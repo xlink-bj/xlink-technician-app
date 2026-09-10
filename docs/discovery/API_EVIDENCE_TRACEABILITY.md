@@ -146,7 +146,8 @@ The consolidated baseline is evidence-backed enough for G2 architecture
 decisions about shared business code, explicit platform adapters, a Workflow
 Runtime boundary, and a bounded Dynamic Form Runtime. It is not evidence-backed
 enough to implement unverified write transitions or to claim production API
-compatibility. Those items remain explicit P0/P1 targeted rescans.
+compatibility. Those concerns remain implementation-gate verification, not G2
+blockers.
 
 ## G1-A2 live read verification
 
@@ -183,5 +184,27 @@ repositories and reduced to sanitized shapes before this record was written.
 | WORKFLOW READ IDENTITY | PARTIAL | Live detail/workflow definition/node/parent reads; `runId` versus workflow `_id` and non-empty parent-child semantics remain unproven. |
 | DYNAMIC FORM READ CONTRACT | PARTIAL | Live field/data/detail/code shapes; cross-form option expansion and read-only precedence remain unproven. |
 
-The full sanitized ledger and remaining P0 list are in
+The full sanitized ledger and deferred verification classification are in
 [API_P0_READ_VERIFICATION.md](./API_P0_READ_VERIFICATION.md).
+
+## G2 Architecture Readiness
+
+**G2_READINESS = READY**
+
+The evidence supports the architecture decision while preserving the known
+`PARTIAL` contract status. No unresolved item prevents selection of Vue 3 /
+uni-app, the API adapter boundary, Auth/session abstraction, Workflow Runtime,
+Dynamic Form Runtime, or platform adapters.
+
+| Uncertainty | Current evidence | Classification | Rationale | Required later verification | Owner gate |
+| --- | --- | --- | --- | --- | --- |
+| Session lifecycle / expiry / refresh / logout | R1 transport and successful beta sessions establish form POST, opaque login token, and `JSESSIONID`; no lifecycle edge was exercised. | `DEFER_TO_G3` | Lifecycle behavior can be implemented behind an Auth adapter contract with explicit hooks and error states. | Verify expiry/error/refresh/logout with an approved non-production fixture. | G3 Auth/Foundation verification |
+| Work-order tab/count exact semantics | Live `.do`/non-`.do` route variants and empty-page behavior are known; `function/dataCount` lacks stable live count keys. | `DEFER_TO_G4` | Count parity is a Work Order List business behavior and does not alter the technology or adapter boundary. | Verify tab/count mapping and complete list-filter parity. | G4 Work Order List slice |
+| Workflow `runId` / parent identity edge semantics | Live reads expose separate workflow/node/definition/form identifiers and a seven-node runtime result; selected parent had no children. | `DEFER_TO_G3` | Runtime read models can retain opaque identifiers without assuming a transition or parent-child implementation detail. | Read a non-empty parent-child case and prove `runId` versus workflow id before transitions. | G1-C Workflow capability work → G3 Workflow Runtime |
+| Dynamic-form option resolution / read-only precedence | Live fields expose 12 types, string `required`, parsed JSON config with nested `readOnly`, `valueOption`, and code-definition envelopes. | `DEFER_TO_G3` | Runtime capability descriptors and explicit unsupported-control behavior can be selected now; precedence is implementation detail. | Verify another form family, option/cascade providers, and read-only precedence before form slices. | G1-C Dynamic Form capability work → G3 Runtime / G4 form slices |
+
+### Remaining G2 blockers
+
+**ZERO.** No additional network call is required for G2 readiness. The deferred
+items remain required at their owner gates, and no P1 write concern is being
+reclassified as P0.

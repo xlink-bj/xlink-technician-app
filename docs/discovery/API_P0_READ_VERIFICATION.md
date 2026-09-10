@@ -2,7 +2,8 @@
 
 ## Status
 
-Verification completed for the targeted beta read-only slice.
+Verification and G2-readiness classification completed for the targeted beta
+read-only slice. No additional network calls were made for this correction.
 
 | Field | Value |
 | --- | --- |
@@ -45,7 +46,7 @@ field names only.
 | --- | --- | --- | --- | --- |
 | `index/phoneLogin.do` | POST form: `method`, redacted phone/code, redacted tenant parameter | 200 through every R1 session; login response accepted by runner and session cookie established in memory | Beta login/session path is confirmed. | Expiry, refresh, logout, error envelope, and MP/App differences were not exercised. |
 | `function/changeRole` | POST form: role identifier list | 200; object envelope with boolean success and function/menu data | Role change is a permitted read-session setup operation for this verification. | Permission failure and role-selection edge cases. |
-| `function/dataCount` | POST form: function capability list | 200; object envelope; live data object had no stable count keys in sanitized shape | Endpoint is reachable but does not yet prove tab-count semantics. | Mapping to work-order tabs remains P0. |
+| `function/dataCount` | POST form: function capability list | 200; object envelope; live data object had no stable count keys in sanitized shape | Endpoint is reachable but does not yet prove tab-count semantics. | Mapping to work-order tabs is deferred to G4. |
 | `basic/serviceAppointment/querySAWorkflowNode` | POST form: page/rows, orderState, sortField/order, state filter | 200; paginated envelope; array length 2; numeric page/rows/total/dataCount | Non-`.do` path is a live read candidate. | Exact server equivalence with `.do` across all filters. |
 | `basic/serviceAppointment/querySAWorkflowNode.do` | Same form shape as non-`.do` variant | 200; same paginated envelope and numeric count fields; array length 2 | `.do` alias is also a live read candidate. | Canonical path choice is an app policy decision, not proof that every edge case is identical. |
 | `basic/serviceAppointment/query` | POST form: page/rows, sort, state filter | 200; paginated envelope; array length 2; numeric page/rows/total/dataCount | Non-`.do` path is a live ordinary-list candidate. | Exact filter parity with `.do`. |
@@ -99,20 +100,30 @@ one universal field rule without more evidence.
 | WORKFLOW READ IDENTITY | **PARTIAL** | Live detail, definition, runtime-node, and parent-node reads expose the expected identifier fields and returned compatible node cardinality. `runId` versus workflow `_id` and non-empty parent-child semantics need one more read-only fixture. |
 | DYNAMIC FORM READ CONTRACT | **PARTIAL** | Field/data/detail reads, 12 observed field types, required/config metadata, identity linkage, and code-definition envelope are confirmed. Complete option expansion, read-only precedence, and cross-form nullability remain open. |
 
-## Remaining P0 gaps
+## G2 Architecture Readiness
 
-These are the remaining read-contract P0 items. No P1 business write concern
-has been promoted to P0:
+**G2_READINESS = READY**
 
-1. Resolve session expiry/error/refresh/logout behavior and document the
-   platform-neutral auth adapter boundary.
-2. Resolve `function/dataCount` to list-tab count semantics and verify whether
-   the selected non-`.do` canonical paths remain equivalent under all V1
-   filters.
-3. Verify `runId` versus workflow `_id`, a non-empty parent-child workflow
-   read, and the exact definition-to-node-to-form identity join.
-4. Bound dynamic-form option/code expansion, read-only precedence, and empty
-   behavior across at least one additional form family.
+The four remaining uncertainties do not block the Technology / Architecture
+Decision Gate. They affect implementation verification and vertical-slice
+behavior, not the ability to define the shared business boundary, explicit
+platform adapters, Auth abstraction, Workflow Runtime boundary, or Dynamic Form
+Runtime boundary. The four contract decisions remain `PARTIAL` and must not be
+read as full contract certification.
+
+| Uncertainty | Current evidence | Classification | Rationale | Required later verification | Owner gate |
+| --- | --- | --- | --- | --- | --- |
+| Session lifecycle / expiry / refresh / logout | Beta form-POST login, in-memory token handling, and `JSESSIONID` application were confirmed; lifecycle behavior was not exercised. | `DEFER_TO_G3` | G2 can define an opaque session/Auth adapter boundary with explicit lifecycle hooks and error states without choosing a different technology stack. | Verify expiry/error/refresh/logout behavior against an approved non-production fixture; keep credentials out of evidence. | G3 Auth/Foundation verification |
+| Work-order tab/count exact semantics | All three list route families and `.do` aliases returned compatible paginated read envelopes; empty pages are understood; `function/dataCount` did not expose stable tab-count fields. | `DEFER_TO_G4` | G2 can define a paginated Work Order repository and count metadata boundary. Exact tab parity is business behavior for the Work Order List slice. | Verify tab/count mapping and full V1 filter parity while implementing the list slice; retain Legacy aliases only where required. | G4 Work Order List slice |
+| Workflow `runId` / parent identity edge semantics | Detail, definition, runtime-node, and parent-node reads expose separate workflow/node/definition/form identifiers; seven runtime nodes were read; selected parent had an empty child array. | `DEFER_TO_G3` | G2 can define Workflow Runtime read models with opaque, separate identifiers and no write assumptions. Edge joins do not prevent the runtime boundary decision. | Use a non-empty parent-child read fixture and prove `runId` versus workflow id before workflow transition implementation. | G1-C Workflow capability work → G3 Workflow Runtime |
+| Dynamic-form option resolution / read-only precedence | 74 fields and 12 types were observed; `required`, JSON `frontEndConfig`, nested `readOnly`, `valueOption`, and code-definition reads are evidenced. Precedence across forms is not complete. | `DEFER_TO_G3` | G2 can define a Dynamic Form Runtime with capability descriptors, option providers, read-only policy inputs, and explicit unsupported-control failures. | Compare another form family, resolve option/cascade providers, and define precedence before form vertical slices. | G1-C Dynamic Form capability work → G3 Runtime / G4 form slices |
+
+### Remaining G2 blockers
+
+**ZERO.** No additional read-only probe is required to make the G2 technology
+and architecture decision. These deferred items remain mandatory verification
+before their owning implementation gates; no P1 business write concern was
+promoted to P0.
 
 ## Safety record
 

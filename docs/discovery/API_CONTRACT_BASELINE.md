@@ -156,7 +156,7 @@ means historical/local-only evidence that cannot yet drive implementation.
 
 ## Core flow coverage
 
-| Stage | Current status | Evidence conclusion | Blocking UNKNOWNs for G2 |
+| Stage | Current status | Evidence conclusion | Deferred implementation unknowns |
 | --- | --- | --- | --- |
 | Login | SUFFICIENT_FOR_DESIGN | Login, session token, role change, and MP phone path are mapped. | Session expiry/refresh, production contract, and platform-specific login verification. |
 | Home | PARTIAL | Existing home reads and count helpers are identified; R2 dashboard is normalized evidence. | Canonical home/count composition and permission-dependent modules. |
@@ -195,7 +195,11 @@ means historical/local-only evidence that cannot yet drive implementation.
    local-only tree with no Git provenance. They are useful hints only and are
    explicitly `LOCAL_ONLY_UNVERIFIED`.
 
-### P0 targeted verification
+### Initial G1-A1 P0 verification scope
+
+These were the P0 read-contract questions targeted by A2. The G2 readiness
+correction below classifies all remaining uncertainty as deferred; none remains
+a G2 blocker.
 
 - Establish the current beta/production environment contract, login response,
   session expiry/refresh behavior, and error envelope without recording
@@ -262,6 +266,24 @@ for the sanitized request/response ledger and call accounting.
 | Workflow read identity | PARTIAL | Preserve separate service-appointment, workflow, definition, node, parent-node, form-definition, and form-data identifiers; do not collapse `runId` into workflow id without another read-only fixture. |
 | Dynamic form read | PARTIAL | Model field definitions, form data, nested workflow linkage, `required`, parsed `frontEndConfig`, and `valueOption` as separate concerns; keep option expansion/read-only precedence unresolved. |
 
-Remaining P0 items are session lifecycle/error behavior, list count/tab
-relationship, workflow run/parent identity proof, and complete dynamic-form
-option/read-only resolution. No P1 write concern was promoted to P0.
+## G2 Architecture Readiness
+
+**G2_READINESS = READY**
+
+The A2 evidence is sufficient to make the Technology / Architecture Decision.
+The four read-contract results remain `PARTIAL`, but their remaining details do
+not prevent defining the Vue 3 / uni-app technology choice, API adapter
+boundary, Auth abstraction, Workflow Runtime boundary, Dynamic Form Runtime
+boundary, or explicit platform adapters.
+
+| Uncertainty | Current evidence | Classification | Rationale | Required later verification | Owner gate |
+| --- | --- | --- | --- | --- | --- |
+| Session lifecycle / expiry / refresh / logout | Beta login/session transport and in-memory `JSESSIONID` handling are confirmed; lifecycle edges were not exercised. | `DEFER_TO_G3` | Define an opaque Auth adapter and lifecycle/error hooks now; implementation behavior belongs to foundation work. | Verify expiry/error/refresh/logout in approved non-production verification. | G3 Auth/Foundation verification |
+| Work-order tab/count exact semantics | Route families and `.do` aliases returned compatible paginated envelopes; `function/dataCount` did not expose stable tab counts. | `DEFER_TO_G4` | The repository and API adapter boundaries are clear; exact tab parity is a Work Order List business slice concern. | Verify tab/count mapping and complete V1 filters. | G4 Work Order List slice |
+| Workflow `runId` / parent identity edge semantics | Separate workflow, definition, node, parent-node, form-definition, and form-data fields are observed; runtime read returned seven nodes. | `DEFER_TO_G3` | Workflow Runtime can preserve opaque IDs and separate read models without assuming transition semantics. | Verify non-empty parent-child joins and `runId` versus workflow id. | G1-C Workflow capability work → G3 Workflow Runtime |
+| Dynamic-form option resolution / read-only precedence | 74 fields, 12 observed types, `required`, nested `frontEndConfig.readOnly`, `valueOption`, and code lookup shapes are observed. | `DEFER_TO_G3` | Dynamic Form Runtime boundaries can be defined with capability descriptors and explicit unsupported behavior. | Verify another form family, option/cascade providers, and read-only precedence. | G1-C Dynamic Form capability work → G3 Runtime / G4 form slices |
+
+### Remaining G2 blockers
+
+**ZERO.** The remaining uncertainties are deferred implementation verification,
+not G2 blockers. No P1 write concern was promoted to P0.
