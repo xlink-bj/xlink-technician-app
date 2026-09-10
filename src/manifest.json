@@ -1,0 +1,14 @@
+{
+  "name": "XLink Technician App",
+  "appid": "__UNI__XLINKTECHNICIAN",
+  "description": "XLink Technician foundation",
+  "versionName": "0.1.0",
+  "versionCode": "1",
+  "transformPx": false,
+  "uniStatistics": {
+    "enable": false
+  },
+  "h5": {
+    "title": "XLink Technician"
+  }
+}
