@@ -3,14 +3,15 @@ import { join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = fileURLToPath(new URL('../src', import.meta.url))
-const guardedRoots = ['app', 'shared', 'runtimes', 'features', 'adapters']
+const guardedRoots = ['app', 'shared', 'runtimes', 'features', 'pages', 'adapters']
 const sourceExtensions = new Set(['.ts', '.vue'])
 const forbiddenPatterns = [
   { label: 'Mini Program API', pattern: /\bwx\s*\./ },
   { label: 'App-Plus API', pattern: /\bplus\s*\./ },
   { label: 'uni platform API', pattern: /\buni\s*\./ },
   { label: 'native module import', pattern: /from\s+['"](?:android|ios|@capacitor|react-native)(?:[/'"]|$)/i },
-  { label: 'Legacy source import', pattern: /from\s+['"].*(?:legacy|xlink-business-jishi-3\.0|xlink-business-3\.0|xlink-app).*[/'"]?/i }
+  { label: 'Legacy source import', pattern: /from\s+['"].*(?:legacy|xlink-business-jishi-3\.0|xlink-business-3\.0|xlink-app).*[/'"]?/i },
+  { label: 'raw auth endpoint', pattern: /index\/phoneLogin\.do/ },
 ]
 
 const inwardBoundaryPatterns = [

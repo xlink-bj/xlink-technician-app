@@ -29,7 +29,24 @@ export interface AuthBackendDriver {
   logout(sessionRef: SessionRef): Promise<unknown>
 }
 
+export class AuthTransportError extends Error {
+  constructor(
+    message: string,
+    readonly retryable: boolean,
+  ) {
+    super(message)
+    this.name = 'AuthTransportError'
+  }
+}
+
 const sessionStorageKey = { namespace: 'session', key: 'current' } as const
+
+function authFailure(error: unknown, fallback: string): OperationSnapshot<never> {
+  return adapterFailure(
+    error instanceof AuthTransportError && error.retryable ? 'network_retryable' : 'server_terminal',
+    unknownErrorMessage(error, fallback),
+  )
+}
 
 function sessionFromBackend(raw: unknown): SessionSnapshot {
   const envelope = asRecord(raw, 'auth response')
@@ -101,7 +118,7 @@ export class AuthSessionAdapter implements AuthSessionPort {
       this.current = session
       return succeeded(session)
     } catch (error) {
-      return adapterFailure('server_terminal', unknownErrorMessage(error, 'Authentication failed'))
+      return authFailure(error, 'Authentication failed')
     }
   }
 
@@ -123,7 +140,7 @@ export class AuthSessionAdapter implements AuthSessionPort {
       this.current = storedSession
       return succeeded(storedSession)
     } catch (error) {
-      return adapterFailure('network_retryable', unknownErrorMessage(error, 'Session restore failed'))
+      return authFailure(error, 'Session restore failed')
     }
   }
 
@@ -139,7 +156,7 @@ export class AuthSessionAdapter implements AuthSessionPort {
       this.current = null
       return removed
     } catch (error) {
-      return adapterFailure('network_retryable', unknownErrorMessage(error, 'Session end failed'))
+      return authFailure(error, 'Session end failed')
     }
   }
 }
