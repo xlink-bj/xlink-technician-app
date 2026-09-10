@@ -1,0 +1,15 @@
+node_modules/
+dist/
+unpackage/
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+.idea/
+.vscode/
+scripts/__pycache__/
+*.pyc
+coverage/
+.tmp/
+.cache/
