@@ -1,0 +1,38 @@
+{
+  "name": "xlink-technician-app",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.31.0",
+  "scripts": {
+    "dev:mp-weixin": "uni -p mp-weixin",
+    "build:mp-weixin": "uni build -p mp-weixin",
+    "typecheck": "vue-tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check:boundaries": "node scripts/check-boundaries.mjs",
+    "verify": "pnpm run check:boundaries && pnpm run typecheck && pnpm run test"
+  },
+  "dependencies": {
+    "@dcloudio/uni-app": "3.0.0-alpha-1000920260909822",
+    "@dcloudio/uni-components": "3.0.0-alpha-1000920260909822",
+    "@vue/devtools-api": "6.6.4",
+    "@vue/reactivity": "3.4.21",
+    "@vue/runtime-core": "3.4.21",
+    "@vue/runtime-dom": "3.4.21",
+    "@vue/shared": "3.4.21",
+    "pinia": "2.1.7",
+    "vue": "3.4.21",
+    "vue-demi": "0.14.10"
+  },
+  "devDependencies": {
+    "@dcloudio/types": "3.4.31",
+    "@dcloudio/vite-plugin-uni": "3.0.0-alpha-1000920260909822",
+    "@types/node": "24.10.0",
+    "@vue/compiler-sfc": "3.4.21",
+    "typescript": "5.9.3",
+    "vite": "8.2.2",
+    "vitest": "5.0.0",
+    "vue-tsc": "3.3.11"
+  }
+}
