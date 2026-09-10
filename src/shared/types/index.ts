@@ -10,6 +10,7 @@ export type {
   FormDefinitionId,
   LocalMediaRef,
   Opaque,
+  OrganizationId,
   RoleId,
   RoleRef,
   SessionRef,

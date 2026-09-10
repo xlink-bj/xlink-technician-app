@@ -1,0 +1,127 @@
+import { evaluateFieldState } from './state'
+import type {
+  FieldStateContext,
+  FormFieldSchema,
+  FormSubmission,
+  NormalizationResult,
+  NormalizedFieldValue,
+  SubmissionResult,
+} from './types'
+
+const trimmedStringTypes = new Set(['text', 'textarea', 'phone', 'IDNumber', 'date', 'time', 'datetime'])
+const optionScalarTypes = new Set(['select', 'bizSelect', 'radio', 'rate'])
+const optionArrayTypes = new Set(['checkbox', 'cascade'])
+
+function trimmed(value: unknown): string | undefined {
+  if (typeof value === 'string') return value.trim()
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value).trim()
+  return undefined
+}
+
+function decimal(value: unknown): number | undefined {
+  const text = trimmed(value)
+  if (!text || !/^-?(?:\d+\.?\d*|\.\d+)$/.test(text)) return undefined
+  const parsed = Number(text)
+  return Number.isFinite(parsed) ? parsed : undefined
+}
+
+function integer(value: unknown): number | undefined {
+  const text = trimmed(value)
+  if (!text || !/^-?\d+$/.test(text)) return undefined
+  const parsed = Number(text)
+  return Number.isSafeInteger(parsed) ? parsed : undefined
+}
+
+function scalar(value: unknown): string | number | boolean | null | undefined {
+  if (value === null) return null
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return value
+  return undefined
+}
+
+function invalid(message: string): NormalizationResult {
+  return { ok: false, reason: 'invalid_value', message }
+}
+
+export function normalizeFieldValue(type: string, value: unknown): NormalizationResult {
+  if (trimmedStringTypes.has(type)) {
+    const result = trimmed(value)
+    return result === undefined ? invalid(`${type} requires a scalar value`) : { ok: true, value: result }
+  }
+  if (type === 'number') {
+    const result = integer(value)
+    return result === undefined ? invalid('number requires an integer') : { ok: true, value: result }
+  }
+  if (type === 'digit' || type === 'area') {
+    const result = decimal(value)
+    return result === undefined ? invalid(`${type} requires a decimal value`) : { ok: true, value: result }
+  }
+  if (type === 'switch') {
+    if (typeof value === 'boolean') return { ok: true, value }
+    if (value === 'true') return { ok: true, value: true }
+    if (value === 'false') return { ok: true, value: false }
+    return invalid('switch requires a boolean value')
+  }
+  if (optionScalarTypes.has(type)) {
+    const result = scalar(value)
+    return result === undefined ? invalid(`${type} requires a scalar choice`) : { ok: true, value: result }
+  }
+  if (optionArrayTypes.has(type) || type === 'file' || type === 'image') {
+    if (Array.isArray(value)) {
+      const values = value.map(scalar)
+      if (values.some((item) => item === undefined)) return invalid(`${type} contains an unsupported value`)
+      return { ok: true, value: values as NormalizedFieldValue }
+    }
+    const result = scalar(value)
+    return result === undefined ? invalid(`${type} requires a value or value array`) : { ok: true, value: result }
+  }
+  return { ok: false, reason: 'unsupported_field_type', message: `unsupported field type: ${type}` }
+}
+
+function isMissing(value: unknown): boolean {
+  return value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0)
+}
+
+export function normalizeSubmission(input: {
+  readonly fields: readonly FormFieldSchema[]
+  readonly values: Readonly<Record<string, unknown>>
+  readonly fieldContexts?: Readonly<Record<string, Omit<FieldStateContext, 'values'>>>
+  readonly preserveHiddenValues?: boolean
+}): SubmissionResult {
+  const normalized: Record<string, NormalizedFieldValue> = {}
+  for (const field of input.fields) {
+    const state = evaluateFieldState(field, {
+      ...(input.fieldContexts?.[field.key] ?? {}),
+      values: input.values,
+    })
+    if (state.capability === 'UNSUPPORTED') {
+      return {
+        ok: false,
+        reason: 'unsupported_capability',
+        fieldKey: field.key,
+        message: state.reason ?? 'field capability is unsupported',
+      }
+    }
+
+    const raw = input.values[field.key]
+    if (!state.visible && !input.preserveHiddenValues) continue
+    if (isMissing(raw)) {
+      if (state.required) {
+        return { ok: false, reason: 'validation', fieldKey: field.key, message: 'required field is missing' }
+      }
+      continue
+    }
+
+    const value = normalizeFieldValue(field.type, raw)
+    if (!value.ok) {
+      return {
+        ok: false,
+        reason: value.reason === 'unsupported_field_type' ? 'unsupported_capability' : 'validation',
+        fieldKey: field.key,
+        message: value.message,
+      }
+    }
+    normalized[field.key] = value.value
+  }
+  const submission: FormSubmission = { values: normalized }
+  return { ok: true, value: submission }
+}

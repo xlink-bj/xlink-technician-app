@@ -15,6 +15,7 @@ export type FormDataId = Opaque<string, 'FormDataId'>
 export type SessionRef = Opaque<string, 'SessionRef'>
 export type LocalMediaRef = Opaque<string, 'LocalMediaRef'>
 export type CustomerContactId = Opaque<string, 'CustomerContactId'>
+export type OrganizationId = Opaque<string, 'OrganizationId'>
 
 export interface UserRef {
   readonly id: UserId
