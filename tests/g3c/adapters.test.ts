@@ -7,6 +7,7 @@ import {
 } from '@adapters/api/technician-api'
 import {
   AuthSessionAdapter,
+  type AuthWireConfig,
   type AuthBackendDriver,
 } from '@adapters/auth/auth-session-adapter'
 import {
@@ -169,18 +170,27 @@ describe('G3-C storage and auth adapter foundations', () => {
   it('keeps phone credentials ephemeral and maps invalid sessions explicitly', async () => {
     const driver = new InMemoryStorageDriver()
     const storage = createSemanticStorageAdapter(driver)
+    const wireConfig: AuthWireConfig = {
+      tenant: 'sanitized-tenant',
+      phoneLoginMethod: 'sanitized-phone-login-method',
+    }
     const backend: AuthBackendDriver = {
       login: vi.fn(async (request) => {
         expect(request).toEqual({
           path: 'index/phoneLogin.do',
-          body: { method: '1', phone: 'test-phone', code: 'test-code' },
+          body: {
+            method: 'sanitized-phone-login-method',
+            phone: 'test-phone',
+            code: 'test-code',
+            tenant: 'sanitized-tenant',
+          },
         })
         return rawAuthResponse
       }),
       restore: vi.fn(async () => ({ valid: false })),
       logout: vi.fn(async () => ({ success: true })),
     }
-    const auth = new AuthSessionAdapter(backend, storage)
+    const auth = new AuthSessionAdapter(backend, storage, wireConfig)
     const input: AuthStartRequest = {
       phoneNumber: 'test-phone',
       verificationCode: 'test-code',
@@ -190,8 +200,11 @@ describe('G3-C storage and auth adapter foundations', () => {
     expect(started.state).toBe('succeeded')
     expect(started.data?.sessionRef).toBe('sanitized-session-token')
     const persisted = driver.values.get('session:current') ?? ''
+    expect(persisted).not.toContain('test-phone')
     expect(persisted).not.toContain('test-code')
     expect(persisted).not.toContain('verificationCode')
+    expect(persisted).not.toContain('sanitized-tenant')
+    expect(persisted).not.toContain('sanitized-phone-login-method')
     expect(persisted).toContain('sanitized-session-token')
 
     const restored = await auth.restoreSession()

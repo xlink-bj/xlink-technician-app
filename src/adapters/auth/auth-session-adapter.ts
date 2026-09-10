@@ -17,6 +17,12 @@ export interface AuthBackendLoginRequest {
   readonly body: Readonly<Record<string, string>>
 }
 
+/** Adapter-only wire values; never part of shared session or login contracts. */
+export interface AuthWireConfig {
+  readonly tenant: string
+  readonly phoneLoginMethod: string
+}
+
 export interface AuthBackendDriver {
   login(request: AuthBackendLoginRequest): Promise<unknown>
   restore(sessionRef: SessionRef): Promise<unknown>
@@ -71,6 +77,7 @@ export class AuthSessionAdapter implements AuthSessionPort {
   constructor(
     private readonly backend: AuthBackendDriver,
     private readonly storage: StoragePort,
+    private readonly wireConfig: AuthWireConfig,
   ) {}
 
   async startSession(request: AuthStartRequest): Promise<OperationSnapshot<SessionSnapshot>> {
@@ -78,9 +85,10 @@ export class AuthSessionAdapter implements AuthSessionPort {
       const raw = await this.backend.login({
         path: 'index/phoneLogin.do',
         body: {
-          method: '1',
+          method: this.wireConfig.phoneLoginMethod,
           phone: request.phoneNumber,
           code: request.verificationCode,
+          tenant: this.wireConfig.tenant,
         },
       })
       const session = sessionFromBackend(raw)
@@ -139,6 +147,7 @@ export class AuthSessionAdapter implements AuthSessionPort {
 export function createAuthSessionAdapter(
   backend: AuthBackendDriver,
   storage: StoragePort,
+  wireConfig: AuthWireConfig,
 ): AuthSessionPort {
-  return new AuthSessionAdapter(backend, storage)
+  return new AuthSessionAdapter(backend, storage, wireConfig)
 }

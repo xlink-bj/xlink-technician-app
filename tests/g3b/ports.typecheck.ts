@@ -24,6 +24,22 @@ const authStart: AuthStartRequest = {
 }
 void authStart
 
+const authWithTenant: AuthStartRequest = {
+  phoneNumber: 'test-phone',
+  verificationCode: 'test-code',
+  // @ts-expect-error tenant wire configuration belongs to the Auth adapter
+  tenant: 'adapter-owned-tenant',
+}
+void authWithTenant
+
+const authWithMethod: AuthStartRequest = {
+  phoneNumber: 'test-phone',
+  verificationCode: 'test-code',
+  // @ts-expect-error backend method wire value belongs to the Auth adapter
+  method: 'adapter-owned-method',
+}
+void authWithMethod
+
 const customerContactId: CustomerContactId = 'opaque-contact-id' as CustomerContactId
 const phoneDial: PhoneDialRequest = {
   contactRef: customerContactId,
