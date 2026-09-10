@@ -147,3 +147,41 @@ decisions about shared business code, explicit platform adapters, a Workflow
 Runtime boundary, and a bounded Dynamic Form Runtime. It is not evidence-backed
 enough to implement unverified write transitions or to claim production API
 compatibility. Those items remain explicit P0/P1 targeted rescans.
+
+## G1-A2 live read verification
+
+Observation `A2-20260910-beta-read-01` was run on 2026-09-10 against the R1
+beta host using the existing R1 virtual environment and scripts. The scripts
+were not modified. Temporary response samples were stored outside the
+repositories and reduced to sanitized shapes before this record was written.
+
+| Verification fact | Traceable evidence | Result |
+| --- | --- | --- |
+| Session transport | R1-T `scripts/api_client.py`; live R1 smoke/inspect sessions | Beta root `/fsgo/wm/`, form POST, login token held in memory, `JSESSIONID` cookie applied by the shared client; 17 login setups succeeded. |
+| Core read chain | R1-S `api_specs/business_core_beta.json`; live smoke sample shapes | Login, role/menu, count, list, detail, project count/list, and contract list all passed. |
+| List route variants | R1-C `mainWorkOrderListContract.js`, list page; live `qsa-do`, `query-nondo`, `query-do`, `workflow-query-nondo`, `workflow-query-do` probes | All tested variants returned HTTP 200 paginated envelopes with numeric page/rows/total/dataCount fields; the synthetic no-match query returned `data=[]`. |
+| Workflow read identity | R1-A detail inventory; R1-C detail page; live `workflow-def`, `workflow-nodes`, `workflow-children` probes | Definition returned top-level `entity`; runtime node read returned 7 nodes; parent read returned an empty child array; identifier relationships are present but `runId` distinction remains open. |
+| Dynamic fields | R1-C `workOrderFormReadContract.js`; R2-R survey/form sources; live `form-fields` probe | 74 field records; 12 observed types; `required` and JSON `frontEndConfig` present; `valueOption` non-empty on 28 fields. |
+| Dynamic data/detail | R1-C form contract/detail page; R2-R survey source; live `form-data`, corrected GET and POST `form-find` probes | Form query returned one paginated record; GET and POST detail reads returned the same nested `data`/`workflow`/`workflowNode` shape. |
+| Code dependency | R1-C detail page code lookup paths; R2-R `cloud-code-labels.ts`; live `code/query` probes | Active code query returned 20 definitions; parent-specific probe for one observed valueOption returned an empty array. Full per-field option resolution remains unknown. |
+
+### Evidence exclusions
+
+- No login credential, token, cookie, tenant value, identifier, name, phone, or
+  customer value from the live responses was copied into this repository.
+- No mutation fixture was run. `orderConfirm`, workflow transitions, form
+  writes/removals, appointment actions, quotation writes, construction or
+  acceptance writes, and media persistence were excluded.
+- No production endpoint was contacted. R1, R2, and R3 remained unchanged.
+
+### G1-A2 decision trace
+
+| Decision | Result | Traceability basis |
+| --- | --- | --- |
+| SESSION CONTRACT | PARTIAL | R1-T transport/session implementation plus successful beta read sessions; no expiry/refresh/logout observation. |
+| WORK-ORDER LIST CONTRACT | PARTIAL | Live parity of tested route spellings and normal empty-page behavior; `function/dataCount` did not expose stable tab-count fields. |
+| WORKFLOW READ IDENTITY | PARTIAL | Live detail/workflow definition/node/parent reads; `runId` versus workflow `_id` and non-empty parent-child semantics remain unproven. |
+| DYNAMIC FORM READ CONTRACT | PARTIAL | Live field/data/detail/code shapes; cross-form option expansion and read-only precedence remain unproven. |
+
+The full sanitized ledger and remaining P0 list are in
+[API_P0_READ_VERIFICATION.md](./API_P0_READ_VERIFICATION.md).

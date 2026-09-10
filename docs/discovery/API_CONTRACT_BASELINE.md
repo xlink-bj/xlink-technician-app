@@ -223,3 +223,45 @@ matrix. Conflicts, bounded dynamic-form/workflow scope, native/platform
 unknowns, and remaining P0/P1 items are explicit. No application
 implementation, dependency installation, backend mutation, or reference-repo
 modification belongs to this baseline.
+
+## G1-A2 P0 read verification update
+
+Targeted beta verification was completed on 2026-09-10 using the existing R1
+read-only tooling. See [API_P0_READ_VERIFICATION.md](./API_P0_READ_VERIFICATION.md)
+for the sanitized request/response ledger and call accounting.
+
+### Resolved read observations
+
+- The R1 beta host uses the `/fsgo/wm/` base, form-encoded POST requests, and a
+  login response token held in memory and applied as `JSESSIONID` by the shared
+  client. Login/session establishment is confirmed; expiry/refresh/logout
+  remains unresolved.
+- `querySAWorkflowNode`, `query`, and `queryWorkflowNode` both accepted `.do`
+  and non-`.do` variants in the tested read cases. Each returned a paginated
+  envelope with numeric page/rows/total/dataCount fields. A synthetic no-match
+  list returned a normal empty array page.
+- Detail data links `serviceAppointment`, `workflow`, and `workflowNode`.
+  Runtime node reads returned seven nodes for the tested workflow and workflow
+  definition reads returned a top-level `entity` envelope. Parent-node reads
+  returned a normal empty array for the selected parent.
+- `extField/query` returned 74 fields with observed types `area`, `bizSelect`,
+  `cascade`, `datetime`, `file`, `foreignkey`, `map`, `phone`, `radio`,
+  `select`, `text`, and `textarea`. `frontEndConfig` was JSON text that parsed
+  to objects; `valueOption` was present on a subset of fields.
+- `extForm/query/{formDefId}` returned a paginated form-data record, and both
+  GET query-parameter and POST form probes of
+  `findByIdWithWorkflow` returned the same observed nested data/workflow/node
+  shape.
+
+### G1-A2 decisions
+
+| Contract | Decision | Current canonical policy / gap |
+| --- | --- | --- |
+| Session | PARTIAL | Use the R1 session model as the candidate adapter boundary; verify expiry/error/refresh/logout before foundation auth is final. |
+| Work-order list | PARTIAL | Treat non-`.do` paths as the new-App canonical candidates because they are used by the R1 pure Technician contracts; retain `.do` as a verified Legacy alias until count/tab parity is resolved. |
+| Workflow read identity | PARTIAL | Preserve separate service-appointment, workflow, definition, node, parent-node, form-definition, and form-data identifiers; do not collapse `runId` into workflow id without another read-only fixture. |
+| Dynamic form read | PARTIAL | Model field definitions, form data, nested workflow linkage, `required`, parsed `frontEndConfig`, and `valueOption` as separate concerns; keep option expansion/read-only precedence unresolved. |
+
+Remaining P0 items are session lifecycle/error behavior, list count/tab
+relationship, workflow run/parent identity proof, and complete dynamic-form
+option/read-only resolution. No P1 write concern was promoted to P0.
