@@ -5,6 +5,7 @@ export type ArchitectureLayer =
   | 'adapter'
 
 export type {
+  CustomerContactId,
   FormDataId,
   FormDefinitionId,
   LocalMediaRef,

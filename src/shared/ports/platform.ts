@@ -1,7 +1,7 @@
 import type {
   CapabilityResult,
+  CustomerContactId,
   LocalMedia,
-  UserId,
 } from '@shared/types'
 
 export interface LocationSnapshot {
@@ -31,7 +31,7 @@ export interface ScanResult {
 }
 
 export interface PhoneDialRequest {
-  readonly contactRef: UserId
+  readonly contactRef: CustomerContactId
   readonly normalizedPhone: string
 }
 

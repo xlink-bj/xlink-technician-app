@@ -9,9 +9,10 @@ export interface SessionSnapshot {
   readonly capabilityNames: readonly string[]
 }
 
+/** Ephemeral V1 phone-login input; implementations must not persist it. */
 export interface AuthStartRequest {
-  readonly method: string
-  readonly parameters: Readonly<Record<string, string>>
+  readonly phoneNumber: string
+  readonly verificationCode: string
 }
 
 export interface AuthSessionPort {

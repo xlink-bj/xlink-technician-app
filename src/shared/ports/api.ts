@@ -9,25 +9,20 @@ import type {
 import type { OperationSnapshot } from '@shared/types'
 
 export interface ReadPage<T> {
-  readonly data: readonly T[]
+  readonly items: readonly T[]
   readonly page?: number
-  readonly rows?: number
-  readonly total?: number
-  readonly dataCount?: number
+  readonly pageSize?: number
+  readonly totalCount?: number
 }
 
 export interface WorkOrderListQuery {
   readonly page: number
-  readonly rows: number
-  readonly sortField?: string
-  readonly sortOrder?: 'asc' | 'desc'
-  readonly filters?: Readonly<Record<string, string | number | boolean>>
+  readonly pageSize: number
 }
 
 export interface WorkOrderSummary {
   readonly id: WorkOrderId
   readonly title?: string
-  readonly stateCode?: string
 }
 
 export interface WorkOrderDetail {
