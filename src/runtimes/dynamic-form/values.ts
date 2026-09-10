@@ -7,6 +7,7 @@ import type {
   NormalizedFieldValue,
   SubmissionResult,
 } from './types'
+import type { LocalMediaRef } from '@shared/types'
 
 const trimmedStringTypes = new Set(['text', 'textarea', 'phone', 'IDNumber', 'date', 'time', 'datetime'])
 const optionScalarTypes = new Set(['select', 'bizSelect', 'radio', 'rate'])
@@ -51,9 +52,16 @@ export function normalizeFieldValue(type: string, value: unknown): Normalization
     const result = integer(value)
     return result === undefined ? invalid('number requires an integer') : { ok: true, value: result }
   }
-  if (type === 'digit' || type === 'area') {
+  if (type === 'digit') {
     const result = decimal(value)
     return result === undefined ? invalid(`${type} requires a decimal value`) : { ok: true, value: result }
+  }
+  if (type === 'area') {
+    return {
+      ok: false,
+      reason: 'unsupported_field_type',
+      message: 'generic area value representation is unresolved; no decimal assumption is applied',
+    }
   }
   if (type === 'switch') {
     if (typeof value === 'boolean') return { ok: true, value }
@@ -65,7 +73,24 @@ export function normalizeFieldValue(type: string, value: unknown): Normalization
     const result = scalar(value)
     return result === undefined ? invalid(`${type} requires a scalar choice`) : { ok: true, value: result }
   }
-  if (optionArrayTypes.has(type) || type === 'file' || type === 'image') {
+  if (type === 'file' || type === 'image') {
+    const mediaReference = (candidate: unknown): LocalMediaRef | undefined => {
+      if (typeof candidate !== 'string' || candidate.trim().length === 0) return undefined
+      return candidate as LocalMediaRef
+    }
+    if (Array.isArray(value)) {
+      const references = value.map(mediaReference)
+      if (references.some((reference) => reference === undefined)) {
+        return invalid(`${type} requires normalized media references`)
+      }
+      return { ok: true, value: references as readonly LocalMediaRef[] }
+    }
+    const reference = mediaReference(value)
+    return reference
+      ? { ok: true, value: reference }
+      : invalid(`${type} requires a normalized media reference`)
+  }
+  if (optionArrayTypes.has(type)) {
     if (Array.isArray(value)) {
       const values = value.map(scalar)
       if (values.some((item) => item === undefined)) return invalid(`${type} contains an unsupported value`)

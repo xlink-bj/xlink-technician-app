@@ -181,7 +181,7 @@ describe('G3-D Dynamic Form Runtime capability and visibility', () => {
     expect(selectOptionProvider({ key: 'missing', type: 'checkbox' }).state).toBe('unsupported')
     expect(selectOptionProvider({ key: 'description', type: 'text' })).toEqual({ state: 'not_required' })
     expect(classifyFieldType('scan').capability).toBe('UNSUPPORTED')
-    expect(classifyFieldType('area').capability).toBe('CONDITIONAL_CAPABILITY')
+    expect(classifyFieldType('area').capability).toBe('SUPPORTED_GENERIC')
   })
 
   it('evaluates scalar, nested, array, existence, false, and malformed visibility cases', () => {
@@ -229,6 +229,7 @@ describe('G3-D Dynamic Form Runtime capability and visibility', () => {
     })
     expect(evaluateFieldState(unsupported).capability).toBe('UNSUPPORTED')
     expect(evaluateFieldState({ key: 'code', type: 'select' }).capability).toBe('UNSUPPORTED')
+    expect(evaluateFieldState({ key: 'genericArea', type: 'area' }).capability).toBe('SUPPORTED_GENERIC')
   })
 })
 
@@ -240,7 +241,18 @@ describe('G3-D Dynamic Form Runtime values and submission', () => {
     expect(normalizeFieldValue('number', '12.5').ok).toBe(false)
     expect(normalizeFieldValue('digit', '12.50')).toEqual({ ok: true, value: 12.5 })
     expect(normalizeFieldValue('checkbox', ['a', 'b'])).toEqual({ ok: true, value: ['a', 'b'] })
+    expect(normalizeFieldValue('image', asOpaqueId<'LocalMediaRef'>('media-ref-001'))).toEqual({
+      ok: true,
+      value: 'media-ref-001',
+    })
     expect(normalizeFieldValue('image', ['media-ref-001'])).toEqual({ ok: true, value: ['media-ref-001'] })
+    expect(normalizeFieldValue('file', true).ok).toBe(false)
+    expect(normalizeFieldValue('file', 42).ok).toBe(false)
+    expect(normalizeFieldValue('image', { ref: 'media-ref-001' }).ok).toBe(false)
+    expect(normalizeFieldValue('area', '12.50')).toMatchObject({
+      ok: false,
+      reason: 'unsupported_field_type',
+    })
     expect(normalizeFieldValue('scan', 'raw-value')).toMatchObject({ ok: false, reason: 'unsupported_field_type' })
   })
 

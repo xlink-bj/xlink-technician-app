@@ -33,7 +33,6 @@ export function classifyFieldType(type: string): FormCapabilityDecision {
   if (!supportedTypes.has(type)) {
     return { capability: 'UNSUPPORTED', reason: `unsupported field type: ${type}` }
   }
-  if (type === 'area') return { capability: 'CONDITIONAL_CAPABILITY', reason: 'named declarative rule required' }
   return { capability: 'SUPPORTED_GENERIC' }
 }
 
