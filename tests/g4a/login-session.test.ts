@@ -106,6 +106,39 @@ describe('G4-A session store and runtime configuration', () => {
     expect(JSON.stringify(store.$state)).not.toContain('test-code')
   })
 
+  it('blocks login during bootstrap and prevents a stale restore from overwriting login state', async () => {
+    const store = useSessionStore()
+    let resolveRestore!: (result: OperationSnapshot<SessionSnapshot | null>) => void
+    const restorePending = new Promise<OperationSnapshot<SessionSnapshot | null>>((resolve) => {
+      resolveRestore = resolve
+    })
+    const startSession = vi.fn(async () => success(session))
+    store.configureAuth(
+      createAuthSession({
+        restoreSession: async () => restorePending,
+        startSession,
+      }),
+    )
+
+    const bootstrap = store.bootstrap()
+    expect(store.status).toBe('unknown')
+    expect(store.bootstrapInProgress).toBe(true)
+
+    const blocked = await store.login({ phoneNumber: 'test-phone', verificationCode: 'test-code' })
+    expect(blocked.state).toBe('failed_terminal')
+    expect(blocked.error?.category).toBe('initialization_in_progress')
+    expect(startSession).not.toHaveBeenCalled()
+
+    resolveRestore(success(null))
+    expect((await bootstrap).data).toBeNull()
+    expect(store.status).toBe('unauthenticated')
+    expect(store.bootstrapInProgress).toBe(false)
+
+    expect((await store.login({ phoneNumber: 'test-phone', verificationCode: 'test-code' })).state).toBe('succeeded')
+    expect(startSession).toHaveBeenCalledTimes(1)
+    expect(store.status).toBe('authenticated')
+  })
+
   it('routes a normalized persisted session to the authenticated shell', async () => {
     const store = useSessionStore()
     store.configureAuth(createAuthSession({ restoreSession: async () => success(session) }))

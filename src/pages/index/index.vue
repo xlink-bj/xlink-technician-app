@@ -1,5 +1,10 @@
 <template>
-  <view v-if="session.status === 'authenticated'" class="landing-page">
+  <view v-if="session.status === 'unknown'" class="loading-page">
+    <text class="eyebrow">Technician App</text>
+    <text class="title">Preparing secure session</text>
+    <text class="subtitle">Checking for an existing session…</text>
+  </view>
+  <view v-else-if="session.status === 'authenticated'" class="landing-page">
     <text class="eyebrow">Authenticated App</text>
     <text class="title">XLink Technician</text>
     <text class="subtitle">Welcome{{ session.session?.user.displayName ? `, ${session.session.user.displayName}` : '' }}.</text>
@@ -75,6 +80,7 @@ async function submit(): Promise<void> {
 
 <style>
 .login-page,
+.loading-page,
 .landing-page {
   align-items: center;
   background: #f5f7fb;
@@ -98,6 +104,10 @@ async function submit(): Promise<void> {
 }
 
 .landing-page {
+  flex-direction: column;
+}
+
+.loading-page {
   flex-direction: column;
 }
 

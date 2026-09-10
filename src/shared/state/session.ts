@@ -19,6 +19,7 @@ export const useSessionStore = defineStore('session', () => {
   const status = ref<SessionStatus>('unknown')
   const session = ref<SessionSnapshot | null>(null)
   const error = ref<OperationError | null>(null)
+  const bootstrapInProgress = ref(false)
   let authSession: AuthSessionPort | null = null
 
   function configureAuth(port: AuthSessionPort): void {
@@ -26,36 +27,53 @@ export const useSessionStore = defineStore('session', () => {
   }
 
   async function bootstrap(): Promise<OperationSnapshot<SessionSnapshot | null>> {
+    if (bootstrapInProgress.value || status.value === 'authenticating') {
+      return failure('initialization_in_progress', 'Session initialization is already in progress')
+    }
+
+    bootstrapInProgress.value = true
     error.value = null
     status.value = 'unknown'
     session.value = null
 
-    if (!authSession) {
-      const result = failure<SessionSnapshot | null>('server_terminal', 'Authentication service is not configured')
+    try {
+      if (!authSession) {
+        const result = failure<SessionSnapshot | null>('server_terminal', 'Authentication service is not configured')
+        status.value = 'error'
+        error.value = result.error ?? null
+        return result
+      }
+
+      const result = await authSession.restoreSession()
+      if (result.state === 'succeeded') {
+        session.value = result.data ?? null
+        status.value = result.data ? 'authenticated' : 'unauthenticated'
+        return result
+      }
+
+      session.value = null
+      if (result.error?.category === 'session_invalid') {
+        status.value = 'unauthenticated'
+        error.value = result.error
+      } else {
+        status.value = 'error'
+        error.value = result.error ?? null
+      }
+      return result
+    } catch {
+      const result = failure<SessionSnapshot | null>('network_retryable', 'Session bootstrap failed')
       status.value = 'error'
       error.value = result.error ?? null
       return result
+    } finally {
+      bootstrapInProgress.value = false
     }
-
-    const result = await authSession.restoreSession()
-    if (result.state === 'succeeded') {
-      session.value = result.data ?? null
-      status.value = result.data ? 'authenticated' : 'unauthenticated'
-      return result
-    }
-
-    session.value = null
-    if (result.error?.category === 'session_invalid') {
-      status.value = 'unauthenticated'
-      error.value = result.error
-    } else {
-      status.value = 'error'
-      error.value = result.error ?? null
-    }
-    return result
   }
 
   async function login(request: AuthStartRequest): Promise<OperationSnapshot<SessionSnapshot>> {
+    if (bootstrapInProgress.value || status.value === 'unknown') {
+      return failure('initialization_in_progress', 'Session bootstrap is still in progress')
+    }
     if (status.value === 'authenticating') return failure('validation', 'Login is already in progress')
     if (!authSession) return failure('server_terminal', 'Authentication service is not configured')
     if (request.phoneNumber.trim().length === 0) return failure('validation', 'Phone number is required')
@@ -106,6 +124,7 @@ export const useSessionStore = defineStore('session', () => {
 
   return {
     status,
+    bootstrapInProgress,
     session,
     error,
     configureAuth,

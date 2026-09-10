@@ -6,6 +6,7 @@ export type OperationState =
   | 'failed_terminal'
 
 export type ErrorCategory =
+  | 'initialization_in_progress'
   | 'session_invalid'
   | 'authorization_denied'
   | 'validation'
