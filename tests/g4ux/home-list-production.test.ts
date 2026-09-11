@@ -65,4 +65,12 @@ describe('G4-UX Phase B2 Work Order List', () => {
     expect(listTemplate).toContain(':url="workOrderDetailRouteFor(item.id)"')
     expect(listPage).toContain('session.status')
   })
+
+  it('uses an inset R2-style list hierarchy without duplicating native back navigation', () => {
+    expect(listTemplate).toContain('class="list-heading-row"')
+    expect(listTemplate).toContain('class="list-heading-copy"')
+    expect(listTemplate).toContain('class="refresh-button"')
+    expect(listTemplate).toContain('class="work-order-row"')
+    expect(listTemplate).not.toContain('‹ 返回首页')
+  })
 })

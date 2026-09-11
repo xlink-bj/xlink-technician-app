@@ -8,17 +8,15 @@
 
   <view v-else class="work-orders-page">
     <view class="list-shell">
-      <view class="list-topbar">
-        <navigator class="back-link" url="/pages/index/index">‹ 返回首页</navigator>
+      <view class="list-heading-row">
+        <view class="list-heading-copy">
+          <text class="page-kicker">工作台</text>
+          <text class="page-title">工单</text>
+          <text class="page-subtitle">查看当前范围内可见的工单信息</text>
+        </view>
         <button class="refresh-button" :disabled="isLoading" @tap="refresh">
           {{ isLoading ? '刷新中' : '刷新' }}
         </button>
-      </view>
-
-      <view class="list-heading">
-        <text class="page-kicker">工作台</text>
-        <text class="page-title">工单</text>
-        <text class="page-subtitle">查看当前范围内可见的工单信息</text>
       </view>
 
       <view v-if="workOrders.loadState === 'loading'" class="list-state loading-state">
@@ -120,26 +118,32 @@ async function loadMore(): Promise<void> {
 <style>
 .work-orders-page,
 .guard-page {
-  background:
-    radial-gradient(circle at 100% 0%, rgba(55, 132, 255, 0.16), transparent 36%),
-    #f6f8fc;
+  background: #f5f7fb;
   box-sizing: border-box;
   min-height: 100vh;
-  padding: 44rpx 32rpx calc(48rpx + constant(safe-area-inset-bottom));
+  padding: 28rpx 24rpx calc(48rpx + constant(safe-area-inset-bottom));
   padding-bottom: calc(48rpx + env(safe-area-inset-bottom));
   width: 100%;
 }
 
 .list-shell {
   margin: 0 auto;
-  max-width: 680rpx;
+  max-width: none;
 }
 
-.list-topbar {
+.list-heading-row {
   align-items: center;
   display: flex;
+  gap: 20rpx;
   justify-content: space-between;
-  min-height: 72rpx;
+  padding: 8rpx 8rpx 28rpx;
+}
+
+.list-heading-copy {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
 }
 
 .back-link {
@@ -151,26 +155,20 @@ async function loadMore(): Promise<void> {
 }
 
 .refresh-button {
-  background: rgba(255, 255, 255, 0.76);
-  border: 1rpx solid #d4e1f6;
-  border-radius: 999rpx;
+  background: #ffffff;
+  border: 1rpx solid #d9e2f1;
+  border-radius: 16rpx;
   color: #286bd5;
   font-size: 24rpx;
   font-weight: 800;
   line-height: 1;
   margin: 0;
-  min-height: 68rpx;
-  padding: 0 24rpx;
+  min-height: 64rpx;
+  padding: 0 20rpx;
 }
 
 .refresh-button[disabled] {
   opacity: 0.55;
-}
-
-.list-heading {
-  display: flex;
-  flex-direction: column;
-  padding: 48rpx 8rpx 32rpx;
 }
 
 .page-kicker,
@@ -183,7 +181,7 @@ async function loadMore(): Promise<void> {
 
 .page-title {
   color: #12203a;
-  font-size: 58rpx;
+  font-size: 52rpx;
   font-weight: 900;
   letter-spacing: -1rpx;
   line-height: 1.2;
@@ -211,7 +209,7 @@ async function loadMore(): Promise<void> {
   border-radius: 28rpx;
   box-sizing: border-box;
   justify-content: center;
-  min-height: 520rpx;
+  min-height: 420rpx;
   padding: 48rpx 36rpx;
   text-align: center;
 }
@@ -225,8 +223,9 @@ async function loadMore(): Promise<void> {
 
 .skeleton-row {
   align-items: center;
-  background: #f1f5fb;
-  border-radius: 22rpx;
+  background: #f7f9fc;
+  border: 1rpx solid #edf1f7;
+  border-radius: 20rpx;
   display: flex;
   gap: 20rpx;
   min-height: 128rpx;
@@ -314,20 +313,20 @@ async function loadMore(): Promise<void> {
 
 .state-action {
   background: #1769df;
-  border-radius: 18rpx;
+  border-radius: 16rpx;
   color: #ffffff;
   font-size: 28rpx;
   font-weight: 800;
   line-height: 1;
   margin: 28rpx 0 0;
-  min-height: 88rpx;
+  min-height: 80rpx;
   padding: 0 36rpx;
 }
 
 .content-caption {
   display: flex;
   flex-direction: column;
-  padding: 8rpx 8rpx 20rpx;
+  padding: 8rpx 4rpx 20rpx;
 }
 
 .content-note {
@@ -337,29 +336,30 @@ async function loadMore(): Promise<void> {
 
 .work-order-row {
   align-items: center;
-  background: rgba(255, 255, 255, 0.95);
+  background: #ffffff;
   border: 1rpx solid #e0e8f5;
-  border-radius: 24rpx;
-  box-shadow: 0 14rpx 30rpx rgba(35, 75, 128, 0.07);
+  border-left: 6rpx solid #3277ed;
+  border-radius: 28rpx;
+  box-shadow: 0 12rpx 32rpx rgba(35, 75, 128, 0.08);
   box-sizing: border-box;
   display: flex;
-  gap: 20rpx;
-  margin-bottom: 20rpx;
-  min-height: 128rpx;
-  padding: 24rpx;
+  gap: 24rpx;
+  margin-bottom: 16rpx;
+  min-height: 144rpx;
+  padding: 24rpx 20rpx;
   width: 100%;
 }
 
 .row-leading {
   align-items: center;
-  background: #eaf2ff;
+  background: linear-gradient(145deg, #5a93ff, #286bd5);
   border-radius: 18rpx;
-  color: #1769df;
+  color: #ffffff;
   display: flex;
-  flex: 0 0 68rpx;
-  font-size: 30rpx;
+  flex: 0 0 72rpx;
+  font-size: 28rpx;
   font-weight: 900;
-  height: 68rpx;
+  height: 72rpx;
   justify-content: center;
 }
 
@@ -389,7 +389,7 @@ async function loadMore(): Promise<void> {
 .row-arrow {
   color: #7d9ed3;
   flex: 0 0 auto;
-  font-size: 48rpx;
+  font-size: 44rpx;
   font-weight: 300;
   line-height: 1;
 }
