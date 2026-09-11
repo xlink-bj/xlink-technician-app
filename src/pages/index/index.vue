@@ -5,21 +5,27 @@
     <text class="subtitle">Checking for an existing session…</text>
   </view>
   <view v-else-if="showHome" class="home-page">
-    <view class="home-header">
-      <view class="home-brand" @tap="handleHomeBrandTap">
-        <text class="home-brand-name">修链</text>
-        <text class="home-brand-tagline">屋顶维修</text>
+    <view class="home-hero">
+      <view class="home-hero-circles" aria-hidden="true">
+        <view class="home-hero-circle home-hero-circle-large" />
+        <view class="home-hero-circle home-hero-circle-small" />
       </view>
-      <text class="home-greeting">{{ homeGreeting }}</text>
-      <text class="home-subtitle">从当前可见的工单开始今天的工作</text>
+      <view class="home-hero-inner">
+        <view class="home-brand" @tap="handleHomeBrandTap">
+          <text class="home-brand-name">修链</text>
+          <text class="home-brand-tagline">屋顶维修</text>
+        </view>
+        <text class="home-greeting">{{ homeGreeting }}</text>
+        <text class="home-subtitle">从当前可见的工单开始今天的工作</text>
+      </view>
     </view>
 
     <view class="home-content">
       <view class="home-surface work-surface">
         <view class="section-heading">
-          <text class="section-kicker">工作台</text>
+          <text class="section-kicker">当前工作</text>
           <text class="section-title">工单</text>
-          <text class="section-description">查看当前范围内可见的工单信息</text>
+          <text class="section-description">查看当前角色范围内可见的工单</text>
         </view>
 
         <navigator class="work-orders-entry" :url="workOrdersRoute">
@@ -27,16 +33,11 @@
             <text>工</text>
           </view>
           <view class="entry-copy">
-            <text class="entry-title">查看工单</text>
-            <text class="entry-subtitle">进入工单列表</text>
+            <text class="entry-title">查看当前可见工单</text>
+            <text class="entry-subtitle">打开工单列表</text>
           </view>
           <text class="entry-arrow" aria-hidden="true">›</text>
         </navigator>
-      </view>
-
-      <view class="home-surface home-hint">
-        <text class="hint-title">从一张工单开始</text>
-        <text class="hint-copy">工单信息会根据当前可见范围显示。</text>
       </view>
 
       <view v-if="mockControlVisible" class="home-surface mock-developer-panel">
@@ -380,13 +381,11 @@ function userFacingLoginMessage(error: OperationError | null | undefined): strin
 }
 
 .home-page {
-  background:
-    radial-gradient(circle at 90% 0%, rgba(36, 119, 255, 0.18), transparent 42%),
-    linear-gradient(180deg, #eef5ff 0%, #f6f8fc 44%, #f6f8fc 100%);
+  background: #f5f7fb;
   box-sizing: border-box;
   display: block;
   min-height: 100vh;
-  padding: 56rpx 32rpx calc(48rpx + constant(safe-area-inset-bottom));
+  padding-bottom: calc(48rpx + constant(safe-area-inset-bottom));
   padding-bottom: calc(48rpx + env(safe-area-inset-bottom));
   width: 100%;
 }
@@ -407,15 +406,70 @@ function userFacingLoginMessage(error: OperationError | null | undefined): strin
   flex-direction: column;
 }
 
-.home-header,
 .home-content,
 .home-footer {
   margin: 0 auto;
   max-width: 680rpx;
 }
 
-.home-header {
-  padding: 20rpx 8rpx 28rpx;
+.home-hero {
+  background: linear-gradient(135deg, #0876ff 0%, #0068f4 44%, #0b84ff 100%);
+  box-sizing: border-box;
+  min-height: 400rpx;
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+}
+
+.home-hero::after {
+  background: #f5f7fb;
+  border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+  bottom: -72rpx;
+  content: '';
+  height: 112rpx;
+  left: -20%;
+  position: absolute;
+  width: 140%;
+  z-index: 1;
+}
+
+.home-hero-inner {
+  box-sizing: border-box;
+  margin: 0 auto;
+  max-width: 680rpx;
+  padding: 64rpx 48rpx 132rpx;
+  position: relative;
+  width: 100%;
+  z-index: 2;
+}
+
+.home-hero-circles {
+  bottom: 0;
+  left: 0;
+  pointer-events: none;
+  position: absolute;
+  right: 0;
+  top: 0;
+}
+
+.home-hero-circle {
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 50%;
+  position: absolute;
+}
+
+.home-hero-circle-large {
+  bottom: -8rpx;
+  height: 208rpx;
+  right: -64rpx;
+  width: 208rpx;
+}
+
+.home-hero-circle-small {
+  bottom: -22rpx;
+  height: 144rpx;
+  right: -4rpx;
+  width: 144rpx;
 }
 
 .home-brand {
@@ -506,52 +560,57 @@ function userFacingLoginMessage(error: OperationError | null | undefined): strin
 }
 
 .home-brand-name {
-  color: #1769df;
+  color: #ffffff;
   font-size: 32rpx;
   font-weight: 900;
   letter-spacing: 2rpx;
 }
 
 .home-brand-tagline {
-  color: #6f83a3;
+  color: rgba(255, 255, 255, 0.82);
   font-size: 20rpx;
   font-weight: 700;
   letter-spacing: 4rpx;
 }
 
 .home-greeting {
-  color: #12203a;
+  color: #ffffff;
   display: block;
-  font-size: 52rpx;
+  font-size: 56rpx;
   font-weight: 900;
   letter-spacing: -1rpx;
-  line-height: 1.25;
-  margin-top: 52rpx;
+  line-height: 1.2;
+  margin-top: 64rpx;
 }
 
 .home-subtitle {
-  color: #687895;
+  color: rgba(255, 255, 255, 0.84);
   display: block;
-  font-size: 28rpx;
+  font-size: 26rpx;
   line-height: 1.55;
-  margin-top: 14rpx;
+  margin-top: 16rpx;
 }
 
 .home-content {
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: 20rpx;
+  gap: 28rpx;
+  margin-top: -64rpx;
+  padding: 0 28rpx;
+  position: relative;
+  z-index: 3;
 }
 
 .home-surface {
-  background: rgba(255, 255, 255, 0.94);
-  border: 1rpx solid rgba(208, 222, 243, 0.9);
+  background: #ffffff;
+  border: 0;
   border-radius: 28rpx;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  padding: 32rpx;
-  box-shadow: 0 18rpx 42rpx rgba(28, 66, 117, 0.08);
+  padding: 40rpx 32rpx 32rpx;
+  box-shadow: 0 36rpx 100rpx rgba(28, 48, 82, 0.07);
   width: 100%;
 }
 
@@ -561,55 +620,55 @@ function userFacingLoginMessage(error: OperationError | null | undefined): strin
 }
 
 .section-kicker {
-  color: #1769df;
+  color: #1478ff;
   font-size: 24rpx;
   font-weight: 800;
   letter-spacing: 2rpx;
 }
 
 .section-title {
-  color: #15233d;
-  font-size: 44rpx;
+  color: #101827;
+  font-size: 40rpx;
   font-weight: 900;
   line-height: 1.3;
   margin-top: 8rpx;
 }
 
 .section-description {
-  color: #71809a;
+  color: #6b7485;
   font-size: 26rpx;
   line-height: 1.5;
   margin-top: 8rpx;
 }
 
 .home-surface .work-orders-entry {
-  margin-top: 28rpx;
+  margin-top: 32rpx;
 }
 
 .work-orders-entry {
   align-items: center;
-  background: linear-gradient(135deg, #1769df 0%, #2e83ff 100%);
-  border: 0;
-  border-radius: 22rpx;
+  background: #ffffff;
+  border: 2rpx solid #e8edf4;
+  border-radius: 20rpx;
   box-sizing: border-box;
   display: flex;
   gap: 20rpx;
-  min-height: 128rpx;
+  min-height: 132rpx;
   padding: 24rpx;
+  box-shadow: 0 16rpx 44rpx rgba(22, 40, 72, 0.06);
   width: 100%;
 }
 
 .entry-icon {
   align-items: center;
-  background: rgba(255, 255, 255, 0.18);
-  border: 1rpx solid rgba(255, 255, 255, 0.3);
-  border-radius: 18rpx;
-  color: #ffffff;
+  background: #eaf2ff;
+  border-radius: 20rpx;
+  color: #1478ff;
   display: flex;
-  flex: 0 0 72rpx;
+  flex: 0 0 88rpx;
   font-size: 32rpx;
   font-weight: 900;
-  height: 72rpx;
+  height: 88rpx;
   justify-content: center;
 }
 
@@ -621,41 +680,23 @@ function userFacingLoginMessage(error: OperationError | null | undefined): strin
 }
 
 .entry-title {
-  color: #ffffff;
-  font-size: 32rpx;
+  color: #101827;
+  font-size: 30rpx;
   font-weight: 900;
 }
 
 .entry-subtitle {
-  color: rgba(255, 255, 255, 0.78);
+  color: #6b7485;
   font-size: 24rpx;
   margin-top: 8rpx;
 }
 
 .entry-arrow {
-  color: #ffffff;
+  color: #a6acb8;
   flex: 0 0 auto;
   font-size: 48rpx;
   font-weight: 300;
   line-height: 1;
-}
-
-.home-hint {
-  background: rgba(255, 255, 255, 0.68);
-  box-shadow: none;
-}
-
-.hint-title {
-  color: #34445f;
-  font-size: 28rpx;
-  font-weight: 800;
-}
-
-.hint-copy {
-  color: #7b89a2;
-  font-size: 24rpx;
-  line-height: 1.5;
-  margin-top: 8rpx;
 }
 
 .home-footer {

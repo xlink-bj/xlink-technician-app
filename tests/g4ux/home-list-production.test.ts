@@ -15,7 +15,7 @@ describe('G4-UX Phase B2 Home', () => {
   it('keeps an authenticated, task-first work entry without fabricating task data', () => {
     expect(homeTemplate).toContain('class="home-page"')
     expect(homeTemplate).toContain(':url="workOrdersRoute"')
-    expect(homeTemplate).toContain('查看工单')
+    expect(homeTemplate).toContain('查看当前可见工单')
     expect(homeTemplate).toContain('从当前可见的工单开始今天的工作')
     expect(homeTemplate).not.toContain('Technician Home')
     expect(homeTemplate).not.toContain('XLink Technician')
