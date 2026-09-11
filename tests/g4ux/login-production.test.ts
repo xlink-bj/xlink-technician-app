@@ -16,6 +16,13 @@ describe('G4-UX production Login flow', () => {
     expect(stageForLoginMethod(supportedLoginMethod)).toBe('form')
   })
 
+  it('keeps the Login brand lockup text-only', () => {
+    expect(loginPage).toContain('class="brand-copy"')
+    expect(loginPage).toContain('class="brand-name">修链</text>')
+    expect(loginPage).toContain('class="brand-tagline">量顶维修</text>')
+    expect(loginPage).not.toContain('brand-mark')
+  })
+
   it('keeps unsupported R2 auth methods unavailable without a backend path', () => {
     expect(stageForLoginMethod('password')).toBeUndefined()
     expect(stageForLoginMethod('quick')).toBeUndefined()

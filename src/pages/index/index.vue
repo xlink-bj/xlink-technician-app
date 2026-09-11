@@ -24,11 +24,6 @@
   <view v-else class="login-page">
     <view v-if="loginStage === 'launch'" class="login-stage launch-stage">
       <view class="brand-lockup">
-        <view class="brand-mark" aria-hidden="true">
-          <view class="brand-mark-sun" />
-          <view class="brand-mark-roof" />
-          <view class="brand-mark-tip" />
-        </view>
         <view class="brand-copy">
           <text class="brand-name">修链</text>
           <text class="brand-tagline">量顶维修</text>
@@ -78,11 +73,6 @@
 
     <view v-else-if="loginStage === 'methods'" class="login-stage methods-stage">
       <view class="brand-lockup brand-lockup-compact">
-        <view class="brand-mark brand-mark-compact" aria-hidden="true">
-          <view class="brand-mark-sun" />
-          <view class="brand-mark-roof" />
-          <view class="brand-mark-tip" />
-        </view>
         <view class="brand-copy">
           <text class="brand-name">修链</text>
           <text class="brand-tagline">量顶维修</text>
@@ -130,11 +120,6 @@
       <button class="back-button" aria-label="返回登录方式" @tap="loginStage = 'methods'">‹</button>
 
       <view class="brand-lockup brand-lockup-compact">
-        <view class="brand-mark brand-mark-compact" aria-hidden="true">
-          <view class="brand-mark-sun" />
-          <view class="brand-mark-roof" />
-          <view class="brand-mark-tip" />
-        </view>
         <view class="brand-copy">
           <text class="brand-name">修链</text>
           <text class="brand-tagline">量顶维修</text>
@@ -358,57 +343,11 @@ function userFacingLoginMessage(error: OperationError | null | undefined): strin
 .brand-lockup {
   align-items: center;
   display: flex;
-  gap: 20rpx;
+  flex-direction: column;
 }
 
 .brand-lockup-compact {
   justify-content: center;
-  transform: scale(0.88);
-  transform-origin: center top;
-}
-
-.brand-mark {
-  height: 112rpx;
-  position: relative;
-  width: 136rpx;
-}
-
-.brand-mark-compact {
-  height: 88rpx;
-  transform: scale(0.78);
-  transform-origin: right center;
-  width: 108rpx;
-}
-
-.brand-mark-sun {
-  background: #ffca1b;
-  border-radius: 50%;
-  height: 88rpx;
-  left: 8rpx;
-  position: absolute;
-  top: 8rpx;
-  width: 88rpx;
-}
-
-.brand-mark-roof {
-  border-bottom: 20rpx solid #1f77f0;
-  border-left: 20rpx solid transparent;
-  height: 40rpx;
-  left: 40rpx;
-  position: absolute;
-  top: 48rpx;
-  transform: rotate(-45deg);
-  width: 80rpx;
-}
-
-.brand-mark-tip {
-  background: #0a46a8;
-  bottom: 20rpx;
-  height: 20rpx;
-  position: absolute;
-  right: 4rpx;
-  transform: rotate(45deg);
-  width: 20rpx;
 }
 
 .brand-copy {
