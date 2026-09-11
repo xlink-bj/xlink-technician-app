@@ -1,4 +1,4 @@
-import type { AuthSessionPort, TechnicianApiReadPort } from '@shared/ports'
+import type { AuthSessionPort, PhonePort, TechnicianApiReadPort } from '@shared/ports'
 import { createOperationError, type OperationSnapshot } from '@shared/types'
 
 import { createRoleScopedTechnicianApiReadAdapter } from '@adapters/api/technician-api'
@@ -7,6 +7,8 @@ import { createAuthSessionAdapter } from '@adapters/auth/auth-session-adapter'
 import { createUniAuthBackendDriver } from '@adapters/auth/uni-auth-backend'
 import { createSemanticStorageAdapter } from '@adapters/storage/storage-adapter'
 import { createUniStorageDriver } from '@adapters/storage/uni-storage-driver'
+import { createPlatformAdapters } from '@adapters/platform/platform-adapters'
+import { createUniPhoneDriver } from '@adapters/platform/uni-phone-driver'
 
 import { loadApplicationRuntimeConfig } from './runtime-config'
 
@@ -62,4 +64,8 @@ export function createDefaultTechnicianApiReadPort(authSession: AuthSessionPort)
     transport,
     () => authSession.getCurrentSession()?.currentRole?.id ?? null,
   )
+}
+
+export function createDefaultPhonePort(): PhonePort {
+  return createPlatformAdapters({ phone: createUniPhoneDriver() }).phone
 }

@@ -40,10 +40,15 @@
     </view>
 
     <view v-else-if="workOrders.loadState === 'succeeded'" class="list-content">
-      <view v-for="item in workOrders.items" :key="String(item.id)" class="work-order-row">
+      <navigator
+        v-for="item in workOrders.items"
+        :key="String(item.id)"
+        class="work-order-row"
+        :url="workOrderDetailRouteFor(item.id)"
+      >
         <text class="row-title">{{ item.title ?? 'Untitled work order' }}</text>
-        <text class="row-note">Details become available in G4-C.</text>
-      </view>
+        <text class="row-note">Open Work Order detail</text>
+      </navigator>
       <button v-if="workOrders.hasMore === true" class="retry" @tap="loadMore">Load more</button>
     </view>
 
@@ -57,6 +62,7 @@
 import { computed, watch } from 'vue'
 
 import { hasAuthenticatedSession } from '@features/home/access'
+import { workOrderDetailRouteFor } from '@features/work-orders/detail'
 import { useWorkOrderListStore } from '@features/work-orders/list'
 import { useSessionStore } from '@shared/state'
 

@@ -1,4 +1,5 @@
 import type {
+  CustomerContactId,
   FormDataId,
   FormDefinitionId,
   WorkOrderId,
@@ -25,9 +26,20 @@ export interface WorkOrderSummary {
   readonly title?: string
 }
 
+/** Semantic customer-contact data kept in the in-memory detail model only. */
+export interface WorkOrderContact {
+  readonly contactRef?: CustomerContactId
+  readonly normalizedPhone?: string
+  readonly displayMask?: string
+}
+
 export interface WorkOrderDetail {
   readonly id: WorkOrderId
   readonly workflowRunId?: WorkflowRunId
+  readonly displayNumber?: string
+  readonly customerName?: string
+  readonly serviceAddress?: string
+  readonly contact?: WorkOrderContact
 }
 
 export interface WorkflowDefinitionRead {
