@@ -1,6 +1,6 @@
 # G4-UX Beta Read Plan
 
-Status: Plan only. No Beta call was executed in Phase A because no approved non-production configuration/credentials were supplied through an approved local mechanism.
+Status: PARTIAL. Beta Login, the authenticated Home shell, and the role-visible Work Order List read path have been verified. Work Order Detail and Customer Contact remain unverified.
 
 ## UX reference and gate priority
 
@@ -70,8 +70,17 @@ Forbidden:
 4. If the mismatch is a business fact, run the smallest read-only evidence check under the owning G4 issue.
 5. If it is target/device-only, record it for G5 unless it blocks the MP G4-UX gate. If it requires a new write or native capability, stop and open the appropriate guarded slice.
 
+## Beta observation (sanitized)
+
+- Login: VERIFIED.
+- Authenticated Home shell: VERIFIED as the current temporary engineering shell.
+- Role-visible Work Order List: VERIFIED — `SANODE` mode, `EMPTY` result, zero normalized rows.
+- Work Order Detail: NOT YET VERIFIED.
+- Customer Contact: NOT YET VERIFIED.
+- The list request reached the accepted role-scope and SANode read path with successful callbacks; no raw response, identifier, or customer data was retained.
+
+`LIVE_BETA_G4_UX_READ = PARTIAL`
+
 ## Exit evidence
 
 The read plan is complete when each checkpoint has a sanitized observation or an explicit `NOT_RUN / CREDENTIAL_REQUIRED` result, the role-visible list meaning is documented, no raw data is retained, and all remaining UNKNOWNs have an owner gate. Phase A can be accepted without Beta execution; the missing Beta evidence must remain visible rather than being represented as a successful observation.
-
-Current status: `LIVE_BETA_G4_UX_READ = NOT_RUN / CREDENTIAL_REQUIRED`.

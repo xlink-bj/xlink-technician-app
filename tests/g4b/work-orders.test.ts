@@ -390,11 +390,13 @@ describe('G4-B uni read composition boundary', () => {
       url: 'https://beta.example.invalid/fsgo/wm/basic/serviceAppointment/query',
       method: 'POST',
       data: 'page=1&rows=20',
+      dataType: 'json',
       header: {
         'Content-Type': 'application/x-www-form-urlencoded',
         Cookie: 'JSESSIONID=sanitized-session-token',
       },
     })
+    expect(requests[0]).not.toHaveProperty('responseType')
   })
 
   it('does not execute an API request without a session reference', async () => {

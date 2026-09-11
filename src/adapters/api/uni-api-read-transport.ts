@@ -90,7 +90,6 @@ export function createUniApiReadTransport(options: UniApiReadTransportOptions): 
           ...(input.method === 'POST' ? { data: formEncode(input.body ?? {}) } : {}),
           header,
           dataType: 'json',
-          responseType: 'json',
           ...(options.timeoutMs === undefined ? {} : { timeout: options.timeoutMs }),
         })
       } catch (error) {
