@@ -15,7 +15,12 @@ function endpointUrl(baseUrl: string, path: string): string {
 
 function formEncode(body: Readonly<Record<string, string>>): string {
   return Object.entries(body)
-    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
+    .map(([key, value]) => {
+      // AuthSessionAdapter keeps tenant semantic inside the adapter boundary;
+      // R1's phoneLogin endpoint names the actual wire field tenantId.
+      const wireKey = key === 'tenant' ? 'tenantId' : key
+      return `${encodeURIComponent(wireKey)}=${encodeURIComponent(value)}`
+    })
     .join('&')
 }
 
@@ -56,7 +61,9 @@ export function createUniAuthBackendDriver(options: UniAuthBackendOptions): Auth
         data: formEncode(input.body),
         header: { 'Content-Type': 'application/x-www-form-urlencoded' },
         dataType: 'json',
-        responseType: 'json',
+        // Match the established MP request behavior in R1. dataType performs
+        // JSON decoding while responseType remains text across MP runtimes.
+        responseType: 'text',
         ...(options.timeoutMs === undefined ? {} : { timeout: options.timeoutMs }),
       })
     } catch (error) {

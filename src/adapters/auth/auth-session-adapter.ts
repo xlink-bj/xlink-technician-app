@@ -41,6 +41,16 @@ export class AuthTransportError extends Error {
 
 const sessionStorageKey = { namespace: 'session', key: 'current' } as const
 
+function decodeAuthResponse(raw: unknown): unknown {
+  if (typeof raw !== 'string') return raw
+
+  try {
+    return JSON.parse(raw) as unknown
+  } catch {
+    throw new Error('Authentication response is not valid JSON')
+  }
+}
+
 function authFailure(error: unknown, fallback: string): OperationSnapshot<never> {
   return adapterFailure(
     error instanceof AuthTransportError && error.retryable ? 'network_retryable' : 'server_terminal',
@@ -49,7 +59,7 @@ function authFailure(error: unknown, fallback: string): OperationSnapshot<never>
 }
 
 function sessionFromBackend(raw: unknown): SessionSnapshot {
-  const envelope = asRecord(raw, 'auth response')
+  const envelope = asRecord(decodeAuthResponse(raw), 'auth response')
   const data = nestedRecord(envelope, ['data', 'entity']) ?? envelope
   const user = nestedRecord(data, ['user', 'person']) ?? data
   const sessionToken = requiredString(data, ['token', 'sessionRef', 'sessionId'], 'session reference')
