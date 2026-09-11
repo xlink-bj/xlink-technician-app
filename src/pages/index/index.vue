@@ -26,7 +26,7 @@
       <view class="brand-lockup">
         <view class="brand-copy">
           <text class="brand-name">修链</text>
-          <text class="brand-tagline">量顶维修</text>
+          <text class="brand-tagline">屋顶维修</text>
         </view>
       </view>
 
@@ -75,7 +75,7 @@
       <view class="brand-lockup brand-lockup-compact">
         <view class="brand-copy">
           <text class="brand-name">修链</text>
-          <text class="brand-tagline">量顶维修</text>
+          <text class="brand-tagline">屋顶维修</text>
         </view>
       </view>
 
@@ -122,7 +122,7 @@
       <view class="brand-lockup brand-lockup-compact">
         <view class="brand-copy">
           <text class="brand-name">修链</text>
-          <text class="brand-tagline">量顶维修</text>
+          <text class="brand-tagline">屋顶维修</text>
         </view>
       </view>
 
