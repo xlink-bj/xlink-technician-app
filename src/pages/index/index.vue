@@ -22,10 +22,15 @@
 
     <view class="home-content">
       <view class="home-surface work-surface">
-        <view class="section-heading">
-          <text class="section-kicker">当前工作</text>
-          <text class="section-title">工单</text>
-          <text class="section-description">查看当前角色范围内可见的工单</text>
+        <view class="section-heading-row">
+          <view class="section-heading-copy">
+            <text class="section-title">今日任务</text>
+            <text class="section-description">优先处理会影响履约节奏的事项</text>
+          </view>
+          <navigator class="section-link" :url="workOrdersRoute">
+            <text>全部任务</text>
+            <text class="section-link-arrow" aria-hidden="true">›</text>
+          </navigator>
         </view>
 
         <navigator class="work-orders-entry" :url="workOrdersRoute">
@@ -408,14 +413,15 @@ function userFacingLoginMessage(error: OperationError | null | undefined): strin
 
 .home-content,
 .home-footer {
-  margin: 0 auto;
-  max-width: 680rpx;
+  margin: 0;
+  max-width: none;
+  width: 100%;
 }
 
 .home-hero {
   background: linear-gradient(135deg, #0876ff 0%, #0068f4 44%, #0b84ff 100%);
   box-sizing: border-box;
-  min-height: 400rpx;
+  min-height: 468rpx;
   overflow: hidden;
   position: relative;
   width: 100%;
@@ -436,8 +442,8 @@ function userFacingLoginMessage(error: OperationError | null | undefined): strin
 .home-hero-inner {
   box-sizing: border-box;
   margin: 0 auto;
-  max-width: 680rpx;
-  padding: 64rpx 48rpx 132rpx;
+  max-width: none;
+  padding: 56rpx 32rpx 164rpx;
   position: relative;
   width: 100%;
   z-index: 2;
@@ -459,17 +465,17 @@ function userFacingLoginMessage(error: OperationError | null | undefined): strin
 }
 
 .home-hero-circle-large {
-  bottom: -8rpx;
-  height: 208rpx;
-  right: -64rpx;
-  width: 208rpx;
+  bottom: -20rpx;
+  height: 300rpx;
+  right: -116rpx;
+  width: 300rpx;
 }
 
 .home-hero-circle-small {
-  bottom: -22rpx;
-  height: 144rpx;
+  bottom: -48rpx;
+  height: 216rpx;
   right: -4rpx;
-  width: 144rpx;
+  width: 216rpx;
 }
 
 .home-brand {
@@ -596,8 +602,8 @@ function userFacingLoginMessage(error: OperationError | null | undefined): strin
   display: flex;
   flex-direction: column;
   gap: 28rpx;
-  margin-top: -64rpx;
-  padding: 0 28rpx;
+  margin-top: -32rpx;
+  padding: 0 24rpx;
   position: relative;
   z-index: 3;
 }
@@ -609,40 +615,58 @@ function userFacingLoginMessage(error: OperationError | null | undefined): strin
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  padding: 40rpx 32rpx 32rpx;
+  padding: 32rpx 24rpx 24rpx;
   box-shadow: 0 36rpx 100rpx rgba(28, 48, 82, 0.07);
   width: 100%;
 }
 
-.section-heading {
+.section-heading-row {
+  align-items: flex-start;
   display: flex;
-  flex-direction: column;
+  gap: 16rpx;
+  justify-content: space-between;
 }
 
-.section-kicker {
-  color: #1478ff;
-  font-size: 24rpx;
-  font-weight: 800;
-  letter-spacing: 2rpx;
+.section-heading-copy {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
 }
 
 .section-title {
   color: #101827;
-  font-size: 40rpx;
+  font-size: 36rpx;
   font-weight: 900;
   line-height: 1.3;
-  margin-top: 8rpx;
 }
 
 .section-description {
   color: #6b7485;
-  font-size: 26rpx;
+  font-size: 24rpx;
   line-height: 1.5;
   margin-top: 8rpx;
 }
 
+.section-link {
+  align-items: center;
+  color: #697589;
+  display: flex;
+  flex: 0 0 auto;
+  font-size: 24rpx;
+  gap: 4rpx;
+  line-height: 1.5;
+  padding-top: 4rpx;
+}
+
+.section-link-arrow {
+  color: #9aa5b5;
+  font-size: 32rpx;
+  line-height: 1;
+}
+
 .home-surface .work-orders-entry {
-  margin-top: 32rpx;
+  margin-top: 28rpx;
 }
 
 .work-orders-entry {
@@ -653,22 +677,22 @@ function userFacingLoginMessage(error: OperationError | null | undefined): strin
   box-sizing: border-box;
   display: flex;
   gap: 20rpx;
-  min-height: 132rpx;
-  padding: 24rpx;
-  box-shadow: 0 16rpx 44rpx rgba(22, 40, 72, 0.06);
+  min-height: 140rpx;
+  padding: 20rpx;
+  box-shadow: none;
   width: 100%;
 }
 
 .entry-icon {
   align-items: center;
-  background: #eaf2ff;
+  background: linear-gradient(145deg, #1478ff 0%, #3a8cff 100%);
   border-radius: 20rpx;
-  color: #1478ff;
+  color: #ffffff;
   display: flex;
-  flex: 0 0 88rpx;
+  flex: 0 0 84rpx;
   font-size: 32rpx;
   font-weight: 900;
-  height: 88rpx;
+  height: 84rpx;
   justify-content: center;
 }
 
@@ -700,7 +724,7 @@ function userFacingLoginMessage(error: OperationError | null | undefined): strin
 }
 
 .home-footer {
-  padding: 32rpx 8rpx 0;
+  padding: 44rpx 24rpx 0;
   text-align: center;
 }
 
@@ -1217,11 +1241,19 @@ function userFacingLoginMessage(error: OperationError | null | undefined): strin
 }
 
 .secondary {
-  background: #ffffff;
-  border: 1rpx solid #d0d5dd;
-  border-radius: 12rpx;
-  color: #344054;
-  font-size: 30rpx;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  color: #7a879a;
+  display: inline-flex;
+  font-size: 24rpx;
+  line-height: 72rpx;
+  min-height: 72rpx;
+  padding: 0 20rpx;
+}
+
+.secondary::after {
+  border: 0;
 }
 
 .secondary[disabled] {
