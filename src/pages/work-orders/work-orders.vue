@@ -10,13 +10,9 @@
     <view class="list-shell">
       <view class="list-heading-row">
         <view class="list-heading-copy">
-          <text class="page-kicker">工作台</text>
           <text class="page-title">工单</text>
-          <text class="page-subtitle">查看当前范围内可见的工单信息</text>
+          <text class="page-subtitle">当前范围内可查看的工单</text>
         </view>
-        <button class="refresh-button" :disabled="isLoading" @tap="refresh">
-          {{ isLoading ? '刷新中' : '刷新' }}
-        </button>
       </view>
 
       <view v-if="workOrders.loadState === 'loading'" class="list-state loading-state">
@@ -44,15 +40,17 @@
 
       <view v-else-if="workOrders.loadState === 'succeeded' && workOrders.items.length === 0" class="list-state empty-state">
         <view class="state-icon state-icon-empty" aria-hidden="true">—</view>
-        <text class="state-title">当前范围暂无工单</text>
-        <text class="state-detail">暂时没有可查看的工单，可以刷新后再试。</text>
+        <text class="state-title">当前暂无工单</text>
+        <text class="state-detail">当前范围内暂时没有可处理的工单，可稍后刷新再试。</text>
         <button class="state-action" @tap="refresh">刷新工单</button>
       </view>
 
       <view v-else-if="workOrders.loadState === 'succeeded'" class="list-content">
         <view class="content-caption">
-          <text class="content-title">可见工单</text>
-          <text class="content-note">选择一项查看详情</text>
+          <text class="content-title">工单列表</text>
+          <button class="content-refresh" :disabled="isLoading" @tap="refresh">
+            {{ isLoading ? '刷新中' : '刷新' }}
+          </button>
         </view>
 
         <navigator
@@ -132,16 +130,13 @@ async function loadMore(): Promise<void> {
 }
 
 .list-heading-row {
-  align-items: center;
+  align-items: flex-start;
   display: flex;
-  gap: 20rpx;
-  justify-content: space-between;
-  padding: 8rpx 8rpx 28rpx;
+  padding: 12rpx 8rpx 30rpx;
 }
 
 .list-heading-copy {
   display: flex;
-  flex: 1;
   flex-direction: column;
   min-width: 0;
 }
@@ -154,46 +149,43 @@ async function loadMore(): Promise<void> {
   padding: 16rpx 0;
 }
 
-.refresh-button {
-  background: #ffffff;
-  border: 1rpx solid #d9e2f1;
-  border-radius: 16rpx;
+.content-refresh {
+  background: transparent;
+  border: 0;
+  border-radius: 12rpx;
   color: #286bd5;
-  font-size: 24rpx;
+  font-size: 23rpx;
   font-weight: 800;
   line-height: 1;
   margin: 0;
-  min-height: 64rpx;
-  padding: 0 20rpx;
+  min-height: 56rpx;
+  padding: 0 12rpx;
 }
 
-.refresh-button[disabled] {
+.content-refresh[disabled] {
   opacity: 0.55;
 }
 
-.page-kicker,
 .content-title {
-  color: #1769df;
-  font-size: 24rpx;
-  font-weight: 800;
-  letter-spacing: 2rpx;
+  color: #1b2942;
+  font-size: 30rpx;
+  font-weight: 900;
+  line-height: 1.4;
 }
 
 .page-title {
   color: #12203a;
-  font-size: 52rpx;
+  font-size: 48rpx;
   font-weight: 900;
-  letter-spacing: -1rpx;
+  letter-spacing: -0.5rpx;
   line-height: 1.2;
-  margin-top: 8rpx;
 }
 
-.page-subtitle,
-.content-note {
+.page-subtitle {
   color: #71809a;
-  font-size: 27rpx;
-  line-height: 1.55;
-  margin-top: 12rpx;
+  font-size: 25rpx;
+  line-height: 1.5;
+  margin-top: 10rpx;
 }
 
 .list-state,
@@ -324,29 +316,25 @@ async function loadMore(): Promise<void> {
 }
 
 .content-caption {
+  align-items: center;
   display: flex;
-  flex-direction: column;
-  padding: 8rpx 4rpx 20rpx;
-}
-
-.content-note {
-  font-size: 24rpx;
-  margin-top: 6rpx;
+  justify-content: space-between;
+  padding: 0 4rpx 16rpx;
 }
 
 .work-order-row {
   align-items: center;
   background: #ffffff;
   border: 1rpx solid #e0e8f5;
-  border-left: 6rpx solid #3277ed;
+  border-left: 5rpx solid #3277ed;
   border-radius: 28rpx;
   box-shadow: 0 12rpx 32rpx rgba(35, 75, 128, 0.08);
   box-sizing: border-box;
   display: flex;
-  gap: 24rpx;
-  margin-bottom: 16rpx;
-  min-height: 144rpx;
-  padding: 24rpx 20rpx;
+  gap: 22rpx;
+  margin-bottom: 18rpx;
+  min-height: 152rpx;
+  padding: 26rpx 20rpx;
   width: 100%;
 }
 
@@ -356,10 +344,10 @@ async function loadMore(): Promise<void> {
   border-radius: 18rpx;
   color: #ffffff;
   display: flex;
-  flex: 0 0 72rpx;
-  font-size: 28rpx;
+  flex: 0 0 76rpx;
+  font-size: 29rpx;
   font-weight: 900;
-  height: 72rpx;
+  height: 76rpx;
   justify-content: center;
 }
 
@@ -383,7 +371,7 @@ async function loadMore(): Promise<void> {
 .row-note {
   color: #8a98ae;
   font-size: 24rpx;
-  margin-top: 8rpx;
+  margin-top: 10rpx;
 }
 
 .row-arrow {

@@ -42,12 +42,16 @@ describe('G4-UX Phase B2 Home', () => {
 
 describe('G4-UX Phase B2 Work Order List', () => {
   it('uses production Chinese copy and preserves the single semantic list', () => {
-    expect(listTemplate).toContain('查看当前范围内可见的工单信息')
-    expect(listTemplate).toContain('当前范围暂无工单')
+    expect(listTemplate).toContain('当前范围内可查看的工单')
+    expect(listTemplate).toContain('当前暂无工单')
+    expect(listTemplate).toContain('当前范围内暂时没有可处理的工单，可稍后刷新再试。')
     expect(listTemplate).toContain('正在加载工单')
     expect(listTemplate).toContain('重新加载')
     expect(listTemplate).toContain('工单加载失败')
     expect(listTemplate).toContain('刷新工单')
+    expect(listTemplate).not.toContain('工作台')
+    expect(listTemplate).not.toContain('选择一项查看详情')
+    expect(listTemplate).not.toContain('查看当前范围内可见的工单信息')
     expect(listTemplate).not.toContain('Role-visible Work Orders')
     expect(listTemplate).not.toContain('Default list for the current role')
     expect(listTemplate).not.toMatch(/\b(tabs?|counts?|filters?|sort(?:ing)?)\b/i)
@@ -69,7 +73,7 @@ describe('G4-UX Phase B2 Work Order List', () => {
   it('uses an inset R2-style list hierarchy without duplicating native back navigation', () => {
     expect(listTemplate).toContain('class="list-heading-row"')
     expect(listTemplate).toContain('class="list-heading-copy"')
-    expect(listTemplate).toContain('class="refresh-button"')
+    expect(listTemplate).toContain('class="content-refresh"')
     expect(listTemplate).toContain('class="work-order-row"')
     expect(listTemplate).not.toContain('‹ 返回首页')
   })
