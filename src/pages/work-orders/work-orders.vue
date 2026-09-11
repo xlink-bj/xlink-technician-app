@@ -10,8 +10,8 @@
     <view class="list-header">
       <view class="header-copy">
         <text class="eyebrow">Technician Home</text>
-        <text class="title">My Work Orders</text>
-        <text class="subtitle">Assigned work orders</text>
+        <text class="title">Role-visible Work Orders</text>
+        <text class="subtitle">Default list for the current role</text>
       </view>
       <button class="refresh" :disabled="isLoading" @tap="refresh">
         {{ isLoading ? 'Loading…' : 'Refresh' }}

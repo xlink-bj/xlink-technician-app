@@ -1,7 +1,7 @@
 import type { AuthSessionPort, TechnicianApiReadPort } from '@shared/ports'
 import { createOperationError, type OperationSnapshot } from '@shared/types'
 
-import { createTechnicianApiReadAdapter } from '@adapters/api/technician-api'
+import { createRoleScopedTechnicianApiReadAdapter } from '@adapters/api/technician-api'
 import { createUniApiReadTransport } from '@adapters/api/uni-api-read-transport'
 import { createAuthSessionAdapter } from '@adapters/auth/auth-session-adapter'
 import { createUniAuthBackendDriver } from '@adapters/auth/uni-auth-backend'
@@ -53,10 +53,13 @@ export function createDefaultTechnicianApiReadPort(authSession: AuthSessionPort)
     }
   }
 
-  return createTechnicianApiReadAdapter(
-    createUniApiReadTransport({
-      apiBaseUrl: config.value.environment.apiBaseUrl,
-      getSessionRef: () => authSession.getCurrentSession()?.sessionRef ?? null,
-    }),
+  const transport = createUniApiReadTransport({
+    apiBaseUrl: config.value.environment.apiBaseUrl,
+    getSessionRef: () => authSession.getCurrentSession()?.sessionRef ?? null,
+  })
+
+  return createRoleScopedTechnicianApiReadAdapter(
+    transport,
+    () => authSession.getCurrentSession()?.currentRole?.id ?? null,
   )
 }

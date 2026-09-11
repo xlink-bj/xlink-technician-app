@@ -16,6 +16,7 @@ import type {
   FormDataId,
   FormDefinitionId,
   OperationSnapshot,
+  RoleId,
   WorkOrderId,
   WorkflowDefinitionId,
   WorkflowNodeRuntimeId,
@@ -55,6 +56,16 @@ export interface ApiReadRequest {
 
 export interface ApiReadTransport {
   execute(request: ApiReadRequest): Promise<unknown>
+}
+
+interface AdapterWorkOrderListScope {
+  readonly mode: 'service-appointment' | 'workflow-node'
+  readonly statusFilter?: string
+  readonly workflowStateFilter?: string
+}
+
+interface WorkOrderListScopeResolver {
+  resolve(): Promise<AdapterWorkOrderListScope>
 }
 
 export class ApiReadTransportError extends Error {
@@ -179,12 +190,162 @@ function codeOption(raw: unknown): CodeOptionRead {
   }
 }
 
-export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
-  constructor(private readonly transport: ApiReadTransport) {}
+function decodeQueryPart(value: string): string {
+  return decodeURIComponent(value.replace(/\+/g, ' '))
+}
 
-  private async read<T>(request: ApiReadRequest, map: (raw: unknown) => T): Promise<OperationSnapshot<T>> {
+function actionQueryValue(action: string, key: string): string | undefined {
+  const query = action.split('?')[1]?.split('#')[0]
+  if (!query) return undefined
+
+  for (const pair of query.split('&')) {
+    if (pair.length === 0) continue
+    const [rawKey, ...rawValue] = pair.split('=')
+    if (decodeQueryPart(rawKey) !== key) continue
+    const value = decodeQueryPart(rawValue.join('='))
+    return value.length > 0 ? value : undefined
+  }
+
+  return undefined
+}
+
+function collectLeafFunctions(items: readonly unknown[], output: AdapterRecord[]): void {
+  for (const item of items) {
+    const record = asRecord(item, 'role function')
+    const children = record.functionList
+    if (Array.isArray(children) && children.length > 0) {
+      collectLeafFunctions(children, output)
+    } else {
+      output.push(record)
+    }
+  }
+}
+
+function roleFunctionList(raw: unknown): readonly AdapterRecord[] {
+  const envelope = asRecord(raw, 'role function response')
+  const payload = nestedRecord(envelope, ['data', 'entity']) ?? envelope
+  const roots = nestedValue(payload, ['functionList'])
+  if (!Array.isArray(roots)) {
+    throw new AdapterMappingError('role function response function list is missing')
+  }
+
+  const leaves: AdapterRecord[] = []
+  collectLeafFunctions(roots, leaves)
+  return leaves
+}
+
+function roleVisibleWorkOrderScope(raw: unknown): AdapterWorkOrderListScope {
+  const candidates = roleFunctionList(raw)
+    .map((record) => {
+      const action = optionalString(record, ['action'])
+      const extensions = optionalRecord(record.exts)
+      if (
+        extensions?.tabDisplay !== '1' ||
+        !action ||
+        !action.includes('/serviceAppointment/serviceAppointments')
+      ) {
+        return undefined
+      }
+
+      const orderValue = optionalNonNegativeInteger(record, ['order']) ?? Number.MAX_SAFE_INTEGER
+      return {
+        orderValue,
+        action,
+      }
+    })
+    .filter((candidate): candidate is { readonly orderValue: number; readonly action: string } => Boolean(candidate))
+    .sort((left, right) => left.orderValue - right.orderValue)
+
+  const selected = candidates[0]
+  if (!selected) {
+    throw new ApiReadTransportError(
+      'The current role has no visible Work Order list scope',
+      'authorization_denied',
+    )
+  }
+
+  const type = actionQueryValue(selected.action, 'type')
+  const status = actionQueryValue(selected.action, 'status')
+  const orderState = actionQueryValue(selected.action, 'orderState')
+
+  return {
+    mode: type === 'SANode' ? 'workflow-node' : 'service-appointment',
+    ...(status ? { statusFilter: status } : {}),
+    ...(orderState ? { workflowStateFilter: orderState } : {}),
+  }
+}
+
+function buildWorkOrderListRequest(
+  query: WorkOrderListQuery,
+  scope: AdapterWorkOrderListScope,
+): ApiReadRequest {
+  const body: Record<string, ApiRequestValue> = {
+    page: query.page,
+    rows: query.pageSize,
+    sortField: scope.mode === 'workflow-node' ? 'updateTime' : 'createTime',
+    sortOrder: 'desc',
+    'is:state|integer#and': 1,
+  }
+
+  if (scope.mode === 'workflow-node' && scope.workflowStateFilter) {
+    body.orderState = scope.workflowStateFilter
+  }
+  if (scope.statusFilter) body['in:status|array#and'] = scope.statusFilter
+
+  return {
+    method: 'POST',
+    path:
+      scope.mode === 'workflow-node'
+        ? 'basic/serviceAppointment/querySAWorkflowNode'
+        : 'basic/serviceAppointment/query',
+    body,
+  }
+}
+
+function createRoleScopedWorkOrderListScopeResolver(
+  transport: ApiReadTransport,
+  getCurrentRoleId: () => RoleId | null,
+): WorkOrderListScopeResolver {
+  let cachedRoleId: RoleId | null = null
+  let cachedScope: AdapterWorkOrderListScope | null = null
+
+  return {
+    async resolve(): Promise<AdapterWorkOrderListScope> {
+      const roleId = getCurrentRoleId()
+      if (!roleId) {
+        throw new ApiReadTransportError(
+          'Current role context is required for Work Order reads',
+          'authorization_denied',
+        )
+      }
+      if (cachedScope && cachedRoleId === roleId) return cachedScope
+
+      const raw = await transport.execute({
+        method: 'POST',
+        path: 'function/changeRole',
+        body: { roleIds: roleId },
+      })
+      const scope = roleVisibleWorkOrderScope(raw)
+      cachedRoleId = roleId
+      cachedScope = scope
+      return scope
+    },
+  }
+}
+
+export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
+  constructor(
+    private readonly transport: ApiReadTransport,
+    private readonly workOrderScopeResolver?: WorkOrderListScopeResolver,
+  ) {}
+
+  private async read<T>(
+    request: ApiReadRequest | (() => Promise<ApiReadRequest>),
+    map: (raw: unknown) => T,
+  ): Promise<OperationSnapshot<T>> {
     try {
-      const raw = await this.transport.execute(request)
+      const resolvedRequest = typeof request === 'function' ? await request() : request
+      const raw = await this.transport.execute(resolvedRequest)
       return succeeded(map(raw))
     } catch (error) {
       if (error instanceof AdapterMappingError) {
@@ -199,11 +360,14 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
 
   listWorkOrders(query: WorkOrderListQuery) {
     return this.read<ReadPage<WorkOrderSummary>>(
-      {
-        method: 'POST',
-        path: 'basic/serviceAppointment/query',
-        body: { page: query.page, rows: query.pageSize },
-      },
+      async () =>
+        this.workOrderScopeResolver
+          ? buildWorkOrderListRequest(query, await this.workOrderScopeResolver.resolve())
+          : {
+              method: 'POST',
+              path: 'basic/serviceAppointment/query',
+              body: { page: query.page, rows: query.pageSize },
+            },
       (raw) => pageEnvelope(raw, workOrderSummary),
     )
   }
@@ -306,4 +470,14 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
 
 export function createTechnicianApiReadAdapter(transport: ApiReadTransport): TechnicianApiReadPort {
   return new TechnicianApiReadAdapter(transport)
+}
+
+export function createRoleScopedTechnicianApiReadAdapter(
+  transport: ApiReadTransport,
+  getCurrentRoleId: () => RoleId | null,
+): TechnicianApiReadPort {
+  return new TechnicianApiReadAdapter(
+    transport,
+    createRoleScopedWorkOrderListScopeResolver(transport, getCurrentRoleId),
+  )
 }

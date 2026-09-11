@@ -25,6 +25,8 @@ export interface WorkOrderListLoadOptions {
   readonly append?: boolean
 }
 
+export type SessionInvalidation = () => Promise<unknown>
+
 function failure<T>(category: ErrorCategory, message: string): OperationSnapshot<T> {
   return {
     state: 'failed_terminal',
@@ -42,14 +44,17 @@ export const useWorkOrderListStore = defineStore('workOrderList', () => {
   const error = ref<OperationError | null>(null)
   let api: TechnicianApiReadPort | null = null
   let getSession: () => SessionSnapshot | null = () => null
+  let invalidateSession: SessionInvalidation | null = null
   let lastLoadWasAppend = false
 
   function configureApi(
     nextApi: TechnicianApiReadPort,
     sessionProvider: () => SessionSnapshot | null,
+    sessionInvalidation?: SessionInvalidation,
   ): void {
     api = nextApi
     getSession = sessionProvider
+    invalidateSession = sessionInvalidation ?? null
   }
 
   function clearList(): void {
@@ -59,7 +64,9 @@ export const useWorkOrderListStore = defineStore('workOrderList', () => {
     hasMore.value = undefined
   }
 
-  function setFailure(result: OperationSnapshot<ReadPage<WorkOrderSummary>>): OperationSnapshot<ReadPage<WorkOrderSummary>> {
+  async function setFailure(
+    result: OperationSnapshot<ReadPage<WorkOrderSummary>>,
+  ): Promise<OperationSnapshot<ReadPage<WorkOrderSummary>>> {
     if (!result.error) {
       const fallback = failure<ReadPage<WorkOrderSummary>>(
         'server_terminal',
@@ -77,7 +84,10 @@ export const useWorkOrderListStore = defineStore('workOrderList', () => {
     }
     loadState.value = normalized.state
     error.value = normalizedError
-    if (normalizedError.category === 'session_invalid') clearList()
+    if (normalizedError.category === 'session_invalid') {
+      clearList()
+      if (invalidateSession) await invalidateSession()
+    }
     return normalized
   }
 

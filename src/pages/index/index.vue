@@ -11,8 +11,8 @@
       <text class="subtitle">Welcome{{ session.session?.user.displayName ? `, ${session.session.user.displayName}` : '' }}.</text>
 
       <navigator class="work-orders-entry" :url="workOrdersRoute">
-        <text class="entry-title">My Work Orders</text>
-        <text class="entry-subtitle">View your assigned work orders</text>
+        <text class="entry-title">Role-visible Work Orders</text>
+        <text class="entry-subtitle">Open the current role's default list</text>
       </navigator>
 
       <button class="secondary" :disabled="isBusy" @tap="logout">

@@ -22,7 +22,11 @@ export function createApplication(dependencies: ApplicationDependencies = {}) {
   const apiRead = dependencies.apiRead ?? createDefaultTechnicianApiReadPort(authSession)
   sessionStore.configureAuth(authSession)
   const workOrderListStore = useWorkOrderListStore(pinia)
-  workOrderListStore.configureApi(apiRead, () => sessionStore.session)
+  workOrderListStore.configureApi(
+    apiRead,
+    () => sessionStore.session,
+    () => sessionStore.endSession().then(() => undefined),
+  )
   void sessionStore.bootstrap()
   return { app, pinia, sessionStore, workOrderListStore }
 }
