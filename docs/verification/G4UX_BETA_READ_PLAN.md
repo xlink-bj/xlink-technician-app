@@ -5,6 +5,7 @@ Status: Plan only. No Beta call was executed in Phase A because no approved non-
 ## UX reference and gate priority
 
 - R2 — `xlink-business-3.0`, pinned main `06b885ed22477e79d50bc6f3a0ce0c96fbc1a185` — primary UX/visual/IA reference.
+- R2 staged Login and task-first Home are the locked product directions for this read plan. Only accepted auth/session and task/list capabilities may be wired or rendered.
 - R1 — `xlink-business-jishi-3.0`, pinned `6ada6b5375324bfcd09ca7c569b96a4ff328173f` — secondary business/field-service evidence.
 - MP-WEIXIN is the primary G4-UX human visual gate.
 - Android/iOS are checked for source/build integrity in G4-UX; native/device visual parity belongs to G5.
@@ -45,8 +46,8 @@ Forbidden:
 
 ## Execution sequence
 
-1. **Bootstrap/Login:** Confirm the initialization shell is non-interactive while restore is pending. Establish whether the primary Sign in action is actually visible and usable in the MP simulator. Use approved test input, observe validation and in-flight behavior, and record only sanitized outcomes.
-2. **Home:** Confirm authenticated landing hierarchy, Work Orders entry, sign-out affordance, safe area/back behavior, and no stale data before authentication.
+1. **Bootstrap/Login:** Confirm the initialization shell is non-interactive while restore is pending. Establish whether the locked R2 staged Login experience and primary Sign in action are actually visible and usable in the MP simulator. Use approved test input, observe validation and in-flight behavior, and record only sanitized outcomes. Unsupported R2 auth methods remain contract-gated.
+2. **Home:** Confirm the locked R2 task-first landing hierarchy, Work Orders/current-task entry, sign-out affordance, safe area/back behavior, and no stale data before authentication. Do not treat metrics-first as an alternative.
 3. **Role-visible list:** Enter through Home. Record the semantic role-visible scope, ordinary/SANode mode at the adapter boundary, observed field presence/nullability, density, empty behavior, and refresh/retry behavior. Do not label it “My” or “Assigned” unless evidence supports that claim. Do not treat R2 search/tabs/counts as required without a business decision.
 4. **Detail:** Open one sanitized row using only its semantic WorkOrderId. Record accepted detail field presence/nullability, long-text/address behavior, loading/error/retry/session-invalid states, and whether information remains read-oriented.
 5. **Contact:** Verify masked display and direct-contact availability only. The `Call customer` action must remain uninvoked in Beta verification; no real call or relay request is permitted. Record contact-only/no-phone as unavailable and relay/private-number as deferred unless a later approved slice changes that scope.
