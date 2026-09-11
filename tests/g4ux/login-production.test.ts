@@ -42,7 +42,7 @@ describe('G4-UX production Login flow', () => {
     expect(loginPage).toContain("session.status === 'unknown'")
     expect(loginPage).toContain("loginStage === 'launch'")
     expect(loginPage).toContain("loginStage === 'methods'")
-    expect(loginPage).toMatch(/class="submit"[^>]*:aria-disabled="isBusy[^>]*@tap="onSubmit"/)
+    expect(loginPage).toMatch(/class="submit"[^>]*:disabled="isBusy"[^>]*@tap="submit"/)
     expect(loginPage).toContain('class="code-button" disabled')
   })
 })

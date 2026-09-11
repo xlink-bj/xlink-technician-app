@@ -66,9 +66,9 @@
         </view>
       </view>
 
-      <view class="launch-cta" role="button" aria-label="进入登录" @tap="goToMethods">
+      <button class="launch-cta" aria-label="进入登录" @tap="goToMethods">
         <text class="submit-label">进入登录</text>
-      </view>
+      </button>
     </view>
 
     <view v-else-if="loginStage === 'methods'" class="login-stage methods-stage">
@@ -156,15 +156,14 @@
       <text v-if="feedback" class="feedback" role="alert">{{ feedback }}</text>
       <text v-if="session.status === 'authenticating'" class="in-flight">登录中，请稍候…</text>
 
-      <view
+      <button
         class="submit"
-        role="button"
         aria-label="登录"
-        :aria-disabled="isBusy ? 'true' : 'false'"
-        @tap="onSubmit"
+        :disabled="isBusy"
+        @tap="submit"
       >
         <text class="submit-label">登录</text>
-      </view>
+      </button>
     </view>
   </view>
 </template>
@@ -215,6 +214,7 @@ function selectMethod(method: LoginMethod): void {
 }
 
 async function submit(): Promise<void> {
+  if (isBusy.value) return
   message.value = ''
   const result = await submitLogin(
     { phoneNumber: phoneNumber.value, verificationCode: verificationCode.value },
@@ -226,11 +226,6 @@ async function submit(): Promise<void> {
   } else {
     message.value = userFacingLoginMessage(result.error)
   }
-}
-
-function onSubmit(): void {
-  if (isBusy.value) return
-  void submit()
 }
 
 async function logout(): Promise<void> {
