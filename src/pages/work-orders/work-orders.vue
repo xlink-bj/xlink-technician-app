@@ -1,59 +1,84 @@
 <template>
   <view v-if="!canAccess" class="guard-page">
-    <text class="eyebrow">Technician App</text>
-    <text class="title">Sign in required</text>
-    <text class="subtitle">Return to Home to start an authenticated session.</text>
-    <navigator class="back-link" url="/pages/index/index">Return to sign in</navigator>
+    <view class="guard-icon" aria-hidden="true">锁</view>
+    <text class="guard-title">需要登录</text>
+    <text class="guard-copy">登录后查看当前账号可见的工单。</text>
+    <navigator class="back-link" url="/pages/index/index">返回登录</navigator>
   </view>
 
   <view v-else class="work-orders-page">
-    <view class="list-header">
-      <view class="header-copy">
-        <text class="eyebrow">Technician Home</text>
-        <text class="title">Role-visible Work Orders</text>
-        <text class="subtitle">Default list for the current role</text>
+    <view class="list-shell">
+      <view class="list-topbar">
+        <navigator class="back-link" url="/pages/index/index">‹ 返回首页</navigator>
+        <button class="refresh-button" :disabled="isLoading" @tap="refresh">
+          {{ isLoading ? '刷新中' : '刷新' }}
+        </button>
       </view>
-      <button class="refresh" :disabled="isLoading" @tap="refresh">
-        {{ isLoading ? 'Loading…' : 'Refresh' }}
-      </button>
-    </view>
 
-    <view v-if="workOrders.loadState === 'loading'" class="list-state">
-      <text class="state-title">Loading work orders…</text>
-    </view>
+      <view class="list-heading">
+        <text class="page-kicker">工作台</text>
+        <text class="page-title">工单</text>
+        <text class="page-subtitle">查看当前范围内可见的工单信息</text>
+      </view>
 
-    <view v-else-if="workOrders.loadState === 'failed_retryable'" class="list-state">
-      <text class="state-title">Work orders are temporarily unavailable.</text>
-      <text class="state-detail">{{ workOrders.error?.message }}</text>
-      <button class="retry" @tap="retry">Try again</button>
-    </view>
+      <view v-if="workOrders.loadState === 'loading'" class="list-state loading-state">
+        <view class="skeleton-list" aria-hidden="true">
+          <view class="skeleton-row"><view class="skeleton-icon" /><view class="skeleton-copy"><view class="skeleton-line skeleton-line-long" /><view class="skeleton-line skeleton-line-short" /></view></view>
+          <view class="skeleton-row"><view class="skeleton-icon" /><view class="skeleton-copy"><view class="skeleton-line skeleton-line-long" /><view class="skeleton-line skeleton-line-short" /></view></view>
+          <view class="skeleton-row"><view class="skeleton-icon" /><view class="skeleton-copy"><view class="skeleton-line skeleton-line-long" /><view class="skeleton-line skeleton-line-short" /></view></view>
+        </view>
+        <text class="state-title">正在加载工单</text>
+      </view>
 
-    <view v-else-if="workOrders.loadState === 'failed_terminal'" class="list-state">
-      <text class="state-title">Work orders could not be loaded.</text>
-      <text class="state-detail">{{ workOrders.error?.message }}</text>
-      <button class="retry" @tap="retry">Retry</button>
-    </view>
+      <view v-else-if="workOrders.loadState === 'failed_retryable'" class="list-state error-state">
+        <view class="state-icon state-icon-error" aria-hidden="true">!</view>
+        <text class="state-title">暂时无法加载工单</text>
+        <text class="state-detail">请检查网络后重试。</text>
+        <button class="state-action" @tap="retry">重新加载</button>
+      </view>
 
-    <view v-else-if="workOrders.loadState === 'succeeded' && workOrders.items.length === 0" class="list-state">
-      <text class="state-title">No work orders to show.</text>
-      <text class="state-detail">Refresh to check again.</text>
-    </view>
+      <view v-else-if="workOrders.loadState === 'failed_terminal'" class="list-state error-state">
+        <view class="state-icon state-icon-error" aria-hidden="true">!</view>
+        <text class="state-title">工单加载失败</text>
+        <text class="state-detail">请稍后再试。</text>
+        <button class="state-action" @tap="retry">再次尝试</button>
+      </view>
 
-    <view v-else-if="workOrders.loadState === 'succeeded'" class="list-content">
-      <navigator
-        v-for="item in workOrders.items"
-        :key="String(item.id)"
-        class="work-order-row"
-        :url="workOrderDetailRouteFor(item.id)"
-      >
-        <text class="row-title">{{ item.title ?? 'Untitled work order' }}</text>
-        <text class="row-note">Open Work Order detail</text>
-      </navigator>
-      <button v-if="workOrders.hasMore === true" class="retry" @tap="loadMore">Load more</button>
-    </view>
+      <view v-else-if="workOrders.loadState === 'succeeded' && workOrders.items.length === 0" class="list-state empty-state">
+        <view class="state-icon state-icon-empty" aria-hidden="true">—</view>
+        <text class="state-title">当前范围暂无工单</text>
+        <text class="state-detail">暂时没有可查看的工单，可以刷新后再试。</text>
+        <button class="state-action" @tap="refresh">刷新工单</button>
+      </view>
 
-    <view v-else class="list-state">
-      <text class="state-title">Preparing work orders…</text>
+      <view v-else-if="workOrders.loadState === 'succeeded'" class="list-content">
+        <view class="content-caption">
+          <text class="content-title">可见工单</text>
+          <text class="content-note">选择一项查看详情</text>
+        </view>
+
+        <navigator
+          v-for="item in workOrders.items"
+          :key="String(item.id)"
+          class="work-order-row"
+          :url="workOrderDetailRouteFor(item.id)"
+        >
+          <view class="row-leading" aria-hidden="true">
+            <text>工</text>
+          </view>
+          <view class="row-copy">
+            <text class="row-title">{{ item.title || '工单详情' }}</text>
+            <text class="row-note">查看工单详情</text>
+          </view>
+          <text class="row-arrow" aria-hidden="true">›</text>
+        </navigator>
+
+        <button v-if="workOrders.hasMore === true" class="state-action load-more" @tap="loadMore">加载更多</button>
+      </view>
+
+      <view v-else class="list-state">
+        <text class="state-title">正在准备工单</text>
+      </view>
     </view>
   </view>
 </template>
@@ -95,98 +120,308 @@ async function loadMore(): Promise<void> {
 <style>
 .work-orders-page,
 .guard-page {
-  background: #f5f7fb;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(55, 132, 255, 0.16), transparent 36%),
+    #f6f8fc;
   box-sizing: border-box;
   min-height: 100vh;
-  padding: 32rpx;
+  padding: 44rpx 32rpx calc(48rpx + constant(safe-area-inset-bottom));
+  padding-bottom: calc(48rpx + env(safe-area-inset-bottom));
+  width: 100%;
 }
 
-.list-header {
-  align-items: flex-start;
-  display: flex;
-  gap: 20rpx;
-  justify-content: space-between;
-  margin: 12rpx auto 28rpx;
-  max-width: 960rpx;
-}
-
-.header-copy {
-  display: flex;
-  flex-direction: column;
-  gap: 8rpx;
-}
-
-.eyebrow,
-.state-detail,
-.row-note {
-  color: #667085;
-  font-size: 26rpx;
-}
-
-.title {
-  color: #101828;
-  font-size: 48rpx;
-  font-weight: 700;
-}
-
-.subtitle {
-  color: #667085;
-  font-size: 30rpx;
-}
-
-.refresh,
-.retry {
-  background: #155eef;
-  border-radius: 12rpx;
-  color: #ffffff;
-  font-size: 28rpx;
-  margin: 0;
-}
-
-.refresh[disabled] {
-  opacity: 0.55;
-}
-
-.list-state,
-.list-content,
-.guard-page {
-  display: flex;
-  flex-direction: column;
-  gap: 20rpx;
+.list-shell {
   margin: 0 auto;
-  max-width: 960rpx;
+  max-width: 680rpx;
 }
 
-.list-state,
-.guard-page {
+.list-topbar {
   align-items: center;
-  justify-content: center;
-  min-height: 50vh;
-  text-align: center;
-}
-
-.state-title {
-  color: #344054;
-  font-size: 32rpx;
-}
-
-.work-order-row {
-  background: #ffffff;
-  border-radius: 16rpx;
   display: flex;
-  flex-direction: column;
-  gap: 8rpx;
-  padding: 28rpx;
-}
-
-.row-title {
-  color: #101828;
-  font-size: 32rpx;
-  font-weight: 600;
+  justify-content: space-between;
+  min-height: 72rpx;
 }
 
 .back-link {
-  color: #155eef;
+  color: #3970c9;
+  font-size: 26rpx;
+  font-weight: 800;
+  line-height: 1.4;
+  padding: 16rpx 0;
+}
+
+.refresh-button {
+  background: rgba(255, 255, 255, 0.76);
+  border: 1rpx solid #d4e1f6;
+  border-radius: 999rpx;
+  color: #286bd5;
+  font-size: 24rpx;
+  font-weight: 800;
+  line-height: 1;
+  margin: 0;
+  min-height: 68rpx;
+  padding: 0 24rpx;
+}
+
+.refresh-button[disabled] {
+  opacity: 0.55;
+}
+
+.list-heading {
+  display: flex;
+  flex-direction: column;
+  padding: 48rpx 8rpx 32rpx;
+}
+
+.page-kicker,
+.content-title {
+  color: #1769df;
+  font-size: 24rpx;
+  font-weight: 800;
+  letter-spacing: 2rpx;
+}
+
+.page-title {
+  color: #12203a;
+  font-size: 58rpx;
+  font-weight: 900;
+  letter-spacing: -1rpx;
+  line-height: 1.2;
+  margin-top: 8rpx;
+}
+
+.page-subtitle,
+.content-note {
+  color: #71809a;
+  font-size: 27rpx;
+  line-height: 1.55;
+  margin-top: 12rpx;
+}
+
+.list-state,
+.list-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.list-state {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1rpx solid #e0e8f5;
+  border-radius: 28rpx;
+  box-sizing: border-box;
+  justify-content: center;
+  min-height: 520rpx;
+  padding: 48rpx 36rpx;
+  text-align: center;
+}
+
+.skeleton-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+  width: 100%;
+}
+
+.skeleton-row {
+  align-items: center;
+  background: #f1f5fb;
+  border-radius: 22rpx;
+  display: flex;
+  gap: 20rpx;
+  min-height: 128rpx;
+  padding: 24rpx;
+}
+
+.skeleton-icon,
+.skeleton-line {
+  background: #e2eaf7;
+  border-radius: 999rpx;
+}
+
+.skeleton-icon {
+  flex: 0 0 68rpx;
+  height: 68rpx;
+}
+
+.skeleton-copy {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.skeleton-line {
+  height: 20rpx;
+}
+
+.skeleton-line-long {
+  width: 72%;
+}
+
+.skeleton-line-short {
+  width: 42%;
+}
+
+.loading-state .state-title {
+  margin-top: 28rpx;
+}
+
+.state-icon,
+.guard-icon {
+  align-items: center;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+}
+
+.state-icon {
+  font-size: 40rpx;
+  font-weight: 900;
+  height: 104rpx;
+  width: 104rpx;
+}
+
+.state-icon-error {
+  background: #fff0ef;
+  color: #d64545;
+}
+
+.state-icon-empty {
+  background: #eaf2ff;
+  color: #4d83dc;
+}
+
+.state-title,
+.guard-title {
+  color: #21304a;
+  font-size: 34rpx;
+  font-weight: 900;
+  line-height: 1.4;
+}
+
+.state-title {
+  margin-top: 24rpx;
+}
+
+.state-detail,
+.guard-copy {
+  color: #7888a3;
+  font-size: 26rpx;
+  line-height: 1.6;
+  margin-top: 12rpx;
+}
+
+.state-action {
+  background: #1769df;
+  border-radius: 18rpx;
+  color: #ffffff;
+  font-size: 28rpx;
+  font-weight: 800;
+  line-height: 1;
+  margin: 28rpx 0 0;
+  min-height: 88rpx;
+  padding: 0 36rpx;
+}
+
+.content-caption {
+  display: flex;
+  flex-direction: column;
+  padding: 8rpx 8rpx 20rpx;
+}
+
+.content-note {
+  font-size: 24rpx;
+  margin-top: 6rpx;
+}
+
+.work-order-row {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1rpx solid #e0e8f5;
+  border-radius: 24rpx;
+  box-shadow: 0 14rpx 30rpx rgba(35, 75, 128, 0.07);
+  box-sizing: border-box;
+  display: flex;
+  gap: 20rpx;
+  margin-bottom: 20rpx;
+  min-height: 128rpx;
+  padding: 24rpx;
+  width: 100%;
+}
+
+.row-leading {
+  align-items: center;
+  background: #eaf2ff;
+  border-radius: 18rpx;
+  color: #1769df;
+  display: flex;
+  flex: 0 0 68rpx;
   font-size: 30rpx;
+  font-weight: 900;
+  height: 68rpx;
+  justify-content: center;
+}
+
+.row-copy {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.row-title {
+  color: #1b2942;
+  font-size: 31rpx;
+  font-weight: 900;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.row-note {
+  color: #8a98ae;
+  font-size: 24rpx;
+  margin-top: 8rpx;
+}
+
+.row-arrow {
+  color: #7d9ed3;
+  flex: 0 0 auto;
+  font-size: 48rpx;
+  font-weight: 300;
+  line-height: 1;
+}
+
+.load-more {
+  align-self: center;
+  margin-top: 8rpx;
+}
+
+.guard-page {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 100vh;
+  text-align: center;
+}
+
+.guard-icon {
+  background: #eaf2ff;
+  color: #1769df;
+  font-size: 28rpx;
+  font-weight: 900;
+  height: 96rpx;
+  width: 96rpx;
+}
+
+.guard-title {
+  margin-top: 24rpx;
+}
+
+button::after {
+  border: 0;
 }
 </style>

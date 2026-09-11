@@ -1,6 +1,6 @@
 # G4-UX Production Baseline
 
-Status: Phase A target baseline with locked product directions. R2’s brand/visual/IA baseline and staged Login/task-first Home directions are locked; no visual value below is settled unless marked LOCKED. Exact values remain proposals for product-owner review.
+Status: Phase B2 implementation candidate with locked product directions. R2’s brand/visual/IA baseline and staged Login/task-first Home directions are locked; no visual value below is settled unless marked LOCKED. Home and Work Order List production UX are implemented on the current branch and remain pending human visual review.
 
 R2 — `xlink-business-3.0`, pinned main `06b885ed22477e79d50bc6f3a0ce0c96fbc1a185` — is the **LOCKED primary brand/visual/IA baseline**. R1 is secondary business/field-service evidence for this baseline. R2 observations are reproduced as approved product UX in uni-app, not copied as React/Next implementation.
 
@@ -24,6 +24,32 @@ These are accepted constraints, not open visual preferences:
 - G4-D is not started; appointment/workflow action behavior remains behind its own evidence gate.
 - No product decision in this document authorizes new API fields, tabs, counts, filters, workflow writes, native integrations, or customer mutations.
 - The branch retains the explicit exact-version MP-WEIXIN compiler correction from `c0128a06fff271532d0e88f04d44066cf192ddd4`; no further dependencies are authorized by this UX baseline.
+
+## B2 IMPLEMENTATION RECORD — HOME / WORK ORDER LIST
+
+The current B2 slice re-expresses the locked R2 task-first hierarchy in
+uni-app without copying R2 React/Next implementation or fabricating data:
+
+- Authenticated Home uses a compact 修链 / 屋顶维修 brand line, optional
+  SessionSnapshot display name, one visually dominant 工单 entry, and a quiet
+  local sign-out action.
+- Home does not render a current-task card, task count, metric, trend, urgency,
+  notification, or unsupported quick action because no separate current-task
+  source is verified.
+- Work Order List remains the single role-visible semantic list. It keeps the
+  accepted adapter-selected SANODE/ordinary read path, page/pageSize behavior,
+  semantic title-only rows, and semantic detail navigation.
+- Work Order List now has production Chinese loading/skeleton, empty, manual
+  refresh, retryable, terminal, and session-guard presentations. Empty means
+  the current visible scope has no rows; it is not a global account claim.
+- Raw adapter errors, backend codes, query names, workflow-node IDs, and
+  WorkOrderId values are not rendered. Tabs, counts, filters, sorting, and
+  richer card fields remain unimplemented until separately evidenced.
+
+This record describes the implemented candidate, not final visual approval.
+Human review must still assess MP safe-area behavior, typography, density,
+touch targets, and narrow-device rendering. Login, Detail, Contact, G4-D, and
+the accepted read transport are outside this B2 change.
 
 ## B. R2-DERIVED UX PROPOSALS
 

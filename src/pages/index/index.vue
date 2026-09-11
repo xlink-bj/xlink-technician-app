@@ -5,18 +5,44 @@
     <text class="subtitle">Checking for an existing session…</text>
   </view>
   <view v-else-if="showHome" class="home-page">
-    <view class="home-card">
-      <text class="eyebrow">Technician Home</text>
-      <text class="title">XLink Technician</text>
-      <text class="subtitle">Welcome{{ session.session?.user.displayName ? `, ${session.session.user.displayName}` : '' }}.</text>
+    <view class="home-header">
+      <view class="home-brand">
+        <text class="home-brand-name">修链</text>
+        <text class="home-brand-tagline">屋顶维修</text>
+      </view>
+      <text class="home-greeting">{{ homeGreeting }}</text>
+      <text class="home-subtitle">从当前可见的工单开始今天的工作</text>
+    </view>
 
-      <navigator class="work-orders-entry" :url="workOrdersRoute">
-        <text class="entry-title">Role-visible Work Orders</text>
-        <text class="entry-subtitle">Open the current role's default list</text>
-      </navigator>
+    <view class="home-content">
+      <view class="home-surface work-surface">
+        <view class="section-heading">
+          <text class="section-kicker">工作台</text>
+          <text class="section-title">工单</text>
+          <text class="section-description">查看当前范围内可见的工单信息</text>
+        </view>
 
+        <navigator class="work-orders-entry" :url="workOrdersRoute">
+          <view class="entry-icon" aria-hidden="true">
+            <text>工</text>
+          </view>
+          <view class="entry-copy">
+            <text class="entry-title">查看工单</text>
+            <text class="entry-subtitle">进入工单列表</text>
+          </view>
+          <text class="entry-arrow" aria-hidden="true">›</text>
+        </navigator>
+      </view>
+
+      <view class="home-surface home-hint">
+        <text class="hint-title">从一张工单开始</text>
+        <text class="hint-copy">工单信息会根据当前可见范围显示。</text>
+      </view>
+    </view>
+
+    <view class="home-footer">
       <button class="secondary" :disabled="isBusy" @tap="logout">
-        {{ logoutInFlight ? 'Signing out…' : 'Sign out' }}
+        {{ logoutInFlight ? '退出中…' : '退出登录' }}
       </button>
       <text v-if="feedback" class="feedback">{{ feedback }}</text>
     </view>
@@ -191,6 +217,10 @@ const loginStage = ref<LoginStage>('launch')
 const message = ref('')
 const logoutInFlight = ref(false)
 const submissionState = reactive<LoginSubmissionState>({ inFlight: false })
+const homeGreeting = computed(() => {
+  const displayName = session.session?.user.displayName?.trim()
+  return displayName ? `您好，${displayName}` : '您好'
+})
 const isBusy = computed(
   () => submissionState.inFlight || logoutInFlight.value || session.status === 'authenticating',
 )
@@ -234,7 +264,9 @@ async function logout(): Promise<void> {
   message.value = ''
   try {
     const result = await session.endSession()
-    if (result.state !== 'succeeded') message.value = result.error?.message ?? 'Unable to sign out'
+    if (result.state !== 'succeeded') {
+      message.value = userFacingLoginMessage(result.error) || '退出登录失败，请稍后重试'
+    }
   } finally {
     logoutInFlight.value = false
   }
@@ -265,8 +297,7 @@ function userFacingLoginMessage(error: OperationError | null | undefined): strin
 </script>
 
 <style>
-.loading-page,
-.home-page {
+.loading-page {
   align-items: center;
   background: #f5f7fb;
   box-sizing: border-box;
@@ -274,6 +305,18 @@ function userFacingLoginMessage(error: OperationError | null | undefined): strin
   justify-content: center;
   min-height: 100vh;
   padding: 32rpx;
+}
+
+.home-page {
+  background:
+    radial-gradient(circle at 90% 0%, rgba(36, 119, 255, 0.18), transparent 42%),
+    linear-gradient(180deg, #eef5ff 0%, #f6f8fc 44%, #f6f8fc 100%);
+  box-sizing: border-box;
+  display: block;
+  min-height: 100vh;
+  padding: 56rpx 32rpx calc(48rpx + constant(safe-area-inset-bottom));
+  padding-bottom: calc(48rpx + env(safe-area-inset-bottom));
+  width: 100%;
 }
 
 .login-page {
@@ -292,21 +335,179 @@ function userFacingLoginMessage(error: OperationError | null | undefined): strin
   flex-direction: column;
 }
 
-.home-card {
-  background: #ffffff;
-  border-radius: 24rpx;
-  box-sizing: border-box;
+.home-header,
+.home-content,
+.home-footer {
+  margin: 0 auto;
+  max-width: 680rpx;
+}
+
+.home-header {
+  padding: 20rpx 8rpx 28rpx;
+}
+
+.home-brand {
+  align-items: baseline;
+  display: flex;
+  gap: 16rpx;
+}
+
+.home-brand-name {
+  color: #1769df;
+  font-size: 32rpx;
+  font-weight: 900;
+  letter-spacing: 2rpx;
+}
+
+.home-brand-tagline {
+  color: #6f83a3;
+  font-size: 20rpx;
+  font-weight: 700;
+  letter-spacing: 4rpx;
+}
+
+.home-greeting {
+  color: #12203a;
+  display: block;
+  font-size: 52rpx;
+  font-weight: 900;
+  letter-spacing: -1rpx;
+  line-height: 1.25;
+  margin-top: 52rpx;
+}
+
+.home-subtitle {
+  color: #687895;
+  display: block;
+  font-size: 28rpx;
+  line-height: 1.55;
+  margin-top: 14rpx;
+}
+
+.home-content {
   display: flex;
   flex-direction: column;
   gap: 20rpx;
-  max-width: 680rpx;
-  padding: 48rpx;
+}
+
+.home-surface {
+  background: rgba(255, 255, 255, 0.94);
+  border: 1rpx solid rgba(208, 222, 243, 0.9);
+  border-radius: 28rpx;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  padding: 32rpx;
+  box-shadow: 0 18rpx 42rpx rgba(28, 66, 117, 0.08);
   width: 100%;
 }
 
-.home-card {
-  align-self: flex-start;
-  margin-top: 12vh;
+.section-heading {
+  display: flex;
+  flex-direction: column;
+}
+
+.section-kicker {
+  color: #1769df;
+  font-size: 24rpx;
+  font-weight: 800;
+  letter-spacing: 2rpx;
+}
+
+.section-title {
+  color: #15233d;
+  font-size: 44rpx;
+  font-weight: 900;
+  line-height: 1.3;
+  margin-top: 8rpx;
+}
+
+.section-description {
+  color: #71809a;
+  font-size: 26rpx;
+  line-height: 1.5;
+  margin-top: 8rpx;
+}
+
+.home-surface .work-orders-entry {
+  margin-top: 28rpx;
+}
+
+.work-orders-entry {
+  align-items: center;
+  background: linear-gradient(135deg, #1769df 0%, #2e83ff 100%);
+  border: 0;
+  border-radius: 22rpx;
+  box-sizing: border-box;
+  display: flex;
+  gap: 20rpx;
+  min-height: 128rpx;
+  padding: 24rpx;
+  width: 100%;
+}
+
+.entry-icon {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.18);
+  border: 1rpx solid rgba(255, 255, 255, 0.3);
+  border-radius: 18rpx;
+  color: #ffffff;
+  display: flex;
+  flex: 0 0 72rpx;
+  font-size: 32rpx;
+  font-weight: 900;
+  height: 72rpx;
+  justify-content: center;
+}
+
+.entry-copy {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.entry-title {
+  color: #ffffff;
+  font-size: 32rpx;
+  font-weight: 900;
+}
+
+.entry-subtitle {
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 24rpx;
+  margin-top: 8rpx;
+}
+
+.entry-arrow {
+  color: #ffffff;
+  flex: 0 0 auto;
+  font-size: 48rpx;
+  font-weight: 300;
+  line-height: 1;
+}
+
+.home-hint {
+  background: rgba(255, 255, 255, 0.68);
+  box-shadow: none;
+}
+
+.hint-title {
+  color: #34445f;
+  font-size: 28rpx;
+  font-weight: 800;
+}
+
+.hint-copy {
+  color: #7b89a2;
+  font-size: 24rpx;
+  line-height: 1.5;
+  margin-top: 8rpx;
+}
+
+.home-footer {
+  padding: 32rpx 8rpx 0;
+  text-align: center;
 }
 
 .login-stage {
@@ -819,27 +1020,6 @@ function userFacingLoginMessage(error: OperationError | null | undefined): strin
 
 .login-page button::after {
   border: 0;
-}
-
-.work-orders-entry {
-  background: #eef4ff;
-  border: 1rpx solid #b2ccff;
-  border-radius: 16rpx;
-  display: flex;
-  flex-direction: column;
-  gap: 8rpx;
-  padding: 24rpx;
-}
-
-.entry-title {
-  color: #155eef;
-  font-size: 32rpx;
-  font-weight: 600;
-}
-
-.entry-subtitle {
-  color: #475467;
-  font-size: 26rpx;
 }
 
 .secondary {
