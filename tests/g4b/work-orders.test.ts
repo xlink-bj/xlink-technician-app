@@ -261,7 +261,19 @@ describe('G4-B uni read composition boundary', () => {
             },
           }
         }
-        return { data: [{ id: 'work-order-001', name: 'Sanitized work order' }], page: 1, rows: 20, total: 1 }
+        return {
+          data: [
+            {
+              _id: 'workflow-node-001',
+              state: 1,
+              nodeDef: { nodeType: 'sanitized-node' },
+              data: { _id: 'work-order-001', name: 'Sanitized work order' },
+            },
+          ],
+          page: 1,
+          rows: 20,
+          total: 1,
+        }
       }),
     }
     const api = createRoleScopedTechnicianApiReadAdapter(transport, () => roleId)
@@ -290,6 +302,61 @@ describe('G4-B uni read composition boundary', () => {
     expect(result.data?.items[0]).not.toHaveProperty('type')
     expect(result.data?.items[0]).not.toHaveProperty('status')
     expect(result.data?.items[0]).not.toHaveProperty('orderState')
+    expect(result.data?.items[0]).not.toHaveProperty('nodeDef')
+    expect(result.data?.items[0]).not.toHaveProperty('_id')
+  })
+
+  it('re-resolves role scope for a new session with the same role', async () => {
+    const roleId = asOpaqueId<'RoleId'>('sanitized-role-001')
+    let currentSession = 'session-a'
+    const requests: ApiReadRequest[] = []
+    const transport: ApiReadTransport = {
+      execute: vi.fn(async (request: ApiReadRequest) => {
+        requests.push(request)
+        if (request.path === 'function/changeRole') {
+          return {
+            data: {
+              functionList: [
+                {
+                  functionList: [
+                    {
+                      order: 1,
+                      exts: { tabDisplay: '1' },
+                      action: `/pages/serviceAppointment/serviceAppointments?type=SANode&orderState=${currentSession}-scope&status=${currentSession}`,
+                    },
+                  ],
+                },
+              ],
+            },
+          }
+        }
+        return {
+          data: [
+            {
+              _id: `workflow-node-${currentSession}`,
+              data: { _id: `work-order-${currentSession}`, name: 'Sanitized work order' },
+            },
+          ],
+          page: 1,
+          rows: 20,
+          total: 1,
+        }
+      }),
+    }
+    const api = createRoleScopedTechnicianApiReadAdapter(transport, () => roleId)
+
+    await api.listWorkOrders({ page: 1, pageSize: 20 })
+    currentSession = 'session-b'
+    const second = await api.listWorkOrders({ page: 1, pageSize: 20 })
+
+    const roleRequests = requests.filter((request) => request.path === 'function/changeRole')
+    const listRequests = requests.filter((request) => request.path !== 'function/changeRole')
+    expect(roleRequests).toHaveLength(2)
+    expect(roleRequests[0].body).toEqual({ roleIds: roleId })
+    expect(roleRequests[1].body).toEqual({ roleIds: roleId })
+    expect(listRequests[0].body).toMatchObject({ orderState: 'session-a-scope' })
+    expect(listRequests[1].body).toMatchObject({ orderState: 'session-b-scope' })
+    expect(second.data?.items[0].id).toBe('work-order-session-b')
   })
 
   it('injects the semantic session reference below the API adapter and normalizes the response', async () => {

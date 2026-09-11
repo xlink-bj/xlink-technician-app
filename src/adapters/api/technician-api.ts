@@ -117,6 +117,13 @@ function workOrderSummary(raw: unknown): WorkOrderSummary {
   return title ? { id, title } : { id }
 }
 
+function sanodeWorkOrderSummary(raw: unknown): WorkOrderSummary {
+  const node = asRecord(raw, 'workflow-node work-order summary')
+  const data = nestedRecord(node, ['data'])
+  if (!data) throw new AdapterMappingError('workflow-node work-order data is missing')
+  return workOrderSummary(data)
+}
+
 function workOrderDetail(raw: unknown, requestedId: WorkOrderId): WorkOrderDetail {
   const envelope = asRecord(raw, 'work-order detail response')
   const record = nestedRecord(envelope, ['serviceAppointment', 'workOrder', 'entity']) ?? envelope
@@ -306,9 +313,6 @@ function createRoleScopedWorkOrderListScopeResolver(
   transport: ApiReadTransport,
   getCurrentRoleId: () => RoleId | null,
 ): WorkOrderListScopeResolver {
-  let cachedRoleId: RoleId | null = null
-  let cachedScope: AdapterWorkOrderListScope | null = null
-
   return {
     async resolve(): Promise<AdapterWorkOrderListScope> {
       const roleId = getCurrentRoleId()
@@ -318,19 +322,25 @@ function createRoleScopedWorkOrderListScopeResolver(
           'authorization_denied',
         )
       }
-      if (cachedScope && cachedRoleId === roleId) return cachedScope
 
       const raw = await transport.execute({
         method: 'POST',
         path: 'function/changeRole',
         body: { roleIds: roleId },
       })
-      const scope = roleVisibleWorkOrderScope(raw)
-      cachedRoleId = roleId
-      cachedScope = scope
-      return scope
+      return roleVisibleWorkOrderScope(raw)
     },
   }
+}
+
+function readFailure<T>(error: unknown): OperationSnapshot<T> {
+  if (error instanceof AdapterMappingError) {
+    return adapterFailure('server_terminal', error.message)
+  }
+  if (error instanceof ApiReadTransportError) {
+    return adapterFailure(error.category, error.message)
+  }
+  return adapterFailure('network_retryable', unknownErrorMessage(error, 'API read transport failed'))
 }
 
 export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
@@ -348,28 +358,35 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
       const raw = await this.transport.execute(resolvedRequest)
       return succeeded(map(raw))
     } catch (error) {
-      if (error instanceof AdapterMappingError) {
-        return adapterFailure('server_terminal', error.message)
-      }
-      if (error instanceof ApiReadTransportError) {
-        return adapterFailure(error.category, error.message)
-      }
-      return adapterFailure('network_retryable', unknownErrorMessage(error, 'API read transport failed'))
+      return readFailure(error)
     }
   }
 
-  listWorkOrders(query: WorkOrderListQuery) {
-    return this.read<ReadPage<WorkOrderSummary>>(
-      async () =>
-        this.workOrderScopeResolver
-          ? buildWorkOrderListRequest(query, await this.workOrderScopeResolver.resolve())
-          : {
-              method: 'POST',
-              path: 'basic/serviceAppointment/query',
-              body: { page: query.page, rows: query.pageSize },
-            },
-      (raw) => pageEnvelope(raw, workOrderSummary),
-    )
+  async listWorkOrders(query: WorkOrderListQuery) {
+    if (!this.workOrderScopeResolver) {
+      return this.read<ReadPage<WorkOrderSummary>>(
+        {
+          method: 'POST',
+          path: 'basic/serviceAppointment/query',
+          body: { page: query.page, rows: query.pageSize },
+        },
+        (raw) => pageEnvelope(raw, workOrderSummary),
+      )
+    }
+
+    try {
+      const scope = await this.workOrderScopeResolver.resolve()
+      return await this.read<ReadPage<WorkOrderSummary>>(
+        buildWorkOrderListRequest(query, scope),
+        (raw) =>
+          pageEnvelope(
+            raw,
+            scope.mode === 'workflow-node' ? sanodeWorkOrderSummary : workOrderSummary,
+          ),
+      )
+    } catch (error) {
+      return readFailure<ReadPage<WorkOrderSummary>>(error)
+    }
   }
 
   getWorkOrderDetail(id: WorkOrderId) {

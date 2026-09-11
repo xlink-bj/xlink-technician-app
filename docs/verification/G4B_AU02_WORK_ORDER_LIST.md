@@ -41,6 +41,12 @@ scope projection; feature and UI code receive only normalized
 The new App deliberately has no user-selectable tabs or count cards in this
 slice. It does not claim full Legacy parity.
 
+For a workflow-node scope, the API Adapter maps the nested `data` service
+appointment payload into `WorkOrderSummary`; the workflow-node identifier and
+node metadata are discarded at that boundary. Role scope is resolved for each
+list read rather than cached by RoleId, so a later session cannot inherit a
+previous session's menu scope.
+
 ## V1 policy
 
 | Concern | G4-B decision | Evidence boundary |
