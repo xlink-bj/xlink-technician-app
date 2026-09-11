@@ -12,6 +12,7 @@ import type {
   WorkflowNodeRead,
 } from '@shared/ports'
 import type {
+  ErrorCategory,
   FormDataId,
   FormDefinitionId,
   OperationSnapshot,
@@ -54,6 +55,19 @@ export interface ApiReadRequest {
 
 export interface ApiReadTransport {
   execute(request: ApiReadRequest): Promise<unknown>
+}
+
+export class ApiReadTransportError extends Error {
+  constructor(
+    message: string,
+    readonly category: Extract<
+      ErrorCategory,
+      'session_invalid' | 'authorization_denied' | 'network_retryable' | 'server_terminal'
+    >,
+  ) {
+    super(message)
+    this.name = 'ApiReadTransportError'
+  }
 }
 
 function requiredOpaqueId<Name extends string>(
@@ -175,6 +189,9 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
     } catch (error) {
       if (error instanceof AdapterMappingError) {
         return adapterFailure('server_terminal', error.message)
+      }
+      if (error instanceof ApiReadTransportError) {
+        return adapterFailure(error.category, error.message)
       }
       return adapterFailure('network_retryable', unknownErrorMessage(error, 'API read transport failed'))
     }

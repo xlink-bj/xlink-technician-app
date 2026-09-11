@@ -5,6 +5,12 @@
       "style": {
         "navigationBarTitleText": "XLink Technician"
       }
+    },
+    {
+      "path": "pages/work-orders/work-orders",
+      "style": {
+        "navigationBarTitleText": "My Work Orders"
+      }
     }
   ],
   "globalStyle": {
