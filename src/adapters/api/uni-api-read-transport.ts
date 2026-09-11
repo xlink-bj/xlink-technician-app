@@ -74,17 +74,17 @@ export function createUniApiReadTransport(options: UniApiReadTransportOptions): 
 
   return {
     async execute(input: ApiReadRequest): Promise<unknown> {
+      const sessionRef = options.getSessionRef()
+      if (!sessionRef) {
+        throw new ApiReadTransportError('Authenticated session is required for API reads', 'session_invalid')
+      }
+
       const mockResponse = await tryMockRead(
         input.path,
         input.body ?? input.query ?? {},
         options.mockLatencyMs === undefined ? {} : { latencyMs: options.mockLatencyMs },
       )
       if (mockResponse !== null) return mockResponse
-
-      const sessionRef = options.getSessionRef()
-      if (!sessionRef) {
-        throw new ApiReadTransportError('Authenticated session is required for API reads', 'session_invalid')
-      }
 
       const header: Record<string, string> = {
         Cookie: `JSESSIONID=${sessionRef}`,

@@ -1,10 +1,10 @@
-import { isBusinessMockEnabled } from './config'
+import { isBusinessMockMode, type BusinessMockMode } from './config'
 import {
+  isSyntheticWorkOrderId,
   mockOrdinaryListResponse,
   mockRoleFunctionResponse,
   mockSanodeListResponse,
-  mockWorkOrderDetailResponse,
-  mockWorkOrderIds,
+  mockWorkOrderDetailResponseFor,
 } from './fixtures'
 
 export interface MockReadOptions {
@@ -19,16 +19,26 @@ function clonedResponse<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T
 }
 
-function matchedResponse(path: string): unknown | null {
+function emptyPageResponse(): unknown {
+  return { data: [], page: 1, rows: 20, total: 0 }
+}
+
+function listResponse(mode: BusinessMockMode, response: unknown): unknown {
+  return mode === 'empty' ? emptyPageResponse() : response
+}
+
+function matchedResponse(path: string, mode: BusinessMockMode): unknown | null {
   const route = normalizedPath(path)
   if (route === 'function/changeRole') return mockRoleFunctionResponse
-  if (route === 'basic/serviceAppointment/querySAWorkflowNode') return mockSanodeListResponse
-  if (route === 'basic/serviceAppointment/query') return mockOrdinaryListResponse
+  if (route === 'basic/serviceAppointment/querySAWorkflowNode') {
+    return listResponse(mode, mockSanodeListResponse)
+  }
+  if (route === 'basic/serviceAppointment/query') return listResponse(mode, mockOrdinaryListResponse)
 
   const detailPrefix = 'basic/serviceAppointment/queryById/'
   if (route.startsWith(detailPrefix)) {
     const requestedId = decodeURIComponent(route.slice(detailPrefix.length))
-    return requestedId === mockWorkOrderIds[0] ? mockWorkOrderDetailResponse : null
+    if (isSyntheticWorkOrderId(requestedId)) return mockWorkOrderDetailResponseFor(requestedId)
   }
 
   return null
@@ -48,8 +58,9 @@ export async function tryMockRead(
   _requestData: Readonly<Record<string, unknown>> = {},
   options: MockReadOptions = {},
 ): Promise<unknown | null> {
-  if (!isBusinessMockEnabled()) return null
-  const response = matchedResponse(path)
+  const mode = isBusinessMockMode()
+  if (mode === 'off') return null
+  const response = matchedResponse(path, mode)
   if (response === null) return null
   await delay(options.latencyMs ?? 300)
   return clonedResponse(response)

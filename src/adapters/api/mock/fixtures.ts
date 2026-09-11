@@ -59,12 +59,44 @@ export const mockOrdinaryListResponse = {
   total: 2,
 } as const
 
-export const mockWorkOrderDetailResponse = {
-  entity: {
-    _id: mockWorkOrderIds[0],
-    orderNum: 'MOCK-WO-001',
-    name: '模拟客户 A（演示数据）',
-    address: '模拟地址 A（非真实地点）',
-    workflowRunId: 'mock-workflow-run-001',
+export const mockWorkOrderDetailResponses = {
+  [mockWorkOrderIds[0]]: {
+    entity: {
+      _id: mockWorkOrderIds[0],
+      orderNum: 'MOCK-WO-001',
+      name: '模拟客户 A（演示数据）',
+      address: '模拟地址 A（非真实地点）',
+      workflowRunId: 'mock-workflow-run-001',
+    },
+  },
+  [mockWorkOrderIds[1]]: {
+    entity: {
+      _id: mockWorkOrderIds[1],
+      orderNum: 'MOCK-WO-002',
+      name: '模拟客户 B（演示数据）',
+      address: '模拟地址 B（非真实地点）',
+      workflowRunId: 'mock-workflow-run-002',
+    },
+  },
+  [mockWorkOrderIds[2]]: {
+    entity: {
+      _id: mockWorkOrderIds[2],
+      orderNum: 'MOCK-WO-003',
+      name: '模拟客户 C（演示数据）',
+      address: '模拟地址 C（非真实地点）',
+      workflowRunId: 'mock-workflow-run-003',
+    },
   },
 } as const
+
+export type MockWorkOrderId = (typeof mockWorkOrderIds)[number]
+
+export function mockWorkOrderDetailResponseFor(id: string): unknown | null {
+  return mockWorkOrderDetailResponses[id as MockWorkOrderId] ?? null
+}
+
+export function isSyntheticWorkOrderId(id: string): id is MockWorkOrderId {
+  return Object.prototype.hasOwnProperty.call(mockWorkOrderDetailResponses, id)
+}
+
+export const mockWorkOrderDetailResponse = mockWorkOrderDetailResponses[mockWorkOrderIds[0]]

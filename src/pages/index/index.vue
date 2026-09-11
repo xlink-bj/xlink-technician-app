@@ -43,12 +43,31 @@
         <view class="mock-panel-heading">
           <text class="mock-panel-title">开发者选项</text>
           <text class="mock-panel-status">
-            {{ mockEnabled ? '当前使用模拟业务数据' : '当前使用真实业务数据' }}
+            {{ mockMode !== 'off' ? '当前使用模拟业务数据' : '当前使用真实业务数据' }}
           </text>
         </view>
         <view class="mock-toggle-row">
           <text class="mock-toggle-label">演示数据</text>
-          <switch class="mock-switch" :checked="mockEnabled" @change="handleMockToggle" />
+          <switch class="mock-switch" :checked="mockMode !== 'off'" @change="handleMockToggle" />
+        </view>
+        <view v-if="mockMode !== 'off'" class="mock-mode-row">
+          <text class="mock-mode-label">演示状态</text>
+          <view class="mock-mode-options">
+            <button
+              class="mock-mode-button"
+              :class="{ 'mock-mode-button-active': mockMode === 'data' }"
+              @tap="selectMockMode('data')"
+            >
+              数据
+            </button>
+            <button
+              class="mock-mode-button"
+              :class="{ 'mock-mode-button-active': mockMode === 'empty' }"
+              @tap="selectMockMode('empty')"
+            >
+              空状态
+            </button>
+          </view>
         </view>
       </view>
     </view>
@@ -212,8 +231,9 @@ import { computed, reactive, ref, watch } from 'vue'
 
 import {
   isBusinessMockDeveloperModeAvailable,
-  isBusinessMockEnabled,
-  setBusinessMockEnabled,
+  isBusinessMockMode,
+  setBusinessMockMode,
+  type BusinessMockMode,
 } from '@app/business-mock'
 import { hasAuthenticatedSession, workOrdersRoute } from '@features/home/access'
 import { submitLogin, type LoginSubmissionState } from '@features/session/login'
@@ -235,7 +255,7 @@ const loginStage = ref<LoginStage>('launch')
 const message = ref('')
 const logoutInFlight = ref(false)
 const mockControlVisible = ref(false)
-const mockEnabled = ref(false)
+const mockMode = ref<BusinessMockMode>('off')
 const submissionState = reactive<LoginSubmissionState>({ inFlight: false })
 let homeBrandTapCount = 0
 let homeBrandTapTimer: ReturnType<typeof setTimeout> | null = null
@@ -279,14 +299,20 @@ function handleHomeBrandTap(): void {
   if (homeBrandTapTimer) clearTimeout(homeBrandTapTimer)
   homeBrandTapTimer = null
   mockControlVisible.value = true
-  mockEnabled.value = isBusinessMockEnabled()
+  mockMode.value = isBusinessMockMode()
 }
 
 function handleMockToggle(event: Event): void {
   const detail = (event as Event & { detail?: { value?: boolean } }).detail
   const enabled = detail?.value === true
-  setBusinessMockEnabled(enabled)
-  mockEnabled.value = isBusinessMockEnabled()
+  setBusinessMockMode(enabled ? 'data' : 'off')
+  mockMode.value = isBusinessMockMode()
+}
+
+function selectMockMode(mode: Exclude<BusinessMockMode, 'off'>): void {
+  if (mockMode.value === 'off') return
+  setBusinessMockMode(mode)
+  mockMode.value = isBusinessMockMode()
 }
 
 async function submit(): Promise<void> {
@@ -434,6 +460,49 @@ function userFacingLoginMessage(error: OperationError | null | undefined): strin
   color: #243858;
   font-size: 28rpx;
   font-weight: 700;
+}
+
+.mock-mode-row {
+  align-items: center;
+  border-top: 1rpx solid #edf1f7;
+  display: flex;
+  justify-content: space-between;
+  margin-top: 24rpx;
+  padding-top: 24rpx;
+}
+
+.mock-mode-label {
+  color: #243858;
+  font-size: 26rpx;
+  font-weight: 700;
+}
+
+.mock-mode-options {
+  display: flex;
+  gap: 12rpx;
+}
+
+.mock-mode-button {
+  background: #f4f7fc;
+  border: 1rpx solid #d9e3f2;
+  border-radius: 999rpx;
+  color: #637593;
+  font-size: 24rpx;
+  line-height: 1;
+  margin: 0;
+  min-height: 60rpx;
+  padding: 0 20rpx;
+}
+
+.mock-mode-button::after {
+  border: 0;
+}
+
+.mock-mode-button-active {
+  background: #eaf2ff;
+  border-color: #6d9ff3;
+  color: #1769df;
+  font-weight: 800;
 }
 
 .home-brand-name {

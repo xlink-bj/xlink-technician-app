@@ -2,6 +2,9 @@
 export {
   isBusinessMockDeveloperModeAvailable,
   isBusinessMockEnabled,
+  isBusinessMockMode,
   resetBusinessMockCache,
   setBusinessMockEnabled,
+  setBusinessMockMode,
 } from '@adapters/api/mock'
+export type { BusinessMockMode } from '@adapters/api/mock'

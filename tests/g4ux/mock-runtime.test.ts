@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
+  ApiReadTransportError,
   createRoleScopedTechnicianApiReadAdapter,
   createTechnicianApiReadAdapter,
   type ApiReadRequest,
@@ -11,12 +12,16 @@ import {
   type UniApiRequestExecutor,
 } from '@adapters/api/uni-api-read-transport'
 import {
+  businessMockModeStorageKey,
   isBusinessMockEnabled,
+  isBusinessMockMode,
   mockSanodeListResponse,
   mockWorkOrderDetailResponse,
+  mockWorkOrderDetailResponses,
   mockWorkOrderIds,
   resetBusinessMockCache,
   resolveBusinessMockEnabled,
+  setBusinessMockMode,
   setBusinessMockEnabled,
   tryMockRead,
 } from '@adapters/api/mock'
@@ -40,10 +45,20 @@ describe('G4-UX business mock runtime', () => {
     expect(resolveBusinessMockEnabled({ environment: 'test', storageValue: false })).toBe(false)
 
     expect(isBusinessMockEnabled()).toBe(false)
+    expect(isBusinessMockMode()).toBe('off')
     setBusinessMockEnabled(true)
     expect(isBusinessMockEnabled()).toBe(true)
+    expect(isBusinessMockMode()).toBe('data')
+    setBusinessMockMode('empty')
+    expect(isBusinessMockMode()).toBe('empty')
     setBusinessMockEnabled(false)
     expect(isBusinessMockEnabled()).toBe(false)
+
+    vi.mocked(uni.getStorageSync).mockImplementation((key: string) =>
+      key === businessMockModeStorageKey ? 'empty' : undefined,
+    )
+    resetBusinessMockCache()
+    expect(isBusinessMockMode()).toBe('empty')
   })
 
   it('hard-disables mock data in production even when storage/build flags request it', () => {
@@ -61,16 +76,30 @@ describe('G4-UX business mock runtime', () => {
     expect(isBusinessMockEnabled()).toBe(false)
   })
 
-  it('bypasses uni.request for matched reads and falls through for unmatched reads', async () => {
+  it('requires a session before mock reads and bypasses uni.request for authenticated matches', async () => {
     const request = vi.fn<UniApiRequestExecutor>()
-    setBusinessMockEnabled(true)
-    const transport = createUniApiReadTransport({
+    setBusinessMockMode('data')
+    const unauthenticatedTransport = createUniApiReadTransport({
       apiBaseUrl: 'https://example.invalid',
       getSessionRef: () => null,
       request,
       mockLatencyMs: 0,
     })
+    await expect(
+      unauthenticatedTransport.execute({
+        method: 'POST',
+        path: 'basic/serviceAppointment/querySAWorkflowNode',
+        body: { page: 1, rows: 20 },
+      }),
+    ).rejects.toMatchObject({ category: 'session_invalid' } satisfies Partial<ApiReadTransportError>)
+    expect(request).not.toHaveBeenCalled()
 
+    const transport = createUniApiReadTransport({
+      apiBaseUrl: 'https://example.invalid',
+      getSessionRef: () => asOpaqueId<'SessionRef'>('synthetic-session-ref'),
+      request,
+      mockLatencyMs: 0,
+    })
     const matched = await transport.execute({
       method: 'POST',
       path: 'basic/serviceAppointment/querySAWorkflowNode',
@@ -78,11 +107,15 @@ describe('G4-UX business mock runtime', () => {
     })
     expect(request).not.toHaveBeenCalled()
     expect(matched).toEqual(mockSanodeListResponse)
+  })
 
+  it('falls through for unmatched reads and keeps empty mode local', async () => {
+    const request = vi.fn<UniApiRequestExecutor>()
     request.mockImplementation((options) => {
       options.success?.({ statusCode: 200, data: { data: [] } } as never)
       return undefined
     })
+    setBusinessMockMode('empty')
     const unmatchedTransport = createUniApiReadTransport({
       apiBaseUrl: 'https://example.invalid',
       getSessionRef: () => asOpaqueId<'SessionRef'>('synthetic-session-ref'),
@@ -90,6 +123,15 @@ describe('G4-UX business mock runtime', () => {
     })
     await unmatchedTransport.execute({ method: 'POST', path: 'workflow/queryNode/mock-run' })
     expect(request).toHaveBeenCalledTimes(1)
+
+    request.mockClear()
+    const empty = await unmatchedTransport.execute({
+      method: 'POST',
+      path: 'basic/serviceAppointment/querySAWorkflowNode',
+      body: { page: 1, rows: 20 },
+    })
+    expect(empty).toEqual({ data: [], page: 1, rows: 20, total: 0 })
+    expect(request).not.toHaveBeenCalled()
   })
 
   it('never mocks Login and disabling restores the real transport path', async () => {
@@ -151,6 +193,27 @@ describe('G4-UX business mock runtime', () => {
     expect(requests.at(-1)?.path).toBe(
       'basic/serviceAppointment/queryById/mock-work-order-001',
     )
+  })
+
+  it('keeps every synthetic list entity inside the local detail journey', async () => {
+    setBusinessMockMode('data')
+    const request = vi.fn<UniApiRequestExecutor>()
+    const transport = createUniApiReadTransport({
+      apiBaseUrl: 'https://example.invalid',
+      getSessionRef: () => asOpaqueId<'SessionRef'>('synthetic-session-ref'),
+      request,
+      mockLatencyMs: 0,
+    })
+    const api = createTechnicianApiReadAdapter(transport)
+
+    for (const id of mockWorkOrderIds) {
+      const detail = await api.getWorkOrderDetail(asOpaqueId<'WorkOrderId'>(id))
+      expect(detail.state).toBe('succeeded')
+      expect(detail.data?.id).toBe(id)
+      expect(mockWorkOrderDetailResponses[id]).toBeDefined()
+    }
+
+    expect(request).not.toHaveBeenCalled()
   })
 
   it('keeps fixtures raw and free of UI-only aliases', () => {

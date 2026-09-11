@@ -1,23 +1,25 @@
 import type { EnvironmentName } from '@shared/config'
 
 export const businessMockStorageKey = 'xlink_technician_business_mock_enabled'
+export const businessMockModeStorageKey = 'xlink_technician_business_mock_mode'
 
-type MockEnvironment = EnvironmentName | 'unknown'
+export type BusinessMockMode = 'off' | 'data' | 'empty'
+export type BusinessMockEnvironment = EnvironmentName | 'unknown'
 
 interface MockStorage {
   getStorageSync(key: string): unknown
-  setStorageSync(key: string, value: boolean): unknown
+  setStorageSync(key: string, value: unknown): unknown
 }
 
-let cachedFlag: boolean | null = null
+let cachedMode: BusinessMockMode | null = null
 
-function environmentFromBuild(): MockEnvironment {
+function environmentFromBuild(): BusinessMockEnvironment {
   const value = import.meta.env.VITE_XLINK_ENVIRONMENT
   if (value === 'dev' || value === 'test' || value === 'staging' || value === 'prod') return value
   return 'unknown'
 }
 
-function isMockAllowed(environment: MockEnvironment): boolean {
+function isMockAllowed(environment: BusinessMockEnvironment): boolean {
   return environment !== 'unknown' && environment !== 'prod'
 }
 
@@ -39,6 +41,18 @@ function readStoredFlag(): boolean | undefined {
   }
 }
 
+function readStoredMode(): BusinessMockMode | undefined {
+  try {
+    const value = platformStorage()?.getStorageSync(businessMockModeStorageKey)
+    if (value === 'data' || value === 'empty' || value === 'off') return value
+  } catch {
+    return undefined
+  }
+
+  const legacyFlag = readStoredFlag()
+  return legacyFlag === undefined ? undefined : legacyFlag ? 'data' : 'off'
+}
+
 function persistFlag(value: boolean): void {
   try {
     platformStorage()?.setStorageSync(businessMockStorageKey, value)
@@ -48,15 +62,21 @@ function persistFlag(value: boolean): void {
 }
 
 export interface ResolveBusinessMockInput {
-  readonly environment: MockEnvironment
+  readonly environment: BusinessMockEnvironment
+  readonly storageMode?: BusinessMockMode
   readonly storageValue?: boolean
   readonly buildEnabled?: boolean
 }
 
+export function resolveBusinessMockMode(input: ResolveBusinessMockInput): BusinessMockMode {
+  if (!isMockAllowed(input.environment)) return 'off'
+  if (input.storageMode !== undefined) return input.storageMode
+  if (input.storageValue !== undefined) return input.storageValue ? 'data' : 'off'
+  return input.buildEnabled === true ? 'data' : 'off'
+}
+
 export function resolveBusinessMockEnabled(input: ResolveBusinessMockInput): boolean {
-  if (!isMockAllowed(input.environment)) return false
-  if (input.storageValue !== undefined) return input.storageValue
-  return input.buildEnabled === true
+  return resolveBusinessMockMode(input) !== 'off'
 }
 
 export function isBusinessMockDeveloperModeAvailable(): boolean {
@@ -64,30 +84,43 @@ export function isBusinessMockDeveloperModeAvailable(): boolean {
 }
 
 export function isBusinessMockEnabled(): boolean {
+  return isBusinessMockMode() !== 'off'
+}
+
+export function isBusinessMockMode(): BusinessMockMode {
   const environment = environmentFromBuild()
   if (!isMockAllowed(environment)) {
-    cachedFlag = false
-    return false
+    cachedMode = 'off'
+    return cachedMode
   }
-  if (cachedFlag !== null) return cachedFlag
+  if (cachedMode !== null) return cachedMode
 
-  cachedFlag = resolveBusinessMockEnabled({
+  cachedMode = resolveBusinessMockMode({
     environment,
-    storageValue: readStoredFlag(),
+    storageMode: readStoredMode(),
     buildEnabled: buildMockFlag(),
   })
-  return cachedFlag
+  return cachedMode
+}
+
+export function setBusinessMockMode(mode: BusinessMockMode): void {
+  if (!isBusinessMockDeveloperModeAvailable()) {
+    cachedMode = 'off'
+    return
+  }
+  cachedMode = mode
+  persistFlag(mode !== 'off')
+  try {
+    platformStorage()?.setStorageSync(businessMockModeStorageKey, mode)
+  } catch {
+    // The in-memory cache remains authoritative for the current session.
+  }
 }
 
 export function setBusinessMockEnabled(enabled: boolean): void {
-  if (!isBusinessMockDeveloperModeAvailable()) {
-    cachedFlag = false
-    return
-  }
-  cachedFlag = enabled
-  persistFlag(enabled)
+  setBusinessMockMode(enabled ? 'data' : 'off')
 }
 
 export function resetBusinessMockCache(): void {
-  cachedFlag = null
+  cachedMode = null
 }
