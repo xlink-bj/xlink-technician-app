@@ -36,7 +36,7 @@
     </view>
 
     <view v-else-if="workOrder.loadState === 'succeeded' && workOrder.detail" class="detail-content">
-      <view class="detail-card">
+      <view class="information-card">
         <text class="card-label">Work Order number</text>
         <text class="card-value">{{ workOrder.detail.displayNumber ?? String(workOrder.detail.id) }}</text>
 
@@ -50,20 +50,21 @@
           <text class="card-value">{{ workOrder.detail.serviceAddress }}</text>
         </view>
 
-        <view v-if="canDial" class="contact-action">
+        <view v-if="workOrder.detail.contact?.displayMask" class="detail-row">
           <text class="card-label">Customer contact</text>
-          <text v-if="workOrder.detail.contact?.displayMask" class="card-value">
-            {{ workOrder.detail.contact.displayMask }}
-          </text>
-          <button class="action" :disabled="workOrder.contactInFlight" @tap="dialContact">
-            {{ workOrder.contactInFlight ? 'Opening phone…' : 'Call customer' }}
-          </button>
-          <text v-if="contactFeedback" class="state-detail">{{ contactFeedback }}</text>
+          <text class="card-value">{{ workOrder.detail.contact.displayMask }}</text>
         </view>
-        <view v-else-if="workOrder.detail.contact" class="contact-action">
-          <text class="card-label">Customer contact</text>
-          <text class="state-detail">Direct phone contact is not available.</text>
-        </view>
+      </view>
+
+      <view class="quick-action-region">
+        <text class="section-label">Quick actions</text>
+        <button v-if="canDial" class="action" :disabled="workOrder.contactInFlight" @tap="dialContact">
+          {{ workOrder.contactInFlight ? 'Opening phone…' : 'Call customer' }}
+        </button>
+        <text v-else-if="workOrder.detail.contact" class="state-detail">
+          Direct phone contact is not available.
+        </text>
+        <text v-if="contactFeedback" class="state-detail">{{ contactFeedback }}</text>
       </view>
     </view>
 
@@ -86,9 +87,7 @@ const workOrder = useWorkOrderDetailStore()
 const routeReady = ref(false)
 const routeValue = ref<unknown>(undefined)
 const canAccess = computed(() => hasAuthenticatedSession(session.status, session.session))
-const canDial = computed(() => Boolean(
-  workOrder.detail?.contact?.contactRef && workOrder.detail?.contact?.normalizedPhone,
-))
+const canDial = computed(() => Boolean(workOrder.detail?.contact?.normalizedPhone))
 const contactFeedback = computed(() => {
   switch (workOrder.contactState) {
     case 'granted':
@@ -173,7 +172,8 @@ async function dialContact(): Promise<void> {
   text-align: center;
 }
 
-.detail-card {
+.information-card,
+.quick-action-region {
   background: #ffffff;
   border-radius: 16rpx;
   display: flex;
@@ -182,8 +182,12 @@ async function dialContact(): Promise<void> {
   padding: 32rpx;
 }
 
-.detail-row,
-.contact-action {
+.quick-action-region {
+  border: 1rpx solid #dbe5ff;
+  background: #f8faff;
+}
+
+.detail-row {
   border-top: 1rpx solid #eaecf0;
   display: flex;
   flex-direction: column;
@@ -193,9 +197,15 @@ async function dialContact(): Promise<void> {
 
 .eyebrow,
 .state-detail,
-.card-label {
+.card-label,
+.section-label {
   color: #667085;
   font-size: 26rpx;
+}
+
+.section-label {
+  color: #344054;
+  font-weight: 600;
 }
 
 .title {

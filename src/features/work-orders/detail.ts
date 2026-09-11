@@ -215,7 +215,7 @@ export const useWorkOrderDetailStore = defineStore('workOrderDetail', () => {
 
   async function dialContact(): Promise<CapabilityResult<void>> {
     const contact = detail.value?.contact
-    if (!contact?.contactRef || !contact.normalizedPhone) {
+    if (!contact?.normalizedPhone) {
       const result = capabilityFailure(
         'unavailable',
         'A direct customer phone contact is not available for this Work Order',
@@ -240,8 +240,8 @@ export const useWorkOrderDetailStore = defineStore('workOrderDetail', () => {
     contactInFlight.value = true
     try {
       const result = await phone.dial({
-        contactRef: contact.contactRef,
         normalizedPhone: contact.normalizedPhone,
+        ...(contact.contactRef ? { contactRef: contact.contactRef } : {}),
       })
       contactState.value = result.state
       contactReason.value = result.reason

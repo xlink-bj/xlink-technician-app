@@ -34,7 +34,7 @@ The API Adapter maps only these evidence-backed semantic values:
 | `displayNumber` | service-appointment `orderNum` | Added for useful detail identification. |
 | `customerName` | service-appointment `name` | Added because the Legacy summary labels and displays it as customer name. |
 | `serviceAddress` | service-appointment `address` | Added because the Legacy summary displays the service address. |
-| `contact.contactRef` | first service-appointment `contactIds` entry | Added as an opaque `CustomerContactId`; it is never treated as `UserId`. |
+| `contact.contactRef` | first service-appointment `contactIds` entry | Added as an optional opaque `CustomerContactId`; it is never treated as `UserId` and is not required for direct dialing. |
 | `contact.normalizedPhone` | service-appointment `phone`, trimmed at the adapter boundary | In-memory action input only; it is not persisted, logged, or placed in a route. |
 | `contact.displayMask` | the evidenced `3 + 4 masked + 4` phone presentation pattern | Only the masked value is rendered; non-matching phone formats are not rendered. |
 
@@ -50,11 +50,13 @@ appointment, order, contract, activity, or contact-maintenance domains.
 
 ## Customer contact decision
 
-G4-C includes a direct-phone contact command when both an opaque contact
-reference and a detail phone are available. This preserves the observed R1
-detail action without exposing Legacy call helpers to the feature. The page
-does not render the full phone number; it renders the evidenced masked form
-when the number has the supported shape and an intentional contact action.
+G4-C includes a direct-phone contact command whenever a detail phone is
+available. This preserves the observed R1 detail action: `phone` is the direct
+call input, while `contactIds` belongs to the no-phone intermediate-number
+branch. An opaque contact reference is included in the semantic command when
+available, but is not a precondition for direct dialing. The page does not
+render the full phone number; it renders the evidenced masked form when the
+number has the supported shape and an intentional contact action.
 
 The R1 no-phone branch uses `getMiddleNumberBySid` and a relay/private-number
 result. Its exact contract, authorization, and cross-target behavior are not
@@ -69,6 +71,33 @@ parity and native behavior remain G5 verification prerequisites.
 
 No contact edit, upsert, note, group-binding, appointment, or workflow write is
 implemented.
+
+## Detail Interaction Rule
+
+The pinned `xlink-business-3.0` Web reference at
+`06b885ed22477e79d50bc6f3a0ce0c96fbc1a185` is accepted as an interaction and
+information-architecture reference only. Its structure separates:
+
+`Detail Summary / Quick Actions` → `WorkflowStepRail` →
+`ProjectCurrentTaskCard` → `ProjectTaskActionSheet` → `DetailTabbedSection`.
+
+The new Technician App adopts the following durable rule:
+
+- information regions and future information Tabs are read-oriented surfaces
+  for Work Order, customer, records, materials, and other information;
+- dynamic workflow/current-task actions must never be modeled as dynamic
+  information Tabs;
+- current workflow/business actions belong to an independent Current Action /
+  Current Task surface, with primary and optional secondary actions;
+- action execution opens a dedicated sheet, modal, or page owned by that action
+  surface;
+- the G4-C `Call customer` action is in a distinct Quick Actions region outside
+  the information card and rows;
+- G4-C does not implement Workflow Runtime actions, workflow execution, or
+  Appointment behavior.
+
+This is an interaction boundary decision, not a copy of the R2 React
+implementation.
 
 ## Remaining unknowns and gate assessment
 

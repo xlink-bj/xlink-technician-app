@@ -252,6 +252,22 @@ describe('G4-C Work Order Detail feature', () => {
     })
   })
 
+  it('allows direct dialing when only the normalized phone is available', async () => {
+    const dial = vi.fn(async () => createCapabilityResult<void>('phone', 'granted'))
+    const phone: PhonePort = { dial }
+    const phoneOnly: WorkOrderDetail = {
+      id: workOrderId,
+      contact: { normalizedPhone: '13800000000', displayMask: '138****0000' },
+    }
+    const store = configure(detailApi(vi.fn(async () => success(phoneOnly))), authenticatedSession, phone)
+
+    await store.load(workOrderId)
+    const result = await store.dialContact()
+
+    expect(result.state).toBe('granted')
+    expect(dial).toHaveBeenCalledWith({ normalizedPhone: '13800000000' })
+  })
+
   it('does not issue a phone command when direct contact data is unavailable', async () => {
     const dial = vi.fn()
     const phone: PhonePort = { dial }
@@ -261,6 +277,19 @@ describe('G4-C Work Order Detail feature', () => {
       contact: { contactRef: asOpaqueId<'CustomerContactId'>('contact-001') },
     }
     const store = configure(detailApi(vi.fn(async () => success(withoutPhone))), authenticatedSession, phone)
+
+    await store.load(workOrderId)
+    const result = await store.dialContact()
+
+    expect(result.state).toBe('unavailable')
+    expect(dial).not.toHaveBeenCalled()
+  })
+
+  it('reports unavailable without contact values and does not invent the relay path', async () => {
+    const dial = vi.fn()
+    const phone: PhonePort = { dial }
+    const withoutContact: WorkOrderDetail = { id: workOrderId }
+    const store = configure(detailApi(vi.fn(async () => success(withoutContact))), authenticatedSession, phone)
 
     await store.load(workOrderId)
     const result = await store.dialContact()
