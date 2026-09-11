@@ -31,7 +31,7 @@ export interface ScanResult {
 }
 
 export interface PhoneDialRequest {
-  readonly contactRef: CustomerContactId
+  readonly contactRef?: CustomerContactId
   readonly normalizedPhone: string
 }
 

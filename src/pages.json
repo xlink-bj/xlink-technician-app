@@ -9,7 +9,13 @@
     {
       "path": "pages/work-orders/work-orders",
       "style": {
-        "navigationBarTitleText": "My Work Orders"
+        "navigationBarTitleText": "Role-visible Work Orders"
+      }
+    },
+    {
+      "path": "pages/work-orders/detail",
+      "style": {
+        "navigationBarTitleText": "Work Order Detail"
       }
     }
   ],

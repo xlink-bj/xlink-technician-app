@@ -124,6 +124,33 @@ function sanodeWorkOrderSummary(raw: unknown): WorkOrderSummary {
   return workOrderSummary(data)
 }
 
+function firstArrayString(value: unknown): string | undefined {
+  if (!Array.isArray(value)) return undefined
+  for (const item of value) {
+    if (typeof item === 'string' && item.trim().length > 0) return item
+    if (typeof item === 'number' && Number.isFinite(item)) return String(item)
+  }
+  return undefined
+}
+
+function phoneDisplayMask(phone: string): string | undefined {
+  const match = /^(\d{3})\d{4}(\d{4})$/.exec(phone)
+  return match ? `${match[1]}****${match[2]}` : undefined
+}
+
+function workOrderContact(record: AdapterRecord) {
+  const contactId = firstArrayString(record.contactIds)
+  const phone = optionalString(record, ['phone'])?.trim()
+  if (!contactId && !phone) return undefined
+  const displayMask = phone ? phoneDisplayMask(phone) : undefined
+
+  return {
+    ...(contactId ? { contactRef: asOpaqueId<'CustomerContactId'>(contactId) } : {}),
+    ...(phone ? { normalizedPhone: phone } : {}),
+    ...(displayMask ? { displayMask } : {}),
+  }
+}
+
 function workOrderDetail(raw: unknown, requestedId: WorkOrderId): WorkOrderDetail {
   const envelope = asRecord(raw, 'work-order detail response')
   const record = nestedRecord(envelope, ['serviceAppointment', 'workOrder', 'entity']) ?? envelope
@@ -133,7 +160,19 @@ function workOrderDetail(raw: unknown, requestedId: WorkOrderId): WorkOrderDetai
     optionalOpaqueId<'WorkflowRunId'>(record, ['workflowRunId', 'runId']) ??
     (workflow ? optionalOpaqueId<'WorkflowRunId'>(workflow, ['workflowRunId', 'runId', '_id']) : undefined)
 
-  return workflowRunId ? { id, workflowRunId } : { id }
+  const displayNumber = optionalString(record, ['orderNum'])
+  const customerName = optionalString(record, ['name'])
+  const serviceAddress = optionalString(record, ['address'])
+  const contact = workOrderContact(record)
+
+  return {
+    id,
+    ...(workflowRunId ? { workflowRunId } : {}),
+    ...(displayNumber ? { displayNumber } : {}),
+    ...(customerName ? { customerName } : {}),
+    ...(serviceAddress ? { serviceAddress } : {}),
+    ...(contact ? { contact } : {}),
+  }
 }
 
 function workflowDefinition(raw: unknown, requestedId: WorkflowDefinitionId): WorkflowDefinitionRead {
