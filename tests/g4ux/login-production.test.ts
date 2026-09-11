@@ -10,6 +10,7 @@ import {
 
 const loginPage = readFileSync(new URL('../../src/pages/index/index.vue', import.meta.url), 'utf8')
 const loginTemplate = loginPage.split('<script setup')[0]
+const appEntry = readFileSync(new URL('../../src/main.ts', import.meta.url), 'utf8')
 
 describe('G4-UX production Login flow', () => {
   it('transitions from brand launch to method selection to the supported form', () => {
@@ -44,5 +45,10 @@ describe('G4-UX production Login flow', () => {
     expect(loginPage).toContain("loginStage === 'methods'")
     expect(loginPage).toMatch(/class="submit"[^>]*:disabled="isBusy"[^>]*@tap="submit"/)
     expect(loginPage).toContain('class="code-button" disabled')
+  })
+
+  it('mounts the application root so mini-program page VMs receive events', () => {
+    expect(appEntry).toMatch(/const application = createApplication\(\)\s+application\.app\.mount\('#app'\)/)
+    expect(appEntry).toContain('return application')
   })
 })
