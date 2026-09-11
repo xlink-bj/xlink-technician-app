@@ -109,6 +109,25 @@ describe('G4-UX business mock runtime', () => {
     expect(matched).toEqual(mockSanodeListResponse)
   })
 
+  it('blocks locally-owned synthetic detail reads when mock mode is off', async () => {
+    setBusinessMockMode('off')
+    const request = vi.fn<UniApiRequestExecutor>()
+    const transport = createUniApiReadTransport({
+      apiBaseUrl: 'https://example.invalid',
+      getSessionRef: () => asOpaqueId<'SessionRef'>('synthetic-session-ref'),
+      request,
+    })
+
+    await expect(
+      transport.execute({
+        method: 'POST',
+        path: 'basic/serviceAppointment/queryById/mock-work-order-001',
+        body: { type: 'query' },
+      }),
+    ).rejects.toMatchObject({ category: 'server_terminal' })
+    expect(request).not.toHaveBeenCalled()
+  })
+
   it('falls through for unmatched reads and keeps empty mode local', async () => {
     const request = vi.fn<UniApiRequestExecutor>()
     request.mockImplementation((options) => {

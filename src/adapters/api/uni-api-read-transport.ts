@@ -5,7 +5,7 @@ import {
   type ApiReadRequest,
   type ApiReadTransport,
 } from './technician-api'
-import { tryMockRead } from './mock'
+import { isMockOwnedRead, tryMockRead } from './mock'
 
 export type UniApiRequestExecutor = (options: UniNamespace.RequestOptions) => unknown
 
@@ -85,6 +85,9 @@ export function createUniApiReadTransport(options: UniApiReadTransportOptions): 
         options.mockLatencyMs === undefined ? {} : { latencyMs: options.mockLatencyMs },
       )
       if (mockResponse !== null) return mockResponse
+      if (isMockOwnedRead(input.path)) {
+        throw new ApiReadTransportError('Synthetic mock read is disabled', 'server_terminal')
+      }
 
       const header: Record<string, string> = {
         Cookie: `JSESSIONID=${sessionRef}`,

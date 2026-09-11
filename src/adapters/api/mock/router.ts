@@ -15,6 +15,18 @@ function normalizedPath(path: string): string {
   return path.replace(/^\/+/, '').split('?')[0]
 }
 
+/** Synthetic detail paths remain locally owned even when mock mode is off. */
+export function isMockOwnedRead(path: string): boolean {
+  const route = normalizedPath(path)
+  const detailPrefix = 'basic/serviceAppointment/queryById/'
+  if (!route.startsWith(detailPrefix)) return false
+  try {
+    return isSyntheticWorkOrderId(decodeURIComponent(route.slice(detailPrefix.length)))
+  } catch {
+    return false
+  }
+}
+
 function clonedResponse<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T
 }
@@ -38,7 +50,7 @@ function matchedResponse(path: string, mode: BusinessMockMode): unknown | null {
   const detailPrefix = 'basic/serviceAppointment/queryById/'
   if (route.startsWith(detailPrefix)) {
     const requestedId = decodeURIComponent(route.slice(detailPrefix.length))
-    if (isSyntheticWorkOrderId(requestedId)) return mockWorkOrderDetailResponseFor(requestedId)
+    if (isMockOwnedRead(route)) return mockWorkOrderDetailResponseFor(requestedId)
   }
 
   return null

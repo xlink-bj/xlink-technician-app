@@ -11,7 +11,7 @@ export {
   setBusinessMockMode,
 } from './config'
 export type { BusinessMockEnvironment, BusinessMockMode, ResolveBusinessMockInput } from './config'
-export { tryMockRead } from './router'
+export { isMockOwnedRead, tryMockRead } from './router'
 export type { MockReadOptions } from './router'
 export {
   mockOrdinaryListResponse,
