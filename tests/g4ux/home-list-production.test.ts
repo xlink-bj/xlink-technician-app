@@ -61,7 +61,7 @@ describe('G4-UX Phase B2 Work Order List', () => {
     expect(listTemplate).not.toContain('workOrders.error?.message')
     expect(listTemplate).not.toContain('{{ item.id }}')
     expect(listTemplate).not.toContain('{{ String(item.id) }}')
-    expect(listTemplate).toContain('{{ item.title || \'工单详情\' }}')
+    expect(listTemplate).toContain('{{ item.displayNumber || \'工单详情\' }}')
   })
 
   it('keeps session guard and semantic detail navigation intact', () => {

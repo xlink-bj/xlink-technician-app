@@ -63,7 +63,7 @@
             <text>工</text>
           </view>
           <view class="row-copy">
-            <text class="row-title">{{ item.title || '工单详情' }}</text>
+            <text class="row-title">{{ item.displayNumber || '工单详情' }}</text>
             <text class="row-note">查看工单详情</text>
           </view>
           <text class="row-arrow" aria-hidden="true">›</text>

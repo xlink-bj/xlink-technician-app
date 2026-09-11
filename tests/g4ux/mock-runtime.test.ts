@@ -15,6 +15,7 @@ import {
   businessMockModeStorageKey,
   isBusinessMockEnabled,
   isBusinessMockMode,
+  mockOrdinaryListResponse,
   mockSanodeListResponse,
   mockWorkOrderDetailResponse,
   mockWorkOrderDetailResponses,
@@ -189,9 +190,23 @@ describe('G4-UX business mock runtime', () => {
     const list = await roleScoped.listWorkOrders({ page: 1, pageSize: 20 })
 
     expect(list.data?.items).toEqual([
-      { id: mockWorkOrderIds[0], title: '演示工单 · 屋面检查 A' },
-      { id: mockWorkOrderIds[1], title: '演示工单 · 防水维修 B' },
-      { id: mockWorkOrderIds[2], title: '演示工单 · 屋面复查 C' },
+      {
+        id: mockWorkOrderIds[0],
+        displayNumber: 'DEMO-SA-001',
+        customerName: '演示客户甲',
+        serviceAddress: '演示服务地址一号',
+      },
+      {
+        id: mockWorkOrderIds[1],
+        displayNumber: 'DEMO-SA-002',
+        customerName: '演示客户乙（长名称结构样本）',
+        serviceAddress: '演示区域二号服务地址，长地址字段示例用于换行校验',
+      },
+      {
+        id: mockWorkOrderIds[2],
+        displayNumber: 'DEMO-SA-003',
+        customerName: '演示客户丙',
+      },
     ])
     expect(list.data?.items[0].id).not.toBe('mock-workflow-node-001')
     expect(requests.map((request) => request.path)).toEqual([
@@ -205,13 +220,44 @@ describe('G4-UX business mock runtime', () => {
     expect(detail.data).toEqual({
       id: mockWorkOrderIds[0],
       workflowRunId: 'mock-workflow-run-001',
-      displayNumber: 'MOCK-WO-001',
-      customerName: '模拟客户 A（演示数据）',
-      serviceAddress: '模拟地址 A（非真实地点）',
+      displayNumber: 'DEMO-SA-001',
+      customerName: '演示客户甲',
+      serviceAddress: '演示服务地址一号',
     })
     expect(requests.at(-1)?.path).toBe(
       'basic/serviceAppointment/queryById/mock-work-order-001',
     )
+  })
+
+  it('normalizes enriched ordinary service-appointment rows into the same summary semantics', async () => {
+    setBusinessMockMode('data')
+    const request = vi.fn<UniApiRequestExecutor>()
+    const api = createTechnicianApiReadAdapter(
+      createUniApiReadTransport({
+        apiBaseUrl: 'https://example.invalid',
+        getSessionRef: () => asOpaqueId<'SessionRef'>('synthetic-session-ref'),
+        request,
+        mockLatencyMs: 0,
+      }),
+    )
+
+    const result = await api.listWorkOrders({ page: 1, pageSize: 20 })
+
+    expect(result.data?.items).toEqual([
+      {
+        id: mockWorkOrderIds[0],
+        displayNumber: 'DEMO-SA-001',
+        customerName: '演示客户甲',
+        serviceAddress: '演示服务地址一号',
+      },
+      {
+        id: mockWorkOrderIds[1],
+        displayNumber: 'DEMO-SA-002',
+        customerName: '演示客户乙（长名称结构样本）',
+        serviceAddress: '演示区域二号服务地址，长地址字段示例用于换行校验',
+      },
+    ])
+    expect(request).not.toHaveBeenCalled()
   })
 
   it('keeps every synthetic list entity inside the local detail journey', async () => {
@@ -235,14 +281,70 @@ describe('G4-UX business mock runtime', () => {
     expect(request).not.toHaveBeenCalled()
   })
 
+  it('keeps every synthetic list row consistent with its normalized detail', async () => {
+    setBusinessMockMode('data')
+    const request = vi.fn<UniApiRequestExecutor>()
+    const transport = createUniApiReadTransport({
+      apiBaseUrl: 'https://example.invalid',
+      getSessionRef: () => asOpaqueId<'SessionRef'>('synthetic-session-ref'),
+      request,
+      mockLatencyMs: 0,
+    })
+    const api = createRoleScopedTechnicianApiReadAdapter(
+      transport,
+      () => asOpaqueId<'RoleId'>('synthetic-role'),
+    )
+
+    const list = await api.listWorkOrders({ page: 1, pageSize: 20 })
+    expect(list.state).toBe('succeeded')
+    expect(list.data?.items).toHaveLength(mockWorkOrderIds.length)
+    for (const item of list.data?.items ?? []) {
+      expect(item).not.toHaveProperty('status')
+      expect(item).not.toHaveProperty('state')
+      expect(item).not.toHaveProperty('serviceType')
+      expect(item).not.toHaveProperty('nodeDef')
+      expect(item).not.toHaveProperty('_id')
+    }
+
+    for (const item of list.data?.items ?? []) {
+      const detail = await createTechnicianApiReadAdapter(transport).getWorkOrderDetail(item.id)
+      expect(detail.state).toBe('succeeded')
+      expect(detail.data).toMatchObject({
+        id: item.id,
+        ...(item.displayNumber ? { displayNumber: item.displayNumber } : {}),
+        ...(item.customerName ? { customerName: item.customerName } : {}),
+        ...(item.serviceAddress ? { serviceAddress: item.serviceAddress } : {}),
+      })
+    }
+
+    expect(request).not.toHaveBeenCalled()
+  })
+
   it('keeps fixtures raw and free of UI-only aliases', () => {
     const rawNode = mockSanodeListResponse.data[0]
     expect(rawNode).toHaveProperty('_id', 'mock-workflow-node-001')
     expect(rawNode).toHaveProperty('data._id', mockWorkOrderIds[0])
     expect(rawNode).toHaveProperty('data.name')
     expect(rawNode.data).not.toHaveProperty('title')
+    expect(rawNode.data).not.toHaveProperty('displayNumber')
+    expect(rawNode.data).not.toHaveProperty('customerName')
+    expect(rawNode.data).not.toHaveProperty('serviceAddress')
     expect(mockWorkOrderDetailResponse.entity).not.toHaveProperty('displayNumber')
     expect(mockWorkOrderDetailResponse.entity).not.toHaveProperty('customerName')
+    expect(mockWorkOrderDetailResponse.entity).not.toHaveProperty('serviceAddress')
+  })
+
+  it('keeps representative mock fixtures sanitized and excludes credential/contact values', () => {
+    const serialized = JSON.stringify({
+      mockSanodeListResponse,
+      mockOrdinaryListResponse,
+      mockWorkOrderDetailResponses,
+    })
+
+    expect(serialized).toContain('DEMO-SA-001')
+    expect(serialized).toContain('演示客户')
+    expect(serialized).not.toMatch(/186\d{8}/)
+    expect(serialized).not.toMatch(/phone|contactIds|JSESSIONID|token/i)
   })
 
   it('exposes the developer switch only behind the hidden non-production control', () => {

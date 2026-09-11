@@ -83,7 +83,14 @@ describe('G3-C API adapter foundation', () => {
     expect(list).toEqual({
       state: 'succeeded',
       data: {
-        items: [{ id: 'work-order-001', title: 'Sanitized work order' }],
+        items: [
+          {
+            id: 'work-order-001',
+            displayNumber: 'DEMO-SA-001',
+            customerName: 'Sanitized customer',
+            serviceAddress: 'Sanitized service address',
+          },
+        ],
         page: 1,
         pageSize: 20,
         totalCount: 1,
@@ -97,7 +104,13 @@ describe('G3-C API adapter foundation', () => {
     })
 
     const detail = await api.getWorkOrderDetail(asOpaqueId<'WorkOrderId'>('work-order-001'))
-    expect(detail.data).toEqual({ id: 'work-order-001', workflowRunId: 'workflow-run-001' })
+    expect(detail.data).toEqual({
+      id: 'work-order-001',
+      workflowRunId: 'workflow-run-001',
+      displayNumber: 'DEMO-SA-001',
+      customerName: 'Sanitized customer',
+      serviceAddress: 'Sanitized service address',
+    })
     expect(transport.requests[1].body).toEqual({ type: 'query' })
 
     const nodes = await api.getWorkflowNodes(asOpaqueId<'WorkflowRunId'>('workflow-run-001'))

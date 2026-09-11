@@ -113,8 +113,16 @@ function pageEnvelope<T>(raw: unknown, mapItem: (value: unknown) => T): ReadPage
 function workOrderSummary(raw: unknown): WorkOrderSummary {
   const record = asRecord(raw, 'work-order summary')
   const id = requiredOpaqueId<'WorkOrderId'>(record, ['id', '_id'], 'work-order id')
-  const title = optionalString(record, ['title', 'name'])
-  return title ? { id, title } : { id }
+  const displayNumber = optionalString(record, ['orderNum'])
+  const customerName = optionalString(record, ['name'])
+  const serviceAddress = optionalString(record, ['address'])
+
+  return {
+    id,
+    ...(displayNumber ? { displayNumber } : {}),
+    ...(customerName ? { customerName } : {}),
+    ...(serviceAddress ? { serviceAddress } : {}),
+  }
 }
 
 function sanodeWorkOrderSummary(raw: unknown): WorkOrderSummary {

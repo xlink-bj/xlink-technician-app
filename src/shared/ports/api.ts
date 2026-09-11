@@ -23,7 +23,9 @@ export interface WorkOrderListQuery {
 
 export interface WorkOrderSummary {
   readonly id: WorkOrderId
-  readonly title?: string
+  readonly displayNumber?: string
+  readonly customerName?: string
+  readonly serviceAddress?: string
 }
 
 /** Semantic customer-contact data kept in the in-memory detail model only. */

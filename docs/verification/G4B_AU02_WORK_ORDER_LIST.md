@@ -77,6 +77,15 @@ previous session's menu scope.
 These unknowns do not justify exposing backend menu/query conventions in the
 shared port or feature/UI layers.
 
+## Data fidelity follow-up
+
+The accepted role-visible list scope remains unchanged. The enriched semantic
+row decision and field-by-field evidence matrix are recorded in
+[`G4B_WORK_ORDER_DATA_FIDELITY.md`](./G4B_WORK_ORDER_DATA_FIDELITY.md). The
+current list UI is intentionally not visually redesigned by that follow-up;
+it only consumes `displayNumber` for the existing row label instead of treating
+an unverified raw `name` value as a task title.
+
 ## Session-invalid invariant
 
 When the normalized API read result is `session_invalid`, the Work Order List

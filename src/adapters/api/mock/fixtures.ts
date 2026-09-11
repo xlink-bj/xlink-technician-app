@@ -6,6 +6,32 @@ export const mockWorkOrderIds = [
   'mock-work-order-003',
 ] as const
 
+const mockServiceAppointmentData = {
+  [mockWorkOrderIds[0]]: {
+    _id: mockWorkOrderIds[0],
+    orderNum: 'DEMO-SA-001',
+    name: '演示客户甲',
+    address: '演示服务地址一号',
+    serviceType: '40',
+    status: '104',
+  },
+  [mockWorkOrderIds[1]]: {
+    _id: mockWorkOrderIds[1],
+    orderNum: 'DEMO-SA-002',
+    name: '演示客户乙（长名称结构样本）',
+    address: '演示区域二号服务地址，长地址字段示例用于换行校验',
+    serviceType: '30',
+    status: '104',
+  },
+  [mockWorkOrderIds[2]]: {
+    _id: mockWorkOrderIds[2],
+    orderNum: 'DEMO-SA-003',
+    name: '演示客户丙',
+    serviceType: '40',
+    status: '104',
+  },
+} as const
+
 export const mockRoleFunctionResponse = {
   data: {
     functionList: [
@@ -29,19 +55,19 @@ export const mockSanodeListResponse = {
       _id: 'mock-workflow-node-001',
       state: 1,
       nodeDef: { nodeType: 'mock-technician-task' },
-      data: { _id: mockWorkOrderIds[0], name: '演示工单 · 屋面检查 A' },
+      data: mockServiceAppointmentData[mockWorkOrderIds[0]],
     },
     {
       _id: 'mock-workflow-node-002',
       state: 1,
       nodeDef: { nodeType: 'mock-technician-task' },
-      data: { _id: mockWorkOrderIds[1], name: '演示工单 · 防水维修 B' },
+      data: mockServiceAppointmentData[mockWorkOrderIds[1]],
     },
     {
       _id: 'mock-workflow-node-003',
       state: 1,
       nodeDef: { nodeType: 'mock-technician-task' },
-      data: { _id: mockWorkOrderIds[2], name: '演示工单 · 屋面复查 C' },
+      data: mockServiceAppointmentData[mockWorkOrderIds[2]],
     },
   ],
   page: 1,
@@ -51,8 +77,8 @@ export const mockSanodeListResponse = {
 
 export const mockOrdinaryListResponse = {
   data: [
-    { _id: mockWorkOrderIds[0], name: '演示工单 · 普通服务 A' },
-    { _id: mockWorkOrderIds[1], name: '演示工单 · 普通服务 B' },
+    mockServiceAppointmentData[mockWorkOrderIds[0]],
+    mockServiceAppointmentData[mockWorkOrderIds[1]],
   ],
   page: 1,
   rows: 20,
@@ -62,28 +88,19 @@ export const mockOrdinaryListResponse = {
 export const mockWorkOrderDetailResponses = {
   [mockWorkOrderIds[0]]: {
     entity: {
-      _id: mockWorkOrderIds[0],
-      orderNum: 'MOCK-WO-001',
-      name: '模拟客户 A（演示数据）',
-      address: '模拟地址 A（非真实地点）',
+      ...mockServiceAppointmentData[mockWorkOrderIds[0]],
       workflowRunId: 'mock-workflow-run-001',
     },
   },
   [mockWorkOrderIds[1]]: {
     entity: {
-      _id: mockWorkOrderIds[1],
-      orderNum: 'MOCK-WO-002',
-      name: '模拟客户 B（演示数据）',
-      address: '模拟地址 B（非真实地点）',
+      ...mockServiceAppointmentData[mockWorkOrderIds[1]],
       workflowRunId: 'mock-workflow-run-002',
     },
   },
   [mockWorkOrderIds[2]]: {
     entity: {
-      _id: mockWorkOrderIds[2],
-      orderNum: 'MOCK-WO-003',
-      name: '模拟客户 C（演示数据）',
-      address: '模拟地址 C（非真实地点）',
+      ...mockServiceAppointmentData[mockWorkOrderIds[2]],
       workflowRunId: 'mock-workflow-run-003',
     },
   },
