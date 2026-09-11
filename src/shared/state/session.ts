@@ -28,7 +28,7 @@ export const useSessionStore = defineStore('session', () => {
 
   async function bootstrap(): Promise<OperationSnapshot<SessionSnapshot | null>> {
     if (bootstrapInProgress.value || status.value === 'authenticating') {
-      return failure('initialization_in_progress', 'Session initialization is already in progress')
+      return failure('validation', 'Session initialization is already in progress')
     }
 
     bootstrapInProgress.value = true
@@ -60,11 +60,6 @@ export const useSessionStore = defineStore('session', () => {
         error.value = result.error ?? null
       }
       return result
-    } catch {
-      const result = failure<SessionSnapshot | null>('network_retryable', 'Session bootstrap failed')
-      status.value = 'error'
-      error.value = result.error ?? null
-      return result
     } finally {
       bootstrapInProgress.value = false
     }
@@ -72,7 +67,7 @@ export const useSessionStore = defineStore('session', () => {
 
   async function login(request: AuthStartRequest): Promise<OperationSnapshot<SessionSnapshot>> {
     if (bootstrapInProgress.value || status.value === 'unknown') {
-      return failure('initialization_in_progress', 'Session bootstrap is still in progress')
+      return failure('validation', 'Session bootstrap is still in progress')
     }
     if (status.value === 'authenticating') return failure('validation', 'Login is already in progress')
     if (!authSession) return failure('server_terminal', 'Authentication service is not configured')

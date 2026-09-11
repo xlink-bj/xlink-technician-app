@@ -126,7 +126,7 @@ describe('G4-A session store and runtime configuration', () => {
 
     const blocked = await store.login({ phoneNumber: 'test-phone', verificationCode: 'test-code' })
     expect(blocked.state).toBe('failed_terminal')
-    expect(blocked.error?.category).toBe('initialization_in_progress')
+    expect(blocked.error?.category).toBe('validation')
     expect(startSession).not.toHaveBeenCalled()
 
     resolveRestore(success(null))
