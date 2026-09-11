@@ -85,9 +85,9 @@ The following decisions remain with the product owner/design review:
 
 ## Screen acceptance checklist for later review
 
-### LOGIN — PROPOSED composition
+### LOGIN — LOCKED R2 staged composition
 
-Product context → phone → verification code → primary Sign in → feedback/recovery. Bootstrap remains non-interactive until resolved.
+Brand launch → login method selection → login form → primary Login action → feedback/recovery. The R2 branded visual language, worker/brand scene, trust cues, method-card hierarchy, and focused form hierarchy are locked. Bootstrap remains non-interactive until resolved. Only accepted auth methods may be actionable; unsupported R2 password/OTP-send/quick-test behavior is `UI/DEV BEHAVIOR REQUIRES CONTRACT EVIDENCE`.
 
 Must not appear: raw method/tenant/endpoint text, password/social/QR flows, unapproved send-code behavior, credentials, or a primary action hidden below the current MP rendering viewport.
 
