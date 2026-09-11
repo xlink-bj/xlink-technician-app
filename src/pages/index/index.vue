@@ -91,24 +91,20 @@
           <text class="method-badge">推荐</text>
         </button>
 
-        <!-- UI/DEV BEHAVIOR REQUIRES CONTRACT EVIDENCE: password auth is not enabled. -->
         <view class="method-card method-card-disabled" aria-disabled="true">
           <text class="method-icon method-icon-muted">▥</text>
           <view class="method-copy">
             <text class="method-title method-title-muted">密码登录</text>
             <text class="method-subtitle">暂未开放</text>
           </view>
-          <text class="method-disabled-label">需合同证据</text>
         </view>
 
-        <!-- UI/DEV BEHAVIOR REQUIRES CONTRACT EVIDENCE: quick/test auth is not enabled. -->
         <view class="method-card method-card-disabled" aria-disabled="true">
           <text class="method-icon method-icon-amber">◒</text>
           <view class="method-copy">
             <text class="method-title method-title-muted">快捷登录</text>
             <text class="method-subtitle">暂未开放</text>
           </view>
-          <text class="method-disabled-label">需合同证据</text>
         </view>
       </view>
 
@@ -152,10 +148,9 @@
             placeholder="请输入短信验证码"
             :disabled="isBusy"
           />
-          <!-- UI/DEV BEHAVIOR REQUIRES CONTRACT EVIDENCE: OTP delivery is not enabled. -->
           <button class="code-button" disabled>获取验证码</button>
         </view>
-        <text class="field-hint">验证码发送功能待合同确认</text>
+        <text class="field-hint">请输入已收到的验证码</text>
       </view>
 
       <text v-if="feedback" class="feedback" role="alert">{{ feedback }}</text>
@@ -187,6 +182,8 @@ import {
 } from '@features/session/login-flow'
 import { useSessionStore } from '@shared/state'
 import type { OperationError } from '@shared/types'
+
+// UI/DEV BEHAVIOR REQUIRES CONTRACT EVIDENCE: unsupported auth actions stay non-operational.
 
 const session = useSessionStore()
 const phoneNumber = ref('')
@@ -688,12 +685,6 @@ function userFacingLoginMessage(error: OperationError | null | undefined): strin
   font-size: 22rpx;
   font-weight: 800;
   padding: 6rpx 12rpx;
-}
-
-.method-disabled-label {
-  color: #9aa7bb;
-  flex-shrink: 0;
-  font-size: 20rpx;
 }
 
 .policy-note {

@@ -9,6 +9,7 @@ import {
 } from '@features/session/login-flow'
 
 const loginPage = readFileSync(new URL('../../src/pages/index/index.vue', import.meta.url), 'utf8')
+const loginTemplate = loginPage.split('<script setup')[0]
 
 describe('G4-UX production Login flow', () => {
   it('transitions from brand launch to method selection to the supported form', () => {
@@ -27,6 +28,14 @@ describe('G4-UX production Login flow', () => {
     expect(stageForLoginMethod('password')).toBeUndefined()
     expect(stageForLoginMethod('quick')).toBeUndefined()
     expect(loginPage).toContain('UI/DEV BEHAVIOR REQUIRES CONTRACT EVIDENCE')
+  })
+
+  it('keeps engineering guidance out of rendered Login copy', () => {
+    expect(loginTemplate).not.toContain('需合同证据')
+    expect(loginTemplate).not.toContain('待合同确认')
+    expect(loginTemplate).not.toContain('UI/DEV BEHAVIOR REQUIRES CONTRACT EVIDENCE')
+    expect(loginTemplate).toContain('暂未开放')
+    expect(loginTemplate).toContain('请输入已收到的验证码')
   })
 
   it('keeps bootstrap non-interactive and renders a reachable disabled-aware primary action', () => {

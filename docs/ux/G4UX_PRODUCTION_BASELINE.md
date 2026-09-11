@@ -4,6 +4,8 @@ Status: Phase A target baseline with locked product directions. R2’s brand/vis
 
 R2 — `xlink-business-3.0`, pinned main `06b885ed22477e79d50bc6f3a0ce0c96fbc1a185` — is the **LOCKED primary brand/visual/IA baseline**. R1 is secondary business/field-service evidence for this baseline. R2 observations are reproduced as approved product UX in uni-app, not copied as React/Next implementation.
 
+Product Owner overrides for the new App: the Login brand lockup is text-only — **修链 / 屋顶维修**. The R2 graphic Logo and the incorrect **量顶维修** copy must not be restored.
+
 ## A. LOCKED PRODUCT / ARCHITECTURE CONSTRAINTS
 
 These are accepted constraints, not open visual preferences:
@@ -11,6 +13,8 @@ These are accepted constraints, not open visual preferences:
 - Shared/application code consumes semantic contracts; raw backend DTOs, paths, query keys, status codes, and menu conventions stay below the adapter boundary.
 - R2 branded visual language and interaction hierarchy are locked for G4-UX.
 - R2 staged Login — brand launch → login method selection → login form — is locked as the Login product direction. Unsupported R2 auth behavior is `UI/DEV BEHAVIOR REQUIRES CONTRACT EVIDENCE` and does not authorize new production auth APIs or shared-contract changes.
+- Login UI must expose product-facing copy only; engineering, contract, endpoint, and backend explanations remain in source comments, tests, and documentation.
+- Login launch auto-advance remains UNDECIDED and is not implemented; the current manual “进入登录” action is intentional.
 - R2 task-first Home is locked: current work/current task first and the next meaningful action visually prioritized. Metrics-first is not a G4-UX alternative; only accepted task data/capabilities may render.
 - Information regions and future information tabs are read-oriented.
 - Stable customer contact is a Quick Action outside information content.
@@ -68,7 +72,7 @@ No exact color, radius, typography size, spacing, shadow, icon, or screen altern
 The following decisions remain with the product owner/design review:
 
 1. **Login content details:** final Chinese copy, agreement text, and which R2 secondary method affordances are contract-supported. Staged structure and branded interaction hierarchy are locked.
-2. **Login functional gate:** resolution of the MP iPhone 12/13 simulator observation where the Sign in action is not visible after the verification-code field. Root cause is intentionally not assumed in Phase A.
+2. **Login functional gate:** B1 source/build correction keeps the primary Login action visible/reachable on the MP simulator; final human visual review remains required.
 3. **Home content details:** exact accepted task data, supported workbench cards, greeting/status copy, and whether any secondary content is V1. R2 task-first structure is locked; metrics-first is not an alternative.
 4. **Navigation shell:** Home/List/Detail back behavior, bottom navigation presence, and the set of V1 destinations; R2’s Projects/Account tabs are not automatically included.
 5. **List capability exposure:** whether search, filters, tabs, counts, direct contact, special ordering, or only one role-visible list is required. No broad Legacy parity is assumed.
