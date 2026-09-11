@@ -42,7 +42,6 @@ describe('G4-UX Phase B2 Home', () => {
 
 describe('G4-UX Phase B2 Work Order List', () => {
   it('uses production Chinese copy and preserves the single semantic list', () => {
-    expect(listTemplate).toContain('当前范围内可查看的工单')
     expect(listTemplate).toContain('当前暂无工单')
     expect(listTemplate).toContain('当前范围内暂时没有可处理的工单，可稍后刷新再试。')
     expect(listTemplate).toContain('正在加载工单')
@@ -54,6 +53,8 @@ describe('G4-UX Phase B2 Work Order List', () => {
     expect(listTemplate).not.toContain('查看当前范围内可见的工单信息')
     expect(listTemplate).not.toContain('Role-visible Work Orders')
     expect(listTemplate).not.toContain('Default list for the current role')
+    expect(listTemplate).not.toContain('class="page-title"')
+    expect(listTemplate).not.toContain('class="page-subtitle"')
     expect(listTemplate).not.toMatch(/\b(tabs?|counts?|filters?|sort(?:ing)?)\b/i)
   })
 
@@ -61,7 +62,10 @@ describe('G4-UX Phase B2 Work Order List', () => {
     expect(listTemplate).not.toContain('workOrders.error?.message')
     expect(listTemplate).not.toContain('{{ item.id }}')
     expect(listTemplate).not.toContain('{{ String(item.id) }}')
-    expect(listTemplate).toContain('{{ item.displayNumber || \'工单详情\' }}')
+    expect(listTemplate).toContain('v-if="item.displayNumber" class="row-meta"')
+    expect(listTemplate).toContain('{{ item.customerName || \'工单\' }}')
+    expect(listTemplate).toContain('v-if="item.serviceAddress" class="row-address"')
+    expect(listTemplate).not.toContain('查看工单详情')
   })
 
   it('keeps session guard and semantic detail navigation intact', () => {
@@ -70,11 +74,12 @@ describe('G4-UX Phase B2 Work Order List', () => {
     expect(listPage).toContain('session.status')
   })
 
-  it('uses an inset R2-style list hierarchy without duplicating native back navigation', () => {
-    expect(listTemplate).toContain('class="list-heading-row"')
-    expect(listTemplate).toContain('class="list-heading-copy"')
+  it('uses a compact R2-style card hierarchy without duplicating native navigation', () => {
     expect(listTemplate).toContain('class="content-refresh"')
     expect(listTemplate).toContain('class="work-order-row"')
+    expect(listTemplate).toContain('class="row-meta"')
+    expect(listTemplate).toContain('class="row-title"')
+    expect(listTemplate).toContain('class="row-address"')
     expect(listTemplate).not.toContain('‹ 返回首页')
   })
 })

@@ -8,13 +8,6 @@
 
   <view v-else class="work-orders-page">
     <view class="list-shell">
-      <view class="list-heading-row">
-        <view class="list-heading-copy">
-          <text class="page-title">工单</text>
-          <text class="page-subtitle">当前范围内可查看的工单</text>
-        </view>
-      </view>
-
       <view v-if="workOrders.loadState === 'loading'" class="list-state loading-state">
         <view class="skeleton-list" aria-hidden="true">
           <view class="skeleton-row"><view class="skeleton-icon" /><view class="skeleton-copy"><view class="skeleton-line skeleton-line-long" /><view class="skeleton-line skeleton-line-short" /></view></view>
@@ -63,8 +56,12 @@
             <text>工</text>
           </view>
           <view class="row-copy">
-            <text class="row-title">{{ item.displayNumber || '工单详情' }}</text>
-            <text class="row-note">查看工单详情</text>
+            <text v-if="item.displayNumber" class="row-meta">{{ item.displayNumber }}</text>
+            <text class="row-title">{{ item.customerName || '工单' }}</text>
+            <view v-if="item.serviceAddress" class="row-address">
+              <text class="row-address-icon" aria-hidden="true">⌖</text>
+              <text class="row-address-copy">{{ item.serviceAddress }}</text>
+            </view>
           </view>
           <text class="row-arrow" aria-hidden="true">›</text>
         </navigator>
@@ -119,7 +116,7 @@ async function loadMore(): Promise<void> {
   background: #f5f7fb;
   box-sizing: border-box;
   min-height: 100vh;
-  padding: 28rpx 24rpx calc(48rpx + constant(safe-area-inset-bottom));
+  padding: 16rpx 24rpx calc(48rpx + constant(safe-area-inset-bottom));
   padding-bottom: calc(48rpx + env(safe-area-inset-bottom));
   width: 100%;
 }
@@ -127,18 +124,6 @@ async function loadMore(): Promise<void> {
 .list-shell {
   margin: 0 auto;
   max-width: none;
-}
-
-.list-heading-row {
-  align-items: flex-start;
-  display: flex;
-  padding: 12rpx 8rpx 30rpx;
-}
-
-.list-heading-copy {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
 }
 
 .back-link {
@@ -171,21 +156,6 @@ async function loadMore(): Promise<void> {
   font-size: 30rpx;
   font-weight: 900;
   line-height: 1.4;
-}
-
-.page-title {
-  color: #12203a;
-  font-size: 48rpx;
-  font-weight: 900;
-  letter-spacing: -0.5rpx;
-  line-height: 1.2;
-}
-
-.page-subtitle {
-  color: #71809a;
-  font-size: 25rpx;
-  line-height: 1.5;
-  margin-top: 10rpx;
 }
 
 .list-state,
@@ -319,35 +289,36 @@ async function loadMore(): Promise<void> {
   align-items: center;
   display: flex;
   justify-content: space-between;
-  padding: 0 4rpx 16rpx;
+  padding: 4rpx 6rpx 18rpx;
 }
 
 .work-order-row {
-  align-items: center;
+  align-items: flex-start;
   background: #ffffff;
   border: 1rpx solid #e0e8f5;
   border-left: 5rpx solid #3277ed;
-  border-radius: 28rpx;
+  border-radius: 24rpx;
   box-shadow: 0 12rpx 32rpx rgba(35, 75, 128, 0.08);
   box-sizing: border-box;
   display: flex;
-  gap: 22rpx;
-  margin-bottom: 18rpx;
-  min-height: 152rpx;
-  padding: 26rpx 20rpx;
+  gap: 20rpx;
+  margin-bottom: 16rpx;
+  min-height: 174rpx;
+  padding: 24rpx 20rpx;
   width: 100%;
 }
 
 .row-leading {
   align-items: center;
-  background: linear-gradient(145deg, #5a93ff, #286bd5);
-  border-radius: 18rpx;
-  color: #ffffff;
+  background: #eaf2ff;
+  border: 1rpx solid #cfe0ff;
+  border-radius: 16rpx;
+  color: #286bd5;
   display: flex;
-  flex: 0 0 76rpx;
-  font-size: 29rpx;
+  flex: 0 0 72rpx;
+  font-size: 27rpx;
   font-weight: 900;
-  height: 76rpx;
+  height: 72rpx;
   justify-content: center;
 }
 
@@ -358,23 +329,58 @@ async function loadMore(): Promise<void> {
   min-width: 0;
 }
 
-.row-title {
-  color: #1b2942;
-  font-size: 31rpx;
-  font-weight: 900;
-  line-height: 1.4;
+.row-meta {
+  color: #71809a;
+  font-size: 22rpx;
+  font-weight: 700;
+  letter-spacing: 0.2rpx;
+  line-height: 1.35;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.row-note {
-  color: #8a98ae;
+.row-title {
+  color: #17243b;
+  display: -webkit-box;
+  font-size: 32rpx;
+  font-weight: 900;
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.row-address {
+  align-items: flex-start;
+  color: #71809a;
+  display: flex;
   font-size: 24rpx;
+  gap: 8rpx;
+  line-height: 1.45;
   margin-top: 10rpx;
+  min-width: 0;
+}
+
+.row-address-icon {
+  color: #6d8fc6;
+  flex: 0 0 auto;
+  font-size: 23rpx;
+  line-height: 1.45;
+}
+
+.row-address-copy {
+  display: -webkit-box;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .row-arrow {
+  align-self: center;
   color: #7d9ed3;
   flex: 0 0 auto;
   font-size: 44rpx;
