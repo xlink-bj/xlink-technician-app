@@ -101,13 +101,13 @@ describe('G4-A uni infrastructure boundaries', () => {
       method: 'POST',
       header: { 'Content-Type': 'application/x-www-form-urlencoded' },
       dataType: 'json',
-      responseType: 'text',
     })
-    expect(String(requests[0].data)).toContain('method=sanitized-phone-login-method')
-    expect(String(requests[0].data)).toContain('phone=test-phone')
-    expect(String(requests[0].data)).toContain('code=test-code')
-    expect(String(requests[0].data)).toContain('tenantId=sanitized-tenant')
-    expect(String(requests[0].data)).not.toContain('tenant=sanitized-tenant')
+    expect(requests[0].data).toEqual({
+      method: 'sanitized-phone-login-method',
+      phone: 'test-phone',
+      code: 'test-code',
+      tenantId: 'sanitized-tenant',
+    })
 
     const persisted = storageDriver.values.get('session:current') ?? ''
     expect(persisted).not.toContain('test-phone')
@@ -123,8 +123,12 @@ describe('G4-A uni infrastructure boundaries', () => {
 
   it('forwards the R1 universal verification code as a normal login credential', async () => {
     const request: UniRequestExecutor = (options) => {
-      expect(String(options.data)).toContain('code=999999')
-      expect(String(options.data)).toContain('tenantId=sanitized-tenant')
+      expect(options.data).toEqual({
+        method: '1',
+        phone: 'test-phone',
+        code: '999999',
+        tenantId: 'sanitized-tenant',
+      })
       options.success?.({
         data: {
           data: {

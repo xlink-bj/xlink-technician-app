@@ -13,15 +13,15 @@ function endpointUrl(baseUrl: string, path: string): string {
   return `${baseUrl.replace(/\/+$/, '')}/${path.replace(/^\/+/, '')}`
 }
 
-function formEncode(body: Readonly<Record<string, string>>): string {
-  return Object.entries(body)
-    .map(([key, value]) => {
+function wireForm(body: Readonly<Record<string, string>>): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(body).map(([key, value]) => {
       // AuthSessionAdapter keeps tenant semantic inside the adapter boundary;
       // R1's phoneLogin endpoint names the actual wire field tenantId.
       const wireKey = key === 'tenant' ? 'tenantId' : key
-      return `${encodeURIComponent(wireKey)}=${encodeURIComponent(value)}`
-    })
-    .join('&')
+      return [wireKey, value]
+    }),
+  )
 }
 
 function defaultRequest(options: UniNamespace.RequestOptions): unknown {
@@ -58,12 +58,11 @@ export function createUniAuthBackendDriver(options: UniAuthBackendOptions): Auth
       response = await requestResponse(request, {
         url: endpointUrl(options.apiBaseUrl, input.path),
         method: 'POST',
-        data: formEncode(input.body),
+        // Keep the request shape identical to the verified consumer/R1 call:
+        // uni/wx serializes the object according to the form content type.
+        data: wireForm(input.body),
         header: { 'Content-Type': 'application/x-www-form-urlencoded' },
         dataType: 'json',
-        // Match the established MP request behavior in R1. dataType performs
-        // JSON decoding while responseType remains text across MP runtimes.
-        responseType: 'text',
         ...(options.timeoutMs === undefined ? {} : { timeout: options.timeoutMs }),
       })
     } catch (error) {
