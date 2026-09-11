@@ -6,7 +6,7 @@
   </view>
   <view v-else-if="showHome" class="home-page">
     <view class="home-header">
-      <view class="home-brand">
+      <view class="home-brand" @tap="handleHomeBrandTap">
         <text class="home-brand-name">修链</text>
         <text class="home-brand-tagline">屋顶维修</text>
       </view>
@@ -37,6 +37,19 @@
       <view class="home-surface home-hint">
         <text class="hint-title">从一张工单开始</text>
         <text class="hint-copy">工单信息会根据当前可见范围显示。</text>
+      </view>
+
+      <view v-if="mockControlVisible" class="home-surface mock-developer-panel">
+        <view class="mock-panel-heading">
+          <text class="mock-panel-title">开发者选项</text>
+          <text class="mock-panel-status">
+            {{ mockEnabled ? '当前使用模拟业务数据' : '当前使用真实业务数据' }}
+          </text>
+        </view>
+        <view class="mock-toggle-row">
+          <text class="mock-toggle-label">演示数据</text>
+          <switch class="mock-switch" :checked="mockEnabled" @change="handleMockToggle" />
+        </view>
       </view>
     </view>
 
@@ -197,6 +210,11 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 
+import {
+  isBusinessMockDeveloperModeAvailable,
+  isBusinessMockEnabled,
+  setBusinessMockEnabled,
+} from '@app/business-mock'
 import { hasAuthenticatedSession, workOrdersRoute } from '@features/home/access'
 import { submitLogin, type LoginSubmissionState } from '@features/session/login'
 import {
@@ -216,7 +234,11 @@ const verificationCode = ref('')
 const loginStage = ref<LoginStage>('launch')
 const message = ref('')
 const logoutInFlight = ref(false)
+const mockControlVisible = ref(false)
+const mockEnabled = ref(false)
 const submissionState = reactive<LoginSubmissionState>({ inFlight: false })
+let homeBrandTapCount = 0
+let homeBrandTapTimer: ReturnType<typeof setTimeout> | null = null
 const homeGreeting = computed(() => {
   const displayName = session.session?.user.displayName?.trim()
   return displayName ? `您好，${displayName}` : '您好'
@@ -241,6 +263,30 @@ function goToMethods(): void {
 function selectMethod(method: LoginMethod): void {
   const nextStage = stageForLoginMethod(method)
   if (nextStage) loginStage.value = nextStage
+}
+
+function handleHomeBrandTap(): void {
+  if (!isBusinessMockDeveloperModeAvailable()) return
+  homeBrandTapCount += 1
+  if (homeBrandTapTimer) clearTimeout(homeBrandTapTimer)
+  homeBrandTapTimer = setTimeout(() => {
+    homeBrandTapCount = 0
+    homeBrandTapTimer = null
+  }, 1500)
+
+  if (homeBrandTapCount < 5) return
+  homeBrandTapCount = 0
+  if (homeBrandTapTimer) clearTimeout(homeBrandTapTimer)
+  homeBrandTapTimer = null
+  mockControlVisible.value = true
+  mockEnabled.value = isBusinessMockEnabled()
+}
+
+function handleMockToggle(event: Event): void {
+  const detail = (event as Event & { detail?: { value?: boolean } }).detail
+  const enabled = detail?.value === true
+  setBusinessMockEnabled(enabled)
+  mockEnabled.value = isBusinessMockEnabled()
 }
 
 async function submit(): Promise<void> {
@@ -350,6 +396,44 @@ function userFacingLoginMessage(error: OperationError | null | undefined): strin
   align-items: baseline;
   display: flex;
   gap: 16rpx;
+}
+
+.mock-developer-panel {
+  border-color: rgba(23, 105, 223, 0.35);
+  box-shadow: 0 12rpx 28rpx rgba(28, 66, 117, 0.06);
+}
+
+.mock-panel-heading {
+  display: flex;
+  flex-direction: column;
+}
+
+.mock-panel-title {
+  color: #1d3154;
+  font-size: 28rpx;
+  font-weight: 800;
+}
+
+.mock-panel-status {
+  color: #71809a;
+  font-size: 24rpx;
+  line-height: 1.5;
+  margin-top: 8rpx;
+}
+
+.mock-toggle-row {
+  align-items: center;
+  border-top: 1rpx solid #edf1f7;
+  display: flex;
+  justify-content: space-between;
+  margin-top: 24rpx;
+  padding-top: 24rpx;
+}
+
+.mock-toggle-label {
+  color: #243858;
+  font-size: 28rpx;
+  font-weight: 700;
 }
 
 .home-brand-name {

@@ -51,6 +51,10 @@ Human review must still assess MP safe-area behavior, typography, density,
 touch targets, and narrow-device rendering. Login, Detail, Contact, G4-D, and
 the accepted read transport are outside this B2 change.
 
+The opt-in synthetic business-read runtime used for UX development is documented
+in `docs/ux/G4UX_MOCK_RUNTIME.md`; it does not replace real Login or Beta read
+verification.
+
 ## B. R2-DERIVED UX PROPOSALS
 
 The following are evidence-backed proposals derived primarily from R2. They require product-owner review before implementation.

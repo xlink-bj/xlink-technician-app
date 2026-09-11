@@ -5,6 +5,7 @@ import {
   type ApiReadRequest,
   type ApiReadTransport,
 } from './technician-api'
+import { tryMockRead } from './mock'
 
 export type UniApiRequestExecutor = (options: UniNamespace.RequestOptions) => unknown
 
@@ -13,6 +14,7 @@ export interface UniApiReadTransportOptions {
   readonly getSessionRef: () => SessionRef | null
   readonly request?: UniApiRequestExecutor
   readonly timeoutMs?: number
+  readonly mockLatencyMs?: number
 }
 
 function endpointUrl(baseUrl: string, path: string): string {
@@ -72,6 +74,13 @@ export function createUniApiReadTransport(options: UniApiReadTransportOptions): 
 
   return {
     async execute(input: ApiReadRequest): Promise<unknown> {
+      const mockResponse = await tryMockRead(
+        input.path,
+        input.body ?? input.query ?? {},
+        options.mockLatencyMs === undefined ? {} : { latencyMs: options.mockLatencyMs },
+      )
+      if (mockResponse !== null) return mockResponse
+
       const sessionRef = options.getSessionRef()
       if (!sessionRef) {
         throw new ApiReadTransportError('Authenticated session is required for API reads', 'session_invalid')
