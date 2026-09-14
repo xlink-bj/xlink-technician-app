@@ -107,6 +107,12 @@ The current v4 implementation is intentionally bounded by the accepted
 semantic contract. The classifications below describe the next parity
 direction; they do not authorize changing the current List UI in this audit.
 
+In the capability table below, `KEEP_OMITTED` means **CURRENT_ACCEPTED_SEMANTIC
+ / NO_CONTRACT_EXTENSION_REQUIRED**. It does not mean remove the field from the
+ UI. `displayNumber`, `customerName`, and `serviceAddress` remain valid current
+ List fields; the recommendation only says that this audit found no need to
+ extend their shared contract.
+
 | Current element | Classification | Audit finding |
 | --- | --- | --- |
 | `工作范围` kicker | KEEP | Honest scope framing. It avoids claiming ownership or assignment and can remain as supporting context. |
