@@ -128,7 +128,9 @@ describe('G3-C API adapter foundation', () => {
 
     const options = await api.getCodeOptions({ parentValue: 'parent-option' })
     expect(options.data?.items).toEqual([{ value: 'option-a', label: 'Sanitized option' }])
-    expect(transport.requests[3].body).toEqual({ parentId: 'parent-option' })
+    expect(transport.requests.find((request) => request.path === 'code/query')?.body).toEqual({
+      parentId: 'parent-option',
+    })
   })
 
   it('maps a verified district code and omits missing or unmapped district codes', async () => {

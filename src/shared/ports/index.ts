@@ -6,6 +6,8 @@ export type {
   FormDefinitionRead,
   ReadPage,
   TechnicianApiReadPort,
+  WorkOrderActivity,
+  WorkOrderActivityIcon,
   WorkOrderContact,
   WorkOrderCurrentTask,
   WorkOrderDetail,

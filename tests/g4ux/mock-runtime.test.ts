@@ -20,6 +20,7 @@ import {
   mockDetailScenarioIds,
   mockSanodeListResponse,
   mockStatusOptionsResponse,
+  mockWorkOrderActivityResponses,
   mockWorkOrderDetailResponse,
   mockWorkOrderDetailResponses,
   mockWorkOrderIds,
@@ -129,6 +130,19 @@ describe('G4-UX business mock runtime', () => {
         method: 'POST',
         path: 'basic/serviceAppointment/queryById/mock-work-order-001',
         body: { type: 'query' },
+      }),
+    ).rejects.toMatchObject({ category: 'server_terminal' })
+    expect(request).not.toHaveBeenCalled()
+
+    await expect(
+      transport.execute({
+        method: 'POST',
+        path: 'biz/action/query.do',
+        body: {
+          bizType: 'serviceAppointment',
+          sid: 'mock-work-order-001',
+          actionType: '1,2,3,4,5,6',
+        },
       }),
     ).rejects.toMatchObject({ category: 'server_terminal' })
     expect(request).not.toHaveBeenCalled()
@@ -259,6 +273,38 @@ describe('G4-UX business mock runtime', () => {
       serviceAddress: '日坛东一街',
       distanceText: '2.6 km',
       contact: { normalizedPhone: '13800000000', displayMask: '138****0000' },
+      activities: [
+        {
+          id: 'mock-activity-001-003',
+          title: '已完成现场服务',
+          content: '现场服务节点已完成。',
+          owner: '演示系统',
+          time: '2026-04-13 15:20',
+          icon: 'location',
+          tone: 'green',
+          badge: '系统',
+        },
+        {
+          id: 'mock-activity-001-002',
+          title: '通话记录',
+          content: '已与客户确认上门安排。',
+          owner: '演示技师',
+          time: '2026-04-13 14:32',
+          icon: 'phone',
+          tone: 'blue',
+          badge: '电话',
+        },
+        {
+          id: 'mock-activity-001-001',
+          title: '跟进笔记',
+          content: '客户确认按预约时间上门。',
+          owner: '演示技师',
+          time: '2026-04-13 14:10',
+          icon: 'location',
+          tone: 'orange',
+          badge: '笔记',
+        },
+      ],
       workflowNodes: [
         {
           id: 'mock-workflow-node-001-current',
@@ -271,6 +317,14 @@ describe('G4-UX business mock runtime', () => {
     expect(requests.filter((request) => request.path.includes('queryById/')).at(-1)?.path).toBe(
       'basic/serviceAppointment/queryById/mock-work-order-001',
     )
+    expect(requests.find((request) => request.path === 'biz/action/query.do')).toMatchObject({
+      method: 'POST',
+      body: {
+        bizType: 'serviceAppointment',
+        sid: mockWorkOrderIds[0],
+        actionType: '1,2,3,4,5,6',
+      },
+    })
   })
 
   it('normalizes enriched ordinary service-appointment rows into the same summary semantics', async () => {
@@ -334,6 +388,78 @@ describe('G4-UX business mock runtime', () => {
       expect(mockWorkOrderDetailResponses[id]).toBeDefined()
     }
 
+    expect(request).not.toHaveBeenCalled()
+  })
+
+  it('normalizes R2-shaped action rows into a newest-first read-only timeline', async () => {
+    setBusinessMockMode('data')
+    const request = vi.fn<UniApiRequestExecutor>()
+    const api = createTechnicianApiReadAdapter(
+      createUniApiReadTransport({
+        apiBaseUrl: 'https://example.invalid',
+        getSessionRef: () => asOpaqueId<'SessionRef'>('synthetic-session-ref'),
+        request,
+        mockLatencyMs: 0,
+      }),
+      mockAdapterOptions,
+    )
+
+    const result = await api.getWorkOrderDetail(asOpaqueId<'WorkOrderId'>(mockWorkOrderIds[0]))
+
+    expect(result.state).toBe('succeeded')
+    expect(result.data?.activities).toEqual([
+      {
+        id: 'mock-activity-001-003',
+        title: '已完成现场服务',
+        content: '现场服务节点已完成。',
+        owner: '演示系统',
+        time: '2026-04-13 15:20',
+        icon: 'location',
+        tone: 'green',
+        badge: '系统',
+      },
+      {
+        id: 'mock-activity-001-002',
+        title: '通话记录',
+        content: '已与客户确认上门安排。',
+        owner: '演示技师',
+        time: '2026-04-13 14:32',
+        icon: 'phone',
+        tone: 'blue',
+        badge: '电话',
+      },
+      {
+        id: 'mock-activity-001-001',
+        title: '跟进笔记',
+        content: '客户确认按预约时间上门。',
+        owner: '演示技师',
+        time: '2026-04-13 14:10',
+        icon: 'location',
+        tone: 'orange',
+        badge: '笔记',
+      },
+    ])
+    expect(mockWorkOrderActivityResponses[mockWorkOrderIds[0]]).toBeDefined()
+    expect(request).not.toHaveBeenCalled()
+  })
+
+  it('keeps Mock EMPTY follow-up records local and empty', async () => {
+    setBusinessMockMode('empty')
+    const request = vi.fn<UniApiRequestExecutor>()
+    const api = createTechnicianApiReadAdapter(
+      createUniApiReadTransport({
+        apiBaseUrl: 'https://example.invalid',
+        getSessionRef: () => asOpaqueId<'SessionRef'>('synthetic-session-ref'),
+        request,
+        mockLatencyMs: 0,
+      }),
+      mockAdapterOptions,
+    )
+
+    const result = await api.getWorkOrderDetail(asOpaqueId<'WorkOrderId'>(mockWorkOrderIds[0]))
+
+    expect(result.state).toBe('succeeded')
+    expect(result.data?.activities).toBeUndefined()
     expect(request).not.toHaveBeenCalled()
   })
 
@@ -677,6 +803,7 @@ describe('G4-UX business mock runtime', () => {
       mockSanodeListResponse,
       mockOrdinaryListResponse,
       mockWorkOrderDetailResponses,
+      mockWorkOrderActivityResponses,
     })
 
     expect(serialized).toContain('09077')

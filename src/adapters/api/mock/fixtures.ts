@@ -281,6 +281,138 @@ export const mockWorkOrderDetailResponses = {
   },
 } as const
 
+/**
+ * Sanitized raw `biz/action/query.do` responses. These records intentionally
+ * keep R2's action type/name/content/time shape; the Technician adapter owns
+ * the title, icon, tone, badge, and newest-first presentation mapping.
+ */
+export const mockWorkOrderActivityResponses = {
+  [mockWorkOrderIds[0]]: {
+    status: 1,
+    data: [
+      {
+        type: 2,
+        typeId: 'mock-activity-001-003',
+        name: '已完成现场服务',
+        content: '现场服务节点已完成。',
+        createUserName: '演示系统',
+        createTime: '2026-04-13 15:20:00',
+      },
+      {
+        type: 3,
+        typeId: 'mock-activity-001-002',
+        content: '已与客户确认上门安排。',
+        createUserName: '演示技师',
+        createTime: '2026-04-13 14:32:00',
+      },
+      {
+        type: 1,
+        typeId: 'mock-activity-001-001',
+        content: '客户确认按预约时间上门。',
+        createUserName: '演示技师',
+        createTime: '2026-04-13 14:10:00',
+      },
+    ],
+  },
+  [mockWorkOrderIds[1]]: {
+    status: 1,
+    data: [
+      {
+        type: 2,
+        typeId: 'mock-activity-002-003',
+        name: '已完成现场服务',
+        content: '现场服务已完成，等待验收。',
+        createUserName: '演示系统',
+        createTime: '2026-04-13 15:20:00',
+      },
+      {
+        type: 4,
+        typeId: 'mock-activity-002-002',
+        content: '现场服务记录已提交。',
+        createUserName: '演示技师',
+        createTime: '2026-04-13 14:32:00',
+      },
+      {
+        type: 3,
+        typeId: 'mock-activity-002-001',
+        content: '已与客户确认验收安排。',
+        createUserName: '演示技师',
+        createTime: '2026-04-13 14:10:00',
+      },
+    ],
+  },
+  [mockWorkOrderIds[2]]: {
+    status: 1,
+    data: [
+      {
+        type: 5,
+        typeId: 'mock-activity-003-002',
+        content: '工单已分派至演示工队。',
+        createUserName: '演示系统',
+        createTime: '2026-04-13 11:05:00',
+      },
+      {
+        type: 2,
+        typeId: 'mock-activity-003-001',
+        name: '已创建工单',
+        content: '已创建待接单工单。',
+        createUserName: '演示系统',
+        createTime: '2026-04-13 10:40:00',
+      },
+    ],
+  },
+  [mockDetailScenarioIds[3]]: {
+    status: 1,
+    data: [
+      {
+        type: 6,
+        typeId: 'mock-activity-004-002',
+        content: '已向客户说明上门时间和服务安排。',
+        createUserName: '演示技师',
+        createTime: '2026-04-14 09:40:00',
+      },
+      {
+        type: 2,
+        typeId: 'mock-activity-004-001',
+        name: '已创建预约',
+        content: '预约时间：2026-04-14 09:30。',
+        createUserName: '演示系统',
+        createTime: '2026-04-14 09:30:00',
+      },
+    ],
+  },
+  [mockDetailScenarioIds[4]]: {
+    status: 1,
+    data: [
+      {
+        type: 3,
+        typeId: 'mock-activity-005-002',
+        content: '已与客户沟通方案确认事项。',
+        createUserName: '演示技师',
+        createTime: '2026-04-15 16:05:00',
+      },
+      {
+        type: 2,
+        typeId: 'mock-activity-005-001',
+        name: '待客户确认方案',
+        content: '等待客户确认服务方案。',
+        createUserName: '演示系统',
+        createTime: '2026-04-15 15:40:00',
+      },
+    ],
+  },
+  [mockDetailScenarioIds[5]]: {
+    status: 1,
+    data: [],
+  },
+} as const
+
+export type MockWorkOrderActivityId = keyof typeof mockWorkOrderActivityResponses
+
+export function mockWorkOrderActivityResponseFor(id: string): unknown | null {
+  return mockWorkOrderActivityResponses[id as MockWorkOrderActivityId] ?? null
+}
+
 export type MockWorkOrderId = (typeof mockDetailScenarioIds)[number]
 
 export function mockWorkOrderDetailResponseFor(id: string): unknown | null {

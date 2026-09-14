@@ -98,6 +98,8 @@ export interface WorkOrderDetail {
   /** Optional part label; emitted only when a verified label source is available. */
   readonly servicePartLabel?: string
   readonly contact?: WorkOrderContact
+  /** Adapter-normalized read-only follow-up timeline; omitted when no records exist. */
+  readonly activities?: readonly WorkOrderActivity[]
   /** Adapter-normalized workflow nodes consumed by the read-only Workflow Runtime. */
   readonly workflowNodes?: readonly WorkflowNodeRead[]
 }
@@ -109,6 +111,26 @@ export interface WorkOrderCurrentTask {
   readonly description: string
   readonly actionLabel: string
   readonly tone: WorkOrderTaskTone
+}
+
+export type WorkOrderActivityIcon =
+  | 'phone'
+  | 'task'
+  | 'location'
+  | 'appointment'
+  | 'complete'
+  | 'unavailable'
+
+export interface WorkOrderActivity {
+  /** Backend action identity retained only for stable local rendering keys. */
+  readonly id: string
+  readonly title: string
+  readonly content: string
+  readonly owner: string
+  readonly time: string
+  readonly icon: WorkOrderActivityIcon
+  readonly tone: WorkOrderTaskTone
+  readonly badge: string
 }
 
 export interface WorkflowDefinitionRead {

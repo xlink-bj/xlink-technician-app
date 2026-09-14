@@ -132,7 +132,31 @@
         </scroll-view>
 
         <view v-if="activeTab === 'follow-up'" class="tab-panel">
-          <view class="tab-empty">
+          <view v-if="activities.length > 0" class="activity-list">
+            <view v-for="(activity, index) in activities" :key="activity.id" class="activity-item">
+              <view class="activity-rail" aria-hidden="true">
+                <view class="activity-icon" :class="`activity-icon--${activity.tone}`">
+                  <AppIcon :name="activity.icon" :size="14" color="#ffffff" />
+                </view>
+                <view v-if="index < activities.length - 1" class="activity-line" />
+              </view>
+              <view class="activity-body">
+                <view class="activity-heading">
+                  <text class="activity-title">{{ activity.title }}</text>
+                  <text
+                    v-if="activity.badge !== '系统'"
+                    class="activity-badge"
+                    :class="`activity-badge--${activity.tone}`"
+                  >
+                    {{ activity.badge }}
+                  </text>
+                </view>
+                <text v-if="activity.content" class="activity-copy">{{ activity.content }}</text>
+                <text class="activity-meta">{{ activity.owner }} · {{ activity.time }}</text>
+              </view>
+            </view>
+          </view>
+          <view v-else class="tab-empty">
             <text class="tab-empty-title">暂无跟进记录</text>
             <text class="tab-empty-copy">后续跟进信息将在业务能力开放后展示。</text>
           </view>
@@ -208,6 +232,7 @@ const routeReady = ref(false)
 const routeValue = ref<unknown>(undefined)
 const canAccess = computed(() => hasAuthenticatedSession(session.status, session.session))
 const detail = computed(() => workOrder.detail)
+const activities = computed(() => detail.value?.activities ?? [])
 const activeTab = ref<DetailTabKey>('follow-up')
 const showLoadingSkeleton = ref(false)
 const loadingSkeletonDelayMs = 240
@@ -662,6 +687,96 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
   color: #9aa7b9;
   font-size: 20rpx;
   line-height: 1.6;
+  margin-top: 8rpx;
+}
+
+.activity-list {
+  padding: 8rpx 0 4rpx;
+}
+
+.activity-item {
+  display: flex;
+  gap: 16rpx;
+}
+
+.activity-rail {
+  align-items: center;
+  display: flex;
+  flex: 0 0 34rpx;
+  flex-direction: column;
+}
+
+.activity-icon {
+  align-items: center;
+  border-radius: 50%;
+  display: flex;
+  flex: 0 0 32rpx;
+  height: 32rpx;
+  justify-content: center;
+  width: 32rpx;
+}
+
+.activity-icon--blue { background: #2878f2; }
+.activity-icon--red { background: #ff4052; }
+.activity-icon--orange { background: #ff8a1a; }
+.activity-icon--purple { background: #7459e8; }
+.activity-icon--green { background: #18ae65; }
+.activity-icon--gray { background: #94a3b8; }
+
+.activity-line {
+  background: #e2e8f0;
+  flex: 1;
+  margin-top: 8rpx;
+  min-height: 22rpx;
+  width: 1rpx;
+}
+
+.activity-body {
+  flex: 1;
+  min-width: 0;
+  padding-bottom: 24rpx;
+}
+
+.activity-heading {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10rpx;
+  min-height: 32rpx;
+}
+
+.activity-title {
+  color: #1d2b40;
+  font-size: 24rpx;
+  font-weight: 800;
+}
+
+.activity-badge {
+  border-radius: 6rpx;
+  font-size: 18rpx;
+  font-weight: 700;
+  padding: 4rpx 8rpx;
+}
+
+.activity-badge--blue { background: #e8f2ff; color: #2878f2; }
+.activity-badge--red { background: #ffe8e9; color: #ff4052; }
+.activity-badge--orange { background: #fff0dc; color: #ff8a1a; }
+.activity-badge--purple { background: #efeaff; color: #7459e8; }
+.activity-badge--green { background: #e8f8ef; color: #18ae65; }
+.activity-badge--gray { background: #edf1f6; color: #687386; }
+
+.activity-copy {
+  color: #697386;
+  display: block;
+  font-size: 22rpx;
+  line-height: 1.55;
+  margin-top: 8rpx;
+}
+
+.activity-meta {
+  color: #94a1b3;
+  display: block;
+  font-size: 20rpx;
   margin-top: 8rpx;
 }
 

@@ -51,6 +51,9 @@ describe('G4-UX detail D2 semantic boundary', () => {
     expect(detailPage).not.toContain('detailLayoutFor')
     expect(detailPage).not.toContain('任务上下文')
     expect(detailPage).not.toContain('taskContext')
+    expect(detailPage).toContain('activities.length > 0')
+    expect(detailPage).toContain('class="activity-item"')
+    expect(detailPage).toContain("activity.badge !== '系统'")
     expect(detailPage).toContain('暂无跟进记录')
   })
 

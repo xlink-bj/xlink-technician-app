@@ -16,6 +16,7 @@ routes are eligible for synthetic responses:
 - `basic/serviceAppointment/querySAWorkflowNode`
 - `basic/serviceAppointment/query`
 - `basic/serviceAppointment/queryById/<synthetic-id>`
+- `biz/action/query.do` for synthetic service-appointment follow-up reads
 
 The mock is checked inside `src/adapters/api/uni-api-read-transport.ts` before
 session/cookie injection and `uni.request`, but only after an authenticated
@@ -40,10 +41,14 @@ the real read transport. No write or mutation route is mocked.
 After real Login in a non-production build, tap the Home `修链 / 屋顶维修`
 brand line five times within 1.5 seconds. The hidden developer panel then
 exposes one switch: `演示数据`. Enable it and choose `数据` or `空状态` under
-`演示状态`. `数据` renders the synthetic SANODE/ordinary records and complete
-local Detail fixtures. `空状态` returns a deterministic empty list (`data=[]`,
-`total=0`) for the mocked Work Order list routes; it never uses a real list
-request. Disable it to restore real transport behavior. The panel is not
+`演示状态`. `数据` renders the synthetic SANODE/ordinary records, complete
+local Detail fixtures, and R2-shaped follow-up action records. The adapter
+sorts those records newest-first and derives their title, icon, tone, and
+badge from the verified action type/text semantics. `空状态` returns a
+deterministic empty list (`data=[]`, `total=0`) for the mocked Work Order list
+routes and an empty follow-up action response for synthetic Details; it never
+uses a real request for those mocked paths. Disable it to restore real
+transport behavior. The panel is not
 unlockable in a production environment and is absent during normal Home use.
 
 An authenticated session is required for every mock business read. Missing

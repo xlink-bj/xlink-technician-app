@@ -71,10 +71,14 @@ not accepted for this slice; the field is not promoted into the Detail model.
 G4-D owns the appointment evidence checkpoint and any later read-only model.
 No appointment or workflow mutation is implemented.
 
-R1 exposes `biz/action/query.do`, but the accepted evidence does not yet
-define a stable, normalized follow-up response/order contract. Follow-up data
-is deferred and the page shows a truthful empty state. No follow-up write is
-introduced.
+R1 exposes `biz/action/query.do`, and R2 establishes the read-only action-row
+shape and newest-first ordering used here. After the service-appointment
+detail read, the adapter performs the companion action read with
+`bizType=serviceAppointment`, the Work Order id, and action types `1,2,3,4,5,6`.
+The adapter maps only supported action rows into title/content/owner/time and
+the R2-aligned icon/tone/badge presentation fields. A missing, unsuccessful,
+or empty action response leaves the detail successful with a truthful empty
+state. No follow-up write is introduced.
 
 ## Service-part disposition
 

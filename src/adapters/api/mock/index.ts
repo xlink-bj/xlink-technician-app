@@ -20,6 +20,8 @@ export {
   mockRoleFunctionResponse,
   mockSanodeListResponse,
   mockStatusOptionsResponse,
+  mockWorkOrderActivityResponseFor,
+  mockWorkOrderActivityResponses,
   mockWorkOrderDetailResponse,
   mockWorkOrderDetailResponses,
   mockWorkOrderDetailResponseFor,
@@ -27,3 +29,4 @@ export {
   isSyntheticWorkOrderId,
 } from './fixtures'
 export type { MockWorkOrderId } from './fixtures'
+export type { MockWorkOrderActivityId } from './fixtures'

@@ -54,10 +54,12 @@ used by earlier tests. Only the service-appointment subject and optional
 workflow-run identity are normalized; workflow-node and node-definition data
 are deliberately not rendered by D1.
 
-The page fetches only the detail subject. It does not load workflow, form,
-appointment, order, contract, activity, or contact-maintenance domains. The
-visible information card is an explicit read-only set of verified fields, not
-a generic backend key/value dump.
+The page fetches the detail subject and its read-only follow-up activity
+companion query. It does not load workflow, form, appointment, order,
+contract, or contact-maintenance domains. The visible information card is an
+explicit read-only set of verified fields and activity rows, not a generic
+backend key/value dump. If the companion activity read is empty or
+unavailable, the detail remains usable and renders the truthful empty state.
 
 ## Customer contact decision
 

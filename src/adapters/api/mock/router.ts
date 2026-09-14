@@ -6,6 +6,7 @@ import {
   mockRoleFunctionResponse,
   mockSanodeListResponse,
   mockStatusOptionsResponse,
+  mockWorkOrderActivityResponseFor,
   mockWorkOrderDetailResponseFor,
 } from './fixtures'
 
@@ -17,16 +18,30 @@ function normalizedPath(path: string): string {
   return path.replace(/^\/+/, '').split('?')[0]
 }
 
-/** Synthetic detail paths remain locally owned even when mock mode is off. */
-export function isMockOwnedRead(path: string): boolean {
+/** Synthetic entity reads remain locally owned even when mock mode is off. */
+export function isMockOwnedRead(
+  path: string,
+  requestData: Readonly<Record<string, unknown>> = {},
+): boolean {
   const route = normalizedPath(path)
   const detailPrefix = 'basic/serviceAppointment/queryById/'
-  if (!route.startsWith(detailPrefix)) return false
-  try {
-    return isSyntheticWorkOrderId(decodeURIComponent(route.slice(detailPrefix.length)))
-  } catch {
-    return false
+  if (route.startsWith(detailPrefix)) {
+    try {
+      return isSyntheticWorkOrderId(decodeURIComponent(route.slice(detailPrefix.length)))
+    } catch {
+      return false
+    }
   }
+
+  if (
+    route === 'biz/action/query.do' &&
+    requestData.bizType === 'serviceAppointment' &&
+    typeof requestData.sid === 'string'
+  ) {
+    return isSyntheticWorkOrderId(requestData.sid)
+  }
+
+  return false
 }
 
 function clonedResponse<T>(value: T): T {
@@ -90,6 +105,16 @@ function matchedResponse(
   }
   if (route === 'i/code/selectMultistageCode.do' && requestData.types === 'repairParts') {
     return mockRepairPartsCascadeResponse
+  }
+  if (
+    route === 'biz/action/query.do' &&
+    requestData.bizType === 'serviceAppointment' &&
+    requestData.actionType === '1,2,3,4,5,6'
+  ) {
+    const workOrderId = typeof requestData.sid === 'string' ? requestData.sid : ''
+    if (!isSyntheticWorkOrderId(workOrderId)) return null
+    if (mode === 'empty') return { status: 1, data: [] }
+    return mockWorkOrderActivityResponseFor(workOrderId)
   }
   if (route === 'basic/serviceAppointment/querySAWorkflowNode') {
     return listResponse(mode, mockSanodeListResponse, requestData)
