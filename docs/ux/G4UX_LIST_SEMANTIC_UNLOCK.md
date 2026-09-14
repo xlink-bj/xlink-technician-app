@@ -4,6 +4,11 @@ Status: evidence and contract-design proposal only. No List v5 UI, shared
 contract, adapter, mock runtime, dependency, backend, or G4-D implementation
 is included.
 
+The four candidate decisions in this proposal are superseded by the final
+targeted vocabulary scan in
+`docs/ux/G4UX_LIST_VOCABULARY_FINAL.md`; this document remains the accepted
+search and semantic-unlock proposal.
+
 Branch: `rebuild/g4-ux-production-baseline`
 
 Proposal baseline: `3af2eac2d899daf280c17fc889cbb5a95cd4a647`
