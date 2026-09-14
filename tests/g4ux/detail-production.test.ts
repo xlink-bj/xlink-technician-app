@@ -40,9 +40,10 @@ describe('G4-UX detail D2 semantic boundary', () => {
     expect(detailPage).toContain('v-if="detail.serviceDistrict || detail.serviceAddress || detail.distanceText"')
   })
 
-  it('collapses unverified workflow, current-task, context, and follow-up blocks', () => {
+  it('renders only a valid read-only current-task projection and keeps deferred blocks collapsed', () => {
     expect(detailPage).not.toContain('class="progress-card"')
-    expect(detailPage).not.toContain('class="current-task-card"')
+    expect(detailPage).toContain('class="current-task-card"')
+    expect(detailPage).toContain('workflowProjection.currentTask')
     expect(detailPage).not.toContain('class="follow-up-list"')
     expect(detailPage).not.toContain('TECHNICIAN_WORKFLOW_TEMPLATE')
     expect(detailPage).not.toContain('detailLayoutFor')
@@ -57,9 +58,9 @@ describe('G4-UX detail D2 semantic boundary', () => {
     expect(detailPage).toContain('const loadingSkeletonDelayMs = 240')
     expect(detailPage).toContain('detail-loading-state')
     expect(detailPage).toContain('skeleton-summary')
+    expect(detailPage).toContain('skeleton-task')
     expect(detailPage).toContain('skeleton-information')
     expect(detailPage).not.toContain('skeleton-progress')
-    expect(detailPage).not.toContain('skeleton-task')
     expect(detailPage).not.toContain('<text class="state-title">正在加载工单详情</text>')
     expect(detailPage).toContain("workOrder.loadState === 'failed_retryable'")
     expect(detailPage).toContain("workOrder.loadState === 'failed_terminal'")

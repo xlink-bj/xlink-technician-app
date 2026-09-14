@@ -12,7 +12,9 @@ The targeted scan reused the accepted R1 evidence at
 accepted G4-B/G4-C notes, and the existing Workflow Runtime contracts. R1
 confirms that the Detail read returns `serviceAppointment`, `workflow`, and
 `workflowNode`, and that workflow nodes carry raw `state` and `nodeDef` data.
-It does not establish a portable current-task/progress/action read contract.
+The D2 slice did not yet establish a portable current-task/progress/action
+read contract; D3 adds only the narrower current-task projection described in
+the D3 scenario matrix.
 
 ## Mock/real convergence
 
@@ -34,26 +36,28 @@ visual density remains three rows:
 | 005 | status, `describe`, contact, workflow node |
 | 006 | unknown status and absent optional customer/address/appointment fields |
 
-`workflowNode`, `nodeDef`, raw `state`, `describe`, `applyTimeStr`, and raw
-status never cross the shared Detail port. The adapter emits only the
-accepted normalized fields. Unknown status and missing optional values are
+`nodeDef`, raw `state`, `describe`, `applyTimeStr`, and raw status never cross
+the shared Detail port. `workflowNode` is converted by the adapter into typed
+node metadata for the existing Workflow Runtime; the page receives only the
+runtime's bounded projection. Unknown status and missing optional values are
 omitted rather than replaced with labels or fallback business content.
 
 ## Workflow and Current Task read model
 
-No accepted source currently proves all of the following together: progress
-ordering/position, current-node identity, task description/context, action
-identity, action label, and action availability. In particular, the R1
-visibility contract is a node filtering rule; it is not a portable Detail
-progress model. Array order, status labels, screenshots, menu positions, and
-the former hard-coded workflow template are not used as substitutes.
+No accepted source currently proves stable progress ordering/position, task
+description/context, or a write authorization model. The R1 visibility
+contract is a node filtering rule, and D3 reuses that rule rather than
+creating a second policy engine. Array order, status labels, screenshots, menu
+positions, and the former hard-coded workflow template are not used as current
+task identity.
 
-Therefore the unverified Workflow Progress, Current Task, and dynamic
-follow-up blocks collapse in the current Detail page. The previous
-Product-Owner decision to remove the Task Context card remains in force; it is
-not reintroduced by this engineering hardening. The status code label remains
-available only as the already accepted normalized status field in the
-read-only Order tab; it is not treated as a current action.
+D3 now exposes a Current Task only when exactly one normalized, visible, active
+node has a supported semantic action intent. Its title comes from normalized
+node display metadata; the title is not action identity. Runtime domain policy
+and G4-UX execution authorization remain separate: the current slice always
+marks execution as read-only/disabled. Progress remains deferred because no
+stable ordering/position contract was proven. The Product-Owner decision to
+remove Task Context remains in force.
 
 ## Appointment and follow-up disposition
 
@@ -85,7 +89,7 @@ but the current adapter emits no service-part label.
 | 资料 | `VERIFIED_LOCAL_READ_NAVIGATION` | Selects the read-only Customer tab. |
 | 跟进 | `VERIFIED_LOCAL_READ_NAVIGATION` | Selects the read-only Follow-up tab. |
 | 导航 | `UNSUPPORTED` | Displays a bounded explanation; no map capability is called. |
-| Current Task primary | `UNSUPPORTED` | No action is rendered without an accepted semantic source. |
+| Current Task primary | `READ_ONLY_PROJECTION` | Rendered only for one Runtime-approved candidate; CTA is disabled and non-mutating. |
 | Task Context secondary | `UNSUPPORTED` | Omitted per the accepted Product-Owner Detail direction. |
 
 ## Safety

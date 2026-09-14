@@ -10,6 +10,9 @@ export type {
   WorkOrderListQuery,
   WorkOrderSummary,
   WorkflowDefinitionRead,
+  WorkflowHandlerIdentity,
+  WorkflowNodeCategory,
+  WorkflowNodeLifecycle,
   WorkflowNodeRead,
 } from './api'
 export type { AuthSessionPort, AuthStartRequest, SessionSnapshot } from './auth'

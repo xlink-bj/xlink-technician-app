@@ -55,6 +55,13 @@ const detail: WorkOrderDetail = {
     normalizedPhone: '13800000000',
     displayMask: '138****0000',
   },
+  workflowNodes: [
+    {
+      id: asOpaqueId<'WorkflowNodeRuntimeId'>('workflow-node-001'),
+      category: 'unsupported',
+      lifecycle: 'unknown',
+    },
+  ],
 }
 
 function success<T>(data: T): OperationSnapshot<T> {

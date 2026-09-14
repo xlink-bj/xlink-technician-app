@@ -26,6 +26,12 @@
           </view>
         </view>
 
+        <view class="skeleton-surface skeleton-task">
+          <view class="skeleton-line skeleton-line--eyebrow" />
+          <view class="skeleton-line skeleton-line--task-title" />
+          <view class="skeleton-button" />
+        </view>
+
         <view class="skeleton-surface skeleton-information">
           <view class="skeleton-tabs"><view /><view /><view /><view /></view>
           <view class="skeleton-information-row"><view /><view /></view>
@@ -92,6 +98,15 @@
         </view>
         <text v-if="!canDial && detail.contact" class="action-hint">暂无可直接拨打的客户电话</text>
         <text v-if="contactFeedback || actionFeedback" class="action-feedback">{{ contactFeedback || actionFeedback }}</text>
+      </view>
+
+      <view v-if="workflowProjection.currentTask" class="current-task-card">
+        <text class="task-eyebrow">当前任务</text>
+        <text class="task-title">{{ workflowProjection.currentTask.title }}</text>
+        <button class="primary-task-action" disabled>
+          {{ currentTaskActionLabel(workflowProjection.currentTask.actionIntent) }}
+        </button>
+        <text class="task-action-note">当前仅支持只读查看，操作能力将在后续核验后开放</text>
       </view>
 
       <view class="information-card">
@@ -174,7 +189,9 @@ import { onLoad } from '@dcloudio/uni-app'
 
 import { hasAuthenticatedSession } from '@features/home/access'
 import { useWorkOrderDetailStore } from '@features/work-orders/detail'
+import { detailWorkflowProjectionFor } from '@features/work-orders/detail-workflow'
 import { detailTabs, type DetailTabKey } from '@features/work-orders/detail-tabs'
+import type { DetailWorkflowActionIntent } from '@runtimes/workflow'
 import { useSessionStore } from '@shared/state'
 import AppIcon from '@shared/ui/AppIcon.vue'
 
@@ -184,6 +201,7 @@ const routeReady = ref(false)
 const routeValue = ref<unknown>(undefined)
 const canAccess = computed(() => hasAuthenticatedSession(session.status, session.session))
 const detail = computed(() => workOrder.detail)
+const workflowProjection = computed(() => detailWorkflowProjectionFor(detail.value, session.session))
 const activeTab = ref<DetailTabKey>('follow-up')
 const showLoadingSkeleton = ref(false)
 const loadingSkeletonDelayMs = 240
@@ -217,6 +235,14 @@ const quickActions = [
   { key: 'records', label: '跟进', icon: 'task' as const, color: '#2878f2' },
   { key: 'navigate', label: '导航', icon: 'location' as const, color: '#2878f2' },
 ] as const
+const workflowActionLabels = {
+  interact_with_form: '处理表单',
+  open_subworkflow: '查看子流程',
+  place_order: '去下单',
+} as const
+function currentTaskActionLabel(action: DetailWorkflowActionIntent): string {
+  return workflowActionLabels[action]
+}
 type QuickActionKey = (typeof quickActions)[number]['key']
 const actionFeedback = ref('')
 const failureCopy = computed(() => {
@@ -489,6 +515,62 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
   color: #2878f2;
 }
 
+.current-task-card {
+  background: #fffaf4;
+  border: 2rpx solid #ffd29d;
+  border-radius: 24rpx;
+  box-shadow: 0 10rpx 34rpx rgba(32, 55, 90, 0.07);
+  margin-top: 18rpx;
+  padding: 24rpx 26rpx 22rpx;
+}
+
+.task-eyebrow {
+  color: #f08a21;
+  display: block;
+  font-size: 20rpx;
+  font-weight: 700;
+}
+
+.task-title {
+  color: #1d2b40;
+  display: block;
+  font-size: 30rpx;
+  font-weight: 800;
+  margin-top: 12rpx;
+}
+
+.primary-task-action {
+  background: #ff8418;
+  border-radius: 14rpx;
+  color: #ffffff;
+  font-size: 24rpx;
+  font-weight: 800;
+  height: 68rpx;
+  line-height: 68rpx;
+  margin: 22rpx 0 0;
+  opacity: 1;
+  padding: 0;
+  width: 100%;
+}
+
+.primary-task-action[disabled] {
+  background: #ff8418;
+  color: #ffffff;
+  opacity: 1;
+}
+
+.primary-task-action::after {
+  border: 0;
+}
+
+.task-action-note {
+  color: #a39a91;
+  display: block;
+  font-size: 20rpx;
+  margin-top: 10rpx;
+  text-align: center;
+}
+
 .detail-tabs {
   border-bottom: 1rpx solid #edf1f6;
   box-sizing: border-box;
@@ -658,6 +740,8 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
 .skeleton-line--customer { height: 32rpx; width: 42%; }
 .skeleton-line--number { height: 24rpx; width: 20%; }
 .skeleton-line--location { margin-top: 24rpx; width: 64%; }
+.skeleton-line--eyebrow { height: 20rpx; width: 18%; }
+.skeleton-line--task-title { height: 30rpx; margin-top: 14rpx; width: 30%; }
 
 .skeleton-actions--summary {
   margin-top: 24rpx;
@@ -673,6 +757,20 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
   border-radius: 14rpx;
   flex: 1;
   height: 64rpx;
+  animation: detail-skeleton-pulse 1.6s ease-in-out infinite;
+}
+
+.skeleton-task {
+  background: #fffaf4;
+  border-color: #ffd29d;
+  padding: 24rpx 26rpx 22rpx;
+}
+
+.skeleton-button {
+  background: #edf2f7;
+  border-radius: 14rpx;
+  height: 68rpx;
+  margin-top: 22rpx;
   animation: detail-skeleton-pulse 1.6s ease-in-out infinite;
 }
 

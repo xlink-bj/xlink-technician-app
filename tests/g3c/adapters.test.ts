@@ -120,6 +120,8 @@ describe('G3-C API adapter foundation', () => {
         definitionId: 'workflow-definition-001',
         runId: 'workflow-run-001',
         parentNodeId: 'workflow-node-parent',
+        category: 'unsupported',
+        lifecycle: 'unknown',
       },
     ])
     expect(nodes.data?.[0]).not.toHaveProperty('nodeStateCode')

@@ -244,6 +244,14 @@ describe('G4-UX business mock runtime', () => {
       serviceAddress: '日坛东一街',
       distanceText: '2.6 km',
       contact: { normalizedPhone: '13800000000', displayMask: '138****0000' },
+      workflowNodes: [
+        {
+          id: 'mock-workflow-node-001-current',
+          displayName: '勘察',
+          category: 'forms',
+          lifecycle: 'active',
+        },
+      ],
     })
     expect(requests.filter((request) => request.path.includes('queryById/')).at(-1)?.path).toBe(
       'basic/serviceAppointment/queryById/mock-work-order-001',
@@ -328,9 +336,11 @@ describe('G4-UX business mock runtime', () => {
       expect(result.state).toBe('succeeded')
       expect(result.data?.id).toBe(id)
       expect(result.data).not.toHaveProperty('status')
-      expect(result.data).not.toHaveProperty('state')
-      expect(result.data).not.toHaveProperty('nodeDef')
-      expect(result.data).not.toHaveProperty('workflowNode')
+      expect(result.data?.workflowNodes).toBeDefined()
+      expect(result.data?.workflowNodes?.every((node) => node.lifecycle !== undefined)).toBe(true)
+      expect(result.data?.workflowNodes?.every((node) => node.category !== undefined)).toBe(true)
+      expect(result.data?.workflowNodes?.every((node) => !('state' in node))).toBe(true)
+      expect(result.data?.workflowNodes?.every((node) => !('nodeDef' in node))).toBe(true)
       expect(result.data).not.toHaveProperty('describe')
       expect(result.data).not.toHaveProperty('applyTimeStr')
       expect(result.data).not.toHaveProperty('servicePartLabel')
@@ -390,6 +400,14 @@ describe('G4-UX business mock runtime', () => {
       id: mockDetailScenarioIds[5],
       displayNumber: '19006',
       workflowRunId: 'mock-workflow-run-006',
+      workflowNodes: [
+        {
+          id: 'mock-workflow-node-006-current',
+          displayName: '待核验',
+          category: 'unsupported',
+          lifecycle: 'unknown',
+        },
+      ],
     })
     expect(request).not.toHaveBeenCalled()
   })

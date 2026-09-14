@@ -13,6 +13,15 @@ export interface NodeVisibilityDecision {
 function matchesHandler(actor: WorkflowActor, handler: HandlerIdentity): boolean {
   if (handler.kind === 'user') return actor.userId === handler.userId
   if (handler.kind === 'role') return actor.roleIds.some((roleId) => roleId === handler.roleId)
+  if (handler.kind === 'unclassified') {
+    return (
+      String(actor.userId) === handler.value ||
+      actor.roleIds.some((roleId) => String(roleId) === handler.value) ||
+      actor.organizationRoles.some(
+        (organizationRole) => `${organizationRole.organizationId}+${organizationRole.roleId}` === handler.value,
+      )
+    )
+  }
   return actor.organizationRoles.some(
     (organizationRole) =>
       organizationRole.organizationId === handler.organizationId && organizationRole.roleId === handler.roleId,
@@ -30,6 +39,7 @@ export function evaluateNodeVisibility(
   if (node.isSystem || node.isSentinel || node.category === 'system' || node.category === 'sentinel') {
     return { visible: false, reason: 'system_node' }
   }
+  if (node.lifecycle === 'unknown') return { visible: false, reason: 'policy_unverified' }
   if (node.lifecycle !== 'active') return { visible: false, reason: 'node_inactive' }
   if (node.category === 'accept' || node.category === 'allot' || node.category === 'dispatch') {
     return { visible: false, reason: 'non_user_node' }

@@ -9,6 +9,9 @@ import type {
   WorkOrderListQuery,
   WorkOrderSummary,
   WorkflowDefinitionRead,
+  WorkflowHandlerIdentity,
+  WorkflowNodeCategory,
+  WorkflowNodeLifecycle,
   WorkflowNodeRead,
 } from '@shared/ports'
 import type {
@@ -253,12 +256,21 @@ function detailPayload(raw: unknown): {
   readonly payload: AdapterRecord
   readonly record: AdapterRecord
   readonly workflow?: AdapterRecord
+  readonly workflowNodes?: readonly unknown[]
 } {
   const envelope = asRecord(raw, 'work-order detail response')
   const payload = nestedRecord(envelope, ['data']) ?? envelope
   const record = nestedRecord(payload, ['serviceAppointment', 'workOrder', 'entity']) ?? payload
   const workflow = nestedRecord(payload, ['workflow']) ?? nestedRecord(envelope, ['workflow'])
-  return { envelope, payload, record, ...(workflow ? { workflow } : {}) }
+  const rawWorkflowNodes = nestedValue(payload, ['workflowNode'])
+  const workflowNodes = Array.isArray(rawWorkflowNodes) ? rawWorkflowNodes : undefined
+  return {
+    envelope,
+    payload,
+    record,
+    ...(workflow ? { workflow } : {}),
+    ...(workflowNodes ? { workflowNodes } : {}),
+  }
 }
 
 function detailContainsServiceAppointmentStatus(raw: unknown): boolean {
@@ -271,7 +283,7 @@ function workOrderDetail(
   requestedId: WorkOrderId,
   statusLabels: ReadonlyMap<string, string>,
 ): WorkOrderDetail {
-  const { record, workflow } = detailPayload(raw)
+  const { record, workflow, workflowNodes: rawWorkflowNodes } = detailPayload(raw)
   const id = optionalOpaqueId<'WorkOrderId'>(record, ['id', '_id']) ?? requestedId
   const workflowRunId =
     optionalOpaqueId<'WorkflowRunId'>(record, ['workflowRunId', 'runId']) ??
@@ -284,6 +296,7 @@ function workOrderDetail(
   const serviceAddress = optionalString(record, ['address'])
   const distanceText = displayDistance(record)
   const contact = workOrderContact(record)
+  const workflowNodes = rawWorkflowNodes?.map(workflowNode)
 
   return {
     id,
@@ -295,6 +308,7 @@ function workOrderDetail(
     ...(serviceAddress ? { serviceAddress } : {}),
     ...(distanceText ? { distanceText } : {}),
     ...(contact ? { contact } : {}),
+    ...(workflowNodes ? { workflowNodes } : {}),
   }
 }
 
@@ -307,19 +321,95 @@ function workflowDefinition(raw: unknown, requestedId: WorkflowDefinitionId): Wo
   return { id: id ?? requestedId }
 }
 
+function workflowNodeCategory(nodeDef: AdapterRecord | undefined): WorkflowNodeCategory {
+  const nodeType = optionalString(nodeDef ?? {}, ['nodeType', 'nodeTypeOld'])
+  switch (nodeType) {
+    case 'forms':
+      return 'forms'
+    case 'repeat':
+      return 'repeat'
+    case 'subflows':
+    case 'subflow':
+    case 'subworkflow':
+      return 'subworkflow'
+    case 'placeOrder':
+      return 'placeOrder'
+    case 'user':
+      return 'user'
+    case 'accept':
+      return 'accept'
+    case 'allot':
+      return 'allot'
+    case 'dispatch':
+      return 'dispatch'
+    case 'system':
+      return 'system'
+    case 'sentinel':
+      return 'sentinel'
+    default:
+      return 'unsupported'
+  }
+}
+
+function workflowNodeLifecycle(record: AdapterRecord): WorkflowNodeLifecycle {
+  if (record.state === 0) return 'active'
+  if (record.state === 10) return 'closed'
+  if (record.state === -1) return 'inactive'
+  return 'unknown'
+}
+
+function workflowNodeHandlers(record: AdapterRecord): readonly WorkflowHandlerIdentity[] | undefined {
+  if (!Array.isArray(record.handlerIds)) return undefined
+
+  const handlers: WorkflowHandlerIdentity[] = []
+  for (const rawValue of record.handlerIds) {
+    if (typeof rawValue !== 'string' && typeof rawValue !== 'number') continue
+    const value = String(rawValue).trim()
+    if (!value) continue
+
+    const separator = value.indexOf('+')
+    if (separator > 0 && separator < value.length - 1 && value.indexOf('+', separator + 1) === -1) {
+      handlers.push({
+        kind: 'organizationRole',
+        organizationId: asOpaqueId<'OrganizationId'>(value.slice(0, separator)),
+        roleId: asOpaqueId<'RoleId'>(value.slice(separator + 1)),
+      })
+      continue
+    }
+
+    // R1 proves bare handlerIds membership checks against user, role, and
+    // org-role identities, but does not provide a wire discriminator.
+    handlers.push({ kind: 'unclassified', value })
+  }
+
+  return handlers.length > 0 ? handlers : undefined
+}
+
 function workflowNode(raw: unknown): WorkflowNodeRead {
   const record = asRecord(raw, 'workflow node')
+  const nodeDef = nestedRecord(record, ['nodeDef'])
   const definitionId = optionalOpaqueId<'WorkflowDefinitionId'>(record, ['definitionId', 'defId'])
   const runId = optionalOpaqueId<'WorkflowRunId'>(record, ['runId', 'workflowRunId'])
   const parentNodeId = optionalOpaqueId<'WorkflowNodeRuntimeId'>(record, [
     'parentNodeId',
     'parentWorkflowNodeId',
   ])
+  const displayName = optionalString(nodeDef ?? {}, ['name'])
+  const handlers = workflowNodeHandlers(record)
+  const isSystem = record.isSystem === true
+  const isSentinel = record.isSentinel === true
+
   return {
     id: requiredOpaqueId<'WorkflowNodeRuntimeId'>(record, ['id', '_id', 'workflowNodeId'], 'workflow node id'),
+    category: workflowNodeCategory(nodeDef),
+    lifecycle: workflowNodeLifecycle(record),
+    ...(displayName ? { displayName } : {}),
     ...(definitionId ? { definitionId } : {}),
     ...(runId ? { runId } : {}),
     ...(parentNodeId ? { parentNodeId } : {}),
+    ...(handlers ? { handlers } : {}),
+    ...(isSystem ? { isSystem } : {}),
+    ...(isSentinel ? { isSentinel } : {}),
   }
 }
 

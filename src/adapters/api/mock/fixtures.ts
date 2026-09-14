@@ -209,7 +209,7 @@ export const mockWorkOrderDetailResponses = {
         {
           _id: 'mock-workflow-node-003-current',
           state: 0,
-          nodeDef: { nodeType: 'accept', name: '接单' },
+          nodeDef: { nodeType: 'subflows', name: '派工' },
         },
       ],
     },
@@ -246,6 +246,7 @@ export const mockWorkOrderDetailResponses = {
         {
           _id: 'mock-workflow-node-005-current',
           state: 0,
+          handlerIds: ['mock-other-role'],
           nodeDef: { nodeType: 'forms', name: '服务' },
         },
       ],
@@ -261,8 +262,8 @@ export const mockWorkOrderDetailResponses = {
       workflowNode: [
         {
           _id: 'mock-workflow-node-006-current',
-          state: 0,
-          nodeDef: { nodeType: 'forms', name: '待核验' },
+          state: 7,
+          nodeDef: { nodeType: 'unverified-node-type', name: '待核验' },
         },
       ],
     },

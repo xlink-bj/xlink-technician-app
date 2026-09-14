@@ -8,6 +8,11 @@ import type {
   WorkflowNodeRuntimeId,
   WorkflowRunId,
 } from '@shared/types'
+import type {
+  WorkflowHandlerIdentity,
+  WorkflowNodeCategory as ReadWorkflowNodeCategory,
+  WorkflowNodeLifecycle as ReadWorkflowNodeLifecycle,
+} from '@shared/ports'
 
 export interface MainWorkflowContext {
   readonly kind: 'main'
@@ -45,14 +50,7 @@ export interface WorkflowIdentityGraph {
   readonly form?: WorkflowFormIdentity
 }
 
-export type HandlerIdentity =
-  | { readonly kind: 'user'; readonly userId: UserId }
-  | { readonly kind: 'role'; readonly roleId: RoleId }
-  | {
-      readonly kind: 'organizationRole'
-      readonly organizationId: OrganizationId
-      readonly roleId: RoleId
-    }
+export type HandlerIdentity = WorkflowHandlerIdentity
 
 export interface WorkflowActor {
   readonly userId: UserId
@@ -63,20 +61,9 @@ export interface WorkflowActor {
   }[]
 }
 
-export type WorkflowNodeCategory =
-  | 'forms'
-  | 'repeat'
-  | 'subworkflow'
-  | 'placeOrder'
-  | 'user'
-  | 'accept'
-  | 'allot'
-  | 'dispatch'
-  | 'system'
-  | 'sentinel'
-  | 'unsupported'
+export type WorkflowNodeCategory = ReadWorkflowNodeCategory
 
-export type WorkflowNodeLifecycle = 'active' | 'closed' | 'inactive'
+export type WorkflowNodeLifecycle = ReadWorkflowNodeLifecycle
 
 export interface WorkflowNodeMetadata {
   readonly id: WorkflowNodeRuntimeId
