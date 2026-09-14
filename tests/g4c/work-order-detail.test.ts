@@ -48,12 +48,6 @@ const detail: WorkOrderDetail = {
   workflowRunId: asOpaqueId<'WorkflowRunId'>('workflow-run-001'),
   displayNumber: 'WO-SANITIZED-001',
   taskLabel: '待联系',
-  currentTask: {
-    title: '需要联系客户',
-    description: '请尽快与客户沟通需求，确认上门意向',
-    actionLabel: '联系客户',
-    tone: 'red',
-  },
   customerName: 'Sanitized Customer',
   serviceAddress: 'Sanitized service address',
   contact: {

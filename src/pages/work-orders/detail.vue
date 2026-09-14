@@ -101,19 +101,18 @@
       </view>
 
       <view
-        v-if="detail.currentTask"
+        v-if="workflowProjection.currentTask"
         class="current-task-card"
-        :class="`current-task-card--${detail.currentTask.tone}`"
+        :class="`current-task-card--${workflowProjection.currentTask.tone}`"
       >
-        <text class="task-eyebrow" :class="`task-eyebrow--${detail.currentTask.tone}`">当前任务</text>
-        <text class="task-title">{{ detail.currentTask.title }}</text>
-        <text class="task-description">{{ detail.currentTask.description }}</text>
+        <text class="task-eyebrow" :class="`task-eyebrow--${workflowProjection.currentTask.tone}`">当前任务</text>
+        <text class="task-title">{{ workflowProjection.currentTask.title }}</text>
         <button
           class="primary-task-action"
-          :class="`primary-task-action--${detail.currentTask.tone}`"
+          :class="`primary-task-action--${workflowProjection.currentTask.tone}`"
           disabled
         >
-          {{ detail.currentTask.actionLabel }}
+          {{ workflowProjection.currentTask.actionLabel }}
         </button>
         <text class="task-action-note">当前仅支持只读查看，操作能力将在后续核验后开放</text>
       </view>
@@ -223,6 +222,7 @@ import { onLoad } from '@dcloudio/uni-app'
 import { hasAuthenticatedSession } from '@features/home/access'
 import { useWorkOrderDetailStore } from '@features/work-orders/detail'
 import { detailTabs, type DetailTabKey } from '@features/work-orders/detail-tabs'
+import { detailWorkflowUiProjectionFor } from '@features/work-orders/detail-workflow'
 import { useSessionStore } from '@shared/state'
 import AppIcon from '@shared/ui/AppIcon.vue'
 
@@ -233,6 +233,7 @@ const routeValue = ref<unknown>(undefined)
 const canAccess = computed(() => hasAuthenticatedSession(session.status, session.session))
 const detail = computed(() => workOrder.detail)
 const activities = computed(() => detail.value?.activities ?? [])
+const workflowProjection = computed(() => detailWorkflowUiProjectionFor(detail.value, session.session))
 const activeTab = ref<DetailTabKey>('follow-up')
 const showLoadingSkeleton = ref(false)
 const loadingSkeletonDelayMs = 240

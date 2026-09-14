@@ -7,7 +7,6 @@ import type {
   ReadPage,
   TechnicianApiReadPort,
   WorkOrderActivity,
-  WorkOrderCurrentTask,
   WorkOrderDetail,
   WorkOrderListQuery,
   WorkOrderSummary,
@@ -133,44 +132,6 @@ function firstStatusCode(value: unknown): string | undefined {
   if (typeof value !== 'string' && typeof value !== 'number') return undefined
   const code = String(value).split(',')[0]?.trim()
   return code || undefined
-}
-
-type CurrentTaskTemplate = WorkOrderCurrentTask
-
-/** R2's status-driven Detail task semantics; raw status remains adapter-only. */
-const currentTaskByStatus: Readonly<Record<string, CurrentTaskTemplate>> = {
-  '101': { title: '等待接单', description: '请尽快接单并联系客户', actionLabel: '接单', tone: 'blue' },
-  '102': { title: '等待接单', description: '请尽快接单并联系客户', actionLabel: '接单', tone: 'blue' },
-  '103': { title: '等待接单', description: '请确认接单并开始跟进', actionLabel: '接单', tone: 'blue' },
-  '104': { title: '需要联系客户', description: '请尽快与客户沟通需求，确认上门意向', actionLabel: '联系客户', tone: 'red' },
-  '105': { title: '待预约上门', description: '请与客户确认上门时间', actionLabel: '联系客户', tone: 'orange' },
-  '200': { title: '暂不需要上门', description: '客户暂不需要上门服务，请保持跟进', actionLabel: '联系客户', tone: 'gray' },
-  '201': { title: '不需要上门', description: '客户不需要上门服务，请记录原因并保持联系', actionLabel: '联系客户', tone: 'gray' },
-  '202': { title: '待上门服务', description: '请按照预约时间上门服务', actionLabel: '确认已上门', tone: 'orange' },
-  '203': { title: '待客户下单', description: '请协助客户完成下单', actionLabel: '跟进下单', tone: 'purple' },
-  '204': { title: '上门未成交', description: '上门后未成交，请继续跟进客户', actionLabel: '联系客户', tone: 'orange' },
-  '205': { title: '跟进方案', description: '请与客户确认方案和报价', actionLabel: '查看方案', tone: 'purple' },
-  '206': { title: '待签约', description: '客户已确认方案，请尽快推进签约', actionLabel: '跟进签约', tone: 'orange' },
-  '207': { title: '待客户确认', description: '等待客户确认相关信息', actionLabel: '联系客户', tone: 'purple' },
-  '300': { title: '现场服务中', description: '工队阶段服务进行中，请关注现场进展', actionLabel: '查看进度', tone: 'orange' },
-  '301': { title: '待工队接单', description: '等待工队接单并安排进场', actionLabel: '联系工队', tone: 'orange' },
-  '302': { title: '待进场交底', description: '请安排工队进场交底', actionLabel: '确认进场', tone: 'orange' },
-  '401': { title: '待验收', description: '请安排验收并跟进客户确认', actionLabel: '查看验收', tone: 'green' },
-  '402': { title: '待完工', description: '施工接近完成，请确认收尾事项', actionLabel: '确认完工', tone: 'green' },
-  '403': { title: '已完工', description: '工单已完工，请关注回访与评价', actionLabel: '查看详情', tone: 'green' },
-  '407': { title: '待支付尾款', description: '请跟进尾款支付', actionLabel: '跟进回款', tone: 'green' },
-  '501': { title: '待客户评价', description: '请邀请客户完成服务评价', actionLabel: '联系客户', tone: 'green' },
-  '502': { title: '服务已完成', description: '客户已评价，本单进入完结态', actionLabel: '查看详情', tone: 'green' },
-  '999': { title: '跟进超时', description: '跟进已超时，请立即处理', actionLabel: '立即跟进', tone: 'red' },
-}
-
-function currentTaskForStatus(record: AdapterRecord): WorkOrderCurrentTask | undefined {
-  const code = firstStatusCode(record.status)
-  const template = code ? currentTaskByStatus[code] : undefined
-  if (!template) return undefined
-
-  const description = optionalString(record, ['describe'])?.trim()
-  return description ? { ...template, description } : template
 }
 
 type ActivityTypeCode = 1 | 2 | 3 | 4 | 5 | 6
@@ -498,7 +459,6 @@ function workOrderDetail(
 
   const displayNumber = optionalString(record, ['orderNum'])
   const taskLabel = serviceAppointmentTaskLabel(record, statusLabels)
-  const currentTask = currentTaskForStatus(record)
   const servicePartLabelValue = servicePartLabel(record, partLabels)
   const serviceDistrict = serviceDistrictLabel(record)
   const customerName = optionalString(record, ['name'])
@@ -512,7 +472,6 @@ function workOrderDetail(
     ...(workflowRunId ? { workflowRunId } : {}),
     ...(displayNumber ? { displayNumber } : {}),
     ...(taskLabel ? { taskLabel } : {}),
-    ...(currentTask ? { currentTask } : {}),
     ...(servicePartLabelValue ? { servicePartLabel: servicePartLabelValue } : {}),
     ...(serviceDistrict ? { serviceDistrict } : {}),
     ...(customerName ? { customerName } : {}),

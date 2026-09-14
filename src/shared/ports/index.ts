@@ -9,7 +9,6 @@ export type {
   WorkOrderActivity,
   WorkOrderActivityIcon,
   WorkOrderContact,
-  WorkOrderCurrentTask,
   WorkOrderDetail,
   WorkOrderListQuery,
   WorkOrderSummary,

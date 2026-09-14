@@ -45,23 +45,23 @@ omitted rather than replaced with labels or fallback business content.
 ## Workflow and Current Task read model
 
 No accepted source currently proves stable progress ordering/position or a
-write authorization model. R2 provides the accepted status-driven current-task
-title/description/action presentation; R1 visibility
-contract is a node filtering rule, and D3 reuses that rule rather than
-creating a second policy engine. Array order, status labels, screenshots, menu
-positions, and the former hard-coded workflow template are not used as current
-task identity.
+write authorization model. R1 provides the node visibility contract, and D3
+reuses that rule through the existing Workflow Runtime rather than creating a
+second policy engine. Array order, status labels, screenshots, menu positions,
+and former hard-coded status task templates are not used as Current Task
+identity.
 
 D3's Workflow Runtime still exposes an action-capability candidate only when
 exactly one normalized, visible, active node has a supported semantic action
-intent. That projection remains an action-capability boundary; it is not the
-product title of the Detail current-task card. The R2-aligned product card is
-status-driven: the adapter maps each accepted status code to a current task
-title, description, action label, and tone. Thus `206` is `待签约` with the
-orange tone, `401` is `待验收` with the green tone, and `101` is `等待接单`
-with the blue tone. Raw status remains private to the adapter, and the CTA is
-still read-only/disabled. Progress remains deferred, and the Product-Owner
-decision to remove Task Context remains in force.
+intent. When exactly one candidate exists, the feature layer exposes its
+normalized display name as the Current Task title and adds a small
+presentation mapping for CTA label/tone. When zero or multiple candidates
+exist, the card is absent; no array-order tie-break is allowed. Runtime domain
+policy and current-slice execution authorization remain separate: the
+projection may report `allowed`, while the UI CTA remains disabled and no
+workflow command is sent. Raw status remains private to the adapter as the
+ordinary `taskLabel` field only. Progress remains deferred, and the
+Product-Owner decision to remove Task Context remains in force.
 
 ## Appointment and follow-up disposition
 

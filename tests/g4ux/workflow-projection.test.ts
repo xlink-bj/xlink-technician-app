@@ -15,6 +15,7 @@ import {
   type WorkflowActor,
   type WorkflowNodeMetadata,
 } from '@runtimes/workflow'
+import { detailWorkflowUiProjectionFor } from '@features/work-orders/detail-workflow'
 import type { WorkflowNodeRead } from '@shared/ports'
 import { asOpaqueId } from '@shared/types'
 
@@ -177,5 +178,25 @@ describe('G4-UX Detail D3 workflow projection', () => {
     ])
     expect(current.currentTask?.execution).toBe('disabled_read_only')
     expect(current.currentTask?.domainPolicy.allowed).toBe(true)
+  })
+
+  it('keeps presentation labels outside Runtime and never uses status as Current Task truth', () => {
+    const detail = {
+      id: asOpaqueId<'WorkOrderId'>('mock-work-order-001'),
+      taskLabel: '跟进签约',
+      workflowNodes: [
+        readNode({ id: 'forms-node', category: 'forms', lifecycle: 'active', displayName: '勘察' }),
+      ],
+    }
+
+    const projection = detailWorkflowUiProjectionFor(detail, null)
+    expect(projection.currentTask).toMatchObject({
+      title: '勘察',
+      actionIntent: 'interact_with_form',
+      actionLabel: '处理表单',
+      tone: 'blue',
+      domainPolicy: { allowed: true },
+      execution: 'disabled_read_only',
+    })
   })
 })

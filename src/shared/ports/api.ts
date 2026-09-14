@@ -87,8 +87,6 @@ export interface WorkOrderDetail {
   readonly displayNumber?: string
   /** Adapter-normalized Chinese status/task label shared with the list model. */
   readonly taskLabel?: string
-  /** R2-aligned status-driven task presentation; raw status never crosses the port. */
-  readonly currentTask?: WorkOrderCurrentTask
   /** Adapter-normalized district label shared with the list model. */
   readonly serviceDistrict?: string
   readonly customerName?: string
@@ -105,13 +103,6 @@ export interface WorkOrderDetail {
 }
 
 export type WorkOrderTaskTone = 'blue' | 'red' | 'orange' | 'purple' | 'green' | 'gray'
-
-export interface WorkOrderCurrentTask {
-  readonly title: string
-  readonly description: string
-  readonly actionLabel: string
-  readonly tone: WorkOrderTaskTone
-}
 
 export type WorkOrderActivityIcon =
   | 'phone'
