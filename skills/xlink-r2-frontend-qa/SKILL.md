@@ -42,6 +42,24 @@ If approved beta credentials or configuration are unavailable, do not
 fabricate them. Report the relevant verification as credential-required and
 keep the work source/build-only.
 
+## R2 Live PII handling
+
+- Prefer approved demo/test accounts and synthetic/demo records whenever they
+  are available.
+- Temporary visual inspection of R2 Live in the browser is allowed.
+- Real customer names, addresses, phone-related data, and other PII must never
+  be persisted into `.review/`, saved screenshots, ZIPs, logs, GitHub Issues,
+  or committed files.
+- Inspect a live screenshot for PII before saving it. If it contains real PII,
+  redact or crop the saved artifact while preserving the layout, spacing,
+  typography, hierarchy, card anatomy, and density evidence needed for QA.
+- If safe redaction or cropping would destroy the required visual evidence, do
+  not save the screenshot. Record
+  `R2_REFERENCE_SCREENSHOT = NOT_SAVED / PII` and continue with transient live
+  browser inspection, pinned R2 source, and non-sensitive visual notes.
+- Technician-side screenshots must use synthetic/mock data only unless
+  separately authorized.
+
 ## Design QA checklist
 
 Explicitly inspect and record:
@@ -89,10 +107,10 @@ For a visual frontend slice, keep review artifacts local and untracked under:
 
 `.review/<slice>/`
 
-Prefer a README, the R2 reference screenshot, the Technician screenshot, and
-an optional side-by-side comparison. Do not upload screenshots or ZIP files to
-GitHub Issues unless explicitly requested. Issues are the textual review
-ledger by default.
+Prefer a README, a PII-safe R2 reference screenshot, the synthetic/mock-data
+Technician screenshot, and an optional side-by-side comparison. Do not upload
+screenshots or ZIP files to GitHub Issues unless explicitly requested. Issues
+are the textual review ledger by default.
 
 ## Preferred capabilities
 
@@ -114,4 +132,5 @@ This skill must not change shared contracts, authorize APIs, decide workflow or
 navigation products, override Program Control or Product Owner decisions, or
 permit backend writes. Keep reference repositories read-only. Do not expose
 credentials, session references, customer data, raw phone numbers, cookies, or
-tokens in screenshots, logs, artifacts, or issue comments.
+tokens in screenshots, logs, artifacts, or issue comments. Apply the R2 Live
+PII handling rules above before persisting any visual evidence.
