@@ -85,7 +85,7 @@ export function createUniApiReadTransport(options: UniApiReadTransportOptions): 
         options.mockLatencyMs === undefined ? {} : { latencyMs: options.mockLatencyMs },
       )
       if (mockResponse !== null) return mockResponse
-      if (isMockOwnedRead(input.path)) {
+      if (isMockOwnedRead(input.path, input.body ?? input.query ?? {})) {
         throw new ApiReadTransportError('Synthetic mock read is disabled', 'server_terminal')
       }
 
