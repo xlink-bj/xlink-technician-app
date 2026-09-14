@@ -34,6 +34,7 @@ export function createApplication(dependencies: ApplicationDependencies = {}) {
     () => sessionStore.session,
     () => sessionStore.endSession().then(() => undefined),
   )
+  workOrderListStore.configurePhone(phone)
   const workOrderDetailStore = useWorkOrderDetailStore(pinia)
   workOrderDetailStore.configureApi(
     apiRead,

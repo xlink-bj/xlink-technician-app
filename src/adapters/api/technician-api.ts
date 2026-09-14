@@ -123,20 +123,72 @@ function serviceDistrictLabel(record: AdapterRecord): string | undefined {
   return countyList[String(code)]
 }
 
+/**
+ * R2's task-card vocabulary is the presentation of the observed service-
+ * appointment status. The wire status remains adapter-owned and is never
+ * returned in the shared WorkOrderSummary.
+ */
+const statusTaskLabels: Readonly<Record<string, string>> = {
+  '101': '待接单',
+  '102': '待接单',
+  '103': '待接单',
+  '104': '联系客户',
+  '105': '预约上门',
+  '200': '暂不上门',
+  '201': '暂不上门',
+  '202': '上门服务',
+  '203': '待下单',
+  '204': '上门跟进',
+  '205': '跟进方案',
+  '206': '跟进签约',
+  '207': '待确认',
+  '300': '现场服务',
+  '301': '现场服务',
+  '302': '现场服务',
+  '401': '验收回款',
+  '402': '验收回款',
+  '403': '已完工',
+  '407': '验收回款',
+  '501': '待评价',
+  '502': '待评价',
+  '999': '跟进超时',
+}
+
+function firstStatusCode(value: unknown): string | undefined {
+  if (typeof value !== 'string' && typeof value !== 'number') return undefined
+  const code = String(value).split(',')[0]?.trim()
+  return code || undefined
+}
+
+function serviceAppointmentTaskLabel(record: AdapterRecord): string | undefined {
+  const statusCode = firstStatusCode(record.status)
+  return (statusCode ? statusTaskLabels[statusCode] : undefined) ?? optionalString(record, ['title'])
+}
+
 function workOrderSummary(raw: unknown): WorkOrderSummary {
   const record = asRecord(raw, 'work-order summary')
   const id = requiredOpaqueId<'WorkOrderId'>(record, ['id', '_id'], 'work-order id')
   const displayNumber = optionalString(record, ['orderNum'])
+  const taskLabel = serviceAppointmentTaskLabel(record)
+  const servicePartLabel = optionalString(record, ['part'])
   const customerName = optionalString(record, ['name'])
   const serviceDistrict = serviceDistrictLabel(record)
   const serviceAddress = optionalString(record, ['address'])
+  const distanceText = optionalString(record, ['distance'])
+  const nearbyCustomerCount = optionalNonNegativeInteger(record, ['nearbyCustomers'])
+  const contact = workOrderContact(record)
 
   return {
     id,
     ...(displayNumber ? { displayNumber } : {}),
+    ...(taskLabel ? { taskLabel } : {}),
+    ...(servicePartLabel ? { servicePartLabel } : {}),
     ...(customerName ? { customerName } : {}),
     ...(serviceDistrict ? { serviceDistrict } : {}),
     ...(serviceAddress ? { serviceAddress } : {}),
+    ...(distanceText ? { distanceText } : {}),
+    ...(nearbyCustomerCount !== undefined ? { nearbyCustomerCount } : {}),
+    ...(contact ? { contact } : {}),
   }
 }
 

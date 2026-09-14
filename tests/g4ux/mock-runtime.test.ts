@@ -192,21 +192,38 @@ describe('G4-UX business mock runtime', () => {
     expect(list.data?.items).toEqual([
       {
         id: mockWorkOrderIds[0],
-        displayNumber: 'DEMO-SA-001',
+        displayNumber: '09077',
+        taskLabel: '跟进签约',
+        servicePartLabel: '屋面',
         customerName: '演示客户甲',
         serviceDistrict: '朝阳区',
-        serviceAddress: '演示服务地址一号',
+        serviceAddress: '日坛东一街',
+        distanceText: '2.6 km',
+        nearbyCustomerCount: 2,
+        contact: { normalizedPhone: '13800000000', displayMask: '138****0000' },
       },
       {
         id: mockWorkOrderIds[1],
-        displayNumber: 'DEMO-SA-002',
+        displayNumber: '04009',
+        taskLabel: '验收回款',
+        servicePartLabel: '屋面',
         customerName: '演示客户乙（长名称结构样本）',
-        serviceAddress: '演示区域二号服务地址，长地址字段示例用于换行校验',
+        serviceAddress: '东坝北路17号国际贸易中心A座',
+        distanceText: '2.6 km',
+        nearbyCustomerCount: 2,
+        contact: { normalizedPhone: '13800000001', displayMask: '138****0001' },
       },
       {
         id: mockWorkOrderIds[2],
-        displayNumber: 'DEMO-SA-003',
+        displayNumber: '11850',
+        taskLabel: '待接单',
+        servicePartLabel: '屋面',
         customerName: '演示客户丙',
+        serviceDistrict: '朝阳区',
+        serviceAddress: '日坛国际贸易中心A座',
+        distanceText: '4.2 km',
+        nearbyCustomerCount: 2,
+        contact: { normalizedPhone: '13800000002', displayMask: '138****0002' },
       },
     ])
     expect(list.data?.items[0].id).not.toBe('mock-workflow-node-001')
@@ -221,9 +238,10 @@ describe('G4-UX business mock runtime', () => {
     expect(detail.data).toEqual({
       id: mockWorkOrderIds[0],
       workflowRunId: 'mock-workflow-run-001',
-      displayNumber: 'DEMO-SA-001',
+      displayNumber: '09077',
       customerName: '演示客户甲',
-      serviceAddress: '演示服务地址一号',
+      serviceAddress: '日坛东一街',
+      contact: { normalizedPhone: '13800000000', displayMask: '138****0000' },
     })
     expect(requests.at(-1)?.path).toBe(
       'basic/serviceAppointment/queryById/mock-work-order-001',
@@ -247,16 +265,26 @@ describe('G4-UX business mock runtime', () => {
     expect(result.data?.items).toEqual([
       {
         id: mockWorkOrderIds[0],
-        displayNumber: 'DEMO-SA-001',
+        displayNumber: '09077',
+        taskLabel: '跟进签约',
+        servicePartLabel: '屋面',
         customerName: '演示客户甲',
         serviceDistrict: '朝阳区',
-        serviceAddress: '演示服务地址一号',
+        serviceAddress: '日坛东一街',
+        distanceText: '2.6 km',
+        nearbyCustomerCount: 2,
+        contact: { normalizedPhone: '13800000000', displayMask: '138****0000' },
       },
       {
         id: mockWorkOrderIds[1],
-        displayNumber: 'DEMO-SA-002',
+        displayNumber: '04009',
+        taskLabel: '验收回款',
+        servicePartLabel: '屋面',
         customerName: '演示客户乙（长名称结构样本）',
-        serviceAddress: '演示区域二号服务地址，长地址字段示例用于换行校验',
+        serviceAddress: '东坝北路17号国际贸易中心A座',
+        distanceText: '2.6 km',
+        nearbyCustomerCount: 2,
+        contact: { normalizedPhone: '13800000001', displayMask: '138****0001' },
       },
     ])
     expect(request).not.toHaveBeenCalled()
@@ -299,7 +327,7 @@ describe('G4-UX business mock runtime', () => {
       () => asOpaqueId<'RoleId'>('synthetic-role'),
     )
 
-    for (const term of ['DEMO-SA-002', '演示客户乙', '长地址字段示例']) {
+    for (const term of ['04009', '演示客户乙', '东坝北路']) {
       const result = await api.listWorkOrders({ page: 1, pageSize: 20, searchText: `  ${term}  ` })
       expect(result.data?.items).toHaveLength(1)
       expect(result.data?.items[0].id).toBe(mockWorkOrderIds[1])
@@ -386,7 +414,11 @@ describe('G4-UX business mock runtime', () => {
     expect(rawNode).toHaveProperty('_id', 'mock-workflow-node-001')
     expect(rawNode).toHaveProperty('data._id', mockWorkOrderIds[0])
     expect(rawNode).toHaveProperty('data.name')
-    expect(rawNode.data).not.toHaveProperty('title')
+    expect(rawNode.data).toHaveProperty('part', '屋面')
+    expect(rawNode.data).toHaveProperty('distance', '2.6 km')
+    expect(rawNode.data).toHaveProperty('nearbyCustomers', 2)
+    expect(rawNode.data).toHaveProperty('status', '206')
+    expect(rawNode.data).toHaveProperty('phone', '13800000000')
     expect(rawNode.data).not.toHaveProperty('displayNumber')
     expect(rawNode.data).not.toHaveProperty('customerName')
     expect(rawNode.data).not.toHaveProperty('serviceAddress')
@@ -395,17 +427,17 @@ describe('G4-UX business mock runtime', () => {
     expect(mockWorkOrderDetailResponse.entity).not.toHaveProperty('serviceAddress')
   })
 
-  it('keeps representative mock fixtures sanitized and excludes credential/contact values', () => {
+  it('keeps representative mock fixtures sanitized with synthetic contact values only', () => {
     const serialized = JSON.stringify({
       mockSanodeListResponse,
       mockOrdinaryListResponse,
       mockWorkOrderDetailResponses,
     })
 
-    expect(serialized).toContain('DEMO-SA-001')
+    expect(serialized).toContain('09077')
     expect(serialized).toContain('演示客户')
     expect(serialized).not.toMatch(/186\d{8}/)
-    expect(serialized).not.toMatch(/phone|contactIds|JSESSIONID|token/i)
+    expect(serialized).not.toMatch(/18600372156|JSESSIONID|token/i)
   })
 
   it('exposes the developer switch only behind the hidden non-production control', () => {

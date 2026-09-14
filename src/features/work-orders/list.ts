@@ -2,13 +2,17 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
 import type {
+  PhonePort,
   ReadPage,
   SessionSnapshot,
   TechnicianApiReadPort,
   WorkOrderSummary,
 } from '@shared/ports'
 import {
+  createCapabilityResult,
   createOperationError,
+  type CapabilityResult,
+  type CapabilityState,
   type ErrorCategory,
   type OperationError,
   type OperationSnapshot,
@@ -43,9 +47,12 @@ export const useWorkOrderListStore = defineStore('workOrderList', () => {
   const totalCount = ref<number | undefined>(undefined)
   const hasMore = ref<boolean | undefined>(undefined)
   const error = ref<OperationError | null>(null)
+  const contactState = ref<CapabilityState>('not_requested')
+  const contactInFlightId = ref<WorkOrderSummary['id'] | null>(null)
   let api: TechnicianApiReadPort | null = null
   let getSession: () => SessionSnapshot | null = () => null
   let invalidateSession: SessionInvalidation | null = null
+  let phone: PhonePort | null = null
   let lastLoadWasAppend = false
 
   function configureApi(
@@ -56,6 +63,45 @@ export const useWorkOrderListStore = defineStore('workOrderList', () => {
     api = nextApi
     getSession = sessionProvider
     invalidateSession = sessionInvalidation ?? null
+  }
+
+  function configurePhone(nextPhone: PhonePort): void {
+    phone = nextPhone
+  }
+
+  function contactFailure(state: CapabilityState, reason: string): CapabilityResult<void> {
+    return createCapabilityResult<void>('phone', state, undefined, reason)
+  }
+
+  async function dialContact(item: WorkOrderSummary): Promise<CapabilityResult<void>> {
+    const contact = item.contact
+    if (!contact?.normalizedPhone) {
+      const result = contactFailure('unavailable', 'A direct customer phone contact is not available')
+      contactState.value = result.state
+      return result
+    }
+    if (!phone) {
+      const result = contactFailure('unsupported_platform', 'Phone contact is not configured')
+      contactState.value = result.state
+      return result
+    }
+    if (contactInFlightId.value) {
+      const result = contactFailure('unavailable', 'Phone contact is already in progress')
+      contactState.value = result.state
+      return result
+    }
+
+    contactInFlightId.value = item.id
+    try {
+      const result = await phone.dial({
+        normalizedPhone: contact.normalizedPhone,
+        ...(contact.contactRef ? { contactRef: contact.contactRef } : {}),
+      })
+      contactState.value = result.state
+      return result
+    } finally {
+      contactInFlightId.value = null
+    }
   }
 
   function clearList(): void {
@@ -177,7 +223,11 @@ export const useWorkOrderListStore = defineStore('workOrderList', () => {
     totalCount,
     hasMore,
     error,
+    contactState,
+    contactInFlightId,
     configureApi,
+    configurePhone,
+    dialContact,
     load,
     refresh,
     search,

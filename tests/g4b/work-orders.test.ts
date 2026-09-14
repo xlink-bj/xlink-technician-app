@@ -10,8 +10,14 @@ import {
 import { createUniApiReadTransport, type UniApiRequestExecutor } from '@adapters/api/uni-api-read-transport'
 import { hasAuthenticatedSession, workOrdersRoute } from '@features/home/access'
 import { useWorkOrderListStore } from '@features/work-orders/list'
-import type { AuthSessionPort, SessionSnapshot, TechnicianApiReadPort, WorkOrderSummary } from '@shared/ports'
-import { asOpaqueId, createOperationError, type OperationSnapshot } from '@shared/types'
+import type {
+  AuthSessionPort,
+  PhonePort,
+  SessionSnapshot,
+  TechnicianApiReadPort,
+  WorkOrderSummary,
+} from '@shared/ports'
+import { asOpaqueId, createCapabilityResult, createOperationError, type OperationSnapshot } from '@shared/types'
 import { useSessionStore } from '@shared/state'
 
 type WorkOrderPage = {
@@ -55,9 +61,11 @@ function configureStore(
   api: TechnicianApiReadPort,
   session: SessionSnapshot | null = authenticatedSession,
   sessionInvalidation?: () => Promise<unknown>,
+  phone?: PhonePort,
 ) {
   const store = useWorkOrderListStore()
   store.configureApi(api, () => session, sessionInvalidation)
+  if (phone) store.configurePhone(phone)
   return store
 }
 
@@ -82,6 +90,28 @@ describe('G4-B Home access and Work Order List feature', () => {
     expect(hasAuthenticatedSession('authenticated', null)).toBe(false)
     expect(hasAuthenticatedSession('unauthenticated', authenticatedSession)).toBe(false)
     expect(workOrdersRoute).toBe('/pages/work-orders/work-orders')
+  })
+
+  it('issues a semantic phone command from the list card without exposing phone mechanics', async () => {
+    const dial = vi.fn(async () => createCapabilityResult<void>('phone', 'granted'))
+    const phone: PhonePort = { dial }
+    const item: WorkOrderSummary = {
+      ...firstWorkOrder,
+      contact: { normalizedPhone: '13800000000', displayMask: '138****0000' },
+    }
+    const store = configureStore(
+      listApi(vi.fn(async () => page([item]))),
+      authenticatedSession,
+      undefined,
+      phone,
+    )
+
+    await store.load()
+    const result = await store.dialContact(item)
+
+    expect(result.state).toBe('granted')
+    expect(dial).toHaveBeenCalledWith({ normalizedPhone: '13800000000' })
+    expect(store.contactInFlightId).toBeNull()
   })
 
   it('exposes loading state and rejects a duplicate list request', async () => {

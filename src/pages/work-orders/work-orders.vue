@@ -10,7 +10,7 @@
     <view class="list-shell">
       <view class="search-band">
         <view class="search-input-shell">
-          <text class="search-icon" aria-hidden="true">⌕</text>
+          <AppIcon class="search-icon" name="search" :size="17" color="#71829e" aria-hidden="true" />
           <input
             v-model="searchDraft"
             class="search-input"
@@ -94,20 +94,71 @@
           hover-class="work-order-card-hover"
           :url="workOrderDetailRouteFor(item.id)"
         >
-          <view class="card-accent" aria-hidden="true" />
+          <view
+            class="card-accent"
+            :class="`card-accent--${workOrderCardToneFor(item.taskLabel)}`"
+            aria-hidden="true"
+          />
           <view class="card-main">
-            <view class="card-header">
-              <view class="card-mark" aria-hidden="true"><view class="card-mark-line" /></view>
-              <text v-if="item.customerName" class="card-customer">{{ item.customerName }}</text>
-              <text v-else-if="item.displayNumber" class="card-customer">{{ item.displayNumber }}</text>
-              <text v-if="item.displayNumber && item.customerName" class="card-number">{{ item.displayNumber }}</text>
-              <text class="card-arrow" aria-hidden="true">›</text>
+            <view class="card-top-row">
+              <view
+                class="card-mark"
+                :class="`card-mark--${workOrderCardToneFor(item.taskLabel)}`"
+                aria-hidden="true"
+              >
+                <AppIcon
+                  :name="workOrderCardIconFor(item.taskLabel)"
+                  :size="19"
+                  :color="workOrderCardIconColorFor(item.taskLabel)"
+                  aria-hidden="true"
+                />
+              </view>
+              <view class="card-title-cluster">
+                <view class="card-title-line">
+                  <text v-if="item.taskLabel" class="card-task">{{ item.taskLabel }}</text>
+                  <text v-if="item.servicePartLabel" class="card-part-badge">{{ item.servicePartLabel }}</text>
+                </view>
+              </view>
+              <text v-if="item.displayNumber" class="card-number">{{ cardNumber(item.displayNumber) }}</text>
             </view>
-            <view v-if="item.serviceDistrict || item.serviceAddress" class="card-location">
-              <text class="location-icon" aria-hidden="true">⌖</text>
-              <text v-if="item.serviceDistrict" class="location-district">{{ item.serviceDistrict }}</text>
-              <text v-if="item.serviceDistrict && item.serviceAddress" class="location-separator" aria-hidden="true">·</text>
-              <text v-if="item.serviceAddress" class="location-address">{{ item.serviceAddress }}</text>
+            <view class="card-details">
+              <view v-if="item.serviceDistrict || item.serviceAddress || item.distanceText" class="card-location">
+                <AppIcon class="location-icon" name="location" :size="17" color="#7088ae" aria-hidden="true" />
+                <text v-if="item.serviceDistrict" class="location-district">{{ item.serviceDistrict }}</text>
+                <text v-if="item.serviceDistrict && item.serviceAddress" class="location-separator" aria-hidden="true"> </text>
+                <text v-if="item.serviceAddress" class="location-address">{{ item.serviceAddress }}</text>
+                <view v-if="item.distanceText" class="location-distance">
+                  <text>{{ item.distanceText }}</text>
+                  <view class="distance-vehicle-icon" aria-hidden="true" />
+                </view>
+              </view>
+              <text v-if="item.customerName" class="card-customer">{{ item.customerName }}</text>
+              <view
+                v-if="item.nearbyCustomerCount !== undefined || item.contact?.normalizedPhone"
+                class="card-footer"
+              >
+                <text v-if="item.nearbyCustomerCount !== undefined" class="nearby-chip">
+                  工单附近客户 {{ item.nearbyCustomerCount }}
+                </text>
+                <view
+                  v-if="item.contact?.normalizedPhone"
+                  class="card-phone-button"
+                  :class="[
+                    `card-phone-button--${workOrderCardToneFor(item.taskLabel)}`,
+                    { 'card-phone-button--loading': workOrders.contactInFlightId === item.id },
+                  ]"
+                  role="button"
+                  aria-label="联系客户"
+                  @tap.stop="dialContact(item)"
+                >
+                  <AppIcon
+                    name="phone"
+                    :size="19"
+                    :color="workOrderCardIconColorFor(item.taskLabel)"
+                    aria-hidden="true"
+                  />
+                </view>
+              </view>
             </view>
           </view>
         </navigator>
@@ -126,15 +177,24 @@
 import { computed, ref, watch } from 'vue'
 
 import { hasAuthenticatedSession } from '@features/home/access'
+import { workOrderCardIconColorFor, workOrderCardIconFor, workOrderCardToneFor } from '@features/work-orders/card'
 import { workOrderDetailRouteFor } from '@features/work-orders/detail'
 import { useWorkOrderListStore } from '@features/work-orders/list'
 import { useSessionStore } from '@shared/state'
+import AppIcon from '@shared/ui/AppIcon.vue'
 
 const session = useSessionStore()
 const workOrders = useWorkOrderListStore()
 const searchDraft = ref(workOrders.searchText)
 const canAccess = computed(() => hasAuthenticatedSession(session.status, session.session))
 const isLoading = computed(() => workOrders.loadState === 'loading')
+
+function cardNumber(value: string): string {
+  const source = value.trim().replace(/^#/, '')
+  const digits = source.replace(/\D/g, '')
+  const shortValue = digits ? digits.slice(-5) : source.slice(-5)
+  return shortValue ? `#${shortValue}` : ''
+}
 
 watch(
   () => session.status,
@@ -165,6 +225,10 @@ async function retry(): Promise<void> {
 
 async function loadMore(): Promise<void> {
   await workOrders.loadMore()
+}
+
+async function dialContact(item: Parameters<typeof workOrders.dialContact>[0]): Promise<void> {
+  await workOrders.dialContact(item)
 }
 </script>
 
@@ -296,10 +360,16 @@ async function loadMore(): Promise<void> {
 }
 
 .card-accent {
-  background: #2b7af1;
   flex: 0 0 6rpx;
   width: 6rpx;
 }
+
+.card-accent--blue { background: #2878f2; }
+.card-accent--red { background: #f06445; }
+.card-accent--orange { background: #ff941f; }
+.card-accent--purple { background: #8a69e8; }
+.card-accent--green { background: #35b978; }
+.card-accent--gray { background: #9aa6b8; }
 
 .card-main {
   box-sizing: border-box;
@@ -310,7 +380,7 @@ async function loadMore(): Promise<void> {
   padding: 24rpx 20rpx 28rpx 18rpx;
 }
 
-.card-header {
+.card-top-row {
   align-items: center;
   display: flex;
   gap: 16rpx;
@@ -330,36 +400,30 @@ async function loadMore(): Promise<void> {
   width: 54rpx;
 }
 
-.card-mark-line,
-.card-mark-line::before,
-.card-mark-line::after {
-  background: #5a96f6;
-  border-radius: 999rpx;
-  content: '';
-  display: block;
-  height: 4rpx;
-  position: relative;
-  width: 24rpx;
+.card-mark--blue { background: #edf4ff; border-color: #d5e5ff; color: #2878f2; }
+.card-mark--red { background: #fff1ed; border-color: #ffd9cf; color: #f06445; }
+.card-mark--orange { background: #fff4e8; border-color: #ffdfbd; color: #ff941f; }
+.card-mark--purple { background: #f3efff; border-color: #e2d7ff; color: #8a69e8; }
+.card-mark--green { background: #eaf9f1; border-color: #c8efd9; color: #35b978; }
+.card-mark--gray { background: #f1f3f6; border-color: #e1e5eb; color: #8d99aa; }
+
+.card-title-cluster {
+  flex: 1;
+  min-width: 0;
 }
 
-.card-mark-line::before,
-.card-mark-line::after {
-  position: absolute;
+.card-title-line {
+  align-items: center;
+  display: flex;
+  gap: 12rpx;
+  min-width: 0;
 }
 
-.card-mark-line::before {
-  top: -8rpx;
-}
-
-.card-mark-line::after {
-  top: 8rpx;
-}
-
-.card-customer {
+.card-task {
   color: #172239;
   display: -webkit-box;
-  flex: 1;
-  font-size: 31rpx;
+  flex: 0 1 auto;
+  font-size: 30rpx;
   font-weight: 850;
   line-height: 1.35;
   min-width: 0;
@@ -367,6 +431,17 @@ async function loadMore(): Promise<void> {
   text-overflow: ellipsis;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
+}
+
+.card-part-badge {
+  background: #f1f3f6;
+  border-radius: 6rpx;
+  color: #263044;
+  flex: 0 0 auto;
+  font-size: 21rpx;
+  font-weight: 800;
+  line-height: 1.35;
+  padding: 4rpx 10rpx;
 }
 
 .card-number {
@@ -381,31 +456,34 @@ async function loadMore(): Promise<void> {
   white-space: nowrap;
 }
 
-.card-arrow {
-  color: #8ca5ca;
-  flex: 0 0 auto;
-  font-size: 34rpx;
-  font-weight: 400;
-  line-height: 1;
-  margin-left: 2rpx;
+.card-details {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding-left: 70rpx;
 }
 
 .card-location {
   align-items: flex-start;
+  box-sizing: border-box;
   color: #71829e;
   display: flex;
   font-size: 24rpx;
   gap: 8rpx;
   line-height: 1.5;
-  margin-top: 20rpx;
+  margin-left: -70rpx;
+  margin-top: 18rpx;
   min-width: 0;
+  padding-left: 70rpx;
+  position: relative;
+  width: calc(100% + 70rpx);
 }
 
 .location-icon {
-  color: #7088ae;
-  flex: 0 0 auto;
-  font-size: 25rpx;
+  left: 0;
   line-height: 1.5;
+  position: absolute;
+  top: -4rpx;
 }
 
 .location-district {
@@ -429,6 +507,87 @@ async function loadMore(): Promise<void> {
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
+
+.location-distance {
+  align-items: center;
+  color: #627492;
+  display: flex;
+  flex: 0 0 auto;
+  font-size: 22rpx;
+  font-weight: 700;
+  gap: 6rpx;
+  margin-left: 6rpx;
+  white-space: nowrap;
+}
+
+.distance-vehicle-icon {
+  border: 2rpx solid #6f86a8;
+  border-radius: 4rpx;
+  box-sizing: border-box;
+  height: 12rpx;
+  position: relative;
+  width: 22rpx;
+}
+
+.distance-vehicle-icon::before,
+.distance-vehicle-icon::after {
+  background: #6f86a8;
+  border-radius: 50%;
+  bottom: -5rpx;
+  content: '';
+  height: 5rpx;
+  position: absolute;
+  width: 5rpx;
+}
+
+.distance-vehicle-icon::before { left: 2rpx; }
+.distance-vehicle-icon::after { right: 2rpx; }
+
+.card-customer {
+  color: #172239;
+  display: -webkit-box;
+  font-size: 29rpx;
+  font-weight: 800;
+  line-height: 1.4;
+  margin-top: 10rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.card-footer {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  margin-top: 14rpx;
+  min-height: 32rpx;
+}
+
+.nearby-chip {
+  background: #edf4ff;
+  border-radius: 6rpx;
+  color: #2878f2;
+  font-size: 21rpx;
+  font-weight: 700;
+  line-height: 32rpx;
+  padding: 0 10rpx;
+}
+
+.card-phone-button {
+  align-items: center;
+  border: 1rpx solid #edf0f5;
+  border-radius: 50%;
+  box-shadow: 0 6rpx 14rpx rgba(27, 48, 82, 0.06);
+  display: flex;
+  flex: 0 0 58rpx;
+  height: 58rpx;
+  justify-content: center;
+  margin-right: 2rpx;
+  width: 58rpx;
+}
+
+.card-phone-button--loading { opacity: 0.48; }
 
 .list-state {
   align-items: center;

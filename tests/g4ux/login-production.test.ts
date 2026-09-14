@@ -7,6 +7,7 @@ import {
   stageForLoginMethod,
   supportedLoginMethod,
 } from '@features/session/login-flow'
+import { resolveQuickLoginInput } from '@features/session/quick-login'
 
 const loginPage = readFileSync(new URL('../../src/pages/index/index.vue', import.meta.url), 'utf8')
 const loginTemplate = loginPage.split('<script setup')[0]
@@ -25,10 +26,19 @@ describe('G4-UX production Login flow', () => {
     expect(loginPage).not.toContain('brand-mark')
   })
 
-  it('keeps unsupported R2 auth methods unavailable without a backend path', () => {
+  it('keeps password login unavailable while exposing R2 quick login as a bounded test shortcut', () => {
     expect(stageForLoginMethod('password')).toBeUndefined()
-    expect(stageForLoginMethod('quick')).toBeUndefined()
-    expect(loginPage).toContain('UI/DEV BEHAVIOR REQUIRES CONTRACT EVIDENCE')
+    expect(resolveQuickLoginInput({
+      VITE_XLINK_ENVIRONMENT: 'test',
+      VITE_XLINK_QUICK_LOGIN_PHONE: 'test-phone',
+    })).toEqual({ phoneNumber: 'test-phone', verificationCode: '999999' })
+    expect(resolveQuickLoginInput({
+      VITE_XLINK_ENVIRONMENT: 'prod',
+      VITE_XLINK_QUICK_LOGIN_PHONE: 'test-phone',
+    })).toBeNull()
+    expect(loginPage).toContain('@tap="quickLogin"')
+    expect(loginPage).toContain('一键使用测试账号登录')
+    expect(loginPage).not.toContain('18600372156')
   })
 
   it('keeps engineering guidance out of rendered Login copy', () => {

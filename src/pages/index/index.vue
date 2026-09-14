@@ -163,14 +163,25 @@
           </view>
         </view>
 
-        <view class="method-card method-card-disabled" aria-disabled="true">
+        <button
+          class="method-card"
+          :class="quickLoginAvailable ? 'method-card-active' : 'method-card-disabled'"
+          :disabled="!quickLoginAvailable || isBusy"
+          :aria-disabled="!quickLoginAvailable"
+          @tap="quickLogin"
+        >
           <text class="method-icon method-icon-amber">◒</text>
           <view class="method-copy">
-            <text class="method-title method-title-muted">快捷登录</text>
-            <text class="method-subtitle">暂未开放</text>
+            <text class="method-title" :class="{ 'method-title-muted': !quickLoginAvailable }">快捷登录</text>
+            <text class="method-subtitle">
+              {{ quickLoginAvailable ? '一键使用测试账号登录' : '仅非生产环境配置后可用' }}
+            </text>
           </view>
-        </view>
+          <text v-if="quickLoginAvailable" class="method-badge method-badge-amber">测试</text>
+        </button>
       </view>
+
+      <text v-if="feedback" class="feedback method-feedback" role="alert">{{ feedback }}</text>
 
       <text class="policy-note">登录即表示同意《用户协议》与《隐私政策》</text>
       <button class="back-link" @tap="loginStage = 'launch'">返回</button>
@@ -243,6 +254,7 @@ import {
 } from '@app/business-mock'
 import { hasAuthenticatedSession, workOrdersRoute } from '@features/home/access'
 import { submitLogin, type LoginSubmissionState } from '@features/session/login'
+import { resolveQuickLoginInput } from '@features/session/quick-login'
 import {
   advanceLoginStage,
   stageForLoginMethod,
@@ -251,8 +263,6 @@ import {
 } from '@features/session/login-flow'
 import { useSessionStore } from '@shared/state'
 import type { OperationError } from '@shared/types'
-
-// UI/DEV BEHAVIOR REQUIRES CONTRACT EVIDENCE: unsupported auth actions stay non-operational.
 
 const session = useSessionStore()
 const phoneNumber = ref('')
@@ -273,6 +283,7 @@ const isBusy = computed(
   () => submissionState.inFlight || logoutInFlight.value || session.status === 'authenticating',
 )
 const showHome = computed(() => hasAuthenticatedSession(session.status, session.session))
+const quickLoginAvailable = computed(() => resolveQuickLoginInput() !== null)
 const feedback = computed(() => message.value || userFacingLoginMessage(session.error))
 
 watch(
@@ -289,6 +300,19 @@ function goToMethods(): void {
 function selectMethod(method: LoginMethod): void {
   const nextStage = stageForLoginMethod(method)
   if (nextStage) loginStage.value = nextStage
+}
+
+async function quickLogin(): Promise<void> {
+  if (isBusy.value) return
+  const input = resolveQuickLoginInput()
+  if (!input) {
+    message.value = '快捷登录仅在非生产环境配置后可用'
+    return
+  }
+
+  message.value = ''
+  const result = await submitLogin(input, submissionState, (request) => session.login(request))
+  if (result.state !== 'succeeded') message.value = userFacingLoginMessage(result.error)
 }
 
 function handleHomeBrandTap(): void {
@@ -1099,6 +1123,11 @@ function userFacingLoginMessage(error: OperationError | null | undefined): strin
   font-size: 22rpx;
   font-weight: 800;
   padding: 6rpx 12rpx;
+}
+
+.method-badge-amber {
+  background: #fff4d6;
+  color: #b88700;
 }
 
 .policy-note {

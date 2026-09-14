@@ -2,6 +2,8 @@ import { readFileSync } from 'node:fs'
 
 import { describe, expect, it } from 'vitest'
 
+import { workOrderCardIconFor, workOrderCardToneFor } from '@features/work-orders/card'
+
 const homePage = readFileSync(new URL('../../src/pages/index/index.vue', import.meta.url), 'utf8')
 const homeTemplate = homePage.slice(
   homePage.indexOf('<view v-else-if="showHome"'),
@@ -40,7 +42,7 @@ describe('G4-UX Phase B2 Home', () => {
   })
 })
 
-describe('G4-UX Phase B2 Work Order List', () => {
+describe('G4-UX Work Order List card', () => {
   it('uses production Chinese copy and preserves the single semantic list', () => {
     expect(listTemplate).toContain('当前暂无工单')
     expect(listTemplate).toContain('当前角色暂时没有可见工单，可稍后刷新再试。')
@@ -60,14 +62,20 @@ describe('G4-UX Phase B2 Work Order List', () => {
     expect(listTemplate).toContain('class="state-illustration"')
   })
 
-  it('does not render raw adapter errors or WorkOrderId values', () => {
+  it('renders bounded semantic card fields without raw adapter values', () => {
     expect(listTemplate).not.toContain('workOrders.error?.message')
     expect(listTemplate).not.toContain('{{ item.id }}')
     expect(listTemplate).not.toContain('{{ String(item.id) }}')
+    expect(listTemplate).toContain('v-if="item.taskLabel" class="card-task"')
+    expect(listTemplate).toContain('v-if="item.servicePartLabel" class="card-part-badge"')
     expect(listTemplate).toContain('v-if="item.customerName" class="card-customer"')
-    expect(listTemplate).toContain('v-if="item.displayNumber && item.customerName" class="card-number"')
+    expect(listTemplate).toContain('v-if="item.displayNumber" class="card-number"')
     expect(listTemplate).toContain('v-if="item.serviceDistrict" class="location-district"')
     expect(listTemplate).toContain('v-if="item.serviceAddress" class="location-address"')
+    expect(listTemplate).toContain('v-if="item.distanceText" class="location-distance"')
+    expect(listTemplate).toContain('工单附近客户 {{ item.nearbyCustomerCount }}')
+    expect(listTemplate).toContain('class="card-phone-button"')
+    expect(listTemplate).toContain('@tap.stop="dialContact(item)"')
     expect(listTemplate).not.toContain('查看工单详情')
   })
 
@@ -88,5 +96,12 @@ describe('G4-UX Phase B2 Work Order List', () => {
     expect(listTemplate).not.toContain('class="content-refresh"')
     expect(listTemplate).not.toContain('class="bottom-nav"')
     expect(listTemplate).not.toContain('‹ 返回首页')
+  })
+
+  it('keeps R2 card icon and color semantics behind normalized task labels', () => {
+    expect(workOrderCardToneFor('跟进签约')).toBe('orange')
+    expect(workOrderCardToneFor('验收回款')).toBe('green')
+    expect(workOrderCardToneFor('待接单')).toBe('blue')
+    expect(workOrderCardIconFor('跟进签约')).not.toBe(workOrderCardIconFor('待接单'))
   })
 })

@@ -26,12 +26,22 @@ export interface WorkOrderListQuery {
 export interface WorkOrderSummary {
   readonly id: WorkOrderId
   readonly displayNumber?: string
+  /** Adapter-normalized Chinese status/task label; not an authorization/action code. */
+  readonly taskLabel?: string
+  /** Adapter-normalized service-part label for the compact card badge. */
+  readonly servicePartLabel?: string
   readonly customerName?: string
   readonly serviceDistrict?: string
   readonly serviceAddress?: string
+  /** Display-ready distance supplied by the read boundary; no location calculation here. */
+  readonly distanceText?: string
+  /** Optional nearby-customer summary supplied by the read boundary. */
+  readonly nearbyCustomerCount?: number
+  /** Ephemeral normalized contact input for the list phone action; never persisted or rendered. */
+  readonly contact?: WorkOrderContact
 }
 
-/** Semantic customer-contact data kept in the in-memory detail model only. */
+/** Semantic customer-contact data kept only in in-memory read models. */
 export interface WorkOrderContact {
   readonly contactRef?: CustomerContactId
   readonly normalizedPhone?: string
