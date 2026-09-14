@@ -15,7 +15,7 @@
     {
       "path": "pages/work-orders/detail",
       "style": {
-        "navigationBarTitleText": "Work Order Detail"
+        "navigationBarTitleText": "工单详情"
       }
     }
   ],

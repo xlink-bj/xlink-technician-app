@@ -52,8 +52,16 @@ export interface WorkOrderDetail {
   readonly id: WorkOrderId
   readonly workflowRunId?: WorkflowRunId
   readonly displayNumber?: string
+  /** Adapter-normalized Chinese status/task label shared with the list model. */
+  readonly taskLabel?: string
+  /** Adapter-normalized district label shared with the list model. */
+  readonly serviceDistrict?: string
   readonly customerName?: string
   readonly serviceAddress?: string
+  /** Display-ready distance supplied by the read boundary; no location calculation here. */
+  readonly distanceText?: string
+  /** Optional part label; emitted only when a verified label source is available. */
+  readonly servicePartLabel?: string
   readonly contact?: WorkOrderContact
 }
 

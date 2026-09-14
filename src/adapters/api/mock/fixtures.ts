@@ -120,21 +120,33 @@ export const mockStatusOptionsResponse = {
 
 export const mockWorkOrderDetailResponses = {
   [mockWorkOrderIds[0]]: {
-    entity: {
-      ...mockServiceAppointmentData[mockWorkOrderIds[0]],
-      workflowRunId: 'mock-workflow-run-001',
+    data: {
+      serviceAppointment: {
+        ...mockServiceAppointmentData[mockWorkOrderIds[0]],
+        workflowRunId: 'mock-workflow-run-001',
+      },
+      workflow: { _id: 'mock-workflow-run-001' },
+      workflowNode: [],
     },
   },
   [mockWorkOrderIds[1]]: {
-    entity: {
-      ...mockServiceAppointmentData[mockWorkOrderIds[1]],
-      workflowRunId: 'mock-workflow-run-002',
+    data: {
+      serviceAppointment: {
+        ...mockServiceAppointmentData[mockWorkOrderIds[1]],
+        workflowRunId: 'mock-workflow-run-002',
+      },
+      workflow: { _id: 'mock-workflow-run-002' },
+      workflowNode: [],
     },
   },
   [mockWorkOrderIds[2]]: {
-    entity: {
-      ...mockServiceAppointmentData[mockWorkOrderIds[2]],
-      workflowRunId: 'mock-workflow-run-003',
+    data: {
+      serviceAppointment: {
+        ...mockServiceAppointmentData[mockWorkOrderIds[2]],
+        workflowRunId: 'mock-workflow-run-003',
+      },
+      workflow: { _id: 'mock-workflow-run-003' },
+      workflowNode: [],
     },
   },
 } as const

@@ -22,33 +22,59 @@
           />
         </view>
         <button class="search-button" :disabled="isLoading" @tap="submitSearch">
-          {{ isLoading ? '加载中' : '搜索' }}
+          搜索
         </button>
       </view>
 
       <view class="list-context">
         <text class="list-context-label">当前角色可见工单</text>
         <button class="context-refresh" :disabled="isLoading" @tap="refresh">
-          {{ isLoading ? '刷新中' : '刷新' }}
+          刷新
         </button>
       </view>
 
-      <view v-if="workOrders.loadState === 'loading'" class="list-state loading-state">
+      <view v-if="showLoadingSkeleton" class="list-state loading-state" aria-label="正在加载工单">
         <view class="skeleton-list" aria-hidden="true">
           <view class="skeleton-card">
-            <view class="skeleton-mark" />
-            <view class="skeleton-copy"><view class="skeleton-line skeleton-line-main" /><view class="skeleton-line skeleton-line-meta" /></view>
+            <view class="skeleton-accent" />
+            <view class="skeleton-card-main">
+              <view class="skeleton-card-top">
+                <view class="skeleton-mark" />
+                <view class="skeleton-copy"><view class="skeleton-line skeleton-line-main" /><view class="skeleton-line skeleton-line-part" /></view>
+                <view class="skeleton-line skeleton-line-number" />
+              </view>
+              <view class="skeleton-line skeleton-line-location" />
+              <view class="skeleton-line skeleton-line-customer" />
+              <view class="skeleton-card-footer"><view class="skeleton-line skeleton-line-chip" /><view class="skeleton-phone" /></view>
+            </view>
           </view>
           <view class="skeleton-card">
-            <view class="skeleton-mark" />
-            <view class="skeleton-copy"><view class="skeleton-line skeleton-line-main" /><view class="skeleton-line skeleton-line-meta" /></view>
+            <view class="skeleton-accent" />
+            <view class="skeleton-card-main">
+              <view class="skeleton-card-top">
+                <view class="skeleton-mark" />
+                <view class="skeleton-copy"><view class="skeleton-line skeleton-line-main" /><view class="skeleton-line skeleton-line-part" /></view>
+                <view class="skeleton-line skeleton-line-number" />
+              </view>
+              <view class="skeleton-line skeleton-line-location" />
+              <view class="skeleton-line skeleton-line-customer" />
+              <view class="skeleton-card-footer"><view class="skeleton-line skeleton-line-chip" /><view class="skeleton-phone" /></view>
+            </view>
           </view>
           <view class="skeleton-card">
-            <view class="skeleton-mark" />
-            <view class="skeleton-copy"><view class="skeleton-line skeleton-line-main" /><view class="skeleton-line skeleton-line-meta" /></view>
+            <view class="skeleton-accent" />
+            <view class="skeleton-card-main">
+              <view class="skeleton-card-top">
+                <view class="skeleton-mark" />
+                <view class="skeleton-copy"><view class="skeleton-line skeleton-line-main" /><view class="skeleton-line skeleton-line-part" /></view>
+                <view class="skeleton-line skeleton-line-number" />
+              </view>
+              <view class="skeleton-line skeleton-line-location" />
+              <view class="skeleton-line skeleton-line-customer" />
+              <view class="skeleton-card-footer"><view class="skeleton-line skeleton-line-chip" /><view class="skeleton-phone" /></view>
+            </view>
           </view>
         </view>
-        <text class="state-title">正在加载工单</text>
       </view>
 
       <view v-else-if="workOrders.loadState === 'failed_retryable'" class="list-state error-state">
@@ -86,7 +112,10 @@
         <button class="state-action" @tap="refresh">刷新工单</button>
       </view>
 
-      <view v-else-if="workOrders.loadState === 'succeeded'" class="list-content">
+      <view v-else-if="workOrders.loadState === 'succeeded' || isRefreshing" class="list-content">
+        <view v-if="isRefreshing" class="inline-refresh" aria-label="正在刷新工单">
+          <view class="inline-refresh-indicator" />
+        </view>
         <navigator
           v-for="item in workOrders.items"
           :key="String(item.id)"
@@ -166,6 +195,8 @@
         <button v-if="workOrders.hasMore === true" class="state-action load-more" @tap="loadMore">加载更多</button>
       </view>
 
+      <view v-else-if="workOrders.loadState === 'loading'" class="loading-placeholder" aria-hidden="true" />
+
       <view v-else class="list-state">
         <text class="state-title">正在准备工单</text>
       </view>
@@ -174,7 +205,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 
 import { hasAuthenticatedSession } from '@features/home/access'
 import { workOrderCardIconColorFor, workOrderCardIconFor, workOrderCardToneFor } from '@features/work-orders/card'
@@ -188,6 +219,15 @@ const workOrders = useWorkOrderListStore()
 const searchDraft = ref(workOrders.searchText)
 const canAccess = computed(() => hasAuthenticatedSession(session.status, session.session))
 const isLoading = computed(() => workOrders.loadState === 'loading')
+const isRefreshing = computed(() => isLoading.value && workOrders.items.length > 0)
+const showLoadingSkeleton = ref(false)
+const loadingSkeletonDelayMs = 240
+let loadingSkeletonTimer: ReturnType<typeof setTimeout> | undefined
+
+function clearLoadingSkeletonTimer(): void {
+  if (loadingSkeletonTimer) clearTimeout(loadingSkeletonTimer)
+  loadingSkeletonTimer = undefined
+}
 
 function cardNumber(value: string): string {
   const source = value.trim().replace(/^#/, '')
@@ -195,6 +235,24 @@ function cardNumber(value: string): string {
   const shortValue = digits ? digits.slice(-5) : source.slice(-5)
   return shortValue ? `#${shortValue}` : ''
 }
+
+watch(
+  [() => workOrders.loadState, () => workOrders.items.length],
+  ([state, itemCount]) => {
+    clearLoadingSkeletonTimer()
+    showLoadingSkeleton.value = false
+    if (state === 'loading' && itemCount === 0) {
+      loadingSkeletonTimer = setTimeout(() => {
+        if (workOrders.loadState === 'loading' && workOrders.items.length === 0) {
+          showLoadingSkeleton.value = true
+        }
+      }, loadingSkeletonDelayMs)
+    }
+  },
+  { immediate: true },
+)
+
+onBeforeUnmount(clearLoadingSkeletonTimer)
 
 watch(
   () => session.status,
@@ -603,6 +661,36 @@ async function dialContact(item: Parameters<typeof workOrders.dialContact>[0]): 
   text-align: center;
 }
 
+.loading-state {
+  align-items: stretch;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  min-height: 0;
+  padding: 0;
+}
+
+.loading-placeholder {
+  min-height: 184rpx;
+}
+
+.inline-refresh {
+  background: #e7eef8;
+  border-radius: 999rpx;
+  height: 4rpx;
+  margin: 0 0 14rpx;
+  overflow: hidden;
+  width: 100%;
+}
+
+.inline-refresh-indicator {
+  animation: work-order-list-refresh 1.1s ease-in-out infinite;
+  background: #2878f2;
+  border-radius: inherit;
+  height: 100%;
+  width: 32%;
+}
+
 .skeleton-list {
   display: flex;
   flex-direction: column;
@@ -611,26 +699,50 @@ async function dialContact(item: Parameters<typeof workOrders.dialContact>[0]): 
 }
 
 .skeleton-card {
-  align-items: center;
-  background: #f8fafc;
-  border: 1rpx solid #edf1f6;
-  border-radius: 24rpx;
+  align-items: stretch;
+  background: #ffffff;
+  border: 1rpx solid #e2e8f1;
+  border-radius: 28rpx;
   box-sizing: border-box;
   display: flex;
-  gap: 16rpx;
-  min-height: 128rpx;
-  padding: 20rpx;
+  min-height: 184rpx;
+  overflow: hidden;
 }
 
-.skeleton-mark,
-.skeleton-line {
-  background: #e3ebf7;
-  border-radius: 999rpx;
+.skeleton-accent {
+  animation: work-order-list-skeleton-pulse 1.6s ease-in-out infinite;
+  background: #e8eef7;
+  flex: 0 0 6rpx;
+  width: 6rpx;
+}
+
+.skeleton-card-main {
+  box-sizing: border-box;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  padding: 24rpx 20rpx 28rpx 18rpx;
+}
+
+.skeleton-card-top,
+.skeleton-card-footer {
+  align-items: center;
+  display: flex;
+}
+
+.skeleton-card-top {
+  gap: 16rpx;
+  min-width: 0;
 }
 
 .skeleton-mark {
+  animation: work-order-list-skeleton-pulse 1.6s ease-in-out infinite;
+  background: #edf2f7;
+  border-radius: 16rpx;
   flex: 0 0 54rpx;
   height: 54rpx;
+  width: 54rpx;
 }
 
 .skeleton-copy {
@@ -641,19 +753,48 @@ async function dialContact(item: Parameters<typeof workOrders.dialContact>[0]): 
 }
 
 .skeleton-line {
-  height: 18rpx;
+  animation: work-order-list-skeleton-pulse 1.6s ease-in-out infinite;
+  background: #e3ebf7;
+  border-radius: 999rpx;
+  height: 20rpx;
 }
 
-.skeleton-line-main {
-  width: 72%;
+.skeleton-line-main { height: 30rpx; width: 68%; }
+.skeleton-line-part { height: 16rpx; width: 30%; }
+.skeleton-line-number { height: 24rpx; width: 20%; }
+.skeleton-line-location { margin-top: 18rpx; width: 62%; }
+.skeleton-line-customer { height: 28rpx; margin-top: 10rpx; width: 42%; }
+.skeleton-line-chip { height: 24rpx; width: 24%; }
+
+.skeleton-card-footer {
+  justify-content: space-between;
+  margin-top: 14rpx;
+  min-height: 58rpx;
 }
 
-.skeleton-line-meta {
-  width: 46%;
+.skeleton-phone {
+  animation: work-order-list-skeleton-pulse 1.6s ease-in-out infinite;
+  background: #f5f7fa;
+  border: 1rpx solid #edf0f5;
+  border-radius: 50%;
+  flex: 0 0 58rpx;
+  height: 58rpx;
+  width: 58rpx;
 }
 
-.loading-state .state-title {
-  margin-top: 28rpx;
+@keyframes work-order-list-skeleton-pulse {
+  0%,
+  100% {
+    opacity: 0.58;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes work-order-list-refresh {
+  0% { transform: translateX(-110%); }
+  100% { transform: translateX(330%); }
 }
 
 .state-illustration {

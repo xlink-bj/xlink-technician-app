@@ -198,6 +198,7 @@ describe('G4-UX business mock runtime', () => {
         customerName: '演示客户甲',
         serviceDistrict: '朝阳区',
         serviceAddress: '日坛东一街',
+        servicePartLabel: '屋面',
         distanceText: '2.6 km',
         communityOrderCount: 2,
         contact: { normalizedPhone: '13800000000', displayMask: '138****0000' },
@@ -208,6 +209,7 @@ describe('G4-UX business mock runtime', () => {
         taskLabel: '验收回款',
         customerName: '演示客户乙（长名称结构样本）',
         serviceAddress: '东坝北路17号国际贸易中心A座',
+        servicePartLabel: '屋面',
         distanceText: '2.6 km',
         communityOrderCount: 2,
         contact: { normalizedPhone: '13800000001', displayMask: '138****0001' },
@@ -219,6 +221,7 @@ describe('G4-UX business mock runtime', () => {
         customerName: '演示客户丙',
         serviceDistrict: '朝阳区',
         serviceAddress: '日坛国际贸易中心A座',
+        servicePartLabel: '屋面',
         distanceText: '4.2 km',
         communityOrderCount: 2,
       },
@@ -237,11 +240,15 @@ describe('G4-UX business mock runtime', () => {
       id: mockWorkOrderIds[0],
       workflowRunId: 'mock-workflow-run-001',
       displayNumber: '09077',
+      taskLabel: '跟进签约',
+      serviceDistrict: '朝阳区',
       customerName: '演示客户甲',
       serviceAddress: '日坛东一街',
+      servicePartLabel: '屋面',
+      distanceText: '2.6 km',
       contact: { normalizedPhone: '13800000000', displayMask: '138****0000' },
     })
-    expect(requests.at(-1)?.path).toBe(
+    expect(requests.filter((request) => request.path.includes('queryById/')).at(-1)?.path).toBe(
       'basic/serviceAppointment/queryById/mock-work-order-001',
     )
   })
@@ -268,6 +275,7 @@ describe('G4-UX business mock runtime', () => {
         customerName: '演示客户甲',
         serviceDistrict: '朝阳区',
         serviceAddress: '日坛东一街',
+        servicePartLabel: '屋面',
         distanceText: '2.6 km',
         communityOrderCount: 2,
         contact: { normalizedPhone: '13800000000', displayMask: '138****0000' },
@@ -278,6 +286,7 @@ describe('G4-UX business mock runtime', () => {
         taskLabel: '验收回款',
         customerName: '演示客户乙（长名称结构样本）',
         serviceAddress: '东坝北路17号国际贸易中心A座',
+        servicePartLabel: '屋面',
         distanceText: '2.6 km',
         communityOrderCount: 2,
         contact: { normalizedPhone: '13800000001', displayMask: '138****0001' },
@@ -421,9 +430,9 @@ describe('G4-UX business mock runtime', () => {
     expect(rawNode.data).not.toHaveProperty('displayNumber')
     expect(rawNode.data).not.toHaveProperty('customerName')
     expect(rawNode.data).not.toHaveProperty('serviceAddress')
-    expect(mockWorkOrderDetailResponse.entity).not.toHaveProperty('displayNumber')
-    expect(mockWorkOrderDetailResponse.entity).not.toHaveProperty('customerName')
-    expect(mockWorkOrderDetailResponse.entity).not.toHaveProperty('serviceAddress')
+    expect(mockWorkOrderDetailResponse.data.serviceAppointment).not.toHaveProperty('displayNumber')
+    expect(mockWorkOrderDetailResponse.data.serviceAppointment).not.toHaveProperty('customerName')
+    expect(mockWorkOrderDetailResponse.data.serviceAppointment).not.toHaveProperty('serviceAddress')
   })
 
   it('resolves task labels only from the adapter-owned code-option read', async () => {

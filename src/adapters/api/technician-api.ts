@@ -43,6 +43,7 @@ import {
   type AdapterRecord,
 } from '../common/records'
 import { countyList } from './reference/area-county-dictionary'
+import { repairPartLabelForCode } from './reference/repair-part-labels'
 
 export type ApiRequestMethod = 'GET' | 'POST'
 export type ApiRequestValue = string | number | boolean
@@ -163,6 +164,14 @@ function communityOrderCount(record: AdapterRecord): number | undefined {
   return extensions ? optionalNonNegativeInteger(extensions, ['communityOrdersTotal']) : undefined
 }
 
+function servicePartLabel(record: AdapterRecord): string | undefined {
+  const extensions = optionalRecord(record.exts)
+  const rawPaths = extensions?.leakagesite_copy
+  if (!Array.isArray(rawPaths) || !Array.isArray(rawPaths[0])) return undefined
+  const code = rawPaths[0][0]
+  return typeof code === 'string' ? repairPartLabelForCode(code.trim()) : undefined
+}
+
 function workOrderSummary(
   raw: unknown,
   statusLabels: ReadonlyMap<string, string>,
@@ -174,6 +183,7 @@ function workOrderSummary(
   const customerName = optionalString(record, ['name'])
   const serviceDistrict = serviceDistrictLabel(record)
   const serviceAddress = optionalString(record, ['address'])
+  const servicePart = servicePartLabel(record)
   const distanceText = displayDistance(record)
   const sameCommunityCount = communityOrderCount(record)
   const contact = workOrderListContact(record)
@@ -185,6 +195,7 @@ function workOrderSummary(
     ...(customerName ? { customerName } : {}),
     ...(serviceDistrict ? { serviceDistrict } : {}),
     ...(serviceAddress ? { serviceAddress } : {}),
+    ...(servicePart ? { servicePartLabel: servicePart } : {}),
     ...(distanceText ? { distanceText } : {}),
     ...(sameCommunityCount !== undefined ? { communityOrderCount: sameCommunityCount } : {}),
     ...(contact ? { contact } : {}),
@@ -248,26 +259,54 @@ function workOrderListContact(record: AdapterRecord) {
   }
 }
 
-function workOrderDetail(raw: unknown, requestedId: WorkOrderId): WorkOrderDetail {
+function detailPayload(raw: unknown): {
+  readonly envelope: AdapterRecord
+  readonly payload: AdapterRecord
+  readonly record: AdapterRecord
+  readonly workflow?: AdapterRecord
+} {
   const envelope = asRecord(raw, 'work-order detail response')
-  const record = nestedRecord(envelope, ['serviceAppointment', 'workOrder', 'entity']) ?? envelope
+  const payload = nestedRecord(envelope, ['data']) ?? envelope
+  const record = nestedRecord(payload, ['serviceAppointment', 'workOrder', 'entity']) ?? payload
+  const workflow = nestedRecord(payload, ['workflow']) ?? nestedRecord(envelope, ['workflow'])
+  return { envelope, payload, record, ...(workflow ? { workflow } : {}) }
+}
+
+function detailContainsServiceAppointmentStatus(raw: unknown): boolean {
+  const { record } = detailPayload(raw)
+  return firstStatusCode(record.status) !== undefined
+}
+
+function workOrderDetail(
+  raw: unknown,
+  requestedId: WorkOrderId,
+  statusLabels: ReadonlyMap<string, string>,
+): WorkOrderDetail {
+  const { record, workflow } = detailPayload(raw)
   const id = optionalOpaqueId<'WorkOrderId'>(record, ['id', '_id']) ?? requestedId
-  const workflow = nestedRecord(envelope, ['workflow'])
   const workflowRunId =
     optionalOpaqueId<'WorkflowRunId'>(record, ['workflowRunId', 'runId']) ??
     (workflow ? optionalOpaqueId<'WorkflowRunId'>(workflow, ['workflowRunId', 'runId', '_id']) : undefined)
 
   const displayNumber = optionalString(record, ['orderNum'])
+  const taskLabel = serviceAppointmentTaskLabel(record, statusLabels)
+  const serviceDistrict = serviceDistrictLabel(record)
   const customerName = optionalString(record, ['name'])
   const serviceAddress = optionalString(record, ['address'])
+  const servicePart = servicePartLabel(record)
+  const distanceText = displayDistance(record)
   const contact = workOrderContact(record)
 
   return {
     id,
     ...(workflowRunId ? { workflowRunId } : {}),
     ...(displayNumber ? { displayNumber } : {}),
+    ...(taskLabel ? { taskLabel } : {}),
+    ...(serviceDistrict ? { serviceDistrict } : {}),
     ...(customerName ? { customerName } : {}),
     ...(serviceAddress ? { serviceAddress } : {}),
+    ...(servicePart ? { servicePartLabel: servicePart } : {}),
+    ...(distanceText ? { distanceText } : {}),
     ...(contact ? { contact } : {}),
   }
 }
@@ -517,6 +556,14 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
     return new Map(options.data.items.map((option) => [option.value, option.label]))
   }
 
+  private async detailStatusLabelsFor(raw: unknown): Promise<ReadonlyMap<string, string>> {
+    if (!detailContainsServiceAppointmentStatus(raw)) return new Map()
+
+    const options = await this.getCodeOptions({ valueOption: 'STATUS' })
+    if (options.state !== 'succeeded' || !options.data) return new Map()
+    return new Map(options.data.items.map((option) => [option.value, option.label]))
+  }
+
   async listWorkOrders(query: WorkOrderListQuery) {
     if (!this.workOrderScopeResolver) {
       return this.read<ReadPage<WorkOrderSummary>>(
@@ -561,7 +608,7 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
         path: `basic/serviceAppointment/queryById/${encodeURIComponent(id)}`,
         body: { type: 'query' },
       },
-      (raw) => workOrderDetail(raw, id),
+      async (raw) => workOrderDetail(raw, id, await this.detailStatusLabelsFor(raw)),
     )
   }
 

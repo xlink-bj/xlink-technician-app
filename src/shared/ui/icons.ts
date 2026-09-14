@@ -4,6 +4,7 @@ export type AppIconName =
   | 'phone'
   | 'task'
   | 'contact'
+  | 'image'
   | 'appointment'
   | 'order'
   | 'complete'
@@ -15,6 +16,7 @@ const appIconTypeByName: Readonly<Record<AppIconName, string>> = {
   phone: 'phone-filled',
   task: 'list',
   contact: 'contact-filled',
+  image: 'image',
   appointment: 'calendar-filled',
   order: 'compose',
   complete: 'checkmarkempty',
