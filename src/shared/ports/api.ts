@@ -137,6 +137,11 @@ export interface CodeOptionsQuery {
   readonly parentValue?: string
 }
 
+export interface CascadeCodeOptionsQuery {
+  /** R1 cascade code type, for example `repairParts`. */
+  readonly codeType: string
+}
+
 export interface TechnicianApiReadPort {
   listWorkOrders(
     query: WorkOrderListQuery,
@@ -160,5 +165,8 @@ export interface TechnicianApiReadPort {
   }): Promise<OperationSnapshot<FormDataRead>>
   getCodeOptions(
     query: CodeOptionsQuery,
+  ): Promise<OperationSnapshot<ReadPage<CodeOptionRead>>>
+  getCascadeCodeOptions(
+    query: CascadeCodeOptionsQuery,
   ): Promise<OperationSnapshot<ReadPage<CodeOptionRead>>>
 }

@@ -2,6 +2,7 @@ import { isBusinessMockMode, type BusinessMockMode } from './config'
 import {
   isSyntheticWorkOrderId,
   mockOrdinaryListResponse,
+  mockRepairPartsCascadeResponse,
   mockRoleFunctionResponse,
   mockSanodeListResponse,
   mockStatusOptionsResponse,
@@ -86,6 +87,9 @@ function matchedResponse(
   if (route === 'function/changeRole') return mockRoleFunctionResponse
   if (route === 'code/query' && requestData.valueOption === 'STATUS') {
     return mockStatusOptionsResponse
+  }
+  if (route === 'i/code/selectMultistageCode.do' && requestData.types === 'repairParts') {
+    return mockRepairPartsCascadeResponse
   }
   if (route === 'basic/serviceAppointment/querySAWorkflowNode') {
     return listResponse(mode, mockSanodeListResponse, requestData)

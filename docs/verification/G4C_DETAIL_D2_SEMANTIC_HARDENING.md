@@ -74,12 +74,13 @@ introduced.
 
 ## Service-part disposition
 
-R1 proves that `exts.leakagesite_copy` is a nested path resolved through the
-tenant-scoped `repairParts` cascade. The complete cascade response and the
-meaning of the first path element are not verified. The former synthetic
-`repair-part-code-001 → 屋面` production mapping is removed. The optional UI
-slot remains structurally available for a later accepted dictionary resolver,
-but the current adapter emits no service-part label.
+The follow-up implementation now uses the verified R1 mechanism: read
+`exts.leakagesite_copy`, take the first value from each path, load the
+tenant-scoped `repairParts` cascade through
+`i/code/selectMultistageCode.do`, and resolve its `value/name` entries inside
+the shared Technician API Adapter. List and Detail therefore use the same
+normalization. A missing cascade entry omits the optional label; it does not
+fabricate a direct code-to-label map.
 
 ## Quick-action capability boundary
 

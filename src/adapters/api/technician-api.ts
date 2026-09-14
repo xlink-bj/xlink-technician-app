@@ -1,4 +1,5 @@
 import type {
+  CascadeCodeOptionsQuery,
   CodeOptionRead,
   CodeOptionsQuery,
   FormDataRead,
@@ -161,6 +162,53 @@ function displayDistance(record: AdapterRecord): string | undefined {
   return /^\d+(?:\.\d+)?$/.test(normalized) ? `${normalized} km` : undefined
 }
 
+function servicePartCodes(record: AdapterRecord): readonly string[] {
+  const rawPaths = optionalRecord(record.exts)?.leakagesite_copy
+  if (!Array.isArray(rawPaths)) return []
+
+  const codes: string[] = []
+  for (const rawPath of rawPaths) {
+    if (!Array.isArray(rawPath)) continue
+    const first = rawPath[0]
+    const code =
+      typeof first === 'string' && first.trim().length > 0
+        ? first.trim()
+        : typeof first === 'number' && Number.isFinite(first)
+          ? String(first)
+          : undefined
+    if (code && !codes.includes(code)) codes.push(code)
+  }
+  return codes
+}
+
+function servicePartCodesFromPage(raw: unknown): readonly string[] {
+  const envelope = asRecord(raw, 'work-order page')
+  const rawItems = nestedValue(envelope, ['data', 'items', 'records'])
+  if (!Array.isArray(rawItems)) throw new AdapterMappingError('work-order page items are missing')
+
+  const codes: string[] = []
+  for (const item of rawItems) {
+    const record = asRecord(item, 'work-order row')
+    const data = nestedRecord(record, ['data']) ?? record
+    for (const code of servicePartCodes(data)) {
+      if (!codes.includes(code)) codes.push(code)
+    }
+  }
+  return codes
+}
+
+function servicePartLabel(
+  record: AdapterRecord,
+  partLabels: ReadonlyMap<string, string>,
+): string | undefined {
+  const label = servicePartCodes(record)
+    .map((code) => partLabels.get(code))
+    .filter((value): value is string => Boolean(value))
+    .join(' ')
+  if (!label) return undefined
+  return label.length > 7 ? `${label.substring(0, 7)}...` : label
+}
+
 function communityOrderCount(record: AdapterRecord): number | undefined {
   const extensions = optionalRecord(record.exts)
   return extensions ? optionalNonNegativeInteger(extensions, ['communityOrdersTotal']) : undefined
@@ -169,11 +217,13 @@ function communityOrderCount(record: AdapterRecord): number | undefined {
 function workOrderSummary(
   raw: unknown,
   statusLabels: ReadonlyMap<string, string>,
+  partLabels: ReadonlyMap<string, string>,
 ): WorkOrderSummary {
   const record = asRecord(raw, 'work-order summary')
   const id = requiredOpaqueId<'WorkOrderId'>(record, ['id', '_id'], 'work-order id')
   const displayNumber = optionalString(record, ['orderNum'])
   const taskLabel = serviceAppointmentTaskLabel(record, statusLabels)
+  const servicePartLabelValue = servicePartLabel(record, partLabels)
   const customerName = optionalString(record, ['name'])
   const serviceDistrict = serviceDistrictLabel(record)
   const serviceAddress = optionalString(record, ['address'])
@@ -185,6 +235,7 @@ function workOrderSummary(
     id,
     ...(displayNumber ? { displayNumber } : {}),
     ...(taskLabel ? { taskLabel } : {}),
+    ...(servicePartLabelValue ? { servicePartLabel: servicePartLabelValue } : {}),
     ...(customerName ? { customerName } : {}),
     ...(serviceDistrict ? { serviceDistrict } : {}),
     ...(serviceAddress ? { serviceAddress } : {}),
@@ -197,11 +248,12 @@ function workOrderSummary(
 function sanodeWorkOrderSummary(
   raw: unknown,
   statusLabels: ReadonlyMap<string, string>,
+  partLabels: ReadonlyMap<string, string>,
 ): WorkOrderSummary {
   const node = asRecord(raw, 'workflow-node work-order summary')
   const data = nestedRecord(node, ['data'])
   if (!data) throw new AdapterMappingError('workflow-node work-order data is missing')
-  return workOrderSummary(data, statusLabels)
+  return workOrderSummary(data, statusLabels, partLabels)
 }
 
 function firstArrayString(value: unknown): string | undefined {
@@ -278,10 +330,15 @@ function detailContainsServiceAppointmentStatus(raw: unknown): boolean {
   return firstStatusCode(record.status) !== undefined
 }
 
+function servicePartCodesFromDetail(raw: unknown): readonly string[] {
+  return servicePartCodes(detailPayload(raw).record)
+}
+
 function workOrderDetail(
   raw: unknown,
   requestedId: WorkOrderId,
   statusLabels: ReadonlyMap<string, string>,
+  partLabels: ReadonlyMap<string, string>,
 ): WorkOrderDetail {
   const { record, workflow, workflowNodes: rawWorkflowNodes } = detailPayload(raw)
   const id = optionalOpaqueId<'WorkOrderId'>(record, ['id', '_id']) ?? requestedId
@@ -291,6 +348,7 @@ function workOrderDetail(
 
   const displayNumber = optionalString(record, ['orderNum'])
   const taskLabel = serviceAppointmentTaskLabel(record, statusLabels)
+  const servicePartLabelValue = servicePartLabel(record, partLabels)
   const serviceDistrict = serviceDistrictLabel(record)
   const customerName = optionalString(record, ['name'])
   const serviceAddress = optionalString(record, ['address'])
@@ -303,6 +361,7 @@ function workOrderDetail(
     ...(workflowRunId ? { workflowRunId } : {}),
     ...(displayNumber ? { displayNumber } : {}),
     ...(taskLabel ? { taskLabel } : {}),
+    ...(servicePartLabelValue ? { servicePartLabel: servicePartLabelValue } : {}),
     ...(serviceDistrict ? { serviceDistrict } : {}),
     ...(customerName ? { customerName } : {}),
     ...(serviceAddress ? { serviceAddress } : {}),
@@ -447,6 +506,39 @@ function codeOption(raw: unknown): CodeOptionRead {
     value: requiredString(record, ['value', 'code', 'valueOption'], 'code option value'),
     label: requiredString(record, ['label', 'name', 'text', 'codelabel'], 'code option label'),
   }
+}
+
+function cascadeCodeOptions(raw: unknown, codeType: string): ReadPage<CodeOptionRead> {
+  const groups = Array.isArray(raw)
+    ? raw
+    : (() => {
+        const envelope = asRecord(raw, 'cascade code response')
+        const value = nestedValue(envelope, ['data', 'items', 'records'])
+        return Array.isArray(value) ? value : []
+      })()
+  const group = groups
+    .map((value) => asRecord(value, 'cascade code group'))
+    .find((value) => optionalString(value, ['type']) === codeType)
+
+  if (!group) return { items: [] }
+
+  const items: CodeOptionRead[] = []
+  const seen = new Set<string>()
+  const flatten = (value: unknown): void => {
+    if (!Array.isArray(value)) return
+    for (const child of value) {
+      const record = asRecord(child, 'cascade code option')
+      const optionValue = optionalString(record, ['value'])
+      const label = optionalString(record, ['name'])
+      if (optionValue && label && !seen.has(optionValue)) {
+        seen.add(optionValue)
+        items.push({ value: optionValue, label })
+      }
+      flatten(record.children)
+    }
+  }
+  flatten(group.children)
+  return { items }
 }
 
 function decodeQueryPart(value: string): string {
@@ -610,6 +702,7 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
   constructor(
     private readonly transport: ApiReadTransport,
     private readonly workOrderScopeResolver?: WorkOrderListScopeResolver,
+    private readonly options: TechnicianApiReadAdapterOptions = {},
   ) {}
 
   private async read<T>(
@@ -641,6 +734,14 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
     return new Map(options.data.items.map((option) => [option.value, option.label]))
   }
 
+  private async partLabelsFor(codes: readonly string[]): Promise<ReadonlyMap<string, string>> {
+    if (codes.length === 0 || !this.options.cascadeTenantId) return new Map()
+
+    const options = await this.getCascadeCodeOptions({ codeType: 'repairParts' })
+    if (options.state !== 'succeeded' || !options.data) return new Map()
+    return new Map(options.data.items.map((option) => [option.value, option.label]))
+  }
+
   async listWorkOrders(query: WorkOrderListQuery) {
     if (!this.workOrderScopeResolver) {
       return this.read<ReadPage<WorkOrderSummary>>(
@@ -655,7 +756,8 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
         },
         async (raw) => {
           const statusLabels = await this.statusLabelsFor(raw)
-          return pageEnvelope(raw, (item) => workOrderSummary(item, statusLabels))
+          const partLabels = await this.partLabelsFor(servicePartCodesFromPage(raw))
+          return pageEnvelope(raw, (item) => workOrderSummary(item, statusLabels, partLabels))
         },
       )
     }
@@ -666,10 +768,11 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
         buildWorkOrderListRequest(query, scope),
         async (raw) => {
           const statusLabels = await this.statusLabelsFor(raw)
+          const partLabels = await this.partLabelsFor(servicePartCodesFromPage(raw))
           return pageEnvelope(raw, (item) =>
             scope.mode === 'workflow-node'
-              ? sanodeWorkOrderSummary(item, statusLabels)
-              : workOrderSummary(item, statusLabels),
+              ? sanodeWorkOrderSummary(item, statusLabels, partLabels)
+              : workOrderSummary(item, statusLabels, partLabels),
           )
         },
       )
@@ -685,7 +788,11 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
         path: `basic/serviceAppointment/queryById/${encodeURIComponent(id)}`,
         body: { type: 'query' },
       },
-      async (raw) => workOrderDetail(raw, id, await this.detailStatusLabelsFor(raw)),
+      async (raw) => {
+        const statusLabels = await this.detailStatusLabelsFor(raw)
+        const partLabels = await this.partLabelsFor(servicePartCodesFromDetail(raw))
+        return workOrderDetail(raw, id, statusLabels, partLabels)
+      },
     )
   }
 
@@ -772,18 +879,48 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
       (raw) => pageEnvelope(raw, codeOption),
     )
   }
+
+  getCascadeCodeOptions(query: CascadeCodeOptionsQuery) {
+    if (!this.options.cascadeTenantId) {
+      return Promise.resolve(
+        adapterFailure<ReadPage<CodeOptionRead>>(
+          'server_terminal',
+          'Cascade code tenant is not configured',
+        ),
+      )
+    }
+
+    return this.read<ReadPage<CodeOptionRead>>(
+      {
+        method: 'POST',
+        path: 'i/code/selectMultistageCode.do',
+        body: { types: query.codeType, tenantId: this.options.cascadeTenantId },
+      },
+      (raw) => cascadeCodeOptions(raw, query.codeType),
+    )
+  }
 }
 
-export function createTechnicianApiReadAdapter(transport: ApiReadTransport): TechnicianApiReadPort {
-  return new TechnicianApiReadAdapter(transport)
+export interface TechnicianApiReadAdapterOptions {
+  /** Current authenticated tenant used by R1's multistage code endpoint. */
+  readonly cascadeTenantId?: string
+}
+
+export function createTechnicianApiReadAdapter(
+  transport: ApiReadTransport,
+  options: TechnicianApiReadAdapterOptions = {},
+): TechnicianApiReadPort {
+  return new TechnicianApiReadAdapter(transport, undefined, options)
 }
 
 export function createRoleScopedTechnicianApiReadAdapter(
   transport: ApiReadTransport,
   getCurrentRoleId: () => RoleId | null,
+  options: TechnicianApiReadAdapterOptions = {},
 ): TechnicianApiReadPort {
   return new TechnicianApiReadAdapter(
     transport,
     createRoleScopedWorkOrderListScopeResolver(transport, getCurrentRoleId),
+    options,
   )
 }

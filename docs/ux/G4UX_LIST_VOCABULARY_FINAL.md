@@ -274,6 +274,16 @@ No synthetic status, type, or leakage-category label may be added before those
 vocabularies become ready. The R2 badge text must not be copied into fixtures
 as a substitute for business evidence.
 
+## Follow-up implementation note
+
+The later accepted implementation closes the service-part evidence gap using
+the R1 cascade mechanism, without changing the historical audit decisions
+above: `exts.leakagesite_copy` is resolved through the configured tenant's
+`repairParts` response from `i/code/selectMultistageCode.do`, and the shared
+Technician API Adapter maps the returned `value/name` entries for both List and
+Detail. Missing or unmapped values remain omitted rather than becoming a
+hardcoded or fabricated badge.
+
 ## Final reportable decisions
 
 - Status source found: **YES**; stable vocabulary: **NO**; decision:

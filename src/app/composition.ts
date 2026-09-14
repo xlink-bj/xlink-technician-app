@@ -52,6 +52,7 @@ export function createDefaultTechnicianApiReadPort(authSession: AuthSessionPort)
       getFormData: async () => blocked(),
       getFormDetail: async () => blocked(),
       getCodeOptions: async () => blocked(),
+      getCascadeCodeOptions: async () => blocked(),
     }
   }
 
@@ -63,6 +64,7 @@ export function createDefaultTechnicianApiReadPort(authSession: AuthSessionPort)
   return createRoleScopedTechnicianApiReadAdapter(
     transport,
     () => authSession.getCurrentSession()?.currentRole?.id ?? null,
+    { cascadeTenantId: config.value.authWireConfig.tenant },
   )
 }
 

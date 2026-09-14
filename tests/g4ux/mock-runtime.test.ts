@@ -16,6 +16,7 @@ import {
   isBusinessMockEnabled,
   isBusinessMockMode,
   mockOrdinaryListResponse,
+  mockRepairPartsCascadeResponse,
   mockDetailScenarioIds,
   mockSanodeListResponse,
   mockStatusOptionsResponse,
@@ -30,6 +31,8 @@ import {
 } from '@adapters/api/mock'
 import { readFileSync } from 'node:fs'
 import { asOpaqueId } from '@shared/types'
+
+const mockAdapterOptions = { cascadeTenantId: 'synthetic-tenant' } as const
 
 describe('G4-UX business mock runtime', () => {
   beforeEach(() => {
@@ -188,6 +191,7 @@ describe('G4-UX business mock runtime', () => {
     const roleScoped = createRoleScopedTechnicianApiReadAdapter(
       transport,
       () => asOpaqueId<'RoleId'>('synthetic-role'),
+      mockAdapterOptions,
     )
     const list = await roleScoped.listWorkOrders({ page: 1, pageSize: 20 })
 
@@ -196,6 +200,7 @@ describe('G4-UX business mock runtime', () => {
         id: mockWorkOrderIds[0],
         displayNumber: '09077',
         taskLabel: '跟进签约',
+        servicePartLabel: '屋面',
         customerName: '演示客户甲',
         serviceDistrict: '朝阳区',
         serviceAddress: '日坛东一街',
@@ -207,6 +212,7 @@ describe('G4-UX business mock runtime', () => {
         id: mockWorkOrderIds[1],
         displayNumber: '04009',
         taskLabel: '验收回款',
+        servicePartLabel: '屋面',
         customerName: '演示客户乙（长名称结构样本）',
         serviceAddress: '东坝北路17号国际贸易中心A座',
         distanceText: '2.6 km',
@@ -217,6 +223,7 @@ describe('G4-UX business mock runtime', () => {
         id: mockWorkOrderIds[2],
         displayNumber: '11850',
         taskLabel: '待接单',
+        servicePartLabel: '屋面',
         customerName: '演示客户丙',
         serviceDistrict: '朝阳区',
         serviceAddress: '日坛国际贸易中心A座',
@@ -229,9 +236,10 @@ describe('G4-UX business mock runtime', () => {
       'function/changeRole',
       'basic/serviceAppointment/querySAWorkflowNode',
       'code/query',
+      'i/code/selectMultistageCode.do',
     ])
 
-    const detail = await createTechnicianApiReadAdapter(transport).getWorkOrderDetail(
+    const detail = await createTechnicianApiReadAdapter(transport, mockAdapterOptions).getWorkOrderDetail(
       asOpaqueId<'WorkOrderId'>(mockWorkOrderIds[0]),
     )
     expect(detail.data).toEqual({
@@ -239,6 +247,7 @@ describe('G4-UX business mock runtime', () => {
       workflowRunId: 'mock-workflow-run-001',
       displayNumber: '09077',
       taskLabel: '跟进签约',
+      servicePartLabel: '屋面',
       serviceDistrict: '朝阳区',
       customerName: '演示客户甲',
       serviceAddress: '日坛东一街',
@@ -268,6 +277,7 @@ describe('G4-UX business mock runtime', () => {
         request,
         mockLatencyMs: 0,
       }),
+      mockAdapterOptions,
     )
 
     const result = await api.listWorkOrders({ page: 1, pageSize: 20 })
@@ -277,6 +287,7 @@ describe('G4-UX business mock runtime', () => {
         id: mockWorkOrderIds[0],
         displayNumber: '09077',
         taskLabel: '跟进签约',
+        servicePartLabel: '屋面',
         customerName: '演示客户甲',
         serviceDistrict: '朝阳区',
         serviceAddress: '日坛东一街',
@@ -288,6 +299,7 @@ describe('G4-UX business mock runtime', () => {
         id: mockWorkOrderIds[1],
         displayNumber: '04009',
         taskLabel: '验收回款',
+        servicePartLabel: '屋面',
         customerName: '演示客户乙（长名称结构样本）',
         serviceAddress: '东坝北路17号国际贸易中心A座',
         distanceText: '2.6 km',
@@ -307,7 +319,7 @@ describe('G4-UX business mock runtime', () => {
       request,
       mockLatencyMs: 0,
     })
-    const api = createTechnicianApiReadAdapter(transport)
+    const api = createTechnicianApiReadAdapter(transport, mockAdapterOptions)
 
     for (const id of mockWorkOrderIds) {
       const detail = await api.getWorkOrderDetail(asOpaqueId<'WorkOrderId'>(id))
@@ -329,6 +341,7 @@ describe('G4-UX business mock runtime', () => {
         request,
         mockLatencyMs: 0,
       }),
+      mockAdapterOptions,
     )
 
     for (const id of mockDetailScenarioIds) {
@@ -343,7 +356,11 @@ describe('G4-UX business mock runtime', () => {
       expect(result.data?.workflowNodes?.every((node) => !('nodeDef' in node))).toBe(true)
       expect(result.data).not.toHaveProperty('describe')
       expect(result.data).not.toHaveProperty('applyTimeStr')
-      expect(result.data).not.toHaveProperty('servicePartLabel')
+      if (id === mockDetailScenarioIds[5]) {
+        expect(result.data).not.toHaveProperty('servicePartLabel')
+      } else {
+        expect(result.data?.servicePartLabel).toBe('屋面')
+      }
     }
 
     expect(request).not.toHaveBeenCalled()
@@ -365,10 +382,11 @@ describe('G4-UX business mock runtime', () => {
     const transport: ApiReadTransport = {
       execute: vi.fn(async (request) => {
         if (request.path === 'code/query') return mockStatusOptionsResponse
+        if (request.path === 'i/code/selectMultistageCode.do') return mockRepairPartsCascadeResponse
         return request.path.endsWith(mockWorkOrderIds[0]) ? syntheticRaw : realRaw
       }),
     }
-    const api = createTechnicianApiReadAdapter(transport)
+    const api = createTechnicianApiReadAdapter(transport, mockAdapterOptions)
 
     const synthetic = await api.getWorkOrderDetail(asOpaqueId<'WorkOrderId'>(mockWorkOrderIds[0]))
     const real = await api.getWorkOrderDetail(asOpaqueId<'WorkOrderId'>('real-work-order-001'))
@@ -426,6 +444,7 @@ describe('G4-UX business mock runtime', () => {
     const api = createRoleScopedTechnicianApiReadAdapter(
       transport,
       () => asOpaqueId<'RoleId'>('synthetic-role'),
+      mockAdapterOptions,
     )
 
     for (const term of ['04009', '演示客户乙', '东坝北路']) {
@@ -461,6 +480,7 @@ describe('G4-UX business mock runtime', () => {
     const api = createRoleScopedTechnicianApiReadAdapter(
       transport,
       () => asOpaqueId<'RoleId'>('synthetic-role'),
+      mockAdapterOptions,
     )
 
     const full = await api.listWorkOrders({ page: 1, pageSize: 20, searchText: '   ' })
@@ -483,6 +503,7 @@ describe('G4-UX business mock runtime', () => {
     const api = createRoleScopedTechnicianApiReadAdapter(
       transport,
       () => asOpaqueId<'RoleId'>('synthetic-role'),
+      mockAdapterOptions,
     )
 
     const list = await api.listWorkOrders({ page: 1, pageSize: 20 })
@@ -497,7 +518,7 @@ describe('G4-UX business mock runtime', () => {
     }
 
     for (const item of list.data?.items ?? []) {
-      const detail = await createTechnicianApiReadAdapter(transport).getWorkOrderDetail(item.id)
+      const detail = await createTechnicianApiReadAdapter(transport, mockAdapterOptions).getWorkOrderDetail(item.id)
       expect(detail.state).toBe('succeeded')
       expect(detail.data).toMatchObject({
         id: item.id,
@@ -531,7 +552,7 @@ describe('G4-UX business mock runtime', () => {
     expect(mockWorkOrderDetailResponse.data.serviceAppointment).not.toHaveProperty('serviceAddress')
   })
 
-  it('resolves task labels only from the adapter-owned code-option read', async () => {
+  it('resolves task and service-part labels only from adapter-owned code reads', async () => {
     setBusinessMockEnabled(true)
     const requests: ApiReadRequest[] = []
     const transport: ApiReadTransport = {
@@ -543,14 +564,20 @@ describe('G4-UX business mock runtime', () => {
       },
     }
 
-    const api = createTechnicianApiReadAdapter(transport)
+    const api = createTechnicianApiReadAdapter(transport, mockAdapterOptions)
     const result = await api.listWorkOrders({ page: 1, pageSize: 20 })
 
     expect(result.data?.items[0].taskLabel).toBe(mockStatusOptionsResponse.data[0].codelabel)
-    expect(requests.at(-1)).toEqual({
+    expect(result.data?.items[0].servicePartLabel).toBe('屋面')
+    expect(requests.find((request) => request.path === 'code/query')).toEqual({
       method: 'POST',
       path: 'code/query',
       body: { valueOption: 'STATUS' },
+    })
+    expect(requests.at(-1)).toEqual({
+      method: 'POST',
+      path: 'i/code/selectMultistageCode.do',
+      body: { types: 'repairParts', tenantId: 'synthetic-tenant' },
     })
   })
 
@@ -572,6 +599,29 @@ describe('G4-UX business mock runtime', () => {
     })
 
     expect(result.data?.items).toEqual([{ id: 'work-order-unknown-status' }])
+  })
+
+  it('uses the returned cascade label instead of an adapter hardcoded mapping', async () => {
+    const transport: ApiReadTransport = {
+      execute: vi.fn(async (request) => {
+        if (request.path === 'code/query') return mockStatusOptionsResponse
+        if (request.path === 'i/code/selectMultistageCode.do') {
+          return [
+            {
+              type: 'repairParts',
+              children: [{ value: 'repair-part-code-001', name: '屋面专用' }],
+            },
+          ]
+        }
+        return mockWorkOrderDetailResponses[mockWorkOrderIds[0]]
+      }),
+    }
+
+    const result = await createTechnicianApiReadAdapter(transport, mockAdapterOptions).getWorkOrderDetail(
+      asOpaqueId<'WorkOrderId'>(mockWorkOrderIds[0]),
+    )
+
+    expect(result.data?.servicePartLabel).toBe('屋面专用')
   })
 
   it('keeps representative mock fixtures sanitized with synthetic contact values only', () => {

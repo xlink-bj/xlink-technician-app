@@ -165,6 +165,17 @@ export const mockStatusOptionsResponse = {
   total: 3,
 } as const
 
+/** Sanitized raw repair-part cascade response used by the R1-backed adapter lookup. */
+export const mockRepairPartsCascadeResponse = [
+  {
+    type: 'repairParts',
+    children: [
+      { value: 'repair-part-code-001', name: '屋面' },
+      { value: 'repair-part-code-002', name: '外墙' },
+    ],
+  },
+] as const
+
 export const mockWorkOrderDetailResponses = {
   [mockWorkOrderIds[0]]: {
     data: {
