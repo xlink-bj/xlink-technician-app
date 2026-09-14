@@ -35,17 +35,60 @@ function emptyPageResponse(): unknown {
   return { data: [], page: 1, rows: 20, total: 0 }
 }
 
-function listResponse(mode: BusinessMockMode, response: unknown): unknown {
-  return mode === 'empty' ? emptyPageResponse() : response
+const workOrderSearchFields = ['title', 'name', 'phone', 'address', 'describe', 'orderNum'] as const
+
+function searchTerm(requestData: Readonly<Record<string, unknown>>): string | undefined {
+  for (const field of workOrderSearchFields) {
+    const value = requestData[`regex:${field}|string#or`]
+    if (typeof value === 'string' && value.trim().length > 0) return value.trim()
+  }
+  return undefined
 }
 
-function matchedResponse(path: string, mode: BusinessMockMode): unknown | null {
+function rawSearchValue(item: unknown, field: string): unknown {
+  if (typeof item !== 'object' || item === null || Array.isArray(item)) return undefined
+  const record = item as Record<string, unknown>
+  const nested = record.data
+  if (typeof nested === 'object' && nested !== null && !Array.isArray(nested)) {
+    return (nested as Record<string, unknown>)[field]
+  }
+  return record[field]
+}
+
+function listResponse(
+  mode: BusinessMockMode,
+  response: unknown,
+  requestData: Readonly<Record<string, unknown>>,
+): unknown {
+  if (mode === 'empty') return emptyPageResponse()
+  const term = searchTerm(requestData)
+  if (!term) return response
+  if (typeof response !== 'object' || response === null || Array.isArray(response)) return response
+  const envelope = response as Record<string, unknown>
+  if (!Array.isArray(envelope.data)) return response
+  const needle = term.toLocaleLowerCase()
+  const data = envelope.data.filter((item) =>
+    workOrderSearchFields.some((field) => {
+      const value = rawSearchValue(item, field)
+      return typeof value === 'string' && value.toLocaleLowerCase().includes(needle)
+    }),
+  )
+  return { ...envelope, data, total: data.length }
+}
+
+function matchedResponse(
+  path: string,
+  mode: BusinessMockMode,
+  requestData: Readonly<Record<string, unknown>>,
+): unknown | null {
   const route = normalizedPath(path)
   if (route === 'function/changeRole') return mockRoleFunctionResponse
   if (route === 'basic/serviceAppointment/querySAWorkflowNode') {
-    return listResponse(mode, mockSanodeListResponse)
+    return listResponse(mode, mockSanodeListResponse, requestData)
   }
-  if (route === 'basic/serviceAppointment/query') return listResponse(mode, mockOrdinaryListResponse)
+  if (route === 'basic/serviceAppointment/query') {
+    return listResponse(mode, mockOrdinaryListResponse, requestData)
+  }
 
   const detailPrefix = 'basic/serviceAppointment/queryById/'
   if (route.startsWith(detailPrefix)) {
@@ -67,12 +110,12 @@ function delay(milliseconds: number): Promise<void> {
  */
 export async function tryMockRead(
   path: string,
-  _requestData: Readonly<Record<string, unknown>> = {},
+  requestData: Readonly<Record<string, unknown>> = {},
   options: MockReadOptions = {},
 ): Promise<unknown | null> {
   const mode = isBusinessMockMode()
   if (mode === 'off') return null
-  const response = matchedResponse(path, mode)
+  const response = matchedResponse(path, mode, requestData)
   if (response === null) return null
   await delay(options.latencyMs ?? 300)
   return clonedResponse(response)

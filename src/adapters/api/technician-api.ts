@@ -42,6 +42,7 @@ import {
   requiredString,
   type AdapterRecord,
 } from '../common/records'
+import { countyList } from './reference/area-county-dictionary'
 
 export type ApiRequestMethod = 'GET' | 'POST'
 export type ApiRequestValue = string | number | boolean
@@ -110,17 +111,31 @@ function pageEnvelope<T>(raw: unknown, mapItem: (value: unknown) => T): ReadPage
   }
 }
 
+function serviceDistrictLabel(record: AdapterRecord): string | undefined {
+  const rawDistrict = record.district
+  const code =
+    typeof rawDistrict === 'number'
+      ? rawDistrict
+      : typeof rawDistrict === 'string' && /^\d+$/.test(rawDistrict.trim())
+        ? Number(rawDistrict.trim())
+        : undefined
+  if (code === undefined || !Number.isInteger(code)) return undefined
+  return countyList[String(code)]
+}
+
 function workOrderSummary(raw: unknown): WorkOrderSummary {
   const record = asRecord(raw, 'work-order summary')
   const id = requiredOpaqueId<'WorkOrderId'>(record, ['id', '_id'], 'work-order id')
   const displayNumber = optionalString(record, ['orderNum'])
   const customerName = optionalString(record, ['name'])
+  const serviceDistrict = serviceDistrictLabel(record)
   const serviceAddress = optionalString(record, ['address'])
 
   return {
     id,
     ...(displayNumber ? { displayNumber } : {}),
     ...(customerName ? { customerName } : {}),
+    ...(serviceDistrict ? { serviceDistrict } : {}),
     ...(serviceAddress ? { serviceAddress } : {}),
   }
 }
@@ -345,6 +360,7 @@ function buildWorkOrderListRequest(
     body.orderState = scope.workflowStateFilter
   }
   if (scope.statusFilter) body['in:status|array#and'] = scope.statusFilter
+  addSearchCriteria(body, query.searchText)
 
   return {
     method: 'POST',
@@ -353,6 +369,16 @@ function buildWorkOrderListRequest(
         ? 'basic/serviceAppointment/querySAWorkflowNode'
         : 'basic/serviceAppointment/query',
     body,
+  }
+}
+
+const workOrderSearchFields = ['title', 'name', 'phone', 'address', 'describe', 'orderNum'] as const
+
+function addSearchCriteria(body: Record<string, ApiRequestValue>, searchText: string | undefined): void {
+  const term = searchText?.trim()
+  if (!term) return
+  for (const field of workOrderSearchFields) {
+    body[`regex:${field}|string#or`] = term
   }
 }
 
@@ -415,7 +441,11 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
         {
           method: 'POST',
           path: 'basic/serviceAppointment/query',
-          body: { page: query.page, rows: query.pageSize },
+          body: (() => {
+            const body: Record<string, ApiRequestValue> = { page: query.page, rows: query.pageSize }
+            addSearchCriteria(body, query.searchText)
+            return body
+          })(),
         },
         (raw) => pageEnvelope(raw, workOrderSummary),
       )

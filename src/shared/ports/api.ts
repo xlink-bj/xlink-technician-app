@@ -19,12 +19,15 @@ export interface ReadPage<T> {
 export interface WorkOrderListQuery {
   readonly page: number
   readonly pageSize: number
+  /** Optional server-side search across the accepted Work Order evidence fields. */
+  readonly searchText?: string
 }
 
 export interface WorkOrderSummary {
   readonly id: WorkOrderId
   readonly displayNumber?: string
   readonly customerName?: string
+  readonly serviceDistrict?: string
   readonly serviceAddress?: string
 }
 

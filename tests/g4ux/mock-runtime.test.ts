@@ -194,6 +194,7 @@ describe('G4-UX business mock runtime', () => {
         id: mockWorkOrderIds[0],
         displayNumber: 'DEMO-SA-001',
         customerName: '演示客户甲',
+        serviceDistrict: '朝阳区',
         serviceAddress: '演示服务地址一号',
       },
       {
@@ -248,6 +249,7 @@ describe('G4-UX business mock runtime', () => {
         id: mockWorkOrderIds[0],
         displayNumber: 'DEMO-SA-001',
         customerName: '演示客户甲',
+        serviceDistrict: '朝阳区',
         serviceAddress: '演示服务地址一号',
       },
       {
@@ -279,6 +281,65 @@ describe('G4-UX business mock runtime', () => {
     }
 
     expect(request).not.toHaveBeenCalled()
+  })
+
+  it('normalizes the bounded search input and keeps search server-side inside the adapter', async () => {
+    setBusinessMockMode('data')
+    const requests: ApiReadRequest[] = []
+    const transport: ApiReadTransport = {
+      execute: async (request) => {
+        requests.push(request)
+        const raw = await tryMockRead(request.path, request.body ?? {}, { latencyMs: 0 })
+        if (raw === null) throw new Error(`No mock fixture for ${request.path}`)
+        return raw
+      },
+    }
+    const api = createRoleScopedTechnicianApiReadAdapter(
+      transport,
+      () => asOpaqueId<'RoleId'>('synthetic-role'),
+    )
+
+    for (const term of ['DEMO-SA-002', '演示客户乙', '长地址字段示例']) {
+      const result = await api.listWorkOrders({ page: 1, pageSize: 20, searchText: `  ${term}  ` })
+      expect(result.data?.items).toHaveLength(1)
+      expect(result.data?.items[0].id).toBe(mockWorkOrderIds[1])
+    }
+
+    const listRequests = requests.filter((request) => request.path.includes('serviceAppointment/query'))
+    expect(listRequests).toHaveLength(3)
+    for (const request of listRequests) {
+      expect(request.body).toMatchObject({
+        'regex:title|string#or': expect.any(String),
+        'regex:name|string#or': expect.any(String),
+        'regex:phone|string#or': expect.any(String),
+        'regex:address|string#or': expect.any(String),
+        'regex:describe|string#or': expect.any(String),
+        'regex:orderNum|string#or': expect.any(String),
+      })
+      expect(request.body).not.toHaveProperty('searchText')
+    }
+  })
+
+  it('keeps blank search as full data and unmatched search as deterministic empty', async () => {
+    setBusinessMockMode('data')
+    const transport: ApiReadTransport = {
+      execute: async (request) => {
+        const raw = await tryMockRead(request.path, request.body ?? {}, { latencyMs: 0 })
+        if (raw === null) throw new Error(`No mock fixture for ${request.path}`)
+        return raw
+      },
+    }
+    const api = createRoleScopedTechnicianApiReadAdapter(
+      transport,
+      () => asOpaqueId<'RoleId'>('synthetic-role'),
+    )
+
+    const full = await api.listWorkOrders({ page: 1, pageSize: 20, searchText: '   ' })
+    const none = await api.listWorkOrders({ page: 1, pageSize: 20, searchText: 'not-in-demo-fixtures' })
+
+    expect(full.data?.items).toHaveLength(mockWorkOrderIds.length)
+    expect(none.data?.items).toEqual([])
+    expect(none.data?.totalCount).toBe(0)
   })
 
   it('keeps every synthetic list row consistent with its normalized detail', async () => {

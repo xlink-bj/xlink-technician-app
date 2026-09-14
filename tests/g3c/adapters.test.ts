@@ -129,6 +129,75 @@ describe('G3-C API adapter foundation', () => {
     expect(transport.requests[3].body).toEqual({ parentId: 'parent-option' })
   })
 
+  it('maps a verified district code and omits missing or unmapped district codes', async () => {
+    const transport = new FixtureApiTransport({
+      'basic/serviceAppointment/query': {
+        data: [
+          {
+            id: 'work-order-mapped',
+            orderNum: 'DEMO-SA-MAPPED',
+            district: 110105,
+            address: 'Sanitized mapped address',
+          },
+          {
+            id: 'work-order-missing',
+            orderNum: 'DEMO-SA-MISSING',
+            address: 'Sanitized missing district address',
+          },
+          {
+            id: 'work-order-unmapped',
+            orderNum: 'DEMO-SA-UNMAPPED',
+            district: 999999,
+            address: 'Sanitized unmapped district address',
+          },
+        ],
+        page: 1,
+        rows: 20,
+        total: 3,
+      },
+    })
+    const api = createTechnicianApiReadAdapter(transport)
+
+    const result = await api.listWorkOrders({ page: 1, pageSize: 20 })
+
+    expect(result.data?.items).toEqual([
+      {
+        id: 'work-order-mapped',
+        displayNumber: 'DEMO-SA-MAPPED',
+        serviceDistrict: '朝阳区',
+        serviceAddress: 'Sanitized mapped address',
+      },
+      {
+        id: 'work-order-missing',
+        displayNumber: 'DEMO-SA-MISSING',
+        serviceAddress: 'Sanitized missing district address',
+      },
+      {
+        id: 'work-order-unmapped',
+        displayNumber: 'DEMO-SA-UNMAPPED',
+        serviceAddress: 'Sanitized unmapped district address',
+      },
+    ])
+  })
+
+  it('maps searchText to adapter-owned backend search keys and resets no shared query shape', async () => {
+    const transport = new FixtureApiTransport({ default: rawWorkOrderPage })
+    const api = createTechnicianApiReadAdapter(transport)
+
+    await api.listWorkOrders({ page: 1, pageSize: 20, searchText: '  sanitized  ' })
+
+    expect(transport.requests[0].body).toEqual({
+      page: 1,
+      rows: 20,
+      'regex:title|string#or': 'sanitized',
+      'regex:name|string#or': 'sanitized',
+      'regex:phone|string#or': 'sanitized',
+      'regex:address|string#or': 'sanitized',
+      'regex:describe|string#or': 'sanitized',
+      'regex:orderNum|string#or': 'sanitized',
+    })
+  })
+
   it('maps form reads and makes malformed backend data terminal', async () => {
     const transport = new FixtureApiTransport({
       'biz/extForm/query/form-definition-001': rawFormDataPage,

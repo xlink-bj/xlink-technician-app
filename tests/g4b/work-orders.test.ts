@@ -224,6 +224,28 @@ describe('G4-B Home access and Work Order List feature', () => {
     expect(listWorkOrders).toHaveBeenLastCalledWith({ page: 1, pageSize: 20 })
     expect(store.items).toEqual([{ id: 'work-order-003' }])
   })
+
+  it('trims search text, resets to page one, and omits blank search input', async () => {
+    const listWorkOrders = vi
+      .fn()
+      .mockResolvedValueOnce(page([firstWorkOrder], 2, 3))
+      .mockResolvedValueOnce(page([], 1, 0))
+      .mockResolvedValueOnce(page([firstWorkOrder], 1, 1))
+    const store = configureStore(listApi(listWorkOrders))
+
+    await store.load()
+    await store.search('  customer  ')
+    expect(store.searchText).toBe('customer')
+    expect(listWorkOrders).toHaveBeenNthCalledWith(2, {
+      page: 1,
+      pageSize: 20,
+      searchText: 'customer',
+    })
+
+    await store.search('   ')
+    expect(store.searchText).toBe('')
+    expect(listWorkOrders).toHaveBeenNthCalledWith(3, { page: 1, pageSize: 20 })
+  })
 })
 
 describe('G4-B uni read composition boundary', () => {

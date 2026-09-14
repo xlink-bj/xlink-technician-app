@@ -39,6 +39,7 @@ export const useWorkOrderListStore = defineStore('workOrderList', () => {
   const items = ref<readonly WorkOrderSummary[]>([])
   const page = ref(1)
   const pageSize = ref(20)
+  const searchText = ref('')
   const totalCount = ref<number | undefined>(undefined)
   const hasMore = ref<boolean | undefined>(undefined)
   const error = ref<OperationError | null>(null)
@@ -123,7 +124,12 @@ export const useWorkOrderListStore = defineStore('workOrderList', () => {
     loadState.value = 'loading'
     error.value = null
 
-    const result = await api.listWorkOrders({ page: requestedPage, pageSize: pageSize.value })
+    const normalizedSearchText = searchText.value.trim()
+    const result = await api.listWorkOrders({
+      page: requestedPage,
+      pageSize: pageSize.value,
+      ...(normalizedSearchText ? { searchText: normalizedSearchText } : {}),
+    })
     if (result.state === 'succeeded' && result.data) {
       const responsePage = result.data.page ?? requestedPage
       const responsePageSize = result.data.pageSize ?? pageSize.value
@@ -146,6 +152,11 @@ export const useWorkOrderListStore = defineStore('workOrderList', () => {
     return load({ refresh: true })
   }
 
+  function search(value: string): Promise<OperationSnapshot<ReadPage<WorkOrderSummary>>> {
+    searchText.value = value.trim()
+    return load({ refresh: true })
+  }
+
   function retry(): Promise<OperationSnapshot<ReadPage<WorkOrderSummary>>> {
     return load({ append: lastLoadWasAppend })
   }
@@ -162,12 +173,14 @@ export const useWorkOrderListStore = defineStore('workOrderList', () => {
     items,
     page,
     pageSize,
+    searchText,
     totalCount,
     hasMore,
     error,
     configureApi,
     load,
     refresh,
+    search,
     retry,
     loadMore,
   }

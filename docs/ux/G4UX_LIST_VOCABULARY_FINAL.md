@@ -27,6 +27,12 @@ Method:
 - No application source, contract, adapter, mock runtime, dependency, backend,
   or reference repository was changed.
 
+Implementation status: the two bounded decisions authorized by this document
+have since been implemented in the new App: `WorkOrderListQuery.searchText`
+and `WorkOrderSummary.serviceDistrict`. The implementation keeps the raw
+search keys and the bundled `county_list` lookup inside the API Adapter; it
+does not promote any deferred status/type/category semantics.
+
 ## Status vocabulary
 
 ### Source and raw shape
