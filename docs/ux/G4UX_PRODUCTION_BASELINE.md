@@ -109,7 +109,7 @@ The following decisions remain with the product owner/design review:
 6. **List/detail density:** minimum semantic fields, status display, card versus row treatment, long-text/address behavior, and empty-state copy after Beta evidence.
 7. **Visual tokens:** final palette, typography scale, radii, spacing, elevation, iconography, focus/pressed states, and contrast acceptance.
 8. **State language:** Chinese copy and illustration/treatment for bootstrap, loading, empty, retryable, terminal, and session-invalid states.
-9. **Future action surface:** placement and presentation of Current Action/Current Task; it must remain outside information tabs and is not implemented here.
+9. **Future action surface:** workflow execution placement and presentation remain product decisions. The read-only R2 status-driven Current Task card is implemented outside information tabs; its CTA remains disabled until the separate action evidence gate passes.
 
 ## Cross-target gate scope
 

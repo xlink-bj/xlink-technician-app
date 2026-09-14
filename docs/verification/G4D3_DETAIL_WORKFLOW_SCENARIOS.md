@@ -8,9 +8,11 @@ raw backend-shaped workflowNode → API Adapter → Workflow Runtime → Detail 
 ```
 
 The page never receives `nodeDef`, numeric `state`, or raw handler strings.
-The runtime selects a Current Task only when there is exactly one visible,
-active, supported, actionable candidate. A CTA may be displayed for visual
-review, but D3 execution is always disabled.
+The runtime selects an action-capability candidate only when there is exactly
+one visible, active, supported, actionable candidate. A CTA may be displayed
+for visual review, but D3 execution is always disabled. The Detail product
+card itself uses the later R2-aligned status-driven current-task semantics;
+this matrix remains the workflow-node policy coverage.
 
 | Synthetic WorkOrderId | Raw workflow shape exercised | Normalized category / lifecycle | Visibility | Current Task | Action intent / domain policy | Expected Detail blocks |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -30,8 +32,9 @@ review, but D3 execution is always disabled.
 - A bare R1 `handlerIds` value is retained as an adapter-owned
   `unclassified` identity because the wire value does not identify whether it
   is a user, role, or organization-role reference. It is never rendered.
-- Current Task selection never uses status labels, first-node rules, array
-  order, screenshots, or WorkOrderId branches.
-- Progress ordering/position is deferred. Follow-up reads, service-part
-  cascade resolution, appointment display/mutation, and workflow mutation
-  remain outside D3.
+- Runtime action-candidate selection never uses status labels, first-node
+  rules, array order, screenshots, or WorkOrderId branches. The separate
+  product current-task card intentionally uses the accepted status semantic
+  mapping from R2.
+- Progress ordering/position is deferred. Follow-up reads, appointment
+  display/mutation, and workflow mutation remain outside D3.

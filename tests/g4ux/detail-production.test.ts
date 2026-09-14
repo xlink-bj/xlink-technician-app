@@ -43,7 +43,9 @@ describe('G4-UX detail D2 semantic boundary', () => {
   it('renders only a valid read-only current-task projection and keeps deferred blocks collapsed', () => {
     expect(detailPage).not.toContain('class="progress-card"')
     expect(detailPage).toContain('class="current-task-card"')
-    expect(detailPage).toContain('workflowProjection.currentTask')
+    expect(detailPage).toContain('detail.currentTask')
+    expect(detailPage).toContain('current-task-card--${detail.currentTask.tone}')
+    expect(detailPage).toContain('detail.currentTask.actionLabel')
     expect(detailPage).not.toContain('class="follow-up-list"')
     expect(detailPage).not.toContain('TECHNICIAN_WORKFLOW_TEMPLATE')
     expect(detailPage).not.toContain('detailLayoutFor')

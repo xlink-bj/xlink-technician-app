@@ -100,11 +100,20 @@
         <text v-if="contactFeedback || actionFeedback" class="action-feedback">{{ contactFeedback || actionFeedback }}</text>
       </view>
 
-      <view v-if="workflowProjection.currentTask" class="current-task-card">
-        <text class="task-eyebrow">当前任务</text>
-        <text class="task-title">{{ workflowProjection.currentTask.title }}</text>
-        <button class="primary-task-action" disabled>
-          {{ currentTaskActionLabel(workflowProjection.currentTask.actionIntent) }}
+      <view
+        v-if="detail.currentTask"
+        class="current-task-card"
+        :class="`current-task-card--${detail.currentTask.tone}`"
+      >
+        <text class="task-eyebrow" :class="`task-eyebrow--${detail.currentTask.tone}`">当前任务</text>
+        <text class="task-title">{{ detail.currentTask.title }}</text>
+        <text class="task-description">{{ detail.currentTask.description }}</text>
+        <button
+          class="primary-task-action"
+          :class="`primary-task-action--${detail.currentTask.tone}`"
+          disabled
+        >
+          {{ detail.currentTask.actionLabel }}
         </button>
         <text class="task-action-note">当前仅支持只读查看，操作能力将在后续核验后开放</text>
       </view>
@@ -189,9 +198,7 @@ import { onLoad } from '@dcloudio/uni-app'
 
 import { hasAuthenticatedSession } from '@features/home/access'
 import { useWorkOrderDetailStore } from '@features/work-orders/detail'
-import { detailWorkflowProjectionFor } from '@features/work-orders/detail-workflow'
 import { detailTabs, type DetailTabKey } from '@features/work-orders/detail-tabs'
-import type { DetailWorkflowActionIntent } from '@runtimes/workflow'
 import { useSessionStore } from '@shared/state'
 import AppIcon from '@shared/ui/AppIcon.vue'
 
@@ -201,7 +208,6 @@ const routeReady = ref(false)
 const routeValue = ref<unknown>(undefined)
 const canAccess = computed(() => hasAuthenticatedSession(session.status, session.session))
 const detail = computed(() => workOrder.detail)
-const workflowProjection = computed(() => detailWorkflowProjectionFor(detail.value, session.session))
 const activeTab = ref<DetailTabKey>('follow-up')
 const showLoadingSkeleton = ref(false)
 const loadingSkeletonDelayMs = 240
@@ -235,14 +241,6 @@ const quickActions = [
   { key: 'records', label: '跟进', icon: 'task' as const, color: '#2878f2' },
   { key: 'navigate', label: '导航', icon: 'location' as const, color: '#2878f2' },
 ] as const
-const workflowActionLabels = {
-  interact_with_form: '处理表单',
-  open_subworkflow: '查看子流程',
-  place_order: '去下单',
-} as const
-function currentTaskActionLabel(action: DetailWorkflowActionIntent): string {
-  return workflowActionLabels[action]
-}
 type QuickActionKey = (typeof quickActions)[number]['key']
 const actionFeedback = ref('')
 const failureCopy = computed(() => {
@@ -516,20 +514,32 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
 }
 
 .current-task-card {
-  background: #fffaf4;
-  border: 2rpx solid #ffd29d;
+  border: 2rpx solid;
   border-radius: 24rpx;
   box-shadow: 0 10rpx 34rpx rgba(32, 55, 90, 0.07);
   margin-top: 18rpx;
   padding: 24rpx 26rpx 22rpx;
 }
 
+.current-task-card--blue { background: #f7fbff; border-color: #cfe3ff; }
+.current-task-card--red { background: #fff8f9; border-color: #ffd1d7; }
+.current-task-card--orange { background: #fffaf4; border-color: #ffd9ad; }
+.current-task-card--purple { background: #fbf8ff; border-color: #dccfff; }
+.current-task-card--green { background: #f7fffa; border-color: #ccefdc; }
+.current-task-card--gray { background: #fbfcfe; border-color: #d8dde6; }
+
 .task-eyebrow {
-  color: #f08a21;
   display: block;
   font-size: 20rpx;
   font-weight: 700;
 }
+
+.task-eyebrow--blue { color: #1478ff; }
+.task-eyebrow--red { color: #ff4052; }
+.task-eyebrow--orange { color: #ff8a1a; }
+.task-eyebrow--purple { color: #7459e8; }
+.task-eyebrow--green { color: #18ae65; }
+.task-eyebrow--gray { color: #687386; }
 
 .task-title {
   color: #1d2b40;
@@ -539,8 +549,15 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
   margin-top: 12rpx;
 }
 
+.task-description {
+  color: #697386;
+  display: block;
+  font-size: 22rpx;
+  line-height: 1.6;
+  margin-top: 8rpx;
+}
+
 .primary-task-action {
-  background: #ff8418;
   border-radius: 14rpx;
   color: #ffffff;
   font-size: 24rpx;
@@ -553,8 +570,20 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
   width: 100%;
 }
 
+.primary-task-action--blue,
+.primary-task-action--blue[disabled] { background: #1478ff; }
+.primary-task-action--red,
+.primary-task-action--red[disabled] { background: #ff4052; }
+.primary-task-action--orange,
+.primary-task-action--orange[disabled] { background: #ff8a1a; }
+.primary-task-action--purple,
+.primary-task-action--purple[disabled] { background: #7459e8; }
+.primary-task-action--green,
+.primary-task-action--green[disabled] { background: #18ae65; }
+.primary-task-action--gray,
+.primary-task-action--gray[disabled] { background: #8b94a3; }
+
 .primary-task-action[disabled] {
-  background: #ff8418;
   color: #ffffff;
   opacity: 1;
 }

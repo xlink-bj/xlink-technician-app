@@ -44,20 +44,24 @@ omitted rather than replaced with labels or fallback business content.
 
 ## Workflow and Current Task read model
 
-No accepted source currently proves stable progress ordering/position, task
-description/context, or a write authorization model. The R1 visibility
+No accepted source currently proves stable progress ordering/position or a
+write authorization model. R2 provides the accepted status-driven current-task
+title/description/action presentation; R1 visibility
 contract is a node filtering rule, and D3 reuses that rule rather than
 creating a second policy engine. Array order, status labels, screenshots, menu
 positions, and the former hard-coded workflow template are not used as current
 task identity.
 
-D3 now exposes a Current Task only when exactly one normalized, visible, active
-node has a supported semantic action intent. Its title comes from normalized
-node display metadata; the title is not action identity. Runtime domain policy
-and G4-UX execution authorization remain separate: the current slice always
-marks execution as read-only/disabled. Progress remains deferred because no
-stable ordering/position contract was proven. The Product-Owner decision to
-remove Task Context remains in force.
+D3's Workflow Runtime still exposes an action-capability candidate only when
+exactly one normalized, visible, active node has a supported semantic action
+intent. That projection remains an action-capability boundary; it is not the
+product title of the Detail current-task card. The R2-aligned product card is
+status-driven: the adapter maps each accepted status code to a current task
+title, description, action label, and tone. Thus `206` is `待签约` with the
+orange tone, `401` is `待验收` with the green tone, and `101` is `等待接单`
+with the blue tone. Raw status remains private to the adapter, and the CTA is
+still read-only/disabled. Progress remains deferred, and the Product-Owner
+decision to remove Task Context remains in force.
 
 ## Appointment and follow-up disposition
 

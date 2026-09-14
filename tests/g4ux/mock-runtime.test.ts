@@ -247,6 +247,12 @@ describe('G4-UX business mock runtime', () => {
       workflowRunId: 'mock-workflow-run-001',
       displayNumber: '09077',
       taskLabel: '跟进签约',
+      currentTask: {
+        title: '待签约',
+        description: '客户已确认方案，请尽快推进签约',
+        actionLabel: '跟进签约',
+        tone: 'orange',
+      },
       servicePartLabel: '屋面',
       serviceDistrict: '朝阳区',
       customerName: '演示客户甲',
@@ -622,6 +628,48 @@ describe('G4-UX business mock runtime', () => {
     )
 
     expect(result.data?.servicePartLabel).toBe('屋面专用')
+  })
+
+  it('covers the R2 status-to-current-task semantics and tone mapping', async () => {
+    const expected = {
+      '101': ['等待接单', '接单', 'blue'],
+      '102': ['等待接单', '接单', 'blue'],
+      '103': ['等待接单', '接单', 'blue'],
+      '104': ['需要联系客户', '联系客户', 'red'],
+      '105': ['待预约上门', '联系客户', 'orange'],
+      '200': ['暂不需要上门', '联系客户', 'gray'],
+      '201': ['不需要上门', '联系客户', 'gray'],
+      '202': ['待上门服务', '确认已上门', 'orange'],
+      '203': ['待客户下单', '跟进下单', 'purple'],
+      '204': ['上门未成交', '联系客户', 'orange'],
+      '205': ['跟进方案', '查看方案', 'purple'],
+      '206': ['待签约', '跟进签约', 'orange'],
+      '207': ['待客户确认', '联系客户', 'purple'],
+      '300': ['现场服务中', '查看进度', 'orange'],
+      '301': ['待工队接单', '联系工队', 'orange'],
+      '302': ['待进场交底', '确认进场', 'orange'],
+      '401': ['待验收', '查看验收', 'green'],
+      '402': ['待完工', '确认完工', 'green'],
+      '403': ['已完工', '查看详情', 'green'],
+      '407': ['待支付尾款', '跟进回款', 'green'],
+      '501': ['待客户评价', '联系客户', 'green'],
+      '502': ['服务已完成', '查看详情', 'green'],
+      '999': ['跟进超时', '立即跟进', 'red'],
+    } as const
+    const transport: ApiReadTransport = {
+      execute: vi.fn(async (request) => {
+        if (request.path === 'code/query') return { data: [], page: 1, rows: 20, total: 0 }
+        const id = request.path.split('/').at(-1) ?? ''
+        const status = id.replace(/^status-/, '')
+        return { data: { serviceAppointment: { _id: id, status } } }
+      }),
+    }
+    const api = createTechnicianApiReadAdapter(transport)
+
+    for (const [status, [title, actionLabel, tone]] of Object.entries(expected)) {
+      const result = await api.getWorkOrderDetail(asOpaqueId<'WorkOrderId'>(`status-${status}`))
+      expect(result.data?.currentTask).toMatchObject({ title, actionLabel, tone })
+    }
   })
 
   it('keeps representative mock fixtures sanitized with synthetic contact values only', () => {
