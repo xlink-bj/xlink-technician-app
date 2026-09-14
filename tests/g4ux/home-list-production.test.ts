@@ -56,6 +56,9 @@ describe('G4-UX Phase B2 Work Order List', () => {
     expect(listTemplate).not.toContain('class="page-title"')
     expect(listTemplate).not.toContain('class="page-subtitle"')
     expect(listTemplate).not.toMatch(/\b(tabs?|counts?|filters?|sort(?:ing)?)\b/i)
+    expect(listTemplate).toContain('class="content-kicker">工作范围')
+    expect(listTemplate).toContain('当前可见工单')
+    expect(listTemplate).toContain('class="empty-illustration"')
   })
 
   it('does not render raw adapter errors or WorkOrderId values', () => {
@@ -63,7 +66,11 @@ describe('G4-UX Phase B2 Work Order List', () => {
     expect(listTemplate).not.toContain('{{ item.id }}')
     expect(listTemplate).not.toContain('{{ String(item.id) }}')
     expect(listTemplate).toContain('v-if="item.displayNumber" class="row-meta"')
-    expect(listTemplate).toContain('{{ item.customerName || \'工单\' }}')
+    expect(listTemplate).toContain('v-if="item.customerName" class="row-title"')
+    expect(listTemplate).not.toContain("item.customerName || '工单'")
+    expect(listTemplate).toContain('class="row-leading-glyph"')
+    expect(listTemplate).toContain('class="row-body"')
+    expect(listTemplate).toContain('class="row-head"')
     expect(listTemplate).toContain('v-if="item.serviceAddress" class="row-address"')
     expect(listTemplate).not.toContain('查看工单详情')
   })

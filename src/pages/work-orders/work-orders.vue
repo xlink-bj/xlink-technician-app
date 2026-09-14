@@ -32,7 +32,11 @@
       </view>
 
       <view v-else-if="workOrders.loadState === 'succeeded' && workOrders.items.length === 0" class="list-state empty-state">
-        <view class="state-icon state-icon-empty" aria-hidden="true">—</view>
+        <view class="empty-illustration" aria-hidden="true">
+          <view class="empty-illustration-halo" />
+          <view class="empty-illustration-card" />
+          <view class="empty-illustration-line" />
+        </view>
         <text class="state-title">当前暂无工单</text>
         <text class="state-detail">当前范围内暂时没有可处理的工单，可稍后刷新再试。</text>
         <button class="state-action" @tap="refresh">刷新工单</button>
@@ -40,7 +44,10 @@
 
       <view v-else-if="workOrders.loadState === 'succeeded'" class="list-content">
         <view class="content-caption">
-          <text class="content-title">工单列表</text>
+          <view class="content-heading">
+            <text class="content-kicker">工作范围</text>
+            <text class="content-title">当前可见工单</text>
+          </view>
           <button class="content-refresh" :disabled="isLoading" @tap="refresh">
             {{ isLoading ? '刷新中' : '刷新' }}
           </button>
@@ -53,17 +60,20 @@
           :url="workOrderDetailRouteFor(item.id)"
         >
           <view class="row-leading" aria-hidden="true">
-            <text>工</text>
+            <view class="row-leading-glyph" />
           </view>
-          <view class="row-copy">
-            <text v-if="item.displayNumber" class="row-meta">{{ item.displayNumber }}</text>
-            <text class="row-title">{{ item.customerName || '工单' }}</text>
+          <view class="row-body">
+            <view class="row-head">
+              <text v-if="item.displayNumber" class="row-meta">{{ item.displayNumber }}</text>
+              <view v-else class="row-meta-spacer" aria-hidden="true" />
+              <view class="row-arrow" aria-hidden="true">›</view>
+            </view>
+            <text v-if="item.customerName" class="row-title">{{ item.customerName }}</text>
             <view v-if="item.serviceAddress" class="row-address">
               <text class="row-address-icon" aria-hidden="true">⌖</text>
               <text class="row-address-copy">{{ item.serviceAddress }}</text>
             </view>
           </view>
-          <text class="row-arrow" aria-hidden="true">›</text>
         </navigator>
 
         <button v-if="workOrders.hasMore === true" class="state-action load-more" @tap="loadMore">加载更多</button>
@@ -116,7 +126,7 @@ async function loadMore(): Promise<void> {
   background: #f5f7fb;
   box-sizing: border-box;
   min-height: 100vh;
-  padding: 16rpx 24rpx calc(48rpx + constant(safe-area-inset-bottom));
+  padding: 20rpx 24rpx calc(48rpx + constant(safe-area-inset-bottom));
   padding-bottom: calc(48rpx + env(safe-area-inset-bottom));
   width: 100%;
 }
@@ -135,16 +145,16 @@ async function loadMore(): Promise<void> {
 }
 
 .content-refresh {
-  background: transparent;
-  border: 0;
-  border-radius: 12rpx;
+  background: #edf4ff;
+  border: 1rpx solid #d4e4ff;
+  border-radius: 999rpx;
   color: #286bd5;
-  font-size: 23rpx;
+  font-size: 24rpx;
   font-weight: 800;
   line-height: 1;
   margin: 0;
-  min-height: 56rpx;
-  padding: 0 12rpx;
+  min-height: 64rpx;
+  padding: 0 20rpx;
 }
 
 .content-refresh[disabled] {
@@ -153,9 +163,23 @@ async function loadMore(): Promise<void> {
 
 .content-title {
   color: #1b2942;
-  font-size: 30rpx;
+  font-size: 34rpx;
   font-weight: 900;
   line-height: 1.4;
+}
+
+.content-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+
+.content-kicker {
+  color: #8a98af;
+  font-size: 21rpx;
+  font-weight: 800;
+  letter-spacing: 1rpx;
+  line-height: 1.3;
 }
 
 .list-state,
@@ -253,6 +277,66 @@ async function loadMore(): Promise<void> {
   color: #4d83dc;
 }
 
+.empty-illustration {
+  height: 116rpx;
+  position: relative;
+  width: 172rpx;
+}
+
+.empty-illustration-halo {
+  background: #edf4ff;
+  border-radius: 50%;
+  height: 116rpx;
+  left: 28rpx;
+  position: absolute;
+  top: 0;
+  width: 116rpx;
+}
+
+.empty-illustration-card {
+  background: #ffffff;
+  border: 2rpx solid #bcd5ff;
+  border-radius: 12rpx;
+  box-shadow: 0 10rpx 20rpx rgba(59, 112, 190, 0.1);
+  height: 58rpx;
+  left: 42rpx;
+  position: absolute;
+  top: 28rpx;
+  transform: rotate(-5deg);
+  width: 88rpx;
+}
+
+.empty-illustration-card::before,
+.empty-illustration-card::after {
+  background: #cfe0ff;
+  border-radius: 999rpx;
+  content: '';
+  height: 7rpx;
+  left: 14rpx;
+  position: absolute;
+}
+
+.empty-illustration-card::before {
+  top: 16rpx;
+  width: 50rpx;
+}
+
+.empty-illustration-card::after {
+  top: 32rpx;
+  width: 34rpx;
+}
+
+.empty-illustration-line {
+  background: #76a7ff;
+  border-radius: 999rpx;
+  bottom: 4rpx;
+  height: 8rpx;
+  left: 20rpx;
+  position: absolute;
+  transform: rotate(-5deg);
+  width: 132rpx;
+}
+
 .state-title,
 .guard-title {
   color: #21304a;
@@ -289,55 +373,105 @@ async function loadMore(): Promise<void> {
   align-items: center;
   display: flex;
   justify-content: space-between;
-  padding: 4rpx 6rpx 18rpx;
+  padding: 0 6rpx 20rpx;
 }
 
 .work-order-row {
   align-items: flex-start;
   background: #ffffff;
   border: 1rpx solid #e0e8f5;
-  border-left: 5rpx solid #3277ed;
-  border-radius: 24rpx;
-  box-shadow: 0 12rpx 32rpx rgba(35, 75, 128, 0.08);
+  border-radius: 28rpx;
+  box-shadow: 0 14rpx 36rpx rgba(35, 75, 128, 0.09);
   box-sizing: border-box;
   display: flex;
   gap: 20rpx;
   margin-bottom: 16rpx;
-  min-height: 174rpx;
-  padding: 24rpx 20rpx;
+  min-height: 188rpx;
+  overflow: hidden;
+  padding: 22rpx 18rpx 22rpx 20rpx;
+  position: relative;
   width: 100%;
+}
+
+.work-order-row::before {
+  background: #3277ed;
+  content: '';
+  height: 100%;
+  left: 0;
+  position: absolute;
+  top: 0;
+  width: 6rpx;
 }
 
 .row-leading {
   align-items: center;
   background: #eaf2ff;
   border: 1rpx solid #cfe0ff;
-  border-radius: 16rpx;
-  color: #286bd5;
+  border-radius: 18rpx;
   display: flex;
-  flex: 0 0 72rpx;
-  font-size: 27rpx;
-  font-weight: 900;
-  height: 72rpx;
+  flex: 0 0 68rpx;
+  height: 68rpx;
   justify-content: center;
 }
 
-.row-copy {
+.row-leading-glyph {
+  background: #5f98f5;
+  border-radius: 999rpx;
+  height: 5rpx;
+  position: relative;
+  width: 28rpx;
+}
+
+.row-leading-glyph::before,
+.row-leading-glyph::after {
+  background: #5f98f5;
+  border-radius: 999rpx;
+  content: '';
+  height: 5rpx;
+  left: 0;
+  position: absolute;
+  width: 28rpx;
+}
+
+.row-leading-glyph::before {
+  top: -10rpx;
+}
+
+.row-leading-glyph::after {
+  top: 10rpx;
+}
+
+.row-body {
   display: flex;
   flex: 1;
   flex-direction: column;
   min-width: 0;
 }
 
+.row-head {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  min-height: 48rpx;
+}
+
 .row-meta {
-  color: #71809a;
+  background: #f1f5fb;
+  border-radius: 8rpx;
+  color: #5f708e;
   font-size: 22rpx;
   font-weight: 700;
   letter-spacing: 0.2rpx;
   line-height: 1.35;
+  max-width: 68%;
   overflow: hidden;
+  padding: 6rpx 10rpx;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.row-meta-spacer {
+  flex: 1;
 }
 
 .row-title {
@@ -346,6 +480,7 @@ async function loadMore(): Promise<void> {
   font-size: 32rpx;
   font-weight: 900;
   line-height: 1.35;
+  margin-top: 8rpx;
   overflow: hidden;
   text-overflow: ellipsis;
   -webkit-box-orient: vertical;
@@ -359,8 +494,10 @@ async function loadMore(): Promise<void> {
   font-size: 24rpx;
   gap: 8rpx;
   line-height: 1.45;
-  margin-top: 10rpx;
+  border-top: 1rpx solid #edf1f7;
+  margin-top: 16rpx;
   min-width: 0;
+  padding-top: 14rpx;
 }
 
 .row-address-icon {
@@ -380,11 +517,17 @@ async function loadMore(): Promise<void> {
 }
 
 .row-arrow {
-  align-self: center;
+  align-items: center;
+  background: #f3f7fe;
+  border: 1rpx solid #e1ebfa;
+  border-radius: 50%;
   color: #7d9ed3;
-  flex: 0 0 auto;
-  font-size: 44rpx;
-  font-weight: 300;
+  display: flex;
+  flex: 0 0 48rpx;
+  font-size: 34rpx;
+  font-weight: 500;
+  height: 48rpx;
+  justify-content: center;
   line-height: 1;
 }
 
