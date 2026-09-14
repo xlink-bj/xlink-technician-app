@@ -12,7 +12,10 @@ import type {
   WorkflowHandlerIdentity,
   WorkflowNodeCategory as ReadWorkflowNodeCategory,
   WorkflowNodeLifecycle as ReadWorkflowNodeLifecycle,
+  WorkflowNodeVisibilityEvidence,
 } from '@shared/ports'
+
+export type { WorkflowNodeVisibilityEvidence } from '@shared/ports'
 
 export interface MainWorkflowContext {
   readonly kind: 'main'
@@ -70,6 +73,7 @@ export interface WorkflowNodeMetadata {
   readonly category: WorkflowNodeCategory
   readonly lifecycle: WorkflowNodeLifecycle
   readonly handlers?: readonly HandlerIdentity[]
+  readonly visibility?: WorkflowNodeVisibilityEvidence
   readonly isSystem?: boolean
   readonly isSentinel?: boolean
 }

@@ -15,6 +15,7 @@ import type {
   WorkflowNodeCategory,
   WorkflowNodeLifecycle,
   WorkflowNodeRead,
+  WorkflowNodeVisibilityEvidence,
 } from '@shared/ports'
 import type {
   ErrorCategory,
@@ -555,6 +556,59 @@ function workflowNodeHandlers(record: AdapterRecord): readonly WorkflowHandlerId
   return handlers.length > 0 ? handlers : undefined
 }
 
+function workflowNodeRoleIds(
+  nodeDef: AdapterRecord | undefined,
+  key: 'userChoose' | 'viewableRoleIds',
+): { readonly present: boolean; readonly valid: boolean; readonly ids: readonly RoleId[] } {
+  const rawValue = nodeDef?.[key]
+  if (rawValue === undefined) return { present: false, valid: true, ids: [] }
+  if (!Array.isArray(rawValue)) return { present: true, valid: false, ids: [] }
+
+  const ids: RoleId[] = []
+  let valid = true
+  for (const rawId of rawValue) {
+    if (typeof rawId !== 'string' && typeof rawId !== 'number') {
+      valid = false
+      continue
+    }
+    const value = String(rawId).trim()
+    if (!value) {
+      valid = false
+      continue
+    }
+    ids.push(asOpaqueId<'RoleId'>(value))
+  }
+  return { present: true, valid, ids }
+}
+
+function workflowNodeHandlersAreValid(record: AdapterRecord): boolean {
+  const rawValue = record.handlerIds
+  if (rawValue === undefined) return true
+  if (!Array.isArray(rawValue)) return false
+  return rawValue.every((value) => {
+    if (typeof value !== 'string' && typeof value !== 'number') return false
+    return String(value).trim().length > 0
+  })
+}
+
+function workflowNodeVisibilityEvidence(
+  record: AdapterRecord,
+  nodeDef: AdapterRecord | undefined,
+): WorkflowNodeVisibilityEvidence {
+  const selectableRoleIds = workflowNodeRoleIds(nodeDef, 'userChoose')
+  const viewableRoleIds = workflowNodeRoleIds(nodeDef, 'viewableRoleIds')
+  const handlerIdsPresent = record.handlerIds !== undefined
+  const hasEvidence = selectableRoleIds.present || viewableRoleIds.present || handlerIdsPresent
+  const structurallyValid =
+    selectableRoleIds.valid && viewableRoleIds.valid && workflowNodeHandlersAreValid(record)
+
+  return {
+    evidenceState: !structurallyValid ? 'unknown' : hasEvidence ? 'verified' : 'missing',
+    ...(selectableRoleIds.present ? { selectableRoleIds: selectableRoleIds.ids } : {}),
+    ...(viewableRoleIds.present ? { viewableRoleIds: viewableRoleIds.ids } : {}),
+  }
+}
+
 function workflowNode(raw: unknown): WorkflowNodeRead {
   const record = asRecord(raw, 'workflow node')
   const nodeDef = nestedRecord(record, ['nodeDef'])
@@ -566,6 +620,7 @@ function workflowNode(raw: unknown): WorkflowNodeRead {
   ])
   const displayName = optionalString(nodeDef ?? {}, ['name'])
   const handlers = workflowNodeHandlers(record)
+  const visibility = workflowNodeVisibilityEvidence(record, nodeDef)
   const isSystem = record.isSystem === true
   const isSentinel = record.isSentinel === true
 
@@ -573,6 +628,7 @@ function workflowNode(raw: unknown): WorkflowNodeRead {
     id: requiredOpaqueId<'WorkflowNodeRuntimeId'>(record, ['id', '_id', 'workflowNodeId'], 'workflow node id'),
     category: workflowNodeCategory(nodeDef),
     lifecycle: workflowNodeLifecycle(record),
+    visibility,
     ...(displayName ? { displayName } : {}),
     ...(definitionId ? { definitionId } : {}),
     ...(runId ? { runId } : {}),

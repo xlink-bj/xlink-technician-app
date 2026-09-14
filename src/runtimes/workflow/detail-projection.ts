@@ -37,6 +37,7 @@ export function workflowNodeMetadataFromRead(node: WorkflowNodeRead): WorkflowNo
     category: node.category,
     lifecycle: node.lifecycle,
     ...(node.handlers ? { handlers: node.handlers } : {}),
+    ...(node.visibility ? { visibility: node.visibility } : {}),
     ...(node.isSystem ? { isSystem: node.isSystem } : {}),
     ...(node.isSentinel ? { isSentinel: node.isSentinel } : {}),
   }

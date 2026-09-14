@@ -188,7 +188,7 @@ export const mockWorkOrderDetailResponses = {
         {
           _id: 'mock-workflow-node-001-current',
           state: 0,
-          nodeDef: { nodeType: 'forms', name: '勘察' },
+          nodeDef: { nodeType: 'forms', name: '勘察', userChoose: ['synthetic-role'] },
         },
       ],
     },
@@ -204,7 +204,7 @@ export const mockWorkOrderDetailResponses = {
         {
           _id: 'mock-workflow-node-002-current',
           state: 0,
-          nodeDef: { nodeType: 'placeOrder', name: '下单' },
+          nodeDef: { nodeType: 'placeOrder', name: '下单', viewableRoleIds: ['synthetic-role'] },
         },
       ],
     },
@@ -220,6 +220,7 @@ export const mockWorkOrderDetailResponses = {
         {
           _id: 'mock-workflow-node-003-current',
           state: 0,
+          handlerIds: ['synthetic-user'],
           nodeDef: { nodeType: 'subflows', name: '派工' },
         },
       ],
@@ -241,7 +242,7 @@ export const mockWorkOrderDetailResponses = {
         {
           _id: 'mock-workflow-node-004-current',
           state: 0,
-          nodeDef: { nodeType: 'placeOrder', name: '下单' },
+          nodeDef: { nodeType: 'placeOrder', name: '下单', viewableRoleIds: ['other-role'] },
         },
       ],
     },
@@ -257,7 +258,6 @@ export const mockWorkOrderDetailResponses = {
         {
           _id: 'mock-workflow-node-005-current',
           state: 0,
-          handlerIds: ['mock-other-role'],
           nodeDef: { nodeType: 'forms', name: '服务' },
         },
       ],

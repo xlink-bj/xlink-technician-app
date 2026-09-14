@@ -63,6 +63,15 @@ workflow command is sent. Raw status remains private to the adapter as the
 ordinary `taskLabel` field only. Progress remains deferred, and the
 Product-Owner decision to remove Task Context remains in force.
 
+Visibility is conservative. The Adapter separately normalizes R1's
+`nodeDef.userChoose`, `nodeDef.viewableRoleIds`, and `handlerIds` into typed
+visibility evidence. Runtime accepts a candidate only when verified evidence
+matches the current user or current role. Missing or malformed evidence is
+`policy_unverified` and is not selected; array position is never a fallback.
+The current SessionSnapshot does not claim a complete role set or
+organization-role membership, so those cases may under-display until a
+verified actor contract exists.
+
 ## Appointment and follow-up disposition
 
 R1 conditionally renders `exts.applyTimeStr`, so its raw presence is retained

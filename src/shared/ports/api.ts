@@ -81,6 +81,18 @@ export type WorkflowHandlerIdentity =
   /** A bare handlerIds value cannot be classified without actor context. */
   | { readonly kind: 'unclassified'; readonly value: string }
 
+export type WorkflowNodeVisibilityEvidenceState = 'verified' | 'missing' | 'unknown'
+
+/** Adapter-normalized, read-only visibility inputs from the workflow node. */
+export interface WorkflowNodeVisibilityEvidence {
+  /** R1 `nodeDef.userChoose`; role IDs allowed to select the node. */
+  readonly selectableRoleIds?: readonly RoleId[]
+  /** R1 `nodeDef.viewableRoleIds`; role IDs allowed to view the node. */
+  readonly viewableRoleIds?: readonly RoleId[]
+  /** Whether the recognized wire inputs were structurally usable. */
+  readonly evidenceState: WorkflowNodeVisibilityEvidenceState
+}
+
 export interface WorkOrderDetail {
   readonly id: WorkOrderId
   readonly workflowRunId?: WorkflowRunId
@@ -137,6 +149,7 @@ export interface WorkflowNodeRead {
   readonly category: WorkflowNodeCategory
   readonly lifecycle: WorkflowNodeLifecycle
   readonly handlers?: readonly WorkflowHandlerIdentity[]
+  readonly visibility?: WorkflowNodeVisibilityEvidence
   readonly isSystem?: boolean
   readonly isSentinel?: boolean
 }

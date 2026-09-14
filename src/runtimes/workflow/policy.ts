@@ -28,6 +28,10 @@ function matchesHandler(actor: WorkflowActor, handler: HandlerIdentity): boolean
   )
 }
 
+function matchesRoleId(actor: WorkflowActor, roleIds: readonly string[]): boolean {
+  return roleIds.some((roleId) => actor.roleIds.some((actorRoleId) => String(actorRoleId) === roleId))
+}
+
 export function isHandlerMatch(actor: WorkflowActor, handlers: readonly HandlerIdentity[]): boolean {
   return handlers.some((handler) => matchesHandler(actor, handler))
 }
@@ -45,7 +49,17 @@ export function evaluateNodeVisibility(
     return { visible: false, reason: 'non_user_node' }
   }
   if (node.category === 'unsupported') return { visible: false, reason: 'unsupported_node_type' }
-  if (node.handlers && node.handlers.length > 0 && (!actor || !isHandlerMatch(actor, node.handlers))) {
+  const evidence = node.visibility
+  if (!evidence || evidence.evidenceState !== 'verified') {
+    return { visible: false, reason: 'policy_unverified' }
+  }
+  if (!actor) return { visible: false, reason: 'not_handler' }
+
+  const handlerMatch = node.handlers ? isHandlerMatch(actor, node.handlers) : false
+  const roleMatch =
+    (evidence.selectableRoleIds && matchesRoleId(actor, evidence.selectableRoleIds)) ||
+    (evidence.viewableRoleIds && matchesRoleId(actor, evidence.viewableRoleIds))
+  if (!handlerMatch && !roleMatch) {
     return { visible: false, reason: 'not_handler' }
   }
   return { visible: true }

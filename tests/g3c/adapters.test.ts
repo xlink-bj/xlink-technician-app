@@ -122,6 +122,7 @@ describe('G3-C API adapter foundation', () => {
         parentNodeId: 'workflow-node-parent',
         category: 'unsupported',
         lifecycle: 'unknown',
+        visibility: { evidenceState: 'missing' },
       },
     ])
     expect(nodes.data?.[0]).not.toHaveProperty('nodeStateCode')

@@ -24,6 +24,7 @@ function readNode(
     id?: string
     displayName?: string
     handlers?: WorkflowNodeRead['handlers']
+    visibility?: WorkflowNodeRead['visibility']
   },
 ): WorkflowNodeRead {
   return {
@@ -32,6 +33,10 @@ function readNode(
     lifecycle: input.lifecycle,
     ...(input.displayName ? { displayName: input.displayName } : {}),
     ...(input.handlers ? { handlers: input.handlers } : {}),
+    visibility: input.visibility ?? {
+      evidenceState: 'verified',
+      selectableRoleIds: [asOpaqueId<'RoleId'>('synthetic-role')],
+    },
   }
 }
 
@@ -62,7 +67,7 @@ describe('G4-UX Detail D3 workflow projection', () => {
       { id: mockDetailScenarioIds[0], category: 'forms', lifecycle: 'active', title: '勘察', action: 'interact_with_form' },
       { id: mockDetailScenarioIds[1], category: 'placeOrder', lifecycle: 'active', title: '下单', action: 'place_order' },
       { id: mockDetailScenarioIds[2], category: 'subworkflow', lifecycle: 'active', title: '派工', action: 'open_subworkflow' },
-      { id: mockDetailScenarioIds[3], category: 'placeOrder', lifecycle: 'active', title: '下单', action: 'place_order' },
+      { id: mockDetailScenarioIds[3], category: 'placeOrder', lifecycle: 'active', selection: 'none' },
       { id: mockDetailScenarioIds[4], category: 'forms', lifecycle: 'active', selection: 'none' },
       { id: mockDetailScenarioIds[5], category: 'unsupported', lifecycle: 'unknown', selection: 'none' },
     ] as const
@@ -73,8 +78,27 @@ describe('G4-UX Detail D3 workflow projection', () => {
       const normalizedNode = nodes.find((node) => node.lifecycle === scenario.lifecycle)
       expect(normalizedNode).toMatchObject({ category: scenario.category, lifecycle: scenario.lifecycle })
       expect(nodes.every((node) => !('state' in node) && !('nodeDef' in node))).toBe(true)
+      if (scenario.id === mockDetailScenarioIds[0]) {
+        expect(normalizedNode?.visibility).toEqual({
+          evidenceState: 'verified',
+          selectableRoleIds: ['synthetic-role'],
+        })
+      }
+      if (scenario.id === mockDetailScenarioIds[1]) {
+        expect(normalizedNode?.visibility).toEqual({
+          evidenceState: 'verified',
+          viewableRoleIds: ['synthetic-role'],
+        })
+      }
+      if (scenario.id === mockDetailScenarioIds[2]) {
+        expect(normalizedNode?.visibility).toEqual({ evidenceState: 'verified' })
+        expect(normalizedNode?.handlers).toEqual([{ kind: 'unclassified', value: 'synthetic-user' }])
+      }
+      if (scenario.id === mockDetailScenarioIds[4]) {
+        expect(normalizedNode?.visibility).toEqual({ evidenceState: 'missing' })
+      }
 
-      const projection = projectDetailWorkflow(nodes, scenario.id === mockDetailScenarioIds[4] ? actor : undefined)
+      const projection = projectDetailWorkflow(nodes, actor)
       if ('title' in scenario) {
         expect(projection).toMatchObject({
           selection: 'selected',
@@ -96,12 +120,12 @@ describe('G4-UX Detail D3 workflow projection', () => {
     const first = readNode({ id: 'first', category: 'forms', lifecycle: 'active', displayName: '表单处理' })
     const second = readNode({ id: 'second', category: 'placeOrder', lifecycle: 'active', displayName: '下单' })
 
-    const projection = projectDetailWorkflow([first, second])
+    const projection = projectDetailWorkflow([first, second], actor)
     expect(projection.selection).toBe('ambiguous')
     expect(projection.currentTask).toBeUndefined()
     expect(projection.actionableNodeCount).toBe(2)
 
-    const one = projectDetailWorkflow([second, readNode({ ...first, lifecycle: 'closed' })])
+    const one = projectDetailWorkflow([second, readNode({ ...first, lifecycle: 'closed' })], actor)
     expect(one.selection).toBe('selected')
     expect(one.currentTask).toMatchObject({ title: '下单', actionIntent: 'place_order' })
   })
@@ -113,12 +137,14 @@ describe('G4-UX Detail D3 workflow projection', () => {
       lifecycle: 'active',
       displayName: '受限表单',
       handlers: [{ kind: 'unclassified', value: 'another-role' }],
+      visibility: { evidenceState: 'verified' },
     })
     const metadata: WorkflowNodeMetadata = {
       id: blocked.id,
       category: blocked.category,
       lifecycle: blocked.lifecycle,
       handlers: blocked.handlers,
+      visibility: blocked.visibility,
     }
 
     expect(evaluateNodeVisibility(metadata, actor)).toEqual({ visible: false, reason: 'not_handler' })
@@ -127,6 +153,89 @@ describe('G4-UX Detail D3 workflow projection', () => {
       visibleNodeCount: 0,
       actionableNodeCount: 0,
     })
+  })
+
+  it('requires explicit visibility evidence and supports each verified R1 match path', () => {
+    const userMatch = readNode({
+      id: 'user-match',
+      category: 'forms',
+      lifecycle: 'active',
+      displayName: '用户处理',
+      handlers: [{ kind: 'unclassified', value: 'synthetic-user' }],
+      visibility: { evidenceState: 'verified' },
+    })
+    const selectableRoleMatch = readNode({
+      id: 'selectable-role-match',
+      category: 'forms',
+      lifecycle: 'active',
+      displayName: '角色选择',
+      visibility: {
+        evidenceState: 'verified',
+        selectableRoleIds: [asOpaqueId<'RoleId'>('synthetic-role')],
+      },
+    })
+    const viewableRoleMatch = readNode({
+      id: 'viewable-role-match',
+      category: 'forms',
+      lifecycle: 'active',
+      displayName: '角色查看',
+      visibility: {
+        evidenceState: 'verified',
+        viewableRoleIds: [asOpaqueId<'RoleId'>('synthetic-role')],
+      },
+    })
+    const missing = readNode({
+      id: 'missing-evidence',
+      category: 'forms',
+      lifecycle: 'active',
+      displayName: '无证据',
+      visibility: { evidenceState: 'missing' },
+    })
+    const mismatch = readNode({
+      id: 'mismatch',
+      category: 'forms',
+      lifecycle: 'active',
+      displayName: '不匹配',
+      visibility: {
+        evidenceState: 'verified',
+        viewableRoleIds: [asOpaqueId<'RoleId'>('other-role')],
+      },
+    })
+
+    expect(projectDetailWorkflow([userMatch], actor).selection).toBe('selected')
+    expect(projectDetailWorkflow([selectableRoleMatch], actor).selection).toBe('selected')
+    expect(projectDetailWorkflow([viewableRoleMatch], actor).selection).toBe('selected')
+    expect(projectDetailWorkflow([missing], actor)).toMatchObject({
+      selection: 'none',
+      visibleNodeCount: 0,
+      actionableNodeCount: 0,
+    })
+    expect(projectDetailWorkflow([mismatch], actor).selection).toBe('none')
+    expect(projectDetailWorkflow([userMatch], { ...actor, userId: asOpaqueId<'UserId'>('other-user') }).selection).toBe(
+      'none',
+    )
+  })
+
+  it('keeps a semantic result stable when node arrays are reordered', () => {
+    const active = readNode({
+      id: 'active',
+      category: 'placeOrder',
+      lifecycle: 'active',
+      displayName: '下单',
+      visibility: {
+        evidenceState: 'verified',
+        selectableRoleIds: [asOpaqueId<'RoleId'>('synthetic-role')],
+      },
+    })
+    const closed = readNode({
+      id: 'closed',
+      category: 'forms',
+      lifecycle: 'closed',
+      displayName: '已完成',
+      visibility: { evidenceState: 'verified', selectableRoleIds: [asOpaqueId<'RoleId'>('synthetic-role')] },
+    })
+
+    expect(projectDetailWorkflow([active, closed], actor)).toEqual(projectDetailWorkflow([closed, active], actor))
   })
 
   it('normalizes the evidenced organization-role handler encoding at the adapter boundary', async () => {
@@ -160,6 +269,28 @@ describe('G4-UX Detail D3 workflow projection', () => {
     })
   })
 
+  it('marks malformed visibility metadata unverified instead of granting visibility', async () => {
+    const api = createTechnicianApiReadAdapter({
+      execute: vi.fn(async () => ({
+        data: {
+          serviceAppointment: { _id: 'work-order-malformed-visibility' },
+          workflowNode: [
+            {
+              _id: 'workflow-node-malformed-visibility',
+              state: 0,
+              nodeDef: { nodeType: 'forms', name: '结构异常', userChoose: 'synthetic-role' },
+            },
+          ],
+        },
+      })),
+    })
+
+    const result = await api.getWorkOrderDetail(asOpaqueId<'WorkOrderId'>('work-order-malformed-visibility'))
+    const node = result.data?.workflowNodes?.[0]
+    expect(node?.visibility).toEqual({ evidenceState: 'unknown', selectableRoleIds: [] })
+    expect(projectDetailWorkflow(result.data?.workflowNodes ?? [], actor).selection).toBe('none')
+  })
+
   it('makes unknown node types and lifecycle explicit and keeps execution read-only', () => {
     const unknown = readNode({
       id: 'unknown',
@@ -175,7 +306,7 @@ describe('G4-UX Detail D3 workflow projection', () => {
 
     const current = projectDetailWorkflow([
       readNode({ id: 'form', category: 'forms', lifecycle: 'active', displayName: '表单' }),
-    ])
+    ], actor)
     expect(current.currentTask?.execution).toBe('disabled_read_only')
     expect(current.currentTask?.domainPolicy.allowed).toBe(true)
   })
@@ -185,11 +316,28 @@ describe('G4-UX Detail D3 workflow projection', () => {
       id: asOpaqueId<'WorkOrderId'>('mock-work-order-001'),
       taskLabel: '跟进签约',
       workflowNodes: [
-        readNode({ id: 'forms-node', category: 'forms', lifecycle: 'active', displayName: '勘察' }),
+        readNode({
+          id: 'forms-node',
+          category: 'forms',
+          lifecycle: 'active',
+          displayName: '勘察',
+          visibility: {
+            evidenceState: 'verified',
+            selectableRoleIds: [asOpaqueId<'RoleId'>('synthetic-role')],
+          },
+        }),
       ],
     }
 
-    const projection = detailWorkflowUiProjectionFor(detail, null)
+    const projection = detailWorkflowUiProjectionFor(
+      detail,
+      {
+        sessionRef: asOpaqueId<'SessionRef'>('synthetic-session-ref'),
+        user: { id: asOpaqueId<'UserId'>('synthetic-user'), displayName: 'Synthetic Technician' },
+        currentRole: { id: asOpaqueId<'RoleId'>('synthetic-role'), name: 'Synthetic Role' },
+        capabilityNames: [],
+      },
+    )
     expect(projection.currentTask).toMatchObject({
       title: '勘察',
       actionIntent: 'interact_with_form',

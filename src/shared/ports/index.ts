@@ -18,6 +18,8 @@ export type {
   WorkflowNodeCategory,
   WorkflowNodeLifecycle,
   WorkflowNodeRead,
+  WorkflowNodeVisibilityEvidence,
+  WorkflowNodeVisibilityEvidenceState,
 } from './api'
 export type { AuthSessionPort, AuthStartRequest, SessionSnapshot } from './auth'
 export type {

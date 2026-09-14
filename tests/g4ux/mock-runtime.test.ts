@@ -305,6 +305,10 @@ describe('G4-UX business mock runtime', () => {
           displayName: '勘察',
           category: 'forms',
           lifecycle: 'active',
+          visibility: {
+            evidenceState: 'verified',
+            selectableRoleIds: ['synthetic-role'],
+          },
         },
       ],
     })
@@ -550,6 +554,7 @@ describe('G4-UX business mock runtime', () => {
           displayName: '待核验',
           category: 'unsupported',
           lifecycle: 'unknown',
+          visibility: { evidenceState: 'missing' },
         },
       ],
     })

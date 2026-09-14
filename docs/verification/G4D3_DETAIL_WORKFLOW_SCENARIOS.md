@@ -15,11 +15,11 @@ independent order read field; they do not select or name the Current Task.
 
 | Synthetic WorkOrderId | Raw workflow shape exercised | Normalized category / lifecycle | Visibility | Current Task | Action intent / domain policy / execution | Expected Detail blocks |
 | --- | --- | --- | --- | --- | --- | --- |
-| `mock-work-order-001` | one `forms` node, `state: 0` | `forms / active` | visible; 1 visible / 1 actionable | `勘察` | `interact_with_form / allowed / disabled_read_only` | Current Task shown; presentation CTA `处理表单` disabled; Progress deferred; Task Context absent |
-| `mock-work-order-002` | one `placeOrder` node, `state: 0` | `placeOrder / active` | visible; 1 visible / 1 actionable | `下单` | `place_order / allowed / disabled_read_only` | Current Task shown; presentation CTA `去下单` disabled; Progress deferred; Task Context absent |
-| `mock-work-order-003` | one `subflows` node, `state: 0` | `subworkflow / active` | visible; 1 visible / 1 actionable | `派工` | `open_subworkflow / allowed / disabled_read_only` | Current Task shown; presentation CTA `查看子流程` disabled; Progress deferred; Task Context absent |
-| `mock-work-order-004` | one closed `forms` node plus one active `placeOrder` node | `forms / closed`, `placeOrder / active` | active candidate visible; closed node lifecycle-filtered | `下单` | `place_order / allowed / disabled_read_only` | Current Task shown; presentation CTA `去下单` disabled; Progress deferred; Task Context absent |
-| `mock-work-order-005` | one active `forms` node with a non-matching bare handler id | `forms / active` | hidden by Runtime handler policy; 0 visible / 0 actionable | absent | no candidate / `not_handler` / no execution | Current Task collapsed; Progress deferred; Task Context absent |
+| `mock-work-order-001` | one `forms` node, `state: 0`, `nodeDef.userChoose: ['synthetic-role']` | `forms / active` | visible through current role; 1 visible / 1 actionable | `勘察` | `interact_with_form / allowed / disabled_read_only` | Current Task shown; presentation CTA `处理表单` disabled; Progress deferred; Task Context absent |
+| `mock-work-order-002` | one `placeOrder` node, `state: 0`, `nodeDef.viewableRoleIds: ['synthetic-role']` | `placeOrder / active` | visible through current role; 1 visible / 1 actionable | `下单` | `place_order / allowed / disabled_read_only` | Current Task shown; presentation CTA `去下单` disabled; Progress deferred; Task Context absent |
+| `mock-work-order-003` | one `subflows` node, `state: 0`, `handlerIds: ['synthetic-user']` | `subworkflow / active` | visible through current user; 1 visible / 1 actionable | `派工` | `open_subworkflow / allowed / disabled_read_only` | Current Task shown; presentation CTA `查看子流程` disabled; Progress deferred; Task Context absent |
+| `mock-work-order-004` | one closed `forms` node plus one active `placeOrder` node with `nodeDef.viewableRoleIds: ['other-role']` | `forms / closed`, `placeOrder / active` | active node hidden by nonmatching role; 0 visible / 0 actionable | absent | no candidate / `not_handler` / no execution | Current Task collapsed; Progress deferred; Task Context absent |
+| `mock-work-order-005` | one active `forms` node with no recognized visibility metadata | `forms / active` | unverified by Runtime; 0 visible / 0 actionable | absent | no candidate / `policy_unverified` / no execution | Current Task collapsed; Progress deferred; Task Context absent |
 | `mock-work-order-006` | unknown node type and unknown lifecycle state | `unsupported / unknown` | hidden by Runtime policy; 0 visible / 0 actionable | absent | no candidate / `policy_unverified` / no execution | Current Task collapsed; Progress deferred; Task Context absent |
 
 ## Boundaries
@@ -28,6 +28,10 @@ independent order read field; they do not select or name the Current Task.
   `inactive` (`-1`), or explicit `unknown`; no other state is guessed.
 - Known R1 node types are normalized to Runtime categories, including the
   observed `subflows` → `subworkflow` compatibility spelling.
+- R1 visibility inputs are normalized independently: `nodeDef.userChoose`
+  becomes `selectableRoleIds`, `nodeDef.viewableRoleIds` remains
+  `viewableRoleIds`, and `handlerIds` remains typed adapter handler metadata.
+  Structural absence is `missing`; malformed recognized input is `unknown`.
 - A bare R1 `handlerIds` value is retained as an adapter-owned
   `unclassified` identity because the wire value does not identify whether it
   is a user, role, or organization-role reference. It is never rendered.
@@ -38,6 +42,11 @@ independent order read field; they do not select or name the Current Task.
 - Progress ordering/position is deferred. Follow-up reads, appointment
   display/mutation, and workflow mutation remain outside D3.
 
+The current SessionSnapshot supplies the current user and current role only.
+The runtime does not fabricate a complete role set or organization-role
+membership; unsupported cases may under-display and never over-display on
+missing evidence.
+
 ## Harness contract
 
 The six IDs above are direct Detail entry points in Mock DATA mode. They are
@@ -45,3 +54,7 @@ not page-level branches: each raw response is normalized by the Technician API
 Adapter and then passed to the same Runtime projection used for a real Detail
 read. The matrix records the expected semantic result so Product Owner review
 can inspect each state without changing List density or production behavior.
+The deterministic semantic harness uses the synthetic actor
+`synthetic-user` / `synthetic-role`; a real session with different visibility
+identities may conservatively under-display the Current Task until matching
+backend evidence is available.

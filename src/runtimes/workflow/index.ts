@@ -33,4 +33,5 @@ export type {
   WorkflowNodeCategory,
   WorkflowNodeLifecycle,
   WorkflowNodeMetadata,
+  WorkflowNodeVisibilityEvidence,
 } from './types'
