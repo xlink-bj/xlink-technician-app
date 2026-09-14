@@ -16,6 +16,7 @@ import {
   isBusinessMockEnabled,
   isBusinessMockMode,
   mockOrdinaryListResponse,
+  mockDetailScenarioIds,
   mockSanodeListResponse,
   mockStatusOptionsResponse,
   mockWorkOrderDetailResponse,
@@ -198,7 +199,6 @@ describe('G4-UX business mock runtime', () => {
         customerName: '演示客户甲',
         serviceDistrict: '朝阳区',
         serviceAddress: '日坛东一街',
-        servicePartLabel: '屋面',
         distanceText: '2.6 km',
         communityOrderCount: 2,
         contact: { normalizedPhone: '13800000000', displayMask: '138****0000' },
@@ -209,7 +209,6 @@ describe('G4-UX business mock runtime', () => {
         taskLabel: '验收回款',
         customerName: '演示客户乙（长名称结构样本）',
         serviceAddress: '东坝北路17号国际贸易中心A座',
-        servicePartLabel: '屋面',
         distanceText: '2.6 km',
         communityOrderCount: 2,
         contact: { normalizedPhone: '13800000001', displayMask: '138****0001' },
@@ -221,7 +220,6 @@ describe('G4-UX business mock runtime', () => {
         customerName: '演示客户丙',
         serviceDistrict: '朝阳区',
         serviceAddress: '日坛国际贸易中心A座',
-        servicePartLabel: '屋面',
         distanceText: '4.2 km',
         communityOrderCount: 2,
       },
@@ -244,7 +242,6 @@ describe('G4-UX business mock runtime', () => {
       serviceDistrict: '朝阳区',
       customerName: '演示客户甲',
       serviceAddress: '日坛东一街',
-      servicePartLabel: '屋面',
       distanceText: '2.6 km',
       contact: { normalizedPhone: '13800000000', displayMask: '138****0000' },
     })
@@ -275,7 +272,6 @@ describe('G4-UX business mock runtime', () => {
         customerName: '演示客户甲',
         serviceDistrict: '朝阳区',
         serviceAddress: '日坛东一街',
-        servicePartLabel: '屋面',
         distanceText: '2.6 km',
         communityOrderCount: 2,
         contact: { normalizedPhone: '13800000000', displayMask: '138****0000' },
@@ -286,7 +282,6 @@ describe('G4-UX business mock runtime', () => {
         taskLabel: '验收回款',
         customerName: '演示客户乙（长名称结构样本）',
         serviceAddress: '东坝北路17号国际贸易中心A座',
-        servicePartLabel: '屋面',
         distanceText: '2.6 km',
         communityOrderCount: 2,
         contact: { normalizedPhone: '13800000001', displayMask: '138****0001' },
@@ -313,6 +308,89 @@ describe('G4-UX business mock runtime', () => {
       expect(mockWorkOrderDetailResponses[id]).toBeDefined()
     }
 
+    expect(request).not.toHaveBeenCalled()
+  })
+
+  it('normalizes every bounded raw detail scenario through the same adapter', async () => {
+    setBusinessMockMode('data')
+    const request = vi.fn<UniApiRequestExecutor>()
+    const api = createTechnicianApiReadAdapter(
+      createUniApiReadTransport({
+        apiBaseUrl: 'https://example.invalid',
+        getSessionRef: () => asOpaqueId<'SessionRef'>('synthetic-session-ref'),
+        request,
+        mockLatencyMs: 0,
+      }),
+    )
+
+    for (const id of mockDetailScenarioIds) {
+      const result = await api.getWorkOrderDetail(asOpaqueId<'WorkOrderId'>(id))
+      expect(result.state).toBe('succeeded')
+      expect(result.data?.id).toBe(id)
+      expect(result.data).not.toHaveProperty('status')
+      expect(result.data).not.toHaveProperty('state')
+      expect(result.data).not.toHaveProperty('nodeDef')
+      expect(result.data).not.toHaveProperty('workflowNode')
+      expect(result.data).not.toHaveProperty('describe')
+      expect(result.data).not.toHaveProperty('applyTimeStr')
+      expect(result.data).not.toHaveProperty('servicePartLabel')
+    }
+
+    expect(request).not.toHaveBeenCalled()
+  })
+
+  it('keeps real and synthetic detail ids on identical semantic mapping', async () => {
+    const syntheticRaw = mockWorkOrderDetailResponses[mockWorkOrderIds[0]]
+    const realRaw = {
+      data: {
+        serviceAppointment: {
+          ...syntheticRaw.data.serviceAppointment,
+          _id: 'real-work-order-001',
+          workflowRunId: 'real-workflow-run-001',
+        },
+        workflow: { _id: 'real-workflow-run-001' },
+        workflowNode: syntheticRaw.data.workflowNode,
+      },
+    }
+    const transport: ApiReadTransport = {
+      execute: vi.fn(async (request) => {
+        if (request.path === 'code/query') return mockStatusOptionsResponse
+        return request.path.endsWith(mockWorkOrderIds[0]) ? syntheticRaw : realRaw
+      }),
+    }
+    const api = createTechnicianApiReadAdapter(transport)
+
+    const synthetic = await api.getWorkOrderDetail(asOpaqueId<'WorkOrderId'>(mockWorkOrderIds[0]))
+    const real = await api.getWorkOrderDetail(asOpaqueId<'WorkOrderId'>('real-work-order-001'))
+
+    expect(synthetic.state).toBe('succeeded')
+    expect(real.state).toBe('succeeded')
+    expect(real.data).toEqual({
+      ...synthetic.data,
+      id: 'real-work-order-001',
+      workflowRunId: 'real-workflow-run-001',
+    })
+  })
+
+  it('omits unknown status and optional appointment fields instead of fabricating semantics', async () => {
+    setBusinessMockMode('data')
+    const request = vi.fn<UniApiRequestExecutor>()
+    const api = createTechnicianApiReadAdapter(
+      createUniApiReadTransport({
+        apiBaseUrl: 'https://example.invalid',
+        getSessionRef: () => asOpaqueId<'SessionRef'>('synthetic-session-ref'),
+        request,
+        mockLatencyMs: 0,
+      }),
+    )
+
+    const result = await api.getWorkOrderDetail(asOpaqueId<'WorkOrderId'>(mockDetailScenarioIds[5]))
+
+    expect(result.data).toEqual({
+      id: mockDetailScenarioIds[5],
+      displayNumber: '19006',
+      workflowRunId: 'mock-workflow-run-006',
+    })
     expect(request).not.toHaveBeenCalled()
   })
 

@@ -43,7 +43,6 @@ import {
   type AdapterRecord,
 } from '../common/records'
 import { countyList } from './reference/area-county-dictionary'
-import { repairPartLabelForCode } from './reference/repair-part-labels'
 
 export type ApiRequestMethod = 'GET' | 'POST'
 export type ApiRequestValue = string | number | boolean
@@ -164,14 +163,6 @@ function communityOrderCount(record: AdapterRecord): number | undefined {
   return extensions ? optionalNonNegativeInteger(extensions, ['communityOrdersTotal']) : undefined
 }
 
-function servicePartLabel(record: AdapterRecord): string | undefined {
-  const extensions = optionalRecord(record.exts)
-  const rawPaths = extensions?.leakagesite_copy
-  if (!Array.isArray(rawPaths) || !Array.isArray(rawPaths[0])) return undefined
-  const code = rawPaths[0][0]
-  return typeof code === 'string' ? repairPartLabelForCode(code.trim()) : undefined
-}
-
 function workOrderSummary(
   raw: unknown,
   statusLabels: ReadonlyMap<string, string>,
@@ -183,7 +174,6 @@ function workOrderSummary(
   const customerName = optionalString(record, ['name'])
   const serviceDistrict = serviceDistrictLabel(record)
   const serviceAddress = optionalString(record, ['address'])
-  const servicePart = servicePartLabel(record)
   const distanceText = displayDistance(record)
   const sameCommunityCount = communityOrderCount(record)
   const contact = workOrderListContact(record)
@@ -195,7 +185,6 @@ function workOrderSummary(
     ...(customerName ? { customerName } : {}),
     ...(serviceDistrict ? { serviceDistrict } : {}),
     ...(serviceAddress ? { serviceAddress } : {}),
-    ...(servicePart ? { servicePartLabel: servicePart } : {}),
     ...(distanceText ? { distanceText } : {}),
     ...(sameCommunityCount !== undefined ? { communityOrderCount: sameCommunityCount } : {}),
     ...(contact ? { contact } : {}),
@@ -293,7 +282,6 @@ function workOrderDetail(
   const serviceDistrict = serviceDistrictLabel(record)
   const customerName = optionalString(record, ['name'])
   const serviceAddress = optionalString(record, ['address'])
-  const servicePart = servicePartLabel(record)
   const distanceText = displayDistance(record)
   const contact = workOrderContact(record)
 
@@ -305,7 +293,6 @@ function workOrderDetail(
     ...(serviceDistrict ? { serviceDistrict } : {}),
     ...(customerName ? { customerName } : {}),
     ...(serviceAddress ? { serviceAddress } : {}),
-    ...(servicePart ? { servicePartLabel: servicePart } : {}),
     ...(distanceText ? { distanceText } : {}),
     ...(contact ? { contact } : {}),
   }

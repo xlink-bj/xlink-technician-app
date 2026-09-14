@@ -26,30 +26,6 @@
           </view>
         </view>
 
-        <view class="skeleton-surface skeleton-progress">
-          <view class="skeleton-progress-steps">
-            <view class="skeleton-progress-step skeleton-progress-step--completed" />
-            <view class="skeleton-progress-step skeleton-progress-step--current" />
-            <view class="skeleton-progress-step" />
-          </view>
-          <view class="skeleton-line skeleton-line--progress-position" />
-        </view>
-
-        <view class="skeleton-surface skeleton-task">
-          <view class="skeleton-line skeleton-line--eyebrow" />
-          <view class="skeleton-line skeleton-line--task-title" />
-          <view class="skeleton-line skeleton-line--task-description" />
-          <view class="skeleton-button" />
-        </view>
-
-        <view class="skeleton-surface skeleton-context">
-          <view class="skeleton-line skeleton-line--eyebrow" />
-          <view class="skeleton-line skeleton-line--context-title" />
-          <view class="skeleton-line skeleton-line--context-description" />
-          <view class="skeleton-media-row"><view /><view /></view>
-          <view class="skeleton-button" />
-        </view>
-
         <view class="skeleton-surface skeleton-information">
           <view class="skeleton-tabs"><view /><view /><view /><view /></view>
           <view class="skeleton-information-row"><view /><view /></view>
@@ -77,8 +53,8 @@
         <view class="summary-top-row">
           <view class="summary-identity">
             <view class="summary-copy">
-              <view class="summary-title-row">
-                <text class="summary-customer">{{ detail.customerName || '工单客户' }}</text>
+              <view v-if="detail.customerName || detail.servicePartLabel" class="summary-title-row">
+                <text v-if="detail.customerName" class="summary-customer">{{ detail.customerName }}</text>
                 <text v-if="detail.servicePartLabel" class="part-badge">{{ detail.servicePartLabel }}</text>
               </view>
             </view>
@@ -118,68 +94,6 @@
         <text v-if="contactFeedback || actionFeedback" class="action-feedback">{{ contactFeedback || actionFeedback }}</text>
       </view>
 
-      <view v-if="layout.progressSteps.length > 0" class="progress-card">
-        <view class="progress-rail" aria-label="流程状态">
-          <view
-            v-for="(step, index) in layout.progressSteps"
-            :key="step.id"
-            class="progress-step"
-            :class="`progress-step--${step.state}`"
-          >
-            <view class="progress-step-track" aria-hidden="true">
-              <view v-if="step.state === 'completed'" class="progress-completed-icon">
-                <AppIcon name="complete" :size="13" color="#ffffff" />
-              </view>
-              <view v-else class="progress-dot" />
-            </view>
-            <text class="progress-label">{{ step.label }}</text>
-            <view v-if="index < layout.progressSteps.length - 1" class="progress-line" aria-hidden="true" />
-          </view>
-          <text class="progress-position">{{ layout.progressPosition }}</text>
-        </view>
-      </view>
-
-      <view v-if="layout.currentTask" class="current-task-card">
-        <text class="task-eyebrow">当前任务</text>
-        <text class="task-title">{{ layout.currentTask.label }}</text>
-        <text class="task-description">{{ layout.currentTask.description }}</text>
-        <button class="primary-task-action" disabled>
-          {{ layout.currentTask.actionLabel }}
-        </button>
-        <text class="task-action-note">当前动作将在对应业务能力核验后开放</text>
-      </view>
-
-      <view v-if="layout.taskContext" class="task-context-card">
-        <view class="context-heading-row">
-          <text class="context-eyebrow">任务上下文</text>
-          <text class="context-status">{{ layout.taskContext.statusLabel }}</text>
-        </view>
-        <view class="context-title-row">
-          <view class="context-mark" aria-hidden="true">
-            <AppIcon name="order" :size="16" color="#ff941f" />
-          </view>
-          <view class="context-copy">
-            <text class="context-title">{{ layout.taskContext.title }}</text>
-            <text class="context-description">{{ layout.taskContext.description }}</text>
-          </view>
-        </view>
-        <view v-if="layout.taskContext.mediaCount > 0" class="context-media" aria-label="任务资料预览">
-          <view
-            v-for="index in layout.taskContext.mediaCount"
-            :key="index"
-            class="context-media-item"
-            :class="`context-media-item--${index}`"
-          >
-            <AppIcon name="image" :size="18" color="#ffffff" aria-hidden="true" />
-          </view>
-        </view>
-        <button class="context-action" disabled>
-          <text>›</text>
-          {{ layout.taskContext.actionLabel }}
-        </button>
-        <text class="context-action-note">查看能力将在对应业务数据接入后开放</text>
-      </view>
-
       <view class="information-card">
         <scroll-view class="detail-tabs" scroll-x="true" show-scrollbar="false">
           <view
@@ -194,24 +108,7 @@
         </scroll-view>
 
         <view v-if="activeTab === 'follow-up'" class="tab-panel">
-          <view v-if="layout.followUps.length > 0" class="follow-up-list">
-            <view v-for="(record, index) in layout.followUps" :key="record.id" class="follow-up-item">
-              <view class="follow-up-marker-wrap" aria-hidden="true">
-                <view class="follow-up-marker" :class="`follow-up-marker--${record.tone}`">
-                  <AppIcon name="task" :size="13" color="#ffffff" />
-                </view>
-                <view v-if="index < layout.followUps.length - 1" class="follow-up-line" />
-              </view>
-              <view class="follow-up-copy">
-                <view class="follow-up-title-row">
-                  <text class="follow-up-title">{{ record.title }}</text>
-                  <text class="follow-up-label">{{ record.label }}</text>
-                </view>
-                <text class="follow-up-time">{{ record.timestamp }}</text>
-              </view>
-            </view>
-          </view>
-          <view v-else class="tab-empty">
+          <view class="tab-empty">
             <text class="tab-empty-title">暂无跟进记录</text>
             <text class="tab-empty-copy">后续跟进信息将在业务能力开放后展示。</text>
           </view>
@@ -277,7 +174,7 @@ import { onLoad } from '@dcloudio/uni-app'
 
 import { hasAuthenticatedSession } from '@features/home/access'
 import { useWorkOrderDetailStore } from '@features/work-orders/detail'
-import { detailLayoutFor, detailTabs, type DetailTabKey } from '@features/work-orders/detail-layout'
+import { detailTabs, type DetailTabKey } from '@features/work-orders/detail-tabs'
 import { useSessionStore } from '@shared/state'
 import AppIcon from '@shared/ui/AppIcon.vue'
 
@@ -287,13 +184,6 @@ const routeReady = ref(false)
 const routeValue = ref<unknown>(undefined)
 const canAccess = computed(() => hasAuthenticatedSession(session.status, session.session))
 const detail = computed(() => workOrder.detail)
-const layout = computed(() => (detail.value ? detailLayoutFor(detail.value) : {
-  progressSteps: [],
-  progressPosition: '',
-  currentTask: null,
-  taskContext: null,
-  followUps: [],
-}))
 const activeTab = ref<DetailTabKey>('follow-up')
 const showLoadingSkeleton = ref(false)
 const loadingSkeletonDelayMs = 240
@@ -599,271 +489,6 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
   color: #2878f2;
 }
 
-.progress-card,
-.current-task-card,
-.task-context-card {
-  background: #ffffff;
-  border: 1rpx solid #e4eaf2;
-  border-radius: 24rpx;
-  box-shadow: 0 10rpx 34rpx rgba(32, 55, 90, 0.07);
-  margin-top: 18rpx;
-}
-
-.progress-card {
-  padding: 20rpx 22rpx;
-}
-
-.progress-rail {
-  align-items: center;
-  display: flex;
-  justify-content: space-between;
-}
-
-.progress-step {
-  align-items: center;
-  display: flex;
-  flex: 0 1 auto;
-  gap: 7rpx;
-  min-width: 0;
-  position: relative;
-}
-
-.progress-step-track {
-  flex: 0 0 20rpx;
-  height: 20rpx;
-  position: static;
-  width: 20rpx;
-}
-
-.progress-dot {
-  background: #ffffff;
-  border: 2rpx solid #d5deeb;
-  border-radius: 50%;
-  box-sizing: border-box;
-  height: 16rpx;
-  width: 16rpx;
-}
-
-.progress-completed-icon {
-  align-items: center;
-  background: #35b978;
-  border-radius: 50%;
-  display: flex;
-  height: 20rpx;
-  justify-content: center;
-  width: 20rpx;
-}
-
-.progress-line {
-  background: #dfe7f1;
-  height: 3rpx;
-  left: calc(100% + 7rpx);
-  position: absolute;
-  top: 9rpx;
-  width: 20rpx;
-}
-
-.progress-step--completed .progress-line {
-  background: #35b978;
-}
-
-.progress-step--current .progress-dot {
-  background: #2878f2;
-  border-color: #2878f2;
-  box-shadow: 0 0 0 5rpx #e7f0ff;
-}
-
-.progress-step--current .progress-label {
-  color: #2878f2;
-  font-weight: 800;
-}
-
-.progress-label {
-  color: #8998ad;
-  flex: 0 1 auto;
-  font-size: 18rpx;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.progress-position {
-  background: #f2f4f7;
-  border-radius: 999rpx;
-  color: #60718d;
-  flex: 0 0 auto;
-  font-size: 18rpx;
-  line-height: 1.2;
-  margin-left: 8rpx;
-  padding: 7rpx 11rpx;
-  white-space: nowrap;
-}
-
-.current-task-card {
-  background: #fffaf4;
-  border: 2rpx solid #ffd29d;
-  padding: 24rpx 26rpx 22rpx;
-}
-
-.task-eyebrow,
-.context-eyebrow {
-  color: #f08a21;
-  display: block;
-  font-size: 20rpx;
-  font-weight: 700;
-}
-
-.task-title {
-  color: #1d2b40;
-  display: block;
-  font-size: 30rpx;
-  font-weight: 800;
-  margin-top: 12rpx;
-}
-
-.task-description {
-  color: #73819a;
-  display: block;
-  font-size: 24rpx;
-  line-height: 1.6;
-  margin-top: 12rpx;
-}
-
-.primary-task-action {
-  background: #ff8418;
-  border-radius: 14rpx;
-  color: #ffffff;
-  font-size: 24rpx;
-  font-weight: 800;
-  height: 68rpx;
-  line-height: 68rpx;
-  margin: 22rpx 0 0;
-  opacity: 1;
-  padding: 0;
-  width: 100%;
-}
-
-.primary-task-action[disabled] {
-  background: #ff8418;
-  color: #ffffff;
-  opacity: 1;
-}
-
-.primary-task-action::after,
-.context-action::after {
-  border: 0;
-}
-
-.task-action-note,
-.context-action-note {
-  color: #a39a91;
-  display: block;
-  font-size: 20rpx;
-  margin-top: 10rpx;
-  text-align: center;
-}
-
-.task-context-card {
-  background: #fffaf4;
-  border: 2rpx dashed #ffcb8d;
-  box-shadow: none;
-  padding: 22rpx 24rpx 22rpx;
-}
-
-.context-heading-row,
-.context-title-row,
-.follow-up-title-row {
-  align-items: center;
-  display: flex;
-}
-
-.context-heading-row {
-  justify-content: space-between;
-}
-
-.context-status {
-  color: #8290a4;
-  font-size: 20rpx;
-}
-
-.context-title-row {
-  align-items: flex-start;
-  gap: 16rpx;
-  margin-top: 22rpx;
-}
-
-.context-mark {
-  align-items: center;
-  background: #fff0d8;
-  border-radius: 10rpx;
-  display: flex;
-  flex: 0 0 auto;
-  height: 38rpx;
-  justify-content: center;
-  width: 38rpx;
-}
-
-.context-copy {
-  min-width: 0;
-}
-
-.context-title {
-  color: #1d2b40;
-  display: block;
-  font-size: 26rpx;
-  font-weight: 800;
-}
-
-.context-description {
-  color: #8290a4;
-  display: block;
-  font-size: 20rpx;
-  line-height: 1.6;
-  margin-top: 8rpx;
-}
-
-.context-media {
-  display: flex;
-  gap: 10rpx;
-  margin: 20rpx 0 0 54rpx;
-}
-
-.context-media-item {
-  align-items: center;
-  background: linear-gradient(145deg, #d9e4e1, #778783);
-  border-radius: 10rpx;
-  display: flex;
-  height: 86rpx;
-  justify-content: center;
-  overflow: hidden;
-  width: 86rpx;
-}
-
-.context-media-item--2 {
-  background: linear-gradient(145deg, #e4d7bf, #736b5b);
-}
-
-.context-action {
-  background: #ffffff;
-  border: 1rpx solid #bcd5ff;
-  border-radius: 12rpx;
-  color: #2878f2;
-  font-size: 22rpx;
-  font-weight: 800;
-  height: 64rpx;
-  line-height: 64rpx;
-  margin: 20rpx 0 0;
-  opacity: 1;
-  padding: 0;
-  width: 100%;
-}
-
-.context-action[disabled] {
-  background: #ffffff;
-  color: #2878f2;
-  opacity: 1;
-}
-
 .detail-tabs {
   border-bottom: 1rpx solid #edf1f6;
   box-sizing: border-box;
@@ -906,81 +531,6 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
 
 .tab-panel {
   padding: 16rpx 28rpx 18rpx;
-}
-
-.follow-up-list {
-  padding-top: 0;
-}
-
-.follow-up-item {
-  display: flex;
-  gap: 16rpx;
-  min-height: 84rpx;
-}
-
-.follow-up-marker-wrap {
-  align-items: center;
-  display: flex;
-  flex: 0 0 30rpx;
-  flex-direction: column;
-  position: relative;
-}
-
-.follow-up-marker {
-  align-items: center;
-  border-radius: 50%;
-  display: flex;
-  height: 28rpx;
-  justify-content: center;
-  margin-top: 22rpx;
-  width: 28rpx;
-  z-index: 1;
-}
-
-.follow-up-marker--orange { background: #ff941f; }
-.follow-up-marker--blue { background: #2878f2; }
-.follow-up-marker--green { background: #35b978; }
-
-.follow-up-line {
-  background: #dfe7f1;
-  bottom: -2rpx;
-  position: absolute;
-  top: 50rpx;
-  width: 2rpx;
-}
-
-.follow-up-copy {
-  border-bottom: 1rpx solid #edf1f6;
-  flex: 1;
-  min-width: 0;
-  padding: 20rpx 0 16rpx;
-}
-
-.follow-up-title-row {
-  gap: 12rpx;
-  justify-content: space-between;
-}
-
-.follow-up-title {
-  color: #1d2b40;
-  font-size: 24rpx;
-  font-weight: 800;
-}
-
-.follow-up-label {
-  background: #fff0d8;
-  border-radius: 6rpx;
-  color: #f08a21;
-  flex: 0 0 auto;
-  font-size: 18rpx;
-  padding: 4rpx 8rpx;
-}
-
-.follow-up-time {
-  color: #9aa7b9;
-  display: block;
-  font-size: 20rpx;
-  margin-top: 8rpx;
 }
 
 .tab-empty {
@@ -1088,17 +638,13 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
 }
 
 .skeleton-summary-top,
-.skeleton-progress,
-.skeleton-progress-steps,
-.skeleton-media-row,
 .skeleton-tabs,
 .skeleton-information-row {
   align-items: center;
   display: flex;
 }
 
-.skeleton-summary-top,
-.skeleton-progress {
+.skeleton-summary-top {
   justify-content: space-between;
 }
 
@@ -1112,12 +658,6 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
 .skeleton-line--customer { height: 32rpx; width: 42%; }
 .skeleton-line--number { height: 24rpx; width: 20%; }
 .skeleton-line--location { margin-top: 24rpx; width: 64%; }
-.skeleton-line--progress-position { height: 28rpx; width: 18%; }
-.skeleton-line--eyebrow { height: 20rpx; width: 18%; }
-.skeleton-line--task-title { height: 30rpx; margin-top: 14rpx; width: 30%; }
-.skeleton-line--task-description { margin-top: 14rpx; width: 74%; }
-.skeleton-line--context-title { height: 28rpx; margin-top: 20rpx; width: 40%; }
-.skeleton-line--context-description { margin-top: 12rpx; width: 68%; }
 
 .skeleton-actions--summary {
   margin-top: 24rpx;
@@ -1133,60 +673,6 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
   border-radius: 14rpx;
   flex: 1;
   height: 64rpx;
-  animation: detail-skeleton-pulse 1.6s ease-in-out infinite;
-}
-
-.skeleton-progress {
-  margin: 0;
-  padding: 20rpx 22rpx;
-}
-
-.skeleton-progress-steps {
-  flex: 1;
-  gap: 12rpx;
-  justify-content: space-between;
-  margin-right: 20rpx;
-}
-
-.skeleton-progress-step {
-  background: #edf2f7;
-  border-radius: 999rpx;
-  height: 18rpx;
-  width: 28%;
-  animation: detail-skeleton-pulse 1.6s ease-in-out infinite;
-}
-
-.skeleton-progress-step--completed { background: #dff4e9; }
-.skeleton-progress-step--current { background: #dceaff; }
-
-.skeleton-task,
-.skeleton-context {
-  padding: 24rpx 26rpx 22rpx;
-}
-
-.skeleton-task {
-  background: #fffaf4;
-  border-color: #ffd29d;
-}
-
-.skeleton-button {
-  background: #edf2f7;
-  border-radius: 14rpx;
-  height: 68rpx;
-  margin-top: 22rpx;
-  animation: detail-skeleton-pulse 1.6s ease-in-out infinite;
-}
-
-.skeleton-media-row {
-  gap: 10rpx;
-  margin: 20rpx 0 0 54rpx;
-}
-
-.skeleton-media-row view {
-  background: #edf2f7;
-  border-radius: 10rpx;
-  height: 86rpx;
-  width: 86rpx;
   animation: detail-skeleton-pulse 1.6s ease-in-out infinite;
 }
 

@@ -15,6 +15,7 @@ export { isMockOwnedRead, tryMockRead } from './router'
 export type { MockReadOptions } from './router'
 export {
   mockOrdinaryListResponse,
+  mockDetailScenarioIds,
   mockRoleFunctionResponse,
   mockSanodeListResponse,
   mockStatusOptionsResponse,

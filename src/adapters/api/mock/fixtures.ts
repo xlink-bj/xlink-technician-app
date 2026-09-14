@@ -6,6 +6,14 @@ export const mockWorkOrderIds = [
   'mock-work-order-003',
 ] as const
 
+/** Detail-only reads extend the bounded fixture set without changing List density. */
+export const mockDetailScenarioIds = [
+  ...mockWorkOrderIds,
+  'mock-work-order-004',
+  'mock-work-order-005',
+  'mock-work-order-006',
+] as const
+
 const mockServiceAppointmentData = {
   [mockWorkOrderIds[0]]: {
     _id: mockWorkOrderIds[0],
@@ -51,6 +59,45 @@ const mockServiceAppointmentData = {
     status: '101',
     phone: '13800000002',
   },
+  [mockDetailScenarioIds[3]]: {
+    _id: mockDetailScenarioIds[3],
+    orderNum: '16204',
+    name: '演示客户丁',
+    address: '建国门外大街',
+    district: 110105,
+    describe: '请确认上门时间',
+    exts: {
+      leakagesite_copy: [['repair-part-code-001']],
+      distance: '5.1',
+      communityOrdersTotal: 0,
+      applyTimeStr: '2026-04-14 09:30',
+    },
+    serviceType: '40',
+    status: '206',
+    phone: '13800000003',
+  },
+  [mockDetailScenarioIds[4]]: {
+    _id: mockDetailScenarioIds[4],
+    orderNum: '17505',
+    name: '演示客户戊',
+    address: '朝阳路演示地址',
+    exts: {
+      leakagesite_copy: [['repair-part-code-001']],
+      distance: 3.8,
+      communityOrdersTotal: 1,
+    },
+    serviceType: '30',
+    status: '101',
+    describe: '等待客户确认方案',
+    phone: '13800000004',
+  },
+  [mockDetailScenarioIds[5]]: {
+    _id: mockDetailScenarioIds[5],
+    orderNum: '19006',
+    exts: {},
+    serviceType: '40',
+    status: 'unverified-status',
+  },
 } as const
 
 export const mockRoleFunctionResponse = {
@@ -75,19 +122,19 @@ export const mockSanodeListResponse = {
     {
       _id: 'mock-workflow-node-001',
       state: 1,
-      nodeDef: { nodeType: 'mock-technician-task' },
+      nodeDef: { nodeType: 'forms', name: '勘察' },
       data: mockServiceAppointmentData[mockWorkOrderIds[0]],
     },
     {
       _id: 'mock-workflow-node-002',
       state: 1,
-      nodeDef: { nodeType: 'mock-technician-task' },
+      nodeDef: { nodeType: 'placeOrder', name: '下单' },
       data: mockServiceAppointmentData[mockWorkOrderIds[1]],
     },
     {
       _id: 'mock-workflow-node-003',
       state: 1,
-      nodeDef: { nodeType: 'mock-technician-task' },
+      nodeDef: { nodeType: 'accept', name: '接单' },
       data: mockServiceAppointmentData[mockWorkOrderIds[2]],
     },
   ],
@@ -126,7 +173,13 @@ export const mockWorkOrderDetailResponses = {
         workflowRunId: 'mock-workflow-run-001',
       },
       workflow: { _id: 'mock-workflow-run-001' },
-      workflowNode: [],
+      workflowNode: [
+        {
+          _id: 'mock-workflow-node-001-current',
+          state: 0,
+          nodeDef: { nodeType: 'forms', name: '勘察' },
+        },
+      ],
     },
   },
   [mockWorkOrderIds[1]]: {
@@ -136,7 +189,13 @@ export const mockWorkOrderDetailResponses = {
         workflowRunId: 'mock-workflow-run-002',
       },
       workflow: { _id: 'mock-workflow-run-002' },
-      workflowNode: [],
+      workflowNode: [
+        {
+          _id: 'mock-workflow-node-002-current',
+          state: 0,
+          nodeDef: { nodeType: 'placeOrder', name: '下单' },
+        },
+      ],
     },
   },
   [mockWorkOrderIds[2]]: {
@@ -146,12 +205,71 @@ export const mockWorkOrderDetailResponses = {
         workflowRunId: 'mock-workflow-run-003',
       },
       workflow: { _id: 'mock-workflow-run-003' },
-      workflowNode: [],
+      workflowNode: [
+        {
+          _id: 'mock-workflow-node-003-current',
+          state: 0,
+          nodeDef: { nodeType: 'accept', name: '接单' },
+        },
+      ],
+    },
+  },
+  [mockDetailScenarioIds[3]]: {
+    data: {
+      serviceAppointment: {
+        ...mockServiceAppointmentData[mockDetailScenarioIds[3]],
+        workflowRunId: 'mock-workflow-run-004',
+      },
+      workflow: { _id: 'mock-workflow-run-004' },
+      workflowNode: [
+        {
+          _id: 'mock-workflow-node-004-complete',
+          state: 10,
+          nodeDef: { nodeType: 'forms', name: '勘察' },
+        },
+        {
+          _id: 'mock-workflow-node-004-current',
+          state: 0,
+          nodeDef: { nodeType: 'placeOrder', name: '下单' },
+        },
+      ],
+    },
+  },
+  [mockDetailScenarioIds[4]]: {
+    data: {
+      serviceAppointment: {
+        ...mockServiceAppointmentData[mockDetailScenarioIds[4]],
+        workflowRunId: 'mock-workflow-run-005',
+      },
+      workflow: { _id: 'mock-workflow-run-005' },
+      workflowNode: [
+        {
+          _id: 'mock-workflow-node-005-current',
+          state: 0,
+          nodeDef: { nodeType: 'forms', name: '服务' },
+        },
+      ],
+    },
+  },
+  [mockDetailScenarioIds[5]]: {
+    data: {
+      serviceAppointment: {
+        ...mockServiceAppointmentData[mockDetailScenarioIds[5]],
+        workflowRunId: 'mock-workflow-run-006',
+      },
+      workflow: { _id: 'mock-workflow-run-006' },
+      workflowNode: [
+        {
+          _id: 'mock-workflow-node-006-current',
+          state: 0,
+          nodeDef: { nodeType: 'forms', name: '待核验' },
+        },
+      ],
     },
   },
 } as const
 
-export type MockWorkOrderId = (typeof mockWorkOrderIds)[number]
+export type MockWorkOrderId = (typeof mockDetailScenarioIds)[number]
 
 export function mockWorkOrderDetailResponseFor(id: string): unknown | null {
   return mockWorkOrderDetailResponses[id as MockWorkOrderId] ?? null
