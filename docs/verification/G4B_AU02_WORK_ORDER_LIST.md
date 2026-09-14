@@ -83,8 +83,8 @@ The accepted role-visible list scope remains unchanged. The enriched semantic
 row decision and field-by-field evidence matrix are recorded in
 [`G4B_WORK_ORDER_DATA_FIDELITY.md`](./G4B_WORK_ORDER_DATA_FIDELITY.md). The
 current list UI is intentionally not visually redesigned by that follow-up;
-it only consumes `displayNumber` for the existing row label instead of treating
-an unverified raw `name` value as a task title.
+it only consumes normalized values. The current adapter disposition is recorded
+in [`G4B_LIST_DATA_HARDENING.md`](./G4B_LIST_DATA_HARDENING.md).
 
 ## V5 bounded semantic additions
 

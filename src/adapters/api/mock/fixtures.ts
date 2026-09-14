@@ -10,12 +10,14 @@ const mockServiceAppointmentData = {
   [mockWorkOrderIds[0]]: {
     _id: mockWorkOrderIds[0],
     orderNum: '09077',
-    part: '屋面',
     name: '演示客户甲',
     address: '日坛东一街',
     district: 110105,
-    distance: '2.6 km',
-    nearbyCustomers: 2,
+    exts: {
+      leakagesite_copy: [['repair-part-code-001']],
+      distance: 2.6,
+      communityOrdersTotal: 2,
+    },
     serviceType: '40',
     status: '206',
     phone: '13800000000',
@@ -23,24 +25,28 @@ const mockServiceAppointmentData = {
   [mockWorkOrderIds[1]]: {
     _id: mockWorkOrderIds[1],
     orderNum: '04009',
-    part: '屋面',
     name: '演示客户乙（长名称结构样本）',
     address: '东坝北路17号国际贸易中心A座',
+    exts: {
+      leakagesite_copy: [['repair-part-code-001']],
+      distance: 2.6,
+      communityOrdersTotal: 2,
+    },
     serviceType: '30',
     status: '401',
-    distance: '2.6 km',
-    nearbyCustomers: 2,
     phone: '13800000001',
   },
   [mockWorkOrderIds[2]]: {
     _id: mockWorkOrderIds[2],
     orderNum: '11850',
-    part: '屋面',
     name: '演示客户丙',
     address: '日坛国际贸易中心A座',
     district: 110105,
-    distance: '4.2 km',
-    nearbyCustomers: 2,
+    exts: {
+      leakagesite_copy: [['repair-part-code-001']],
+      distance: 4.2,
+      communityOrdersTotal: 2,
+    },
     serviceType: '40',
     status: '101',
     phone: '13800000002',
@@ -98,6 +104,18 @@ export const mockOrdinaryListResponse = {
   page: 1,
   rows: 20,
   total: 2,
+} as const
+
+/** Sanitized raw status code-table response used to exercise adapter lookup. */
+export const mockStatusOptionsResponse = {
+  data: [
+    { value: '206', codelabel: '跟进签约' },
+    { value: '401', codelabel: '验收回款' },
+    { value: '101', codelabel: '待接单' },
+  ],
+  page: 1,
+  rows: 20,
+  total: 3,
 } as const
 
 export const mockWorkOrderDetailResponses = {

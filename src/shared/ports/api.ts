@@ -35,8 +35,8 @@ export interface WorkOrderSummary {
   readonly serviceAddress?: string
   /** Display-ready distance supplied by the read boundary; no location calculation here. */
   readonly distanceText?: string
-  /** Optional nearby-customer summary supplied by the read boundary. */
-  readonly nearbyCustomerCount?: number
+  /** Optional same-community order count supplied by the read boundary. */
+  readonly communityOrderCount?: number
   /** Ephemeral normalized contact input for the list phone action; never persisted or rendered. */
   readonly contact?: WorkOrderContact
 }

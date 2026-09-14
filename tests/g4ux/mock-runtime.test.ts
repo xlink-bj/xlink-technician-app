@@ -17,6 +17,7 @@ import {
   isBusinessMockMode,
   mockOrdinaryListResponse,
   mockSanodeListResponse,
+  mockStatusOptionsResponse,
   mockWorkOrderDetailResponse,
   mockWorkOrderDetailResponses,
   mockWorkOrderIds,
@@ -194,42 +195,39 @@ describe('G4-UX business mock runtime', () => {
         id: mockWorkOrderIds[0],
         displayNumber: '09077',
         taskLabel: '跟进签约',
-        servicePartLabel: '屋面',
         customerName: '演示客户甲',
         serviceDistrict: '朝阳区',
         serviceAddress: '日坛东一街',
         distanceText: '2.6 km',
-        nearbyCustomerCount: 2,
+        communityOrderCount: 2,
         contact: { normalizedPhone: '13800000000', displayMask: '138****0000' },
       },
       {
         id: mockWorkOrderIds[1],
         displayNumber: '04009',
         taskLabel: '验收回款',
-        servicePartLabel: '屋面',
         customerName: '演示客户乙（长名称结构样本）',
         serviceAddress: '东坝北路17号国际贸易中心A座',
         distanceText: '2.6 km',
-        nearbyCustomerCount: 2,
+        communityOrderCount: 2,
         contact: { normalizedPhone: '13800000001', displayMask: '138****0001' },
       },
       {
         id: mockWorkOrderIds[2],
         displayNumber: '11850',
         taskLabel: '待接单',
-        servicePartLabel: '屋面',
         customerName: '演示客户丙',
         serviceDistrict: '朝阳区',
         serviceAddress: '日坛国际贸易中心A座',
         distanceText: '4.2 km',
-        nearbyCustomerCount: 2,
-        contact: { normalizedPhone: '13800000002', displayMask: '138****0002' },
+        communityOrderCount: 2,
       },
     ])
     expect(list.data?.items[0].id).not.toBe('mock-workflow-node-001')
     expect(requests.map((request) => request.path)).toEqual([
       'function/changeRole',
       'basic/serviceAppointment/querySAWorkflowNode',
+      'code/query',
     ])
 
     const detail = await createTechnicianApiReadAdapter(transport).getWorkOrderDetail(
@@ -267,23 +265,21 @@ describe('G4-UX business mock runtime', () => {
         id: mockWorkOrderIds[0],
         displayNumber: '09077',
         taskLabel: '跟进签约',
-        servicePartLabel: '屋面',
         customerName: '演示客户甲',
         serviceDistrict: '朝阳区',
         serviceAddress: '日坛东一街',
         distanceText: '2.6 km',
-        nearbyCustomerCount: 2,
+        communityOrderCount: 2,
         contact: { normalizedPhone: '13800000000', displayMask: '138****0000' },
       },
       {
         id: mockWorkOrderIds[1],
         displayNumber: '04009',
         taskLabel: '验收回款',
-        servicePartLabel: '屋面',
         customerName: '演示客户乙（长名称结构样本）',
         serviceAddress: '东坝北路17号国际贸易中心A座',
         distanceText: '2.6 km',
-        nearbyCustomerCount: 2,
+        communityOrderCount: 2,
         contact: { normalizedPhone: '13800000001', displayMask: '138****0001' },
       },
     ])
@@ -414,9 +410,12 @@ describe('G4-UX business mock runtime', () => {
     expect(rawNode).toHaveProperty('_id', 'mock-workflow-node-001')
     expect(rawNode).toHaveProperty('data._id', mockWorkOrderIds[0])
     expect(rawNode).toHaveProperty('data.name')
-    expect(rawNode.data).toHaveProperty('part', '屋面')
-    expect(rawNode.data).toHaveProperty('distance', '2.6 km')
-    expect(rawNode.data).toHaveProperty('nearbyCustomers', 2)
+    expect(rawNode.data).toHaveProperty('exts.leakagesite_copy', [['repair-part-code-001']])
+    expect(rawNode.data).toHaveProperty('exts.distance', 2.6)
+    expect(rawNode.data).toHaveProperty('exts.communityOrdersTotal', 2)
+    expect(rawNode.data).not.toHaveProperty('part')
+    expect(rawNode.data).not.toHaveProperty('distance')
+    expect(rawNode.data).not.toHaveProperty('nearbyCustomers')
     expect(rawNode.data).toHaveProperty('status', '206')
     expect(rawNode.data).toHaveProperty('phone', '13800000000')
     expect(rawNode.data).not.toHaveProperty('displayNumber')
@@ -425,6 +424,49 @@ describe('G4-UX business mock runtime', () => {
     expect(mockWorkOrderDetailResponse.entity).not.toHaveProperty('displayNumber')
     expect(mockWorkOrderDetailResponse.entity).not.toHaveProperty('customerName')
     expect(mockWorkOrderDetailResponse.entity).not.toHaveProperty('serviceAddress')
+  })
+
+  it('resolves task labels only from the adapter-owned code-option read', async () => {
+    setBusinessMockEnabled(true)
+    const requests: ApiReadRequest[] = []
+    const transport: ApiReadTransport = {
+      execute: async (request) => {
+        requests.push(request)
+        const raw = await tryMockRead(request.path, request.body ?? {}, { latencyMs: 0 })
+        if (raw === null) throw new Error(`No mock fixture for ${request.path}`)
+        return raw
+      },
+    }
+
+    const api = createTechnicianApiReadAdapter(transport)
+    const result = await api.listWorkOrders({ page: 1, pageSize: 20 })
+
+    expect(result.data?.items[0].taskLabel).toBe(mockStatusOptionsResponse.data[0].codelabel)
+    expect(requests.at(-1)).toEqual({
+      method: 'POST',
+      path: 'code/query',
+      body: { valueOption: 'STATUS' },
+    })
+  })
+
+  it('omits an unknown status instead of fabricating a task label', async () => {
+    const transport: ApiReadTransport = {
+      execute: vi.fn(async (request) => {
+        if (request.path === 'code/query') return { data: [], page: 1, rows: 20, total: 0 }
+        return {
+          data: [{ _id: 'work-order-unknown-status', status: 'unverified-status' }],
+          page: 1,
+          rows: 20,
+          total: 1,
+        }
+      }),
+    }
+    const result = await createTechnicianApiReadAdapter(transport).listWorkOrders({
+      page: 1,
+      pageSize: 20,
+    })
+
+    expect(result.data?.items).toEqual([{ id: 'work-order-unknown-status' }])
   })
 
   it('keeps representative mock fixtures sanitized with synthetic contact values only', () => {

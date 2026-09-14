@@ -73,7 +73,7 @@ describe('G4-UX Work Order List card', () => {
     expect(listTemplate).toContain('v-if="item.serviceDistrict" class="location-district"')
     expect(listTemplate).toContain('v-if="item.serviceAddress" class="location-address"')
     expect(listTemplate).toContain('v-if="item.distanceText" class="location-distance"')
-    expect(listTemplate).toContain('工单附近客户 {{ item.nearbyCustomerCount }}')
+    expect(listTemplate).toContain('同小区 {{ item.communityOrderCount }}')
     expect(listTemplate).toContain('class="card-phone-button"')
     expect(listTemplate).toContain('@tap.stop="dialContact(item)"')
     expect(listTemplate).not.toContain('查看工单详情')

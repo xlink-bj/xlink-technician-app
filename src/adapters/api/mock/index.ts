@@ -17,6 +17,7 @@ export {
   mockOrdinaryListResponse,
   mockRoleFunctionResponse,
   mockSanodeListResponse,
+  mockStatusOptionsResponse,
   mockWorkOrderDetailResponse,
   mockWorkOrderDetailResponses,
   mockWorkOrderDetailResponseFor,

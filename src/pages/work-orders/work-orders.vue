@@ -134,11 +134,11 @@
               </view>
               <text v-if="item.customerName" class="card-customer">{{ item.customerName }}</text>
               <view
-                v-if="item.nearbyCustomerCount !== undefined || item.contact?.normalizedPhone"
+                v-if="item.communityOrderCount !== undefined || item.contact?.normalizedPhone"
                 class="card-footer"
               >
-                <text v-if="item.nearbyCustomerCount !== undefined" class="nearby-chip">
-                  工单附近客户 {{ item.nearbyCustomerCount }}
+                <text v-if="item.communityOrderCount !== undefined" class="nearby-chip">
+                  同小区 {{ item.communityOrderCount }}
                 </text>
                 <view
                   v-if="item.contact?.normalizedPhone"

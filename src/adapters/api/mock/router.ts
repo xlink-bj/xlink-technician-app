@@ -4,6 +4,7 @@ import {
   mockOrdinaryListResponse,
   mockRoleFunctionResponse,
   mockSanodeListResponse,
+  mockStatusOptionsResponse,
   mockWorkOrderDetailResponseFor,
 } from './fixtures'
 
@@ -83,6 +84,9 @@ function matchedResponse(
 ): unknown | null {
   const route = normalizedPath(path)
   if (route === 'function/changeRole') return mockRoleFunctionResponse
+  if (route === 'code/query' && requestData.valueOption === 'STATUS') {
+    return mockStatusOptionsResponse
+  }
   if (route === 'basic/serviceAppointment/querySAWorkflowNode') {
     return listResponse(mode, mockSanodeListResponse, requestData)
   }

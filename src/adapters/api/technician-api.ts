@@ -123,80 +123,82 @@ function serviceDistrictLabel(record: AdapterRecord): string | undefined {
   return countyList[String(code)]
 }
 
-/**
- * R2's task-card vocabulary is the presentation of the observed service-
- * appointment status. The wire status remains adapter-owned and is never
- * returned in the shared WorkOrderSummary.
- */
-const statusTaskLabels: Readonly<Record<string, string>> = {
-  '101': '待接单',
-  '102': '待接单',
-  '103': '待接单',
-  '104': '联系客户',
-  '105': '预约上门',
-  '200': '暂不上门',
-  '201': '暂不上门',
-  '202': '上门服务',
-  '203': '待下单',
-  '204': '上门跟进',
-  '205': '跟进方案',
-  '206': '跟进签约',
-  '207': '待确认',
-  '300': '现场服务',
-  '301': '现场服务',
-  '302': '现场服务',
-  '401': '验收回款',
-  '402': '验收回款',
-  '403': '已完工',
-  '407': '验收回款',
-  '501': '待评价',
-  '502': '待评价',
-  '999': '跟进超时',
-}
-
 function firstStatusCode(value: unknown): string | undefined {
   if (typeof value !== 'string' && typeof value !== 'number') return undefined
   const code = String(value).split(',')[0]?.trim()
   return code || undefined
 }
 
-function serviceAppointmentTaskLabel(record: AdapterRecord): string | undefined {
-  const statusCode = firstStatusCode(record.status)
-  return (statusCode ? statusTaskLabels[statusCode] : undefined) ?? optionalString(record, ['title'])
+function pageContainsServiceAppointmentStatus(raw: unknown): boolean {
+  const envelope = asRecord(raw, 'work-order page')
+  const rawItems = nestedValue(envelope, ['data', 'items', 'records'])
+  if (!Array.isArray(rawItems)) throw new AdapterMappingError('work-order page items are missing')
+
+  return rawItems.some((item) => {
+    const record = asRecord(item, 'work-order row')
+    const data = nestedRecord(record, ['data']) ?? record
+    return firstStatusCode(data.status) !== undefined
+  })
 }
 
-function workOrderSummary(raw: unknown): WorkOrderSummary {
+function serviceAppointmentTaskLabel(
+  record: AdapterRecord,
+  statusLabels: ReadonlyMap<string, string>,
+): string | undefined {
+  const statusCode = firstStatusCode(record.status)
+  return statusCode ? statusLabels.get(statusCode) : undefined
+}
+
+function displayDistance(record: AdapterRecord): string | undefined {
+  const extensions = optionalRecord(record.exts)
+  const value = extensions?.distance
+  if (typeof value === 'number' && Number.isFinite(value) && value >= 0) return `${value} km`
+  if (typeof value !== 'string') return undefined
+  const normalized = value.trim()
+  return /^\d+(?:\.\d+)?$/.test(normalized) ? `${normalized} km` : undefined
+}
+
+function communityOrderCount(record: AdapterRecord): number | undefined {
+  const extensions = optionalRecord(record.exts)
+  return extensions ? optionalNonNegativeInteger(extensions, ['communityOrdersTotal']) : undefined
+}
+
+function workOrderSummary(
+  raw: unknown,
+  statusLabels: ReadonlyMap<string, string>,
+): WorkOrderSummary {
   const record = asRecord(raw, 'work-order summary')
   const id = requiredOpaqueId<'WorkOrderId'>(record, ['id', '_id'], 'work-order id')
   const displayNumber = optionalString(record, ['orderNum'])
-  const taskLabel = serviceAppointmentTaskLabel(record)
-  const servicePartLabel = optionalString(record, ['part'])
+  const taskLabel = serviceAppointmentTaskLabel(record, statusLabels)
   const customerName = optionalString(record, ['name'])
   const serviceDistrict = serviceDistrictLabel(record)
   const serviceAddress = optionalString(record, ['address'])
-  const distanceText = optionalString(record, ['distance'])
-  const nearbyCustomerCount = optionalNonNegativeInteger(record, ['nearbyCustomers'])
-  const contact = workOrderContact(record)
+  const distanceText = displayDistance(record)
+  const sameCommunityCount = communityOrderCount(record)
+  const contact = workOrderListContact(record)
 
   return {
     id,
     ...(displayNumber ? { displayNumber } : {}),
     ...(taskLabel ? { taskLabel } : {}),
-    ...(servicePartLabel ? { servicePartLabel } : {}),
     ...(customerName ? { customerName } : {}),
     ...(serviceDistrict ? { serviceDistrict } : {}),
     ...(serviceAddress ? { serviceAddress } : {}),
     ...(distanceText ? { distanceText } : {}),
-    ...(nearbyCustomerCount !== undefined ? { nearbyCustomerCount } : {}),
+    ...(sameCommunityCount !== undefined ? { communityOrderCount: sameCommunityCount } : {}),
     ...(contact ? { contact } : {}),
   }
 }
 
-function sanodeWorkOrderSummary(raw: unknown): WorkOrderSummary {
+function sanodeWorkOrderSummary(
+  raw: unknown,
+  statusLabels: ReadonlyMap<string, string>,
+): WorkOrderSummary {
   const node = asRecord(raw, 'workflow-node work-order summary')
   const data = nestedRecord(node, ['data'])
   if (!data) throw new AdapterMappingError('workflow-node work-order data is missing')
-  return workOrderSummary(data)
+  return workOrderSummary(data, statusLabels)
 }
 
 function firstArrayString(value: unknown): string | undefined {
@@ -222,6 +224,26 @@ function workOrderContact(record: AdapterRecord) {
   return {
     ...(contactId ? { contactRef: asOpaqueId<'CustomerContactId'>(contactId) } : {}),
     ...(phone ? { normalizedPhone: phone } : {}),
+    ...(displayMask ? { displayMask } : {}),
+  }
+}
+
+/**
+ * R1 exposes the direct list phone action only when the service-appointment
+ * status gate has passed. Contact-only rows belong to the deferred relay path
+ * and must not create a list dial action.
+ */
+function workOrderListContact(record: AdapterRecord) {
+  const phone = optionalString(record, ['phone'])?.trim()
+  const statusCode = firstStatusCode(record.status)
+  const statusNumber = statusCode ? Number(statusCode) : Number.NaN
+  if (!phone || !Number.isFinite(statusNumber) || statusNumber <= 103) return undefined
+
+  const contactId = firstArrayString(record.contactIds)
+  const displayMask = phoneDisplayMask(phone)
+  return {
+    ...(contactId ? { contactRef: asOpaqueId<'CustomerContactId'>(contactId) } : {}),
+    normalizedPhone: phone,
     ...(displayMask ? { displayMask } : {}),
   }
 }
@@ -476,15 +498,23 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
 
   private async read<T>(
     request: ApiReadRequest | (() => Promise<ApiReadRequest>),
-    map: (raw: unknown) => T,
+    map: (raw: unknown) => T | Promise<T>,
   ): Promise<OperationSnapshot<T>> {
     try {
       const resolvedRequest = typeof request === 'function' ? await request() : request
       const raw = await this.transport.execute(resolvedRequest)
-      return succeeded(map(raw))
+      return succeeded(await map(raw))
     } catch (error) {
       return readFailure(error)
     }
+  }
+
+  private async statusLabelsFor(raw: unknown): Promise<ReadonlyMap<string, string>> {
+    if (!pageContainsServiceAppointmentStatus(raw)) return new Map()
+
+    const options = await this.getCodeOptions({ valueOption: 'STATUS' })
+    if (options.state !== 'succeeded' || !options.data) return new Map()
+    return new Map(options.data.items.map((option) => [option.value, option.label]))
   }
 
   async listWorkOrders(query: WorkOrderListQuery) {
@@ -499,7 +529,10 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
             return body
           })(),
         },
-        (raw) => pageEnvelope(raw, workOrderSummary),
+        async (raw) => {
+          const statusLabels = await this.statusLabelsFor(raw)
+          return pageEnvelope(raw, (item) => workOrderSummary(item, statusLabels))
+        },
       )
     }
 
@@ -507,11 +540,14 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
       const scope = await this.workOrderScopeResolver.resolve()
       return await this.read<ReadPage<WorkOrderSummary>>(
         buildWorkOrderListRequest(query, scope),
-        (raw) =>
-          pageEnvelope(
-            raw,
-            scope.mode === 'workflow-node' ? sanodeWorkOrderSummary : workOrderSummary,
-          ),
+        async (raw) => {
+          const statusLabels = await this.statusLabelsFor(raw)
+          return pageEnvelope(raw, (item) =>
+            scope.mode === 'workflow-node'
+              ? sanodeWorkOrderSummary(item, statusLabels)
+              : workOrderSummary(item, statusLabels),
+          )
+        },
       )
     } catch (error) {
       return readFailure<ReadPage<WorkOrderSummary>>(error)
