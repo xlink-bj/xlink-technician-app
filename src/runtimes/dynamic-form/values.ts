@@ -2,6 +2,7 @@ import { evaluateFieldState } from './state'
 import type {
   FieldStateContext,
   FormFieldSchema,
+  FormOption,
   FormSubmission,
   NormalizationResult,
   NormalizedFieldValue,
@@ -43,7 +44,25 @@ function invalid(message: string): NormalizationResult {
   return { ok: false, reason: 'invalid_value', message }
 }
 
-export function normalizeFieldValue(type: string, value: unknown): NormalizationResult {
+function supportedOption(options: readonly FormOption[] | undefined, value: unknown): boolean {
+  if (!options || options.length === 0) return true
+  const values = Array.isArray(value) ? value : [value]
+  return values.every(
+    (candidate) =>
+      candidate !== null &&
+      candidate !== undefined &&
+      options.some((option) => option.value === String(candidate)),
+  )
+}
+
+export function normalizeFieldValue(
+  type: string,
+  value: unknown,
+  options?: readonly FormOption[],
+): NormalizationResult {
+  if (!supportedOption(options, value)) {
+    return invalid(`${type} contains an unsupported option`)
+  }
   if (trimmedStringTypes.has(type)) {
     const result = trimmed(value)
     return result === undefined ? invalid(`${type} requires a scalar value`) : { ok: true, value: result }
@@ -136,7 +155,7 @@ export function normalizeSubmission(input: {
       continue
     }
 
-    const value = normalizeFieldValue(field.type, raw)
+    const value = normalizeFieldValue(field.type, raw, field.inlineOptions)
     if (!value.ok) {
       return {
         ok: false,

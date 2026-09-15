@@ -20,6 +20,10 @@ import {
 import { createRoleScopedTechnicianApiReadAdapter } from '@adapters/api/technician-api'
 import { useWorkOrderDetailStore } from '@features/work-orders/detail'
 import { useWorkOrderListStore } from '@features/work-orders/list'
+import {
+  appointmentRuntimeFieldsFor,
+  normalizeAppointmentForm,
+} from '@features/work-orders/appointment-form-runtime'
 import { detailWorkflowProjectionFor } from '@features/work-orders/detail-workflow'
 import type {
   FormDataRead,
@@ -246,6 +250,39 @@ describe('G4-D final functional and safety corrections', () => {
     expect(detailWorkflowProjectionFor(detail, session).currentTask).toMatchObject({
       actionIntent: 'set_appointment',
       execution: 'enabled',
+    })
+  })
+
+  it('routes appointment fields, state, options, and values through Dynamic Form Runtime', () => {
+    const form = {
+      fields: formDefinition().fields!,
+      values: { source: 'backend value' },
+    }
+    const fields = appointmentRuntimeFieldsFor(form)
+    expect(fields.map((field) => field.key)).toEqual(['need', 'datetime', 'note', 'source'])
+    expect(fields.find((field) => field.key === 'need')?.runtime.optionProvider).toEqual({
+      state: 'provider',
+      provider: { kind: 'inline' },
+    })
+    expect(fields.find((field) => field.key === 'source')?.runtime).toMatchObject({
+      readOnly: true,
+      required: false,
+    })
+
+    expect(normalizeAppointmentForm({
+      ...form,
+      values: {
+        need: '1',
+        datetime: ' 2026-04-20 10:00 ',
+        source: 'backend value',
+      },
+    })).toEqual({
+      state: 'succeeded',
+      data: {
+        need: '1',
+        datetime: '2026-04-20 10:00',
+        source: 'backend value',
+      },
     })
   })
 

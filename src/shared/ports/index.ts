@@ -42,6 +42,7 @@ export type {
   LocationSnapshot,
   MediaCapturePort,
   MediaFilePickerPort,
+  NavigationPort,
   PhoneDialRequest,
   PhonePort,
   ScanPort,

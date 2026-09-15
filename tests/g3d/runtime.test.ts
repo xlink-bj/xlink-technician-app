@@ -235,6 +235,25 @@ describe('G3-D Dynamic Form Runtime capability and visibility', () => {
     expect(evaluateFieldState({ key: 'code', type: 'select' }).capability).toBe('UNSUPPORTED')
     expect(evaluateFieldState({ key: 'genericArea', type: 'area' }).capability).toBe('SUPPORTED_GENERIC')
   })
+
+  it('validates declared option values during runtime submission normalization', () => {
+    expect(
+      normalizeSubmission({
+        fields: [{
+          key: 'need',
+          type: 'radio',
+          required: true,
+          inlineOptions: [{ value: '1', label: '需要上门' }],
+        }],
+        values: { need: 'unsupported' },
+      }),
+    ).toEqual({
+      ok: false,
+      reason: 'validation',
+      fieldKey: 'need',
+      message: 'radio contains an unsupported option',
+    })
+  })
 })
 
 describe('G3-D Dynamic Form Runtime values and submission', () => {

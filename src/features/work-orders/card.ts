@@ -4,6 +4,7 @@ export type WorkOrderCardTone = 'blue' | 'red' | 'orange' | 'purple' | 'green' |
 
 const exactToneByTaskLabel: Readonly<Record<string, WorkOrderCardTone>> = {
   待接单: 'blue',
+  待预约: 'orange',
   联系客户: 'red',
   预约上门: 'orange',
   上门服务: 'orange',

@@ -4,6 +4,7 @@ import { createPinia } from 'pinia'
 import App from '@/App.vue'
 import type {
   AuthSessionPort,
+  NavigationPort,
   PhonePort,
   TechnicianApiCommandPort,
   TechnicianApiReadPort,
@@ -16,6 +17,7 @@ import {
   createDefaultAuthSessionPort,
   createDefaultTechnicianApiCommandPort,
   createDefaultPhonePort,
+  createDefaultNavigationPort,
   createDefaultTechnicianApiReadPort,
 } from './composition'
 
@@ -24,6 +26,7 @@ export interface ApplicationDependencies {
   readonly apiRead?: TechnicianApiReadPort
   readonly apiCommand?: TechnicianApiCommandPort
   readonly phone?: PhonePort
+  readonly navigation?: NavigationPort
 }
 
 export function createApplication(dependencies: ApplicationDependencies = {}) {
@@ -35,6 +38,7 @@ export function createApplication(dependencies: ApplicationDependencies = {}) {
   const apiRead = dependencies.apiRead ?? createDefaultTechnicianApiReadPort(authSession)
   const apiCommand = dependencies.apiCommand ?? createDefaultTechnicianApiCommandPort(authSession, apiRead)
   const phone = dependencies.phone ?? createDefaultPhonePort()
+  const navigation = dependencies.navigation ?? createDefaultNavigationPort()
   sessionStore.configureAuth(authSession)
   const workOrderListStore = useWorkOrderListStore(pinia)
   const workOrderDetailStore = useWorkOrderDetailStore(pinia)
@@ -45,6 +49,7 @@ export function createApplication(dependencies: ApplicationDependencies = {}) {
   )
   workOrderListStore.configureCommandApi(apiCommand, () => workOrderDetailStore.clear())
   workOrderListStore.configurePhone(phone)
+  workOrderListStore.configureNavigation(navigation)
   workOrderDetailStore.configureApi(
     apiRead,
     () => sessionStore.session,

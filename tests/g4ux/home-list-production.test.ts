@@ -94,6 +94,7 @@ describe('G4-UX Work Order List card', () => {
     expect(listTemplate).toContain('!canAccess')
     expect(listTemplate).toContain(':url="listActionFor(item).detailAccessible ? workOrderDetailRouteFor(item.id) : \'\'"')
     expect(listTemplate).toContain('listActionFor(item).acceptOrder')
+    expect(listPage).toContain('await workOrders.navigateTo(workOrderDetailRouteFor(item.id))')
     expect(listPage).toContain('session.status')
   })
 
@@ -121,6 +122,7 @@ describe('G4-UX Work Order List card', () => {
     expect(workOrderCardToneFor('跟进签约')).toBe('orange')
     expect(workOrderCardToneFor('验收回款')).toBe('green')
     expect(workOrderCardToneFor('待接单')).toBe('blue')
+    expect(workOrderCardToneFor('待预约')).toBe('orange')
     expect(workOrderCardToneFor('联系客户')).toBe('red')
     expect(workOrderCardToneFor('暂不上门')).toBe('gray')
     expect(workOrderCardToneFor('待下单')).toBe('purple')

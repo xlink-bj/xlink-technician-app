@@ -128,9 +128,9 @@
           <text class="appointment-card-title">预约上门时间</text>
           <text class="appointment-card-caption">请填写客户确认的上门安排</text>
         </view>
-        <view v-for="field in workOrder.appointmentForm.fields" :key="field.key" class="appointment-field">
+        <view v-for="field in workOrder.appointmentFields" :key="field.key" class="appointment-field">
           <text class="appointment-field-label">
-            {{ field.label }}<text v-if="field.required" class="appointment-required"> *</text>
+            {{ field.label }}<text v-if="field.runtime.required" class="appointment-required"> *</text>
           </text>
           <view v-if="field.options?.length" class="appointment-options">
             <button
@@ -138,7 +138,7 @@
               :key="option.value"
               class="appointment-option"
               :class="{ 'appointment-option--selected': String(workOrder.appointmentForm.values[field.key] ?? '') === option.value }"
-              :disabled="field.readOnly"
+              :disabled="field.runtime.readOnly"
               @tap="setAppointmentField(field.key, option.value)"
             >
               {{ option.label }}
@@ -148,14 +148,14 @@
             v-else-if="field.type === 'textarea'"
             class="appointment-textarea"
             :value="String(workOrder.appointmentForm.values[field.key] ?? '')"
-            :disabled="field.readOnly"
+            :disabled="field.runtime.readOnly"
             @input="updateAppointmentField(field.key, $event)"
           />
           <input
             v-else
             class="appointment-input"
             :value="String(workOrder.appointmentForm.values[field.key] ?? '')"
-            :disabled="field.readOnly"
+            :disabled="field.runtime.readOnly"
             @input="updateAppointmentField(field.key, $event)"
           />
         </view>

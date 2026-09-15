@@ -142,14 +142,14 @@ function acceptMockWorkOrder(id: string): void {
   const listNode = mutableRecord(listItem)
   if (listNode) {
     const listData = mutableRecord(listNode.data)
-    if (listData) listData.status = 'mock-status-contact'
+    if (listData) listData.status = 'mock-status-appointment-pending'
     listNode.nodeDef = { nodeType: 'forms', name: '预约上门时间', formDefId: appointmentFormDefinitionWireId, userChoose: ['synthetic-role'] }
     listNode.state = 0
   }
 
   const data = detailDataForWorkOrder(id)
   if (data) {
-    data.status = 'mock-status-contact'
+    data.status = 'mock-status-appointment-pending'
     const nodes = detailNodesForWorkOrder(id)
     if (nodes) {
       nodes.splice(0, nodes.length, {

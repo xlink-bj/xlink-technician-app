@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 
 import type {
   AppointmentFormRead,
@@ -22,7 +22,12 @@ import {
   type WorkOrderId,
   type WorkflowNodeRuntimeId,
 } from '@shared/types'
-import { validateAppointmentForm, validateAppointmentValue } from './appointment-validation'
+import {
+  appointmentRuntimeFieldsFor,
+  normalizeAppointmentFieldValue,
+  normalizeAppointmentForm,
+  type AppointmentRuntimeField,
+} from './appointment-form-runtime'
 
 export const workOrderDetailRoute = '/pages/work-orders/detail' as const
 
@@ -77,6 +82,9 @@ export const useWorkOrderDetailStore = defineStore('workOrderDetail', () => {
   const contactInFlight = ref(false)
   const appointmentState = ref<AppointmentOperationState>('idle')
   const appointmentForm = ref<AppointmentFormRead | null>(null)
+  const appointmentFields = computed<readonly AppointmentRuntimeField[]>(() =>
+    appointmentForm.value ? appointmentRuntimeFieldsFor(appointmentForm.value) : [],
+  )
   const appointmentError = ref<OperationError | null>(null)
   const appointmentNodeId = ref<WorkflowNodeRuntimeId | null>(null)
 
@@ -274,18 +282,21 @@ export const useWorkOrderDetailStore = defineStore('workOrderDetail', () => {
     if (!appointmentForm.value) return failure('validation', 'Appointment form is not ready')
     const field = appointmentForm.value.fields.find((candidate) => candidate.key === key)
     if (!field) return failure('validation', 'Appointment field is not supported')
-    const validation = validateAppointmentValue(field, value)
+    const validation = normalizeAppointmentFieldValue(field, value, appointmentForm.value.values)
     if (validation.state !== 'succeeded') {
       appointmentError.value = validation.error ?? null
       appointmentState.value = 'ready'
-      return validation
+      return {
+        state: validation.state,
+        ...(validation.error ? { error: validation.error } : {}),
+      }
     }
     appointmentForm.value = {
       ...appointmentForm.value,
-      values: { ...appointmentForm.value.values, [key]: value },
+      values: { ...appointmentForm.value.values, [key]: validation.data! },
     }
     appointmentError.value = null
-    return validation
+    return { state: 'succeeded', data: undefined }
   }
 
   async function submitAppointment(): Promise<OperationSnapshot<void>> {
@@ -300,11 +311,14 @@ export const useWorkOrderDetailStore = defineStore('workOrderDetail', () => {
     const workOrderId = lastWorkOrderId
     if (!workOrderId) return failure('validation', 'Work Order detail is not available')
 
-    const validation = validateAppointmentForm(appointmentForm.value)
+    const validation = normalizeAppointmentForm(appointmentForm.value)
     if (validation.state !== 'succeeded') {
       appointmentState.value = 'ready'
       appointmentError.value = validation.error ?? null
-      return validation
+      return {
+        state: validation.state,
+        ...(validation.error ? { error: validation.error } : {}),
+      }
     }
 
     appointmentState.value = 'submitting'
@@ -314,7 +328,7 @@ export const useWorkOrderDetailStore = defineStore('workOrderDetail', () => {
       workflowNodeId: appointmentNodeId.value,
       ...(detail.value.workflowRunId ? { workflowRunId: detail.value.workflowRunId } : {}),
       ...(appointmentForm.value.dataId ? { formDataId: appointmentForm.value.dataId } : {}),
-      values: appointmentForm.value.values,
+      values: validation.data ?? {},
     })
     if (result.state !== 'succeeded') {
       appointmentState.value = result.state === 'failed_retryable' ? 'failed_retryable' : 'failed_terminal'
@@ -376,6 +390,7 @@ export const useWorkOrderDetailStore = defineStore('workOrderDetail', () => {
     contactInFlight,
     appointmentState,
     appointmentForm,
+    appointmentFields,
     appointmentError,
     appointmentNodeId,
     configureApi,

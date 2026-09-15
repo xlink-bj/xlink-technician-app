@@ -10,6 +10,7 @@ This document records the implementation slice after the accepted G4-D0 evidence
 - Added the List pre-accept projection: one actor-eligible active `accept` node exposes `接单`; Detail navigation and direct contact remain unavailable until acceptance.
 - Added explicit confirmation UI when the R1-shaped `selfExamination` response is non-empty.
 - Added dynamic appointment form rendering from normalized definition fields and values. The observed semantic field shapes are `need`, `datetime`, and `note`; the UI does not hard-code backend form IDs.
+- Closed the Dynamic Form Runtime bridge for the appointment slice: normalized appointment fields are mapped to Runtime schemas, effective visibility/read-only/required state is Runtime-derived, declared options are Runtime-validated, and submission values are Runtime-normalized before the command Adapter receives them.
 - On command success, List and Detail state are invalidated and reread. Failed commands leave the existing read state intact; the UI never guesses the resulting status or workflow node.
 - Mock and real reads/commands use the same Adapter and semantic feature path. Synthetic work-order commands are locally owned and cannot fall through to real transport.
 - Mock and Real command responses share one transport normalization path. HTTP 200 `success: false` is a normalized failure, session markers become `session_invalid`, and malformed envelopes become `server_terminal`; backend messages are not presented by Vue.
@@ -24,6 +25,11 @@ Detail current-task selection remains exactly-one visible, active, supported, an
 ## Appointment mapping
 
 The Adapter recognizes the verified R1 appointment form definition internally and emits only the semantic `appointment` purpose. Form definition fields and existing form values are normalized into the typed read model. When no `formDataId` is present, the read returns the definition with empty values and does not query form data. When an ID is present, only that exact record is accepted and mismatches fail conservatively. Submit maps normalized values to the Adapter-owned form save command, obtains the saved form-data ID, then processes the current workflow node. Before submit, required fields, normalized option values, and read-only edits are checked locally; no date/time business-window rule is invented. `applyTimeStr` and calendar/reminder behavior remain read/display evidence only; no calendar write was added.
+
+The appointment slice is intentionally bounded to the currently evidenced scalar
+field values. If a future appointment definition introduces a normalized value
+shape outside the current command port, the Dynamic Form Runtime returns an
+explicit unsupported-capability result rather than silently sending it.
 
 ## Mock scenarios
 

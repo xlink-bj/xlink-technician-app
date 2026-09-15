@@ -196,11 +196,15 @@ describe('G4-D accept and appointment semantics', () => {
     await command.acceptOrder({ workOrderId: row.id, workflowNodeId: accept.workflowNodeId })
     const rereadList = await read.listWorkOrders({ page: 1, pageSize: 20 })
     const rereadRow = rereadList.data?.items.find((item) => String(item.id) === String(row.id))
-    expect(rereadRow?.taskLabel).toBe('联系客户')
+    expect(rereadRow?.taskLabel).toBe('待预约')
     expect(workOrderListActionFor(rereadRow!, session)).toMatchObject({ detailAccessible: true, contactAvailable: true })
     const acceptedDetail = await read.getWorkOrderDetail(row.id)
     const projection = detailWorkflowUiProjectionFor(acceptedDetail.data ?? null, session)
-    expect(projection.currentTask).toMatchObject({ title: '预约上门时间', actionIntent: 'set_appointment' })
+    expect(projection.currentTask).toMatchObject({
+      title: '预约上门时间',
+      actionIntent: 'set_appointment',
+      tone: 'orange',
+    })
     const form = await command.readAppointmentForm({})
     expect(form.data?.fields.map((field) => field.key)).toEqual(['need', 'datetime', 'note'])
     await command.submitAppointment({

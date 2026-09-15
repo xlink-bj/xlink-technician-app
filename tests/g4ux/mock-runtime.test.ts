@@ -313,7 +313,7 @@ describe('G4-UX business mock runtime', () => {
       {
         id: mockDetailScenarioIds[3],
         displayNumber: '16204',
-        taskLabel: '联系客户',
+        taskLabel: '待预约',
         servicePartLabel: '屋面',
         customerName: '演示客户丁',
         serviceDistrict: '朝阳区',
@@ -878,7 +878,7 @@ describe('G4-UX business mock runtime', () => {
     expect(raw).toMatchObject({
       data: expect.arrayContaining([
         expect.objectContaining({
-          data: expect.objectContaining({ status: mockSyntheticStatusCodes.contact }),
+          data: expect.objectContaining({ status: mockSyntheticStatusCodes.appointmentPending }),
         }),
         expect.objectContaining({
           data: expect.objectContaining({ status: mockSyntheticStatusCodes.onsite }),
@@ -892,7 +892,7 @@ describe('G4-UX business mock runtime', () => {
 
     expect(mockStatusOptionsResponse.data).toEqual(
       expect.arrayContaining([
-        { value: mockSyntheticStatusCodes.contact, codelabel: '联系客户' },
+        { value: mockSyntheticStatusCodes.appointmentPending, codelabel: '待预约' },
         { value: mockSyntheticStatusCodes.onsite, codelabel: '现场服务' },
         { value: mockSyntheticStatusCodes.visit, codelabel: '上门服务' },
         { value: mockSyntheticStatusCodes.deferred, codelabel: '暂不上门' },

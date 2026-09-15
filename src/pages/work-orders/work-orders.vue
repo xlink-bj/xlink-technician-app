@@ -331,6 +331,9 @@ async function requestAccept(item: WorkOrderSummary): Promise<void> {
     workflowNodeId: action.workflowNodeId,
   })
   if (result.state === 'confirmation_required') acceptCandidate.value = item
+  if (result.state === 'succeeded') {
+    await workOrders.navigateTo(workOrderDetailRouteFor(item.id))
+  }
 }
 
 async function confirmAccept(): Promise<void> {
@@ -346,6 +349,9 @@ async function confirmAccept(): Promise<void> {
     workflowNodeId: action.workflowNodeId,
   }, true)
   if (result.state !== 'confirmation_required') acceptCandidate.value = null
+  if (result.state === 'succeeded') {
+    await workOrders.navigateTo(workOrderDetailRouteFor(item.id))
+  }
 }
 
 function cancelAccept(): void {

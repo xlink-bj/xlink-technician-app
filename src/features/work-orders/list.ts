@@ -3,6 +3,7 @@ import { ref } from 'vue'
 
 import type {
   AcceptOrderInput,
+  NavigationPort,
   PhonePort,
   ReadPage,
   SessionSnapshot,
@@ -55,6 +56,7 @@ export const useWorkOrderListStore = defineStore('workOrderList', () => {
   let getSession: () => SessionSnapshot | null = () => null
   let invalidateSession: SessionInvalidation | null = null
   let phone: PhonePort | null = null
+  let navigation: NavigationPort | null = null
   let commandApi: TechnicianApiCommandPort | null = null
   let onAcceptSuccess: ((workOrderId: WorkOrderSummary['id']) => void) | null = null
   const acceptInFlightId = ref<WorkOrderSummary['id'] | null>(null)
@@ -74,6 +76,14 @@ export const useWorkOrderListStore = defineStore('workOrderList', () => {
 
   function configurePhone(nextPhone: PhonePort): void {
     phone = nextPhone
+  }
+
+  function configureNavigation(nextNavigation: NavigationPort): void {
+    navigation = nextNavigation
+  }
+
+  function navigateTo(url: string): Promise<void> {
+    return navigation ? navigation.navigate(url) : Promise.resolve()
   }
 
   function configureCommandApi(
@@ -294,6 +304,8 @@ export const useWorkOrderListStore = defineStore('workOrderList', () => {
     acceptError,
     configureApi,
     configurePhone,
+    configureNavigation,
+    navigateTo,
     configureCommandApi,
     acceptOrder,
     dialContact,

@@ -1,5 +1,6 @@
 import type {
   AuthSessionPort,
+  NavigationPort,
   PhonePort,
   TechnicianApiCommandPort,
   TechnicianApiReadPort,
@@ -16,6 +17,7 @@ import { createSemanticStorageAdapter } from '@adapters/storage/storage-adapter'
 import { createUniStorageDriver } from '@adapters/storage/uni-storage-driver'
 import { createPlatformAdapters } from '@adapters/platform/platform-adapters'
 import { createUniPhoneDriver } from '@adapters/platform/uni-phone-driver'
+import { createUniNavigationDriver } from '@adapters/platform/uni-navigation-driver'
 
 import { loadApplicationRuntimeConfig } from './runtime-config'
 
@@ -109,4 +111,8 @@ export function createDefaultTechnicianApiCommandPort(
 
 export function createDefaultPhonePort(): PhonePort {
   return createPlatformAdapters({ phone: createUniPhoneDriver() }).phone
+}
+
+export function createDefaultNavigationPort(): NavigationPort {
+  return createPlatformAdapters({ navigation: createUniNavigationDriver() }).navigation
 }

@@ -58,3 +58,7 @@ export interface ScanPort {
 export interface PhonePort {
   dial(input: PhoneDialRequest): Promise<CapabilityResult<void>>
 }
+
+export interface NavigationPort {
+  navigate(url: string): Promise<void>
+}

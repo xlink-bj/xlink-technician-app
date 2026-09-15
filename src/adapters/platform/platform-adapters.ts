@@ -6,6 +6,7 @@ import type {
   LocationSnapshot,
   MediaCapturePort,
   MediaFilePickerPort,
+  NavigationPort,
   PhoneDialRequest,
   PhonePort,
   ScanPort,
@@ -54,6 +55,10 @@ export interface ScanDriver {
 
 export interface PhoneDriver {
   dial(input: PhoneDialRequest): Promise<PlatformDriverResult>
+}
+
+export interface NavigationDriver {
+  navigate(url: string): Promise<void>
 }
 
 const supportedStates = new Set<PlatformDriverState>([
@@ -155,6 +160,7 @@ export interface PlatformDrivers {
   readonly calendar?: CalendarDriver
   readonly scan?: ScanDriver
   readonly phone?: PhoneDriver
+  readonly navigation?: NavigationDriver
 }
 
 export interface PlatformAdapters {
@@ -164,6 +170,7 @@ export interface PlatformAdapters {
   readonly calendar: CalendarPort
   readonly scan: ScanPort
   readonly phone: PhonePort
+  readonly navigation: NavigationPort
 }
 
 export function createPlatformAdapters(drivers: PlatformDrivers = {}): PlatformAdapters {
@@ -207,7 +214,13 @@ export function createPlatformAdapters(drivers: PlatformDrivers = {}): PlatformA
         : unsupported('phone'),
   }
 
-  return { location, mediaCapture, mediaFilePicker, calendar, scan, phone }
+  const navigation: NavigationPort = {
+    navigate: (url) => drivers.navigation
+      ? drivers.navigation.navigate(url)
+      : Promise.reject(new Error('Navigation is unsupported on this platform')),
+  }
+
+  return { location, mediaCapture, mediaFilePicker, calendar, scan, phone, navigation }
 }
 
 export function createUnsupportedPlatformAdapters(): PlatformAdapters {

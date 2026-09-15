@@ -96,11 +96,11 @@ the accepted semantic summary. The records intentionally include:
 - short and long synthetic display numbers/customer/address values;
 - two raw service-type values retained only to exercise backend-shaped input;
 - mixed district presence to prove optional-field handling;
-- the status labels `联系客户`, `跟进签约`, `现场服务`, `上门服务`,
+- the status labels `待预约`, `跟进签约`, `现场服务`, `上门服务`,
   `暂不上门`, `待接单`, `待下单`, `跟进方案`, `验收回款`, and `待评价`,
   resolved through the real Mock STATUS code-table path rather than a page
   status map. The additional visual-review samples use explicit synthetic
-  values such as `mock-status-contact` and `mock-status-onsite`; they do not
+  values such as `mock-status-appointment-pending` and `mock-status-onsite`; they do not
   claim production numeric code meanings. R2 supplies presentation examples
   only, while R1/backend evidence remains the business-semantic authority;
 - both `屋面` and `卫生间` service-part labels from the Mock cascade.
