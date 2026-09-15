@@ -2,13 +2,17 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
 import type {
+  PhonePort,
   ReadPage,
   SessionSnapshot,
   TechnicianApiReadPort,
   WorkOrderSummary,
 } from '@shared/ports'
 import {
+  createCapabilityResult,
   createOperationError,
+  type CapabilityResult,
+  type CapabilityState,
   type ErrorCategory,
   type OperationError,
   type OperationSnapshot,
@@ -39,13 +43,18 @@ export const useWorkOrderListStore = defineStore('workOrderList', () => {
   const items = ref<readonly WorkOrderSummary[]>([])
   const page = ref(1)
   const pageSize = ref(20)
+  const searchText = ref('')
   const totalCount = ref<number | undefined>(undefined)
   const hasMore = ref<boolean | undefined>(undefined)
   const error = ref<OperationError | null>(null)
+  const contactState = ref<CapabilityState>('not_requested')
+  const contactInFlightId = ref<WorkOrderSummary['id'] | null>(null)
   let api: TechnicianApiReadPort | null = null
   let getSession: () => SessionSnapshot | null = () => null
   let invalidateSession: SessionInvalidation | null = null
+  let phone: PhonePort | null = null
   let lastLoadWasAppend = false
+  let loadVersion = 0
 
   function configureApi(
     nextApi: TechnicianApiReadPort,
@@ -57,11 +66,60 @@ export const useWorkOrderListStore = defineStore('workOrderList', () => {
     invalidateSession = sessionInvalidation ?? null
   }
 
+  function configurePhone(nextPhone: PhonePort): void {
+    phone = nextPhone
+  }
+
+  function contactFailure(state: CapabilityState, reason: string): CapabilityResult<void> {
+    return createCapabilityResult<void>('phone', state, undefined, reason)
+  }
+
+  async function dialContact(item: WorkOrderSummary): Promise<CapabilityResult<void>> {
+    const contact = item.contact
+    if (!contact?.normalizedPhone) {
+      const result = contactFailure('unavailable', 'A direct customer phone contact is not available')
+      contactState.value = result.state
+      return result
+    }
+    if (!phone) {
+      const result = contactFailure('unsupported_platform', 'Phone contact is not configured')
+      contactState.value = result.state
+      return result
+    }
+    if (contactInFlightId.value) {
+      const result = contactFailure('unavailable', 'Phone contact is already in progress')
+      contactState.value = result.state
+      return result
+    }
+
+    contactInFlightId.value = item.id
+    try {
+      const result = await phone.dial({
+        normalizedPhone: contact.normalizedPhone,
+        ...(contact.contactRef ? { contactRef: contact.contactRef } : {}),
+      })
+      contactState.value = result.state
+      return result
+    } finally {
+      contactInFlightId.value = null
+    }
+  }
+
   function clearList(): void {
+    loadVersion += 1
     items.value = []
     page.value = 1
     totalCount.value = undefined
     hasMore.value = undefined
+  }
+
+  function clear(): void {
+    clearList()
+    lastLoadWasAppend = false
+    contactState.value = 'not_requested'
+    contactInFlightId.value = null
+    loadState.value = 'idle'
+    error.value = null
   }
 
   async function setFailure(
@@ -119,11 +177,18 @@ export const useWorkOrderListStore = defineStore('workOrderList', () => {
     const refresh = options.refresh === true
     const append = options.append === true
     const requestedPage = refresh ? 1 : append ? page.value + 1 : page.value
+    const requestVersion = ++loadVersion
     lastLoadWasAppend = append
     loadState.value = 'loading'
     error.value = null
 
-    const result = await api.listWorkOrders({ page: requestedPage, pageSize: pageSize.value })
+    const normalizedSearchText = searchText.value.trim()
+    const result = await api.listWorkOrders({
+      page: requestedPage,
+      pageSize: pageSize.value,
+      ...(normalizedSearchText ? { searchText: normalizedSearchText } : {}),
+    })
+    if (requestVersion !== loadVersion) return result
     if (result.state === 'succeeded' && result.data) {
       const responsePage = result.data.page ?? requestedPage
       const responsePageSize = result.data.pageSize ?? pageSize.value
@@ -146,6 +211,11 @@ export const useWorkOrderListStore = defineStore('workOrderList', () => {
     return load({ refresh: true })
   }
 
+  function search(value: string): Promise<OperationSnapshot<ReadPage<WorkOrderSummary>>> {
+    searchText.value = value.trim()
+    return load({ refresh: true })
+  }
+
   function retry(): Promise<OperationSnapshot<ReadPage<WorkOrderSummary>>> {
     return load({ append: lastLoadWasAppend })
   }
@@ -162,13 +232,20 @@ export const useWorkOrderListStore = defineStore('workOrderList', () => {
     items,
     page,
     pageSize,
+    searchText,
     totalCount,
     hasMore,
     error,
+    contactState,
+    contactInFlightId,
     configureApi,
+    configurePhone,
+    dialContact,
     load,
     refresh,
+    search,
     retry,
     loadMore,
+    clear,
   }
 })

@@ -29,6 +29,16 @@ function isTargetPlatform(value: unknown): value is TargetPlatform {
   return typeof value === 'string' && targetPlatforms.includes(value as TargetPlatform)
 }
 
+function httpUrlIssue(value: string): string | undefined {
+  const normalized = value.trim()
+  const match = /^([a-z][a-z\d+.-]*):\/\/([^/?#\s]+)(?:[/?#][^\s]*)?$/i.exec(normalized)
+  if (!match) return 'apiBaseUrl must be a valid URL'
+  if (!['http', 'https'].includes(match[1].toLowerCase())) {
+    return 'apiBaseUrl must use http or https'
+  }
+  return undefined
+}
+
 export function parseEnvironmentConfig(input: unknown): EnvironmentConfigResult {
   if (!isRecord(input)) {
     return { ok: false, issues: ['configuration must be an object'] }
@@ -45,14 +55,8 @@ export function parseEnvironmentConfig(input: unknown): EnvironmentConfigResult 
   if (typeof input.apiBaseUrl !== 'string' || input.apiBaseUrl.trim().length === 0) {
     issues.push('apiBaseUrl is required')
   } else {
-    try {
-      const parsed = new URL(input.apiBaseUrl)
-      if (!['http:', 'https:'].includes(parsed.protocol)) {
-        issues.push('apiBaseUrl must use http or https')
-      }
-    } catch {
-      issues.push('apiBaseUrl must be a valid URL')
-    }
+    const issue = httpUrlIssue(input.apiBaseUrl)
+    if (issue) issues.push(issue)
   }
 
   const flags = input.flags ?? {}

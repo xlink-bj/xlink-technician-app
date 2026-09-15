@@ -13,10 +13,15 @@ function endpointUrl(baseUrl: string, path: string): string {
   return `${baseUrl.replace(/\/+$/, '')}/${path.replace(/^\/+/, '')}`
 }
 
-function formEncode(body: Readonly<Record<string, string>>): string {
-  return Object.entries(body)
-    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
-    .join('&')
+function wireForm(body: Readonly<Record<string, string>>): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(body).map(([key, value]) => {
+      // AuthSessionAdapter keeps tenant semantic inside the adapter boundary;
+      // R1's phoneLogin endpoint names the actual wire field tenantId.
+      const wireKey = key === 'tenant' ? 'tenantId' : key
+      return [wireKey, value]
+    }),
+  )
 }
 
 function defaultRequest(options: UniNamespace.RequestOptions): unknown {
@@ -53,10 +58,11 @@ export function createUniAuthBackendDriver(options: UniAuthBackendOptions): Auth
       response = await requestResponse(request, {
         url: endpointUrl(options.apiBaseUrl, input.path),
         method: 'POST',
-        data: formEncode(input.body),
+        // Keep the request shape identical to the verified consumer/R1 call:
+        // uni/wx serializes the object according to the form content type.
+        data: wireForm(input.body),
         header: { 'Content-Type': 'application/x-www-form-urlencoded' },
         dataType: 'json',
-        responseType: 'json',
         ...(options.timeoutMs === undefined ? {} : { timeout: options.timeoutMs }),
       })
     } catch (error) {

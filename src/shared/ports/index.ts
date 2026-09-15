@@ -1,16 +1,25 @@
 export type {
+  CascadeCodeOptionsQuery,
   CodeOptionRead,
   CodeOptionsQuery,
   FormDataRead,
   FormDefinitionRead,
   ReadPage,
   TechnicianApiReadPort,
+  WorkOrderActivity,
+  WorkOrderActivityIcon,
   WorkOrderContact,
   WorkOrderDetail,
   WorkOrderListQuery,
   WorkOrderSummary,
+  WorkOrderTaskTone,
   WorkflowDefinitionRead,
+  WorkflowHandlerIdentity,
+  WorkflowNodeCategory,
+  WorkflowNodeLifecycle,
   WorkflowNodeRead,
+  WorkflowNodeVisibilityEvidence,
+  WorkflowNodeVisibilityEvidenceState,
 } from './api'
 export type { AuthSessionPort, AuthStartRequest, SessionSnapshot } from './auth'
 export type {

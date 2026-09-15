@@ -3,25 +3,25 @@
     {
       "path": "pages/index/index",
       "style": {
-        "navigationBarTitleText": "XLink Technician"
+        "navigationBarTitleText": "修链"
       }
     },
     {
       "path": "pages/work-orders/work-orders",
       "style": {
-        "navigationBarTitleText": "Role-visible Work Orders"
+        "navigationBarTitleText": "工单"
       }
     },
     {
       "path": "pages/work-orders/detail",
       "style": {
-        "navigationBarTitleText": "Work Order Detail"
+        "navigationBarTitleText": "工单详情"
       }
     }
   ],
   "globalStyle": {
     "navigationBarTextStyle": "black",
-    "navigationBarTitleText": "XLink Technician",
+    "navigationBarTitleText": "修链",
     "navigationBarBackgroundColor": "#ffffff",
     "backgroundColor": "#ffffff"
   }

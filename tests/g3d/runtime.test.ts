@@ -54,6 +54,10 @@ function node(overrides: Partial<WorkflowNodeMetadata> = {}): WorkflowNodeMetada
     id: childNodeId,
     category: 'forms',
     lifecycle: 'active',
+    visibility: {
+      evidenceState: 'verified',
+      selectableRoleIds: [roleId],
+    },
     ...overrides,
   }
 }

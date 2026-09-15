@@ -30,23 +30,36 @@ The API Adapter maps only these evidence-backed semantic values:
 | Shared value | Evidence-backed source | Decision |
 | --- | --- | --- |
 | `id` | service-appointment `_id` | Existing `WorkOrderId` contract retained. |
-| `workflowRunId` | service-appointment/workflow run identity | Existing optional workflow identity retained. |
+| `workflowRunId` | service-appointment/workflow run identity | Existing optional workflow identity retained; workflow-node records remain adapter-internal. |
 | `displayNumber` | service-appointment `orderNum` | Added for useful detail identification. |
+| `taskLabel` | service-appointment `status` + adapter-owned `code/query` status labels | Added as the same normalized status/task label used by the frozen list; raw status codes never leave the adapter. |
+| `serviceDistrict` | service-appointment `district` + accepted county dictionary | Added for the detail summary location line; unmapped codes are omitted. |
 | `customerName` | service-appointment `name` | Added because the Legacy summary labels and displays it as customer name. |
 | `serviceAddress` | service-appointment `address` | Added because the Legacy summary displays the service address. |
+| `distanceText` | service-appointment `exts.distance` | Added as a display-ready read value when the backend supplies a finite non-negative distance; no client-side location calculation. |
 | `contact.contactRef` | first service-appointment `contactIds` entry | Added as an optional opaque `CustomerContactId`; it is never treated as `UserId` and is not required for direct dialing. |
 | `contact.normalizedPhone` | service-appointment `phone`, trimmed at the adapter boundary | In-memory action input only; it is not persisted, logged, or placed in a route. |
 | `contact.displayMask` | the evidenced `3 + 4 masked + 4` phone presentation pattern | Only the masked value is rendered; non-matching phone formats are not rendered. |
 
 Raw status/state codes, `exts`, workflow nodes, node definitions, appointment
-data, and backend envelopes are not part of the shared detail model. A usable
-status label requires an accepted code-label mapping and display policy, so it
-remains an explicit follow-up rather than a guessed status vocabulary. Missing
-or unauthorized-detail fallback behavior also remains UNKNOWN and is surfaced
-as a normalized read failure by the adapter.
+data, and backend envelopes are not part of the shared detail model. Status
+labels are read through the adapter-owned code table, matching the list model;
+an unknown code is omitted rather than guessed. Missing or unauthorized-detail
+fallback behavior remains UNKNOWN and is surfaced as a normalized read failure
+by the adapter.
 
-The page fetches only the detail subject. It does not load workflow, form,
-appointment, order, contract, activity, or contact-maintenance domains.
+The adapter accepts the R1-shaped detail envelope (`data.serviceAppointment`,
+`data.workflow`, and `data.workflowNode`) as well as the narrow fixture shape
+used by earlier tests. Only the service-appointment subject and optional
+workflow-run identity are normalized; workflow-node and node-definition data
+are deliberately not rendered by D1.
+
+The page fetches the detail subject and its read-only follow-up activity
+companion query. It does not load workflow, form, appointment, order,
+contract, or contact-maintenance domains. The visible information card is an
+explicit read-only set of verified fields and activity rows, not a generic
+backend key/value dump. If the companion activity read is empty or
+unavailable, the detail remains usable and renders the truthful empty state.
 
 ## Customer contact decision
 
@@ -91,8 +104,12 @@ The new Technician App adopts the following durable rule:
   Current Task surface, with primary and optional secondary actions;
 - action execution opens a dedicated sheet, modal, or page owned by that action
   surface;
-- the G4-C `Call customer` action is in a distinct Quick Actions region outside
-  the information card and rows;
+- the G4-C Quick Actions row is inside the Summary card but remains a distinct
+  action region outside the read-only information card and rows;
+- the current Summary action row presents the evidence-shaped actions `联系客户`,
+  `客户资料`, `记录跟进`, and `导航`; only direct phone contact executes in D1,
+  while the other actions provide explicit deferred feedback until their
+  corresponding read/platform contracts are verified;
 - G4-C does not implement Workflow Runtime actions, workflow execution, or
   Appointment behavior.
 

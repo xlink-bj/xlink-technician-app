@@ -45,6 +45,24 @@ describe('G3-B environment contract', () => {
     expect(result.ok).toBe(true)
   })
 
+  it('validates the API URL without a browser URL constructor', () => {
+    const originalUrl = globalThis.URL
+    Object.defineProperty(globalThis, 'URL', { configurable: true, value: undefined })
+
+    try {
+      const result = parseEnvironmentConfig({
+        environment: 'test',
+        platform: 'mp-weixin',
+        apiBaseUrl: 'https://example.invalid/fsgo/wm/',
+        flags: {},
+      })
+
+      expect(result.ok).toBe(true)
+    } finally {
+      Object.defineProperty(globalThis, 'URL', { configurable: true, value: originalUrl })
+    }
+  })
+
   it('rejects unsupported targets and secret defaults', () => {
     const result = parseEnvironmentConfig({
       environment: 'prod',

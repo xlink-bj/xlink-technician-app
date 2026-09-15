@@ -25,3 +25,12 @@ Rules:
 - No main merge or destructive git action without explicit human authorization.
 - Prefer coherent capability slices over micro-refactors.
 - Each meaningful implementation slice must be independently reviewable and rollbackable.
+
+## Frontend Quality Guardrail
+
+- R2 Live Mobile is the primary visual truth for G4-UX.
+- Frontend visual work must explicitly use `skills/xlink-r2-frontend-qa/SKILL.md`.
+- Visual implementation requires matched-viewport screenshot QA before handoff.
+- Production-grade frontend quality is a review requirement; weak engineering-shell UI is a blocker.
+- R2 visual reference does not authorize unsupported business semantics.
+- Screenshots remain local review artifacts unless explicitly requested.

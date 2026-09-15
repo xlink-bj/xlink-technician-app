@@ -13,10 +13,23 @@ export interface NodeVisibilityDecision {
 function matchesHandler(actor: WorkflowActor, handler: HandlerIdentity): boolean {
   if (handler.kind === 'user') return actor.userId === handler.userId
   if (handler.kind === 'role') return actor.roleIds.some((roleId) => roleId === handler.roleId)
+  if (handler.kind === 'unclassified') {
+    return (
+      String(actor.userId) === handler.value ||
+      actor.roleIds.some((roleId) => String(roleId) === handler.value) ||
+      actor.organizationRoles.some(
+        (organizationRole) => `${organizationRole.organizationId}+${organizationRole.roleId}` === handler.value,
+      )
+    )
+  }
   return actor.organizationRoles.some(
     (organizationRole) =>
       organizationRole.organizationId === handler.organizationId && organizationRole.roleId === handler.roleId,
   )
+}
+
+function matchesRoleId(actor: WorkflowActor, roleIds: readonly string[]): boolean {
+  return roleIds.some((roleId) => actor.roleIds.some((actorRoleId) => String(actorRoleId) === roleId))
 }
 
 export function isHandlerMatch(actor: WorkflowActor, handlers: readonly HandlerIdentity[]): boolean {
@@ -30,12 +43,23 @@ export function evaluateNodeVisibility(
   if (node.isSystem || node.isSentinel || node.category === 'system' || node.category === 'sentinel') {
     return { visible: false, reason: 'system_node' }
   }
+  if (node.lifecycle === 'unknown') return { visible: false, reason: 'policy_unverified' }
   if (node.lifecycle !== 'active') return { visible: false, reason: 'node_inactive' }
   if (node.category === 'accept' || node.category === 'allot' || node.category === 'dispatch') {
     return { visible: false, reason: 'non_user_node' }
   }
   if (node.category === 'unsupported') return { visible: false, reason: 'unsupported_node_type' }
-  if (node.handlers && node.handlers.length > 0 && (!actor || !isHandlerMatch(actor, node.handlers))) {
+  const evidence = node.visibility
+  if (!evidence || evidence.evidenceState !== 'verified') {
+    return { visible: false, reason: 'policy_unverified' }
+  }
+  if (!actor) return { visible: false, reason: 'not_handler' }
+
+  const handlerMatch = node.handlers ? isHandlerMatch(actor, node.handlers) : false
+  const roleMatch =
+    (evidence.selectableRoleIds && matchesRoleId(actor, evidence.selectableRoleIds)) ||
+    (evidence.viewableRoleIds && matchesRoleId(actor, evidence.viewableRoleIds))
+  if (!handlerMatch && !roleMatch) {
     return { visible: false, reason: 'not_handler' }
   }
   return { visible: true }

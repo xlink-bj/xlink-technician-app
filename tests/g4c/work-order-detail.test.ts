@@ -47,6 +47,7 @@ const detail: WorkOrderDetail = {
   id: workOrderId,
   workflowRunId: asOpaqueId<'WorkflowRunId'>('workflow-run-001'),
   displayNumber: 'WO-SANITIZED-001',
+  taskLabel: '待联系',
   customerName: 'Sanitized Customer',
   serviceAddress: 'Sanitized service address',
   contact: {
@@ -54,6 +55,14 @@ const detail: WorkOrderDetail = {
     normalizedPhone: '13800000000',
     displayMask: '138****0000',
   },
+  workflowNodes: [
+    {
+      id: asOpaqueId<'WorkflowNodeRuntimeId'>('workflow-node-001'),
+      category: 'unsupported',
+      lifecycle: 'unknown',
+      visibility: { evidenceState: 'missing' },
+    },
+  ],
 }
 
 function success<T>(data: T): OperationSnapshot<T> {
@@ -84,20 +93,30 @@ describe('G4-C API detail mapping and route identity', () => {
     const transport: ApiReadTransport = {
       execute: vi.fn(async (request) => {
         requests.push(request)
+        if (request.path === 'code/query') {
+          return {
+            data: [{ value: '104', codelabel: '待联系' }],
+            page: 1,
+            rows: 20,
+            total: 1,
+          }
+        }
         return {
-          serviceAppointment: {
-            _id: 'work-order-001',
-            orderNum: 'WO-SANITIZED-001',
-            name: 'Sanitized Customer',
-            address: 'Sanitized service address',
-            phone: '13800000000',
-            contactIds: ['contact-001'],
-            workflowRunId: 'workflow-run-001',
-            status: '104',
-            exts: { sourceType: 'sanitized-source' },
+          data: {
+            serviceAppointment: {
+              _id: 'work-order-001',
+              orderNum: 'WO-SANITIZED-001',
+              name: 'Sanitized Customer',
+              address: 'Sanitized service address',
+              phone: '13800000000',
+              contactIds: ['contact-001'],
+              workflowRunId: 'workflow-run-001',
+              status: '104',
+              exts: { sourceType: 'sanitized-source' },
+            },
+            workflow: { _id: 'workflow-run-001' },
+            workflowNode: [{ _id: 'workflow-node-001', nodeDef: { nodeType: 'sanitized' } }],
           },
-          workflow: { _id: 'workflow-run-001' },
-          workflowNode: { _id: 'workflow-node-001', nodeDef: { nodeType: 'sanitized' } },
         }
       }),
     }
@@ -115,6 +134,7 @@ describe('G4-C API detail mapping and route identity', () => {
       path: 'basic/serviceAppointment/queryById/work-order-001',
       body: { type: 'query' },
     })
+    expect(requests[1].path).toBe('code/query')
   })
 
   it('passes only a validated semantic WorkOrderId from list navigation to detail', () => {

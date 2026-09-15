@@ -10,8 +10,14 @@ import {
 import { createUniApiReadTransport, type UniApiRequestExecutor } from '@adapters/api/uni-api-read-transport'
 import { hasAuthenticatedSession, workOrdersRoute } from '@features/home/access'
 import { useWorkOrderListStore } from '@features/work-orders/list'
-import type { AuthSessionPort, SessionSnapshot, TechnicianApiReadPort, WorkOrderSummary } from '@shared/ports'
-import { asOpaqueId, createOperationError, type OperationSnapshot } from '@shared/types'
+import type {
+  AuthSessionPort,
+  PhonePort,
+  SessionSnapshot,
+  TechnicianApiReadPort,
+  WorkOrderSummary,
+} from '@shared/ports'
+import { asOpaqueId, createCapabilityResult, createOperationError, type OperationSnapshot } from '@shared/types'
 import { useSessionStore } from '@shared/state'
 
 type WorkOrderPage = {
@@ -29,7 +35,9 @@ const authenticatedSession: SessionSnapshot = {
 
 const firstWorkOrder: WorkOrderSummary = {
   id: asOpaqueId<'WorkOrderId'>('work-order-001'),
-  title: 'Sanitized work order',
+  displayNumber: 'DEMO-SA-001',
+  customerName: 'Sanitized customer',
+  serviceAddress: 'Sanitized service address',
 }
 
 function page(
@@ -53,9 +61,11 @@ function configureStore(
   api: TechnicianApiReadPort,
   session: SessionSnapshot | null = authenticatedSession,
   sessionInvalidation?: () => Promise<unknown>,
+  phone?: PhonePort,
 ) {
   const store = useWorkOrderListStore()
   store.configureApi(api, () => session, sessionInvalidation)
+  if (phone) store.configurePhone(phone)
   return store
 }
 
@@ -80,6 +90,28 @@ describe('G4-B Home access and Work Order List feature', () => {
     expect(hasAuthenticatedSession('authenticated', null)).toBe(false)
     expect(hasAuthenticatedSession('unauthenticated', authenticatedSession)).toBe(false)
     expect(workOrdersRoute).toBe('/pages/work-orders/work-orders')
+  })
+
+  it('issues a semantic phone command from the list card without exposing phone mechanics', async () => {
+    const dial = vi.fn(async () => createCapabilityResult<void>('phone', 'granted'))
+    const phone: PhonePort = { dial }
+    const item: WorkOrderSummary = {
+      ...firstWorkOrder,
+      contact: { normalizedPhone: '13800000000', displayMask: '138****0000' },
+    }
+    const store = configureStore(
+      listApi(vi.fn(async () => page([item]))),
+      authenticatedSession,
+      undefined,
+      phone,
+    )
+
+    await store.load()
+    const result = await store.dialContact(item)
+
+    expect(result.state).toBe('granted')
+    expect(dial).toHaveBeenCalledWith({ normalizedPhone: '13800000000' })
+    expect(store.contactInFlightId).toBeNull()
   })
 
   it('exposes loading state and rejects a duplicate list request', async () => {
@@ -222,6 +254,28 @@ describe('G4-B Home access and Work Order List feature', () => {
     expect(listWorkOrders).toHaveBeenLastCalledWith({ page: 1, pageSize: 20 })
     expect(store.items).toEqual([{ id: 'work-order-003' }])
   })
+
+  it('trims search text, resets to page one, and omits blank search input', async () => {
+    const listWorkOrders = vi
+      .fn()
+      .mockResolvedValueOnce(page([firstWorkOrder], 2, 3))
+      .mockResolvedValueOnce(page([], 1, 0))
+      .mockResolvedValueOnce(page([firstWorkOrder], 1, 1))
+    const store = configureStore(listApi(listWorkOrders))
+
+    await store.load()
+    await store.search('  customer  ')
+    expect(store.searchText).toBe('customer')
+    expect(listWorkOrders).toHaveBeenNthCalledWith(2, {
+      page: 1,
+      pageSize: 20,
+      searchText: 'customer',
+    })
+
+    await store.search('   ')
+    expect(store.searchText).toBe('')
+    expect(listWorkOrders).toHaveBeenNthCalledWith(3, { page: 1, pageSize: 20 })
+  })
 })
 
 describe('G4-B uni read composition boundary', () => {
@@ -267,7 +321,12 @@ describe('G4-B uni read composition boundary', () => {
               _id: 'workflow-node-001',
               state: 1,
               nodeDef: { nodeType: 'sanitized-node' },
-              data: { _id: 'work-order-001', name: 'Sanitized work order' },
+              data: {
+                _id: 'work-order-001',
+                orderNum: 'DEMO-SA-001',
+                name: 'Sanitized customer',
+                address: 'Sanitized service address',
+              },
             },
           ],
           page: 1,
@@ -365,7 +424,15 @@ describe('G4-B uni read composition boundary', () => {
       requests.push(options)
       options.success?.({
         data: {
-          data: [{ id: 'work-order-001', title: 'Sanitized work order', stateCode: 'legacy-state' }],
+          data: [
+            {
+              id: 'work-order-001',
+              orderNum: 'DEMO-SA-001',
+              name: 'Sanitized customer',
+              address: 'Sanitized service address',
+              stateCode: 'legacy-state',
+            },
+          ],
           page: 1,
           rows: 20,
           total: 1,
@@ -390,11 +457,13 @@ describe('G4-B uni read composition boundary', () => {
       url: 'https://beta.example.invalid/fsgo/wm/basic/serviceAppointment/query',
       method: 'POST',
       data: 'page=1&rows=20',
+      dataType: 'json',
       header: {
         'Content-Type': 'application/x-www-form-urlencoded',
         Cookie: 'JSESSIONID=sanitized-session-token',
       },
     })
+    expect(requests[0]).not.toHaveProperty('responseType')
   })
 
   it('does not execute an API request without a session reference', async () => {

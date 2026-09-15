@@ -52,17 +52,28 @@ export function createDefaultTechnicianApiReadPort(authSession: AuthSessionPort)
       getFormData: async () => blocked(),
       getFormDetail: async () => blocked(),
       getCodeOptions: async () => blocked(),
+      getCascadeCodeOptions: async () => blocked(),
     }
   }
 
   const transport = createUniApiReadTransport({
     apiBaseUrl: config.value.environment.apiBaseUrl,
     getSessionRef: () => authSession.getCurrentSession()?.sessionRef ?? null,
+    getMockActor: () => {
+      const session = authSession.getCurrentSession()
+      return session
+        ? {
+            userId: session.user.id,
+            ...(session.currentRole ? { roleId: session.currentRole.id } : {}),
+          }
+        : null
+    },
   })
 
   return createRoleScopedTechnicianApiReadAdapter(
     transport,
     () => authSession.getCurrentSession()?.currentRole?.id ?? null,
+    { cascadeTenantId: config.value.authWireConfig.tenant },
   )
 }
 

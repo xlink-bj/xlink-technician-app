@@ -77,6 +77,36 @@ previous session's menu scope.
 These unknowns do not justify exposing backend menu/query conventions in the
 shared port or feature/UI layers.
 
+## Data fidelity follow-up
+
+The accepted role-visible list scope remains unchanged. The enriched semantic
+row decision and field-by-field evidence matrix are recorded in
+[`G4B_WORK_ORDER_DATA_FIDELITY.md`](./G4B_WORK_ORDER_DATA_FIDELITY.md). The
+current list UI is intentionally not visually redesigned by that follow-up;
+it only consumes normalized values. The current adapter disposition is recorded
+in [`G4B_LIST_DATA_HARDENING.md`](./G4B_LIST_DATA_HARDENING.md).
+
+## V5 bounded semantic additions
+
+The accepted search proposal is now implemented as the single optional
+semantic input `WorkOrderListQuery.searchText`. The feature trims it, treats
+blank input as absent, resets reads to page one, and applies the same input to
+ordinary and SANode modes. The API Adapter alone projects the input to the
+six R1-evidenced server-side search fields (`title`, `name`, `phone`,
+`address`, `describe`, and `orderNum`); those raw keys do not cross the shared
+port.
+
+The accepted district decision is now implemented as the optional semantic
+`WorkOrderSummary.serviceDistrict`. The API Adapter resolves raw
+`data.district` through an adapter-owned copy of the pinned R1 `county_list`
+dictionary. Missing or unmapped codes omit the field, and `serviceAddress`
+remains a separate raw-address mapping; the adapter never parses the address
+to infer a district.
+
+No status, type, category, appointment, distance, nearby, phone, tab, count,
+or arbitrary-filter field was added. These remain deferred or unknown under
+the existing G4-B scope decision.
+
 ## Session-invalid invariant
 
 When the normalized API read result is `session_invalid`, the Work Order List

@@ -5,6 +5,7 @@ import {
   type ApiReadRequest,
   type ApiReadTransport,
 } from './technician-api'
+import { isMockOwnedRead, tryMockRead, type MockReadActor } from './mock'
 
 export type UniApiRequestExecutor = (options: UniNamespace.RequestOptions) => unknown
 
@@ -13,6 +14,9 @@ export interface UniApiReadTransportOptions {
   readonly getSessionRef: () => SessionRef | null
   readonly request?: UniApiRequestExecutor
   readonly timeoutMs?: number
+  readonly mockLatencyMs?: number
+  /** Supplies the real authenticated actor for bounded mock visibility markers. */
+  readonly getMockActor?: () => MockReadActor | null
 }
 
 function endpointUrl(baseUrl: string, path: string): string {
@@ -77,6 +81,19 @@ export function createUniApiReadTransport(options: UniApiReadTransportOptions): 
         throw new ApiReadTransportError('Authenticated session is required for API reads', 'session_invalid')
       }
 
+      const mockResponse = await tryMockRead(
+        input.path,
+        input.body ?? input.query ?? {},
+        {
+          ...(options.mockLatencyMs === undefined ? {} : { latencyMs: options.mockLatencyMs }),
+          ...(options.getMockActor ? { actor: options.getMockActor() } : {}),
+        },
+      )
+      if (mockResponse !== null) return mockResponse
+      if (isMockOwnedRead(input.path, input.body ?? input.query ?? {})) {
+        throw new ApiReadTransportError('Synthetic mock read is disabled', 'server_terminal')
+      }
+
       const header: Record<string, string> = {
         Cookie: `JSESSIONID=${sessionRef}`,
       }
@@ -90,7 +107,6 @@ export function createUniApiReadTransport(options: UniApiReadTransportOptions): 
           ...(input.method === 'POST' ? { data: formEncode(input.body ?? {}) } : {}),
           header,
           dataType: 'json',
-          responseType: 'json',
           ...(options.timeoutMs === undefined ? {} : { timeout: options.timeoutMs }),
         })
       } catch (error) {

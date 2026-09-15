@@ -2,7 +2,9 @@ export const rawWorkOrderPage = {
   data: [
     {
       id: 'work-order-001',
-      title: 'Sanitized work order',
+      orderNum: 'DEMO-SA-001',
+      name: 'Sanitized customer',
+      address: 'Sanitized service address',
       stateCode: 'legacy-state-code',
     },
   ],
@@ -15,6 +17,9 @@ export const rawWorkOrderPage = {
 export const rawWorkOrderDetail = {
   serviceAppointment: {
     _id: 'work-order-001',
+    orderNum: 'DEMO-SA-001',
+    name: 'Sanitized customer',
+    address: 'Sanitized service address',
     workflowRunId: 'workflow-run-001',
     stateCode: 'legacy-state-code',
   },

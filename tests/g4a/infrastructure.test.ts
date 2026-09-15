@@ -100,11 +100,14 @@ describe('G4-A uni infrastructure boundaries', () => {
       url: 'https://beta.example.invalid/api/index/phoneLogin.do',
       method: 'POST',
       header: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      dataType: 'json',
     })
-    expect(String(requests[0].data)).toContain('method=sanitized-phone-login-method')
-    expect(String(requests[0].data)).toContain('phone=test-phone')
-    expect(String(requests[0].data)).toContain('code=test-code')
-    expect(String(requests[0].data)).toContain('tenant=sanitized-tenant')
+    expect(requests[0].data).toEqual({
+      method: 'sanitized-phone-login-method',
+      phone: 'test-phone',
+      code: 'test-code',
+      tenantId: 'sanitized-tenant',
+    })
 
     const persisted = storageDriver.values.get('session:current') ?? ''
     expect(persisted).not.toContain('test-phone')
@@ -116,6 +119,75 @@ describe('G4-A uni infrastructure boundaries', () => {
     await auth.endSession()
     expect(requests).toHaveLength(1)
     expect(storageDriver.values.has('session:current')).toBe(false)
+  })
+
+  it('forwards the R1 universal verification code as a normal login credential', async () => {
+    const request: UniRequestExecutor = (options) => {
+      expect(options.data).toEqual({
+        method: '1',
+        phone: 'test-phone',
+        code: '999999',
+        tenantId: 'sanitized-tenant',
+      })
+      options.success?.({
+        data: {
+          data: {
+            token: 'sanitized-session-token',
+            user: { id: 'sanitized-user-id' },
+          },
+        },
+        statusCode: 200,
+        header: {},
+        cookies: [],
+      })
+    }
+    const auth = createAuthSessionAdapter(
+      createUniAuthBackendDriver({ apiBaseUrl: 'https://beta.example.invalid', request }),
+      createSemanticStorageAdapter(createUniStorageDriver(new FakeUniStorage())),
+      { tenant: 'sanitized-tenant', phoneLoginMethod: '1' },
+    )
+
+    const result = await auth.startSession({
+      phoneNumber: 'test-phone',
+      verificationCode: '999999',
+    })
+
+    expect(result.state).toBe('succeeded')
+  })
+
+  it('accepts the R1 text response mode when the successful JSON arrives as text', async () => {
+    const auth = createAuthSessionAdapter(
+      createUniAuthBackendDriver({
+        apiBaseUrl: 'https://beta.example.invalid',
+        request: (options) => {
+          options.success?.({
+            data: JSON.stringify({
+              success: true,
+              status: 1,
+              data: {
+                token: 'sanitized-session-token',
+                user: { _id: 'sanitized-user-id' },
+                currentRole: { _id: 'sanitized-role-id', name: 'Technician' },
+              },
+            }),
+            statusCode: 200,
+            header: {},
+            cookies: [],
+          })
+        },
+      }),
+      createSemanticStorageAdapter(createUniStorageDriver(new FakeUniStorage())),
+      { tenant: 'sanitized-tenant', phoneLoginMethod: '1' },
+    )
+
+    const result = await auth.startSession({
+      phoneNumber: 'test-phone',
+      verificationCode: '999999',
+    })
+
+    expect(result.state).toBe('succeeded')
+    expect(result.data?.sessionRef).toBe('sanitized-session-token')
+    expect(result.data?.user.id).toBe('sanitized-user-id')
   })
 
   it('maps network failure to retryable and HTTP failure to terminal auth errors', async () => {

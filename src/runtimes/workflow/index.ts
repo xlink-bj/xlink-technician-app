@@ -6,6 +6,17 @@ export {
   createWorkflowIdentityGraph,
 } from './identity'
 export { evaluateNodeVisibility, evaluateWorkflowAction, isHandlerMatch } from './policy'
+export {
+  projectDetailWorkflow,
+  workflowActionIntentForCategory,
+  workflowNodeMetadataFromRead,
+} from './detail-projection'
+export type {
+  CurrentTaskProjection,
+  CurrentTaskSelection,
+  DetailWorkflowActionIntent,
+  DetailWorkflowProjection,
+} from './detail-projection'
 export type { NodeVisibilityDecision } from './policy'
 export type {
   ChildWorkflowContext,
@@ -22,4 +33,5 @@ export type {
   WorkflowNodeCategory,
   WorkflowNodeLifecycle,
   WorkflowNodeMetadata,
+  WorkflowNodeVisibilityEvidence,
 } from './types'
