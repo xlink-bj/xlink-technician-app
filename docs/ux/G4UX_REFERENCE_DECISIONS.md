@@ -1,21 +1,53 @@
 # G4-UX Reference Decisions
 
-Status: Phase A final documentation sync. R2 is the **LOCKED primary brand / visual / IA baseline** for Production UX; R1 remains secondary business/field-service evidence for this scope and remains important evidence elsewhere.
+Status: Final governance record for the frozen G4-UX baseline.
 
-## Reference weighting
+G4-UX Production UX Baseline = ACCEPTED / FROZEN
 
-| Priority | Source | Role in G4-UX | Boundary |
+Accepted branch HEAD: `5aac413b187e039d01450e092905b600fb23e8ac`
+
+Product Owner visual acceptance: COMPLETED
+
+ChatGPT engineering / architecture freeze audit: PASS, subject only to the
+documentation closeout recorded here.
+
+The Product Owner's current UX specifications, screenshots, and feedback remain
+the authority for future visual decisions. This document records the accepted
+baseline and the authority boundary used to implement it.
+
+## Authority model
+
+- **R1 / REAL BACKEND = production business truth.** R1 is authoritative for
+  production backend API behavior, field meanings, business semantics,
+  workflow semantics, permissions/visibility, operational edge cases, and
+  compatibility requirements.
+- **R2 = new-experience prototype / UX reference.** R2 is primary for G4-UX
+  visual hierarchy, IA, interaction direction, and List/Detail experience
+  patterns. R2 is not production backend dictionary authority, status-code
+  authority, workflow truth, or API-contract authority.
+- **NEW APP = modern implementation of R1 business truth with the accepted
+  R2-led experience direction.**
+
+## Reference roles
+
+| Role | Source | Authority in G4-UX | Boundary |
 | --- | --- | --- | --- |
-| Primary / LOCKED | R2 `xlink-business-3.0`, pinned main `06b885ed22477e79d50bc6f3a0ce0c96fbc1a185` | Recent redesign/POC covering Login → Home → Work Order List → Work Order Detail; locked primary brand, visual, IA, and interaction baseline. | Reproduce approved product UX in uni-app, not React/Next/Tailwind implementation. |
-| Secondary | R1 `xlink-business-jishi-3.0`, pinned `6ada6b5375324bfcd09ca7c569b96a4ff328173f` | Mature Technician field-service business evidence, operational edge cases, and backend/business meaning. | Preserve verified business semantics where needed; do not let its broader Legacy surface define UX parity or architecture. |
+| Primary UX / IA / visual reference | R2 `xlink-business-3.0`, pinned main `06b885ed22477e79d50bc6f3a0ce0c96fbc1a185` | New experience prototype and accepted visual/IA/interaction direction for Login → Home → Work Order List → Work Order Detail. | Reproduce the accepted product UX in uni-app, not the React/Next/Tailwind implementation. |
+| Production business/API authority | R1 `xlink-business-jishi-3.0`, pinned `6ada6b5375324bfcd09ca7c569b96a4ff328173f` | Mature Technician field-service evidence, backend behavior, field meaning, workflow semantics, permissions, and operational edge cases. | Preserve verified business semantics; do not let the broader Legacy surface define UX parity or architecture. |
 
-The general Program Control rule is unchanged: R1 remains important business/backend evidence in other slices. This priority correction is specifically for the Production UX baseline.
+R2 does not define production status-code vocabulary, backend contracts, or
+workflow truth. R1/backend evidence does not override the Product Owner's
+accepted UX direction.
 
-## Locked Product Directions
+## Frozen Product Directions
 
-- **Brand / visual / IA:** R2 is the locked primary baseline for this gate.
+- **Brand / visual / IA:** the Product Owner-accepted R2-led direction is frozen
+  at the accepted branch HEAD.
 - **Login:** reproduce the R2 staged experience — brand launch → login method selection → login form — including its approved branded visual language and interaction hierarchy in uni-app.
 - **Home:** reproduce the R2 task-first composition — current work/current task first, with the next meaningful action visually prioritized. Metrics-first is not an active G4-UX alternative.
+- **Business truth:** all production field meanings, API behavior, workflow
+  semantics, permissions, visibility, and compatibility requirements come from
+  R1 / the real backend evidence.
 - **Capability guard:** R2 password Login, OTP send, quick/test Login, or other debug affordances are `UI/DEV BEHAVIOR REQUIRES CONTRACT EVIDENCE` when not supported by accepted auth contracts. This sync does not authorize production auth APIs or shared-contract changes.
 
 ## R2-led decision matrix
@@ -28,11 +60,11 @@ The general Program Control rule is unchanged: R1 remains important business/bac
 | `web/app/(app)/work-orders/WorkOrdersInner.tsx`; `web/components/list/ListSearchHeader.tsx`; `ListAdvancedFilterSheet.tsx` | Search header, optional filter button, bottom-sheet filters, role/filter tabs, paginated loading, empty/error/retry states. | Scanning and recovery should be explicit without overwhelming the primary list. | Use one-screen search/filter density; bottom sheet needs safe-area and dismissal behavior. | Search, advanced sort/date filter, multiple tabs, and counts until the current role/business contract accepts them. | Current baseline remains one role-visible list. Product owner must approve any search/filter/tab/count exposure. |
 | `web/components/list/ListControls.tsx`; `web/components/list/ServiceCard.tsx` | Cards group type/icon, order number, address/distance, customer, tag, and contact affordance; skeleton/empty/error/load-more are first-class. | Use a predictable scan order and one clear row affordance. | Preserve hierarchy and touch targets; adapt long text and small width; use semantic fields only. | Raw statuses, raw menu labels, workflow-node ids, and richer R2 mock fields not accepted by the new contract. | Adapt card rhythm only after Beta confirms the minimum useful semantic fields and density. |
 | `web/app/(app)/work-orders/[id]/page.tsx`; `web/components/detail/DetailShell.tsx` | Back → summary → Quick Actions → workflow context/current task → read-oriented tabs; explicit skeleton, empty/error, and info rows. | Context first; stable actions separate from information; recovery is visible. | Compact summary, platform back, safe-area handling, and scrollable read content. | Dynamic workflow actions, R2 mock data fetching, maps/navigation, and unaccepted tabs/materials/records. | Keep G4-C summary + Quick Actions. Future workflow actions must use Current Action / Current Task. |
-| `web/components/WorkflowStepRail.tsx`; `ProjectCurrentTaskCard.tsx`; `ProjectTaskActionSheet.tsx` | Workflow progress, prominent primary task action, secondary actions, and dedicated sheet. | Current business action deserves an independent visual and interaction surface. | Use a sheet/modal/page that is reachable and dismissible on MP/App; retain disabled/in-flight states. | Workflow execution and appointment/inspection actions before their guarded slices. | Lock the independent action-region rule; no implementation in Phase A. |
+| `web/components/WorkflowStepRail.tsx`; `ProjectCurrentTaskCard.tsx`; `ProjectTaskActionSheet.tsx` | Workflow progress, prominent primary task action, secondary actions, and dedicated sheet. | Current business action deserves an independent visual and interaction surface. | Use a sheet/modal/page that is reachable and dismissible on MP/App; retain disabled/in-flight states. | Workflow execution and appointment/inspection actions before their guarded slices. | Read-only Current Task presentation is accepted in G4-UX; execution remains behind an independent evidence gate and G4-D is not started. |
 | `web/lib/project-detail-tabs.ts`; `DetailTabbedSection` use | Tabs group records, customer/order information, and materials; tabs are read-oriented. | Tabs organize information, not business execution. | Use tabs only if content volume justifies them and back/scroll behavior is clear. | Dynamic actions modeled as tabs; tab names/capabilities not accepted by evidence. | Future tabs remain read-only and require a product/feature evidence checkpoint. |
-| R2 detail components and global styles | Card surfaces, blue primary actions, compact type hierarchy, restrained borders/shadows, pulse skeleton, bottom navigation. | A coherent visual system improves scanability and confidence. | Re-express with uni-app-compatible tokens and target-safe layout, not copied CSS. | Exact colors, sizes, radii, shadows, icons, and component code as unapproved product decisions. | Values in the production baseline are proposals until human approval. |
+| R2 detail components and global styles | Card surfaces, blue primary actions, compact type hierarchy, restrained borders/shadows, pulse skeleton, bottom navigation. | A coherent visual system improves scanability and confidence. | Re-express with uni-app-compatible tokens and target-safe layout, not copied CSS. | Exact colors, sizes, radii, shadows, icons, and component code remain implementation details, not backend semantics. | The accepted implementation at the frozen HEAD is the visual baseline; future changes require Product Owner direction. |
 
-## R1 secondary evidence matrix
+## R1 production business/API evidence matrix
 
 | R1 exact evidence | Material business meaning added | Decision | Guard against Legacy parity |
 | --- | --- | --- | --- |

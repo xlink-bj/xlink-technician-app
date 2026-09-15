@@ -1,10 +1,33 @@
 # G4-UX Production Baseline
 
-Status: Phase B2 implementation candidate with locked product directions. R2’s brand/visual/IA baseline and staged Login/task-first Home directions are locked; no visual value below is settled unless marked LOCKED. Home and Work Order List production UX are implemented on the current branch and remain pending human visual review.
+Status: G4-UX Production UX Baseline = ACCEPTED / FROZEN
 
-R2 — `xlink-business-3.0`, pinned main `06b885ed22477e79d50bc6f3a0ce0c96fbc1a185` — is the **LOCKED primary brand/visual/IA baseline**. R1 is secondary business/field-service evidence for this baseline. R2 observations are reproduced as approved product UX in uni-app, not copied as React/Next implementation.
+Accepted branch HEAD: `5aac413b187e039d01450e092905b600fb23e8ac`
+
+Product Owner visual acceptance: COMPLETED
+
+ChatGPT engineering / architecture freeze audit: PASS, subject only to this
+documentation closeout.
+
+This is the durable governance record for the accepted G4-UX implementation at
+the accepted HEAD. Future Product Owner UX specifications may supersede this
+baseline through an explicit follow-up decision; this closeout does not reopen
+the current visual review.
 
 Product Owner overrides for the new App: the Login brand lockup is text-only — **修链 / 屋顶维修**. The R2 graphic Logo and the incorrect **量顶维修** copy must not be restored.
+
+## Authority model
+
+- **R1 / REAL BACKEND = production business truth.** R1 is authoritative for
+  production backend API behavior, field meanings, business semantics,
+  workflow semantics, permissions/visibility, operational edge cases, and
+  compatibility requirements.
+- **R2 = new-experience prototype / UX reference.** R2 is primary for G4-UX
+  visual hierarchy, IA, interaction direction, and List/Detail experience
+  patterns. R2 is not production backend dictionary authority, status-code
+  authority, workflow truth, or API-contract authority.
+- **NEW APP = modern implementation of R1 business truth with the accepted
+  R2-led experience direction.**
 
 ## A. LOCKED PRODUCT / ARCHITECTURE CONSTRAINTS
 
@@ -24,6 +47,39 @@ These are accepted constraints, not open visual preferences:
 - G4-D is not started; appointment/workflow action behavior remains behind its own evidence gate.
 - No product decision in this document authorizes new API fields, tabs, counts, filters, workflow writes, native integrations, or customer mutations.
 - The branch retains the explicit exact-version MP-WEIXIN compiler correction from `c0128a06fff271532d0e88f04d44066cf192ddd4`; no further dependencies are authorized by this UX baseline.
+
+## FROZEN CURRENT BASELINE
+
+The accepted read journey is:
+
+Login / Session → Home → Work Order List → Work Order Detail → Customer
+Contact presentation → read-only Current Task projection where semantically
+valid.
+
+The accepted development infrastructure is:
+
+- Non-production Home exposes the `Mock 数据` / `Real API` source switch.
+- Fresh non-production state defaults to Mock `DATA`; `DATA` / `EMPTY` scenarios
+  remain available while Mock is enabled.
+- Real API reads use the same Adapter, semantic model, Workflow Runtime, and UI
+  path as Mock reads.
+- Login / Session remains real and is never mocked.
+- Production does not render the switch and Mock is hard-disabled.
+
+The Detail Interaction Rule is frozen: information regions and tabs are
+read-oriented; Workflow / Appointment execution belongs to an independent
+Current Action / Current Task surface.
+
+The following read evidence remains **DEFERRED / NON-BLOCKING FOR G4-UX**:
+
+- representative live `repairParts` cascade shape;
+- representative live `communityOrdersTotal` shape;
+- complete live raw workflow visibility matrix;
+- raw-envelope persistence/parity evidence.
+
+Missing evidence is conservatively omitted or under-displayed. No fallback
+business semantics are fabricated. These items may be verified when a later
+slice genuinely requires them.
 
 ## B2 IMPLEMENTATION RECORD — HOME / WORK ORDER LIST
 
@@ -46,27 +102,30 @@ uni-app without copying R2 React/Next implementation or fabricating data:
   WorkOrderId values are not rendered. Tabs, counts, filters, sorting, and
   richer card fields remain unimplemented until separately evidenced.
 
-This record describes the implemented candidate, not final visual approval.
-Human review must still assess MP safe-area behavior, typography, density,
-touch targets, and narrow-device rendering. Login, Detail, Contact, G4-D, and
-the accepted read transport are outside this B2 change.
+This is the accepted implementation record for the frozen baseline. Product
+Owner visual acceptance is complete; no screenshot artifact is required in the
+repository. Login, Detail, Contact, and the accepted read transport are part of
+the subsequent frozen G4-UX read journey below.
 
-The opt-in synthetic business-read runtime used for UX development is documented
-in `docs/ux/G4UX_MOCK_RUNTIME.md`; it does not replace real Login or Beta read
-verification.
+The development-only synthetic business-read runtime and source control are
+documented in `docs/ux/G4UX_MOCK_RUNTIME.md`; they do not replace real Login or
+Beta read verification.
 
-## B. R2-DERIVED UX PROPOSALS
+## B. R2-DERIVED UX RATIONALE AND OPEN DETAILS
 
-The following are evidence-backed proposals derived primarily from R2. They require product-owner review before implementation.
+The following rationale is derived primarily from R2 and explains the accepted
+experience direction. Exact details or capabilities explicitly marked deferred
+remain outside the frozen acceptance and require a later Product Owner or
+evidence-gated decision.
 
-### Hierarchy and composition proposal
+### Accepted hierarchy and composition
 
 - **Login:** reproduce the locked R2 staged experience: branded launch → login method selection → focused login form → one primary action → concise feedback. Only contract-supported auth behavior may be wired.
 - **Home:** reproduce the locked R2 task-first composition: authenticated context → current work/current task → next meaningful action → secondary information/actions. Only accepted task data/capabilities may render.
 - **List:** scope/title → optional search/filter controls only if accepted → structured rows/cards → explicit recovery and pagination state.
 - **Detail:** Back → summary/identity → stable Quick Actions → read-oriented information → future independent Current Action/Task surface. This preserves the accepted Detail Interaction Rule.
 
-### Visual rhythm proposal
+### Accepted visual rhythm
 
 - Prefer a soft page background, white information surfaces, restrained borders, and subtle elevation similar to R2.
 - Use short section groups, a clear title/supporting-text relationship, and one dominant primary action.
@@ -74,40 +133,42 @@ The following are evidence-backed proposals derived primarily from R2. They requ
 - Use skeletons for initial loads, explicit empty/retryable/terminal/session-invalid states, and disabled/in-flight treatment for duplicate actions.
 - Respect safe areas, platform back behavior, long title/address wrapping, and a minimum touch target suitable for MP/App.
 
-### PROPOSED visual tokens — not approved
+### Unpinned visual implementation details
 
-These values make the proposal concrete for review; they are not locked design tokens:
+The accepted implementation at the frozen HEAD is the visual baseline. The
+following values are retained as historical implementation guidance only; they
+do not authorize a future visual change without Product Owner direction:
 
-| Token | PROPOSED value | Approval needed |
+| Token | Historical guidance | Future change |
 | --- | --- | --- |
-| Page background | `#F5F7FB` or a product-approved neutral | Brand/visual approval |
-| Primary surface | White | Product/contrast approval |
-| Primary text | Near-black neutral, e.g. `#101827` | Contrast/brand approval |
-| Supporting text | Neutral gray, e.g. `#667085` | Contrast approval |
-| Primary action | Blue family inspired by R2, exact hue TBD | Brand approval |
-| Error | Semantic red paired with text/recovery | Accessibility approval |
-| Card radius | 14–20rpx | Visual approval |
-| Control radius | 10–16rpx | Visual approval |
-| Page inset | 24–32rpx on compact phones | Device/layout review |
-| Spacing rhythm | 8rpx base with 16/24/32/48rpx steps | Density review |
-| Page title | 40–52rpx equivalent, weight TBD | Typography/copy approval |
-| Body text | 28–30rpx equivalent, line-height TBD | Typography/accessibility approval |
-| Minimum control height | 88rpx equivalent where practical | MP/App touch-target review |
-| Elevation | Subtle shadow only | Visual approval |
+| Page background | `#F5F7FB` or a product-approved neutral | Explicit PO spec |
+| Primary surface | White | Explicit PO spec |
+| Primary text | Near-black neutral, e.g. `#101827` | Explicit PO spec |
+| Supporting text | Neutral gray, e.g. `#667085` | Explicit PO spec |
+| Primary action | Blue family inspired by R2 | Explicit PO spec |
+| Error | Semantic red paired with text/recovery | Explicit PO spec |
+| Card radius | 14–20rpx | Explicit PO spec |
+| Control radius | 10–16rpx | Explicit PO spec |
+| Page inset | 24–32rpx on compact phones | Explicit PO spec |
+| Spacing rhythm | 8rpx base with 16/24/32/48rpx steps | Explicit PO spec |
+| Page title | 40–52rpx equivalent | Explicit PO spec |
+| Body text | 28–30rpx equivalent | Explicit PO spec |
+| Minimum control height | 88rpx equivalent where practical | Explicit PO spec |
+| Elevation | Subtle shadow only | Explicit PO spec |
 
-No exact color, radius, typography size, spacing, shadow, icon, or screen alternative above is settled.
+## C. NON-BLOCKING OPEN DETAILS AND FUTURE GATES
 
-## C. PRODUCT DECISIONS REQUIRED
-
-The following decisions remain with the product owner/design review:
+The following items do not block the frozen G4-UX baseline. Future changes or
+capability expansion still require Product Owner direction and, where noted,
+an independent evidence gate:
 
 1. **Login content details:** final Chinese copy, agreement text, and which R2 secondary method affordances are contract-supported. Staged structure and branded interaction hierarchy are locked.
-2. **Login functional gate:** B1 source/build correction keeps the primary Login action visible/reachable on the MP simulator; final human visual review remains required.
+2. **Login functional gate:** B1 source/build correction keeps the primary Login action visible/reachable on the MP simulator; Product Owner visual acceptance is complete.
 3. **Home content details:** exact accepted task data, supported workbench cards, greeting/status copy, and whether any secondary content is V1. R2 task-first structure is locked; metrics-first is not an alternative.
 4. **Navigation shell:** Home/List/Detail back behavior, bottom navigation presence, and the set of V1 destinations; R2’s Projects/Account tabs are not automatically included.
 5. **List capability exposure:** whether search, filters, tabs, counts, direct contact, special ordering, or only one role-visible list is required. No broad Legacy parity is assumed.
 6. **List/detail density:** minimum semantic fields, status display, card versus row treatment, long-text/address behavior, and empty-state copy after Beta evidence.
-7. **Visual tokens:** final palette, typography scale, radii, spacing, elevation, iconography, focus/pressed states, and contrast acceptance.
+7. **Visual tokens:** the implementation at the accepted HEAD is frozen; future palette, typography, radii, spacing, elevation, iconography, focus/pressed-state, or contrast changes require explicit Product Owner direction.
 8. **State language:** Chinese copy and illustration/treatment for bootstrap, loading, empty, retryable, terminal, and session-invalid states.
 9. **Future action surface:** workflow execution placement and presentation remain product decisions. The read-only R2 status-driven Current Task card is implemented outside information tabs; its CTA remains disabled until the separate action evidence gate passes.
 
