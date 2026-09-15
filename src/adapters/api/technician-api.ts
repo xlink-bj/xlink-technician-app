@@ -3,6 +3,7 @@ import type {
   CodeOptionRead,
   CodeOptionsQuery,
   FormDataRead,
+  FormFieldRead,
   FormDefinitionRead,
   ReadPage,
   TechnicianApiReadPort,
@@ -49,6 +50,7 @@ import {
   type AdapterRecord,
 } from '../common/records'
 import { countyList } from './reference/area-county-dictionary'
+import { appointmentFormDefinitionWireId } from './appointment-contract'
 
 export type ApiRequestMethod = 'GET' | 'POST'
 export type ApiRequestValue = string | number | boolean
@@ -365,7 +367,10 @@ function sanodeWorkOrderSummary(
   const node = asRecord(raw, 'workflow-node work-order summary')
   const data = nestedRecord(node, ['data'])
   if (!data) throw new AdapterMappingError('workflow-node work-order data is missing')
-  return workOrderSummary(data, statusLabels, partLabels)
+  return {
+    ...workOrderSummary(data, statusLabels, partLabels),
+    workflowNodes: [workflowNode(node)],
+  }
 }
 
 function firstArrayString(value: unknown): string | undefined {
@@ -404,7 +409,8 @@ function workOrderListContact(record: AdapterRecord) {
   const phone = optionalString(record, ['phone'])?.trim()
   const statusCode = firstStatusCode(record.status)
   const statusNumber = statusCode ? Number(statusCode) : Number.NaN
-  if (!phone || !Number.isFinite(statusNumber) || statusNumber <= 103) return undefined
+  const syntheticVisualStatus = statusCode?.startsWith('mock-status-') === true
+  if (!phone || (!syntheticVisualStatus && (!Number.isFinite(statusNumber) || statusNumber <= 103))) return undefined
 
   const contactId = firstArrayString(record.contactIds)
   const displayMask = phoneDisplayMask(phone)
@@ -619,6 +625,11 @@ function workflowNode(raw: unknown): WorkflowNodeRead {
     'parentWorkflowNodeId',
   ])
   const displayName = optionalString(nodeDef ?? {}, ['name'])
+  const formDataId = optionalOpaqueId<'FormDataId'>(record, ['formDataId', 'dataId'])
+  const formPurpose =
+    optionalString(nodeDef ?? {}, ['formDefId', 'formDefinitionId']) === appointmentFormDefinitionWireId
+      ? ('appointment' as const)
+      : undefined
   const handlers = workflowNodeHandlers(record)
   const visibility = workflowNodeVisibilityEvidence(record, nodeDef)
   const isSystem = record.isSystem === true
@@ -630,12 +641,45 @@ function workflowNode(raw: unknown): WorkflowNodeRead {
     lifecycle: workflowNodeLifecycle(record),
     visibility,
     ...(displayName ? { displayName } : {}),
+    ...(formPurpose ? { formPurpose } : {}),
+    ...(formDataId ? { formDataId } : {}),
     ...(definitionId ? { definitionId } : {}),
     ...(runId ? { runId } : {}),
     ...(parentNodeId ? { parentNodeId } : {}),
     ...(handlers ? { handlers } : {}),
     ...(isSystem ? { isSystem } : {}),
     ...(isSentinel ? { isSentinel } : {}),
+  }
+}
+
+function formField(raw: unknown): FormFieldRead | null {
+  const record = optionalRecord(raw)
+  if (!record) return null
+  const key = optionalString(record, ['name', 'key', 'fieldName'])?.trim()
+  if (!key) return null
+  const label = optionalString(record, ['nameDisp', 'label', 'displayName', 'name'])?.trim() ?? key
+  const type = optionalString(record, ['type', 'fieldType'])?.trim() ?? 'unknown'
+  const requiredValue = record.required
+  const readOnlyValue = record.readOnly ?? record.readonly
+  const required = requiredValue === true || requiredValue === 1 || requiredValue === '1'
+  const readOnly = readOnlyValue === true || readOnlyValue === 1 || readOnlyValue === '1'
+  const rawOptions = Array.isArray(record.options) ? record.options : Array.isArray(record.items) ? record.items : undefined
+  const options = rawOptions
+    ?.map((value) => {
+      const option = optionalRecord(value)
+      const optionValue = option ? optionalString(option, ['value', 'code', 'id']) : undefined
+      const optionLabel = option ? optionalString(option, ['label', 'name', 'text', 'codelabel']) : undefined
+      return optionValue && optionLabel ? { value: optionValue, label: optionLabel } : null
+    })
+    .filter((value): value is { value: string; label: string } => Boolean(value))
+
+  return {
+    key,
+    label,
+    type,
+    required,
+    readOnly,
+    ...(options && options.length > 0 ? { options } : {}),
   }
 }
 
@@ -646,12 +690,63 @@ function formDefinition(raw: unknown, requestedId: FormDefinitionId): FormDefini
   const id = record
     ? optionalOpaqueId<'FormDefinitionId'>(record, ['id', '_id', 'extId', 'definitionId'])
     : optionalOpaqueId<'FormDefinitionId'>(envelope, ['id', '_id', 'extId', 'definitionId'])
-  return { id: id ?? requestedId }
+  const rawFields = Array.isArray(envelope.data)
+    ? envelope.data
+    : record && Array.isArray(record.fields)
+      ? record.fields
+      : []
+  const fields = rawFields
+    .map(formField)
+    .filter((value): value is FormFieldRead => Boolean(value))
+  const purpose = String(requestedId) === appointmentFormDefinitionWireId
+    ? ('appointment' as const)
+    : undefined
+  return {
+    id: id ?? requestedId,
+    ...(purpose ? { purpose } : {}),
+    ...(fields.length > 0 ? { fields } : {}),
+  }
+}
+
+function formFieldValue(value: unknown): string | number | boolean | null | undefined {
+  if (value === null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+    return value
+  }
+  return undefined
+}
+
+function formValues(record: AdapterRecord): Readonly<Record<string, string | number | boolean | null>> | undefined {
+  const values: Record<string, string | number | boolean | null> = {}
+  const extensions = optionalRecord(record.exts)
+  if (extensions) {
+    for (const [key, value] of Object.entries(extensions)) {
+      const normalized = formFieldValue(value)
+      if (normalized !== undefined) values[key] = normalized
+    }
+  }
+  const metadata = new Set([
+    '_id',
+    'id',
+    'dataId',
+    'extId',
+    'formDefId',
+    'definitionId',
+    'workflowRunId',
+    'runId',
+    'exts',
+  ])
+  for (const [key, value] of Object.entries(record)) {
+    if (metadata.has(key) || key in values) continue
+    const normalized = formFieldValue(value)
+    if (normalized !== undefined) values[key] = normalized
+  }
+  return Object.keys(values).length > 0 ? values : undefined
 }
 
 function formData(raw: unknown): FormDataRead {
   const record = asRecord(raw, 'form data')
   const workflow = nestedRecord(record, ['workflow'])
+  const values = formValues(record)
   return {
     id: requiredOpaqueId<'FormDataId'>(record, ['id', '_id', 'dataId'], 'form data id'),
     definitionId: requiredOpaqueId<'FormDefinitionId'>(
@@ -664,6 +759,7 @@ function formData(raw: unknown): FormDataRead {
       : workflow && optionalOpaqueId<'WorkflowRunId'>(workflow, ['runId', 'workflowRunId'])
         ? { workflowRunId: optionalOpaqueId<'WorkflowRunId'>(workflow, ['runId', 'workflowRunId']) }
         : {}),
+    ...(values ? { values } : {}),
   }
 }
 
@@ -1024,7 +1120,13 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
       {
         method: 'POST',
         path: 'biz/extField/query',
-        body: { extId: id },
+        body: {
+          extId: id,
+          sortField: 'order',
+          sortOrder: 'asc',
+          'is:state|integer#and': 1,
+          _all: '1',
+        },
       },
       (raw) => formDefinition(raw, id),
     )

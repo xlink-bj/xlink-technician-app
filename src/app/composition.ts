@@ -1,8 +1,15 @@
-import type { AuthSessionPort, PhonePort, TechnicianApiReadPort } from '@shared/ports'
+import type {
+  AuthSessionPort,
+  PhonePort,
+  TechnicianApiCommandPort,
+  TechnicianApiReadPort,
+} from '@shared/ports'
 import { createOperationError, type OperationSnapshot } from '@shared/types'
 
 import { createRoleScopedTechnicianApiReadAdapter } from '@adapters/api/technician-api'
+import { createTechnicianApiCommandAdapter } from '@adapters/api/technician-api-commands'
 import { createUniApiReadTransport } from '@adapters/api/uni-api-read-transport'
+import { createUniApiCommandTransport } from '@adapters/api/uni-api-command-transport'
 import { createAuthSessionAdapter } from '@adapters/auth/auth-session-adapter'
 import { createUniAuthBackendDriver } from '@adapters/auth/uni-auth-backend'
 import { createSemanticStorageAdapter } from '@adapters/storage/storage-adapter'
@@ -75,6 +82,29 @@ export function createDefaultTechnicianApiReadPort(authSession: AuthSessionPort)
     () => authSession.getCurrentSession()?.currentRole?.id ?? null,
     { cascadeTenantId: config.value.authWireConfig.tenant },
   )
+}
+
+export function createDefaultTechnicianApiCommandPort(
+  authSession: AuthSessionPort,
+  apiRead: TechnicianApiReadPort,
+): TechnicianApiCommandPort {
+  const config = loadApplicationRuntimeConfig()
+  if (!config.ok) {
+    const message = `Technician API configuration is unavailable: ${config.issues.join('; ')}`
+    const blocked = async <T>(): Promise<OperationSnapshot<T>> => configurationFailure<T>(message)
+    return {
+      inspectAcceptOrder: async () => blocked(),
+      acceptOrder: async () => blocked(),
+      readAppointmentForm: async () => blocked(),
+      submitAppointment: async () => blocked(),
+    }
+  }
+
+  const transport = createUniApiCommandTransport({
+    apiBaseUrl: config.value.environment.apiBaseUrl,
+    getSessionRef: () => authSession.getCurrentSession()?.sessionRef ?? null,
+  })
+  return createTechnicianApiCommandAdapter(transport, apiRead)
 }
 
 export function createDefaultPhonePort(): PhonePort {

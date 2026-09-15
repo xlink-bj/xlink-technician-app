@@ -5,7 +5,7 @@ export {
   createWorkflowFormIdentity,
   createWorkflowIdentityGraph,
 } from './identity'
-export { evaluateNodeVisibility, evaluateWorkflowAction, isHandlerMatch } from './policy'
+export { evaluateAcceptOrder, evaluateNodeVisibility, evaluateWorkflowAction, isHandlerMatch } from './policy'
 export {
   projectDetailWorkflow,
   workflowActionIntentForCategory,

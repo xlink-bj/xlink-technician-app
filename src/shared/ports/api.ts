@@ -42,6 +42,8 @@ export interface WorkOrderSummary {
   readonly communityOrderCount?: number
   /** Ephemeral normalized contact input for the list phone action; never persisted or rendered. */
   readonly contact?: WorkOrderContact
+  /** Normalized workflow evidence used by List action projection. */
+  readonly workflowNodes?: readonly WorkflowNodeRead[]
 }
 
 /** Semantic customer-contact data kept only in in-memory read models. */
@@ -146,6 +148,9 @@ export interface WorkflowNodeRead {
   readonly runId?: WorkflowRunId
   readonly parentNodeId?: WorkflowNodeRuntimeId
   readonly displayName?: string
+  /** Semantic form purpose; the raw form definition identity stays Adapter-owned. */
+  readonly formPurpose?: 'appointment'
+  readonly formDataId?: FormDataId
   readonly category: WorkflowNodeCategory
   readonly lifecycle: WorkflowNodeLifecycle
   readonly handlers?: readonly WorkflowHandlerIdentity[]
@@ -156,12 +161,26 @@ export interface WorkflowNodeRead {
 
 export interface FormDefinitionRead {
   readonly id: FormDefinitionId
+  readonly purpose?: 'appointment'
+  readonly fields?: readonly FormFieldRead[]
 }
+
+export interface FormFieldRead {
+  readonly key: string
+  readonly label: string
+  readonly type: string
+  readonly required: boolean
+  readonly readOnly: boolean
+  readonly options?: readonly { readonly value: string; readonly label: string }[]
+}
+
+export type FormFieldValue = string | number | boolean | null
 
 export interface FormDataRead {
   readonly id: FormDataId
   readonly definitionId: FormDefinitionId
   readonly workflowRunId?: WorkflowRunId
+  readonly values?: Readonly<Record<string, FormFieldValue>>
 }
 
 export interface CodeOptionRead {

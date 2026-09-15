@@ -74,12 +74,15 @@ export interface WorkflowNodeMetadata {
   readonly lifecycle: WorkflowNodeLifecycle
   readonly handlers?: readonly HandlerIdentity[]
   readonly visibility?: WorkflowNodeVisibilityEvidence
+  readonly formPurpose?: 'appointment'
   readonly isSystem?: boolean
   readonly isSentinel?: boolean
 }
 
 export type WorkflowActionIntent =
+  | 'accept_order'
   | 'interact_with_form'
+  | 'set_appointment'
   | 'complete'
   | 'open_subworkflow'
   | 'place_order'

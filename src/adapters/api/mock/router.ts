@@ -1,14 +1,18 @@
 import { isBusinessMockMode, type BusinessMockMode } from './config'
+import { appointmentFormDefinitionWireId } from '../appointment-contract'
 import {
   isSyntheticWorkOrderId,
+  mockAppointmentFormDefinitionResponse,
   mockOrdinaryListResponse,
   mockRepairPartsCascadeResponse,
   mockRoleFunctionResponse,
   mockSanodeListResponse,
   mockStatusOptionsResponse,
   mockWorkOrderActivityResponseFor,
+  mockWorkOrderDetailResponses,
   mockWorkOrderDetailResponseFor,
 } from './fixtures'
+import type { ApiCommandRequest } from '../technician-api-commands'
 
 export interface MockReadOptions {
   readonly latencyMs?: number
@@ -20,6 +24,14 @@ export interface MockReadActor {
   readonly userId?: string
   readonly roleId?: string
 }
+
+interface MockCommandState {
+  listResponse: unknown
+  detailResponses: Map<string, unknown>
+  formData: Map<string, unknown>
+}
+
+let commandState: MockCommandState | null = null
 
 function normalizedPath(path: string): string {
   return path.replace(/^\/+/, '').split('?')[0]
@@ -51,14 +63,139 @@ export function isMockOwnedRead(
   return false
 }
 
+export function isMockOwnedCommand(
+  path: string,
+  requestData: Readonly<Record<string, unknown>> = {},
+): boolean {
+  const values = [requestData.sid, requestData.saId]
+  const serialized = requestData.dataStr
+  if (typeof serialized === 'string') {
+    try {
+      const parsed = JSON.parse(serialized) as Record<string, unknown>
+      values.push(parsed.sid)
+    } catch {
+      // A malformed command is still handled by the real adapter as a failure.
+    }
+  }
+  return values.some((value) => typeof value === 'string' && isSyntheticWorkOrderId(value))
+}
+
 function clonedResponse<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T
+}
+
+function mockCommandState(): MockCommandState {
+  if (!commandState) {
+    commandState = {
+      listResponse: clonedResponse(mockSanodeListResponse),
+      detailResponses: new Map(
+        Object.entries(mockWorkOrderDetailResponses).map(([id, response]) => [id, clonedResponse(response)]),
+      ),
+      formData: new Map(),
+    }
+  }
+  return commandState
+}
+
+export function resetMockCommandState(): void {
+  commandState = null
 }
 
 function mutableRecord(value: unknown): Record<string, unknown> | null {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : null
+}
+
+function responseForDetail(id: string): unknown | null {
+  return mockCommandState().detailResponses.get(id) ?? null
+}
+
+function listItemForWorkOrder(id: string): Record<string, unknown> | null {
+  const envelope = mutableRecord(mockCommandState().listResponse)
+  const items = envelope?.data
+  if (!Array.isArray(items)) return null
+  for (const item of items) {
+    const record = mutableRecord(item)
+    const data = mutableRecord(record?.data)
+    if (data?._id === id) return record
+  }
+  return null
+}
+
+function detailDataForWorkOrder(id: string): Record<string, unknown> | null {
+  const envelope = mutableRecord(responseForDetail(id))
+  const payload = mutableRecord(envelope?.data)
+  return mutableRecord(payload?.serviceAppointment)
+}
+
+function detailNodesForWorkOrder(id: string): unknown[] | null {
+  const envelope = mutableRecord(responseForDetail(id))
+  const payload = mutableRecord(envelope?.data)
+  if (!payload) return null
+  return Array.isArray(payload.workflowNode) ? payload.workflowNode : null
+}
+
+function acceptMockWorkOrder(id: string): void {
+  const listItem = listItemForWorkOrder(id)
+  const listNode = mutableRecord(listItem)
+  if (listNode) {
+    const listData = mutableRecord(listNode.data)
+    if (listData) listData.status = 'mock-status-contact'
+    listNode.nodeDef = { nodeType: 'forms', name: '预约上门时间', formDefId: appointmentFormDefinitionWireId, userChoose: ['synthetic-role'] }
+    listNode.state = 0
+  }
+
+  const data = detailDataForWorkOrder(id)
+  if (data) {
+    data.status = 'mock-status-contact'
+    const nodes = detailNodesForWorkOrder(id)
+    if (nodes) {
+      nodes.splice(0, nodes.length, {
+        _id: 'mock-workflow-node-003-appointment',
+        state: 0,
+        nodeDef: {
+          nodeType: 'forms',
+          name: '预约上门时间',
+          formDefId: appointmentFormDefinitionWireId,
+          userChoose: ['synthetic-role'],
+        },
+      })
+    }
+  }
+}
+
+function saveMockAppointment(dataStr: unknown): string {
+  if (typeof dataStr !== 'string') throw new Error('Appointment form data is missing')
+  const values = JSON.parse(dataStr) as Record<string, unknown>
+  const formDataId = typeof values._id === 'string' && values._id.length > 0
+    ? values._id
+    : 'mock-form-data-003-appointment'
+  mockCommandState().formData.set(formDataId, {
+    _id: formDataId,
+    extId: appointmentFormDefinitionWireId,
+    exts: {
+      need: values.need ?? null,
+      datetime: values.datetime ?? null,
+      note: values.note ?? null,
+    },
+    state: 1,
+  })
+  return formDataId
+}
+
+function completeMockAppointment(id: string, formDataId: string): void {
+  const nodes = detailNodesForWorkOrder(id)
+  if (!nodes) return
+  for (const value of nodes) {
+    const node = mutableRecord(value)
+    if (!node) continue
+    const nodeDef = mutableRecord(node.nodeDef)
+    if (nodeDef?.formDefId === appointmentFormDefinitionWireId) {
+      node.state = 10
+      node.formDataId = formDataId
+    }
+  }
 }
 
 /**
@@ -70,16 +207,9 @@ function mutableRecord(value: unknown): Record<string, unknown> | null {
  */
 function bindMockActorMarkers(raw: unknown, actor: MockReadActor | null | undefined): unknown {
   if (!actor?.userId && !actor?.roleId) return raw
+  if (Array.isArray(raw)) return raw
 
-  const envelope = mutableRecord(raw)
-  const payload = mutableRecord(envelope?.data)
-  const workflowNodes = payload?.workflowNode
-  if (!Array.isArray(workflowNodes)) return raw
-
-  for (const value of workflowNodes) {
-    const node = mutableRecord(value)
-    if (!node) continue
-
+  const bindNode = (node: Record<string, unknown>): void => {
     if (actor.roleId) {
       const nodeDef = mutableRecord(node.nodeDef)
       if (nodeDef) {
@@ -93,6 +223,25 @@ function bindMockActorMarkers(raw: unknown, actor: MockReadActor | null | undefi
 
     if (actor.userId && Array.isArray(node.handlerIds)) {
       node.handlerIds = node.handlerIds.map((item) => item === 'synthetic-user' ? actor.userId : item)
+    }
+  }
+
+  const envelope = mutableRecord(raw)
+  const payload = mutableRecord(envelope?.data)
+  const workflowNodes = payload?.workflowNode
+  if (Array.isArray(workflowNodes)) {
+    for (const value of workflowNodes) {
+      const node = mutableRecord(value)
+      if (node) bindNode(node)
+    }
+    return envelope
+  }
+
+  const rows = envelope?.data
+  if (Array.isArray(rows)) {
+    for (const value of rows) {
+      const row = mutableRecord(value)
+      if (row) bindNode(row)
     }
   }
 
@@ -168,7 +317,7 @@ function matchedResponse(
     return mockWorkOrderActivityResponseFor(workOrderId)
   }
   if (route === 'basic/serviceAppointment/querySAWorkflowNode') {
-    return listResponse(mode, mockSanodeListResponse, requestData)
+    return listResponse(mode, mockCommandState().listResponse, requestData)
   }
   if (route === 'basic/serviceAppointment/query') {
     return listResponse(mode, mockOrdinaryListResponse, requestData)
@@ -177,9 +326,46 @@ function matchedResponse(
   const detailPrefix = 'basic/serviceAppointment/queryById/'
   if (route.startsWith(detailPrefix)) {
     const requestedId = decodeURIComponent(route.slice(detailPrefix.length))
-    if (isMockOwnedRead(route)) return mockWorkOrderDetailResponseFor(requestedId)
+    if (isMockOwnedRead(route)) return responseForDetail(requestedId) ?? mockWorkOrderDetailResponseFor(requestedId)
+  }
+  if (route === 'biz/extField/query' && requestData.extId === appointmentFormDefinitionWireId) {
+    return mockAppointmentFormDefinitionResponse
+  }
+  if (route === `biz/extForm/query/${appointmentFormDefinitionWireId}`) {
+    const dataId = typeof requestData.id === 'string' ? requestData.id : undefined
+    const formData = dataId ? mockCommandState().formData.get(dataId) : undefined
+    return { data: formData ? [formData] : [], page: 1, rows: 20, total: formData ? 1 : 0 }
   }
 
+  return null
+}
+
+function matchedCommandResponse(request: ApiCommandRequest): unknown | null {
+  const route = normalizedPath(request.path)
+  const data = request.body ?? {}
+  if (route === 'basic/serviceAppointment/selfExamination') {
+    const id = typeof data.saId === 'string' ? data.saId : ''
+    if (!isSyntheticWorkOrderId(id)) return null
+    const current = responseForDetail(id)
+    const nodes = mutableRecord(mutableRecord(current)?.data)?.workflowNode
+    const hasAccept = Array.isArray(nodes) && nodes.some((value) => mutableRecord(value)?.nodeDef && mutableRecord(mutableRecord(value)?.nodeDef)?.nodeType === 'accept')
+    return { data: hasAccept ? [{ reason: 'synthetic confirmation required' }] : [] }
+  }
+  if (route === 'biz/extForm/upsert/' + appointmentFormDefinitionWireId) {
+    const formDataId = saveMockAppointment(data.dataStr)
+    return { data: { _id: formDataId } }
+  }
+  if (route === 'workflow/process') {
+    const id = typeof data.sid === 'string' ? data.sid : ''
+    if (!isSyntheticWorkOrderId(id)) return null
+    if (data.nodeFormDefId === appointmentFormDefinitionWireId) {
+      const formDataId = typeof data.nodeFormDataId === 'string' ? data.nodeFormDataId : ''
+      completeMockAppointment(id, formDataId)
+    } else {
+      acceptMockWorkOrder(id)
+    }
+    return { success: true, data: {} }
+  }
   return null
 }
 
@@ -203,4 +389,15 @@ export async function tryMockRead(
   if (response === null) return null
   await delay(options.latencyMs ?? 300)
   return bindMockActorMarkers(clonedResponse(response), options.actor)
+}
+
+export async function tryMockCommand(
+  path: string,
+  requestData: Readonly<Record<string, unknown>> = {},
+): Promise<unknown | null> {
+  const mode = isBusinessMockMode()
+  if (mode === 'off') return null
+  const response = matchedCommandResponse({ method: 'POST', path, body: requestData as Record<string, string | number | boolean> })
+  if (response === null) return null
+  return clonedResponse(response)
 }

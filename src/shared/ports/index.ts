@@ -3,6 +3,8 @@ export type {
   CodeOptionRead,
   CodeOptionsQuery,
   FormDataRead,
+  FormFieldRead,
+  FormFieldValue,
   FormDefinitionRead,
   ReadPage,
   TechnicianApiReadPort,
@@ -21,6 +23,16 @@ export type {
   WorkflowNodeVisibilityEvidence,
   WorkflowNodeVisibilityEvidenceState,
 } from './api'
+export type {
+  AcceptOrderInput,
+  AcceptOrderInspection,
+  AppointmentFieldValue,
+  AppointmentFormFieldRead,
+  AppointmentFormOption,
+  AppointmentFormRead,
+  SubmitAppointmentInput,
+  TechnicianApiCommandPort,
+} from './commands'
 export type { AuthSessionPort, AuthStartRequest, SessionSnapshot } from './auth'
 export type {
   CalendarEventInput,

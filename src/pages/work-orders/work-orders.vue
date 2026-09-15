@@ -128,7 +128,7 @@
           :key="String(item.id)"
           class="work-order-card"
           hover-class="work-order-card-hover"
-          :url="workOrderDetailRouteFor(item.id)"
+          :url="listActionFor(item).detailAccessible ? workOrderDetailRouteFor(item.id) : ''"
         >
           <view
             class="card-accent"
@@ -170,14 +170,14 @@
               </view>
               <text v-if="item.customerName" class="card-customer">{{ item.customerName }}</text>
               <view
-                v-if="item.communityOrderCount !== undefined || item.contact?.normalizedPhone"
+                v-if="item.communityOrderCount !== undefined || listActionFor(item).contactAvailable || listActionFor(item).acceptOrder"
                 class="card-footer"
               >
                 <text v-if="item.communityOrderCount !== undefined" class="nearby-chip">
                   同小区 {{ item.communityOrderCount }}
                 </text>
                 <view
-                  v-if="item.contact?.normalizedPhone"
+                  v-if="listActionFor(item).contactAvailable"
                   class="card-phone-button"
                   :class="[
                     `card-phone-button--${workOrderCardToneFor(item.taskLabel)}`,
@@ -194,12 +194,32 @@
                     aria-hidden="true"
                   />
                 </view>
+                <button
+                  v-if="listActionFor(item).acceptOrder"
+                  class="card-accept-button"
+                  :class="`card-accept-button--${workOrderCardToneFor(item.taskLabel)}`"
+                  :disabled="workOrders.acceptInFlightId === item.id"
+                  @tap.stop="requestAccept(item)"
+                >
+                  {{ workOrders.acceptInFlightId === item.id ? '接单中' : '接单' }}
+                </button>
               </view>
             </view>
           </view>
         </navigator>
 
         <button v-if="workOrders.hasMore === true" class="state-action load-more" @tap="loadMore">加载更多</button>
+      </view>
+
+      <view v-if="acceptCandidate" class="accept-confirm-backdrop" @tap="cancelAccept">
+        <view class="accept-confirm-card" @tap.stop>
+          <text class="accept-confirm-title">确认接单</text>
+          <text class="accept-confirm-copy">该工单存在待确认事项，确认后将进入工单处理流程。</text>
+          <view class="accept-confirm-actions">
+            <button class="accept-confirm-button accept-confirm-button--secondary" @tap="cancelAccept">取消</button>
+            <button class="accept-confirm-button accept-confirm-button--primary" @tap="confirmAccept">确认接单</button>
+          </view>
+        </view>
       </view>
 
       <view v-else-if="workOrders.loadState === 'loading'" class="loading-placeholder" aria-hidden="true" />
@@ -217,12 +237,15 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { hasAuthenticatedSession } from '@features/home/access'
 import { workOrderCardIconColorFor, workOrderCardIconFor, workOrderCardToneFor } from '@features/work-orders/card'
 import { workOrderDetailRouteFor } from '@features/work-orders/detail'
+import { workOrderListActionFor } from '@features/work-orders/list-actions'
 import { useWorkOrderListStore } from '@features/work-orders/list'
+import type { WorkOrderSummary } from '@shared/ports'
 import { useSessionStore } from '@shared/state'
 import AppIcon from '@shared/ui/AppIcon.vue'
 
 const session = useSessionStore()
 const workOrders = useWorkOrderListStore()
+const acceptCandidate = ref<WorkOrderSummary | null>(null)
 const searchDraft = ref(workOrders.searchText)
 const canAccess = computed(() => hasAuthenticatedSession(session.status, session.session))
 const isLoading = computed(() => workOrders.loadState === 'loading')
@@ -294,6 +317,39 @@ async function loadMore(): Promise<void> {
 
 async function dialContact(item: Parameters<typeof workOrders.dialContact>[0]): Promise<void> {
   await workOrders.dialContact(item)
+}
+
+function listActionFor(item: WorkOrderSummary) {
+  return workOrderListActionFor(item, session.session)
+}
+
+async function requestAccept(item: WorkOrderSummary): Promise<void> {
+  const action = listActionFor(item).acceptOrder
+  if (!action) return
+  const result = await workOrders.acceptOrder({
+    workOrderId: item.id,
+    workflowNodeId: action.workflowNodeId,
+  })
+  if (result.state === 'confirmation_required') acceptCandidate.value = item
+}
+
+async function confirmAccept(): Promise<void> {
+  const item = acceptCandidate.value
+  if (!item) return
+  const action = listActionFor(item).acceptOrder
+  if (!action) {
+    acceptCandidate.value = null
+    return
+  }
+  const result = await workOrders.acceptOrder({
+    workOrderId: item.id,
+    workflowNodeId: action.workflowNodeId,
+  }, true)
+  if (result.state !== 'confirmation_required') acceptCandidate.value = null
+}
+
+function cancelAccept(): void {
+  acceptCandidate.value = null
 }
 </script>
 
@@ -630,6 +686,80 @@ async function dialContact(item: Parameters<typeof workOrders.dialContact>[0]): 
 }
 
 .card-phone-button--loading { opacity: 0.48; }
+
+.card-accept-button {
+  border: 0;
+  border-radius: 10rpx;
+  color: #ffffff;
+  flex: 0 0 auto;
+  font-size: 22rpx;
+  font-weight: 800;
+  line-height: 54rpx;
+  margin: 0 2rpx 0 12rpx;
+  min-height: 54rpx;
+  padding: 0 22rpx;
+}
+
+.card-accept-button--blue { background: #2878f2; }
+.card-accept-button--red { background: #f06445; }
+.card-accept-button--orange { background: #ff941f; }
+.card-accept-button--purple { background: #8a69e8; }
+.card-accept-button--green { background: #35b978; }
+.card-accept-button--gray { background: #8d99aa; }
+.card-accept-button[disabled] { opacity: 0.52; }
+
+.accept-confirm-backdrop {
+  align-items: center;
+  background: rgba(15, 28, 48, 0.38);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  position: fixed;
+  z-index: 20;
+}
+
+.accept-confirm-card {
+  background: #ffffff;
+  border-radius: 24rpx;
+  box-sizing: border-box;
+  margin: 48rpx;
+  padding: 32rpx;
+  width: 100%;
+}
+
+.accept-confirm-title {
+  color: #172239;
+  display: block;
+  font-size: 30rpx;
+  font-weight: 800;
+}
+
+.accept-confirm-copy {
+  color: #6f7f98;
+  display: block;
+  font-size: 24rpx;
+  line-height: 1.6;
+  margin-top: 16rpx;
+}
+
+.accept-confirm-actions {
+  display: flex;
+  gap: 16rpx;
+  margin-top: 28rpx;
+}
+
+.accept-confirm-button {
+  border-radius: 12rpx;
+  flex: 1;
+  font-size: 24rpx;
+  font-weight: 800;
+  height: 72rpx;
+  line-height: 72rpx;
+  margin: 0;
+}
+
+.accept-confirm-button--secondary { background: #f1f4f8; color: #5f708b; }
+.accept-confirm-button--primary { background: #2878f2; color: #ffffff; }
 
 .list-state {
   align-items: center;

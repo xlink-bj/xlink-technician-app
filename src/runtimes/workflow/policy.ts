@@ -10,6 +10,24 @@ export interface NodeVisibilityDecision {
   readonly reason?: WorkflowBlockedReason
 }
 
+function evaluateActorVisibility(
+  node: WorkflowNodeMetadata,
+  actor: WorkflowActor | undefined,
+): NodeVisibilityDecision {
+  const evidence = node.visibility
+  if (!evidence || evidence.evidenceState !== 'verified') {
+    return { visible: false, reason: 'policy_unverified' }
+  }
+  if (!actor) return { visible: false, reason: 'not_handler' }
+
+  const handlerMatch = node.handlers ? isHandlerMatch(actor, node.handlers) : false
+  const roleMatch =
+    (evidence.selectableRoleIds && matchesRoleId(actor, evidence.selectableRoleIds)) ||
+    (evidence.viewableRoleIds && matchesRoleId(actor, evidence.viewableRoleIds))
+  if (!handlerMatch && !roleMatch) return { visible: false, reason: 'not_handler' }
+  return { visible: true }
+}
+
 function matchesHandler(actor: WorkflowActor, handler: HandlerIdentity): boolean {
   if (handler.kind === 'user') return actor.userId === handler.userId
   if (handler.kind === 'role') return actor.roleIds.some((roleId) => roleId === handler.roleId)
@@ -49,20 +67,17 @@ export function evaluateNodeVisibility(
     return { visible: false, reason: 'non_user_node' }
   }
   if (node.category === 'unsupported') return { visible: false, reason: 'unsupported_node_type' }
-  const evidence = node.visibility
-  if (!evidence || evidence.evidenceState !== 'verified') {
-    return { visible: false, reason: 'policy_unverified' }
-  }
-  if (!actor) return { visible: false, reason: 'not_handler' }
+  return evaluateActorVisibility(node, actor)
+}
 
-  const handlerMatch = node.handlers ? isHandlerMatch(actor, node.handlers) : false
-  const roleMatch =
-    (evidence.selectableRoleIds && matchesRoleId(actor, evidence.selectableRoleIds)) ||
-    (evidence.viewableRoleIds && matchesRoleId(actor, evidence.viewableRoleIds))
-  if (!handlerMatch && !roleMatch) {
-    return { visible: false, reason: 'not_handler' }
+export function evaluateAcceptOrder(node: WorkflowNodeMetadata, actor?: WorkflowActor): NodeVisibilityDecision {
+  if (node.isSystem || node.isSentinel || node.category === 'system' || node.category === 'sentinel') {
+    return { visible: false, reason: 'system_node' }
   }
-  return { visible: true }
+  if (node.category !== 'accept') return { visible: false, reason: 'unsupported_node_type' }
+  if (node.lifecycle === 'unknown') return { visible: false, reason: 'policy_unverified' }
+  if (node.lifecycle !== 'active') return { visible: false, reason: 'node_inactive' }
+  return evaluateActorVisibility(node, actor)
 }
 
 export function evaluateWorkflowAction(input: {
@@ -71,6 +86,13 @@ export function evaluateWorkflowAction(input: {
   readonly actor?: WorkflowActor
   readonly formRecordCount?: number
 }): WorkflowActionPolicyDecision {
+  if (input.action === 'accept_order') {
+    const visibility = evaluateAcceptOrder(input.node, input.actor)
+    return visibility.visible
+      ? { action: input.action, allowed: true, command: { type: input.action, nodeId: input.node.id } }
+      : { action: input.action, allowed: false, reason: visibility.reason }
+  }
+
   const visibility = evaluateNodeVisibility(input.node, input.actor)
   if (!visibility.visible) {
     return {
@@ -95,6 +117,11 @@ export function evaluateWorkflowAction(input: {
   const formNode = input.node.category === 'forms' || input.node.category === 'repeat'
   if (input.action === 'interact_with_form') {
     return formNode
+      ? { action: input.action, allowed: true, command: { type: input.action, nodeId: input.node.id } }
+      : { action: input.action, allowed: false, reason: 'unsupported_node_type' }
+  }
+  if (input.action === 'set_appointment') {
+    return formNode && input.node.formPurpose === 'appointment'
       ? { action: input.action, allowed: true, command: { type: input.action, nodeId: input.node.id } }
       : { action: input.action, allowed: false, reason: 'unsupported_node_type' }
   }

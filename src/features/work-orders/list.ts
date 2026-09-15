@@ -2,9 +2,11 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
 import type {
+  AcceptOrderInput,
   PhonePort,
   ReadPage,
   SessionSnapshot,
+  TechnicianApiCommandPort,
   TechnicianApiReadPort,
   WorkOrderSummary,
 } from '@shared/ports'
@@ -53,6 +55,10 @@ export const useWorkOrderListStore = defineStore('workOrderList', () => {
   let getSession: () => SessionSnapshot | null = () => null
   let invalidateSession: SessionInvalidation | null = null
   let phone: PhonePort | null = null
+  let commandApi: TechnicianApiCommandPort | null = null
+  let onAcceptSuccess: ((workOrderId: WorkOrderSummary['id']) => void) | null = null
+  const acceptInFlightId = ref<WorkOrderSummary['id'] | null>(null)
+  const acceptError = ref<OperationError | null>(null)
   let lastLoadWasAppend = false
   let loadVersion = 0
 
@@ -68,6 +74,14 @@ export const useWorkOrderListStore = defineStore('workOrderList', () => {
 
   function configurePhone(nextPhone: PhonePort): void {
     phone = nextPhone
+  }
+
+  function configureCommandApi(
+    nextApi: TechnicianApiCommandPort,
+    accepted?: (workOrderId: WorkOrderSummary['id']) => void,
+  ): void {
+    commandApi = nextApi
+    onAcceptSuccess = accepted ?? null
   }
 
   function contactFailure(state: CapabilityState, reason: string): CapabilityResult<void> {
@@ -113,11 +127,49 @@ export const useWorkOrderListStore = defineStore('workOrderList', () => {
     hasMore.value = undefined
   }
 
+  async function acceptOrder(
+    input: AcceptOrderInput,
+    confirmed = false,
+  ): Promise<OperationSnapshot<void> | { readonly state: 'confirmation_required' }> {
+    if (!commandApi) return failure('server_terminal', 'Work Order command API is not configured')
+    if (acceptInFlightId.value) return failure('validation', 'Accept order is already in progress')
+
+    acceptInFlightId.value = input.workOrderId
+    acceptError.value = null
+    try {
+      const inspection = await commandApi.inspectAcceptOrder(input)
+      if (inspection.state !== 'succeeded') {
+        acceptError.value = inspection.error ?? null
+        return inspection.state === 'failed_retryable' || inspection.state === 'failed_terminal'
+          ? { state: inspection.state, ...(inspection.error ? { error: inspection.error } : {}) }
+          : failure('server_terminal', 'Accept order precheck was incomplete')
+      }
+      if (inspection.data?.requiresConfirmation && !confirmed) {
+        return { state: 'confirmation_required' }
+      }
+
+      const result = await commandApi.acceptOrder(input)
+      if (result.state === 'succeeded') {
+        onAcceptSuccess?.(input.workOrderId)
+        clearList()
+        loadState.value = 'idle'
+        await load({ refresh: true })
+      } else {
+        acceptError.value = result.error ?? null
+      }
+      return result
+    } finally {
+      acceptInFlightId.value = null
+    }
+  }
+
   function clear(): void {
     clearList()
     lastLoadWasAppend = false
     contactState.value = 'not_requested'
     contactInFlightId.value = null
+    acceptInFlightId.value = null
+    acceptError.value = null
     loadState.value = 'idle'
     error.value = null
   }
@@ -238,8 +290,12 @@ export const useWorkOrderListStore = defineStore('workOrderList', () => {
     error,
     contactState,
     contactInFlightId,
+    acceptInFlightId,
+    acceptError,
     configureApi,
     configurePhone,
+    configureCommandApi,
+    acceptOrder,
     dialContact,
     load,
     refresh,

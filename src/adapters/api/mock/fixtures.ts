@@ -1,5 +1,41 @@
 /** Synthetic raw responses only. These fields intentionally imitate backend shapes. */
 
+export const mockAppointmentFormDefinitionResponse = {
+  data: [
+    {
+      _id: 'mock-form-field-need',
+      name: 'need',
+      nameDisp: '是否需要上门',
+      type: 'radio',
+      required: '1',
+      state: 1,
+      options: [
+        { value: '1', name: '需要上门' },
+        { value: '0', name: '暂不上门' },
+      ],
+    },
+    {
+      _id: 'mock-form-field-datetime',
+      name: 'datetime',
+      nameDisp: '预约时间',
+      type: 'datetime',
+      required: '1',
+      state: 1,
+    },
+    {
+      _id: 'mock-form-field-note',
+      name: 'note',
+      nameDisp: '备注',
+      type: 'textarea',
+      required: '0',
+      state: 1,
+    },
+  ],
+  page: 1,
+  rows: 20,
+  total: 3,
+} as const
+
 export const mockWorkOrderIds = [
   'mock-work-order-001',
   'mock-work-order-002',
@@ -222,7 +258,8 @@ export const mockSanodeListResponse = {
     },
     {
       _id: 'mock-workflow-node-003',
-      state: 1,
+      state: 0,
+      handlerIds: ['synthetic-user'],
       nodeDef: { nodeType: 'accept', name: '接单' },
       data: mockServiceAppointmentData[mockWorkOrderIds[2]],
     },

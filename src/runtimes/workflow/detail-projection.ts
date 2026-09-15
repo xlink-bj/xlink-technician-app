@@ -12,10 +12,11 @@ import type {
 export type CurrentTaskSelection = 'selected' | 'none' | 'ambiguous'
 export type DetailWorkflowActionIntent = Extract<
   WorkflowActionIntent,
-  'interact_with_form' | 'open_subworkflow' | 'place_order'
+  'interact_with_form' | 'open_subworkflow' | 'place_order' | 'set_appointment'
 >
 
 export interface CurrentTaskProjection {
+  readonly nodeId: WorkflowNodeRead['id']
   readonly title: string
   readonly category: WorkflowNodeCategory
   readonly actionIntent: DetailWorkflowActionIntent
@@ -38,6 +39,7 @@ export function workflowNodeMetadataFromRead(node: WorkflowNodeRead): WorkflowNo
     lifecycle: node.lifecycle,
     ...(node.handlers ? { handlers: node.handlers } : {}),
     ...(node.visibility ? { visibility: node.visibility } : {}),
+    ...(node.formPurpose ? { formPurpose: node.formPurpose } : {}),
     ...(node.isSystem ? { isSystem: node.isSystem } : {}),
     ...(node.isSentinel ? { isSentinel: node.isSentinel } : {}),
   }
@@ -45,11 +47,12 @@ export function workflowNodeMetadataFromRead(node: WorkflowNodeRead): WorkflowNo
 
 export function workflowActionIntentForCategory(
   category: WorkflowNodeCategory,
+  formPurpose?: WorkflowNodeRead['formPurpose'],
 ): DetailWorkflowActionIntent | undefined {
   switch (category) {
     case 'forms':
     case 'repeat':
-      return 'interact_with_form'
+      return formPurpose === 'appointment' ? 'set_appointment' : 'interact_with_form'
     case 'subworkflow':
       return 'open_subworkflow'
     case 'placeOrder':
@@ -83,7 +86,7 @@ export function projectDetailWorkflow(
   const candidates = visibleNodes.flatMap((node) => {
     const title = node.displayName
     if (node.lifecycle !== 'active' || !title) return []
-    const actionIntent = workflowActionIntentForCategory(node.category)
+    const actionIntent = workflowActionIntentForCategory(node.category, node.formPurpose)
     if (!actionIntent) return []
 
     const metadata = workflowNodeMetadataFromRead(node)
@@ -106,6 +109,7 @@ export function projectDetailWorkflow(
     visibleNodeCount: visibleNodes.length,
     actionableNodeCount: candidates.length,
     currentTask: {
+      nodeId: candidate.node.id,
       title: candidate.title,
       category: candidate.node.category,
       actionIntent: candidate.actionIntent,
