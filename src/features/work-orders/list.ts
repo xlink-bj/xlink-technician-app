@@ -54,6 +54,7 @@ export const useWorkOrderListStore = defineStore('workOrderList', () => {
   let invalidateSession: SessionInvalidation | null = null
   let phone: PhonePort | null = null
   let lastLoadWasAppend = false
+  let loadVersion = 0
 
   function configureApi(
     nextApi: TechnicianApiReadPort,
@@ -105,10 +106,20 @@ export const useWorkOrderListStore = defineStore('workOrderList', () => {
   }
 
   function clearList(): void {
+    loadVersion += 1
     items.value = []
     page.value = 1
     totalCount.value = undefined
     hasMore.value = undefined
+  }
+
+  function clear(): void {
+    clearList()
+    lastLoadWasAppend = false
+    contactState.value = 'not_requested'
+    contactInFlightId.value = null
+    loadState.value = 'idle'
+    error.value = null
   }
 
   async function setFailure(
@@ -166,6 +177,7 @@ export const useWorkOrderListStore = defineStore('workOrderList', () => {
     const refresh = options.refresh === true
     const append = options.append === true
     const requestedPage = refresh ? 1 : append ? page.value + 1 : page.value
+    const requestVersion = ++loadVersion
     lastLoadWasAppend = append
     loadState.value = 'loading'
     error.value = null
@@ -176,6 +188,7 @@ export const useWorkOrderListStore = defineStore('workOrderList', () => {
       pageSize: pageSize.value,
       ...(normalizedSearchText ? { searchText: normalizedSearchText } : {}),
     })
+    if (requestVersion !== loadVersion) return result
     if (result.state === 'succeeded' && result.data) {
       const responsePage = result.data.page ?? requestedPage
       const responsePageSize = result.data.pageSize ?? pageSize.value
@@ -233,5 +246,6 @@ export const useWorkOrderListStore = defineStore('workOrderList', () => {
     search,
     retry,
     loadMore,
+    clear,
   }
 })

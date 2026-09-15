@@ -1,6 +1,6 @@
 # G4-UX Business Mock Runtime
 
-Status: opt-in UX development infrastructure. It is not a production data mode.
+Status: development/test-only UX infrastructure. It is not a production data mode.
 
 ## Purpose and evidence
 
@@ -27,29 +27,27 @@ the real read transport. No write or mutation route is mocked.
 
 ## Safety and activation
 
-- Default: OFF.
+- Default: ON (`data`) in `dev`, `test`, and `staging` when no stored choice or
+  explicit build disable is present.
 - Deterministic mock modes are `off`, `data`, and `empty`.
 - Storage key: `xlink_technician_business_mock_enabled`.
 - Mode storage key: `xlink_technician_business_mock_mode`.
-- Optional non-production build flag: `VITE_XLINK_MOCK=true`.
+- Optional non-production build flag: `VITE_XLINK_MOCK=false` explicitly disables
+  the default; `true` explicitly enables it.
 - `VITE_XLINK_ENVIRONMENT=prod` is a hard disable, regardless of storage or
   build flag.
 - Unknown/missing environment is also disabled.
 - No fixture contains credentials, tokens, tenant values, real customer data,
   or real phone numbers.
 
-After real Login in a non-production build, tap the Home `修链 / 屋顶维修`
-brand line five times within 1.5 seconds. The hidden developer panel then
-exposes one switch: `演示数据`. Enable it and choose `数据` or `空状态` under
-`演示状态`. `数据` renders the synthetic SANODE/ordinary records, complete
-local Detail fixtures, and R2-shaped follow-up action records. The adapter
-sorts those records newest-first and derives their title, icon, tone, and
-badge from the verified action type/text semantics. `空状态` returns a
-deterministic empty list (`data=[]`, `total=0`) for the mocked Work Order list
-routes and an empty follow-up action response for synthetic Details; it never
-uses a real request for those mocked paths. Disable it to restore real
-transport behavior. The panel is not
-unlockable in a production environment and is absent during normal Home use.
+After real Login in a non-production build, Home exposes the `Mock 数据` source
+switch and a small `Mock` / `Real API` indicator. The switch is ON by default
+for a new development/test installation and routes accepted business reads
+through the existing Mock Runtime. Turning it OFF restores the real read
+transport. Every source change clears the Work Order list and Detail stores
+before reloading the list, so data from the two sources cannot coexist in the
+same in-memory UI state. While Mock is ON, choose `数据` or `空状态` under
+`Mock 场景`. The panel is unavailable in production.
 
 An authenticated session is required for every mock business read. Missing
 `SessionRef` produces normalized `session_invalid` and neither a mock response

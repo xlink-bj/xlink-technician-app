@@ -23,8 +23,11 @@ function isMockAllowed(environment: BusinessMockEnvironment): boolean {
   return environment !== 'unknown' && environment !== 'prod'
 }
 
-function buildMockFlag(): boolean {
-  return import.meta.env.VITE_XLINK_MOCK === 'true'
+function buildMockFlag(): boolean | undefined {
+  const value = import.meta.env.VITE_XLINK_MOCK
+  if (value === 'true') return true
+  if (value === 'false') return false
+  return undefined
 }
 
 function platformStorage(): MockStorage | null {
@@ -72,7 +75,8 @@ export function resolveBusinessMockMode(input: ResolveBusinessMockInput): Busine
   if (!isMockAllowed(input.environment)) return 'off'
   if (input.storageMode !== undefined) return input.storageMode
   if (input.storageValue !== undefined) return input.storageValue ? 'data' : 'off'
-  return input.buildEnabled === true ? 'data' : 'off'
+  if (input.buildEnabled === false) return 'off'
+  return 'data'
 }
 
 export function resolveBusinessMockEnabled(input: ResolveBusinessMockInput): boolean {

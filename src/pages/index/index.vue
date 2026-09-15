@@ -11,7 +11,7 @@
         <view class="home-hero-circle home-hero-circle-small" />
       </view>
       <view class="home-hero-inner">
-        <view class="home-brand" @tap="handleHomeBrandTap">
+        <view class="home-brand">
           <text class="home-brand-name">修链</text>
           <text class="home-brand-tagline">屋顶维修</text>
         </view>
@@ -47,17 +47,25 @@
 
       <view v-if="mockControlVisible" class="home-surface mock-developer-panel">
         <view class="mock-panel-heading">
-          <text class="mock-panel-title">开发者选项</text>
-          <text class="mock-panel-status">
-            {{ mockMode !== 'off' ? '当前使用模拟业务数据' : '当前使用真实业务数据' }}
+          <text class="mock-panel-title">业务数据源</text>
+          <text class="mock-source-indicator" :class="{ 'mock-source-indicator--real': mockMode === 'off' }">
+            {{ businessDataSourceLabel }}
           </text>
         </view>
         <view class="mock-toggle-row">
-          <text class="mock-toggle-label">演示数据</text>
-          <switch class="mock-switch" :checked="mockMode !== 'off'" @change="handleMockToggle" />
+          <view class="mock-toggle-copy">
+            <text class="mock-toggle-label">Mock 数据</text>
+            <text class="mock-toggle-hint">仅非生产环境可用</text>
+          </view>
+          <switch
+            class="mock-switch"
+            :checked="mockMode !== 'off'"
+            :disabled="mockSwitchInFlight"
+            @change="handleMockToggle"
+          />
         </view>
         <view v-if="mockMode !== 'off'" class="mock-mode-row">
-          <text class="mock-mode-label">演示状态</text>
+          <text class="mock-mode-label">Mock 场景</text>
           <view class="mock-mode-options">
             <button
               class="mock-mode-button"
@@ -253,6 +261,10 @@ import {
   type BusinessMockMode,
 } from '@app/business-mock'
 import { hasAuthenticatedSession, workOrdersRoute } from '@features/home/access'
+import {
+  reloadBusinessReadStores,
+  switchBusinessDataSource,
+} from '@features/home/business-data-source'
 import { submitLogin, type LoginSubmissionState } from '@features/session/login'
 import { resolveQuickLoginInput } from '@features/session/quick-login'
 import {
@@ -263,18 +275,21 @@ import {
 } from '@features/session/login-flow'
 import { useSessionStore } from '@shared/state'
 import type { OperationError } from '@shared/types'
+import { useWorkOrderDetailStore } from '@features/work-orders/detail'
+import { useWorkOrderListStore } from '@features/work-orders/list'
 
 const session = useSessionStore()
+const workOrders = useWorkOrderListStore()
+const workOrderDetail = useWorkOrderDetailStore()
 const phoneNumber = ref('')
 const verificationCode = ref('')
 const loginStage = ref<LoginStage>('launch')
 const message = ref('')
 const logoutInFlight = ref(false)
-const mockControlVisible = ref(false)
-const mockMode = ref<BusinessMockMode>('off')
+const mockControlVisible = computed(() => isBusinessMockDeveloperModeAvailable())
+const mockMode = ref<BusinessMockMode>(isBusinessMockMode())
+const mockSwitchInFlight = ref(false)
 const submissionState = reactive<LoginSubmissionState>({ inFlight: false })
-let homeBrandTapCount = 0
-let homeBrandTapTimer: ReturnType<typeof setTimeout> | null = null
 const homeGreeting = computed(() => {
   const displayName = session.session?.user.displayName?.trim()
   return displayName ? `您好，${displayName}` : '您好'
@@ -284,6 +299,7 @@ const isBusy = computed(
 )
 const showHome = computed(() => hasAuthenticatedSession(session.status, session.session))
 const quickLoginAvailable = computed(() => resolveQuickLoginInput() !== null)
+const businessDataSourceLabel = computed(() => (mockMode.value === 'off' ? 'Real API' : 'Mock'))
 const feedback = computed(() => message.value || userFacingLoginMessage(session.error))
 
 watch(
@@ -315,34 +331,33 @@ async function quickLogin(): Promise<void> {
   if (result.state !== 'succeeded') message.value = userFacingLoginMessage(result.error)
 }
 
-function handleHomeBrandTap(): void {
-  if (!isBusinessMockDeveloperModeAvailable()) return
-  homeBrandTapCount += 1
-  if (homeBrandTapTimer) clearTimeout(homeBrandTapTimer)
-  homeBrandTapTimer = setTimeout(() => {
-    homeBrandTapCount = 0
-    homeBrandTapTimer = null
-  }, 1500)
-
-  if (homeBrandTapCount < 5) return
-  homeBrandTapCount = 0
-  if (homeBrandTapTimer) clearTimeout(homeBrandTapTimer)
-  homeBrandTapTimer = null
-  mockControlVisible.value = true
-  mockMode.value = isBusinessMockMode()
-}
-
-function handleMockToggle(event: Event): void {
+async function handleMockToggle(event: Event): Promise<void> {
+  if (mockSwitchInFlight.value) return
   const detail = (event as Event & { detail?: { value?: boolean } }).detail
   const enabled = detail?.value === true
-  setBusinessMockMode(enabled ? 'data' : 'off')
-  mockMode.value = isBusinessMockMode()
+  mockSwitchInFlight.value = true
+  try {
+    await switchBusinessDataSource(
+      enabled ? 'mock' : 'real',
+      setBusinessMockMode,
+      { list: workOrders, detail: workOrderDetail },
+    )
+  } finally {
+    mockMode.value = isBusinessMockMode()
+    mockSwitchInFlight.value = false
+  }
 }
 
-function selectMockMode(mode: Exclude<BusinessMockMode, 'off'>): void {
+async function selectMockMode(mode: Exclude<BusinessMockMode, 'off'>): Promise<void> {
   if (mockMode.value === 'off') return
+  mockSwitchInFlight.value = true
   setBusinessMockMode(mode)
-  mockMode.value = isBusinessMockMode()
+  try {
+    await reloadBusinessReadStores({ list: workOrders, detail: workOrderDetail })
+  } finally {
+    mockMode.value = isBusinessMockMode()
+    mockSwitchInFlight.value = false
+  }
 }
 
 async function submit(): Promise<void> {
@@ -514,8 +529,9 @@ function userFacingLoginMessage(error: OperationError | null | undefined): strin
 }
 
 .mock-panel-heading {
+  align-items: center;
   display: flex;
-  flex-direction: column;
+  justify-content: space-between;
 }
 
 .mock-panel-title {
@@ -524,8 +540,32 @@ function userFacingLoginMessage(error: OperationError | null | undefined): strin
   font-weight: 800;
 }
 
-.mock-panel-status {
-  color: #71809a;
+.mock-source-indicator {
+  background: #eaf7ef;
+  border: 1rpx solid #b9e6ca;
+  border-radius: 999rpx;
+  color: #21864b;
+  font-size: 22rpx;
+  font-weight: 800;
+  line-height: 1;
+  padding: 10rpx 16rpx;
+}
+
+.mock-source-indicator--real {
+  background: #eef4ff;
+  border-color: #cbdcff;
+  color: #296bcf;
+}
+
+.mock-toggle-copy {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.mock-toggle-hint {
+  color: #8a98ad;
   font-size: 24rpx;
   line-height: 1.5;
   margin-top: 8rpx;

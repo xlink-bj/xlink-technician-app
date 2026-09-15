@@ -14,6 +14,7 @@ import {
 import { detailWorkflowUiProjectionFor } from '@features/work-orders/detail-workflow'
 import {
   businessMockModeStorageKey,
+  isBusinessMockDeveloperModeAvailable,
   isBusinessMockEnabled,
   isBusinessMockMode,
   mockOrdinaryListResponse,
@@ -50,13 +51,15 @@ describe('G4-UX business mock runtime', () => {
     resetBusinessMockCache()
   })
 
-  it('defaults off and resolves runtime storage enable/disable deterministically', () => {
-    expect(resolveBusinessMockEnabled({ environment: 'test' })).toBe(false)
+  it('defaults on in non-production and resolves runtime storage enable/disable deterministically', () => {
+    expect(resolveBusinessMockEnabled({ environment: 'dev' })).toBe(true)
+    expect(resolveBusinessMockEnabled({ environment: 'test' })).toBe(true)
+    expect(resolveBusinessMockEnabled({ environment: 'test', buildEnabled: false })).toBe(false)
     expect(resolveBusinessMockEnabled({ environment: 'test', storageValue: true })).toBe(true)
     expect(resolveBusinessMockEnabled({ environment: 'test', storageValue: false })).toBe(false)
 
-    expect(isBusinessMockEnabled()).toBe(false)
-    expect(isBusinessMockMode()).toBe('off')
+    expect(isBusinessMockEnabled()).toBe(true)
+    expect(isBusinessMockMode()).toBe('data')
     setBusinessMockEnabled(true)
     expect(isBusinessMockEnabled()).toBe(true)
     expect(isBusinessMockMode()).toBe('data')
@@ -84,6 +87,7 @@ describe('G4-UX business mock runtime', () => {
     vi.stubEnv('VITE_XLINK_ENVIRONMENT', 'prod')
     vi.stubEnv('VITE_XLINK_MOCK', 'true')
     resetBusinessMockCache()
+    expect(isBusinessMockDeveloperModeAvailable()).toBe(false)
     expect(isBusinessMockEnabled()).toBe(false)
   })
 
@@ -990,15 +994,16 @@ describe('G4-UX business mock runtime', () => {
     expect(serialized).not.toMatch(/18600372156|JSESSIONID|token/i)
   })
 
-  it('exposes the developer switch only behind the hidden non-production control', () => {
+  it('exposes the data-source switch only in non-production Home', () => {
     const homePage = readFileSync(new URL('../../src/pages/index/index.vue', import.meta.url), 'utf8')
     const homeTemplate = homePage.slice(
       homePage.indexOf('<view v-else-if="showHome"'),
       homePage.indexOf('<view v-else class="login-page">'),
     )
-    expect(homeTemplate).toContain('@tap="handleHomeBrandTap"')
     expect(homeTemplate).toContain('v-if="mockControlVisible"')
-    expect(homeTemplate).toContain('演示数据')
+    expect(homeTemplate).toContain('Mock 数据')
+    expect(homeTemplate).toContain('{{ businessDataSourceLabel }}')
+    expect(homePage).not.toContain('handleHomeBrandTap')
     expect(homePage).toContain('isBusinessMockDeveloperModeAvailable')
   })
 })
