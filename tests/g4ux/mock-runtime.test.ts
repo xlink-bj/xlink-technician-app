@@ -23,6 +23,7 @@ import {
   mockSanodeListResponse,
   mockStatusOptionsResponse,
   mockStatusSampleIds,
+  mockSyntheticStatusCodes,
   mockWorkOrderActivityResponses,
   mockWorkOrderDetailResponse,
   mockWorkOrderDetailResponses,
@@ -315,7 +316,6 @@ describe('G4-UX business mock runtime', () => {
         serviceAddress: '建国门外大街',
         distanceText: '5.1 km',
         communityOrderCount: 0,
-        contact: { normalizedPhone: '13800000003', displayMask: '138****0003' },
       },
       {
         id: mockDetailScenarioIds[4],
@@ -326,7 +326,6 @@ describe('G4-UX business mock runtime', () => {
         serviceAddress: '朝阳路演示地址',
         distanceText: '3.8 km',
         communityOrderCount: 1,
-        contact: { normalizedPhone: '13800000004', displayMask: '138****0004' },
       },
       {
         id: mockDetailScenarioIds[5],
@@ -337,7 +336,6 @@ describe('G4-UX business mock runtime', () => {
         serviceAddress: '朝阳区演示街',
         distanceText: '6.8 km',
         communityOrderCount: 0,
-        contact: { normalizedPhone: '13800000005', displayMask: '138****0005' },
       },
       {
         id: mockStatusSampleIds[0],
@@ -349,7 +347,6 @@ describe('G4-UX business mock runtime', () => {
         serviceAddress: '日坛路',
         distanceText: '0.9 km',
         communityOrderCount: 3,
-        contact: { normalizedPhone: '13800000007', displayMask: '138****0007' },
       },
       {
         id: mockStatusSampleIds[1],
@@ -361,7 +358,6 @@ describe('G4-UX business mock runtime', () => {
         serviceAddress: '朝阳门地铁站',
         distanceText: '4.9 km',
         communityOrderCount: 4,
-        contact: { normalizedPhone: '13800000008', displayMask: '138****0008' },
       },
       {
         id: mockStatusSampleIds[2],
@@ -373,7 +369,6 @@ describe('G4-UX business mock runtime', () => {
         serviceAddress: '天福园小区',
         distanceText: '0.5 km',
         communityOrderCount: 1,
-        contact: { normalizedPhone: '13800000009', displayMask: '138****0009' },
       },
       {
         id: mockStatusSampleIds[3],
@@ -385,7 +380,6 @@ describe('G4-UX business mock runtime', () => {
         serviceAddress: '日坛国际贸易中心A座',
         distanceText: '1.6 km',
         communityOrderCount: 1,
-        contact: { normalizedPhone: '13800000010', displayMask: '138****0010' },
       },
     ])
     expect(list.data?.items[0].id).not.toBe('mock-workflow-node-001')
@@ -868,6 +862,60 @@ describe('G4-UX business mock runtime', () => {
       path: 'i/code/selectMultistageCode.do',
       body: { types: 'repairParts', tenantId: 'synthetic-tenant' },
     })
+  })
+
+  it('keeps visual-only status samples synthetic across raw data, lookup, and Adapter output', async () => {
+    setBusinessMockEnabled(true)
+    const raw = await tryMockRead(
+      'basic/serviceAppointment/querySAWorkflowNode',
+      { page: 1, rows: 20 },
+      { latencyMs: 0 },
+    )
+    expect(raw).toMatchObject({
+      data: expect.arrayContaining([
+        expect.objectContaining({
+          data: expect.objectContaining({ status: mockSyntheticStatusCodes.contact }),
+        }),
+        expect.objectContaining({
+          data: expect.objectContaining({ status: mockSyntheticStatusCodes.onsite }),
+        }),
+      ]),
+    })
+    const rawStatusValues = (raw as { data: Array<{ data: { status: string } }> }).data.map(
+      (item) => item.data.status,
+    )
+    expect(rawStatusValues).toEqual(expect.arrayContaining(Object.values(mockSyntheticStatusCodes)))
+
+    expect(mockStatusOptionsResponse.data).toEqual(
+      expect.arrayContaining([
+        { value: mockSyntheticStatusCodes.contact, codelabel: '联系客户' },
+        { value: mockSyntheticStatusCodes.onsite, codelabel: '现场服务' },
+        { value: mockSyntheticStatusCodes.visit, codelabel: '上门服务' },
+        { value: mockSyntheticStatusCodes.deferred, codelabel: '暂不上门' },
+        { value: mockSyntheticStatusCodes.order, codelabel: '待下单' },
+        { value: mockSyntheticStatusCodes.proposal, codelabel: '跟进方案' },
+        { value: mockSyntheticStatusCodes.rating, codelabel: '待评价' },
+      ]),
+    )
+    expect(mockStatusOptionsResponse.data.map((option) => option.value)).not.toEqual(
+      expect.arrayContaining(['104', '200', '201', '202', '203', '205', '402']),
+    )
+
+    const request = vi.fn<UniApiRequestExecutor>()
+    const api = createRoleScopedTechnicianApiReadAdapter(
+      createUniApiReadTransport({
+        apiBaseUrl: 'https://example.invalid',
+        getSessionRef: () => asOpaqueId<'SessionRef'>('synthetic-session-ref'),
+        request,
+        mockLatencyMs: 0,
+      }),
+      () => asOpaqueId<'RoleId'>('synthetic-role'),
+      mockAdapterOptions,
+    )
+    const result = await api.listWorkOrders({ page: 1, pageSize: 20 })
+    expect(result.data?.items.find((item) => item.id === mockStatusSampleIds[0])?.taskLabel).toBe('现场服务')
+    expect(result.data?.items.find((item) => item.id === mockStatusSampleIds[1])?.taskLabel).toBe('上门服务')
+    expect(request).not.toHaveBeenCalled()
   })
 
   it('omits an unknown status instead of fabricating a task label', async () => {

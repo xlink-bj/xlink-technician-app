@@ -22,6 +22,7 @@ export {
   mockSanodeListResponse,
   mockStatusOptionsResponse,
   mockStatusSampleIds,
+  mockSyntheticStatusCodes,
   mockWorkOrderActivityResponseFor,
   mockWorkOrderActivityResponses,
   mockWorkOrderDetailResponse,

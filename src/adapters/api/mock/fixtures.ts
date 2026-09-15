@@ -14,13 +14,24 @@ export const mockDetailScenarioIds = [
   'mock-work-order-006',
 ] as const
 
-/** Additional status samples mirror the approved R2 card examples. */
+/** Visual-only status samples use synthetic codes; R2 supplies presentation examples only. */
 export const mockStatusSampleIds = [
   'mock-work-order-007',
   'mock-work-order-008',
   'mock-work-order-009',
   'mock-work-order-010',
 ] as const
+
+/** Mock-only codes keep visual status coverage out of the unverified production vocabulary. */
+export const mockSyntheticStatusCodes = {
+  contact: 'mock-status-contact',
+  onsite: 'mock-status-onsite',
+  visit: 'mock-status-visit',
+  deferred: 'mock-status-deferred',
+  order: 'mock-status-order',
+  proposal: 'mock-status-proposal',
+  rating: 'mock-status-rating',
+} as const
 
 /** Mock DATA list order is intentionally stable for visual review. */
 export const mockListScenarioIds = [...mockDetailScenarioIds, ...mockStatusSampleIds] as const
@@ -84,7 +95,7 @@ const mockServiceAppointmentData = {
       applyTimeStr: '2026-04-14 09:30',
     },
     serviceType: '40',
-    status: '104',
+    status: mockSyntheticStatusCodes.contact,
     phone: '13800000003',
   },
   [mockDetailScenarioIds[4]]: {
@@ -98,7 +109,7 @@ const mockServiceAppointmentData = {
       communityOrdersTotal: 1,
     },
     serviceType: '30',
-    status: '201',
+    status: mockSyntheticStatusCodes.deferred,
     describe: '等待客户确认方案',
     phone: '13800000004',
   },
@@ -113,7 +124,7 @@ const mockServiceAppointmentData = {
       communityOrdersTotal: 0,
     },
     serviceType: '40',
-    status: '203',
+    status: mockSyntheticStatusCodes.order,
     phone: '13800000005',
   },
   [mockStatusSampleIds[0]]: {
@@ -128,7 +139,7 @@ const mockServiceAppointmentData = {
       communityOrdersTotal: 3,
     },
     serviceType: '40',
-    status: '200',
+    status: mockSyntheticStatusCodes.onsite,
     phone: '13800000007',
   },
   [mockStatusSampleIds[1]]: {
@@ -143,7 +154,7 @@ const mockServiceAppointmentData = {
       communityOrdersTotal: 4,
     },
     serviceType: '40',
-    status: '202',
+    status: mockSyntheticStatusCodes.visit,
     phone: '13800000008',
   },
   [mockStatusSampleIds[2]]: {
@@ -158,7 +169,7 @@ const mockServiceAppointmentData = {
       communityOrdersTotal: 1,
     },
     serviceType: '40',
-    status: '205',
+    status: mockSyntheticStatusCodes.proposal,
     phone: '13800000009',
   },
   [mockStatusSampleIds[3]]: {
@@ -173,7 +184,7 @@ const mockServiceAppointmentData = {
       communityOrdersTotal: 1,
     },
     serviceType: '40',
-    status: '402',
+    status: mockSyntheticStatusCodes.rating,
     phone: '13800000010',
   },
 } as const
@@ -279,13 +290,13 @@ export const mockStatusOptionsResponse = {
     { value: '206', codelabel: '跟进签约' },
     { value: '401', codelabel: '验收回款' },
     { value: '101', codelabel: '待接单' },
-    { value: '104', codelabel: '联系客户' },
-    { value: '200', codelabel: '现场服务' },
-    { value: '202', codelabel: '上门服务' },
-    { value: '201', codelabel: '暂不上门' },
-    { value: '203', codelabel: '待下单' },
-    { value: '205', codelabel: '跟进方案' },
-    { value: '402', codelabel: '待评价' },
+    { value: mockSyntheticStatusCodes.contact, codelabel: '联系客户' },
+    { value: mockSyntheticStatusCodes.onsite, codelabel: '现场服务' },
+    { value: mockSyntheticStatusCodes.visit, codelabel: '上门服务' },
+    { value: mockSyntheticStatusCodes.deferred, codelabel: '暂不上门' },
+    { value: mockSyntheticStatusCodes.order, codelabel: '待下单' },
+    { value: mockSyntheticStatusCodes.proposal, codelabel: '跟进方案' },
+    { value: mockSyntheticStatusCodes.rating, codelabel: '待评价' },
   ],
   page: 1,
   rows: 20,
