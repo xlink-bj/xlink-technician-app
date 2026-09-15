@@ -2,6 +2,7 @@ import type { SessionRef } from '@shared/types'
 
 import {
   ApiCommandTransportError,
+  normalizeCommandResponse,
   type ApiCommandRequest,
   type ApiCommandTransport,
 } from './technician-api-commands'
@@ -55,6 +56,11 @@ function statusCategory(
   return 'server_terminal'
 }
 
+function isRealMutationPath(path: string): boolean {
+  const route = path.replace(/^\/+/, '').split('?')[0]
+  return route === 'workflow/process' || route.startsWith('biz/extForm/upsert/')
+}
+
 export function createUniApiCommandTransport(options: UniApiCommandTransportOptions): ApiCommandTransport {
   const request = options.request ?? defaultRequest
 
@@ -66,9 +72,15 @@ export function createUniApiCommandTransport(options: UniApiCommandTransportOpti
       }
 
       const mockResponse = await tryMockCommand(input.path, input.body ?? {})
-      if (mockResponse !== null) return mockResponse
+      if (mockResponse !== null) return normalizeCommandResponse(mockResponse)
       if (isMockOwnedCommand(input.path, input.body ?? {})) {
         throw new ApiCommandTransportError('Synthetic mock command is disabled', 'server_terminal')
+      }
+      if (isRealMutationPath(input.path) && import.meta.env.VITE_XLINK_ENABLE_REAL_WRITES !== 'true') {
+        throw new ApiCommandTransportError(
+          'Real command writes are disabled for this build',
+          'unsupported_capability',
+        )
       }
 
       let response: UniNamespace.RequestSuccessCallbackResult
@@ -98,7 +110,7 @@ export function createUniApiCommandTransport(options: UniApiCommandTransportOpti
         )
       }
 
-      return response.data
+      return normalizeCommandResponse(response.data)
     },
   }
 }

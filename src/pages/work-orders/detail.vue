@@ -115,12 +115,12 @@
         <button
           class="primary-task-action"
           :class="`primary-task-action--${workflowProjection.currentTask.tone}`"
-          :disabled="workflowProjection.currentTask.actionIntent !== 'set_appointment' || workOrder.appointmentState === 'loading' || workOrder.appointmentState === 'submitting'"
+          :disabled="workflowProjection.currentTask.execution !== 'enabled' || workOrder.appointmentState === 'loading' || workOrder.appointmentState === 'submitting'"
           @tap="handleCurrentTaskAction"
         >
           {{ workOrder.appointmentState === 'loading' ? '读取中' : workflowProjection.currentTask.actionLabel }}
         </button>
-        <text v-if="workflowProjection.currentTask.actionIntent !== 'set_appointment'" class="task-action-note">当前仅支持只读查看，操作能力将在后续核验后开放</text>
+        <text v-if="workflowProjection.currentTask.execution !== 'enabled'" class="task-action-note">当前仅支持只读查看，操作能力将在后续核验后开放</text>
       </view>
 
       <view v-if="workOrder.appointmentForm" class="appointment-card">
@@ -138,6 +138,7 @@
               :key="option.value"
               class="appointment-option"
               :class="{ 'appointment-option--selected': String(workOrder.appointmentForm.values[field.key] ?? '') === option.value }"
+              :disabled="field.readOnly"
               @tap="setAppointmentField(field.key, option.value)"
             >
               {{ option.label }}
@@ -398,7 +399,7 @@ async function dialContact(): Promise<void> {
 
 async function handleCurrentTaskAction(): Promise<void> {
   const currentTask = workflowProjection.value.currentTask
-  if (!currentTask || currentTask.actionIntent !== 'set_appointment') return
+  if (!currentTask || currentTask.execution !== 'enabled') return
   await workOrder.openAppointment(currentTask.nodeId)
 }
 

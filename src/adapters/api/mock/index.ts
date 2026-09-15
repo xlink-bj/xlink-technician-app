@@ -29,6 +29,7 @@ export {
   mockStatusOptionsResponse,
   mockStatusSampleIds,
   mockSyntheticStatusCodes,
+  mockCommandScenarioIds,
   mockWorkOrderActivityResponseFor,
   mockWorkOrderActivityResponses,
   mockWorkOrderDetailResponse,

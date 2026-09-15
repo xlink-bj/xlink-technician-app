@@ -21,8 +21,8 @@ export interface CurrentTaskProjection {
   readonly category: WorkflowNodeCategory
   readonly actionIntent: DetailWorkflowActionIntent
   readonly domainPolicy: Pick<WorkflowActionPolicyDecision, 'action' | 'allowed' | 'reason'>
-  /** The current D3 slice never authorizes a workflow mutation. */
-  readonly execution: 'disabled_read_only'
+  /** Runtime-owned execution authorization; UI must not infer this from intent. */
+  readonly execution: 'enabled' | 'disabled_read_only'
 }
 
 export interface DetailWorkflowProjection {
@@ -114,7 +114,7 @@ export function projectDetailWorkflow(
       category: candidate.node.category,
       actionIntent: candidate.actionIntent,
       domainPolicy: policySummary(candidate.domainPolicy),
-      execution: 'disabled_read_only',
+      execution: candidate.actionIntent === 'set_appointment' ? 'enabled' : 'disabled_read_only',
     },
   }
 }

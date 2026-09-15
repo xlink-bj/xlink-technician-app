@@ -8,6 +8,7 @@ import {
   mockRoleFunctionResponse,
   mockSanodeListResponse,
   mockStatusOptionsResponse,
+  mockCommandScenarioIds,
   mockWorkOrderActivityResponseFor,
   mockWorkOrderDetailResponses,
   mockWorkOrderDetailResponseFor,
@@ -198,6 +199,26 @@ function completeMockAppointment(id: string, formDataId: string): void {
   }
 }
 
+function commandWorkOrderId(data: Readonly<Record<string, unknown>>): string {
+  if (typeof data.sid === 'string') return data.sid
+  if (typeof data.saId === 'string') return data.saId
+  if (typeof data.dataStr !== 'string') return ''
+  try {
+    const parsed = JSON.parse(data.dataStr) as Record<string, unknown>
+    return typeof parsed.sid === 'string' ? parsed.sid : ''
+  } catch {
+    return ''
+  }
+}
+
+function mockFailureResponse(kind: 'retryable' | 'terminal'): unknown {
+  return {
+    success: false,
+    code: kind === 'retryable' ? 'RETRYABLE' : 'TERMINAL',
+    message: 'synthetic command failure',
+  }
+}
+
 /**
  * Positive Detail fixtures use explicit synthetic identity markers so their
  * raw workflow shapes stay deterministic. In the running app, bind those
@@ -346,18 +367,30 @@ function matchedCommandResponse(request: ApiCommandRequest): unknown | null {
   if (route === 'basic/serviceAppointment/selfExamination') {
     const id = typeof data.saId === 'string' ? data.saId : ''
     if (!isSyntheticWorkOrderId(id)) return null
+    if (
+      id === mockCommandScenarioIds.acceptDirect ||
+      id === mockCommandScenarioIds.acceptRetryable ||
+      id === mockCommandScenarioIds.acceptTerminal
+    ) {
+      return { data: [] }
+    }
     const current = responseForDetail(id)
     const nodes = mutableRecord(mutableRecord(current)?.data)?.workflowNode
     const hasAccept = Array.isArray(nodes) && nodes.some((value) => mutableRecord(value)?.nodeDef && mutableRecord(mutableRecord(value)?.nodeDef)?.nodeType === 'accept')
     return { data: hasAccept ? [{ reason: 'synthetic confirmation required' }] : [] }
   }
   if (route === 'biz/extForm/upsert/' + appointmentFormDefinitionWireId) {
+    const id = commandWorkOrderId(data)
+    if (id === mockCommandScenarioIds.appointmentRetryable) return mockFailureResponse('retryable')
+    if (id === mockCommandScenarioIds.appointmentTerminal) return mockFailureResponse('terminal')
     const formDataId = saveMockAppointment(data.dataStr)
     return { data: { _id: formDataId } }
   }
   if (route === 'workflow/process') {
     const id = typeof data.sid === 'string' ? data.sid : ''
     if (!isSyntheticWorkOrderId(id)) return null
+    if (id === mockCommandScenarioIds.acceptRetryable) return mockFailureResponse('retryable')
+    if (id === mockCommandScenarioIds.acceptTerminal) return mockFailureResponse('terminal')
     if (data.nodeFormDefId === appointmentFormDefinitionWireId) {
       const formDataId = typeof data.nodeFormDataId === 'string' ? data.nodeFormDataId : ''
       completeMockAppointment(id, formDataId)

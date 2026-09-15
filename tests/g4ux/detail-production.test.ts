@@ -92,7 +92,7 @@ describe('G4-UX detail D3 semantic boundary', () => {
     expect(detailPage).not.toContain('viewableRoleIds')
     expect(detailPage).not.toContain('handlerIds')
     expect(detailPage).toContain('appointment-card')
-    expect(detailPage).toContain("actionIntent !== 'set_appointment'")
+    expect(detailPage).toContain("execution !== 'enabled'")
     expect(detailPage).not.toContain('formDefId')
     expect(detailPage).not.toContain('完成当前任务')
     expect(detailPage).toContain('disabled')

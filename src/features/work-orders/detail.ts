@@ -22,6 +22,7 @@ import {
   type WorkOrderId,
   type WorkflowNodeRuntimeId,
 } from '@shared/types'
+import { validateAppointmentForm, validateAppointmentValue } from './appointment-validation'
 
 export const workOrderDetailRoute = '/pages/work-orders/detail' as const
 
@@ -269,12 +270,22 @@ export const useWorkOrderDetailStore = defineStore('workOrderDetail', () => {
     return result
   }
 
-  function setAppointmentField(key: string, value: string | number | boolean | null): void {
-    if (!appointmentForm.value) return
+  function setAppointmentField(key: string, value: string | number | boolean | null): OperationSnapshot<void> {
+    if (!appointmentForm.value) return failure('validation', 'Appointment form is not ready')
+    const field = appointmentForm.value.fields.find((candidate) => candidate.key === key)
+    if (!field) return failure('validation', 'Appointment field is not supported')
+    const validation = validateAppointmentValue(field, value)
+    if (validation.state !== 'succeeded') {
+      appointmentError.value = validation.error ?? null
+      appointmentState.value = 'ready'
+      return validation
+    }
     appointmentForm.value = {
       ...appointmentForm.value,
       values: { ...appointmentForm.value.values, [key]: value },
     }
+    appointmentError.value = null
+    return validation
   }
 
   async function submitAppointment(): Promise<OperationSnapshot<void>> {
@@ -288,6 +299,14 @@ export const useWorkOrderDetailStore = defineStore('workOrderDetail', () => {
 
     const workOrderId = lastWorkOrderId
     if (!workOrderId) return failure('validation', 'Work Order detail is not available')
+
+    const validation = validateAppointmentForm(appointmentForm.value)
+    if (validation.state !== 'succeeded') {
+      appointmentState.value = 'ready'
+      appointmentError.value = validation.error ?? null
+      return validation
+    }
+
     appointmentState.value = 'submitting'
     appointmentError.value = null
     const result = await commandApi.submitAppointment({

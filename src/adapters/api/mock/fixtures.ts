@@ -1,5 +1,7 @@
 /** Synthetic raw responses only. These fields intentionally imitate backend shapes. */
 
+import { appointmentFormDefinitionWireId } from '../appointment-contract'
+
 export const mockAppointmentFormDefinitionResponse = {
   data: [
     {
@@ -67,6 +69,15 @@ export const mockSyntheticStatusCodes = {
   order: 'mock-status-order',
   proposal: 'mock-status-proposal',
   rating: 'mock-status-rating',
+} as const
+
+/** Functional command fixtures are direct-detail harness entries, not List rows. */
+export const mockCommandScenarioIds = {
+  acceptDirect: 'mock-work-order-011-accept-direct',
+  acceptRetryable: 'mock-work-order-012-accept-retryable',
+  acceptTerminal: 'mock-work-order-013-accept-terminal',
+  appointmentRetryable: 'mock-work-order-014-appointment-retryable',
+  appointmentTerminal: 'mock-work-order-015-appointment-terminal',
 } as const
 
 /** Mock DATA list order is intentionally stable for visual review. */
@@ -495,6 +506,124 @@ export const mockWorkOrderDetailResponses = {
       workflowNode: [],
     },
   },
+  [mockCommandScenarioIds.acceptDirect]: {
+    data: {
+      serviceAppointment: {
+        _id: mockCommandScenarioIds.acceptDirect,
+        orderNum: '19011',
+        name: '演示接单直通样本',
+        address: '演示地址一',
+        district: 110105,
+        exts: { distance: 1.1, communityOrdersTotal: 0 },
+        status: mockSyntheticStatusCodes.contact,
+        phone: '13800000011',
+        workflowRunId: 'mock-workflow-run-011',
+      },
+      workflow: { _id: 'mock-workflow-run-011' },
+      workflowNode: [{
+        _id: 'mock-workflow-node-011-accept',
+        state: 0,
+        handlerIds: ['synthetic-user'],
+        nodeDef: { nodeType: 'accept', name: '接单' },
+      }],
+    },
+  },
+  [mockCommandScenarioIds.acceptRetryable]: {
+    data: {
+      serviceAppointment: {
+        _id: mockCommandScenarioIds.acceptRetryable,
+        orderNum: '19012',
+        name: '演示接单重试样本',
+        address: '演示地址二',
+        district: 110105,
+        exts: { distance: 1.2, communityOrdersTotal: 0 },
+        status: mockSyntheticStatusCodes.contact,
+        phone: '13800000012',
+        workflowRunId: 'mock-workflow-run-012',
+      },
+      workflow: { _id: 'mock-workflow-run-012' },
+      workflowNode: [{
+        _id: 'mock-workflow-node-012-accept',
+        state: 0,
+        handlerIds: ['synthetic-user'],
+        nodeDef: { nodeType: 'accept', name: '接单' },
+      }],
+    },
+  },
+  [mockCommandScenarioIds.acceptTerminal]: {
+    data: {
+      serviceAppointment: {
+        _id: mockCommandScenarioIds.acceptTerminal,
+        orderNum: '19013',
+        name: '演示接单终止样本',
+        address: '演示地址三',
+        district: 110105,
+        exts: { distance: 1.3, communityOrdersTotal: 0 },
+        status: mockSyntheticStatusCodes.contact,
+        phone: '13800000013',
+        workflowRunId: 'mock-workflow-run-013',
+      },
+      workflow: { _id: 'mock-workflow-run-013' },
+      workflowNode: [{
+        _id: 'mock-workflow-node-013-accept',
+        state: 0,
+        handlerIds: ['synthetic-user'],
+        nodeDef: { nodeType: 'accept', name: '接单' },
+      }],
+    },
+  },
+  [mockCommandScenarioIds.appointmentRetryable]: {
+    data: {
+      serviceAppointment: {
+        _id: mockCommandScenarioIds.appointmentRetryable,
+        orderNum: '19014',
+        name: '演示预约重试样本',
+        address: '演示地址四',
+        district: 110105,
+        exts: { distance: 1.4, communityOrdersTotal: 0 },
+        status: mockSyntheticStatusCodes.contact,
+        phone: '13800000014',
+        workflowRunId: 'mock-workflow-run-014',
+      },
+      workflow: { _id: 'mock-workflow-run-014' },
+      workflowNode: [{
+        _id: 'mock-workflow-node-014-appointment',
+        state: 0,
+        nodeDef: {
+          nodeType: 'forms',
+          name: '预约上门时间',
+          formDefId: appointmentFormDefinitionWireId,
+          userChoose: ['synthetic-role'],
+        },
+      }],
+    },
+  },
+  [mockCommandScenarioIds.appointmentTerminal]: {
+    data: {
+      serviceAppointment: {
+        _id: mockCommandScenarioIds.appointmentTerminal,
+        orderNum: '19015',
+        name: '演示预约终止样本',
+        address: '演示地址五',
+        district: 110105,
+        exts: { distance: 1.5, communityOrdersTotal: 0 },
+        status: mockSyntheticStatusCodes.contact,
+        phone: '13800000015',
+        workflowRunId: 'mock-workflow-run-015',
+      },
+      workflow: { _id: 'mock-workflow-run-015' },
+      workflowNode: [{
+        _id: 'mock-workflow-node-015-appointment',
+        state: 0,
+        nodeDef: {
+          nodeType: 'forms',
+          name: '预约上门时间',
+          formDefId: appointmentFormDefinitionWireId,
+          userChoose: ['synthetic-role'],
+        },
+      }],
+    },
+  },
 } as const
 
 /**
@@ -708,7 +837,7 @@ export function mockWorkOrderActivityResponseFor(id: string): unknown | null {
   return mockWorkOrderActivityResponses[id as MockWorkOrderActivityId] ?? null
 }
 
-export type MockWorkOrderId = (typeof mockListScenarioIds)[number]
+export type MockWorkOrderId = keyof typeof mockWorkOrderDetailResponses
 
 export function mockWorkOrderDetailResponseFor(id: string): unknown | null {
   return mockWorkOrderDetailResponses[id as MockWorkOrderId] ?? null

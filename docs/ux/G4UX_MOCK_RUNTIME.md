@@ -17,13 +17,17 @@ routes are eligible for synthetic responses:
 - `basic/serviceAppointment/query`
 - `basic/serviceAppointment/queryById/<synthetic-id>`
 - `biz/action/query.do` for synthetic service-appointment follow-up reads
+- G4-D command fixtures for synthetic IDs: accept precheck/process and
+  appointment form upsert/process
 
 The mock is checked inside `src/adapters/api/uni-api-read-transport.ts` before
 session/cookie injection and `uni.request`, but only after an authenticated
 `SessionRef` is present. A matched route returns a raw backend-shaped fixture
 and then passes through the same Technician API adapter mapping as a real
-response. An unmatched non-synthetic route returns `null` and falls through to
-the real read transport. No write or mutation route is mocked.
+response. The G4-D command routes use the same raw-response normalization path
+for Mock and Real. An unmatched non-synthetic route returns `null` and falls
+through to the real transport. Mock commands are bounded synthetic UX fixtures;
+they do not write to a backend.
 
 ## Safety and activation
 
@@ -37,6 +41,9 @@ the real read transport. No write or mutation route is mocked.
 - `VITE_XLINK_ENVIRONMENT=prod` is a hard disable, regardless of storage or
   build flag.
 - Unknown/missing environment is also disabled.
+- Real workflow/process and appointment-form upsert writes are blocked by
+  default; explicit `VITE_XLINK_ENABLE_REAL_WRITES=true` is required for a
+  later authorized real-write slice. Read-only command reads remain available.
 - No fixture contains credentials, tokens, tenant values, real customer data,
   or real phone numbers.
 
