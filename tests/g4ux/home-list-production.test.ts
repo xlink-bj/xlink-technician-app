@@ -101,6 +101,7 @@ describe('G4-UX Work Order List card', () => {
     expect(listTemplate).toContain('class="search-input-shell"')
     expect(listTemplate).toContain('class="search-button"')
     expect(listPage).toContain('margin: 12rpx 8rpx 0;')
+    expect(listPage).toContain('margin: 20rpx 8rpx 0;')
     expect(listPage).toContain('margin: 32rpx 8rpx 0;')
     expect(listPage).toContain('flex: 0 0 128rpx;')
     expect(listTemplate).not.toContain('当前角色可见工单')

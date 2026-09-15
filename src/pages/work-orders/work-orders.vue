@@ -378,6 +378,7 @@ async function dialContact(item: Parameters<typeof workOrders.dialContact>[0]): 
 .list-content {
   display: flex;
   flex-direction: column;
+  margin: 20rpx 8rpx 0;
 }
 
 .work-order-card {
