@@ -86,21 +86,34 @@ Both paths produce the same `WorkOrderSummary` semantics. The SANode wrapper
 
 ## Mock dataset and consistency
 
-The DATA scenario remains role-scoped SANode data with three synthetic rows.
-The raw fixtures contain backend-shaped `orderNum`, `name`, `address`,
-`serviceType`, and `status` fields, while the adapter emits only the accepted
-semantic summary. The records intentionally include:
+The DATA scenario remains role-scoped SANode data with ten synthetic rows.
+The first six rows are the D3 Detail scenarios; the additional four rows are
+status-coverage samples so the List can be reviewed against the approved R2
+card examples. The raw fixtures contain backend-shaped `orderNum`, `name`,
+`address`, `serviceType`, and `status` fields, while the adapter emits only
+the accepted semantic summary. The records intentionally include:
 
 - short and long synthetic display numbers/customer/address values;
 - two raw service-type values retained only to exercise backend-shaped input;
-- one row without an address to prove optional-field handling;
-- no invented task title and no unverified semantic status variation.
+- mixed district presence to prove optional-field handling;
+- the screenshot-authorized status labels `联系客户`, `跟进签约`, `现场服务`,
+  `上门服务`, `暂不上门`, `待接单`, `待下单`, `跟进方案`, `验收回款`, and
+  `待评价`, resolved through the Mock code-table response rather than a page
+  status map;
+- both `屋面` and `卫生间` service-part labels from the Mock cascade.
 
-All three SANode WorkOrderIds have local raw Detail fixtures. Each Detail
+The status coverage is presentation evidence only. The raw numeric values are
+backend-shaped fixture inputs, and this slice does not infer or execute any
+status transition or workflow action from them.
+
+All ten SANode WorkOrderIds have local raw Detail fixtures. Each Detail
 fixture reuses the same display number, customer name, and optional address as
-the List fixture and is passed through the same API Adapter mapping. The
-ordinary raw list also uses the first two service-appointment records to prove
-ordinary normalization.
+the List fixture and is passed through the same API Adapter mapping. The first
+six retain the D3 workflow-node scenarios; the four status-only samples have
+an empty read-only workflow-node array so they remain safe, navigable Mock
+Detail records without inventing workflow semantics. The ordinary raw list
+also uses the first two service-appointment records to prove ordinary
+normalization.
 
 The EMPTY scenario remains deterministic and local. It does not fall through
 to the real backend. Synthetic IDs remain locally owned in every mock mode and

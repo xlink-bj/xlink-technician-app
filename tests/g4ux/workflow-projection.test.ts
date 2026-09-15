@@ -342,9 +342,31 @@ describe('G4-UX Detail D3 workflow projection', () => {
       title: '勘察',
       actionIntent: 'interact_with_form',
       actionLabel: '处理表单',
-      tone: 'blue',
+      tone: 'orange',
       domainPolicy: { allowed: true },
       execution: 'disabled_read_only',
     })
+  })
+
+  it('inherits the List status tone for each read-only Detail Action', async () => {
+    const detailSession = {
+      sessionRef: asOpaqueId<'SessionRef'>('synthetic-session-ref'),
+      user: { id: asOpaqueId<'UserId'>('synthetic-user'), displayName: 'Synthetic Technician' },
+      currentRole: { id: asOpaqueId<'RoleId'>('synthetic-role'), name: 'Synthetic Role' },
+      capabilityNames: [],
+    } as const
+    const expected = [
+      [mockDetailScenarioIds[0], 'orange'],
+      [mockDetailScenarioIds[1], 'green'],
+      [mockDetailScenarioIds[2], 'blue'],
+    ] as const
+
+    for (const [id, tone] of expected) {
+      const detail = await readScenario(id)
+      expect(detailWorkflowUiProjectionFor(detail.data ?? null, detailSession).currentTask).toMatchObject({
+        tone,
+        execution: 'disabled_read_only',
+      })
+    }
   })
 })

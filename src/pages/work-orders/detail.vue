@@ -161,39 +161,48 @@
           </view>
         </view>
 
-        <view v-else-if="activeTab === 'customer'" class="tab-panel">
-          <view class="detail-row" v-if="detail.customerName">
-            <text class="row-label">客户名称</text>
-            <text class="row-value">{{ detail.customerName }}</text>
+        <view v-else-if="activeTab === 'customer'" class="tab-panel customer-info-panel">
+          <view class="detail-row customer-info-row">
+            <text class="row-label">客户姓名</text>
+            <text class="row-value customer-info-value">{{ detail.customerName || '—' }}</text>
           </view>
-          <view class="detail-row detail-row--stacked" v-if="detail.serviceDistrict || detail.serviceAddress">
+          <view class="detail-row customer-info-row customer-info-row--address">
             <text class="row-label">服务地址</text>
-            <text class="row-value row-value--long">
-              {{ detail.serviceDistrict }}{{ detail.serviceDistrict && detail.serviceAddress ? ' ' : '' }}{{ detail.serviceAddress }}
-            </text>
+            <text class="row-value customer-info-value customer-info-value--address">{{ customerServiceAddress }}</text>
           </view>
-          <view class="detail-row" v-if="detail.contact?.displayMask">
+          <view class="detail-row customer-info-row">
+            <text class="row-label">工单编号</text>
+            <text class="row-value customer-info-value">{{ detail.displayNumber || '—' }}</text>
+          </view>
+          <view class="detail-row customer-info-row">
             <text class="row-label">联系电话</text>
-            <text class="row-value">{{ detail.contact.displayMask }}</text>
+            <text class="row-value customer-info-value">{{ detail.contact?.displayMask || '—' }}</text>
           </view>
         </view>
 
-        <view v-else-if="activeTab === 'order'" class="tab-panel">
-          <view class="detail-row" v-if="detail.displayNumber">
-            <text class="row-label">工单编号</text>
-            <text class="row-value">#{{ detail.displayNumber }}</text>
+        <view v-else-if="activeTab === 'order'" class="tab-panel order-info-panel">
+          <view class="order-info-heading">
+            <text>订单信息</text>
           </view>
-          <view class="detail-row" v-if="detail.taskLabel">
-            <text class="row-label">当前状态</text>
-            <text class="row-value row-value--accent">{{ detail.taskLabel }}</text>
-          </view>
-          <view class="detail-row" v-if="detail.servicePartLabel">
-            <text class="row-label">服务部位</text>
-            <text class="row-value">{{ detail.servicePartLabel }}</text>
-          </view>
-          <view class="detail-row" v-if="detail.distanceText">
-            <text class="row-label">距离</text>
-            <text class="row-value">{{ detail.distanceText }}</text>
+          <view class="order-info-list">
+            <view class="detail-row order-info-row" v-if="detail.displayNumber">
+              <text class="row-label">工单编号</text>
+              <text class="row-value order-info-value">#{{ detail.displayNumber }}</text>
+            </view>
+            <view class="detail-row order-info-row" v-if="detail.taskLabel">
+              <text class="row-label">当前状态</text>
+              <text class="row-value order-info-value" :class="`row-value--${workOrderCardToneFor(detail.taskLabel)}`">
+                {{ detail.taskLabel }}
+              </text>
+            </view>
+            <view class="detail-row order-info-row" v-if="detail.servicePartLabel">
+              <text class="row-label">服务部位</text>
+              <text class="row-value order-info-value">{{ detail.servicePartLabel }}</text>
+            </view>
+            <view class="detail-row order-info-row" v-if="detail.distanceText">
+              <text class="row-label">距离</text>
+              <text class="row-value order-info-value">{{ detail.distanceText }}</text>
+            </view>
           </view>
         </view>
 
@@ -220,6 +229,7 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 
 import { hasAuthenticatedSession } from '@features/home/access'
+import { workOrderCardToneFor } from '@features/work-orders/card'
 import { useWorkOrderDetailStore } from '@features/work-orders/detail'
 import { detailTabs, type DetailTabKey } from '@features/work-orders/detail-tabs'
 import { detailWorkflowUiProjectionFor } from '@features/work-orders/detail-workflow'
@@ -233,6 +243,11 @@ const routeValue = ref<unknown>(undefined)
 const canAccess = computed(() => hasAuthenticatedSession(session.status, session.session))
 const detail = computed(() => workOrder.detail)
 const activities = computed(() => detail.value?.activities ?? [])
+const customerServiceAddress = computed(() => {
+  const district = detail.value?.serviceDistrict?.trim()
+  const address = detail.value?.serviceAddress?.trim()
+  return [district, address].filter(Boolean).join(' ') || '—'
+})
 const workflowProjection = computed(() => detailWorkflowUiProjectionFor(detail.value, session.session))
 const activeTab = ref<DetailTabKey>('follow-up')
 const showLoadingSkeleton = ref(false)
@@ -560,12 +575,12 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
   font-weight: 700;
 }
 
-.task-eyebrow--blue { color: #1478ff; }
-.task-eyebrow--red { color: #ff4052; }
-.task-eyebrow--orange { color: #ff8a1a; }
-.task-eyebrow--purple { color: #7459e8; }
-.task-eyebrow--green { color: #18ae65; }
-.task-eyebrow--gray { color: #687386; }
+.task-eyebrow--blue { color: #2878f2; }
+.task-eyebrow--red { color: #f06445; }
+.task-eyebrow--orange { color: #ff941f; }
+.task-eyebrow--purple { color: #8a69e8; }
+.task-eyebrow--green { color: #35b978; }
+.task-eyebrow--gray { color: #8d99aa; }
 
 .task-title {
   color: #1d2b40;
@@ -597,17 +612,17 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
 }
 
 .primary-task-action--blue,
-.primary-task-action--blue[disabled] { background: #1478ff; }
+.primary-task-action--blue[disabled] { background: #2878f2; }
 .primary-task-action--red,
-.primary-task-action--red[disabled] { background: #ff4052; }
+.primary-task-action--red[disabled] { background: #f06445; }
 .primary-task-action--orange,
-.primary-task-action--orange[disabled] { background: #ff8a1a; }
+.primary-task-action--orange[disabled] { background: #ff941f; }
 .primary-task-action--purple,
-.primary-task-action--purple[disabled] { background: #7459e8; }
+.primary-task-action--purple[disabled] { background: #8a69e8; }
 .primary-task-action--green,
-.primary-task-action--green[disabled] { background: #18ae65; }
+.primary-task-action--green[disabled] { background: #35b978; }
 .primary-task-action--gray,
-.primary-task-action--gray[disabled] { background: #8b94a3; }
+.primary-task-action--gray[disabled] { background: #8d99aa; }
 
 .primary-task-action[disabled] {
   color: #ffffff;
@@ -786,6 +801,54 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
   overflow: hidden;
 }
 
+.customer-info-panel {
+  padding: 8rpx 20rpx;
+}
+
+.customer-info-row {
+  min-height: 82rpx;
+}
+
+.customer-info-row--address {
+  min-height: 112rpx;
+}
+
+.customer-info-value {
+  line-height: 1.45;
+  max-width: 64%;
+  text-align: right;
+}
+
+.customer-info-value--address {
+  max-width: 64%;
+  white-space: normal;
+  word-break: break-all;
+}
+
+.order-info-panel {
+  padding: 8rpx 20rpx 10rpx;
+}
+
+.order-info-heading {
+  color: #536581;
+  font-size: 22rpx;
+  font-weight: 800;
+  line-height: 1.4;
+  min-height: 42rpx;
+}
+
+.order-info-list {
+  width: 100%;
+}
+
+.order-info-row {
+  min-height: 82rpx;
+}
+
+.order-info-value {
+  max-width: 68%;
+}
+
 .detail-row {
   border-top: 1rpx solid #edf1f6;
   gap: 20rpx;
@@ -821,9 +884,12 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
   width: 100%;
 }
 
-.row-value--accent {
-  color: #2878f2;
-}
+.row-value--blue { color: #2878f2; }
+.row-value--red { color: #f06445; }
+.row-value--orange { color: #ff941f; }
+.row-value--purple { color: #8a69e8; }
+.row-value--green { color: #35b978; }
+.row-value--gray { color: #8d99aa; }
 
 .detail-state,
 .guard-page,
@@ -906,8 +972,8 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
 }
 
 .skeleton-task {
-  background: #fffaf4;
-  border-color: #ffd29d;
+  background: #ffffff;
+  border-color: #e4eaf2;
   padding: 24rpx 26rpx 22rpx;
 }
 

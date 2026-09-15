@@ -210,7 +210,7 @@ No Mock runtime change is made by this document.
 If `searchText` is accepted in a later implementation slice, the deterministic
 Mock DATA design is:
 
-- retain the existing three synthetic SANode records and their complete local
+- retain the six synthetic SANode records and their complete local
   Detail fixtures;
 - do not add mock-only fields or real data;
 - use the existing synthetic display number, customer name, and address values

@@ -5,7 +5,7 @@ import {
   type ApiReadRequest,
   type ApiReadTransport,
 } from './technician-api'
-import { isMockOwnedRead, tryMockRead } from './mock'
+import { isMockOwnedRead, tryMockRead, type MockReadActor } from './mock'
 
 export type UniApiRequestExecutor = (options: UniNamespace.RequestOptions) => unknown
 
@@ -15,6 +15,8 @@ export interface UniApiReadTransportOptions {
   readonly request?: UniApiRequestExecutor
   readonly timeoutMs?: number
   readonly mockLatencyMs?: number
+  /** Supplies the real authenticated actor for bounded mock visibility markers. */
+  readonly getMockActor?: () => MockReadActor | null
 }
 
 function endpointUrl(baseUrl: string, path: string): string {
@@ -82,7 +84,10 @@ export function createUniApiReadTransport(options: UniApiReadTransportOptions): 
       const mockResponse = await tryMockRead(
         input.path,
         input.body ?? input.query ?? {},
-        options.mockLatencyMs === undefined ? {} : { latencyMs: options.mockLatencyMs },
+        {
+          ...(options.mockLatencyMs === undefined ? {} : { latencyMs: options.mockLatencyMs }),
+          ...(options.getMockActor ? { actor: options.getMockActor() } : {}),
+        },
       )
       if (mockResponse !== null) return mockResponse
       if (isMockOwnedRead(input.path, input.body ?? input.query ?? {})) {

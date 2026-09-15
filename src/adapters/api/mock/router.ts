@@ -12,6 +12,13 @@ import {
 
 export interface MockReadOptions {
   readonly latencyMs?: number
+  /** Authenticated actor values used only to bind bounded fixture markers. */
+  readonly actor?: MockReadActor | null
+}
+
+export interface MockReadActor {
+  readonly userId?: string
+  readonly roleId?: string
 }
 
 function normalizedPath(path: string): string {
@@ -46,6 +53,50 @@ export function isMockOwnedRead(
 
 function clonedResponse<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T
+}
+
+function mutableRecord(value: unknown): Record<string, unknown> | null {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null
+}
+
+/**
+ * Positive Detail fixtures use explicit synthetic identity markers so their
+ * raw workflow shapes stay deterministic. In the running app, bind those
+ * markers to the already-authenticated actor before the normal Adapter path.
+ * This does not create or alter a SessionRef and leaves mismatch/unknown
+ * scenarios untouched.
+ */
+function bindMockActorMarkers(raw: unknown, actor: MockReadActor | null | undefined): unknown {
+  if (!actor?.userId && !actor?.roleId) return raw
+
+  const envelope = mutableRecord(raw)
+  const payload = mutableRecord(envelope?.data)
+  const workflowNodes = payload?.workflowNode
+  if (!Array.isArray(workflowNodes)) return raw
+
+  for (const value of workflowNodes) {
+    const node = mutableRecord(value)
+    if (!node) continue
+
+    if (actor.roleId) {
+      const nodeDef = mutableRecord(node.nodeDef)
+      if (nodeDef) {
+        for (const key of ['userChoose', 'viewableRoleIds']) {
+          const values = nodeDef[key]
+          if (!Array.isArray(values)) continue
+          nodeDef[key] = values.map((item) => item === 'synthetic-role' ? actor.roleId : item)
+        }
+      }
+    }
+
+    if (actor.userId && Array.isArray(node.handlerIds)) {
+      node.handlerIds = node.handlerIds.map((item) => item === 'synthetic-user' ? actor.userId : item)
+    }
+  }
+
+  return envelope
 }
 
 function emptyPageResponse(): unknown {
@@ -151,5 +202,5 @@ export async function tryMockRead(
   const response = matchedResponse(path, mode, requestData)
   if (response === null) return null
   await delay(options.latencyMs ?? 300)
-  return clonedResponse(response)
+  return bindMockActorMarkers(clonedResponse(response), options.actor)
 }

@@ -1,5 +1,6 @@
 import type { SessionSnapshot, WorkOrderDetail, WorkOrderTaskTone } from '@shared/ports'
 import { projectDetailWorkflow } from '@runtimes/workflow'
+import { workOrderCardToneFor } from './card'
 import type {
   CurrentTaskProjection,
   DetailWorkflowProjection,
@@ -33,14 +34,18 @@ export interface DetailWorkflowUiProjection
 }
 
 const currentTaskPresentation: Readonly<
-  Record<CurrentTaskProjection['actionIntent'], Pick<DetailWorkflowUiCurrentTask, 'actionLabel' | 'tone'>>
+  Record<CurrentTaskProjection['actionIntent'], Pick<DetailWorkflowUiCurrentTask, 'actionLabel'>>
 > = {
-  interact_with_form: { actionLabel: '处理表单', tone: 'blue' },
-  open_subworkflow: { actionLabel: '查看子流程', tone: 'orange' },
-  place_order: { actionLabel: '去下单', tone: 'purple' },
+  interact_with_form: { actionLabel: '处理表单' },
+  open_subworkflow: { actionLabel: '查看子流程' },
+  place_order: { actionLabel: '去下单' },
 }
 
-/** Adds presentation labels without making status or raw workflow fields semantic. */
+/**
+ * Adds presentation labels without making status or raw workflow fields semantic.
+ * The Detail current-task tone follows the same normalized status label used by
+ * the List card; action intent still comes only from the Workflow Runtime.
+ */
 export function detailWorkflowUiProjectionFor(
   detail: WorkOrderDetail | null,
   session: SessionSnapshot | null,
@@ -59,6 +64,7 @@ export function detailWorkflowUiProjectionFor(
     currentTask: {
       ...projection.currentTask,
       ...currentTaskPresentation[projection.currentTask.actionIntent],
+      tone: workOrderCardToneFor(detail?.taskLabel),
     },
   }
 }

@@ -59,6 +59,15 @@ export function createDefaultTechnicianApiReadPort(authSession: AuthSessionPort)
   const transport = createUniApiReadTransport({
     apiBaseUrl: config.value.environment.apiBaseUrl,
     getSessionRef: () => authSession.getCurrentSession()?.sessionRef ?? null,
+    getMockActor: () => {
+      const session = authSession.getCurrentSession()
+      return session
+        ? {
+            userId: session.user.id,
+            ...(session.currentRole ? { roleId: session.currentRole.id } : {}),
+          }
+        : null
+    },
   })
 
   return createRoleScopedTechnicianApiReadAdapter(

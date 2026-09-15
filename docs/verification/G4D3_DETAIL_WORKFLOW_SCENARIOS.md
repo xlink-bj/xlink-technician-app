@@ -49,12 +49,16 @@ missing evidence.
 
 ## Harness contract
 
-The six IDs above are direct Detail entry points in Mock DATA mode. They are
-not page-level branches: each raw response is normalized by the Technician API
-Adapter and then passed to the same Runtime projection used for a real Detail
-read. The matrix records the expected semantic result so Product Owner review
-can inspect each state without changing List density or production behavior.
-The deterministic semantic harness uses the synthetic actor
-`synthetic-user` / `synthetic-role`; a real session with different visibility
-identities may conservatively under-display the Current Task until matching
-backend evidence is available.
+The six IDs above are emitted by the Mock DATA SANODE list and are also direct
+Detail entry points. They are not page-level branches: each raw response is
+normalized by the Technician API Adapter and then passed to the same Runtime
+projection used for a real Detail read. The matrix records the expected
+semantic result so Product Owner review can inspect each state while keeping
+the accepted List card structure unchanged.
+Positive fixture visibility markers (`synthetic-user` / `synthetic-role`) are
+bound in memory to the already-authenticated real Session actor before the
+same Adapter + Runtime path runs in the app. This keeps the harness usable for
+visual review without creating a fake SessionRef or relaxing Runtime visibility
+checks. The raw fixture objects remain unchanged. A missing current user/role
+still conservatively under-displays the affected positive scenario; mismatch,
+missing-evidence, and unknown scenarios are never promoted by this binding.

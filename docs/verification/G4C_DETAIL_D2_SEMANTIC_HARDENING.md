@@ -24,8 +24,9 @@ with the same optional `workflow`, `workflowNode`, `status`, `describe`, and
 same `workOrderDetail` mapper as a real response. No feature or page code
 branches on a WorkOrderId prefix.
 
-The bounded fixture set contains six Detail reads while the accepted List
-visual density remains three rows:
+The bounded fixture set contains six Detail reads, and the Mock DATA SANODE
+list now emits all six rows so every listed synthetic entity has a direct local
+Detail journey:
 
 | Scenario | Raw evidence exercised |
 | --- | --- |
