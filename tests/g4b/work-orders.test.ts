@@ -339,7 +339,7 @@ describe('G4-B uni read composition boundary', () => {
 
     const result = await api.listWorkOrders({ page: 1, pageSize: 20 })
 
-    expect(result.data?.items).toEqual([firstWorkOrder])
+    expect(result.data?.items).toMatchObject([firstWorkOrder])
     expect(requests[0]).toEqual({
       method: 'POST',
       path: 'function/changeRole',

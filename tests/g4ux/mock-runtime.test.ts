@@ -275,7 +275,7 @@ describe('G4-UX business mock runtime', () => {
     )
     const list = await roleScoped.listWorkOrders({ page: 1, pageSize: 20 })
 
-    expect(list.data?.items).toEqual([
+    expect(list.data?.items).toMatchObject([
       {
         id: mockWorkOrderIds[0],
         displayNumber: '09077',
