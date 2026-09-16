@@ -49,23 +49,28 @@ available → in_progress → draft_local → submitting → succeeded
 Validation keeps the Workspace editable. Retryable and terminal submit errors
 keep the current input and do not reread as if the business action succeeded.
 Local draft save is independent from business submission: offline editing can
-save locally, but no network cannot produce a fake business success.
+save locally, but no network cannot produce a fake business success. Once the
+business command returns success, the business result is terminal success and
+the submit affordance stays disabled. Draft finalization and authoritative
+refresh are tracked separately; either may remain pending without turning the
+business result into a submit failure or inviting resubmission.
 
 ## Draft identity, autosave, and restore
 
 Drafts use the versioned semantic identity:
 
 ```text
-WorkOrderId + WorkflowNodeRuntimeId + Action intent + content kind
-             + content/form identity when available
+UserId + WorkOrderId + WorkflowNodeRuntimeId + Action intent + content kind
+       + content/form identity when available
 ```
 
 The identity is encoded by the Action Runtime into the typed `StoragePort`
 draft namespace. Appointment edits are debounced before local persistence.
 Reopening the same action restores only a compatible unfinished record. A
-different work order, workflow node, action, content identity, or draft version
-cannot consume it. Successful submission removes the unfinished record before
-the authoritative read is used to refresh the context.
+different user, work order, workflow node, action, content identity, or draft
+version cannot consume it. Successful submission best-effort finalizes the
+unfinished record and then attempts the authoritative read; cleanup and refresh
+warnings remain separate from the already-successful business result.
 
 ## Mock/Real parity and platform scope
 

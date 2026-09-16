@@ -8,11 +8,14 @@ import {
   actionDraftIdentityMatches,
   actionDraftStorageKey,
   actionExecutionForWorkflowDecision,
+  type ActionBusinessResult,
   type ActionDescriptor,
   type ActionDraftIdentity,
+  type ActionDraftFinalizationStatus,
   type ActionDraftRecord,
   type ActionDraftStatus,
   type ActionLifecycle,
+  type ActionRefreshStatus,
 } from '@runtimes/action'
 import type {
   AppointmentFieldValue,
@@ -30,6 +33,7 @@ import {
   type OperationError,
   type OperationSnapshot,
   type OperationState,
+  type UserId,
   type WorkOrderId,
   type WorkflowNodeRuntimeId,
 } from '@shared/types'
@@ -109,6 +113,7 @@ function draftRecordFor(
 
   const storedIdentity: ActionDraftIdentity = {
     version: 1,
+    userId: rawIdentity.userId as UserId,
     workOrderId: rawIdentity.workOrderId as WorkOrderId,
     workflowNodeId: rawIdentity.workflowNodeId as WorkflowNodeRuntimeId,
     actionIntent: rawIdentity.actionIntent as ActionDraftIdentity['actionIntent'],
@@ -155,6 +160,10 @@ export interface ActionWorkspaceDependencies {
 export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
   const loadState = ref<ActionWorkspaceLoadState>('idle')
   const lifecycle = ref<ActionLifecycle>('available')
+  const businessResult = ref<ActionBusinessResult>('not_started')
+  const draftFinalization = ref<ActionDraftFinalizationStatus>('not_started')
+  const refreshStatus = ref<ActionRefreshStatus>('not_started')
+  const postSuccessError = ref<OperationError | null>(null)
   const draftStatus = ref<ActionDraftStatus>('clean')
   const detail = ref<WorkOrderDetail | null>(null)
   const descriptor = ref<ActionDescriptor | null>(null)
@@ -167,6 +176,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
   const canSubmit = computed(() =>
     loadState.value === 'succeeded' &&
     lifecycle.value !== 'submitting' &&
+    businessResult.value !== 'succeeded' &&
     descriptor.value?.execution === 'enabled' &&
     appointmentForm.value !== null,
   )
@@ -194,6 +204,10 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     identity = null
     loadState.value = 'idle'
     lifecycle.value = 'available'
+    businessResult.value = 'not_started'
+    draftFinalization.value = 'not_started'
+    refreshStatus.value = 'not_started'
+    postSuccessError.value = null
     draftStatus.value = 'clean'
     detail.value = null
     descriptor.value = null
@@ -241,6 +255,10 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     const requestVersion = ++loadVersion
     loadState.value = 'loading'
     lifecycle.value = 'available'
+    businessResult.value = 'not_started'
+    draftFinalization.value = 'not_started'
+    refreshStatus.value = 'not_started'
+    postSuccessError.value = null
     draftStatus.value = 'clean'
     detail.value = null
     descriptor.value = null
@@ -296,6 +314,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     }
 
     const nextDescriptor: ActionDescriptor = {
+      userId: session.user.id,
       workOrderId: read.data.id,
       workflowNodeId: currentTask.nodeId,
       actionIntent: currentTask.actionIntent,
@@ -449,6 +468,9 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     if (!configured || !currentDescriptor || !form || !currentIdentity) {
       return failure('validation', 'Action content is not ready')
     }
+    if (businessResult.value === 'succeeded') {
+      return { state: 'succeeded', data: undefined }
+    }
     if (currentDescriptor.execution !== 'enabled') return failure('unsupported_capability', 'This Action is read-only')
     if (lifecycle.value === 'submitting') return failure('validation', 'Action is already being submitted')
 
@@ -470,28 +492,37 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       values: validation.data ?? {},
     })
     if (commandResult.state !== 'succeeded') {
+      businessResult.value = 'failed'
       lifecycle.value = lifecycleForFailure(commandResult.state)
       error.value = commandResult.error ?? null
       return commandResult
     }
 
+    businessResult.value = 'succeeded'
+    lifecycle.value = 'succeeded'
+    loadState.value = 'succeeded'
+    draftFinalization.value = 'pending'
+    refreshStatus.value = 'pending'
+    postSuccessError.value = null
+
     const draftCleanup = await clearPersistedDraft()
-    if (draftCleanup.state !== 'succeeded') {
-      lifecycle.value = 'failed_retryable'
-      error.value = draftCleanup.error ?? createOperationError('network_retryable', 'Local draft cleanup is pending')
-      return draftCleanup
+    if (draftCleanup.state === 'succeeded') {
+      draftFinalization.value = 'completed'
+    } else {
+      postSuccessError.value = draftCleanup.error ?? createOperationError('network_retryable', 'Local draft cleanup is pending')
     }
     const reread = await configured.apiRead.getWorkOrderDetail(currentDescriptor.workOrderId)
     if (reread.state !== 'succeeded' || !reread.data) {
-      lifecycle.value = 'succeeded'
-      error.value = reread.error ?? createOperationError('server_terminal', 'Authoritative Action state could not be refreshed')
-      return failureFrom<WorkOrderDetail, void>(reread)
+      refreshStatus.value = 'pending'
+      postSuccessError.value = reread.error ?? createOperationError('server_terminal', 'Authoritative Action state could not be refreshed')
+      error.value = postSuccessError.value
+      return { state: 'succeeded', data: undefined }
     }
 
     detail.value = reread.data
-    lifecycle.value = 'succeeded'
-    loadState.value = 'succeeded'
-    error.value = null
+    refreshStatus.value = 'refreshed'
+    if (!postSuccessError.value) error.value = null
+    else error.value = postSuccessError.value
     return { state: 'succeeded', data: undefined }
   }
 
@@ -514,6 +545,10 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
   return {
     loadState,
     lifecycle,
+    businessResult,
+    draftFinalization,
+    refreshStatus,
+    postSuccessError,
     draftStatus,
     draftMessage,
     detail,

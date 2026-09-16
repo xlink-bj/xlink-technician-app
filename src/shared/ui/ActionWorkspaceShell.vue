@@ -41,7 +41,7 @@
       </button>
       <view v-else class="action-workspace-success" aria-live="polite">
         <text class="action-workspace-success-title">操作已完成</text>
-        <text class="action-workspace-success-copy">工单状态已刷新，即将返回工单详情。</text>
+        <text class="action-workspace-success-copy">{{ successCopy || '工单状态已刷新，即将返回工单详情。' }}</text>
       </view>
     </view>
   </view>
@@ -58,6 +58,7 @@ defineProps<{
   readonly draftStatus: ActionDraftStatus
   readonly canSubmit: boolean
   readonly submitLabel: string
+  readonly successCopy?: string
 }>()
 
 defineEmits<{

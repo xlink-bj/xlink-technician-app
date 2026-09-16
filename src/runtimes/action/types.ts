@@ -1,4 +1,4 @@
-import type { FormDefinitionId, FormDataId, WorkOrderId, WorkflowNodeRuntimeId } from '@shared/types'
+import type { FormDefinitionId, FormDataId, UserId, WorkOrderId, WorkflowNodeRuntimeId } from '@shared/types'
 import type { WorkflowActionIntent } from '@runtimes/workflow'
 
 /** Content kinds are an explicit plug-in boundary for future Actions. */
@@ -11,6 +11,12 @@ export type ActionContentKind =
   | 'unsupported'
 
 export type ActionExecution = 'enabled' | 'disabled'
+
+export type ActionBusinessResult = 'not_started' | 'succeeded' | 'failed'
+
+export type ActionDraftFinalizationStatus = 'not_started' | 'completed' | 'pending'
+
+export type ActionRefreshStatus = 'not_started' | 'refreshed' | 'pending'
 
 export type ActionLifecycle =
   | 'available'
@@ -31,6 +37,7 @@ export type ActionDraftStatus =
   | 'save_failed'
 
 export interface ActionIdentity {
+  readonly userId: UserId
   readonly workOrderId: WorkOrderId
   readonly workflowNodeId: WorkflowNodeRuntimeId
   readonly actionIntent: WorkflowActionIntent
@@ -45,6 +52,7 @@ export interface ActionDescriptor extends ActionIdentity {
 
 export interface ActionDraftIdentity {
   readonly version: 1
+  readonly userId: UserId
   readonly workOrderId: WorkOrderId
   readonly workflowNodeId: WorkflowNodeRuntimeId
   readonly actionIntent: WorkflowActionIntent
@@ -81,6 +89,7 @@ export function actionExecutionForWorkflowDecision(execution: 'enabled' | 'disab
 export function actionDraftIdentityFor(action: ActionIdentity): ActionDraftIdentity {
   return {
     version: 1,
+    userId: action.userId,
     workOrderId: action.workOrderId,
     workflowNodeId: action.workflowNodeId,
     actionIntent: action.actionIntent,
@@ -94,6 +103,7 @@ export function actionDraftStorageKey(identity: ActionDraftIdentity): string {
   return [
     'action-workspace',
     String(identity.version),
+    encodeURIComponent(String(identity.userId)),
     encodeURIComponent(String(identity.workOrderId)),
     encodeURIComponent(String(identity.workflowNodeId)),
     encodeURIComponent(identity.actionIntent),
@@ -107,6 +117,7 @@ export function actionDraftIdentityMatches(
   right: ActionDraftIdentity,
 ): boolean {
   return left.version === right.version
+    && String(left.userId) === String(right.userId)
     && String(left.workOrderId) === String(right.workOrderId)
     && String(left.workflowNodeId) === String(right.workflowNodeId)
     && left.actionIntent === right.actionIntent

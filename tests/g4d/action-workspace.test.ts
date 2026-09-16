@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
+import { readFile } from 'node:fs/promises'
 
 import {
   actionDraftIdentityFor,
@@ -13,6 +14,7 @@ import { resetMockCommandState, resetBusinessMockCache, setBusinessMockMode } fr
 import { useActionWorkspaceStore } from '@features/work-orders/action-workspace'
 import type {
   AppointmentFormRead,
+  SessionSnapshot,
   StorageKey,
   StoragePort,
   TechnicianApiCommandPort,
@@ -95,6 +97,7 @@ function configureWorkspace(
   detail: WorkOrderDetail = appointmentDetail(),
   form: AppointmentFormRead = appointmentForm(),
   sharedStorage?: ReturnType<typeof storageFor>,
+  getSession: () => SessionSnapshot | null = () => session,
 ) {
   const storage = sharedStorage ?? storageFor()
   const api: TechnicianApiReadPort = {
@@ -110,7 +113,7 @@ function configureWorkspace(
     commandApi: command,
     storage: storage.storage,
     navigation: navigation(),
-    getSession: () => session,
+    getSession,
     debounceMs: 5,
     now: () => '2026-04-20T10:00:00.000Z',
   })
@@ -168,6 +171,7 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
 
   it('scopes draft identity to Work Order, workflow node, action, and content', () => {
     const base = {
+      userId: asOpaqueId<'UserId'>('user-a'),
       workOrderId: asOpaqueId<'WorkOrderId'>('work-order-a'),
       workflowNodeId: asOpaqueId<'WorkflowNodeRuntimeId'>('node-a'),
       actionIntent: 'set_appointment' as const,
@@ -179,6 +183,21 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
     expect(otherOrder).not.toBe(otherNode)
     expect(otherOrder).not.toContain('work-order-a')
     expect(actionDraftStorageKey(actionDraftIdentityFor(base))).not.toBe(otherOrder)
+  })
+
+  it('does not restore a draft across authenticated users', async () => {
+    const shared = storageFor()
+    const userA = { ...session, user: { ...session.user, id: asOpaqueId<'UserId'>('user-a') } }
+    const userB = { ...session, user: { ...session.user, id: asOpaqueId<'UserId'>('user-b') } }
+    const first = configureWorkspace(appointmentDetail(), appointmentForm(), shared, () => userA)
+    await openWorkspace(first.store)
+    first.store.setField('need', '1')
+    await first.store.flushDraft()
+
+    const second = configureWorkspace(appointmentDetail(), appointmentForm(), shared, () => userB)
+    await openWorkspace(second.store)
+    expect(second.store.appointmentForm?.values.need).toBeUndefined()
+    expect(second.store.draftStatus).toBe('clean')
   })
 
   it('debounces edits into a local draft without a manual save command', async () => {
@@ -270,6 +289,38 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
     expect(api.getWorkOrderDetail).toHaveBeenCalledTimes(2)
   })
 
+  it('keeps business success terminal when draft cleanup and refresh remain pending', async () => {
+    const { store, api, command, storage } = configureWorkspace()
+    await openWorkspace(store)
+    store.setField('need', '1')
+    store.setField('datetime', '2026-04-20 10:00')
+    await store.flushDraft()
+
+    vi.mocked(api.getWorkOrderDetail).mockResolvedValueOnce({
+      state: 'failed_retryable',
+      error: { category: 'network_retryable', message: 'offline', retryable: true },
+    })
+    vi.mocked(storage.storage.remove).mockResolvedValue({
+      state: 'failed_retryable',
+      error: { category: 'network_retryable', message: 'storage unavailable', retryable: true },
+    })
+    vi.mocked(storage.storage.write).mockResolvedValue({
+      state: 'failed_retryable',
+      error: { category: 'network_retryable', message: 'storage unavailable', retryable: true },
+    })
+
+    const result = await store.submit()
+    expect(result.state).toBe('succeeded')
+    expect(store.businessResult).toBe('succeeded')
+    expect(store.lifecycle).toBe('succeeded')
+    expect(store.draftFinalization).toBe('pending')
+    expect(store.refreshStatus).toBe('pending')
+    expect(store.canSubmit).toBe(false)
+    expect(command.submitAppointment).toHaveBeenCalledTimes(1)
+    expect((await store.submit()).state).toBe('succeeded')
+    expect(command.submitAppointment).toHaveBeenCalledTimes(1)
+  })
+
   it('uses the same Mock raw read/command path as the real Action Workspace', async () => {
     vi.stubEnv('VITE_XLINK_ENVIRONMENT', 'test')
     setBusinessMockMode('data')
@@ -315,7 +366,7 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
   })
 
   it('keeps Appointment content dynamic-form driven and never embeds a raw endpoint or storage API', async () => {
-    const source = await import('node:fs/promises').then((fs) => fs.readFile('/Users/yesun/Code/xlink-technician-app/src/pages/work-orders/action-workspace.vue', 'utf8'))
+    const source = await readFile(new URL('../../src/pages/work-orders/action-workspace.vue', import.meta.url), 'utf8')
     expect(source).toContain('workspace.appointmentFields')
     expect(source).toContain('workspace.setField')
     expect(source).not.toContain('uni.getStorage')

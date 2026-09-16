@@ -191,6 +191,7 @@ An executable action requires stable semantic identity.
 At minimum, an identity is scoped by:
 
 ```text
+UserId
 WorkOrderId
 WorkflowNodeRuntimeId
 Action semantic kind / intent
@@ -239,7 +240,8 @@ A draft key must be scoped to the semantic action identity. Conceptually:
 
 ```text
 ActionDraftKey =
-  WorkOrderId
+  UserId
+  + WorkOrderId
   + WorkflowNodeRuntimeId
   + ActionKind
   + ContentIdentity/version when required
@@ -328,13 +330,15 @@ The Action Workspace does not own endpoint paths or raw mutation envelopes.
 On successful mutation:
 
 1. mark the business operation succeeded;
-2. clear/finalize the unfinished local draft;
-3. invalidate relevant cached/read state;
-4. reread authoritative Work Order / Workflow state;
-5. let Workflow Runtime derive the next Current Action;
-6. show explicit success feedback;
-7. return to Work Order Detail or the appropriate post-action context.
+2. best-effort clear/finalize the unfinished local draft;
+3. attempt the authoritative Work Order / Workflow reread;
+4. let Workflow Runtime derive the next Current Action when that reread succeeds;
+5. show explicit success feedback and any separate cleanup/refresh warning;
+6. return to Work Order Detail only when the post-success context is ready.
 
+Business success is terminal once the mutation returns success. Draft cleanup or
+authoritative refresh failure is represented as a separate pending state; it
+must not convert the mutation into a submit failure or invite resubmission.
 The frontend must not guess the next business status or workflow node.
 
 A toast alone is insufficient as the architectural success model. The workspace must support a visible success state, while the Detail page must reflect the reread business state.
@@ -504,7 +508,7 @@ The following invariants are review gates for future Action implementations:
 6. Dynamic Form Runtime remains a bounded content runtime, not the whole action system.
 7. Draft identity is scoped to stable semantic action identity.
 8. Local draft success never implies backend business success.
-9. Successful business mutation triggers authoritative reread.
+9. Successful business mutation triggers authoritative reread; refresh failure remains a post-success warning.
 10. Mock and Real follow the same Adapter/Runtime/UI path.
 11. Platform-specific APIs stop at adapters/ports.
 12. Unsupported action/content capability fails explicitly rather than silently degrading.

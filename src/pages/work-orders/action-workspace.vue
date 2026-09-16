@@ -46,6 +46,7 @@
     :lifecycle="workspace.lifecycle"
     :draft-status="workspace.draftStatus"
     :can-submit="workspace.canSubmit"
+    :success-copy="successCopy"
     submit-label="确认预约"
     @exit="exit"
     @submit="submit"
@@ -128,9 +129,18 @@ let successTimer: ReturnType<typeof setTimeout> | undefined
 
 const canAccess = computed(() => hasAuthenticatedSession(session.status, session.session))
 const feedback = computed(() => {
-  if (workspace.lifecycle === 'succeeded') return '预约已提交'
+  if (workspace.lifecycle === 'succeeded') {
+    if (workspace.refreshStatus === 'pending') return '预约已提交，工单状态刷新暂不可用，请稍后查看。'
+    if (workspace.draftFinalization === 'pending') return '预约已提交，本地草稿清理待完成。'
+    return '预约已提交'
+  }
   return actionErrorCopy(workspace.error)
 })
+const successCopy = computed(() => workspace.refreshStatus === 'pending'
+  ? '预约已提交，状态刷新暂不可用，请稍后返回工单详情。'
+  : workspace.draftFinalization === 'pending'
+    ? '工单状态已刷新，本地草稿清理待完成。'
+    : '工单状态已刷新，即将返回工单详情。')
 
 function loadWorkspace(): void {
   if (!routeReady.value || session.status !== 'authenticated') return
@@ -194,7 +204,7 @@ function updateField(key: string, event: unknown): void {
 
 async function submit(): Promise<void> {
   const result = await workspace.submit()
-  if (result.state === 'succeeded') {
+  if (result.state === 'succeeded' && workspace.refreshStatus === 'refreshed' && workspace.draftFinalization === 'completed') {
     successTimer = setTimeout(() => { void workspace.exit() }, 520)
   }
 }
