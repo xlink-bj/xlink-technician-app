@@ -23,6 +23,23 @@ explicit confirmation page, and a bounded success state. Appointment stores
 one verified datetime value (`YYYY-MM-DD HH:mm`); quick time choices are only
 presentation shortcuts and do not imply duration, availability, or capacity.
 
+The Shell has three stable regions: optional Work Order context, a scrollable
+Action Content region, and a persistent Action Bar. Draft feedback is rendered
+by the Shell exactly once. Footer placement and safe-area handling remain Shell
+responsibilities, so supported content can grow without moving or covering the
+primary CTA.
+
+Shell invariants:
+
+1. Draft feedback is Shell-owned and rendered exactly once.
+2. The primary Action Bar is persistent and independent of Action Content
+   height.
+3. Action Content scrolls inside the Workspace; the Action Bar is outside the
+   scroll container.
+4. Safe-area and footer geometry are Shell responsibilities, never Action
+   Content responsibilities.
+5. Action Content remains usable with arbitrary supported content length.
+
 ## Boundaries
 
 - Workflow Runtime owns node visibility, Current Action selection, domain
@@ -30,9 +47,9 @@ presentation shortcuts and do not imply duration, availability, or capacity.
 - Action Runtime owns Action identity, content kind, lifecycle, draft status,
   and the reusable workspace contract.
 - The Workspace shell owns compact Work Order context, loading, draft feedback,
-  sticky action placement, failures, and native page navigation support. Action
-  sub-pages use replace semantics when available to avoid stack growth. It does
-  not know Appointment fields.
+  persistent action placement, failures, safe-area/footer geometry, and native
+  page navigation support. Action sub-pages use replace semantics when
+  available to avoid stack growth. It does not know Appointment fields.
 - Action Content consumes normalized read data and Dynamic Form Runtime state.
   Appointment-specific presentation roles use verified field keys (`need`,
   `datetime`, `note`); field order and generic field shape do not assign roles.

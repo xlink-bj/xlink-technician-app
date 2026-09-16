@@ -1,46 +1,58 @@
 <template>
   <view class="action-workspace-page">
-    <view class="action-workspace-body">
-      <view class="action-workspace-context">
-        <text class="action-workspace-context-label">当前工单</text>
-        <view class="action-workspace-context-row">
-          <text class="action-workspace-context-customer">{{ customerName || '工单' }}</text>
-          <text v-if="displayNumber" class="action-workspace-context-number">#{{ displayNumber }}</text>
+    <scroll-view class="action-workspace-scroll" scroll-y enable-flex>
+      <view class="action-workspace-body">
+        <view class="action-workspace-context">
+          <text class="action-workspace-context-label">当前工单</text>
+          <view class="action-workspace-context-row">
+            <text class="action-workspace-context-customer">{{ customerName || '工单' }}</text>
+            <text v-if="displayNumber" class="action-workspace-context-number">#{{ displayNumber }}</text>
+          </view>
+        </view>
+
+        <template v-if="lifecycle !== 'succeeded'">
+          <slot />
+        </template>
+        <template v-else>
+          <slot name="success" />
+        </template>
+
+        <view v-if="draftStatus !== 'clean'" class="action-workspace-draft-status" aria-live="polite">
+          <text v-if="draftStatus === 'saving'">正在保存本地草稿</text>
+          <text v-else-if="draftStatus === 'saved_local'">已保存到本地</text>
+          <text v-else-if="draftStatus === 'restore_available'">已恢复本地草稿</text>
+          <text v-else-if="draftStatus === 'save_failed'">本地草稿保存失败</text>
+          <text v-else-if="draftStatus === 'dirty'">编辑未保存</text>
+        </view>
+
+        <view v-if="businessFeedback" class="action-workspace-business-feedback" aria-live="polite">
+          <text>{{ businessFeedback }}</text>
+        </view>
+
+        <view v-if="lifecycle === 'submitting'" class="action-workspace-operation-status" aria-live="polite">
+          <text>正在提交</text>
         </view>
       </view>
+    </scroll-view>
 
-      <slot />
-
-      <view class="action-workspace-status" aria-live="polite">
-        <text v-if="draftStatus === 'saving'">正在保存本地草稿</text>
-        <text v-else-if="draftStatus === 'saved_local'">已保存到本地</text>
-        <text v-else-if="draftStatus === 'restore_available'">已恢复本地草稿</text>
-        <text v-else-if="draftStatus === 'save_failed'">本地草稿保存失败</text>
-        <text v-else-if="draftStatus === 'dirty'">编辑未保存</text>
-        <text v-else-if="lifecycle === 'submitting'">正在提交</text>
-        <text v-else-if="lifecycle === 'succeeded'">已完成</text>
+    <view class="action-workspace-footer">
+      <view class="action-workspace-footer-inner">
+        <template v-if="lifecycle !== 'succeeded'">
+          <slot name="actions">
+            <button
+              class="action-workspace-submit"
+              :class="{ 'action-workspace-submit--disabled': !canSubmit }"
+              :disabled="!canSubmit"
+              @tap="$emit('submit')"
+            >
+              {{ lifecycle === 'submitting' ? '提交中' : submitLabel }}
+            </button>
+          </slot>
+        </template>
+        <template v-else>
+          <slot name="success-actions" />
+        </template>
       </view>
-
-      <slot name="feedback" />
-
-      <view v-if="lifecycle !== 'succeeded'" class="action-workspace-actions">
-        <slot name="actions">
-          <button
-            class="action-workspace-submit"
-            :class="{ 'action-workspace-submit--disabled': !canSubmit }"
-            :disabled="!canSubmit"
-            @tap="$emit('submit')"
-          >
-            {{ lifecycle === 'submitting' ? '提交中' : submitLabel }}
-          </button>
-        </slot>
-      </view>
-      <slot v-else name="success">
-        <view class="action-workspace-success" aria-live="polite">
-          <text class="action-workspace-success-title">操作已完成</text>
-          <text class="action-workspace-success-copy">{{ successCopy || '工单状态已刷新。' }}</text>
-        </view>
-      </slot>
     </view>
   </view>
 </template>
@@ -55,7 +67,7 @@ defineProps<{
   readonly draftStatus: ActionDraftStatus
   readonly canSubmit: boolean
   readonly submitLabel: string
-  readonly successCopy?: string
+  readonly businessFeedback?: string
 }>()
 
 defineEmits<{
@@ -68,8 +80,18 @@ defineEmits<{
 .action-workspace-page {
   background: #f3f6fa;
   box-sizing: border-box;
-  min-height: 100vh;
-  padding-bottom: calc(46rpx + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  min-height: 100%;
+  overflow: hidden;
+  width: 100%;
+}
+
+.action-workspace-scroll {
+  flex: 1;
+  height: 0;
+  min-height: 0;
   width: 100%;
 }
 
@@ -77,7 +99,8 @@ defineEmits<{
   box-sizing: border-box;
   margin: 0 auto;
   max-width: 960rpx;
-  padding: 22rpx 24rpx 0;
+  padding: 22rpx 24rpx 28rpx;
+  width: 100%;
 }
 
 .action-workspace-context,
@@ -119,13 +142,18 @@ defineEmits<{
   font-weight: 800;
 }
 
-.action-workspace-status {
+.action-workspace-draft-status,
+.action-workspace-business-feedback,
+.action-workspace-operation-status {
   color: #7e8da4;
+  display: block;
   font-size: 20rpx;
-  min-height: 32rpx;
   padding: 12rpx 4rpx 0;
   text-align: center;
 }
+
+.action-workspace-business-feedback { color: #f06445; font-size: 21rpx; line-height: 1.5; }
+.action-workspace-operation-status { padding-top: 8rpx; }
 
 .action-workspace-submit {
   background: #2878f2;
@@ -135,46 +163,22 @@ defineEmits<{
   font-weight: 800;
   height: 76rpx;
   line-height: 76rpx;
-  margin: 18rpx 0 0;
+  margin: 0;
   width: 100%;
 }
 
-.action-workspace-actions {
+.action-workspace-footer {
   background: #f3f6fa;
-  bottom: 0;
+  border-top: 1rpx solid #e4eaf2;
   box-sizing: border-box;
-  margin: 18rpx -24rpx calc(-46rpx - env(safe-area-inset-bottom));
-  padding: 12rpx 24rpx calc(46rpx + env(safe-area-inset-bottom));
-  position: sticky;
-  z-index: 2;
+  flex-shrink: 0;
+  padding: 12rpx 24rpx calc(16rpx + constant(safe-area-inset-bottom));
+  padding-bottom: calc(16rpx + env(safe-area-inset-bottom));
+  width: 100%;
 }
 
-.action-workspace-actions .action-workspace-submit { margin-top: 0; }
+.action-workspace-footer-inner { margin: 0 auto; max-width: 960rpx; width: 100%; }
 
 .action-workspace-submit--disabled { opacity: 0.48; }
 .action-workspace-submit::after { border: 0; }
-
-.action-workspace-success {
-  align-items: center;
-  background: #f7fffa;
-  border: 1rpx solid #ccefdc;
-  border-radius: 18rpx;
-  display: flex;
-  flex-direction: column;
-  margin-top: 14rpx;
-  padding: 22rpx;
-  text-align: center;
-}
-
-.action-workspace-success-title {
-  color: #18ae65;
-  font-size: 26rpx;
-  font-weight: 800;
-}
-
-.action-workspace-success-copy {
-  color: #6f8098;
-  font-size: 20rpx;
-  margin-top: 8rpx;
-}
 </style>

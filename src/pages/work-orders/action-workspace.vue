@@ -45,6 +45,7 @@
     :lifecycle="workspace.lifecycle"
     :draft-status="workspace.draftStatus"
     :can-submit="workspace.canSubmit"
+    :business-feedback="feedback"
     submit-label="继续确认"
     @submit="continueToConfirmation"
   >
@@ -140,10 +141,6 @@
       </view>
     </view>
 
-    <template #feedback>
-      <text v-if="feedback" class="action-workspace-feedback">{{ feedback }}</text>
-      <text v-if="workspace.draftMessage" class="action-workspace-draft-message">{{ workspace.draftMessage }}</text>
-    </template>
   </ActionWorkspaceShell>
 
   <view v-else class="workspace-state workspace-state--centered">
@@ -423,18 +420,6 @@ function actionErrorCopy(error: OperationError | null): string {
 
 .action-content-note { min-height: 112rpx; }
 .action-content-input { height: 72rpx; padding-bottom: 0; padding-top: 0; }
-
-.action-workspace-feedback,
-.action-workspace-draft-message {
-  color: #f06445;
-  display: block;
-  font-size: 21rpx;
-  line-height: 1.5;
-  margin-top: 12rpx;
-  text-align: center;
-}
-
-.action-workspace-draft-message { color: #7e8da4; }
 
 @keyframes workspace-pulse {
   0%, 100% { opacity: 0.56; }

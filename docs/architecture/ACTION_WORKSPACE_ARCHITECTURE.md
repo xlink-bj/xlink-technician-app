@@ -29,6 +29,17 @@ action does not invent a different execution pattern.
 
 The first consumer is Appointment. Appointment is not the architecture itself; it is one Action Content implementation.
 
+### Action Workspace invariants
+
+1. Draft feedback is Shell-owned and rendered exactly once.
+2. The primary Action Bar is persistent and independent of Action Content
+   height.
+3. Action Content scrolls inside the Workspace; the Action Bar is outside the
+   scroll container.
+4. Safe-area and footer geometry are Shell responsibilities, never Action
+   Content responsibilities.
+5. Action Content remains usable with arbitrary supported content length.
+
 ## 2. Product Interaction Pattern
 
 The default product flow is:

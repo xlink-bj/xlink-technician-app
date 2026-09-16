@@ -37,6 +37,7 @@
     :lifecycle="workspace.lifecycle"
     :draft-status="workspace.draftStatus"
     :can-submit="workspace.canSubmit"
+    :business-feedback="isSuccess ? '' : feedback"
     submit-label="确认预约"
   >
     <view v-if="!isSuccess" class="confirmation-content">
@@ -83,11 +84,6 @@
       </view>
     </view>
 
-    <template #feedback>
-      <text v-if="!isSuccess && feedback" class="action-workspace-feedback">{{ feedback }}</text>
-      <text v-if="!isSuccess && workspace.draftMessage" class="action-workspace-draft-message">{{ workspace.draftMessage }}</text>
-    </template>
-
     <template #actions v-if="!isSuccess">
       <view class="confirmation-actions">
         <button class="confirmation-action confirmation-action--secondary" @tap="backToEdit">返回修改</button>
@@ -107,6 +103,11 @@
           <text class="appointment-success-time-value">{{ appointmentDisplay?.timeLabel || '预约时间已提交' }}</text>
         </view>
         <text v-if="postSuccessWarning" class="appointment-success-warning">{{ postSuccessWarning }}</text>
+      </view>
+    </template>
+
+    <template #success-actions>
+      <view class="confirmation-success-actions">
         <button class="appointment-success-primary" @tap="viewDetail">查看工单详情</button>
         <button class="appointment-success-secondary" @tap="viewList">返回工单列表</button>
       </view>
@@ -288,9 +289,6 @@ function actionErrorCopy(error: OperationError | null): string {
 .confirmation-value--address { line-height: 1.5; max-width: 68%; }
 .confirmation-note { color: #4d607e; display: block; font-size: 23rpx; line-height: 1.6; margin-top: 16rpx; }
 
-.action-workspace-feedback, .action-workspace-draft-message { color: #f06445; display: block; font-size: 21rpx; line-height: 1.5; margin-top: 12rpx; text-align: center; }
-.action-workspace-draft-message { color: #7e8da4; }
-
 .confirmation-actions { display: flex; gap: 14rpx; }
 .confirmation-action { border-radius: 14rpx; box-sizing: border-box; flex: 1; font-size: 24rpx; font-weight: 800; height: 76rpx; line-height: 76rpx; margin: 0; }
 .confirmation-action::after { border: 0; }
@@ -306,8 +304,9 @@ function actionErrorCopy(error: OperationError | null): string {
 .appointment-success-date { color: #1d2b40; display: block; font-size: 26rpx; font-weight: 800; }
 .appointment-success-time-value { color: #2878f2; display: block; font-size: 24rpx; font-weight: 700; margin-top: 8rpx; }
 .appointment-success-warning { color: #bf7b16; font-size: 20rpx; line-height: 1.5; margin-top: 16rpx; }
-.appointment-success-primary, .appointment-success-secondary { border-radius: 14rpx; box-sizing: border-box; font-size: 24rpx; font-weight: 800; height: 74rpx; line-height: 74rpx; margin: 28rpx 0 0; width: 100%; }
+.confirmation-success-actions { display: flex; flex-direction: column; gap: 12rpx; }
+.appointment-success-primary, .appointment-success-secondary { border-radius: 14rpx; box-sizing: border-box; font-size: 24rpx; font-weight: 800; height: 74rpx; line-height: 74rpx; margin: 0; width: 100%; }
 .appointment-success-primary { background: #2878f2; color: #ffffff; }
-.appointment-success-secondary { background: #ffffff; color: #2878f2; margin-top: 12rpx; }
+.appointment-success-secondary { background: #ffffff; color: #2878f2; }
 .appointment-success-primary::after, .appointment-success-secondary::after { border: 0; }
 </style>

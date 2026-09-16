@@ -37,6 +37,7 @@
     :lifecycle="workspace.lifecycle"
     :draft-status="workspace.draftStatus"
     :can-submit="Boolean(selectedOption)"
+    :business-feedback="feedback"
     submit-label="确认选择"
   >
     <view class="time-selection-content">
@@ -88,11 +89,6 @@
         <text v-if="timeError" class="time-selection-error">{{ timeError }}</text>
       </view>
     </view>
-
-    <template #feedback>
-      <text v-if="feedback" class="action-workspace-feedback">{{ feedback }}</text>
-      <text v-if="workspace.draftMessage" class="action-workspace-draft-message">{{ workspace.draftMessage }}</text>
-    </template>
 
     <template #actions>
       <button class="time-selection-submit" :class="{ 'time-selection-submit--disabled': !selectedOption }" :disabled="!selectedOption" @tap="confirmSelection">确认选择</button>
@@ -347,8 +343,6 @@ function actionErrorCopy(error: OperationError | null): string {
 .time-slot--selected { background: #edf4ff; border-color: #2878f2; color: #2878f2; }
 .time-slot-check { background: #2878f2; border-radius: 50%; color: #ffffff; font-size: 20rpx; height: 32rpx; line-height: 32rpx; text-align: center; width: 32rpx; }
 .time-selection-error { color: #f06445; display: block; font-size: 21rpx; margin-top: 14rpx; }
-.action-workspace-feedback, .action-workspace-draft-message { color: #f06445; display: block; font-size: 21rpx; line-height: 1.5; margin-top: 12rpx; text-align: center; }
-.action-workspace-draft-message { color: #7e8da4; }
 .time-selection-submit { margin: 0; width: 100%; }
 .time-selection-submit--disabled { opacity: 0.48; }
 </style>

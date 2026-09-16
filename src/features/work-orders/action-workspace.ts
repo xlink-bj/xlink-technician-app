@@ -197,7 +197,6 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
   const descriptor = ref<ActionDescriptor | null>(null)
   const appointmentForm = ref<AppointmentFormRead | null>(null)
   const error = ref<OperationError | null>(null)
-  const draftMessage = ref('')
   const appointmentFields = computed<readonly AppointmentRuntimeField[]>(() =>
     appointmentForm.value ? appointmentRuntimeFieldsFor(appointmentForm.value) : [],
   )
@@ -272,7 +271,6 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     descriptor.value = null
     appointmentForm.value = null
     error.value = null
-    draftMessage.value = ''
   }
 
   async function restoreDraft(
@@ -294,7 +292,6 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       values: { ...form.values, ...draft.values },
     }
     draftStatus.value = 'restore_available'
-    draftMessage.value = '已恢复本地草稿'
     lifecycle.value = 'draft_local'
   }
 
@@ -324,7 +321,6 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     descriptor.value = null
     appointmentForm.value = null
     error.value = null
-    draftMessage.value = ''
 
     const read = await configured.apiRead.getWorkOrderDetail(input.workOrderId)
     if (requestVersion !== loadVersion) return failure('cancelled', 'Action Workspace load was superseded')
@@ -436,7 +432,6 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     error.value = null
     lifecycle.value = 'in_progress'
     draftStatus.value = 'dirty'
-    draftMessage.value = ''
     scheduleDraftSave()
     return { state: 'succeeded', data: undefined }
   }
@@ -588,16 +583,13 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       if (writeVersion !== loadVersion) return result
       if (writeRevision !== draftRevision) {
         draftStatus.value = 'dirty'
-        draftMessage.value = ''
         return result
       }
       if (result.state === 'succeeded') {
         draftStatus.value = 'saved_local'
         lifecycle.value = 'draft_local'
-        draftMessage.value = '已保存到本地'
       } else {
         draftStatus.value = 'save_failed'
-        draftMessage.value = '本地草稿保存失败'
         error.value = result.error ?? null
       }
       return result
@@ -629,7 +621,6 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     const result = await configured.storage.remove(key)
     if (result.state === 'succeeded') {
       draftStatus.value = 'clean'
-      draftMessage.value = ''
       return result
     }
 
@@ -647,7 +638,6 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       const markedCompleted = await configured.storage.write(key, tombstone)
       if (markedCompleted.state === 'succeeded') {
         draftStatus.value = 'clean'
-        draftMessage.value = ''
         return markedCompleted
       }
     }
@@ -744,7 +734,6 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     refreshStatus,
     postSuccessError,
     draftStatus,
-    draftMessage,
     detail,
     descriptor,
     appointmentForm,
