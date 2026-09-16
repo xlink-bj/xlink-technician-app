@@ -23,7 +23,9 @@ Workflow Runtime
 - **Action Workspace** answers: where and how is the action executed?
 - **Action Content** answers: what business-specific editor/component is required to complete the action?
 
-This architecture is introduced before detailed Appointment UX design so later actions such as Inspection, Quotation, Contract, Construction and Acceptance do not each invent a different execution pattern.
+This architecture is the shared foundation for Appointment and later actions
+such as Inspection, Quotation, Contract, Construction and Acceptance, so each
+action does not invent a different execution pattern.
 
 The first consumer is Appointment. Appointment is not the architecture itself; it is one Action Content implementation.
 
@@ -37,8 +39,10 @@ Work Order Detail
   -> user taps CTA
   -> dedicated Action Workspace page
   -> edit / autosave / leave / resume
+  -> time selection
+  -> explicit confirmation
   -> submit business action
-  -> explicit success/failure feedback
+  -> dedicated success/failure feedback
   -> authoritative backend/workflow reread
   -> return to Work Order Detail
   -> Workflow Runtime derives the next Current Action
@@ -60,7 +64,9 @@ Main business actions use a dedicated full-page workspace because action complex
 - a technician may spend minutes or tens of minutes inside one action;
 - actions need draft recovery and weak-network behavior.
 
-Bottom sheets and dialogs remain suitable for short auxiliary confirmations, not as the universal action container.
+Bottom sheets and dialogs remain suitable for short auxiliary confirmations, not as the universal action container. Appointment uses full-page navigation for
+its time-selection and confirmation steps so the system navigation hierarchy
+remains coherent across MP-WEIXIN and App.
 
 ## 3. Logical Frontend Architecture
 

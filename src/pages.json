@@ -21,7 +21,19 @@
     {
       "path": "pages/work-orders/action-workspace",
       "style": {
-        "navigationBarTitleText": "处理工单"
+        "navigationBarTitleText": "预约上门"
+      }
+    },
+    {
+      "path": "pages/work-orders/action-time",
+      "style": {
+        "navigationBarTitleText": "选择时间"
+      }
+    },
+    {
+      "path": "pages/work-orders/action-confirmation",
+      "style": {
+        "navigationBarTitleText": "确认预约"
       }
     }
   ],

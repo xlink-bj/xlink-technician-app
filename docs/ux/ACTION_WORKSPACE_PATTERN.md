@@ -9,16 +9,19 @@ execution surface for completing that action.
 ```text
 Work Order Detail
   → Workflow Runtime Current Action
-  → Action Workspace shell
-  → Action Content plug-in
-  → semantic command
+  → Appointment Workspace
+  → time selection
+  → confirmation
+  → Action Content command
+  → dedicated success state
   → authoritative reread
-  → Work Order Detail
 ```
 
-The first Action Content is the existing Appointment dynamic form. This slice
-establishes the execution framework; it does not redesign Appointment or add
-other business actions.
+The first Action Content is the Appointment dynamic form. Its production flow
+is split into a dedicated workspace, a friendly datetime selection page, an
+explicit confirmation page, and a bounded success state. The time choices are
+presentation controls for the verified datetime field; they do not claim
+backend availability.
 
 ## Boundaries
 
@@ -26,9 +29,9 @@ other business actions.
   policy, and the enabled/disabled execution decision.
 - Action Runtime owns Action identity, content kind, lifecycle, draft status,
   and the reusable workspace contract.
-- The Workspace shell owns navigation, Work Order context, loading, draft
-  feedback, submit state, failures, and success presentation. It does not know
-  Appointment fields.
+- The Workspace shell owns compact Work Order context, loading, draft feedback,
+  sticky action placement, failures, and native page navigation support. It does
+  not know Appointment fields.
 - Action Content consumes normalized read data and Dynamic Form Runtime state.
   It does not call endpoints or platform storage APIs.
 - Adapters own backend wire fields and Mock/Real transport selection. Vue does
@@ -76,9 +79,10 @@ warnings remain separate from the already-successful business result.
 
 Mock data and Real API reads follow the same Adapter → Runtime → Workspace
 path. Mock provides direct development entries for fresh, retryable, and
-terminal Appointment Workspace states; validation, draft restore, and success
-are reachable through the same page without source edits. Synthetic IDs are
-owned by Mock transport and are blocked from Real transport.
+terminal Appointment Workspace states; validation, draft restore, time
+selection, confirmation, success, and post-success refresh warnings are
+reachable through the same semantic path without source edits. Synthetic IDs
+are owned by Mock transport and are blocked from Real transport.
 
 The implementation uses standard uni-app page navigation, Vue components,
 typed ports, and semantic storage, so the shell is shared by MP-WEIXIN, iOS

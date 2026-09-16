@@ -45,13 +45,40 @@ import {
 } from './appointment-form-runtime'
 
 export const actionWorkspaceRoute = '/pages/work-orders/action-workspace' as const
+export const actionWorkspaceTimeRoute = '/pages/work-orders/action-time' as const
+export const actionWorkspaceConfirmationRoute = '/pages/work-orders/action-confirmation' as const
+
+function actionRouteFor(
+  route: string,
+  workOrderId: WorkOrderId,
+  workflowNodeId: WorkflowNodeRuntimeId,
+  actionIntent: string,
+): string {
+  return `${route}?id=${encodeURIComponent(String(workOrderId))}&node=${encodeURIComponent(String(workflowNodeId))}&action=${encodeURIComponent(actionIntent)}`
+}
 
 export function actionWorkspaceRouteFor(
   workOrderId: WorkOrderId,
   workflowNodeId: WorkflowNodeRuntimeId,
   actionIntent: string,
 ): string {
-  return `${actionWorkspaceRoute}?id=${encodeURIComponent(String(workOrderId))}&node=${encodeURIComponent(String(workflowNodeId))}&action=${encodeURIComponent(actionIntent)}`
+  return actionRouteFor(actionWorkspaceRoute, workOrderId, workflowNodeId, actionIntent)
+}
+
+export function actionWorkspaceTimeRouteFor(
+  workOrderId: WorkOrderId,
+  workflowNodeId: WorkflowNodeRuntimeId,
+  actionIntent: string,
+): string {
+  return actionRouteFor(actionWorkspaceTimeRoute, workOrderId, workflowNodeId, actionIntent)
+}
+
+export function actionWorkspaceConfirmationRouteFor(
+  workOrderId: WorkOrderId,
+  workflowNodeId: WorkflowNodeRuntimeId,
+  actionIntent: string,
+): string {
+  return actionRouteFor(actionWorkspaceConfirmationRoute, workOrderId, workflowNodeId, actionIntent)
 }
 
 export function parseActionWorkspaceId(value: unknown): WorkOrderId | null {
@@ -173,6 +200,18 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
   const appointmentFields = computed<readonly AppointmentRuntimeField[]>(() =>
     appointmentForm.value ? appointmentRuntimeFieldsFor(appointmentForm.value) : [],
   )
+  const appointmentChoiceField = computed(() => appointmentFields.value.find((field) => Boolean(field.options?.length)))
+  const appointmentTimeField = computed(() => appointmentFields.value.find((field) => field.type === 'datetime'))
+  const appointmentNoteField = computed(() => appointmentFields.value.find((field) => field.type === 'textarea'))
+  const appointmentExtraFields = computed(() => appointmentFields.value.filter((field) =>
+    field.key !== appointmentChoiceField.value?.key
+    && field.key !== appointmentTimeField.value?.key
+    && field.key !== appointmentNoteField.value?.key,
+  ))
+  const appointmentTimeValue = computed(() => {
+    const key = appointmentTimeField.value?.key
+    return key ? appointmentForm.value?.values[key] : undefined
+  })
   const canSubmit = computed(() =>
     loadState.value === 'succeeded' &&
     lifecycle.value !== 'submitting' &&
@@ -209,6 +248,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     refreshStatus.value = 'not_started'
     postSuccessError.value = null
     draftStatus.value = 'clean'
+    identity = null
     detail.value = null
     descriptor.value = null
     appointmentForm.value = null
@@ -260,6 +300,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     refreshStatus.value = 'not_started'
     postSuccessError.value = null
     draftStatus.value = 'clean'
+    identity = null
     detail.value = null
     descriptor.value = null
     appointmentForm.value = null
@@ -335,6 +376,28 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     return { state: 'succeeded', data: nextDescriptor }
   }
 
+  async function ensureLoaded(input: {
+    readonly workOrderId: WorkOrderId
+    readonly workflowNodeId: WorkflowNodeRuntimeId
+    readonly actionIntent?: string
+  }): Promise<OperationSnapshot<ActionDescriptor>> {
+    const configured = dependencies
+    const session = configured?.getSession()
+    const current = descriptor.value
+    const sameAction = Boolean(
+      current
+      && session
+      && String(current.userId) === String(session.user.id)
+      && String(current.workOrderId) === String(input.workOrderId)
+      && String(current.workflowNodeId) === String(input.workflowNodeId)
+      && (!input.actionIntent || current.actionIntent === input.actionIntent),
+    )
+    if (sameAction && loadState.value === 'succeeded') {
+      return { state: 'succeeded', data: current! }
+    }
+    return load(input)
+  }
+
   function setField(key: string, value: AppointmentFieldValue): OperationSnapshot<void> {
     const form = appointmentForm.value
     if (!form) return failure('validation', 'Action content is not ready')
@@ -356,6 +419,114 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     draftStatus.value = 'dirty'
     draftMessage.value = ''
     scheduleDraftSave()
+    return { state: 'succeeded', data: undefined }
+  }
+
+  function setAppointmentTime(value: string): OperationSnapshot<void> {
+    const field = appointmentTimeField.value
+    if (!field) return failure('unsupported_capability', 'Appointment time field is unavailable')
+    return setField(field.key, value)
+  }
+
+  async function openAppointmentTimeSelection(): Promise<OperationSnapshot<void>> {
+    const currentDescriptor = descriptor.value
+    if (!currentDescriptor || !appointmentTimeField.value) {
+      return failure('unsupported_capability', 'Appointment time selection is unavailable')
+    }
+    const flushed = await flushDraft()
+    if (flushed.state !== 'succeeded') {
+      error.value = flushed.error ?? null
+      return flushed
+    }
+    const configured = dependencies
+    if (!configured) return failure('server_terminal', 'Action Workspace is not configured')
+    await configured.navigation.navigate(actionWorkspaceTimeRouteFor(
+      currentDescriptor.workOrderId,
+      currentDescriptor.workflowNodeId,
+      currentDescriptor.actionIntent,
+    ))
+    return { state: 'succeeded', data: undefined }
+  }
+
+  async function continueToConfirmation(): Promise<OperationSnapshot<void>> {
+    const currentDescriptor = descriptor.value
+    const form = appointmentForm.value
+    if (!currentDescriptor || !form) return failure('validation', 'Action content is not ready')
+    const validation = normalizeAppointmentForm(form)
+    if (validation.state !== 'succeeded') {
+      error.value = validation.error ?? null
+      lifecycle.value = 'in_progress'
+      return { state: validation.state, ...(validation.error ? { error: validation.error } : {}) }
+    }
+    const flushed = await flushDraft()
+    if (flushed.state !== 'succeeded') {
+      error.value = flushed.error ?? null
+      return flushed
+    }
+    const configured = dependencies
+    if (!configured) return failure('server_terminal', 'Action Workspace is not configured')
+    await configured.navigation.navigate(actionWorkspaceConfirmationRouteFor(
+      currentDescriptor.workOrderId,
+      currentDescriptor.workflowNodeId,
+      currentDescriptor.actionIntent,
+    ))
+    return { state: 'succeeded', data: undefined }
+  }
+
+  async function openConfirmation(): Promise<OperationSnapshot<void>> {
+    const currentDescriptor = descriptor.value
+    if (!currentDescriptor || !appointmentForm.value) {
+      return failure('validation', 'Action content is not ready')
+    }
+    const validation = normalizeAppointmentForm(appointmentForm.value)
+    if (validation.state !== 'succeeded') {
+      error.value = validation.error ?? null
+      return { state: validation.state, ...(validation.error ? { error: validation.error } : {}) }
+    }
+    const flushed = await flushDraft()
+    if (flushed.state !== 'succeeded') {
+      error.value = flushed.error ?? null
+      return flushed
+    }
+    const configured = dependencies
+    if (!configured) return failure('server_terminal', 'Action Workspace is not configured')
+    await configured.navigation.navigate(actionWorkspaceConfirmationRouteFor(
+      currentDescriptor.workOrderId,
+      currentDescriptor.workflowNodeId,
+      currentDescriptor.actionIntent,
+    ))
+    return { state: 'succeeded', data: undefined }
+  }
+
+  async function backToAppointmentWorkspace(): Promise<OperationSnapshot<void>> {
+    const currentDescriptor = descriptor.value
+    const configured = dependencies
+    if (!currentDescriptor || !configured) return failure('validation', 'Action content is not ready')
+    const flushed = await flushDraft()
+    if (flushed.state !== 'succeeded') {
+      error.value = flushed.error ?? null
+      return flushed
+    }
+    await configured.navigation.navigate(actionWorkspaceRouteFor(
+      currentDescriptor.workOrderId,
+      currentDescriptor.workflowNodeId,
+      currentDescriptor.actionIntent,
+    ))
+    return { state: 'succeeded', data: undefined }
+  }
+
+  async function navigateToDetail(): Promise<OperationSnapshot<void>> {
+    const configured = dependencies
+    const currentDetail = detail.value
+    if (!configured || !currentDetail) return failure('unsupported_capability', 'Work Order detail is unavailable')
+    await configured.navigation.navigate(`/pages/work-orders/detail?id=${encodeURIComponent(String(currentDetail.id))}`)
+    return { state: 'succeeded', data: undefined }
+  }
+
+  async function navigateToList(): Promise<OperationSnapshot<void>> {
+    const configured = dependencies
+    if (!configured) return failure('unsupported_capability', 'Work Order list is unavailable')
+    await configured.navigation.navigate('/pages/work-orders/work-orders')
     return { state: 'succeeded', data: undefined }
   }
 
@@ -555,13 +726,26 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     descriptor,
     appointmentForm,
     appointmentFields,
+    appointmentChoiceField,
+    appointmentTimeField,
+    appointmentNoteField,
+    appointmentExtraFields,
+    appointmentTimeValue,
     appointmentError: error,
     error,
     canSubmit,
     configure,
     clear,
     load,
+    ensureLoaded,
     setField,
+    setAppointmentTime,
+    openAppointmentTimeSelection,
+    continueToConfirmation,
+    openConfirmation,
+    backToAppointmentWorkspace,
+    navigateToDetail,
+    navigateToList,
     saveDraft,
     flushDraft,
     submit,

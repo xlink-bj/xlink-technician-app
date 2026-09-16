@@ -1,13 +1,5 @@
 <template>
   <view class="action-workspace-page">
-    <view class="action-workspace-header">
-      <button class="action-workspace-back" aria-label="返回工单详情" @tap="$emit('exit')">
-        <text aria-hidden="true">‹</text>
-      </button>
-      <text class="action-workspace-header-title">{{ title }}</text>
-      <view class="action-workspace-header-spacer" aria-hidden="true" />
-    </view>
-
     <view class="action-workspace-body">
       <view class="action-workspace-context">
         <text class="action-workspace-context-label">当前工单</text>
@@ -31,18 +23,24 @@
 
       <slot name="feedback" />
 
-      <button
-        v-if="lifecycle !== 'succeeded'"
-        class="action-workspace-submit"
-        :disabled="!canSubmit"
-        @tap="$emit('submit')"
-      >
-        {{ lifecycle === 'submitting' ? '提交中' : submitLabel }}
-      </button>
-      <view v-else class="action-workspace-success" aria-live="polite">
-        <text class="action-workspace-success-title">操作已完成</text>
-        <text class="action-workspace-success-copy">{{ successCopy || '工单状态已刷新，即将返回工单详情。' }}</text>
+      <view v-if="lifecycle !== 'succeeded'" class="action-workspace-actions">
+        <slot name="actions">
+          <button
+            class="action-workspace-submit"
+            :class="{ 'action-workspace-submit--disabled': !canSubmit }"
+            :disabled="!canSubmit"
+            @tap="$emit('submit')"
+          >
+            {{ lifecycle === 'submitting' ? '提交中' : submitLabel }}
+          </button>
+        </slot>
       </view>
+      <slot v-else name="success">
+        <view class="action-workspace-success" aria-live="polite">
+          <text class="action-workspace-success-title">操作已完成</text>
+          <text class="action-workspace-success-copy">{{ successCopy || '工单状态已刷新。' }}</text>
+        </view>
+      </slot>
     </view>
   </view>
 </template>
@@ -51,7 +49,6 @@
 import type { ActionDraftStatus, ActionLifecycle } from '@runtimes/action'
 
 defineProps<{
-  readonly title: string
   readonly customerName?: string
   readonly displayNumber?: string
   readonly lifecycle: ActionLifecycle
@@ -75,43 +72,6 @@ defineEmits<{
   padding-bottom: calc(46rpx + env(safe-area-inset-bottom));
   width: 100%;
 }
-
-.action-workspace-header {
-  align-items: center;
-  background: #ffffff;
-  display: flex;
-  height: 96rpx;
-  justify-content: space-between;
-  padding: 0 24rpx;
-  position: relative;
-}
-
-.action-workspace-back {
-  align-items: center;
-  background: transparent;
-  color: #172239;
-  display: flex;
-  font-size: 58rpx;
-  height: 72rpx;
-  justify-content: flex-start;
-  line-height: 72rpx;
-  margin: 0;
-  padding: 0;
-  width: 72rpx;
-}
-
-.action-workspace-back::after { border: 0; }
-
-.action-workspace-header-title {
-  color: #172239;
-  font-size: 30rpx;
-  font-weight: 800;
-  left: 50%;
-  position: absolute;
-  transform: translateX(-50%);
-}
-
-.action-workspace-header-spacer { width: 72rpx; }
 
 .action-workspace-body {
   box-sizing: border-box;
@@ -179,7 +139,19 @@ defineEmits<{
   width: 100%;
 }
 
-.action-workspace-submit[disabled] { opacity: 0.48; }
+.action-workspace-actions {
+  background: #f3f6fa;
+  bottom: 0;
+  box-sizing: border-box;
+  margin: 18rpx -24rpx calc(-46rpx - env(safe-area-inset-bottom));
+  padding: 12rpx 24rpx calc(46rpx + env(safe-area-inset-bottom));
+  position: sticky;
+  z-index: 2;
+}
+
+.action-workspace-actions .action-workspace-submit { margin-top: 0; }
+
+.action-workspace-submit--disabled { opacity: 0.48; }
 .action-workspace-submit::after { border: 0; }
 
 .action-workspace-success {

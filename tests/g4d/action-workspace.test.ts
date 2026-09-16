@@ -11,7 +11,11 @@ import { createRoleScopedTechnicianApiReadAdapter } from '@adapters/api/technici
 import { createUniApiCommandTransport } from '@adapters/api/uni-api-command-transport'
 import { createUniApiReadTransport } from '@adapters/api/uni-api-read-transport'
 import { resetMockCommandState, resetBusinessMockCache, setBusinessMockMode } from '@adapters/api/mock'
-import { useActionWorkspaceStore } from '@features/work-orders/action-workspace'
+import {
+  actionWorkspaceConfirmationRouteFor,
+  actionWorkspaceTimeRouteFor,
+  useActionWorkspaceStore,
+} from '@features/work-orders/action-workspace'
 import type {
   AppointmentFormRead,
   SessionSnapshot,
@@ -100,6 +104,7 @@ function configureWorkspace(
   getSession: () => SessionSnapshot | null = () => session,
 ) {
   const storage = sharedStorage ?? storageFor()
+  const nextNavigation = navigation()
   const api: TechnicianApiReadPort = {
     getWorkOrderDetail: vi.fn(async () => succeeded(detail)),
   } as unknown as TechnicianApiReadPort
@@ -112,12 +117,12 @@ function configureWorkspace(
     apiRead: api,
     commandApi: command,
     storage: storage.storage,
-    navigation: navigation(),
+    navigation: nextNavigation,
     getSession,
     debounceMs: 5,
     now: () => '2026-04-20T10:00:00.000Z',
   })
-  return { store, api, command, storage }
+  return { store, api, command, storage, navigation: nextNavigation }
 }
 
 async function openWorkspace(
@@ -321,6 +326,60 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
     expect(command.submitAppointment).toHaveBeenCalledTimes(1)
   })
 
+  it('validates before entering confirmation and routes through the time step', async () => {
+    const { store, navigation, storage } = configureWorkspace()
+    await openWorkspace(store)
+
+    const missing = await store.continueToConfirmation()
+    expect(missing.state).toBe('failed_terminal')
+    expect(missing.error?.category).toBe('validation')
+    expect(navigation.navigate).not.toHaveBeenCalled()
+
+    store.setField('need', '1')
+    const toTime = await store.openAppointmentTimeSelection()
+    expect(toTime.state).toBe('succeeded')
+    expect(navigation.navigate).toHaveBeenCalledWith(actionWorkspaceTimeRouteFor(
+      asOpaqueId<'WorkOrderId'>('workspace-work-order'),
+      asOpaqueId<'WorkflowNodeRuntimeId'>('workspace-appointment-node'),
+      'set_appointment',
+    ))
+    expect(storage.storage.write).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps the selected datetime in the dynamic form and routes to confirmation', async () => {
+    const { store, navigation } = configureWorkspace()
+    await openWorkspace(store)
+    store.setField('need', '1')
+
+    expect(store.setAppointmentTime('2026-04-20 14:00').state).toBe('succeeded')
+    const result = await store.openConfirmation()
+
+    expect(result.state).toBe('succeeded')
+    expect(store.appointmentForm?.values.datetime).toBe('2026-04-20 14:00')
+    expect(navigation.navigate).toHaveBeenCalledWith(actionWorkspaceConfirmationRouteFor(
+      asOpaqueId<'WorkOrderId'>('workspace-work-order'),
+      asOpaqueId<'WorkflowNodeRuntimeId'>('workspace-appointment-node'),
+      'set_appointment',
+    ))
+  })
+
+  it('does not re-submit after business success and exposes post-success navigation', async () => {
+    const { store, command, navigation } = configureWorkspace()
+    await openWorkspace(store)
+    store.setField('need', '1')
+    store.setAppointmentTime('2026-04-20 14:00')
+    expect((await store.submit()).state).toBe('succeeded')
+    expect(store.businessResult).toBe('succeeded')
+    expect(store.canSubmit).toBe(false)
+
+    await store.submit()
+    expect(command.submitAppointment).toHaveBeenCalledTimes(1)
+    await store.navigateToDetail()
+    await store.navigateToList()
+    expect(navigation.navigate).toHaveBeenNthCalledWith(1, '/pages/work-orders/detail?id=workspace-work-order')
+    expect(navigation.navigate).toHaveBeenNthCalledWith(2, '/pages/work-orders/work-orders')
+  })
+
   it('uses the same Mock raw read/command path as the real Action Workspace', async () => {
     vi.stubEnv('VITE_XLINK_ENVIRONMENT', 'test')
     setBusinessMockMode('data')
@@ -362,6 +421,7 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
     store.setField('need', '1')
     store.setField('datetime', '2026-04-20 10:00')
     expect((await store.submit()).state).toBe('succeeded')
+    expect(store.refreshStatus).toBe('refreshed')
     expect(storage.values.size).toBe(0)
   })
 
