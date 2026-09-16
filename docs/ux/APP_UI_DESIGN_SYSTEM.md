@@ -13,9 +13,10 @@ This is intentionally a living system. New patterns are promoted only after they
 The hierarchy is:
 
 ```text
-Design Tokens
-  -> Shared UI Primitives
-  -> Reusable Product Patterns
+External mobile design baseline
+  -> XLink semantic design tokens
+  -> Shared UI primitives
+  -> Reusable product patterns
   -> Feature / Action Content
 ```
 
@@ -32,6 +33,7 @@ The visual language is optimized for field-service work:
 - **Progressive complexity** — simple work remains simple; long forms and complex editors use the same shell rather than a new interaction model.
 - **State is explicit** — saving, validation, failure, success, read-only, and disabled states are visibly distinct.
 - **Cross-platform by construction** — patterns must work in uni-app on MP-WEIXIN, iOS, and Android without Web-only behavior.
+- **Mature mobile defaults first** — common control geometry and interaction states should inherit proven mobile conventions before XLink invents a new value.
 
 Current visual direction:
 
@@ -47,9 +49,80 @@ cool-light page background
 + generous but efficient spacing
 ```
 
-## 2. Design tokens
+## 2. External reference hierarchy
+
+XLink does not need to rediscover standard mobile control sizes, spacing, hit areas, field anatomy, action hierarchy, or feedback behavior by repeatedly tuning individual screens.
+
+The default reference order is:
+
+1. **WeChat Mini Program / WeUI** — primary baseline because MP-WEIXIN is a first-class runtime and the WeChat design system is built to match native WeChat interaction expectations.
+2. **Vant Weapp / Vant mobile design language** — secondary baseline for mature mobile component anatomy, state coverage, and dense business UI patterns.
+3. **Ant Design Mobile / Ant token methodology** — tertiary baseline for semantic token organization, component state completeness, and interaction hierarchy.
+4. **XLink product-specific overrides** — used only where field-service workflows or accepted product UX require a deliberate deviation.
+
+Reference sources:
+
+- WeUI: <https://github.com/Tencent/weui>
+- WeUI for Mini Program: <https://github.com/tencent/weui-wxss>
+- Vant Weapp: <https://github.com/youzan/vant-weapp>
+- Ant Design Mobile: <https://github.com/ant-design/ant-design-mobile>
+
+These references are design baselines, not required runtime dependencies. The current App remains uni-app based and should not import a third-party UI library merely to match its dimensions or interaction grammar.
+
+### What should be inherited before XLink overrides it
+
+For common controls, engineering should first benchmark mature mobile references for:
+
+- control height and minimum touch area;
+- horizontal page gutter and control padding;
+- vertical spacing between labels, controls, sections, and cards;
+- typography hierarchy;
+- button emphasis and action grouping;
+- input / textarea / selector anatomy;
+- cell / information-row anatomy;
+- selected, pressed, focused, disabled, loading, error, and success states;
+- dialog, toast, notice, loading, and empty-state behavior;
+- safe-area and persistent bottom-action treatment.
+
+Do not invent a new control size, spacing value, radius, or interaction state simply because a new screen is being implemented.
+
+### Conflict rule
+
+When references disagree:
+
+1. prefer WeUI / Mini Program convention for interaction geometry and expectations that materially affect MP-WEIXIN;
+2. use Vant Weapp as the next mobile-oriented reference;
+3. use Ant Design Mobile mainly to improve semantic token/state completeness;
+4. apply an XLink override only when the field-service product context or accepted Product Owner UX clearly requires it.
+
+A deliberate override must be semantic and reusable. It must not be a one-page visual exception without product reason.
+
+### Reference, do not clone
+
+XLink should borrow mature design reasoning, not blindly copy a library theme.
+
+The target is:
+
+```text
+mature mobile geometry + interaction conventions
++ XLink semantic tokens
++ XLink field-service product patterns
+```
+
+not:
+
+```text
+third-party component library visual identity
+```
+
+## 3. Design tokens
 
 Tokens are semantic. Feature pages should consume token intent rather than copy literal values repeatedly.
+
+Token values should be established in two steps:
+
+1. benchmark the relevant mature mobile reference for geometry/state behavior;
+2. apply the smallest XLink-specific visual adjustment required by the accepted product direction.
 
 The v0.1 palette is based on the currently accepted Appointment/G4-UX direction and is subject to controlled evolution:
 
@@ -67,6 +140,24 @@ The v0.1 palette is based on the currently accepted Appointment/G4-UX direction 
 
 Do not create feature-specific blue/gray variants when an existing semantic token is sufficient.
 
+### Geometry tokens
+
+Geometry should not be tuned per feature. Establish shared semantic tokens for at least:
+
+- `page-gutter`;
+- `control-height`;
+- `control-height-compact` only when a real compact use exists;
+- `touch-target-min`;
+- `field-padding-x` / `field-padding-y`;
+- `card-padding`;
+- `section-gap`;
+- `field-gap`;
+- `action-bar-padding`;
+- `action-bar-gap`;
+- control and surface radius.
+
+The initial values should be benchmarked against WeUI first, then checked against Vant Weapp and current accepted XLink Appointment UX. Do not choose geometry from one screenshot in isolation.
+
 ### Spacing
 
 Use a small semantic spacing scale rather than ad-hoc values. The implementation may use `rpx`, but spacing relationships must remain consistent across MP and App.
@@ -80,6 +171,8 @@ md   16
 lg   20/24
 xl   32
 ```
+
+This scale is a semantic working scale, not permission to ignore platform conventions. Final control geometry should be benchmarked against the external hierarchy above.
 
 Use the scale for card padding, field gaps, section separation, and page gutters. Exceptional geometry must have an explicit product reason.
 
@@ -106,7 +199,7 @@ The system needs a small hierarchy, not per-page font inventions:
 
 Primary hierarchy should come from size, weight, and spacing before color.
 
-## 3. Shared UI primitives
+## 4. Shared UI primitives
 
 The following primitives are candidates for shared implementation. Do not create a universal component unless reuse is real; when a primitive is shared, feature pages should not restyle it independently.
 
@@ -140,6 +233,8 @@ loading
 disabled
 ```
 
+Button geometry and hit area should start from WeUI mobile convention, be compared with Vant Weapp, and then use XLink brand tokens for color/radius if needed.
+
 Button state must not be encoded only by opacity if interaction meaning would become ambiguous.
 
 ### Input / Textarea
@@ -152,6 +247,8 @@ Common properties:
 - field-level validation belongs near the affected field;
 - feature code must not invent length/required rules unsupported by the normalized schema.
 
+Input height, internal padding, typography, and disabled/focus/error treatment should follow the external reference hierarchy before XLink-specific adjustment.
+
 ### Selector
 
 Use when a value opens a focused selection surface such as Appointment date/time.
@@ -163,6 +260,8 @@ A selector must visibly communicate:
 - disabled/read-only state;
 - selected/result state.
 
+Selector geometry should normally align with Input geometry unless the interaction requires a deliberate larger target.
+
 Do not style semantic selectors as generic text inputs.
 
 ### Choice Group
@@ -173,6 +272,8 @@ Use for small mutually exclusive option sets.
 - obvious selected state;
 - option labels come from normalized business data where available;
 - do not infer semantics from visual order.
+
+Choice geometry and selected-state contrast should be benchmarked against WeUI / Vant mobile patterns rather than invented per form.
 
 ### Notice / Status
 
@@ -199,13 +300,13 @@ secondary metadata (optional)
 trailing affordance/status (optional)
 ```
 
-Rows that navigate must look and behave consistently across modules.
+Rows that navigate must look and behave consistently across modules. Cell height, padding, divider behavior, and trailing affordance should start from mature mobile cell/list patterns rather than page-specific invention.
 
 ### Icon
 
 Use the existing shared `AppIcon`/icon vocabulary where appropriate. Do not introduce page-local symbolic glyphs when a shared semantic icon exists. Icon color follows component state, not decoration.
 
-## 4. Reusable product patterns
+## 5. Reusable product patterns
 
 Patterns are larger than primitives and encode stable product interaction structure.
 
@@ -223,7 +324,7 @@ Current patterns include:
 
 New features should reuse these patterns before inventing alternatives.
 
-## 5. Action Workspace UI contract
+## 6. Action Workspace UI contract
 
 Action Workspace is a product and architecture pattern, not an Appointment-only layout.
 
@@ -250,7 +351,7 @@ The following are UI architecture invariants:
 
 Appointment is the first concrete consumer. Inspection, quotation, contract, signature, and other Actions should inherit this structure when they become supported.
 
-## 6. Interaction states
+## 7. Interaction states
 
 Every reusable interactive component or pattern must deliberately define the states that apply to it. At minimum review:
 
@@ -267,9 +368,11 @@ retryable error
 success
 ```
 
+Use mature mobile component systems to validate that state coverage is complete. XLink should customize the semantic appearance, not omit standard interaction states.
+
 Do not leave browser/uni-app native defaults to define the product language accidentally when a shared state is required.
 
-## 7. Cross-platform constraints
+## 8. Cross-platform constraints
 
 UI system implementation must remain compatible with:
 
@@ -286,7 +389,7 @@ Prefer:
 
 Avoid platform assumptions in feature content. If a platform difference is unavoidable, isolate it in shared platform/layout infrastructure rather than duplicating feature UI.
 
-## 8. Component promotion rule
+## 9. Component promotion rule
 
 Do not over-componentize early.
 
@@ -298,38 +401,63 @@ Use this working rule:
 
 However, components already identified as architectural invariants — such as Action Workspace Shell, persistent Action Bar, and draft status presentation — should be shared immediately.
 
-## 9. Design-system governance
+External maturity can accelerate promotion: if WeUI/Vant/Ant Mobile all express essentially the same stable mobile primitive and XLink has an immediate real use, it is reasonable to create the shared primitive at first use rather than wait for three internal copies.
+
+## 10. Design-system governance
 
 For each new business slice:
 
 ```text
-1. reuse existing token / primitive / pattern
-2. extend an existing primitive when the interaction is genuinely the same
-3. add a new local pattern only when existing grammar is insufficient
-4. after Product Owner acceptance, decide whether the new pattern graduates into this system
-5. update this document and shared implementation together
+1. check the external reference hierarchy for the common mobile primitive
+2. reuse existing XLink token / primitive / pattern
+3. extend an existing primitive when the interaction is genuinely the same
+4. add a new local pattern only when existing grammar is insufficient
+5. after Product Owner acceptance, decide whether the new pattern graduates into this system
+6. update this document and shared implementation together
 ```
 
 A new page is not permission to introduce a new visual system.
 
-Product Owner owns final visual/experience acceptance. Engineering review owns architecture, semantic correctness, reuse discipline, and cross-platform safety.
+Before introducing a new literal geometry/color in a feature page, engineering should be able to answer one of:
 
-## 10. v0.1 implementation target
+- which existing XLink semantic token this maps to;
+- which mature mobile reference justifies a new token;
+- which field-service product requirement requires a deliberate override.
 
-The first code-side consolidation should focus on high-value reuse, not a full component library:
+Product Owner owns final visual/experience acceptance. Engineering review owns architecture, semantic correctness, reuse discipline, reference discipline, and cross-platform safety.
 
-- central semantic UI tokens;
-- shared Card/Surface styling;
-- Primary/Secondary/Text button grammar;
-- shared field/selector/choice visual grammar;
-- status/notice presentation;
-- persistent Action Bar and Action Workspace Shell geometry;
-- reuse existing `AppIcon` rather than page-local glyph styling;
-- migration of current Appointment surfaces to consume the shared system without changing business semantics.
+## 11. v0.1 implementation target
 
-Do not build a universal calendar, quotation editor, contract system, or form builder merely to satisfy Design System v0.1.
+The first code-side consolidation should focus on high-value reuse, not a full component library.
 
-## 11. Definition of consistency
+Start with the controls already proven by Appointment:
+
+1. **Button** — Primary / Secondary / Text, including loading and disabled states.
+2. **Field frame** — label / required marker / supporting or error text.
+3. **Textarea / Input visual grammar** — common field geometry and state treatment.
+4. **Selector** — Appointment datetime selector is the first consumer.
+5. **Choice control** — Appointment `need` options are the first consumer.
+6. **Card / Surface** — compact context, confirmation grouping, information surfaces.
+7. **Notice / Status** — draft/autosave, warning, retryable/terminal error, success.
+8. **Information Row / Cell** — confirmation rows and later Work Order information rows.
+9. **Persistent Action Bar** — one or two actions, Shell-owned safe area.
+10. **AppIcon semantic vocabulary** — replace local text glyphs where appropriate.
+
+For each primitive:
+
+```text
+A. inspect WeUI / WeUI Mini Program baseline
+B. compare Vant Weapp mobile pattern
+C. use Ant Mobile/token methodology to check state completeness
+D. map the result to XLink semantic tokens
+E. migrate one real Appointment consumer
+F. verify MP-WEIXIN + App build
+G. only then reuse it elsewhere
+```
+
+Do not build a universal calendar, quotation editor, contract system, list framework, theme editor, CSS utility framework, or form-builder redesign merely to satisfy Design System v0.1.
+
+## 12. Definition of consistency
 
 A future screen is consistent when a technician can correctly predict:
 
@@ -342,3 +470,5 @@ A future screen is consistent when a technician can correctly predict:
 - how confirmation and success are presented;
 
 without learning a new visual language for every workflow node.
+
+Consistency does not mean every screen looks identical. It means common mobile behavior comes from a mature baseline, common XLink semantics come from shared tokens/primitives, and only genuine business differences remain feature-specific.
