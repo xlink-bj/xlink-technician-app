@@ -29,10 +29,10 @@ presentation shortcuts and do not imply duration, availability, or capacity.
   policy, and the enabled/disabled execution decision.
 - Action Runtime owns Action identity, content kind, lifecycle, draft status,
   and the reusable workspace contract.
-- The Workspace shell owns compact Work Order context, loading, draft feedback,
-  sticky action placement, failures, and native page navigation support. Action
-  sub-pages use replace semantics when available to avoid stack growth. It does
-  not know Appointment fields.
+- The Workspace shell owns compact Work Order context, loading, generic draft
+  feedback, persistent action placement, failures, safe-area/footer geometry,
+  and native page navigation support. Action sub-pages use replace semantics
+  when available to avoid stack growth. It does not know Appointment fields.
 - Action Content consumes normalized read data and Dynamic Form Runtime state.
   Appointment-specific presentation roles use verified field keys (`need`,
   `datetime`, `note`); field order and generic field shape do not assign roles.
@@ -45,6 +45,32 @@ presentation shortcuts and do not imply duration, availability, or capacity.
 
 Only an enabled Action can open an executable Workspace. A semantic domain
 policy decision is not itself a permission to execute a business mutation.
+
+## Workspace structure
+
+The reusable Workspace is structurally divided into scrollable business content
+and a persistent action area:
+
+```text
+Native Page Header
+Action Workspace Shell
+  ├── compact business context
+  ├── scrollable Action Content
+  ├── Shell-owned status / feedback
+  └── persistent Action Bar
+```
+
+The following are architecture invariants for all editable Actions:
+
+1. Draft/autosave feedback is owned by the Shell and rendered exactly once.
+2. The primary Action Bar is persistent and independent of Action Content height.
+3. Action Content scrolls; the Action Bar remains outside the scroll container.
+4. Safe-area and footer geometry are Shell responsibilities, not Action Content responsibilities.
+5. Long supported Action Content must remain usable without moving the primary CTA into the content flow.
+6. Action Content does not implement its own storage/autosave presentation.
+
+These invariants apply to Appointment now and to future Inspection, Quotation,
+Contract, Construction, Acceptance, and other supported Action Content types.
 
 ## Lifecycle and weak network
 
@@ -81,6 +107,26 @@ version cannot consume it. Successful submission best-effort finalizes the
 unfinished record and then attempts the authoritative read; cleanup and refresh
 warnings remain separate from the already-successful business result.
 
+## Visual system
+
+Action Workspace follows the App-wide living UI system in
+`docs/ux/APP_UI_DESIGN_SYSTEM.md`.
+
+The Workspace must therefore reuse the shared visual grammar for:
+
+- page/surface background;
+- card/surface treatment;
+- typography hierarchy;
+- primary/secondary/text actions;
+- input, textarea, selector, and choice states;
+- draft/status/error/success presentation;
+- persistent Action Bar;
+- shared icons.
+
+Appointment is the first source surface for Design System v0.1, not a separate
+visual system. Later Actions should reuse existing tokens/primitives/patterns
+before introducing new ones.
+
 ## Mock/Real parity and platform scope
 
 Mock data and Real API reads follow the same Adapter → Runtime → Workspace
@@ -91,8 +137,9 @@ reachable through the same semantic path without source edits. Synthetic IDs
 are owned by Mock transport and are blocked from Real transport.
 
 The implementation uses standard uni-app page navigation, Vue components,
-typed ports, and semantic storage, so the shell is shared by MP-WEIXIN, iOS
-App, and Android App. It does not depend on Web-only lifecycle or overlay APIs.
+typed ports, semantic storage, and platform-safe shared UI primitives, so the
+shell is shared by MP-WEIXIN, iOS App, and Android App. It does not depend on
+Web-only lifecycle or overlay APIs.
 
 ## Deferred
 
