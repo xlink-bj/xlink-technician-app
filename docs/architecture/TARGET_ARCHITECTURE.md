@@ -1,812 +1,918 @@
-# Target Architecture
+# Target Architecture — Living Architecture Record
 
-Status: G2 architecture decision record  
+Status: Living target architecture  
 Program: New Technician / Field Service App  
-Baseline: `9f95ce3dbebf8e559ab9538c7e3b8dd2585eaf11`  
-Branch: `rebuild/g2-architecture-decision`
+Original architecture decision: G2  
+Current revision: G4-D / Action Workspace architecture review  
+Implementation baseline reviewed: `2ab3190e1d480612001786fbd29d5e56b6771ee2`  
+Working branch: `rebuild/g4d-action-workspace`
 
-This document fixes the architecture boundary for G3. It is not application
-code, a second Legacy scan, or a promise to preserve every historical widget
-and branch. It consumes the accepted G1 evidence and turns it into an
-implementation boundary for MP-WEIXIN, Android, and iOS.
+This document is the current high-level architecture authority for the new Technician App.
 
-## 1. Decision Summary
+The original G2 architecture direction remains valid unless explicitly revised below. The purpose of this revision is not to replace that architecture, but to incorporate what G3, G4-UX, and G4-D have proven in implementation and to make the frontend execution model explicit before later workflow slices such as Inspection, Quotation, Contract, Construction, and Acceptance.
 
-The new app will use one TypeScript business codebase built on Vue 3 and the
-uni-app family. Shared business code will own user journeys, domain semantics,
-Workflow Runtime, Dynamic Form Runtime, and normalized application state.
-API/Auth, upload, storage, and device behavior will enter through explicit
-ports implemented by adapters. MP-WEIXIN, Android, and iOS are equal first-
-class targets; platform differences are isolated behind Platform Adapters.
+Architecture is treated as a living program artifact. Material implementation evidence may refine this document, but foundational changes require explicit architecture review rather than silent drift inside a feature branch.
 
-The architecture is intentionally smaller than Legacy. It preserves observed
-V1 behavior and backend wire compatibility where required, but it does not
-preserve Legacy page structure, scattered literals, H5 parity, background
-tracking, offline-first behavior, a generic low-code platform, or arbitrary
-custom widgets.
+Related focused architecture:
 
-G2 exit decision:
+- `docs/architecture/ACTION_WORKSPACE_ARCHITECTURE.md` — detailed Action Driven / Action Workspace frontend execution architecture.
+- `docs/architecture/AI_ENGINEERING_LOOP.md` — engineering/AI collaboration loop.
 
-- shared MP/Android/iOS business architecture: FIXED
-- layer dependency direction: FIXED
-- API/Auth boundary: FIXED
-- Workflow Runtime boundary: FIXED
-- bounded Dynamic Form Runtime: FIXED
-- Platform Adapter boundary: FIXED
-- state management: FIXED
-- native bridge policy: FIXED
-- Legacy exception boundary: CONTROLLED
-- G3 implementation entry: READY
-- `BLOCKS_G3`: **0**
+---
 
-### Decision record: architecture direction
+## 1. Current Architecture Decision Summary
 
-**DECISION** — Build one Vue 3 + uni-app + TypeScript application with
-platform-neutral business modules and explicit adapters for MP-WEIXIN,
-Android, and iOS.
+The application uses one shared Vue 3 + uni-app + TypeScript business codebase for:
 
-**WHY** — G1 confirms that the primary variation is API, workflow/form
-semantics, permissions, media, and native capability—not three independent
-business products. One business model is the smallest surface that can keep
-MP and App behavior aligned while allowing native differences where evidence
-requires them.
+- MP-WEIXIN;
+- Android App;
+- iOS App.
 
-**REJECTED / NOT CHOSEN** — Separate MP, Android, and iOS codebases; a
-native-first rewrite; an H5-first architecture; copying Legacy pages into a
-new shell; a framework reset without new evidence.
+All three are first-class product targets.
 
-**CONSEQUENCE** — G3 must establish shared contracts and adapter ports before
-implementing a vertical slice. Platform-specific code is permitted only in
-the adapter boundary and must return normalized results.
+The core dependency direction remains:
 
-## 2. Constraints Inherited from Program Control and G1
+```text
+Presentation
+  -> Application
+  -> Domain / Runtime
+  -> Typed Ports
+  -> Infrastructure Adapters
+```
 
-The following constraints are accepted inputs, not open architecture debates:
+The frontend runtime architecture has evolved from the original G2 model of:
 
-- The product journey is Login → Home → Work Order List → Work Order Detail →
-  Customer Contact → Appointment → On-site Inspection → Inspection Form →
-  Estimate / Quotation → Construction → Acceptance.
-- V1 targets MP-WEIXIN, Android App, and iOS App.
-- Existing backend APIs are reused. Backend redesign is not a prerequisite.
-- Legacy repositories R1, R2, and R3 are reference-only and remain read-only.
-- Reuse means behavior and contracts supported by evidence, not Legacy page
-  architecture or unbounded hardcode.
-- Unsupported dynamic capability must fail explicitly; it must not silently
-  degrade to a different field, label, or successful empty value.
-- V1 is not offline-first and has no accepted continuous/background tracking
-  requirement.
-- G1 closed PASS with `BLOCKS_G2 = 0`. G1 left later implementation and
-  business-verification UNKNOWNs intentionally explicit.
+```text
+Workflow Runtime
+Dynamic Form Runtime
+```
 
-Accepted evidence used for this decision:
+into the more explicit execution model:
 
-| Evidence | Accepted content |
-| --- | --- |
-| `docs/discovery/API_CONTRACT_BASELINE.md` | Read contract, adapter, and deferred API semantics. |
-| `docs/discovery/API_P0_READ_VERIFICATION.md` | P0 read verification and G2 readiness classification. |
-| `docs/discovery/API_EVIDENCE_TRACEABILITY.md` | Evidence-to-contract traceability. |
-| `docs/discovery/LEGACY_EXCEPTION_INVENTORY.md` | Legacy hardcodes, workarounds, domain rules, and drop candidates. |
-| `docs/discovery/WORKFLOW_CAPABILITY_MATRIX.md` | Workflow identity, action, transition, and subworkflow boundary. |
-| `docs/discovery/DYNAMIC_FORM_CAPABILITY_MATRIX.md` | Bounded field subset, option providers, visibility, and field-state rules. |
-| `docs/discovery/PLATFORM_CAPABILITY_MATRIX.md` | MP/App capability, permission, media, and native boundary. |
+```text
+Workflow Runtime
+  -> Current Action Projection
+  -> Action Runtime / Action Workspace
+  -> Action Content Runtime
+       -> Dynamic Form Runtime
+       -> Quotation Content     (future)
+       -> Contract Content      (future)
+       -> Media / Signature     (future)
+       -> Composite Content     (future)
+```
 
-G1 evidence was static and read-only. No architecture choice depends on a
-new production call, a business mutation, or a reference-repository change.
+This is an architectural refinement, not a reversal of G2.
 
-## 3. Target Logical Architecture
+### Current fixed decisions
+
+- one shared TypeScript business codebase for MP / Android / iOS: **FIXED**;
+- Vue 3 + uni-app family: **FIXED**;
+- inward layered dependency direction: **FIXED**;
+- API/Auth/Storage/Upload/Platform adapter boundaries: **FIXED**;
+- Workflow Runtime as workflow identity/eligibility authority: **FIXED**;
+- Action Runtime / Action Workspace as shared business-action execution boundary: **FIXED AS TARGET**;
+- Dynamic Form Runtime as a bounded Action Content runtime, not the whole action architecture: **FIXED**;
+- Work Order Detail as business context + current action + read-oriented information: **FIXED**;
+- Mock / Real semantic-path equivalence: **FIXED**;
+- local draft persistence separated from business submission: **FIXED**;
+- V1 is not offline-first and has no generic queued business-mutation engine: **FIXED**;
+- platform differences stop at typed adapters/ports: **FIXED**;
+- Legacy business truth is reused without copying Legacy architecture: **FIXED**.
+
+---
+
+## 2. Business Truth and Reference Authority
+
+The project now uses an explicit authority model.
+
+### R1 / real backend
+
+`xlink-business-jishi-3.0` and verified current backend behavior are authoritative for:
+
+- current production business sequence;
+- role/permission semantics;
+- workflow semantics;
+- status/business-state semantics;
+- API behavior;
+- mutation behavior;
+- validation and required business outcomes;
+- operational edge cases.
+
+R1 is business truth, not implementation architecture truth.
+
+### R2
+
+`xlink-business-3.0` is a UX / IA / interaction reference only where useful.
+
+R2 logic is incomplete and must not be used to invent:
+
+- backend contracts;
+- workflow transitions;
+- business status mappings;
+- permissions;
+- missing production business rules.
+
+### New App
+
+The new App is a modern implementation of verified current business behavior.
+
+The permanent audit question is:
+
+> Is this behavior a required current business capability, or merely a historical Legacy implementation choice?
+
+The App preserves required outcomes and wire compatibility where necessary while redesigning state management, architecture, interaction structure, runtime ownership, and error handling using current engineering principles.
+
+---
+
+## 3. Current Logical Architecture
 
 ```mermaid
 flowchart TD
-    UI[Vue 3 pages and components] --> APP[Application use cases]
-    APP --> DOM[Domain and feature semantics]
+    UI[Vue 3 Pages / Components] --> APP[Application Use Cases]
+
+    APP --> DOMAIN[Domain / Feature Semantics]
     APP --> WF[Workflow Runtime]
-    APP --> FORM[Dynamic Form Runtime]
-    DOM --> PORTS[Typed ports and normalized contracts]
+
+    WF --> ACTIONPROJ[Current Action Projection]
+    ACTIONPROJ --> ACTION[Action Runtime / Workspace]
+
+    ACTION --> CONTENT[Action Content Boundary]
+    CONTENT --> FORM[Dynamic Form Runtime]
+    CONTENT --> QUOTE[Quotation Content - future]
+    CONTENT --> CONTRACT[Contract Content - future]
+    CONTENT --> OTHER[Other verified content runtimes - future]
+
+    ACTION --> DRAFT[Action Draft / Recovery]
+
+    DOMAIN --> PORTS[Typed Ports / Normalized Contracts]
     WF --> PORTS
+    ACTION --> PORTS
     FORM --> PORTS
+    DRAFT --> PORTS
+
     PORTS --> API[Technician API Adapter]
-    PORTS --> AUTH[Auth and Session Adapter]
+    PORTS --> AUTH[Auth / Session Adapter]
+    PORTS --> STORAGE[Storage Adapter]
     PORTS --> UPLOAD[Upload Adapter]
     PORTS --> PLATFORM[Platform Adapters]
-    PORTS --> STORE[Storage Adapter]
-    API --> BACKEND[(Existing backend APIs)]
+
+    API --> BACKEND[(Existing Backend APIs)]
     AUTH --> BACKEND
     UPLOAD --> BACKEND
+
+    STORAGE --> MPSTORE[MP Storage]
+    STORAGE --> APPSTORE[Android / iOS Storage]
     PLATFORM --> MP[MP-WEIXIN]
-    PLATFORM --> APPPLUS[Android / iOS App]
+    PLATFORM --> APPPLUS[Android / iOS]
 ```
 
-The dependency direction is inward: UI depends on application contracts;
-application and runtimes depend on domain types and ports; infrastructure
-adapters implement ports. No inner layer imports a platform SDK, endpoint
-path, storage key, native permission value, or Legacy component.
+No inner layer imports:
 
-### Decision record: layered architecture
+- raw endpoint paths;
+- backend DTO/envelope shapes;
+- raw storage keys;
+- `wx`, `plus`, Android, or iOS SDK objects;
+- Legacy components or page helpers.
 
-**DECISION** — Use four logical layers: Presentation, Application, Domain /
-Runtime, and Infrastructure Adapters. Ports are owned by the inner layers and
-implemented by infrastructure.
+---
 
-**WHY** — The G1 findings show independent variation in wire envelopes,
-workflow identity, dynamic form interpretation, permissions, and media. A
-layered port boundary prevents those concerns from becoming page-level
-conditionals.
+## 4. Layer and Dependency Rules
 
-**REJECTED / NOT CHOSEN** — Page-to-endpoint calls; a shared utility folder
-with no ownership; a Legacy-shaped component hierarchy treated as the domain
-model; direct native calls from forms or workflow screens.
+1. **Presentation** consumes view models, application commands, Runtime projections, and normalized state. It does not consume backend DTOs or authorize business actions from labels.
+2. **Application** coordinates use cases, invalidation, reread, and transaction boundaries. It does not render UI or encode platform branching.
+3. **Domain / Runtime** owns semantic identities, policies, execution state, and business-safe abstractions.
+4. **Typed Ports** define semantic inputs/outputs owned by inner layers.
+5. **Adapters** own backend wire details, session wire behavior, storage mechanics, native SDK interaction, and compatibility translation.
+6. Features may consume another feature/runtime public contract, not its private store or implementation internals.
+7. Backend literals and compatibility exceptions must remain adapter/config-owned and evidence-backed.
+8. Server authorization is authoritative; visible UI is never an authorization source.
+9. Read evidence does not authorize guessed write contracts.
+10. Unknown or unsupported semantics fail conservatively rather than being inferred from labels, indexes, colors, or menu position.
+11. Mock and Real must resolve through the same semantic runtime path.
+12. Business execution must remain separate from read-oriented information surfaces.
 
-**CONSEQUENCE** — Every new cross-layer dependency must identify its owning
-port and normalized type. A feature may not bypass an adapter because its
-current platform call appears convenient.
+---
 
-## 4. Dependency Rules
+## 5. Frontend Execution Architecture
 
-1. Presentation imports view models, use-case commands, and normalized state.
-   It does not import API DTOs, raw response envelopes, native objects, or
-   Legacy constants.
-2. Application services coordinate use cases and transaction boundaries. They
-   do not render UI or encode MP/App branching.
-3. Domain modules own stable business concepts such as work order, appointment,
-   inspection, quotation, construction, and acceptance. Backend codes are
-   represented by named types or registry entries at the adapter boundary.
-4. Workflow Runtime owns workflow identity, visibility, action policy,
-   transition intent, and refresh scope. Dynamic Form Runtime owns schema
-   interpretation and field state. Neither is implemented as a page helper.
-5. Ports define normalized inputs/outputs. API, Auth, Upload, Storage, and
-   Platform Adapters own wire/platform translation.
-6. A Platform Adapter may depend on a platform API; shared business code may
-   not. Raw `wx`, `plus`, Android, or iOS objects stop at the adapter.
-7. Compatibility literals require a typed registry entry with source evidence,
-   owner, scope, and removal/review condition. A literal in a component is a
-   design error unless it is presentation copy.
-8. Server authorization is authoritative. Visibility of a button, field, or
-   node is not authorization.
-9. Read and write contracts are separate. A verified read shape does not
-   authorize a guessed mutation envelope.
-10. A feature may use another feature's public application contract, not its
-    private store, component state, or adapter implementation.
+The Technician App is **Action Driven**.
 
-## 5. Feature / Module Structure
+The core product relationship is:
 
-The target structure is organized around the Technician journey and shared
-runtime capabilities, not around Legacy pages:
+```text
+Work Order Detail = business context
+Workflow Runtime  = what is currently allowed / required
+Current Action    = what the technician should do now
+Action Workspace  = where the technician performs the task
+Action Content    = business-specific editor/component
+```
+
+### 5.1 Work Order Detail
+
+Work Order Detail owns:
+
+- order/customer/service context;
+- read-oriented information;
+- Current Action presentation;
+- navigation into an Action Workspace.
+
+It does not own:
+
+- complex action-editor state;
+- local draft persistence;
+- business mutation orchestration;
+- workflow transition guessing.
+
+Information tabs remain read-oriented.
+
+A business action is not embedded as a dynamic information tab.
+
+### 5.2 Workflow Runtime — revised responsibility
+
+Workflow Runtime remains the authority for:
+
+- workflow identity;
+- node lifecycle;
+- action visibility;
+- actor/role/handler eligibility;
+- semantic action identity / intent;
+- execution authorization;
+- conservative unknown/blocked behavior.
+
+Workflow Runtime does **not** become a general action editor or page lifecycle manager.
+
+It should not own:
+
+- draft persistence;
+- action autosave;
+- action-form UI state;
+- quotation editor state;
+- contract editor state;
+- platform-specific execution mechanics.
+
+UI must not infer action eligibility from:
+
+- Chinese labels;
+- status labels;
+- button copy;
+- color/tone;
+- menu position;
+- node array index.
+
+### 5.3 Current Action Projection
+
+Current Action is the normalized bridge between workflow semantics and user execution.
+
+It expresses only evidence-backed information such as:
+
+- semantic action intent;
+- runtime-node identity;
+- presentation label/context;
+- whether execution is enabled or read-only/blocked;
+- content identity required to open a workspace.
+
+This projection prevents Vue pages from recreating workflow rules.
+
+### 5.4 Action Runtime / Action Workspace
+
+Action Runtime is the shared cross-action execution boundary.
+
+It owns or coordinates:
+
+- semantic action identity;
+- execution lifecycle;
+- workspace readiness;
+- draft identity;
+- local autosave;
+- restore eligibility;
+- stale-action protection;
+- submission lifecycle;
+- retryable/terminal failure semantics;
+- success semantics;
+- authoritative reread after successful mutation.
+
+Action Workspace is the standard UI execution shell for main business actions.
+
+Default interaction:
+
+```text
+Work Order Detail
+  -> Current Action CTA
+  -> Full-page Action Workspace
+  -> edit / autosave / leave / resume
+  -> submit
+  -> explicit success/failure
+  -> authoritative backend/workflow reread
+  -> return to Detail
+  -> Workflow Runtime derives next action
+```
+
+Full-page execution is the default because action complexity is not stable. A later action may contain a short form, long inspection form, quotation editor, contract/signature component, media capture, or composite business editor.
+
+Dialogs and bottom sheets remain appropriate for short auxiliary confirmation, not as the universal business-action container.
+
+### 5.5 Action Content Boundary
+
+The Action Workspace must not assume all actions are forms.
+
+Conceptual content kinds include:
+
+```text
+dynamic_form
+quotation
+contract
+media_signature
+composite
+```
+
+Only content kinds with verified implementation are executable.
+
+Unknown content kinds fail explicitly or remain unavailable.
+
+No empty future module should be created merely because a future content kind is named here.
+
+### 5.6 Dynamic Form Runtime
+
+Dynamic Form Runtime remains a bounded schema interpreter.
+
+It owns:
+
+- supported field types;
+- option-provider resolution;
+- visibility;
+- required/read-only precedence;
+- field normalization;
+- validation;
+- semantic submission values.
+
+It is an **Action Content Runtime**, not the top-level business-action architecture.
+
+Appointment is the first Action Workspace consumer and uses Dynamic Form Runtime as its content engine.
+
+---
+
+## 6. Feature / Module Direction
+
+The codebase is organized by business capability and shared runtime ownership rather than Legacy pages.
+
+Target responsibility map:
 
 ```text
 src/
-  app/                 app bootstrap, routing, dependency wiring
+  app/
+    bootstrap / routing / dependency wiring
+
   shared/
-    types/             branded IDs, result/error types, common value objects
-    config/             environment and compatibility registries
-    state/              Pinia setup and cross-feature session state
-    ui/                 presentation-only primitives
+    types/
+    config/
+    state/
+    ui/
+    ports/
+
   adapters/
-    api/               Technician API facade, DTO mappers, lookup adapters
-    auth/              Auth Adapter and Session Adapter
-    upload/            token, transport, and upload lifecycle
-    platform/          MP/App implementations of platform ports
-    storage/           semantic storage implementation
+    api/
+    auth/
+    storage/
+    upload/
+    platform/
+
   runtimes/
-    workflow/          Workflow Runtime
-    dynamic-form/      bounded Dynamic Form Runtime
+    workflow/
+    action/
+    dynamic-form/
+
   features/
     auth/
     home/
     work-orders/
     customer-contact/
     appointment/
-    inspection/
-    quotation/
-    construction/
-    acceptance/
-  test-support/        sanitized fixtures and contract test helpers
+    inspection/        # only when active
+    quotation/         # only when active
+    contract/          # only when active
+    construction/      # only when active
+    acceptance/        # only when active
+
+  pages/
+    ... route-level composition only
 ```
 
-Each feature exposes use cases, view models, and route-level composition. A
-feature can consume `workflow`, `dynamic-form`, `media`, and shared contracts;
-it does not copy their implementation. The first G4 vertical slice will use
-the smallest feature set needed to prove the architecture rather than
-scaffolding every page.
+This is a responsibility map, not permission to scaffold inactive future modules.
 
-### Decision record: feature boundaries
+---
 
-**DECISION** — Model modules by business capability and shared runtime, with
-one public contract per module.
+## 7. State Management
 
-**WHY** — The target journey has stable business boundaries, while Legacy
-pages mix API calls, workflow predicates, form rendering, and device behavior.
-Capability modules make ownership reviewable and let G4 deliver slices.
+Pinia remains the application state container.
 
-**REJECTED / NOT CHOSEN** — One giant `pages` module; a one-to-one Legacy page
-port; a generic `common.js` replacement; a microfrontend or multi-app split.
+### Global state
 
-**CONSEQUENCE** — A new screen is composition of feature use cases and
-runtime contracts. It is not permission to add another cross-cutting helper.
+Keep global state small:
 
-## 6. API / Auth Adapter Boundaries
+- authenticated session/current user;
+- current role;
+- safe capability/environment metadata.
+
+### Feature state
+
+Feature stores own server-derived data and use-case state for their feature.
+
+Examples:
+
+- Work Order List;
+- Work Order Detail;
+- Appointment;
+- later active slices.
+
+### Runtime state
+
+Runtime-owned state is separate from page state:
+
+- Workflow Runtime owns workflow/action eligibility semantics;
+- Action Runtime owns action execution/draft lifecycle;
+- Dynamic Form Runtime owns effective form/field semantics.
+
+### No giant global entity graph
+
+V1 does not introduce:
+
+- a global normalized business database;
+- hidden offline synchronization;
+- background mutation queues;
+- one giant store containing all screens.
+
+---
+
+## 8. Action Draft and Weak-Network Architecture
+
+Local draft persistence is now a first-class frontend architecture capability.
+
+It is deliberately narrower than offline-first.
+
+### 8.1 Draft identity
+
+A draft is scoped to stable semantic action identity, conceptually:
+
+```text
+ActionDraftKey =
+  Session/User scope
+  + WorkOrderId
+  + WorkflowNodeRuntimeId
+  + Action semantic kind
+  + Content identity/version when needed
+```
+
+A draft must never leak:
+
+- between users/sessions;
+- between work orders;
+- between workflow nodes;
+- between incompatible content/schema versions.
+
+### 8.2 Draft storage
+
+Action Content does not call platform storage directly.
+
+Draft persistence flows through a typed storage boundary and Storage Adapter.
+
+A draft contains semantic recoverable editor state only; it must not persist credentials, raw API envelopes, or transport state.
+
+### 8.3 Autosave
+
+Editable actions use debounced local autosave.
+
+Typical flow:
+
+```text
+edit
+  -> dirty
+  -> debounce
+  -> local persistence
+  -> saved_local
+```
+
+Autosave should avoid writing on every keystroke while still protecting field-service work from ordinary interruption.
+
+### 8.4 Restore and stale protection
+
+Opening an Action Workspace should:
+
+1. read current authoritative action/workflow state;
+2. resolve current semantic Action Identity;
+3. inspect a local draft for that exact identity;
+4. restore only if compatible;
+5. isolate/clear stale drafts conservatively.
+
+A draft from an old workflow node must not be applied to a newly activated node merely because both share the same visible title.
+
+### 8.5 Weak-network rule
+
+The permanent distinction is:
+
+```text
+Local draft saved != Business action succeeded
+```
+
+No network may still allow local editing/autosave where the content permits it.
+
+But a backend workflow/form/quotation/contract mutation must not be reported as successful unless the required business persistence is known.
+
+V1 does not automatically queue `workflow/process` or other business writes for later replay.
+
+Queued offline mutation requires a separate program-level decision because it introduces ordering, idempotency, stale workflow, and conflict semantics.
+
+---
+
+## 9. Mock / Real Equivalence
+
+Mock / Real equivalence is now a high-level architecture invariant.
+
+```text
+Mock raw business-shaped data
+  -> Adapter
+  -> Runtime
+  -> Feature / Action Workspace
+  -> UI
+
+Real backend raw data
+  -> same Adapter contracts
+  -> same Runtime
+  -> same Feature / Action Workspace
+  -> same UI
+```
+
+Mock is not a second product and not UI placeholder data.
+
+Mock values may be synthetic, but the following must remain production-faithful where evidence exists:
+
+- semantic field structure;
+- nullability;
+- relationships;
+- workflow identity shape;
+- lifecycle/operation behavior;
+- validation behavior;
+- failure behavior.
+
+There must be no Mock-only Vue business semantics.
+
+The local simulator should expose deterministic development scenarios sufficient to test current functionality and UX, including where applicable:
+
+- fresh state;
+- partially completed draft;
+- restored draft;
+- validation failure;
+- retryable failure;
+- terminal failure;
+- successful mutation;
+- post-success authoritative reread.
+
+Synthetic identifiers must never fall through to a Real transport path.
+
+---
+
+## 10. API / Command / Auth Boundary
 
 ### API Adapter
 
-The API Adapter is the only owner of backend endpoint paths, request envelopes,
-response envelopes, query conventions, backend code normalization, and wire
-identifier encoding. It exposes normalized operations such as:
+The API Adapter is the only owner of:
 
-- `getHomeSummary`
-- `listWorkOrders`
-- `getWorkOrderDetail`
-- `getWorkflowDefinition`
-- `getWorkflowRun`
-- `getWorkflowNode`
-- `getFormDefinition`
-- `getFormData`
-- `getLookupOptions`
-- named application commands whose write envelope is accepted by G4 evidence
+- endpoint paths;
+- HTTP/wire method details;
+- body/query conventions;
+- raw response envelopes;
+- backend code/status translation;
+- backend identifiers that are not semantic domain identities.
 
-These names are semantic ports, not a claim that every operation is already a
-verified write contract. DTOs do not cross into feature screens. The adapter
-keeps the current backend unchanged and records route variants and compatibility
-exceptions in the registry.
+Features and runtimes consume semantic typed ports.
 
-### Auth and Session Adapter
+### Read / write separation
 
-The Auth boundary owns login, session restoration, current user and role
-references, capability snapshot loading, expiry/invalid-session handling, and
-logout. The Session Store contains only the minimum normalized session state:
-session reference, user reference, current role reference, role version, and
-safe capability metadata. Passwords and raw credentials are never persisted.
+Verified reads do not imply verified writes.
 
-Session expiry, refresh, and logout wire details remain a G3 implementation
-verification item. The boundary is not deferred: an expired or invalid session
-must clear local identity, stop protected requests, and route to login. A
-refresh attempt, if supported by the existing backend, is an Auth Adapter
-policy rather than a page concern. UI capability visibility never substitutes
-for server authorization.
+Write operations require separate evidence and semantic commands.
 
-### Decision record: API and Auth ownership
+The App must not infer successful workflow/business outcome from a local UI state change. Successful mutation is followed by invalidation and authoritative reread when the resulting state is backend-owned.
 
-**DECISION** — Use one `TechnicianApi` semantic facade plus separate Auth and
-Session ports. Normalize wire contracts before they reach runtimes or
-features.
+### Command response normalization
 
-**WHY** — G1 found endpoint variants, lookup/code translation, opaque workflow
-identities, form read exceptions, and session state spread through Legacy
-pages. Central ownership preserves backend compatibility without importing
-Legacy coupling.
+Backend transport/business-envelope semantics are normalized at the adapter boundary, including session-invalid and business-failure responses.
 
-**REJECTED / NOT CHOSEN** — Endpoint calls in components; a generic untyped
-HTTP helper as the business API; a new backend/auth protocol; storing raw
-tokens/passwords in feature state; deriving authorization from menu visibility.
+Raw backend messages or wire sentinels do not become page-level control flow.
 
-**CONSEQUENCE** — G3 must implement ports and sanitized adapter fixtures
-before a feature can depend on a backend response. The unresolved refresh and
-logout semantics do not require a different application architecture.
+### Auth / session
 
-## 7. Workflow Runtime Boundary
+Auth and Session boundaries own:
 
-Workflow Runtime is a shared domain service. It is not a visual workflow
-editor and not a collection of component `if` statements.
+- login;
+- session restore;
+- current identity/role;
+- invalid-session handling;
+- logout;
+- future refresh behavior if the backend supports it.
 
-It owns:
+Protected operations stop when session identity is invalid.
 
-- typed opaque identities:
+The UI never derives authorization merely from capability visibility.
 
-  ```text
-  WorkflowDefinitionId
-  WorkflowRunId
-  WorkflowNodeRuntimeId
-  FormDefinitionId
-  FormDataId
-  SubworkflowRef { parentRunId, definitionId, runId }
-  HandlerIdentity = User | Role | OrganizationRole
-  ```
+---
 
-- node visibility based on declared metadata, state, and supported node type;
-- handler identity normalization and action eligibility;
-- named commands and preconditions for transitions, completion, rollback,
-  takeback, cancellation, acceptance, quotation, and construction actions;
-- parent/child workflow context and targeted refresh scope;
-- status/code mapping through the compatibility registry;
-- explicit blocked-action reasons and retry/idempotency state.
+## 11. Network / Operation / Error Model
 
-The API Adapter converts wire fields such as `defId`, `runId`, `workflowNodeId`,
-`handlerIds`, and form identifiers. Screens never use an array index, display
-label, or raw backend status as workflow identity. The source-index `1` rule,
-fixed node IDs, service type `30`, status transitions, and handler composite
-encoding are reviewed compatibility inputs, not general rules.
+Networked and platform operations use explicit normalized state rather than boolean loading flags.
 
-### Decision record: Workflow Runtime
-
-**DECISION** — Fix a typed Workflow Runtime between features and the API
-Adapter. It owns identity relationships, policies, commands, and refresh
-scope; it does not own endpoint details or rendering.
-
-**WHY** — G1-C found separate main/subworkflow identifiers, handler encodings,
-status transitions, node-type actions, and Legacy array-position exceptions.
-Those semantics require one owner even where exact write verification is later.
-
-**REJECTED / NOT CHOSEN** — Passing raw workflow JSON to pages; using `runId`
-or array position interchangeably; encoding transitions as button labels;
-building a generic workflow designer; treating visible actions as permission.
-
-**CONSEQUENCE** — G3 can define identity and policy interfaces without
-claiming unresolved backend invariants. G4 verifies guarded transitions,
-parent/child edge cases, and write envelopes against accepted fixtures.
-
-## 8. Dynamic Form Runtime Boundary
-
-Dynamic Form Runtime is a bounded schema interpreter for the Technician V1
-subset. It is not a general-purpose low-code platform.
-
-### Supported V1 generic subset
-
-The runtime supports only the evidenced subset, subject to per-form selection
-at G4:
-
-`text`, `textarea`, `phone`, `IDNumber`, `number`, `digit`, `date`, `time`,
-`datetime`, `select`, `bizSelect`, `cascade`, `radio`, `checkbox`, `switch`,
-`rate`, `file`, `image`, and the named `area` measurement rule where its active
-form scope is accepted.
-
-Unsupported field types, unresolved option providers, and unselected custom
-widgets produce an explicit capability error. They do not silently render as
-text or submit an empty successful value.
-
-### Option-provider resolution
-
-The V1 order is deterministic:
-
-1. `workType` resolves through the named `workTypes` provider.
-2. A `cascade` field with `valueOption` resolves through
-   `cascadeCode_<valueOption>`.
-3. Other code-backed fields resolve through `codecfg_<valueOption>`.
-4. Explicit inline options are used only when the schema declares ownership
-   of those options.
-5. If no provider is available, the field is unsupported or read-only for
-   display according to the form policy; labels are never submitted as values.
-
-The provider service completes option resolution before dependent visibility
-is evaluated. Conflicting providers are a G3 contract error until an explicit
-registry rule is accepted.
-
-### Visibility and field-state precedence
-
-The runtime applies this order:
-
-1. Unsupported schema/widget or unresolved provider → explicit capability
-   error.
-2. Normalize field paths and evaluate visibility, including supported scalar,
-   dotted, array, cascade, and `$exist` expressions.
-3. Hidden fields are not interactively required and are omitted unless an
-   explicit preservation policy requires their existing value.
-4. Workflow/node state can force read-only. Completed, closed, non-handler,
-   or policy-restricted state cannot be weakened.
-5. A named, reviewed fixed-form override may add restriction or requirement;
-   it never applies from a numeric ID without a registry entry.
-6. Schema `readOnly` applies.
-7. Runtime state may only add restriction, never weaken read-only.
-8. Required validation runs only for visible, editable, effectively required
-   fields. Existing read-only values may be preserved unchanged.
-
-The API Adapter serializes normalized values into the current backend field
-names and envelopes. The runtime owns validation and semantic values; it does
-not know Qiniu, `wx` file objects, or component event shapes.
-
-### Decision record: Dynamic Form Runtime
-
-**DECISION** — Implement a bounded Dynamic Form Runtime with an explicit
-field/widget registry, provider resolver, visibility evaluator, monotonic
-read-only policy, validator, and serializer port.
-
-**WHY** — G1-C proves repeated schema-driven behavior but also identifies
-unsupported custom widgets, fixed-form exceptions, option-provider differences,
-and incomplete Legacy precedence. A bounded runtime preserves reusable form
-semantics without recreating a low-code product.
-
-**REJECTED / NOT CHOSEN** — Porting all Legacy renderers; arbitrary custom
-HTML/canvas/widget support; silently treating unknown types as text; applying
-required/read-only rules in each page; using display labels as option values.
-
-**CONSEQUENCE** — G3 can implement the runtime contract and explicit failure
-states. G4 must select active form families and verify representative fixtures;
-unsupported capability remains visible as a controlled product decision.
-
-## 9. Platform Adapter Boundary
-
-Shared business code sees semantic capability ports, never raw MP/App APIs.
-The adapters cover:
-
-| Port | Shared result | Platform-owned responsibility |
-| --- | --- | --- |
-| Storage | semantic key/value or scoped draft snapshot | MP/App persistence mechanics and retention |
-| Location | one-shot `{ latitude, longitude, coordinateSystem, capturedAt }` | authorization, system service, settings, coordinate acquisition |
-| Calendar | optional event result or non-blocking failure | MP/Android/iOS consent and event provider |
-| Media capture | normalized local media item or cancelled/unavailable | camera permissions, capture route, native file shape |
-| File/media picker | normalized media list or cancelled/unavailable | album/filesystem permissions and picker mechanics |
-| Scan | `{ rawValue, format?, scannedAt }` or unsupported/cancelled | scanner implementation and camera capability |
-| Phone contact | approved `DialContact` command result | dialer capability and platform gesture |
-| Permission/capability | semantic state | native permission and settings APIs |
-
-The shared capability states are:
-`not_requested`, `granted`, `denied`, `denied_permanently_or_settings`,
-`unavailable`, `unsupported_platform`, `cancelled`, and `error_retryable`.
-Permission UX explains purpose and offers retry/settings/manual fallback where
-the business flow allows it. A denied optional capability does not fabricate
-success and does not automatically block unrelated workflow steps.
-
-G1-D disposition is retained: session/storage, one-shot location, camera,
-file/media selection, upload lifecycle, and the common permission model are
-V1 boundaries; calendar, scan, customer dialer, and canvas are conditional or
-unknown slice decisions; background tracking, clipboard shortcuts, H5 parity,
-and unselected custom widgets are not V1 requirements.
-
-### Decision record: Platform Adapters
-
-**DECISION** — Use explicit semantic Platform Adapter ports with separate
-implementations for MP-WEIXIN and App (Android/iOS), sharing the same business
-contract.
-
-**WHY** — G1-D shows genuine permission, system-service, media, and file-shape
-differences. It also shows that the differences can be normalized at a clear
-boundary without splitting business code.
-
-**REJECTED / NOT CHOSEN** — `wx`/`plus` calls from feature components; treating
-Android and iOS as separate business implementations; requesting all
-permissions at login; adding H5 as a first-class V1 target; a generic plugin
-framework for every historical widget.
-
-**CONSEQUENCE** — G3 must provide capability ports and test doubles. G5 owns
-real-device permission and native verification; unsupported capability states
-are a supported result, not an implicit crash.
-
-## 10. Media / Upload Boundary
-
-Media has three distinct stages:
+Existing shared operation states remain authoritative where applicable:
 
 ```text
-capture or pick
-  → normalized LocalMediaItem
-  → Upload Adapter (token, transport, progress, retry)
-  → UploadedMediaRef
-  → API Adapter persists the reference in form/workflow data
+idle
+loading
+succeeded
+failed_retryable
+failed_terminal
 ```
 
-The Platform Media Adapter owns local paths and native file objects. The
-Upload Adapter owns token acquisition, transport, retry, and upload state.
-The Dynamic Form Runtime owns field validation and whether required media is
-complete. The API Adapter owns persistence of the resulting reference.
-Qiniu endpoint details and upload tokens remain below the adapter boundary.
-Required media cannot mark a form or workflow complete while it is pending or
-failed. A retryable failure preserves safe local input without fabricating a
-server reference.
+Action Runtime may expose richer action lifecycle states, but it must map cleanly to the shared operation/error taxonomy rather than creating a competing error system.
 
-### Decision record: media boundary
+Error categories include:
 
-**DECISION** — Separate capture/picker, upload transport, and business
-reference persistence into three ports.
+- `session_invalid`;
+- `authorization_denied`;
+- `validation`;
+- `unsupported_capability`;
+- `network_retryable`;
+- `server_terminal`;
+- `cancelled`.
 
-**WHY** — G1 evidence shows platform-specific local file shapes, a token-based
-upload flow, and separate form/workflow persistence. Combining them would
-recreate Legacy coupling and make retry semantics unclear.
+No operation reports business success until required persistence is known.
 
-**REJECTED / NOT CHOSEN** — Uploading directly from form components; exposing
-Qiniu/native response objects to the domain; treating a local file path as a
-persisted URL; blocking all workflow behavior on optional media.
+Toast-only failure handling is insufficient as an architecture model.
 
-**CONSEQUENCE** — G3 can test media with local doubles and sanitized upload
-fixtures. G4 verifies required-media persistence and retry behavior per slice.
+---
 
-## 11. State-Management Decision
+## 12. Platform Adapter Boundary
 
-Use Pinia as the application state container.
+Shared business code sees semantic capability ports, never raw platform APIs.
 
-- Global stores: session/current user, current role, capability registry, and
-  environment metadata only.
-- Feature stores: work-order list/detail, appointment, inspection, quotation,
-  construction, and acceptance state owned by their feature.
-- Runtime state: Workflow Runtime owns workflow context; Dynamic Form Runtime
-  owns active form state and effective field state.
-- Server-derived data is cached per feature/use case with explicit loading,
-  stale, retry, and invalidation behavior.
-- Draft snapshots are scoped, expirable, user-local, subordinate to server
-  data, and never an offline work-order database.
-- No broad normalized entity graph, background synchronization queue, or
-  hidden persistence is introduced in V1.
+Platform adapters normalize differences for:
 
-### Decision record: state
+- Storage;
+- Location;
+- Camera/media capture;
+- File/media picker;
+- Phone/dialer;
+- Calendar when required;
+- Scan when required;
+- Signature/canvas when required;
+- other explicitly approved native capabilities.
 
-**DECISION** — Pinia with small global stores, feature-local stores, and
-runtime-owned form/workflow state.
+Raw `wx`, `plus`, Android, or iOS objects stop at the adapter boundary.
 
-**WHY** — The app needs predictable shared session/capability state and
-feature-local server data, but G1 provides no requirement for offline entity
-sync or a global normalized graph.
+The preferred implementation order remains:
 
-**REJECTED / NOT CHOSEN** — Global mutable singleton objects; a giant store
-containing every screen; Redux-style ceremony without a requirement; an
-offline database and sync engine; storing form state in arbitrary components.
+1. standard uni-app/shared capability;
+2. thin platform-specific adapter;
+3. thin native bridge only when required by an accepted business capability.
 
-**CONSEQUENCE** — Store ownership is reviewable. A later offline requirement
-would be a program-level architecture change, not an accidental feature.
+No generic plugin/native framework is introduced pre-emptively.
 
-## 12. Network / Error Model
+MP-WEIXIN, Android, and iOS must either share semantic parity or return an explicit unsupported result.
 
-All API, Auth, upload, and platform operations expose explicit state:
+---
 
-`idle → loading → succeeded`  
-`loading → failed_retryable`  
-`loading → failed_terminal`
+## 13. Media / Upload Boundary
 
-Errors are classified into:
-
-- `session_invalid`: clear protected identity and require login;
-- `authorization_denied`: show a blocked action, never retry blindly;
-- `validation`: return field/domain errors without losing safe input;
-- `unsupported_capability`: explain the bounded-runtime/platform limitation;
-- `network_retryable`: preserve local safe state and offer retry;
-- `server_terminal`: show an actionable failure and preserve evidence;
-- `cancelled`: normal user/platform outcome, not a system error.
-
-No operation reports success until its required server persistence is known.
-There is no offline success, eventual-sync promise, background retry queue, or
-silent fallback to stale identity in V1.
-
-### Decision record: failure semantics
-
-**DECISION** — Use typed operation state and typed error categories across
-network, auth, upload, form, workflow, and platform ports.
-
-**WHY** — G1-D explicitly requires retryable media/network failures and
-semantic capability states. A common model prevents each screen from inventing
-different recovery behavior.
-
-**REJECTED / NOT CHOSEN** — Toast-only failures; boolean `loading` flags;
-silent empty responses; offline-first optimistic success; treating permission
-denial as a network error.
-
-**CONSEQUENCE** — UI can provide consistent retry, settings, login, and
-manual-fallback actions. Tests can assert failure state without a real device.
-
-## 13. Configuration / Compatibility Registry
-
-All retained Legacy exceptions are represented by typed registry entries, not
-scattered constants. An entry includes:
+Media remains split into three responsibilities:
 
 ```text
-name
-semantic purpose
-scope (form/workflow/tenant/platform)
-wire value(s), if any
-source evidence and accepted commit
-owner gate
-confidence
-activation condition
-safe fallback
-review/removal condition
+Platform capture/pick
+  -> normalized local media
+  -> Upload Adapter
+  -> uploaded media reference
+  -> API / business persistence
 ```
 
-Registry examples include workflow node references, handler wire encoding,
-status transitions, active form read exceptions, `workType` providers,
-service-type acceptance behavior, and the declarative survey-area rule. A
-fixed numeric ID alone never activates behavior. Tenant/customer/role literals
-remain configuration inputs requiring current ownership evidence and are not
-copied into application code.
+The Platform Adapter owns local/native file shape.
 
-The registry is a compatibility boundary, not a place to hide arbitrary page
-logic. Every entry must be referenced by a named runtime or adapter policy.
+The Upload Adapter owns:
 
-### Decision record: compatibility registry
+- token acquisition;
+- upload transport;
+- progress;
+- retry;
+- upload result.
 
-**DECISION** — Centralize accepted wire and business exceptions in typed,
-scoped registries with provenance and owner gates.
+Dynamic Form or other Action Content runtimes own whether media is required and semantically complete.
 
-**WHY** — G1-B/C/D found fixed IDs, code mappings, status predicates,
-platform exceptions, and Legacy workarounds. Centralization preserves only
-what is evidenced and makes later removal possible.
+A local path is never treated as an already persisted backend media reference.
 
-**REJECTED / NOT CHOSEN** — Copying literals into templates; a catch-all
-`legacyMode`; tenant-specific branches without ownership; keeping every
-historical branch “just in case.”
+---
 
-**CONSEQUENCE** — Exceptions are visible in review and test fixtures. An
-unknown entry is blocked or read-only by default rather than silently active.
+## 14. Configuration and Compatibility Registry
 
-## 14. Native Bridge Policy
+Environment configuration and compatibility/business exceptions remain separate.
 
-Use the uni-app/common platform capability first. Add a thin native bridge only
-when a required V1 capability cannot be expressed through the shared uni-app
-surface and the capability has an accepted owner, platform contract, and test
-plan.
+### Environment configuration
 
-Native bridges must:
+Answers:
 
-- expose one semantic TypeScript port to shared code;
-- be capability-specific, not a general scripting or plugin host;
-- normalize permission, cancellation, unavailable, and error states;
-- contain no workflow/form/business policy;
-- have MP, Android, and iOS parity or an explicit unsupported result;
-- be introduced only after a G3/G4 slice proves the need.
+> Where and how does this build connect?
 
-No new native bridge is required to start G3. Calendar, App scan, customer
-dialer, canvas/signature, and other conditional capabilities remain behind
-ports until their slice requirement is accepted.
+Examples:
 
-### Decision record: native bridge
+- `dev`;
+- `test`;
+- `staging`;
+- `prod`;
+- API base URL;
+- safe feature/build flags.
 
-**DECISION** — Prefer common uni-app APIs; allow only thin, capability-scoped
-native bridges behind Platform Adapter ports.
+Secrets/signing material/credentials remain outside the repository.
 
-**WHY** — G1-D identifies native differences but does not justify a broad
-native framework or new plugin class. A thin bridge protects the shared model
-while keeping native risk proportional to accepted product need.
+### Compatibility registry
 
-**REJECTED / NOT CHOSEN** — Native-first business logic; direct SDK imports
-throughout the app; a generic plugin/low-code bridge; implementing every
-historical MP-only helper before a V1 slice exists.
+Answers:
 
-**CONSEQUENCE** — G3 can proceed with test doubles and common APIs. G5 is the
-gate for device-specific bridge verification and any approved additions.
+> Which evidence-backed backend/business exception exists, why, in what scope, and under what owner gate?
 
-## 15. Testing / Verification Strategy
+Compatibility entries require:
 
-Testing follows the same boundaries as production code:
+- semantic purpose;
+- scope;
+- wire value where necessary;
+- source evidence;
+- confidence;
+- activation rule;
+- safe fallback;
+- review/removal condition.
 
-1. Pure domain tests for named value objects, status mappings, action policy,
-   capability state, and error classification.
-2. Workflow Runtime tests for typed identity joins, visibility, handler
-   normalization, command preconditions, parent/child refresh, and explicit
-   unknown/blocked states.
-3. Dynamic Form Runtime tests for provider precedence, visibility expressions,
-   required/read-only precedence, supported widgets, validation, serialization,
-   and unsupported capability errors.
-4. Adapter contract tests using sanitized fixtures derived from accepted G1
-   evidence. Fixtures must not contain production credentials, tenant secrets,
-   customer data, or unverified write assumptions.
-5. Feature/component tests for loading, retry, blocked action, empty, and
-   success states, including safe draft recovery where selected.
-6. Platform verification on MP-WEIXIN, Android, and iOS for permissions,
-   location, camera/media, upload, and selected conditional capabilities.
-7. Guarded backend write verification only after the relevant G4 contract and
-   safety scope are accepted; no guessed mutation tests in G3.
-8. G6 side-by-side verification against Legacy for business outcomes and
-   supported V1 semantics, not DOM/page parity.
+A raw numeric ID alone must not become presentation/business logic.
 
-### Decision record: verification
+---
 
-**DECISION** — Test pure runtimes and adapters independently, then verify
-selected vertical slices on all three target platforms and side-by-side at G6.
+## 15. Native Bridge Policy
 
-**WHY** — The risk is contract and boundary drift, not just rendering. Static
-evidence supports sanitized fixtures and deterministic runtime tests before
-real device verification.
+Use common uni-app capability first.
 
-**REJECTED / NOT CHOSEN** — Snapshotting Legacy pages as the architecture
-oracle; testing only MP; testing only happy-path UI; production calls as a
-substitute for fixtures; broad native builds during G2.
+A native bridge is allowed only when a required verified business capability cannot be expressed adequately through the shared platform layer.
 
-**CONSEQUENCE** — G3 can establish a test harness without application
-features. G4/G5/G6 own progressively stronger contract and platform evidence.
+A bridge must:
 
-## 16. Environment / Configuration Strategy
+- expose one semantic TypeScript port;
+- remain capability-specific;
+- normalize cancellation/permission/unavailable/error states;
+- contain no workflow/business policy;
+- avoid leaking native objects upward;
+- have explicit MP/Android/iOS behavior or supported `unsupported_platform` semantics.
 
-Build targets are explicit: `dev`, `test`, `staging`, and `prod`, with
-platform-specific build selection for MP-WEIXIN, Android, and iOS. Each
-environment supplies an API base URL and non-secret feature/configuration
-values through the build/runtime configuration layer. Secrets, signing
-material, credentials, and production tokens remain outside the repository and
-are injected by the delivery environment.
+Native-first business logic and broad plugin hosts remain rejected.
 
-Environment configuration is separate from the compatibility registry:
+---
 
-- environment config answers “where/how does this build connect?”;
-- compatibility config answers “which accepted backend/business exception is
-  active, why, and who owns it?”
+## 16. Testing and Verification Strategy
 
-Production defaults are never used by local tests. Sensitive values are not
-logged, committed, reproduced in fixtures, or placed in issue comments.
+Tests follow architecture boundaries.
 
-### Decision record: environment
+1. **Domain/runtime tests** — semantic policies, identities, lifecycle and error classification.
+2. **Workflow Runtime tests** — visibility, role/handler eligibility, action projection, unknown/blocked behavior.
+3. **Action Runtime tests** — draft identity, autosave, restore, stale protection, failure preservation, success reread.
+4. **Dynamic Form Runtime tests** — field capability, option providers, visibility, required/read-only, validation, normalization.
+5. **Adapter contract tests** — sanitized backend-shaped fixtures and exact wire mapping where accepted.
+6. **Feature/component tests** — loading, empty, retry, blocked, draft, interruption, and success states.
+7. **Mock / Real parity tests** — both transports resolve through the same semantic boundaries.
+8. **Platform verification** — MP-WEIXIN + Android + iOS for selected native capability behavior.
+9. **Guarded backend write verification** — only after explicit contract/safety authorization.
+10. **G6 side-by-side verification** — compare required business outcomes with R1, not DOM/page parity.
 
-**DECISION** — Use typed, build-target-specific environment configuration with
-secrets injected externally, separate from reviewed compatibility entries.
+Production calls are not a substitute for deterministic fixtures/tests.
 
-**WHY** — G1 contains tenant/configuration UNKNOWNs that must not become
-source-level branches. Separating deployment configuration from semantics
-keeps the architecture portable and auditable.
-
-**REJECTED / NOT CHOSEN** — Hardcoded endpoints or credentials; a single
-production-like `.env`; tenant names in components; runtime mutation of
-architecture rules from arbitrary remote JSON.
-
-**CONSEQUENCE** — G3 must define config validation and safe defaults. G4/G6
-verify environment routing and active business configuration before any gray
-release.
+---
 
 ## 17. Explicit Non-Goals
 
-The following are intentionally not part of the G2 architecture or V1:
+The following remain outside current V1 architecture unless explicitly reopened:
 
-- H5 parity or an H5-first delivery target;
-- offline-first work-order storage, synchronization, conflict resolution, or
-  eventual-success semantics;
-- background/continuous technician location tracking;
-- a generic low-code or arbitrary custom-widget platform;
-- automatic parity for every Legacy field type, canvas action, menu, or branch;
-- separate business codebases for MP, Android, and iOS;
-- backend redesign, endpoint migration, or replacement of existing APIs;
-- copying Legacy page hierarchy, hardcoded tenant/customer/role branches, or
-  obsolete menu paths;
-- a new native plugin framework or native business logic;
-- analytics, notification, or unrelated product-surface migration;
-- treating UI labels, array positions, or button visibility as contracts.
+- H5 parity as a first-class target;
+- offline-first work-order database;
+- general offline business-mutation queue;
+- background/continuous location tracking;
+- generic low-code platform;
+- arbitrary Legacy widget parity;
+- separate MP/Android/iOS business codebases;
+- backend redesign as a prerequisite;
+- copying Legacy page/component architecture;
+- treating UI labels, menu positions, array positions, or colors as contracts;
+- pre-building quotation/contract/inspection implementations before their slices are active;
+- generic native/plugin host.
 
-An item in this list requires a reviewed program change and an explicit gate;
-it cannot enter through an implementation shortcut.
+---
 
-## 18. Deferred Architecture UNKNOWNs and Owner Gates
+## 18. Evolution of the Original G2 Deferred UNKNOWNs
 
-The following are deferred architecture UNKNOWNs. They do not prevent G3
-because the relevant ownership boundary and failure behavior are fixed. They
-must remain visible in implementation plans and test gates.
+The original G2 document recorded ten deferred architecture unknowns. G3/G4 implementation has resolved or narrowed several of them. They are now tracked by status instead of a static G2 count.
 
-| ID | Deferred UNKNOWN | Why architecture is still safe | Owner gate |
+| ID | Original concern | Current status | Current owner / next evidence |
 | --- | --- | --- | --- |
-| AU-01 | Exact session expiry, refresh, and logout wire semantics. | Auth/Session Adapter owns all variants; invalid session has one safe behavior. | G3 Auth Adapter contract; G4 guarded verification |
-| AU-02 | Exact work-order tab/count parity and refresh semantics. | Work-order feature consumes a normalized list-summary port; semantics do not alter layers. | G4 Work Order List slice |
-| AU-03 | Active V1 form/workflow registry entries and tenant/customer/role branches. | Compatibility Registry defaults inactive and requires provenance; no branch is copied blindly. | G3 config contract; G4 business-owner verification |
-| AU-04 | Parent/child `runId` uniqueness, stale-node behavior, and completion propagation. | Workflow Runtime already separates opaque identities and refresh scope. | G3 identity contract; G4 workflow fixtures |
-| AU-05 | Exact conflicting option-provider resolution in historical schemas. | Provider resolution is centralized and unsupported conflicts fail explicitly. | G3 Dynamic Form Runtime contract |
-| AU-06 | Full Legacy required/read-only precedence across all forms and nodes. | Runtime precedence is monotonic and explicit; representative forms can verify it. | G3 runtime tests; G4 form fixtures |
-| AU-07 | Exact write envelopes, idempotency, and destructive-command response shapes. | Write ports are separate from verified reads and can be guarded by the API Adapter. | G4 workflow/form write verification |
-| AU-08 | Calendar mandatory/optional policy and duplicate/update event semantics. | Calendar is an optional Platform Adapter command and never blocks core workflow. | G4 Appointment slice |
-| AU-09 | App parity and V1 necessity for scan, dialer, canvas/signature, and other custom actions. | Each is a conditional port with explicit unsupported behavior; no generic bridge is required. | G4 slice selection; G5 device verification |
-| AU-10 | Final environment endpoint provenance and active deployment partition. | Environment config is external and typed; semantic code is not tenant-bound. | G3 config validation; G6 environment/business verification |
+| AU-01 | Session expiry, refresh, logout wire semantics | **PARTIALLY RESOLVED** — invalid-session behavior and observed restart semantics are normalized; complete refresh/logout variants remain backend-evidence dependent | Auth / later integration verification |
+| AU-02 | Work-order list/count/tab/refresh semantics | **PARTIALLY RESOLVED** — list/detail read and invalidation patterns implemented; full Legacy parity is not an architecture requirement | active Work Order slices / G6 |
+| AU-03 | Active form/workflow/tenant/role registry entries | **PARTIALLY RESOLVED** — evidence-backed active entries exist; future slices add only verified entries | each G4 slice |
+| AU-04 | Parent/child workflow identity, stale-node propagation | **DEFERRED** where not required by current slice; typed runtime boundary remains safe | future workflow slices |
+| AU-05 | Historical conflicting option-provider cases | **DEFERRED / BOUNDED** — unsupported conflicts fail explicitly | future representative forms |
+| AU-06 | Required/read-only precedence across all Legacy forms | **PARTIALLY RESOLVED** — Dynamic Form Runtime precedence established; remaining forms verified per slice | future form slices |
+| AU-07 | Write envelopes, idempotency, destructive-command shapes | **PARTIALLY RESOLVED** — Accept Order and Appointment verified/implemented behind semantic commands; other mutations remain evidence-gated | each write-capable slice |
+| AU-08 | Calendar policy / duplicate-update semantics | **DEFERRED** — not required for G4-D V1 | future explicit calendar requirement |
+| AU-09 | App necessity/parity for scan, dialer, canvas/signature | **PARTIALLY RESOLVED** — direct phone path exists; other native capabilities remain slice-driven | G4/G5 |
+| AU-10 | Final environment endpoint provenance/deployment partition | **DEFERRED** without architectural risk due typed environment boundary | G6 / release |
 
-Deferred architecture UNKNOWN count: **10**.  
-True `BLOCKS_G3` count: **0**.
+### New architecture questions introduced by Action Workspace
 
-These UNKNOWNs are intentionally not resolved by another broad Legacy scan.
-Each has a later owner gate and a minimum verification scope. If a future
-probe changes a foundational boundary, it must reopen G2 through Program
-Control rather than silently changing this document.
+These are not blockers for introducing the pattern but must remain explicit:
 
-## 19. G3 Implementation Entry Plan
+| ID | Question | Safe current rule | Owner |
+| --- | --- | --- | --- |
+| AU-11 | Draft retention/expiry and explicit user cleanup policy | scope strictly by session/user + action identity; fail conservatively; no cross-action reuse | Action Runtime implementation / UX |
+| AU-12 | Local draft vs server-edited conflict semantics | no automatic merge; restore only exact compatible action identity; later conflict policy requires evidence | future multi-device/conflict need |
+| AU-13 | Future Quotation/Contract/Composite content contracts | Action Content boundary exists; do not scaffold or infer business semantics early | corresponding future G4 slices |
 
-G3 may start from this branch after review. Its ordered entry plan is:
+An unresolved item is not permission to infer behavior. It remains blocked, unsupported, or conservatively under-displayed until evidence exists.
 
-1. Scaffold the Vue 3 / uni-app / TypeScript workspace and build-target
-   configuration without adding business pages.
-2. Establish the layer/module rules, path aliases, lint/type/test boundaries,
-   and dependency injection for ports and adapters.
-3. Define branded IDs, normalized result/error types, operation state, and the
-   typed compatibility/environment registries.
-4. Implement Auth/Session, API, Storage, Upload, and Platform port contracts
-   with test doubles; verify no raw platform objects cross the boundary.
-5. Implement the Workflow Runtime identity/policy contracts and bounded
-   Dynamic Form Runtime contracts with pure tests.
-6. Add Pinia stores only for approved global and feature-local state.
-7. Add sanitized adapter fixtures and contract tests for accepted read paths.
-8. Select the first G4 vertical slice only after the foundation tests pass;
-   do not rediscover Legacy broadly or infer unverified write envelopes.
+---
 
-G3 exit requires the foundation to demonstrate shared business code on MP,
-Android, and iOS build targets, even if conditional native capabilities are
-reported as explicit unsupported states until G5. G3 does not close any
-deferred business UNKNOWN; it proves that the architecture contains them
-safely.
+## 19. Architecture Invariants
 
-### G2 completion criteria
+These are standing review gates for current and future slices.
 
-This record satisfies the G2 decision scope when reviewed together with the
-accepted G1 documents:
+1. R1 / verified backend behavior is business truth; R2 is UX/IA reference only.
+2. Presentation does not own endpoint/wire/storage/platform mechanics.
+3. Workflow Runtime decides action identity/visibility/eligibility.
+4. Vue does not authorize an action from labels/status/index/menu position.
+5. Work Order Detail is context + Current Action + read-oriented information.
+6. Main business execution occurs in an Action Workspace, normally a full page.
+7. Action Runtime owns shared execution/draft/recovery semantics.
+8. Action Content is pluggable; not every action is a form.
+9. Dynamic Form Runtime is a bounded content engine, not the entire action system.
+10. Draft identity is stable, scoped, versionable, and isolated by user/session/work-order/action.
+11. Local draft success never implies backend business success.
+12. V1 does not queue offline workflow mutations automatically.
+13. Successful backend mutation is followed by authoritative reread when backend owns resulting state.
+14. Mock and Real use the same Adapter/Runtime/Feature/UI path.
+15. Synthetic IDs never fall through to Real backend transport.
+16. Platform-specific APIs stop at adapters/ports.
+17. Unsupported capabilities fail explicitly rather than silently degrading.
+18. Write contracts remain separately evidence-gated from read contracts.
+19. Future functionality does not justify copying Legacy architecture.
+20. Foundational boundary changes require architecture review and document update.
 
-- one shared MP/Android/iOS business architecture is explicit;
-- dependencies and adapter ownership are explicit;
-- Workflow Runtime and bounded Dynamic Form Runtime are fixed;
-- Platform Adapter and media/upload boundaries are fixed;
-- state choice, native bridge policy, error model, and configuration policy
-  are explicit;
-- Legacy exception handling is controlled through provenance and owner gates;
-- non-goals are explicit;
-- ten deferred architecture UNKNOWNs are named with owners;
-- `BLOCKS_G3 = 0`;
-- G3 can begin without broad Legacy rediscovery.
+---
+
+## 20. Architecture Review Cadence
+
+This document is intentionally living rather than frozen at G2.
+
+Architecture review should occur when one of the following happens:
+
+- a new shared Runtime is introduced;
+- a feature repeatedly needs to bypass an existing layer;
+- cross-platform constraints force a new abstraction;
+- local/offline/draft semantics materially expand;
+- a new Action Content class such as Quotation or Contract requires a reusable execution model;
+- backend evidence invalidates an existing semantic boundary;
+- a feature proposes general infrastructure to solve a one-off problem;
+- several completed vertical slices reveal recurring architecture drift.
+
+Routine feature/UI iteration does not require rewriting this document.
+
+Recommended process:
+
+```text
+Vertical Slice Evidence
+  -> Architecture Review if material
+  -> update TARGET_ARCHITECTURE
+  -> focused architecture doc where necessary
+  -> implement / verify
+```
+
+The goal is to keep the high-level architecture synchronized with proven engineering reality without turning it into a changelog of every implementation detail.
+
+---
+
+## 21. Current Architecture Execution Priority
+
+The current architecture priority is to implement the Action Workspace pattern defined in:
+
+`docs/architecture/ACTION_WORKSPACE_ARCHITECTURE.md`
+
+using Appointment as the first consumer.
+
+That implementation should establish only the reusable execution foundation needed now:
+
+- Current Action -> dedicated Action Workspace navigation;
+- Action Runtime execution lifecycle;
+- typed action identity;
+- local draft/autosave/restore;
+- weak-network local-save semantics;
+- Dynamic Form as the Appointment Action Content;
+- Mock/Real parity;
+- authoritative reread after success.
+
+Detailed Appointment visual/interaction design is a separate Product Owner UX/UI step after the execution foundation exists.
+
+Do not use the Action Workspace architecture as permission to start G4-E, Quotation, Contract, Construction, or other later business slices prematurely.
