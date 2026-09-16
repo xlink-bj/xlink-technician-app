@@ -685,13 +685,16 @@ function formField(raw: unknown): FormFieldRead | null {
 
 function formDefinition(raw: unknown, requestedId: FormDefinitionId): FormDefinitionRead {
   const envelope = asRecord(raw, 'form definition response')
-  const first = Array.isArray(envelope.data) ? optionalRecord(envelope.data[0]) : undefined
+  const fieldRows = Array.isArray(envelope.data) ? envelope.data : undefined
+  const first = fieldRows ? optionalRecord(fieldRows[0]) : undefined
   const record = nestedRecord(envelope, ['entity', 'definition']) ?? first
-  const id = record
-    ? optionalOpaqueId<'FormDefinitionId'>(record, ['id', '_id', 'extId', 'definitionId'])
-    : optionalOpaqueId<'FormDefinitionId'>(envelope, ['id', '_id', 'extId', 'definitionId'])
-  const rawFields = Array.isArray(envelope.data)
-    ? envelope.data
+  const id = fieldRows
+    ? requestedId
+    : record
+      ? optionalOpaqueId<'FormDefinitionId'>(record, ['id', '_id', 'extId', 'definitionId'])
+      : optionalOpaqueId<'FormDefinitionId'>(envelope, ['id', '_id', 'extId', 'definitionId'])
+  const rawFields = fieldRows
+    ? fieldRows
     : record && Array.isArray(record.fields)
       ? record.fields
       : []
@@ -1133,11 +1136,16 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
   }
 
   getFormData(input: { readonly definitionId: FormDefinitionId; readonly dataId?: FormDataId }) {
+    const body = {
+      sortField: 'createTime',
+      sortOrder: 'desc',
+      ...(input.dataId ? { 'is:_id|string#and': input.dataId } : {}),
+    }
     return this.read<ReadPage<FormDataRead>>(
       {
         method: 'POST',
         path: `biz/extForm/query/${encodeURIComponent(input.definitionId)}`,
-        ...(input.dataId ? { body: { id: input.dataId } } : {}),
+        body,
       },
       (raw) => pageEnvelope(raw, formData),
     )

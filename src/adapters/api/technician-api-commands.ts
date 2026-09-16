@@ -79,6 +79,9 @@ function commandFailureCategory(record: Record<string, unknown>): CommandFailure
  * mapper.
  */
 export function normalizeCommandResponse(raw: unknown): unknown {
+  if (typeof raw === 'string' && raw.trim() === 'restart') {
+    throw new ApiCommandTransportError('Command session is invalid', 'session_invalid')
+  }
   const envelope = commandResponseRecord(raw)
   const nestedData = typeof envelope.data === 'object' && envelope.data !== null && !Array.isArray(envelope.data)
     ? envelope.data as Record<string, unknown>

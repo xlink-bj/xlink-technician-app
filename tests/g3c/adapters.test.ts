@@ -234,6 +234,50 @@ describe('G3-C API adapter foundation', () => {
     expect(result.state).toBe('failed_terminal')
     expect(result.error?.category).toBe('server_terminal')
   })
+
+  it('keeps the requested form definition identity when extField returns field rows', async () => {
+    const requestedId = asOpaqueId<'FormDefinitionId'>('appointment-definition')
+    const transport = new FixtureApiTransport({
+      'biz/extField/query': {
+        data: [
+          {
+            _id: 'field-row-001',
+            extId: 'appointment-definition',
+            name: 'datetime',
+            nameDisp: '预约时间',
+            type: 'datetime',
+          },
+        ],
+      },
+    })
+    const api = createTechnicianApiReadAdapter(transport)
+
+    const result = await api.getFormDefinition(requestedId)
+
+    expect(result.data?.id).toBe(requestedId)
+    expect(result.data?.id).not.toBe('field-row-001')
+  })
+
+  it('uses the exact R1 form-data filter and sort request shape', async () => {
+    const transport = new FixtureApiTransport({
+      'biz/extForm/query/appointment-definition': rawFormDataPage,
+    })
+    const api = createTechnicianApiReadAdapter(transport)
+    const definitionId = asOpaqueId<'FormDefinitionId'>('appointment-definition')
+    const dataId = asOpaqueId<'FormDataId'>('form-data-001')
+
+    await api.getFormData({ definitionId, dataId })
+
+    expect(transport.requests[0]).toEqual({
+      method: 'POST',
+      path: 'biz/extForm/query/appointment-definition',
+      body: {
+        sortField: 'createTime',
+        sortOrder: 'desc',
+        'is:_id|string#and': dataId,
+      },
+    })
+  })
 })
 
 describe('G3-C storage and auth adapter foundations', () => {

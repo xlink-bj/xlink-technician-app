@@ -128,6 +128,22 @@ describe('G4-D final functional and safety corrections', () => {
       .rejects.toMatchObject({ category: 'server_terminal' })
   })
 
+  it('normalizes the R1 literal restart response as session invalid', async () => {
+    const transport = createUniApiCommandTransport({
+      apiBaseUrl: 'https://example.invalid',
+      getSessionRef: () => session.sessionRef,
+      request: vi.fn<UniApiCommandRequestExecutor>((options) => {
+        options.success?.({ statusCode: 200, data: 'restart' } as never)
+      }),
+    })
+
+    await expect(transport.execute({
+      method: 'POST',
+      path: 'basic/serviceAppointment/selfExamination',
+      body: { saId: 'real-work-order' },
+    })).rejects.toMatchObject({ category: 'session_invalid' })
+  })
+
   it('does not reread List after a normalized failed workflow process', async () => {
     vi.stubEnv('VITE_XLINK_ENABLE_REAL_WRITES', 'true')
     const request = vi.fn<UniApiCommandRequestExecutor>((options) => {
