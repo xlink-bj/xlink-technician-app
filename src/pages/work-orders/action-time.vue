@@ -288,7 +288,7 @@ function actionErrorCopy(error: OperationError | null): string {
   display: flex;
   flex: 1;
   flex-direction: column;
-  height: 82rpx;
+  min-height: var(--app-touch-target);
   justify-content: center;
   margin: 0;
   padding: 0 4rpx;
@@ -325,7 +325,7 @@ function actionErrorCopy(error: OperationError | null): string {
   justify-content: space-between;
   line-height: 1;
   margin: 0;
-  min-height: 72rpx;
+  min-height: var(--app-touch-target);
   padding: 0 20rpx;
   text-align: left;
 }

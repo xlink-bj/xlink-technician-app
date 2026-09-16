@@ -46,14 +46,14 @@
           <view class="confirmation-card-icon" aria-hidden="true"><AppIcon name="appointment" :size="20" color="var(--app-color-primary)" /></view>
           <text class="confirmation-card-title">预约信息</text>
         </view>
-        <view class="confirmation-row app-information-row">
-          <text class="confirmation-label app-information-row__label">预约日期</text>
-          <text class="confirmation-value app-information-row__value">{{ appointmentDisplay?.dateLabel || '—' }}</text>
-        </view>
-        <view class="confirmation-row app-information-row">
-          <text class="confirmation-label app-information-row__label">预约时间</text>
-          <text class="confirmation-value app-information-row__value">{{ appointmentDisplay?.timeLabel || '—' }}</text>
-        </view>
+        <AppInformationRow class="confirmation-row">
+          <template #label>预约日期</template>
+          <template #value>{{ appointmentDisplay?.dateLabel || '—' }}</template>
+        </AppInformationRow>
+        <AppInformationRow class="confirmation-row">
+          <template #label>预约时间</template>
+          <template #value>{{ appointmentDisplay?.timeLabel || '—' }}</template>
+        </AppInformationRow>
       </view>
 
       <view class="confirmation-card app-surface app-surface--compact">
@@ -61,18 +61,18 @@
           <view class="confirmation-card-icon confirmation-card-icon--customer" aria-hidden="true"><AppIcon name="contact" :size="20" color="var(--app-color-primary)" /></view>
           <text class="confirmation-card-title">客户信息</text>
         </view>
-        <view v-if="workspace.detail?.customerName" class="confirmation-row app-information-row">
-          <text class="confirmation-label app-information-row__label">客户姓名</text>
-          <text class="confirmation-value app-information-row__value">{{ workspace.detail.customerName }}</text>
-        </view>
-        <view v-if="workspace.detail?.contact?.displayMask" class="confirmation-row app-information-row">
-          <text class="confirmation-label app-information-row__label">联系电话</text>
-          <text class="confirmation-value app-information-row__value">{{ workspace.detail.contact.displayMask }}</text>
-        </view>
-        <view v-if="customerServiceAddress" class="confirmation-row app-information-row confirmation-row--address">
-          <text class="confirmation-label app-information-row__label">服务地址</text>
-          <text class="confirmation-value app-information-row__value confirmation-value--address">{{ customerServiceAddress }}</text>
-        </view>
+        <AppInformationRow v-if="workspace.detail?.customerName" class="confirmation-row">
+          <template #label>客户姓名</template>
+          <template #value>{{ workspace.detail.customerName }}</template>
+        </AppInformationRow>
+        <AppInformationRow v-if="workspace.detail?.contact?.displayMask" class="confirmation-row">
+          <template #label>联系电话</template>
+          <template #value>{{ workspace.detail.contact.displayMask }}</template>
+        </AppInformationRow>
+        <AppInformationRow v-if="customerServiceAddress" class="confirmation-row confirmation-row--address">
+          <template #label>服务地址</template>
+          <template #value><text class="confirmation-value--address">{{ customerServiceAddress }}</text></template>
+        </AppInformationRow>
       </view>
 
       <view v-if="noteValue" class="confirmation-card app-surface app-surface--compact">
@@ -134,6 +134,7 @@ import { useSessionStore } from '@shared/state'
 import ActionWorkspaceShell from '@shared/ui/ActionWorkspaceShell.vue'
 import AppButton from '@shared/ui/AppButton.vue'
 import AppIcon from '@shared/ui/AppIcon.vue'
+import AppInformationRow from '@shared/ui/AppInformationRow.vue'
 import type { OperationError } from '@shared/types'
 
 const session = useSessionStore()

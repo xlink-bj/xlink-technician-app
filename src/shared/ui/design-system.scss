@@ -50,7 +50,7 @@ page {
   --app-font-status: 21rpx;
 
   --app-page-gutter: 24rpx;
-  --app-control-height: 76rpx;
+  --app-control-height: 88rpx;
   --app-touch-target: 88rpx;
   --app-action-bar-padding: 24rpx;
 }
@@ -79,7 +79,7 @@ page {
   height: var(--app-control-height);
   line-height: var(--app-control-height);
   margin: 0;
-  padding: 0 var(--app-space-lg);
+  padding: 0 32rpx;
   text-align: center;
 }
 
@@ -115,7 +115,7 @@ page {
   justify-content: space-between;
   margin: 0;
   min-height: var(--app-touch-target);
-  padding: var(--app-space-sm) var(--app-space-md) var(--app-space-sm) var(--app-space-lg);
+  padding: var(--app-space-sm) 32rpx;
   text-align: left;
   width: 100%;
 }
@@ -130,7 +130,7 @@ page {
 .app-selector:active { opacity: 0.9; }
 
 /* Choice grammar */
-.app-choice-group { display: flex; gap: var(--app-space-sm); }
+.app-choice-group { display: flex; gap: 16rpx; }
 .app-choice {
   background: var(--app-color-control-surface);
   border: 1rpx solid var(--app-color-border-control);
@@ -143,7 +143,7 @@ page {
   height: var(--app-control-height);
   line-height: var(--app-control-height);
   margin: 0;
-  padding: 0 var(--app-space-sm);
+  padding: 0 32rpx;
 }
 
 .app-choice::after { border: 0; }
@@ -159,7 +159,8 @@ page {
 .app-status--quiet { padding: var(--app-space-sm) var(--app-space-xs) 0; }
 
 /* Shared information row grammar for confirmation and future Action content. */
-.app-information-row { align-items: center; display: flex; justify-content: space-between; min-height: 66rpx; }
+.app-information-row { align-items: center; display: flex; justify-content: space-between; min-height: var(--app-touch-target); }
 .app-information-row + .app-information-row { border-top: 1rpx solid var(--app-color-divider); }
 .app-information-row__label { color: var(--app-color-text-secondary); font-size: var(--app-font-field-label); }
-.app-information-row__value { color: var(--app-color-text-primary); font-size: var(--app-font-value); font-weight: 700; text-align: right; }
+.app-information-row__value { color: var(--app-color-text-primary); font-size: var(--app-font-value); font-weight: 700; line-height: 1.5; max-width: 68%; text-align: right; word-break: break-all; }
+.app-information-row__trailing { flex-shrink: 0; margin-left: var(--app-space-sm); }
