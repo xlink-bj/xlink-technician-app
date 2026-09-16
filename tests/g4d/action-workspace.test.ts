@@ -94,7 +94,12 @@ function storageFor() {
 }
 
 function navigation() {
-  return { navigate: vi.fn(async () => undefined), back: vi.fn(async () => undefined) }
+  return {
+    navigate: vi.fn(async () => undefined),
+    replace: vi.fn(async () => undefined),
+    reset: vi.fn(async () => undefined),
+    back: vi.fn(async () => undefined),
+  }
 }
 
 function configureWorkspace(
@@ -356,7 +361,7 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
 
     expect(result.state).toBe('succeeded')
     expect(store.appointmentForm?.values.datetime).toBe('2026-04-20 14:00')
-    expect(navigation.navigate).toHaveBeenCalledWith(actionWorkspaceConfirmationRouteFor(
+    expect(navigation.replace).toHaveBeenCalledWith(actionWorkspaceConfirmationRouteFor(
       asOpaqueId<'WorkOrderId'>('workspace-work-order'),
       asOpaqueId<'WorkflowNodeRuntimeId'>('workspace-appointment-node'),
       'set_appointment',
@@ -376,8 +381,45 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
     expect(command.submitAppointment).toHaveBeenCalledTimes(1)
     await store.navigateToDetail()
     await store.navigateToList()
-    expect(navigation.navigate).toHaveBeenNthCalledWith(1, '/pages/work-orders/detail?id=workspace-work-order')
-    expect(navigation.navigate).toHaveBeenNthCalledWith(2, '/pages/work-orders/work-orders')
+    expect(navigation.reset).toHaveBeenNthCalledWith(1, '/pages/work-orders/detail?id=workspace-work-order')
+    expect(navigation.reset).toHaveBeenNthCalledWith(2, '/pages/work-orders/work-orders')
+  })
+
+  it('replaces Action sub-pages so edit and confirmation cycles stay bounded', async () => {
+    const { store, navigation } = configureWorkspace()
+    await openWorkspace(store)
+    store.setField('need', '1')
+    store.setAppointmentTime('2026-04-20 14:00')
+
+    await store.openAppointmentTimeSelection()
+    await store.openConfirmation()
+    await store.backToAppointmentWorkspace()
+    await store.openAppointmentTimeSelection()
+    await store.openConfirmation()
+
+    expect(navigation.navigate).toHaveBeenCalledTimes(2)
+    expect(navigation.replace).toHaveBeenCalledTimes(2)
+    expect(navigation.back).toHaveBeenCalledTimes(1)
+    expect(navigation.navigate).toHaveBeenNthCalledWith(1, actionWorkspaceTimeRouteFor(
+      asOpaqueId<'WorkOrderId'>('workspace-work-order'),
+      asOpaqueId<'WorkflowNodeRuntimeId'>('workspace-appointment-node'),
+      'set_appointment',
+    ))
+    expect(navigation.navigate).toHaveBeenNthCalledWith(2, actionWorkspaceTimeRouteFor(
+      asOpaqueId<'WorkOrderId'>('workspace-work-order'),
+      asOpaqueId<'WorkflowNodeRuntimeId'>('workspace-appointment-node'),
+      'set_appointment',
+    ))
+    expect(navigation.replace).toHaveBeenNthCalledWith(1, actionWorkspaceConfirmationRouteFor(
+      asOpaqueId<'WorkOrderId'>('workspace-work-order'),
+      asOpaqueId<'WorkflowNodeRuntimeId'>('workspace-appointment-node'),
+      'set_appointment',
+    ))
+    expect(navigation.replace).toHaveBeenNthCalledWith(2, actionWorkspaceConfirmationRouteFor(
+      asOpaqueId<'WorkOrderId'>('workspace-work-order'),
+      asOpaqueId<'WorkflowNodeRuntimeId'>('workspace-appointment-node'),
+      'set_appointment',
+    ))
   })
 
   it('uses the same Mock raw read/command path as the real Action Workspace', async () => {

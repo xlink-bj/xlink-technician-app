@@ -10,7 +10,7 @@ execution surface for completing that action.
 Work Order Detail
   → Workflow Runtime Current Action
   → Appointment Workspace
-  → time selection
+  → single-datetime selection
   → confirmation
   → Action Content command
   → dedicated success state
@@ -19,9 +19,9 @@ Work Order Detail
 
 The first Action Content is the Appointment dynamic form. Its production flow
 is split into a dedicated workspace, a friendly datetime selection page, an
-explicit confirmation page, and a bounded success state. The time choices are
-presentation controls for the verified datetime field; they do not claim
-backend availability.
+explicit confirmation page, and a bounded success state. Appointment stores
+one verified datetime value (`YYYY-MM-DD HH:mm`); quick time choices are only
+presentation shortcuts and do not imply duration, availability, or capacity.
 
 ## Boundaries
 
@@ -30,9 +30,15 @@ backend availability.
 - Action Runtime owns Action identity, content kind, lifecycle, draft status,
   and the reusable workspace contract.
 - The Workspace shell owns compact Work Order context, loading, draft feedback,
-  sticky action placement, failures, and native page navigation support. It does
+  sticky action placement, failures, and native page navigation support. Action
+  sub-pages use replace semantics when available to avoid stack growth. It does
   not know Appointment fields.
 - Action Content consumes normalized read data and Dynamic Form Runtime state.
+  Appointment-specific presentation roles use verified field keys (`need`,
+  `datetime`, `note`); field order and generic field shape do not assign roles.
+- The Action flow uses bounded native transitions: time selection is pushed,
+  confirmation replaces it, edit returns to the existing workspace, and final
+  success returns to Detail/List with a clean navigation reset.
   It does not call endpoints or platform storage APIs.
 - Adapters own backend wire fields and Mock/Real transport selection. Vue does
   not branch on Mock scenario IDs or backend endpoint/status fields.

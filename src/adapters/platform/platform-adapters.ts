@@ -59,6 +59,8 @@ export interface PhoneDriver {
 
 export interface NavigationDriver {
   navigate(url: string): Promise<void>
+  replace?(url: string): Promise<void>
+  reset?(url: string): Promise<void>
   back?(): Promise<void>
 }
 
@@ -219,6 +221,12 @@ export function createPlatformAdapters(drivers: PlatformDrivers = {}): PlatformA
     navigate: (url) => drivers.navigation
       ? drivers.navigation.navigate(url)
       : Promise.reject(new Error('Navigation is unsupported on this platform')),
+    ...(drivers.navigation?.replace
+      ? { replace: (url: string) => drivers.navigation!.replace!(url) }
+      : {}),
+    ...(drivers.navigation?.reset
+      ? { reset: (url: string) => drivers.navigation!.reset!(url) }
+      : {}),
     ...(drivers.navigation?.back
       ? { back: () => drivers.navigation!.back!() }
       : {}),

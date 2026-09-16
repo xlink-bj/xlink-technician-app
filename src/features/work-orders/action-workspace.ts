@@ -38,6 +38,7 @@ import {
   type WorkflowNodeRuntimeId,
 } from '@shared/types'
 import {
+  appointmentFieldRolesFor,
   appointmentRuntimeFieldsFor,
   normalizeAppointmentFieldValue,
   normalizeAppointmentForm,
@@ -200,14 +201,15 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
   const appointmentFields = computed<readonly AppointmentRuntimeField[]>(() =>
     appointmentForm.value ? appointmentRuntimeFieldsFor(appointmentForm.value) : [],
   )
-  const appointmentChoiceField = computed(() => appointmentFields.value.find((field) => Boolean(field.options?.length)))
-  const appointmentTimeField = computed(() => appointmentFields.value.find((field) => field.type === 'datetime'))
-  const appointmentNoteField = computed(() => appointmentFields.value.find((field) => field.type === 'textarea'))
-  const appointmentExtraFields = computed(() => appointmentFields.value.filter((field) =>
-    field.key !== appointmentChoiceField.value?.key
-    && field.key !== appointmentTimeField.value?.key
-    && field.key !== appointmentNoteField.value?.key,
-  ))
+  const appointmentFieldRoles = computed(() =>
+    appointmentForm.value
+      ? appointmentFieldRolesFor(appointmentForm.value)
+      : { extras: [] },
+  )
+  const appointmentChoiceField = computed(() => appointmentFieldRoles.value.need)
+  const appointmentTimeField = computed(() => appointmentFieldRoles.value.datetime)
+  const appointmentNoteField = computed(() => appointmentFieldRoles.value.note)
+  const appointmentExtraFields = computed(() => appointmentFieldRoles.value.extras)
   const appointmentTimeValue = computed(() => {
     const key = appointmentTimeField.value?.key
     return key ? appointmentForm.value?.values[key] : undefined
@@ -236,6 +238,24 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     dependencies = next
   }
 
+  async function navigateTo(url: string, replace = false): Promise<void> {
+    const configured = dependencies
+    if (!configured) throw new Error('Action Workspace is not configured')
+    const transition = replace
+      ? configured.navigation.replace ?? configured.navigation.navigate
+      : configured.navigation.navigate
+    await transition(url)
+  }
+
+  async function resetTo(url: string): Promise<void> {
+    const configured = dependencies
+    if (!configured) throw new Error('Action Workspace is not configured')
+    const transition = configured.navigation.reset
+      ?? configured.navigation.replace
+      ?? configured.navigation.navigate
+    await transition(url)
+  }
+
   function clear(): void {
     loadVersion += 1
     clearDraftTimer()
@@ -248,7 +268,6 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     refreshStatus.value = 'not_started'
     postSuccessError.value = null
     draftStatus.value = 'clean'
-    identity = null
     detail.value = null
     descriptor.value = null
     appointmentForm.value = null
@@ -440,7 +459,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     }
     const configured = dependencies
     if (!configured) return failure('server_terminal', 'Action Workspace is not configured')
-    await configured.navigation.navigate(actionWorkspaceTimeRouteFor(
+    await navigateTo(actionWorkspaceTimeRouteFor(
       currentDescriptor.workOrderId,
       currentDescriptor.workflowNodeId,
       currentDescriptor.actionIntent,
@@ -465,11 +484,11 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     }
     const configured = dependencies
     if (!configured) return failure('server_terminal', 'Action Workspace is not configured')
-    await configured.navigation.navigate(actionWorkspaceConfirmationRouteFor(
+    await navigateTo(actionWorkspaceConfirmationRouteFor(
       currentDescriptor.workOrderId,
       currentDescriptor.workflowNodeId,
       currentDescriptor.actionIntent,
-    ))
+    ), true)
     return { state: 'succeeded', data: undefined }
   }
 
@@ -490,11 +509,11 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     }
     const configured = dependencies
     if (!configured) return failure('server_terminal', 'Action Workspace is not configured')
-    await configured.navigation.navigate(actionWorkspaceConfirmationRouteFor(
+    await navigateTo(actionWorkspaceConfirmationRouteFor(
       currentDescriptor.workOrderId,
       currentDescriptor.workflowNodeId,
       currentDescriptor.actionIntent,
-    ))
+    ), true)
     return { state: 'succeeded', data: undefined }
   }
 
@@ -507,11 +526,15 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       error.value = flushed.error ?? null
       return flushed
     }
-    await configured.navigation.navigate(actionWorkspaceRouteFor(
-      currentDescriptor.workOrderId,
-      currentDescriptor.workflowNodeId,
-      currentDescriptor.actionIntent,
-    ))
+    if (configured.navigation.back) {
+      await configured.navigation.back()
+    } else {
+      await navigateTo(actionWorkspaceRouteFor(
+        currentDescriptor.workOrderId,
+        currentDescriptor.workflowNodeId,
+        currentDescriptor.actionIntent,
+      ), true)
+    }
     return { state: 'succeeded', data: undefined }
   }
 
@@ -519,14 +542,14 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     const configured = dependencies
     const currentDetail = detail.value
     if (!configured || !currentDetail) return failure('unsupported_capability', 'Work Order detail is unavailable')
-    await configured.navigation.navigate(`/pages/work-orders/detail?id=${encodeURIComponent(String(currentDetail.id))}`)
+    await resetTo(`/pages/work-orders/detail?id=${encodeURIComponent(String(currentDetail.id))}`)
     return { state: 'succeeded', data: undefined }
   }
 
   async function navigateToList(): Promise<OperationSnapshot<void>> {
     const configured = dependencies
     if (!configured) return failure('unsupported_capability', 'Work Order list is unavailable')
-    await configured.navigation.navigate('/pages/work-orders/work-orders')
+    await resetTo('/pages/work-orders/work-orders')
     return { state: 'succeeded', data: undefined }
   }
 
@@ -707,7 +730,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       return { state: 'succeeded', data: undefined }
     }
     if (detail.value) {
-      await configured.navigation.navigate(`/pages/work-orders/detail?id=${encodeURIComponent(String(detail.value.id))}`)
+      await resetTo(`/pages/work-orders/detail?id=${encodeURIComponent(String(detail.value.id))}`)
       return { state: 'succeeded', data: undefined }
     }
     return failure('unsupported_capability', 'Navigation is unavailable')
@@ -726,6 +749,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     descriptor,
     appointmentForm,
     appointmentFields,
+    appointmentFieldRoles,
     appointmentChoiceField,
     appointmentTimeField,
     appointmentNoteField,

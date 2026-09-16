@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import { createAuthSessionAdapter } from '@adapters/auth/auth-session-adapter'
 import {
@@ -10,6 +10,8 @@ import {
   createUniStorageDriver,
   type UniStorageApi,
 } from '@adapters/storage/uni-storage-driver'
+import { createUniNavigationDriver } from '@adapters/platform/uni-navigation-driver'
+import { createPlatformAdapters } from '@adapters/platform/platform-adapters'
 import type { StorageKey } from '@shared/ports'
 import { asOpaqueId } from '@shared/types'
 
@@ -218,5 +220,24 @@ describe('G4-A uni infrastructure boundaries', () => {
     })
     const result = await backend.logout(asOpaqueId<'SessionRef'>('sanitized-session-token'))
     expect(result).toEqual({ remoteLogout: 'not_configured' })
+  })
+
+  it('maps bounded navigation transitions to standard uni primitives', async () => {
+    const navigateTo = vi.fn((options: { url: string; success?: () => void }) => options.success?.())
+    const redirectTo = vi.fn((options: { url: string; success?: () => void }) => options.success?.())
+    const reLaunch = vi.fn((options: { url: string; success?: () => void }) => options.success?.())
+    const navigateBack = vi.fn((options?: { delta?: number; success?: () => void }) => options?.success?.())
+    const driver = createUniNavigationDriver(navigateTo, navigateBack, redirectTo, reLaunch)
+    const navigation = createPlatformAdapters({ navigation: driver }).navigation
+
+    await navigation.navigate('/pages/work-orders/action-workspace')
+    await navigation.replace?.('/pages/work-orders/action-confirmation')
+    await navigation.reset?.('/pages/work-orders/detail?id=synthetic-work-order')
+    await navigation.back?.()
+
+    expect(navigateTo).toHaveBeenCalledWith(expect.objectContaining({ url: '/pages/work-orders/action-workspace' }))
+    expect(redirectTo).toHaveBeenCalledWith(expect.objectContaining({ url: '/pages/work-orders/action-confirmation' }))
+    expect(reLaunch).toHaveBeenCalledWith(expect.objectContaining({ url: '/pages/work-orders/detail?id=synthetic-work-order' }))
+    expect(navigateBack).toHaveBeenCalledWith(expect.objectContaining({ delta: 1 }))
   })
 })

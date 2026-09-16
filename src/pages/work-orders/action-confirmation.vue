@@ -104,7 +104,7 @@
         <text class="appointment-success-copy">已成功为客户预约上门时间</text>
         <view class="appointment-success-time">
           <text class="appointment-success-date">{{ appointmentDisplay?.dateLabel || '预约日期已提交' }}</text>
-          <text class="appointment-success-range">{{ appointmentDisplay?.timeLabel || '预约时间已提交' }}</text>
+          <text class="appointment-success-time-value">{{ appointmentDisplay?.timeLabel || '预约时间已提交' }}</text>
         </view>
         <text v-if="postSuccessWarning" class="appointment-success-warning">{{ postSuccessWarning }}</text>
         <button class="appointment-success-primary" @tap="viewDetail">查看工单详情</button>
@@ -304,7 +304,7 @@ function actionErrorCopy(error: OperationError | null): string {
 .appointment-success-copy { color: #7a8ca7; font-size: 22rpx; margin-top: 10rpx; }
 .appointment-success-time { background: #f7faff; border: 1rpx solid #e2ecfb; border-radius: 16rpx; margin-top: 28rpx; padding: 20rpx 34rpx; }
 .appointment-success-date { color: #1d2b40; display: block; font-size: 26rpx; font-weight: 800; }
-.appointment-success-range { color: #2878f2; display: block; font-size: 24rpx; font-weight: 700; margin-top: 8rpx; }
+.appointment-success-time-value { color: #2878f2; display: block; font-size: 24rpx; font-weight: 700; margin-top: 8rpx; }
 .appointment-success-warning { color: #bf7b16; font-size: 20rpx; line-height: 1.5; margin-top: 16rpx; }
 .appointment-success-primary, .appointment-success-secondary { border-radius: 14rpx; box-sizing: border-box; font-size: 24rpx; font-weight: 800; height: 74rpx; line-height: 74rpx; margin: 28rpx 0 0; width: 100%; }
 .appointment-success-primary { background: #2878f2; color: #ffffff; }

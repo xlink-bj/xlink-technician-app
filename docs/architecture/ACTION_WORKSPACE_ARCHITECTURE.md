@@ -39,7 +39,7 @@ Work Order Detail
   -> user taps CTA
   -> dedicated Action Workspace page
   -> edit / autosave / leave / resume
-  -> time selection
+  -> single-datetime selection
   -> explicit confirmation
   -> submit business action
   -> dedicated success/failure feedback
@@ -66,7 +66,10 @@ Main business actions use a dedicated full-page workspace because action complex
 
 Bottom sheets and dialogs remain suitable for short auxiliary confirmations, not as the universal action container. Appointment uses full-page navigation for
 its time-selection and confirmation steps so the system navigation hierarchy
-remains coherent across MP-WEIXIN and App.
+remains coherent across MP-WEIXIN and App. Action sub-pages replace the current
+action page where possible, keeping repeated edit/confirm cycles bounded.
+Completion returns through a clean navigation reset so a successful action page
+cannot be reopened through Back.
 
 ## 3. Logical Frontend Architecture
 
@@ -189,6 +192,11 @@ Dynamic Form Runtime remains responsible for schema interpretation and field sem
 - submission validation.
 
 It is one Action Content engine, not the top-level action architecture.
+
+Appointment presentation assigns the verified `need`, `datetime`, and `note`
+field identities to their dedicated roles. Other normalized fields remain
+extras. Required, read-only, option, visibility, and any future field
+constraints remain Dynamic Form Runtime semantics.
 
 ## 5. Action Identity
 

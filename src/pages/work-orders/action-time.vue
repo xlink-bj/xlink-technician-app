@@ -36,13 +36,13 @@
     :display-number="workspace.detail?.displayNumber"
     :lifecycle="workspace.lifecycle"
     :draft-status="workspace.draftStatus"
-    :can-submit="Boolean(selectedSlot)"
+    :can-submit="Boolean(selectedOption)"
     submit-label="确认选择"
   >
     <view class="time-selection-content">
       <view class="time-selection-heading">
         <text class="time-selection-title">选择上门时间</text>
-        <text class="time-selection-copy">请根据与客户确认的安排选择日期和时间段</text>
+        <text class="time-selection-copy">请根据与客户确认的安排选择日期和时间</text>
       </view>
 
       <view class="time-section">
@@ -72,17 +72,17 @@
       </view>
 
       <view class="time-section time-section--slots">
-        <text class="time-section-label">预约时间段</text>
+        <text class="time-section-label">预约时间</text>
         <view class="time-slots">
           <button
-            v-for="slot in appointmentTimeSlots"
-            :key="slot.key"
+            v-for="option in appointmentTimeOptions"
+            :key="option.key"
             class="time-slot"
-            :class="{ 'time-slot--selected': selectedSlotKey === slot.key }"
-            @tap="selectSlot(slot.key)"
+            :class="{ 'time-slot--selected': selectedOptionKey === option.key }"
+            @tap="selectOption(option.key)"
           >
-            <text>{{ slot.label }}</text>
-            <text v-if="selectedSlotKey === slot.key" class="time-slot-check">✓</text>
+            <text>{{ option.label }}</text>
+            <text v-if="selectedOptionKey === option.key" class="time-slot-check">✓</text>
           </button>
         </view>
         <text v-if="timeError" class="time-selection-error">{{ timeError }}</text>
@@ -95,7 +95,7 @@
     </template>
 
     <template #actions>
-      <button class="time-selection-submit" :class="{ 'time-selection-submit--disabled': !selectedSlot }" :disabled="!selectedSlot" @tap="confirmSelection">确认选择</button>
+      <button class="time-selection-submit" :class="{ 'time-selection-submit--disabled': !selectedOption }" :disabled="!selectedOption" @tap="confirmSelection">确认选择</button>
     </template>
   </ActionWorkspaceShell>
 
@@ -115,7 +115,7 @@ import {
   useActionWorkspaceStore,
 } from '@features/work-orders/action-workspace'
 import {
-  appointmentTimeSlots,
+  appointmentTimeOptions,
   dateLabelFor,
   dateShortcutsFor,
   dateStringFor,
@@ -133,12 +133,12 @@ const routeNodeId = ref<ReturnType<typeof parseActionWorkspaceNodeId>>(null)
 const routeAction = ref<string | undefined>(undefined)
 const routeError = ref('')
 const selectedDate = ref(dateStringFor())
-const selectedSlotKey = ref('')
+const selectedOptionKey = ref('')
 const timeError = ref('')
 
 const canAccess = computed(() => hasAuthenticatedSession(session.status, session.session))
 const dateShortcuts = dateShortcutsFor()
-const selectedSlot = computed(() => appointmentTimeSlots.find((slot) => slot.key === selectedSlotKey.value))
+const selectedOption = computed(() => appointmentTimeOptions.find((option) => option.key === selectedOptionKey.value))
 const feedback = computed(() => actionErrorCopy(workspace.error))
 
 function loadWorkspace(): void {
@@ -182,8 +182,8 @@ watch(
     const parsed = parseAppointmentDateTime(value)
     if (!parsed) return
     selectedDate.value = parsed.date
-    const match = appointmentTimeSlots.find((slot) => slot.start === parsed.time.slice(0, 5))
-    if (match) selectedSlotKey.value = match.key
+    const match = appointmentTimeOptions.find((option) => option.value === parsed.time)
+    if (match) selectedOptionKey.value = match.key
   },
   { immediate: true },
 )
@@ -201,18 +201,18 @@ function handleDateChange(event: unknown): void {
   if (typeof detail.value === 'string' && detail.value) selectDate(detail.value)
 }
 
-function selectSlot(key: string): void {
-  selectedSlotKey.value = key
+function selectOption(key: string): void {
+  selectedOptionKey.value = key
   timeError.value = ''
 }
 
 async function confirmSelection(): Promise<void> {
-  const slot = selectedSlot.value
-  if (!slot) {
-    timeError.value = '请选择预约时间段。'
+  const option = selectedOption.value
+  if (!option) {
+    timeError.value = '请选择预约时间。'
     return
   }
-  const updated = workspace.setAppointmentTime(`${selectedDate.value} ${slot.start}`)
+  const updated = workspace.setAppointmentTime(`${selectedDate.value} ${option.value}`)
   if (updated.state !== 'succeeded') {
     timeError.value = '预约时间暂时无法保存，请重试。'
     return

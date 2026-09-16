@@ -1,7 +1,6 @@
-export interface AppointmentTimeSlot {
+export interface AppointmentTimeOption {
   readonly key: string
-  readonly start: string
-  readonly end: string
+  readonly value: string
   readonly label: string
 }
 
@@ -18,15 +17,12 @@ export interface AppointmentDisplay {
   readonly timeLabel: string
 }
 
-/**
- * These are presentation choices for a datetime-only backend field. They do
- * not assert that a slot is available or reserve capacity in the backend.
- */
-export const appointmentTimeSlots: readonly AppointmentTimeSlot[] = [
-  { key: '09-11', start: '09:00', end: '11:00', label: '09:00–11:00' },
-  { key: '11-13', start: '11:00', end: '13:00', label: '11:00–13:00' },
-  { key: '14-16', start: '14:00', end: '16:00', label: '14:00–16:00' },
-  { key: '16-18', start: '16:00', end: '18:00', label: '16:00–18:00' },
+/** Presentation shortcuts for one datetime value; they do not claim availability. */
+export const appointmentTimeOptions: readonly AppointmentTimeOption[] = [
+  { key: '09', value: '09:00', label: '09:00' },
+  { key: '11', value: '11:00', label: '11:00' },
+  { key: '14', value: '14:00', label: '14:00' },
+  { key: '16', value: '16:00', label: '16:00' },
 ]
 
 const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'] as const
@@ -76,17 +72,14 @@ export function dateShortcutsFor(now: Date = new Date()): readonly AppointmentDa
 
 export function parseAppointmentDateTime(value: unknown): AppointmentDisplay | undefined {
   if (typeof value !== 'string') return undefined
-  const match = /^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2})(?:\s*[-–]\s*(\d{2}:\d{2}))?$/.exec(value.trim())
+  const match = /^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2})$/.exec(value.trim())
   if (!match || !dateFromInput(match[1])) return undefined
-  const start = match[2]
-  const end = match[3]
-  const slot = appointmentTimeSlots.find((candidate) => candidate.start === start)
-  const timeLabel = end ? `${start}–${end}` : slot?.label ?? start
+  const time = match[2]
   return {
     date: match[1],
     dateLabel: dateLabelFor(match[1]),
-    time: start,
-    timeLabel,
+    time,
+    timeLabel: time,
   }
 }
 

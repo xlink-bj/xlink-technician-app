@@ -8,6 +8,22 @@ export interface UniNavigateToOptions {
 
 export type UniNavigateTo = (options: UniNavigateToOptions) => unknown
 
+export interface UniRedirectToOptions {
+  readonly url: string
+  readonly success?: () => void
+  readonly fail?: (error: unknown) => void
+}
+
+export type UniRedirectTo = (options: UniRedirectToOptions) => unknown
+
+export interface UniReLaunchOptions {
+  readonly url: string
+  readonly success?: () => void
+  readonly fail?: (error: unknown) => void
+}
+
+export type UniReLaunch = (options: UniReLaunchOptions) => unknown
+
 export type UniNavigateBack = (options?: { readonly delta?: number; readonly success?: () => void; readonly fail?: (error: unknown) => void }) => unknown
 
 function defaultNavigateTo(options: UniNavigateToOptions): unknown {
@@ -15,6 +31,20 @@ function defaultNavigateTo(options: UniNavigateToOptions): unknown {
     throw new Error('uni navigation is unavailable')
   }
   return uni.navigateTo(options)
+}
+
+function defaultRedirectTo(options: UniRedirectToOptions): unknown {
+  if (typeof uni === 'undefined' || typeof uni.redirectTo !== 'function') {
+    throw new Error('uni redirect navigation is unavailable')
+  }
+  return uni.redirectTo(options)
+}
+
+function defaultReLaunch(options: UniReLaunchOptions): unknown {
+  if (typeof uni === 'undefined' || typeof uni.reLaunch !== 'function') {
+    throw new Error('uni relaunch navigation is unavailable')
+  }
+  return uni.reLaunch(options)
 }
 
 /** Thin platform driver; navigation stays outside feature/page business logic. */
@@ -26,12 +56,40 @@ export function createUniNavigationDriver(
     }
     return uni.navigateBack(options)
   },
+  redirectTo: UniRedirectTo = defaultRedirectTo,
+  reLaunch: UniReLaunch = defaultReLaunch,
 ): NavigationDriver {
   return {
     navigate(url): Promise<void> {
       return new Promise((resolve, reject) => {
         try {
           navigateTo({
+            url,
+            success: () => resolve(),
+            fail: (error) => reject(error),
+          })
+        } catch (error) {
+          reject(error)
+        }
+      })
+    },
+    replace(url): Promise<void> {
+      return new Promise((resolve, reject) => {
+        try {
+          redirectTo({
+            url,
+            success: () => resolve(),
+            fail: (error) => reject(error),
+          })
+        } catch (error) {
+          reject(error)
+        }
+      })
+    },
+    reset(url): Promise<void> {
+      return new Promise((resolve, reject) => {
+        try {
+          reLaunch({
             url,
             success: () => resolve(),
             fail: (error) => reject(error),

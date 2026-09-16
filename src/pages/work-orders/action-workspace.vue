@@ -86,7 +86,7 @@
         >
           <view v-if="appointmentDisplay" class="appointment-time-selected">
             <text class="appointment-time-selected-date">{{ appointmentDisplay.dateLabel }}</text>
-            <text class="appointment-time-selected-range">{{ appointmentDisplay.timeLabel }}</text>
+            <text class="appointment-time-selected-value">{{ appointmentDisplay.timeLabel }}</text>
           </view>
           <text v-else class="appointment-time-placeholder">请选择上门时间</text>
           <text class="appointment-time-chevron" aria-hidden="true">›</text>
@@ -94,11 +94,13 @@
       </view>
 
       <view v-if="workspace.appointmentNoteField" class="action-content-field action-content-field--note">
-        <text class="action-content-label">{{ workspace.appointmentNoteField.label }}（选填）</text>
+        <text class="action-content-label">
+          {{ workspace.appointmentNoteField.label }}<text v-if="workspace.appointmentNoteField.runtime.required" class="action-content-required"> *</text><text v-else>（选填）</text>
+        </text>
         <textarea
           class="action-content-note"
           :value="String(workspace.appointmentForm.values[workspace.appointmentNoteField.key] ?? '')"
-          :maxlength="100"
+          maxlength="-1"
           :disabled="workspace.appointmentNoteField.runtime.readOnly || workspace.lifecycle === 'submitting'"
           placeholder="请填写与客户沟通的其他信息"
           @input="updateField(workspace.appointmentNoteField.key, $event)"
@@ -404,7 +406,7 @@ function actionErrorCopy(error: OperationError | null): string {
 .appointment-time-placeholder { color: #9aa8ba; font-size: 24rpx; }
 .appointment-time-selected { display: flex; flex-direction: column; gap: 4rpx; }
 .appointment-time-selected-date { color: #1d2b40; font-size: 25rpx; font-weight: 800; }
-.appointment-time-selected-range { color: #2878f2; font-size: 22rpx; font-weight: 700; }
+.appointment-time-selected-value { color: #2878f2; font-size: 22rpx; font-weight: 700; }
 .appointment-time-chevron { color: #7f90a8; font-size: 42rpx; line-height: 1; }
 
 .action-content-note,

@@ -19,6 +19,13 @@ export interface AppointmentRuntimeField extends AppointmentFormFieldRead {
   readonly runtime: EffectiveFieldState
 }
 
+export interface AppointmentFieldRoles {
+  readonly need?: AppointmentRuntimeField
+  readonly datetime?: AppointmentRuntimeField
+  readonly note?: AppointmentRuntimeField
+  readonly extras: readonly AppointmentRuntimeField[]
+}
+
 function schemaFor(field: AppointmentFormFieldRead): FormFieldSchema {
   return {
     key: field.key,
@@ -45,6 +52,24 @@ export function appointmentRuntimeFieldsFor(
       runtime: runtimeFieldState(field, form.values),
     }))
     .filter((field) => field.runtime.visible && field.runtime.capability !== 'UNSUPPORTED')
+}
+
+/** Appointment presentation roles are keyed by the verified field identities. */
+export function appointmentFieldRolesFor(
+  form: AppointmentFormRead,
+): AppointmentFieldRoles {
+  const fields = appointmentRuntimeFieldsFor(form)
+  const need = fields.find((field) => field.key === 'need')
+  const datetime = fields.find((field) => field.key === 'datetime')
+  const note = fields.find((field) => field.key === 'note')
+  const knownKeys = new Set(['need', 'datetime', 'note'])
+
+  return {
+    ...(need ? { need } : {}),
+    ...(datetime ? { datetime } : {}),
+    ...(note ? { note } : {}),
+    extras: fields.filter((field) => !knownKeys.has(field.key)),
+  }
 }
 
 function appointmentValue(value: NormalizedFieldValue): AppointmentFieldValue | undefined {

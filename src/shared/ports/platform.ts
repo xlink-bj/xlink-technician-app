@@ -61,6 +61,10 @@ export interface PhonePort {
 
 export interface NavigationPort {
   navigate(url: string): Promise<void>
+  /** Replace the current page without growing the native navigation stack. */
+  readonly replace?: (url: string) => Promise<void>
+  /** Finish a flow with a clean root so completed action pages cannot re-open. */
+  readonly reset?: (url: string) => Promise<void>
   /** Optional native page-stack back operation. */
   readonly back?: () => Promise<void>
 }
