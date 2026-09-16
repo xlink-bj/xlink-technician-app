@@ -115,54 +115,12 @@
         <button
           class="primary-task-action"
           :class="`primary-task-action--${workflowProjection.currentTask.tone}`"
-          :disabled="workflowProjection.currentTask.execution !== 'enabled' || workOrder.appointmentState === 'loading' || workOrder.appointmentState === 'submitting'"
+          :disabled="workflowProjection.currentTask.execution !== 'enabled'"
           @tap="handleCurrentTaskAction"
         >
-          {{ workOrder.appointmentState === 'loading' ? '读取中' : workflowProjection.currentTask.actionLabel }}
+          {{ workflowProjection.currentTask.actionLabel }}
         </button>
         <text v-if="workflowProjection.currentTask.execution !== 'enabled'" class="task-action-note">当前仅支持只读查看，操作能力将在后续核验后开放</text>
-      </view>
-
-      <view v-if="workOrder.appointmentForm" class="appointment-card">
-        <view class="appointment-card-heading">
-          <text class="appointment-card-title">预约上门时间</text>
-          <text class="appointment-card-caption">请填写客户确认的上门安排</text>
-        </view>
-        <view v-for="field in workOrder.appointmentFields" :key="field.key" class="appointment-field">
-          <text class="appointment-field-label">
-            {{ field.label }}<text v-if="field.runtime.required" class="appointment-required"> *</text>
-          </text>
-          <view v-if="field.options?.length" class="appointment-options">
-            <button
-              v-for="option in field.options"
-              :key="option.value"
-              class="appointment-option"
-              :class="{ 'appointment-option--selected': String(workOrder.appointmentForm.values[field.key] ?? '') === option.value }"
-              :disabled="field.runtime.readOnly"
-              @tap="setAppointmentField(field.key, option.value)"
-            >
-              {{ option.label }}
-            </button>
-          </view>
-          <textarea
-            v-else-if="field.type === 'textarea'"
-            class="appointment-textarea"
-            :value="String(workOrder.appointmentForm.values[field.key] ?? '')"
-            :disabled="field.runtime.readOnly"
-            @input="updateAppointmentField(field.key, $event)"
-          />
-          <input
-            v-else
-            class="appointment-input"
-            :value="String(workOrder.appointmentForm.values[field.key] ?? '')"
-            :disabled="field.runtime.readOnly"
-            @input="updateAppointmentField(field.key, $event)"
-          />
-        </view>
-        <text v-if="appointmentFeedback" class="appointment-feedback">{{ appointmentFeedback }}</text>
-        <button class="appointment-submit" :disabled="workOrder.appointmentState === 'submitting'" @tap="submitAppointment">
-          {{ workOrder.appointmentState === 'submitting' ? '提交中' : '确认预约' }}
-        </button>
       </view>
 
       <view class="information-card">
@@ -279,6 +237,7 @@ import { onLoad } from '@dcloudio/uni-app'
 import { hasAuthenticatedSession } from '@features/home/access'
 import { workOrderCardToneFor } from '@features/work-orders/card'
 import { useWorkOrderDetailStore } from '@features/work-orders/detail'
+import { actionWorkspaceRouteFor } from '@features/work-orders/action-workspace'
 import { detailTabs, type DetailTabKey } from '@features/work-orders/detail-tabs'
 import { detailWorkflowUiProjectionFor } from '@features/work-orders/detail-workflow'
 import { useSessionStore } from '@shared/state'
@@ -335,11 +294,6 @@ const quickActions = [
 ] as const
 type QuickActionKey = (typeof quickActions)[number]['key']
 const actionFeedback = ref('')
-const appointmentFeedback = computed(() => {
-  if (workOrder.appointmentError?.category === 'validation') return '请补充预约信息后再提交。'
-  if (workOrder.appointmentError) return '预约信息暂不可用，请稍后重试。'
-  return ''
-})
 const failureCopy = computed(() => {
   if (workOrder.error?.category === 'session_invalid') return '登录状态已失效，请重新登录。'
   if (workOrder.error?.category === 'authorization_denied') return '当前账号无权查看此工单。'
@@ -400,22 +354,9 @@ async function dialContact(): Promise<void> {
 async function handleCurrentTaskAction(): Promise<void> {
   const currentTask = workflowProjection.value.currentTask
   if (!currentTask || currentTask.execution !== 'enabled') return
-  await workOrder.openAppointment(currentTask.nodeId)
-}
-
-function setAppointmentField(key: string, value: string): void {
-  workOrder.setAppointmentField(key, value)
-}
-
-function updateAppointmentField(key: string, event: unknown): void {
-  const record = typeof event === 'object' && event !== null ? event as Record<string, unknown> : {}
-  const detail = typeof record.detail === 'object' && record.detail !== null ? record.detail as Record<string, unknown> : {}
-  const value = detail.value
-  workOrder.setAppointmentField(key, typeof value === 'string' ? value : '')
-}
-
-async function submitAppointment(): Promise<void> {
-  await workOrder.submitAppointment()
+  const id = detail.value?.id
+  if (!id) return
+  await workOrder.navigateTo(actionWorkspaceRouteFor(id, currentTask.nodeId, currentTask.actionIntent))
 }
 
 async function handleQuickAction(action: QuickActionKey): Promise<void> {
@@ -717,106 +658,6 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
   margin-top: 10rpx;
   text-align: center;
 }
-
-.appointment-card {
-  background: #ffffff;
-  border: 1rpx solid #e4eaf2;
-  border-radius: 24rpx;
-  box-shadow: 0 10rpx 34rpx rgba(32, 55, 90, 0.07);
-  margin-top: 18rpx;
-  padding: 26rpx;
-}
-
-.appointment-card-heading {
-  display: flex;
-  flex-direction: column;
-  gap: 6rpx;
-}
-
-.appointment-card-title {
-  color: #1d2b40;
-  font-size: 28rpx;
-  font-weight: 800;
-}
-
-.appointment-card-caption,
-.appointment-field-label {
-  color: #7b8aa1;
-  font-size: 21rpx;
-}
-
-.appointment-field {
-  margin-top: 22rpx;
-}
-
-.appointment-field-label {
-  display: block;
-  margin-bottom: 10rpx;
-}
-
-.appointment-required { color: #f06445; }
-
-.appointment-input,
-.appointment-textarea {
-  background: #f8fafc;
-  border: 1rpx solid #e1e8f1;
-  border-radius: 12rpx;
-  box-sizing: border-box;
-  color: #1d2b40;
-  font-size: 24rpx;
-  padding: 0 18rpx;
-  width: 100%;
-}
-
-.appointment-input { height: 72rpx; }
-.appointment-textarea { min-height: 132rpx; padding-top: 16rpx; }
-
-.appointment-options {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12rpx;
-}
-
-.appointment-option {
-  background: #f5f8fc;
-  border: 1rpx solid #e1e8f1;
-  border-radius: 999rpx;
-  color: #61728e;
-  font-size: 22rpx;
-  line-height: 58rpx;
-  margin: 0;
-  min-height: 58rpx;
-  padding: 0 22rpx;
-}
-
-.appointment-option--selected {
-  background: #edf4ff;
-  border-color: #8db9ff;
-  color: #2878f2;
-}
-
-.appointment-feedback {
-  color: #f06445;
-  display: block;
-  font-size: 21rpx;
-  margin-top: 16rpx;
-}
-
-.appointment-submit {
-  background: #2878f2;
-  border-radius: 14rpx;
-  color: #ffffff;
-  font-size: 24rpx;
-  font-weight: 800;
-  height: 70rpx;
-  line-height: 70rpx;
-  margin: 24rpx 0 0;
-  width: 100%;
-}
-
-.appointment-submit[disabled] { opacity: 0.55; }
-.appointment-submit::after,
-.appointment-option::after { border: 0; }
 
 .detail-tabs {
   border-bottom: 1rpx solid #edf1f6;

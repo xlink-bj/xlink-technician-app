@@ -1,0 +1,115 @@
+import type { FormDefinitionId, FormDataId, WorkOrderId, WorkflowNodeRuntimeId } from '@shared/types'
+import type { WorkflowActionIntent } from '@runtimes/workflow'
+
+/** Content kinds are an explicit plug-in boundary for future Actions. */
+export type ActionContentKind =
+  | 'dynamic_form'
+  | 'quotation'
+  | 'contract'
+  | 'media_signature'
+  | 'composite'
+  | 'unsupported'
+
+export type ActionExecution = 'enabled' | 'disabled'
+
+export type ActionLifecycle =
+  | 'available'
+  | 'in_progress'
+  | 'draft_local'
+  | 'submitting'
+  | 'succeeded'
+  | 'failed_retryable'
+  | 'failed_terminal'
+  | 'blocked'
+
+export type ActionDraftStatus =
+  | 'clean'
+  | 'dirty'
+  | 'saving'
+  | 'saved_local'
+  | 'restore_available'
+  | 'save_failed'
+
+export interface ActionIdentity {
+  readonly workOrderId: WorkOrderId
+  readonly workflowNodeId: WorkflowNodeRuntimeId
+  readonly actionIntent: WorkflowActionIntent
+  readonly contentKind: ActionContentKind
+  readonly contentIdentity?: FormDefinitionId | FormDataId | string
+}
+
+export interface ActionDescriptor extends ActionIdentity {
+  readonly title: string
+  readonly execution: ActionExecution
+}
+
+export interface ActionDraftIdentity {
+  readonly version: 1
+  readonly workOrderId: WorkOrderId
+  readonly workflowNodeId: WorkflowNodeRuntimeId
+  readonly actionIntent: WorkflowActionIntent
+  readonly contentKind: ActionContentKind
+  readonly contentIdentity?: string
+}
+
+export interface ActionDraftRecord<TValues extends Readonly<Record<string, unknown>>> {
+  readonly version: 1
+  readonly identity: ActionDraftIdentity
+  readonly values: TValues
+  readonly updatedAt: string
+  readonly status: 'unfinished' | 'completed'
+}
+
+export function actionContentKindForIntent(intent: WorkflowActionIntent): ActionContentKind {
+  switch (intent) {
+    case 'set_appointment':
+    case 'interact_with_form':
+      return 'dynamic_form'
+    case 'quotation':
+      return 'quotation'
+    case 'construction':
+      return 'composite'
+    default:
+      return 'unsupported'
+  }
+}
+
+export function actionExecutionForWorkflowDecision(execution: 'enabled' | 'disabled_read_only'): ActionExecution {
+  return execution === 'enabled' ? 'enabled' : 'disabled'
+}
+
+export function actionDraftIdentityFor(action: ActionIdentity): ActionDraftIdentity {
+  return {
+    version: 1,
+    workOrderId: action.workOrderId,
+    workflowNodeId: action.workflowNodeId,
+    actionIntent: action.actionIntent,
+    contentKind: action.contentKind,
+    ...(action.contentIdentity ? { contentIdentity: String(action.contentIdentity) } : {}),
+  }
+}
+
+export function actionDraftStorageKey(identity: ActionDraftIdentity): string {
+  const contentIdentity = identity.contentIdentity ?? 'none'
+  return [
+    'action-workspace',
+    String(identity.version),
+    encodeURIComponent(String(identity.workOrderId)),
+    encodeURIComponent(String(identity.workflowNodeId)),
+    encodeURIComponent(identity.actionIntent),
+    encodeURIComponent(identity.contentKind),
+    encodeURIComponent(contentIdentity),
+  ].join(':')
+}
+
+export function actionDraftIdentityMatches(
+  left: ActionDraftIdentity,
+  right: ActionDraftIdentity,
+): boolean {
+  return left.version === right.version
+    && String(left.workOrderId) === String(right.workOrderId)
+    && String(left.workflowNodeId) === String(right.workflowNodeId)
+    && left.actionIntent === right.actionIntent
+    && left.contentKind === right.contentKind
+    && (left.contentIdentity ?? '') === (right.contentIdentity ?? '')
+}

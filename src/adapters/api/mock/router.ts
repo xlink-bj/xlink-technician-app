@@ -353,7 +353,12 @@ function matchedResponse(
     return mockAppointmentFormDefinitionResponse
   }
   if (route === `biz/extForm/query/${appointmentFormDefinitionWireId}`) {
-    const dataId = typeof requestData.id === 'string' ? requestData.id : undefined
+    const exactDataId = requestData['is:_id|string#and']
+    const dataId = typeof exactDataId === 'string'
+      ? exactDataId
+      : typeof requestData.id === 'string'
+        ? requestData.id
+        : undefined
     const formData = dataId ? mockCommandState().formData.get(dataId) : undefined
     return { data: formData ? [formData] : [], page: 1, rows: 20, total: formData ? 1 : 0 }
   }

@@ -18,7 +18,7 @@ import {
   setBusinessMockMode,
 } from '@adapters/api/mock'
 import { createRoleScopedTechnicianApiReadAdapter } from '@adapters/api/technician-api'
-import { useWorkOrderDetailStore } from '@features/work-orders/detail'
+import { useActionWorkspaceStore } from '@features/work-orders/action-workspace'
 import { useWorkOrderListStore } from '@features/work-orders/list'
 import {
   appointmentRuntimeFieldsFor,
@@ -227,27 +227,37 @@ describe('G4-D final functional and safety corrections', () => {
       inspectAcceptOrder: vi.fn(),
       acceptOrder: vi.fn(),
     }
-    const store = useWorkOrderDetailStore()
-    store.configureApi(api, () => session)
-    store.configureCommandApi(command)
-    await store.load(id)
-    await store.openAppointment(nodeId)
+    const storage = {
+      read: vi.fn(async () => succeeded(null)),
+      write: vi.fn(async () => succeeded(undefined)),
+      remove: vi.fn(async () => succeeded(undefined)),
+    }
+    const store = useActionWorkspaceStore()
+    store.configure({
+      apiRead: api,
+      commandApi: command,
+      storage,
+      navigation: { navigate: vi.fn(async () => undefined), back: vi.fn(async () => undefined) },
+      getSession: () => session,
+      debounceMs: 0,
+    })
+    await store.load({ workOrderId: id, workflowNodeId: nodeId, actionIntent: 'set_appointment' })
 
-    const readonlyResult = store.setAppointmentField('source', 'changed')
+    const readonlyResult = store.setField('source', 'changed')
     expect(readonlyResult.error?.category).toBe('validation')
     expect(store.appointmentForm?.values.source).toBe('backend value')
-    const optionResult = store.setAppointmentField('need', 'unsupported')
+    const optionResult = store.setField('need', 'unsupported')
     expect(optionResult.error?.category).toBe('validation')
     expect(store.appointmentForm?.values.need).toBeUndefined()
 
-    const missing = await store.submitAppointment()
+    const missing = await store.submit()
     expect(missing.error?.category).toBe('validation')
-    expect(store.appointmentState).toBe('ready')
+    expect(store.lifecycle).toBe('in_progress')
     expect(command.submitAppointment).not.toHaveBeenCalled()
 
-    store.setAppointmentField('need', '1')
-    store.setAppointmentField('datetime', '2026-04-20 10:00')
-    expect((await store.submitAppointment()).state).toBe('succeeded')
+    store.setField('need', '1')
+    store.setField('datetime', '2026-04-20 10:00')
+    expect((await store.submit()).state).toBe('succeeded')
     expect(command.submitAppointment).toHaveBeenCalledTimes(1)
   })
 
@@ -330,12 +340,22 @@ describe('G4-D final functional and safety corrections', () => {
       inspectAcceptOrder: vi.fn(),
       acceptOrder: vi.fn(),
     }
-    const store = useWorkOrderDetailStore()
-    store.configureApi(api, () => session)
-    store.configureCommandApi(command)
-    await store.load(id)
-    await store.openAppointment(nodeId)
-    expect((await store.submitAppointment()).state).toBe('failed_retryable')
+    const storage = {
+      read: vi.fn(async () => succeeded(null)),
+      write: vi.fn(async () => succeeded(undefined)),
+      remove: vi.fn(async () => succeeded(undefined)),
+    }
+    const store = useActionWorkspaceStore()
+    store.configure({
+      apiRead: api,
+      commandApi: command,
+      storage,
+      navigation: { navigate: vi.fn(async () => undefined), back: vi.fn(async () => undefined) },
+      getSession: () => session,
+      debounceMs: 0,
+    })
+    await store.load({ workOrderId: id, workflowNodeId: nodeId, actionIntent: 'set_appointment' })
+    expect((await store.submit()).state).toBe('failed_retryable')
     expect(api.getWorkOrderDetail).toHaveBeenCalledTimes(1)
   })
 

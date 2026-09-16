@@ -6,10 +6,12 @@ import type {
   AuthSessionPort,
   NavigationPort,
   PhonePort,
+  StoragePort,
   TechnicianApiCommandPort,
   TechnicianApiReadPort,
 } from '@shared/ports'
 import { useWorkOrderDetailStore } from '@features/work-orders/detail'
+import { useActionWorkspaceStore } from '@features/work-orders/action-workspace'
 import { useWorkOrderListStore } from '@features/work-orders/list'
 import { useSessionStore } from '@shared/state'
 
@@ -18,6 +20,7 @@ import {
   createDefaultTechnicianApiCommandPort,
   createDefaultPhonePort,
   createDefaultNavigationPort,
+  createDefaultStoragePort,
   createDefaultTechnicianApiReadPort,
 } from './composition'
 
@@ -27,6 +30,7 @@ export interface ApplicationDependencies {
   readonly apiCommand?: TechnicianApiCommandPort
   readonly phone?: PhonePort
   readonly navigation?: NavigationPort
+  readonly storage?: StoragePort
 }
 
 export function createApplication(dependencies: ApplicationDependencies = {}) {
@@ -39,6 +43,7 @@ export function createApplication(dependencies: ApplicationDependencies = {}) {
   const apiCommand = dependencies.apiCommand ?? createDefaultTechnicianApiCommandPort(authSession, apiRead)
   const phone = dependencies.phone ?? createDefaultPhonePort()
   const navigation = dependencies.navigation ?? createDefaultNavigationPort()
+  const storage = dependencies.storage ?? createDefaultStoragePort()
   sessionStore.configureAuth(authSession)
   const workOrderListStore = useWorkOrderListStore(pinia)
   const workOrderDetailStore = useWorkOrderDetailStore(pinia)
@@ -55,8 +60,16 @@ export function createApplication(dependencies: ApplicationDependencies = {}) {
     () => sessionStore.session,
     () => sessionStore.endSession().then(() => undefined),
   )
-  workOrderDetailStore.configureCommandApi(apiCommand)
   workOrderDetailStore.configurePhone(phone)
+  workOrderDetailStore.configureNavigation(navigation)
+  const actionWorkspaceStore = useActionWorkspaceStore(pinia)
+  actionWorkspaceStore.configure({
+    apiRead,
+    commandApi: apiCommand,
+    storage,
+    navigation,
+    getSession: () => sessionStore.session,
+  })
   void sessionStore.bootstrap()
-  return { app, pinia, sessionStore, workOrderListStore, workOrderDetailStore }
+  return { app, pinia, sessionStore, workOrderListStore, workOrderDetailStore, actionWorkspaceStore }
 }

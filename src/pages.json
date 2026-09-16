@@ -17,6 +17,12 @@
       "style": {
         "navigationBarTitleText": "工单详情"
       }
+    },
+    {
+      "path": "pages/work-orders/action-workspace",
+      "style": {
+        "navigationBarTitleText": "处理工单"
+      }
     }
   ],
   "globalStyle": {

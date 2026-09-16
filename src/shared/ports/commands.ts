@@ -1,5 +1,6 @@
 import type {
   FormDataId,
+  FormDefinitionId,
   WorkOrderId,
   WorkflowNodeRuntimeId,
   WorkflowRunId,
@@ -34,6 +35,8 @@ export interface AppointmentFormFieldRead {
 export interface AppointmentFormRead {
   readonly fields: readonly AppointmentFormFieldRead[]
   readonly values: Readonly<Record<string, AppointmentFieldValue>>
+  /** Adapter-normalized definition identity used to scope local Action drafts. */
+  readonly definitionId?: FormDefinitionId
   readonly dataId?: FormDataId
 }
 

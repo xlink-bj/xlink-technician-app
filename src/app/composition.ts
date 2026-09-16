@@ -2,6 +2,7 @@ import type {
   AuthSessionPort,
   NavigationPort,
   PhonePort,
+  StoragePort,
   TechnicianApiCommandPort,
   TechnicianApiReadPort,
 } from '@shared/ports'
@@ -44,6 +45,10 @@ export function createDefaultAuthSessionPort(): AuthSessionPort {
     apiBaseUrl: config.value.environment.apiBaseUrl,
   })
   return createAuthSessionAdapter(backend, storage, config.value.authWireConfig)
+}
+
+export function createDefaultStoragePort(): StoragePort {
+  return createSemanticStorageAdapter(createUniStorageDriver())
 }
 
 export function createDefaultTechnicianApiReadPort(authSession: AuthSessionPort): TechnicianApiReadPort {

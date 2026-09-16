@@ -190,6 +190,7 @@ export class TechnicianApiCommandAdapter implements TechnicianApiCommandPort {
 
     if (!input.formDataId) {
       return succeeded({
+        definitionId: definition.data.id,
         fields: definition.data.fields ?? [],
         values: {},
       })
@@ -212,6 +213,7 @@ export class TechnicianApiCommandAdapter implements TechnicianApiCommandPort {
     }
 
     return succeeded({
+      definitionId: definition.data.id,
       fields: definition.data.fields ?? [],
       values: first?.values ?? {},
       ...(first?.id ? { dataId: first.id } : {}),

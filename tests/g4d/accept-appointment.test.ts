@@ -23,7 +23,7 @@ import {
 } from '@adapters/api/mock'
 import { workOrderListActionFor } from '@features/work-orders/list-actions'
 import { detailWorkflowUiProjectionFor } from '@features/work-orders/detail-workflow'
-import { useWorkOrderDetailStore } from '@features/work-orders/detail'
+import { useActionWorkspaceStore } from '@features/work-orders/action-workspace'
 import { useWorkOrderListStore } from '@features/work-orders/list'
 import type {
   FormDataRead,
@@ -236,7 +236,7 @@ describe('G4-D accept and appointment semantics', () => {
     expect(request).not.toHaveBeenCalled()
   })
 
-  it('rereads Detail after appointment submit through the store command boundary', async () => {
+  it('rereads Detail after appointment submit through the Action Workspace boundary', async () => {
     const id = asOpaqueId<'WorkOrderId'>('store-work-order')
     const detail: WorkOrderDetail = {
       id,
@@ -256,13 +256,23 @@ describe('G4-D accept and appointment semantics', () => {
       inspectAcceptOrder: vi.fn(),
       acceptOrder: vi.fn(),
     }
-    const store = useWorkOrderDetailStore()
-    store.configureApi(api, () => session)
-    store.configureCommandApi(command)
-    await store.load(id)
-    await store.openAppointment(appointmentNode.id)
-    store.setAppointmentField('datetime', '2026-04-20 10:00')
-    expect((await store.submitAppointment()).state).toBe('succeeded')
+    const storage = {
+      read: vi.fn(async () => succeeded(null)),
+      write: vi.fn(async () => succeeded(undefined)),
+      remove: vi.fn(async () => succeeded(undefined)),
+    }
+    const store = useActionWorkspaceStore()
+    store.configure({
+      apiRead: api,
+      commandApi: command,
+      storage,
+      navigation: { navigate: vi.fn(async () => undefined), back: vi.fn(async () => undefined) },
+      getSession: () => session,
+      debounceMs: 0,
+    })
+    await store.load({ workOrderId: id, workflowNodeId: appointmentNode.id, actionIntent: 'set_appointment' })
+    store.setField('datetime', '2026-04-20 10:00')
+    expect((await store.submit()).state).toBe('succeeded')
     expect(command.submitAppointment).toHaveBeenCalledWith(expect.objectContaining({ workOrderId: id }))
     expect(api.getWorkOrderDetail).toHaveBeenCalledTimes(2)
     expect(store.detail?.workflowNodes).toEqual([])

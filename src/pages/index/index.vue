@@ -83,6 +83,21 @@
             </button>
           </view>
         </view>
+        <view v-if="mockMode === 'data'" class="mock-action-scenarios">
+          <text class="mock-mode-label">Action Workspace 场景</text>
+          <navigator
+            v-for="scenario in mockActionWorkspaceScenarios"
+            :key="scenario.key"
+            class="mock-action-scenario"
+            :url="scenario.route"
+          >
+            <view class="mock-action-scenario-copy">
+              <text class="mock-action-scenario-label">{{ scenario.label }}</text>
+              <text class="mock-action-scenario-description">{{ scenario.description }}</text>
+            </view>
+            <text class="mock-action-scenario-arrow" aria-hidden="true">›</text>
+          </navigator>
+        </view>
       </view>
     </view>
 
@@ -260,6 +275,7 @@ import {
   setBusinessMockMode,
   type BusinessMockMode,
 } from '@app/business-mock'
+import { mockActionWorkspaceScenarios } from '@app/action-workspace-harness'
 import { hasAuthenticatedSession, workOrdersRoute } from '@features/home/access'
 import {
   reloadBusinessReadStores,
@@ -627,6 +643,46 @@ function userFacingLoginMessage(error: OperationError | null | undefined): strin
   border-color: #6d9ff3;
   color: #1769df;
   font-weight: 800;
+}
+
+.mock-action-scenarios {
+  border-top: 1rpx solid #edf1f7;
+  margin-top: 24rpx;
+  padding-top: 24rpx;
+}
+
+.mock-action-scenario {
+  align-items: center;
+  border-top: 1rpx solid #f0f3f8;
+  display: flex;
+  justify-content: space-between;
+  margin-top: 14rpx;
+  padding-top: 14rpx;
+}
+
+.mock-action-scenario-copy {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.mock-action-scenario-label {
+  color: #243858;
+  font-size: 24rpx;
+  font-weight: 700;
+}
+
+.mock-action-scenario-description {
+  color: #8a98ad;
+  font-size: 20rpx;
+  margin-top: 4rpx;
+}
+
+.mock-action-scenario-arrow {
+  color: #1769df;
+  font-size: 34rpx;
+  padding-left: 16rpx;
 }
 
 .home-brand-name {

@@ -78,6 +78,7 @@ export const mockCommandScenarioIds = {
   acceptTerminal: 'mock-work-order-013-accept-terminal',
   appointmentRetryable: 'mock-work-order-014-appointment-retryable',
   appointmentTerminal: 'mock-work-order-015-appointment-terminal',
+  appointmentSuccess: 'mock-work-order-016-appointment-success',
 } as const
 
 /** Mock DATA list order is intentionally stable for visual review. */
@@ -614,6 +615,32 @@ export const mockWorkOrderDetailResponses = {
       workflow: { _id: 'mock-workflow-run-015' },
       workflowNode: [{
         _id: 'mock-workflow-node-015-appointment',
+        state: 0,
+        nodeDef: {
+          nodeType: 'forms',
+          name: '预约上门时间',
+          formDefId: appointmentFormDefinitionWireId,
+          userChoose: ['synthetic-role'],
+        },
+      }],
+    },
+  },
+  [mockCommandScenarioIds.appointmentSuccess]: {
+    data: {
+      serviceAppointment: {
+        _id: mockCommandScenarioIds.appointmentSuccess,
+        orderNum: '19016',
+        name: '演示预约成功样本',
+        address: '演示地址六',
+        district: 110105,
+        exts: { distance: 1.6, communityOrdersTotal: 0 },
+        status: mockSyntheticStatusCodes.appointmentPending,
+        phone: '13800000016',
+        workflowRunId: 'mock-workflow-run-016',
+      },
+      workflow: { _id: 'mock-workflow-run-016' },
+      workflowNode: [{
+        _id: 'mock-workflow-node-016-appointment',
         state: 0,
         nodeDef: {
           nodeType: 'forms',

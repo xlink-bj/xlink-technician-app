@@ -1,11 +1,10 @@
 import { defineStore } from 'pinia'
-import { computed, ref } from 'vue'
+import { ref } from 'vue'
 
 import type {
-  AppointmentFormRead,
+  NavigationPort,
   PhonePort,
   SessionSnapshot,
-  TechnicianApiCommandPort,
   TechnicianApiReadPort,
   WorkOrderDetail,
 } from '@shared/ports'
@@ -20,14 +19,7 @@ import {
   type OperationSnapshot,
   type OperationState,
   type WorkOrderId,
-  type WorkflowNodeRuntimeId,
 } from '@shared/types'
-import {
-  appointmentRuntimeFieldsFor,
-  normalizeAppointmentFieldValue,
-  normalizeAppointmentForm,
-  type AppointmentRuntimeField,
-} from './appointment-form-runtime'
 
 export const workOrderDetailRoute = '/pages/work-orders/detail' as const
 
@@ -47,22 +39,11 @@ export type WorkOrderDetailLoadState = Extract<
 
 export type SessionInvalidation = () => Promise<unknown>
 
-export type AppointmentOperationState = Extract<
-  OperationState,
-  'idle' | 'loading' | 'succeeded' | 'failed_retryable' | 'failed_terminal'
-> | 'ready' | 'submitting'
-
 function failure<T>(category: ErrorCategory, message: string): OperationSnapshot<T> {
   return {
     state: 'failed_terminal',
     error: createOperationError(category, message),
   }
-}
-
-function failureFromDetail(result: OperationSnapshot<WorkOrderDetail>): OperationSnapshot<void> {
-  return result.state === 'succeeded'
-    ? failure('server_terminal', 'Work Order detail reread was incomplete')
-    : { state: result.state, ...(result.error ? { error: result.error } : {}) }
 }
 
 function capabilityFailure(
@@ -80,19 +61,12 @@ export const useWorkOrderDetailStore = defineStore('workOrderDetail', () => {
   const contactState = ref<CapabilityState>('not_requested')
   const contactReason = ref<string | undefined>(undefined)
   const contactInFlight = ref(false)
-  const appointmentState = ref<AppointmentOperationState>('idle')
-  const appointmentForm = ref<AppointmentFormRead | null>(null)
-  const appointmentFields = computed<readonly AppointmentRuntimeField[]>(() =>
-    appointmentForm.value ? appointmentRuntimeFieldsFor(appointmentForm.value) : [],
-  )
-  const appointmentError = ref<OperationError | null>(null)
-  const appointmentNodeId = ref<WorkflowNodeRuntimeId | null>(null)
 
   let api: TechnicianApiReadPort | null = null
   let getSession: () => SessionSnapshot | null = () => null
   let invalidateSession: SessionInvalidation | null = null
   let phone: PhonePort | null = null
-  let commandApi: TechnicianApiCommandPort | null = null
+  let navigation: NavigationPort | null = null
   let lastWorkOrderId: WorkOrderId | null = null
   let loadVersion = 0
 
@@ -110,8 +84,12 @@ export const useWorkOrderDetailStore = defineStore('workOrderDetail', () => {
     phone = nextPhone
   }
 
-  function configureCommandApi(nextApi: TechnicianApiCommandPort): void {
-    commandApi = nextApi
+  function configureNavigation(nextNavigation: NavigationPort): void {
+    navigation = nextNavigation
+  }
+
+  function navigateTo(url: string): Promise<void> {
+    return navigation ? navigation.navigate(url) : Promise.resolve()
   }
 
   function clearContactState(): void {
@@ -120,18 +98,10 @@ export const useWorkOrderDetailStore = defineStore('workOrderDetail', () => {
     contactInFlight.value = false
   }
 
-  function clearAppointmentState(): void {
-    appointmentState.value = 'idle'
-    appointmentForm.value = null
-    appointmentError.value = null
-    appointmentNodeId.value = null
-  }
-
   function clearDetailData(): void {
     currentWorkOrderId.value = null
     detail.value = null
     clearContactState()
-    clearAppointmentState()
   }
 
   function clear(): void {
@@ -194,7 +164,6 @@ export const useWorkOrderDetailStore = defineStore('workOrderDetail', () => {
     currentWorkOrderId.value = id
     detail.value = null
     clearContactState()
-    clearAppointmentState()
     loadState.value = 'loading'
     error.value = null
 
@@ -254,94 +223,6 @@ export const useWorkOrderDetailStore = defineStore('workOrderDetail', () => {
       : Promise.resolve(failure('validation', 'No Work Order detail is available to retry'))
   }
 
-  async function openAppointment(nodeId: WorkflowNodeRuntimeId): Promise<OperationSnapshot<AppointmentFormRead>> {
-    if (!commandApi) return failure('server_terminal', 'Work Order command API is not configured')
-    const node = detail.value?.workflowNodes?.find((candidate) => candidate.id === nodeId)
-    if (!node || node.formPurpose !== 'appointment') {
-      return failure('unsupported_capability', 'Appointment form is not available for this task')
-    }
-
-    appointmentState.value = 'loading'
-    appointmentError.value = null
-    const result = await commandApi.readAppointmentForm(
-      node.formDataId ? { formDataId: node.formDataId } : {},
-    )
-    if (result.state === 'succeeded' && result.data) {
-      appointmentNodeId.value = nodeId
-      appointmentForm.value = result.data
-      appointmentState.value = 'ready'
-      return result
-    }
-
-    appointmentState.value = result.state === 'failed_retryable' ? 'failed_retryable' : 'failed_terminal'
-    appointmentError.value = result.error ?? null
-    return result
-  }
-
-  function setAppointmentField(key: string, value: string | number | boolean | null): OperationSnapshot<void> {
-    if (!appointmentForm.value) return failure('validation', 'Appointment form is not ready')
-    const field = appointmentForm.value.fields.find((candidate) => candidate.key === key)
-    if (!field) return failure('validation', 'Appointment field is not supported')
-    const validation = normalizeAppointmentFieldValue(field, value, appointmentForm.value.values)
-    if (validation.state !== 'succeeded') {
-      appointmentError.value = validation.error ?? null
-      appointmentState.value = 'ready'
-      return {
-        state: validation.state,
-        ...(validation.error ? { error: validation.error } : {}),
-      }
-    }
-    appointmentForm.value = {
-      ...appointmentForm.value,
-      values: { ...appointmentForm.value.values, [key]: validation.data! },
-    }
-    appointmentError.value = null
-    return { state: 'succeeded', data: undefined }
-  }
-
-  async function submitAppointment(): Promise<OperationSnapshot<void>> {
-    if (!commandApi) return failure('server_terminal', 'Work Order command API is not configured')
-    if (!detail.value || !appointmentForm.value || !appointmentNodeId.value) {
-      return failure('validation', 'Appointment form is not ready')
-    }
-    if (appointmentState.value === 'submitting') {
-      return failure('validation', 'Appointment form is already being submitted')
-    }
-
-    const workOrderId = lastWorkOrderId
-    if (!workOrderId) return failure('validation', 'Work Order detail is not available')
-
-    const validation = normalizeAppointmentForm(appointmentForm.value)
-    if (validation.state !== 'succeeded') {
-      appointmentState.value = 'ready'
-      appointmentError.value = validation.error ?? null
-      return {
-        state: validation.state,
-        ...(validation.error ? { error: validation.error } : {}),
-      }
-    }
-
-    appointmentState.value = 'submitting'
-    appointmentError.value = null
-    const result = await commandApi.submitAppointment({
-      workOrderId,
-      workflowNodeId: appointmentNodeId.value,
-      ...(detail.value.workflowRunId ? { workflowRunId: detail.value.workflowRunId } : {}),
-      ...(appointmentForm.value.dataId ? { formDataId: appointmentForm.value.dataId } : {}),
-      values: validation.data ?? {},
-    })
-    if (result.state !== 'succeeded') {
-      appointmentState.value = result.state === 'failed_retryable' ? 'failed_retryable' : 'failed_terminal'
-      appointmentError.value = result.error ?? null
-      return result
-    }
-
-    clearAppointmentState()
-    const reread = await load(workOrderId)
-    if (reread.state !== 'succeeded') return failureFromDetail(reread)
-    return result
-  }
-
   async function dialContact(): Promise<CapabilityResult<void>> {
     const contact = detail.value?.contact
     if (!contact?.normalizedPhone) {
@@ -388,21 +269,14 @@ export const useWorkOrderDetailStore = defineStore('workOrderDetail', () => {
     contactState,
     contactReason,
     contactInFlight,
-    appointmentState,
-    appointmentForm,
-    appointmentFields,
-    appointmentError,
-    appointmentNodeId,
     configureApi,
     configurePhone,
-    configureCommandApi,
+    configureNavigation,
+    navigateTo,
     clear,
     load,
     loadFromRoute,
     retry,
     dialContact,
-    openAppointment,
-    setAppointmentField,
-    submitAppointment,
   }
 })

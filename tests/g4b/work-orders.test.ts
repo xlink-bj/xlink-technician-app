@@ -8,6 +8,7 @@ import {
   type ApiReadTransport,
 } from '@adapters/api/technician-api'
 import { createUniApiReadTransport, type UniApiRequestExecutor } from '@adapters/api/uni-api-read-transport'
+import { resetBusinessMockCache, setBusinessMockMode } from '@adapters/api/mock'
 import { hasAuthenticatedSession, workOrdersRoute } from '@features/home/access'
 import { useWorkOrderListStore } from '@features/work-orders/list'
 import type {
@@ -72,6 +73,9 @@ function configureStore(
 describe('G4-B Home access and Work Order List feature', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
+    vi.stubEnv('VITE_XLINK_MOCK', 'false')
+    resetBusinessMockCache()
+    setBusinessMockMode('off')
   })
 
   it('requires an authenticated session before loading work orders', async () => {

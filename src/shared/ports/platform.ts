@@ -61,4 +61,6 @@ export interface PhonePort {
 
 export interface NavigationPort {
   navigate(url: string): Promise<void>
+  /** Optional native page-stack back operation. */
+  readonly back?: () => Promise<void>
 }

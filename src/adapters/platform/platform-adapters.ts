@@ -59,6 +59,7 @@ export interface PhoneDriver {
 
 export interface NavigationDriver {
   navigate(url: string): Promise<void>
+  back?(): Promise<void>
 }
 
 const supportedStates = new Set<PlatformDriverState>([
@@ -218,6 +219,9 @@ export function createPlatformAdapters(drivers: PlatformDrivers = {}): PlatformA
     navigate: (url) => drivers.navigation
       ? drivers.navigation.navigate(url)
       : Promise.reject(new Error('Navigation is unsupported on this platform')),
+    ...(drivers.navigation?.back
+      ? { back: () => drivers.navigation!.back!() }
+      : {}),
   }
 
   return { location, mediaCapture, mediaFilePicker, calendar, scan, phone, navigation }
