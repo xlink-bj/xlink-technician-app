@@ -22,12 +22,12 @@
   <view v-else-if="workspace.loadState === 'failed_retryable'" class="workspace-state workspace-state--centered">
     <text class="workspace-state-title">暂时无法打开时间选择</text>
     <text class="workspace-state-copy">请检查网络后重试，已保存的本地草稿不会丢失。</text>
-    <button class="workspace-state-action" @tap="reload">重新加载</button>
+    <AppButton class="workspace-state-action" @tap="reload">重新加载</AppButton>
   </view>
 
   <view v-else-if="workspace.loadState === 'failed_terminal'" class="workspace-state workspace-state--centered">
     <text class="workspace-state-title">时间选择暂不可用</text>
-    <button class="workspace-state-action" @tap="reload">再次尝试</button>
+    <AppButton class="workspace-state-action" @tap="reload">再次尝试</AppButton>
   </view>
 
   <ActionWorkspaceShell
@@ -40,7 +40,7 @@
     :business-feedback="feedback"
     submit-label="确认选择"
   >
-    <view class="time-selection-content">
+    <view class="time-selection-content app-surface">
       <view class="time-selection-heading">
         <text class="time-selection-title">选择上门时间</text>
         <text class="time-selection-copy">请根据与客户确认的安排选择日期和时间</text>
@@ -62,7 +62,7 @@
           <picker class="date-shortcuts-more" mode="date" :value="selectedDate" @change="handleDateChange">
             <view class="date-shortcut date-shortcut--more">
               <text class="date-shortcut-label">更多日期</text>
-              <text class="date-shortcut-date">⌄</text>
+              <AppIcon name="chevron-right" :size="16" aria-hidden="true" />
             </view>
           </picker>
         </view>
@@ -83,7 +83,7 @@
             @tap="selectOption(option.key)"
           >
             <text>{{ option.label }}</text>
-            <text v-if="selectedOptionKey === option.key" class="time-slot-check">✓</text>
+            <AppIcon v-if="selectedOptionKey === option.key" class="time-slot-check" name="complete" :size="14" color="var(--app-color-surface)" aria-hidden="true" />
           </button>
         </view>
         <text v-if="timeError" class="time-selection-error">{{ timeError }}</text>
@@ -91,7 +91,7 @@
     </view>
 
     <template #actions>
-      <button class="time-selection-submit" :class="{ 'time-selection-submit--disabled': !selectedOption }" :disabled="!selectedOption" @tap="confirmSelection">确认选择</button>
+      <AppButton class="time-selection-submit" :disabled="!selectedOption" block @tap="confirmSelection">确认选择</AppButton>
     </template>
   </ActionWorkspaceShell>
 
@@ -119,6 +119,8 @@ import {
 } from '@features/work-orders/appointment-time'
 import { useSessionStore } from '@shared/state'
 import ActionWorkspaceShell from '@shared/ui/ActionWorkspaceShell.vue'
+import AppButton from '@shared/ui/AppButton.vue'
+import AppIcon from '@shared/ui/AppIcon.vue'
 import type { OperationError } from '@shared/types'
 
 const session = useSessionStore()
@@ -236,64 +238,53 @@ function actionErrorCopy(error: OperationError | null): string {
 <style>
 .workspace-state {
   align-items: center;
-  background: #f3f6fa;
+  background: var(--app-color-page);
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
   justify-content: center;
   min-height: 100vh;
-  padding: 24rpx;
+  padding: var(--app-space-lg);
   text-align: center;
   width: 100%;
 }
 
-.workspace-state-title { color: #1d2b40; font-size: 28rpx; font-weight: 800; }
-.workspace-state-copy { color: #7e8da4; font-size: 22rpx; line-height: 1.6; margin-top: 10rpx; }
-.workspace-state-link { color: #2878f2; font-size: 24rpx; font-weight: 700; margin-top: 22rpx; }
+.workspace-state-title { color: var(--app-color-text-primary); font-size: var(--app-font-section-title); font-weight: 800; }
+.workspace-state-copy { color: var(--app-color-text-secondary); font-size: var(--app-font-field-label); line-height: 1.6; margin-top: var(--app-space-sm); }
+.workspace-state-link { color: var(--app-color-primary); font-size: var(--app-font-body); font-weight: 700; margin-top: var(--app-space-lg); }
 
 .workspace-state-action,
 .time-selection-submit {
-  background: #2878f2;
-  border-radius: 14rpx;
-  color: #ffffff;
-  font-size: 24rpx;
-  font-weight: 800;
-  height: 70rpx;
-  line-height: 70rpx;
-  margin-top: 24rpx;
+  margin-top: var(--app-space-lg);
   width: 300rpx;
 }
 
 .workspace-state-action::after,
 .time-selection-submit::after { border: 0; }
-.workspace-loading-card { background: #ffffff; border-radius: 24rpx; height: 260rpx; margin-bottom: 22rpx; width: 100%; }
+.workspace-loading-card { height: 260rpx; margin-bottom: var(--app-space-lg); width: 100%; }
 
 .time-selection-content {
-  background: #ffffff;
-  border: 1rpx solid #e4eaf2;
-  border-radius: 24rpx;
-  box-shadow: 0 10rpx 34rpx rgba(32, 55, 90, 0.07);
-  margin-top: 18rpx;
-  padding: 26rpx;
+  margin-top: var(--app-space-md);
+  padding: var(--app-space-lg);
 }
 
-.time-selection-heading { border-bottom: 1rpx solid #edf1f6; padding-bottom: 22rpx; }
-.time-selection-title { color: #1d2b40; display: block; font-size: 30rpx; font-weight: 800; }
-.time-selection-copy { color: #7b8aa1; display: block; font-size: 22rpx; margin-top: 8rpx; }
-.time-section { margin-top: 26rpx; }
-.time-section--slots { border-top: 1rpx solid #edf1f6; padding-top: 26rpx; }
-.time-section-label { color: #1d2b40; display: block; font-size: 24rpx; font-weight: 800; margin-bottom: 14rpx; }
+.time-selection-heading { border-bottom: 1rpx solid var(--app-color-divider); padding-bottom: var(--app-space-lg); }
+.time-selection-title { color: var(--app-color-text-primary); display: block; font-size: var(--app-font-section-title); font-weight: 800; }
+.time-selection-copy { color: var(--app-color-text-secondary); display: block; font-size: var(--app-font-field-label); margin-top: var(--app-space-xs); }
+.time-section { margin-top: var(--app-space-xl); }
+.time-section--slots { border-top: 1rpx solid var(--app-color-divider); padding-top: var(--app-space-xl); }
+.time-section-label { color: var(--app-color-text-primary); display: block; font-size: var(--app-font-body); font-weight: 800; margin-bottom: var(--app-space-sm); }
 
 .date-shortcuts { display: flex; gap: 10rpx; }
 .date-shortcuts-more { flex: 1; }
 
 .date-shortcut {
   align-items: center;
-  background: #f8fafc;
-  border: 1rpx solid #e1e8f1;
-  border-radius: 14rpx;
+  background: var(--app-color-control-surface);
+  border: 1rpx solid var(--app-color-border-control);
+  border-radius: var(--app-radius-control);
   box-sizing: border-box;
-  color: #627492;
+  color: var(--app-color-text-secondary);
   display: flex;
   flex: 1;
   flex-direction: column;
@@ -304,33 +295,33 @@ function actionErrorCopy(error: OperationError | null): string {
 }
 
 .date-shortcut::after { border: 0; }
-.date-shortcut--selected { background: #edf4ff; border-color: #2878f2; color: #2878f2; }
-.date-shortcut-label { font-size: 22rpx; font-weight: 700; }
+.date-shortcut--selected { background: var(--app-color-primary-soft); border-color: var(--app-color-primary); color: var(--app-color-primary); }
+.date-shortcut-label { font-size: var(--app-font-field-label); font-weight: 700; }
 .date-shortcut-date { font-size: 18rpx; margin-top: 4rpx; }
-.date-shortcut--more { color: #627492; font-size: 20rpx; }
+.date-shortcut--more { color: var(--app-color-text-secondary); font-size: var(--app-font-meta); }
 
 .selected-date-card {
   align-items: center;
-  background: #f8fafc;
-  border-radius: 12rpx;
+  background: var(--app-color-control-surface);
+  border-radius: var(--app-radius-control);
   display: flex;
   justify-content: space-between;
-  margin-top: 14rpx;
-  padding: 16rpx 18rpx;
+  margin-top: var(--app-space-sm);
+  padding: var(--app-space-md) 18rpx;
 }
 
-.selected-date-label { color: #8998ad; font-size: 21rpx; }
-.selected-date-value { color: #1d2b40; font-size: 23rpx; font-weight: 700; }
-.time-slots { display: flex; flex-direction: column; gap: 12rpx; }
+.selected-date-label { color: var(--app-color-text-secondary); font-size: var(--app-font-status); }
+.selected-date-value { color: var(--app-color-text-primary); font-size: var(--app-font-value); font-weight: 700; }
+.time-slots { display: flex; flex-direction: column; gap: var(--app-space-sm); }
 
 .time-slot {
   align-items: center;
-  background: #ffffff;
-  border: 1rpx solid #e1e8f1;
-  border-radius: 14rpx;
-  color: #1d2b40;
+  background: var(--app-color-surface);
+  border: 1rpx solid var(--app-color-border-control);
+  border-radius: var(--app-radius-control);
+  color: var(--app-color-text-primary);
   display: flex;
-  font-size: 24rpx;
+  font-size: var(--app-font-body);
   justify-content: space-between;
   line-height: 1;
   margin: 0;
@@ -340,9 +331,8 @@ function actionErrorCopy(error: OperationError | null): string {
 }
 
 .time-slot::after { border: 0; }
-.time-slot--selected { background: #edf4ff; border-color: #2878f2; color: #2878f2; }
-.time-slot-check { background: #2878f2; border-radius: 50%; color: #ffffff; font-size: 20rpx; height: 32rpx; line-height: 32rpx; text-align: center; width: 32rpx; }
-.time-selection-error { color: #f06445; display: block; font-size: 21rpx; margin-top: 14rpx; }
+.time-slot--selected { background: var(--app-color-primary-soft); border-color: var(--app-color-primary); color: var(--app-color-primary); }
+.time-slot-check { background: var(--app-color-primary); border-radius: 50%; color: var(--app-color-surface); height: 32rpx; padding: 0; text-align: center; width: 32rpx; }
+.time-selection-error { color: var(--app-color-danger); display: block; font-size: var(--app-font-status); margin-top: var(--app-space-sm); }
 .time-selection-submit { margin: 0; width: 100%; }
-.time-selection-submit--disabled { opacity: 0.48; }
 </style>

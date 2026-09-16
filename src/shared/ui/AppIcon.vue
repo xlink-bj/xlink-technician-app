@@ -15,7 +15,7 @@ withDefaults(
   }>(),
   {
     size: 18,
-    color: '#627492',
+    color: 'var(--app-color-text-secondary)',
   },
 )
 </script>

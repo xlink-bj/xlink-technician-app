@@ -1,0 +1,165 @@
+/*
+ * App UI Design System v0.1
+ *
+ * These are semantic, platform-safe tokens. Keep this file deliberately small:
+ * it is a shared visual contract, not a utility framework.
+ */
+:root,
+page {
+  --app-color-primary: #2878f2;
+  --app-color-primary-soft: #edf4ff;
+  --app-color-page: #f3f6fa;
+  --app-color-surface: #ffffff;
+  --app-color-border: #e4eaf2;
+  --app-color-border-control: #dfe7f1;
+  --app-color-text-primary: #1d2b40;
+  --app-color-text-secondary: #7b8aa1;
+  --app-color-text-body: #4d607e;
+  --app-color-text-muted: #9aa8ba;
+  --app-color-success: #18ae65;
+  --app-color-success-soft: #dff8eb;
+  --app-color-warning: #bf7b16;
+  --app-color-warning-soft: #fff4e3;
+  --app-color-danger: #f06445;
+  --app-color-danger-soft: #fff0ec;
+  --app-color-disabled: #aeb8c6;
+  --app-color-disabled-surface: #f1f3f6;
+  --app-color-divider: #edf1f6;
+  --app-color-border-soft: #e2ecfb;
+  --app-color-primary-border: #9fc3ff;
+  --app-color-control-surface: #f8fafc;
+  --app-color-shadow: rgba(32, 55, 90, 0.07);
+
+  --app-space-xs: 8rpx;
+  --app-space-sm: 12rpx;
+  --app-space-md: 16rpx;
+  --app-space-lg: 24rpx;
+  --app-space-xl: 32rpx;
+
+  --app-radius-control: 14rpx;
+  --app-radius-surface: 20rpx;
+  --app-radius-card: 24rpx;
+  --app-radius-large: 28rpx;
+
+  --app-font-major-title: 34rpx;
+  --app-font-section-title: 30rpx;
+  --app-font-field-label: 22rpx;
+  --app-font-body: 24rpx;
+  --app-font-value: 23rpx;
+  --app-font-meta: 20rpx;
+  --app-font-status: 21rpx;
+
+  --app-page-gutter: 24rpx;
+  --app-control-height: 76rpx;
+  --app-touch-target: 88rpx;
+  --app-action-bar-padding: 24rpx;
+}
+
+/* Surface / card grammar */
+.app-surface {
+  background: var(--app-color-surface);
+  border: 1rpx solid var(--app-color-border);
+  border-radius: var(--app-radius-card);
+  box-shadow: 0 10rpx 34rpx var(--app-color-shadow);
+  box-sizing: border-box;
+}
+
+.app-surface--compact {
+  border-radius: var(--app-radius-surface);
+  box-shadow: 0 8rpx 26rpx rgba(32, 55, 90, 0.05);
+}
+
+/* Button grammar: components own behavior/state; these classes own visuals. */
+.app-button {
+  border: 0;
+  border-radius: var(--app-radius-control);
+  box-sizing: border-box;
+  font-size: var(--app-font-body);
+  font-weight: 800;
+  height: var(--app-control-height);
+  line-height: var(--app-control-height);
+  margin: 0;
+  padding: 0 var(--app-space-lg);
+  text-align: center;
+}
+
+.app-button::after { border: 0; }
+.app-button--block { width: 100%; }
+.app-button--primary { background: var(--app-color-primary); color: var(--app-color-surface); }
+.app-button--secondary { background: var(--app-color-surface); border: 1rpx solid var(--app-color-primary-border); color: var(--app-color-primary); }
+.app-button--text { background: transparent; color: var(--app-color-primary); padding-left: var(--app-space-sm); padding-right: var(--app-space-sm); }
+.app-button:active { opacity: 0.86; }
+.app-button--disabled { background: var(--app-color-disabled-surface); border-color: var(--app-color-border); color: var(--app-color-disabled); opacity: 1; }
+.app-button--primary.app-button--disabled { background: var(--app-color-primary); color: var(--app-color-surface); opacity: 0.48; }
+.app-button--loading { opacity: 0.78; }
+.app-button--primary.app-button--loading { background: var(--app-color-primary); color: var(--app-color-surface); }
+
+/* Field grammar */
+.app-field { margin-top: var(--app-space-xl); }
+.app-field__label { color: var(--app-color-text-secondary); display: block; font-size: var(--app-font-field-label); font-weight: 600; line-height: 1.5; margin-bottom: var(--app-space-sm); }
+.app-field__required { color: var(--app-color-danger); }
+.app-field__optional { color: var(--app-color-text-secondary); }
+.app-field__supporting { color: var(--app-color-text-secondary); display: block; font-size: var(--app-font-meta); line-height: 1.5; margin-top: var(--app-space-xs); }
+.app-field__error { color: var(--app-color-danger); display: block; font-size: var(--app-font-status); line-height: 1.5; margin-top: var(--app-space-sm); }
+.app-field--error .app-field__label { color: var(--app-color-danger); }
+
+/* Selector grammar */
+.app-selector {
+  align-items: center;
+  background: var(--app-color-control-surface);
+  border: 1rpx solid var(--app-color-border-control);
+  border-radius: var(--app-radius-control);
+  box-sizing: border-box;
+  color: var(--app-color-text-primary);
+  display: flex;
+  justify-content: space-between;
+  margin: 0;
+  min-height: var(--app-touch-target);
+  padding: var(--app-space-sm) var(--app-space-md) var(--app-space-sm) var(--app-space-lg);
+  text-align: left;
+  width: 100%;
+}
+
+.app-selector::after { border: 0; }
+.app-selector__content { flex: 1; min-width: 0; }
+.app-selector__placeholder { color: var(--app-color-text-muted); font-size: var(--app-font-body); }
+.app-selector__value { color: var(--app-color-text-primary); font-size: var(--app-font-body); font-weight: 700; }
+.app-selector__chevron { color: var(--app-color-text-secondary); flex-shrink: 0; margin-left: var(--app-space-sm); }
+.app-selector--selected { background: var(--app-color-primary-soft); border-color: var(--app-color-primary); }
+.app-selector--disabled { background: var(--app-color-disabled-surface); color: var(--app-color-disabled); }
+.app-selector:active { opacity: 0.9; }
+
+/* Choice grammar */
+.app-choice-group { display: flex; gap: var(--app-space-sm); }
+.app-choice {
+  background: var(--app-color-control-surface);
+  border: 1rpx solid var(--app-color-border-control);
+  border-radius: var(--app-radius-control);
+  box-sizing: border-box;
+  color: var(--app-color-text-secondary);
+  flex: 1;
+  font-size: var(--app-font-body);
+  font-weight: 600;
+  height: var(--app-control-height);
+  line-height: var(--app-control-height);
+  margin: 0;
+  padding: 0 var(--app-space-sm);
+}
+
+.app-choice::after { border: 0; }
+.app-choice--selected { background: var(--app-color-primary-soft); border-color: var(--app-color-primary); color: var(--app-color-primary); }
+.app-choice--disabled { background: var(--app-color-disabled-surface); color: var(--app-color-disabled); }
+.app-choice:active { opacity: 0.9; }
+
+/* Notice / status grammar */
+.app-status { color: var(--app-color-text-secondary); display: block; font-size: var(--app-font-status); line-height: 1.5; text-align: center; }
+.app-status--success { color: var(--app-color-success); }
+.app-status--warning { color: var(--app-color-warning); }
+.app-status--danger { color: var(--app-color-danger); }
+.app-status--quiet { padding: var(--app-space-sm) var(--app-space-xs) 0; }
+
+/* Shared information row grammar for confirmation and future Action content. */
+.app-information-row { align-items: center; display: flex; justify-content: space-between; min-height: 66rpx; }
+.app-information-row + .app-information-row { border-top: 1rpx solid var(--app-color-divider); }
+.app-information-row__label { color: var(--app-color-text-secondary); font-size: var(--app-font-field-label); }
+.app-information-row__value { color: var(--app-color-text-primary); font-size: var(--app-font-value); font-weight: 700; text-align: right; }

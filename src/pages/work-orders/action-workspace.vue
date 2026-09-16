@@ -13,11 +13,11 @@
   <view v-else-if="routeError || workspace.loadState === 'blocked'" class="workspace-state workspace-state--centered">
     <text class="workspace-state-title">当前操作暂不可用</text>
     <text class="workspace-state-copy">请返回工单详情，按当前任务继续操作。</text>
-    <button class="workspace-state-action" @tap="exit">返回工单详情</button>
+    <AppButton class="workspace-state-action" @tap="exit">返回工单详情</AppButton>
   </view>
 
   <view v-else-if="workspace.loadState === 'loading'" class="workspace-state workspace-state--centered">
-    <view class="workspace-loading-card" aria-hidden="true">
+    <view class="workspace-loading-card app-surface app-surface--compact" aria-hidden="true">
       <view class="workspace-loading-line workspace-loading-line--short" />
       <view class="workspace-loading-line workspace-loading-line--long" />
       <view class="workspace-loading-block" />
@@ -29,13 +29,13 @@
   <view v-else-if="workspace.loadState === 'failed_retryable'" class="workspace-state workspace-state--centered">
     <text class="workspace-state-title">暂时无法打开操作</text>
     <text class="workspace-state-copy">请检查网络后重试，已保存的本地草稿不会丢失。</text>
-    <button class="workspace-state-action" @tap="reload">重新加载</button>
+    <AppButton class="workspace-state-action" @tap="reload">重新加载</AppButton>
   </view>
 
   <view v-else-if="workspace.loadState === 'failed_terminal'" class="workspace-state workspace-state--centered">
     <text class="workspace-state-title">操作内容暂不可用</text>
     <text class="workspace-state-copy">请返回工单详情后再次尝试。</text>
-    <button class="workspace-state-action" @tap="reload">再次尝试</button>
+    <AppButton class="workspace-state-action" @tap="reload">再次尝试</AppButton>
   </view>
 
   <ActionWorkspaceShell
@@ -49,39 +49,38 @@
     submit-label="继续确认"
     @submit="continueToConfirmation"
   >
-    <view class="action-workspace-content" :data-field-count="workspace.appointmentFields.length">
+    <view class="action-workspace-content app-surface" :data-field-count="workspace.appointmentFields.length">
       <view class="action-content-heading">
         <view class="action-content-title-row">
-          <view class="action-content-icon" aria-hidden="true">▣</view>
+          <view class="action-content-icon" aria-hidden="true"><AppIcon name="appointment" :size="20" /></view>
           <text class="action-content-title">预约信息</text>
         </view>
         <text class="action-content-caption">请与客户确认上门时间安排</text>
       </view>
 
-      <view v-if="workspace.appointmentChoiceField" class="action-content-field action-content-field--choice">
-        <text class="action-content-label">
-          {{ workspace.appointmentChoiceField.label }}<text v-if="workspace.appointmentChoiceField.runtime.required" class="action-content-required"> *</text>
-        </text>
-        <view class="action-content-options">
-          <button
-            v-for="option in workspace.appointmentChoiceField.options"
-            :key="option.value"
-            class="action-content-option"
-            :class="{ 'action-content-option--selected': String(workspace.appointmentForm.values[workspace.appointmentChoiceField.key] ?? '') === option.value }"
-            :disabled="workspace.appointmentChoiceField.runtime.readOnly || workspace.lifecycle === 'submitting'"
-            @tap="setField(workspace.appointmentChoiceField.key, option.value)"
-          >
-            {{ option.label }}
-          </button>
-        </view>
-      </view>
+      <AppField
+        v-if="workspace.appointmentChoiceField"
+        class="action-content-field--choice"
+        :label="workspace.appointmentChoiceField.label"
+        :required="workspace.appointmentChoiceField.runtime.required"
+      >
+        <AppChoiceGroup
+          :options="workspace.appointmentChoiceField.options ?? []"
+          :model-value="String(workspace.appointmentForm.values[workspace.appointmentChoiceField.key] ?? '')"
+          :disabled="workspace.appointmentChoiceField.runtime.readOnly || workspace.lifecycle === 'submitting'"
+          @update:model-value="setField(workspace.appointmentChoiceField.key, $event)"
+        />
+      </AppField>
 
-      <view v-if="workspace.appointmentTimeField" class="action-content-field">
-        <text class="action-content-label">
-          {{ workspace.appointmentTimeField.label }}<text v-if="workspace.appointmentTimeField.runtime.required" class="action-content-required"> *</text>
-        </text>
-        <button
+      <AppField
+        v-if="workspace.appointmentTimeField"
+        class="action-content-field"
+        :label="workspace.appointmentTimeField.label"
+        :required="workspace.appointmentTimeField.runtime.required"
+      >
+        <AppSelector
           class="appointment-time-selector"
+          :selected="Boolean(appointmentDisplay)"
           :disabled="workspace.appointmentTimeField.runtime.readOnly || workspace.lifecycle === 'submitting'"
           @tap="openTimeSelection"
         >
@@ -90,14 +89,16 @@
             <text class="appointment-time-selected-value">{{ appointmentDisplay.timeLabel }}</text>
           </view>
           <text v-else class="appointment-time-placeholder">请选择上门时间</text>
-          <text class="appointment-time-chevron" aria-hidden="true">›</text>
-        </button>
-      </view>
+        </AppSelector>
+      </AppField>
 
-      <view v-if="workspace.appointmentNoteField" class="action-content-field action-content-field--note">
-        <text class="action-content-label">
-          {{ workspace.appointmentNoteField.label }}<text v-if="workspace.appointmentNoteField.runtime.required" class="action-content-required"> *</text><text v-else>（选填）</text>
-        </text>
+      <AppField
+        v-if="workspace.appointmentNoteField"
+        class="action-content-field--note"
+        :label="workspace.appointmentNoteField.label"
+        :required="workspace.appointmentNoteField.runtime.required"
+        :optional="!workspace.appointmentNoteField.runtime.required"
+      >
         <textarea
           class="action-content-note"
           :value="String(workspace.appointmentForm.values[workspace.appointmentNoteField.key] ?? '')"
@@ -106,24 +107,22 @@
           placeholder="请填写与客户沟通的其他信息"
           @input="updateField(workspace.appointmentNoteField.key, $event)"
         />
-      </view>
+      </AppField>
 
-      <view v-for="field in workspace.appointmentExtraFields" :key="field.key" class="action-content-field">
-        <text class="action-content-label">
-          {{ field.label }}<text v-if="field.runtime.required" class="action-content-required"> *</text>
-        </text>
-        <view v-if="field.options?.length" class="action-content-options">
-          <button
-            v-for="option in field.options"
-            :key="option.value"
-            class="action-content-option"
-            :class="{ 'action-content-option--selected': String(workspace.appointmentForm.values[field.key] ?? '') === option.value }"
-            :disabled="field.runtime.readOnly || workspace.lifecycle === 'submitting'"
-            @tap="setField(field.key, option.value)"
-          >
-            {{ option.label }}
-          </button>
-        </view>
+      <AppField
+        v-for="field in workspace.appointmentExtraFields"
+        :key="field.key"
+        class="action-content-field"
+        :label="field.label"
+        :required="field.runtime.required"
+      >
+        <AppChoiceGroup
+          v-if="field.options?.length"
+          :options="field.options"
+          :model-value="String(workspace.appointmentForm.values[field.key] ?? '')"
+          :disabled="field.runtime.readOnly || workspace.lifecycle === 'submitting'"
+          @update:model-value="setField(field.key, $event)"
+        />
         <textarea
           v-else-if="field.type === 'textarea'"
           class="action-content-note"
@@ -138,14 +137,14 @@
           :disabled="field.runtime.readOnly || workspace.lifecycle === 'submitting'"
           @input="updateField(field.key, $event)"
         />
-      </view>
+      </AppField>
     </view>
 
   </ActionWorkspaceShell>
 
   <view v-else class="workspace-state workspace-state--centered">
     <text class="workspace-state-title">操作内容暂不可用</text>
-    <button class="workspace-state-action" @tap="exit">返回工单详情</button>
+    <AppButton class="workspace-state-action" @tap="exit">返回工单详情</AppButton>
   </view>
 </template>
 
@@ -162,6 +161,11 @@ import {
 import { appointmentDisplayFor } from '@features/work-orders/appointment-time'
 import { useSessionStore } from '@shared/state'
 import ActionWorkspaceShell from '@shared/ui/ActionWorkspaceShell.vue'
+import AppButton from '@shared/ui/AppButton.vue'
+import AppChoiceGroup from '@shared/ui/AppChoiceGroup.vue'
+import AppField from '@shared/ui/AppField.vue'
+import AppIcon from '@shared/ui/AppIcon.vue'
+import AppSelector from '@shared/ui/AppSelector.vue'
 import type { OperationError } from '@shared/types'
 
 const session = useSessionStore()
@@ -259,10 +263,10 @@ function actionErrorCopy(error: OperationError | null): string {
 
 <style>
 .workspace-state {
-  background: #f3f6fa;
+  background: var(--app-color-page);
   box-sizing: border-box;
   min-height: 100vh;
-  padding: 24rpx;
+  padding: var(--app-space-lg);
   width: 100%;
 }
 
@@ -275,53 +279,43 @@ function actionErrorCopy(error: OperationError | null): string {
 }
 
 .workspace-state-mark {
-  background: #dce9ff;
+  background: var(--app-color-primary-soft);
   border-radius: 50%;
   height: 64rpx;
-  margin-bottom: 20rpx;
+  margin-bottom: var(--app-space-md);
   width: 64rpx;
 }
 
-.workspace-state-title { color: #1d2b40; font-size: 28rpx; font-weight: 800; }
+.workspace-state-title { color: var(--app-color-text-primary); font-size: var(--app-font-section-title); font-weight: 800; }
 
 .workspace-state-copy {
-  color: #7e8da4;
-  font-size: 22rpx;
+  color: var(--app-color-text-secondary);
+  font-size: var(--app-font-field-label);
   line-height: 1.6;
-  margin-top: 10rpx;
+  margin-top: var(--app-space-sm);
   max-width: 620rpx;
 }
 
-.workspace-state-link { color: #2878f2; font-size: 24rpx; font-weight: 700; margin-top: 22rpx; }
+.workspace-state-link { color: var(--app-color-primary); font-size: var(--app-font-body); font-weight: 700; margin-top: var(--app-space-lg); }
 
 .workspace-state-action {
-  background: #2878f2;
-  border-radius: 14rpx;
-  color: #ffffff;
-  font-size: 24rpx;
-  font-weight: 800;
-  height: 70rpx;
-  line-height: 70rpx;
-  margin-top: 24rpx;
+  margin-top: var(--app-space-lg);
   width: 300rpx;
 }
 
 .workspace-state-action::after { border: 0; }
 
 .workspace-loading-card {
-  background: #ffffff;
-  border: 1rpx solid #e4eaf2;
-  border-radius: 24rpx;
   box-sizing: border-box;
-  margin-bottom: 22rpx;
-  padding: 26rpx;
+  margin-bottom: var(--app-space-lg);
+  padding: var(--app-space-lg);
   width: 100%;
 }
 
 .workspace-loading-line,
 .workspace-loading-block {
   animation: workspace-pulse 1.5s ease-in-out infinite;
-  background: #edf2f7;
+  background: var(--app-color-control-surface);
   border-radius: 999rpx;
 }
 
@@ -332,89 +326,44 @@ function actionErrorCopy(error: OperationError | null): string {
 .workspace-loading-block--tall { height: 160rpx; margin-top: 16rpx; }
 
 .action-workspace-content {
-  background: #ffffff;
-  border: 1rpx solid #e4eaf2;
-  border-radius: 24rpx;
-  box-shadow: 0 10rpx 34rpx rgba(32, 55, 90, 0.07);
-  margin-top: 18rpx;
-  padding: 26rpx;
+  margin-top: var(--app-space-md);
+  padding: var(--app-space-lg);
 }
 
-.action-content-heading { border-bottom: 1rpx solid #edf1f6; padding-bottom: 22rpx; }
+.action-content-heading { border-bottom: 1rpx solid var(--app-color-divider); padding-bottom: var(--app-space-lg); }
 .action-content-title-row { align-items: center; display: flex; }
 
 .action-content-icon {
   align-items: center;
-  background: #eaf2ff;
+  background: var(--app-color-primary-soft);
   border-radius: 10rpx;
-  color: #2878f2;
+  color: var(--app-color-primary);
   display: flex;
   font-size: 22rpx;
   height: 42rpx;
   justify-content: center;
-  margin-right: 12rpx;
+  margin-right: var(--app-space-sm);
   width: 42rpx;
 }
 
-.action-content-title { color: #1d2b40; font-size: 30rpx; font-weight: 800; }
-.action-content-caption, .action-content-label { color: #7b8aa1; font-size: 22rpx; }
-.action-content-caption { display: block; margin-top: 8rpx; }
-.action-content-field { margin-top: 26rpx; }
-.action-content-field--choice { margin-top: 24rpx; }
-.action-content-label { display: block; font-weight: 600; margin-bottom: 12rpx; }
-.action-content-required { color: #f06445; }
+.action-content-title { color: var(--app-color-text-primary); font-size: var(--app-font-section-title); font-weight: 800; }
+.action-content-caption { color: var(--app-color-text-secondary); display: block; font-size: var(--app-font-field-label); margin-top: var(--app-space-xs); }
 
-.action-content-options { display: flex; gap: 14rpx; }
-
-.action-content-option {
-  background: #f8fafc;
-  border: 1rpx solid #dfe7f1;
-  border-radius: 14rpx;
-  color: #61728e;
-  flex: 1;
-  font-size: 24rpx;
-  font-weight: 600;
-  height: 76rpx;
-  line-height: 76rpx;
-  margin: 0;
-  padding: 0 12rpx;
-}
-
-.action-content-option--selected { background: #edf4ff; border-color: #2878f2; color: #2878f2; }
-.action-content-option::after { border: 0; }
-
-.appointment-time-selector {
-  align-items: center;
-  background: #f8fafc;
-  border: 1rpx solid #dfe7f1;
-  border-radius: 14rpx;
-  box-sizing: border-box;
-  color: #1d2b40;
-  display: flex;
-  justify-content: space-between;
-  margin: 0;
-  min-height: 88rpx;
-  padding: 12rpx 20rpx;
-  text-align: left;
-  width: 100%;
-}
-
-.appointment-time-selector::after { border: 0; }
-.appointment-time-placeholder { color: #9aa8ba; font-size: 24rpx; }
+.appointment-time-selector { color: var(--app-color-text-primary); }
+.appointment-time-placeholder { color: var(--app-color-text-muted); font-size: var(--app-font-body); }
 .appointment-time-selected { display: flex; flex-direction: column; gap: 4rpx; }
-.appointment-time-selected-date { color: #1d2b40; font-size: 25rpx; font-weight: 800; }
-.appointment-time-selected-value { color: #2878f2; font-size: 22rpx; font-weight: 700; }
-.appointment-time-chevron { color: #7f90a8; font-size: 42rpx; line-height: 1; }
+.appointment-time-selected-date { color: var(--app-color-text-primary); font-size: var(--app-font-value); font-weight: 800; }
+.appointment-time-selected-value { color: var(--app-color-primary); font-size: var(--app-font-field-label); font-weight: 700; }
 
 .action-content-note,
 .action-content-input {
-  background: #f8fafc;
-  border: 1rpx solid #dfe7f1;
-  border-radius: 14rpx;
+  background: var(--app-color-control-surface);
+  border: 1rpx solid var(--app-color-border-control);
+  border-radius: var(--app-radius-control);
   box-sizing: border-box;
-  color: #1d2b40;
-  font-size: 24rpx;
-  padding: 16rpx 18rpx;
+  color: var(--app-color-text-primary);
+  font-size: var(--app-font-body);
+  padding: var(--app-space-md) 18rpx;
   width: 100%;
 }
 

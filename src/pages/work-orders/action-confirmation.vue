@@ -22,12 +22,12 @@
   <view v-else-if="workspace.loadState === 'failed_retryable'" class="workspace-state workspace-state--centered">
     <text class="workspace-state-title">暂时无法打开确认页</text>
     <text class="workspace-state-copy">请检查网络后重试，已保存的本地草稿不会丢失。</text>
-    <button class="workspace-state-action" @tap="reload">重新加载</button>
+    <AppButton class="workspace-state-action" @tap="reload">重新加载</AppButton>
   </view>
 
   <view v-else-if="workspace.loadState === 'failed_terminal'" class="workspace-state workspace-state--centered">
     <text class="workspace-state-title">预约信息暂不可用</text>
-    <button class="workspace-state-action" @tap="reload">再次尝试</button>
+    <AppButton class="workspace-state-action" @tap="reload">再次尝试</AppButton>
   </view>
 
   <ActionWorkspaceShell
@@ -41,43 +41,43 @@
     submit-label="确认预约"
   >
     <view v-if="!isSuccess" class="confirmation-content">
-      <view class="confirmation-card">
+      <view class="confirmation-card app-surface app-surface--compact">
         <view class="confirmation-card-heading">
-          <view class="confirmation-card-icon" aria-hidden="true">▣</view>
+          <view class="confirmation-card-icon" aria-hidden="true"><AppIcon name="appointment" :size="20" color="var(--app-color-primary)" /></view>
           <text class="confirmation-card-title">预约信息</text>
         </view>
-        <view class="confirmation-row">
-          <text class="confirmation-label">预约日期</text>
-          <text class="confirmation-value">{{ appointmentDisplay?.dateLabel || '—' }}</text>
+        <view class="confirmation-row app-information-row">
+          <text class="confirmation-label app-information-row__label">预约日期</text>
+          <text class="confirmation-value app-information-row__value">{{ appointmentDisplay?.dateLabel || '—' }}</text>
         </view>
-        <view class="confirmation-row">
-          <text class="confirmation-label">预约时间</text>
-          <text class="confirmation-value">{{ appointmentDisplay?.timeLabel || '—' }}</text>
+        <view class="confirmation-row app-information-row">
+          <text class="confirmation-label app-information-row__label">预约时间</text>
+          <text class="confirmation-value app-information-row__value">{{ appointmentDisplay?.timeLabel || '—' }}</text>
         </view>
       </view>
 
-      <view class="confirmation-card">
+      <view class="confirmation-card app-surface app-surface--compact">
         <view class="confirmation-card-heading">
-          <view class="confirmation-card-icon confirmation-card-icon--customer" aria-hidden="true">●</view>
+          <view class="confirmation-card-icon confirmation-card-icon--customer" aria-hidden="true"><AppIcon name="contact" :size="20" color="var(--app-color-primary)" /></view>
           <text class="confirmation-card-title">客户信息</text>
         </view>
-        <view v-if="workspace.detail?.customerName" class="confirmation-row">
-          <text class="confirmation-label">客户姓名</text>
-          <text class="confirmation-value">{{ workspace.detail.customerName }}</text>
+        <view v-if="workspace.detail?.customerName" class="confirmation-row app-information-row">
+          <text class="confirmation-label app-information-row__label">客户姓名</text>
+          <text class="confirmation-value app-information-row__value">{{ workspace.detail.customerName }}</text>
         </view>
-        <view v-if="workspace.detail?.contact?.displayMask" class="confirmation-row">
-          <text class="confirmation-label">联系电话</text>
-          <text class="confirmation-value">{{ workspace.detail.contact.displayMask }}</text>
+        <view v-if="workspace.detail?.contact?.displayMask" class="confirmation-row app-information-row">
+          <text class="confirmation-label app-information-row__label">联系电话</text>
+          <text class="confirmation-value app-information-row__value">{{ workspace.detail.contact.displayMask }}</text>
         </view>
-        <view v-if="customerServiceAddress" class="confirmation-row confirmation-row--address">
-          <text class="confirmation-label">服务地址</text>
-          <text class="confirmation-value confirmation-value--address">{{ customerServiceAddress }}</text>
+        <view v-if="customerServiceAddress" class="confirmation-row app-information-row confirmation-row--address">
+          <text class="confirmation-label app-information-row__label">服务地址</text>
+          <text class="confirmation-value app-information-row__value confirmation-value--address">{{ customerServiceAddress }}</text>
         </view>
       </view>
 
-      <view v-if="noteValue" class="confirmation-card">
+      <view v-if="noteValue" class="confirmation-card app-surface app-surface--compact">
         <view class="confirmation-card-heading">
-          <view class="confirmation-card-icon" aria-hidden="true">≡</view>
+          <view class="confirmation-card-icon" aria-hidden="true"><AppIcon name="order" :size="20" color="var(--app-color-primary)" /></view>
           <text class="confirmation-card-title">备注</text>
         </view>
         <text class="confirmation-note">{{ noteValue }}</text>
@@ -86,16 +86,16 @@
 
     <template #actions v-if="!isSuccess">
       <view class="confirmation-actions">
-        <button class="confirmation-action confirmation-action--secondary" @tap="backToEdit">返回修改</button>
-        <button class="confirmation-action confirmation-action--primary" :class="{ 'confirmation-action--disabled': !workspace.canSubmit }" :disabled="!workspace.canSubmit" @tap="confirmAppointment">
+        <AppButton variant="secondary" class="confirmation-action" @tap="backToEdit">返回修改</AppButton>
+        <AppButton class="confirmation-action" :disabled="!workspace.canSubmit" :loading="workspace.lifecycle === 'submitting'" @tap="confirmAppointment">
           {{ workspace.lifecycle === 'submitting' ? '提交中' : '确认预约' }}
-        </button>
+        </AppButton>
       </view>
     </template>
 
     <template #success>
       <view class="appointment-success" aria-live="polite">
-        <view class="appointment-success-mark" aria-hidden="true">✓</view>
+        <view class="appointment-success-mark" aria-hidden="true"><AppIcon name="complete" :size="42" color="var(--app-color-success)" /></view>
         <text class="appointment-success-title">预约成功</text>
         <text class="appointment-success-copy">已成功为客户预约上门时间</text>
         <view class="appointment-success-time">
@@ -108,8 +108,8 @@
 
     <template #success-actions>
       <view class="confirmation-success-actions">
-        <button class="appointment-success-primary" @tap="viewDetail">查看工单详情</button>
-        <button class="appointment-success-secondary" @tap="viewList">返回工单列表</button>
+        <AppButton class="appointment-success-primary" block @tap="viewDetail">查看工单详情</AppButton>
+        <AppButton variant="secondary" class="appointment-success-secondary" block @tap="viewList">返回工单列表</AppButton>
       </view>
     </template>
   </ActionWorkspaceShell>
@@ -132,6 +132,8 @@ import {
 import { appointmentDisplayFor } from '@features/work-orders/appointment-time'
 import { useSessionStore } from '@shared/state'
 import ActionWorkspaceShell from '@shared/ui/ActionWorkspaceShell.vue'
+import AppButton from '@shared/ui/AppButton.vue'
+import AppIcon from '@shared/ui/AppIcon.vue'
 import type { OperationError } from '@shared/types'
 
 const session = useSessionStore()
@@ -235,78 +237,55 @@ function actionErrorCopy(error: OperationError | null): string {
 <style>
 .workspace-state {
   align-items: center;
-  background: #f3f6fa;
+  background: var(--app-color-page);
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
   justify-content: center;
   min-height: 100vh;
-  padding: 24rpx;
+  padding: var(--app-space-lg);
   text-align: center;
   width: 100%;
 }
 
-.workspace-state-title { color: #1d2b40; font-size: 28rpx; font-weight: 800; }
-.workspace-state-copy { color: #7e8da4; font-size: 22rpx; margin-top: 10rpx; }
-.workspace-state-link { color: #2878f2; font-size: 24rpx; font-weight: 700; margin-top: 22rpx; }
+.workspace-state-title { color: var(--app-color-text-primary); font-size: var(--app-font-section-title); font-weight: 800; }
+.workspace-state-copy { color: var(--app-color-text-secondary); font-size: var(--app-font-field-label); margin-top: var(--app-space-sm); }
+.workspace-state-link { color: var(--app-color-primary); font-size: var(--app-font-body); font-weight: 700; margin-top: var(--app-space-lg); }
 
 .workspace-state-action {
-  background: #2878f2;
-  border-radius: 14rpx;
-  color: #ffffff;
-  font-size: 24rpx;
-  font-weight: 800;
-  height: 70rpx;
-  line-height: 70rpx;
-  margin-top: 24rpx;
+  margin-top: var(--app-space-lg);
   width: 300rpx;
 }
 
 .workspace-state-action::after { border: 0; }
-.workspace-loading-card { background: #ffffff; border-radius: 24rpx; height: 260rpx; margin-bottom: 22rpx; width: 100%; }
+.workspace-loading-card { height: 260rpx; margin-bottom: var(--app-space-lg); width: 100%; }
 
-.confirmation-content { margin-top: 18rpx; }
+.confirmation-content { margin-top: var(--app-space-md); }
 
 .confirmation-card {
-  background: #ffffff;
-  border: 1rpx solid #e4eaf2;
-  border-radius: 20rpx;
-  box-shadow: 0 8rpx 26rpx rgba(32, 55, 90, 0.05);
-  margin-bottom: 16rpx;
-  padding: 24rpx;
+  margin-bottom: var(--app-space-md);
+  padding: var(--app-space-lg);
 }
 
-.confirmation-card-heading { align-items: center; border-bottom: 1rpx solid #edf1f6; display: flex; padding-bottom: 16rpx; }
-.confirmation-card-icon { align-items: center; background: #eaf2ff; border-radius: 9rpx; color: #2878f2; display: flex; font-size: 20rpx; height: 38rpx; justify-content: center; margin-right: 10rpx; width: 38rpx; }
-.confirmation-card-icon--customer { font-size: 18rpx; }
-.confirmation-card-title { color: #1d2b40; font-size: 26rpx; font-weight: 800; }
+.confirmation-card-heading { align-items: center; border-bottom: 1rpx solid var(--app-color-divider); display: flex; padding-bottom: var(--app-space-md); }
+.confirmation-card-icon { align-items: center; background: var(--app-color-primary-soft); border-radius: 9rpx; color: var(--app-color-primary); display: flex; height: 38rpx; justify-content: center; margin-right: var(--app-space-sm); width: 38rpx; }
+.confirmation-card-title { color: var(--app-color-text-primary); font-size: 26rpx; font-weight: 800; }
 
-.confirmation-row { align-items: center; display: flex; justify-content: space-between; min-height: 66rpx; }
-.confirmation-row + .confirmation-row { border-top: 1rpx solid #f0f3f7; }
 .confirmation-row--address { align-items: flex-start; padding-top: 16rpx; }
-.confirmation-label { color: #8190a5; font-size: 22rpx; }
-.confirmation-value { color: #1d2b40; font-size: 23rpx; font-weight: 700; text-align: right; }
 .confirmation-value--address { line-height: 1.5; max-width: 68%; }
-.confirmation-note { color: #4d607e; display: block; font-size: 23rpx; line-height: 1.6; margin-top: 16rpx; }
+.confirmation-note { color: var(--app-color-text-body); display: block; font-size: var(--app-font-value); line-height: 1.6; margin-top: var(--app-space-md); }
 
-.confirmation-actions { display: flex; gap: 14rpx; }
-.confirmation-action { border-radius: 14rpx; box-sizing: border-box; flex: 1; font-size: 24rpx; font-weight: 800; height: 76rpx; line-height: 76rpx; margin: 0; }
-.confirmation-action::after { border: 0; }
-.confirmation-action--secondary { background: #ffffff; border: 1rpx solid #9fc3ff; color: #2878f2; }
-.confirmation-action--primary { background: #2878f2; color: #ffffff; }
-.confirmation-action--disabled { opacity: 0.48; }
+.confirmation-actions { display: flex; gap: var(--app-space-sm); }
+.confirmation-action { flex: 1; }
 
 .appointment-success { align-items: center; display: flex; flex-direction: column; padding: 34rpx 12rpx 12rpx; text-align: center; }
-.appointment-success-mark { align-items: center; background: #dff8eb; border-radius: 50%; color: #18ae65; display: flex; font-size: 54rpx; font-weight: 800; height: 116rpx; justify-content: center; width: 116rpx; }
-.appointment-success-title { color: #1d2b40; font-size: 34rpx; font-weight: 800; margin-top: 24rpx; }
-.appointment-success-copy { color: #7a8ca7; font-size: 22rpx; margin-top: 10rpx; }
-.appointment-success-time { background: #f7faff; border: 1rpx solid #e2ecfb; border-radius: 16rpx; margin-top: 28rpx; padding: 20rpx 34rpx; }
-.appointment-success-date { color: #1d2b40; display: block; font-size: 26rpx; font-weight: 800; }
-.appointment-success-time-value { color: #2878f2; display: block; font-size: 24rpx; font-weight: 700; margin-top: 8rpx; }
-.appointment-success-warning { color: #bf7b16; font-size: 20rpx; line-height: 1.5; margin-top: 16rpx; }
-.confirmation-success-actions { display: flex; flex-direction: column; gap: 12rpx; }
-.appointment-success-primary, .appointment-success-secondary { border-radius: 14rpx; box-sizing: border-box; font-size: 24rpx; font-weight: 800; height: 74rpx; line-height: 74rpx; margin: 0; width: 100%; }
-.appointment-success-primary { background: #2878f2; color: #ffffff; }
-.appointment-success-secondary { background: #ffffff; color: #2878f2; }
-.appointment-success-primary::after, .appointment-success-secondary::after { border: 0; }
+.appointment-success-mark { align-items: center; background: var(--app-color-success-soft); border-radius: 50%; display: flex; height: 116rpx; justify-content: center; width: 116rpx; }
+.appointment-success-title { color: var(--app-color-text-primary); font-size: var(--app-font-major-title); font-weight: 800; margin-top: var(--app-space-lg); }
+.appointment-success-copy { color: var(--app-color-text-secondary); font-size: var(--app-font-field-label); margin-top: var(--app-space-sm); }
+.appointment-success-time { background: var(--app-color-primary-soft); border: 1rpx solid var(--app-color-border-soft); border-radius: var(--app-radius-control); margin-top: 28rpx; padding: 20rpx 34rpx; }
+.appointment-success-date { color: var(--app-color-text-primary); display: block; font-size: 26rpx; font-weight: 800; }
+.appointment-success-time-value { color: var(--app-color-primary); display: block; font-size: var(--app-font-body); font-weight: 700; margin-top: var(--app-space-xs); }
+.appointment-success-warning { color: var(--app-color-warning); font-size: var(--app-font-meta); line-height: 1.5; margin-top: var(--app-space-md); }
+.confirmation-success-actions { display: flex; flex-direction: column; gap: var(--app-space-sm); }
+.appointment-success-primary, .appointment-success-secondary { width: 100%; }
 </style>

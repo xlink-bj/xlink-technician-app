@@ -2,7 +2,7 @@
   <view class="action-workspace-page">
     <scroll-view class="action-workspace-scroll" scroll-y enable-flex>
       <view class="action-workspace-body">
-        <view class="action-workspace-context">
+        <view class="action-workspace-context app-surface app-surface--compact">
           <text class="action-workspace-context-label">当前工单</text>
           <view class="action-workspace-context-row">
             <text class="action-workspace-context-customer">{{ customerName || '工单' }}</text>
@@ -17,21 +17,15 @@
           <slot name="success" />
         </template>
 
-        <view v-if="draftStatus !== 'clean'" class="action-workspace-draft-status" aria-live="polite">
-          <text v-if="draftStatus === 'saving'">正在保存本地草稿</text>
-          <text v-else-if="draftStatus === 'saved_local'">已保存到本地</text>
-          <text v-else-if="draftStatus === 'restore_available'">已恢复本地草稿</text>
-          <text v-else-if="draftStatus === 'save_failed'">本地草稿保存失败</text>
-          <text v-else-if="draftStatus === 'dirty'">编辑未保存</text>
-        </view>
+        <AppStatus v-if="draftStatus === 'saving'" class="action-workspace-draft-status" message="正在保存本地草稿" quiet />
+        <AppStatus v-else-if="draftStatus === 'saved_local'" class="action-workspace-draft-status" message="已保存到本地" quiet />
+        <AppStatus v-else-if="draftStatus === 'restore_available'" class="action-workspace-draft-status" message="已恢复本地草稿" quiet />
+        <AppStatus v-else-if="draftStatus === 'save_failed'" class="action-workspace-draft-status" message="本地草稿保存失败" tone="danger" quiet />
+        <AppStatus v-else-if="draftStatus === 'dirty'" class="action-workspace-draft-status" message="编辑未保存" quiet />
 
-        <view v-if="businessFeedback" class="action-workspace-business-feedback" aria-live="polite">
-          <text>{{ businessFeedback }}</text>
-        </view>
+        <AppStatus v-if="businessFeedback" class="action-workspace-business-feedback" :message="businessFeedback" tone="danger" quiet />
 
-        <view v-if="lifecycle === 'submitting'" class="action-workspace-operation-status" aria-live="polite">
-          <text>正在提交</text>
-        </view>
+        <AppStatus v-if="lifecycle === 'submitting'" class="action-workspace-operation-status" message="正在提交" quiet />
       </view>
     </scroll-view>
 
@@ -39,14 +33,15 @@
       <view class="action-workspace-footer-inner">
         <template v-if="lifecycle !== 'succeeded'">
           <slot name="actions">
-            <button
+            <AppButton
               class="action-workspace-submit"
-              :class="{ 'action-workspace-submit--disabled': !canSubmit }"
               :disabled="!canSubmit"
+              :loading="lifecycle === 'submitting'"
+              block
               @tap="$emit('submit')"
             >
               {{ lifecycle === 'submitting' ? '提交中' : submitLabel }}
-            </button>
+            </AppButton>
           </slot>
         </template>
         <template v-else>
@@ -59,6 +54,8 @@
 
 <script setup lang="ts">
 import type { ActionDraftStatus, ActionLifecycle } from '@runtimes/action'
+import AppButton from './AppButton.vue'
+import AppStatus from './AppStatus.vue'
 
 defineProps<{
   readonly customerName?: string
@@ -78,7 +75,7 @@ defineEmits<{
 
 <style>
 .action-workspace-page {
-  background: #f3f6fa;
+  background: var(--app-color-page);
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
@@ -99,35 +96,27 @@ defineEmits<{
   box-sizing: border-box;
   margin: 0 auto;
   max-width: 960rpx;
-  padding: 22rpx 24rpx 28rpx;
+  padding: 22rpx var(--app-page-gutter) 28rpx;
   width: 100%;
 }
 
-.action-workspace-context,
-.action-workspace-content {
-  background: #ffffff;
-  border: 1rpx solid #e4eaf2;
-  border-radius: 24rpx;
-  box-shadow: 0 10rpx 34rpx rgba(32, 55, 90, 0.07);
-}
-
-.action-workspace-context { padding: 22rpx 24rpx; }
+.action-workspace-context { padding: 22rpx var(--app-space-lg); }
 
 .action-workspace-context-label {
-  color: #8290a4;
+  color: var(--app-color-text-secondary);
   display: block;
-  font-size: 20rpx;
+  font-size: var(--app-font-meta);
 }
 
 .action-workspace-context-row {
   align-items: center;
   display: flex;
   justify-content: space-between;
-  margin-top: 8rpx;
+  margin-top: var(--app-space-xs);
 }
 
 .action-workspace-context-customer {
-  color: #172239;
+  color: var(--app-color-text-primary);
   font-size: 26rpx;
   font-weight: 800;
   max-width: 72%;
@@ -137,48 +126,28 @@ defineEmits<{
 }
 
 .action-workspace-context-number {
-  color: #627492;
-  font-size: 22rpx;
+  color: var(--app-color-text-secondary);
+  font-size: var(--app-font-field-label);
   font-weight: 800;
 }
 
 .action-workspace-draft-status,
 .action-workspace-business-feedback,
 .action-workspace-operation-status {
-  color: #7e8da4;
   display: block;
-  font-size: 20rpx;
-  padding: 12rpx 4rpx 0;
-  text-align: center;
-}
-
-.action-workspace-business-feedback { color: #f06445; font-size: 21rpx; line-height: 1.5; }
-.action-workspace-operation-status { padding-top: 8rpx; }
-
-.action-workspace-submit {
-  background: #2878f2;
-  border-radius: 14rpx;
-  color: #ffffff;
-  font-size: 26rpx;
-  font-weight: 800;
-  height: 76rpx;
-  line-height: 76rpx;
-  margin: 0;
-  width: 100%;
+  padding-top: var(--app-space-sm);
 }
 
 .action-workspace-footer {
-  background: #f3f6fa;
-  border-top: 1rpx solid #e4eaf2;
+  background: var(--app-color-page);
+  border-top: 1rpx solid var(--app-color-border);
   box-sizing: border-box;
   flex-shrink: 0;
-  padding: 12rpx 24rpx calc(16rpx + constant(safe-area-inset-bottom));
+  padding: var(--app-space-sm) var(--app-action-bar-padding) calc(16rpx + constant(safe-area-inset-bottom));
   padding-bottom: calc(16rpx + env(safe-area-inset-bottom));
   width: 100%;
 }
 
 .action-workspace-footer-inner { margin: 0 auto; max-width: 960rpx; width: 100%; }
 
-.action-workspace-submit--disabled { opacity: 0.48; }
-.action-workspace-submit::after { border: 0; }
 </style>

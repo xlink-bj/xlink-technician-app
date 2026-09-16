@@ -10,6 +10,7 @@ export type AppIconName =
   | 'order'
   | 'complete'
   | 'unavailable'
+  | 'chevron-right'
 
 const appIconTypeByName: Readonly<Record<AppIconName, string>> = {
   search: 'search',
@@ -23,6 +24,7 @@ const appIconTypeByName: Readonly<Record<AppIconName, string>> = {
   order: 'compose',
   complete: 'checkmarkempty',
   unavailable: 'minus',
+  'chevron-right': 'forward',
 }
 
 export function appIconTypeFor(name: AppIconName): string {
