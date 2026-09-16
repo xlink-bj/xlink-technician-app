@@ -265,14 +265,14 @@ function actionErrorCopy(error: OperationError | null): string {
 
 .time-selection-content {
   margin-top: var(--app-space-md);
-  padding: var(--app-space-lg);
+  padding: var(--app-card-padding);
 }
 
 .time-selection-heading { border-bottom: 1rpx solid var(--app-color-divider); padding-bottom: var(--app-space-lg); }
 .time-selection-title { color: var(--app-color-text-primary); display: block; font-size: var(--app-font-section-title); font-weight: 800; }
 .time-selection-copy { color: var(--app-color-text-secondary); display: block; font-size: var(--app-font-field-label); margin-top: var(--app-space-xs); }
-.time-section { margin-top: var(--app-space-xl); }
-.time-section--slots { border-top: 1rpx solid var(--app-color-divider); padding-top: var(--app-space-xl); }
+.time-section { margin-top: var(--app-section-gap); }
+.time-section--slots { border-top: 1rpx solid var(--app-color-divider); padding-top: var(--app-section-gap); }
 .time-section-label { color: var(--app-color-text-primary); display: block; font-size: var(--app-font-body); font-weight: 800; margin-bottom: var(--app-space-sm); }
 
 .date-shortcuts { display: flex; gap: 10rpx; }
@@ -312,7 +312,7 @@ function actionErrorCopy(error: OperationError | null): string {
 
 .selected-date-label { color: var(--app-color-text-secondary); font-size: var(--app-font-status); }
 .selected-date-value { color: var(--app-color-text-primary); font-size: var(--app-font-value); font-weight: 700; }
-.time-slots { display: flex; flex-direction: column; gap: var(--app-space-sm); }
+.time-slots { display: flex; flex-direction: column; gap: var(--app-action-bar-gap); }
 
 .time-slot {
   align-items: center;

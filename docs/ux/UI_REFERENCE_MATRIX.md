@@ -11,14 +11,15 @@ third-party UI runtime dependency.
 
 | Reference | Role | Source evidence |
 | --- | --- | --- |
-| WeUI Mini Program | Primary MP interaction and safe-area baseline | [weui-wxss button](https://github.com/Tencent/weui-wxss/blob/master/src/style/widget/weui-button/weui-button.less), [cell](https://github.com/Tencent/weui-wxss/blob/master/src/style/widget/weui-cell/weui-cell_global.less), [select](https://github.com/Tencent/weui-wxss/blob/master/src/style/widget/weui-form/weui-select.less), [radio](https://github.com/Tencent/weui-wxss/blob/master/src/style/widget/weui-form/weui-radio.less), [bottom fixed](https://github.com/Tencent/weui-wxss/blob/master/src/style/widget/weui-footer/weui-btn_bottom-fixed.less) |
-| Vant Weapp | Secondary mobile control anatomy and state coverage | [button](https://github.com/youzan/vant-weapp/blob/dev/packages/button/index.less), [field](https://github.com/youzan/vant-weapp/tree/dev/packages/field), [cell](https://github.com/youzan/vant-weapp/blob/dev/packages/cell/index.less), [goods action](https://github.com/youzan/vant-weapp/tree/dev/packages/goods-action) |
-| Ant Design Mobile | Tertiary token and interaction-state methodology | [Button](https://github.com/ant-design/ant-design-mobile/blob/master/src/components/button/index.zh.md), [Input](https://github.com/ant-design/ant-design-mobile/blob/master/src/components/input/index.zh.md), [Selector](https://github.com/ant-design/ant-design-mobile/blob/master/src/components/selector/index.zh.md), [SafeArea](https://github.com/ant-design/ant-design-mobile/blob/master/src/components/safe-area/index.zh.md) |
+| WeUI Mini Program | Primary MP interaction and safe-area baseline | [pinned commit `739eca5`](https://github.com/Tencent/weui-wxss/tree/739eca530481e9dc9860cc298cb126b9890799cf), [button](https://github.com/Tencent/weui-wxss/blob/739eca530481e9dc9860cc298cb126b9890799cf/src/style/widget/weui-button/weui-button.less), [cell](https://github.com/Tencent/weui-wxss/blob/739eca530481e9dc9860cc298cb126b9890799cf/src/style/widget/weui-cell/weui-cell_global.less), [select](https://github.com/Tencent/weui-wxss/blob/739eca530481e9dc9860cc298cb126b9890799cf/src/style/widget/weui-form/weui-select.less), [radio](https://github.com/Tencent/weui-wxss/blob/739eca530481e9dc9860cc298cb126b9890799cf/src/style/widget/weui-form/weui-radio.less), [bottom fixed](https://github.com/Tencent/weui-wxss/blob/739eca530481e9dc9860cc298cb126b9890799cf/src/style/widget/weui-footer/weui-btn_bottom-fixed.less) |
+| Vant Weapp | Secondary mobile control anatomy and state coverage | [pinned commit `7a7d437`](https://github.com/youzan/vant-weapp/tree/7a7d43757ed19d3ad5e6bca69059e0b9ea565d0b), [button](https://github.com/youzan/vant-weapp/blob/7a7d43757ed19d3ad5e6bca69059e0b9ea565d0b/packages/button/index.less), [field](https://github.com/youzan/vant-weapp/tree/7a7d43757ed19d3ad5e6bca69059e0b9ea565d0b/packages/field), [cell](https://github.com/youzan/vant-weapp/blob/7a7d43757ed19d3ad5e6bca69059e0b9ea565d0b/packages/cell/index.less), [goods action](https://github.com/youzan/vant-weapp/tree/7a7d43757ed19d3ad5e6bca69059e0b9ea565d0b/packages/goods-action) |
+| Ant Design Mobile | Tertiary token and interaction-state methodology | [pinned commit `eee5477`](https://github.com/ant-design/ant-design-mobile/tree/eee5477f8d6221ced8298e3547eb03e0a037a615), [Button](https://github.com/ant-design/ant-design-mobile/blob/eee5477f8d6221ced8298e3547eb03e0a037a615/src/components/button/index.zh.md), [Input](https://github.com/ant-design/ant-design-mobile/blob/eee5477f8d6221ced8298e3547eb03e0a037a615/src/components/input/index.zh.md), [Selector](https://github.com/ant-design/ant-design-mobile/blob/eee5477f8d6221ced8298e3547eb03e0a037a615/src/components/selector/index.zh.md), [SafeArea](https://github.com/ant-design/ant-design-mobile/blob/eee5477f8d6221ced8298e3547eb03e0a037a615/src/components/safe-area/index.zh.md) |
 
 ## Verified implementation references
 
-Values below are the source values observed in the referenced repositories at
-the time of implementation. `rpx` uses the standard 750rpx design width; the
+Values below are the source values observed in the pinned commits above. The
+commit is part of the evidence: do not replace it with a moving branch when
+rechecking the decision. `rpx` uses the standard 750rpx design width; the
 conversion is an implementation convention, not a claim that every platform
 uses the same physical pixel density.
 
@@ -53,9 +54,20 @@ uses the same physical pixel density.
 - Accepted XLink visual direction owns the palette, radius, page background,
   card elevation, and typography values; these are semantic tokens rather than
   copied library theme values.
-- The 44px / 88rpx control baseline is a deliberate cross-platform compromise:
-  it matches Vant's default button height and remains close to WeUI's 48px
-  control while preserving the existing accepted visual shell.
+- The 44px / 88rpx control baseline is a deliberate cross-platform product
+  decision: field technicians need a dense but thumb-safe form, the accepted
+  XLink visual direction already uses this geometry, and the same baseline is
+  now shared by input, selector, choice, and action controls. It matches
+  Vant's pinned default height and remains close to WeUI's pinned 48px control;
+  changing it to 48px would require Product Owner approval.
+- Shared geometry decisions are represented by semantic tokens including
+  `--app-control-padding-x`, `--app-card-padding`, `--app-field-gap`,
+  `--app-section-gap`, `--app-action-bar-padding-x`,
+  `--app-action-bar-gap`, `--app-input-padding-x`,
+  `--app-input-padding-y`, and `--app-textarea-min-height`.
+- The external references are reproducible at the pinned commits above. Their
+  observed values and the adopted XLink values remain separate columns; the
+  XLink values are deliberate overrides where they differ.
 - The matrix does not establish business labels, workflow states, action
   identity, field validation rules, or backend capabilities.
 - No value is inferred from a screenshot alone. Where the XLink shell differs

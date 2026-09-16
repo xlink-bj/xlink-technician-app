@@ -6,9 +6,10 @@
       class="app-choice"
       :class="{
         'app-choice--selected': modelValue === option.value,
-        'app-choice--disabled': disabled,
+        'app-choice--disabled': disabled || option.disabled,
       }"
-      :disabled="disabled"
+      :disabled="disabled || option.disabled"
+      :aria-pressed="modelValue === option.value"
       @tap="$emit('update:modelValue', option.value)"
     >
       {{ option.label }}
@@ -17,10 +18,10 @@
 </template>
 
 <script setup lang="ts">
-import type { FormOption } from '@runtimes/dynamic-form'
+import type { AppChoiceOption } from './types'
 
 defineProps<{
-  readonly options: readonly FormOption[]
+  readonly options: readonly AppChoiceOption[]
   readonly modelValue: string
   readonly disabled?: boolean
 }>()

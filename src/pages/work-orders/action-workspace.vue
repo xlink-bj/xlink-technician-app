@@ -65,7 +65,7 @@
         :required="workspace.appointmentChoiceField.runtime.required"
       >
         <AppChoiceGroup
-          :options="workspace.appointmentChoiceField.options ?? []"
+          :options="appChoiceOptionsFor(workspace.appointmentChoiceField)"
           :model-value="String(workspace.appointmentForm.values[workspace.appointmentChoiceField.key] ?? '')"
           :disabled="workspace.appointmentChoiceField.runtime.readOnly || workspace.lifecycle === 'submitting'"
           @update:model-value="setField(workspace.appointmentChoiceField.key, $event)"
@@ -99,13 +99,13 @@
         :required="workspace.appointmentNoteField.runtime.required"
         :optional="!workspace.appointmentNoteField.runtime.required"
       >
-        <textarea
-          class="action-content-note"
-          :value="String(workspace.appointmentForm.values[workspace.appointmentNoteField.key] ?? '')"
-          maxlength="-1"
+        <AppTextarea
+          :model-value="String(workspace.appointmentForm.values[workspace.appointmentNoteField.key] ?? '')"
+          :maxlength="-1"
           :disabled="workspace.appointmentNoteField.runtime.readOnly || workspace.lifecycle === 'submitting'"
+          :read-only="workspace.appointmentNoteField.runtime.readOnly"
           placeholder="请填写与客户沟通的其他信息"
-          @input="updateField(workspace.appointmentNoteField.key, $event)"
+          @update:model-value="setField(workspace.appointmentNoteField.key, $event)"
         />
       </AppField>
 
@@ -118,24 +118,24 @@
       >
         <AppChoiceGroup
           v-if="field.options?.length"
-          :options="field.options"
+          :options="appChoiceOptionsFor(field)"
           :model-value="String(workspace.appointmentForm.values[field.key] ?? '')"
           :disabled="field.runtime.readOnly || workspace.lifecycle === 'submitting'"
           @update:model-value="setField(field.key, $event)"
         />
-        <textarea
+        <AppTextarea
           v-else-if="field.type === 'textarea'"
-          class="action-content-note"
-          :value="String(workspace.appointmentForm.values[field.key] ?? '')"
+          :model-value="String(workspace.appointmentForm.values[field.key] ?? '')"
           :disabled="field.runtime.readOnly || workspace.lifecycle === 'submitting'"
-          @input="updateField(field.key, $event)"
+          :read-only="field.runtime.readOnly"
+          @update:model-value="setField(field.key, $event)"
         />
-        <input
+        <AppInput
           v-else
-          class="action-content-input"
-          :value="String(workspace.appointmentForm.values[field.key] ?? '')"
+          :model-value="String(workspace.appointmentForm.values[field.key] ?? '')"
           :disabled="field.runtime.readOnly || workspace.lifecycle === 'submitting'"
-          @input="updateField(field.key, $event)"
+          :read-only="field.runtime.readOnly"
+          @update:model-value="setField(field.key, $event)"
         />
       </AppField>
     </view>
@@ -165,7 +165,10 @@ import AppButton from '@shared/ui/AppButton.vue'
 import AppChoiceGroup from '@shared/ui/AppChoiceGroup.vue'
 import AppField from '@shared/ui/AppField.vue'
 import AppIcon from '@shared/ui/AppIcon.vue'
+import AppInput from '@shared/ui/AppInput.vue'
 import AppSelector from '@shared/ui/AppSelector.vue'
+import AppTextarea from '@shared/ui/AppTextarea.vue'
+import type { AppChoiceOption } from '@shared/ui/types'
 import type { OperationError } from '@shared/types'
 
 const session = useSessionStore()
@@ -228,12 +231,10 @@ function setField(key: string, value: string): void {
   workspace.setField(key, value)
 }
 
-function updateField(key: string, event: unknown): void {
-  const input = typeof event === 'object' && event !== null ? event as Record<string, unknown> : {}
-  const detail = typeof input.detail === 'object' && input.detail !== null
-    ? input.detail as Record<string, unknown>
-    : {}
-  workspace.setField(key, typeof detail.value === 'string' ? detail.value : '')
+function appChoiceOptionsFor(
+  field: { readonly options?: readonly { readonly value: string; readonly label: string }[] } | undefined,
+): readonly AppChoiceOption[] {
+  return (field?.options ?? []).map(({ value, label }) => ({ value, label }))
 }
 
 async function openTimeSelection(): Promise<void> {
@@ -327,7 +328,7 @@ function actionErrorCopy(error: OperationError | null): string {
 
 .action-workspace-content {
   margin-top: var(--app-space-md);
-  padding: var(--app-space-lg);
+  padding: var(--app-card-padding);
 }
 
 .action-content-heading { border-bottom: 1rpx solid var(--app-color-divider); padding-bottom: var(--app-space-lg); }
@@ -354,21 +355,6 @@ function actionErrorCopy(error: OperationError | null): string {
 .appointment-time-selected { display: flex; flex-direction: column; gap: 4rpx; }
 .appointment-time-selected-date { color: var(--app-color-text-primary); font-size: var(--app-font-value); font-weight: 800; }
 .appointment-time-selected-value { color: var(--app-color-primary); font-size: var(--app-font-field-label); font-weight: 700; }
-
-.action-content-note,
-.action-content-input {
-  background: var(--app-color-control-surface);
-  border: 1rpx solid var(--app-color-border-control);
-  border-radius: var(--app-radius-control);
-  box-sizing: border-box;
-  color: var(--app-color-text-primary);
-  font-size: var(--app-font-body);
-  padding: var(--app-space-md) 18rpx;
-  width: 100%;
-}
-
-.action-content-note { min-height: 112rpx; }
-.action-content-input { height: 72rpx; padding-bottom: 0; padding-top: 0; }
 
 @keyframes workspace-pulse {
   0%, 100% { opacity: 0.56; }

@@ -249,6 +249,14 @@ Common properties:
 
 Input height, internal padding, typography, and disabled/focus/error treatment should follow the external reference hierarchy before XLink-specific adjustment.
 
+The shared implementation uses `AppInput` for single-line entry and
+`AppTextarea` for multiline entry. Both expose presentation-only value,
+placeholder, disabled, read-only, and error contracts. Single-line controls
+use the shared `control-height`; textarea uses the semantic
+`textarea-min-height` token rather than pretending multiline content has the
+same geometry as an input. Appointment-specific fields and Dynamic Form
+semantics remain outside these controls.
+
 ### Selector
 
 Use when a value opens a focused selection surface such as Appointment date/time.

@@ -265,7 +265,7 @@ function actionErrorCopy(error: OperationError | null): string {
 
 .confirmation-card {
   margin-bottom: var(--app-space-md);
-  padding: var(--app-space-lg);
+  padding: var(--app-card-padding);
 }
 
 .confirmation-card-heading { align-items: center; border-bottom: 1rpx solid var(--app-color-divider); display: flex; padding-bottom: var(--app-space-md); }
@@ -276,7 +276,7 @@ function actionErrorCopy(error: OperationError | null): string {
 .confirmation-value--address { line-height: 1.5; max-width: 68%; }
 .confirmation-note { color: var(--app-color-text-body); display: block; font-size: var(--app-font-value); line-height: 1.6; margin-top: var(--app-space-md); }
 
-.confirmation-actions { display: flex; gap: var(--app-space-sm); }
+.confirmation-actions { display: flex; gap: var(--app-action-bar-gap); }
 .confirmation-action { flex: 1; }
 
 .appointment-success { align-items: center; display: flex; flex-direction: column; padding: 34rpx 12rpx 12rpx; text-align: center; }
@@ -287,6 +287,6 @@ function actionErrorCopy(error: OperationError | null): string {
 .appointment-success-date { color: var(--app-color-text-primary); display: block; font-size: 26rpx; font-weight: 800; }
 .appointment-success-time-value { color: var(--app-color-primary); display: block; font-size: var(--app-font-body); font-weight: 700; margin-top: var(--app-space-xs); }
 .appointment-success-warning { color: var(--app-color-warning); font-size: var(--app-font-meta); line-height: 1.5; margin-top: var(--app-space-md); }
-.confirmation-success-actions { display: flex; flex-direction: column; gap: var(--app-space-sm); }
+.confirmation-success-actions { display: flex; flex-direction: column; gap: var(--app-action-bar-gap); }
 .appointment-success-primary, .appointment-success-secondary { width: 100%; }
 </style>

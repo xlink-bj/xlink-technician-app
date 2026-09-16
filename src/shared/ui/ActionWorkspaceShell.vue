@@ -53,15 +53,15 @@
 </template>
 
 <script setup lang="ts">
-import type { ActionDraftStatus, ActionLifecycle } from '@runtimes/action'
+import type { AppActionDraftStatus, AppActionLifecycle } from './types'
 import AppButton from './AppButton.vue'
 import AppStatus from './AppStatus.vue'
 
 defineProps<{
   readonly customerName?: string
   readonly displayNumber?: string
-  readonly lifecycle: ActionLifecycle
-  readonly draftStatus: ActionDraftStatus
+  readonly lifecycle: AppActionLifecycle
+  readonly draftStatus: AppActionDraftStatus
   readonly canSubmit: boolean
   readonly submitLabel: string
   readonly businessFeedback?: string
@@ -100,7 +100,7 @@ defineEmits<{
   width: 100%;
 }
 
-.action-workspace-context { padding: 22rpx var(--app-space-lg); }
+.action-workspace-context { padding: 22rpx var(--app-card-padding); }
 
 .action-workspace-context-label {
   color: var(--app-color-text-secondary);
@@ -143,7 +143,7 @@ defineEmits<{
   border-top: 1rpx solid var(--app-color-border);
   box-sizing: border-box;
   flex-shrink: 0;
-  padding: var(--app-space-sm) var(--app-action-bar-padding) calc(16rpx + constant(safe-area-inset-bottom));
+  padding: var(--app-space-sm) var(--app-action-bar-padding-x) calc(16rpx + constant(safe-area-inset-bottom));
   padding-bottom: calc(16rpx + env(safe-area-inset-bottom));
   width: 100%;
 }
