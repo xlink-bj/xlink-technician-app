@@ -38,6 +38,7 @@ describe('G4-UX Phase B2 Home', () => {
     expect(homeTemplate).toContain('LocalDraftDiagnosticsPanel')
     expect(homeTemplate).toContain('v-if="mockControlVisible"')
     expect(homePage).toContain('useLocalDraftDiagnosticsStore')
+    expect(homePage).toContain('session.session?.user.id')
     expect(homePage).toContain('isBusinessMockDeveloperModeAvailable')
     expect(homePage).not.toContain('uni.getStorage')
     expect(homePage).not.toContain('uni.setStorage')

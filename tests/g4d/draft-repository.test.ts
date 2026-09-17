@@ -117,6 +117,34 @@ describe('Action Draft Repository', () => {
     expect((await repository.read<Record<string, unknown>>(b)).data?.values).toEqual({ owner: 'b' })
   })
 
+  it('does not collide when content identity is absent versus the literal "none"', async () => {
+    const { storage } = storageFor()
+    const repository = createActionDraftRepository(storage)
+    const withoutContent = actionDraftIdentityFor({
+      userId: userA,
+      workOrderId: asOpaqueId<'WorkOrderId'>('collision-work-order'),
+      workflowNodeId: asOpaqueId<'WorkflowNodeRuntimeId'>('collision-node'),
+      actionIntent: 'set_appointment',
+      contentKind: 'dynamic_form',
+    })
+    const literalNone = actionDraftIdentityFor({
+      userId: userA,
+      workOrderId: withoutContent.workOrderId,
+      workflowNodeId: withoutContent.workflowNodeId,
+      actionIntent: withoutContent.actionIntent,
+      contentKind: withoutContent.contentKind,
+      contentIdentity: 'none',
+    })
+
+    expect(actionDraftStorageKey(withoutContent)).not.toBe(actionDraftStorageKey(literalNone))
+    await repository.write(recordFor(withoutContent, { branch: 'absent' }, '2026-09-17T09:00:00.000Z'))
+    await repository.write(recordFor(literalNone, { branch: 'literal' }, '2026-09-17T10:00:00.000Z'))
+
+    expect((await repository.listForUser(userA)).data?.entries).toHaveLength(2)
+    expect((await repository.read<Record<string, unknown>>(withoutContent)).data?.values).toEqual({ branch: 'absent' })
+    expect((await repository.read<Record<string, unknown>>(literalNone)).data?.values).toEqual({ branch: 'literal' })
+  })
+
   it('counts malformed records, ignores mismatched records, and never throws on malformed identity values', async () => {
     const { storage, values } = storageFor()
     const repository = createActionDraftRepository(storage)

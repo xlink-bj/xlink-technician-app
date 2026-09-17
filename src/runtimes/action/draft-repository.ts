@@ -96,8 +96,12 @@ function identityFromKey(key: string): ActionDraftIdentity | null {
     !contentKinds.has(contentKind as ActionContentKind)
   ) return null
 
-  const contentIdentity = parts[7] === 'none' ? undefined : decode(parts[7])
-  if (parts[7] !== 'none' && !contentIdentity) return null
+  let contentIdentity: string | undefined
+  if (parts[7] !== 'u') {
+    if (!parts[7].startsWith('v')) return null
+    contentIdentity = decode(parts[7].slice(1))
+    if (!contentIdentity) return null
+  }
   return {
     version: 1,
     userId: asOpaqueId<'UserId'>(userId),

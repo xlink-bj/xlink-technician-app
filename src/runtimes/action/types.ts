@@ -99,7 +99,11 @@ export function actionDraftIdentityFor(action: ActionIdentity): ActionDraftIdent
 }
 
 export function actionDraftStorageKey(identity: ActionDraftIdentity): string {
-  const contentIdentity = identity.contentIdentity ?? 'none'
+  // Prefix the optional segment so absence and a literal content identity such
+  // as "none" remain distinct without relying on a reserved user value.
+  const contentIdentity = identity.contentIdentity === undefined
+    ? 'u'
+    : `v${encodeURIComponent(String(identity.contentIdentity))}`
   return [
     'action-workspace',
     String(identity.version),

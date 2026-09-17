@@ -97,6 +97,9 @@ This identity must prevent draft leakage:
 
 A visible title, field label, customer name, form name, or array index is never a valid draft identity.
 
+The serialized key uses a tagged optional content-identity segment, so an
+absent content identity cannot collide with a literal value such as `none`.
+
 ### One latest unfinished draft per Action Identity
 
 The default model is:

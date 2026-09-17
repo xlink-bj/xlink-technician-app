@@ -342,6 +342,13 @@ watch(
   },
 )
 
+watch(
+  () => session.session?.user.id,
+  () => {
+    void draftDiagnostics.refresh()
+  },
+)
+
 onShow(() => {
   if (showHome.value) void draftDiagnostics.refresh()
 })
