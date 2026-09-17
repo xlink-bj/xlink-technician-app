@@ -1,0 +1,132 @@
+{
+  "schemaVersion": 1,
+  "evidenceKind": "beta_form_family_inventory",
+  "capturedAt": "2026-09-17",
+  "environment": "beta",
+  "sanitized": true,
+  "source": {
+    "method": "authenticated_read_only_beta",
+    "r1Reference": "xlink-app/business_jishi",
+    "r1ReferencePathAvailable": false,
+    "productionParity": "unknown",
+    "snapshotPolicy": "historical structures are not promoted to current"
+  },
+  "scan": {
+    "workOrderListRows": 20,
+    "detailReads": 20,
+    "historicalCompletedRepeatNodes": 5,
+    "activeRepeatNodes": 0,
+    "repeatNodesWithExactFormDataId": 0,
+    "repeatNodesWithWorkflowFormDataId": 5,
+    "formDataReadPolicy": "not read without exact formDataId"
+  },
+  "families": [
+    {
+      "alias": "beta-form-family-01",
+      "classification": "OTHER",
+      "confidence": "STRONG",
+      "observedNodeNames": ["评价"],
+      "observedNodeTypes": ["node"],
+      "observedLifecycles": ["active"],
+      "fieldCount": 4,
+      "fields": [
+        {"key": "rate", "type": "rate", "required": true, "multiple": false},
+        {"key": "image", "type": "file", "required": false, "multiple": false},
+        {"key": "memo", "type": "textarea", "required": false, "multiple": false},
+        {"key": "button", "type": "button", "required": false, "multiple": false}
+      ],
+      "formData": {
+        "exactRecordRead": false,
+        "reason": "no exact formDataId captured"
+      }
+    },
+    {
+      "alias": "beta-form-family-02",
+      "classification": "OTHER",
+      "confidence": "STRONG",
+      "observedNodeNames": ["预约"],
+      "observedNodeTypes": ["node"],
+      "observedLifecycles": ["active", "inactive"],
+      "fieldCount": 6,
+      "fields": [
+        {"key": "need", "type": "radio", "required": true, "multiple": false},
+        {"key": "reasons1", "type": "select", "required": true, "multiple": false},
+        {"key": "otherReason", "type": "text", "required": true, "multiple": false},
+        {"key": "datetime", "type": "datetime", "required": true, "multiple": false},
+        {"key": "note", "type": "text", "required": false, "multiple": false},
+        {"key": "modifyReason", "type": "text", "required": true, "multiple": false}
+      ],
+      "formData": {
+        "exactRecordRead": false,
+        "reason": "no exact formDataId captured"
+      }
+    },
+    {
+      "alias": "beta-form-family-03",
+      "classification": "SURVEY",
+      "confidence": "STRONG",
+      "observedNodeNames": ["勘察"],
+      "observedNodeTypes": ["repeat"],
+      "observedLifecycles": ["inactive"],
+      "occurrences": 5,
+      "fieldRowCount": 61,
+      "duplicateFieldKeys": ["province", "length", "width", "gap4"],
+      "fieldKeysByType": {
+        "aLink": ["surveyPDFUrl"],
+        "area": ["area"],
+        "bizSelect": ["serviceGoods"],
+        "cascade": ["part"],
+        "data": ["leakageCause"],
+        "datetime": ["createTime"],
+        "digit": ["gapLength", "height", "length", "perimeter", "planeArea", "squareMeter", "width"],
+        "file": ["afterMoldRemoval", "beforeMoldRemoval", "images1", "images10", "images11", "images12", "images13", "images14", "images15", "images16", "images17", "images18", "images19", "images2", "images20", "images3", "images4", "images5", "images6", "images7", "images8", "images9", "infraredImageList", "surveyDrawing"],
+        "gap": ["gap0", "gap1", "gap2", "gap3", "gap4"],
+        "phone": ["phone", "supervisorPhone"],
+        "radio": ["isMoldRemoved"],
+        "select": ["leakageCauseSelect", "province"],
+        "text": ["address", "city", "district", "memo", "name", "orgId", "orgName", "province", "serviceAppointmentNum", "supervisorName", "surveyNum"]
+      },
+      "requiredFieldKeys": ["part", "squareMeter", "gapLength", "length", "width", "perimeter", "planeArea", "height", "surveyDrawing", "images1", "images2", "leakageCause"],
+      "multipleFieldKeys": ["leakageCause", "serviceGoods"],
+      "providerReferences": {
+        "parts": "valueOption observed",
+        "projPackage": "valueOption observed; option provider not resolved in this inventory"
+      },
+      "formData": {
+        "exactRecordRead": false,
+        "reason": "repeat nodes exposed workflowFormDataId but no exact formDataId; no cross-record query performed"
+      },
+      "evidence": [
+        "node name 勘察",
+        "node type repeat",
+        "61 live field rows",
+        "typed Survey collection and legacy Survey PDF path"
+      ]
+    },
+    {
+      "alias": "beta-form-family-04",
+      "classification": "OTHER",
+      "confidence": "STRONG",
+      "observedNodeNames": ["建单"],
+      "observedNodeTypes": ["auto"],
+      "observedLifecycles": ["active", "inactive"],
+      "fieldCount": 74,
+      "fieldTypes": ["area", "bizSelect", "cascade", "datetime", "file", "foreignkey", "map", "phone", "radio", "select", "text", "textarea"],
+      "fieldKeyCount": 74,
+      "formData": {
+        "exactRecordRead": false,
+        "reason": "not required for family classification"
+      }
+    }
+  ],
+  "notObservedFamilies": [
+    {
+      "classification": "INSPECTION_APPOINTMENT",
+      "reason": "no active typed InspectionAppointment / InspectionForm identity captured in this scan"
+    },
+    {
+      "classification": "QUOTATION",
+      "reason": "quotation is evidenced by typed Order type 0 and dynamic quotation confirmation, not a relevant current workflow form family"
+    }
+  ]
+}

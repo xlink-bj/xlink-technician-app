@@ -63,6 +63,17 @@ implementation.**
 
 ## 1A. Current Beta contract and Mock source of truth
 
+### Domain-truth reclassification (2026-09-17)
+
+The deeper Survey domain investigation is recorded in
+`docs/verification/G4E_SURVEY_DOMAIN_TRUTH.md`. This document preserves the
+earlier G4-E implementation evidence, but the 15-field snapshot below must
+not be read as proof of the active Survey or InspectionAppointment contract.
+It is classified as a shared/historical hybrid. A separate sanitized Beta
+structural scan found a 61-field historical inactive repeat `勘察` family,
+five occurrences and zero active repeat nodes. The existing snapshot and Mock
+implementation are intentionally unchanged in this documentation-only pass.
+
 The previously captured Beta form observation is committed as a sanitized
 structural snapshot at:
 

@@ -117,6 +117,17 @@ historical Inspection form.
 
 ## Development observation
 
+### Domain-truth reclassification (2026-09-17)
+
+The deeper Survey domain investigation is recorded in
+`docs/verification/G4E_SURVEY_DOMAIN_TRUTH.md`. It supersedes any inference
+that this 15-field artifact is the active Survey or InspectionAppointment
+contract: the artifact is now classified as a shared/historical hybrid. A
+separate sanitized Beta structural scan found a 61-field historical inactive
+repeat `勘察` family, five occurrences and zero active repeat nodes. The
+snapshot below remains unchanged for compatibility and review history; it is
+not promoted as current domain truth.
+
 The previous Beta observation found an Inspection form family with 15 field
 rows. The numeric form identity is intentionally not persisted; the snapshot
 uses a deterministic opaque alias and preserves relationships only. A later
