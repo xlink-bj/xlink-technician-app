@@ -57,6 +57,7 @@ page {
   --app-card-padding: 24rpx;
   --app-field-gap: 32rpx;
   --app-section-gap: 32rpx;
+  --app-control-gap: 12rpx;
   --app-action-bar-padding-x: 24rpx;
   --app-action-bar-gap: 12rpx;
   --app-input-padding-x: 32rpx;
@@ -137,10 +138,10 @@ page {
   min-height: var(--app-textarea-min-height);
 }
 
-.app-input::placeholder,
-.app-textarea::placeholder { color: var(--app-color-text-muted); }
-.app-input:focus,
-.app-textarea:focus { border-color: var(--app-color-primary); }
+.app-input__placeholder,
+.app-textarea__placeholder { color: var(--app-color-text-muted); }
+.app-input--focused,
+.app-textarea--focused { border-color: var(--app-color-primary); }
 .app-input--readonly,
 .app-textarea--readonly { background: var(--app-color-disabled-surface); }
 .app-input--disabled,
@@ -177,7 +178,7 @@ page {
 .app-selector:active { opacity: 0.9; }
 
 /* Choice grammar */
-.app-choice-group { display: flex; gap: var(--app-action-bar-gap); }
+.app-choice-group { display: flex; gap: var(--app-control-gap); }
 .app-choice {
   background: var(--app-color-control-surface);
   border: 1rpx solid var(--app-color-border-control);

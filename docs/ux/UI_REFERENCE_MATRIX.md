@@ -62,9 +62,12 @@ uses the same physical pixel density.
   changing it to 48px would require Product Owner approval.
 - Shared geometry decisions are represented by semantic tokens including
   `--app-control-padding-x`, `--app-card-padding`, `--app-field-gap`,
-  `--app-section-gap`, `--app-action-bar-padding-x`,
+  `--app-section-gap`, `--app-control-gap`, `--app-action-bar-padding-x`,
   `--app-action-bar-gap`, `--app-input-padding-x`,
   `--app-input-padding-y`, and `--app-textarea-min-height`.
+- `--app-control-gap` is reserved for ordinary control groups and stacked
+  options. `--app-action-bar-gap` remains an Action Bar grouping token and is
+  not reused by choice or time-slot controls.
 - The external references are reproducible at the pinned commits above. Their
   observed values and the adopted XLink values remain separate columns; the
   XLink values are deliberate overrides where they differ.

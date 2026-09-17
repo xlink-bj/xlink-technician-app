@@ -44,6 +44,7 @@ describe('App UI Design System v0.1', () => {
       '--app-card-padding',
       '--app-field-gap',
       '--app-section-gap',
+      '--app-control-gap',
       '--app-action-bar-padding-x',
       '--app-action-bar-gap',
       '--app-input-padding-x',
@@ -78,9 +79,23 @@ describe('App UI Design System v0.1', () => {
     expect(field).toContain('showOptional')
     expect(input).toContain('modelValue?: string')
     expect(input).toContain('readOnly?: boolean')
+    expect(input).toContain(':disabled="nativeDisabled"')
+    expect(input).toContain('props.disabled || props.readOnly')
+    expect(input).toContain(':placeholder-class="placeholderClass"')
+    expect(input).toContain(':placeholder-style="placeholderStyle"')
+    expect(input).toContain('@focus="handleFocus"')
+    expect(input).toContain('@blur="handleBlur"')
+    expect(input).not.toContain(':readonly=')
     expect(input).toContain("'app-input--error': error")
     expect(textarea).toContain('class="app-textarea"')
     expect(textarea).toContain("'app-textarea--readonly': readOnly")
+    expect(textarea).toContain(':disabled="nativeDisabled"')
+    expect(textarea).toContain('props.disabled || props.readOnly')
+    expect(textarea).toContain(':placeholder-class="placeholderClass"')
+    expect(textarea).toContain(':placeholder-style="placeholderStyle"')
+    expect(textarea).toContain('@focus="handleFocus"')
+    expect(textarea).toContain('@blur="handleBlur"')
+    expect(textarea).not.toContain(':readonly=')
     expect(selector).toContain('selected?: boolean')
     expect(selector).toContain('readOnly?: boolean')
     expect(selector).toContain('error?: boolean')
@@ -122,12 +137,24 @@ describe('App UI Design System v0.1', () => {
     expect(time).toContain('<AppButton')
     expect(time).toContain('AppIcon name="chevron-right"')
     expect(time).toContain('AppIcon v-if="selectedOptionKey === option.key"')
+    expect(time).toContain('var(--app-control-gap)')
+    expect(time).not.toContain('var(--app-action-bar-gap)')
     expect(confirmation).toContain('app-surface')
     expect(confirmation).toContain('<AppInformationRow')
     expect(confirmation).toContain('variant="secondary"')
     expect(confirmation).toContain('AppIcon name="complete"')
     expect(shell).toContain('AppStatus')
     expect(shell).toContain('AppButton')
+
+    const tokens = await readFile(tokenPath, 'utf8')
+    expect(tokens).not.toContain('::placeholder')
+    expect(tokens).not.toContain('.app-input:focus')
+    expect(tokens).not.toContain('.app-textarea:focus')
+    expect(tokens).toContain('.app-input--focused')
+    expect(tokens).toContain('.app-textarea--focused')
+    expect(tokens).toContain('.app-choice-group { display: flex; gap: var(--app-control-gap); }')
+    expect(tokens).not.toContain('.app-choice-group { display: flex; gap: var(--app-action-bar-gap); }')
+    expect(confirmation).toContain('var(--app-action-bar-gap)')
 
     const allMigrated = [workspace, time, confirmation, shell].join('\n')
     for (const literal of ['#2878f2', '#f3f6fa', '#ffffff', '#e4eaf2', '#1d2b40', '#7b8aa1', '#18ae65', '#f06445']) {

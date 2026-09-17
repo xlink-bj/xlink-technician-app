@@ -312,7 +312,7 @@ function actionErrorCopy(error: OperationError | null): string {
 
 .selected-date-label { color: var(--app-color-text-secondary); font-size: var(--app-font-status); }
 .selected-date-value { color: var(--app-color-text-primary); font-size: var(--app-font-value); font-weight: 700; }
-.time-slots { display: flex; flex-direction: column; gap: var(--app-action-bar-gap); }
+.time-slots { display: flex; flex-direction: column; gap: var(--app-control-gap); }
 
 .time-slot {
   align-items: center;

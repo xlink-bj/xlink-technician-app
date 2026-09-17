@@ -251,7 +251,11 @@ Input height, internal padding, typography, and disabled/focus/error treatment s
 
 The shared implementation uses `AppInput` for single-line entry and
 `AppTextarea` for multiline entry. Both expose presentation-only value,
-placeholder, disabled, read-only, and error contracts. Single-line controls
+placeholder, disabled, read-only, and error contracts. Read-only is rendered
+as an independent visual state but is backed by the cross-platform native
+`disabled` behavior so it cannot be edited on MP or App. Placeholder styling
+uses uni-app's `placeholder-class` / `placeholder-style` contract, and focus
+visuals are driven by explicit focus/blur state classes. Single-line controls
 use the shared `control-height`; textarea uses the semantic
 `textarea-min-height` token rather than pretending multiline content has the
 same geometry as an input. Appointment-specific fields and Dynamic Form
