@@ -92,6 +92,22 @@ check is:
 pnpm run check:inspection-contract
 ```
 
+When a local Beta account is available, the repository can establish the
+read Session itself using the R1-compatible phone login flow:
+
+```text
+XLINK_BETA_PHONE=<Beta account>
+XLINK_BETA_CODE=<Beta test code>
+pnpm run inspect:inspection-contract:beta
+```
+
+The helper posts the verified `method`/`phone`/`code`/`tenantId` shape to
+`index/phoneLogin.do`, keeps `data.token` in memory, and sends it as
+`Cookie: JSESSIONID` for the subsequent read-only calls. It only permits the
+Beta host. Password mode is available through
+`XLINK_BETA_LOGIN_METHOD=password` and `XLINK_BETA_PASSWORD`. Credentials are
+runtime inputs only and are not written to the repository.
+
 The default observed Inspection Mock is generated from that snapshot by
 `src/adapters/api/mock/inspection-contract.ts` and then passes through the
 existing raw-response Adapter and Dynamic Form Runtime. There is no second

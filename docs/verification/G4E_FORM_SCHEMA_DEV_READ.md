@@ -79,6 +79,30 @@ In a controlled authenticated Beta environment, append `--live` (or set
 compare its deterministic fingerprint with the committed snapshot. CI does
 not require Beta credentials.
 
+## Local Beta login and capture
+
+The repository now includes the same R1 login flow used by the existing
+business tooling. It posts `method`, `phone`, `code`, and `tenantId` to
+`index/phoneLogin.do`; the returned opaque `data.token` is held in memory and
+sent as `Cookie: JSESSIONID=...` for subsequent read-only requests. The CLI
+only permits the Beta host and never prints or persists the session value.
+
+Provide credentials through the shell environment, not through a committed
+file or chat message:
+
+```text
+XLINK_BETA_PHONE=<Beta account>
+XLINK_BETA_CODE=<Beta test code>
+pnpm run inspect:inspection-contract:beta -- --work-order=<optional-safe-id>
+```
+
+Password login is also supported with `XLINK_BETA_LOGIN_METHOD=password` and
+`XLINK_BETA_PASSWORD`. `--phone`, `--code`, `--password`, `--tenant`,
+`--base-url`, `--work-order`, `--node`, and `--output` are available for a
+controlled invocation. The command performs login and contract discovery in
+one process, so the Session never needs to be copied into
+`XLINK_SCHEMA_SESSION_REF`.
+
 ## Development observation
 
 The current Beta observation found an active Inspection form family with 15

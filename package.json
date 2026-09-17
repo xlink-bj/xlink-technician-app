@@ -10,6 +10,7 @@
     "build:app": "uni build -p app",
     "inspect:form-schema": "node scripts/inspect-inspection-contract.mjs",
     "inspect:inspection-contract": "node scripts/inspect-inspection-contract.mjs",
+    "inspect:inspection-contract:beta": "node scripts/inspect-inspection-contract-beta.mjs",
     "check:inspection-contract": "node scripts/check-inspection-contract.mjs",
     "typecheck": "vue-tsc --noEmit",
     "test": "vitest run",

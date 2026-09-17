@@ -61,6 +61,25 @@ The MP-WEIXIN compile check is available locally with:
 pnpm run build:mp-weixin
 ```
 
+## Beta read-only contract discovery
+
+For local inspection-contract discovery, use the R1-compatible Beta login
+helper. It logs in with `index/phoneLogin.do`, keeps the returned opaque
+session in memory, and performs only authenticated reads. The helper rejects
+non-Beta hosts and never prints or persists the session value.
+
+```sh
+XLINK_BETA_PHONE=<Beta account> \
+XLINK_BETA_CODE=<Beta test code> \
+pnpm run inspect:inspection-contract:beta
+```
+
+Use `XLINK_BETA_LOGIN_METHOD=password` and `XLINK_BETA_PASSWORD` for the
+password variant. `--work-order`, `--node`, and `--output` are available for a
+controlled capture. The output is sanitized before it can be committed; no
+real write, upload, customer call, or Production request is part of this
+command.
+
 The source ownership skeleton is under `src/`: `app` contains bootstrap,
 `shared` contains cross-cutting types/config/state/UI boundaries, `adapters`
 contains infrastructure boundaries, `runtimes` contains the future workflow

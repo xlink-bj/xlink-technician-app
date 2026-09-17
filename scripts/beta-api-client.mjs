@@ -1,0 +1,171 @@
+#!/usr/bin/env node
+
+/**
+ * Small, read-only Beta API client for local contract discovery.
+ *
+ * The login response contains the opaque JSESSIONID in data.token. The token
+ * is returned to the caller for in-process use only; this module never writes
+ * it to disk or prints it.
+ */
+
+const DEFAULT_BETA_API_BASE_URL = 'https://xlinkbeta.fsgo365.cn/fsgo/wm'
+const DEFAULT_BETA_TENANT_ID = '1340835581184723420'
+const BETA_HOST = 'xlinkbeta.fsgo365.cn'
+
+export class BetaApiClientError extends Error {
+  constructor(message, code = 'beta_api_failed') {
+    super(message)
+    this.name = 'BetaApiClientError'
+    this.code = code
+  }
+}
+
+function isObject(value) {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function endpoint(baseUrl, path) {
+  return `${baseUrl.replace(/\/+$/, '')}/${path.replace(/^\/+/, '')}`
+}
+
+function formBody(body) {
+  return new URLSearchParams(
+    Object.entries(body).map(([key, value]) => [key, String(value)]),
+  ).toString()
+}
+
+function isSuccessful(value) {
+  return value === true || value === 1 || value === '1' || value === 'true'
+}
+
+function fetchFunction(fetchImpl) {
+  const implementation = fetchImpl ?? globalThis.fetch
+  if (typeof implementation !== 'function') {
+    throw new BetaApiClientError('Node fetch is unavailable', 'runtime_unavailable')
+  }
+  return implementation
+}
+
+function timeoutSignal(timeoutMs) {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), timeoutMs)
+  return { controller, timer }
+}
+
+function normalizedTimeout(value) {
+  return Number.isFinite(value) && value > 0 ? value : 15_000
+}
+
+async function requestJson(options, path, body) {
+  const request = fetchFunction(options.fetchImpl)
+  const { controller, timer } = timeoutSignal(normalizedTimeout(options.timeoutMs))
+  try {
+    const response = await request(endpoint(options.apiBaseUrl, path), {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json, text/plain, */*',
+        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+        ...(options.sessionRef ? { Cookie: `JSESSIONID=${options.sessionRef}` } : {}),
+      },
+      body: formBody(body),
+      signal: controller.signal,
+    })
+    if (!response.ok) {
+      throw new BetaApiClientError(`Beta API returned HTTP ${response.status}`, 'http_error')
+    }
+    let raw
+    try {
+      raw = await response.json()
+    } catch {
+      throw new BetaApiClientError('Beta API returned invalid JSON', 'malformed_response')
+    }
+    if (!isObject(raw)) throw new BetaApiClientError('Beta API returned an invalid response', 'malformed_response')
+    return raw
+  } catch (error) {
+    if (error instanceof BetaApiClientError) throw error
+    throw new BetaApiClientError('Beta API request could not be completed', 'network_error')
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+export function assertBetaApiBaseUrl(value) {
+  let parsed
+  try {
+    parsed = new URL(value)
+  } catch {
+    throw new BetaApiClientError('Beta API base URL is invalid', 'invalid_base_url')
+  }
+  if (parsed.protocol !== 'https:' || parsed.hostname !== BETA_HOST) {
+    throw new BetaApiClientError('This local login tool only permits the Beta API host', 'non_beta_host')
+  }
+  return parsed.toString().replace(/\/+$/, '')
+}
+
+export function normalizeBetaLoginMethod(value = 'code') {
+  if (value === '1' || value === 'code' || value === 'sms') return '1'
+  if (value === '2' || value === 'password') return '2'
+  throw new BetaApiClientError('Beta login method must be code or password', 'invalid_login_method')
+}
+
+export function betaDefaults(env = process.env) {
+  const configuredTimeout = Number(env.XLINK_BETA_TIMEOUT_MS ?? 15_000)
+  return {
+    apiBaseUrl: env.XLINK_BETA_API_BASE_URL?.trim() || DEFAULT_BETA_API_BASE_URL,
+    tenantId: env.XLINK_BETA_TENANT_ID?.trim() || DEFAULT_BETA_TENANT_ID,
+    phone: env.XLINK_BETA_PHONE?.trim() || '',
+    method: normalizeBetaLoginMethod(env.XLINK_BETA_LOGIN_METHOD?.trim() || 'code'),
+    code: env.XLINK_BETA_CODE?.trim() || '',
+    password: env.XLINK_BETA_PASSWORD?.trim() || '',
+    timeoutMs: normalizedTimeout(configuredTimeout),
+  }
+}
+
+export async function loginBeta(options) {
+  const apiBaseUrl = assertBetaApiBaseUrl(options.apiBaseUrl || DEFAULT_BETA_API_BASE_URL)
+  const method = normalizeBetaLoginMethod(options.method)
+  const phone = String(options.phone || '').trim()
+  const credential = String(options.credential || '').trim()
+  const tenantId = String(options.tenantId || DEFAULT_BETA_TENANT_ID).trim()
+  if (!phone || !credential || !tenantId) {
+    throw new BetaApiClientError('Beta login requires phone, credential and tenant', 'missing_login_input')
+  }
+  const raw = await requestJson({
+    apiBaseUrl,
+    timeoutMs: Number.isFinite(options.timeoutMs) ? options.timeoutMs : 15_000,
+    fetchImpl: options.fetchImpl,
+  }, 'index/phoneLogin.do', {
+    method,
+    phone,
+    // R1 sends both SMS codes and password credentials in the code field.
+    code: credential,
+    tenantId,
+  })
+  if (!isSuccessful(raw.success)) {
+    throw new BetaApiClientError('Beta login was rejected', 'login_rejected')
+  }
+  const data = isObject(raw.data) ? raw.data : undefined
+  const token = typeof data?.token === 'string' ? data.token.trim() : ''
+  if (!token) throw new BetaApiClientError('Beta login returned no session', 'missing_session')
+  return { sessionRef: token }
+}
+
+export function createBetaReadClient(options) {
+  const apiBaseUrl = assertBetaApiBaseUrl(String(options.apiBaseUrl || '').trim())
+  const sessionRef = String(options.sessionRef || '').trim()
+  if (!apiBaseUrl || !sessionRef) {
+    throw new BetaApiClientError('Beta read requires API base URL and authenticated session', 'missing_read_input')
+  }
+  return {
+    read(path, body = {}) {
+      return requestJson({
+        apiBaseUrl,
+        sessionRef,
+        timeoutMs: normalizedTimeout(options.timeoutMs),
+        fetchImpl: options.fetchImpl,
+      }, path, body)
+    },
+  }
+}
+
+export { DEFAULT_BETA_API_BASE_URL, DEFAULT_BETA_TENANT_ID }

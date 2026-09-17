@@ -11,6 +11,8 @@
 import { createHash } from 'node:crypto'
 import { readFile, writeFile } from 'node:fs/promises'
 
+import { assertBetaApiBaseUrl, createBetaReadClient } from './beta-api-client.mjs'
+
 const ACTIVE_NODE_STATES = new Set([0, '0', 'active'])
 const CODE_FIELD_TYPES = new Set(['select', 'radio', 'checkbox'])
 const FRONTEND_STRUCTURAL_KEYS = new Set([
@@ -346,6 +348,16 @@ function providerShape(kind) {
 }
 
 async function readJson(options, path, body) {
+  if (options.readClient) {
+    try {
+      return await options.readClient.read(path, body)
+    } catch (error) {
+      throw new ContractDiscoveryError(
+        error instanceof Error ? error.message : 'Beta read could not be completed',
+        error?.code ?? 'beta_read_failed',
+      )
+    }
+  }
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), options.timeoutMs)
   try {
@@ -591,13 +603,19 @@ export async function runInspectionContractCli(argv = process.argv.slice(2)) {
   if (!apiBaseUrl || !sessionRef) {
     throw new ContractDiscoveryError('XLINK_SCHEMA_API_BASE_URL and XLINK_SCHEMA_SESSION_REF are required for a read-only Beta capture', 'missing_beta_credentials')
   }
+  const normalizedApiBaseUrl = assertBetaApiBaseUrl(apiBaseUrl)
   const snapshot = await discoverInspectionContract({
-    apiBaseUrl,
+    apiBaseUrl: normalizedApiBaseUrl,
     sessionRef,
     timeoutMs: Number(process.env.XLINK_SCHEMA_TIMEOUT_MS ?? 15_000),
     tenantId: process.env.XLINK_SCHEMA_TENANT_ID?.trim(),
     workOrderId: args['work-order'] ?? process.env.XLINK_SCHEMA_WORK_ORDER_ID?.trim(),
     nodeId: args.node ?? process.env.XLINK_SCHEMA_INSPECTION_NODE_ID?.trim(),
+    readClient: createBetaReadClient({
+      apiBaseUrl: normalizedApiBaseUrl,
+      sessionRef,
+      timeoutMs: Number(process.env.XLINK_SCHEMA_TIMEOUT_MS ?? 15_000),
+    }),
   })
   const outputFile = args.output ?? process.env.XLINK_SCHEMA_OUTPUT_FILE?.trim()
   const serialized = `${JSON.stringify(snapshot, null, 2)}\n`
@@ -619,7 +637,16 @@ export async function runContractCheck(snapshotFile, options = {}) {
     if (!options.apiBaseUrl || !options.sessionRef) {
       throw new ContractDiscoveryError('live drift check requires Beta read credentials', 'missing_beta_credentials')
     }
-    const live = await discoverInspectionContract(options)
+    const normalizedApiBaseUrl = assertBetaApiBaseUrl(options.apiBaseUrl)
+    const live = await discoverInspectionContract({
+      ...options,
+      apiBaseUrl: normalizedApiBaseUrl,
+      readClient: createBetaReadClient({
+        apiBaseUrl: normalizedApiBaseUrl,
+        sessionRef: options.sessionRef,
+        timeoutMs: options.timeoutMs,
+      }),
+    })
     if (contractFingerprint(live) !== result.fingerprint) {
       throw new ContractDiscoveryError('current sanitized Beta contract differs from the committed snapshot', 'contract_drift')
     }
