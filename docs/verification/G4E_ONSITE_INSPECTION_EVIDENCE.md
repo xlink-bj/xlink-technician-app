@@ -1,9 +1,9 @@
 # G4-E On-site Inspection / Inspection Form Evidence
 
-Status: Phase 2 bounded fix pass — awaiting review
+Status: Beta contract discovery + Mock fidelity pass — awaiting review
 Repository: `xlink-bj/xlink-technician-app`  
 Branch: `rebuild/g4e-onsite-inspection`  
-Baseline: `0a46d8482b878b2d04f08894da54f5b77fb56214`  
+Baseline: `ba71d1e44ad92a632954908522916e08bfd2b5eb`
 Issue: `#21`
 
 This document combines the accepted Phase 0/1 evidence with the bounded Phase
@@ -60,6 +60,59 @@ The following remain UNKNOWN and block implementation claims:
 Decision: **Phase 0/1 evidence is accepted. Phase 2 is limited to the existing
 verified inspection-node boundary and leaves the UNKNOWNs below outside the
 implementation.**
+
+## 1A. Current Beta contract and Mock source of truth
+
+The current Beta form observation is committed as a sanitized structural
+snapshot at:
+
+```text
+contracts/beta/inspection/current.json
+```
+
+The snapshot is authoritative for this development Beta form family only. It
+contains a deterministic opaque form alias, field identity aliases, structural
+metadata, provider contracts and value shapes. It contains no raw work-order,
+form-data, customer, tenant, session, token or media values.
+
+The repeatable read-only discovery command is:
+
+```text
+pnpm run inspect:inspection-contract
+```
+
+It discovers the active form identity from the authenticated workflow node,
+then reads `biz/extField/query`, an exact existing FormData record when the
+node exposes one, and only the evidenced provider endpoints. It never falls
+back to the historical Inspection form ID. `--work-order` and `--node` are
+available for deterministic controlled captures. The local integrity/drift
+check is:
+
+```text
+pnpm run check:inspection-contract
+```
+
+The default observed Inspection Mock is generated from that snapshot by
+`src/adapters/api/mock/inspection-contract.ts` and then passes through the
+existing raw-response Adapter and Dynamic Form Runtime. There is no second
+hand-authored 15-field Inspection schema.
+
+Current provider status in the committed snapshot:
+
+| Provider | Status | Disposition |
+| --- | --- | --- |
+| `parts` | VERIFIED | R1 multistage cascade response retained. |
+| `qualified` | VERIFIED | R1 batch code response retained. |
+| `projPackage` | UNKNOWN | No options fabricated; completion remains guarded. |
+| `inspectionSOP` | UNKNOWN | Custom record contract not fabricated. |
+| `inspectionContent` | UNKNOWN | Multi-value provider not fabricated. |
+
+This implementation run did not have an authenticated Beta session in its
+environment, so it did not perform a new live capture. The committed snapshot
+is the previously sanitized Beta observation; the new command is ready for a
+controlled capture with `XLINK_SCHEMA_API_BASE_URL` and
+`XLINK_SCHEMA_SESSION_REF`. No live write, upload, phone call or production
+request was made.
 
 ## 2. R1 business sequence
 

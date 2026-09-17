@@ -1,20 +1,21 @@
-# G4-E Form Schema — Development Read Snapshot
+# G4-E Form Schema — Current Beta Contract Observation
 
-Status: development read evidence only; not a production schema registry.  
+Status: current Beta read evidence; not a Production schema registry.
 Repository: `xlink-bj/xlink-technician-app`  
 Branch: `rebuild/g4e-onsite-inspection`
 
 ## Purpose
 
 This record establishes how the Technician application obtains the real
-dynamic-form shape. It is a shape-only snapshot from a read-only development
-database check on 2026-09-17. It contains no form values, customer data,
-tenant/session/token material, media references, or raw response payloads.
+dynamic-form shape. The machine-readable contract is committed at
+`contracts/beta/inspection/current.json`. It is a sanitized, deterministic
+snapshot from an authenticated read-only Beta observation on 2026-09-17. It
+contains no form values, customer data, tenant/session/token material, media
+references, or raw response payloads.
 
-The exact active form for a Beta/Production technician must still be confirmed
-through an authenticated read using the same Adapter path. This development
-observation is evidence for field normalization and capability decisions, not
-a license to infer production behavior.
+Dev and Beta are the same development environment for this slice. Therefore
+the active runtime observation is the current Beta contract authority for
+development. Production parity remains UNKNOWN and is not asserted here.
 
 ## Read method
 
@@ -49,23 +50,40 @@ sortOrder: desc
 is:_id|string#and: <FormDataId>
 ```
 
-The local shape-only inspector is:
+The repeatable read-only contract inspector is:
 
 ```text
-pnpm run inspect:form-schema
+pnpm run inspect:inspection-contract
 ```
 
-It requires runtime-only environment variables
-`XLINK_SCHEMA_API_BASE_URL`, `XLINK_SCHEMA_SESSION_REF`, and
-`XLINK_SCHEMA_FORM_DEFINITION_ID`; `XLINK_SCHEMA_FORM_DATA_ID` is optional.
-The inspector prints field names/types and value shapes only. It never writes a
-response file or prints raw form values, cookies, tokens, or customer data.
+It requires runtime-only `XLINK_SCHEMA_API_BASE_URL` and
+`XLINK_SCHEMA_SESSION_REF`. A deterministic work-order read can be selected
+with `XLINK_SCHEMA_WORK_ORDER_ID` (or `--work-order`) and an ambiguous active
+node can be selected with `XLINK_SCHEMA_INSPECTION_NODE_ID` (or `--node`). The
+inspector discovers the active node and its `formDefinitionId`; it never uses a
+historical ID, page title, field name, or Mock fixture as a fallback.
+
+The inspector performs only authenticated POST reads. It can write a
+sanitized candidate only when `XLINK_SCHEMA_OUTPUT_FILE` or `--output` is
+explicitly supplied. It never prints or persists raw form values, cookies,
+tokens, tenant identifiers, customer data, or media references.
+
+The committed snapshot can be checked without Beta credentials:
+
+```text
+pnpm run check:inspection-contract
+```
+
+In a controlled authenticated Beta environment, append `--live` (or set
+`XLINK_SCHEMA_CHECK_LIVE=true`) to capture the current sanitized contract and
+compare its deterministic fingerprint with the committed snapshot. CI does
+not require Beta credentials.
 
 ## Development observation
 
-The read-only development check found an active `InspectionForm` candidate
-with 15 field rows. The numeric form identity is intentionally not persisted
-in this document; it remains an opaque runtime input.
+The current Beta observation found an active Inspection form family with 15
+field rows. The numeric form identity is intentionally not persisted; the
+snapshot uses a deterministic opaque alias and preserves relationships only.
 
 | Field key | Type | Required | Multiple | Option/provider | Conditional metadata |
 | --- | --- | ---: | ---: | --- | --- |
@@ -119,9 +137,30 @@ from this record.
 ## Authority and remaining unknowns
 
 - R1 is the authority for endpoint/request and legacy dynamic-form semantics.
-- The development read is evidence of one development form family only.
+- The current Beta read is evidence of one active form family only.
 - R2 remains presentation/IA reference only.
-- Beta/Production active form membership, complete option providers, custom
-  widget contracts, server validation, and media persistence remain UNKNOWN.
+- Production active-form membership/parity, complete business-record and
+  custom-widget providers, server validation, and media persistence remain
+  UNKNOWN.
 - No write command, upload, or production endpoint was executed for this
   snapshot.
+
+## Mock source of truth
+
+The default observed Inspection Mock is mechanically derived from
+`contracts/beta/inspection/current.json` by
+`src/adapters/api/mock/inspection-contract.ts`. The Adapter still receives
+backend-shaped field rows and provider responses, so the runtime path remains:
+
+```text
+sanitized Beta snapshot
+  -> generated Mock raw response
+  -> existing Adapter
+  -> Dynamic Form Runtime
+  -> Action Workspace
+```
+
+`parts` and `qualified` are VERIFIED provider families in this snapshot.
+`projPackage`, `inspectionSOP`, and the provider for the multi-value
+`inspectionContent` field remain explicitly UNKNOWN; they have no fabricated
+options and continue to block completion when required by the Runtime.
