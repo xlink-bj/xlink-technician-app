@@ -10,7 +10,7 @@
 
     <template v-for="field in workspace.dynamicFields" :key="field.key">
       <AppField
-        v-if="field.runtime.capability !== 'UNSUPPORTED'"
+        v-if="field.runtime.visible && field.runtime.capability !== 'UNSUPPORTED'"
         class="inspection-action-field"
         :label="field.label"
         :required="field.runtime.required"
@@ -38,13 +38,15 @@
           </text>
         </view>
         <AppButton
+          v-if="!field.runtime.readOnly"
           variant="secondary"
-          :disabled="workspace.lifecycle === 'submitting' || workspace.mediaInFlightField === field.key"
+          :disabled="!workspace.canPickDynamicMedia(field.key) || workspace.lifecycle === 'submitting' || workspace.mediaInFlightField === field.key"
           :loading="workspace.mediaInFlightField === field.key"
           @tap="pickMedia(field.key)"
         >
           {{ mediaCountFor(field.key) > 0 ? '重新选择' : '选择照片' }}
         </AppButton>
+        <text v-else class="inspection-action-media-readonly">仅查看</text>
       </view>
       <AppInput
         v-else
@@ -148,6 +150,7 @@ async function save(): Promise<void> {
 }
 .inspection-action-media-copy { align-items: center; display: flex; gap: var(--app-space-xs); }
 .inspection-action-media-label { color: var(--app-color-text-primary); font-size: var(--app-font-body); }
+.inspection-action-media-readonly { color: var(--app-color-text-secondary); font-size: var(--app-font-caption); }
 .inspection-action-unsupported { margin-top: var(--app-space-sm); }
 .inspection-action-save { margin-top: var(--app-space-xl); }
 </style>

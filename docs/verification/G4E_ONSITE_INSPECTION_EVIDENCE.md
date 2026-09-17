@@ -1,6 +1,6 @@
 # G4-E On-site Inspection / Inspection Form Evidence
 
-Status: Phase 2 minimal implementation — awaiting review
+Status: Phase 2 bounded fix pass — awaiting review
 Repository: `xlink-bj/xlink-technician-app`  
 Branch: `rebuild/g4e-onsite-inspection`  
 Baseline: `0a46d8482b878b2d04f08894da54f5b77fb56214`  
@@ -310,12 +310,23 @@ Adapter-normalized workflow node
   the requested data ID, definition ID and expected workflow run when present.
 - Field rendering and submission validation reuse the Dynamic Form Runtime.
   Supported generic text, textarea, option and image/file references are
-  rendered from normalized metadata. Unsupported fields are visible as an
-  unavailable capability and block completion; they are never silently
-  discarded or guessed.
+  rendered from normalized metadata only when their effective runtime state is
+  visible and supported. Unsupported fields with effective visibility are
+  surfaced as an unavailable capability and block completion; hidden fields are
+  omitted without a misleading warning. Checkbox/cascade fields remain
+  explicitly unsupported in this Action Content because no correct multi-value
+  presentation path exists here; they are never rendered through scalar
+  choices.
 - The explicit `保存表单` operation and workflow completion are separate. The
   completion action is enabled only after normalized validation, required media
-  upload, and a successful form save.
+  upload, a valid form-data identity, and a successful explicit form save.
+  `completeDynamicForm()` never saves implicitly; any later field or successful
+  media change returns the form to `not_saved`.
+- Conditional visibility metadata supported by the existing Runtime is
+  normalized by the Adapter into the shared field read model. Unsupported or
+  malformed conditional metadata is marked explicitly unsupported rather than
+  silently discarded. The page receives neither `nodeDef` nor raw
+  `frontEndConfig`.
 
 ### Draft, media and retry behavior
 
@@ -326,7 +337,9 @@ Adapter-normalized workflow node
   selection stays in the platform adapter; Mock returns a synthetic uploaded
   reference and Real remains behind the existing real-write safety boundary.
   G4-E is online-first and does not promise offline media recovery or a media
-  queue.
+  queue. Picker and upload calls are gated by the same effective field state;
+  hidden, read-only, unsupported and wrong-type media fields have no picker or
+  upload side effect.
 - Save and completion use single-flight guards. There is no blind automatic
   mutation retry. If completion is ambiguous, the workspace rereads the
   authoritative detail before a later manual retry becomes eligible. A

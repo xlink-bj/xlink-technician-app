@@ -4,6 +4,8 @@ import type {
   CodeOptionsQuery,
   FormDataRead,
   FormFieldRead,
+  FormFieldValue,
+  FormFieldVisibility,
   FormDefinitionRead,
   ReadPage,
   TechnicianApiReadPort,
@@ -657,6 +659,72 @@ function workflowNode(raw: unknown): WorkflowNodeRead {
   }
 }
 
+function parsedRecord(value: unknown): AdapterRecord | undefined {
+  const direct = optionalRecord(value)
+  if (direct) return direct
+  if (typeof value !== 'string' || value.trim().length === 0) return undefined
+  try {
+    return optionalRecord(JSON.parse(value))
+  } catch {
+    return undefined
+  }
+}
+
+function conditionValue(value: unknown): FormFieldValue | undefined {
+  if (value === null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+    return value
+  }
+  if (Array.isArray(value) && value.every((item) =>
+    typeof item === 'string' || typeof item === 'number' || typeof item === 'boolean',
+  )) {
+    return value as readonly (string | number | boolean)[]
+  }
+  return undefined
+}
+
+function formFieldVisibility(record: AdapterRecord): {
+  readonly visibility?: FormFieldVisibility
+  readonly unsupportedReason?: string
+} {
+  const rawConfig = record.frontEndConfig
+  const config = parsedRecord(rawConfig)
+  const malformedConfig = typeof rawConfig === 'string'
+    && rawConfig.trim().length > 0
+    && !config
+    && /showField|showValue|showType/.test(rawConfig)
+  if (malformedConfig) return { unsupportedReason: 'Conditional field visibility metadata is malformed' }
+
+  const directShowField = optionalString(record, ['showField'])
+  const configShowField = optionalString(config ?? {}, ['showField'])
+  const showField = directShowField ?? configShowField
+  const rawShowType = record.showType ?? config?.showType
+  const showType = rawShowType === undefined || rawShowType === null ? undefined : String(rawShowType)
+  const configExts = optionalRecord(config?.exts)
+  const showValueSources = [record, config, configExts].filter(
+    (value): value is AdapterRecord => Boolean(value && Object.prototype.hasOwnProperty.call(value, 'showValue')),
+  )
+  const hasShowValue = showValueSources.length > 0
+  const showValue = showValueSources[0]?.showValue
+  const hasConditionalMetadata = Boolean(showField) || (showType !== undefined && showType !== '1') || hasShowValue
+  if (!hasConditionalMetadata) return {}
+  if (!showField) return { unsupportedReason: 'Conditional field visibility is missing its source field' }
+  if (showType === '4' || showType === '5') {
+    return { unsupportedReason: 'Role-based field visibility is unavailable in this Action Content' }
+  }
+  if (showType !== undefined && showType !== '2' && showType !== '3' && showValue !== '$exist') {
+    return { unsupportedReason: `Unsupported field visibility mode: ${showType}` }
+  }
+  if (showValue === '$exist' || showType === '2') {
+    return { visibility: { kind: 'exists', path: showField, expected: true } }
+  }
+  if (!hasShowValue) return { unsupportedReason: 'Conditional field visibility is missing its match value' }
+  const normalizedValue = conditionValue(showValue)
+  if (normalizedValue === undefined) {
+    return { unsupportedReason: 'Conditional field visibility uses an unsupported match value' }
+  }
+  return { visibility: { kind: 'equals', path: showField, value: normalizedValue } }
+}
+
 function formField(raw: unknown): FormFieldRead | null {
   const record = optionalRecord(raw)
   if (!record) return null
@@ -677,6 +745,8 @@ function formField(raw: unknown): FormFieldRead | null {
       return optionValue && optionLabel ? { value: optionValue, label: optionLabel } : null
     })
     .filter((value): value is { value: string; label: string } => Boolean(value))
+  const conditional = formFieldVisibility(record)
+  const valueOption = optionalString(record, ['valueOption'])
 
   return {
     key,
@@ -685,6 +755,9 @@ function formField(raw: unknown): FormFieldRead | null {
     required,
     readOnly,
     ...(options && options.length > 0 ? { options } : {}),
+    ...(conditional.visibility ? { visibility: conditional.visibility } : {}),
+    ...(valueOption ? { valueOption } : {}),
+    ...(conditional.unsupportedReason ? { unsupportedReason: conditional.unsupportedReason } : {}),
   }
 }
 

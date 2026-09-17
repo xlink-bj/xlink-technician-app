@@ -6,6 +6,16 @@ export function evaluateFieldState(
   field: FormFieldSchema,
   context: FieldStateContext = {},
 ): EffectiveFieldState {
+  if (field.unsupportedReason) {
+    return {
+      capability: 'UNSUPPORTED',
+      visible: false,
+      readOnly: true,
+      required: false,
+      optionProvider: { state: 'unsupported', reason: field.unsupportedReason },
+      reason: field.unsupportedReason,
+    }
+  }
   const capability = classifyFieldType(field.type)
   const optionProvider = selectOptionProvider(field)
   if (capability.capability === 'UNSUPPORTED') {

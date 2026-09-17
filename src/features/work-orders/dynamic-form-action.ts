@@ -1,5 +1,6 @@
 import {
   evaluateFieldState,
+  evaluateVisibility,
   normalizeFieldValue,
   normalizeSubmission,
 } from '@runtimes/dynamic-form'
@@ -13,13 +14,28 @@ export interface DynamicActionField extends AppointmentFormFieldRead {
   readonly runtime: EffectiveFieldState
 }
 
-function schemaFor(field: AppointmentFormFieldRead): FormFieldSchema {
+function actionUnsupportedReasonFor(field: AppointmentFormFieldRead, values: Readonly<Record<string, FormFieldValue>>): string | undefined {
+  if (field.unsupportedReason) return field.unsupportedReason
+  if (field.type !== 'checkbox' && field.type !== 'cascade') return undefined
+  return evaluateVisibility(field.visibility, values).state === 'visible'
+    ? `${field.type} requires a multi-value Action Content control`
+    : undefined
+}
+
+function schemaFor(
+  field: AppointmentFormFieldRead,
+  values: Readonly<Record<string, FormFieldValue>> = {},
+): FormFieldSchema {
+  const unsupportedReason = actionUnsupportedReasonFor(field, values)
   return {
     key: field.key,
     type: field.type,
     required: field.required,
     readOnly: field.readOnly,
     ...(field.options?.length ? { inlineOptions: field.options } : {}),
+    ...(field.visibility ? { visibility: field.visibility } : {}),
+    ...(field.valueOption ? { valueOption: field.valueOption } : {}),
+    ...(unsupportedReason ? { unsupportedReason } : {}),
   }
 }
 
@@ -32,7 +48,7 @@ function fieldState(
   field: AppointmentFormFieldRead,
   values: Readonly<Record<string, FormFieldValue>>,
 ): EffectiveFieldState {
-  return evaluateFieldState(schemaFor(field), { values })
+  return evaluateFieldState(schemaFor(field, values), { values })
 }
 
 export function dynamicActionFieldsFor(form: DynamicFormRead): readonly DynamicActionField[] {
@@ -43,14 +59,18 @@ export function dynamicActionFieldsFor(form: DynamicFormRead): readonly DynamicA
 }
 
 export function dynamicActionUnsupportedFieldsFor(form: DynamicFormRead): readonly DynamicActionField[] {
-  return dynamicActionFieldsFor(form).filter((field) => field.runtime.capability === 'UNSUPPORTED')
+  return dynamicActionFieldsFor(form).filter((field) => {
+    if (field.runtime.capability !== 'UNSUPPORTED') return false
+    return evaluateVisibility(field.visibility, form.values).state !== 'hidden'
+  })
 }
 
 export function normalizeDynamicForm(
   form: DynamicFormRead,
 ): OperationSnapshot<Readonly<Record<string, FormFieldValue>>> {
+  const fields = form.fields.map((field) => schemaFor(field, form.values))
   const result = normalizeSubmission({
-    fields: form.fields.map(schemaFor),
+    fields,
     values: form.values,
   })
   if (!result.ok) {
@@ -74,7 +94,8 @@ export function normalizeDynamicFieldValue(
   field: AppointmentFormFieldRead,
   value: FormFieldValue,
 ): OperationSnapshot<FormFieldValue> {
-  const state = fieldState(field, { ...form.values, [field.key]: value })
+  const values = { ...form.values, [field.key]: value }
+  const state = fieldState(field, values)
   if (state.capability === 'UNSUPPORTED') {
     return {
       state: 'failed_terminal',

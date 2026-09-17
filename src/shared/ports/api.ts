@@ -174,9 +174,23 @@ export interface FormFieldRead {
   readonly required: boolean
   readonly readOnly: boolean
   readonly options?: readonly { readonly value: string; readonly label: string }[]
+  /** Adapter-normalized conditional visibility; raw frontEndConfig never crosses the port. */
+  readonly visibility?: FormFieldVisibility
+  /** Adapter-normalized option provider identity, when evidenced by the field. */
+  readonly valueOption?: string
+  /** Explicit capability boundary for metadata the current Runtime cannot safely interpret. */
+  readonly unsupportedReason?: string
 }
 
 export type FormFieldValue = string | number | boolean | null | readonly (string | number | boolean)[]
+
+export type FormFieldVisibilityPath = string | readonly string[]
+
+export type FormFieldVisibility =
+  | { readonly kind: 'equals'; readonly path: FormFieldVisibilityPath; readonly value: FormFieldValue }
+  | { readonly kind: 'includes'; readonly path: FormFieldVisibilityPath; readonly value: FormFieldValue }
+  | { readonly kind: 'exists'; readonly path: FormFieldVisibilityPath; readonly expected: boolean }
+  | { readonly kind: 'all'; readonly conditions: readonly FormFieldVisibility[] }
 
 export interface FormDataRead {
   readonly id: FormDataId

@@ -1,4 +1,4 @@
-import type { FormFieldValue } from '@shared/ports/api'
+import type { FormFieldValue, FormFieldVisibility } from '@shared/ports/api'
 import type {
   FormDataId,
   FormDefinitionId,
@@ -31,6 +31,12 @@ export interface AppointmentFormFieldRead {
   readonly required: boolean
   readonly readOnly: boolean
   readonly options?: readonly AppointmentFormOption[]
+  /** Adapter-normalized conditional visibility; raw backend metadata stays out of UI. */
+  readonly visibility?: FormFieldVisibility
+  /** Adapter-normalized option provider identity, when evidenced by the field. */
+  readonly valueOption?: string
+  /** Explicit capability boundary for metadata the current Runtime cannot safely interpret. */
+  readonly unsupportedReason?: string
 }
 
 export interface AppointmentFormRead {

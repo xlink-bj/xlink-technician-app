@@ -330,6 +330,8 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       businessResult.value !== 'succeeded' &&
       descriptor.value?.execution === 'enabled' &&
       dynamicForm.value !== null &&
+      dynamicFormSaveState.value === 'saved' &&
+      Boolean(dynamicForm.value.dataId) &&
       dynamicUnsupportedFields.value.length === 0 &&
       dynamicValidation.value.state === 'succeeded' &&
       !dynamicRequiredMediaPending.value &&
@@ -971,6 +973,12 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     if (businessResult.value === 'succeeded') return { state: 'succeeded', data: undefined }
     if (currentDescriptor.execution !== 'enabled') return failure('unsupported_capability', 'This Action is read-only')
     if (lifecycle.value === 'submitting') return failure('validation', 'Action is already being submitted')
+    if (dynamicFormSaveState.value !== 'saved' || !form.dataId) {
+      const unsaved = createOperationError('validation', 'Save the inspection form before completing it')
+      error.value = unsaved
+      lifecycle.value = 'in_progress'
+      return { state: 'failed_terminal', error: unsaved }
+    }
     if (!completionReconciled.value) {
       return failure('network_retryable', 'Please refresh the current Action state before retrying')
     }
@@ -988,10 +996,6 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       return { state: 'failed_terminal', error: mediaError }
     }
 
-    if (dynamicFormSaveState.value !== 'saved' || !form.dataId) {
-      const saved = await saveDynamicForm()
-      if (saved.state !== 'succeeded') return saved
-    }
     const savedForm = dynamicForm.value
     if (!savedForm?.dataId) return failure('server_terminal', 'Dynamic form data identity is unavailable')
 
@@ -1021,9 +1025,18 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     const configured = dependencies
     const form = dynamicForm.value
     const field = form?.fields.find((candidate) => candidate.key === fieldKey)
-    if (!configured || !form || !field || (field.type !== 'image' && field.type !== 'file')) {
+    const effective = dynamicFields.value.find((candidate) => candidate.key === fieldKey)
+    if (!configured || !form || !field || !effective) {
       return failure('unsupported_capability', 'Inspection media is unavailable')
     }
+    if (field.type !== 'image' && field.type !== 'file') {
+      return failure('unsupported_capability', 'Inspection media is unavailable')
+    }
+    if (effective.runtime.capability === 'UNSUPPORTED') {
+      return failure('unsupported_capability', effective.runtime.reason ?? 'Inspection media is unavailable')
+    }
+    if (!effective.runtime.visible) return failure('validation', 'This inspection media field is hidden')
+    if (effective.runtime.readOnly) return failure('validation', 'This inspection media field is read-only')
     if (!configured.mediaFilePicker || !configured.upload) {
       return failure('unsupported_capability', 'Inspection media upload is unavailable')
     }
@@ -1059,6 +1072,17 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     } finally {
       mediaInFlightField.value = null
     }
+  }
+
+  function canPickDynamicMedia(fieldKey: string): boolean {
+    const field = dynamicFields.value.find((candidate) => candidate.key === fieldKey)
+    return Boolean(
+      field
+      && (field.type === 'image' || field.type === 'file')
+      && field.runtime.capability !== 'UNSUPPORTED'
+      && field.runtime.visible
+      && !field.runtime.readOnly,
+    )
   }
 
   async function submit(): Promise<OperationSnapshot<void>> {
@@ -1143,6 +1167,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     dynamicFields,
     dynamicUnsupportedFields,
     dynamicValidation,
+    canPickDynamicMedia,
     dynamicFormSaveState,
     mediaByField,
     mediaInFlightField,

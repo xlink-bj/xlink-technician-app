@@ -5,6 +5,8 @@ export type {
   FormDataRead,
   FormFieldRead,
   FormFieldValue,
+  FormFieldVisibility,
+  FormFieldVisibilityPath,
   FormDefinitionRead,
   ReadPage,
   TechnicianApiReadPort,

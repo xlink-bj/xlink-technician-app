@@ -1,4 +1,5 @@
 import type { CompatibilityEntry } from '@shared/config'
+import type { FormFieldVisibility, FormFieldVisibilityPath } from '@shared/ports'
 import type { LocalMediaRef } from '@shared/types'
 
 export type FormCapability = 'SUPPORTED_GENERIC' | 'CONDITIONAL_CAPABILITY' | 'UNSUPPORTED'
@@ -29,13 +30,9 @@ export interface FormOption {
   readonly label: string
 }
 
-export type VisibilityPath = string | readonly string[]
+export type VisibilityPath = FormFieldVisibilityPath
 
-export type VisibilityExpression =
-  | { readonly kind: 'equals'; readonly path: VisibilityPath; readonly value: unknown }
-  | { readonly kind: 'includes'; readonly path: VisibilityPath; readonly value: unknown }
-  | { readonly kind: 'exists'; readonly path: VisibilityPath; readonly expected: boolean }
-  | { readonly kind: 'all'; readonly conditions: readonly VisibilityExpression[] }
+export type VisibilityExpression = FormFieldVisibility
 
 export interface FormFieldSchema {
   readonly key: string
@@ -45,6 +42,7 @@ export interface FormFieldSchema {
   readonly visibility?: VisibilityExpression
   readonly valueOption?: string
   readonly inlineOptions?: readonly FormOption[]
+  readonly unsupportedReason?: string
 }
 
 export interface FormCapabilityDecision {

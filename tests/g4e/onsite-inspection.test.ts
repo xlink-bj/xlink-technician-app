@@ -2,7 +2,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 
 import { createTechnicianApiCommandAdapter } from '@adapters/api/technician-api-commands'
-import { createRoleScopedTechnicianApiReadAdapter } from '@adapters/api/technician-api'
+import {
+  createRoleScopedTechnicianApiReadAdapter,
+  createTechnicianApiReadAdapter,
+  type ApiReadTransport,
+} from '@adapters/api/technician-api'
 import { createUniApiCommandTransport } from '@adapters/api/uni-api-command-transport'
 import { createUniApiReadTransport } from '@adapters/api/uni-api-read-transport'
 import { createUniUploadPort } from '@adapters/upload/uni-upload-port'
@@ -17,6 +21,10 @@ import {
 import { createActionDraftRepository } from '@runtimes/action'
 import { detailWorkflowProjectionFor } from '@features/work-orders/detail-workflow'
 import { useActionWorkspaceStore } from '@features/work-orders/action-workspace'
+import {
+  dynamicActionFieldsFor,
+  dynamicActionUnsupportedFieldsFor,
+} from '@features/work-orders/dynamic-form-action'
 import type {
   DynamicFormRead,
   FormFieldValue,
@@ -113,6 +121,7 @@ function storageFor() {
 function configureWorkspace(
   commandResult: OperationSnapshot<void> = succeeded(undefined),
   detailResult: WorkOrderDetail = inspectionDetail(),
+  dynamicForm: DynamicFormRead = inspectionForm(),
 ) {
   const storage = storageFor()
   const api: TechnicianApiReadPort = {
@@ -121,7 +130,7 @@ function configureWorkspace(
   const save = vi.fn(async (_input: SaveDynamicFormInput) => succeeded(formDataId))
   const complete = vi.fn(async () => commandResult)
   const command: TechnicianApiCommandPort = {
-    readDynamicForm: vi.fn(async () => succeeded(inspectionForm())),
+    readDynamicForm: vi.fn(async () => succeeded(dynamicForm)),
     saveDynamicForm: save,
     completeWorkflowNode: complete,
     readAppointmentForm: vi.fn(async () => succeeded({ fields: [], values: {} })),
@@ -194,6 +203,126 @@ describe('G4-E onsite inspection dynamic Action Content', () => {
     expect(result.error?.category).toBe('validation')
     expect(save).not.toHaveBeenCalled()
     expect(complete).not.toHaveBeenCalled()
+  })
+
+  it('requires an explicit successful form save before completion and invalidates eligibility after edits', async () => {
+    const { store, save, complete } = configureWorkspace()
+    await store.load({ workOrderId, workflowNodeId, actionIntent: 'interact_with_form' })
+    store.setField('summary', '墙面情况正常')
+    store.setField('result', 'safe')
+    await store.pickDynamicMedia('photo')
+
+    expect(store.canSubmit).toBe(false)
+    const unsavedCompletion = await store.completeDynamicForm()
+    expect(unsavedCompletion.state).toBe('failed_terminal')
+    expect(unsavedCompletion.error?.category).toBe('validation')
+    expect(save).not.toHaveBeenCalled()
+    expect(complete).not.toHaveBeenCalled()
+
+    expect((await store.saveDynamicForm()).state).toBe('succeeded')
+    expect(store.dynamicFormSaveState).toBe('saved')
+    expect(store.canSubmit).toBe(true)
+
+    store.setField('note', '保存后发生的修改')
+    expect(store.dynamicFormSaveState).toBe('not_saved')
+    expect(store.canSubmit).toBe(false)
+    expect(complete).not.toHaveBeenCalled()
+  })
+
+  it('carries verified conditional visibility through the adapter without exposing raw metadata', async () => {
+    const transport: ApiReadTransport = {
+      execute: vi.fn(async () => ({
+        data: [{
+          _id: 'field-row-conditional',
+          name: 'inspectionPhoto',
+          nameDisp: '现场照片',
+          type: 'image',
+          frontEndConfig: { showField: 'inspectionResult', showValue: 'safe' },
+        }],
+      })),
+    }
+    const api = createTechnicianApiReadAdapter(transport)
+    const definition = await api.getFormDefinition(formDefinitionId)
+    const field = definition.data?.fields?.[0]
+
+    expect(field).toMatchObject({
+      visibility: { kind: 'equals', path: 'inspectionResult', value: 'safe' },
+    })
+    expect(field).not.toHaveProperty('frontEndConfig')
+  })
+
+  it('hides conditional fields and does not warn for hidden unsupported Action Content', () => {
+    const form: DynamicFormRead = {
+      ...inspectionForm({ result: 'follow_up' }),
+      fields: [
+        ...inspectionForm().fields,
+        {
+          key: 'followUpPhoto',
+          label: '跟进照片',
+          type: 'unknown-media',
+          required: false,
+          readOnly: false,
+          visibility: { kind: 'equals', path: 'result', value: 'safe' },
+        },
+      ],
+    }
+
+    expect(dynamicActionFieldsFor(form).find((field) => field.key === 'followUpPhoto')?.runtime.visible).toBe(false)
+    expect(dynamicActionUnsupportedFieldsFor(form).map((field) => field.key)).not.toContain('followUpPhoto')
+  })
+
+  it('marks checkbox and cascade fields unsupported instead of rendering scalar choices', () => {
+    const form: DynamicFormRead = {
+      fields: [
+        {
+          key: 'inspectionChecks',
+          label: '检查项',
+          type: 'checkbox',
+          required: true,
+          readOnly: false,
+          options: [{ value: 'ok', label: '正常' }],
+        },
+        {
+          key: 'inspectionPath',
+          label: '检查路径',
+          type: 'cascade',
+          required: false,
+          readOnly: false,
+          options: [{ value: 'a', label: 'A' }],
+        },
+      ],
+      values: {},
+    }
+    expect(dynamicActionUnsupportedFieldsFor(form).map((field) => field.key)).toEqual([
+      'inspectionChecks',
+      'inspectionPath',
+    ])
+  })
+
+  it('guards media picker and upload with the effective field state', async () => {
+    const readOnlyForm: DynamicFormRead = {
+      ...inspectionForm(),
+      fields: inspectionForm().fields.map((field) => field.key === 'photo' ? { ...field, readOnly: true } : field),
+    }
+    const hiddenForm: DynamicFormRead = {
+      ...inspectionForm(),
+      fields: inspectionForm().fields.map((field) => field.key === 'photo'
+        ? { ...field, visibility: { kind: 'equals' as const, path: 'result', value: 'safe' } }
+        : field),
+    }
+    const unsupportedForm: DynamicFormRead = {
+      ...inspectionForm(),
+      fields: inspectionForm().fields.map((field) => field.key === 'photo' ? { ...field, type: 'video' } : field),
+    }
+
+    for (const form of [readOnlyForm, hiddenForm, unsupportedForm]) {
+      const { store, picker, upload } = configureWorkspace(succeeded(undefined), inspectionDetail(), form)
+      await store.load({ workOrderId, workflowNodeId, actionIntent: 'interact_with_form' })
+      const result = await store.pickDynamicMedia('photo')
+      expect(result.state).toBe('failed_terminal')
+      expect(picker.pick).not.toHaveBeenCalled()
+      expect(upload.upload).not.toHaveBeenCalled()
+    }
   })
 
   it('keeps save and workflow completion as separate commands and uploads media online', async () => {
