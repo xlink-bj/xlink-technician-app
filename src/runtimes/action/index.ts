@@ -4,6 +4,7 @@ export {
   actionDraftIdentityMatches,
   actionDraftLegacyStorageKey,
   actionDraftLegacyStorageKeyPrefixForUser,
+  actionDraftLegacyStorageKeys,
   actionDraftStorageKey,
   actionDraftStorageKeyPrefixForUser,
   actionExecutionForWorkflowDecision,

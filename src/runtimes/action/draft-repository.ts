@@ -12,8 +12,8 @@ import type {
 } from './types'
 import {
   actionDraftIdentityMatches,
-  actionDraftLegacyStorageKey,
   actionDraftLegacyStorageKeyPrefixForUser,
+  actionDraftLegacyStorageKeys,
   actionDraftStorageKey,
   actionDraftStorageKeyPrefixForUser,
 } from './types'
@@ -71,73 +71,8 @@ function objectRecord(value: unknown): Record<string, unknown> | null {
     : null
 }
 
-function decode(value: string): string | undefined {
-  try {
-    const decoded = decodeURIComponent(value)
-    return decoded.length > 0 ? decoded : undefined
-  } catch {
-    return undefined
-  }
-}
-
 function nonEmptyString(value: unknown): string | undefined {
   return typeof value === 'string' && value.trim().length > 0 ? value : undefined
-}
-
-type DraftKeyFormat = 'canonical' | 'legacy'
-
-interface ParsedDraftKey {
-  readonly identity: ActionDraftIdentity
-  readonly format: DraftKeyFormat
-}
-
-function identityFromKey(key: string): ParsedDraftKey | null {
-  const parts = key.split(':')
-  if (parts.length !== 8 || parts[0] !== 'action-workspace') return null
-  let format: DraftKeyFormat
-  if (parts[1] === '2') format = 'canonical'
-  else if (parts[1] === '1') format = 'legacy'
-  else return null
-  const userId = decode(parts[2])
-  const workOrderId = decode(parts[3])
-  const workflowNodeId = decode(parts[4])
-  const actionIntent = decode(parts[5])
-  const contentKind = decode(parts[6])
-  if (
-    !userId ||
-    !workOrderId ||
-    !workflowNodeId ||
-    !actionIntent ||
-    !contentKind ||
-    !actionIntents.has(actionIntent as WorkflowActionIntent) ||
-    !contentKinds.has(contentKind as ActionContentKind)
-  ) return null
-
-  let contentIdentity: string | undefined
-  if (format === 'canonical') {
-    if (parts[7] === 'u') {
-      contentIdentity = undefined
-    } else {
-      if (!parts[7].startsWith('v')) return null
-      contentIdentity = decode(parts[7].slice(1))
-      if (!contentIdentity) return null
-    }
-  } else if (parts[7] !== 'none') {
-    contentIdentity = decode(parts[7])
-    if (!contentIdentity) return null
-  }
-  return {
-    format,
-    identity: {
-      version: 1,
-      userId: asOpaqueId<'UserId'>(userId),
-      workOrderId: asOpaqueId<'WorkOrderId'>(workOrderId),
-      workflowNodeId: asOpaqueId<'WorkflowNodeRuntimeId'>(workflowNodeId),
-      actionIntent: actionIntent as WorkflowActionIntent,
-      contentKind: contentKind as ActionContentKind,
-      ...(contentIdentity ? { contentIdentity } : {}),
-    },
-  }
 }
 
 function identityFromRecord(value: unknown): ActionDraftIdentity | null {
@@ -218,13 +153,14 @@ export class SemanticActionDraftRepository implements ActionDraftRepository {
       return { state: 'succeeded', data: canonical.data }
     }
 
-    const legacy = await this.storage.read<unknown>({
-      namespace: 'draft',
-      key: actionDraftLegacyStorageKey(identity),
-    })
-    if (legacy.state !== 'succeeded') return legacy as OperationSnapshot<ActionDraftRecord<TState> | null>
-    if (legacy.data === null || !validDraftRecord<TState>(legacy.data, identity)) return { state: 'succeeded', data: null }
-    return { state: 'succeeded', data: legacy.data }
+    for (const key of actionDraftLegacyStorageKeys(identity)) {
+      const legacy = await this.storage.read<unknown>({ namespace: 'draft', key })
+      if (legacy.state !== 'succeeded') return legacy as OperationSnapshot<ActionDraftRecord<TState> | null>
+      if (legacy.data !== null && validDraftRecord<TState>(legacy.data, identity)) {
+        return { state: 'succeeded', data: legacy.data }
+      }
+    }
+    return { state: 'succeeded', data: null }
   }
 
   write<TState extends Readonly<Record<string, unknown>>>(
@@ -239,8 +175,8 @@ export class SemanticActionDraftRepository implements ActionDraftRepository {
   remove(identity: ActionDraftIdentity): Promise<OperationSnapshot<void>> {
     return Promise.all([
       this.storage.remove({ namespace: 'draft', key: actionDraftStorageKey(identity) }),
-      this.storage.remove({ namespace: 'draft', key: actionDraftLegacyStorageKey(identity) }),
-    ]).then(([canonical, legacy]) => canonical.state !== 'succeeded' ? canonical : legacy)
+      ...actionDraftLegacyStorageKeys(identity).map((key) => this.storage.remove({ namespace: 'draft', key })),
+    ]).then((results) => results.find((result) => result.state !== 'succeeded') ?? results[0])
   }
 
   async listForUser(userId: UserId): Promise<OperationSnapshot<ActionDraftRegistrySnapshot>> {
@@ -256,31 +192,32 @@ export class SemanticActionDraftRepository implements ActionDraftRepository {
       }
     }
 
-    const candidates: Array<ActionDraftRegistryEntry & { readonly key: string; readonly format: DraftKeyFormat }> = []
+    const candidates: Array<ActionDraftRegistryEntry & { readonly key: string; readonly format: 'canonical' | 'legacy' }> = []
     let invalidRecordCount = 0
-    const allKeys: Array<{ readonly key: string; readonly format: DraftKeyFormat }> = [
+    const allKeys: Array<{ readonly key: string; readonly format: 'canonical' | 'legacy' }> = [
       ...(canonicalKeys.data ?? []).map((key) => ({ key, format: 'canonical' as const })),
       ...(legacyKeys.data ?? []).map((key) => ({ key, format: 'legacy' as const })),
     ]
     for (const { key, format } of allKeys) {
-      const parsed = identityFromKey(key)
-      if (!parsed || parsed.format !== format || String(parsed.identity.userId) !== String(userId)) {
-        invalidRecordCount += 1
-        continue
-      }
-      const expectedKey = format === 'canonical'
-        ? actionDraftStorageKey(parsed.identity)
-        : actionDraftLegacyStorageKey(parsed.identity)
-      if (expectedKey !== key) {
-        invalidRecordCount += 1
-        continue
-      }
       const stored = await this.storage.read<unknown>({ namespace: 'draft', key })
-      if (stored.state !== 'succeeded' || !stored.data || !validDraftRecord(stored.data, parsed.identity)) {
+      const storedIdentity = stored.state === 'succeeded' && stored.data
+        ? identityFromRecord(stored.data)
+        : null
+      const keyMatchesIdentity = storedIdentity && (format === 'canonical'
+        ? actionDraftStorageKey(storedIdentity) === key
+        : actionDraftLegacyStorageKeys(storedIdentity).includes(key))
+      if (
+        stored.state !== 'succeeded' ||
+        !stored.data ||
+        !storedIdentity ||
+        !keyMatchesIdentity ||
+        !validDraftRecord(stored.data, storedIdentity) ||
+        String(storedIdentity.userId) !== String(userId)
+      ) {
         invalidRecordCount += 1
         continue
       }
-      candidates.push({ ...entryFor(parsed.identity, stored.data), key, format })
+      candidates.push({ ...entryFor(storedIdentity, stored.data), key, format })
     }
 
     const entriesByIdentity = new Map<string, typeof candidates[number]>()

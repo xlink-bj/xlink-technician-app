@@ -100,10 +100,11 @@ A visible title, field label, customer name, form name, or array index is never 
 The canonical serialized key uses codec version `2` and a tagged optional
 content-identity segment, so an absent content identity cannot collide with a
 literal value such as `none`. Codec version `1` remains read/remove compatible
-for drafts persisted before the upgrade: reads try canonical then legacy,
-registry listing recognizes both formats and deduplicates by Action Identity,
-and new writes use only the canonical format. Listing does not perform a
-destructive migration.
+for drafts persisted before the upgrade, including the immediately preceding
+tagged-v1 variant: reads try canonical then the legacy variants, registry
+listing recognizes all formats and deduplicates by Action Identity, and new
+writes use only the canonical format. Listing does not perform a destructive
+migration.
 
 ### One latest unfinished draft per Action Identity
 

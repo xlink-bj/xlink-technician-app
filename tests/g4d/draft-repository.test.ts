@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   actionDraftIdentityFor,
   actionDraftLegacyStorageKey,
+  actionDraftLegacyStorageKeys,
   actionDraftStorageKey,
   createActionDraftRepository,
 } from '@runtimes/action'
@@ -146,28 +147,33 @@ describe('Action Draft Repository', () => {
     expect((await repository.read<Record<string, unknown>>(literalNone)).data?.values).toEqual({ branch: 'literal' })
   })
 
-  it('restores legacy drafts after the key codec upgrade and cleans both formats', async () => {
+  it('restores legacy drafts after the key codec upgrade and cleans all formats', async () => {
     const { storage, values } = storageFor()
     const repository = createActionDraftRepository(storage)
     const existing = identity()
+    const transitional = identity({ workOrderId: asOpaqueId<'WorkOrderId'>('draft-transitional-work-order') })
     const legacyKey = actionDraftLegacyStorageKey(existing)
     const canonicalKey = actionDraftStorageKey(existing)
+    const transitionalKey = actionDraftLegacyStorageKeys(transitional)[1]
     values.set(`draft:${legacyKey}`, recordFor(existing, { source: 'pre-upgrade' }, '2026-09-17T09:00:00.000Z'))
+    values.set(`draft:${transitionalKey}`, recordFor(transitional, { source: 'intermediate-upgrade' }, '2026-09-17T09:30:00.000Z'))
 
     expect(legacyKey).toContain('action-workspace:1:')
     expect(canonicalKey).toContain('action-workspace:2:')
     expect((await repository.read<Record<string, unknown>>(existing)).data?.values).toEqual({ source: 'pre-upgrade' })
-    expect((await repository.listForUser(userA)).data?.entries).toHaveLength(1)
+    expect((await repository.read<Record<string, unknown>>(transitional)).data?.values).toEqual({ source: 'intermediate-upgrade' })
+    expect((await repository.listForUser(userA)).data?.entries).toHaveLength(2)
 
     await repository.write(recordFor(existing, { source: 'post-upgrade' }, '2026-09-17T10:00:00.000Z'))
     expect(values.has(`draft:${canonicalKey}`)).toBe(true)
     expect(values.has(`draft:${legacyKey}`)).toBe(true)
-    expect((await repository.listForUser(userA)).data?.entries).toHaveLength(1)
+    expect((await repository.listForUser(userA)).data?.entries).toHaveLength(2)
     expect((await repository.read<Record<string, unknown>>(existing)).data?.values).toEqual({ source: 'post-upgrade' })
 
     await repository.remove(existing)
     expect(values.has(`draft:${canonicalKey}`)).toBe(false)
     expect(values.has(`draft:${legacyKey}`)).toBe(false)
+    expect(values.has(`draft:${transitionalKey}`)).toBe(true)
     expect((await repository.read<Record<string, unknown>>(existing)).data).toBeNull()
   })
 

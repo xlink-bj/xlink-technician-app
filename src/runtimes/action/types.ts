@@ -135,6 +135,33 @@ export function actionDraftLegacyStorageKey(identity: ActionDraftIdentity): stri
   ].join(':')
 }
 
+/**
+ * The immediately preceding v1 implementation used the v2 tags without
+ * bumping the key version. Keep those keys readable/removable as well.
+ */
+function actionDraftLegacyTaggedStorageKey(identity: ActionDraftIdentity): string {
+  const contentIdentity = identity.contentIdentity === undefined
+    ? 'u'
+    : `v${encodeURIComponent(String(identity.contentIdentity))}`
+  return [
+    'action-workspace',
+    '1',
+    encodeURIComponent(String(identity.userId)),
+    encodeURIComponent(String(identity.workOrderId)),
+    encodeURIComponent(String(identity.workflowNodeId)),
+    encodeURIComponent(identity.actionIntent),
+    encodeURIComponent(identity.contentKind),
+    encodeURIComponent(contentIdentity),
+  ].join(':')
+}
+
+export function actionDraftLegacyStorageKeys(identity: ActionDraftIdentity): readonly string[] {
+  return [...new Set([
+    actionDraftLegacyStorageKey(identity),
+    actionDraftLegacyTaggedStorageKey(identity),
+  ])]
+}
+
 export function actionDraftStorageKeyPrefixForUser(userId: UserId): string {
   return ['action-workspace', '2', encodeURIComponent(String(userId))].join(':') + ':'
 }
