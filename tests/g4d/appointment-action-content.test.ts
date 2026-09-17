@@ -9,7 +9,9 @@ import {
 } from '@features/work-orders/appointment-time'
 import {
   appointmentFieldRolesFor,
+  appointmentVisitIntentFor,
   normalizeAppointmentFieldValue,
+  normalizeAppointmentForm,
 } from '@features/work-orders/appointment-form-runtime'
 import type { AppointmentFormRead } from '@shared/ports'
 import { asOpaqueId } from '@shared/types'
@@ -90,6 +92,55 @@ describe('Appointment Action Content presentation boundary', () => {
     expect(normalizeAppointmentFieldValue(note, longValue, {}).data).toBe(longValue)
   })
 
+  it('projects the visit branch from verified option values, never from labels', () => {
+    const form: AppointmentFormRead = {
+      definitionId: asOpaqueId<'FormDefinitionId'>('appointment-definition'),
+      fields: [
+        {
+          key: 'need',
+          label: '任意展示文案',
+          type: 'radio',
+          required: true,
+          readOnly: false,
+          options: [
+            { value: '1', label: '任意文案 A' },
+            { value: '0', label: '任意文案 B' },
+          ],
+        },
+        { key: 'datetime', label: '任意时间文案', type: 'datetime', required: true, readOnly: false },
+      ],
+      values: { need: '1', datetime: '2026-04-20 10:00' },
+    }
+
+    expect(appointmentVisitIntentFor(form)).toBe('visit_required')
+    expect(appointmentVisitIntentFor({ ...form, values: { ...form.values, need: '0' } })).toBe('visit_deferred')
+    expect(appointmentVisitIntentFor({ ...form, values: { ...form.values, need: 'unexpected' } })).toBe('unknown')
+  })
+
+  it('keeps deferred datetime in editing state but excludes it from effective submission', () => {
+    const form: AppointmentFormRead = {
+      definitionId: asOpaqueId<'FormDefinitionId'>('appointment-definition'),
+      fields: [
+        {
+          key: 'need',
+          label: '是否需要上门',
+          type: 'radio',
+          required: true,
+          readOnly: false,
+          options: [{ value: '1', label: '需要上门' }, { value: '0', label: '暂不上门' }],
+        },
+        { key: 'datetime', label: '预约时间', type: 'datetime', required: true, readOnly: false },
+        { key: 'note', label: '备注', type: 'textarea', required: false, readOnly: false },
+      ],
+      values: { need: '0', datetime: '2026-04-20 10:00', note: '保留备注' },
+    }
+
+    expect(normalizeAppointmentForm(form)).toEqual({
+      state: 'succeeded',
+      data: { need: '0', note: '保留备注' },
+    })
+  })
+
   it('uses native page navigation and keeps confirmation/success copy bounded', async () => {
     const pages = await readFile(new URL('../../src/pages.json', import.meta.url), 'utf8')
     const action = await readFile(new URL('../../src/pages/work-orders/action-workspace.vue', import.meta.url), 'utf8')
@@ -110,10 +161,16 @@ describe('Appointment Action Content presentation boundary', () => {
     expect(action).toContain('maxlength="-1"')
     expect(action).toContain('runtime.required')
     expect(confirmation).toContain('预约成功')
+    expect(confirmation).toContain('isVisitDeferred')
+    expect(confirmation).toContain('visitIntentLabel')
+    expect(confirmation).toContain('已确认暂不上门')
+    expect(confirmation).toContain('操作已完成')
     expect(confirmation).toContain('查看工单详情')
     expect(confirmation).toContain('返回工单列表')
     expect(confirmation).not.toContain('下一步任务')
     expect(confirmation).not.toContain('服务方式')
-    expect([action, time, confirmation].join('\n')).not.toContain('biz/extForm')
+    const pagesSource = [action, time, confirmation].join('\n')
+    expect(pagesSource).not.toContain('biz/extForm')
+    expect(pagesSource).not.toContain("label === '暂不上门'")
   })
 })

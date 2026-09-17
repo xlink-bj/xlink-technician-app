@@ -40,11 +40,15 @@ export interface AppointmentFormRead {
   readonly dataId?: FormDataId
 }
 
+export type AppointmentVisitIntent = 'visit_required' | 'visit_deferred' | 'unknown'
+
 export interface SubmitAppointmentInput {
   readonly workOrderId: WorkOrderId
   readonly workflowNodeId: WorkflowNodeRuntimeId
   readonly workflowRunId?: WorkflowRunId
   readonly formDataId?: FormDataId
+  /** Feature-projected branch used by the transport safety boundary. */
+  readonly visitIntent?: AppointmentVisitIntent
   readonly values: Readonly<Record<string, AppointmentFieldValue>>
 }
 

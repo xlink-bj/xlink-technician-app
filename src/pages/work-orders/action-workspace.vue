@@ -63,7 +63,7 @@
       </AppField>
 
       <AppField
-        v-if="workspace.appointmentTimeField"
+        v-if="workspace.appointmentTimeField && workspace.appointmentTimeField.runtime.visible"
         class="action-content-field"
         :label="workspace.appointmentTimeField.label"
         :required="workspace.appointmentTimeField.runtime.required"

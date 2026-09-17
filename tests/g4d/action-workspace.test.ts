@@ -353,6 +353,85 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
     expect(storage.storage.write).toHaveBeenCalledTimes(1)
   })
 
+  it('treats deferred visit as a real conditional branch while preserving the draft datetime', async () => {
+    const { store, navigation } = configureWorkspace()
+    await openWorkspace(store)
+    store.setField('need', '1')
+    store.setAppointmentTime('2026-04-20 11:00')
+
+    expect(store.appointmentVisitIntent).toBe('visit_required')
+    expect(store.appointmentTimeField?.runtime.visible).toBe(true)
+    expect(store.appointmentTimeField?.runtime.required).toBe(true)
+
+    store.setField('need', '0')
+
+    expect(store.appointmentVisitIntent).toBe('visit_deferred')
+    expect(store.appointmentTimeField?.runtime.visible).toBe(false)
+    expect(store.appointmentTimeField?.runtime.required).toBe(false)
+    expect(store.appointmentFields.map((field) => field.key)).toEqual(['need', 'note'])
+    expect(store.appointmentForm?.values.datetime).toBe('2026-04-20 11:00')
+    expect(store.setAppointmentTime('2026-04-21 14:00').state).toBe('failed_terminal')
+
+    const result = await store.continueToConfirmation()
+    expect(result.state).toBe('succeeded')
+    expect(navigation.replace).toHaveBeenLastCalledWith(actionWorkspaceConfirmationRouteFor(
+      asOpaqueId<'WorkOrderId'>('workspace-work-order'),
+      asOpaqueId<'WorkflowNodeRuntimeId'>('workspace-appointment-node'),
+      'set_appointment',
+    ))
+  })
+
+  it('restores a preserved datetime when the user switches back to a required visit', async () => {
+    const { store } = configureWorkspace()
+    await openWorkspace(store)
+    store.setField('need', '1')
+    store.setAppointmentTime('2026-04-20 11:00')
+    store.setField('need', '0')
+
+    expect(store.appointmentTimeField?.runtime.visible).toBe(false)
+    store.setField('need', '1')
+
+    expect(store.appointmentVisitIntent).toBe('visit_required')
+    expect(store.appointmentTimeField?.runtime.visible).toBe(true)
+    expect(store.appointmentForm?.values.datetime).toBe('2026-04-20 11:00')
+  })
+
+  it('restores deferred drafts without activating their preserved datetime', async () => {
+    const shared = storageFor()
+    const first = configureWorkspace(appointmentDetail(), appointmentForm(), shared)
+    await openWorkspace(first.store)
+    first.store.setField('need', '1')
+    first.store.setAppointmentTime('2026-04-20 11:00')
+    first.store.setField('need', '0')
+    await first.store.flushDraft()
+
+    first.store.clear()
+    const second = configureWorkspace(appointmentDetail(), appointmentForm(), shared)
+    await openWorkspace(second.store)
+
+    expect(second.store.appointmentVisitIntent).toBe('visit_deferred')
+    expect(second.store.appointmentTimeField?.runtime.visible).toBe(false)
+    expect(second.store.appointmentForm?.values.datetime).toBe('2026-04-20 11:00')
+    second.store.setField('need', '1')
+    expect(second.store.appointmentTimeField?.runtime.visible).toBe(true)
+    expect(second.store.appointmentForm?.values.datetime).toBe('2026-04-20 11:00')
+  })
+
+  it('submits only effective values for a deferred visit branch', async () => {
+    const { store, command } = configureWorkspace()
+    await openWorkspace(store)
+    store.setField('need', '1')
+    store.setAppointmentTime('2026-04-20 11:00')
+    store.setField('need', '0')
+
+    expect((await store.submit()).state).toBe('succeeded')
+    expect(command.submitAppointment).toHaveBeenCalledWith(expect.objectContaining({
+      visitIntent: 'visit_deferred',
+      values: { need: '0' },
+    }))
+    expect(vi.mocked(command.submitAppointment).mock.calls[0][0].values).not.toHaveProperty('datetime')
+  })
+
   it('keeps the selected datetime in the dynamic form and routes to confirmation', async () => {
     const { store, navigation } = configureWorkspace()
     await openWorkspace(store)

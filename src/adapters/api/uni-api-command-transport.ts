@@ -76,6 +76,12 @@ export function createUniApiCommandTransport(options: UniApiCommandTransportOpti
       if (isMockOwnedCommand(input.path, input.body ?? {})) {
         throw new ApiCommandTransportError('Synthetic mock command is disabled', 'server_terminal')
       }
+      if (input.safety === 'deferred_appointment_datetime_encoding_unknown') {
+        throw new ApiCommandTransportError(
+          'Deferred appointment datetime encoding is not verified for Real API',
+          'unsupported_capability',
+        )
+      }
       if (isRealMutationPath(input.path) && import.meta.env.VITE_XLINK_ENABLE_REAL_WRITES !== 'true') {
         throw new ApiCommandTransportError(
           'Real command writes are disabled for this build',

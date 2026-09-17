@@ -17,6 +17,8 @@ export interface ApiCommandRequest {
   readonly method: Extract<ApiRequestMethod, 'POST'>
   readonly path: string
   readonly body?: Readonly<Record<string, ApiRequestValue>>
+  /** Internal safety metadata; never serialized into the backend request. */
+  readonly safety?: 'deferred_appointment_datetime_encoding_unknown'
 }
 
 export interface ApiCommandTransport {
@@ -236,6 +238,9 @@ export class TechnicianApiCommandAdapter implements TechnicianApiCommandPort {
         method: 'POST',
         path: `biz/extForm/upsert/${appointmentFormDefinitionWireId}`,
         body: { dataStr: JSON.stringify(formData) },
+        ...(input.visitIntent === 'visit_deferred'
+          ? { safety: 'deferred_appointment_datetime_encoding_unknown' as const }
+          : {}),
       },
       formDataIdFromResponse,
     )

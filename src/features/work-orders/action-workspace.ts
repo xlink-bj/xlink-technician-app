@@ -41,7 +41,10 @@ import {
   appointmentFieldRolesFor,
   appointmentRuntimeFieldsFor,
   normalizeAppointmentFieldValue,
+  normalizeAppointmentFieldValueForForm,
   normalizeAppointmentForm,
+  appointmentVisitIntentFor,
+  type AppointmentVisitIntent,
   type AppointmentRuntimeField,
 } from './appointment-form-runtime'
 
@@ -204,6 +207,9 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     appointmentForm.value
       ? appointmentFieldRolesFor(appointmentForm.value)
       : { extras: [] },
+  )
+  const appointmentVisitIntent = computed<AppointmentVisitIntent>(() =>
+    appointmentForm.value ? appointmentVisitIntentFor(appointmentForm.value) : 'unknown',
   )
   const appointmentChoiceField = computed(() => appointmentFieldRoles.value.need)
   const appointmentTimeField = computed(() => appointmentFieldRoles.value.datetime)
@@ -432,7 +438,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     if (!form) return failure('validation', 'Action content is not ready')
     const field = form.fields.find((candidate) => candidate.key === key)
     if (!field) return failure('validation', 'Action field is not supported')
-    const normalized = normalizeAppointmentFieldValue(field, value, form.values)
+    const normalized = normalizeAppointmentFieldValueForForm(form, field, value)
     if (normalized.state !== 'succeeded') {
       error.value = normalized.error ?? null
       return { state: normalized.state, ...(normalized.error ? { error: normalized.error } : {}) }
@@ -452,13 +458,13 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
 
   function setAppointmentTime(value: string): OperationSnapshot<void> {
     const field = appointmentTimeField.value
-    if (!field) return failure('unsupported_capability', 'Appointment time field is unavailable')
+    if (!field || !field.runtime.visible) return failure('validation', 'Appointment time is not applicable to the current visit branch')
     return setField(field.key, value)
   }
 
   async function openAppointmentTimeSelection(): Promise<OperationSnapshot<void>> {
     const currentDescriptor = descriptor.value
-    if (!currentDescriptor || !appointmentTimeField.value) {
+    if (!currentDescriptor || !appointmentTimeField.value || !appointmentTimeField.value.runtime.visible) {
       return failure('unsupported_capability', 'Appointment time selection is unavailable')
     }
     const flushed = await flushDraft()
@@ -683,6 +689,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       workflowNodeId: currentDescriptor.workflowNodeId,
       ...(detail.value?.workflowRunId ? { workflowRunId: detail.value.workflowRunId } : {}),
       ...(form.dataId ? { formDataId: form.dataId } : {}),
+      visitIntent: appointmentVisitIntent.value,
       values: validation.data ?? {},
     })
     if (commandResult.state !== 'succeeded') {
@@ -749,6 +756,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     appointmentForm,
     appointmentFields,
     appointmentFieldRoles,
+    appointmentVisitIntent,
     appointmentChoiceField,
     appointmentTimeField,
     appointmentNoteField,

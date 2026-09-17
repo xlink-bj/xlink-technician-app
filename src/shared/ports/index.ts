@@ -30,6 +30,7 @@ export type {
   AppointmentFormFieldRead,
   AppointmentFormOption,
   AppointmentFormRead,
+  AppointmentVisitIntent,
   SubmitAppointmentInput,
   TechnicianApiCommandPort,
 } from './commands'

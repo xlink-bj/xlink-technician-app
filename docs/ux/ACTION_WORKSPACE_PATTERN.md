@@ -61,6 +61,11 @@ Shell invariants:
 - Action Content consumes normalized read data and Dynamic Form Runtime state.
   Appointment-specific presentation roles use verified field keys (`need`,
   `datetime`, `note`); field order and generic field shape do not assign roles.
+  Appointment's `need` value is projected into a semantic visit intent before
+  rendering: `visit_required` keeps `datetime` applicable, while
+  `visit_deferred` removes it from the active content and validation path.
+  This projection is value-based, not label-based, and does not change the
+  generic Dynamic Form Runtime schema.
 - The Action flow uses bounded native transitions: time selection is pushed,
   confirmation replaces it, edit returns to the existing workspace, and final
   success returns to Detail/List with a clean navigation reset.
@@ -70,6 +75,36 @@ Shell invariants:
 
 Only an enabled Action can open an executable Workspace. A semantic domain
 policy decision is not itself a permission to execute a business mutation.
+
+## Conditional Action Content Pattern
+
+Some dynamic actions contain a controlling choice whose value determines
+whether another field is applicable. The reusable pattern is:
+
+```text
+controlling semantic value
+  → effective field applicability
+  → validation
+  → confirmation
+  → submission normalization
+  → draft preservation
+```
+
+For Appointment, `need = '1'` is the verified required-visit option and
+`need = '0'` is the verified deferred-visit option. In the deferred branch,
+`datetime` is hidden, excluded from effective validation and confirmation, and
+is not included in the effective values passed to the command boundary. The
+previous datetime may remain in the local draft so switching back can restore
+the user's editing work. Stored draft values and effective submitted values
+are intentionally different concepts.
+
+The current backend contract does not define whether a deferred appointment
+must omit `datetime`, send `null`, or use another sentinel on a real write.
+The feature therefore keeps the effective value separate and does not claim a
+verified deferred write encoding. Mock can exercise the semantic branch; the
+real-write safety boundary remains authoritative until that encoding is
+verified. This pattern is documented here rather than promoted into a generic
+form framework before a second real consumer exists.
 
 ## Workspace structure
 

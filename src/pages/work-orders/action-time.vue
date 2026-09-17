@@ -26,7 +26,7 @@
   </view>
 
   <ActionWorkspaceShell
-    v-else-if="workspace.descriptor && workspace.appointmentForm"
+    v-else-if="workspace.descriptor && workspace.appointmentForm && workspace.appointmentTimeField?.runtime.visible"
     :customer-name="workspace.detail?.customerName"
     :display-number="workspace.detail?.displayNumber"
     :lifecycle="workspace.lifecycle"

@@ -40,16 +40,22 @@
       <view class="confirmation-card app-surface app-surface--compact">
         <view class="confirmation-card-heading">
           <view class="confirmation-card-icon" aria-hidden="true"><AppIcon name="appointment" :size="20" color="var(--app-color-primary)" /></view>
-          <text class="confirmation-card-title">预约信息</text>
+          <text class="confirmation-card-title">{{ isVisitDeferred ? '安排信息' : '预约信息' }}</text>
         </view>
         <AppInformationRow class="confirmation-row">
-          <template #label>预约日期</template>
-          <template #value>{{ appointmentDisplay?.dateLabel || '—' }}</template>
+          <template #label>上门安排</template>
+          <template #value>{{ visitIntentLabel }}</template>
         </AppInformationRow>
-        <AppInformationRow class="confirmation-row">
-          <template #label>预约时间</template>
-          <template #value>{{ appointmentDisplay?.timeLabel || '—' }}</template>
-        </AppInformationRow>
+        <template v-if="!isVisitDeferred">
+          <AppInformationRow class="confirmation-row">
+            <template #label>预约日期</template>
+            <template #value>{{ appointmentDisplay?.dateLabel || '—' }}</template>
+          </AppInformationRow>
+          <AppInformationRow class="confirmation-row">
+            <template #label>预约时间</template>
+            <template #value>{{ appointmentDisplay?.timeLabel || '—' }}</template>
+          </AppInformationRow>
+        </template>
       </view>
 
       <view class="confirmation-card app-surface app-surface--compact">
@@ -92,12 +98,18 @@
     <template #success>
       <view class="appointment-success" aria-live="polite">
         <view class="appointment-success-mark" aria-hidden="true"><AppIcon name="complete" :size="42" color="var(--app-color-success)" /></view>
-        <text class="appointment-success-title">预约成功</text>
-        <text class="appointment-success-copy">已成功为客户预约上门时间</text>
-        <view class="appointment-success-time">
-          <text class="appointment-success-date">{{ appointmentDisplay?.dateLabel || '预约日期已提交' }}</text>
-          <text class="appointment-success-time-value">{{ appointmentDisplay?.timeLabel || '预约时间已提交' }}</text>
-        </view>
+        <template v-if="isVisitDeferred">
+          <text class="appointment-success-title">已确认暂不上门</text>
+          <text class="appointment-success-copy">操作已完成，当前上门安排已确认</text>
+        </template>
+        <template v-else>
+          <text class="appointment-success-title">预约成功</text>
+          <text class="appointment-success-copy">已成功为客户预约上门时间</text>
+          <view class="appointment-success-time">
+            <text class="appointment-success-date">{{ appointmentDisplay?.dateLabel || '预约日期已提交' }}</text>
+            <text class="appointment-success-time-value">{{ appointmentDisplay?.timeLabel || '预约时间已提交' }}</text>
+          </view>
+        </template>
         <text v-if="postSuccessWarning" class="appointment-success-warning">{{ postSuccessWarning }}</text>
       </view>
     </template>
@@ -145,7 +157,14 @@ const isNavigating = ref(false)
 
 const canAccess = computed(() => hasAuthenticatedSession(session.status, session.session))
 const isSuccess = computed(() => workspace.lifecycle === 'succeeded' && workspace.businessResult === 'succeeded')
+const isVisitDeferred = computed(() => workspace.appointmentVisitIntent === 'visit_deferred')
 const appointmentDisplay = computed(() => appointmentDisplayFor(workspace.appointmentTimeValue))
+const visitIntentLabel = computed(() => {
+  const field = workspace.appointmentChoiceField
+  const key = field?.key
+  const value = key ? workspace.appointmentForm?.values[key] : undefined
+  return field?.options?.find((option) => option.value === String(value ?? ''))?.label ?? '当前安排'
+})
 const customerServiceAddress = computed(() => {
   const district = workspace.detail?.serviceDistrict?.trim()
   const address = workspace.detail?.serviceAddress?.trim()
@@ -157,8 +176,9 @@ const noteValue = computed(() => {
   return typeof value === 'string' && value.trim() ? value.trim() : ''
 })
 const postSuccessWarning = computed(() => {
-  if (workspace.refreshStatus === 'pending') return '预约已提交，工单状态刷新暂不可用，请稍后查看。'
-  if (workspace.draftFinalization === 'pending') return '预约已提交，本地草稿清理待完成。'
+  const actionCopy = isVisitDeferred.value ? '操作已完成' : '预约已提交'
+  if (workspace.refreshStatus === 'pending') return `${actionCopy}，工单状态刷新暂不可用，请稍后查看。`
+  if (workspace.draftFinalization === 'pending') return `${actionCopy}，本地草稿清理待完成。`
   return ''
 })
 const feedback = computed(() => actionErrorCopy(workspace.error))

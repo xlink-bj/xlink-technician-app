@@ -31,6 +31,23 @@ field values. If a future appointment definition introduces a normalized value
 shape outside the current command port, the Dynamic Form Runtime returns an
 explicit unsupported-capability result rather than silently sending it.
 
+## Conditional visit branch
+
+The Appointment feature projects the verified `need` option values into a
+semantic visit intent. `need = '1'` keeps the `datetime` field visible,
+required, validated, confirmed, and effective for submission. `need = '0'`
+projects `visit_deferred`: `datetime` is hidden and excluded from effective
+validation, confirmation, and command values, while the previous editing value
+can remain in the scoped local draft for restoration if the user switches back.
+The projection never branches on the Chinese option labels.
+
+The current evidence does not establish the backend wire encoding for a
+deferred datetime (omit, `null`, or another sentinel). This remains an explicit
+write-contract gap; no production write was executed or asserted for that
+branch. Mock exercises the same normalized feature path for visual and
+functional UX development, while the existing real-write safety gate remains
+in force.
+
 ## Mock scenarios
 
 The six Detail scenarios remain raw backend-shaped fixtures and pass through the same Adapter + Runtime path:

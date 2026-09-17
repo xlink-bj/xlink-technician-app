@@ -12,6 +12,7 @@ import type {
   AppointmentFieldValue,
   AppointmentFormFieldRead,
   AppointmentFormRead,
+  AppointmentVisitIntent,
 } from '@shared/ports'
 import { createOperationError, type OperationSnapshot } from '@shared/types'
 
@@ -25,6 +26,19 @@ export interface AppointmentFieldRoles {
   readonly note?: AppointmentRuntimeField
   readonly extras: readonly AppointmentRuntimeField[]
 }
+
+export type { AppointmentVisitIntent } from '@shared/ports'
+
+/**
+ * R1 verifies the appointment form's semantic option values: `1` is the
+ * branch that can create an on-site appointment. `0` is the complementary
+ * deferred branch exposed by the same normalized option set. Labels remain
+ * presentation metadata and are intentionally not consulted here.
+ */
+const appointmentVisitOptionValues = {
+  required: '1',
+  deferred: '0',
+} as const
 
 function schemaFor(field: AppointmentFormFieldRead): FormFieldSchema {
   return {
@@ -43,14 +57,43 @@ function runtimeFieldState(
   return evaluateFieldState(schemaFor(field), { values })
 }
 
+export function appointmentVisitIntentFor(form: AppointmentFormRead): AppointmentVisitIntent {
+  const needField = form.fields.find((field) => field.key === 'need')
+  if (!needField) return 'unknown'
+
+  const rawValue = form.values[needField.key]
+  if (rawValue === undefined || rawValue === null || rawValue === '') return 'unknown'
+  const value = String(rawValue).trim()
+  if (!needField.options?.some((option) => option.value === value)) return 'unknown'
+  if (value === appointmentVisitOptionValues.required) return 'visit_required'
+  if (value === appointmentVisitOptionValues.deferred) return 'visit_deferred'
+  return 'unknown'
+}
+
+function effectiveRuntimeFieldFor(
+  field: AppointmentFormFieldRead,
+  form: AppointmentFormRead,
+): AppointmentRuntimeField {
+  const runtime = runtimeFieldState(field, form.values)
+  if (field.key !== 'datetime' || appointmentVisitIntentFor(form) !== 'visit_deferred') {
+    return { ...field, runtime }
+  }
+
+  return {
+    ...field,
+    runtime: {
+      ...runtime,
+      visible: false,
+      required: false,
+    },
+  }
+}
+
 export function appointmentRuntimeFieldsFor(
   form: AppointmentFormRead,
 ): readonly AppointmentRuntimeField[] {
   return form.fields
-    .map((field) => ({
-      ...field,
-      runtime: runtimeFieldState(field, form.values),
-    }))
+    .map((field) => effectiveRuntimeFieldFor(field, form))
     .filter((field) => field.runtime.visible && field.runtime.capability !== 'UNSUPPORTED')
 }
 
@@ -58,7 +101,12 @@ export function appointmentRuntimeFieldsFor(
 export function appointmentFieldRolesFor(
   form: AppointmentFormRead,
 ): AppointmentFieldRoles {
-  const fields = appointmentRuntimeFieldsFor(form)
+  // Keep a conditionally hidden datetime field in the role projection so its
+  // draft value remains recoverable. Consumers must use runtime.visible to
+  // decide whether it is currently in the active content path.
+  const fields = form.fields
+    .map((field) => effectiveRuntimeFieldFor(field, form))
+    .filter((field) => field.runtime.capability !== 'UNSUPPORTED')
   const need = fields.find((field) => field.key === 'need')
   const datetime = fields.find((field) => field.key === 'datetime')
   const note = fields.find((field) => field.key === 'note')
@@ -68,7 +116,7 @@ export function appointmentFieldRolesFor(
     ...(need ? { need } : {}),
     ...(datetime ? { datetime } : {}),
     ...(note ? { note } : {}),
-    extras: fields.filter((field) => !knownKeys.has(field.key)),
+    extras: fields.filter((field) => !knownKeys.has(field.key) && field.runtime.visible),
   }
 }
 
@@ -112,12 +160,37 @@ function resultFromSubmission(
 export function normalizeAppointmentForm(
   form: AppointmentFormRead,
 ): OperationSnapshot<Readonly<Record<string, AppointmentFieldValue>>> {
+  const roles = appointmentFieldRolesFor(form)
+  const values = { ...form.values }
+  const fieldContexts: Record<string, { readonly fixedRequired: boolean }> = {}
+  if (appointmentVisitIntentFor(form) === 'visit_deferred' && roles.datetime) {
+    // The stored draft value remains in `form.values`, but it is not an
+    // effective value for the deferred branch and must not reach submission.
+    delete values[roles.datetime.key]
+    fieldContexts[roles.datetime.key] = { fixedRequired: false }
+  }
+
   return resultFromSubmission(
     normalizeSubmission({
       fields: form.fields.map(schemaFor),
-      values: form.values,
+      values,
+      ...(Object.keys(fieldContexts).length > 0 ? { fieldContexts } : {}),
     }),
   )
+}
+
+export function normalizeAppointmentFieldValueForForm(
+  form: AppointmentFormRead,
+  field: AppointmentFormFieldRead,
+  value: AppointmentFieldValue,
+): OperationSnapshot<AppointmentFieldValue> {
+  if (field.key === 'datetime' && appointmentVisitIntentFor(form) === 'visit_deferred') {
+    return {
+      state: 'failed_terminal',
+      error: createOperationError('validation', 'Appointment time is not applicable to the current visit branch'),
+    }
+  }
+  return normalizeAppointmentFieldValue(field, value, form.values)
 }
 
 export function normalizeAppointmentFieldValue(
