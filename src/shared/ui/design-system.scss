@@ -109,17 +109,38 @@ page {
 .app-button--primary.app-button--disabled { background: var(--app-color-primary); color: var(--app-color-surface); opacity: 0.48; }
 .app-button--loading { opacity: 0.78; }
 .app-button--primary.app-button--loading { background: var(--app-color-primary); color: var(--app-color-surface); }
-.app-button__loading-mark {
-  animation: app-loading-spin var(--app-motion-loading-spinner-duration) linear infinite;
+.app-button__content {
+  align-items: center;
+  display: inline-flex;
+  justify-content: center;
+  max-width: 100%;
+  vertical-align: top;
+}
+
+.app-button__label {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-button__loading-slot {
   border: 4rpx solid currentColor;
   border-radius: 50%;
   border-right-color: transparent;
-  display: inline-block;
+  box-sizing: border-box;
   height: 22rpx;
   margin-right: 10rpx;
-  vertical-align: -4rpx;
+  visibility: hidden;
   width: 22rpx;
 }
+
+.app-button__loading-slot--active {
+  animation: app-loading-spin var(--app-motion-loading-spinner-duration) linear infinite;
+  visibility: visible;
+}
+.app-button__loading-slot--trailing { margin-left: 10rpx; margin-right: 0; }
 
 /* Field grammar */
 .app-field { margin-top: var(--app-field-gap); }

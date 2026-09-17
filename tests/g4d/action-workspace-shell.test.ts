@@ -29,6 +29,8 @@ describe('Action Workspace Shell structural contract', () => {
     expect(shell).toContain('safe-area-inset-bottom')
     expect(shell).toContain('padding-left: var(--app-action-bar-padding-x)')
     expect(shell).toContain('padding-right: var(--app-action-bar-padding-x)')
+    expect(shell).toContain('readonly transitioning?: boolean')
+    expect(shell).toContain(':loading="lifecycle === \'submitting\' || transitioning"')
     expect(shell).not.toContain('position: sticky')
   })
 
@@ -36,13 +38,13 @@ describe('Action Workspace Shell structural contract', () => {
     const shell = await readFile(shellPath, 'utf8')
     const pages = await Promise.all(pagePaths.map((path) => readFile(path, 'utf8')))
 
-    expect(shell).toContain('draftStatus === \'saved_local\'')
-    expect(shell).toContain('draftStatus === \'restore_available\'')
-    expect(shell).toContain('draftStatus === \'save_failed\'')
+    expect(shell).toContain('displayedDraftStatus === \'saved_local\'')
+    expect(shell).toContain('displayedDraftStatus === \'restore_available\'')
+    expect(shell).toContain('displayedDraftStatus === \'save_failed\'')
     expect(count(shell, '已自动保存')).toBe(1)
     expect(count(shell, '已恢复本地草稿')).toBe(1)
     expect(count(shell, '本地草稿保存失败')).toBe(1)
-    expect(shell).not.toContain('draftStatus === \'dirty\'')
+    expect(shell).not.toContain('displayedDraftStatus === \'dirty\'')
     for (const page of pages) {
       expect(page).not.toContain('draftMessage')
       expect(page).not.toContain('action-workspace-draft-message')
@@ -73,17 +75,35 @@ describe('Action Workspace Shell structural contract', () => {
 
   it('places the single draft strip before Action Content and suppresses it after success', async () => {
     const shell = await readFile(shellPath, 'utf8')
-    const draftStatusIndex = shell.indexOf('draftStatus === \'saving\'')
+    const draftStatusIndex = shell.indexOf('displayedDraftStatus === \'saving\'')
     const actionSlotIndex = shell.indexOf('<slot />')
     const successBranchIndex = shell.indexOf('<template v-else>')
 
     expect(draftStatusIndex).toBeGreaterThanOrEqual(0)
     expect(actionSlotIndex).toBeGreaterThan(draftStatusIndex)
     expect(successBranchIndex).toBeGreaterThan(actionSlotIndex)
-    expect(shell).toContain('lifecycle !== \'succeeded\' && draftStatus === \'saving\'')
-    expect(shell).toContain('lifecycle !== \'succeeded\' && draftStatus === \'saved_local\'')
-    expect(shell).toContain('lifecycle !== \'succeeded\' && draftStatus === \'restore_available\'')
-    expect(shell).toContain('lifecycle !== \'succeeded\' && draftStatus === \'save_failed\'')
+    expect(shell).toContain('lifecycle !== \'succeeded\' && displayedDraftStatus === \'saving\'')
+    expect(shell).toContain('lifecycle !== \'succeeded\' && displayedDraftStatus === \'saved_local\'')
+    expect(shell).toContain('lifecycle !== \'succeeded\' && displayedDraftStatus === \'restore_available\'')
+    expect(shell).toContain('lifecycle !== \'succeeded\' && displayedDraftStatus === \'save_failed\'')
+    expect(shell).toContain("if (status !== 'dirty') displayedDraftStatus.value = status")
+    expect(shell).not.toContain('!transitioning && lifecycle !==')
+  })
+
+  it('gates route transitions so draft persistence cannot reflow the departing page', async () => {
+    const pages = await Promise.all(pagePaths.map((path) => readFile(path, 'utf8')))
+    const workspace = pages[0]
+    const time = pages[1]
+    const confirmation = pages[2]
+
+    expect(workspace).toContain(':transitioning="isNavigating"')
+    expect(workspace).toContain('if (isNavigating.value) return')
+    expect(workspace).toContain('isNavigating.value = true')
+    expect(time).toContain(':loading="isNavigating"')
+    expect(time).toContain(':disabled="!selectedOption || isNavigating"')
+    expect(time).toContain('const result = await workspace.openConfirmation()')
+    expect(confirmation).toContain(':transitioning="isNavigating"')
+    expect(confirmation).toContain('const result = await workspace.backToAppointmentWorkspace()')
   })
 
   it('provides a deterministic long-content fixture for independent shell checks', () => {

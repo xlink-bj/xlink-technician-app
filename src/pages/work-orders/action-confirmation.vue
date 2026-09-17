@@ -31,6 +31,7 @@
     :display-number="workspace.detail?.displayNumber"
     :lifecycle="workspace.lifecycle"
     :draft-status="workspace.draftStatus"
+    :transitioning="isNavigating"
     :can-submit="workspace.canSubmit"
     :business-feedback="isSuccess ? '' : feedback"
     submit-label="确认预约"
@@ -140,6 +141,7 @@ const routeId = ref<ReturnType<typeof parseActionWorkspaceId>>(null)
 const routeNodeId = ref<ReturnType<typeof parseActionWorkspaceNodeId>>(null)
 const routeAction = ref<string | undefined>(undefined)
 const routeError = ref('')
+const isNavigating = ref(false)
 
 const canAccess = computed(() => hasAuthenticatedSession(session.status, session.session))
 const isSuccess = computed(() => workspace.lifecycle === 'succeeded' && workspace.businessResult === 'succeeded')
@@ -197,7 +199,10 @@ watch(
 )
 
 async function backToEdit(): Promise<void> {
-  await workspace.backToAppointmentWorkspace()
+  if (isNavigating.value) return
+  isNavigating.value = true
+  const result = await workspace.backToAppointmentWorkspace()
+  if (result.state !== 'succeeded') isNavigating.value = false
 }
 
 async function confirmAppointment(): Promise<void> {

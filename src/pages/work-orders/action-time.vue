@@ -31,6 +31,7 @@
     :display-number="workspace.detail?.displayNumber"
     :lifecycle="workspace.lifecycle"
     :draft-status="workspace.draftStatus"
+    :transitioning="isNavigating"
     :can-submit="Boolean(selectedOption)"
     :business-feedback="feedback"
     submit-label="确认选择"
@@ -86,7 +87,7 @@
     </view>
 
     <template #actions>
-      <AppButton class="time-selection-submit" :disabled="!selectedOption" block @tap="confirmSelection">确认选择</AppButton>
+      <AppButton class="time-selection-submit" :disabled="!selectedOption || isNavigating" :loading="isNavigating" block @tap="confirmSelection">确认选择</AppButton>
     </template>
   </ActionWorkspaceShell>
 
@@ -129,6 +130,7 @@ const routeError = ref('')
 const selectedDate = ref(dateStringFor())
 const selectedOptionKey = ref('')
 const timeError = ref('')
+const isNavigating = ref(false)
 
 const canAccess = computed(() => hasAuthenticatedSession(session.status, session.session))
 const dateShortcuts = dateShortcutsFor()
@@ -201,17 +203,21 @@ function selectOption(key: string): void {
 }
 
 async function confirmSelection(): Promise<void> {
+  if (isNavigating.value) return
   const option = selectedOption.value
   if (!option) {
     timeError.value = '请选择预约时间。'
     return
   }
+  isNavigating.value = true
   const updated = workspace.setAppointmentTime(`${selectedDate.value} ${option.value}`)
   if (updated.state !== 'succeeded') {
+    isNavigating.value = false
     timeError.value = '预约时间暂时无法保存，请重试。'
     return
   }
-  await workspace.openConfirmation()
+  const result = await workspace.openConfirmation()
+  if (result.state !== 'succeeded') isNavigating.value = false
 }
 
 function reload(): void {

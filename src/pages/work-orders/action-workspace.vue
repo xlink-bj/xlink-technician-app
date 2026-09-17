@@ -33,6 +33,7 @@
     :display-number="workspace.detail?.displayNumber"
     :lifecycle="workspace.lifecycle"
     :draft-status="workspace.draftStatus"
+    :transitioning="isNavigating"
     :can-submit="workspace.canSubmit"
     :business-feedback="feedback"
     submit-label="继续确认"
@@ -70,7 +71,7 @@
         <AppSelector
           class="appointment-time-selector"
           :selected="Boolean(appointmentDisplay)"
-          :disabled="workspace.appointmentTimeField.runtime.readOnly || workspace.lifecycle === 'submitting'"
+          :disabled="workspace.appointmentTimeField.runtime.readOnly || workspace.lifecycle === 'submitting' || isNavigating"
           @tap="openTimeSelection"
         >
           <view v-if="appointmentDisplay" class="appointment-time-selected">
@@ -168,6 +169,7 @@ const routeId = ref<ReturnType<typeof parseActionWorkspaceId>>(null)
 const routeNodeId = ref<ReturnType<typeof parseActionWorkspaceNodeId>>(null)
 const routeAction = ref<string | undefined>(undefined)
 const routeError = ref('')
+const isNavigating = ref(false)
 
 const canAccess = computed(() => hasAuthenticatedSession(session.status, session.session))
 const appointmentDisplay = computed(() => appointmentDisplayFor(workspace.appointmentTimeValue))
@@ -228,11 +230,17 @@ function appChoiceOptionsFor(
 }
 
 async function openTimeSelection(): Promise<void> {
-  await workspace.openAppointmentTimeSelection()
+  if (isNavigating.value) return
+  isNavigating.value = true
+  const result = await workspace.openAppointmentTimeSelection()
+  if (result.state !== 'succeeded') isNavigating.value = false
 }
 
 async function continueToConfirmation(): Promise<void> {
-  await workspace.continueToConfirmation()
+  if (isNavigating.value) return
+  isNavigating.value = true
+  const result = await workspace.continueToConfirmation()
+  if (result.state !== 'succeeded') isNavigating.value = false
 }
 
 function actionErrorCopy(error: OperationError | null): string {

@@ -75,6 +75,8 @@ describe('App UI Design System v0.1', () => {
     expect(button).toContain("'app-button--pressed': pressed")
     expect(button).toContain(':disabled="disabled || loading"')
     expect(button).toContain(':aria-busy="loading"')
+    expect(button).toContain('app-button__loading-slot--active')
+    expect(button).toContain('app-button__label')
     expect(field).toContain('required?: boolean')
     expect(field).toContain('error?: string')
     expect(field).toContain('showOptional')
@@ -162,6 +164,9 @@ describe('App UI Design System v0.1', () => {
     expect(shell).toContain('AppButton')
 
     const tokens = await readFile(tokenPath, 'utf8')
+    expect(tokens).toContain('.app-button__content')
+    expect(tokens).toContain('.app-button__loading-slot--active {')
+    expect(tokens).toContain('visibility: visible;')
     expect(tokens).toContain('--app-motion-loading-duration')
     expect(tokens).toContain('@keyframes app-loading-pulse')
     expect(tokens).toContain('@keyframes app-loading-spin')

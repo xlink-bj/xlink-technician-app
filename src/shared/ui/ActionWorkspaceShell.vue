@@ -11,14 +11,14 @@
         </view>
 
         <AppStatus
-          v-if="lifecycle !== 'succeeded' && draftStatus === 'saving'"
+          v-if="lifecycle !== 'succeeded' && displayedDraftStatus === 'saving'"
           class="action-workspace-draft-status"
           message="正在保存…"
           variant="strip"
           quiet
         />
         <AppStatus
-          v-else-if="lifecycle !== 'succeeded' && draftStatus === 'saved_local'"
+          v-else-if="lifecycle !== 'succeeded' && displayedDraftStatus === 'saved_local'"
           class="action-workspace-draft-status"
           message="已自动保存"
           tone="success"
@@ -27,7 +27,7 @@
           quiet
         />
         <AppStatus
-          v-else-if="lifecycle !== 'succeeded' && draftStatus === 'restore_available'"
+          v-else-if="lifecycle !== 'succeeded' && displayedDraftStatus === 'restore_available'"
           class="action-workspace-draft-status"
           message="已恢复本地草稿"
           variant="strip"
@@ -35,7 +35,7 @@
           quiet
         />
         <AppStatus
-          v-else-if="lifecycle !== 'succeeded' && draftStatus === 'save_failed'"
+          v-else-if="lifecycle !== 'succeeded' && displayedDraftStatus === 'save_failed'"
           class="action-workspace-draft-status"
           message="本地草稿保存失败"
           tone="warning"
@@ -63,8 +63,8 @@
           <slot name="actions">
             <AppButton
               class="action-workspace-submit"
-              :disabled="!canSubmit"
-              :loading="lifecycle === 'submitting'"
+              :disabled="!canSubmit || transitioning"
+              :loading="lifecycle === 'submitting' || transitioning"
               block
               @tap="$emit('submit')"
             >
@@ -81,19 +81,36 @@
 </template>
 
 <script setup lang="ts">
+import { ref, watch } from 'vue'
+
 import type { AppActionDraftStatus, AppActionLifecycle } from './types'
 import AppButton from './AppButton.vue'
 import AppStatus from './AppStatus.vue'
 
-defineProps<{
+const props = defineProps<{
   readonly customerName?: string
   readonly displayNumber?: string
   readonly lifecycle: AppActionLifecycle
   readonly draftStatus: AppActionDraftStatus
+  readonly transitioning?: boolean
   readonly canSubmit: boolean
   readonly submitLabel: string
   readonly businessFeedback?: string
 }>()
+
+/**
+ * Keep the last stable status visible while a draft is dirty. The Runtime
+ * remains authoritative; this only prevents a transient dirty -> saving
+ * transition from removing a status row and reflowing Action Content.
+ */
+const displayedDraftStatus = ref<AppActionDraftStatus>('clean')
+watch(
+  () => props.draftStatus,
+  (status) => {
+    if (status !== 'dirty') displayedDraftStatus.value = status
+  },
+  { immediate: true },
+)
 
 defineEmits<{
   (event: 'exit'): void

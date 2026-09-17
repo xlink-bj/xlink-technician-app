@@ -15,8 +15,15 @@
     :aria-pressed="pressed === undefined ? undefined : pressed"
     @tap="$emit('tap')"
   >
-    <view v-if="loading" class="app-button__loading-mark" aria-hidden="true" />
-    <slot />
+    <view class="app-button__content">
+      <view
+        class="app-button__loading-slot"
+        :class="{ 'app-button__loading-slot--active': loading }"
+        aria-hidden="true"
+      />
+      <view class="app-button__label"><slot /></view>
+      <view class="app-button__loading-slot app-button__loading-slot--trailing" aria-hidden="true" />
+    </view>
   </button>
 </template>
 
