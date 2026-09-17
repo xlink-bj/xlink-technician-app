@@ -5,16 +5,15 @@ import {
   mockAppointmentFormDefinitionResponse,
   mockOrdinaryListResponse,
   mockRepairPartsCascadeResponse,
-  mockInspectionPartsCascadeResponse,
+  mockSurveyPartsCascadeResponse,
   mockRoleFunctionResponse,
   mockSanodeListResponse,
   mockStatusOptionsResponse,
-  mockQualifiedCodeOptionsResponse,
   mockCommandScenarioIds,
-  mockInspectionFormDefinitionId,
-  mockInspectionFormDefinitionResponse,
-  mockObservedInspectionFormDefinitionId,
-  mockObservedInspectionFormDefinitionResponse,
+  mockSyntheticDynamicFormDefinitionId,
+  mockSyntheticInspectionFormDefinitionResponse,
+  mockSurveyFormDefinitionId,
+  mockSurveyFormDefinitionResponse,
   mockWorkOrderActivityResponseFor,
   mockWorkOrderDetailResponses,
   mockWorkOrderDetailResponseFor,
@@ -53,13 +52,13 @@ export function isMockOwnedRead(
   if (
     route === 'biz/extField/query' &&
     typeof requestData.extId === 'string' &&
-    (requestData.extId === mockInspectionFormDefinitionId
-      || requestData.extId === mockObservedInspectionFormDefinitionId)
+    (requestData.extId === mockSyntheticDynamicFormDefinitionId
+      || requestData.extId === mockSurveyFormDefinitionId)
   ) return true
   if (
     route.startsWith('biz/extForm/query/') &&
-    (route.slice('biz/extForm/query/'.length) === mockInspectionFormDefinitionId
-      || route.slice('biz/extForm/query/'.length) === mockObservedInspectionFormDefinitionId)
+    (route.slice('biz/extForm/query/'.length) === mockSyntheticDynamicFormDefinitionId
+      || route.slice('biz/extForm/query/'.length) === mockSurveyFormDefinitionId)
   ) return true
   const detailPrefix = 'basic/serviceAppointment/queryById/'
   if (route.startsWith(detailPrefix)) {
@@ -374,19 +373,11 @@ function matchedResponse(
   if (route === 'code/query' && requestData.valueOption === 'STATUS') {
     return mockStatusOptionsResponse
   }
-  if (route === 'i/code/selectCode.do' && typeof requestData.jsonPara === 'string') {
-    try {
-      const config = JSON.parse(requestData.jsonPara) as Array<{ codeId?: unknown }>
-      if (config.some((item) => item?.codeId === 'qualified')) return mockQualifiedCodeOptionsResponse
-    } catch {
-      return null
-    }
-  }
   if (route === 'i/code/selectMultistageCode.do' && requestData.types === 'repairParts') {
     return mockRepairPartsCascadeResponse
   }
   if (route === 'i/code/selectMultistageCode.do' && requestData.types === 'parts') {
-    return mockInspectionPartsCascadeResponse
+    return mockSurveyPartsCascadeResponse
   }
   if (
     route === 'biz/action/query.do' &&
@@ -413,11 +404,11 @@ function matchedResponse(
   if (route === 'biz/extField/query' && requestData.extId === appointmentFormDefinitionWireId) {
     return mockAppointmentFormDefinitionResponse
   }
-  if (route === 'biz/extField/query' && requestData.extId === mockInspectionFormDefinitionId) {
-    return mockInspectionFormDefinitionResponse
+  if (route === 'biz/extField/query' && requestData.extId === mockSyntheticDynamicFormDefinitionId) {
+    return mockSyntheticInspectionFormDefinitionResponse
   }
-  if (route === 'biz/extField/query' && requestData.extId === mockObservedInspectionFormDefinitionId) {
-    return mockObservedInspectionFormDefinitionResponse
+  if (route === 'biz/extField/query' && requestData.extId === mockSurveyFormDefinitionId) {
+    return mockSurveyFormDefinitionResponse
   }
   if (route.startsWith('biz/extForm/query/') && route.slice('biz/extForm/query/'.length) === appointmentFormDefinitionWireId) {
     const exactDataId = requestData['is:_id|string#and']
@@ -429,13 +420,13 @@ function matchedResponse(
     const formData = dataId ? mockCommandState().formData.get(dataId) : undefined
     return { data: formData ? [formData] : [], page: 1, rows: 20, total: formData ? 1 : 0 }
   }
-  if (route.startsWith('biz/extForm/query/') && route.slice('biz/extForm/query/'.length) === mockInspectionFormDefinitionId) {
+  if (route.startsWith('biz/extForm/query/') && route.slice('biz/extForm/query/'.length) === mockSyntheticDynamicFormDefinitionId) {
     const exactDataId = requestData['is:_id|string#and']
     const dataId = typeof exactDataId === 'string' ? exactDataId : undefined
     const formData = dataId ? mockCommandState().formData.get(dataId) : undefined
     return { data: formData ? [formData] : [], page: 1, rows: 20, total: formData ? 1 : 0 }
   }
-  if (route.startsWith('biz/extForm/query/') && route.slice('biz/extForm/query/'.length) === mockObservedInspectionFormDefinitionId) {
+  if (route.startsWith('biz/extForm/query/') && route.slice('biz/extForm/query/'.length) === mockSurveyFormDefinitionId) {
     const exactDataId = requestData['is:_id|string#and']
     const dataId = typeof exactDataId === 'string' ? exactDataId : undefined
     const formData = dataId ? mockCommandState().formData.get(dataId) : undefined
@@ -474,8 +465,8 @@ function matchedCommandResponse(request: ApiCommandRequest): unknown | null {
     return { data: { _id: formDataId } }
   }
   if (
-    route === 'biz/extForm/upsert/' + mockInspectionFormDefinitionId
-    || route === 'biz/extForm/upsert/' + mockObservedInspectionFormDefinitionId
+    route === 'biz/extForm/upsert/' + mockSyntheticDynamicFormDefinitionId
+    || route === 'biz/extForm/upsert/' + mockSurveyFormDefinitionId
   ) {
     const definitionId = route.slice('biz/extForm/upsert/'.length)
     const formDataId = saveMockDynamicForm(data.dataStr, definitionId)
@@ -490,8 +481,8 @@ function matchedCommandResponse(request: ApiCommandRequest): unknown | null {
       const formDataId = typeof data.nodeFormDataId === 'string' ? data.nodeFormDataId : ''
       completeMockAppointment(id, formDataId)
     } else if (
-      data.nodeFormDefId === mockInspectionFormDefinitionId
-      || data.nodeFormDefId === mockObservedInspectionFormDefinitionId
+      data.nodeFormDefId === mockSyntheticDynamicFormDefinitionId
+      || data.nodeFormDefId === mockSurveyFormDefinitionId
     ) {
       const formDataId = typeof data.nodeFormDataId === 'string' ? data.nodeFormDataId : ''
       completeMockDynamicForm(id, formDataId, data.nodeFormDefId)

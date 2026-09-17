@@ -40,7 +40,7 @@
     :submit-label="workspace.descriptor.actionIntent === 'interact_with_form' ? '完成勘察' : '继续确认'"
     @submit="submitWorkspace"
   >
-    <InspectionActionContent v-if="workspace.descriptor.actionIntent === 'interact_with_form'" />
+    <SurveyActionContent v-if="workspace.descriptor.actionIntent === 'interact_with_form'" />
     <view v-else class="action-workspace-content app-surface" :data-field-count="workspace.appointmentFields.length">
       <view class="action-content-heading">
         <view class="action-content-title-row">
@@ -58,9 +58,9 @@
       >
         <AppChoiceGroup
           :options="appChoiceOptionsFor(workspace.appointmentChoiceField)"
-          :model-value="String(workspace.appointmentForm?.values[workspace.appointmentChoiceField.key] ?? '')"
+          :model-value="String(workspace.appointmentForm?.values[workspace.appointmentChoiceField.valueKey] ?? '')"
           :disabled="workspace.appointmentChoiceField.runtime.readOnly || workspace.lifecycle === 'submitting'"
-          @update:model-value="setField(workspace.appointmentChoiceField.key, $event)"
+          @update:model-value="setField(workspace.appointmentChoiceField.fieldId, $event)"
         />
       </AppField>
 
@@ -92,18 +92,18 @@
         :optional="!workspace.appointmentNoteField.runtime.required"
       >
         <AppTextarea
-          :model-value="String(workspace.appointmentForm?.values[workspace.appointmentNoteField.key] ?? '')"
+          :model-value="String(workspace.appointmentForm?.values[workspace.appointmentNoteField.valueKey] ?? '')"
           :maxlength="-1"
           :disabled="workspace.appointmentNoteField.runtime.readOnly || workspace.lifecycle === 'submitting'"
           :read-only="workspace.appointmentNoteField.runtime.readOnly"
           placeholder="请填写与客户沟通的其他信息"
-          @update:model-value="setField(workspace.appointmentNoteField.key, $event)"
+          @update:model-value="setField(workspace.appointmentNoteField.fieldId, $event)"
         />
       </AppField>
 
       <AppField
         v-for="field in workspace.appointmentExtraFields"
-        :key="field.key"
+        :key="field.fieldId"
         class="action-content-field"
         :label="field.label"
         :required="field.runtime.required"
@@ -111,23 +111,23 @@
         <AppChoiceGroup
           v-if="field.options?.length"
           :options="appChoiceOptionsFor(field)"
-          :model-value="String(workspace.appointmentForm?.values[field.key] ?? '')"
+          :model-value="String(workspace.appointmentForm?.values[field.valueKey] ?? '')"
           :disabled="field.runtime.readOnly || workspace.lifecycle === 'submitting'"
-          @update:model-value="setField(field.key, $event)"
+          @update:model-value="setField(field.fieldId, $event)"
         />
         <AppTextarea
           v-else-if="field.type === 'textarea'"
-          :model-value="String(workspace.appointmentForm?.values[field.key] ?? '')"
+          :model-value="String(workspace.appointmentForm?.values[field.valueKey] ?? '')"
           :disabled="field.runtime.readOnly || workspace.lifecycle === 'submitting'"
           :read-only="field.runtime.readOnly"
-          @update:model-value="setField(field.key, $event)"
+          @update:model-value="setField(field.fieldId, $event)"
         />
         <AppInput
           v-else
-          :model-value="String(workspace.appointmentForm?.values[field.key] ?? '')"
+          :model-value="String(workspace.appointmentForm?.values[field.valueKey] ?? '')"
           :disabled="field.runtime.readOnly || workspace.lifecycle === 'submitting'"
           :read-only="field.runtime.readOnly"
-          @update:model-value="setField(field.key, $event)"
+          @update:model-value="setField(field.fieldId, $event)"
         />
       </AppField>
       </view>
@@ -165,7 +165,7 @@ import {
 import { appointmentDisplayFor } from '@features/work-orders/appointment-time'
 import { useSessionStore } from '@shared/state'
 import ActionWorkspaceShell from '@shared/ui/ActionWorkspaceShell.vue'
-import InspectionActionContent from '@features/work-orders/components/InspectionActionContent.vue'
+import SurveyActionContent from '@features/work-orders/components/SurveyActionContent.vue'
 import AppButton from '@shared/ui/AppButton.vue'
 import AppChoiceGroup from '@shared/ui/AppChoiceGroup.vue'
 import AppField from '@shared/ui/AppField.vue'
@@ -234,8 +234,8 @@ function reload(): void {
   loadWorkspace()
 }
 
-function setField(key: string, value: string): void {
-  workspace.setField(key, value)
+function setField(fieldId: string, value: string): void {
+  workspace.setField(fieldId, value)
 }
 
 function appChoiceOptionsFor(

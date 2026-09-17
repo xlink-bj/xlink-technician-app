@@ -1,9 +1,9 @@
-# G4-E On-site Inspection / Inspection Form Evidence
+# G4-E Survey / On-site Action Evidence
 
-Status: Beta contract discovery + Mock fidelity hardening — awaiting review
+Status: Survey contract rebase + field identity hardening — awaiting review
 Repository: `xlink-bj/xlink-technician-app`  
 Branch: `rebuild/g4e-onsite-inspection`  
-Baseline before this hardening pass: `21df8a0714a379b99849012029c4ed3fe4366ec8`
+Baseline before this rebase pass: `821632e914ef2546b85198a304fa0d491bead048`
 Issue: `#21`
 
 This document combines the accepted Phase 0/1 evidence with the bounded Phase
@@ -72,7 +72,9 @@ not be read as proof of the active Survey or InspectionAppointment contract.
 It is classified as a shared/historical hybrid. A separate sanitized Beta
 structural scan found a 61-field historical inactive repeat `勘察` family,
 five occurrences and zero active repeat nodes. The existing snapshot and Mock
-implementation are intentionally unchanged in this documentation-only pass.
+implementation are now re-based to the sanitized 61-row Survey family for the
+G4-E application Mock. The 15-field artifact remains quarantine-only for
+historical compatibility evidence.
 
 The previously captured Beta form observation is committed as a sanitized
 structural snapshot at:
@@ -81,10 +83,9 @@ structural snapshot at:
 contracts/beta/inspection/current.json
 ```
 
-The snapshot is authoritative for this development Beta form family only. It
-contains a deterministic opaque form alias, field identity aliases, structural
-metadata, provider contracts and value shapes. It contains no raw work-order,
-form-data, customer, tenant, session, token or media values.
+The snapshot is retained as historical compatibility evidence only. It is not
+the G4-E Survey Mock source and it contains no raw work-order, form-data,
+customer, tenant, session, token or media values.
 
 The repeatable read-only discovery command is:
 
@@ -124,10 +125,11 @@ Beta host. Password mode is available through
 `XLINK_BETA_LOGIN_METHOD=password` and `XLINK_BETA_PASSWORD`. Credentials are
 runtime inputs only and are not written to the repository.
 
-The default observed Inspection Mock is generated from that snapshot by
-`src/adapters/api/mock/inspection-contract.ts` and then passes through the
-existing raw-response Adapter and Dynamic Form Runtime. There is no second
-hand-authored 15-field Inspection schema.
+The G4-E Survey Mock is generated from the sanitized 61-row family inventory by
+`src/adapters/api/mock/survey-contract.ts` and then passes through the
+existing raw-response Adapter and Dynamic Form Runtime. The historical
+15-field hybrid remains isolated in `inspection-contract.ts` and is not part
+of the G4-E application route.
 
 Current provider status in the committed snapshot:
 
@@ -372,7 +374,7 @@ validation are in `values.ts:13-171`.
 | `select`, `bizSelect`, `radio`, `checkbox`, `switch`, `rate` | **SUPPORTED / CONDITIONAL**; choice types need a verified provider or inline options | Reuse provider/runtime; collect actual option sources and nullable behavior | `capabilities.ts:39-61`; `values.ts:47-55,85-119`; R1 provider setup `inspectionAppointment.vue:5595-5605`. |
 | `cascade` | **PARTIAL**; normalized provider/value shape exists, but active inspection cascade and dependency graph are unknown | Extend only after field fixture proves the dependency shape | `capabilities.ts:43-47`; R1 `valueOption` handling `5595-5605`; matrix `DYNAMIC_FORM_CAPABILITY_MATRIX.md:42-44`. |
 | `file` / `image` | **PARTIAL**; Runtime accepts normalized media references, not binary/upload mechanics | Reuse scalar semantics; requires Platform/API Media Adapter and upload contract | `types.ts:92-99`; `values.ts:95-110`; `PLATFORM_CAPABILITY_MATRIX.md:41-44`; R1 upload `inspectionAppointment.vue:9207-9346`. |
-| `area` | **PARTIAL / guarded**; generic area normalization explicitly returns unsupported, while a named survey rule exists | Do not generalize; use a reviewed declarative rule only if active inspection evidence selects it | `values.ts:78-83`; `types.ts:117-122`; R1 measurement rule `editableFieldWriteContract.js:4-43`. |
+| `area` | **UNSUPPORTED**; generic area representation is unresolved and normalization rejects it | Keep hidden and blocked until a verified measurement contract is available; do not generalize a named survey rule | `values.ts:78-83`; `capabilities.ts`; R1 measurement rule `editableFieldWriteContract.js:4-43`. |
 | `scan`, `addItem`, `pushItem`, `sort`, `evaluate`, `dialog`, `data`, `canvas`, `bgImage` and other custom widgets | **MISSING generic support** | Treat each as an explicit inspection-specific capability decision; unsupported must fail explicitly | R1 branches `inspectionAppointment.vue:5573-5616`; current disposition `DYNAMIC_FORM_CAPABILITY_MATRIX.md:47,105-113`. |
 | `inspectionSOPData` checklist/media structure | **MISSING as a named semantic content model** | Inspection Action Content may own the presentation after evidence, while Dynamic Form Runtime remains the field/rule engine | R1 required behavior `inspectionAppointment.vue:5831-5849`; current App ports have only generic `FormFieldRead` (`src/shared/ports/api.ts:168-175`). |
 | Conditional visibility / required / read-only | **SUPPORTED bounded runtime semantics** | Reuse; apply effective-state rules and do not copy Legacy predicates into Vue | `types.ts:32-90`; `values.ts:128-171`; `DYNAMIC_FORM_CAPABILITY_MATRIX.md:43-45,67-93`. |

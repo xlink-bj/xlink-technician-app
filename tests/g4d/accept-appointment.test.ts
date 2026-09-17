@@ -125,7 +125,7 @@ describe('G4-D accept and appointment semantics', () => {
     const readPort = {
       getFormDefinition: async (): Promise<OperationSnapshot<FormDefinitionRead>> => succeeded({
         id: asOpaqueId<'FormDefinitionId'>('appointment-definition'),
-        fields: [{ key: 'datetime', label: '预约时间', type: 'datetime', required: true, readOnly: false }],
+        fields: [{ fieldId: 'datetime', valueKey: 'datetime', label: '预约时间', type: 'datetime', required: true, readOnly: false }],
       }),
       getFormData: async (): Promise<OperationSnapshot<ReadPage<FormDataRead>>> => succeeded({
         items: [{
@@ -142,7 +142,7 @@ describe('G4-D accept and appointment semantics', () => {
     expect((await command.inspectAcceptOrder({ workOrderId, workflowNodeId: nodeId })).state).toBe('succeeded')
     expect((await command.acceptOrder({ workOrderId, workflowNodeId: nodeId })).state).toBe('succeeded')
     const form = await command.readAppointmentForm({ formDataId: asOpaqueId<'FormDataId'>('existing-form-data') })
-    expect(form.data?.fields[0].key).toBe('datetime')
+    expect(form.data?.fields[0].valueKey).toBe('datetime')
     expect(form.data?.values.datetime).toBe('2026-04-20 10:00')
     expect((await command.submitAppointment({
       workOrderId,
@@ -208,7 +208,7 @@ describe('G4-D accept and appointment semantics', () => {
       tone: 'orange',
     })
     const form = await command.readAppointmentForm({})
-    expect(form.data?.fields.map((field) => field.key)).toEqual(['need', 'datetime', 'note'])
+    expect(form.data?.fields.map((field) => field.valueKey)).toEqual(['need', 'datetime', 'note'])
     await command.submitAppointment({
       workOrderId: row.id,
       workflowNodeId: projection.currentTask!.nodeId,
@@ -251,7 +251,7 @@ describe('G4-D accept and appointment semantics', () => {
     } as unknown as TechnicianApiReadPort
     const command = {
       readAppointmentForm: vi.fn(async () => succeeded({
-        fields: [{ key: 'datetime', label: '预约时间', type: 'datetime', required: true, readOnly: false }],
+        fields: [{ fieldId: 'datetime', valueKey: 'datetime', label: '预约时间', type: 'datetime', required: true, readOnly: false }],
         values: {},
       })),
       submitAppointment: vi.fn(async () => succeeded(undefined)),

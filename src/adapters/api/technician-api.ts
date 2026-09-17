@@ -747,12 +747,14 @@ function formFieldVisibility(record: AdapterRecord): {
   return { visibility: { kind: 'equals', path: showField, value: normalizedValue } }
 }
 
-function formField(raw: unknown): FormFieldRead | null {
+function formField(raw: unknown, rowIndex: number): FormFieldRead | null {
   const record = optionalRecord(raw)
   if (!record) return null
-  const key = optionalString(record, ['name', 'key', 'fieldName'])?.trim()
-  if (!key) return null
-  const label = optionalString(record, ['nameDisp', 'label', 'displayName', 'name'])?.trim() ?? key
+  const valueKey = optionalString(record, ['name', 'key', 'fieldName'])?.trim()
+  if (!valueKey) return null
+  const rawFieldId = optionalString(record, ['_id', 'id', 'fieldId'])?.trim()
+  const fieldId = rawFieldId ?? `unidentified-field-row-${rowIndex + 1}`
+  const label = optionalString(record, ['nameDisp', 'label', 'displayName', 'name'])?.trim() ?? valueKey
   const type = optionalString(record, ['type', 'fieldType'])?.trim() ?? 'unknown'
   const requiredValue = record.required
   const readOnlyValue = record.readOnly ?? record.readonly
@@ -773,7 +775,8 @@ function formField(raw: unknown): FormFieldRead | null {
   const valueOption = optionalString(record, ['valueOption'])
 
   return {
-    key,
+    fieldId,
+    valueKey,
     label,
     type,
     required,
@@ -782,7 +785,11 @@ function formField(raw: unknown): FormFieldRead | null {
     ...(options && options.length > 0 ? { options } : {}),
     ...(conditional.visibility ? { visibility: conditional.visibility } : {}),
     ...(valueOption ? { valueOption } : {}),
-    ...(conditional.unsupportedReason ? { unsupportedReason: conditional.unsupportedReason } : {}),
+    ...(!rawFieldId
+      ? { unsupportedReason: 'Field row identity is unavailable' }
+      : conditional.unsupportedReason
+        ? { unsupportedReason: conditional.unsupportedReason }
+        : {}),
   }
 }
 
@@ -802,7 +809,7 @@ function formDefinition(raw: unknown, requestedId: FormDefinitionId): FormDefini
       ? record.fields
       : []
   const fields = rawFields
-    .map(formField)
+    .map((field, index) => formField(field, index))
     .filter((value): value is FormFieldRead => Boolean(value))
   const purpose = String(requestedId) === appointmentFormDefinitionWireId
     ? ('appointment' as const)

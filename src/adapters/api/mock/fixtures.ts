@@ -2,20 +2,18 @@
 
 import { appointmentFormDefinitionWireId } from '../appointment-contract'
 import {
-  mockInspectionPartsCascadeResponse,
-  mockObservedInspectionFormDefinitionId,
-  mockObservedInspectionFormDefinitionResponse,
-  mockQualifiedCodeOptionsResponse,
-} from './inspection-contract'
+  mockSurveyFormDefinitionId,
+  mockSurveyFormDefinitionResponse,
+  mockSurveyPartsCascadeResponse,
+} from './survey-contract'
 
-/** Synthetic only: no production form-definition vocabulary is asserted. */
-export const mockInspectionFormDefinitionId = 'mock-form-definition-inspection'
+/** Synthetic-only legacy harness form; it is not the G4-E Survey contract. */
+export const mockSyntheticDynamicFormDefinitionId = 'mock-form-definition-inspection'
 
 export {
-  mockInspectionPartsCascadeResponse,
-  mockObservedInspectionFormDefinitionId,
-  mockObservedInspectionFormDefinitionResponse,
-  mockQualifiedCodeOptionsResponse,
+  mockSurveyFormDefinitionId,
+  mockSurveyFormDefinitionResponse,
+  mockSurveyPartsCascadeResponse,
 }
 
 export const mockAppointmentFormDefinitionResponse = {
@@ -54,7 +52,7 @@ export const mockAppointmentFormDefinitionResponse = {
   total: 3,
 } as const
 
-export const mockInspectionFormDefinitionResponse = {
+export const mockSyntheticInspectionFormDefinitionResponse = {
   data: [
     {
       _id: 'mock-inspection-field-summary',
@@ -139,7 +137,7 @@ export const mockCommandScenarioIds = {
   appointmentRetryable: 'mock-work-order-014-appointment-retryable',
   appointmentTerminal: 'mock-work-order-015-appointment-terminal',
   appointmentSuccess: 'mock-work-order-016-appointment-success',
-  inspectionSuccess: 'mock-work-order-017-inspection-success',
+  surveySuccess: 'mock-work-order-017-survey-success',
 } as const
 
 /** Mock DATA list order is intentionally stable for visual review. */
@@ -712,10 +710,10 @@ export const mockWorkOrderDetailResponses = {
       }],
     },
   },
-  [mockCommandScenarioIds.inspectionSuccess]: {
+  [mockCommandScenarioIds.surveySuccess]: {
     data: {
       serviceAppointment: {
-        _id: mockCommandScenarioIds.inspectionSuccess,
+        _id: mockCommandScenarioIds.surveySuccess,
         orderNum: '19017',
         name: '演示现场勘察样本',
         address: '演示地址七',
@@ -732,7 +730,7 @@ export const mockWorkOrderDetailResponses = {
         nodeDef: {
           nodeType: 'forms',
           name: '现场勘察',
-          formDefId: mockObservedInspectionFormDefinitionId,
+          formDefId: mockSurveyFormDefinitionId,
           userChoose: ['synthetic-role'],
         },
       }],

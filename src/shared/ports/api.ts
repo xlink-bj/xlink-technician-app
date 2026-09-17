@@ -168,7 +168,10 @@ export interface FormDefinitionRead {
 }
 
 export interface FormFieldRead {
-  readonly key: string
+  /** Stable ExtField row identity; never used as a FormData value key. */
+  readonly fieldId: string
+  /** Backend business field name used in FormData values. May repeat across rows. */
+  readonly valueKey: string
   readonly label: string
   readonly type: string
   readonly required: boolean

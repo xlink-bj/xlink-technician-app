@@ -161,7 +161,7 @@ const isVisitDeferred = computed(() => workspace.appointmentVisitIntent === 'vis
 const appointmentDisplay = computed(() => appointmentDisplayFor(workspace.appointmentTimeValue))
 const visitIntentLabel = computed(() => {
   const field = workspace.appointmentChoiceField
-  const key = field?.key
+  const key = field?.valueKey
   const value = key ? workspace.appointmentForm?.values[key] : undefined
   return field?.options?.find((option) => option.value === String(value ?? ''))?.label ?? '当前安排'
 })
@@ -171,7 +171,7 @@ const customerServiceAddress = computed(() => {
   return [district, address].filter(Boolean).join(' ')
 })
 const noteValue = computed(() => {
-  const key = workspace.appointmentNoteField?.key
+  const key = workspace.appointmentNoteField?.valueKey
   const value = key ? workspace.appointmentForm?.values[key] : undefined
   return typeof value === 'string' && value.trim() ? value.trim() : ''
 })

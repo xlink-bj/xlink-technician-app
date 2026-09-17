@@ -154,23 +154,30 @@ export function normalizeSubmission(input: {
   const normalized: Record<string, NormalizedFieldValue> = {}
   for (const field of input.fields) {
     const state = evaluateFieldState(field, {
-      ...(input.fieldContexts?.[field.key] ?? {}),
+      ...(input.fieldContexts?.[field.fieldId] ?? {}),
       values: input.values,
     })
     if (state.capability === 'UNSUPPORTED') {
       return {
         ok: false,
         reason: 'unsupported_capability',
-        fieldKey: field.key,
+        fieldId: field.fieldId,
+        valueKey: field.valueKey,
         message: state.reason ?? 'field capability is unsupported',
       }
     }
 
-    const raw = input.values[field.key]
+    const raw = input.values[field.valueKey]
     if (!state.visible && !input.preserveHiddenValues) continue
     if (isMissing(raw)) {
       if (state.required) {
-        return { ok: false, reason: 'validation', fieldKey: field.key, message: 'required field is missing' }
+        return {
+          ok: false,
+          reason: 'validation',
+          fieldId: field.fieldId,
+          valueKey: field.valueKey,
+          message: 'required field is missing',
+        }
       }
       continue
     }
@@ -180,11 +187,12 @@ export function normalizeSubmission(input: {
       return {
         ok: false,
         reason: value.reason === 'unsupported_field_type' ? 'unsupported_capability' : 'validation',
-        fieldKey: field.key,
+        fieldId: field.fieldId,
+        valueKey: field.valueKey,
         message: value.message,
       }
     }
-    normalized[field.key] = value.value
+    normalized[field.valueKey] = value.value
   }
   const submission: FormSubmission = { values: normalized }
   return { ok: true, value: submission }

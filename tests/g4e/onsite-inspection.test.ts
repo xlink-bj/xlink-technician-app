@@ -13,8 +13,8 @@ import { createUniUploadPort } from '@adapters/upload/uni-upload-port'
 import {
   isMockOwnedRead,
   mockCommandScenarioIds,
-  mockInspectionFormDefinitionId,
-  mockObservedInspectionFormDefinitionId,
+  mockSyntheticDynamicFormDefinitionId,
+  mockSurveyFormDefinitionId,
   resetBusinessMockCache,
   resetMockCommandState,
   setBusinessMockMode,
@@ -86,17 +86,17 @@ function inspectionForm(values: Readonly<Record<string, FormFieldValue>> = {}): 
   return {
     definitionId: formDefinitionId,
     fields: [
-      { key: 'summary', label: '现场情况', type: 'textarea', required: true, readOnly: false },
+      { fieldId: 'summary', valueKey: 'summary', label: '现场情况', type: 'textarea', required: true, readOnly: false },
       {
-        key: 'result',
+        fieldId: 'result', valueKey: 'result',
         label: '勘察结论',
         type: 'radio',
         required: true,
         readOnly: false,
         options: [{ value: 'safe', label: '可继续施工' }, { value: 'follow_up', label: '需要跟进' }],
       },
-      { key: 'photo', label: '现场照片', type: 'image', required: true, readOnly: false },
-      { key: 'note', label: '备注', type: 'textarea', required: false, readOnly: false },
+      { fieldId: 'photo', valueKey: 'photo', label: '现场照片', type: 'image', required: true, readOnly: false },
+      { fieldId: 'note', valueKey: 'note', label: '备注', type: 'textarea', required: false, readOnly: false },
     ],
     values,
   }
@@ -258,7 +258,7 @@ describe('G4-E onsite inspection dynamic Action Content', () => {
       fields: [
         ...inspectionForm().fields,
         {
-          key: 'followUpPhoto',
+          fieldId: 'followUpPhoto', valueKey: 'followUpPhoto',
           label: '跟进照片',
           type: 'unknown-media',
           required: false,
@@ -268,15 +268,15 @@ describe('G4-E onsite inspection dynamic Action Content', () => {
       ],
     }
 
-    expect(dynamicActionFieldsFor(form).find((field) => field.key === 'followUpPhoto')?.runtime.visible).toBe(false)
-    expect(dynamicActionUnsupportedFieldsFor(form).map((field) => field.key)).not.toContain('followUpPhoto')
+    expect(dynamicActionFieldsFor(form).find((field) => field.valueKey === 'followUpPhoto')?.runtime.visible).toBe(false)
+    expect(dynamicActionUnsupportedFieldsFor(form).map((field) => field.valueKey)).not.toContain('followUpPhoto')
   })
 
   it('supports checkbox and cascade fields without scalarizing their values', () => {
     const form: DynamicFormRead = {
       fields: [
         {
-          key: 'inspectionChecks',
+          fieldId: 'inspectionChecks', valueKey: 'inspectionChecks',
           label: '检查项',
           type: 'checkbox',
           required: true,
@@ -284,7 +284,7 @@ describe('G4-E onsite inspection dynamic Action Content', () => {
           options: [{ value: 'ok', label: '正常' }],
         },
         {
-          key: 'inspectionPath',
+          fieldId: 'inspectionPath', valueKey: 'inspectionPath',
           label: '检查路径',
           type: 'cascade',
           required: false,
@@ -294,14 +294,14 @@ describe('G4-E onsite inspection dynamic Action Content', () => {
       ],
       values: {},
     }
-    expect(dynamicActionUnsupportedFieldsFor(form).map((field) => field.key)).toEqual([])
+    expect(dynamicActionUnsupportedFieldsFor(form).map((field) => field.valueKey)).toEqual([])
   })
 
   it('supports declared multi-value choices without scalarizing them', () => {
     const form: DynamicFormRead = {
       fields: [
         {
-          key: 'inspectionContent',
+          fieldId: 'inspectionContent', valueKey: 'inspectionContent',
           label: '巡检内容',
           type: 'select',
           required: false,
@@ -310,7 +310,7 @@ describe('G4-E onsite inspection dynamic Action Content', () => {
           options: [{ value: 'a', label: 'A' }],
         },
         {
-          key: 'serviceGoods',
+          fieldId: 'serviceGoods', valueKey: 'serviceGoods',
           label: '套餐名称',
           type: 'bizSelect',
           required: true,
@@ -322,12 +322,29 @@ describe('G4-E onsite inspection dynamic Action Content', () => {
       values: {},
     }
 
-    expect(dynamicActionUnsupportedFieldsFor(form).map((field) => field.key)).toEqual([])
+    expect(dynamicActionUnsupportedFieldsFor(form).map((field) => field.valueKey)).toEqual([])
 
     expect(dynamicActionUnsupportedFieldsFor({
       fields: [{ ...form.fields[0], options: undefined }],
       values: {},
-    }).map((field) => field.key)).toEqual(['inspectionContent'])
+    }).map((field) => field.valueKey)).toEqual(['inspectionContent'])
+  })
+
+  it('addresses repeated Survey rows by fieldId while storing the shared valueKey', async () => {
+    const form: DynamicFormRead = {
+      fields: [
+        { fieldId: 'survey-length-row-001', valueKey: 'length', label: '长度（结构）', type: 'digit', required: false, readOnly: false },
+        { fieldId: 'survey-length-row-002', valueKey: 'length', label: '长度（局部）', type: 'digit', required: false, readOnly: false },
+      ],
+      values: {},
+    }
+    const { store } = configureWorkspace(succeeded(undefined), inspectionDetail(), form)
+    await store.load({ workOrderId, workflowNodeId, actionIntent: 'interact_with_form' })
+
+    store.setField('survey-length-row-002', '2.5')
+
+    expect(store.dynamicForm?.values).toEqual({ length: 2.5 })
+    expect(store.dynamicFormSaveState).toBe('not_saved')
   })
 
   it('blocks completion when a required provider remains UNKNOWN', async () => {
@@ -336,7 +353,7 @@ describe('G4-E onsite inspection dynamic Action Content', () => {
       fields: [
         ...inspectionForm().fields,
         {
-          key: 'serviceGoods',
+          fieldId: 'serviceGoods', valueKey: 'serviceGoods',
           label: '套餐名称',
           type: 'bizSelect',
           required: true,
@@ -362,17 +379,17 @@ describe('G4-E onsite inspection dynamic Action Content', () => {
   it('guards media picker and upload with the effective field state', async () => {
     const readOnlyForm: DynamicFormRead = {
       ...inspectionForm(),
-      fields: inspectionForm().fields.map((field) => field.key === 'photo' ? { ...field, readOnly: true } : field),
+      fields: inspectionForm().fields.map((field) => field.valueKey === 'photo' ? { ...field, readOnly: true } : field),
     }
     const hiddenForm: DynamicFormRead = {
       ...inspectionForm(),
-      fields: inspectionForm().fields.map((field) => field.key === 'photo'
+      fields: inspectionForm().fields.map((field) => field.valueKey === 'photo'
         ? { ...field, visibility: { kind: 'equals' as const, path: 'result', value: 'safe' } }
         : field),
     }
     const unsupportedForm: DynamicFormRead = {
       ...inspectionForm(),
-      fields: inspectionForm().fields.map((field) => field.key === 'photo' ? { ...field, type: 'video' } : field),
+      fields: inspectionForm().fields.map((field) => field.valueKey === 'photo' ? { ...field, type: 'video' } : field),
     }
 
     for (const form of [readOnlyForm, hiddenForm, unsupportedForm]) {
@@ -452,7 +469,7 @@ describe('G4-E onsite inspection dynamic Action Content', () => {
     expect(store.loadState).toBe('blocked')
   })
 
-  it('keeps synthetic inspection reads local and refuses synthetic fall-through when Mock is off', async () => {
+  it('keeps synthetic Survey reads local and refuses synthetic fall-through when Mock is off', async () => {
     setBusinessMockMode('data')
     const request = vi.fn(() => { throw new Error('real transport must not be called') })
     const readTransport = createUniApiReadTransport({
@@ -466,24 +483,24 @@ describe('G4-E onsite inspection dynamic Action Content', () => {
       cascadeTenantId: 'synthetic-tenant',
       codeTenantId: 'synthetic-tenant',
     })
-    const detail = await read.getWorkOrderDetail(asOpaqueId<'WorkOrderId'>(mockCommandScenarioIds.inspectionSuccess))
+    const detail = await read.getWorkOrderDetail(asOpaqueId<'WorkOrderId'>(mockCommandScenarioIds.surveySuccess))
     expect(detail.state).toBe('succeeded')
     expect(detail.data?.workflowNodes?.[0]).toMatchObject({
-      formDefinitionId: asOpaqueId<'FormDefinitionId'>(mockObservedInspectionFormDefinitionId),
+      formDefinitionId: asOpaqueId<'FormDefinitionId'>(mockSurveyFormDefinitionId),
     })
     expect(request).not.toHaveBeenCalled()
-    expect(isMockOwnedRead(`biz/extForm/query/${mockObservedInspectionFormDefinitionId}`)).toBe(true)
+    expect(isMockOwnedRead(`biz/extForm/query/${mockSurveyFormDefinitionId}`)).toBe(true)
 
     setBusinessMockMode('off')
     await expect(readTransport.execute({
       method: 'POST',
-      path: `biz/extForm/query/${mockInspectionFormDefinitionId}`,
+      path: `biz/extForm/query/${mockSyntheticDynamicFormDefinitionId}`,
       body: { 'is:_id|string#and': 'synthetic-data' },
     })).rejects.toMatchObject({ category: 'server_terminal' })
     expect(request).not.toHaveBeenCalled()
   })
 
-  it('runs the observed inspection form through the real Adapter command path', async () => {
+  it('runs the observed Survey form through the real Adapter command path', async () => {
     setBusinessMockMode('data')
     const request = vi.fn(() => { throw new Error('synthetic path must not use network') })
     const readTransport = createUniApiReadTransport({
@@ -503,40 +520,43 @@ describe('G4-E onsite inspection dynamic Action Content', () => {
       request,
     })
     const commands = createTechnicianApiCommandAdapter(commandTransport, read)
-    const detail = await read.getWorkOrderDetail(asOpaqueId<'WorkOrderId'>(mockCommandScenarioIds.inspectionSuccess))
+    const detail = await read.getWorkOrderDetail(asOpaqueId<'WorkOrderId'>(mockCommandScenarioIds.surveySuccess))
     expect(detail.state).toBe('succeeded')
     const node = detail.data?.workflowNodes?.[0]
-    expect(node?.formDefinitionId).toBe(asOpaqueId<'FormDefinitionId'>(mockObservedInspectionFormDefinitionId))
+    expect(node?.formDefinitionId).toBe(asOpaqueId<'FormDefinitionId'>(mockSurveyFormDefinitionId))
 
     const initial = await commands.readDynamicForm!({
       definitionId: node!.formDefinitionId!,
       expectedWorkflowRunId: detail.data?.workflowRunId,
     })
     expect(initial).toMatchObject({ state: 'succeeded', data: { values: {} } })
-    expect(initial.data?.fields.find((field) => field.key === 'part')?.options).toEqual([
+    expect(initial.data?.fields.find((field) => field.valueKey === 'part')?.options).toEqual([
       { value: 'repair-part-code-001', label: '屋面' },
       { value: 'repair-part-code-002', label: '外墙' },
       { value: 'repair-part-code-003', label: '卫生间' },
     ])
-    expect(initial.data?.fields.find((field) => field.key === 'isQualified')?.options).toEqual([
-      { value: '0', label: '不合格' },
-      { value: '1', label: '合格' },
-    ])
+    expect(initial.data?.fields).toHaveLength(61)
+    const duplicateLengthRows = initial.data?.fields.filter((field) => field.valueKey === 'length') ?? []
+    expect(duplicateLengthRows).toHaveLength(2)
+    expect(new Set(duplicateLengthRows.map((field) => field.fieldId)).size).toBe(2)
     const initialFields = dynamicActionFieldsFor(initial.data!)
-    expect(initialFields.find((field) => field.key === 'part')?.runtime.capability).toBe('SUPPORTED_GENERIC')
-    expect(initialFields.find((field) => field.key === 'isQualified')?.runtime.capability).toBe('SUPPORTED_GENERIC')
+    expect(initialFields.find((field) => field.valueKey === 'part')?.runtime.capability).toBe('SUPPORTED_GENERIC')
+    expect(initialFields.find((field) => field.valueKey === 'serviceGoods')?.runtime.capability).toBe('UNSUPPORTED')
+    expect(initialFields.find((field) => field.valueKey === 'leakageCause')?.runtime.capability).toBe('UNSUPPORTED')
     const selectedPart = {
       ...initial.data!,
       values: { part: ['repair-part-code-001'] },
     }
-    expect(dynamicActionFieldsFor(selectedPart).find((field) => field.key === 'length')?.runtime.visible).toBe(true)
+    expect(dynamicActionFieldsFor(selectedPart)
+      .filter((field) => field.valueKey === 'length')
+      .every((field) => field.runtime.visible)).toBe(true)
 
     const saved = await commands.saveDynamicForm!({
-      workOrderId: asOpaqueId<'WorkOrderId'>(mockCommandScenarioIds.inspectionSuccess),
+      workOrderId: asOpaqueId<'WorkOrderId'>(mockCommandScenarioIds.surveySuccess),
       workflowNodeId: node!.id,
       workflowRunId: detail.data?.workflowRunId,
       definitionId: node!.formDefinitionId!,
-      values: { requirement: '符合现场施工要求', suggest: '按现场条件继续施工' },
+      values: { memo: '按现场条件继续施工' },
     })
     expect(saved.state).toBe('succeeded')
     expect(saved.data).toBeTruthy()
@@ -548,23 +568,23 @@ describe('G4-E onsite inspection dynamic Action Content', () => {
     })
     expect(rereadForm).toMatchObject({
       state: 'succeeded',
-      data: { dataId: saved.data, values: expect.objectContaining({ suggest: '按现场条件继续施工' }) },
+      data: { dataId: saved.data, values: expect.objectContaining({ memo: '按现场条件继续施工' }) },
     })
 
     const completed = await commands.completeWorkflowNode!({
-      workOrderId: asOpaqueId<'WorkOrderId'>(mockCommandScenarioIds.inspectionSuccess),
+      workOrderId: asOpaqueId<'WorkOrderId'>(mockCommandScenarioIds.surveySuccess),
       workflowNodeId: node!.id,
       workflowRunId: detail.data?.workflowRunId,
       definitionId: node!.formDefinitionId!,
       formDataId: saved.data!,
     })
     expect(completed.state).toBe('succeeded')
-    const after = await read.getWorkOrderDetail(asOpaqueId<'WorkOrderId'>(mockCommandScenarioIds.inspectionSuccess))
+    const after = await read.getWorkOrderDetail(asOpaqueId<'WorkOrderId'>(mockCommandScenarioIds.surveySuccess))
     expect(after.data?.workflowNodes?.[0]?.lifecycle).not.toBe('active')
     expect(request).not.toHaveBeenCalled()
   })
 
-  it('runs the observed backend-shaped Inspection schema through the same raw-row Adapter path', async () => {
+  it('runs the observed backend-shaped Survey schema through the same raw-row Adapter path', async () => {
     setBusinessMockMode('data')
     const request = vi.fn(() => { throw new Error('observed schema fixture must not use network') })
     const readTransport = createUniApiReadTransport({
@@ -575,31 +595,21 @@ describe('G4-E onsite inspection dynamic Action Content', () => {
     })
     const read = createTechnicianApiReadAdapter(readTransport)
 
-    const definition = await read.getFormDefinition(asOpaqueId<'FormDefinitionId'>(mockObservedInspectionFormDefinitionId))
+    const definition = await read.getFormDefinition(asOpaqueId<'FormDefinitionId'>(mockSurveyFormDefinitionId))
 
     expect(definition.state).toBe('succeeded')
-    expect(definition.data?.fields?.map((field) => field.key)).toEqual([
-      'part', 'village', 'length', 'width', 'planeArea', 'inspectionSOP',
-      'inspectionContent', 'requirement', 'isQualified', 'reason', 'otherReason',
-      'serviceGoods', 'suggest', 'surveyDrawing', 'reformDate',
-    ])
-    expect(definition.data?.fields?.find((field) => field.key === 'inspectionContent')).toMatchObject({
-      type: 'select',
-      multiple: true,
-    })
+    expect(definition.data?.fields).toHaveLength(61)
+    expect(definition.data?.fields?.filter((field) => field.valueKey === 'province')).toHaveLength(2)
+    expect(definition.data?.fields?.filter((field) => field.valueKey === 'length')).toHaveLength(2)
+    expect(definition.data?.fields?.filter((field) => field.valueKey === 'width')).toHaveLength(2)
+    expect(definition.data?.fields?.filter((field) => field.valueKey === 'gap4')).toHaveLength(2)
     expect(dynamicActionUnsupportedFieldsFor({
       fields: definition.data?.fields ?? [],
       values: {},
-    }).map((field) => field.key)).toEqual(expect.arrayContaining([
-      'part', 'inspectionSOP', 'inspectionContent', 'isQualified', 'serviceGoods',
+    }).map((field) => field.valueKey)).toEqual(expect.arrayContaining([
+      'gap0', 'gap1', 'gap2', 'gap3', 'gap4', 'isMoldRemoved', 'leakageCauseSelect',
+      'serviceGoods', 'leakageCause',
     ]))
-    expect(definition.data?.fields?.find((field) => field.key === 'length')).toMatchObject({
-      visibility: {
-        kind: 'oneOf',
-        path: 'part',
-        values: [['repair-part-code-001'], ['repair-part-code-002']],
-      },
-    })
     expect(request).not.toHaveBeenCalled()
   })
 

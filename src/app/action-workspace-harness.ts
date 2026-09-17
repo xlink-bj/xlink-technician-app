@@ -31,8 +31,8 @@ const routeFor = (workOrderId: string, nodeSuffix: string): string =>
     'set_appointment',
   )
 
-const inspectionRoute = actionWorkspaceRouteFor(
-  asOpaqueId<'WorkOrderId'>(mockCommandScenarioIds.inspectionSuccess),
+const surveyRoute = actionWorkspaceRouteFor(
+  asOpaqueId<'WorkOrderId'>(mockCommandScenarioIds.surveySuccess),
   asOpaqueId<'WorkflowNodeRuntimeId'>('mock-workflow-node-017-inspection'),
   'interact_with_form',
 )
@@ -93,9 +93,9 @@ export const mockActionWorkspaceScenarios: readonly MockActionWorkspaceScenario[
     route: routeFor(mockCommandScenarioIds.appointmentTerminal, '015'),
   },
   {
-    key: 'inspection',
+    key: 'survey',
     label: '现场勘察',
     description: '动态表单、照片上传、保存和完成',
-    route: inspectionRoute,
+    route: surveyRoute,
   },
 ]

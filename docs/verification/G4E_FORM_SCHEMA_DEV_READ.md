@@ -1,4 +1,4 @@
-# G4-E Form Schema — Sanitized Beta Contract Observation
+# G4-E Survey Form Schema — Sanitized Beta Contract Observation
 
 Status: current Beta read evidence; not a Production schema registry.
 Repository: `xlink-bj/xlink-technician-app`  
@@ -197,20 +197,25 @@ from this record.
 
 ## Mock source of truth
 
-The default observed Inspection Mock is mechanically derived from
-`contracts/beta/inspection/current.json` by
-`src/adapters/api/mock/inspection-contract.ts`. The Adapter still receives
+The G4-E Survey Mock is mechanically derived from the sanitized 61-row Survey
+family in `contracts/beta/form-families/observed.json` by
+`src/adapters/api/mock/survey-contract.ts`. The Adapter still receives
 backend-shaped field rows and provider responses, so the runtime path remains:
 
 ```text
-sanitized Beta snapshot
+sanitized Survey family inventory
   -> generated Mock raw response
   -> existing Adapter
   -> Dynamic Form Runtime
   -> Action Workspace
 ```
 
-`parts` and `qualified` are VERIFIED provider families in this snapshot.
-`projPackage`, `inspectionSOP`, and the provider for the multi-value
-`inspectionContent` field remain explicitly UNKNOWN; they have no fabricated
-options and continue to block completion when required by the Runtime.
+The Survey `parts` provider is retained as an independently evidenced R1
+multistage provider with synthetic option aliases. The Survey `projPackage`
+provider remains UNKNOWN, and no options are fabricated for the multi-value
+`serviceGoods` field. Unsupported Survey row types remain explicit capability
+boundaries.
+
+The former 15-field artifact is isolated as historical hybrid evidence under
+`contracts/beta/inspection/current.json` and is not imported by the G4-E
+application Mock. Its Inspection-like fields do not define Survey behavior.

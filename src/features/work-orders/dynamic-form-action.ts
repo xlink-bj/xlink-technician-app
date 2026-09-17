@@ -32,7 +32,8 @@ function schemaFor(
 ): FormFieldSchema {
   const unsupportedReason = actionUnsupportedReasonFor(field, values)
   return {
-    key: field.key,
+    fieldId: field.fieldId,
+    valueKey: field.valueKey,
     type: field.type,
     required: field.required,
     readOnly: field.readOnly,
@@ -84,7 +85,7 @@ export function normalizeDynamicForm(
       error: createOperationError(
         result.reason === 'unsupported_capability' ? 'unsupported_capability' : 'validation',
         result.message,
-        { reason: result.fieldKey },
+        { reason: result.fieldId ?? result.valueKey },
       ),
     }
   }
@@ -99,7 +100,7 @@ export function normalizeDynamicFieldValue(
   field: AppointmentFormFieldRead,
   value: FormFieldValue,
 ): OperationSnapshot<FormFieldValue> {
-  const values = { ...form.values, [field.key]: value }
+  const values = { ...form.values, [field.valueKey]: value }
   const state = fieldState(field, values)
   if (state.capability === 'UNSUPPORTED') {
     return {

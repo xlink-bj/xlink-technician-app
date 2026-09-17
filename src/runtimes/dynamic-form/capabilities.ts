@@ -23,7 +23,6 @@ const supportedTypes = new Set([
   'rate',
   'file',
   'image',
-  'area',
 ])
 
 const optionTypes = new Set(['select', 'bizSelect', 'cascade', 'radio', 'checkbox'])
@@ -39,7 +38,7 @@ export function classifyFieldType(type: string): FormCapabilityDecision {
 }
 
 export function selectOptionProvider(field: FormFieldSchema): OptionProviderDecision {
-  if (field.key === 'workType') {
+  if (field.valueKey === 'workType') {
     return { state: 'provider', provider: { kind: 'workTypes' } }
   }
   if (field.type === 'cascade' && field.valueOption) {

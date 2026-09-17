@@ -179,20 +179,20 @@ function draftRecordFor(
   }
   if (!actionDraftIdentityMatches(storedIdentity, identity)) return null
 
-  const fields = new Map(form.fields.map((field) => [field.key, field]))
   const values: Record<string, AppointmentFieldValue> = {}
   for (const [key, rawValue] of Object.entries(rawValues)) {
-    const field = fields.get(key)
+    const fields = form.fields.filter((candidate) => candidate.valueKey === key)
     const normalized = appointmentValue(rawValue)
-    if (!field || normalized === undefined) return null
-    if (field.readOnly) {
-      if (form.values[key] !== normalized) return null
-      values[key] = normalized
-      continue
+    if (fields.length === 0 || normalized === undefined) return null
+    for (const field of fields) {
+      if (field.readOnly) {
+        if (form.values[key] !== normalized) return null
+        continue
+      }
+      const result = normalizeAppointmentFieldValue(field, normalized, { ...form.values, ...values })
+      if (result.state !== 'succeeded' || result.data === undefined) return null
+      values[key] = result.data
     }
-    const result = normalizeAppointmentFieldValue(field, normalized, { ...form.values, ...values })
-    if (result.state !== 'succeeded' || result.data === undefined) return null
-    values[key] = result.data
   }
 
   return {
@@ -233,17 +233,18 @@ function dynamicDraftRecordFor(
 
   const values: Record<string, FormFieldValue> = {}
   for (const [key, rawValue] of Object.entries(rawValues)) {
-    const field = form.fields.find((candidate) => candidate.key === key)
+    const fields = form.fields.filter((candidate) => candidate.valueKey === key)
     const normalizedRaw = formFieldValue(rawValue)
-    if (!field || normalizedRaw === undefined) return null
-    if (field.readOnly) {
-      if (form.values[key] !== normalizedRaw) return null
-      values[key] = normalizedRaw
-      continue
+    if (fields.length === 0 || normalizedRaw === undefined) return null
+    for (const field of fields) {
+      if (field.readOnly) {
+        if (form.values[key] !== normalizedRaw) return null
+        continue
+      }
+      const normalized = normalizeDynamicFieldValue(form, field, normalizedRaw)
+      if (normalized.state !== 'succeeded' || normalized.data === undefined) return null
+      values[key] = normalized.data
     }
-    const normalized = normalizeDynamicFieldValue(form, field, normalizedRaw)
-    if (normalized.state !== 'succeeded' || normalized.data === undefined) return null
-    values[key] = normalized.data
   }
 
   return {
@@ -304,8 +305,8 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
   const appointmentNoteField = computed(() => appointmentFieldRoles.value.note)
   const appointmentExtraFields = computed(() => appointmentFieldRoles.value.extras)
   const appointmentTimeValue = computed(() => {
-    const key = appointmentTimeField.value?.key
-    return appointmentDatetimeApplicable.value && key ? appointmentForm.value?.values[key] : undefined
+    const valueKey = appointmentTimeField.value?.valueKey
+    return appointmentDatetimeApplicable.value && valueKey ? appointmentForm.value?.values[valueKey] : undefined
   })
   const dynamicFields = computed<readonly DynamicActionField[]>(() =>
     dynamicForm.value ? dynamicActionFieldsFor(dynamicForm.value) : [],
@@ -321,7 +322,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
   const isDynamicFormAction = computed(() => descriptor.value?.actionIntent === 'interact_with_form')
   const dynamicRequiredMediaPending = computed(() => dynamicFields.value.some((field) =>
     field.runtime.visible && field.runtime.required && (field.type === 'image' || field.type === 'file')
-      && !dynamicForm.value?.values[field.key],
+      && !dynamicForm.value?.values[field.valueKey],
   ))
   const dynamicMediaUploading = computed(() => mediaInFlightField.value !== null)
   const canSubmit = computed(() => isDynamicFormAction.value
@@ -600,10 +601,10 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     return load(input)
   }
 
-  function setField(key: string, value: FormFieldValue): OperationSnapshot<void> {
+  function setField(fieldId: string, value: FormFieldValue): OperationSnapshot<void> {
     const dynamic = dynamicForm.value
     if (dynamic) {
-      const field = dynamic.fields.find((candidate) => candidate.key === key)
+      const field = dynamic.fields.find((candidate) => candidate.fieldId === fieldId)
       if (!field) return failure('validation', 'Action field is not supported')
       const normalized = normalizeDynamicFieldValue(dynamic, field, value)
       if (normalized.state !== 'succeeded') {
@@ -612,13 +613,13 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       }
       dynamicForm.value = {
         ...dynamic,
-        values: { ...dynamic.values, [key]: normalized.data! },
+        values: { ...dynamic.values, [field.valueKey]: normalized.data! },
       }
       dynamicFormSaveState.value = 'not_saved'
     } else {
       const form = appointmentForm.value
       if (!form) return failure('validation', 'Action content is not ready')
-      const field = form.fields.find((candidate) => candidate.key === key)
+      const field = form.fields.find((candidate) => candidate.fieldId === fieldId)
       if (!field) return failure('validation', 'Action field is not supported')
       const scalar = appointmentValue(value)
       if (scalar === undefined) return failure('validation', 'Appointment field value is not supported')
@@ -630,7 +631,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
 
       appointmentForm.value = {
         ...form,
-        values: { ...form.values, [key]: normalized.data! },
+        values: { ...form.values, [field.valueKey]: normalized.data! },
       }
     }
     draftRevision += 1
@@ -644,7 +645,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
   function setAppointmentTime(value: string): OperationSnapshot<void> {
     const field = appointmentTimeField.value
     if (!field || !appointmentDatetimeApplicable.value) return failure('validation', 'Appointment time is not applicable to the current visit branch')
-    return setField(field.key, value)
+    return setField(field.fieldId, value)
   }
 
   async function openAppointmentTimeSelection(): Promise<OperationSnapshot<void>> {
@@ -1021,11 +1022,11 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     return finalizeBusinessSuccess()
   }
 
-  async function pickDynamicMedia(fieldKey: string): Promise<OperationSnapshot<void>> {
+  async function pickDynamicMedia(fieldId: string): Promise<OperationSnapshot<void>> {
     const configured = dependencies
     const form = dynamicForm.value
-    const field = form?.fields.find((candidate) => candidate.key === fieldKey)
-    const effective = dynamicFields.value.find((candidate) => candidate.key === fieldKey)
+    const field = form?.fields.find((candidate) => candidate.fieldId === fieldId)
+    const effective = dynamicFields.value.find((candidate) => candidate.fieldId === fieldId)
     if (!configured || !form || !field || !effective) {
       return failure('unsupported_capability', 'Inspection media is unavailable')
     }
@@ -1042,7 +1043,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     }
     if (mediaInFlightField.value) return failure('validation', 'Media upload is already in progress')
 
-    mediaInFlightField.value = fieldKey
+    mediaInFlightField.value = fieldId
     error.value = null
     try {
       const picked = await configured.mediaFilePicker.pick()
@@ -1064,18 +1065,18 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
         uploaded.push(result.data)
       }
 
-      mediaByField.value = { ...mediaByField.value, [fieldKey]: uploaded }
+      mediaByField.value = { ...mediaByField.value, [fieldId]: uploaded }
       const mediaValue: FormFieldValue = uploaded.length === 1
         ? uploaded[0].url
         : uploaded.map((item) => item.url)
-      return setField(fieldKey, mediaValue)
+      return setField(fieldId, mediaValue)
     } finally {
       mediaInFlightField.value = null
     }
   }
 
-  function canPickDynamicMedia(fieldKey: string): boolean {
-    const field = dynamicFields.value.find((candidate) => candidate.key === fieldKey)
+  function canPickDynamicMedia(fieldId: string): boolean {
+    const field = dynamicFields.value.find((candidate) => candidate.fieldId === fieldId)
     return Boolean(
       field
       && (field.type === 'image' || field.type === 'file')

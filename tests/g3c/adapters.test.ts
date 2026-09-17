@@ -320,6 +320,37 @@ describe('G3-C API adapter foundation', () => {
     expect(result.data?.id).not.toBe('field-row-001')
   })
 
+  it('preserves distinct field-row identities when Survey value keys repeat', async () => {
+    const requestedId = asOpaqueId<'FormDefinitionId'>('survey-definition')
+    const transport = new FixtureApiTransport({
+      'biz/extField/query': {
+        data: [
+          {
+            _id: 'survey-row-length-001',
+            name: 'length',
+            nameDisp: '长度（结构）',
+            type: 'digit',
+          },
+          {
+            _id: 'survey-row-length-002',
+            name: 'length',
+            nameDisp: '长度（局部）',
+            type: 'digit',
+          },
+        ],
+      },
+    })
+    const api = createTechnicianApiReadAdapter(transport)
+
+    const result = await api.getFormDefinition(requestedId)
+
+    expect(result.data?.id).toBe(requestedId)
+    expect(result.data?.fields?.map((field) => ({ fieldId: field.fieldId, valueKey: field.valueKey }))).toEqual([
+      { fieldId: 'survey-row-length-001', valueKey: 'length' },
+      { fieldId: 'survey-row-length-002', valueKey: 'length' },
+    ])
+  })
+
   it('normalizes observed conditional metadata from record.exts and preserves multi-value shape', async () => {
     const requestedId = asOpaqueId<'FormDefinitionId'>('observed-inspection-definition')
     const transport = new FixtureApiTransport({
@@ -367,7 +398,8 @@ describe('G3-C API adapter foundation', () => {
 
     expect(result.data?.fields).toEqual([
       {
-        key: 'part',
+        fieldId: 'field-row-part',
+        valueKey: 'part',
         label: '部位',
         type: 'cascade',
         required: true,
@@ -375,7 +407,8 @@ describe('G3-C API adapter foundation', () => {
         valueOption: 'parts',
       },
       {
-        key: 'inspectionContent',
+        fieldId: 'field-row-content',
+        valueKey: 'inspectionContent',
         label: '巡检内容',
         type: 'select',
         required: false,
@@ -383,7 +416,8 @@ describe('G3-C API adapter foundation', () => {
         multiple: true,
       },
       {
-        key: 'length',
+        fieldId: 'field-row-length',
+        valueKey: 'length',
         label: '长',
         type: 'digit',
         required: true,

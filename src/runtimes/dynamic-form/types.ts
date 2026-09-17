@@ -36,7 +36,10 @@ export type VisibilityPath = FormFieldVisibilityPath
 export type VisibilityExpression = FormFieldVisibility
 
 export interface FormFieldSchema {
-  readonly key: string
+  /** Stable field-row identity used for runtime/UI addressing. */
+  readonly fieldId: string
+  /** FormData business key; duplicate field rows may share this key. */
+  readonly valueKey: string
   readonly type: string
   readonly required?: boolean
   readonly readOnly?: boolean
@@ -110,7 +113,8 @@ export type SubmissionResult =
   | {
       readonly ok: false
       readonly reason: 'unsupported_capability' | 'validation'
-      readonly fieldKey?: string
+      readonly fieldId?: string
+      readonly valueKey?: string
       readonly message: string
     }
 

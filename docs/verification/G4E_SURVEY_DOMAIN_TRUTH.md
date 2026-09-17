@@ -1,7 +1,7 @@
 # G4-E Survey Domain Truth Deep Dive
 
-Status: evidence investigation only; no product behavior is changed by this
-document.
+Status: domain truth accepted; Survey Contract Rebase implemented in the
+G4-E application Mock.
 Environment: Beta / Dev (same development environment for this slice)
 Captured: 2026-09-17
 Issue: `#21`
@@ -42,8 +42,10 @@ It does not contain the `inspectionSOP`, `inspectionContent`, `isQualified`,
 unchanged but classified as a shared/historical hybrid, not promoted as the
 current Survey contract.
 
-This investigation does not establish the complete active Production schema,
-does not change the Mock contract, and does not authorize any write behavior.
+This investigation does not establish the complete active Production schema
+and does not authorize any write behavior. The bounded G4-E implementation
+now derives its development Mock from the sanitized 61-row family while
+retaining the 15-field artifact as quarantine-only evidence.
 
 ## 2. Terminology
 
@@ -255,18 +257,47 @@ as:
 | Promote as current Survey contract | `NO` |
 | Promote as current InspectionAppointment contract | `NO` |
 | Remove or rename the artifact in this pass | `NO` — preserve it for compatibility and review history; do not silently rewrite it. |
-| Keep as the G4-E Survey Mock source | `UNKNOWN` — it must not be treated as authority; a future approved Mock should derive from an identified Survey contract. |
+| Keep as the G4-E Survey Mock source | `NO` — G4-E Mock now derives from the sanitized 61-row Survey family inventory below; this artifact remains quarantine-only. |
 
 The 15-field snapshot is therefore a quarantined development artifact, not a
-backend dictionary. It remains unchanged in this research pass.
+backend dictionary. It remains unchanged for historical compatibility tests
+and is not imported by the G4-E application Mock.
+
+## 9A. Survey Contract Rebase and Field Identity Model
+
+G4-E application Mock data is generated from the `SURVEY` family in
+`contracts/beta/form-families/observed.json`. That family is a sanitized,
+historical, inactive Beta observation with 61 field rows; it is the approved
+structural basis for this development Mock, not a claim about the active
+Production schema. The old 15-field hybrid remains isolated under
+`contracts/beta/inspection/current.json`.
+
+Each Survey field row has two identities:
+
+| Runtime identity | Meaning | Allowed to repeat? |
+| --- | --- | ---: |
+| `fieldId` | Stable ExtField row identity used to address a field in the Runtime and UI. | No within a definition. |
+| `valueKey` | Backend business field name used at the FormData value layer. | Yes; observed duplicates include `province`, `length`, `width` and `gap4`. |
+
+The Adapter maps raw row `_id` to `fieldId` and raw `name` to `valueKey`.
+Runtime field state, visibility and field-level interaction use `fieldId`;
+value lookup, normalization and submission use `valueKey`. No Map keyed only
+by `valueKey` may be used to represent field rows, because it would silently
+drop repeated Survey rows.
+
+The Mock preserves this boundary with deterministic `survey-field-*` row IDs,
+passes the raw-shaped response through the production Adapter, and retains
+the real Dynamic Form Runtime. Missing Survey providers and unsupported field
+types remain explicit capability failures; the Mock does not turn them into
+scalar controls or invent Production options.
 
 ## 10. Backend Persistence Map
 
 | Business concept | Typed collection / dynamic namespace | Evidence |
 | --- | --- | --- |
 | Service Appointment / work order | `serviceAppointment` | `ServiceAppointment` and workflow services. |
-| Survey | `survey` | `Survey.COLLECTION_NAME`; special Survey conversion in `ExtFormServiceImpl`. |
-| Survey dynamic form family | usually `frm_<tenant>_survey` when accessed as a dynamic form | `Ext` type/colName dispatch and Survey special handling. |
+| Survey typed entity | `survey` | `Survey.COLLECTION_NAME`; `ExtFormServiceImpl` has explicit Survey conversion/update handling. Do not infer a generic `frm_<tenant>_survey` write namespace. |
+| Generic dynamic Ext form | `frm_<tenant>_<colName>` | Only true `Ext.type=0` dynamic forms use the generic dynamic namespace. |
 | InspectionAppointment | `inspectionAppointment` | `InspectionAppointment.COLLECTIO_NNAME`; typed query/report service. |
 | Inspection form | `frm_<tenant>_InspectionForm` | Inspection report generator. |
 | Inspection SOP records | `frm_<tenant>_inspectionSOP` | R1 `queryByColName` and report path. |
@@ -347,35 +378,27 @@ not run and was not used as evidence.
 
 ## 14. Architecture Consequences for the New App
 
-These are proposals for the next design decision, not implementation in this
-pass:
+The following consequences are implemented in the current bounded G4-E pass:
 
 1. **Use domain identity before presentation identity.** A Survey action must
    be selected from an explicitly identified Survey node/form contract. Do not
    use the word “inspection”, a first list row, a field label or a historical
    form ID as a fallback.
-2. **Consider an internal Survey rename for G4-E.** Symbols such as the
-   current inspection contract snapshot, inspection Mock contract and
-   `InspectionActionContent` are misleading if G4-E is confirmed to be the
-   Survey branch. This should be a deliberate follow-up refactor, not a
-   silent rename during evidence capture. True `InspectionAppointment`
-   symbols should remain reserved for the backend inspection/SOP/report
-   domain.
-3. **Do not use the 15-field hybrid as Survey Mock authority.** A future
-   Survey Mock should be derived from a sanitized, explicitly approved Survey
-   contract such as the identified 61-row family, after active identity and
-   provider contracts are verified.
-4. **Keep commercial fields out of Survey.** Package prices, totals,
+2. **Do not use the 15-field hybrid as Survey Mock authority.** The current
+   Survey Mock is derived from the sanitized 61-row family; the old artifact
+   is quarantine-only. True `InspectionAppointment` symbols remain reserved
+   for the backend inspection/SOP/report domain.
+3. **Keep commercial fields out of Survey.** Package prices, totals,
    discounts, payment, order products/material snapshots and contract values
    belong to the quotation/order flow. `serviceGoods` can remain a Survey
    compatibility/recommendation value only when its provider and semantics are
    explicit.
-5. **Keep dynamic behavior in Dynamic Form Runtime.** Definition, field
+4. **Keep dynamic behavior in Dynamic Form Runtime.** Definition, field
    visibility, requiredness, option providers and value normalization belong
    in Adapter/schema/Runtime. Custom controls are justified only for verified
    measurement, media or SOP contracts. Do not hardcode Survey fields or
    silently flatten unsupported multi-value/cascade/business-selector fields.
-6. **Preserve the current safety boundary.** Until the missing identities and
+5. **Preserve the current safety boundary.** Until the missing identities and
    providers are verified, fail closed for unsupported fields and keep all
    live business mutations disabled.
 
@@ -387,18 +410,19 @@ pass:
 - All Beta observations were sanitized and held in memory; no raw payload,
   FormData value, customer/address/phone value, session, token, tenant
   identifier, media URL or raw business ID was persisted.
-- The target App source, Runtime, Mock fixtures and UI were not changed by
-  this domain-truth pass.
+- The target App changes are limited to the Survey Mock source, field identity
+  model and required Runtime wiring; no visual redesign was performed.
 - No real business mutation, upload, phone call or Production request was
   performed.
 - G4-F was not started.
 
 ## Verification Record
 
-The repository verification commands for this documentation-only pass are:
+The repository verification commands for this bounded rebase are:
 
 ```text
-pnpm run check:inspection-contract
+pnpm run check:survey-contract
+pnpm run check:inspection-contract  # historical compatibility artifact only
 pnpm run check:boundaries
 pnpm run typecheck
 pnpm test
@@ -407,5 +431,6 @@ pnpm run build:app
 ```
 
 The final command results and commit are recorded in the delivery message and
-Issue #21. The structural artifact is independently checked by
+Issue #21. The active Survey inventory is checked by `check:survey-contract`;
+the historical artifact is independently checked by
 `check:inspection-contract`.
