@@ -237,6 +237,24 @@ Button geometry and hit area should start from WeUI mobile convention, be compar
 
 Button state must not be encoded only by opacity if interaction meaning would become ambiguous.
 
+### Loading
+
+Loading is a shared cross-platform state, not page-specific copy. `AppLoadingState`
+owns three presentation modes:
+
+- `page` — session/bootstrap preparation uses a quiet centered indicator;
+- `workspace` — Action Workspace entry uses a structural skeleton that preserves
+  context, content, and persistent action-bar geometry;
+- `inline` — short background preparation uses a restrained progress bar.
+
+Read-oriented pages reveal their structural skeleton only after the shared
+240ms threshold. Faster reads render directly, which avoids a one-frame loading
+flash. Refresh keeps existing content visible and uses the inline indicator.
+Route loading does not show visible “正在加载…” copy; the accessible status
+label remains available through the loading component. Business submission is a
+separate interaction state: the shared button shows a spinner and keeps the
+current content and action context in place.
+
 ### Input / Textarea
 
 Common properties:

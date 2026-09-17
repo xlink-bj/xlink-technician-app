@@ -1,9 +1,5 @@
 <template>
-  <view v-if="session.status === 'unknown'" class="loading-page">
-    <view class="loading-mark" aria-hidden="true" />
-    <text class="loading-title">正在准备工单详情</text>
-    <text class="loading-copy">正在确认登录状态</text>
-  </view>
+  <AppLoadingState v-if="session.status === 'unknown'" label="正在准备工单详情" />
 
   <view v-else-if="!canAccess" class="guard-page">
     <view class="guard-mark" aria-hidden="true"><AppIcon name="contact" :size="24" color="#2f72ec" /></view>
@@ -224,9 +220,7 @@
 
     <view v-else-if="workOrder.loadState === 'loading'" class="detail-loading-placeholder" aria-hidden="true" />
 
-    <view v-else class="detail-state">
-      <text class="state-title">正在准备工单详情</text>
-    </view>
+    <AppLoadingState v-else variant="inline" label="正在准备工单详情" />
   </view>
 </template>
 
@@ -242,6 +236,8 @@ import { detailTabs, type DetailTabKey } from '@features/work-orders/detail-tabs
 import { detailWorkflowUiProjectionFor } from '@features/work-orders/detail-workflow'
 import { useSessionStore } from '@shared/state'
 import AppIcon from '@shared/ui/AppIcon.vue'
+import AppLoadingState from '@shared/ui/AppLoadingState.vue'
+import { appLoadingSkeletonDelayMs } from '@shared/ui/loading'
 
 const session = useSessionStore()
 const workOrder = useWorkOrderDetailStore()
@@ -261,7 +257,6 @@ const preAcceptBlocked = computed(() => Boolean(
 ))
 const activeTab = ref<DetailTabKey>('follow-up')
 const showLoadingSkeleton = ref(false)
-const loadingSkeletonDelayMs = 240
 let loadingSkeletonTimer: ReturnType<typeof setTimeout> | undefined
 
 function clearLoadingSkeletonTimer(): void {
@@ -277,7 +272,7 @@ watch(
     if (state === 'loading') {
       loadingSkeletonTimer = setTimeout(() => {
         if (workOrder.loadState === 'loading') showLoadingSkeleton.value = true
-      }, loadingSkeletonDelayMs)
+      }, appLoadingSkeletonDelayMs)
     }
   },
   { immediate: true },
@@ -385,8 +380,7 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
 <style>
 /* Detail typography scale: keep hierarchy semantic and avoid component-specific sizes. */
 .detail-page,
-.guard-page,
-.loading-page {
+.guard-page {
   background: #f3f6fa;
   box-sizing: border-box;
   min-height: 100vh;
@@ -396,8 +390,7 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
 
 .detail-content,
 .detail-state,
-.guard-page,
-.loading-page {
+.guard-page {
   display: flex;
   flex-direction: column;
   margin: 0 auto;
@@ -910,8 +903,7 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
 .row-value--gray { color: #8d99aa; }
 
 .detail-state,
-.guard-page,
-.loading-page {
+.guard-page {
   align-items: center;
   justify-content: center;
   min-height: 58vh;
@@ -963,7 +955,7 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
   background: #edf2f7;
   border-radius: 999rpx;
   height: 22rpx;
-  animation: detail-skeleton-pulse 1.6s ease-in-out infinite;
+  animation: app-loading-pulse var(--app-motion-loading-duration) var(--app-motion-loading-easing) infinite;
 }
 
 .skeleton-line--customer { height: 32rpx; width: 42%; }
@@ -986,7 +978,7 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
   border-radius: 14rpx;
   flex: 1;
   height: 64rpx;
-  animation: detail-skeleton-pulse 1.6s ease-in-out infinite;
+  animation: app-loading-pulse var(--app-motion-loading-duration) var(--app-motion-loading-easing) infinite;
 }
 
 .skeleton-task {
@@ -1000,7 +992,7 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
   border-radius: 14rpx;
   height: 68rpx;
   margin-top: 22rpx;
-  animation: detail-skeleton-pulse 1.6s ease-in-out infinite;
+  animation: app-loading-pulse var(--app-motion-loading-duration) var(--app-motion-loading-easing) infinite;
 }
 
 .skeleton-information {
@@ -1019,7 +1011,7 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
   border-radius: 999rpx;
   height: 20rpx;
   width: 76rpx;
-  animation: detail-skeleton-pulse 1.6s ease-in-out infinite;
+  animation: app-loading-pulse var(--app-motion-loading-duration) var(--app-motion-loading-easing) infinite;
 }
 
 .skeleton-information-row {
@@ -1034,24 +1026,13 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
   border-radius: 999rpx;
   height: 20rpx;
   width: 22%;
-  animation: detail-skeleton-pulse 1.6s ease-in-out infinite;
+  animation: app-loading-pulse var(--app-motion-loading-duration) var(--app-motion-loading-easing) infinite;
 }
 
 .skeleton-information-row view:last-child {
   width: 34%;
 }
 
-@keyframes detail-skeleton-pulse {
-  0%,
-  100% {
-    opacity: 0.58;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
-.loading-mark,
 .guard-mark,
 .state-icon {
   align-items: center;
@@ -1061,12 +1042,6 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
   justify-content: center;
   margin-bottom: 22rpx;
   width: 74rpx;
-}
-
-.loading-mark {
-  background: #eaf2ff;
-  border: 8rpx solid #cfe0ff;
-  border-right-color: #2878f2;
 }
 
 .guard-mark {
@@ -1085,7 +1060,6 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
   color: #e28a19;
 }
 
-.loading-title,
 .guard-title,
 .state-title {
   color: #172033;
@@ -1093,7 +1067,6 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
   font-weight: 800;
 }
 
-.loading-copy,
 .guard-copy,
 .state-detail {
   color: #8290a4;

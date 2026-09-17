@@ -1,7 +1,5 @@
 <template>
-  <view v-if="session.status === 'unknown'" class="workspace-state workspace-state--centered">
-    <text class="workspace-state-title">正在准备操作空间</text>
-  </view>
+  <AppLoadingState v-if="session.status === 'unknown'" label="正在准备操作空间" />
 
   <view v-else-if="!canAccess" class="workspace-state workspace-state--centered">
     <text class="workspace-state-title">需要登录</text>
@@ -14,10 +12,7 @@
     <text class="workspace-state-copy">请返回工单详情，按当前任务继续操作。</text>
   </view>
 
-  <view v-else-if="workspace.loadState === 'loading'" class="workspace-state workspace-state--centered">
-    <view class="workspace-loading-card" aria-hidden="true" />
-    <text class="workspace-state-title">正在准备预约信息</text>
-  </view>
+  <AppLoadingState v-else-if="workspace.loadState === 'loading'" variant="workspace" label="正在准备预约信息" />
 
   <view v-else-if="workspace.loadState === 'failed_retryable'" class="workspace-state workspace-state--centered">
     <text class="workspace-state-title">暂时无法打开确认页</text>
@@ -135,6 +130,7 @@ import ActionWorkspaceShell from '@shared/ui/ActionWorkspaceShell.vue'
 import AppButton from '@shared/ui/AppButton.vue'
 import AppIcon from '@shared/ui/AppIcon.vue'
 import AppInformationRow from '@shared/ui/AppInformationRow.vue'
+import AppLoadingState from '@shared/ui/AppLoadingState.vue'
 import type { OperationError } from '@shared/types'
 
 const session = useSessionStore()
@@ -259,8 +255,6 @@ function actionErrorCopy(error: OperationError | null): string {
 }
 
 .workspace-state-action::after { border: 0; }
-.workspace-loading-card { height: 260rpx; margin-bottom: var(--app-space-lg); width: 100%; }
-
 .confirmation-content { margin-top: var(--app-space-md); }
 
 .confirmation-card {

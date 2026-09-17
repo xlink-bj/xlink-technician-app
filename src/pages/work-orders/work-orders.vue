@@ -224,9 +224,7 @@
 
       <view v-else-if="workOrders.loadState === 'loading'" class="loading-placeholder" aria-hidden="true" />
 
-      <view v-else class="list-state">
-        <text class="state-title">正在准备工单</text>
-      </view>
+      <AppLoadingState v-else variant="inline" label="正在准备工单" />
     </view>
   </view>
 </template>
@@ -242,6 +240,8 @@ import { useWorkOrderListStore } from '@features/work-orders/list'
 import type { WorkOrderSummary } from '@shared/ports'
 import { useSessionStore } from '@shared/state'
 import AppIcon from '@shared/ui/AppIcon.vue'
+import AppLoadingState from '@shared/ui/AppLoadingState.vue'
+import { appLoadingSkeletonDelayMs } from '@shared/ui/loading'
 
 const session = useSessionStore()
 const workOrders = useWorkOrderListStore()
@@ -251,7 +251,6 @@ const canAccess = computed(() => hasAuthenticatedSession(session.status, session
 const isLoading = computed(() => workOrders.loadState === 'loading')
 const isRefreshing = computed(() => isLoading.value && workOrders.items.length > 0)
 const showLoadingSkeleton = ref(false)
-const loadingSkeletonDelayMs = 240
 let loadingSkeletonTimer: ReturnType<typeof setTimeout> | undefined
 
 function clearLoadingSkeletonTimer(): void {
@@ -276,7 +275,7 @@ watch(
         if (workOrders.loadState === 'loading' && workOrders.items.length === 0) {
           showLoadingSkeleton.value = true
         }
-      }, loadingSkeletonDelayMs)
+      }, appLoadingSkeletonDelayMs)
     }
   },
   { immediate: true },
@@ -1007,7 +1006,7 @@ function cancelAccept(): void {
 }
 
 .inline-refresh-indicator {
-  animation: work-order-list-refresh 1.1s ease-in-out infinite;
+  animation: app-loading-slide var(--app-motion-loading-slide-duration) ease-in-out infinite;
   background: #2878f2;
   border-radius: inherit;
   height: 100%;
@@ -1033,7 +1032,7 @@ function cancelAccept(): void {
 }
 
 .skeleton-accent {
-  animation: work-order-list-skeleton-pulse 1.6s ease-in-out infinite;
+  animation: app-loading-pulse var(--app-motion-loading-duration) var(--app-motion-loading-easing) infinite;
   background: #e8eef7;
   flex: 0 0 6rpx;
   width: 6rpx;
@@ -1060,7 +1059,7 @@ function cancelAccept(): void {
 }
 
 .skeleton-mark {
-  animation: work-order-list-skeleton-pulse 1.6s ease-in-out infinite;
+  animation: app-loading-pulse var(--app-motion-loading-duration) var(--app-motion-loading-easing) infinite;
   background: #edf2f7;
   border-radius: 16rpx;
   flex: 0 0 54rpx;
@@ -1076,7 +1075,7 @@ function cancelAccept(): void {
 }
 
 .skeleton-line {
-  animation: work-order-list-skeleton-pulse 1.6s ease-in-out infinite;
+  animation: app-loading-pulse var(--app-motion-loading-duration) var(--app-motion-loading-easing) infinite;
   background: #e3ebf7;
   border-radius: 999rpx;
   height: 20rpx;
@@ -1096,28 +1095,13 @@ function cancelAccept(): void {
 }
 
 .skeleton-phone {
-  animation: work-order-list-skeleton-pulse 1.6s ease-in-out infinite;
+  animation: app-loading-pulse var(--app-motion-loading-duration) var(--app-motion-loading-easing) infinite;
   background: #f5f7fa;
   border: 1rpx solid #edf0f5;
   border-radius: 50%;
   flex: 0 0 58rpx;
   height: 58rpx;
   width: 58rpx;
-}
-
-@keyframes work-order-list-skeleton-pulse {
-  0%,
-  100% {
-    opacity: 0.58;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
-@keyframes work-order-list-refresh {
-  0% { transform: translateX(-110%); }
-  100% { transform: translateX(330%); }
 }
 
 .state-illustration {

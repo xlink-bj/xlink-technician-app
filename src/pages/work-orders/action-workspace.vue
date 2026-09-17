@@ -1,8 +1,5 @@
 <template>
-  <view v-if="session.status === 'unknown'" class="workspace-state workspace-state--centered">
-    <view class="workspace-state-mark" aria-hidden="true" />
-    <text class="workspace-state-title">正在准备操作空间</text>
-  </view>
+  <AppLoadingState v-if="session.status === 'unknown'" label="正在准备操作空间" />
 
   <view v-else-if="!canAccess" class="workspace-state workspace-state--centered">
     <text class="workspace-state-title">需要登录</text>
@@ -16,15 +13,7 @@
     <AppButton class="workspace-state-action" @tap="exit">返回工单详情</AppButton>
   </view>
 
-  <view v-else-if="workspace.loadState === 'loading'" class="workspace-state workspace-state--centered">
-    <view class="workspace-loading-card app-surface app-surface--compact" aria-hidden="true">
-      <view class="workspace-loading-line workspace-loading-line--short" />
-      <view class="workspace-loading-line workspace-loading-line--long" />
-      <view class="workspace-loading-block" />
-      <view class="workspace-loading-block workspace-loading-block--tall" />
-    </view>
-    <text class="workspace-state-title">正在准备操作内容</text>
-  </view>
+  <AppLoadingState v-else-if="workspace.loadState === 'loading'" variant="workspace" label="正在准备操作内容" />
 
   <view v-else-if="workspace.loadState === 'failed_retryable'" class="workspace-state workspace-state--centered">
     <text class="workspace-state-title">暂时无法打开操作</text>
@@ -166,6 +155,7 @@ import AppChoiceGroup from '@shared/ui/AppChoiceGroup.vue'
 import AppField from '@shared/ui/AppField.vue'
 import AppIcon from '@shared/ui/AppIcon.vue'
 import AppInput from '@shared/ui/AppInput.vue'
+import AppLoadingState from '@shared/ui/AppLoadingState.vue'
 import AppSelector from '@shared/ui/AppSelector.vue'
 import AppTextarea from '@shared/ui/AppTextarea.vue'
 import type { AppChoiceOption } from '@shared/ui/types'
@@ -279,14 +269,6 @@ function actionErrorCopy(error: OperationError | null): string {
   text-align: center;
 }
 
-.workspace-state-mark {
-  background: var(--app-color-primary-soft);
-  border-radius: 50%;
-  height: 64rpx;
-  margin-bottom: var(--app-space-md);
-  width: 64rpx;
-}
-
 .workspace-state-title { color: var(--app-color-text-primary); font-size: var(--app-font-section-title); font-weight: 800; }
 
 .workspace-state-copy {
@@ -305,26 +287,6 @@ function actionErrorCopy(error: OperationError | null): string {
 }
 
 .workspace-state-action::after { border: 0; }
-
-.workspace-loading-card {
-  box-sizing: border-box;
-  margin-bottom: var(--app-space-lg);
-  padding: var(--app-space-lg);
-  width: 100%;
-}
-
-.workspace-loading-line,
-.workspace-loading-block {
-  animation: workspace-pulse 1.5s ease-in-out infinite;
-  background: var(--app-color-control-surface);
-  border-radius: 999rpx;
-}
-
-.workspace-loading-line { height: 24rpx; }
-.workspace-loading-line--short { width: 30%; }
-.workspace-loading-line--long { margin-top: 18rpx; width: 56%; }
-.workspace-loading-block { border-radius: 14rpx; height: 72rpx; margin-top: 26rpx; }
-.workspace-loading-block--tall { height: 160rpx; margin-top: 16rpx; }
 
 .action-workspace-content {
   margin-top: var(--app-space-md);
@@ -356,8 +318,4 @@ function actionErrorCopy(error: OperationError | null): string {
 .appointment-time-selected-date { color: var(--app-color-text-primary); font-size: var(--app-font-value); font-weight: 800; }
 .appointment-time-selected-value { color: var(--app-color-primary); font-size: var(--app-font-field-label); font-weight: 700; }
 
-@keyframes workspace-pulse {
-  0%, 100% { opacity: 0.56; }
-  50% { opacity: 1; }
-}
 </style>

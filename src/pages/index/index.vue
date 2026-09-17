@@ -1,9 +1,5 @@
 <template>
-  <view v-if="session.status === 'unknown'" class="loading-page">
-    <text class="eyebrow">Technician App</text>
-    <text class="title">Preparing secure session</text>
-    <text class="subtitle">Checking for an existing session…</text>
-  </view>
+  <AppLoadingState v-if="session.status === 'unknown'" label="正在准备应用" />
   <view v-else-if="showHome" class="home-page">
     <view class="home-hero">
       <view class="home-hero-circles" aria-hidden="true">
@@ -291,6 +287,7 @@ import {
 } from '@features/session/login-flow'
 import { useSessionStore } from '@shared/state'
 import type { OperationError } from '@shared/types'
+import AppLoadingState from '@shared/ui/AppLoadingState.vue'
 import { useWorkOrderDetailStore } from '@features/work-orders/detail'
 import { useWorkOrderListStore } from '@features/work-orders/list'
 
@@ -430,16 +427,6 @@ function userFacingLoginMessage(error: OperationError | null | undefined): strin
 </script>
 
 <style>
-.loading-page {
-  align-items: center;
-  background: #f5f7fb;
-  box-sizing: border-box;
-  display: flex;
-  justify-content: center;
-  min-height: 100vh;
-  padding: 32rpx;
-}
-
 .home-page {
   background: #f5f7fb;
   box-sizing: border-box;
@@ -460,10 +447,6 @@ function userFacingLoginMessage(error: OperationError | null | undefined): strin
   padding: 0 32rpx calc(96rpx + constant(safe-area-inset-bottom));
   padding-bottom: calc(96rpx + env(safe-area-inset-bottom));
   width: 100%;
-}
-
-.loading-page {
-  flex-direction: column;
 }
 
 .home-content,

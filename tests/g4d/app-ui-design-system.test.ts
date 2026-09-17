@@ -57,7 +57,7 @@ describe('App UI Design System v0.1', () => {
   })
 
   it('provides shared stateful primitives without Appointment business values', async () => {
-    const [button, field, input, textarea, selector, choice, status, informationRow] = await Promise.all([
+    const [button, field, input, textarea, selector, choice, status, informationRow, loading] = await Promise.all([
       readFile(uiPath('AppButton.vue'), 'utf8'),
       readFile(uiPath('AppField.vue'), 'utf8'),
       readFile(uiPath('AppInput.vue'), 'utf8'),
@@ -66,6 +66,7 @@ describe('App UI Design System v0.1', () => {
       readFile(uiPath('AppChoiceGroup.vue'), 'utf8'),
       readFile(uiPath('AppStatus.vue'), 'utf8'),
       readFile(uiPath('AppInformationRow.vue'), 'utf8'),
+      readFile(uiPath('AppLoadingState.vue'), 'utf8'),
     ])
 
     expect(button).toContain("variant?: 'primary' | 'secondary' | 'text'")
@@ -107,8 +108,13 @@ describe('App UI Design System v0.1', () => {
     expect(informationRow).toContain('name="label"')
     expect(informationRow).toContain('name="value"')
     expect(informationRow).toContain('name="trailing"')
+    expect(loading).toContain("variant?: 'page' | 'workspace' | 'inline'")
+    expect(loading).toContain('aria-busy="true"')
+    expect(loading).toContain('app-loading-state--workspace')
+    expect(loading).toContain('app-loading-state--inline')
+    expect(loading).not.toContain('<text')
 
-    for (const source of [button, field, input, textarea, selector, choice, status, informationRow]) {
+    for (const source of [button, field, input, textarea, selector, choice, status, informationRow, loading]) {
       expect(source).not.toContain('需要上门')
       expect(source).not.toContain('预约')
       expect(source).not.toContain('datetime')
@@ -129,6 +135,8 @@ describe('App UI Design System v0.1', () => {
     expect(workspace).toContain('AppSelector')
     expect(workspace).toContain('AppInput')
     expect(workspace).toContain('AppTextarea')
+    expect(workspace).toContain('variant="workspace"')
+    expect(workspace).not.toContain('正在准备操作内容</text>')
     expect(workspace).toContain('appChoiceOptionsFor')
     expect(workspace).toContain('AppIcon name="appointment"')
     expect(workspace).not.toContain('action-content-input')
@@ -138,15 +146,23 @@ describe('App UI Design System v0.1', () => {
     expect(time).toContain('AppIcon name="chevron-right"')
     expect(time).toContain('AppIcon v-if="selectedOptionKey === option.key"')
     expect(time).toContain('var(--app-control-gap)')
+    expect(time).toContain('variant="workspace"')
+    expect(time).not.toContain('正在准备时间选择</text>')
     expect(time).not.toContain('var(--app-action-bar-gap)')
     expect(confirmation).toContain('app-surface')
     expect(confirmation).toContain('<AppInformationRow')
     expect(confirmation).toContain('variant="secondary"')
     expect(confirmation).toContain('AppIcon name="complete"')
+    expect(confirmation).toContain('variant="workspace"')
+    expect(confirmation).not.toContain('正在准备预约信息</text>')
     expect(shell).toContain('AppStatus')
     expect(shell).toContain('AppButton')
 
     const tokens = await readFile(tokenPath, 'utf8')
+    expect(tokens).toContain('--app-motion-loading-duration')
+    expect(tokens).toContain('@keyframes app-loading-pulse')
+    expect(tokens).toContain('@keyframes app-loading-spin')
+    expect(tokens).toContain('@keyframes app-loading-slide')
     expect(tokens).not.toContain('::placeholder')
     expect(tokens).not.toContain('.app-input:focus')
     expect(tokens).not.toContain('.app-textarea:focus')

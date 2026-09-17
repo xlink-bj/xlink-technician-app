@@ -75,7 +75,8 @@ describe('G4-UX detail D3 semantic boundary', () => {
   it('keeps loading/error states normalized and workflow execution out of D2', () => {
     expect(detailPage).toContain("workOrder.loadState === 'loading'")
     expect(detailPage).toContain('v-if="showLoadingSkeleton"')
-    expect(detailPage).toContain('const loadingSkeletonDelayMs = 240')
+    expect(detailPage).toContain('appLoadingSkeletonDelayMs')
+    expect(detailPage).toContain('}, appLoadingSkeletonDelayMs)')
     expect(detailPage).toContain('detail-loading-state')
     expect(detailPage).toContain('skeleton-summary')
     expect(detailPage).toContain('skeleton-task')

@@ -29,6 +29,7 @@ uses the same physical pixel density.
 | Minimum action target | Bottom action bar reserves safe-area padding | Goods Action reserves safe-area padding | SafeArea is an explicit layout primitive | `--app-touch-target: 88rpx`; Shell owns bottom safe-area handling |
 | Button horizontal padding | 24px default | tokenized button padding | 12px base padding token | 32rpx for the larger field-service CTA; one shared component token |
 | Button states | default, plain, warn, disabled | active overlay, disabled, loading | active, disabled, loading | AppButton owns primary/secondary/text plus pressed/loading/disabled states |
+| Loading states | structural skeleton / progress feedback | loading state with preserved context | loading state is distinct from empty/error | AppLoadingState owns page/workspace/inline modes; shared 240ms reveal threshold; no visible route-loading copy |
 | Cell / information row | 56px cell with 16px horizontal spacing | 10px vertical / 16px horizontal Cell padding | List-like content uses tokenized spacing | AppInformationRow uses a shared 88rpx minimum for readable two-column data |
 | Selector / choice | Select and radio expose selected/disabled states | Radio and field/cell composition | Selector uses 8px/16px padding and selected/disabled states | AppSelector/AppChoiceGroup share selected/disabled grammar |
 | Field anatomy | Cell-based label/control grouping | Field composes Cell and exposes error/disabled/placeholder states | Input exposes error/disabled/loading feedback | AppField owns label/required/supporting/error chrome; native input remains content |
@@ -47,6 +48,7 @@ uses the same physical pixel density.
 | `AppSurface` | surface and compact surface treatment | Appointment workspace/time/confirmation |
 | `AppStatus` | neutral/success/warning/danger/quiet status copy | Action Workspace Shell |
 | `AppInformationRow` | label/value/trailing slots, shared divider and rhythm | Confirmation |
+| `AppLoadingState` | page/bootstrap, workspace skeleton, inline progress | Home/bootstrap, List/Detail preparation, Appointment Workspace |
 | Persistent Action Bar | Shell-owned draft status, CTA, safe area | ActionWorkspaceShell |
 
 ## Explicit XLink overrides and non-claims
