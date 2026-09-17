@@ -330,6 +330,35 @@ describe('G4-E onsite inspection dynamic Action Content', () => {
     }).map((field) => field.key)).toEqual(['inspectionContent'])
   })
 
+  it('blocks completion when a required provider remains UNKNOWN', async () => {
+    const form: DynamicFormRead = {
+      ...inspectionForm(),
+      fields: [
+        ...inspectionForm().fields,
+        {
+          key: 'serviceGoods',
+          label: '套餐名称',
+          type: 'bizSelect',
+          required: true,
+          readOnly: false,
+          multiple: true,
+          options: undefined,
+        },
+      ],
+    }
+    const { store, save, complete } = configureWorkspace(succeeded(undefined), inspectionDetail(), form)
+    await store.load({ workOrderId, workflowNodeId, actionIntent: 'interact_with_form' })
+    store.setField('summary', '墙面情况正常')
+    store.setField('result', 'safe')
+    await store.pickDynamicMedia('photo')
+
+    expect(store.canSubmit).toBe(false)
+    const result = await store.saveDynamicForm()
+    expect(result.error?.category).toBe('unsupported_capability')
+    expect(save).not.toHaveBeenCalled()
+    expect(complete).not.toHaveBeenCalled()
+  })
+
   it('guards media picker and upload with the effective field state', async () => {
     const readOnlyForm: DynamicFormRead = {
       ...inspectionForm(),

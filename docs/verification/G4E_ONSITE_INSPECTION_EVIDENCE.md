@@ -1,9 +1,9 @@
 # G4-E On-site Inspection / Inspection Form Evidence
 
-Status: Beta contract discovery + Mock fidelity pass — awaiting review
+Status: Beta contract discovery + Mock fidelity hardening — awaiting review
 Repository: `xlink-bj/xlink-technician-app`  
 Branch: `rebuild/g4e-onsite-inspection`  
-Baseline: `ba71d1e44ad92a632954908522916e08bfd2b5eb`
+Baseline before this hardening pass: `21df8a0714a379b99849012029c4ed3fe4366ec8`
 Issue: `#21`
 
 This document combines the accepted Phase 0/1 evidence with the bounded Phase
@@ -63,8 +63,8 @@ implementation.**
 
 ## 1A. Current Beta contract and Mock source of truth
 
-The current Beta form observation is committed as a sanitized structural
-snapshot at:
+The previously captured Beta form observation is committed as a sanitized
+structural snapshot at:
 
 ```text
 contracts/beta/inspection/current.json
@@ -78,15 +78,17 @@ form-data, customer, tenant, session, token or media values.
 The repeatable read-only discovery command is:
 
 ```text
-pnpm run inspect:inspection-contract
+pnpm run inspect:inspection-contract -- --work-order=<safe-id>
 ```
 
-It discovers the active form identity from the authenticated workflow node,
-then reads `biz/extField/query`, an exact existing FormData record when the
+It requires an explicit work-order identity and, when necessary, an explicit
+workflow-node identity. It accepts only an active `repeat` Inspection node
+with an explicit form definition; a generic `forms` node is not sufficient.
+It then reads `biz/extField/query`, an exact existing FormData record when the
 node exposes one, and only the evidenced provider endpoints. It never falls
-back to the historical Inspection form ID. `--work-order` and `--node` are
-available for deterministic controlled captures. The local integrity/drift
-check is:
+back to list order, display labels, the Appointment/Rating form families, a
+historical Inspection form ID, or Mock data. The local integrity/drift check
+is:
 
 ```text
 pnpm run check:inspection-contract
@@ -128,15 +130,24 @@ Current provider status in the committed snapshot:
 
 The local Beta login path was exercised successfully from `.env.local` on
 2026-09-17 without temporary phone or verification-code injection. The
-authenticated read-only session completed the work-order list and detail
-reads for the available page of results. The automatic first-work-order
-selection did not expose an active inspection node with an explicit form
-definition, so the inspector conservatively stopped with
-`no_current_inspection_form`; it did not substitute the Appointment, Rating,
-or historical Survey form families. The committed snapshot therefore remains
-the previously sanitized observation and was not silently replaced by a
-different form. No live write, upload, phone call or production request was
+authenticated read-only session completed 20 sanitized work-order list/detail
+reads. The bounded scan found five historical completed `repeat` Inspection
+nodes but zero active `repeat` Inspection nodes with a form definition. The
+result is therefore `NO_ACTIVE_BETA_INSPECTION_WORK_ORDER`: no current live
+Inspection contract was captured in this pass. The inspector does not select
+an arbitrary first work order, so the committed snapshot remains the previous
+sanitized development observation and was not silently replaced by a
+historical form. No live write, upload, phone call or production request was
 made.
+
+The Beta wrapper enforces the same read-only boundary before network access:
+login, service-appointment detail/workflow reads, field definitions, exact
+form data, and evidenced provider reads are allowlisted. Workflow process,
+form writes, accept/order, upload/media, and unknown routes are blocked.
+Provider verification is structural (`VERIFIED`, `PARTIAL`, or `UNKNOWN`),
+not inferred from HTTP 200. In particular, `inspectionSOP` uses a dedicated
+shape sanitizer and `inspectionContent` remains `UNKNOWN` until a real option
+provider is evidenced.
 
 ## 2. R1 business sequence
 

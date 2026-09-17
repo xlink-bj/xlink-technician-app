@@ -1,4 +1,4 @@
-# G4-E Form Schema — Current Beta Contract Observation
+# G4-E Form Schema — Sanitized Beta Contract Observation
 
 Status: current Beta read evidence; not a Production schema registry.
 Repository: `xlink-bj/xlink-technician-app`  
@@ -53,20 +53,28 @@ is:_id|string#and: <FormDataId>
 The repeatable read-only contract inspector is:
 
 ```text
-pnpm run inspect:inspection-contract
+pnpm run inspect:inspection-contract -- --work-order=<safe-id>
 ```
 
-It requires runtime-only `XLINK_SCHEMA_API_BASE_URL` and
-`XLINK_SCHEMA_SESSION_REF`. A deterministic work-order read can be selected
-with `XLINK_SCHEMA_WORK_ORDER_ID` (or `--work-order`) and an ambiguous active
-node can be selected with `XLINK_SCHEMA_INSPECTION_NODE_ID` (or `--node`). The
-inspector discovers the active node and its `formDefinitionId`; it never uses a
-historical ID, page title, field name, or Mock fixture as a fallback.
+It requires runtime-only `XLINK_SCHEMA_API_BASE_URL`,
+`XLINK_SCHEMA_SESSION_REF`, and an explicit `XLINK_SCHEMA_WORK_ORDER_ID` (or
+`--work-order`). `XLINK_SCHEMA_INSPECTION_NODE_ID` (or `--node`) is required
+when the selected work order has multiple eligible Inspection nodes. The
+inspector discovers the active `repeat` Inspection node and its
+`formDefinitionId`; it never selects a work order by list position or uses a
+historical ID, page title, field name, generic `forms` node, or Mock fixture as
+a fallback. If the identity is not safe, it stops with a sanitized discovery
+error.
 
-The inspector performs only authenticated POST reads. It can write a
-sanitized candidate only when `XLINK_SCHEMA_OUTPUT_FILE` or `--output` is
-explicitly supplied. It never prints or persists raw form values, cookies,
-tokens, tenant identifiers, customer data, or media references.
+The Beta wrapper has a hard read-route allowlist. It permits only the login,
+service-appointment detail/workflow, field-definition, exact form-data,
+evidenced code/provider, package, and Inspection SOP read routes. Workflow
+process, form upsert/remove/delete, accept/order, upload/media, and unknown
+routes are rejected before network access. The inspector performs only
+authenticated POST reads. It can write a sanitized candidate only when
+`XLINK_SCHEMA_OUTPUT_FILE` or `--output` is explicitly supplied. It never
+prints or persists raw form values, cookies, tokens, tenant identifiers,
+customer data, or media references.
 
 The committed snapshot can be checked without Beta credentials:
 
@@ -95,21 +103,26 @@ injection is required or used. Credentials are never printed, committed or
 sent to chat:
 
 ```text
-pnpm run inspect:inspection-contract:beta -- --work-order=<optional-safe-id>
+pnpm run inspect:inspection-contract:beta -- --work-order=<safe-id>
 ```
 
 Password login remains available as a separately explicit diagnostic path
-with `XLINK_BETA_LOGIN_METHOD=password` and `XLINK_BETA_PASSWORD`.
-`--password`, `--tenant`, `--base-url`, `--work-order`, `--node`, and
+with `XLINK_BETA_LOGIN_METHOD=password` and `XLINK_BETA_PASSWORD`; no password
+CLI argument exists. `--tenant`, `--base-url`, `--work-order`, `--node`, and
 `--output` are available for a controlled invocation. The command performs
 login and contract discovery in one process, so the Session never needs to be
-copied into `XLINK_SCHEMA_SESSION_REF`.
+copied into `XLINK_SCHEMA_SESSION_REF`. Missing or ambiguous Inspection
+identity fails closed; it does not fall back to an Appointment, Rating, or
+historical Inspection form.
 
 ## Development observation
 
-The current Beta observation found an active Inspection form family with 15
-field rows. The numeric form identity is intentionally not persisted; the
-snapshot uses a deterministic opaque alias and preserves relationships only.
+The previous Beta observation found an Inspection form family with 15 field
+rows. The numeric form identity is intentionally not persisted; the snapshot
+uses a deterministic opaque alias and preserves relationships only. A later
+bounded scan found no active Inspection node, so this snapshot must not be
+described as the currently active Beta contract without a new explicit
+read-only capture.
 
 | Field key | Type | Required | Multiple | Option/provider | Conditional metadata |
 | --- | --- | ---: | ---: | --- | --- |

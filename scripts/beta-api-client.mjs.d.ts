@@ -7,6 +7,7 @@ export interface BetaLoginResult {
 }
 
 export declare function assertBetaApiBaseUrl(value: string): string
+export declare function assertAllowedBetaReadPath(path: string): string
 export declare function normalizeBetaLoginMethod(value?: string): '1' | '2'
 export declare function betaDefaults(env?: Record<string, string | undefined>): {
   readonly apiBaseUrl: string

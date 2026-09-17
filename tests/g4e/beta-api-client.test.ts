@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import {
+  assertAllowedBetaReadPath,
   assertBetaApiBaseUrl,
   betaDefaults,
   betaLocalDefaults,
@@ -8,6 +9,7 @@ import {
   loginBeta,
   normalizeBetaLoginMethod,
 } from '../../scripts/beta-api-client.mjs'
+import { runBetaInspectionContractCli } from '../../scripts/inspect-inspection-contract-beta.mjs'
 
 describe('G4-E local Beta API development client', () => {
   it('uses the R1 phoneLogin wire shape and returns the session only in memory', async () => {
@@ -78,6 +80,38 @@ describe('G4-E local Beta API development client', () => {
     await expect(client.read('biz/extField/query', { extId: 'safe-form' })).resolves.toEqual({ data: [] })
   })
 
+  it('allows every current discovery route and rejects mutations before network access', async () => {
+    const allowedRoutes = [
+      'basic/serviceAppointment/querySAWorkflowNode',
+      'basic/serviceAppointment/queryById/safe-work-order',
+      'biz/extField/query',
+      'biz/extForm/query/safe-form',
+      'i/code/selectCode.do',
+      'i/code/selectMultistageCode.do',
+      'biz/projPackage/queryWithRank',
+      'biz/extForm/queryByColName/inspectionSOP',
+    ]
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ data: [] }), { status: 200 }))
+    const client = createBetaReadClient({
+      apiBaseUrl: 'https://xlinkbeta.fsgo365.cn/fsgo/wm',
+      sessionRef: 'beta-session',
+      timeoutMs: 1_000,
+      fetchImpl,
+    })
+
+    for (const path of allowedRoutes) {
+      expect(assertAllowedBetaReadPath(path)).toBe(path)
+      await expect(client.read(path)).resolves.toEqual({ data: [] })
+    }
+    await expect(client.read('workflow/process')).rejects.toMatchObject({ code: 'route_not_allowed' })
+    await expect(client.read('biz/extForm/upsert/safe-form')).rejects.toMatchObject({ code: 'route_not_allowed' })
+    await expect(client.read('biz/extForm/remove/safe-form')).rejects.toMatchObject({ code: 'route_not_allowed' })
+    await expect(client.read('upload/token')).rejects.toMatchObject({ code: 'route_not_allowed' })
+    await expect(client.read('unknown/read')).rejects.toMatchObject({ code: 'route_not_allowed' })
+    await expect(client.read('basic/serviceAppointment/queryById/../workflow/process')).rejects.toMatchObject({ code: 'route_not_allowed' })
+    expect(fetchImpl).toHaveBeenCalledTimes(allowedRoutes.length)
+  })
+
   it('rejects non-Beta hosts and keeps login method parsing explicit', () => {
     expect(() => assertBetaApiBaseUrl('https://xlink.fsgo365.cn/fsgo/wm')).toThrow(/Beta API host/)
     expect(normalizeBetaLoginMethod('1')).toBe('1')
@@ -109,6 +143,13 @@ describe('G4-E local Beta API development client', () => {
       phone: 'local-account',
       code: '654321',
     })
+  })
+
+  it('does not accept phone, password or verification code through CLI arguments', async () => {
+    for (const argument of ['phone', 'password', 'code']) {
+      await expect(runBetaInspectionContractCli([`--${argument}`, 'sensitive-cli-value']))
+        .rejects.toMatchObject({ code: 'credential_cli_forbidden' })
+    }
   })
 
   it('requires the App environment to be explicitly non-production', () => {

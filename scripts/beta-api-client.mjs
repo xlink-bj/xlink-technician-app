@@ -17,6 +17,18 @@ const DEFAULT_BETA_TENANT_ID = '1340835581184723420'
 const DEFAULT_BETA_CODE = '999999'
 const BETA_HOST = 'xlinkbeta.fsgo365.cn'
 
+const ALLOWED_BETA_READ_PATHS = [
+  /^index\/phoneLogin\.do$/,
+  /^basic\/serviceAppointment\/querySAWorkflowNode$/,
+  /^basic\/serviceAppointment\/queryById\/[^/]+$/,
+  /^biz\/extField\/query$/,
+  /^biz\/extForm\/query\/[^/]+$/,
+  /^i\/code\/selectCode\.do$/,
+  /^i\/code\/selectMultistageCode\.do$/,
+  /^biz\/projPackage\/queryWithRank$/,
+  /^biz\/extForm\/queryByColName\/inspectionSOP$/,
+]
+
 export class BetaApiClientError extends Error {
   constructor(message, code = 'beta_api_failed') {
     super(message)
@@ -61,6 +73,22 @@ function normalizedTimeout(value) {
   return Number.isFinite(value) && value > 0 ? value : 15_000
 }
 
+export function assertAllowedBetaReadPath(path) {
+  const normalized = String(path ?? '').replace(/^\/+/, '')
+  const segments = normalized.split('/')
+  if (segments.some((segment) => segment === '' || segment === '.' || segment === '..')) {
+    throw new BetaApiClientError(
+      'Beta contract inspection route is not allowlisted',
+      'route_not_allowed',
+    )
+  }
+  if (ALLOWED_BETA_READ_PATHS.some((pattern) => pattern.test(normalized))) return normalized
+  throw new BetaApiClientError(
+    'Beta contract inspection route is not allowlisted',
+    'route_not_allowed',
+  )
+}
+
 function parseLocalEnv(filePath) {
   let source
   try {
@@ -87,10 +115,11 @@ function localRuntimeEnv() {
 }
 
 async function requestJson(options, path, body) {
+  const allowedPath = assertAllowedBetaReadPath(path)
   const request = fetchFunction(options.fetchImpl)
   const { controller, timer } = timeoutSignal(normalizedTimeout(options.timeoutMs))
   try {
-    const response = await request(endpoint(options.apiBaseUrl, path), {
+    const response = await request(endpoint(options.apiBaseUrl, allowedPath), {
       method: 'POST',
       headers: {
         Accept: 'application/json, text/plain, */*',

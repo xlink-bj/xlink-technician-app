@@ -11,7 +11,7 @@
 import { createHash } from 'node:crypto'
 import { readFile, writeFile } from 'node:fs/promises'
 
-import { assertBetaApiBaseUrl, createBetaReadClient } from './beta-api-client.mjs'
+import { assertAllowedBetaReadPath, assertBetaApiBaseUrl, createBetaReadClient } from './beta-api-client.mjs'
 
 const ACTIVE_NODE_STATES = new Set([0, '0', 'active'])
 const CODE_FIELD_TYPES = new Set(['select', 'radio', 'checkbox'])
@@ -269,14 +269,19 @@ function activeFormNode(raw, requestedNodeId) {
     const record = object(item)
     const nodeDef = object(record?.nodeDef)
     const formDefinitionId = firstString(nodeDef, ['formDefId', 'formDefinitionId'])
-    return Boolean(formDefinitionId) && ACTIVE_NODE_STATES.has(record?.state ?? record?.lifecycle)
+    // R1's Inspection workflow is a repeat node. This is a verified semantic
+    // discriminator for this contract family; generic `forms` nodes are not
+    // sufficient because Appointment and other forms share that category.
+    return Boolean(formDefinitionId)
+      && nodeDef?.nodeType === 'repeat'
+      && ACTIVE_NODE_STATES.has(record?.state ?? record?.lifecycle)
   }
   if (requestedNodeId && !node) {
     throw new ContractDiscoveryError('requested inspection workflow node was not observed', 'node_not_found')
   }
   const selected = node ? (eligible(node) ? node : undefined) : candidates.filter(eligible)
   if (!selected || (Array.isArray(selected) && selected.length === 0)) {
-    throw new ContractDiscoveryError('no current inspection form observed', 'no_current_inspection_form')
+    throw new ContractDiscoveryError('explicit Inspection workflow identity is required', 'inspection_identity_required')
   }
   if (Array.isArray(selected) && selected.length !== 1) {
     throw new ContractDiscoveryError('multiple active form nodes observed; provide XLINK_SCHEMA_INSPECTION_NODE_ID', 'ambiguous_inspection_form')
@@ -305,38 +310,119 @@ function nodeContext(node, aliases) {
   }
 }
 
-function providerOptionsFromCode(raw, valueOption, aliases) {
-  if (!Array.isArray(raw)) return []
-  const entry = raw.map(object).find((item) => item?.eleid === valueOption)
-  const options = object(entry?.options)
-  if (!options) return []
-  return Object.entries(options)
-    .filter(([, label]) => typeof label === 'string' && label.trim())
-    .map(([value, label]) => ({ value: optionAlias(value, aliases), label: label.trim() }))
+function usableRelationship(value) {
+  if (typeof value === 'string' || typeof value === 'number') return String(value).trim().length > 0
+  if (Array.isArray(value)) return value.length > 0 && value.every((item) => usableRelationship(item))
+  return false
 }
 
-function providerOptionsFromCascade(raw, codeType, aliases) {
+function sanitizedRelationship(value, aliases) {
+  if (Array.isArray(value)) return value.map((item) => sanitizedRelationship(item, aliases))
+  if (typeof value === 'string' || typeof value === 'number') return optionAlias(value, aliases)
+  return shapeOf(value)
+}
+
+function parsePartsProvider(raw, codeType, aliases) {
   const groups = Array.isArray(raw) ? raw : rowsFrom(raw)
   const group = groups.map(object).find((item) => item?.type === codeType)
-  const visit = (items) => (Array.isArray(items) ? items.map((item) => {
-    const option = object(item)
-    const value = firstString(option, ['value', 'code', 'id', '_id'])
-    const label = firstString(option, ['name', 'label', 'text'])
-    if (!value || !label) return undefined
-    const children = visit(option.children)
-    return { value: optionAlias(value, aliases), label, ...(children.length ? { children } : {}) }
-  }).filter(Boolean) : [])
-  return visit(group?.children)
+  if (!group) return { verification: 'UNKNOWN', options: [], reason: 'missing_group' }
+  if (!Array.isArray(group.children) || group.children.length === 0) {
+    return { verification: 'PARTIAL', options: [], reason: 'empty_hierarchy' }
+  }
+
+  const visit = (items) => {
+    if (!Array.isArray(items) || items.length === 0) throw new Error('empty_hierarchy')
+    return items.map((item) => {
+      const option = object(item)
+      const value = firstString(option, ['value', 'code', 'id', '_id'])
+      const label = firstString(option, ['name', 'label', 'text'])
+      if (!value || !label) throw new Error('malformed_hierarchy_node')
+      if (option.children !== undefined && !Array.isArray(option.children)) {
+        throw new Error('malformed_hierarchy_children')
+      }
+      const children = option.children?.length ? visit(option.children) : undefined
+      return { value: optionAlias(value, aliases), label, ...(children ? { children } : {}) }
+    })
+  }
+
+  try {
+    return { verification: 'VERIFIED', options: visit(group.children) }
+  } catch (error) {
+    return { verification: 'PARTIAL', options: [], reason: error instanceof Error ? error.message : 'malformed_hierarchy' }
+  }
 }
 
-function providerOptionsFromRecords(raw, aliases) {
-  return rowsFrom(raw).map((item) => {
-    const record = object(item)
-    const value = firstString(record, ['_id', 'id', 'value', 'code'])
-    const label = firstString(record, ['name', 'label', 'text'])
-    if (!value || !label) return undefined
-    return { value: optionAlias(value, aliases), label }
-  }).filter(Boolean)
+function parseQualifiedProvider(raw, valueOption, aliases) {
+  const entries = Array.isArray(raw) ? raw : rowsFrom(raw)
+  const matches = entries.map(object).filter((item) => item?.eleid === valueOption)
+  if (matches.length === 0) return { verification: 'UNKNOWN', options: [], reason: 'requested_element_missing' }
+  if (matches.length !== 1) return { verification: 'PARTIAL', options: [], reason: 'ambiguous_requested_element' }
+  const optionRecord = object(matches[0]?.options)
+  if (!optionRecord) return { verification: 'UNKNOWN', options: [], reason: 'option_object_missing' }
+  const optionEntries = Object.entries(optionRecord)
+  if (optionEntries.length === 0) return { verification: 'PARTIAL', options: [], reason: 'empty_options' }
+  if (optionEntries.some(([value, label]) => !String(value).trim() || typeof label !== 'string' || !label.trim())) {
+    return { verification: 'PARTIAL', options: [], reason: 'malformed_option_pair' }
+  }
+  return {
+    verification: 'VERIFIED',
+    options: optionEntries.map(([value, label]) => ({ value: optionAlias(value, aliases), label: label.trim() })),
+  }
+}
+
+function sanitizePackageRecord(raw, aliases) {
+  const record = object(raw)
+  const extensions = object(record?.exts)
+  const value = firstString(record, ['_id', 'id', 'value', 'code'])
+  const label = firstString(record, ['name', 'label', 'text'])
+  const serviceType = record?.serviceType
+  const repairPart = extensions?.repairPart
+  if (!value || !label || !usableRelationship(serviceType) || !usableRelationship(repairPart)) return undefined
+  return {
+    value: optionAlias(value, aliases),
+    label,
+    serviceType: sanitizedRelationship(serviceType, aliases),
+    repairPart: sanitizedRelationship(repairPart, aliases),
+    ...(record.sourceType !== undefined ? { sourceType: sanitizedRelationship(record.sourceType, aliases) } : {}),
+  }
+}
+
+function parsePackageProvider(raw, aliases) {
+  const records = rowsFrom(raw)
+  if (records.length === 0) return { verification: 'UNKNOWN', options: [], reason: 'empty_records' }
+  const options = records.map((record) => sanitizePackageRecord(record, aliases))
+  if (options.some((option) => !option)) return { verification: 'PARTIAL', options: [], reason: 'missing_package_relationship' }
+  return { verification: 'VERIFIED', options }
+}
+
+function sanitizeInspectionSopRecord(raw, aliases) {
+  const record = object(raw)
+  const value = firstString(record, ['_id', 'id', 'dataId'])
+  const part = record?.part
+  const order = record?.sopOrder ?? record?.order
+  const requiredKeys = ['content', 'isQualified', 'reason', 'otherReason', 'inspectionImg']
+  if (!value || !usableRelationship(part) || order === undefined || requiredKeys.some((key) => !Object.prototype.hasOwnProperty.call(record, key))) {
+    return undefined
+  }
+  return {
+    idAlias: aliases.alias('inspection-sop', value),
+    part: sanitizedRelationship(part, aliases),
+    contentShape: shapeOf(record.content),
+    ...(record.required !== undefined ? { required: booleanFlag(record.required) } : {}),
+    order: shapeOf(order),
+    isQualifiedShape: shapeOf(record.isQualified),
+    reasonShape: shapeOf(record.reason),
+    otherReasonShape: shapeOf(record.otherReason),
+    inspectionImgShape: shapeOf(record.inspectionImg),
+  }
+}
+
+function parseInspectionSopProvider(raw, aliases) {
+  const records = rowsFrom(raw)
+  if (records.length === 0) return { verification: 'UNKNOWN', options: [], reason: 'empty_records' }
+  const options = records.map((record) => sanitizeInspectionSopRecord(record, aliases))
+  if (options.some((option) => !option)) return { verification: 'PARTIAL', options: [], reason: 'malformed_inspection_sop_record' }
+  return { verification: 'VERIFIED', options }
 }
 
 function providerShape(kind) {
@@ -348,9 +434,10 @@ function providerShape(kind) {
 }
 
 async function readJson(options, path, body) {
+  const allowedPath = assertAllowedBetaReadPath(path)
   if (options.readClient) {
     try {
-      return await options.readClient.read(path, body)
+      return await options.readClient.read(allowedPath, body)
     } catch (error) {
       throw new ContractDiscoveryError(
         error instanceof Error ? error.message : 'Beta read could not be completed',
@@ -361,7 +448,7 @@ async function readJson(options, path, body) {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), options.timeoutMs)
   try {
-    const response = await fetch(endpoint(options.apiBaseUrl, path), {
+    const response = await fetch(endpoint(options.apiBaseUrl, allowedPath), {
       method: 'POST',
       headers: {
         Cookie: `JSESSIONID=${options.sessionRef}`,
@@ -406,7 +493,8 @@ async function captureProviders(options, fields, serviceAppointment, formDataRec
     if (id === 'parts') {
       try {
         const raw = await readJson(options, 'i/code/selectMultistageCode.do', { types: id, ...(options.tenantId ? { tenantId: options.tenantId } : {}) })
-        providers.push(providerEntry(id, 'r1_multistage_code', 'VERIFIED', 'i/code/selectMultistageCode.do', ['types', 'tenantId'], providerOptionsFromCascade(raw, id, aliases)))
+        const parsed = parsePartsProvider(raw, id, aliases)
+        providers.push(providerEntry(id, 'r1_multistage_code', parsed.verification, 'i/code/selectMultistageCode.do', ['types', 'tenantId'], parsed.options, parsed.reason))
       } catch (error) {
         providers.push(providerEntry(id, 'r1_multistage_code', 'UNKNOWN', 'i/code/selectMultistageCode.do', ['types', 'tenantId'], [], error.code))
       }
@@ -418,7 +506,8 @@ async function captureProviders(options, fields, serviceAppointment, formDataRec
           jsonPara: JSON.stringify([{ codeId: id, eleid: id }]),
           ...(options.tenantId ? { tenantId: options.tenantId } : {}),
         })
-        providers.push(providerEntry(id, 'r1_batch_code', 'VERIFIED', 'i/code/selectCode.do', ['jsonPara', 'tenantId'], providerOptionsFromCode(raw, id, aliases)))
+        const parsed = parseQualifiedProvider(raw, id, aliases)
+        providers.push(providerEntry(id, 'r1_batch_code', parsed.verification, 'i/code/selectCode.do', ['jsonPara', 'tenantId'], parsed.options, parsed.reason))
       } catch (error) {
         providers.push(providerEntry(id, 'r1_batch_code', 'UNKNOWN', 'i/code/selectCode.do', ['jsonPara', 'tenantId'], [], error.code))
       }
@@ -440,7 +529,8 @@ async function captureProviders(options, fields, serviceAppointment, formDataRec
           sortField: 'order,_id',
           sortOrder: 'asc',
         })
-        providers.push(providerEntry(id, 'business_record', 'VERIFIED', 'biz/projPackage/queryWithRank', ['_all', 'is:state|integer#and', 'in:serviceType|array#and', 'sourceType', 'sortField', 'sortOrder'], providerOptionsFromRecords(raw, aliases)))
+        const parsed = parsePackageProvider(raw, aliases)
+        providers.push(providerEntry(id, 'business_record', parsed.verification, 'biz/projPackage/queryWithRank', ['_all', 'is:state|integer#and', 'in:serviceType|array#and', 'sourceType', 'sortField', 'sortOrder'], parsed.options, parsed.reason))
       } catch (error) {
         providers.push(providerEntry(id, 'business_record', 'UNKNOWN', 'biz/projPackage/queryWithRank', ['_all', 'is:state|integer#and', 'in:serviceType|array#and', 'sourceType', 'sortField', 'sortOrder'], [], error.code))
       }
@@ -460,7 +550,8 @@ async function captureProviders(options, fields, serviceAppointment, formDataRec
           sortField: 'sopOrder',
           sortOrder: 'asc',
         })
-        providers.push(providerEntry(id, 'custom_record', 'VERIFIED', 'biz/extForm/queryByColName/inspectionSOP', ['_all', 'is:state|integer#and', 'all:part|array#and', 'sortField', 'sortOrder'], providerOptionsFromRecords(raw, aliases)))
+        const parsed = parseInspectionSopProvider(raw, aliases)
+        providers.push(providerEntry(id, 'custom_record', parsed.verification, 'biz/extForm/queryByColName/inspectionSOP', ['_all', 'is:state|integer#and', 'all:part|array#and', 'sortField', 'sortOrder'], parsed.options, parsed.reason))
       } catch (error) {
         providers.push(providerEntry(id, 'custom_record', 'UNKNOWN', 'biz/extForm/queryByColName/inspectionSOP', ['_all', 'is:state|integer#and', 'all:part|array#and', 'sortField', 'sortOrder'], [], error.code))
       }
@@ -512,26 +603,16 @@ export function validateContractSnapshot(snapshot) {
 
 export async function discoverInspectionContract(options) {
   const aliases = createAliasRegistry()
-  let workOrderRaw
-  let workOrderId = options.workOrderId
-  if (workOrderId) {
-    workOrderRaw = await readJson(options, `basic/serviceAppointment/queryById/${encodeURIComponent(workOrderId)}`, { type: 'query' })
-  } else {
-    const listRaw = await readJson(options, 'basic/serviceAppointment/querySAWorkflowNode', {
-      page: 1,
-      rows: 20,
-      sortField: 'updateTime',
-      sortOrder: 'desc',
-      'is:state|integer#and': 1,
-    })
-    const listRows = rowsFrom(listRaw)
-    const first = listRows.find((item) => firstString(object(object(item)?.data) ?? object(item), ['_id', 'id']))
-    workOrderId = firstString(object(object(first)?.data) ?? object(first), ['_id', 'id'])
-    if (!workOrderId) throw new ContractDiscoveryError('no readable work order was observed', 'no_work_order')
-    workOrderRaw = await readJson(options, `basic/serviceAppointment/queryById/${encodeURIComponent(workOrderId)}`, { type: 'query' })
+  const workOrderId = firstString(options, ['workOrderId'])
+  if (!workOrderId) {
+    throw new ContractDiscoveryError(
+      'Inspection contract capture requires an explicit work order identity',
+      'inspection_identity_required',
+    )
   }
+  const workOrderRaw = await readJson(options, `basic/serviceAppointment/queryById/${encodeURIComponent(workOrderId)}`, { type: 'query' })
 
-  const node = activeFormNode(workOrderRaw, options.nodeId)
+  const node = activeFormNode(workOrderRaw, options.workflowNodeId ?? options.nodeId)
   const nodeRecord = object(node) ?? {}
   const nodeDef = object(nodeRecord.nodeDef) ?? {}
   const formDefinitionId = firstString(nodeDef, ['formDefId', 'formDefinitionId'])
