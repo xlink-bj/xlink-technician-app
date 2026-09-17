@@ -49,5 +49,5 @@ export type {
   ScanPort,
   ScanResult,
 } from './platform'
-export type { StorageKey, StorageNamespace, StoragePort } from './storage'
+export type { StorageKey, StorageListQuery, StorageNamespace, StoragePort } from './storage'
 export type { UploadPort } from './upload'

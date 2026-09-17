@@ -112,6 +112,10 @@ export function actionDraftStorageKey(identity: ActionDraftIdentity): string {
   ].join(':')
 }
 
+export function actionDraftStorageKeyPrefixForUser(userId: UserId): string {
+  return ['action-workspace', '1', encodeURIComponent(String(userId))].join(':') + ':'
+}
+
 export function actionDraftIdentityMatches(
   left: ActionDraftIdentity,
   right: ActionDraftIdentity,

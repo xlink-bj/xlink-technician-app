@@ -1,7 +1,9 @@
 import { createSSRApp } from 'vue'
 import { createPinia } from 'pinia'
 
+import { createActionDraftRepository, type ActionDraftRepository } from '@runtimes/action'
 import App from '@/App.vue'
+import { mockAppointmentDraftSeeds } from './action-workspace-harness'
 import type {
   AuthSessionPort,
   NavigationPort,
@@ -13,7 +15,9 @@ import type {
 import { useWorkOrderDetailStore } from '@features/work-orders/detail'
 import { useActionWorkspaceStore } from '@features/work-orders/action-workspace'
 import { useWorkOrderListStore } from '@features/work-orders/list'
+import { useLocalDraftDiagnosticsStore } from '@features/home/draft-diagnostics'
 import { useSessionStore } from '@shared/state'
+import { isBusinessMockDeveloperModeAvailable, isBusinessMockMode } from './business-mock'
 
 import {
   createDefaultAuthSessionPort,
@@ -31,6 +35,7 @@ export interface ApplicationDependencies {
   readonly phone?: PhonePort
   readonly navigation?: NavigationPort
   readonly storage?: StoragePort
+  readonly draftRepository?: ActionDraftRepository
 }
 
 export function createApplication(dependencies: ApplicationDependencies = {}) {
@@ -44,6 +49,7 @@ export function createApplication(dependencies: ApplicationDependencies = {}) {
   const phone = dependencies.phone ?? createDefaultPhonePort()
   const navigation = dependencies.navigation ?? createDefaultNavigationPort()
   const storage = dependencies.storage ?? createDefaultStoragePort()
+  const draftRepository = dependencies.draftRepository ?? createActionDraftRepository(storage)
   sessionStore.configureAuth(authSession)
   const workOrderListStore = useWorkOrderListStore(pinia)
   const workOrderDetailStore = useWorkOrderDetailStore(pinia)
@@ -66,10 +72,26 @@ export function createApplication(dependencies: ApplicationDependencies = {}) {
   actionWorkspaceStore.configure({
     apiRead,
     commandApi: apiCommand,
-    storage,
+    draftRepository,
     navigation,
     getSession: () => sessionStore.session,
   })
+  const localDraftDiagnosticsStore = useLocalDraftDiagnosticsStore(pinia)
+  localDraftDiagnosticsStore.configure({
+    repository: draftRepository,
+    getSession: () => sessionStore.session,
+    isDeveloperModeAvailable: isBusinessMockDeveloperModeAvailable,
+    getMockMode: isBusinessMockMode,
+    mockDraftSeeds: mockAppointmentDraftSeeds,
+  })
   void sessionStore.bootstrap()
-  return { app, pinia, sessionStore, workOrderListStore, workOrderDetailStore, actionWorkspaceStore }
+  return {
+    app,
+    pinia,
+    sessionStore,
+    workOrderListStore,
+    workOrderDetailStore,
+    actionWorkspaceStore,
+    localDraftDiagnosticsStore,
+  }
 }

@@ -46,7 +46,7 @@
           <template #label>上门安排</template>
           <template #value>{{ visitIntentLabel }}</template>
         </AppInformationRow>
-        <template v-if="!isVisitDeferred">
+        <template v-if="workspace.appointmentDatetimeApplicable">
           <AppInformationRow class="confirmation-row">
             <template #label>预约日期</template>
             <template #value>{{ appointmentDisplay?.dateLabel || '—' }}</template>

@@ -95,6 +95,21 @@
           </navigator>
         </view>
       </view>
+
+      <LocalDraftDiagnosticsPanel
+        v-if="mockControlVisible"
+        :mock-mode="mockMode"
+        :loading="draftDiagnostics.loading"
+        :entries="draftDiagnostics.entries"
+        :unfinished-total="draftDiagnostics.unfinishedTotal"
+        :invalid-total="draftDiagnostics.invalidTotal"
+        :error="draftDiagnostics.error"
+        :seed-available="draftDiagnostics.seedAvailable"
+        :cleanup-available="draftDiagnostics.cleanupAvailable"
+        @refresh="refreshDraftDiagnostics"
+        @seed="seedMockDrafts"
+        @clear="clearMockDrafts"
+      />
     </view>
 
     <view class="home-footer">
@@ -264,6 +279,7 @@
 
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
+import { onShow } from '@dcloudio/uni-app'
 
 import {
   isBusinessMockDeveloperModeAvailable,
@@ -273,10 +289,12 @@ import {
 } from '@app/business-mock'
 import { mockActionWorkspaceScenarios } from '@app/action-workspace-harness'
 import { hasAuthenticatedSession, workOrdersRoute } from '@features/home/access'
+import LocalDraftDiagnosticsPanel from '@features/home/components/LocalDraftDiagnosticsPanel.vue'
 import {
   reloadBusinessReadStores,
   switchBusinessDataSource,
 } from '@features/home/business-data-source'
+import { useLocalDraftDiagnosticsStore } from '@features/home/draft-diagnostics'
 import { submitLogin, type LoginSubmissionState } from '@features/session/login'
 import { resolveQuickLoginInput } from '@features/session/quick-login'
 import {
@@ -294,6 +312,7 @@ import { useWorkOrderListStore } from '@features/work-orders/list'
 const session = useSessionStore()
 const workOrders = useWorkOrderListStore()
 const workOrderDetail = useWorkOrderDetailStore()
+const draftDiagnostics = useLocalDraftDiagnosticsStore()
 const phoneNumber = ref('')
 const verificationCode = ref('')
 const loginStage = ref<LoginStage>('launch')
@@ -319,8 +338,13 @@ watch(
   () => session.status,
   (status) => {
     if (status === 'unauthenticated') loginStage.value = 'launch'
+    void draftDiagnostics.refresh()
   },
 )
+
+onShow(() => {
+  if (showHome.value) void draftDiagnostics.refresh()
+})
 
 function goToMethods(): void {
   loginStage.value = advanceLoginStage(loginStage.value)
@@ -357,6 +381,7 @@ async function handleMockToggle(event: Event): Promise<void> {
     )
   } finally {
     mockMode.value = isBusinessMockMode()
+    await draftDiagnostics.refresh()
     mockSwitchInFlight.value = false
   }
 }
@@ -369,8 +394,21 @@ async function selectMockMode(mode: Exclude<BusinessMockMode, 'off'>): Promise<v
     await reloadBusinessReadStores({ list: workOrders, detail: workOrderDetail })
   } finally {
     mockMode.value = isBusinessMockMode()
+    await draftDiagnostics.refresh()
     mockSwitchInFlight.value = false
   }
+}
+
+async function refreshDraftDiagnostics(): Promise<void> {
+  await draftDiagnostics.refresh()
+}
+
+async function seedMockDrafts(): Promise<void> {
+  await draftDiagnostics.seedMockDrafts()
+}
+
+async function clearMockDrafts(): Promise<void> {
+  await draftDiagnostics.clearMockDrafts()
 }
 
 async function submit(): Promise<void> {

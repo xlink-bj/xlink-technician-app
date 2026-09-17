@@ -107,7 +107,7 @@ flowchart TD
     AR --> DRAFT[Draft Store / Storage Port]
     AR --> OP[Operation State / Error Taxonomy]
 
-    DRAFT --> REGISTRY[Draft Registry / Metadata Index - target]
+    DRAFT --> REGISTRY[Draft Registry / derived metadata - implemented V1]
 
     CONTENT --> FORM[Dynamic Form Runtime]
     CONTENT --> QUOTE[Quotation Content - future]

@@ -6,7 +6,6 @@ import {
   actionContentKindForIntent,
   actionDraftIdentityFor,
   actionDraftIdentityMatches,
-  actionDraftStorageKey,
   actionExecutionForWorkflowDecision,
   type ActionBusinessResult,
   type ActionDescriptor,
@@ -16,13 +15,13 @@ import {
   type ActionDraftStatus,
   type ActionLifecycle,
   type ActionRefreshStatus,
+  type ActionDraftRepository,
 } from '@runtimes/action'
 import type {
   AppointmentFieldValue,
   AppointmentFormRead,
   NavigationPort,
   SessionSnapshot,
-  StoragePort,
   TechnicianApiCommandPort,
   TechnicianApiReadPort,
   WorkOrderDetail,
@@ -39,6 +38,7 @@ import {
 } from '@shared/types'
 import {
   appointmentFieldRolesFor,
+  appointmentDatetimeApplicableFor,
   appointmentRuntimeFieldsFor,
   normalizeAppointmentFieldValue,
   normalizeAppointmentFieldValueForForm,
@@ -181,7 +181,7 @@ function draftRecordFor(
 export interface ActionWorkspaceDependencies {
   readonly apiRead: TechnicianApiReadPort
   readonly commandApi: TechnicianApiCommandPort
-  readonly storage: StoragePort
+  readonly draftRepository: ActionDraftRepository
   readonly navigation: NavigationPort
   readonly getSession: () => SessionSnapshot | null
   readonly debounceMs?: number
@@ -213,11 +213,14 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
   )
   const appointmentChoiceField = computed(() => appointmentFieldRoles.value.need)
   const appointmentTimeField = computed(() => appointmentFieldRoles.value.datetime)
+  const appointmentDatetimeApplicable = computed(() =>
+    appointmentForm.value ? appointmentDatetimeApplicableFor(appointmentForm.value) : false,
+  )
   const appointmentNoteField = computed(() => appointmentFieldRoles.value.note)
   const appointmentExtraFields = computed(() => appointmentFieldRoles.value.extras)
   const appointmentTimeValue = computed(() => {
     const key = appointmentTimeField.value?.key
-    return key ? appointmentForm.value?.values[key] : undefined
+    return appointmentDatetimeApplicable.value && key ? appointmentForm.value?.values[key] : undefined
   })
   const canSubmit = computed(() =>
     loadState.value === 'succeeded' &&
@@ -299,10 +302,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
   ): Promise<void> {
     const configured = dependencies
     if (!configured) return
-    const stored = await configured.storage.read<unknown>({
-      namespace: 'draft',
-      key: actionDraftStorageKey(nextIdentity),
-    })
+    const stored = await configured.draftRepository.read<Readonly<Record<string, AppointmentFieldValue>>>(nextIdentity)
     if (stored.state !== 'succeeded' || !stored.data) return
     const draft = draftRecordFor(stored.data, nextIdentity, form)
     if (!draft) return
@@ -458,13 +458,13 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
 
   function setAppointmentTime(value: string): OperationSnapshot<void> {
     const field = appointmentTimeField.value
-    if (!field || !field.runtime.visible) return failure('validation', 'Appointment time is not applicable to the current visit branch')
+    if (!field || !appointmentDatetimeApplicable.value) return failure('validation', 'Appointment time is not applicable to the current visit branch')
     return setField(field.key, value)
   }
 
   async function openAppointmentTimeSelection(): Promise<OperationSnapshot<void>> {
     const currentDescriptor = descriptor.value
-    if (!currentDescriptor || !appointmentTimeField.value || !appointmentTimeField.value.runtime.visible) {
+    if (!currentDescriptor || !appointmentTimeField.value || !appointmentDatetimeApplicable.value) {
       return failure('unsupported_capability', 'Appointment time selection is unavailable')
     }
     const flushed = await flushDraft()
@@ -592,10 +592,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     }
     const writeVersion = loadVersion
     draftStatus.value = 'saving'
-    draftWriteInFlight = configured.storage.write(
-      { namespace: 'draft', key: actionDraftStorageKey(currentIdentity) },
-      record,
-    ).then((result) => {
+    draftWriteInFlight = configured.draftRepository.write(record).then((result) => {
       if (writeVersion !== loadVersion) return result
       if (writeRevision !== draftRevision) {
         draftStatus.value = 'dirty'
@@ -633,8 +630,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     const configured = dependencies
     const currentIdentity = identity
     if (!configured || !currentIdentity) return { state: 'succeeded', data: undefined }
-    const key = { namespace: 'draft' as const, key: actionDraftStorageKey(currentIdentity) }
-    const result = await configured.storage.remove(key)
+    const result = await configured.draftRepository.remove(currentIdentity)
     if (result.state === 'succeeded') {
       draftStatus.value = 'clean'
       return result
@@ -651,7 +647,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
         updatedAt: configured.now?.() ?? new Date().toISOString(),
         status: 'completed',
       }
-      const markedCompleted = await configured.storage.write(key, tombstone)
+      const markedCompleted = await configured.draftRepository.write(tombstone)
       if (markedCompleted.state === 'succeeded') {
         draftStatus.value = 'clean'
         return markedCompleted
@@ -757,6 +753,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     appointmentFields,
     appointmentFieldRoles,
     appointmentVisitIntent,
+    appointmentDatetimeApplicable,
     appointmentChoiceField,
     appointmentTimeField,
     appointmentNoteField,

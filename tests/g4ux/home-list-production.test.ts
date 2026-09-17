@@ -34,6 +34,15 @@ describe('G4-UX Phase B2 Home', () => {
     expect(homeTemplate).toContain('class="work-orders-entry"')
   })
 
+  it('exposes local draft diagnostics only through the non-production developer surface', () => {
+    expect(homeTemplate).toContain('LocalDraftDiagnosticsPanel')
+    expect(homeTemplate).toContain('v-if="mockControlVisible"')
+    expect(homePage).toContain('useLocalDraftDiagnosticsStore')
+    expect(homePage).toContain('isBusinessMockDeveloperModeAvailable')
+    expect(homePage).not.toContain('uni.getStorage')
+    expect(homePage).not.toContain('uni.setStorage')
+  })
+
   it('uses product-facing navigation titles for the authenticated surfaces', () => {
     expect(pagesConfig).toContain('"navigationBarTitleText": "修链"')
     expect(pagesConfig).toContain('"navigationBarTitleText": "工单"')

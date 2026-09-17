@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 
+import { createActionDraftRepository } from '@runtimes/action'
+
 import {
   createTechnicianApiCommandAdapter,
   type ApiCommandRequest,
@@ -260,12 +262,13 @@ describe('G4-D accept and appointment semantics', () => {
       read: vi.fn(async () => succeeded(null)),
       write: vi.fn(async () => succeeded(undefined)),
       remove: vi.fn(async () => succeeded(undefined)),
+      listKeys: vi.fn(async () => succeeded([])),
     }
     const store = useActionWorkspaceStore()
     store.configure({
       apiRead: api,
       commandApi: command,
-      storage,
+      draftRepository: createActionDraftRepository(storage),
       navigation: { navigate: vi.fn(async () => undefined), back: vi.fn(async () => undefined) },
       getSession: () => session,
       debounceMs: 0,

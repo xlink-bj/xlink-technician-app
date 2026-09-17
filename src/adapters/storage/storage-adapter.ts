@@ -1,5 +1,5 @@
 import type { OperationSnapshot } from '@shared/types'
-import type { StorageKey, StoragePort } from '@shared/ports'
+import type { StorageKey, StorageListQuery, StoragePort } from '@shared/ports'
 import { createOperationError } from '@shared/types'
 
 import { adapterFailure, succeeded, unknownErrorMessage } from '../common/operations'
@@ -8,6 +8,7 @@ export interface KeyValueStorageDriver {
   get(key: string): Promise<string | null>
   set(key: string, value: string): Promise<void>
   remove(key: string): Promise<void>
+  listKeys(): Promise<readonly string[]>
 }
 
 function storageKey(key: StorageKey): string {
@@ -45,6 +46,22 @@ export class SemanticStorageAdapter implements StoragePort {
         state: 'failed_retryable',
         error: createOperationError('network_retryable', unknownErrorMessage(error, 'Storage remove failed')),
       }
+    }
+  }
+
+  async listKeys(query: StorageListQuery): Promise<OperationSnapshot<readonly string[]>> {
+    const namespacePrefix = `${query.namespace}:`
+    const requestedPrefix = query.prefix ? `${namespacePrefix}${query.prefix}` : namespacePrefix
+    try {
+      const keys = await this.driver.listKeys()
+      return succeeded(
+        keys
+          .filter((key): key is string => typeof key === 'string' && key.startsWith(requestedPrefix))
+          .map((key) => key.slice(namespacePrefix.length))
+          .sort(),
+      )
+    } catch (error) {
+      return adapterFailure('server_terminal', unknownErrorMessage(error, 'Storage key enumeration failed'))
     }
   }
 }

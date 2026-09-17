@@ -5,6 +5,7 @@ import { readFile } from 'node:fs/promises'
 import {
   actionDraftIdentityFor,
   actionDraftStorageKey,
+  createActionDraftRepository,
 } from '@runtimes/action'
 import { createTechnicianApiCommandAdapter } from '@adapters/api/technician-api-commands'
 import { createRoleScopedTechnicianApiReadAdapter } from '@adapters/api/technician-api'
@@ -78,11 +79,12 @@ function appointmentForm(values: AppointmentFormRead['values'] = {}): Appointmen
   }
 }
 
-function storageFor() {
+function storageFor(writeDelayMs = 0) {
   const values = new Map<string, unknown>()
   const storage = {
     read: vi.fn(async (key: StorageKey) => succeeded(values.get(key.key) ?? null)),
     write: vi.fn(async (key: StorageKey, value: unknown) => {
+      if (writeDelayMs > 0) await new Promise((resolve) => setTimeout(resolve, writeDelayMs))
       values.set(key.key, value)
       return succeeded(undefined)
     }),
@@ -90,6 +92,7 @@ function storageFor() {
       values.delete(key.key)
       return succeeded(undefined)
     }),
+    listKeys: vi.fn(async () => succeeded([...values.keys()])),
   } as unknown as StoragePort
   return { storage, values }
 }
@@ -108,8 +111,10 @@ function configureWorkspace(
   form: AppointmentFormRead = appointmentForm(),
   sharedStorage?: ReturnType<typeof storageFor>,
   getSession: () => SessionSnapshot | null = () => session,
+  debounceMs = 5,
 ) {
   const storage = sharedStorage ?? storageFor()
+  const draftRepository = createActionDraftRepository(storage.storage)
   const nextNavigation = navigation()
   const api: TechnicianApiReadPort = {
     getWorkOrderDetail: vi.fn(async () => succeeded(detail)),
@@ -122,13 +127,13 @@ function configureWorkspace(
   store.configure({
     apiRead: api,
     commandApi: command,
-    storage: storage.storage,
+    draftRepository,
     navigation: nextNavigation,
     getSession,
-    debounceMs: 5,
+    debounceMs,
     now: () => '2026-04-20T10:00:00.000Z',
   })
-  return { store, api, command, storage, navigation: nextNavigation }
+  return { store, api, command, storage, draftRepository, navigation: nextNavigation }
 }
 
 async function openWorkspace(
@@ -227,6 +232,61 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
     })
   })
 
+  it('keeps current editing state when autosave fails instead of rolling back the branch', async () => {
+    const { store, storage } = configureWorkspace()
+    await openWorkspace(store)
+    store.setField('need', '1')
+    store.setAppointmentTime('2026-04-20 11:00')
+    await store.flushDraft()
+
+    vi.mocked(storage.storage.write).mockResolvedValueOnce({
+      state: 'failed_retryable',
+      error: { category: 'network_retryable', message: 'storage unavailable', retryable: true },
+    })
+    store.setField('need', '0')
+
+    const result = await store.flushDraft()
+    expect(result.state).toBe('failed_retryable')
+    expect(store.draftStatus).toBe('save_failed')
+    expect(store.appointmentVisitIntent).toBe('visit_deferred')
+    expect(store.appointmentDatetimeApplicable).toBe(false)
+    expect(store.appointmentTimeValue).toBeUndefined()
+    expect(store.appointmentForm?.values).toMatchObject({ need: '0', datetime: '2026-04-20 11:00' })
+  })
+
+  it('persists only the latest revision after rapid conditional toggles', async () => {
+    const shared = storageFor(20)
+    const { store, storage } = configureWorkspace(
+      appointmentDetail(),
+      appointmentForm(),
+      shared,
+      () => session,
+      5,
+    )
+    await openWorkspace(store)
+    store.setField('need', '1')
+    store.setAppointmentTime('2026-04-20 11:00')
+
+    await new Promise((resolve) => setTimeout(resolve, 10))
+    expect(storage.storage.write).toHaveBeenCalledTimes(1)
+
+    store.setField('need', '0')
+    store.setField('note', '快速切换后的备注')
+    store.setField('need', '1')
+    store.setAppointmentTime('2026-04-20 14:00')
+    await store.flushDraft()
+
+    const persisted = [...shared.values.values()][0] as { values: Record<string, unknown> }
+    expect(storage.storage.write).toHaveBeenCalledTimes(2)
+    expect(persisted.values).toMatchObject({
+      need: '1',
+      datetime: '2026-04-20 14:00',
+      note: '快速切换后的备注',
+    })
+    expect(store.appointmentVisitIntent).toBe('visit_required')
+    expect(store.appointmentDatetimeApplicable).toBe(true)
+  })
+
   it('leaves and reopens the same Action with its scoped draft restored', async () => {
     const { store, storage } = configureWorkspace()
     await openWorkspace(store)
@@ -241,7 +301,7 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
         readAppointmentForm: vi.fn(async () => succeeded(appointmentForm())),
         submitAppointment: vi.fn(async () => succeeded(undefined)),
       } as unknown as TechnicianApiCommandPort,
-      storage: storage.storage,
+      draftRepository: createActionDraftRepository(storage.storage),
       navigation: navigation(),
       getSession: () => session,
       debounceMs: 5,
@@ -268,7 +328,7 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
   })
 
   it('keeps local input on retryable submit failure and never reports fake success offline', async () => {
-    const { store, command, storage } = configureWorkspace()
+    const { store, command, storage, draftRepository } = configureWorkspace()
     vi.mocked(command.submitAppointment).mockResolvedValueOnce({
       state: 'failed_retryable',
       error: { category: 'network_retryable', message: 'offline', retryable: true },
@@ -283,10 +343,11 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
     expect(store.lifecycle).toBe('failed_retryable')
     expect(store.appointmentForm?.values.datetime).toBe('2026-04-20 10:00')
     expect(storage.values.size).toBe(1)
+    expect((await draftRepository.listForUser(session.user.id)).data?.entries).toHaveLength(1)
   })
 
   it('clears the unfinished draft and rereads authoritative state after success', async () => {
-    const { store, api, storage } = configureWorkspace()
+    const { store, api, storage, draftRepository } = configureWorkspace()
     await openWorkspace(store)
     store.setField('need', '1')
     store.setField('datetime', '2026-04-20 10:00')
@@ -298,6 +359,7 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
     expect(storage.storage.remove).toHaveBeenCalledTimes(1)
     expect(storage.values.size).toBe(0)
     expect(api.getWorkOrderDetail).toHaveBeenCalledTimes(2)
+    expect((await draftRepository.listForUser(session.user.id)).data?.entries).toHaveLength(0)
   })
 
   it('keeps business success terminal when draft cleanup and refresh remain pending', async () => {
@@ -366,6 +428,7 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
     store.setField('need', '0')
 
     expect(store.appointmentVisitIntent).toBe('visit_deferred')
+    expect(store.appointmentDatetimeApplicable).toBe(false)
     expect(store.appointmentTimeField?.runtime.visible).toBe(false)
     expect(store.appointmentTimeField?.runtime.required).toBe(false)
     expect(store.appointmentFields.map((field) => field.key)).toEqual(['need', 'note'])
@@ -392,6 +455,7 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
     store.setField('need', '1')
 
     expect(store.appointmentVisitIntent).toBe('visit_required')
+    expect(store.appointmentDatetimeApplicable).toBe(true)
     expect(store.appointmentTimeField?.runtime.visible).toBe(true)
     expect(store.appointmentForm?.values.datetime).toBe('2026-04-20 11:00')
   })
@@ -425,6 +489,61 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
     store.setField('need', '0')
 
     expect((await store.submit()).state).toBe('succeeded')
+    expect(command.submitAppointment).toHaveBeenCalledWith(expect.objectContaining({
+      visitIntent: 'visit_deferred',
+      values: { need: '0' },
+    }))
+    expect(vi.mocked(command.submitAppointment).mock.calls[0][0].values).not.toHaveProperty('datetime')
+  })
+
+  it('flushes the current deferred editing state before fast confirmation navigation', async () => {
+    const shared = storageFor()
+    const { store, navigation } = configureWorkspace(
+      appointmentDetail(),
+      appointmentForm(),
+      shared,
+      () => session,
+      360,
+    )
+    await openWorkspace(store)
+    store.setField('need', '1')
+    store.setAppointmentTime('2026-04-20 11:00')
+    await store.flushDraft()
+
+    store.setField('need', '0')
+    const result = await store.continueToConfirmation()
+
+    expect(result.state).toBe('succeeded')
+    expect(store.appointmentDatetimeApplicable).toBe(false)
+    expect(store.appointmentTimeValue).toBeUndefined()
+    expect(navigation.replace).toHaveBeenLastCalledWith(actionWorkspaceConfirmationRouteFor(
+      asOpaqueId<'WorkOrderId'>('workspace-work-order'),
+      asOpaqueId<'WorkflowNodeRuntimeId'>('workspace-appointment-node'),
+      'set_appointment',
+    ))
+    expect([...shared.values.values()][0]).toMatchObject({
+      values: { need: '0', datetime: '2026-04-20 11:00' },
+    })
+  })
+
+  it('submits current effective state before the debounce can persist it', async () => {
+    const shared = storageFor()
+    const { store, command } = configureWorkspace(
+      appointmentDetail(),
+      appointmentForm(),
+      shared,
+      () => session,
+      360,
+    )
+    await openWorkspace(store)
+    store.setField('need', '1')
+    store.setAppointmentTime('2026-04-20 11:00')
+    await store.flushDraft()
+
+    store.setField('need', '0')
+    const result = await store.submit()
+
+    expect(result.state).toBe('succeeded')
     expect(command.submitAppointment).toHaveBeenCalledWith(expect.objectContaining({
       visitIntent: 'visit_deferred',
       values: { need: '0' },
@@ -563,7 +682,7 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
     store.configure({
       apiRead: read,
       commandApi: command,
-      storage: storage.storage,
+      draftRepository: createActionDraftRepository(storage.storage),
       navigation: navigation(),
       getSession: () => session,
       debounceMs: 0,

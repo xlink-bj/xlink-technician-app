@@ -36,6 +36,10 @@ class FakeUniStorage implements UniStorageApi {
     this.values.delete(options.key)
     options.success?.({})
   }
+
+  getStorageInfo(options: UniNamespace.GetStorageInfoOptions): void {
+    options.success?.({ keys: [...this.values.keys()], currentSize: 0, limitSize: 0 })
+  }
 }
 
 const sessionKey: StorageKey = { namespace: 'session', key: 'current' }
@@ -55,6 +59,11 @@ describe('G4-A uni infrastructure boundaries', () => {
       data: { sessionRef: 'sanitized-session-token' },
     })
     expect(await storage.remove(sessionKey)).toEqual({ state: 'succeeded' })
+    await storage.write({ namespace: 'draft', key: 'action-workspace:1:user-a:one' }, { draft: true })
+    expect(await storage.listKeys({ namespace: 'draft', prefix: 'action-workspace:1:user-a:' })).toEqual({
+      state: 'succeeded',
+      data: ['action-workspace:1:user-a:one'],
+    })
   })
 
   it('form-encodes accepted auth wire fields and returns only normalized session data', async () => {

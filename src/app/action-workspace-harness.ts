@@ -1,5 +1,7 @@
+import { appointmentFormDefinitionWireId } from '@adapters/api/appointment-contract'
 import { mockCommandScenarioIds } from '@adapters/api/mock'
 import { actionWorkspaceRouteFor } from '@features/work-orders/action-workspace'
+import type { AppointmentFieldValue } from '@shared/ports'
 import { asOpaqueId, type WorkOrderId, type WorkflowNodeRuntimeId } from '@shared/types'
 
 export interface MockActionWorkspaceScenario {
@@ -7,6 +9,16 @@ export interface MockActionWorkspaceScenario {
   readonly label: string
   readonly description: string
   readonly route: string
+}
+
+export interface MockActionDraftSeed {
+  readonly key: 'required' | 'deferred' | 'retryable'
+  readonly workOrderId: WorkOrderId
+  readonly workflowNodeId: WorkflowNodeRuntimeId
+  readonly actionIntent: 'set_appointment'
+  readonly contentKind: 'dynamic_form'
+  readonly contentIdentity: string
+  readonly values: Readonly<Record<string, AppointmentFieldValue>>
 }
 
 const appointmentNodeFor = (suffix: string): WorkflowNodeRuntimeId =>
@@ -18,6 +30,37 @@ const routeFor = (workOrderId: string, nodeSuffix: string): string =>
     appointmentNodeFor(nodeSuffix),
     'set_appointment',
   )
+
+/** Canonical identities shared by Mock Detail fixtures and developer Draft seed records. */
+export const mockAppointmentDraftSeeds: readonly MockActionDraftSeed[] = [
+  {
+    key: 'required',
+    workOrderId: asOpaqueId<'WorkOrderId'>(mockCommandScenarioIds.appointmentSuccess),
+    workflowNodeId: appointmentNodeFor('016'),
+    actionIntent: 'set_appointment',
+    contentKind: 'dynamic_form',
+    contentIdentity: appointmentFormDefinitionWireId,
+    values: { need: '1', datetime: '2026-09-20 11:00', note: 'mock draft A' },
+  },
+  {
+    key: 'deferred',
+    workOrderId: asOpaqueId<'WorkOrderId'>(mockCommandScenarioIds.appointmentTerminal),
+    workflowNodeId: appointmentNodeFor('015'),
+    actionIntent: 'set_appointment',
+    contentKind: 'dynamic_form',
+    contentIdentity: appointmentFormDefinitionWireId,
+    values: { need: '0', datetime: '2026-09-19 09:00', note: 'mock draft B' },
+  },
+  {
+    key: 'retryable',
+    workOrderId: asOpaqueId<'WorkOrderId'>(mockCommandScenarioIds.appointmentRetryable),
+    workflowNodeId: appointmentNodeFor('014'),
+    actionIntent: 'set_appointment',
+    contentKind: 'dynamic_form',
+    contentIdentity: appointmentFormDefinitionWireId,
+    values: { need: '1', datetime: '2026-09-20 14:00' },
+  },
+]
 
 /**
  * Development-only navigation hints for the existing Mock infrastructure.

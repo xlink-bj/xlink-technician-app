@@ -167,6 +167,25 @@ version cannot consume it. Successful submission best-effort finalizes the
 unfinished record and then attempts the authoritative read; cleanup and refresh
 warnings remain separate from the already-successful business result.
 
+### Stored Draft State vs Effective Business State
+
+Conditional Action Content may preserve inactive user-entered values in the
+unfinished Draft for recovery and branch switching. Those values are stored
+editing data, not current task semantics. They are not rendered as active
+controls, do not participate in effective validation, do not appear in
+confirmation, and do not become effective command values. The semantic
+applicability projection is shared by rendering, validation, confirmation, and
+submission normalization; the original editing snapshot remains available to
+the Action Runtime for restoration.
+
+The controlling edit updates the in-memory editing snapshot immediately. It
+marks the draft dirty and restarts the existing debounce, but autosave latency
+does not control the visible or effective branch. Revision and load-version
+guards ensure an older asynchronous write cannot overwrite a newer snapshot.
+Exit and Action-step transitions flush the current snapshot for durability;
+page-to-page navigation continues using the current Store state rather than
+rereading persisted Draft storage.
+
 ## Visual system
 
 Action Workspace follows the App-wide living UI system in

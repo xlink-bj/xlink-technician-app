@@ -48,6 +48,18 @@ branch. Mock exercises the same normalized feature path for visual and
 functional UX development, while the existing real-write safety gate remains
 in force.
 
+## Stored draft state vs effective business state
+
+The Action Runtime keeps the complete editing snapshot, including an old
+datetime while `need = '0'`, so a user can switch back without losing work.
+Appointment applicability is a single feature projection consumed by the
+rendering, validation, confirmation, and effective submission paths. An
+inactive datetime is therefore preserved for draft recovery but omitted from
+effective validation, confirmation, and command values. Immediate in-memory
+updates are independent of the approximately 360ms autosave debounce; existing
+revision guards and forced flushes protect the latest snapshot at transition
+points without rereading stale storage during normal page navigation.
+
 ## Mock scenarios
 
 The six Detail scenarios remain raw backend-shaped fixtures and pass through the same Adapter + Runtime path:

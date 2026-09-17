@@ -62,6 +62,10 @@ class InMemoryStorageDriver implements KeyValueStorageDriver {
   async remove(key: string): Promise<void> {
     this.values.delete(key)
   }
+
+  async listKeys(): Promise<readonly string[]> {
+    return [...this.values.keys()]
+  }
 }
 
 const key = (namespace: StorageKey['namespace'], value: string): StorageKey => ({
@@ -296,6 +300,20 @@ describe('G3-C storage and auth adapter foundations', () => {
     })
     expect(await storage.remove(key('draft', 'inspection'))).toEqual({ state: 'succeeded' })
     expect(driver.values.has('draft:inspection')).toBe(false)
+  })
+
+  it('enumerates only the requested semantic namespace and prefix', async () => {
+    const driver = new InMemoryStorageDriver()
+    const storage = createSemanticStorageAdapter(driver)
+    await storage.write(key('draft', 'action-workspace:1:user-a:one'), { draft: 1 })
+    await storage.write(key('draft', 'action-workspace:1:user-a:two'), { draft: 2 })
+    await storage.write(key('draft', 'action-workspace:1:user-b:three'), { draft: 3 })
+    await storage.write(key('session', 'action-workspace:1:user-a:session'), { session: true })
+
+    expect(await storage.listKeys({ namespace: 'draft', prefix: 'action-workspace:1:user-a:' })).toEqual({
+      state: 'succeeded',
+      data: ['action-workspace:1:user-a:one', 'action-workspace:1:user-a:two'],
+    })
   })
 
   it('keeps phone credentials ephemeral and maps invalid sessions explicitly', async () => {

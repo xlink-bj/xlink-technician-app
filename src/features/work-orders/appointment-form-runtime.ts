@@ -27,6 +27,8 @@ export interface AppointmentFieldRoles {
   readonly extras: readonly AppointmentRuntimeField[]
 }
 
+export type AppointmentFieldApplicability = 'applicable' | 'not_applicable'
+
 export type { AppointmentVisitIntent } from '@shared/ports'
 
 /**
@@ -70,21 +72,46 @@ export function appointmentVisitIntentFor(form: AppointmentFormRead): Appointmen
   return 'unknown'
 }
 
+function appointmentFieldApplicabilityFromRuntime(
+  field: AppointmentFormFieldRead,
+  form: AppointmentFormRead,
+  runtime: EffectiveFieldState,
+): AppointmentFieldApplicability {
+  if (runtime.capability === 'UNSUPPORTED' || !runtime.visible) return 'not_applicable'
+  if (field.key === 'datetime' && appointmentVisitIntentFor(form) === 'visit_deferred') return 'not_applicable'
+  return 'applicable'
+}
+
+/**
+ * One semantic applicability result is shared by rendering, validation,
+ * confirmation, and effective submission projection. Stored draft values are
+ * deliberately not consulted as proof that a field is currently applicable.
+ */
+export function appointmentFieldApplicabilityFor(
+  form: AppointmentFormRead,
+  field: AppointmentFormFieldRead,
+): AppointmentFieldApplicability {
+  return appointmentFieldApplicabilityFromRuntime(field, form, runtimeFieldState(field, form.values))
+}
+
+export function appointmentDatetimeApplicableFor(form: AppointmentFormRead): boolean {
+  const field = form.fields.find((candidate) => candidate.key === 'datetime')
+  return field ? appointmentFieldApplicabilityFor(form, field) === 'applicable' : false
+}
+
 function effectiveRuntimeFieldFor(
   field: AppointmentFormFieldRead,
   form: AppointmentFormRead,
 ): AppointmentRuntimeField {
   const runtime = runtimeFieldState(field, form.values)
-  if (field.key !== 'datetime' || appointmentVisitIntentFor(form) !== 'visit_deferred') {
-    return { ...field, runtime }
-  }
+  const applicability = appointmentFieldApplicabilityFromRuntime(field, form, runtime)
 
   return {
     ...field,
     runtime: {
       ...runtime,
-      visible: false,
-      required: false,
+      visible: applicability === 'applicable',
+      required: applicability === 'applicable' && runtime.required,
     },
   }
 }
@@ -160,14 +187,18 @@ function resultFromSubmission(
 export function normalizeAppointmentForm(
   form: AppointmentFormRead,
 ): OperationSnapshot<Readonly<Record<string, AppointmentFieldValue>>> {
-  const roles = appointmentFieldRolesFor(form)
-  const values = { ...form.values }
+  const values: Record<string, AppointmentFieldValue> = {}
   const fieldContexts: Record<string, { readonly fixedRequired: boolean }> = {}
-  if (appointmentVisitIntentFor(form) === 'visit_deferred' && roles.datetime) {
-    // The stored draft value remains in `form.values`, but it is not an
-    // effective value for the deferred branch and must not reach submission.
-    delete values[roles.datetime.key]
-    fieldContexts[roles.datetime.key] = { fixedRequired: false }
+  for (const field of form.fields) {
+    const applicability = appointmentFieldApplicabilityFor(form, field)
+    if (applicability === 'not_applicable') {
+      // The stored draft value remains in `form.values`, but it is not an
+      // effective value and must not reach validation or submission.
+      fieldContexts[field.key] = { fixedRequired: false }
+      continue
+    }
+    const value = form.values[field.key]
+    if (value !== undefined) values[field.key] = value
   }
 
   return resultFromSubmission(
@@ -184,10 +215,10 @@ export function normalizeAppointmentFieldValueForForm(
   field: AppointmentFormFieldRead,
   value: AppointmentFieldValue,
 ): OperationSnapshot<AppointmentFieldValue> {
-  if (field.key === 'datetime' && appointmentVisitIntentFor(form) === 'visit_deferred') {
+  if (appointmentFieldApplicabilityFor(form, field) === 'not_applicable') {
     return {
       state: 'failed_terminal',
-      error: createOperationError('validation', 'Appointment time is not applicable to the current visit branch'),
+      error: createOperationError('validation', 'Appointment field is not applicable to the current visit branch'),
     }
   }
   return normalizeAppointmentFieldValue(field, value, form.values)

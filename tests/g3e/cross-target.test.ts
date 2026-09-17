@@ -17,6 +17,7 @@ function createFoundationComposition() {
     get: async () => null,
     set: async () => undefined,
     remove: async () => undefined,
+    listKeys: async () => [],
   }
   const storage = createSemanticStorageAdapter(storageDriver)
   const apiTransport: ApiReadTransport = {

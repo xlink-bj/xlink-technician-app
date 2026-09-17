@@ -8,6 +8,7 @@ import {
   dateShortcutsFor,
 } from '@features/work-orders/appointment-time'
 import {
+  appointmentDatetimeApplicableFor,
   appointmentFieldRolesFor,
   appointmentVisitIntentFor,
   normalizeAppointmentFieldValue,
@@ -112,8 +113,11 @@ describe('Appointment Action Content presentation boundary', () => {
       values: { need: '1', datetime: '2026-04-20 10:00' },
     }
 
+    const deferred = { ...form, values: { ...form.values, need: '0' } }
     expect(appointmentVisitIntentFor(form)).toBe('visit_required')
-    expect(appointmentVisitIntentFor({ ...form, values: { ...form.values, need: '0' } })).toBe('visit_deferred')
+    expect(appointmentDatetimeApplicableFor(form)).toBe(true)
+    expect(appointmentVisitIntentFor(deferred)).toBe('visit_deferred')
+    expect(appointmentDatetimeApplicableFor(deferred)).toBe(false)
     expect(appointmentVisitIntentFor({ ...form, values: { ...form.values, need: 'unexpected' } })).toBe('unknown')
   })
 
@@ -157,6 +161,9 @@ describe('Appointment Action Content presentation boundary', () => {
     expect(time).not.toContain('可预约')
     expect(time).not.toContain('14:00–16:00')
     expect(time).toMatch(/<picker[^>]+mode="date"/)
+    expect(action).toContain('appointmentDatetimeApplicable')
+    expect(time).toContain('appointmentDatetimeApplicable')
+    expect(confirmation).toContain('workspace.appointmentDatetimeApplicable')
     expect(action).not.toContain('maxlength="100"')
     expect(action).toContain('maxlength="-1"')
     expect(action).toContain('runtime.required')

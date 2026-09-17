@@ -173,7 +173,8 @@ The required model is therefore not one global `currentDraft`; it is an identity
 
 A field-service App also needs a way to know which unfinished drafts exist without opening every possible Action.
 
-The target architecture therefore includes a lightweight **Draft Registry**.
+The implementation includes a lightweight **Draft Registry** derived from the
+actual identity-keyed draft records.
 
 The Registry stores metadata only, conceptually:
 
@@ -188,6 +189,11 @@ DraftRegistryEntry {
 ```
 
 It must not duplicate full form/editor contents.
+
+In the current V1 implementation, the registry is not a second persisted
+index. It enumerates typed draft keys for the current user, reads the matching
+records through the shared Draft Repository, and derives the metadata snapshot
+from those records. Malformed records are counted and ignored conservatively.
 
 The Registry enables future capabilities such as:
 
@@ -389,13 +395,16 @@ At the current G4-D stage:
 
 - semantic Action Draft identity is implemented;
 - identity-keyed key-value storage can hold multiple independent draft records;
+- the shared Action Draft Repository and record-derived Registry metadata
+  snapshot are implemented;
+- non-production Home diagnostics can inspect, seed, and clear known Mock draft
+  records for the current user without exposing draft contents;
 - Appointment is the first real Action Content consumer;
 - local autosave/restore and terminal cleanup semantics exist for the current Action;
 - a generic automatic offline business-command queue does not exist and is not authorized.
 
 Still target/future implementation as additional slices require it:
 
-- Draft Registry / metadata index;
 - multiple production Action Content runtimes using the same Draft contract;
 - storage-pressure/retention governance;
 - durable local media persistence for media-heavy Actions;
@@ -449,6 +458,6 @@ These rules are permanent review gates:
 10. Draft restoration never crosses semantic Action Identity boundaries.
 11. Latest-revision persistence must be protected from stale async writes.
 12. Large media uses durable local references/capabilities rather than uncontrolled binary embedding in generic draft records.
-13. Draft Registry metadata, when implemented, must not duplicate full content.
+13. Draft Registry metadata must not duplicate full content.
 14. Cleanup/retention is conservative and must not silently discard active field-service work.
 15. Platform storage details remain behind typed adapters/ports.

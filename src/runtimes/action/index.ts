@@ -3,8 +3,11 @@ export {
   actionDraftIdentityFor,
   actionDraftIdentityMatches,
   actionDraftStorageKey,
+  actionDraftStorageKeyPrefixForUser,
   actionExecutionForWorkflowDecision,
 } from './types'
+export { createActionDraftRepository, SemanticActionDraftRepository } from './draft-repository'
+export type { ActionDraftRegistryEntry, ActionDraftRegistrySnapshot, ActionDraftRepository } from './draft-repository'
 export type {
   ActionContentKind,
   ActionBusinessResult,
