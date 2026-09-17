@@ -255,6 +255,18 @@ label remains available through the loading component. Business submission is a
 separate interaction state: the shared button shows a spinner and keeps the
 current content and action context in place.
 
+Action Workspace draft status is a Shell-owned compact status strip positioned
+between Workspace Context and Action Content. Its shared copy and tone are:
+
+- saving → `正在保存…`, neutral;
+- saved_local → `已自动保存`, restrained success;
+- restore_available → `已恢复本地草稿`, informational/neutral;
+- save_failed → `本地草稿保存失败`, warning/error.
+
+The transient `dirty` Runtime state is not rendered as a visible strip, and
+normal draft status is suppressed after terminal business success. Post-success
+cleanup or refresh warnings remain separate operational feedback.
+
 ### Input / Textarea
 
 Common properties:
@@ -378,6 +390,11 @@ The following are UI architecture invariants:
 5. **Action Content must remain usable at arbitrary supported content length.**
 6. **Action Content does not own storage/autosave presentation.**
 7. **Success must be a visible state, not only a toast.**
+
+The persistent Action Bar keeps a minimum 24rpx horizontal gutter on both sides
+of its action group. One or two actions share that inner width; the footer owns
+the bottom safe-area inset, so buttons never touch the viewport edge or home
+indicator.
 
 Appointment is the first concrete consumer. Inspection, quotation, contract, signature, and other Actions should inherit this structure when they become supported.
 

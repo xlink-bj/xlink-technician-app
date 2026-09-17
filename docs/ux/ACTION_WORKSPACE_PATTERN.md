@@ -29,6 +29,14 @@ by the Shell exactly once. Footer placement and safe-area handling remain Shell
 responsibilities, so supported content can grow without moving or covering the
 primary CTA.
 
+Draft Status is a Workspace-level compact status strip positioned between
+Workspace Context and Action Content. It is rendered once by the Shell, uses
+shared semantic copy/tone (`saving` neutral, `saved_local` restrained success,
+`restore_available` informational, `save_failed` warning/error), and does not
+render the transient `dirty` state. Normal draft status is hidden after terminal
+business success; any post-success cleanup or refresh warning remains a
+separate operational feedback channel.
+
 Shell invariants:
 
 1. Draft feedback is Shell-owned and rendered exactly once.

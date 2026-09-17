@@ -9,6 +9,8 @@ export type AppIconName =
   | 'appointment'
   | 'order'
   | 'complete'
+  | 'restore'
+  | 'warning'
   | 'unavailable'
   | 'chevron-right'
 
@@ -23,6 +25,8 @@ const appIconTypeByName: Readonly<Record<AppIconName, string>> = {
   appointment: 'calendar-filled',
   order: 'compose',
   complete: 'checkmarkempty',
+  restore: 'undo',
+  warning: 'info-filled',
   unavailable: 'minus',
   'chevron-right': 'forward',
 }

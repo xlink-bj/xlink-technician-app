@@ -10,18 +10,46 @@
           </view>
         </view>
 
+        <AppStatus
+          v-if="lifecycle !== 'succeeded' && draftStatus === 'saving'"
+          class="action-workspace-draft-status"
+          message="正在保存…"
+          variant="strip"
+          quiet
+        />
+        <AppStatus
+          v-else-if="lifecycle !== 'succeeded' && draftStatus === 'saved_local'"
+          class="action-workspace-draft-status"
+          message="已自动保存"
+          tone="success"
+          variant="strip"
+          icon="complete"
+          quiet
+        />
+        <AppStatus
+          v-else-if="lifecycle !== 'succeeded' && draftStatus === 'restore_available'"
+          class="action-workspace-draft-status"
+          message="已恢复本地草稿"
+          variant="strip"
+          icon="restore"
+          quiet
+        />
+        <AppStatus
+          v-else-if="lifecycle !== 'succeeded' && draftStatus === 'save_failed'"
+          class="action-workspace-draft-status"
+          message="本地草稿保存失败"
+          tone="warning"
+          variant="strip"
+          icon="warning"
+          quiet
+        />
+
         <template v-if="lifecycle !== 'succeeded'">
           <slot />
         </template>
         <template v-else>
           <slot name="success" />
         </template>
-
-        <AppStatus v-if="draftStatus === 'saving'" class="action-workspace-draft-status" message="正在保存本地草稿" quiet />
-        <AppStatus v-else-if="draftStatus === 'saved_local'" class="action-workspace-draft-status" message="已保存到本地" quiet />
-        <AppStatus v-else-if="draftStatus === 'restore_available'" class="action-workspace-draft-status" message="已恢复本地草稿" quiet />
-        <AppStatus v-else-if="draftStatus === 'save_failed'" class="action-workspace-draft-status" message="本地草稿保存失败" tone="danger" quiet />
-        <AppStatus v-else-if="draftStatus === 'dirty'" class="action-workspace-draft-status" message="编辑未保存" quiet />
 
         <AppStatus v-if="businessFeedback" class="action-workspace-business-feedback" :message="businessFeedback" tone="danger" quiet />
 
@@ -138,16 +166,25 @@ defineEmits<{
   padding-top: var(--app-space-sm);
 }
 
+.action-workspace-draft-status { margin-top: var(--app-space-sm); padding-top: 0; }
+
 .action-workspace-footer {
   background: var(--app-color-page);
   border-top: 1rpx solid var(--app-color-border);
   box-sizing: border-box;
   flex-shrink: 0;
-  padding: var(--app-space-sm) var(--app-action-bar-padding-x) calc(16rpx + constant(safe-area-inset-bottom));
+  padding: var(--app-space-sm) 0 calc(16rpx + constant(safe-area-inset-bottom));
   padding-bottom: calc(16rpx + env(safe-area-inset-bottom));
   width: 100%;
 }
 
-.action-workspace-footer-inner { margin: 0 auto; max-width: 960rpx; width: 100%; }
+.action-workspace-footer-inner {
+  box-sizing: border-box;
+  margin: 0 auto;
+  max-width: 960rpx;
+  padding-left: var(--app-action-bar-padding-x);
+  padding-right: var(--app-action-bar-padding-x);
+  width: 100%;
+}
 
 </style>

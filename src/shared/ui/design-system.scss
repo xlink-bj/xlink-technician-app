@@ -220,6 +220,24 @@ page {
 .app-status--warning { color: var(--app-color-warning); }
 .app-status--danger { color: var(--app-color-danger); }
 .app-status--quiet { padding: var(--app-space-sm) var(--app-space-xs) 0; }
+.app-status--strip {
+  align-items: center;
+  background: var(--app-color-control-surface);
+  border: 1rpx solid var(--app-color-border);
+  border-radius: var(--app-radius-surface);
+  box-sizing: border-box;
+  display: flex;
+  min-height: 48rpx;
+  padding: 10rpx 16rpx;
+  text-align: left;
+  width: 100%;
+}
+.app-status--strip.app-status--success { background: var(--app-color-success-soft); border-color: var(--app-color-success-soft); }
+.app-status--strip.app-status--warning { background: var(--app-color-warning-soft); border-color: var(--app-color-warning-soft); }
+.app-status--strip.app-status--danger { background: var(--app-color-danger-soft); border-color: var(--app-color-danger-soft); }
+.app-status--strip.app-status--quiet { padding: 10rpx 16rpx; }
+.app-status__icon { flex-shrink: 0; margin-right: var(--app-space-xs); }
+.app-status__message { min-width: 0; }
 
 /* Shared information row grammar for confirmation and future Action content. */
 .app-information-row { align-items: center; display: flex; justify-content: space-between; min-height: var(--app-touch-target); }
