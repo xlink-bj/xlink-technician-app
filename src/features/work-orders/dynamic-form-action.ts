@@ -16,6 +16,16 @@ export interface DynamicActionField extends AppointmentFormFieldRead {
 
 function actionUnsupportedReasonFor(field: AppointmentFormFieldRead, values: Readonly<Record<string, FormFieldValue>>): string | undefined {
   if (field.unsupportedReason) return field.unsupportedReason
+  if (
+    field.valueOption
+    && ['select', 'bizSelect', 'radio', 'checkbox', 'cascade'].includes(field.type)
+    && !field.options?.length
+  ) {
+    return `${field.type} requires a verified option set before it can be rendered`
+  }
+  if (field.multiple && (field.type === 'select' || field.type === 'bizSelect')) {
+    return `${field.type} multi-value fields require a multi-value Action Content control`
+  }
   if (field.type !== 'checkbox' && field.type !== 'cascade') return undefined
   return evaluateVisibility(field.visibility, values).state === 'visible'
     ? `${field.type} requires a multi-value Action Content control`

@@ -173,6 +173,8 @@ export interface FormFieldRead {
   readonly type: string
   readonly required: boolean
   readonly readOnly: boolean
+  /** Backend `multiple` flag; a multi-value control must not be rendered as a scalar choice. */
+  readonly multiple?: boolean
   readonly options?: readonly { readonly value: string; readonly label: string }[]
   /** Adapter-normalized conditional visibility; raw frontEndConfig never crosses the port. */
   readonly visibility?: FormFieldVisibility

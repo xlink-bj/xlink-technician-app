@@ -30,6 +30,8 @@ export interface AppointmentFormFieldRead {
   readonly type: string
   readonly required: boolean
   readonly readOnly: boolean
+  /** Backend `multiple` flag; a multi-value control must not be rendered as a scalar choice. */
+  readonly multiple?: boolean
   readonly options?: readonly AppointmentFormOption[]
   /** Adapter-normalized conditional visibility; raw backend metadata stays out of UI. */
   readonly visibility?: FormFieldVisibility

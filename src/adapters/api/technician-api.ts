@@ -700,13 +700,22 @@ function formFieldVisibility(record: AdapterRecord): {
   const rawShowType = record.showType ?? config?.showType
   const showType = rawShowType === undefined || rawShowType === null ? undefined : String(rawShowType)
   const configExts = optionalRecord(config?.exts)
-  const showValueSources = [record, config, configExts].filter(
-    (value): value is AdapterRecord => Boolean(value && Object.prototype.hasOwnProperty.call(value, 'showValue')),
-  )
-  const hasShowValue = showValueSources.length > 0
-  const showValue = showValueSources[0]?.showValue
+  const recordExts = optionalRecord(record.exts)
+  // R1's modern branch uses `field.showValue || field.exts.showValue`.
+  // Preserve that fallback: development responses commonly carry an empty
+  // root showValue together with the effective list under record.exts.
+  const showValueCandidates = configShowField
+    ? [config?.showValue]
+    : [record.showValue, recordExts?.showValue, config?.showValue, configExts?.showValue]
+  const selectedShowValue = showValueCandidates.find((value) => Boolean(value))
+  const hasShowValue = selectedShowValue !== undefined
+  const showValue = selectedShowValue
   const hasConditionalMetadata = Boolean(showField) || (showType !== undefined && showType !== '1') || hasShowValue
   if (!hasConditionalMetadata) return {}
+  // R1 treats showType=1 as unconditionally visible when no legacy
+  // frontEndConfig.showField expression is present. Do not reinterpret an
+  // unrelated showValue as a condition in that mode.
+  if (showType === '1' && !configShowField && !directShowField) return {}
   if (!showField) return { unsupportedReason: 'Conditional field visibility is missing its source field' }
   if (showType === '4' || showType === '5') {
     return { unsupportedReason: 'Role-based field visibility is unavailable in this Action Content' }
@@ -734,8 +743,10 @@ function formField(raw: unknown): FormFieldRead | null {
   const type = optionalString(record, ['type', 'fieldType'])?.trim() ?? 'unknown'
   const requiredValue = record.required
   const readOnlyValue = record.readOnly ?? record.readonly
+  const multipleValue = record.multiple
   const required = requiredValue === true || requiredValue === 1 || requiredValue === '1'
   const readOnly = readOnlyValue === true || readOnlyValue === 1 || readOnlyValue === '1'
+  const multiple = multipleValue === true || multipleValue === 1 || multipleValue === '1' || multipleValue === 'true'
   const rawOptions = Array.isArray(record.options) ? record.options : Array.isArray(record.items) ? record.items : undefined
   const options = rawOptions
     ?.map((value) => {
@@ -754,6 +765,7 @@ function formField(raw: unknown): FormFieldRead | null {
     type,
     required,
     readOnly,
+    ...(multiple ? { multiple } : {}),
     ...(options && options.length > 0 ? { options } : {}),
     ...(conditional.visibility ? { visibility: conditional.visibility } : {}),
     ...(valueOption ? { valueOption } : {}),

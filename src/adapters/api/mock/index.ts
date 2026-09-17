@@ -32,6 +32,8 @@ export {
   mockCommandScenarioIds,
   mockInspectionFormDefinitionId,
   mockInspectionFormDefinitionResponse,
+  mockObservedInspectionFormDefinitionId,
+  mockObservedInspectionFormDefinitionResponse,
   mockWorkOrderActivityResponseFor,
   mockWorkOrderActivityResponses,
   mockWorkOrderDetailResponse,

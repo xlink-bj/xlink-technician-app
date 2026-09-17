@@ -262,6 +262,79 @@ describe('G3-C API adapter foundation', () => {
     expect(result.data?.id).not.toBe('field-row-001')
   })
 
+  it('normalizes observed conditional metadata from record.exts and preserves multi-value shape', async () => {
+    const requestedId = asOpaqueId<'FormDefinitionId'>('observed-inspection-definition')
+    const transport = new FixtureApiTransport({
+      'biz/extField/query': {
+        data: [
+          {
+            _id: 'field-row-part',
+            extId: requestedId,
+            name: 'part',
+            nameDisp: '部位',
+            type: 'cascade',
+            required: '1',
+            multiple: false,
+            valueOption: 'parts',
+            showType: '1',
+          },
+          {
+            _id: 'field-row-content',
+            extId: requestedId,
+            name: 'inspectionContent',
+            nameDisp: '巡检内容',
+            type: 'select',
+            multiple: true,
+            showType: '1',
+          },
+          {
+            _id: 'field-row-length',
+            extId: requestedId,
+            name: 'length',
+            nameDisp: '长',
+            type: 'digit',
+            required: '1',
+            showType: '3',
+            showField: 'part',
+            showFieldPreset: 1,
+            showValue: '',
+            exts: { showValue: ['1', '2'] },
+          },
+        ],
+      },
+    })
+    const api = createTechnicianApiReadAdapter(transport)
+
+    const result = await api.getFormDefinition(requestedId)
+
+    expect(result.data?.fields).toEqual([
+      {
+        key: 'part',
+        label: '部位',
+        type: 'cascade',
+        required: true,
+        readOnly: false,
+        valueOption: 'parts',
+      },
+      {
+        key: 'inspectionContent',
+        label: '巡检内容',
+        type: 'select',
+        required: false,
+        readOnly: false,
+        multiple: true,
+      },
+      {
+        key: 'length',
+        label: '长',
+        type: 'digit',
+        required: true,
+        readOnly: false,
+        visibility: { kind: 'equals', path: 'part', value: ['1', '2'] },
+      },
+    ])
+  })
+
   it('uses the exact R1 form-data filter and sort request shape', async () => {
     const transport = new FixtureApiTransport({
       'biz/extForm/query/appointment-definition': rawFormDataPage,

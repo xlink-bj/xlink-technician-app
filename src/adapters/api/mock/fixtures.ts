@@ -5,6 +5,39 @@ import { appointmentFormDefinitionWireId } from '../appointment-contract'
 /** Synthetic only: no production form-definition vocabulary is asserted. */
 export const mockInspectionFormDefinitionId = 'mock-form-definition-inspection'
 
+/**
+ * Shape-only development observation of the active InspectionForm field-row
+ * family. It is intentionally separate from the executable four-field Action
+ * harness below: the observed form contains unsupported request/cascade and
+ * multi-value controls, so presenting it as a fully executable G4-E scenario
+ * would be dishonest. It exists to exercise the same raw-row Adapter path and
+ * to make unsupported capabilities visible during development.
+ */
+export const mockObservedInspectionFormDefinitionId = 'mock-form-definition-inspection-observed'
+
+export const mockObservedInspectionFormDefinitionResponse = {
+  data: [
+    { _id: 'observed-field-row-part', name: 'part', nameDisp: '部位', type: 'cascade', required: '1', multiple: false, valueOption: 'parts', showType: '1', state: 1 },
+    { _id: 'observed-field-row-village', name: 'village', nameDisp: '小区名称', type: 'text', required: '1', multiple: false, showType: '3', showField: 'part', showFieldPreset: 1, exts: { showValue: [] }, state: 1 },
+    { _id: 'observed-field-row-length', name: 'length', nameDisp: '长', type: 'digit', required: '1', multiple: false, showType: '3', showField: 'part', showFieldPreset: 1, exts: { showValue: ['observed-option-a', 'observed-option-b'] }, state: 1 },
+    { _id: 'observed-field-row-width', name: 'width', nameDisp: '宽', type: 'digit', required: '1', multiple: false, showType: '3', showField: 'part', showFieldPreset: 1, exts: { showValue: ['observed-option-a', 'observed-option-b'] }, state: 1 },
+    { _id: 'observed-field-row-plane-area', name: 'planeArea', nameDisp: '平面面积（㎡）', type: 'digit', required: '1', multiple: false, showType: '3', showField: 'part', showFieldPreset: 1, exts: { showValue: ['observed-option-a', 'observed-option-b'] }, state: 1 },
+    { _id: 'observed-field-row-sop', name: 'inspectionSOP', nameDisp: '巡检SOP', type: 'request', required: '0', multiple: false, frontEndConfig: '{"componentType":"observed"}', state: 1 },
+    { _id: 'observed-field-row-content', name: 'inspectionContent', nameDisp: '巡检内容', type: 'select', required: '0', multiple: true, state: 1 },
+    { _id: 'observed-field-row-requirement', name: 'requirement', nameDisp: '质量要求', type: 'text', required: '0', multiple: false, state: 1 },
+    { _id: 'observed-field-row-qualified', name: 'isQualified', nameDisp: '是否合格', type: 'select', required: '0', multiple: false, valueOption: 'qualified', state: 1 },
+    { _id: 'observed-field-row-reason', name: 'reason', nameDisp: '不合格原因', type: 'text', required: '0', multiple: false, showType: '3', showField: 'isQualified', showFieldPreset: 1, showValue: '0', state: 1 },
+    { _id: 'observed-field-row-other-reason', name: 'otherReason', nameDisp: '其他原因', type: 'text', required: '0', multiple: false, state: 1 },
+    { _id: 'observed-field-row-goods', name: 'serviceGoods', nameDisp: '套餐名称', type: 'bizSelect', required: '1', multiple: true, valueOption: 'projPackage', frontEndConfig: '{"componentType":"observed"}', state: 1 },
+    { _id: 'observed-field-row-suggest', name: 'suggest', nameDisp: '巡检建议', type: 'text', required: '1', multiple: false, state: 1 },
+    { _id: 'observed-field-row-drawing', name: 'surveyDrawing', nameDisp: '测绘图', type: 'file', required: '1', multiple: false, showType: '3', showField: 'part', showFieldPreset: 1, exts: { showValue: ['observed-a', 'observed-b', 'observed-c', 'observed-d'] }, frontEndConfig: '{"max":1,"surveyTool":true}', state: 1 },
+    { _id: 'observed-field-row-reform-date', name: 'reformDate', nameDisp: '不合格整改日期', type: 'date', required: '0', multiple: false, state: 1 },
+  ],
+  page: 1,
+  rows: 20,
+  total: 15,
+} as const
+
 export const mockAppointmentFormDefinitionResponse = {
   data: [
     {

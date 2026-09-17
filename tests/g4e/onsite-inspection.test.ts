@@ -14,6 +14,7 @@ import {
   isMockOwnedRead,
   mockCommandScenarioIds,
   mockInspectionFormDefinitionId,
+  mockObservedInspectionFormDefinitionId,
   resetBusinessMockCache,
   resetMockCommandState,
   setBusinessMockMode,
@@ -299,6 +300,37 @@ describe('G4-E onsite inspection dynamic Action Content', () => {
     ])
   })
 
+  it('marks backend multi-value select and bizSelect fields unsupported instead of scalarizing them', () => {
+    const form: DynamicFormRead = {
+      fields: [
+        {
+          key: 'inspectionContent',
+          label: '巡检内容',
+          type: 'select',
+          required: false,
+          readOnly: false,
+          multiple: true,
+          options: [{ value: 'a', label: 'A' }],
+        },
+        {
+          key: 'serviceGoods',
+          label: '套餐名称',
+          type: 'bizSelect',
+          required: true,
+          readOnly: false,
+          multiple: true,
+          options: [{ value: 'a', label: 'A' }],
+        },
+      ],
+      values: {},
+    }
+
+    expect(dynamicActionUnsupportedFieldsFor(form).map((field) => field.key)).toEqual([
+      'inspectionContent',
+      'serviceGoods',
+    ])
+  })
+
   it('guards media picker and upload with the effective field state', async () => {
     const readOnlyForm: DynamicFormRead = {
       ...inspectionForm(),
@@ -478,6 +510,41 @@ describe('G4-E onsite inspection dynamic Action Content', () => {
     expect(completed.state).toBe('succeeded')
     const after = await read.getWorkOrderDetail(asOpaqueId<'WorkOrderId'>(mockCommandScenarioIds.inspectionSuccess))
     expect(after.data?.workflowNodes?.[0]?.lifecycle).not.toBe('active')
+    expect(request).not.toHaveBeenCalled()
+  })
+
+  it('runs the observed backend-shaped Inspection schema through the same raw-row Adapter path', async () => {
+    setBusinessMockMode('data')
+    const request = vi.fn(() => { throw new Error('observed schema fixture must not use network') })
+    const readTransport = createUniApiReadTransport({
+      apiBaseUrl: 'https://example.invalid',
+      getSessionRef: () => session.sessionRef,
+      request,
+      mockLatencyMs: 0,
+    })
+    const read = createTechnicianApiReadAdapter(readTransport)
+
+    const definition = await read.getFormDefinition(asOpaqueId<'FormDefinitionId'>(mockObservedInspectionFormDefinitionId))
+
+    expect(definition.state).toBe('succeeded')
+    expect(definition.data?.fields?.map((field) => field.key)).toEqual([
+      'part', 'village', 'length', 'width', 'planeArea', 'inspectionSOP',
+      'inspectionContent', 'requirement', 'isQualified', 'reason', 'otherReason',
+      'serviceGoods', 'suggest', 'surveyDrawing', 'reformDate',
+    ])
+    expect(definition.data?.fields?.find((field) => field.key === 'inspectionContent')).toMatchObject({
+      type: 'select',
+      multiple: true,
+    })
+    expect(dynamicActionUnsupportedFieldsFor({
+      fields: definition.data?.fields ?? [],
+      values: {},
+    }).map((field) => field.key)).toEqual(expect.arrayContaining([
+      'part', 'inspectionSOP', 'inspectionContent', 'isQualified', 'serviceGoods',
+    ]))
+    expect(definition.data?.fields?.find((field) => field.key === 'length')).toMatchObject({
+      visibility: { kind: 'equals', path: 'part', value: ['observed-option-a', 'observed-option-b'] },
+    })
     expect(request).not.toHaveBeenCalled()
   })
 

@@ -11,6 +11,8 @@ import {
   mockCommandScenarioIds,
   mockInspectionFormDefinitionId,
   mockInspectionFormDefinitionResponse,
+  mockObservedInspectionFormDefinitionId,
+  mockObservedInspectionFormDefinitionResponse,
   mockWorkOrderActivityResponseFor,
   mockWorkOrderDetailResponses,
   mockWorkOrderDetailResponseFor,
@@ -49,11 +51,13 @@ export function isMockOwnedRead(
   if (
     route === 'biz/extField/query' &&
     typeof requestData.extId === 'string' &&
-    requestData.extId === mockInspectionFormDefinitionId
+    (requestData.extId === mockInspectionFormDefinitionId
+      || requestData.extId === mockObservedInspectionFormDefinitionId)
   ) return true
   if (
     route.startsWith('biz/extForm/query/') &&
-    route.slice('biz/extForm/query/'.length) === mockInspectionFormDefinitionId
+    (route.slice('biz/extForm/query/'.length) === mockInspectionFormDefinitionId
+      || route.slice('biz/extForm/query/'.length) === mockObservedInspectionFormDefinitionId)
   ) return true
   const detailPrefix = 'basic/serviceAppointment/queryById/'
   if (route.startsWith(detailPrefix)) {
@@ -399,6 +403,9 @@ function matchedResponse(
   if (route === 'biz/extField/query' && requestData.extId === mockInspectionFormDefinitionId) {
     return mockInspectionFormDefinitionResponse
   }
+  if (route === 'biz/extField/query' && requestData.extId === mockObservedInspectionFormDefinitionId) {
+    return mockObservedInspectionFormDefinitionResponse
+  }
   if (route.startsWith('biz/extForm/query/') && route.slice('biz/extForm/query/'.length) === appointmentFormDefinitionWireId) {
     const exactDataId = requestData['is:_id|string#and']
     const dataId = typeof exactDataId === 'string'
@@ -410,6 +417,12 @@ function matchedResponse(
     return { data: formData ? [formData] : [], page: 1, rows: 20, total: formData ? 1 : 0 }
   }
   if (route.startsWith('biz/extForm/query/') && route.slice('biz/extForm/query/'.length) === mockInspectionFormDefinitionId) {
+    const exactDataId = requestData['is:_id|string#and']
+    const dataId = typeof exactDataId === 'string' ? exactDataId : undefined
+    const formData = dataId ? mockCommandState().formData.get(dataId) : undefined
+    return { data: formData ? [formData] : [], page: 1, rows: 20, total: formData ? 1 : 0 }
+  }
+  if (route.startsWith('biz/extForm/query/') && route.slice('biz/extForm/query/'.length) === mockObservedInspectionFormDefinitionId) {
     const exactDataId = requestData['is:_id|string#and']
     const dataId = typeof exactDataId === 'string' ? exactDataId : undefined
     const formData = dataId ? mockCommandState().formData.get(dataId) : undefined
