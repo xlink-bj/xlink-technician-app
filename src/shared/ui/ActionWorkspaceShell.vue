@@ -10,39 +10,45 @@
           </view>
         </view>
 
-        <AppStatus
-          v-if="lifecycle !== 'succeeded' && displayedDraftStatus === 'saving'"
-          class="action-workspace-draft-status"
-          message="正在保存…"
-          variant="strip"
-          quiet
-        />
-        <AppStatus
-          v-else-if="lifecycle !== 'succeeded' && displayedDraftStatus === 'saved_local'"
-          class="action-workspace-draft-status"
-          message="已自动保存"
-          tone="success"
-          variant="strip"
-          icon="complete"
-          quiet
-        />
-        <AppStatus
-          v-else-if="lifecycle !== 'succeeded' && displayedDraftStatus === 'restore_available'"
-          class="action-workspace-draft-status"
-          message="已恢复本地草稿"
-          variant="strip"
-          icon="restore"
-          quiet
-        />
-        <AppStatus
-          v-else-if="lifecycle !== 'succeeded' && displayedDraftStatus === 'save_failed'"
-          class="action-workspace-draft-status"
-          message="本地草稿保存失败"
-          tone="warning"
-          variant="strip"
-          icon="warning"
-          quiet
-        />
+        <view
+          class="action-workspace-draft-status-shell"
+          :class="{ 'action-workspace-draft-status-shell--collapsed': lifecycle === 'succeeded' || displayedDraftStatus === 'clean' }"
+          :aria-hidden="lifecycle === 'succeeded' || displayedDraftStatus === 'clean' ? 'true' : 'false'"
+        >
+          <AppStatus
+            v-if="lifecycle !== 'succeeded' && displayedDraftStatus === 'saving'"
+            class="action-workspace-draft-status"
+            message="正在保存…"
+            variant="strip"
+            quiet
+          />
+          <AppStatus
+            v-else-if="lifecycle !== 'succeeded' && displayedDraftStatus === 'saved_local'"
+            class="action-workspace-draft-status"
+            message="已自动保存"
+            tone="success"
+            variant="strip"
+            icon="complete"
+            quiet
+          />
+          <AppStatus
+            v-else-if="lifecycle !== 'succeeded' && displayedDraftStatus === 'restore_available'"
+            class="action-workspace-draft-status"
+            message="已恢复本地草稿"
+            variant="strip"
+            icon="restore"
+            quiet
+          />
+          <AppStatus
+            v-else-if="lifecycle !== 'succeeded' && displayedDraftStatus === 'save_failed'"
+            class="action-workspace-draft-status"
+            message="本地草稿保存失败"
+            tone="warning"
+            variant="strip"
+            icon="warning"
+            quiet
+          />
+        </view>
 
         <template v-if="lifecycle !== 'succeeded'">
           <slot />
@@ -181,6 +187,21 @@ defineEmits<{
 .action-workspace-operation-status {
   display: block;
   padding-top: var(--app-space-sm);
+}
+
+.action-workspace-draft-status-shell {
+  max-height: 96rpx;
+  opacity: 1;
+  overflow: hidden;
+  transition:
+    max-height var(--app-motion-collapse-duration) var(--app-motion-collapse-easing),
+    opacity var(--app-motion-collapse-duration) var(--app-motion-collapse-easing);
+}
+
+.action-workspace-draft-status-shell--collapsed {
+  max-height: 0;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .action-workspace-draft-status { margin-top: var(--app-space-sm); padding-top: 0; }
