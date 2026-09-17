@@ -2,6 +2,8 @@ import { describe, expect, it, vi } from 'vitest'
 
 import {
   assertBetaApiBaseUrl,
+  betaDefaults,
+  betaLocalDefaults,
   createBetaReadClient,
   loginBeta,
   normalizeBetaLoginMethod,
@@ -81,5 +83,51 @@ describe('G4-E local Beta API development client', () => {
     expect(normalizeBetaLoginMethod('1')).toBe('1')
     expect(normalizeBetaLoginMethod('password')).toBe('2')
     expect(() => normalizeBetaLoginMethod('quick-login')).toThrow(/code or password/)
+  })
+
+  it('matches App quick-login configuration and defaults to the R1 test code', () => {
+    expect(betaDefaults({
+      VITE_XLINK_QUICK_LOGIN_PHONE: '  local-account  ',
+      VITE_XLINK_AUTH_TENANT: 'local-tenant',
+      VITE_XLINK_AUTH_METHOD: '1',
+    })).toMatchObject({
+      phone: 'local-account',
+      tenantId: 'local-tenant',
+      method: '1',
+      code: '999999',
+    })
+  })
+
+  it('uses the App verification-code override while ignoring temporary Beta code injection', () => {
+    expect(betaLocalDefaults({
+      VITE_XLINK_ENVIRONMENT: 'beta',
+      VITE_XLINK_QUICK_LOGIN_PHONE: 'local-account',
+      VITE_XLINK_QUICK_LOGIN_CODE: '654321',
+      XLINK_BETA_PHONE: 'temporary-phone-injection',
+      XLINK_BETA_CODE: 'temporary-code-injection',
+    })).toMatchObject({
+      phone: 'local-account',
+      code: '654321',
+    })
+  })
+
+  it('requires the App environment to be explicitly non-production', () => {
+    expect(() => betaLocalDefaults({
+      VITE_XLINK_ENVIRONMENT: 'prod',
+      VITE_XLINK_QUICK_LOGIN_PHONE: 'local-account',
+    })).toThrow(/non-production/)
+    expect(betaLocalDefaults({
+      VITE_XLINK_ENVIRONMENT: 'beta',
+      VITE_XLINK_QUICK_LOGIN_PHONE: 'local-account',
+      VITE_XLINK_AUTH_TENANT: 'local-tenant',
+      VITE_XLINK_AUTH_METHOD: '1',
+      XLINK_BETA_PHONE: 'temporary-phone-injection',
+      XLINK_BETA_CODE: 'temporary-code-injection',
+    })).toMatchObject({
+      phone: 'local-account',
+      tenantId: 'local-tenant',
+      method: '1',
+      code: '999999',
+    })
   })
 })

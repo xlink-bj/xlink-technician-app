@@ -69,10 +69,16 @@ session in memory, and performs only authenticated reads. The helper rejects
 non-Beta hosts and never prints or persists the session value.
 
 ```sh
-XLINK_BETA_PHONE=<Beta account> \
-XLINK_BETA_CODE=<Beta test code> \
 pnpm run inspect:inspection-contract:beta
 ```
+
+The command automatically reuses the App quick-login configuration from the
+local `.env.local`: `VITE_XLINK_QUICK_LOGIN_PHONE`, `VITE_XLINK_AUTH_TENANT`,
+`VITE_XLINK_AUTH_METHOD`, and the optional
+`VITE_XLINK_QUICK_LOGIN_CODE`. It is available only when
+`VITE_XLINK_ENVIRONMENT` is explicitly non-production, and uses the same
+`999999` default code as the App. No per-run phone or verification-code
+injection is required or used by this path.
 
 Use `XLINK_BETA_LOGIN_METHOD=password` and `XLINK_BETA_PASSWORD` for the
 password variant. `--work-order`, `--node`, and `--output` are available for a

@@ -8,8 +8,13 @@
  * it to disk or prints it.
  */
 
+import { readFileSync } from 'node:fs'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
 const DEFAULT_BETA_API_BASE_URL = 'https://xlinkbeta.fsgo365.cn/fsgo/wm'
 const DEFAULT_BETA_TENANT_ID = '1340835581184723420'
+const DEFAULT_BETA_CODE = '999999'
 const BETA_HOST = 'xlinkbeta.fsgo365.cn'
 
 export class BetaApiClientError extends Error {
@@ -54,6 +59,31 @@ function timeoutSignal(timeoutMs) {
 
 function normalizedTimeout(value) {
   return Number.isFinite(value) && value > 0 ? value : 15_000
+}
+
+function parseLocalEnv(filePath) {
+  let source
+  try {
+    source = readFileSync(filePath, 'utf8')
+  } catch {
+    return {}
+  }
+  const values = {}
+  for (const line of source.split(/\r?\n/)) {
+    const match = line.match(/^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)=(.*)\s*$/)
+    if (!match) continue
+    let value = match[2].trim()
+    if ((value.startsWith("'") && value.endsWith("'")) || (value.startsWith('"') && value.endsWith('"'))) {
+      value = value.slice(1, -1)
+    }
+    values[match[1]] = value
+  }
+  return values
+}
+
+function localRuntimeEnv() {
+  const localEnvPath = resolve(dirname(fileURLToPath(import.meta.url)), '../.env.local')
+  return { ...parseLocalEnv(localEnvPath), ...process.env }
 }
 
 async function requestJson(options, path, body) {
@@ -111,20 +141,41 @@ export function normalizeBetaLoginMethod(value = 'code') {
 export function betaDefaults(env = process.env) {
   const configuredTimeout = Number(env.XLINK_BETA_TIMEOUT_MS ?? 15_000)
   return {
-    apiBaseUrl: env.XLINK_BETA_API_BASE_URL?.trim() || DEFAULT_BETA_API_BASE_URL,
-    tenantId: env.XLINK_BETA_TENANT_ID?.trim() || DEFAULT_BETA_TENANT_ID,
-    phone: env.XLINK_BETA_PHONE?.trim() || '',
-    method: normalizeBetaLoginMethod(env.XLINK_BETA_LOGIN_METHOD?.trim() || 'code'),
-    code: env.XLINK_BETA_CODE?.trim() || '',
+    apiBaseUrl: env.XLINK_BETA_API_BASE_URL?.trim() || env.VITE_XLINK_API_BASE_URL?.trim() || DEFAULT_BETA_API_BASE_URL,
+    tenantId: env.XLINK_BETA_TENANT_ID?.trim() || env.VITE_XLINK_AUTH_TENANT?.trim() || DEFAULT_BETA_TENANT_ID,
+    phone: env.XLINK_BETA_PHONE?.trim() || env.VITE_XLINK_QUICK_LOGIN_PHONE?.trim() || '',
+    method: normalizeBetaLoginMethod(env.XLINK_BETA_LOGIN_METHOD?.trim() || env.VITE_XLINK_AUTH_METHOD?.trim() || 'code'),
+    code: env.XLINK_BETA_CODE?.trim() || env.VITE_XLINK_QUICK_LOGIN_CODE?.trim() || DEFAULT_BETA_CODE,
     password: env.XLINK_BETA_PASSWORD?.trim() || '',
     timeoutMs: normalizedTimeout(configuredTimeout),
   }
 }
 
+export function betaLocalDefaults(env = localRuntimeEnv()) {
+  const environment = env.VITE_XLINK_ENVIRONMENT?.trim()
+  if (!environment || environment === 'prod') {
+    throw new BetaApiClientError(
+      'Local Beta login is available only in a configured non-production environment',
+      'non_production_only',
+    )
+  }
+  // Keep the local discovery path aligned with App quick-login. Do not let
+  // ad-hoc XLINK_BETA_PHONE/CODE values silently diverge from the App's
+  // VITE_XLINK_QUICK_LOGIN_* configuration.
+  return betaDefaults({
+    VITE_XLINK_API_BASE_URL: env.VITE_XLINK_API_BASE_URL,
+    VITE_XLINK_AUTH_TENANT: env.VITE_XLINK_AUTH_TENANT,
+    VITE_XLINK_AUTH_METHOD: env.VITE_XLINK_AUTH_METHOD,
+    VITE_XLINK_QUICK_LOGIN_PHONE: env.VITE_XLINK_QUICK_LOGIN_PHONE,
+    VITE_XLINK_QUICK_LOGIN_CODE: env.VITE_XLINK_QUICK_LOGIN_CODE,
+    XLINK_BETA_TIMEOUT_MS: env.XLINK_BETA_TIMEOUT_MS,
+  })
+}
+
 export async function loginBeta(options) {
   const apiBaseUrl = assertBetaApiBaseUrl(options.apiBaseUrl || DEFAULT_BETA_API_BASE_URL)
   const method = normalizeBetaLoginMethod(options.method)
-  const phone = String(options.phone || '').trim()
+  const phone = String(options.phone || '').replace(/\s+/g, '').trim()
   const credential = String(options.credential || '').trim()
   const tenantId = String(options.tenantId || DEFAULT_BETA_TENANT_ID).trim()
   if (!phone || !credential || !tenantId) {

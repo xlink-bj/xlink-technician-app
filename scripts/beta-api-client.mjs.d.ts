@@ -17,6 +17,7 @@ export declare function betaDefaults(env?: Record<string, string | undefined>): 
   readonly password: string
   readonly timeoutMs: number
 }
+export declare function betaLocalDefaults(env?: Record<string, string | undefined>): ReturnType<typeof betaDefaults>
 export declare function loginBeta(options: Record<string, unknown>): Promise<BetaLoginResult>
 export declare function createBetaReadClient(options: Record<string, unknown>): {
   read(path: string, body?: Record<string, unknown>): Promise<Record<string, unknown>>

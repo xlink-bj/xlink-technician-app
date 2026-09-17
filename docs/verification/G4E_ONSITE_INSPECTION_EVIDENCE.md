@@ -96,10 +96,13 @@ When a local Beta account is available, the repository can establish the
 read Session itself using the R1-compatible phone login flow:
 
 ```text
-XLINK_BETA_PHONE=<Beta account>
-XLINK_BETA_CODE=<Beta test code>
 pnpm run inspect:inspection-contract:beta
 ```
+
+The command reuses the App quick-login configuration from the existing local
+`.env.local`, including its non-production guard and `999999` default code.
+No per-run phone or verification-code injection is used; no credential or
+Session value is persisted.
 
 The helper posts the verified `method`/`phone`/`code`/`tenantId` shape to
 `index/phoneLogin.do`, keeps `data.token` in memory, and sends it as
@@ -123,12 +126,17 @@ Current provider status in the committed snapshot:
 | `inspectionSOP` | UNKNOWN | Custom record contract not fabricated. |
 | `inspectionContent` | UNKNOWN | Multi-value provider not fabricated. |
 
-This implementation run did not have an authenticated Beta session in its
-environment, so it did not perform a new live capture. The committed snapshot
-is the previously sanitized Beta observation; the new command is ready for a
-controlled capture with `XLINK_SCHEMA_API_BASE_URL` and
-`XLINK_SCHEMA_SESSION_REF`. No live write, upload, phone call or production
-request was made.
+The local Beta login path was exercised successfully from `.env.local` on
+2026-09-17 without temporary phone or verification-code injection. The
+authenticated read-only session completed the work-order list and detail
+reads for the available page of results. The automatic first-work-order
+selection did not expose an active inspection node with an explicit form
+definition, so the inspector conservatively stopped with
+`no_current_inspection_form`; it did not substitute the Appointment, Rating,
+or historical Survey form families. The committed snapshot therefore remains
+the previously sanitized observation and was not silently replaced by a
+different form. No live write, upload, phone call or production request was
+made.
 
 ## 2. R1 business sequence
 

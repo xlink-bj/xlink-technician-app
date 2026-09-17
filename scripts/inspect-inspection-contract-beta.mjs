@@ -4,7 +4,7 @@ import { writeFile } from 'node:fs/promises'
 
 import { discoverInspectionContract } from './inspection-contract.mjs'
 import {
-  betaDefaults,
+  betaLocalDefaults,
   BetaApiClientError,
   assertBetaApiBaseUrl,
   createBetaReadClient,
@@ -25,15 +25,15 @@ function argsFrom(argv) {
 }
 
 function loginOptions(args) {
-  const defaults = betaDefaults()
-  const method = normalizeBetaLoginMethod(args.method ?? defaults.method)
+  const defaults = betaLocalDefaults()
+  const method = normalizeBetaLoginMethod(args.method ?? process.env.XLINK_BETA_LOGIN_METHOD ?? defaults.method)
   const credential = method === '2'
-    ? args.password ?? defaults.password
-    : args.code ?? defaults.code
+    ? args.password ?? process.env.XLINK_BETA_PASSWORD ?? defaults.password
+    : defaults.code
   return {
     apiBaseUrl: args['base-url'] ?? defaults.apiBaseUrl,
     tenantId: args.tenant ?? defaults.tenantId,
-    phone: args.phone ?? defaults.phone,
+    phone: defaults.phone,
     method,
     credential,
     timeoutMs: defaults.timeoutMs,
