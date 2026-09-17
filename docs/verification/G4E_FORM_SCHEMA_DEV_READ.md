@@ -104,10 +104,11 @@ from this record.
 - Unsupported `request`, custom, cascade and multi-value controls remain
   explicit capability boundaries until a correct Action Content control and
   provider contract are verified.
-- The existing four-field inspection Mock remains the executable bounded
-  Action harness. The observed 15-row shape is available as a separate
-  backend-shaped Mock read fixture so development can inspect real capability
-  gaps without falsely claiming that unsupported fields are executable.
+- The inspection workspace now resolves the observed 15-row shape through the
+  normal Mock read/Adapter/Runtime path. The former four-field fixture remains
+  available as a low-level synthetic regression fixture, but is not the
+  default simulator form. Unsupported fields are intentionally blocked rather
+  than silently presented as executable controls.
 
 ## Authority and remaining unknowns
 

@@ -460,8 +460,12 @@ function matchedCommandResponse(request: ApiCommandRequest): unknown | null {
     const formDataId = saveMockAppointment(data.dataStr)
     return { data: { _id: formDataId } }
   }
-  if (route === 'biz/extForm/upsert/' + mockInspectionFormDefinitionId) {
-    const formDataId = saveMockDynamicForm(data.dataStr, mockInspectionFormDefinitionId)
+  if (
+    route === 'biz/extForm/upsert/' + mockInspectionFormDefinitionId
+    || route === 'biz/extForm/upsert/' + mockObservedInspectionFormDefinitionId
+  ) {
+    const definitionId = route.slice('biz/extForm/upsert/'.length)
+    const formDataId = saveMockDynamicForm(data.dataStr, definitionId)
     return { data: { _id: formDataId } }
   }
   if (route === 'workflow/process') {
@@ -472,9 +476,12 @@ function matchedCommandResponse(request: ApiCommandRequest): unknown | null {
     if (data.nodeFormDefId === appointmentFormDefinitionWireId) {
       const formDataId = typeof data.nodeFormDataId === 'string' ? data.nodeFormDataId : ''
       completeMockAppointment(id, formDataId)
-    } else if (data.nodeFormDefId === mockInspectionFormDefinitionId) {
+    } else if (
+      data.nodeFormDefId === mockInspectionFormDefinitionId
+      || data.nodeFormDefId === mockObservedInspectionFormDefinitionId
+    ) {
       const formDataId = typeof data.nodeFormDataId === 'string' ? data.nodeFormDataId : ''
-      completeMockDynamicForm(id, formDataId, mockInspectionFormDefinitionId)
+      completeMockDynamicForm(id, formDataId, data.nodeFormDefId)
     } else {
       acceptMockWorkOrder(id)
     }

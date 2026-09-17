@@ -752,7 +752,7 @@ export const mockWorkOrderDetailResponses = {
         nodeDef: {
           nodeType: 'forms',
           name: '现场勘察',
-          formDefId: mockInspectionFormDefinitionId,
+          formDefId: mockObservedInspectionFormDefinitionId,
           userChoose: ['synthetic-role'],
         },
       }],

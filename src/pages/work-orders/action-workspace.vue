@@ -27,6 +27,7 @@
     <AppButton class="workspace-state-action" @tap="reload">再次尝试</AppButton>
   </view>
 
+  <!-- Appointment path remains @submit="continueToConfirmation"; generic forms use the Runtime-gated handler. -->
   <ActionWorkspaceShell
     v-else-if="workspace.descriptor && (workspace.appointmentForm || workspace.dynamicForm)"
     :customer-name="workspace.detail?.customerName"
@@ -37,7 +38,6 @@
     :can-submit="workspace.canSubmit"
     :business-feedback="feedback"
     :submit-label="workspace.descriptor.actionIntent === 'interact_with_form' ? '完成勘察' : '继续确认'"
-    <!-- Appointment path remains @submit="continueToConfirmation"; generic forms use the Runtime-gated handler. -->
     @submit="submitWorkspace"
   >
     <InspectionActionContent v-if="workspace.descriptor.actionIntent === 'interact_with_form'" />

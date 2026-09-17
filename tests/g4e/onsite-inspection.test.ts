@@ -438,10 +438,10 @@ describe('G4-E onsite inspection dynamic Action Content', () => {
     const detail = await read.getWorkOrderDetail(asOpaqueId<'WorkOrderId'>(mockCommandScenarioIds.inspectionSuccess))
     expect(detail.state).toBe('succeeded')
     expect(detail.data?.workflowNodes?.[0]).toMatchObject({
-      formDefinitionId: asOpaqueId<'FormDefinitionId'>(mockInspectionFormDefinitionId),
+      formDefinitionId: asOpaqueId<'FormDefinitionId'>(mockObservedInspectionFormDefinitionId),
     })
     expect(request).not.toHaveBeenCalled()
-    expect(isMockOwnedRead(`biz/extForm/query/${mockInspectionFormDefinitionId}`)).toBe(true)
+    expect(isMockOwnedRead(`biz/extForm/query/${mockObservedInspectionFormDefinitionId}`)).toBe(true)
 
     setBusinessMockMode('off')
     await expect(readTransport.execute({
@@ -452,7 +452,7 @@ describe('G4-E onsite inspection dynamic Action Content', () => {
     expect(request).not.toHaveBeenCalled()
   })
 
-  it('runs the synthetic inspection form through the real Adapter command path', async () => {
+  it('runs the observed inspection form through the real Adapter command path', async () => {
     setBusinessMockMode('data')
     const request = vi.fn(() => { throw new Error('synthetic path must not use network') })
     const readTransport = createUniApiReadTransport({
@@ -472,7 +472,7 @@ describe('G4-E onsite inspection dynamic Action Content', () => {
     const detail = await read.getWorkOrderDetail(asOpaqueId<'WorkOrderId'>(mockCommandScenarioIds.inspectionSuccess))
     expect(detail.state).toBe('succeeded')
     const node = detail.data?.workflowNodes?.[0]
-    expect(node?.formDefinitionId).toBe(asOpaqueId<'FormDefinitionId'>(mockInspectionFormDefinitionId))
+    expect(node?.formDefinitionId).toBe(asOpaqueId<'FormDefinitionId'>(mockObservedInspectionFormDefinitionId))
 
     const initial = await commands.readDynamicForm!({
       definitionId: node!.formDefinitionId!,
@@ -485,7 +485,7 @@ describe('G4-E onsite inspection dynamic Action Content', () => {
       workflowNodeId: node!.id,
       workflowRunId: detail.data?.workflowRunId,
       definitionId: node!.formDefinitionId!,
-      values: { inspectionSummary: '墙面情况正常', inspectionResult: 'safe', inspectionPhoto: 'https://mock-upload.invalid/photo' },
+      values: { requirement: '符合现场施工要求', suggest: '按现场条件继续施工' },
     })
     expect(saved.state).toBe('succeeded')
     expect(saved.data).toBeTruthy()
@@ -497,7 +497,7 @@ describe('G4-E onsite inspection dynamic Action Content', () => {
     })
     expect(rereadForm).toMatchObject({
       state: 'succeeded',
-      data: { dataId: saved.data, values: expect.objectContaining({ inspectionResult: 'safe' }) },
+      data: { dataId: saved.data, values: expect.objectContaining({ suggest: '按现场条件继续施工' }) },
     })
 
     const completed = await commands.completeWorkflowNode!({
