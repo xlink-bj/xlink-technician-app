@@ -147,6 +147,32 @@ describe('Action Draft Repository', () => {
     expect((await repository.read<Record<string, unknown>>(literalNone)).data?.values).toEqual({ branch: 'literal' })
   })
 
+  it('does not delete a colliding legacy record owned by the other identity', async () => {
+    const { storage, values } = storageFor()
+    const repository = createActionDraftRepository(storage)
+    const withoutContent = actionDraftIdentityFor({
+      userId: userA,
+      workOrderId: asOpaqueId<'WorkOrderId'>('legacy-collision-work-order'),
+      workflowNodeId: asOpaqueId<'WorkflowNodeRuntimeId'>('legacy-collision-node'),
+      actionIntent: 'set_appointment',
+      contentKind: 'dynamic_form',
+    })
+    const literalNone = actionDraftIdentityFor({
+      ...withoutContent,
+      contentIdentity: 'none',
+    })
+    const legacyCollisionKey = actionDraftLegacyStorageKey(withoutContent)
+    values.set(`draft:${legacyCollisionKey}`, recordFor(literalNone, { owner: 'literal-none' }, '2026-09-17T09:00:00.000Z'))
+
+    await repository.remove(withoutContent)
+
+    expect(values.has(`draft:${legacyCollisionKey}`)).toBe(true)
+    expect((await repository.read<Record<string, unknown>>(literalNone)).data?.values).toEqual({ owner: 'literal-none' })
+
+    await repository.remove(literalNone)
+    expect(values.has(`draft:${legacyCollisionKey}`)).toBe(false)
+  })
+
   it('restores legacy drafts after the key codec upgrade and cleans all formats', async () => {
     const { storage, values } = storageFor()
     const repository = createActionDraftRepository(storage)

@@ -172,11 +172,29 @@ export class SemanticActionDraftRepository implements ActionDraftRepository {
     )
   }
 
-  remove(identity: ActionDraftIdentity): Promise<OperationSnapshot<void>> {
-    return Promise.all([
-      this.storage.remove({ namespace: 'draft', key: actionDraftStorageKey(identity) }),
-      ...actionDraftLegacyStorageKeys(identity).map((key) => this.storage.remove({ namespace: 'draft', key })),
-    ]).then((results) => results.find((result) => result.state !== 'succeeded') ?? results[0])
+  private async removeLegacyIfOwned(
+    key: string,
+    identity: ActionDraftIdentity,
+  ): Promise<OperationSnapshot<void>> {
+    const stored = await this.storage.read<unknown>({ namespace: 'draft', key })
+    if (stored.state !== 'succeeded') return stored as OperationSnapshot<void>
+    if (stored.data === null || !validDraftRecord(stored.data, identity)) {
+      // A missing, malformed, or differently-owned legacy record is not ours
+      // to delete. Keep it for its owner or future conservative recovery.
+      return { state: 'succeeded', data: undefined }
+    }
+    return this.storage.remove({ namespace: 'draft', key })
+  }
+
+  async remove(identity: ActionDraftIdentity): Promise<OperationSnapshot<void>> {
+    const results: Array<OperationSnapshot<void>> = [
+      // Canonical v2 keys are collision-free and can be removed directly.
+      await this.storage.remove({ namespace: 'draft', key: actionDraftStorageKey(identity) }),
+    ]
+    for (const key of actionDraftLegacyStorageKeys(identity)) {
+      results.push(await this.removeLegacyIfOwned(key, identity))
+    }
+    return results.find((result) => result.state !== 'succeeded') ?? results[0]
   }
 
   async listForUser(userId: UserId): Promise<OperationSnapshot<ActionDraftRegistrySnapshot>> {
