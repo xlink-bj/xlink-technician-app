@@ -202,6 +202,11 @@ describe('G3-D Dynamic Form Runtime capability and visibility', () => {
     expect(evaluateVisibility({ kind: 'equals', path: 'customer.tier', value: 'gold' }, values).visible).toBe(true)
     expect(evaluateVisibility({ kind: 'includes', path: 'choices', value: 'b' }, values).visible).toBe(true)
     expect(evaluateVisibility({ kind: 'includes', path: ['cascade'], value: 'city-001' }, values).visible).toBe(true)
+    expect(evaluateVisibility({
+      kind: 'oneOf',
+      path: 'cascade',
+      values: [['north', 'city-001'], ['south', 'city-002']],
+    }, values).visible).toBe(true)
     expect(evaluateVisibility({ kind: 'exists', path: 'customer.tier', expected: true }, values).visible).toBe(true)
     expect(evaluateVisibility({ kind: 'equals', path: 'status', value: 'closed' }, values).state).toBe('hidden')
     expect(evaluateVisibility({ kind: 'exists', path: 'missing', expected: true }, values).state).toBe('hidden')
@@ -264,6 +269,23 @@ describe('G3-D Dynamic Form Runtime values and submission', () => {
     expect(normalizeFieldValue('number', '12.5').ok).toBe(false)
     expect(normalizeFieldValue('digit', '12.50')).toEqual({ ok: true, value: 12.5 })
     expect(normalizeFieldValue('checkbox', ['a', 'b'])).toEqual({ ok: true, value: ['a', 'b'] })
+    expect(normalizeFieldValue(
+      'select',
+      ['a', 'b'],
+      [{ value: 'a', label: 'A' }, { value: 'b', label: 'B' }],
+      true,
+    )).toEqual({ ok: true, value: ['a', 'b'] })
+    expect(normalizeFieldValue(
+      'cascade',
+      ['roof', 'inner'],
+      [{ value: 'roof', label: '屋面', children: [{ value: 'inner', label: '女儿墙' }] }],
+    )).toEqual({ ok: true, value: ['roof', 'inner'] })
+    expect(normalizeFieldValue(
+      'select',
+      ['a', 'unknown'],
+      [{ value: 'a', label: 'A' }],
+      true,
+    )).toMatchObject({ ok: false, reason: 'invalid_value' })
     expect(normalizeFieldValue('image', asOpaqueId<'LocalMediaRef'>('media-ref-001'))).toEqual({
       ok: true,
       value: 'media-ref-001',

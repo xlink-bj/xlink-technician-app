@@ -5,9 +5,11 @@ import {
   mockAppointmentFormDefinitionResponse,
   mockOrdinaryListResponse,
   mockRepairPartsCascadeResponse,
+  mockInspectionPartsCascadeResponse,
   mockRoleFunctionResponse,
   mockSanodeListResponse,
   mockStatusOptionsResponse,
+  mockQualifiedCodeOptionsResponse,
   mockCommandScenarioIds,
   mockInspectionFormDefinitionId,
   mockInspectionFormDefinitionResponse,
@@ -372,8 +374,19 @@ function matchedResponse(
   if (route === 'code/query' && requestData.valueOption === 'STATUS') {
     return mockStatusOptionsResponse
   }
+  if (route === 'i/code/selectCode.do' && typeof requestData.jsonPara === 'string') {
+    try {
+      const config = JSON.parse(requestData.jsonPara) as Array<{ codeId?: unknown }>
+      if (config.some((item) => item?.codeId === 'qualified')) return mockQualifiedCodeOptionsResponse
+    } catch {
+      return null
+    }
+  }
   if (route === 'i/code/selectMultistageCode.do' && requestData.types === 'repairParts') {
     return mockRepairPartsCascadeResponse
+  }
+  if (route === 'i/code/selectMultistageCode.do' && requestData.types === 'parts') {
+    return mockInspectionPartsCascadeResponse
   }
   if (
     route === 'biz/action/query.do' &&

@@ -92,7 +92,10 @@ export function createDefaultTechnicianApiReadPort(authSession: AuthSessionPort)
   return createRoleScopedTechnicianApiReadAdapter(
     transport,
     () => authSession.getCurrentSession()?.currentRole?.id ?? null,
-    { cascadeTenantId: config.value.authWireConfig.tenant },
+    {
+      cascadeTenantId: config.value.authWireConfig.tenant,
+      codeTenantId: config.value.authWireConfig.tenant,
+    },
   )
 }
 

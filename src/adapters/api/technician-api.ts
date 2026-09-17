@@ -727,6 +727,19 @@ function formFieldVisibility(record: AdapterRecord): {
     return { visibility: { kind: 'exists', path: showField, expected: true } }
   }
   if (!hasShowValue) return { unsupportedReason: 'Conditional field visibility is missing its match value' }
+  if (Array.isArray(showValue) && showValue.some((value) => Array.isArray(value))) {
+    const alternatives = showValue.map(conditionValue)
+    if (alternatives.some((value) => value === undefined)) {
+      return { unsupportedReason: 'Conditional field visibility uses an unsupported match value' }
+    }
+    return {
+      visibility: {
+        kind: 'oneOf',
+        path: showField,
+        values: alternatives as FormFieldValue[],
+      },
+    }
+  }
   const normalizedValue = conditionValue(showValue)
   if (normalizedValue === undefined) {
     return { unsupportedReason: 'Conditional field visibility uses an unsupported match value' }
@@ -870,6 +883,41 @@ function codeOption(raw: unknown): CodeOptionRead {
   }
 }
 
+function dynamicCodeOptions(raw: unknown, valueOption: string): ReadPage<CodeOptionRead> {
+  if (!Array.isArray(raw)) throw new AdapterMappingError('dynamic code response is malformed')
+  const entry = raw
+    .map((value) => optionalRecord(value))
+    .find((value) => value?.eleid === valueOption)
+  const options = optionalRecord(entry?.options)
+  if (!options) return { items: [] }
+
+  return {
+    items: Object.entries(options)
+      .map(([value, label]) => {
+        if (typeof label !== 'string' || label.trim().length === 0) return null
+        return { value, label: label.trim() }
+      })
+      .filter((value): value is CodeOptionRead => Boolean(value)),
+  }
+}
+
+function cascadeOption(raw: unknown): CodeOptionRead | null {
+  const record = optionalRecord(raw)
+  const value = optionalString(record ?? {}, ['value'])
+  const label = optionalString(record ?? {}, ['name', 'label'])
+  if (!value || !label) return null
+  const children = record && Array.isArray(record.children)
+    ? record.children
+      .map(cascadeOption)
+      .filter((item): item is CodeOptionRead => Boolean(item))
+    : []
+  return {
+    value,
+    label,
+    ...(children.length > 0 ? { children } : {}),
+  }
+}
+
 function cascadeCodeOptions(raw: unknown, codeType: string): ReadPage<CodeOptionRead> {
   const groups = Array.isArray(raw)
     ? raw
@@ -884,23 +932,26 @@ function cascadeCodeOptions(raw: unknown, codeType: string): ReadPage<CodeOption
 
   if (!group) return { items: [] }
 
-  const items: CodeOptionRead[] = []
-  const seen = new Set<string>()
-  const flatten = (value: unknown): void => {
-    if (!Array.isArray(value)) return
-    for (const child of value) {
-      const record = asRecord(child, 'cascade code option')
-      const optionValue = optionalString(record, ['value'])
-      const label = optionalString(record, ['name'])
-      if (optionValue && label && !seen.has(optionValue)) {
-        seen.add(optionValue)
-        items.push({ value: optionValue, label })
-      }
-      flatten(record.children)
-    }
-  }
-  flatten(group.children)
+  const items = Array.isArray(group.children)
+    ? group.children
+      .map(cascadeOption)
+      .filter((item): item is CodeOptionRead => Boolean(item))
+    : []
   return { items }
+}
+
+function flattenCodeOptions(options: readonly CodeOptionRead[]): readonly CodeOptionRead[] {
+  const output: CodeOptionRead[] = []
+  const seen = new Set<string>()
+  const visit = (option: CodeOptionRead): void => {
+    if (!seen.has(option.value)) {
+      seen.add(option.value)
+      output.push(option)
+    }
+    option.children?.forEach(visit)
+  }
+  options.forEach(visit)
+  return output
 }
 
 function decodeQueryPart(value: string): string {
@@ -1085,7 +1136,7 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
 
     const options = await this.getCodeOptions({ valueOption: 'STATUS' })
     if (options.state !== 'succeeded' || !options.data) return new Map()
-    return new Map(options.data.items.map((option) => [option.value, option.label]))
+    return new Map(flattenCodeOptions(options.data.items).map((option) => [option.value, option.label]))
   }
 
   private async detailStatusLabelsFor(raw: unknown): Promise<ReadonlyMap<string, string>> {
@@ -1272,6 +1323,30 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
     )
   }
 
+  getDynamicCodeOptions(query: { readonly valueOption: string }) {
+    const tenantId = this.options.codeTenantId ?? this.options.cascadeTenantId
+    if (!tenantId) {
+      return Promise.resolve(
+        adapterFailure<ReadPage<CodeOptionRead>>(
+          'server_terminal',
+          'Dynamic code tenant is not configured',
+        ),
+      )
+    }
+
+    return this.read<ReadPage<CodeOptionRead>>(
+      {
+        method: 'POST',
+        path: 'i/code/selectCode.do',
+        body: {
+          jsonPara: JSON.stringify([{ codeId: query.valueOption, eleid: query.valueOption }]),
+          tenantId,
+        },
+      },
+      (raw) => dynamicCodeOptions(raw, query.valueOption),
+    )
+  }
+
   getCascadeCodeOptions(query: CascadeCodeOptionsQuery) {
     if (!this.options.cascadeTenantId) {
       return Promise.resolve(
@@ -1296,6 +1371,8 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
 export interface TechnicianApiReadAdapterOptions {
   /** Current authenticated tenant used by R1's multistage code endpoint. */
   readonly cascadeTenantId?: string
+  /** Current authenticated tenant used by R1's batch dynamic code endpoint. */
+  readonly codeTenantId?: string
 }
 
 export function createTechnicianApiReadAdapter(

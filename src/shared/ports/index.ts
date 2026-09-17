@@ -3,6 +3,7 @@ export type {
   CodeOptionRead,
   CodeOptionsQuery,
   FormDataRead,
+  FormFieldOptionRead,
   FormFieldRead,
   FormFieldValue,
   FormFieldVisibility,

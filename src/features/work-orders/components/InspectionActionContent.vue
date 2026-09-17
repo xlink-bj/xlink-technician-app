@@ -15,8 +15,22 @@
         :label="field.label"
         :required="field.runtime.required"
       >
+      <AppCascadeSelector
+        v-if="field.type === 'cascade' && field.options?.length"
+        :options="field.options"
+        :model-value="arrayValue(workspace.dynamicForm?.values[field.key])"
+        :disabled="field.runtime.readOnly || workspace.lifecycle === 'submitting'"
+        @update:model-value="setField(field.key, $event)"
+      />
+      <AppMultiChoiceGroup
+        v-else-if="field.options?.length && isMultiChoiceField(field.type, field.multiple)"
+        :options="choiceOptionsFor(field.options)"
+        :model-value="arrayValue(workspace.dynamicForm?.values[field.key])"
+        :disabled="field.runtime.readOnly || workspace.lifecycle === 'submitting'"
+        @update:model-value="setField(field.key, $event)"
+      />
       <AppChoiceGroup
-        v-if="field.options?.length"
+        v-else-if="field.options?.length"
         :options="choiceOptionsFor(field.options)"
         :model-value="stringValue(workspace.dynamicForm?.values[field.key])"
         :disabled="field.runtime.readOnly || workspace.lifecycle === 'submitting'"
@@ -59,10 +73,9 @@
     </template>
 
     <AppStatus
-      v-for="field in workspace.dynamicUnsupportedFields"
-      :key="`unsupported-${field.key}`"
+      v-if="workspace.dynamicUnsupportedFields.length > 0"
       class="inspection-action-unsupported"
-      message="当前表单包含暂不支持的字段，无法提交。"
+      :message="unsupportedMessage"
       tone="warning"
       icon="warning"
       quiet
@@ -82,22 +95,42 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
+
 import { useActionWorkspaceStore } from '@features/work-orders/action-workspace'
 import type { FormFieldValue } from '@shared/ports'
 import type { AppChoiceOption } from '@shared/ui/types'
 import AppButton from '@shared/ui/AppButton.vue'
+import AppCascadeSelector from '@shared/ui/AppCascadeSelector.vue'
 import AppChoiceGroup from '@shared/ui/AppChoiceGroup.vue'
 import AppField from '@shared/ui/AppField.vue'
 import AppIcon from '@shared/ui/AppIcon.vue'
 import AppInput from '@shared/ui/AppInput.vue'
+import AppMultiChoiceGroup from '@shared/ui/AppMultiChoiceGroup.vue'
 import AppStatus from '@shared/ui/AppStatus.vue'
 import AppTextarea from '@shared/ui/AppTextarea.vue'
 
 const workspace = useActionWorkspaceStore()
 
+const unsupportedMessage = computed(() => {
+  const labels = workspace.dynamicUnsupportedFields.map((field) => field.label).join('、')
+  return labels
+    ? `暂不支持：${labels}。补齐这些字段后才能提交。`
+    : '当前表单包含暂不支持的字段，无法提交。'
+})
+
 function stringValue(value: FormFieldValue | undefined): string {
   if (Array.isArray(value)) return value.map(String).join(', ')
   return value === null || value === undefined ? '' : String(value)
+}
+
+function arrayValue(value: FormFieldValue | undefined): readonly string[] {
+  if (Array.isArray(value)) return value.map(String)
+  return value === undefined || value === null || value === '' ? [] : [String(value)]
+}
+
+function isMultiChoiceField(type: string, multiple: boolean | undefined): boolean {
+  return Boolean(multiple) || type === 'checkbox'
 }
 
 function choiceOptionsFor(options: readonly { readonly value: string; readonly label: string }[]): readonly AppChoiceOption[] {
@@ -108,7 +141,7 @@ function mediaCountFor(fieldKey: string): number {
   return workspace.mediaByField[fieldKey]?.length ?? (workspace.dynamicForm?.values[fieldKey] ? 1 : 0)
 }
 
-function setField(key: string, value: string): void {
+function setField(key: string, value: FormFieldValue): void {
   workspace.setField(key, value)
 }
 

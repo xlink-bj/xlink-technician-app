@@ -28,6 +28,7 @@ export type NormalizedFieldType =
 export interface FormOption {
   readonly value: string
   readonly label: string
+  readonly children?: readonly FormOption[]
 }
 
 export type VisibilityPath = FormFieldVisibilityPath
@@ -39,6 +40,7 @@ export interface FormFieldSchema {
   readonly type: string
   readonly required?: boolean
   readonly readOnly?: boolean
+  readonly multiple?: boolean
   readonly visibility?: VisibilityExpression
   readonly valueOption?: string
   readonly inlineOptions?: readonly FormOption[]

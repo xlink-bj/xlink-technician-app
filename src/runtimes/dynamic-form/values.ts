@@ -44,14 +44,25 @@ function invalid(message: string): NormalizationResult {
   return { ok: false, reason: 'invalid_value', message }
 }
 
+function optionValues(options: readonly FormOption[]): readonly string[] {
+  const values: string[] = []
+  const visit = (option: FormOption): void => {
+    values.push(option.value)
+    option.children?.forEach(visit)
+  }
+  options.forEach(visit)
+  return values
+}
+
 function supportedOption(options: readonly FormOption[] | undefined, value: unknown): boolean {
   if (!options || options.length === 0) return true
   const values = Array.isArray(value) ? value : [value]
+  const supported = new Set(optionValues(options))
   return values.every(
     (candidate) =>
       candidate !== null &&
       candidate !== undefined &&
-      options.some((option) => option.value === String(candidate)),
+      supported.has(String(candidate)),
   )
 }
 
@@ -59,6 +70,7 @@ export function normalizeFieldValue(
   type: string,
   value: unknown,
   options?: readonly FormOption[],
+  multiple = false,
 ): NormalizationResult {
   if (!supportedOption(options, value)) {
     return invalid(`${type} contains an unsupported option`)
@@ -88,6 +100,14 @@ export function normalizeFieldValue(
     if (value === 'false') return { ok: true, value: false }
     return invalid('switch requires a boolean value')
   }
+  if (optionScalarTypes.has(type) && multiple) {
+    if (!Array.isArray(value)) return invalid(`${type} requires an array of choices`)
+    const values = value.map(scalar)
+    if (values.some((item) => item === undefined || item === null)) {
+      return invalid(`${type} contains an unsupported value`)
+    }
+    return { ok: true, value: values as NormalizedFieldValue }
+  }
   if (optionScalarTypes.has(type)) {
     const result = scalar(value)
     return result === undefined ? invalid(`${type} requires a scalar choice`) : { ok: true, value: result }
@@ -112,7 +132,7 @@ export function normalizeFieldValue(
   if (optionArrayTypes.has(type)) {
     if (Array.isArray(value)) {
       const values = value.map(scalar)
-      if (values.some((item) => item === undefined)) return invalid(`${type} contains an unsupported value`)
+      if (values.some((item) => item === undefined || item === null)) return invalid(`${type} contains an unsupported value`)
       return { ok: true, value: values as NormalizedFieldValue }
     }
     const result = scalar(value)
@@ -155,7 +175,7 @@ export function normalizeSubmission(input: {
       continue
     }
 
-    const value = normalizeFieldValue(field.type, raw, field.inlineOptions)
+    const value = normalizeFieldValue(field.type, raw, field.inlineOptions, field.multiple)
     if (!value.ok) {
       return {
         ok: false,

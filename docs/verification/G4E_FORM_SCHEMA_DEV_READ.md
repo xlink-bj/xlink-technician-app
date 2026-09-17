@@ -101,9 +101,15 @@ from this record.
 - `showType=1` remains unconditionally visible unless an explicit legacy
   `frontEndConfig.showField` expression exists. `showType=3` remains a bounded
   value condition and does not use array position.
-- Unsupported `request`, custom, cascade and multi-value controls remain
-  explicit capability boundaries until a correct Action Content control and
-  provider contract are verified.
+- The verified R1 code provider (`i/code/selectCode.do`) and multistage
+  provider (`i/code/selectMultistageCode.do`) now resolve `qualified` and
+  `parts` through the Adapter before the form reaches Runtime. Cascade paths
+  retain their hierarchy, and option-bearing checkbox/multi-value select
+  fields use array-valued controls rather than scalar choices.
+- `request`, business-record `bizSelect` without a verified record provider,
+  and multi-value fields without an option source remain explicit capability
+  boundaries. They are not rendered as ordinary text inputs and still block
+  completion until their provider/control contract is verified.
 - The inspection workspace now resolves the observed 15-row shape through the
   normal Mock read/Adapter/Runtime path. The former four-field fixture remains
   available as a low-level synthetic regression fixture, but is not the

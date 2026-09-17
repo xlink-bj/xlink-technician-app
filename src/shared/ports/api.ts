@@ -175,7 +175,7 @@ export interface FormFieldRead {
   readonly readOnly: boolean
   /** Backend `multiple` flag; a multi-value control must not be rendered as a scalar choice. */
   readonly multiple?: boolean
-  readonly options?: readonly { readonly value: string; readonly label: string }[]
+  readonly options?: readonly FormFieldOptionRead[]
   /** Adapter-normalized conditional visibility; raw frontEndConfig never crosses the port. */
   readonly visibility?: FormFieldVisibility
   /** Adapter-normalized option provider identity, when evidenced by the field. */
@@ -184,12 +184,20 @@ export interface FormFieldRead {
   readonly unsupportedReason?: string
 }
 
+/** A normalized option may retain its hierarchy for cascade controls. */
+export interface FormFieldOptionRead {
+  readonly value: string
+  readonly label: string
+  readonly children?: readonly FormFieldOptionRead[]
+}
+
 export type FormFieldValue = string | number | boolean | null | readonly (string | number | boolean)[]
 
 export type FormFieldVisibilityPath = string | readonly string[]
 
 export type FormFieldVisibility =
   | { readonly kind: 'equals'; readonly path: FormFieldVisibilityPath; readonly value: FormFieldValue }
+  | { readonly kind: 'oneOf'; readonly path: FormFieldVisibilityPath; readonly values: readonly FormFieldValue[] }
   | { readonly kind: 'includes'; readonly path: FormFieldVisibilityPath; readonly value: FormFieldValue }
   | { readonly kind: 'exists'; readonly path: FormFieldVisibilityPath; readonly expected: boolean }
   | { readonly kind: 'all'; readonly conditions: readonly FormFieldVisibility[] }
@@ -204,6 +212,7 @@ export interface FormDataRead {
 export interface CodeOptionRead {
   readonly value: string
   readonly label: string
+  readonly children?: readonly CodeOptionRead[]
 }
 
 export interface CodeOptionsQuery {
@@ -239,6 +248,10 @@ export interface TechnicianApiReadPort {
   }): Promise<OperationSnapshot<FormDataRead>>
   getCodeOptions(
     query: CodeOptionsQuery,
+  ): Promise<OperationSnapshot<ReadPage<CodeOptionRead>>>
+  /** R1's batch code provider used by dynamic form fields. */
+  getDynamicCodeOptions?(
+    query: { readonly valueOption: string },
   ): Promise<OperationSnapshot<ReadPage<CodeOptionRead>>>
   getCascadeCodeOptions(
     query: CascadeCodeOptionsQuery,

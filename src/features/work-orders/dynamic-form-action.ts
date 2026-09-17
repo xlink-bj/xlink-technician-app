@@ -23,13 +23,7 @@ function actionUnsupportedReasonFor(field: AppointmentFormFieldRead, values: Rea
   ) {
     return `${field.type} requires a verified option set before it can be rendered`
   }
-  if (field.multiple && (field.type === 'select' || field.type === 'bizSelect')) {
-    return `${field.type} multi-value fields require a multi-value Action Content control`
-  }
-  if (field.type !== 'checkbox' && field.type !== 'cascade') return undefined
-  return evaluateVisibility(field.visibility, values).state === 'visible'
-    ? `${field.type} requires a multi-value Action Content control`
-    : undefined
+  return undefined
 }
 
 function schemaFor(
@@ -42,6 +36,7 @@ function schemaFor(
     type: field.type,
     required: field.required,
     readOnly: field.readOnly,
+    ...(field.multiple ? { multiple: field.multiple } : {}),
     ...(field.options?.length ? { inlineOptions: field.options } : {}),
     ...(field.visibility ? { visibility: field.visibility } : {}),
     ...(field.valueOption ? { valueOption: field.valueOption } : {}),
@@ -125,7 +120,7 @@ export function normalizeDynamicFieldValue(
     }
   }
 
-  const normalized = normalizeFieldValue(field.type, value, field.options)
+  const normalized = normalizeFieldValue(field.type, value, field.options, field.multiple)
   if (!normalized.ok) {
     return {
       state: 'failed_terminal',

@@ -4,6 +4,8 @@ import type {
   AppointmentFormRead,
   CompleteWorkflowNodeInput,
   DynamicFormRead,
+  FormDefinitionRead,
+  FormFieldRead,
   ReadDynamicFormInput,
   SaveDynamicFormInput,
   SubmitAppointmentInput,
@@ -164,6 +166,49 @@ export class TechnicianApiCommandAdapter implements TechnicianApiCommandPort {
     }
   }
 
+  private async resolveDynamicDefinition(
+    definition: FormDefinitionRead,
+  ): Promise<OperationSnapshot<FormDefinitionRead>> {
+    const fields: FormFieldRead[] = []
+    for (const field of definition.fields ?? []) {
+      const codeLookup =
+        field.valueOption && (field.type === 'select' || field.type === 'radio' || field.type === 'checkbox')
+          ? this.readPort.getDynamicCodeOptions
+          : undefined
+      const cascadeLookup = field.valueOption && field.type === 'cascade'
+        ? this.readPort.getCascadeCodeOptions
+        : undefined
+
+      if (!codeLookup && !cascadeLookup) {
+        fields.push(field)
+        continue
+      }
+
+      // A test/application composition that does not provide the optional
+      // dynamic provider remains conservative; Runtime will mark the field
+      // unsupported instead of inventing an option set.
+      if (!field.valueOption) {
+        fields.push(field)
+        continue
+      }
+
+      const options = codeLookup
+        ? await codeLookup.call(this.readPort, { valueOption: field.valueOption })
+        : await cascadeLookup!.call(this.readPort, { codeType: field.valueOption })
+      if (options.state !== 'succeeded' || !options.data) {
+        return failureFrom(options)
+      }
+      fields.push({
+        ...field,
+        ...(options.data.items.length > 0
+          ? { options: options.data.items }
+          : { unsupportedReason: `${field.type} option provider returned no options` }),
+      })
+    }
+
+    return succeeded({ ...definition, fields })
+  }
+
   inspectAcceptOrder(input: AcceptOrderInput) {
     return this.command<AcceptOrderInspection>(
       {
@@ -216,10 +261,15 @@ export class TechnicianApiCommandAdapter implements TechnicianApiCommandPort {
       return failureFrom(definition)
     }
 
+    const resolvedDefinition = await this.resolveDynamicDefinition(definition.data)
+    if (resolvedDefinition.state !== 'succeeded' || !resolvedDefinition.data) {
+      return failureFrom(resolvedDefinition)
+    }
+
     if (!input.formDataId) {
       return succeeded({
-        definitionId: definition.data.id,
-        fields: definition.data.fields ?? [],
+        definitionId: resolvedDefinition.data.id,
+        fields: resolvedDefinition.data.fields ?? [],
         values: {},
       })
     }
@@ -235,15 +285,15 @@ export class TechnicianApiCommandAdapter implements TechnicianApiCommandPort {
       data.data.items.length !== 1 ||
       !first ||
       first.id !== input.formDataId ||
-      first.definitionId !== definition.data.id ||
+      first.definitionId !== resolvedDefinition.data.id ||
       (input.expectedWorkflowRunId && first.workflowRunId !== input.expectedWorkflowRunId)
     ) {
       return adapterFailure('server_terminal', 'Dynamic form data did not match the requested record')
     }
 
     return succeeded({
-      definitionId: definition.data.id,
-      fields: definition.data.fields ?? [],
+      definitionId: resolvedDefinition.data.id,
+      fields: resolvedDefinition.data.fields ?? [],
       values: first?.values ?? {},
       ...(first?.id ? { dataId: first.id } : {}),
       ...(first?.workflowRunId ? { workflowRunId: first.workflowRunId } : {}),

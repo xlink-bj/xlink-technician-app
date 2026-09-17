@@ -138,6 +138,64 @@ describe('G3-C API adapter foundation', () => {
     })
   })
 
+  it('maps the R1 batch dynamic code provider without exposing its wire envelope', async () => {
+    const transport = new FixtureApiTransport({
+      'i/code/selectCode.do': [{
+        eleid: 'qualified',
+        options: { '0': '不合格', '1': '合格' },
+      }],
+    })
+    const api = createTechnicianApiReadAdapter(transport, {
+      codeTenantId: 'sanitized-tenant',
+    })
+
+    const result = await api.getDynamicCodeOptions!({ valueOption: 'qualified' })
+
+    expect(result).toEqual({
+      state: 'succeeded',
+      data: {
+        items: [
+          { value: '0', label: '不合格' },
+          { value: '1', label: '合格' },
+        ],
+      },
+    })
+    expect(transport.requests[0]).toEqual({
+      method: 'POST',
+      path: 'i/code/selectCode.do',
+      body: {
+        jsonPara: JSON.stringify([{ codeId: 'qualified', eleid: 'qualified' }]),
+        tenantId: 'sanitized-tenant',
+      },
+    })
+    expect(JSON.stringify(result)).not.toContain('eleid')
+    expect(JSON.stringify(result)).not.toContain('options')
+  })
+
+  it('retains cascade hierarchy while normalizing R1 code nodes', async () => {
+    const transport = new FixtureApiTransport({
+      'i/code/selectMultistageCode.do': [{
+        type: 'parts',
+        children: [{
+          value: 'roof',
+          name: '屋面',
+          children: [{ value: 'roof-inner', name: '女儿墙' }],
+        }],
+      }],
+    })
+    const api = createTechnicianApiReadAdapter(transport, {
+      cascadeTenantId: 'sanitized-tenant',
+    })
+
+    const result = await api.getCascadeCodeOptions({ codeType: 'parts' })
+
+    expect(result.data?.items).toEqual([{
+      value: 'roof',
+      label: '屋面',
+      children: [{ value: 'roof-inner', label: '女儿墙' }],
+    }])
+  })
+
   it('maps a verified district code and omits missing or unmapped district codes', async () => {
     const transport = new FixtureApiTransport({
       'basic/serviceAppointment/query': {

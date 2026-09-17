@@ -27,7 +27,9 @@ const supportedTypes = new Set([
 ])
 
 const optionTypes = new Set(['select', 'bizSelect', 'cascade', 'radio', 'checkbox'])
-const codeBackedTypes = new Set(['select', 'bizSelect', 'radio', 'checkbox'])
+// bizSelect is a business-record provider, not a code table. It must not be
+// sent through the code provider merely because it has a valueOption marker.
+const codeBackedTypes = new Set(['select', 'radio', 'checkbox'])
 
 export function classifyFieldType(type: string): FormCapabilityDecision {
   if (!supportedTypes.has(type)) {

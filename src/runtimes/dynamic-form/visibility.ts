@@ -58,7 +58,7 @@ function evaluateExpression(expression: unknown, values: Readonly<Record<string,
     }
     return { state: 'visible', visible: true }
   }
-  if (candidate.kind !== 'equals' && candidate.kind !== 'includes' && candidate.kind !== 'exists') {
+  if (candidate.kind !== 'equals' && candidate.kind !== 'oneOf' && candidate.kind !== 'includes' && candidate.kind !== 'exists') {
     return unsupported('visibility operator is unsupported')
   }
   if (!('path' in candidate)) return unsupported('visibility path is missing')
@@ -69,6 +69,11 @@ function evaluateExpression(expression: unknown, values: Readonly<Record<string,
   if (candidate.kind === 'exists') {
     if (typeof candidate.expected !== 'boolean') return unsupported('visibility existence expectation is invalid')
     return { state: resolved.exists === candidate.expected ? 'visible' : 'hidden', visible: resolved.exists === candidate.expected }
+  }
+  if (candidate.kind === 'oneOf') {
+    if (!Array.isArray(candidate.values)) return unsupported('visibility oneOf values are invalid')
+    const visible = candidate.values.some((value) => equalValue(resolved.value, value))
+    return { state: visible ? 'visible' : 'hidden', visible }
   }
   if (!('value' in candidate)) return unsupported('visibility comparison value is missing')
   if (candidate.kind === 'includes') {

@@ -272,7 +272,7 @@ describe('G4-E onsite inspection dynamic Action Content', () => {
     expect(dynamicActionUnsupportedFieldsFor(form).map((field) => field.key)).not.toContain('followUpPhoto')
   })
 
-  it('marks checkbox and cascade fields unsupported instead of rendering scalar choices', () => {
+  it('supports checkbox and cascade fields without scalarizing their values', () => {
     const form: DynamicFormRead = {
       fields: [
         {
@@ -294,13 +294,10 @@ describe('G4-E onsite inspection dynamic Action Content', () => {
       ],
       values: {},
     }
-    expect(dynamicActionUnsupportedFieldsFor(form).map((field) => field.key)).toEqual([
-      'inspectionChecks',
-      'inspectionPath',
-    ])
+    expect(dynamicActionUnsupportedFieldsFor(form).map((field) => field.key)).toEqual([])
   })
 
-  it('marks backend multi-value select and bizSelect fields unsupported instead of scalarizing them', () => {
+  it('supports declared multi-value choices without scalarizing them', () => {
     const form: DynamicFormRead = {
       fields: [
         {
@@ -325,10 +322,12 @@ describe('G4-E onsite inspection dynamic Action Content', () => {
       values: {},
     }
 
-    expect(dynamicActionUnsupportedFieldsFor(form).map((field) => field.key)).toEqual([
-      'inspectionContent',
-      'serviceGoods',
-    ])
+    expect(dynamicActionUnsupportedFieldsFor(form).map((field) => field.key)).toEqual([])
+
+    expect(dynamicActionUnsupportedFieldsFor({
+      fields: [{ ...form.fields[0], options: undefined }],
+      values: {},
+    }).map((field) => field.key)).toEqual(['inspectionContent'])
   })
 
   it('guards media picker and upload with the effective field state', async () => {
@@ -434,7 +433,10 @@ describe('G4-E onsite inspection dynamic Action Content', () => {
       mockLatencyMs: 0,
       getMockActor: () => ({ userId, roleId }),
     })
-    const read = createRoleScopedTechnicianApiReadAdapter(readTransport, () => roleId)
+    const read = createRoleScopedTechnicianApiReadAdapter(readTransport, () => roleId, {
+      cascadeTenantId: 'synthetic-tenant',
+      codeTenantId: 'synthetic-tenant',
+    })
     const detail = await read.getWorkOrderDetail(asOpaqueId<'WorkOrderId'>(mockCommandScenarioIds.inspectionSuccess))
     expect(detail.state).toBe('succeeded')
     expect(detail.data?.workflowNodes?.[0]).toMatchObject({
@@ -462,7 +464,10 @@ describe('G4-E onsite inspection dynamic Action Content', () => {
       mockLatencyMs: 0,
       getMockActor: () => ({ userId, roleId }),
     })
-    const read = createRoleScopedTechnicianApiReadAdapter(readTransport, () => roleId)
+    const read = createRoleScopedTechnicianApiReadAdapter(readTransport, () => roleId, {
+      cascadeTenantId: 'synthetic-tenant',
+      codeTenantId: 'synthetic-tenant',
+    })
     const commandTransport = createUniApiCommandTransport({
       apiBaseUrl: 'https://example.invalid',
       getSessionRef: () => session.sessionRef,
@@ -479,6 +484,23 @@ describe('G4-E onsite inspection dynamic Action Content', () => {
       expectedWorkflowRunId: detail.data?.workflowRunId,
     })
     expect(initial).toMatchObject({ state: 'succeeded', data: { values: {} } })
+    expect(initial.data?.fields.find((field) => field.key === 'part')?.options).toEqual([
+      { value: 'repair-part-code-001', label: '屋面' },
+      { value: 'repair-part-code-002', label: '外墙' },
+      { value: 'repair-part-code-003', label: '卫生间' },
+    ])
+    expect(initial.data?.fields.find((field) => field.key === 'isQualified')?.options).toEqual([
+      { value: '0', label: '不合格' },
+      { value: '1', label: '合格' },
+    ])
+    const initialFields = dynamicActionFieldsFor(initial.data!)
+    expect(initialFields.find((field) => field.key === 'part')?.runtime.capability).toBe('SUPPORTED_GENERIC')
+    expect(initialFields.find((field) => field.key === 'isQualified')?.runtime.capability).toBe('SUPPORTED_GENERIC')
+    const selectedPart = {
+      ...initial.data!,
+      values: { part: ['repair-part-code-001'] },
+    }
+    expect(dynamicActionFieldsFor(selectedPart).find((field) => field.key === 'length')?.runtime.visible).toBe(true)
 
     const saved = await commands.saveDynamicForm!({
       workOrderId: asOpaqueId<'WorkOrderId'>(mockCommandScenarioIds.inspectionSuccess),
@@ -543,7 +565,11 @@ describe('G4-E onsite inspection dynamic Action Content', () => {
       'part', 'inspectionSOP', 'inspectionContent', 'isQualified', 'serviceGoods',
     ]))
     expect(definition.data?.fields?.find((field) => field.key === 'length')).toMatchObject({
-      visibility: { kind: 'equals', path: 'part', value: ['observed-option-a', 'observed-option-b'] },
+      visibility: {
+        kind: 'oneOf',
+        path: 'part',
+        values: [['repair-part-code-001'], ['repair-part-code-002']],
+      },
     })
     expect(request).not.toHaveBeenCalled()
   })

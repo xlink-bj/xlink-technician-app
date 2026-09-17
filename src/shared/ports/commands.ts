@@ -22,6 +22,7 @@ export type AppointmentFieldValue = string | number | boolean | null
 export interface AppointmentFormOption {
   readonly value: string
   readonly label: string
+  readonly children?: readonly AppointmentFormOption[]
 }
 
 export interface AppointmentFormFieldRead {
