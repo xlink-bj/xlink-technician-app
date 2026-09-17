@@ -607,3 +607,488 @@ category, form widget, upload path or media persistence in Phase 0.
 - G4-F or later work started: **NO**
 - Evidence deliverable: **READY FOR REVIEW**
 
+---
+
+# Phase 1 — Engineering Review / Unknown Resolution
+
+Phase 1 reviews only U1–U4 from the Phase 0 record. It is an investigation and
+design decision record; it does not implement G4-E.
+
+## U1 — Arrival / Start Inspection Action Boundary
+
+### Final classification
+
+**UNKNOWN — an independent persisted arrival or start-inspection action is not
+established by repository evidence.**
+
+This is not classified as `NOT SUPPORTED`: the absence of a named endpoint in
+the scanned client source does not prove that the backend has no such action.
+
+### Evidence
+
+- The active inspection-list accept path calls `workflow/process` with the
+  service-appointment ID, runtime node ID and module in
+  `subpackages2/inspectionAppointment/inspectionAppointments.vue:1297-1335`.
+- The active inspection-detail form path calls `biz/extForm/upsert/{formDefId}`
+  in `subpackages2/inspectionAppointment/inspectionAppointment.vue:5825-5886`
+  and then calls `workflow/process` in `6009-6126`.
+- The only detail status mutation found for visit-related outcomes is
+  `basic/inspectionAppointment/upsert.do` in `inspectionAppointment.vue:
+  8814-8881`, used for “does not need visit” / “visit not won” reason data.
+- Terms such as `上门`, `到场` and `勘察` also occur in labels, calendar copy,
+  status filters and comments (`inspectionAppointment.vue:19,5900,5973-5984`;
+  `inspectionAppointments.vue:36-183`). These are not persisted-action
+  evidence.
+- R1's modernization record says the inspection-flow endpoints have no
+  accepted spec and were not exercised: `docs/modernization/
+  API_CHARACTERIZATION.md:88-96`.
+
+No active call chain was found from an arrival/start-inspection UI control to a
+distinct client API and persisted event/state. The R1 `workflow/startWorkflow`
+and `workflow/startSubWorkflow` helpers are used for other historical form or
+subworkflow paths (`inspectionAppointment.vue:5369,7295-7302`), not proven to
+mean “arrive” or “start inspection”.
+
+### Active call/data flow
+
+The evidence-backed inspection-shaped flow is currently:
+
+```text
+service-appointment/detail read
+  -> workflow/runtime-node material
+  -> actor/visibility and node-state filtering
+  -> extField/query for the node form definition
+  -> exact form-data query when a data identity exists
+  -> extForm/upsert
+  -> workflow/process when the node is completed
+  -> detail/subworkflow reread
+```
+
+Concrete R1 symbols are `getSAData` (`5055-5142`), `viewForm` (`5505-5537`),
+`getFields` (`5542-5649`), `getFormData` (`5656-5688`), `saveForm`
+(`5730-5925`) and `process` (`6009-6126`).
+
+### Engineering implication for G4-E
+
+Do not add `arrive`, `arrived`, `start_inspection`, a new status, or a new
+Workflow Runtime category. The minimum implementation may proceed with the
+existing `forms`/`repeat` model only after a sanitized fixture proves that
+Inspection is represented by one of those nodes and that Appointment
+completion is the predecessor.
+
+If R1 later proves an independent action, it must enter as a typed semantic
+intent with an Adapter-owned command and Runtime-owned eligibility/execution
+policy. It must not be derived from a button label, route name, node title or
+status code.
+
+### Remaining uncertainty
+
+The following need R1 workflow-owner evidence or a sanitized read fixture:
+
+- persisted arrival state/event and its identity;
+- persisted start-inspection state/event and its identity;
+- predecessor and concurrency rules;
+- whether the two concepts are separate, combined, or absent in the active
+  workflow;
+- whether a child workflow is created before the inspection form.
+
+## U2 — Effective Inspection Form Fields
+
+### Final classification
+
+**UNKNOWN for the active effective field set; CONFIRMED for the dynamic schema
+envelope.**
+
+The repository proves that the inspection page obtains field rows dynamically;
+it does not contain a current sanitized response proving the complete active
+field set for the selected onsite workflow.
+
+### Evidence
+
+- R1 `getFields` calls `biz/extField/query` with `extId=formDefId`, active state,
+  order and `_all`, filters `showList`/`mpDetailHide`, parses
+  `frontEndConfig`, and derives code/cascade providers
+  (`inspectionAppointment.vue:5542-5616`).
+- R1 renders ordinary fields through type branches and has historical branches
+  for `file`, `area`, `scan`, `addItem`, `bizSelect`, `data`, `sort`, `pushItem`,
+  `evaluate` and `canvas` (`5573-5616`). A branch being present is not proof
+  that it is active in the current production form.
+- The special `inspectionSOP` branch renders a repeatable checklist shape with
+  disabled content/requirement values, qualification, failure causes and
+  images (`inspectionAppointment.vue:3061-3155`).
+- `getInspectionSOP` reads active SOP rows by `part` and order, while
+  `getInspectionCause` reads active failure/suggestion options
+  (`inspectionAppointment.vue:9014-9075`). These are auxiliary reads, not a
+  complete FormDefinition response.
+- R1 validates `inspectionSOPData.isQualified` and requires an image when an
+  item is qualified (`inspectionAppointment.vue:5831-5849`).
+- The strongest static form candidate remains
+  `3807435364983262382`, based on the candidate-specific photo and
+  `InspectionForm` measurement branches (`inspectionAppointment.vue:
+  6967-6991,5890-5899,9424-9442`). Its active membership and complete rows are
+  not proven.
+
+### Active call/data flow
+
+The historical data flow is:
+
+```text
+nodeDef.formDefId
+  -> biz/extField/query
+  -> active/display field rows + frontEndConfig/provider metadata
+  -> optional inspectionSOP / inspectionCause reads
+  -> biz/extForm/query/{formDefId}
+  -> formData values + exts
+  -> field validation/serialization
+  -> extForm/upsert/{formDefId}
+```
+
+R1's existing data callback takes the first returned record and flattens
+`exts` into view values (`inspectionAppointment.vue:5656-5683`). The new App's
+accepted typed boundary keeps this distinction explicit: `FormDefinitionRead`,
+`FormFieldRead`, `FormDataRead` and their read methods are defined in
+`src/shared/ports/api.ts:162-221`; field-array definition identity is the
+requested ID in `src/adapters/api/technician-api.ts:686-712`.
+
+The new App has no G4-E frontend-rendered or submitted field set yet. Its
+backend-supported generic field contract is the normalized Dynamic Form type
+set, not a claim about the active Inspection schema
+(`src/runtimes/dynamic-form/types.ts:6-115`).
+
+### Smallest evidence-backed field contract
+
+Until a form-definition fixture is accepted, G4-E may depend only on this
+envelope:
+
+1. A node supplies an opaque `FormDefinitionId` through Adapter-owned metadata.
+2. The field read returns backend field name, display metadata, type,
+   required/read-only metadata, and verified option/visibility configuration.
+3. Active/display filtering follows the evidenced R1 inputs, but the modern
+   Adapter owns the normalized result and does not expose `nodeDef` or raw
+   field rows.
+4. Form values are keyed by backend field name; `exts` is normalized by the
+   Adapter. Form-definition identity is never a field-row `_id`.
+5. Any field type, option provider, conditional expression, SOP group or media
+   relation not represented by a reviewed normalized capability is explicitly
+   unsupported; it is not silently rendered or submitted.
+
+This is deliberately not a speculative canonical field list. If the accepted
+fixture proves a fully dynamic generic form, `dynamic_form` remains sufficient;
+if it proves the `inspectionSOPData`/repeat/media structures are required, a
+bounded Inspection Action Content projection is needed on top of the Runtime.
+
+### Engineering implication for G4-E
+
+Do not hard-code fields such as `hasLeak`, `requiresRepair`, or a guessed
+inspection checklist. Implement only the fields and rules present in the
+accepted fixture. Reuse the Dynamic Form Runtime for supported generic fields,
+and keep any SOP/repeat/media presentation-specific model outside the generic
+Runtime unless its semantics are shown to be generic.
+
+### Remaining uncertainty
+
+The active FormDefinition response must still establish every field's key,
+purpose, type, required/read-only/nullability/default, options, conditional
+visibility, repeat/group relation and media relation. This is the principal
+U2 blocker for a safe implementation.
+
+## U3 — Write Idempotency / Duplicate Submission Semantics
+
+### Final classification
+
+**No idempotency guarantee is evidenced.** The three mutation classes are
+separate and each is `client-guarded only / server semantics UNKNOWN`.
+
+### Evidence and active flow
+
+#### Form save
+
+- R1 uses `isRepeatClick('saveForm')` and a local `disabled.saveForm` flag before
+  save (`resources/js/common.js:2171-2193`;
+  `inspectionAppointment.vue:5730-5736`). This is a time-based UI guard, not a
+  request identity or server idempotency key.
+- The write is `biz/extForm/upsert/{nodeFormDefId}` with a serialized `dataStr`
+  (`inspectionAppointment.vue:5825-5886`). No explicit request ID or
+  idempotency key is visible in the payload construction.
+- The current App appointment command also performs an upsert followed by
+  `workflow/process` and sends no idempotency key
+  (`src/adapters/api/technician-api-commands.ts:225-265`).
+
+If `_id`/`FormDataId` is present, the backend may update an existing record;
+when it is absent, a retry may create another record. The repository does not
+prove either the exact upsert rule or the server's duplicate behavior.
+
+#### Workflow completion
+
+- R1 sets `disabled.process` before `workflow/process` and rereads after the
+  callback (`inspectionAppointment.vue:6043-6045,6099-6125`). This prevents
+  ordinary double taps in one page instance only.
+- Completion carries runtime node, form-definition/data and work-order IDs
+  (`inspectionAppointment.vue:6059-6073`). There is no request ID in the
+  observed parameter object and no accepted server transition/idempotency
+  contract.
+- The new App prevents an in-memory resubmission after a known successful
+  Appointment command and separates business success from reread/cleanup
+  (`src/features/work-orders/action-workspace.ts:659-724`). This is a useful
+  application safety boundary, not proof of backend idempotency for Inspection.
+
+An ambiguous timeout or lost response can therefore leave the server
+transitioned while the client does not know it. Blindly repeating completion
+could either be rejected by a server guard or repeat a side effect; the
+outcome is UNKNOWN.
+
+#### Media attachment/upload
+
+- R1 obtains a token and calls `wx.uploadFile` to Qiniu
+  (`resources/js/common.js:1120-1170`), then appends the returned URL/key into
+  form state (`1156-1291`). The inspection path uses the same upload family
+  (`inspectionAppointment.vue:9207-9346`).
+- R1 retries a file upload on failure (`common.js:1293-1357`), but no stable
+  media-operation identity or deduplication contract is visible. A response
+  lost after successful object upload could produce an orphan or duplicate
+  attachment on retry.
+- The inspection measurement side write uses `/measurementData/upsert` keyed
+  by form-data ID but exposes no idempotency contract
+  (`inspectionAppointment.vue:9424-9442`).
+
+### Engineering implication for G4-E
+
+The implementation must not advertise automatic safe retry until the backend
+contract is verified. The smallest safe application behavior is:
+
+```text
+single-flight logical operation
+  -> if result is ambiguous, reread exact form/node state
+  -> retry only with a proven update/transition identity
+  -> never create a second form or attachment by blind replay
+```
+
+Form save, workflow completion and media upload need separate operation states.
+The existing `OperationSnapshot` taxonomy can represent retryable versus
+terminal outcomes (`src/shared/types/operation.ts:1-52`), but it does not create
+server-side idempotency.
+
+### Remaining uncertainty
+
+R1 frontend-only evidence cannot establish server duplicate handling. A safe
+G4-E write review still needs a non-production contract fixture or backend
+owner confirmation for:
+
+- upsert create/update behavior and duplicate record handling;
+- workflow transition guards and repeated completion;
+- media object/key deduplication, form association and orphan cleanup;
+- measurement side-write duplicate behavior;
+- server validation/auth failure and ambiguous-response recovery.
+
+## U4 — Offline Media Capability
+
+### Final classification
+
+**PARTIAL INFRASTRUCTURE; offline capture, durable media persistence, deferred
+upload and app-restart recovery are NOT SUPPORTED BY CURRENT EVIDENCE.**
+
+### Evidence
+
+#### WeChat Mini Program
+
+R1's active inspection media path requests an upload token and immediately
+uploads the selected local path to Qiniu (`resources/js/common.js:1120-1170`,
+`inspectionAppointment.vue:9207-9246`). It retries some upload failures and
+reports failure to the caller (`common.js:1293-1357`), but no durable local
+media record, upload queue, restart recovery or per-item persisted progress is
+shown.
+
+The inspection page's `temporaryForm`, `surveyData` and `surveyField` storage
+paths are transient form/survey coordination, not a durable local binary/media
+store (`inspectionAppointment.vue:9966-9988`, `9424-9452`).
+
+#### iOS / Android App via UniApp
+
+The accepted platform contract provides normalized camera/file-picker results
+for MP/App and keeps native mechanics behind adapters
+(`docs/discovery/PLATFORM_CAPABILITY_MATRIX.md:42-44,107-110`). The current App
+has `MediaCapturePort`, `MediaFilePickerPort` and `UploadPort`, but the upload
+adapter is a token/upload bridge that returns an uploaded reference; it is not
+a durable local-media repository or deferred-sync queue
+(`src/shared/ports/platform.ts:40-47`; `src/shared/ports/upload.ts:1-4`;
+`src/adapters/upload/upload-adapter.ts:40-57`).
+
+The current platform adapter normalizes a local reference and capability state
+(`src/adapters/platform/platform-adapters.ts:83-122`), but there is no evidence
+of a persisted file path surviving an App restart, background upload scheduler,
+upload-progress store, or offline replay.
+
+The platform matrix explicitly separates file selection, upload, and retry
+state and records V1 as not offline-first
+(`docs/discovery/PLATFORM_CAPABILITY_MATRIX.md:43-44,51-52`).
+
+### Active capability flow
+
+The current evidence supports:
+
+```text
+MP/App capture or file picker
+  -> normalized LocalMedia reference
+  -> token/upload adapter
+  -> UploadedMediaRef
+  -> form value / business save
+```
+
+It does not support:
+
+```text
+offline capture
+  -> durable local file/media registry
+  -> app restart restoration
+  -> deferred upload after connectivity recovery
+  -> reliable form completion after upload reconciliation
+```
+
+### Engineering implication for G4-E
+
+If the selected G4-E slice is explicitly online-only, reuse the existing
+capture/picker/upload boundaries, preserve a retryable upload state and block
+completion until required media has an uploaded backend reference.
+
+If the selected slice promises offline/weak-network capture, the smallest
+additional architecture is a separately scoped durable local-media record and
+upload lifecycle (`local`, `uploading`, `uploaded`, `failed`) keyed to the
+Action/Draft identity. Generic Action Drafts must store references/status only,
+never binary or base64. This is a Phase 2 design dependency, not an
+implementation in this review.
+
+### Remaining uncertainty
+
+The following require MP and App capability-owner verification before promising
+offline media:
+
+- local file lifetime and restart survival on MP, Android and iOS;
+- upload-token expiry and retry behavior;
+- deterministic media identity/deduplication and delete/replacement semantics;
+- upload progress and cancellation behavior;
+- whether required SOP images are mandatory in the selected active form;
+- whether camera location metadata is required or merely historical coupling.
+
+## Proposed G4-E Minimal Contract
+
+This is the smallest implementation-ready contract that can be stated without
+inventing the four unresolved business areas.
+
+* **Entry:** Enter only from a verified active, actor-visible, supported
+  inspection node whose predecessor conditions are confirmed. Do not invent an
+  arrival or start-inspection command from labels. Runtime remains the
+  authority for visibility, lifecycle, eligibility and execution.
+* **Read:** Read the Work Order/detail workflow context, then the node's
+  FormDefinition by opaque ID. If a FormDataId exists, query that exact record
+  and verify record ID, definition ID and workflow identity. If absent, return
+  an empty editor state; never query an unscoped form-data collection.
+* **Editable form state:** Normalize the backend field rows into the Dynamic
+  Form schema. Render and validate only visible/editable supported fields.
+  Required, read-only, option and conditional rules are Runtime-owned. SOP,
+  repeat/group and custom widgets remain explicit capabilities selected from
+  the accepted fixture.
+* **Draft/save:** Reuse the user-scoped Multi-Draft identity and Action
+  Workspace lifecycle. Draft persistence is local recoverable editor state,
+  not business success. Store normalized JSON-like values and media references
+  only; never credentials, raw envelopes, guessed workflow state or binary.
+* **Media:** Use Platform/API media boundaries. For an online-only slice,
+  required media must reach `uploaded` before completion. For offline capture,
+  do not claim support until durable local-media persistence and deferred
+  upload are separately accepted.
+* **Complete:** Keep form data upsert and workflow node completion as separate
+  business boundaries. Mark success only from normalized command results, then
+  finalize draft state and perform authoritative reread. Never fabricate the
+  next node, status or action.
+* **Retry/idempotency:** Use single-flight commands and explicit operation
+  states. On ambiguous results, reread before retrying. Do not blindly replay a
+  create or attachment operation. Backend idempotency remains a required
+  contract gate.
+* **Offline:** JSON form drafting/recovery can reuse the existing Draft
+  Repository. Offline media capture, deferred upload and restart-safe media
+  recovery are not promised by the current contract.
+* **Non-goals:** No new arrival/start command until proven; no Progress,
+  Appointment expansion, contact/calendar work, generic widget family,
+  continuous tracking, live business mutation, G4-F or later work.
+
+## Proposed Implementation Boundary
+
+### Likely files/modules to change after Phase 2 acceptance
+
+- `src/shared/ports/api.ts` — only minimal typed inspection identity/field
+  metadata proven by the accepted fixture.
+- `src/adapters/api/technician-api.ts` and the command/read adapters — only
+  verified R1 normalization and exact request envelopes.
+- `src/runtimes/workflow/types.ts`, `policy.ts` and/or
+  `detail-projection.ts` — only if U1 proves a missing semantic node/action;
+  otherwise unchanged.
+- `src/runtimes/dynamic-form/*` — only bounded generic capability extensions
+  proven by U2; no speculative custom-widget expansion.
+- `src/features/work-orders/*` — Action Content/application orchestration,
+  reusing the existing Action Workspace rather than adding a parallel flow.
+- `src/shared/ports/upload.ts` and platform/upload adapters — only if the
+  selected media contract requires the existing normalized upload boundary or
+  the separately accepted local-media gap.
+- `src/adapters/api/mock/*` and focused semantic tests — raw backend-shaped
+  synthetic fixtures through the same Adapter → Runtime → Workspace path.
+- Verification/design documentation for the accepted form and command
+  contract.
+
+### Must remain unchanged for this slice
+
+- accepted Appointment behavior and its Runtime-owned execution boundary;
+- conservative Workflow visibility and exact-one current-task semantics;
+- the canonical/legacy-safe Multi-Draft Repository codec and cleanup rules;
+- session/login behavior and real-write default-off safety;
+- current List/Detail visual shell and unrelated shared UI;
+- R1/R2 reference repositories.
+
+### Runtime/API changes required
+
+**NO change is justified by Phase 1 evidence alone.** Existing contracts are
+sufficient for generic dynamic-form interpretation, typed action identity,
+draft isolation and conservative Workflow policy. They are not sufficient to
+claim the active Inspection form schema, an independent arrival/start action,
+server idempotency or offline media persistence. Those gaps must be resolved
+before implementation rather than hidden behind guessed types or commands.
+
+### Legacy paths to avoid
+
+- Do not port `subpackages2/inspectionAppointment/inspectionAppointment.vue`
+  as a page architecture.
+- Do not put `common.osg.ajax`, raw `nodeDef`, raw workflow/status codes or
+  direct `wx.uploadFile` calls into the new Runtime/page.
+- Do not use `temporaryForm`, `surveyData` or `surveyField` as the new
+  multi-draft/media identity model.
+- Do not use source index, route/menu order, labels or colors as identity,
+  eligibility or transition semantics.
+- Do not use R2 workflow labels as R1 backend truth.
+
+## Phase 2 Go / No-Go Checklist
+
+Phase 2 implementation is **BLOCKED** at this checkpoint.
+
+| Gate | Required before implementation | Current result |
+| --- | --- | --- |
+| U1 action boundary | Confirm independent arrival/start action, or explicitly accept a minimum slice that excludes it and proves Inspection entry through an existing node. | **OPEN / BLOCKING** |
+| U2 effective form | Provide a sanitized active node/form/field fixture and approve the smallest field/control capability set. | **OPEN / BLOCKING** |
+| U3 duplicate safety | Establish form-save, completion and media retry/idempotency behavior, or approve a design that never auto-retries ambiguous writes and rereads before any manual retry. | **OPEN / BLOCKING for full submit** |
+| U4 media scope | Decide online-only versus offline media. If required SOP media is in scope, approve upload/reference and recovery semantics; if not, explicitly exclude media from V1. | **OPEN / BLOCKING as a scope decision** |
+| Authority | R1 contract accepted; R2 remains UX/IA only; no guessed labels/statuses become backend truth. | **PASS** |
+| Safety | No live writes, no production data, real writes default-off, synthetic IDs isolated. | **PASS** |
+| Architecture | Existing Workflow/Action/Draft/Form boundaries remain the target; no second policy/draft engine. | **PASS** |
+
+No unresolved UNKNOWN can currently be declared safely outside the smallest
+full onsite-inspection slice: U1 and U2 determine what the action and data are;
+U3 determines whether submission can be safely retried; U4 determines whether
+R1's required inspection images are deliverable in the intended field
+conditions. Therefore implementation must not start yet.
+
+## Phase 1 disposition
+
+- Product/runtime behavior changed: **NO**
+- G4-E implementation started: **NO**
+- Runtime/API contracts added or modified: **NO**
+- Live Beta/Production writes executed: **NO**
+- New offline subsystem introduced: **NO**
+- G4-F or later work started: **NO**
+- Phase 2: **BLOCKED pending U1–U4 acceptance**
