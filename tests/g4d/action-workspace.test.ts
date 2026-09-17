@@ -356,7 +356,7 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
     const result = await store.submit()
     expect(result.state).toBe('succeeded')
     expect(store.lifecycle).toBe('succeeded')
-    expect(storage.storage.remove).toHaveBeenCalledTimes(1)
+    expect(storage.storage.remove).toHaveBeenCalledTimes(2)
     expect(storage.values.size).toBe(0)
     expect(api.getWorkOrderDetail).toHaveBeenCalledTimes(2)
     expect((await draftRepository.listForUser(session.user.id)).data?.entries).toHaveLength(0)

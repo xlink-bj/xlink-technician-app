@@ -97,8 +97,13 @@ This identity must prevent draft leakage:
 
 A visible title, field label, customer name, form name, or array index is never a valid draft identity.
 
-The serialized key uses a tagged optional content-identity segment, so an
-absent content identity cannot collide with a literal value such as `none`.
+The canonical serialized key uses codec version `2` and a tagged optional
+content-identity segment, so an absent content identity cannot collide with a
+literal value such as `none`. Codec version `1` remains read/remove compatible
+for drafts persisted before the upgrade: reads try canonical then legacy,
+registry listing recognizes both formats and deduplicates by Action Identity,
+and new writes use only the canonical format. Listing does not perform a
+destructive migration.
 
 ### One latest unfinished draft per Action Identity
 

@@ -99,14 +99,33 @@ export function actionDraftIdentityFor(action: ActionIdentity): ActionDraftIdent
 }
 
 export function actionDraftStorageKey(identity: ActionDraftIdentity): string {
-  // Prefix the optional segment so absence and a literal content identity such
-  // as "none" remain distinct without relying on a reserved user value.
+  // Codec v2 uses a tagged optional segment so absence and a literal content
+  // identity such as "none" remain distinct without relying on a reserved
+  // user value.
   const contentIdentity = identity.contentIdentity === undefined
     ? 'u'
     : `v${encodeURIComponent(String(identity.contentIdentity))}`
   return [
     'action-workspace',
-    String(identity.version),
+    '2',
+    encodeURIComponent(String(identity.userId)),
+    encodeURIComponent(String(identity.workOrderId)),
+    encodeURIComponent(String(identity.workflowNodeId)),
+    encodeURIComponent(identity.actionIntent),
+    encodeURIComponent(identity.contentKind),
+    encodeURIComponent(contentIdentity),
+  ].join(':')
+}
+
+/**
+ * The v1 key format is read/remove compatibility only. New writes must use
+ * actionDraftStorageKey so an app upgrade cannot create an identity collision.
+ */
+export function actionDraftLegacyStorageKey(identity: ActionDraftIdentity): string {
+  const contentIdentity = identity.contentIdentity ?? 'none'
+  return [
+    'action-workspace',
+    '1',
     encodeURIComponent(String(identity.userId)),
     encodeURIComponent(String(identity.workOrderId)),
     encodeURIComponent(String(identity.workflowNodeId)),
@@ -117,6 +136,10 @@ export function actionDraftStorageKey(identity: ActionDraftIdentity): string {
 }
 
 export function actionDraftStorageKeyPrefixForUser(userId: UserId): string {
+  return ['action-workspace', '2', encodeURIComponent(String(userId))].join(':') + ':'
+}
+
+export function actionDraftLegacyStorageKeyPrefixForUser(userId: UserId): string {
   return ['action-workspace', '1', encodeURIComponent(String(userId))].join(':') + ':'
 }
 

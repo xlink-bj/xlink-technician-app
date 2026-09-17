@@ -2,6 +2,8 @@ export {
   actionContentKindForIntent,
   actionDraftIdentityFor,
   actionDraftIdentityMatches,
+  actionDraftLegacyStorageKey,
+  actionDraftLegacyStorageKeyPrefixForUser,
   actionDraftStorageKey,
   actionDraftStorageKeyPrefixForUser,
   actionExecutionForWorkflowDecision,

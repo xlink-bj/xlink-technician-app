@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   actionDraftIdentityFor,
+  actionDraftLegacyStorageKey,
   actionDraftStorageKey,
   createActionDraftRepository,
 } from '@runtimes/action'
@@ -143,6 +144,31 @@ describe('Action Draft Repository', () => {
     expect((await repository.listForUser(userA)).data?.entries).toHaveLength(2)
     expect((await repository.read<Record<string, unknown>>(withoutContent)).data?.values).toEqual({ branch: 'absent' })
     expect((await repository.read<Record<string, unknown>>(literalNone)).data?.values).toEqual({ branch: 'literal' })
+  })
+
+  it('restores legacy drafts after the key codec upgrade and cleans both formats', async () => {
+    const { storage, values } = storageFor()
+    const repository = createActionDraftRepository(storage)
+    const existing = identity()
+    const legacyKey = actionDraftLegacyStorageKey(existing)
+    const canonicalKey = actionDraftStorageKey(existing)
+    values.set(`draft:${legacyKey}`, recordFor(existing, { source: 'pre-upgrade' }, '2026-09-17T09:00:00.000Z'))
+
+    expect(legacyKey).toContain('action-workspace:1:')
+    expect(canonicalKey).toContain('action-workspace:2:')
+    expect((await repository.read<Record<string, unknown>>(existing)).data?.values).toEqual({ source: 'pre-upgrade' })
+    expect((await repository.listForUser(userA)).data?.entries).toHaveLength(1)
+
+    await repository.write(recordFor(existing, { source: 'post-upgrade' }, '2026-09-17T10:00:00.000Z'))
+    expect(values.has(`draft:${canonicalKey}`)).toBe(true)
+    expect(values.has(`draft:${legacyKey}`)).toBe(true)
+    expect((await repository.listForUser(userA)).data?.entries).toHaveLength(1)
+    expect((await repository.read<Record<string, unknown>>(existing)).data?.values).toEqual({ source: 'post-upgrade' })
+
+    await repository.remove(existing)
+    expect(values.has(`draft:${canonicalKey}`)).toBe(false)
+    expect(values.has(`draft:${legacyKey}`)).toBe(false)
+    expect((await repository.read<Record<string, unknown>>(existing)).data).toBeNull()
   })
 
   it('counts malformed records, ignores mismatched records, and never throws on malformed identity values', async () => {
