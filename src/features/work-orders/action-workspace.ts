@@ -540,6 +540,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
             definitionId: node.formDefinitionId!,
             ...(node.formDataId ? { formDataId: node.formDataId } : {}),
             ...(read.data.workflowRunId ? { expectedWorkflowRunId: read.data.workflowRunId } : {}),
+            ...(currentTask.formFieldIdsReadOnly ? { workflowReadOnlyFieldIds: currentTask.formFieldIdsReadOnly } : {}),
           })
         : failure<DynamicFormRead>('unsupported_capability', 'Dynamic form content is unavailable')
     if (requestVersion !== loadVersion) return failure('cancelled', 'Action Workspace load was superseded')
@@ -551,6 +552,17 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       return failureFrom<AppointmentFormRead | DynamicFormRead, ActionDescriptor>(form)
     }
 
+    const formPurpose = isAppointmentAction
+      ? 'appointment' as const
+      : (form.data as DynamicFormRead).purpose ?? currentTask.formPurpose
+    if (currentTask.formPurpose && formPurpose && currentTask.formPurpose !== formPurpose) {
+      detail.value = read.data
+      loadState.value = 'blocked'
+      lifecycle.value = 'blocked'
+      error.value = createOperationError('unsupported_capability', 'Dynamic form semantic identity is inconsistent')
+      return failure('unsupported_capability', 'Dynamic form semantic identity is inconsistent')
+    }
+
     const nextDescriptor: ActionDescriptor = {
       userId: session.user.id,
       workOrderId: read.data.id,
@@ -559,13 +571,14 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       contentKind,
       title: currentTask.title,
       execution: actionExecutionForWorkflowDecision(currentTask.execution),
+      ...(formPurpose ? { formPurpose } : {}),
       ...(form.data.definitionId ? { contentIdentity: form.data.definitionId } : {}),
     }
     const nextIdentity = actionDraftIdentityFor(nextDescriptor)
     detail.value = read.data
     descriptor.value = nextDescriptor
     appointmentForm.value = isAppointmentAction ? form.data as AppointmentFormRead : null
-    dynamicForm.value = isDynamicAction ? form.data as DynamicFormRead : null
+    dynamicForm.value = isDynamicAction ? { ...(form.data as DynamicFormRead), ...(formPurpose ? { purpose: formPurpose } : {}) } : null
     dynamicFormSaveState.value = isDynamicAction && form.data.dataId ? 'saved' : 'not_saved'
     mediaByField.value = {}
     mediaInFlightField.value = null

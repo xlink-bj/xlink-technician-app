@@ -39,11 +39,10 @@ R1 provides strong evidence for the following bounded facts:
   calls in the Legacy flow: `biz/extForm/upsert/{formDefId}`
   (`5881-5886`) is followed by `workflow/process` (`6099-6126`) for the
   relevant non-save-only path.
-- The strongest static candidate for an inspection form is form definition
-  `3807435364983262382`, because the source applies inspection-specific photo
-  limits and survey/inspection handling to it (`inspectionAppointment.vue:
-  6971-6991`, `5890-5899`, `9431-9442`). This proves historical behavior at
-  that call site, not that this is the complete active V1 form set.
+- The Legacy source contains a historical candidate form identity whose
+  inspection-specific photo and survey/inspection handling are useful only as
+  compatibility evidence. This proves behavior at that call site, not the
+  complete active V1 form set or Survey identity.
 
 The following remain UNKNOWN and block implementation claims:
 
@@ -57,9 +56,10 @@ The following remain UNKNOWN and block implementation claims:
   if so, the durable local-media contract;
 - the authoritative post-submit workflow/status/next-action result.
 
-Decision: **Phase 0/1 evidence is accepted. Phase 2 is limited to the existing
-verified inspection-node boundary and leaves the UNKNOWNs below outside the
-implementation.**
+Decision: **Phase 0/1 evidence is accepted. The current bounded rebase is
+limited to verified Survey semantic routing and effective contract fidelity;
+arrival/start-inspection and the separate InspectionAppointment domain remain
+outside this implementation.**
 
 ## 1A. Current Beta contract and Mock source of truth
 
@@ -131,12 +131,35 @@ existing raw-response Adapter and Dynamic Form Runtime. The historical
 15-field hybrid remains isolated in `inspection-contract.ts` and is not part
 of the G4-E application route.
 
-Current provider status in the committed snapshot:
+### Rebased Survey contract used by the current application
+
+The dedicated machine-readable artifact is
+`contracts/beta/survey/historical.json`. It is a sanitized, historical-inactive
+Beta Survey family capture with 61 field rows. It is the only Survey Mock
+source in this branch; the R2 screenshots remain presentation/IA references
+only. The raw field-row response is generated mechanically from this artifact,
+then resolved through the normal Adapter, provider reads and Dynamic Form
+Runtime before reaching Action Workspace.
+
+The artifact retains row identity (`fieldId`) separately from the FormData
+business key (`valueKey`). The confirmed repeated keys are `province`,
+`length`, `width` and `gap4`. Conditional metadata, required/read-only flags,
+ordering, multiple-value shape and provider status are retained; unsupported
+or unverified capabilities remain explicit and block completion.
+
+The verified Survey providers are `parts` (hierarchical multistage), `regions`
+and `IS` (batch code). `projPackage` and custom `leakageCause` are UNKNOWN;
+the Mock does not fabricate their options. Survey copy is selected only after
+the Adapter proves `formPurpose=survey` through backend semantic metadata.
+Generic dynamic forms remain unclassified and use generic Action Content;
+Appointment remains a separate `appointment` purpose.
+
+Provider status in the quarantined legacy compatibility artifact:
 
 | Provider | Status | Disposition |
 | --- | --- | --- |
 | `parts` | VERIFIED | R1 multistage cascade response retained. |
-| `qualified` | VERIFIED | R1 batch code response retained. |
+| `qualified` | VERIFIED | Legacy Inspection compatibility only; not Survey provider evidence. |
 | `projPackage` | UNKNOWN | No options fabricated; completion remains guarded. |
 | `inspectionSOP` | UNKNOWN | Custom record contract not fabricated. |
 | `inspectionContent` | UNKNOWN | Multi-value provider not fabricated. |
@@ -158,9 +181,10 @@ login, service-appointment detail/workflow reads, field definitions, exact
 form data, and evidenced provider reads are allowlisted. Workflow process,
 form writes, accept/order, upload/media, and unknown routes are blocked.
 Provider verification is structural (`VERIFIED`, `PARTIAL`, or `UNKNOWN`),
-not inferred from HTTP 200. In particular, `inspectionSOP` uses a dedicated
-shape sanitizer and `inspectionContent` remains `UNKNOWN` until a real option
-provider is evidenced.
+not inferred from HTTP 200. For the Survey artifact, `projPackage` and custom
+`leakageCause` remain UNKNOWN; the legacy `inspectionSOP` and
+`inspectionContent` providers are isolated to the separate Inspection
+compatibility artifact.
 
 ## 2. R1 business sequence
 
@@ -317,11 +341,11 @@ The G4-D lesson is retained: a field-row `_id` is not form-definition
 identity. The Adapter uses the requested form-definition ID for field-array
 responses (`src/adapters/api/technician-api.ts:686-708`).
 
-## 5. Inspection Form evidence
+## 5. Legacy Inspection Form compatibility evidence (not Survey)
 
 ### Strongest candidate, with a confidence limit
 
-`3807435364983262382` is the strongest static inspection-form candidate:
+The Legacy source contains a strongest static inspection-form candidate:
 
 - inspection-specific maximum photo handling is gated on it
   (`inspectionAppointment.vue:6967-6991`);
@@ -334,9 +358,9 @@ responses (`src/adapters/api/technician-api.ts:686-708`).
 The source does not contain a committed response fixture enumerating the
 current field rows for this form. Therefore this ID is **a historical candidate,
 not an accepted complete active-form registry entry**. The appointment form
-`2522989775781119510` and survey/quotation form `7971040108398070730` must not
-be conflated with the Inspection form; their separate fixed-ID behavior is
-recorded in `docs/discovery/DYNAMIC_FORM_CAPABILITY_MATRIX.md:105-113`.
+The appointment and Survey/quotation form families must not be conflated with
+the Inspection form; their separate fixed-ID behavior is recorded in
+`docs/discovery/DYNAMIC_FORM_CAPABILITY_MATRIX.md:105-113`.
 
 ### Field evidence actually observed
 
@@ -360,7 +384,7 @@ fixture before implementation: complete backend field names, labels/purpose,
 all types, nullability/defaults, option values, conditional expressions,
 repeat/group schema, cascade dependencies, and every media relation.
 
-## 6. Dynamic Form capability matrix
+## 6. Dynamic Form capability matrix and legacy Inspection notes
 
 The current Dynamic Form Runtime is the data/rule engine, not the final
 Inspection presentation. Its normalized type set and field-state contract are
@@ -739,7 +763,7 @@ added in Phase 0.
 | --- | --- | --- |
 | Arrival / `上门` transition | No active named arrival command found; inspection API spec absent (`API_CHARACTERIZATION.md:88-96`). | R1 workflow owner + sanitized runtime fixture. |
 | Separate `开始勘察` action | No active named start-inspection action found. | R1 workflow owner; compare node metadata and process parameters. |
-| Active Inspection form registry | `3807435364983262382` is a strong historical candidate, not an active registry proof (`inspectionAppointment.vue:6967-6991`). | Read-only form/node fixture. |
+| Active Inspection form registry | A strong historical candidate exists, but it is not active registry proof (`inspectionAppointment.vue:6967-6991`). | Read-only form/node fixture. |
 | Complete field schema | Field rows are fetched dynamically; static source cannot enumerate current rows (`inspectionAppointment.vue:5542-5561`). | Sanitized `extField/query` response. |
 | Required/options/conditional/repeat semantics | Legacy branches exist, but active precedence and selected field behavior are not proven. | Form fixture plus Dynamic Form Runtime mapping review. |
 | Exact form-data cardinality/history | R1 consumes first result of an array and repeat uses a separate list query (`5656-5683`, `8675-8723`). | Backend read contract and representative records. |
@@ -911,11 +935,10 @@ field set for the selected onsite workflow.
   complete FormDefinition response.
 - R1 validates `inspectionSOPData.isQualified` and requires an image when an
   item is qualified (`inspectionAppointment.vue:5831-5849`).
-- The strongest static form candidate remains
-  `3807435364983262382`, based on the candidate-specific photo and
-  `InspectionForm` measurement branches (`inspectionAppointment.vue:
-  6967-6991,5890-5899,9424-9442`). Its active membership and complete rows are
-  not proven.
+- The strongest static form candidate remains a historical, candidate-specific
+  branch based on photo and `InspectionForm` measurement handling
+  (`inspectionAppointment.vue:6967-6991,5890-5899,9424-9442`). Its active
+  membership and complete rows are not proven.
 
 ### Active call/data flow
 
@@ -939,15 +962,16 @@ accepted typed boundary keeps this distinction explicit: `FormDefinitionRead`,
 `src/shared/ports/api.ts:162-221`; field-array definition identity is the
 requested ID in `src/adapters/api/technician-api.ts:686-712`.
 
-The new App has no G4-E frontend-rendered or submitted field set yet. Its
-backend-supported generic field contract is the normalized Dynamic Form type
-set, not a claim about the active Inspection schema
-(`src/runtimes/dynamic-form/types.ts:6-115`).
+The current G4-E Survey route uses the normalized Dynamic Form type set and
+the dedicated historical Survey contract described in section 1A. The
+Inspection-specific material in this section remains compatibility evidence
+only; it is not a field list or semantic source for Survey.
 
 ### Smallest evidence-backed field contract
 
-Until a form-definition fixture is accepted, G4-E may depend only on this
-envelope:
+For the legacy Inspection path, the pre-capture envelope was intentionally
+minimal. The current Survey path instead depends on the sanitized 61-row
+artifact and the following identity boundary:
 
 1. A node supplies an opaque `FormDefinitionId` through Adapter-owned metadata.
 2. The field read returns backend field name, display metadata, type,
@@ -976,10 +1000,10 @@ Runtime unless its semantics are shown to be generic.
 
 ### Remaining uncertainty
 
-The active FormDefinition response must still establish every field's key,
-purpose, type, required/read-only/nullability/default, options, conditional
-visibility, repeat/group relation and media relation. This is the principal
-U2 blocker for a safe implementation.
+The active Production FormDefinition response must still establish every
+Survey field's parity, provider behavior and media relation. The historical
+Beta artifact is sufficient for the bounded development Mock, but it is not a
+Production registry and does not authorize guessed fields or writes.
 
 ## U3 — Write Idempotency / Duplicate Submission Semantics
 
@@ -1252,9 +1276,12 @@ before implementation rather than hidden behind guessed types or commands.
   eligibility or transition semantics.
 - Do not use R2 workflow labels as R1 backend truth.
 
-## Phase 2 Go / No-Go Checklist
+## Phase 2 Go / No-Go Checklist (pre-Survey-rebase record)
 
-Phase 2 implementation is **BLOCKED** at this checkpoint.
+The table below records the earlier pre-capture gate and is retained for
+auditability. It is superseded for the bounded Survey semantic-routing and
+effective-contract-fidelity work by the current disposition immediately below;
+it does not authorize arrival/start-inspection or InspectionAppointment work.
 
 | Gate | Required before implementation | Current result |
 | --- | --- | --- |
@@ -1270,14 +1297,19 @@ No unresolved UNKNOWN can currently be declared safely outside the smallest
 full onsite-inspection slice: U1 and U2 determine what the action and data are;
 U3 determines whether submission can be safely retried; U4 determines whether
 R1's required inspection images are deliverable in the intended field
-conditions. Therefore implementation must not start yet.
+conditions. Therefore the broader onsite-inspection slice must not start from
+this record.
 
-## Phase 1 disposition
+## Current Survey rebase disposition
 
-- Product/runtime behavior changed: **NO**
-- G4-E implementation started: **NO**
-- Runtime/API contracts added or modified: **NO**
+- Survey semantic routing added: **YES, bounded to Adapter-proven purpose**
+- Survey effective contract artifact: **YES, sanitized historical-inactive Beta family**
+- Product/runtime behavior changed: **YES, only the bounded generic/Survey routing path**
+- G4-E implementation started: **YES, bounded Survey contract fidelity only**
+- Runtime/API contracts added or modified: **YES, normalized purpose/row metadata only**
 - Live Beta/Production writes executed: **NO**
 - New offline subsystem introduced: **NO**
 - G4-F or later work started: **NO**
-- Phase 2: **BLOCKED pending U1–U4 acceptance**
+- Arrival/start-inspection semantics: **DEFERRED / UNKNOWN**
+- InspectionAppointment implementation: **NOT STARTED**
+- Survey active Production schema parity: **UNKNOWN**

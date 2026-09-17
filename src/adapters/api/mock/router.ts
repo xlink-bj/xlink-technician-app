@@ -9,6 +9,7 @@ import {
   mockRoleFunctionResponse,
   mockSanodeListResponse,
   mockStatusOptionsResponse,
+  mockSurveyCodeOptionsResponse,
   mockCommandScenarioIds,
   mockSyntheticDynamicFormDefinitionId,
   mockSyntheticInspectionFormDefinitionResponse,
@@ -84,6 +85,10 @@ export function isMockOwnedCommand(
   path: string,
   requestData: Readonly<Record<string, unknown>> = {},
 ): boolean {
+  const route = normalizedPath(path)
+  const syntheticFormMutation =
+    route === `biz/extForm/upsert/${mockSyntheticDynamicFormDefinitionId}`
+    || route === `biz/extForm/upsert/${mockSurveyFormDefinitionId}`
   const values = [requestData.sid, requestData.saId]
   const serialized = requestData.dataStr
   if (typeof serialized === 'string') {
@@ -94,7 +99,7 @@ export function isMockOwnedCommand(
       // A malformed command is still handled by the real adapter as a failure.
     }
   }
-  return values.some((value) => typeof value === 'string' && isSyntheticWorkOrderId(value))
+  return syntheticFormMutation || values.some((value) => typeof value === 'string' && isSyntheticWorkOrderId(value))
 }
 
 function clonedResponse<T>(value: T): T {
@@ -372,6 +377,18 @@ function matchedResponse(
   if (route === 'function/changeRole') return mockRoleFunctionResponse
   if (route === 'code/query' && requestData.valueOption === 'STATUS') {
     return mockStatusOptionsResponse
+  }
+  if (route === 'i/code/selectCode.do') {
+    const rawValue = typeof requestData.jsonPara === 'string' ? requestData.jsonPara : ''
+    try {
+      const entries = JSON.parse(rawValue)
+      const valueOption = Array.isArray(entries) && typeof entries[0]?.eleid === 'string'
+        ? entries[0].eleid
+        : undefined
+      if (valueOption) return mockSurveyCodeOptionsResponse(valueOption)
+    } catch {
+      return []
+    }
   }
   if (route === 'i/code/selectMultistageCode.do' && requestData.types === 'repairParts') {
     return mockRepairPartsCascadeResponse

@@ -252,6 +252,7 @@ export class TechnicianApiCommandAdapter implements TechnicianApiCommandPort {
       values,
       ...(generic.data.definitionId ? { definitionId: generic.data.definitionId } : {}),
       ...(generic.data.dataId ? { dataId: generic.data.dataId } : {}),
+      ...(generic.data.purpose ? { purpose: generic.data.purpose } : {}),
     })
   }
 
@@ -269,8 +270,10 @@ export class TechnicianApiCommandAdapter implements TechnicianApiCommandPort {
     if (!input.formDataId) {
       return succeeded({
         definitionId: resolvedDefinition.data.id,
+        ...(resolvedDefinition.data.purpose ? { purpose: resolvedDefinition.data.purpose } : {}),
         fields: resolvedDefinition.data.fields ?? [],
         values: {},
+        ...(input.workflowReadOnlyFieldIds ? { workflowReadOnlyFieldIds: input.workflowReadOnlyFieldIds } : {}),
       })
     }
 
@@ -293,10 +296,12 @@ export class TechnicianApiCommandAdapter implements TechnicianApiCommandPort {
 
     return succeeded({
       definitionId: resolvedDefinition.data.id,
+      ...(resolvedDefinition.data.purpose ? { purpose: resolvedDefinition.data.purpose } : {}),
       fields: resolvedDefinition.data.fields ?? [],
       values: first?.values ?? {},
       ...(first?.id ? { dataId: first.id } : {}),
       ...(first?.workflowRunId ? { workflowRunId: first.workflowRunId } : {}),
+      ...(input.workflowReadOnlyFieldIds ? { workflowReadOnlyFieldIds: input.workflowReadOnlyFieldIds } : {}),
     })
   }
 

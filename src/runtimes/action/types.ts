@@ -1,4 +1,5 @@
 import type { FormDefinitionId, FormDataId, UserId, WorkOrderId, WorkflowNodeRuntimeId } from '@shared/types'
+import type { FormPurpose } from '@shared/ports'
 import type { WorkflowActionIntent } from '@runtimes/workflow'
 
 /** Content kinds are an explicit plug-in boundary for future Actions. */
@@ -48,6 +49,8 @@ export interface ActionIdentity {
 export interface ActionDescriptor extends ActionIdentity {
   readonly title: string
   readonly execution: ActionExecution
+  /** Semantic form identity resolved by the Adapter, not inferred from intent. */
+  readonly formPurpose?: FormPurpose
 }
 
 export interface ActionDraftIdentity {

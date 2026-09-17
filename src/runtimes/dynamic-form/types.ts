@@ -43,6 +43,11 @@ export interface FormFieldSchema {
   readonly type: string
   readonly required?: boolean
   readonly readOnly?: boolean
+  readonly order?: number
+  readonly state?: number | string
+  readonly fixed?: string | number | boolean
+  readonly operationType?: string | number
+  readonly presentation?: Readonly<Record<string, string | number | boolean>>
   readonly multiple?: boolean
   readonly visibility?: VisibilityExpression
   readonly valueOption?: string

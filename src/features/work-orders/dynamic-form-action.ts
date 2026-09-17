@@ -37,6 +37,11 @@ function schemaFor(
     type: field.type,
     required: field.required,
     readOnly: field.readOnly,
+    ...(field.order !== undefined ? { order: field.order } : {}),
+    ...(field.state !== undefined ? { state: field.state } : {}),
+    ...(field.fixed !== undefined ? { fixed: field.fixed } : {}),
+    ...(field.operationType !== undefined ? { operationType: field.operationType } : {}),
+    ...(field.presentation ? { presentation: field.presentation as Readonly<Record<string, string | number | boolean>> } : {}),
     ...(field.multiple ? { multiple: field.multiple } : {}),
     ...(field.options?.length ? { inlineOptions: field.options } : {}),
     ...(field.visibility ? { visibility: field.visibility } : {}),
@@ -53,14 +58,21 @@ function toFormValue(value: NormalizedFieldValue): FormFieldValue {
 function fieldState(
   field: AppointmentFormFieldRead,
   values: Readonly<Record<string, FormFieldValue>>,
+  workflowReadOnly = false,
 ): EffectiveFieldState {
-  return evaluateFieldState(schemaFor(field, values), { values })
+  return evaluateFieldState(schemaFor(field, values), {
+    values,
+    workflowReadOnly,
+  })
 }
 
 export function dynamicActionFieldsFor(form: DynamicFormRead): readonly DynamicActionField[] {
   return form.fields.map((field) => ({
     ...field,
-    runtime: fieldState(field, form.values),
+    runtime: evaluateFieldState(schemaFor(field, form.values), {
+      values: form.values,
+      workflowReadOnly: form.workflowReadOnlyFieldIds?.some((id) => String(id) === String(field.fieldId)),
+    }),
   }))
 }
 
@@ -74,7 +86,12 @@ export function dynamicActionUnsupportedFieldsFor(form: DynamicFormRead): readon
 export function normalizeDynamicForm(
   form: DynamicFormRead,
 ): OperationSnapshot<Readonly<Record<string, FormFieldValue>>> {
-  const fields = form.fields.map((field) => schemaFor(field, form.values))
+  const fields = form.fields.map((field) => {
+    const schema = schemaFor(field, form.values)
+    return form.workflowReadOnlyFieldIds?.some((id) => String(id) === String(field.fieldId))
+      ? { ...schema, readOnly: true }
+      : schema
+  })
   const result = normalizeSubmission({
     fields,
     values: form.values,
@@ -101,7 +118,11 @@ export function normalizeDynamicFieldValue(
   value: FormFieldValue,
 ): OperationSnapshot<FormFieldValue> {
   const values = { ...form.values, [field.valueKey]: value }
-  const state = fieldState(field, values)
+  const state = fieldState(
+    field,
+    values,
+    form.workflowReadOnlyFieldIds?.some((id) => String(id) === String(field.fieldId)),
+  )
   if (state.capability === 'UNSUPPORTED') {
     return {
       state: 'failed_terminal',

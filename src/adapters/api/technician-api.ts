@@ -3,10 +3,13 @@ import type {
   CodeOptionRead,
   CodeOptionsQuery,
   FormDataRead,
+  FormFieldOptionRead,
   FormFieldRead,
+  FormFieldPresentation,
   FormFieldValue,
   FormFieldVisibility,
   FormDefinitionRead,
+  FormPurpose,
   ReadPage,
   TechnicianApiReadPort,
   WorkOrderActivity,
@@ -617,6 +620,34 @@ function workflowNodeVisibilityEvidence(
   }
 }
 
+function verifiedFormPurpose(record: AdapterRecord | undefined): FormPurpose | undefined {
+  if (!record) return undefined
+  const candidates = ['colName', 'collectionName', 'formPurpose', 'purpose']
+    .map((key) => optionalString(record, [key])?.toLocaleLowerCase())
+    .filter((value): value is string => Boolean(value))
+  const purposes = new Set(candidates.filter((value): value is FormPurpose => value === 'survey' || value === 'appointment'))
+  if (purposes.size === 1) return [...purposes][0]
+  return undefined
+}
+
+function fieldRowsFormPurpose(fieldRows: readonly unknown[]): FormPurpose | undefined {
+  const purposes = new Set(fieldRows.map((field) => {
+    const row = optionalRecord(field)
+    const colName = optionalString(row ?? {}, ['colName'])?.toLocaleLowerCase()
+    return colName === 'survey' || colName === 'appointment' ? colName : undefined
+  }).filter((value): value is FormPurpose => value !== undefined))
+  return purposes.size === 1 ? [...purposes][0] : undefined
+}
+
+function workflowNodeReadOnlyFieldIds(record: AdapterRecord, nodeDef: AdapterRecord | undefined): readonly string[] | undefined {
+  const rawValue = record.formFieldIdsReadOnly ?? nodeDef?.formFieldIdsReadOnly
+  if (!Array.isArray(rawValue)) return undefined
+  const ids = rawValue
+    .map((value) => typeof value === 'string' || typeof value === 'number' ? String(value).trim() : '')
+    .filter(Boolean)
+  return ids.length > 0 ? ids : []
+}
+
 function workflowNode(raw: unknown): WorkflowNodeRead {
   const record = asRecord(raw, 'workflow node')
   const nodeDef = nestedRecord(record, ['nodeDef'])
@@ -633,11 +664,13 @@ function workflowNode(raw: unknown): WorkflowNodeRead {
   ])
   const formDataId = optionalOpaqueId<'FormDataId'>(record, ['formDataId', 'dataId'])
   const formPurpose =
-    optionalString(nodeDef ?? {}, ['formDefId', 'formDefinitionId']) === appointmentFormDefinitionWireId
+    verifiedFormPurpose(nodeDef)
+    ?? (optionalString(nodeDef ?? {}, ['formDefId', 'formDefinitionId']) === appointmentFormDefinitionWireId
       ? ('appointment' as const)
-      : undefined
+      : undefined)
   const handlers = workflowNodeHandlers(record)
   const visibility = workflowNodeVisibilityEvidence(record, nodeDef)
+  const formFieldIdsReadOnly = workflowNodeReadOnlyFieldIds(record, nodeDef)
   const isSystem = record.isSystem === true
   const isSentinel = record.isSentinel === true
 
@@ -649,6 +682,7 @@ function workflowNode(raw: unknown): WorkflowNodeRead {
     ...(displayName ? { displayName } : {}),
     ...(formDefinitionId ? { formDefinitionId } : {}),
     ...(formPurpose ? { formPurpose } : {}),
+    ...(formFieldIdsReadOnly ? { formFieldIdsReadOnly } : {}),
     ...(formDataId ? { formDataId } : {}),
     ...(definitionId ? { definitionId } : {}),
     ...(runId ? { runId } : {}),
@@ -682,6 +716,49 @@ function conditionValue(value: unknown): FormFieldValue | undefined {
   return undefined
 }
 
+function structuralNumber(value: unknown): number | undefined {
+  if (typeof value === 'number' && Number.isFinite(value)) return value
+  if (typeof value === 'string' && value.trim() && Number.isFinite(Number(value))) return Number(value)
+  return undefined
+}
+
+function structuralString(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined
+}
+
+function fieldPresentation(record: AdapterRecord, config: AdapterRecord | undefined): FormFieldPresentation | undefined {
+  const read = (keys: readonly string[]) => record[keys[0]] ?? config?.[keys[0]]
+  const placeholder = structuralString(read(['placeholder']))
+  const width = structuralString(read(['width'])) ?? structuralNumber(read(['width']))
+  const minlength = structuralNumber(record.minlength ?? record.minLength ?? config?.minlength ?? config?.minLength)
+  const maxlength = structuralNumber(record.maxlength ?? record.maxLength ?? config?.maxlength ?? config?.maxLength)
+  const group = structuralString(read(['group']))
+  const max = structuralNumber(read(['max']))
+  const min = structuralNumber(read(['min']))
+  const componentType = structuralString(read(['componentType']))
+  const surveyTool = record.surveyTool ?? config?.surveyTool
+  const url = config?.url
+  const params = config?.params
+  const customizeFlag = record.customizeFlag
+  const result: FormFieldPresentation = {
+    ...(componentType ? { componentType } : {}),
+    ...(placeholder ? { placeholder } : {}),
+    ...(width !== undefined ? { width } : {}),
+    ...(minlength !== undefined ? { minlength } : {}),
+    ...(maxlength !== undefined ? { maxlength } : {}),
+    ...(group ? { group } : {}),
+    ...(typeof customizeFlag === 'boolean' || typeof customizeFlag === 'number' || typeof customizeFlag === 'string'
+      ? { customizeFlag: customizeFlag === true || customizeFlag === 1 || customizeFlag === '1' || customizeFlag === 'true' }
+      : {}),
+    ...(max !== undefined ? { max } : {}),
+    ...(min !== undefined ? { min } : {}),
+    ...(typeof surveyTool === 'boolean' ? { surveyTool } : {}),
+    ...(url !== undefined ? { urlShape: Array.isArray(url) ? 'array' : typeof url } : {}),
+    ...(params !== undefined ? { paramsShape: Array.isArray(params) ? 'array' : typeof params } : {}),
+  }
+  return Object.keys(result).length > 0 ? result : undefined
+}
+
 function formFieldVisibility(record: AdapterRecord): {
   readonly visibility?: FormFieldVisibility
   readonly unsupportedReason?: string
@@ -707,7 +784,11 @@ function formFieldVisibility(record: AdapterRecord): {
   const showValueCandidates = configShowField
     ? [config?.showValue]
     : [record.showValue, recordExts?.showValue, config?.showValue, configExts?.showValue]
-  const selectedShowValue = showValueCandidates.find((value) => Boolean(value))
+  const selectedShowValue = showValueCandidates.find((value) =>
+    value !== undefined
+    && value !== null
+    && !(typeof value === 'string' && value.trim().length === 0),
+  )
   const hasShowValue = selectedShowValue !== undefined
   const showValue = selectedShowValue
   const hasConditionalMetadata = Boolean(showField) || (showType !== undefined && showType !== '1') || hasShowValue
@@ -740,6 +821,19 @@ function formFieldVisibility(record: AdapterRecord): {
       },
     }
   }
+  if (Array.isArray(showValue)) {
+    const values = showValue.map(conditionValue)
+    if (values.some((value) => value === undefined)) {
+      return { unsupportedReason: 'Conditional field visibility uses an unsupported match value' }
+    }
+    return {
+      visibility: {
+        kind: 'oneOf',
+        path: showField,
+        values: values as FormFieldValue[],
+      },
+    }
+  }
   const normalizedValue = conditionValue(showValue)
   if (normalizedValue === undefined) {
     return { unsupportedReason: 'Conditional field visibility uses an unsupported match value' }
@@ -763,16 +857,37 @@ function formField(raw: unknown, rowIndex: number): FormFieldRead | null {
   const readOnly = readOnlyValue === true || readOnlyValue === 1 || readOnlyValue === '1'
   const multiple = multipleValue === true || multipleValue === 1 || multipleValue === '1' || multipleValue === 'true'
   const rawOptions = Array.isArray(record.options) ? record.options : Array.isArray(record.items) ? record.items : undefined
-  const options = rawOptions
-    ?.map((value) => {
-      const option = optionalRecord(value)
-      const optionValue = option ? optionalString(option, ['value', 'code', 'id']) : undefined
-      const optionLabel = option ? optionalString(option, ['label', 'name', 'text', 'codelabel']) : undefined
-      return optionValue && optionLabel ? { value: optionValue, label: optionLabel } : null
-    })
-    .filter((value): value is { value: string; label: string } => Boolean(value))
+  function option(value: unknown): FormFieldOptionRead | null {
+    const record = optionalRecord(value)
+    const optionValue = record ? optionalString(record, ['value', 'code', 'id']) : undefined
+    const optionLabel = record ? optionalString(record, ['label', 'name', 'text', 'codelabel']) : undefined
+    if (!record || !optionValue || !optionLabel) return null
+    const rawChildren = Array.isArray(record.children) ? record.children : undefined
+    const children = rawChildren?.map(option)
+    if (children?.some((child): child is null => child === null)) return null
+    return {
+      value: optionValue,
+      label: optionLabel,
+      ...(children && children.length > 0 ? { children: children as FormFieldOptionRead[] } : {}),
+    }
+  }
+  const options = rawOptions?.map(option).filter((value): value is FormFieldOptionRead => Boolean(value))
+  const malformedOptions = Boolean(rawOptions && options && options.length !== rawOptions.length)
   const conditional = formFieldVisibility(record)
   const valueOption = optionalString(record, ['valueOption'])
+  const config = parsedRecord(record.frontEndConfig)
+  const order = structuralNumber(record.order ?? record.sort)
+  const state = typeof record.state === 'number' || typeof record.state === 'string' ? record.state : undefined
+  const fixed = typeof record.fixed === 'string' || typeof record.fixed === 'number' || typeof record.fixed === 'boolean'
+    ? record.fixed
+    : undefined
+  const operationType = typeof record.operationType === 'string' || typeof record.operationType === 'number'
+    ? record.operationType
+    : undefined
+  const showList = Array.isArray(record.showList)
+    ? record.showList.filter((value): value is string | number => typeof value === 'string' || typeof value === 'number')
+    : undefined
+  const presentation = fieldPresentation(record, config)
 
   return {
     fieldId,
@@ -781,15 +896,23 @@ function formField(raw: unknown, rowIndex: number): FormFieldRead | null {
     type,
     required,
     readOnly,
+    ...(order !== undefined ? { order } : {}),
+    ...(state !== undefined ? { state } : {}),
+    ...(fixed !== undefined ? { fixed } : {}),
+    ...(operationType !== undefined ? { operationType } : {}),
+    ...(showList ? { showList } : {}),
     ...(multiple ? { multiple } : {}),
     ...(options && options.length > 0 ? { options } : {}),
     ...(conditional.visibility ? { visibility: conditional.visibility } : {}),
     ...(valueOption ? { valueOption } : {}),
+    ...(presentation ? { presentation } : {}),
     ...(!rawFieldId
       ? { unsupportedReason: 'Field row identity is unavailable' }
       : conditional.unsupportedReason
         ? { unsupportedReason: conditional.unsupportedReason }
-        : {}),
+        : malformedOptions
+          ? { unsupportedReason: 'Field option metadata is malformed' }
+          : {}),
   }
 }
 
@@ -811,9 +934,13 @@ function formDefinition(raw: unknown, requestedId: FormDefinitionId): FormDefini
   const fields = rawFields
     .map((field, index) => formField(field, index))
     .filter((value): value is FormFieldRead => Boolean(value))
-  const purpose = String(requestedId) === appointmentFormDefinitionWireId
-    ? ('appointment' as const)
-    : undefined
+  const purpose = fieldRows
+    // `colName` is the Ext identity on field rows. Do not interpret an
+    // arbitrary field-level `purpose` value as the form's semantic identity;
+    // contradictory Ext identities fail closed as unclassified.
+    ? fieldRowsFormPurpose(fieldRows)
+    : verifiedFormPurpose(record)
+      ?? (String(requestedId) === appointmentFormDefinitionWireId ? ('appointment' as const) : undefined)
   return {
     id: id ?? requestedId,
     ...(purpose ? { purpose } : {}),

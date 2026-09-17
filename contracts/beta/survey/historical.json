@@ -1,0 +1,1852 @@
+{
+  "schemaVersion": 2,
+  "environment": "beta",
+  "lifecycleEvidence": "historical_inactive",
+  "domain": "survey",
+  "semanticPurpose": "survey",
+  "sanitized": true,
+  "source": {
+    "authority": "authenticated Beta read-only capture",
+    "fieldEndpoint": "biz/extField/query",
+    "fieldRequest": [
+      "extId",
+      "sortField=order",
+      "sortOrder=asc",
+      "is:state|integer#and=1",
+      "_all=1"
+    ],
+    "notes": [
+      "R2 supplies presentation examples only; it is not a backend dictionary.",
+      "No active Survey membership was required or asserted."
+    ]
+  },
+  "fieldRowCount": 61,
+  "fieldRows": [
+    {
+      "fieldId": "survey-field-001",
+      "valueKey": "surveyNum",
+      "label": "勘察单编号",
+      "type": "text",
+      "required": false,
+      "multiple": false,
+      "order": 1,
+      "state": 1,
+      "readOnly": false,
+      "operationType": "1",
+      "showType": "1",
+      "showFieldPreset": 1,
+      "showValue": "",
+      "customizeFlag": 1
+    },
+    {
+      "fieldId": "survey-field-002",
+      "valueKey": "serviceAppointmentNum",
+      "label": "工单编号",
+      "type": "text",
+      "required": false,
+      "multiple": false,
+      "order": 2,
+      "state": 1,
+      "readOnly": false,
+      "operationType": "1",
+      "showType": "1",
+      "showFieldPreset": 0,
+      "showValue": "",
+      "customizeFlag": 1
+    },
+    {
+      "fieldId": "survey-field-003",
+      "valueKey": "name",
+      "label": "客户姓名",
+      "type": "text",
+      "required": false,
+      "multiple": false,
+      "order": 3,
+      "state": 1,
+      "readOnly": false,
+      "fixed": "left",
+      "operationType": "1",
+      "showType": "1",
+      "showFieldPreset": 0,
+      "showValue": "",
+      "customizeFlag": 1
+    },
+    {
+      "fieldId": "survey-field-004",
+      "valueKey": "surveyPDFUrl",
+      "label": "勘察单链接",
+      "type": "aLink",
+      "required": false,
+      "multiple": false,
+      "order": 4,
+      "state": 1,
+      "readOnly": false,
+      "operationType": "1",
+      "showType": "1",
+      "showFieldPreset": 0,
+      "showValue": "",
+      "width": "300px",
+      "customizeFlag": 1
+    },
+    {
+      "fieldId": "survey-field-005",
+      "valueKey": "phone",
+      "label": "联系方式",
+      "type": "phone",
+      "required": false,
+      "multiple": false,
+      "order": 5,
+      "state": 1,
+      "readOnly": false,
+      "operationType": "1",
+      "showType": "1",
+      "showFieldPreset": 0,
+      "showValue": "",
+      "customizeFlag": 1
+    },
+    {
+      "fieldId": "survey-field-006",
+      "valueKey": "area",
+      "label": "项目地区",
+      "type": "area",
+      "required": false,
+      "multiple": false,
+      "order": 6,
+      "state": 1,
+      "readOnly": false,
+      "operationType": "1",
+      "showType": "1",
+      "showFieldPreset": 0,
+      "showValue": "",
+      "customizeFlag": 1
+    },
+    {
+      "fieldId": "survey-field-007",
+      "valueKey": "province",
+      "label": "行政区划",
+      "type": "select",
+      "required": false,
+      "multiple": false,
+      "order": 7,
+      "state": 1,
+      "readOnly": false,
+      "operationType": "1",
+      "valueOption": "regions",
+      "showType": "1",
+      "showFieldPreset": 0,
+      "showValue": "",
+      "customizeFlag": 1
+    },
+    {
+      "fieldId": "survey-field-008",
+      "valueKey": "province",
+      "label": "省",
+      "type": "text",
+      "required": false,
+      "multiple": false,
+      "order": 8,
+      "state": 1,
+      "readOnly": false,
+      "operationType": "1",
+      "showType": "1",
+      "showFieldPreset": 0,
+      "showValue": "",
+      "customizeFlag": 1
+    },
+    {
+      "fieldId": "survey-field-009",
+      "valueKey": "city",
+      "label": "市",
+      "type": "text",
+      "required": false,
+      "multiple": false,
+      "order": 9,
+      "state": 1,
+      "readOnly": false,
+      "operationType": "1",
+      "showType": "1",
+      "showFieldPreset": 0,
+      "showValue": "",
+      "customizeFlag": 1
+    },
+    {
+      "fieldId": "survey-field-010",
+      "valueKey": "district",
+      "label": "区",
+      "type": "text",
+      "required": false,
+      "multiple": false,
+      "order": 10,
+      "state": 1,
+      "readOnly": false,
+      "operationType": "1",
+      "showType": "1",
+      "showFieldPreset": 0,
+      "showValue": "",
+      "customizeFlag": 1
+    },
+    {
+      "fieldId": "survey-field-011",
+      "valueKey": "address",
+      "label": "项目地址",
+      "type": "text",
+      "required": false,
+      "multiple": false,
+      "order": 11,
+      "state": 1,
+      "readOnly": false,
+      "operationType": "1",
+      "showType": "1",
+      "showFieldPreset": 0,
+      "showValue": "",
+      "width": "200px",
+      "customizeFlag": 1
+    },
+    {
+      "fieldId": "survey-field-012",
+      "valueKey": "orgId",
+      "label": "服务商",
+      "type": "text",
+      "required": false,
+      "multiple": false,
+      "order": 12,
+      "state": 1,
+      "readOnly": false,
+      "operationType": "1",
+      "showType": "1",
+      "showFieldPreset": 0,
+      "showValue": "",
+      "customizeFlag": 1
+    },
+    {
+      "fieldId": "survey-field-013",
+      "valueKey": "orgName",
+      "label": "服务商",
+      "type": "text",
+      "required": false,
+      "multiple": false,
+      "order": 13,
+      "state": 1,
+      "readOnly": false,
+      "operationType": "1",
+      "showType": "1",
+      "showFieldPreset": 0,
+      "showValue": "",
+      "width": "150px",
+      "customizeFlag": 1
+    },
+    {
+      "fieldId": "survey-field-014",
+      "valueKey": "supervisorName",
+      "label": "技术工程师",
+      "type": "text",
+      "required": false,
+      "multiple": false,
+      "order": 14,
+      "state": 1,
+      "readOnly": false,
+      "operationType": "1",
+      "showType": "1",
+      "showFieldPreset": 0,
+      "showValue": "",
+      "customizeFlag": 1
+    },
+    {
+      "fieldId": "survey-field-015",
+      "valueKey": "supervisorPhone",
+      "label": "联系方式",
+      "type": "phone",
+      "required": false,
+      "multiple": false,
+      "order": 15,
+      "state": 1,
+      "readOnly": false,
+      "operationType": "1",
+      "showType": "1",
+      "showFieldPreset": 0,
+      "showValue": "",
+      "customizeFlag": 1
+    },
+    {
+      "fieldId": "survey-field-016",
+      "valueKey": "createTime",
+      "label": "勘察时间",
+      "type": "datetime",
+      "required": false,
+      "multiple": false,
+      "order": 16,
+      "state": 1,
+      "readOnly": false,
+      "operationType": "1",
+      "showType": "1",
+      "showFieldPreset": 0,
+      "showValue": "",
+      "width": "140px",
+      "customizeFlag": 1
+    },
+    {
+      "fieldId": "survey-field-017",
+      "valueKey": "part",
+      "label": "维修部位",
+      "type": "cascade",
+      "required": true,
+      "multiple": false,
+      "order": 17,
+      "state": 1,
+      "readOnly": false,
+      "operationType": "1",
+      "valueOption": "parts",
+      "showType": "1",
+      "showFieldPreset": 0,
+      "showValue": "",
+      "width": "200px",
+      "customizeFlag": 1
+    },
+    {
+      "fieldId": "survey-field-018",
+      "valueKey": "gap0",
+      "label": "分隔槽",
+      "type": "gap",
+      "required": false,
+      "multiple": false,
+      "order": 18,
+      "state": 1,
+      "readOnly": false,
+      "operationType": "1",
+      "showType": "3",
+      "showField": "part",
+      "showFieldPreset": 1,
+      "showValue": "",
+      "extsShowValue": [
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-9bdb2af67992",
+          "survey-option-4c9bf88bc02a"
+        ],
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-9bdb2af67992",
+          "survey-option-ab8f265cc2a5"
+        ],
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-2abaca4911e6",
+          "survey-option-c02425d39be4"
+        ],
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-2abaca4911e6",
+          "survey-option-10b147100023"
+        ],
+        [
+          "survey-option-d4735e3a265e",
+          "survey-option-d29d53701d3c"
+        ],
+        [
+          "survey-option-d4735e3a265e",
+          "survey-option-36790ecd55c2"
+        ],
+        [
+          "survey-option-4e07408562be",
+          "survey-option-226f76b55acb"
+        ],
+        [
+          "survey-option-4e07408562be",
+          "survey-option-88820462180e"
+        ],
+        [
+          "survey-option-2c624232cdd2"
+        ],
+        [
+          "survey-option-19581e27de7c"
+        ],
+        [
+          "survey-option-ef2d127de37b"
+        ]
+      ],
+      "customizeFlag": 1
+    },
+    {
+      "fieldId": "survey-field-019",
+      "valueKey": "squareMeter",
+      "label": "防水施工面积（㎡）",
+      "type": "digit",
+      "required": true,
+      "multiple": false,
+      "order": 19,
+      "state": 1,
+      "readOnly": false,
+      "operationType": "1",
+      "showType": "3",
+      "showField": "part",
+      "showFieldPreset": 1,
+      "showValue": "",
+      "extsShowValue": [
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-9bdb2af67992"
+        ],
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-2abaca4911e6"
+        ],
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-38d66d9692ac"
+        ],
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-dbae772db290"
+        ],
+        [
+          "survey-option-d4735e3a265e",
+          "survey-option-d29d53701d3c"
+        ],
+        [
+          "survey-option-d4735e3a265e",
+          "survey-option-36790ecd55c2"
+        ],
+        [
+          "survey-option-19581e27de7c"
+        ],
+        [
+          "survey-option-ef2d127de37b"
+        ]
+      ],
+      "width": "150px",
+      "customizeFlag": 1
+    },
+    {
+      "fieldId": "survey-field-020",
+      "valueKey": "gapLength",
+      "label": "缝隙长度",
+      "type": "digit",
+      "required": true,
+      "multiple": false,
+      "order": 20,
+      "state": 1,
+      "readOnly": false,
+      "operationType": "1",
+      "showType": "3",
+      "showField": "part",
+      "showFieldPreset": 1,
+      "showValue": "",
+      "extsShowValue": [
+        [
+          "survey-option-2c624232cdd2"
+        ]
+      ],
+      "customizeFlag": 1
+    },
+    {
+      "fieldId": "survey-field-021",
+      "valueKey": "length",
+      "label": "长（m）",
+      "type": "digit",
+      "required": true,
+      "multiple": false,
+      "order": 21,
+      "state": 1,
+      "readOnly": false,
+      "operationType": "1",
+      "showType": "3",
+      "showField": "part",
+      "showFieldPreset": 1,
+      "showValue": "",
+      "extsShowValue": [
+        [
+          "survey-option-4e07408562be",
+          "survey-option-226f76b55acb"
+        ],
+        [
+          "survey-option-4e07408562be",
+          "survey-option-88820462180e"
+        ]
+      ],
+      "customizeFlag": 1
+    },
+    {
+      "fieldId": "survey-field-022",
+      "valueKey": "length",
+      "label": "长（m）",
+      "type": "digit",
+      "required": false,
+      "multiple": false,
+      "order": 22,
+      "state": 1,
+      "readOnly": false,
+      "operationType": "1",
+      "showType": "3",
+      "showField": "part",
+      "showFieldPreset": 1,
+      "showValue": "",
+      "extsShowValue": [
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-9bdb2af67992"
+        ],
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-2abaca4911e6"
+        ],
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-38d66d9692ac"
+        ],
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-dbae772db290"
+        ],
+        [
+          "survey-option-d4735e3a265e",
+          "survey-option-d29d53701d3c"
+        ],
+        [
+          "survey-option-d4735e3a265e",
+          "survey-option-36790ecd55c2"
+        ],
+        [
+          "survey-option-2c624232cdd2"
+        ],
+        [
+          "survey-option-19581e27de7c"
+        ],
+        [
+          "survey-option-ef2d127de37b"
+        ]
+      ],
+      "customizeFlag": 1
+    },
+    {
+      "fieldId": "survey-field-023",
+      "valueKey": "width",
+      "label": "宽（m）",
+      "type": "digit",
+      "required": true,
+      "multiple": false,
+      "order": 23,
+      "state": 1,
+      "readOnly": false,
+      "operationType": "1",
+      "showType": "3",
+      "showField": "part",
+      "showFieldPreset": 1,
+      "showValue": "",
+      "extsShowValue": [
+        [
+          "survey-option-4e07408562be",
+          "survey-option-226f76b55acb"
+        ],
+        [
+          "survey-option-4e07408562be",
+          "survey-option-88820462180e"
+        ]
+      ],
+      "customizeFlag": 1
+    },
+    {
+      "fieldId": "survey-field-024",
+      "valueKey": "width",
+      "label": "宽（m）",
+      "type": "digit",
+      "required": false,
+      "multiple": false,
+      "order": 24,
+      "state": 1,
+      "readOnly": false,
+      "operationType": "1",
+      "showType": "3",
+      "showField": "part",
+      "showFieldPreset": 1,
+      "showValue": "",
+      "extsShowValue": [
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-9bdb2af67992"
+        ],
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-2abaca4911e6"
+        ],
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-38d66d9692ac"
+        ],
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-dbae772db290"
+        ],
+        [
+          "survey-option-d4735e3a265e",
+          "survey-option-d29d53701d3c"
+        ],
+        [
+          "survey-option-d4735e3a265e",
+          "survey-option-36790ecd55c2"
+        ],
+        [
+          "survey-option-2c624232cdd2"
+        ],
+        [
+          "survey-option-19581e27de7c"
+        ],
+        [
+          "survey-option-ef2d127de37b"
+        ]
+      ],
+      "customizeFlag": 1
+    },
+    {
+      "fieldId": "survey-field-025",
+      "valueKey": "perimeter",
+      "label": "周长（m）",
+      "type": "digit",
+      "required": true,
+      "multiple": false,
+      "order": 25,
+      "state": 1,
+      "readOnly": false,
+      "operationType": "1",
+      "showType": "3",
+      "showField": "part",
+      "showFieldPreset": 1,
+      "showValue": "",
+      "extsShowValue": [],
+      "customizeFlag": 1
+    },
+    {
+      "fieldId": "survey-field-026",
+      "valueKey": "planeArea",
+      "label": "平面面积（㎡）",
+      "type": "digit",
+      "required": true,
+      "multiple": false,
+      "order": 26,
+      "state": 1,
+      "readOnly": false,
+      "operationType": "1",
+      "showType": "3",
+      "showField": "part",
+      "showFieldPreset": 1,
+      "showValue": "",
+      "extsShowValue": [
+        [
+          "survey-option-4e07408562be",
+          "survey-option-226f76b55acb"
+        ],
+        [
+          "survey-option-4e07408562be",
+          "survey-option-88820462180e"
+        ]
+      ],
+      "placeholder": "填写长和宽自动计算",
+      "customizeFlag": 1
+    },
+    {
+      "fieldId": "survey-field-027",
+      "valueKey": "height",
+      "label": "立面高（m）",
+      "type": "digit",
+      "required": true,
+      "multiple": false,
+      "order": 27,
+      "state": 1,
+      "readOnly": false,
+      "operationType": "1",
+      "showType": "3",
+      "showField": "part",
+      "showFieldPreset": 1,
+      "showValue": "",
+      "extsShowValue": [
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-9bdb2af67992",
+          "survey-option-4c9bf88bc02a"
+        ],
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-9bdb2af67992",
+          "survey-option-ab8f265cc2a5"
+        ],
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-2abaca4911e6",
+          "survey-option-c02425d39be4"
+        ],
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-2abaca4911e6",
+          "survey-option-10b147100023"
+        ]
+      ],
+      "customizeFlag": 1
+    },
+    {
+      "fieldId": "survey-field-028",
+      "valueKey": "gap1",
+      "label": "分隔槽",
+      "type": "gap",
+      "required": false,
+      "multiple": false,
+      "order": 28,
+      "state": 1,
+      "readOnly": false,
+      "operationType": "1",
+      "showType": "3",
+      "showField": "part",
+      "showFieldPreset": 1,
+      "showValue": "",
+      "extsShowValue": [
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-9bdb2af67992",
+          "survey-option-4c9bf88bc02a"
+        ],
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-9bdb2af67992",
+          "survey-option-ab8f265cc2a5"
+        ],
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-2abaca4911e6",
+          "survey-option-c02425d39be4"
+        ],
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-2abaca4911e6",
+          "survey-option-10b147100023"
+        ],
+        [
+          "survey-option-d4735e3a265e",
+          "survey-option-d29d53701d3c"
+        ],
+        [
+          "survey-option-d4735e3a265e",
+          "survey-option-36790ecd55c2"
+        ],
+        [
+          "survey-option-4e07408562be",
+          "survey-option-226f76b55acb"
+        ],
+        [
+          "survey-option-4e07408562be",
+          "survey-option-88820462180e"
+        ],
+        [
+          "survey-option-2c624232cdd2"
+        ],
+        [
+          "survey-option-19581e27de7c"
+        ],
+        [
+          "survey-option-ef2d127de37b"
+        ],
+        [
+          "survey-option-e7f6c011776e"
+        ]
+      ],
+      "customizeFlag": 1
+    },
+    {
+      "fieldId": "survey-field-029",
+      "valueKey": "surveyDrawing",
+      "label": "测绘图",
+      "type": "file",
+      "required": true,
+      "multiple": false,
+      "order": 29,
+      "state": 1,
+      "readOnly": false,
+      "operationType": "1",
+      "showType": "1",
+      "showFieldPreset": 0,
+      "showValue": "",
+      "frontEndConfig": {
+        "max": 1,
+        "surveyTool": true
+      },
+      "width": "",
+      "customizeFlag": 1
+    },
+    {
+      "fieldId": "survey-field-030",
+      "valueKey": "images1",
+      "label": "大面全景",
+      "type": "file",
+      "required": true,
+      "multiple": false,
+      "order": 30,
+      "state": 1,
+      "readOnly": false,
+      "operationType": "1",
+      "showType": "1",
+      "showFieldPreset": 0,
+      "showValue": "",
+      "width": "240px",
+      "customizeFlag": 1
+    },
+    {
+      "fieldId": "survey-field-031",
+      "valueKey": "images2",
+      "label": "渗漏部位",
+      "type": "file",
+      "required": true,
+      "multiple": false,
+      "order": 31,
+      "state": 1,
+      "readOnly": false,
+      "operationType": "1",
+      "showType": "1",
+      "showFieldPreset": 0,
+      "showValue": "",
+      "customizeFlag": 1
+    },
+    {
+      "fieldId": "survey-field-032",
+      "valueKey": "images3",
+      "label": "防水层大面",
+      "type": "file",
+      "required": false,
+      "multiple": false,
+      "order": 32,
+      "state": 1,
+      "readOnly": false,
+      "operationType": "1",
+      "showType": "3",
+      "showField": "part",
+      "showFieldPreset": 1,
+      "showValue": "",
+      "extsShowValue": [
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-38d66d9692ac"
+        ],
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-dbae772db290"
+        ]
+      ],
+      "width": "240px",
+      "customizeFlag": 1
+    },
+    {
+      "fieldId": "survey-field-033",
+      "valueKey": "images4",
+      "label": "搭接缝",
+      "type": "file",
+      "required": false,
+      "multiple": false,
+      "order": 33,
+      "state": 1,
+      "readOnly": false,
+      "operationType": "1",
+      "showType": "3",
+      "showField": "part",
+      "showFieldPreset": 1,
+      "showValue": "",
+      "extsShowValue": [
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-38d66d9692ac"
+        ],
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-dbae772db290"
+        ]
+      ],
+      "width": "240px",
+      "customizeFlag": 1
+    },
+    {
+      "fieldId": "survey-field-034",
+      "valueKey": "images5",
+      "label": "落水口",
+      "type": "file",
+      "required": false,
+      "multiple": false,
+      "order": 34,
+      "state": 1,
+      "readOnly": false,
+      "operationType": "1",
+      "showType": "3",
+      "showField": "part",
+      "showFieldPreset": 1,
+      "showValue": "",
+      "extsShowValue": [
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-9bdb2af67992"
+        ],
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-2abaca4911e6"
+        ],
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-38d66d9692ac"
+        ],
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-dbae772db290"
+        ]
+      ],
+      "width": "240px",
+      "customizeFlag": 1
+    },
+    {
+      "fieldId": "survey-field-035",
+      "valueKey": "images6",
+      "label": "排气孔",
+      "type": "file",
+      "required": false,
+      "multiple": false,
+      "order": 35,
+      "state": 1,
+      "readOnly": false,
+      "operationType": "1",
+      "showType": "3",
+      "showField": "part",
+      "showFieldPreset": 1,
+      "showValue": "",
+      "extsShowValue": [
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-9bdb2af67992"
+        ],
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-2abaca4911e6"
+        ],
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-38d66d9692ac"
+        ],
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-dbae772db290"
+        ]
+      ],
+      "width": "240px",
+      "customizeFlag": 1
+    },
+    {
+      "fieldId": "survey-field-036",
+      "valueKey": "images7",
+      "label": "女儿墙顶",
+      "type": "file",
+      "required": false,
+      "multiple": false,
+      "order": 36,
+      "state": 1,
+      "readOnly": false,
+      "operationType": "1",
+      "showType": "3",
+      "showField": "part",
+      "showFieldPreset": 1,
+      "showValue": "",
+      "extsShowValue": [
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-9bdb2af67992"
+        ],
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-2abaca4911e6"
+        ],
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-38d66d9692ac"
+        ],
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-dbae772db290"
+        ]
+      ],
+      "width": "240px",
+      "customizeFlag": 1
+    },
+    {
+      "fieldId": "survey-field-037",
+      "valueKey": "images8",
+      "label": "天（檐）沟",
+      "type": "file",
+      "required": false,
+      "multiple": false,
+      "order": 37,
+      "state": 1,
+      "readOnly": false,
+      "operationType": "1",
+      "showType": "3",
+      "showField": "part",
+      "showFieldPreset": 1,
+      "showValue": "",
+      "extsShowValue": [
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-9bdb2af67992"
+        ],
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-2abaca4911e6"
+        ],
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-38d66d9692ac"
+        ],
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-dbae772db290"
+        ],
+        [
+          "survey-option-2c624232cdd2"
+        ],
+        [
+          "survey-option-19581e27de7c"
+        ]
+      ],
+      "width": "240px",
+      "customizeFlag": 1
+    },
+    {
+      "fieldId": "survey-field-038",
+      "valueKey": "images9",
+      "label": "立面收口",
+      "type": "file",
+      "required": false,
+      "multiple": false,
+      "order": 38,
+      "state": 1,
+      "readOnly": false,
+      "operationType": "1",
+      "showType": "3",
+      "showField": "part",
+      "showFieldPreset": 1,
+      "showValue": "",
+      "extsShowValue": [
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-9bdb2af67992"
+        ],
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-2abaca4911e6"
+        ],
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-38d66d9692ac"
+        ],
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-dbae772db290"
+        ]
+      ],
+      "width": "240px",
+      "customizeFlag": 1
+    },
+    {
+      "fieldId": "survey-field-039",
+      "valueKey": "images10",
+      "label": "设备基座",
+      "type": "file",
+      "required": false,
+      "multiple": false,
+      "order": 39,
+      "state": 1,
+      "readOnly": false,
+      "operationType": "1",
+      "showType": "3",
+      "showField": "part",
+      "showFieldPreset": 1,
+      "showValue": "",
+      "extsShowValue": [
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-9bdb2af67992"
+        ],
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-2abaca4911e6"
+        ],
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-38d66d9692ac"
+        ],
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-dbae772db290"
+        ]
+      ],
+      "width": "240px",
+      "customizeFlag": 1
+    },
+    {
+      "fieldId": "survey-field-040",
+      "valueKey": "images11",
+      "label": "立墙",
+      "type": "file",
+      "required": false,
+      "multiple": false,
+      "order": 40,
+      "state": 1,
+      "readOnly": false,
+      "operationType": "1",
+      "showType": "3",
+      "showField": "part",
+      "showFieldPreset": 1,
+      "showValue": "",
+      "extsShowValue": [
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-9bdb2af67992"
+        ],
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-2abaca4911e6"
+        ],
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-38d66d9692ac"
+        ],
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-dbae772db290"
+        ]
+      ],
+      "width": "240px",
+      "customizeFlag": 1
+    },
+    {
+      "fieldId": "survey-field-041",
+      "valueKey": "images12",
+      "label": "排水系统",
+      "type": "file",
+      "required": false,
+      "multiple": false,
+      "order": 41,
+      "state": 1,
+      "readOnly": false,
+      "operationType": "1",
+      "showType": "3",
+      "showField": "part",
+      "showFieldPreset": 1,
+      "showValue": "",
+      "extsShowValue": [
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-9bdb2af67992"
+        ],
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-2abaca4911e6"
+        ],
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-38d66d9692ac"
+        ],
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-dbae772db290"
+        ]
+      ],
+      "width": "240px",
+      "customizeFlag": 1
+    },
+    {
+      "fieldId": "survey-field-042",
+      "valueKey": "images13",
+      "label": "起鼓水包",
+      "type": "file",
+      "required": false,
+      "multiple": false,
+      "order": 42,
+      "state": 1,
+      "readOnly": false,
+      "operationType": "1",
+      "showType": "3",
+      "showField": "part",
+      "showFieldPreset": 1,
+      "showValue": "",
+      "extsShowValue": [
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-38d66d9692ac"
+        ],
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-dbae772db290"
+        ]
+      ],
+      "width": "240px",
+      "customizeFlag": 1
+    },
+    {
+      "fieldId": "survey-field-043",
+      "valueKey": "images14",
+      "label": "立墙交界处",
+      "type": "file",
+      "required": false,
+      "multiple": false,
+      "order": 43,
+      "state": 1,
+      "readOnly": false,
+      "operationType": "1",
+      "showType": "3",
+      "showField": "part",
+      "showFieldPreset": 1,
+      "showValue": "",
+      "extsShowValue": [
+        [
+          "survey-option-2c624232cdd2"
+        ],
+        [
+          "survey-option-19581e27de7c"
+        ]
+      ],
+      "width": "240px",
+      "customizeFlag": 1
+    },
+    {
+      "fieldId": "survey-field-044",
+      "valueKey": "images15",
+      "label": "固定件",
+      "type": "file",
+      "required": false,
+      "multiple": false,
+      "order": 44,
+      "state": 1,
+      "readOnly": false,
+      "operationType": "1",
+      "showType": "3",
+      "showField": "part",
+      "showFieldPreset": 1,
+      "showValue": "",
+      "extsShowValue": [
+        [
+          "survey-option-19581e27de7c"
+        ]
+      ],
+      "width": "240px",
+      "customizeFlag": 1
+    },
+    {
+      "fieldId": "survey-field-045",
+      "valueKey": "images16",
+      "label": "密封胶条",
+      "type": "file",
+      "required": false,
+      "multiple": false,
+      "order": 45,
+      "state": 1,
+      "readOnly": false,
+      "operationType": "1",
+      "showType": "3",
+      "showField": "part",
+      "showFieldPreset": 1,
+      "showValue": "",
+      "extsShowValue": [
+        [
+          "survey-option-2c624232cdd2"
+        ]
+      ],
+      "width": "240px",
+      "customizeFlag": 1
+    },
+    {
+      "fieldId": "survey-field-046",
+      "valueKey": "images17",
+      "label": "外墙情况",
+      "type": "file",
+      "required": false,
+      "multiple": false,
+      "order": 46,
+      "state": 1,
+      "readOnly": false,
+      "operationType": "1",
+      "showType": "3",
+      "showField": "part",
+      "showFieldPreset": 1,
+      "showValue": "",
+      "extsShowValue": [
+        [
+          "survey-option-4e07408562be",
+          "survey-option-226f76b55acb"
+        ],
+        [
+          "survey-option-4e07408562be",
+          "survey-option-88820462180e"
+        ]
+      ],
+      "width": "240px",
+      "customizeFlag": 1
+    },
+    {
+      "fieldId": "survey-field-047",
+      "valueKey": "images18",
+      "label": "地漏",
+      "type": "file",
+      "required": false,
+      "multiple": false,
+      "order": 47,
+      "state": 1,
+      "readOnly": false,
+      "operationType": "1",
+      "showType": "3",
+      "showField": "part",
+      "showFieldPreset": 1,
+      "showValue": "",
+      "extsShowValue": [
+        [
+          "survey-option-d4735e3a265e",
+          "survey-option-d29d53701d3c"
+        ],
+        [
+          "survey-option-d4735e3a265e",
+          "survey-option-36790ecd55c2"
+        ]
+      ],
+      "width": "240px",
+      "customizeFlag": 1
+    },
+    {
+      "fieldId": "survey-field-048",
+      "valueKey": "images19",
+      "label": "过门石周边",
+      "type": "file",
+      "required": false,
+      "multiple": false,
+      "order": 48,
+      "state": 1,
+      "readOnly": false,
+      "operationType": "1",
+      "showType": "3",
+      "showField": "part",
+      "showFieldPreset": 1,
+      "showValue": "",
+      "extsShowValue": [
+        [
+          "survey-option-d4735e3a265e",
+          "survey-option-d29d53701d3c"
+        ],
+        [
+          "survey-option-d4735e3a265e",
+          "survey-option-36790ecd55c2"
+        ]
+      ],
+      "width": "240px",
+      "customizeFlag": 1
+    },
+    {
+      "fieldId": "survey-field-049",
+      "valueKey": "images20",
+      "label": "卫生间外墙体",
+      "type": "file",
+      "required": false,
+      "multiple": false,
+      "order": 49,
+      "state": 1,
+      "readOnly": false,
+      "operationType": "1",
+      "showType": "3",
+      "showField": "part",
+      "showFieldPreset": 1,
+      "showValue": "",
+      "extsShowValue": [
+        [
+          "survey-option-d4735e3a265e",
+          "survey-option-d29d53701d3c"
+        ],
+        [
+          "survey-option-d4735e3a265e",
+          "survey-option-36790ecd55c2"
+        ]
+      ],
+      "width": "240px",
+      "customizeFlag": 1
+    },
+    {
+      "fieldId": "survey-field-050",
+      "valueKey": "gap2",
+      "label": "分隔槽",
+      "type": "gap",
+      "required": false,
+      "multiple": false,
+      "order": 50,
+      "state": 1,
+      "readOnly": false,
+      "operationType": "1",
+      "showType": "1",
+      "showFieldPreset": 1,
+      "showValue": "",
+      "extsShowValue": [],
+      "customizeFlag": 1
+    },
+    {
+      "fieldId": "survey-field-051",
+      "valueKey": "infraredImageList",
+      "label": "红外照片现场图",
+      "type": "file",
+      "required": false,
+      "multiple": false,
+      "order": 51,
+      "state": 1,
+      "readOnly": false,
+      "operationType": "1",
+      "showType": "1",
+      "showFieldPreset": 0,
+      "showValue": "",
+      "frontEndConfig": {
+        "max": 4
+      },
+      "width": "240px",
+      "customizeFlag": 1
+    },
+    {
+      "fieldId": "survey-field-052",
+      "valueKey": "gap3",
+      "label": "分隔槽",
+      "type": "gap",
+      "required": false,
+      "multiple": false,
+      "order": 52,
+      "state": 1,
+      "readOnly": false,
+      "operationType": "1",
+      "showType": "1",
+      "showFieldPreset": 0,
+      "showValue": "",
+      "customizeFlag": 1
+    },
+    {
+      "fieldId": "survey-field-053",
+      "valueKey": "isMoldRemoved",
+      "label": "是否除霉",
+      "type": "radio",
+      "required": false,
+      "multiple": false,
+      "order": 53,
+      "state": 1,
+      "readOnly": false,
+      "operationType": "1",
+      "valueOption": "IS",
+      "showType": "1",
+      "showFieldPreset": 0,
+      "showValue": "",
+      "customizeFlag": 1
+    },
+    {
+      "fieldId": "survey-field-054",
+      "valueKey": "beforeMoldRemoval",
+      "label": "除霉前",
+      "type": "file",
+      "required": false,
+      "multiple": false,
+      "order": 54,
+      "state": 1,
+      "readOnly": false,
+      "operationType": "1",
+      "showType": "1",
+      "showFieldPreset": 1,
+      "showValue": "",
+      "frontEndConfig": {
+        "showField": "isMoldRemoved",
+        "showValue": "survey-option-6b86b273ff34"
+      },
+      "customizeFlag": 1
+    },
+    {
+      "fieldId": "survey-field-055",
+      "valueKey": "afterMoldRemoval",
+      "label": "除霉后",
+      "type": "file",
+      "required": false,
+      "multiple": false,
+      "order": 55,
+      "state": 1,
+      "readOnly": false,
+      "operationType": "1",
+      "showType": "1",
+      "showFieldPreset": 1,
+      "showValue": "",
+      "frontEndConfig": {
+        "showField": "isMoldRemoved",
+        "showValue": "survey-option-6b86b273ff34"
+      },
+      "customizeFlag": 1
+    },
+    {
+      "fieldId": "survey-field-056",
+      "valueKey": "gap4",
+      "label": "分隔槽",
+      "type": "gap",
+      "required": false,
+      "multiple": false,
+      "order": 56,
+      "state": 1,
+      "readOnly": false,
+      "operationType": "1",
+      "showType": "1",
+      "showFieldPreset": 0,
+      "showValue": "",
+      "customizeFlag": 1
+    },
+    {
+      "fieldId": "survey-field-057",
+      "valueKey": "leakageCauseSelect",
+      "label": "选择渗漏原因",
+      "type": "select",
+      "required": false,
+      "multiple": false,
+      "order": 57,
+      "state": 1,
+      "readOnly": false,
+      "operationType": "1",
+      "showType": "3",
+      "showField": "part",
+      "showFieldPreset": 1,
+      "showValue": "",
+      "extsShowValue": [
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-9bdb2af67992"
+        ],
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-2abaca4911e6"
+        ],
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-38d66d9692ac"
+        ],
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-dbae772db290"
+        ],
+        [
+          "survey-option-d4735e3a265e",
+          "survey-option-d29d53701d3c"
+        ],
+        [
+          "survey-option-d4735e3a265e",
+          "survey-option-36790ecd55c2"
+        ],
+        [
+          "survey-option-4e07408562be",
+          "survey-option-226f76b55acb"
+        ],
+        [
+          "survey-option-4e07408562be",
+          "survey-option-88820462180e"
+        ],
+        [
+          "survey-option-2c624232cdd2"
+        ],
+        [
+          "survey-option-19581e27de7c"
+        ],
+        [
+          "survey-option-ef2d127de37b"
+        ],
+        [
+          "survey-option-e7f6c011776e"
+        ]
+      ],
+      "customizeFlag": 1
+    },
+    {
+      "fieldId": "survey-field-058",
+      "valueKey": "leakageCause",
+      "label": "已选择渗漏原因",
+      "type": "data",
+      "required": true,
+      "multiple": true,
+      "order": 58,
+      "state": 1,
+      "readOnly": false,
+      "operationType": "1",
+      "showType": "3",
+      "showField": "part",
+      "showFieldPreset": 1,
+      "showValue": "",
+      "extsShowValue": [
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-9bdb2af67992"
+        ],
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-2abaca4911e6"
+        ],
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-38d66d9692ac"
+        ],
+        [
+          "survey-option-6b86b273ff34",
+          "survey-option-dbae772db290"
+        ],
+        [
+          "survey-option-d4735e3a265e",
+          "survey-option-d29d53701d3c"
+        ],
+        [
+          "survey-option-d4735e3a265e",
+          "survey-option-36790ecd55c2"
+        ],
+        [
+          "survey-option-4e07408562be",
+          "survey-option-226f76b55acb"
+        ],
+        [
+          "survey-option-4e07408562be",
+          "survey-option-88820462180e"
+        ],
+        [
+          "survey-option-2c624232cdd2"
+        ],
+        [
+          "survey-option-19581e27de7c"
+        ],
+        [
+          "survey-option-ef2d127de37b"
+        ],
+        [
+          "survey-option-e7f6c011776e"
+        ]
+      ],
+      "width": "240px",
+      "customizeFlag": 1
+    },
+    {
+      "fieldId": "survey-field-059",
+      "valueKey": "memo",
+      "label": "备注",
+      "type": "text",
+      "required": false,
+      "multiple": false,
+      "order": 59,
+      "state": 1,
+      "readOnly": false,
+      "operationType": "1",
+      "showType": "1",
+      "showFieldPreset": 0,
+      "showValue": "",
+      "width": "240px",
+      "customizeFlag": 1
+    },
+    {
+      "fieldId": "survey-field-060",
+      "valueKey": "gap4",
+      "label": "分隔槽",
+      "type": "gap",
+      "required": false,
+      "multiple": false,
+      "order": 60,
+      "state": 1,
+      "readOnly": false,
+      "operationType": "1",
+      "showType": "1",
+      "showFieldPreset": 0,
+      "showValue": "",
+      "customizeFlag": 1
+    },
+    {
+      "fieldId": "survey-field-061",
+      "valueKey": "serviceGoods",
+      "label": "推荐服务商品",
+      "type": "bizSelect",
+      "required": false,
+      "multiple": true,
+      "order": 61,
+      "state": 1,
+      "readOnly": false,
+      "operationType": "1",
+      "valueOption": "projPackage",
+      "showType": "1",
+      "showFieldPreset": 1,
+      "showValue": "",
+      "extsShowValue": [],
+      "frontEndConfig": {
+        "label": "name",
+        "params": {
+          "kind": "object"
+        },
+        "url": {
+          "kind": "string"
+        },
+        "value": "_id"
+      },
+      "width": "300px",
+      "customizeFlag": 1
+    }
+  ],
+  "duplicateValueKeys": [
+    "gap4",
+    "length",
+    "province",
+    "width"
+  ],
+  "providers": [
+    {
+      "id": "regions",
+      "kind": "r1_batch_code",
+      "verification": "VERIFIED",
+      "endpoint": "i/code/selectCode.do",
+      "requestKeys": [
+        "jsonPara",
+        "tenantId"
+      ],
+      "options": [
+        {
+          "value": "survey-option-e9126f469646",
+          "label": "北京市"
+        },
+        {
+          "value": "survey-option-4f9f73b34c5b",
+          "label": "天津"
+        },
+        {
+          "value": "survey-option-a0337a650ec8",
+          "label": "河北"
+        },
+        {
+          "value": "survey-option-718e63b74c96",
+          "label": "上海市"
+        },
+        {
+          "value": "survey-option-7b0d98ba3f8a",
+          "label": "陕西"
+        }
+      ]
+    },
+    {
+      "id": "parts",
+      "kind": "r1_multistage_code",
+      "verification": "VERIFIED",
+      "endpoint": "i/code/selectMultistageCode.do",
+      "requestKeys": [
+        "types",
+        "tenantId"
+      ],
+      "options": [
+        {
+          "value": "survey-option-6b86b273ff34",
+          "label": "屋面",
+          "children": [
+            {
+              "value": "survey-option-9bdb2af67992",
+              "label": "有保护平屋面"
+            },
+            {
+              "value": "survey-option-2abaca4911e6",
+              "label": "有保护斜屋面"
+            },
+            {
+              "value": "survey-option-38d66d9692ac",
+              "label": "无保护平屋面"
+            },
+            {
+              "value": "survey-option-dbae772db290",
+              "label": "无保护斜屋面"
+            }
+          ]
+        },
+        {
+          "value": "survey-option-d4735e3a265e",
+          "label": "卫生间",
+          "children": [
+            {
+              "value": "survey-option-d29d53701d3c",
+              "label": "下沉式"
+            },
+            {
+              "value": "survey-option-36790ecd55c2",
+              "label": "非下沉式"
+            }
+          ]
+        },
+        {
+          "value": "survey-option-4e07408562be",
+          "label": "窗户",
+          "children": [
+            {
+              "value": "survey-option-226f76b55acb",
+              "label": "有保温"
+            },
+            {
+              "value": "survey-option-88820462180e",
+              "label": "无保温"
+            }
+          ]
+        },
+        {
+          "value": "survey-option-2c624232cdd2",
+          "label": "阳光房"
+        },
+        {
+          "value": "survey-option-19581e27de7c",
+          "label": "金属屋面"
+        },
+        {
+          "value": "survey-option-ef2d127de37b",
+          "label": "地下室"
+        },
+        {
+          "value": "survey-option-e7f6c011776e",
+          "label": "其他"
+        }
+      ]
+    },
+    {
+      "id": "IS",
+      "kind": "r1_batch_code",
+      "verification": "VERIFIED",
+      "endpoint": "i/code/selectCode.do",
+      "requestKeys": [
+        "jsonPara",
+        "tenantId"
+      ],
+      "options": [
+        {
+          "value": "survey-option-5feceb66ffc8",
+          "label": "否"
+        },
+        {
+          "value": "survey-option-6b86b273ff34",
+          "label": "是"
+        }
+      ]
+    },
+    {
+      "id": "projPackage",
+      "kind": "business_record",
+      "verification": "UNKNOWN",
+      "endpoint": "biz/projPackage/queryWithRank",
+      "requestKeys": [
+        "_all",
+        "is:state|integer#and",
+        "in:serviceType|array#and",
+        "sourceType",
+        "sortField",
+        "sortOrder"
+      ],
+      "options": [],
+      "reason": "Survey-stage service type was not observed; no package options fabricated"
+    },
+    {
+      "id": "leakageCause",
+      "kind": "unknown",
+      "verification": "UNKNOWN",
+      "endpoint": "unknown",
+      "requestKeys": [],
+      "options": [],
+      "reason": "custom data/provider contract not verified"
+    }
+  ],
+  "evidence": {
+    "formIdentity": "explicit historical Survey family read through ExtField rows; raw identity omitted",
+    "activeNodeObserved": false,
+    "rawIdentityPersisted": false
+  },
+  "fingerprint": "b4555ca30b72067b2af754744397efc6172b673130a0b7a4db0b05f5eccc3d2e"
+}

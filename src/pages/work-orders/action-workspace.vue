@@ -37,10 +37,11 @@
     :transitioning="isNavigating"
     :can-submit="workspace.canSubmit"
     :business-feedback="feedback"
-    :submit-label="workspace.descriptor.actionIntent === 'interact_with_form' ? '完成勘察' : '继续确认'"
+    :submit-label="workspace.descriptor.formPurpose === 'survey' ? '完成勘察' : workspace.descriptor.actionIntent === 'interact_with_form' ? '完成' : '继续确认'"
     @submit="submitWorkspace"
   >
-    <SurveyActionContent v-if="workspace.descriptor.actionIntent === 'interact_with_form'" />
+    <SurveyActionContent v-if="workspace.descriptor.actionIntent === 'interact_with_form' && workspace.descriptor.formPurpose === 'survey'" />
+    <GenericDynamicFormActionContent v-else-if="workspace.descriptor.actionIntent === 'interact_with_form'" />
     <view v-else class="action-workspace-content app-surface" :data-field-count="workspace.appointmentFields.length">
       <view class="action-content-heading">
         <view class="action-content-title-row">
@@ -135,8 +136,8 @@
     <template #success v-if="workspace.descriptor?.actionIntent === 'interact_with_form'">
       <view class="action-success app-surface">
         <view class="action-success-icon" aria-hidden="true"><AppIcon name="complete" :size="28" /></view>
-        <text class="action-success-title">现场勘察已完成</text>
-        <text class="action-success-copy">本次动态表单已提交，工单状态已刷新。</text>
+        <text class="action-success-title">{{ workspace.descriptor.formPurpose === 'survey' ? '现场勘察已完成' : '表单已完成' }}</text>
+        <text class="action-success-copy">{{ workspace.descriptor.formPurpose === 'survey' ? '本次动态表单已提交，工单状态已刷新。' : '本次动态表单已提交，工单状态已刷新。' }}</text>
       </view>
     </template>
     <template #success-actions v-if="workspace.descriptor?.actionIntent === 'interact_with_form'">
@@ -165,6 +166,7 @@ import {
 import { appointmentDisplayFor } from '@features/work-orders/appointment-time'
 import { useSessionStore } from '@shared/state'
 import ActionWorkspaceShell from '@shared/ui/ActionWorkspaceShell.vue'
+import GenericDynamicFormActionContent from '@features/work-orders/components/GenericDynamicFormActionContent.vue'
 import SurveyActionContent from '@features/work-orders/components/SurveyActionContent.vue'
 import AppButton from '@shared/ui/AppButton.vue'
 import AppChoiceGroup from '@shared/ui/AppChoiceGroup.vue'

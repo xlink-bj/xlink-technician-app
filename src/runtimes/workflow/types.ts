@@ -13,6 +13,7 @@ import type {
   WorkflowNodeCategory as ReadWorkflowNodeCategory,
   WorkflowNodeLifecycle as ReadWorkflowNodeLifecycle,
   WorkflowNodeVisibilityEvidence,
+  FormPurpose,
 } from '@shared/ports'
 
 export type { WorkflowNodeVisibilityEvidence } from '@shared/ports'
@@ -75,7 +76,8 @@ export interface WorkflowNodeMetadata {
   readonly formDefinitionId?: FormDefinitionId
   readonly handlers?: readonly HandlerIdentity[]
   readonly visibility?: WorkflowNodeVisibilityEvidence
-  readonly formPurpose?: 'appointment'
+  readonly formPurpose?: FormPurpose
+  readonly formFieldIdsReadOnly?: readonly string[]
   readonly isSystem?: boolean
   readonly isSentinel?: boolean
 }

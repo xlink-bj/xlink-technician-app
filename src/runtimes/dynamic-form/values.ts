@@ -1,4 +1,5 @@
 import { evaluateFieldState } from './state'
+import { evaluateVisibility } from './visibility'
 import type {
   FieldStateContext,
   FormFieldSchema,
@@ -157,7 +158,13 @@ export function normalizeSubmission(input: {
       ...(input.fieldContexts?.[field.fieldId] ?? {}),
       values: input.values,
     })
+    // Capability is evaluated independently from effective visibility. A
+    // hidden unsupported row is outside the current submission surface and
+    // must not produce a misleading warning or block the visible form. An
+    // unsupported visibility expression remains fail-closed in state above.
     if (state.capability === 'UNSUPPORTED') {
+      const visibility = evaluateVisibility(field.visibility, input.values)
+      if (visibility.state === 'hidden') continue
       return {
         ok: false,
         reason: 'unsupported_capability',

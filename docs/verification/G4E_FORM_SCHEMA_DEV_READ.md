@@ -1,21 +1,23 @@
-# G4-E Survey Form Schema — Sanitized Beta Contract Observation
+# G4-E Dynamic Form / Survey Contract — Sanitized Beta Observation
 
-Status: current Beta read evidence; not a Production schema registry.
+Status: historical inactive Survey evidence; not a Production schema registry.
 Repository: `xlink-bj/xlink-technician-app`  
 Branch: `rebuild/g4e-onsite-inspection`
 
 ## Purpose
 
 This record establishes how the Technician application obtains the real
-dynamic-form shape. The machine-readable contract is committed at
-`contracts/beta/inspection/current.json`. It is a sanitized, deterministic
-snapshot from an authenticated read-only Beta observation on 2026-09-17. It
+dynamic-form shape. The machine-readable historical Survey contract is
+committed at `contracts/beta/survey/historical.json`. It is a sanitized,
+deterministic snapshot from an authenticated read-only Beta observation on
+2026-09-18. It
 contains no form values, customer data, tenant/session/token material, media
 references, or raw response payloads.
 
 Dev and Beta are the same development environment for this slice. Therefore
-the active runtime observation is the current Beta contract authority for
-development. Production parity remains UNKNOWN and is not asserted here.
+this historical Beta family is the development Mock contract authority for
+this bounded slice. It is not an assertion about active membership or
+Production parity.
 
 ## Read method
 
@@ -50,7 +52,8 @@ sortOrder: desc
 is:_id|string#and: <FormDataId>
 ```
 
-The repeatable read-only contract inspector is:
+The repeatable read-only contract inspector for the older Inspection hybrid
+evidence is:
 
 ```text
 pnpm run inspect:inspection-contract -- --work-order=<safe-id>
@@ -76,11 +79,24 @@ authenticated POST reads. It can write a sanitized candidate only when
 prints or persists raw form values, cookies, tokens, tenant identifiers,
 customer data, or media references.
 
-The committed snapshot can be checked without Beta credentials:
+The committed historical Survey snapshot can be checked without Beta credentials:
 
 ```text
-pnpm run check:inspection-contract
+pnpm run check:survey-contract
 ```
+
+To recapture a sanitized historical Survey family in a controlled non-production
+environment, use the App login settings from the local environment and supply
+the form identity only at runtime:
+
+```text
+XLINK_SCHEMA_SURVEY_FORM_ID=<runtime-only-id> pnpm run capture:survey-contract:beta
+```
+
+The command performs authenticated reads only, writes aliases and structural
+metadata to the dedicated artifact, and never persists the raw form identity
+or response payload. A capture is historical evidence until its workflow
+membership and lifecycle are separately verified.
 
 In a controlled authenticated Beta environment, append `--live` (or set
 `XLINK_SCHEMA_CHECK_LIVE=true`) to capture the current sanitized contract and
@@ -169,20 +185,23 @@ from this record.
 - `showType=1` remains unconditionally visible unless an explicit legacy
   `frontEndConfig.showField` expression exists. `showType=3` remains a bounded
   value condition and does not use array position.
-- The verified R1 code provider (`i/code/selectCode.do`) and multistage
-  provider (`i/code/selectMultistageCode.do`) now resolve `qualified` and
-  `parts` through the Adapter before the form reaches Runtime. Cascade paths
-  retain their hierarchy, and option-bearing checkbox/multi-value select
-  fields use array-valued controls rather than scalar choices.
+- The verified R1 code providers (`i/code/selectCode.do`) and multistage
+  provider (`i/code/selectMultistageCode.do`) now resolve the Survey `regions`,
+  `IS` and `parts` providers through the Adapter before the form reaches
+  Runtime. Cascade paths retain their hierarchy, and option-bearing
+  checkbox/multi-value select fields use array-valued controls rather than
+  scalar choices. The legacy `qualified` provider belongs only to the
+  quarantined Inspection compatibility artifact.
 - `request`, business-record `bizSelect` without a verified record provider,
   and multi-value fields without an option source remain explicit capability
   boundaries. They are not rendered as ordinary text inputs and still block
   completion until their provider/control contract is verified.
-- The inspection workspace now resolves the observed 15-row shape through the
-  normal Mock read/Adapter/Runtime path. The former four-field fixture remains
-  available as a low-level synthetic regression fixture, but is not the
-  default simulator form. Unsupported fields are intentionally blocked rather
-  than silently presented as executable controls.
+- The Survey workspace now resolves the sanitized 61-row historical Survey
+  shape through the normal Mock read/Adapter/Runtime path. The former 15-field
+  hybrid and four-field fixture remain available only for low-level historical
+  compatibility regression; neither is the default Survey simulator form.
+  Unsupported fields are intentionally blocked rather than silently presented
+  as executable controls.
 
 ## Authority and remaining unknowns
 
@@ -198,7 +217,7 @@ from this record.
 ## Mock source of truth
 
 The G4-E Survey Mock is mechanically derived from the sanitized 61-row Survey
-family in `contracts/beta/form-families/observed.json` by
+contract in `contracts/beta/survey/historical.json` by
 `src/adapters/api/mock/survey-contract.ts`. The Adapter still receives
 backend-shaped field rows and provider responses, so the runtime path remains:
 
@@ -219,3 +238,14 @@ boundaries.
 The former 15-field artifact is isolated as historical hybrid evidence under
 `contracts/beta/inspection/current.json` and is not imported by the G4-E
 application Mock. Its Inspection-like fields do not define Survey behavior.
+
+The semantic boundary is explicit: generic dynamic forms have no Survey
+purpose by default; only Adapter-proven `survey` identity receives
+Survey-specific copy and `SurveyActionContent`. Appointment remains a separate
+`appointment` purpose. The current historical contract is captured by the
+read-only helper `pnpm run capture:survey-contract:beta` (with the form
+identity supplied only through the local runtime environment) and validated by
+`pnpm run check:survey-contract`. Its row-level metadata includes labels,
+ordering, required/read-only flags, duplicate value keys, visibility sources,
+presentation structure and provider status. `projPackage` and custom
+`leakageCause` behavior remain unresolved and fail closed.

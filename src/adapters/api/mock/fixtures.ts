@@ -5,6 +5,7 @@ import {
   mockSurveyFormDefinitionId,
   mockSurveyFormDefinitionResponse,
   mockSurveyPartsCascadeResponse,
+  mockSurveyCodeOptionsResponse,
 } from './survey-contract'
 
 /** Synthetic-only legacy harness form; it is not the G4-E Survey contract. */
@@ -14,6 +15,7 @@ export {
   mockSurveyFormDefinitionId,
   mockSurveyFormDefinitionResponse,
   mockSurveyPartsCascadeResponse,
+  mockSurveyCodeOptionsResponse,
 }
 
 export const mockAppointmentFormDefinitionResponse = {
@@ -731,6 +733,7 @@ export const mockWorkOrderDetailResponses = {
           nodeType: 'forms',
           name: '现场勘察',
           formDefId: mockSurveyFormDefinitionId,
+          colName: 'survey',
           userChoose: ['synthetic-role'],
         },
       }],

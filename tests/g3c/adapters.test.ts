@@ -320,6 +320,89 @@ describe('G3-C API adapter foundation', () => {
     expect(result.data?.id).not.toBe('field-row-001')
   })
 
+  it('routes only an explicit Survey Ext identity and leaves generic forms unclassified', async () => {
+    const surveyId = asOpaqueId<'FormDefinitionId'>('survey-definition')
+    const surveyTransport = new FixtureApiTransport({
+      'biz/extField/query': {
+        data: [{
+          _id: 'survey-row-001',
+          colName: 'survey',
+          purpose: 'not-a-form-purpose',
+          name: 'surveyField',
+          nameDisp: '勘查字段',
+          type: 'text',
+        }],
+      },
+    })
+    const survey = await createTechnicianApiReadAdapter(surveyTransport).getFormDefinition(surveyId)
+    expect(survey.data?.purpose).toBe('survey')
+
+    const genericId = asOpaqueId<'FormDefinitionId'>('generic-definition')
+    const genericTransport = new FixtureApiTransport({
+      'biz/extField/query': {
+        data: [{
+          _id: 'generic-row-001',
+          purpose: 'survey',
+          name: 'genericField',
+          nameDisp: '通用字段',
+          type: 'text',
+        }],
+      },
+    })
+    const generic = await createTechnicianApiReadAdapter(genericTransport).getFormDefinition(genericId)
+    expect(generic.data).not.toHaveProperty('purpose')
+  })
+
+  it('fails closed when field rows carry contradictory form identities', async () => {
+    const requestedId = asOpaqueId<'FormDefinitionId'>('mixed-definition')
+    const transport = new FixtureApiTransport({
+      'biz/extField/query': {
+        data: [
+          { _id: 'survey-row', colName: 'survey', name: 'first', nameDisp: '第一行', type: 'text' },
+          { _id: 'appointment-row', colName: 'appointment', name: 'second', nameDisp: '第二行', type: 'text' },
+        ],
+      },
+    })
+
+    const result = await createTechnicianApiReadAdapter(transport).getFormDefinition(requestedId)
+
+    expect(result.data).not.toHaveProperty('purpose')
+  })
+
+  it('retains inline option hierarchy and fails closed on malformed option rows', async () => {
+    const requestedId = asOpaqueId<'FormDefinitionId'>('generic-definition')
+    const transport = new FixtureApiTransport({
+      'biz/extField/query': {
+        data: [
+          {
+            _id: 'cascade-row',
+            name: 'location',
+            nameDisp: '位置',
+            type: 'cascade',
+            options: [{ value: 'roof', name: '屋面', children: [{ value: 'inner', name: '女儿墙' }] }],
+          },
+          {
+            _id: 'malformed-row',
+            name: 'broken',
+            nameDisp: '异常选项',
+            type: 'select',
+            options: [{ value: 'missing-label' }],
+          },
+        ],
+      },
+    })
+    const result = await createTechnicianApiReadAdapter(transport).getFormDefinition(requestedId)
+    expect(result.data?.fields?.[0]?.options).toEqual([{
+      value: 'roof',
+      label: '屋面',
+      children: [{ value: 'inner', label: '女儿墙' }],
+    }])
+    expect(result.data?.fields?.[1]).toMatchObject({
+      fieldId: 'malformed-row',
+      unsupportedReason: 'Field option metadata is malformed',
+    })
+  })
+
   it('preserves distinct field-row identities when Survey value keys repeat', async () => {
     const requestedId = asOpaqueId<'FormDefinitionId'>('survey-definition')
     const transport = new FixtureApiTransport({
@@ -422,7 +505,7 @@ describe('G3-C API adapter foundation', () => {
         type: 'digit',
         required: true,
         readOnly: false,
-        visibility: { kind: 'equals', path: 'part', value: ['1', '2'] },
+        visibility: { kind: 'oneOf', path: 'part', values: ['1', '2'] },
       },
     ])
   })

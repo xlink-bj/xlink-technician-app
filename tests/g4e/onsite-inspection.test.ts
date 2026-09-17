@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { createPinia, setActivePinia } from 'pinia'
 
 import { createTechnicianApiCommandAdapter } from '@adapters/api/technician-api-commands'
@@ -48,27 +50,27 @@ import {
   type UploadedMediaRef,
 } from '@shared/types'
 
-const roleId = asOpaqueId<'RoleId'>('inspection-role')
-const userId = asOpaqueId<'UserId'>('inspection-user')
+const roleId = asOpaqueId<'RoleId'>('survey-role')
+const userId = asOpaqueId<'UserId'>('survey-user')
 const session: SessionSnapshot = {
-  sessionRef: asOpaqueId<'SessionRef'>('inspection-session'),
+  sessionRef: asOpaqueId<'SessionRef'>('survey-session'),
   user: { id: userId },
   currentRole: { id: roleId },
   capabilityNames: [],
 }
-const workOrderId = asOpaqueId<'WorkOrderId'>('inspection-work-order')
-const workflowNodeId = asOpaqueId<'WorkflowNodeRuntimeId'>('inspection-node')
-const formDefinitionId = asOpaqueId<'FormDefinitionId'>('inspection-definition')
-const formDataId = asOpaqueId<'FormDataId'>('inspection-form-data')
+const workOrderId = asOpaqueId<'WorkOrderId'>('survey-work-order')
+const workflowNodeId = asOpaqueId<'WorkflowNodeRuntimeId'>('survey-node')
+const formDefinitionId = asOpaqueId<'FormDefinitionId'>('survey-definition')
+const formDataId = asOpaqueId<'FormDataId'>('survey-form-data')
 
 function succeeded<T>(data: T): OperationSnapshot<T> {
   return { state: 'succeeded', data }
 }
 
-function inspectionDetail(): WorkOrderDetail {
+function surveyDetail(): WorkOrderDetail {
   return {
     id: workOrderId,
-    workflowRunId: asOpaqueId<'WorkflowRunId'>('inspection-run'),
+    workflowRunId: asOpaqueId<'WorkflowRunId'>('survey-run'),
     displayNumber: '19018',
     customerName: '演示现场勘察',
     workflowNodes: [{
@@ -77,26 +79,28 @@ function inspectionDetail(): WorkOrderDetail {
       lifecycle: 'active',
       displayName: '现场勘察',
       formDefinitionId,
+      formPurpose: 'survey',
       visibility: { evidenceState: 'verified', viewableRoleIds: [roleId] },
     }],
   }
 }
 
-function inspectionForm(values: Readonly<Record<string, FormFieldValue>> = {}): DynamicFormRead {
+function surveyForm(values: Readonly<Record<string, FormFieldValue>> = {}): DynamicFormRead {
   return {
+    purpose: 'survey',
     definitionId: formDefinitionId,
     fields: [
-      { fieldId: 'summary', valueKey: 'summary', label: '现场情况', type: 'textarea', required: true, readOnly: false },
+      { fieldId: 'survey-summary', valueKey: 'surveySummary', label: '现场情况', type: 'textarea', required: true, readOnly: false },
       {
-        fieldId: 'result', valueKey: 'result',
+        fieldId: 'survey-result', valueKey: 'surveyResult',
         label: '勘察结论',
         type: 'radio',
         required: true,
         readOnly: false,
         options: [{ value: 'safe', label: '可继续施工' }, { value: 'follow_up', label: '需要跟进' }],
       },
-      { fieldId: 'photo', valueKey: 'photo', label: '现场照片', type: 'image', required: true, readOnly: false },
-      { fieldId: 'note', valueKey: 'note', label: '备注', type: 'textarea', required: false, readOnly: false },
+      { fieldId: 'survey-photo', valueKey: 'surveyPhoto', label: '现场照片', type: 'image', required: true, readOnly: false },
+      { fieldId: 'survey-note', valueKey: 'surveyNote', label: '备注', type: 'textarea', required: false, readOnly: false },
     ],
     values,
   }
@@ -121,8 +125,8 @@ function storageFor() {
 
 function configureWorkspace(
   commandResult: OperationSnapshot<void> = succeeded(undefined),
-  detailResult: WorkOrderDetail = inspectionDetail(),
-  dynamicForm: DynamicFormRead = inspectionForm(),
+  detailResult: WorkOrderDetail = surveyDetail(),
+  dynamicForm: DynamicFormRead = surveyForm(),
 ) {
   const storage = storageFor()
   const api: TechnicianApiReadPort = {
@@ -141,7 +145,7 @@ function configureWorkspace(
   }
   const picker: MediaFilePickerPort = {
     pick: vi.fn(async () => createCapabilityResult<readonly LocalMedia[]>('photo-library', 'granted', [{
-      ref: asOpaqueId<'LocalMediaRef'>('local-inspection-photo'),
+      ref: asOpaqueId<'LocalMediaRef'>('local-survey-photo'),
       localPath: '/tmp/not-persisted.jpg',
       mimeType: 'image/jpeg',
       source: 'library' as const,
@@ -172,13 +176,13 @@ function configureWorkspace(
 }
 
 async function fillAndSave(store: ReturnType<typeof useActionWorkspaceStore>): Promise<void> {
-  store.setField('summary', '墙面情况正常')
-  store.setField('result', 'safe')
-  await store.pickDynamicMedia('photo')
+  store.setField('survey-summary', '墙面情况正常')
+  store.setField('survey-result', 'safe')
+  await store.pickDynamicMedia('survey-photo')
   expect((await store.saveDynamicForm()).state).toBe('succeeded')
 }
 
-describe('G4-E onsite inspection dynamic Action Content', () => {
+describe('G4-E Survey dynamic Action Content', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     vi.stubEnv('VITE_XLINK_ENVIRONMENT', 'test')
@@ -188,12 +192,32 @@ describe('G4-E onsite inspection dynamic Action Content', () => {
   })
 
   it('projects a verified dynamic form node as the executable current Action', () => {
-    const projection = detailWorkflowProjectionFor(inspectionDetail(), session)
+    const projection = detailWorkflowProjectionFor(surveyDetail(), session)
     expect(projection.selection).toBe('selected')
     expect(projection.currentTask).toMatchObject({
       actionIntent: 'interact_with_form',
       execution: 'enabled',
     })
+  })
+
+  it('keeps an unclassified dynamic form generic even when its display label resembles Survey copy', () => {
+    const generic = surveyDetail()
+    const genericNode = generic.workflowNodes![0]
+    const projection = detailWorkflowProjectionFor({
+      ...generic,
+      workflowNodes: [{
+        ...genericNode,
+        displayName: '现场勘察',
+        formDefinitionId: asOpaqueId<'FormDefinitionId'>('generic-form-definition'),
+        formPurpose: undefined,
+      }],
+    }, session)
+
+    expect(projection.currentTask).toMatchObject({
+      actionIntent: 'interact_with_form',
+      execution: 'enabled',
+    })
+    expect(projection.currentTask).not.toHaveProperty('formPurpose')
   })
 
   it('uses the Dynamic Form Runtime for required validation before any write', async () => {
@@ -209,9 +233,9 @@ describe('G4-E onsite inspection dynamic Action Content', () => {
   it('requires an explicit successful form save before completion and invalidates eligibility after edits', async () => {
     const { store, save, complete } = configureWorkspace()
     await store.load({ workOrderId, workflowNodeId, actionIntent: 'interact_with_form' })
-    store.setField('summary', '墙面情况正常')
-    store.setField('result', 'safe')
-    await store.pickDynamicMedia('photo')
+    store.setField('survey-summary', '墙面情况正常')
+    store.setField('survey-result', 'safe')
+    await store.pickDynamicMedia('survey-photo')
 
     expect(store.canSubmit).toBe(false)
     const unsavedCompletion = await store.completeDynamicForm()
@@ -224,7 +248,7 @@ describe('G4-E onsite inspection dynamic Action Content', () => {
     expect(store.dynamicFormSaveState).toBe('saved')
     expect(store.canSubmit).toBe(true)
 
-    store.setField('note', '保存后发生的修改')
+    store.setField('survey-note', '保存后发生的修改')
     expect(store.dynamicFormSaveState).toBe('not_saved')
     expect(store.canSubmit).toBe(false)
     expect(complete).not.toHaveBeenCalled()
@@ -235,10 +259,10 @@ describe('G4-E onsite inspection dynamic Action Content', () => {
       execute: vi.fn(async () => ({
         data: [{
           _id: 'field-row-conditional',
-          name: 'inspectionPhoto',
+          name: 'surveyPhoto',
           nameDisp: '现场照片',
           type: 'image',
-          frontEndConfig: { showField: 'inspectionResult', showValue: 'safe' },
+          frontEndConfig: { showField: 'surveyResult', showValue: 'safe' },
         }],
       })),
     }
@@ -247,36 +271,36 @@ describe('G4-E onsite inspection dynamic Action Content', () => {
     const field = definition.data?.fields?.[0]
 
     expect(field).toMatchObject({
-      visibility: { kind: 'equals', path: 'inspectionResult', value: 'safe' },
+      visibility: { kind: 'equals', path: 'surveyResult', value: 'safe' },
     })
     expect(field).not.toHaveProperty('frontEndConfig')
   })
 
   it('hides conditional fields and does not warn for hidden unsupported Action Content', () => {
     const form: DynamicFormRead = {
-      ...inspectionForm({ result: 'follow_up' }),
+      ...surveyForm({ surveyResult: 'follow_up' }),
       fields: [
-        ...inspectionForm().fields,
+        ...surveyForm().fields,
         {
-          fieldId: 'followUpPhoto', valueKey: 'followUpPhoto',
+          fieldId: 'survey-follow-up-photo', valueKey: 'surveyFollowUpPhoto',
           label: '跟进照片',
           type: 'unknown-media',
           required: false,
           readOnly: false,
-          visibility: { kind: 'equals', path: 'result', value: 'safe' },
+          visibility: { kind: 'equals', path: 'surveyResult', value: 'safe' },
         },
       ],
     }
 
-    expect(dynamicActionFieldsFor(form).find((field) => field.valueKey === 'followUpPhoto')?.runtime.visible).toBe(false)
-    expect(dynamicActionUnsupportedFieldsFor(form).map((field) => field.valueKey)).not.toContain('followUpPhoto')
+    expect(dynamicActionFieldsFor(form).find((field) => field.valueKey === 'surveyFollowUpPhoto')?.runtime.visible).toBe(false)
+    expect(dynamicActionUnsupportedFieldsFor(form).map((field) => field.valueKey)).not.toContain('surveyFollowUpPhoto')
   })
 
   it('supports checkbox and cascade fields without scalarizing their values', () => {
     const form: DynamicFormRead = {
       fields: [
         {
-          fieldId: 'inspectionChecks', valueKey: 'inspectionChecks',
+          fieldId: 'surveyChecks', valueKey: 'surveyChecks',
           label: '检查项',
           type: 'checkbox',
           required: true,
@@ -284,7 +308,7 @@ describe('G4-E onsite inspection dynamic Action Content', () => {
           options: [{ value: 'ok', label: '正常' }],
         },
         {
-          fieldId: 'inspectionPath', valueKey: 'inspectionPath',
+          fieldId: 'surveyPath', valueKey: 'surveyPath',
           label: '检查路径',
           type: 'cascade',
           required: false,
@@ -301,8 +325,8 @@ describe('G4-E onsite inspection dynamic Action Content', () => {
     const form: DynamicFormRead = {
       fields: [
         {
-          fieldId: 'inspectionContent', valueKey: 'inspectionContent',
-          label: '巡检内容',
+          fieldId: 'survey-measurements', valueKey: 'surveyMeasurements',
+          label: '勘查记录',
           type: 'select',
           required: false,
           readOnly: false,
@@ -327,7 +351,7 @@ describe('G4-E onsite inspection dynamic Action Content', () => {
     expect(dynamicActionUnsupportedFieldsFor({
       fields: [{ ...form.fields[0], options: undefined }],
       values: {},
-    }).map((field) => field.valueKey)).toEqual(['inspectionContent'])
+    }).map((field) => field.valueKey)).toEqual(['surveyMeasurements'])
   })
 
   it('addresses repeated Survey rows by fieldId while storing the shared valueKey', async () => {
@@ -338,7 +362,7 @@ describe('G4-E onsite inspection dynamic Action Content', () => {
       ],
       values: {},
     }
-    const { store } = configureWorkspace(succeeded(undefined), inspectionDetail(), form)
+    const { store } = configureWorkspace(succeeded(undefined), surveyDetail(), form)
     await store.load({ workOrderId, workflowNodeId, actionIntent: 'interact_with_form' })
 
     store.setField('survey-length-row-002', '2.5')
@@ -349,9 +373,9 @@ describe('G4-E onsite inspection dynamic Action Content', () => {
 
   it('blocks completion when a required provider remains UNKNOWN', async () => {
     const form: DynamicFormRead = {
-      ...inspectionForm(),
+      ...surveyForm(),
       fields: [
-        ...inspectionForm().fields,
+        ...surveyForm().fields,
         {
           fieldId: 'serviceGoods', valueKey: 'serviceGoods',
           label: '套餐名称',
@@ -363,11 +387,11 @@ describe('G4-E onsite inspection dynamic Action Content', () => {
         },
       ],
     }
-    const { store, save, complete } = configureWorkspace(succeeded(undefined), inspectionDetail(), form)
+    const { store, save, complete } = configureWorkspace(succeeded(undefined), surveyDetail(), form)
     await store.load({ workOrderId, workflowNodeId, actionIntent: 'interact_with_form' })
-    store.setField('summary', '墙面情况正常')
-    store.setField('result', 'safe')
-    await store.pickDynamicMedia('photo')
+    store.setField('survey-summary', '墙面情况正常')
+    store.setField('survey-result', 'safe')
+    await store.pickDynamicMedia('survey-photo')
 
     expect(store.canSubmit).toBe(false)
     const result = await store.saveDynamicForm()
@@ -378,24 +402,24 @@ describe('G4-E onsite inspection dynamic Action Content', () => {
 
   it('guards media picker and upload with the effective field state', async () => {
     const readOnlyForm: DynamicFormRead = {
-      ...inspectionForm(),
-      fields: inspectionForm().fields.map((field) => field.valueKey === 'photo' ? { ...field, readOnly: true } : field),
+      ...surveyForm(),
+      fields: surveyForm().fields.map((field) => field.valueKey === 'surveyPhoto' ? { ...field, readOnly: true } : field),
     }
     const hiddenForm: DynamicFormRead = {
-      ...inspectionForm(),
-      fields: inspectionForm().fields.map((field) => field.valueKey === 'photo'
-        ? { ...field, visibility: { kind: 'equals' as const, path: 'result', value: 'safe' } }
+      ...surveyForm(),
+      fields: surveyForm().fields.map((field) => field.valueKey === 'surveyPhoto'
+        ? { ...field, visibility: { kind: 'equals' as const, path: 'surveyResult', value: 'safe' } }
         : field),
     }
     const unsupportedForm: DynamicFormRead = {
-      ...inspectionForm(),
-      fields: inspectionForm().fields.map((field) => field.valueKey === 'photo' ? { ...field, type: 'video' } : field),
+      ...surveyForm(),
+      fields: surveyForm().fields.map((field) => field.valueKey === 'surveyPhoto' ? { ...field, type: 'video' } : field),
     }
 
     for (const form of [readOnlyForm, hiddenForm, unsupportedForm]) {
-      const { store, picker, upload } = configureWorkspace(succeeded(undefined), inspectionDetail(), form)
+      const { store, picker, upload } = configureWorkspace(succeeded(undefined), surveyDetail(), form)
       await store.load({ workOrderId, workflowNodeId, actionIntent: 'interact_with_form' })
-      const result = await store.pickDynamicMedia('photo')
+      const result = await store.pickDynamicMedia('survey-photo')
       expect(result.state).toBe('failed_terminal')
       expect(picker.pick).not.toHaveBeenCalled()
       expect(upload.upload).not.toHaveBeenCalled()
@@ -411,7 +435,7 @@ describe('G4-E onsite inspection dynamic Action Content', () => {
     expect(upload.upload).toHaveBeenCalledTimes(1)
     expect(save).toHaveBeenCalledWith(expect.objectContaining({
       definitionId: formDefinitionId,
-      values: expect.objectContaining({ photo: 'https://mock-upload.invalid/local-inspection-photo' }),
+      values: expect.objectContaining({ surveyPhoto: 'https://mock-upload.invalid/local-survey-photo' }),
     }))
     expect(save.mock.calls[0][0]).not.toHaveProperty('formDataId')
     expect(complete).not.toHaveBeenCalled()
@@ -449,7 +473,7 @@ describe('G4-E onsite inspection dynamic Action Content', () => {
       state: 'failed_retryable',
       error: { category: 'network_retryable', message: 'temporary', retryable: true },
     }
-    const initialDetail = inspectionDetail()
+    const initialDetail = surveyDetail()
     const reconciledDetail: WorkOrderDetail = {
       ...initialDetail,
       workflowNodes: [{ ...initialDetail.workflowNodes![0], lifecycle: 'closed' }],
@@ -498,6 +522,19 @@ describe('G4-E onsite inspection dynamic Action Content', () => {
       body: { 'is:_id|string#and': 'synthetic-data' },
     })).rejects.toMatchObject({ category: 'server_terminal' })
     expect(request).not.toHaveBeenCalled()
+
+    vi.stubEnv('VITE_XLINK_ENABLE_REAL_WRITES', 'true')
+    const commandTransport = createUniApiCommandTransport({
+      apiBaseUrl: 'https://example.invalid',
+      getSessionRef: () => session.sessionRef,
+      request,
+    })
+    await expect(commandTransport.execute({
+      method: 'POST',
+      path: `biz/extForm/upsert/${mockSurveyFormDefinitionId}`,
+      body: { dataStr: JSON.stringify({ sid: 'real-work-order' }) },
+    })).rejects.toMatchObject({ category: 'server_terminal' })
+    expect(request).not.toHaveBeenCalled()
   })
 
   it('runs the observed Survey form through the real Adapter command path', async () => {
@@ -530,11 +567,11 @@ describe('G4-E onsite inspection dynamic Action Content', () => {
       expectedWorkflowRunId: detail.data?.workflowRunId,
     })
     expect(initial).toMatchObject({ state: 'succeeded', data: { values: {} } })
-    expect(initial.data?.fields.find((field) => field.valueKey === 'part')?.options).toEqual([
-      { value: 'repair-part-code-001', label: '屋面' },
-      { value: 'repair-part-code-002', label: '外墙' },
-      { value: 'repair-part-code-003', label: '卫生间' },
-    ])
+    expect(initial.data?.purpose).toBe('survey')
+    const partOptions = initial.data?.fields.find((field) => field.valueKey === 'part')?.options ?? []
+    expect(partOptions).toHaveLength(7)
+    expect(partOptions[0]).toMatchObject({ label: '屋面' })
+    expect(partOptions[0]?.children).toHaveLength(4)
     expect(initial.data?.fields).toHaveLength(61)
     const duplicateLengthRows = initial.data?.fields.filter((field) => field.valueKey === 'length') ?? []
     expect(duplicateLengthRows).toHaveLength(2)
@@ -543,13 +580,16 @@ describe('G4-E onsite inspection dynamic Action Content', () => {
     expect(initialFields.find((field) => field.valueKey === 'part')?.runtime.capability).toBe('SUPPORTED_GENERIC')
     expect(initialFields.find((field) => field.valueKey === 'serviceGoods')?.runtime.capability).toBe('UNSUPPORTED')
     expect(initialFields.find((field) => field.valueKey === 'leakageCause')?.runtime.capability).toBe('UNSUPPORTED')
+    const window = partOptions.find((option) => option.label === '窗户')
+    const windowPart = window?.children?.[0]
+    expect(windowPart).toBeDefined()
     const selectedPart = {
       ...initial.data!,
-      values: { part: ['repair-part-code-001'] },
+      values: { part: [window!.value, windowPart!.value] },
     }
     expect(dynamicActionFieldsFor(selectedPart)
       .filter((field) => field.valueKey === 'length')
-      .every((field) => field.runtime.visible)).toBe(true)
+      .map((field) => field.runtime.visible)).toEqual([true, false])
 
     const saved = await commands.saveDynamicForm!({
       workOrderId: asOpaqueId<'WorkOrderId'>(mockCommandScenarioIds.surveySuccess),
@@ -603,14 +643,23 @@ describe('G4-E onsite inspection dynamic Action Content', () => {
     expect(definition.data?.fields?.filter((field) => field.valueKey === 'length')).toHaveLength(2)
     expect(definition.data?.fields?.filter((field) => field.valueKey === 'width')).toHaveLength(2)
     expect(definition.data?.fields?.filter((field) => field.valueKey === 'gap4')).toHaveLength(2)
-    expect(dynamicActionUnsupportedFieldsFor({
+    const unsupported = dynamicActionUnsupportedFieldsFor({
       fields: definition.data?.fields ?? [],
       values: {},
-    }).map((field) => field.valueKey)).toEqual(expect.arrayContaining([
-      'gap0', 'gap1', 'gap2', 'gap3', 'gap4', 'isMoldRemoved', 'leakageCauseSelect',
-      'serviceGoods', 'leakageCause',
-    ]))
+    }).map((field) => field.valueKey)
+    expect(unsupported).toEqual(expect.arrayContaining(['surveyPDFUrl', 'area', 'province', 'part', 'serviceGoods']))
+    expect(unsupported).not.toContain('gap0')
+    expect(unsupported).not.toContain('leakageCauseSelect')
     expect(request).not.toHaveBeenCalled()
+  })
+
+  it('keeps generic dynamic forms generic and restricts Survey copy to verified purpose', () => {
+    const generic = readFileSync(fileURLToPath(new URL('../../src/features/work-orders/components/GenericDynamicFormActionContent.vue', import.meta.url)), 'utf8')
+    const survey = readFileSync(fileURLToPath(new URL('../../src/features/work-orders/components/SurveyActionContent.vue', import.meta.url)), 'utf8')
+    expect(generic).toContain('表单信息')
+    expect(generic).not.toContain('现场勘察')
+    expect(survey).toContain('现场勘察')
+    expect(survey).toContain('GenericDynamicFormActionContent')
   })
 
   it('blocks real media upload by default before token or provider transport', async () => {

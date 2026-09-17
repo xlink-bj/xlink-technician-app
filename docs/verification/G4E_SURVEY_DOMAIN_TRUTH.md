@@ -1,7 +1,7 @@
 # G4-E Survey Domain Truth Deep Dive
 
-Status: domain truth accepted; Survey Contract Rebase implemented in the
-G4-E application Mock.
+Status: domain truth accepted; Survey semantic routing and effective contract
+fidelity are implemented in the G4-E application Mock.
 Environment: Beta / Dev (same development environment for this slice)
 Captured: 2026-09-17
 Issue: `#21`
@@ -265,11 +265,11 @@ and is not imported by the G4-E application Mock.
 
 ## 9A. Survey Contract Rebase and Field Identity Model
 
-G4-E application Mock data is generated from the `SURVEY` family in
-`contracts/beta/form-families/observed.json`. That family is a sanitized,
-historical, inactive Beta observation with 61 field rows; it is the approved
-structural basis for this development Mock, not a claim about the active
-Production schema. The old 15-field hybrid remains isolated under
+G4-E application Mock data is generated from the sanitized Survey contract in
+`contracts/beta/survey/historical.json`. That contract is a sanitized,
+historical, inactive Beta observation with 61 field rows and row-level
+behavior metadata; it is the approved structural basis for this development
+Mock, not a claim about the active Production schema. The old 15-field hybrid remains isolated under
 `contracts/beta/inspection/current.json`.
 
 Each Survey field row has two identities:
@@ -331,11 +331,12 @@ and retry semantics remain separate implementation gates.
 
 ## 12. Beta Observed Form Families
 
-The sanitized structural inventory is committed at
-`contracts/beta/form-families/observed.json`. It records 20 list rows, 20
-detail reads, five historical inactive repeat `勘察` nodes, zero active repeat
-nodes and four distinct form-family shapes. It records field keys and types,
-not field values or raw identities.
+The sanitized structural inventory is retained at
+`contracts/beta/form-families/observed.json` as the scan index. The effective
+Survey field contract is committed at
+`contracts/beta/survey/historical.json`: 61 historical inactive rows with
+labels, ordering, required/read-only flags, duplicate value keys, conditional
+metadata and provider verification. No active Survey membership is asserted.
 
 | Alias | Node / family | Observed shape | Classification |
 | --- | --- | --- | --- |

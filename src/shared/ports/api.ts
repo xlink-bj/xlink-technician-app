@@ -72,6 +72,9 @@ export type WorkflowNodeCategory =
 
 export type WorkflowNodeLifecycle = 'active' | 'closed' | 'inactive' | 'unknown'
 
+/** Verified semantic identity of a dynamic form; absent means generic. */
+export type FormPurpose = 'appointment' | 'survey'
+
 export type WorkflowHandlerIdentity =
   | { readonly kind: 'user'; readonly userId: UserId }
   | { readonly kind: 'role'; readonly roleId: RoleId }
@@ -151,8 +154,10 @@ export interface WorkflowNodeRead {
   /** Adapter-normalized opaque form definition identity, when supplied by the node. */
   readonly formDefinitionId?: FormDefinitionId
   /** Semantic form purpose; the raw form definition identity stays Adapter-owned. */
-  readonly formPurpose?: 'appointment'
+  readonly formPurpose?: FormPurpose
   readonly formDataId?: FormDataId
+  /** Node-instance readonly context; never baked into the field definition. */
+  readonly formFieldIdsReadOnly?: readonly string[]
   readonly category: WorkflowNodeCategory
   readonly lifecycle: WorkflowNodeLifecycle
   readonly handlers?: readonly WorkflowHandlerIdentity[]
@@ -163,7 +168,7 @@ export interface WorkflowNodeRead {
 
 export interface FormDefinitionRead {
   readonly id: FormDefinitionId
-  readonly purpose?: 'appointment'
+  readonly purpose?: FormPurpose
   readonly fields?: readonly FormFieldRead[]
 }
 
@@ -176,6 +181,11 @@ export interface FormFieldRead {
   readonly type: string
   readonly required: boolean
   readonly readOnly: boolean
+  readonly order?: number
+  readonly state?: number | string
+  readonly fixed?: string | number | boolean
+  readonly operationType?: string | number
+  readonly showList?: readonly (string | number)[]
   /** Backend `multiple` flag; a multi-value control must not be rendered as a scalar choice. */
   readonly multiple?: boolean
   readonly options?: readonly FormFieldOptionRead[]
@@ -183,8 +193,25 @@ export interface FormFieldRead {
   readonly visibility?: FormFieldVisibility
   /** Adapter-normalized option provider identity, when evidenced by the field. */
   readonly valueOption?: string
+  /** Safe structural presentation metadata; raw frontEndConfig stays Adapter-owned. */
+  readonly presentation?: FormFieldPresentation
   /** Explicit capability boundary for metadata the current Runtime cannot safely interpret. */
   readonly unsupportedReason?: string
+}
+
+export interface FormFieldPresentation {
+  readonly componentType?: string
+  readonly placeholder?: string
+  readonly width?: string | number
+  readonly minlength?: number
+  readonly maxlength?: number
+  readonly group?: string
+  readonly customizeFlag?: boolean
+  readonly max?: number
+  readonly min?: number
+  readonly surveyTool?: boolean
+  readonly urlShape?: string
+  readonly paramsShape?: string
 }
 
 /** A normalized option may retain its hierarchy for cascade controls. */

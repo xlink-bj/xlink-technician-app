@@ -1,3 +1,8 @@
+/**
+ * Legacy Inspection compatibility harness only.
+ * This file is not the Survey contract and must not be used as the G4-E
+ * application fixture or business-semantic authority.
+ */
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import {
@@ -59,7 +64,7 @@ async function discoverProviderFixture(options: {
   return { snapshot, requests }
 }
 
-describe('G4-E Beta Inspection contract and Mock derivation', () => {
+describe('G4-E legacy Inspection compatibility contract (not Survey)', () => {
   afterEach(() => {
     vi.unstubAllGlobals()
   })

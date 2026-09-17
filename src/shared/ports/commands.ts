@@ -1,4 +1,4 @@
-import type { FormFieldValue, FormFieldVisibility } from '@shared/ports/api'
+import type { FormFieldPresentation, FormFieldValue, FormFieldVisibility, FormPurpose } from '@shared/ports/api'
 import type {
   FormDataId,
   FormDefinitionId,
@@ -34,6 +34,11 @@ export interface AppointmentFormFieldRead {
   readonly type: string
   readonly required: boolean
   readonly readOnly: boolean
+  readonly order?: number
+  readonly state?: number | string
+  readonly fixed?: string | number | boolean
+  readonly operationType?: string | number
+  readonly showList?: readonly (string | number)[]
   /** Backend `multiple` flag; a multi-value control must not be rendered as a scalar choice. */
   readonly multiple?: boolean
   readonly options?: readonly AppointmentFormOption[]
@@ -41,6 +46,7 @@ export interface AppointmentFormFieldRead {
   readonly visibility?: FormFieldVisibility
   /** Adapter-normalized option provider identity, when evidenced by the field. */
   readonly valueOption?: string
+  readonly presentation?: FormFieldPresentation
   /** Explicit capability boundary for metadata the current Runtime cannot safely interpret. */
   readonly unsupportedReason?: string
 }
@@ -51,6 +57,7 @@ export interface AppointmentFormRead {
   /** Adapter-normalized definition identity used to scope local Action drafts. */
   readonly definitionId?: FormDefinitionId
   readonly dataId?: FormDataId
+  readonly purpose?: FormPurpose
 }
 
 /** Generic dynamic-form read model shared by future Action Content. */
@@ -60,12 +67,16 @@ export interface DynamicFormRead {
   readonly definitionId?: FormDefinitionId
   readonly dataId?: FormDataId
   readonly workflowRunId?: WorkflowRunId
+  readonly purpose?: FormPurpose
+  /** Node-instance readonly context, kept separate from the field contract. */
+  readonly workflowReadOnlyFieldIds?: readonly string[]
 }
 
 export interface ReadDynamicFormInput {
   readonly definitionId: FormDefinitionId
   readonly formDataId?: FormDataId
   readonly expectedWorkflowRunId?: WorkflowRunId
+  readonly workflowReadOnlyFieldIds?: readonly string[]
 }
 
 export interface SaveDynamicFormInput {

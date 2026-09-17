@@ -138,7 +138,21 @@ async function requestJson(options, path, body) {
     } catch {
       throw new BetaApiClientError('Beta API returned invalid JSON', 'malformed_response')
     }
-    if (!isObject(raw)) throw new BetaApiClientError('Beta API returned an invalid response', 'malformed_response')
+    // R1 read providers are not envelope-consistent: code/selectCode.do may
+    // return a JSON array encoded as a JSON string, while
+    // selectMultistageCode.do may return a top-level array. Decode one
+    // transport-level string wrapper, then keep the actual wire shape for the
+    // caller; login still validates its object-shaped success/session below.
+    if (typeof raw === 'string') {
+      try {
+        raw = JSON.parse(raw)
+      } catch {
+        throw new BetaApiClientError('Beta API returned invalid JSON content', 'malformed_response')
+      }
+    }
+    if (!isObject(raw) && !Array.isArray(raw)) {
+      throw new BetaApiClientError('Beta API returned an invalid response', 'malformed_response')
+    }
     return raw
   } catch (error) {
     if (error instanceof BetaApiClientError) throw error

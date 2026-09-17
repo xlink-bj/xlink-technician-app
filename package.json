@@ -11,6 +11,7 @@
     "inspect:form-schema": "node scripts/inspect-inspection-contract.mjs",
     "inspect:inspection-contract": "node scripts/inspect-inspection-contract.mjs",
     "inspect:inspection-contract:beta": "node scripts/inspect-inspection-contract-beta.mjs",
+    "capture:survey-contract:beta": "node scripts/capture-survey-contract-beta.mjs",
     "check:inspection-contract": "node scripts/check-inspection-contract.mjs",
     "check:survey-contract": "node scripts/check-survey-contract.mjs",
     "typecheck": "vue-tsc --noEmit",
