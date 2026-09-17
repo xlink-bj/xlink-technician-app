@@ -9,6 +9,8 @@ import {
   mockSanodeListResponse,
   mockStatusOptionsResponse,
   mockCommandScenarioIds,
+  mockInspectionFormDefinitionId,
+  mockInspectionFormDefinitionResponse,
   mockWorkOrderActivityResponseFor,
   mockWorkOrderDetailResponses,
   mockWorkOrderDetailResponseFor,
@@ -44,6 +46,15 @@ export function isMockOwnedRead(
   requestData: Readonly<Record<string, unknown>> = {},
 ): boolean {
   const route = normalizedPath(path)
+  if (
+    route === 'biz/extField/query' &&
+    typeof requestData.extId === 'string' &&
+    requestData.extId === mockInspectionFormDefinitionId
+  ) return true
+  if (
+    route.startsWith('biz/extForm/query/') &&
+    route.slice('biz/extForm/query/'.length) === mockInspectionFormDefinitionId
+  ) return true
   const detailPrefix = 'basic/serviceAppointment/queryById/'
   if (route.startsWith(detailPrefix)) {
     try {
@@ -193,6 +204,39 @@ function completeMockAppointment(id: string, formDataId: string): void {
     if (!node) continue
     const nodeDef = mutableRecord(node.nodeDef)
     if (nodeDef?.formDefId === appointmentFormDefinitionWireId) {
+      node.state = 10
+      node.formDataId = formDataId
+    }
+  }
+}
+
+function saveMockDynamicForm(dataStr: unknown, definitionId: string): string {
+  if (typeof dataStr !== 'string') throw new Error('Dynamic form data is missing')
+  const values = JSON.parse(dataStr) as Record<string, unknown>
+  const formDataId = typeof values._id === 'string' && values._id.length > 0
+    ? values._id
+    : `mock-form-data-${definitionId}`
+  const metadata = new Set(['_id', 'sid', 'smodule', 'nodeId', 'workflowId', 'state'])
+  const formValues = Object.fromEntries(Object.entries(values).filter(([key]) => !metadata.has(key)))
+  mockCommandState().formData.set(formDataId, {
+    _id: formDataId,
+    extId: definitionId,
+    exts: formValues,
+    ...(typeof values.workflowId === 'string'
+      ? { workflowId: values.workflowId, workflowRunId: values.workflowId }
+      : {}),
+    state: 1,
+  })
+  return formDataId
+}
+
+function completeMockDynamicForm(id: string, formDataId: string, definitionId: string): void {
+  const nodes = detailNodesForWorkOrder(id)
+  if (!nodes) return
+  for (const value of nodes) {
+    const node = mutableRecord(value)
+    const nodeDef = mutableRecord(node?.nodeDef)
+    if (nodeDef?.formDefId === definitionId && node) {
       node.state = 10
       node.formDataId = formDataId
     }
@@ -352,13 +396,22 @@ function matchedResponse(
   if (route === 'biz/extField/query' && requestData.extId === appointmentFormDefinitionWireId) {
     return mockAppointmentFormDefinitionResponse
   }
-  if (route === `biz/extForm/query/${appointmentFormDefinitionWireId}`) {
+  if (route === 'biz/extField/query' && requestData.extId === mockInspectionFormDefinitionId) {
+    return mockInspectionFormDefinitionResponse
+  }
+  if (route.startsWith('biz/extForm/query/') && route.slice('biz/extForm/query/'.length) === appointmentFormDefinitionWireId) {
     const exactDataId = requestData['is:_id|string#and']
     const dataId = typeof exactDataId === 'string'
       ? exactDataId
       : typeof requestData.id === 'string'
         ? requestData.id
         : undefined
+    const formData = dataId ? mockCommandState().formData.get(dataId) : undefined
+    return { data: formData ? [formData] : [], page: 1, rows: 20, total: formData ? 1 : 0 }
+  }
+  if (route.startsWith('biz/extForm/query/') && route.slice('biz/extForm/query/'.length) === mockInspectionFormDefinitionId) {
+    const exactDataId = requestData['is:_id|string#and']
+    const dataId = typeof exactDataId === 'string' ? exactDataId : undefined
     const formData = dataId ? mockCommandState().formData.get(dataId) : undefined
     return { data: formData ? [formData] : [], page: 1, rows: 20, total: formData ? 1 : 0 }
   }
@@ -369,6 +422,9 @@ function matchedResponse(
 function matchedCommandResponse(request: ApiCommandRequest): unknown | null {
   const route = normalizedPath(request.path)
   const data = request.body ?? {}
+  if (route === 'back/super/file/upToken.do') {
+    return { token: 'synthetic-upload-token' }
+  }
   if (route === 'basic/serviceAppointment/selfExamination') {
     const id = typeof data.saId === 'string' ? data.saId : ''
     if (!isSyntheticWorkOrderId(id)) return null
@@ -391,6 +447,10 @@ function matchedCommandResponse(request: ApiCommandRequest): unknown | null {
     const formDataId = saveMockAppointment(data.dataStr)
     return { data: { _id: formDataId } }
   }
+  if (route === 'biz/extForm/upsert/' + mockInspectionFormDefinitionId) {
+    const formDataId = saveMockDynamicForm(data.dataStr, mockInspectionFormDefinitionId)
+    return { data: { _id: formDataId } }
+  }
   if (route === 'workflow/process') {
     const id = typeof data.sid === 'string' ? data.sid : ''
     if (!isSyntheticWorkOrderId(id)) return null
@@ -399,6 +459,9 @@ function matchedCommandResponse(request: ApiCommandRequest): unknown | null {
     if (data.nodeFormDefId === appointmentFormDefinitionWireId) {
       const formDataId = typeof data.nodeFormDataId === 'string' ? data.nodeFormDataId : ''
       completeMockAppointment(id, formDataId)
+    } else if (data.nodeFormDefId === mockInspectionFormDefinitionId) {
+      const formDataId = typeof data.nodeFormDataId === 'string' ? data.nodeFormDataId : ''
+      completeMockDynamicForm(id, formDataId, mockInspectionFormDefinitionId)
     } else {
       acceptMockWorkOrder(id)
     }

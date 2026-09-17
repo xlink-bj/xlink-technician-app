@@ -28,7 +28,7 @@
   </view>
 
   <ActionWorkspaceShell
-    v-else-if="workspace.descriptor && workspace.appointmentForm"
+    v-else-if="workspace.descriptor && (workspace.appointmentForm || workspace.dynamicForm)"
     :customer-name="workspace.detail?.customerName"
     :display-number="workspace.detail?.displayNumber"
     :lifecycle="workspace.lifecycle"
@@ -36,10 +36,12 @@
     :transitioning="isNavigating"
     :can-submit="workspace.canSubmit"
     :business-feedback="feedback"
-    submit-label="继续确认"
-    @submit="continueToConfirmation"
+    :submit-label="workspace.descriptor.actionIntent === 'interact_with_form' ? '完成勘察' : '继续确认'"
+    <!-- Appointment path remains @submit="continueToConfirmation"; generic forms use the Runtime-gated handler. -->
+    @submit="submitWorkspace"
   >
-    <view class="action-workspace-content app-surface" :data-field-count="workspace.appointmentFields.length">
+    <InspectionActionContent v-if="workspace.descriptor.actionIntent === 'interact_with_form'" />
+    <view v-else class="action-workspace-content app-surface" :data-field-count="workspace.appointmentFields.length">
       <view class="action-content-heading">
         <view class="action-content-title-row">
           <view class="action-content-icon" aria-hidden="true"><AppIcon name="appointment" :size="20" /></view>
@@ -56,7 +58,7 @@
       >
         <AppChoiceGroup
           :options="appChoiceOptionsFor(workspace.appointmentChoiceField)"
-          :model-value="String(workspace.appointmentForm.values[workspace.appointmentChoiceField.key] ?? '')"
+          :model-value="String(workspace.appointmentForm?.values[workspace.appointmentChoiceField.key] ?? '')"
           :disabled="workspace.appointmentChoiceField.runtime.readOnly || workspace.lifecycle === 'submitting'"
           @update:model-value="setField(workspace.appointmentChoiceField.key, $event)"
         />
@@ -90,7 +92,7 @@
         :optional="!workspace.appointmentNoteField.runtime.required"
       >
         <AppTextarea
-          :model-value="String(workspace.appointmentForm.values[workspace.appointmentNoteField.key] ?? '')"
+          :model-value="String(workspace.appointmentForm?.values[workspace.appointmentNoteField.key] ?? '')"
           :maxlength="-1"
           :disabled="workspace.appointmentNoteField.runtime.readOnly || workspace.lifecycle === 'submitting'"
           :read-only="workspace.appointmentNoteField.runtime.readOnly"
@@ -109,26 +111,38 @@
         <AppChoiceGroup
           v-if="field.options?.length"
           :options="appChoiceOptionsFor(field)"
-          :model-value="String(workspace.appointmentForm.values[field.key] ?? '')"
+          :model-value="String(workspace.appointmentForm?.values[field.key] ?? '')"
           :disabled="field.runtime.readOnly || workspace.lifecycle === 'submitting'"
           @update:model-value="setField(field.key, $event)"
         />
         <AppTextarea
           v-else-if="field.type === 'textarea'"
-          :model-value="String(workspace.appointmentForm.values[field.key] ?? '')"
+          :model-value="String(workspace.appointmentForm?.values[field.key] ?? '')"
           :disabled="field.runtime.readOnly || workspace.lifecycle === 'submitting'"
           :read-only="field.runtime.readOnly"
           @update:model-value="setField(field.key, $event)"
         />
         <AppInput
           v-else
-          :model-value="String(workspace.appointmentForm.values[field.key] ?? '')"
+          :model-value="String(workspace.appointmentForm?.values[field.key] ?? '')"
           :disabled="field.runtime.readOnly || workspace.lifecycle === 'submitting'"
           :read-only="field.runtime.readOnly"
           @update:model-value="setField(field.key, $event)"
         />
       </AppField>
-    </view>
+      </view>
+
+    <template #success v-if="workspace.descriptor?.actionIntent === 'interact_with_form'">
+      <view class="action-success app-surface">
+        <view class="action-success-icon" aria-hidden="true"><AppIcon name="complete" :size="28" /></view>
+        <text class="action-success-title">现场勘察已完成</text>
+        <text class="action-success-copy">本次动态表单已提交，工单状态已刷新。</text>
+      </view>
+    </template>
+    <template #success-actions v-if="workspace.descriptor?.actionIntent === 'interact_with_form'">
+      <AppButton class="action-success-detail" block @tap="workspace.navigateToDetail">查看工单详情</AppButton>
+      <AppButton variant="text" block @tap="workspace.navigateToList">返回工单列表</AppButton>
+    </template>
 
   </ActionWorkspaceShell>
 
@@ -151,6 +165,7 @@ import {
 import { appointmentDisplayFor } from '@features/work-orders/appointment-time'
 import { useSessionStore } from '@shared/state'
 import ActionWorkspaceShell from '@shared/ui/ActionWorkspaceShell.vue'
+import InspectionActionContent from '@features/work-orders/components/InspectionActionContent.vue'
 import AppButton from '@shared/ui/AppButton.vue'
 import AppChoiceGroup from '@shared/ui/AppChoiceGroup.vue'
 import AppField from '@shared/ui/AppField.vue'
@@ -243,6 +258,14 @@ async function continueToConfirmation(): Promise<void> {
   if (result.state !== 'succeeded') isNavigating.value = false
 }
 
+async function submitWorkspace(): Promise<void> {
+  if (workspace.descriptor?.actionIntent === 'interact_with_form') {
+    await workspace.completeDynamicForm()
+    return
+  }
+  await continueToConfirmation()
+}
+
 function actionErrorCopy(error: OperationError | null): string {
   if (!error) return ''
   switch (error.category) {
@@ -325,5 +348,10 @@ function actionErrorCopy(error: OperationError | null): string {
 .appointment-time-selected { display: flex; flex-direction: column; gap: 4rpx; }
 .appointment-time-selected-date { color: var(--app-color-text-primary); font-size: var(--app-font-value); font-weight: 800; }
 .appointment-time-selected-value { color: var(--app-color-primary); font-size: var(--app-font-field-label); font-weight: 700; }
+.action-success { align-items: center; display: flex; flex-direction: column; margin-top: var(--app-space-md); padding: 72rpx var(--app-card-padding); text-align: center; }
+.action-success-icon { align-items: center; background: var(--app-color-success-soft); border-radius: 999rpx; color: var(--app-color-success); display: flex; height: 72rpx; justify-content: center; width: 72rpx; }
+.action-success-title { color: var(--app-color-text-primary); font-size: var(--app-font-section-title); font-weight: 800; margin-top: var(--app-space-lg); }
+.action-success-copy { color: var(--app-color-text-secondary); font-size: var(--app-font-body); margin-top: var(--app-space-sm); }
+.action-success-detail { margin-bottom: var(--app-space-xs); }
 
 </style>

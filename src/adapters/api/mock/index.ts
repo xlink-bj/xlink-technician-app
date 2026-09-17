@@ -30,6 +30,8 @@ export {
   mockStatusSampleIds,
   mockSyntheticStatusCodes,
   mockCommandScenarioIds,
+  mockInspectionFormDefinitionId,
+  mockInspectionFormDefinitionResponse,
   mockWorkOrderActivityResponseFor,
   mockWorkOrderActivityResponses,
   mockWorkOrderDetailResponse,

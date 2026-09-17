@@ -31,6 +31,12 @@ const routeFor = (workOrderId: string, nodeSuffix: string): string =>
     'set_appointment',
   )
 
+const inspectionRoute = actionWorkspaceRouteFor(
+  asOpaqueId<'WorkOrderId'>(mockCommandScenarioIds.inspectionSuccess),
+  asOpaqueId<'WorkflowNodeRuntimeId'>('mock-workflow-node-017-inspection'),
+  'interact_with_form',
+)
+
 /** Canonical identities shared by Mock Detail fixtures and developer Draft seed records. */
 export const mockAppointmentDraftSeeds: readonly MockActionDraftSeed[] = [
   {
@@ -85,5 +91,11 @@ export const mockActionWorkspaceScenarios: readonly MockActionWorkspaceScenario[
     label: '终止失败',
     description: '终止失败后保留可恢复输入',
     route: routeFor(mockCommandScenarioIds.appointmentTerminal, '015'),
+  },
+  {
+    key: 'inspection',
+    label: '现场勘察',
+    description: '动态表单、照片上传、保存和完成',
+    route: inspectionRoute,
   },
 ]

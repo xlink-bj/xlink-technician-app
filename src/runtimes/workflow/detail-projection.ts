@@ -37,6 +37,7 @@ export function workflowNodeMetadataFromRead(node: WorkflowNodeRead): WorkflowNo
     id: node.id,
     category: node.category,
     lifecycle: node.lifecycle,
+    ...(node.formDefinitionId ? { formDefinitionId: node.formDefinitionId } : {}),
     ...(node.handlers ? { handlers: node.handlers } : {}),
     ...(node.visibility ? { visibility: node.visibility } : {}),
     ...(node.formPurpose ? { formPurpose: node.formPurpose } : {}),
@@ -114,7 +115,11 @@ export function projectDetailWorkflow(
       category: candidate.node.category,
       actionIntent: candidate.actionIntent,
       domainPolicy: policySummary(candidate.domainPolicy),
-      execution: candidate.actionIntent === 'set_appointment' ? 'enabled' : 'disabled_read_only',
+      // A generic form is executable only when the Adapter supplied an opaque
+      // form definition identity. Bare/unknown form nodes remain read-only.
+      execution: candidate.actionIntent === 'set_appointment' || Boolean(candidate.node.formDefinitionId)
+        ? 'enabled'
+        : 'disabled_read_only',
     },
   }
 }

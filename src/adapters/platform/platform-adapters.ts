@@ -112,6 +112,9 @@ function mediaFromDriver(value: unknown): LocalMedia {
     ref: asOpaqueId<'LocalMediaRef'>(ref),
     mimeType: requiredString(record, ['mimeType', 'type'], 'local media MIME type'),
     source: mediaSource(record.source),
+    ...(optionalString(record, ['localPath', 'path', 'filePath'])
+      ? { localPath: optionalString(record, ['localPath', 'path', 'filePath']) }
+      : {}),
     ...(optionalString(record, ['name', 'fileName'])
       ? { name: optionalString(record, ['name', 'fileName']) }
       : {}),

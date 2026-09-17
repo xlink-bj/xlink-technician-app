@@ -5,6 +5,9 @@ import type {
   StoragePort,
   TechnicianApiCommandPort,
   TechnicianApiReadPort,
+  MediaCapturePort,
+  MediaFilePickerPort,
+  UploadPort,
 } from '@shared/ports'
 import { createOperationError, type OperationSnapshot } from '@shared/types'
 
@@ -19,6 +22,8 @@ import { createUniStorageDriver } from '@adapters/storage/uni-storage-driver'
 import { createPlatformAdapters } from '@adapters/platform/platform-adapters'
 import { createUniPhoneDriver } from '@adapters/platform/uni-phone-driver'
 import { createUniNavigationDriver } from '@adapters/platform/uni-navigation-driver'
+import { createUniMediaCaptureDriver, createUniMediaFilePickerDriver } from '@adapters/platform/uni-media-drivers'
+import { createUniUploadPort } from '@adapters/upload/uni-upload-port'
 
 import { loadApplicationRuntimeConfig } from './runtime-config'
 
@@ -103,6 +108,9 @@ export function createDefaultTechnicianApiCommandPort(
       inspectAcceptOrder: async () => blocked(),
       acceptOrder: async () => blocked(),
       readAppointmentForm: async () => blocked(),
+      readDynamicForm: async () => blocked(),
+      saveDynamicForm: async () => blocked(),
+      completeWorkflowNode: async () => blocked(),
       submitAppointment: async () => blocked(),
     }
   }
@@ -116,6 +124,27 @@ export function createDefaultTechnicianApiCommandPort(
 
 export function createDefaultPhonePort(): PhonePort {
   return createPlatformAdapters({ phone: createUniPhoneDriver() }).phone
+}
+
+export function createDefaultMediaCapturePort(): MediaCapturePort {
+  return createPlatformAdapters({ mediaCapture: createUniMediaCaptureDriver() }).mediaCapture
+}
+
+export function createDefaultMediaFilePickerPort(): MediaFilePickerPort {
+  return createPlatformAdapters({ mediaFilePicker: createUniMediaFilePickerDriver() }).mediaFilePicker
+}
+
+export function createDefaultUploadPort(authSession: AuthSessionPort): UploadPort {
+  const config = loadApplicationRuntimeConfig()
+  if (!config.ok) {
+    return {
+      upload: async () => configurationFailure('Upload configuration is unavailable'),
+    }
+  }
+  return createUniUploadPort(createUniApiCommandTransport({
+    apiBaseUrl: config.value.environment.apiBaseUrl,
+    getSessionRef: () => authSession.getCurrentSession()?.sessionRef ?? null,
+  }))
 }
 
 export function createDefaultNavigationPort(): NavigationPort {

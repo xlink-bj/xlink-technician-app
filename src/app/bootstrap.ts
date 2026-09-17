@@ -11,6 +11,9 @@ import type {
   StoragePort,
   TechnicianApiCommandPort,
   TechnicianApiReadPort,
+  MediaCapturePort,
+  MediaFilePickerPort,
+  UploadPort,
 } from '@shared/ports'
 import { useWorkOrderDetailStore } from '@features/work-orders/detail'
 import { useActionWorkspaceStore } from '@features/work-orders/action-workspace'
@@ -26,6 +29,9 @@ import {
   createDefaultNavigationPort,
   createDefaultStoragePort,
   createDefaultTechnicianApiReadPort,
+  createDefaultMediaCapturePort,
+  createDefaultMediaFilePickerPort,
+  createDefaultUploadPort,
 } from './composition'
 
 export interface ApplicationDependencies {
@@ -36,6 +42,9 @@ export interface ApplicationDependencies {
   readonly navigation?: NavigationPort
   readonly storage?: StoragePort
   readonly draftRepository?: ActionDraftRepository
+  readonly mediaCapture?: MediaCapturePort
+  readonly mediaFilePicker?: MediaFilePickerPort
+  readonly upload?: UploadPort
 }
 
 export function createApplication(dependencies: ApplicationDependencies = {}) {
@@ -50,6 +59,9 @@ export function createApplication(dependencies: ApplicationDependencies = {}) {
   const navigation = dependencies.navigation ?? createDefaultNavigationPort()
   const storage = dependencies.storage ?? createDefaultStoragePort()
   const draftRepository = dependencies.draftRepository ?? createActionDraftRepository(storage)
+  const mediaCapture = dependencies.mediaCapture ?? createDefaultMediaCapturePort()
+  const mediaFilePicker = dependencies.mediaFilePicker ?? createDefaultMediaFilePickerPort()
+  const upload = dependencies.upload ?? createDefaultUploadPort(authSession)
   sessionStore.configureAuth(authSession)
   const workOrderListStore = useWorkOrderListStore(pinia)
   const workOrderDetailStore = useWorkOrderDetailStore(pinia)
@@ -75,6 +87,9 @@ export function createApplication(dependencies: ApplicationDependencies = {}) {
     draftRepository,
     navigation,
     getSession: () => sessionStore.session,
+    mediaCapture,
+    mediaFilePicker,
+    upload,
   })
   const localDraftDiagnosticsStore = useLocalDraftDiagnosticsStore(pinia)
   localDraftDiagnosticsStore.configure({

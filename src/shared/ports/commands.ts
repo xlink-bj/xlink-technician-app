@@ -1,3 +1,4 @@
+import type { FormFieldValue } from '@shared/ports/api'
 import type {
   FormDataId,
   FormDefinitionId,
@@ -40,6 +41,38 @@ export interface AppointmentFormRead {
   readonly dataId?: FormDataId
 }
 
+/** Generic dynamic-form read model shared by future Action Content. */
+export interface DynamicFormRead {
+  readonly fields: readonly AppointmentFormFieldRead[]
+  readonly values: Readonly<Record<string, FormFieldValue>>
+  readonly definitionId?: FormDefinitionId
+  readonly dataId?: FormDataId
+  readonly workflowRunId?: WorkflowRunId
+}
+
+export interface ReadDynamicFormInput {
+  readonly definitionId: FormDefinitionId
+  readonly formDataId?: FormDataId
+  readonly expectedWorkflowRunId?: WorkflowRunId
+}
+
+export interface SaveDynamicFormInput {
+  readonly workOrderId: WorkOrderId
+  readonly workflowNodeId: WorkflowNodeRuntimeId
+  readonly workflowRunId?: WorkflowRunId
+  readonly definitionId: FormDefinitionId
+  readonly formDataId?: FormDataId
+  readonly values: Readonly<Record<string, FormFieldValue>>
+}
+
+export interface CompleteWorkflowNodeInput {
+  readonly workOrderId: WorkOrderId
+  readonly workflowNodeId: WorkflowNodeRuntimeId
+  readonly workflowRunId?: WorkflowRunId
+  readonly definitionId: FormDefinitionId
+  readonly formDataId: FormDataId
+}
+
 export type AppointmentVisitIntent = 'visit_required' | 'visit_deferred' | 'unknown'
 
 export interface SubmitAppointmentInput {
@@ -58,5 +91,9 @@ export interface TechnicianApiCommandPort {
   readAppointmentForm(input: {
     readonly formDataId?: FormDataId
   }): Promise<OperationSnapshot<AppointmentFormRead>>
+  /** Optional while older test/application compositions are appointment-only. */
+  readDynamicForm?(input: ReadDynamicFormInput): Promise<OperationSnapshot<DynamicFormRead>>
+  saveDynamicForm?(input: SaveDynamicFormInput): Promise<OperationSnapshot<FormDataId>>
+  completeWorkflowNode?(input: CompleteWorkflowNodeInput): Promise<OperationSnapshot<void>>
   submitAppointment(input: SubmitAppointmentInput): Promise<OperationSnapshot<void>>
 }

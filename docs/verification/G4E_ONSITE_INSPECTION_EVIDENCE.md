@@ -1,14 +1,15 @@
 # G4-E On-site Inspection / Inspection Form Evidence
 
-Status: Phase 0 evidence checkpoint only  
+Status: Phase 2 minimal implementation — awaiting review
 Repository: `xlink-bj/xlink-technician-app`  
 Branch: `rebuild/g4e-onsite-inspection`  
 Baseline: `0a46d8482b878b2d04f08894da54f5b77fb56214`  
 Issue: `#21`
 
-This document is a static/source evidence record. It does not implement
-Inspection, add pages or commands, change Workflow Runtime behavior, add form
-capabilities, implement upload/media persistence, or execute a live mutation.
+This document combines the accepted Phase 0/1 evidence with the bounded Phase
+2 implementation record below. It does not claim an arrival/start-inspection
+workflow, a complete production inspection schema, durable offline media, or
+any live mutation.
 
 ## Evidence boundary and authority
 
@@ -56,8 +57,9 @@ The following remain UNKNOWN and block implementation claims:
   if so, the durable local-media contract;
 - the authoritative post-submit workflow/status/next-action result.
 
-Decision: **Phase 0 evidence is ready for review, but G4-E implementation must
-remain gated on the UNKNOWNs above.**
+Decision: **Phase 0/1 evidence is accepted. Phase 2 is limited to the existing
+verified inspection-node boundary and leaves the UNKNOWNs below outside the
+implementation.**
 
 ## 2. R1 business sequence
 
@@ -279,6 +281,79 @@ validation are in `values.ts:13-171`.
 This matrix deliberately does not claim that the complete inspection schema is
 generic or that all historical widgets belong in G4-E. The final field matrix
 must be produced from an actual sanitized definition read.
+
+## Phase 2 — Minimal Implementation
+
+Phase 2 implements only an already verified, active, visible, supported form
+node. It does not add an arrival or start-inspection transition. The bounded
+path is:
+
+```text
+Adapter-normalized workflow node
+  -> existing Workflow Runtime current-task projection
+  -> Action Workspace
+  -> existing Dynamic Form Runtime
+  -> explicit form save
+  -> existing UploadPort online media boundary
+  -> separate workflow/process completion
+  -> authoritative detail reread
+```
+
+### Implementation boundary
+
+- The Adapter carries an opaque `formDefinitionId` only when the backend-shaped
+  node supplies one. A bare forms node remains read-only; the page does not
+  infer inspection capability from a title, status, route or array position.
+- `interact_with_form` uses the generic `DynamicFormRead` command boundary. A
+  missing `formDataId` reads the definition and returns empty values. An
+  existing ID is read through the exact definition-scoped query and must match
+  the requested data ID, definition ID and expected workflow run when present.
+- Field rendering and submission validation reuse the Dynamic Form Runtime.
+  Supported generic text, textarea, option and image/file references are
+  rendered from normalized metadata. Unsupported fields are visible as an
+  unavailable capability and block completion; they are never silently
+  discarded or guessed.
+- The explicit `保存表单` operation and workflow completion are separate. The
+  completion action is enabled only after normalized validation, required media
+  upload, and a successful form save.
+
+### Draft, media and retry behavior
+
+- Action drafts continue through the existing user/work-order/node/action/
+  content-scoped Draft Repository. Only JSON field values are persisted; local
+  media paths and binary content are not written to drafts.
+- Media uses the existing token/provider `UploadPort`. MP/App platform file
+  selection stays in the platform adapter; Mock returns a synthetic uploaded
+  reference and Real remains behind the existing real-write safety boundary.
+  G4-E is online-first and does not promise offline media recovery or a media
+  queue.
+- Save and completion use single-flight guards. There is no blind automatic
+  mutation retry. If completion is ambiguous, the workspace rereads the
+  authoritative detail before a later manual retry becomes eligible. A
+  successful business mutation remains successful even if local draft cleanup
+  or the follow-up reread is pending; the UI cannot invite duplicate
+  submission.
+
+### Mock verification boundary
+
+The sanitized synthetic inspection fixture uses the same raw node, form
+definition, form-data, UploadPort, save command and workflow completion path as
+the real adapter. Synthetic IDs are handled locally by the Mock router and are
+rejected before Real transport fallback. Login/session behavior remains real;
+only bounded business reads, Mock commands and Mock upload results are local.
+
+### UNKNOWNs intentionally outside Phase 2
+
+- U1 arrival/start-inspection semantics remain UNKNOWN and are not implemented.
+- U2 fixed inspection business fields remain UNKNOWN; the synthetic fixture is
+  visual/functional test data, not a production schema claim.
+- U3 server-side idempotency remains UNKNOWN; client single-flight and reread
+  protection are the only Phase 2 guarantees.
+- U4 durable offline media remains unsupported by design. JSON draft recovery
+  does not restore unuploaded media after app restart.
+
+Phase 2 therefore adds no new workflow intent, no new backend API, no legacy
+networking abstraction, and no G4-F scope.
 
 ## 7. Existing FormData semantics
 

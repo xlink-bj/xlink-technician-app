@@ -148,6 +148,8 @@ export interface WorkflowNodeRead {
   readonly runId?: WorkflowRunId
   readonly parentNodeId?: WorkflowNodeRuntimeId
   readonly displayName?: string
+  /** Adapter-normalized opaque form definition identity, when supplied by the node. */
+  readonly formDefinitionId?: FormDefinitionId
   /** Semantic form purpose; the raw form definition identity stays Adapter-owned. */
   readonly formPurpose?: 'appointment'
   readonly formDataId?: FormDataId
@@ -174,7 +176,7 @@ export interface FormFieldRead {
   readonly options?: readonly { readonly value: string; readonly label: string }[]
 }
 
-export type FormFieldValue = string | number | boolean | null
+export type FormFieldValue = string | number | boolean | null | readonly (string | number | boolean)[]
 
 export interface FormDataRead {
   readonly id: FormDataId

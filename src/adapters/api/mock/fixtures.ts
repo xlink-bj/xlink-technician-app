@@ -2,6 +2,9 @@
 
 import { appointmentFormDefinitionWireId } from '../appointment-contract'
 
+/** Synthetic only: no production form-definition vocabulary is asserted. */
+export const mockInspectionFormDefinitionId = 'mock-form-definition-inspection'
+
 export const mockAppointmentFormDefinitionResponse = {
   data: [
     {
@@ -36,6 +39,50 @@ export const mockAppointmentFormDefinitionResponse = {
   page: 1,
   rows: 20,
   total: 3,
+} as const
+
+export const mockInspectionFormDefinitionResponse = {
+  data: [
+    {
+      _id: 'mock-inspection-field-summary',
+      name: 'inspectionSummary',
+      nameDisp: '现场情况',
+      type: 'textarea',
+      required: '1',
+      state: 1,
+    },
+    {
+      _id: 'mock-inspection-field-result',
+      name: 'inspectionResult',
+      nameDisp: '勘察结论',
+      type: 'radio',
+      required: '1',
+      state: 1,
+      options: [
+        { value: 'safe', name: '可继续施工' },
+        { value: 'follow_up', name: '需要跟进' },
+      ],
+    },
+    {
+      _id: 'mock-inspection-field-photo',
+      name: 'inspectionPhoto',
+      nameDisp: '现场照片',
+      type: 'image',
+      required: '1',
+      state: 1,
+    },
+    {
+      _id: 'mock-inspection-field-note',
+      name: 'inspectionNote',
+      nameDisp: '备注',
+      type: 'textarea',
+      required: '0',
+      state: 1,
+    },
+  ],
+  page: 1,
+  rows: 20,
+  total: 4,
 } as const
 
 export const mockWorkOrderIds = [
@@ -79,6 +126,7 @@ export const mockCommandScenarioIds = {
   appointmentRetryable: 'mock-work-order-014-appointment-retryable',
   appointmentTerminal: 'mock-work-order-015-appointment-terminal',
   appointmentSuccess: 'mock-work-order-016-appointment-success',
+  inspectionSuccess: 'mock-work-order-017-inspection-success',
 } as const
 
 /** Mock DATA list order is intentionally stable for visual review. */
@@ -646,6 +694,32 @@ export const mockWorkOrderDetailResponses = {
           nodeType: 'forms',
           name: '预约上门时间',
           formDefId: appointmentFormDefinitionWireId,
+          userChoose: ['synthetic-role'],
+        },
+      }],
+    },
+  },
+  [mockCommandScenarioIds.inspectionSuccess]: {
+    data: {
+      serviceAppointment: {
+        _id: mockCommandScenarioIds.inspectionSuccess,
+        orderNum: '19017',
+        name: '演示现场勘察样本',
+        address: '演示地址七',
+        district: 110105,
+        exts: { distance: 1.7, communityOrdersTotal: 0 },
+        status: mockSyntheticStatusCodes.onsite,
+        phone: '13800000017',
+        workflowRunId: 'mock-workflow-run-017',
+      },
+      workflow: { _id: 'mock-workflow-run-017' },
+      workflowNode: [{
+        _id: 'mock-workflow-node-017-inspection',
+        state: 0,
+        nodeDef: {
+          nodeType: 'forms',
+          name: '现场勘察',
+          formDefId: mockInspectionFormDefinitionId,
           userChoose: ['synthetic-role'],
         },
       }],

@@ -625,6 +625,10 @@ function workflowNode(raw: unknown): WorkflowNodeRead {
     'parentWorkflowNodeId',
   ])
   const displayName = optionalString(nodeDef ?? {}, ['name'])
+  const formDefinitionId = optionalOpaqueId<'FormDefinitionId'>(nodeDef ?? {}, [
+    'formDefId',
+    'formDefinitionId',
+  ])
   const formDataId = optionalOpaqueId<'FormDataId'>(record, ['formDataId', 'dataId'])
   const formPurpose =
     optionalString(nodeDef ?? {}, ['formDefId', 'formDefinitionId']) === appointmentFormDefinitionWireId
@@ -641,6 +645,7 @@ function workflowNode(raw: unknown): WorkflowNodeRead {
     lifecycle: workflowNodeLifecycle(record),
     visibility,
     ...(displayName ? { displayName } : {}),
+    ...(formDefinitionId ? { formDefinitionId } : {}),
     ...(formPurpose ? { formPurpose } : {}),
     ...(formDataId ? { formDataId } : {}),
     ...(definitionId ? { definitionId } : {}),
@@ -711,15 +716,20 @@ function formDefinition(raw: unknown, requestedId: FormDefinitionId): FormDefini
   }
 }
 
-function formFieldValue(value: unknown): string | number | boolean | null | undefined {
+function formFieldValue(value: unknown): string | number | boolean | null | readonly (string | number | boolean)[] | undefined {
   if (value === null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
     return value
+  }
+  if (Array.isArray(value) && value.every((item) =>
+    typeof item === 'string' || typeof item === 'number' || typeof item === 'boolean',
+  )) {
+    return value as readonly (string | number | boolean)[]
   }
   return undefined
 }
 
-function formValues(record: AdapterRecord): Readonly<Record<string, string | number | boolean | null>> | undefined {
-  const values: Record<string, string | number | boolean | null> = {}
+function formValues(record: AdapterRecord): Readonly<Record<string, string | number | boolean | null | readonly (string | number | boolean)[]>> | undefined {
+  const values: Record<string, string | number | boolean | null | readonly (string | number | boolean)[]> = {}
   const extensions = optionalRecord(record.exts)
   if (extensions) {
     for (const [key, value] of Object.entries(extensions)) {
@@ -736,6 +746,7 @@ function formValues(record: AdapterRecord): Readonly<Record<string, string | num
     'definitionId',
     'workflowRunId',
     'runId',
+    'workflowId',
     'exts',
   ])
   for (const [key, value] of Object.entries(record)) {

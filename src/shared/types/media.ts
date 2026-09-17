@@ -7,6 +7,8 @@ export interface LocalMedia {
   readonly ref: LocalMediaRef
   readonly mimeType: string
   readonly source: MediaSource
+  /** Ephemeral platform path used only by the online upload adapter. */
+  readonly localPath?: string
   readonly name?: string
   readonly size?: number
   readonly capturedAt?: string

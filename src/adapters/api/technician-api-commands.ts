@@ -2,6 +2,10 @@ import type {
   AcceptOrderInput,
   AcceptOrderInspection,
   AppointmentFormRead,
+  CompleteWorkflowNodeInput,
+  DynamicFormRead,
+  ReadDynamicFormInput,
+  SaveDynamicFormInput,
   SubmitAppointmentInput,
   TechnicianApiCommandPort,
   TechnicianApiReadPort,
@@ -142,6 +146,10 @@ function mapSubmitValues(values: Readonly<Record<string, string | number | boole
   return Object.fromEntries(Object.entries(values).filter(([, value]) => value !== null))
 }
 
+function mapDynamicValues(values: Readonly<Record<string, unknown>>): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(values).filter(([, value]) => value !== null))
+}
+
 export class TechnicianApiCommandAdapter implements TechnicianApiCommandPort {
   constructor(
     private readonly transport: ApiCommandTransport,
@@ -183,9 +191,27 @@ export class TechnicianApiCommandAdapter implements TechnicianApiCommandPort {
   }
 
   async readAppointmentForm(input: { readonly formDataId?: FormDataId }): Promise<OperationSnapshot<AppointmentFormRead>> {
-    const definition = await this.readPort.getFormDefinition(
-      appointmentFormDefinitionWireId as FormDefinitionId,
-    )
+    const generic = await this.readDynamicForm({
+      definitionId: appointmentFormDefinitionWireId as FormDefinitionId,
+      ...(input.formDataId ? { formDataId: input.formDataId } : {}),
+    })
+    if (generic.state !== 'succeeded' || !generic.data) return generic as OperationSnapshot<AppointmentFormRead>
+    const values: Record<string, AppointmentFormRead['values'][string]> = {}
+    for (const [key, value] of Object.entries(generic.data.values)) {
+      if (value === null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+        values[key] = value
+      }
+    }
+    return succeeded({
+      fields: generic.data.fields,
+      values,
+      ...(generic.data.definitionId ? { definitionId: generic.data.definitionId } : {}),
+      ...(generic.data.dataId ? { dataId: generic.data.dataId } : {}),
+    })
+  }
+
+  async readDynamicForm(input: ReadDynamicFormInput): Promise<OperationSnapshot<DynamicFormRead>> {
+    const definition = await this.readPort.getFormDefinition(input.definitionId)
     if (definition.state !== 'succeeded' || !definition.data) {
       return failureFrom(definition)
     }
@@ -199,7 +225,7 @@ export class TechnicianApiCommandAdapter implements TechnicianApiCommandPort {
     }
 
     const data = await this.readPort.getFormData({
-      definitionId: appointmentFormDefinitionWireId as FormDefinitionId,
+      definitionId: input.definitionId,
       dataId: input.formDataId,
     })
     if (data.state !== 'succeeded' || !data.data) return failureFrom(data)
@@ -209,9 +235,10 @@ export class TechnicianApiCommandAdapter implements TechnicianApiCommandPort {
       data.data.items.length !== 1 ||
       !first ||
       first.id !== input.formDataId ||
-      first.definitionId !== definition.data.id
+      first.definitionId !== definition.data.id ||
+      (input.expectedWorkflowRunId && first.workflowRunId !== input.expectedWorkflowRunId)
     ) {
-      return adapterFailure('server_terminal', 'Appointment form data did not match the requested record')
+      return adapterFailure('server_terminal', 'Dynamic form data did not match the requested record')
     }
 
     return succeeded({
@@ -219,12 +246,13 @@ export class TechnicianApiCommandAdapter implements TechnicianApiCommandPort {
       fields: definition.data.fields ?? [],
       values: first?.values ?? {},
       ...(first?.id ? { dataId: first.id } : {}),
+      ...(first?.workflowRunId ? { workflowRunId: first.workflowRunId } : {}),
     })
   }
 
-  async submitAppointment(input: SubmitAppointmentInput): Promise<OperationSnapshot<void>> {
+  async saveDynamicForm(input: SaveDynamicFormInput): Promise<OperationSnapshot<FormDataId>> {
     const formData: Record<string, unknown> = {
-      ...mapSubmitValues(input.values),
+      ...mapDynamicValues(input.values),
       sid: input.workOrderId,
       smodule: 'serviceAppointment',
       nodeId: input.workflowNodeId,
@@ -232,36 +260,72 @@ export class TechnicianApiCommandAdapter implements TechnicianApiCommandPort {
       ...(input.formDataId ? { _id: input.formDataId } : {}),
       state: 1,
     }
-
-    const saved = await this.command<FormDataId>(
+    return this.command<FormDataId>(
       {
         method: 'POST',
-        path: `biz/extForm/upsert/${appointmentFormDefinitionWireId}`,
+        path: `biz/extForm/upsert/${encodeURIComponent(String(input.definitionId))}`,
         body: { dataStr: JSON.stringify(formData) },
-        ...(input.visitIntent === 'visit_deferred'
-          ? { safety: 'deferred_appointment_datetime_encoding_unknown' as const }
-          : {}),
       },
       formDataIdFromResponse,
     )
-    if (saved.state !== 'succeeded') return failureFrom<FormDataId, void>(saved)
-    if (!saved.data) return adapterFailure('server_terminal', 'Saved appointment form data id is missing')
+  }
 
-    const processed = await this.command<void>(
+  completeWorkflowNode(input: CompleteWorkflowNodeInput): Promise<OperationSnapshot<void>> {
+    return this.command<void>(
       {
         method: 'POST',
         path: 'workflow/process',
         body: {
           workflowNodeId: input.workflowNodeId,
-          nodeFormDefId: appointmentFormDefinitionWireId,
-          nodeFormDataId: saved.data,
+          nodeFormDefId: input.definitionId,
+          nodeFormDataId: input.formDataId,
           smodule: 'serviceAppointment',
           sid: input.workOrderId,
         },
       },
       () => undefined,
     )
-    return processed
+  }
+
+  async submitAppointment(input: SubmitAppointmentInput): Promise<OperationSnapshot<void>> {
+    const saved = input.visitIntent === 'visit_deferred'
+      ? await this.command<FormDataId>(
+          {
+            method: 'POST',
+            path: `biz/extForm/upsert/${appointmentFormDefinitionWireId}`,
+            body: {
+              dataStr: JSON.stringify({
+                ...mapSubmitValues(input.values),
+                sid: input.workOrderId,
+                smodule: 'serviceAppointment',
+                nodeId: input.workflowNodeId,
+                ...(input.workflowRunId ? { workflowId: input.workflowRunId } : {}),
+                ...(input.formDataId ? { _id: input.formDataId } : {}),
+                state: 1,
+              }),
+            },
+            safety: 'deferred_appointment_datetime_encoding_unknown',
+          },
+          formDataIdFromResponse,
+        )
+      : await this.saveDynamicForm({
+          workOrderId: input.workOrderId,
+          workflowNodeId: input.workflowNodeId,
+          ...(input.workflowRunId ? { workflowRunId: input.workflowRunId } : {}),
+          definitionId: appointmentFormDefinitionWireId as FormDefinitionId,
+          ...(input.formDataId ? { formDataId: input.formDataId } : {}),
+          values: input.values,
+        })
+    if (saved.state !== 'succeeded') return failureFrom<FormDataId, void>(saved)
+    if (!saved.data) return adapterFailure('server_terminal', 'Saved appointment form data id is missing')
+
+    return this.completeWorkflowNode({
+      workOrderId: input.workOrderId,
+      workflowNodeId: input.workflowNodeId,
+      ...(input.workflowRunId ? { workflowRunId: input.workflowRunId } : {}),
+      definitionId: appointmentFormDefinitionWireId as FormDefinitionId,
+      formDataId: saved.data,
+    })
   }
 }
 

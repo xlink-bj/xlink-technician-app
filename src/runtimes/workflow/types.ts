@@ -72,6 +72,7 @@ export interface WorkflowNodeMetadata {
   readonly id: WorkflowNodeRuntimeId
   readonly category: WorkflowNodeCategory
   readonly lifecycle: WorkflowNodeLifecycle
+  readonly formDefinitionId?: FormDefinitionId
   readonly handlers?: readonly HandlerIdentity[]
   readonly visibility?: WorkflowNodeVisibilityEvidence
   readonly formPurpose?: 'appointment'

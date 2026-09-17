@@ -31,6 +31,10 @@ export type {
   AppointmentFormOption,
   AppointmentFormRead,
   AppointmentVisitIntent,
+  CompleteWorkflowNodeInput,
+  DynamicFormRead,
+  ReadDynamicFormInput,
+  SaveDynamicFormInput,
   SubmitAppointmentInput,
   TechnicianApiCommandPort,
 } from './commands'

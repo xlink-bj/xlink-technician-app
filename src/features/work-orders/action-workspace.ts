@@ -20,21 +20,28 @@ import {
 import type {
   AppointmentFieldValue,
   AppointmentFormRead,
+  DynamicFormRead,
+  FormFieldValue,
+  MediaCapturePort,
+  MediaFilePickerPort,
   NavigationPort,
   SessionSnapshot,
   TechnicianApiCommandPort,
   TechnicianApiReadPort,
+  UploadPort,
   WorkOrderDetail,
 } from '@shared/ports'
 import {
   createOperationError,
   type ErrorCategory,
+  type FormDefinitionId,
   type OperationError,
   type OperationSnapshot,
   type OperationState,
   type UserId,
   type WorkOrderId,
   type WorkflowNodeRuntimeId,
+  type UploadedMediaRef,
 } from '@shared/types'
 import {
   appointmentFieldRolesFor,
@@ -47,6 +54,13 @@ import {
   type AppointmentVisitIntent,
   type AppointmentRuntimeField,
 } from './appointment-form-runtime'
+import {
+  dynamicActionFieldsFor,
+  dynamicActionUnsupportedFieldsFor,
+  normalizeDynamicFieldValue,
+  normalizeDynamicForm,
+  type DynamicActionField,
+} from './dynamic-form-action'
 
 export const actionWorkspaceRoute = '/pages/work-orders/action-workspace' as const
 export const actionWorkspaceTimeRoute = '/pages/work-orders/action-time' as const
@@ -120,6 +134,18 @@ function appointmentValue(value: unknown): AppointmentFieldValue | undefined {
     : undefined
 }
 
+function formFieldValue(value: unknown): FormFieldValue | undefined {
+  if (value === null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+    return value
+  }
+  if (Array.isArray(value) && value.every((item) =>
+    typeof item === 'string' || typeof item === 'number' || typeof item === 'boolean',
+  )) {
+    return value as readonly (string | number | boolean)[]
+  }
+  return undefined
+}
+
 function record(value: unknown): Record<string, unknown> | null {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
     ? value as Record<string, unknown>
@@ -178,12 +204,66 @@ function draftRecordFor(
   }
 }
 
+function dynamicDraftRecordFor(
+  value: unknown,
+  identity: ActionDraftIdentity,
+  form: DynamicFormRead,
+): ActionDraftRecord<Readonly<Record<string, FormFieldValue>>> | null {
+  const input = record(value)
+  const rawIdentity = record(input?.identity)
+  const rawValues = record(input?.values)
+  if (
+    input?.version !== 1 ||
+    input.status !== 'unfinished' ||
+    typeof input.updatedAt !== 'string' ||
+    !rawIdentity ||
+    !rawValues
+  ) return null
+
+  const storedIdentity: ActionDraftIdentity = {
+    version: 1,
+    userId: rawIdentity.userId as UserId,
+    workOrderId: rawIdentity.workOrderId as WorkOrderId,
+    workflowNodeId: rawIdentity.workflowNodeId as WorkflowNodeRuntimeId,
+    actionIntent: rawIdentity.actionIntent as ActionDraftIdentity['actionIntent'],
+    contentKind: rawIdentity.contentKind as ActionDraftIdentity['contentKind'],
+    ...(typeof rawIdentity.contentIdentity === 'string' ? { contentIdentity: rawIdentity.contentIdentity } : {}),
+  }
+  if (!actionDraftIdentityMatches(storedIdentity, identity)) return null
+
+  const values: Record<string, FormFieldValue> = {}
+  for (const [key, rawValue] of Object.entries(rawValues)) {
+    const field = form.fields.find((candidate) => candidate.key === key)
+    const normalizedRaw = formFieldValue(rawValue)
+    if (!field || normalizedRaw === undefined) return null
+    if (field.readOnly) {
+      if (form.values[key] !== normalizedRaw) return null
+      values[key] = normalizedRaw
+      continue
+    }
+    const normalized = normalizeDynamicFieldValue(form, field, normalizedRaw)
+    if (normalized.state !== 'succeeded' || normalized.data === undefined) return null
+    values[key] = normalized.data
+  }
+
+  return {
+    version: 1,
+    identity,
+    values,
+    updatedAt: input.updatedAt,
+    status: 'unfinished',
+  }
+}
+
 export interface ActionWorkspaceDependencies {
   readonly apiRead: TechnicianApiReadPort
   readonly commandApi: TechnicianApiCommandPort
   readonly draftRepository: ActionDraftRepository
   readonly navigation: NavigationPort
   readonly getSession: () => SessionSnapshot | null
+  readonly mediaCapture?: MediaCapturePort
+  readonly mediaFilePicker?: MediaFilePickerPort
+  readonly upload?: UploadPort
   readonly debounceMs?: number
   readonly now?: () => string
 }
@@ -199,6 +279,11 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
   const detail = ref<WorkOrderDetail | null>(null)
   const descriptor = ref<ActionDescriptor | null>(null)
   const appointmentForm = ref<AppointmentFormRead | null>(null)
+  const dynamicForm = ref<DynamicFormRead | null>(null)
+  const dynamicFormSaveState = ref<'not_saved' | 'saving' | 'saved' | 'failed'>('not_saved')
+  const mediaByField = ref<Readonly<Record<string, readonly UploadedMediaRef[]>>>({})
+  const mediaInFlightField = ref<string | null>(null)
+  const completionReconciled = ref(false)
   const error = ref<OperationError | null>(null)
   const appointmentFields = computed<readonly AppointmentRuntimeField[]>(() =>
     appointmentForm.value ? appointmentRuntimeFieldsFor(appointmentForm.value) : [],
@@ -222,13 +307,39 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     const key = appointmentTimeField.value?.key
     return appointmentDatetimeApplicable.value && key ? appointmentForm.value?.values[key] : undefined
   })
-  const canSubmit = computed(() =>
-    loadState.value === 'succeeded' &&
-    lifecycle.value !== 'submitting' &&
-    businessResult.value !== 'succeeded' &&
-    descriptor.value?.execution === 'enabled' &&
-    appointmentForm.value !== null,
+  const dynamicFields = computed<readonly DynamicActionField[]>(() =>
+    dynamicForm.value ? dynamicActionFieldsFor(dynamicForm.value) : [],
   )
+  const dynamicUnsupportedFields = computed<readonly DynamicActionField[]>(() =>
+    dynamicForm.value ? dynamicActionUnsupportedFieldsFor(dynamicForm.value) : [],
+  )
+  const dynamicValidation = computed(() =>
+    dynamicForm.value
+      ? normalizeDynamicForm(dynamicForm.value)
+      : failure<Readonly<Record<string, FormFieldValue>>>('validation', 'Action content is not ready'),
+  )
+  const isDynamicFormAction = computed(() => descriptor.value?.actionIntent === 'interact_with_form')
+  const dynamicRequiredMediaPending = computed(() => dynamicFields.value.some((field) =>
+    field.runtime.visible && field.runtime.required && (field.type === 'image' || field.type === 'file')
+      && !dynamicForm.value?.values[field.key],
+  ))
+  const dynamicMediaUploading = computed(() => mediaInFlightField.value !== null)
+  const canSubmit = computed(() => isDynamicFormAction.value
+    ? loadState.value === 'succeeded' &&
+      lifecycle.value !== 'submitting' &&
+      businessResult.value !== 'succeeded' &&
+      descriptor.value?.execution === 'enabled' &&
+      dynamicForm.value !== null &&
+      dynamicUnsupportedFields.value.length === 0 &&
+      dynamicValidation.value.state === 'succeeded' &&
+      !dynamicRequiredMediaPending.value &&
+      !dynamicMediaUploading.value &&
+      completionReconciled.value
+    : loadState.value === 'succeeded' &&
+      lifecycle.value !== 'submitting' &&
+      businessResult.value !== 'succeeded' &&
+      descriptor.value?.execution === 'enabled' &&
+      appointmentForm.value !== null)
 
   let dependencies: ActionWorkspaceDependencies | null = null
   let identity: ActionDraftIdentity | null = null
@@ -293,6 +404,11 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     detail.value = null
     descriptor.value = null
     appointmentForm.value = null
+    dynamicForm.value = null
+    dynamicFormSaveState.value = 'not_saved'
+    mediaByField.value = {}
+    mediaInFlightField.value = null
+    completionReconciled.value = true
     error.value = null
   }
 
@@ -311,6 +427,26 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       ...form,
       values: { ...form.values, ...draft.values },
     }
+    draftStatus.value = 'restore_available'
+    lifecycle.value = 'draft_local'
+  }
+
+  async function restoreDynamicDraft(
+    nextIdentity: ActionDraftIdentity,
+    form: DynamicFormRead,
+  ): Promise<void> {
+    const configured = dependencies
+    if (!configured) return
+    const stored = await configured.draftRepository.read<Readonly<Record<string, FormFieldValue>>>(nextIdentity)
+    if (stored.state !== 'succeeded' || !stored.data) return
+    const draft = dynamicDraftRecordFor(stored.data, nextIdentity, form)
+    if (!draft) return
+
+    dynamicForm.value = {
+      ...form,
+      values: { ...form.values, ...draft.values },
+    }
+    dynamicFormSaveState.value = 'not_saved'
     draftStatus.value = 'restore_available'
     lifecycle.value = 'draft_local'
   }
@@ -340,6 +476,11 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     detail.value = null
     descriptor.value = null
     appointmentForm.value = null
+    dynamicForm.value = null
+    dynamicFormSaveState.value = 'not_saved'
+    mediaByField.value = {}
+    mediaInFlightField.value = null
+    completionReconciled.value = true
     error.value = null
 
     const read = await configured.apiRead.getWorkOrderDetail(input.workOrderId)
@@ -369,7 +510,9 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     }
 
     const contentKind = actionContentKindForIntent(currentTask.actionIntent)
-    if (contentKind !== 'dynamic_form' || currentTask.actionIntent !== 'set_appointment') {
+    const isAppointmentAction = currentTask.actionIntent === 'set_appointment'
+    const isDynamicAction = currentTask.actionIntent === 'interact_with_form'
+    if (contentKind !== 'dynamic_form' || (!isAppointmentAction && !isDynamicAction)) {
       detail.value = read.data
       loadState.value = 'blocked'
       lifecycle.value = 'blocked'
@@ -377,16 +520,32 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       return failure('unsupported_capability', 'This Action content is not supported')
     }
 
-    const form = await configured.commandApi.readAppointmentForm(
-      node.formDataId ? { formDataId: node.formDataId } : {},
-    )
+    if (isDynamicAction && !node.formDefinitionId) {
+      detail.value = read.data
+      loadState.value = 'blocked'
+      lifecycle.value = 'blocked'
+      error.value = createOperationError('unsupported_capability', 'Dynamic form definition is unavailable')
+      return failure('unsupported_capability', 'Dynamic form definition is unavailable')
+    }
+
+    const form = isAppointmentAction
+      ? await configured.commandApi.readAppointmentForm(
+          node.formDataId ? { formDataId: node.formDataId } : {},
+        )
+      : configured.commandApi.readDynamicForm
+        ? await configured.commandApi.readDynamicForm({
+            definitionId: node.formDefinitionId!,
+            ...(node.formDataId ? { formDataId: node.formDataId } : {}),
+            ...(read.data.workflowRunId ? { expectedWorkflowRunId: read.data.workflowRunId } : {}),
+          })
+        : failure<DynamicFormRead>('unsupported_capability', 'Dynamic form content is unavailable')
     if (requestVersion !== loadVersion) return failure('cancelled', 'Action Workspace load was superseded')
     if (form.state !== 'succeeded' || !form.data) {
       detail.value = read.data
       loadState.value = form.state
       lifecycle.value = lifecycleForFailure(form.state)
       error.value = form.error ?? null
-      return failureFrom<AppointmentFormRead, ActionDescriptor>(form)
+      return failureFrom<AppointmentFormRead | DynamicFormRead, ActionDescriptor>(form)
     }
 
     const nextDescriptor: ActionDescriptor = {
@@ -402,12 +561,18 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     const nextIdentity = actionDraftIdentityFor(nextDescriptor)
     detail.value = read.data
     descriptor.value = nextDescriptor
-    appointmentForm.value = form.data
+    appointmentForm.value = isAppointmentAction ? form.data as AppointmentFormRead : null
+    dynamicForm.value = isDynamicAction ? form.data as DynamicFormRead : null
+    dynamicFormSaveState.value = isDynamicAction && form.data.dataId ? 'saved' : 'not_saved'
+    mediaByField.value = {}
+    mediaInFlightField.value = null
+    completionReconciled.value = true
     identity = nextIdentity
     loadState.value = 'succeeded'
     lifecycle.value = 'available'
     error.value = null
-    await restoreDraft(nextIdentity, form.data)
+    if (isAppointmentAction) await restoreDraft(nextIdentity, form.data as AppointmentFormRead)
+    else await restoreDynamicDraft(nextIdentity, form.data as DynamicFormRead)
     return { state: 'succeeded', data: nextDescriptor }
   }
 
@@ -433,20 +598,38 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     return load(input)
   }
 
-  function setField(key: string, value: AppointmentFieldValue): OperationSnapshot<void> {
-    const form = appointmentForm.value
-    if (!form) return failure('validation', 'Action content is not ready')
-    const field = form.fields.find((candidate) => candidate.key === key)
-    if (!field) return failure('validation', 'Action field is not supported')
-    const normalized = normalizeAppointmentFieldValueForForm(form, field, value)
-    if (normalized.state !== 'succeeded') {
-      error.value = normalized.error ?? null
-      return { state: normalized.state, ...(normalized.error ? { error: normalized.error } : {}) }
-    }
+  function setField(key: string, value: FormFieldValue): OperationSnapshot<void> {
+    const dynamic = dynamicForm.value
+    if (dynamic) {
+      const field = dynamic.fields.find((candidate) => candidate.key === key)
+      if (!field) return failure('validation', 'Action field is not supported')
+      const normalized = normalizeDynamicFieldValue(dynamic, field, value)
+      if (normalized.state !== 'succeeded') {
+        error.value = normalized.error ?? null
+        return { state: normalized.state, ...(normalized.error ? { error: normalized.error } : {}) }
+      }
+      dynamicForm.value = {
+        ...dynamic,
+        values: { ...dynamic.values, [key]: normalized.data! },
+      }
+      dynamicFormSaveState.value = 'not_saved'
+    } else {
+      const form = appointmentForm.value
+      if (!form) return failure('validation', 'Action content is not ready')
+      const field = form.fields.find((candidate) => candidate.key === key)
+      if (!field) return failure('validation', 'Action field is not supported')
+      const scalar = appointmentValue(value)
+      if (scalar === undefined) return failure('validation', 'Appointment field value is not supported')
+      const normalized = normalizeAppointmentFieldValueForForm(form, field, scalar)
+      if (normalized.state !== 'succeeded') {
+        error.value = normalized.error ?? null
+        return { state: normalized.state, ...(normalized.error ? { error: normalized.error } : {}) }
+      }
 
-    appointmentForm.value = {
-      ...form,
-      values: { ...form.values, [key]: normalized.data! },
+      appointmentForm.value = {
+        ...form,
+        values: { ...form.values, [key]: normalized.data! },
+      }
     }
     draftRevision += 1
     error.value = null
@@ -576,14 +759,14 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
   async function saveDraft(): Promise<OperationSnapshot<void>> {
     const configured = dependencies
     const currentIdentity = identity
-    const form = appointmentForm.value
+    const form = appointmentForm.value ?? dynamicForm.value
     if (!configured || !currentIdentity || !form || draftStatus.value === 'clean') {
       return { state: 'succeeded', data: undefined }
     }
     if (draftWriteInFlight) return draftWriteInFlight
 
     const writeRevision = draftRevision
-    const record: ActionDraftRecord<Readonly<Record<string, AppointmentFieldValue>>> = {
+    const record: ActionDraftRecord<Readonly<Record<string, FormFieldValue>>> = {
       version: 1,
       identity: currentIdentity,
       values: form.values,
@@ -638,9 +821,9 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
 
     // A completed tombstone prevents an unfinished record from being restored
     // if a platform storage remove operation is temporarily unavailable.
-    const form = appointmentForm.value
+    const form = appointmentForm.value ?? dynamicForm.value
     if (form) {
-      const tombstone: ActionDraftRecord<Readonly<Record<string, AppointmentFieldValue>>> = {
+      const tombstone: ActionDraftRecord<Readonly<Record<string, FormFieldValue>>> = {
         version: 1,
         identity: currentIdentity,
         values: form.values,
@@ -654,6 +837,228 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       }
     }
     return result
+  }
+
+  async function finalizeBusinessSuccess(): Promise<OperationSnapshot<void>> {
+    const configured = dependencies
+    const currentDescriptor = descriptor.value
+    if (!configured || !currentDescriptor) return failure('server_terminal', 'Action Workspace is not configured')
+
+    // The command has already succeeded. Cleanup and reread are deliberately
+    // separate states and can never turn the business result back into a
+    // submit failure or invite a duplicate mutation.
+    businessResult.value = 'succeeded'
+    lifecycle.value = 'succeeded'
+    loadState.value = 'succeeded'
+    draftFinalization.value = 'pending'
+    refreshStatus.value = 'pending'
+    postSuccessError.value = null
+
+    const draftCleanup = await clearPersistedDraft()
+    if (draftCleanup.state === 'succeeded') {
+      draftFinalization.value = 'completed'
+    } else {
+      postSuccessError.value = draftCleanup.error ?? createOperationError('network_retryable', 'Local draft cleanup is pending')
+    }
+    const reread = await configured.apiRead.getWorkOrderDetail(currentDescriptor.workOrderId)
+    if (reread.state !== 'succeeded' || !reread.data) {
+      refreshStatus.value = 'pending'
+      postSuccessError.value = postSuccessError.value
+        ?? reread.error
+        ?? createOperationError('server_terminal', 'Authoritative Action state could not be refreshed')
+      error.value = postSuccessError.value
+      return { state: 'succeeded', data: undefined }
+    }
+
+    detail.value = reread.data
+    refreshStatus.value = 'refreshed'
+    if (!postSuccessError.value) error.value = null
+    else error.value = postSuccessError.value
+    return { state: 'succeeded', data: undefined }
+  }
+
+  async function saveDynamicForm(): Promise<OperationSnapshot<void>> {
+    const configured = dependencies
+    const currentDescriptor = descriptor.value
+    const form = dynamicForm.value
+    if (!configured || !currentDescriptor || !form || !isDynamicFormAction.value) {
+      return failure('validation', 'Dynamic form content is not ready')
+    }
+    if (!configured.commandApi.saveDynamicForm || !currentDescriptor.contentIdentity) {
+      return failure('unsupported_capability', 'Dynamic form saving is unavailable')
+    }
+    if (dynamicFormSaveState.value === 'saving') {
+      return failure('validation', 'Dynamic form is already saving')
+    }
+
+    const validation = normalizeDynamicForm(form)
+    if (validation.state !== 'succeeded' || !validation.data) {
+      dynamicFormSaveState.value = 'failed'
+      error.value = validation.error ?? null
+      lifecycle.value = 'in_progress'
+      return { state: validation.state, ...(validation.error ? { error: validation.error } : {}) }
+    }
+
+    const flushed = await flushDraft()
+    if (flushed.state !== 'succeeded') {
+      error.value = flushed.error ?? null
+      return flushed
+    }
+
+    dynamicFormSaveState.value = 'saving'
+    error.value = null
+    const result = await configured.commandApi.saveDynamicForm({
+      workOrderId: currentDescriptor.workOrderId,
+      workflowNodeId: currentDescriptor.workflowNodeId,
+      ...(detail.value?.workflowRunId ? { workflowRunId: detail.value.workflowRunId } : {}),
+      definitionId: currentDescriptor.contentIdentity as FormDefinitionId,
+      ...(form.dataId ? { formDataId: form.dataId } : {}),
+      values: validation.data,
+    })
+    if (result.state !== 'succeeded' || !result.data) {
+      dynamicFormSaveState.value = 'failed'
+      error.value = result.error ?? null
+      return result.state === 'succeeded'
+        ? failure('server_terminal', 'Dynamic form save did not return a record identity')
+        : result as OperationSnapshot<void>
+    }
+
+    dynamicForm.value = { ...form, values: validation.data, dataId: result.data }
+    dynamicFormSaveState.value = 'saved'
+    lifecycle.value = 'in_progress'
+    error.value = null
+    return { state: 'succeeded', data: undefined }
+  }
+
+  async function reconcileAfterFailedCompletion(): Promise<void> {
+    const configured = dependencies
+    const currentDescriptor = descriptor.value
+    if (!configured || !currentDescriptor) return
+    const reread = await configured.apiRead.getWorkOrderDetail(currentDescriptor.workOrderId)
+    if (reread.state === 'succeeded' && reread.data) {
+      detail.value = reread.data
+      const currentTask = detailWorkflowProjectionFor(reread.data, configured.getSession()).currentTask
+      const sameActionStillAvailable = Boolean(
+        currentTask
+        && String(currentTask.nodeId) === String(currentDescriptor.workflowNodeId)
+        && currentTask.actionIntent === currentDescriptor.actionIntent
+        && currentTask.execution === 'enabled',
+      )
+      completionReconciled.value = sameActionStillAvailable
+      if (!sameActionStillAvailable) {
+        loadState.value = 'blocked'
+        lifecycle.value = 'blocked'
+        error.value = createOperationError(
+          'unsupported_capability',
+          'The current Action state changed; return to Work Order detail before continuing',
+        )
+      }
+    } else {
+      completionReconciled.value = false
+    }
+  }
+
+  async function completeDynamicForm(): Promise<OperationSnapshot<void>> {
+    const configured = dependencies
+    const currentDescriptor = descriptor.value
+    const form = dynamicForm.value
+    if (!configured || !currentDescriptor || !form || !isDynamicFormAction.value) {
+      return failure('validation', 'Dynamic form content is not ready')
+    }
+    if (!configured.commandApi.completeWorkflowNode || !currentDescriptor.contentIdentity) {
+      return failure('unsupported_capability', 'Dynamic form completion is unavailable')
+    }
+    if (businessResult.value === 'succeeded') return { state: 'succeeded', data: undefined }
+    if (currentDescriptor.execution !== 'enabled') return failure('unsupported_capability', 'This Action is read-only')
+    if (lifecycle.value === 'submitting') return failure('validation', 'Action is already being submitted')
+    if (!completionReconciled.value) {
+      return failure('network_retryable', 'Please refresh the current Action state before retrying')
+    }
+
+    const validation = normalizeDynamicForm(form)
+    if (validation.state !== 'succeeded') {
+      error.value = validation.error ?? null
+      lifecycle.value = 'in_progress'
+      return { state: validation.state, ...(validation.error ? { error: validation.error } : {}) }
+    }
+    if (dynamicRequiredMediaPending.value || dynamicMediaUploading.value) {
+      const mediaError = createOperationError('validation', 'Required inspection media is not uploaded')
+      error.value = mediaError
+      lifecycle.value = 'in_progress'
+      return { state: 'failed_terminal', error: mediaError }
+    }
+
+    if (dynamicFormSaveState.value !== 'saved' || !form.dataId) {
+      const saved = await saveDynamicForm()
+      if (saved.state !== 'succeeded') return saved
+    }
+    const savedForm = dynamicForm.value
+    if (!savedForm?.dataId) return failure('server_terminal', 'Dynamic form data identity is unavailable')
+
+    lifecycle.value = 'submitting'
+    error.value = null
+    const commandResult = await configured.commandApi.completeWorkflowNode({
+      workOrderId: currentDescriptor.workOrderId,
+      workflowNodeId: currentDescriptor.workflowNodeId,
+      ...(detail.value?.workflowRunId ? { workflowRunId: detail.value.workflowRunId } : {}),
+      definitionId: currentDescriptor.contentIdentity as FormDefinitionId,
+      formDataId: savedForm.dataId,
+    })
+    if (commandResult.state !== 'succeeded') {
+      businessResult.value = 'failed'
+      lifecycle.value = lifecycleForFailure(commandResult.state)
+      error.value = commandResult.error ?? null
+      // Never automatically resend a workflow command. A read reconciliation
+      // is the only thing that can make a later manual retry eligible.
+      await reconcileAfterFailedCompletion()
+      return commandResult
+    }
+
+    return finalizeBusinessSuccess()
+  }
+
+  async function pickDynamicMedia(fieldKey: string): Promise<OperationSnapshot<void>> {
+    const configured = dependencies
+    const form = dynamicForm.value
+    const field = form?.fields.find((candidate) => candidate.key === fieldKey)
+    if (!configured || !form || !field || (field.type !== 'image' && field.type !== 'file')) {
+      return failure('unsupported_capability', 'Inspection media is unavailable')
+    }
+    if (!configured.mediaFilePicker || !configured.upload) {
+      return failure('unsupported_capability', 'Inspection media upload is unavailable')
+    }
+    if (mediaInFlightField.value) return failure('validation', 'Media upload is already in progress')
+
+    mediaInFlightField.value = fieldKey
+    error.value = null
+    try {
+      const picked = await configured.mediaFilePicker.pick()
+      if (picked.state !== 'granted' || !picked.value || picked.value.length === 0) {
+        const cancelled = picked.reason ? createOperationError('validation', picked.reason) : null
+        if (cancelled) error.value = cancelled
+        return cancelled ? { state: 'failed_terminal', error: cancelled } : { state: 'succeeded', data: undefined }
+      }
+
+      const uploaded: UploadedMediaRef[] = []
+      for (const media of picked.value) {
+        const result = await configured.upload.upload(media)
+        if (result.state !== 'succeeded' || !result.data) {
+          error.value = result.error ?? createOperationError('network_retryable', 'Media upload failed')
+          return result.state === 'succeeded'
+            ? { state: 'failed_terminal', error: error.value }
+            : result as OperationSnapshot<void>
+        }
+        uploaded.push(result.data)
+      }
+
+      mediaByField.value = { ...mediaByField.value, [fieldKey]: uploaded }
+      const mediaValue: FormFieldValue = uploaded.length === 1
+        ? uploaded[0].url
+        : uploaded.map((item) => item.url)
+      return setField(fieldKey, mediaValue)
+    } finally {
+      mediaInFlightField.value = null
+    }
   }
 
   async function submit(): Promise<OperationSnapshot<void>> {
@@ -695,32 +1100,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       return commandResult
     }
 
-    businessResult.value = 'succeeded'
-    lifecycle.value = 'succeeded'
-    loadState.value = 'succeeded'
-    draftFinalization.value = 'pending'
-    refreshStatus.value = 'pending'
-    postSuccessError.value = null
-
-    const draftCleanup = await clearPersistedDraft()
-    if (draftCleanup.state === 'succeeded') {
-      draftFinalization.value = 'completed'
-    } else {
-      postSuccessError.value = draftCleanup.error ?? createOperationError('network_retryable', 'Local draft cleanup is pending')
-    }
-    const reread = await configured.apiRead.getWorkOrderDetail(currentDescriptor.workOrderId)
-    if (reread.state !== 'succeeded' || !reread.data) {
-      refreshStatus.value = 'pending'
-      postSuccessError.value = reread.error ?? createOperationError('server_terminal', 'Authoritative Action state could not be refreshed')
-      error.value = postSuccessError.value
-      return { state: 'succeeded', data: undefined }
-    }
-
-    detail.value = reread.data
-    refreshStatus.value = 'refreshed'
-    if (!postSuccessError.value) error.value = null
-    else error.value = postSuccessError.value
-    return { state: 'succeeded', data: undefined }
+    return finalizeBusinessSuccess()
   }
 
   async function exit(): Promise<OperationSnapshot<void>> {
@@ -759,6 +1139,13 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     appointmentNoteField,
     appointmentExtraFields,
     appointmentTimeValue,
+    dynamicForm,
+    dynamicFields,
+    dynamicUnsupportedFields,
+    dynamicValidation,
+    dynamicFormSaveState,
+    mediaByField,
+    mediaInFlightField,
     appointmentError: error,
     error,
     canSubmit,
@@ -776,6 +1163,9 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     navigateToList,
     saveDraft,
     flushDraft,
+    saveDynamicForm,
+    completeDynamicForm,
+    pickDynamicMedia,
     submit,
     exit,
   }
