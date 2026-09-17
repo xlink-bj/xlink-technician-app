@@ -13,6 +13,7 @@ import { createUniApiReadTransport } from '@adapters/api/uni-api-read-transport'
 import { resetMockCommandState, resetBusinessMockCache, setBusinessMockMode } from '@adapters/api/mock'
 import {
   actionWorkspaceConfirmationRouteFor,
+  actionWorkspaceRouteFor,
   actionWorkspaceTimeRouteFor,
   useActionWorkspaceStore,
 } from '@features/work-orders/action-workspace'
@@ -343,11 +344,12 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
     store.setField('need', '1')
     const toTime = await store.openAppointmentTimeSelection()
     expect(toTime.state).toBe('succeeded')
-    expect(navigation.navigate).toHaveBeenCalledWith(actionWorkspaceTimeRouteFor(
+    expect(navigation.replace).toHaveBeenCalledWith(actionWorkspaceTimeRouteFor(
       asOpaqueId<'WorkOrderId'>('workspace-work-order'),
       asOpaqueId<'WorkflowNodeRuntimeId'>('workspace-appointment-node'),
       'set_appointment',
     ))
+    expect(navigation.navigate).not.toHaveBeenCalled()
     expect(storage.storage.write).toHaveBeenCalledTimes(1)
   })
 
@@ -397,20 +399,10 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
     await store.openAppointmentTimeSelection()
     await store.openConfirmation()
 
-    expect(navigation.navigate).toHaveBeenCalledTimes(2)
-    expect(navigation.replace).toHaveBeenCalledTimes(2)
-    expect(navigation.back).toHaveBeenCalledTimes(1)
-    expect(navigation.navigate).toHaveBeenNthCalledWith(1, actionWorkspaceTimeRouteFor(
-      asOpaqueId<'WorkOrderId'>('workspace-work-order'),
-      asOpaqueId<'WorkflowNodeRuntimeId'>('workspace-appointment-node'),
-      'set_appointment',
-    ))
-    expect(navigation.navigate).toHaveBeenNthCalledWith(2, actionWorkspaceTimeRouteFor(
-      asOpaqueId<'WorkOrderId'>('workspace-work-order'),
-      asOpaqueId<'WorkflowNodeRuntimeId'>('workspace-appointment-node'),
-      'set_appointment',
-    ))
-    expect(navigation.replace).toHaveBeenNthCalledWith(1, actionWorkspaceConfirmationRouteFor(
+    expect(navigation.navigate).not.toHaveBeenCalled()
+    expect(navigation.replace).toHaveBeenCalledTimes(5)
+    expect(navigation.back).not.toHaveBeenCalled()
+    expect(navigation.replace).toHaveBeenNthCalledWith(1, actionWorkspaceTimeRouteFor(
       asOpaqueId<'WorkOrderId'>('workspace-work-order'),
       asOpaqueId<'WorkflowNodeRuntimeId'>('workspace-appointment-node'),
       'set_appointment',
@@ -420,6 +412,50 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
       asOpaqueId<'WorkflowNodeRuntimeId'>('workspace-appointment-node'),
       'set_appointment',
     ))
+    expect(navigation.replace).toHaveBeenNthCalledWith(3, actionWorkspaceRouteFor(
+      asOpaqueId<'WorkOrderId'>('workspace-work-order'),
+      asOpaqueId<'WorkflowNodeRuntimeId'>('workspace-appointment-node'),
+      'set_appointment',
+    ))
+    expect(navigation.replace).toHaveBeenNthCalledWith(4, actionWorkspaceTimeRouteFor(
+      asOpaqueId<'WorkOrderId'>('workspace-work-order'),
+      asOpaqueId<'WorkflowNodeRuntimeId'>('workspace-appointment-node'),
+      'set_appointment',
+    ))
+    expect(navigation.replace).toHaveBeenNthCalledWith(5, actionWorkspaceConfirmationRouteFor(
+      asOpaqueId<'WorkOrderId'>('workspace-work-order'),
+      asOpaqueId<'WorkflowNodeRuntimeId'>('workspace-appointment-node'),
+      'set_appointment',
+    ))
+  })
+
+  it('returns from confirmation to the explicit edit route instead of native back', async () => {
+    const { store, navigation } = configureWorkspace()
+    await openWorkspace(store)
+    store.setField('need', '1')
+    store.setAppointmentTime('2026-04-20 14:00')
+    await store.openConfirmation()
+
+    const result = await store.backToAppointmentWorkspace()
+
+    expect(result.state).toBe('succeeded')
+    expect(navigation.replace).toHaveBeenLastCalledWith(actionWorkspaceRouteFor(
+      asOpaqueId<'WorkOrderId'>('workspace-work-order'),
+      asOpaqueId<'WorkflowNodeRuntimeId'>('workspace-appointment-node'),
+      'set_appointment',
+    ))
+    expect(navigation.back).not.toHaveBeenCalled()
+  })
+
+  it('returns action errors to the explicit detail route instead of native back', async () => {
+    const { store, navigation } = configureWorkspace()
+    await openWorkspace(store)
+
+    const result = await store.exit()
+
+    expect(result.state).toBe('succeeded')
+    expect(navigation.reset).toHaveBeenLastCalledWith('/pages/work-orders/detail?id=workspace-work-order')
+    expect(navigation.back).not.toHaveBeenCalled()
   })
 
   it('uses the same Mock raw read/command path as the real Action Workspace', async () => {

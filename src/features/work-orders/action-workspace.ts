@@ -255,6 +255,20 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     await transition(url)
   }
 
+  async function returnTo(url: string): Promise<void> {
+    const configured = dependencies
+    if (!configured) throw new Error('Action Workspace is not configured')
+    if (configured.navigation.replace) {
+      await configured.navigation.replace(url)
+      return
+    }
+    if (configured.navigation.reset) {
+      await configured.navigation.reset(url)
+      return
+    }
+    await configured.navigation.navigate(url)
+  }
+
   function clear(): void {
     loadVersion += 1
     clearDraftTimer()
@@ -454,7 +468,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     }
     const configured = dependencies
     if (!configured) return failure('server_terminal', 'Action Workspace is not configured')
-    await navigateTo(actionWorkspaceTimeRouteFor(
+    await returnTo(actionWorkspaceTimeRouteFor(
       currentDescriptor.workOrderId,
       currentDescriptor.workflowNodeId,
       currentDescriptor.actionIntent,
@@ -521,15 +535,11 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       error.value = flushed.error ?? null
       return flushed
     }
-    if (configured.navigation.back) {
-      await configured.navigation.back()
-    } else {
-      await navigateTo(actionWorkspaceRouteFor(
-        currentDescriptor.workOrderId,
-        currentDescriptor.workflowNodeId,
-        currentDescriptor.actionIntent,
-      ), true)
-    }
+    await returnTo(actionWorkspaceRouteFor(
+      currentDescriptor.workOrderId,
+      currentDescriptor.workflowNodeId,
+      currentDescriptor.actionIntent,
+    ))
     return { state: 'succeeded', data: undefined }
   }
 
@@ -715,12 +725,12 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     if (flushed.state !== 'succeeded') return flushed
     const configured = dependencies
     if (!configured) return failure('server_terminal', 'Action Workspace is not configured')
-    if (configured.navigation.back) {
-      await configured.navigation.back()
-      return { state: 'succeeded', data: undefined }
-    }
     if (detail.value) {
       await resetTo(`/pages/work-orders/detail?id=${encodeURIComponent(String(detail.value.id))}`)
+      return { state: 'succeeded', data: undefined }
+    }
+    if (configured.navigation.back) {
+      await configured.navigation.back()
       return { state: 'succeeded', data: undefined }
     }
     return failure('unsupported_capability', 'Navigation is unavailable')

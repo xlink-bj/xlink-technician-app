@@ -79,7 +79,11 @@ Bottom sheets and dialogs remain suitable for short auxiliary confirmations, not
 its time-selection and confirmation steps so the system navigation hierarchy
 remains coherent across MP-WEIXIN and App. Action sub-pages replace the current
 action page where possible, keeping repeated edit/confirm cycles bounded.
-Completion returns through a clean navigation reset so a successful action page
+Returning to edit uses the explicit Action Workspace route rather than relying
+on native `navigateBack(delta: 1)`, because the native stack is not a semantic
+return-target contract across entry paths. Error exits likewise target the
+explicit Work Order Detail route with a clean navigation reset. Completion
+also returns through a clean navigation reset so a successful action page
 cannot be reopened through Back.
 
 ## 3. Logical Frontend Architecture
