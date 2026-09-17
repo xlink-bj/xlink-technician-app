@@ -62,25 +62,32 @@
         />
       </AppField>
 
-      <AppField
-        v-if="workspace.appointmentTimeField && workspace.appointmentDatetimeApplicable"
-        class="action-content-field"
-        :label="workspace.appointmentTimeField.label"
-        :required="workspace.appointmentTimeField.runtime.required"
+      <!-- Keep the conditional field mounted; only its bounded layout region collapses. -->
+      <view
+        v-if="workspace.appointmentTimeField"
+        class="action-content-field-shell"
+        :class="{ 'action-content-field-shell--collapsed': !workspace.appointmentDatetimeApplicable }"
+        :aria-hidden="workspace.appointmentDatetimeApplicable ? 'false' : 'true'"
       >
-        <AppSelector
-          class="appointment-time-selector"
-          :selected="Boolean(appointmentDisplay)"
-          :disabled="workspace.appointmentTimeField.runtime.readOnly || workspace.lifecycle === 'submitting' || isNavigating"
-          @tap="openTimeSelection"
+        <AppField
+          class="action-content-field"
+          :label="workspace.appointmentTimeField.label"
+          :required="workspace.appointmentTimeField.runtime.required"
         >
-          <view v-if="appointmentDisplay" class="appointment-time-selected">
-            <text class="appointment-time-selected-date">{{ appointmentDisplay.dateLabel }}</text>
-            <text class="appointment-time-selected-value">{{ appointmentDisplay.timeLabel }}</text>
-          </view>
-          <text v-else class="appointment-time-placeholder">请选择上门时间</text>
-        </AppSelector>
-      </AppField>
+          <AppSelector
+            class="appointment-time-selector"
+            :selected="Boolean(appointmentDisplay)"
+            :disabled="workspace.appointmentTimeField.runtime.readOnly || workspace.lifecycle === 'submitting' || isNavigating"
+            @tap="openTimeSelection"
+          >
+            <view v-if="appointmentDisplay" class="appointment-time-selected">
+              <text class="appointment-time-selected-date">{{ appointmentDisplay.dateLabel }}</text>
+              <text class="appointment-time-selected-value">{{ appointmentDisplay.timeLabel }}</text>
+            </view>
+            <text v-else class="appointment-time-placeholder">请选择上门时间</text>
+          </AppSelector>
+        </AppField>
+      </view>
 
       <AppField
         v-if="workspace.appointmentNoteField"
@@ -319,6 +326,27 @@ function actionErrorCopy(error: OperationError | null): string {
 
 .action-content-title { color: var(--app-color-text-primary); font-size: var(--app-font-section-title); font-weight: 800; }
 .action-content-caption { color: var(--app-color-text-secondary); display: block; font-size: var(--app-font-field-label); margin-top: var(--app-space-xs); }
+
+/*
+ * The datetime field remains mounted while the Runtime changes its effective
+ * branch. A bounded collapse keeps the card and surrounding layout from
+ * reflowing by a same-frame mount/unmount cycle, while still removing the
+ * inactive field from the visual and interaction surface.
+ */
+.action-content-field-shell {
+  max-height: 360rpx;
+  opacity: 1;
+  overflow: hidden;
+  transition:
+    max-height var(--app-motion-collapse-duration) var(--app-motion-collapse-easing),
+    opacity var(--app-motion-collapse-duration) var(--app-motion-collapse-easing);
+}
+
+.action-content-field-shell--collapsed {
+  max-height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
 
 .appointment-time-selector { color: var(--app-color-text-primary); }
 .appointment-time-placeholder { color: var(--app-color-text-muted); font-size: var(--app-font-body); }

@@ -47,6 +47,8 @@ describe('App UI Design System v0.1', () => {
       '--app-control-gap',
       '--app-action-bar-padding-x',
       '--app-action-bar-gap',
+      '--app-motion-collapse-duration',
+      '--app-motion-collapse-easing',
       '--app-input-padding-x',
       '--app-input-padding-y',
       '--app-textarea-min-height',

@@ -180,4 +180,19 @@ describe('Appointment Action Content presentation boundary', () => {
     expect(pagesSource).not.toContain('biz/extForm')
     expect(pagesSource).not.toContain("label === '暂不上门'")
   })
+
+  it('collapses the conditional datetime field without destroying its layout region', async () => {
+    const action = await readFile(new URL('../../src/pages/work-orders/action-workspace.vue', import.meta.url), 'utf8')
+
+    expect(action).toContain('v-if="workspace.appointmentTimeField"')
+    expect(action).toContain('class="action-content-field-shell"')
+    expect(action).toContain("'action-content-field-shell--collapsed': !workspace.appointmentDatetimeApplicable")
+    expect(action).toContain(":aria-hidden=\"workspace.appointmentDatetimeApplicable ? 'false' : 'true'\"")
+    expect(action).not.toContain('v-if="workspace.appointmentTimeField && workspace.appointmentDatetimeApplicable"')
+    expect(action).toContain('max-height: 360rpx')
+    expect(action).toContain('overflow: hidden')
+    expect(action).toContain('pointer-events: none')
+    expect(action).toContain('max-height var(--app-motion-collapse-duration) var(--app-motion-collapse-easing)')
+    expect(action).toContain('opacity var(--app-motion-collapse-duration) var(--app-motion-collapse-easing)')
+  })
 })
