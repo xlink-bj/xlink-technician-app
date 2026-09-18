@@ -23,6 +23,13 @@ describe('G4-E local Beta API development client', () => {
     ])).toThrow(/colName=survey/)
   })
 
+  it('requires every captured ExtField row to prove the same Survey identity', () => {
+    expect(() => assertSurveyFieldRows([
+      { colName: 'survey', name: 'first' },
+      { colName: 'custom-form', name: 'second' },
+    ])).toThrow(/colName=survey/)
+  })
+
   it('uses the R1 phoneLogin wire shape and returns the session only in memory', async () => {
     const fetchImpl = vi.fn(async (_input: string, init?: RequestInit) => {
       expect(init?.method).toBe('POST')

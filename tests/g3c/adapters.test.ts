@@ -353,6 +353,54 @@ describe('G3-C API adapter foundation', () => {
     expect(generic.data).not.toHaveProperty('purpose')
   })
 
+  it('fails closed when any field row has no Ext collection identity', async () => {
+    const requestedId = asOpaqueId<'FormDefinitionId'>('missing-identity-definition')
+    const transport = new FixtureApiTransport({
+      'biz/extField/query': {
+        data: [
+          { _id: 'survey-row', colName: 'survey', name: 'first', nameDisp: '第一行', type: 'text' },
+          { _id: 'missing-row', name: 'second', nameDisp: '第二行', type: 'text' },
+        ],
+      },
+    })
+
+    const result = await createTechnicianApiReadAdapter(transport).getFormDefinition(requestedId)
+
+    expect(result.data).not.toHaveProperty('purpose')
+  })
+
+  it('fails closed when any field row has an unknown Ext collection identity', async () => {
+    const requestedId = asOpaqueId<'FormDefinitionId'>('unknown-identity-definition')
+    const transport = new FixtureApiTransport({
+      'biz/extField/query': {
+        data: [
+          { _id: 'survey-row', colName: 'survey', name: 'first', nameDisp: '第一行', type: 'text' },
+          { _id: 'unknown-row', colName: 'custom-form', name: 'second', nameDisp: '第二行', type: 'text' },
+        ],
+      },
+    })
+
+    const result = await createTechnicianApiReadAdapter(transport).getFormDefinition(requestedId)
+
+    expect(result.data).not.toHaveProperty('purpose')
+  })
+
+  it('keeps an all-Survey ExtField response classified as Survey', async () => {
+    const requestedId = asOpaqueId<'FormDefinitionId'>('all-survey-definition')
+    const transport = new FixtureApiTransport({
+      'biz/extField/query': {
+        data: [
+          { _id: 'survey-row-1', colName: 'survey', name: 'first', nameDisp: '第一行', type: 'text' },
+          { _id: 'survey-row-2', colName: 'survey', name: 'second', nameDisp: '第二行', type: 'text' },
+        ],
+      },
+    })
+
+    const result = await createTechnicianApiReadAdapter(transport).getFormDefinition(requestedId)
+
+    expect(result.data?.purpose).toBe('survey')
+  })
+
   it('fails closed when field rows carry contradictory form identities', async () => {
     const requestedId = asOpaqueId<'FormDefinitionId'>('mixed-definition')
     const transport = new FixtureApiTransport({

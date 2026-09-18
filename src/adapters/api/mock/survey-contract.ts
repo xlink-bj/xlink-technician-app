@@ -46,6 +46,7 @@ type SurveyProvider = {
 type SurveyContract = {
   readonly domain: string
   readonly semanticPurpose: string
+  readonly semanticIdentity: string
   readonly fieldRowCount: number
   readonly fieldRows: readonly SurveyFieldRow[]
   readonly providers: readonly SurveyProvider[]
@@ -55,6 +56,7 @@ const surveyContract = historicalSurvey as SurveyContract
 if (
   surveyContract.domain !== 'survey'
   || surveyContract.semanticPurpose !== 'survey'
+  || surveyContract.semanticIdentity !== 'all_extfield_rows_colName_survey'
   || surveyContract.fieldRows.length !== surveyContract.fieldRowCount
 ) {
   throw new Error('Sanitized historical Survey contract is invalid')

@@ -35,6 +35,7 @@ if (
   || contract.lifecycleEvidence !== 'historical_inactive'
   || contract.domain !== 'survey'
   || contract.semanticPurpose !== 'survey'
+  || contract.semanticIdentity !== 'all_extfield_rows_colName_survey'
 ) fail('authority markers must identify a sanitized historical Beta Survey contract')
 
 const fields = contract.fieldRows

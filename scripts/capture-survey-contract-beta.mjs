@@ -336,6 +336,7 @@ async function capture(options, env = process.env) {
     lifecycleEvidence: 'historical_inactive',
     domain: 'survey',
     semanticPurpose: 'survey',
+    semanticIdentity: 'all_extfield_rows_colName_survey',
     sanitized: true,
     source: {
       authority: 'authenticated Beta read-only capture',

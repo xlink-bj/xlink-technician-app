@@ -4,6 +4,7 @@
   "lifecycleEvidence": "historical_inactive",
   "domain": "survey",
   "semanticPurpose": "survey",
+  "semanticIdentity": "all_extfield_rows_colName_survey",
   "sanitized": true,
   "source": {
     "authority": "authenticated Beta read-only capture",
@@ -2124,5 +2125,5 @@
     "activeNodeObserved": false,
     "rawIdentityPersisted": false
   },
-  "fingerprint": "339778f645b92a503ffa0f00eb83a7f8dd7631e64f079fa6807ca4e421516aae"
+  "fingerprint": "9ed17f08b2d786fd6810b1afcddd60ac6d53eb9cd711173334bd00e6e6fa4aa6"
 }

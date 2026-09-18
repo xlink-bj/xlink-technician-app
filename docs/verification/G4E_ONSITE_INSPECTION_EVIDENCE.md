@@ -149,6 +149,10 @@ are retained. The Action Workspace is the mobile detail surface (`showList`
 code `4`), so rows without that code are excluded from rendering, unsupported
 warnings and submission. Unsupported or unverified capabilities remain
 explicit and block completion.
+The artifact's semantic identity is machine-checked as
+`all_extfield_rows_colName_survey`; both capture and the Live Adapter fail
+closed when any raw ExtField row has a missing, unknown or contradictory
+`colName`.
 
 The verified Survey providers are `parts` (hierarchical multistage), `regions`
 and `IS` (batch code). `projPackage` and custom `leakageCause` are UNKNOWN;

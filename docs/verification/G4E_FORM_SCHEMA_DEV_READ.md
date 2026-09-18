@@ -253,5 +253,8 @@ every raw ExtField row independently proves `colName=survey`. Its row-level
 metadata includes labels,
 ordering, required/read-only flags, duplicate value keys, visibility sources,
 `showList` applicability, presentation structure and provider status.
+The artifact also carries the machine-checkable semantic marker
+`semanticIdentity=all_extfield_rows_colName_survey`; the contract checker
+requires this marker and the Live Adapter applies the same all-rows rule.
 `projPackage` and custom
 `leakageCause` behavior remain unresolved and fail closed.

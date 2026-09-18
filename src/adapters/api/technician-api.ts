@@ -631,12 +631,20 @@ function verifiedFormPurpose(record: AdapterRecord | undefined): FormPurpose | u
 }
 
 function fieldRowsFormPurpose(fieldRows: readonly unknown[]): FormPurpose | undefined {
-  const purposes = new Set(fieldRows.map((field) => {
+  if (fieldRows.length === 0) return undefined
+
+  // Every raw ExtField row must independently prove the same known semantic
+  // collection. Dropping missing/unknown values before building the set would
+  // allow a partially unclassified response to masquerade as a Survey or
+  // Appointment form.
+  const purposes = fieldRows.map((field) => {
     const row = optionalRecord(field)
     const colName = optionalString(row ?? {}, ['colName'])?.toLocaleLowerCase()
     return colName === 'survey' || colName === 'appointment' ? colName : undefined
-  }).filter((value): value is FormPurpose => value !== undefined))
-  return purposes.size === 1 ? [...purposes][0] : undefined
+  })
+  if (purposes.some((purpose): purpose is undefined => purpose === undefined)) return undefined
+  const distinctPurposes = new Set(purposes)
+  return distinctPurposes.size === 1 ? [...distinctPurposes][0] : undefined
 }
 
 function workflowNodeReadOnlyFieldIds(record: AdapterRecord, nodeDef: AdapterRecord | undefined): readonly string[] | undefined {
