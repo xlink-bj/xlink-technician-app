@@ -10,8 +10,19 @@ import {
   normalizeBetaLoginMethod,
 } from '../../scripts/beta-api-client.mjs'
 import { runBetaInspectionContractCli } from '../../scripts/inspect-inspection-contract-beta.mjs'
+import { assertSurveyFieldRows } from '../../scripts/capture-survey-contract-beta.mjs'
 
 describe('G4-E local Beta API development client', () => {
+  it('requires raw ExtField rows to prove Survey identity before capture', () => {
+    expect(assertSurveyFieldRows([{ colName: 'survey', name: 'field' }])).toHaveLength(1)
+    expect(() => assertSurveyFieldRows([{ colName: 'other', name: 'field' }])).toThrow(/colName=survey/)
+    expect(() => assertSurveyFieldRows([{ name: 'field' }])).toThrow(/colName=survey/)
+    expect(() => assertSurveyFieldRows([
+      { colName: 'survey', name: 'first' },
+      { colName: 'appointment', name: 'second' },
+    ])).toThrow(/colName=survey/)
+  })
+
   it('uses the R1 phoneLogin wire shape and returns the session only in memory', async () => {
     const fetchImpl = vi.fn(async (_input: string, init?: RequestInit) => {
       expect(init?.method).toBe('POST')

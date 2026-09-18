@@ -151,10 +151,41 @@ function rowsFrom(raw) {
   return []
 }
 
+/**
+ * The caller-supplied form id is only a lookup selector. The raw ExtField
+ * rows must independently prove the Survey collection before a Survey
+ * contract can be emitted.
+ */
+export function assertSurveyFieldRows(rawFields) {
+  const rows = Array.isArray(rawFields) ? rawFields : []
+  if (rows.length === 0) throw new Error('Survey contract capture refused: ExtField response contains no rows')
+  const invalidIndex = rows.findIndex((row) => stringValue(object(row)?.colName)?.toLocaleLowerCase() !== 'survey')
+  if (invalidIndex >= 0) {
+    throw new Error(`Survey contract capture refused: ExtField row ${invalidIndex + 1} does not prove colName=survey`)
+  }
+  return rows
+}
+
+function showListValue(raw, index) {
+  if (raw === undefined) throw new Error(`Survey field row ${index + 1} has no showList metadata`)
+  const parsed = typeof raw === 'string'
+    ? (() => {
+        try { return JSON.parse(raw) } catch { return undefined }
+      })()
+    : raw
+  if (!Array.isArray(parsed)) throw new Error(`Survey field row ${index + 1} has malformed showList metadata`)
+  const values = parsed.map(stringValue)
+  if (values.some((value) => value === undefined)) {
+    throw new Error(`Survey field row ${index + 1} has malformed showList metadata`)
+  }
+  return values
+}
+
 function sanitizeField(raw, index, aliases) {
   const record = object(raw) ?? {}
   const key = stringValue(record.name ?? record.key ?? record.fieldName)
   if (!key) throw new Error(`Survey field row ${index + 1} has no value key`)
+  const showList = showListValue(record.showList, index)
   const config = structuralConfig(record.frontEndConfig, aliases)
   const rootShowValue = record.showValue
   const extsShowValue = object(record.exts)?.showValue
@@ -172,6 +203,7 @@ function sanitizeField(raw, index, aliases) {
     order: Number.isFinite(rawOrder) ? rawOrder : index + 1,
     state: record.state ?? 1,
     readOnly: booleanFlag(record.readOnly ?? record.readonly),
+    showList,
     ...(record.fixed !== undefined ? { fixed: typeof record.fixed === 'string' || typeof record.fixed === 'boolean' ? record.fixed : shapeOf(record.fixed) } : {}),
     ...(record.operationType !== undefined ? { operationType: typeof record.operationType === 'string' || typeof record.operationType === 'number' ? record.operationType : shapeOf(record.operationType) } : {}),
     ...(stringValue(record.valueOption) ? { valueOption: stringValue(record.valueOption) } : {}),
@@ -247,13 +279,13 @@ function canonicalize(value) {
   return value
 }
 
-async function capture(options) {
+async function capture(options, env = process.env) {
   const defaults = betaLocalDefaults()
-  const formDefinitionId = process.env.XLINK_SCHEMA_SURVEY_FORM_ID?.trim()
+  const formDefinitionId = env.XLINK_SCHEMA_SURVEY_FORM_ID?.trim()
   if (!formDefinitionId) throw new Error('XLINK_SCHEMA_SURVEY_FORM_ID is required for read-only Survey capture')
-  const method = normalizeBetaLoginMethod(process.env.XLINK_BETA_LOGIN_METHOD?.trim() || defaults.method)
+  const method = normalizeBetaLoginMethod(env.XLINK_BETA_LOGIN_METHOD?.trim() || defaults.method)
   const credential = method === '2'
-    ? process.env.XLINK_BETA_PASSWORD ?? defaults.password
+    ? env.XLINK_BETA_PASSWORD ?? defaults.password
     : defaults.code
   const loginOptions = {
     apiBaseUrl: options.baseUrl ?? defaults.apiBaseUrl,
@@ -274,7 +306,7 @@ async function capture(options) {
     'is:state|integer#and': 1,
     _all: 1,
   })
-  const rawFields = rowsFrom(rawDefinition)
+  const rawFields = assertSurveyFieldRows(rowsFrom(rawDefinition))
   const fieldRows = rawFields.map((row, index) => sanitizeField(row, index, aliases))
   const providers = []
   const valueOptions = [...new Set(fieldRows.map((field) => field.valueOption).filter(Boolean))]
@@ -336,14 +368,21 @@ function argsFrom(argv) {
   return args
 }
 
-const args = argsFrom(process.argv.slice(2))
-try {
-  const snapshot = await capture({ baseUrl: args['base-url'], tenant: args.tenant })
-  const output = args.output ?? process.env.XLINK_SCHEMA_OUTPUT_FILE?.trim() ?? DEFAULT_OUTPUT
+export async function runSurveyContractCaptureCli(argv = process.argv.slice(2), env = process.env) {
+  const args = argsFrom(argv)
+  const snapshot = await capture({ baseUrl: args['base-url'], tenant: args.tenant }, env)
+  const output = args.output ?? env.XLINK_SCHEMA_OUTPUT_FILE?.trim() ?? DEFAULT_OUTPUT
   await mkdir(resolve(output, '..'), { recursive: true })
   await writeFile(output, `${JSON.stringify(snapshot, null, 2)}\n`, 'utf8')
   console.log(`Sanitized historical Survey contract captured: ${snapshot.fieldRowCount} rows`)
-} catch (error) {
-  console.error(error instanceof Error ? error.message : 'Survey contract capture failed')
-  process.exitCode = 1
+  return snapshot
+}
+
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  try {
+    await runSurveyContractCaptureCli()
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : 'Survey contract capture failed')
+    process.exitCode = 1
+  }
 }

@@ -32,6 +32,11 @@
       "order": 1,
       "state": 1,
       "readOnly": false,
+      "showList": [
+        "1",
+        "2",
+        "5"
+      ],
       "operationType": "1",
       "showType": "1",
       "showFieldPreset": 1,
@@ -48,6 +53,11 @@
       "order": 2,
       "state": 1,
       "readOnly": false,
+      "showList": [
+        "1",
+        "2",
+        "5"
+      ],
       "operationType": "1",
       "showType": "1",
       "showFieldPreset": 0,
@@ -64,6 +74,11 @@
       "order": 3,
       "state": 1,
       "readOnly": false,
+      "showList": [
+        "1",
+        "2",
+        "5"
+      ],
       "fixed": "left",
       "operationType": "1",
       "showType": "1",
@@ -81,6 +96,10 @@
       "order": 4,
       "state": 1,
       "readOnly": false,
+      "showList": [
+        "1",
+        "2"
+      ],
       "operationType": "1",
       "showType": "1",
       "showFieldPreset": 0,
@@ -98,6 +117,11 @@
       "order": 5,
       "state": 1,
       "readOnly": false,
+      "showList": [
+        "1",
+        "2",
+        "5"
+      ],
       "operationType": "1",
       "showType": "1",
       "showFieldPreset": 0,
@@ -114,6 +138,9 @@
       "order": 6,
       "state": 1,
       "readOnly": false,
+      "showList": [
+        "2"
+      ],
       "operationType": "1",
       "showType": "1",
       "showFieldPreset": 0,
@@ -130,6 +157,9 @@
       "order": 7,
       "state": 1,
       "readOnly": false,
+      "showList": [
+        "5"
+      ],
       "operationType": "1",
       "valueOption": "regions",
       "showType": "1",
@@ -147,6 +177,9 @@
       "order": 8,
       "state": 1,
       "readOnly": false,
+      "showList": [
+        "1"
+      ],
       "operationType": "1",
       "showType": "1",
       "showFieldPreset": 0,
@@ -163,6 +196,9 @@
       "order": 9,
       "state": 1,
       "readOnly": false,
+      "showList": [
+        "1"
+      ],
       "operationType": "1",
       "showType": "1",
       "showFieldPreset": 0,
@@ -179,6 +215,9 @@
       "order": 10,
       "state": 1,
       "readOnly": false,
+      "showList": [
+        "1"
+      ],
       "operationType": "1",
       "showType": "1",
       "showFieldPreset": 0,
@@ -195,6 +234,11 @@
       "order": 11,
       "state": 1,
       "readOnly": false,
+      "showList": [
+        "1",
+        "2",
+        "5"
+      ],
       "operationType": "1",
       "showType": "1",
       "showFieldPreset": 0,
@@ -212,6 +256,9 @@
       "order": 12,
       "state": 1,
       "readOnly": false,
+      "showList": [
+        "5"
+      ],
       "operationType": "1",
       "showType": "1",
       "showFieldPreset": 0,
@@ -228,6 +275,9 @@
       "order": 13,
       "state": 1,
       "readOnly": false,
+      "showList": [
+        "1"
+      ],
       "operationType": "1",
       "showType": "1",
       "showFieldPreset": 0,
@@ -245,6 +295,11 @@
       "order": 14,
       "state": 1,
       "readOnly": false,
+      "showList": [
+        "1",
+        "2",
+        "5"
+      ],
       "operationType": "1",
       "showType": "1",
       "showFieldPreset": 0,
@@ -261,6 +316,11 @@
       "order": 15,
       "state": 1,
       "readOnly": false,
+      "showList": [
+        "1",
+        "2",
+        "5"
+      ],
       "operationType": "1",
       "showType": "1",
       "showFieldPreset": 0,
@@ -277,6 +337,12 @@
       "order": 16,
       "state": 1,
       "readOnly": false,
+      "showList": [
+        "1",
+        "2",
+        "5",
+        "3"
+      ],
       "operationType": "1",
       "showType": "1",
       "showFieldPreset": 0,
@@ -294,6 +360,12 @@
       "order": 17,
       "state": 1,
       "readOnly": false,
+      "showList": [
+        "1",
+        "2",
+        "4",
+        "5"
+      ],
       "operationType": "1",
       "valueOption": "parts",
       "showType": "1",
@@ -312,6 +384,10 @@
       "order": 18,
       "state": 1,
       "readOnly": false,
+      "showList": [
+        "2",
+        "4"
+      ],
       "operationType": "1",
       "showType": "3",
       "showField": "part",
@@ -376,6 +452,11 @@
       "order": 19,
       "state": 1,
       "readOnly": false,
+      "showList": [
+        "1",
+        "2",
+        "4"
+      ],
       "operationType": "1",
       "showType": "3",
       "showField": "part",
@@ -426,6 +507,11 @@
       "order": 20,
       "state": 1,
       "readOnly": false,
+      "showList": [
+        "1",
+        "2",
+        "4"
+      ],
       "operationType": "1",
       "showType": "3",
       "showField": "part",
@@ -448,6 +534,11 @@
       "order": 21,
       "state": 1,
       "readOnly": false,
+      "showList": [
+        "1",
+        "2",
+        "4"
+      ],
       "operationType": "1",
       "showType": "3",
       "showField": "part",
@@ -475,6 +566,10 @@
       "order": 22,
       "state": 1,
       "readOnly": false,
+      "showList": [
+        "2",
+        "4"
+      ],
       "operationType": "1",
       "showType": "3",
       "showField": "part",
@@ -527,6 +622,11 @@
       "order": 23,
       "state": 1,
       "readOnly": false,
+      "showList": [
+        "1",
+        "2",
+        "4"
+      ],
       "operationType": "1",
       "showType": "3",
       "showField": "part",
@@ -554,6 +654,10 @@
       "order": 24,
       "state": 1,
       "readOnly": false,
+      "showList": [
+        "2",
+        "4"
+      ],
       "operationType": "1",
       "showType": "3",
       "showField": "part",
@@ -606,6 +710,11 @@
       "order": 25,
       "state": 1,
       "readOnly": false,
+      "showList": [
+        "1",
+        "2",
+        "4"
+      ],
       "operationType": "1",
       "showType": "3",
       "showField": "part",
@@ -624,6 +733,11 @@
       "order": 26,
       "state": 1,
       "readOnly": false,
+      "showList": [
+        "1",
+        "2",
+        "4"
+      ],
       "operationType": "1",
       "showType": "3",
       "showField": "part",
@@ -652,6 +766,11 @@
       "order": 27,
       "state": 1,
       "readOnly": false,
+      "showList": [
+        "1",
+        "2",
+        "4"
+      ],
       "operationType": "1",
       "showType": "3",
       "showField": "part",
@@ -691,6 +810,10 @@
       "order": 28,
       "state": 1,
       "readOnly": false,
+      "showList": [
+        "2",
+        "4"
+      ],
       "operationType": "1",
       "showType": "3",
       "showField": "part",
@@ -758,6 +881,11 @@
       "order": 29,
       "state": 1,
       "readOnly": false,
+      "showList": [
+        "1",
+        "2",
+        "4"
+      ],
       "operationType": "1",
       "showType": "1",
       "showFieldPreset": 0,
@@ -779,6 +907,11 @@
       "order": 30,
       "state": 1,
       "readOnly": false,
+      "showList": [
+        "1",
+        "2",
+        "4"
+      ],
       "operationType": "1",
       "showType": "1",
       "showFieldPreset": 0,
@@ -796,6 +929,11 @@
       "order": 31,
       "state": 1,
       "readOnly": false,
+      "showList": [
+        "1",
+        "2",
+        "4"
+      ],
       "operationType": "1",
       "showType": "1",
       "showFieldPreset": 0,
@@ -812,6 +950,11 @@
       "order": 32,
       "state": 1,
       "readOnly": false,
+      "showList": [
+        "1",
+        "2",
+        "4"
+      ],
       "operationType": "1",
       "showType": "3",
       "showField": "part",
@@ -840,6 +983,11 @@
       "order": 33,
       "state": 1,
       "readOnly": false,
+      "showList": [
+        "1",
+        "2",
+        "4"
+      ],
       "operationType": "1",
       "showType": "3",
       "showField": "part",
@@ -868,6 +1016,11 @@
       "order": 34,
       "state": 1,
       "readOnly": false,
+      "showList": [
+        "1",
+        "2",
+        "4"
+      ],
       "operationType": "1",
       "showType": "3",
       "showField": "part",
@@ -904,6 +1057,11 @@
       "order": 35,
       "state": 1,
       "readOnly": false,
+      "showList": [
+        "1",
+        "2",
+        "4"
+      ],
       "operationType": "1",
       "showType": "3",
       "showField": "part",
@@ -940,6 +1098,11 @@
       "order": 36,
       "state": 1,
       "readOnly": false,
+      "showList": [
+        "1",
+        "2",
+        "4"
+      ],
       "operationType": "1",
       "showType": "3",
       "showField": "part",
@@ -976,6 +1139,11 @@
       "order": 37,
       "state": 1,
       "readOnly": false,
+      "showList": [
+        "1",
+        "2",
+        "4"
+      ],
       "operationType": "1",
       "showType": "3",
       "showField": "part",
@@ -1018,6 +1186,11 @@
       "order": 38,
       "state": 1,
       "readOnly": false,
+      "showList": [
+        "1",
+        "2",
+        "4"
+      ],
       "operationType": "1",
       "showType": "3",
       "showField": "part",
@@ -1054,6 +1227,11 @@
       "order": 39,
       "state": 1,
       "readOnly": false,
+      "showList": [
+        "1",
+        "2",
+        "4"
+      ],
       "operationType": "1",
       "showType": "3",
       "showField": "part",
@@ -1090,6 +1268,11 @@
       "order": 40,
       "state": 1,
       "readOnly": false,
+      "showList": [
+        "1",
+        "2",
+        "4"
+      ],
       "operationType": "1",
       "showType": "3",
       "showField": "part",
@@ -1126,6 +1309,11 @@
       "order": 41,
       "state": 1,
       "readOnly": false,
+      "showList": [
+        "1",
+        "2",
+        "4"
+      ],
       "operationType": "1",
       "showType": "3",
       "showField": "part",
@@ -1162,6 +1350,11 @@
       "order": 42,
       "state": 1,
       "readOnly": false,
+      "showList": [
+        "1",
+        "2",
+        "4"
+      ],
       "operationType": "1",
       "showType": "3",
       "showField": "part",
@@ -1190,6 +1383,11 @@
       "order": 43,
       "state": 1,
       "readOnly": false,
+      "showList": [
+        "1",
+        "2",
+        "4"
+      ],
       "operationType": "1",
       "showType": "3",
       "showField": "part",
@@ -1216,6 +1414,11 @@
       "order": 44,
       "state": 1,
       "readOnly": false,
+      "showList": [
+        "1",
+        "2",
+        "4"
+      ],
       "operationType": "1",
       "showType": "3",
       "showField": "part",
@@ -1239,6 +1442,11 @@
       "order": 45,
       "state": 1,
       "readOnly": false,
+      "showList": [
+        "1",
+        "2",
+        "4"
+      ],
       "operationType": "1",
       "showType": "3",
       "showField": "part",
@@ -1262,6 +1470,11 @@
       "order": 46,
       "state": 1,
       "readOnly": false,
+      "showList": [
+        "1",
+        "2",
+        "4"
+      ],
       "operationType": "1",
       "showType": "3",
       "showField": "part",
@@ -1290,6 +1503,11 @@
       "order": 47,
       "state": 1,
       "readOnly": false,
+      "showList": [
+        "1",
+        "2",
+        "4"
+      ],
       "operationType": "1",
       "showType": "3",
       "showField": "part",
@@ -1318,6 +1536,11 @@
       "order": 48,
       "state": 1,
       "readOnly": false,
+      "showList": [
+        "1",
+        "2",
+        "4"
+      ],
       "operationType": "1",
       "showType": "3",
       "showField": "part",
@@ -1346,6 +1569,11 @@
       "order": 49,
       "state": 1,
       "readOnly": false,
+      "showList": [
+        "1",
+        "2",
+        "4"
+      ],
       "operationType": "1",
       "showType": "3",
       "showField": "part",
@@ -1374,6 +1602,10 @@
       "order": 50,
       "state": 1,
       "readOnly": false,
+      "showList": [
+        "2",
+        "4"
+      ],
       "operationType": "1",
       "showType": "1",
       "showFieldPreset": 1,
@@ -1391,6 +1623,11 @@
       "order": 51,
       "state": 1,
       "readOnly": false,
+      "showList": [
+        "1",
+        "2",
+        "4"
+      ],
       "operationType": "1",
       "showType": "1",
       "showFieldPreset": 0,
@@ -1411,6 +1648,10 @@
       "order": 52,
       "state": 1,
       "readOnly": false,
+      "showList": [
+        "2",
+        "4"
+      ],
       "operationType": "1",
       "showType": "1",
       "showFieldPreset": 0,
@@ -1427,6 +1668,9 @@
       "order": 53,
       "state": 1,
       "readOnly": false,
+      "showList": [
+        "4"
+      ],
       "operationType": "1",
       "valueOption": "IS",
       "showType": "1",
@@ -1444,6 +1688,9 @@
       "order": 54,
       "state": 1,
       "readOnly": false,
+      "showList": [
+        "4"
+      ],
       "operationType": "1",
       "showType": "1",
       "showFieldPreset": 1,
@@ -1464,6 +1711,9 @@
       "order": 55,
       "state": 1,
       "readOnly": false,
+      "showList": [
+        "4"
+      ],
       "operationType": "1",
       "showType": "1",
       "showFieldPreset": 1,
@@ -1484,6 +1734,10 @@
       "order": 56,
       "state": 1,
       "readOnly": false,
+      "showList": [
+        "2",
+        "4"
+      ],
       "operationType": "1",
       "showType": "1",
       "showFieldPreset": 0,
@@ -1500,6 +1754,9 @@
       "order": 57,
       "state": 1,
       "readOnly": false,
+      "showList": [
+        "4"
+      ],
       "operationType": "1",
       "showType": "3",
       "showField": "part",
@@ -1563,6 +1820,11 @@
       "order": 58,
       "state": 1,
       "readOnly": false,
+      "showList": [
+        "1",
+        "2",
+        "4"
+      ],
       "operationType": "1",
       "showType": "3",
       "showField": "part",
@@ -1627,6 +1889,11 @@
       "order": 59,
       "state": 1,
       "readOnly": false,
+      "showList": [
+        "1",
+        "2",
+        "4"
+      ],
       "operationType": "1",
       "showType": "1",
       "showFieldPreset": 0,
@@ -1644,6 +1911,10 @@
       "order": 60,
       "state": 1,
       "readOnly": false,
+      "showList": [
+        "2",
+        "4"
+      ],
       "operationType": "1",
       "showType": "1",
       "showFieldPreset": 0,
@@ -1660,6 +1931,11 @@
       "order": 61,
       "state": 1,
       "readOnly": false,
+      "showList": [
+        "4",
+        "1",
+        "2"
+      ],
       "operationType": "1",
       "valueOption": "projPackage",
       "showType": "1",
@@ -1848,5 +2124,5 @@
     "activeNodeObserved": false,
     "rawIdentityPersisted": false
   },
-  "fingerprint": "b4555ca30b72067b2af754744397efc6172b673130a0b7a4db0b05f5eccc3d2e"
+  "fingerprint": "339778f645b92a503ffa0f00eb83a7f8dd7631e64f079fa6807ca4e421516aae"
 }

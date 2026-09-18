@@ -197,7 +197,10 @@ from this record.
   boundaries. They are not rendered as ordinary text inputs and still block
   completion until their provider/control contract is verified.
 - The Survey workspace now resolves the sanitized 61-row historical Survey
-  shape through the normal Mock read/Adapter/Runtime path. The former 15-field
+  shape through the normal Mock read/Adapter/Runtime path. The contract also
+  preserves ExtField `showList`; the current Action Workspace is the mobile
+  detail surface (`showList` code `4`), so rows without that applicability are
+  excluded before rendering, warnings or submission. The former 15-field
   hybrid and four-field fixture remain available only for low-level historical
   compatibility regression; neither is the default Survey simulator form.
   Unsupported fields are intentionally blocked rather than silently presented
@@ -245,7 +248,10 @@ Survey-specific copy and `SurveyActionContent`. Appointment remains a separate
 `appointment` purpose. The current historical contract is captured by the
 read-only helper `pnpm run capture:survey-contract:beta` (with the form
 identity supplied only through the local runtime environment) and validated by
-`pnpm run check:survey-contract`. Its row-level metadata includes labels,
+`pnpm run check:survey-contract`. Capture refuses to emit the artifact unless
+every raw ExtField row independently proves `colName=survey`. Its row-level
+metadata includes labels,
 ordering, required/read-only flags, duplicate value keys, visibility sources,
-presentation structure and provider status. `projPackage` and custom
+`showList` applicability, presentation structure and provider status.
+`projPackage` and custom
 `leakageCause` behavior remain unresolved and fail closed.

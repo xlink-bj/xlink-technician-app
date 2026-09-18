@@ -379,6 +379,7 @@ describe('G3-C API adapter foundation', () => {
             name: 'location',
             nameDisp: '位置',
             type: 'cascade',
+            showList: ['3', '4'],
             options: [{ value: 'roof', name: '屋面', children: [{ value: 'inner', name: '女儿墙' }] }],
           },
           {
@@ -397,6 +398,7 @@ describe('G3-C API adapter foundation', () => {
       label: '屋面',
       children: [{ value: 'inner', label: '女儿墙' }],
     }])
+    expect(result.data?.fields?.[0]?.showList).toEqual(['3', '4'])
     expect(result.data?.fields?.[1]).toMatchObject({
       fieldId: 'malformed-row',
       unsupportedReason: 'Field option metadata is malformed',

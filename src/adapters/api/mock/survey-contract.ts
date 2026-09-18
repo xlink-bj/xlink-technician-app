@@ -16,6 +16,7 @@ type SurveyFieldRow = {
   readonly order: number
   readonly state: number | string
   readonly readOnly: boolean
+  readonly showList: readonly string[]
   readonly fixed?: unknown
   readonly operationType?: string | number
   readonly valueOption?: string
@@ -81,7 +82,7 @@ function rawOption(option: SurveyOption): Record<string, unknown> {
 function rawField(field: SurveyFieldRow): Record<string, unknown> {
   return {
     _id: field.fieldId,
-    colName: 'survey',
+    colName: surveyContract.semanticPurpose,
     name: field.valueKey,
     nameDisp: field.label,
     type: field.type,
@@ -91,6 +92,7 @@ function rawField(field: SurveyFieldRow): Record<string, unknown> {
     order: field.order,
     state: field.state,
     ...(field.fixed !== undefined ? { fixed: field.fixed } : {}),
+    showList: field.showList,
     ...(field.operationType !== undefined ? { operationType: field.operationType } : {}),
     ...(field.valueOption ? { valueOption: field.valueOption } : {}),
     ...(field.inlineOptions?.length ? { options: field.inlineOptions.map(rawOption) } : {}),

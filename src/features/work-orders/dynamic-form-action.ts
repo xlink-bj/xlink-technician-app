@@ -1,10 +1,11 @@
 import {
   evaluateFieldState,
   evaluateVisibility,
+  isFieldApplicable,
   normalizeFieldValue,
   normalizeSubmission,
 } from '@runtimes/dynamic-form'
-import type { EffectiveFieldState, FormFieldSchema, NormalizedFieldValue } from '@runtimes/dynamic-form'
+import type { EffectiveFieldState, FormFieldSchema, FormRuntimeSurface, NormalizedFieldValue } from '@runtimes/dynamic-form'
 import type { DynamicFormRead, AppointmentFormFieldRead } from '@shared/ports'
 import type { FormFieldValue } from '@shared/ports/api'
 import type { OperationSnapshot } from '@shared/types'
@@ -13,6 +14,8 @@ import { createOperationError } from '@shared/types'
 export interface DynamicActionField extends AppointmentFormFieldRead {
   readonly runtime: EffectiveFieldState
 }
+
+const ACTION_FORM_SURFACE: FormRuntimeSurface = 'mobile_detail'
 
 function actionUnsupportedReasonFor(field: AppointmentFormFieldRead, values: Readonly<Record<string, FormFieldValue>>): string | undefined {
   if (field.unsupportedReason) return field.unsupportedReason
@@ -42,6 +45,7 @@ function schemaFor(
     ...(field.fixed !== undefined ? { fixed: field.fixed } : {}),
     ...(field.operationType !== undefined ? { operationType: field.operationType } : {}),
     ...(field.presentation ? { presentation: field.presentation as Readonly<Record<string, string | number | boolean>> } : {}),
+    ...(field.showList ? { showList: field.showList } : {}),
     ...(field.multiple ? { multiple: field.multiple } : {}),
     ...(field.options?.length ? { inlineOptions: field.options } : {}),
     ...(field.visibility ? { visibility: field.visibility } : {}),
@@ -63,6 +67,7 @@ function fieldState(
   return evaluateFieldState(schemaFor(field, values), {
     values,
     workflowReadOnly,
+    surface: ACTION_FORM_SURFACE,
   })
 }
 
@@ -72,12 +77,14 @@ export function dynamicActionFieldsFor(form: DynamicFormRead): readonly DynamicA
     runtime: evaluateFieldState(schemaFor(field, form.values), {
       values: form.values,
       workflowReadOnly: form.workflowReadOnlyFieldIds?.some((id) => String(id) === String(field.fieldId)),
+      surface: ACTION_FORM_SURFACE,
     }),
   }))
 }
 
 export function dynamicActionUnsupportedFieldsFor(form: DynamicFormRead): readonly DynamicActionField[] {
   return dynamicActionFieldsFor(form).filter((field) => {
+    if (!isFieldApplicable(field, ACTION_FORM_SURFACE)) return false
     if (field.runtime.capability !== 'UNSUPPORTED') return false
     return evaluateVisibility(field.visibility, form.values).state !== 'hidden'
   })
@@ -95,6 +102,7 @@ export function normalizeDynamicForm(
   const result = normalizeSubmission({
     fields,
     values: form.values,
+    surface: ACTION_FORM_SURFACE,
   })
   if (!result.ok) {
     return {

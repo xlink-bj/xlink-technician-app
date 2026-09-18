@@ -35,6 +35,9 @@ export type VisibilityPath = FormFieldVisibilityPath
 
 export type VisibilityExpression = FormFieldVisibility
 
+/** Backend showList projection used by the mobile detail Action surface. */
+export type FormRuntimeSurface = 'mobile_detail'
+
 export interface FormFieldSchema {
   /** Stable field-row identity used for runtime/UI addressing. */
   readonly fieldId: string
@@ -48,6 +51,7 @@ export interface FormFieldSchema {
   readonly fixed?: string | number | boolean
   readonly operationType?: string | number
   readonly presentation?: Readonly<Record<string, string | number | boolean>>
+  readonly showList?: readonly (string | number)[]
   readonly multiple?: boolean
   readonly visibility?: VisibilityExpression
   readonly valueOption?: string
@@ -80,6 +84,7 @@ export interface VisibilityEvaluation {
 }
 
 export interface FieldStateContext {
+  readonly surface?: FormRuntimeSurface
   readonly workflowReadOnly?: boolean
   readonly fixedFormReadOnly?: boolean
   readonly runtimeReadOnly?: boolean

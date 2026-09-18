@@ -144,8 +144,11 @@ Runtime before reaching Action Workspace.
 The artifact retains row identity (`fieldId`) separately from the FormData
 business key (`valueKey`). The confirmed repeated keys are `province`,
 `length`, `width` and `gap4`. Conditional metadata, required/read-only flags,
-ordering, multiple-value shape and provider status are retained; unsupported
-or unverified capabilities remain explicit and block completion.
+ordering, multiple-value shape, `showList` applicability and provider status
+are retained. The Action Workspace is the mobile detail surface (`showList`
+code `4`), so rows without that code are excluded from rendering, unsupported
+warnings and submission. Unsupported or unverified capabilities remain
+explicit and block completion.
 
 The verified Survey providers are `parts` (hierarchical multistage), `regions`
 and `IS` (batch code). `projPackage` and custom `leakageCause` are UNKNOWN;

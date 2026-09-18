@@ -1,4 +1,5 @@
 import { evaluateFieldState } from './state'
+import { isFieldApplicable } from './applicability'
 import { evaluateVisibility } from './visibility'
 import type {
   FieldStateContext,
@@ -149,14 +150,17 @@ function isMissing(value: unknown): boolean {
 export function normalizeSubmission(input: {
   readonly fields: readonly FormFieldSchema[]
   readonly values: Readonly<Record<string, unknown>>
+  readonly surface?: import('./types').FormRuntimeSurface
   readonly fieldContexts?: Readonly<Record<string, Omit<FieldStateContext, 'values'>>>
   readonly preserveHiddenValues?: boolean
 }): SubmissionResult {
   const normalized: Record<string, NormalizedFieldValue> = {}
   for (const field of input.fields) {
+    if (!isFieldApplicable(field, input.surface)) continue
     const state = evaluateFieldState(field, {
       ...(input.fieldContexts?.[field.fieldId] ?? {}),
       values: input.values,
+      surface: input.surface,
     })
     // Capability is evaluated independently from effective visibility. A
     // hidden unsupported row is outside the current submission surface and

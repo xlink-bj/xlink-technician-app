@@ -55,6 +55,9 @@ for (const field of fields) {
   if (typeof field.required !== 'boolean' || typeof field.multiple !== 'boolean' || typeof field.readOnly !== 'boolean') {
     fail(`field ${field.fieldId} is missing boolean behavior metadata`)
   }
+  if (!Array.isArray(field.showList) || field.showList.length === 0 || field.showList.some(
+    (value) => typeof value !== 'string' || !['1', '2', '3', '4', '5', '6'].includes(value),
+  )) fail(`field ${field.fieldId} has malformed showList metadata`)
   if (!Number.isInteger(field.order)) fail(`field ${field.fieldId} has an invalid order`)
   orders.push(field.order)
   valueKeyCounts.set(field.valueKey, (valueKeyCounts.get(field.valueKey) ?? 0) + 1)

@@ -27,6 +27,7 @@ import { useActionWorkspaceStore } from '@features/work-orders/action-workspace'
 import {
   dynamicActionFieldsFor,
   dynamicActionUnsupportedFieldsFor,
+  normalizeDynamicForm,
 } from '@features/work-orders/dynamic-form-action'
 import type {
   DynamicFormRead,
@@ -537,7 +538,7 @@ describe('G4-E Survey dynamic Action Content', () => {
     expect(request).not.toHaveBeenCalled()
   })
 
-  it('runs the observed Survey form through the real Adapter command path', async () => {
+  it('exercises Survey transport serialization and command plumbing only', async () => {
     setBusinessMockMode('data')
     const request = vi.fn(() => { throw new Error('synthetic path must not use network') })
     const readTransport = createUniApiReadTransport({
@@ -624,6 +625,33 @@ describe('G4-E Survey dynamic Action Content', () => {
     expect(request).not.toHaveBeenCalled()
   })
 
+  it('applies ExtField.showList to the mobile detail Action surface', () => {
+    const form: DynamicFormRead = {
+      purpose: 'survey',
+      fields: [
+        { fieldId: 'mobile-list-only', valueKey: 'mobileListOnly', label: '列表字段', type: 'text', required: false, readOnly: false, showList: ['3'] },
+        { fieldId: 'mobile-detail', valueKey: 'mobileDetail', label: '详情字段', type: 'text', required: false, readOnly: false, showList: ['4'] },
+        { fieldId: 'hidden-unsupported', valueKey: 'hiddenUnsupported', label: '隐藏字段', type: 'unverified', required: false, readOnly: false, showList: ['2'] },
+        { fieldId: 'visible-unsupported', valueKey: 'visibleUnsupported', label: '详情不支持字段', type: 'unverified', required: false, readOnly: false, showList: ['4'] },
+      ],
+      values: {
+        mobileListOnly: 'should-not-submit',
+        mobileDetail: 'visible-value',
+        hiddenUnsupported: 'hidden-value',
+        visibleUnsupported: 'unsupported-value',
+      },
+    }
+
+    const fields = dynamicActionFieldsFor(form)
+    expect(fields.find((field) => field.fieldId === 'mobile-list-only')?.runtime.visible).toBe(false)
+    expect(fields.find((field) => field.fieldId === 'mobile-detail')?.runtime.visible).toBe(true)
+    expect(dynamicActionUnsupportedFieldsFor(form).map((field) => field.fieldId)).toEqual(['visible-unsupported'])
+    expect(normalizeDynamicForm({ ...form, fields: form.fields.slice(0, 3) })).toMatchObject({
+      state: 'succeeded',
+      data: { mobileDetail: 'visible-value' },
+    })
+  })
+
   it('runs the observed backend-shaped Survey schema through the same raw-row Adapter path', async () => {
     setBusinessMockMode('data')
     const request = vi.fn(() => { throw new Error('observed schema fixture must not use network') })
@@ -643,11 +671,16 @@ describe('G4-E Survey dynamic Action Content', () => {
     expect(definition.data?.fields?.filter((field) => field.valueKey === 'length')).toHaveLength(2)
     expect(definition.data?.fields?.filter((field) => field.valueKey === 'width')).toHaveLength(2)
     expect(definition.data?.fields?.filter((field) => field.valueKey === 'gap4')).toHaveLength(2)
+    expect(definition.data?.fields?.find((field) => field.valueKey === 'surveyPDFUrl')?.showList).toEqual(['1', '2'])
+    expect(definition.data?.fields?.find((field) => field.valueKey === 'length')?.showList).toEqual(['1', '2', '4'])
     const unsupported = dynamicActionUnsupportedFieldsFor({
       fields: definition.data?.fields ?? [],
       values: {},
     }).map((field) => field.valueKey)
-    expect(unsupported).toEqual(expect.arrayContaining(['surveyPDFUrl', 'area', 'province', 'part', 'serviceGoods']))
+    expect(unsupported).toEqual(expect.arrayContaining(['part', 'serviceGoods']))
+    expect(unsupported).not.toContain('surveyPDFUrl')
+    expect(unsupported).not.toContain('area')
+    expect(unsupported).not.toContain('province')
     expect(unsupported).not.toContain('gap0')
     expect(unsupported).not.toContain('leakageCauseSelect')
     expect(request).not.toHaveBeenCalled()

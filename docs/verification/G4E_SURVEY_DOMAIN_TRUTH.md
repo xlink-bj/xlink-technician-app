@@ -336,7 +336,10 @@ The sanitized structural inventory is retained at
 Survey field contract is committed at
 `contracts/beta/survey/historical.json`: 61 historical inactive rows with
 labels, ordering, required/read-only flags, duplicate value keys, conditional
-metadata and provider verification. No active Survey membership is asserted.
+metadata, `showList` applicability and provider verification. The mobile
+detail surface uses backend `showList` code `4`; rows without that code are
+not part of the Action Workspace submission surface. No active Survey
+membership is asserted.
 
 | Alias | Node / family | Observed shape | Classification |
 | --- | --- | --- | --- |

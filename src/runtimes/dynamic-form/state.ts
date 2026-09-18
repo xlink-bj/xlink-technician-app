@@ -1,4 +1,5 @@
 import { classifyFieldType, selectOptionProvider } from './capabilities'
+import { isFieldApplicable } from './applicability'
 import { evaluateVisibility } from './visibility'
 import type { EffectiveFieldState, FieldStateContext, FormFieldSchema } from './types'
 
@@ -6,6 +7,18 @@ export function evaluateFieldState(
   field: FormFieldSchema,
   context: FieldStateContext = {},
 ): EffectiveFieldState {
+  const capability = classifyFieldType(field.type)
+  const optionProvider = selectOptionProvider(field)
+  if (!isFieldApplicable(field, context.surface)) {
+    return {
+      capability: capability.capability,
+      visible: false,
+      readOnly: true,
+      required: false,
+      optionProvider,
+      reason: 'Field is not applicable to the current form surface',
+    }
+  }
   if (field.unsupportedReason) {
     return {
       capability: 'UNSUPPORTED',
@@ -16,8 +29,6 @@ export function evaluateFieldState(
       reason: field.unsupportedReason,
     }
   }
-  const capability = classifyFieldType(field.type)
-  const optionProvider = selectOptionProvider(field)
   if (capability.capability === 'UNSUPPORTED') {
     return {
       capability: capability.capability,
