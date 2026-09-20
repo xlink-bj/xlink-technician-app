@@ -21,6 +21,7 @@
     "check:survey-capabilities": "node scripts/check-survey-capabilities.mjs",
     "check:survey-leakage-cause": "node scripts/check-survey-leakage-cause.mjs",
     "check:survey-onsite-checkin": "node scripts/check-survey-onsite-checkin.mjs",
+    "check:g4e-closure-readiness": "node scripts/check-g4e-closure-readiness.mjs",
     "typecheck": "vue-tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
