@@ -15,6 +15,14 @@ describe('G4-E Survey onsite check-in contract', () => {
     expect(() => execFileSync(process.execPath, [checkerFile], { cwd: process.cwd(), encoding: 'utf8' })).not.toThrow()
     const contract = readContract()
 
+    expect(contract.governance).toMatchObject({
+      status: 'DEFERRED_NON_BLOCKING',
+      owner: 'PRODUCT',
+      blocksFrontendEngineering: false,
+      blocksProductionReadiness: false,
+    })
+    expect(contract.businessRequirement.status).toBe('DEFERRED_NON_BLOCKING')
+    expect(contract.manual.status).toBe('DEFERRED_NON_BLOCKING')
     expect(contract.domainSeparation.survey).toContain('勘查')
     expect(contract.domainSeparation.inspectionAppointment).toContain('巡检')
     expect(contract.ownership.recordOwner).toBe('UNKNOWN')

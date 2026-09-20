@@ -1,7 +1,7 @@
 # G4-E Survey Onsite Check-in Contract
 
-Status: **CONTRACT / PARTIAL — awaiting verified Survey owner, command and
-reconciliation contract**
+Status: **DEFERRED_NON_BLOCKING — implementation intentionally deferred by
+Product governance**
 
 Repository: `xlink-bj/xlink-technician-app`
 
@@ -10,8 +10,9 @@ Branch: `rebuild/g4e-onsite-inspection`
 Issue: `#21`
 
 This is an evidence artifact for the P0 Survey / 勘查 onsite check-in slice.
-It does not claim that a real Survey check-in command has been identified or
-implemented. The machine-readable contract is
+The requirement remains recorded, but this capability is explicitly deferred
+and is not a G4-E frontend or production-readiness blocker. It does not claim
+that a real Survey check-in command has been identified or implemented. The machine-readable contract is
 `contracts/beta/survey/onsite-checkin-contract.json`; the checker is
 `pnpm run check:survey-onsite-checkin`.
 
@@ -33,9 +34,10 @@ The stated business sequence is:
 预约确认 -> Survey / 勘查现场打卡 -> Survey / 勘查 -> 报价
 ```
 
-The requirement is current product truth. R1 and Backend are supporting
-evidence and are not allowed to turn an old generic endpoint into a new Survey
-contract by naming similarity.
+The requirement is current product truth, with implementation deferred by
+Product governance for this gate. R1 and Backend are supporting evidence only
+and are not allowed to turn an old generic endpoint into a new Survey contract
+by naming similarity.
 
 ## Domain separation
 
@@ -163,9 +165,9 @@ verified.
 
 ## Manual check-in semantics
 
-Manual check-in is a current requirement, but implementation is blocked until
-record ownership, command, validation, and reconciliation are proven. The
-safe expected flow is location capture followed by an explicit command and
+Manual check-in is a current requirement, but implementation is deferred until
+record ownership, command, validation, and reconciliation are proven. The safe
+expected flow is location capture followed by an explicit command and
 authoritative reread. Opening the Survey Action Workspace does not check in;
 Survey save does not check in; workflow completion does not check in.
 
@@ -186,7 +188,7 @@ defines:
 - duplicate handling for automatic attempts.
 
 Therefore automatic check-in is **not implemented** and remains
-`UNKNOWN_NEEDS_BUSINESS_CONFIG`. No scheduler, background mutation, 100 m /
+`UNKNOWN_NEEDS_BUSINESS_CONFIG` within the deferred evidence. No scheduler, background mutation, 100 m /
 500 m rule, or ±30 minute / ±1 hour window was invented. The generic Punch
 thresholds are historical evidence only and do not fill this gap.
 
@@ -224,6 +226,10 @@ normalized contract behind it.
 
 ## Deferred UNKNOWNs
 
+The following UNKNOWN values are intentionally retained as research evidence.
+They are `DEFERRED_NON_BLOCKING`, owned by PRODUCT, and do not block G4-E
+frontend engineering or production readiness in this governance gate.
+
 - Survey check-in record owner;
 - exact command/API, request and response;
 - coordinate system and accuracy policy;
@@ -243,10 +249,17 @@ The artifact is machine-checked with:
 pnpm run check:survey-onsite-checkin
 ```
 
-The test proves Survey/Inspection separation, owner and command UNKNOWN
-status, explicit coordinate/time/appointment-near UNKNOWN values, no invented
-thresholds, no offline business mutation queue, no automatic scheduler or
-background mutation, and real writes disabled.
+The test proves Survey/Inspection separation, explicit
+`DEFERRED_NON_BLOCKING` governance, owner and command UNKNOWN status, explicit
+coordinate/time/appointment-near UNKNOWN values, no invented thresholds, no
+offline business mutation queue, no automatic scheduler or background
+mutation, and real writes disabled.
 
 This contract does not authorize G4-F and does not claim live business
 mutation, visual implementation, or a completed Survey onsite check-in.
+
+Governance status: **DEFERRED_NON_BLOCKING**. The P0 requirement is retained,
+but Product governance defers implementation. The owner/command/time/
+coordinate/reconciliation/appointment-near UNKNOWNs and historical
+Punch/Sign/gpsPoint research are evidence only; they do not block G4-E
+frontend engineering or production readiness in this gate.

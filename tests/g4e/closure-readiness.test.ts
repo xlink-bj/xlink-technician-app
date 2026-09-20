@@ -20,6 +20,7 @@ describe('G4-E closure readiness', () => {
     expect(closure.productDeferred).toEqual(expect.arrayContaining([
       expect.objectContaining({ id: 'serviceGoods-projPackage', status: 'DEFERRED_NON_BLOCKING', blocksFrontendEngineering: false }),
       expect.objectContaining({ id: 'surveyDrawing-surveyTool', status: 'DEFERRED_NON_BLOCKING', blocksFrontendEngineering: false }),
+      expect.objectContaining({ id: 'survey-onsite-checkin', status: 'DEFERRED_NON_BLOCKING', blocksFrontendEngineering: false, blocksProductionReadiness: false }),
     ]))
     expect(closure.formExecutability.deferredExcludedFieldKeys).toEqual(['serviceGoods', 'surveyDrawing'])
   })
@@ -46,8 +47,10 @@ describe('G4-E closure readiness', () => {
       g4fAuthorized: false,
     })
     expect(closure.externalDependencies).toEqual(expect.arrayContaining([
-      expect.objectContaining({ id: 'survey-onsite-checkin-record-owner-and-command', status: 'BLOCKED_EXTERNAL', owner: 'BACKEND', blocksFrontendEngineering: false }),
       expect.objectContaining({ id: 'real-watermark-coordinate-contract', status: 'BLOCKED_EXTERNAL', blocksFrontendEngineering: false }),
+    ]))
+    expect(closure.externalDependencies).not.toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: expect.stringMatching(/survey-onsite-checkin|appointment-near-policy/) }),
     ]))
     expect(closure.visualValidationPending).toEqual(expect.arrayContaining([
       expect.objectContaining({ id: 'authenticated-mp-survey-ui', status: 'VISUAL_VALIDATION_PENDING', owner: 'VISUAL_QA' }),

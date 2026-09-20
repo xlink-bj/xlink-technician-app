@@ -1463,6 +1463,9 @@ Survey-specific location port, business command, automatic scheduler,
 background mutation, blind retry, or offline business-mutation queue in this
 slice. Real Beta and Production writes are disabled and none were performed.
 
-Status: **CONTRACT / PARTIAL — awaiting verified Survey owner, command and
-reconciliation contract**. This is an action-capability evidence artifact,
-not an addition to the Survey form-field capability matrix.
+Status: **DEFERRED_NON_BLOCKING**. The P0 requirement remains recorded, but
+Product governance defers implementation. The owner/command/time/coordinate/
+reconciliation/appointment-near UNKNOWNs and historical Punch/Sign/gpsPoint
+research remain evidence only and do not block G4-E frontend engineering or
+production readiness in this gate. This is an action-capability evidence
+artifact, not an addition to the Survey form-field capability matrix.

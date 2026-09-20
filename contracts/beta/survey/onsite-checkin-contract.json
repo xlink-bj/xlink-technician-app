@@ -4,6 +4,13 @@
   "domain": "survey_onsite_checkin",
   "semanticIdentity": "survey_lbs_onsite_checkin_contract",
   "sanitized": true,
+  "governance": {
+    "status": "DEFERRED_NON_BLOCKING",
+    "owner": "PRODUCT",
+    "blocksFrontendEngineering": false,
+    "blocksProductionReadiness": false,
+    "reason": "The P0 requirement is retained, but Product governance defers Survey LBS onsite check-in. Historical Punch/Sign/gpsPoint research remains evidence only; no LBS implementation is authorized."
+  },
   "businessRequirement": {
     "priority": "P0",
     "locationRequired": true,
@@ -17,7 +24,7 @@
       "survey",
       "quotation"
     ],
-    "status": "REQUIREMENT_ONLY"
+    "status": "DEFERRED_NON_BLOCKING"
   },
   "domainSeparation": {
     "survey": "onsite survey / 勘查",
@@ -86,7 +93,7 @@
     "legacyEvidence": "PunchController creates server-side createTime when ts is absent, but accepts caller-provided ts; not adopted"
   },
   "manual": {
-    "status": "REQUIREMENT_ONLY_BLOCKED_UNTIL_COMMAND_PROVEN",
+    "status": "DEFERRED_NON_BLOCKING",
     "flow": [
       "user_intent",
       "LocationPort.captureCurrentLocation",

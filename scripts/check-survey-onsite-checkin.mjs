@@ -25,12 +25,19 @@ requireEqual(contract.domain, 'survey_onsite_checkin', 'domain')
 requireEqual(contract.semanticIdentity, 'survey_lbs_onsite_checkin_contract', 'semanticIdentity')
 requireEqual(contract.sanitized, true, 'sanitized')
 
+const governance = contract.governance
+requireEqual(governance?.status, 'DEFERRED_NON_BLOCKING', 'governance status')
+requireEqual(governance?.owner, 'PRODUCT', 'governance owner')
+requireEqual(governance?.blocksFrontendEngineering, false, 'frontend blocker')
+requireEqual(governance?.blocksProductionReadiness, false, 'production blocker')
+
 const requirement = contract.businessRequirement
 requireEqual(requirement?.priority, 'P0', 'priority')
 requireEqual(requirement?.locationRequired, true, 'locationRequired')
 requireEqual(requirement?.systemTimeRequired, true, 'systemTimeRequired')
 requireEqual(requirement?.manualCheckIn, true, 'manualCheckIn')
 requireEqual(requirement?.appointmentNearAutomatic, 'UNKNOWN_NEEDS_BUSINESS_CONFIG', 'appointmentNearAutomatic')
+requireEqual(requirement?.status, 'DEFERRED_NON_BLOCKING', 'business requirement status')
 if (JSON.stringify(requirement?.sequence) !== JSON.stringify([
   'appointment_confirmation',
   'survey_onsite_check_in',
@@ -78,7 +85,7 @@ requireEqual(appointmentNear?.autoImplemented, false, 'automatic check-in implem
 requireEqual(appointmentNear?.backgroundMutation, false, 'background mutation')
 
 const manual = contract.manual
-requireEqual(manual?.status, 'REQUIREMENT_ONLY_BLOCKED_UNTIL_COMMAND_PROVEN', 'manual status')
+requireEqual(manual?.status, 'DEFERRED_NON_BLOCKING', 'manual status')
 requireEqual(manual?.saveSurvey, false, 'manual check-in must not save Survey')
 requireEqual(manual?.completeWorkflow, false, 'manual check-in must not complete workflow')
 requireEqual(manual?.createQuote, false, 'manual check-in must not create quote')
@@ -107,4 +114,4 @@ for (const forbidden of [
   if (serialized.includes(forbidden)) fail(`sensitive/raw value found: ${forbidden}`)
 }
 
-console.log('Survey onsite check-in contract check passed: requirement recorded; Survey command/owner/time/location explicit UNKNOWN; real writes disabled')
+console.log('Survey onsite check-in contract check passed: requirement deferred non-blocking; historical UNKNOWN evidence retained; real writes disabled')

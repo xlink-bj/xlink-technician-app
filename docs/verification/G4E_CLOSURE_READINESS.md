@@ -39,7 +39,7 @@ remaining work is no longer an unclassified frontend engineering blocker.
 | Weak-network media durability | `PASS` | Durable local asset and persistent queue are implemented; ambiguous upload is not blindly retried | No | Yes | DEVICE_QA; MP/App restart smoke |
 | Camera watermark architecture | `PASS` | Post-upload abstraction, source checkpoint, final-ref boundary and pre-upload fail-closed preflight | No | No | FRONTEND; keep real adapter disabled |
 | Real watermark execution | `BLOCKED_EXTERNAL` | GCJ02/GPS84 conflict, idempotency/reconciliation gap, fixed backend temp paths, no live authorization | No | Yes | BACKEND + PRODUCT; resolve contract/concurrency and authorize |
-| Survey onsite LBS check-in | `BLOCKED_EXTERNAL` | Requirement is P0, but owner/command/read/coordinate/time/appointment-near semantics are UNKNOWN | No | Yes | BACKEND + PRODUCT; provide verified Survey contract |
+| Survey onsite LBS check-in | `DEFERRED_NON_BLOCKING` | P0 requirement remains recorded; owner/command/read/coordinate/time/appointment-near research is retained as evidence only and no LBS code is authorized | No | No | PRODUCT; re-open only with approved scope and contract |
 | `serviceGoods` / `projPackage` | `DEFERRED_NON_BLOCKING` | Historical recommendation capability; explicitly deferred | No | No | PRODUCT; only re-open with new evidence |
 | `surveyDrawing` / `surveyTool` | `DEFERRED_NON_BLOCKING` | Special tool protocol explicitly deferred; excluded and no generic fallback | No | No | PRODUCT; only re-open with new evidence |
 | MP device restart recovery | `DEVICE_VALIDATION_PENDING` | Build verified; authenticated MP device restart and saved-file survival not smoked | No | Yes | DEVICE_QA |
@@ -88,8 +88,8 @@ The audit does not silently discard remaining uncertainty:
 | 23 Survey media capability rows PARTIAL | `LIVE_VALIDATION_PENDING` | BACKEND | No | Generic source-backed path exists; production media contract remains incomplete |
 | Media max-count/aggregate and camera policy UNKNOWN | `BLOCKED_EXTERNAL` | BACKEND | No | No client rule is invented |
 | MP/App media restart status PARTIAL | `DEVICE_VALIDATION_PENDING` | DEVICE_QA | No | Requires authenticated device smoke |
-| Survey onsite owner/command/time/location/reconciliation UNKNOWN | `BLOCKED_EXTERNAL` | BACKEND | No | Requires verified business/backend contract |
-| Appointment-near trigger/window/distance UNKNOWN | `BLOCKED_EXTERNAL` | PRODUCT | No | No auto-check-in implementation or invented threshold |
+| Survey onsite owner/command/time/location/reconciliation UNKNOWN | `DEFERRED_NON_BLOCKING` | PRODUCT | No | Product governance defers the capability; historical research remains evidence only |
+| Appointment-near trigger/window/distance UNKNOWN | `DEFERRED_NON_BLOCKING` | PRODUCT | No | Automatic check-in is deferred; no threshold is invented |
 
 The machine-readable artifact records each class with owner and blocker
 impact. The checker fails if an UNKNOWN/PARTIAL residual is added without an

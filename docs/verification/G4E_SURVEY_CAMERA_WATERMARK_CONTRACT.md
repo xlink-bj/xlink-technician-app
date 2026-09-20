@@ -84,7 +84,8 @@ queued -> ready_to_upload -> uploading -> uploaded
 - Survey camera final ref：仅最终 processor 输出可进入 FormData。
 - Album：无水印、无必需定位，原有直接上传路径保持不变。
 - `surveyDrawing`：继续 `DEFERRED / NON-BLOCKING`，不进入 camera policy，不回退普通媒体。
-- LBS check-in：不实现；它是独立 business command/process event。
+- LBS check-in：作为独立 business command/process event 保持
+  `DEFERRED_NON_BLOCKING`；不进入 camera path，也不在本轮实现。
 
 ## Why real adapter remains disabled
 

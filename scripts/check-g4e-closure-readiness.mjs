@@ -62,7 +62,7 @@ for (const collection of ['implemented', 'productDeferred', 'externalDependencie
 }
 
 const deferred = new Map(closure.productDeferred.map((item) => [item.id, item]))
-for (const id of ['serviceGoods-projPackage', 'surveyDrawing-surveyTool']) {
+for (const id of ['serviceGoods-projPackage', 'surveyDrawing-surveyTool', 'survey-onsite-checkin']) {
   const item = deferred.get(id)
   if (!item) fail(`${id} must remain explicitly deferred`)
   equal(item.status, 'DEFERRED_NON_BLOCKING', `${id} status`)
@@ -70,8 +70,12 @@ for (const id of ['serviceGoods-projPackage', 'surveyDrawing-surveyTool']) {
   equal(item.blocksProductionReadiness, false, `${id} production blocker`)
 }
 
-const onsite = closure.externalDependencies.find((item) => item.id === 'survey-onsite-checkin-record-owner-and-command')
-if (!onsite || onsite.status !== 'BLOCKED_EXTERNAL' || onsite.owner !== 'BACKEND') fail('Survey onsite check-in must remain a backend external dependency')
+const onsiteContractFile = resolve(fileURLToPath(new URL('../contracts/beta/survey/onsite-checkin-contract.json', import.meta.url)))
+const onsiteContract = JSON.parse(await readFile(onsiteContractFile, 'utf8'))
+equal(onsiteContract.governance?.status, 'DEFERRED_NON_BLOCKING', 'onsite check-in governance status')
+equal(onsiteContract.governance?.blocksFrontendEngineering, false, 'onsite check-in frontend blocker')
+equal(onsiteContract.governance?.blocksProductionReadiness, false, 'onsite check-in production blocker')
+if (closure.externalDependencies.some((item) => /survey-onsite-checkin|appointment-near-policy/i.test(item.id))) fail('Survey onsite check-in must not remain an external production blocker')
 if (closure.implemented.some((item) => /onsite.?check.?in/i.test(item.id))) fail('onsite check-in must not be marked implemented')
 
 const watermark = closure.externalDependencies.filter((item) => item.id.startsWith('real-watermark-'))

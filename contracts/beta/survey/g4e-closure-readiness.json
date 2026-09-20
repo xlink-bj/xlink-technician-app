@@ -72,25 +72,17 @@
       "blocksFrontendEngineering": false,
       "blocksProductionReadiness": false,
       "evidence": "Special surveyTool protocol is not implemented; field is excluded from rendering/submission and never falls back to generic media."
+    },
+    {
+      "id": "survey-onsite-checkin",
+      "status": "DEFERRED_NON_BLOCKING",
+      "owner": "PRODUCT",
+      "blocksFrontendEngineering": false,
+      "blocksProductionReadiness": false,
+      "evidence": "The P0 Survey LBS onsite check-in requirement remains recorded, but Product governance defers implementation. Historical Punch/Sign/gpsPoint research remains evidence only; no LBS code is implemented."
     }
   ],
   "externalDependencies": [
-    {
-      "id": "survey-onsite-checkin-record-owner-and-command",
-      "status": "BLOCKED_EXTERNAL",
-      "owner": "BACKEND",
-      "blocksFrontendEngineering": false,
-      "blocksProductionReadiness": true,
-      "evidence": "Survey record owner, command/API, authoritative read/reconciliation, coordinate semantics and timestamp authority remain UNKNOWN. Legacy Punch/Sign are not adopted."
-    },
-    {
-      "id": "survey-onsite-checkin-appointment-near-policy",
-      "status": "BLOCKED_EXTERNAL",
-      "owner": "PRODUCT",
-      "blocksFrontendEngineering": false,
-      "blocksProductionReadiness": true,
-      "evidence": "Appointment-near trigger, time window, distance rule, lifecycle and duplicate behavior are not defined; no automatic check-in is implemented."
-    },
     {
       "id": "real-watermark-coordinate-contract",
       "status": "BLOCKED_EXTERNAL",
@@ -340,14 +332,14 @@
       "reason": "Implementation exists; device restart smoke is pending."
     },
     {
-      "id": "unknown-onsite-checkin-contract",
+      "id": "deferred-onsite-checkin-contract-unknowns",
       "observedStatus": "UNKNOWN",
-      "status": "BLOCKED_EXTERNAL",
-      "owner": "BACKEND",
-      "scope": "Survey record owner, command, coordinate/time authority and reconciliation",
+      "status": "DEFERRED_NON_BLOCKING",
+      "owner": "PRODUCT",
+      "scope": "Survey record owner, command, coordinate/time authority, reconciliation and appointment-near semantics",
       "blocksFrontendEngineering": false,
-      "blocksProductionReadiness": true,
-      "reason": "Explicit external backend/business contract dependency; not a frontend TODO."
+      "blocksProductionReadiness": false,
+      "reason": "The unknowns are retained as historical contract research. Product governance defers the capability, so they are not G4-E frontend or production-readiness blockers in this gate."
     }
   ],
   "realMutationAuthorization": "NOT_AUTHORIZED",
