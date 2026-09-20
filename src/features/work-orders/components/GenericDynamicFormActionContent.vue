@@ -1,5 +1,5 @@
 <template>
-  <view class="dynamic-action-content app-surface" data-action-content="dynamic-form">
+  <view class="dynamic-action-content app-surface" data-action-content="dynamic-form" data-testid="dynamic-form-action-content">
     <view class="dynamic-action-heading">
       <view class="dynamic-action-title-row">
         <view class="dynamic-action-icon" aria-hidden="true"><AppIcon name="task" :size="20" /></view>
@@ -21,6 +21,7 @@
       <AppField
         v-if="!props.excludedFieldIds.includes(field.fieldId) && field.runtime.visible && field.runtime.capability !== 'UNSUPPORTED' && field.runtime.capability !== 'PRESENTATION_ONLY'"
         class="dynamic-action-field"
+        :data-testid="`dynamic-field-${field.valueKey}`"
         :label="field.label"
         :required="field.runtime.required"
       >
@@ -53,7 +54,11 @@
           placeholder="请填写内容"
           @update:model-value="setField(field.fieldId, $event)"
         />
-        <view v-else-if="field.type === 'image' || field.type === 'file'" class="dynamic-action-media">
+        <view
+          v-else-if="field.type === 'image' || field.type === 'file'"
+          class="dynamic-action-media"
+          :data-testid="`dynamic-media-${field.valueKey}`"
+        >
           <view class="dynamic-action-media-copy">
             <AppIcon name="image" :size="20" color="var(--app-color-primary)" />
             <text class="dynamic-action-media-label">
@@ -70,7 +75,11 @@
             {{ workspace.mediaCanRetryDynamic(field.fieldId) ? '继续处理' : mediaCountFor(field.fieldId) > 0 ? '重新选择' : '选择文件' }}
           </AppButton>
           <text v-else class="dynamic-action-media-readonly">仅查看</text>
-          <text v-if="workspace.dynamicMediaHint(field.fieldId)" class="dynamic-action-media-hint">
+          <text
+            v-if="workspace.dynamicMediaHint(field.fieldId)"
+            class="dynamic-action-media-hint"
+            :data-testid="`dynamic-media-status-${field.valueKey}`"
+          >
             {{ workspace.dynamicMediaHint(field.fieldId) }}
           </text>
         </view>
@@ -88,6 +97,7 @@
 
     <AppStatus
       v-if="workspace.dynamicUnsupportedFields.length > 0"
+      data-testid="dynamic-form-unsupported"
       class="dynamic-action-unsupported"
       :message="unsupportedMessage"
       tone="warning"
@@ -96,6 +106,7 @@
     />
 
     <AppButton
+      data-testid="dynamic-form-save"
       class="dynamic-action-save"
       variant="secondary"
       block

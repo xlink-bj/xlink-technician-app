@@ -23,7 +23,8 @@ export default defineConfig({
   },
   define: {
     'import.meta.env.VITE_XLINK_ENVIRONMENT': JSON.stringify('dev'),
-    'import.meta.env.VITE_XLINK_PLATFORM': JSON.stringify('h5'),
+    // H5 is only the browser host; runtime semantics target the reviewed MP build.
+    'import.meta.env.VITE_XLINK_PLATFORM': JSON.stringify('mp-weixin'),
     'import.meta.env.VITE_XLINK_API_BASE_URL': JSON.stringify('https://mock-review.invalid'),
     'import.meta.env.VITE_XLINK_AUTH_TENANT': JSON.stringify('mock-review-tenant'),
     'import.meta.env.VITE_XLINK_AUTH_METHOD': JSON.stringify('mock-review-phone'),

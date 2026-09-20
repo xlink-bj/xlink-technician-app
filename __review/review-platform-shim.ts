@@ -66,6 +66,34 @@ export function installReviewPlatformShim(): void {
   }, true)
 }
 
+/**
+ * The custom H5 review HTML bypasses uni's page compiler, so its browser
+ * stylesheets do not receive the normal rpx-to-px conversion. Apply that
+ * platform conversion only after the review stylesheet graph has loaded.
+ */
+export function installReviewRpxCompatibility(): void {
+  if (typeof document === 'undefined') return
+  const scale = window.innerWidth / 750
+  const rpxPattern = /(-?(?:\d+\.?\d*|\.\d+))rpx\b/g
+  const convert = (value: string): string => value.replace(rpxPattern, (_match, number: string) => `${Number(number) * scale}px`)
+
+  const visitRules = (rules: CSSRuleList): void => {
+    for (const rule of Array.from(rules)) {
+      if (rule instanceof CSSStyleRule) rule.style.cssText = convert(rule.style.cssText)
+      const nestedRules = (rule as CSSRule & { cssRules?: CSSRuleList }).cssRules
+      if (nestedRules) visitRules(nestedRules)
+    }
+  }
+
+  for (const sheet of Array.from(document.styleSheets)) {
+    try {
+      if (sheet.cssRules) visitRules(sheet.cssRules)
+    } catch {
+      // Review styles are same-origin; ignore any browser-owned sheet.
+    }
+  }
+}
+
 export function createReviewAuthSession(): AuthSessionPort {
   const snapshot: SessionSnapshot = {
     sessionRef: asOpaqueId<'SessionRef'>('mock-review-session'),

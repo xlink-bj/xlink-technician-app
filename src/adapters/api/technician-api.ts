@@ -784,7 +784,14 @@ function formFieldVisibility(record: AdapterRecord): {
   const configShowField = optionalString(config ?? {}, ['showField'])
   const showField = directShowField ?? configShowField
   const rawShowType = record.showType ?? config?.showType
-  const showType = rawShowType === undefined || rawShowType === null ? undefined : String(rawShowType)
+  // R1 Survey rows can carry the generic root showType=1 together with a
+  // more specific frontEndConfig.showField/showValue condition. The
+  // field-level expression is the effective contract in that shape.
+  const showType = configShowField
+    && config?.showType === undefined
+    && String(rawShowType ?? '') === '1'
+    ? undefined
+    : rawShowType === undefined || rawShowType === null ? undefined : String(rawShowType)
   const configExts = optionalRecord(config?.exts)
   const recordExts = optionalRecord(record.exts)
   // R1's modern branch uses `field.showValue || field.exts.showValue`.

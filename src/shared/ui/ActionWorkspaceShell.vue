@@ -1,5 +1,5 @@
 <template>
-  <view class="action-workspace-page">
+  <view class="action-workspace-page" data-testid="action-workspace-shell">
     <scroll-view class="action-workspace-scroll" scroll-y enable-flex>
       <view class="action-workspace-body">
         <view class="action-workspace-context app-surface app-surface--compact">
@@ -62,6 +62,7 @@
         <template v-if="lifecycle !== 'succeeded'">
           <slot name="actions">
             <AppButton
+              data-testid="action-workspace-submit"
               class="action-workspace-submit"
               :disabled="!canSubmit || transitioning"
               :loading="lifecycle === 'submitting' || transitioning"

@@ -9,13 +9,16 @@ Status: `READY_FOR_PRODUCT_OWNER_REVIEW`
 - Branch: `rebuild/g4e-onsite-inspection`
 - Mode: `MOCK_PRODUCT_REVIEW`
 - Visual label: `H5_VISUAL_PROXY`
-- Viewport: mobile `390 x 844` (recommended)
+- Viewport: mobile `390 x 844`
 - Authenticated: `NO`
 - Real customer data, credentials, or live writes: `NO`
-- Screenshots: not captured in this environment; the harness is the review artifact
+- Playwright: `@playwright/test 1.63.0`
+- Browser: Chromium `153.0.8010.12`
+- Automated browser tests: `18 passed` (11 scenario smoke tests + 7 semantic assertions)
+- Screenshots: 11 generated under `generated/`; intentionally untracked and not committed
 
-This directory is intentionally untracked. Screenshot files, if captured by
-Product/Visual QA, must not be committed unless repository policy explicitly
+Generated screenshot files are intentionally untracked. They are local review
+evidence and must not be committed unless repository policy explicitly
 changes.
 
 ## Start
@@ -24,6 +27,17 @@ changes.
 cd /Users/yesun/Code/xlink-technician-app
 pnpm run dev:h5-review
 ```
+
+For automated smoke tests and screenshot capture, use:
+
+```bash
+pnpm run test:h5-review
+pnpm run capture:g4e-review
+```
+
+Playwright starts `pnpm run dev:h5-review` automatically at
+`http://127.0.0.1:5173`. The browser test is the runtime visual-review path;
+`build:h5-review` remains separate build/isolation evidence.
 
 Open:
 
@@ -75,9 +89,9 @@ Example:
 
 ## Known limitations
 
-- This environment has no browser screenshot automation, so no PNGs are
-  claimed or committed. Product Owner can capture screenshots from the URL
-  above at the recommended viewport.
+- The generated PNGs are review evidence only, not visual-regression baselines,
+  and remain untracked. The browser test produces failure screenshots and
+  traces only when a test fails.
 - H5 platform behavior is represented by the review shim; MP/App device
   permissions, restart recovery, and native camera behavior remain separate
   device QA concerns.

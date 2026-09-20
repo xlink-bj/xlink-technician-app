@@ -14,7 +14,8 @@ if (import.meta.env.PROD) {
   ])
   const { createDefaultTechnicianApiReadPort, createDefaultTechnicianApiCommandPort, createDefaultSurveyLeakageCauseProvider, createDefaultUploadPort } = composition
   const { createReviewMediaUploadQueue, reviewUserId } = await import('./g4e-review-runtime')
-  const { createReviewAuthSession, createReviewMemoryStorage, createReviewNavigation, createReviewMediaCapture, createReviewMediaPicker, createReviewLocation } = await import('./review-platform-shim')
+  const { createReviewAuthSession, createReviewMemoryStorage, createReviewNavigation, createReviewMediaCapture, createReviewMediaPicker, createReviewLocation, installReviewRpxCompatibility } = await import('./review-platform-shim')
+  installReviewRpxCompatibility()
 
   const authSession = createReviewAuthSession()
   const apiRead = createDefaultTechnicianApiReadPort(authSession)

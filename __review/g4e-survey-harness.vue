@@ -1,10 +1,10 @@
 <template>
-  <view class="review-root">
+  <view class="review-root" data-testid="g4e-review-harness">
     <view class="review-banner">
-      <view class="review-banner__title">G4-E Survey / 勘查</view>
+      <view class="review-banner__title" data-testid="g4e-review-title">G4-E Survey / 勘查</view>
       <view class="review-banner__badges">
-        <text class="review-badge">H5_VISUAL_PROXY</text>
-        <text class="review-badge">MOCK_PRODUCT_REVIEW</text>
+        <text class="review-badge" data-testid="g4e-review-h5-label">H5_VISUAL_PROXY</text>
+        <text class="review-badge" data-testid="g4e-review-mock-label">MOCK_PRODUCT_REVIEW</text>
       </view>
       <text class="review-banner__copy">真实 Action Workspace 与 Dynamic Form Runtime · 开发评审入口</text>
     </view>
@@ -12,7 +12,7 @@
     <view class="review-controls">
       <view class="review-control-row">
         <text class="review-control-label">评审场景</text>
-        <select v-model="selectedScenario" class="review-select" aria-label="评审场景">
+        <select v-model="selectedScenario" class="review-select" data-testid="g4e-review-scenario" aria-label="评审场景">
           <option v-for="item in reviewScenarioCatalog" :key="item.key" :value="item.key">{{ item.label }}</option>
         </select>
       </view>
@@ -29,6 +29,7 @@
     />
 
     <ActionWorkspaceShell
+      data-testid="g4e-review-workspace"
       v-if="workspace.loadState === 'succeeded' && workspace.descriptor && workspace.dynamicForm"
       :customer-name="workspace.detail?.customerName"
       :display-number="workspace.detail?.displayNumber"
@@ -156,6 +157,8 @@ function valueForField(field: { readonly type: string; readonly options?: readon
   if (field.type === 'cascade' && field.options?.length) return firstLeaf(field.options) ?? 'mock-option'
   if ((field.multiple || field.type === 'checkbox') && field.options?.length) return [field.options[0].value]
   if (field.options?.length) return field.options[0].value
+  if (field.type === 'digit') return '12.5'
+  if (field.type === 'number') return '12'
   return field.type === 'textarea' ? '演示填写内容' : '演示填写'
 }
 
@@ -194,6 +197,9 @@ void reviewScenarioKeys
 <style>
 html, body, #app { background: var(--app-color-page); margin: 0; min-height: 100%; }
 body { color: var(--app-color-text-primary); font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; }
+/* H5 review shim: uni's view/scroll-view are block containers on MP/App. */
+view, scroll-view { display: block; }
+text { display: inline; }
 .review-root { background: var(--app-color-page); min-height: 100vh; padding: 16px 0 0; }
 .review-banner { background: #172a47; color: #fff; margin: 0 auto 12px; max-width: 960rpx; padding: 16px 24px; }
 .review-banner__title { font-size: 22px; font-weight: 800; }

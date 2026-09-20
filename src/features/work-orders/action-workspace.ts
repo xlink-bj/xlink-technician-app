@@ -1573,10 +1573,12 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     if (!field.runtime.visible) return '当前字段不适用于本页面'
     if (field.runtime.readOnly) return '当前字段仅可查看'
     const taskState = mediaStateByField.value[fieldId]
-    if (taskState === 'queued' || taskState === 'preprocessing' || taskState === 'ready_to_upload' || taskState === 'uploading') return '正在准备上传…'
-    if (taskState === 'source_uploaded' || taskState === 'postprocessing') return '正在生成最终照片…'
+    if (taskState === 'queued') return '本地已保存，等待上传'
+    if (taskState === 'preprocessing' || taskState === 'ready_to_upload') return '正在准备上传…'
+    if (taskState === 'uploading') return '正在上传…'
+    if (taskState === 'source_uploaded' || taskState === 'postprocessing') return '正在生成水印照片…'
     const hasAmbiguousPostprocess = (mediaTasksByField.value[fieldId] ?? []).some((task) => task.lastError?.code === 'ambiguous_postprocess')
-    if (taskState === 'failed_retryable' && hasAmbiguousPostprocess) return '水印结果待核查，请勿重复上传'
+    if (taskState === 'failed_retryable' && hasAmbiguousPostprocess) return '处理结果待核查，请勿重复提交'
     if (taskState === 'failed_retryable') return '上传失败，可点击重试'
     if (taskState === 'failed_terminal') return '上传失败，请重新选择'
     return undefined

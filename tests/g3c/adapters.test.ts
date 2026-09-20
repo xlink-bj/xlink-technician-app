@@ -667,6 +667,30 @@ describe('G3-C API adapter foundation', () => {
     ])
   })
 
+  it('prefers a frontEndConfig condition over a generic root showType=1 marker', async () => {
+    const requestedId = asOpaqueId<'FormDefinitionId'>('survey-definition')
+    const transport = new FixtureApiTransport({
+      'biz/extField/query': {
+        data: [{
+          _id: 'field-row-mold-photo',
+          extId: requestedId,
+          name: 'beforeMoldRemoval',
+          nameDisp: '除霉前',
+          type: 'file',
+          showType: '1',
+          frontEndConfig: { showField: 'isMoldRemoved', showValue: 'yes' },
+        }],
+      },
+    })
+    const api = createTechnicianApiReadAdapter(transport)
+
+    const result = await api.getFormDefinition(requestedId)
+
+    expect(result.data?.fields?.[0]).toMatchObject({
+      visibility: { kind: 'equals', path: 'isMoldRemoved', value: 'yes' },
+    })
+  })
+
   it('uses the exact R1 form-data filter and sort request shape', async () => {
     const transport = new FixtureApiTransport({
       'biz/extForm/query/appointment-definition': rawFormDataPage,

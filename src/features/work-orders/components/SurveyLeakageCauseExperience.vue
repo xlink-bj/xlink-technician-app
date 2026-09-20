@@ -1,5 +1,9 @@
 <template>
-  <view v-if="workspace.surveyLeakageCauseExperience && workspace.surveyLeakageCauseVisible" class="survey-leakage-cause">
+  <view
+    v-if="workspace.surveyLeakageCauseExperience && workspace.surveyLeakageCauseVisible"
+    class="survey-leakage-cause"
+    data-testid="survey-leakage-cause"
+  >
     <AppField
       class="survey-leakage-cause__field"
       :label="workspace.surveyLeakageCauseExperience.valueField.label"
@@ -21,7 +25,7 @@
       </AppButton>
       <text v-else class="survey-leakage-cause__readonly">仅查看</text>
 
-      <view v-if="isOpen" class="survey-leakage-cause__panel">
+      <view v-if="isOpen" class="survey-leakage-cause__panel" data-testid="survey-leakage-cause-panel">
         <AppStatus
           v-if="workspace.surveyLeakageCauseProviderState === 'loading'"
           message="正在加载渗漏原因"
