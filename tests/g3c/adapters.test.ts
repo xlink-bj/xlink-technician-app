@@ -377,6 +377,30 @@ describe('G3-C API adapter foundation', () => {
     expect(result.error?.category).toBe('server_terminal')
   })
 
+  it.each([
+    ['scalar', 'fake'],
+    ['primitive list', ['a', 'b']],
+  ])('fails closed when a Survey media field is not a media list on read (%s)', async (_label, value) => {
+    const transport = new FixtureApiTransport({
+      'biz/extForm/query/survey-definition': {
+        data: [{
+          _id: 'survey-data-001',
+          extId: 'survey-definition',
+          exts: { images1: value },
+        }],
+      },
+    })
+    const api = createTechnicianApiReadAdapter(transport)
+    const result = await api.getFormData({
+      definitionId: asOpaqueId<'FormDefinitionId'>('survey-definition'),
+      dataId: asOpaqueId<'FormDataId'>('survey-data-001'),
+      valueCodec: surveyMediaValueCodec,
+    })
+
+    expect(result.state).toBe('failed_terminal')
+    expect(result.error?.category).toBe('server_terminal')
+  })
+
   it('does not assign Survey media semantics to object-like values in a generic form', async () => {
     const transport = new FixtureApiTransport({
       'biz/extForm/query/generic-definition': {

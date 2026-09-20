@@ -958,6 +958,10 @@ function formDefinition(raw: unknown, requestedId: FormDefinitionId): FormDefini
 }
 
 function formFieldValue(value: unknown, codec: FormValueCodec | undefined, valueKey: string): FormFieldValue | undefined {
+  if (codec) {
+    const decoded = codec.decode(value, { valueKey })
+    if (decoded !== undefined) return decoded
+  }
   if (value === null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
     return value
   }
@@ -966,7 +970,7 @@ function formFieldValue(value: unknown, codec: FormValueCodec | undefined, value
       typeof item === 'string' || typeof item === 'number' || typeof item === 'boolean',
     )) return value as readonly (string | number | boolean)[]
   }
-  return codec?.decode(value, { valueKey })
+  return undefined
 }
 
 function formValues(record: AdapterRecord, codec?: FormValueCodec): Readonly<Record<string, FormFieldValue>> | undefined {

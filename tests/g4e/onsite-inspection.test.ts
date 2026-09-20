@@ -742,6 +742,29 @@ describe('G4-E Survey dynamic Action Content', () => {
     expect(execute).not.toHaveBeenCalled()
   })
 
+  it.each([
+    ['scalar', 'fake'],
+    ['primitive list', ['a', 'b']],
+  ])('does not serialize a non-media Survey value (%s)', async (_label, value) => {
+    const execute = vi.fn(async () => ({ data: { _id: 'must-not-write' } }))
+    const commands = createTechnicianApiCommandAdapter(
+      { execute },
+      {} as TechnicianApiReadPort,
+    )
+
+    const result = await commands.saveDynamicForm!({
+      workOrderId,
+      workflowNodeId,
+      definitionId: formDefinitionId,
+      purpose: 'survey',
+      values: { images1: value },
+    })
+
+    expect(result.state).toBe('failed_terminal')
+    expect(result.error?.category).toBe('server_terminal')
+    expect(execute).not.toHaveBeenCalled()
+  })
+
   it('applies ExtField.showList to the mobile detail Action surface', () => {
     const form: DynamicFormRead = {
       purpose: 'survey',

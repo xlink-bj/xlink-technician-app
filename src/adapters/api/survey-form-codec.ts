@@ -51,20 +51,19 @@ function wireMediaRef(value: unknown): FormFieldValue | undefined {
 }
 
 function decodeSurveyValue(value: unknown, valueKey: string): FormFieldValue | undefined {
+  if (SURVEY_MEDIA_VALUE_KEYS.has(valueKey)) {
+    if (!Array.isArray(value)) {
+      throw new AdapterMappingError(`Survey media list is malformed for ${valueKey}`)
+    }
+    const media = value.map(wireMediaRef)
+    if (media.every((item) => item !== undefined)) return media as FormFieldValue
+    throw new AdapterMappingError(`Survey media list is malformed for ${valueKey}`)
+  }
   const scalar = primitive(value)
   if (scalar !== undefined) return scalar
   const scalarList = primitiveList(value)
   if (scalarList) return scalarList
-  if (!SURVEY_MEDIA_VALUE_KEYS.has(valueKey)) return undefined
-  if (Array.isArray(value)) {
-    const media = value.map(wireMediaRef)
-    if (media.every((item) => item !== undefined)) return media as FormFieldValue
-    if (value.some((item) => item !== null && typeof item === 'object')) {
-      throw new AdapterMappingError(`Survey media list is malformed for ${valueKey}`)
-    }
-    return undefined
-  }
-  return wireMediaRef(value)
+  return undefined
 }
 
 function wireMediaRefFromValue(value: FormFieldValue): Record<string, string> {
@@ -84,15 +83,10 @@ function encodeSurveyValue(value: FormFieldValue, valueKey: string): unknown {
     }
     return value
   }
-  if (primitive(value) !== undefined || primitiveList(value)) return value
-  if (isMediaValueRef(value)) return wireMediaRefFromValue(value)
-  if (Array.isArray(value)) {
-    if (value.every((item) => isMediaValueRef(item))) {
-      return value.map((item) => wireMediaRefFromValue(item as FormFieldValue))
-    }
+  if (!Array.isArray(value) || !value.every((item) => isMediaValueRef(item))) {
     throw new AdapterMappingError(`Survey media list is malformed for ${valueKey}`)
   }
-  throw new AdapterMappingError(`Survey field value is unsupported for ${valueKey}`)
+  return value.map((item) => wireMediaRefFromValue(item))
 }
 
 export const surveyMediaValueCodec: FormValueCodec = {
