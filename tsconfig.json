@@ -30,7 +30,10 @@
     "vite.config.ts",
     "vitest.config.ts",
     "scripts/**/*.mjs",
-    "scripts/**/*.d.ts"
+    "scripts/**/*.d.ts",
+    "__review/**/*.ts",
+    "__review/**/*.vue",
+    "vite.review.config.ts"
   ],
   "exclude": ["node_modules", "dist", "unpackage"]
 }
