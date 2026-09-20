@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { createMediaQueueRepository, createMediaUploadQueue, InMemoryDurableMediaStore } from '@runtimes/media'
+import { createDisabledRealMediaPostUploadProcessor } from '@adapters/upload/uni-media-post-upload-processor'
+import { createMediaQueueRepository, createMediaUploadQueue, InMemoryDurableMediaStore, type MediaUploadQueueOptions } from '@runtimes/media'
 import type { StorageKey, StoragePort, UploadPort } from '@shared/ports'
 import { asOpaqueId, createOperationError, type LocalMedia, type MediaUploadTask, type OperationSnapshot, type UploadedMediaRef } from '@shared/types'
 
@@ -58,13 +59,13 @@ function uploaded(mediaItem: LocalMedia): UploadedMediaRef {
   }
 }
 
-function createQueue(upload: UploadPort, storage = storageFor()) {
+function createQueue(upload: UploadPort, storage = storageFor(), options: MediaUploadQueueOptions = {}) {
   return {
     queue: createMediaUploadQueue(
       new InMemoryDurableMediaStore(),
       createMediaQueueRepository(storage.storage),
       upload,
-      { now: () => '2026-09-20T10:00:00.000Z' },
+      { now: () => '2026-09-20T10:00:00.000Z', ...options },
     ),
     storage,
   }
@@ -84,6 +85,165 @@ describe('G4-E shared durable media queue', () => {
     expect(processed.state).toBe('succeeded')
     expect(processed.data?.state).toBe('uploaded')
     expect(processed.data?.uploadedRef?.url).toContain('queue-photo')
+  })
+
+  it('persists a source checkpoint and resumes post-upload processing without re-uploading', async () => {
+    const storage = storageFor()
+    const durable = new InMemoryDurableMediaStore()
+    const repository = createMediaQueueRepository(storage.storage)
+    const upload = { upload: vi.fn(async (item: LocalMedia) => succeeded(uploaded(item))) }
+    const firstProcessor = {
+      process: vi.fn(async () => ({
+        state: 'failed_retryable' as const,
+        error: createOperationError('network_retryable', 'processor was not dispatched', { code: 'postprocess_not_dispatched' }),
+      })),
+    }
+    const first = createMediaUploadQueue(durable, repository, upload, {
+      now: () => '2026-09-20T10:00:00.000Z',
+      postUploadProcessor: firstProcessor,
+    })
+    const enqueued = await first.enqueue({
+      scope,
+      media: media('camera-checkpoint'),
+      evidence: {
+        postUploadPolicy: 'remote_location_watermark',
+        location: { latitude: 39.9, longitude: 116.4, coordinateSystem: 'gcj02', capturedAt: '2026-09-20T10:00:00.000Z' },
+      },
+    })
+    const failed = await first.process(enqueued.data!.taskId)
+    expect(failed.state).toBe('failed_retryable')
+    expect(failed.data?.state).toBe('failed_retryable')
+    expect(failed.data?.sourceUploadedRef?.url).toContain('camera-checkpoint')
+    expect(upload.upload).toHaveBeenCalledTimes(1)
+
+    const secondProcessor = {
+      process: vi.fn(async ({ source }: { source: UploadedMediaRef }) => succeeded({
+        ...source,
+        url: `https://mock-watermarked.invalid/${String(source.key ?? source.url)}`,
+      })),
+    }
+    const restarted = createMediaUploadQueue(durable, repository, upload, { postUploadProcessor: secondProcessor })
+    const resumed = await restarted.retry(enqueued.data!.taskId)
+    expect(resumed.state).toBe('succeeded')
+    expect(resumed.data?.state).toBe('uploaded')
+    expect(resumed.data?.sourceUploadedRef?.url).toContain('camera-checkpoint')
+    expect(resumed.data?.uploadedRef?.url).toContain('mock-watermarked')
+    expect(upload.upload).toHaveBeenCalledTimes(1)
+    expect(secondProcessor.process).toHaveBeenCalledTimes(1)
+  })
+
+  it('never exposes a source ref as a final ref while postprocessing is pending', async () => {
+    let resolveStarted: (() => void) | undefined
+    const processorStarted = new Promise<void>((resolve) => { resolveStarted = resolve })
+    let resolveProcessor: ((result: OperationSnapshot<UploadedMediaRef>) => void) | undefined
+    const processor = {
+      process: vi.fn(() => new Promise<OperationSnapshot<UploadedMediaRef>>((resolveResult) => {
+        resolveProcessor = resolveResult
+        resolveStarted!()
+      })),
+    }
+    const { queue } = createQueue(
+      { upload: vi.fn(async (item: LocalMedia) => succeeded(uploaded(item))) },
+      storageFor(),
+      { postUploadProcessor: processor },
+    )
+    const enqueued = await queue.enqueue({
+      scope,
+      media: media('pending-camera'),
+      evidence: {
+        postUploadPolicy: 'remote_location_watermark',
+        location: { latitude: 39.9, longitude: 116.4, coordinateSystem: 'gcj02', capturedAt: '2026-09-20T10:00:00.000Z' },
+      },
+    })
+    const processing = queue.process(enqueued.data!.taskId)
+    await processorStarted
+    const pending = await queue.listForAction(scope)
+    expect(pending.data?.[0].state).toBe('postprocessing')
+    expect(pending.data?.[0].sourceUploadedRef).toBeDefined()
+    expect(pending.data?.[0].uploadedRef).toBeUndefined()
+    resolveProcessor!(succeeded({
+      ...pending.data![0].sourceUploadedRef!,
+      url: 'https://mock-watermarked.invalid/pending-camera',
+    }))
+    const completed = await processing
+    expect(completed.data?.uploadedRef?.url).toContain('mock-watermarked')
+  })
+
+  it('does not replay an ambiguous postprocess after restart or generic retry', async () => {
+    const storage = storageFor()
+    const durable = new InMemoryDurableMediaStore()
+    const repository = createMediaQueueRepository(storage.storage)
+    const item = media('ambiguous-postprocess')
+    await durable.persist(item)
+    const current = {
+      schemaVersion: 1 as const,
+      taskId: asOpaqueId<'MediaUploadTaskId'>('ambiguous-postprocess-task'),
+      scope: { ...scope, localAssetId: item.ref },
+      state: 'postprocessing' as const,
+      attempts: 1,
+      createdAt: '2026-09-20T10:00:00.000Z',
+      updatedAt: '2026-09-20T10:00:00.000Z',
+      evidence: {
+        postUploadPolicy: 'remote_location_watermark' as const,
+        location: { latitude: 39.9, longitude: 116.4, coordinateSystem: 'gcj02' as const, capturedAt: '2026-09-20T10:00:00.000Z' },
+      },
+      sourceUploadedRef: uploaded(item),
+    }
+    await repository.write(current)
+    const processor = { process: vi.fn(async () => succeeded(uploaded(item))) }
+    const queue = createMediaUploadQueue(durable, repository, { upload: vi.fn() }, { postUploadProcessor: processor })
+
+    const interrupted = await queue.process(current.taskId)
+    expect(interrupted.state).toBe('failed_retryable')
+    expect(interrupted.error?.code).toBe('ambiguous_postprocess')
+    expect(interrupted.data?.sourceUploadedRef?.url).toContain('ambiguous-postprocess')
+    expect(processor.process).not.toHaveBeenCalled()
+
+    const retried = await queue.retry(current.taskId)
+    expect(retried.state).toBe('failed_retryable')
+    expect(retried.error?.code).toBe('ambiguous_postprocess')
+    expect(processor.process).not.toHaveBeenCalled()
+  })
+
+  it('retains the source checkpoint until final save cleanup', async () => {
+    const durable = new InMemoryDurableMediaStore()
+    const storage = storageFor()
+    const processor = {
+      process: vi.fn(async ({ source }: { source: UploadedMediaRef }) => succeeded({
+        ...source,
+        url: 'https://mock-watermarked.invalid/final-cleanup',
+      })),
+    }
+    const queue = createMediaUploadQueue(
+      durable,
+      createMediaQueueRepository(storage.storage),
+      { upload: vi.fn(async (item: LocalMedia) => succeeded(uploaded(item))) },
+      { postUploadProcessor: processor },
+    )
+    const enqueued = await queue.enqueue({
+      scope,
+      media: media('final-checkpoint'),
+      evidence: { postUploadPolicy: 'remote_location_watermark', location: { latitude: 39.9, longitude: 116.4, coordinateSystem: 'gcj02', capturedAt: '2026-09-20T10:00:00.000Z' } },
+    })
+    const completed = await queue.process(enqueued.data!.taskId)
+    expect(completed.data?.sourceUploadedRef).toBeDefined()
+    expect((await durable.exists(enqueued.data!.scope.localAssetId)).data).toBe(true)
+    expect((await queue.finalizeAfterSave(enqueued.data!.taskId)).state).toBe('succeeded')
+    expect((await durable.exists(enqueued.data!.scope.localAssetId)).data).toBe(false)
+    expect((await queue.listForAction(scope)).data).toEqual([])
+  })
+
+  it('keeps the real watermark adapter disabled while coordinates are unresolved', async () => {
+    const processor = createDisabledRealMediaPostUploadProcessor()
+    const result = await processor.process({
+      source: uploaded(media('real-disabled')),
+      evidence: {
+        postUploadPolicy: 'remote_location_watermark',
+        location: { latitude: 39.9, longitude: 116.4, coordinateSystem: 'gcj02', capturedAt: '2026-09-20T10:00:00.000Z' },
+      },
+    })
+    expect(result.state).toBe('failed_terminal')
+    expect(result.error?.code).toBe('coordinate_contract_conflict')
   })
 
   it('single-flights concurrent processing for one task', async () => {
@@ -200,13 +360,13 @@ describe('G4-E shared durable media queue', () => {
     expect(otherField.data?.map((task) => String(task.scope.localAssetId))).toEqual(['other-form-photo'])
   })
 
-  it('requires source-backed location before watermark preprocessing and never fabricates it', async () => {
+  it('requires source-backed location before remote watermark processing and never fabricates it', async () => {
     const upload = { upload: vi.fn(async (item: LocalMedia) => succeeded(uploaded(item))) }
     const { queue } = createQueue(upload)
     const enqueued = await queue.enqueue({
       scope,
       media: { ...media('camera-photo'), source: 'camera' },
-      evidence: { preprocessPolicy: 'location_watermark' },
+      evidence: { postUploadPolicy: 'remote_location_watermark' },
     })
     const result = await queue.process(enqueued.data!.taskId)
     expect(result.state).toBe('failed_terminal')

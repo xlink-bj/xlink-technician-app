@@ -1404,9 +1404,10 @@ R1/backend source tracing records the ordinary photo path
 `biz/image/uploadAddLogo.do`. The R1 offline location-report list is explicitly
 not treated as evidence of an offline media queue. The new runtime therefore
 uses `DurableMediaStorePort`, `MediaQueueRepository`, `MediaUploadQueuePort`,
-`MediaPreprocessorPort`, `LocationPort` and optional `NetworkStatusPort` as
-generic boundaries. Survey `{url,name,extname}` serialization remains owned by
-the Survey codec.
+`MediaPostUploadProcessorPort`, `LocationPort` and optional `NetworkStatusPort`
+as generic boundaries. `MediaPreprocessorPort` remains reserved for future local
+transforms and is not used for remote watermarking. Survey `{url,name,extname}`
+serialization remains owned by the Survey codec.
 
 The queue persists a local asset before upload, restores task metadata by the
 full user/work/node/form/field/value/local-asset identity, single-flights one

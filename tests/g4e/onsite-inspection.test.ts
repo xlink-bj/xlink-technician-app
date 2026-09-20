@@ -34,6 +34,9 @@ import {
 import type {
   DynamicFormRead,
   FormFieldValue,
+  LocationPort,
+  LocationSnapshot,
+  MediaCapturePort,
   MediaFilePickerPort,
   MediaUploadQueuePort,
   SaveDynamicFormInput,
@@ -48,6 +51,7 @@ import type {
 import {
   asOpaqueId,
   createCapabilityResult,
+  createOperationError,
   type FormDataId,
   type LocalMedia,
   type MediaUploadTask,
@@ -146,6 +150,8 @@ function configureWorkspace(
   dynamicForm: DynamicFormRead = surveyForm(),
   useDurableMediaQueue = false,
   mediaQueueOverride?: MediaUploadQueuePort,
+  mediaCaptureOverride?: MediaCapturePort,
+  locationOverride?: LocationPort,
 ) {
   const storage = storageFor()
   const api: TechnicianApiReadPort = {
@@ -190,6 +196,8 @@ function configureWorkspace(
     navigation,
     getSession: () => session,
     mediaFilePicker: picker,
+    ...(mediaCaptureOverride ? { mediaCapture: mediaCaptureOverride } : {}),
+    ...(locationOverride ? { location: locationOverride } : {}),
     upload,
     ...(mediaUploadQueue ? { mediaUploadQueue } : {}),
     debounceMs: 1,
@@ -441,13 +449,197 @@ describe('G4-E Survey dynamic Action Content', () => {
     }
 
     for (const form of [readOnlyForm, hiddenForm, unsupportedForm]) {
-      const { store, picker, upload } = configureWorkspace(succeeded(undefined), surveyDetail(), form)
+      const capture: MediaCapturePort = {
+        capture: vi.fn(async () => createCapabilityResult<LocalMedia>('camera', 'granted', {
+          ref: asOpaqueId<'LocalMediaRef'>('camera-should-not-start'),
+          localPath: '/tmp/camera-should-not-start.jpg',
+          mimeType: 'image/jpeg',
+          source: 'camera',
+        })),
+      }
+      const { store, picker, upload } = configureWorkspace(succeeded(undefined), surveyDetail(), form, false, undefined, capture)
       await store.load({ workOrderId, workflowNodeId, actionIntent: 'interact_with_form' })
       const result = await store.pickDynamicMedia('survey-photo')
       expect(result.state).toBe('failed_terminal')
       expect(picker.pick).not.toHaveBeenCalled()
       expect(upload.upload).not.toHaveBeenCalled()
+      const cameraResult = await store.captureDynamicMedia('survey-photo')
+      expect(cameraResult.state).toBe('failed_terminal')
+      expect(capture.capture).not.toHaveBeenCalled()
     }
+  })
+
+  it('keeps the camera pipeline location-bound and applies only the final watermarked ref', async () => {
+    const capture: MediaCapturePort = {
+      capture: vi.fn(async () => createCapabilityResult<LocalMedia>('camera', 'granted', {
+        ref: asOpaqueId<'LocalMediaRef'>('camera-survey-photo'),
+        localPath: '/tmp/camera-survey-photo.jpg',
+        mimeType: 'image/jpeg',
+        source: 'camera',
+        name: 'survey-original.jpg',
+      })),
+    }
+    const location: LocationPort = {
+      captureCurrentLocation: vi.fn(async () => createCapabilityResult('location', 'granted', {
+        latitude: 39.9,
+        longitude: 116.4,
+        coordinateSystem: 'gcj02' as const,
+        capturedAt: '2026-09-20T10:00:00.000Z',
+      })),
+    }
+    const sourceUpload: UploadPort = {
+      upload: vi.fn(async (media: LocalMedia) => succeeded({
+        url: `https://mock-source.invalid/${String(media.ref)}`,
+        key: 'original-qiniu-key',
+        fileName: media.name,
+        extension: 'jpg',
+        source: media.source,
+        mimeType: media.mimeType,
+        uploadState: 'uploaded' as const,
+      })),
+    }
+    const postProcessor = {
+      process: vi.fn(async ({ source }: { source: UploadedMediaRef }) => succeeded({
+        ...source,
+        url: 'https://mock-watermarked.invalid/final-camera-photo',
+      })),
+    }
+    const queue = createMediaUploadQueue(
+      new InMemoryDurableMediaStore(),
+      createMediaQueueRepository(storageFor().storage),
+      sourceUpload,
+      { postUploadProcessor: postProcessor },
+    )
+    const { store } = configureWorkspace(succeeded(undefined), surveyDetail(), surveyMediaForm(), false, queue, capture, location)
+    await store.load({ workOrderId, workflowNodeId, actionIntent: 'interact_with_form' })
+
+    const result = await store.captureDynamicMedia('survey-images-1')
+    expect(result.state).toBe('succeeded')
+    expect(location.captureCurrentLocation).toHaveBeenCalledTimes(1)
+    expect(sourceUpload.upload).toHaveBeenCalledTimes(1)
+    expect(postProcessor.process).toHaveBeenCalledTimes(1)
+    expect(store.dynamicForm?.values.images1).toEqual([{
+      url: 'https://mock-watermarked.invalid/final-camera-photo',
+      objectKey: 'original-qiniu-key',
+      fileName: 'survey-original.jpg',
+      extension: 'jpg',
+    }])
+    expect(JSON.stringify(store.dynamicForm?.values.images1)).not.toContain('mock-source.invalid')
+  })
+
+  it('denied location blocks source upload and preserves an existing remote photo', async () => {
+    const capture: MediaCapturePort = {
+      capture: vi.fn(async () => createCapabilityResult<LocalMedia>('camera', 'granted', {
+        ref: asOpaqueId<'LocalMediaRef'>('camera-denied-photo'),
+        localPath: '/tmp/camera-denied-photo.jpg',
+        mimeType: 'image/jpeg',
+        source: 'camera',
+      })),
+    }
+    const location: LocationPort = {
+      captureCurrentLocation: vi.fn(async () => createCapabilityResult<LocationSnapshot>('location', 'denied', undefined, 'permission denied')),
+    }
+    const sourceUpload: UploadPort = { upload: vi.fn(async (): Promise<OperationSnapshot<UploadedMediaRef>> => succeeded({
+      url: 'https://mock-source.invalid/should-not-upload',
+      source: 'camera' as const,
+      mimeType: 'image/jpeg',
+      uploadState: 'uploaded' as const,
+    })) }
+    const queue = createMediaUploadQueue(
+      new InMemoryDurableMediaStore(),
+      createMediaQueueRepository(storageFor().storage),
+      sourceUpload,
+      { postUploadProcessor: { process: vi.fn(async (): Promise<OperationSnapshot<UploadedMediaRef>> => succeeded({
+        url: 'https://mock-watermarked.invalid/should-not-process',
+        source: 'camera' as const,
+        mimeType: 'image/jpeg',
+        uploadState: 'uploaded' as const,
+      })) } },
+    )
+    const existing = [{ url: 'https://existing.invalid/photo', objectKey: 'existing-key' }]
+    const { store } = configureWorkspace(
+      succeeded(undefined),
+      surveyDetail(),
+      surveyMediaForm({ images1: existing }),
+      false,
+      queue,
+      capture,
+      location,
+    )
+    await store.load({ workOrderId, workflowNodeId, actionIntent: 'interact_with_form' })
+
+    const result = await store.captureDynamicMedia('survey-images-1')
+    expect(result.state).toBe('failed_terminal')
+    expect(sourceUpload.upload).not.toHaveBeenCalled()
+    expect(store.dynamicForm?.values.images1).toEqual(existing)
+  })
+
+  it('keeps album media on the direct upload path without location or postprocessing', async () => {
+    const location: LocationPort = { captureCurrentLocation: vi.fn(async () => createCapabilityResult<LocationSnapshot>('location', 'granted')) }
+    const postProcessor = { process: vi.fn(async () => succeeded<UploadedMediaRef>({
+      url: 'https://mock-watermarked.invalid/should-not-run',
+      source: 'library',
+      mimeType: 'image/jpeg',
+      uploadState: 'uploaded',
+    })) }
+    const queue = createMediaUploadQueue(
+      new InMemoryDurableMediaStore(),
+      createMediaQueueRepository(storageFor().storage),
+      { upload: vi.fn(async () => succeeded<UploadedMediaRef>({
+        url: 'https://mock-source.invalid/album-final',
+        source: 'library',
+        mimeType: 'image/jpeg',
+        uploadState: 'uploaded',
+      })) },
+      { postUploadProcessor: postProcessor },
+    )
+    const { store } = configureWorkspace(succeeded(undefined), surveyDetail(), surveyMediaForm(), false, queue, undefined, location)
+    await store.load({ workOrderId, workflowNodeId, actionIntent: 'interact_with_form' })
+    expect((await store.pickDynamicMedia('survey-images-1')).state).toBe('succeeded')
+    expect(location.captureCurrentLocation).not.toHaveBeenCalled()
+    expect(postProcessor.process).not.toHaveBeenCalled()
+  })
+
+  it('keeps required camera media pending when remote watermark processing is retryable', async () => {
+    const capture: MediaCapturePort = {
+      capture: vi.fn(async () => createCapabilityResult<LocalMedia>('camera', 'granted', {
+        ref: asOpaqueId<'LocalMediaRef'>('camera-pending-photo'),
+        localPath: '/tmp/camera-pending-photo.jpg',
+        mimeType: 'image/jpeg',
+        source: 'camera',
+      })),
+    }
+    const location: LocationPort = {
+      captureCurrentLocation: vi.fn(async () => createCapabilityResult('location', 'granted', {
+        latitude: 39.9,
+        longitude: 116.4,
+        coordinateSystem: 'gcj02' as const,
+        capturedAt: '2026-09-20T10:00:00.000Z',
+      })),
+    }
+    const postProcessor = {
+      process: vi.fn(async () => ({
+        state: 'failed_retryable' as const,
+        error: createOperationError('network_retryable', 'not dispatched', { code: 'postprocess_not_dispatched' }),
+      })),
+    }
+    const queue = createMediaUploadQueue(
+      new InMemoryDurableMediaStore(),
+      createMediaQueueRepository(storageFor().storage),
+      { upload: vi.fn(async () => succeeded<UploadedMediaRef>({
+        url: 'https://mock-source.invalid/pending',
+        source: 'camera',
+        mimeType: 'image/jpeg',
+        uploadState: 'uploaded',
+      })) },
+      { postUploadProcessor: postProcessor },
+    )
+    const { store } = configureWorkspace(succeeded(undefined), surveyDetail(), surveyMediaForm(), false, queue, capture, location)
+    await store.load({ workOrderId, workflowNodeId, actionIntent: 'interact_with_form' })
+    expect((await store.captureDynamicMedia('survey-images-1')).state).toBe('failed_retryable')
+    expect(store.dynamicForm?.values.images1).toBeUndefined()
+    expect(store.mediaTasksByField['survey-images-1'][0].sourceUploadedRef).toBeDefined()
+    expect(store.canSubmit).toBe(false)
   })
 
   it('keeps Survey media as structured object lists and blocks the special drawing tool from generic upload', async () => {

@@ -15,6 +15,7 @@
     "generate:survey-media": "node scripts/generate-survey-media-contract.mjs",
     "check:survey-media": "node scripts/check-survey-media.mjs",
     "check:survey-media-p0": "node scripts/check-survey-media-p0.mjs",
+    "check:survey-camera-watermark": "node scripts/check-survey-camera-watermark.mjs",
     "check:inspection-contract": "node scripts/check-inspection-contract.mjs",
     "check:survey-contract": "node scripts/check-survey-contract.mjs",
     "check:survey-capabilities": "node scripts/check-survey-capabilities.mjs",

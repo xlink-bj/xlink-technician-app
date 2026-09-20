@@ -7,6 +7,7 @@ import type {
   TechnicianApiReadPort,
   MediaCapturePort,
   MediaFilePickerPort,
+  MediaPostUploadProcessorPort,
   MediaUploadQueuePort,
   LocationPort,
   UploadPort,
@@ -30,9 +31,12 @@ import { createUniLocationDriver } from '@adapters/platform/uni-location-driver'
 import { createUniUploadPort } from '@adapters/upload/uni-upload-port'
 import { createUniDurableMediaStore } from '@adapters/storage/uni-durable-media-store'
 import { createMediaQueueRepository, createMediaUploadQueue } from '@runtimes/media'
+import { createMockMediaPostUploadProcessor } from '@runtimes/media'
+import { createDisabledRealMediaPostUploadProcessor } from '@adapters/upload/uni-media-post-upload-processor'
 import { createSurveyLeakageCauseProvider } from '@adapters/api/survey-leakage-cause'
 
 import { loadApplicationRuntimeConfig } from './runtime-config'
+import { isBusinessMockMode } from './business-mock'
 
 function configurationFailure<T>(message: string): OperationSnapshot<T> {
   return { state: 'failed_terminal', error: createOperationError('server_terminal', message) }
@@ -183,11 +187,22 @@ export function createDefaultUploadPort(authSession: AuthSessionPort): UploadPor
   }))
 }
 
-export function createDefaultMediaUploadQueue(storage: StoragePort, upload: UploadPort): MediaUploadQueuePort {
+export function createDefaultMediaPostUploadProcessor(): MediaPostUploadProcessorPort {
+  return isBusinessMockMode() !== 'off'
+    ? createMockMediaPostUploadProcessor()
+    : createDisabledRealMediaPostUploadProcessor()
+}
+
+export function createDefaultMediaUploadQueue(
+  storage: StoragePort,
+  upload: UploadPort,
+  postUploadProcessor: MediaPostUploadProcessorPort = createDefaultMediaPostUploadProcessor(),
+): MediaUploadQueuePort {
   return createMediaUploadQueue(
     createUniDurableMediaStore(storage),
     createMediaQueueRepository(storage),
     upload,
+    { postUploadProcessor },
   )
 }
 

@@ -13,7 +13,7 @@ import type {
 export interface LocationSnapshot {
   readonly latitude: number
   readonly longitude: number
-  readonly coordinateSystem: 'gcj02'
+  readonly coordinateSystem: 'gcj02' | 'wgs84'
   readonly capturedAt: string
   readonly accuracy?: number
   readonly address?: string
@@ -31,6 +31,17 @@ export interface MediaPreprocessorPort {
     readonly media: LocalMedia
     readonly evidence?: MediaEvidenceContext
   }): Promise<OperationSnapshot<LocalMedia>>
+}
+
+/**
+ * Generic post-upload stage. A business policy may require a final remote
+ * representation after the source upload has been durably checkpointed.
+ */
+export interface MediaPostUploadProcessorPort {
+  process(input: {
+    readonly source: import('@shared/types').UploadedMediaRef
+    readonly evidence?: MediaEvidenceContext
+  }): Promise<OperationSnapshot<import('@shared/types').UploadedMediaRef>>
 }
 
 export interface MediaQueueRepository {

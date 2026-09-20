@@ -72,7 +72,7 @@ import {
   normalizeDynamicForm,
   type DynamicActionField,
 } from './dynamic-form-action'
-import { surveyMediaDescriptorFor, surveyMediaPreprocessPolicyFor } from './survey-media'
+import { surveyMediaDescriptorFor, surveyMediaPostUploadPolicyFor } from './survey-media'
 import {
   normalizeSurveyLeakageCauseSelection,
   surveyLeakageCauseCurrentPart as currentPartForLeakageCause,
@@ -355,7 +355,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
   const surveyLeakageCauseProviderError = ref<OperationError | null>(null)
   const mediaByField = ref<Readonly<Record<string, readonly UploadedMediaRef[]>>>({})
   const mediaInFlightField = ref<string | null>(null)
-  const mediaStateByField = ref<Readonly<Record<string, 'idle' | 'picking' | 'queued' | 'preprocessing' | 'ready_to_upload' | 'uploading' | 'uploaded' | 'failed_retryable' | 'failed_terminal'>>>({})
+  const mediaStateByField = ref<Readonly<Record<string, 'idle' | 'picking' | 'queued' | 'preprocessing' | 'ready_to_upload' | 'uploading' | 'source_uploaded' | 'postprocessing' | 'uploaded' | 'failed_retryable' | 'failed_terminal'>>>({})
   const mediaTasksByField = ref<Readonly<Record<string, readonly MediaUploadTask[]>>>({})
   const completionReconciled = ref(false)
   const error = ref<OperationError | null>(null)
@@ -438,12 +438,13 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
   const dynamicRequiredMediaPending = computed(() => dynamicFields.value.some((field) => {
     if (isDeferredSurveyField(dynamicForm.value?.purpose, field)) return false
     if (!field.runtime.visible || !field.runtime.required || (field.type !== 'image' && field.type !== 'file')) return false
-    const tasks = mediaTasksByField.value[field.fieldId] ?? []
-    if (tasks.some((task) => task.state !== 'uploaded')) return true
     const value = dynamicForm.value?.values[field.valueKey]
-    if (Array.isArray(value)) return value.length === 0
-    if (isMediaValueRef(value)) return false
-    return !value
+    const hasAuthoritativeRemoteValue = Array.isArray(value)
+      ? value.length > 0
+      : isMediaValueRef(value) || Boolean(value)
+    if (hasAuthoritativeRemoteValue) return false
+    const tasks = mediaTasksByField.value[field.fieldId] ?? []
+    return tasks.some((task) => task.state !== 'uploaded')
   }))
   const dynamicMediaUploading = computed(() => mediaInFlightField.value !== null || Object.values(mediaTasksByField.value).some((tasks) =>
     tasks.some((task) => ['queued', 'preprocessing', 'ready_to_upload', 'uploading'].includes(task.state)),
@@ -592,6 +593,8 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       'preprocessing',
       'ready_to_upload',
       'queued',
+      'postprocessing',
+      'source_uploaded',
       'uploaded',
     ]
     return priority.find((state) => tasks.some((task) => task.state === state)) ?? 'idle'
@@ -655,7 +658,10 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     }
 
     let restoredBusinessValue = false
-    for (const task of listed.data.filter((candidate) => mediaTaskMatchesDynamicForm(candidate, nextDescriptor, dynamicForm.value!))) {
+    for (const listedTask of listed.data.filter((candidate) => mediaTaskMatchesDynamicForm(candidate, nextDescriptor, dynamicForm.value!))) {
+      const task = listedTask.state === 'postprocessing'
+        ? (await configured.mediaUploadQueue.process(listedTask.taskId)).data ?? listedTask
+        : listedTask
       rememberMediaTask(task)
       if (task.state === 'uploaded' && task.uploadedRef) {
         const fieldUploaded = mediaByField.value[task.scope.fieldId] ?? []
@@ -1416,15 +1422,15 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
           : result as OperationSnapshot<void>
       }
       for (const media of selected) {
-        const policy = surveyMediaPreprocessPolicyFor(form.purpose, field, media.source)
+        const policy = surveyMediaPostUploadPolicyFor(form.purpose, field, media.source)
         let location: MediaEvidenceContext['location'] | undefined
-        if (policy === 'location_watermark' && configured.location) {
+        if (policy === 'remote_location_watermark' && configured.location) {
           const capturedLocation = await configured.location.captureCurrentLocation()
           if (capturedLocation.state === 'granted' && capturedLocation.value) location = capturedLocation.value
         }
         const evidence: MediaEvidenceContext = {
           ...(media.capturedAt ? { capturedAt: media.capturedAt } : {}),
-          preprocessPolicy: policy,
+          postUploadPolicy: policy,
           ...(location ? { location } : {}),
         }
 
@@ -1499,13 +1505,20 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     const queue = configured?.mediaUploadQueue
     const tasks = mediaTasksByField.value[fieldId] ?? []
     if (!queue || tasks.length === 0) return failure('unsupported_capability', '没有可重试的媒体上传')
+    const resumableTasks = tasks.filter((candidate) =>
+      candidate.state === 'source_uploaded'
+      || (candidate.state === 'failed_retryable' && candidate.lastError?.code !== 'ambiguous_postprocess'),
+    )
+    if (resumableTasks.length === 0) return failure('validation', '水印处理结果待核查，不能重复提交')
     if (mediaInFlightField.value) return failure('validation', 'Media upload is already in progress')
     mediaInFlightField.value = fieldId
     error.value = null
     try {
       const uploaded: UploadedMediaRef[] = []
-      for (const task of tasks.filter((candidate) => candidate.state === 'failed_retryable')) {
-        const result = await queue.retry(task.taskId)
+      for (const task of resumableTasks) {
+        const result = task.state === 'source_uploaded'
+          ? await queue.process(task.taskId)
+          : await queue.retry(task.taskId)
         if (result.data) rememberMediaTask(result.data)
         if (result.state !== 'succeeded' || !result.data?.uploadedRef) {
           error.value = result.error ?? createOperationError('network_retryable', 'Media upload failed')
@@ -1544,6 +1557,13 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     )
   }
 
+  function mediaCanRetryDynamic(fieldId: string): boolean {
+    return (mediaTasksByField.value[fieldId] ?? []).some((task) =>
+      task.state === 'source_uploaded'
+      || (task.state === 'failed_retryable' && task.lastError?.code !== 'ambiguous_postprocess'),
+    )
+  }
+
   function dynamicMediaHint(fieldId: string): string | undefined {
     const field = dynamicFields.value.find((candidate) => candidate.fieldId === fieldId)
     if (!field) return undefined
@@ -1554,6 +1574,9 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     if (field.runtime.readOnly) return '当前字段仅可查看'
     const taskState = mediaStateByField.value[fieldId]
     if (taskState === 'queued' || taskState === 'preprocessing' || taskState === 'ready_to_upload' || taskState === 'uploading') return '正在准备上传…'
+    if (taskState === 'source_uploaded' || taskState === 'postprocessing') return '正在生成最终照片…'
+    const hasAmbiguousPostprocess = (mediaTasksByField.value[fieldId] ?? []).some((task) => task.lastError?.code === 'ambiguous_postprocess')
+    if (taskState === 'failed_retryable' && hasAmbiguousPostprocess) return '水印结果待核查，请勿重复上传'
     if (taskState === 'failed_retryable') return '上传失败，可点击重试'
     if (taskState === 'failed_terminal') return '上传失败，请重新选择'
     return undefined
@@ -1653,6 +1676,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     surveyLeakageCauseProviderState,
     surveyLeakageCauseProviderError,
     canPickDynamicMedia,
+    mediaCanRetryDynamic,
     dynamicFormSaveState,
     mediaByField,
     mediaTasksByField,

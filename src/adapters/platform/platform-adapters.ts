@@ -127,7 +127,7 @@ function mediaFromDriver(value: unknown): LocalMedia {
 
 function locationFromDriver(value: unknown): LocationSnapshot {
   const record = asRecord(value, 'location')
-  if (record.coordinateSystem !== 'gcj02') {
+  if (record.coordinateSystem !== 'gcj02' && record.coordinateSystem !== 'wgs84') {
     throw new AdapterMappingError('location coordinate system is unsupported')
   }
   if (typeof record.latitude !== 'number' || typeof record.longitude !== 'number') {
@@ -136,7 +136,7 @@ function locationFromDriver(value: unknown): LocationSnapshot {
   return {
     latitude: record.latitude,
     longitude: record.longitude,
-    coordinateSystem: 'gcj02',
+    coordinateSystem: record.coordinateSystem,
     capturedAt: requiredString(record, ['capturedAt', 'timestamp'], 'location timestamp'),
     ...(typeof record.accuracy === 'number' ? { accuracy: record.accuracy } : {}),
     ...(optionalString(record, ['address']) ? { address: optionalString(record, ['address']) } : {}),

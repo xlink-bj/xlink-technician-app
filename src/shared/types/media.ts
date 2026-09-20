@@ -20,12 +20,13 @@ export interface MediaEvidenceContext {
   readonly location?: {
     readonly latitude: number
     readonly longitude: number
-    readonly coordinateSystem: 'gcj02'
+    readonly coordinateSystem: 'gcj02' | 'wgs84'
     readonly capturedAt: string
     readonly accuracy?: number
     readonly address?: string
   }
-  readonly preprocessPolicy?: 'none' | 'location_watermark'
+  /** Post-upload business policy; this is deliberately not a client preprocessor. */
+  readonly postUploadPolicy?: 'none' | 'remote_location_watermark'
 }
 
 export type MediaUploadTaskState =
@@ -33,6 +34,8 @@ export type MediaUploadTaskState =
   | 'preprocessing'
   | 'ready_to_upload'
   | 'uploading'
+  | 'source_uploaded'
+  | 'postprocessing'
   | 'uploaded'
   | 'failed_retryable'
   | 'failed_terminal'
@@ -63,6 +66,8 @@ export interface MediaUploadTask {
   readonly createdAt: string
   readonly updatedAt: string
   readonly evidence?: MediaEvidenceContext
+  /** Original remote object; retained until final lifecycle cleanup. */
+  readonly sourceUploadedRef?: UploadedMediaRef
   readonly uploadedRef?: UploadedMediaRef
   readonly lastError?: import('./operation').OperationError
 }

@@ -55,6 +55,7 @@ export type {
   LocationSnapshot,
   DurableMediaStorePort,
   MediaPreprocessorPort,
+  MediaPostUploadProcessorPort,
   MediaQueueRepository,
   MediaTaskLookupScope,
   MediaUploadQueuePort,

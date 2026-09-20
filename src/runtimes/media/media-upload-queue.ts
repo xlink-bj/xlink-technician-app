@@ -1,6 +1,6 @@
 import type {
   DurableMediaStorePort,
-  MediaPreprocessorPort,
+  MediaPostUploadProcessorPort,
   MediaQueueRepository,
   MediaTaskLookupScope,
   MediaUploadQueuePort,
@@ -18,7 +18,7 @@ import {
 
 export interface MediaUploadQueueOptions {
   readonly now?: () => string
-  readonly preprocessor?: MediaPreprocessorPort
+  readonly postUploadProcessor?: MediaPostUploadProcessorPort
 }
 
 function nowFor(options: MediaUploadQueueOptions): string {
@@ -42,6 +42,20 @@ function taskIdFor(scope: Omit<MediaTaskScope, 'localAssetId'>, localAssetId: st
 
 function operationFailure<T>(task: MediaUploadTask, error: ReturnType<typeof createOperationError>): OperationSnapshot<MediaUploadTask> {
   return { state: error.retryable ? 'failed_retryable' : 'failed_terminal', data: task, error }
+}
+
+function ambiguousPostprocessError() {
+  return createOperationError(
+    'network_retryable',
+    'Post-upload processing outcome is ambiguous; manual reconciliation is required',
+    { code: 'ambiguous_postprocess' },
+  )
+}
+
+function normalizePostprocessError(error: ReturnType<typeof createOperationError> | undefined) {
+  if (!error) return createOperationError('server_terminal', 'Post-upload processing failed')
+  if (error.retryable && error.code !== 'postprocess_not_dispatched') return ambiguousPostprocessError()
+  return error
 }
 
 export class MediaUploadQueue implements MediaUploadQueuePort {
@@ -103,7 +117,12 @@ export class MediaUploadQueue implements MediaUploadQueuePort {
     if (current.data.state !== 'failed_retryable') {
       return operationFailure(current.data, createOperationError('validation', 'Only retryable media failures can be retried'))
     }
-    const queued = await this.update(current.data, { state: 'queued', lastError: undefined })
+    if (current.data.lastError?.code === 'ambiguous_postprocess') {
+      return operationFailure(current.data, current.data.lastError)
+    }
+    const queued = await this.update(current.data, current.data.sourceUploadedRef
+      ? { state: 'source_uploaded', lastError: undefined }
+      : { state: 'queued', lastError: undefined })
     if (queued.state !== 'succeeded' || !queued.data) return queued
     return this.process(taskId)
   }
@@ -146,6 +165,12 @@ export class MediaUploadQueue implements MediaUploadQueuePort {
     const task = current.data
     if (task.state === 'uploaded') return { state: 'succeeded', data: task }
     if (task.state === 'failed_terminal') return operationFailure(task, task.lastError ?? createOperationError('server_terminal', 'Media upload task is terminal'))
+    if (task.state === 'postprocessing') {
+      const ambiguous = ambiguousPostprocessError()
+      const marked = await this.update(task, { state: 'failed_retryable', lastError: ambiguous })
+      return marked.state === 'succeeded' && marked.data ? operationFailure(marked.data, ambiguous) : marked
+    }
+    if (task.state === 'source_uploaded') return this.processPostUpload(task)
     if (task.state === 'uploading') {
       const interrupted = createOperationError('network_retryable', 'Previous media upload was interrupted; manual retry is required', { code: 'ambiguous_upload' })
       const marked = await this.update(task, { state: 'failed_retryable', lastError: interrupted })
@@ -159,30 +184,11 @@ export class MediaUploadQueue implements MediaUploadQueuePort {
       return marked.state === 'succeeded' && marked.data ? operationFailure(marked.data, missing) : marked
     }
 
-    let media = asset.data.media
-    if (task.evidence?.preprocessPolicy === 'location_watermark') {
-      if (!task.evidence.location) {
-        const missingLocation = createOperationError('authorization_denied', 'Location evidence is required before this photo can upload', { code: 'location_required' })
-        const marked = await this.update(task, { state: 'failed_terminal', lastError: missingLocation })
-        return marked.state === 'succeeded' && marked.data ? operationFailure(marked.data, missingLocation) : marked
-      }
-      if (!this.options.preprocessor) {
-        const unsupported = createOperationError('unsupported_capability', 'Location watermark preprocessing is not configured', { code: 'watermark_unavailable' })
-        const marked = await this.update(task, { state: 'failed_terminal', lastError: unsupported })
-        return marked.state === 'succeeded' && marked.data ? operationFailure(marked.data, unsupported) : marked
-      }
-      const preprocessing = await this.update(task, { state: 'preprocessing' })
-      if (preprocessing.state !== 'succeeded' || !preprocessing.data) return preprocessing
-      const processed = await this.options.preprocessor.preprocess({ media, evidence: task.evidence })
-      if (processed.state !== 'succeeded' || !processed.data) {
-        const error = processed.error ?? createOperationError('server_terminal', 'Media preprocessing failed')
-        const marked = await this.update(preprocessing.data, {
-          state: error.retryable ? 'failed_retryable' : 'failed_terminal',
-          lastError: error,
-        })
-        return marked.state === 'succeeded' && marked.data ? operationFailure(marked.data, error) : marked
-      }
-      media = processed.data
+    const media = asset.data.media
+    if (task.evidence?.postUploadPolicy === 'remote_location_watermark' && !task.evidence.location) {
+      const missingLocation = createOperationError('authorization_denied', 'Location evidence is required before remote watermark processing', { code: 'location_required' })
+      const marked = await this.update(task, { state: 'failed_terminal', lastError: missingLocation })
+      return marked.state === 'succeeded' && marked.data ? operationFailure(marked.data, missingLocation) : marked
     }
 
     const ready = await this.update(task, { state: 'ready_to_upload' })
@@ -203,7 +209,52 @@ export class MediaUploadQueue implements MediaUploadQueuePort {
       return marked.state === 'succeeded' && marked.data ? operationFailure(marked.data, error) : marked
     }
 
+    if (task.evidence?.postUploadPolicy === 'remote_location_watermark') {
+      const checkpoint = await this.update(uploading.data, {
+        state: 'source_uploaded',
+        sourceUploadedRef: result.data,
+        lastError: undefined,
+      })
+      if (checkpoint.state !== 'succeeded' || !checkpoint.data) return checkpoint
+      return this.processPostUpload(checkpoint.data)
+    }
+
     const completed = await this.update(uploading.data, {
+      state: 'uploaded',
+      uploadedRef: result.data,
+      lastError: undefined,
+    })
+    return completed.state === 'succeeded' && completed.data
+      ? { state: 'succeeded', data: completed.data }
+      : completed
+  }
+
+  private async processPostUpload(task: MediaUploadTask): Promise<OperationSnapshot<MediaUploadTask>> {
+    const source = task.sourceUploadedRef
+    if (!source) {
+      const malformed = createOperationError('server_terminal', 'Source upload checkpoint is missing its remote reference', { code: 'source_checkpoint_malformed' })
+      const marked = await this.update(task, { state: 'failed_terminal', lastError: malformed })
+      return marked.state === 'succeeded' && marked.data ? operationFailure(marked.data, malformed) : marked
+    }
+    if (!this.options.postUploadProcessor) {
+      const unavailable = createOperationError('unsupported_capability', 'Remote watermark processing is disabled for this coordinate contract', { code: 'coordinate_contract_conflict' })
+      const marked = await this.update(task, { state: 'failed_terminal', lastError: unavailable })
+      return marked.state === 'succeeded' && marked.data ? operationFailure(marked.data, unavailable) : marked
+    }
+
+    const processing = await this.update(task, { state: 'postprocessing', lastError: undefined })
+    if (processing.state !== 'succeeded' || !processing.data) return processing
+    const result = await this.options.postUploadProcessor.process({ source, evidence: task.evidence })
+    if (result.state !== 'succeeded' || !result.data) {
+      const error = normalizePostprocessError(result.error)
+      const marked = await this.update(processing.data, {
+        state: error.retryable ? 'failed_retryable' : 'failed_terminal',
+        lastError: error,
+      })
+      return marked.state === 'succeeded' && marked.data ? operationFailure(marked.data, error) : marked
+    }
+
+    const completed = await this.update(processing.data, {
       state: 'uploaded',
       uploadedRef: result.data,
       lastError: undefined,
@@ -215,7 +266,7 @@ export class MediaUploadQueue implements MediaUploadQueuePort {
 
   private async update(
     task: MediaUploadTask,
-    patch: Partial<Pick<MediaUploadTask, 'state' | 'attempts' | 'uploadedRef' | 'lastError'>>,
+    patch: Partial<Pick<MediaUploadTask, 'state' | 'attempts' | 'sourceUploadedRef' | 'uploadedRef' | 'lastError'>>,
   ): Promise<OperationSnapshot<MediaUploadTask>> {
     const next: MediaUploadTask = {
       ...task,

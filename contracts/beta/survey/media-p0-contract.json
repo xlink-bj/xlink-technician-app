@@ -22,7 +22,8 @@
     "durableMediaStore": "DurableMediaStorePort",
     "queueRepository": "MediaQueueRepository",
     "uploadQueue": "MediaUploadQueuePort",
-    "preprocessor": "MediaPreprocessorPort",
+    "preprocessor": "MediaPreprocessorPort (reserved for future local transforms)",
+    "postUploadProcessor": "MediaPostUploadProcessorPort",
     "location": "LocationPort",
     "networkStatus": "NetworkStatusPort",
     "surveySpecificQueue": false,
@@ -43,6 +44,8 @@
     "preprocessing",
     "ready_to_upload",
     "uploading",
+    "source_uploaded",
+    "postprocessing",
     "uploaded",
     "failed_retryable",
     "failed_terminal"
@@ -83,7 +86,7 @@
     "camera": {
       "status": "PARTIAL",
       "locationRequired": true,
-      "watermark": "PREPROCESSOR_REQUIRED",
+      "watermark": "REMOTE_POST_UPLOAD_PROCESSOR_REQUIRED",
       "serverEndpointEvidence": "biz/image/uploadAddLogo.do"
     },
     "surveyDrawing": "DEFERRED_NON_BLOCKING",
