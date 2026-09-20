@@ -174,6 +174,32 @@ describe('G4-E shared durable media queue', () => {
     expect(userB.data?.map((task) => String(task.scope.userId))).toEqual(['queue-user-b'])
   })
 
+  it('restores only the current form and field identity, with safe form-data compatibility', async () => {
+    const upload = { upload: vi.fn(async (item: LocalMedia) => succeeded(uploaded(item))) }
+    const { queue } = createQueue(upload)
+    const otherForm = { ...scope, formDefinitionId: asOpaqueId<'FormDefinitionId'>('queue-other-definition'), fieldId: 'images2', valueKey: 'images2' }
+    const savedRecord = { ...scope, formDataId: asOpaqueId<'FormDataId'>('queue-form-data') }
+    const staleRecord = { ...scope, formDataId: asOpaqueId<'FormDataId'>('queue-stale-form-data') }
+    await queue.enqueue({ scope, media: media('current-form-photo') })
+    await queue.enqueue({ scope: otherForm, media: media('other-form-photo') })
+    await queue.enqueue({ scope: savedRecord, media: media('saved-record-photo') })
+    await queue.enqueue({ scope: staleRecord, media: media('stale-record-photo') })
+
+    const current = await queue.listForAction(scope)
+    expect(current.data?.map((task) => String(task.scope.localAssetId))).toEqual(['current-form-photo'])
+
+    const saved = await queue.listForAction({ ...scope, formDataId: savedRecord.formDataId })
+    expect(saved.data?.map((task) => String(task.scope.localAssetId))).toEqual(['current-form-photo', 'saved-record-photo'])
+
+    const otherField = await queue.listForAction({
+      ...scope,
+      formDefinitionId: otherForm.formDefinitionId,
+      fieldId: otherForm.fieldId,
+      valueKey: otherForm.valueKey,
+    })
+    expect(otherField.data?.map((task) => String(task.scope.localAssetId))).toEqual(['other-form-photo'])
+  })
+
   it('requires source-backed location before watermark preprocessing and never fabricates it', async () => {
     const upload = { upload: vi.fn(async (item: LocalMedia) => succeeded(uploaded(item))) }
     const { queue } = createQueue(upload)

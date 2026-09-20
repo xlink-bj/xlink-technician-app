@@ -23,12 +23,13 @@ export interface DynamicActionField extends AppointmentFormFieldRead {
 
 const ACTION_FORM_SURFACE: FormRuntimeSurface = 'mobile_detail'
 
-/** Product-owned legacy Survey field: retained in evidence, excluded from the current action. */
+/** Product-owned Survey fields retained in evidence, excluded from this action. */
 export function isDeferredSurveyField(
   formPurpose: DynamicFormRead['purpose'] | undefined,
   field: Pick<AppointmentFormFieldRead, 'valueKey'>,
 ): boolean {
-  return formPurpose === 'survey' && field.valueKey === 'serviceGoods'
+  return formPurpose === 'survey'
+    && (field.valueKey === 'serviceGoods' || field.valueKey === 'surveyDrawing')
 }
 
 function actionUnsupportedReasonFor(

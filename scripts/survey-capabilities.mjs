@@ -117,10 +117,20 @@ function classify(field) {
     )
   }
 
+  if (field.valueKey === 'surveyDrawing') {
+    return common(
+      field,
+      'CUSTOM_EXPERIENCE',
+      'DEFERRED',
+      'Not rendered; verified surveyTool protocol is deferred for G4-E',
+      'EXCLUDED',
+      undefined,
+      'The evidenced surveyDrawing field is required by the historical contract, but its special surveyTool protocol is not implemented. It is non-blocking for G4-E and must never fall back to the generic media picker or upload path.',
+    )
+  }
+
   if (MEDIA_KEYS.has(field.valueKey)) {
-    const mediaNote = field.valueKey === 'surveyDrawing'
-      ? 'R1 marks this field with surveyTool behavior; the new generic upload path is not equivalent to the drawing tool.'
-      : field.valueKey === 'infraredImageList'
+    const mediaNote = field.valueKey === 'infraredImageList'
         ? 'Backend stores a media list and R1 treats infrared photos as a distinct field; capture/location semantics remain unverified.'
         : field.valueKey === 'beforeMoldRemoval' || field.valueKey === 'afterMoldRemoval'
           ? 'Mold-photo meaning is evidenced by field labels, but the complete save/weak-network contract is not verified.'
@@ -242,7 +252,7 @@ export function buildSurveyCapabilityMatrixMarkdown(inventory) {
     '### gap / 分隔槽', '',
     '`type=gap` 已由 Dynamic Form Runtime 识别为 `PRESENTATION_ONLY`。适用且条件可见时渲染为 restrained divider；不可编辑、不进入 submission、不产生 unsupported warning、不阻塞校验。', '',
     '### Survey Media', '',
-    '媒体字段目前是 `MEDIA_INPUT / PARTIAL`，不是完成态。普通媒体先进入通用 `MediaUploadQueuePort`，本地资产持久化后才允许上传，确认获得远端引用后才进入表单值；表单保存和 workflow completion 仍是独立操作。字段级证据和边界见 `docs/verification/G4E_SURVEY_MEDIA_CONTRACT.md` 与 `docs/verification/G4E_SURVEY_MEDIA_P0.md`；`surveyDrawing` 的 R1 `surveyTool`、普通照片的拍照水印/定位、红外照片、除霉前后照片、设备重启 smoke 和服务端幂等性仍未完成。', '',
+    '普通媒体字段目前是 `MEDIA_INPUT / PARTIAL`，不是完成态。普通媒体先进入通用 `MediaUploadQueuePort`，本地资产持久化后才允许上传，确认获得远端引用后才进入表单值；表单保存和 workflow completion 仍是独立操作。`surveyDrawing` 的 R1 `surveyTool` 协议已明确延期为 `DEFERRED / NON-BLOCKING`，不会渲染，也不会回退到普通媒体选择器/上传路径。字段级证据和边界见 `docs/verification/G4E_SURVEY_MEDIA_CONTRACT.md` 与 `docs/verification/G4E_SURVEY_MEDIA_P0.md`；普通照片的拍照水印/定位、红外照片、除霉前后照片、设备重启 smoke 和服务端幂等性仍未完成。', '',
     '### leakageCause', '',
     '`leakageCauseSelect` 与 `leakageCause` 是同一业务交互的触发/持久化两层，不是两个普通独立字段。当前由 Survey 专属 Experience 接管：provider 使用 `biz/extForm/queryByColName/leakageCause`，完整保留所有 `part` 分组，子项 ID 使用 `leakageCause`，保存值为 `List<String>`；当前维修部位只用于默认分组优先展示，用户仍可切换并选择其他分组。触发字段不提交，值字段参与提交；可见到可见的维修部位切换保持值，可见到隐藏时清空本地值。', '',
     '### serviceGoods / projPackage', '',

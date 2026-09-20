@@ -37,8 +37,15 @@ export interface MediaQueueRepository {
   read(taskId: MediaUploadTaskId): Promise<OperationSnapshot<MediaUploadTask | null>>
   write(task: MediaUploadTask): Promise<OperationSnapshot<void>>
   remove(taskId: MediaUploadTaskId): Promise<OperationSnapshot<void>>
-  list(scope: Pick<MediaTaskScope, 'userId' | 'workOrderId' | 'workflowNodeId'>): Promise<OperationSnapshot<readonly MediaUploadTask[]>>
+  list(scope: MediaTaskLookupScope): Promise<OperationSnapshot<readonly MediaUploadTask[]>>
 }
+
+/**
+ * Read-side queue scope. Form/data identity is optional for pre-save tasks,
+ * but when supplied it narrows recovery to the current form instance.
+ */
+export type MediaTaskLookupScope = Pick<MediaTaskScope, 'userId' | 'workOrderId' | 'workflowNodeId'>
+  & Partial<Pick<MediaTaskScope, 'formDefinitionId' | 'formDataId' | 'fieldId' | 'valueKey'>>
 
 export interface MediaUploadQueuePort {
   enqueue(input: {
@@ -50,7 +57,7 @@ export interface MediaUploadQueuePort {
   retry(taskId: MediaUploadTaskId): Promise<OperationSnapshot<MediaUploadTask>>
   discard(taskId: MediaUploadTaskId): Promise<OperationSnapshot<void>>
   finalizeAfterSave(taskId: MediaUploadTaskId): Promise<OperationSnapshot<void>>
-  listForAction(scope: Pick<MediaTaskScope, 'userId' | 'workOrderId' | 'workflowNodeId'>): Promise<OperationSnapshot<readonly MediaUploadTask[]>>
+  listForAction(scope: MediaTaskLookupScope): Promise<OperationSnapshot<readonly MediaUploadTask[]>>
 }
 
 export type NetworkStatus = 'online' | 'offline' | 'unknown'

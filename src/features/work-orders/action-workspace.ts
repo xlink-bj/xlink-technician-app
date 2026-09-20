@@ -67,6 +67,7 @@ import {
 import {
   dynamicActionFieldsFor,
   dynamicActionUnsupportedFieldsFor,
+  isDeferredSurveyField,
   normalizeDynamicFieldValue,
   normalizeDynamicForm,
   type DynamicActionField,
@@ -171,6 +172,43 @@ function formFieldValue(value: unknown): FormFieldValue | undefined {
     return value as readonly MediaValueRef[]
   }
   return undefined
+}
+
+function mediaUrlFromFormValue(value: unknown): string | undefined {
+  if (typeof value === 'string' && value.trim().length > 0) return value
+  if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+    const url = (value as Record<string, unknown>).url
+    return typeof url === 'string' && url.trim().length > 0 ? url : undefined
+  }
+  return undefined
+}
+
+function formValueContainsUploadedRef(value: unknown, uploadedRef: UploadedMediaRef): boolean {
+  const values = Array.isArray(value) ? value : [value]
+  return values.some((candidate) => mediaUrlFromFormValue(candidate) === uploadedRef.url)
+}
+
+function mediaTaskMatchesDynamicForm(
+  task: MediaUploadTask,
+  descriptor: ActionDescriptor,
+  form: DynamicFormRead,
+): boolean {
+  const taskDefinitionId = task.scope.formDefinitionId
+  const currentDefinitionId = descriptor.contentIdentity ?? form.definitionId
+  if (!taskDefinitionId || !currentDefinitionId) return false
+  if (String(taskDefinitionId) !== String(currentDefinitionId)) return false
+  if (form.definitionId && String(taskDefinitionId) !== String(form.definitionId)) return false
+
+  const field = form.fields.find((candidate) => String(candidate.fieldId) === String(task.scope.fieldId))
+  if (!field || field.valueKey !== task.scope.valueKey) return false
+
+  const currentFormDataId = form.dataId === undefined || form.dataId === null ? undefined : String(form.dataId)
+  const taskFormDataId = task.scope.formDataId === undefined || task.scope.formDataId === null
+    ? undefined
+    : String(task.scope.formDataId)
+  if (!currentFormDataId && taskFormDataId) return false
+  if (currentFormDataId && taskFormDataId && currentFormDataId !== taskFormDataId) return false
+  return true
 }
 
 function record(value: unknown): Record<string, unknown> | null {
@@ -398,6 +436,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
   ))
   const isDynamicFormAction = computed(() => descriptor.value?.actionIntent === 'interact_with_form')
   const dynamicRequiredMediaPending = computed(() => dynamicFields.value.some((field) => {
+    if (isDeferredSurveyField(dynamicForm.value?.purpose, field)) return false
     if (!field.runtime.visible || !field.runtime.required || (field.type !== 'image' && field.type !== 'file')) return false
     const tasks = mediaTasksByField.value[field.fieldId] ?? []
     if (tasks.some((task) => task.state !== 'uploaded')) return true
@@ -605,6 +644,8 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       userId: nextDescriptor.userId,
       workOrderId: nextDescriptor.workOrderId,
       workflowNodeId: nextDescriptor.workflowNodeId,
+      ...(nextDescriptor.contentIdentity ? { formDefinitionId: String(nextDescriptor.contentIdentity) as FormDefinitionId } : {}),
+      ...(dynamicForm.value.dataId ? { formDataId: dynamicForm.value.dataId } : {}),
     })
     if (listed.state !== 'succeeded' || !listed.data) {
       // Queue metadata is auxiliary to the business read. Keep the form usable
@@ -614,7 +655,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     }
 
     let restoredBusinessValue = false
-    for (const task of listed.data) {
+    for (const task of listed.data.filter((candidate) => mediaTaskMatchesDynamicForm(candidate, nextDescriptor, dynamicForm.value!))) {
       rememberMediaTask(task)
       if (task.state === 'uploaded' && task.uploadedRef) {
         const fieldUploaded = mediaByField.value[task.scope.fieldId] ?? []
@@ -1201,7 +1242,12 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     error.value = null
     if (configured.mediaUploadQueue) {
       for (const task of Object.values(mediaTasksByField.value).flat()) {
-        if (task.state !== 'uploaded') continue
+        if (
+          task.state !== 'uploaded'
+          || !task.uploadedRef
+          || !mediaTaskMatchesDynamicForm(task, currentDescriptor, form)
+          || !formValueContainsUploadedRef(validation.data[task.scope.valueKey], task.uploadedRef)
+        ) continue
         const finalized = await configured.mediaUploadQueue.finalizeAfterSave(task.taskId)
         if (finalized.state === 'succeeded') {
           const remaining = (mediaTasksByField.value[task.scope.fieldId] ?? [])

@@ -34,6 +34,8 @@ if (contract.formSafety?.remoteRefBeforeConfirmedUpload !== false || contract.fo
 if (contract.platform?.mp_weixin?.status !== 'PARTIAL' || contract.platform?.app?.status !== 'PARTIAL') fail('platform verification must remain honest')
 if (contract.photoEvidence?.camera?.locationRequired !== true || contract.photoEvidence?.camera?.watermark !== 'PREPROCESSOR_REQUIRED') fail('camera evidence policy is not source-backed')
 if (!Array.isArray(contract.deferred) || !contract.deferred.some((item) => String(item).includes('serviceGoods/projPackage'))) fail('serviceGoods deferred disposition is missing')
+if (contract.photoEvidence?.surveyDrawing !== 'DEFERRED_NON_BLOCKING') fail('surveyDrawing must be deferred and non-blocking')
+if (!contract.deferred.some((item) => String(item).includes('surveyDrawing') && String(item).includes('non-blocking'))) fail('surveyDrawing deferred disposition is missing')
 
 const serialized = JSON.stringify(contract)
 for (const forbidden of ['http://', 'https://', 'JSESSIONID', 'access_token', 'sessionRef', 'phoneLogin', 'customerName', '138000']) {

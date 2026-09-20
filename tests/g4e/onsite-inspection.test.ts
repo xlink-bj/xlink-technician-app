@@ -35,6 +35,7 @@ import type {
   DynamicFormRead,
   FormFieldValue,
   MediaFilePickerPort,
+  MediaUploadQueuePort,
   SaveDynamicFormInput,
   SessionSnapshot,
   StorageKey,
@@ -49,6 +50,7 @@ import {
   createCapabilityResult,
   type FormDataId,
   type LocalMedia,
+  type MediaUploadTask,
   type OperationSnapshot,
   type UploadedMediaRef,
 } from '@shared/types'
@@ -143,6 +145,7 @@ function configureWorkspace(
   detailResult: WorkOrderDetail = surveyDetail(),
   dynamicForm: DynamicFormRead = surveyForm(),
   useDurableMediaQueue = false,
+  mediaQueueOverride?: MediaUploadQueuePort,
 ) {
   const storage = storageFor()
   const api: TechnicianApiReadPort = {
@@ -175,9 +178,9 @@ function configureWorkspace(
       uploadState: 'uploaded' as const,
     })),
   }
-  const mediaUploadQueue = useDurableMediaQueue
+  const mediaUploadQueue = mediaQueueOverride ?? (useDurableMediaQueue
     ? createMediaUploadQueue(new InMemoryDurableMediaStore(), createMediaQueueRepository(storage.storage), upload)
-    : undefined
+    : undefined)
   const navigation = { navigate: vi.fn(async () => undefined) }
   const store = useActionWorkspaceStore()
   store.configure({
@@ -192,7 +195,7 @@ function configureWorkspace(
     debounceMs: 1,
     now: () => '2026-09-17T10:00:00.000Z',
   })
-  return { store, api, command, save, complete, picker, upload, storage }
+  return { store, api, command, save, complete, picker, upload, storage, mediaUploadQueue }
 }
 
 async function fillAndSave(store: ReturnType<typeof useActionWorkspaceStore>): Promise<void> {
@@ -456,7 +459,7 @@ describe('G4-E Survey dynamic Action Content', () => {
     const drawingWorkspace = configureWorkspace(succeeded(undefined), surveyDetail(), drawingForm)
     await drawingWorkspace.store.load({ workOrderId, workflowNodeId, actionIntent: 'interact_with_form' })
 
-    expect(drawingWorkspace.store.dynamicUnsupportedFields.map((field) => field.valueKey)).toContain('surveyDrawing')
+    expect(drawingWorkspace.store.dynamicUnsupportedFields.map((field) => field.valueKey)).not.toContain('surveyDrawing')
     const drawing = await drawingWorkspace.store.pickDynamicMedia('survey-drawing')
     expect(drawing.state).toBe('failed_terminal')
     expect(drawing.error?.category).toBe('unsupported_capability')
@@ -542,6 +545,48 @@ describe('G4-E Survey dynamic Action Content', () => {
       values: expect.objectContaining({ surveyPhoto: 'https://mock-upload.invalid/local-survey-photo' }),
     }))
     expect(store.mediaTasksByField['survey-photo']).toEqual([])
+  })
+
+  it('does not finalize an uploaded task whose ref is absent from this save payload', async () => {
+    const finalizeAfterSave = vi.fn(async () => succeeded(undefined))
+    const queue = {
+      listForAction: vi.fn(async () => succeeded<readonly MediaUploadTask[]>([])),
+      finalizeAfterSave,
+    } as unknown as MediaUploadQueuePort
+    const { store } = configureWorkspace(succeeded(undefined), surveyDetail(), surveyForm(), false, queue)
+    await store.load({ workOrderId, workflowNodeId, actionIntent: 'interact_with_form' })
+    store.setField('survey-summary', '墙面情况正常')
+    store.setField('survey-result', 'safe')
+    store.setField('survey-photo', 'https://mock-upload.invalid/current-photo')
+
+    const unappliedTask: MediaUploadTask = {
+      schemaVersion: 1,
+      taskId: asOpaqueId<'MediaUploadTaskId'>('unapplied-task'),
+      scope: {
+        userId,
+        workOrderId,
+        workflowNodeId,
+        formDefinitionId,
+        fieldId: 'survey-photo',
+        valueKey: 'surveyPhoto',
+        localAssetId: asOpaqueId<'LocalMediaRef'>('unapplied-local-photo'),
+      },
+      state: 'uploaded',
+      attempts: 1,
+      createdAt: '2026-09-17T10:00:00.000Z',
+      updatedAt: '2026-09-17T10:00:00.000Z',
+      uploadedRef: {
+        url: 'https://mock-upload.invalid/hidden-photo',
+        source: 'library',
+        mimeType: 'image/jpeg',
+        uploadState: 'uploaded',
+      },
+    }
+    store.mediaTasksByField = { 'survey-photo': [unappliedTask] }
+
+    expect((await store.saveDynamicForm()).state).toBe('succeeded')
+    expect(finalizeAfterSave).not.toHaveBeenCalled()
+    expect(store.mediaTasksByField['survey-photo']).toHaveLength(1)
   })
 
   it('reconciles a failed completion before a later manual retry and never auto-retries', async () => {

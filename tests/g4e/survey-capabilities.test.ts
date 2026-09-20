@@ -38,7 +38,11 @@ describe('G4-E Survey capability matrix', () => {
     expect(byValueKey.get('leakageCauseSelect')?.implementationStatus).toBe('SUPPORTED')
     expect(byValueKey.get('serviceGoods')?.capabilityClass).toBe('CUSTOM_EXPERIENCE')
     expect(byValueKey.get('serviceGoods')?.implementationStatus).toBe('DEFERRED')
-    expect(byValueKey.get('surveyDrawing')?.implementationStatus).toBe('PARTIAL')
+    expect(byValueKey.get('surveyDrawing')).toMatchObject({
+      capabilityClass: 'CUSTOM_EXPERIENCE',
+      implementationStatus: 'DEFERRED',
+      submissionMode: 'EXCLUDED',
+    })
   })
 
   it('uses the effective ext condition when the root showValue is empty', () => {

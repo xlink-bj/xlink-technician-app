@@ -35,8 +35,9 @@ token 写入本合同。
 
 R1 明确存在 `surveyTool` 专用测绘入口，并且 Backend 对 `Survey.surveyDrawing`
 有 typed persistence。普通相册照片不能冒充测绘工具结果，因此新 Runtime 将
-该字段标记为 `UNKNOWN_SPECIAL_TOOL` 并阻断普通 picker/upload。测绘工具协议、
-绘制结果格式以及额外 `measurementData` 关系仍未被本轮实现。
+该字段标记为 `DEFERRED / NON-BLOCKING` 并阻断普通 picker/upload；它不渲染、不参与
+当前提交、不阻塞勘查完成。测绘工具协议、绘制结果格式以及额外 `measurementData`
+关系仍未被本轮实现。
 
 ### 普通 Survey 照片与除霉前后照片
 

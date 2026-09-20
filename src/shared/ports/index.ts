@@ -56,6 +56,7 @@ export type {
   DurableMediaStorePort,
   MediaPreprocessorPort,
   MediaQueueRepository,
+  MediaTaskLookupScope,
   MediaUploadQueuePort,
   NetworkStatus,
   NetworkStatusPort,

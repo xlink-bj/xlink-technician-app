@@ -86,12 +86,12 @@
       "watermark": "PREPROCESSOR_REQUIRED",
       "serverEndpointEvidence": "biz/image/uploadAddLogo.do"
     },
-    "surveyDrawing": "UNKNOWN_BLOCKED",
+    "surveyDrawing": "DEFERRED_NON_BLOCKING",
     "infrared": "PARTIAL"
   },
   "deferred": [
     "serviceGoods/projPackage remains DEFERRED and non-blocking",
-    "surveyDrawing tool protocol",
+    "surveyDrawing tool protocol is deferred and non-blocking; generic media fallback is prohibited",
     "real Beta/Production upload",
     "server idempotency contract",
     "device restart smoke on MP/App",

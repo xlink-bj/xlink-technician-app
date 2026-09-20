@@ -63,7 +63,8 @@ LocalMedia
 
 相册/文件选择路径当前可走 Mock/统一 UploadPort；相机路径只在具备真实定位和
 `MediaPreprocessorPort` 时允许 location-watermark policy，不使用 `0,0`、假地址、
-本地时间冒充服务端时间。`surveyDrawing` 仍为专用工具 UNKNOWN/BLOCKED，
+本地时间冒充服务端时间。`surveyDrawing` 是专用工具，当前明确延期为 DEFERRED / NON-BLOCKING，
+不允许回退到普通媒体选择器或上传路径；
 `infraredImageList` 保持独立字段且为 PARTIAL。
 
 ## Verification and deferred items

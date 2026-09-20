@@ -200,12 +200,11 @@
       "mobileApplicable": true,
       "conditionalVisibility": "无条件显示（以 showList 适用性为前提）",
       "provider": null,
-      "capabilityClass": "MEDIA_INPUT",
-      "currentRenderer": "Generic media picker + durable MediaUploadQueuePort + explicit form save",
-      "implementationStatus": "PARTIAL",
-      "submissionMode": "INCLUDED_IF_UPLOADED",
-      "blocker": "Survey-specific media contract and weak-network behavior are incomplete",
-      "notes": "R1 marks this field with surveyTool behavior; the new generic upload path is not equivalent to the drawing tool."
+      "capabilityClass": "CUSTOM_EXPERIENCE",
+      "currentRenderer": "Not rendered; verified surveyTool protocol is deferred for G4-E",
+      "implementationStatus": "DEFERRED",
+      "submissionMode": "EXCLUDED",
+      "notes": "The evidenced surveyDrawing field is required by the historical contract, but its special surveyTool protocol is not implemented. It is non-blocking for G4-E and must never fall back to the generic media picker or upload path."
     },
     {
       "fieldId": "survey-field-030",

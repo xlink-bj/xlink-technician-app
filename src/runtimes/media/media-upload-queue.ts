@@ -2,6 +2,7 @@ import type {
   DurableMediaStorePort,
   MediaPreprocessorPort,
   MediaQueueRepository,
+  MediaTaskLookupScope,
   MediaUploadQueuePort,
   UploadPort,
 } from '@shared/ports'
@@ -131,7 +132,7 @@ export class MediaUploadQueue implements MediaUploadQueuePort {
     return this.repository.remove(taskId)
   }
 
-  listForAction(scope: Pick<MediaTaskScope, 'userId' | 'workOrderId' | 'workflowNodeId'>) {
+  listForAction(scope: MediaTaskLookupScope) {
     return this.repository.list(scope)
   }
 

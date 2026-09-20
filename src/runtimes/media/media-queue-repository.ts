@@ -1,4 +1,4 @@
-import type { MediaQueueRepository, StoragePort } from '@shared/ports'
+import type { MediaQueueRepository, MediaTaskLookupScope, StoragePort } from '@shared/ports'
 import {
   createOperationError,
   type MediaUploadTask,
@@ -59,7 +59,7 @@ export class SemanticMediaQueueRepository implements MediaQueueRepository {
   }
 
   async list(
-    scope: Pick<MediaTaskScope, 'userId' | 'workOrderId' | 'workflowNodeId'>,
+    scope: MediaTaskLookupScope,
   ): Promise<OperationSnapshot<readonly MediaUploadTask[]>> {
     const keys = await this.storage.listKeys({ namespace: 'cache', prefix })
     if (keys.state !== 'succeeded' || !keys.data) return keys as unknown as OperationSnapshot<readonly MediaUploadTask[]>
@@ -72,11 +72,27 @@ export class SemanticMediaQueueRepository implements MediaQueueRepository {
         if (task.state !== 'succeeded') return task as unknown as OperationSnapshot<readonly MediaUploadTask[]>
         continue
       }
-      if (
-        String(task.data.scope.userId) === String(scope.userId)
-        && String(task.data.scope.workOrderId) === String(scope.workOrderId)
-        && String(task.data.scope.workflowNodeId) === String(scope.workflowNodeId)
-      ) tasks.push(task.data)
+      const taskScope = task.data.scope
+      const baseMatches = String(taskScope.userId) === String(scope.userId)
+        && String(taskScope.workOrderId) === String(scope.workOrderId)
+        && String(taskScope.workflowNodeId) === String(scope.workflowNodeId)
+      if (!baseMatches) continue
+
+      if (scope.formDefinitionId === undefined
+        ? taskScope.formDefinitionId !== undefined
+        : String(taskScope.formDefinitionId) !== String(scope.formDefinitionId)) continue
+      if (scope.fieldId !== undefined && taskScope.fieldId !== scope.fieldId) continue
+      if (scope.valueKey !== undefined && taskScope.valueKey !== scope.valueKey) continue
+
+      // A task created before the first form save has no formDataId and may
+      // be adopted by that first save. A task tied to a prior saved record
+      // must never be restored into a form with no current record identity.
+      if (scope.formDataId === undefined) {
+        if (taskScope.formDataId !== undefined) continue
+      } else if (taskScope.formDataId !== undefined
+        && String(taskScope.formDataId) !== String(scope.formDataId)) continue
+
+      tasks.push(task.data)
     }
     return { state: 'succeeded', data: tasks.sort((left, right) => left.createdAt.localeCompare(right.createdAt)) }
   }

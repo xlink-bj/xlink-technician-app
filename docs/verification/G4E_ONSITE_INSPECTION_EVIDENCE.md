@@ -1338,9 +1338,9 @@ rows and all 45 are explicitly classified:
 - 2 `OPTION_INPUT` rows (`part` and `isMoldRemoved`);
 - 6 `PRESENTATION_ONLY` rows (`gap0`–`gap4`, with the evidenced duplicate
   `gap4` row);
-- 24 `MEDIA_INPUT` rows at `PARTIAL` status;
+- 23 `MEDIA_INPUT` rows at `PARTIAL` status;
 - 2 `CUSTOM_EXPERIENCE` rows at `SUPPORTED` status (`leakageCauseSelect`,
-  `leakageCause`) and 1 legacy `DEFERRED` row (`serviceGoods`).
+  `leakageCause`) and 2 `DEFERRED` rows (`surveyDrawing`, `serviceGoods`).
 
 The first implementation slice is generic and type-driven: `type=gap` is a
 Dynamic Form Runtime `PRESENTATION_ONLY` capability. It can render a restrained
@@ -1355,6 +1355,8 @@ Qiniu upload path, has a distinct `surveyTool` path for `surveyDrawing`, and
 uses `/biz/image/uploadAddLogo` for camera watermark processing. The new App
 has not claimed camera/location/timestamp, max-count, staged-save, or complete
 offline semantics; the generic queue provides explicit retry states only.
+`surveyDrawing` is deferred and non-blocking for G4-E; its special `surveyTool`
+protocol is not rendered and never falls back to the generic media picker/upload path.
 `leakageCauseSelect` and `leakageCause` remain a coupled
 part-scoped tree interaction with `leakageCause[]` persistence, not two scalar
 fields. `serviceGoods` remains “推荐服务商品”; R1 evidence shows
@@ -1370,8 +1372,8 @@ The bounded media contract is recorded in
 normalized path now preserves R1/Backend media object lists as
 neutral `MediaValueRef[]`; the Survey-specific codec owns conversion to the
 evidenced wire shape. Media upload, form save and workflow completion remain
-separate operations. The registry keeps `surveyDrawing` behind its unverified
-special survey tool, enforces only the evidenced `surveyDrawing=1` and
+separate operations. The registry keeps `surveyDrawing` deferred/non-blocking behind
+its unverified special survey tool, prohibits generic fallback, enforces only the evidenced `surveyDrawing=1` and
 `infraredImageList=4` limits, and leaves ordinary/aggregate limits UNKNOWN.
 
 The implementation remains Mock/test oriented for business writes. It does not
@@ -1416,6 +1418,6 @@ cleanup failure is not reclassified as business-save failure.
 
 This is infrastructure evidence, not a claim of finished offline business
 support. MP/App device restart smoke, real Beta/Production/Qiniu upload,
-server idempotency, camera watermark execution, surveyDrawing tooling and
+server idempotency, camera watermark execution and surveyDrawing tooling (deferred)
 offline location-report integration remain PARTIAL/DEFERRED. `serviceGoods` /
 `projPackage` remains DEFERRED and non-blocking.
