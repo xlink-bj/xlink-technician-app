@@ -1427,3 +1427,42 @@ support. MP/App device restart smoke, real Beta/Production/Qiniu upload,
 server idempotency, camera watermark execution and surveyDrawing tooling (deferred)
 offline location-report integration remain PARTIAL/DEFERRED. `serviceGoods` /
 `projPackage` remains DEFERRED and non-blocking.
+
+## G4-E P0 action capability — Survey Onsite Check-in
+
+The current Yuhong product requirement identifies **工勘打卡 / Survey onsite
+check-in** as a P0 action capability: location plus system time, with manual
+check-in and a separate appointment-near automatic requirement. It is not a
+Dynamic Form field and it is not the `InspectionAppointment` / 巡检 domain.
+The intended business sequence is:
+
+```text
+预约确认 -> Survey onsite check-in -> Survey / 勘查 -> 报价
+```
+
+The contract artifact is
+`contracts/beta/survey/onsite-checkin-contract.json`, checked by
+`pnpm run check:survey-onsite-checkin`. It records the requirement and keeps
+the unproven business contract explicit: the Survey record owner, command/API,
+coordinate system, accuracy policy, authoritative time and appointment-near
+rules are currently UNKNOWN. No `ServiceAppointment.gpsPoint` or
+`InspectionAppointment.gpsPoint` field is promoted to a check-in record.
+
+The source trace found legacy generic candidates in `/biz/punch/dot` and the
+`Sign`/`SignDetail` family. They accept or persist location-bearing work
+records, but do not prove ownership of the current Survey check-in contract.
+Survey itself has no proven check-in command or `gpsPoint` field in the
+evidence reviewed. Legacy thresholds are not adopted as appointment-near
+rules, and no time/distance threshold is invented.
+
+The generic `LocationPort` may be reused to acquire a location snapshot when
+the business command is proven. Photo watermark/location evidence remains
+separate from the check-in business record and does not complete check-in,
+save Survey, complete workflow, or create a quote. There is no
+Survey-specific location port, business command, automatic scheduler,
+background mutation, blind retry, or offline business-mutation queue in this
+slice. Real Beta and Production writes are disabled and none were performed.
+
+Status: **CONTRACT / PARTIAL — awaiting verified Survey owner, command and
+reconciliation contract**. This is an action-capability evidence artifact,
+not an addition to the Survey form-field capability matrix.

@@ -20,6 +20,7 @@
     "check:survey-contract": "node scripts/check-survey-contract.mjs",
     "check:survey-capabilities": "node scripts/check-survey-capabilities.mjs",
     "check:survey-leakage-cause": "node scripts/check-survey-leakage-cause.mjs",
+    "check:survey-onsite-checkin": "node scripts/check-survey-onsite-checkin.mjs",
     "typecheck": "vue-tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
