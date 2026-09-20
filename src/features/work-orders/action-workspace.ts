@@ -41,9 +41,9 @@ import {
   type UserId,
   type WorkOrderId,
   type WorkflowNodeRuntimeId,
-  isSurveyMediaRef,
-  surveyMediaRefFromUpload,
-  type SurveyMediaRef,
+  isMediaValueRef,
+  mediaValueRefFromUpload,
+  type MediaValueRef,
   type UploadedMediaRef,
 } from '@shared/types'
 import {
@@ -147,9 +147,9 @@ function formFieldValue(value: unknown): FormFieldValue | undefined {
   )) {
     return value as readonly (string | number | boolean)[]
   }
-  if (isSurveyMediaRef(value)) return value
-  if (Array.isArray(value) && value.every((item) => isSurveyMediaRef(item))) {
-    return value as readonly SurveyMediaRef[]
+  if (isMediaValueRef(value)) return value
+  if (Array.isArray(value) && value.every((item) => isMediaValueRef(item))) {
+    return value as readonly MediaValueRef[]
   }
   return undefined
 }
@@ -333,7 +333,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     if (!field.runtime.visible || !field.runtime.required || (field.type !== 'image' && field.type !== 'file')) return false
     const value = dynamicForm.value?.values[field.valueKey]
     if (Array.isArray(value)) return value.length === 0
-    if (isSurveyMediaRef(value)) return false
+    if (isMediaValueRef(value)) return false
     return !value
   }))
   const dynamicMediaUploading = computed(() => mediaInFlightField.value !== null)
@@ -942,6 +942,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       workflowNodeId: currentDescriptor.workflowNodeId,
       ...(detail.value?.workflowRunId ? { workflowRunId: detail.value.workflowRunId } : {}),
       definitionId: currentDescriptor.contentIdentity as FormDefinitionId,
+      ...(form.purpose ? { purpose: form.purpose } : {}),
       ...(form.dataId ? { formDataId: form.dataId } : {}),
       values: validation.data,
     })
@@ -1018,7 +1019,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       return { state: validation.state, ...(validation.error ? { error: validation.error } : {}) }
     }
     if (dynamicRequiredMediaPending.value || dynamicMediaUploading.value) {
-      const mediaError = createOperationError('validation', 'Required inspection media is not uploaded')
+      const mediaError = createOperationError('validation', 'Required media is not uploaded')
       error.value = mediaError
       lifecycle.value = 'in_progress'
       return { state: 'failed_terminal', error: mediaError }
@@ -1055,22 +1056,22 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     const field = form?.fields.find((candidate) => candidate.fieldId === fieldId)
     const effective = dynamicFields.value.find((candidate) => candidate.fieldId === fieldId)
     if (!configured || !form || !field || !effective) {
-      return failure('unsupported_capability', 'Survey media is unavailable')
+      return failure('unsupported_capability', 'Media is unavailable')
     }
     if (field.type !== 'image' && field.type !== 'file') {
-      return failure('unsupported_capability', 'Survey media is unavailable')
+      return failure('unsupported_capability', 'Media is unavailable')
     }
     if (effective.runtime.capability === 'UNSUPPORTED') {
-      return failure('unsupported_capability', effective.runtime.reason ?? 'Survey media is unavailable')
+      return failure('unsupported_capability', effective.runtime.reason ?? 'Media is unavailable')
     }
-    if (!effective.runtime.visible) return failure('validation', 'This inspection media field is hidden')
-    if (effective.runtime.readOnly) return failure('validation', 'This inspection media field is read-only')
+    if (!effective.runtime.visible) return failure('validation', 'This media field is hidden')
+    if (effective.runtime.readOnly) return failure('validation', 'This media field is read-only')
     const mediaDescriptor = surveyMediaDescriptorFor(form.purpose, field)
     if (mediaDescriptor?.selectionMode === 'special_tool') {
       return failure('unsupported_capability', mediaDescriptor.blocker ?? 'Survey media tool is unavailable')
     }
     if (!configured.mediaFilePicker || !configured.upload) {
-      return failure('unsupported_capability', 'Survey media upload is unavailable')
+      return failure('unsupported_capability', 'Media upload is unavailable')
     }
     if (mediaInFlightField.value) return failure('validation', 'Media upload is already in progress')
 
@@ -1112,7 +1113,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
 
       mediaByField.value = { ...mediaByField.value, [fieldId]: uploaded }
       const mediaValue: FormFieldValue = mediaDescriptor
-        ? uploaded.map(surveyMediaRefFromUpload)
+        ? uploaded.map(mediaValueRefFromUpload)
         : uploaded.length === 1
           ? uploaded[0].url
           : uploaded.map((item) => item.url)

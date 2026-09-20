@@ -10,6 +10,7 @@ import {
   type AuthWireConfig,
   type AuthBackendDriver,
 } from '@adapters/auth/auth-session-adapter'
+import { surveyMediaValueCodec } from '@adapters/api/survey-form-codec'
 import {
   createPlatformAdapters,
   createUnsupportedPlatformAdapters,
@@ -336,6 +337,7 @@ describe('G3-C API adapter foundation', () => {
     const result = await api.getFormData({
       definitionId: asOpaqueId<'FormDefinitionId'>('survey-definition'),
       dataId: asOpaqueId<'FormDataId'>('survey-data-001'),
+      valueCodec: surveyMediaValueCodec,
     })
 
     expect(result).toMatchObject({
@@ -368,10 +370,37 @@ describe('G3-C API adapter foundation', () => {
     const result = await api.getFormData({
       definitionId: asOpaqueId<'FormDefinitionId'>('survey-definition'),
       dataId: asOpaqueId<'FormDataId'>('survey-data-001'),
+      valueCodec: surveyMediaValueCodec,
     })
 
     expect(result.state).toBe('failed_terminal')
     expect(result.error?.category).toBe('server_terminal')
+  })
+
+  it('does not assign Survey media semantics to object-like values in a generic form', async () => {
+    const transport = new FixtureApiTransport({
+      'biz/extForm/query/generic-definition': {
+        data: [{
+          _id: 'generic-data-001',
+          extId: 'generic-definition',
+          exts: {
+            attachments: [{ url: 'https://media.invalid/generic', name: 'generic/object' }],
+            arbitraryRows: [{ url: 'https://media.invalid/row', label: 'not media' }],
+          },
+        }],
+      },
+    })
+    const api = createTechnicianApiReadAdapter(transport)
+    const result = await api.getFormData({
+      definitionId: asOpaqueId<'FormDefinitionId'>('generic-definition'),
+      dataId: asOpaqueId<'FormDataId'>('generic-data-001'),
+    })
+
+    expect(result).toMatchObject({
+      state: 'succeeded',
+      data: { items: [{ id: 'generic-data-001', definitionId: 'generic-definition' }] },
+    })
+    expect(result.data?.items[0]?.values).toBeUndefined()
   })
 
   it('routes only an explicit Survey Ext identity and leaves generic forms unclassified', async () => {

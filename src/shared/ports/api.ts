@@ -10,7 +10,7 @@ import type {
   WorkflowNodeRuntimeId,
   WorkflowRunId,
 } from '@shared/types'
-import type { OperationSnapshot, SurveyMediaRef } from '@shared/types'
+import type { MediaValueRef, OperationSnapshot } from '@shared/types'
 
 export interface ReadPage<T> {
   readonly items: readonly T[]
@@ -225,8 +225,18 @@ export type FormFieldPrimitive = string | number | boolean
 export type FormFieldValue =
   | FormFieldPrimitive
   | null
-  | SurveyMediaRef
-  | readonly (FormFieldPrimitive | SurveyMediaRef)[]
+  | MediaValueRef
+  | readonly (FormFieldPrimitive | MediaValueRef)[]
+
+export interface FormValueCodecContext {
+  readonly valueKey: string
+}
+
+/** Business/form codecs own persistence-specific value translation. */
+export interface FormValueCodec {
+  decode(value: unknown, context: FormValueCodecContext): FormFieldValue | undefined
+  encode(value: FormFieldValue, context: FormValueCodecContext): unknown
+}
 
 export type FormFieldVisibilityPath = string | readonly string[]
 
@@ -276,10 +286,12 @@ export interface TechnicianApiReadPort {
   getFormData(input: {
     readonly definitionId: FormDefinitionId
     readonly dataId?: FormDataId
+    readonly valueCodec?: FormValueCodec
   }): Promise<OperationSnapshot<ReadPage<FormDataRead>>>
   getFormDetail(input: {
     readonly definitionId: FormDefinitionId
     readonly dataId: FormDataId
+    readonly valueCodec?: FormValueCodec
   }): Promise<OperationSnapshot<FormDataRead>>
   getCodeOptions(
     query: CodeOptionsQuery,

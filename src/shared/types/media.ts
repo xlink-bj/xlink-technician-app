@@ -25,28 +25,30 @@ export interface UploadedMediaRef {
 }
 
 /**
- * The persisted Survey media shape.  This is intentionally separate from
- * UploadedMediaRef: local/upload lifecycle metadata must never leak into
- * FormData values.
+ * Neutral media value carried by a form runtime. Business/form wire codecs
+ * decide how this value is persisted; local/upload lifecycle metadata never
+ * leaks into FormData values.
  */
-export interface SurveyMediaRef {
+export interface MediaValueRef {
   readonly url: string
   readonly objectKey?: string
   readonly fileName?: string
   readonly extension?: string
 }
 
-export function isSurveyMediaRef(value: unknown): value is SurveyMediaRef {
+export function isMediaValueRef(value: unknown): value is MediaValueRef {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) return false
   const record = value as Record<string, unknown>
   if (typeof record.url !== 'string' || record.url.trim().length === 0) return false
+  const allowedKeys = new Set(['url', 'objectKey', 'fileName', 'extension'])
+  if (Object.keys(record).some((key) => !allowedKeys.has(key))) return false
   return ['objectKey', 'fileName', 'extension'].every((key) => {
     const candidate = record[key]
     return candidate === undefined || (typeof candidate === 'string' && candidate.trim().length > 0)
   })
 }
 
-export function surveyMediaRefFromUpload(media: UploadedMediaRef): SurveyMediaRef {
+export function mediaValueRefFromUpload(media: UploadedMediaRef): MediaValueRef {
   return {
     url: media.url,
     ...(media.key ? { objectKey: media.key } : {}),

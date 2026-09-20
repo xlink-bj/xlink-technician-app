@@ -5,20 +5,23 @@ import type {
   CompleteWorkflowNodeInput,
   DynamicFormRead,
   FormDefinitionRead,
+  FormFieldValue,
   FormFieldRead,
   ReadDynamicFormInput,
   SaveDynamicFormInput,
   SubmitAppointmentInput,
   TechnicianApiCommandPort,
   TechnicianApiReadPort,
+  FormPurpose,
 } from '@shared/ports'
-import { isSurveyMediaRef } from '@shared/types'
-import type { FormDataId, FormDefinitionId, OperationSnapshot, SurveyMediaRef } from '@shared/types'
+import { isMediaValueRef } from '@shared/types'
+import type { FormDataId, FormDefinitionId, OperationSnapshot } from '@shared/types'
 
 import { appointmentFormDefinitionWireId } from './appointment-contract'
 import type { ApiRequestMethod, ApiRequestValue } from './technician-api'
 import { AdapterMappingError, adapterFailure, succeeded, unknownErrorMessage } from '../common/operations'
 import { asRecord, nestedValue, optionalRecord, optionalString, requiredString, type AdapterRecord } from '../common/records'
+import { surveyMediaValueCodec } from './survey-form-codec'
 
 export interface ApiCommandRequest {
   readonly method: Extract<ApiRequestMethod, 'POST'>
@@ -149,25 +152,21 @@ function mapSubmitValues(values: Readonly<Record<string, string | number | boole
   return Object.fromEntries(Object.entries(values).filter(([, value]) => value !== null))
 }
 
-function mapDynamicValues(values: Readonly<Record<string, unknown>>): Record<string, unknown> {
+function mapDynamicValues(
+  values: Readonly<Record<string, unknown>>,
+  purpose?: FormPurpose,
+): Record<string, unknown> {
   return Object.fromEntries(Object.entries(values)
     .filter(([, value]) => value !== null)
-    .map(([key, value]) => [key, mapDynamicValue(value)]))
+    .map(([key, value]) => [key, mapDynamicValue(value, key, purpose)]))
 }
 
-function mapSurveyMediaRef(value: SurveyMediaRef): Record<string, string> {
-  return {
-    url: value.url,
-    ...(value.objectKey ? { name: value.objectKey } : {}),
-    ...(value.fileName ? { fileName: value.fileName } : {}),
-    ...(value.extension ? { extname: value.extension } : {}),
+function mapDynamicValue(value: unknown, valueKey: string, purpose?: FormPurpose): unknown {
+  if (purpose === 'survey') {
+    return surveyMediaValueCodec.encode(value as FormFieldValue, { valueKey })
   }
-}
-
-function mapDynamicValue(value: unknown): unknown {
-  if (isSurveyMediaRef(value)) return mapSurveyMediaRef(value)
-  if (Array.isArray(value) && value.every((item) => isSurveyMediaRef(item))) {
-    return value.map((item) => mapSurveyMediaRef(item))
+  if (isMediaValueRef(value) || (Array.isArray(value) && value.some(isMediaValueRef))) {
+    throw new AdapterMappingError(`A verified form media codec is required for ${valueKey}`)
   }
   return value
 }
@@ -300,6 +299,7 @@ export class TechnicianApiCommandAdapter implements TechnicianApiCommandPort {
     const data = await this.readPort.getFormData({
       definitionId: input.definitionId,
       dataId: input.formDataId,
+      ...(resolvedDefinition.data.purpose === 'survey' ? { valueCodec: surveyMediaValueCodec } : {}),
     })
     if (data.state !== 'succeeded' || !data.data) return failureFrom(data)
 
@@ -326,14 +326,19 @@ export class TechnicianApiCommandAdapter implements TechnicianApiCommandPort {
   }
 
   async saveDynamicForm(input: SaveDynamicFormInput): Promise<OperationSnapshot<FormDataId>> {
-    const formData: Record<string, unknown> = {
-      ...mapDynamicValues(input.values),
-      sid: input.workOrderId,
-      smodule: 'serviceAppointment',
-      nodeId: input.workflowNodeId,
-      ...(input.workflowRunId ? { workflowId: input.workflowRunId } : {}),
-      ...(input.formDataId ? { _id: input.formDataId } : {}),
-      state: 1,
+    let formData: Record<string, unknown>
+    try {
+      formData = {
+        ...mapDynamicValues(input.values, input.purpose),
+        sid: input.workOrderId,
+        smodule: 'serviceAppointment',
+        nodeId: input.workflowNodeId,
+        ...(input.workflowRunId ? { workflowId: input.workflowRunId } : {}),
+        ...(input.formDataId ? { _id: input.formDataId } : {}),
+        state: 1,
+      }
+    } catch (error) {
+      return commandFailure(error)
     }
     return this.command<FormDataId>(
       {

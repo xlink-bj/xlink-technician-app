@@ -84,6 +84,7 @@ export interface SaveDynamicFormInput {
   readonly workflowNodeId: WorkflowNodeRuntimeId
   readonly workflowRunId?: WorkflowRunId
   readonly definitionId: FormDefinitionId
+  readonly purpose?: FormPurpose
   readonly formDataId?: FormDataId
   readonly values: Readonly<Record<string, FormFieldValue>>
 }

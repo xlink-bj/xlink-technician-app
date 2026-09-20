@@ -1363,7 +1363,8 @@ The bounded media contract is recorded in
 `docs/verification/G4E_SURVEY_MEDIA_CONTRACT.md` and machine-checked by
 `pnpm run check:survey-media`. It contains 24 mobile Survey media rows. The
 normalized path now preserves R1/Backend media object lists as
-`SurveyMediaRef[]`; media upload, form save and workflow completion remain
+neutral `MediaValueRef[]`; the Survey-specific codec owns conversion to the
+evidenced wire shape. Media upload, form save and workflow completion remain
 separate operations. The registry keeps `surveyDrawing` behind its unverified
 special survey tool, enforces only the evidenced `surveyDrawing=1` and
 `infraredImageList=4` limits, and leaves ordinary/aggregate limits UNKNOWN.
@@ -1371,3 +1372,14 @@ special survey tool, enforces only the evidenced `surveyDrawing=1` and
 The implementation is online-only and Mock/test oriented. It does not perform
 real Beta/Production uploads, does not add camera watermark/LBS, does not add
 offline media persistence, and does not claim a Survey submit is complete.
+
+### Media abstraction boundary hardening
+
+The shared form/runtime layer now carries only the neutral `MediaValueRef`
+shape. It does not infer Survey semantics from URL-like objects and does not
+serialize those values into `{url,name,extname}`. The Survey-specific codec is
+selected only for a form whose normalized purpose is `survey` and only maps
+verified Survey media value keys. Generic form reads therefore ignore unknown
+object-shaped values, while generic writes fail closed when a media codec is
+required. Survey media policy remains in the feature registry; upload and
+workflow operations remain separate.

@@ -703,6 +703,7 @@ describe('G4-E Survey dynamic Action Content', () => {
       workOrderId,
       workflowNodeId,
       definitionId: formDefinitionId,
+      purpose: 'survey',
       values: {
         images1: [{
           url: 'https://media.invalid/object-002',
@@ -718,6 +719,27 @@ describe('G4-E Survey dynamic Action Content', () => {
     expect(JSON.parse(String(dataStr))).toMatchObject({
       images1: [{ url: 'https://media.invalid/object-002', name: 'survey/object-002', extname: 'jpg' }],
     })
+  })
+
+  it('does not serialize neutral media through a generic form path', async () => {
+    const execute = vi.fn(async () => ({ data: { _id: 'must-not-write' } }))
+    const commands = createTechnicianApiCommandAdapter(
+      { execute },
+      {} as TechnicianApiReadPort,
+    )
+
+    const result = await commands.saveDynamicForm!({
+      workOrderId,
+      workflowNodeId,
+      definitionId: formDefinitionId,
+      values: {
+        attachment: [{ url: 'https://media.invalid/generic-object' }],
+      },
+    })
+
+    expect(result.state).toBe('failed_terminal')
+    expect(result.error?.category).toBe('server_terminal')
+    expect(execute).not.toHaveBeenCalled()
   })
 
   it('applies ExtField.showList to the mobile detail Action surface', () => {

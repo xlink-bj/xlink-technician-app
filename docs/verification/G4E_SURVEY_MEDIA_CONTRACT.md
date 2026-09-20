@@ -20,8 +20,9 @@ token 写入本合同。
 - 必填媒体：`surveyDrawing`、`images1`、`images2`。
 - Backend 持久化形状：`List<Map>`，每个媒体对象至少有 `url`；R1 证据使用
   `name` 作为对象 key、`extname` 作为扩展名。
-- 新 App 规范化形状：`SurveyMediaRef[]`，对象字段为
-  `{ url, objectKey?, fileName?, extension? }`。本地路径、token、上传状态和
+- 新 App 规范化形状：中性的 `MediaValueRef[]`，对象字段为
+  `{ url, objectKey?, fileName?, extension? }`；仅由 Survey codec 负责映射为
+  R1 wire 形状。本地路径、token、上传状态和
   平台句柄不会进入 FormData。
 - `ExtField.multiple=false` 不被解释为标量；Survey 媒体仍按列表对象处理。
 - 已证据数量上限：`surveyDrawing=1`、`infraredImageList=4`。

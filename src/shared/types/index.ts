@@ -23,10 +23,10 @@ export type {
 } from './identifiers'
 export { asOpaqueId } from './identifiers'
 export {
-  isSurveyMediaRef,
-  surveyMediaRefFromUpload,
+  isMediaValueRef,
+  mediaValueRefFromUpload,
 } from './media'
-export type { LocalMedia, MediaSource, SurveyMediaRef, UploadedMediaRef, UploadState } from './media'
+export type { LocalMedia, MediaSource, MediaValueRef, UploadedMediaRef, UploadState } from './media'
 export {
   createOperationError,
   isRetryableCategory,

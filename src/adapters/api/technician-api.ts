@@ -4,6 +4,7 @@ import type {
   CodeOptionsQuery,
   FormDataRead,
   FormFieldOptionRead,
+  FormValueCodec,
   FormFieldRead,
   FormFieldPresentation,
   FormFieldValue,
@@ -35,7 +36,6 @@ import type {
   WorkflowRunId,
 } from '@shared/types'
 import { asOpaqueId } from '@shared/types'
-import type { SurveyMediaRef } from '@shared/types'
 
 import {
   AdapterMappingError,
@@ -957,56 +957,24 @@ function formDefinition(raw: unknown, requestedId: FormDefinitionId): FormDefini
   }
 }
 
-function rawMediaRef(value: unknown): SurveyMediaRef | undefined {
-  if (value === null || typeof value !== 'object' || Array.isArray(value)) return undefined
-  const record = value as Record<string, unknown>
-  const hasMediaShape = ['url', 'key', 'fileKey', 'objectKey', 'name', 'extname', 'extension', 'fileName']
-    .some((key) => Object.prototype.hasOwnProperty.call(record, key))
-  if (!hasMediaShape) return undefined
-  if (typeof record.url !== 'string' || record.url.trim().length === 0) {
-    throw new AdapterMappingError('Survey media record is missing a usable url')
-  }
-  const objectKey = [record.key, record.fileKey, record.objectKey, record.name]
-    .find((value): value is string => typeof value === 'string' && value.trim().length > 0)
-  const fileName = typeof record.fileName === 'string' && record.fileName.trim().length > 0
-    ? record.fileName
-    : undefined
-  const extension = [record.extname, record.extension]
-    .find((value): value is string => typeof value === 'string' && value.trim().length > 0)
-  return {
-    url: record.url,
-    ...(objectKey ? { objectKey } : {}),
-    ...(fileName ? { fileName } : {}),
-    ...(extension ? { extension } : {}),
-  }
-}
-
-function formFieldValue(value: unknown): FormFieldValue | undefined {
+function formFieldValue(value: unknown, codec: FormValueCodec | undefined, valueKey: string): FormFieldValue | undefined {
   if (value === null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
     return value
   }
-  const media = rawMediaRef(value)
-  if (media) return media
   if (Array.isArray(value)) {
     if (value.every((item) =>
       typeof item === 'string' || typeof item === 'number' || typeof item === 'boolean',
     )) return value as readonly (string | number | boolean)[]
-    if (value.every((item) => rawMediaRef(item))) {
-      return value.map((item) => rawMediaRef(item)!)
-    }
-    if (value.some((item) => item !== null && typeof item === 'object')) {
-      throw new AdapterMappingError('Survey media list is malformed')
-    }
   }
-  return undefined
+  return codec?.decode(value, { valueKey })
 }
 
-function formValues(record: AdapterRecord): Readonly<Record<string, FormFieldValue>> | undefined {
+function formValues(record: AdapterRecord, codec?: FormValueCodec): Readonly<Record<string, FormFieldValue>> | undefined {
   const values: Record<string, FormFieldValue> = {}
   const extensions = optionalRecord(record.exts)
   if (extensions) {
     for (const [key, value] of Object.entries(extensions)) {
-      const normalized = formFieldValue(value)
+      const normalized = formFieldValue(value, codec, key)
       if (normalized !== undefined) values[key] = normalized
     }
   }
@@ -1024,16 +992,16 @@ function formValues(record: AdapterRecord): Readonly<Record<string, FormFieldVal
   ])
   for (const [key, value] of Object.entries(record)) {
     if (metadata.has(key) || key in values) continue
-    const normalized = formFieldValue(value)
+    const normalized = formFieldValue(value, codec, key)
     if (normalized !== undefined) values[key] = normalized
   }
   return Object.keys(values).length > 0 ? values : undefined
 }
 
-function formData(raw: unknown): FormDataRead {
+function formData(raw: unknown, codec?: FormValueCodec): FormDataRead {
   const record = asRecord(raw, 'form data')
   const workflow = nestedRecord(record, ['workflow'])
-  const values = formValues(record)
+  const values = formValues(record, codec)
   return {
     id: requiredOpaqueId<'FormDataId'>(record, ['id', '_id', 'dataId'], 'form data id'),
     definitionId: requiredOpaqueId<'FormDefinitionId'>(
@@ -1457,7 +1425,11 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
     )
   }
 
-  getFormData(input: { readonly definitionId: FormDefinitionId; readonly dataId?: FormDataId }) {
+  getFormData(input: {
+    readonly definitionId: FormDefinitionId
+    readonly dataId?: FormDataId
+    readonly valueCodec?: FormValueCodec
+  }) {
     const body = {
       sortField: 'createTime',
       sortOrder: 'desc',
@@ -1469,11 +1441,15 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
         path: `biz/extForm/query/${encodeURIComponent(input.definitionId)}`,
         body,
       },
-      (raw) => pageEnvelope(raw, formData),
+      (raw) => pageEnvelope(raw, (item) => formData(item, input.valueCodec)),
     )
   }
 
-  getFormDetail(input: { readonly definitionId: FormDefinitionId; readonly dataId: FormDataId }) {
+  getFormDetail(input: {
+    readonly definitionId: FormDefinitionId
+    readonly dataId: FormDataId
+    readonly valueCodec?: FormValueCodec
+  }) {
     return this.read<FormDataRead>(
       {
         method: 'GET',
@@ -1483,7 +1459,7 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
       (raw) => {
         const envelope = asRecord(raw, 'form detail response')
         const data = nestedValue(envelope, ['data', 'entity'])
-        return formData(data ?? envelope)
+        return formData(data ?? envelope, input.valueCodec)
       },
     )
   }

@@ -10,8 +10,8 @@ import type {
   NormalizedFieldValue,
   SubmissionResult,
 } from './types'
-import { isSurveyMediaRef } from '@shared/types'
-import type { LocalMediaRef, SurveyMediaRef } from '@shared/types'
+import { isMediaValueRef } from '@shared/types'
+import type { LocalMediaRef, MediaValueRef } from '@shared/types'
 
 const trimmedStringTypes = new Set(['text', 'textarea', 'phone', 'IDNumber', 'date', 'time', 'datetime'])
 const optionScalarTypes = new Set(['select', 'bizSelect', 'radio', 'rate'])
@@ -116,9 +116,9 @@ export function normalizeFieldValue(
     return result === undefined ? invalid(`${type} requires a scalar choice`) : { ok: true, value: result }
   }
   if (type === 'file' || type === 'image') {
-    const mediaReference = (candidate: unknown): LocalMediaRef | SurveyMediaRef | undefined => {
+    const mediaReference = (candidate: unknown): LocalMediaRef | MediaValueRef | undefined => {
       if (typeof candidate === 'string' && candidate.trim().length > 0) return candidate as LocalMediaRef
-      if (isSurveyMediaRef(candidate)) return candidate
+      if (isMediaValueRef(candidate)) return candidate
       return undefined
     }
     if (Array.isArray(value)) {
@@ -126,7 +126,7 @@ export function normalizeFieldValue(
       if (references.some((reference) => reference === undefined)) {
         return invalid(`${type} requires normalized media references`)
       }
-      return { ok: true, value: references as readonly (LocalMediaRef | SurveyMediaRef)[] }
+      return { ok: true, value: references as readonly (LocalMediaRef | MediaValueRef)[] }
     }
     const reference = mediaReference(value)
     return reference
