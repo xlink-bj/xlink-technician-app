@@ -8,6 +8,7 @@ import type {
   MediaCapturePort,
   MediaFilePickerPort,
   UploadPort,
+  SurveyLeakageCauseProviderPort,
 } from '@shared/ports'
 import { createOperationError, type OperationSnapshot } from '@shared/types'
 
@@ -24,6 +25,7 @@ import { createUniPhoneDriver } from '@adapters/platform/uni-phone-driver'
 import { createUniNavigationDriver } from '@adapters/platform/uni-navigation-driver'
 import { createUniMediaCaptureDriver, createUniMediaFilePickerDriver } from '@adapters/platform/uni-media-drivers'
 import { createUniUploadPort } from '@adapters/upload/uni-upload-port'
+import { createSurveyLeakageCauseProvider } from '@adapters/api/survey-leakage-cause'
 
 import { loadApplicationRuntimeConfig } from './runtime-config'
 
@@ -97,6 +99,28 @@ export function createDefaultTechnicianApiReadPort(authSession: AuthSessionPort)
       codeTenantId: config.value.authWireConfig.tenant,
     },
   )
+}
+
+export function createDefaultSurveyLeakageCauseProvider(authSession: AuthSessionPort): SurveyLeakageCauseProviderPort {
+  const config = loadApplicationRuntimeConfig()
+  if (!config.ok) {
+    return {
+      query: async () => configurationFailure(`Survey leakage-cause provider configuration is unavailable: ${config.issues.join('; ')}`),
+    }
+  }
+  return createSurveyLeakageCauseProvider(createUniApiReadTransport({
+    apiBaseUrl: config.value.environment.apiBaseUrl,
+    getSessionRef: () => authSession.getCurrentSession()?.sessionRef ?? null,
+    getMockActor: () => {
+      const session = authSession.getCurrentSession()
+      return session
+        ? {
+            userId: session.user.id,
+            ...(session.currentRole ? { roleId: session.currentRole.id } : {}),
+          }
+        : null
+    },
+  }))
 }
 
 export function createDefaultTechnicianApiCommandPort(

@@ -11,6 +11,11 @@ import type { FormFieldValue } from '@shared/ports/api'
 import { createOperationError } from '@shared/types'
 import type { OperationSnapshot } from '@shared/types'
 import { surveyMediaDescriptorFor } from './survey-media'
+import {
+  surveyLeakageCauseExperienceFor,
+  surveyLeakageCauseFieldStateFor,
+  surveyLeakageCausePersistedIds,
+} from './survey-leakage-cause'
 
 export interface DynamicActionField extends AppointmentFormFieldRead {
   readonly runtime: EffectiveFieldState
@@ -83,7 +88,7 @@ function fieldState(
 export function dynamicActionFieldsFor(form: DynamicFormRead): readonly DynamicActionField[] {
   return form.fields.map((field) => ({
     ...field,
-    runtime: evaluateFieldState(schemaFor(field, form.values, form.purpose), {
+    runtime: surveyLeakageCauseFieldStateFor(form, field) ?? evaluateFieldState(schemaFor(field, form.values, form.purpose), {
       values: form.values,
       workflowReadOnly: form.workflowReadOnlyFieldIds?.some((id) => String(id) === String(field.fieldId)),
       surface: ACTION_FORM_SURFACE,
@@ -102,7 +107,13 @@ export function dynamicActionUnsupportedFieldsFor(form: DynamicFormRead): readon
 export function normalizeDynamicForm(
   form: DynamicFormRead,
 ): OperationSnapshot<Readonly<Record<string, FormFieldValue>>> {
-  const fields = form.fields.map((field) => {
+  const leakageExperience = surveyLeakageCauseExperienceFor(form)
+  const controlledFieldIds = new Set(
+    leakageExperience
+      ? [leakageExperience.triggerField.fieldId, leakageExperience.valueField.fieldId]
+      : [],
+  )
+  const fields = form.fields.filter((field) => !controlledFieldIds.has(field.fieldId)).map((field) => {
     const schema = schemaFor(field, form.values, form.purpose)
     return form.workflowReadOnlyFieldIds?.some((id) => String(id) === String(field.fieldId))
       ? { ...schema, readOnly: true }
@@ -126,6 +137,44 @@ export function normalizeDynamicForm(
 
   const values: Record<string, FormFieldValue> = {}
   for (const [key, value] of Object.entries(result.value.values)) values[key] = toFormValue(value)
+
+  if (leakageExperience) {
+    const state = surveyLeakageCauseFieldStateFor(form, leakageExperience.valueField)
+    if (state?.capability === 'UNSUPPORTED' && state.visible) {
+      return {
+        state: 'failed_terminal',
+        error: createOperationError('unsupported_capability', state.reason ?? 'Survey leakage-cause field is unsupported'),
+      }
+    }
+    if (state?.visible) {
+      const raw = form.values[leakageExperience.valueField.valueKey]
+      const missing = raw === undefined
+        || raw === null
+        || raw === ''
+        || (Array.isArray(raw) && raw.length === 0)
+      if (missing) {
+        if (state.required) {
+          return {
+            state: 'failed_terminal',
+            error: createOperationError('validation', 'required field is missing', {
+              reason: leakageExperience.valueField.valueKey,
+            }),
+          }
+        }
+        return { state: 'succeeded', data: values }
+      }
+      const ids = surveyLeakageCausePersistedIds(raw)
+      if (!ids) {
+        return {
+          state: 'failed_terminal',
+          error: createOperationError('validation', 'Leakage-cause selection is invalid', {
+            reason: leakageExperience.valueField.valueKey,
+          }),
+        }
+      }
+      if (ids.length > 0) values[leakageExperience.valueField.valueKey] = ids
+    }
+  }
   return { state: 'succeeded', data: values }
 }
 
@@ -135,6 +184,30 @@ export function normalizeDynamicFieldValue(
   value: FormFieldValue,
 ): OperationSnapshot<FormFieldValue> {
   const values = { ...form.values, [field.valueKey]: value }
+  const leakageExperience = surveyLeakageCauseExperienceFor(form)
+  const leakageState = leakageExperience
+    ? surveyLeakageCauseFieldStateFor({ ...form, values }, field)
+    : undefined
+  if (leakageExperience && field.fieldId === leakageExperience.triggerField.fieldId) {
+    return {
+      state: 'failed_terminal',
+      error: createOperationError('unsupported_capability', 'Use the Survey leakage-cause selector to change this field'),
+    }
+  }
+  if (leakageExperience && field.fieldId === leakageExperience.valueField.fieldId) {
+    if (!leakageState || leakageState.capability === 'UNSUPPORTED') {
+      return {
+        state: 'failed_terminal',
+        error: createOperationError('unsupported_capability', leakageState?.reason ?? 'Survey leakage-cause field is unsupported'),
+      }
+    }
+    if (!leakageState.visible) return { state: 'failed_terminal', error: createOperationError('validation', 'Hidden fields cannot be changed') }
+    if (leakageState.readOnly) return { state: 'failed_terminal', error: createOperationError('validation', 'Read-only fields cannot be changed') }
+    const ids = surveyLeakageCausePersistedIds(value)
+    if (!ids) return { state: 'failed_terminal', error: createOperationError('validation', 'Leakage-cause selection is invalid') }
+    return { state: 'succeeded', data: ids }
+  }
+
   const state = fieldState(
     field,
     values,

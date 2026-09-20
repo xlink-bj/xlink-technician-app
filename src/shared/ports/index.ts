@@ -63,3 +63,4 @@ export type {
 } from './platform'
 export type { StorageKey, StorageListQuery, StorageNamespace, StoragePort } from './storage'
 export type { UploadPort } from './upload'
+export type { SurveyLeakageCauseProviderPort, SurveyLeakageCauseRow } from './survey-leakage-cause'

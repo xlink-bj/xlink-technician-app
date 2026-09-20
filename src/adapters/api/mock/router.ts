@@ -15,6 +15,7 @@ import {
   mockSyntheticInspectionFormDefinitionResponse,
   mockSurveyFormDefinitionId,
   mockSurveyFormDefinitionResponse,
+  mockSurveyLeakageCauseResponse,
   mockWorkOrderActivityResponseFor,
   mockWorkOrderDetailResponses,
   mockWorkOrderDetailResponseFor,
@@ -395,6 +396,9 @@ function matchedResponse(
   }
   if (route === 'i/code/selectMultistageCode.do' && requestData.types === 'parts') {
     return mockSurveyPartsCascadeResponse
+  }
+  if (route === 'biz/extForm/queryByColName/leakageCause') {
+    return { data: mockSurveyLeakageCauseResponse, page: 1, rows: mockSurveyLeakageCauseResponse.length, total: mockSurveyLeakageCauseResponse.length }
   }
   if (
     route === 'biz/action/query.do' &&

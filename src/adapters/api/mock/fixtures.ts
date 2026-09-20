@@ -5,6 +5,7 @@ import {
   mockSurveyFormDefinitionId,
   mockSurveyFormDefinitionResponse,
   mockSurveyPartsCascadeResponse,
+  mockSurveyLeakageCauseResponse,
   mockSurveyCodeOptionsResponse,
 } from './survey-contract'
 
@@ -15,6 +16,7 @@ export {
   mockSurveyFormDefinitionId,
   mockSurveyFormDefinitionResponse,
   mockSurveyPartsCascadeResponse,
+  mockSurveyLeakageCauseResponse,
   mockSurveyCodeOptionsResponse,
 }
 

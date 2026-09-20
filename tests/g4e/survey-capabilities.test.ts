@@ -28,13 +28,14 @@ describe('G4-E Survey capability matrix', () => {
     )
   })
 
-  it('keeps unresolved special controls explicit instead of classifying them as generic inputs', () => {
+  it('keeps Survey leakage cause as a controlled experience instead of a generic input', () => {
     const contract = JSON.parse(readFileSync(contractFile, 'utf8'))
     const inventory = buildSurveyCapabilityInventory(contract)
     const byValueKey = new Map<string, CapabilityRow>(inventory.capabilities.map((row: CapabilityRow) => [row.valueKey, row]))
 
     expect(byValueKey.get('leakageCause')?.capabilityClass).toBe('CUSTOM_EXPERIENCE')
-    expect(byValueKey.get('leakageCause')?.implementationStatus).toBe('UNKNOWN')
+    expect(byValueKey.get('leakageCause')?.implementationStatus).toBe('PARTIAL')
+    expect(byValueKey.get('leakageCauseSelect')?.implementationStatus).toBe('SUPPORTED')
     expect(byValueKey.get('serviceGoods')?.capabilityClass).toBe('CUSTOM_EXPERIENCE')
     expect(byValueKey.get('serviceGoods')?.implementationStatus).toBe('UNKNOWN')
     expect(byValueKey.get('surveyDrawing')?.implementationStatus).toBe('PARTIAL')

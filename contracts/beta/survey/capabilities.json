@@ -645,11 +645,10 @@
       "conditionalVisibility": "条件元数据：showType=3，showField=part，effectiveShowValue=[[\"survey-option-6b86b273ff34\",\"survey-option-9bdb2af67992\"],[\"survey-option-6b86b273ff34\",\"survey-option-2abaca4911e6\"],[\"survey-option-6b86b273ff34\",\"survey-option-38d66d9692ac\"],[\"survey-option-6b86b273ff34\",\"survey-option-dbae772db290\"],[\"survey-option-d4735e3a265e\",\"survey-option-d29d53701d3c\"],[\"survey-option-d4735e3a265e\",\"survey-option-36790ecd55c2\"],[\"survey-option-4e07408562be\",\"survey-option-226f76b55acb\"],[\"survey-option-4e07408562be\",\"survey-option-88820462180e\"],[\"survey-option-2c624232cdd2\"],[\"survey-option-19581e27de7c\"],[\"survey-option-ef2d127de37b\"],[\"survey-option-e7f6c011776e\"]]（来源：extsShowValue）",
       "provider": null,
       "capabilityClass": "CUSTOM_EXPERIENCE",
-      "currentRenderer": "Not rendered as a safe generic control; Runtime blocks unresolved semantics",
-      "implementationStatus": "UNKNOWN",
-      "submissionMode": "BLOCKED",
-      "blocker": "R1 proves a coupled repair-part tree interaction, but the provider/value shape and reset semantics are not yet a new-App contract",
-      "notes": "Trigger/display field for the coupled leakageCause selection flow; not an independent scalar select."
+      "currentRenderer": "Survey Leakage Cause Experience controlled tree selection",
+      "implementationStatus": "SUPPORTED",
+      "submissionMode": "EXCLUDED",
+      "notes": "Trigger/display field only; opens the controlled tree and is not persisted."
     },
     {
       "fieldId": "survey-field-058",
@@ -661,11 +660,11 @@
       "conditionalVisibility": "条件元数据：showType=3，showField=part，effectiveShowValue=[[\"survey-option-6b86b273ff34\",\"survey-option-9bdb2af67992\"],[\"survey-option-6b86b273ff34\",\"survey-option-2abaca4911e6\"],[\"survey-option-6b86b273ff34\",\"survey-option-38d66d9692ac\"],[\"survey-option-6b86b273ff34\",\"survey-option-dbae772db290\"],[\"survey-option-d4735e3a265e\",\"survey-option-d29d53701d3c\"],[\"survey-option-d4735e3a265e\",\"survey-option-36790ecd55c2\"],[\"survey-option-4e07408562be\",\"survey-option-226f76b55acb\"],[\"survey-option-4e07408562be\",\"survey-option-88820462180e\"],[\"survey-option-2c624232cdd2\"],[\"survey-option-19581e27de7c\"],[\"survey-option-ef2d127de37b\"],[\"survey-option-e7f6c011776e\"]]（来源：extsShowValue）",
       "provider": null,
       "capabilityClass": "CUSTOM_EXPERIENCE",
-      "currentRenderer": "Not rendered as a safe generic control; Runtime blocks unresolved semantics",
-      "implementationStatus": "UNKNOWN",
-      "submissionMode": "BLOCKED",
-      "blocker": "R1 proves a coupled repair-part tree interaction, but the provider/value shape and reset semantics are not yet a new-App contract",
-      "notes": "Persisted Survey field is a list of selected leakage-cause identifiers; the source tree is queried separately."
+      "currentRenderer": "Survey Leakage Cause Experience controlled tree selection",
+      "implementationStatus": "PARTIAL",
+      "submissionMode": "INCLUDED",
+      "blocker": "Visible-to-visible part transition cleanup/filtering remains unverified",
+      "notes": "Provider rows are grouped by part and persist as a List<String> of leakageCause identifiers; hidden-field clearing is implemented, while visible-to-visible transition behavior remains UNKNOWN."
     },
     {
       "fieldId": "survey-field-059",

@@ -17,6 +17,7 @@
     "check:inspection-contract": "node scripts/check-inspection-contract.mjs",
     "check:survey-contract": "node scripts/check-survey-contract.mjs",
     "check:survey-capabilities": "node scripts/check-survey-capabilities.mjs",
+    "check:survey-leakage-cause": "node scripts/check-survey-leakage-cause.mjs",
     "typecheck": "vue-tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",

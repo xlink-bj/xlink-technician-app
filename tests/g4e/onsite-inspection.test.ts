@@ -645,7 +645,7 @@ describe('G4-E Survey dynamic Action Content', () => {
     const initialFields = dynamicActionFieldsFor(initial.data!)
     expect(initialFields.find((field) => field.valueKey === 'part')?.runtime.capability).toBe('SUPPORTED_GENERIC')
     expect(initialFields.find((field) => field.valueKey === 'serviceGoods')?.runtime.capability).toBe('UNSUPPORTED')
-    expect(initialFields.find((field) => field.valueKey === 'leakageCause')?.runtime.capability).toBe('UNSUPPORTED')
+    expect(initialFields.find((field) => field.valueKey === 'leakageCause')?.runtime.capability).toBe('CONDITIONAL_CAPABILITY')
     const window = partOptions.find((option) => option.label === '窗户')
     const windowPart = window?.children?.[0]
     expect(windowPart).toBeDefined()

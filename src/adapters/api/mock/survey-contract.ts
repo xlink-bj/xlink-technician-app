@@ -130,6 +130,25 @@ export const mockSurveyPartsCascadeResponse = [
   },
 ] as const
 
+/** Synthetic visual-review rows. Production leakageCause option values are not asserted here. */
+export const mockSurveyLeakageCauseResponse = [
+  {
+    part: 'survey-option-6b86b273ff34',
+    leakageCause: 'mock-leakage-cause-roof-1',
+    label: '演示原因：屋面节点',
+  },
+  {
+    part: 'survey-option-6b86b273ff34',
+    leakageCause: 'mock-leakage-cause-roof-2',
+    label: '演示原因：屋面排水',
+  },
+  {
+    part: 'survey-option-d4735e3a265e',
+    leakageCause: 'mock-leakage-cause-bath-1',
+    label: '演示原因：卫生间节点',
+  },
+] as const
+
 /** R1's batch code provider, mechanically derived from the captured contract. */
 export function mockSurveyCodeOptionsResponse(valueOption: string): readonly Record<string, unknown>[] {
   const provider = providerFor(valueOption)

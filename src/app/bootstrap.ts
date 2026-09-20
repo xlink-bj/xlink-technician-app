@@ -14,6 +14,7 @@ import type {
   MediaCapturePort,
   MediaFilePickerPort,
   UploadPort,
+  SurveyLeakageCauseProviderPort,
 } from '@shared/ports'
 import { useWorkOrderDetailStore } from '@features/work-orders/detail'
 import { useActionWorkspaceStore } from '@features/work-orders/action-workspace'
@@ -32,6 +33,7 @@ import {
   createDefaultMediaCapturePort,
   createDefaultMediaFilePickerPort,
   createDefaultUploadPort,
+  createDefaultSurveyLeakageCauseProvider,
 } from './composition'
 
 export interface ApplicationDependencies {
@@ -45,6 +47,7 @@ export interface ApplicationDependencies {
   readonly mediaCapture?: MediaCapturePort
   readonly mediaFilePicker?: MediaFilePickerPort
   readonly upload?: UploadPort
+  readonly surveyLeakageCauseProvider?: SurveyLeakageCauseProviderPort
 }
 
 export function createApplication(dependencies: ApplicationDependencies = {}) {
@@ -62,6 +65,7 @@ export function createApplication(dependencies: ApplicationDependencies = {}) {
   const mediaCapture = dependencies.mediaCapture ?? createDefaultMediaCapturePort()
   const mediaFilePicker = dependencies.mediaFilePicker ?? createDefaultMediaFilePickerPort()
   const upload = dependencies.upload ?? createDefaultUploadPort(authSession)
+  const surveyLeakageCauseProvider = dependencies.surveyLeakageCauseProvider ?? createDefaultSurveyLeakageCauseProvider(authSession)
   sessionStore.configureAuth(authSession)
   const workOrderListStore = useWorkOrderListStore(pinia)
   const workOrderDetailStore = useWorkOrderDetailStore(pinia)
@@ -90,6 +94,7 @@ export function createApplication(dependencies: ApplicationDependencies = {}) {
     mediaCapture,
     mediaFilePicker,
     upload,
+    surveyLeakageCauseProvider,
   })
   const localDraftDiagnosticsStore = useLocalDraftDiagnosticsStore(pinia)
   localDraftDiagnosticsStore.configure({

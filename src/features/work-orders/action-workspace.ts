@@ -26,6 +26,8 @@ import type {
   MediaFilePickerPort,
   NavigationPort,
   SessionSnapshot,
+  SurveyLeakageCauseProviderPort,
+  SurveyLeakageCauseRow,
   TechnicianApiCommandPort,
   TechnicianApiReadPort,
   UploadPort,
@@ -65,6 +67,17 @@ import {
   type DynamicActionField,
 } from './dynamic-form-action'
 import { surveyMediaDescriptorFor } from './survey-media'
+import {
+  normalizeSurveyLeakageCauseSelection,
+  surveyLeakageCauseCurrentPart as currentPartForLeakageCause,
+  surveyLeakageCauseExperienceFor,
+  surveyLeakageCauseFieldIdsFor,
+  surveyLeakageCauseGroups,
+  surveyLeakageCauseLabels,
+  surveyLeakageCausePartChangePolicy,
+  surveyLeakageCauseFieldStateFor,
+  surveyLeakageCausePersistedIds,
+} from './survey-leakage-cause'
 
 export const actionWorkspaceRoute = '/pages/work-orders/action-workspace' as const
 export const actionWorkspaceTimeRoute = '/pages/work-orders/action-time' as const
@@ -273,6 +286,7 @@ export interface ActionWorkspaceDependencies {
   readonly mediaCapture?: MediaCapturePort
   readonly mediaFilePicker?: MediaFilePickerPort
   readonly upload?: UploadPort
+  readonly surveyLeakageCauseProvider?: SurveyLeakageCauseProviderPort
   readonly debounceMs?: number
   readonly now?: () => string
 }
@@ -290,6 +304,9 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
   const appointmentForm = ref<AppointmentFormRead | null>(null)
   const dynamicForm = ref<DynamicFormRead | null>(null)
   const dynamicFormSaveState = ref<'not_saved' | 'saving' | 'saved' | 'failed'>('not_saved')
+  const surveyLeakageCauseRows = ref<readonly SurveyLeakageCauseRow[]>([])
+  const surveyLeakageCauseProviderState = ref<'idle' | 'loading' | 'succeeded' | 'failed_retryable' | 'failed_terminal'>('idle')
+  const surveyLeakageCauseProviderError = ref<OperationError | null>(null)
   const mediaByField = ref<Readonly<Record<string, readonly UploadedMediaRef[]>>>({})
   const mediaInFlightField = ref<string | null>(null)
   const mediaStateByField = ref<Readonly<Record<string, 'idle' | 'picking' | 'uploading' | 'uploaded' | 'failed_retryable' | 'failed_terminal'>>>({})
@@ -328,6 +345,41 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       ? normalizeDynamicForm(dynamicForm.value)
       : failure<Readonly<Record<string, FormFieldValue>>>('validation', 'Action content is not ready'),
   )
+  const surveyLeakageCauseExperience = computed(() =>
+    dynamicForm.value ? surveyLeakageCauseExperienceFor(dynamicForm.value) : undefined,
+  )
+  const surveyLeakageCauseFieldIds = computed(() =>
+    dynamicForm.value ? surveyLeakageCauseFieldIdsFor(dynamicForm.value) : [],
+  )
+  const surveyLeakageCauseCurrentPart = computed(() =>
+    dynamicForm.value ? currentPartForLeakageCause(dynamicForm.value.values.part) : undefined,
+  )
+  const surveyLeakageCauseSelectedIds = computed<readonly string[]>(() => {
+    const experience = surveyLeakageCauseExperience.value
+    if (!dynamicForm.value || !experience) return []
+    return surveyLeakageCausePersistedIds(dynamicForm.value.values[experience.valueField.valueKey]) ?? []
+  })
+  const surveyLeakageCauseLabelsValue = computed(() =>
+    surveyLeakageCauseLabels(surveyLeakageCauseSelectedIds.value, surveyLeakageCauseRows.value),
+  )
+  const surveyLeakageCauseOptions = computed(() =>
+    surveyLeakageCauseGroups(surveyLeakageCauseRows.value, surveyLeakageCauseCurrentPart.value),
+  )
+  const surveyLeakageCauseReadOnly = computed(() => {
+    const experience = surveyLeakageCauseExperience.value
+    if (!dynamicForm.value || !experience) return false
+    return surveyLeakageCauseFieldStateFor(dynamicForm.value, experience.valueField)?.readOnly ?? false
+  })
+  const surveyLeakageCauseVisible = computed(() => {
+    const experience = surveyLeakageCauseExperience.value
+    if (!dynamicForm.value || !experience) return false
+    return surveyLeakageCauseFieldStateFor(dynamicForm.value, experience.valueField)?.visible ?? false
+  })
+  const surveyLeakageCauseCanOpen = computed(() => Boolean(
+    surveyLeakageCauseExperience.value
+    && surveyLeakageCauseCurrentPart.value
+    && !surveyLeakageCauseReadOnly.value,
+  ))
   const isDynamicFormAction = computed(() => descriptor.value?.actionIntent === 'interact_with_form')
   const dynamicRequiredMediaPending = computed(() => dynamicFields.value.some((field) => {
     if (!field.runtime.visible || !field.runtime.required || (field.type !== 'image' && field.type !== 'file')) return false
@@ -362,6 +414,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
   let draftWriteInFlight: Promise<OperationSnapshot<void>> | null = null
   let draftRevision = 0
   let loadVersion = 0
+  let surveyLeakageCauseProviderInFlight: Promise<OperationSnapshot<readonly SurveyLeakageCauseRow[]>> | null = null
 
   function clearDraftTimer(): void {
     if (draftTimer) clearTimeout(draftTimer)
@@ -421,6 +474,9 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     appointmentForm.value = null
     dynamicForm.value = null
     dynamicFormSaveState.value = 'not_saved'
+    surveyLeakageCauseRows.value = []
+    surveyLeakageCauseProviderState.value = 'idle'
+    surveyLeakageCauseProviderError.value = null
     mediaByField.value = {}
     mediaInFlightField.value = null
     mediaStateByField.value = {}
@@ -494,6 +550,10 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     appointmentForm.value = null
     dynamicForm.value = null
     dynamicFormSaveState.value = 'not_saved'
+    surveyLeakageCauseRows.value = []
+    surveyLeakageCauseProviderState.value = 'idle'
+    surveyLeakageCauseProviderError.value = null
+    surveyLeakageCauseProviderInFlight = null
     mediaByField.value = {}
     mediaInFlightField.value = null
     mediaStateByField.value = {}
@@ -638,10 +698,14 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
         error.value = normalized.error ?? null
         return { state: normalized.state, ...(normalized.error ? { error: normalized.error } : {}) }
       }
-      dynamicForm.value = {
-        ...dynamic,
-        values: { ...dynamic.values, [field.valueKey]: normalized.data! },
-      }
+      const nextValues = { ...dynamic.values, [field.valueKey]: normalized.data! }
+      const leakageExperience = surveyLeakageCauseExperienceFor(dynamic)
+      const nextDynamicValues = leakageExperience
+        && field.valueKey === 'part'
+        && surveyLeakageCausePartChangePolicy(dynamic, nextValues) === 'clear_when_hidden'
+        ? { ...nextValues, [leakageExperience.valueField.valueKey]: [] }
+        : nextValues
+      dynamicForm.value = { ...dynamic, values: nextDynamicValues }
       dynamicFormSaveState.value = 'not_saved'
     } else {
       const form = appointmentForm.value
@@ -661,6 +725,63 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
         values: { ...form.values, [field.valueKey]: normalized.data! },
       }
     }
+    draftRevision += 1
+    error.value = null
+    lifecycle.value = 'in_progress'
+    draftStatus.value = 'dirty'
+    scheduleDraftSave()
+    return { state: 'succeeded', data: undefined }
+  }
+
+  async function loadSurveyLeakageCauseOptions(): Promise<OperationSnapshot<readonly SurveyLeakageCauseRow[]>> {
+    const configured = dependencies
+    if (!configured?.surveyLeakageCauseProvider) {
+      const unavailable = createOperationError('unsupported_capability', 'Leakage-cause provider is unavailable')
+      surveyLeakageCauseProviderState.value = 'failed_terminal'
+      surveyLeakageCauseProviderError.value = unavailable
+      return { state: 'failed_terminal', error: unavailable }
+    }
+    if (surveyLeakageCauseProviderInFlight) return surveyLeakageCauseProviderInFlight
+
+    surveyLeakageCauseProviderState.value = 'loading'
+    surveyLeakageCauseProviderError.value = null
+    const providerLoadVersion = loadVersion
+    let request: Promise<OperationSnapshot<readonly SurveyLeakageCauseRow[]>>
+    request = configured.surveyLeakageCauseProvider.query().then((result) => {
+      if (providerLoadVersion !== loadVersion) return result
+      if (result.state === 'succeeded' && result.data) {
+        surveyLeakageCauseRows.value = result.data
+        surveyLeakageCauseProviderState.value = 'succeeded'
+        surveyLeakageCauseProviderError.value = null
+      } else {
+        surveyLeakageCauseProviderState.value = result.state
+        surveyLeakageCauseProviderError.value = result.error ?? null
+      }
+      return result
+    }).finally(() => {
+      if (surveyLeakageCauseProviderInFlight === request) surveyLeakageCauseProviderInFlight = null
+    })
+    surveyLeakageCauseProviderInFlight = request
+    return request
+  }
+
+  function setSurveyLeakageCauseSelection(selectedIds: readonly string[]): OperationSnapshot<void> {
+    const form = dynamicForm.value
+    if (!form || surveyLeakageCauseProviderState.value !== 'succeeded') {
+      return failure('network_retryable', 'Leakage-cause options are not available')
+    }
+    const normalized = normalizeSurveyLeakageCauseSelection(form, selectedIds, surveyLeakageCauseRows.value)
+    if (normalized.state !== 'succeeded' || !normalized.data) {
+      error.value = normalized.error ?? null
+      return { state: normalized.state, ...(normalized.error ? { error: normalized.error } : {}) }
+    }
+    const experience = surveyLeakageCauseExperienceFor(form)
+    if (!experience) return failure('unsupported_capability', 'Leakage-cause experience is unavailable')
+    dynamicForm.value = {
+      ...form,
+      values: { ...form.values, [experience.valueField.valueKey]: normalized.data },
+    }
+    dynamicFormSaveState.value = 'not_saved'
     draftRevision += 1
     error.value = null
     lifecycle.value = 'in_progress'
@@ -1232,6 +1353,17 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     dynamicFields,
     dynamicUnsupportedFields,
     dynamicValidation,
+    surveyLeakageCauseExperience,
+    surveyLeakageCauseFieldIds,
+    surveyLeakageCauseCurrentPart,
+    surveyLeakageCauseSelectedIds,
+    surveyLeakageCauseLabels: surveyLeakageCauseLabelsValue,
+    surveyLeakageCauseOptions,
+    surveyLeakageCauseReadOnly,
+    surveyLeakageCauseVisible,
+    surveyLeakageCauseCanOpen,
+    surveyLeakageCauseProviderState,
+    surveyLeakageCauseProviderError,
     canPickDynamicMedia,
     dynamicFormSaveState,
     mediaByField,
@@ -1246,6 +1378,8 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     load,
     ensureLoaded,
     setField,
+    loadSurveyLeakageCauseOptions,
+    setSurveyLeakageCauseSelection,
     setAppointmentTime,
     openAppointmentTimeSelection,
     continueToConfirmation,

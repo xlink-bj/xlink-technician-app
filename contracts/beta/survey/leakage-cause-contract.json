@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "sourceSurveyFingerprint": "9ed17f08b2d786fd6810b1afcddd60ac6d53eb9cd711173334bd00e6e6fa4aa6",
+  "domain": "survey",
+  "experience": "leakage_cause",
+  "status": "PARTIAL",
+  "triggerField": {
+    "fieldId": "survey-field-057",
+    "valueKey": "leakageCauseSelect",
+    "type": "select",
+    "required": false,
+    "mobileShowList": ["4"]
+  },
+  "valueField": {
+    "fieldId": "survey-field-058",
+    "valueKey": "leakageCause",
+    "type": "data",
+    "required": true,
+    "multiple": true,
+    "mobileShowList": ["1", "2", "4"],
+    "persistedShape": "List<String>"
+  },
+  "provider": {
+    "kind": "dynamic_collection_queryByColName",
+    "endpoint": "biz/extForm/queryByColName/leakageCause",
+    "method": "POST",
+    "request": {
+      "_all": "1",
+      "sortField": "partOrder,leakageCauseOrder",
+      "sortOrder": "asc"
+    },
+    "responseRow": {
+      "part": "string",
+      "leakageCause": "string",
+      "label": "string"
+    },
+    "grouping": "part"
+  },
+  "selection": {
+    "mode": "multi_select",
+    "selectable": "provider child rows; R1 groups by part; IDs are leakageCause",
+    "parentSelectable": false,
+    "triggerPersistence": "not persisted; opens controlled tree"
+  },
+  "partDependency": {
+    "source": "R1 onCascaderFinish + tree active group formData.part[0]",
+    "providerKey": "first part path segment",
+    "hiddenFieldPolicy": "clear persisted value when effective field becomes hidden",
+    "visibleToVisiblePolicy": "UNKNOWN"
+  },
+  "evidence": {
+    "r1File": "business_jishi/subpackages2/inspectionAppointment/inspectionAppointment.vue",
+    "backendFiles": [
+      "src/main/java/com/fsgo/modulemini/biz/ExtFormController.java",
+      "src/main/java/com/fsgo/service/biz/ExtFormServiceImpl.java",
+      "src/main/java/com/fsgo/entity/basic/Survey.java",
+      "src/main/java/com/fsgo/modulemini/basic/SurveyController.java"
+    ],
+    "sanitized": true,
+    "productionDataIncluded": false
+  }
+}

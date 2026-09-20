@@ -10,7 +10,7 @@
 
     <template v-for="field in workspace.dynamicFields" :key="field.fieldId">
       <view
-        v-if="field.runtime.visible && field.runtime.capability === 'PRESENTATION_ONLY'"
+        v-if="!props.excludedFieldIds.includes(field.fieldId) && field.runtime.visible && field.runtime.capability === 'PRESENTATION_ONLY'"
         class="dynamic-action-presentation-divider"
         aria-hidden="true"
       >
@@ -19,7 +19,7 @@
         <view class="dynamic-action-presentation-line" />
       </view>
       <AppField
-        v-if="field.runtime.visible && field.runtime.capability !== 'UNSUPPORTED' && field.runtime.capability !== 'PRESENTATION_ONLY'"
+        v-if="!props.excludedFieldIds.includes(field.fieldId) && field.runtime.visible && field.runtime.capability !== 'UNSUPPORTED' && field.runtime.capability !== 'PRESENTATION_ONLY'"
         class="dynamic-action-field"
         :label="field.label"
         :required="field.runtime.required"
@@ -84,6 +84,8 @@
       </AppField>
     </template>
 
+    <slot name="experience" />
+
     <AppStatus
       v-if="workspace.dynamicUnsupportedFields.length > 0"
       class="dynamic-action-unsupported"
@@ -126,10 +128,12 @@ const props = withDefaults(defineProps<{
   readonly title?: string
   readonly caption?: string
   readonly savedLabel?: string
+  readonly excludedFieldIds?: readonly string[]
 }>(), {
   title: '表单信息',
   caption: '请填写表单信息，保存后完成当前操作。',
   savedLabel: '已保存，可完成',
+  excludedFieldIds: () => [],
 })
 
 const workspace = useActionWorkspaceStore()
