@@ -22,6 +22,7 @@ import {
   setBusinessMockMode,
 } from '@adapters/api/mock'
 import { createActionDraftRepository } from '@runtimes/action'
+import { createMediaQueueRepository, createMediaUploadQueue, InMemoryDurableMediaStore } from '@runtimes/media'
 import { detailWorkflowProjectionFor } from '@features/work-orders/detail-workflow'
 import { useActionWorkspaceStore } from '@features/work-orders/action-workspace'
 import {
@@ -141,6 +142,7 @@ function configureWorkspace(
   commandResult: OperationSnapshot<void> = succeeded(undefined),
   detailResult: WorkOrderDetail = surveyDetail(),
   dynamicForm: DynamicFormRead = surveyForm(),
+  useDurableMediaQueue = false,
 ) {
   const storage = storageFor()
   const api: TechnicianApiReadPort = {
@@ -173,6 +175,9 @@ function configureWorkspace(
       uploadState: 'uploaded' as const,
     })),
   }
+  const mediaUploadQueue = useDurableMediaQueue
+    ? createMediaUploadQueue(new InMemoryDurableMediaStore(), createMediaQueueRepository(storage.storage), upload)
+    : undefined
   const navigation = { navigate: vi.fn(async () => undefined) }
   const store = useActionWorkspaceStore()
   store.configure({
@@ -183,6 +188,7 @@ function configureWorkspace(
     getSession: () => session,
     mediaFilePicker: picker,
     upload,
+    ...(mediaUploadQueue ? { mediaUploadQueue } : {}),
     debounceMs: 1,
     now: () => '2026-09-17T10:00:00.000Z',
   })
@@ -385,7 +391,7 @@ describe('G4-E Survey dynamic Action Content', () => {
     expect(store.dynamicFormSaveState).toBe('not_saved')
   })
 
-  it('blocks completion when a required provider remains UNKNOWN', async () => {
+  it('keeps legacy serviceGoods deferred and non-blocking for Survey Action Content', async () => {
     const form: DynamicFormRead = {
       ...surveyForm(),
       fields: [
@@ -409,8 +415,9 @@ describe('G4-E Survey dynamic Action Content', () => {
 
     expect(store.canSubmit).toBe(false)
     const result = await store.saveDynamicForm()
-    expect(result.error?.category).toBe('unsupported_capability')
-    expect(save).not.toHaveBeenCalled()
+    expect(result.state).toBe('succeeded')
+    expect(save).toHaveBeenCalledTimes(1)
+    expect(save.mock.calls[0][0].values).not.toHaveProperty('serviceGoods')
     expect(complete).not.toHaveBeenCalled()
   })
 
@@ -515,6 +522,26 @@ describe('G4-E Survey dynamic Action Content', () => {
     expect(storage.values.size).toBe(0)
     const serialized = JSON.stringify([...storage.values.values()])
     expect(serialized).not.toContain('not-persisted')
+  })
+
+  it('uses the durable queue path before applying a confirmed media reference to the form', async () => {
+    const { store, save, upload } = configureWorkspace(succeeded(undefined), surveyDetail(), surveyForm(), true)
+    await store.load({ workOrderId, workflowNodeId, actionIntent: 'interact_with_form' })
+
+    store.setField('survey-summary', '墙面情况正常')
+    store.setField('survey-result', 'safe')
+    const selected = await store.pickDynamicMedia('survey-photo')
+    expect(selected.state).toBe('succeeded')
+    expect(store.dynamicForm?.values.surveyPhoto).toBe('https://mock-upload.invalid/local-survey-photo')
+    expect(store.mediaTasksByField['survey-photo']).toHaveLength(1)
+    expect(store.mediaTasksByField['survey-photo'][0].state).toBe('uploaded')
+    expect(upload.upload).toHaveBeenCalledTimes(1)
+
+    expect((await store.saveDynamicForm()).state).toBe('succeeded')
+    expect(save).toHaveBeenCalledWith(expect.objectContaining({
+      values: expect.objectContaining({ surveyPhoto: 'https://mock-upload.invalid/local-survey-photo' }),
+    }))
+    expect(store.mediaTasksByField['survey-photo']).toEqual([])
   })
 
   it('reconciles a failed completion before a later manual retry and never auto-retries', async () => {

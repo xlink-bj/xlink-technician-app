@@ -138,6 +138,8 @@ function locationFromDriver(value: unknown): LocationSnapshot {
     longitude: record.longitude,
     coordinateSystem: 'gcj02',
     capturedAt: requiredString(record, ['capturedAt', 'timestamp'], 'location timestamp'),
+    ...(typeof record.accuracy === 'number' ? { accuracy: record.accuracy } : {}),
+    ...(optionalString(record, ['address']) ? { address: optionalString(record, ['address']) } : {}),
   }
 }
 

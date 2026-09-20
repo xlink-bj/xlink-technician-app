@@ -9,6 +9,7 @@ export type {
   FormDataId,
   FormDefinitionId,
   LocalMediaRef,
+  MediaUploadTaskId,
   Opaque,
   OrganizationId,
   RoleId,
@@ -26,7 +27,18 @@ export {
   isMediaValueRef,
   mediaValueRefFromUpload,
 } from './media'
-export type { LocalMedia, MediaSource, MediaValueRef, UploadedMediaRef, UploadState } from './media'
+export type {
+  DurableMediaAsset,
+  LocalMedia,
+  MediaEvidenceContext,
+  MediaSource,
+  MediaTaskScope,
+  MediaUploadTask,
+  MediaUploadTaskState,
+  MediaValueRef,
+  UploadedMediaRef,
+  UploadState,
+} from './media'
 export {
   createOperationError,
   isRetryableCategory,

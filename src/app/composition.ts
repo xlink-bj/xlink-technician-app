@@ -7,6 +7,8 @@ import type {
   TechnicianApiReadPort,
   MediaCapturePort,
   MediaFilePickerPort,
+  MediaUploadQueuePort,
+  LocationPort,
   UploadPort,
   SurveyLeakageCauseProviderPort,
 } from '@shared/ports'
@@ -24,7 +26,10 @@ import { createPlatformAdapters } from '@adapters/platform/platform-adapters'
 import { createUniPhoneDriver } from '@adapters/platform/uni-phone-driver'
 import { createUniNavigationDriver } from '@adapters/platform/uni-navigation-driver'
 import { createUniMediaCaptureDriver, createUniMediaFilePickerDriver } from '@adapters/platform/uni-media-drivers'
+import { createUniLocationDriver } from '@adapters/platform/uni-location-driver'
 import { createUniUploadPort } from '@adapters/upload/uni-upload-port'
+import { createUniDurableMediaStore } from '@adapters/storage/uni-durable-media-store'
+import { createMediaQueueRepository, createMediaUploadQueue } from '@runtimes/media'
 import { createSurveyLeakageCauseProvider } from '@adapters/api/survey-leakage-cause'
 
 import { loadApplicationRuntimeConfig } from './runtime-config'
@@ -161,6 +166,10 @@ export function createDefaultMediaFilePickerPort(): MediaFilePickerPort {
   return createPlatformAdapters({ mediaFilePicker: createUniMediaFilePickerDriver() }).mediaFilePicker
 }
 
+export function createDefaultLocationPort(): LocationPort {
+  return createPlatformAdapters({ location: createUniLocationDriver() }).location
+}
+
 export function createDefaultUploadPort(authSession: AuthSessionPort): UploadPort {
   const config = loadApplicationRuntimeConfig()
   if (!config.ok) {
@@ -172,6 +181,14 @@ export function createDefaultUploadPort(authSession: AuthSessionPort): UploadPor
     apiBaseUrl: config.value.environment.apiBaseUrl,
     getSessionRef: () => authSession.getCurrentSession()?.sessionRef ?? null,
   }))
+}
+
+export function createDefaultMediaUploadQueue(storage: StoragePort, upload: UploadPort): MediaUploadQueuePort {
+  return createMediaUploadQueue(
+    createUniDurableMediaStore(storage),
+    createMediaQueueRepository(storage),
+    upload,
+  )
 }
 
 export function createDefaultNavigationPort(): NavigationPort {

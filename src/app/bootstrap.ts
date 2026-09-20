@@ -13,6 +13,8 @@ import type {
   TechnicianApiReadPort,
   MediaCapturePort,
   MediaFilePickerPort,
+  MediaUploadQueuePort,
+  LocationPort,
   UploadPort,
   SurveyLeakageCauseProviderPort,
 } from '@shared/ports'
@@ -32,6 +34,8 @@ import {
   createDefaultTechnicianApiReadPort,
   createDefaultMediaCapturePort,
   createDefaultMediaFilePickerPort,
+  createDefaultLocationPort,
+  createDefaultMediaUploadQueue,
   createDefaultUploadPort,
   createDefaultSurveyLeakageCauseProvider,
 } from './composition'
@@ -46,7 +50,9 @@ export interface ApplicationDependencies {
   readonly draftRepository?: ActionDraftRepository
   readonly mediaCapture?: MediaCapturePort
   readonly mediaFilePicker?: MediaFilePickerPort
+  readonly location?: LocationPort
   readonly upload?: UploadPort
+  readonly mediaUploadQueue?: MediaUploadQueuePort
   readonly surveyLeakageCauseProvider?: SurveyLeakageCauseProviderPort
 }
 
@@ -64,7 +70,9 @@ export function createApplication(dependencies: ApplicationDependencies = {}) {
   const draftRepository = dependencies.draftRepository ?? createActionDraftRepository(storage)
   const mediaCapture = dependencies.mediaCapture ?? createDefaultMediaCapturePort()
   const mediaFilePicker = dependencies.mediaFilePicker ?? createDefaultMediaFilePickerPort()
+  const location = dependencies.location ?? createDefaultLocationPort()
   const upload = dependencies.upload ?? createDefaultUploadPort(authSession)
+  const mediaUploadQueue = dependencies.mediaUploadQueue ?? createDefaultMediaUploadQueue(storage, upload)
   const surveyLeakageCauseProvider = dependencies.surveyLeakageCauseProvider ?? createDefaultSurveyLeakageCauseProvider(authSession)
   sessionStore.configureAuth(authSession)
   const workOrderListStore = useWorkOrderListStore(pinia)
@@ -93,7 +101,9 @@ export function createApplication(dependencies: ApplicationDependencies = {}) {
     getSession: () => sessionStore.session,
     mediaCapture,
     mediaFilePicker,
+    location,
     upload,
+    mediaUploadQueue,
     surveyLeakageCauseProvider,
   })
   const localDraftDiagnosticsStore = useLocalDraftDiagnosticsStore(pinia)

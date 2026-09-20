@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 1,
+  "environment": "beta",
+  "domain": "survey_media_p0",
+  "semanticIdentity": "generic_durable_media_queue_with_survey_codec_boundary",
+  "sanitized": true,
+  "source": {
+    "r1": "xlink-business-jishi-3.0/subpackages2/inspectionAppointment/inspectionAppointment.vue",
+    "backend": "xlink-cloud-backend/BackFileController.java,ImageController.java,ImageServiceImpl.java",
+    "authority": "R1 behavior plus Backend upload/persistence evidence; R2 presentation only",
+    "noLiveWrite": true,
+    "rawProductionPayloadPersisted": false
+  },
+  "r1Observed": {
+    "ordinaryPhoto": "back/super/file/upToken.do -> Qiniu upload -> form media object",
+    "cameraPhoto": "camera branch -> biz/image/uploadAddLogo.do -> server watermarked Qiniu object",
+    "location": "R1 has an offline location-report queue; no R1 durable media queue was found",
+    "timestamp": "camera watermark uses server-side current time in the backend image service",
+    "retry": "R1 upload helper retries online upload attempts; this is not evidence of durable media queue recovery"
+  },
+  "genericRuntime": {
+    "durableMediaStore": "DurableMediaStorePort",
+    "queueRepository": "MediaQueueRepository",
+    "uploadQueue": "MediaUploadQueuePort",
+    "preprocessor": "MediaPreprocessorPort",
+    "location": "LocationPort",
+    "networkStatus": "NetworkStatusPort",
+    "surveySpecificQueue": false,
+    "surveySpecificCodec": "survey-form-codec.ts"
+  },
+  "taskIdentity": [
+    "userId",
+    "workOrderId",
+    "workflowNodeId",
+    "formDefinitionId",
+    "formDataId",
+    "fieldId",
+    "valueKey",
+    "localAssetId"
+  ],
+  "states": [
+    "queued",
+    "preprocessing",
+    "ready_to_upload",
+    "uploading",
+    "uploaded",
+    "failed_retryable",
+    "failed_terminal"
+  ],
+  "durability": {
+    "localAssetBeforeUpload": true,
+    "tempPathOnly": false,
+    "metadataAndQueueAreSeparate": true,
+    "restartRecovery": "IMPLEMENTED_BUT_DEVICE_SMOKE_REQUIRED",
+    "ambiguousUpload": "manual_retry_required",
+    "automaticRetry": false
+  },
+  "formSafety": {
+    "remoteRefBeforeConfirmedUpload": false,
+    "requiredPendingMediaBlocksSave": true,
+    "workflowCompletionRequiresSavedForm": true,
+    "localPathInFormData": false,
+    "queueLifecycleInFormData": false
+  },
+  "platform": {
+    "mp_weixin": {
+      "durableMechanism": "uni.saveFile + saved-file metadata",
+      "status": "PARTIAL",
+      "deviceRestartSmoke": "DEFERRED"
+    },
+    "app": {
+      "durableMechanism": "uni.saveFile + saved-file metadata",
+      "status": "PARTIAL",
+      "deviceRestartSmoke": "DEFERRED"
+    }
+  },
+  "photoEvidence": {
+    "library": {
+      "status": "PARTIAL",
+      "locationRequired": false,
+      "watermark": "NOT_APPLIED"
+    },
+    "camera": {
+      "status": "PARTIAL",
+      "locationRequired": true,
+      "watermark": "PREPROCESSOR_REQUIRED",
+      "serverEndpointEvidence": "biz/image/uploadAddLogo.do"
+    },
+    "surveyDrawing": "UNKNOWN_BLOCKED",
+    "infrared": "PARTIAL"
+  },
+  "deferred": [
+    "serviceGoods/projPackage remains DEFERRED and non-blocking",
+    "surveyDrawing tool protocol",
+    "real Beta/Production upload",
+    "server idempotency contract",
+    "device restart smoke on MP/App",
+    "offline location-report integration"
+  ]
+}

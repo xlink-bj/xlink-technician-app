@@ -67,7 +67,7 @@
             :loading="workspace.mediaInFlightField === field.fieldId"
             @tap="pickMedia(field.fieldId)"
           >
-            {{ mediaCountFor(field.fieldId) > 0 ? '重新选择' : '选择文件' }}
+            {{ workspace.mediaStateByField[field.fieldId] === 'failed_retryable' ? '重试上传' : mediaCountFor(field.fieldId) > 0 ? '重新选择' : '选择文件' }}
           </AppButton>
           <text v-else class="dynamic-action-media-readonly">仅查看</text>
           <text v-if="workspace.dynamicMediaHint(field.fieldId)" class="dynamic-action-media-hint">
@@ -176,6 +176,10 @@ function setField(fieldId: string, value: FormFieldValue): void {
 }
 
 async function pickMedia(fieldId: string): Promise<void> {
+  if (workspace.mediaStateByField[fieldId] === 'failed_retryable') {
+    await workspace.retryDynamicMedia(fieldId)
+    return
+  }
   await workspace.pickDynamicMedia(fieldId)
 }
 

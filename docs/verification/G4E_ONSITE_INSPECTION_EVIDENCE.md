@@ -465,13 +465,15 @@ Adapter-normalized workflow node
 - Action drafts continue through the existing user/work-order/node/action/
   content-scoped Draft Repository. Only JSON field values are persisted; local
   media paths and binary content are not written to drafts.
-- Media uses the existing token/provider `UploadPort`. MP/App platform file
+- Media uses the generic `DurableMediaStorePort` + `MediaUploadQueuePort` before
+  crossing the existing token/provider `UploadPort`. MP/App platform file
   selection stays in the platform adapter; Mock returns a synthetic uploaded
   reference and Real remains behind the existing real-write safety boundary.
-  G4-E is online-first and does not promise offline media recovery or a media
-  queue. Picker and upload calls are gated by the same effective field state;
-  hidden, read-only, unsupported and wrong-type media fields have no picker or
-  upload side effect.
+  The queue foundation restores task metadata and retains retryable media, but
+  device restart smoke and complete offline business support remain PARTIAL.
+  Picker and upload calls are gated by the same effective field state; hidden,
+  read-only, unsupported and wrong-type media fields have no picker or upload
+  side effect.
 - Save and completion use single-flight guards. There is no blind automatic
   mutation retry. If completion is ambiguous, the workspace rereads the
   authoritative detail before a later manual retry becomes eligible. A
@@ -494,8 +496,10 @@ only bounded business reads, Mock commands and Mock upload results are local.
   visual/functional test data, not a production schema claim.
 - U3 server-side idempotency remains UNKNOWN; client single-flight and reread
   protection are the only Phase 2 guarantees.
-- U4 durable offline media remains unsupported by design. JSON draft recovery
-  does not restore unuploaded media after app restart.
+- U4 durable offline media queue foundation is implemented, but MP/App device
+  restart smoke, background execution and full offline business semantics are
+  still PARTIAL/DEFERRED. This is not an assertion that R1 had a durable media
+  queue.
 
 Phase 2 therefore adds no new workflow intent, no new backend API, no legacy
 networking abstraction, and no G4-F scope.
@@ -1335,8 +1339,8 @@ rows and all 45 are explicitly classified:
 - 6 `PRESENTATION_ONLY` rows (`gap0`–`gap4`, with the evidenced duplicate
   `gap4` row);
 - 24 `MEDIA_INPUT` rows at `PARTIAL` status;
-- 3 `CUSTOM_EXPERIENCE` rows at `UNKNOWN` status (`leakageCauseSelect`,
-  `leakageCause`, `serviceGoods`).
+- 2 `CUSTOM_EXPERIENCE` rows at `SUPPORTED` status (`leakageCauseSelect`,
+  `leakageCause`) and 1 legacy `DEFERRED` row (`serviceGoods`).
 
 The first implementation slice is generic and type-driven: `type=gap` is a
 Dynamic Form Runtime `PRESENTATION_ONLY` capability. It can render a restrained
@@ -1349,8 +1353,9 @@ Survey media remains incomplete. Backend `Survey` persists the relevant media
 as `List<Map>` for `surveyDrawing` and `infraredImageList`; R1 uses the shared
 Qiniu upload path, has a distinct `surveyTool` path for `surveyDrawing`, and
 uses `/biz/image/uploadAddLogo` for camera watermark processing. The new App
-has not claimed camera/location/timestamp, max-count, staged-save, offline or
-retry semantics. `leakageCauseSelect` and `leakageCause` remain a coupled
+has not claimed camera/location/timestamp, max-count, staged-save, or complete
+offline semantics; the generic queue provides explicit retry states only.
+`leakageCauseSelect` and `leakageCause` remain a coupled
 part-scoped tree interaction with `leakageCause[]` persistence, not two scalar
 fields. `serviceGoods` remains “推荐服务商品”; R1 evidence shows
 `serviceType`/`sourceType`/repair-part filtering through
@@ -1369,9 +1374,10 @@ separate operations. The registry keeps `surveyDrawing` behind its unverified
 special survey tool, enforces only the evidenced `surveyDrawing=1` and
 `infraredImageList=4` limits, and leaves ordinary/aggregate limits UNKNOWN.
 
-The implementation is online-only and Mock/test oriented. It does not perform
-real Beta/Production uploads, does not add camera watermark/LBS, does not add
-offline media persistence, and does not claim a Survey submit is complete.
+The implementation remains Mock/test oriented for business writes. It does not
+perform real Beta/Production uploads, does not execute camera watermark/LBS,
+and does not claim a Survey submit is complete. The generic durable media queue
+is present, while device restart/background execution remains PARTIAL.
 
 ### Media abstraction boundary hardening
 
@@ -1383,3 +1389,33 @@ verified Survey media value keys. Generic form reads therefore ignore unknown
 object-shaped values, while generic writes fail closed when a media codec is
 required. Survey media policy remains in the feature registry; upload and
 workflow operations remain separate.
+
+## G4-E P0 — shared durable media queue addendum
+
+The P0 implementation establishes a generic durable media foundation without
+promoting the quarantined Inspection schema or creating a Survey-specific queue.
+The machine-readable contract is `contracts/beta/survey/media-p0-contract.json`
+and is checked by `pnpm run check:survey-media-p0`.
+
+R1/backend source tracing records the ordinary photo path
+`back/super/file/upToken.do -> Qiniu upload` and the camera path
+`biz/image/uploadAddLogo.do`. The R1 offline location-report list is explicitly
+not treated as evidence of an offline media queue. The new runtime therefore
+uses `DurableMediaStorePort`, `MediaQueueRepository`, `MediaUploadQueuePort`,
+`MediaPreprocessorPort`, `LocationPort` and optional `NetworkStatusPort` as
+generic boundaries. Survey `{url,name,extname}` serialization remains owned by
+the Survey codec.
+
+The queue persists a local asset before upload, restores task metadata by the
+full user/work/node/form/field/value/local-asset identity, single-flights one
+task, retains retryable failures, and does not automatically resend an
+ambiguous `uploading` task. A remote reference reaches FormData only after a
+confirmed upload. Required pending media remains ineligible for form save or
+workflow completion. Successful form save may best-effort finalize queue tasks;
+cleanup failure is not reclassified as business-save failure.
+
+This is infrastructure evidence, not a claim of finished offline business
+support. MP/App device restart smoke, real Beta/Production/Qiniu upload,
+server idempotency, camera watermark execution, surveyDrawing tooling and
+offline location-report integration remain PARTIAL/DEFERRED. `serviceGoods` /
+`projPackage` remains DEFERRED and non-blocking.

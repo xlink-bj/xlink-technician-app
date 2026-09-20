@@ -33,7 +33,7 @@ const allowedClasses = new Set([
 ])
 for (const row of actual.capabilities) {
   if (!allowedClasses.has(row.capabilityClass)) fail(`${row.fieldId} has invalid capability class`)
-  if (!['SUPPORTED', 'PARTIAL', 'UNKNOWN'].includes(row.implementationStatus)) fail(`${row.fieldId} has invalid implementation status`)
+  if (!['SUPPORTED', 'PARTIAL', 'UNKNOWN', 'DEFERRED'].includes(row.implementationStatus)) fail(`${row.fieldId} has invalid implementation status`)
   if (!row.mobileApplicable) fail(`${row.fieldId} is not mobile applicable`)
 }
 

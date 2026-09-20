@@ -34,6 +34,7 @@ function imageResult(result: UniChooseImageResult, source: 'camera' | 'library')
       localPath: path,
       mimeType: 'image/jpeg',
       source,
+      capturedAt: new Date().toISOString(),
       ...(sizes.get(path) !== undefined ? { size: sizes.get(path) } : {}),
       name: path.split('/').pop() ?? `image-${index + 1}.jpg`,
     }))

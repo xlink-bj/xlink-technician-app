@@ -23,6 +23,14 @@ export interface DynamicActionField extends AppointmentFormFieldRead {
 
 const ACTION_FORM_SURFACE: FormRuntimeSurface = 'mobile_detail'
 
+/** Product-owned legacy Survey field: retained in evidence, excluded from the current action. */
+export function isDeferredSurveyField(
+  formPurpose: DynamicFormRead['purpose'] | undefined,
+  field: Pick<AppointmentFormFieldRead, 'valueKey'>,
+): boolean {
+  return formPurpose === 'survey' && field.valueKey === 'serviceGoods'
+}
+
 function actionUnsupportedReasonFor(
   field: AppointmentFormFieldRead,
   values: Readonly<Record<string, FormFieldValue>>,
@@ -98,6 +106,7 @@ export function dynamicActionFieldsFor(form: DynamicFormRead): readonly DynamicA
 
 export function dynamicActionUnsupportedFieldsFor(form: DynamicFormRead): readonly DynamicActionField[] {
   return dynamicActionFieldsFor(form).filter((field) => {
+    if (isDeferredSurveyField(form.purpose, field)) return false
     if (!isFieldApplicable(field, ACTION_FORM_SURFACE)) return false
     if (field.runtime.capability !== 'UNSUPPORTED') return false
     return evaluateVisibility(field.visibility, form.values).state !== 'hidden'
@@ -113,7 +122,10 @@ export function normalizeDynamicForm(
       ? [leakageExperience.triggerField.fieldId, leakageExperience.valueField.fieldId]
       : [],
   )
-  const fields = form.fields.filter((field) => !controlledFieldIds.has(field.fieldId)).map((field) => {
+  const fields = form.fields
+    .filter((field) => !controlledFieldIds.has(field.fieldId))
+    .filter((field) => !isDeferredSurveyField(form.purpose, field))
+    .map((field) => {
     const schema = schemaFor(field, form.values, form.purpose)
     return form.workflowReadOnlyFieldIds?.some((id) => String(id) === String(field.fieldId))
       ? { ...schema, readOnly: true }

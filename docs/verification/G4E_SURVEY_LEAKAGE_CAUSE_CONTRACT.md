@@ -52,7 +52,7 @@ cause vocabulary.
 ## Explicit unknowns / exclusions
 
 - production option rows are not persisted in this repository;
-- `serviceGoods` / `projPackage` remains UNKNOWN;
+- `serviceGoods` / `projPackage` is LEGACY / DEFERRED / NON-BLOCKING by product decision;
 - media, real Survey writes, workflow completion, offline queues, location and
   watermark behavior are outside this slice;
 - G4-F is not started.

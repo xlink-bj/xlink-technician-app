@@ -1,7 +1,13 @@
 import type {
   CapabilityResult,
+  DurableMediaAsset,
   CustomerContactId,
   LocalMedia,
+  MediaEvidenceContext,
+  MediaUploadTask,
+  MediaUploadTaskId,
+  MediaTaskScope,
+  OperationSnapshot,
 } from '@shared/types'
 
 export interface LocationSnapshot {
@@ -9,6 +15,49 @@ export interface LocationSnapshot {
   readonly longitude: number
   readonly coordinateSystem: 'gcj02'
   readonly capturedAt: string
+  readonly accuracy?: number
+  readonly address?: string
+}
+
+export interface DurableMediaStorePort {
+  persist(media: LocalMedia): Promise<OperationSnapshot<DurableMediaAsset>>
+  resolve(assetId: import('@shared/types').LocalMediaRef): Promise<OperationSnapshot<DurableMediaAsset | null>>
+  exists(assetId: import('@shared/types').LocalMediaRef): Promise<OperationSnapshot<boolean>>
+  remove(assetId: import('@shared/types').LocalMediaRef): Promise<OperationSnapshot<void>>
+}
+
+export interface MediaPreprocessorPort {
+  preprocess(input: {
+    readonly media: LocalMedia
+    readonly evidence?: MediaEvidenceContext
+  }): Promise<OperationSnapshot<LocalMedia>>
+}
+
+export interface MediaQueueRepository {
+  read(taskId: MediaUploadTaskId): Promise<OperationSnapshot<MediaUploadTask | null>>
+  write(task: MediaUploadTask): Promise<OperationSnapshot<void>>
+  remove(taskId: MediaUploadTaskId): Promise<OperationSnapshot<void>>
+  list(scope: Pick<MediaTaskScope, 'userId' | 'workOrderId' | 'workflowNodeId'>): Promise<OperationSnapshot<readonly MediaUploadTask[]>>
+}
+
+export interface MediaUploadQueuePort {
+  enqueue(input: {
+    readonly scope: Omit<MediaTaskScope, 'localAssetId'>
+    readonly media: LocalMedia
+    readonly evidence?: MediaEvidenceContext
+  }): Promise<OperationSnapshot<MediaUploadTask>>
+  process(taskId: MediaUploadTaskId): Promise<OperationSnapshot<MediaUploadTask>>
+  retry(taskId: MediaUploadTaskId): Promise<OperationSnapshot<MediaUploadTask>>
+  discard(taskId: MediaUploadTaskId): Promise<OperationSnapshot<void>>
+  finalizeAfterSave(taskId: MediaUploadTaskId): Promise<OperationSnapshot<void>>
+  listForAction(scope: Pick<MediaTaskScope, 'userId' | 'workOrderId' | 'workflowNodeId'>): Promise<OperationSnapshot<readonly MediaUploadTask[]>>
+}
+
+export type NetworkStatus = 'online' | 'offline' | 'unknown'
+
+export interface NetworkStatusPort {
+  current(): Promise<NetworkStatus>
+  subscribe(listener: (status: NetworkStatus) => void): () => void
 }
 
 export interface CalendarEventInput {

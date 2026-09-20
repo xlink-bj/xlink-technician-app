@@ -12,6 +12,8 @@ export interface SurveyMediaFieldDescriptor {
   readonly persistedShape: 'media_object_list'
 }
 
+export type SurveyMediaPreprocessPolicy = 'none' | 'location_watermark'
+
 const ordinarySurveyPhotoKeys = new Set([
   ...Array.from({ length: 20 }, (_, index) => `images${index + 1}`),
 ])
@@ -64,4 +66,17 @@ export function surveyMediaDescriptorFor(
 
 export function surveyMediaRegistryKeys(): readonly string[] {
   return Object.keys(SURVEY_MEDIA_REGISTRY)
+}
+
+/** Camera watermarking is evidenced only on the R1 camera branch. Album uploads stay unwatermarked. */
+export function surveyMediaPreprocessPolicyFor(
+  purpose: FormPurpose | undefined,
+  field: Pick<FormFieldRead, 'valueKey' | 'type'>,
+  source: 'camera' | 'library' | 'file',
+): SurveyMediaPreprocessPolicy {
+  const descriptor = surveyMediaDescriptorFor(purpose, field)
+  if (!descriptor || source !== 'camera') return 'none'
+  return descriptor.kind === 'survey_photo' || descriptor.kind === 'mold_photo'
+    ? 'location_watermark'
+    : 'none'
 }
