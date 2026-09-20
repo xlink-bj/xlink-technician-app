@@ -1356,3 +1356,18 @@ fields. `serviceGoods` remains “推荐服务商品”; R1 evidence shows
 `serviceType`/`sourceType`/repair-part filtering through
 `biz/projPackage/queryWithRank`, but does not prove quotation pricing or a
 final quotation input.
+
+### Survey Media Contract + Online Foundation
+
+The bounded media contract is recorded in
+`docs/verification/G4E_SURVEY_MEDIA_CONTRACT.md` and machine-checked by
+`pnpm run check:survey-media`. It contains 24 mobile Survey media rows. The
+normalized path now preserves R1/Backend media object lists as
+`SurveyMediaRef[]`; media upload, form save and workflow completion remain
+separate operations. The registry keeps `surveyDrawing` behind its unverified
+special survey tool, enforces only the evidenced `surveyDrawing=1` and
+`infraredImageList=4` limits, and leaves ordinary/aggregate limits UNKNOWN.
+
+The implementation is online-only and Mock/test oriented. It does not perform
+real Beta/Production uploads, does not add camera watermark/LBS, does not add
+offline media persistence, and does not claim a Survey submit is complete.

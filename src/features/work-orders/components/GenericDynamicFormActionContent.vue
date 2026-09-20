@@ -70,6 +70,9 @@
             {{ mediaCountFor(field.fieldId) > 0 ? '重新选择' : '选择文件' }}
           </AppButton>
           <text v-else class="dynamic-action-media-readonly">仅查看</text>
+          <text v-if="workspace.dynamicMediaHint(field.fieldId)" class="dynamic-action-media-hint">
+            {{ workspace.dynamicMediaHint(field.fieldId) }}
+          </text>
         </view>
         <AppInput
           v-else

@@ -22,7 +22,11 @@ export type {
   WorkflowRunId,
 } from './identifiers'
 export { asOpaqueId } from './identifiers'
-export type { LocalMedia, MediaSource, UploadedMediaRef, UploadState } from './media'
+export {
+  isSurveyMediaRef,
+  surveyMediaRefFromUpload,
+} from './media'
+export type { LocalMedia, MediaSource, SurveyMediaRef, UploadedMediaRef, UploadState } from './media'
 export {
   createOperationError,
   isRetryableCategory,

@@ -241,7 +241,7 @@ export function buildSurveyCapabilityMatrixMarkdown(inventory) {
     '### gap / 分隔槽', '',
     '`type=gap` 已由 Dynamic Form Runtime 识别为 `PRESENTATION_ONLY`。适用且条件可见时渲染为 restrained divider；不可编辑、不进入 submission、不产生 unsupported warning、不阻塞校验。', '',
     '### Survey Media', '',
-    '媒体字段目前是 `MEDIA_INPUT / PARTIAL`，不是完成态。`surveyDrawing` 的 R1 `surveyTool`、普通照片的拍照水印/定位、红外照片、除霉前后照片、数量限制、保存时序和弱网恢复仍需单独证据。', '',
+    '媒体字段目前是 `MEDIA_INPUT / PARTIAL`，不是完成态。字段级证据和在线基础边界见 `docs/verification/G4E_SURVEY_MEDIA_CONTRACT.md`；`surveyDrawing` 的 R1 `surveyTool`、普通照片的拍照水印/定位、红外照片、除霉前后照片、数量限制、保存时序和弱网恢复仍需单独证据。', '',
     '### leakageCause', '',
     '`leakageCauseSelect` 与 `leakageCause` 是同一业务交互的触发/持久化两层，不是两个普通独立字段。R1 证明了按维修部位分组的树形选择与 `leakageCause[]`，但新 Runtime 的 provider、清理和提交契约尚未完成，因此继续阻断。', '',
     '### serviceGoods / projPackage', '',

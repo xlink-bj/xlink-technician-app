@@ -35,6 +35,7 @@ import type {
   WorkflowRunId,
 } from '@shared/types'
 import { asOpaqueId } from '@shared/types'
+import type { SurveyMediaRef } from '@shared/types'
 
 import {
   AdapterMappingError,
@@ -956,20 +957,52 @@ function formDefinition(raw: unknown, requestedId: FormDefinitionId): FormDefini
   }
 }
 
-function formFieldValue(value: unknown): string | number | boolean | null | readonly (string | number | boolean)[] | undefined {
+function rawMediaRef(value: unknown): SurveyMediaRef | undefined {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return undefined
+  const record = value as Record<string, unknown>
+  const hasMediaShape = ['url', 'key', 'fileKey', 'objectKey', 'name', 'extname', 'extension', 'fileName']
+    .some((key) => Object.prototype.hasOwnProperty.call(record, key))
+  if (!hasMediaShape) return undefined
+  if (typeof record.url !== 'string' || record.url.trim().length === 0) {
+    throw new AdapterMappingError('Survey media record is missing a usable url')
+  }
+  const objectKey = [record.key, record.fileKey, record.objectKey, record.name]
+    .find((value): value is string => typeof value === 'string' && value.trim().length > 0)
+  const fileName = typeof record.fileName === 'string' && record.fileName.trim().length > 0
+    ? record.fileName
+    : undefined
+  const extension = [record.extname, record.extension]
+    .find((value): value is string => typeof value === 'string' && value.trim().length > 0)
+  return {
+    url: record.url,
+    ...(objectKey ? { objectKey } : {}),
+    ...(fileName ? { fileName } : {}),
+    ...(extension ? { extension } : {}),
+  }
+}
+
+function formFieldValue(value: unknown): FormFieldValue | undefined {
   if (value === null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
     return value
   }
-  if (Array.isArray(value) && value.every((item) =>
-    typeof item === 'string' || typeof item === 'number' || typeof item === 'boolean',
-  )) {
-    return value as readonly (string | number | boolean)[]
+  const media = rawMediaRef(value)
+  if (media) return media
+  if (Array.isArray(value)) {
+    if (value.every((item) =>
+      typeof item === 'string' || typeof item === 'number' || typeof item === 'boolean',
+    )) return value as readonly (string | number | boolean)[]
+    if (value.every((item) => rawMediaRef(item))) {
+      return value.map((item) => rawMediaRef(item)!)
+    }
+    if (value.some((item) => item !== null && typeof item === 'object')) {
+      throw new AdapterMappingError('Survey media list is malformed')
+    }
   }
   return undefined
 }
 
-function formValues(record: AdapterRecord): Readonly<Record<string, string | number | boolean | null | readonly (string | number | boolean)[]>> | undefined {
-  const values: Record<string, string | number | boolean | null | readonly (string | number | boolean)[]> = {}
+function formValues(record: AdapterRecord): Readonly<Record<string, FormFieldValue>> | undefined {
+  const values: Record<string, FormFieldValue> = {}
   const extensions = optionalRecord(record.exts)
   if (extensions) {
     for (const [key, value] of Object.entries(extensions)) {

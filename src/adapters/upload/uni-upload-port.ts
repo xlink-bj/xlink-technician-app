@@ -40,6 +40,15 @@ function parseUploadResponse(value: unknown): Record<string, unknown> {
   return {}
 }
 
+function fileNameFor(media: LocalMedia): string {
+  const supplied = media.name?.trim().split('/').pop()
+  if (supplied) return supplied
+  const extension = media.mimeType.split('/')[1]?.toLowerCase() === 'jpeg'
+    ? 'jpg'
+    : media.mimeType.split('/')[1]?.toLowerCase() ?? 'bin'
+  return `upload.${extension}`
+}
+
 function uploadFile(
   upload: UniUploadFile,
   media: LocalMedia,
@@ -90,7 +99,20 @@ export function createUniUploadPort(
       issueToken: (media) => commandTransport.execute({
         method: 'POST',
         path: 'back/super/file/upToken.do',
-        body: { mimeType: media.mimeType },
+        body: { fileName: fileNameFor(media) },
+      }).then((response) => {
+        const record = typeof response === 'object' && response !== null && !Array.isArray(response)
+          ? response as Record<string, unknown>
+          : undefined
+        const key = record?.key ?? record?.fileKey ?? record?.objectKey
+        const baseUrl = import.meta.env.VITE_XLINK_MEDIA_DOWNLOAD_BASE_URL
+        if (!record || typeof key !== 'string' || typeof baseUrl !== 'string' || baseUrl.trim().length === 0) {
+          return response
+        }
+        return {
+          ...record,
+          downloadUrl: `${baseUrl.replace(/\/+$/, '')}/${key.replace(/^\/+/, '')}`,
+        }
       }),
     },
     {

@@ -320,6 +320,60 @@ describe('G3-C API adapter foundation', () => {
     expect(result.data?.id).not.toBe('field-row-001')
   })
 
+  it('normalizes R1 Survey media rows without losing object identity or list shape', async () => {
+    const transport = new FixtureApiTransport({
+      'biz/extForm/query/survey-definition': {
+        data: [{
+          _id: 'survey-data-001',
+          extId: 'survey-definition',
+          exts: {
+            images1: [{ url: 'https://media.invalid/object-001', name: 'survey/object-001', extname: 'jpg' }],
+          },
+        }],
+      },
+    })
+    const api = createTechnicianApiReadAdapter(transport)
+    const result = await api.getFormData({
+      definitionId: asOpaqueId<'FormDefinitionId'>('survey-definition'),
+      dataId: asOpaqueId<'FormDataId'>('survey-data-001'),
+    })
+
+    expect(result).toMatchObject({
+      state: 'succeeded',
+      data: {
+        items: [{
+          values: {
+            images1: [{
+              url: 'https://media.invalid/object-001',
+              objectKey: 'survey/object-001',
+              extension: 'jpg',
+            }],
+          },
+        }],
+      },
+    })
+  })
+
+  it('fails closed when a backend Survey media object is malformed', async () => {
+    const transport = new FixtureApiTransport({
+      'biz/extForm/query/survey-definition': {
+        data: [{
+          _id: 'survey-data-001',
+          extId: 'survey-definition',
+          exts: { images1: [{ name: 'missing-url' }] },
+        }],
+      },
+    })
+    const api = createTechnicianApiReadAdapter(transport)
+    const result = await api.getFormData({
+      definitionId: asOpaqueId<'FormDefinitionId'>('survey-definition'),
+      dataId: asOpaqueId<'FormDataId'>('survey-data-001'),
+    })
+
+    expect(result.state).toBe('failed_terminal')
+    expect(result.error?.category).toBe('server_terminal')
+  })
+
   it('routes only an explicit Survey Ext identity and leaves generic forms unclassified', async () => {
     const surveyId = asOpaqueId<'FormDefinitionId'>('survey-definition')
     const surveyTransport = new FixtureApiTransport({

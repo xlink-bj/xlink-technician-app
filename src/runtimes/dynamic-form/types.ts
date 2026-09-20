@@ -1,6 +1,6 @@
 import type { CompatibilityEntry } from '@shared/config'
 import type { FormFieldVisibility, FormFieldVisibilityPath } from '@shared/ports'
-import type { LocalMediaRef } from '@shared/types'
+import type { LocalMediaRef, SurveyMediaRef } from '@shared/types'
 
 export type FormCapability =
   | 'SUPPORTED_GENERIC'
@@ -113,7 +113,8 @@ export type NormalizedFieldValue =
   | boolean
   | null
   | LocalMediaRef
-  | readonly (string | number | boolean | LocalMediaRef)[]
+  | SurveyMediaRef
+  | readonly (string | number | boolean | LocalMediaRef | SurveyMediaRef)[]
 
 export type NormalizationResult =
   | { readonly ok: true; readonly value: NormalizedFieldValue }

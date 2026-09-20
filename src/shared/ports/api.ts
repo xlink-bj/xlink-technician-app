@@ -10,7 +10,7 @@ import type {
   WorkflowNodeRuntimeId,
   WorkflowRunId,
 } from '@shared/types'
-import type { OperationSnapshot } from '@shared/types'
+import type { OperationSnapshot, SurveyMediaRef } from '@shared/types'
 
 export interface ReadPage<T> {
   readonly items: readonly T[]
@@ -221,7 +221,12 @@ export interface FormFieldOptionRead {
   readonly children?: readonly FormFieldOptionRead[]
 }
 
-export type FormFieldValue = string | number | boolean | null | readonly (string | number | boolean)[]
+export type FormFieldPrimitive = string | number | boolean
+export type FormFieldValue =
+  | FormFieldPrimitive
+  | null
+  | SurveyMediaRef
+  | readonly (FormFieldPrimitive | SurveyMediaRef)[]
 
 export type FormFieldVisibilityPath = string | readonly string[]
 

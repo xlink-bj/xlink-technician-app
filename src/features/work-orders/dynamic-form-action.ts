@@ -8,8 +8,9 @@ import {
 import type { EffectiveFieldState, FormFieldSchema, FormRuntimeSurface, NormalizedFieldValue } from '@runtimes/dynamic-form'
 import type { DynamicFormRead, AppointmentFormFieldRead } from '@shared/ports'
 import type { FormFieldValue } from '@shared/ports/api'
-import type { OperationSnapshot } from '@shared/types'
 import { createOperationError } from '@shared/types'
+import type { OperationSnapshot } from '@shared/types'
+import { surveyMediaDescriptorFor } from './survey-media'
 
 export interface DynamicActionField extends AppointmentFormFieldRead {
   readonly runtime: EffectiveFieldState
@@ -17,8 +18,14 @@ export interface DynamicActionField extends AppointmentFormFieldRead {
 
 const ACTION_FORM_SURFACE: FormRuntimeSurface = 'mobile_detail'
 
-function actionUnsupportedReasonFor(field: AppointmentFormFieldRead, values: Readonly<Record<string, FormFieldValue>>): string | undefined {
+function actionUnsupportedReasonFor(
+  field: AppointmentFormFieldRead,
+  values: Readonly<Record<string, FormFieldValue>>,
+  formPurpose?: DynamicFormRead['purpose'],
+): string | undefined {
   if (field.unsupportedReason) return field.unsupportedReason
+  const mediaDescriptor = surveyMediaDescriptorFor(formPurpose, field)
+  if (mediaDescriptor?.selectionMode === 'special_tool') return mediaDescriptor.blocker
   if (
     field.valueOption
     && ['select', 'bizSelect', 'radio', 'checkbox', 'cascade'].includes(field.type)
@@ -32,8 +39,9 @@ function actionUnsupportedReasonFor(field: AppointmentFormFieldRead, values: Rea
 function schemaFor(
   field: AppointmentFormFieldRead,
   values: Readonly<Record<string, FormFieldValue>> = {},
+  formPurpose?: DynamicFormRead['purpose'],
 ): FormFieldSchema {
-  const unsupportedReason = actionUnsupportedReasonFor(field, values)
+  const unsupportedReason = actionUnsupportedReasonFor(field, values, formPurpose)
   return {
     fieldId: field.fieldId,
     valueKey: field.valueKey,
@@ -55,7 +63,7 @@ function schemaFor(
 }
 
 function toFormValue(value: NormalizedFieldValue): FormFieldValue {
-  if (Array.isArray(value)) return value.map((item) => String(item))
+  if (Array.isArray(value)) return value as FormFieldValue
   return value
 }
 
@@ -63,8 +71,9 @@ function fieldState(
   field: AppointmentFormFieldRead,
   values: Readonly<Record<string, FormFieldValue>>,
   workflowReadOnly = false,
+  formPurpose?: DynamicFormRead['purpose'],
 ): EffectiveFieldState {
-  return evaluateFieldState(schemaFor(field, values), {
+  return evaluateFieldState(schemaFor(field, values, formPurpose), {
     values,
     workflowReadOnly,
     surface: ACTION_FORM_SURFACE,
@@ -74,7 +83,7 @@ function fieldState(
 export function dynamicActionFieldsFor(form: DynamicFormRead): readonly DynamicActionField[] {
   return form.fields.map((field) => ({
     ...field,
-    runtime: evaluateFieldState(schemaFor(field, form.values), {
+    runtime: evaluateFieldState(schemaFor(field, form.values, form.purpose), {
       values: form.values,
       workflowReadOnly: form.workflowReadOnlyFieldIds?.some((id) => String(id) === String(field.fieldId)),
       surface: ACTION_FORM_SURFACE,
@@ -94,7 +103,7 @@ export function normalizeDynamicForm(
   form: DynamicFormRead,
 ): OperationSnapshot<Readonly<Record<string, FormFieldValue>>> {
   const fields = form.fields.map((field) => {
-    const schema = schemaFor(field, form.values)
+    const schema = schemaFor(field, form.values, form.purpose)
     return form.workflowReadOnlyFieldIds?.some((id) => String(id) === String(field.fieldId))
       ? { ...schema, readOnly: true }
       : schema
@@ -130,6 +139,7 @@ export function normalizeDynamicFieldValue(
     field,
     values,
     form.workflowReadOnlyFieldIds?.some((id) => String(id) === String(field.fieldId)),
+    form.purpose,
   )
   if (state.capability === 'PRESENTATION_ONLY') {
     return {

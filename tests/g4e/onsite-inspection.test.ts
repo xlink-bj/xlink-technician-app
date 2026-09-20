@@ -108,6 +108,18 @@ function surveyForm(values: Readonly<Record<string, FormFieldValue>> = {}): Dyna
   }
 }
 
+function surveyMediaForm(values: Readonly<Record<string, FormFieldValue>> = {}): DynamicFormRead {
+  return {
+    purpose: 'survey',
+    definitionId: formDefinitionId,
+    fields: [
+      { fieldId: 'survey-images-1', valueKey: 'images1', label: '大面全景', type: 'file', required: true, readOnly: false },
+      { fieldId: 'survey-infrared', valueKey: 'infraredImageList', label: '红外照片现场图', type: 'file', required: false, readOnly: false },
+    ],
+    values,
+  }
+}
+
 function storageFor() {
   const values = new Map<string, unknown>()
   const storage = {
@@ -428,6 +440,58 @@ describe('G4-E Survey dynamic Action Content', () => {
     }
   })
 
+  it('keeps Survey media as structured object lists and blocks the special drawing tool from generic upload', async () => {
+    const form = surveyMediaForm()
+    const drawingForm: DynamicFormRead = {
+      ...form,
+      fields: [...form.fields, { fieldId: 'survey-drawing', valueKey: 'surveyDrawing', label: '测绘图', type: 'file', required: true, readOnly: false }],
+    }
+    const drawingWorkspace = configureWorkspace(succeeded(undefined), surveyDetail(), drawingForm)
+    await drawingWorkspace.store.load({ workOrderId, workflowNodeId, actionIntent: 'interact_with_form' })
+
+    expect(drawingWorkspace.store.dynamicUnsupportedFields.map((field) => field.valueKey)).toContain('surveyDrawing')
+    const drawing = await drawingWorkspace.store.pickDynamicMedia('survey-drawing')
+    expect(drawing.state).toBe('failed_terminal')
+    expect(drawing.error?.category).toBe('unsupported_capability')
+    expect(drawingWorkspace.picker.pick).not.toHaveBeenCalled()
+
+    const { store, picker, upload, save } = configureWorkspace(succeeded(undefined), surveyDetail(), surveyMediaForm())
+    await store.load({ workOrderId, workflowNodeId, actionIntent: 'interact_with_form' })
+
+    const photo = await store.pickDynamicMedia('survey-images-1')
+    expect(photo.state).toBe('succeeded')
+    expect(store.dynamicForm?.values.images1).toEqual([{
+      url: 'https://mock-upload.invalid/local-survey-photo',
+    }])
+    expect(store.mediaStateByField['survey-images-1']).toBe('uploaded')
+
+    const saved = await store.saveDynamicForm()
+    expect(saved.state).toBe('succeeded')
+    expect(save).toHaveBeenCalledWith(expect.objectContaining({
+      values: expect.objectContaining({
+        images1: [{ url: 'https://mock-upload.invalid/local-survey-photo' }],
+      }),
+    }))
+    expect(upload.upload).toHaveBeenCalledTimes(1)
+  })
+
+  it('rejects a Survey media selection over an evidenced field maximum before upload', async () => {
+    const { store, picker, upload } = configureWorkspace(succeeded(undefined), surveyDetail(), surveyMediaForm())
+    vi.mocked(picker.pick).mockResolvedValue(createCapabilityResult<readonly LocalMedia[]>('photo-library', 'granted', [
+      ...Array.from({ length: 5 }, (_, index) => ({
+        ref: asOpaqueId<'LocalMediaRef'>(`infrared-${index}`),
+        localPath: `/tmp/infrared-${index}.jpg`,
+        mimeType: 'image/jpeg',
+        source: 'library' as const,
+      })),
+    ]))
+    await store.load({ workOrderId, workflowNodeId, actionIntent: 'interact_with_form' })
+
+    const result = await store.pickDynamicMedia('survey-infrared')
+    expect(result.state).toBe('failed_terminal')
+    expect(upload.upload).not.toHaveBeenCalled()
+  })
+
   it('keeps save and workflow completion as separate commands and uploads media online', async () => {
     const { store, api, save, complete, picker, upload, storage } = configureWorkspace()
     await store.load({ workOrderId, workflowNodeId, actionIntent: 'interact_with_form' })
@@ -626,6 +690,36 @@ describe('G4-E Survey dynamic Action Content', () => {
     expect(request).not.toHaveBeenCalled()
   })
 
+  it('serializes normalized Survey media refs back to the evidenced R1 object shape', async () => {
+    let capturedRequest: { readonly body?: Readonly<Record<string, unknown>> } | undefined
+    const transport = {
+      execute: vi.fn(async (input: { readonly body?: Readonly<Record<string, unknown>> }) => {
+        capturedRequest = input
+        return { data: { _id: 'survey-data-002' } }
+      }),
+    }
+    const commands = createTechnicianApiCommandAdapter(transport, {} as TechnicianApiReadPort)
+    const result = await commands.saveDynamicForm!({
+      workOrderId,
+      workflowNodeId,
+      definitionId: formDefinitionId,
+      values: {
+        images1: [{
+          url: 'https://media.invalid/object-002',
+          objectKey: 'survey/object-002',
+          extension: 'jpg',
+        }],
+      },
+    })
+
+    expect(result).toMatchObject({ state: 'succeeded', data: 'survey-data-002' })
+    const dataStr = capturedRequest?.body?.dataStr
+    expect(typeof dataStr).toBe('string')
+    expect(JSON.parse(String(dataStr))).toMatchObject({
+      images1: [{ url: 'https://media.invalid/object-002', name: 'survey/object-002', extname: 'jpg' }],
+    })
+  })
+
   it('applies ExtField.showList to the mobile detail Action surface', () => {
     const form: DynamicFormRead = {
       purpose: 'survey',
@@ -751,6 +845,28 @@ describe('G4-E Survey dynamic Action Content', () => {
       error: { category: 'unsupported_capability' },
     })
     expect(execute).not.toHaveBeenCalled()
+    expect(providerUpload).not.toHaveBeenCalled()
+  })
+
+  it('uses the R1 fileName token request while keeping Mock upload local', async () => {
+    setBusinessMockMode('data')
+    const execute = vi.fn(async (input: { readonly body?: Readonly<Record<string, unknown>> }) => {
+      expect(input.body).toEqual({ fileName: 'survey-photo.jpg' })
+      return { token: 'synthetic-upload-token' }
+    })
+    const providerUpload = vi.fn()
+    const upload = createUniUploadPort({ execute }, providerUpload)
+
+    const result = await upload.upload({
+      ref: asOpaqueId<'LocalMediaRef'>('survey-photo-with-name'),
+      localPath: '/tmp/survey-photo.jpg',
+      name: 'survey-photo.jpg',
+      mimeType: 'image/jpeg',
+      source: 'library',
+    })
+
+    expect(result.state).toBe('succeeded')
+    expect(execute).toHaveBeenCalledTimes(1)
     expect(providerUpload).not.toHaveBeenCalled()
   })
 })

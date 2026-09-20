@@ -67,7 +67,7 @@
 
 ### Survey Media
 
-媒体字段目前是 `MEDIA_INPUT / PARTIAL`，不是完成态。`surveyDrawing` 的 R1 `surveyTool`、普通照片的拍照水印/定位、红外照片、除霉前后照片、数量限制、保存时序和弱网恢复仍需单独证据。
+媒体字段目前是 `MEDIA_INPUT / PARTIAL`，不是完成态。字段级证据和在线基础边界见 `docs/verification/G4E_SURVEY_MEDIA_CONTRACT.md`；`surveyDrawing` 的 R1 `surveyTool`、普通照片的拍照水印/定位、红外照片、除霉前后照片、数量限制、保存时序和弱网恢复仍需单独证据。
 
 ### leakageCause
 

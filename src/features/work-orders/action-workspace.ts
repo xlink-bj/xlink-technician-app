@@ -41,6 +41,9 @@ import {
   type UserId,
   type WorkOrderId,
   type WorkflowNodeRuntimeId,
+  isSurveyMediaRef,
+  surveyMediaRefFromUpload,
+  type SurveyMediaRef,
   type UploadedMediaRef,
 } from '@shared/types'
 import {
@@ -61,6 +64,7 @@ import {
   normalizeDynamicForm,
   type DynamicActionField,
 } from './dynamic-form-action'
+import { surveyMediaDescriptorFor } from './survey-media'
 
 export const actionWorkspaceRoute = '/pages/work-orders/action-workspace' as const
 export const actionWorkspaceTimeRoute = '/pages/work-orders/action-time' as const
@@ -142,6 +146,10 @@ function formFieldValue(value: unknown): FormFieldValue | undefined {
     typeof item === 'string' || typeof item === 'number' || typeof item === 'boolean',
   )) {
     return value as readonly (string | number | boolean)[]
+  }
+  if (isSurveyMediaRef(value)) return value
+  if (Array.isArray(value) && value.every((item) => isSurveyMediaRef(item))) {
+    return value as readonly SurveyMediaRef[]
   }
   return undefined
 }
@@ -284,6 +292,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
   const dynamicFormSaveState = ref<'not_saved' | 'saving' | 'saved' | 'failed'>('not_saved')
   const mediaByField = ref<Readonly<Record<string, readonly UploadedMediaRef[]>>>({})
   const mediaInFlightField = ref<string | null>(null)
+  const mediaStateByField = ref<Readonly<Record<string, 'idle' | 'picking' | 'uploading' | 'uploaded' | 'failed_retryable' | 'failed_terminal'>>>({})
   const completionReconciled = ref(false)
   const error = ref<OperationError | null>(null)
   const appointmentFields = computed<readonly AppointmentRuntimeField[]>(() =>
@@ -320,10 +329,13 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       : failure<Readonly<Record<string, FormFieldValue>>>('validation', 'Action content is not ready'),
   )
   const isDynamicFormAction = computed(() => descriptor.value?.actionIntent === 'interact_with_form')
-  const dynamicRequiredMediaPending = computed(() => dynamicFields.value.some((field) =>
-    field.runtime.visible && field.runtime.required && (field.type === 'image' || field.type === 'file')
-      && !dynamicForm.value?.values[field.valueKey],
-  ))
+  const dynamicRequiredMediaPending = computed(() => dynamicFields.value.some((field) => {
+    if (!field.runtime.visible || !field.runtime.required || (field.type !== 'image' && field.type !== 'file')) return false
+    const value = dynamicForm.value?.values[field.valueKey]
+    if (Array.isArray(value)) return value.length === 0
+    if (isSurveyMediaRef(value)) return false
+    return !value
+  }))
   const dynamicMediaUploading = computed(() => mediaInFlightField.value !== null)
   const canSubmit = computed(() => isDynamicFormAction.value
     ? loadState.value === 'succeeded' &&
@@ -411,6 +423,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     dynamicFormSaveState.value = 'not_saved'
     mediaByField.value = {}
     mediaInFlightField.value = null
+    mediaStateByField.value = {}
     completionReconciled.value = true
     error.value = null
   }
@@ -483,6 +496,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     dynamicFormSaveState.value = 'not_saved'
     mediaByField.value = {}
     mediaInFlightField.value = null
+    mediaStateByField.value = {}
     completionReconciled.value = true
     error.value = null
 
@@ -1041,36 +1055,54 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     const field = form?.fields.find((candidate) => candidate.fieldId === fieldId)
     const effective = dynamicFields.value.find((candidate) => candidate.fieldId === fieldId)
     if (!configured || !form || !field || !effective) {
-      return failure('unsupported_capability', 'Inspection media is unavailable')
+      return failure('unsupported_capability', 'Survey media is unavailable')
     }
     if (field.type !== 'image' && field.type !== 'file') {
-      return failure('unsupported_capability', 'Inspection media is unavailable')
+      return failure('unsupported_capability', 'Survey media is unavailable')
     }
     if (effective.runtime.capability === 'UNSUPPORTED') {
-      return failure('unsupported_capability', effective.runtime.reason ?? 'Inspection media is unavailable')
+      return failure('unsupported_capability', effective.runtime.reason ?? 'Survey media is unavailable')
     }
     if (!effective.runtime.visible) return failure('validation', 'This inspection media field is hidden')
     if (effective.runtime.readOnly) return failure('validation', 'This inspection media field is read-only')
+    const mediaDescriptor = surveyMediaDescriptorFor(form.purpose, field)
+    if (mediaDescriptor?.selectionMode === 'special_tool') {
+      return failure('unsupported_capability', mediaDescriptor.blocker ?? 'Survey media tool is unavailable')
+    }
     if (!configured.mediaFilePicker || !configured.upload) {
-      return failure('unsupported_capability', 'Inspection media upload is unavailable')
+      return failure('unsupported_capability', 'Survey media upload is unavailable')
     }
     if (mediaInFlightField.value) return failure('validation', 'Media upload is already in progress')
 
     mediaInFlightField.value = fieldId
+    mediaStateByField.value = { ...mediaStateByField.value, [fieldId]: 'picking' }
     error.value = null
     try {
       const picked = await configured.mediaFilePicker.pick()
       if (picked.state !== 'granted' || !picked.value || picked.value.length === 0) {
         const cancelled = picked.reason ? createOperationError('validation', picked.reason) : null
+        mediaStateByField.value = { ...mediaStateByField.value, [fieldId]: 'idle' }
         if (cancelled) error.value = cancelled
         return cancelled ? { state: 'failed_terminal', error: cancelled } : { state: 'succeeded', data: undefined }
       }
 
+      if (mediaDescriptor?.maxCount !== undefined && picked.value.length > mediaDescriptor.maxCount) {
+        const tooMany = createOperationError('validation', `该媒体字段最多选择 ${mediaDescriptor.maxCount} 项`)
+        mediaStateByField.value = { ...mediaStateByField.value, [fieldId]: 'failed_terminal' }
+        error.value = tooMany
+        return { state: 'failed_terminal', error: tooMany }
+      }
+
       const uploaded: UploadedMediaRef[] = []
+      mediaStateByField.value = { ...mediaStateByField.value, [fieldId]: 'uploading' }
       for (const media of picked.value) {
         const result = await configured.upload.upload(media)
         if (result.state !== 'succeeded' || !result.data) {
           error.value = result.error ?? createOperationError('network_retryable', 'Media upload failed')
+          mediaStateByField.value = {
+            ...mediaStateByField.value,
+            [fieldId]: result.error?.retryable ? 'failed_retryable' : 'failed_terminal',
+          }
           return result.state === 'succeeded'
             ? { state: 'failed_terminal', error: error.value }
             : result as OperationSnapshot<void>
@@ -1079,10 +1111,17 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       }
 
       mediaByField.value = { ...mediaByField.value, [fieldId]: uploaded }
-      const mediaValue: FormFieldValue = uploaded.length === 1
-        ? uploaded[0].url
-        : uploaded.map((item) => item.url)
-      return setField(fieldId, mediaValue)
+      const mediaValue: FormFieldValue = mediaDescriptor
+        ? uploaded.map(surveyMediaRefFromUpload)
+        : uploaded.length === 1
+          ? uploaded[0].url
+          : uploaded.map((item) => item.url)
+      const applied = setField(fieldId, mediaValue)
+      mediaStateByField.value = {
+        ...mediaStateByField.value,
+        [fieldId]: applied.state === 'succeeded' ? 'uploaded' : 'failed_terminal',
+      }
+      return applied
     } finally {
       mediaInFlightField.value = null
     }
@@ -1097,6 +1136,17 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       && field.runtime.visible
       && !field.runtime.readOnly,
     )
+  }
+
+  function dynamicMediaHint(fieldId: string): string | undefined {
+    const field = dynamicFields.value.find((candidate) => candidate.fieldId === fieldId)
+    if (!field) return undefined
+    const descriptor = surveyMediaDescriptorFor(dynamicForm.value?.purpose, field)
+    if (descriptor?.selectionMode === 'special_tool') return descriptor.blocker
+    if (field.runtime.capability === 'UNSUPPORTED') return field.runtime.reason
+    if (!field.runtime.visible) return '当前字段不适用于本页面'
+    if (field.runtime.readOnly) return '当前字段仅可查看'
+    return undefined
   }
 
   async function submit(): Promise<OperationSnapshot<void>> {
@@ -1185,6 +1235,8 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     dynamicFormSaveState,
     mediaByField,
     mediaInFlightField,
+    mediaStateByField,
+    dynamicMediaHint,
     appointmentError: error,
     error,
     canSubmit,

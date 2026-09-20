@@ -12,7 +12,8 @@ import type {
   TechnicianApiCommandPort,
   TechnicianApiReadPort,
 } from '@shared/ports'
-import type { FormDataId, FormDefinitionId, OperationSnapshot } from '@shared/types'
+import { isSurveyMediaRef } from '@shared/types'
+import type { FormDataId, FormDefinitionId, OperationSnapshot, SurveyMediaRef } from '@shared/types'
 
 import { appointmentFormDefinitionWireId } from './appointment-contract'
 import type { ApiRequestMethod, ApiRequestValue } from './technician-api'
@@ -149,7 +150,26 @@ function mapSubmitValues(values: Readonly<Record<string, string | number | boole
 }
 
 function mapDynamicValues(values: Readonly<Record<string, unknown>>): Record<string, unknown> {
-  return Object.fromEntries(Object.entries(values).filter(([, value]) => value !== null))
+  return Object.fromEntries(Object.entries(values)
+    .filter(([, value]) => value !== null)
+    .map(([key, value]) => [key, mapDynamicValue(value)]))
+}
+
+function mapSurveyMediaRef(value: SurveyMediaRef): Record<string, string> {
+  return {
+    url: value.url,
+    ...(value.objectKey ? { name: value.objectKey } : {}),
+    ...(value.fileName ? { fileName: value.fileName } : {}),
+    ...(value.extension ? { extname: value.extension } : {}),
+  }
+}
+
+function mapDynamicValue(value: unknown): unknown {
+  if (isSurveyMediaRef(value)) return mapSurveyMediaRef(value)
+  if (Array.isArray(value) && value.every((item) => isSurveyMediaRef(item))) {
+    return value.map((item) => mapSurveyMediaRef(item))
+  }
+  return value
 }
 
 export class TechnicianApiCommandAdapter implements TechnicianApiCommandPort {
