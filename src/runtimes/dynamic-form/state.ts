@@ -66,6 +66,15 @@ export function evaluateFieldState(
     context.workflowReadOnly || context.fixedFormReadOnly || field.readOnly || context.runtimeReadOnly,
   )
   const requiredSource = context.fixedRequired ?? context.runtimeRequired ?? field.required ?? false
+  if (capability.capability === 'PRESENTATION_ONLY') {
+    return {
+      capability: capability.capability,
+      visible: visibility.visible,
+      readOnly: true,
+      required: false,
+      optionProvider,
+    }
+  }
   return {
     capability: capability.capability,
     visible: visibility.visible,

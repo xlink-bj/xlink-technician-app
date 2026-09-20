@@ -162,6 +162,7 @@ export function normalizeSubmission(input: {
       values: input.values,
       surface: input.surface,
     })
+    if (state.capability === 'PRESENTATION_ONLY') continue
     // Capability is evaluated independently from effective visibility. A
     // hidden unsupported row is outside the current submission surface and
     // must not produce a misleading warning or block the visible form. An

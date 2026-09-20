@@ -31,6 +31,7 @@ const optionTypes = new Set(['select', 'bizSelect', 'cascade', 'radio', 'checkbo
 const codeBackedTypes = new Set(['select', 'radio', 'checkbox'])
 
 export function classifyFieldType(type: string): FormCapabilityDecision {
+  if (type === 'gap') return { capability: 'PRESENTATION_ONLY' }
   if (!supportedTypes.has(type)) {
     return { capability: 'UNSUPPORTED', reason: `unsupported field type: ${type}` }
   }

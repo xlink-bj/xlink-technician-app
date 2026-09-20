@@ -14,6 +14,7 @@
     "capture:survey-contract:beta": "node scripts/capture-survey-contract-beta.mjs",
     "check:inspection-contract": "node scripts/check-inspection-contract.mjs",
     "check:survey-contract": "node scripts/check-survey-contract.mjs",
+    "check:survey-capabilities": "node scripts/check-survey-capabilities.mjs",
     "typecheck": "vue-tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",

@@ -9,8 +9,17 @@
     </view>
 
     <template v-for="field in workspace.dynamicFields" :key="field.fieldId">
+      <view
+        v-if="field.runtime.visible && field.runtime.capability === 'PRESENTATION_ONLY'"
+        class="dynamic-action-presentation-divider"
+        aria-hidden="true"
+      >
+        <view class="dynamic-action-presentation-line" />
+        <text class="dynamic-action-presentation-label">{{ field.label }}</text>
+        <view class="dynamic-action-presentation-line" />
+      </view>
       <AppField
-        v-if="field.runtime.visible && field.runtime.capability !== 'UNSUPPORTED'"
+        v-if="field.runtime.visible && field.runtime.capability !== 'UNSUPPORTED' && field.runtime.capability !== 'PRESENTATION_ONLY'"
         class="dynamic-action-field"
         :label="field.label"
         :required="field.runtime.required"
@@ -198,6 +207,9 @@ async function save(): Promise<void> {
 .dynamic-action-media-copy { align-items: center; display: flex; gap: var(--app-space-xs); }
 .dynamic-action-media-label { color: var(--app-color-text-primary); font-size: var(--app-font-body); }
 .dynamic-action-media-readonly { color: var(--app-color-text-secondary); font-size: var(--app-font-caption); }
+.dynamic-action-presentation-divider { align-items: center; display: flex; gap: var(--app-space-sm); margin-top: var(--app-space-lg); }
+.dynamic-action-presentation-line { background: var(--app-color-divider); flex: 1; height: 1rpx; }
+.dynamic-action-presentation-label { color: var(--app-color-text-tertiary); font-size: var(--app-font-caption); }
 .dynamic-action-unsupported { margin-top: var(--app-space-sm); }
 .dynamic-action-save { margin-top: var(--app-space-xl); }
 </style>

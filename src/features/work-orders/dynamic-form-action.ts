@@ -131,6 +131,12 @@ export function normalizeDynamicFieldValue(
     values,
     form.workflowReadOnlyFieldIds?.some((id) => String(id) === String(field.fieldId)),
   )
+  if (state.capability === 'PRESENTATION_ONLY') {
+    return {
+      state: 'failed_terminal',
+      error: createOperationError('validation', 'Presentation-only fields cannot be changed'),
+    }
+  }
   if (state.capability === 'UNSUPPORTED') {
     return {
       state: 'failed_terminal',

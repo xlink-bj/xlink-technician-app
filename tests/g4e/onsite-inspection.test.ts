@@ -27,6 +27,7 @@ import { useActionWorkspaceStore } from '@features/work-orders/action-workspace'
 import {
   dynamicActionFieldsFor,
   dynamicActionUnsupportedFieldsFor,
+  normalizeDynamicFieldValue,
   normalizeDynamicForm,
 } from '@features/work-orders/dynamic-form-action'
 import type {
@@ -649,6 +650,42 @@ describe('G4-E Survey dynamic Action Content', () => {
     expect(normalizeDynamicForm({ ...form, fields: form.fields.slice(0, 3) })).toMatchObject({
       state: 'succeeded',
       data: { mobileDetail: 'visible-value' },
+    })
+  })
+
+  it('treats Survey gap rows as visible presentation-only controls', () => {
+    const form: DynamicFormRead = {
+      purpose: 'survey',
+      fields: [
+        { fieldId: 'gap-visible', valueKey: 'gap0', label: '分隔槽', type: 'gap', required: true, readOnly: false, showList: ['4'] },
+        {
+          fieldId: 'gap-hidden', valueKey: 'gap1', label: '分隔槽', type: 'gap', required: false, readOnly: false, showList: ['4'],
+          visibility: { kind: 'equals', path: 'showGap', value: true },
+        },
+        { fieldId: 'gap-list-only', valueKey: 'gap2', label: '分隔槽', type: 'gap', required: false, readOnly: false, showList: ['2'] },
+        { fieldId: 'memo', valueKey: 'memo', label: '备注', type: 'text', required: false, readOnly: false, showList: ['4'] },
+      ],
+      values: { gap0: 'invalid-gap-value', showGap: false, memo: '现场记录' },
+    }
+
+    const fields = dynamicActionFieldsFor(form)
+    expect(fields.find((field) => field.fieldId === 'gap-visible')?.runtime).toMatchObject({
+      capability: 'PRESENTATION_ONLY',
+      visible: true,
+      readOnly: true,
+      required: false,
+    })
+    expect(fields.find((field) => field.fieldId === 'gap-hidden')?.runtime.visible).toBe(false)
+    expect(fields.find((field) => field.fieldId === 'gap-list-only')?.runtime.visible).toBe(false)
+    expect(dynamicActionUnsupportedFieldsFor(form).some((field) => field.fieldId.startsWith('gap-'))).toBe(false)
+    expect(normalizeDynamicForm(form)).toMatchObject({
+      state: 'succeeded',
+      data: { memo: '现场记录' },
+    })
+    expect(normalizeDynamicForm(form).data).not.toHaveProperty('gap0')
+    expect(normalizeDynamicFieldValue(form, form.fields[0], 'attempt')).toMatchObject({
+      state: 'failed_terminal',
+      error: { category: 'validation' },
     })
   })
 

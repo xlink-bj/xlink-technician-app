@@ -237,6 +237,12 @@ describe('G3-D Dynamic Form Runtime capability and visibility', () => {
       required: false,
     })
     expect(evaluateFieldState(unsupported).capability).toBe('UNSUPPORTED')
+    expect(evaluateFieldState({ fieldId: 'gap', valueKey: 'gap', type: 'gap' })).toMatchObject({
+      capability: 'PRESENTATION_ONLY',
+      visible: true,
+      readOnly: true,
+      required: false,
+    })
     expect(evaluateFieldState({ fieldId: 'code', valueKey: 'code', type: 'select' }).capability).toBe('UNSUPPORTED')
     expect(evaluateFieldState({ fieldId: 'genericArea', valueKey: 'genericArea', type: 'area' }).capability).toBe('UNSUPPORTED')
   })
@@ -324,6 +330,18 @@ describe('G3-D Dynamic Form Runtime values and submission', () => {
       values: {},
     })
     expect(missing).toMatchObject({ ok: false, reason: 'validation', fieldId: 'name', valueKey: 'name' })
+  })
+
+  it('keeps presentation-only fields visible but excludes them from submission', () => {
+    const result = normalizeSubmission({
+      fields: [
+        { fieldId: 'gap', valueKey: 'gap', type: 'gap', required: true },
+        { fieldId: 'memo', valueKey: 'memo', type: 'text', required: true },
+      ],
+      values: { gap: 'must-not-submit', memo: 'recorded' },
+    })
+
+    expect(result).toEqual({ ok: true, value: { values: { memo: 'recorded' } } })
   })
 
   it('reports duplicate Survey rows by field identity while reading their shared value key', () => {

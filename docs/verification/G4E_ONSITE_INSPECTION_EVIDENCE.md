@@ -1,6 +1,6 @@
 # G4-E Survey / On-site Action Evidence
 
-Status: Survey contract rebase + field identity hardening — awaiting review
+Status: Survey capability matrix + presentation-only gap slice — awaiting review
 Repository: `xlink-bj/xlink-technician-app`  
 Branch: `rebuild/g4e-onsite-inspection`  
 Baseline before this rebase pass: `821632e914ef2546b85198a304fa0d491bead048`
@@ -1320,3 +1320,39 @@ this record.
 - Arrival/start-inspection semantics: **DEFERRED / UNKNOWN**
 - InspectionAppointment implementation: **NOT STARTED**
 - Survey active Production schema parity: **UNKNOWN**
+
+## Survey capability completion slice
+
+The field-by-field capability matrix is maintained in
+`docs/verification/G4E_SURVEY_CAPABILITY_MATRIX.md`; its machine-readable
+derivation is `contracts/beta/survey/capabilities.json`, generated from the
+61-row historical Survey contract and checked by
+`pnpm run check:survey-capabilities`. The mobile-detail surface contains 45
+rows and all 45 are explicitly classified:
+
+- 10 `GENERIC_INPUT` rows;
+- 2 `OPTION_INPUT` rows (`part` and `isMoldRemoved`);
+- 6 `PRESENTATION_ONLY` rows (`gap0`–`gap4`, with the evidenced duplicate
+  `gap4` row);
+- 24 `MEDIA_INPUT` rows at `PARTIAL` status;
+- 3 `CUSTOM_EXPERIENCE` rows at `UNKNOWN` status (`leakageCauseSelect`,
+  `leakageCause`, `serviceGoods`).
+
+The first implementation slice is generic and type-driven: `type=gap` is a
+Dynamic Form Runtime `PRESENTATION_ONLY` capability. It can render a restrained
+divider when applicable and conditionally visible, but it is read-only,
+excluded from normalized submission, cannot be changed through `setField()`,
+does not create an unsupported warning and cannot block validation. This is
+not a field-name-specific Survey rendering hack.
+
+Survey media remains incomplete. Backend `Survey` persists the relevant media
+as `List<Map>` for `surveyDrawing` and `infraredImageList`; R1 uses the shared
+Qiniu upload path, has a distinct `surveyTool` path for `surveyDrawing`, and
+uses `/biz/image/uploadAddLogo` for camera watermark processing. The new App
+has not claimed camera/location/timestamp, max-count, staged-save, offline or
+retry semantics. `leakageCauseSelect` and `leakageCause` remain a coupled
+part-scoped tree interaction with `leakageCause[]` persistence, not two scalar
+fields. `serviceGoods` remains “推荐服务商品”; R1 evidence shows
+`serviceType`/`sourceType`/repair-part filtering through
+`biz/projPackage/queryWithRank`, but does not prove quotation pricing or a
+final quotation input.

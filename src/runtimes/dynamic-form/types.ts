@@ -2,7 +2,11 @@ import type { CompatibilityEntry } from '@shared/config'
 import type { FormFieldVisibility, FormFieldVisibilityPath } from '@shared/ports'
 import type { LocalMediaRef } from '@shared/types'
 
-export type FormCapability = 'SUPPORTED_GENERIC' | 'CONDITIONAL_CAPABILITY' | 'UNSUPPORTED'
+export type FormCapability =
+  | 'SUPPORTED_GENERIC'
+  | 'CONDITIONAL_CAPABILITY'
+  | 'PRESENTATION_ONLY'
+  | 'UNSUPPORTED'
 
 export type NormalizedFieldType =
   | 'text'
@@ -24,6 +28,7 @@ export type NormalizedFieldType =
   | 'file'
   | 'image'
   | 'area'
+  | 'gap'
 
 export interface FormOption {
   readonly value: string
