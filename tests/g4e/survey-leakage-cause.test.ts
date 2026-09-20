@@ -15,6 +15,7 @@ import {
   surveyLeakageCauseExperienceFor,
   surveyLeakageCauseGroups,
   surveyLeakageCauseLabels,
+  surveyLeakageCausePartLabelsFor,
   surveyLeakageCausePartChangePolicy,
   surveyLeakageCausePersistedIds,
 } from '@features/work-orders/survey-leakage-cause'
@@ -154,11 +155,12 @@ describe('G4-E Survey leakage-cause contract', () => {
     expect(contract).toMatchObject({
       domain: 'survey',
       experience: 'leakage_cause',
-      status: 'PARTIAL',
+      status: 'SUPPORTED',
       triggerField: { fieldId: 'survey-field-057', valueKey: 'leakageCauseSelect', type: 'select' },
       valueField: { fieldId: 'survey-field-058', valueKey: 'leakageCause', type: 'data', multiple: true },
       provider: { endpoint: 'biz/extForm/queryByColName/leakageCause', method: 'POST' },
     })
+    expect(contract.partDependency.visibleToVisiblePolicy).toBe('PRESERVE')
     expect(JSON.stringify(contract)).not.toMatch(/138\d{8}|token|session|cookie|真实地址/u)
   })
 
@@ -246,12 +248,14 @@ describe('G4-E Survey leakage-cause contract', () => {
     expect(hidden).toEqual({ state: 'succeeded', data: {} })
   })
 
-  it('validates selections against the current part and preserves unknown existing IDs for display', () => {
+  it('validates selections against the full provider and preserves unknown existing IDs for display', () => {
     const form = surveyForm({ part: ['roof'] })
     expect(normalizeSurveyLeakageCauseSelection(form, ['cause-roof-1'], rows)).toEqual({
       state: 'succeeded', data: ['cause-roof-1'],
     })
-    expect(normalizeSurveyLeakageCauseSelection(form, ['cause-bath-1'], rows).error?.category).toBe('validation')
+    expect(normalizeSurveyLeakageCauseSelection(form, ['cause-bath-1'], rows)).toEqual({
+      state: 'succeeded', data: ['cause-bath-1'],
+    })
     expect(surveyLeakageCausePersistedIds(['existing-unknown'])).toEqual(['existing-unknown'])
     expect(surveyLeakageCauseLabels(['existing-unknown'], [])).toEqual(['未解析（existing-unknown）'])
   })
@@ -268,16 +272,58 @@ describe('G4-E Survey leakage-cause contract', () => {
   })
 
   it('groups provider rows by part and clears only when the field becomes hidden', () => {
-    expect(surveyLeakageCauseGroups(rows, 'roof')).toEqual([{
-      value: 'roof',
-      label: 'roof',
-      children: [
-        { value: 'cause-roof-1', label: '屋面节点' },
-        { value: 'cause-roof-2', label: '屋面排水' },
-      ],
-    }])
+    expect(surveyLeakageCauseGroups(rows, 'roof', new Map([
+      ['roof', '屋面'],
+      ['bath', '卫生间'],
+    ]))).toEqual([
+      {
+        value: 'roof',
+        label: '屋面',
+        children: [
+          { value: 'cause-roof-1', label: '屋面节点' },
+          { value: 'cause-roof-2', label: '屋面排水' },
+        ],
+      },
+      {
+        value: 'bath',
+        label: '卫生间',
+        children: [{ value: 'cause-bath-1', label: '卫生间节点' }],
+      },
+    ])
     expect(surveyLeakageCausePartChangePolicy(surveyForm({ part: ['roof'] }), { part: ['bath'] })).toBe('clear_when_hidden')
     expect(surveyLeakageCausePartChangePolicy(surveyForm({ part: ['roof'] }), { part: ['roof'] })).toBe('preserve')
+
+    const alwaysVisible = {
+      ...surveyForm({ part: ['roof'], leakageCause: ['cause-roof-1'] }),
+      fields: surveyForm().fields.map((field) => ({ ...field, visibility: undefined })),
+    }
+    expect(surveyLeakageCausePartChangePolicy(alwaysVisible, { part: ['bath'] })).toBe('preserve')
+  })
+
+  it('uses the dynamic part option labels without changing provider identity', () => {
+    const form = {
+      fields: [{
+        fieldId: 'part',
+        valueKey: 'part',
+        label: '维修部位',
+        type: 'cascade',
+        required: true,
+        readOnly: false,
+        options: [{
+          value: 'building',
+          label: '建筑',
+          children: [
+            { value: 'roof', label: '屋面' },
+            { value: 'bath', label: '卫生间' },
+          ],
+        }],
+      }],
+    } satisfies Pick<DynamicFormRead, 'fields'>
+    expect(surveyLeakageCausePartLabelsFor(form)).toEqual(new Map([
+      ['building', '建筑'],
+      ['roof', '屋面'],
+      ['bath', '卫生间'],
+    ]))
   })
 
   it('keeps existing values when the provider fails and does not cross the save/complete boundary', async () => {

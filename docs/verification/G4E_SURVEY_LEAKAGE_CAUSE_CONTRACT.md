@@ -1,7 +1,7 @@
 # G4-E Survey Leakage Cause Contract
 
-Status: `PARTIAL` — controlled read/selection experience is implemented; the
-visible-to-visible part transition cleanup policy remains explicitly UNKNOWN.
+Status: `SUPPORTED` — the controlled read/selection experience preserves the
+R1 full-provider grouping and part-transition semantics.
 
 ## Evidence
 
@@ -11,14 +11,16 @@ proves the following behavior:
 - opening `leakageCauseSelect` queries `biz/extForm/queryByColName/leakageCause`;
 - the request is a POST form request with `_all=1`, sorted by
   `partOrder,leakageCauseOrder` ascending;
-- rows are grouped by `part`, and child selection toggles the
+- all rows are retained and grouped by `part`, and child selection toggles the
   `leakageCause` identifier into a multi-value array;
 - `leakageCauseSelect` is UI state for opening the tree and is not a persisted
   FormData value;
-- the selected repair-part path uses `formData.part[0]` to select the active
-  tree group;
+- the selected repair-part path uses `formData.part[0]` to prioritize the
+  default tree group; it does not filter out other provider groups;
 - R1 clears dependent fields when a part change makes their effective
   visibility false.
+- A visible-to-visible part change preserves the leakage-cause value. A
+  visible-to-hidden change clears it.
 
 Backend source confirms the persistence shape:
 
@@ -50,7 +52,6 @@ cause vocabulary.
 ## Explicit unknowns / exclusions
 
 - production option rows are not persisted in this repository;
-- the exact visible-to-visible part transition cleanup/filter policy is UNKNOWN;
 - `serviceGoods` / `projPackage` remains UNKNOWN;
 - media, real Survey writes, workflow completion, offline queues, location and
   watermark behavior are outside this slice;

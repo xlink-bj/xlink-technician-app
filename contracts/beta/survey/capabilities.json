@@ -661,10 +661,9 @@
       "provider": null,
       "capabilityClass": "CUSTOM_EXPERIENCE",
       "currentRenderer": "Survey Leakage Cause Experience controlled tree selection",
-      "implementationStatus": "PARTIAL",
+      "implementationStatus": "SUPPORTED",
       "submissionMode": "INCLUDED",
-      "blocker": "Visible-to-visible part transition cleanup/filtering remains unverified",
-      "notes": "Provider rows are grouped by part and persist as a List<String> of leakageCause identifiers; hidden-field clearing is implemented, while visible-to-visible transition behavior remains UNKNOWN."
+      "notes": "The full provider result remains grouped and selectable; current part only prioritizes the default group. Values persist as a List<String> of leakageCause identifiers; hidden-to-visible transitions preserve values and visible-to-hidden transitions clear them."
     },
     {
       "fieldId": "survey-field-059",

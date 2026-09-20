@@ -141,13 +141,13 @@ function classify(field) {
     return common(
       field,
       'CUSTOM_EXPERIENCE',
-      trigger ? 'SUPPORTED' : 'PARTIAL',
+      'SUPPORTED',
       'Survey Leakage Cause Experience controlled tree selection',
       trigger ? 'EXCLUDED' : 'INCLUDED',
-      trigger ? undefined : 'Visible-to-visible part transition cleanup/filtering remains unverified',
+      undefined,
       trigger
         ? 'Trigger/display field only; opens the controlled tree and is not persisted.'
-        : 'Provider rows are grouped by part and persist as a List<String> of leakageCause identifiers; hidden-field clearing is implemented, while visible-to-visible transition behavior remains UNKNOWN.',
+        : 'The full provider result remains grouped and selectable; current part only prioritizes the default group. Values persist as a List<String> of leakageCause identifiers; hidden-to-visible transitions preserve values and visible-to-hidden transitions clear them.',
     )
   }
 
@@ -244,7 +244,7 @@ export function buildSurveyCapabilityMatrixMarkdown(inventory) {
     '### Survey Media', '',
     '媒体字段目前是 `MEDIA_INPUT / PARTIAL`，不是完成态。字段级证据和在线基础边界见 `docs/verification/G4E_SURVEY_MEDIA_CONTRACT.md`；`surveyDrawing` 的 R1 `surveyTool`、普通照片的拍照水印/定位、红外照片、除霉前后照片、数量限制、保存时序和弱网恢复仍需单独证据。', '',
     '### leakageCause', '',
-    '`leakageCauseSelect` 与 `leakageCause` 是同一业务交互的触发/持久化两层，不是两个普通独立字段。当前由 Survey 专属 Experience 接管：provider 使用 `biz/extForm/queryByColName/leakageCause`，按 `part` 分组，子项 ID 使用 `leakageCause`，保存值为 `List<String>`；触发字段不提交，值字段参与提交。字段变为隐藏时会清空本地值；可见到可见的维修部位切换清理规则仍保持 UNKNOWN，因此值字段为 PARTIAL。', '',
+    '`leakageCauseSelect` 与 `leakageCause` 是同一业务交互的触发/持久化两层，不是两个普通独立字段。当前由 Survey 专属 Experience 接管：provider 使用 `biz/extForm/queryByColName/leakageCause`，完整保留所有 `part` 分组，子项 ID 使用 `leakageCause`，保存值为 `List<String>`；当前维修部位只用于默认分组优先展示，用户仍可切换并选择其他分组。触发字段不提交，值字段参与提交；可见到可见的维修部位切换保持值，可见到隐藏时清空本地值。', '',
     '### serviceGoods / projPackage', '',
     '当前只称为“推荐服务商品”。R1 查询使用 `serviceType`、`sourceType`、维修部位过滤 `biz/projPackage/queryWithRank`；未证明它等于报价套餐、报价金额或最终报价输入，因此不实现 provider。', '',
     '## 来源与下一步', '',

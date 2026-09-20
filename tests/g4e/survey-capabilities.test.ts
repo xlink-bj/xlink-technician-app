@@ -34,7 +34,7 @@ describe('G4-E Survey capability matrix', () => {
     const byValueKey = new Map<string, CapabilityRow>(inventory.capabilities.map((row: CapabilityRow) => [row.valueKey, row]))
 
     expect(byValueKey.get('leakageCause')?.capabilityClass).toBe('CUSTOM_EXPERIENCE')
-    expect(byValueKey.get('leakageCause')?.implementationStatus).toBe('PARTIAL')
+    expect(byValueKey.get('leakageCause')?.implementationStatus).toBe('SUPPORTED')
     expect(byValueKey.get('leakageCauseSelect')?.implementationStatus).toBe('SUPPORTED')
     expect(byValueKey.get('serviceGoods')?.capabilityClass).toBe('CUSTOM_EXPERIENCE')
     expect(byValueKey.get('serviceGoods')?.implementationStatus).toBe('UNKNOWN')

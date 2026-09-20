@@ -74,6 +74,7 @@ import {
   surveyLeakageCauseFieldIdsFor,
   surveyLeakageCauseGroups,
   surveyLeakageCauseLabels,
+  surveyLeakageCausePartLabelsFor,
   surveyLeakageCausePartChangePolicy,
   surveyLeakageCauseFieldStateFor,
   surveyLeakageCausePersistedIds,
@@ -354,6 +355,9 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
   const surveyLeakageCauseCurrentPart = computed(() =>
     dynamicForm.value ? currentPartForLeakageCause(dynamicForm.value.values.part) : undefined,
   )
+  const surveyLeakageCausePartLabels = computed(() =>
+    dynamicForm.value ? surveyLeakageCausePartLabelsFor(dynamicForm.value) : new Map<string, string>(),
+  )
   const surveyLeakageCauseSelectedIds = computed<readonly string[]>(() => {
     const experience = surveyLeakageCauseExperience.value
     if (!dynamicForm.value || !experience) return []
@@ -363,7 +367,11 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     surveyLeakageCauseLabels(surveyLeakageCauseSelectedIds.value, surveyLeakageCauseRows.value),
   )
   const surveyLeakageCauseOptions = computed(() =>
-    surveyLeakageCauseGroups(surveyLeakageCauseRows.value, surveyLeakageCauseCurrentPart.value),
+    surveyLeakageCauseGroups(
+      surveyLeakageCauseRows.value,
+      surveyLeakageCauseCurrentPart.value,
+      surveyLeakageCausePartLabels.value,
+    ),
   )
   const surveyLeakageCauseReadOnly = computed(() => {
     const experience = surveyLeakageCauseExperience.value

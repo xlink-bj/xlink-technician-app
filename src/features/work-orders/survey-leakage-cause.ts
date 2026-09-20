@@ -122,23 +122,50 @@ export function surveyLeakageCauseCurrentPart(value: unknown): string | undefine
   return value[0].trim()
 }
 
+/**
+ * Resolves repair-part labels from the same dynamic-form option contract that
+ * supplies the part field. The provider only returns part codes, so labels
+ * must not be guessed from those codes.
+ */
+export function surveyLeakageCausePartLabelsFor(
+  form: Pick<DynamicFormRead, 'fields'>,
+): ReadonlyMap<string, string> {
+  const partField = fieldByValueKey(form.fields, 'part')
+  const labels = new Map<string, string>()
+  const visit = (options: readonly NonNullable<AppointmentFormFieldRead['options']>[number][]): void => {
+    for (const option of options) {
+      if (!labels.has(option.value) && option.label.trim().length > 0) {
+        labels.set(option.value, option.label)
+      }
+      if (option.children?.length) visit(option.children)
+    }
+  }
+  if (partField?.options?.length) visit(partField.options)
+  return labels
+}
+
 export function surveyLeakageCauseGroups(
   rows: readonly SurveyLeakageCauseRow[],
   currentPart: string | undefined,
+  partLabels: ReadonlyMap<string, string> = new Map(),
 ): readonly SurveyLeakageCauseTreeOption[] {
-  if (!currentPart) return []
   const grouped = new Map<string, { value: string; label: string }[]>()
   for (const row of rows) {
-    if (row.part !== currentPart) continue
     const children = grouped.get(row.part) ?? []
     children.push({ value: row.id, label: row.label })
     grouped.set(row.part, children)
   }
-  return [...grouped.entries()].map(([part, children]) => ({
+  const groups = [...grouped.entries()].map(([part, children]) => ({
     value: part,
-    label: part,
+    label: partLabels.get(part) ?? part,
     children,
   }))
+  if (!currentPart) return groups
+  return groups.sort((left, right) => {
+    const leftPriority = left.value === currentPart ? 0 : 1
+    const rightPriority = right.value === currentPart ? 0 : 1
+    return leftPriority - rightPriority
+  })
 }
 
 export function surveyLeakageCauseLabels(
@@ -173,10 +200,9 @@ export function normalizeSurveyLeakageCauseSelection(
   if (state.readOnly) return { state: 'failed_terminal', error: createOperationError('validation', 'Leakage-cause field is read-only') }
   const persisted = surveyLeakageCausePersistedIds(selectedIds)
   if (!persisted) return { state: 'failed_terminal', error: createOperationError('validation', 'Leakage-cause selection is invalid') }
-  const part = surveyLeakageCauseCurrentPart(form.values.part)
-  const allowed = new Set(providerRows.filter((row) => row.part === part).map((row) => row.id))
+  const allowed = new Set(providerRows.map((row) => row.id))
   if (persisted.some((id) => !allowed.has(id))) {
-    return { state: 'failed_terminal', error: createOperationError('validation', 'Leakage-cause selection is not available for the current part') }
+    return { state: 'failed_terminal', error: createOperationError('validation', 'Leakage-cause selection is not available') }
   }
   return { state: 'succeeded', data: persisted }
 }

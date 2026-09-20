@@ -3,7 +3,7 @@
   "sourceSurveyFingerprint": "9ed17f08b2d786fd6810b1afcddd60ac6d53eb9cd711173334bd00e6e6fa4aa6",
   "domain": "survey",
   "experience": "leakage_cause",
-  "status": "PARTIAL",
+  "status": "SUPPORTED",
   "triggerField": {
     "fieldId": "survey-field-057",
     "valueKey": "leakageCauseSelect",
@@ -38,15 +38,15 @@
   },
   "selection": {
     "mode": "multi_select",
-    "selectable": "provider child rows; R1 groups by part; IDs are leakageCause",
+    "selectable": "all provider child rows; R1 groups by part and uses the selected part only for default group priority; IDs are leakageCause",
     "parentSelectable": false,
     "triggerPersistence": "not persisted; opens controlled tree"
   },
   "partDependency": {
     "source": "R1 onCascaderFinish + tree active group formData.part[0]",
-    "providerKey": "first part path segment",
+    "providerKey": "first part path segment for default group priority; not a provider filter",
     "hiddenFieldPolicy": "clear persisted value when effective field becomes hidden",
-    "visibleToVisiblePolicy": "UNKNOWN"
+    "visibleToVisiblePolicy": "PRESERVE"
   },
   "evidence": {
     "r1File": "business_jishi/subpackages2/inspectionAppointment/inspectionAppointment.vue",
