@@ -15,9 +15,50 @@ const MEDIA_KEYS = new Set([
   'afterMoldRemoval',
 ])
 
+function optionalNonEmptyString(value) {
+  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined
+}
+
+function object(value) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value) ? value : undefined
+}
+
+function effectiveVisibility(field) {
+  const config = object(field.frontEndConfig)
+  const directShowField = optionalNonEmptyString(field.showField)
+  const configShowField = optionalNonEmptyString(config?.showField)
+  const showField = directShowField ?? configShowField
+  const showType = field.showType ?? config?.showType
+  const configExts = object(config?.exts)
+  const candidates = configShowField
+    ? [
+        { value: config?.showValue, source: 'frontEndConfig.showValue' },
+      ]
+    : [
+        { value: field.showValue, source: 'showValue' },
+        { value: field.extsShowValue, source: 'extsShowValue' },
+        { value: config?.showValue, source: 'frontEndConfig.showValue' },
+        { value: configExts?.showValue, source: 'frontEndConfig.exts.showValue' },
+      ]
+  const selected = candidates.find(({ value }) =>
+    value !== undefined
+    && value !== null
+    && !(typeof value === 'string' && value.trim().length === 0),
+  )
+  return {
+    showField,
+    showType,
+    showValue: selected?.value,
+    showValueSource: selected?.source,
+  }
+}
+
 function visibility(field) {
-  if (!field.showField) return '无条件显示（以 showList 适用性为前提）'
-  return `条件元数据：showType=${String(field.showType ?? '未记录')}，showField=${field.showField}，showValue=${JSON.stringify(field.showValue ?? '')}`
+  const effective = effectiveVisibility(field)
+  if (!effective.showField) return '无条件显示（以 showList 适用性为前提）'
+  const showValue = effective.showValue === undefined ? '未记录' : JSON.stringify(effective.showValue)
+  const source = effective.showValueSource ?? '未记录'
+  return `条件元数据：showType=${String(effective.showType ?? '未记录')}，showField=${effective.showField}，effectiveShowValue=${showValue}（来源：${source}）`
 }
 
 function common(field, capabilityClass, implementationStatus, renderer, submissionMode, blocker, notes) {

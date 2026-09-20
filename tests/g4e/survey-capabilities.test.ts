@@ -39,4 +39,28 @@ describe('G4-E Survey capability matrix', () => {
     expect(byValueKey.get('serviceGoods')?.implementationStatus).toBe('UNKNOWN')
     expect(byValueKey.get('surveyDrawing')?.implementationStatus).toBe('PARTIAL')
   })
+
+  it('uses the effective ext condition when the root showValue is empty', () => {
+    const contract = JSON.parse(readFileSync(contractFile, 'utf8'))
+    const inventory = buildSurveyCapabilityInventory(contract)
+    const sourceField = contract.fieldRows.find((row: { fieldId: string }) => row.fieldId === 'survey-field-018')
+    const matrixRow = inventory.capabilities.find((row: { fieldId: string }) => row.fieldId === 'survey-field-018')
+
+    expect(sourceField.showValue).toBe('')
+    expect(sourceField.extsShowValue).toEqual(expect.any(Array))
+    expect(matrixRow?.conditionalVisibility).toContain(`effectiveShowValue=${JSON.stringify(sourceField.extsShowValue)}`)
+    expect(matrixRow?.conditionalVisibility).toContain('来源：extsShowValue')
+    expect(matrixRow?.conditionalVisibility).not.toContain('effectiveShowValue=""')
+  })
+
+  it('uses frontEndConfig visibility before root or ext conditions', () => {
+    const contract = JSON.parse(readFileSync(contractFile, 'utf8'))
+    const inventory = buildSurveyCapabilityInventory(contract)
+    const sourceField = contract.fieldRows.find((row: { fieldId: string }) => row.fieldId === 'survey-field-054')
+    const matrixRow = inventory.capabilities.find((row: { fieldId: string }) => row.fieldId === 'survey-field-054')
+
+    expect(sourceField.frontEndConfig).toMatchObject({ showField: 'isMoldRemoved', showValue: expect.any(String) })
+    expect(matrixRow?.conditionalVisibility).toContain(`effectiveShowValue=${JSON.stringify(sourceField.frontEndConfig.showValue)}`)
+    expect(matrixRow?.conditionalVisibility).toContain('来源：frontEndConfig.showValue')
+  })
 })
