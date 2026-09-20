@@ -32,6 +32,8 @@ if (contract.idempotency?.status !== 'NOT_PROVEN') fail('idempotency status must
 if (contract.idempotency?.reconciliationApiFound !== false) fail('reconciliation API must not be claimed')
 if (contract.idempotency?.ambiguousPostprocessAutoRetry !== false) fail('ambiguous postprocess auto retry must be disabled')
 if (contract.runtime?.genericPort !== 'MediaPostUploadProcessorPort') fail('generic post-upload port is missing')
+if (contract.runtime?.preflightBeforeSourceUpload !== true) fail('post-upload preflight must precede source upload')
+if (!String(contract.runtime?.preflightFailure).includes('no token')) fail('preflight failure safety behavior is missing')
 if (contract.runtime?.realUploadAddLogo !== 'DISABLED') fail('real uploadAddLogo must remain disabled')
 if (contract.runtime?.mockPipeline !== 'ENABLED_DETERMINISTIC') fail('deterministic Mock pipeline is missing')
 if (contract.pipeline?.sourceAndFinalAreDistinct !== true || contract.pipeline?.sourceRefNeverEntersSurveyFormData !== true) fail('source/final FormData safety boundary is missing')

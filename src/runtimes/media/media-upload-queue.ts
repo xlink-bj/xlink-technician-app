@@ -190,6 +190,17 @@ export class MediaUploadQueue implements MediaUploadQueuePort {
       const marked = await this.update(task, { state: 'failed_terminal', lastError: missingLocation })
       return marked.state === 'succeeded' && marked.data ? operationFailure(marked.data, missingLocation) : marked
     }
+    if (task.evidence?.postUploadPolicy === 'remote_location_watermark') {
+      const preflightError = createOperationError('unsupported_capability', 'Remote watermark processing is unavailable for this coordinate contract', { code: 'coordinate_contract_conflict' })
+      const preflight = this.options.postUploadProcessor
+        ? await this.options.postUploadProcessor.preflight({ evidence: task.evidence })
+        : { state: 'failed_terminal' as const, error: preflightError }
+      if (preflight.state !== 'succeeded') {
+        const error = preflight.error ?? preflightError
+        const marked = await this.update(task, { state: 'failed_terminal', lastError: error })
+        return marked.state === 'succeeded' && marked.data ? operationFailure(marked.data, error) : marked
+      }
+    }
 
     const ready = await this.update(task, { state: 'ready_to_upload' })
     if (ready.state !== 'succeeded' || !ready.data) return ready

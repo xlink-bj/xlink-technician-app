@@ -1417,6 +1417,11 @@ confirmed upload. Required pending media remains ineligible for form save or
 workflow completion. Successful form save may best-effort finalize queue tasks;
 cleanup failure is not reclassified as business-save failure.
 
+For camera remote-watermark tasks, `MediaPostUploadProcessorPort.preflight` runs
+before the source upload. If the coordinate contract is unavailable, the task
+fails closed without requesting an upload token or creating a remote source
+object; the durable local asset remains available for later reconciliation.
+
 This is infrastructure evidence, not a claim of finished offline business
 support. MP/App device restart smoke, real Beta/Production/Qiniu upload,
 server idempotency, camera watermark execution and surveyDrawing tooling (deferred)

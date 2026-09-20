@@ -23,6 +23,7 @@ if (contract.source?.noLiveWrite !== true || contract.source?.rawProductionPaylo
 if (contract.genericRuntime?.surveySpecificQueue !== false) fail('media queue must remain generic')
 if (contract.genericRuntime?.uploadQueue !== 'MediaUploadQueuePort') fail('generic queue port is missing')
 if (contract.genericRuntime?.postUploadProcessor !== 'MediaPostUploadProcessorPort') fail('post-upload processor port is missing')
+if (contract.genericRuntime?.postUploadPreflightBeforeSourceUpload !== true) fail('post-upload preflight must precede source upload')
 if (contract.genericRuntime?.surveySpecificCodec !== 'survey-form-codec.ts') fail('Survey codec boundary is missing')
 
 const requiredIdentity = ['userId', 'workOrderId', 'workflowNodeId', 'formDefinitionId', 'formDataId', 'fieldId', 'valueKey', 'localAssetId']

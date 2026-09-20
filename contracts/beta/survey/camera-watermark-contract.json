@@ -85,6 +85,8 @@
   },
   "runtime": {
     "genericPort": "MediaPostUploadProcessorPort",
+    "preflightBeforeSourceUpload": true,
+    "preflightFailure": "retain durable local media; no token, source upload, or sourceUploadedRef",
     "mockPipeline": "ENABLED_DETERMINISTIC",
     "realUploadAddLogo": "DISABLED",
     "realWrites": "NOT_AUTHORIZED"

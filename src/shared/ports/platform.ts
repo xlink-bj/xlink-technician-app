@@ -38,6 +38,13 @@ export interface MediaPreprocessorPort {
  * representation after the source upload has been durably checkpointed.
  */
 export interface MediaPostUploadProcessorPort {
+  /**
+   * Verifies that the post-upload policy is executable before source upload.
+   * This must not perform a network mutation.
+   */
+  preflight(input: {
+    readonly evidence?: MediaEvidenceContext
+  }): Promise<OperationSnapshot<void>>
   process(input: {
     readonly source: import('@shared/types').UploadedMediaRef
     readonly evidence?: MediaEvidenceContext

@@ -68,6 +68,10 @@ LocalMedia
 不允许回退到普通媒体选择器或上传路径；
 `infraredImageList` 保持独立字段且为 PARTIAL。
 
+相机任务在 Qiniu 源上传前必须通过 `MediaPostUploadProcessorPort.preflight`。Real
+坐标合同未解决时直接 fail-closed：不请求 token、不上传源图、不生成
+`sourceUploadedRef`，但保留本地 durable media；Mock 路径通过同一 preflight 后继续。
+
 ## Verification and deferred items
 
 已覆盖：队列持久化前置、恢复列表、任务身份隔离、单飞、retryable 保留、含糊

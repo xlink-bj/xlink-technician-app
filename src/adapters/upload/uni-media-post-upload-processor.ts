@@ -8,6 +8,19 @@ import { createOperationError, type OperationSnapshot, type UploadedMediaRef } f
  * prevents a future caller from accidentally sending a guessed coordinate.
  */
 export class DisabledRealMediaPostUploadProcessor implements MediaPostUploadProcessorPort {
+  async preflight(_input: {
+    readonly evidence?: import('@shared/types').MediaEvidenceContext
+  }): Promise<OperationSnapshot<void>> {
+    return {
+      state: 'failed_terminal',
+      error: createOperationError(
+        'unsupported_capability',
+        'Real remote watermark processing is disabled while the coordinate contract is unresolved',
+        { code: 'coordinate_contract_conflict' },
+      ),
+    }
+  }
+
   async process(_input: {
     readonly source: UploadedMediaRef
     readonly evidence?: import('@shared/types').MediaEvidenceContext

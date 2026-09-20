@@ -24,6 +24,7 @@
     "uploadQueue": "MediaUploadQueuePort",
     "preprocessor": "MediaPreprocessorPort (reserved for future local transforms)",
     "postUploadProcessor": "MediaPostUploadProcessorPort",
+    "postUploadPreflightBeforeSourceUpload": true,
     "location": "LocationPort",
     "networkStatus": "NetworkStatusPort",
     "surveySpecificQueue": false,

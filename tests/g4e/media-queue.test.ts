@@ -93,6 +93,7 @@ describe('G4-E shared durable media queue', () => {
     const repository = createMediaQueueRepository(storage.storage)
     const upload = { upload: vi.fn(async (item: LocalMedia) => succeeded(uploaded(item))) }
     const firstProcessor = {
+      preflight: vi.fn(async () => succeeded(undefined)),
       process: vi.fn(async () => ({
         state: 'failed_retryable' as const,
         error: createOperationError('network_retryable', 'processor was not dispatched', { code: 'postprocess_not_dispatched' }),
@@ -117,6 +118,7 @@ describe('G4-E shared durable media queue', () => {
     expect(upload.upload).toHaveBeenCalledTimes(1)
 
     const secondProcessor = {
+      preflight: vi.fn(async () => succeeded(undefined)),
       process: vi.fn(async ({ source }: { source: UploadedMediaRef }) => succeeded({
         ...source,
         url: `https://mock-watermarked.invalid/${String(source.key ?? source.url)}`,
@@ -137,6 +139,7 @@ describe('G4-E shared durable media queue', () => {
     const processorStarted = new Promise<void>((resolve) => { resolveStarted = resolve })
     let resolveProcessor: ((result: OperationSnapshot<UploadedMediaRef>) => void) | undefined
     const processor = {
+      preflight: vi.fn(async () => succeeded(undefined)),
       process: vi.fn(() => new Promise<OperationSnapshot<UploadedMediaRef>>((resolveResult) => {
         resolveProcessor = resolveResult
         resolveStarted!()
@@ -190,7 +193,10 @@ describe('G4-E shared durable media queue', () => {
       sourceUploadedRef: uploaded(item),
     }
     await repository.write(current)
-    const processor = { process: vi.fn(async () => succeeded(uploaded(item))) }
+    const processor = {
+      preflight: vi.fn(async () => succeeded(undefined)),
+      process: vi.fn(async () => succeeded(uploaded(item))),
+    }
     const queue = createMediaUploadQueue(durable, repository, { upload: vi.fn() }, { postUploadProcessor: processor })
 
     const interrupted = await queue.process(current.taskId)
@@ -209,6 +215,7 @@ describe('G4-E shared durable media queue', () => {
     const durable = new InMemoryDurableMediaStore()
     const storage = storageFor()
     const processor = {
+      preflight: vi.fn(async () => succeeded(undefined)),
       process: vi.fn(async ({ source }: { source: UploadedMediaRef }) => succeeded({
         ...source,
         url: 'https://mock-watermarked.invalid/final-cleanup',
@@ -244,6 +251,34 @@ describe('G4-E shared durable media queue', () => {
     })
     expect(result.state).toBe('failed_terminal')
     expect(result.error?.code).toBe('coordinate_contract_conflict')
+  })
+
+  it('preflights remote watermark capability before source upload and keeps durable media', async () => {
+    const durable = new InMemoryDurableMediaStore()
+    const upload = { upload: vi.fn(async (item: LocalMedia) => succeeded(uploaded(item))) }
+    const storage = storageFor()
+    const queue = createMediaUploadQueue(
+      durable,
+      createMediaQueueRepository(storage.storage),
+      upload,
+      { postUploadProcessor: createDisabledRealMediaPostUploadProcessor() },
+    )
+    const enqueued = await queue.enqueue({
+      scope,
+      media: media('preflight-blocked-camera'),
+      evidence: {
+        postUploadPolicy: 'remote_location_watermark',
+        location: { latitude: 39.9, longitude: 116.4, coordinateSystem: 'gcj02', capturedAt: '2026-09-20T10:00:00.000Z' },
+      },
+    })
+
+    const blocked = await queue.process(enqueued.data!.taskId)
+
+    expect(blocked.state).toBe('failed_terminal')
+    expect(blocked.error?.code).toBe('coordinate_contract_conflict')
+    expect(upload.upload).not.toHaveBeenCalled()
+    expect(blocked.data?.sourceUploadedRef).toBeUndefined()
+    expect((await durable.exists(enqueued.data!.scope.localAssetId)).data).toBe(true)
   })
 
   it('single-flights concurrent processing for one task', async () => {

@@ -6,16 +6,22 @@ import { createOperationError, type OperationSnapshot, type UploadedMediaRef } f
  * without claiming that the backend watermark endpoint was executed.
  */
 export class MockMediaPostUploadProcessor implements MediaPostUploadProcessorPort {
-  async process(input: {
-    readonly source: UploadedMediaRef
+  async preflight(input: {
     readonly evidence?: import('@shared/types').MediaEvidenceContext
-  }): Promise<OperationSnapshot<UploadedMediaRef>> {
+  }): Promise<OperationSnapshot<void>> {
     if (input.evidence?.postUploadPolicy === 'remote_location_watermark' && !input.evidence.location) {
       return {
         state: 'failed_terminal',
         error: createOperationError('authorization_denied', 'Location evidence is required before mock watermark processing', { code: 'location_required' }),
       }
     }
+    return { state: 'succeeded', data: undefined }
+  }
+
+  async process(input: {
+    readonly source: UploadedMediaRef
+    readonly evidence?: import('@shared/types').MediaEvidenceContext
+  }): Promise<OperationSnapshot<UploadedMediaRef>> {
     const identity = input.source.key ?? input.source.url
     const syntheticKey = `mock-watermarked/${encodeURIComponent(identity)}`
     return {

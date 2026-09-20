@@ -499,6 +499,7 @@ describe('G4-E Survey dynamic Action Content', () => {
       })),
     }
     const postProcessor = {
+      preflight: vi.fn(async () => succeeded(undefined)),
       process: vi.fn(async ({ source }: { source: UploadedMediaRef }) => succeeded({
         ...source,
         url: 'https://mock-watermarked.invalid/final-camera-photo',
@@ -549,12 +550,15 @@ describe('G4-E Survey dynamic Action Content', () => {
       new InMemoryDurableMediaStore(),
       createMediaQueueRepository(storageFor().storage),
       sourceUpload,
-      { postUploadProcessor: { process: vi.fn(async (): Promise<OperationSnapshot<UploadedMediaRef>> => succeeded({
-        url: 'https://mock-watermarked.invalid/should-not-process',
-        source: 'camera' as const,
-        mimeType: 'image/jpeg',
-        uploadState: 'uploaded' as const,
-      })) } },
+      { postUploadProcessor: {
+        preflight: vi.fn(async () => succeeded(undefined)),
+        process: vi.fn(async (): Promise<OperationSnapshot<UploadedMediaRef>> => succeeded({
+          url: 'https://mock-watermarked.invalid/should-not-process',
+          source: 'camera' as const,
+          mimeType: 'image/jpeg',
+          uploadState: 'uploaded' as const,
+        })),
+      } },
     )
     const existing = [{ url: 'https://existing.invalid/photo', objectKey: 'existing-key' }]
     const { store } = configureWorkspace(
@@ -576,12 +580,15 @@ describe('G4-E Survey dynamic Action Content', () => {
 
   it('keeps album media on the direct upload path without location or postprocessing', async () => {
     const location: LocationPort = { captureCurrentLocation: vi.fn(async () => createCapabilityResult<LocationSnapshot>('location', 'granted')) }
-    const postProcessor = { process: vi.fn(async () => succeeded<UploadedMediaRef>({
-      url: 'https://mock-watermarked.invalid/should-not-run',
-      source: 'library',
-      mimeType: 'image/jpeg',
-      uploadState: 'uploaded',
-    })) }
+    const postProcessor = {
+      preflight: vi.fn(async () => succeeded(undefined)),
+      process: vi.fn(async () => succeeded<UploadedMediaRef>({
+        url: 'https://mock-watermarked.invalid/should-not-run',
+        source: 'library',
+        mimeType: 'image/jpeg',
+        uploadState: 'uploaded',
+      })),
+    }
     const queue = createMediaUploadQueue(
       new InMemoryDurableMediaStore(),
       createMediaQueueRepository(storageFor().storage),
@@ -618,6 +625,7 @@ describe('G4-E Survey dynamic Action Content', () => {
       })),
     }
     const postProcessor = {
+      preflight: vi.fn(async () => succeeded(undefined)),
       process: vi.fn(async () => ({
         state: 'failed_retryable' as const,
         error: createOperationError('network_retryable', 'not dispatched', { code: 'postprocess_not_dispatched' }),

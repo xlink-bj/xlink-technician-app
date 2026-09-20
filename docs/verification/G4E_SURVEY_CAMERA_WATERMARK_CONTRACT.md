@@ -66,6 +66,11 @@ queued -> ready_to_upload -> uploading -> uploaded
 源上传成功后，队列先持久化 `source_uploaded` checkpoint，再调用
 `MediaPostUploadProcessorPort`。App 重启可以从 checkpoint 继续，不能重复上传源图。
 
+在相机任务进入源上传前，队列先调用后处理器的 `preflight` 能力检查。Real
+坐标合同未解决时，preflight 直接失败；不会请求上传 token、上传 Qiniu 源图或
+生成 `sourceUploadedRef`，本地 durable 资产保留。Mock preflight 通过后继续同一条
+队列路径。
+
 `postprocessing` 中断时，`uploadAddLogo` 结果可能已经写入 Backend。由于该接口
 每次生成新 UUID，且没有已验证的幂等键或 reconciliation API，运行时会进入
 `ambiguous_postprocess`，禁止自动或通用重试。只有 processor 明确证明请求未 dispatch
