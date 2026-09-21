@@ -129,6 +129,7 @@ describe('App UI Design System v0.2', () => {
     expect(actions).toContain('保存表单')
     expect(actions).toContain('保存中…')
     expect(actions).toContain('已保存')
+    expect(actions).toContain("saveState === 'saved'")
     expect(actions).toContain('!canSubmit')
 
     for (const source of [button, field, input, textarea, selector, choice, status, informationRow, loading]) {
@@ -219,6 +220,14 @@ describe('App UI Design System v0.2', () => {
     expect(presentation).toContain("'memo'")
     expect(presentation).toContain("'remarks'")
     expect(presentation).toContain("'description'")
+  })
+
+  it('keeps Bottom Sheet classification honest until a second consumer exists', async () => {
+    const standard = await readFile(new URL('../../docs/design-system/ACTION_WORKSPACE_UX_STANDARD.md', import.meta.url), 'utf8')
+    expect(standard).toContain('| Bottom Sheet | `SHARED_PATTERN` |')
+    expect(standard).not.toContain('| Bottom Sheet | `SHARED_PRIMITIVE` |')
+    expect(standard).toContain('second verified consumer')
+    expect(standard).toContain('interaction contract is truly common')
   })
 
   it('records current external references and explicit XLink decisions', async () => {

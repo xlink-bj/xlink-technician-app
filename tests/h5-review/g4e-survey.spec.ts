@@ -269,10 +269,26 @@ test('media count uses verified max only and never fabricates the R1 default', a
 test('saved state keeps Save and Complete as distinct Runtime actions', async ({ page }) => {
   const evidence = installBrowserSafetyGuards(page)
   await openScenario(page, 'saved-ready-to-complete', evidence)
+  const save = page.getByTestId('dynamic-form-save')
+  const complete = page.getByTestId('action-workspace-submit')
   await expect(page.getByTestId('action-workspace-form-actions')).toBeVisible()
-  await expect(page.getByTestId('dynamic-form-save')).toHaveText('已保存')
-  await expect(page.getByTestId('action-workspace-submit')).toHaveText('完成勘查')
-  await expect(page.getByTestId('action-workspace-submit')).toBeEnabled()
+  await expect(save).toHaveText('已保存')
+  await expect(save).toBeDisabled()
+  await expect(complete).toHaveText('完成勘查')
+  await expect(complete).toBeEnabled()
+
+  const emittedClicks = await save.evaluate((button) => {
+    let clicks = 0
+    button.addEventListener('click', () => { clicks += 1 })
+    ;(button as HTMLButtonElement).click()
+    return clicks
+  })
+  expect(emittedClicks).toBe(0)
+
+  await page.getByTestId('dynamic-field-memo').locator('textarea').fill('保存后再次编辑')
+  await expect(save).toHaveText('保存表单')
+  await expect(save).toBeEnabled()
+  await expect(complete).toBeDisabled()
   await assertHealthy(page, evidence)
 })
 

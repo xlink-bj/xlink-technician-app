@@ -4,7 +4,7 @@
       data-testid="dynamic-form-save"
       class="action-workspace-form-actions__save"
       variant="secondary"
-      :disabled="lifecycle === 'submitting' || transitioning || saveState === 'saving'"
+      :disabled="saveState === 'saved' || lifecycle === 'submitting' || transitioning || saveState === 'saving'"
       :loading="saveState === 'saving'"
       block
       @tap="$emit('save')"

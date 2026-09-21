@@ -117,15 +117,23 @@ normalization and persistence.
 | --- | --- | --- |
 | Media Uploader | `SHARED_PATTERN` | Shared media state presentation; business codecs stay domain-owned |
 | Gap / Separator | `SHARED_PATTERN` | Presentation-only ordering/separation row |
-| Bottom Sheet | `SHARED_PRIMITIVE` | Reusable shell and interaction surface |
+| Bottom Sheet | `SHARED_PATTERN` | Proven inside Survey Leakage Cause; no shared `AppBottomSheet` primitive exists yet |
 | Tree Multi Select | `SHARED_PATTERN` | Reusable tree selection presentation; provider semantics stay outside |
 | Hierarchical Cascade | `SHARED_PATTERN` | Reusable hierarchical presentation; value path remains Runtime-owned |
 | Leakage Cause | `BUSINESS_EXPERIENCE` | Survey provider, grouping and persistence semantics remain Survey-owned |
 | Repair Part | `BUSINESS_EXPERIENCE` | Survey cascade contract remains outside generic controls |
 
 Leakage Cause and repair-part rules are not extracted into generic business
-components in v0.2. Their visual shells are candidates for future promotion
-only after a second verified consumer exists.
+components in v0.2. A pattern is promoted only by this rule:
+
+```text
+SHARED_PATTERN
+  -> second verified consumer
+  -> extract a shared primitive if the interaction contract is truly common
+```
+
+The current Bottom Sheet is therefore a shared pattern, not an invented
+`AppBottomSheet` API. Its shell may be promoted only after that evidence gate.
 
 ## 8. State / Feedback Grammar
 
