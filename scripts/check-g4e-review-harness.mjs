@@ -37,6 +37,8 @@ const gallerySource = [
   await read('__review/design-system-gallery-fixtures.ts'),
 ].join('\n')
 const reviewConfig = await read('vite.review.config.ts')
+const uniReviewConfig = await read('vite.uni-h5-review.config.ts')
+const uniReviewAppSource = await readTree('review-app')
 const pages = await read('src/pages.json')
 const appConfig = await read('vite.config.ts')
 const productionSource = await readTree('src')
@@ -74,6 +76,24 @@ if (appConfig.includes('__review') || appConfig.includes('g4e-survey')) {
 if (pages.includes('design-system.html') || pages.includes('design-system')) {
   fail('production pages.json must not expose the Design System Gallery route')
 }
+if (!uniReviewConfig.includes("process.env.UNI_INPUT_DIR = reviewInputDir")) {
+  fail('uni H5 review must use the supported explicit UNI_INPUT_DIR input root')
+}
+if (!uniReviewConfig.includes("port: 5174")) {
+  fail('uni H5 review must use its isolated development port')
+}
+if (!uniReviewConfig.includes("'./review-app'")) {
+  fail('uni H5 review config must point at the review-only input root')
+}
+if (!uniReviewAppSource.includes('pages/design-system/index')) {
+  fail('uni H5 review pages.json must register only the review page')
+}
+if (!uniReviewAppSource.includes('createSSRApp') || uniReviewAppSource.includes('installReviewRpxCompatibility')) {
+  fail('uni H5 review must use the real page runtime without the raw H5 rpx shim')
+}
+if (!uniReviewAppSource.includes('DesignSystemGallery')) {
+  fail('uni H5 review page must mount the real Design System Gallery content')
+}
 if (productionSource.includes('__review/design-system') || productionSource.includes('design-system-gallery')) {
   fail('production source must not import the Design System Gallery')
 }
@@ -83,8 +103,14 @@ for (const forbidden of ['@app/bootstrap', '@features/', '@adapters/', 'apiRead'
   }
 }
 for (const forbidden of ['VITE_XLINK_QUICK_LOGIN_PHONE', 'sessionRef', 'access_token', '138000']) {
-  if (entry.includes(forbidden) || reviewConfig.includes(forbidden) || gallerySource.includes(forbidden)) {
+  if (entry.includes(forbidden) || reviewConfig.includes(forbidden) || gallerySource.includes(forbidden) || uniReviewConfig.includes(forbidden) || uniReviewAppSource.includes(forbidden)) {
     fail(`review infrastructure contains forbidden credential/PII marker: ${forbidden}`)
+  }
+}
+
+for (const forbidden of ['@app/bootstrap', '@features/', '@adapters/', 'apiRead', 'commandApi', 'VITE_XLINK_', 'saveDynamicForm', 'completeDynamicForm']) {
+  if (uniReviewConfig.includes(forbidden) || uniReviewAppSource.includes(forbidden)) {
+    fail(`uni H5 Design System review must remain shared-UI-only and offline: ${forbidden}`)
   }
 }
 

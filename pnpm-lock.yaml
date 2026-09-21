@@ -45,6 +45,9 @@ importers:
       '@dcloudio/types':
         specifier: 3.4.31
         version: 3.4.31
+      '@dcloudio/uni-h5':
+        specifier: 3.0.0-5010520260709002
+        version: 3.0.0-5010520260709002(postcss@8.5.28)(rollup@4.63.1)(vite@5.2.8(@types/node@18.19.130)(lightningcss@1.33.0)(sass@1.77.8)(terser@5.51.2))(vue@3.4.21(typescript@4.9.5))
       '@dcloudio/uni-mp-weixin':
         specifier: 3.0.0-5010520260709002
         version: 3.0.0-5010520260709002(postcss@8.5.28)(rollup@4.63.1)(vue@3.4.21(typescript@4.9.5))
@@ -57,6 +60,9 @@ importers:
       '@types/node':
         specifier: 18.19.130
         version: 18.19.130
+      '@vitejs/plugin-vue':
+        specifier: 5.2.4
+        version: 5.2.4(vite@5.2.8(@types/node@18.19.130)(lightningcss@1.33.0)(sass@1.77.8)(terser@5.51.2))(vue@3.4.21(typescript@4.9.5))
       '@vue/compiler-sfc':
         specifier: 3.4.21
         version: 3.4.21

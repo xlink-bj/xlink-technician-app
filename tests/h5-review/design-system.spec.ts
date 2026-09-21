@@ -1,7 +1,7 @@
 import { mkdir } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Locator, type Page } from '@playwright/test'
 
 import { designSystemScreenshotContracts } from '../../__review/design-system-gallery-fixtures'
 
@@ -73,6 +73,24 @@ async function assertNoHorizontalOverflow(page: Page): Promise<void> {
   expect(overflow.bodyWidth, 'body horizontal overflow').toBeLessThanOrEqual(overflow.viewportWidth)
 }
 
+async function assertDisabled(control: Locator): Promise<void> {
+  const disabled = await control.evaluate((element) =>
+    element.getAttribute('disabled') !== null && element.getAttribute('disabled') !== 'false'
+    || element.getAttribute('aria-disabled') === 'true'
+    || (element as HTMLButtonElement).disabled === true,
+  )
+  expect(disabled, 'shared control must expose a disabled state').toBe(true)
+}
+
+async function assertEnabled(control: Locator): Promise<void> {
+  const disabled = await control.evaluate((element) =>
+    element.getAttribute('disabled') !== null && element.getAttribute('disabled') !== 'false'
+    || element.getAttribute('aria-disabled') === 'true'
+    || (element as HTMLButtonElement).disabled === true,
+  )
+  expect(disabled, 'shared control must not expose a disabled state').toBe(false)
+}
+
 async function openGallery(page: Page, evidence: BrowserEvidence): Promise<void> {
   await page.goto(galleryPath, { waitUntil: 'domcontentloaded' })
   await expect(page.getByTestId('design-system-gallery')).toBeVisible()
@@ -98,12 +116,12 @@ test('Gallery exposes real shared component states and independent footer action
 
   const unsaved = page.getByTestId('gallery-action-state-unsaved')
   await expect(unsaved.getByTestId('dynamic-form-save')).toHaveText('保存表单')
-  await expect(unsaved.getByTestId('action-workspace-submit')).toBeDisabled()
+  await assertDisabled(unsaved.getByTestId('action-workspace-submit'))
 
   const saved = page.getByTestId('gallery-action-state-saved')
   await expect(saved.getByTestId('dynamic-form-save')).toHaveText('已保存')
-  await expect(saved.getByTestId('dynamic-form-save')).toBeDisabled()
-  await expect(saved.getByTestId('action-workspace-submit')).toBeEnabled()
+  await assertDisabled(saved.getByTestId('dynamic-form-save'))
+  await assertEnabled(saved.getByTestId('action-workspace-submit'))
 
   const textarea = page.getByTestId('gallery-textarea-empty')
   await expect(textarea).toBeVisible()
@@ -134,7 +152,7 @@ test('Gallery remains usable at compact 320px width', async ({ page }) => {
   await openGallery(page, evidence)
   await assertNoHorizontalOverflow(page)
   await expect(page.getByTestId('gallery-section-07-action-workspace-footer')).toBeVisible()
-  await expect(page.getByTestId('gallery-action-state-saved').getByTestId('dynamic-form-save')).toBeDisabled()
+  await assertDisabled(page.getByTestId('gallery-action-state-saved').getByTestId('dynamic-form-save'))
   await assertHealthy(page, evidence)
 })
 

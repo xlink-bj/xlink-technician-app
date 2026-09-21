@@ -180,11 +180,13 @@ queue behavior, or starts G4-F.
 ## Review & Regression
 
 The markdown standard is the normative UX contract. The development-only
-Design System Gallery is its executable visual reference: it renders the real
-shared components with deterministic presentation fixtures and is the future
-home for approved visual evidence. The existing G4-E H5 harness remains the
-QA proxy for Action Workspace and Survey integration; it is not a product
-channel. MP/App device smoke is platform validation and cannot be inferred
-from H5. Approved screenshot baselines may later become the visual-regression
-contract after Product/Web review; this foundation does not add pixel-diff CI
-or baseline gating.
+uni-app H5 Design System Review is the primary automated visual reference: it
+runs through the real uni-app page/compiler/runtime pipeline and renders the
+real shared components with deterministic presentation fixtures. MP-WEIXIN is
+the platform-fidelity calibration target, and MP/App real-device smoke is the
+final platform validation. The retained raw H5 Gallery is a fast semantic and
+state harness only; it is not visual authority. H5 and MP are not expected to
+be pixel-identical, but material typography, layout, or control-density
+divergence is a defect signal. Approved screenshot baselines may later become
+the visual-regression contract after Product/Web review; this foundation does
+not add pixel-diff CI or baseline gating.

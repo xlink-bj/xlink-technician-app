@@ -4,6 +4,7 @@ const baseURL = 'http://127.0.0.1:5173'
 
 export default defineConfig({
   testDir: './tests/h5-review',
+  testMatch: ['**/design-system.spec.ts', '**/g4e-survey.spec.ts'],
   fullyParallel: false,
   workers: 1,
   timeout: 60_000,

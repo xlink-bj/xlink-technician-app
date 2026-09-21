@@ -1,0 +1,14 @@
+{
+  "name": "XLink Design System Review",
+  "appid": "__UNI__XLINKDESIGNREVIEW",
+  "description": "Development-only Design System review app",
+  "versionName": "0.1.0",
+  "versionCode": "1",
+  "transformPx": false,
+  "uniStatistics": {
+    "enable": false
+  },
+  "h5": {
+    "title": "Design System Gallery"
+  }
+}

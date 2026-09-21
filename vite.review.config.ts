@@ -1,12 +1,12 @@
 import { fileURLToPath, URL } from 'node:url'
-import { createRequire } from 'node:module'
 import { defineConfig } from 'vite'
-
-const require = createRequire(import.meta.url)
-const uni = require('@dcloudio/vite-plugin-uni').default
+import vue from '@vitejs/plugin-vue'
 
 export default defineConfig({
-  plugins: [uni()],
+  // This is the retained raw semantic/state harness, not the canonical
+  // uni-app H5 visual path. Keep it on plain Vue so its DOM remains stable
+  // and the manual review shim remains explicitly scoped to this entry.
+  plugins: [vue()],
   appType: 'spa',
   // Do not leak the developer shell's VITE_* credentials into the review bundle.
   // The review entry receives only the explicit Mock values below via define.
@@ -19,6 +19,7 @@ export default defineConfig({
       '@adapters': fileURLToPath(new URL('./src/adapters', import.meta.url)),
       '@runtimes': fileURLToPath(new URL('./src/runtimes', import.meta.url)),
       '@features': fileURLToPath(new URL('./src/features', import.meta.url)),
+      '@dcloudio/uni-ui/lib/uni-icons/uni-icons.vue': fileURLToPath(new URL('./__review/review-uni-icons.vue', import.meta.url)),
     },
   },
   define: {
