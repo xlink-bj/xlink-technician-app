@@ -37,7 +37,7 @@
     :transitioning="isNavigating"
     :can-submit="workspace.canSubmit"
     :business-feedback="feedback"
-    :submit-label="workspace.descriptor.formPurpose === 'survey' ? '完成勘察' : workspace.descriptor.actionIntent === 'interact_with_form' ? '完成' : '继续确认'"
+    :submit-label="workspace.descriptor.formPurpose === 'survey' ? '完成勘查' : workspace.descriptor.actionIntent === 'interact_with_form' ? '完成' : '继续确认'"
     @submit="submitWorkspace"
   >
     <SurveyActionContent v-if="workspace.descriptor.actionIntent === 'interact_with_form' && workspace.descriptor.formPurpose === 'survey'" />
@@ -136,7 +136,7 @@
     <template #success v-if="workspace.descriptor?.actionIntent === 'interact_with_form'">
       <view class="action-success app-surface">
         <view class="action-success-icon" aria-hidden="true"><AppIcon name="complete" :size="28" /></view>
-        <text class="action-success-title">{{ workspace.descriptor.formPurpose === 'survey' ? '现场勘察已完成' : '表单已完成' }}</text>
+        <text class="action-success-title">{{ workspace.descriptor.formPurpose === 'survey' ? '现场勘查已完成' : '表单已完成' }}</text>
         <text class="action-success-copy">{{ workspace.descriptor.formPurpose === 'survey' ? '本次动态表单已提交，工单状态已刷新。' : '本次动态表单已提交，工单状态已刷新。' }}</text>
       </view>
     </template>

@@ -1195,8 +1195,8 @@ describe('G4-E Survey dynamic Action Content', () => {
     const generic = readFileSync(fileURLToPath(new URL('../../src/features/work-orders/components/GenericDynamicFormActionContent.vue', import.meta.url)), 'utf8')
     const survey = readFileSync(fileURLToPath(new URL('../../src/features/work-orders/components/SurveyActionContent.vue', import.meta.url)), 'utf8')
     expect(generic).toContain('表单信息')
-    expect(generic).not.toContain('现场勘察')
-    expect(survey).toContain('现场勘察')
+    expect(generic).not.toContain('现场勘查')
+    expect(survey).toContain('现场勘查')
     expect(survey).toContain('GenericDynamicFormActionContent')
   })
 

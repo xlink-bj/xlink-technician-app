@@ -60,6 +60,7 @@
           quiet
         />
         <AppTreeMultiChoiceGroup
+          data-testid="survey-leakage-cause-options"
           v-else-if="workspace.surveyLeakageCauseProviderState === 'succeeded'"
           :options="workspace.surveyLeakageCauseOptions"
           :model-value="workspace.surveyLeakageCauseSelectedIds"

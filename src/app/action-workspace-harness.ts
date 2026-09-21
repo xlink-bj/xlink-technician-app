@@ -94,7 +94,7 @@ export const mockActionWorkspaceScenarios: readonly MockActionWorkspaceScenario[
   },
   {
     key: 'survey',
-    label: '现场勘察',
+    label: '现场勘查',
     description: '动态表单、照片上传、保存和完成',
     route: surveyRoute,
   },

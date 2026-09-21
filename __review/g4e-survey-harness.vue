@@ -37,14 +37,14 @@
       :draft-status="workspace.draftStatus"
       :can-submit="workspace.canSubmit"
       :business-feedback="feedback"
-      submit-label="完成勘察"
+      submit-label="完成勘查"
       @submit="complete"
     >
       <SurveyActionContent />
 
       <template #success>
         <view class="review-success app-surface">
-          <text class="review-success__title">现场勘察已完成</text>
+        <text class="review-success__title">现场勘查已完成</text>
           <text class="review-success__copy">本次动态表单已提交，工单状态已刷新。</text>
         </view>
       </template>

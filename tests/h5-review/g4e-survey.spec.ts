@@ -6,21 +6,28 @@ import { expect, test, type Page } from '@playwright/test'
 const reviewPath = '/__review/g4e-survey.html'
 const screenshotDirectory = resolve(process.cwd(), '.review/g4e-product-gate/generated')
 
-const scenarioScreenshots: Record<string, string> = {
-  'survey-overview': '01-overview.png',
-  'required-fields': '02-required-fields.png',
-  'leakage-cause': '03-leakage-cause.png',
-  'required-media-empty': '04-media-empty.png',
-  'media-local-pending': '05-media-pending.png',
-  'media-retryable-failure': '06-media-failure.png',
-  'media-ambiguous': '07-media-ambiguous.png',
-  'media-uploaded': '08-media-uploaded.png',
-  'validation-error': '09-validation.png',
-  'saved-ready-to-complete': '10-save-complete.png',
-  'deferred-fields-absent': '11-deferred-absent.png',
+type VisualScenarioContract = {
+  readonly scenario: string
+  readonly focusTestId: string
+  readonly screenshotName?: string
+  readonly preparation?: 'open-leakage-cause' | 'trigger-validation' | 'wait-saved'
 }
 
-const scenarios = Object.keys(scenarioScreenshots)
+/** One review-only contract drives scenario smoke coverage and focused capture. */
+const visualScenarioContracts: readonly VisualScenarioContract[] = [
+  { scenario: 'survey-overview', focusTestId: 'action-workspace-context', screenshotName: '01-overview.png' },
+  { scenario: 'required-fields', focusTestId: 'dynamic-form-action-content' },
+  { scenario: 'part-dependent-fields', focusTestId: 'survey-repair-part-selector', screenshotName: '02-repair-part.png' },
+  { scenario: 'leakage-cause', focusTestId: 'survey-leakage-cause-panel', screenshotName: '03-leakage-cause.png', preparation: 'open-leakage-cause' },
+  { scenario: 'required-media-empty', focusTestId: 'dynamic-media-images1', screenshotName: '04-media-empty.png' },
+  { scenario: 'media-local-pending', focusTestId: 'dynamic-media-images1', screenshotName: '05-media-pending.png' },
+  { scenario: 'media-retryable-failure', focusTestId: 'dynamic-media-images1', screenshotName: '06-media-failure.png' },
+  { scenario: 'media-ambiguous', focusTestId: 'dynamic-media-images1', screenshotName: '07-media-ambiguous.png' },
+  { scenario: 'media-uploaded', focusTestId: 'dynamic-media-images1', screenshotName: '08-media-uploaded.png' },
+  { scenario: 'validation-error', focusTestId: 'action-workspace-feedback', screenshotName: '09-validation.png', preparation: 'trigger-validation' },
+  { scenario: 'saved-ready-to-complete', focusTestId: 'action-workspace-submit', screenshotName: '10-save-complete.png', preparation: 'wait-saved' },
+  { scenario: 'deferred-fields-absent', focusTestId: 'dynamic-form-action-content', screenshotName: '11-deferred-absent.png' },
+]
 
 type BrowserEvidence = {
   readonly consoleErrors: string[]
@@ -88,14 +95,32 @@ test.beforeAll(async ({ browser }) => {
   await mkdir(screenshotDirectory, { recursive: true })
 })
 
-for (const scenario of scenarios) {
-  test(`renders ${scenario} without browser/runtime errors`, async ({ page }) => {
+async function prepareVisualScenario(page: Page, preparation: VisualScenarioContract['preparation']): Promise<void> {
+  if (preparation === 'open-leakage-cause') {
+    await page.getByRole('button', { name: /选择渗漏原因|修改选择/ }).click()
+    await expect(page.getByTestId('survey-leakage-cause-panel')).toBeVisible()
+    await expect(page.getByTestId('survey-leakage-cause-options')).toContainText('演示原因：屋面节点')
+  }
+  if (preparation === 'trigger-validation') {
+    await page.getByTestId('dynamic-form-save').click()
+    await expect(page.getByTestId('action-workspace-feedback')).toBeVisible()
+  }
+  if (preparation === 'wait-saved') {
+    await expect(page.getByTestId('dynamic-form-save')).toHaveText('已保存，可完成勘查')
+    await expect(page.getByTestId('action-workspace-submit')).toHaveText('完成勘查')
+  }
+}
+
+for (const contract of visualScenarioContracts) {
+  test(`renders ${contract.scenario} without browser/runtime errors`, async ({ page }) => {
     const evidence = installBrowserSafetyGuards(page)
-    await openScenario(page, scenario, evidence)
-    await page.screenshot({
-      path: join(screenshotDirectory, scenarioScreenshots[scenario]),
-      animations: 'disabled',
-    })
+    await openScenario(page, contract.scenario, evidence)
+    await prepareVisualScenario(page, contract.preparation)
+    if (!contract.screenshotName) return
+    const focus = page.getByTestId(contract.focusTestId)
+    await expect(focus).toBeVisible()
+    await focus.scrollIntoViewIfNeeded()
+    await page.screenshot({ path: join(screenshotDirectory, contract.screenshotName), animations: 'disabled' })
   })
 }
 
@@ -106,7 +131,7 @@ test('overview mounts the real review path and is not the production guard', asy
   await expect(page.getByTestId('g4e-review-mock-label')).toHaveText('MOCK_PRODUCT_REVIEW')
   await expect(page.getByTestId('g4e-review-title')).toContainText('Survey / 勘查')
   await expect(page.getByTestId('dynamic-form-action-content')).toBeVisible()
-  await expect(page.getByText('现场勘察', { exact: true })).toBeVisible()
+  await expect(page.getByText('现场勘查', { exact: true })).toBeVisible()
   await expect(page.getByTestId('g4e-review-scenario')).toBeVisible()
   await assertHealthy(page, evidence)
 })
@@ -148,8 +173,8 @@ test('ambiguous media requires verification and has no blind retry', async ({ pa
 test('saved state keeps Save and Complete as distinct Runtime actions', async ({ page }) => {
   const evidence = installBrowserSafetyGuards(page)
   await openScenario(page, 'saved-ready-to-complete', evidence)
-  await expect(page.getByTestId('dynamic-form-save')).toHaveText('已保存，可完成勘察')
-  await expect(page.getByTestId('action-workspace-submit')).toHaveText('完成勘察')
+  await expect(page.getByTestId('dynamic-form-save')).toHaveText('已保存，可完成勘查')
+  await expect(page.getByTestId('action-workspace-submit')).toHaveText('完成勘查')
   await expect(page.getByTestId('action-workspace-submit')).toBeEnabled()
   await assertHealthy(page, evidence)
 })

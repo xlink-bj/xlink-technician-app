@@ -29,6 +29,7 @@
           v-if="field.type === 'cascade' && field.options?.length"
           :options="field.options"
           :model-value="arrayValue(workspace.dynamicForm?.values[field.valueKey])"
+          :hierarchical="workspace.dynamicForm?.purpose === 'survey' && field.valueKey === 'part'"
           :disabled="field.runtime.readOnly || workspace.lifecycle === 'submitting'"
           @update:model-value="setField(field.fieldId, $event)"
         />

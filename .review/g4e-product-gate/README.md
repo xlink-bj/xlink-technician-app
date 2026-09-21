@@ -14,7 +14,7 @@ Status: `READY_FOR_PRODUCT_OWNER_REVIEW`
 - Real customer data, credentials, or live writes: `NO`
 - Playwright: `@playwright/test 1.63.0`
 - Browser: Chromium `153.0.8010.12`
-- Automated browser tests: `18 passed` (11 scenario smoke tests + 7 semantic assertions)
+- Automated browser tests: `19 passed` (12 scenario smoke tests + 7 semantic assertions)
 - Screenshots: 11 generated under `generated/`; intentionally untracked and not committed
 
 Generated screenshot files are intentionally untracked. They are local review
@@ -86,6 +86,25 @@ Example:
 - Ambiguous media does not receive an ordinary blind-retry success path.
 - This is not MP device evidence, App device evidence, authenticated evidence,
   live Beta evidence, or production readiness evidence.
+
+## Focused screenshot contract
+
+The browser smoke suite uses one metadata contract for scenario loading,
+focused scrolling, and screenshot names. The 11 captured states are:
+
+| File | Focused state |
+| --- | --- |
+| `01-overview.png` | workspace context and form hierarchy |
+| `02-repair-part.png` | hierarchical Survey repair-part parent/child selector |
+| `03-leakage-cause.png` | expanded Leakage Cause groups and options |
+| `04-media-empty.png` | required media empty state |
+| `05-media-pending.png` | local media waiting for upload |
+| `06-media-failure.png` | retryable media failure and action |
+| `07-media-ambiguous.png` | verification-required media state |
+| `08-media-uploaded.png` | confirmed uploaded media |
+| `09-validation.png` | actual Save validation feedback |
+| `10-save-complete.png` | saved state and Complete action |
+| `11-deferred-absent.png` | deferred-field absence review |
 
 ## Known limitations
 

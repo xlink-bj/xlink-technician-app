@@ -2,7 +2,7 @@
   <view class="action-workspace-page" data-testid="action-workspace-shell">
     <scroll-view class="action-workspace-scroll" scroll-y enable-flex>
       <view class="action-workspace-body">
-        <view class="action-workspace-context app-surface app-surface--compact">
+        <view class="action-workspace-context app-surface app-surface--compact" data-testid="action-workspace-context">
           <text class="action-workspace-context-label">当前工单</text>
           <view class="action-workspace-context-row">
             <text class="action-workspace-context-customer">{{ customerName || '工单' }}</text>
@@ -51,7 +51,14 @@
           <slot name="success" />
         </template>
 
-        <AppStatus v-if="businessFeedback" class="action-workspace-business-feedback" :message="businessFeedback" tone="danger" quiet />
+        <AppStatus
+          v-if="businessFeedback"
+          data-testid="action-workspace-feedback"
+          class="action-workspace-business-feedback"
+          :message="businessFeedback"
+          tone="danger"
+          quiet
+        />
 
         <AppStatus v-if="lifecycle === 'submitting'" class="action-workspace-operation-status" message="正在提交" quiet />
       </view>
