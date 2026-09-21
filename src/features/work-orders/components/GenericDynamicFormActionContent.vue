@@ -66,7 +66,7 @@
         >
           <view class="dynamic-action-media-header">
             <text class="dynamic-action-media-count" :data-testid="`dynamic-media-count-${field.valueKey}`">
-              已选 {{ mediaCountFor(field.fieldId) }} 项<text v-if="mediaMaxFor(field)"> / {{ mediaMaxFor(field) }}</text>
+              已选 {{ mediaCountFor(field.fieldId) }} 项<text v-if="mediaMaxFor(field) !== undefined"> / {{ mediaMaxFor(field) }}</text>
             </text>
           </view>
 
@@ -75,6 +75,7 @@
               v-for="media in mediaPreviewsFor(field)"
               :key="media.url"
               class="dynamic-action-media-tile"
+              :style="mediaThumbnailStyle(media.url)"
             >
               <image class="dynamic-action-media-thumbnail" :src="media.url" mode="aspectFill" />
             </view>
@@ -87,12 +88,15 @@
               <text>本地媒体</text>
             </view>
             <view
-              v-if="mediaCountFor(field.fieldId) === 0"
-              class="dynamic-action-media-empty"
-              :data-testid="`dynamic-media-empty-${field.valueKey}`"
+              v-if="mediaAddTileLabel(field)"
+              class="dynamic-action-media-tile dynamic-action-media-tile--add"
+              :data-testid="`dynamic-media-add-${field.valueKey}`"
+              role="button"
+              tabindex="0"
+              @tap="pickMedia(field.fieldId)"
             >
-              <AppIcon name="image" :size="22" color="var(--app-color-text-muted)" />
-              <text>尚未选择文件</text>
+              <AppIcon name="image" :size="24" color="var(--app-color-primary)" />
+              <text>{{ mediaAddTileLabel(field) }}</text>
             </view>
           </view>
 
@@ -105,7 +109,7 @@
           </text>
 
           <view
-            v-if="mediaActionLabel(field)"
+            v-if="mediaRecoveryLabel(field)"
             class="dynamic-action-media-actions"
             :data-testid="`dynamic-media-actions-${field.valueKey}`"
           >
@@ -117,7 +121,7 @@
               :loading="workspace.mediaInFlightField === field.fieldId"
               @tap="pickMedia(field.fieldId)"
             >
-              {{ mediaActionLabel(field) }}
+              {{ mediaRecoveryLabel(field) }}
             </AppButton>
             <text v-else class="dynamic-action-media-readonly">仅查看</text>
           </view>
@@ -165,6 +169,7 @@ import { useActionWorkspaceStore } from '@features/work-orders/action-workspace'
 import type { FormFieldValue } from '@shared/ports'
 import { isMediaValueRef } from '@shared/types'
 import type { AppChoiceOption } from '@shared/ui/types'
+import { verifiedMediaMaxFor } from '../media-presentation'
 import AppButton from '@shared/ui/AppButton.vue'
 import AppCascadeSelector from '@shared/ui/AppCascadeSelector.vue'
 import AppChoiceGroup from '@shared/ui/AppChoiceGroup.vue'
@@ -228,6 +233,15 @@ function mediaPreviewsFor(field: { readonly fieldId: string; readonly valueKey: 
   return values.filter(isMediaValueRef).map(({ url }) => ({ url }))
 }
 
+function mediaThumbnailStyle(url: string): Record<string, string> {
+  return {
+    backgroundImage: `url("${url.replace(/"/g, '%22')}")`,
+    backgroundPosition: 'center',
+    backgroundRepeat: 'no-repeat',
+    backgroundSize: 'cover',
+  }
+}
+
 function mediaCountFor(fieldId: string): number {
   const field = workspace.dynamicFields.find((candidate) => candidate.fieldId === fieldId)
   const value = field ? workspace.dynamicForm?.values[field.valueKey] : undefined
@@ -236,18 +250,33 @@ function mediaCountFor(fieldId: string): number {
 }
 
 function mediaMaxFor(field: { readonly presentation?: { readonly max?: number } }): number | undefined {
-  const max = field.presentation?.max
-  return typeof max === 'number' && Number.isFinite(max) && max >= 0 ? max : undefined
+  return verifiedMediaMaxFor(field)
 }
 
 function hasAmbiguousMedia(fieldId: string): boolean {
   return (workspace.mediaTasksByField[fieldId] ?? []).some((task) => task.lastError?.code === 'ambiguous_postprocess')
 }
 
-function mediaActionLabel(field: { readonly fieldId: string; readonly valueKey: string; readonly readOnly: boolean }): string | undefined {
+function hasPendingMediaTask(fieldId: string): boolean {
+  return (workspace.mediaTasksByField[fieldId] ?? []).some((task) =>
+    ['queued', 'preprocessing', 'ready_to_upload', 'uploading', 'source_uploaded', 'postprocessing'].includes(task.state),
+  )
+}
+
+function hasTerminalMediaTask(fieldId: string): boolean {
+  return (workspace.mediaTasksByField[fieldId] ?? []).some((task) => task.state === 'failed_terminal')
+}
+
+function mediaAddTileLabel(field: { readonly fieldId: string; readonly type: string; readonly readOnly: boolean }): string | undefined {
+  if (field.readOnly || hasAmbiguousMedia(field.fieldId) || hasPendingMediaTask(field.fieldId) || workspace.mediaCanRetryDynamic(field.fieldId)) return undefined
+  if (hasTerminalMediaTask(field.fieldId)) return '重新选择'
+  if (mediaCountFor(field.fieldId) === 0) return field.type === 'image' ? '选择图片' : '选择文件'
+  return '继续添加'
+}
+
+function mediaRecoveryLabel(field: { readonly fieldId: string; readonly readOnly: boolean }): string | undefined {
   if (field.readOnly || hasAmbiguousMedia(field.fieldId)) return undefined
-  if (workspace.mediaCanRetryDynamic(field.fieldId)) return '继续处理'
-  return mediaCountFor(field.fieldId) > 0 ? '重新选择' : '选择文件'
+  return workspace.mediaCanRetryDynamic(field.fieldId) ? '继续处理' : undefined
 }
 
 function setField(fieldId: string, value: FormFieldValue): void {
@@ -294,23 +323,26 @@ async function save(): Promise<void> {
 .dynamic-action-media-header { align-items: center; display: flex; justify-content: flex-end; }
 .dynamic-action-media-count { color: var(--app-color-text-secondary); font-size: var(--app-font-caption); }
 .dynamic-action-media-grid { display: flex; flex-wrap: wrap; gap: var(--app-control-gap); margin-top: var(--app-space-md); }
-.dynamic-action-media-tile,
-.dynamic-action-media-empty {
+.dynamic-action-media-tile {
   align-items: center;
   background: var(--app-color-control-surface);
   border: 1rpx solid var(--app-color-border-control);
   border-radius: var(--app-radius-control);
   box-sizing: border-box;
   display: flex;
+  flex-basis: 17vw;
   flex-direction: column;
-  height: 132rpx;
+  flex-grow: 0;
+  flex-shrink: 0;
+  height: 17vw;
   justify-content: center;
   overflow: hidden;
-  width: 132rpx;
+  width: 17vw;
 }
 .dynamic-action-media-tile--pending { border-style: dashed; color: var(--app-color-text-secondary); gap: var(--app-space-xs); padding: var(--app-space-xs); text-align: center; }
-.dynamic-action-media-thumbnail { height: 100%; width: 100%; }
-.dynamic-action-media-empty { border-style: dashed; color: var(--app-color-text-muted); font-size: var(--app-font-caption); gap: var(--app-space-xs); }
+.dynamic-action-media-tile--add { color: var(--app-color-primary); cursor: pointer; font-size: var(--app-font-caption); gap: var(--app-space-xs); }
+.dynamic-action-media-tile--add:active { opacity: 0.78; }
+.dynamic-action-media-thumbnail { display: block; height: 100%; object-fit: cover; width: 100%; }
 .dynamic-action-media-hint { background: var(--app-color-page); color: var(--app-color-text-secondary); display: block; font-size: var(--app-font-caption); line-height: 1.5; margin-top: var(--app-space-md); padding: var(--app-space-sm) var(--app-space-md); }
 .dynamic-action-media-actions { margin-top: var(--app-space-md); }
 .dynamic-action-media-readonly { color: var(--app-color-text-secondary); font-size: var(--app-font-caption); }

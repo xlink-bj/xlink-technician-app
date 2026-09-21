@@ -147,7 +147,7 @@ export function normalizeDynamicForm(
       state: 'failed_terminal',
       error: createOperationError(
         result.reason === 'unsupported_capability' ? 'unsupported_capability' : 'validation',
-        result.message,
+        result.message === 'required field is missing' ? '请填写必填项' : result.message,
         { reason: result.fieldId ?? result.valueKey },
       ),
     }
@@ -174,7 +174,7 @@ export function normalizeDynamicForm(
         if (state.required) {
           return {
             state: 'failed_terminal',
-            error: createOperationError('validation', 'required field is missing', {
+            error: createOperationError('validation', '请选择渗漏原因', {
               reason: leakageExperience.valueField.valueKey,
             }),
           }

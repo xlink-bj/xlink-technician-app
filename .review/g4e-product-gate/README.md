@@ -4,7 +4,7 @@ Status: `READY_FOR_PRODUCT_OWNER_REVIEW`
 
 ## Manifest
 
-- Starting HEAD: `9e8e22bb4feaddb5ef3bc0103ec8d18e3ba15958`
+- Starting HEAD: `addb395fe92cca847c917165209e3faebd0dee9c`
 - Review HEAD: current tip of `rebuild/g4e-onsite-inspection` (the final full SHA is reported with the delivery)
 - Branch: `rebuild/g4e-onsite-inspection`
 - Mode: `MOCK_PRODUCT_REVIEW`
@@ -14,7 +14,7 @@ Status: `READY_FOR_PRODUCT_OWNER_REVIEW`
 - Real customer data, credentials, or live writes: `NO`
 - Playwright: `@playwright/test 1.63.0`
 - Browser: Chromium `153.0.8010.12`
-- Automated browser tests: `23 passed` (12 scenario smoke tests + 11 semantic assertions)
+- Automated browser tests: `26 passed` (12 scenario smoke tests + 14 semantic assertions)
 - Screenshots: 12 generated under `generated/`; intentionally untracked and not committed
 
 Generated screenshot files are intentionally untracked. They are local review
@@ -84,6 +84,16 @@ Example:
 - Save remains distinct from Complete; the real Runtime controls eligibility.
 - Pending local media is not presented as uploaded media.
 - Ambiguous media does not receive an ordinary blind-retry success path.
+- Uploaded review media uses the real `UploadedMediaRef`/`MediaValueRef` path and a
+  deterministic same-origin thumbnail asset; it is not customer data.
+- Media fields expose one compact add tile: empty fields use type-appropriate
+  `选择图片`/`选择文件`, uploaded fields use `继续添加`, and retryable work uses
+  `继续处理`.
+- Leakage Cause uses the real provider and global selection semantics in a
+  compact R1-shaped bottom-sheet tree; the current repair part only prioritizes
+  the initial group.
+- Required validation copy is product-facing Chinese, including
+  `请选择渗漏原因`.
 - This is not MP device evidence, App device evidence, authenticated evidence,
   live Beta evidence, or production readiness evidence.
 

@@ -10,116 +10,210 @@
       :required="workspace.surveyLeakageCauseExperience.valueField.required"
       :supporting="workspace.surveyLeakageCauseReadOnly ? '仅查看已保存的选择' : '按维修部位选择一个或多个渗漏原因'"
     >
-      <view class="survey-leakage-cause__selected">
-        <text v-if="selectedLabels" class="survey-leakage-cause__selected-text">{{ selectedLabels }}</text>
-        <text v-else class="survey-leakage-cause__empty">请选择渗漏原因</text>
-      </view>
-      <AppButton
+      <button
         v-if="!workspace.surveyLeakageCauseReadOnly"
-        variant="secondary"
-        block
+        class="survey-leakage-cause__trigger"
+        data-testid="survey-leakage-cause-trigger"
         :disabled="!workspace.surveyLeakageCauseCanOpen || workspace.lifecycle === 'submitting'"
         @tap="open"
       >
-        {{ isOpen ? '收起选择' : selectedLabels ? '修改选择' : '选择渗漏原因' }}
-      </AppButton>
-      <text v-else class="survey-leakage-cause__readonly">仅查看</text>
+        <view class="survey-leakage-cause__summary">
+          <text v-if="selectedCount > 0" class="survey-leakage-cause__count">已选择 {{ selectedCount }} 项</text>
+          <text :class="selectedCount > 0 ? 'survey-leakage-cause__selected-text' : 'survey-leakage-cause__empty'">
+            {{ selectedCount > 0 ? selectedLabels : '请选择渗漏原因' }}
+          </text>
+        </view>
+        <text class="survey-leakage-cause__chevron" aria-hidden="true">›</text>
+      </button>
+      <view v-else class="survey-leakage-cause__readonly-summary">
+        <text v-if="selectedCount > 0" class="survey-leakage-cause__selected-text">{{ selectedLabels }}</text>
+        <text v-else class="survey-leakage-cause__empty">未选择渗漏原因</text>
+      </view>
 
-      <view v-if="isOpen" class="survey-leakage-cause__panel" data-testid="survey-leakage-cause-panel">
-        <AppStatus
-          v-if="workspace.surveyLeakageCauseProviderState === 'loading'"
-          message="正在加载渗漏原因"
-          tone="neutral"
-          quiet
-        />
-        <AppStatus
-          v-else-if="workspace.surveyLeakageCauseProviderState === 'failed_retryable' || workspace.surveyLeakageCauseProviderState === 'failed_terminal'"
-          message="渗漏原因暂时无法加载，已保存选择不会被清除"
-          tone="warning"
-          icon="warning"
-          quiet
-        />
-        <AppButton
-          v-if="workspace.surveyLeakageCauseProviderState === 'failed_retryable' || workspace.surveyLeakageCauseProviderState === 'failed_terminal'"
-          variant="text"
-          block
-          @tap="retry"
-        >
-          重试加载
-        </AppButton>
-        <AppStatus
-          v-else-if="!workspace.surveyLeakageCauseCurrentPart"
-          message="请先选择维修部位"
-          tone="neutral"
-          quiet
-        />
-        <AppStatus
-          v-else-if="workspace.surveyLeakageCauseProviderState === 'succeeded' && workspace.surveyLeakageCauseOptions.length === 0"
-          message="当前维修部位暂无可选渗漏原因"
-          tone="neutral"
-          quiet
-        />
-        <AppTreeMultiChoiceGroup
-          data-testid="survey-leakage-cause-options"
-          v-else-if="workspace.surveyLeakageCauseProviderState === 'succeeded'"
-          :options="workspace.surveyLeakageCauseOptions"
-          :model-value="workspace.surveyLeakageCauseSelectedIds"
-          :disabled="workspace.lifecycle === 'submitting'"
-          @update:model-value="select"
-        />
-        <AppButton
-          v-if="workspace.surveyLeakageCauseProviderState === 'succeeded'"
-          class="survey-leakage-cause__done"
-          variant="secondary"
-          block
-          @tap="isOpen = false"
-        >
-          完成选择
-        </AppButton>
+      <view v-if="isOpen" class="survey-leakage-cause__backdrop">
+        <view class="survey-leakage-cause__sheet" data-testid="survey-leakage-cause-panel">
+          <view class="survey-leakage-cause__sheet-header">
+            <text class="survey-leakage-cause__sheet-title">渗漏原因</text>
+            <button class="survey-leakage-cause__close" aria-label="关闭" @tap="close">×</button>
+          </view>
+
+          <AppStatus
+            v-if="workspace.surveyLeakageCauseProviderState === 'loading'"
+            message="正在加载渗漏原因"
+            tone="neutral"
+            quiet
+          />
+          <template v-else-if="workspace.surveyLeakageCauseProviderState === 'failed_retryable' || workspace.surveyLeakageCauseProviderState === 'failed_terminal'">
+            <AppStatus
+              message="渗漏原因暂时无法加载，已保存选择不会被清除"
+              tone="warning"
+              icon="warning"
+              quiet
+            />
+            <AppButton variant="text" block @tap="retry">重试加载</AppButton>
+          </template>
+          <AppStatus
+            v-else-if="!workspace.surveyLeakageCauseCurrentPart"
+            message="请先选择维修部位"
+            tone="neutral"
+            quiet
+          />
+          <AppStatus
+            v-else-if="workspace.surveyLeakageCauseOptions.length === 0"
+            message="当前维修部位暂无可选渗漏原因"
+            tone="neutral"
+            quiet
+          />
+          <template v-else>
+            <view class="survey-leakage-cause__sheet-body" data-testid="survey-leakage-cause-options">
+              <scroll-view class="survey-leakage-cause__groups" scroll-y>
+                <text class="survey-leakage-cause__column-title">维修部位</text>
+                <button
+                  v-for="group in workspace.surveyLeakageCauseOptions"
+                  :key="group.value"
+                  class="survey-leakage-cause__group"
+                  :class="{ 'survey-leakage-cause__group--active': activeGroup?.value === group.value }"
+                  data-testid="survey-leakage-cause-group"
+                  :aria-pressed="activeGroup?.value === group.value"
+                  @tap="activeGroupValue = group.value"
+                >
+                  <text>{{ group.label }}</text>
+                  <text v-if="selectedCountFor(group.value) > 0" class="survey-leakage-cause__group-count">
+                    {{ selectedCountFor(group.value) }}
+                  </text>
+                </button>
+              </scroll-view>
+
+              <scroll-view class="survey-leakage-cause__options" scroll-y>
+                <text class="survey-leakage-cause__column-title">{{ activeGroup?.label || '渗漏原因' }}</text>
+                <button
+                  v-for="option in activeGroup?.children ?? []"
+                  :key="option.value"
+                  class="survey-leakage-cause__option"
+                  :class="{ 'survey-leakage-cause__option--selected': isSelected(option.value) }"
+                  data-testid="survey-leakage-cause-option"
+                  :aria-pressed="isSelected(option.value)"
+                  :disabled="workspace.lifecycle === 'submitting'"
+                  @tap="toggleOption(option.value)"
+                >
+                  <text class="survey-leakage-cause__option-indicator" aria-hidden="true">{{ isSelected(option.value) ? '✓' : '' }}</text>
+                  <text>{{ option.label }}</text>
+                </button>
+              </scroll-view>
+            </view>
+            <AppButton class="survey-leakage-cause__done" variant="primary" block @tap="close">
+              完成选择
+            </AppButton>
+          </template>
+        </view>
       </view>
     </AppField>
   </view>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 import { useActionWorkspaceStore } from '../action-workspace'
 import AppButton from '@shared/ui/AppButton.vue'
 import AppField from '@shared/ui/AppField.vue'
 import AppStatus from '@shared/ui/AppStatus.vue'
-import AppTreeMultiChoiceGroup from '@shared/ui/AppTreeMultiChoiceGroup.vue'
 
 const workspace = useActionWorkspaceStore()
 const isOpen = ref(false)
+const activeGroupValue = ref<string | undefined>()
+const selectedCount = computed(() => workspace.surveyLeakageCauseSelectedIds.length)
 const selectedLabels = computed(() => workspace.surveyLeakageCauseLabels.join('、'))
+const activeGroup = computed(() => workspace.surveyLeakageCauseOptions.find((group) => group.value === activeGroupValue.value)
+  ?? workspace.surveyLeakageCauseOptions[0])
+
+watch(
+  () => workspace.surveyLeakageCauseOptions,
+  (groups) => {
+    if (groups.length > 0 && !groups.some((group) => group.value === activeGroupValue.value)) {
+      activeGroupValue.value = groups[0].value
+    }
+  },
+  { immediate: true },
+)
 
 async function open(): Promise<void> {
   isOpen.value = true
-  await workspace.loadSurveyLeakageCauseOptions()
+  const result = await workspace.loadSurveyLeakageCauseOptions()
+  if (result.state === 'succeeded') activeGroupValue.value = workspace.surveyLeakageCauseOptions[0]?.value
+}
+
+function close(): void {
+  isOpen.value = false
 }
 
 async function retry(): Promise<void> {
-  await workspace.loadSurveyLeakageCauseOptions()
+  const result = await workspace.loadSurveyLeakageCauseOptions()
+  if (result.state === 'succeeded') activeGroupValue.value = workspace.surveyLeakageCauseOptions[0]?.value
 }
 
-function select(value: readonly string[]): void {
-  workspace.setSurveyLeakageCauseSelection(value)
+function selectedCountFor(groupValue: string): number {
+  const group = workspace.surveyLeakageCauseOptions.find((candidate) => candidate.value === groupValue)
+  if (!group) return 0
+  const selected = new Set(workspace.surveyLeakageCauseSelectedIds)
+  return group.children.filter((option) => selected.has(option.value)).length
+}
+
+function isSelected(value: string): boolean {
+  return workspace.surveyLeakageCauseSelectedIds.includes(value)
+}
+
+function toggleOption(value: string): void {
+  const next = new Set(workspace.surveyLeakageCauseSelectedIds)
+  if (next.has(value)) next.delete(value)
+  else next.add(value)
+  const ordered = workspace.surveyLeakageCauseOptions.flatMap((group) => group.children.map((option) => option.value))
+  workspace.setSurveyLeakageCauseSelection(ordered.filter((candidate) => next.has(candidate)))
 }
 </script>
 
 <style>
 .survey-leakage-cause__field { margin-top: var(--app-space-lg); }
-.survey-leakage-cause__selected {
+.survey-leakage-cause__trigger,
+.survey-leakage-cause__readonly-summary {
+  align-items: center;
   background: var(--app-color-control-surface);
   border: 1rpx solid var(--app-color-border-control);
   border-radius: var(--app-radius-control);
-  min-height: var(--app-control-height);
-  padding: var(--app-input-padding-y) var(--app-input-padding-x);
+  box-sizing: border-box;
+  display: flex;
+  justify-content: space-between;
+  min-height: var(--app-touch-target);
+  padding: var(--app-control-padding-y) var(--app-control-padding-x);
+  text-align: left;
+  width: 100%;
 }
-.survey-leakage-cause__selected-text { color: var(--app-color-text-primary); line-height: 1.5; }
-.survey-leakage-cause__empty,
-.survey-leakage-cause__readonly { color: var(--app-color-text-muted); line-height: 1.5; }
-.survey-leakage-cause__panel { border-top: 1rpx solid var(--app-color-divider); margin-top: var(--app-space-md); padding-top: var(--app-space-sm); }
+.survey-leakage-cause__trigger::after { border: 0; }
+.survey-leakage-cause__trigger:active { opacity: 0.9; }
+.survey-leakage-cause__summary { flex: 1; min-width: 0; }
+.survey-leakage-cause__count { color: var(--app-color-text-primary); display: block; font-size: var(--app-font-body); font-weight: 700; }
+.survey-leakage-cause__selected-text { color: var(--app-color-text-secondary); display: block; line-height: 1.5; margin-top: var(--app-space-xs); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.survey-leakage-cause__empty { color: var(--app-color-text-muted); line-height: 1.5; }
+.survey-leakage-cause__chevron { color: var(--app-color-text-secondary); font-size: 36rpx; line-height: 1; margin-left: var(--app-space-sm); }
+.survey-leakage-cause__backdrop { background: rgba(16, 31, 53, 0.42); bottom: 0; left: 0; position: fixed; right: 0; top: 0; z-index: 100; }
+.survey-leakage-cause__sheet { background: var(--app-color-surface); border-radius: 24rpx 24rpx 0 0; bottom: 0; box-sizing: border-box; display: flex; flex-direction: column; left: 0; max-height: 82vh; padding: var(--app-space-lg) var(--app-page-gutter) calc(var(--app-space-md) + env(safe-area-inset-bottom)); position: absolute; right: 0; }
+.survey-leakage-cause__sheet-header { align-items: center; display: flex; justify-content: space-between; }
+.survey-leakage-cause__sheet-title { color: var(--app-color-text-primary); font-size: var(--app-font-section-title); font-weight: 800; }
+.survey-leakage-cause__close { background: transparent; border: 0; color: var(--app-color-text-secondary); font-size: 42rpx; height: 56rpx; line-height: 48rpx; margin: -8rpx -8rpx 0 0; padding: 0; width: 56rpx; }
+.survey-leakage-cause__close::after { border: 0; }
+.survey-leakage-cause__sheet-body { border: 1rpx solid var(--app-color-border); border-radius: var(--app-radius-control); display: flex; height: 48vh; margin-top: var(--app-space-md); min-height: 300rpx; overflow: hidden; }
+.survey-leakage-cause__groups { background: var(--app-color-page); border-right: 1rpx solid var(--app-color-border); box-sizing: border-box; flex: 0 0 34%; height: 100%; padding: var(--app-space-sm); }
+.survey-leakage-cause__options { box-sizing: border-box; flex: 1; height: 100%; padding: var(--app-space-sm) var(--app-space-md); }
+.survey-leakage-cause__column-title { color: var(--app-color-text-secondary); display: block; font-size: var(--app-font-meta); font-weight: 700; margin-bottom: var(--app-space-xs); }
+.survey-leakage-cause__group { align-items: center; background: transparent; border: 0; border-left: 4rpx solid transparent; border-radius: 0; color: var(--app-color-text-secondary); display: flex; font-size: var(--app-font-body); justify-content: space-between; margin: 0; min-height: var(--app-touch-target); padding: var(--app-space-sm) var(--app-space-xs); text-align: left; width: 100%; }
+.survey-leakage-cause__group::after { border: 0; }
+.survey-leakage-cause__group--active { background: var(--app-color-surface); border-left-color: var(--app-color-primary); color: var(--app-color-primary); font-weight: 700; }
+.survey-leakage-cause__group-count { background: var(--app-color-primary-soft); border-radius: 999px; color: var(--app-color-primary); font-size: var(--app-font-caption); min-width: 30rpx; padding: 2rpx 6rpx; text-align: center; }
+.survey-leakage-cause__option { align-items: center; background: var(--app-color-control-surface); border: 1rpx solid var(--app-color-border-control); border-radius: var(--app-radius-control); color: var(--app-color-text-primary); display: flex; font-size: var(--app-font-body); justify-content: flex-start; margin: var(--app-space-sm) 0 0; min-height: var(--app-touch-target); padding: var(--app-space-sm) var(--app-space-md); text-align: left; width: 100%; }
+.survey-leakage-cause__option::after { border: 0; }
+.survey-leakage-cause__option--selected { background: var(--app-color-primary-soft); border-color: var(--app-color-primary); color: var(--app-color-primary); font-weight: 700; }
+.survey-leakage-cause__option-indicator { align-items: center; border: 2rpx solid var(--app-color-border-control); border-radius: 50%; display: inline-flex; height: 32rpx; justify-content: center; margin-right: var(--app-space-sm); width: 32rpx; }
+.survey-leakage-cause__option--selected .survey-leakage-cause__option-indicator { background: var(--app-color-primary); border-color: var(--app-color-primary); color: #fff; }
 .survey-leakage-cause__done { margin-top: var(--app-space-md); }
+.survey-leakage-cause__readonly-summary { background: var(--app-color-disabled-surface); }
 </style>

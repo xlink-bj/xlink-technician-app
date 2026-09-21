@@ -102,7 +102,7 @@ function taskScope(fieldId: string, valueKey: string, formDataId?: FormDataId): 
 
 function uploadedRef(valueKey: string): UploadedMediaRef {
   return {
-    url: `https://mock-upload.invalid/review/${valueKey}.jpg`,
+    url: '/__review/review-uploaded-thumbnail.svg',
     key: `review/${valueKey}.jpg`,
     fileName: `${valueKey}.jpg`,
     extension: 'jpg',

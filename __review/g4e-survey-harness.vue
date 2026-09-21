@@ -120,7 +120,10 @@ async function applyScenario(scenario: ReviewScenarioKey): Promise<void> {
     if (leaf) workspace.setField(part.fieldId, leaf)
   }
 
-  if (scenario === 'required-fields' || scenario === 'validation-error' || scenario === 'unsaved') {
+  if (scenario === 'validation-error') {
+    fillAllRequiredFields({ excludeLeakageCause: true })
+    seedRequiredMediaForValidation()
+  } else if (scenario === 'required-fields' || scenario === 'unsaved') {
     const representative = workspace.dynamicFields.find((field) =>
       field.runtime.visible && field.runtime.capability !== 'UNSUPPORTED' && field.runtime.required && field.type !== 'image' && field.type !== 'file',
     )
@@ -143,13 +146,27 @@ async function applyScenario(scenario: ReviewScenarioKey): Promise<void> {
   }
 }
 
-function fillAllRequiredFields(): void {
+function fillAllRequiredFields(options: { readonly excludeLeakageCause?: boolean } = {}): void {
   for (const field of workspace.dynamicFields) {
     if (!field.runtime.visible || field.runtime.readOnly || field.runtime.capability === 'UNSUPPORTED' || field.runtime.capability === 'PRESENTATION_ONLY') continue
     if (!field.runtime.required || field.type === 'image' || field.type === 'file') continue
+    if (options.excludeLeakageCause && (field.valueKey === 'leakageCause' || field.valueKey === 'leakageCauseSelect')) continue
     const current = workspace.dynamicForm?.values[field.valueKey]
     if (current !== undefined && current !== null && current !== '' && (!Array.isArray(current) || current.length > 0)) continue
     workspace.setField(field.fieldId, valueForField(field))
+  }
+}
+
+function seedRequiredMediaForValidation(): void {
+  for (const field of workspace.dynamicFields) {
+    if (!field.runtime.visible || field.runtime.readOnly || field.runtime.capability === 'UNSUPPORTED' || field.runtime.capability === 'PRESENTATION_ONLY') continue
+    if (!field.runtime.required || (field.type !== 'image' && field.type !== 'file')) continue
+    workspace.setField(field.fieldId, [{
+      url: '/__review/review-uploaded-thumbnail.svg',
+      objectKey: 'review/validation/required-media.svg',
+      fileName: 'required-media.svg',
+      extension: 'svg',
+    }])
   }
 }
 
