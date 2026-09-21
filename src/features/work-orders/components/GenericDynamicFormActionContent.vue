@@ -75,7 +75,6 @@
               v-for="media in mediaPreviewsFor(field)"
               :key="media.url"
               class="dynamic-action-media-tile"
-              :style="mediaThumbnailStyle(media.url)"
             >
               <image class="dynamic-action-media-thumbnail" :src="media.url" mode="aspectFill" />
             </view>
@@ -169,7 +168,7 @@ import { useActionWorkspaceStore } from '@features/work-orders/action-workspace'
 import type { FormFieldValue } from '@shared/ports'
 import { isMediaValueRef } from '@shared/types'
 import type { AppChoiceOption } from '@shared/ui/types'
-import { verifiedMediaMaxFor } from '../media-presentation'
+import { mediaPickerLabelFor, verifiedMediaMaxFor } from '../media-presentation'
 import AppButton from '@shared/ui/AppButton.vue'
 import AppCascadeSelector from '@shared/ui/AppCascadeSelector.vue'
 import AppChoiceGroup from '@shared/ui/AppChoiceGroup.vue'
@@ -233,15 +232,6 @@ function mediaPreviewsFor(field: { readonly fieldId: string; readonly valueKey: 
   return values.filter(isMediaValueRef).map(({ url }) => ({ url }))
 }
 
-function mediaThumbnailStyle(url: string): Record<string, string> {
-  return {
-    backgroundImage: `url("${url.replace(/"/g, '%22')}")`,
-    backgroundPosition: 'center',
-    backgroundRepeat: 'no-repeat',
-    backgroundSize: 'cover',
-  }
-}
-
 function mediaCountFor(fieldId: string): number {
   const field = workspace.dynamicFields.find((candidate) => candidate.fieldId === fieldId)
   const value = field ? workspace.dynamicForm?.values[field.valueKey] : undefined
@@ -267,10 +257,10 @@ function hasTerminalMediaTask(fieldId: string): boolean {
   return (workspace.mediaTasksByField[fieldId] ?? []).some((task) => task.state === 'failed_terminal')
 }
 
-function mediaAddTileLabel(field: { readonly fieldId: string; readonly type: string; readonly readOnly: boolean }): string | undefined {
+function mediaAddTileLabel(field: { readonly fieldId: string; readonly valueKey: string; readonly type: string; readonly readOnly: boolean }): string | undefined {
   if (field.readOnly || hasAmbiguousMedia(field.fieldId) || hasPendingMediaTask(field.fieldId) || workspace.mediaCanRetryDynamic(field.fieldId)) return undefined
   if (hasTerminalMediaTask(field.fieldId)) return '重新选择'
-  if (mediaCountFor(field.fieldId) === 0) return field.type === 'image' ? '选择图片' : '选择文件'
+  if (mediaCountFor(field.fieldId) === 0) return mediaPickerLabelFor(workspace.dynamicForm?.purpose, field)
   return '继续添加'
 }
 

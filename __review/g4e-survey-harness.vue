@@ -229,6 +229,17 @@ text { display: inline; }
 .review-select { background: var(--app-color-control-surface); border: 1px solid var(--app-color-border-control); border-radius: 8px; color: var(--app-color-text-primary); font-size: 14px; max-width: 64%; padding: 8px 10px; }
 .review-control-description, .review-control-note { color: var(--app-color-text-secondary); display: block; font-size: 12px; margin-top: 8px; }
 .review-control-note { color: var(--app-color-warning); }
+/* Review-only H5 shim: the real uni `image` element is retained in the
+ * production component; this only makes the deterministic local review asset
+ * visible in the browser renderer. */
+.review-root image.dynamic-action-media-thumbnail[src="/__review/review-uploaded-thumbnail.svg"] {
+  background-image: url('/__review/review-uploaded-thumbnail.svg');
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  min-height: 100%;
+  min-width: 100%;
+}
 .review-load-status { margin: 0 auto; max-width: 912rpx; padding: 12px 24px; }
 .review-success { margin-top: 16px; padding: 32px 24px; text-align: center; }
 .review-success__title { color: var(--app-color-text-primary); display: block; font-size: 24px; font-weight: 800; }
