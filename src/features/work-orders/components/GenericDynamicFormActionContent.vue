@@ -12,11 +12,15 @@
       <view
         v-if="!props.excludedFieldIds.includes(field.fieldId) && field.runtime.visible && field.runtime.capability === 'PRESENTATION_ONLY'"
         class="dynamic-action-presentation-divider"
+        :class="{ 'dynamic-action-presentation-divider--gap': field.type === 'gap' }"
+        :data-testid="`dynamic-form-presentation-${field.valueKey}`"
         aria-hidden="true"
       >
-        <view class="dynamic-action-presentation-line" />
-        <text class="dynamic-action-presentation-label">{{ field.label }}</text>
-        <view class="dynamic-action-presentation-line" />
+        <template v-if="field.type !== 'gap'">
+          <view class="dynamic-action-presentation-line" />
+          <text class="dynamic-action-presentation-label">{{ field.label }}</text>
+          <view class="dynamic-action-presentation-line" />
+        </template>
       </view>
       <AppField
         v-if="!props.excludedFieldIds.includes(field.fieldId) && field.runtime.visible && field.runtime.capability !== 'UNSUPPORTED' && field.runtime.capability !== 'PRESENTATION_ONLY'"
@@ -60,22 +64,38 @@
           class="dynamic-action-media"
           :data-testid="`dynamic-media-${field.valueKey}`"
         >
-          <view class="dynamic-action-media-copy">
-            <AppIcon name="image" :size="20" color="var(--app-color-primary)" />
-            <text class="dynamic-action-media-label">
-              {{ mediaCountFor(field.fieldId) > 0 ? `已上传 ${mediaCountFor(field.fieldId)} 项` : '上传文件' }}
+          <view class="dynamic-action-media-header">
+            <text class="dynamic-action-media-count" :data-testid="`dynamic-media-count-${field.valueKey}`">
+              已选 {{ mediaCountFor(field.fieldId) }} 项<text v-if="mediaMaxFor(field)"> / {{ mediaMaxFor(field) }}</text>
             </text>
           </view>
-          <AppButton
-            v-if="!field.runtime.readOnly"
-            variant="secondary"
-            :disabled="!workspace.canPickDynamicMedia(field.fieldId) || workspace.lifecycle === 'submitting' || workspace.mediaInFlightField === field.fieldId"
-            :loading="workspace.mediaInFlightField === field.fieldId"
-            @tap="pickMedia(field.fieldId)"
-          >
-            {{ workspace.mediaCanRetryDynamic(field.fieldId) ? '继续处理' : mediaCountFor(field.fieldId) > 0 ? '重新选择' : '选择文件' }}
-          </AppButton>
-          <text v-else class="dynamic-action-media-readonly">仅查看</text>
+
+          <view class="dynamic-action-media-grid" :data-testid="`dynamic-media-preview-${field.valueKey}`">
+            <view
+              v-for="media in mediaPreviewsFor(field)"
+              :key="media.url"
+              class="dynamic-action-media-tile"
+            >
+              <image class="dynamic-action-media-thumbnail" :src="media.url" mode="aspectFill" />
+            </view>
+            <view
+              v-if="mediaPreviewsFor(field).length === 0 && mediaTaskCountFor(field.fieldId) > 0"
+              class="dynamic-action-media-tile dynamic-action-media-tile--pending"
+              :data-testid="`dynamic-media-local-${field.valueKey}`"
+            >
+              <AppIcon name="image" :size="24" color="var(--app-color-text-secondary)" />
+              <text>本地媒体</text>
+            </view>
+            <view
+              v-if="mediaCountFor(field.fieldId) === 0"
+              class="dynamic-action-media-empty"
+              :data-testid="`dynamic-media-empty-${field.valueKey}`"
+            >
+              <AppIcon name="image" :size="22" color="var(--app-color-text-muted)" />
+              <text>尚未选择文件</text>
+            </view>
+          </view>
+
           <text
             v-if="workspace.dynamicMediaHint(field.fieldId)"
             class="dynamic-action-media-hint"
@@ -83,6 +103,24 @@
           >
             {{ workspace.dynamicMediaHint(field.fieldId) }}
           </text>
+
+          <view
+            v-if="mediaActionLabel(field)"
+            class="dynamic-action-media-actions"
+            :data-testid="`dynamic-media-actions-${field.valueKey}`"
+          >
+            <AppButton
+              v-if="!field.runtime.readOnly"
+              variant="secondary"
+              block
+              :disabled="!workspace.canPickDynamicMedia(field.fieldId) || workspace.lifecycle === 'submitting' || workspace.mediaInFlightField === field.fieldId"
+              :loading="workspace.mediaInFlightField === field.fieldId"
+              @tap="pickMedia(field.fieldId)"
+            >
+              {{ mediaActionLabel(field) }}
+            </AppButton>
+            <text v-else class="dynamic-action-media-readonly">仅查看</text>
+          </view>
         </view>
         <AppInput
           v-else
@@ -125,6 +163,7 @@ import { computed } from 'vue'
 
 import { useActionWorkspaceStore } from '@features/work-orders/action-workspace'
 import type { FormFieldValue } from '@shared/ports'
+import { isMediaValueRef } from '@shared/types'
 import type { AppChoiceOption } from '@shared/ui/types'
 import AppButton from '@shared/ui/AppButton.vue'
 import AppCascadeSelector from '@shared/ui/AppCascadeSelector.vue'
@@ -177,10 +216,38 @@ function choiceOptionsFor(options: readonly { readonly value: string; readonly l
   return options.map(({ value, label }) => ({ value, label }))
 }
 
+function mediaTaskCountFor(fieldId: string): number {
+  return workspace.mediaTasksByField[fieldId]?.length ?? 0
+}
+
+function mediaPreviewsFor(field: { readonly fieldId: string; readonly valueKey: string }): readonly { readonly url: string }[] {
+  const uploaded = workspace.mediaByField[field.fieldId] ?? []
+  if (uploaded.length > 0) return uploaded
+  const value = workspace.dynamicForm?.values[field.valueKey]
+  const values = Array.isArray(value) ? value : value === undefined || value === null || value === '' ? [] : [value]
+  return values.filter(isMediaValueRef).map(({ url }) => ({ url }))
+}
+
 function mediaCountFor(fieldId: string): number {
   const field = workspace.dynamicFields.find((candidate) => candidate.fieldId === fieldId)
   const value = field ? workspace.dynamicForm?.values[field.valueKey] : undefined
-  return workspace.mediaByField[fieldId]?.length ?? (value ? 1 : 0)
+  const values = Array.isArray(value) ? value.length : value === undefined || value === null || value === '' ? 0 : 1
+  return Math.max(workspace.mediaByField[fieldId]?.length ?? 0, mediaTaskCountFor(fieldId), values)
+}
+
+function mediaMaxFor(field: { readonly presentation?: { readonly max?: number } }): number | undefined {
+  const max = field.presentation?.max
+  return typeof max === 'number' && Number.isFinite(max) && max >= 0 ? max : undefined
+}
+
+function hasAmbiguousMedia(fieldId: string): boolean {
+  return (workspace.mediaTasksByField[fieldId] ?? []).some((task) => task.lastError?.code === 'ambiguous_postprocess')
+}
+
+function mediaActionLabel(field: { readonly fieldId: string; readonly valueKey: string; readonly readOnly: boolean }): string | undefined {
+  if (field.readOnly || hasAmbiguousMedia(field.fieldId)) return undefined
+  if (workspace.mediaCanRetryDynamic(field.fieldId)) return '继续处理'
+  return mediaCountFor(field.fieldId) > 0 ? '重新选择' : '选择文件'
 }
 
 function setField(fieldId: string, value: FormFieldValue): void {
@@ -218,19 +285,37 @@ async function save(): Promise<void> {
 .dynamic-action-caption { color: var(--app-color-text-secondary); display: block; font-size: var(--app-font-field-label); margin-top: var(--app-space-xs); }
 .dynamic-action-field { margin-top: var(--app-space-lg); }
 .dynamic-action-media {
-  align-items: center;
   background: var(--app-color-control);
   border: 1rpx solid var(--app-color-border);
   border-radius: var(--app-radius-control);
-  display: flex;
-  justify-content: space-between;
-  min-height: 86rpx;
-  padding: 0 var(--app-space-sm) 0 var(--app-space-md);
+  display: block;
+  padding: var(--app-space-md);
 }
-.dynamic-action-media-copy { align-items: center; display: flex; gap: var(--app-space-xs); }
-.dynamic-action-media-label { color: var(--app-color-text-primary); font-size: var(--app-font-body); }
+.dynamic-action-media-header { align-items: center; display: flex; justify-content: flex-end; }
+.dynamic-action-media-count { color: var(--app-color-text-secondary); font-size: var(--app-font-caption); }
+.dynamic-action-media-grid { display: flex; flex-wrap: wrap; gap: var(--app-control-gap); margin-top: var(--app-space-md); }
+.dynamic-action-media-tile,
+.dynamic-action-media-empty {
+  align-items: center;
+  background: var(--app-color-control-surface);
+  border: 1rpx solid var(--app-color-border-control);
+  border-radius: var(--app-radius-control);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  height: 132rpx;
+  justify-content: center;
+  overflow: hidden;
+  width: 132rpx;
+}
+.dynamic-action-media-tile--pending { border-style: dashed; color: var(--app-color-text-secondary); gap: var(--app-space-xs); padding: var(--app-space-xs); text-align: center; }
+.dynamic-action-media-thumbnail { height: 100%; width: 100%; }
+.dynamic-action-media-empty { border-style: dashed; color: var(--app-color-text-muted); font-size: var(--app-font-caption); gap: var(--app-space-xs); }
+.dynamic-action-media-hint { background: var(--app-color-page); color: var(--app-color-text-secondary); display: block; font-size: var(--app-font-caption); line-height: 1.5; margin-top: var(--app-space-md); padding: var(--app-space-sm) var(--app-space-md); }
+.dynamic-action-media-actions { margin-top: var(--app-space-md); }
 .dynamic-action-media-readonly { color: var(--app-color-text-secondary); font-size: var(--app-font-caption); }
 .dynamic-action-presentation-divider { align-items: center; display: flex; gap: var(--app-space-sm); margin-top: var(--app-space-lg); }
+.dynamic-action-presentation-divider--gap { background: var(--app-color-page); border-radius: var(--app-radius-control); height: var(--app-space-lg); margin-left: calc(var(--app-card-padding) * -1); margin-right: calc(var(--app-card-padding) * -1); }
 .dynamic-action-presentation-line { background: var(--app-color-divider); flex: 1; height: 1rpx; }
 .dynamic-action-presentation-label { color: var(--app-color-text-tertiary); font-size: var(--app-font-caption); }
 .dynamic-action-unsupported { margin-top: var(--app-space-sm); }

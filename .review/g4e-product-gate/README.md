@@ -4,7 +4,7 @@ Status: `READY_FOR_PRODUCT_OWNER_REVIEW`
 
 ## Manifest
 
-- Starting HEAD: `a803fff01742b2e02fa01421d195dc0029ce8bc8`
+- Starting HEAD: `9e8e22bb4feaddb5ef3bc0103ec8d18e3ba15958`
 - Review HEAD: current tip of `rebuild/g4e-onsite-inspection` (the final full SHA is reported with the delivery)
 - Branch: `rebuild/g4e-onsite-inspection`
 - Mode: `MOCK_PRODUCT_REVIEW`
@@ -14,8 +14,8 @@ Status: `READY_FOR_PRODUCT_OWNER_REVIEW`
 - Real customer data, credentials, or live writes: `NO`
 - Playwright: `@playwright/test 1.63.0`
 - Browser: Chromium `153.0.8010.12`
-- Automated browser tests: `19 passed` (12 scenario smoke tests + 7 semantic assertions)
-- Screenshots: 11 generated under `generated/`; intentionally untracked and not committed
+- Automated browser tests: `23 passed` (12 scenario smoke tests + 11 semantic assertions)
+- Screenshots: 12 generated under `generated/`; intentionally untracked and not committed
 
 Generated screenshot files are intentionally untracked. They are local review
 evidence and must not be committed unless repository policy explicitly
@@ -90,12 +90,13 @@ Example:
 ## Focused screenshot contract
 
 The browser smoke suite uses one metadata contract for scenario loading,
-focused scrolling, and screenshot names. The 11 captured states are:
+focused scrolling, and screenshot names. The 12 captured states are:
 
 | File | Focused state |
 | --- | --- |
 | `01-overview.png` | workspace context and form hierarchy |
 | `02-repair-part.png` | hierarchical Survey repair-part parent/child selector |
+| `12-gap.png` | quiet full-width Gap separator in form context |
 | `03-leakage-cause.png` | expanded Leakage Cause groups and options |
 | `04-media-empty.png` | required media empty state |
 | `05-media-pending.png` | local media waiting for upload |

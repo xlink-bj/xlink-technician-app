@@ -10,6 +10,7 @@ type VisualScenarioContract = {
   readonly scenario: string
   readonly focusTestId: string
   readonly screenshotName?: string
+  readonly additionalScreenshots?: readonly { readonly focusTestId: string; readonly screenshotName: string }[]
   readonly preparation?: 'open-leakage-cause' | 'trigger-validation' | 'wait-saved'
 }
 
@@ -17,7 +18,12 @@ type VisualScenarioContract = {
 const visualScenarioContracts: readonly VisualScenarioContract[] = [
   { scenario: 'survey-overview', focusTestId: 'action-workspace-context', screenshotName: '01-overview.png' },
   { scenario: 'required-fields', focusTestId: 'dynamic-form-action-content' },
-  { scenario: 'part-dependent-fields', focusTestId: 'survey-repair-part-selector', screenshotName: '02-repair-part.png' },
+  {
+    scenario: 'part-dependent-fields',
+    focusTestId: 'survey-repair-part-selector',
+    screenshotName: '02-repair-part.png',
+    additionalScreenshots: [{ focusTestId: 'dynamic-form-presentation-gap2', screenshotName: '12-gap.png' }],
+  },
   { scenario: 'leakage-cause', focusTestId: 'survey-leakage-cause-panel', screenshotName: '03-leakage-cause.png', preparation: 'open-leakage-cause' },
   { scenario: 'required-media-empty', focusTestId: 'dynamic-media-images1', screenshotName: '04-media-empty.png' },
   { scenario: 'media-local-pending', focusTestId: 'dynamic-media-images1', screenshotName: '05-media-pending.png' },
@@ -121,6 +127,12 @@ for (const contract of visualScenarioContracts) {
     await expect(focus).toBeVisible()
     await focus.scrollIntoViewIfNeeded()
     await page.screenshot({ path: join(screenshotDirectory, contract.screenshotName), animations: 'disabled' })
+    for (const additional of contract.additionalScreenshots ?? []) {
+      const additionalFocus = page.getByTestId(additional.focusTestId)
+      await expect(additionalFocus).toBeVisible()
+      await additionalFocus.scrollIntoViewIfNeeded()
+      await page.screenshot({ path: join(screenshotDirectory, additional.screenshotName), animations: 'disabled' })
+    }
   })
 }
 
@@ -153,6 +165,18 @@ test('media local pending is not presented as uploaded', async ({ page }) => {
   await assertHealthy(page, evidence)
 })
 
+test('media presentation keeps status and primary action in separate regions', async ({ page }) => {
+  const evidence = installBrowserSafetyGuards(page)
+  await openScenario(page, 'media-local-pending', evidence)
+  const status = page.getByTestId('dynamic-media-status-images1')
+  const actions = page.getByTestId('dynamic-media-actions-images1')
+  await expect(status).toBeVisible()
+  await expect(actions).toBeVisible()
+  await expect(status.evaluate((node) => node.parentElement?.dataset.testid ?? '')).not.toBe('dynamic-media-actions-images1')
+  await expect(page.getByTestId('dynamic-media-local-images1')).toBeVisible()
+  await assertHealthy(page, evidence)
+})
+
 test('retryable media failure exposes the real retry affordance', async ({ page }) => {
   const evidence = installBrowserSafetyGuards(page)
   await openScenario(page, 'media-retryable-failure', evidence)
@@ -167,6 +191,43 @@ test('ambiguous media requires verification and has no blind retry', async ({ pa
   await expect(page.getByTestId('dynamic-media-status-images1')).toContainText('待核查')
   await expect(page.getByTestId('dynamic-media-status-images1')).toContainText('请勿重复提交')
   await expect(page.getByRole('button', { name: '继续处理' })).toHaveCount(0)
+  await assertHealthy(page, evidence)
+})
+
+test('uploaded media shows confirmed state and a real preview', async ({ page }) => {
+  const evidence = installBrowserSafetyGuards(page)
+  await openScenario(page, 'media-uploaded', evidence)
+  await expect(page.getByTestId('dynamic-media-status-images1')).toHaveText('已上传')
+  const preview = page.getByTestId('dynamic-media-preview-images1').locator('image, img')
+  await expect(preview).toHaveCount(1)
+  await expect(preview).toHaveAttribute('src', /mock-upload\.invalid\/review\/images1\.jpg/)
+  await expect(page.getByRole('button', { name: '重新选择' })).toBeVisible()
+  await assertHealthy(page, evidence)
+})
+
+test('gap presentation is empty, ordered, and not an editable field', async ({ page }) => {
+  const evidence = installBrowserSafetyGuards(page)
+  await openScenario(page, 'part-dependent-fields', evidence)
+  const gap = page.getByTestId('dynamic-form-presentation-gap2')
+  await expect(gap).toBeVisible()
+  await expect(gap).toHaveText('')
+  await expect(page.getByText('分隔槽', { exact: true })).toHaveCount(0)
+  await expect(page.getByTestId('dynamic-field-gap2')).toHaveCount(0)
+  const renderedIds = await page.getByTestId('dynamic-form-action-content').locator('[data-testid]').evaluateAll((nodes) =>
+    nodes.map((node) => node.getAttribute('data-testid')).filter((value): value is string => Boolean(value)),
+  )
+  expect(renderedIds.indexOf('dynamic-form-presentation-gap2')).toBeGreaterThan(-1)
+  expect(renderedIds.indexOf('dynamic-form-presentation-gap2')).toBeLessThan(renderedIds.indexOf('dynamic-form-presentation-gap3'))
+  await assertHealthy(page, evidence)
+})
+
+test('media count uses verified max only and never fabricates the R1 default', async ({ page }) => {
+  const evidence = installBrowserSafetyGuards(page)
+  await openScenario(page, 'media-uploaded', evidence)
+  await expect(page.getByTestId('dynamic-media-count-images1')).toHaveText('已选 1 项')
+  await expect(page.getByTestId('dynamic-media-count-images1')).not.toContainText('/ 20')
+  const infrared = page.getByTestId('dynamic-media-count-infraredImageList')
+  if (await infrared.count()) await expect(infrared).toContainText('/ 4')
   await assertHealthy(page, evidence)
 })
 

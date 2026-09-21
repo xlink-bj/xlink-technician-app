@@ -1581,6 +1581,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     if (taskState === 'failed_retryable' && hasAmbiguousPostprocess) return '处理结果待核查，请勿重复提交'
     if (taskState === 'failed_retryable') return '上传失败，可点击重试'
     if (taskState === 'failed_terminal') return '上传失败，请重新选择'
+    if (taskState === 'uploaded' || (mediaByField.value[fieldId] ?? []).length > 0) return '已上传'
     return undefined
   }
 
