@@ -52,7 +52,7 @@
           @update:model-value="setField(field.fieldId, $event)"
         />
         <AppTextarea
-          v-else-if="field.type === 'textarea'"
+          v-else-if="isMultilineField(field)"
           :model-value="stringValue(workspace.dynamicForm?.values[field.valueKey])"
           :disabled="field.runtime.readOnly || workspace.lifecycle === 'submitting'"
           :read-only="field.runtime.readOnly"
@@ -147,17 +147,6 @@
       quiet
     />
 
-    <AppButton
-      data-testid="dynamic-form-save"
-      class="dynamic-action-save"
-      variant="secondary"
-      block
-      :disabled="workspace.lifecycle === 'submitting' || workspace.dynamicFormSaveState === 'saving'"
-      :loading="workspace.dynamicFormSaveState === 'saving'"
-      @tap="save"
-    >
-      {{ workspace.dynamicFormSaveState === 'saved' ? savedLabel : '保存表单' }}
-    </AppButton>
   </view>
 </template>
 
@@ -168,6 +157,7 @@ import { useActionWorkspaceStore } from '@features/work-orders/action-workspace'
 import type { FormFieldValue } from '@shared/ports'
 import { isMediaValueRef } from '@shared/types'
 import type { AppChoiceOption } from '@shared/ui/types'
+import { isMultilineField } from '../form-presentation'
 import { mediaPickerLabelFor, verifiedMediaMaxFor } from '../media-presentation'
 import AppButton from '@shared/ui/AppButton.vue'
 import AppCascadeSelector from '@shared/ui/AppCascadeSelector.vue'
@@ -182,19 +172,16 @@ import AppTextarea from '@shared/ui/AppTextarea.vue'
 const props = withDefaults(defineProps<{
   readonly title?: string
   readonly caption?: string
-  readonly savedLabel?: string
   readonly excludedFieldIds?: readonly string[]
 }>(), {
   title: '表单信息',
   caption: '请填写表单信息，保存后完成当前操作。',
-  savedLabel: '已保存，可完成',
   excludedFieldIds: () => [],
 })
 
 const workspace = useActionWorkspaceStore()
 const title = computed(() => props.title)
 const caption = computed(() => props.caption)
-const savedLabel = computed(() => props.savedLabel)
 const unsupportedMessage = computed(() => {
   const labels = workspace.dynamicUnsupportedFields.map((field) => field.label).join('、')
   return labels
@@ -281,9 +268,6 @@ async function pickMedia(fieldId: string): Promise<void> {
   await workspace.pickDynamicMedia(fieldId)
 }
 
-async function save(): Promise<void> {
-  await workspace.saveDynamicForm()
-}
 </script>
 
 <style>
@@ -341,5 +325,4 @@ async function save(): Promise<void> {
 .dynamic-action-presentation-line { background: var(--app-color-divider); flex: 1; height: 1rpx; }
 .dynamic-action-presentation-label { color: var(--app-color-text-tertiary); font-size: var(--app-font-caption); }
 .dynamic-action-unsupported { margin-top: var(--app-space-sm); }
-.dynamic-action-save { margin-top: var(--app-space-xl); }
 </style>

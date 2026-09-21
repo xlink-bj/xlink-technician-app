@@ -112,7 +112,7 @@ async function prepareVisualScenario(page: Page, preparation: VisualScenarioCont
     await expect(page.getByTestId('action-workspace-feedback')).toBeVisible()
   }
   if (preparation === 'wait-saved') {
-    await expect(page.getByTestId('dynamic-form-save')).toHaveText('已保存，可完成勘查')
+    await expect(page.getByTestId('dynamic-form-save')).toHaveText('已保存')
     await expect(page.getByTestId('action-workspace-submit')).toHaveText('完成勘查')
   }
 }
@@ -269,9 +269,28 @@ test('media count uses verified max only and never fabricates the R1 default', a
 test('saved state keeps Save and Complete as distinct Runtime actions', async ({ page }) => {
   const evidence = installBrowserSafetyGuards(page)
   await openScenario(page, 'saved-ready-to-complete', evidence)
-  await expect(page.getByTestId('dynamic-form-save')).toHaveText('已保存，可完成勘查')
+  await expect(page.getByTestId('action-workspace-form-actions')).toBeVisible()
+  await expect(page.getByTestId('dynamic-form-save')).toHaveText('已保存')
   await expect(page.getByTestId('action-workspace-submit')).toHaveText('完成勘查')
   await expect(page.getByTestId('action-workspace-submit')).toBeEnabled()
+  await assertHealthy(page, evidence)
+})
+
+test('unsaved state keeps Save visible while Runtime disables Complete', async ({ page }) => {
+  const evidence = installBrowserSafetyGuards(page)
+  await openScenario(page, 'unsaved', evidence)
+  await expect(page.getByTestId('action-workspace-form-actions')).toBeVisible()
+  await expect(page.getByTestId('dynamic-form-save')).toHaveText('保存表单')
+  await expect(page.getByTestId('action-workspace-submit')).toHaveText('完成勘查')
+  await expect(page.getByTestId('action-workspace-submit')).toBeDisabled()
+  await assertHealthy(page, evidence)
+})
+
+test('Survey memo uses the shared multiline textarea contract', async ({ page }) => {
+  const evidence = installBrowserSafetyGuards(page)
+  await openScenario(page, 'survey-overview', evidence)
+  const memo = page.getByTestId('dynamic-field-memo').locator('textarea')
+  await expect(memo).toBeVisible()
   await assertHealthy(page, evidence)
 })
 

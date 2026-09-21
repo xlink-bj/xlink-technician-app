@@ -117,7 +117,7 @@
           @update:model-value="setField(field.fieldId, $event)"
         />
         <AppTextarea
-          v-else-if="field.type === 'textarea'"
+          v-else-if="isMultilineField(field)"
           :model-value="String(workspace.appointmentForm?.values[field.valueKey] ?? '')"
           :disabled="field.runtime.readOnly || workspace.lifecycle === 'submitting'"
           :read-only="field.runtime.readOnly"
@@ -132,6 +132,18 @@
         />
       </AppField>
       </view>
+
+    <template #actions v-if="workspace.descriptor?.actionIntent === 'interact_with_form'">
+      <ActionWorkspaceFormActions
+        :lifecycle="workspace.lifecycle"
+        :save-state="workspace.dynamicFormSaveState"
+        :can-submit="workspace.canSubmit"
+        :transitioning="isNavigating"
+        :submit-label="workspace.descriptor.formPurpose === 'survey' ? '完成勘查' : '完成'"
+        @save="workspace.saveDynamicForm"
+        @submit="submitWorkspace"
+      />
+    </template>
 
     <template #success v-if="workspace.descriptor?.actionIntent === 'interact_with_form'">
       <view class="action-success app-surface">
@@ -164,7 +176,9 @@ import {
   useActionWorkspaceStore,
 } from '@features/work-orders/action-workspace'
 import { appointmentDisplayFor } from '@features/work-orders/appointment-time'
+import { isMultilineField } from '@features/work-orders/form-presentation'
 import { useSessionStore } from '@shared/state'
+import ActionWorkspaceFormActions from '@shared/ui/ActionWorkspaceFormActions.vue'
 import ActionWorkspaceShell from '@shared/ui/ActionWorkspaceShell.vue'
 import GenericDynamicFormActionContent from '@features/work-orders/components/GenericDynamicFormActionContent.vue'
 import SurveyActionContent from '@features/work-orders/components/SurveyActionContent.vue'

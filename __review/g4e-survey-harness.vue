@@ -42,6 +42,17 @@
     >
       <SurveyActionContent />
 
+      <template #actions>
+        <ActionWorkspaceFormActions
+          :lifecycle="workspace.lifecycle"
+          :save-state="workspace.dynamicFormSaveState"
+          :can-submit="workspace.canSubmit"
+          submit-label="完成勘查"
+          @save="workspace.saveDynamicForm"
+          @submit="complete"
+        />
+      </template>
+
       <template #success>
         <view class="review-success app-surface">
         <text class="review-success__title">现场勘查已完成</text>
@@ -60,6 +71,7 @@ import { computed, nextTick, ref, watch } from 'vue'
 
 import { useSessionStore } from '@shared/state'
 import { useActionWorkspaceStore } from '@features/work-orders/action-workspace'
+import ActionWorkspaceFormActions from '@shared/ui/ActionWorkspaceFormActions.vue'
 import ActionWorkspaceShell from '@shared/ui/ActionWorkspaceShell.vue'
 import AppButton from '@shared/ui/AppButton.vue'
 import AppStatus from '@shared/ui/AppStatus.vue'
