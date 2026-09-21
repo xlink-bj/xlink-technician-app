@@ -176,3 +176,15 @@ placement while making Save and Complete boundaries explicit.
 
 No v0.2 rule authorizes real writes, changes form semantics, changes media
 queue behavior, or starts G4-F.
+
+## Review & Regression
+
+The markdown standard is the normative UX contract. The development-only
+Design System Gallery is its executable visual reference: it renders the real
+shared components with deterministic presentation fixtures and is the future
+home for approved visual evidence. The existing G4-E H5 harness remains the
+QA proxy for Action Workspace and Survey integration; it is not a product
+channel. MP/App device smoke is platform validation and cannot be inferred
+from H5. Approved screenshot baselines may later become the visual-regression
+contract after Product/Web review; this foundation does not add pixel-diff CI
+or baseline gating.

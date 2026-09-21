@@ -8,6 +8,7 @@
     "dev:mp-weixin": "uni -p mp-weixin",
     "dev:h5-review": "vite --config vite.review.config.ts",
     "build:h5-review": "vite build --config vite.review.config.ts --outDir unpackage/h5-review",
+    "test:design-system-review": "playwright test tests/h5-review/design-system.spec.ts",
     "check:g4e-review-harness": "node scripts/check-g4e-review-harness.mjs",
     "test:h5-review": "playwright test",
     "capture:g4e-review": "playwright test tests/h5-review/g4e-survey.spec.ts",
