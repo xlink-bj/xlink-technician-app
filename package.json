@@ -10,6 +10,7 @@
     "build:h5-review": "vite build --config vite.review.config.ts --outDir unpackage/h5-review",
     "dev:uni-h5-review": "vite --config vite.uni-h5-review.config.ts",
     "build:uni-h5-review": "vite build --config vite.uni-h5-review.config.ts",
+    "build:mp-weixin-review": "uni build -p mp-weixin -c vite.mp-weixin-review.config.ts --outDir ../unpackage/design-system-mp-weixin",
     "test:design-system-review": "playwright test tests/h5-review/design-system.spec.ts",
     "test:uni-h5-review": "playwright test --config playwright.uni-h5-review.config.ts",
     "check:g4e-review-harness": "node scripts/check-g4e-review-harness.mjs",

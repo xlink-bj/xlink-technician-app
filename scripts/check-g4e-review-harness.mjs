@@ -38,7 +38,9 @@ const gallerySource = [
 ].join('\n')
 const reviewConfig = await read('vite.review.config.ts')
 const uniReviewConfig = await read('vite.uni-h5-review.config.ts')
+const mpReviewConfig = await read('vite.mp-weixin-review.config.ts')
 const uniReviewAppSource = await readTree('review-app')
+const packageJson = JSON.parse(await read('package.json'))
 const pages = await read('src/pages.json')
 const appConfig = await read('vite.config.ts')
 const productionSource = await readTree('src')
@@ -85,6 +87,15 @@ if (!uniReviewConfig.includes("port: 5174")) {
 if (!uniReviewConfig.includes("'./review-app'")) {
   fail('uni H5 review config must point at the review-only input root')
 }
+if (!mpReviewConfig.includes('process.env.UNI_INPUT_DIR = reviewInputDir')) {
+  fail('MP review must use the supported explicit UNI_INPUT_DIR input root')
+}
+if (!mpReviewConfig.includes('design-system-mp-weixin')) {
+  fail('MP review must use an isolated output directory')
+}
+if (packageJson.scripts?.['build:mp-weixin-review'] !== 'uni build -p mp-weixin -c vite.mp-weixin-review.config.ts --outDir ../unpackage/design-system-mp-weixin') {
+  fail('MP review build script must use the installed uni CLI and review config')
+}
 if (!uniReviewAppSource.includes('pages/design-system/index')) {
   fail('uni H5 review pages.json must register only the review page')
 }
@@ -103,15 +114,37 @@ for (const forbidden of ['@app/bootstrap', '@features/', '@adapters/', 'apiRead'
   }
 }
 for (const forbidden of ['VITE_XLINK_QUICK_LOGIN_PHONE', 'sessionRef', 'access_token', '138000']) {
-  if (entry.includes(forbidden) || reviewConfig.includes(forbidden) || gallerySource.includes(forbidden) || uniReviewConfig.includes(forbidden) || uniReviewAppSource.includes(forbidden)) {
+  if (entry.includes(forbidden) || reviewConfig.includes(forbidden) || gallerySource.includes(forbidden) || uniReviewConfig.includes(forbidden) || mpReviewConfig.includes(forbidden) || uniReviewAppSource.includes(forbidden)) {
     fail(`review infrastructure contains forbidden credential/PII marker: ${forbidden}`)
   }
 }
 
 for (const forbidden of ['@app/bootstrap', '@features/', '@adapters/', 'apiRead', 'commandApi', 'VITE_XLINK_', 'saveDynamicForm', 'completeDynamicForm']) {
-  if (uniReviewConfig.includes(forbidden) || uniReviewAppSource.includes(forbidden)) {
+  if (uniReviewConfig.includes(forbidden) || mpReviewConfig.includes(forbidden) || uniReviewAppSource.includes(forbidden)) {
     fail(`uni H5 Design System review must remain shared-UI-only and offline: ${forbidden}`)
   }
+}
+
+const productionMpManifestPath = resolve(root, 'dist/build/mp-weixin/app.json')
+try {
+  const productionMpManifest = await readFile(productionMpManifestPath, 'utf8')
+  if (productionMpManifest.includes('pages/design-system/index') || productionMpManifest.includes('__review')) {
+    fail('normal MP artifact must not contain the review page')
+  }
+} catch (error) {
+  if (error?.code !== 'ENOENT') throw error
+  // The source/build checks remain useful before the normal MP artifact exists.
+}
+
+const reviewMpManifestPath = resolve(root, 'unpackage/design-system-mp-weixin/app.json')
+try {
+  const reviewMpManifest = JSON.parse(await readFile(reviewMpManifestPath, 'utf8'))
+  if (JSON.stringify(reviewMpManifest.pages) !== JSON.stringify(['pages/design-system/index'])) {
+    fail('MP review artifact must contain only the review page')
+  }
+} catch (error) {
+  if (error?.code !== 'ENOENT') throw error
+  // Allow source-only checks before the review MP artifact is built.
 }
 
 console.log('G4-E review harness check passed: isolated dev entry, Mock-only, real writes disabled, no production route exposure')
