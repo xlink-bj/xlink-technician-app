@@ -111,11 +111,11 @@ export function dynamicActionUnsupportedFieldsFor(form: DynamicFormRead): readon
     if (!isFieldApplicable(field, ACTION_FORM_SURFACE)) return false
     if (field.runtime.capability !== 'UNSUPPORTED') return false
     // Unsupported capability is intentionally non-renderable in the Runtime,
-    // so its `visible` bit is false by construction. Re-evaluate only the
-    // verified visibility contract to distinguish a visible unsupported field
-    // (which must block) from a hidden field (which must stay silent).
+    // so its `visible` bit is false by construction. Re-evaluate the verified
+    // visibility contract: only an explicitly hidden field is non-blocking;
+    // an unresolvable expression remains fail-closed and blocks.
     const visibility = evaluateVisibility(field.visibility, form.values)
-    return visibility.state === 'visible' && visibility.visible
+    return visibility.state !== 'hidden'
   })
 }
 

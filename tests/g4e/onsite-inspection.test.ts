@@ -33,6 +33,7 @@ import {
 } from '@features/work-orders/dynamic-form-action'
 import type {
   DynamicFormRead,
+  FormFieldVisibility,
   FormFieldValue,
   LocationPort,
   LocationSnapshot,
@@ -1062,6 +1063,62 @@ describe('G4-E Survey dynamic Action Content', () => {
       state: 'succeeded',
       data: { mobileDetail: 'visible-value' },
     })
+  })
+
+  it('does not block an unsupported field with verified hidden visibility', () => {
+    const form: DynamicFormRead = {
+      fields: [{
+        fieldId: 'hidden-unsupported-by-rule',
+        valueKey: 'hiddenUnsupportedByRule',
+        label: '条件隐藏字段',
+        type: 'unverified',
+        required: false,
+        readOnly: false,
+        visibility: { kind: 'equals', path: 'showUnsupported', value: true },
+      }],
+      values: { showUnsupported: false },
+    }
+
+    expect(dynamicActionUnsupportedFieldsFor(form)).toEqual([])
+  })
+
+  it('blocks an unsupported field with verified visible visibility', () => {
+    const form: DynamicFormRead = {
+      fields: [{
+        fieldId: 'visible-unsupported-by-rule',
+        valueKey: 'visibleUnsupportedByRule',
+        label: '条件显示字段',
+        type: 'unverified',
+        required: false,
+        readOnly: false,
+        visibility: { kind: 'equals', path: 'showUnsupported', value: true },
+      }],
+      values: { showUnsupported: true },
+    }
+
+    expect(dynamicActionUnsupportedFieldsFor(form).map((field) => field.fieldId))
+      .toEqual(['visible-unsupported-by-rule'])
+  })
+
+  it('blocks an unsupported field when its visibility cannot be resolved', () => {
+    const form: DynamicFormRead = {
+      fields: [{
+        fieldId: 'unresolvable-unsupported-visibility',
+        valueKey: 'unresolvableUnsupportedVisibility',
+        label: '无法解析的条件字段',
+        type: 'unverified',
+        required: false,
+        readOnly: false,
+        visibility: {
+          kind: 'all',
+          conditions: [{ kind: 'equals', path: 'showUnsupported' } as unknown as FormFieldVisibility],
+        },
+      }],
+      values: {},
+    }
+
+    expect(dynamicActionUnsupportedFieldsFor(form).map((field) => field.fieldId))
+      .toEqual(['unresolvable-unsupported-visibility'])
   })
 
   it('treats Survey gap rows as visible presentation-only controls', () => {
