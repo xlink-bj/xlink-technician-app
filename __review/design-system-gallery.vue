@@ -86,19 +86,19 @@
             <template v-else-if="example.kind === 'inputs'">
               <view class="gallery-control-stack">
                 <AppInput data-testid="gallery-input-empty" placeholder="空值输入" />
-                <AppInput model-value="已填写的单行内容" />
-                <AppInput model-value="只读内容" read-only />
-                <AppInput model-value="不可编辑内容" disabled />
-                <AppInput model-value="错误内容" error />
+                <view class="gallery-stack-gap"><AppInput model-value="已填写的单行内容" /></view>
+                <view class="gallery-stack-gap"><AppInput model-value="只读内容" read-only /></view>
+                <view class="gallery-stack-gap"><AppInput model-value="不可编辑内容" disabled /></view>
+                <view class="gallery-stack-gap"><AppInput model-value="错误内容" error /></view>
               </view>
             </template>
 
             <template v-else-if="example.kind === 'textarea'">
               <view class="gallery-control-stack">
                 <AppTextarea data-testid="gallery-textarea-empty" placeholder="请填写多行内容" />
-                <AppTextarea data-testid="gallery-textarea-populated" model-value="第一行现场记录\n第二行补充说明\n第三行可继续增长" />
-                <AppTextarea model-value="只读多行内容" read-only />
-                <AppTextarea model-value="需要修正的多行内容" error />
+                <view class="gallery-stack-gap"><AppTextarea data-testid="gallery-textarea-populated" model-value="第一行现场记录\n第二行补充说明\n第三行可继续增长" /></view>
+                <view class="gallery-stack-gap"><AppTextarea model-value="只读多行内容" read-only /></view>
+                <view class="gallery-stack-gap"><AppTextarea model-value="需要修正的多行内容" error /></view>
               </view>
             </template>
 
@@ -106,9 +106,9 @@
               <AppField label="选择器">
                 <view class="gallery-control-stack">
                   <AppSelector placeholder="请选择" />
-                  <AppSelector selected value="已选择" />
-                  <AppSelector selected value="不可更改" disabled />
-                  <AppSelector error placeholder="请选择有效值" />
+                  <view class="gallery-stack-gap"><AppSelector selected value="已选择" /></view>
+                  <view class="gallery-stack-gap"><AppSelector selected value="不可更改" disabled /></view>
+                  <view class="gallery-stack-gap"><AppSelector error placeholder="请选择有效值" /></view>
                 </view>
               </AppField>
               <AppField label="单选">
@@ -131,15 +131,15 @@
             <template v-else-if="example.kind === 'feedback'">
               <view class="gallery-status-stack">
                 <AppStatus message="普通提示" />
-                <AppStatus message="操作已保存" tone="success" icon="complete" />
-                <AppStatus message="请检查输入" tone="warning" icon="warning" />
-                <AppStatus message="操作失败，请稍后重试" tone="danger" icon="warning" />
-                <AppStatus message="成功状态条" tone="success" variant="strip" icon="complete" />
-                <AppStatus message="警告状态条" tone="warning" variant="strip" icon="warning" />
+                <view class="gallery-stack-gap"><AppStatus message="操作已保存" tone="success" icon="complete" /></view>
+                <view class="gallery-stack-gap"><AppStatus message="请检查输入" tone="warning" icon="warning" /></view>
+                <view class="gallery-stack-gap"><AppStatus message="操作失败，请稍后重试" tone="danger" icon="warning" /></view>
+                <view class="gallery-stack-gap"><AppStatus message="成功状态条" tone="success" variant="strip" icon="complete" /></view>
+                <view class="gallery-stack-gap"><AppStatus message="警告状态条" tone="warning" variant="strip" icon="warning" /></view>
               </view>
               <view class="gallery-information-stack">
                 <AppInformationRow data-testid="gallery-information-normal"><template #label>状态</template><template #value>已完成</template></AppInformationRow>
-                <AppInformationRow data-testid="gallery-information-long"><template #label>长文本</template><template #value>演示区域的一段较长说明文字，用于验证中文长文本换行与信息行的视觉稳定性。</template></AppInformationRow>
+                <view class="gallery-stack-gap"><AppInformationRow data-testid="gallery-information-long"><template #label>长文本</template><template #value>演示区域的一段较长说明文字，用于验证中文长文本换行与信息行的视觉稳定性。</template></AppInformationRow></view>
               </view>
             </template>
 
@@ -153,11 +153,11 @@
                     <view class="gallery-media-pattern__copy"><AppStatus message="本地已保存，等待上传" /><AppButton variant="secondary">继续处理</AppButton></view>
                   </view>
                 </view>
-                <view class="pattern-block">
+                <view class="pattern-block pattern-block--separated">
                   <text class="pattern-title">Gap / Separator · SHARED_PATTERN</text>
                   <view class="gallery-gap-pattern"><view /><text>分组分隔</text><view /></view>
                 </view>
-                <view class="pattern-block">
+                <view class="pattern-block pattern-block--separated">
                   <text class="pattern-title">Bottom Sheet · SHARED_PATTERN</text>
                   <AppButton variant="secondary" @tap="bottomSheetOpen = true">打开通用视觉示例</AppButton>
                   <view class="gallery-sheet-preview" data-testid="gallery-bottom-sheet-preview">
@@ -166,11 +166,11 @@
                     <AppChoiceGroup :options="sheetOptions" model-value="" />
                   </view>
                 </view>
-                <view class="pattern-block">
+                <view class="pattern-block pattern-block--separated">
                   <text class="pattern-title">Tree Multi Select · SHARED_PATTERN</text>
                   <AppTreeMultiChoiceGroup :options="treeOptions" :model-value="treeSelected" />
                 </view>
-                <view class="pattern-block">
+                <view class="pattern-block pattern-block--separated">
                   <text class="pattern-title">Hierarchical Cascade · SHARED_PATTERN</text>
                   <AppCascadeSelector :options="cascadeOptions" :model-value="hierarchicalCascadeValue" hierarchical />
                 </view>
@@ -183,19 +183,19 @@
                   <text class="pattern-title">Single action</text>
                   <AppButton block>继续</AppButton>
                 </view>
-                <view data-testid="gallery-action-state-unsaved" class="gallery-action-state">
+                <view data-testid="gallery-action-state-unsaved" class="gallery-action-state gallery-action-stack__separated">
                   <text class="pattern-title">Unsaved</text>
                   <ActionWorkspaceFormActions lifecycle="in_progress" save-state="not_saved" :can-submit="false" submit-label="完成勘查" />
                 </view>
-                <view data-testid="gallery-action-state-saving" class="gallery-action-state">
+                <view data-testid="gallery-action-state-saving" class="gallery-action-state gallery-action-stack__separated">
                   <text class="pattern-title">Saving</text>
                   <ActionWorkspaceFormActions lifecycle="in_progress" save-state="saving" :can-submit="false" submit-label="完成勘查" />
                 </view>
-                <view data-testid="gallery-action-state-saved" class="gallery-action-state">
+                <view data-testid="gallery-action-state-saved" class="gallery-action-state gallery-action-stack__separated">
                   <text class="pattern-title">Saved</text>
                   <ActionWorkspaceFormActions lifecycle="in_progress" save-state="saved" :can-submit="true" submit-label="完成勘查" />
                 </view>
-                <view data-testid="gallery-action-state-submitting" class="gallery-action-state">
+                <view data-testid="gallery-action-state-submitting" class="gallery-action-state gallery-action-stack__separated">
                   <text class="pattern-title">Submitting</text>
                   <ActionWorkspaceFormActions lifecycle="submitting" save-state="saved" :can-submit="true" submit-label="完成勘查" />
                 </view>
@@ -329,11 +329,11 @@ text { display: inline; }
 .gallery-meta-copy { color: var(--app-color-text-muted); font-size: var(--app-font-meta); margin-top: 8rpx; }
 .gallery-button-grid { display: grid; gap: 12rpx; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 20rpx; }
 .gallery-button-grid .app-button:last-child { grid-column: span 2; }
-.gallery-control-stack > * + *, .gallery-status-stack > * + *, .gallery-information-stack > * + * { display: block; margin-top: 16rpx; }
+.gallery-stack-gap { display: block; margin-top: 16rpx; }
 .gallery-selection-group { margin-top: 16rpx; }
 .gallery-status-stack { margin-top: 16rpx; }
 .gallery-information-stack { border-top: 1rpx solid var(--app-color-divider); margin-top: 20rpx; padding-top: 8rpx; }
-.pattern-stack > * + * { border-top: 1rpx solid var(--app-color-divider); margin-top: 24rpx; padding-top: 24rpx; }
+.pattern-block--separated { border-top: 1rpx solid var(--app-color-divider); margin-top: 24rpx; padding-top: 24rpx; }
 .pattern-title { color: var(--app-color-text-secondary); display: block; font-size: var(--app-font-meta); font-weight: 700; line-height: 1.5; margin-bottom: 12rpx; }
 .gallery-media-pattern { align-items: center; display: flex; gap: 16rpx; min-width: 0; }
 .gallery-media-pattern__tile { align-items: center; background: var(--app-color-control-surface); border: 1rpx dashed var(--app-color-border-control); border-radius: var(--app-radius-control); color: var(--app-color-text-secondary); display: flex; flex: 0 0 120rpx; height: 120rpx; justify-content: center; text-align: center; }
@@ -345,7 +345,7 @@ text { display: inline; }
 .gallery-gap-pattern text { color: var(--app-color-text-tertiary); flex: 0 0 auto; font-size: var(--app-font-meta); }
 .gallery-sheet-preview { background: var(--app-color-page); border-radius: var(--app-radius-control) var(--app-radius-control) 0 0; margin-top: 16rpx; padding: 20rpx 16rpx 16rpx; }
 .gallery-sheet-preview__handle, .gallery-sheet__handle { background: var(--app-color-border-control); border-radius: 999rpx; height: 8rpx; margin: 0 auto 16rpx; width: 72rpx; }
-.gallery-action-stack > * + * { border-top: 1rpx solid var(--app-color-divider); margin-top: 24rpx; padding-top: 24rpx; }
+.gallery-action-stack__separated { border-top: 1rpx solid var(--app-color-divider); margin-top: 24rpx; padding-top: 24rpx; }
 .gallery-action-state { min-width: 0; }
 .gallery-action-state .action-workspace-form-actions { margin-top: 12rpx; }
 .gallery-sheet-overlay { bottom: 0; left: 0; position: fixed; right: 0; top: 0; z-index: 100; }

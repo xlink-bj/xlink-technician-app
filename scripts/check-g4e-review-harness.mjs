@@ -36,6 +36,9 @@ const gallerySource = [
   await read('__review/design-system-gallery.vue'),
   await read('__review/design-system-gallery-fixtures.ts'),
 ].join('\n')
+const galleryPage = await read('__review/design-system-gallery.vue')
+const galleryStyle = galleryPage.match(/<style[^>]*>([\s\S]*?)<\/style>/)?.[1] ?? ''
+const universalSelectorPattern = /(?:^|[,{>+~])\s*\*(?=\s*(?:[>+~.#:[,{\s]|$))/m
 const reviewConfig = await read('vite.review.config.ts')
 const uniReviewConfig = await read('vite.uni-h5-review.config.ts')
 const mpReviewConfig = await read('vite.mp-weixin-review.config.ts')
@@ -62,6 +65,12 @@ if (!galleryEntry.includes('Design System Gallery is development-only')) {
 }
 if (!galleryHtml.includes('/__review/design-system-main.ts')) {
   fail('Design System Gallery HTML must use the isolated review entry')
+}
+if (!galleryStyle) {
+  fail('Design System Gallery must keep its review-only presentation styles in the gallery page')
+}
+if (universalSelectorPattern.test(galleryStyle)) {
+  fail('Design System Gallery WXSS must not use universal selectors; use explicit review-only classes')
 }
 if (!reviewConfig.includes("VITE_XLINK_ENABLE_REAL_WRITES': JSON.stringify('false')")) {
   fail('review config must hard-disable real writes')
@@ -141,6 +150,17 @@ try {
   const reviewMpManifest = JSON.parse(await readFile(reviewMpManifestPath, 'utf8'))
   if (JSON.stringify(reviewMpManifest.pages) !== JSON.stringify(['pages/design-system/index'])) {
     fail('MP review artifact must contain only the review page')
+  }
+} catch (error) {
+  if (error?.code !== 'ENOENT') throw error
+  // Allow source-only checks before the review MP artifact is built.
+}
+
+const reviewGalleryWxssPath = resolve(root, 'unpackage/design-system-mp-weixin/__review/design-system-gallery.wxss')
+try {
+  const reviewGalleryWxss = await readFile(reviewGalleryWxssPath, 'utf8')
+  if (universalSelectorPattern.test(reviewGalleryWxss)) {
+    fail('compiled Design System Gallery WXSS contains a universal selector unsupported by the MP target')
   }
 } catch (error) {
   if (error?.code !== 'ENOENT') throw error
