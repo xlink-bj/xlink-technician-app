@@ -5,6 +5,7 @@ import type {
   StoragePort,
   TechnicianApiCommandPort,
   TechnicianApiReadPort,
+  QuotationCatalogReadPort,
   MediaCapturePort,
   MediaFilePickerPort,
   MediaPostUploadProcessorPort,
@@ -15,6 +16,7 @@ import type {
 } from '@shared/ports'
 import { createOperationError, type OperationSnapshot } from '@shared/types'
 
+import { createQuotationCatalogReadAdapter } from '@adapters/api/quotation-catalog-api'
 import { createRoleScopedTechnicianApiReadAdapter } from '@adapters/api/technician-api'
 import { createTechnicianApiCommandAdapter } from '@adapters/api/technician-api-commands'
 import { createUniApiReadTransport } from '@adapters/api/uni-api-read-transport'
@@ -109,6 +111,36 @@ export function createDefaultTechnicianApiReadPort(authSession: AuthSessionPort)
       codeTenantId: config.value.authWireConfig.tenant,
     },
   )
+}
+
+export function createDefaultQuotationCatalogReadPort(authSession: AuthSessionPort): QuotationCatalogReadPort {
+  const config = loadApplicationRuntimeConfig()
+  if (!config.ok) {
+    const blocked = async <T>(): Promise<OperationSnapshot<T>> =>
+      configurationFailure(`Quotation catalog configuration is unavailable: ${config.issues.join('; ')}`)
+    return {
+      listPackages: async () => blocked(),
+      getPackageDetail: async () => blocked(),
+      listProcedures: async () => blocked(),
+      listMaterials: async () => blocked(),
+      listMeasures: async () => blocked(),
+    }
+  }
+
+  const transport = createUniApiReadTransport({
+    apiBaseUrl: config.value.environment.apiBaseUrl,
+    getSessionRef: () => authSession.getCurrentSession()?.sessionRef ?? null,
+    getMockActor: () => {
+      const session = authSession.getCurrentSession()
+      return session
+        ? {
+            userId: session.user.id,
+            ...(session.currentRole ? { roleId: session.currentRole.id } : {}),
+          }
+        : null
+    },
+  })
+  return createQuotationCatalogReadAdapter(transport)
 }
 
 export function createDefaultSurveyLeakageCauseProvider(authSession: AuthSessionPort): SurveyLeakageCauseProviderPort {

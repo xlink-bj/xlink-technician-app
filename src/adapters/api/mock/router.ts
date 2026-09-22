@@ -21,6 +21,15 @@ import {
   mockWorkOrderDetailResponses,
   mockWorkOrderDetailResponseFor,
 } from './fixtures'
+import {
+  mockQuotationCatalogServiceType,
+  mockQuotationCatalogSourceType,
+  mockQuotationPackageListResponse,
+  mockQuotationProcedureListResponse,
+  mockQuotationMaterialListResponse,
+  mockQuotationMeasureListResponse,
+  mockQuotationPackageDetailResponse,
+} from './quotation-catalog'
 import type { ApiCommandRequest } from '../technician-api-commands'
 
 export interface MockReadOptions {
@@ -46,6 +55,13 @@ function normalizedPath(path: string): string {
   return path.replace(/^\/+/, '').split('?')[0]
 }
 
+const quotationCatalogListRoutes = new Set([
+  'biz/projPackage/queryWithRank',
+  'biz/procedure/queryWithRank',
+  'basic/material/queryWithRank',
+  'biz/measure/queryWithRank',
+])
+
 /** Synthetic entity reads remain locally owned even when mock mode is off. */
 export function isMockOwnedRead(
   path: string,
@@ -55,6 +71,19 @@ export function isMockOwnedRead(
   // This is an internal, synthetic-only route. It is always mock-owned so a
   // disabled Mock mode can never fall through to a real backend endpoint.
   if (route === '__mock/quotation/action-content') return true
+  if (
+    quotationCatalogListRoutes.has(route)
+    && typeof requestData['in:serviceType|array#and'] === 'string'
+    && requestData['in:serviceType|array#and'].startsWith('mock-')
+  ) return true
+  const packageDetailPrefix = 'biz/projPackage/findById/'
+  if (route.startsWith(packageDetailPrefix)) {
+    try {
+      return decodeURIComponent(route.slice(packageDetailPrefix.length)).startsWith('mock-catalog-package-')
+    } catch {
+      return false
+    }
+  }
   if (
     route === 'biz/extField/query' &&
     typeof requestData.extId === 'string' &&
@@ -395,6 +424,33 @@ function matchedResponse(
         quotation: null,
       },
     }
+  }
+  if (quotationCatalogListRoutes.has(route)) {
+    const matchesMockScope = requestData['in:serviceType|array#and'] === mockQuotationCatalogServiceType
+      && (requestData.sourceType === undefined || requestData.sourceType === mockQuotationCatalogSourceType)
+    if (mode === 'empty' || !matchesMockScope) {
+      return { data: [], page: 1, rows: 20, total: 0 }
+    }
+    if (route === 'biz/projPackage/queryWithRank') return mockQuotationPackageListResponse
+    if (route === 'biz/procedure/queryWithRank') return mockQuotationProcedureListResponse
+    if (route === 'basic/material/queryWithRank') return mockQuotationMaterialListResponse
+    return mockQuotationMeasureListResponse
+  }
+  const packageDetailPrefix = 'biz/projPackage/findById/'
+  if (route.startsWith(packageDetailPrefix)) {
+    let packageId = ''
+    try {
+      packageId = decodeURIComponent(route.slice(packageDetailPrefix.length))
+    } catch {
+      return null
+    }
+    if (mode === 'data' && packageId === 'mock-catalog-package-basic') {
+      return mockQuotationPackageDetailResponse
+    }
+    if (mode === 'data' && packageId.startsWith('mock-catalog-package-')) {
+      return { success: true, entity: null }
+    }
+    return null
   }
   if (route === 'function/changeRole') return mockRoleFunctionResponse
   if (route === 'code/query' && requestData.valueOption === 'STATUS') {

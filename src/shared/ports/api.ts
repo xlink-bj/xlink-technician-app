@@ -277,6 +277,68 @@ export interface CascadeCodeOptionsQuery {
   readonly codeType: string
 }
 
+/** Current work-order provider context used by the R1 ranked quotation catalog reads. */
+export interface QuotationCatalogQuery {
+  readonly serviceType: string
+  /** R1 omits this filter only when the active work-order context has no source type. */
+  readonly sourceType?: string
+}
+
+/** Source-backed commercial fields are read-only data, not a price calculation contract. */
+export interface QuotationCatalogCommercialRead {
+  readonly price?: number
+  readonly minimumPrice?: number
+  readonly guideUnitPrice?: number
+  readonly minimumGuideTotalPrice?: number
+  readonly servicePrice?: number
+  readonly serviceCostPrice?: number
+  readonly storeCostPrice?: number
+  readonly cost?: number
+}
+
+export interface QuotationCatalogItemRead extends QuotationCatalogCommercialRead {
+  readonly id: string
+  readonly name: string
+  readonly unit?: string
+  readonly specification?: string
+  readonly serviceTypes?: readonly string[]
+  readonly sourceTypeList?: readonly string[]
+  readonly description?: string
+  readonly content?: string
+  /** R1 package repair-part contract is retained as received, not interpreted here. */
+  readonly repairPart?: string
+  readonly order?: number
+}
+
+/** A package child retains its source reference and optional embedded provider row. */
+export interface QuotationPackageComponentRead extends QuotationCatalogCommercialRead {
+  readonly id?: string
+  readonly referenceId?: string
+  readonly item: QuotationCatalogItemRead | null
+  /** R1 body/entity quantity projection; not a computed or normalized quantity. */
+  readonly number?: string
+  readonly coefficient?: number
+  readonly coefficientUnit?: string
+  readonly unit?: string
+  readonly order?: number
+}
+
+export interface QuotationPackageDetailRead {
+  readonly package: QuotationCatalogItemRead
+  readonly procedures: readonly QuotationPackageComponentRead[]
+  readonly materials: readonly QuotationPackageComponentRead[]
+  readonly measures: readonly QuotationPackageComponentRead[]
+}
+
+/** Read-only provider boundary; intentionally separate from local quotation draft composition. */
+export interface QuotationCatalogReadPort {
+  listPackages(query: QuotationCatalogQuery): Promise<OperationSnapshot<ReadPage<QuotationCatalogItemRead>>>
+  getPackageDetail(packageId: string): Promise<OperationSnapshot<QuotationPackageDetailRead>>
+  listProcedures(query: QuotationCatalogQuery): Promise<OperationSnapshot<ReadPage<QuotationCatalogItemRead>>>
+  listMaterials(query: QuotationCatalogQuery): Promise<OperationSnapshot<ReadPage<QuotationCatalogItemRead>>>
+  listMeasures(query: QuotationCatalogQuery): Promise<OperationSnapshot<ReadPage<QuotationCatalogItemRead>>>
+}
+
 export interface TechnicianApiReadPort {
   listWorkOrders(
     query: WorkOrderListQuery,

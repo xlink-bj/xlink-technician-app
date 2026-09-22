@@ -46,3 +46,7 @@ export {
 } from './fixtures'
 export type { MockWorkOrderId } from './fixtures'
 export type { MockWorkOrderActivityId } from './fixtures'
+export {
+  mockQuotationCatalogServiceType,
+  mockQuotationCatalogSourceType,
+} from './quotation-catalog'

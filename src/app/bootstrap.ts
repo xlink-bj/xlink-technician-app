@@ -11,6 +11,7 @@ import type {
   StoragePort,
   TechnicianApiCommandPort,
   TechnicianApiReadPort,
+  QuotationCatalogReadPort,
   MediaCapturePort,
   MediaFilePickerPort,
   MediaUploadQueuePort,
@@ -32,6 +33,7 @@ import {
   createDefaultNavigationPort,
   createDefaultStoragePort,
   createDefaultTechnicianApiReadPort,
+  createDefaultQuotationCatalogReadPort,
   createDefaultMediaCapturePort,
   createDefaultMediaFilePickerPort,
   createDefaultLocationPort,
@@ -43,6 +45,7 @@ import {
 export interface ApplicationDependencies {
   readonly authSession?: AuthSessionPort
   readonly apiRead?: TechnicianApiReadPort
+  readonly quotationCatalogRead?: QuotationCatalogReadPort
   readonly apiCommand?: TechnicianApiCommandPort
   readonly phone?: PhonePort
   readonly navigation?: NavigationPort
@@ -63,6 +66,7 @@ export function createApplication(dependencies: ApplicationDependencies = {}) {
   const sessionStore = useSessionStore(pinia)
   const authSession = dependencies.authSession ?? createDefaultAuthSessionPort()
   const apiRead = dependencies.apiRead ?? createDefaultTechnicianApiReadPort(authSession)
+  const quotationCatalogRead = dependencies.quotationCatalogRead ?? createDefaultQuotationCatalogReadPort(authSession)
   const apiCommand = dependencies.apiCommand ?? createDefaultTechnicianApiCommandPort(authSession, apiRead)
   const phone = dependencies.phone ?? createDefaultPhonePort()
   const navigation = dependencies.navigation ?? createDefaultNavigationPort()
@@ -122,6 +126,7 @@ export function createApplication(dependencies: ApplicationDependencies = {}) {
     workOrderListStore,
     workOrderDetailStore,
     actionWorkspaceStore,
+    quotationCatalogRead,
     localDraftDiagnosticsStore,
   }
 }
