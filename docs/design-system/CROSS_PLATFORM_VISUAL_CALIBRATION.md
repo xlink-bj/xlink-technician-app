@@ -30,16 +30,19 @@ regressions. This is not an aesthetic score.
 
 | Surface | What to compare | Status |
 | --- | --- | --- |
-| Foundations | typography scale, line height, card spacing/radius, page background | NOT_TESTED |
-| Actions | primary, secondary, disabled, loading | NOT_TESTED |
-| Input / Textarea | control height, inner padding, placeholder, multiline/auto-height | NOT_TESTED |
-| Selection | selector, choice, multi-choice, hierarchical cascade | NOT_TESTED |
-| Action Workspace Footer | single/dual action, disabled Complete, Saved state, safe-area composition | NOT_TESTED |
+| Foundations | typography scale, line height, card spacing/radius, page background | MATCH |
+| Actions | primary, secondary, disabled, loading | MATCH |
+| Input / Textarea | control height, inner padding, placeholder, multiline/auto-height | ACCEPTABLE_PLATFORM_DIFFERENCE |
+| Selection | selector, choice, multi-choice, hierarchical cascade | MATCH |
+| Action Workspace Footer | single/dual action, disabled Complete, Saved state, safe-area composition | ACCEPTABLE_PLATFORM_DIFFERENCE |
 
 Status vocabulary is intentionally limited to `MATCH`,
 `ACCEPTABLE_PLATFORM_DIFFERENCE`, `MATERIAL_DIVERGENCE`, and `NOT_TESTED`.
-This source/build slice records `NOT_TESTED` until the five MP simulator
-captures are reviewed. A successful MP build is not a device or visual PASS.
+The five MP simulator surfaces were reviewed against the true uni-app H5
+reference on 2026-09-22. No `MATERIAL_DIVERGENCE` was identified. The accepted
+differences are limited to platform-native metrics such as input/textarea text
+metrics and safe-area/footer composition. A successful build alone is still
+not device or visual evidence.
 
 ## Scope boundary
 
