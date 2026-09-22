@@ -169,10 +169,9 @@ placement while making Save and Complete boundaries explicit.
   touch targets must remain within uni-app supported behavior.
 - **App**: the same component and state contract is used in App-Plus; device
   keyboard and safe-area behavior remain device-validation concerns.
-- **H5 review proxy**: the existing development-only harness renders the real
-  Action Workspace and Runtime with a minimal platform shim. It is QA
-  infrastructure, not a product channel and not authenticated/device/live
-  evidence.
+- **uni-app H5 Design System Review**: primary automated visual reference, compiled through the real uni-app H5 page/runtime pipeline.
+- **Raw H5 harness**: fast semantic/state QA only; it is not visual authority.
+- **MP-WEIXIN Review App**: lower-frequency platform-fidelity calibration using the same review page and canonical fixtures.
 
 No v0.2 rule authorizes real writes, changes form semantics, changes media
 queue behavior, or starts G4-F.
@@ -190,3 +189,19 @@ be pixel-identical, but material typography, layout, or control-density
 divergence is a defect signal. Approved screenshot baselines may later become
 the visual-regression contract after Product/Web review; this foundation does
 not add pixel-diff CI or baseline gating.
+
+## 11. UI Delivery Workflow Gate
+
+The operational delivery rules are defined in
+`docs/design-system/UI_DELIVERY_WORKFLOW.md`.
+
+Every normal verification run includes:
+
+```bash
+pnpm run check:ui-governance
+```
+
+The workflow fixes the reuse/promotion rule, H5/MP review responsibilities, MP
+calibration triggers, and the minimum evidence required before shared UI is
+accepted. The checker intentionally protects only durable cross-business
+invariants; business semantics remain in their feature/runtime owners.
