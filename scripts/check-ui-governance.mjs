@@ -50,7 +50,7 @@ if (!textarea.includes('<textarea') || !textarea.includes(':auto-height="autoHei
 
 if (
   !formActions.includes("saveState === 'saved'")
-  || !formActions.includes("data-testid="dynamic-form-save"")
+  || !formActions.includes('data-testid="dynamic-form-save"')
   || !formActions.includes(':disabled=')
 ) {
   fail('ActionWorkspaceFormActions must preserve a passive saved business-Save state')
