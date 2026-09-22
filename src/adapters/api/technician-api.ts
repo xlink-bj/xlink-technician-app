@@ -11,6 +11,7 @@ import type {
   FormFieldVisibility,
   FormDefinitionRead,
   QuotationActionContentRead,
+  QuotationCatalogContext,
   FormPurpose,
   ReadPage,
   TechnicianApiReadPort,
@@ -450,6 +451,18 @@ function detailPayload(raw: unknown): {
   }
 }
 
+function quotationCatalogContext(record: AdapterRecord): QuotationCatalogContext | undefined {
+  // Do not derive catalog scope from display labels or workflow/UI state.
+  // These are the ServiceAppointment's persisted provider fields.
+  const serviceType = optionalString(record, ['serviceType'])
+  if (!serviceType) return undefined
+  const sourceType = optionalString(optionalRecord(record.exts) ?? {}, ['sourceType'])
+  return {
+    serviceType,
+    ...(sourceType ? { sourceType } : {}),
+  }
+}
+
 function detailContainsServiceAppointmentStatus(raw: unknown): boolean {
   const { record } = detailPayload(raw)
   return firstStatusCode(record.status) !== undefined
@@ -480,6 +493,7 @@ function workOrderDetail(
   const distanceText = displayDistance(record)
   const contact = workOrderContact(record)
   const workflowNodes = rawWorkflowNodes?.map(workflowNode)
+  const catalogContext = quotationCatalogContext(record)
 
   return {
     id,
@@ -487,6 +501,7 @@ function workOrderDetail(
     ...(displayNumber ? { displayNumber } : {}),
     ...(taskLabel ? { taskLabel } : {}),
     ...(servicePartLabelValue ? { servicePartLabel: servicePartLabelValue } : {}),
+    ...(catalogContext ? { quotationCatalogContext: catalogContext } : {}),
     ...(serviceDistrict ? { serviceDistrict } : {}),
     ...(customerName ? { customerName } : {}),
     ...(serviceAddress ? { serviceAddress } : {}),

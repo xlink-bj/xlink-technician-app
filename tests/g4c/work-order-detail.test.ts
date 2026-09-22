@@ -50,6 +50,10 @@ const detail: WorkOrderDetail = {
   taskLabel: '待联系',
   customerName: 'Sanitized Customer',
   serviceAddress: 'Sanitized service address',
+  quotationCatalogContext: {
+    serviceType: 'sanitized-service-type',
+    sourceType: 'sanitized-source',
+  },
   contact: {
     contactRef: asOpaqueId<'CustomerContactId'>('contact-001'),
     normalizedPhone: '13800000000',
@@ -110,6 +114,7 @@ describe('G4-C API detail mapping and route identity', () => {
               address: 'Sanitized service address',
               phone: '13800000000',
               contactIds: ['contact-001'],
+              serviceType: 'sanitized-service-type',
               workflowRunId: 'workflow-run-001',
               status: '104',
               exts: { sourceType: 'sanitized-source' },
@@ -129,12 +134,37 @@ describe('G4-C API detail mapping and route identity', () => {
     expect(result.data).not.toHaveProperty('status')
     expect(result.data).not.toHaveProperty('exts')
     expect(result.data).not.toHaveProperty('workflowNode')
+    expect(result.data?.quotationCatalogContext).toEqual({
+      serviceType: 'sanitized-service-type',
+      sourceType: 'sanitized-source',
+    })
     expect(requests[0]).toEqual({
       method: 'POST',
       path: 'basic/serviceAppointment/queryById/work-order-001',
       body: { type: 'query' },
     })
     expect(requests[1].path).toBe('code/query')
+  })
+
+  it('does not create catalog context from labels or sourceType alone when serviceType is absent', async () => {
+    const api = createTechnicianApiReadAdapter({
+      execute: vi.fn(async (request) => request.path === 'code/query'
+        ? { data: [] }
+        : {
+            data: {
+              serviceAppointment: {
+                _id: 'work-order-001',
+                status: '104',
+                exts: { sourceType: 'sanitized-source' },
+              },
+            },
+          }),
+    })
+
+    const result = await api.getWorkOrderDetail(workOrderId)
+
+    expect(result.state).toBe('succeeded')
+    expect(result.data).not.toHaveProperty('quotationCatalogContext')
   })
 
   it('passes only a validated semantic WorkOrderId from list navigation to detail', () => {

@@ -25,10 +25,18 @@ or workflow mutation was added.
 | Materials | `POST basic/material/queryWithRank` | Same ranked provider context filters |
 | Measures | `POST biz/measure/queryWithRank` | Same ranked provider context filters |
 
-Catalog list reads require a non-empty service type, preventing an accidental
-unscoped request. `sourceType` is omitted only when the caller has no value in
-the active work-order context. Tenant/organization identity is not guessed or
-added to the request; authenticated backend context remains authoritative.
+Catalog scope is mapped at the Work Order API boundary into
+`WorkOrderDetail.quotationCatalogContext`:
+
+- `ServiceAppointment.serviceType` → `catalog.serviceType`;
+- `ServiceAppointment.exts.sourceType` → `catalog.sourceType`.
+
+The catalog port consumes this normalized context instead of asking a UI to
+reconstruct it from labels or other display state. If `serviceType` is absent,
+the adapter omits the context and rejects an unscoped catalog request.
+`sourceType` is omitted only when it is absent from the active Work Order's
+`exts`. Tenant/organization identity is not guessed or added to the request;
+authenticated backend context remains authoritative.
 
 Package detail requires the requested identity to match the returned package,
 requires all three child-list properties, and rejects disagreement between a
@@ -38,17 +46,23 @@ silently joined to another item.
 
 ## Normalized read model
 
-The port exposes item identity/name, observed unit/specification, service-type
-and source-type lists, description/content, package `repairPart`, and order
-fields, plus individually named commercial fields present in the source-backed
-contract. Package child rows preserve the observed `number`, `coefficient`,
-`coefficientUnit`, and embedded-reference structure; `number` is not rebranded
-as a calculated quantity. These values are read-only provider data: this adapter
-does not calculate totals, choose minimum prices, establish freshness, or
-represent a quote snapshot. No version/revision/freshness token is synthesized.
+The port uses kind-discriminated package, procedure, material, and measure
+models. Package rows retain `type` and `agelimit` (normalized as `ageLimit`);
+material rows retain `code`, `materialUnit`, `specUnit`, and numeric `type`.
+Common identity/name, observed unit/specification, service/source applicability,
+description/content, and individually named source-backed commercial fields
+remain available without collapsing type-specific semantics. Package child
+rows preserve the observed `number`, `coefficient`, `coefficientUnit`, and
+embedded-reference structure; material-body `exts.layer` is retained when
+present and remains optional. The adapter never assigns a layer from array
+position. `number` is not rebranded as a calculated quantity. These values are
+read-only provider data: this adapter does not calculate totals, choose minimum
+prices, establish freshness, or represent a quote snapshot. No
+version/revision/freshness token is synthesized.
 
 Package detail preserves procedure/material/measure child grouping and their
-reference/embedded-item relationship. It does not flatten the data into
+kind-specific reference/embedded-item relationship. Measure-facing Mock copy
+uses the R1 product term “机措”. It does not flatten the data into
 quotation lines or persist the response.
 
 ## Mock and Real transport boundary

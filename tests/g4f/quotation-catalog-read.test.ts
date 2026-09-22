@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { ApiReadRequest } from '@adapters/api/technician-api'
 import { createQuotationCatalogReadAdapter } from '@adapters/api/quotation-catalog-api'
+import { createTechnicianApiReadAdapter } from '@adapters/api/technician-api'
 import { createUniApiReadTransport } from '@adapters/api/uni-api-read-transport'
 import {
   isMockOwnedRead,
@@ -22,6 +23,11 @@ function catalogItem(id: string, name: string) {
     name,
     unit: '项',
     spec: '结构样例',
+    code: 'catalog-code-1',
+    type: 2,
+    agelimit: 4,
+    materialUnit: '支',
+    specUnit: '毫米',
     serviceType: [query.serviceType],
     sourceTypeList: query.sourceType ? [query.sourceType] : [],
     repairPart: '["synthetic-repair-part"]',
@@ -58,11 +64,12 @@ function detailEntity(id = 'package-1') {
       unit: '支',
       order: 2,
       price: 15,
+      exts: { layer: 'layer-2' },
     }],
     measureList: [{
       _id: 'measure-row-1',
       measureId: 'measure-1',
-      measure: catalogItem('measure-1', '计措结构样例'),
+      measure: catalogItem('measure-1', '机措结构样例'),
       unit: '次',
       order: 3,
     }],
@@ -155,13 +162,33 @@ describe('G4-F Phase 1C quotation catalog read foundation', () => {
         specification: '结构样例',
         serviceTypes: [query.serviceType],
         sourceTypeList: [query.sourceType],
-        repairPart: '["synthetic-repair-part"]',
         price: 120,
         minimumPrice: 80.5,
         guideUnitPrice: 45,
         minimumGuideTotalPrice: 30,
       })
     }
+    expect(results.map((result) => result.data?.items[0]?.kind)).toEqual([
+      'package',
+      'procedure',
+      'material',
+      'measure',
+    ])
+    expect(results[0].data?.items[0]).toMatchObject({
+      kind: 'package',
+      type: '2',
+      code: 'catalog-code-1',
+      ageLimit: 4,
+      repairPart: '["synthetic-repair-part"]',
+    })
+    expect(results[2].data?.items[0]).toMatchObject({
+      kind: 'material',
+      code: 'catalog-code-1',
+      materialUnit: '支',
+      specUnit: '毫米',
+      type: 2,
+    })
+    expect(results[1].data?.items[0]).not.toHaveProperty('materialUnit')
   })
 
   it('omits sourceType only when the active context does not provide it', async () => {
@@ -181,6 +208,45 @@ describe('G4-F Phase 1C quotation catalog read foundation', () => {
     })
   })
 
+  it('carries the catalog scope from normalized WorkOrderDetail into the exact read filters', async () => {
+    const workOrderApi = createTechnicianApiReadAdapter({
+      execute: vi.fn(async (request) => request.path === 'biz/action/query.do'
+        ? { status: 1, data: [] }
+        : {
+            data: {
+              serviceAppointment: {
+                _id: 'sanitized-work-order',
+                serviceType: 'verified-service-type',
+                exts: { sourceType: 'verified-source-type' },
+              },
+            },
+          }),
+    })
+    const workOrder = await workOrderApi.getWorkOrderDetail(asOpaqueId<'WorkOrderId'>('sanitized-work-order'))
+    expect(workOrder.state).toBe('succeeded')
+    expect(workOrder.data?.quotationCatalogContext).toEqual({
+      serviceType: 'verified-service-type',
+      sourceType: 'verified-source-type',
+    })
+
+    const execute = vi.fn(async () => ({ data: [] }))
+    const catalog = createQuotationCatalogReadAdapter({ execute })
+    await catalog.listPackages(workOrder.data!.quotationCatalogContext!)
+
+    expect(execute).toHaveBeenCalledWith({
+      method: 'POST',
+      path: 'biz/projPackage/queryWithRank',
+      body: {
+        _all: '1',
+        'is:state|integer#and': 1,
+        'in:serviceType|array#and': 'verified-service-type',
+        sourceType: 'verified-source-type',
+        sortField: 'order,_id',
+        sortOrder: 'asc',
+      },
+    })
+  })
+
   it('maps package detail child relations and fails closed on identity or shape conflicts', async () => {
     const execute = vi.fn(async () => ({ success: true, entity: detailEntity() }))
     const catalog = createQuotationCatalogReadAdapter({ execute })
@@ -190,9 +256,24 @@ describe('G4-F Phase 1C quotation catalog read foundation', () => {
     expect(result).toMatchObject({
       state: 'succeeded',
       data: {
-        package: { id: 'package-1', name: '服务包结构样例' },
+        package: { id: 'package-1', name: '服务包结构样例', kind: 'package', ageLimit: 4 },
         procedures: [{ referenceId: 'procedure-1', item: { id: 'procedure-1' }, coefficient: 1.5 }],
-        materials: [{ referenceId: 'material-1', item: { id: 'material-1' }, number: '2', coefficientUnit: '支', price: 15 }],
+        materials: [{
+          kind: 'material',
+          referenceId: 'material-1',
+          item: {
+            id: 'material-1',
+            kind: 'material',
+            code: 'catalog-code-1',
+            materialUnit: '支',
+            specUnit: '毫米',
+            type: 2,
+          },
+          layer: 'layer-2',
+          number: '2',
+          coefficientUnit: '支',
+          price: 15,
+        }],
         measures: [{ referenceId: 'measure-1', item: { id: 'measure-1' } }],
       },
     })
@@ -215,6 +296,17 @@ describe('G4-F Phase 1C quotation catalog read foundation', () => {
       execute: async () => ({ entity }),
     }).getPackageDetail('package-1')
     expect(result.state).toBe('failed_terminal')
+  })
+
+  it('keeps package material layer optional and never derives it from list position', async () => {
+    const entity = detailEntity()
+    Reflect.deleteProperty(entity.materialList[0], 'exts')
+    const result = await createQuotationCatalogReadAdapter({
+      execute: async () => ({ entity }),
+    }).getPackageDetail('package-1')
+
+    expect(result.state).toBe('succeeded')
+    expect(result.data?.materials[0]).not.toHaveProperty('layer')
   })
 
   it('preserves unresolved package child references without inventing embedded catalog data', async () => {
@@ -252,12 +344,56 @@ describe('G4-F Phase 1C quotation catalog read foundation', () => {
       catalog.listMeasures(mockQuery),
       catalog.getPackageDetail('mock-catalog-package-basic'),
     ])
-    expect(packages.data?.items[0]).toMatchObject({ id: 'mock-catalog-package-basic', name: 'Mock 服务方案 A' })
+    expect(packages.data?.items[0]).toMatchObject({
+      kind: 'package',
+      id: 'mock-catalog-package-basic',
+      name: 'Mock 服务方案 A',
+      code: 'mock-package-code-a',
+      type: 'mock-package-type',
+      ageLimit: 2,
+    })
     expect(procedures.data?.items[0].id).toBe('mock-catalog-procedure-seal')
-    expect(materials.data?.items[0].id).toBe('mock-catalog-material-sealant')
-    expect(measures.data?.items[0].id).toBe('mock-catalog-measure-inspection')
+    expect(materials.data?.items[0]).toMatchObject({
+      kind: 'material',
+      id: 'mock-catalog-material-sealant',
+      code: 'mock-material-code-a',
+      materialUnit: '支',
+      specUnit: 'mock-spec-unit',
+      type: 1,
+    })
+    expect(measures.data?.items[0]).toMatchObject({
+      kind: 'measure',
+      id: 'mock-catalog-measure-inspection',
+      name: 'Mock 机措 A',
+    })
     expect(detail.data?.materials[0].item?.id).toBe('mock-catalog-material-sealant')
+    expect(detail.data?.materials[0]).toMatchObject({ kind: 'material', layer: 'mock-layer-1' })
     expect([packages, procedures, materials, measures, detail].every((result) => result.state === 'succeeded')).toBe(true)
+    expect(realRequest).not.toHaveBeenCalled()
+  })
+
+  it('keeps catalog context derived from a synthetic WorkOrder Mock-owned after Mock is disabled', async () => {
+    setBusinessMockMode('data')
+    const realRequest = vi.fn()
+    const transport = createUniApiReadTransport({
+      apiBaseUrl: 'https://mock-review.invalid',
+      getSessionRef: () => sessionRef,
+      request: realRequest as never,
+      mockLatencyMs: 0,
+    })
+    const workOrder = await createTechnicianApiReadAdapter(transport).getWorkOrderDetail(
+      asOpaqueId<'WorkOrderId'>('mock-work-order-001'),
+    )
+    expect(workOrder.data?.quotationCatalogContext).toEqual({
+      serviceType: mockQuotationCatalogServiceType,
+      sourceType: mockQuotationCatalogSourceType,
+    })
+
+    setBusinessMockMode('off')
+    const result = await createQuotationCatalogReadAdapter(transport)
+      .listPackages(workOrder.data!.quotationCatalogContext!)
+
+    expect(result.state).toBe('failed_terminal')
     expect(realRequest).not.toHaveBeenCalled()
   })
 

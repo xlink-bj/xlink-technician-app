@@ -53,6 +53,12 @@ export interface WorkOrderContact {
   readonly displayMask?: string
 }
 
+/** Catalog scope derived by the API adapter from the current ServiceAppointment. */
+export interface QuotationCatalogContext {
+  readonly serviceType: string
+  readonly sourceType?: string
+}
+
 /**
  * Adapter-normalized workflow metadata shared with the Workflow Runtime.
  * These values are deliberately independent of backend nodeDef/state fields.
@@ -112,6 +118,8 @@ export interface WorkOrderDetail {
   readonly distanceText?: string
   /** Optional part label; emitted only when a verified label source is available. */
   readonly servicePartLabel?: string
+  /** R1 catalog filters mapped from ServiceAppointment.serviceType and exts.sourceType. */
+  readonly quotationCatalogContext?: QuotationCatalogContext
   readonly contact?: WorkOrderContact
   /** Adapter-normalized read-only follow-up timeline; omitted when no records exist. */
   readonly activities?: readonly WorkOrderActivity[]
@@ -277,13 +285,6 @@ export interface CascadeCodeOptionsQuery {
   readonly codeType: string
 }
 
-/** Current work-order provider context used by the R1 ranked quotation catalog reads. */
-export interface QuotationCatalogQuery {
-  readonly serviceType: string
-  /** R1 omits this filter only when the active work-order context has no source type. */
-  readonly sourceType?: string
-}
-
 /** Source-backed commercial fields are read-only data, not a price calculation contract. */
 export interface QuotationCatalogCommercialRead {
   readonly price?: number
@@ -296,7 +297,7 @@ export interface QuotationCatalogCommercialRead {
   readonly cost?: number
 }
 
-export interface QuotationCatalogItemRead extends QuotationCatalogCommercialRead {
+export interface QuotationCatalogItemBaseRead extends QuotationCatalogCommercialRead {
   readonly id: string
   readonly name: string
   readonly unit?: string
@@ -305,16 +306,43 @@ export interface QuotationCatalogItemRead extends QuotationCatalogCommercialRead
   readonly sourceTypeList?: readonly string[]
   readonly description?: string
   readonly content?: string
-  /** R1 package repair-part contract is retained as received, not interpreted here. */
-  readonly repairPart?: string
   readonly order?: number
 }
 
-/** A package child retains its source reference and optional embedded provider row. */
-export interface QuotationPackageComponentRead extends QuotationCatalogCommercialRead {
+export interface QuotationPackageRead extends QuotationCatalogItemBaseRead {
+  readonly kind: 'package'
+  readonly code?: string
+  readonly type?: string
+  readonly ageLimit?: number
+  /** R1 package repair-part contract is retained as received, not interpreted here. */
+  readonly repairPart?: string
+}
+
+export interface QuotationProcedureRead extends QuotationCatalogItemBaseRead {
+  readonly kind: 'procedure'
+}
+
+export interface QuotationMaterialRead extends QuotationCatalogItemBaseRead {
+  readonly kind: 'material'
+  readonly code?: string
+  readonly materialUnit?: string
+  readonly specUnit?: string
+  readonly type?: number
+}
+
+export interface QuotationMeasureRead extends QuotationCatalogItemBaseRead {
+  readonly kind: 'measure'
+}
+
+export type QuotationCatalogItemRead =
+  | QuotationPackageRead
+  | QuotationProcedureRead
+  | QuotationMaterialRead
+  | QuotationMeasureRead
+
+interface QuotationPackageComponentBaseRead extends QuotationCatalogCommercialRead {
   readonly id?: string
   readonly referenceId?: string
-  readonly item: QuotationCatalogItemRead | null
   /** R1 body/entity quantity projection; not a computed or normalized quantity. */
   readonly number?: string
   readonly coefficient?: number
@@ -323,20 +351,37 @@ export interface QuotationPackageComponentRead extends QuotationCatalogCommercia
   readonly order?: number
 }
 
+export interface QuotationPackageProcedureRead extends QuotationPackageComponentBaseRead {
+  readonly kind: 'procedure'
+  readonly item: QuotationProcedureRead | null
+}
+
+export interface QuotationPackageMaterialRead extends QuotationPackageComponentBaseRead {
+  readonly kind: 'material'
+  readonly item: QuotationMaterialRead | null
+  /** Raw body exts.layer code; no layer labels or ordering are inferred. */
+  readonly layer?: string | number
+}
+
+export interface QuotationPackageMeasureRead extends QuotationPackageComponentBaseRead {
+  readonly kind: 'measure'
+  readonly item: QuotationMeasureRead | null
+}
+
 export interface QuotationPackageDetailRead {
-  readonly package: QuotationCatalogItemRead
-  readonly procedures: readonly QuotationPackageComponentRead[]
-  readonly materials: readonly QuotationPackageComponentRead[]
-  readonly measures: readonly QuotationPackageComponentRead[]
+  readonly package: QuotationPackageRead
+  readonly procedures: readonly QuotationPackageProcedureRead[]
+  readonly materials: readonly QuotationPackageMaterialRead[]
+  readonly measures: readonly QuotationPackageMeasureRead[]
 }
 
 /** Read-only provider boundary; intentionally separate from local quotation draft composition. */
 export interface QuotationCatalogReadPort {
-  listPackages(query: QuotationCatalogQuery): Promise<OperationSnapshot<ReadPage<QuotationCatalogItemRead>>>
+  listPackages(context: QuotationCatalogContext): Promise<OperationSnapshot<ReadPage<QuotationPackageRead>>>
   getPackageDetail(packageId: string): Promise<OperationSnapshot<QuotationPackageDetailRead>>
-  listProcedures(query: QuotationCatalogQuery): Promise<OperationSnapshot<ReadPage<QuotationCatalogItemRead>>>
-  listMaterials(query: QuotationCatalogQuery): Promise<OperationSnapshot<ReadPage<QuotationCatalogItemRead>>>
-  listMeasures(query: QuotationCatalogQuery): Promise<OperationSnapshot<ReadPage<QuotationCatalogItemRead>>>
+  listProcedures(context: QuotationCatalogContext): Promise<OperationSnapshot<ReadPage<QuotationProcedureRead>>>
+  listMaterials(context: QuotationCatalogContext): Promise<OperationSnapshot<ReadPage<QuotationMaterialRead>>>
+  listMeasures(context: QuotationCatalogContext): Promise<OperationSnapshot<ReadPage<QuotationMeasureRead>>>
 }
 
 export interface TechnicianApiReadPort {

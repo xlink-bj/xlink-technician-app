@@ -7,6 +7,9 @@ export const mockQuotationPackageListResponse = {
     {
       _id: 'mock-catalog-package-basic',
       name: 'Mock 服务方案 A',
+      code: 'mock-package-code-a',
+      type: 'mock-package-type',
+      agelimit: 2,
       unit: '项',
       serviceType: [mockQuotationCatalogServiceType],
       sourceTypeList: [mockQuotationCatalogSourceType],
@@ -15,6 +18,9 @@ export const mockQuotationPackageListResponse = {
     {
       _id: 'mock-catalog-package-extended',
       name: 'Mock 服务方案 B',
+      code: 'mock-package-code-b',
+      type: 'mock-package-type',
+      agelimit: 3,
       unit: '项',
       serviceType: [mockQuotationCatalogServiceType],
       sourceTypeList: [mockQuotationCatalogSourceType],
@@ -47,8 +53,12 @@ export const mockQuotationMaterialListResponse = {
     {
       _id: 'mock-catalog-material-sealant',
       name: 'Mock 材料 A',
+      code: 'mock-material-code-a',
       unit: '支',
+      materialUnit: '支',
       spec: '合成规格',
+      specUnit: 'mock-spec-unit',
+      type: 1,
       serviceType: [mockQuotationCatalogServiceType],
       sourceTypeList: [mockQuotationCatalogSourceType],
       order: 1,
@@ -63,7 +73,7 @@ export const mockQuotationMeasureListResponse = {
   data: [
     {
       _id: 'mock-catalog-measure-inspection',
-      name: 'Mock 计措 A',
+      name: 'Mock 机措 A',
       unit: '次',
       serviceType: [mockQuotationCatalogServiceType],
       sourceTypeList: [mockQuotationCatalogSourceType],
@@ -80,6 +90,9 @@ export const mockQuotationPackageDetailResponse = {
   entity: {
     _id: 'mock-catalog-package-basic',
     name: 'Mock 服务方案 A',
+    code: 'mock-package-code-a',
+    type: 'mock-package-type',
+    agelimit: 2,
     unit: '项',
     serviceType: [mockQuotationCatalogServiceType],
     sourceTypeList: [mockQuotationCatalogSourceType],
@@ -108,10 +121,15 @@ export const mockQuotationPackageDetailResponse = {
         material: {
           _id: 'mock-catalog-material-sealant',
           name: 'Mock 材料 A',
+          code: 'mock-material-code-a',
           unit: '支',
+          materialUnit: '支',
           spec: '合成规格',
+          specUnit: 'mock-spec-unit',
+          type: 1,
           order: 1,
         },
+        exts: { layer: 'mock-layer-1' },
         coefficient: 1,
         coefficientUnit: '支',
         number: '1',
@@ -125,7 +143,7 @@ export const mockQuotationPackageDetailResponse = {
         measureId: 'mock-catalog-measure-inspection',
         measure: {
           _id: 'mock-catalog-measure-inspection',
-          name: 'Mock 计措 A',
+          name: 'Mock 机措 A',
           unit: '次',
           order: 1,
         },

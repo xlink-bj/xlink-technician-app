@@ -1,9 +1,14 @@
 import type {
-  QuotationCatalogItemRead,
-  QuotationCatalogQuery,
+  QuotationCatalogContext,
+  QuotationCatalogItemBaseRead,
   QuotationCatalogReadPort,
-  QuotationPackageComponentRead,
+  QuotationMaterialRead,
+  QuotationMeasureRead,
+  QuotationPackageMaterialRead,
   QuotationPackageDetailRead,
+  QuotationPackageProcedureRead,
+  QuotationPackageRead,
+  QuotationProcedureRead,
   ReadPage,
 } from '@shared/ports'
 import type { OperationSnapshot } from '@shared/types'
@@ -60,14 +65,13 @@ function optionalStringList(record: AdapterRecord, key: string): readonly string
   return [...value]
 }
 
-function commercialValues(record: AdapterRecord): Partial<QuotationCatalogItemRead> {
+function commercialValues(record: AdapterRecord) {
   return Object.fromEntries(
     commercialFieldNames.map((field) => [field, optionalFiniteNumber(record, field)]).filter((entry) => entry[1] !== undefined),
   )
 }
 
-function catalogItem(raw: unknown): QuotationCatalogItemRead {
-  const record = asRecord(raw, 'quotation catalog item')
+function catalogItemBase(record: AdapterRecord): QuotationCatalogItemBaseRead {
   const order = optionalNonNegativeInteger(record, ['order'])
   const unit = optionalString(record, ['unit'])
   const specification = optionalString(record, ['spec'])
@@ -75,7 +79,6 @@ function catalogItem(raw: unknown): QuotationCatalogItemRead {
   const sourceTypeList = optionalStringList(record, 'sourceTypeList')
   const description = optionalString(record, ['desc'])
   const content = optionalString(record, ['content'])
-  const repairPart = optionalString(record, ['repairPart'])
   return {
     id: requiredString(record, ['_id'], 'catalog item identity'),
     name: requiredString(record, ['name'], 'catalog item name'),
@@ -85,26 +88,69 @@ function catalogItem(raw: unknown): QuotationCatalogItemRead {
     ...(sourceTypeList ? { sourceTypeList } : {}),
     ...(description ? { description } : {}),
     ...(content ? { content } : {}),
-    ...(repairPart ? { repairPart } : {}),
     ...(order === undefined ? {} : { order }),
     ...commercialValues(record),
   }
 }
 
-function packageComponent(
+function packageItem(raw: unknown): QuotationPackageRead {
+  const record = asRecord(raw, 'quotation package')
+  const type = optionalString(record, ['type'])
+  const code = optionalString(record, ['code'])
+  const ageLimit = optionalNonNegativeInteger(record, ['agelimit'])
+  const repairPart = optionalString(record, ['repairPart'])
+  return {
+    ...catalogItemBase(record),
+    kind: 'package',
+    ...(type ? { type } : {}),
+    ...(code ? { code } : {}),
+    ...(ageLimit === undefined ? {} : { ageLimit }),
+    ...(repairPart ? { repairPart } : {}),
+  }
+}
+
+function procedureItem(raw: unknown): QuotationProcedureRead {
+  return { ...catalogItemBase(asRecord(raw, 'quotation procedure')), kind: 'procedure' }
+}
+
+function materialItem(raw: unknown): QuotationMaterialRead {
+  const record = asRecord(raw, 'quotation material')
+  const code = optionalString(record, ['code'])
+  const materialUnit = optionalString(record, ['materialUnit'])
+  const specUnit = optionalString(record, ['specUnit'])
+  const type = optionalNonNegativeInteger(record, ['type'])
+  return {
+    ...catalogItemBase(record),
+    kind: 'material',
+    ...(code ? { code } : {}),
+    ...(materialUnit ? { materialUnit } : {}),
+    ...(specUnit ? { specUnit } : {}),
+    ...(type === undefined ? {} : { type }),
+  }
+}
+
+function measureItem(raw: unknown): QuotationMeasureRead {
+  return { ...catalogItemBase(asRecord(raw, 'quotation measure')), kind: 'measure' }
+}
+
+function rawLayer(record: AdapterRecord): string | number | undefined {
+  const layer = optionalRecord(record.exts)?.layer
+  if (layer === undefined || layer === null || layer === '') return undefined
+  if (typeof layer === 'string' && layer.trim().length > 0) return layer
+  if (typeof layer === 'number' && Number.isFinite(layer)) return layer
+  throw new AdapterMappingError('quotation package material layer is malformed')
+}
+
+function packageComponentFields(
   raw: unknown,
   referenceKey: 'procedureId' | 'materialId' | 'measureId',
   itemKey: 'procedure' | 'material' | 'measure',
-): QuotationPackageComponentRead {
+): Omit<QuotationPackageProcedureRead, 'kind' | 'item'> {
   const record = asRecord(raw, 'quotation package component')
   const embedded = optionalRecord(record[itemKey])
   const referenceId = optionalString(record, [referenceKey])
-  const embeddedItem = embedded ? catalogItem(embedded) : null
-  if (!referenceId && !embeddedItem) {
+  if (!referenceId && !embedded) {
     throw new AdapterMappingError(`quotation package ${itemKey} reference is missing`)
-  }
-  if (referenceId && embeddedItem && embeddedItem.id !== referenceId) {
-    throw new AdapterMappingError(`quotation package ${itemKey} identity does not match its reference`)
   }
   const number = optionalString(record, ['number'])
   const coefficient = optionalFiniteNumber(record, 'coefficient')
@@ -115,7 +161,6 @@ function packageComponent(
   return {
     ...(id ? { id } : {}),
     ...(referenceId ? { referenceId } : {}),
-    item: embeddedItem,
     ...(number === undefined ? {} : { number }),
     ...(coefficient === undefined ? {} : { coefficient }),
     ...(coefficientUnit ? { coefficientUnit } : {}),
@@ -123,6 +168,45 @@ function packageComponent(
     ...(order === undefined ? {} : { order }),
     ...commercialValues(record),
   }
+}
+
+function packageProcedure(raw: unknown): QuotationPackageProcedureRead {
+  const record = asRecord(raw, 'quotation package procedure body')
+  const fields = packageComponentFields(record, 'procedureId', 'procedure')
+  const embedded = optionalRecord(record.procedure)
+  const item = embedded ? procedureItem(embedded) : null
+  if (fields.referenceId && item && item.id !== fields.referenceId) {
+    throw new AdapterMappingError('quotation package procedure identity does not match its reference')
+  }
+  return { ...fields, kind: 'procedure', item }
+}
+
+function packageMaterial(raw: unknown): QuotationPackageMaterialRead {
+  const record = asRecord(raw, 'quotation package material body')
+  const fields = packageComponentFields(record, 'materialId', 'material')
+  const embedded = optionalRecord(record.material)
+  const item = embedded ? materialItem(embedded) : null
+  if (fields.referenceId && item && item.id !== fields.referenceId) {
+    throw new AdapterMappingError('quotation package material identity does not match its reference')
+  }
+  const layer = rawLayer(record)
+  return {
+    ...fields,
+    kind: 'material',
+    item,
+    ...(layer === undefined ? {} : { layer }),
+  }
+}
+
+function packageMeasure(raw: unknown): QuotationPackageDetailRead['measures'][number] {
+  const record = asRecord(raw, 'quotation package measure body')
+  const fields = packageComponentFields(record, 'measureId', 'measure')
+  const embedded = optionalRecord(record.measure)
+  const item = embedded ? measureItem(embedded) : null
+  if (fields.referenceId && item && item.id !== fields.referenceId) {
+    throw new AdapterMappingError('quotation package measure identity does not match its reference')
+  }
+  return { ...fields, kind: 'measure', item }
 }
 
 function packageDetailEntity(raw: unknown): AdapterRecord {
@@ -138,7 +222,7 @@ function packageDetailEntity(raw: unknown): AdapterRecord {
 
 function packageDetail(raw: unknown, requestedId: string): QuotationPackageDetailRead {
   const entity = packageDetailEntity(raw)
-  const item = catalogItem(entity)
+  const item = packageItem(entity)
   if (item.id !== requestedId) throw new AdapterMappingError('quotation package detail identity does not match request')
   const procedureRows = entity.procedureList
   const materialRows = entity.materialList
@@ -148,15 +232,17 @@ function packageDetail(raw: unknown, requestedId: string): QuotationPackageDetai
   }
   return {
     package: item,
-    procedures: procedureRows.map((row) => packageComponent(row, 'procedureId', 'procedure')),
-    materials: materialRows.map((row) => packageComponent(row, 'materialId', 'material')),
-    measures: measureRows.map((row) => packageComponent(row, 'measureId', 'measure')),
+    procedures: procedureRows.map(packageProcedure),
+    materials: materialRows.map(packageMaterial),
+    measures: measureRows.map(packageMeasure),
   }
 }
 
-function listRequest(path: string, query: QuotationCatalogQuery): ApiReadRequest {
-  if (!query.serviceType.trim()) throw new AdapterMappingError('quotation catalog service type is required')
-  if (query.sourceType !== undefined && !query.sourceType.trim()) {
+function listRequest(path: string, context: QuotationCatalogContext): ApiReadRequest {
+  if (!context || typeof context.serviceType !== 'string' || !context.serviceType.trim()) {
+    throw new AdapterMappingError('work-order catalog context with service type is required')
+  }
+  if (context.sourceType !== undefined && (typeof context.sourceType !== 'string' || !context.sourceType.trim())) {
     throw new AdapterMappingError('quotation catalog source type must be omitted when unavailable')
   }
   return {
@@ -165,8 +251,8 @@ function listRequest(path: string, query: QuotationCatalogQuery): ApiReadRequest
     body: {
       _all: '1',
       'is:state|integer#and': 1,
-      'in:serviceType|array#and': query.serviceType,
-      ...(query.sourceType === undefined ? {} : { sourceType: query.sourceType }),
+      'in:serviceType|array#and': context.serviceType,
+      ...(context.sourceType === undefined ? {} : { sourceType: context.sourceType }),
       sortField: 'order,_id',
       sortOrder: 'asc',
     },
@@ -194,8 +280,8 @@ class QuotationCatalogReadAdapter implements QuotationCatalogReadPort {
     }
   }
 
-  listPackages(query: QuotationCatalogQuery) {
-    return this.read(() => listRequest('biz/projPackage/queryWithRank', query), (raw) => pageEnvelope(raw, catalogItem))
+  listPackages(context: QuotationCatalogContext) {
+    return this.read(() => listRequest('biz/projPackage/queryWithRank', context), (raw) => pageEnvelope(raw, packageItem))
   }
 
   getPackageDetail(packageId: string) {
@@ -208,16 +294,16 @@ class QuotationCatalogReadAdapter implements QuotationCatalogReadPort {
     )
   }
 
-  listProcedures(query: QuotationCatalogQuery) {
-    return this.read(() => listRequest('biz/procedure/queryWithRank', query), (raw) => pageEnvelope(raw, catalogItem))
+  listProcedures(context: QuotationCatalogContext) {
+    return this.read(() => listRequest('biz/procedure/queryWithRank', context), (raw) => pageEnvelope(raw, procedureItem))
   }
 
-  listMaterials(query: QuotationCatalogQuery) {
-    return this.read(() => listRequest('basic/material/queryWithRank', query), (raw) => pageEnvelope(raw, catalogItem))
+  listMaterials(context: QuotationCatalogContext) {
+    return this.read(() => listRequest('basic/material/queryWithRank', context), (raw) => pageEnvelope(raw, materialItem))
   }
 
-  listMeasures(query: QuotationCatalogQuery) {
-    return this.read(() => listRequest('biz/measure/queryWithRank', query), (raw) => pageEnvelope(raw, catalogItem))
+  listMeasures(context: QuotationCatalogContext) {
+    return this.read(() => listRequest('biz/measure/queryWithRank', context), (raw) => pageEnvelope(raw, measureItem))
   }
 }
 

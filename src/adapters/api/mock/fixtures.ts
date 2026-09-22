@@ -2,6 +2,10 @@
 
 import { appointmentFormDefinitionWireId } from '../appointment-contract'
 import {
+  mockQuotationCatalogServiceType,
+  mockQuotationCatalogSourceType,
+} from './quotation-catalog'
+import {
   mockSurveyFormDefinitionId,
   mockSurveyFormDefinitionResponse,
   mockSurveyPartsCascadeResponse,
@@ -303,6 +307,20 @@ const mockServiceAppointmentData = {
   },
 } as const
 
+function mockServiceAppointmentDetailData(
+  id: keyof typeof mockServiceAppointmentData,
+): Record<string, unknown> {
+  const appointment = mockServiceAppointmentData[id] as unknown as Record<string, unknown>
+  const extensions = typeof appointment.exts === 'object' && appointment.exts !== null
+    ? appointment.exts as Record<string, unknown>
+    : {}
+  return {
+    ...appointment,
+    serviceType: mockQuotationCatalogServiceType,
+    exts: { ...extensions, sourceType: mockQuotationCatalogSourceType },
+  }
+}
+
 export const mockRoleFunctionResponse = {
   data: {
     functionList: [
@@ -434,7 +452,7 @@ export const mockWorkOrderDetailResponses = {
   [mockWorkOrderIds[0]]: {
     data: {
       serviceAppointment: {
-        ...mockServiceAppointmentData[mockWorkOrderIds[0]],
+        ...mockServiceAppointmentDetailData(mockWorkOrderIds[0]),
         workflowRunId: 'mock-workflow-run-001',
       },
       workflow: { _id: 'mock-workflow-run-001' },
@@ -450,7 +468,7 @@ export const mockWorkOrderDetailResponses = {
   [mockWorkOrderIds[1]]: {
     data: {
       serviceAppointment: {
-        ...mockServiceAppointmentData[mockWorkOrderIds[1]],
+        ...mockServiceAppointmentDetailData(mockWorkOrderIds[1]),
         workflowRunId: 'mock-workflow-run-002',
       },
       workflow: { _id: 'mock-workflow-run-002' },
@@ -466,7 +484,7 @@ export const mockWorkOrderDetailResponses = {
   [mockWorkOrderIds[2]]: {
     data: {
       serviceAppointment: {
-        ...mockServiceAppointmentData[mockWorkOrderIds[2]],
+        ...mockServiceAppointmentDetailData(mockWorkOrderIds[2]),
         workflowRunId: 'mock-workflow-run-003',
       },
       workflow: { _id: 'mock-workflow-run-003' },
@@ -483,7 +501,7 @@ export const mockWorkOrderDetailResponses = {
   [mockDetailScenarioIds[3]]: {
     data: {
       serviceAppointment: {
-        ...mockServiceAppointmentData[mockDetailScenarioIds[3]],
+        ...mockServiceAppointmentDetailData(mockDetailScenarioIds[3]),
         workflowRunId: 'mock-workflow-run-004',
       },
       workflow: { _id: 'mock-workflow-run-004' },
@@ -504,7 +522,7 @@ export const mockWorkOrderDetailResponses = {
   [mockDetailScenarioIds[4]]: {
     data: {
       serviceAppointment: {
-        ...mockServiceAppointmentData[mockDetailScenarioIds[4]],
+        ...mockServiceAppointmentDetailData(mockDetailScenarioIds[4]),
         workflowRunId: 'mock-workflow-run-005',
       },
       workflow: { _id: 'mock-workflow-run-005' },
@@ -520,7 +538,7 @@ export const mockWorkOrderDetailResponses = {
   [mockDetailScenarioIds[5]]: {
     data: {
       serviceAppointment: {
-        ...mockServiceAppointmentData[mockDetailScenarioIds[5]],
+        ...mockServiceAppointmentDetailData(mockDetailScenarioIds[5]),
         workflowRunId: 'mock-workflow-run-006',
       },
       workflow: { _id: 'mock-workflow-run-006' },
@@ -536,7 +554,7 @@ export const mockWorkOrderDetailResponses = {
   [mockStatusSampleIds[0]]: {
     data: {
       serviceAppointment: {
-        ...mockServiceAppointmentData[mockStatusSampleIds[0]],
+        ...mockServiceAppointmentDetailData(mockStatusSampleIds[0]),
         workflowRunId: 'mock-workflow-run-007',
       },
       workflow: { _id: 'mock-workflow-run-007' },
@@ -546,7 +564,7 @@ export const mockWorkOrderDetailResponses = {
   [mockStatusSampleIds[1]]: {
     data: {
       serviceAppointment: {
-        ...mockServiceAppointmentData[mockStatusSampleIds[1]],
+        ...mockServiceAppointmentDetailData(mockStatusSampleIds[1]),
         workflowRunId: 'mock-workflow-run-008',
       },
       workflow: { _id: 'mock-workflow-run-008' },
@@ -556,7 +574,7 @@ export const mockWorkOrderDetailResponses = {
   [mockStatusSampleIds[2]]: {
     data: {
       serviceAppointment: {
-        ...mockServiceAppointmentData[mockStatusSampleIds[2]],
+        ...mockServiceAppointmentDetailData(mockStatusSampleIds[2]),
         workflowRunId: 'mock-workflow-run-009',
       },
       workflow: { _id: 'mock-workflow-run-009' },
@@ -566,7 +584,7 @@ export const mockWorkOrderDetailResponses = {
   [mockStatusSampleIds[3]]: {
     data: {
       serviceAppointment: {
-        ...mockServiceAppointmentData[mockStatusSampleIds[3]],
+        ...mockServiceAppointmentDetailData(mockStatusSampleIds[3]),
         workflowRunId: 'mock-workflow-run-010',
       },
       workflow: { _id: 'mock-workflow-run-010' },
