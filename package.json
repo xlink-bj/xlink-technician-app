@@ -36,7 +36,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "check:boundaries": "node scripts/check-boundaries.mjs",
-    "verify": "pnpm run check:boundaries && pnpm run typecheck && pnpm run test"
+    "verify": "pnpm run check:boundaries && pnpm run check:ui-governance && pnpm run typecheck && pnpm run test",
+    "check:ui-governance": "node scripts/check-ui-governance.mjs"
   },
   "dependencies": {
     "@dcloudio/uni-app": "3.0.0-5010520260709002",
