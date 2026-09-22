@@ -83,12 +83,12 @@ Provider queries were bounded to page-sized samples, using service/source contex
 | Package | `biz/projPackage/queryWithRank` | 10 rows | `_id`, `tenantId`, `orgId`, `name`, `unit`; numeric `price`, `minimumPrice`; nested `materialList`, `procedureList`, `measureList` properties | Tenant/org identity fields present. No price/version/revision token observed in the sample. |
 | Procedure | `biz/procedure/queryWithRank` | 10 rows | `_id`, `tenantId`, `orgId`, `unit`; numeric `guideUnitPrice`, `minimumGuideTotalPrice` | Tenant/org fields present. No price/version/revision token observed. |
 | Ranked material | `basic/material/queryWithRank` | 10 rows | `_id`, `tenantId`, `orgId`, material unit/spec fields; numeric price/service-price/cost-price fields | Tenant/org fields present. No price/version/revision token observed. |
-| Package SKU detail | R1 source uses `basic/material/query` filtered by `spuid`, after package detail | No current SKU chain verified | The package detail route did not return a successful read in this attempt; no SKU response is claimed | SKU filters, returned SKU identity, and SKU price semantics remain unknown live |
+| Package detail → SKU | R1 source uses `basic/material/query` filtered by `spuid` after package detail | Package-detail sample: 4/5 structural successes; 1/5 HTTP 500. One valid body-to-embedded-material identity was followed by a `spuid` query returning 0 rows | Package detail works for some sampled packages; one failure is consistent with a package-specific issue, but exact cause is unknown | SKU fields and price/version semantics remain unknown because no SKU row was returned; see [package diagnostic](./G4F_PACKAGE_DETAIL_DIAGNOSTIC.md) |
 | Measure | `biz/measure/queryWithRank` | 1 row | `_id`, `tenantId`, `orgId`, `unit`; numeric `guideUnitPrice` and `cost` | Tenant/org fields present. No version token observed; a minimum-price field was not present in this bounded row, which does not prove global absence. |
 
-All four provider list routes were reachable. The live request context contained service type and source type where present; these were not persisted. The inspected legacy backend applies tenant/organization scoping and price-body overlays, but this live sample does not prove the exact current Beta implementation of those rules. No freshness/version mechanism was observed; none is inferred.
+All four provider list routes were reachable. The live request context contained service type and source type where present; these were not persisted. A later five-package detail check returned four structural details and one HTTP 500. One matched material body/embedded identity was queried through the R1-compatible SKU route; the successful response contained an empty `FlipInfo.data` list. See the linked package diagnostic for aliases, child-list counts, structural field names, and the bounded source hypothesis. The inspected legacy backend applies tenant/organization scoping and price-body overlays, but this live sample does not prove the exact current Beta implementation of those rules. No freshness/version mechanism is inferred from a zero-row SKU result.
 
-**Pricing read result: PARTIAL.** Ranked package, procedure, material, and measure list contracts are observed. Package-detail → SPU → SKU read is not verified, and no provider revision/freshness token was observed.
+**Pricing read result: PARTIAL.** Ranked package, procedure, material, and measure list contracts are observed. Package detail is structurally verified for four of five sampled packages (`PACKAGE_DETAIL = PARTIAL`, `FAILURE_SCOPE = PACKAGE_SPECIFIC`); one `spuid` lookup returned zero rows, so `SPU_SKU_CHAIN = PARTIAL`. SKU structure and provider freshness tokens remain unknown.
 
 ## Write-contract evidence — source only
 
@@ -128,7 +128,9 @@ The live node confirms raw category, current lifecycle, and definition evidence,
 | Survey completion as causal trigger for `placeOrder` | `PARTIAL` | Follow-up definition establishes adjacency only; backend transition evidence/Product confirmation still needed |
 | Type-0 quote work-order association and multiplicity | `UNKNOWN` | Sampled detail lacked work-order relation fields; identify authoritative association semantics or a representative linked record |
 | Type-0 confirmation relation semantics | `UNKNOWN` | One sampled detail had no confirmation field; another representative record or backend contract is needed |
-| Package detail / package SPU → SKU provider | `PARTIAL` | Package detail read did not succeed; establish its current read response and then inspect SPU/SKU relation |
+| Cause of one sampled package-detail HTTP 500 | `UNKNOWN` | Four other package details succeeded; backend null dereference from an unresolved child is only a hypothesis and needs runtime evidence |
+| SPU → SKU result for other valid material references | `UNKNOWN` | One R1-compatible `spuid` lookup returned an empty array; a different package/material sample or backend evidence is needed |
+| SKU field schema and freshness/revision tokens | `UNKNOWN` | No SKU rows were available to inspect; empty sample is not evidence that the fields do not exist |
 | Price freshness/revision identity | `UNKNOWN` | Backend/Product must define a version token or explicitly establish that no conflict token exists |
 | Quote create/update idempotency and reconciliation | `UNKNOWN` | Backend command/read contract required; no mutation performed |
 | Exact actor authorization for the observed node | `PARTIAL` | Resolve the account role/handler membership against sanitized node configuration |
@@ -137,7 +139,7 @@ The live node confirms raw category, current lifecycle, and definition evidence,
 
 ## Smallest next slice
 
-The accepted quotation Action Content and Phase 1A/1B composition runtime already exist. Do not start Phase 1C or any real catalog/quotation integration yet. A next bounded read-only evidence slice may test another package detail to determine whether the observed HTTP 500 is package-specific, then continue the package → SPU → SKU and quote-association questions. The backend source null-dereference is only a plausible hypothesis, not a diagnosed cause. Real catalog access, quote writes, and Workflow Complete remain unauthorized.
+The accepted quotation Action Content and Phase 1A/1B composition runtime already exist. Do not start Phase 1C or any real catalog/quotation integration yet. The bounded package diagnostic establishes mixed detail outcomes but not the HTTP 500 cause; a next read-only evidence gate would need an authorized server-side error explanation and a successful non-empty SKU result from a validated SPU, plus the remaining quote-association questions. The backend source null-dereference is only a plausible hypothesis, not a diagnosed cause. Real catalog access, quote writes, and Workflow Complete remain unauthorized.
 
 ## Safety and verification boundary
 
