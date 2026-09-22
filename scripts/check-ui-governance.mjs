@@ -1,0 +1,111 @@
+#!/usr/bin/env node
+
+import { readFile } from 'node:fs/promises'
+import { fileURLToPath } from 'node:url'
+import { resolve } from 'node:path'
+
+const root = resolve(fileURLToPath(new URL('..', import.meta.url)))
+
+async function read(relativePath) {
+  return readFile(resolve(root, relativePath), 'utf8')
+}
+
+function fail(message) {
+  throw new Error(`UI governance check failed: ${message}`)
+}
+
+const [
+  packageJsonSource,
+  standard,
+  workflow,
+  pages,
+  dynamicFormContent,
+  textarea,
+  formActions,
+  gallery,
+] = await Promise.all([
+  read('package.json'),
+  read('docs/design-system/ACTION_WORKSPACE_UX_STANDARD.md'),
+  read('docs/design-system/UI_DELIVERY_WORKFLOW.md'),
+  read('src/pages.json'),
+  read('src/features/work-orders/components/GenericDynamicFormActionContent.vue'),
+  read('src/shared/ui/AppTextarea.vue'),
+  read('src/shared/ui/ActionWorkspaceFormActions.vue'),
+  read('__review/design-system-gallery.vue'),
+])
+
+const packageJson = JSON.parse(packageJsonSource)
+
+if (pages.includes('__review') || pages.includes('design-system')) {
+  fail('production pages.json must not expose review/gallery routes')
+}
+
+if (dynamicFormContent.includes('dynamic-form-save') || dynamicFormContent.includes('保存表单')) {
+  fail('dynamic form content must not own the Workspace-level business Save action')
+}
+
+if (!textarea.includes('<textarea') || !textarea.includes(':auto-height="autoHeight"')) {
+  fail('AppTextarea must preserve the shared native multiline/auto-height contract')
+}
+
+if (
+  !formActions.includes("saveState === 'saved'")
+  || !formActions.includes("data-testid="dynamic-form-save"")
+  || !formActions.includes(':disabled=')
+) {
+  fail('ActionWorkspaceFormActions must preserve a passive saved business-Save state')
+}
+
+const governedGalleryComponents = [
+  'AppButton',
+  'AppField',
+  'AppInput',
+  'AppTextarea',
+  'AppSelector',
+  'AppChoiceGroup',
+  'AppMultiChoiceGroup',
+  'AppCascadeSelector',
+  'AppStatus',
+  'AppInformationRow',
+  'AppTreeMultiChoiceGroup',
+  'ActionWorkspaceFormActions',
+]
+
+for (const component of governedGalleryComponents) {
+  if (!gallery.includes(component)) {
+    fail(`Design System Gallery must cover governed shared UI: ${component}`)
+  }
+}
+
+for (const requiredRule of [
+  'R1 Mobile UX Baseline',
+  'Workspace actions always belong to the persistent bottom Action Bar',
+  'SHARED_PATTERN',
+  'BUSINESS_EXPERIENCE',
+  'uni-app H5 Design System Review',
+]) {
+  if (!standard.includes(requiredRule)) {
+    fail(`Action Workspace UX Standard is missing rule: ${requiredRule}`)
+  }
+}
+
+for (const requiredWorkflowRule of [
+  'Reuse before invention',
+  'MP calibration trigger matrix',
+  'second verified consumer',
+  'check:ui-governance',
+]) {
+  if (!workflow.includes(requiredWorkflowRule)) {
+    fail(`UI Delivery Workflow is missing rule: ${requiredWorkflowRule}`)
+  }
+}
+
+if (packageJson.scripts?.['check:ui-governance'] !== 'node scripts/check-ui-governance.mjs') {
+  fail('package.json must expose check:ui-governance')
+}
+
+if (!packageJson.scripts?.verify?.includes('check:ui-governance')) {
+  fail('pnpm run verify must include UI governance')
+}
+
+console.log('UI governance check passed: shared UX contract, Gallery coverage, and delivery gates are intact')
