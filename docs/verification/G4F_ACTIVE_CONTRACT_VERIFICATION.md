@@ -1,6 +1,6 @@
 # G4-F Targeted Active Contract Verification
 
-**Result: PARTIAL — current active workflow evidence obtained; no current type-0 quotation was available in the scoped account sample.** This is evidence only, not authorization for G4-F implementation.
+**Result: PARTIAL — the initial 48 work-order-scoped lists had no type-0 quotation, while a later bounded account-level query returned 9 type-0 rows and one detail was read.** These scopes do not establish quote/work-order linkage, multiplicity, or a common path. A follow-up also read the active workflow definition; Survey-to-`placeOrder` causality remains unproven. This is evidence only, not authorization for G4-F implementation. See [R1 Quotation / Place-Order Runtime Follow-up](./G4F_R1_RUNTIME_FOLLOWUP.md).
 
 | Property | Value |
 | --- | --- |
@@ -48,7 +48,7 @@ One actual account-visible active quote-stage node was read, followed by its wor
 | `formDefinitionId` | No `nodeDef.formDefId` or `nodeDef.formDefinitionId` observed | Absent on this node record |
 | `formDataId` | No `formDataId` observed; a distinct `workflowFormDataId` property was present | The latter's semantics and mapping to `formDataId` are unverified; do not treat it as equivalent |
 | Workflow reference | Raw `workflowId` present; `workflow/queryNode/{workflowId}` returned 7 nodes | Adapter currently looks for `runId` / `workflowRunId`; normalized run identity equivalence is not established |
-| Workflow definition identity | No definition ID observed on the selected node | `workflowDef/queryById` was not called without a proven definition identity |
+| Workflow definition identity | A separate follow-up active node exposed top-level `WorkflowNode.defId`; its definition was read successfully (version `248`) | Follow-up observation; see linked document. This supersedes the earlier sample's missing definition ID, but does not prove transition causality |
 
 **Active node result: VERIFIED for the observed node — its raw category is `placeOrder`.** The authenticated endpoint returned it, but exact role membership and the meaning of the two MP flags remain unknown. No policy or Action Content mapping was changed.
 
@@ -56,23 +56,23 @@ One actual account-visible active quote-stage node was read, followed by its wor
 
 The same workflow-instance snapshot contained seven nodes. The `勘察` node was a `repeat` category with raw state `10` (mapped by current source to closed), and the `下单` node had raw category `placeOrder` with state `0` (active). An appointment node in that same snapshot was also closed.
 
-**Classification: PARTIAL.** This is direct evidence that, in one current Beta snapshot, a closed Survey-stage node coexisted with an active `placeOrder` node in the same workflow instance. It does not prove that Survey completion caused the transition: no before/after trace, active workflow definition, Groovy trigger, or transition audit was available. No workflow state was mutated to test the sequence.
+**Classification: PARTIAL.** The initial snapshot showed a closed Survey-stage node coexisting with an active `placeOrder` node. The follow-up definition read shows an ordered eight-node definition where `repeat`/勘察 immediately precedes `placeOrder`/下单; the inspected `placeOrder` entry had no `routeInCondition`, and its action-script contents were empty. Ordering plus co-occurrence still does not prove Survey completion caused activation. No workflow state was mutated to test the sequence.
 
 ## Current quotation read contract
 
-The quote/order list was queried with the R1-shaped read filter: work-order identity, active states `0,1`, descending `createTime`. The list endpoint was reachable for all 48 distinct account-visible active `placeOrder` work orders.
+The initial quote/order list used the R1-shaped work-order filter (active states `0,1`, descending `createTime`) and was reachable for all 48 distinct account-visible active `placeOrder` work orders; it returned no type-0 rows in those work-order-scoped lists. A separate follow-up made one bounded account-visible query with `type=0`, states `0,1`, page 1 / 50 rows; that query returned 9 rows. One row was read through `basic/order/queryById` and its detail identity matched the list identity in memory. These results are not contradictory: the second query was not scoped to the 48 work orders.
 
 | Check | Current Beta observation | Result |
 | --- | --- | --- |
-| Type-0 quotation in the 48 work-order lists | 0 observed | No live quotation candidate in this bounded account-visible sample |
+| Type-0 quotation in the 48 work-order lists | 0 observed | Scoped result only; does not imply no account-visible type-0 quotations |
+| Separate bounded account-level type-0 query | 9 rows returned on page 1 / 50 rows | Bounded account-visible result, not global prevalence or a work-order association |
+| Type-0 list → detail | One selected list row's detail identity matched in memory | Verified for one round trip; identity omitted |
+| Type-0 detail structure | `bjProducts` present with keys `orderList`, `addItems`, `deleteItems`, `otherItemsAmount`, `preferentialAmount`; `processState` numeric code `0`; `exts.bjdPDFurl` present | One sampled detail only; no raw values persisted |
+| Work-order / contract relation | `serviceAppointmentId`, `serviceAppointmentNum`, and `contractId` absent on the sampled detail | Does not establish linkage or relation behavior for all type-0 records |
+| Confirmation relation | No top-level or `exts.confirm` observed on the sampled detail | Confirmation semantics remain unknown |
 | Type-1 order rows | Present in some lists | Not treated as quotation evidence |
-| Multiple type-0 quotations for one work order | None observed because no type-0 rows were found | Multiplicity semantics remain unknown |
-| `Order._id`, `serviceAppointmentId`, `serviceAppointmentNum`, `contractId` on a type-0 quote | No type-0 quote row available to inspect | Current live values/shape unknown |
-| `bjProducts` / `exts` detail structure | No type-0 quote available; list endpoint is not a detail read | Current live shape unknown |
-| Confirmation relation | No current quote/confirmation pair available | Unknown |
-| List → `basic/order/queryById` detail relationship | Detail route is allowlisted, but no type-0 ID existed to query | Not verified live |
 
-**Quote read result: PARTIAL / candidate unavailable.** This is not evidence that Beta has no quotations globally; it only describes the read scope and sample above. Historical R1/backend shape remains in [G4-F Quotation Domain Truth](./G4F_QUOTATION_DOMAIN_TRUTH.md) and is not substituted for a current record.
+**Quote read result: PARTIAL — an account-scoped type-0 candidate and one detail are available, but no association to the active work-order sample was established.** This is not a global prevalence or workflow-path conclusion. Historical R1/backend shape remains in [G4-F Quotation Domain Truth](./G4F_QUOTATION_DOMAIN_TRUTH.md) and is not substituted for a current record.
 
 ## Current provider and price reads
 
@@ -129,10 +129,9 @@ The live node confirms the raw category but not its authoritative content type, 
 
 | Item | Classification | Owner / next evidence |
 | --- | --- | --- |
-| Exact active workflow definition and transition rule | `BLOCKED_ENV` / not identified from this node | Backend/configuration evidence must expose a definition identity or safe read route; then read-only inspection can determine triggers |
-| Survey completion as causal trigger for `placeOrder` | `PARTIAL` | Backend workflow definition / transition audit and Product confirmation |
-| Active quote record and detail schema (`bjProducts`, `exts`, confirmation relation) | `BLOCKED_ENV` for this account-visible sample | Identify an authorized current Beta type-0 quote or account scope that can read one; do not infer from type-1 orders |
-| Quote list → detail round trip and multiple quote behavior | `BLOCKED_ENV` / not exercised | Requires an actual type-0 list row and safe detail read |
+| Survey completion as causal trigger for `placeOrder` | `PARTIAL` | Follow-up definition establishes adjacency only; backend transition evidence/Product confirmation still needed |
+| Type-0 quote work-order association and multiplicity | `UNKNOWN` | Sampled detail lacked work-order relation fields; identify authoritative association semantics or a representative linked record |
+| Type-0 confirmation relation semantics | `UNKNOWN` | One sampled detail had no confirmation field; another representative record or backend contract is needed |
 | Package detail / package SPU → SKU provider | `PARTIAL` | Package detail read did not succeed; establish its current read response and then inspect SPU/SKU relation |
 | Price freshness/revision identity | `UNKNOWN` | Backend/Product must define a version token or explicitly establish that no conflict token exists |
 | Quote create/update idempotency and reconciliation | `UNKNOWN` | Backend command/read contract required; no mutation performed |
@@ -142,7 +141,7 @@ The live node confirms the raw category but not its authoritative content type, 
 
 ## Smallest next slice
 
-Do not start quotation UI/runtime or writes yet. The smallest useful next step is a **read-only identity/evidence follow-up**: obtain the active workflow-definition identity and one authorized current type-0 quote (if one exists in the intended Beta scope), then verify quote list→detail, package detail→SKU, and the workflow transition evidence. Web/Product can then decide the intent/content mapping from actual evidence. If those reads remain unavailable, retain the unknowns and keep quotation implementation unauthorized rather than substituting legacy assumptions.
+Do not start quotation UI/runtime or writes yet. The next bounded evidence slice should resolve the package-detail HTTP 500 and package → SPU → SKU chain, and seek authoritative type-0 quote association/multiplicity and workflow transition evidence. The active definition and one type-0 list→detail round trip are now observed, but neither resolves those questions. Web/Product should decide the intent/content mapping from evidence; do not substitute legacy assumptions.
 
 ## Safety and verification boundary
 
