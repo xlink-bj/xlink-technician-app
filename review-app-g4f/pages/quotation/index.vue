@@ -6,7 +6,17 @@
         <text class="g4f-review-badge">H5_VISUAL_PROXY</text>
         <text class="g4f-review-badge">MOCK_PRODUCT_REVIEW</text>
       </view>
-      <text class="g4f-review-banner__copy">uni-app H5 · 合成报价场景 · 只读预览</text>
+      <text class="g4f-review-banner__copy">uni-app H5 · 合成报价场景 · 本地草稿</text>
+      <view class="g4f-review-scenarios" data-testid="g4f-review-scenario-selector">
+        <navigator
+          v-for="option in reviewScenarios"
+          :key="option.id"
+          class="g4f-review-scenario"
+          :class="{ 'g4f-review-scenario--selected': scenario === option.id }"
+          :url="`/pages/quotation/index?scenario=${option.id}`"
+          :data-testid="`g4f-review-scenario-${option.id}`"
+        >{{ option.label }}</navigator>
+      </view>
     </view>
 
     <AppLoadingState
@@ -27,10 +37,11 @@
     >
       <QuotationActionContent
         :state="quotationContentViewState"
-        :content="workspace.quotationContent"
+        @retry="reload"
+        @back="exit"
       />
       <template #actions>
-        <text class="g4f-review-readonly" data-testid="g4f-readonly-boundary">Mock 只读预览 · 报价编辑与提交未开放</text>
+        <text class="g4f-review-readonly" data-testid="g4f-readonly-boundary">报价草稿仅保存在本机，不会提交报价</text>
       </template>
     </ActionWorkspaceShell>
 
@@ -51,9 +62,19 @@ import AppLoadingState from '@shared/ui/AppLoadingState.vue'
 import QuotationActionContent from '@features/work-orders/quotation/QuotationActionContent.vue'
 import { mockCommandScenarioIds, mockQuotationWorkflowNodeId } from '@adapters/api/mock'
 import { asOpaqueId } from '@shared/types'
+import { reviewScenarioFromLocation } from '../../quotation-scenarios'
 
 const session = useSessionStore()
 const workspace = useActionWorkspaceStore()
+const scenario = reviewScenarioFromLocation()
+const reviewScenarios = [
+  { id: 'empty', label: '空草稿' },
+  { id: 'catalog', label: '目录选择' },
+  { id: 'populated', label: '组合草稿' },
+  { id: 'restored', label: '恢复草稿' },
+  { id: 'invalid', label: '异常草稿' },
+] as const
+let initialCatalogOpened = false
 const quotationContentViewState = computed(() => workspace.quotationContentState === 'idle'
   ? 'loading'
   : workspace.quotationContentState)
@@ -70,6 +91,30 @@ watch(
   },
   { immediate: true },
 )
+
+watch(
+  () => [workspace.loadState, workspace.quotationComposition.localState] as const,
+  ([loadState, localState]) => {
+    if (!initialCatalogOpened && scenario === 'catalog' && loadState === 'succeeded' && localState === 'fresh') {
+      initialCatalogOpened = true
+      workspace.quotationComposition.openCatalog()
+    }
+  },
+  { immediate: true },
+)
+
+function reload(): void {
+  void workspace.clear()
+  void workspace.ensureLoaded({
+    workOrderId: asOpaqueId<'WorkOrderId'>(mockCommandScenarioIds.quotationFoundation),
+    workflowNodeId: asOpaqueId<'WorkflowNodeRuntimeId'>(mockQuotationWorkflowNodeId),
+    actionIntent: 'place_order',
+  })
+}
+
+function exit(): void {
+  void workspace.flushDraft()
+}
 </script>
 
 <style>
@@ -79,6 +124,9 @@ watch(
 .g4f-review-banner__badges { display: flex; flex-wrap: wrap; gap: var(--app-space-xs); margin-top: var(--app-space-sm); }
 .g4f-review-badge { background: var(--app-color-primary-soft); border-radius: var(--app-radius-control); color: var(--app-color-primary); font-size: var(--app-font-meta); padding: var(--app-space-xs) var(--app-space-sm); }
 .g4f-review-banner__copy { color: var(--app-color-text-secondary); display: block; font-size: var(--app-font-meta); margin-top: var(--app-space-sm); }
+.g4f-review-scenarios { display: flex; flex-wrap: wrap; gap: var(--app-space-xs); margin-top: var(--app-space-sm); }
+.g4f-review-scenario { background: var(--app-color-surface); border: 1rpx solid var(--app-color-border); border-radius: var(--app-radius-control); color: var(--app-color-text-secondary); font-size: var(--app-font-meta); padding: var(--app-space-xs) var(--app-space-sm); }
+.g4f-review-scenario--selected { background: var(--app-color-primary-soft); border-color: var(--app-color-primary); color: var(--app-color-primary); }
 .g4f-review-readonly { color: var(--app-color-text-secondary); display: block; font-size: var(--app-font-meta); padding: var(--app-space-md) 0; text-align: center; }
 .g4f-review-blocked { background: var(--app-color-surface); border-radius: var(--app-radius-card); margin: var(--app-space-md) auto; max-width: 960rpx; padding: var(--app-card-padding); }
 .g4f-review-blocked__title { color: var(--app-color-text-primary); display: block; font-size: var(--app-font-field-label); font-weight: 800; }

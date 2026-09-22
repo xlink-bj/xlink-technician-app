@@ -11,7 +11,7 @@ function localReviewRequest(url: string): boolean {
     const parsed = new URL(url)
     return ['http:', 'https:', 'ws:', 'wss:'].includes(parsed.protocol)
       && (parsed.hostname === '127.0.0.1' || parsed.hostname === 'localhost')
-      && (parsed.port === '' || parsed.port === '5175')
+      && parsed.port === '5175'
   } catch {
     return false
   }
@@ -48,12 +48,12 @@ test('true uni-app H5 mounts the synthetic placeOrder quotation workspace with n
   await expect(page.getByTestId('g4f-quotation-workspace')).toBeVisible()
   await expect(page.getByTestId('action-workspace-context')).toContainText('演示报价工单')
   await expect(page.getByTestId('action-workspace-context')).toContainText('#MOCK-018')
-  await expect(page.getByTestId('quotation-state-ready')).toContainText('此合成场景没有已保存报价')
-  await expect(page.getByTestId('quotation-state-ready')).toContainText('不代表线上工单的报价读取结果')
-  await expect(page.getByTestId('g4f-readonly-boundary')).toContainText('报价编辑与提交未开放')
+  await expect(page.getByTestId('quotation-draft-empty')).toContainText('还没有添加报价明细')
+  await expect(page.getByTestId('g4f-readonly-boundary')).toContainText('报价草稿仅保存在本机，不会提交报价')
+  await expect(page.getByTestId('quotation-add-item')).toBeVisible()
   await expect(page.getByTestId('dynamic-form-save')).toHaveCount(0)
   await expect(page.getByTestId('action-workspace-submit')).toHaveCount(0)
-  await expect(page.getByText('当前报价暂无数据')).toHaveCount(0)
+  await expect(page.getByText(/价格|单价|小计|总价|¥|￥/)).toHaveCount(0)
 
   const focus = page.getByTestId('quotation-state-ready')
   await focus.scrollIntoViewIfNeeded()

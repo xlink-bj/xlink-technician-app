@@ -5,6 +5,7 @@ import { setBusinessMockMode } from '@app/business-mock'
 import type { AuthSessionPort, SessionSnapshot } from '@shared/ports'
 import { asOpaqueId, type OperationSnapshot } from '@shared/types'
 import App from './App.vue'
+import { createG4fReviewStorage, reviewScenarioFromLocation, seedG4fReviewDraft } from './quotation-scenarios'
 
 const reviewSession: SessionSnapshot = {
   sessionRef: asOpaqueId<'SessionRef'>('g4f-mock-review-session'),
@@ -28,7 +29,9 @@ export function createApp() {
   // This root is development-only and hard-selects the existing bounded Mock
   // runtime. The synthetic session is local; it contains no credentials.
   setBusinessMockMode('data')
-  const application = createApplication({ authSession })
+  const storage = createG4fReviewStorage()
+  seedG4fReviewDraft(storage, reviewScenarioFromLocation())
+  const application = createApplication({ authSession, storage })
   const app = createSSRApp(App)
   app.use(application.pinia)
   return { app }

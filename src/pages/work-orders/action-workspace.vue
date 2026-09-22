@@ -24,12 +24,11 @@
   >
     <QuotationActionContent
       :state="quotationContentViewState"
-      :content="workspace.quotationContent"
       @retry="reload"
       @back="exit"
     />
     <template #actions>
-      <text class="quotation-readonly-note" data-testid="quotation-readonly-note">报价编辑与提交未开放</text>
+      <text class="quotation-readonly-note" data-testid="quotation-readonly-note">报价草稿仅保存在本机，不会提交报价</text>
     </template>
   </ActionWorkspaceShell>
 

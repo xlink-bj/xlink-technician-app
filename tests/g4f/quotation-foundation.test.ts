@@ -165,6 +165,12 @@ describe('G4-F Phase 1A quotation action foundation', () => {
       state: 'no_persisted_quote',
     })
     expect(workspace.quotationContentState).toBe('ready')
+    expect(workspace.quotationComposition.localState).toBe('fresh')
+    expect(workspace.quotationComposition.draft).toMatchObject({
+      workOrderId: String(workOrderId),
+      workflowNodeId: String(workflowNodeId),
+      lines: [],
+    })
     expect(workspace.detail?.customerName).toBe('演示报价工单')
     expect(workspace.canSubmit).toBe(false)
     expect(isMockOwnedRead('__mock/quotation/action-content')).toBe(true)
@@ -211,14 +217,17 @@ describe('G4-F Phase 1A quotation action foundation', () => {
     expect(result.error?.category).toBe('server_terminal')
   })
 
-  it('keeps quotation foundation UI read-only with no quote mutation API surface', async () => {
+  it('keeps quotation composition local with no quote mutation API surface', async () => {
     const { readFile } = await import('node:fs/promises')
     const [component, commandPort, page] = await Promise.all([
       readFile(new URL('../../src/features/work-orders/quotation/QuotationActionContent.vue', import.meta.url), 'utf8'),
       readFile(new URL('../../src/shared/ports/commands.ts', import.meta.url), 'utf8'),
       readFile(new URL('../../src/pages/work-orders/action-workspace.vue', import.meta.url), 'utf8'),
     ])
-    expect(component).toContain('本阶段不开放报价编辑、保存、提交、客户确认或转订单')
+    expect(component).toContain('仅本机草稿')
+    expect(component).toContain('服务方案 / 报价明细')
+    expect(component).not.toContain('MOCK_PRODUCT_REVIEW')
+    expect(component).not.toContain('H5_VISUAL_PROXY')
     expect(commandPort).not.toMatch(/createQuotation|updateQuotation|sendQuotation|convertQuotation/)
     expect(page).toContain("workspace.descriptor?.contentKind === 'quotation'")
     expect(page).toContain(':can-submit="false"')

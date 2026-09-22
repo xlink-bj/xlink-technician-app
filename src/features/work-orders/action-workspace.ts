@@ -74,6 +74,7 @@ import {
   type DynamicActionField,
 } from './dynamic-form-action'
 import { surveyMediaDescriptorFor, surveyMediaPostUploadPolicyFor } from './survey-media'
+import { useQuotationCompositionStore } from './quotation/composition-store'
 import {
   normalizeSurveyLeakageCauseSelection,
   surveyLeakageCauseCurrentPart as currentPartForLeakageCause,
@@ -339,6 +340,7 @@ export interface ActionWorkspaceDependencies {
 }
 
 export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
+  const quotationComposition = useQuotationCompositionStore()
   const loadState = ref<ActionWorkspaceLoadState>('idle')
   const lifecycle = ref<ActionLifecycle>('available')
   const businessResult = ref<ActionBusinessResult>('not_started')
@@ -521,6 +523,8 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
   }
 
   function clear(): void {
+    if (descriptor.value?.contentKind === 'quotation') void quotationComposition.flushDraft()
+    quotationComposition.clear()
     loadVersion += 1
     clearDraftTimer()
     draftRevision += 1
@@ -699,7 +703,14 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     if (!session) return failure('session_invalid', 'An authenticated session is required')
 
     clearDraftTimer()
+    if (descriptor.value?.contentKind === 'quotation') {
+      const flushed = await quotationComposition.flushDraft()
+      if (flushed.state !== 'succeeded') {
+        return { state: flushed.state, ...(flushed.error ? { error: flushed.error } : {}) }
+      }
+    }
     if (draftWriteInFlight) await draftWriteInFlight
+    quotationComposition.clear()
     const requestVersion = ++loadVersion
     loadState.value = 'loading'
     lifecycle.value = 'available'
@@ -805,8 +816,15 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
         return failureFrom<QuotationActionContentRead, ActionDescriptor>(quotationRead)
       }
       quotationContent.value = quotationRead.data
-      quotationContentState.value = 'ready'
       identity = actionDraftIdentityFor(nextDescriptor)
+      await quotationComposition.initialize({
+        identity,
+        repository: configured.draftRepository,
+        ...(configured.now ? { now: configured.now } : {}),
+        ...(configured.debounceMs !== undefined ? { debounceMs: configured.debounceMs } : {}),
+      })
+      if (requestVersion !== loadVersion) return failure('cancelled', 'Action Workspace load was superseded')
+      quotationContentState.value = 'ready'
       loadState.value = 'succeeded'
       lifecycle.value = 'available'
       error.value = null
@@ -1160,6 +1178,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
 
   async function flushDraft(): Promise<OperationSnapshot<void>> {
     clearDraftTimer()
+    if (descriptor.value?.contentKind === 'quotation') return quotationComposition.flushDraft()
     if (draftWriteInFlight) {
       const inFlight = await draftWriteInFlight
       if (draftStatus.value === 'dirty') return saveDraft()
@@ -1704,6 +1723,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     appointmentForm,
     quotationContent,
     quotationContentState,
+    quotationComposition,
     appointmentFields,
     appointmentFieldRoles,
     appointmentVisitIntent,
