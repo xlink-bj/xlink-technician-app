@@ -120,9 +120,11 @@ export function projectDetailWorkflow(
       ...(candidate.node.formPurpose ? { formPurpose: candidate.node.formPurpose } : {}),
       ...(candidate.node.formFieldIdsReadOnly ? { formFieldIdsReadOnly: candidate.node.formFieldIdsReadOnly } : {}),
       domainPolicy: policySummary(candidate.domainPolicy),
-      // A generic form is executable only when the Adapter supplied an opaque
-      // form definition identity. Bare/unknown form nodes remain read-only.
-      execution: candidate.actionIntent === 'set_appointment' || Boolean(candidate.node.formDefinitionId)
+      // Workflow policy owns placeOrder eligibility; only form-backed actions
+      // require a form definition before their content can execute.
+      execution: candidate.actionIntent === 'set_appointment'
+        || candidate.actionIntent === 'place_order'
+        || Boolean(candidate.node.formDefinitionId)
         ? 'enabled'
         : 'disabled_read_only',
     },

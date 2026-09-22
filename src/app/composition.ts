@@ -81,6 +81,7 @@ export function createDefaultTechnicianApiReadPort(authSession: AuthSessionPort)
       getFormDefinition: async () => blocked(),
       getFormData: async () => blocked(),
       getFormDetail: async () => blocked(),
+      getQuotationActionContent: async () => blocked(),
       getCodeOptions: async () => blocked(),
       getCascadeCodeOptions: async () => blocked(),
     }

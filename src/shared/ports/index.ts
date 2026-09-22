@@ -15,6 +15,7 @@ export type {
   FormPurpose,
   FormDefinitionRead,
   ReadPage,
+  QuotationActionContentRead,
   TechnicianApiReadPort,
   WorkOrderActivity,
   WorkOrderActivityIcon,

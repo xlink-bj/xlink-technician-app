@@ -167,9 +167,9 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
       id: asOpaqueId<'WorkOrderId'>('place-order-work-order'),
       workflowNodes: [{
         id: asOpaqueId<'WorkflowNodeRuntimeId'>('place-order-node'),
-        category: 'placeOrder',
+        category: 'forms',
         lifecycle: 'active',
-        displayName: '下单',
+        displayName: '普通表单',
         visibility: { evidenceState: 'verified', viewableRoleIds: [roleId] },
       }],
     }
@@ -177,7 +177,7 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
     const result = await store.load({
       workOrderId: detail.id,
       workflowNodeId: detail.workflowNodes![0].id,
-      actionIntent: 'place_order',
+      actionIntent: 'interact_with_form',
     })
 
     expect(result.error?.category).toBe('unsupported_capability')

@@ -31,6 +31,7 @@ export {
   mockStatusSampleIds,
   mockSyntheticStatusCodes,
   mockCommandScenarioIds,
+  mockQuotationWorkflowNodeId,
   mockSyntheticDynamicFormDefinitionId,
   mockSyntheticInspectionFormDefinitionResponse,
   mockSurveyFormDefinitionId,

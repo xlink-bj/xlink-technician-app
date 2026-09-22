@@ -11,6 +11,7 @@ import {
   mockStatusOptionsResponse,
   mockSurveyCodeOptionsResponse,
   mockCommandScenarioIds,
+  mockQuotationWorkflowNodeId,
   mockSyntheticDynamicFormDefinitionId,
   mockSyntheticInspectionFormDefinitionResponse,
   mockSurveyFormDefinitionId,
@@ -51,6 +52,9 @@ export function isMockOwnedRead(
   requestData: Readonly<Record<string, unknown>> = {},
 ): boolean {
   const route = normalizedPath(path)
+  // This is an internal, synthetic-only route. It is always mock-owned so a
+  // disabled Mock mode can never fall through to a real backend endpoint.
+  if (route === '__mock/quotation/action-content') return true
   if (
     route === 'biz/extField/query' &&
     typeof requestData.extId === 'string' &&
@@ -375,6 +379,23 @@ function matchedResponse(
   requestData: Readonly<Record<string, unknown>>,
 ): unknown | null {
   const route = normalizedPath(path)
+  if (route === '__mock/quotation/action-content') {
+    const workOrderId = typeof requestData.workOrderId === 'string' ? requestData.workOrderId : ''
+    const workflowNodeId = typeof requestData.workflowNodeId === 'string' ? requestData.workflowNodeId : ''
+    if (
+      mode !== 'data'
+      || workOrderId !== mockCommandScenarioIds.quotationFoundation
+      || workflowNodeId !== mockQuotationWorkflowNodeId
+    ) return null
+    return {
+      data: {
+        workOrderId,
+        workflowNodeId,
+        fixtureId: 'g4f-quotation-empty-v1',
+        quotation: null,
+      },
+    }
+  }
   if (route === 'function/changeRole') return mockRoleFunctionResponse
   if (route === 'code/query' && requestData.valueOption === 'STATUS') {
     return mockStatusOptionsResponse

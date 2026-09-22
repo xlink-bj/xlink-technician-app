@@ -13,6 +13,26 @@
     <AppButton class="workspace-state-action" @tap="exit">返回工单详情</AppButton>
   </view>
 
+  <ActionWorkspaceShell
+    v-else-if="workspace.descriptor?.contentKind === 'quotation' && workspace.descriptor.actionIntent === 'place_order'"
+    :customer-name="workspace.detail?.customerName"
+    :display-number="workspace.detail?.displayNumber"
+    :lifecycle="workspace.lifecycle"
+    :draft-status="workspace.draftStatus"
+    :can-submit="false"
+    submit-label="报价操作未开放"
+  >
+    <QuotationActionContent
+      :state="quotationContentViewState"
+      :content="workspace.quotationContent"
+      @retry="reload"
+      @back="exit"
+    />
+    <template #actions>
+      <text class="quotation-readonly-note" data-testid="quotation-readonly-note">报价编辑与提交未开放</text>
+    </template>
+  </ActionWorkspaceShell>
+
   <AppLoadingState v-else-if="workspace.loadState === 'loading'" variant="workspace" label="正在准备操作内容" />
 
   <view v-else-if="workspace.loadState === 'failed_retryable'" class="workspace-state workspace-state--centered">
@@ -182,6 +202,7 @@ import ActionWorkspaceFormActions from '@shared/ui/ActionWorkspaceFormActions.vu
 import ActionWorkspaceShell from '@shared/ui/ActionWorkspaceShell.vue'
 import GenericDynamicFormActionContent from '@features/work-orders/components/GenericDynamicFormActionContent.vue'
 import SurveyActionContent from '@features/work-orders/components/SurveyActionContent.vue'
+import QuotationActionContent from '@features/work-orders/quotation/QuotationActionContent.vue'
 import AppButton from '@shared/ui/AppButton.vue'
 import AppChoiceGroup from '@shared/ui/AppChoiceGroup.vue'
 import AppField from '@shared/ui/AppField.vue'
@@ -205,6 +226,9 @@ const isNavigating = ref(false)
 const canAccess = computed(() => hasAuthenticatedSession(session.status, session.session))
 const appointmentDisplay = computed(() => appointmentDisplayFor(workspace.appointmentTimeValue))
 const feedback = computed(() => actionErrorCopy(workspace.error))
+const quotationContentViewState = computed(() => workspace.quotationContentState === 'idle'
+  ? 'loading'
+  : workspace.quotationContentState)
 
 function loadWorkspace(): void {
   if (!routeReady.value || session.status !== 'authenticated') return
@@ -369,5 +393,6 @@ function actionErrorCopy(error: OperationError | null): string {
 .action-success-title { color: var(--app-color-text-primary); font-size: var(--app-font-section-title); font-weight: 800; margin-top: var(--app-space-lg); }
 .action-success-copy { color: var(--app-color-text-secondary); font-size: var(--app-font-body); margin-top: var(--app-space-sm); }
 .action-success-detail { margin-bottom: var(--app-space-xs); }
+.quotation-readonly-note { color: var(--app-color-text-secondary); display: block; font-size: var(--app-font-meta); padding: var(--app-space-md) 0; text-align: center; }
 
 </style>

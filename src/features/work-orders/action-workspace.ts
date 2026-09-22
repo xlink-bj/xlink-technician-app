@@ -28,6 +28,7 @@ import type {
   LocationPort,
   NavigationPort,
   SessionSnapshot,
+  QuotationActionContentRead,
   SurveyLeakageCauseProviderPort,
   SurveyLeakageCauseRow,
   TechnicianApiCommandPort,
@@ -349,6 +350,8 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
   const descriptor = ref<ActionDescriptor | null>(null)
   const appointmentForm = ref<AppointmentFormRead | null>(null)
   const dynamicForm = ref<DynamicFormRead | null>(null)
+  const quotationContent = ref<QuotationActionContentRead | null>(null)
+  const quotationContentState = ref<'idle' | 'loading' | 'ready' | 'blocked' | 'failed_retryable' | 'failed_terminal'>('idle')
   const dynamicFormSaveState = ref<'not_saved' | 'saving' | 'saved' | 'failed'>('not_saved')
   const surveyLeakageCauseRows = ref<readonly SurveyLeakageCauseRow[]>([])
   const surveyLeakageCauseProviderState = ref<'idle' | 'loading' | 'succeeded' | 'failed_retryable' | 'failed_terminal'>('idle')
@@ -533,6 +536,8 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     descriptor.value = null
     appointmentForm.value = null
     dynamicForm.value = null
+    quotationContent.value = null
+    quotationContentState.value = 'idle'
     dynamicFormSaveState.value = 'not_saved'
     surveyLeakageCauseRows.value = []
     surveyLeakageCauseProviderState.value = 'idle'
@@ -708,6 +713,8 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     descriptor.value = null
     appointmentForm.value = null
     dynamicForm.value = null
+    quotationContent.value = null
+    quotationContentState.value = 'idle'
     dynamicFormSaveState.value = 'not_saved'
     surveyLeakageCauseRows.value = []
     surveyLeakageCauseProviderState.value = 'idle'
@@ -749,7 +756,8 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     const contentKind = actionContentKindForIntent(currentTask.actionIntent)
     const isAppointmentAction = currentTask.actionIntent === 'set_appointment'
     const isDynamicAction = currentTask.actionIntent === 'interact_with_form'
-    if (contentKind !== 'dynamic_form' || (!isAppointmentAction && !isDynamicAction)) {
+    const isQuotationAction = currentTask.actionIntent === 'place_order' && contentKind === 'quotation'
+    if (!isAppointmentAction && !isDynamicAction && !isQuotationAction) {
       detail.value = read.data
       loadState.value = 'blocked'
       lifecycle.value = 'blocked'
@@ -763,6 +771,46 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       lifecycle.value = 'blocked'
       error.value = createOperationError('unsupported_capability', 'Dynamic form definition is unavailable')
       return failure('unsupported_capability', 'Dynamic form definition is unavailable')
+    }
+
+    if (isQuotationAction) {
+      const nextDescriptor: ActionDescriptor = {
+        userId: session.user.id,
+        workOrderId: read.data.id,
+        workflowNodeId: currentTask.nodeId,
+        actionIntent: currentTask.actionIntent,
+        contentKind,
+        title: currentTask.title,
+        execution: actionExecutionForWorkflowDecision(currentTask.execution),
+      }
+      detail.value = read.data
+      descriptor.value = nextDescriptor
+      quotationContentState.value = 'loading'
+      const quotationRead = configured.apiRead.getQuotationActionContent
+        ? await configured.apiRead.getQuotationActionContent({
+            workOrderId: read.data.id,
+            workflowNodeId: currentTask.nodeId,
+          })
+        : failure<QuotationActionContentRead>('unsupported_capability', 'Quotation foundation content is unavailable')
+      if (requestVersion !== loadVersion) return failure('cancelled', 'Action Workspace load was superseded')
+      if (quotationRead.state !== 'succeeded' || !quotationRead.data) {
+        loadState.value = quotationRead.state
+        lifecycle.value = quotationRead.state === 'failed_retryable' ? 'failed_retryable' : 'failed_terminal'
+        error.value = quotationRead.error ?? null
+        quotationContentState.value = quotationRead.error?.category === 'unsupported_capability'
+          ? 'blocked'
+          : quotationRead.state === 'failed_retryable'
+            ? 'failed_retryable'
+            : 'failed_terminal'
+        return failureFrom<QuotationActionContentRead, ActionDescriptor>(quotationRead)
+      }
+      quotationContent.value = quotationRead.data
+      quotationContentState.value = 'ready'
+      identity = actionDraftIdentityFor(nextDescriptor)
+      loadState.value = 'succeeded'
+      lifecycle.value = 'available'
+      error.value = null
+      return { state: 'succeeded', data: nextDescriptor }
     }
 
     const form = isAppointmentAction
@@ -1654,6 +1702,8 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     detail,
     descriptor,
     appointmentForm,
+    quotationContent,
+    quotationContentState,
     appointmentFields,
     appointmentFieldRoles,
     appointmentVisitIntent,

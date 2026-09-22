@@ -1,0 +1,16 @@
+{
+  "pages": [
+    {
+      "path": "pages/quotation/index",
+      "style": {
+        "navigationBarTitleText": "报价工作区"
+      }
+    }
+  ],
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "报价工作区",
+    "navigationBarBackgroundColor": "#ffffff",
+    "backgroundColor": "#f3f6fa"
+  }
+}

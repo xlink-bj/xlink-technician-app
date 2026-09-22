@@ -76,6 +76,7 @@ export function actionContentKindForIntent(intent: WorkflowActionIntent): Action
     case 'set_appointment':
     case 'interact_with_form':
       return 'dynamic_form'
+    case 'place_order':
     case 'quotation':
       return 'quotation'
     case 'construction':

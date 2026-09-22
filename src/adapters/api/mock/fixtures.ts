@@ -142,7 +142,10 @@ export const mockCommandScenarioIds = {
   appointmentTerminal: 'mock-work-order-015-appointment-terminal',
   appointmentSuccess: 'mock-work-order-016-appointment-success',
   surveySuccess: 'mock-work-order-017-survey-success',
+  quotationFoundation: 'mock-work-order-018-quotation-foundation',
 } as const
+
+export const mockQuotationWorkflowNodeId = 'mock-workflow-node-018-place-order'
 
 /** Mock DATA list order is intentionally stable for visual review. */
 export const mockListScenarioIds = [...mockDetailScenarioIds, ...mockStatusSampleIds] as const
@@ -737,6 +740,28 @@ export const mockWorkOrderDetailResponses = {
           formDefId: mockSurveyFormDefinitionId,
           colName: 'survey',
           userChoose: ['synthetic-role'],
+        },
+      }],
+    },
+  },
+  [mockCommandScenarioIds.quotationFoundation]: {
+    data: {
+      serviceAppointment: {
+        _id: mockCommandScenarioIds.quotationFoundation,
+        orderNum: 'MOCK-018',
+        name: '演示报价工单',
+        address: '合成评审地址',
+        district: 110105,
+        workflowRunId: 'mock-workflow-run-018',
+      },
+      workflow: { _id: 'mock-workflow-run-018' },
+      workflowNode: [{
+        _id: mockQuotationWorkflowNodeId,
+        state: 0,
+        nodeDef: {
+          nodeType: 'placeOrder',
+          name: '报价',
+          viewableRoleIds: ['synthetic-role'],
         },
       }],
     },

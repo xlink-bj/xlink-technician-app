@@ -10,6 +10,7 @@ import type {
   FormFieldValue,
   FormFieldVisibility,
   FormDefinitionRead,
+  QuotationActionContentRead,
   FormPurpose,
   ReadPage,
   TechnicianApiReadPort,
@@ -1433,6 +1434,40 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
         },
       },
       (raw) => formDefinition(raw, id),
+    )
+  }
+
+  getQuotationActionContent(input: {
+    readonly workOrderId: WorkOrderId
+    readonly workflowNodeId: WorkflowNodeRuntimeId
+  }) {
+    return this.read<QuotationActionContentRead>(
+      {
+        method: 'POST',
+        path: '__mock/quotation/action-content',
+        body: {
+          workOrderId: input.workOrderId,
+          workflowNodeId: input.workflowNodeId,
+        },
+      },
+      (raw) => {
+        const envelope = asRecord(raw, 'quotation foundation response')
+        const data = optionalRecord(envelope.data)
+        if (!data) throw new AdapterMappingError('quotation foundation fixture data is missing')
+        if (
+          optionalString(data, ['workOrderId']) !== String(input.workOrderId)
+          || optionalString(data, ['workflowNodeId']) !== String(input.workflowNodeId)
+          || optionalString(data, ['fixtureId']) !== 'g4f-quotation-empty-v1'
+          || data.quotation !== null
+        ) {
+          throw new AdapterMappingError('quotation foundation fixture identity or shape is invalid')
+        }
+        return {
+          source: 'mock_fixture',
+          fixtureId: 'g4f-quotation-empty-v1',
+          state: 'no_persisted_quote',
+        }
+      },
     )
   }
 

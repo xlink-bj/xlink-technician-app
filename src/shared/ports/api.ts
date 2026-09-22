@@ -254,6 +254,13 @@ export interface FormDataRead {
   readonly values?: Readonly<Record<string, FormFieldValue>>
 }
 
+/** Mock-only quotation foundation content; not a production quote read model. */
+export interface QuotationActionContentRead {
+  readonly source: 'mock_fixture'
+  readonly fixtureId: 'g4f-quotation-empty-v1'
+  readonly state: 'no_persisted_quote'
+}
+
 export interface CodeOptionRead {
   readonly value: string
   readonly label: string
@@ -293,6 +300,11 @@ export interface TechnicianApiReadPort {
     readonly dataId: FormDataId
     readonly valueCodec?: FormValueCodec
   }): Promise<OperationSnapshot<FormDataRead>>
+  /** Synthetic, fail-closed foundation fixture. No Real quotation endpoint is implemented. */
+  getQuotationActionContent?(input: {
+    readonly workOrderId: WorkOrderId
+    readonly workflowNodeId: WorkflowNodeRuntimeId
+  }): Promise<OperationSnapshot<QuotationActionContentRead>>
   getCodeOptions(
     query: CodeOptionsQuery,
   ): Promise<OperationSnapshot<ReadPage<CodeOptionRead>>>
