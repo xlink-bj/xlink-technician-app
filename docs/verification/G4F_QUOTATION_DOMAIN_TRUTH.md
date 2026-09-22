@@ -14,7 +14,9 @@ This document records what the checked-in source proves. It is not a production 
 - Formal `ProjPackage` selection exists in the quotation editor. The R1 Survey `serviceGoods` field is a separate Survey-era feature and is not evidence for the formal quotation package contract.
 - R1 computes the displayed/submitted total in the client. Backend provider queries supply organization-scoped approved prices, and the quotation creation service runs a tenant-specific `order` pre-script before persistence. Therefore overall pricing authority is **MIXED / TENANT-DEPENDENT**, not a single verified formula contract.
 - Quote creation, customer confirmation, conversion to an actual order, and workflow processing are distinct source paths. The source does **not** prove that creating a quote completes the active `placeOrder` workflow node, nor that customer confirmation is universally required before conversion.
-- The current app has reusable Action Workspace and user/work-order/node-scoped draft infrastructure, but quotation execution remains deliberately unverified by Workflow Runtime policy. The nested quote editor, line codec, price reconciliation and quote-specific command/read contract are new business capabilities.
+- The current app has a partial `placeOrder` workflow projection: `WorkflowNode.category=placeOrder` maps to `place_order`, whose policy can allow a visible, active, handler-authorized `placeOrder` node. This does **not** mean quotation content can execute: standalone `quotation` remains `policy_unverified`, `place_order` currently maps to unsupported Action Content, and `ActionWorkspace.load()` supports only appointment/dynamic-form content. The relationship between `place_order` and quotation content is an architecture decision pending evidence/review.
+- Detail projection currently marks non-appointment tasks executable when `formDefinitionId` is truthy. Whether that execution derivation is correct for a `placeOrder` node is **NOT PROVEN**; the later Action Workspace content guard still blocks unsupported content.
+- The nested quote editor, line codec, price reconciliation and quote-specific command/read contract are new business capabilities. Existing generic Action Workspace and user/work-order/node-scoped draft infrastructure remain reusable foundations, not quotation authorization.
 
 ## 1. Business sequence
 
@@ -148,6 +150,17 @@ Backend `ReturnStatus` paths include HTTP-200 business failures such as inactive
 
 The legacy quote page is structurally not a generic scalar dynamic form: its line editor composes nested package, procedure, material/SKU and measure lists, custom additions/deletions, per-category quantities/totals, discounts/coupons and generated quote snapshot JSON. The `order` ExtField rows are configurable supplementary fields only.
 
+### Current frontend Action Model (verified in checked-in source)
+
+| Layer | Current state | Evidence / boundary |
+| --- | --- | --- |
+| `WorkflowNode.category=placeOrder` projection | `PARTIAL / EXISTS` | `workflowActionIntentForCategory()` maps `placeOrder` to `place_order`; projection selects only visible, active, titled nodes whose policy allows the action. |
+| `place_order` workflow policy | `CAPABLE WHEN VERIFIED NODE CONDITIONS PASS` | `evaluateWorkflowAction(place_order)` allows category `placeOrder` after visibility/actor checks. This establishes policy capability, not a complete quotation experience. |
+| Standalone `quotation` intent | `POLICY_UNVERIFIED` | `evaluateWorkflowAction()` explicitly rejects this separate intent with `policy_unverified`. This must not be generalized to `place_order`. |
+| `quotation` Action Content runtime | `NOT_IMPLEMENTED` | `actionContentKindForIntent('place_order')` currently falls through to `unsupported`; `ActionWorkspace.load()` accepts only `set_appointment` and `interact_with_form` with `dynamic_form` content. |
+| Detail projection execution for `placeOrder` | `PARTIAL / UNVERIFIED` | For every non-appointment intent, `execution` is inferred from `Boolean(formDefinitionId)`. A definition ID alone does not prove that a `placeOrder` node has executable quotation content; correctness is not established. |
+| `place_order` → quotation content/intent relationship | `ARCHITECTURE_DECISION_PENDING` | Do not assert `place_order == quotation`. A later gated decision must choose whether to keep `place_order` as workflow intent and map it to quotation content, normalize it to a `quotation` intent, or adopt another evidence-backed mapping. |
+
 **Target classification:**
 
 | Capability | Classification | Phase-0 recommendation |
@@ -155,7 +168,8 @@ The legacy quote page is structurally not a generic scalar dynamic form: its lin
 | Action Workspace shell and persistent footer | `REUSE_UNCHANGED` | Reuse the current Workspace context/status/action shell; preserve separate local draft, business Save, and workflow Complete states. |
 | Shared inputs, textarea, selector and choice controls | `REUSE_UNCHANGED` / `SHARED_PATTERN` | Reuse for simple configured fields and local selections after contract mapping. Do not move quotation semantics into shared components. |
 | Package/line-item editor, pricing summary, discount and revision handling | `BUSINESS_EXPERIENCE` | Build as a quotation-owned controlled experience with explicit normalized line model and a quote-specific serializer. |
-| Quote API adapters, nested line codec, authoritative read/reconciliation, pricing freshness | `NEW_CAPABILITY_REQUIRED` | No quote read/command adapter or quote runtime exists in the current app. Workflow policy currently returns `policy_unverified` for `quotation`; this is correctly fail-closed. |
+| Quote API adapters, nested line codec, authoritative read/reconciliation, pricing freshness | `NEW_CAPABILITY_REQUIRED` | No quote read/command adapter or quote runtime exists in the current app. Standalone `quotation` policy is unverified; `place_order` policy can allow a qualified node but its Action Content is unsupported. Keep these layers distinct. |
+| Workflow intent ↔ quotation content mapping | `ARCHITECTURE_DECISION_PENDING` | Resolve only at a later gated architecture decision; do not change policy or content mapping based on legacy labels alone. |
 | Bottom Sheet / media pattern | `SHARED_PATTERN` / `NOT_APPLICABLE` | Reuse an existing pattern only when interaction semantics match. Media is not a proven quote-line capability. |
 | UI delivery and H5 review | `REUSE_UNCHANGED` | Apply `docs/design-system/UI_DELIVERY_WORKFLOW.md` once product behavior is authorized; Phase 0 adds no review route or visual implementation. |
 
@@ -164,11 +178,12 @@ Do not serialize nested quote line items as generic `FormFieldValue` scalars. Th
 ## 9. Draft and weak-network implications
 
 1. R1's quote `temporaryForm()` / restore code is commented and explicitly excludes type 0. There is no source-backed durable quote draft behavior to preserve.
-2. Current Action Draft identity already scopes by `userId`, `workOrderId`, `workflowNodeId`, `actionIntent`, `contentKind`, and optional `contentIdentity`; `quotation`/`quotation` content kinds exist as architecture slots. That does not authorize quotation execution today.
-3. A future quote draft should persist only semantic editor state (line IDs, selected product/package identity, quantity, user-entered descriptions and locally changed values), never credentials/session tokens. Price/source/version identity must be included only after an authoritative price contract defines it.
-4. On restore, re-read current quote/work-order/provider state and reconcile catalog/price identity before allowing business Save. The current backend evidence has no explicit price-list revision token; do not invent one or silently replay stale prices.
-5. Local draft persistence is not an offline business mutation queue. A create/update command must not be automatically replayed after connectivity returns. An ambiguous create remains unresolved until a real authoritative reconciliation contract can identify the operation/quote.
-6. Workflow-node identity changes must not silently retarget a restored quote draft. Keep the draft isolated by the Runtime-issued node/action/content identity and require explicit recovery policy if the node changes.
+2. Current Action Draft identity already scopes by `userId`, `workOrderId`, `workflowNodeId`, `actionIntent`, `contentKind`, and optional `contentIdentity`. The action-intent types include `place_order` and `quotation`, and the content-kind type includes `quotation`; these separate slots do not establish a mapping between them or authorize quotation execution today.
+3. `placeOrder` can project to `place_order` and pass its workflow policy, but `ActionWorkspace.load()` rejects its currently unsupported Action Content. The detail projection's `formDefinitionId`-based execution flag for this non-appointment task is not proof that quotation is executable.
+4. A future quote draft should persist only semantic editor state (line IDs, selected product/package identity, quantity, user-entered descriptions and locally changed values), never credentials/session tokens. Price/source/version identity must be included only after an authoritative price contract defines it.
+5. On restore, re-read current quote/work-order/provider state and reconcile catalog/price identity before allowing business Save. The current backend evidence has no explicit price-list revision token; do not invent one or silently replay stale prices.
+6. Local draft persistence is not an offline business mutation queue. A create/update command must not be automatically replayed after connectivity returns. An ambiguous create remains unresolved until a real authoritative reconciliation contract can identify the operation/quote.
+7. Workflow-node identity changes must not silently retarget a restored quote draft. Keep the draft isolated by the Runtime-issued node/action/content identity and require explicit recovery policy if the node changes.
 
 ## 10. Deterministic Mock scenario plan (not implemented)
 
@@ -204,7 +219,9 @@ No stale-price/version-conflict fixture is specified yet: the source does not pr
 | Parent `placeOrder` workflow completion timing / next state | `UNKNOWN` | `BACKEND` + `PRODUCT` | Quote create does not call workflow process endpoint. Need a verified workflow trace and explicit Runtime mapping. |
 | Customer confirmation requirement before conversion | `UNKNOWN` | `PRODUCT` | Confirmation exists separately; R1 conversion control is not visibly gated by `exts.confirm`. Confirm current policy. |
 | Quote-specific local draft/restore behavior | `NOT_IMPLEMENTED` | `FRONTEND` (after contract gate) | R1 temporary quote draft is commented/excluded; target app has reusable generic draft infrastructure but no quote codec/runtime. |
-| Current active workflow can authorize quotation in technician app | `NOT_AUTHORIZED` | `FRONTEND` / Program Gate | Current Workflow Runtime policy denies `quotation` as `policy_unverified`; do not bypass it in Vue. |
+| `place_order` workflow policy vs quotation content support | `PARTIAL` | `FRONTEND` + `PRODUCT` / Program Gate | `place_order` policy can allow a visible active handler-authorized `placeOrder` node; Action Content remains unsupported in `ActionWorkspace.load()`. Detail projection separately derives non-appointment execution from `Boolean(formDefinitionId)`, whose correctness for this node is not proven. |
+| Standalone `quotation` intent execution | `NOT_AUTHORIZED` | `FRONTEND` / Program Gate | This distinct intent returns `policy_unverified`; do not conflate it with `place_order` policy. |
+| `place_order` → quotation intent/content mapping | `ARCHITECTURE_DECISION_PENDING` | `FRONTEND` + `PRODUCT` / Program Gate | A later gated decision must select a mapping backed by current workflow/product evidence; no mapping is asserted here. |
 
 ## 12. Smallest safe implementation sequence (recommendation only)
 
@@ -246,13 +263,15 @@ All paths below refer to the local sibling evidence repositories inspected read-
 
 ### Current technician-app architecture
 
-- `src/runtimes/action/types.ts` — `quotation` content-kind and draft identity slots (`L5-L13`, `L40-L64`).
+- `src/runtimes/action/types.ts` — action/content types and `actionContentKindForIntent()` (`L5-L13`, `L74-L85`); draft identity slots (`L40-L64`).
 - `src/runtimes/action/draft-repository.ts` — user-scoped generic draft repository API (`L21-L41`).
-- `src/runtimes/workflow/policy.ts` — `quotation` is denied with `policy_unverified` (`L105-L115`).
+- `src/runtimes/workflow/detail-projection.ts` — `placeOrder` → `place_order`, visible/active/policy-allowed projection, and `formDefinitionId`-based non-appointment execution derivation (`L52-L67`, `L82-L129`).
+- `src/runtimes/workflow/policy.ts` — separate `quotation` intent denial (`L105-L115`) and `place_order` category policy (`L140-L145`).
+- `src/features/work-orders/action-workspace.ts` — load guard supports only appointment/dynamic-form Action Content (`L735-L765`).
 - `src/shared/ui/ActionWorkspaceShell.vue`, `ActionWorkspaceFormActions.vue`, and `src/shared/ui/index.ts` — reusable workspace shell/actions and presentation components.
 - `docs/architecture/LOCAL_DRAFT_AND_WEAK_NETWORK_ARCHITECTURE.md` — content-owned quotation editor state within generic draft orchestration (`L122-L138`).
 - `docs/design-system/UI_DELIVERY_WORKFLOW.md` — component reuse and separation of local draft, explicit business Save, and workflow Complete (`L23-L58`).
 
 ## Phase-0 boundary
 
-**Evidence result: PARTIAL, source-backed legacy contract only.** This is sufficient to set the target domain boundary and prevent a false generic-form implementation; it is not sufficient to authorize a Real quotation command, enable Runtime execution, declare production pricing truth, or start G4-G. No Survey, quote, order, customer, credential, or session payload from Beta/Production was captured or persisted.
+**Evidence result: PARTIAL, source-backed legacy contract only.** This is sufficient to set the target quotation domain boundary and prevent a false generic-form implementation; it is not sufficient to authorize a Real quotation command, assert that `place_order` is quotation, establish that its `formDefinitionId`-derived execution flag is correct, enable quotation Action Content, declare production pricing truth, or start G4-G. The current frontend has a `placeOrder` projection and a conditionally capable `place_order` policy, while standalone `quotation` is `policy_unverified` and quotation content is not implemented. The mapping remains a gated architecture decision. No Survey, quote, order, customer, credential, or session payload from Beta/Production was captured or persisted.
