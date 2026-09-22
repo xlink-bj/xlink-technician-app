@@ -102,11 +102,20 @@ describe('G4-E local Beta API development client', () => {
     const allowedRoutes = [
       'basic/serviceAppointment/querySAWorkflowNode',
       'basic/serviceAppointment/queryById/safe-work-order',
+      'workflow/queryNode/safe-workflow-run',
+      'workflowDef/queryById/safe-workflow-definition',
+      'basic/order/clearOrderFieldQuery',
+      'basic/order/queryById',
       'biz/extField/query',
       'biz/extForm/query/safe-form',
       'i/code/selectCode.do',
       'i/code/selectMultistageCode.do',
       'biz/projPackage/queryWithRank',
+      'biz/projPackage/findById/safe-package',
+      'biz/procedure/queryWithRank',
+      'basic/material/queryWithRank',
+      'basic/material/query',
+      'biz/measure/queryWithRank',
       'biz/extForm/queryByColName/inspectionSOP',
     ]
     const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ data: [] }), { status: 200 }))
@@ -122,6 +131,10 @@ describe('G4-E local Beta API development client', () => {
       await expect(client.read(path)).resolves.toEqual({ data: [] })
     }
     await expect(client.read('workflow/process')).rejects.toMatchObject({ code: 'route_not_allowed' })
+    await expect(client.read('basic/order/upsert')).rejects.toMatchObject({ code: 'route_not_allowed' })
+    await expect(client.read('basic/order/creatQuotation')).rejects.toMatchObject({ code: 'route_not_allowed' })
+    await expect(client.read('basic/order/sendMessage')).rejects.toMatchObject({ code: 'route_not_allowed' })
+    await expect(client.read('i/bjd/quotation.do')).rejects.toMatchObject({ code: 'route_not_allowed' })
     await expect(client.read('biz/extForm/upsert/safe-form')).rejects.toMatchObject({ code: 'route_not_allowed' })
     await expect(client.read('biz/extForm/remove/safe-form')).rejects.toMatchObject({ code: 'route_not_allowed' })
     await expect(client.read('upload/token')).rejects.toMatchObject({ code: 'route_not_allowed' })
