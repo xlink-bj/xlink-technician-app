@@ -12,7 +12,7 @@
 | Evidence persistence | Sanitized structural observations only; no raw payload, raw ID, literal price, customer value, credential, or session persisted |
 | Mutation boundary | No Beta/Production business mutation, customer communication, media upload, or workflow command |
 
-This supplements [G4-F Active Contract Verification](./G4F_ACTIVE_CONTRACT_VERIFICATION.md). It does not authorize Phase 1C implementation or select a `place_order` / quotation architecture mapping.
+This supplements [G4-F Active Contract Verification](./G4F_ACTIVE_CONTRACT_VERIFICATION.md). The accepted frontend architecture is `placeOrder` → `place_order` → quotation Action Content, with the Phase 1A/1B composition runtime. This Beta follow-up neither establishes that mapping as the unique business truth nor overturns the accepted architecture. Standalone `quotation` intent remains `policy_unverified`. This document does not authorize Phase 1C, Real catalog access, quote writes, or Workflow Complete.
 
 ## Scope and evidence provenance
 
@@ -184,7 +184,7 @@ Relevant `frontEndConfig` behavior was recorded by key/presence only, not by arb
 | Is editing an existing Order snapshot an available current Beta action? | `SOURCE_ONLY` / current runtime `UNKNOWN` | R1 `placeOrders.vue` accepts `orderId`, reads `basic/order/queryById`, and saves an existing snapshot through `basic/order/upsert`. A current Beta Order detail is readable, but this evidence did not exercise/verify an edit entry or write. |
 | Is there a dedicated add-item/delete-item amendment workflow? | `SOURCE_ONLY`; current Beta workflow `UNKNOWN` | The sampled `bjProducts` contains `addItems` and `deleteItems`. R1 has `editType` modes for edit/add/delete within the existing Order editor/upsert path. No separate current Beta command/workflow was proven. |
 
-The current Beta evidence sharpens the domain/composition model but does **not** decide whether `place_order` remains the Workflow intent mapped to quotation Action Content, is normalized to `quotation`, or follows another architecture. No policy or mapping code changed.
+The current Beta evidence sharpens the domain/composition model but does **not** independently establish the accepted `placeOrder` → `place_order` → quotation Action Content mapping as the unique business interpretation. It also does not contradict that accepted frontend architecture. No policy or mapping code changed in this evidence task. Standalone `quotation` remains `policy_unverified`; Real catalog/quote writes and Workflow Complete remain unauthorized.
 
 ## Remaining unknowns and smallest next slice
 
@@ -195,7 +195,7 @@ The current Beta evidence sharpens the domain/composition model but does **not**
 - **Existing Order edit and add/delete modes:** R1 source evidence only; current Beta UI/authorization behavior unverified.
 - **Command idempotency/reconciliation, price authority, quote Save versus Workflow Complete:** unchanged `UNKNOWN` items from the Phase 0/source audit; no write was attempted.
 
-Smallest next useful step: resolve the package-detail HTTP 500 using backend/runtime evidence before claiming a package-detail/SPU/SKU adapter contract. The ranked list read contract can be treated separately from the unavailable detail chain. Keep the quotation intent/content architecture gated on Web/Product review; do not introduce real quotation writes or Workflow Complete.
+Smallest next useful read-only step: query a different ranked package detail to determine whether the HTTP 500 is package-specific, then use backend evidence to investigate the detail → SPU → SKU contract. Backend source contains a plausible null-dereference path for orphan child references, but this is only a hypothesis, not a diagnosis. Keep Real catalog access, quote writes, and Workflow Complete unauthorized; the accepted frontend mapping is unchanged.
 
 ## Safety
 

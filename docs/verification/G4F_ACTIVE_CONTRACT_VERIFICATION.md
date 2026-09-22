@@ -105,25 +105,21 @@ No write route was requested. Existing checked-in R1/backend evidence documents 
 
 R1 transport source treats HTTP 200 with `success === false` as a failure and literal `restart` as session expiry. Backend/source paths include business failures inside successful HTTP responses. These are source findings, not current Beta command-response verification. No create, update, send, confirm, conversion, workflow/process, or upload operation was attempted.
 
-## `place_order` ↔ quotation Action Content constraints
+## Current accepted `place_order` → quotation Action Content architecture
 
-No target architecture is selected by this evidence.
+The accepted frontend architecture is `placeOrder` → `place_order` → quotation Action Content. This is the current implementation and accepted architecture, not a claim that the Beta observations alone establish the only valid business interpretation. The Beta evidence does not overturn or independently prove that mapping.
 
 | Existing layer | Current checked-in behavior | Consequence |
 | --- | --- | --- |
-| Workflow category projection | `placeOrder` maps to intent `place_order` in `workflowActionIntentForCategory()` | Preserving `place_order` as Workflow intent is already the current projection |
-| Workflow policy | `place_order` may be allowed when visible/active and the workflow handler/role checks pass | Policy allowance is not proof that quotation content exists or is executable |
-| Separate quotation intent | `quotation` remains independently classified as `policy_unverified` | Do not merge the two intents based on the display label or legacy page |
-| Action Content mapping | `actionContentKindForIntent('place_order')` resolves to `unsupported`; `quotation` resolves to quotation content | `ActionWorkspace.load()` currently supports appointment and dynamic-form content only; quotation runtime is not implemented |
-| Execution projection | Non-appointment execution currently derives from `Boolean(formDefinitionId)` | Correctness for `placeOrder` is unproven; the observed node had no form definition ID, and this heuristic is not a quotation contract |
+| Workflow category projection | `placeOrder` maps to intent `place_order` in `workflowActionIntentForCategory()` | Current Workflow intent remains `place_order` |
+| Workflow policy | `place_order` may be allowed when the node is visible/active and Workflow handler/role checks pass | This is Workflow Runtime eligibility; it does not authorize a real quote mutation or workflow completion |
+| Standalone quotation intent | `quotation` remains independently classified as `policy_unverified` | This does not change the accepted `place_order` route |
+| Action Content mapping | `actionContentKindForIntent('place_order')` resolves to `quotation` | `ActionWorkspace.load()` loads quotation content and initializes the Phase 1A/1B composition runtime |
+| Quotation read/catalog | Action Workspace uses a Mock quotation fixture and local Phase 1A/1B composition runtime; Beta reads in these documents are evidence-only, not an app adapter | Real catalog integration remains `NOT_AUTHORIZED`; this foundation is not a live quotation read model |
+| Mutation / completion | Quotation UI does not expose quote save/submit/confirm/conversion; `canSubmit` is false and Workflow Complete is not invoked | Real quote writes and Workflow Complete remain `NOT_AUTHORIZED` |
+| Execution projection | `place_order` execution is enabled when Workflow policy allows it; form-backed actions separately require a form definition | This is current frontend behavior. The Beta snapshot verifies the raw active `placeOrder` node, but does not independently establish the unique business content semantics |
 
-Evidence leaves at least these review choices open:
-
-- **A.** Keep `place_order` as Workflow intent and map it to quotation Action Content.
-- **B.** Normalize the workflow projection to a separate `quotation` intent.
-- **C.** Choose another mapping only if active definition/product evidence supports it.
-
-The live node confirms the raw category but not its authoritative content type, lifecycle completion command, or Survey data handoff. No policy/content mapping code was changed.
+The live node confirms raw category, current lifecycle, and definition evidence, but does not by itself establish that this accepted frontend mapping is the only business interpretation, nor does it prove the lifecycle completion command or Survey data handoff. No policy or mapping code changed in this evidence follow-up.
 
 ## Remaining unknowns and blockers
 
@@ -137,11 +133,11 @@ The live node confirms the raw category but not its authoritative content type, 
 | Quote create/update idempotency and reconciliation | `UNKNOWN` | Backend command/read contract required; no mutation performed |
 | Exact actor authorization for the observed node | `PARTIAL` | Resolve the account role/handler membership against sanitized node configuration |
 | `workflowId` versus normalized `workflowRunId`; `workflowFormDataId` versus `formDataId` | `UNKNOWN` | Confirm wire semantics before any Adapter mapping change |
-| `place_order` to quotation Action Content architecture | `ARCHITECTURE_DECISION_PENDING` | Web/Product gate; not decided here |
+| Whether Beta evidence alone establishes the unique business meaning of `place_order` | `UNKNOWN` | The accepted frontend mapping remains in force; product/backend semantics need separate evidence if a unique business-truth claim is required |
 
 ## Smallest next slice
 
-Do not start quotation UI/runtime or writes yet. The next bounded evidence slice should resolve the package-detail HTTP 500 and package → SPU → SKU chain, and seek authoritative type-0 quote association/multiplicity and workflow transition evidence. The active definition and one type-0 list→detail round trip are now observed, but neither resolves those questions. Web/Product should decide the intent/content mapping from evidence; do not substitute legacy assumptions.
+The accepted quotation Action Content and Phase 1A/1B composition runtime already exist. Do not start Phase 1C or any real catalog/quotation integration yet. A next bounded read-only evidence slice may test another package detail to determine whether the observed HTTP 500 is package-specific, then continue the package → SPU → SKU and quote-association questions. The backend source null-dereference is only a plausible hypothesis, not a diagnosed cause. Real catalog access, quote writes, and Workflow Complete remain unauthorized.
 
 ## Safety and verification boundary
 
