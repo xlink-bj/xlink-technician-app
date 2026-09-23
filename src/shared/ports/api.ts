@@ -285,19 +285,7 @@ export interface CascadeCodeOptionsQuery {
   readonly codeType: string
 }
 
-/** Source-backed commercial fields are read-only data, not a price calculation contract. */
-export interface QuotationCatalogCommercialRead {
-  readonly price?: number
-  readonly minimumPrice?: number
-  readonly guideUnitPrice?: number
-  readonly minimumGuideTotalPrice?: number
-  readonly servicePrice?: number
-  readonly serviceCostPrice?: number
-  readonly storeCostPrice?: number
-  readonly cost?: number
-}
-
-export interface QuotationCatalogItemBaseRead extends QuotationCatalogCommercialRead {
+export interface QuotationCatalogItemBaseRead {
   readonly id: string
   readonly name: string
   readonly unit?: string
@@ -311,6 +299,9 @@ export interface QuotationCatalogItemBaseRead extends QuotationCatalogCommercial
 
 export interface QuotationPackageRead extends QuotationCatalogItemBaseRead {
   readonly kind: 'package'
+  readonly price?: number
+  readonly minimumPrice?: number
+  readonly cost?: number
   readonly code?: string
   readonly type?: string
   readonly ageLimit?: number
@@ -320,10 +311,17 @@ export interface QuotationPackageRead extends QuotationCatalogItemBaseRead {
 
 export interface QuotationProcedureRead extends QuotationCatalogItemBaseRead {
   readonly kind: 'procedure'
+  readonly guideUnitPrice?: number
+  readonly minimumGuideTotalPrice?: number
 }
 
 export interface QuotationMaterialRead extends QuotationCatalogItemBaseRead {
   readonly kind: 'material'
+  readonly price?: number
+  readonly servicePrice?: number
+  readonly serviceCostPrice?: number
+  readonly storeCostPrice?: number
+  readonly cost?: number
   readonly code?: string
   readonly materialUnit?: string
   readonly specUnit?: string
@@ -332,6 +330,8 @@ export interface QuotationMaterialRead extends QuotationCatalogItemBaseRead {
 
 export interface QuotationMeasureRead extends QuotationCatalogItemBaseRead {
   readonly kind: 'measure'
+  readonly guideUnitPrice?: number
+  readonly cost?: number
 }
 
 export type QuotationCatalogItemRead =
@@ -340,7 +340,7 @@ export type QuotationCatalogItemRead =
   | QuotationMaterialRead
   | QuotationMeasureRead
 
-interface QuotationPackageComponentBaseRead extends QuotationCatalogCommercialRead {
+interface QuotationPackageComponentBaseRead {
   readonly id?: string
   readonly referenceId?: string
   /** R1 body/entity quantity projection; not a computed or normalized quantity. */
@@ -359,6 +359,8 @@ export interface QuotationPackageProcedureRead extends QuotationPackageComponent
 export interface QuotationPackageMaterialRead extends QuotationPackageComponentBaseRead {
   readonly kind: 'material'
   readonly item: QuotationMaterialRead | null
+  /** R1 package material exts.price; retained as a raw package-row value. */
+  readonly price?: number
   /** Raw body exts.layer code; no layer labels or ordering are inferred. */
   readonly layer?: string | number
 }

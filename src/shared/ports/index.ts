@@ -16,7 +16,6 @@ export type {
   FormDefinitionRead,
   ReadPage,
   QuotationCatalogContext,
-  QuotationCatalogCommercialRead,
   QuotationCatalogItemBaseRead,
   QuotationCatalogItemRead,
   QuotationCatalogReadPort,

@@ -50,15 +50,21 @@ The port uses kind-discriminated package, procedure, material, and measure
 models. Package rows retain `type` and `agelimit` (normalized as `ageLimit`);
 material rows retain `code`, `materialUnit`, `specUnit`, and numeric `type`.
 Common identity/name, observed unit/specification, service/source applicability,
-description/content, and individually named source-backed commercial fields
-remain available without collapsing type-specific semantics. Package child
-rows preserve the observed `number`, `coefficient`, `coefficientUnit`, and
-embedded-reference structure; material-body `exts.layer` is retained when
-present and remains optional. The adapter never assigns a layer from array
-position. `number` is not rebranded as a calculated quantity. These values are
-read-only provider data: this adapter does not calculate totals, choose minimum
-prices, establish freshness, or represent a quote snapshot. No
-version/revision/freshness token is synthesized.
+and description/content are non-commercial shared fields. Commercial fields
+are mapped only through kind-specific allowlists: Package (`price`,
+`minimumPrice`, `cost`), Procedure (`guideUnitPrice`,
+`minimumGuideTotalPrice`), Material (`price`, `servicePrice`,
+`serviceCostPrice`, `storeCostPrice`, `cost`), and Measure (`guideUnitPrice`,
+`cost`). Irrelevant commercial values on a raw row are omitted from other
+kinds' normalized models. Package child rows preserve the observed `number`,
+`coefficient`, `coefficientUnit`, and embedded-reference structure. For a
+package material row, only the observed `exts.price` is retained as its row
+price; unrelated root-level commercial fields are ignored. Material-body
+`exts.layer` is retained when present and remains optional. The adapter never
+assigns a layer from array position. `number` is not rebranded as a calculated
+quantity. These values are read-only provider data: this adapter does not
+calculate totals, choose minimum prices, establish freshness, or represent a
+quote snapshot. No version/revision/freshness token is synthesized.
 
 Package detail preserves procedure/material/measure child grouping and their
 kind-specific reference/embedded-item relationship. Measure-facing Mock copy

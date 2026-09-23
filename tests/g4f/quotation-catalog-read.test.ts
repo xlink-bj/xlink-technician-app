@@ -50,6 +50,7 @@ function detailEntity(id = 'package-1') {
       _id: 'procedure-row-1',
       procedureId: 'procedure-1',
       procedure: catalogItem('procedure-1', '工序结构样例'),
+      price: 999,
       coefficient: 1.5,
       unit: '处',
       order: 1,
@@ -63,13 +64,15 @@ function detailEntity(id = 'package-1') {
       coefficientUnit: '支',
       unit: '支',
       order: 2,
-      price: 15,
-      exts: { layer: 'layer-2' },
+      price: 999,
+      guideUnitPrice: 888,
+      exts: { layer: 'layer-2', price: 15 },
     }],
     measureList: [{
       _id: 'measure-row-1',
       measureId: 'measure-1',
       measure: catalogItem('measure-1', '机措结构样例'),
+      price: 777,
       unit: '次',
       order: 3,
     }],
@@ -162,10 +165,6 @@ describe('G4-F Phase 1C quotation catalog read foundation', () => {
         specification: '结构样例',
         serviceTypes: [query.serviceType],
         sourceTypeList: [query.sourceType],
-        price: 120,
-        minimumPrice: 80.5,
-        guideUnitPrice: 45,
-        minimumGuideTotalPrice: 30,
       })
     }
     expect(results.map((result) => result.data?.items[0]?.kind)).toEqual([
@@ -189,6 +188,28 @@ describe('G4-F Phase 1C quotation catalog read foundation', () => {
       type: 2,
     })
     expect(results[1].data?.items[0]).not.toHaveProperty('materialUnit')
+
+    const [packageItem, procedureItem, materialItem, measureItem] = results.map((result) => result.data!.items[0]!)
+    expect(packageItem).toMatchObject({ price: 120, minimumPrice: 80.5, cost: 50 })
+    expect(procedureItem).toMatchObject({ guideUnitPrice: 45, minimumGuideTotalPrice: 30 })
+    expect(materialItem).toMatchObject({
+      price: 120,
+      servicePrice: 100,
+      serviceCostPrice: 55,
+      storeCostPrice: 60,
+      cost: 50,
+    })
+    expect(measureItem).toMatchObject({ guideUnitPrice: 45, cost: 50 })
+
+    const fieldsByKind = [
+      { item: packageItem, absent: ['guideUnitPrice', 'minimumGuideTotalPrice', 'servicePrice', 'serviceCostPrice', 'storeCostPrice'] },
+      { item: procedureItem, absent: ['price', 'minimumPrice', 'servicePrice', 'serviceCostPrice', 'storeCostPrice', 'cost'] },
+      { item: materialItem, absent: ['minimumPrice', 'guideUnitPrice', 'minimumGuideTotalPrice'] },
+      { item: measureItem, absent: ['price', 'minimumPrice', 'minimumGuideTotalPrice', 'servicePrice', 'serviceCostPrice', 'storeCostPrice'] },
+    ] as const
+    for (const { item, absent } of fieldsByKind) {
+      for (const field of absent) expect(item).not.toHaveProperty(field)
+    }
   })
 
   it('omits sourceType only when the active context does not provide it', async () => {
@@ -277,6 +298,23 @@ describe('G4-F Phase 1C quotation catalog read foundation', () => {
         measures: [{ referenceId: 'measure-1', item: { id: 'measure-1' } }],
       },
     })
+    const detail = result.data!
+    expect(detail.package).toMatchObject({ price: 120, minimumPrice: 80.5, cost: 50 })
+    expect(detail.package).not.toHaveProperty('guideUnitPrice')
+    expect(detail.procedures[0]?.item).toMatchObject({ guideUnitPrice: 45, minimumGuideTotalPrice: 30 })
+    expect(detail.procedures[0]?.item).not.toHaveProperty('price')
+    expect(detail.procedures[0]).not.toHaveProperty('price')
+    expect(detail.materials[0]?.item).toMatchObject({
+      price: 120,
+      servicePrice: 100,
+      serviceCostPrice: 55,
+      storeCostPrice: 60,
+      cost: 50,
+    })
+    expect(detail.measures[0]?.item).toMatchObject({ guideUnitPrice: 45, cost: 50 })
+    expect(detail.measures[0]?.item).not.toHaveProperty('minimumGuideTotalPrice')
+    expect(detail.measures[0]).not.toHaveProperty('price')
+    expect(detail.materials[0]).not.toHaveProperty('guideUnitPrice')
 
     const mismatch = await createQuotationCatalogReadAdapter({
       execute: async () => ({ success: true, entity: detailEntity('different-package') }),

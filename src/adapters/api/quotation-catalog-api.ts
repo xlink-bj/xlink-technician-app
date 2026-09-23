@@ -35,6 +35,7 @@ const commercialFieldNames = [
   'storeCostPrice',
   'cost',
 ] as const
+type CommercialField = typeof commercialFieldNames[number]
 
 function pageEnvelope<T>(raw: unknown, mapItem: (value: unknown) => T): ReadPage<T> {
   const envelope = asRecord(raw, 'quotation catalog list response')
@@ -65,10 +66,10 @@ function optionalStringList(record: AdapterRecord, key: string): readonly string
   return [...value]
 }
 
-function commercialValues(record: AdapterRecord) {
+function commercialValues<Fields extends readonly CommercialField[]>(record: AdapterRecord, fields: Fields) {
   return Object.fromEntries(
-    commercialFieldNames.map((field) => [field, optionalFiniteNumber(record, field)]).filter((entry) => entry[1] !== undefined),
-  )
+    fields.map((field) => [field, optionalFiniteNumber(record, field)]).filter((entry) => entry[1] !== undefined),
+  ) as Partial<Record<Fields[number], number>>
 }
 
 function catalogItemBase(record: AdapterRecord): QuotationCatalogItemBaseRead {
@@ -89,7 +90,6 @@ function catalogItemBase(record: AdapterRecord): QuotationCatalogItemBaseRead {
     ...(description ? { description } : {}),
     ...(content ? { content } : {}),
     ...(order === undefined ? {} : { order }),
-    ...commercialValues(record),
   }
 }
 
@@ -102,6 +102,7 @@ function packageItem(raw: unknown): QuotationPackageRead {
   return {
     ...catalogItemBase(record),
     kind: 'package',
+    ...commercialValues(record, ['price', 'minimumPrice', 'cost']),
     ...(type ? { type } : {}),
     ...(code ? { code } : {}),
     ...(ageLimit === undefined ? {} : { ageLimit }),
@@ -110,7 +111,12 @@ function packageItem(raw: unknown): QuotationPackageRead {
 }
 
 function procedureItem(raw: unknown): QuotationProcedureRead {
-  return { ...catalogItemBase(asRecord(raw, 'quotation procedure')), kind: 'procedure' }
+  const record = asRecord(raw, 'quotation procedure')
+  return {
+    ...catalogItemBase(record),
+    kind: 'procedure',
+    ...commercialValues(record, ['guideUnitPrice', 'minimumGuideTotalPrice']),
+  }
 }
 
 function materialItem(raw: unknown): QuotationMaterialRead {
@@ -122,6 +128,7 @@ function materialItem(raw: unknown): QuotationMaterialRead {
   return {
     ...catalogItemBase(record),
     kind: 'material',
+    ...commercialValues(record, ['price', 'servicePrice', 'serviceCostPrice', 'storeCostPrice', 'cost']),
     ...(code ? { code } : {}),
     ...(materialUnit ? { materialUnit } : {}),
     ...(specUnit ? { specUnit } : {}),
@@ -130,7 +137,12 @@ function materialItem(raw: unknown): QuotationMaterialRead {
 }
 
 function measureItem(raw: unknown): QuotationMeasureRead {
-  return { ...catalogItemBase(asRecord(raw, 'quotation measure')), kind: 'measure' }
+  const record = asRecord(raw, 'quotation measure')
+  return {
+    ...catalogItemBase(record),
+    kind: 'measure',
+    ...commercialValues(record, ['guideUnitPrice', 'cost']),
+  }
 }
 
 function rawLayer(record: AdapterRecord): string | number | undefined {
@@ -166,7 +178,6 @@ function packageComponentFields(
     ...(coefficientUnit ? { coefficientUnit } : {}),
     ...(unit ? { unit } : {}),
     ...(order === undefined ? {} : { order }),
-    ...commercialValues(record),
   }
 }
 
@@ -190,11 +201,14 @@ function packageMaterial(raw: unknown): QuotationPackageMaterialRead {
     throw new AdapterMappingError('quotation package material identity does not match its reference')
   }
   const layer = rawLayer(record)
+  const exts = optionalRecord(record.exts)
+  const price = exts ? optionalFiniteNumber(exts, 'price') : undefined
   return {
     ...fields,
     kind: 'material',
     item,
     ...(layer === undefined ? {} : { layer }),
+    ...(price === undefined ? {} : { price }),
   }
 }
 
