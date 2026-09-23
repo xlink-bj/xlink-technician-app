@@ -48,6 +48,16 @@ async function openScenario(page: Page, scenario: string): Promise<void> {
   await expect(page.getByText('服务方案 / 报价明细')).toBeVisible()
 }
 
+async function openPackageConfigurationFromEditableGroup(page: Page): Promise<void> {
+  await openScenario(page, 'empty')
+  await page.getByTestId('quotation-add-group').click()
+  await page.getByText('屋面', { exact: true }).click()
+  await page.getByTestId('quotation-browse-quotation-group-1-package').click()
+  await expect(page.getByTestId('quotation-catalog-sheet')).toBeVisible()
+  await page.getByTestId('quotation-package-detail-mock-catalog-package-basic').click()
+  await expect(page.getByTestId('quotation-package-detail')).toBeVisible()
+}
+
 async function expectSafe(page: Page, diagnostics: Awaited<ReturnType<typeof installSafetyGuards>>): Promise<void> {
   expect(diagnostics.pageErrors, 'pageerror output').toEqual([])
   expect(diagnostics.consoleErrors, 'console.error output').toEqual([])
@@ -124,11 +134,56 @@ test('Phase 1E package detail displays only observed child data grouped by suppl
   await expect(page.getByTestId('quotation-catalog-kind-package')).toBeVisible()
   await expect(page.getByTestId('quotation-catalog-item-package-mock-catalog-package-basic')).toContainText('Mock 服务方案 A')
   await page.getByTestId('quotation-package-detail-mock-catalog-package-basic').click()
-  await expect(page.getByTestId('quotation-package-detail')).toContainText('套餐组成（只读）')
+  await expect(page.getByTestId('quotation-package-detail')).toContainText('配置后只会保存在目标维修部位组的本机草稿中')
   await expect(page.getByTestId('quotation-material-layer-string:mock-layer-1')).toContainText('Mock 材料 A')
   await expect(page.getByTestId('quotation-composition-selection')).toHaveCount(0)
   await expect(page.getByText(/价格|单价|小计|总价|¥|￥/)).toHaveCount(0)
   await page.getByTestId('quotation-catalog-sheet').screenshot({ path: resolve(output, '03-catalog-detail-readonly.png'), animations: 'disabled' })
+  await expectSafe(page, diagnostics)
+})
+
+test('Phase 1G configures a Package locally after exactly one Material is chosen per supplied layer', async ({ page }) => {
+  const diagnostics = await installSafetyGuards(page)
+  await openPackageConfigurationFromEditableGroup(page)
+  await expect(page.getByTestId('quotation-package-detail')).toContainText('目标维修部位组的本机草稿')
+  await expect(page.getByTestId('quotation-package-material-choice-string:mock-layer-1-0')).toBeEnabled()
+  await expect(page.getByTestId('quotation-package-material-choice-number:2-0')).toBeEnabled()
+
+  const commit = page.getByTestId('quotation-package-configure-commit')
+  // uni-app H5 renders this shared AppButton as a <uni-button> custom element,
+  // so Playwright's native-button disabled matcher does not apply. Assert the
+  // platform-rendered disabled attribute directly.
+  await expect(commit).toHaveAttribute('disabled', 'true')
+  await page.getByTestId('quotation-package-material-choice-string:mock-layer-1-0').click()
+  await expect(commit).toHaveAttribute('disabled', 'true')
+  await page.getByTestId('quotation-package-material-choice-number:2-0').click()
+  await expect(commit).not.toHaveAttribute('disabled')
+  await expect(page.getByText(/价格|单价|小计|总价|¥|￥/)).toHaveCount(0)
+  await expect(page.getByTestId('action-workspace-submit')).toHaveCount(0)
+
+  await commit.click()
+  await expect(page.getByTestId('quotation-catalog-sheet')).toHaveCount(0)
+  const configured = page.getByTestId('quotation-configured-package-quotation-selection-1')
+  await expect(page.getByText('Mock 服务方案 A', { exact: true })).toBeVisible()
+  await expect(configured).toContainText('Mock 施工工序 A')
+  await expect(configured).toContainText('Mock 材料 A')
+  await expect(configured).toContainText('Mock 材料 B（数值层）')
+  await expect(configured).toContainText('Mock 机措 A')
+  await expect(page.getByTestId('quotation-composition-selection')).toHaveCount(1)
+  await expectSafe(page, diagnostics)
+})
+
+test('Phase 1G blocks local Package commit until all layers are configured', async ({ page }) => {
+  const diagnostics = await installSafetyGuards(page)
+  await openPackageConfigurationFromEditableGroup(page)
+  const commit = page.getByTestId('quotation-package-configure-commit')
+  await expect(commit).toHaveAttribute('disabled', 'true')
+  await page.getByTestId('quotation-package-material-choice-string:mock-layer-1-0').click()
+  await expect(commit).toHaveAttribute('disabled', 'true')
+  await commit.click()
+  await expect(page.getByTestId('quotation-composition-selection')).toHaveCount(0)
+  await expect(page.getByText(/价格|单价|小计|总价|¥|￥/)).toHaveCount(0)
+  await expect(page.getByTestId('action-workspace-submit')).toHaveCount(0)
   await expectSafe(page, diagnostics)
 })
 

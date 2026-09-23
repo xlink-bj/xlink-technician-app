@@ -136,6 +136,32 @@ export const mockQuotationPackageDetailResponse = {
         unit: '支',
         order: 1,
       },
+      {
+        _id: 'mock-package-material-row-alternative',
+        materialId: 'mock-catalog-material-sealant-alternative',
+        material: {
+          _id: 'mock-catalog-material-sealant-alternative',
+          name: 'Mock 材料 A（同层替代）',
+          unit: '支',
+          order: 2,
+        },
+        exts: { layer: 'mock-layer-1' },
+        unit: '支',
+        order: 2,
+      },
+      {
+        _id: 'mock-package-material-row-layer-2',
+        materialId: 'mock-catalog-material-layer-2',
+        material: {
+          _id: 'mock-catalog-material-layer-2',
+          name: 'Mock 材料 B（数值层）',
+          unit: '桶',
+          order: 3,
+        },
+        exts: { layer: 2 },
+        unit: '桶',
+        order: 3,
+      },
     ],
     measureList: [
       {

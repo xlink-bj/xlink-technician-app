@@ -8,7 +8,7 @@ const root = resolve(fileURLToPath(new URL('..', import.meta.url)))
 const read = (path) => readFile(resolve(root, path), 'utf8')
 const fail = (message) => { throw new Error(`G4-F quotation composition boundary check failed: ${message}`) }
 
-const [pages, workspace, component, model, codec, catalog, catalogBrowser, compositionStore, genericForm, commandPort, reviewMain, reviewScenarios, reviewPage, playwrightConfig, viteConfig, browserTests, unitTests, packageSource] = await Promise.all([
+const [pages, workspace, component, model, codec, catalog, catalogBrowser, compositionStore, packageConfiguration, genericForm, commandPort, reviewMain, reviewScenarios, reviewPage, playwrightConfig, viteConfig, browserTests, unitTests, packageConfigurationTests, packageSource] = await Promise.all([
   read('src/pages.json'),
   read('src/features/work-orders/action-workspace.ts'),
   read('src/features/work-orders/quotation/QuotationActionContent.vue'),
@@ -17,6 +17,7 @@ const [pages, workspace, component, model, codec, catalog, catalogBrowser, compo
   read('src/features/work-orders/quotation/catalog.ts'),
   read('src/features/work-orders/quotation/catalog-browser-store.ts'),
   read('src/features/work-orders/quotation/composition-store.ts'),
+  read('src/features/work-orders/quotation/package-configuration.ts'),
   read('src/features/work-orders/dynamic-form-action.ts'),
   read('src/shared/ports/commands.ts'),
   read('review-app-g4f/main.ts'),
@@ -26,6 +27,7 @@ const [pages, workspace, component, model, codec, catalog, catalogBrowser, compo
   read('vite.uni-h5-g4f-review.config.ts'),
   read('tests/h5-review/g4f-quotation-phase1b.spec.ts'),
   read('tests/g4f/quotation-composition.test.ts'),
+  read('tests/g4f/package-configuration.test.ts'),
   read('package.json'),
 ])
 const packageJson = JSON.parse(packageSource)
@@ -67,8 +69,8 @@ if (!component.includes('quotation-add-group') || !component.includes('quotation
 if (component.includes('composition.addCatalogItem') || !component.includes('workspace.addQuotationCatalogSelection') || !component.includes('加入当前组')) {
   fail('direct catalog selection must pass through the Action Workspace bridge')
 }
-if (!component.includes("item.kind === 'package'") || !component.includes('查看套餐')) {
-  fail('packages must remain read-only and expose details rather than a draft-selection action')
+if (!component.includes("item.kind === 'package'") || !component.includes('配置套餐') || !component.includes('quotation-package-configure-commit')) {
+  fail('Package must use its distinct material-configuration UX, not the generic direct-selection action')
 }
 if (!workspace.includes('quotationCatalogBrowser.selectedCatalogItemFor(kind, catalogId)') || !workspace.includes('isDirectQuotationCatalogKind(kind)')) {
   fail('Action Workspace must accept only current successful reads of the explicit direct-selection kinds')
@@ -81,6 +83,19 @@ if (!catalog.includes('synthetic-package-basic') || !component.includes('目标�
 }
 if (!workspace.includes('quotationComposition.addCatalogReadItem(groupId, source)')) {
   fail('Action Workspace must bridge verified read records into local composition')
+}
+if (!workspace.includes('quotationCatalogBrowser.packageCandidateFor(packageId)')
+  || !workspace.includes('quotationCatalogBrowser.successfulPackageDetailFor(packageId)')
+  || !workspace.includes('quotationComposition.configurePackageReadItem')) {
+  fail('Package configuration must be gated by current successful list/detail reads and use its separate Action Workspace bridge')
+}
+if (!packageConfiguration.includes('configuredQuotationPackageCandidateFor')
+  || !packageConfiguration.includes('quotationPackageLayerKey')
+  || !packageConfiguration.includes('validLayer')) {
+  fail('Package configuration must preserve exact provider layers and validate a complete candidate before local commit')
+}
+if (!codec.includes('QUOTATION_DRAFT_SCHEMA_VERSION = 3') || !codec.includes('values.schemaVersion !== 2')) {
+  fail('Package configuration must write schema v3 while retaining grouped schema-v2 recovery')
 }
 if (!compositionStore.includes('isDirectQuotationCatalogKind(source.kind)') || !compositionStore.includes('catalogId: source.id') || !compositionStore.includes('label: source.name')) {
   fail('composition must enforce its explicit kind allowlist and project provider identity into local draft fields')
@@ -109,15 +124,18 @@ if (!reviewPage.includes('H5_VISUAL_PROXY') || !reviewPage.includes('MOCK_PRODUC
 if (!playwrightConfig.includes('http://127.0.0.1:5175') || !viteConfig.includes("VITE_XLINK_ENABLE_REAL_WRITES': JSON.stringify('false')")) {
   fail('review server must be isolated and real writes disabled')
 }
-if (!browserTests.includes('01-empty-draft.png') || !browserTests.includes('02-grouped-draft-direct-selections.png') || !browserTests.includes('03-catalog-detail-readonly.png') || !browserTests.includes('externalRequests') || !browserTests.includes('quotation-catalog-add-')) {
-  fail('Playwright must prove direct allowed-kind selection, package read-only state, and network safety')
+if (!browserTests.includes('01-empty-draft.png') || !browserTests.includes('02-grouped-draft-direct-selections.png') || !browserTests.includes('03-catalog-detail-readonly.png') || !browserTests.includes('externalRequests') || !browserTests.includes('quotation-catalog-add-') || !browserTests.includes('quotation-package-configure-commit')) {
+  fail('Playwright must prove direct selection, configured Package UX, and network safety')
 }
 for (const token of ['autosaves grouped state only', 'restores the local quotation draft', 'different %s identity', 'malformed or incompatible', 'legacy flat v1 drafts']) {
   if (!unitTests.includes(token)) fail(`unit coverage missing: ${token}`)
+}
+for (const token of ['missing', 'numeric and string', 'unresolved selected Material', 'unresolved bundled Procedure or Measure', 'reconfigures in place', 'maintainAreaNum']) {
+  if (!packageConfigurationTests.includes(token)) fail(`Phase 1G package configuration coverage missing: ${token}`)
 }
 for (const script of ['test:uni-h5-g4f-phase1b-review', 'check:g4f-phase1b']) {
   if (!packageJson.scripts?.[script]) fail(`missing package script: ${script}`)
 }
 if (!packageJson.scripts.verify.includes('check:g4f-phase1b')) fail('normal verify must include the Phase 1B guard')
 
-console.log('G4-F Phase 1F boundary passed: only explicit Procedure/Material/Measure read selections bridge into the local grouped draft; Package remains read-only; no pricing or business mutation')
+console.log('G4-F catalog boundary passed: direct Procedure/Material/Measure selection remains explicit; Package uses its separate configured local bridge; no pricing or business mutation')

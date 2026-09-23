@@ -2,7 +2,12 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 
 import type { ActionDraftIdentity, ActionDraftRepository } from '@runtimes/action'
-import type { CodeOptionRead, QuotationCatalogItemRead } from '@shared/ports'
+import type {
+  CodeOptionRead,
+  QuotationCatalogItemRead,
+  QuotationPackageDetailRead,
+  QuotationPackageRead,
+} from '@shared/ports'
 import { createOperationError, type OperationSnapshot } from '@shared/types'
 
 import { quotationCatalogItemFor, quotationCatalogKindLabels } from './catalog'
@@ -17,12 +22,17 @@ import {
   parseQuotationQuantity,
   quotationSelectionsFor,
   removeQuotationSelection,
+  upsertQuotationPackageSelection,
   updateQuotationGroupContext,
   type QuotationDraft,
   type QuotationCatalogItem,
   type QuotationGroupContext,
   type QuotationLineKind,
 } from './model'
+import {
+  configuredQuotationPackageCandidateFor,
+  type QuotationPackageMaterialChoice,
+} from './package-configuration'
 
 export type QuotationDraftLocalState =
   | 'idle'
@@ -248,6 +258,70 @@ export const useQuotationCompositionStore = defineStore('quotationComposition', 
     return succeeded()
   }
 
+  function packageConfigurationCandidate(
+    groupId: string,
+    source: QuotationPackageRead,
+    detail: QuotationPackageDetailRead,
+    choices: readonly QuotationPackageMaterialChoice[],
+  ) {
+    if (!draft.value || !canEdit()) return failed('unsupported_capability', '报价草稿当前不可编辑')
+    const group = draft.value.groups.find((item) => item.groupId === groupId)
+    if (!group) return failed('validation', '请先选择有效的维修部位组')
+    if (group.projPackages.filter((selection) => selection.catalogId === source.id).length > 1) {
+      return failed('validation', '当前分组存在重复套餐记录，未修改草稿。')
+    }
+    return configuredQuotationPackageCandidateFor(group, source, detail, choices)
+  }
+
+  function validatePackageReadItem(
+    groupId: string,
+    source: QuotationPackageRead,
+    detail: QuotationPackageDetailRead,
+    choices: readonly QuotationPackageMaterialChoice[],
+  ): OperationSnapshot<void> {
+    const candidate = packageConfigurationCandidate(groupId, source, detail, choices)
+    return candidate.state === 'succeeded'
+      ? succeeded()
+      : { state: candidate.state, ...(candidate.error ? { error: candidate.error } : {}) }
+  }
+
+  function configurePackageReadItem(
+    groupId: string,
+    source: QuotationPackageRead,
+    detail: QuotationPackageDetailRead,
+    choices: readonly QuotationPackageMaterialChoice[],
+  ): OperationSnapshot<void> {
+    const candidate = packageConfigurationCandidate(groupId, source, detail, choices)
+    if (candidate.state !== 'succeeded' || !candidate.data || !draft.value) {
+      return { state: candidate.state, ...(candidate.error ? { error: candidate.error } : {}) }
+    }
+    const group = draft.value.groups.find((item) => item.groupId === groupId)
+    if (!group) return failed('validation', '请先选择有效的维修部位组')
+    const existing = group.projPackages.find((selection) => selection.catalogId === source.id)
+    const usedIds = selections(draft.value).flatMap((selection) => {
+      const match = /^quotation-selection-(\d+)$/.exec(selection.selectionId)
+      return match ? [Number(match[1])] : []
+    })
+    const selectionId = `quotation-selection-${Math.max(0, ...usedIds) + 1}`
+    const next = upsertQuotationPackageSelection(draft.value, groupId, {
+      catalogId: source.id,
+      label: source.name,
+      ...(source.unit ? { unit: source.unit } : {}),
+      configuration: candidate.data.configuration,
+      selectionId,
+      initialQuantity: candidate.data.quantity,
+    })
+    if (next !== draft.value) {
+      draft.value = next
+      if (!existing) {
+        quantityTextBySelection.value = { ...quantityTextBySelection.value, [selectionId]: String(candidate.data.quantity) }
+        quantityErrorBySelection.value = { ...quantityErrorBySelection.value, [selectionId]: '' }
+      }
+      markDirty()
+    }
+    return succeeded()
+  }
+
   function setQuantityText(groupId: string, selectionId: string, input: string): OperationSnapshot<void> {
     if (!draft.value || !canEdit()) return failed('unsupported_capability', '报价草稿当前不可编辑')
     quantityTextBySelection.value = { ...quantityTextBySelection.value, [selectionId]: input }
@@ -363,8 +437,11 @@ export const useQuotationCompositionStore = defineStore('quotationComposition', 
     clear,
     createGroup,
     updateGroupContext,
+    isGroupEditable: (groupId: string) => canEdit() && draft.value?.groups.some((group) => group.groupId === groupId) === true,
     addCatalogItem,
     addCatalogReadItem,
+    validatePackageReadItem,
+    configurePackageReadItem,
     setQuantityText,
     removeSelection,
     flushDraft,
