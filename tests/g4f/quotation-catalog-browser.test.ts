@@ -159,6 +159,24 @@ describe('G4-F Phase 1E quotation catalog browser', () => {
     expect(port.getPackageDetail).not.toHaveBeenCalled()
   })
 
+  it('does not expose a successful-looking detail whose Package identity mismatches the current candidate', async () => {
+    const port = catalogPort({
+      getPackageDetail: vi.fn(async () => succeeded<QuotationPackageDetailRead>({
+        package: { ...packageRow, id: 'different-package' },
+        procedures: [],
+        materials: [],
+        measures: [],
+      })),
+    })
+    const store = useQuotationCatalogBrowserStore()
+    store.configure({ readPort: port, catalogContext: context })
+    await store.loadList('package')
+    await store.openPackageDetail(packageRow.id)
+    expect(store.packageCandidateFor(packageRow.id)).toEqual(packageRow)
+    expect(store.packageDetailState).toBe('succeeded')
+    expect(store.successfulPackageDetailFor(packageRow.id)).toBeNull()
+  })
+
   it('keeps package-detail retryable errors separate and hides raw transport copy', async () => {
     const port = catalogPort({
       getPackageDetail: vi.fn()

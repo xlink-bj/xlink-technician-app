@@ -11,6 +11,7 @@ import type {
 } from '@shared/ports'
 import type { OperationState } from '@shared/types'
 import type { QuotationLineKind } from './model'
+import { quotationPackageLayerKey } from './package-configuration'
 
 export type QuotationCatalogBrowserState = Extract<OperationState, 'idle' | 'loading' | 'succeeded' | 'failed_retryable' | 'failed_terminal'> | 'blocked'
 
@@ -47,9 +48,7 @@ export function quotationPackageMaterialLayersFor(
 ): readonly QuotationPackageMaterialLayerGroup[] {
   const grouped = new Map<string, { label: string; materials: QuotationPackageMaterialRead[] }>()
   for (const material of materials) {
-    const key = material.layer === undefined
-      ? 'missing-layer'
-      : `${typeof material.layer}:${String(material.layer)}`
+    const key = quotationPackageLayerKey(material.layer)
     const label = material.layer === undefined ? '层级未提供' : `层级：${String(material.layer)}`
     const existing = grouped.get(key)
     if (existing) existing.materials.push(material)
@@ -140,6 +139,26 @@ export const useQuotationCatalogBrowserStore = defineStore('quotationCatalogBrow
       || !catalogId.trim()
     ) return null
     return catalogItemsByKind.value[kind].find((item) => item.kind === kind && item.id === catalogId) ?? null
+  }
+
+  /** Current successfully-read Package candidate; never accepts caller-owned provider objects. */
+  function packageCandidateFor(packageId: string): Extract<QuotationCatalogItemRead, { kind: 'package' }> | null {
+    if (!packageId.trim() || catalogStatesByKind.value.package !== 'succeeded') return null
+    const item = catalogItemsByKind.value.package.find((candidate) => candidate.kind === 'package' && candidate.id === packageId)
+    return item?.kind === 'package' ? item : null
+  }
+
+  /** Detail is usable only while it is the successful detail for this current list candidate. */
+  function successfulPackageDetailFor(packageId: string): QuotationPackageDetailRead | null {
+    const candidate = packageCandidateFor(packageId)
+    if (
+      !candidate
+      || packageDetailState.value !== 'succeeded'
+      || selectedPackageId.value !== packageId
+      || packageDetail.value?.package.id !== candidate.id
+      || packageDetail.value.package.kind !== 'package'
+    ) return null
+    return packageDetail.value
   }
 
   async function loadList(kind: QuotationLineKind, force = false): Promise<void> {
@@ -262,6 +281,8 @@ export const useQuotationCatalogBrowserStore = defineStore('quotationCatalogBrow
     close,
     selectKind,
     selectedCatalogItemFor,
+    packageCandidateFor,
+    successfulPackageDetailFor,
     loadList,
     retryList,
     openPackageDetail,

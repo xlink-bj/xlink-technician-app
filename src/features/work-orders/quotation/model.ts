@@ -18,8 +18,31 @@ export interface QuotationSelection<K extends QuotationLineKind = QuotationLineK
   readonly label: string
   readonly unit?: string
   readonly quantity: number
+  readonly configuration?: K extends 'package' ? QuotationPackageConfiguration : never
 }
 
+export interface QuotationConfiguredPackageComponent {
+  /** Package-detail child-body identity, preserved only when supplied. */
+  readonly providerComponentId?: string
+  /** Package-detail referenced provider identity, preserved only when supplied. */
+  readonly providerReferenceId?: string
+  readonly catalogId: string
+  readonly label: string
+  readonly unit?: string
+}
+
+export interface QuotationConfiguredPackageMaterial extends QuotationConfiguredPackageComponent {
+  /** Exact provider layer value; numeric and string values remain distinct. */
+  readonly layer: string | number
+}
+
+export interface QuotationPackageConfiguration {
+  readonly procedures: readonly QuotationConfiguredPackageComponent[]
+  readonly materials: readonly QuotationConfiguredPackageMaterial[]
+  readonly measures: readonly QuotationConfiguredPackageComponent[]
+}
+
+/** Missing configuration is reserved for losslessly restored schema-v2 rows. */
 export type QuotationPackageSelection = QuotationSelection<'package'>
 export type QuotationProcedureSelection = QuotationSelection<'procedure'>
 export type QuotationMaterialSelection = QuotationSelection<'material'>
@@ -174,6 +197,38 @@ export function appendQuotationSelection(
       quantity: 1,
     }
     return withSelections(group, item.kind, [...selectionsForKind(group, item.kind), selection])
+  })
+}
+
+export function upsertQuotationPackageSelection(
+  draft: QuotationDraft,
+  groupId: string,
+  input: {
+    readonly catalogId: string
+    readonly label: string
+    readonly unit?: string
+    readonly configuration: QuotationPackageConfiguration
+    readonly selectionId: string
+    readonly initialQuantity: number
+  },
+): QuotationDraft {
+  return updateGroup(draft, groupId, (group) => {
+    const existingIndex = group.projPackages.findIndex((selection) => selection.catalogId === input.catalogId)
+    const existing = existingIndex < 0 ? undefined : group.projPackages[existingIndex]
+    const next: QuotationPackageSelection = {
+      selectionId: existing?.selectionId ?? input.selectionId,
+      kind: 'package',
+      catalogId: input.catalogId,
+      label: input.label,
+      ...(input.unit ? { unit: input.unit } : {}),
+      quantity: existing?.quantity ?? input.initialQuantity,
+      configuration: input.configuration,
+    }
+    if (existing && JSON.stringify(existing) === JSON.stringify(next)) return group
+    const projPackages = existingIndex < 0
+      ? [...group.projPackages, next]
+      : group.projPackages.map((selection, index) => index === existingIndex ? next : selection)
+    return { ...group, projPackages }
   })
 }
 

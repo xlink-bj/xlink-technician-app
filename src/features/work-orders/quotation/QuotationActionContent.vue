@@ -3,7 +3,7 @@
     <view class="quotation-content__heading">
       <text class="quotation-content__eyebrow">报价工作区</text>
       <text class="quotation-content__title">报价方案</text>
-      <text class="quotation-content__description">分组草稿保存在本机；工序、材料和机措可加入当前维修部位组，套餐仍为只读。</text>
+      <text class="quotation-content__description">分组草稿保存在本机；工序、材料和机措可直接加入，套餐需按详情配置后加入当前维修部位组。</text>
     </view>
 
     <view v-if="state === 'loading'" class="quotation-content__panel app-surface" data-testid="quotation-state-loading">
@@ -152,6 +152,19 @@
                   </view>
                   <text class="quotation-content__kind-tag">{{ composition.catalogKindLabels[selection.kind] }}</text>
                 </view>
+                <view
+                  v-if="selection.kind === 'package'"
+                  class="quotation-content__package-summary"
+                  :data-testid="`quotation-configured-package-${selection.selectionId}`"
+                >
+                  <template v-if="selection.configuration">
+                    <text class="quotation-content__package-summary-title">套餐组成已配置 · {{ selection.configuration.materials.length }} 个材料层级</text>
+                    <text v-for="component in selection.configuration.procedures" :key="`procedure-${component.providerComponentId || ''}-${component.providerReferenceId || ''}`" class="quotation-content__package-summary-row">工序 · {{ component.label }}</text>
+                    <text v-for="component in selection.configuration.materials" :key="`material-${typeof component.layer}-${String(component.layer)}-${component.providerComponentId || ''}-${component.providerReferenceId || ''}`" class="quotation-content__package-summary-row">材料 · 层级 {{ String(component.layer) }} · {{ component.label }}</text>
+                    <text v-for="component in selection.configuration.measures" :key="`measure-${component.providerComponentId || ''}-${component.providerReferenceId || ''}`" class="quotation-content__package-summary-row">机措 · {{ component.label }}</text>
+                  </template>
+                  <text v-else class="quotation-content__package-summary-row">套餐尚未完成配置；已保留原有本机套餐记录。</text>
+                </view>
                 <view class="quotation-content__line-controls">
                   <text class="quotation-content__quantity-label">数量</text>
                   <view class="quotation-content__quantity-wrap" :class="{ 'quotation-content__quantity-wrap--error': composition.quantityErrorBySelection[selection.selectionId] }">
@@ -227,7 +240,7 @@
         <view class="quotation-content__catalog-heading">
           <view>
             <text class="quotation-content__catalog-title">报价目录浏览</text>
-            <text class="quotation-content__catalog-subtitle">目标：{{ activeCatalogGroup?.partDescription || (activeCatalogGroup ? '当前维修部位组' : '未指定分组') }} · 工序、材料、机措可加入本机草稿 · 套餐只读</text>
+            <text class="quotation-content__catalog-subtitle">目标：{{ activeCatalogGroupTitle }} · 工序、材料、机措可直接加入；套餐需完成层级配置后写入本机草稿</text>
           </view>
           <AppButton class="quotation-content__catalog-close" variant="text" aria-label="关闭目录" data-testid="quotation-catalog-close" @tap="closeCatalog">关闭</AppButton>
         </view>
@@ -312,8 +325,8 @@
               v-if="item.kind === 'package'"
               variant="text"
               :data-testid="`quotation-package-detail-${item.id}`"
-              @tap="catalogBrowser.openPackageDetail(item.id)"
-            >查看套餐</AppButton>
+              @tap="openPackageConfiguration(item.id)"
+            >{{ packageSelectionFor(item.id)?.configuration ? '重新配置' : '配置套餐' }}</AppButton>
             <AppButton
               v-else-if="isDirectQuotationCatalogKind(item.kind)"
               variant="secondary"
@@ -327,7 +340,7 @@
         </view>
 
         <scroll-view v-else class="quotation-content__package-detail" scroll-y data-testid="quotation-package-detail">
-          <AppButton variant="text" data-testid="quotation-package-detail-back" @tap="catalogBrowser.backToList">返回目录</AppButton>
+          <AppButton variant="text" data-testid="quotation-package-detail-back" @tap="backFromPackageConfiguration">返回目录</AppButton>
           <AppLoadingState
             v-if="catalogBrowser.packageDetailState === 'loading'"
             class="quotation-content__catalog-state"
@@ -346,7 +359,7 @@
           </view>
           <view v-else-if="catalogBrowser.packageDetail" class="quotation-content__package-detail-content">
             <text class="quotation-content__package-detail-title">{{ catalogBrowser.packageDetail.package.name }}</text>
-            <text class="quotation-content__package-detail-note">套餐组成（只读）</text>
+            <text class="quotation-content__package-detail-note">配置后只会保存在目标维修部位组的本机草稿中。</text>
             <view class="quotation-content__detail-section" data-testid="quotation-package-procedures">
               <text class="quotation-content__detail-heading">工序</text>
               <text v-if="catalogBrowser.packageDetail.procedures.length === 0" class="quotation-content__empty-section">暂无工序</text>
@@ -358,9 +371,22 @@
               <text class="quotation-content__detail-heading">材料 · 按已提供层级</text>
               <view v-for="layer in catalogBrowser.packageMaterialLayers" :key="layer.key" class="quotation-content__layer-group" :data-testid="`quotation-material-layer-${layer.key}`">
                 <text class="quotation-content__layer-heading">{{ layer.label }}</text>
-                <text v-for="(row, index) in layer.materials" :key="row.id || row.referenceId || index" class="quotation-content__detail-row">
-                  {{ row.item?.name || '材料引用暂不可解析' }}<template v-if="row.unit"> · {{ row.unit }}</template>
-                </text>
+                <AppStatus
+                  v-if="layer.key === 'missing-layer'"
+                  message="此套餐材料缺少来源层级，不能安全配置。"
+                  tone="warning"
+                  quiet
+                />
+                <AppButton
+                  v-for="(row, index) in layer.materials"
+                  :key="`${row.id || ''}:${row.referenceId || ''}:${index}`"
+                  class="quotation-content__material-choice"
+                  variant="secondary"
+                  :pressed="isPackageMaterialSelected(row)"
+                  :disabled="!canChoosePackageMaterial(row, layer.materials)"
+                  :data-testid="`quotation-package-material-choice-${layer.key}-${index}`"
+                  @tap="choosePackageMaterial(row)"
+                >{{ row.item?.name || '材料引用暂不可解析' }}<template v-if="row.unit || row.item?.unit"> · {{ row.unit || row.item?.unit }}</template>{{ isPackageMaterialSelected(row) ? ' · 已选' : '' }}</AppButton>
               </view>
               <text v-if="catalogBrowser.packageDetail.materials.length === 0" class="quotation-content__empty-section">暂无材料</text>
             </view>
@@ -371,6 +397,20 @@
                 {{ row.item?.name || '机措引用暂不可解析' }}<template v-if="row.unit"> · {{ row.unit }}</template>
               </text>
             </view>
+            <AppStatus
+              v-if="packageConfigurationValidation.state !== 'succeeded'"
+              class="quotation-content__package-config-status"
+              :message="packageConfigurationValidation.error?.message || '请完成套餐材料层级选择。'"
+              tone="warning"
+              quiet
+            />
+            <AppButton
+              class="quotation-content__package-config-commit"
+              block
+              :disabled="packageConfigurationValidation.state !== 'succeeded'"
+              data-testid="quotation-package-configure-commit"
+              @tap="commitPackageConfiguration"
+            >{{ existingPackageSelection?.configuration ? '更新当前组套餐' : '加入当前组' }}</AppButton>
           </view>
         </scroll-view>
       </view>
@@ -391,7 +431,14 @@ import { isDirectQuotationCatalogKind } from './model'
 import { quotationCatalogKindLabels } from './catalog'
 import { useQuotationCatalogBrowserStore } from './catalog-browser-store'
 import type { QuotationLineKind } from './model'
-import type { QuotationCatalogItemRead } from '@shared/ports'
+import type { QuotationCatalogItemRead, QuotationPackageMaterialRead } from '@shared/ports'
+import {
+  quotationPackageLayerKey,
+  quotationPackageMaterialChoiceFor,
+  quotationPackageMaterialChoiceToken,
+  quotationPackageMaterialMatchesChoice,
+  type QuotationPackageMaterialChoice,
+} from './package-configuration'
 
 defineProps<{
   readonly state: 'loading' | 'ready' | 'blocked' | 'failed_retryable' | 'failed_terminal'
@@ -409,7 +456,30 @@ const catalogKinds: readonly QuotationLineKind[] = ['package', 'procedure', 'mat
 const canEdit = computed(() => ['fresh', 'restored', 'dirty', 'saving', 'saved_local', 'save_failed'].includes(composition.localState))
 const activeCatalogGroupId = ref<string | null>(null)
 const catalogSelectionError = ref('')
+const packageMaterialChoicesByLayer = ref<Readonly<Record<string, QuotationPackageMaterialChoice>>>({})
 const activeCatalogGroup = computed(() => composition.groups.find((group) => group.groupId === activeCatalogGroupId.value))
+const activeCatalogGroupTitle = computed(() => {
+  if (!activeCatalogGroup.value) return '未指定分组'
+  const index = composition.groups.findIndex((group) => group.groupId === activeCatalogGroup.value?.groupId)
+  const groupLabel = activeCatalogGroup.value.partDescription.trim()
+  return groupLabel ? `维修部位组 ${index + 1} · ${groupLabel}` : `维修部位组 ${index + 1}`
+})
+const currentPackageId = computed(() => catalogBrowser.selectedPackageId)
+const existingPackageSelection = computed(() => activeCatalogGroup.value?.projPackages.find(
+  (selection) => selection.catalogId === currentPackageId.value,
+))
+const packageMaterialChoices = computed(() => Object.values(packageMaterialChoicesByLayer.value))
+const packageConfigurationValidation = computed(() => {
+  const packageId = currentPackageId.value
+  if (!packageId || catalogBrowser.packageDetailState !== 'succeeded') {
+    return { state: 'failed_terminal' as const }
+  }
+  return workspace.validateQuotationPackageConfiguration(
+    activeCatalogGroupId.value ?? '',
+    packageId,
+    packageMaterialChoices.value,
+  )
+})
 const kindLabels = quotationCatalogKindLabels
 
 function openCatalog(groupId: string, kind: QuotationLineKind): void {
@@ -422,6 +492,7 @@ function closeCatalog(): void {
   catalogBrowser.close()
   activeCatalogGroupId.value = null
   catalogSelectionError.value = ''
+  packageMaterialChoicesByLayer.value = {}
 }
 
 function selectCatalogKind(kind: QuotationLineKind): void {
@@ -449,6 +520,73 @@ function addCatalogSelection(kind: QuotationLineKind, catalogId: string): void {
   catalogSelectionError.value = result.error?.category === 'unsupported_capability'
     ? '当前报价草稿不可编辑，目录项未加入。'
     : '目录项或维修部位组已变化，请重新打开目录后再试。'
+}
+
+function packageSelectionFor(packageId: string) {
+  return activeCatalogGroup.value?.projPackages.find((selection) => selection.catalogId === packageId)
+}
+
+async function openPackageConfiguration(packageId: string): Promise<void> {
+  packageMaterialChoicesByLayer.value = {}
+  catalogSelectionError.value = ''
+  await catalogBrowser.openPackageDetail(packageId)
+  if (catalogBrowser.packageDetailState !== 'succeeded' || !activeCatalogGroup.value) return
+  const existing = activeCatalogGroup.value.projPackages.find((selection) => selection.catalogId === packageId)
+  const choices: Record<string, QuotationPackageMaterialChoice> = {}
+  for (const material of existing?.configuration?.materials ?? []) {
+    const choice: QuotationPackageMaterialChoice = {
+      layer: material.layer,
+      ...(material.providerComponentId ? { componentId: material.providerComponentId } : {}),
+      ...(material.providerReferenceId ? { referenceId: material.providerReferenceId } : {}),
+    }
+    choices[quotationPackageLayerKey(material.layer)] = choice
+  }
+  packageMaterialChoicesByLayer.value = choices
+}
+
+function backFromPackageConfiguration(): void {
+  catalogBrowser.backToList()
+  packageMaterialChoicesByLayer.value = {}
+  catalogSelectionError.value = ''
+}
+
+function canChoosePackageMaterial(row: QuotationPackageMaterialRead, layerRows: readonly QuotationPackageMaterialRead[]): boolean {
+  const choice = quotationPackageMaterialChoiceFor(row)
+  const detailRows = catalogBrowser.packageDetail?.materials ?? []
+  return canEdit.value
+    && Boolean(row.item && row.item.kind === 'material' && row.item.id.trim() && row.item.name.trim())
+    && choice !== null
+    && layerRows.filter((candidate) => quotationPackageMaterialMatchesChoice(candidate, choice)).length === 1
+    && detailRows.filter((candidate) => quotationPackageMaterialMatchesChoice(candidate, choice)).length === 1
+}
+
+function isPackageMaterialSelected(row: QuotationPackageMaterialRead): boolean {
+  const choice = quotationPackageMaterialChoiceFor(row)
+  if (!choice) return false
+  return quotationPackageMaterialChoiceToken(packageMaterialChoicesByLayer.value[quotationPackageLayerKey(choice.layer)] ?? {
+    layer: choice.layer,
+  }) === quotationPackageMaterialChoiceToken(choice)
+}
+
+function choosePackageMaterial(row: QuotationPackageMaterialRead): void {
+  const choice = quotationPackageMaterialChoiceFor(row)
+  if (!choice || !canChoosePackageMaterial(row, [row])) return
+  packageMaterialChoicesByLayer.value = {
+    ...packageMaterialChoicesByLayer.value,
+    [quotationPackageLayerKey(choice.layer)]: choice,
+  }
+}
+
+function commitPackageConfiguration(): void {
+  const packageId = currentPackageId.value
+  const groupId = activeCatalogGroupId.value
+  if (!packageId || !groupId) return
+  const result = workspace.configureQuotationPackageSelection(groupId, packageId, packageMaterialChoices.value)
+  if (result.state === 'succeeded') {
+    closeCatalog()
+    return
+  }
+  catalogSelectionError.value = result.error?.message || '套餐配置未完成，未写入草稿。'
 }
 
 function eventValue(event: unknown): string {
@@ -558,6 +696,12 @@ function catalogMetadata(item: QuotationCatalogItemRead): string {
 .quotation-content__package-detail-content { padding: var(--app-space-sm) 0 var(--app-space-lg); }
 .quotation-content__package-detail-title { color: var(--app-color-text-primary); display: block; font-size: var(--app-font-value); font-weight: 800; margin-top: var(--app-space-sm); }
 .quotation-content__package-detail-note { color: var(--app-color-text-secondary); display: block; font-size: var(--app-font-meta); margin-top: var(--app-space-xs); }
+.quotation-content__package-summary { background: var(--app-color-control-surface); border-radius: var(--app-radius-control); display: flex; flex-direction: column; gap: var(--app-space-xs); margin-top: var(--app-space-sm); padding: var(--app-space-sm); }
+.quotation-content__package-summary-title { color: var(--app-color-text-primary); font-size: var(--app-font-meta); font-weight: 700; }
+.quotation-content__package-summary-row { color: var(--app-color-text-secondary); display: block; font-size: var(--app-font-meta); line-height: 1.4; }
+.quotation-content__material-choice { display: block; margin-top: var(--app-space-xs); text-align: left; width: 100%; }
+.quotation-content__package-config-status { margin-top: var(--app-space-md); }
+.quotation-content__package-config-commit { margin-top: var(--app-space-md); }
 .quotation-content__detail-section { border-top: 1rpx solid var(--app-color-divider); margin-top: var(--app-space-md); padding-top: var(--app-space-md); }
 .quotation-content__detail-heading { color: var(--app-color-text-primary); display: block; font-size: var(--app-font-field-label); font-weight: 800; }
 .quotation-content__detail-row { color: var(--app-color-text-secondary); display: block; font-size: var(--app-font-body); line-height: 1.5; margin-top: var(--app-space-sm); }

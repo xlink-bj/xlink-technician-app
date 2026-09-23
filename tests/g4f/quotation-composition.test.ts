@@ -13,7 +13,7 @@ import { asOpaqueId, type OperationSnapshot } from '@shared/types'
 import { useQuotationCompositionStore } from '@features/work-orders/quotation/composition-store'
 import { quotationCatalog } from '@features/work-orders/quotation/catalog'
 import { decodeQuotationDraftRecord, quotationDraftRecordFor } from '@features/work-orders/quotation/draft-codec'
-import { createEmptyQuotationDraft, isDirectQuotationCatalogKind, parseQuotationQuantity } from '@features/work-orders/quotation/model'
+import { createEmptyQuotationDraft, createQuotationGroup, isDirectQuotationCatalogKind, parseQuotationQuantity } from '@features/work-orders/quotation/model'
 
 function succeeded<T>(data: T): OperationSnapshot<T> {
   return { state: 'succeeded', data }
@@ -80,7 +80,7 @@ describe('G4-F quotation composition model and local draft recovery', () => {
     const stored = await repository.read<Readonly<Record<string, unknown>>>(identity)
     expect(stored.state).toBe('succeeded')
     expect(stored.data?.values).toEqual({
-      schemaVersion: 2,
+      schemaVersion: 3,
       quotationDraft: {
         workOrderId: String(identity.workOrderId),
         workflowNodeId: String(identity.workflowNodeId),
@@ -218,6 +218,52 @@ describe('G4-F quotation composition model and local draft recovery', () => {
     expect(reopened.localStateMessage).toContain('已恢复本地报价分组草稿')
   })
 
+  it('restores grouped schema v2 losslessly and writes v3 after a local edit', async () => {
+    const currentIdentity = identityFor()
+    const v2Draft = {
+      workOrderId: String(currentIdentity.workOrderId),
+      workflowNodeId: String(currentIdentity.workflowNodeId),
+      draftVersion: 9,
+      groups: [{
+        groupId: 'quotation-group-7',
+        repairParts: ['roof-path', 'roof-child'],
+        partDescription: '旧版组描述',
+        maintainAreaNum: '6.25',
+        projPackages: [{ selectionId: 'legacy-package-selection', kind: 'package', catalogId: 'legacy-package-id', label: '旧版套餐', unit: '套', quantity: 3 }],
+        procedures: [{ selectionId: 'legacy-procedure-selection', kind: 'procedure', catalogId: 'legacy-procedure-id', label: '旧版工序', unit: '项', quantity: 2 }],
+        materials: [{ selectionId: 'legacy-material-selection', kind: 'material', catalogId: 'legacy-material-id', label: '旧版材料', unit: '桶', quantity: 4 }],
+        measures: [{ selectionId: 'legacy-measure-selection', kind: 'measure', catalogId: 'legacy-measure-id', label: '旧版机措', unit: '次', quantity: 1 }],
+      }],
+    }
+    const originalRecord: ActionDraftRecord<Readonly<Record<string, unknown>>> = {
+      version: 1,
+      identity: currentIdentity,
+      values: { schemaVersion: 2, quotationDraft: v2Draft },
+      updatedAt: '2026-09-22T09:00:00.000Z',
+      status: 'unfinished',
+    }
+    await repository.write(originalRecord)
+
+    const store = useQuotationCompositionStore()
+    expect(await store.initialize({ identity: currentIdentity, repository, debounceMs: 60_000 })).toBe('restored')
+    expect(store.draft).toEqual(v2Draft)
+    expect(store.groups[0].projPackages[0].configuration).toBeUndefined()
+    expect(await repository.read<Readonly<Record<string, unknown>>>(currentIdentity)).toMatchObject({ data: originalRecord })
+
+    expect(store.updateGroupContext('quotation-group-7', { partDescription: '编辑后的组描述' }).state).toBe('succeeded')
+    expect((await store.flushDraft()).state).toBe('succeeded')
+    const saved = await repository.read<Readonly<Record<string, unknown>>>(currentIdentity)
+    expect(saved.data?.values).toEqual({
+      schemaVersion: 3,
+      quotationDraft: {
+        ...v2Draft,
+        draftVersion: 10,
+        groups: [{ ...v2Draft.groups[0], partDescription: '编辑后的组描述' }],
+      },
+    })
+    expect(store.groups[0].projPackages[0].configuration).toBeUndefined()
+  })
+
   it.each([
     ['user', { userId: 'quotation-user-B' }],
     ['work order', { workOrderId: 'quotation-work-order-B' }],
@@ -285,6 +331,67 @@ describe('G4-F quotation composition model and local draft recovery', () => {
       actionIntent: 'quotation',
     })).toMatchObject({ state: 'invalid' })
     expect(actionDraftStorageKey(identity)).toContain('quotation')
+  })
+
+  it('validates schema-v3 configured Package snapshots and rejects duplicate configured identity/layer', () => {
+    const currentIdentity = identityFor()
+    const configuredPackage = {
+      selectionId: 'quotation-selection-1',
+      kind: 'package' as const,
+      catalogId: 'provider-package-a',
+      label: '演示套餐',
+      quantity: 2,
+      configuration: {
+        procedures: [{ providerReferenceId: 'procedure-ref-a', catalogId: 'procedure-a', label: '演示工序' }],
+        materials: [{ providerComponentId: 'material-body-a', catalogId: 'material-a', label: '演示材料', layer: 1 }],
+        measures: [{ providerReferenceId: 'measure-ref-a', catalogId: 'measure-a', label: '演示机措' }],
+      },
+    }
+    const draft = {
+      ...createEmptyQuotationDraft(String(currentIdentity.workOrderId), String(currentIdentity.workflowNodeId)),
+      groups: [{ ...createQuotationGroup('group-v3', { repairParts: ['roof'] }), projPackages: [configuredPackage] }],
+    }
+    const record = quotationDraftRecordFor(currentIdentity, draft, '2026-09-22T09:00:00.000Z')
+    expect(record.values.schemaVersion).toBe(3)
+    expect(decodeQuotationDraftRecord(record, currentIdentity)).toMatchObject({ state: 'valid', draft })
+
+    const malformedProviderIdentity = JSON.parse(JSON.stringify(record)) as {
+      identity: ActionDraftIdentity
+      values: {
+        schemaVersion: number
+        quotationDraft: {
+          groups: Array<{
+            projPackages: Array<{
+              configuration: { procedures: Array<Record<string, unknown>> }
+            }>
+          }>
+        }
+      }
+    }
+    malformedProviderIdentity.values.quotationDraft.groups[0].projPackages[0]
+      .configuration.procedures[0].providerComponentId = 42
+    expect(decodeQuotationDraftRecord(malformedProviderIdentity, currentIdentity).state).toBe('invalid')
+
+    const duplicateLayer = {
+      ...draft,
+      groups: [{ ...draft.groups[0], projPackages: [{
+        ...configuredPackage,
+        configuration: {
+          ...configuredPackage.configuration,
+          materials: [
+            ...configuredPackage.configuration.materials,
+            { providerComponentId: 'material-body-b', catalogId: 'material-b', label: '同层另一材料', layer: 1 },
+          ],
+        },
+      }] }],
+    }
+    expect(decodeQuotationDraftRecord(quotationDraftRecordFor(currentIdentity, duplicateLayer, '2026-09-22T09:00:00.000Z'), currentIdentity).state).toBe('invalid')
+
+    const duplicatePackage = {
+      ...draft,
+      groups: [{ ...draft.groups[0], projPackages: [configuredPackage, { ...configuredPackage, selectionId: 'quotation-selection-2' }] }],
+    }
+    expect(decodeQuotationDraftRecord(quotationDraftRecordFor(currentIdentity, duplicatePackage, '2026-09-22T09:00:00.000Z'), currentIdentity).state).toBe('invalid')
   })
 
   it('retains legacy flat v1 drafts without migration or overwrite until explicit user disposition', async () => {

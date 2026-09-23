@@ -183,17 +183,34 @@ describe('G4-F Phase 1A quotation action foundation', () => {
       workflowNodeId: String(workflowNodeId),
       groups: [],
     })
+    const groupId = workspace.quotationComposition.createGroup({
+      repairParts: ['verified-roof-path'],
+      maintainAreaNum: '9.5',
+    }).data!
     const localDraftBeforeCatalogRead = JSON.stringify(workspace.quotationComposition.draft)
+    expect(workspace.configureQuotationPackageSelection(groupId, 'mock-catalog-package-basic', []).state).toBe('failed_terminal')
     workspace.quotationCatalogBrowser.open('package')
     await workspace.quotationCatalogBrowser.loadList('package')
     expect(workspace.quotationCatalogBrowser.catalogStatesByKind.package).toBe('succeeded')
     expect(workspace.quotationCatalogBrowser.visibleCatalogItems.map((item) => item.id)).toContain('mock-catalog-package-basic')
+    expect(workspace.configureQuotationPackageSelection(groupId, 'unlisted-package', []).state).toBe('failed_terminal')
+    expect(workspace.configureQuotationPackageSelection(groupId, 'mock-catalog-package-basic', []).state).toBe('failed_terminal')
     await workspace.quotationCatalogBrowser.openPackageDetail('mock-catalog-package-basic')
     expect(workspace.quotationCatalogBrowser.packageDetailState).toBe('succeeded')
-    expect(workspace.quotationCatalogBrowser.packageMaterialLayers.map((layer) => layer.label)).toEqual(['层级：mock-layer-1'])
+    expect(workspace.quotationCatalogBrowser.packageMaterialLayers.map((layer) => layer.label)).toEqual(['层级：mock-layer-1', '层级：2'])
     expect(JSON.stringify(workspace.quotationComposition.draft)).toBe(localDraftBeforeCatalogRead)
-
-    const groupId = workspace.quotationComposition.createGroup({ repairParts: ['verified-roof-path'] }).data!
+    const packageChoices = [
+      { layer: 'mock-layer-1', componentId: 'mock-package-material-row', referenceId: 'mock-catalog-material-sealant' },
+      { layer: 2, componentId: 'mock-package-material-row-layer-2', referenceId: 'mock-catalog-material-layer-2' },
+    ] as const
+    expect(workspace.configureQuotationPackageSelection(groupId, 'unlisted-package', packageChoices).state).toBe('failed_terminal')
+    expect(workspace.configureQuotationPackageSelection(groupId, 'mock-catalog-package-basic', packageChoices).state).toBe('succeeded')
+    expect(workspace.quotationComposition.selectionsFor(groupId, 'package')).toMatchObject([{
+      kind: 'package',
+      catalogId: 'mock-catalog-package-basic',
+      quantity: 9.5,
+      configuration: { materials: [{ layer: 'mock-layer-1' }, { layer: 2 }] },
+    }])
     for (const kind of ['procedure', 'material', 'measure'] as const) {
       workspace.quotationCatalogBrowser.open(kind)
       await workspace.quotationCatalogBrowser.loadList(kind)

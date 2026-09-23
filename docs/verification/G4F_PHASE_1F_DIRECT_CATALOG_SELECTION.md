@@ -22,8 +22,10 @@ Phase 1E read contracts.
 - Within a group, the same `kind + catalogId` is idempotent: reselecting it
   leaves the draft and quantity unchanged. The same provider item may still be
   selected once in each of multiple groups.
-- `Package` remains read-only: package detail and observed material layers can
-  be browsed, but package rows cannot be inserted as ordinary selections.
+- In Phase 1F, `Package` remained outside draft composition: detail and
+  observed material layers were browsable, but Package could not use the
+  generic direct-selection bridge. Phase 1G adds a distinct, configured local
+  Package bridge; the Phase 1F direct allowlist remains unchanged.
 - Mock and Real use the same normalized catalog read and local-selection path.
   Real catalog reads do not dispatch a business mutation.
 
@@ -46,8 +48,8 @@ not a backend quotation and must not be represented as one.
   append a row or increment quantity; all three remain independently selectable
   in another repair-part group.
 - H5 browser smoke proves passive browsing, explicit direct selection into the
-  opened repair-part group, Package read-only behavior, and no external network
-  requests.
+  opened repair-part group, Package exclusion from the generic direct bridge,
+  and no external network requests.
 
 ## Verification
 

@@ -29,6 +29,8 @@ import type {
   NavigationPort,
   QuotationCatalogReadPort,
   QuotationCatalogItemRead,
+  QuotationPackageDetailRead,
+  QuotationPackageRead,
   SessionSnapshot,
   SurveyLeakageCauseProviderPort,
   SurveyLeakageCauseRow,
@@ -78,6 +80,7 @@ import { surveyMediaDescriptorFor, surveyMediaPostUploadPolicyFor } from './surv
 import { useQuotationCompositionStore } from './quotation/composition-store'
 import { useQuotationCatalogBrowserStore } from './quotation/catalog-browser-store'
 import { isDirectQuotationCatalogKind, type QuotationLineKind } from './quotation/model'
+import type { QuotationPackageMaterialChoice } from './quotation/package-configuration'
 import {
   normalizeSurveyLeakageCauseSelection,
   surveyLeakageCauseCurrentPart as currentPartForLeakageCause,
@@ -1200,6 +1203,62 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     return quotationComposition.addCatalogReadItem(groupId, source)
   }
 
+  function resolveQuotationPackageConfigurationInput(
+    groupId: string,
+    packageId: string,
+  ): OperationSnapshot<{ readonly packageRow: QuotationPackageRead; readonly detail: QuotationPackageDetailRead }> {
+    const currentDescriptor = descriptor.value
+    if (
+      loadState.value !== 'succeeded'
+      || currentDescriptor?.actionIntent !== 'place_order'
+      || currentDescriptor.contentKind !== 'quotation'
+      || currentDescriptor.execution !== 'enabled'
+      || businessResult.value === 'succeeded'
+    ) return failure('unsupported_capability', '当前报价工作区不可配置套餐')
+    if (!quotationComposition.isGroupEditable(groupId)) {
+      return failure('validation', '目标维修部位组不存在或当前不可编辑')
+    }
+    const packageRow = quotationCatalogBrowser.packageCandidateFor(packageId)
+    if (!packageRow) return failure('validation', '套餐不属于当前已成功读取的目录结果')
+    const detail = quotationCatalogBrowser.successfulPackageDetailFor(packageId)
+    if (!detail) return failure('validation', '请先读取并核对当前套餐详情')
+    return { state: 'succeeded', data: { packageRow, detail } }
+  }
+
+  function validateQuotationPackageConfiguration(
+    groupId: string,
+    packageId: string,
+    materialChoices: readonly QuotationPackageMaterialChoice[],
+  ): OperationSnapshot<void> {
+    const source = resolveQuotationPackageConfigurationInput(groupId, packageId)
+    if (source.state !== 'succeeded' || !source.data) {
+      return { state: source.state, ...(source.error ? { error: source.error } : {}) }
+    }
+    return quotationComposition.validatePackageReadItem(
+      groupId,
+      source.data.packageRow,
+      source.data.detail,
+      materialChoices,
+    )
+  }
+
+  function configureQuotationPackageSelection(
+    groupId: string,
+    packageId: string,
+    materialChoices: readonly QuotationPackageMaterialChoice[],
+  ): OperationSnapshot<void> {
+    const source = resolveQuotationPackageConfigurationInput(groupId, packageId)
+    if (source.state !== 'succeeded' || !source.data) {
+      return { state: source.state, ...(source.error ? { error: source.error } : {}) }
+    }
+    return quotationComposition.configurePackageReadItem(
+      groupId,
+      source.data.packageRow,
+      source.data.detail,
+      materialChoices,
+    )
+  }
+
   async function clearPersistedDraft(): Promise<OperationSnapshot<void>> {
     const configured = dependencies
     const currentIdentity = identity
@@ -1736,6 +1795,8 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     quotationContentState,
     quotationComposition,
     quotationCatalogBrowser,
+    validateQuotationPackageConfiguration,
+    configureQuotationPackageSelection,
     appointmentFields,
     appointmentFieldRoles,
     appointmentVisitIntent,

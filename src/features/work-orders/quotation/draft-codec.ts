@@ -5,17 +5,16 @@ import {
 } from '@runtimes/action'
 
 import {
-  QUOTATION_LINE_KINDS,
   type QuotationDraft,
   type QuotationGroup,
   type QuotationLineKind,
   type QuotationSelection,
 } from './model'
 
-const QUOTATION_DRAFT_SCHEMA_VERSION = 2
+const QUOTATION_DRAFT_SCHEMA_VERSION = 3
 
 export interface QuotationDraftRecordValues extends Readonly<Record<string, unknown>> {
-  readonly schemaVersion: 2
+  readonly schemaVersion: 3
   readonly quotationDraft: QuotationDraft
 }
 
@@ -40,7 +39,54 @@ function nonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0
 }
 
-function validSelection(value: unknown, expectedKind: QuotationLineKind): value is QuotationSelection {
+function validConfiguredComponent(value: unknown, material: boolean): boolean {
+  const component = record(value)
+  if (!component) return false
+  const expectedKeys = [
+    ...(Object.prototype.hasOwnProperty.call(component, 'providerComponentId') ? ['providerComponentId'] : []),
+    ...(Object.prototype.hasOwnProperty.call(component, 'providerReferenceId') ? ['providerReferenceId'] : []),
+    'catalogId',
+    'label',
+    ...(Object.prototype.hasOwnProperty.call(component, 'unit') ? ['unit'] : []),
+    ...(material ? ['layer'] : []),
+  ]
+  const hasProviderIdentity = nonEmptyString(component.providerComponentId)
+    || nonEmptyString(component.providerReferenceId)
+  const optionalProviderIdentitiesAreValid = (component.providerComponentId === undefined
+    || nonEmptyString(component.providerComponentId))
+    && (component.providerReferenceId === undefined || nonEmptyString(component.providerReferenceId))
+  const layerIsValid = !material
+    || (typeof component.layer === 'string' && component.layer.trim().length > 0)
+    || (typeof component.layer === 'number' && Number.isFinite(component.layer))
+  return exactKeys(component, expectedKeys)
+    && hasProviderIdentity
+    && optionalProviderIdentitiesAreValid
+    && nonEmptyString(component.catalogId)
+    && nonEmptyString(component.label)
+    && (component.unit === undefined || nonEmptyString(component.unit))
+    && layerIsValid
+}
+
+function validPackageConfiguration(value: unknown): boolean {
+  const configuration = record(value)
+  if (!(Boolean(configuration)
+    && exactKeys(configuration!, ['procedures', 'materials', 'measures'])
+    && Array.isArray(configuration!.procedures)
+    && configuration!.procedures.every((component) => validConfiguredComponent(component, false))
+    && Array.isArray(configuration!.materials)
+    && configuration!.materials.every((component) => validConfiguredComponent(component, true))
+    && Array.isArray(configuration!.measures)
+    && configuration!.measures.every((component) => validConfiguredComponent(component, false)))) return false
+  const materialLayers = (configuration!.materials as Array<Record<string, unknown>>)
+    .map((component) => JSON.stringify([typeof component.layer, component.layer]))
+  return new Set(materialLayers).size === materialLayers.length
+}
+
+function validSelection(
+  value: unknown,
+  expectedKind: QuotationLineKind,
+  schemaVersion: 2 | 3,
+): value is QuotationSelection {
   const selection = record(value)
   if (!selection) return false
   const expectedKeys = [
@@ -50,6 +96,9 @@ function validSelection(value: unknown, expectedKind: QuotationLineKind): value 
     'label',
     'quantity',
     ...(Object.prototype.hasOwnProperty.call(selection, 'unit') ? ['unit'] : []),
+    ...(schemaVersion === 3 && expectedKind === 'package' && Object.prototype.hasOwnProperty.call(selection, 'configuration')
+      ? ['configuration']
+      : []),
   ]
   return exactKeys(selection, expectedKeys)
     && selection.kind === expectedKind
@@ -60,13 +109,16 @@ function validSelection(value: unknown, expectedKind: QuotationLineKind): value 
     && typeof selection.quantity === 'number'
     && Number.isFinite(selection.quantity)
     && selection.quantity > 0
+    && (schemaVersion === 2 || expectedKind !== 'package'
+      || !Object.prototype.hasOwnProperty.call(selection, 'configuration')
+      || validPackageConfiguration(selection.configuration))
 }
 
-function validSelectionList(value: unknown, kind: QuotationLineKind): value is readonly QuotationSelection[] {
-  return Array.isArray(value) && value.every((selection) => validSelection(selection, kind))
+function validSelectionList(value: unknown, kind: QuotationLineKind, schemaVersion: 2 | 3): value is readonly QuotationSelection[] {
+  return Array.isArray(value) && value.every((selection) => validSelection(selection, kind, schemaVersion))
 }
 
-function validGroup(value: unknown): value is QuotationGroup {
+function validGroup(value: unknown, schemaVersion: 2 | 3): value is QuotationGroup {
   const group = record(value)
   if (!group) return false
   const expectedKeys = [
@@ -85,10 +137,10 @@ function validGroup(value: unknown): value is QuotationGroup {
     && group.repairParts.every(nonEmptyString)
     && typeof group.partDescription === 'string'
     && typeof group.maintainAreaNum === 'string'
-    && validSelectionList(group.projPackages, 'package')
-    && validSelectionList(group.procedures, 'procedure')
-    && validSelectionList(group.materials, 'material')
-    && validSelectionList(group.measures, 'measure')
+    && validSelectionList(group.projPackages, 'package', schemaVersion)
+    && validSelectionList(group.procedures, 'procedure', schemaVersion)
+    && validSelectionList(group.materials, 'material', schemaVersion)
+    && validSelectionList(group.measures, 'measure', schemaVersion)
 }
 
 export function quotationDraftRecordFor(
@@ -144,7 +196,7 @@ export function decodeQuotationDraftRecord(
   }
 
   if (
-    values.schemaVersion !== QUOTATION_DRAFT_SCHEMA_VERSION ||
+    (values.schemaVersion !== 2 && values.schemaVersion !== QUOTATION_DRAFT_SCHEMA_VERSION) ||
     !exactKeys(draftValue, ['workOrderId', 'workflowNodeId', 'draftVersion', 'groups']) ||
     !nonEmptyString(draftValue.workOrderId) ||
     !nonEmptyString(draftValue.workflowNodeId) ||
@@ -154,18 +206,24 @@ export function decodeQuotationDraftRecord(
     !Number.isSafeInteger(draftValue.draftVersion) ||
     draftValue.draftVersion < 1 ||
     !Array.isArray(draftValue.groups) ||
-    !draftValue.groups.every(validGroup)
+    !draftValue.groups.every((group) => validGroup(group, values.schemaVersion as 2 | 3))
   ) return { state: 'invalid', reason: '新版报价分组草稿内容无效，未覆盖原记录。' }
 
   const groups = draftValue.groups as QuotationGroup[]
   const groupIds = new Set(groups.map((group) => group.groupId))
+  const duplicateConfiguredPackage = values.schemaVersion === 3 && groups.some((group) => {
+    const configuredIds = group.projPackages
+      .filter((selection) => selection.configuration)
+      .map((selection) => selection.catalogId)
+    return new Set(configuredIds).size !== configuredIds.length
+  })
   const selectionIds = groups.flatMap((group) => [
     ...group.projPackages,
     ...group.procedures,
     ...group.materials,
     ...group.measures,
   ]).map((selection) => selection.selectionId)
-  if (groupIds.size !== groups.length || new Set(selectionIds).size !== selectionIds.length) {
+  if (groupIds.size !== groups.length || new Set(selectionIds).size !== selectionIds.length || duplicateConfiguredPackage) {
     return { state: 'invalid', reason: '报价分组草稿存在重复身份，未覆盖原记录。' }
   }
 
@@ -180,7 +238,16 @@ export function decodeQuotationDraftRecord(
         repairParts: [...group.repairParts],
         partDescription: group.partDescription,
         maintainAreaNum: group.maintainAreaNum,
-        projPackages: group.projPackages.map((selection) => ({ ...selection })),
+        projPackages: group.projPackages.map((selection) => ({
+          ...selection,
+          ...(selection.configuration ? {
+            configuration: {
+              procedures: selection.configuration.procedures.map((component) => ({ ...component })),
+              materials: selection.configuration.materials.map((component) => ({ ...component })),
+              measures: selection.configuration.measures.map((component) => ({ ...component })),
+            },
+          } : {}),
+        })),
         procedures: group.procedures.map((selection) => ({ ...selection })),
         materials: group.materials.map((selection) => ({ ...selection })),
         measures: group.measures.map((selection) => ({ ...selection })),
