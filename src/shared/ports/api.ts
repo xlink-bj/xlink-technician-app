@@ -158,6 +158,8 @@ export interface WorkflowNodeRead {
   readonly definitionId?: WorkflowDefinitionId
   readonly runId?: WorkflowRunId
   readonly parentNodeId?: WorkflowNodeRuntimeId
+  /** R1 nodeDef.nodeTypeDef, kept opaque; usable only for its verified subworkflow command contract. */
+  readonly childWorkflowDefinitionId?: WorkflowDefinitionId
   readonly displayName?: string
   /** Adapter-normalized opaque form definition identity, when supplied by the node. */
   readonly formDefinitionId?: FormDefinitionId
@@ -172,6 +174,28 @@ export interface WorkflowNodeRead {
   readonly visibility?: WorkflowNodeVisibilityEvidence
   readonly isSystem?: boolean
   readonly isSentinel?: boolean
+}
+
+/** Minimal authoritative Order read model; it never retains the raw response envelope. */
+export interface QuotationOrderRead {
+  readonly id: string
+  readonly type: number
+  readonly serviceAppointmentId: string
+  readonly state?: number
+  readonly processState?: number
+  readonly workflowId?: string
+  readonly ownerName?: string
+  readonly description?: string
+  readonly originPrice?: number
+  readonly totalPrice?: number
+  readonly preferentialAmount?: number
+  readonly discount?: number
+  readonly coupons?: string
+  readonly qiniuList?: readonly string[]
+  readonly bjProducts: Readonly<Record<string, unknown>>
+  /** Explicitly projected Order entity fields used only for a guarded replace-snapshot update; never persisted in a local draft. */
+  readonly replaceSnapshot: Readonly<Record<string, unknown>>
+  readonly updateTime?: string
 }
 
 export interface FormDefinitionRead {
@@ -395,6 +419,7 @@ export interface TechnicianApiReadPort {
     query: WorkOrderListQuery,
   ): Promise<OperationSnapshot<ReadPage<WorkOrderSummary>>>
   getWorkOrderDetail(id: WorkOrderId): Promise<OperationSnapshot<WorkOrderDetail>>
+  getQuotationOrderById?(id: string): Promise<OperationSnapshot<QuotationOrderRead>>
   getWorkflowDefinition(
     id: WorkflowDefinitionId,
   ): Promise<OperationSnapshot<WorkflowDefinitionRead>>

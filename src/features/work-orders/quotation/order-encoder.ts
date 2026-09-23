@@ -21,6 +21,7 @@ export interface R1OfficialOrderType1Payload {
     readonly coupons: ''
     readonly couponsVal: 0
     readonly couponsName: ''
+    readonly isCreateBjdPDF: '1'
   }
 }
 
@@ -64,16 +65,28 @@ function packageMaterialQuantityIssue(selection: Extract<HydratedQuotationSelect
       selectionId: selection.selection.selectionId,
     }
   }
-  if (selection.materials.length === 0) return null
-  // R1's active fillOrder derives these quantities from package quantity,
-  // coefficient and material.spec. Phase 1H explicitly does not authorize
-  // implementing that calculation, so a complete Order payload cannot be emitted.
-  return {
-    code: 'encoding.package_material_quantity_not_authorized',
-    message: '套餐材料用量依赖 R1 的系数/规格推导；该计算未获本阶段授权，不能生成完整订单载荷。',
-    groupId,
-    selectionId: selection.selection.selectionId,
+  for (const row of selection.materials) {
+    const coefficient = row.coefficient
+    const spec = row.item?.specification?.trim() ? Number(row.item.specification) : Number.NaN
+    if (coefficient === undefined || !Number.isFinite(coefficient) || coefficient <= 0
+      || !Number.isFinite(spec) || spec <= 0
+      || !Number.isFinite(selection.selection.quantity) || selection.selection.quantity <= 0) {
+      return {
+        code: 'encoding.package_material_quantity_contract_invalid',
+        message: '套餐材料系数、规格或套餐数量缺失/无效，不能安全推导材料用量。',
+        groupId,
+        selectionId: selection.selection.selectionId,
+      }
+    }
   }
+  return null
+}
+
+function packageMaterialNumber(
+  packageQuantity: number,
+  row: Extract<HydratedQuotationSelection, { kind: 'package' }>['materials'][number],
+): number {
+  return Math.ceil(packageQuantity * row.coefficient! / Number(row.item!.specification))
 }
 
 function componentProcedureFor(
@@ -220,6 +233,13 @@ export function encodeR1OfficialOrderType1(input: {
       if (selection.kind === 'package') {
         const blocker = packageMaterialQuantityIssue(selection, group.groupId)
         if (blocker) issues.push(blocker)
+      } else if (selection.kind === 'material' && selection.item.spuId) {
+        issues.push({
+          code: 'encoding.material_sku_path_not_authorized',
+          message: '此材料使用 SPU/SKU 规格路径；该选择语义未纳入本阶段。',
+          groupId: group.groupId,
+          selectionId: selection.selection.selectionId,
+        })
       }
     }
     const categoryData = {
@@ -265,6 +285,7 @@ export function encodeR1OfficialOrderType1(input: {
             materialId: row.item!.id,
             coefficient: row.coefficient,
             coefficientUnit: row.coefficientUnit,
+            number: packageMaterialNumber(selection.selection.quantity, row),
             material: {
               _id: row.item!.id,
               name: row.item!.name,
@@ -336,6 +357,7 @@ export function encodeR1OfficialOrderType1(input: {
         coupons: '',
         couponsVal: 0,
         couponsName: '',
+        isCreateBjdPDF: '1',
       },
     },
   }

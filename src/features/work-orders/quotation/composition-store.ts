@@ -409,6 +409,25 @@ export const useQuotationCompositionStore = defineStore('quotationComposition', 
     return succeeded()
   }
 
+  async function restoreServerOrderDraft(source: QuotationDraft): Promise<OperationSnapshot<void>> {
+    if (!identity || localState.value !== 'fresh' || draft.value?.groups.length !== 0) {
+      return failed('unsupported_capability', '已有本地草稿未完成处理，服务器订单不会覆盖本地内容。')
+    }
+    if (String(source.workOrderId) !== String(identity.workOrderId) || source.groups.length === 0) {
+      return failed('validation', '服务器订单与当前工单不匹配，未恢复到本地草稿。')
+    }
+    draft.value = {
+      ...source,
+      workOrderId: String(identity.workOrderId),
+      workflowNodeId: String(identity.workflowNodeId),
+      draftVersion: 1,
+    }
+    quantityTextBySelection.value = inputValuesFor(draft.value)
+    localState.value = 'restored'
+    localStateMessage.value = '已从服务器订单恢复分组；目录身份将重新核对后才允许编辑。'
+    return persist()
+  }
+
   async function discardStoredDraftAndStartFresh(expectedState: 'invalid' | 'legacy_requires_action'): Promise<OperationSnapshot<void>> {
     if (!repository || !identity || localState.value !== expectedState) {
       return failed('validation', '当前没有需要显式处理的旧草稿')
@@ -445,6 +464,7 @@ export const useQuotationCompositionStore = defineStore('quotationComposition', 
     setQuantityText,
     removeSelection,
     flushDraft,
+    restoreServerOrderDraft,
     discardInvalidDraft: () => discardStoredDraftAndStartFresh('invalid'),
     discardLegacyDraft: () => discardStoredDraftAndStartFresh('legacy_requires_action'),
     selectionsFor: (groupId: string, kind: QuotationLineKind) => {

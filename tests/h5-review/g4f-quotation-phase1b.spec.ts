@@ -126,7 +126,7 @@ test('Phase 1F browses all catalog kinds and explicitly adds only direct selecti
   await expectSafe(page, diagnostics)
 })
 
-test('Phase 1H shows local engine readiness and source-data blocking without any submit action', async ({ page }) => {
+test('isolated Phase 1B review harness keeps blocked local preview separate from real Order submission', async ({ page }) => {
   const diagnostics = await installSafetyGuards(page)
   await openScenario(page, 'empty')
   await page.getByTestId('quotation-add-group').click()
@@ -144,9 +144,11 @@ test('Phase 1H shows local engine readiness and source-data blocking without any
   await page.getByTestId(`quotation-group-quantity-${groupId}`).locator('input').fill('12.5')
   await expect(page.getByTestId('quotation-engine-blocked')).toContainText('指导单价缺失')
   await expect(page.getByTestId('quotation-engine-blocked')).toContainText('材料单价缺失')
-  await expect(page.getByTestId('quotation-engine-local-only')).toContainText('不会提交报价')
+  await expect(page.getByTestId('quotation-engine-local-only')).toContainText('只有单独确认')
+  await expect(page.getByTestId('quotation-engine-local-only')).toContainText('不会完成当前工单工作流')
   await expect(page.getByTestId('quotation-local-gross-total')).toHaveCount(0)
   await expect(page.getByTestId('action-workspace-submit')).toHaveCount(0)
+  await expect(page.getByTestId('quotation-order-confirmation')).toHaveCount(0)
   await expect(page.getByTestId('dynamic-form-save')).toHaveCount(0)
   await page.getByTestId('quotation-engine-readiness').scrollIntoViewIfNeeded()
   await page.screenshot({ path: resolve(output, '04-engine-blocked-source-prices.png'), animations: 'disabled' })

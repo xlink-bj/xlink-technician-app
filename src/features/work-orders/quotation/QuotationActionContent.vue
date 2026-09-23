@@ -39,6 +39,14 @@
         tone="success"
         quiet
       />
+      <AppStatus
+        v-if="workspace.quotationEditState.message"
+        class="quotation-content__local-status"
+        :message="workspace.quotationEditState.message"
+        :tone="workspace.quotationEditState.state === 'blocked' ? 'warning' : 'neutral'"
+        quiet
+        data-testid="quotation-edit-state"
+      />
 
       <view class="quotation-content__engine" data-testid="quotation-engine-readiness">
         <AppLoadingState
@@ -74,9 +82,30 @@
               role="alert"
             >{{ message }}</text>
           </view>
-        <text class="quotation-content__engine-note" data-testid="quotation-engine-local-only">此处仅为本地校验与计算，不会提交报价、确认订单或完成工作流。</text>
+          <text class="quotation-content__engine-note" data-testid="quotation-engine-local-only">以上为本机核验预览；只有单独确认“提交订单/报价方案”后才会创建服务器订单，不会完成当前工单工作流。</text>
         </template>
         <text v-else class="quotation-content__engine-note" data-testid="quotation-engine-local-only">填写完整分组后，系统会重新核对当前目录数据。</text>
+      </view>
+
+      <view class="quotation-content__submission" data-testid="quotation-order-submit-boundary">
+        <AppStatus
+          v-if="workspace.quotationOrderState.message"
+          :message="workspace.quotationOrderState.message"
+          :tone="workspace.quotationOrderState.state === 'succeeded' ? 'success' : workspace.quotationOrderState.state === 'failed_terminal' || workspace.quotationOrderState.state === 'failed_ambiguous_after_dispatch' ? 'warning' : 'neutral'"
+          quiet
+        />
+        <AppButton
+          v-if="workspace.quotationOrderState.state === 'write_succeeded_readback_pending'"
+          variant="secondary"
+          block
+          data-testid="quotation-order-readback-retry"
+          @tap="workspace.retryQuotationOrderReadback"
+        >刷新订单状态（只读）</AppButton>
+        <view
+          v-if="workspace.quotationOrderState.state === 'succeeded' && workspace.quotationOrderState.order?.qiniuList?.length"
+          class="quotation-content__submitted-document"
+          data-testid="quotation-order-authoritative-document"
+        >服务器已返回报价单文件</view>
       </view>
 
       <view v-if="composition.localState === 'legacy_requires_action'" class="quotation-content__blocked" data-testid="quotation-draft-legacy">
@@ -559,6 +588,7 @@ function closeCatalog(): void {
   packageMaterialChoicesByLayer.value = {}
 }
 
+
 function selectCatalogKind(kind: QuotationLineKind): void {
   catalogSelectionError.value = ''
   catalogBrowser.selectKind(kind)
@@ -704,6 +734,8 @@ function catalogMetadata(item: QuotationCatalogItemRead): string {
 .quotation-content__engine-blocked { margin-top: var(--app-space-xs); }
 .quotation-content__engine-issue { color: var(--app-color-text-secondary); display: block; font-size: var(--app-font-meta); line-height: 1.5; margin-top: var(--app-space-xs); }
 .quotation-content__engine-note { margin-top: var(--app-space-xs); }
+.quotation-content__submission { border-top: 1rpx solid var(--app-color-divider); display: flex; flex-direction: column; gap: var(--app-space-sm); margin-top: var(--app-space-md); padding-top: var(--app-space-md); }
+.quotation-content__submitted-document { color: var(--app-color-primary); font-size: var(--app-font-body); }
 .quotation-content__empty { align-items: center; display: flex; flex-direction: column; padding: 48rpx var(--app-space-sm) 16rpx; text-align: center; }
 .quotation-content__empty-mark { align-items: center; background: var(--app-color-primary-soft); border-radius: 999rpx; color: var(--app-color-primary); display: flex; font-size: 46rpx; height: 80rpx; justify-content: center; width: 80rpx; }
 .quotation-content__empty-title, .quotation-content__blocked-title { color: var(--app-color-text-primary); display: block; font-size: var(--app-font-value); font-weight: 800; margin-top: var(--app-space-md); }

@@ -19,17 +19,26 @@
     :display-number="workspace.detail?.displayNumber"
     :lifecycle="workspace.lifecycle"
     :draft-status="workspace.draftStatus"
-    :can-submit="false"
-    submit-label="报价操作未开放"
+    :can-submit="workspace.canSubmitQuotation"
+    :transitioning="workspace.quotationOrderState.state === 'submitting'"
+    :submit-label="workspace.quotationOrderState.state === 'submitting' ? '提交中…' : '提交订单/报价方案'"
+    @submit="quotationConfirmOpen = true"
   >
     <QuotationActionContent
       :state="quotationContentViewState"
       @retry="reload"
       @back="exit"
     />
-    <template #actions>
-      <text class="quotation-readonly-note" data-testid="quotation-readonly-note">报价草稿仅保存在本机，不会提交报价</text>
-    </template>
+    <view v-if="quotationConfirmOpen" class="quotation-confirm-backdrop" role="presentation">
+      <view class="quotation-confirm-sheet" role="dialog" aria-modal="true" data-testid="quotation-order-confirmation">
+        <text class="quotation-confirm-title">确认提交订单/报价方案？</text>
+        <text class="workspace-state-copy">提交会创建服务器订单，并触发后端已验证的报价单生成、工单金额更新等副作用；不会完成当前工单工作流。提交后请勿重复操作。</text>
+        <view class="quotation-confirm-actions">
+          <AppButton variant="secondary" @tap="quotationConfirmOpen = false">返回检查</AppButton>
+          <AppButton data-testid="quotation-order-confirm" @tap="confirmQuotationSubmit">确认提交</AppButton>
+        </view>
+      </view>
+    </view>
   </ActionWorkspaceShell>
 
   <AppLoadingState v-else-if="workspace.loadState === 'loading'" variant="workspace" label="正在准备操作内容" />
@@ -219,8 +228,10 @@ const routeReady = ref(false)
 const routeId = ref<ReturnType<typeof parseActionWorkspaceId>>(null)
 const routeNodeId = ref<ReturnType<typeof parseActionWorkspaceNodeId>>(null)
 const routeAction = ref<string | undefined>(undefined)
+const routeQuotationOrderId = ref<string | undefined>(undefined)
 const routeError = ref('')
 const isNavigating = ref(false)
+const quotationConfirmOpen = ref(false)
 
 const canAccess = computed(() => hasAuthenticatedSession(session.status, session.session))
 const appointmentDisplay = computed(() => appointmentDisplayFor(workspace.appointmentTimeValue))
@@ -229,7 +240,7 @@ const quotationContentViewState = computed(() => workspace.quotationContentState
   ? 'loading'
   : workspace.quotationContentState)
 
-function loadWorkspace(): void {
+async function loadWorkspace(): Promise<void> {
   if (!routeReady.value || session.status !== 'authenticated') return
   if (!routeId.value || !routeNodeId.value) {
     routeError.value = 'invalid-route'
@@ -237,17 +248,21 @@ function loadWorkspace(): void {
     return
   }
   routeError.value = ''
-  void workspace.ensureLoaded({
+  const loaded = await workspace.ensureLoaded({
     workOrderId: routeId.value,
     workflowNodeId: routeNodeId.value,
     ...(routeAction.value ? { actionIntent: routeAction.value } : {}),
   })
+  if (loaded.state === 'succeeded' && routeQuotationOrderId.value && workspace.descriptor?.contentKind === 'quotation') {
+    await workspace.loadQuotationOrderForEdit(routeQuotationOrderId.value)
+  }
 }
 
 onLoad((options) => {
   routeId.value = parseActionWorkspaceId(options?.id)
   routeNodeId.value = parseActionWorkspaceNodeId(options?.node)
   routeAction.value = typeof options?.action === 'string' ? options.action : undefined
+  routeQuotationOrderId.value = typeof options?.orderId === 'string' && options.orderId.trim() ? options.orderId.trim() : undefined
   routeReady.value = true
 })
 
@@ -303,6 +318,11 @@ async function submitWorkspace(): Promise<void> {
     return
   }
   await continueToConfirmation()
+}
+
+async function confirmQuotationSubmit(): Promise<void> {
+  quotationConfirmOpen.value = false
+  await workspace.submitQuotationOrder()
 }
 
 function actionErrorCopy(error: OperationError | null): string {
@@ -393,5 +413,9 @@ function actionErrorCopy(error: OperationError | null): string {
 .action-success-copy { color: var(--app-color-text-secondary); font-size: var(--app-font-body); margin-top: var(--app-space-sm); }
 .action-success-detail { margin-bottom: var(--app-space-xs); }
 .quotation-readonly-note { color: var(--app-color-text-secondary); display: block; font-size: var(--app-font-meta); padding: var(--app-space-md) 0; text-align: center; }
+.quotation-confirm-backdrop { align-items: center; background: rgba(20, 32, 52, .42); display: flex; inset: 0; justify-content: center; padding: var(--app-page-gutter); position: fixed; z-index: 1100; }
+.quotation-confirm-sheet { background: var(--app-color-surface); border: 1rpx solid var(--app-color-border); border-radius: var(--app-radius-card); box-sizing: border-box; max-width: 640rpx; padding: var(--app-card-padding); width: 100%; }
+.quotation-confirm-title { color: var(--app-color-text-primary); display: block; font-size: var(--app-font-section-title); font-weight: 800; }
+.quotation-confirm-actions { display: flex; gap: var(--app-space-sm); justify-content: flex-end; margin-top: var(--app-space-lg); }
 
 </style>
