@@ -305,6 +305,8 @@ export interface QuotationPackageRead extends QuotationCatalogItemBaseRead {
   readonly code?: string
   readonly type?: string
   readonly ageLimit?: number
+  /** R1 `exts.pricingMethod`; only `1` selects the SKU-based package path. */
+  readonly pricingMethod?: string
   /** R1 package repair-part contract is retained as received, not interpreted here. */
   readonly repairPart?: string
 }
@@ -326,6 +328,8 @@ export interface QuotationMaterialRead extends QuotationCatalogItemBaseRead {
   readonly materialUnit?: string
   readonly specUnit?: string
   readonly type?: number
+  /** R1 SKU rows carry `spuid`; SKU-dependent prices are not enabled in Phase 1H. */
+  readonly spuId?: string
 }
 
 export interface QuotationMeasureRead extends QuotationCatalogItemBaseRead {

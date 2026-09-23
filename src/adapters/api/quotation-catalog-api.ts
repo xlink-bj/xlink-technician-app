@@ -95,10 +95,12 @@ function catalogItemBase(record: AdapterRecord): QuotationCatalogItemBaseRead {
 
 function packageItem(raw: unknown): QuotationPackageRead {
   const record = asRecord(raw, 'quotation package')
+  const exts = optionalRecord(record.exts)
   const type = optionalString(record, ['type'])
   const code = optionalString(record, ['code'])
   const ageLimit = optionalNonNegativeInteger(record, ['agelimit'])
   const repairPart = optionalString(record, ['repairPart'])
+  const pricingMethod = exts ? optionalString(exts, ['pricingMethod']) : undefined
   return {
     ...catalogItemBase(record),
     kind: 'package',
@@ -106,6 +108,7 @@ function packageItem(raw: unknown): QuotationPackageRead {
     ...(type ? { type } : {}),
     ...(code ? { code } : {}),
     ...(ageLimit === undefined ? {} : { ageLimit }),
+    ...(pricingMethod ? { pricingMethod } : {}),
     ...(repairPart ? { repairPart } : {}),
   }
 }
@@ -121,6 +124,7 @@ function procedureItem(raw: unknown): QuotationProcedureRead {
 
 function materialItem(raw: unknown): QuotationMaterialRead {
   const record = asRecord(raw, 'quotation material')
+  const spuId = optionalString(record, ['spuid'])
   const code = optionalString(record, ['code'])
   const materialUnit = optionalString(record, ['materialUnit'])
   const specUnit = optionalString(record, ['specUnit'])
@@ -133,6 +137,7 @@ function materialItem(raw: unknown): QuotationMaterialRead {
     ...(materialUnit ? { materialUnit } : {}),
     ...(specUnit ? { specUnit } : {}),
     ...(type === undefined ? {} : { type }),
+    ...(spuId ? { spuId } : {}),
   }
 }
 

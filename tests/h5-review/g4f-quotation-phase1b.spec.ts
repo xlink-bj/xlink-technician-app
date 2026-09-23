@@ -126,6 +126,33 @@ test('Phase 1F browses all catalog kinds and explicitly adds only direct selecti
   await expectSafe(page, diagnostics)
 })
 
+test('Phase 1H shows local engine readiness and source-data blocking without any submit action', async ({ page }) => {
+  const diagnostics = await installSafetyGuards(page)
+  await openScenario(page, 'empty')
+  await page.getByTestId('quotation-add-group').click()
+  await page.getByText('屋面', { exact: true }).click()
+  const groupId = 'quotation-group-1'
+
+  for (const kind of ['procedure', 'material'] as const) {
+    await page.getByTestId(`quotation-browse-${groupId}-${kind}`).click()
+    await page.getByTestId(`quotation-catalog-kind-${kind}`).click()
+    const itemId = kind === 'procedure' ? 'mock-catalog-procedure-seal' : 'mock-catalog-material-sealant'
+    await page.getByTestId(`quotation-catalog-add-${kind}-${itemId}`).click()
+  }
+
+  await page.getByTestId(`quotation-group-description-${groupId}`).locator('textarea').fill('合成测试部位描述')
+  await page.getByTestId(`quotation-group-quantity-${groupId}`).locator('input').fill('12.5')
+  await expect(page.getByTestId('quotation-engine-blocked')).toContainText('指导单价缺失')
+  await expect(page.getByTestId('quotation-engine-blocked')).toContainText('材料单价缺失')
+  await expect(page.getByTestId('quotation-engine-local-only')).toContainText('不会提交报价')
+  await expect(page.getByTestId('quotation-local-gross-total')).toHaveCount(0)
+  await expect(page.getByTestId('action-workspace-submit')).toHaveCount(0)
+  await expect(page.getByTestId('dynamic-form-save')).toHaveCount(0)
+  await page.getByTestId('quotation-engine-readiness').scrollIntoViewIfNeeded()
+  await page.screenshot({ path: resolve(output, '04-engine-blocked-source-prices.png'), animations: 'disabled' })
+  await expectSafe(page, diagnostics)
+})
+
 test('Phase 1E package detail displays only observed child data grouped by supplied material layer', async ({ page }) => {
   const diagnostics = await installSafetyGuards(page)
   await mkdir(output, { recursive: true })

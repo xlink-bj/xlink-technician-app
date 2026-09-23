@@ -40,6 +40,44 @@
         quiet
       />
 
+      <view class="quotation-content__engine" data-testid="quotation-engine-readiness">
+        <AppLoadingState
+          v-if="workspace.quotationEngine.state === 'loading'"
+          variant="inline"
+          label="正在核对目录、报价规则与本地金额"
+        />
+        <template v-else-if="workspace.quotationEngine.result">
+          <view v-if="workspace.quotationEngine.result.pricing" class="quotation-content__engine-total" data-testid="quotation-local-gross-total">
+            <text class="quotation-content__engine-label">本地金额预览 · 未提交</text>
+            <text class="quotation-content__engine-amount">¥{{ workspace.quotationEngine.result.pricing.displayGrossTotal.toFixed(2) }}</text>
+          </view>
+          <AppStatus
+            v-if="workspace.quotationEngine.result.state === 'ready'"
+            message="报价校验通过；已在本机生成 type=1 结构预览，未创建或提交订单。"
+            tone="success"
+            quiet
+            data-testid="quotation-engine-ready"
+          />
+          <view v-else class="quotation-content__engine-blocked" data-testid="quotation-engine-blocked">
+            <AppStatus
+              :message="workspace.quotationEngine.result.pricing
+                ? '金额可预览，但当前合同不足以安全生成完整载荷。'
+                : '当前报价内容尚未通过校验或目录核对。'"
+              tone="warning"
+              quiet
+            />
+            <text
+              v-for="(message, index) in workspace.quotationEngine.issueMessages.slice(0, 4)"
+              :key="`${index}:${message}`"
+              class="quotation-content__engine-issue"
+              role="alert"
+            >{{ message }}</text>
+          </view>
+        <text class="quotation-content__engine-note" data-testid="quotation-engine-local-only">此处仅为本地校验与计算，不会提交报价、确认订单或完成工作流。</text>
+        </template>
+        <text v-else class="quotation-content__engine-note" data-testid="quotation-engine-local-only">填写完整分组后，系统会重新核对当前目录数据。</text>
+      </view>
+
       <view v-if="composition.localState === 'legacy_requires_action'" class="quotation-content__blocked" data-testid="quotation-draft-legacy">
         <text class="quotation-content__blocked-title">旧版平铺草稿已保留</text>
         <text class="quotation-content__copy">旧草稿没有可靠的维修部位和工程量归属，系统不会自动迁移、覆盖或清除。请先人工处理；如确认不再需要，可显式放弃并创建分组草稿。</text>
@@ -79,6 +117,7 @@
               <view>
                 <text class="quotation-content__group-eyebrow">维修部位组 {{ String(groupIndex + 1).padStart(2, '0') }}</text>
                 <text class="quotation-content__group-title">{{ group.partDescription || '待填写部位描述' }}</text>
+                <text v-if="groupSubtotal(group.groupId) !== undefined" class="quotation-content__group-subtotal" :data-testid="`quotation-group-subtotal-${group.groupId}`">组小计 ¥{{ groupSubtotal(group.groupId)?.toFixed(2) }}</text>
               </view>
               <text class="quotation-content__local-tag">本机草稿</text>
             </view>
@@ -419,7 +458,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 
 import AppButton from '@shared/ui/AppButton.vue'
 import AppCascadeSelector from '@shared/ui/AppCascadeSelector.vue'
@@ -452,6 +491,30 @@ defineEmits<{
 const composition = useQuotationCompositionStore()
 const catalogBrowser = useQuotationCatalogBrowserStore()
 const workspace = useActionWorkspaceStore()
+const groupSubtotal = (groupId: string): number | undefined =>
+  workspace.quotationEngine.result?.pricing?.groups.find((group) => group.groupId === groupId)?.subtotal
+
+let engineRefreshTimer: ReturnType<typeof setTimeout> | undefined
+watch(
+  () => [
+    composition.draft?.draftVersion,
+    workspace.descriptor?.workflowNodeId,
+    workspace.detail?.quotationCatalogContext?.serviceType,
+    workspace.detail?.quotationCatalogContext?.sourceType,
+  ],
+  () => {
+    if (engineRefreshTimer) clearTimeout(engineRefreshTimer)
+    workspace.quotationEngine.clear()
+    engineRefreshTimer = setTimeout(() => {
+      engineRefreshTimer = undefined
+      void workspace.refreshQuotationEngine()
+    }, 500)
+  },
+  { immediate: true },
+)
+onBeforeUnmount(() => {
+  if (engineRefreshTimer) clearTimeout(engineRefreshTimer)
+})
 const catalogKinds: readonly QuotationLineKind[] = ['package', 'procedure', 'material', 'measure']
 const canEdit = computed(() => ['fresh', 'restored', 'dirty', 'saving', 'saved_local', 'save_failed'].includes(composition.localState))
 const activeCatalogGroupId = ref<string | null>(null)
@@ -633,6 +696,13 @@ function catalogMetadata(item: QuotationCatalogItemRead): string {
 .quotation-content__line-count { color: var(--app-color-text-secondary); display: block; font-size: var(--app-font-meta); margin-top: var(--app-space-xs); }
 .quotation-content__local-tag, .quotation-content__kind-tag { background: var(--app-color-primary-soft); border-radius: var(--app-radius-control); color: var(--app-color-primary); flex-shrink: 0; font-size: var(--app-font-meta); padding: var(--app-space-xs) var(--app-space-sm); }
 .quotation-content__local-status { margin-top: var(--app-space-sm); }
+.quotation-content__engine { background: var(--app-color-primary-soft); border: 1rpx solid var(--app-color-primary-border); border-radius: var(--app-radius-control); margin-top: var(--app-space-md); padding: var(--app-space-md); }
+.quotation-content__engine-total { align-items: center; display: flex; justify-content: space-between; }
+.quotation-content__engine-label, .quotation-content__engine-note { color: var(--app-color-text-secondary); display: block; font-size: var(--app-font-meta); line-height: 1.5; }
+.quotation-content__engine-amount { color: var(--app-color-text-primary); font-size: var(--app-font-value); font-weight: 800; }
+.quotation-content__engine-blocked { margin-top: var(--app-space-xs); }
+.quotation-content__engine-issue { color: var(--app-color-text-secondary); display: block; font-size: var(--app-font-meta); line-height: 1.5; margin-top: var(--app-space-xs); }
+.quotation-content__engine-note { margin-top: var(--app-space-xs); }
 .quotation-content__empty { align-items: center; display: flex; flex-direction: column; padding: 48rpx var(--app-space-sm) 16rpx; text-align: center; }
 .quotation-content__empty-mark { align-items: center; background: var(--app-color-primary-soft); border-radius: 999rpx; color: var(--app-color-primary); display: flex; font-size: 46rpx; height: 80rpx; justify-content: center; width: 80rpx; }
 .quotation-content__empty-title, .quotation-content__blocked-title { color: var(--app-color-text-primary); display: block; font-size: var(--app-font-value); font-weight: 800; margin-top: var(--app-space-md); }
@@ -647,6 +717,7 @@ function catalogMetadata(item: QuotationCatalogItemRead): string {
 .quotation-content__group-heading { align-items: flex-start; border-bottom: 1rpx solid var(--app-color-divider); padding-bottom: var(--app-space-sm); }
 .quotation-content__group-eyebrow { color: var(--app-color-text-secondary); display: block; font-size: var(--app-font-meta); }
 .quotation-content__group-title { color: var(--app-color-text-primary); display: block; font-size: var(--app-font-field-label); font-weight: 800; margin-top: var(--app-space-xs); }
+.quotation-content__group-subtotal { color: var(--app-color-primary); display: block; font-size: var(--app-font-meta); font-weight: 700; margin-top: var(--app-space-xs); }
 .quotation-content__group-context { display: flex; flex-direction: column; gap: var(--app-space-sm); padding: var(--app-space-md) 0; }
 .quotation-content__context-label { color: var(--app-color-text-secondary); display: block; font-size: var(--app-font-meta); font-weight: 700; }
 .quotation-content__group-fields { display: grid; gap: var(--app-space-sm); grid-template-columns: 1fr; }
