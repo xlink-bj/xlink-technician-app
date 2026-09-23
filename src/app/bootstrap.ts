@@ -99,6 +99,7 @@ export function createApplication(dependencies: ApplicationDependencies = {}) {
   const actionWorkspaceStore = useActionWorkspaceStore(pinia)
   actionWorkspaceStore.configure({
     apiRead,
+    quotationCatalogRead,
     commandApi: apiCommand,
     draftRepository,
     navigation,

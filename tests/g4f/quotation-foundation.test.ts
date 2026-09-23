@@ -2,10 +2,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 
 import { createTechnicianApiReadAdapter } from '@adapters/api/technician-api'
+import { createQuotationCatalogReadAdapter } from '@adapters/api/quotation-catalog-api'
 import { createUniApiReadTransport } from '@adapters/api/uni-api-read-transport'
 import {
   isMockOwnedRead,
   mockCommandScenarioIds,
+  mockQuotationCatalogServiceType,
+  mockQuotationCatalogSourceType,
   mockQuotationWorkflowNodeId,
   resetBusinessMockCache,
   resetMockCommandState,
@@ -140,6 +143,7 @@ describe('G4-F Phase 1A quotation action foundation', () => {
       mockLatencyMs: 0,
     })
     const api = createTechnicianApiReadAdapter(transport)
+    const quotationCatalogRead = createQuotationCatalogReadAdapter(transport)
     const commandApi = {
       readAppointmentForm: vi.fn(),
       readDynamicForm: vi.fn(),
@@ -150,6 +154,7 @@ describe('G4-F Phase 1A quotation action foundation', () => {
     const workspace = useActionWorkspaceStore()
     workspace.configure({
       apiRead: api,
+      quotationCatalogRead,
       commandApi,
       draftRepository: createActionDraftRepository(memoryStorage()),
       navigation: navigation(),
@@ -165,12 +170,25 @@ describe('G4-F Phase 1A quotation action foundation', () => {
       state: 'no_persisted_quote',
     })
     expect(workspace.quotationContentState).toBe('ready')
+    expect(workspace.detail?.quotationCatalogContext).toEqual({
+      serviceType: mockQuotationCatalogServiceType,
+      sourceType: mockQuotationCatalogSourceType,
+    })
     expect(workspace.quotationComposition.localState).toBe('fresh')
     expect(workspace.quotationComposition.draft).toMatchObject({
       workOrderId: String(workOrderId),
       workflowNodeId: String(workflowNodeId),
       groups: [],
     })
+    const localDraftBeforeCatalogRead = JSON.stringify(workspace.quotationComposition.draft)
+    workspace.quotationCatalogBrowser.open('package')
+    await workspace.quotationCatalogBrowser.loadList('package')
+    expect(workspace.quotationCatalogBrowser.catalogStatesByKind.package).toBe('succeeded')
+    expect(workspace.quotationCatalogBrowser.visibleCatalogItems.map((item) => item.id)).toContain('mock-catalog-package-basic')
+    await workspace.quotationCatalogBrowser.openPackageDetail('mock-catalog-package-basic')
+    expect(workspace.quotationCatalogBrowser.packageDetailState).toBe('succeeded')
+    expect(workspace.quotationCatalogBrowser.packageMaterialLayers.map((layer) => layer.label)).toEqual(['层级：mock-layer-1'])
+    expect(JSON.stringify(workspace.quotationComposition.draft)).toBe(localDraftBeforeCatalogRead)
     expect(workspace.detail?.customerName).toBe('演示报价工单')
     expect(workspace.canSubmit).toBe(false)
     expect(isMockOwnedRead('__mock/quotation/action-content')).toBe(true)

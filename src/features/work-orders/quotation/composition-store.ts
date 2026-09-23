@@ -57,9 +57,6 @@ export const useQuotationCompositionStore = defineStore('quotationComposition', 
   const draft = ref<QuotationDraft | null>(null)
   const localState = ref<QuotationDraftLocalState>('idle')
   const localStateMessage = ref('')
-  const catalogOpen = ref(false)
-  const selectedCatalogKind = ref<QuotationLineKind>('package')
-  const selectedGroupId = ref<string | null>(null)
   const repairPartOptions = ref<readonly CodeOptionRead[]>([])
   const quantityTextBySelection = ref<Readonly<Record<string, string>>>({})
   const quantityErrorBySelection = ref<Readonly<Record<string, string>>>({})
@@ -92,9 +89,6 @@ export const useQuotationCompositionStore = defineStore('quotationComposition', 
     draft.value = null
     localState.value = 'idle'
     localStateMessage.value = ''
-    catalogOpen.value = false
-    selectedCatalogKind.value = 'package'
-    selectedGroupId.value = null
     repairPartOptions.value = []
     quantityTextBySelection.value = {}
     quantityErrorBySelection.value = {}
@@ -123,8 +117,6 @@ export const useQuotationCompositionStore = defineStore('quotationComposition', 
     repairPartOptions.value = input.repairPartOptions ?? []
     quantityTextBySelection.value = {}
     quantityErrorBySelection.value = {}
-    catalogOpen.value = false
-    selectedGroupId.value = null
 
     const stored = await input.repository.read<Readonly<Record<string, unknown>>>(input.identity)
     if (currentGeneration !== generation) return localState.value
@@ -198,6 +190,7 @@ export const useQuotationCompositionStore = defineStore('quotationComposition', 
     return succeeded()
   }
 
+  /** Phase 1D deterministic local fixture selection only; provider read records are never accepted here. */
   function addCatalogItem(groupId: string, kind: QuotationLineKind, catalogId: string): OperationSnapshot<void> {
     if (!draft.value || !canEdit()) return failed('unsupported_capability', '报价草稿当前不可编辑')
     const group = draft.value.groups.find((item) => item.groupId === groupId)
@@ -251,22 +244,6 @@ export const useQuotationCompositionStore = defineStore('quotationComposition', 
     quantityErrorBySelection.value = nextErrors
     markDirty()
     return succeeded()
-  }
-
-  function openCatalog(groupId: string, kind = selectedCatalogKind.value): void {
-    if (!draft.value?.groups.some((group) => group.groupId === groupId) || !canEdit()) return
-    selectedGroupId.value = groupId
-    selectedCatalogKind.value = kind
-    catalogOpen.value = true
-  }
-
-  function closeCatalog(): void {
-    catalogOpen.value = false
-    selectedGroupId.value = null
-  }
-
-  function selectCatalogKind(kind: QuotationLineKind): void {
-    selectedCatalogKind.value = kind
   }
 
   async function persist(): Promise<OperationSnapshot<void>> {
@@ -340,9 +317,6 @@ export const useQuotationCompositionStore = defineStore('quotationComposition', 
     selectionCount,
     localState,
     localStateMessage,
-    catalogOpen,
-    selectedCatalogKind,
-    selectedGroupId,
     repairPartOptions,
     catalogKindLabels,
     quantityTextBySelection,
@@ -354,9 +328,6 @@ export const useQuotationCompositionStore = defineStore('quotationComposition', 
     addCatalogItem,
     setQuantityText,
     removeSelection,
-    openCatalog,
-    closeCatalog,
-    selectCatalogKind,
     flushDraft,
     discardInvalidDraft: () => discardStoredDraftAndStartFresh('invalid'),
     discardLegacyDraft: () => discardStoredDraftAndStartFresh('legacy_requires_action'),

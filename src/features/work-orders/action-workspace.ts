@@ -27,6 +27,7 @@ import type {
   MediaUploadQueuePort,
   LocationPort,
   NavigationPort,
+  QuotationCatalogReadPort,
   SessionSnapshot,
   QuotationActionContentRead,
   SurveyLeakageCauseProviderPort,
@@ -75,6 +76,7 @@ import {
 } from './dynamic-form-action'
 import { surveyMediaDescriptorFor, surveyMediaPostUploadPolicyFor } from './survey-media'
 import { useQuotationCompositionStore } from './quotation/composition-store'
+import { useQuotationCatalogBrowserStore } from './quotation/catalog-browser-store'
 import {
   normalizeSurveyLeakageCauseSelection,
   surveyLeakageCauseCurrentPart as currentPartForLeakageCause,
@@ -327,6 +329,7 @@ export interface ActionWorkspaceDependencies {
   readonly apiRead: TechnicianApiReadPort
   readonly commandApi: TechnicianApiCommandPort
   readonly draftRepository: ActionDraftRepository
+  readonly quotationCatalogRead?: QuotationCatalogReadPort
   readonly navigation: NavigationPort
   readonly getSession: () => SessionSnapshot | null
   readonly mediaCapture?: MediaCapturePort
@@ -341,6 +344,7 @@ export interface ActionWorkspaceDependencies {
 
 export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
   const quotationComposition = useQuotationCompositionStore()
+  const quotationCatalogBrowser = useQuotationCatalogBrowserStore()
   const loadState = ref<ActionWorkspaceLoadState>('idle')
   const lifecycle = ref<ActionLifecycle>('available')
   const businessResult = ref<ActionBusinessResult>('not_started')
@@ -525,6 +529,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
   function clear(): void {
     if (descriptor.value?.contentKind === 'quotation') void quotationComposition.flushDraft()
     quotationComposition.clear()
+    quotationCatalogBrowser.clear()
     loadVersion += 1
     clearDraftTimer()
     draftRevision += 1
@@ -711,6 +716,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     }
     if (draftWriteInFlight) await draftWriteInFlight
     quotationComposition.clear()
+    quotationCatalogBrowser.clear()
     const requestVersion = ++loadVersion
     loadState.value = 'loading'
     lifecycle.value = 'available'
@@ -816,6 +822,10 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
         return failureFrom<QuotationActionContentRead, ActionDescriptor>(quotationRead)
       }
       quotationContent.value = quotationRead.data
+      quotationCatalogBrowser.configure({
+        readPort: configured.quotationCatalogRead ?? null,
+        catalogContext: read.data.quotationCatalogContext,
+      })
       identity = actionDraftIdentityFor(nextDescriptor)
       const repairPartsRead = await configured.apiRead.getCascadeCodeOptions({ codeType: 'repairParts' })
       if (requestVersion !== loadVersion) return failure('cancelled', 'Action Workspace load was superseded')
@@ -1727,6 +1737,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     quotationContent,
     quotationContentState,
     quotationComposition,
+    quotationCatalogBrowser,
     appointmentFields,
     appointmentFieldRoles,
     appointmentVisitIntent,

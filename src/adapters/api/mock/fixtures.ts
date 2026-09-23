@@ -770,6 +770,8 @@ export const mockWorkOrderDetailResponses = {
         name: '演示报价工单',
         address: '合成评审地址',
         district: 110105,
+        serviceType: mockQuotationCatalogServiceType,
+        exts: { sourceType: mockQuotationCatalogSourceType },
         workflowRunId: 'mock-workflow-run-018',
       },
       workflow: { _id: 'mock-workflow-run-018' },

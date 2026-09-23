@@ -8,13 +8,14 @@ const root = resolve(fileURLToPath(new URL('..', import.meta.url)))
 const read = (path) => readFile(resolve(root, path), 'utf8')
 const fail = (message) => { throw new Error(`G4-F local quotation composition check failed: ${message}`) }
 
-const [pages, workspace, component, model, codec, catalog, genericForm, commandPort, reviewMain, reviewScenarios, reviewPage, playwrightConfig, viteConfig, browserTests, unitTests, packageSource] = await Promise.all([
+const [pages, workspace, component, model, codec, catalog, catalogBrowser, genericForm, commandPort, reviewMain, reviewScenarios, reviewPage, playwrightConfig, viteConfig, browserTests, unitTests, packageSource] = await Promise.all([
   read('src/pages.json'),
   read('src/features/work-orders/action-workspace.ts'),
   read('src/features/work-orders/quotation/QuotationActionContent.vue'),
   read('src/features/work-orders/quotation/model.ts'),
   read('src/features/work-orders/quotation/draft-codec.ts'),
   read('src/features/work-orders/quotation/catalog.ts'),
+  read('src/features/work-orders/quotation/catalog-browser-store.ts'),
   read('src/features/work-orders/dynamic-form-action.ts'),
   read('src/shared/ports/commands.ts'),
   read('review-app-g4f/main.ts'),
@@ -51,13 +52,22 @@ if (!catalog.includes('synthetic-package-basic') || !catalog.includes('synthetic
 if (genericForm.includes('quotationDraft') || genericForm.includes('QuotationLine')) fail('quotation semantics must not leak into generic Dynamic Form Runtime')
 if (/createQuotation|updateQuotation|sendQuotation|convertQuotation/.test(commandPort)) fail('quotation mutation APIs remain out of scope')
 if (!component.includes('服务方案 / 报价明细') || !component.includes('quotation-draft-empty') || !component.includes('quotation-catalog-sheet')) {
-  fail('quotation-owned composition and catalog selection UI must be present')
+  fail('quotation-owned composition and catalog browser UI must be present')
 }
 if (component.includes('保存报价') || component.includes('提交报价') || component.includes('completeWorkflowNode') || component.includes('¥')) {
   fail('UI must not expose quote business writes, workflow completion, or prices')
 }
-if (!component.includes('quotation-add-group') || !component.includes('quotation-add-item-') || !component.includes('quotation-selection-quantity-') || !component.includes('quotation-selection-remove-') || !component.includes('quotation-draft-legacy')) {
+if (!component.includes('quotation-add-group') || !component.includes('quotation-browse-') || !component.includes('quotation-package-detail-') || !component.includes('quotation-selection-quantity-') || !component.includes('quotation-selection-remove-') || !component.includes('quotation-draft-legacy')) {
   fail('group composition controls and explicit legacy-draft handling must remain testable')
+}
+if (component.includes('composition.addCatalogItem') || component.includes('selectItem(') || !component.includes('不会加入本机草稿')) {
+  fail('Phase 1E catalog browsing must not mutate the grouped local draft')
+}
+if (!workspace.includes('quotationCatalogBrowser.configure') || !workspace.includes('catalogContext: read.data.quotationCatalogContext')) {
+  fail('catalog browser must receive adapter-derived Work Order context')
+}
+for (const method of ['listPackages', 'listProcedures', 'listMaterials', 'listMeasures', 'getPackageDetail']) {
+  if (!catalogBrowser.includes(`port.${method}`)) fail(`catalog browser must use read-only port method ${method}`)
 }
 if (!reviewMain.includes('setBusinessMockMode(\'data\')') || !reviewMain.includes('createG4fReviewStorage')) {
   fail('H5 review entry must use deterministic local Mock and review-only storage')
@@ -71,8 +81,8 @@ if (!reviewPage.includes('H5_VISUAL_PROXY') || !reviewPage.includes('MOCK_PRODUC
 if (!playwrightConfig.includes('http://127.0.0.1:5175') || !viteConfig.includes("VITE_XLINK_ENABLE_REAL_WRITES': JSON.stringify('false')")) {
   fail('review server must be isolated and real writes disabled')
 }
-if (!browserTests.includes('01-empty-draft.png') || !browserTests.includes('02-composed-draft.png') || !browserTests.includes('03-catalog-selection.png') || !browserTests.includes('externalRequests')) {
-  fail('Playwright must capture the three review states and enforce network safety')
+if (!browserTests.includes('01-empty-draft.png') || !browserTests.includes('02-grouped-draft-catalog-readonly.png') || !browserTests.includes('03-catalog-detail-readonly.png') || !browserTests.includes('externalRequests')) {
+  fail('Playwright must capture grouped composition/read-only catalog states and enforce network safety')
 }
 for (const token of ['autosaves grouped state only', 'restores the local quotation draft', 'different %s identity', 'malformed or incompatible', 'legacy flat v1 drafts']) {
   if (!unitTests.includes(token)) fail(`unit coverage missing: ${token}`)
@@ -82,4 +92,4 @@ for (const script of ['test:uni-h5-g4f-phase1b-review', 'check:g4f-phase1b']) {
 }
 if (!packageJson.scripts.verify.includes('check:g4f-phase1b')) fail('normal verify must include the Phase 1B guard')
 
-console.log('G4-F local composition boundary passed: grouped local draft, explicit legacy retention, synthetic catalog, no pricing or business mutation')
+console.log('G4-F Phase 1E boundary passed: grouped local draft, Real/Mock read-only catalog browser, package layers, explicit legacy retention, no catalog-to-draft bridge or business mutation')

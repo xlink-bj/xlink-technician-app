@@ -103,7 +103,7 @@ test.beforeAll(async ({ browser }) => {
 
 async function prepareVisualScenario(page: Page, preparation: VisualScenarioContract['preparation']): Promise<void> {
   if (preparation === 'open-leakage-cause') {
-    await page.getByRole('button', { name: /选择渗漏原因|修改选择/ }).click()
+    await page.getByTestId('survey-leakage-cause-trigger').click()
     await expect(page.getByTestId('survey-leakage-cause-panel')).toBeVisible()
     await expect(page.getByTestId('survey-leakage-cause-options')).toContainText('演示原因：屋面节点')
   }

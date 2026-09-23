@@ -69,7 +69,7 @@ const workspace = useActionWorkspaceStore()
 const scenario = reviewScenarioFromLocation()
 const reviewScenarios = [
   { id: 'empty', label: '空草稿' },
-  { id: 'catalog', label: '目录选择' },
+  { id: 'catalog', label: '目录浏览' },
   { id: 'populated', label: '组合草稿' },
   { id: 'restored', label: '恢复草稿' },
   { id: 'invalid', label: '异常草稿' },
@@ -99,7 +99,7 @@ watch(
     if (!initialCatalogOpened && scenario === 'catalog' && loadState === 'succeeded' && localState === 'fresh') {
       initialCatalogOpened = true
       const group = workspace.quotationComposition.createGroup({ repairParts: ['repair-part-code-001'] })
-      if (group.state === 'succeeded' && group.data) workspace.quotationComposition.openCatalog(group.data, 'package')
+      if (group.state === 'succeeded' && group.data) workspace.quotationCatalogBrowser.open('package')
     }
   },
   { immediate: true },

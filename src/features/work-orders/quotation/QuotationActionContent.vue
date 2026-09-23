@@ -3,7 +3,7 @@
     <view class="quotation-content__heading">
       <text class="quotation-content__eyebrow">报价工作区</text>
       <text class="quotation-content__title">报价方案</text>
-      <text class="quotation-content__description">整理本机草稿中的服务方案与报价明细。</text>
+      <text class="quotation-content__description">分组草稿保存在本机；目录内容仅供只读浏览，尚不能加入草稿。</text>
     </view>
 
     <view v-if="state === 'loading'" class="quotation-content__panel app-surface" data-testid="quotation-state-loading">
@@ -134,12 +134,11 @@
               <view class="quotation-content__group-section-heading">
                 <text class="quotation-content__panel-title">{{ composition.catalogKindLabels[kind] }}</text>
                 <AppButton
-                  class="quotation-content__add-selection"
+                  class="quotation-content__browse-catalog"
                   variant="secondary"
-                  :data-testid="`quotation-add-item-${group.groupId}-${kind}`"
-                  :disabled="!canEdit || group.repairParts.length === 0"
-                  @tap="composition.openCatalog(group.groupId, kind)"
-                >添加</AppButton>
+                  :data-testid="`quotation-browse-${kind}`"
+                  @tap="catalogBrowser.open(kind)"
+                >浏览目录</AppButton>
               </view>
               <view
                 v-for="selection in composition.selectionsFor(group.groupId, kind)"
@@ -200,7 +199,7 @@
 
     <view v-else-if="state === 'blocked'" class="quotation-content__panel app-surface" data-testid="quotation-state-blocked">
       <AppStatus
-        message="真实报价读取尚未开放；未使用 Mock 数据替代真实报价。"
+        message="报价单业务状态暂不可用；不会用目录数据替代已有报价状态。"
         tone="warning"
         quiet
       />
@@ -218,45 +217,139 @@
     </view>
 
     <view
-      v-if="state === 'ready' && composition.catalogOpen"
+      v-if="state === 'ready' && catalogBrowser.isOpen"
       class="quotation-content__catalog-backdrop"
       data-testid="quotation-catalog-sheet"
-      @tap.self="composition.closeCatalog"
+      @tap.self="catalogBrowser.close"
     >
-      <view class="quotation-content__catalog-sheet" role="dialog" aria-modal="true" aria-label="选择报价目录项">
+      <view class="quotation-content__catalog-sheet" role="dialog" aria-modal="true" aria-label="报价目录只读浏览">
         <view class="quotation-content__catalog-handle" aria-hidden="true" />
         <view class="quotation-content__catalog-heading">
           <view>
-            <text class="quotation-content__catalog-title">添加报价项目</text>
-            <text class="quotation-content__catalog-subtitle">选择项目加入当前维修部位组</text>
+            <text class="quotation-content__catalog-title">报价目录浏览</text>
+            <text class="quotation-content__catalog-subtitle">只读查看 · 当前阶段不会加入本机草稿</text>
           </view>
-          <AppButton class="quotation-content__catalog-close" variant="text" aria-label="关闭目录" @tap="composition.closeCatalog">关闭</AppButton>
+          <AppButton class="quotation-content__catalog-close" variant="text" aria-label="关闭目录" data-testid="quotation-catalog-close" @tap="catalogBrowser.close">关闭</AppButton>
         </view>
+
+        <view v-if="!catalogBrowser.selectedPackageId" class="quotation-content__catalog-browser" data-testid="quotation-catalog-browser">
         <view class="quotation-content__category-grid" data-testid="quotation-catalog-categories">
           <AppButton
             v-for="kind in catalogKinds"
             :key="kind"
             class="quotation-content__category"
             variant="secondary"
-            :pressed="composition.selectedCatalogKind === kind"
+            :pressed="catalogBrowser.selectedKind === kind"
             :data-testid="`quotation-catalog-kind-${kind}`"
-            @tap="composition.selectCatalogKind(kind)"
+            @tap="catalogBrowser.selectKind(kind)"
           >{{ composition.catalogKindLabels[kind] }}</AppButton>
         </view>
-        <scroll-view class="quotation-content__catalog-list" scroll-y>
-          <button
-            v-for="item in visibleCatalogItems"
-            :key="item.catalogId"
+        <AppLoadingState
+          v-if="catalogBrowser.catalogStatesByKind[catalogBrowser.selectedKind] === 'loading'"
+          class="quotation-content__catalog-state"
+          variant="inline"
+          :label="`正在读取${composition.catalogKindLabels[catalogBrowser.selectedKind]}目录`"
+        />
+        <AppStatus
+          v-else-if="catalogBrowser.catalogStatesByKind[catalogBrowser.selectedKind] === 'blocked'"
+          class="quotation-content__catalog-state"
+          :message="catalogBrowser.listErrorCopyByKind[catalogBrowser.selectedKind] || '当前工单缺少目录适用范围。'"
+          tone="warning"
+          quiet
+        />
+        <view
+          v-else-if="catalogBrowser.catalogStatesByKind[catalogBrowser.selectedKind] === 'failed_retryable' || catalogBrowser.catalogStatesByKind[catalogBrowser.selectedKind] === 'failed_terminal'"
+          class="quotation-content__catalog-state"
+          data-testid="quotation-catalog-list-error"
+        >
+          <AppStatus
+            :message="catalogBrowser.listErrorCopyByKind[catalogBrowser.selectedKind] || '目录暂不可用。'"
+            tone="warning"
+            quiet
+          />
+          <AppButton
+            v-if="catalogBrowser.catalogStatesByKind[catalogBrowser.selectedKind] === 'failed_retryable'"
+            variant="secondary"
+            block
+            data-testid="quotation-catalog-list-retry"
+            @tap="catalogBrowser.retryList"
+          >重试读取</AppButton>
+        </view>
+        <AppStatus
+          v-else-if="catalogBrowser.catalogStatesByKind[catalogBrowser.selectedKind] === 'succeeded' && catalogBrowser.visibleCatalogItems.length === 0"
+          class="quotation-content__catalog-state"
+          message="当前适用范围暂无目录项目。"
+          tone="neutral"
+          quiet
+        />
+        <scroll-view v-else class="quotation-content__catalog-list" scroll-y data-testid="quotation-catalog-list">
+          <view
+            v-for="item in catalogBrowser.visibleCatalogItems"
+            :key="item.id"
             class="quotation-content__catalog-item"
-            :data-testid="`quotation-catalog-item-${item.catalogId}`"
-            @tap="selectItem(item.kind, item.catalogId)"
+            :data-testid="`quotation-catalog-item-${item.kind}-${item.id}`"
           >
             <view class="quotation-content__catalog-item-copy">
-              <text class="quotation-content__catalog-item-title">{{ item.label }}</text>
-              <text class="quotation-content__catalog-item-meta">{{ item.unit ? `计量单位：${item.unit}` : '未设置单位' }}</text>
+              <text class="quotation-content__catalog-item-title">{{ item.name }}</text>
+              <text class="quotation-content__catalog-item-meta">{{ catalogMetadata(item) }}</text>
             </view>
-            <text class="quotation-content__catalog-item-add" aria-hidden="true">＋</text>
-          </button>
+            <AppButton
+              v-if="item.kind === 'package'"
+              variant="text"
+              :data-testid="`quotation-package-detail-${item.id}`"
+              @tap="catalogBrowser.openPackageDetail(item.id)"
+            >查看套餐</AppButton>
+            <text v-else class="quotation-content__catalog-readonly">只读</text>
+          </view>
+        </scroll-view>
+        </view>
+
+        <scroll-view v-else class="quotation-content__package-detail" scroll-y data-testid="quotation-package-detail">
+          <AppButton variant="text" data-testid="quotation-package-detail-back" @tap="catalogBrowser.backToList">返回目录</AppButton>
+          <AppLoadingState
+            v-if="catalogBrowser.packageDetailState === 'loading'"
+            class="quotation-content__catalog-state"
+            variant="inline"
+            label="正在读取套餐详情"
+          />
+          <view v-else-if="catalogBrowser.packageDetailState === 'failed_retryable' || catalogBrowser.packageDetailState === 'failed_terminal' || catalogBrowser.packageDetailState === 'blocked'" class="quotation-content__catalog-state" data-testid="quotation-package-detail-error">
+            <AppStatus :message="catalogBrowser.packageDetailErrorCopy || '套餐详情暂不可用。'" tone="warning" quiet />
+            <AppButton
+              v-if="catalogBrowser.packageDetailState === 'failed_retryable'"
+              variant="secondary"
+              block
+              data-testid="quotation-package-detail-retry"
+              @tap="catalogBrowser.retryPackageDetail"
+            >重试读取</AppButton>
+          </view>
+          <view v-else-if="catalogBrowser.packageDetail" class="quotation-content__package-detail-content">
+            <text class="quotation-content__package-detail-title">{{ catalogBrowser.packageDetail.package.name }}</text>
+            <text class="quotation-content__package-detail-note">套餐组成（只读）</text>
+            <view class="quotation-content__detail-section" data-testid="quotation-package-procedures">
+              <text class="quotation-content__detail-heading">工序</text>
+              <text v-if="catalogBrowser.packageDetail.procedures.length === 0" class="quotation-content__empty-section">暂无工序</text>
+              <text v-for="(row, index) in catalogBrowser.packageDetail.procedures" :key="row.id || row.referenceId || index" class="quotation-content__detail-row">
+                {{ row.item?.name || '工序引用暂不可解析' }}<template v-if="row.unit"> · {{ row.unit }}</template>
+              </text>
+            </view>
+            <view class="quotation-content__detail-section" data-testid="quotation-package-materials">
+              <text class="quotation-content__detail-heading">材料 · 按已提供层级</text>
+              <view v-for="layer in catalogBrowser.packageMaterialLayers" :key="layer.key" class="quotation-content__layer-group" :data-testid="`quotation-material-layer-${layer.key}`">
+                <text class="quotation-content__layer-heading">{{ layer.label }}</text>
+                <text v-for="(row, index) in layer.materials" :key="row.id || row.referenceId || index" class="quotation-content__detail-row">
+                  {{ row.item?.name || '材料引用暂不可解析' }}<template v-if="row.unit"> · {{ row.unit }}</template>
+                </text>
+              </view>
+              <text v-if="catalogBrowser.packageDetail.materials.length === 0" class="quotation-content__empty-section">暂无材料</text>
+            </view>
+            <view class="quotation-content__detail-section" data-testid="quotation-package-measures">
+              <text class="quotation-content__detail-heading">机措</text>
+              <text v-if="catalogBrowser.packageDetail.measures.length === 0" class="quotation-content__empty-section">暂无机措</text>
+              <text v-for="(row, index) in catalogBrowser.packageDetail.measures" :key="row.id || row.referenceId || index" class="quotation-content__detail-row">
+                {{ row.item?.name || '机措引用暂不可解析' }}<template v-if="row.unit"> · {{ row.unit }}</template>
+              </text>
+            </view>
+          </view>
         </scroll-view>
       </view>
     </view>
@@ -271,8 +364,10 @@ import AppCascadeSelector from '@shared/ui/AppCascadeSelector.vue'
 import AppLoadingState from '@shared/ui/AppLoadingState.vue'
 import AppStatus from '@shared/ui/AppStatus.vue'
 import { useQuotationCompositionStore } from './composition-store'
-import { quotationCatalog, quotationCatalogItemsFor } from './catalog'
+import { quotationCatalogKindLabels } from './catalog'
+import { useQuotationCatalogBrowserStore } from './catalog-browser-store'
 import type { QuotationLineKind } from './model'
+import type { QuotationCatalogItemRead } from '@shared/ports'
 
 defineProps<{
   readonly state: 'loading' | 'ready' | 'blocked' | 'failed_retryable' | 'failed_terminal'
@@ -284,9 +379,10 @@ defineEmits<{
 }>()
 
 const composition = useQuotationCompositionStore()
+const catalogBrowser = useQuotationCatalogBrowserStore()
 const catalogKinds: readonly QuotationLineKind[] = ['package', 'procedure', 'material', 'measure']
 const canEdit = computed(() => ['fresh', 'restored', 'dirty', 'saving', 'saved_local', 'save_failed'].includes(composition.localState))
-const visibleCatalogItems = computed(() => quotationCatalogItemsFor(composition.selectedCatalogKind))
+const kindLabels = quotationCatalogKindLabels
 
 function eventValue(event: unknown): string {
   const detail = typeof event === 'object' && event !== null
@@ -311,11 +407,12 @@ function onQuantityInput(groupId: string, selectionId: string, event: unknown): 
   composition.setQuantityText(groupId, selectionId, eventValue(event))
 }
 
-function selectItem(kind: QuotationLineKind, catalogId: string): void {
-  const groupId = composition.selectedGroupId
-  if (!groupId) return
-  const result = composition.addCatalogItem(groupId, kind, catalogId)
-  if (result.state === 'succeeded') composition.closeCatalog()
+function catalogMetadata(item: QuotationCatalogItemRead): string {
+  const parts: string[] = []
+  if ((item.kind === 'package' || item.kind === 'material') && item.code) parts.push(`编码：${item.code}`)
+  if (item.specification) parts.push(`规格：${item.specification}`)
+  if (item.unit) parts.push(`单位：${item.unit}`)
+  return parts.length ? parts.join(' · ') : kindLabels[item.kind]
 }
 </script>
 
@@ -353,7 +450,7 @@ function selectItem(kind: QuotationLineKind, catalogId: string): void {
 .quotation-content__context-input--multiline { min-height: 112rpx; }
 .quotation-content__group-section { border-top: 1rpx solid var(--app-color-divider); padding-top: var(--app-space-md); }
 .quotation-content__group-section + .quotation-content__group-section { margin-top: var(--app-space-sm); }
-.quotation-content__add-selection { min-height: 40px; }
+.quotation-content__browse-catalog { min-height: 40px; }
 .quotation-content__selection { border-top: 1rpx solid var(--app-color-divider); margin-top: var(--app-space-sm); padding-top: var(--app-space-sm); }
 .quotation-content__empty-section { color: var(--app-color-text-muted); display: block; font-size: var(--app-font-meta); padding: var(--app-space-sm) 0; }
 .quotation-content__lines { display: flex; flex-direction: column; gap: var(--app-space-sm); padding-top: var(--app-space-md); }
@@ -382,10 +479,21 @@ function selectItem(kind: QuotationLineKind, catalogId: string): void {
 .quotation-content__catalog-close { min-height: 44px; }
 .quotation-content__category-grid { display: grid; gap: var(--app-space-xs); grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: var(--app-space-md); }
 .quotation-content__category { min-height: 48px; padding-left: 4rpx; padding-right: 4rpx; }
-.quotation-content__catalog-list { flex: 1; margin-top: var(--app-space-sm); min-height: 100rpx; }
-.quotation-content__catalog-item { align-items: center; background: var(--app-color-surface); border: 1rpx solid var(--app-color-border); border-radius: var(--app-radius-control); box-sizing: border-box; color: var(--app-color-text-primary); display: flex; justify-content: space-between; margin-bottom: var(--app-space-sm); min-height: 92rpx; padding: var(--app-space-sm) var(--app-space-md); text-align: left; width: 100%; }
+.quotation-content__catalog-browser { display: flex; flex: 1; flex-direction: column; min-height: 0; }
+.quotation-content__catalog-state { margin-top: var(--app-space-md); }
+.quotation-content__catalog-list, .quotation-content__package-detail { flex: 1; margin-top: var(--app-space-sm); min-height: 100rpx; }
+.quotation-content__package-detail { box-sizing: border-box; }
+.quotation-content__catalog-item { align-items: center; background: var(--app-color-surface); border: 1rpx solid var(--app-color-border); border-radius: var(--app-radius-control); box-sizing: border-box; display: flex; justify-content: space-between; margin-bottom: var(--app-space-sm); min-height: 92rpx; padding: var(--app-space-sm) var(--app-space-md); width: 100%; }
 .quotation-content__catalog-item-copy { display: flex; flex: 1; flex-direction: column; min-width: 0; }
 .quotation-content__catalog-item-title { font-size: var(--app-font-body); font-weight: 700; overflow-wrap: anywhere; }
 .quotation-content__catalog-item-meta { color: var(--app-color-text-secondary); font-size: var(--app-font-meta); margin-top: var(--app-space-xs); }
-.quotation-content__catalog-item-add { color: var(--app-color-primary); flex-shrink: 0; font-size: 36rpx; margin-left: var(--app-space-sm); }
+.quotation-content__catalog-readonly { color: var(--app-color-text-muted); flex-shrink: 0; font-size: var(--app-font-meta); margin-left: var(--app-space-sm); }
+.quotation-content__package-detail-content { padding: var(--app-space-sm) 0 var(--app-space-lg); }
+.quotation-content__package-detail-title { color: var(--app-color-text-primary); display: block; font-size: var(--app-font-value); font-weight: 800; margin-top: var(--app-space-sm); }
+.quotation-content__package-detail-note { color: var(--app-color-text-secondary); display: block; font-size: var(--app-font-meta); margin-top: var(--app-space-xs); }
+.quotation-content__detail-section { border-top: 1rpx solid var(--app-color-divider); margin-top: var(--app-space-md); padding-top: var(--app-space-md); }
+.quotation-content__detail-heading { color: var(--app-color-text-primary); display: block; font-size: var(--app-font-field-label); font-weight: 800; }
+.quotation-content__detail-row { color: var(--app-color-text-secondary); display: block; font-size: var(--app-font-body); line-height: 1.5; margin-top: var(--app-space-sm); }
+.quotation-content__layer-group { background: var(--app-color-surface); border-radius: var(--app-radius-control); margin-top: var(--app-space-sm); padding: var(--app-space-sm); }
+.quotation-content__layer-heading { color: var(--app-color-primary); display: block; font-size: var(--app-font-meta); font-weight: 800; }
 </style>
