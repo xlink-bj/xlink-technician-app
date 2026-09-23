@@ -21,13 +21,20 @@ Status: implementation evidence for Web Review; no quotation/order mutation was 
 | Procedure minimum total | R1 substitutes `minimumGuideTotalPrice` when guide price × quantity is lower. | `CLIENT_SOURCE_VERIFIED` | Apply the source minimum; do not infer one when absent. |
 | Direct Material price | R1 uses `price × number` when no SKU rows are present; otherwise it calculates from SKU rows. | `CLIENT_SOURCE_VERIFIED` for the direct non-SKU branch | Direct price is allowed only when current material has no `spuId`; SPU/SKU-dependent rows fail closed. |
 | Measure / 机措 guide unit price | R1 uses `guideUnitPrice × number`; no minimum is applied in the inspected calculation. | `CLIENT_SOURCE_VERIFIED` | Use current hydrated guide unit price and R1 rounding. |
-| Category, group, and gross totals | R1 rounds row/category values with `amountToFixed`, sums categories into each repair-part group, then aggregates groups. | `CLIENT_SOURCE_VERIFIED` | Deterministic category → group → gross aggregation; these are local estimates, not server-authoritative totals. |
+| Top-level `originPrice` / `totalPrice` | `calcTotalPrice()` accumulates raw Package/Procedure/Material/Measure contributions, rounds the total once for `originPrice`, then neutral discount/coupon/preferential steps preserve that rounded amount as `totalPrice`. | `CLIENT_SOURCE_VERIFIED` | Modeled as the independent `calcTotalPrice` projection. |
+| `bjProducts` row/category/group totals | `fillOrder()` rounds row totals; Package and Procedure category accumulators receive their source row/minimum values then receive a category `amountToFixed`; Material and Measure totals sum their rounded rows without another category-rounding pass. Group total is the direct sum of category totals; `orderListTotalAmount` directly sums group totals. | `CLIENT_SOURCE_VERIFIED` | Modeled separately as `fillOrder`; no added group/list rounding. This projection may differ from top-level price. |
 | Discount, coupon, preferential amount | R1 has discount/coupon/preferential calculations, but Phase 1H draft has no verified input model or user intent for them. | `UNRESOLVED` | Excluded from calculation. Encoder uses only the neutral no-discount/no-coupon representation already supported by the type-1 construction path; no discount behavior is implemented. |
 | Server recalculation / authoritative pricing | `OrderServiceImpl.upsert` stores the supplied `totalPrice` and `bjProducts`; inspected backend path has tenant pre-script execution whose arbitrary behavior is not established here. The PDF projection reads category `totalAmount` values; that is not proof of server-side price validation. | `UNRESOLVED` | Never call totals server-authoritative. Real writes remain unauthorized. |
 
-### Money precision
+### Money precision and distinct R1 projections
 
-R1 helper is `Number((+money).toFixed(2))` with a zero fallback. Phase 1H mirrors this exact JavaScript behavior at the same row/category/group/gross boundaries. It does not introduce decimal-scale restrictions, a new currency model, or a different rounding mode. Preview precision is two decimals; encoded amount precision follows the R1 calculated row/category values. The binary floating-point behavior of JavaScript `toFixed` is intentionally preserved for parity (for example, `1.005` follows the runtime's `toFixed(2)` result).
+R1 helper is `Number((+money).toFixed(2))` with a zero fallback. It is applied at different boundaries in the two code paths; they are not normalized to equality.
+
+- `calcTotalPrice` projection: preserve every supported row contribution at source precision, sum across all selected rows/groups, then apply `amountToFixed` once to top-level `originPrice`. With neutral discount/coupon/preferential values, `totalPrice` equals that rounded `originPrice`.
+- `fillOrder` projection: calculate each emitted row total using its R1 row rule; round Package and Procedure category totals at their own final category boundary; Material and Measure categories sum already-rounded rows without another category round; group totals directly sum categories and `orderListTotalAmount` directly sums groups without extra rounding.
+- The two projections can legitimately differ. For Procedure `0.335` plus Material `0.335`, `calcTotalPrice` gives `originPrice/totalPrice = 0.67`, while `fillOrder` gives row totals `0.34 + 0.34` and group total `0.68`. The encoder preserves both values in their respective payload locations.
+
+No decimal-scale restrictions, new currency model, or alternate rounding mode is introduced. JavaScript binary floating-point `toFixed` behavior is intentionally preserved (for example, `1.005` follows the runtime's `toFixed(2)` result).
 
 ## Validation contract
 
@@ -53,13 +60,13 @@ Draft schema remains v3. Provider price/cost values are transient hydrated data 
 Implemented source-backed rules:
 
 - Package standard path: `(package.price + sum(selected material exts.price where > 0)) × quantity`, then `minimumPrice` floor.
-- Package `pricingMethod === '1'`: blocked; SKU pricing is outside this phase. Missing pricing method is also blocked.
+- Package price calculation is independent of `pricingMethod`: missing/undefined and non-`'1'` values use the source-backed base + selected-material markup + minimum formula; explicit `'1'` still gets the same local price projection because `calcTotalPrice()` does not branch on that field.
 - Procedure: `guideUnitPrice × quantity`, then `minimumGuideTotalPrice` floor.
 - Direct Material: `price × quantity`, only when no SPU/SKU identity is present.
 - Measure: `guideUnitPrice × quantity`.
 - Totals are returned per selection, per category/group, and overall. Missing/invalid price is not treated as zero.
 
-Two deliberate encoder boundaries remain fail-closed: SKU-based Package rows cannot be priced here, and configured Package material quantities are not encoded because active R1 derives them with `ceil(package quantity × coefficient / material spec)`, a calculation the Issue explicitly did not authorize. Such a Package may have a local price preview from source-backed fields, but it cannot produce a ready Order payload. This is not synthetic fallback.
+Two deliberate encoder boundaries remain fail-closed: explicit `pricingMethod === '1'` Package SKU composition is not encoded, and any configured Package material quantities are not encoded because active R1 derives them with `ceil(package quantity × coefficient / material spec)`, a calculation the Issue explicitly did not authorize. Packages without `pricingMethod` can still receive their source-backed local price projection, but cannot produce a ready payload while material quantity derivation is unresolved. This is not synthetic fallback.
 
 Discount/coupon/preferential behavior and server-side authoritative recalculation remain `UNRESOLVED`, and are not implemented.
 
@@ -93,7 +100,7 @@ Backend source confirms `Order.type=0` is the quote/demo type and `Order.type=1`
 |---:|---|
 | 1–11 | `tests/g4f/quotation-engine.test.ts` validation cases 1–11 |
 | 12–17 | `tests/g4f/quotation-engine.test.ts` hydration cases 12–17 |
-| 18–24 | `tests/g4f/quotation-engine.test.ts` pricing/rounding cases 18–24 |
+| 18–24 | `tests/g4f/quotation-engine.test.ts` pricing/rounding cases 18–24, including the `0.335 + 0.335` two-projection parity regression |
 | 25 | engine test 25; existing `tests/g4f/quotation-composition.test.ts` persistence exclusion assertion |
 | 26 | engine test 26 |
 | 27–32 | engine tests 27–32; H5 request guard in `tests/h5-review/g4f-quotation-phase1b.spec.ts` |
@@ -102,15 +109,15 @@ Backend source confirms `Order.type=0` is the quote/demo type and `Order.type=1`
 | 35–37 | existing schema-v2/v3 and flat-v1 recovery tests in `tests/g4f/quotation-composition.test.ts` |
 | 38–40 | Phase 1H H5 test verifies local-only readiness/blocking copy, missing current source prices, no calculated gross when blocked, no submit/save CTA, and no external network |
 
-The 37 new engine unit tests and existing Phase 1F/1G/draft-codec regressions together cover the 40-item contract. H5 uses deterministic synthetic rows and the existing Mock/source-backed app path; no real customer data is used.
+The 41 engine unit tests and existing Phase 1F/1G/draft-codec regressions together cover the 40-item contract plus the two source-parity corrections, including independent rejection of altered top-level and `fillOrder` projections at the encoder boundary. H5 uses deterministic synthetic rows and the existing Mock/source-backed app path; no real customer data is used.
 
-`tests/g4f/quotation-catalog-read.test.ts` also verifies that the R1-backed adapter retains Package `pricingMethod` and Material `spuId`, which the engine requires to distinguish supported direct-price paths from SKU-dependent paths. Unrelated raw commercial fields remain excluded by the kind-specific adapter mapping.
+`tests/g4f/quotation-catalog-read.test.ts` also verifies that the R1-backed adapter retains Package `pricingMethod` and Material `spuId`. The engine uses explicit Package method `'1'` only to keep unsupported SKU encoding blocked; package price projection itself does not require this field. Unrelated raw commercial fields remain excluded by the kind-specific adapter mapping.
 
 ## Verification results
 
 | Command | Result |
 |---|---|
-| `pnpm run verify` | PASS — boundaries, UI governance, G4-F guards, typecheck, 39 Vitest files / 439 tests. |
+| `pnpm run verify` | PASS — boundaries, UI governance, G4-F guards, typecheck, 39 Vitest files / 443 tests after source-parity corrections. |
 | `pnpm run test:uni-h5-g4f-phase1b-review` | PASS — 7 browser tests, including the Phase 1H readiness/blocking scenario. |
 | `pnpm run test:h5-review` | PASS — 32 browser tests; Chromium `153.0.8010.12`. |
 | `pnpm run test:uni-h5-review` | PASS — 4 browser tests. |

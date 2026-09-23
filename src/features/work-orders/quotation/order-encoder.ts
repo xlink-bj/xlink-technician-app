@@ -48,14 +48,22 @@ function labelPath(options: readonly CodeOptionRead[], path: readonly string[]):
 }
 
 function pricedAmount(pricing: QuotationPricingResult, selectionId: string): number | undefined {
-  for (const group of pricing.groups) {
+  for (const group of pricing.fillOrder.groups) {
     const row = group.selectionAmounts.find((selection) => selection.selectionId === selectionId)
-    if (row) return row.amount
+    if (row) return row.fillOrderTotalAmount
   }
   return undefined
 }
 
 function packageMaterialQuantityIssue(selection: Extract<HydratedQuotationSelection, { kind: 'package' }>, groupId: string): QuotationEncodingIssue | null {
+  if (selection.item.pricingMethod === '1') {
+    return {
+      code: 'encoding.package_sku_path_not_authorized',
+      message: '此套餐使用 SKU 计价路径；SKU 组成未纳入本阶段，不能生成完整订单载荷。',
+      groupId,
+      selectionId: selection.selection.selectionId,
+    }
+  }
   if (selection.materials.length === 0) return null
   // R1's active fillOrder derives these quantities from package quantity,
   // coefficient and material.spec. Phase 1H explicitly does not authorize
@@ -163,10 +171,14 @@ function validateHydratedDraft(draft: HydratedQuotationDraft) {
 }
 
 function validatePricingCompleteness(draft: HydratedQuotationDraft, pricing: QuotationPricingResult): boolean {
-  if (!Number.isFinite(pricing.grossTotal) || pricing.grossTotal < 0) return false
+  if (!Number.isFinite(pricing.calcTotalPrice.originPrice) || pricing.calcTotalPrice.originPrice < 0
+    || !Number.isFinite(pricing.calcTotalPrice.totalPrice) || pricing.calcTotalPrice.totalPrice < 0
+    || !Number.isFinite(pricing.fillOrder.orderListTotalAmount) || pricing.fillOrder.orderListTotalAmount < 0) return false
   const recomputed = calculateQuotationPricing(draft)
   if (recomputed.state !== 'succeeded') return false
-  return JSON.stringify(recomputed.data) === JSON.stringify(pricing)
+  const calcTotalPriceMatches = JSON.stringify(recomputed.data.calcTotalPrice) === JSON.stringify(pricing.calcTotalPrice)
+  const fillOrderMatches = JSON.stringify(recomputed.data.fillOrder) === JSON.stringify(pricing.fillOrder)
+  return calcTotalPriceMatches && fillOrderMatches
 }
 
 export function encodeR1OfficialOrderType1(input: {
@@ -194,7 +206,7 @@ export function encodeR1OfficialOrderType1(input: {
   }
   if (issues.length > 0) return { state: 'blocked', issues }
 
-  const groupPricingById = new Map(input.pricing.groups.map((group) => [group.groupId, group]))
+  const groupPricingById = new Map(input.pricing.fillOrder.groups.map((group) => [group.groupId, group]))
   const orderList = [] as Array<Record<string, unknown>>
 
   for (const hydratedGroup of input.draft.groups) {
@@ -277,6 +289,8 @@ export function encodeR1OfficialOrderType1(input: {
         categoryData[selection.kind].push(directSelectionFor(selection, amount))
       }
     }
+    // These category/group values come from fillOrder() projection and must not
+    // be reconciled to calcTotalPrice()'s independently rounded top-level total.
     const categoryTotals = groupPricing.categoryTotals
     const constructionLocation = input.repairPartOptions
       ? labelPath(input.repairPartOptions, group.repairParts)
@@ -302,7 +316,7 @@ export function encodeR1OfficialOrderType1(input: {
     otherItemsAmount: 0,
     preferentialAmount: 0,
   }
-  const total = input.pricing.grossTotal
+  const total = input.pricing.calcTotalPrice.totalPrice
   return {
     state: 'ready',
     payload: {
@@ -310,7 +324,7 @@ export function encodeR1OfficialOrderType1(input: {
       serviceAppointmentId: input.draft.workOrderId,
       productIds: '[]',
       bjProducts: JSON.stringify(bjProducts),
-      originPrice: total,
+      originPrice: input.pricing.calcTotalPrice.originPrice,
       totalPrice: total,
       discount: 1,
       otherAmount: 0,

@@ -301,7 +301,10 @@ describe('G4-F Phase 1H quotation engine', () => {
 
   it('18. prices a standard Package as base price plus selected exts.price markup times quantity', async () => {
     const outcome = await pricingFor(packageDraft({ quantity: 2 }))
-    expect(outcome).toMatchObject({ state: 'succeeded', data: { groups: [{ selectionAmounts: [{ amount: 215 }] }] } })
+    expect(outcome).toMatchObject({ state: 'succeeded', data: {
+      calcTotalPrice: { originPrice: 215, totalPrice: 215 },
+      fillOrder: { groups: [{ selectionAmounts: [{ fillOrderTotalAmount: 215 }], subtotal: 215 }] },
+    } })
   })
 
   it('19. applies the observed Package minimum-price floor at and below the boundary', async () => {
@@ -309,8 +312,8 @@ describe('G4-F Phase 1H quotation engine', () => {
     const boundaryPort = catalogPort({ listPackages: vi.fn(async () => succeeded({ items: [{ ...packageItem, minimumPrice: 107.5 }] })) })
     const below = await pricingFor(packageDraft({ quantity: 1 }), belowPort)
     const atBoundary = await pricingFor(packageDraft({ quantity: 1 }), boundaryPort)
-    expect(below).toMatchObject({ state: 'succeeded', data: { groups: [{ selectionAmounts: [{ amount: 120 }] }] } })
-    expect(atBoundary).toMatchObject({ state: 'succeeded', data: { groups: [{ selectionAmounts: [{ amount: 107.5 }] }] } })
+    expect(below).toMatchObject({ state: 'succeeded', data: { calcTotalPrice: { originPrice: 120 }, fillOrder: { groups: [{ selectionAmounts: [{ fillOrderTotalAmount: 120 }] }] } } })
+    expect(atBoundary).toMatchObject({ state: 'succeeded', data: { calcTotalPrice: { originPrice: 107.5 }, fillOrder: { groups: [{ selectionAmounts: [{ fillOrderTotalAmount: 107.5 }] }] } } })
   })
 
   it('20. applies the Procedure minimum total when the guide-price product is below it', async () => {
@@ -318,17 +321,20 @@ describe('G4-F Phase 1H quotation engine', () => {
     const port = catalogPort({ listProcedures: vi.fn(async () => succeeded({ items: [lowMinimum] })) })
     const outcome = await pricingFor(directDraft(['procedure', 'material'], { quantity: 2 }), port)
     expect(outcome.state).toBe('succeeded')
-    if (outcome.state === 'succeeded') expect(outcome.data.groups[0].selectionAmounts[0].amount).toBe(30)
+    if (outcome.state === 'succeeded') {
+      expect(outcome.data.calcTotalPrice.originPrice).toBe(39)
+      expect(outcome.data.fillOrder.groups[0].selectionAmounts[0].fillOrderTotalAmount).toBe(30)
+    }
   })
 
   it('21. prices direct Material by its current catalog price and quantity', async () => {
     const outcome = await pricingFor(directDraft(['procedure', 'material'], { quantity: 2 }))
-    expect(outcome).toMatchObject({ state: 'succeeded', data: { groups: [{ selectionAmounts: [{ amount: 20 }, { amount: 9 }] }] } })
+    expect(outcome).toMatchObject({ state: 'succeeded', data: { fillOrder: { groups: [{ selectionAmounts: [{ fillOrderTotalAmount: 20 }, { fillOrderTotalAmount: 9 }] }] } } })
   })
 
   it('22. prices Measure by guideUnitPrice and quantity', async () => {
     const outcome = await pricingFor(directDraft(['procedure', 'material', 'measure'], { quantity: 2 }))
-    expect(outcome).toMatchObject({ state: 'succeeded', data: { groups: [{ selectionAmounts: [{ amount: 20 }, { amount: 9 }, { amount: 4.5 }] }] } })
+    expect(outcome).toMatchObject({ state: 'succeeded', data: { fillOrder: { groups: [{ selectionAmounts: [{ fillOrderTotalAmount: 20 }, { fillOrderTotalAmount: 9 }, { fillOrderTotalAmount: 4.5 }] }] } } })
   })
 
   it('23. aggregates multiple groups deterministically', async () => {
@@ -339,7 +345,41 @@ describe('G4-F Phase 1H quotation engine', () => {
       groups: [first, second],
     }
     const outcome = await pricingFor(draft)
-    expect(outcome).toMatchObject({ state: 'succeeded', data: { groups: [{ subtotal: 14.5 }, { subtotal: 29 }], grossTotal: 43.5 } })
+    expect(outcome).toMatchObject({ state: 'succeeded', data: {
+      calcTotalPrice: { originPrice: 43.5, totalPrice: 43.5 },
+      fillOrder: { groups: [{ subtotal: 14.5 }, { subtotal: 29 }], orderListTotalAmount: 43.5 },
+    } })
+  })
+
+  it('keeps calcTotalPrice and fillOrder projections distinct when R1 row rounding creates a one-cent difference', async () => {
+    const port = catalogPort({
+      listProcedures: vi.fn(async () => succeeded({ items: [{ ...procedureItem, guideUnitPrice: 0.335 }] })),
+      listMaterials: vi.fn(async () => succeeded({ items: [{ ...materialItem, price: 0.335 }] })),
+    })
+    const result = await evaluateQuotationDraft({ draft: directDraft(), catalogContext: context, catalogRead: port })
+    expect(result.state).toBe('ready')
+    expect(result.pricing).toMatchObject({
+      calcTotalPrice: { originPrice: 0.67, totalPrice: 0.67 },
+      fillOrder: {
+        groups: [{
+          selectionAmounts: [
+            { kind: 'procedure', calcTotalPriceContribution: 0.335, fillOrderTotalAmount: 0.34 },
+            { kind: 'material', calcTotalPriceContribution: 0.335, fillOrderTotalAmount: 0.34 },
+          ],
+          categoryTotals: { procedure: 0.34, material: 0.34 },
+          subtotal: 0.68,
+        }],
+        orderListTotalAmount: 0.68,
+      },
+    })
+    expect(result.payload?.originPrice).toBe(0.67)
+    expect(result.payload?.totalPrice).toBe(0.67)
+    const encoded = JSON.parse(result.payload!.bjProducts) as { orderList: Array<{ totalAmount: number; procedures: { totalAmount: number }; materials: { totalAmount: number } }> }
+    expect(encoded.orderList[0]).toMatchObject({
+      totalAmount: 0.68,
+      procedures: { totalAmount: 0.34 },
+      materials: { totalAmount: 0.34 },
+    })
   })
 
   it('24. applies the R1 two-decimal toFixed behavior deterministically', () => {
@@ -390,6 +430,33 @@ describe('G4-F Phase 1H quotation engine', () => {
     })
   })
 
+  it('independently rejects forged calcTotalPrice or fillOrder projections at the encoder boundary', async () => {
+    const hydrated = await hydrate(directDraft())
+    expect(hydrated.state).toBe('succeeded')
+    if (hydrated.state !== 'succeeded') throw new Error('Expected hydration to succeed')
+    const calculated = calculateQuotationPricing(hydrated.data)
+    expect(calculated.state).toBe('succeeded')
+    if (calculated.state !== 'succeeded') throw new Error('Expected pricing to succeed')
+
+    const forgedTopLevel = {
+      ...calculated.data,
+      calcTotalPrice: { ...calculated.data.calcTotalPrice, totalPrice: calculated.data.calcTotalPrice.totalPrice + 0.01 },
+    }
+    const forgedBreakdown = {
+      ...calculated.data,
+      fillOrder: {
+        ...calculated.data.fillOrder,
+        groups: calculated.data.fillOrder.groups.map((current, index) => index === 0
+          ? { ...current, subtotal: current.subtotal + 0.01 }
+          : current),
+      },
+    }
+    for (const pricing of [forgedTopLevel, forgedBreakdown]) {
+      const encoded = encodeR1OfficialOrderType1({ draft: hydrated.data, pricing, catalogContext: context })
+      expect(encoded).toMatchObject({ state: 'blocked', issues: [expect.objectContaining({ code: 'encoding.pricing_incomplete' })] })
+    }
+  })
+
   it('29. refuses to encode a hydrated draft with incomplete group readiness', () => {
     const invalid = {
       workOrderId: 'work-order-a', workflowNodeId: 'workflow-node-a', draftVersion: 1,
@@ -397,7 +464,11 @@ describe('G4-F Phase 1H quotation engine', () => {
     }
     const result = encodeR1OfficialOrderType1({
       draft: invalid,
-      pricing: { groups: [{ groupId: 'group-a', selectionAmounts: [], categoryTotals: { package: 0, procedure: 0, material: 0, measure: 0 }, subtotal: 0 }], grossTotal: 0, displayGrossTotal: 0, rounding: 'r1_toFixed_2' },
+      pricing: {
+        calcTotalPrice: { originPrice: 0, totalPrice: 0 },
+        fillOrder: { groups: [{ groupId: 'group-a', selectionAmounts: [], categoryTotals: { package: 0, procedure: 0, material: 0, measure: 0 }, subtotal: 0 }], orderListTotalAmount: 0 },
+        rounding: 'r1_calcTotalPrice_and_fillOrder',
+      },
       catalogContext: context,
     })
     expect(result).toMatchObject({ state: 'blocked', issues: expect.arrayContaining([expect.objectContaining({ code: 'encoding.group.repair_parts_required' })]) })
@@ -428,17 +499,39 @@ describe('G4-F Phase 1H quotation engine', () => {
     expect(port).not.toHaveProperty('completeWorkflow')
   })
 
-  it('blocks SKU-based package and SPU/SKU-based direct material prices', async () => {
-    const skuPackage = { ...packageItem, pricingMethod: '1' }
-    const packagePort = catalogPort({ listPackages: vi.fn(async () => succeeded({ items: [skuPackage] })) })
-    const packageResult = await pricingFor(packageDraft(), packagePort)
-    expect(packageResult).toMatchObject({ state: 'blocked', issues: [expect.objectContaining({ code: 'pricing.package_sku_deferred' })] })
-
+  it('blocks SPU/SKU-based direct material prices', async () => {
     const skuMaterial = { ...materialItem, spuId: 'synthetic-spu' }
     const materialPort = catalogPort({ listMaterials: vi.fn(async () => succeeded({ items: [skuMaterial] })) })
     const materialDraft = directDraft(['procedure', 'material'])
     const materialResult = await pricingFor(materialDraft, materialPort)
     expect(materialResult).toMatchObject({ state: 'blocked', issues: [expect.objectContaining({ code: 'pricing.material_sku_deferred' })] })
+  })
+
+  it('prices a Package without pricingMethod via the standard formula but blocks unresolved material quantity encoding', async () => {
+    const packageWithoutMethod: QuotationPackageRead = { ...packageItem, pricingMethod: undefined }
+    const port = catalogPort({ listPackages: vi.fn(async () => succeeded({ items: [packageWithoutMethod] })) })
+    const result = await evaluateQuotationDraft({ draft: packageDraft(), catalogContext: context, catalogRead: port })
+    expect(result.state).toBe('blocked')
+    expect(result.pricing).toMatchObject({
+      calcTotalPrice: { originPrice: 107.5, totalPrice: 107.5 },
+      fillOrder: { groups: [{ categoryTotals: { package: 107.5 }, subtotal: 107.5 }] },
+    })
+    expect(result.issues).toContainEqual(expect.objectContaining({
+      phase: 'encoding', code: 'encoding.package_material_quantity_not_authorized',
+    }))
+    expect(result.payload).toBeUndefined()
+  })
+
+  it('prices explicit SKU-mode Package under calcTotalPrice but never emits its unsupported SKU payload', async () => {
+    const skuPackage: QuotationPackageRead = { ...packageItem, pricingMethod: '1' }
+    const port = catalogPort({ listPackages: vi.fn(async () => succeeded({ items: [skuPackage] })) })
+    const result = await evaluateQuotationDraft({ draft: packageDraft(), catalogContext: context, catalogRead: port })
+    expect(result.state).toBe('blocked')
+    expect(result.pricing?.calcTotalPrice.originPrice).toBe(107.5)
+    expect(result.issues).toContainEqual(expect.objectContaining({
+      phase: 'encoding', code: 'encoding.package_sku_path_not_authorized',
+    }))
+    expect(result.payload).toBeUndefined()
   })
 
   it('does not generate an encodable payload for configured Package materials with unapproved derived quantity', async () => {

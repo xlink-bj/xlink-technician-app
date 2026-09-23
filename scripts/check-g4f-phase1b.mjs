@@ -71,8 +71,8 @@ const buttonContents = [...component.matchAll(/<AppButton\b[^>]*>([\s\S]*?)<\/Ap
 if (buttonContents.some((text) => /保存报价|提交报价|确认报价|完成工作流/.test(text)) || component.includes('completeWorkflowNode')) {
   fail('UI must not expose quote business writes or workflow completion')
 }
-if (!component.includes('本地金额预览') || !component.includes('未提交') || !component.includes('quotation-local-gross-total')
-  || !component.includes('不会提交报价')) {
+if (!component.includes('R1 顶层金额预览') || !component.includes('未提交') || !component.includes('quotation-local-gross-total')
+  || !component.includes('quotation-rounding-note') || !component.includes('独立舍入') || !component.includes('不会提交报价')) {
   fail('Phase 1H local price preview must be explicitly non-submitted and Action-owned')
 }
 if (!component.includes('quotation-add-group') || !component.includes('quotation-browse-') || !component.includes('quotation-package-detail-') || !component.includes('quotation-selection-quantity-') || !component.includes('quotation-selection-remove-') || !component.includes('quotation-draft-legacy')) {
@@ -153,8 +153,16 @@ if (!validation.includes('validateQuotationDraft') || !hydration.includes('hydra
   || !engine.includes('validateQuotationDraft') || !engine.includes('hydrateQuotationDraft')) {
   fail('Phase 1H domain validation, provider hydration, pricing, and pure encoder must be integrated')
 }
+if (!pricing.includes('calcTotalPriceContribution') || !pricing.includes('fillOrderTotalAmount')
+  || !pricing.includes('calcTotalPrice:') || !pricing.includes('fillOrder:')
+  || pricing.includes('pricing.package_method_unknown')) {
+  fail('Phase 1H must preserve distinct R1 money projections and price Packages without requiring pricingMethod')
+}
 if (!orderEncoder.includes('type: 1') || !orderEncoder.includes('orderList') || !orderEncoder.includes('bjProducts')) {
   fail('Phase 1H encoder must target only the source-backed grouped official Order type=1 shape')
+}
+if (!orderEncoder.includes('pricing.calcTotalPrice.originPrice') || !orderEncoder.includes('pricing.fillOrder.groups')) {
+  fail('Phase 1H encoder must source top-level totals and bjProducts totals from their respective R1 projections')
 }
 const engineSource = [engine, validation, hydration, pricing, orderEncoder].join('\n')
 if (/basic\/order\/upsert|creatQuotation|workflow\/process|completeWorkflowNode/.test(engineSource)
@@ -164,7 +172,10 @@ if (/basic\/order\/upsert|creatQuotation|workflow\/process|completeWorkflowNode/
 if (!engineTests.includes('37 tests') && !engineTests.includes('quotation engine')) {
   fail('Phase 1H deterministic engine regression suite is missing')
 }
-for (const token of ['Pricing Authority Matrix', 'UNRESOLVED', 'type=1', 'no business write']) {
+for (const token of ['0.335', 'forgedTopLevel', 'pricingMethod: undefined', 'package_sku_path_not_authorized']) {
+  if (!engineTests.includes(token) && !orderEncoder.includes(token)) fail(`Phase 1H source-parity regression missing: ${token}`)
+}
+for (const token of ['Pricing Authority Matrix', 'UNRESOLVED', 'type=1', 'no business write', 'calcTotalPrice', 'fillOrder']) {
   if (!verificationDoc.toLowerCase().includes(token.toLowerCase())) fail(`Phase 1H verification evidence missing: ${token}`)
 }
 for (const script of ['test:uni-h5-g4f-phase1b-review', 'check:g4f-phase1b']) {

@@ -48,9 +48,10 @@
         />
         <template v-else-if="workspace.quotationEngine.result">
           <view v-if="workspace.quotationEngine.result.pricing" class="quotation-content__engine-total" data-testid="quotation-local-gross-total">
-            <text class="quotation-content__engine-label">本地金额预览 · 未提交</text>
-            <text class="quotation-content__engine-amount">¥{{ workspace.quotationEngine.result.pricing.displayGrossTotal.toFixed(2) }}</text>
+            <text class="quotation-content__engine-label">R1 顶层金额预览 · 未提交</text>
+            <text class="quotation-content__engine-amount">¥{{ workspace.quotationEngine.result.pricing.calcTotalPrice.totalPrice.toFixed(2) }}</text>
           </view>
+          <text v-if="workspace.quotationEngine.result.pricing" class="quotation-content__engine-note" data-testid="quotation-rounding-note">明细分组金额按 R1 填单规则独立舍入，与顶层金额可能存在分差。</text>
           <AppStatus
             v-if="workspace.quotationEngine.result.state === 'ready'"
             message="报价校验通过；已在本机生成 type=1 结构预览，未创建或提交订单。"
@@ -492,7 +493,7 @@ const composition = useQuotationCompositionStore()
 const catalogBrowser = useQuotationCatalogBrowserStore()
 const workspace = useActionWorkspaceStore()
 const groupSubtotal = (groupId: string): number | undefined =>
-  workspace.quotationEngine.result?.pricing?.groups.find((group) => group.groupId === groupId)?.subtotal
+  workspace.quotationEngine.result?.pricing?.fillOrder.groups.find((group) => group.groupId === groupId)?.subtotal
 
 let engineRefreshTimer: ReturnType<typeof setTimeout> | undefined
 watch(

@@ -11,10 +11,10 @@ export interface QuotationPricingIssue {
 export interface QuotationPricedSelection {
   readonly selectionId: string
   readonly kind: QuotationLineKind
-  /** R1-compatible row total; minimum-price values retain source precision. */
-  readonly amount: number
-  /** Two-decimal display amount, matching R1 amountToFixed(). */
-  readonly displayAmount: number
+  /** Raw contribution accumulated by R1 calcTotalPrice() before its final top-level rounding. */
+  readonly calcTotalPriceContribution: number
+  /** Row total emitted by R1 fillOrder(); quantity-derived value is rounded per row except an applied minimum. */
+  readonly fillOrderTotalAmount: number
 }
 
 export interface QuotationGroupPricing {
@@ -25,10 +25,17 @@ export interface QuotationGroupPricing {
 }
 
 export interface QuotationPricingResult {
-  readonly groups: readonly QuotationGroupPricing[]
-  readonly grossTotal: number
-  readonly displayGrossTotal: number
-  readonly rounding: 'r1_toFixed_2'
+  /** calcTotalPrice() projection used by top-level Order originPrice/totalPrice. */
+  readonly calcTotalPrice: {
+    readonly originPrice: number
+    readonly totalPrice: number
+  }
+  /** fillOrder() projection used exclusively to encode bjProducts rows and aggregates. */
+  readonly fillOrder: {
+    readonly groups: readonly QuotationGroupPricing[]
+    readonly orderListTotalAmount: number
+  }
+  readonly rounding: 'r1_calcTotalPrice_and_fillOrder'
 }
 
 export type QuotationPricingOutcome =
@@ -56,7 +63,7 @@ function issue(
 }
 
 function selectionAmount(selection: HydratedQuotationSelection, groupId: string):
-  | { readonly state: 'succeeded'; readonly amount: number }
+  | { readonly state: 'succeeded'; readonly calcTotalPriceContribution: number; readonly fillOrderTotalAmount: number }
   | { readonly state: 'blocked'; readonly issue: QuotationPricingIssue } {
   const { quantity } = selection.selection
   if (!Number.isFinite(quantity) || quantity <= 0) {
@@ -64,12 +71,6 @@ function selectionAmount(selection: HydratedQuotationSelection, groupId: string)
   }
   switch (selection.kind) {
     case 'package': {
-      if (!selection.item.pricingMethod) {
-        return { state: 'blocked', issue: issue('pricing.package_method_unknown', '套餐计价方式未提供，无法确定适用的 R1 计价路径。', groupId, selection.selection.selectionId) }
-      }
-      if (selection.item.pricingMethod === '1') {
-        return { state: 'blocked', issue: issue('pricing.package_sku_deferred', '此套餐使用 SKU 计价；SKU/SPU 能力尚未纳入本阶段。', groupId, selection.selection.selectionId) }
-      }
       if (!safeMoney(selection.item.price)) {
         return { state: 'blocked', issue: issue('pricing.package_price_missing', '套餐基础价格缺失或无效。', groupId, selection.selection.selectionId) }
       }
@@ -86,7 +87,11 @@ function selectionAmount(selection: HydratedQuotationSelection, groupId: string)
         return { state: 'blocked', issue: issue('pricing.package_total_invalid', '套餐金额超出可计算范围。', groupId, selection.selection.selectionId) }
       }
       const minimum = selection.item.minimumPrice ?? 0
-      return { state: 'succeeded', amount: unrounded < minimum ? minimum : r1AmountToFixed(unrounded) }
+      return {
+        state: 'succeeded',
+        calcTotalPriceContribution: unrounded < minimum ? minimum : unrounded,
+        fillOrderTotalAmount: unrounded < minimum ? minimum : r1AmountToFixed(unrounded),
+      }
     }
     case 'procedure': {
       const price = selection.item.guideUnitPrice
@@ -101,7 +106,11 @@ function selectionAmount(selection: HydratedQuotationSelection, groupId: string)
       if (!Number.isFinite(unrounded)) {
         return { state: 'blocked', issue: issue('pricing.procedure_total_invalid', '工序金额超出可计算范围。', groupId, selection.selection.selectionId) }
       }
-      return { state: 'succeeded', amount: unrounded < (minimum ?? 0) ? minimum! : r1AmountToFixed(unrounded) }
+      return {
+        state: 'succeeded',
+        calcTotalPriceContribution: unrounded < (minimum ?? 0) ? minimum! : unrounded,
+        fillOrderTotalAmount: unrounded < (minimum ?? 0) ? minimum! : r1AmountToFixed(unrounded),
+      }
     }
     case 'material': {
       if (selection.item.spuId) {
@@ -112,7 +121,7 @@ function selectionAmount(selection: HydratedQuotationSelection, groupId: string)
       }
       const total = selection.item.price * quantity
       return Number.isFinite(total)
-        ? { state: 'succeeded', amount: r1AmountToFixed(total) }
+        ? { state: 'succeeded', calcTotalPriceContribution: total, fillOrderTotalAmount: r1AmountToFixed(total) }
         : { state: 'blocked', issue: issue('pricing.material_total_invalid', '材料金额超出可计算范围。', groupId, selection.selection.selectionId) }
     }
     case 'measure': {
@@ -121,19 +130,16 @@ function selectionAmount(selection: HydratedQuotationSelection, groupId: string)
       }
       const total = selection.item.guideUnitPrice * quantity
       return Number.isFinite(total)
-        ? { state: 'succeeded', amount: r1AmountToFixed(total) }
+        ? { state: 'succeeded', calcTotalPriceContribution: total, fillOrderTotalAmount: r1AmountToFixed(total) }
         : { state: 'blocked', issue: issue('pricing.measure_total_invalid', '机措金额超出可计算范围。', groupId, selection.selection.selectionId) }
     }
   }
 }
 
-function sumR1Category(values: readonly number[]): number {
-  return r1AmountToFixed(values.reduce((sum, value) => sum + value, 0))
-}
-
 export function calculateQuotationPricing(draft: HydratedQuotationDraft): QuotationPricingOutcome {
   const issues: QuotationPricingIssue[] = []
   const groups: QuotationGroupPricing[] = []
+  let calcTotalPriceContribution = 0
   for (const hydratedGroup of draft.groups) {
     const selectionAmounts: QuotationPricedSelection[] = []
     const categoryValues: Record<QuotationLineKind, number[]> = {
@@ -145,27 +151,40 @@ export function calculateQuotationPricing(draft: HydratedQuotationDraft): Quotat
         issues.push(priced.issue)
         continue
       }
+      calcTotalPriceContribution += priced.calcTotalPriceContribution
       selectionAmounts.push({
         selectionId: selection.selection.selectionId,
         kind: selection.kind,
-        amount: priced.amount,
-        displayAmount: r1AmountToFixed(priced.amount),
+        calcTotalPriceContribution: priced.calcTotalPriceContribution,
+        fillOrderTotalAmount: priced.fillOrderTotalAmount,
       })
-      categoryValues[selection.kind].push(priced.amount)
+      categoryValues[selection.kind].push(priced.fillOrderTotalAmount)
     }
+    const packageSum = categoryValues.package.reduce((sum, value) => sum + value, 0)
+    const procedureSum = categoryValues.procedure.reduce((sum, value) => sum + value, 0)
     const categoryTotals: Record<QuotationLineKind, number> = {
-      package: sumR1Category(categoryValues.package),
-      procedure: sumR1Category(categoryValues.procedure),
-      material: sumR1Category(categoryValues.material),
-      measure: sumR1Category(categoryValues.measure),
+      package: r1AmountToFixed(packageSum),
+      procedure: r1AmountToFixed(procedureSum),
+      // R1's fillOrder accumulates row-rounded totals here without another category rounding pass.
+      material: categoryValues.material.reduce((sum, value) => sum + value, 0),
+      measure: categoryValues.measure.reduce((sum, value) => sum + value, 0),
     }
-    const subtotal = r1AmountToFixed(Object.values(categoryTotals).reduce((sum, value) => sum + value, 0))
+    // R1 sums category totals for a group without an additional group rounding pass.
+    const subtotal = Object.values(categoryTotals).reduce((sum, value) => sum + value, 0)
     groups.push({ groupId: hydratedGroup.group.groupId, selectionAmounts, categoryTotals, subtotal })
   }
   if (issues.length > 0) return { state: 'blocked', issues }
-  const grossTotal = r1AmountToFixed(groups.reduce((sum, group) => sum + group.subtotal, 0))
+  const originPrice = r1AmountToFixed(calcTotalPriceContribution)
+  // With no discount/coupon/preferential inputs in this phase, R1's subsequent neutral
+  // totalPrice steps preserve the already-rounded originPrice.
+  const totalPrice = originPrice
+  const orderListTotalAmount = groups.reduce((sum, group) => sum + group.subtotal, 0)
   return {
     state: 'succeeded',
-    data: { groups, grossTotal, displayGrossTotal: r1AmountToFixed(grossTotal), rounding: 'r1_toFixed_2' },
+    data: {
+      calcTotalPrice: { originPrice, totalPrice },
+      fillOrder: { groups, orderListTotalAmount },
+      rounding: 'r1_calcTotalPrice_and_fillOrder',
+    },
   }
 }
