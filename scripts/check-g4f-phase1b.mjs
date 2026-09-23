@@ -66,6 +66,9 @@ if (component.includes('composition.addCatalogItem') || component.includes('sele
 if (!workspace.includes('quotationCatalogBrowser.configure') || !workspace.includes('catalogContext: read.data.quotationCatalogContext')) {
   fail('catalog browser must receive adapter-derived Work Order context')
 }
+if (workspace.includes('getQuotationActionContent')) {
+  fail('Mock-only quotation content fixtures must not gate place_order workspace initialization')
+}
 for (const method of ['listPackages', 'listProcedures', 'listMaterials', 'listMeasures', 'getPackageDetail']) {
   if (!catalogBrowser.includes(`port.${method}`)) fail(`catalog browser must use read-only port method ${method}`)
 }

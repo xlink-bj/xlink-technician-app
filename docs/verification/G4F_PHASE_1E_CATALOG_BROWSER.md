@@ -12,6 +12,13 @@ context comes only from the adapter-normalized active Work Order:
 If the port or required service-type context is unavailable, list requests are
 blocked locally. The browser does not construct scope from UI labels.
 
+The executable `place_order` Action Workspace initializes from the authorized
+Workflow projection and Work Order detail, then prepares the local grouped
+draft and read-only browser. The synthetic quotation-content fixture remains
+available as isolated Mock review evidence, but is not requested by or required
+for Workspace initialization. If the Work Order has no catalog context, the
+Workspace remains available and only the Catalog Browser is locally blocked.
+
 ## Read UX
 
 The browser loads Package, Procedure, Material, and Measure/机措 through their

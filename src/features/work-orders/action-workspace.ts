@@ -29,7 +29,6 @@ import type {
   NavigationPort,
   QuotationCatalogReadPort,
   SessionSnapshot,
-  QuotationActionContentRead,
   SurveyLeakageCauseProviderPort,
   SurveyLeakageCauseRow,
   TechnicianApiCommandPort,
@@ -356,7 +355,6 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
   const descriptor = ref<ActionDescriptor | null>(null)
   const appointmentForm = ref<AppointmentFormRead | null>(null)
   const dynamicForm = ref<DynamicFormRead | null>(null)
-  const quotationContent = ref<QuotationActionContentRead | null>(null)
   const quotationContentState = ref<'idle' | 'loading' | 'ready' | 'blocked' | 'failed_retryable' | 'failed_terminal'>('idle')
   const dynamicFormSaveState = ref<'not_saved' | 'saving' | 'saved' | 'failed'>('not_saved')
   const surveyLeakageCauseRows = ref<readonly SurveyLeakageCauseRow[]>([])
@@ -545,7 +543,6 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     descriptor.value = null
     appointmentForm.value = null
     dynamicForm.value = null
-    quotationContent.value = null
     quotationContentState.value = 'idle'
     dynamicFormSaveState.value = 'not_saved'
     surveyLeakageCauseRows.value = []
@@ -730,7 +727,6 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     descriptor.value = null
     appointmentForm.value = null
     dynamicForm.value = null
-    quotationContent.value = null
     quotationContentState.value = 'idle'
     dynamicFormSaveState.value = 'not_saved'
     surveyLeakageCauseRows.value = []
@@ -803,25 +799,6 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       detail.value = read.data
       descriptor.value = nextDescriptor
       quotationContentState.value = 'loading'
-      const quotationRead = configured.apiRead.getQuotationActionContent
-        ? await configured.apiRead.getQuotationActionContent({
-            workOrderId: read.data.id,
-            workflowNodeId: currentTask.nodeId,
-          })
-        : failure<QuotationActionContentRead>('unsupported_capability', 'Quotation foundation content is unavailable')
-      if (requestVersion !== loadVersion) return failure('cancelled', 'Action Workspace load was superseded')
-      if (quotationRead.state !== 'succeeded' || !quotationRead.data) {
-        loadState.value = quotationRead.state
-        lifecycle.value = quotationRead.state === 'failed_retryable' ? 'failed_retryable' : 'failed_terminal'
-        error.value = quotationRead.error ?? null
-        quotationContentState.value = quotationRead.error?.category === 'unsupported_capability'
-          ? 'blocked'
-          : quotationRead.state === 'failed_retryable'
-            ? 'failed_retryable'
-            : 'failed_terminal'
-        return failureFrom<QuotationActionContentRead, ActionDescriptor>(quotationRead)
-      }
-      quotationContent.value = quotationRead.data
       quotationCatalogBrowser.configure({
         readPort: configured.quotationCatalogRead ?? null,
         catalogContext: read.data.quotationCatalogContext,
@@ -1734,7 +1711,6 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     detail,
     descriptor,
     appointmentForm,
-    quotationContent,
     quotationContentState,
     quotationComposition,
     quotationCatalogBrowser,

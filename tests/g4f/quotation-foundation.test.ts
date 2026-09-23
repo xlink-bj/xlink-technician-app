@@ -134,7 +134,7 @@ describe('G4-F Phase 1A quotation action foundation', () => {
     expect(projectDetailWorkflow([genericNode], workflowActor()).currentTask?.execution).toBe('disabled_read_only')
   })
 
-  it('loads the synthetic empty-quote fixture through Mock transport, Adapter, and Action Workspace only', async () => {
+  it('initializes the place_order workspace and Mock catalog independently of the quote fixture', async () => {
     const realRequest = vi.fn()
     const transport = createUniApiReadTransport({
       apiBaseUrl: 'https://mock-review.invalid',
@@ -144,6 +144,13 @@ describe('G4-F Phase 1A quotation action foundation', () => {
     })
     const api = createTechnicianApiReadAdapter(transport)
     const quotationCatalogRead = createQuotationCatalogReadAdapter(transport)
+    const fixtureRead = await api.getQuotationActionContent!({ workOrderId, workflowNodeId })
+    expect(fixtureRead).toEqual(succeeded({
+      source: 'mock_fixture',
+      fixtureId: 'g4f-quotation-empty-v1',
+      state: 'no_persisted_quote',
+    }))
+    const quotationFixtureRead = vi.spyOn(api, 'getQuotationActionContent')
     const commandApi = {
       readAppointmentForm: vi.fn(),
       readDynamicForm: vi.fn(),
@@ -164,11 +171,7 @@ describe('G4-F Phase 1A quotation action foundation', () => {
     const result = await workspace.load({ workOrderId, workflowNodeId, actionIntent: 'place_order' })
     expect(result.state).toBe('succeeded')
     expect(workspace.descriptor).toMatchObject({ actionIntent: 'place_order', contentKind: 'quotation', execution: 'enabled' })
-    expect(workspace.quotationContent).toEqual({
-      source: 'mock_fixture',
-      fixtureId: 'g4f-quotation-empty-v1',
-      state: 'no_persisted_quote',
-    })
+    expect(quotationFixtureRead).not.toHaveBeenCalled()
     expect(workspace.quotationContentState).toBe('ready')
     expect(workspace.detail?.quotationCatalogContext).toEqual({
       serviceType: mockQuotationCatalogServiceType,
@@ -217,6 +220,86 @@ describe('G4-F Phase 1A quotation action foundation', () => {
     expect(result.state).toBe('failed_terminal')
     expect(result.error?.category).toBe('server_terminal')
     expect(realRequest).not.toHaveBeenCalled()
+  })
+
+  it('opens place_order with Mock off and no catalog context while blocking only catalog reads', async () => {
+    setBusinessMockMode('off')
+    const activeWorkOrderId = asOpaqueId<'WorkOrderId'>('active-place-order-without-catalog-context')
+    const requestPaths: string[] = []
+    const realRequest = vi.fn((options: UniNamespace.RequestOptions) => {
+      const path = String(options.url).replace('https://mock-review.invalid/', '')
+      requestPaths.push(path)
+      let data: unknown
+      if (path === `basic/serviceAppointment/queryById/${encodeURIComponent(activeWorkOrderId)}`) {
+        data = {
+          data: {
+            serviceAppointment: {
+              _id: String(activeWorkOrderId),
+              orderNum: 'SYNTHETIC-PLACE-ORDER',
+              workflowRunId: 'mock-run-no-catalog-context',
+            },
+            workflow: { _id: 'mock-run-no-catalog-context' },
+            workflowNode: [{
+              _id: String(workflowNodeId),
+              state: 0,
+              nodeDef: { nodeType: 'placeOrder', name: '报价', viewableRoleIds: ['synthetic-role'] },
+            }],
+          },
+        }
+      } else if (path === 'biz/action/query.do') {
+        data = { data: [] }
+      } else if (path === 'i/code/selectMultistageCode.do') {
+        data = [{ type: 'repairParts', children: [] }]
+      } else {
+        throw new Error(`Unexpected request in no-context regression: ${path}`)
+      }
+      options.success?.({ statusCode: 200, data } as UniNamespace.RequestSuccessCallbackResult)
+    })
+    const transport = createUniApiReadTransport({
+      apiBaseUrl: 'https://mock-review.invalid',
+      getSessionRef: () => session.sessionRef,
+      request: realRequest,
+      mockLatencyMs: 0,
+    })
+    const api = createTechnicianApiReadAdapter(transport, { cascadeTenantId: 'synthetic-tenant' })
+    const quotationFixtureRead = vi.spyOn(api, 'getQuotationActionContent')
+    const quotationCatalogRead = createQuotationCatalogReadAdapter(transport)
+    const listPackages = vi.spyOn(quotationCatalogRead, 'listPackages')
+    const commandApi = {
+      readAppointmentForm: vi.fn(),
+      readDynamicForm: vi.fn(),
+      saveDynamicForm: vi.fn(),
+      completeWorkflowNode: vi.fn(),
+      submitAppointment: vi.fn(),
+    } as unknown as TechnicianApiCommandPort
+    const workspace = useActionWorkspaceStore()
+    workspace.configure({
+      apiRead: api,
+      quotationCatalogRead,
+      commandApi,
+      draftRepository: createActionDraftRepository(memoryStorage()),
+      navigation: navigation(),
+      getSession: () => session,
+    })
+
+    const result = await workspace.load({ workOrderId: activeWorkOrderId, workflowNodeId, actionIntent: 'place_order' })
+    expect(result.state, workspace.error?.message ?? JSON.stringify(result)).toBe('succeeded')
+    expect(workspace.loadState).toBe('succeeded')
+    expect(workspace.quotationContentState).toBe('ready')
+    expect(workspace.detail?.quotationCatalogContext).toBeUndefined()
+    expect(workspace.quotationComposition.localState).toBe('fresh')
+    expect(workspace.quotationComposition.draft?.groups).toEqual([])
+    expect(quotationFixtureRead).not.toHaveBeenCalled()
+
+    workspace.quotationCatalogBrowser.open('package')
+    expect(workspace.quotationCatalogBrowser.catalogStatesByKind.package).toBe('blocked')
+    expect(workspace.quotationCatalogBrowser.listErrorCopyByKind.package).toContain('适用范围')
+    expect(listPackages).not.toHaveBeenCalled()
+    expect(requestPaths).toContain(`basic/serviceAppointment/queryById/${encodeURIComponent(activeWorkOrderId)}`)
+    expect(requestPaths).not.toContain('__mock/quotation/action-content')
+    expect(requestPaths.some((path) => path.startsWith('biz/projPackage/queryWithRank'))).toBe(false)
+    expect(commandApi.saveDynamicForm).not.toHaveBeenCalled()
+    expect(commandApi.completeWorkflowNode).not.toHaveBeenCalled()
   })
 
   it('rejects mismatched Mock fixture identity instead of accepting content for another node', async () => {

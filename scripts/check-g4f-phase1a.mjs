@@ -37,8 +37,13 @@ if (!projection.includes("candidate.actionIntent === 'place_order'")) {
 if (!projection.includes('Boolean(candidate.node.formDefinitionId)')) {
   fail('generic form execution must retain the formDefinitionId requirement')
 }
-if (!workspace.includes('getQuotationActionContent') || !workspace.includes('quotationContentState')) {
-  fail('Action Workspace must own the quotation content read and state')
+if (
+  !workspace.includes('quotationContentState')
+  || !workspace.includes('quotationComposition.initialize')
+  || !workspace.includes('quotationCatalogBrowser.configure')
+  || workspace.includes('getQuotationActionContent')
+) {
+  fail('place_order Workspace must initialize local composition/catalog without gating on the Mock-only quotation fixture')
 }
 if (!adapter.includes("path: '__mock/quotation/action-content'")) {
   fail('quotation foundation must use the synthetic-only Adapter route')
