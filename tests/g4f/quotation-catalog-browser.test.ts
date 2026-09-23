@@ -134,6 +134,22 @@ describe('G4-F Phase 1E quotation catalog browser', () => {
     expect(port.getPackageDetail).not.toHaveBeenCalled()
   })
 
+  it('exposes selection candidates only from the open successful category and exact read identity', async () => {
+    const procedure: QuotationProcedureRead = { kind: 'procedure', id: 'procedure-1', name: '工序一' }
+    const port = catalogPort({ listProcedures: vi.fn(async () => succeeded({ ...emptyPage(), items: [procedure] })) })
+    const store = useQuotationCatalogBrowserStore()
+    store.configure({ readPort: port, catalogContext: context })
+
+    expect(store.selectedCatalogItemFor('procedure', 'procedure-1')).toBeNull()
+    store.open('procedure')
+    await store.loadList('procedure')
+    expect(store.selectedCatalogItemFor('procedure', 'procedure-1')).toEqual(procedure)
+    expect(store.selectedCatalogItemFor('material', 'procedure-1')).toBeNull()
+    expect(store.selectedCatalogItemFor('procedure', 'unlisted-procedure')).toBeNull()
+    store.close()
+    expect(store.selectedCatalogItemFor('procedure', 'procedure-1')).toBeNull()
+  })
+
   it('does not request a package that is not in the current successful package list', async () => {
     const port = catalogPort()
     const store = useQuotationCatalogBrowserStore()

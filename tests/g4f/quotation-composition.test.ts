@@ -8,12 +8,12 @@ import {
   type ActionDraftIdentity,
   type ActionDraftRecord,
 } from '@runtimes/action'
-import type { StorageKey, StoragePort } from '@shared/ports'
+import type { QuotationCatalogItemRead, StorageKey, StoragePort } from '@shared/ports'
 import { asOpaqueId, type OperationSnapshot } from '@shared/types'
 import { useQuotationCompositionStore } from '@features/work-orders/quotation/composition-store'
 import { quotationCatalog } from '@features/work-orders/quotation/catalog'
 import { decodeQuotationDraftRecord, quotationDraftRecordFor } from '@features/work-orders/quotation/draft-codec'
-import { createEmptyQuotationDraft, parseQuotationQuantity } from '@features/work-orders/quotation/model'
+import { createEmptyQuotationDraft, isDirectQuotationCatalogKind, parseQuotationQuantity } from '@features/work-orders/quotation/model'
 
 function succeeded<T>(data: T): OperationSnapshot<T> {
   return { state: 'succeeded', data }
@@ -114,6 +114,45 @@ describe('G4-F quotation composition model and local draft recovery', () => {
     expect(parseQuotationQuantity('1e3')).toMatchObject({ valid: false })
     expect(parseQuotationQuantity(' 2.375 ')).toEqual({ valid: true, value: 2.375 })
     expect(parseQuotationQuantity('.5')).toEqual({ valid: true, value: 0.5 })
+  })
+
+  it('adds only direct non-package provider selections and excludes commercial metadata from the local draft', async () => {
+    expect(isDirectQuotationCatalogKind('procedure')).toBe(true)
+    expect(isDirectQuotationCatalogKind('material')).toBe(true)
+    expect(isDirectQuotationCatalogKind('measure')).toBe(true)
+    expect(isDirectQuotationCatalogKind('package')).toBe(false)
+    expect(isDirectQuotationCatalogKind('sku')).toBe(false)
+
+    const identity = identityFor()
+    const store = useQuotationCompositionStore()
+    await store.initialize({ identity, repository, debounceMs: 10_000 })
+    const groupId = store.createGroup({ repairParts: ['part-roof'] }).data!
+    const directItems: readonly QuotationCatalogItemRead[] = [
+      { kind: 'procedure', id: 'real-procedure-1', name: '基层处理', unit: '处', guideUnitPrice: 999, minimumGuideTotalPrice: 888 },
+      { kind: 'material', id: 'real-material-1', name: '防水材料', unit: '桶', price: 777, servicePrice: 666 },
+      { kind: 'measure', id: 'real-measure-1', name: '机械措施', unit: '次', guideUnitPrice: 555, cost: 444 },
+    ]
+
+    for (const item of directItems) {
+      expect(store.addCatalogReadItem(groupId, item).state).toBe('succeeded')
+    }
+    expect(store.groups[0]).toMatchObject({
+      procedures: [{ catalogId: 'real-procedure-1', label: '基层处理', unit: '处', quantity: 1 }],
+      materials: [{ catalogId: 'real-material-1', label: '防水材料', unit: '桶', quantity: 1 }],
+      measures: [{ catalogId: 'real-measure-1', label: '机械措施', unit: '次', quantity: 1 }],
+    })
+    expect(JSON.stringify(store.draft)).not.toMatch(/price|minimum|cost|guideUnit/i)
+
+    const unboundGroupId = store.createGroup().data!
+    const beforeUnboundSelection = JSON.stringify(store.draft)
+    expect(store.addCatalogReadItem(unboundGroupId, directItems[0]).state).toBe('failed_terminal')
+    expect(JSON.stringify(store.draft)).toBe(beforeUnboundSelection)
+
+    const beforePackage = JSON.stringify(store.draft)
+    expect(store.addCatalogReadItem(groupId, {
+      kind: 'package', id: 'real-package-1', name: '套餐', unit: '项', price: 100,
+    }).state).toBe('failed_terminal')
+    expect(JSON.stringify(store.draft)).toBe(beforePackage)
   })
 
   it('does not persist invalid intermediate quantity text as a valid draft change', async () => {

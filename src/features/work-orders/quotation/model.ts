@@ -2,6 +2,14 @@ export const QUOTATION_LINE_KINDS = ['package', 'procedure', 'material', 'measur
 
 export type QuotationLineKind = typeof QUOTATION_LINE_KINDS[number]
 
+/** Direct catalog selections authorized for the Phase 1F local composition bridge. */
+export const QUOTATION_DIRECT_CATALOG_KINDS = ['procedure', 'material', 'measure'] as const
+export type QuotationDirectCatalogKind = typeof QUOTATION_DIRECT_CATALOG_KINDS[number]
+
+export function isDirectQuotationCatalogKind(kind: string): kind is QuotationDirectCatalogKind {
+  return (QUOTATION_DIRECT_CATALOG_KINDS as readonly string[]).includes(kind)
+}
+
 /** Local selection only; it is not a persisted/backend quotation row. */
 export interface QuotationSelection<K extends QuotationLineKind = QuotationLineKind> {
   readonly selectionId: string

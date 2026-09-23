@@ -69,14 +69,16 @@ test('Phase 1D empty quotation draft starts from a repair-part group', async ({ 
   await expectSafe(page, diagnostics)
 })
 
-test('Phase 1E browses each catalog category without mutating the grouped draft', async ({ page }) => {
+test('Phase 1F browses all catalog kinds and explicitly adds only direct selections to the opened repair group', async ({ page }) => {
   const diagnostics = await installSafetyGuards(page)
   await mkdir(output, { recursive: true })
   await openScenario(page, 'empty')
   await page.getByTestId('quotation-add-group').click()
   await page.getByText('屋面', { exact: true }).click()
+  const groupId = 'quotation-group-1'
+  let selectionCount = 0
   for (const kind of ['package', 'procedure', 'material', 'measure'] as const) {
-    await page.getByTestId(`quotation-browse-${kind}`).click()
+    await page.getByTestId(`quotation-browse-${groupId}-${kind}`).click()
     await expect(page.getByTestId('quotation-catalog-sheet')).toBeVisible()
     await page.getByTestId(`quotation-catalog-kind-${kind}`).click()
     const labels = {
@@ -86,11 +88,28 @@ test('Phase 1E browses each catalog category without mutating the grouped draft'
       measure: 'Mock 机措 A',
     } as const
     await expect(page.getByTestId('quotation-catalog-list')).toContainText(labels[kind])
-    await expect(page.getByTestId('quotation-composition-selection')).toHaveCount(0)
-    await page.getByTestId('quotation-catalog-close').click()
+    await expect(page.getByTestId('quotation-composition-selection')).toHaveCount(selectionCount)
+    if (kind === 'package') {
+      await expect(page.getByTestId('quotation-catalog-add-package-mock-catalog-package-basic')).toHaveCount(0)
+      await expect(page.getByTestId('quotation-package-detail-mock-catalog-package-basic')).toBeVisible()
+      await page.getByTestId('quotation-catalog-close').click()
+      continue
+    }
+    const catalogIds = {
+      procedure: 'mock-catalog-procedure-seal',
+      material: 'mock-catalog-material-sealant',
+      measure: 'mock-catalog-measure-inspection',
+    } as const
+    const itemId = catalogIds[kind]
+    await expect(page.getByTestId(`quotation-catalog-add-${kind}-${itemId}`)).toBeEnabled()
+    await page.getByTestId(`quotation-catalog-add-${kind}-${itemId}`).click()
+    selectionCount += 1
+    await expect(page.getByTestId('quotation-catalog-sheet')).toHaveCount(0)
+    await expect(page.getByTestId('quotation-composition-selection')).toHaveCount(selectionCount)
+    await expect(page.getByTestId(`quotation-group-section-${groupId}-${kind}`)).toContainText(labels[kind])
   }
   await page.getByTestId('quotation-draft-groups').scrollIntoViewIfNeeded()
-  await page.screenshot({ path: resolve(output, '02-grouped-draft-catalog-readonly.png'), animations: 'disabled' })
+  await page.screenshot({ path: resolve(output, '02-grouped-draft-direct-selections.png'), animations: 'disabled' })
   await expect(page.getByText(/价格|单价|小计|总价|¥|￥/)).toHaveCount(0)
   await expect(page.getByTestId('action-workspace-submit')).toHaveCount(0)
   await expect(page.getByTestId('dynamic-form-save')).toHaveCount(0)

@@ -134,7 +134,7 @@ describe('G4-F Phase 1A quotation action foundation', () => {
     expect(projectDetailWorkflow([genericNode], workflowActor()).currentTask?.execution).toBe('disabled_read_only')
   })
 
-  it('initializes the place_order workspace and Mock catalog independently of the quote fixture', async () => {
+  it('initializes place_order without the quote fixture and bridges only explicit direct catalog selections', async () => {
     const realRequest = vi.fn()
     const transport = createUniApiReadTransport({
       apiBaseUrl: 'https://mock-review.invalid',
@@ -192,6 +192,27 @@ describe('G4-F Phase 1A quotation action foundation', () => {
     expect(workspace.quotationCatalogBrowser.packageDetailState).toBe('succeeded')
     expect(workspace.quotationCatalogBrowser.packageMaterialLayers.map((layer) => layer.label)).toEqual(['层级：mock-layer-1'])
     expect(JSON.stringify(workspace.quotationComposition.draft)).toBe(localDraftBeforeCatalogRead)
+
+    const groupId = workspace.quotationComposition.createGroup({ repairParts: ['verified-roof-path'] }).data!
+    for (const kind of ['procedure', 'material', 'measure'] as const) {
+      workspace.quotationCatalogBrowser.open(kind)
+      await workspace.quotationCatalogBrowser.loadList(kind)
+      const item = workspace.quotationCatalogBrowser.visibleCatalogItems[0]
+      expect(item?.kind).toBe(kind)
+      expect(workspace.addQuotationCatalogSelection(groupId, kind, item!.id).state).toBe('succeeded')
+      expect(workspace.quotationComposition.selectionsFor(groupId, kind)).toMatchObject([
+        { catalogId: item!.id, label: item!.name, ...(item!.unit ? { unit: item!.unit } : {}), quantity: 1 },
+      ])
+    }
+    workspace.quotationCatalogBrowser.open('package')
+    await workspace.quotationCatalogBrowser.loadList('package')
+    const beforeRejectedPackage = JSON.stringify(workspace.quotationComposition.draft)
+    expect(workspace.addQuotationCatalogSelection(groupId, 'package', 'mock-catalog-package-basic').state).toBe('failed_terminal')
+    workspace.quotationCatalogBrowser.open('material')
+    await workspace.quotationCatalogBrowser.loadList('material')
+    expect(workspace.addQuotationCatalogSelection(groupId, 'material', 'unlisted-material').state).toBe('failed_terminal')
+    expect(JSON.stringify(workspace.quotationComposition.draft)).toBe(beforeRejectedPackage)
+
     expect(workspace.detail?.customerName).toBe('演示报价工单')
     expect(workspace.canSubmit).toBe(false)
     expect(isMockOwnedRead('__mock/quotation/action-content')).toBe(true)

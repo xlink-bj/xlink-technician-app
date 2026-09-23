@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 
 import type { ActionDraftIdentity, ActionDraftRepository } from '@runtimes/action'
-import type { CodeOptionRead } from '@shared/ports'
+import type { CodeOptionRead, QuotationCatalogItemRead } from '@shared/ports'
 import { createOperationError, type OperationSnapshot } from '@shared/types'
 
 import { quotationCatalogItemFor, quotationCatalogKindLabels } from './catalog'
@@ -13,11 +13,13 @@ import {
   changeQuotationSelectionQuantity,
   createEmptyQuotationDraft,
   createQuotationGroup,
+  isDirectQuotationCatalogKind,
   parseQuotationQuantity,
   quotationSelectionsFor,
   removeQuotationSelection,
   updateQuotationGroupContext,
   type QuotationDraft,
+  type QuotationCatalogItem,
   type QuotationGroupContext,
   type QuotationLineKind,
 } from './model'
@@ -210,6 +212,37 @@ export const useQuotationCompositionStore = defineStore('quotationComposition', 
     return succeeded()
   }
 
+  /** Adds only allowlisted normalized direct reads to the local draft. */
+  function addCatalogReadItem(groupId: string, source: QuotationCatalogItemRead): OperationSnapshot<void> {
+    if (!isDirectQuotationCatalogKind(source.kind)) return failed('unsupported_capability', '该目录类型不能直接加入草稿')
+    if (!draft.value || !canEdit()) return failed('unsupported_capability', '报价草稿当前不可编辑')
+    const group = draft.value.groups.find((item) => item.groupId === groupId)
+    if (!group) return failed('validation', '请先选择有效的维修部位组')
+    if (group.repairParts.length === 0) return failed('validation', '请先为维修部位组选择部位路径')
+    if (!source.id.trim() || !source.name.trim()) return failed('validation', '所选目录项身份不完整')
+
+    // Project only local composition fields; provider commercial metadata is
+    // intentionally excluded from the persisted draft model.
+    const item = {
+      catalogId: source.id,
+      kind: source.kind,
+      label: source.name,
+      ...(source.unit ? { unit: source.unit } : {}),
+    } satisfies QuotationCatalogItem
+    const usedIds = selections(draft.value).flatMap((selection) => {
+      const match = /^quotation-selection-(\d+)$/.exec(selection.selectionId)
+      return match ? [Number(match[1])] : []
+    })
+    const selectionId = `quotation-selection-${Math.max(0, ...usedIds) + 1}`
+    const next = appendQuotationSelection(draft.value, groupId, item, selectionId)
+    if (next === draft.value) return failed('validation', '所选目录项未能加入当前分组')
+    draft.value = next
+    quantityTextBySelection.value = { ...quantityTextBySelection.value, [selectionId]: '1' }
+    quantityErrorBySelection.value = { ...quantityErrorBySelection.value, [selectionId]: '' }
+    markDirty()
+    return succeeded()
+  }
+
   function setQuantityText(groupId: string, selectionId: string, input: string): OperationSnapshot<void> {
     if (!draft.value || !canEdit()) return failed('unsupported_capability', '报价草稿当前不可编辑')
     quantityTextBySelection.value = { ...quantityTextBySelection.value, [selectionId]: input }
@@ -326,6 +359,7 @@ export const useQuotationCompositionStore = defineStore('quotationComposition', 
     createGroup,
     updateGroupContext,
     addCatalogItem,
+    addCatalogReadItem,
     setQuantityText,
     removeSelection,
     flushDraft,

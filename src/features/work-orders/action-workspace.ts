@@ -28,6 +28,7 @@ import type {
   LocationPort,
   NavigationPort,
   QuotationCatalogReadPort,
+  QuotationCatalogItemRead,
   SessionSnapshot,
   SurveyLeakageCauseProviderPort,
   SurveyLeakageCauseRow,
@@ -76,6 +77,7 @@ import {
 import { surveyMediaDescriptorFor, surveyMediaPostUploadPolicyFor } from './survey-media'
 import { useQuotationCompositionStore } from './quotation/composition-store'
 import { useQuotationCatalogBrowserStore } from './quotation/catalog-browser-store'
+import { isDirectQuotationCatalogKind, type QuotationLineKind } from './quotation/model'
 import {
   normalizeSurveyLeakageCauseSelection,
   surveyLeakageCauseCurrentPart as currentPartForLeakageCause,
@@ -1178,6 +1180,26 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     return { state: 'succeeded', data: undefined }
   }
 
+  function addQuotationCatalogSelection(
+    groupId: string,
+    kind: QuotationLineKind,
+    catalogId: string,
+  ): OperationSnapshot<void> {
+    const currentDescriptor = descriptor.value
+    if (
+      loadState.value !== 'succeeded'
+      || currentDescriptor?.actionIntent !== 'place_order'
+      || currentDescriptor.contentKind !== 'quotation'
+      || currentDescriptor.execution !== 'enabled'
+      || businessResult.value === 'succeeded'
+    ) return failure('unsupported_capability', '当前报价工作区不可编辑')
+    if (!isDirectQuotationCatalogKind(kind)) return failure('unsupported_capability', '该目录类型不能直接加入草稿')
+
+    const source: QuotationCatalogItemRead | null = quotationCatalogBrowser.selectedCatalogItemFor(kind, catalogId)
+    if (!source) return failure('validation', '该目录项不属于当前已读取的目录结果')
+    return quotationComposition.addCatalogReadItem(groupId, source)
+  }
+
   async function clearPersistedDraft(): Promise<OperationSnapshot<void>> {
     const configured = dependencies
     const currentIdentity = identity
@@ -1765,6 +1787,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     navigateToList,
     saveDraft,
     flushDraft,
+    addQuotationCatalogSelection,
     saveDynamicForm,
     completeDynamicForm,
     pickDynamicMedia,

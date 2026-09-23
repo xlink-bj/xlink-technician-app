@@ -3,7 +3,7 @@
     <view class="quotation-content__heading">
       <text class="quotation-content__eyebrow">报价工作区</text>
       <text class="quotation-content__title">报价方案</text>
-      <text class="quotation-content__description">分组草稿保存在本机；目录内容仅供只读浏览，尚不能加入草稿。</text>
+      <text class="quotation-content__description">分组草稿保存在本机；工序、材料和机措可加入当前维修部位组，套餐仍为只读。</text>
     </view>
 
     <view v-if="state === 'loading'" class="quotation-content__panel app-surface" data-testid="quotation-state-loading">
@@ -136,8 +136,8 @@
                 <AppButton
                   class="quotation-content__browse-catalog"
                   variant="secondary"
-                  :data-testid="`quotation-browse-${kind}`"
-                  @tap="catalogBrowser.open(kind)"
+                  :data-testid="`quotation-browse-${group.groupId}-${kind}`"
+                  @tap="openCatalog(group.groupId, kind)"
                 >浏览目录</AppButton>
               </view>
               <view
@@ -220,17 +220,32 @@
       v-if="state === 'ready' && catalogBrowser.isOpen"
       class="quotation-content__catalog-backdrop"
       data-testid="quotation-catalog-sheet"
-      @tap.self="catalogBrowser.close"
+      @tap.self="closeCatalog"
     >
-      <view class="quotation-content__catalog-sheet" role="dialog" aria-modal="true" aria-label="报价目录只读浏览">
+      <view class="quotation-content__catalog-sheet" role="dialog" aria-modal="true" aria-label="报价目录浏览与选择">
         <view class="quotation-content__catalog-handle" aria-hidden="true" />
         <view class="quotation-content__catalog-heading">
           <view>
             <text class="quotation-content__catalog-title">报价目录浏览</text>
-            <text class="quotation-content__catalog-subtitle">只读查看 · 当前阶段不会加入本机草稿</text>
+            <text class="quotation-content__catalog-subtitle">目标：{{ activeCatalogGroup?.partDescription || (activeCatalogGroup ? '当前维修部位组' : '未指定分组') }} · 工序、材料、机措可加入本机草稿 · 套餐只读</text>
           </view>
-          <AppButton class="quotation-content__catalog-close" variant="text" aria-label="关闭目录" data-testid="quotation-catalog-close" @tap="catalogBrowser.close">关闭</AppButton>
+          <AppButton class="quotation-content__catalog-close" variant="text" aria-label="关闭目录" data-testid="quotation-catalog-close" @tap="closeCatalog">关闭</AppButton>
         </view>
+
+        <AppStatus
+          v-if="catalogSelectionError"
+          class="quotation-content__catalog-state"
+          :message="catalogSelectionError"
+          tone="warning"
+          quiet
+        />
+        <AppStatus
+          v-else-if="catalogBrowser.selectedKind !== 'package' && (!activeCatalogGroup || activeCatalogGroup.repairParts.length === 0)"
+          class="quotation-content__catalog-state"
+          message="请从已选择维修部位路径的分组打开目录，才能加入工序、材料或机措。"
+          tone="neutral"
+          quiet
+        />
 
         <view v-if="!catalogBrowser.selectedPackageId" class="quotation-content__catalog-browser" data-testid="quotation-catalog-browser">
         <view class="quotation-content__category-grid" data-testid="quotation-catalog-categories">
@@ -241,7 +256,7 @@
             variant="secondary"
             :pressed="catalogBrowser.selectedKind === kind"
             :data-testid="`quotation-catalog-kind-${kind}`"
-            @tap="catalogBrowser.selectKind(kind)"
+            @tap="selectCatalogKind(kind)"
           >{{ composition.catalogKindLabels[kind] }}</AppButton>
         </view>
         <AppLoadingState
@@ -299,6 +314,13 @@
               :data-testid="`quotation-package-detail-${item.id}`"
               @tap="catalogBrowser.openPackageDetail(item.id)"
             >查看套餐</AppButton>
+            <AppButton
+              v-else-if="isDirectQuotationCatalogKind(item.kind)"
+              variant="secondary"
+              :disabled="!canSelectCatalogItem(item)"
+              :data-testid="`quotation-catalog-add-${item.kind}-${item.id}`"
+              @tap="addCatalogSelection(item.kind, item.id)"
+            >加入当前组</AppButton>
             <text v-else class="quotation-content__catalog-readonly">只读</text>
           </view>
         </scroll-view>
@@ -357,13 +379,15 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 
 import AppButton from '@shared/ui/AppButton.vue'
 import AppCascadeSelector from '@shared/ui/AppCascadeSelector.vue'
 import AppLoadingState from '@shared/ui/AppLoadingState.vue'
 import AppStatus from '@shared/ui/AppStatus.vue'
+import { useActionWorkspaceStore } from '../action-workspace'
 import { useQuotationCompositionStore } from './composition-store'
+import { isDirectQuotationCatalogKind } from './model'
 import { quotationCatalogKindLabels } from './catalog'
 import { useQuotationCatalogBrowserStore } from './catalog-browser-store'
 import type { QuotationLineKind } from './model'
@@ -380,9 +404,52 @@ defineEmits<{
 
 const composition = useQuotationCompositionStore()
 const catalogBrowser = useQuotationCatalogBrowserStore()
+const workspace = useActionWorkspaceStore()
 const catalogKinds: readonly QuotationLineKind[] = ['package', 'procedure', 'material', 'measure']
 const canEdit = computed(() => ['fresh', 'restored', 'dirty', 'saving', 'saved_local', 'save_failed'].includes(composition.localState))
+const activeCatalogGroupId = ref<string | null>(null)
+const catalogSelectionError = ref('')
+const activeCatalogGroup = computed(() => composition.groups.find((group) => group.groupId === activeCatalogGroupId.value))
 const kindLabels = quotationCatalogKindLabels
+
+function openCatalog(groupId: string, kind: QuotationLineKind): void {
+  activeCatalogGroupId.value = groupId
+  catalogSelectionError.value = ''
+  catalogBrowser.open(kind)
+}
+
+function closeCatalog(): void {
+  catalogBrowser.close()
+  activeCatalogGroupId.value = null
+  catalogSelectionError.value = ''
+}
+
+function selectCatalogKind(kind: QuotationLineKind): void {
+  catalogSelectionError.value = ''
+  catalogBrowser.selectKind(kind)
+}
+
+function canSelectCatalogItem(item: QuotationCatalogItemRead): boolean {
+  return isDirectQuotationCatalogKind(item.kind)
+    && canEdit.value
+    && Boolean(activeCatalogGroup.value?.repairParts.length)
+}
+
+function addCatalogSelection(kind: QuotationLineKind, catalogId: string): void {
+  const groupId = activeCatalogGroupId.value
+  if (!groupId) {
+    catalogSelectionError.value = '尚未指定维修部位组，目录项未加入。'
+    return
+  }
+  const result = workspace.addQuotationCatalogSelection(groupId, kind, catalogId)
+  if (result.state === 'succeeded') {
+    closeCatalog()
+    return
+  }
+  catalogSelectionError.value = result.error?.category === 'unsupported_capability'
+    ? '当前报价草稿不可编辑，目录项未加入。'
+    : '目录项或维修部位组已变化，请重新打开目录后再试。'
+}
 
 function eventValue(event: unknown): string {
   const detail = typeof event === 'object' && event !== null

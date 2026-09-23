@@ -131,6 +131,17 @@ export const useQuotationCatalogBrowserStore = defineStore('quotationCatalogBrow
     void loadList(kind)
   }
 
+  /** Returns only an item from the currently open, successfully-read category. */
+  function selectedCatalogItemFor(kind: QuotationLineKind, catalogId: string): QuotationCatalogItemRead | null {
+    if (
+      !isOpen.value
+      || selectedKind.value !== kind
+      || catalogStatesByKind.value[kind] !== 'succeeded'
+      || !catalogId.trim()
+    ) return null
+    return catalogItemsByKind.value[kind].find((item) => item.kind === kind && item.id === catalogId) ?? null
+  }
+
   async function loadList(kind: QuotationLineKind, force = false): Promise<void> {
     if (listRequests[kind]) return listRequests[kind]
     if (!force && catalogStatesByKind.value[kind] === 'succeeded') return
@@ -250,6 +261,7 @@ export const useQuotationCatalogBrowserStore = defineStore('quotationCatalogBrow
     open,
     close,
     selectKind,
+    selectedCatalogItemFor,
     loadList,
     retryList,
     openPackageDetail,
