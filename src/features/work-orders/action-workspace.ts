@@ -79,6 +79,7 @@ import {
 import { surveyMediaDescriptorFor, surveyMediaPostUploadPolicyFor } from './survey-media'
 import { useQuotationCompositionStore } from './quotation/composition-store'
 import { useQuotationCatalogBrowserStore } from './quotation/catalog-browser-store'
+import { useQuotationEngineStore } from './quotation/engine-store'
 import { isDirectQuotationCatalogKind, type QuotationLineKind } from './quotation/model'
 import type { QuotationPackageMaterialChoice } from './quotation/package-configuration'
 import {
@@ -349,6 +350,7 @@ export interface ActionWorkspaceDependencies {
 export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
   const quotationComposition = useQuotationCompositionStore()
   const quotationCatalogBrowser = useQuotationCatalogBrowserStore()
+  const quotationEngine = useQuotationEngineStore()
   const loadState = ref<ActionWorkspaceLoadState>('idle')
   const lifecycle = ref<ActionLifecycle>('available')
   const businessResult = ref<ActionBusinessResult>('not_started')
@@ -533,6 +535,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     if (descriptor.value?.contentKind === 'quotation') void quotationComposition.flushDraft()
     quotationComposition.clear()
     quotationCatalogBrowser.clear()
+    quotationEngine.clear()
     loadVersion += 1
     clearDraftTimer()
     draftRevision += 1
@@ -719,6 +722,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     if (draftWriteInFlight) await draftWriteInFlight
     quotationComposition.clear()
     quotationCatalogBrowser.clear()
+    quotationEngine.clear()
     const requestVersion = ++loadVersion
     loadState.value = 'loading'
     lifecycle.value = 'available'
@@ -886,6 +890,22 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     else await restoreDynamicDraft(nextIdentity, form.data as DynamicFormRead)
     await restoreMediaTasks(nextDescriptor)
     return { state: 'succeeded', data: nextDescriptor }
+  }
+
+  async function refreshQuotationEngine() {
+    const configured = dependencies
+    const currentDraft = quotationComposition.draft
+    if (!configured || !currentDraft || descriptor.value?.contentKind !== 'quotation') {
+      quotationEngine.clear()
+      return null
+    }
+    return quotationEngine.evaluate({
+      draft: currentDraft,
+      catalogContext: detail.value?.quotationCatalogContext,
+      catalogRead: configured.quotationCatalogRead,
+      serviceAppointmentNum: detail.value?.displayNumber,
+      repairPartOptions: quotationComposition.repairPartOptions,
+    })
   }
 
   async function ensureLoaded(input: {
@@ -1795,6 +1815,8 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     quotationContentState,
     quotationComposition,
     quotationCatalogBrowser,
+    quotationEngine,
+    refreshQuotationEngine,
     validateQuotationPackageConfiguration,
     configureQuotationPackageSelection,
     appointmentFields,

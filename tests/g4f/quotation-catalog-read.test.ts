@@ -229,6 +229,23 @@ describe('G4-F Phase 1C quotation catalog read foundation', () => {
     })
   })
 
+  it('preserves R1 Package pricingMethod and Material spuid as explicit fail-closed pricing inputs', async () => {
+    const execute = vi.fn(async (request: ApiReadRequest) => {
+      if (request.path === 'biz/projPackage/queryWithRank') {
+        return { data: [{ _id: 'package-with-sku-method', name: 'Synthetic package', price: 100, exts: { pricingMethod: '1' } }] }
+      }
+      if (request.path === 'basic/material/queryWithRank') {
+        return { data: [{ _id: 'material-with-spu', name: 'Synthetic SKU material', price: 12, spuid: 'synthetic-spu' }] }
+      }
+      return { data: [] }
+    })
+    const catalog = createQuotationCatalogReadAdapter({ execute })
+    const packages = await catalog.listPackages(query)
+    const materials = await catalog.listMaterials(query)
+    expect(packages.data?.items[0]).toMatchObject({ kind: 'package', pricingMethod: '1' })
+    expect(materials.data?.items[0]).toMatchObject({ kind: 'material', spuId: 'synthetic-spu' })
+  })
+
   it('carries the catalog scope from normalized WorkOrderDetail into the exact read filters', async () => {
     const workOrderApi = createTechnicianApiReadAdapter({
       execute: vi.fn(async (request) => request.path === 'biz/action/query.do'

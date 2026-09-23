@@ -8,7 +8,7 @@ const root = resolve(fileURLToPath(new URL('..', import.meta.url)))
 const read = (path) => readFile(resolve(root, path), 'utf8')
 const fail = (message) => { throw new Error(`G4-F quotation composition boundary check failed: ${message}`) }
 
-const [pages, workspace, component, model, codec, catalog, catalogBrowser, compositionStore, packageConfiguration, genericForm, commandPort, reviewMain, reviewScenarios, reviewPage, playwrightConfig, viteConfig, browserTests, unitTests, packageConfigurationTests, packageSource] = await Promise.all([
+const [pages, workspace, component, model, codec, catalog, catalogBrowser, compositionStore, packageConfiguration, genericForm, commandPort, reviewMain, reviewScenarios, reviewPage, playwrightConfig, viteConfig, browserTests, unitTests, packageConfigurationTests, packageSource, engine, validation, hydration, pricing, orderEncoder, engineTests, verificationDoc] = await Promise.all([
   read('src/pages.json'),
   read('src/features/work-orders/action-workspace.ts'),
   read('src/features/work-orders/quotation/QuotationActionContent.vue'),
@@ -29,6 +29,13 @@ const [pages, workspace, component, model, codec, catalog, catalogBrowser, compo
   read('tests/g4f/quotation-composition.test.ts'),
   read('tests/g4f/package-configuration.test.ts'),
   read('package.json'),
+  read('src/features/work-orders/quotation/engine.ts'),
+  read('src/features/work-orders/quotation/validation.ts'),
+  read('src/features/work-orders/quotation/hydration.ts'),
+  read('src/features/work-orders/quotation/pricing.ts'),
+  read('src/features/work-orders/quotation/order-encoder.ts'),
+  read('tests/g4f/quotation-engine.test.ts'),
+  read('docs/verification/G4F_PHASE_1H_QUOTATION_ENGINE_COMPLETION.md'),
 ])
 const packageJson = JSON.parse(packageSource)
 
@@ -60,8 +67,13 @@ if (/createQuotation|updateQuotation|sendQuotation|convertQuotation/.test(comman
 if (!component.includes('服务方案 / 报价明细') || !component.includes('quotation-draft-empty') || !component.includes('quotation-catalog-sheet')) {
   fail('quotation-owned composition and catalog browser UI must be present')
 }
-if (component.includes('保存报价') || component.includes('提交报价') || component.includes('completeWorkflowNode') || component.includes('¥')) {
-  fail('UI must not expose quote business writes, workflow completion, or prices')
+const buttonContents = [...component.matchAll(/<AppButton\b[^>]*>([\s\S]*?)<\/AppButton>/g)].map((match) => match[1])
+if (buttonContents.some((text) => /保存报价|提交报价|确认报价|完成工作流/.test(text)) || component.includes('completeWorkflowNode')) {
+  fail('UI must not expose quote business writes or workflow completion')
+}
+if (!component.includes('R1 顶层金额预览') || !component.includes('未提交') || !component.includes('quotation-local-gross-total')
+  || !component.includes('quotation-rounding-note') || !component.includes('独立舍入') || !component.includes('不会提交报价')) {
+  fail('Phase 1H local price preview must be explicitly non-submitted and Action-owned')
 }
 if (!component.includes('quotation-add-group') || !component.includes('quotation-browse-') || !component.includes('quotation-package-detail-') || !component.includes('quotation-selection-quantity-') || !component.includes('quotation-selection-remove-') || !component.includes('quotation-draft-legacy')) {
   fail('group composition controls and explicit legacy-draft handling must remain testable')
@@ -106,6 +118,9 @@ if (/source\.(?:price|minimumPrice|guideUnitPrice|minimumGuideTotalPrice|cost|se
 if (!workspace.includes('quotationCatalogBrowser.configure') || !workspace.includes('catalogContext: read.data.quotationCatalogContext')) {
   fail('catalog browser must receive adapter-derived Work Order context')
 }
+if (!workspace.includes('refreshQuotationEngine') || !workspace.includes('useQuotationEngineStore')) {
+  fail('Action Workspace must own the read/hydrate/validate/price/encode engine lifecycle')
+}
 if (workspace.includes('getQuotationActionContent')) {
   fail('Mock-only quotation content fixtures must not gate place_order workspace initialization')
 }
@@ -133,9 +148,39 @@ for (const token of ['autosaves grouped state only', 'restores the local quotati
 for (const token of ['missing', 'numeric and string', 'unresolved selected Material', 'unresolved bundled Procedure or Measure', 'reconfigures in place', 'maintainAreaNum']) {
   if (!packageConfigurationTests.includes(token)) fail(`Phase 1G package configuration coverage missing: ${token}`)
 }
+if (!validation.includes('validateQuotationDraft') || !hydration.includes('hydrateQuotationDraft')
+  || !pricing.includes('calculateQuotationPricing') || !orderEncoder.includes('encodeR1OfficialOrderType1')
+  || !engine.includes('validateQuotationDraft') || !engine.includes('hydrateQuotationDraft')) {
+  fail('Phase 1H domain validation, provider hydration, pricing, and pure encoder must be integrated')
+}
+if (!pricing.includes('calcTotalPriceContribution') || !pricing.includes('fillOrderTotalAmount')
+  || !pricing.includes('calcTotalPrice:') || !pricing.includes('fillOrder:')
+  || pricing.includes('pricing.package_method_unknown')) {
+  fail('Phase 1H must preserve distinct R1 money projections and price Packages without requiring pricingMethod')
+}
+if (!orderEncoder.includes('type: 1') || !orderEncoder.includes('orderList') || !orderEncoder.includes('bjProducts')) {
+  fail('Phase 1H encoder must target only the source-backed grouped official Order type=1 shape')
+}
+if (!orderEncoder.includes('pricing.calcTotalPrice.originPrice') || !orderEncoder.includes('pricing.fillOrder.groups')) {
+  fail('Phase 1H encoder must source top-level totals and bjProducts totals from their respective R1 projections')
+}
+const engineSource = [engine, validation, hydration, pricing, orderEncoder].join('\n')
+if (/basic\/order\/upsert|creatQuotation|workflow\/process|completeWorkflowNode/.test(engineSource)
+  || /@shared\/ports\/commands|saveOrder|upsertOrder|fetch\s*\(/.test(engineSource)) {
+  fail('Phase 1H quotation engine must remain pure/read-only with no business write transport')
+}
+if (!engineTests.includes('37 tests') && !engineTests.includes('quotation engine')) {
+  fail('Phase 1H deterministic engine regression suite is missing')
+}
+for (const token of ['0.335', 'forgedTopLevel', 'pricingMethod: undefined', 'package_sku_path_not_authorized']) {
+  if (!engineTests.includes(token) && !orderEncoder.includes(token)) fail(`Phase 1H source-parity regression missing: ${token}`)
+}
+for (const token of ['Pricing Authority Matrix', 'UNRESOLVED', 'type=1', 'no business write', 'calcTotalPrice', 'fillOrder']) {
+  if (!verificationDoc.toLowerCase().includes(token.toLowerCase())) fail(`Phase 1H verification evidence missing: ${token}`)
+}
 for (const script of ['test:uni-h5-g4f-phase1b-review', 'check:g4f-phase1b']) {
   if (!packageJson.scripts?.[script]) fail(`missing package script: ${script}`)
 }
 if (!packageJson.scripts.verify.includes('check:g4f-phase1b')) fail('normal verify must include the Phase 1B guard')
 
-console.log('G4-F catalog boundary passed: direct Procedure/Material/Measure selection remains explicit; Package uses its separate configured local bridge; no pricing or business mutation')
+console.log('G4-F Phase 1H boundary passed: grouped local engine uses source-backed reads/pricing and a pure type=1 encoder; no business mutation path')
