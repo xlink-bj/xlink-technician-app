@@ -16,7 +16,6 @@ export type {
   FormDefinitionRead,
   ReadPage,
   QuotationCatalogContext,
-  QuotationOrderRead,
   QuotationCatalogItemBaseRead,
   QuotationCatalogItemRead,
   QuotationCatalogReadPort,
@@ -45,6 +44,7 @@ export type {
   WorkflowNodeVisibilityEvidence,
   WorkflowNodeVisibilityEvidenceState,
 } from './api'
+export type { QuotationOrderRead, QuotationOrderReadPort } from './quotation-order'
 export type {
   AcceptOrderInput,
   AcceptOrderInspection,

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import type { QuotationOrderCommandPort, QuotationOrderRead, TechnicianApiReadPort } from '@shared/ports'
+import type { QuotationOrderCommandPort, QuotationOrderRead, QuotationOrderReadPort } from '@shared/ports'
 import type { StoragePort, StorageKey } from '@shared/ports'
 import { asOpaqueId, createOperationError, type OperationSnapshot } from '@shared/types'
 import type { R1OfficialOrderType1Payload } from '@features/work-orders/quotation/order-encoder'
@@ -77,7 +77,7 @@ let setupCounter = 0
 
 function setup(options: {
   readonly upsert?: QuotationOrderCommandPort['upsertOfficialOrder']
-  readonly read?: TechnicianApiReadPort['getQuotationOrderById']
+  readonly read?: QuotationOrderReadPort['getQuotationOrderById']
   readonly start?: QuotationOrderCommandPort['startOrderWorkflow']
   readonly finalize?: () => Promise<OperationSnapshot<void>>
 } = {}) {
@@ -87,7 +87,7 @@ function setup(options: {
     upsertOfficialOrder: options.upsert ?? vi.fn(async () => success(orderId)),
   }
   const read = options.read ?? vi.fn(async () => success(authoritativeOrder()))
-  const readApi = { getQuotationOrderById: read } as unknown as TechnicianApiReadPort
+  const readApi: QuotationOrderReadPort = { getQuotationOrderById: read }
   const finalizeDraft = options.finalize ?? vi.fn(async () => success(undefined))
   const input: QuotationOrderSubmissionInput = {
     userId: asOpaqueId<'UserId'>(`user-synthetic-${++setupCounter}`),
@@ -223,6 +223,26 @@ describe('G4-F Phase 1I order submission', () => {
     expect((await submitQuotationOrder(ctx.input)).state).toBe('failed_terminal')
     expect(ctx.command.startOrderWorkflow).toHaveBeenCalledTimes(1)
     expect(ctx.command.upsertOfficialOrder).toHaveBeenCalledTimes(2)
+  })
+
+  it('safely replaces a prepared pre-dispatch receipt when the local payload changed', async () => {
+    const ctx = setup()
+    const key = `draft:quotation-order-receipt:v1:${encodeURIComponent(String(ctx.input.userId))}:${encodeURIComponent(String(workOrderId))}:${encodeURIComponent(String(nodeId))}`
+    ctx.values.set(key, {
+      version: 1,
+      workOrderId,
+      workflowNodeId: nodeId,
+      fingerprint: 'prior-local-only-fingerprint',
+      draftVersion: 3,
+      state: 'prepared',
+    })
+    expect(ctx.command.startOrderWorkflow).not.toHaveBeenCalled()
+    expect(ctx.command.upsertOfficialOrder).not.toHaveBeenCalled()
+    const editedPayload = { ...payload, originPrice: 18, totalPrice: 18 }
+    const result = await submitQuotationOrder({ ...ctx.input, payload: editedPayload, expectedDraftVersion: 5, evaluatedDraftVersion: 5 })
+    expect(result.state).toBe('succeeded')
+    expect(ctx.command.startOrderWorkflow).toHaveBeenCalledTimes(1)
+    expect(ctx.command.upsertOfficialOrder).toHaveBeenCalledTimes(1)
   })
 
   it('keeps confirmed write success when local draft cleanup fails', async () => {

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 
-import type { QuotationOrderRead } from '@shared/ports'
+import type { QuotationCatalogReadPort, QuotationOrderRead } from '@shared/ports'
 import { quotationOrderEditBlockers, reconstructQuotationOrder } from '@features/work-orders/quotation/order-reconstruction'
+import { hydrateQuotationDraft } from '@features/work-orders/quotation/hydration'
 
 function order(overrides: Partial<QuotationOrderRead> = {}): QuotationOrderRead {
   return {
@@ -135,5 +136,68 @@ describe('G4-F Phase 1I Order reconstruction/edit safety', () => {
       }], addItems: { data: [] }, deleteItems: { data: [] },
     } })
     expect(reconstructQuotationOrder(ambiguousLayer, 'node').state).toBe('blocked')
+  })
+
+  it('rehydrates an R1 Package snapshot with component row IDs and embedded catalog IDs but no explicit references', async () => {
+    const r1Order = order({ bjProducts: {
+      orderList: [{
+        repairParts: ['roof'], partDescription: 'synthetic', maintainAreaNum: '1',
+        projPackages: { data: [{
+          _id: 'package-a', name: 'synthetic package', number: 1,
+          procedureList: [{ _id: 'procedure-component-a', number: '1', procedure: { _id: 'procedure-catalog-a', name: 'synthetic procedure', unit: '项' } }],
+          materialList: [{ _id: 'material-component-a', checked: true, exts: { layer: 'roof-base' }, material: { _id: 'material-catalog-a', name: 'synthetic material', unit: '桶' } }],
+          measureList: [{ _id: 'measure-component-a', number: '1', measure: { _id: 'measure-catalog-a', name: 'synthetic measure', unit: '次' } }],
+        }] },
+        procedures: { data: [] }, materials: { data: [] }, measures: { data: [] },
+      }], addItems: { data: [] }, deleteItems: { data: [] },
+    } })
+    const reconstructed = reconstructQuotationOrder(r1Order, 'workflow-node-synthetic')
+    expect(reconstructed.state).toBe('ready')
+    if (reconstructed.state !== 'ready') return
+    expect(reconstructed.draft.groups[0].projPackages[0].configuration).toMatchObject({
+      procedures: [{ providerComponentId: 'procedure-component-a', catalogId: 'procedure-catalog-a' }],
+      materials: [{ providerComponentId: 'material-component-a', catalogId: 'material-catalog-a', layer: 'roof-base' }],
+      measures: [{ providerComponentId: 'measure-component-a', catalogId: 'measure-catalog-a' }],
+    })
+    for (const components of Object.values(reconstructed.draft.groups[0].projPackages[0].configuration!)) {
+      expect(components[0]).not.toHaveProperty('providerReferenceId')
+    }
+    const packageRead = { id: 'package-a', kind: 'package' as const, name: 'synthetic package' }
+    const procedureRead = { id: 'procedure-catalog-a', kind: 'procedure' as const, name: 'synthetic procedure' }
+    const materialRead = { id: 'material-catalog-a', kind: 'material' as const, name: 'synthetic material' }
+    const measureRead = { id: 'measure-catalog-a', kind: 'measure' as const, name: 'synthetic measure' }
+    const detail = {
+      package: packageRead,
+      procedures: [{ kind: 'procedure' as const, id: 'procedure-component-a', item: procedureRead }],
+      materials: [{ kind: 'material' as const, id: 'material-component-a', layer: 'roof-base', item: materialRead }],
+      measures: [{ kind: 'measure' as const, id: 'measure-component-a', item: measureRead }],
+    }
+    const provider: QuotationCatalogReadPort = {
+      listPackages: async () => ({ state: 'succeeded', data: { items: [packageRead] } }),
+      getPackageDetail: async () => ({ state: 'succeeded' as const, data: detail }),
+      listProcedures: async () => ({ state: 'succeeded' as const, data: { items: [] } }),
+      listMaterials: async () => ({ state: 'succeeded' as const, data: { items: [] } }),
+      listMeasures: async () => ({ state: 'succeeded' as const, data: { items: [] } }),
+    }
+    const hydrated = await hydrateQuotationDraft({
+      draft: reconstructed.draft,
+      context: { serviceType: 'synthetic-service' },
+      port: provider,
+    })
+    expect(hydrated.state).toBe('succeeded')
+  })
+
+  it('fails closed when a genuinely explicit Package reference conflicts with embedded catalog identity', () => {
+    const conflicting = order({ bjProducts: {
+      orderList: [{
+        repairParts: ['roof'], partDescription: 'synthetic', maintainAreaNum: '1',
+        projPackages: { data: [{
+          _id: 'package-a', name: 'synthetic package', number: 1,
+          procedureList: [{ _id: 'procedure-component-a', procedureId: 'different-reference', procedure: { _id: 'procedure-catalog-a', name: 'synthetic procedure' } }],
+          materialList: [], measureList: [],
+        }] }, procedures: { data: [] }, materials: { data: [] }, measures: { data: [] },
+      }], addItems: { data: [] }, deleteItems: { data: [] },
+    } })
+    expect(reconstructQuotationOrder(conflicting, 'node')).toMatchObject({ state: 'blocked' })
   })
 })

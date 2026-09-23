@@ -5,6 +5,7 @@ import type {
   StoragePort,
   TechnicianApiCommandPort,
   QuotationOrderCommandPort,
+  QuotationOrderReadPort,
   TechnicianApiReadPort,
   QuotationCatalogReadPort,
   MediaCapturePort,
@@ -21,6 +22,7 @@ import { createQuotationCatalogReadAdapter } from '@adapters/api/quotation-catal
 import { createRoleScopedTechnicianApiReadAdapter } from '@adapters/api/technician-api'
 import { createTechnicianApiCommandAdapter } from '@adapters/api/technician-api-commands'
 import { createQuotationOrderCommandAdapter } from '@adapters/api/quotation-order-commands'
+import { createQuotationOrderReadAdapter } from '@adapters/api/quotation-order-api'
 import { createUniApiReadTransport } from '@adapters/api/uni-api-read-transport'
 import { createUniApiCommandTransport } from '@adapters/api/uni-api-command-transport'
 import { createAuthSessionAdapter } from '@adapters/auth/auth-session-adapter'
@@ -205,6 +207,24 @@ export function createDefaultQuotationOrderCommandPort(authSession: AuthSessionP
     getSessionRef: () => authSession.getCurrentSession()?.sessionRef ?? null,
   })
   return createQuotationOrderCommandAdapter(transport)
+}
+
+export function createDefaultQuotationOrderReadPort(authSession: AuthSessionPort): QuotationOrderReadPort {
+  const config = loadApplicationRuntimeConfig()
+  if (!config.ok) {
+    return {
+      getQuotationOrderById: async () => configurationFailure(`Quotation Order read configuration is unavailable: ${config.issues.join('; ')}`),
+    }
+  }
+  const transport = createUniApiReadTransport({
+    apiBaseUrl: config.value.environment.apiBaseUrl,
+    getSessionRef: () => authSession.getCurrentSession()?.sessionRef ?? null,
+    getMockActor: () => {
+      const session = authSession.getCurrentSession()
+      return session ? { userId: session.user.id, ...(session.currentRole ? { roleId: session.currentRole.id } : {}) } : null
+    },
+  })
+  return createQuotationOrderReadAdapter(transport)
 }
 
 export function createDefaultPhonePort(): PhonePort {

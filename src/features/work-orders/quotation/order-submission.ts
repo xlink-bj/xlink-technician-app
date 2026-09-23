@@ -1,4 +1,4 @@
-import type { QuotationOrderCommandPort, QuotationOrderRead, TechnicianApiReadPort, StoragePort } from '@shared/ports'
+import type { QuotationOrderCommandPort, QuotationOrderRead, QuotationOrderReadPort, StoragePort } from '@shared/ports'
 import type { OperationSnapshot, UserId, WorkOrderId, WorkflowNodeRuntimeId, WorkflowDefinitionId } from '@shared/types'
 
 import type { R1OfficialOrderType1Payload } from './order-encoder'
@@ -42,7 +42,7 @@ export interface QuotationOrderSubmissionInput {
   readonly payload: R1OfficialOrderType1Payload
   readonly existingOrderId?: string
   readonly command: QuotationOrderCommandPort
-  readonly readApi: TechnicianApiReadPort
+  readonly readApi: QuotationOrderReadPort
   readonly storage: StoragePort
   readonly finalizeDraft: () => Promise<OperationSnapshot<void>>
 }
@@ -194,7 +194,7 @@ async function submitQuotationOrderOnce(input: QuotationOrderSubmissionInput): P
   if (old) {
     const sameFingerprint = old.fingerprint === fingerprint(input.payload)
     const sameOrderEdit = Boolean(input.existingOrderId && old.orderId === input.existingOrderId && old.state === 'succeeded')
-    if (!sameFingerprint && !sameOrderEdit && old.state !== 'workflow_started') {
+    if (!sameFingerprint && !sameOrderEdit && old.state !== 'workflow_started' && old.state !== 'prepared') {
       return { state: 'failed_ambiguous_after_dispatch', message: safeMessage('failed_ambiguous_after_dispatch') }
     }
     if (sameFingerprint && (old.state === 'succeeded' || old.state === 'write_succeeded_readback_pending')) {

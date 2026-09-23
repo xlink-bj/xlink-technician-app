@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import { createTechnicianApiReadAdapter, type ApiReadRequest, type ApiReadTransport } from '@adapters/api/technician-api'
+import { createQuotationOrderReadAdapter } from '@adapters/api/quotation-order-api'
+import type { ApiReadRequest, ApiReadTransport } from '@adapters/api/technician-api'
 
 describe('G4-F Phase 1I authoritative Order read adapter', () => {
   it('uses the verified queryById request and returns a sanitized replace snapshot', async () => {
@@ -27,7 +28,7 @@ describe('G4-F Phase 1I authoritative Order read adapter', () => {
         }
       },
     }
-    const result = await createTechnicianApiReadAdapter(transport).getQuotationOrderById!('order-synthetic')
+    const result = await createQuotationOrderReadAdapter(transport).getQuotationOrderById('order-synthetic')
     expect(requests).toEqual([{ method: 'POST', path: 'basic/order/queryById', body: { id: 'order-synthetic' } }])
     expect(result).toMatchObject({
       state: 'succeeded',
@@ -51,9 +52,17 @@ describe('G4-F Phase 1I authoritative Order read adapter', () => {
   })
 
   it('fails closed if the authoritative order has no recognizable grouped read structure', async () => {
-    const result = await createTechnicianApiReadAdapter({
+    const result = await createQuotationOrderReadAdapter({
       execute: async () => ({ _id: 'order-synthetic', type: 1, serviceAppointmentId: 'work-order-synthetic', bjProducts: '{}' }),
-    }).getQuotationOrderById!('order-synthetic')
+    }).getQuotationOrderById('order-synthetic')
     expect(result.state).toBe('failed_terminal')
+  })
+
+  it('keeps quotation Order read mapping out of the technician/work-order adapter', async () => {
+    const { readFile } = await import('node:fs/promises')
+    const source = await readFile(new URL('../../src/adapters/api/technician-api.ts', import.meta.url), 'utf8')
+    expect(source).not.toContain('QuotationOrderRead')
+    expect(source).not.toContain('getQuotationOrderById')
+    expect(source).not.toContain('basic/order/queryById')
   })
 })

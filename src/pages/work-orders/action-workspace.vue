@@ -13,33 +13,12 @@
     <AppButton class="workspace-state-action" @tap="exit">返回工单详情</AppButton>
   </view>
 
-  <ActionWorkspaceShell
+  <QuotationActionWorkspace
     v-else-if="workspace.descriptor?.contentKind === 'quotation' && workspace.descriptor.actionIntent === 'place_order'"
-    :customer-name="workspace.detail?.customerName"
-    :display-number="workspace.detail?.displayNumber"
-    :lifecycle="workspace.lifecycle"
-    :draft-status="workspace.draftStatus"
-    :can-submit="workspace.canSubmitQuotation"
-    :transitioning="workspace.quotationOrderState.state === 'submitting'"
-    :submit-label="workspace.quotationOrderState.state === 'submitting' ? '提交中…' : '提交订单/报价方案'"
-    @submit="quotationConfirmOpen = true"
-  >
-    <QuotationActionContent
-      :state="quotationContentViewState"
-      @retry="reload"
-      @back="exit"
-    />
-    <view v-if="quotationConfirmOpen" class="quotation-confirm-backdrop" role="presentation">
-      <view class="quotation-confirm-sheet" role="dialog" aria-modal="true" data-testid="quotation-order-confirmation">
-        <text class="quotation-confirm-title">确认提交订单/报价方案？</text>
-        <text class="workspace-state-copy">提交会创建服务器订单，并触发后端已验证的报价单生成、工单金额更新等副作用；不会完成当前工单工作流。提交后请勿重复操作。</text>
-        <view class="quotation-confirm-actions">
-          <AppButton variant="secondary" @tap="quotationConfirmOpen = false">返回检查</AppButton>
-          <AppButton data-testid="quotation-order-confirm" @tap="confirmQuotationSubmit">确认提交</AppButton>
-        </view>
-      </view>
-    </view>
-  </ActionWorkspaceShell>
+    :content-state="quotationContentViewState"
+    @retry="reload"
+    @back="exit"
+  />
 
   <AppLoadingState v-else-if="workspace.loadState === 'loading'" variant="workspace" label="正在准备操作内容" />
 
@@ -203,6 +182,7 @@ import {
   parseActionWorkspaceNodeId,
   useActionWorkspaceStore,
 } from '@features/work-orders/action-workspace'
+import QuotationActionWorkspace from '@features/work-orders/quotation/QuotationActionWorkspace.vue'
 import { appointmentDisplayFor } from '@features/work-orders/appointment-time'
 import { isMultilineField } from '@features/work-orders/form-presentation'
 import { useSessionStore } from '@shared/state'
@@ -210,7 +190,6 @@ import ActionWorkspaceFormActions from '@shared/ui/ActionWorkspaceFormActions.vu
 import ActionWorkspaceShell from '@shared/ui/ActionWorkspaceShell.vue'
 import GenericDynamicFormActionContent from '@features/work-orders/components/GenericDynamicFormActionContent.vue'
 import SurveyActionContent from '@features/work-orders/components/SurveyActionContent.vue'
-import QuotationActionContent from '@features/work-orders/quotation/QuotationActionContent.vue'
 import AppButton from '@shared/ui/AppButton.vue'
 import AppChoiceGroup from '@shared/ui/AppChoiceGroup.vue'
 import AppField from '@shared/ui/AppField.vue'
@@ -231,7 +210,6 @@ const routeAction = ref<string | undefined>(undefined)
 const routeQuotationOrderId = ref<string | undefined>(undefined)
 const routeError = ref('')
 const isNavigating = ref(false)
-const quotationConfirmOpen = ref(false)
 
 const canAccess = computed(() => hasAuthenticatedSession(session.status, session.session))
 const appointmentDisplay = computed(() => appointmentDisplayFor(workspace.appointmentTimeValue))
@@ -318,11 +296,6 @@ async function submitWorkspace(): Promise<void> {
     return
   }
   await continueToConfirmation()
-}
-
-async function confirmQuotationSubmit(): Promise<void> {
-  quotationConfirmOpen.value = false
-  await workspace.submitQuotationOrder()
 }
 
 function actionErrorCopy(error: OperationError | null): string {
@@ -413,9 +386,5 @@ function actionErrorCopy(error: OperationError | null): string {
 .action-success-copy { color: var(--app-color-text-secondary); font-size: var(--app-font-body); margin-top: var(--app-space-sm); }
 .action-success-detail { margin-bottom: var(--app-space-xs); }
 .quotation-readonly-note { color: var(--app-color-text-secondary); display: block; font-size: var(--app-font-meta); padding: var(--app-space-md) 0; text-align: center; }
-.quotation-confirm-backdrop { align-items: center; background: rgba(20, 32, 52, .42); display: flex; inset: 0; justify-content: center; padding: var(--app-page-gutter); position: fixed; z-index: 1100; }
-.quotation-confirm-sheet { background: var(--app-color-surface); border: 1rpx solid var(--app-color-border); border-radius: var(--app-radius-card); box-sizing: border-box; max-width: 640rpx; padding: var(--app-card-padding); width: 100%; }
-.quotation-confirm-title { color: var(--app-color-text-primary); display: block; font-size: var(--app-font-section-title); font-weight: 800; }
-.quotation-confirm-actions { display: flex; gap: var(--app-space-sm); justify-content: flex-end; margin-top: var(--app-space-lg); }
 
 </style>

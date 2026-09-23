@@ -30,6 +30,7 @@ import type {
   StoragePort,
   QuotationCatalogReadPort,
   QuotationOrderCommandPort,
+  QuotationOrderReadPort,
   QuotationCatalogItemRead,
   QuotationPackageDetailRead,
   QuotationPackageRead,
@@ -339,6 +340,7 @@ export interface ActionWorkspaceDependencies {
   readonly apiRead: TechnicianApiReadPort
   readonly commandApi: TechnicianApiCommandPort
   readonly quotationOrderCommand?: QuotationOrderCommandPort
+  readonly quotationOrderRead?: QuotationOrderReadPort
   readonly draftRepository: ActionDraftRepository
   readonly storage?: StoragePort
   readonly quotationCatalogRead?: QuotationCatalogReadPort
@@ -950,7 +952,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     const engine = quotationEngine.result
     const session = configured?.getSession()
     const currentNode = detail.value?.workflowNodes?.find((node) => node.id === currentDescriptor?.workflowNodeId)
-    if (!configured?.quotationOrderCommand || !configured.storage || !configured.apiRead.getQuotationOrderById
+    if (!configured?.quotationOrderCommand || !configured.quotationOrderRead || !configured.storage
       || !currentDescriptor || currentDescriptor.contentKind !== 'quotation' || currentDescriptor.actionIntent !== 'place_order'
       || currentDescriptor.execution !== 'enabled' || !currentIdentity || !currentDraft || !session) {
       quotationOrderState.value = { state: 'failed_terminal', message: '当前报价动作尚未具备安全提交条件。' }
@@ -978,7 +980,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       payload: engine.payload,
       ...(quotationExistingOrderId.value ? { existingOrderId: quotationExistingOrderId.value } : {}),
       command: configured.quotationOrderCommand,
-      readApi: configured.apiRead,
+      readApi: configured.quotationOrderRead,
       storage: configured.storage,
       finalizeDraft: async () => {
         const removed = await configured.draftRepository.remove(currentIdentity)
@@ -1001,12 +1003,12 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     const configured = dependencies
     const currentDescriptor = descriptor.value
     if (!configured || !orderId.trim() || !currentDescriptor || currentDescriptor.contentKind !== 'quotation'
-      || !configured.apiRead.getQuotationOrderById || !configured.quotationCatalogRead) {
+      || !configured.quotationOrderRead || !configured.quotationCatalogRead) {
       quotationEditState.value = { state: 'blocked', message: '当前无法安全读取待编辑订单。' }
       return failure('unsupported_capability', '当前无法安全读取待编辑订单。')
     }
     quotationEditState.value = { state: 'loading' }
-    const orderRead = await configured.apiRead.getQuotationOrderById(orderId)
+    const orderRead = await configured.quotationOrderRead.getQuotationOrderById(orderId)
     if (orderRead.state !== 'succeeded' || !orderRead.data
       || orderRead.data.id !== orderId
       || orderRead.data.type !== 1
@@ -1070,7 +1072,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     const currentDraft = quotationComposition.draft
     const session = configured?.getSession()
     const engine = quotationEngine.result
-    if (!configured?.quotationOrderCommand || !configured.storage || !configured.apiRead.getQuotationOrderById
+    if (!configured?.quotationOrderCommand || !configured.quotationOrderRead || !configured.storage
       || !currentDescriptor || !currentIdentity || !currentDraft || !session || !engine?.payload) {
       quotationOrderState.value = { state: 'failed_terminal', message: '当前无法安全刷新已提交订单。' }
       return quotationOrderState.value
@@ -1084,7 +1086,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       engineReady: true,
       payload: engine.payload,
       command: configured.quotationOrderCommand,
-      readApi: configured.apiRead,
+      readApi: configured.quotationOrderRead,
       storage: configured.storage,
       finalizeDraft: async () => {
         const removed = await configured.draftRepository.remove(currentIdentity)

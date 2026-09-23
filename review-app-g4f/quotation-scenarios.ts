@@ -5,7 +5,7 @@ import { asOpaqueId, type OperationSnapshot } from '@shared/types'
 import { quotationDraftRecordFor } from '@features/work-orders/quotation/draft-codec'
 import type { QuotationDraft } from '@features/work-orders/quotation/model'
 
-export type G4fReviewScenario = 'empty' | 'populated' | 'restored' | 'catalog' | 'invalid' | 'legacy'
+export type G4fReviewScenario = 'empty' | 'populated' | 'restored' | 'catalog' | 'invalid' | 'legacy' | 'submit-ready' | 'readback-pending' | 'edit' | 'unsupported-edit'
 
 function succeeded<T>(data: T): OperationSnapshot<T> {
   return { state: 'succeeded', data }
@@ -14,7 +14,7 @@ function succeeded<T>(data: T): OperationSnapshot<T> {
 export function reviewScenarioFromLocation(): G4fReviewScenario {
   if (typeof window === 'undefined') return 'empty'
   const value = new URLSearchParams(window.location.search).get('scenario')
-  return ['populated', 'restored', 'catalog', 'invalid', 'legacy'].includes(value ?? '')
+  return ['populated', 'restored', 'catalog', 'invalid', 'legacy', 'submit-ready', 'readback-pending', 'edit', 'unsupported-edit'].includes(value ?? '')
     ? value as G4fReviewScenario
     : 'empty'
 }
@@ -36,6 +36,39 @@ export function createG4fReviewStorage(): StoragePort {
 }
 
 export function seedG4fReviewDraft(storage: StoragePort, scenario: G4fReviewScenario): void {
+  if (scenario === 'submit-ready' || scenario === 'readback-pending') {
+    const identity = actionDraftIdentityFor({
+      userId: asOpaqueId<'UserId'>('g4f-mock-review-user'),
+      workOrderId: asOpaqueId<'WorkOrderId'>('mock-work-order-018-quotation-foundation'),
+      workflowNodeId: asOpaqueId<'WorkflowNodeRuntimeId'>('mock-workflow-node-018-place-order'),
+      actionIntent: 'place_order',
+      contentKind: 'quotation',
+    })
+    const draft: QuotationDraft = {
+      workOrderId: String(identity.workOrderId), workflowNodeId: String(identity.workflowNodeId), draftVersion: 8,
+      groups: [{
+        groupId: 'quotation-group-review-submit', repairParts: ['repair-part-code-001'],
+        partDescription: '合成屋面区域', maintainAreaNum: '12', projPackages: [],
+        procedures: [{ selectionId: 'review-procedure', kind: 'procedure', catalogId: 'mock-catalog-procedure-seal', label: 'Mock 施工工序 A', unit: '处', quantity: 1 }],
+        materials: [{ selectionId: 'review-material', kind: 'material', catalogId: 'mock-catalog-material-sealant', label: 'Mock 材料 A', unit: '支', quantity: 2 }],
+        measures: [{ selectionId: 'review-measure', kind: 'measure', catalogId: 'mock-catalog-measure-inspection', label: 'Mock 机措 A', unit: '次', quantity: 1 }],
+      }],
+    }
+    void storage.write({ namespace: 'draft', key: actionDraftStorageKey(identity) }, quotationDraftRecordFor(identity, draft, '2026-09-23T00:00:00.000Z'))
+    if (scenario === 'readback-pending') {
+      const receiptKey = `quotation-order-receipt:v1:${encodeURIComponent(String(identity.userId))}:${encodeURIComponent(String(identity.workOrderId))}:${encodeURIComponent(String(identity.workflowNodeId))}`
+      void storage.write({ namespace: 'draft', key: receiptKey }, {
+        version: 1,
+        workOrderId: String(identity.workOrderId),
+        workflowNodeId: String(identity.workflowNodeId),
+        fingerprint: 'synthetic-pending-readback-fingerprint',
+        draftVersion: draft.draftVersion,
+        state: 'write_succeeded_readback_pending',
+        orderId: 'order-synthetic-review',
+      })
+    }
+    return
+  }
   if (scenario !== 'populated' && scenario !== 'restored' && scenario !== 'invalid' && scenario !== 'legacy') return
   const identity = actionDraftIdentityFor({
     userId: asOpaqueId<'UserId'>('g4f-mock-review-user'),

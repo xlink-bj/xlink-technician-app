@@ -50,21 +50,23 @@ function packageComponents(value: unknown, kind: 'procedure' | 'material' | 'mea
 function componentsFor(
   rawValue: unknown,
   kind: 'procedure' | 'material' | 'measure',
-): readonly { providerComponentId: string; providerReferenceId: string; catalogId: string; label: string; unit?: string; layer?: string | number }[] | null {
+): readonly { providerComponentId: string; providerReferenceId?: string; catalogId: string; label: string; unit?: string; layer?: string | number }[] | null {
   const values = packageComponents(rawValue, kind)
   if (!values) return null
   const output = []
   for (const row of values) {
     const item = record(row[kind])
     const providerComponentId = text(row._id)
-    const catalogId = kind === 'material' ? text(row.materialId) ?? text(item?._id) : text(item?._id)
+    const referenceKey = kind === 'procedure' ? 'procedureId' : kind === 'material' ? 'materialId' : 'measureId'
+    const providerReferenceId = text(row[referenceKey])
+    const catalogId = text(item?._id)
     const label = text(item?.name)
     const unit = text(item?.unit)
     const layer = record(row.exts)?.layer
-    if (!providerComponentId || !catalogId || !label) return null
+    if (!providerComponentId || !catalogId || !label || (providerReferenceId && providerReferenceId !== catalogId)) return null
     const entry = {
       providerComponentId,
-      providerReferenceId: catalogId,
+      ...(providerReferenceId ? { providerReferenceId } : {}),
       catalogId,
       label,
       ...(unit ? { unit } : {}),

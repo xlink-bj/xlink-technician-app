@@ -30,11 +30,13 @@ describe('G4-F Phase 1I no-live-write review safety', () => {
 
   it('keeps the real quotation confirmation explicit and separate from workflow completion', async () => {
     const page = await readFile(new URL('../../src/pages/work-orders/action-workspace.vue', import.meta.url), 'utf8')
+    const quotationWorkspace = await readFile(new URL('../../src/features/work-orders/quotation/QuotationActionWorkspace.vue', import.meta.url), 'utf8')
     const workspace = await readFile(new URL('../../src/features/work-orders/action-workspace.ts', import.meta.url), 'utf8')
     const adapter = await readFile(new URL('../../src/adapters/api/quotation-order-commands.ts', import.meta.url), 'utf8')
-    expect(page).toContain(':can-submit="workspace.canSubmitQuotation"')
-    expect(page).toContain('data-testid="quotation-order-confirmation"')
-    expect(page).toContain('@tap="confirmQuotationSubmit"')
+    expect(page).toContain('<QuotationActionWorkspace')
+    expect(quotationWorkspace).toContain(':can-submit="workspace.canSubmitQuotation"')
+    expect(quotationWorkspace).toContain('data-testid="quotation-order-confirmation"')
+    expect(quotationWorkspace).toContain('@tap="confirmQuotationSubmit"')
     expect(workspace).toContain('expectedDraftVersion: currentDraft.draftVersion')
     expect(workspace).toContain('engine.draftVersion !== currentDraft.draftVersion')
     expect(adapter).toContain("path: 'basic/order/upsert'")

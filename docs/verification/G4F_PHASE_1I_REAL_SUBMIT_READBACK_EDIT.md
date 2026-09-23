@@ -4,7 +4,7 @@ Status: implementation candidate for Web Review. This document records source ev
 
 ## Source evidence inspected
 
-- R1 frontend: `xlink-bj/xlink-app@6c0a97b26bcbcaee81ac4e1dfd627c6e8e70e29`, `supplier/subpackages/order/placeOrders.vue` (`fillOrder`, `doSaveOrder`, `startWorkflow`, `getOrderById`, and package material quantity calculation).
+- R1 frontend: `xlink-bj/xlink-app@6c0a97b26bcbcaee81ac4e1dfd627c6e8e70e29`, `business/subpackages/order/placeOrders.vue` (`fillOrder`, `doSaveOrder`, `startWorkflow`, `getOrderById`, and package material quantity calculation).
 - Backend: `xlink-bj/xlink-cloud-backend@5fc008d32e771205260f120621c1c4fc62d0824e`, `OrderController`, `OrderServiceImpl`, `Order`, `PayExtDataEntity`, `ExtDataEntity`, `DataEntity`, and `Entity`.
 
 ## Mutation contract matrix
@@ -55,6 +55,7 @@ The current encoder applies this only at payload generation time. It does not pe
 The persisted receipt contains only version, WorkOrder/node scope, local payload fingerprint, draft version, and optional child workflow/Order IDs. It contains no payload, customer fields, phone, credential, or raw response.
 
 - The receipt is written before each external dispatch.
+- A durable `prepared` receipt is explicitly pre-dispatch and may be superseded by a changed local payload; all dispatch/ambiguous/success states retain their existing no-blind-retry protections.
 - A single-flight lock collapses repeated in-process submissions.
 - Ambiguous start/upsert outcomes remain blocked from blind resubmission.
 - Confirmed write success is recorded before readback. Readback failure remains business success with refresh pending; retry is read-only.
@@ -64,7 +65,7 @@ The persisted receipt contains only version, WorkOrder/node scope, local payload
 ## Existing Order reconstruction and edit
 
 - Read is by `basic/order/queryById` and must prove `type=1`, matching Order ID, and matching current ServiceAppointment.
-- Reconstruction uses `bjProducts.orderList[]`; missing repair-part identity, group structure, item IDs, names, quantities, package component identity, or unique selected material layers makes the Order read-only.
+- Reconstruction uses `bjProducts.orderList[]`; missing repair-part identity, group structure, item IDs, names, quantities, package component identity, or unique selected material layers makes the Order read-only. Package component identity preserves the saved component `_id`, embedded catalog item `_id`, explicit reference only when present, and exact supplied layer; no reference is synthesized from catalog identity.
 - Current Package/Procedure/Material/Measure providers rehydrate the reconstructed identities before enabling edit.
 - Existing local unsaved draft is never overwritten.
 - Update sends the same `_id`, a projected existing Order snapshot plus current type-1 payload, and `processState=0`; it does not start a new child workflow.
@@ -77,7 +78,9 @@ Implementation tests use synthetic IDs and fake ports/transports only. No live c
 
 No Beta/Production mutation, real Order write, customer action, coupon action, contract/payment action, parent workflow mutation, or G4-G work was performed.
 
-Verification on the review candidate worktree:
+Quotation Order readback is owned by the dedicated `QuotationOrderReadPort` / `quotation-order-api.ts` boundary. `TechnicianApiReadPort` and `technician-api.ts` do not own `basic/order/queryById` or Order normalization. The product submit confirmation and Action Workspace shell are shared by the production page and isolated H5 review harness; the harness injects synthetic ports only.
+
+Verification on the review correction worktree:
 
 | Command / suite | Result |
 |---|---|
@@ -87,13 +90,14 @@ Verification on the review candidate worktree:
 | `pnpm run test:uni-h5-review` | PASS — 4 Playwright tests |
 | `pnpm run test:design-system-review` | PASS — 4 Playwright tests |
 | `pnpm run test:uni-h5-g4f-phase1b-review` | PASS — 7 Playwright tests; this isolated harness intentionally does not expose real Order submission |
+| `pnpm exec playwright test --config playwright.uni-h5-g4f-review.config.ts tests/h5-review/g4f-quotation-phase1i.spec.ts` | PASS — synthetic product Action Workspace confirmation/single-flight lock, readback-pending blocked state, supported orderId edit, unsupported edit read-only, no external requests |
 | `pnpm run build:uni-h5-g4f-review` | PASS |
 | `pnpm run build:mp-weixin-review` | PASS |
 | `pnpm run build:mp-weixin` | PASS |
 | `pnpm run build:app` | PASS |
 | `git diff --check` | PASS |
 
-The product Action Workspace submit/edit UI is not authenticated against Beta in this slice. The isolated G4-F browser harness remains a composition-review harness, not live command execution evidence; production write capability remains disabled in its build configuration.
+The product Action Workspace submit/edit UI is not authenticated against Beta in this slice. H5 integration evidence uses synthetic in-memory command/read ports against real product components; it is not live command execution evidence. Production write capability remains disabled in the review build configuration.
 
 ## Remaining constraints / UNKNOWNs
 
