@@ -5,7 +5,7 @@ import { asOpaqueId, type OperationSnapshot } from '@shared/types'
 import { quotationDraftRecordFor } from '@features/work-orders/quotation/draft-codec'
 import type { QuotationDraft } from '@features/work-orders/quotation/model'
 
-export type G4fReviewScenario = 'empty' | 'populated' | 'restored' | 'catalog' | 'invalid'
+export type G4fReviewScenario = 'empty' | 'populated' | 'restored' | 'catalog' | 'invalid' | 'legacy'
 
 function succeeded<T>(data: T): OperationSnapshot<T> {
   return { state: 'succeeded', data }
@@ -14,7 +14,7 @@ function succeeded<T>(data: T): OperationSnapshot<T> {
 export function reviewScenarioFromLocation(): G4fReviewScenario {
   if (typeof window === 'undefined') return 'empty'
   const value = new URLSearchParams(window.location.search).get('scenario')
-  return ['populated', 'restored', 'catalog', 'invalid'].includes(value ?? '')
+  return ['populated', 'restored', 'catalog', 'invalid', 'legacy'].includes(value ?? '')
     ? value as G4fReviewScenario
     : 'empty'
 }
@@ -36,7 +36,7 @@ export function createG4fReviewStorage(): StoragePort {
 }
 
 export function seedG4fReviewDraft(storage: StoragePort, scenario: G4fReviewScenario): void {
-  if (scenario !== 'populated' && scenario !== 'restored' && scenario !== 'invalid') return
+  if (scenario !== 'populated' && scenario !== 'restored' && scenario !== 'invalid' && scenario !== 'legacy') return
   const identity = actionDraftIdentityFor({
     userId: asOpaqueId<'UserId'>('g4f-mock-review-user'),
     workOrderId: asOpaqueId<'WorkOrderId'>('mock-work-order-018-quotation-foundation'),
@@ -50,17 +50,33 @@ export function seedG4fReviewDraft(storage: StoragePort, scenario: G4fReviewScen
     updatedAt: '2026-09-22T09:00:00.000Z',
     status: 'unfinished' as const,
   }
-  if (scenario === 'invalid') {
+  if (scenario === 'invalid' || scenario === 'legacy') {
     void storage.write({ namespace: 'draft', key: actionDraftStorageKey(identity) }, {
       ...common,
       values: {
-        schemaVersion: 1,
-        quotationDraft: {
-          workOrderId: String(identity.workOrderId),
-          workflowNodeId: String(identity.workflowNodeId),
-          draftVersion: 1,
-          lines: [{ lineId: 'quotation-line-1', kind: 'material', catalogId: 'synthetic-material-demo', label: '演示防水材料', unit: '桶', quantity: 0 }],
-        },
+        schemaVersion: scenario === 'legacy' ? 1 : 2,
+        quotationDraft: scenario === 'legacy'
+          ? {
+              workOrderId: String(identity.workOrderId),
+              workflowNodeId: String(identity.workflowNodeId),
+              draftVersion: 4,
+              lines: [{ lineId: 'old-line-1', kind: 'material', catalogId: 'synthetic-material-demo', label: '演示防水材料', unit: '桶', quantity: 2 }],
+            }
+          : {
+              workOrderId: String(identity.workOrderId),
+              workflowNodeId: String(identity.workflowNodeId),
+              draftVersion: 1,
+              groups: [{
+                groupId: 'quotation-group-1',
+                repairParts: ['repair-part-code-001'],
+                partDescription: '屋面局部维修',
+                maintainAreaNum: '18',
+                projPackages: [],
+                procedures: [],
+                materials: [{ selectionId: 'quotation-selection-1', kind: 'material', catalogId: 'synthetic-material-demo', label: '演示防水材料', unit: '桶', quantity: 0 }],
+                measures: [],
+              }],
+            },
       },
     })
     return
@@ -70,12 +86,24 @@ export function seedG4fReviewDraft(storage: StoragePort, scenario: G4fReviewScen
     workOrderId: String(identity.workOrderId),
     workflowNodeId: String(identity.workflowNodeId),
     draftVersion: 5,
-    lines: [
-      { lineId: 'quotation-line-1', kind: 'package', catalogId: 'synthetic-package-basic', label: '标准服务方案', unit: '套', quantity: 1 },
-      { lineId: 'quotation-line-2', kind: 'procedure', catalogId: 'synthetic-procedure-base', label: '基层处理', unit: '项', quantity: 1 },
-      { lineId: 'quotation-line-3', kind: 'material', catalogId: 'synthetic-material-demo', label: '演示防水材料', unit: '桶', quantity: 2 },
-      { lineId: 'quotation-line-4', kind: 'measure', catalogId: 'synthetic-measure-area', label: '施工面积', unit: '㎡', quantity: 12.5 },
-    ],
+    groups: [{
+      groupId: 'quotation-group-1',
+      repairParts: ['repair-part-code-001'],
+      partDescription: '屋面局部维修',
+      maintainAreaNum: '18',
+      projPackages: [
+        { selectionId: 'quotation-selection-1', kind: 'package', catalogId: 'synthetic-package-basic', label: '标准服务方案', unit: '套', quantity: 1 },
+      ],
+      procedures: [
+        { selectionId: 'quotation-selection-2', kind: 'procedure', catalogId: 'synthetic-procedure-base', label: '基层处理', unit: '项', quantity: 1 },
+      ],
+      materials: [
+        { selectionId: 'quotation-selection-3', kind: 'material', catalogId: 'synthetic-material-demo', label: '演示防水材料', unit: '桶', quantity: 2 },
+      ],
+      measures: [
+        { selectionId: 'quotation-selection-4', kind: 'measure', catalogId: 'synthetic-measure-area', label: '施工面积', unit: '㎡', quantity: 12.5 },
+      ],
+    }],
   }
   void storage.write({ namespace: 'draft', key: actionDraftStorageKey(identity) }, quotationDraftRecordFor(identity, draft, common.updatedAt))
 }

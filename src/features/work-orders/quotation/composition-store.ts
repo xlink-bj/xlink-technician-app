@@ -2,17 +2,23 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 
 import type { ActionDraftIdentity, ActionDraftRepository } from '@runtimes/action'
+import type { CodeOptionRead } from '@shared/ports'
 import { createOperationError, type OperationSnapshot } from '@shared/types'
 
 import { quotationCatalogItemFor, quotationCatalogKindLabels } from './catalog'
 import { decodeQuotationDraftRecord, quotationDraftRecordFor } from './draft-codec'
 import {
-  appendQuotationLine,
-  changeQuotationLineQuantity,
+  appendQuotationGroup,
+  appendQuotationSelection,
+  changeQuotationSelectionQuantity,
   createEmptyQuotationDraft,
+  createQuotationGroup,
   parseQuotationQuantity,
-  removeQuotationLine,
+  quotationSelectionsFor,
+  removeQuotationSelection,
+  updateQuotationGroupContext,
   type QuotationDraft,
+  type QuotationGroupContext,
   type QuotationLineKind,
 } from './model'
 
@@ -25,16 +31,26 @@ export type QuotationDraftLocalState =
   | 'saving'
   | 'saved_local'
   | 'save_failed'
+  | 'legacy_requires_action'
   | 'invalid'
   | 'unavailable'
 
-function succeeded(): OperationSnapshot<void> {
-  return { state: 'succeeded', data: undefined }
+function succeeded<T = void>(data?: T): OperationSnapshot<T> {
+  return { state: 'succeeded', ...(data === undefined ? {} : { data }) }
 }
 
-function failed(category: 'validation' | 'unsupported_capability' | 'server_terminal', message: string): OperationSnapshot<void> {
+function failed<T = void>(category: 'validation' | 'unsupported_capability' | 'server_terminal', message: string): OperationSnapshot<T> {
   const error = createOperationError(category, message)
   return { state: 'failed_terminal', error }
+}
+
+function selections(draft: QuotationDraft) {
+  return draft.groups.flatMap((group) => [
+    ...group.projPackages,
+    ...group.procedures,
+    ...group.materials,
+    ...group.measures,
+  ])
 }
 
 export const useQuotationCompositionStore = defineStore('quotationComposition', () => {
@@ -43,9 +59,12 @@ export const useQuotationCompositionStore = defineStore('quotationComposition', 
   const localStateMessage = ref('')
   const catalogOpen = ref(false)
   const selectedCatalogKind = ref<QuotationLineKind>('package')
-  const quantityTextByLine = ref<Readonly<Record<string, string>>>({})
-  const quantityErrorByLine = ref<Readonly<Record<string, string>>>({})
-  const lines = computed(() => draft.value?.lines ?? [])
+  const selectedGroupId = ref<string | null>(null)
+  const repairPartOptions = ref<readonly CodeOptionRead[]>([])
+  const quantityTextBySelection = ref<Readonly<Record<string, string>>>({})
+  const quantityErrorBySelection = ref<Readonly<Record<string, string>>>({})
+  const groups = computed(() => draft.value?.groups ?? [])
+  const selectionCount = computed(() => draft.value ? selections(draft.value).length : 0)
   const catalogKindLabels = quotationCatalogKindLabels
 
   let repository: ActionDraftRepository | null = null
@@ -55,6 +74,10 @@ export const useQuotationCompositionStore = defineStore('quotationComposition', 
   let timer: ReturnType<typeof setTimeout> | undefined
   let generation = 0
   let activeWrite: { readonly generation: number; readonly promise: Promise<OperationSnapshot<void>> } | null = null
+
+  function canEdit(): boolean {
+    return ['fresh', 'restored', 'dirty', 'saving', 'saved_local', 'save_failed'].includes(localState.value)
+  }
 
   function clearTimer(): void {
     if (timer) clearTimeout(timer)
@@ -71,17 +94,20 @@ export const useQuotationCompositionStore = defineStore('quotationComposition', 
     localStateMessage.value = ''
     catalogOpen.value = false
     selectedCatalogKind.value = 'package'
-    quantityTextByLine.value = {}
-    quantityErrorByLine.value = {}
+    selectedGroupId.value = null
+    repairPartOptions.value = []
+    quantityTextBySelection.value = {}
+    quantityErrorBySelection.value = {}
   }
 
   function inputValuesFor(value: QuotationDraft): Record<string, string> {
-    return Object.fromEntries(value.lines.map((line) => [line.lineId, String(line.quantity)]))
+    return Object.fromEntries(selections(value).map((selection) => [selection.selectionId, String(selection.quantity)]))
   }
 
   async function initialize(input: {
     readonly identity: ActionDraftIdentity
     readonly repository: ActionDraftRepository
+    readonly repairPartOptions?: readonly CodeOptionRead[]
     readonly now?: () => string
     readonly debounceMs?: number
   }): Promise<QuotationDraftLocalState> {
@@ -94,9 +120,11 @@ export const useQuotationCompositionStore = defineStore('quotationComposition', 
     draft.value = null
     localState.value = 'loading'
     localStateMessage.value = ''
-    quantityTextByLine.value = {}
-    quantityErrorByLine.value = {}
+    repairPartOptions.value = input.repairPartOptions ?? []
+    quantityTextBySelection.value = {}
+    quantityErrorBySelection.value = {}
     catalogOpen.value = false
+    selectedGroupId.value = null
 
     const stored = await input.repository.read<Readonly<Record<string, unknown>>>(input.identity)
     if (currentGeneration !== generation) return localState.value
@@ -107,21 +135,26 @@ export const useQuotationCompositionStore = defineStore('quotationComposition', 
     }
     if (!stored.data) {
       draft.value = createEmptyQuotationDraft(String(input.identity.workOrderId), String(input.identity.workflowNodeId))
-      quantityTextByLine.value = {}
+      quantityTextBySelection.value = {}
       localState.value = 'fresh'
       return localState.value
     }
 
     const decoded = decodeQuotationDraftRecord(stored.data, input.identity)
+    if (decoded.state === 'legacy_requires_action') {
+      localState.value = 'legacy_requires_action'
+      localStateMessage.value = decoded.reason
+      return localState.value
+    }
     if (decoded.state !== 'valid') {
       localState.value = 'invalid'
       localStateMessage.value = decoded.reason
       return localState.value
     }
     draft.value = decoded.draft
-    quantityTextByLine.value = inputValuesFor(decoded.draft)
+    quantityTextBySelection.value = inputValuesFor(decoded.draft)
     localState.value = 'restored'
-    localStateMessage.value = '已恢复本地报价草稿。'
+    localStateMessage.value = '已恢复本地报价分组草稿。'
     return localState.value
   }
 
@@ -139,68 +172,97 @@ export const useQuotationCompositionStore = defineStore('quotationComposition', 
     scheduleSave()
   }
 
-  function addCatalogItem(kind: QuotationLineKind, catalogId: string): OperationSnapshot<void> {
-    if (!draft.value || !['fresh', 'restored', 'dirty', 'saving', 'saved_local', 'save_failed'].includes(localState.value)) {
-      return failed('unsupported_capability', '报价草稿当前不可编辑')
-    }
-    const item = quotationCatalogItemFor(kind, catalogId)
-    if (!item) return failed('validation', '所选目录项不可用')
-    const usedIds = draft.value.lines.flatMap((line) => {
-      const match = /^quotation-line-(\d+)$/.exec(line.lineId)
+  function createGroup(context: QuotationGroupContext = {}): OperationSnapshot<string> {
+    if (!draft.value || !canEdit()) return failed<string>('unsupported_capability', '报价草稿当前不可编辑')
+    const usedIds = draft.value.groups.flatMap((group) => {
+      const match = /^quotation-group-(\d+)$/.exec(group.groupId)
       return match ? [Number(match[1])] : []
     })
-    const lineId = `quotation-line-${Math.max(0, ...usedIds) + 1}`
-    draft.value = appendQuotationLine(draft.value, item, lineId)
-    quantityTextByLine.value = { ...quantityTextByLine.value, [lineId]: '1' }
-    quantityErrorByLine.value = { ...quantityErrorByLine.value, [lineId]: '' }
+    const groupId = `quotation-group-${Math.max(0, ...usedIds) + 1}`
+    draft.value = appendQuotationGroup(draft.value, createQuotationGroup(groupId, context))
     markDirty()
-    return succeeded()
+    return succeeded(groupId)
   }
 
-  function setQuantityText(lineId: string, input: string): OperationSnapshot<void> {
-    if (!draft.value || !['fresh', 'restored', 'dirty', 'saving', 'saved_local', 'save_failed'].includes(localState.value)) {
-      return failed('unsupported_capability', '报价草稿当前不可编辑')
+  function updateGroupContext(groupId: string, context: QuotationGroupContext): OperationSnapshot<void> {
+    if (!draft.value || !canEdit()) return failed('unsupported_capability', '报价草稿当前不可编辑')
+    if (!draft.value.groups.some((group) => group.groupId === groupId)) return failed('validation', '维修部位组已不存在')
+    if (context.repairParts?.some((value) => typeof value !== 'string' || value.trim().length === 0)) {
+      return failed('validation', '维修部位路径无效')
     }
-    quantityTextByLine.value = { ...quantityTextByLine.value, [lineId]: input }
-    const parsed = parseQuotationQuantity(input)
-    if (!parsed.valid) {
-      quantityErrorByLine.value = { ...quantityErrorByLine.value, [lineId]: parsed.message }
-      return failed('validation', parsed.message)
-    }
-    const previous = draft.value.lines.find((line) => line.lineId === lineId)
-    if (!previous) return failed('validation', '报价明细已不存在')
-    quantityErrorByLine.value = { ...quantityErrorByLine.value, [lineId]: '' }
-    if (previous.quantity !== parsed.value) {
-      draft.value = changeQuotationLineQuantity(draft.value, lineId, parsed.value)
+    const next = updateQuotationGroupContext(draft.value, groupId, context)
+    if (next !== draft.value) {
+      draft.value = next
       markDirty()
     }
     return succeeded()
   }
 
-  function removeLine(lineId: string): OperationSnapshot<void> {
-    if (!draft.value || !['fresh', 'restored', 'dirty', 'saving', 'saved_local', 'save_failed'].includes(localState.value)) {
-      return failed('unsupported_capability', '报价草稿当前不可编辑')
-    }
-    const next = removeQuotationLine(draft.value, lineId)
-    if (next === draft.value) return failed('validation', '报价明细已不存在')
-    draft.value = next
-    const nextTexts = { ...quantityTextByLine.value }
-    const nextErrors = { ...quantityErrorByLine.value }
-    delete nextTexts[lineId]
-    delete nextErrors[lineId]
-    quantityTextByLine.value = nextTexts
-    quantityErrorByLine.value = nextErrors
+  function addCatalogItem(groupId: string, kind: QuotationLineKind, catalogId: string): OperationSnapshot<void> {
+    if (!draft.value || !canEdit()) return failed('unsupported_capability', '报价草稿当前不可编辑')
+    const group = draft.value.groups.find((item) => item.groupId === groupId)
+    if (!group) return failed('validation', '请先选择有效的维修部位组')
+    if (group.repairParts.length === 0) return failed('validation', '请先为维修部位组选择部位路径')
+    const item = quotationCatalogItemFor(kind, catalogId)
+    if (!item) return failed('validation', '所选目录项不可用')
+    const usedIds = selections(draft.value).flatMap((selection) => {
+      const match = /^quotation-selection-(\d+)$/.exec(selection.selectionId)
+      return match ? [Number(match[1])] : []
+    })
+    const selectionId = `quotation-selection-${Math.max(0, ...usedIds) + 1}`
+    draft.value = appendQuotationSelection(draft.value, groupId, item, selectionId)
+    quantityTextBySelection.value = { ...quantityTextBySelection.value, [selectionId]: '1' }
+    quantityErrorBySelection.value = { ...quantityErrorBySelection.value, [selectionId]: '' }
     markDirty()
     return succeeded()
   }
 
-  function openCatalog(kind = selectedCatalogKind.value): void {
+  function setQuantityText(groupId: string, selectionId: string, input: string): OperationSnapshot<void> {
+    if (!draft.value || !canEdit()) return failed('unsupported_capability', '报价草稿当前不可编辑')
+    quantityTextBySelection.value = { ...quantityTextBySelection.value, [selectionId]: input }
+    const parsed = parseQuotationQuantity(input)
+    if (!parsed.valid) {
+      quantityErrorBySelection.value = { ...quantityErrorBySelection.value, [selectionId]: parsed.message }
+      return failed('validation', parsed.message)
+    }
+    const group = draft.value.groups.find((item) => item.groupId === groupId)
+    if (!group || !selections({ ...draft.value, groups: [group] }).some((item) => item.selectionId === selectionId)) {
+      return failed('validation', '报价项目已不存在')
+    }
+    quantityErrorBySelection.value = { ...quantityErrorBySelection.value, [selectionId]: '' }
+    const next = changeQuotationSelectionQuantity(draft.value, groupId, selectionId, parsed.value)
+    if (next !== draft.value) {
+      draft.value = next
+      markDirty()
+    }
+    return succeeded()
+  }
+
+  function removeSelection(groupId: string, selectionId: string): OperationSnapshot<void> {
+    if (!draft.value || !canEdit()) return failed('unsupported_capability', '报价草稿当前不可编辑')
+    const next = removeQuotationSelection(draft.value, groupId, selectionId)
+    if (next === draft.value) return failed('validation', '报价项目已不存在')
+    draft.value = next
+    const nextTexts = { ...quantityTextBySelection.value }
+    const nextErrors = { ...quantityErrorBySelection.value }
+    delete nextTexts[selectionId]
+    delete nextErrors[selectionId]
+    quantityTextBySelection.value = nextTexts
+    quantityErrorBySelection.value = nextErrors
+    markDirty()
+    return succeeded()
+  }
+
+  function openCatalog(groupId: string, kind = selectedCatalogKind.value): void {
+    if (!draft.value?.groups.some((group) => group.groupId === groupId) || !canEdit()) return
+    selectedGroupId.value = groupId
     selectedCatalogKind.value = kind
     catalogOpen.value = true
   }
 
   function closeCatalog(): void {
     catalogOpen.value = false
+    selectedGroupId.value = null
   }
 
   function selectCatalogKind(kind: QuotationLineKind): void {
@@ -216,7 +278,7 @@ export const useQuotationCompositionStore = defineStore('quotationComposition', 
     if (!currentRepository || !currentIdentity || !currentDraft) {
       return failed('unsupported_capability', '报价草稿当前不可保存')
     }
-    if (localState.value === 'invalid' || localState.value === 'unavailable') {
+    if (localState.value === 'legacy_requires_action' || localState.value === 'invalid' || localState.value === 'unavailable') {
       return failed('unsupported_capability', '本地报价草稿需要先恢复后才能保存')
     }
     if (activeWrite?.generation === currentGeneration) return activeWrite.promise
@@ -233,7 +295,7 @@ export const useQuotationCompositionStore = defineStore('quotationComposition', 
           scheduleSave()
         } else if (result.state === 'succeeded') {
           localState.value = 'saved_local'
-          localStateMessage.value = '报价草稿已保存在本机。'
+          localStateMessage.value = '报价分组草稿已保存在本机。'
         } else {
           localState.value = 'save_failed'
           localStateMessage.value = '本地草稿保存失败，请保持页面打开并重试。'
@@ -258,15 +320,15 @@ export const useQuotationCompositionStore = defineStore('quotationComposition', 
     return succeeded()
   }
 
-  async function discardInvalidDraft(): Promise<OperationSnapshot<void>> {
-    if (!repository || !identity || localState.value !== 'invalid') {
-      return failed('validation', '当前没有需要清理的无效报价草稿')
+  async function discardStoredDraftAndStartFresh(expectedState: 'invalid' | 'legacy_requires_action'): Promise<OperationSnapshot<void>> {
+    if (!repository || !identity || localState.value !== expectedState) {
+      return failed('validation', '当前没有需要显式处理的旧草稿')
     }
     const removed = await repository.remove(identity)
     if (removed.state !== 'succeeded') return removed
     draft.value = createEmptyQuotationDraft(String(identity.workOrderId), String(identity.workflowNodeId))
-    quantityTextByLine.value = {}
-    quantityErrorByLine.value = {}
+    quantityTextBySelection.value = {}
+    quantityErrorBySelection.value = {}
     localState.value = 'fresh'
     localStateMessage.value = ''
     return succeeded()
@@ -274,23 +336,33 @@ export const useQuotationCompositionStore = defineStore('quotationComposition', 
 
   return {
     draft,
-    lines,
+    groups,
+    selectionCount,
     localState,
     localStateMessage,
     catalogOpen,
     selectedCatalogKind,
+    selectedGroupId,
+    repairPartOptions,
     catalogKindLabels,
-    quantityTextByLine,
-    quantityErrorByLine,
+    quantityTextBySelection,
+    quantityErrorBySelection,
     initialize,
     clear,
+    createGroup,
+    updateGroupContext,
     addCatalogItem,
     setQuantityText,
-    removeLine,
+    removeSelection,
     openCatalog,
     closeCatalog,
     selectCatalogKind,
     flushDraft,
-    discardInvalidDraft,
+    discardInvalidDraft: () => discardStoredDraftAndStartFresh('invalid'),
+    discardLegacyDraft: () => discardStoredDraftAndStartFresh('legacy_requires_action'),
+    selectionsFor: (groupId: string, kind: QuotationLineKind) => {
+      const group = draft.value?.groups.find((item) => item.groupId === groupId)
+      return group ? quotationSelectionsFor(group, kind) : []
+    },
   }
 })

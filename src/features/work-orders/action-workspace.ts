@@ -817,9 +817,12 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       }
       quotationContent.value = quotationRead.data
       identity = actionDraftIdentityFor(nextDescriptor)
+      const repairPartsRead = await configured.apiRead.getCascadeCodeOptions({ codeType: 'repairParts' })
+      if (requestVersion !== loadVersion) return failure('cancelled', 'Action Workspace load was superseded')
       await quotationComposition.initialize({
         identity,
         repository: configured.draftRepository,
+        repairPartOptions: repairPartsRead.state === 'succeeded' ? repairPartsRead.data?.items ?? [] : [],
         ...(configured.now ? { now: configured.now } : {}),
         ...(configured.debounceMs !== undefined ? { debounceMs: configured.debounceMs } : {}),
       })

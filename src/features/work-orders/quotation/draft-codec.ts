@@ -4,17 +4,24 @@ import {
   type ActionDraftRecord,
 } from '@runtimes/action'
 
-import { QUOTATION_LINE_KINDS, type QuotationDraft, type QuotationLine, type QuotationLineKind } from './model'
+import {
+  QUOTATION_LINE_KINDS,
+  type QuotationDraft,
+  type QuotationGroup,
+  type QuotationLineKind,
+  type QuotationSelection,
+} from './model'
 
-const QUOTATION_DRAFT_SCHEMA_VERSION = 1
+const QUOTATION_DRAFT_SCHEMA_VERSION = 2
 
 export interface QuotationDraftRecordValues extends Readonly<Record<string, unknown>> {
-  readonly schemaVersion: 1
+  readonly schemaVersion: 2
   readonly quotationDraft: QuotationDraft
 }
 
 export type QuotationDraftDecodeResult =
   | { readonly state: 'valid'; readonly draft: QuotationDraft }
+  | { readonly state: 'legacy_requires_action'; readonly reason: string }
   | { readonly state: 'invalid'; readonly reason: string }
 
 function record(value: unknown): Record<string, unknown> | null {
@@ -25,26 +32,63 @@ function record(value: unknown): Record<string, unknown> | null {
 
 function exactKeys(value: Record<string, unknown>, expected: readonly string[]): boolean {
   const keys = Object.keys(value).sort()
-  return keys.length === expected.length && keys.every((key, index) => key === [...expected].sort()[index])
+  const sortedExpected = [...expected].sort()
+  return keys.length === sortedExpected.length && keys.every((key, index) => key === sortedExpected[index])
 }
 
 function nonEmptyString(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0
 }
 
-function validLine(value: unknown): value is QuotationLine {
-  const line = record(value)
-  if (!line) return false
-  const expectedKeys = ['lineId', 'kind', 'catalogId', 'label', 'quantity', ...(Object.prototype.hasOwnProperty.call(line, 'unit') ? ['unit'] : [])]
-  if (!exactKeys(line, expectedKeys)) return false
-  return nonEmptyString(line.lineId)
-    && nonEmptyString(line.catalogId)
-    && nonEmptyString(line.label)
-    && (QUOTATION_LINE_KINDS as readonly unknown[]).includes(line.kind)
-    && (line.unit === undefined || nonEmptyString(line.unit))
-    && typeof line.quantity === 'number'
-    && Number.isFinite(line.quantity)
-    && line.quantity > 0
+function validSelection(value: unknown, expectedKind: QuotationLineKind): value is QuotationSelection {
+  const selection = record(value)
+  if (!selection) return false
+  const expectedKeys = [
+    'selectionId',
+    'kind',
+    'catalogId',
+    'label',
+    'quantity',
+    ...(Object.prototype.hasOwnProperty.call(selection, 'unit') ? ['unit'] : []),
+  ]
+  return exactKeys(selection, expectedKeys)
+    && selection.kind === expectedKind
+    && nonEmptyString(selection.selectionId)
+    && nonEmptyString(selection.catalogId)
+    && nonEmptyString(selection.label)
+    && (selection.unit === undefined || nonEmptyString(selection.unit))
+    && typeof selection.quantity === 'number'
+    && Number.isFinite(selection.quantity)
+    && selection.quantity > 0
+}
+
+function validSelectionList(value: unknown, kind: QuotationLineKind): value is readonly QuotationSelection[] {
+  return Array.isArray(value) && value.every((selection) => validSelection(selection, kind))
+}
+
+function validGroup(value: unknown): value is QuotationGroup {
+  const group = record(value)
+  if (!group) return false
+  const expectedKeys = [
+    'groupId',
+    'repairParts',
+    'partDescription',
+    'maintainAreaNum',
+    'projPackages',
+    'procedures',
+    'materials',
+    'measures',
+  ]
+  return exactKeys(group, expectedKeys)
+    && nonEmptyString(group.groupId)
+    && Array.isArray(group.repairParts)
+    && group.repairParts.every(nonEmptyString)
+    && typeof group.partDescription === 'string'
+    && typeof group.maintainAreaNum === 'string'
+    && validSelectionList(group.projPackages, 'package')
+    && validSelectionList(group.procedures, 'procedure')
+    && validSelectionList(group.materials, 'material')
+    && validSelectionList(group.measures, 'measure')
 }
 
 export function quotationDraftRecordFor(
@@ -60,6 +104,7 @@ export function quotationDraftRecordFor(
     status: 'unfinished',
   }
 }
+
 export function decodeQuotationDraftRecord(
   value: unknown,
   expectedIdentity: ActionDraftIdentity,
@@ -78,14 +123,29 @@ export function decodeQuotationDraftRecord(
     !Number.isFinite(Date.parse(stored.updatedAt)) ||
     stored.status !== 'unfinished' ||
     !values ||
-    !exactKeys(values, ['schemaVersion', 'quotationDraft']) ||
-    values.schemaVersion !== QUOTATION_DRAFT_SCHEMA_VERSION
-  ) return { state: 'invalid', reason: '本地报价草稿格式不兼容，未覆盖原记录。' }
+    !exactKeys(values, ['schemaVersion', 'quotationDraft'])
+  ) return { state: 'invalid', reason: '本地报价草稿格式无效，未覆盖原记录。' }
 
   const draftValue = record(values.quotationDraft)
+  if (!draftValue) return { state: 'invalid', reason: '本地报价草稿内容无效，未覆盖原记录。' }
+
   if (
-    !draftValue ||
-    !exactKeys(draftValue, ['workOrderId', 'workflowNodeId', 'draftVersion', 'lines']) ||
+    values.schemaVersion === 1 &&
+    nonEmptyString(draftValue.workOrderId) &&
+    nonEmptyString(draftValue.workflowNodeId) &&
+    String(expectedIdentity.workOrderId) === draftValue.workOrderId &&
+    String(expectedIdentity.workflowNodeId) === draftValue.workflowNodeId &&
+    Array.isArray(draftValue.lines)
+  ) {
+    return {
+      state: 'legacy_requires_action',
+      reason: '检测到旧版平铺报价草稿。原记录已保留，未自动迁移或覆盖；新分组模型不会猜测旧明细的维修部位与工程量归属。',
+    }
+  }
+
+  if (
+    values.schemaVersion !== QUOTATION_DRAFT_SCHEMA_VERSION ||
+    !exactKeys(draftValue, ['workOrderId', 'workflowNodeId', 'draftVersion', 'groups']) ||
     !nonEmptyString(draftValue.workOrderId) ||
     !nonEmptyString(draftValue.workflowNodeId) ||
     String(expectedIdentity.workOrderId) !== draftValue.workOrderId ||
@@ -93,13 +153,21 @@ export function decodeQuotationDraftRecord(
     typeof draftValue.draftVersion !== 'number' ||
     !Number.isSafeInteger(draftValue.draftVersion) ||
     draftValue.draftVersion < 1 ||
-    !Array.isArray(draftValue.lines) ||
-    !draftValue.lines.every(validLine)
-  ) return { state: 'invalid', reason: '本地报价草稿内容无效，未覆盖原记录。' }
+    !Array.isArray(draftValue.groups) ||
+    !draftValue.groups.every(validGroup)
+  ) return { state: 'invalid', reason: '新版报价分组草稿内容无效，未覆盖原记录。' }
 
-  const lines = draftValue.lines as QuotationLine[]
-  const lineIds = new Set(lines.map((line) => line.lineId))
-  if (lineIds.size !== lines.length) return { state: 'invalid', reason: '本地报价草稿包含重复行，未覆盖原记录。' }
+  const groups = draftValue.groups as QuotationGroup[]
+  const groupIds = new Set(groups.map((group) => group.groupId))
+  const selectionIds = groups.flatMap((group) => [
+    ...group.projPackages,
+    ...group.procedures,
+    ...group.materials,
+    ...group.measures,
+  ]).map((selection) => selection.selectionId)
+  if (groupIds.size !== groups.length || new Set(selectionIds).size !== selectionIds.length) {
+    return { state: 'invalid', reason: '报价分组草稿存在重复身份，未覆盖原记录。' }
+  }
 
   return {
     state: 'valid',
@@ -107,13 +175,15 @@ export function decodeQuotationDraftRecord(
       workOrderId: draftValue.workOrderId,
       workflowNodeId: draftValue.workflowNodeId,
       draftVersion: draftValue.draftVersion,
-      lines: lines.map((line) => ({
-        lineId: line.lineId,
-        kind: line.kind as QuotationLineKind,
-        catalogId: line.catalogId,
-        label: line.label,
-        ...(line.unit ? { unit: line.unit } : {}),
-        quantity: line.quantity,
+      groups: groups.map((group) => ({
+        groupId: group.groupId,
+        repairParts: [...group.repairParts],
+        partDescription: group.partDescription,
+        maintainAreaNum: group.maintainAreaNum,
+        projPackages: group.projPackages.map((selection) => ({ ...selection })),
+        procedures: group.procedures.map((selection) => ({ ...selection })),
+        materials: group.materials.map((selection) => ({ ...selection })),
+        measures: group.measures.map((selection) => ({ ...selection })),
       })),
     },
   }

@@ -488,13 +488,13 @@ describe('G4-F Phase 1C quotation catalog read foundation', () => {
     })).toBe(true)
   })
 
-  it('keeps package detail independent from the Phase 1B flat draft model', async () => {
+  it('keeps package detail read-only and independent from the Phase 1D grouped draft model', async () => {
     const { readFile } = await import('node:fs/promises')
     const [composition, content] = await Promise.all([
       readFile(new URL('../../src/features/work-orders/quotation/model.ts', import.meta.url), 'utf8'),
       readFile(new URL('../../src/features/work-orders/quotation/QuotationActionContent.vue', import.meta.url), 'utf8'),
     ])
-    expect(composition).toContain('lines:')
+    expect(composition).toContain('groups:')
     expect(composition).not.toContain('QuotationCatalogReadPort')
     expect(content).not.toContain('quotationCatalogRead')
   })

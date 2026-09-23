@@ -2,7 +2,7 @@
   <view
     class="app-choice-group app-choice-group--multi app-cascade-selector"
     :class="{ 'app-cascade-selector--hierarchical': hierarchical }"
-    :data-testid="hierarchical ? 'survey-repair-part-selector' : undefined"
+    :data-testid="testId ?? (hierarchical ? 'survey-repair-part-selector' : undefined)"
   >
     <template v-if="hierarchical">
       <view class="app-cascade-selector__parents" data-testid="survey-repair-part-parents">
@@ -78,6 +78,7 @@ const props = withDefaults(
     readonly disabled?: boolean
     /** Survey uses a readable parent -> child presentation; value paths stay unchanged. */
     readonly hierarchical?: boolean
+    readonly testId?: string
   }>(),
   { disabled: false, hierarchical: false },
 )

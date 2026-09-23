@@ -73,6 +73,7 @@ const reviewScenarios = [
   { id: 'populated', label: '组合草稿' },
   { id: 'restored', label: '恢复草稿' },
   { id: 'invalid', label: '异常草稿' },
+  { id: 'legacy', label: '旧版草稿保留' },
 ] as const
 let initialCatalogOpened = false
 const quotationContentViewState = computed(() => workspace.quotationContentState === 'idle'
@@ -97,7 +98,8 @@ watch(
   ([loadState, localState]) => {
     if (!initialCatalogOpened && scenario === 'catalog' && loadState === 'succeeded' && localState === 'fresh') {
       initialCatalogOpened = true
-      workspace.quotationComposition.openCatalog()
+      const group = workspace.quotationComposition.createGroup({ repairParts: ['repair-part-code-001'] })
+      if (group.state === 'succeeded' && group.data) workspace.quotationComposition.openCatalog(group.data, 'package')
     }
   },
   { immediate: true },

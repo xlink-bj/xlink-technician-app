@@ -14,7 +14,7 @@
       <view class="quotation-content__panel-header">
         <view>
           <text class="quotation-content__panel-title">服务方案 / 报价明细</text>
-          <text class="quotation-content__line-count">{{ composition.lines.length }} 项</text>
+          <text class="quotation-content__line-count">{{ composition.selectionCount }} 项 · {{ composition.groups.length }} 个部位组</text>
         </view>
         <text class="quotation-content__local-tag">仅本机草稿</text>
       </view>
@@ -40,7 +40,12 @@
         quiet
       />
 
-      <view v-if="composition.localState === 'invalid'" class="quotation-content__blocked" data-testid="quotation-draft-invalid">
+      <view v-if="composition.localState === 'legacy_requires_action'" class="quotation-content__blocked" data-testid="quotation-draft-legacy">
+        <text class="quotation-content__blocked-title">旧版平铺草稿已保留</text>
+        <text class="quotation-content__copy">旧草稿没有可靠的维修部位和工程量归属，系统不会自动迁移、覆盖或清除。请先人工处理；如确认不再需要，可显式放弃并创建分组草稿。</text>
+        <AppButton class="quotation-content__secondary-action" variant="secondary" block @tap="composition.discardLegacyDraft">确认放弃旧版草稿并新建</AppButton>
+      </view>
+      <view v-else-if="composition.localState === 'invalid'" class="quotation-content__blocked" data-testid="quotation-draft-invalid">
         <text class="quotation-content__blocked-title">无法恢复这份本地草稿</text>
         <text class="quotation-content__copy">草稿格式不兼容，原记录已保留。确认不再需要后，可清除异常记录并新建。</text>
         <AppButton class="quotation-content__secondary-action" variant="secondary" block @tap="composition.discardInvalidDraft">清除异常草稿并新建</AppButton>
@@ -50,67 +55,141 @@
         <text class="quotation-content__copy">为避免覆盖尚未确认的数据，当前报价内容已锁定。请稍后重试或返回工单。</text>
       </view>
       <view v-else>
-        <view v-if="composition.lines.length === 0" class="quotation-content__empty" data-testid="quotation-draft-empty">
+        <view v-if="composition.groups.length === 0" class="quotation-content__empty" data-testid="quotation-draft-empty">
           <view class="quotation-content__empty-mark" aria-hidden="true">＋</view>
-          <text class="quotation-content__empty-title">还没有添加报价明细</text>
-          <text class="quotation-content__copy">从目录选择服务方案、工序、材料或计量项，先整理本地草稿。</text>
+          <text class="quotation-content__empty-title">还没有维修部位组</text>
+          <text class="quotation-content__copy">先建立部位上下文，再在每个分组中整理服务方案、工序、材料或机措。当前内容仅保存在本机。</text>
           <AppButton
-            class="quotation-content__add-button"
-            data-testid="quotation-add-item"
+            class="quotation-content__add-group-button"
+            data-testid="quotation-add-group"
             block
             :disabled="!canEdit"
-            @tap="composition.openCatalog()"
-          >添加项目</AppButton>
+            @tap="composition.createGroup()"
+          >添加维修部位组</AppButton>
         </view>
 
-        <view v-else class="quotation-content__lines" data-testid="quotation-draft-lines">
+        <view v-else class="quotation-content__groups" data-testid="quotation-draft-groups">
           <view
-            v-for="(line, index) in composition.lines"
-            :key="line.lineId"
-            class="quotation-content__line app-surface app-surface--compact"
-            data-testid="quotation-composition-line"
+            v-for="(group, groupIndex) in composition.groups"
+            :key="group.groupId"
+            class="quotation-content__group app-surface app-surface--compact"
+            :data-testid="`quotation-repair-group-${group.groupId}`"
           >
-            <view class="quotation-content__line-heading">
-              <view class="quotation-content__line-title-wrap">
-                <text class="quotation-content__line-index">{{ String(index + 1).padStart(2, '0') }}</text>
-                <text class="quotation-content__line-title">{{ line.label }}</text>
+            <view class="quotation-content__group-heading">
+              <view>
+                <text class="quotation-content__group-eyebrow">维修部位组 {{ String(groupIndex + 1).padStart(2, '0') }}</text>
+                <text class="quotation-content__group-title">{{ group.partDescription || '待填写部位描述' }}</text>
               </view>
-              <text class="quotation-content__kind-tag">{{ composition.catalogKindLabels[line.kind] }}</text>
+              <text class="quotation-content__local-tag">本机草稿</text>
             </view>
-            <view class="quotation-content__line-controls">
-              <text class="quotation-content__quantity-label">数量</text>
-              <view class="quotation-content__quantity-wrap" :class="{ 'quotation-content__quantity-wrap--error': composition.quantityErrorByLine[line.lineId] }">
-                <input
-                  class="quotation-content__quantity"
-                  type="digit"
-                  :value="composition.quantityTextByLine[line.lineId] ?? String(line.quantity)"
-                  :disabled="!canEdit"
-                  :aria-label="`${line.label}数量`"
-                  :data-testid="`quotation-line-quantity-${line.lineId}`"
-                  @input="onQuantityInput(line.lineId, $event)"
-                />
-                <text v-if="line.unit" class="quotation-content__unit">{{ line.unit }}</text>
+            <view class="quotation-content__group-context" :data-testid="`quotation-group-context-${group.groupId}`">
+              <text class="quotation-content__context-label">维修部位路径</text>
+              <AppCascadeSelector
+                :options="composition.repairPartOptions"
+                :model-value="group.repairParts"
+                :hierarchical="true"
+                :test-id="`quotation-repair-part-selector-${group.groupId}`"
+                :disabled="!canEdit || composition.repairPartOptions.length === 0"
+                @update:model-value="onRepairPartChange(group.groupId, $event)"
+              />
+              <AppStatus
+                v-if="composition.repairPartOptions.length === 0"
+                message="维修部位选项暂不可用；当前组未绑定部位，不能向其中添加目录项。"
+                tone="warning"
+                quiet
+              />
+              <view class="quotation-content__group-fields">
+                <label class="quotation-content__context-field">
+                  <text class="quotation-content__context-label">部位描述</text>
+                  <textarea
+                    class="quotation-content__context-input quotation-content__context-input--multiline"
+                    :value="group.partDescription"
+                    :disabled="!canEdit"
+                    placeholder="补充维修部位描述"
+                    :data-testid="`quotation-group-description-${group.groupId}`"
+                    @input="onGroupDescriptionInput(group.groupId, $event)"
+                  />
+                </label>
+                <label class="quotation-content__context-field">
+                  <text class="quotation-content__context-label">工程量</text>
+                  <input
+                    class="quotation-content__context-input"
+                    type="digit"
+                    :value="group.maintainAreaNum"
+                    :disabled="!canEdit"
+                    placeholder="填写工程量"
+                    :data-testid="`quotation-group-quantity-${group.groupId}`"
+                    @input="onGroupQuantityInput(group.groupId, $event)"
+                  />
+                </label>
               </view>
-              <text v-if="composition.quantityErrorByLine[line.lineId]" class="quotation-content__quantity-error" role="alert">
-                {{ composition.quantityErrorByLine[line.lineId] }}
-              </text>
-              <AppButton
-                class="quotation-content__remove-button"
-                variant="text"
-                :disabled="!canEdit"
-                :data-testid="`quotation-line-remove-${line.lineId}`"
-                @tap="composition.removeLine(line.lineId)"
-              >移除</AppButton>
+            </view>
+
+            <view
+              v-for="kind in catalogKinds"
+              :key="kind"
+              class="quotation-content__group-section"
+              :data-testid="`quotation-group-section-${group.groupId}-${kind}`"
+            >
+              <view class="quotation-content__group-section-heading">
+                <text class="quotation-content__panel-title">{{ composition.catalogKindLabels[kind] }}</text>
+                <AppButton
+                  class="quotation-content__add-selection"
+                  variant="secondary"
+                  :data-testid="`quotation-add-item-${group.groupId}-${kind}`"
+                  :disabled="!canEdit || group.repairParts.length === 0"
+                  @tap="composition.openCatalog(group.groupId, kind)"
+                >添加</AppButton>
+              </view>
+              <view
+                v-for="selection in composition.selectionsFor(group.groupId, kind)"
+                :key="selection.selectionId"
+                class="quotation-content__selection"
+                data-testid="quotation-composition-selection"
+              >
+                <view class="quotation-content__line-heading">
+                  <view class="quotation-content__line-title-wrap">
+                    <text class="quotation-content__line-title">{{ selection.label }}</text>
+                  </view>
+                  <text class="quotation-content__kind-tag">{{ composition.catalogKindLabels[selection.kind] }}</text>
+                </view>
+                <view class="quotation-content__line-controls">
+                  <text class="quotation-content__quantity-label">数量</text>
+                  <view class="quotation-content__quantity-wrap" :class="{ 'quotation-content__quantity-wrap--error': composition.quantityErrorBySelection[selection.selectionId] }">
+                    <input
+                      class="quotation-content__quantity"
+                      type="digit"
+                      :value="composition.quantityTextBySelection[selection.selectionId] ?? String(selection.quantity)"
+                      :disabled="!canEdit"
+                      :aria-label="`${selection.label}数量`"
+                      :data-testid="`quotation-selection-quantity-${selection.selectionId}`"
+                      @input="onQuantityInput(group.groupId, selection.selectionId, $event)"
+                    />
+                    <text v-if="selection.unit" class="quotation-content__unit">{{ selection.unit }}</text>
+                  </view>
+                  <text v-if="composition.quantityErrorBySelection[selection.selectionId]" class="quotation-content__quantity-error" role="alert">
+                    {{ composition.quantityErrorBySelection[selection.selectionId] }}
+                  </text>
+                  <AppButton
+                    class="quotation-content__remove-button"
+                    variant="text"
+                    :disabled="!canEdit"
+                    :data-testid="`quotation-selection-remove-${selection.selectionId}`"
+                    @tap="composition.removeSelection(group.groupId, selection.selectionId)"
+                  >移除</AppButton>
+                </view>
+              </view>
+              <text v-if="composition.selectionsFor(group.groupId, kind).length === 0" class="quotation-content__empty-section">暂未添加</text>
             </view>
           </view>
           <AppButton
-            class="quotation-content__add-button quotation-content__add-button--outline"
-            data-testid="quotation-add-item"
+            class="quotation-content__add-group-button quotation-content__add-group-button--outline"
+            data-testid="quotation-add-group"
             variant="secondary"
             block
             :disabled="!canEdit"
-            @tap="composition.openCatalog()"
-          >＋ 添加项目</AppButton>
+            @tap="composition.createGroup()"
+          >＋ 添加维修部位组</AppButton>
         </view>
       </view>
 
@@ -149,7 +228,7 @@
         <view class="quotation-content__catalog-heading">
           <view>
             <text class="quotation-content__catalog-title">添加报价项目</text>
-            <text class="quotation-content__catalog-subtitle">选择项目加入本机草稿</text>
+            <text class="quotation-content__catalog-subtitle">选择项目加入当前维修部位组</text>
           </view>
           <AppButton class="quotation-content__catalog-close" variant="text" aria-label="关闭目录" @tap="composition.closeCatalog">关闭</AppButton>
         </view>
@@ -188,6 +267,7 @@
 import { computed } from 'vue'
 
 import AppButton from '@shared/ui/AppButton.vue'
+import AppCascadeSelector from '@shared/ui/AppCascadeSelector.vue'
 import AppLoadingState from '@shared/ui/AppLoadingState.vue'
 import AppStatus from '@shared/ui/AppStatus.vue'
 import { useQuotationCompositionStore } from './composition-store'
@@ -208,15 +288,33 @@ const catalogKinds: readonly QuotationLineKind[] = ['package', 'procedure', 'mat
 const canEdit = computed(() => ['fresh', 'restored', 'dirty', 'saving', 'saved_local', 'save_failed'].includes(composition.localState))
 const visibleCatalogItems = computed(() => quotationCatalogItemsFor(composition.selectedCatalogKind))
 
-function onQuantityInput(lineId: string, event: unknown): void {
+function eventValue(event: unknown): string {
   const detail = typeof event === 'object' && event !== null
     ? (event as { detail?: { value?: unknown } }).detail
     : undefined
-  composition.setQuantityText(lineId, typeof detail?.value === 'string' ? detail.value : '')
+  return typeof detail?.value === 'string' ? detail.value : ''
+}
+
+function onRepairPartChange(groupId: string, repairParts: readonly string[]): void {
+  composition.updateGroupContext(groupId, { repairParts })
+}
+
+function onGroupDescriptionInput(groupId: string, event: unknown): void {
+  composition.updateGroupContext(groupId, { partDescription: eventValue(event) })
+}
+
+function onGroupQuantityInput(groupId: string, event: unknown): void {
+  composition.updateGroupContext(groupId, { maintainAreaNum: eventValue(event) })
+}
+
+function onQuantityInput(groupId: string, selectionId: string, event: unknown): void {
+  composition.setQuantityText(groupId, selectionId, eventValue(event))
 }
 
 function selectItem(kind: QuotationLineKind, catalogId: string): void {
-  const result = composition.addCatalogItem(kind, catalogId)
+  const groupId = composition.selectedGroupId
+  if (!groupId) return
+  const result = composition.addCatalogItem(groupId, kind, catalogId)
   if (result.state === 'succeeded') composition.closeCatalog()
 }
 </script>
@@ -239,6 +337,25 @@ function selectItem(kind: QuotationLineKind, catalogId: string): void {
 .quotation-content__copy { color: var(--app-color-text-secondary); display: block; font-size: var(--app-font-body); line-height: 1.6; margin-top: var(--app-space-sm); }
 .quotation-content__add-button { margin-top: var(--app-space-md); }
 .quotation-content__add-button--outline { border-style: dashed; }
+.quotation-content__add-group-button { margin-top: var(--app-space-md); }
+.quotation-content__add-group-button--outline { border-style: dashed; }
+.quotation-content__groups { display: flex; flex-direction: column; gap: var(--app-space-md); padding-top: var(--app-space-md); }
+.quotation-content__group { padding: var(--app-card-padding); }
+.quotation-content__group-heading, .quotation-content__group-section-heading { align-items: center; display: flex; justify-content: space-between; }
+.quotation-content__group-heading { align-items: flex-start; border-bottom: 1rpx solid var(--app-color-divider); padding-bottom: var(--app-space-sm); }
+.quotation-content__group-eyebrow { color: var(--app-color-text-secondary); display: block; font-size: var(--app-font-meta); }
+.quotation-content__group-title { color: var(--app-color-text-primary); display: block; font-size: var(--app-font-field-label); font-weight: 800; margin-top: var(--app-space-xs); }
+.quotation-content__group-context { display: flex; flex-direction: column; gap: var(--app-space-sm); padding: var(--app-space-md) 0; }
+.quotation-content__context-label { color: var(--app-color-text-secondary); display: block; font-size: var(--app-font-meta); font-weight: 700; }
+.quotation-content__group-fields { display: grid; gap: var(--app-space-sm); grid-template-columns: 1fr; }
+.quotation-content__context-field { display: flex; flex-direction: column; gap: var(--app-space-xs); min-width: 0; }
+.quotation-content__context-input { background: var(--app-color-control-surface); border: 1rpx solid var(--app-color-border-control); border-radius: var(--app-radius-control); box-sizing: border-box; color: var(--app-color-text-primary); font-size: var(--app-font-body); min-height: 76rpx; padding: var(--app-space-sm); width: 100%; }
+.quotation-content__context-input--multiline { min-height: 112rpx; }
+.quotation-content__group-section { border-top: 1rpx solid var(--app-color-divider); padding-top: var(--app-space-md); }
+.quotation-content__group-section + .quotation-content__group-section { margin-top: var(--app-space-sm); }
+.quotation-content__add-selection { min-height: 40px; }
+.quotation-content__selection { border-top: 1rpx solid var(--app-color-divider); margin-top: var(--app-space-sm); padding-top: var(--app-space-sm); }
+.quotation-content__empty-section { color: var(--app-color-text-muted); display: block; font-size: var(--app-font-meta); padding: var(--app-space-sm) 0; }
 .quotation-content__lines { display: flex; flex-direction: column; gap: var(--app-space-sm); padding-top: var(--app-space-md); }
 .quotation-content__line { padding: var(--app-space-md); }
 .quotation-content__line-heading { align-items: flex-start; display: flex; gap: var(--app-space-sm); justify-content: space-between; }

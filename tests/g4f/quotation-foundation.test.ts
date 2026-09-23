@@ -169,7 +169,7 @@ describe('G4-F Phase 1A quotation action foundation', () => {
     expect(workspace.quotationComposition.draft).toMatchObject({
       workOrderId: String(workOrderId),
       workflowNodeId: String(workflowNodeId),
-      lines: [],
+      groups: [],
     })
     expect(workspace.detail?.customerName).toBe('演示报价工单')
     expect(workspace.canSubmit).toBe(false)

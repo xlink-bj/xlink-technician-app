@@ -55,38 +55,52 @@ describe('G4-F quotation composition model and local draft recovery', () => {
 
   afterEach(() => vi.useRealTimers())
 
-  it('starts empty, composes all supported catalog kinds, edits positive quantity, removes a line, and autosaves semantic state only', async () => {
+  it('starts empty, composes all catalog kinds in a repair-part group, edits quantity, and autosaves grouped state only', async () => {
     vi.useFakeTimers()
     const identity = identityFor()
     const store = useQuotationCompositionStore()
     expect(await store.initialize({ identity, repository, debounceMs: 500 })).toBe('fresh')
     expect(store.draft).toEqual(createEmptyQuotationDraft(String(identity.workOrderId), String(identity.workflowNodeId)))
 
+    const groupResult = store.createGroup({ repairParts: ['part-root', 'part-leaf'], partDescription: '局部维修', maintainAreaNum: '12.5' })
+    expect(groupResult.state).toBe('succeeded')
+    const groupId = groupResult.data!
     for (const item of quotationCatalog) {
-      expect(store.addCatalogItem(item.kind, item.catalogId).state).toBe('succeeded')
+      expect(store.addCatalogItem(groupId, item.kind, item.catalogId).state).toBe('succeeded')
     }
-    const stableLineIds = store.lines.map((line) => line.lineId)
-    const measureLine = store.lines.find((line) => line.kind === 'measure')!
-    expect(store.setQuantityText(measureLine.lineId, '12.5').state).toBe('succeeded')
-    expect(store.lines.map((line) => line.lineId)).toEqual(stableLineIds)
-    const removedLine = store.lines.find((line) => line.kind === 'procedure')!
-    expect(store.removeLine(removedLine.lineId).state).toBe('succeeded')
+    const stableSelectionIds = store.groups[0].procedures.map((selection) => selection.selectionId)
+    const measureSelection = store.groups[0].measures[0]
+    expect(store.setQuantityText(groupId, measureSelection.selectionId, '12.5').state).toBe('succeeded')
+    expect(store.groups[0].procedures.map((selection) => selection.selectionId)).toEqual(stableSelectionIds)
+    const procedureSelection = store.groups[0].procedures[0]
+    expect(store.removeSelection(groupId, procedureSelection.selectionId).state).toBe('succeeded')
 
     await vi.advanceTimersByTimeAsync(650)
     expect(store.localState).toBe('saved_local')
     const stored = await repository.read<Readonly<Record<string, unknown>>>(identity)
     expect(stored.state).toBe('succeeded')
     expect(stored.data?.values).toEqual({
-      schemaVersion: 1,
+      schemaVersion: 2,
       quotationDraft: {
         workOrderId: String(identity.workOrderId),
         workflowNodeId: String(identity.workflowNodeId),
-        draftVersion: 7,
-        lines: [
-          { lineId: 'quotation-line-1', kind: 'package', catalogId: 'synthetic-package-basic', label: '标准服务方案', unit: '套', quantity: 1 },
-          { lineId: 'quotation-line-3', kind: 'material', catalogId: 'synthetic-material-demo', label: '演示防水材料', unit: '桶', quantity: 1 },
-          { lineId: 'quotation-line-4', kind: 'measure', catalogId: 'synthetic-measure-area', label: '施工面积', unit: '㎡', quantity: 12.5 },
-        ],
+        draftVersion: 8,
+        groups: [{
+          groupId: 'quotation-group-1',
+          repairParts: ['part-root', 'part-leaf'],
+          partDescription: '局部维修',
+          maintainAreaNum: '12.5',
+          projPackages: [
+            { selectionId: 'quotation-selection-1', kind: 'package', catalogId: 'synthetic-package-basic', label: '标准服务方案', unit: '套', quantity: 1 },
+          ],
+          procedures: [],
+          materials: [
+            { selectionId: 'quotation-selection-3', kind: 'material', catalogId: 'synthetic-material-demo', label: '演示防水材料', unit: '桶', quantity: 1 },
+          ],
+          measures: [
+            { selectionId: 'quotation-selection-4', kind: 'measure', catalogId: 'synthetic-measure-area', label: '施工面积', unit: '㎡', quantity: 12.5 },
+          ],
+        }],
       },
     })
     const serialized = JSON.stringify(stored.data)
@@ -106,17 +120,18 @@ describe('G4-F quotation composition model and local draft recovery', () => {
     const identity = identityFor()
     const store = useQuotationCompositionStore()
     await store.initialize({ identity, repository, debounceMs: 10_000 })
-    store.addCatalogItem('material', 'synthetic-material-demo')
-    const line = store.lines[0]
+    const groupId = store.createGroup({ repairParts: ['part-material'] }).data!
+    store.addCatalogItem(groupId, 'material', 'synthetic-material-demo')
+    const selection = store.groups[0].materials[0]
     const before = store.draft
-    expect(store.setQuantityText(line.lineId, '0').state).toBe('failed_terminal')
-    expect(store.quantityErrorByLine[line.lineId]).toBe('请输入大于 0 的数量')
+    expect(store.setQuantityText(groupId, selection.selectionId, '0').state).toBe('failed_terminal')
+    expect(store.quantityErrorBySelection[selection.selectionId]).toBe('请输入大于 0 的数量')
     expect(store.draft).toEqual(before)
     const flushed = await store.flushDraft()
     expect(flushed.state).toBe('succeeded')
     const stored = await repository.read<Readonly<Record<string, unknown>>>(identity)
     expect(stored.data?.values).toMatchObject({
-      quotationDraft: { lines: [{ quantity: 1 }] },
+      quotationDraft: { groups: [{ materials: [{ quantity: 1 }] }] },
     })
     expect(JSON.stringify(stored.data?.values)).not.toContain('"quantity":0')
   })
@@ -125,18 +140,22 @@ describe('G4-F quotation composition model and local draft recovery', () => {
     const identity = identityFor()
     const first = useQuotationCompositionStore()
     await first.initialize({ identity, repository, debounceMs: 10_000 })
-    first.addCatalogItem('package', 'synthetic-package-basic')
-    first.addCatalogItem('procedure', 'synthetic-procedure-base')
+    const groupId = first.createGroup({ repairParts: ['part-roof'] }).data!
+    first.addCatalogItem(groupId, 'package', 'synthetic-package-basic')
+    first.addCatalogItem(groupId, 'procedure', 'synthetic-procedure-base')
     expect((await first.flushDraft()).state).toBe('succeeded')
 
     setActivePinia(createPinia())
     const reopened = useQuotationCompositionStore()
     expect(await reopened.initialize({ identity, repository })).toBe('restored')
-    expect(reopened.lines.map((line) => [line.kind, line.catalogId])).toEqual([
-      ['package', 'synthetic-package-basic'],
-      ['procedure', 'synthetic-procedure-base'],
+    expect(reopened.groups.map((group) => group.repairParts)).toEqual([['part-roof']])
+    expect(reopened.groups[0].projPackages.map((selection) => selection.catalogId)).toEqual([
+      'synthetic-package-basic',
     ])
-    expect(reopened.localStateMessage).toContain('已恢复本地报价草稿')
+    expect(reopened.groups[0].procedures.map((selection) => selection.catalogId)).toEqual([
+      'synthetic-procedure-base',
+    ])
+    expect(reopened.localStateMessage).toContain('已恢复本地报价分组草稿')
   })
 
   it.each([
@@ -147,13 +166,14 @@ describe('G4-F quotation composition model and local draft recovery', () => {
     const originalIdentity = identityFor()
     const original = useQuotationCompositionStore()
     await original.initialize({ identity: originalIdentity, repository })
-    original.addCatalogItem('package', 'synthetic-package-basic')
+    const groupId = original.createGroup({ repairParts: ['part-roof'] }).data!
+    original.addCatalogItem(groupId, 'package', 'synthetic-package-basic')
     await original.flushDraft()
 
     setActivePinia(createPinia())
     const isolated = useQuotationCompositionStore()
     expect(await isolated.initialize({ identity: identityFor(change), repository })).toBe('fresh')
-    expect(isolated.lines).toEqual([])
+    expect(isolated.groups).toEqual([])
   })
 
   it('rejects malformed or incompatible persisted drafts without overwriting them', async () => {
@@ -162,12 +182,21 @@ describe('G4-F quotation composition model and local draft recovery', () => {
       version: 1,
       identity,
       values: {
-        schemaVersion: 1,
+        schemaVersion: 2,
         quotationDraft: {
           workOrderId: String(identity.workOrderId),
           workflowNodeId: String(identity.workflowNodeId),
           draftVersion: 1,
-          lines: [{ lineId: 'line-1', kind: 'material', catalogId: 'synthetic-material-demo', label: '演示材料', quantity: 0, price: 999 }],
+          groups: [{
+            groupId: 'group-1',
+            repairParts: [],
+            partDescription: '',
+            maintainAreaNum: '',
+            projPackages: [],
+            procedures: [],
+            materials: [{ selectionId: 'selection-1', kind: 'material', catalogId: 'synthetic-material-demo', label: '演示材料', quantity: 0, price: 999 }],
+            measures: [],
+          }],
         },
       },
       updatedAt: '2026-09-22T09:00:00.000Z',
@@ -180,7 +209,7 @@ describe('G4-F quotation composition model and local draft recovery', () => {
 
     const store = useQuotationCompositionStore()
     expect(await store.initialize({ identity, repository })).toBe('invalid')
-    expect(store.addCatalogItem('package', 'synthetic-package-basic').state).toBe('failed_terminal')
+    expect(store.createGroup().state).toBe('failed_terminal')
     expect((await repository.read<Readonly<Record<string, unknown>>>(identity)).data).toEqual(malformed)
     expect(await store.discardInvalidDraft()).toMatchObject({ state: 'succeeded' })
     expect(store.localState).toBe('fresh')
@@ -196,5 +225,37 @@ describe('G4-F quotation composition model and local draft recovery', () => {
       actionIntent: 'quotation',
     })).toMatchObject({ state: 'invalid' })
     expect(actionDraftStorageKey(identity)).toContain('quotation')
+  })
+
+  it('retains legacy flat v1 drafts without migration or overwrite until explicit user disposition', async () => {
+    const identity = identityFor()
+    const legacy: ActionDraftRecord<Readonly<Record<string, unknown>>> = {
+      version: 1,
+      identity,
+      values: {
+        schemaVersion: 1,
+        quotationDraft: {
+          workOrderId: String(identity.workOrderId),
+          workflowNodeId: String(identity.workflowNodeId),
+          draftVersion: 4,
+          lines: [{ lineId: 'old-line-1', kind: 'material', catalogId: 'synthetic-material-demo', label: '演示材料', quantity: 2 }],
+        },
+      },
+      updatedAt: '2026-09-22T09:00:00.000Z',
+      status: 'unfinished',
+    }
+    await repository.write(legacy)
+    expect(decodeQuotationDraftRecord(legacy, identity)).toMatchObject({ state: 'legacy_requires_action' })
+
+    const store = useQuotationCompositionStore()
+    expect(await store.initialize({ identity, repository })).toBe('legacy_requires_action')
+    expect(store.draft).toBeNull()
+    expect(store.createGroup().state).toBe('failed_terminal')
+    await store.flushDraft()
+    expect((await repository.read<Readonly<Record<string, unknown>>>(identity)).data).toEqual(legacy)
+
+    expect(await store.discardLegacyDraft()).toMatchObject({ state: 'succeeded' })
+    expect((await repository.read<Readonly<Record<string, unknown>>>(identity)).data).toBeNull()
+    expect(store.localState).toBe('fresh')
   })
 })

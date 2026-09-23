@@ -56,25 +56,28 @@ async function expectSafe(page: Page, diagnostics: Awaited<ReturnType<typeof ins
   expect(width.scroll, 'review viewport must not horizontally overflow').toBeLessThanOrEqual(width.viewport)
 }
 
-test('Phase 1B empty quotation draft is a local composition workspace', async ({ page }) => {
+test('Phase 1D empty quotation draft starts from a repair-part group', async ({ page }) => {
   const diagnostics = await installSafetyGuards(page)
   await mkdir(output, { recursive: true })
   await openScenario(page, 'empty')
   await expect(page.getByTestId('g4f-review-scenario-selector')).toBeVisible()
-  await expect(page.getByTestId('quotation-draft-empty')).toContainText('还没有添加报价明细')
-  await expect(page.getByTestId('quotation-add-item')).toBeVisible()
+  await expect(page.getByTestId('quotation-draft-empty')).toContainText('还没有维修部位组')
+  await expect(page.getByTestId('quotation-add-group')).toBeVisible()
   await expect(page.getByText(/价格|单价|小计|总价|¥|￥/)).toHaveCount(0)
   await page.getByTestId('quotation-draft-empty').scrollIntoViewIfNeeded()
   await page.screenshot({ path: resolve(output, '01-empty-draft.png'), animations: 'disabled' })
   await expectSafe(page, diagnostics)
 })
 
-test('Phase 1B composes package, procedure, material, and measure through the real catalog UI', async ({ page }) => {
+test('Phase 1D composes each catalog category inside its repair-part group', async ({ page }) => {
   const diagnostics = await installSafetyGuards(page)
   await mkdir(output, { recursive: true })
   await openScenario(page, 'empty')
+  await page.getByTestId('quotation-add-group').click()
+  const groupId = 'quotation-group-1'
+  await page.getByText('屋面', { exact: true }).click()
   for (const kind of ['package', 'procedure', 'material', 'measure'] as const) {
-    await page.getByTestId('quotation-add-item').last().click()
+    await page.getByTestId(`quotation-add-item-${groupId}-${kind}`).click()
     await expect(page.getByTestId('quotation-catalog-sheet')).toBeVisible()
     await page.getByTestId(`quotation-catalog-kind-${kind}`).click()
     const ids = {
@@ -85,23 +88,23 @@ test('Phase 1B composes package, procedure, material, and measure through the re
     } as const
     await page.getByTestId(`quotation-catalog-item-${ids[kind]}`).click()
   }
-  await expect(page.getByTestId('quotation-composition-line')).toHaveCount(4)
-  const packageQuantity = page.getByTestId('quotation-line-quantity-quotation-line-1').locator('input')
+  await expect(page.getByTestId('quotation-composition-selection')).toHaveCount(4)
+  const packageQuantity = page.getByTestId('quotation-selection-quantity-quotation-selection-1').locator('input')
   await packageQuantity.fill('0')
   await expect(page.getByRole('alert')).toContainText('请输入大于 0 的数量')
   await packageQuantity.fill('2.5')
-  await expect(page.getByText('报价草稿已保存在本机。')).toBeVisible()
+  await expect(page.getByText('报价分组草稿已保存在本机。')).toBeVisible()
   await expect(page.getByText(/价格|单价|小计|总价|¥|￥/)).toHaveCount(0)
   await expect(page.getByTestId('action-workspace-submit')).toHaveCount(0)
   await expect(page.getByTestId('dynamic-form-save')).toHaveCount(0)
-  await page.getByTestId('quotation-draft-lines').scrollIntoViewIfNeeded()
+  await page.getByTestId('quotation-draft-groups').scrollIntoViewIfNeeded()
   await page.screenshot({ path: resolve(output, '02-composed-draft.png'), animations: 'disabled' })
-  await page.getByTestId('quotation-line-remove-quotation-line-2').click()
-  await expect(page.getByTestId('quotation-composition-line')).toHaveCount(3)
+  await page.getByTestId('quotation-selection-remove-quotation-selection-2').click()
+  await expect(page.getByTestId('quotation-composition-selection')).toHaveCount(3)
   await expectSafe(page, diagnostics)
 })
 
-test('Phase 1B catalog selection is usable and synthetic only', async ({ page }) => {
+test('Phase 1D catalog selection is scoped to a repair-part group and remains synthetic', async ({ page }) => {
   const diagnostics = await installSafetyGuards(page)
   await mkdir(output, { recursive: true })
   await openScenario(page, 'catalog')
@@ -112,17 +115,20 @@ test('Phase 1B catalog selection is usable and synthetic only', async ({ page })
   await expectSafe(page, diagnostics)
 })
 
-test('Phase 1B restores only the current identity and rejects malformed local drafts', async ({ page }) => {
+test('Phase 1D restores grouped drafts and preserves legacy flat drafts for explicit handling', async ({ page }) => {
   const diagnostics = await installSafetyGuards(page)
   await openScenario(page, 'populated')
-  await expect(page.getByTestId('quotation-composition-line')).toHaveCount(4)
+  await expect(page.getByTestId('quotation-composition-selection')).toHaveCount(4)
   await openScenario(page, 'restored')
-  await expect(page.getByTestId('quotation-composition-line')).toHaveCount(4)
-  await expect(page.getByText('已恢复本地报价草稿。')).toBeVisible()
+  await expect(page.getByTestId('quotation-composition-selection')).toHaveCount(4)
+  await expect(page.getByText('已恢复本地报价分组草稿。')).toBeVisible()
   await expectSafe(page, diagnostics)
 
   await page.goto('/?scenario=invalid', { waitUntil: 'domcontentloaded' })
   await expect(page.getByTestId('quotation-draft-invalid')).toBeVisible()
-  await expect(page.getByTestId('quotation-add-item')).toHaveCount(0)
+  await expect(page.getByTestId('quotation-add-group')).toHaveCount(0)
+  await page.goto('/?scenario=legacy', { waitUntil: 'domcontentloaded' })
+  await expect(page.getByTestId('quotation-draft-legacy')).toContainText('不会自动迁移、覆盖或清除')
+  await expect(page.getByTestId('quotation-add-group')).toHaveCount(0)
   await expectSafe(page, diagnostics)
 })
