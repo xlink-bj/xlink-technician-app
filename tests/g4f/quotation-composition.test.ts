@@ -143,6 +143,27 @@ describe('G4-F quotation composition model and local draft recovery', () => {
     })
     expect(JSON.stringify(store.draft)).not.toMatch(/price|minimum|cost|guideUnit/i)
 
+    const beforeDuplicateSelections = JSON.stringify(store.draft)
+    for (const item of directItems) {
+      expect(store.addCatalogReadItem(groupId, item).state).toBe('succeeded')
+    }
+    expect(JSON.stringify(store.draft)).toBe(beforeDuplicateSelections)
+    expect(store.groups[0]).toMatchObject({
+      procedures: [{ catalogId: 'real-procedure-1', quantity: 1 }],
+      materials: [{ catalogId: 'real-material-1', quantity: 1 }],
+      measures: [{ catalogId: 'real-measure-1', quantity: 1 }],
+    })
+
+    const otherGroupId = store.createGroup({ repairParts: ['part-window'] }).data!
+    for (const item of directItems) {
+      expect(store.addCatalogReadItem(otherGroupId, item).state).toBe('succeeded')
+    }
+    expect(store.groups[1]).toMatchObject({
+      procedures: [{ catalogId: 'real-procedure-1', quantity: 1 }],
+      materials: [{ catalogId: 'real-material-1', quantity: 1 }],
+      measures: [{ catalogId: 'real-measure-1', quantity: 1 }],
+    })
+
     const unboundGroupId = store.createGroup().data!
     const beforeUnboundSelection = JSON.stringify(store.draft)
     expect(store.addCatalogReadItem(unboundGroupId, directItems[0]).state).toBe('failed_terminal')

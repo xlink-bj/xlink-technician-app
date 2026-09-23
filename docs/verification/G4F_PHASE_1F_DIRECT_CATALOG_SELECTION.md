@@ -19,6 +19,9 @@ Phase 1E read contracts.
 - The draft projection retains only catalog ID, display name, optional unit,
   and local quantity. Provider price, cost, minimum-price, and other commercial
   metadata are not copied into the composition model.
+- Within a group, the same `kind + catalogId` is idempotent: reselecting it
+  leaves the draft and quantity unchanged. The same provider item may still be
+  selected once in each of multiple groups.
 - `Package` remains read-only: package detail and observed material layers can
   be browsed, but package rows cannot be inserted as ordinary selections.
 - Mock and Real use the same normalized catalog read and local-selection path.
@@ -39,6 +42,9 @@ not a backend quotation and must not be represented as one.
   rejects Package and IDs absent from the current result.
 - Composition projects only ID/name/unit into local selections; commercial
   fields on a provider row do not enter the draft.
+- Re-selecting the same Procedure, Material, or Measure in one group does not
+  append a row or increment quantity; all three remain independently selectable
+  in another repair-part group.
 - H5 browser smoke proves passive browsing, explicit direct selection into the
   opened repair-part group, Package read-only behavior, and no external network
   requests.
@@ -56,6 +62,18 @@ Executed locally:
 - `pnpm run test:h5-review` — PASS; 32 tests, including G4-E regression.
 - `pnpm run build:uni-h5-g4f-review` — PASS.
 - `pnpm run build:mp-weixin-review` — PASS.
+- `pnpm run build:mp-weixin` — PASS.
+- `pnpm run build:app` — PASS.
+- `git diff --check` — PASS.
+
+Duplicate-selection correction verification:
+
+- `pnpm exec vitest run tests/g4f/quotation-composition.test.ts` — PASS;
+  11 tests, including duplicate Procedure/Material/Measure selection in one
+  group and independent selection in another group.
+- `pnpm run check:g4f-phase1b` — PASS.
+- `pnpm run verify` — PASS; typecheck and 379 tests across 37 files.
+- `pnpm run test:uni-h5-g4f-phase1b-review` — PASS; 4 browser tests.
 - `pnpm run build:mp-weixin` — PASS.
 - `pnpm run build:app` — PASS.
 - `git diff --check` — PASS.

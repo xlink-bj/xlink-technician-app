@@ -220,6 +220,11 @@ export const useQuotationCompositionStore = defineStore('quotationComposition', 
     if (!group) return failed('validation', '请先选择有效的维修部位组')
     if (group.repairParts.length === 0) return failed('validation', '请先为维修部位组选择部位路径')
     if (!source.id.trim() || !source.name.trim()) return failed('validation', '所选目录项身份不完整')
+    if (quotationSelectionsFor(group, source.kind).some((selection) => selection.catalogId === source.id)) {
+      // Re-selecting a row is an idempotent no-op. Quantity remains an explicit
+      // user-edited field and is never increased as a side effect of selection.
+      return succeeded()
+    }
 
     // Project only local composition fields; provider commercial metadata is
     // intentionally excluded from the persisted draft model.
