@@ -13,24 +13,12 @@
     <AppButton class="workspace-state-action" @tap="exit">返回工单详情</AppButton>
   </view>
 
-  <ActionWorkspaceShell
+  <QuotationActionWorkspace
     v-else-if="workspace.descriptor?.contentKind === 'quotation' && workspace.descriptor.actionIntent === 'place_order'"
-    :customer-name="workspace.detail?.customerName"
-    :display-number="workspace.detail?.displayNumber"
-    :lifecycle="workspace.lifecycle"
-    :draft-status="workspace.draftStatus"
-    :can-submit="false"
-    submit-label="报价操作未开放"
-  >
-    <QuotationActionContent
-      :state="quotationContentViewState"
-      @retry="reload"
-      @back="exit"
-    />
-    <template #actions>
-      <text class="quotation-readonly-note" data-testid="quotation-readonly-note">报价草稿仅保存在本机，不会提交报价</text>
-    </template>
-  </ActionWorkspaceShell>
+    :content-state="quotationContentViewState"
+    @retry="reload"
+    @back="exit"
+  />
 
   <AppLoadingState v-else-if="workspace.loadState === 'loading'" variant="workspace" label="正在准备操作内容" />
 
@@ -194,6 +182,7 @@ import {
   parseActionWorkspaceNodeId,
   useActionWorkspaceStore,
 } from '@features/work-orders/action-workspace'
+import QuotationActionWorkspace from '@features/work-orders/quotation/QuotationActionWorkspace.vue'
 import { appointmentDisplayFor } from '@features/work-orders/appointment-time'
 import { isMultilineField } from '@features/work-orders/form-presentation'
 import { useSessionStore } from '@shared/state'
@@ -201,7 +190,6 @@ import ActionWorkspaceFormActions from '@shared/ui/ActionWorkspaceFormActions.vu
 import ActionWorkspaceShell from '@shared/ui/ActionWorkspaceShell.vue'
 import GenericDynamicFormActionContent from '@features/work-orders/components/GenericDynamicFormActionContent.vue'
 import SurveyActionContent from '@features/work-orders/components/SurveyActionContent.vue'
-import QuotationActionContent from '@features/work-orders/quotation/QuotationActionContent.vue'
 import AppButton from '@shared/ui/AppButton.vue'
 import AppChoiceGroup from '@shared/ui/AppChoiceGroup.vue'
 import AppField from '@shared/ui/AppField.vue'
@@ -219,6 +207,7 @@ const routeReady = ref(false)
 const routeId = ref<ReturnType<typeof parseActionWorkspaceId>>(null)
 const routeNodeId = ref<ReturnType<typeof parseActionWorkspaceNodeId>>(null)
 const routeAction = ref<string | undefined>(undefined)
+const routeQuotationOrderId = ref<string | undefined>(undefined)
 const routeError = ref('')
 const isNavigating = ref(false)
 
@@ -229,7 +218,7 @@ const quotationContentViewState = computed(() => workspace.quotationContentState
   ? 'loading'
   : workspace.quotationContentState)
 
-function loadWorkspace(): void {
+async function loadWorkspace(): Promise<void> {
   if (!routeReady.value || session.status !== 'authenticated') return
   if (!routeId.value || !routeNodeId.value) {
     routeError.value = 'invalid-route'
@@ -237,17 +226,21 @@ function loadWorkspace(): void {
     return
   }
   routeError.value = ''
-  void workspace.ensureLoaded({
+  const loaded = await workspace.ensureLoaded({
     workOrderId: routeId.value,
     workflowNodeId: routeNodeId.value,
     ...(routeAction.value ? { actionIntent: routeAction.value } : {}),
   })
+  if (loaded.state === 'succeeded' && routeQuotationOrderId.value && workspace.descriptor?.contentKind === 'quotation') {
+    await workspace.loadQuotationOrderForEdit(routeQuotationOrderId.value)
+  }
 }
 
 onLoad((options) => {
   routeId.value = parseActionWorkspaceId(options?.id)
   routeNodeId.value = parseActionWorkspaceNodeId(options?.node)
   routeAction.value = typeof options?.action === 'string' ? options.action : undefined
+  routeQuotationOrderId.value = typeof options?.orderId === 'string' && options.orderId.trim() ? options.orderId.trim() : undefined
   routeReady.value = true
 })
 

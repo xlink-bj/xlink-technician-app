@@ -507,19 +507,17 @@ describe('G4-F Phase 1H quotation engine', () => {
     expect(materialResult).toMatchObject({ state: 'blocked', issues: [expect.objectContaining({ code: 'pricing.material_sku_deferred' })] })
   })
 
-  it('prices a Package without pricingMethod via the standard formula but blocks unresolved material quantity encoding', async () => {
+  it('prices a Package without pricingMethod and emits R1 standard material quantity', async () => {
     const packageWithoutMethod: QuotationPackageRead = { ...packageItem, pricingMethod: undefined }
     const port = catalogPort({ listPackages: vi.fn(async () => succeeded({ items: [packageWithoutMethod] })) })
     const result = await evaluateQuotationDraft({ draft: packageDraft(), catalogContext: context, catalogRead: port })
-    expect(result.state).toBe('blocked')
+    expect(result.state).toBe('ready')
     expect(result.pricing).toMatchObject({
       calcTotalPrice: { originPrice: 107.5, totalPrice: 107.5 },
       fillOrder: { groups: [{ categoryTotals: { package: 107.5 }, subtotal: 107.5 }] },
     })
-    expect(result.issues).toContainEqual(expect.objectContaining({
-      phase: 'encoding', code: 'encoding.package_material_quantity_not_authorized',
-    }))
-    expect(result.payload).toBeUndefined()
+    const products = JSON.parse(result.payload!.bjProducts) as { orderList: Array<{ projPackages: { data: Array<{ materialList: Array<{ number: number }> }> } }> }
+    expect(products.orderList[0].projPackages.data[0].materialList[0].number).toBe(1)
   })
 
   it('prices explicit SKU-mode Package under calcTotalPrice but never emits its unsupported SKU payload', async () => {
@@ -534,13 +532,26 @@ describe('G4-F Phase 1H quotation engine', () => {
     expect(result.payload).toBeUndefined()
   })
 
-  it('does not generate an encodable payload for configured Package materials with unapproved derived quantity', async () => {
-    const result = await evaluateQuotationDraft({ draft: packageDraft(), catalogContext: context, catalogRead: catalogPort() })
-    expect(result).toMatchObject({
-      state: 'blocked',
-      issues: [expect.objectContaining({ phase: 'encoding', code: 'encoding.package_material_quantity_not_authorized' })],
+  it('matches shipped R1 ceil(package quantity × coefficient / material spec) without persisting the derived count', async () => {
+    const result = await evaluateQuotationDraft({ draft: packageDraft({ quantity: 20 }), catalogContext: context, catalogRead: catalogPort() })
+    expect(result.state).toBe('ready')
+    const products = JSON.parse(result.payload!.bjProducts) as { orderList: Array<{ projPackages: { data: Array<{ materialList: Array<{ number: number }> }> } }> }
+    expect(products.orderList[0].projPackages.data[0].materialList[0].number).toBe(2)
+    expect(packageDraft({ quantity: 20 }).groups[0].projPackages[0].quantity).toBe(20)
+  })
+
+  it('blocks standard Package encoding when coefficient or material spec is missing/invalid', async () => {
+    const invalidCoefficient = { ...packageMaterialRow, coefficient: undefined }
+    const noCoefficientPort = catalogPort({ getPackageDetail: vi.fn(async () => succeeded(packageDetail({ materials: [invalidCoefficient] }))) })
+    const noCoefficient = await evaluateQuotationDraft({ draft: packageDraft(), catalogContext: context, catalogRead: noCoefficientPort })
+    expect(noCoefficient).toMatchObject({ state: 'blocked', issues: [expect.objectContaining({ code: 'encoding.package_material_quantity_contract_invalid' })] })
+
+    const invalidSpecPort = catalogPort({
+      listMaterials: vi.fn(async () => succeeded({ items: [{ ...materialItem, specification: '0' }] })),
+      getPackageDetail: vi.fn(async () => succeeded(packageDetail({ materials: [{ ...packageMaterialRow, item: { ...materialItem, specification: '0' } }] }))),
     })
-    expect(result.payload).toBeUndefined()
+    const invalidSpec = await evaluateQuotationDraft({ draft: packageDraft(), catalogContext: context, catalogRead: invalidSpecPort })
+    expect(invalidSpec).toMatchObject({ state: 'blocked', issues: [expect.objectContaining({ code: 'encoding.package_material_quantity_contract_invalid' })] })
   })
 
   it('blocks pricing when source-backed provider amount is absent instead of substituting zero', async () => {

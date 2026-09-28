@@ -121,3 +121,14 @@ export interface TechnicianApiCommandPort {
   completeWorkflowNode?(input: CompleteWorkflowNodeInput): Promise<OperationSnapshot<void>>
   submitAppointment(input: SubmitAppointmentInput): Promise<OperationSnapshot<void>>
 }
+
+/** Deliberately separate from catalog reads and parent Workflow Runtime commands. */
+export interface QuotationOrderCommandPort {
+  startOrderWorkflow(input: {
+    readonly workOrderId: WorkOrderId
+    readonly workflowDefinitionId: import('@shared/types').WorkflowDefinitionId
+  }): Promise<OperationSnapshot<string>>
+  upsertOfficialOrder(input: {
+    readonly order: Readonly<Record<string, unknown>>
+  }): Promise<OperationSnapshot<string>>
+}

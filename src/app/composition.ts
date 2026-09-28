@@ -4,6 +4,8 @@ import type {
   PhonePort,
   StoragePort,
   TechnicianApiCommandPort,
+  QuotationOrderCommandPort,
+  QuotationOrderReadPort,
   TechnicianApiReadPort,
   QuotationCatalogReadPort,
   MediaCapturePort,
@@ -19,6 +21,8 @@ import { createOperationError, type OperationSnapshot } from '@shared/types'
 import { createQuotationCatalogReadAdapter } from '@adapters/api/quotation-catalog-api'
 import { createRoleScopedTechnicianApiReadAdapter } from '@adapters/api/technician-api'
 import { createTechnicianApiCommandAdapter } from '@adapters/api/technician-api-commands'
+import { createQuotationOrderCommandAdapter } from '@adapters/api/quotation-order-commands'
+import { createQuotationOrderReadAdapter } from '@adapters/api/quotation-order-api'
 import { createUniApiReadTransport } from '@adapters/api/uni-api-read-transport'
 import { createUniApiCommandTransport } from '@adapters/api/uni-api-command-transport'
 import { createAuthSessionAdapter } from '@adapters/auth/auth-session-adapter'
@@ -189,6 +193,38 @@ export function createDefaultTechnicianApiCommandPort(
     getSessionRef: () => authSession.getCurrentSession()?.sessionRef ?? null,
   })
   return createTechnicianApiCommandAdapter(transport, apiRead)
+}
+
+export function createDefaultQuotationOrderCommandPort(authSession: AuthSessionPort): QuotationOrderCommandPort {
+  const config = loadApplicationRuntimeConfig()
+  if (!config.ok) {
+    const blocked = async <T>(): Promise<OperationSnapshot<T>> =>
+      configurationFailure(`Quotation Order command configuration is unavailable: ${config.issues.join('; ')}`)
+    return { startOrderWorkflow: async () => blocked(), upsertOfficialOrder: async () => blocked() }
+  }
+  const transport = createUniApiCommandTransport({
+    apiBaseUrl: config.value.environment.apiBaseUrl,
+    getSessionRef: () => authSession.getCurrentSession()?.sessionRef ?? null,
+  })
+  return createQuotationOrderCommandAdapter(transport)
+}
+
+export function createDefaultQuotationOrderReadPort(authSession: AuthSessionPort): QuotationOrderReadPort {
+  const config = loadApplicationRuntimeConfig()
+  if (!config.ok) {
+    return {
+      getQuotationOrderById: async () => configurationFailure(`Quotation Order read configuration is unavailable: ${config.issues.join('; ')}`),
+    }
+  }
+  const transport = createUniApiReadTransport({
+    apiBaseUrl: config.value.environment.apiBaseUrl,
+    getSessionRef: () => authSession.getCurrentSession()?.sessionRef ?? null,
+    getMockActor: () => {
+      const session = authSession.getCurrentSession()
+      return session ? { userId: session.user.id, ...(session.currentRole ? { roleId: session.currentRole.id } : {}) } : null
+    },
+  })
+  return createQuotationOrderReadAdapter(transport)
 }
 
 export function createDefaultPhonePort(): PhonePort {

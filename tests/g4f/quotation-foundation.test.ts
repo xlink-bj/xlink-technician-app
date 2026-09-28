@@ -356,19 +356,24 @@ describe('G4-F Phase 1A quotation action foundation', () => {
     expect(result.error?.category).toBe('server_terminal')
   })
 
-  it('keeps quotation composition local with no quote mutation API surface', async () => {
+  it('keeps quotation submission behind the dedicated guarded Order command boundary', async () => {
     const { readFile } = await import('node:fs/promises')
-    const [component, commandPort, page] = await Promise.all([
+    const [component, commandPort, page, quotationWorkspace] = await Promise.all([
       readFile(new URL('../../src/features/work-orders/quotation/QuotationActionContent.vue', import.meta.url), 'utf8'),
       readFile(new URL('../../src/shared/ports/commands.ts', import.meta.url), 'utf8'),
       readFile(new URL('../../src/pages/work-orders/action-workspace.vue', import.meta.url), 'utf8'),
+      readFile(new URL('../../src/features/work-orders/quotation/QuotationActionWorkspace.vue', import.meta.url), 'utf8'),
     ])
     expect(component).toContain('仅本机草稿')
     expect(component).toContain('服务方案 / 报价明细')
     expect(component).not.toContain('MOCK_PRODUCT_REVIEW')
     expect(component).not.toContain('H5_VISUAL_PROXY')
+    expect(commandPort).toContain('interface QuotationOrderCommandPort')
     expect(commandPort).not.toMatch(/createQuotation|updateQuotation|sendQuotation|convertQuotation/)
     expect(page).toContain("workspace.descriptor?.contentKind === 'quotation'")
-    expect(page).toContain(':can-submit="false"')
+    expect(page).toContain('<QuotationActionWorkspace')
+    expect(quotationWorkspace).toContain(':can-submit="workspace.canSubmitQuotation"')
+    expect(quotationWorkspace).toContain('@submit="quotationConfirmOpen = true"')
+    expect(page).not.toContain('workflow/process')
   })
 })

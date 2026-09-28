@@ -27,7 +27,10 @@ import type {
   MediaUploadQueuePort,
   LocationPort,
   NavigationPort,
+  StoragePort,
   QuotationCatalogReadPort,
+  QuotationOrderCommandPort,
+  QuotationOrderReadPort,
   QuotationCatalogItemRead,
   QuotationPackageDetailRead,
   QuotationPackageRead,
@@ -80,6 +83,9 @@ import { surveyMediaDescriptorFor, surveyMediaPostUploadPolicyFor } from './surv
 import { useQuotationCompositionStore } from './quotation/composition-store'
 import { useQuotationCatalogBrowserStore } from './quotation/catalog-browser-store'
 import { useQuotationEngineStore } from './quotation/engine-store'
+import { submitQuotationOrder, retryQuotationOrderReadback, restoreQuotationOrderSubmissionState, type QuotationOrderSubmissionSnapshot } from './quotation/order-submission'
+import { hydrateQuotationDraft } from './quotation/hydration'
+import { reconstructQuotationOrder, quotationOrderEditBlockers } from './quotation/order-reconstruction'
 import { isDirectQuotationCatalogKind, type QuotationLineKind } from './quotation/model'
 import type { QuotationPackageMaterialChoice } from './quotation/package-configuration'
 import {
@@ -333,7 +339,10 @@ function dynamicDraftRecordFor(
 export interface ActionWorkspaceDependencies {
   readonly apiRead: TechnicianApiReadPort
   readonly commandApi: TechnicianApiCommandPort
+  readonly quotationOrderCommand?: QuotationOrderCommandPort
+  readonly quotationOrderRead?: QuotationOrderReadPort
   readonly draftRepository: ActionDraftRepository
+  readonly storage?: StoragePort
   readonly quotationCatalogRead?: QuotationCatalogReadPort
   readonly navigation: NavigationPort
   readonly getSession: () => SessionSnapshot | null
@@ -351,6 +360,21 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
   const quotationComposition = useQuotationCompositionStore()
   const quotationCatalogBrowser = useQuotationCatalogBrowserStore()
   const quotationEngine = useQuotationEngineStore()
+  const quotationOrderState = ref<QuotationOrderSubmissionSnapshot>({ state: 'idle' })
+  const quotationEditState = ref<{ readonly state: 'none' | 'loading' | 'ready' | 'blocked'; readonly message?: string }>({ state: 'none' })
+  const quotationExistingOrderId = ref<string | null>(null)
+  let quotationOrderInFlight: Promise<QuotationOrderSubmissionSnapshot> | null = null
+  const canSubmitQuotation = computed(() => Boolean(
+    descriptor.value?.contentKind === 'quotation'
+      && descriptor.value.actionIntent === 'place_order'
+      && descriptor.value.execution === 'enabled'
+      && quotationEngine.result?.state === 'ready'
+      && quotationComposition.draft
+      && quotationEngine.result.draftVersion === quotationComposition.draft.draftVersion
+      && quotationEditState.value.state !== 'loading'
+      && quotationEditState.value.state !== 'blocked'
+      && !['submitting', 'write_succeeded_readback_pending', 'failed_ambiguous_after_dispatch', 'succeeded'].includes(quotationOrderState.value.state),
+  ))
   const loadState = ref<ActionWorkspaceLoadState>('idle')
   const lifecycle = ref<ActionLifecycle>('available')
   const businessResult = ref<ActionBusinessResult>('not_started')
@@ -536,6 +560,9 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     quotationComposition.clear()
     quotationCatalogBrowser.clear()
     quotationEngine.clear()
+    quotationOrderState.value = { state: 'idle' }
+    quotationEditState.value = { state: 'none' }
+    quotationExistingOrderId.value = null
     loadVersion += 1
     clearDraftTimer()
     draftRevision += 1
@@ -823,6 +850,14 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
         ...(configured.debounceMs !== undefined ? { debounceMs: configured.debounceMs } : {}),
       })
       if (requestVersion !== loadVersion) return failure('cancelled', 'Action Workspace load was superseded')
+      quotationOrderState.value = configured.storage
+        ? await restoreQuotationOrderSubmissionState({
+            userId: session.user.id,
+            workOrderId: read.data.id,
+            workflowNodeId: currentTask.nodeId,
+            storage: configured.storage,
+          })
+        : { state: 'failed_terminal', message: '本地订单防重记录不可用，暂不能安全提交。' }
       quotationContentState.value = 'ready'
       loadState.value = 'succeeded'
       lifecycle.value = 'available'
@@ -906,6 +941,164 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       serviceAppointmentNum: detail.value?.displayNumber,
       repairPartOptions: quotationComposition.repairPartOptions,
     })
+  }
+
+  async function runQuotationOrderSubmission(): Promise<QuotationOrderSubmissionSnapshot> {
+    if (quotationOrderInFlight) return quotationOrderInFlight
+    const configured = dependencies
+    const currentDescriptor = descriptor.value
+    const currentIdentity = identity
+    const currentDraft = quotationComposition.draft
+    const engine = quotationEngine.result
+    const session = configured?.getSession()
+    const currentNode = detail.value?.workflowNodes?.find((node) => node.id === currentDescriptor?.workflowNodeId)
+    if (!configured?.quotationOrderCommand || !configured.quotationOrderRead || !configured.storage
+      || !currentDescriptor || currentDescriptor.contentKind !== 'quotation' || currentDescriptor.actionIntent !== 'place_order'
+      || currentDescriptor.execution !== 'enabled' || !currentIdentity || !currentDraft || !session) {
+      quotationOrderState.value = { state: 'failed_terminal', message: '当前报价动作尚未具备安全提交条件。' }
+      return quotationOrderState.value
+    }
+    const flushed = await quotationComposition.flushDraft()
+    if (flushed.state !== 'succeeded') {
+      quotationOrderState.value = { state: 'failed_retryable_before_write', message: '本机报价草稿尚未保存完成，暂不能提交。' }
+      return quotationOrderState.value
+    }
+    if (!engine || engine.state !== 'ready' || !engine.payload
+      || engine.draftVersion !== currentDraft.draftVersion
+      || engine.draftVersion !== quotationComposition.draft?.draftVersion) {
+      quotationOrderState.value = { state: 'failed_terminal', message: '报价校验结果已过期，请等待重新核对后再提交。' }
+      return quotationOrderState.value
+    }
+    const input = {
+      userId: session.user.id,
+      workOrderId: currentDescriptor.workOrderId,
+      workflowNodeId: currentDescriptor.workflowNodeId,
+      ...(currentNode?.childWorkflowDefinitionId ? { workflowDefinitionId: currentNode.childWorkflowDefinitionId } : {}),
+      expectedDraftVersion: currentDraft.draftVersion,
+      evaluatedDraftVersion: engine.draftVersion,
+      engineReady: true,
+      payload: engine.payload,
+      ...(quotationExistingOrderId.value ? { existingOrderId: quotationExistingOrderId.value } : {}),
+      command: configured.quotationOrderCommand,
+      readApi: configured.quotationOrderRead,
+      storage: configured.storage,
+      finalizeDraft: async () => {
+        const removed = await configured.draftRepository.remove(currentIdentity)
+        if (removed.state === 'succeeded') {
+          quotationComposition.clear()
+          draftStatus.value = 'clean'
+        }
+        return removed
+      },
+    }
+    quotationOrderState.value = { state: 'submitting', message: '正在提交订单…' }
+    quotationOrderInFlight = submitQuotationOrder(input).then((result) => {
+      quotationOrderState.value = result
+      return result
+    }).finally(() => { quotationOrderInFlight = null })
+    return quotationOrderInFlight
+  }
+
+  async function loadQuotationOrderForEdit(orderId: string): Promise<OperationSnapshot<void>> {
+    const configured = dependencies
+    const currentDescriptor = descriptor.value
+    if (!configured || !orderId.trim() || !currentDescriptor || currentDescriptor.contentKind !== 'quotation'
+      || !configured.quotationOrderRead || !configured.quotationCatalogRead) {
+      quotationEditState.value = { state: 'blocked', message: '当前无法安全读取待编辑订单。' }
+      return failure('unsupported_capability', '当前无法安全读取待编辑订单。')
+    }
+    quotationEditState.value = { state: 'loading' }
+    const orderRead = await configured.quotationOrderRead.getQuotationOrderById(orderId)
+    if (orderRead.state !== 'succeeded' || !orderRead.data
+      || orderRead.data.id !== orderId
+      || orderRead.data.type !== 1
+      || orderRead.data.serviceAppointmentId !== currentDescriptor.workOrderId) {
+      const message = '待编辑订单无法权威读取或不属于当前工单。'
+      quotationEditState.value = { state: 'blocked', message }
+      return failure('unsupported_capability', message)
+    }
+    const blockers = quotationOrderEditBlockers(orderRead.data)
+    if (blockers.length > 0) {
+      quotationEditState.value = { state: 'blocked', message: blockers[0] }
+      return failure('unsupported_capability', blockers[0])
+    }
+    const reconstructed = reconstructQuotationOrder(orderRead.data, String(currentDescriptor.workflowNodeId))
+    if (reconstructed.state !== 'ready') {
+      quotationEditState.value = { state: 'blocked', message: reconstructed.reason }
+      return failure('unsupported_capability', reconstructed.reason)
+    }
+    const currentIdentity = identity
+    const userSession = configured.getSession()
+    const stored = currentIdentity
+      ? await configured.draftRepository.read<Readonly<Record<string, unknown>>>(currentIdentity)
+      : failure<import('@runtimes/action').ActionDraftRecord<Readonly<Record<string, unknown>>> | null>('unsupported_capability', 'Action draft identity is unavailable')
+    if (!userSession || stored.state !== 'succeeded' || stored.data !== null || quotationComposition.localState !== 'fresh') {
+      const message = '当前存在未处理的本地报价草稿；服务器订单不会覆盖它。'
+      quotationEditState.value = { state: 'blocked', message }
+      return failure('unsupported_capability', message)
+    }
+    const currentDraft = { ...reconstructed.draft, workOrderId: String(currentDescriptor.workOrderId) }
+    const hydrated = await hydrateQuotationDraft({
+      draft: currentDraft,
+      context: detail.value?.quotationCatalogContext,
+      port: configured.quotationCatalogRead,
+    })
+    if (hydrated.state !== 'succeeded') {
+      const message = '服务器订单中的目录身份或套餐组成与当前目录不一致；订单保持只读。'
+      quotationEditState.value = { state: 'blocked', message }
+      return failure('unsupported_capability', message)
+    }
+    const restored = await quotationComposition.restoreServerOrderDraft(currentDraft)
+    if (restored.state !== 'succeeded') {
+      const message = restored.error?.message ?? '服务器订单未能安全恢复到本地编辑器。'
+      quotationEditState.value = { state: 'blocked', message }
+      return restored
+    }
+    quotationExistingOrderId.value = orderId
+    const engine = await refreshQuotationEngine()
+    if (!engine || engine.state !== 'ready') {
+      const message = '当前目录或价格校验未通过；现有订单保持只读。'
+      quotationEditState.value = { state: 'blocked', message }
+      return failure('unsupported_capability', message)
+    }
+    quotationEditState.value = { state: 'ready', message: '已读取并核对现有订单；保存时将更新同一订单身份。' }
+    return { state: 'succeeded', data: undefined }
+  }
+
+  async function retryQuotationOrderReadbackOnly(): Promise<QuotationOrderSubmissionSnapshot> {
+    const configured = dependencies
+    const currentDescriptor = descriptor.value
+    const currentIdentity = identity
+    const currentDraft = quotationComposition.draft
+    const session = configured?.getSession()
+    const engine = quotationEngine.result
+    if (!configured?.quotationOrderCommand || !configured.quotationOrderRead || !configured.storage
+      || !currentDescriptor || !currentIdentity || !currentDraft || !session || !engine?.payload) {
+      quotationOrderState.value = { state: 'failed_terminal', message: '当前无法安全刷新已提交订单。' }
+      return quotationOrderState.value
+    }
+    const result = await retryQuotationOrderReadback({
+      userId: session.user.id,
+      workOrderId: currentDescriptor.workOrderId,
+      workflowNodeId: currentDescriptor.workflowNodeId,
+      expectedDraftVersion: currentDraft.draftVersion,
+      evaluatedDraftVersion: engine.draftVersion,
+      engineReady: true,
+      payload: engine.payload,
+      command: configured.quotationOrderCommand,
+      readApi: configured.quotationOrderRead,
+      storage: configured.storage,
+      finalizeDraft: async () => {
+        const removed = await configured.draftRepository.remove(currentIdentity)
+        if (removed.state === 'succeeded') {
+          quotationComposition.clear()
+          draftStatus.value = 'clean'
+        }
+        return removed
+      },
+    })
+    quotationOrderState.value = result
+    return result
   }
 
   async function ensureLoaded(input: {
@@ -1816,7 +2009,13 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     quotationComposition,
     quotationCatalogBrowser,
     quotationEngine,
+    quotationOrderState,
+    quotationEditState,
+    canSubmitQuotation,
     refreshQuotationEngine,
+    submitQuotationOrder: runQuotationOrderSubmission,
+    retryQuotationOrderReadback: retryQuotationOrderReadbackOnly,
+    loadQuotationOrderForEdit,
     validateQuotationPackageConfiguration,
     configureQuotationPackageSelection,
     appointmentFields,

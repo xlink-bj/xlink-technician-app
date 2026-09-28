@@ -72,7 +72,8 @@ if (buttonContents.some((text) => /保存报价|提交报价|确认报价|完成
   fail('UI must not expose quote business writes or workflow completion')
 }
 if (!component.includes('R1 顶层金额预览') || !component.includes('未提交') || !component.includes('quotation-local-gross-total')
-  || !component.includes('quotation-rounding-note') || !component.includes('独立舍入') || !component.includes('不会提交报价')) {
+  || !component.includes('quotation-rounding-note') || !component.includes('独立舍入')
+  || !component.includes('只有单独确认') || !component.includes('不会完成当前工单工作流')) {
   fail('Phase 1H local price preview must be explicitly non-submitted and Action-owned')
 }
 if (!component.includes('quotation-add-group') || !component.includes('quotation-browse-') || !component.includes('quotation-package-detail-') || !component.includes('quotation-selection-quantity-') || !component.includes('quotation-selection-remove-') || !component.includes('quotation-draft-legacy')) {

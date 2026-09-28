@@ -121,12 +121,12 @@ test('Phase 1F browses all catalog kinds and explicitly adds only direct selecti
   await page.getByTestId('quotation-draft-groups').scrollIntoViewIfNeeded()
   await page.screenshot({ path: resolve(output, '02-grouped-draft-direct-selections.png'), animations: 'disabled' })
   await expect(page.getByText(/价格|单价|小计|总价|¥|￥/)).toHaveCount(0)
-  await expect(page.getByTestId('action-workspace-submit')).toHaveCount(0)
+  await expect(page.getByTestId('action-workspace-submit')).toHaveAttribute('disabled', 'true')
   await expect(page.getByTestId('dynamic-form-save')).toHaveCount(0)
   await expectSafe(page, diagnostics)
 })
 
-test('Phase 1H shows local engine readiness and source-data blocking without any submit action', async ({ page }) => {
+test('isolated Phase 1B review harness keeps blocked local preview separate from real Order submission', async ({ page }) => {
   const diagnostics = await installSafetyGuards(page)
   await openScenario(page, 'empty')
   await page.getByTestId('quotation-add-group').click()
@@ -144,9 +144,11 @@ test('Phase 1H shows local engine readiness and source-data blocking without any
   await page.getByTestId(`quotation-group-quantity-${groupId}`).locator('input').fill('12.5')
   await expect(page.getByTestId('quotation-engine-blocked')).toContainText('指导单价缺失')
   await expect(page.getByTestId('quotation-engine-blocked')).toContainText('材料单价缺失')
-  await expect(page.getByTestId('quotation-engine-local-only')).toContainText('不会提交报价')
+  await expect(page.getByTestId('quotation-engine-local-only')).toContainText('只有单独确认')
+  await expect(page.getByTestId('quotation-engine-local-only')).toContainText('不会完成当前工单工作流')
   await expect(page.getByTestId('quotation-local-gross-total')).toHaveCount(0)
-  await expect(page.getByTestId('action-workspace-submit')).toHaveCount(0)
+  await expect(page.getByTestId('action-workspace-submit')).toHaveAttribute('disabled', 'true')
+  await expect(page.getByTestId('quotation-order-confirmation')).toHaveCount(0)
   await expect(page.getByTestId('dynamic-form-save')).toHaveCount(0)
   await page.getByTestId('quotation-engine-readiness').scrollIntoViewIfNeeded()
   await page.screenshot({ path: resolve(output, '04-engine-blocked-source-prices.png'), animations: 'disabled' })
@@ -186,7 +188,7 @@ test('Phase 1G configures a Package locally after exactly one Material is chosen
   await page.getByTestId('quotation-package-material-choice-number:2-0').click()
   await expect(commit).not.toHaveAttribute('disabled')
   await expect(page.getByText(/价格|单价|小计|总价|¥|￥/)).toHaveCount(0)
-  await expect(page.getByTestId('action-workspace-submit')).toHaveCount(0)
+  await expect(page.getByTestId('action-workspace-submit')).toHaveAttribute('disabled', 'true')
 
   await commit.click()
   await expect(page.getByTestId('quotation-catalog-sheet')).toHaveCount(0)
@@ -210,7 +212,7 @@ test('Phase 1G blocks local Package commit until all layers are configured', asy
   await commit.click()
   await expect(page.getByTestId('quotation-composition-selection')).toHaveCount(0)
   await expect(page.getByText(/价格|单价|小计|总价|¥|￥/)).toHaveCount(0)
-  await expect(page.getByTestId('action-workspace-submit')).toHaveCount(0)
+  await expect(page.getByTestId('action-workspace-submit')).toHaveAttribute('disabled', 'true')
   await expectSafe(page, diagnostics)
 })
 

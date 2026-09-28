@@ -58,7 +58,10 @@ function statusCategory(
 
 function isRealMutationPath(path: string): boolean {
   const route = path.replace(/^\/+/, '').split('?')[0]
-  return route === 'workflow/process' || route.startsWith('biz/extForm/upsert/')
+  return route === 'workflow/process'
+    || route.startsWith('biz/extForm/upsert/')
+    || route === 'basic/order/upsert'
+    || /^workflow\/startWorkflow\/order\/null\/[^/]+$/.test(route)
 }
 
 export function createUniApiCommandTransport(options: UniApiCommandTransportOptions): ApiCommandTransport {

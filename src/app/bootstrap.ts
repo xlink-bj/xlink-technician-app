@@ -10,6 +10,8 @@ import type {
   PhonePort,
   StoragePort,
   TechnicianApiCommandPort,
+  QuotationOrderCommandPort,
+  QuotationOrderReadPort,
   TechnicianApiReadPort,
   QuotationCatalogReadPort,
   MediaCapturePort,
@@ -29,6 +31,8 @@ import { isBusinessMockDeveloperModeAvailable, isBusinessMockMode } from './busi
 import {
   createDefaultAuthSessionPort,
   createDefaultTechnicianApiCommandPort,
+  createDefaultQuotationOrderCommandPort,
+  createDefaultQuotationOrderReadPort,
   createDefaultPhonePort,
   createDefaultNavigationPort,
   createDefaultStoragePort,
@@ -47,6 +51,8 @@ export interface ApplicationDependencies {
   readonly apiRead?: TechnicianApiReadPort
   readonly quotationCatalogRead?: QuotationCatalogReadPort
   readonly apiCommand?: TechnicianApiCommandPort
+  readonly quotationOrderCommand?: QuotationOrderCommandPort
+  readonly quotationOrderRead?: QuotationOrderReadPort
   readonly phone?: PhonePort
   readonly navigation?: NavigationPort
   readonly storage?: StoragePort
@@ -68,6 +74,8 @@ export function createApplication(dependencies: ApplicationDependencies = {}) {
   const apiRead = dependencies.apiRead ?? createDefaultTechnicianApiReadPort(authSession)
   const quotationCatalogRead = dependencies.quotationCatalogRead ?? createDefaultQuotationCatalogReadPort(authSession)
   const apiCommand = dependencies.apiCommand ?? createDefaultTechnicianApiCommandPort(authSession, apiRead)
+  const quotationOrderCommand = dependencies.quotationOrderCommand ?? createDefaultQuotationOrderCommandPort(authSession)
+  const quotationOrderRead = dependencies.quotationOrderRead ?? createDefaultQuotationOrderReadPort(authSession)
   const phone = dependencies.phone ?? createDefaultPhonePort()
   const navigation = dependencies.navigation ?? createDefaultNavigationPort()
   const storage = dependencies.storage ?? createDefaultStoragePort()
@@ -101,8 +109,11 @@ export function createApplication(dependencies: ApplicationDependencies = {}) {
     apiRead,
     quotationCatalogRead,
     commandApi: apiCommand,
+    quotationOrderCommand,
+    quotationOrderRead,
     draftRepository,
     navigation,
+    storage,
     getSession: () => sessionStore.session,
     mediaCapture,
     mediaFilePicker,
@@ -128,6 +139,7 @@ export function createApplication(dependencies: ApplicationDependencies = {}) {
     workOrderDetailStore,
     actionWorkspaceStore,
     quotationCatalogRead,
+    quotationOrderRead,
     localDraftDiagnosticsStore,
   }
 }

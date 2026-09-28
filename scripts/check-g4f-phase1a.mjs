@@ -8,7 +8,7 @@ const root = resolve(fileURLToPath(new URL('..', import.meta.url)))
 const read = (path) => readFile(resolve(root, path), 'utf8')
 const fail = (message) => { throw new Error(`G4-F Phase 1A check failed: ${message}`) }
 
-const [pages, actionTypes, projection, workspace, adapter, mockRouter, commandPort, quotationUi, reviewPages, reviewMain, reviewConfig, reviewPage, packageSource] = await Promise.all([
+const [pages, actionTypes, projection, workspace, adapter, mockRouter, commandPort, quotationUi, reviewPages, reviewMain, reviewConfig, reviewPage, reviewWorkspace, packageSource] = await Promise.all([
   read('src/pages.json'),
   read('src/runtimes/action/types.ts'),
   read('src/runtimes/workflow/detail-projection.ts'),
@@ -21,6 +21,7 @@ const [pages, actionTypes, projection, workspace, adapter, mockRouter, commandPo
   read('review-app-g4f/main.ts'),
   read('vite.uni-h5-g4f-review.config.ts'),
   read('review-app-g4f/pages/quotation/index.vue'),
+  read('src/features/work-orders/quotation/QuotationActionWorkspace.vue'),
   read('package.json'),
 ])
 const packageJson = JSON.parse(packageSource)
@@ -63,8 +64,8 @@ if (!reviewPages.includes('pages/quotation/index') || reviewMain.includes('creat
 if (!reviewConfig.includes('port: 5175') || !reviewConfig.includes("VITE_XLINK_ENABLE_REAL_WRITES': JSON.stringify('false')")) {
   fail('uni-app review configuration must remain separate and real writes disabled')
 }
-if (!reviewPage.includes('QuotationActionContent') || !reviewPage.includes('MOCK_PRODUCT_REVIEW')) {
-  fail('review page must mount the real quotation content and label Mock evidence')
+if (!reviewPage.includes('QuotationActionWorkspace') || !reviewWorkspace.includes('QuotationActionContent') || !reviewPage.includes('MOCK_PRODUCT_REVIEW')) {
+  fail('review page must mount the shared product quotation workspace/content and label Mock evidence')
 }
 for (const script of ['dev:uni-h5-g4f-review', 'test:uni-h5-g4f-review', 'build:uni-h5-g4f-review', 'check:g4f-phase1a']) {
   if (!packageJson.scripts?.[script]) fail(`missing package script: ${script}`)

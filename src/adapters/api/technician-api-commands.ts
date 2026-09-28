@@ -114,7 +114,14 @@ export function normalizeCommandResponse(raw: unknown): unknown {
   if (nestedData?.success !== undefined && nestedData.success !== true && nestedData.success !== false) {
     throw new ApiCommandTransportError('Command response success marker is malformed', 'server_terminal')
   }
-  if (!Object.prototype.hasOwnProperty.call(envelope, 'data') && envelope.success !== true) {
+  // R1's WorkflowController returns ReturnStatus(status=1, entity=Workflow)
+  // without a `data` property. Preserve this proven success envelope while
+  // still rejecting empty/unmarked command responses.
+  const verifiedEntitySuccess = envelope.status === 1
+    && typeof envelope.entity === 'object'
+    && envelope.entity !== null
+    && !Array.isArray(envelope.entity)
+  if (!Object.prototype.hasOwnProperty.call(envelope, 'data') && envelope.success !== true && !verifiedEntitySuccess) {
     throw new ApiCommandTransportError('Command response payload is malformed', 'server_terminal')
   }
 

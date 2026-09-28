@@ -158,6 +158,8 @@ export interface WorkflowNodeRead {
   readonly definitionId?: WorkflowDefinitionId
   readonly runId?: WorkflowRunId
   readonly parentNodeId?: WorkflowNodeRuntimeId
+  /** R1 nodeDef.nodeTypeDef, kept opaque; usable only for its verified subworkflow command contract. */
+  readonly childWorkflowDefinitionId?: WorkflowDefinitionId
   readonly displayName?: string
   /** Adapter-normalized opaque form definition identity, when supplied by the node. */
   readonly formDefinitionId?: FormDefinitionId

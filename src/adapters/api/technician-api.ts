@@ -682,6 +682,7 @@ function workflowNode(raw: unknown): WorkflowNodeRead {
     'parentNodeId',
     'parentWorkflowNodeId',
   ])
+  const childWorkflowDefinitionId = optionalOpaqueId<'WorkflowDefinitionId'>(nodeDef ?? {}, ['nodeTypeDef'])
   const displayName = optionalString(nodeDef ?? {}, ['name'])
   const formDefinitionId = optionalOpaqueId<'FormDefinitionId'>(nodeDef ?? {}, [
     'formDefId',
@@ -712,6 +713,7 @@ function workflowNode(raw: unknown): WorkflowNodeRead {
     ...(definitionId ? { definitionId } : {}),
     ...(runId ? { runId } : {}),
     ...(parentNodeId ? { parentNodeId } : {}),
+    ...(childWorkflowDefinitionId ? { childWorkflowDefinitionId } : {}),
     ...(handlers ? { handlers } : {}),
     ...(isSystem ? { isSystem } : {}),
     ...(isSentinel ? { isSentinel } : {}),
