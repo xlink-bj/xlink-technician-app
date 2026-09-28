@@ -12,18 +12,18 @@ Status: **PARTIAL — live Beta create/edit is blocked by safe-target access.** 
 
 ## Beta access and mutation boundary
 
-The configured endpoint was the non-production Beta environment. Three read-only login requests were made across two distinct credential sets: once with the locally configured, previously documented test account; once with the separately documented local backup account; and once more through the existing business API client's defaults. The last request was not a third credential set: its phone, code, and tenant matched the technician app's local configuration. All three requests were rejected with the sanitized category `login_rejected`; none established an authenticated session. Consequently, no work-order/ServiceAppointment reads were made, no test/disposable target could be proven, and no target was selected. This is `BLOCKED_ENV`, not evidence that a work order or quotation is absent.
+The configured endpoint was the non-production Beta environment. Four read-only login requests were made across two distinct credential sets: once with the locally configured, previously documented test account; once with the separately documented local backup account; once through the existing business API client's defaults; and once through the technician app's actual `resolveQuickLoginInput` → `submitLogin` → `AuthSessionAdapter` → `createUniAuthBackendDriver` path, using an in-memory-only storage stub and a fetch bridge for `uni.request`. The business-client and app-adapter checks were not new credential sets: their phone, code, and tenant matched the technician app's local configuration. All four requests were rejected with the sanitized category `login_rejected`; none established an authenticated session. Consequently, no work-order/ServiceAppointment reads were made, no test/disposable target could be proven, and no target was selected. This is `BLOCKED_ENV`, not evidence that a work order or quotation is absent.
 
 | Activity | Result |
 |---|---|
-| Beta login preflight | 3 requests / 2 distinct credential sets; all `login_rejected` |
+| Beta login preflight | 4 requests / 2 distinct credential sets; all `login_rejected` |
 | Beta ServiceAppointment / workflow / Order reads | 0 |
 | Beta business mutations, including child workflow and Order create/update | 0 |
 | Production requests or mutations | 0 |
 | Safe test target proven | No; target not selected |
 | Live write flag | Not enabled for this verification |
 
-No raw response, identifiers, customer data, credentials, cookies, or payloads are persisted here. The documented backup account was attempted once; the business API client's defaults were internally compared with the local app configuration and found to be the same primary credential set. No further credential guessing or guessed work-order ID was attempted. An old Cloud UI login sample was not reused because it is a stale administrative UI session artifact, not a current technician-app session.
+No raw response, identifiers, customer data, credentials, cookies, or payloads are persisted here. The documented backup account was attempted once; the business API client's defaults were internally compared with the local app configuration and found to be the same primary credential set. The technician app's actual authentication adapter was also exercised once; the server returned business `success=false`, and the adapter reported terminal failure. Its temporary probe was removed and no source/test file was retained. No further credential guessing or guessed work-order ID was attempted. An old Cloud UI login sample was not reused because it is a stale administrative UI session artifact, not a current technician-app session.
 
 ## Create, readback, tenant contract, and edit
 
