@@ -199,7 +199,14 @@ describe('Production read-only profile', () => {
       }
       throw new Error('synthetic stop after request capture')
     })
-    const api = createTechnicianApiReadAdapter({ execute }, { getSessionScope: () => 'synthetic-session' })
+    const api = createTechnicianApiReadAdapter({ execute }, {
+      getReadAuthorizationScope: () => ({
+        sessionRef: 'synthetic-session',
+        userId: 'synthetic-user',
+        roleId: 'synthetic-role',
+        roleVersion: 'synthetic-role-version',
+      }),
+    })
 
     await api.listWorkOrders({ page: 1, pageSize: 20 })
     await api.getWorkOrderDetail(asOpaqueId<'WorkOrderId'>('synthetic-work-order'))
@@ -214,14 +221,19 @@ describe('Production read-only profile', () => {
 
   it('scopes quotation Work Order authorization to successful list results in the active session', async () => {
     vi.stubEnv('VITE_XLINK_ENVIRONMENT', 'prod')
-    let sessionScope: string | null = 'synthetic-session-a'
+    let identity = {
+      sessionRef: 'synthetic-session-a',
+      userId: 'synthetic-user-a',
+      roleId: 'synthetic-role-a',
+      roleVersion: 'synthetic-role-version-a',
+    }
     const execute = vi.fn(async (request: { path: string }) => request.path === 'function/queryTreeByRoleId'
       ? { data: { functionList: [{ action: '/pages/serviceAppointment/serviceAppointments', exts: { tabDisplay: '1' } }] } }
       : { data: [{ _id: 'listed-work-order-synthetic' }] })
     const api = createRoleScopedTechnicianApiReadAdapter(
       { execute },
-      () => asOpaqueId<'RoleId'>('synthetic-role'),
-      { getSessionScope: () => sessionScope },
+      () => asOpaqueId<'RoleId'>(identity.roleId),
+      { getReadAuthorizationScope: () => identity },
     )
 
     expect(api.isWorkOrderListedForCurrentSession?.('listed-work-order-synthetic')).toBe(false)
@@ -230,7 +242,35 @@ describe('Production read-only profile', () => {
     expect(api.isWorkOrderListedForCurrentSession?.('listed-work-order-synthetic')).toBe(true)
     expect(api.isWorkOrderListedForCurrentSession?.('arbitrary-work-order-synthetic')).toBe(false)
 
-    sessionScope = 'synthetic-session-b'
+    identity = { ...identity, sessionRef: 'synthetic-session-b' }
+    expect(api.isWorkOrderListedForCurrentSession?.('listed-work-order-synthetic')).toBe(false)
+  })
+
+  it.each([
+    ['user', { userId: 'synthetic-user-b' }],
+    ['role', { roleId: 'synthetic-role-b' }],
+    ['role version', { roleVersion: 'synthetic-role-version-b' }],
+  ] as const)('invalidates listed Work Order authorization when the same-session %s changes', async (_label, change) => {
+    vi.stubEnv('VITE_XLINK_ENVIRONMENT', 'prod')
+    let identity = {
+      sessionRef: 'synthetic-session-stable',
+      userId: 'synthetic-user-a',
+      roleId: 'synthetic-role-a',
+      roleVersion: 'synthetic-role-version-a',
+    }
+    const execute = vi.fn(async (request: { path: string }) => request.path === 'function/queryTreeByRoleId'
+      ? { data: { functionList: [{ action: '/pages/serviceAppointment/serviceAppointments', exts: { tabDisplay: '1' } }] } }
+      : { data: [{ _id: 'listed-work-order-synthetic' }] })
+    const api = createRoleScopedTechnicianApiReadAdapter(
+      { execute },
+      () => asOpaqueId<'RoleId'>(identity.roleId),
+      { getReadAuthorizationScope: () => identity },
+    )
+
+    expect((await api.listWorkOrders({ page: 1, pageSize: 20 })).state).toBe('succeeded')
+    expect(api.isWorkOrderListedForCurrentSession?.('listed-work-order-synthetic')).toBe(true)
+    identity = { ...identity, ...change }
+    expect(identity.sessionRef).toBe('synthetic-session-stable')
     expect(api.isWorkOrderListedForCurrentSession?.('listed-work-order-synthetic')).toBe(false)
   })
 

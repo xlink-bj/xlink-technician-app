@@ -264,7 +264,19 @@ async function run() {
     const technicianApi = createRoleScopedTechnicianApiReadAdapter(
       apiTransport,
       () => auth.getCurrentSession()?.currentRole?.id ?? null,
-      { cascadeTenantId: runtime.value.authWireConfig.tenant, codeTenantId: runtime.value.authWireConfig.tenant, getSessionScope: () => auth.getCurrentSession()?.sessionRef ?? null },
+      {
+        cascadeTenantId: runtime.value.authWireConfig.tenant,
+        codeTenantId: runtime.value.authWireConfig.tenant,
+        getReadAuthorizationScope: () => {
+          const current = auth.getCurrentSession()
+          return current ? {
+            sessionRef: current.sessionRef,
+            userId: current.user.id,
+            roleId: current.currentRole?.id ?? null,
+            roleVersion: current.roleVersion ?? null,
+          } : null
+        },
+      },
     )
     const catalogApi = createQuotationCatalogReadAdapter(apiTransport, () => auth.getCurrentSession()?.sessionRef ?? null)
     const orderApi = createQuotationOrderReadAdapter(

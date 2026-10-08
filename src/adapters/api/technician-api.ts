@@ -1315,8 +1315,20 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
   }
 
   private synchronizeReadScope(): string | null {
-    const sessionRef = this.options.getSessionScope?.() ?? null
-    const nextScope = sessionRef || null
+    let identityScope: ReturnType<NonNullable<TechnicianApiReadAdapterOptions['getReadAuthorizationScope']>> = null
+    try {
+      identityScope = this.options.getReadAuthorizationScope?.() ?? null
+    } catch {
+      identityScope = null
+    }
+    const nextScope = identityScope?.sessionRef && identityScope.userId && identityScope.roleId
+      ? JSON.stringify([
+          identityScope.sessionRef,
+          identityScope.userId,
+          identityScope.roleId,
+          identityScope.roleVersion,
+        ])
+      : null
     if (nextScope !== this.currentReadScope) {
       this.currentReadScope = nextScope
       this.listedWorkOrderIds.clear()
@@ -1421,7 +1433,7 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
     const productionReadOnly = this.isProductionReadOnly()
     if (productionReadOnly) {
       const scope = this.synchronizeReadScope()
-      if (!this.options.getSessionScope || !scope || !this.listedWorkOrderIds.has(String(id))) {
+      if (!this.options.getReadAuthorizationScope || !scope || !this.listedWorkOrderIds.has(String(id))) {
         return Promise.resolve(adapterFailure<WorkOrderDetail>(
           'authorization_denied',
           'Production Work Order detail requires an ID returned by the current session\'s role-scoped list',
@@ -1656,8 +1668,13 @@ export interface TechnicianApiReadAdapterOptions {
   readonly cascadeTenantId?: string
   /** Current authenticated tenant used by R1's batch dynamic code endpoint. */
   readonly codeTenantId?: string
-  /** Opaque authenticated session reference, used only to scope ephemeral read IDs in memory. */
-  readonly getSessionScope?: () => string | null
+  /** Current principal/role identity, used only to scope ephemeral authorized Work Order IDs in memory. */
+  readonly getReadAuthorizationScope?: () => {
+    readonly sessionRef: string | null
+    readonly userId: string | null
+    readonly roleId: string | null
+    readonly roleVersion: string | null
+  } | null
 }
 
 export function createTechnicianApiReadAdapter(

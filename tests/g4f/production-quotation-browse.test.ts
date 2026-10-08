@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
+import { nextTick, ref } from 'vue'
 
 import type { QuotationOrderBrowseItem, QuotationOrderReadPort, ReadPage, SessionSnapshot } from '@shared/ports'
 import type { OperationSnapshot } from '@shared/types'
@@ -8,10 +9,17 @@ import { useQuotationOrderBrowseStore } from '@features/work-orders/quotation/or
 
 function succeeded<T>(data: T): OperationSnapshot<T> { return { state: 'succeeded', data } }
 
-function session(ref: string): SessionSnapshot {
+function session(
+  ref: string,
+  userId = 'synthetic-user',
+  roleId = 'synthetic-role',
+  roleVersion = 'synthetic-role-version',
+): SessionSnapshot {
   return {
     sessionRef: asOpaqueId<'SessionRef'>(ref),
-    user: { id: asOpaqueId<'UserId'>('synthetic-user') },
+    user: { id: asOpaqueId<'UserId'>(userId) },
+    currentRole: { id: asOpaqueId<'RoleId'>(roleId) },
+    roleVersion,
     capabilityNames: [],
   }
 }
@@ -72,11 +80,48 @@ describe('Production Work-Order-scoped quotation browse store', () => {
     store.configure(port, () => currentSession)
 
     const request = store.load('synthetic-work-order-id')
-    currentSession = session('synthetic-session-b')
+    currentSession = session('synthetic-session-a', 'synthetic-user', 'synthetic-role-b', 'synthetic-role-version-b')
     resolveList?.(succeeded({ items: [quote], page: 1, pageSize: 3 }))
     const result = await request
     expect(result.state).toBe('failed_terminal')
     expect(store.items).toEqual([])
     expect(store.fetchedSessionRef).toBeNull()
+  })
+
+  it.each([
+    ['user identity', (current: SessionSnapshot) => session(current.sessionRef, 'synthetic-user-b', 'synthetic-role-a', 'synthetic-version-a')],
+    ['role identity', (current: SessionSnapshot) => session(current.sessionRef, 'synthetic-user-a', 'synthetic-role-b', 'synthetic-version-a')],
+    ['role version', (current: SessionSnapshot) => session(current.sessionRef, 'synthetic-user-a', 'synthetic-role-a', 'synthetic-version-b')],
+  ])('does not reuse a browse cache when the same sessionRef changes %s', async (_label, changeIdentity) => {
+    const currentSession = ref<SessionSnapshot | null>(session(
+      'synthetic-session-stable',
+      'synthetic-user-a',
+      'synthetic-role-a',
+      'synthetic-version-a',
+    ))
+    let readCount = 0
+    const list = vi.fn(async (workOrderId: string) => {
+      readCount += 1
+      return succeeded<ReadPage<QuotationOrderBrowseItem>>({
+        items: [{ ...quote, id: `synthetic-order-${readCount}`, serviceAppointmentId: workOrderId }],
+        page: 1,
+        pageSize: 3,
+      })
+    })
+    const store = useQuotationOrderBrowseStore()
+    store.configure({ getQuotationOrderById: async () => ({ state: 'failed_terminal' }), listTypeOneOrdersForWorkOrder: list }, () => currentSession.value)
+
+    await store.load('synthetic-work-order-id')
+    expect(store.items[0]?.id).toBe('synthetic-order-1')
+
+    currentSession.value = changeIdentity(currentSession.value!)
+    await nextTick()
+    expect(store.items).toEqual([])
+    expect(store.state).toBe('idle')
+    await store.load('synthetic-work-order-id')
+
+    expect(list).toHaveBeenCalledTimes(2)
+    expect(store.items[0]?.id).toBe('synthetic-order-2')
+    expect(store.fetchedSessionRef).toBe('synthetic-session-stable')
   })
 })

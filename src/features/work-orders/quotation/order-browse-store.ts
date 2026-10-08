@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 
 import type { QuotationOrderBrowseGroup, QuotationOrderBrowseItem, QuotationOrderBrowseLine, QuotationOrderReadPort, SessionSnapshot } from '@shared/ports'
 import type { OperationSnapshot, OperationState } from '@shared/types'
@@ -12,21 +12,45 @@ function failure<T>(category: 'session_invalid' | 'server_terminal', message: st
   return { state: 'failed_terminal', error: createOperationError(category, message) }
 }
 
+function authorizationIdentityKey(session: SessionSnapshot | null): string | null {
+  if (!session) return null
+  return JSON.stringify([
+    session.sessionRef,
+    session.user.id,
+    session.currentRole?.id ?? null,
+    session.roleVersion ?? null,
+  ])
+}
+
 export const useQuotationOrderBrowseStore = defineStore('quotationOrderBrowse', () => {
   const state = ref<BrowseState>('idle')
   const items = ref<readonly QuotationOrderBrowseItem[]>([])
   const errorMessage = ref('')
   const fetchedSessionRef = ref<string | null>(null)
   const fetchedWorkOrderId = ref<string | null>(null)
+  let fetchedAuthorizationIdentityKey: string | null = null
   let port: QuotationOrderReadPort | null = null
   let getSession: () => SessionSnapshot | null = () => null
+  let stopWatchingAuthorizationIdentity: (() => void) | null = null
   let requestVersion = 0
-  let inFlight: { readonly workOrderId: string; readonly promise: Promise<OperationSnapshot<ReadPage<QuotationOrderBrowseItem>>> } | null = null
+  let inFlight: {
+    readonly workOrderId: string
+    readonly authorizationIdentityKey: string
+    readonly promise: Promise<OperationSnapshot<ReadPage<QuotationOrderBrowseItem>>>
+  } | null = null
 
   function configure(nextPort: QuotationOrderReadPort, sessionProvider: () => SessionSnapshot | null): void {
+    stopWatchingAuthorizationIdentity?.()
     clear()
     port = nextPort
     getSession = sessionProvider
+    stopWatchingAuthorizationIdentity = watch(
+      () => authorizationIdentityKey(getSession()),
+      (current, previous) => {
+        if (current !== previous) clear()
+      },
+      { immediate: true },
+    )
   }
 
   function clear(): void {
@@ -37,19 +61,25 @@ export const useQuotationOrderBrowseStore = defineStore('quotationOrderBrowse', 
     errorMessage.value = ''
     fetchedSessionRef.value = null
     fetchedWorkOrderId.value = null
+    fetchedAuthorizationIdentityKey = null
   }
 
   async function load(workOrderId: string, pageSize: 1 | 3 = 3): Promise<OperationSnapshot<ReadPage<QuotationOrderBrowseItem>>> {
     const sessionAtStart = getSession()
     if (!sessionAtStart) return failure<ReadPage<QuotationOrderBrowseItem>>('session_invalid', '请先登录后查看当前账号可见的报价。')
+    const authorizationIdentityAtStart = authorizationIdentityKey(sessionAtStart)
+    if (!authorizationIdentityAtStart) return failure<ReadPage<QuotationOrderBrowseItem>>('session_invalid', '登录身份信息不完整，请重新加载报价记录。')
     if (!port) return failure<ReadPage<QuotationOrderBrowseItem>>('server_terminal', '报价只读服务尚未配置。')
     if (!/^[A-Za-z0-9_-]{1,100}$/.test(workOrderId)) {
       return failure<ReadPage<QuotationOrderBrowseItem>>('server_terminal', '请从当前账号可见的工单详情进入报价记录。')
     }
-    if (state.value === 'succeeded' && fetchedSessionRef.value === sessionAtStart.sessionRef && fetchedWorkOrderId.value === workOrderId) {
+    if (state.value === 'succeeded'
+      && fetchedAuthorizationIdentityKey === authorizationIdentityAtStart
+      && fetchedWorkOrderId.value === workOrderId) {
       return { state: 'succeeded', data: { items: items.value, pageSize: items.value.length } }
     }
-    if (inFlight?.workOrderId === workOrderId) return inFlight.promise
+    if (inFlight?.workOrderId === workOrderId
+      && inFlight.authorizationIdentityKey === authorizationIdentityAtStart) return inFlight.promise
 
     const currentRequest = ++requestVersion
     items.value = []
@@ -57,16 +87,19 @@ export const useQuotationOrderBrowseStore = defineStore('quotationOrderBrowse', 
     errorMessage.value = ''
     const readPort = port
     const pending = readPort.listTypeOneOrdersForWorkOrder(workOrderId, pageSize).then((result) => {
-      if (currentRequest !== requestVersion) return result
       const currentSession = getSession()
-      if (!currentSession || currentSession.sessionRef !== sessionAtStart.sessionRef) {
-        clear()
+      if (!currentSession || authorizationIdentityKey(currentSession) !== authorizationIdentityAtStart) {
+        if (currentRequest === requestVersion) clear()
         return failure<ReadPage<QuotationOrderBrowseItem>>('session_invalid', '登录状态已变化，请重新加载报价记录。')
+      }
+      if (currentRequest !== requestVersion) {
+        return failure<ReadPage<QuotationOrderBrowseItem>>('server_terminal', '报价读取已被新的请求替代，请重新加载。')
       }
       if (result.state === 'succeeded' && result.data) {
         items.value = [...result.data.items].slice(0, 3)
         fetchedSessionRef.value = currentSession.sessionRef
         fetchedWorkOrderId.value = workOrderId
+        fetchedAuthorizationIdentityKey = authorizationIdentityAtStart
         state.value = 'succeeded'
         errorMessage.value = ''
         return { ...result, data: { ...result.data, items: items.value } }
@@ -81,7 +114,7 @@ export const useQuotationOrderBrowseStore = defineStore('quotationOrderBrowse', 
     }).finally(() => {
       if (currentRequest === requestVersion) inFlight = null
     })
-    inFlight = { workOrderId, promise: pending }
+    inFlight = { workOrderId, authorizationIdentityKey: authorizationIdentityAtStart, promise: pending }
     return pending
   }
 

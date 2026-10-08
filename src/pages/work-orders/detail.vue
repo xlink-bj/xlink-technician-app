@@ -350,11 +350,6 @@ watch(
 onBeforeUnmount(clearLoadingSkeletonTimer)
 
 watch(
-  () => session.session?.sessionRef ?? null,
-  () => quotationBrowse.clear(),
-)
-
-watch(
   () => detail.value?.id ?? null,
   () => quotationBrowse.clear(),
 )
