@@ -119,9 +119,9 @@ describe('G4-F Phase 1E quotation catalog browser', () => {
     expect(port.getPackageDetail).toHaveBeenCalledWith('package-1')
     expect(store.packageDetailState).toBe('succeeded')
     expect(store.packageMaterialLayers.map((group) => [group.key, group.label, group.materials.length])).toEqual([
-      ['string:B', '层级：B', 2],
-      ['number:2', '层级：2', 1],
-      ['missing-layer', '层级未提供', 1],
+      ['string:B', '材料层级 1', 2],
+      ['number:2', '材料层级 2', 1],
+      ['missing-layer', '材料层级信息缺失', 1],
     ])
   })
 
@@ -213,9 +213,13 @@ describe('G4-F Phase 1E quotation catalog browser', () => {
   })
 
   it('groups package materials by exact supplied layer value and preserves first-seen group order', () => {
-    expect(quotationPackageMaterialLayersFor([
+    const groups = quotationPackageMaterialLayersFor([
       { kind: 'material', item: null, layer: 1 },
       { kind: 'material', item: null, layer: '1' },
-    ]).map((group) => group.key)).toEqual(['number:1', 'string:1'])
+    ])
+    expect(groups.map((group) => group.key)).toEqual(['number:1', 'string:1'])
+    expect(groups.map((group) => group.label)).toEqual(['材料层级 1', '材料层级 2'])
+    expect(groups.map((group) => group.label).join(' ')).not.toContain('number:1')
+    expect(groups.map((group) => group.label).join(' ')).not.toContain('string:1')
   })
 })

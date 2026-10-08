@@ -54,7 +54,7 @@ test('true uni-app H5 mounts the synthetic placeOrder quotation workspace with n
   await expect(page.getByTestId('dynamic-form-save')).toHaveCount(0)
   await expect(page.getByTestId('action-workspace-submit')).toHaveAttribute('disabled', 'true')
   await expect(page.getByTestId('quotation-order-submit-boundary').getByRole('button')).toHaveCount(0)
-  await expect(page.getByText(/价格|单价|小计|总价|¥|￥/)).toHaveCount(0)
+  await expect(page.getByText(/(?:¥|￥)\s*\d|\d+(?:\.\d{1,2})?\s*元/)).toHaveCount(0)
 
   const focus = page.getByTestId('quotation-state-ready')
   await focus.scrollIntoViewIfNeeded()

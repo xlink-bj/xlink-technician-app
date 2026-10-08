@@ -197,7 +197,8 @@ describe('G4-F Phase 1A quotation action foundation', () => {
     expect(workspace.configureQuotationPackageSelection(groupId, 'mock-catalog-package-basic', []).state).toBe('failed_terminal')
     await workspace.quotationCatalogBrowser.openPackageDetail('mock-catalog-package-basic')
     expect(workspace.quotationCatalogBrowser.packageDetailState).toBe('succeeded')
-    expect(workspace.quotationCatalogBrowser.packageMaterialLayers.map((layer) => layer.label)).toEqual(['层级：mock-layer-1', '层级：2'])
+    expect(workspace.quotationCatalogBrowser.packageMaterialLayers.map((layer) => layer.label)).toEqual(['材料层级 1', '材料层级 2'])
+    expect(workspace.quotationCatalogBrowser.packageMaterialLayers.map((layer) => layer.label).join(' ')).not.toContain('mock-layer-1')
     expect(JSON.stringify(workspace.quotationComposition.draft)).toBe(localDraftBeforeCatalogRead)
     const packageChoices = [
       { layer: 'mock-layer-1', componentId: 'mock-package-material-row', referenceId: 'mock-catalog-material-sealant' },

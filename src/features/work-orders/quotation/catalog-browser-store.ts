@@ -49,10 +49,12 @@ export function quotationPackageMaterialLayersFor(
   const grouped = new Map<string, { label: string; materials: QuotationPackageMaterialRead[] }>()
   for (const material of materials) {
     const key = quotationPackageLayerKey(material.layer)
-    const label = material.layer === undefined ? '层级未提供' : `层级：${String(material.layer)}`
     const existing = grouped.get(key)
     if (existing) existing.materials.push(material)
-    else grouped.set(key, { label, materials: [material] })
+    else grouped.set(key, {
+      label: material.layer === undefined ? '材料层级信息缺失' : `材料层级 ${grouped.size + 1}`,
+      materials: [material],
+    })
   }
   return [...grouped].map(([key, group]) => ({ key, label: group.label, materials: group.materials }))
 }

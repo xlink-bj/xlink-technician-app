@@ -19,9 +19,9 @@
           <text class="quotation-workspace-footer-summary__meta">{{ composition.selectionCount }} 项 · {{ composition.groups.length }} 个部位组</text>
         </view>
         <view class="quotation-workspace-footer-summary__amount">
-          <text class="quotation-workspace-footer-summary__amount-label">{{ verifiedPricing ? '本机金额预览' : '金额状态' }}</text>
+          <text class="quotation-workspace-footer-summary__amount-label">{{ amountPresentation.label }}</text>
           <text class="quotation-workspace-footer-summary__amount-value">
-            {{ verifiedPricing ? `¥${verifiedPricing.calcTotalPrice.totalPrice.toFixed(2)}` : '待核验' }}
+            {{ amountPresentation.value }}
           </text>
         </view>
       </view>
@@ -42,6 +42,14 @@
         block
         @tap="quotationConfirmOpen = true"
       >{{ workspace.quotationOrderState.state === 'submitting' ? '提交中…' : '提交订单/报价方案' }}</AppButton>
+      <AppStatus
+        v-if="!productionReadOnly && !workspace.canSubmitQuotation"
+        class="quotation-submit-unavailable"
+        message="提交条件尚未满足；完成必需配置并通过本机校验后，此入口才会开放。"
+        tone="neutral"
+        quiet
+        data-testid="quotation-submit-unavailable"
+      />
     </template>
     <view v-if="!productionReadOnly && quotationConfirmOpen" class="quotation-confirm-backdrop" role="presentation">
       <view class="quotation-confirm-sheet" role="dialog" aria-modal="true" data-testid="quotation-order-confirmation">
@@ -61,6 +69,7 @@ import { computed, nextTick, ref } from 'vue'
 import { isProductionReadOnlyRuntime } from '@shared/config'
 import { useActionWorkspaceStore } from '../action-workspace'
 import { useQuotationCompositionStore } from './composition-store'
+import { quotationAmountPresentation } from './amount-presentation'
 import ActionWorkspaceShell from '@shared/ui/ActionWorkspaceShell.vue'
 import AppButton from '@shared/ui/AppButton.vue'
 import AppStatus from '@shared/ui/AppStatus.vue'
@@ -71,10 +80,11 @@ defineEmits<{ (event: 'retry'): void; (event: 'back'): void }>()
 
 const workspace = useActionWorkspaceStore()
 const composition = useQuotationCompositionStore()
-const verifiedPricing = computed(() => {
-  const result = workspace.quotationEngine.result
-  return result && result.draftVersion === composition.draft?.draftVersion ? result.pricing : undefined
-})
+const amountPresentation = computed(() => quotationAmountPresentation({
+  result: workspace.quotationEngine.result,
+  draftVersion: composition.draft?.draftVersion,
+  isLoading: workspace.quotationEngine.state === 'loading',
+}))
 const productionReadOnly = isProductionReadOnlyRuntime()
 const quotationConfirmOpen = ref(false)
 const scrollIntoView = ref('')
@@ -101,10 +111,12 @@ async function confirmQuotationSubmit(): Promise<void> {
 .quotation-workspace-footer-summary { align-items: center; display: flex; justify-content: space-between; margin-bottom: var(--app-space-sm); }
 .quotation-workspace-footer-summary__copy { display: flex; flex-direction: column; min-width: 0; }
 .quotation-workspace-footer-summary__title { color: var(--app-color-text-primary); font-size: var(--app-font-meta); font-weight: 800; }
-.quotation-workspace-footer-summary__meta { color: var(--app-color-text-secondary); font-size: 10px; margin-top: 2rpx; }
+.quotation-workspace-footer-summary__meta { color: var(--app-color-text-secondary); font-size: var(--app-font-body); line-height: 1.35; margin-top: 2rpx; }
 .quotation-workspace-footer-summary__amount { align-items: flex-end; display: flex; flex-direction: column; flex-shrink: 0; margin-left: var(--app-space-sm); }
-.quotation-workspace-footer-summary__amount-label { color: var(--app-color-text-secondary); font-size: 10px; }
+.quotation-workspace-footer-summary__amount-label { color: var(--app-color-text-secondary); font-size: var(--app-font-body); }
 .quotation-workspace-footer-summary__amount-value { color: var(--app-color-text-primary); font-size: var(--app-font-field-label); font-weight: 800; margin-top: 2rpx; }
+.quotation-submit-unavailable { margin-top: var(--app-space-sm); }
+.quotation-workspace-shell .action-workspace-body { padding-bottom: calc(320rpx + env(safe-area-inset-bottom)); }
 /* #ifdef H5 */
 .quotation-workspace-shell.action-workspace-page { height: calc(100vh - 44px); min-height: 0; }
 /* #endif */

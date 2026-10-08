@@ -3,7 +3,7 @@ import { resolve } from 'node:path'
 
 import { expect, test, type Page } from '@playwright/test'
 
-const output = resolve(process.cwd(), '.review/g4f-phase1b')
+const output = resolve(process.cwd(), '.review/g4f-ux-phase-b0/after/phase1b')
 
 function isLocalReviewRequest(url: string): boolean {
   if (url.startsWith('data:') || url.startsWith('blob:') || url.startsWith('about:')) return true
@@ -49,7 +49,7 @@ async function openScenario(page: Page, scenario: string): Promise<void> {
     await page.getByText('屋面', { exact: true }).click()
     await page.getByTestId('quotation-group-description-quotation-group-1').locator('textarea').fill('屋面檐口修复')
     await page.getByTestId('quotation-group-quantity-quotation-group-1').locator('input').fill('18')
-    await page.getByTestId('quotation-browse-quotation-group-1-package').click()
+    await page.getByTestId('quotation-browse-quotation-group-1').click()
     await expect(page.getByTestId('quotation-catalog-page')).toBeVisible()
     await expect(page.getByTestId('quotation-catalog-browser')).toBeVisible()
     await expect(page.getByTestId('quotation-catalog-target')).toContainText('屋面檐口修复')
@@ -60,11 +60,17 @@ async function openScenario(page: Page, scenario: string): Promise<void> {
   await expect(page.getByText('报价组成', { exact: true })).toBeVisible()
 }
 
+async function openCatalogKind(page: Page, groupId: string, kind: 'package' | 'procedure' | 'material' | 'measure'): Promise<void> {
+  await page.getByTestId(`quotation-browse-${groupId}`).click()
+  await expect(page.getByTestId('quotation-catalog-page')).toBeVisible()
+  await page.getByTestId(`quotation-catalog-kind-${kind}`).click()
+}
+
 async function openPackageConfigurationFromEditableGroup(page: Page): Promise<void> {
   await openScenario(page, 'empty')
   await page.getByTestId('quotation-add-group').click()
   await page.getByText('屋面', { exact: true }).click()
-  await page.getByTestId('quotation-browse-quotation-group-1-package').click()
+  await page.getByTestId('quotation-browse-quotation-group-1').click()
   await expect(page.getByTestId('quotation-catalog-page')).toBeVisible()
   await page.getByTestId('quotation-package-detail-mock-catalog-package-basic').click()
   await expect(page.getByTestId('quotation-package-detail')).toBeVisible()
@@ -85,7 +91,7 @@ test('Phase 1D empty quotation draft starts from a repair-part group', async ({ 
   await expect(page.getByTestId('g4f-review-scenario-selector')).toBeVisible()
   await expect(page.getByTestId('quotation-draft-empty')).toContainText('还没有维修部位组')
   await expect(page.getByTestId('quotation-add-group')).toBeVisible()
-  await expect(page.getByText(/价格|单价|小计|总价|¥|￥/)).toHaveCount(0)
+  await expect(page.getByText(/(?:¥|￥)\s*\d|\d+(?:\.\d{1,2})?\s*元/)).toHaveCount(0)
   await page.getByTestId('quotation-draft-empty').scrollIntoViewIfNeeded()
   await page.screenshot({ path: resolve(output, '01-empty-draft.png'), animations: 'disabled' })
   await expectSafe(page, diagnostics)
@@ -100,7 +106,7 @@ test('Phase 1F browses all catalog kinds and explicitly adds only direct selecti
   const groupId = 'quotation-group-1'
   let selectionCount = 0
   for (const kind of ['package', 'procedure', 'material', 'measure'] as const) {
-    await page.getByTestId(`quotation-browse-${groupId}-${kind}`).click()
+    await page.getByTestId(`quotation-browse-${groupId}`).click()
     await expect(page.getByTestId('quotation-catalog-page')).toBeVisible()
     await page.getByTestId(`quotation-catalog-kind-${kind}`).click()
     const labels = {
@@ -132,7 +138,7 @@ test('Phase 1F browses all catalog kinds and explicitly adds only direct selecti
   }
   await page.getByTestId('quotation-draft-groups').scrollIntoViewIfNeeded()
   await page.screenshot({ path: resolve(output, '02-grouped-draft-direct-selections.png'), animations: 'disabled' })
-  await expect(page.getByText(/价格|单价|小计|总价|¥|￥/)).toHaveCount(0)
+  await expect(page.getByText(/(?:¥|￥)\s*\d|\d+(?:\.\d{1,2})?\s*元/)).toHaveCount(0)
   await expect(page.getByTestId('action-workspace-submit')).toHaveAttribute('disabled', 'true')
   await expect(page.getByTestId('dynamic-form-save')).toHaveCount(0)
   await expectSafe(page, diagnostics)
@@ -146,8 +152,7 @@ test('isolated Phase 1B review harness keeps blocked local preview separate from
   const groupId = 'quotation-group-1'
 
   for (const kind of ['procedure', 'material'] as const) {
-    await page.getByTestId(`quotation-browse-${groupId}-${kind}`).click()
-    await page.getByTestId(`quotation-catalog-kind-${kind}`).click()
+    await openCatalogKind(page, groupId, kind)
     const itemId = kind === 'procedure' ? 'mock-catalog-procedure-seal' : 'mock-catalog-material-sealant'
     await page.getByTestId(`quotation-catalog-add-${kind}-${itemId}`).click()
   }
@@ -176,9 +181,10 @@ test('Phase 1E package detail displays only observed child data grouped by suppl
   await expect(page.getByTestId('quotation-catalog-item-package-mock-catalog-package-basic')).toContainText('Mock 服务方案 A')
   await page.getByTestId('quotation-package-detail-mock-catalog-package-basic').click()
   await expect(page.getByTestId('quotation-package-detail')).toContainText('配置后只会保存在目标维修部位组的本机草稿中')
-  await expect(page.getByTestId('quotation-material-layer-string:mock-layer-1')).toContainText('Mock 材料 A')
+  await expect(page.getByTestId('quotation-material-layer-string:mock-layer-1')).toContainText('材料层级 1')
+  await expect(page.getByTestId('quotation-material-layer-string:mock-layer-1')).not.toContainText('mock-layer-1')
   await expect(page.getByTestId('quotation-composition-selection')).toHaveCount(0)
-  await expect(page.getByText(/价格|单价|小计|总价|¥|￥/)).toHaveCount(0)
+  await expect(page.getByText(/(?:¥|￥)\s*\d|\d+(?:\.\d{1,2})?\s*元/)).toHaveCount(0)
   await page.getByTestId('quotation-catalog-page').screenshot({ path: resolve(output, '03-catalog-detail-readonly.png'), animations: 'disabled' })
   await expectSafe(page, diagnostics)
 })
@@ -199,7 +205,7 @@ test('Phase 1G configures a Package locally after exactly one Material is chosen
   await expect(commit).toHaveAttribute('disabled', 'true')
   await page.getByTestId('quotation-package-material-choice-number:2-0').click()
   await expect(commit).not.toHaveAttribute('disabled')
-  await expect(page.getByText(/价格|单价|小计|总价|¥|￥/)).toHaveCount(0)
+  await expect(page.getByText(/(?:¥|￥)\s*\d|\d+(?:\.\d{1,2})?\s*元/)).toHaveCount(0)
   await expect(page.getByTestId('action-workspace-submit')).toHaveAttribute('disabled', 'true')
 
   await commit.click()
@@ -210,6 +216,9 @@ test('Phase 1G configures a Package locally after exactly one Material is chosen
   await expect(configured).toContainText('Mock 材料 A')
   await expect(configured).toContainText('Mock 材料 B（数值层）')
   await expect(configured).toContainText('Mock 机措 A')
+  await expect(configured).toContainText('计价关系待核验')
+  await expect(configured).toContainText('材料层级 1')
+  await expect(configured).not.toContainText('mock-layer-1')
   await expect(page.getByTestId('quotation-composition-selection')).toHaveCount(1)
   await expectSafe(page, diagnostics)
 })
@@ -223,7 +232,7 @@ test('Phase 1G blocks local Package commit until all layers are configured', asy
   await expect(commit).toHaveAttribute('disabled', 'true')
   await commit.click()
   await expect(page.getByTestId('quotation-composition-selection')).toHaveCount(0)
-  await expect(page.getByText(/价格|单价|小计|总价|¥|￥/)).toHaveCount(0)
+  await expect(page.getByText(/(?:¥|￥)\s*\d|\d+(?:\.\d{1,2})?\s*元/)).toHaveCount(0)
   await expect(page.getByTestId('action-workspace-submit')).toHaveAttribute('disabled', 'true')
   await expectSafe(page, diagnostics)
 })

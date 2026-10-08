@@ -144,7 +144,7 @@ if (!playwrightConfig.includes('http://127.0.0.1:5175') || !viteConfig.includes(
 if (!browserTests.includes('01-empty-draft.png') || !browserTests.includes('02-grouped-draft-direct-selections.png') || !browserTests.includes('03-catalog-detail-readonly.png') || !browserTests.includes('externalRequests') || !browserTests.includes('quotation-catalog-add-') || !browserTests.includes('quotation-package-configure-commit')) {
   fail('Playwright must prove direct selection, configured Package UX, and network safety')
 }
-for (const token of ['01-quotation-workbench.png', '02-visual-catalog.png', '03-package-configuration.png', '04-workbench-after-selection.png', '05-compact-two-group-quote.png', 'catalog-empty', 'catalog-error', 'externalRequests', 'same-group review']) {
+for (const token of ['b01-workbench-quote-list-390.png', 'b02-visual-catalog-390.png', 'b03-package-configuration-390.png', 'b04-workbench-package-and-standalone-material-390.png', 'b05-two-group-compact-320.png', 'b06-catalog-empty-390.png', 'b07-catalog-retryable-error-390.png', 'catalog-empty', 'catalog-error', 'externalRequests', 'same-group review']) {
   if (!uxBrowserTests.includes(token)) fail(`Phase B0 visual/runtime regression coverage missing: ${token}`)
 }
 for (const token of ['autosaves grouped state only', 'restores the local quotation draft', 'different %s identity', 'malformed or incompatible', 'legacy flat v1 drafts']) {
