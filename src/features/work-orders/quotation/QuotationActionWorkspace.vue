@@ -43,7 +43,7 @@
         @tap="quotationConfirmOpen = true"
       >{{ workspace.quotationOrderState.state === 'submitting' ? '提交中…' : '提交订单/报价方案' }}</AppButton>
       <AppStatus
-        v-if="!productionReadOnly && !workspace.canSubmitQuotation"
+        v-if="!productionReadOnly && !workspace.canSubmitQuotation && !isInitialEmptyWorkbench"
         class="quotation-submit-unavailable"
         message="提交条件尚未满足；完成必需配置并通过本机校验后，此入口才会开放。"
         tone="neutral"
@@ -70,16 +70,24 @@ import { isProductionReadOnlyRuntime } from '@shared/config'
 import { useActionWorkspaceStore } from '../action-workspace'
 import { useQuotationCompositionStore } from './composition-store'
 import { quotationAmountPresentation } from './amount-presentation'
+import { isInitialQuotationWorkbenchEmpty } from './empty-workbench-state'
 import ActionWorkspaceShell from '@shared/ui/ActionWorkspaceShell.vue'
 import AppButton from '@shared/ui/AppButton.vue'
 import AppStatus from '@shared/ui/AppStatus.vue'
 import QuotationActionContent from './QuotationActionContent.vue'
 
-defineProps<{ readonly contentState: 'loading' | 'ready' | 'blocked' | 'failed_retryable' | 'failed_terminal' }>()
+const props = defineProps<{ readonly contentState: 'loading' | 'ready' | 'blocked' | 'failed_retryable' | 'failed_terminal' }>()
 defineEmits<{ (event: 'retry'): void; (event: 'back'): void }>()
 
 const workspace = useActionWorkspaceStore()
 const composition = useQuotationCompositionStore()
+const isInitialEmptyWorkbench = computed(() => isInitialQuotationWorkbenchEmpty({
+  contentState: props.contentState,
+  editState: workspace.quotationEditState.state,
+  draftState: composition.localState,
+  groupCount: composition.groups.length,
+  catalogOpen: false,
+}))
 const amountPresentation = computed(() => quotationAmountPresentation({
   result: workspace.quotationEngine.result,
   draftVersion: composition.draft?.draftVersion,

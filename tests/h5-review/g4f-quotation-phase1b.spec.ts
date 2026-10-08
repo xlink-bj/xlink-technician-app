@@ -3,7 +3,7 @@ import { resolve } from 'node:path'
 
 import { expect, test, type Page } from '@playwright/test'
 
-const output = resolve(process.cwd(), '.review/g4f-ux-phase-b0/after/phase1b')
+const output = resolve(process.cwd(), '.review/g4f-ux-phase-b0/empty-workbench-approved-v1/after/phase1b')
 
 function isLocalReviewRequest(url: string): boolean {
   if (url.startsWith('data:') || url.startsWith('blob:') || url.startsWith('about:')) return true
@@ -56,8 +56,14 @@ async function openScenario(page: Page, scenario: string): Promise<void> {
     return
   }
   await expect(page.getByTestId('quotation-state-ready')).toBeVisible()
-  await expect(page.getByTestId('quotation-workbench-heading')).toContainText('报价工作台')
-  await expect(page.getByText('项目概览', { exact: true })).toBeVisible()
+  if (scenario === 'empty') {
+    await expect(page.getByTestId('quotation-initial-empty-workbench')).toBeVisible()
+  } else {
+    await expect(page.getByTestId('quotation-workbench-heading')).toContainText('报价工作台')
+  }
+  if (scenario !== 'empty') {
+    await expect(page.getByText('项目概览', { exact: true })).toBeVisible()
+  }
 }
 
 async function openCatalogKind(page: Page, groupId: string, kind: 'package' | 'procedure' | 'material' | 'measure'): Promise<void> {
@@ -89,10 +95,10 @@ test('Phase 1D empty quotation draft starts from a repair-part group', async ({ 
   await mkdir(output, { recursive: true })
   await openScenario(page, 'empty')
   await expect(page.getByTestId('g4f-review-scenario-selector')).toBeVisible()
-  await expect(page.getByTestId('quotation-draft-empty')).toContainText('还没有维修部位组')
+  await expect(page.getByTestId('quotation-initial-empty-workbench')).toContainText('暂无维修部位')
   await expect(page.getByTestId('quotation-add-group')).toBeVisible()
   await expect(page.getByText(/(?:¥|￥)\s*\d|\d+(?:\.\d{1,2})?\s*元/)).toHaveCount(0)
-  await page.getByTestId('quotation-draft-empty').scrollIntoViewIfNeeded()
+  await page.getByTestId('quotation-initial-empty-workbench').scrollIntoViewIfNeeded()
   await page.screenshot({ path: resolve(output, '01-empty-draft.png'), animations: 'disabled' })
   await expectSafe(page, diagnostics)
 })

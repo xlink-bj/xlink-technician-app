@@ -1,17 +1,17 @@
 <template>
   <view class="quotation-content" data-testid="quotation-action-content">
-    <view v-if="!catalogBrowser.isOpen" class="quotation-content__heading" data-testid="quotation-workbench-heading">
+    <view v-if="!catalogBrowser.isOpen && !isInitialEmptyWorkbench" class="quotation-content__heading" data-testid="quotation-workbench-heading">
       <text class="quotation-content__eyebrow">报价草稿 · 按部位组织</text>
       <text class="quotation-content__title">报价工作台</text>
       <text class="quotation-content__description">选择维修部位，逐组整理项目；当前内容仅保存在本机。</text>
     </view>
 
-    <view v-if="state === 'loading'" class="quotation-content__panel app-surface" data-testid="quotation-state-loading">
+    <view v-if="props.state === 'loading'" class="quotation-content__panel app-surface" data-testid="quotation-state-loading">
       <AppLoadingState variant="inline" label="正在准备报价内容" />
     </view>
 
-    <view v-else-if="state === 'ready'" v-show="!catalogBrowser.isOpen" class="quotation-content__panel quotation-content__workbench app-surface" data-testid="quotation-state-ready">
-      <view class="quotation-content__workbench-summary" data-testid="quotation-workbench-summary">
+    <view v-else-if="props.state === 'ready'" v-show="!catalogBrowser.isOpen" class="quotation-content__panel quotation-content__workbench app-surface" data-testid="quotation-state-ready">
+      <view v-if="!isInitialEmptyWorkbench" class="quotation-content__workbench-summary" data-testid="quotation-workbench-summary">
         <view class="quotation-content__workbench-summary-copy">
           <text class="quotation-content__panel-title">项目概览</text>
           <text class="quotation-content__line-count">{{ composition.selectionCount }} 项 · {{ composition.groups.length }} 个维修部位</text>
@@ -93,7 +93,7 @@
         <text v-else class="quotation-content__engine-note" data-testid="quotation-engine-local-only">目录与报价依据核验完成前不显示估算金额。</text>
       </view>
 
-      <view class="quotation-content__submission" data-testid="quotation-order-submit-boundary">
+      <view v-if="!isInitialEmptyWorkbench" class="quotation-content__submission" data-testid="quotation-order-submit-boundary">
         <AppStatus
           v-if="workspace.quotationOrderState.message"
           :message="workspace.quotationOrderState.message"
@@ -129,7 +129,27 @@
         <text class="quotation-content__copy">为避免覆盖尚未确认的数据，当前报价内容已锁定。请稍后重试或返回工单。</text>
       </view>
       <view v-else>
-        <view v-if="composition.groups.length === 0" class="quotation-content__empty" data-testid="quotation-draft-empty">
+        <view v-if="composition.groups.length === 0 && isInitialEmptyWorkbench" class="quotation-content__initial-empty" data-testid="quotation-initial-empty-workbench">
+          <view class="quotation-content__initial-empty-heading">
+            <text class="quotation-content__initial-empty-title">维修部位报价</text>
+            <text class="quotation-content__initial-empty-description">请先添加维修部位，再为对应分组选择套餐、工序、材料或机措。</text>
+          </view>
+          <view class="quotation-content__initial-empty-surface">
+            <view class="quotation-content__initial-empty-mark" aria-hidden="true">
+              <AppIcon name="order" :size="32" color="var(--app-color-primary)" />
+            </view>
+            <text class="quotation-content__empty-title">暂无维修部位</text>
+            <text class="quotation-content__initial-empty-copy">从添加维修部位开始整理报价，项目会归入对应的部位分组。</text>
+            <AppButton
+              class="quotation-content__initial-empty-action"
+              data-testid="quotation-add-group"
+              :disabled="!canEdit"
+              @tap="createRepairGroup()"
+            >＋ 添加维修部位</AppButton>
+            <text class="quotation-content__initial-empty-note">当前为本机报价草稿；成功提交后将创建正式订单。</text>
+          </view>
+        </view>
+        <view v-else-if="composition.groups.length === 0" class="quotation-content__empty" data-testid="quotation-draft-empty">
           <view class="quotation-content__empty-mark" aria-hidden="true">＋</view>
           <text class="quotation-content__empty-title">还没有维修部位组</text>
           <text class="quotation-content__copy">先建立部位上下文，再在每个分组中整理套餐、工序、材料或机措。当前内容仅保存在本机。</text>
@@ -356,7 +376,7 @@
       </view>
     </view>
 
-    <view v-else-if="state === 'blocked'" class="quotation-content__panel app-surface" data-testid="quotation-state-blocked">
+    <view v-else-if="props.state === 'blocked'" class="quotation-content__panel app-surface" data-testid="quotation-state-blocked">
       <AppStatus
         message="报价单业务状态暂不可用；不会用目录数据替代已有报价状态。"
         tone="warning"
@@ -365,7 +385,7 @@
       <AppButton class="quotation-content__secondary-action" variant="secondary" block @tap="$emit('back')">返回工单详情</AppButton>
     </view>
 
-    <view v-else-if="state === 'failed_retryable'" class="quotation-content__panel app-surface" data-testid="quotation-state-retryable">
+    <view v-else-if="props.state === 'failed_retryable'" class="quotation-content__panel app-surface" data-testid="quotation-state-retryable">
       <AppStatus message="暂时无法准备报价内容，请检查网络后重试。" tone="warning" quiet />
       <AppButton class="quotation-content__secondary-action" variant="secondary" block @tap="$emit('retry')">重新加载</AppButton>
     </view>
@@ -376,7 +396,7 @@
     </view>
 
     <view
-      v-if="state === 'ready' && catalogBrowser.isOpen"
+      v-if="props.state === 'ready' && catalogBrowser.isOpen"
       class="quotation-content__catalog-page"
       data-testid="quotation-catalog-page"
     >
@@ -685,11 +705,13 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 
 import AppButton from '@shared/ui/AppButton.vue'
 import AppCascadeSelector from '@shared/ui/AppCascadeSelector.vue'
+import AppIcon from '@shared/ui/AppIcon.vue'
 import AppLoadingState from '@shared/ui/AppLoadingState.vue'
 import AppStatus from '@shared/ui/AppStatus.vue'
 import { useActionWorkspaceStore } from '../action-workspace'
 import { useQuotationCompositionStore } from './composition-store'
 import { quotationAmountPresentation } from './amount-presentation'
+import { isInitialQuotationWorkbenchEmpty } from './empty-workbench-state'
 import { isDirectQuotationCatalogKind } from './model'
 import { quotationCatalogKindLabels } from './catalog'
 import { useQuotationCatalogBrowserStore } from './catalog-browser-store'
@@ -703,7 +725,7 @@ import {
   type QuotationPackageMaterialChoice,
 } from './package-configuration'
 
-defineProps<{
+const props = defineProps<{
   readonly state: 'loading' | 'ready' | 'blocked' | 'failed_retryable' | 'failed_terminal'
 }>()
 
@@ -720,6 +742,13 @@ const verifiedPricing = computed(() => {
   const result = workspace.quotationEngine.result
   return result && result.draftVersion === composition.draft?.draftVersion ? result.pricing : undefined
 })
+const isInitialEmptyWorkbench = computed(() => isInitialQuotationWorkbenchEmpty({
+  contentState: props.state,
+  editState: workspace.quotationEditState.state,
+  draftState: composition.localState,
+  groupCount: composition.groups.length,
+  catalogOpen: catalogBrowser.isOpen,
+}))
 const amountPresentation = computed(() => quotationAmountPresentation({
   result: workspace.quotationEngine.result,
   draftVersion: composition.draft?.draftVersion,
@@ -1393,6 +1422,17 @@ function configuredPackageLayerLabel(
 .quotation-content__catalog-state-card { border-radius: 22rpx; margin-top: 20rpx; padding: 30rpx 22rpx; }
 .quotation-content__catalog-state-title { font-size: 26rpx; }
 .quotation-content__catalog-state-copy { font-size: 23rpx; line-height: 1.5; }
+
+.quotation-content__initial-empty { display: flex; flex-direction: column; gap: 18rpx; }
+.quotation-content__initial-empty-heading { display: flex; flex-direction: column; gap: 8rpx; }
+.quotation-content__initial-empty-title { color: var(--app-color-text-primary); display: block; font-size: 30rpx; font-weight: 800; line-height: 1.3; }
+.quotation-content__initial-empty-description { color: var(--app-color-text-secondary); display: block; font-size: 23rpx; line-height: 1.5; }
+.quotation-content__initial-empty-surface { align-items: center; background: var(--app-color-primary-soft); border: 1rpx solid var(--app-color-border-soft); border-radius: var(--app-radius-large); display: flex; flex-direction: column; padding: 34rpx 22rpx 24rpx; text-align: center; }
+.quotation-content__initial-empty-mark { align-items: center; background: var(--app-color-surface); border: 1rpx solid var(--app-color-border); border-radius: 24rpx; display: flex; height: 76px; justify-content: center; width: 76px; }
+.quotation-content__initial-empty-surface .quotation-content__empty-title { font-size: 27rpx; margin-top: 20rpx; }
+.quotation-content__initial-empty-copy { color: var(--app-color-text-body); display: block; font-size: 22rpx; line-height: 1.55; margin-top: 8rpx; max-width: 520rpx; }
+.quotation-content__initial-empty-action { border-radius: 16rpx; margin-top: 22rpx; max-width: 280px; min-height: 54px; width: 100%; }
+.quotation-content__initial-empty-note { color: var(--app-color-text-secondary); display: block; font-size: 19rpx; line-height: 1.5; margin-top: 18rpx; }
 .quotation-content__catalog-footer { border-radius: 20rpx 20rpx 0 0; gap: 10rpx; margin-top: 10rpx; padding: 14rpx var(--app-page-gutter) 12rpx; }
 .quotation-content__catalog-footer-copy { min-width: 0; }
 .quotation-content__catalog-footer-title { font-size: 22rpx; line-height: 1.35; }
