@@ -87,7 +87,10 @@ function setup(options: {
     upsertOfficialOrder: options.upsert ?? vi.fn(async () => success(orderId)),
   }
   const read = options.read ?? vi.fn(async () => success(authoritativeOrder()))
-  const readApi: QuotationOrderReadPort = { getQuotationOrderById: read }
+  const readApi: QuotationOrderReadPort = {
+    getQuotationOrderById: read,
+    listTypeOneOrdersForWorkOrder: async () => success({ items: [], page: 1, pageSize: 3, totalCount: 0 }),
+  }
   const finalizeDraft = options.finalize ?? vi.fn(async () => success(undefined))
   const input: QuotationOrderSubmissionInput = {
     userId: asOpaqueId<'UserId'>(`user-synthetic-${++setupCounter}`),

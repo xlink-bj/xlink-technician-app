@@ -75,6 +75,61 @@ describe('Production read-only profile', () => {
     expect(request).toHaveBeenCalledTimes(3)
   })
 
+  it('allows only bounded type=1 quotation queries scoped to a role-listed Work Order', async () => {
+    vi.stubEnv('VITE_XLINK_ENVIRONMENT', 'prod')
+    const request = vi.fn((options: UniNamespace.RequestOptions) => {
+      options.success?.({ statusCode: 200, data: { data: [] } } as never)
+    })
+    const transport = createUniApiReadTransport({
+      apiBaseUrl: 'https://production.invalid',
+      getSessionRef: () => 'production-session' as never,
+      request,
+    })
+
+    await expect(transport.execute({
+      method: 'POST',
+      path: 'basic/order/query',
+      body: {
+        _all: '1', page: 1, rows: 3, sortField: 'createTime', sortOrder: 'desc',
+        'is:serviceAppointmentId|string#and': 'synthetic-listed-work-order',
+        'is:type|integer#and': 1,
+      },
+    })).resolves.toMatchObject({ data: [] })
+    await expect(transport.execute({
+      method: 'POST',
+      path: 'basic/order/query',
+      body: {
+        _all: '1', page: 1, rows: 4, sortField: 'createTime', sortOrder: 'desc',
+        'is:serviceAppointmentId|string#and': 'synthetic-listed-work-order',
+        'is:type|integer#and': 1,
+      },
+    })).rejects.toMatchObject({ category: 'unsupported_capability' })
+    await expect(transport.execute({
+      method: 'POST',
+      path: 'basic/order/query',
+      body: {
+        _all: '1', page: 1, rows: 3, sortField: 'createTime', sortOrder: 'desc',
+        'is:serviceAppointmentId|string#and': 'synthetic-listed-work-order',
+      },
+    })).rejects.toMatchObject({ category: 'unsupported_capability' })
+    await expect(transport.execute({
+      method: 'POST',
+      path: 'basic/order/query',
+      body: {
+        _all: '1', page: 1, rows: 3, sortField: 'createTime', sortOrder: 'desc',
+        'is:serviceAppointmentId|string#and': 'arbitrary-work-order',
+        'is:type|integer#and': 0,
+      },
+    })).rejects.toMatchObject({ category: 'unsupported_capability' })
+    await expect(transport.execute({
+      method: 'POST',
+      path: 'basic/order/queryById',
+      body: { id: 'arbitrary-order' },
+    })).rejects.toMatchObject({ category: 'unsupported_capability' })
+
+    expect(request).toHaveBeenCalledTimes(1)
+  })
+
   it('uses the read-only role tree route for Production Work Order list scope', async () => {
     vi.stubEnv('VITE_XLINK_ENVIRONMENT', 'prod')
     const requests: UniNamespace.RequestOptions[] = []
@@ -138,14 +193,18 @@ describe('Production read-only profile', () => {
 
   it('omits the permission-bypass flag from Production detail requests created by the adapter', async () => {
     vi.stubEnv('VITE_XLINK_ENVIRONMENT', 'prod')
-    const execute = vi.fn(async () => {
+    const execute = vi.fn(async (request) => {
+      if (request.path === 'basic/serviceAppointment/query') {
+        return { data: [{ _id: 'synthetic-work-order' }] }
+      }
       throw new Error('synthetic stop after request capture')
     })
-    const api = createTechnicianApiReadAdapter({ execute })
+    const api = createTechnicianApiReadAdapter({ execute }, { getSessionScope: () => 'synthetic-session' })
 
+    await api.listWorkOrders({ page: 1, pageSize: 20 })
     await api.getWorkOrderDetail(asOpaqueId<'WorkOrderId'>('synthetic-work-order'))
 
-    expect(execute).toHaveBeenCalledTimes(1)
+    expect(execute).toHaveBeenCalledTimes(2)
     expect(execute).toHaveBeenCalledWith({
       method: 'POST',
       path: 'basic/serviceAppointment/queryById/synthetic-work-order',

@@ -113,6 +113,7 @@ export function createDefaultTechnicianApiReadPort(authSession: AuthSessionPort)
     {
       cascadeTenantId: config.value.authWireConfig.tenant,
       codeTenantId: config.value.authWireConfig.tenant,
+      getSessionScope: () => authSession.getCurrentSession()?.sessionRef ?? null,
     },
   )
 }
@@ -144,7 +145,10 @@ export function createDefaultQuotationCatalogReadPort(authSession: AuthSessionPo
         : null
     },
   })
-  return createQuotationCatalogReadAdapter(transport)
+  return createQuotationCatalogReadAdapter(
+    transport,
+    () => authSession.getCurrentSession()?.sessionRef ?? null,
+  )
 }
 
 export function createDefaultSurveyLeakageCauseProvider(authSession: AuthSessionPort): SurveyLeakageCauseProviderPort {
@@ -214,6 +218,7 @@ export function createDefaultQuotationOrderReadPort(authSession: AuthSessionPort
   if (!config.ok) {
     return {
       getQuotationOrderById: async () => configurationFailure(`Quotation Order read configuration is unavailable: ${config.issues.join('; ')}`),
+      listTypeOneOrdersForWorkOrder: async () => configurationFailure(`Quotation Order read configuration is unavailable: ${config.issues.join('; ')}`),
     }
   }
   const transport = createUniApiReadTransport({

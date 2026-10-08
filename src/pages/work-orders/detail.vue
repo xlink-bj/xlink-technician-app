@@ -81,7 +81,7 @@
 
         <view class="summary-actions" aria-label="快捷操作">
           <button
-            v-for="action in quickActions"
+            v-for="action in visibleQuickActions"
             :key="action.key"
             class="summary-action"
             :class="{ 'summary-action--disabled': action.key === 'contact' && !canDial }"
@@ -97,6 +97,14 @@
             <text>{{ workOrder.contactInFlight && action.key === 'contact' ? '打开中' : action.label }}</text>
           </button>
         </view>
+        <AppStatus
+          v-if="productionReadOnly"
+          class="production-read-only-notice"
+          message="生产数据只读：当前账号有权限的工单和流程可查看；业务操作及客户联系已关闭。"
+          tone="warning"
+          quiet
+          data-testid="production-read-only-notice"
+        />
         <text v-if="!canDial && detail.contact" class="action-hint">暂无可直接拨打的客户电话</text>
         <text v-if="contactFeedback || actionFeedback" class="action-feedback">{{ contactFeedback || actionFeedback }}</text>
       </view>
@@ -111,18 +119,18 @@
         <button
           class="primary-task-action"
           :class="`primary-task-action--${workflowProjection.currentTask.tone}`"
-          :disabled="workflowProjection.currentTask.execution !== 'enabled'"
+          :disabled="workflowProjection.currentTask.execution !== 'enabled' || (productionReadOnly && workflowProjection.currentTask.actionIntent !== 'place_order')"
           @tap="handleCurrentTaskAction"
         >
-          {{ workflowProjection.currentTask.actionLabel }}
+          {{ productionReadOnly ? (workflowProjection.currentTask.actionIntent === 'place_order' ? '查看报价方案' : '生产只读') : workflowProjection.currentTask.actionLabel }}
         </button>
-        <text v-if="workflowProjection.currentTask.execution !== 'enabled'" class="task-action-note">当前仅支持只读查看，操作能力将在后续核验后开放</text>
+        <text v-if="workflowProjection.currentTask.execution !== 'enabled' || (productionReadOnly && workflowProjection.currentTask.actionIntent !== 'place_order')" class="task-action-note">当前环境只开放读取，不会提交、接单或推进流程</text>
       </view>
 
       <view class="information-card">
         <scroll-view class="detail-tabs" scroll-x="true" show-scrollbar="false">
           <view
-            v-for="tab in detailTabs"
+            v-for="tab in visibleDetailTabs"
             :key="tab.key"
             class="detail-tab"
             :class="{ 'detail-tab--active': activeTab === tab.key }"
@@ -208,6 +216,55 @@
           </view>
         </view>
 
+        <view v-else-if="activeTab === 'quotation' && productionReadOnly" class="tab-panel quotation-read-panel" data-testid="production-quotation-read-panel">
+          <view class="quotation-read-intro">
+            <text class="tab-empty-title">报价记录 · 只读</text>
+            <text class="tab-empty-copy">只读取当前工单最近最多 3 条有效报价。服务器报价保持只读，不会载入本地草稿、打开或下载 PDF，也不会修改报价或流程。</text>
+          </view>
+          <view v-if="quotationBrowse.state === 'loading'" class="quotation-read-state" data-testid="quotation-read-loading">
+            <AppLoadingState variant="inline" label="正在读取报价记录" />
+          </view>
+          <view v-else-if="quotationBrowse.state === 'failed_retryable' || quotationBrowse.state === 'failed_terminal'" class="quotation-read-state" data-testid="quotation-read-error">
+            <text class="tab-empty-copy">{{ quotationBrowse.errorMessage }}</text>
+            <button class="state-action quotation-retry" @tap="retryQuotationRead">重新读取</button>
+          </view>
+          <view v-else-if="quotationBrowse.state === 'idle'" class="quotation-read-state">
+            <button class="state-action quotation-retry" @tap="loadQuotationRead">读取该工单报价记录</button>
+          </view>
+          <view v-else-if="matchingQuotationOrders.length === 0" class="tab-empty" data-testid="quotation-read-empty">
+            <text class="tab-empty-title">本次有限读取中未找到该工单报价</text>
+            <text class="tab-empty-copy">这里只读取了该工单最近最多 3 条有效报价；这不代表该工单没有其他历史报价。</text>
+          </view>
+          <view v-else class="quotation-read-list">
+            <view v-for="order in matchingQuotationOrders" :key="order.id" class="quotation-read-card" data-testid="quotation-read-record">
+              <view class="quotation-read-heading">
+                <text class="quotation-read-number">{{ order.displayNumber ? `报价单 ${order.displayNumber}` : '报价记录' }}</text>
+                <text v-if="order.updateTime" class="quotation-read-date">{{ order.updateTime }}</text>
+              </view>
+              <text class="quotation-read-readonly">服务器报价 · 只读；当前版本不支持编辑历史报价</text>
+              <text v-if="order.totalPrice !== undefined" class="quotation-read-total">报价金额：¥{{ order.totalPrice.toFixed(2) }}</text>
+              <view v-if="order.groups.length === 0" class="quotation-read-warning">
+                <text>报价分组内容暂不可识别，已保留只读状态。</text>
+              </view>
+              <view v-for="(group, groupIndex) in order.groups" :key="`${order.id}-group-${groupIndex}`" class="quotation-read-group">
+                <text class="quotation-read-group-title">{{ group.partDescription || `维修部位 ${groupIndex + 1}` }}</text>
+                <text v-if="group.maintainAreaNum" class="quotation-read-meta">工程量：{{ group.maintainAreaNum }}</text>
+                <view v-for="row in quotationLineRows(group)" :key="`${order.id}-${groupIndex}-${row.key}`" class="quotation-read-line" :class="{ 'quotation-read-line--nested': row.depth > 0 }">
+                  <view class="quotation-read-line-main">
+                    <text class="quotation-read-line-kind">{{ quotationKindLabel(row.line.kind) }}</text>
+                    <text class="quotation-read-line-label">{{ row.line.label }}</text>
+                  </view>
+                  <text class="quotation-read-meta">
+                    {{ row.line.quantity === undefined ? '' : `${row.line.quantity}${row.line.unit ? ` ${row.line.unit}` : ''}` }}{{ row.line.amount === undefined ? '' : ` · ¥${row.line.amount.toFixed(2)}` }}
+                  </text>
+                </view>
+                <text v-if="!group.contentSupported" class="quotation-read-warning">该分组含未识别字段，以上仅为可确认内容。</text>
+              </view>
+              <text class="quotation-read-pdf-note">报价 PDF 未打开或下载。</text>
+            </view>
+          </view>
+        </view>
+
         <view v-else class="tab-panel">
           <view class="tab-empty">
             <text class="tab-empty-title">暂无资料</text>
@@ -229,21 +286,27 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 
 import { hasAuthenticatedSession } from '@features/home/access'
+import { isProductionReadOnlyRuntime } from '@shared/config'
 import { workOrderCardToneFor } from '@features/work-orders/card'
 import { useWorkOrderDetailStore } from '@features/work-orders/detail'
 import { actionWorkspaceRouteFor } from '@features/work-orders/action-workspace'
 import { detailTabs, type DetailTabKey } from '@features/work-orders/detail-tabs'
 import { detailWorkflowUiProjectionFor } from '@features/work-orders/detail-workflow'
+import { quotationBrowseLineRows, useQuotationOrderBrowseStore } from '@features/work-orders/quotation/order-browse-store'
+import type { QuotationOrderBrowseGroup, QuotationOrderBrowseKind } from '@shared/ports'
 import { useSessionStore } from '@shared/state'
 import AppIcon from '@shared/ui/AppIcon.vue'
 import AppLoadingState from '@shared/ui/AppLoadingState.vue'
+import AppStatus from '@shared/ui/AppStatus.vue'
 import { appLoadingSkeletonDelayMs } from '@shared/ui/loading'
 
 const session = useSessionStore()
 const workOrder = useWorkOrderDetailStore()
+const quotationBrowse = useQuotationOrderBrowseStore()
 const routeReady = ref(false)
 const routeValue = ref<unknown>(undefined)
 const canAccess = computed(() => hasAuthenticatedSession(session.status, session.session))
+const productionReadOnly = isProductionReadOnlyRuntime()
 const detail = computed(() => workOrder.detail)
 const activities = computed(() => detail.value?.activities ?? [])
 const customerServiceAddress = computed(() => {
@@ -256,6 +319,12 @@ const preAcceptBlocked = computed(() => Boolean(
   detail.value?.workflowNodes?.some((node) => node.category === 'accept' && node.lifecycle === 'active'),
 ))
 const activeTab = ref<DetailTabKey>('follow-up')
+const visibleDetailTabs = computed(() => productionReadOnly
+  ? [...detailTabs, { key: 'quotation' as const, label: '报价记录' }]
+  : detailTabs)
+const matchingQuotationOrders = computed(() => quotationBrowse.items.filter(
+  (order) => order.serviceAppointmentId === String(detail.value?.id ?? ''),
+))
 const showLoadingSkeleton = ref(false)
 let loadingSkeletonTimer: ReturnType<typeof setTimeout> | undefined
 
@@ -280,13 +349,26 @@ watch(
 
 onBeforeUnmount(clearLoadingSkeletonTimer)
 
-const canDial = computed(() => Boolean(detail.value?.contact?.normalizedPhone))
+watch(
+  () => session.session?.sessionRef ?? null,
+  () => quotationBrowse.clear(),
+)
+
+watch(
+  () => detail.value?.id ?? null,
+  () => quotationBrowse.clear(),
+)
+
+const canDial = computed(() => !productionReadOnly && Boolean(detail.value?.contact?.normalizedPhone))
 const quickActions = [
   { key: 'contact', label: '联系', icon: 'phone' as const, color: '#2878f2' },
   { key: 'customer', label: '资料', icon: 'contact' as const, color: '#2878f2' },
   { key: 'records', label: '跟进', icon: 'task' as const, color: '#2878f2' },
   { key: 'navigate', label: '导航', icon: 'location' as const, color: '#2878f2' },
 ] as const
+const visibleQuickActions = computed(() => quickActions.filter(
+  (action) => !(productionReadOnly && (action.key === 'contact' || action.key === 'navigate')),
+))
 type QuickActionKey = (typeof quickActions)[number]['key']
 const actionFeedback = ref('')
 const failureCopy = computed(() => {
@@ -340,6 +422,31 @@ async function retry(): Promise<void> {
 
 function selectTab(tab: DetailTabKey): void {
   activeTab.value = tab
+  if (tab === 'quotation' && productionReadOnly) void loadQuotationRead()
+}
+
+async function loadQuotationRead(): Promise<void> {
+  const workOrderId = detail.value?.id
+  if (!workOrderId) return
+  await quotationBrowse.load(String(workOrderId))
+}
+
+async function retryQuotationRead(): Promise<void> {
+  quotationBrowse.clear()
+  await loadQuotationRead()
+}
+
+function quotationLineRows(group: QuotationOrderBrowseGroup) {
+  return quotationBrowseLineRows(group)
+}
+
+function quotationKindLabel(kind: QuotationOrderBrowseKind): string {
+  switch (kind) {
+    case 'package': return '套餐'
+    case 'procedure': return '工序'
+    case 'material': return '材料'
+    case 'measure': return '机措'
+  }
 }
 
 async function dialContact(): Promise<void> {
@@ -349,6 +456,7 @@ async function dialContact(): Promise<void> {
 async function handleCurrentTaskAction(): Promise<void> {
   const currentTask = workflowProjection.value.currentTask
   if (!currentTask || currentTask.execution !== 'enabled') return
+  if (productionReadOnly && currentTask.actionIntent !== 'place_order') return
   const id = detail.value?.id
   if (!id) return
   await workOrder.navigateTo(actionWorkspaceRouteFor(id, currentTask.nodeId, currentTask.actionIntent))
@@ -387,6 +495,8 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
   padding: 20rpx 24rpx calc(46rpx + env(safe-area-inset-bottom));
   width: 100%;
 }
+
+.production-read-only-notice { display: block; margin-top: 16rpx; }
 
 .detail-content,
 .detail-state,
@@ -695,6 +805,26 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
 .tab-panel {
   padding: 16rpx 28rpx 18rpx;
 }
+
+.quotation-read-intro { padding: 8rpx 0 20rpx; }
+.quotation-read-state { align-items: center; display: flex; flex-direction: column; padding: 24rpx 0; }
+.quotation-retry { margin-top: 16rpx; }
+.quotation-read-list { display: flex; flex-direction: column; gap: 16rpx; }
+.quotation-read-card { background: #f8fafd; border: 1rpx solid #e6edf6; border-radius: 16rpx; padding: 20rpx; }
+.quotation-read-heading { align-items: baseline; display: flex; flex-wrap: wrap; gap: 8rpx 16rpx; justify-content: space-between; }
+.quotation-read-number { color: #1d2b40; font-size: 24rpx; font-weight: 800; }
+.quotation-read-readonly { color: #71819a; display: block; font-size: 19rpx; margin-top: 8rpx; }
+.quotation-read-date, .quotation-read-meta, .quotation-read-pdf-note { color: #8391a6; font-size: 19rpx; }
+.quotation-read-total { color: #263a58; display: block; font-size: 22rpx; font-weight: 700; margin-top: 12rpx; }
+.quotation-read-group { border-top: 1rpx solid #e8edf4; margin-top: 16rpx; padding-top: 14rpx; }
+.quotation-read-group-title { color: #455875; display: block; font-size: 21rpx; font-weight: 800; }
+.quotation-read-line { align-items: flex-start; display: flex; flex-direction: column; gap: 4rpx; padding: 10rpx 0; }
+.quotation-read-line--nested { border-left: 3rpx solid #dbe7f8; margin-left: 12rpx; padding-left: 14rpx; }
+.quotation-read-line-main { align-items: baseline; display: flex; flex-wrap: wrap; gap: 4rpx 10rpx; }
+.quotation-read-line-kind { color: #2878f2; font-size: 18rpx; font-weight: 700; }
+.quotation-read-line-label { color: #26364e; font-size: 21rpx; }
+.quotation-read-warning { color: #ad6a14; display: block; font-size: 19rpx; line-height: 1.5; margin-top: 12rpx; }
+.quotation-read-pdf-note { display: block; margin-top: 14rpx; }
 
 .tab-empty {
   align-items: center;

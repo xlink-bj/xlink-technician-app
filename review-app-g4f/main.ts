@@ -97,6 +97,7 @@ export function createApp() {
       if (id !== 'order-synthetic-review') return { state: 'failed_terminal' }
       return succeeded(syntheticOrder(scenario === 'unsupported-edit'))
     },
+    listTypeOneOrdersForWorkOrder: async () => succeeded({ items: [], page: 1, pageSize: 3, totalCount: 0 }),
   }
   const counters = { dispatches: 0, workflowStarts: 0 }
   const quotationOrderCommand: QuotationOrderCommandPort = {

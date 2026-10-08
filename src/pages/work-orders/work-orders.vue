@@ -8,6 +8,14 @@
 
   <view v-else class="work-orders-page">
     <view class="list-shell">
+      <AppStatus
+        v-if="productionReadOnly"
+        class="production-read-only-notice"
+        message="生产数据只读：可查看当前账号有权限的工单；接单、联系客户和业务修改已关闭。"
+        tone="warning"
+        quiet
+        data-testid="production-read-only-notice"
+      />
       <view class="search-band">
         <view class="search-input-shell">
           <AppIcon class="search-icon" name="search" :size="17" color="#71829e" aria-hidden="true" />
@@ -233,6 +241,7 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 
 import { hasAuthenticatedSession } from '@features/home/access'
+import { isProductionReadOnlyRuntime } from '@shared/config'
 import { workOrderCardIconColorFor, workOrderCardIconFor, workOrderCardToneFor } from '@features/work-orders/card'
 import { workOrderDetailRouteFor } from '@features/work-orders/detail'
 import { workOrderListActionFor } from '@features/work-orders/list-actions'
@@ -241,6 +250,7 @@ import type { WorkOrderSummary } from '@shared/ports'
 import { useSessionStore } from '@shared/state'
 import AppIcon from '@shared/ui/AppIcon.vue'
 import AppLoadingState from '@shared/ui/AppLoadingState.vue'
+import AppStatus from '@shared/ui/AppStatus.vue'
 import { appLoadingSkeletonDelayMs } from '@shared/ui/loading'
 
 const session = useSessionStore()
@@ -248,6 +258,7 @@ const workOrders = useWorkOrderListStore()
 const acceptCandidate = ref<WorkOrderSummary | null>(null)
 const searchDraft = ref(workOrders.searchText)
 const canAccess = computed(() => hasAuthenticatedSession(session.status, session.session))
+const productionReadOnly = isProductionReadOnlyRuntime()
 const isLoading = computed(() => workOrders.loadState === 'loading')
 const isRefreshing = computed(() => isLoading.value && workOrders.items.length > 0)
 const showLoadingSkeleton = ref(false)
@@ -319,10 +330,14 @@ async function dialContact(item: Parameters<typeof workOrders.dialContact>[0]): 
 }
 
 function listActionFor(item: WorkOrderSummary) {
-  return workOrderListActionFor(item, session.session)
+  const action = workOrderListActionFor(item, session.session)
+  return productionReadOnly
+    ? { detailAccessible: action.detailAccessible, contactAvailable: false }
+    : action
 }
 
 async function requestAccept(item: WorkOrderSummary): Promise<void> {
+  if (productionReadOnly) return
   const action = listActionFor(item).acceptOrder
   if (!action) return
   const result = await workOrders.acceptOrder({
@@ -336,6 +351,10 @@ async function requestAccept(item: WorkOrderSummary): Promise<void> {
 }
 
 async function confirmAccept(): Promise<void> {
+  if (productionReadOnly) {
+    acceptCandidate.value = null
+    return
+  }
   const item = acceptCandidate.value
   if (!item) return
   const action = listActionFor(item).acceptOrder
@@ -373,6 +392,8 @@ function cancelAccept(): void {
   margin: 0 auto;
   max-width: none;
 }
+
+.production-read-only-notice { display: block; margin: 0 0 14rpx; }
 
 .search-band {
   align-items: center;

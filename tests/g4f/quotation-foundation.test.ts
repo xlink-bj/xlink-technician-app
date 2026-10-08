@@ -372,7 +372,7 @@ describe('G4-F Phase 1A quotation action foundation', () => {
     expect(commandPort).not.toMatch(/createQuotation|updateQuotation|sendQuotation|convertQuotation/)
     expect(page).toContain("workspace.descriptor?.contentKind === 'quotation'")
     expect(page).toContain('<QuotationActionWorkspace')
-    expect(quotationWorkspace).toContain(':can-submit="workspace.canSubmitQuotation"')
+    expect(quotationWorkspace).toContain(':can-submit="!productionReadOnly && workspace.canSubmitQuotation"')
     expect(quotationWorkspace).toContain('@submit="quotationConfirmOpen = true"')
     expect(page).not.toContain('workflow/process')
   })

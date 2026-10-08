@@ -18,6 +18,7 @@ export {
   apiHostForSafetyCheck,
   isProductionApiHost,
   isProductionReadOnlyReadAllowed,
+  isProductionReadOnlyRuntime,
   isProductionReadOnlyTarget,
   isProductionRoleMutationPath,
   normalizedApiRoute,

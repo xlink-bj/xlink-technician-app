@@ -341,6 +341,7 @@ function workOrderSummary(
   raw: unknown,
   statusLabels: ReadonlyMap<string, string>,
   partLabels: ReadonlyMap<string, string>,
+  includeContact = true,
 ): WorkOrderSummary {
   const record = asRecord(raw, 'work-order summary')
   const id = requiredOpaqueId<'WorkOrderId'>(record, ['id', '_id'], 'work-order id')
@@ -352,7 +353,7 @@ function workOrderSummary(
   const serviceAddress = optionalString(record, ['address'])
   const distanceText = displayDistance(record)
   const sameCommunityCount = communityOrderCount(record)
-  const contact = workOrderListContact(record)
+  const contact = includeContact ? workOrderListContact(record) : undefined
 
   return {
     id,
@@ -372,12 +373,13 @@ function sanodeWorkOrderSummary(
   raw: unknown,
   statusLabels: ReadonlyMap<string, string>,
   partLabels: ReadonlyMap<string, string>,
+  includeContact = true,
 ): WorkOrderSummary {
   const node = asRecord(raw, 'workflow-node work-order summary')
   const data = nestedRecord(node, ['data'])
   if (!data) throw new AdapterMappingError('workflow-node work-order data is missing')
   return {
-    ...workOrderSummary(data, statusLabels, partLabels),
+    ...workOrderSummary(data, statusLabels, partLabels, includeContact),
     workflowNodes: [workflowNode(node)],
   }
 }
@@ -478,6 +480,7 @@ function workOrderDetail(
   requestedId: WorkOrderId,
   statusLabels: ReadonlyMap<string, string>,
   partLabels: ReadonlyMap<string, string>,
+  includeContact = true,
 ): WorkOrderDetail {
   const { record, workflow, workflowNodes: rawWorkflowNodes } = detailPayload(raw)
   const id = optionalOpaqueId<'WorkOrderId'>(record, ['id', '_id']) ?? requestedId
@@ -492,7 +495,7 @@ function workOrderDetail(
   const customerName = optionalString(record, ['name'])
   const serviceAddress = optionalString(record, ['address'])
   const distanceText = displayDistance(record)
-  const contact = workOrderContact(record)
+  const contact = includeContact ? workOrderContact(record) : undefined
   const workflowNodes = rawWorkflowNodes?.map(workflowNode)
   const catalogContext = quotationCatalogContext(record)
 
@@ -1294,12 +1297,53 @@ function readFailure<T>(error: unknown): OperationSnapshot<T> {
   return adapterFailure('network_retryable', unknownErrorMessage(error, 'API read transport failed'))
 }
 
+function ephemeralScopeFingerprint(value: string): string {
+  let hash = 2166136261
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index)
+    hash = Math.imul(hash, 16777619)
+  }
+  return (hash >>> 0).toString(16)
+}
+
 export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
+  private currentReadScope: string | null = null
+  private readonly listedWorkOrderIds = new Set<string>()
+
   constructor(
     private readonly transport: ApiReadTransport,
     private readonly workOrderScopeResolver?: WorkOrderListScopeResolver,
     private readonly options: TechnicianApiReadAdapterOptions = {},
   ) {}
+
+  private isProductionReadOnly(): boolean {
+    return isProductionReadOnlyTarget(
+      import.meta.env.VITE_XLINK_ENVIRONMENT,
+      import.meta.env.VITE_XLINK_API_BASE_URL,
+    )
+  }
+
+  private synchronizeProductionReadScope(): string | null {
+    const sessionRef = this.options.getSessionScope?.() ?? null
+    const nextScope = sessionRef ? ephemeralScopeFingerprint(sessionRef) : null
+    if (nextScope !== this.currentReadScope) {
+      this.currentReadScope = nextScope
+      this.listedWorkOrderIds.clear()
+    }
+    return nextScope
+  }
+
+  private rememberListedWorkOrders(
+    result: OperationSnapshot<ReadPage<WorkOrderSummary>>,
+    scopeAtStart: string | null,
+  ): void {
+    if (!this.isProductionReadOnly() || !scopeAtStart || this.synchronizeProductionReadScope() !== scopeAtStart
+      || result.state !== 'succeeded' || !result.data) return
+    for (const item of result.data.items) {
+      if (this.listedWorkOrderIds.size >= 100) break
+      this.listedWorkOrderIds.add(String(item.id))
+    }
+  }
 
   private async read<T>(
     request: ApiReadRequest | (() => Promise<ApiReadRequest>),
@@ -1339,8 +1383,9 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
   }
 
   async listWorkOrders(query: WorkOrderListQuery) {
+    const scopeAtStart = this.isProductionReadOnly() ? this.synchronizeProductionReadScope() : null
     if (!this.workOrderScopeResolver) {
-      return this.read<ReadPage<WorkOrderSummary>>(
+      const result = await this.read<ReadPage<WorkOrderSummary>>(
         {
           method: 'POST',
           path: 'basic/serviceAppointment/query',
@@ -1353,35 +1398,45 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
         async (raw) => {
           const statusLabels = await this.statusLabelsFor(raw)
           const partLabels = await this.partLabelsFor(servicePartCodesFromPage(raw))
-          return pageEnvelope(raw, (item) => workOrderSummary(item, statusLabels, partLabels))
+          return pageEnvelope(raw, (item) => workOrderSummary(item, statusLabels, partLabels, !this.isProductionReadOnly()))
         },
       )
+      this.rememberListedWorkOrders(result, scopeAtStart)
+      return result
     }
 
     try {
       const scope = await this.workOrderScopeResolver.resolve()
-      return await this.read<ReadPage<WorkOrderSummary>>(
+      const result = await this.read<ReadPage<WorkOrderSummary>>(
         buildWorkOrderListRequest(query, scope),
         async (raw) => {
           const statusLabels = await this.statusLabelsFor(raw)
           const partLabels = await this.partLabelsFor(servicePartCodesFromPage(raw))
           return pageEnvelope(raw, (item) =>
             scope.mode === 'workflow-node'
-              ? sanodeWorkOrderSummary(item, statusLabels, partLabels)
-              : workOrderSummary(item, statusLabels, partLabels),
+              ? sanodeWorkOrderSummary(item, statusLabels, partLabels, !this.isProductionReadOnly())
+              : workOrderSummary(item, statusLabels, partLabels, !this.isProductionReadOnly()),
           )
         },
       )
+      this.rememberListedWorkOrders(result, scopeAtStart)
+      return result
     } catch (error) {
       return readFailure<ReadPage<WorkOrderSummary>>(error)
     }
   }
 
   getWorkOrderDetail(id: WorkOrderId) {
-    const productionReadOnly = isProductionReadOnlyTarget(
-      import.meta.env.VITE_XLINK_ENVIRONMENT,
-      import.meta.env.VITE_XLINK_API_BASE_URL,
-    )
+    const productionReadOnly = this.isProductionReadOnly()
+    if (productionReadOnly) {
+      const scope = this.synchronizeProductionReadScope()
+      if (!this.options.getSessionScope || !scope || !this.listedWorkOrderIds.has(String(id))) {
+        return Promise.resolve(adapterFailure<WorkOrderDetail>(
+          'authorization_denied',
+          'Production Work Order detail requires an ID returned by the current session\'s role-scoped list',
+        ))
+      }
+    }
     return this.read<WorkOrderDetail>(
       {
         method: 'POST',
@@ -1393,7 +1448,8 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
       async (raw) => {
         const statusLabels = await this.detailStatusLabelsFor(raw)
         const partLabels = await this.partLabelsFor(servicePartCodesFromDetail(raw))
-        const detail = workOrderDetail(raw, id, statusLabels, partLabels)
+        const detail = workOrderDetail(raw, id, statusLabels, partLabels, !productionReadOnly)
+        if (productionReadOnly) return detail
         const activities = await this.readWorkOrderActivities(id)
         return activities.state === 'succeeded' && activities.data && activities.data.length > 0
           ? { ...detail, activities: activities.data }
@@ -1604,6 +1660,8 @@ export interface TechnicianApiReadAdapterOptions {
   readonly cascadeTenantId?: string
   /** Current authenticated tenant used by R1's batch dynamic code endpoint. */
   readonly codeTenantId?: string
+  /** Opaque authenticated session reference, used only to scope ephemeral read IDs in memory. */
+  readonly getSessionScope?: () => string | null
 }
 
 export function createTechnicianApiReadAdapter(

@@ -1,5 +1,6 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
+import { isProductionReadOnlyRuntime } from '@shared/config'
 
 import { detailWorkflowProjectionFor } from './detail-workflow'
 import {
@@ -365,7 +366,8 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
   const quotationExistingOrderId = ref<string | null>(null)
   let quotationOrderInFlight: Promise<QuotationOrderSubmissionSnapshot> | null = null
   const canSubmitQuotation = computed(() => Boolean(
-    descriptor.value?.contentKind === 'quotation'
+    !isProductionReadOnlyRuntime()
+      && descriptor.value?.contentKind === 'quotation'
       && descriptor.value.actionIntent === 'place_order'
       && descriptor.value.execution === 'enabled'
       && quotationEngine.result?.state === 'ready'
@@ -945,6 +947,10 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
 
   async function runQuotationOrderSubmission(): Promise<QuotationOrderSubmissionSnapshot> {
     if (quotationOrderInFlight) return quotationOrderInFlight
+    if (isProductionReadOnlyRuntime()) {
+      quotationOrderState.value = { state: 'failed_terminal', message: '生产环境仅开放报价只读查看；不会提交或修改订单。' }
+      return quotationOrderState.value
+    }
     const configured = dependencies
     const currentDescriptor = descriptor.value
     const currentIdentity = identity
@@ -1000,6 +1006,11 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
   }
 
   async function loadQuotationOrderForEdit(orderId: string): Promise<OperationSnapshot<void>> {
+    if (isProductionReadOnlyRuntime()) {
+      const message = '生产环境中的服务器报价只读，不能加载到可编辑草稿。'
+      quotationEditState.value = { state: 'blocked', message }
+      return failure('unsupported_capability', message)
+    }
     const configured = dependencies
     const currentDescriptor = descriptor.value
     if (!configured || !orderId.trim() || !currentDescriptor || currentDescriptor.contentKind !== 'quotation'
@@ -1066,6 +1077,10 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
   }
 
   async function retryQuotationOrderReadbackOnly(): Promise<QuotationOrderSubmissionSnapshot> {
+    if (isProductionReadOnlyRuntime()) {
+      quotationOrderState.value = { state: 'failed_terminal', message: '生产环境不执行报价提交回读流程。' }
+      return quotationOrderState.value
+    }
     const configured = dependencies
     const currentDescriptor = descriptor.value
     const currentIdentity = identity

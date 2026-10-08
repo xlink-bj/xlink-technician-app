@@ -34,7 +34,7 @@ describe('G4-F Phase 1I no-live-write review safety', () => {
     const workspace = await readFile(new URL('../../src/features/work-orders/action-workspace.ts', import.meta.url), 'utf8')
     const adapter = await readFile(new URL('../../src/adapters/api/quotation-order-commands.ts', import.meta.url), 'utf8')
     expect(page).toContain('<QuotationActionWorkspace')
-    expect(quotationWorkspace).toContain(':can-submit="workspace.canSubmitQuotation"')
+    expect(quotationWorkspace).toContain(':can-submit="!productionReadOnly && workspace.canSubmitQuotation"')
     expect(quotationWorkspace).toContain('data-testid="quotation-order-confirmation"')
     expect(quotationWorkspace).toContain('@tap="confirmQuotationSubmit"')
     expect(workspace).toContain('expectedDraftVersion: currentDraft.draftVersion')

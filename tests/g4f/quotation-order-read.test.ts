@@ -1,9 +1,142 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import { createQuotationOrderReadAdapter } from '@adapters/api/quotation-order-api'
 import type { ApiReadRequest, ApiReadTransport } from '@adapters/api/technician-api'
 
-describe('G4-F Phase 1I authoritative Order read adapter', () => {
+describe('G4-F Production quotation Order read adapter', () => {
+  it('does not issue an Order query without a valid role-listed Work Order identity', async () => {
+    const execute = vi.fn(async () => ({ data: [] }))
+    const result = await createQuotationOrderReadAdapter({ execute }).listTypeOneOrdersForWorkOrder('../unscoped')
+    expect(result.state).toBe('failed_terminal')
+    expect(execute).not.toHaveBeenCalled()
+  })
+
+  it('reads a bounded Work Order-scoped type=1 page and projects grouped SKU/SPU evidence without leaking the raw payload', async () => {
+    const requests: ApiReadRequest[] = []
+    const transport: ApiReadTransport = {
+      execute: async (request) => {
+        requests.push(request)
+        return {
+          data: [{
+            _id: 'order-synthetic-list',
+            type: 1,
+            serviceAppointmentId: 'work-order-synthetic',
+            orderNumber: 'Q-SYNTHETIC',
+            totalPrice: 125.5,
+            customerPhone: 'must-not-leak',
+            exts: { bjdPDFurl: 'https://synthetic.invalid/private.pdf' },
+            bjProducts: JSON.stringify({ orderList: [{
+              repairParts: ['roof-code-synthetic'],
+              partDescription: '合成屋面区域',
+              maintainAreaNum: '10',
+              projPackages: { data: [] },
+              procedures: { data: [] },
+              materials: { data: [{
+                materialId: 'material-reference-synthetic',
+                number: 2,
+                material: { name: '合成材料', skuId: 'sku-synthetic', spuid: 'spu-synthetic', skuCode: 'SKU-SYN', unit: '支' },
+              }] },
+              measures: { data: [] },
+            }] }),
+          }],
+        }
+      },
+    }
+
+    const result = await createQuotationOrderReadAdapter(transport).listTypeOneOrdersForWorkOrder('work-order-synthetic')
+    expect(requests).toEqual([{
+      method: 'POST',
+      path: 'basic/order/query',
+      body: {
+        _all: '1',
+        page: 1,
+        rows: 3,
+        sortField: 'createTime',
+        sortOrder: 'desc',
+        'is:serviceAppointmentId|string#and': 'work-order-synthetic',
+        'is:type|integer#and': 1,
+      },
+    }])
+    expect(result).toMatchObject({
+      state: 'succeeded',
+      data: {
+        items: [{
+          type: 1,
+          serviceAppointmentId: 'work-order-synthetic',
+          displayNumber: 'Q-SYNTHETIC',
+          totalPrice: 125.5,
+          pdfState: 'present_no_access',
+          groups: [{
+            partDescription: '合成屋面区域',
+            maintainAreaNum: '10',
+            lines: [{
+              kind: 'material',
+              label: '合成材料',
+              quantity: 2,
+              unit: '支',
+              identity: {
+                providerReferenceId: 'material-reference-synthetic',
+                skuId: 'sku-synthetic',
+                spuId: 'spu-synthetic',
+                skuCode: 'SKU-SYN',
+              },
+            }],
+          }],
+        }],
+      },
+    })
+    expect(JSON.stringify(result)).not.toContain('customerPhone')
+    expect(JSON.stringify(result)).not.toContain('must-not-leak')
+    expect(JSON.stringify(result)).not.toContain('private.pdf')
+  })
+
+  it('rejects a Work-Order-scoped quote response that exceeds the three-row bounded page', async () => {
+    const row = {
+      _id: 'order-synthetic', type: 1, serviceAppointmentId: 'work-order-synthetic',
+      bjProducts: { orderList: [] },
+    }
+    const result = await createQuotationOrderReadAdapter({
+      execute: async () => ({ data: [row, row, row, row] }),
+    }).listTypeOneOrdersForWorkOrder('work-order-synthetic')
+    expect(result.state).toBe('failed_terminal')
+  })
+
+  it('keeps incomplete grouped server Orders explicitly unsupported and never exposes PDF URLs or unrelated fields', async () => {
+    const result = await createQuotationOrderReadAdapter({
+      execute: async () => ({
+        data: [{
+          _id: 'order-synthetic',
+          type: 1,
+          serviceAppointmentId: 'work-order-synthetic',
+          ownerPhone: 'must-not-leak',
+          exts: { bjdPDFurl: 'https://synthetic.invalid/private.pdf' },
+          bjProducts: { orderList: [{
+            repairParts: ['roof-path-synthetic'],
+            partDescription: '合成维修部位',
+            projPackages: { data: [{ name: '合成但结构不完整的套餐' }] },
+          }] },
+        }],
+      }),
+    }).listTypeOneOrdersForWorkOrder('work-order-synthetic')
+
+    expect(result).toMatchObject({
+      state: 'succeeded',
+      data: {
+        items: [{
+          contentSupported: false,
+          pdfState: 'present_no_access',
+          groups: [{
+            contentSupported: false,
+            lines: [{ kind: 'package', contentSupported: false, children: [] }],
+          }],
+        }],
+      },
+    })
+    expect(JSON.stringify(result)).not.toContain('ownerPhone')
+    expect(JSON.stringify(result)).not.toContain('must-not-leak')
+    expect(JSON.stringify(result)).not.toContain('private.pdf')
+  })
+
   it('uses the verified queryById request and returns a sanitized replace snapshot', async () => {
     const requests: ApiReadRequest[] = []
     const transport: ApiReadTransport = {
