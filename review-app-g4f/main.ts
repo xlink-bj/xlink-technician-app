@@ -3,7 +3,7 @@ import { createSSRApp } from 'vue'
 import { createApplication } from '@app/bootstrap'
 import { setBusinessMockMode } from '@app/business-mock'
 import type { AuthSessionPort, QuotationCatalogReadPort, QuotationOrderCommandPort, QuotationOrderRead, QuotationOrderReadPort, SessionSnapshot, TechnicianApiReadPort } from '@shared/ports'
-import { asOpaqueId, type OperationSnapshot } from '@shared/types'
+import { asOpaqueId, createOperationError, type OperationSnapshot } from '@shared/types'
 import { createDefaultQuotationCatalogReadPort, createDefaultTechnicianApiReadPort } from '@app/composition'
 import App from './App.vue'
 import { mockQuotationWorkflowNodeId } from '@adapters/api/mock'
@@ -58,7 +58,7 @@ export function createApp() {
     },
   }) : baseApiRead
   const baseCatalog = createDefaultQuotationCatalogReadPort(authSession)
-  const catalog: QuotationCatalogReadPort = needsOrderReview ? {
+  const catalogBase: QuotationCatalogReadPort = needsOrderReview ? {
     listPackages: async (context) => baseCatalog.listPackages(context),
     getPackageDetail: async (packageId) => baseCatalog.getPackageDetail(packageId),
     listProcedures: async (context) => {
@@ -80,6 +80,20 @@ export function createApp() {
         : result
     },
   } : baseCatalog
+  const catalog: QuotationCatalogReadPort = scenario === 'catalog-empty'
+    ? {
+        ...catalogBase,
+        listPackages: async () => succeeded({ items: [], page: 1, pageSize: 20, totalCount: 0 }),
+      }
+    : scenario === 'catalog-error'
+      ? {
+          ...catalogBase,
+          listPackages: async () => ({
+            state: 'failed_retryable',
+            error: createOperationError('network_retryable', 'synthetic review-only catalog failure'),
+          }),
+        }
+      : catalogBase
   const syntheticOrder = (unsupported = false): QuotationOrderRead => ({
     id: 'order-synthetic-review', type: 1, serviceAppointmentId: 'mock-work-order-018-quotation-foundation',
     state: 1, processState: 0, discount: 1, preferentialAmount: 0, coupons: unsupported ? 'synthetic-coupon' : '',

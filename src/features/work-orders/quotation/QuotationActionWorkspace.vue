@@ -1,5 +1,7 @@
 <template>
   <ActionWorkspaceShell
+    class="quotation-workspace-shell"
+    :scroll-into-view="scrollIntoView"
     :customer-name="workspace.detail?.customerName"
     :display-number="workspace.detail?.displayNumber"
     :lifecycle="workspace.lifecycle"
@@ -9,8 +11,20 @@
     :submit-label="workspace.quotationOrderState.state === 'submitting' ? '提交中…' : '提交订单/报价方案'"
     @submit="quotationConfirmOpen = true"
   >
-    <QuotationActionContent :state="contentState" @retry="$emit('retry')" @back="$emit('back')" />
+    <QuotationActionContent :state="contentState" @retry="$emit('retry')" @back="$emit('back')" @return-to-group="returnToGroup" />
     <template #actions>
+      <view class="quotation-workspace-footer-summary" data-testid="quotation-footer-summary">
+        <view class="quotation-workspace-footer-summary__copy">
+          <text class="quotation-workspace-footer-summary__title">本机报价草稿</text>
+          <text class="quotation-workspace-footer-summary__meta">{{ composition.selectionCount }} 项 · {{ composition.groups.length }} 个部位组</text>
+        </view>
+        <view class="quotation-workspace-footer-summary__amount">
+          <text class="quotation-workspace-footer-summary__amount-label">{{ verifiedPricing ? '本机金额预览' : '金额状态' }}</text>
+          <text class="quotation-workspace-footer-summary__amount-value">
+            {{ verifiedPricing ? `¥${verifiedPricing.calcTotalPrice.totalPrice.toFixed(2)}` : '待核验' }}
+          </text>
+        </view>
+      </view>
       <AppStatus
         v-if="productionReadOnly"
         class="quotation-production-read-only"
@@ -43,9 +57,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, nextTick, ref } from 'vue'
 import { isProductionReadOnlyRuntime } from '@shared/config'
 import { useActionWorkspaceStore } from '../action-workspace'
+import { useQuotationCompositionStore } from './composition-store'
 import ActionWorkspaceShell from '@shared/ui/ActionWorkspaceShell.vue'
 import AppButton from '@shared/ui/AppButton.vue'
 import AppStatus from '@shared/ui/AppStatus.vue'
@@ -55,8 +70,20 @@ defineProps<{ readonly contentState: 'loading' | 'ready' | 'blocked' | 'failed_r
 defineEmits<{ (event: 'retry'): void; (event: 'back'): void }>()
 
 const workspace = useActionWorkspaceStore()
+const composition = useQuotationCompositionStore()
+const verifiedPricing = computed(() => {
+  const result = workspace.quotationEngine.result
+  return result && result.draftVersion === composition.draft?.draftVersion ? result.pricing : undefined
+})
 const productionReadOnly = isProductionReadOnlyRuntime()
 const quotationConfirmOpen = ref(false)
+const scrollIntoView = ref('')
+
+async function returnToGroup(groupId: string): Promise<void> {
+  scrollIntoView.value = ''
+  await nextTick()
+  scrollIntoView.value = `quotation-repair-group-${groupId}`
+}
 
 async function confirmQuotationSubmit(): Promise<void> {
   if (productionReadOnly) return
@@ -71,4 +98,14 @@ async function confirmQuotationSubmit(): Promise<void> {
 .quotation-confirm-title { color: var(--app-color-text-primary); display: block; font-size: var(--app-font-section-title); font-weight: 800; }
 .quotation-confirm-actions { display: flex; gap: var(--app-space-sm); justify-content: flex-end; margin-top: var(--app-space-lg); }
 .quotation-production-read-only { display: block; }
+.quotation-workspace-footer-summary { align-items: center; display: flex; justify-content: space-between; margin-bottom: var(--app-space-sm); }
+.quotation-workspace-footer-summary__copy { display: flex; flex-direction: column; min-width: 0; }
+.quotation-workspace-footer-summary__title { color: var(--app-color-text-primary); font-size: var(--app-font-meta); font-weight: 800; }
+.quotation-workspace-footer-summary__meta { color: var(--app-color-text-secondary); font-size: 10px; margin-top: 2rpx; }
+.quotation-workspace-footer-summary__amount { align-items: flex-end; display: flex; flex-direction: column; flex-shrink: 0; margin-left: var(--app-space-sm); }
+.quotation-workspace-footer-summary__amount-label { color: var(--app-color-text-secondary); font-size: 10px; }
+.quotation-workspace-footer-summary__amount-value { color: var(--app-color-text-primary); font-size: var(--app-font-field-label); font-weight: 800; margin-top: 2rpx; }
+/* #ifdef H5 */
+.quotation-workspace-shell.action-workspace-page { height: calc(100vh - 44px); min-height: 0; }
+/* #endif */
 </style>

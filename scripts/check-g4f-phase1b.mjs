@@ -8,7 +8,7 @@ const root = resolve(fileURLToPath(new URL('..', import.meta.url)))
 const read = (path) => readFile(resolve(root, path), 'utf8')
 const fail = (message) => { throw new Error(`G4-F quotation composition boundary check failed: ${message}`) }
 
-const [pages, workspace, component, model, codec, catalog, catalogBrowser, compositionStore, packageConfiguration, genericForm, commandPort, reviewMain, reviewScenarios, reviewPage, playwrightConfig, viteConfig, browserTests, unitTests, packageConfigurationTests, packageSource, engine, validation, hydration, pricing, orderEncoder, engineTests, verificationDoc] = await Promise.all([
+const [pages, workspace, component, model, codec, catalog, catalogBrowser, compositionStore, packageConfiguration, genericForm, commandPort, reviewMain, reviewScenarios, reviewPage, playwrightConfig, viteConfig, browserTests, uxBrowserTests, unitTests, packageConfigurationTests, packageSource, engine, validation, hydration, pricing, orderEncoder, engineTests, verificationDoc] = await Promise.all([
   read('src/pages.json'),
   read('src/features/work-orders/action-workspace.ts'),
   read('src/features/work-orders/quotation/QuotationActionContent.vue'),
@@ -26,6 +26,7 @@ const [pages, workspace, component, model, codec, catalog, catalogBrowser, compo
   read('playwright.uni-h5-g4f-review.config.ts'),
   read('vite.uni-h5-g4f-review.config.ts'),
   read('tests/h5-review/g4f-quotation-phase1b.spec.ts'),
+  read('tests/h5-review/g4f-quotation-ux-b0.spec.ts'),
   read('tests/g4f/quotation-composition.test.ts'),
   read('tests/g4f/package-configuration.test.ts'),
   read('package.json'),
@@ -64,7 +65,7 @@ if (!catalog.includes('synthetic-package-basic') || !catalog.includes('synthetic
 }
 if (genericForm.includes('quotationDraft') || genericForm.includes('QuotationLine')) fail('quotation semantics must not leak into generic Dynamic Form Runtime')
 if (/createQuotation|updateQuotation|sendQuotation|convertQuotation/.test(commandPort)) fail('quotation mutation APIs remain out of scope')
-if (!component.includes('服务方案 / 报价明细') || !component.includes('quotation-draft-empty') || !component.includes('quotation-catalog-sheet')) {
+if (!component.includes('按维修部位组织方案') || !component.includes('quotation-draft-empty') || !component.includes('quotation-catalog-page')) {
   fail('quotation-owned composition and catalog browser UI must be present')
 }
 const buttonContents = [...component.matchAll(/<AppButton\b[^>]*>([\s\S]*?)<\/AppButton>/g)].map((match) => match[1])
@@ -82,7 +83,7 @@ if (!component.includes('quotation-add-group') || !component.includes('quotation
 if (component.includes('composition.addCatalogItem') || !component.includes('workspace.addQuotationCatalogSelection') || !component.includes('加入当前组')) {
   fail('direct catalog selection must pass through the Action Workspace bridge')
 }
-if (!component.includes("item.kind === 'package'") || !component.includes('配置套餐') || !component.includes('quotation-package-configure-commit')) {
+if (!component.includes("item.kind === 'package'") || !component.includes('配置服务方案') || !component.includes('quotation-package-configure-commit')) {
   fail('Package must use its distinct material-configuration UX, not the generic direct-selection action')
 }
 if (!workspace.includes('quotationCatalogBrowser.selectedCatalogItemFor(kind, catalogId)') || !workspace.includes('isDirectQuotationCatalogKind(kind)')) {
@@ -91,7 +92,7 @@ if (!workspace.includes('quotationCatalogBrowser.selectedCatalogItemFor(kind, ca
 if (!catalogBrowser.includes('function selectedCatalogItemFor') || !catalogBrowser.includes("catalogStatesByKind.value[kind] !== 'succeeded'")) {
   fail('selection candidates must be resolved from a successful current catalog result')
 }
-if (!catalog.includes('synthetic-package-basic') || !component.includes('目标：')) {
+if (!catalog.includes('synthetic-package-basic') || !component.includes('添加到当前维修部位')) {
   fail('catalog selection must remain scoped to an explicitly opened repair-part group')
 }
 if (!workspace.includes('quotationComposition.addCatalogReadItem(groupId, source)')) {
@@ -131,7 +132,7 @@ for (const method of ['listPackages', 'listProcedures', 'listMaterials', 'listMe
 if (!reviewMain.includes('setBusinessMockMode(\'data\')') || !reviewMain.includes('createG4fReviewStorage')) {
   fail('H5 review entry must use deterministic local Mock and review-only storage')
 }
-if (!reviewScenarios.includes("'empty'") || !reviewScenarios.includes("'populated'") || !reviewScenarios.includes("'restored'") || !reviewScenarios.includes("'invalid'")) {
+if (!reviewScenarios.includes("'empty'") || !reviewScenarios.includes("'populated'") || !reviewScenarios.includes("'restored'") || !reviewScenarios.includes("'invalid'") || !reviewScenarios.includes("'catalog-empty'") || !reviewScenarios.includes("'catalog-error'")) {
   fail('review harness must model fresh, composed, restored, and malformed scenarios')
 }
 if (!reviewPage.includes('H5_VISUAL_PROXY') || !reviewPage.includes('MOCK_PRODUCT_REVIEW')) {
@@ -142,6 +143,9 @@ if (!playwrightConfig.includes('http://127.0.0.1:5175') || !viteConfig.includes(
 }
 if (!browserTests.includes('01-empty-draft.png') || !browserTests.includes('02-grouped-draft-direct-selections.png') || !browserTests.includes('03-catalog-detail-readonly.png') || !browserTests.includes('externalRequests') || !browserTests.includes('quotation-catalog-add-') || !browserTests.includes('quotation-package-configure-commit')) {
   fail('Playwright must prove direct selection, configured Package UX, and network safety')
+}
+for (const token of ['01-quotation-workbench.png', '02-visual-catalog.png', '03-package-configuration.png', '04-workbench-after-selection.png', '05-compact-two-group-quote.png', 'catalog-empty', 'catalog-error', 'externalRequests', 'same-group review']) {
+  if (!uxBrowserTests.includes(token)) fail(`Phase B0 visual/runtime regression coverage missing: ${token}`)
 }
 for (const token of ['autosaves grouped state only', 'restores the local quotation draft', 'different %s identity', 'malformed or incompatible', 'legacy flat v1 drafts']) {
   if (!unitTests.includes(token)) fail(`unit coverage missing: ${token}`)

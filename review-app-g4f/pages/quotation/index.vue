@@ -58,6 +58,8 @@ const routeOrderId = typeof window === 'undefined' ? null : new URLSearchParams(
 const reviewScenarios = [
   { id: 'empty', label: '空草稿' },
   { id: 'catalog', label: '目录浏览' },
+  { id: 'catalog-empty', label: '目录空状态' },
+  { id: 'catalog-error', label: '目录可重试失败' },
   { id: 'populated', label: '组合草稿' },
   { id: 'restored', label: '恢复草稿' },
   { id: 'invalid', label: '异常草稿' },
@@ -67,7 +69,6 @@ const reviewScenarios = [
   { id: 'edit', label: '现有订单编辑' },
   { id: 'unsupported-edit', label: '不支持订单只读' },
 ] as const
-let initialCatalogOpened = false
 const quotationContentViewState = computed(() => workspace.quotationContentState === 'idle'
   ? 'loading'
   : workspace.quotationContentState)
@@ -85,18 +86,6 @@ watch(
         await workspace.loadQuotationOrderForEdit(routeOrderId)
       }
     })
-  },
-  { immediate: true },
-)
-
-watch(
-  () => [workspace.loadState, workspace.quotationComposition.localState] as const,
-  ([loadState, localState]) => {
-    if (!initialCatalogOpened && scenario === 'catalog' && loadState === 'succeeded' && localState === 'fresh') {
-      initialCatalogOpened = true
-      const group = workspace.quotationComposition.createGroup({ repairParts: ['repair-part-code-001'] })
-      if (group.state === 'succeeded' && group.data) workspace.quotationCatalogBrowser.open('package')
-    }
   },
   { immediate: true },
 )

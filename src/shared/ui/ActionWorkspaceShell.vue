@@ -1,6 +1,6 @@
 <template>
   <view class="action-workspace-page" data-testid="action-workspace-shell">
-    <scroll-view class="action-workspace-scroll" scroll-y enable-flex>
+    <scroll-view class="action-workspace-scroll" scroll-y enable-flex :scroll-into-view="scrollIntoView">
       <view class="action-workspace-body">
         <view class="action-workspace-context app-surface app-surface--compact" data-testid="action-workspace-context">
           <text class="action-workspace-context-label">当前工单</text>
@@ -103,6 +103,7 @@ const props = defineProps<{
   readonly transitioning?: boolean
   readonly canSubmit: boolean
   readonly submitLabel: string
+  readonly scrollIntoView?: string
   readonly businessFeedback?: string
 }>()
 

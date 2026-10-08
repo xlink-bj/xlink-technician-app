@@ -43,9 +43,21 @@ async function installSafetyGuards(page: Page) {
 async function openScenario(page: Page, scenario: string): Promise<void> {
   await page.goto(`/?scenario=${scenario}`, { waitUntil: 'domcontentloaded' })
   await expect(page.getByTestId('g4f-quotation-workspace')).toBeVisible()
+  if (scenario === 'catalog' || scenario === 'catalog-empty' || scenario === 'catalog-error') {
+    await expect(page.getByTestId('quotation-state-ready')).toBeVisible()
+    await page.getByTestId('quotation-add-group').click()
+    await page.getByText('屋面', { exact: true }).click()
+    await page.getByTestId('quotation-group-description-quotation-group-1').locator('textarea').fill('屋面檐口修复')
+    await page.getByTestId('quotation-group-quantity-quotation-group-1').locator('input').fill('18')
+    await page.getByTestId('quotation-browse-quotation-group-1-package').click()
+    await expect(page.getByTestId('quotation-catalog-page')).toBeVisible()
+    await expect(page.getByTestId('quotation-catalog-browser')).toBeVisible()
+    await expect(page.getByTestId('quotation-catalog-target')).toContainText('屋面檐口修复')
+    return
+  }
   await expect(page.getByTestId('quotation-state-ready')).toBeVisible()
-  await expect(page.getByText('报价方案', { exact: true })).toBeVisible()
-  await expect(page.getByText('服务方案 / 报价明细')).toBeVisible()
+  await expect(page.getByTestId('quotation-workbench-heading')).toContainText('按维修部位组织方案')
+  await expect(page.getByText('报价组成', { exact: true })).toBeVisible()
 }
 
 async function openPackageConfigurationFromEditableGroup(page: Page): Promise<void> {
@@ -53,7 +65,7 @@ async function openPackageConfigurationFromEditableGroup(page: Page): Promise<vo
   await page.getByTestId('quotation-add-group').click()
   await page.getByText('屋面', { exact: true }).click()
   await page.getByTestId('quotation-browse-quotation-group-1-package').click()
-  await expect(page.getByTestId('quotation-catalog-sheet')).toBeVisible()
+  await expect(page.getByTestId('quotation-catalog-page')).toBeVisible()
   await page.getByTestId('quotation-package-detail-mock-catalog-package-basic').click()
   await expect(page.getByTestId('quotation-package-detail')).toBeVisible()
 }
@@ -89,7 +101,7 @@ test('Phase 1F browses all catalog kinds and explicitly adds only direct selecti
   let selectionCount = 0
   for (const kind of ['package', 'procedure', 'material', 'measure'] as const) {
     await page.getByTestId(`quotation-browse-${groupId}-${kind}`).click()
-    await expect(page.getByTestId('quotation-catalog-sheet')).toBeVisible()
+    await expect(page.getByTestId('quotation-catalog-page')).toBeVisible()
     await page.getByTestId(`quotation-catalog-kind-${kind}`).click()
     const labels = {
       package: 'Mock 服务方案 A',
@@ -114,7 +126,7 @@ test('Phase 1F browses all catalog kinds and explicitly adds only direct selecti
     await expect(page.getByTestId(`quotation-catalog-add-${kind}-${itemId}`)).toBeEnabled()
     await page.getByTestId(`quotation-catalog-add-${kind}-${itemId}`).click()
     selectionCount += 1
-    await expect(page.getByTestId('quotation-catalog-sheet')).toHaveCount(0)
+    await expect(page.getByTestId('quotation-catalog-page')).toHaveCount(0)
     await expect(page.getByTestId('quotation-composition-selection')).toHaveCount(selectionCount)
     await expect(page.getByTestId(`quotation-group-section-${groupId}-${kind}`)).toContainText(labels[kind])
   }
@@ -159,7 +171,7 @@ test('Phase 1E package detail displays only observed child data grouped by suppl
   const diagnostics = await installSafetyGuards(page)
   await mkdir(output, { recursive: true })
   await openScenario(page, 'catalog')
-  await expect(page.getByTestId('quotation-catalog-sheet')).toBeVisible()
+  await expect(page.getByTestId('quotation-catalog-page')).toBeVisible()
   await expect(page.getByTestId('quotation-catalog-kind-package')).toBeVisible()
   await expect(page.getByTestId('quotation-catalog-item-package-mock-catalog-package-basic')).toContainText('Mock 服务方案 A')
   await page.getByTestId('quotation-package-detail-mock-catalog-package-basic').click()
@@ -167,7 +179,7 @@ test('Phase 1E package detail displays only observed child data grouped by suppl
   await expect(page.getByTestId('quotation-material-layer-string:mock-layer-1')).toContainText('Mock 材料 A')
   await expect(page.getByTestId('quotation-composition-selection')).toHaveCount(0)
   await expect(page.getByText(/价格|单价|小计|总价|¥|￥/)).toHaveCount(0)
-  await page.getByTestId('quotation-catalog-sheet').screenshot({ path: resolve(output, '03-catalog-detail-readonly.png'), animations: 'disabled' })
+  await page.getByTestId('quotation-catalog-page').screenshot({ path: resolve(output, '03-catalog-detail-readonly.png'), animations: 'disabled' })
   await expectSafe(page, diagnostics)
 })
 
@@ -191,7 +203,7 @@ test('Phase 1G configures a Package locally after exactly one Material is chosen
   await expect(page.getByTestId('action-workspace-submit')).toHaveAttribute('disabled', 'true')
 
   await commit.click()
-  await expect(page.getByTestId('quotation-catalog-sheet')).toHaveCount(0)
+  await expect(page.getByTestId('quotation-catalog-page')).toHaveCount(0)
   const configured = page.getByTestId('quotation-configured-package-quotation-selection-1')
   await expect(page.getByText('Mock 服务方案 A', { exact: true })).toBeVisible()
   await expect(configured).toContainText('Mock 施工工序 A')

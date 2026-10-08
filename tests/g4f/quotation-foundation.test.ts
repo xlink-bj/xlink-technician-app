@@ -364,8 +364,9 @@ describe('G4-F Phase 1A quotation action foundation', () => {
       readFile(new URL('../../src/pages/work-orders/action-workspace.vue', import.meta.url), 'utf8'),
       readFile(new URL('../../src/features/work-orders/quotation/QuotationActionWorkspace.vue', import.meta.url), 'utf8'),
     ])
-    expect(component).toContain('仅本机草稿')
-    expect(component).toContain('服务方案 / 报价明细')
+    expect(component).toContain('本机草稿')
+    expect(component).toContain('按维修部位组织方案')
+    expect(component).toContain('不会创建服务器报价')
     expect(component).not.toContain('MOCK_PRODUCT_REVIEW')
     expect(component).not.toContain('H5_VISUAL_PROXY')
     expect(commandPort).toContain('interface QuotationOrderCommandPort')

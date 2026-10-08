@@ -5,7 +5,7 @@ import { asOpaqueId, type OperationSnapshot } from '@shared/types'
 import { quotationDraftRecordFor } from '@features/work-orders/quotation/draft-codec'
 import type { QuotationDraft } from '@features/work-orders/quotation/model'
 
-export type G4fReviewScenario = 'empty' | 'populated' | 'restored' | 'catalog' | 'invalid' | 'legacy' | 'submit-ready' | 'readback-pending' | 'edit' | 'unsupported-edit'
+export type G4fReviewScenario = 'empty' | 'populated' | 'restored' | 'catalog' | 'catalog-empty' | 'catalog-error' | 'invalid' | 'legacy' | 'submit-ready' | 'readback-pending' | 'edit' | 'unsupported-edit'
 
 function succeeded<T>(data: T): OperationSnapshot<T> {
   return { state: 'succeeded', data }
@@ -14,7 +14,7 @@ function succeeded<T>(data: T): OperationSnapshot<T> {
 export function reviewScenarioFromLocation(): G4fReviewScenario {
   if (typeof window === 'undefined') return 'empty'
   const value = new URLSearchParams(window.location.search).get('scenario')
-  return ['populated', 'restored', 'catalog', 'invalid', 'legacy', 'submit-ready', 'readback-pending', 'edit', 'unsupported-edit'].includes(value ?? '')
+  return ['populated', 'restored', 'catalog', 'catalog-empty', 'catalog-error', 'invalid', 'legacy', 'submit-ready', 'readback-pending', 'edit', 'unsupported-edit'].includes(value ?? '')
     ? value as G4fReviewScenario
     : 'empty'
 }
