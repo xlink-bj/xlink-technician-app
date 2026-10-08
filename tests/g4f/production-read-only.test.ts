@@ -2,6 +2,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { createUniApiCommandTransport, type UniApiCommandRequestExecutor } from '@adapters/api/uni-api-command-transport'
 import { createUniApiReadTransport } from '@adapters/api/uni-api-read-transport'
+import {
+  createRoleScopedTechnicianApiReadAdapter,
+  createTechnicianApiReadAdapter,
+} from '@adapters/api/technician-api'
 import { createSurveyLeakageCauseProvider } from '@adapters/api/survey-leakage-cause'
 import { resetBusinessMockCache, setBusinessMockMode } from '@adapters/api/mock'
 import { createUniAuthBackendDriver } from '@adapters/auth/uni-auth-backend'
@@ -32,6 +36,148 @@ describe('Production read-only profile', () => {
       data: [{ part: 'roof', id: 'cause-a', label: 'synthetic cause' }],
     })
     expect(request).toHaveBeenCalledTimes(1)
+  })
+
+  it('allows the source-verified role tree read and bounded Work Order list reads', async () => {
+    vi.stubEnv('VITE_XLINK_ENVIRONMENT', 'prod')
+    const request = vi.fn((options: UniNamespace.RequestOptions) => {
+      options.success?.({ statusCode: 200, data: { success: true, data: { functionList: [] } } } as never)
+    })
+    const transport = createUniApiReadTransport({
+      apiBaseUrl: 'https://production.invalid',
+      getSessionRef: () => 'production-session' as never,
+      request,
+    })
+
+    await expect(transport.execute({
+      method: 'POST',
+      path: 'function/queryTreeByRoleId',
+      query: { roleId: 'synthetic-role-id' },
+    })).resolves.toMatchObject({ success: true })
+
+    for (const path of ['basic/serviceAppointment/query', 'basic/serviceAppointment/querySAWorkflowNode']) {
+      await expect(transport.execute({
+        method: 'POST',
+        path,
+        body: {
+          page: 1,
+          rows: 20,
+          sortField: 'updateTime',
+          sortOrder: 'desc',
+          'is:state|integer#and': 1,
+          orderState: 'todo',
+          'in:status|array#and': 'active',
+          'regex:name|string#or': 'synthetic search',
+        },
+      })).resolves.toMatchObject({ success: true })
+    }
+
+    expect(request).toHaveBeenCalledTimes(3)
+  })
+
+  it('uses the read-only role tree route for Production Work Order list scope', async () => {
+    vi.stubEnv('VITE_XLINK_ENVIRONMENT', 'prod')
+    const requests: UniNamespace.RequestOptions[] = []
+    const request = vi.fn((options: UniNamespace.RequestOptions) => {
+      requests.push(options)
+      const url = String(options.url)
+      const data = url.includes('function/queryTreeByRoleId')
+        ? {
+            data: {
+              functionList: [{
+                order: 1,
+                exts: { tabDisplay: '1' },
+                action: '/pages/serviceAppointment/serviceAppointments?type=SANode&orderState=ready',
+              }],
+            },
+          }
+        : { data: [], page: 1, rows: 20, total: 0 }
+      options.success?.({ statusCode: 200, data } as never)
+    })
+    const transport = createUniApiReadTransport({
+      apiBaseUrl: 'https://production.invalid',
+      getSessionRef: () => 'production-session' as never,
+      request,
+    })
+    const api = createRoleScopedTechnicianApiReadAdapter(transport, () => asOpaqueId<'RoleId'>('synthetic-role'))
+
+    await expect(api.listWorkOrders({ page: 1, pageSize: 20 })).resolves.toMatchObject({ state: 'succeeded' })
+
+    expect(requests.map((item) => new URL(String(item.url)).pathname)).toEqual([
+      '/function/queryTreeByRoleId',
+      '/basic/serviceAppointment/querySAWorkflowNode',
+    ])
+    expect(String(requests[0]?.url)).toContain('roleId=synthetic-role')
+    expect(String(requests[1]?.data)).toContain('orderState=ready')
+  })
+
+  it('allows a bounded Work Order detail read only without the legacy permission-bypass flag', async () => {
+    vi.stubEnv('VITE_XLINK_ENVIRONMENT', 'prod')
+    const request = vi.fn((options: UniNamespace.RequestOptions) => {
+      options.success?.({ statusCode: 200, data: { success: true } } as never)
+    })
+    const transport = createUniApiReadTransport({
+      apiBaseUrl: 'https://production.invalid',
+      getSessionRef: () => 'production-session' as never,
+      request,
+    })
+
+    await expect(transport.execute({
+      method: 'POST',
+      path: 'basic/serviceAppointment/queryById/synthetic-work-order',
+      body: {},
+    })).resolves.toMatchObject({ success: true })
+    await expect(transport.execute({
+      method: 'POST',
+      path: 'basic/serviceAppointment/queryById/synthetic-work-order',
+      body: { type: 'query' },
+    })).rejects.toMatchObject({ category: 'unsupported_capability' })
+
+    expect(request).toHaveBeenCalledTimes(1)
+  })
+
+  it('omits the permission-bypass flag from Production detail requests created by the adapter', async () => {
+    vi.stubEnv('VITE_XLINK_ENVIRONMENT', 'prod')
+    const execute = vi.fn(async () => {
+      throw new Error('synthetic stop after request capture')
+    })
+    const api = createTechnicianApiReadAdapter({ execute })
+
+    await api.getWorkOrderDetail(asOpaqueId<'WorkOrderId'>('synthetic-work-order'))
+
+    expect(execute).toHaveBeenCalledTimes(1)
+    expect(execute).toHaveBeenCalledWith({
+      method: 'POST',
+      path: 'basic/serviceAppointment/queryById/synthetic-work-order',
+      body: {},
+    })
+  })
+
+  it('rejects oversized/unscoped Production Work Order list reads and malformed detail identities', async () => {
+    vi.stubEnv('VITE_XLINK_ENVIRONMENT', 'prod')
+    const request = vi.fn()
+    const transport = createUniApiReadTransport({
+      apiBaseUrl: 'https://production.invalid',
+      getSessionRef: () => 'production-session' as never,
+      request,
+    })
+    const body = {
+      page: 1,
+      rows: 1000,
+      sortField: 'updateTime',
+      sortOrder: 'desc',
+      'is:state|integer#and': 1,
+      notFilterOrgId: '1',
+    }
+
+    await expect(transport.execute({ method: 'POST', path: 'basic/serviceAppointment/querySAWorkflowNode', body }))
+      .rejects.toMatchObject({ category: 'unsupported_capability' })
+    await expect(transport.execute({
+      method: 'POST',
+      path: 'basic/serviceAppointment/queryById/../account',
+      body: {},
+    })).rejects.toMatchObject({ category: 'unsupported_capability' })
+    expect(request).not.toHaveBeenCalled()
   })
 
   it.each([
@@ -136,16 +282,28 @@ describe('Production read-only profile', () => {
     expect(providerUpload).not.toHaveBeenCalled()
   })
 
-  it('blocks production phone login before dispatch because the backend persists account permission context', async () => {
+  it('allows the explicitly authorized Production phone login but no business command', async () => {
     vi.stubEnv('VITE_XLINK_ENVIRONMENT', 'prod')
-    const request = vi.fn()
+    const request = vi.fn((options: UniNamespace.RequestOptions) => {
+      options.success?.({ statusCode: 200, data: { success: true, data: { token: 'synthetic-session' } } } as never)
+    })
     const auth = createUniAuthBackendDriver({ apiBaseUrl: 'https://production.invalid', request })
 
     await expect(auth.login({
       path: 'index/phoneLogin.do',
       body: { method: '1', phone: 'synthetic-phone', code: 'synthetic-code', tenant: 'synthetic-tenant' },
-    })).rejects.toThrow(/Production login is disabled/)
-    expect(request).not.toHaveBeenCalled()
+    })).resolves.toMatchObject({ success: true })
+    expect(request).toHaveBeenCalledTimes(1)
+    expect(request.mock.calls[0]?.[0]).toMatchObject({
+      url: 'https://production.invalid/index/phoneLogin.do',
+      method: 'POST',
+      data: {
+        method: '1',
+        phone: 'synthetic-phone',
+        code: 'synthetic-code',
+        tenantId: 'synthetic-tenant',
+      },
+    })
   })
 
   it('treats the canonical Production API host as read-only even when the environment is mislabeled', async () => {
