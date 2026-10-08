@@ -1,4 +1,9 @@
 import type { SessionRef } from '@shared/types'
+import {
+  isProductionReadOnlyReadAllowed,
+  isProductionReadOnlyTarget,
+  isProductionRoleMutationPath,
+} from '@shared/config'
 
 import {
   ApiReadTransportError,
@@ -76,6 +81,27 @@ export function createUniApiReadTransport(options: UniApiReadTransportOptions): 
 
   return {
     async execute(input: ApiReadRequest): Promise<unknown> {
+      const productionReadOnly = isProductionReadOnlyTarget(
+        import.meta.env.VITE_XLINK_ENVIRONMENT,
+        options.apiBaseUrl,
+      )
+
+      if (productionReadOnly && isProductionRoleMutationPath(input.path)) {
+        // The backend persists Account.permissionRoleId when a single role is
+        // selected. It is therefore not a read-only operation in Production.
+        throw new ApiReadTransportError(
+          'Production read-only mode blocks the persistent role-selection endpoint',
+          'unsupported_capability',
+        )
+      }
+
+      if (productionReadOnly && !isProductionReadOnlyReadAllowed(input)) {
+        throw new ApiReadTransportError(
+          'Production read-only mode blocks API reads without a verified safe route contract',
+          'unsupported_capability',
+        )
+      }
+
       const sessionRef = options.getSessionRef()
       if (!sessionRef) {
         throw new ApiReadTransportError('Authenticated session is required for API reads', 'session_invalid')

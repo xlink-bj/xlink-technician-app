@@ -177,6 +177,21 @@ export function quotationOrderEditBlockers(order: QuotationOrderRead): readonly 
       for (const item of entries) {
         const material = record(item.material)
         const exts = record(item.exts)
+        const packageMaterials = Array.isArray(item.materialList)
+          ? item.materialList.map(record).filter((component): component is Record<string, unknown> => component !== null)
+          : []
+        const packageMaterialHasSkuCode = packageMaterials.some((component) => {
+          const componentExts = record(record(component.material)?.exts)
+          return Boolean(text(component.skuCode) || text(component.spuCode) || text(componentExts?.skuCode) || text(componentExts?.spuCode))
+        })
+        const hasSkuComposition = Boolean(
+          text(item.skuCode)
+          || text(item.spuCode)
+          || text(exts?.skuCode)
+          || text(exts?.spuCode)
+          || packageMaterialHasSkuCode,
+        )
+        if (hasSkuComposition) blockers.push('订单包含当前编辑器不能无损保留的 SKU/SPU 编码或套餐材料配置。')
         if (text(material?.spuid) || text(item.spuid) || text(material?.spuId) || text(item.spuId) || Array.isArray(item.skus)) blockers.push('订单包含未支持的 SPU/SKU 材料。')
         if (exts?.pricingMethod === '1') blockers.push('订单包含未支持的 SKU 套餐。')
       }

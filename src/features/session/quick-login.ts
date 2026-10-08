@@ -18,7 +18,11 @@ function optionalString(input: RuntimeInput, key: string): string | undefined {
  * not provide a fallback phone number.
  */
 export function resolveQuickLoginInput(
-  input: RuntimeInput = import.meta.env,
+  input: RuntimeInput = {
+    VITE_XLINK_ENVIRONMENT: import.meta.env.VITE_XLINK_ENVIRONMENT,
+    VITE_XLINK_QUICK_LOGIN_PHONE: import.meta.env.VITE_XLINK_QUICK_LOGIN_PHONE,
+    VITE_XLINK_QUICK_LOGIN_CODE: import.meta.env.VITE_XLINK_QUICK_LOGIN_CODE,
+  },
 ): QuickLoginInput | null {
   const environment = optionalString(input, 'VITE_XLINK_ENVIRONMENT')
   if (!environment || environment === 'prod') return null

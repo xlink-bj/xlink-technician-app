@@ -90,7 +90,7 @@ export class ApiReadTransportError extends Error {
     message: string,
     readonly category: Extract<
       ErrorCategory,
-      'session_invalid' | 'authorization_denied' | 'network_retryable' | 'server_terminal'
+      'session_invalid' | 'authorization_denied' | 'unsupported_capability' | 'network_retryable' | 'server_terminal'
     >,
   ) {
     super(message)

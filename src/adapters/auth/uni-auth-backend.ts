@@ -1,5 +1,6 @@
 import type { AuthBackendDriver, AuthBackendLoginRequest } from './auth-session-adapter'
 import { AuthTransportError } from './auth-session-adapter'
+import { isProductionReadOnlyTarget } from '@shared/config'
 
 export type UniRequestExecutor = (options: UniNamespace.RequestOptions) => unknown
 
@@ -53,6 +54,13 @@ export function createUniAuthBackendDriver(options: UniAuthBackendOptions): Auth
   const request = options.request ?? defaultRequest
 
   const login = async (input: AuthBackendLoginRequest): Promise<unknown> => {
+    if (isProductionReadOnlyTarget(import.meta.env.VITE_XLINK_ENVIRONMENT, options.apiBaseUrl)) {
+      throw new AuthTransportError(
+        'Production login is disabled because the backend login path persists account permission context',
+        false,
+      )
+    }
+
     let response: UniNamespace.RequestSuccessCallbackResult
     try {
       response = await requestResponse(request, {

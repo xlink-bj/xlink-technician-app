@@ -6,6 +6,7 @@
   "packageManager": "pnpm@10.31.0",
   "scripts": {
     "dev:mp-weixin": "uni -p mp-weixin",
+    "dev:mp-weixin:prod-readonly": "uni -p mp-weixin --mode prod",
     "dev:h5-review": "vite --config vite.review.config.ts",
     "build:h5-review": "vite build --config vite.review.config.ts --outDir unpackage/h5-review",
     "dev:uni-h5-review": "vite --config vite.uni-h5-review.config.ts",

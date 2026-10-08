@@ -1,3 +1,5 @@
+import { isProductionApiHost } from './production-read-only'
+
 export const environmentNames = ['dev', 'test', 'staging', 'prod'] as const
 export const targetPlatforms = ['mp-weixin', 'android', 'ios'] as const
 
@@ -57,6 +59,9 @@ export function parseEnvironmentConfig(input: unknown): EnvironmentConfigResult 
   } else {
     const issue = httpUrlIssue(input.apiBaseUrl)
     if (issue) issues.push(issue)
+    if (isProductionApiHost(input.apiBaseUrl) && input.environment !== 'prod') {
+      issues.push('production API host requires the prod environment')
+    }
   }
 
   const flags = input.flags ?? {}
