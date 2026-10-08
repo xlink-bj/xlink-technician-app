@@ -396,6 +396,8 @@ export interface TechnicianApiReadPort {
   listWorkOrders(
     query: WorkOrderListQuery,
   ): Promise<OperationSnapshot<ReadPage<WorkOrderSummary>>>
+  /** True only when this ID was returned by a successful list in the current authenticated session. */
+  isWorkOrderListedForCurrentSession?(id: string): boolean
   getWorkOrderDetail(id: WorkOrderId): Promise<OperationSnapshot<WorkOrderDetail>>
   getWorkflowDefinition(
     id: WorkflowDefinitionId,

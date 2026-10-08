@@ -6,9 +6,38 @@ import type { ApiReadRequest, ApiReadTransport } from '@adapters/api/technician-
 describe('G4-F Production quotation Order read adapter', () => {
   it('does not issue an Order query without a valid role-listed Work Order identity', async () => {
     const execute = vi.fn(async () => ({ data: [] }))
-    const result = await createQuotationOrderReadAdapter({ execute }).listTypeOneOrdersForWorkOrder('../unscoped')
+    const result = await createQuotationOrderReadAdapter({ execute }, () => true).listTypeOneOrdersForWorkOrder('../unscoped')
     expect(result.state).toBe('failed_terminal')
     expect(execute).not.toHaveBeenCalled()
+  })
+
+  it('rejects a syntactically valid Work Order ID absent from the current session list before transport', async () => {
+    const execute = vi.fn(async () => ({ data: [] }))
+    const result = await createQuotationOrderReadAdapter({ execute }, () => false)
+      .listTypeOneOrdersForWorkOrder('work-order-synthetic')
+
+    expect(result).toMatchObject({ state: 'failed_terminal', error: { category: 'authorization_denied' } })
+    expect(execute).not.toHaveBeenCalled()
+  })
+
+  it('fails closed if the authenticated list scope changes while the quote request is in flight', async () => {
+    const isAuthorized = vi.fn().mockReturnValueOnce(true).mockReturnValue(false)
+    const execute = vi.fn(async () => ({
+      data: [{
+        _id: 'order-synthetic',
+        type: 1,
+        serviceAppointmentId: 'work-order-synthetic',
+        bjProducts: { orderList: [] },
+      }],
+    }))
+
+    const result = await createQuotationOrderReadAdapter({ execute }, isAuthorized)
+      .listTypeOneOrdersForWorkOrder('work-order-synthetic')
+
+    expect(execute).toHaveBeenCalledOnce()
+    expect(isAuthorized).toHaveBeenCalledTimes(2)
+    expect(result).toMatchObject({ state: 'failed_terminal', error: { category: 'authorization_denied' } })
+    expect(JSON.stringify(result)).not.toContain('order-synthetic')
   })
 
   it('reads a bounded Work Order-scoped type=1 page and projects grouped SKU/SPU evidence without leaking the raw payload', async () => {
@@ -43,7 +72,8 @@ describe('G4-F Production quotation Order read adapter', () => {
       },
     }
 
-    const result = await createQuotationOrderReadAdapter(transport).listTypeOneOrdersForWorkOrder('work-order-synthetic')
+    const result = await createQuotationOrderReadAdapter(transport, (id) => id === 'work-order-synthetic')
+      .listTypeOneOrdersForWorkOrder('work-order-synthetic')
     expect(requests).toEqual([{
       method: 'POST',
       path: 'basic/order/query',
@@ -97,8 +127,34 @@ describe('G4-F Production quotation Order read adapter', () => {
     }
     const result = await createQuotationOrderReadAdapter({
       execute: async () => ({ data: [row, row, row, row] }),
-    }).listTypeOneOrdersForWorkOrder('work-order-synthetic')
+    }, () => true).listTypeOneOrdersForWorkOrder('work-order-synthetic')
     expect(result.state).toBe('failed_terminal')
+  })
+
+  it('rejects the entire quote page when any returned record belongs to another Work Order', async () => {
+    const execute = vi.fn(async () => ({
+      data: [
+        {
+          _id: 'order-synthetic-matching',
+          type: 1,
+          serviceAppointmentId: 'work-order-synthetic',
+          bjProducts: { orderList: [] },
+        },
+        {
+          _id: 'order-synthetic-mismatch',
+          type: 1,
+          serviceAppointmentId: 'different-work-order-synthetic',
+          bjProducts: { orderList: [] },
+        },
+      ],
+    }))
+    const result = await createQuotationOrderReadAdapter({ execute }, () => true)
+      .listTypeOneOrdersForWorkOrder('work-order-synthetic')
+
+    expect(result).toMatchObject({ state: 'failed_terminal', error: { category: 'server_terminal' } })
+    expect(JSON.stringify(result)).not.toContain('different-work-order-synthetic')
+    expect(JSON.stringify(result)).not.toContain('order-synthetic-matching')
+    expect(JSON.stringify(result)).not.toContain('order-synthetic-mismatch')
   })
 
   it('keeps incomplete grouped server Orders explicitly unsupported and never exposes PDF URLs or unrelated fields', async () => {
@@ -117,7 +173,7 @@ describe('G4-F Production quotation Order read adapter', () => {
           }] },
         }],
       }),
-    }).listTypeOneOrdersForWorkOrder('work-order-synthetic')
+    }, () => true).listTypeOneOrdersForWorkOrder('work-order-synthetic')
 
     expect(result).toMatchObject({
       state: 'succeeded',

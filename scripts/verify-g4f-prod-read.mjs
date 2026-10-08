@@ -267,7 +267,11 @@ async function run() {
       { cascadeTenantId: runtime.value.authWireConfig.tenant, codeTenantId: runtime.value.authWireConfig.tenant, getSessionScope: () => auth.getCurrentSession()?.sessionRef ?? null },
     )
     const catalogApi = createQuotationCatalogReadAdapter(apiTransport, () => auth.getCurrentSession()?.sessionRef ?? null)
-    const orderApi = createQuotationOrderReadAdapter(apiTransport)
+    const orderApi = createQuotationOrderReadAdapter(
+      apiTransport,
+      (workOrderId) => listedWorkOrderIds.has(workOrderId)
+        && technicianApi.isWorkOrderListedForCurrentSession?.(workOrderId) === true,
+    )
 
     stage = 'work_order_list_read'
     const workOrders = await technicianApi.listWorkOrders({ page: 1, pageSize: 3 })

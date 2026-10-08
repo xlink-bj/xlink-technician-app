@@ -76,7 +76,10 @@ export function createApplication(dependencies: ApplicationDependencies = {}) {
   const quotationCatalogRead = dependencies.quotationCatalogRead ?? createDefaultQuotationCatalogReadPort(authSession)
   const apiCommand = dependencies.apiCommand ?? createDefaultTechnicianApiCommandPort(authSession, apiRead)
   const quotationOrderCommand = dependencies.quotationOrderCommand ?? createDefaultQuotationOrderCommandPort(authSession)
-  const quotationOrderRead = dependencies.quotationOrderRead ?? createDefaultQuotationOrderReadPort(authSession)
+  const quotationOrderRead = dependencies.quotationOrderRead ?? createDefaultQuotationOrderReadPort(
+    authSession,
+    (workOrderId) => apiRead.isWorkOrderListedForCurrentSession?.(workOrderId) === true,
+  )
   const phone = dependencies.phone ?? createDefaultPhonePort()
   const navigation = dependencies.navigation ?? createDefaultNavigationPort()
   const storage = dependencies.storage ?? createDefaultStoragePort()

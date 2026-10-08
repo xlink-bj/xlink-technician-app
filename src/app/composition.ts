@@ -213,7 +213,10 @@ export function createDefaultQuotationOrderCommandPort(authSession: AuthSessionP
   return createQuotationOrderCommandAdapter(transport)
 }
 
-export function createDefaultQuotationOrderReadPort(authSession: AuthSessionPort): QuotationOrderReadPort {
+export function createDefaultQuotationOrderReadPort(
+  authSession: AuthSessionPort,
+  isWorkOrderListedForCurrentSession: (id: string) => boolean,
+): QuotationOrderReadPort {
   const config = loadApplicationRuntimeConfig()
   if (!config.ok) {
     return {
@@ -229,7 +232,7 @@ export function createDefaultQuotationOrderReadPort(authSession: AuthSessionPort
       return session ? { userId: session.user.id, ...(session.currentRole ? { roleId: session.currentRole.id } : {}) } : null
     },
   })
-  return createQuotationOrderReadAdapter(transport)
+  return createQuotationOrderReadAdapter(transport, isWorkOrderListedForCurrentSession)
 }
 
 export function createDefaultPhonePort(): PhonePort {

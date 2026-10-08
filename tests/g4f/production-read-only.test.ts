@@ -212,6 +212,28 @@ describe('Production read-only profile', () => {
     })
   })
 
+  it('scopes quotation Work Order authorization to successful list results in the active session', async () => {
+    vi.stubEnv('VITE_XLINK_ENVIRONMENT', 'prod')
+    let sessionScope: string | null = 'synthetic-session-a'
+    const execute = vi.fn(async (request: { path: string }) => request.path === 'function/queryTreeByRoleId'
+      ? { data: { functionList: [{ action: '/pages/serviceAppointment/serviceAppointments', exts: { tabDisplay: '1' } }] } }
+      : { data: [{ _id: 'listed-work-order-synthetic' }] })
+    const api = createRoleScopedTechnicianApiReadAdapter(
+      { execute },
+      () => asOpaqueId<'RoleId'>('synthetic-role'),
+      { getSessionScope: () => sessionScope },
+    )
+
+    expect(api.isWorkOrderListedForCurrentSession?.('listed-work-order-synthetic')).toBe(false)
+    const list = await api.listWorkOrders({ page: 1, pageSize: 20 })
+    expect(list.state).toBe('succeeded')
+    expect(api.isWorkOrderListedForCurrentSession?.('listed-work-order-synthetic')).toBe(true)
+    expect(api.isWorkOrderListedForCurrentSession?.('arbitrary-work-order-synthetic')).toBe(false)
+
+    sessionScope = 'synthetic-session-b'
+    expect(api.isWorkOrderListedForCurrentSession?.('listed-work-order-synthetic')).toBe(false)
+  })
+
   it('rejects oversized/unscoped Production Work Order list reads and malformed detail identities', async () => {
     vi.stubEnv('VITE_XLINK_ENVIRONMENT', 'prod')
     const request = vi.fn()

@@ -253,15 +253,19 @@ function quotationOrderBrowseItem(raw: unknown): QuotationOrderBrowseItem {
   }
 }
 
-function quotationOrderBrowsePage(raw: unknown): ReadPage<QuotationOrderBrowseItem> {
+function quotationOrderBrowsePage(raw: unknown, requestedWorkOrderId: string): ReadPage<QuotationOrderBrowseItem> {
   const envelope = asRecord(raw, 'Work Order-scoped Order list response')
   const data = optionalRecord(envelope.data)
   const candidateItems = [envelope.data, envelope.items, envelope.records, data?.items, data?.records, data?.data]
   const items = candidateItems.find(Array.isArray)
   if (!Array.isArray(items)) throw new AdapterMappingError('Work Order-scoped Order list rows are missing')
   if (items.length > 3) throw new AdapterMappingError('Work Order-scoped Order list exceeded its bounded page size')
+  const mappedItems = items.map(quotationOrderBrowseItem)
+  if (mappedItems.some((item) => item.serviceAppointmentId !== requestedWorkOrderId)) {
+    throw new AdapterMappingError('Work-Order-scoped Order list returned a record with mismatched ownership')
+  }
   return {
-    items: items.map(quotationOrderBrowseItem),
+    items: mappedItems,
     page: optionalNonNegativeInteger(data ?? envelope, ['page']),
     pageSize: optionalNonNegativeInteger(data ?? envelope, ['rows', 'pageSize']),
     totalCount: optionalNonNegativeInteger(data ?? envelope, ['total', 'dataCount', 'totalCount']),
@@ -275,7 +279,10 @@ function readFailure<T>(error: unknown): OperationSnapshot<T> {
 }
 
 export class QuotationOrderReadAdapter implements QuotationOrderReadPort {
-  constructor(private readonly transport: ApiReadTransport) {}
+  constructor(
+    private readonly transport: ApiReadTransport,
+    private readonly isWorkOrderListedForCurrentSession: (id: string) => boolean = () => false,
+  ) {}
 
   async getQuotationOrderById(id: string): Promise<OperationSnapshot<QuotationOrderRead>> {
     if (!id.trim()) return adapterFailure('validation', 'quotation order id is required')
@@ -287,12 +294,24 @@ export class QuotationOrderReadAdapter implements QuotationOrderReadPort {
     }
   }
 
+  private isAuthorizedForCurrentSession(workOrderId: string): boolean {
+    try {
+      return this.isWorkOrderListedForCurrentSession(workOrderId)
+    } catch {
+      // Authorization sources are fail-closed; exceptions must never reach or escape the read path.
+      return false
+    }
+  }
+
   async listTypeOneOrdersForWorkOrder(
     workOrderId: string,
     pageSize: 1 | 3 = 3,
   ): Promise<OperationSnapshot<ReadPage<QuotationOrderBrowseItem>>> {
     if (!/^[A-Za-z0-9_-]{1,100}$/.test(workOrderId)) {
       return adapterFailure('validation', 'a listed Work Order identity is required to read its quotations')
+    }
+    if (!this.isAuthorizedForCurrentSession(workOrderId)) {
+      return adapterFailure('authorization_denied', 'Work Order quotation reads require an ID listed in the current session')
     }
     try {
       const raw = await this.transport.execute({
@@ -308,13 +327,19 @@ export class QuotationOrderReadAdapter implements QuotationOrderReadPort {
           'is:type|integer#and': 1,
         },
       })
-      return succeeded(quotationOrderBrowsePage(raw))
+      if (!this.isAuthorizedForCurrentSession(workOrderId)) {
+        return adapterFailure('authorization_denied', 'Work Order session changed during quotation read')
+      }
+      return succeeded(quotationOrderBrowsePage(raw, workOrderId))
     } catch (error) {
       return readFailure(error)
     }
   }
 }
 
-export function createQuotationOrderReadAdapter(transport: ApiReadTransport): QuotationOrderReadPort {
-  return new QuotationOrderReadAdapter(transport)
+export function createQuotationOrderReadAdapter(
+  transport: ApiReadTransport,
+  isWorkOrderListedForCurrentSession?: (id: string) => boolean,
+): QuotationOrderReadPort {
+  return new QuotationOrderReadAdapter(transport, isWorkOrderListedForCurrentSession)
 }

@@ -1297,15 +1297,6 @@ function readFailure<T>(error: unknown): OperationSnapshot<T> {
   return adapterFailure('network_retryable', unknownErrorMessage(error, 'API read transport failed'))
 }
 
-function ephemeralScopeFingerprint(value: string): string {
-  let hash = 2166136261
-  for (let index = 0; index < value.length; index += 1) {
-    hash ^= value.charCodeAt(index)
-    hash = Math.imul(hash, 16777619)
-  }
-  return (hash >>> 0).toString(16)
-}
-
 export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
   private currentReadScope: string | null = null
   private readonly listedWorkOrderIds = new Set<string>()
@@ -1323,9 +1314,9 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
     )
   }
 
-  private synchronizeProductionReadScope(): string | null {
+  private synchronizeReadScope(): string | null {
     const sessionRef = this.options.getSessionScope?.() ?? null
-    const nextScope = sessionRef ? ephemeralScopeFingerprint(sessionRef) : null
+    const nextScope = sessionRef || null
     if (nextScope !== this.currentReadScope) {
       this.currentReadScope = nextScope
       this.listedWorkOrderIds.clear()
@@ -1337,7 +1328,7 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
     result: OperationSnapshot<ReadPage<WorkOrderSummary>>,
     scopeAtStart: string | null,
   ): void {
-    if (!this.isProductionReadOnly() || !scopeAtStart || this.synchronizeProductionReadScope() !== scopeAtStart
+    if (!scopeAtStart || this.synchronizeReadScope() !== scopeAtStart
       || result.state !== 'succeeded' || !result.data) return
     for (const item of result.data.items) {
       if (this.listedWorkOrderIds.size >= 100) break
@@ -1383,7 +1374,7 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
   }
 
   async listWorkOrders(query: WorkOrderListQuery) {
-    const scopeAtStart = this.isProductionReadOnly() ? this.synchronizeProductionReadScope() : null
+    const scopeAtStart = this.synchronizeReadScope()
     if (!this.workOrderScopeResolver) {
       const result = await this.read<ReadPage<WorkOrderSummary>>(
         {
@@ -1429,7 +1420,7 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
   getWorkOrderDetail(id: WorkOrderId) {
     const productionReadOnly = this.isProductionReadOnly()
     if (productionReadOnly) {
-      const scope = this.synchronizeProductionReadScope()
+      const scope = this.synchronizeReadScope()
       if (!this.options.getSessionScope || !scope || !this.listedWorkOrderIds.has(String(id))) {
         return Promise.resolve(adapterFailure<WorkOrderDetail>(
           'authorization_denied',
@@ -1456,6 +1447,11 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
           : detail
       },
     )
+  }
+
+  isWorkOrderListedForCurrentSession(id: string): boolean {
+    const scope = this.synchronizeReadScope()
+    return Boolean(this.workOrderScopeResolver && scope && id.trim() && this.listedWorkOrderIds.has(id))
   }
 
   private readWorkOrderActivities(id: WorkOrderId) {
