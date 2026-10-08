@@ -35,6 +35,9 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Verify boundaries, types, and tests
+        env:
+          # Test-only synthetic Mock contract. Never inherited by bundle builds.
+          VITE_XLINK_ENVIRONMENT: test
         run: pnpm run verify
 
       - name: Build WeChat Mini Program bundle
