@@ -9,7 +9,7 @@
 
   <view v-else-if="routeError || workspace.loadState === 'blocked'" class="workspace-state workspace-state--centered">
     <text class="workspace-state-title">当前操作暂不可用</text>
-    <text class="workspace-state-copy">请返回工单详情，按当前任务继续操作。</text>
+    <text class="workspace-state-copy">{{ routeError === 'production-read-only' ? '生产环境仅开放已验证的报价只读入口；其他操作空间不会加载或提交。' : '请返回工单详情，按当前任务继续操作。' }}</text>
     <AppButton class="workspace-state-action" @tap="exit">返回工单详情</AppButton>
   </view>
 
@@ -177,6 +177,7 @@ import { computed, ref, watch } from 'vue'
 import { onLoad, onUnload } from '@dcloudio/uni-app'
 
 import { hasAuthenticatedSession } from '@features/home/access'
+import { isProductionReadOnlyRuntime } from '@shared/config'
 import {
   parseActionWorkspaceId,
   parseActionWorkspaceNodeId,
@@ -212,6 +213,7 @@ const routeError = ref('')
 const isNavigating = ref(false)
 
 const canAccess = computed(() => hasAuthenticatedSession(session.status, session.session))
+const productionReadOnly = isProductionReadOnlyRuntime()
 const appointmentDisplay = computed(() => appointmentDisplayFor(workspace.appointmentTimeValue))
 const feedback = computed(() => actionErrorCopy(workspace.error))
 const quotationContentViewState = computed(() => workspace.quotationContentState === 'idle'
@@ -222,6 +224,11 @@ async function loadWorkspace(): Promise<void> {
   if (!routeReady.value || session.status !== 'authenticated') return
   if (!routeId.value || !routeNodeId.value) {
     routeError.value = 'invalid-route'
+    workspace.clear()
+    return
+  }
+  if (productionReadOnly && routeAction.value !== 'place_order') {
+    routeError.value = 'production-read-only'
     workspace.clear()
     return
   }

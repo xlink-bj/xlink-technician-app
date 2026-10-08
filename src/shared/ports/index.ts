@@ -44,7 +44,15 @@ export type {
   WorkflowNodeVisibilityEvidence,
   WorkflowNodeVisibilityEvidenceState,
 } from './api'
-export type { QuotationOrderRead, QuotationOrderReadPort } from './quotation-order'
+export type {
+  QuotationOrderBrowseGroup,
+  QuotationOrderBrowseIdentity,
+  QuotationOrderBrowseItem,
+  QuotationOrderBrowseKind,
+  QuotationOrderBrowseLine,
+  QuotationOrderRead,
+  QuotationOrderReadPort,
+} from './quotation-order'
 export type {
   AcceptOrderInput,
   AcceptOrderInspection,

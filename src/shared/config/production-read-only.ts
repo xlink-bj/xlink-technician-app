@@ -1,5 +1,11 @@
 const productionApiHosts = new Set(['xlink.fsgo365.cn'])
 const workOrderSearchFields = ['title', 'name', 'phone', 'address', 'describe', 'orderNum'] as const
+const quotationCatalogListRoutes = new Set([
+  'biz/projPackage/queryWithRank',
+  'biz/procedure/queryWithRank',
+  'basic/material/queryWithRank',
+  'biz/measure/queryWithRank',
+])
 
 function hasOwn(record: Readonly<Record<string, unknown>>, key: string): boolean {
   return Object.prototype.hasOwnProperty.call(record, key)
@@ -19,6 +25,13 @@ export function isProductionApiHost(apiBaseUrl: unknown): boolean {
 /** Production is always read-only; recognizing the canonical host also fails closed on mislabeled builds. */
 export function isProductionReadOnlyTarget(environment: unknown, apiBaseUrl: unknown): boolean {
   return environment === 'prod' || isProductionApiHost(apiBaseUrl)
+}
+
+export function isProductionReadOnlyRuntime(): boolean {
+  return isProductionReadOnlyTarget(
+    import.meta.env.VITE_XLINK_ENVIRONMENT,
+    import.meta.env.VITE_XLINK_API_BASE_URL,
+  )
 }
 
 export function normalizedApiRoute(path: string): string {
@@ -62,6 +75,25 @@ export function isProductionReadOnlyReadAllowed(input: {
       && (input.body === undefined || Object.keys(input.body).length === 0)
   }
 
+  if (quotationCatalogListRoutes.has(path)) {
+    return queryKeys.length === 0 && isBoundedQuotationCatalogListBody(input.body)
+  }
+
+  const packageDetailPrefix = 'biz/projPackage/findById/'
+  if (path.startsWith(packageDetailPrefix)) {
+    const id = decodePathIdentity(path.slice(packageDetailPrefix.length))
+    return id !== null
+      && queryKeys.length === 0
+      && (input.body === undefined || Object.keys(input.body).length === 0)
+  }
+
+  // Order browse must stay scoped to a Work Order already selected from the
+  // authenticated role-scoped list. Never enumerate a tenant-wide Order page;
+  // basic/order/queryById also has no tenant guard and remains blocked.
+  if (path === 'basic/order/query') {
+    return queryKeys.length === 0 && isBoundedWorkOrderQuotationListBody(input.body)
+  }
+
   if (path !== 'biz/extForm/queryByColName/leakageCause' || queryKeys.length > 0) return false
   const body = input.body
   if (!body) return false
@@ -73,6 +105,54 @@ export function isProductionReadOnlyReadAllowed(input: {
     && body._all === '1'
     && body.sortField === 'partOrder,leakageCauseOrder'
     && body.sortOrder === 'asc'
+}
+
+function decodePathIdentity(encoded: string): string | null {
+  let id: string
+  try {
+    id = decodeURIComponent(encoded)
+  } catch {
+    return null
+  }
+  return /^[A-Za-z0-9_-]{1,100}$/.test(id) ? id : null
+}
+
+function isBoundedQuotationCatalogListBody(body: Readonly<Record<string, unknown>> | undefined): boolean {
+  if (!body) return false
+  const required = ['_all', 'is:state|integer#and', 'in:serviceType|array#and', 'sortField', 'sortOrder']
+  const keys = Object.keys(body)
+  if (required.some((key) => !hasOwn(body, key))) return false
+  if (keys.some((key) => !required.includes(key) && key !== 'sourceType')) return false
+  if (body._all !== '1' || body['is:state|integer#and'] !== 1) return false
+  if (body.sortField !== 'order,_id' || body.sortOrder !== 'asc') return false
+  const serviceType = body['in:serviceType|array#and']
+  if (typeof serviceType !== 'string' || !/^[A-Za-z0-9,._-]{1,200}$/.test(serviceType)) return false
+  return !hasOwn(body, 'sourceType')
+    || typeof body.sourceType === 'string' && /^[A-Za-z0-9,._-]{1,100}$/.test(body.sourceType)
+}
+
+function isBoundedWorkOrderQuotationListBody(body: Readonly<Record<string, unknown>> | undefined): boolean {
+  if (!body) return false
+  const required = [
+    '_all',
+    'page',
+    'rows',
+    'sortField',
+    'sortOrder',
+    'is:serviceAppointmentId|string#and',
+    'is:type|integer#and',
+  ]
+  const keys = Object.keys(body)
+  if (required.length !== keys.length || required.some((key) => !hasOwn(body, key))) return false
+  const workOrderId = body['is:serviceAppointmentId|string#and']
+  return body._all === '1'
+    && body.page === 1
+    && (body.rows === 1 || body.rows === 3)
+    && body.sortField === 'createTime'
+    && body.sortOrder === 'desc'
+    && body['is:type|integer#and'] === 1
+    && typeof workOrderId === 'string'
+    && /^[A-Za-z0-9_-]{1,100}$/.test(workOrderId)
 }
 
 function isBoundedWorkOrderListBody(body: Readonly<Record<string, unknown>> | undefined): boolean {

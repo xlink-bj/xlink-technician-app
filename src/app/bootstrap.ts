@@ -22,6 +22,7 @@ import type {
   SurveyLeakageCauseProviderPort,
 } from '@shared/ports'
 import { useWorkOrderDetailStore } from '@features/work-orders/detail'
+import { useQuotationOrderBrowseStore } from '@features/work-orders/quotation/order-browse-store'
 import { useActionWorkspaceStore } from '@features/work-orders/action-workspace'
 import { useWorkOrderListStore } from '@features/work-orders/list'
 import { useLocalDraftDiagnosticsStore } from '@features/home/draft-diagnostics'
@@ -75,7 +76,10 @@ export function createApplication(dependencies: ApplicationDependencies = {}) {
   const quotationCatalogRead = dependencies.quotationCatalogRead ?? createDefaultQuotationCatalogReadPort(authSession)
   const apiCommand = dependencies.apiCommand ?? createDefaultTechnicianApiCommandPort(authSession, apiRead)
   const quotationOrderCommand = dependencies.quotationOrderCommand ?? createDefaultQuotationOrderCommandPort(authSession)
-  const quotationOrderRead = dependencies.quotationOrderRead ?? createDefaultQuotationOrderReadPort(authSession)
+  const quotationOrderRead = dependencies.quotationOrderRead ?? createDefaultQuotationOrderReadPort(
+    authSession,
+    (workOrderId) => apiRead.isWorkOrderListedForCurrentSession?.(workOrderId) === true,
+  )
   const phone = dependencies.phone ?? createDefaultPhonePort()
   const navigation = dependencies.navigation ?? createDefaultNavigationPort()
   const storage = dependencies.storage ?? createDefaultStoragePort()
@@ -104,6 +108,8 @@ export function createApplication(dependencies: ApplicationDependencies = {}) {
   )
   workOrderDetailStore.configurePhone(phone)
   workOrderDetailStore.configureNavigation(navigation)
+  const quotationOrderBrowseStore = useQuotationOrderBrowseStore(pinia)
+  quotationOrderBrowseStore.configure(quotationOrderRead, () => sessionStore.session)
   const actionWorkspaceStore = useActionWorkspaceStore(pinia)
   actionWorkspaceStore.configure({
     apiRead,
@@ -137,6 +143,7 @@ export function createApplication(dependencies: ApplicationDependencies = {}) {
     sessionStore,
     workOrderListStore,
     workOrderDetailStore,
+    quotationOrderBrowseStore,
     actionWorkspaceStore,
     quotationCatalogRead,
     quotationOrderRead,

@@ -113,6 +113,16 @@ export function createDefaultTechnicianApiReadPort(authSession: AuthSessionPort)
     {
       cascadeTenantId: config.value.authWireConfig.tenant,
       codeTenantId: config.value.authWireConfig.tenant,
+      getReadAuthorizationScope: () => {
+        const session = authSession.getCurrentSession()
+        if (!session) return null
+        return {
+          sessionRef: session.sessionRef,
+          userId: session.user.id,
+          roleId: session.currentRole?.id ?? null,
+          roleVersion: session.roleVersion ?? null,
+        }
+      },
     },
   )
 }
@@ -144,7 +154,10 @@ export function createDefaultQuotationCatalogReadPort(authSession: AuthSessionPo
         : null
     },
   })
-  return createQuotationCatalogReadAdapter(transport)
+  return createQuotationCatalogReadAdapter(
+    transport,
+    () => authSession.getCurrentSession()?.sessionRef ?? null,
+  )
 }
 
 export function createDefaultSurveyLeakageCauseProvider(authSession: AuthSessionPort): SurveyLeakageCauseProviderPort {
@@ -209,11 +222,15 @@ export function createDefaultQuotationOrderCommandPort(authSession: AuthSessionP
   return createQuotationOrderCommandAdapter(transport)
 }
 
-export function createDefaultQuotationOrderReadPort(authSession: AuthSessionPort): QuotationOrderReadPort {
+export function createDefaultQuotationOrderReadPort(
+  authSession: AuthSessionPort,
+  isWorkOrderListedForCurrentSession: (id: string) => boolean,
+): QuotationOrderReadPort {
   const config = loadApplicationRuntimeConfig()
   if (!config.ok) {
     return {
       getQuotationOrderById: async () => configurationFailure(`Quotation Order read configuration is unavailable: ${config.issues.join('; ')}`),
+      listTypeOneOrdersForWorkOrder: async () => configurationFailure(`Quotation Order read configuration is unavailable: ${config.issues.join('; ')}`),
     }
   }
   const transport = createUniApiReadTransport({
@@ -224,7 +241,7 @@ export function createDefaultQuotationOrderReadPort(authSession: AuthSessionPort
       return session ? { userId: session.user.id, ...(session.currentRole ? { roleId: session.currentRole.id } : {}) } : null
     },
   })
-  return createQuotationOrderReadAdapter(transport)
+  return createQuotationOrderReadAdapter(transport, isWorkOrderListedForCurrentSession)
 }
 
 export function createDefaultPhonePort(): PhonePort {

@@ -5,6 +5,7 @@ import { detailTabs } from '@features/work-orders/detail-tabs'
 
 const detailPage = readFileSync(new URL('../../src/pages/work-orders/detail.vue', import.meta.url), 'utf8')
 const detailTabsSource = readFileSync(new URL('../../src/features/work-orders/detail-tabs.ts', import.meta.url), 'utf8')
+const quotationWorkspace = readFileSync(new URL('../../src/features/work-orders/quotation/QuotationActionWorkspace.vue', import.meta.url), 'utf8')
 
 describe('G4-UX detail D3 semantic boundary', () => {
   it('keeps the accepted summary, quick-action shell, and read-only tabs', () => {
@@ -22,6 +23,8 @@ describe('G4-UX detail D3 semantic boundary', () => {
     expect(detailPage).toContain("label: '资料'")
     expect(detailPage).toContain("label: '跟进'")
     expect(detailPage).toContain('导航')
+    expect(detailPage).toContain("action.key === 'contact' || action.key === 'navigate'")
+    expect(detailPage).toContain("{ key: 'quotation' as const, label: '报价记录' }")
     expect(detailPage).toContain('detailTabs')
     expect(detailTabs).toEqual([
       { key: 'follow-up', label: '跟进记录' },
@@ -104,5 +107,19 @@ describe('G4-UX detail D3 semantic boundary', () => {
     expect(detailPage).not.toContain('mock-work-order-')
     expect(detailPage).not.toContain('mockLayoutById')
     expect(detailPage).not.toContain('progressPosition')
+  })
+
+  it('keeps Production server quotations read-only and scoped to the current Work Order', () => {
+    expect(detailPage).toContain('只读取当前工单最近最多 3 条有效报价')
+    expect(detailPage).toContain('服务器报价保持只读')
+    expect(detailPage).toContain('不会载入本地草稿')
+    expect(detailPage).toContain('报价 PDF 未打开或下载')
+    expect(detailPage).toContain('quotationBrowse.items.filter')
+    expect(detailPage).toContain('serviceAppointmentId === String(detail.value?.id ?? \'\')')
+    expect(quotationWorkspace).toContain(':can-submit="!productionReadOnly && workspace.canSubmitQuotation"')
+    expect(quotationWorkspace).toContain('生产服务器报价只读')
+    expect(quotationWorkspace).toContain('此处本机草稿不会提交、修改订单或推进流程')
+    expect(quotationWorkspace).toContain('v-else\n        data-testid="action-workspace-submit"')
+    expect(quotationWorkspace).toContain('if (productionReadOnly) return')
   })
 })

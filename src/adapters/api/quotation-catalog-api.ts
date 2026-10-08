@@ -12,6 +12,7 @@ import type {
   ReadPage,
 } from '@shared/ports'
 import type { OperationSnapshot } from '@shared/types'
+import { isProductionReadOnlyTarget } from '@shared/config'
 import { adapterFailure, succeeded, unknownErrorMessage, AdapterMappingError } from '../common/operations'
 import {
   asRecord,
@@ -285,7 +286,27 @@ function readFailure<T>(error: unknown): OperationSnapshot<T> {
 }
 
 class QuotationCatalogReadAdapter implements QuotationCatalogReadPort {
-  constructor(private readonly transport: ApiReadTransport) {}
+  private currentReadScope: string | null = null
+  private readonly listedPackageIds = new Set<string>()
+
+  constructor(
+    private readonly transport: ApiReadTransport,
+    private readonly getSessionScope?: () => string | null,
+  ) {}
+
+  private isProductionReadOnly(): boolean {
+    return isProductionReadOnlyTarget(import.meta.env.VITE_XLINK_ENVIRONMENT, import.meta.env.VITE_XLINK_API_BASE_URL)
+  }
+
+  private synchronizeProductionReadScope(): string | null {
+    const sessionRef = this.getSessionScope?.() ?? null
+    const nextScope = sessionRef ? scopeFingerprint(sessionRef) : null
+    if (nextScope !== this.currentReadScope) {
+      this.currentReadScope = nextScope
+      this.listedPackageIds.clear()
+    }
+    return nextScope
+  }
 
   private async read<T>(
     request: ApiReadRequest | (() => ApiReadRequest),
@@ -299,11 +320,29 @@ class QuotationCatalogReadAdapter implements QuotationCatalogReadPort {
     }
   }
 
-  listPackages(context: QuotationCatalogContext) {
-    return this.read(() => listRequest('biz/projPackage/queryWithRank', context), (raw) => pageEnvelope(raw, packageItem))
+  async listPackages(context: QuotationCatalogContext) {
+    const scopeAtStart = this.isProductionReadOnly() ? this.synchronizeProductionReadScope() : null
+    const result = await this.read(() => listRequest('biz/projPackage/queryWithRank', context), (raw) => pageEnvelope(raw, packageItem))
+    if (this.isProductionReadOnly() && scopeAtStart && this.synchronizeProductionReadScope() === scopeAtStart
+      && result.state === 'succeeded' && result.data) {
+      for (const item of result.data.items) {
+        if (this.listedPackageIds.size >= 200) break
+        this.listedPackageIds.add(item.id)
+      }
+    }
+    return result
   }
 
   getPackageDetail(packageId: string) {
+    if (this.isProductionReadOnly()) {
+      const scope = this.synchronizeProductionReadScope()
+      if (!this.getSessionScope || !scope || !this.listedPackageIds.has(packageId)) {
+        return Promise.resolve(adapterFailure<QuotationPackageDetailRead>(
+          'authorization_denied',
+          'Production package detail requires an identity from the current session\'s successful package list',
+        ))
+      }
+    }
     return this.read(
       () => {
         if (!packageId.trim()) throw new AdapterMappingError('quotation package identity is required')
@@ -326,6 +365,18 @@ class QuotationCatalogReadAdapter implements QuotationCatalogReadPort {
   }
 }
 
-export function createQuotationCatalogReadAdapter(transport: ApiReadTransport): QuotationCatalogReadPort {
-  return new QuotationCatalogReadAdapter(transport)
+function scopeFingerprint(value: string): string {
+  let hash = 2166136261
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index)
+    hash = Math.imul(hash, 16777619)
+  }
+  return (hash >>> 0).toString(16)
+}
+
+export function createQuotationCatalogReadAdapter(
+  transport: ApiReadTransport,
+  getSessionScope?: () => string | null,
+): QuotationCatalogReadPort {
+  return new QuotationCatalogReadAdapter(transport, getSessionScope)
 }
