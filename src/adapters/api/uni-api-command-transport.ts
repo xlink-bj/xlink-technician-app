@@ -1,4 +1,5 @@
 import type { SessionRef } from '@shared/types'
+import { isProductionReadOnlyTarget } from '@shared/config'
 
 import {
   ApiCommandTransportError,
@@ -78,6 +79,12 @@ export function createUniApiCommandTransport(options: UniApiCommandTransportOpti
       if (mockResponse !== null) return normalizeCommandResponse(mockResponse)
       if (isMockOwnedCommand(input.path, input.body ?? {})) {
         throw new ApiCommandTransportError('Synthetic mock command is disabled', 'server_terminal')
+      }
+      if (isProductionReadOnlyTarget(import.meta.env.VITE_XLINK_ENVIRONMENT, options.apiBaseUrl)) {
+        throw new ApiCommandTransportError(
+          'Production read-only mode blocks all command execution',
+          'unsupported_capability',
+        )
       }
       if (input.safety === 'deferred_appointment_datetime_encoding_unknown') {
         throw new ApiCommandTransportError(

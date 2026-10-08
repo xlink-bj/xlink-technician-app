@@ -81,6 +81,45 @@ describe('G4-F Phase 1I Order reconstruction/edit safety', () => {
     expect(reconstructQuotationOrder(missingParts, 'node').state).toBe('blocked')
   })
 
+  it('blocks edit when R1 SKU/SPU codes or selected package material SKU metadata cannot be preserved', () => {
+    const directMaterialSkuCode = order({ bjProducts: {
+      orderList: [{
+        repairParts: ['roof'], partDescription: 'synthetic', maintainAreaNum: '1',
+        projPackages: { data: [] }, procedures: { data: [] },
+        materials: { data: [{ _id: 'material-a', name: 'synthetic material', number: 1, skuCode: 'synthetic-sku-code' }] },
+        measures: { data: [] },
+      }], addItems: { data: [] }, deleteItems: { data: [] },
+    } })
+    expect(quotationOrderEditBlockers(directMaterialSkuCode)).toContain(
+      '订单包含当前编辑器不能无损保留的 SKU/SPU 编码或套餐材料配置。',
+    )
+
+    const packageSpuCode = order({ bjProducts: {
+      orderList: [{
+        repairParts: ['roof'], partDescription: 'synthetic', maintainAreaNum: '1',
+        projPackages: { data: [{ _id: 'package-a', name: 'synthetic package', number: 1, exts: { spuCode: 'synthetic-spu-code' } }] },
+        procedures: { data: [] }, materials: { data: [] }, measures: { data: [] },
+      }], addItems: { data: [] }, deleteItems: { data: [] },
+    } })
+    expect(quotationOrderEditBlockers(packageSpuCode)).toContain(
+      '订单包含当前编辑器不能无损保留的 SKU/SPU 编码或套餐材料配置。',
+    )
+
+    const packageMaterialSkuCode = order({ bjProducts: {
+      orderList: [{
+        repairParts: ['roof'], partDescription: 'synthetic', maintainAreaNum: '1',
+        projPackages: { data: [{
+          _id: 'package-a', name: 'synthetic package', number: 1,
+          materialList: [{ material: { exts: { skuCode: 'synthetic-material-sku' } } }],
+        }] },
+        procedures: { data: [] }, materials: { data: [] }, measures: { data: [] },
+      }], addItems: { data: [] }, deleteItems: { data: [] },
+    } })
+    expect(quotationOrderEditBlockers(packageMaterialSkuCode)).toContain(
+      '订单包含当前编辑器不能无损保留的 SKU/SPU 编码或套餐材料配置。',
+    )
+  })
+
   it('blocks additions and deletions rather than dropping them during replace-snapshot edit', () => {
     for (const field of ['addItems', 'deleteItems'] as const) {
       const result = quotationOrderEditBlockers(order({

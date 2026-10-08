@@ -53,6 +53,9 @@ export function createUniAuthBackendDriver(options: UniAuthBackendOptions): Auth
   const request = options.request ?? defaultRequest
 
   const login = async (input: AuthBackendLoginRequest): Promise<unknown> => {
+    // Production phone login is explicitly authorized for local read-only
+    // inspection; its account/session metadata writes are separate from the
+    // deny-all Production business command transport.
     let response: UniNamespace.RequestSuccessCallbackResult
     try {
       response = await requestResponse(request, {

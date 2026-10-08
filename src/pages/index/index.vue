@@ -208,10 +208,10 @@
           <view class="method-copy">
             <text class="method-title" :class="{ 'method-title-muted': !quickLoginAvailable }">快捷登录</text>
             <text class="method-subtitle">
-              {{ quickLoginAvailable ? '一键使用测试账号登录' : '仅非生产环境配置后可用' }}
+              {{ quickLoginSubtitle }}
             </text>
           </view>
-          <text v-if="quickLoginAvailable" class="method-badge method-badge-amber">测试</text>
+          <text v-if="quickLoginAvailable" class="method-badge method-badge-amber">{{ quickLoginBadge }}</text>
         </button>
       </view>
 
@@ -331,6 +331,14 @@ const isBusy = computed(
 )
 const showHome = computed(() => hasAuthenticatedSession(session.status, session.session))
 const quickLoginAvailable = computed(() => resolveQuickLoginInput() !== null)
+const productionTarget = import.meta.env.VITE_XLINK_ENVIRONMENT === 'prod'
+const quickLoginSubtitle = computed(() => {
+  if (quickLoginAvailable.value) {
+    return productionTarget ? '本机生产账号，业务数据只读' : '一键使用测试账号登录'
+  }
+  return productionTarget ? '生产快捷登录仅限本机开发运行' : '仅非生产环境配置后可用'
+})
+const quickLoginBadge = computed(() => (productionTarget ? '本机' : '测试'))
 const businessDataSourceLabel = computed(() => (mockMode.value === 'off' ? 'Real API' : 'Mock'))
 const feedback = computed(() => message.value || userFacingLoginMessage(session.error))
 
@@ -366,7 +374,7 @@ async function quickLogin(): Promise<void> {
   if (isBusy.value) return
   const input = resolveQuickLoginInput()
   if (!input) {
-    message.value = '快捷登录仅在非生产环境配置后可用'
+    message.value = '快捷登录仅在本机开发运行或非生产环境配置后可用'
     return
   }
 

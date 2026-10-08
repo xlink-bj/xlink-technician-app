@@ -59,6 +59,7 @@ import {
 } from '../common/records'
 import { countyList } from './reference/area-county-dictionary'
 import { appointmentFormDefinitionWireId } from './appointment-contract'
+import { isProductionReadOnlyTarget } from '@shared/config'
 
 export type ApiRequestMethod = 'GET' | 'POST'
 export type ApiRequestValue = string | number | boolean
@@ -90,7 +91,7 @@ export class ApiReadTransportError extends Error {
     message: string,
     readonly category: Extract<
       ErrorCategory,
-      'session_invalid' | 'authorization_denied' | 'network_retryable' | 'server_terminal'
+      'session_invalid' | 'authorization_denied' | 'unsupported_capability' | 'network_retryable' | 'server_terminal'
     >,
   ) {
     super(message)
@@ -1263,11 +1264,21 @@ function createRoleScopedWorkOrderListScopeResolver(
         )
       }
 
-      const raw = await transport.execute({
-        method: 'POST',
-        path: 'function/changeRole',
-        body: { roleIds: roleId },
-      })
+      const productionReadOnly = isProductionReadOnlyTarget(
+        import.meta.env.VITE_XLINK_ENVIRONMENT,
+        import.meta.env.VITE_XLINK_API_BASE_URL,
+      )
+      const raw = await transport.execute(productionReadOnly
+        ? {
+            method: 'POST',
+            path: 'function/queryTreeByRoleId',
+            query: { roleId },
+          }
+        : {
+            method: 'POST',
+            path: 'function/changeRole',
+            body: { roleIds: roleId },
+          })
       return roleVisibleWorkOrderScope(raw)
     },
   }
@@ -1367,11 +1378,17 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
   }
 
   getWorkOrderDetail(id: WorkOrderId) {
+    const productionReadOnly = isProductionReadOnlyTarget(
+      import.meta.env.VITE_XLINK_ENVIRONMENT,
+      import.meta.env.VITE_XLINK_API_BASE_URL,
+    )
     return this.read<WorkOrderDetail>(
       {
         method: 'POST',
         path: `basic/serviceAppointment/queryById/${encodeURIComponent(id)}`,
-        body: { type: 'query' },
+        // The legacy type=query flag bypasses the backend's normal workflow
+        // visibility check; Production reads deliberately omit that bypass.
+        body: productionReadOnly ? {} : { type: 'query' },
       },
       async (raw) => {
         const statusLabels = await this.detailStatusLabelsFor(raw)

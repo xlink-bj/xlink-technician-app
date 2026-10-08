@@ -36,8 +36,20 @@ describe('G4-UX production Login flow', () => {
       VITE_XLINK_ENVIRONMENT: 'prod',
       VITE_XLINK_QUICK_LOGIN_PHONE: 'test-phone',
     })).toBeNull()
+    expect(resolveQuickLoginInput({
+      VITE_XLINK_ENVIRONMENT: 'prod',
+      VITE_XLINK_LOCAL_DEV: 'true',
+      VITE_XLINK_QUICK_LOGIN_PHONE: 'production-phone',
+      VITE_XLINK_QUICK_LOGIN_CODE: 'configured-production-code',
+    })).toEqual({ phoneNumber: 'production-phone', verificationCode: 'configured-production-code' })
+    expect(resolveQuickLoginInput({
+      VITE_XLINK_ENVIRONMENT: 'prod',
+      VITE_XLINK_LOCAL_DEV: 'true',
+      VITE_XLINK_QUICK_LOGIN_PHONE: 'production-phone',
+    })).toEqual({ phoneNumber: 'production-phone', verificationCode: '999999' })
     expect(loginPage).toContain('@tap="quickLogin"')
     expect(loginPage).toContain('一键使用测试账号登录')
+    expect(loginPage).toContain('本机生产账号，业务数据只读')
     expect(loginPage).not.toContain('18600372156')
   })
 

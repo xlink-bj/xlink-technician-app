@@ -2,6 +2,7 @@ import type { ApiCommandTransport } from '@adapters/api/technician-api-commands'
 import { isBusinessMockMode } from '@adapters/api/mock'
 import type { UploadPort } from '@shared/ports'
 import { createOperationError, type LocalMedia, type OperationSnapshot, type UploadedMediaRef } from '@shared/types'
+import { isProductionReadOnlyTarget } from '@shared/config'
 
 import { createUploadAdapter, type MediaUploadDriver, type UploadTokenDriver } from './upload-adapter'
 
@@ -125,7 +126,13 @@ export function createUniUploadPort(
 
   return {
     async upload(media: LocalMedia): Promise<OperationSnapshot<UploadedMediaRef>> {
-      if (isBusinessMockMode() === 'off' && import.meta.env.VITE_XLINK_ENABLE_REAL_WRITES !== 'true') {
+      if (
+        isProductionReadOnlyTarget(
+          import.meta.env.VITE_XLINK_ENVIRONMENT,
+          import.meta.env.VITE_XLINK_API_BASE_URL,
+        )
+        || (isBusinessMockMode() === 'off' && import.meta.env.VITE_XLINK_ENABLE_REAL_WRITES !== 'true')
+      ) {
         return {
           state: 'failed_terminal',
           error: createOperationError('unsupported_capability', 'Real media upload is disabled for this build'),

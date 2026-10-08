@@ -128,6 +128,17 @@ describe('G4-F Phase 1I order submission', () => {
     const first = await submitQuotationOrder(ctx.input)
     expect(first.state).toBe('write_succeeded_readback_pending')
     expect(ctx.finalizeDraft).not.toHaveBeenCalled()
+
+    // Simulate app restart/re-entry: the new runtime restores the durable receipt
+    // before offering only a readback retry, never another business mutation.
+    const restored = await restoreQuotationOrderSubmissionState({
+      userId: ctx.input.userId,
+      workOrderId,
+      workflowNodeId: nodeId,
+      storage: ctx.port,
+    })
+    expect(restored.state).toBe('write_succeeded_readback_pending')
+
     const second = await retryQuotationOrderReadback(ctx.input)
     expect(second.state).toBe('succeeded')
     expect(ctx.command.startOrderWorkflow).toHaveBeenCalledTimes(1)
