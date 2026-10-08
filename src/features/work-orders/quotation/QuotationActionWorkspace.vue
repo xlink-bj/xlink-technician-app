@@ -108,13 +108,14 @@ async function confirmQuotationSubmit(): Promise<void> {
 .quotation-confirm-title { color: var(--app-color-text-primary); display: block; font-size: var(--app-font-section-title); font-weight: 800; }
 .quotation-confirm-actions { display: flex; gap: var(--app-space-sm); justify-content: flex-end; margin-top: var(--app-space-lg); }
 .quotation-production-read-only { display: block; }
-.quotation-workspace-footer-summary { align-items: center; display: flex; justify-content: space-between; margin-bottom: var(--app-space-sm); }
+.quotation-workspace-shell .action-workspace-footer { background: var(--app-color-surface); padding-top: 14rpx; }
+.quotation-workspace-footer-summary { align-items: center; display: flex; justify-content: space-between; margin-bottom: 12rpx; }
 .quotation-workspace-footer-summary__copy { display: flex; flex-direction: column; min-width: 0; }
-.quotation-workspace-footer-summary__title { color: var(--app-color-text-primary); font-size: var(--app-font-meta); font-weight: 800; }
-.quotation-workspace-footer-summary__meta { color: var(--app-color-text-secondary); font-size: var(--app-font-body); line-height: 1.35; margin-top: 2rpx; }
+.quotation-workspace-footer-summary__title { color: var(--app-color-text-primary); font-size: 22rpx; font-weight: 800; }
+.quotation-workspace-footer-summary__meta { color: var(--app-color-text-secondary); font-size: 22rpx; line-height: 1.35; margin-top: 4rpx; }
 .quotation-workspace-footer-summary__amount { align-items: flex-end; display: flex; flex-direction: column; flex-shrink: 0; margin-left: var(--app-space-sm); }
-.quotation-workspace-footer-summary__amount-label { color: var(--app-color-text-secondary); font-size: var(--app-font-body); }
-.quotation-workspace-footer-summary__amount-value { color: var(--app-color-text-primary); font-size: var(--app-font-field-label); font-weight: 800; margin-top: 2rpx; }
+.quotation-workspace-footer-summary__amount-label { color: var(--app-color-text-secondary); font-size: 20rpx; }
+.quotation-workspace-footer-summary__amount-value { color: var(--app-color-primary); font-size: 25rpx; font-weight: 800; margin-top: 4rpx; }
 .quotation-submit-unavailable { margin-top: var(--app-space-sm); }
 .quotation-workspace-shell .action-workspace-body { padding-bottom: calc(320rpx + env(safe-area-inset-bottom)); }
 /* #ifdef H5 */

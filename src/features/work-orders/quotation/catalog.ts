@@ -9,10 +9,10 @@ export const quotationCatalog: readonly QuotationCatalogItem[] = [
 ]
 
 export const quotationCatalogKindLabels: Readonly<Record<QuotationLineKind, string>> = {
-  package: '服务方案',
+  package: '套餐',
   procedure: '工序',
   material: '材料',
-  measure: '计量项',
+  measure: '机措',
 }
 
 export function quotationCatalogItemsFor(kind: QuotationLineKind): readonly QuotationCatalogItem[] {

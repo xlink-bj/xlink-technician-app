@@ -6,8 +6,8 @@ export const mockQuotationPackageListResponse = {
   data: [
     {
       _id: 'mock-catalog-package-basic',
-      name: 'Mock 服务方案 A',
-      code: 'mock-package-code-a',
+      name: '屋面防水修缮方案（示例）',
+      code: 'DEMO-PKG-001',
       type: 'mock-package-type',
       agelimit: 2,
       unit: '项',
@@ -17,8 +17,8 @@ export const mockQuotationPackageListResponse = {
     },
     {
       _id: 'mock-catalog-package-extended',
-      name: 'Mock 服务方案 B',
-      code: 'mock-package-code-b',
+      name: '外墙节点防水方案（示例）',
+      code: 'DEMO-PKG-002',
       type: 'mock-package-type',
       agelimit: 3,
       unit: '项',
@@ -36,7 +36,7 @@ export const mockQuotationProcedureListResponse = {
   data: [
     {
       _id: 'mock-catalog-procedure-seal',
-      name: 'Mock 施工工序 A',
+      name: '檐口密封处理（示例）',
       unit: '处',
       serviceType: [mockQuotationCatalogServiceType],
       sourceTypeList: [mockQuotationCatalogSourceType],
@@ -52,12 +52,12 @@ export const mockQuotationMaterialListResponse = {
   data: [
     {
       _id: 'mock-catalog-material-sealant',
-      name: 'Mock 材料 A',
-      code: 'mock-material-code-a',
+      name: '弹性密封材料（示例）',
+      code: 'DEMO-MAT-001',
       unit: '支',
       materialUnit: '支',
-      spec: '合成规格',
-      specUnit: 'mock-spec-unit',
+      spec: '常用包装规格（示例）',
+      specUnit: '支',
       type: 1,
       serviceType: [mockQuotationCatalogServiceType],
       sourceTypeList: [mockQuotationCatalogSourceType],
@@ -73,7 +73,7 @@ export const mockQuotationMeasureListResponse = {
   data: [
     {
       _id: 'mock-catalog-measure-inspection',
-      name: 'Mock 机措 A',
+      name: '高处作业防护（示例）',
       unit: '次',
       serviceType: [mockQuotationCatalogServiceType],
       sourceTypeList: [mockQuotationCatalogSourceType],
@@ -89,8 +89,8 @@ export const mockQuotationPackageDetailResponse = {
   success: true,
   entity: {
     _id: 'mock-catalog-package-basic',
-    name: 'Mock 服务方案 A',
-    code: 'mock-package-code-a',
+    name: '屋面防水修缮方案（示例）',
+    code: 'DEMO-PKG-001',
     type: 'mock-package-type',
     agelimit: 2,
     unit: '项',
@@ -103,7 +103,7 @@ export const mockQuotationPackageDetailResponse = {
         procedureId: 'mock-catalog-procedure-seal',
         procedure: {
           _id: 'mock-catalog-procedure-seal',
-          name: 'Mock 施工工序 A',
+          name: '檐口密封处理（示例）',
           unit: '处',
           order: 1,
         },
@@ -120,12 +120,12 @@ export const mockQuotationPackageDetailResponse = {
         materialId: 'mock-catalog-material-sealant',
         material: {
           _id: 'mock-catalog-material-sealant',
-          name: 'Mock 材料 A',
-          code: 'mock-material-code-a',
+          name: '弹性密封材料（示例）',
+          code: 'DEMO-MAT-001',
           unit: '支',
           materialUnit: '支',
-          spec: '合成规格',
-          specUnit: 'mock-spec-unit',
+          spec: '常用包装规格（示例）',
+          specUnit: '支',
           type: 1,
           order: 1,
         },
@@ -141,7 +141,7 @@ export const mockQuotationPackageDetailResponse = {
         materialId: 'mock-catalog-material-sealant-alternative',
         material: {
           _id: 'mock-catalog-material-sealant-alternative',
-          name: 'Mock 材料 A（同层替代）',
+          name: '高延伸密封材料（替代示例）',
           unit: '支',
           order: 2,
         },
@@ -154,7 +154,7 @@ export const mockQuotationPackageDetailResponse = {
         materialId: 'mock-catalog-material-layer-2',
         material: {
           _id: 'mock-catalog-material-layer-2',
-          name: 'Mock 材料 B（数值层）',
+          name: '基层防护涂料（示例）',
           unit: '桶',
           order: 3,
         },
@@ -169,7 +169,7 @@ export const mockQuotationPackageDetailResponse = {
         measureId: 'mock-catalog-measure-inspection',
         measure: {
           _id: 'mock-catalog-measure-inspection',
-          name: 'Mock 机措 A',
+          name: '高处作业防护（示例）',
           unit: '次',
           order: 1,
         },

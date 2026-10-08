@@ -49,9 +49,9 @@ export function seedG4fReviewDraft(storage: StoragePort, scenario: G4fReviewScen
       groups: [{
         groupId: 'quotation-group-review-submit', repairParts: ['repair-part-code-001'],
         partDescription: '合成屋面区域', maintainAreaNum: '12', projPackages: [],
-        procedures: [{ selectionId: 'review-procedure', kind: 'procedure', catalogId: 'mock-catalog-procedure-seal', label: 'Mock 施工工序 A', unit: '处', quantity: 1 }],
-        materials: [{ selectionId: 'review-material', kind: 'material', catalogId: 'mock-catalog-material-sealant', label: 'Mock 材料 A', unit: '支', quantity: 2 }],
-        measures: [{ selectionId: 'review-measure', kind: 'measure', catalogId: 'mock-catalog-measure-inspection', label: 'Mock 机措 A', unit: '次', quantity: 1 }],
+        procedures: [{ selectionId: 'review-procedure', kind: 'procedure', catalogId: 'mock-catalog-procedure-seal', label: '檐口密封处理（示例）', unit: '处', quantity: 1 }],
+        materials: [{ selectionId: 'review-material', kind: 'material', catalogId: 'mock-catalog-material-sealant', label: '弹性密封材料（示例）', unit: '支', quantity: 2 }],
+        measures: [{ selectionId: 'review-measure', kind: 'measure', catalogId: 'mock-catalog-measure-inspection', label: '高处作业防护（示例）', unit: '次', quantity: 1 }],
       }],
     }
     void storage.write({ namespace: 'draft', key: actionDraftStorageKey(identity) }, quotationDraftRecordFor(identity, draft, '2026-09-23T00:00:00.000Z'))

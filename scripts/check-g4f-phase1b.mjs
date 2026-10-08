@@ -65,25 +65,25 @@ if (!catalog.includes('synthetic-package-basic') || !catalog.includes('synthetic
 }
 if (genericForm.includes('quotationDraft') || genericForm.includes('QuotationLine')) fail('quotation semantics must not leak into generic Dynamic Form Runtime')
 if (/createQuotation|updateQuotation|sendQuotation|convertQuotation/.test(commandPort)) fail('quotation mutation APIs remain out of scope')
-if (!component.includes('按维修部位组织方案') || !component.includes('quotation-draft-empty') || !component.includes('quotation-catalog-page')) {
+if (!component.includes('报价工作台') || !component.includes('quotation-draft-empty') || !component.includes('quotation-catalog-page')) {
   fail('quotation-owned composition and catalog browser UI must be present')
 }
 const buttonContents = [...component.matchAll(/<AppButton\b[^>]*>([\s\S]*?)<\/AppButton>/g)].map((match) => match[1])
 if (buttonContents.some((text) => /保存报价|提交报价|确认报价|完成工作流/.test(text)) || component.includes('completeWorkflowNode')) {
   fail('UI must not expose quote business writes or workflow completion')
 }
-if (!component.includes('R1 顶层金额预览') || !component.includes('未提交') || !component.includes('quotation-local-gross-total')
-  || !component.includes('quotation-rounding-note') || !component.includes('独立舍入')
+if (!component.includes('本机金额预览') || !component.includes('未提交') || !component.includes('quotation-local-gross-total')
+  || !component.includes('quotation-rounding-note') || !component.includes('舍入后可能存在小额差异')
   || !component.includes('只有单独确认') || !component.includes('不会完成当前工单工作流')) {
   fail('Phase 1H local price preview must be explicitly non-submitted and Action-owned')
 }
 if (!component.includes('quotation-add-group') || !component.includes('quotation-browse-') || !component.includes('quotation-package-detail-') || !component.includes('quotation-selection-quantity-') || !component.includes('quotation-selection-remove-') || !component.includes('quotation-draft-legacy')) {
   fail('group composition controls and explicit legacy-draft handling must remain testable')
 }
-if (component.includes('composition.addCatalogItem') || !component.includes('workspace.addQuotationCatalogSelection') || !component.includes('加入当前组')) {
+if (component.includes('composition.addCatalogItem') || !component.includes('workspace.addQuotationCatalogSelection') || !component.includes('加入本组')) {
   fail('direct catalog selection must pass through the Action Workspace bridge')
 }
-if (!component.includes("item.kind === 'package'") || !component.includes('配置服务方案') || !component.includes('quotation-package-configure-commit')) {
+if (!component.includes("item.kind === 'package'") || !component.includes('套餐配置') || !component.includes('quotation-package-configure-commit')) {
   fail('Package must use its distinct material-configuration UX, not the generic direct-selection action')
 }
 if (!workspace.includes('quotationCatalogBrowser.selectedCatalogItemFor(kind, catalogId)') || !workspace.includes('isDirectQuotationCatalogKind(kind)')) {

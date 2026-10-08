@@ -100,9 +100,9 @@ export function createApp() {
     bjProducts: { orderList: [{
       repairParts: ['repair-part-code-001'], partDescription: '合成屋面区域', maintainAreaNum: '12',
       projPackages: { data: [] },
-      procedures: { data: [{ _id: 'mock-catalog-procedure-seal', name: 'Mock 施工工序 A', unit: '处', number: 1 }] },
-      materials: { data: [{ _id: 'mock-catalog-material-sealant', name: 'Mock 材料 A', unit: '支', number: 2 }] },
-      measures: { data: [{ _id: 'mock-catalog-measure-inspection', name: 'Mock 机措 A', unit: '次', number: 1 }] },
+      procedures: { data: [{ _id: 'mock-catalog-procedure-seal', name: '檐口密封处理（示例）', unit: '处', number: 1 }] },
+      materials: { data: [{ _id: 'mock-catalog-material-sealant', name: '弹性密封材料（示例）', unit: '支', number: 2 }] },
+      measures: { data: [{ _id: 'mock-catalog-measure-inspection', name: '高处作业防护（示例）', unit: '次', number: 1 }] },
     }], addItems: { data: [] }, deleteItems: { data: [] } },
     replaceSnapshot: { _id: 'order-synthetic-review', type: 1, serviceAppointmentId: 'mock-work-order-018-quotation-foundation', productIds: '[]', exts: {}, otherAmount: 0 },
   })

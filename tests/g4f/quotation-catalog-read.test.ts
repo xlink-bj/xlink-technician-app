@@ -402,8 +402,8 @@ describe('G4-F Phase 1C quotation catalog read foundation', () => {
     expect(packages.data?.items[0]).toMatchObject({
       kind: 'package',
       id: 'mock-catalog-package-basic',
-      name: 'Mock 服务方案 A',
-      code: 'mock-package-code-a',
+      name: '屋面防水修缮方案（示例）',
+      code: 'DEMO-PKG-001',
       type: 'mock-package-type',
       ageLimit: 2,
     })
@@ -411,15 +411,15 @@ describe('G4-F Phase 1C quotation catalog read foundation', () => {
     expect(materials.data?.items[0]).toMatchObject({
       kind: 'material',
       id: 'mock-catalog-material-sealant',
-      code: 'mock-material-code-a',
+      code: 'DEMO-MAT-001',
       materialUnit: '支',
-      specUnit: 'mock-spec-unit',
+      specUnit: '支',
       type: 1,
     })
     expect(measures.data?.items[0]).toMatchObject({
       kind: 'measure',
       id: 'mock-catalog-measure-inspection',
-      name: 'Mock 机措 A',
+      name: '高处作业防护（示例）',
     })
     expect(detail.data?.materials[0].item?.id).toBe('mock-catalog-material-sealant')
     expect(detail.data?.materials[0]).toMatchObject({ kind: 'material', layer: 'mock-layer-1' })

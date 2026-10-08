@@ -4,6 +4,7 @@ import { resolve } from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
 
 const output = resolve(process.cwd(), '.review/g4f-ux-phase-b0/after')
+const visualMasterOutput = resolve(process.cwd(), '.review/g4f-ux-phase-b0/master-v1/after')
 
 type Diagnostics = {
   readonly pageErrors: string[]
@@ -101,6 +102,15 @@ async function captureFocusedViewport(page: Page, testId: string, filename: stri
   await page.screenshot({ path: resolve(output, filename), animations: 'disabled' })
 }
 
+async function returnWorkspaceToTop(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    for (const element of document.querySelectorAll<HTMLElement>('*')) {
+      if (element.scrollTop > 0) element.scrollTop = 0
+    }
+    window.scrollTo(0, 0)
+  })
+}
+
 async function openPackage(page: Page, groupId: string): Promise<void> {
   await openGroupCatalog(page, groupId)
   await expect(page.getByTestId('quotation-catalog-target')).toContainText(`维修部位组 ${groupId.endsWith('1') ? '1' : '2'}`)
@@ -124,8 +134,8 @@ test('Phase B0 golden path: workbench → catalog → package configuration → 
   await createGroup(page, groupId, '屋面', '屋面檐口修复', '18')
   await addDirectItem(page, groupId, 'procedure')
   await addDirectItem(page, groupId, 'material')
-  await expect(page.getByTestId(`quotation-group-section-${groupId}-procedure`)).toContainText('Mock 施工工序 A')
-  await expect(page.getByTestId(`quotation-group-section-${groupId}-material`)).toContainText('Mock 材料 A')
+  await expect(page.getByTestId(`quotation-group-section-${groupId}-procedure`)).toContainText('檐口密封处理（示例）')
+  await expect(page.getByTestId(`quotation-group-section-${groupId}-material`)).toContainText('弹性密封材料（示例）')
   await expect(page.getByTestId('quotation-workbench-amount')).toContainText(/待核验|暂不可计算/)
   await expect(page.getByTestId('quotation-footer-summary')).toContainText(/待核验|暂不可计算/)
   await expect(page.getByTestId('action-workspace-submit')).toHaveAttribute('disabled', 'true')
@@ -138,17 +148,17 @@ test('Phase B0 golden path: workbench → catalog → package configuration → 
   await page.getByTestId('quotation-catalog-kind-package').click()
   await expect(page.getByTestId('quotation-catalog-target')).toContainText('维修部位组 1')
   await expect(page.getByTestId('quotation-catalog-target')).toContainText('屋面檐口修复')
-  await expect(page.getByTestId('quotation-catalog-item-package-mock-catalog-package-basic')).toContainText('Mock 服务方案 A')
-  await expect(page.getByTestId('quotation-catalog-item-package-mock-catalog-package-basic')).toContainText('价格依据待核验')
+  await expect(page.getByTestId('quotation-catalog-item-package-mock-catalog-package-basic')).toContainText('屋面防水修缮方案（示例）')
+  await expect(page.getByTestId('quotation-catalog-item-package-mock-catalog-package-basic')).toContainText('金额待核验')
   await expect(page.getByTestId('quotation-catalog-search')).toBeVisible()
   await expect(page.getByTestId('quotation-catalog-footer')).toContainText('2 项已选')
   await captureFocusedViewport(page, 'quotation-catalog-item-package-mock-catalog-package-basic', 'b02-visual-catalog-390.png')
 
   await page.getByTestId('quotation-package-detail-mock-catalog-package-basic').click()
   await expect(page.getByTestId('quotation-package-config-focus')).toBeVisible()
-  await expect(page.getByTestId('quotation-package-procedures')).toContainText('Mock 施工工序 A')
-  await expect(page.getByTestId('quotation-package-materials')).toContainText('Mock 材料 A')
-  await expect(page.getByTestId('quotation-package-measures')).toContainText('Mock 机措 A')
+  await expect(page.getByTestId('quotation-package-procedures')).toContainText('檐口密封处理（示例）')
+  await expect(page.getByTestId('quotation-package-materials')).toContainText('弹性密封材料（示例）')
+  await expect(page.getByTestId('quotation-package-measures')).toContainText('高处作业防护（示例）')
   const layerOne = page.getByTestId('quotation-package-material-choice-string:mock-layer-1-0')
   const layerTwo = page.getByTestId('quotation-package-material-choice-number:2-0')
   await layerOne.click()
@@ -174,13 +184,15 @@ test('Phase B0 golden path: workbench → catalog → package configuration → 
   await commit.click()
   await expect(page.getByTestId('quotation-catalog-page')).toHaveCount(0)
   await expect(page.getByTestId('quotation-composition-selection')).toHaveCount(3)
-  await expect(page.getByTestId('quotation-configured-package-quotation-selection-3')).toContainText('Mock 材料 B（数值层）')
   const configuredPackage = page.getByTestId('quotation-configured-package-quotation-selection-3')
+  await expect(configuredPackage).toContainText('1 项工序 · 2 项材料 · 1 项机措')
+  await expect(configuredPackage).toContainText('金额关系待核验')
+  await expect(configuredPackage).not.toContainText('mock-layer-1')
+  await page.getByTestId('quotation-package-details-toggle-quotation-selection-3').click()
   await expect(configuredPackage).toContainText('材料层级 1')
   await expect(configuredPackage).toContainText('材料层级 2')
-  await expect(configuredPackage).toContainText('计价关系待核验')
-  await expect(configuredPackage).not.toContainText('mock-layer-1')
-  await expect(page.getByTestId(`quotation-group-section-${groupId}-material`)).toContainText('Mock 材料 A')
+  await expect(configuredPackage).toContainText('基层防护涂料（示例）')
+  await expect(page.getByTestId(`quotation-group-section-${groupId}-material`)).toContainText('弹性密封材料（示例）')
 
   const packageQuantity = page.getByTestId('quotation-selection-quantity-quotation-selection-3').locator('input')
   await packageQuantity.fill('2')
@@ -188,7 +200,7 @@ test('Phase B0 golden path: workbench → catalog → package configuration → 
   await captureFocusedViewport(page, `quotation-group-composition-${groupId}`, 'b04-workbench-package-and-standalone-material-390.png')
 
   await page.getByTestId(`quotation-group-details-toggle-${groupId}`).click()
-  await expect(page.getByTestId(`quotation-group-collapsed-summary-${groupId}`)).toContainText('Mock 服务方案 A')
+  await expect(page.getByTestId(`quotation-group-collapsed-summary-${groupId}`)).toContainText('屋面防水修缮方案（示例）')
   await expect(page.getByTestId(`quotation-group-section-${groupId}-package`)).toBeHidden()
   await page.getByTestId(`quotation-group-details-toggle-${groupId}`).click()
   await expect(page.getByTestId(`quotation-group-section-${groupId}-package`)).toBeVisible()
@@ -198,14 +210,14 @@ test('Phase B0 golden path: workbench → catalog → package configuration → 
   await procedureRemove.click()
   await expect(page.getByTestId('quotation-group-section-quotation-group-1-procedure')).toBeHidden()
   await addDirectItem(page, groupId, 'procedure')
-  await expect(page.getByTestId('quotation-group-section-quotation-group-1-procedure')).toContainText('Mock 施工工序 A')
+  await expect(page.getByTestId('quotation-group-section-quotation-group-1-procedure')).toContainText('檐口密封处理（示例）')
 
   // A second group can independently use the same provider item identity.
   const secondGroupId = 'quotation-group-2'
   await createGroup(page, secondGroupId, '卫生间', '卫生间墙地交界', '6')
   await addDirectItem(page, secondGroupId, 'material')
-  await expect(page.getByTestId('quotation-group-section-quotation-group-1-material')).toContainText('Mock 材料 A')
-  await expect(page.getByTestId('quotation-group-section-quotation-group-2-material')).toContainText('Mock 材料 A')
+  await expect(page.getByTestId('quotation-group-section-quotation-group-1-material')).toContainText('弹性密封材料（示例）')
+  await expect(page.getByTestId('quotation-group-section-quotation-group-2-material')).toContainText('弹性密封材料（示例）')
   await expect(page.getByTestId('quotation-draft-groups').locator('[data-testid="quotation-composition-selection"]')).toHaveCount(4)
 
   await page.getByTestId(`quotation-group-details-toggle-${groupId}`).click()
@@ -243,5 +255,84 @@ test('Phase B0 empty and retryable catalog states are explicit and recoverable',
   await retry.click()
   await expect(page.getByTestId('quotation-catalog-list-error')).toContainText('暂时无法读取目录')
   await captureFocusedViewport(page, 'quotation-catalog-list-error', 'b07-catalog-retryable-error-390.png')
+  await expectNoRuntimeOrNetworkErrors(diagnostics)
+})
+
+test('Phase B1 captures the real four-state quotation journey and compact/recovery states', async ({ page, browser }) => {
+  console.log(`[g4f-visual-master-v1] Playwright ${browser.version()}`)
+  await mkdir(visualMasterOutput, { recursive: true })
+  const diagnostics = await installReviewSafety(page)
+  const groupId = 'quotation-group-1'
+
+  await openReview(page, 'empty')
+  await createGroup(page, groupId, '屋面', '屋面檐口修复', '18')
+  await addDirectItem(page, groupId, 'material')
+  await returnWorkspaceToTop(page)
+  await expect(page.getByTestId('quotation-workbench-amount')).toContainText(/待核验|暂不可计算/)
+  await expect(page.getByTestId('quotation-group-section-quotation-group-1-material')).toContainText('弹性密封材料（示例）')
+  await expect(page.getByText(/¥0(?:\.00)?/)).toHaveCount(0)
+  await page.screenshot({ path: resolve(visualMasterOutput, '01-workbench-390.png'), animations: 'disabled' })
+
+  await openGroupCatalog(page, groupId)
+  await page.getByTestId('quotation-catalog-kind-package').click()
+  const packageCard = page.getByTestId('quotation-catalog-item-package-mock-catalog-package-basic')
+  await expect(packageCard).toContainText('屋面防水修缮方案（示例）')
+  await expect(packageCard).toContainText('金额待核验')
+  await expect(packageCard).toContainText('图片未提供')
+  await packageCard.scrollIntoViewIfNeeded()
+  await page.screenshot({ path: resolve(visualMasterOutput, '02-visual-catalog-390.png'), animations: 'disabled' })
+
+  await page.getByTestId('quotation-package-detail-mock-catalog-package-basic').click()
+  await expect(page.getByTestId('quotation-package-config-focus')).toBeVisible()
+  await expect(page.getByTestId('quotation-package-selection-summary')).toContainText('屋面檐口修复')
+  await expect(page.getByTestId('quotation-package-detail')).not.toContainText('mock-layer-1')
+  await page.getByTestId('quotation-package-material-choice-string:mock-layer-1-0').click()
+  await page.getByTestId('quotation-material-layer-string:mock-layer-1').scrollIntoViewIfNeeded()
+  await page.screenshot({ path: resolve(visualMasterOutput, '03-package-configuration-390.png'), animations: 'disabled' })
+
+  await page.getByTestId('quotation-package-material-choice-number:2-0').click()
+  await page.getByTestId('quotation-package-configure-commit').click()
+  await expect(page.getByTestId('quotation-catalog-page')).toHaveCount(0)
+  const configured = page.getByTestId('quotation-configured-package-quotation-selection-2')
+  await expect(page.getByText('屋面防水修缮方案（示例）', { exact: true })).toBeVisible()
+  await expect(configured).toContainText('1 项工序 · 2 项材料 · 1 项机措')
+  await expect(configured).toContainText('金额关系待核验')
+  await expect(configured).not.toContainText('材料层级 1')
+  await expect(page.getByTestId('quotation-package-details-toggle-quotation-selection-2')).toHaveAttribute('aria-expanded', 'false')
+  await expect(configured).not.toContainText('材料层级 1')
+  await returnWorkspaceToTop(page)
+  await configured.evaluate((element) => {
+    element.closest('[data-testid="quotation-composition-selection"]')?.scrollIntoView({ block: 'center', behavior: 'auto' })
+  })
+  await page.getByTestId(`quotation-repair-group-${groupId}`).screenshot({
+    path: resolve(visualMasterOutput, '04-returned-workbench-390.png'),
+    animations: 'disabled',
+  })
+
+  const secondGroupId = 'quotation-group-2'
+  await createGroup(page, secondGroupId, '卫生间', '卫生间墙地交界', '6')
+  await addDirectItem(page, secondGroupId, 'procedure')
+  await page.getByTestId(`quotation-group-details-toggle-${groupId}`).click()
+  await page.getByTestId(`quotation-group-details-toggle-${secondGroupId}`).click()
+  await page.setViewportSize({ width: 320, height: 844 })
+  const compactOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)
+  expect(compactOverflow, '320px two-group quote must not horizontally overflow').toBe(false)
+  await page.screenshot({ path: resolve(visualMasterOutput, '05-two-groups-320.png'), animations: 'disabled', fullPage: true })
+
+  await openReview(page, 'catalog-empty')
+  await createGroup(page, groupId, '屋面', '屋面檐口修复', '18')
+  await openGroupCatalog(page, groupId)
+  await page.getByTestId('quotation-catalog-kind-package').click()
+  await expect(page.getByTestId('quotation-catalog-empty')).toBeVisible()
+  await page.screenshot({ path: resolve(visualMasterOutput, '06-catalog-empty-390.png'), animations: 'disabled' })
+
+  await openReview(page, 'catalog-error')
+  await createGroup(page, groupId, '屋面', '屋面檐口修复', '18')
+  await openGroupCatalog(page, groupId)
+  await page.getByTestId('quotation-catalog-kind-package').click()
+  await expect(page.getByTestId('quotation-catalog-list-error')).toBeVisible()
+  await expect(page.getByTestId('quotation-catalog-list-retry')).toBeVisible()
+  await page.screenshot({ path: resolve(visualMasterOutput, '07-catalog-error-390.png'), animations: 'disabled' })
+
   await expectNoRuntimeOrNetworkErrors(diagnostics)
 })
