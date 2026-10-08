@@ -6,7 +6,8 @@ Status: **PARTIAL — live Beta create/edit is blocked by safe-target access.** 
 
 - Authorized base: `89218f9c375a0cf593a3787cced1bf24779a3422`.
 - Branch: `codex/g4f-phase1j-beta-closure-hardening`.
-- Evidence revision: the branch commit carrying this report (exact HEAD is recorded in the associated Issue #29 / Draft PR).
+- Code revision used for the Production login/read verification: `5e376c5237a336ef2fa5a28be22e33375bfcd3af`.
+- This documentation-only update records that later read evidence; it does not change the code revision used for the live run.
 - R1 source: `xlink-bj/xlink-app@6c0a97b26bcbcaee81ac4e1dfd627c6e8e70e29`.
 - Backend source: `xlink-bj/xlink-cloud-backend@5fc008d32e771205260f120621c1c4fc62d0824e`.
 
@@ -19,8 +20,8 @@ The configured endpoint was the non-production Beta environment. Five read-only 
 | Beta login preflight | 5 requests / 2 distinct credential sets; all `login_rejected` |
 | Beta ServiceAppointment / workflow / Order reads | 0 |
 | Beta business mutations, including child workflow and Order create/update | 0 |
-| Production API requests | 0 |
-| Production business mutations | 0 |
+| Production API requests during the Beta preflight documented in this subsection | 0 |
+| Production business mutation requests during that Beta preflight | 0 |
 | Safe test target proven | No; target not selected |
 | Live write flag | Not enabled for this verification |
 
@@ -28,7 +29,7 @@ No raw response, identifiers, customer data, credentials, cookies, or payloads a
 
 ## Production read-only evidence and access boundary
 
-**Evidence class:** `VERIFIED_PROD_STRUCTURE` for the bounded Mongo snapshot; `SOURCE_SUPPORTED_INFERENCE` for R1/backend behavior; no Production business API behavior is claimed.
+**Evidence class:** `VERIFIED_PROD_STRUCTURE` for the bounded Mongo snapshot; `VERIFIED_PROD_APP_READ` for the bounded app login/role/list/detail run on 2026-10-08; `SOURCE_SUPPORTED_INFERENCE` for R1/backend behavior. No Production mutation behavior is claimed.
 
 The ignored local Production profile was inspected by key names and non-secret mode only: it targets the Production environment, Mock is off, and the real-write flag is false. The separate ignored Mongo credential file is mode `0600`. No environment values or credentials are recorded here. A bounded Mongo read using that configured account confirmed the configured read-only identity could access the required collections. The account→user relationship was resolved in memory; only aggregate counts and field paths were emitted.
 
@@ -82,28 +83,33 @@ PDF field presence is structural evidence only; it does not authorize a document
 
 ### Production API and role context
 
-**Production API requests made: none.** The application Production API read boundary now permits only the exact source-verified POST read `biz/extForm/queryByColName/leakageCause`, with its fixed `_all`/sort body and no query parameters. Backend `ExtFormController.queryByColName` delegates to `ExtFormServiceImpl.queryByColName`, which resolves the tenant Ext and performs a paged `find`; the controller/service path inspected contains no write. This route was not called in this continuation.
+**Production app login and bounded Work Order reads: VERIFIED for this account/run.** The successful live run used the app's `AuthSessionAdapter`, `createUniAuthBackendDriver`, and role-scoped Technician API read adapter. Session state was held in an in-memory-only storage stub. No raw response, identifiers, customer data, phone, code, token, or full URL was retained.
 
-The requested “log in, then read business data without writing business records” path is **not available from the inspected existing login/role contract without a separate authorization for account/permission metadata writes**. The login write is not a quotation/work-order mutation, but it is still a persistent Production database write:
+| Exact endpoint / request category | Count | Result / evidence boundary |
+|---|---:|---|
+| `index/phoneLogin.do` | 2 attempts | One earlier temporary-runner attempt is `OUTCOME_UNKNOWN` after the runner's 5-second timeout; it is not success evidence. One later controlled attempt succeeded. The authorized login-time account/permission-context persistence may have occurred for either attempt. |
+| `function/queryTreeByRoleId` | 1 | Read succeeded using the role context returned by login; `function/changeRole` was not called. |
+| Bounded ServiceAppointment / Work Order list | 1 | Read succeeded; 20 records returned. The sanitized runner recorded only the list category and did not retain whether the actual path was `basic/serviceAppointment/query` or `basic/serviceAppointment/querySAWorkflowNode`. The exact list path is therefore **UNKNOWN** and is not inferred here. |
+| `basic/serviceAppointment/queryById/{list-derived-id}` | 1 | Detail read succeeded for a record selected from the returned list. The concrete ID was kept in memory only; the legacy `type=query` permission-bypass flag was omitted. |
 
-- Backend `IndexController.phoneLogin` stores account/user in session and Redis. For tenant accounts it clears `permissionOrgIds` and `permissionRole`, then calls `mongoTemplate.save(account)` before returning. This is a persistent account/permission-context write, so the app Production auth adapter remains blocked before dispatch unless that exact metadata write is separately authorized.
-- `FunctionServiceImpl.changeRole` persists `Account.permissionRoleId` with `updateFirst`, then populates `permissionRole` and `permissionOrgIds` in context. The Production read-only adapter blocks `function/changeRole`.
-- `FunctionServiceImpl.queryByRole` can clear/add to the current role-ID list when passed role IDs, and does not establish the permission role/org context used by protected business reads; it is not a safe substitute.
-- The inspected `queryTreeByRoleId` path is a menu-tree read, not a WorkOrder data-scope contract. No source-backed side-effect-free role-context path for ServiceAppointment/Order reads was found.
+The local request guard observed no unexpected network route. No additional Production API call is authorized or needed for this documentation closure. The live detail response contained `workflowNodes` and `quotationCatalogContext` properties, but this run did not retain or inspect their contents. Therefore it does **not** establish a trustworthy active `placeOrder` node, quotation intent/content, linked Order, or parent-workflow state.
 
-The user's updated governance removes a blanket numerical “Production writes must equal zero” acceptance criterion, but it does **not** grant blanket write permission: each Production mutation still requires specific prior authorization. No login/role/business mutation has been authorized or performed here. Mongo remains evidence-only and is not wired as an App data source.
+Backend `IndexController.phoneLogin` persists account/permission context and session state; that specific login-time context write was separately authorized. `FunctionServiceImpl.changeRole` persists `Account.permissionRoleId` and remains prohibited. Production command transport, quote/order mutations, workflow mutations, uploads, messages, coupon/contract/payment operations, and arbitrary-record reads remain outside this authorization. Mongo remains evidence-only and is not wired as an App data source.
+
+Production business mutation requests: **0**. This is the observed count for this verification, not a blanket authorization for future writes. The initial timed-out login's server-side outcome remains `OUTCOME_UNKNOWN`; it is not described as either a successful or failed login.
 
 ### Exact current classification
 
 | Capability | Status |
 |---|---|
 | Sanitized Production Mongo structural evidence | `PASS` for the scoped read snapshot only |
-| Production app login with no database writes | `BLOCKED_EXTERNAL` — current login persists account permission context |
-| Production role selection for business data scope | `BLOCKED_EXTERNAL` — `changeRole` persists role state; no equivalent side-effect-free contract found |
-| Production API WorkOrder/Order reads | `BLOCKED_EXTERNAL` — no authenticated safe role context/read path available; no API request made |
+| Production app login with authorized account-context persistence | `VERIFIED` for this account/run; first timed-out attempt remains `OUTCOME_UNKNOWN` |
+| Production role-tree read | `VERIFIED`; `function/changeRole` remains prohibited and was not called |
+| Production bounded WorkOrder list/detail reads | `VERIFIED`; one bounded page and one list-derived detail read; exact list route path was not retained |
+| Production API Order readback | `NOT_PERFORMED`; outside the authorized endpoint set |
 | Production bundle credential exposure | `PASS` after the local build redaction; no configured quick-login/Mongo credential values found in 208 rebuilt artifacts |
 | Same-ID Production Order edit | `NOT_AUTHORIZED` and not attempted |
-| Production business mutations in this continuation | `0` performed; zero is an observation, not a global acceptance requirement |
+| Production business mutations in this continuation | `0` requests performed; login-time account-context persistence is separately authorized |
 
 ## Create, readback, tenant contract, and edit
 
@@ -146,7 +152,7 @@ Deterministic test coverage simulates process restart by restoring the persisted
 | PDF field/URL behavior | `PARTIAL / UNKNOWN` | Beta Order readback and approved URL/platform validation |
 | Same-ID Beta edit | `BLOCKED_ENV` | Requires successful safe-target create/readback first |
 | Native MP/App runtime behavior | `DEVICE_VALIDATION_PENDING` | Device QA with an approved isolated test account/target |
-| Production mutation/readiness | `NOT_AUTHORIZED` | Separate future authorization; no Production action is in scope |
+| Production business mutation/readiness | `NOT_AUTHORIZED` / `NOT_READY` | Business writes remain prohibited; Production read evidence does not close Beta create/edit, parent-workflow, or PDF gates |
 
 No G4-G work was started. No parent workflow command, quote confirmation, conversion, payment, coupon, contract, upload, or customer action was performed.
 
