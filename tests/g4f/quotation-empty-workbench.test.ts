@@ -67,4 +67,12 @@ describe('Action Workspace context ownership', () => {
     expect(shell).toContain('displayNumber')
     expect(quotationContent).not.toMatch(/action-workspace-context|customerName|displayNumber/)
   })
+
+  it('renders every approved initial-state module without changing the action boundary', () => {
+    expect(quotationContent).toContain('data-testid="quotation-draft-notice"')
+    expect(quotationContent).toContain('data-testid="quotation-empty-illustration"')
+    expect(quotationContent).toContain('data-testid="quotation-quote-process"')
+    expect(quotationContent).toContain('@tap="createRepairGroup()"')
+    expect(quotationContent).not.toContain('quotation-content__initial-empty-mark')
+  })
 })

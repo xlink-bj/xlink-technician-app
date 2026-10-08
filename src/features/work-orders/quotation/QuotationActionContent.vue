@@ -10,7 +10,7 @@
       <AppLoadingState variant="inline" label="正在准备报价内容" />
     </view>
 
-    <view v-else-if="props.state === 'ready'" v-show="!catalogBrowser.isOpen" class="quotation-content__panel quotation-content__workbench app-surface" data-testid="quotation-state-ready">
+    <view v-else-if="props.state === 'ready'" v-show="!catalogBrowser.isOpen" class="quotation-content__panel quotation-content__workbench app-surface" :class="{ 'quotation-content__workbench--initial': isInitialEmptyWorkbench }" data-testid="quotation-state-ready">
       <view v-if="!isInitialEmptyWorkbench" class="quotation-content__workbench-summary" data-testid="quotation-workbench-summary">
         <view class="quotation-content__workbench-summary-copy">
           <text class="quotation-content__panel-title">项目概览</text>
@@ -130,23 +130,54 @@
       </view>
       <view v-else>
         <view v-if="composition.groups.length === 0 && isInitialEmptyWorkbench" class="quotation-content__initial-empty" data-testid="quotation-initial-empty-workbench">
-          <view class="quotation-content__initial-empty-heading">
-            <text class="quotation-content__initial-empty-title">维修部位报价</text>
-            <text class="quotation-content__initial-empty-description">请先添加维修部位，再为对应分组选择套餐、工序、材料或机措。</text>
+          <view class="quotation-content__initial-draft-notice" data-testid="quotation-draft-notice" role="status">
+            <text class="quotation-content__initial-draft-notice-mark" aria-hidden="true">i</text>
+            <text class="quotation-content__initial-draft-notice-copy">当前为本机报价草稿；通过校验并提交后才会创建正式订单。</text>
           </view>
-          <view class="quotation-content__initial-empty-surface">
-            <view class="quotation-content__initial-empty-mark" aria-hidden="true">
-              <AppIcon name="order" :size="32" color="var(--app-color-primary)" />
+          <view class="quotation-content__initial-card app-surface" data-testid="quotation-initial-main-card">
+            <view class="quotation-content__initial-empty-heading">
+              <text class="quotation-content__initial-empty-title">维修部位报价</text>
+              <text class="quotation-content__initial-empty-description">请添加维修部位，再选择相应的套餐、工序、材料或机措。</text>
             </view>
-            <text class="quotation-content__empty-title">暂无维修部位</text>
-            <text class="quotation-content__initial-empty-copy">从添加维修部位开始整理报价，项目会归入对应的部位分组。</text>
-            <AppButton
-              class="quotation-content__initial-empty-action"
-              data-testid="quotation-add-group"
-              :disabled="!canEdit"
-              @tap="createRepairGroup()"
-            >＋ 添加维修部位</AppButton>
-            <text class="quotation-content__initial-empty-note">当前为本机报价草稿；成功提交后将创建正式订单。</text>
+            <view class="quotation-content__initial-empty-surface">
+              <view class="quotation-content__initial-empty-artwork" aria-hidden="true">
+                <view class="quotation-content__initial-empty-ground" />
+                <image class="quotation-content__initial-empty-illustration" :src="emptyBoxArtwork" mode="aspectFit" data-testid="quotation-empty-illustration" />
+              </view>
+              <text class="quotation-content__empty-title">暂无维修部位</text>
+              <text class="quotation-content__initial-empty-copy">添加维修部位后，可选择工序、材料与机措。</text>
+              <AppButton
+                class="quotation-content__initial-empty-action"
+                data-testid="quotation-add-group"
+                :disabled="!canEdit"
+                @tap="createRepairGroup()"
+              >＋ 添加维修部位</AppButton>
+            </view>
+          </view>
+          <view class="quotation-content__initial-process app-surface" data-testid="quotation-quote-process">
+            <view class="quotation-content__initial-process-heading">
+              <text class="quotation-content__initial-process-title">报价流程</text>
+              <text class="quotation-content__initial-process-subtitle">三步整理报价</text>
+            </view>
+            <view class="quotation-content__initial-process-steps">
+              <view class="quotation-content__initial-process-step">
+                <view class="quotation-content__initial-process-symbol"><text class="quotation-content__initial-process-number">1</text><AppIcon name="task" :size="22" color="var(--app-color-primary)" /></view>
+                <text class="quotation-content__initial-process-step-title">选择维修部位</text>
+                <text class="quotation-content__initial-process-step-copy">如屋面、卫生间等</text>
+              </view>
+              <text class="quotation-content__initial-process-arrow" aria-hidden="true">›</text>
+              <view class="quotation-content__initial-process-step">
+                <view class="quotation-content__initial-process-symbol"><text class="quotation-content__initial-process-number">2</text><AppIcon name="order" :size="22" color="var(--app-color-primary)" /></view>
+                <text class="quotation-content__initial-process-step-title">添加项目</text>
+                <text class="quotation-content__initial-process-step-copy">选择套餐、工序、材料与机措</text>
+              </view>
+              <text class="quotation-content__initial-process-arrow" aria-hidden="true">›</text>
+              <view class="quotation-content__initial-process-step">
+                <view class="quotation-content__initial-process-symbol"><text class="quotation-content__initial-process-number">3</text><AppIcon name="complete" :size="22" color="var(--app-color-primary)" /></view>
+                <text class="quotation-content__initial-process-step-title">提交订单</text>
+                <text class="quotation-content__initial-process-step-copy">通过校验后提交</text>
+              </view>
+            </view>
           </view>
         </view>
         <view v-else-if="composition.groups.length === 0" class="quotation-content__empty" data-testid="quotation-draft-empty">
@@ -702,6 +733,7 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import emptyBoxArtwork from './empty-box-illustration.png'
 
 import AppButton from '@shared/ui/AppButton.vue'
 import AppCascadeSelector from '@shared/ui/AppCascadeSelector.vue'
@@ -1423,16 +1455,34 @@ function configuredPackageLayerLabel(
 .quotation-content__catalog-state-title { font-size: 26rpx; }
 .quotation-content__catalog-state-copy { font-size: 23rpx; line-height: 1.5; }
 
-.quotation-content__initial-empty { display: flex; flex-direction: column; gap: 18rpx; }
-.quotation-content__initial-empty-heading { display: flex; flex-direction: column; gap: 8rpx; }
-.quotation-content__initial-empty-title { color: var(--app-color-text-primary); display: block; font-size: 30rpx; font-weight: 800; line-height: 1.3; }
-.quotation-content__initial-empty-description { color: var(--app-color-text-secondary); display: block; font-size: 23rpx; line-height: 1.5; }
-.quotation-content__initial-empty-surface { align-items: center; background: var(--app-color-primary-soft); border: 1rpx solid var(--app-color-border-soft); border-radius: var(--app-radius-large); display: flex; flex-direction: column; padding: 34rpx 22rpx 24rpx; text-align: center; }
-.quotation-content__initial-empty-mark { align-items: center; background: var(--app-color-surface); border: 1rpx solid var(--app-color-border); border-radius: 24rpx; display: flex; height: 76px; justify-content: center; width: 76px; }
-.quotation-content__initial-empty-surface .quotation-content__empty-title { font-size: 27rpx; margin-top: 20rpx; }
-.quotation-content__initial-empty-copy { color: var(--app-color-text-body); display: block; font-size: 22rpx; line-height: 1.55; margin-top: 8rpx; max-width: 520rpx; }
-.quotation-content__initial-empty-action { border-radius: 16rpx; margin-top: 22rpx; max-width: 280px; min-height: 54px; width: 100%; }
-.quotation-content__initial-empty-note { color: var(--app-color-text-secondary); display: block; font-size: 19rpx; line-height: 1.5; margin-top: 18rpx; }
+.quotation-content__workbench--initial { background: transparent; border: 0; box-shadow: none; padding: 0; }
+.quotation-content__initial-empty { display: flex; flex-direction: column; gap: 20rpx; }
+.quotation-content__initial-draft-notice { align-items: center; background: linear-gradient(105deg, #eaf4ff, #f2f8ff); border: 1rpx solid #dceafb; border-radius: 20rpx; box-shadow: 0 5rpx 18rpx rgba(50, 100, 170, .055); box-sizing: border-box; color: #42618f; display: flex; font-size: 22rpx; line-height: 1.45; min-height: 72rpx; padding: 12rpx 18rpx; text-align: left; }
+.quotation-content__initial-draft-notice-mark { align-items: center; background: var(--app-color-primary); border-radius: 999rpx; color: #fff; display: flex; flex: 0 0 30rpx; font-size: 22rpx; font-weight: 800; height: 30rpx; justify-content: center; margin-right: 14rpx; }
+.quotation-content__initial-draft-notice-copy { display: block; min-width: 0; }
+.quotation-content__initial-card, .quotation-content__initial-process { background: linear-gradient(145deg, #fff 0%, #fff 76%, #fafdff 100%); border-color: #eaf0f8; border-radius: 26rpx; box-shadow: 0 12rpx 32rpx rgba(45, 80, 128, .07); }
+.quotation-content__initial-card { box-sizing: border-box; display: flex; flex-direction: column; min-height: 620rpx; padding: 28rpx 20rpx 20rpx; }
+.quotation-content__initial-empty-heading { display: flex; flex-direction: column; gap: 8rpx; padding: 0 4rpx 16rpx; }
+.quotation-content__initial-empty-title { color: #122448; display: block; font-size: 34rpx; font-weight: 800; line-height: 1.25; }
+.quotation-content__initial-empty-description { color: var(--app-color-text-body); display: block; font-size: 23rpx; line-height: 1.45; }
+.quotation-content__initial-empty-surface { align-items: center; background: linear-gradient(155deg, #f3f9ff 0%, #eaf5ff 57%, #f8fcff 100%); border: 1rpx solid #eaf2fc; border-radius: 24rpx; display: flex; flex: 1; flex-direction: column; justify-content: center; padding: 12rpx 16rpx 22rpx; text-align: center; }
+.quotation-content__initial-empty-artwork { align-items: center; display: flex; height: 214rpx; justify-content: center; position: relative; width: 100%; }
+.quotation-content__initial-empty-ground { background: radial-gradient(ellipse at center, rgba(77, 150, 232, .23), rgba(77, 150, 232, .02) 67%, transparent 70%); bottom: 0; height: 52rpx; position: absolute; width: 84%; }
+.quotation-content__initial-empty-illustration { height: 220rpx; position: relative; width: 220rpx; }
+.quotation-content__initial-empty-surface .quotation-content__empty-title { color: #122448; font-size: 28rpx; margin-top: 3rpx; }
+.quotation-content__initial-empty-copy { color: var(--app-color-text-body); display: block; font-size: 22rpx; line-height: 1.45; margin-top: 6rpx; max-width: 520rpx; }
+.quotation-content__initial-empty-action { border-radius: 18rpx; box-shadow: 0 9rpx 20rpx rgba(35, 111, 235, .18); margin-top: 18rpx; max-width: 190px; min-height: 48px; min-width: 160px; width: 58%; }
+.quotation-content__initial-process { box-sizing: border-box; min-height: 330rpx; padding: 24rpx 18rpx 26rpx; }
+.quotation-content__initial-process-heading { align-items: baseline; display: flex; justify-content: space-between; margin: 0 2rpx 16rpx; }
+.quotation-content__initial-process-title { color: #122448; font-size: 30rpx; font-weight: 800; }
+.quotation-content__initial-process-subtitle { color: var(--app-color-text-body); font-size: 21rpx; }
+.quotation-content__initial-process-steps { align-items: stretch; display: flex; gap: 2rpx; }
+.quotation-content__initial-process-step { background: linear-gradient(160deg, #fff 0%, #f7fbff 100%); border: 1rpx solid #f8faff; border-radius: 20rpx; box-shadow: 0 7rpx 18rpx rgba(37, 75, 131, .045); box-sizing: border-box; display: flex; flex: 1; flex-direction: column; min-height: 198rpx; min-width: 0; padding: 16rpx 8rpx 18rpx; }
+.quotation-content__initial-process-arrow { align-self: center; color: var(--app-color-primary); flex: 0 0 18rpx; font-size: 42rpx; line-height: 1; text-align: center; }
+.quotation-content__initial-process-symbol { align-items: center; display: flex; gap: 10rpx; min-height: 48rpx; }
+.quotation-content__initial-process-number { align-items: center; background: #e8f3ff; border-radius: 999rpx; color: var(--app-color-primary); display: flex; flex: 0 0 40rpx; font-size: 24rpx; font-weight: 800; height: 40rpx; justify-content: center; }
+.quotation-content__initial-process-step-title { color: #182e51; display: block; font-size: 25rpx; font-weight: 800; line-height: 1.35; margin-top: 8rpx; }
+.quotation-content__initial-process-step-copy { color: var(--app-color-text-body); display: block; font-size: 21rpx; line-height: 1.45; margin-top: 6rpx; }
 .quotation-content__catalog-footer { border-radius: 20rpx 20rpx 0 0; gap: 10rpx; margin-top: 10rpx; padding: 14rpx var(--app-page-gutter) 12rpx; }
 .quotation-content__catalog-footer-copy { min-width: 0; }
 .quotation-content__catalog-footer-title { font-size: 22rpx; line-height: 1.35; }
