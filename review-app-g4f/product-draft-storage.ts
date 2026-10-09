@@ -33,7 +33,7 @@ export function createProductReviewDraftStorage(
   readBrowserStorage: () => BrowserReviewStorage | null = () => typeof window === 'undefined' ? null : window.localStorage,
 ): StoragePort {
   return {
-    async read<T>(key) {
+    async read<T>(key: StorageKey) {
       const physical = prefixFor(key)
       if (!physical) return unavailable<T | null>()
       try {
@@ -51,7 +51,7 @@ export function createProductReviewDraftStorage(
         return unavailable<T | null>()
       }
     },
-    async write<T>(key, value: T) {
+    async write<T>(key: StorageKey, value: T) {
       const physical = prefixFor(key)
       if (!physical) return unavailable<void>()
       try {
@@ -63,7 +63,7 @@ export function createProductReviewDraftStorage(
         return unavailable<void>()
       }
     },
-    async remove(key) {
+    async remove(key: StorageKey) {
       const physical = prefixFor(key)
       if (!physical) return unavailable<void>()
       try {
