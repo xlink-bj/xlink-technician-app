@@ -99,8 +99,12 @@ test('synthetic ExtField UX runs the real quotation workbench, validates both ph
   await expect(page.getByTestId('synthetic-extfield-review-panel')).toHaveCount(0)
   await expect(page.getByTestId('quotation-first-step-product-action')).toBeVisible()
   await captureFocusViewport(page, 'quotation-first-step-product-action', '00-workbench-primary-actions.png')
-  await page.getByTestId('synthetic-panel-toggle').click()
+  await completeQuotationGroupContext(page)
+  await page.getByTestId('quotation-first-step-select-products').click()
+  await expect(page.getByTestId('synthetic-extfield-review-panel')).toBeVisible()
   await expect(page.getByTestId('synthetic-editable-fields')).toBeVisible()
+  await expect(page.getByTestId('synthetic-entry-validation-error')).toContainText('专项说明内容')
+  await expect(page.getByTestId('quotation-catalog-page')).toHaveCount(0)
 
   await expect(page.getByTestId('g4f-review-title')).toContainText('报价工作区')
   await expect(page.getByTestId('quotation-repair-group-quotation-group-synthetic-dynamic-fields')).toBeVisible()
@@ -122,10 +126,6 @@ test('synthetic ExtField UX runs the real quotation workbench, validates both ph
 
   await captureSyntheticViewport(page, '01-synthetic-fields-and-phase-rules.png')
 
-  await completeQuotationGroupContext(page)
-  await page.getByTestId('quotation-first-step-select-products').click()
-  await expect(page.getByTestId('quotation-catalog-page')).toHaveCount(0)
-  await expect(page.getByTestId('synthetic-entry-validation-error')).toContainText('专项说明内容')
   await captureSyntheticViewport(page, '02-entry-required-validation.png')
 
   await page.getByTestId('synthetic-input-demo-conditional-required-row').locator('textarea').fill('合成必填说明')
@@ -179,6 +179,15 @@ test('fast synthetic panel unmount and re-entry restores the draft without waiti
   await page.getByTestId('g4f-review-fast-reentry').click()
   await expect(page.getByTestId('synthetic-extfield-review-panel')).toBeVisible()
   await expect(page.getByTestId('synthetic-input-demo-shared-visible-yes-row').locator('input')).toHaveValue(editedValue)
+  await expect(page.getByTestId('synthetic-draft-saved')).toBeVisible()
+  await expectNoBusinessCommands(page)
+
+  // Once the recovered snapshot has been persisted, a new page/runtime must read it from storage.
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  await expect(page.getByTestId('synthetic-panel-toggle')).toBeVisible()
+  await page.getByTestId('synthetic-panel-toggle').click()
+  await expect(page.getByTestId('synthetic-input-demo-shared-visible-yes-row').locator('input')).toHaveValue(editedValue)
+  await expect(page.getByTestId('synthetic-draft-saved')).toBeVisible()
   await expectNoBusinessCommands(page)
   await expectSafe(page, diagnostics)
 })

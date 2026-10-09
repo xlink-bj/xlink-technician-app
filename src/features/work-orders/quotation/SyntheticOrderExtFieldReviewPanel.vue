@@ -151,7 +151,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import type { StoragePort } from '@shared/ports'
 import AppButton from '@shared/ui/AppButton.vue'
 import AppField from '@shared/ui/AppField.vue'
@@ -174,6 +174,7 @@ import type {
 
 export interface SyntheticOrderExtFieldReviewPanelHandle {
   validateSelectionEntry(): boolean
+  requestSelectionEntryValidation(): void
   focusFirstError(): void
 }
 
@@ -193,6 +194,7 @@ const diagnosticsExpanded = ref(false)
 let session: SyntheticOrderExtFieldDraftSession | undefined
 let identityGeneration = 0
 let allowDraftWrites = false
+let validateEntryAfterLoad = false
 
 const identityToken = computed(() => {
   const identity = props.identity
@@ -242,6 +244,7 @@ watch(identityToken, (token) => {
   identityGeneration += 1
   const generation = identityGeneration
   allowDraftWrites = false
+  validateEntryAfterLoad = false
   stopCurrentSession()
   fieldErrors.value = Object.create(null) as Record<string, string>
   entryValidationMessage.value = ''
@@ -259,7 +262,7 @@ watch(identityToken, (token) => {
     },
   })
   session = nextSession
-  void nextSession.load().then((result) => {
+  void nextSession.load().then(async (result) => {
     if (generation !== identityGeneration || session !== nextSession) return
     if (result.state === 'empty') {
       setValues({ demoMode: '是', demoWaiverMode: '豁免' })
@@ -273,10 +276,22 @@ watch(identityToken, (token) => {
       draftState.value = result.state
       allowDraftWrites = false
     }
+    if (validateEntryAfterLoad) {
+      validateEntryAfterLoad = false
+      await nextTick()
+      if (generation === identityGeneration && session === nextSession) {
+        validateSelectionEntry(true)
+        focusFirstError()
+      }
+    }
   }).catch(() => {
     if (generation !== identityGeneration) return
     draftState.value = 'unavailable'
     allowDraftWrites = false
+    if (validateEntryAfterLoad) {
+      validateEntryAfterLoad = false
+      entryValidationMessage.value = '本机合成草稿读取失败，暂不能进入目录；原报价草稿未受影响。'
+    }
   })
 }, { immediate: true })
 
@@ -318,7 +333,7 @@ function focusFirstError(): void {
   if (target instanceof HTMLElement) target.focus()
 }
 
-function validateSelectionEntry(): boolean {
+function validateSelectionEntry(showReentryHint = false): boolean {
   if (!canEdit.value) {
     entryValidationMessage.value = '本机合成草稿尚未就绪，暂不能进入目录。'
     return false
@@ -330,8 +345,22 @@ function validateSelectionEntry(): boolean {
     return false
   }
   fieldErrors.value = Object.create(null) as Record<string, string>
-  entryValidationMessage.value = '目录进入必填校验通过；此结果只用于合成体验，不代表正式订单可提交。'
+  entryValidationMessage.value = showReentryHint
+    ? '必填项已满足，请再次点击“选择产品”进入目录。此结果仅用于合成体验。'
+    : '目录进入必填校验通过；此结果只用于合成体验，不代表正式订单可提交。'
   return true
+}
+
+function requestSelectionEntryValidation(): void {
+  if (draftState.value === 'loading') {
+    validateEntryAfterLoad = true
+    entryValidationMessage.value = '正在恢复合成字段并检查目录必填项…'
+    return
+  }
+  void nextTick().then(() => {
+    validateSelectionEntry(true)
+    focusFirstError()
+  })
 }
 
 function finalStateLabel(state: 'missing' | 'valid' | 'blocked' | 'optional'): string {
@@ -347,6 +376,7 @@ function filterReasonLabel(reason?: string): string {
 
 defineExpose<SyntheticOrderExtFieldReviewPanelHandle>({
   validateSelectionEntry,
+  requestSelectionEntryValidation,
   focusFirstError,
 })
 </script>

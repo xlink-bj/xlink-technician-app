@@ -218,8 +218,17 @@ describe('synthetic Order ExtField review integration', () => {
     expect(writes).toHaveLength(1)
     const persisted = base.values.get(`draft:${syntheticOrderExtFieldStorageKey(identity)}`) as { values: readonly (readonly [string, unknown])[] }
     expect(persisted.values).toContainEqual(['demoSharedExplanation', '离开前的最后输入'])
+
+    const refreshed = createSyntheticOrderExtFieldDraftSession(trackingStorage, identity)
+    const refreshedLoad = await refreshed.load()
+    expect(refreshedLoad).toMatchObject({
+      state: 'ready',
+      recoveredPending: false,
+      values: { demoMode: '是', demoSharedExplanation: '离开前的最后输入' },
+    })
     first.dispose()
     second.dispose()
+    refreshed.dispose()
   })
 
   it('recovers a late failed in-flight write for the same identity and lets the newer session persist safely', async () => {

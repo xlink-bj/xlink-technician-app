@@ -165,7 +165,12 @@ function exit(): void {
 }
 
 function validateSyntheticSelectionEntry(): boolean {
-  return syntheticReviewPanel.value?.validateSelectionEntry() ?? false
+  if (!syntheticPanelExpanded.value || !syntheticPanelMounted.value || !syntheticReviewPanel.value) {
+    syntheticPanelExpanded.value = true
+    void nextTick().then(() => syntheticReviewPanel.value?.requestSelectionEntryValidation())
+    return false
+  }
+  return syntheticReviewPanel.value.validateSelectionEntry()
 }
 
 function focusSyntheticFirstError(): void {
