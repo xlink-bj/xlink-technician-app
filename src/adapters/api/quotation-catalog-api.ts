@@ -357,7 +357,6 @@ class QuotationCatalogReadAdapter implements QuotationCatalogReadPort {
     if (!productionReadOnly) return result
 
     this.synchronizeProductionReadScope()
-    this.synchronizeCatalogContext(context)
     if (this.authorizationContextGeneration !== generationAtStart) {
       return adapterFailure('authorization_denied', 'Catalog results were discarded because the authenticated identity or Work Order catalog context changed during the read. Reload the current catalog.')
     }

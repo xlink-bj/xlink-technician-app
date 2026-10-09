@@ -121,6 +121,8 @@ describe('G4-F P0 contract evidence fixtures (synthetic only)', () => {
         workOrderContextAbaStaleListDiscarded: 'PASS',
         workOrderContextAbaStaleDetailDiscarded: 'PASS',
         sameEpochListDetail: 'PASS',
+        staleCompletionPreservesNewPackageCache: 'PASS',
+        staleCompletionDoesNotPoisonNewPendingList: 'PASS',
         externalRequests: 0,
       })
     })

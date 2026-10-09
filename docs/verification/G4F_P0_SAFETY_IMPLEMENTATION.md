@@ -1,6 +1,6 @@
 # G4-F P0 Catalog Safety — Implementation Evidence
 
-**Implementation status:** `READY_FOR_LEAD_ABA_REVIEW`
+**Implementation status:** `READY_FOR_LEAD_FINAL_D3_REVIEW`
 **Base:** `858fd50fd11a484dab1f86244038682dbde15479`
 **Scope:** synthetic tests and source-level implementation only. No Production/Beta login, API request, Mongo access, or business mutation.
 
@@ -35,7 +35,7 @@ Each observed identity or Work Order context transition increments a monotonic i
 
 This is client-side least-privilege scoping for the existing by-ID read path, not a claim of server authorization. No `function/changeRole` call is used; tests simulate identity snapshots only.
 
-The ABA correction adds a monotonic generation that advances on every observed identity or catalog-context transition. Deferred fake-transport regressions prove that stale package-list responses cannot re-register Package IDs and stale detail responses cannot be returned after both identity A→B→A and Work Order context A→B→A. Same-generation package list→detail remains valid. These tests use synthetic identities, contexts, and IDs only.
+The ABA correction adds a monotonic generation that advances on every observed identity or catalog-context transition. Deferred fake-transport regressions prove that stale package-list responses cannot re-register Package IDs and stale detail responses cannot be returned after both identity A→B→A and Work Order context A→B→A. A stale list completion never synchronizes its captured Work Order context: tests prove it neither clears a newer Work Order's authorized Package IDs nor poisons that Work Order's still-pending Package list. Same-generation package list→detail remains valid. These tests use synthetic identities, contexts, and IDs only.
 
 ## D4 — Order ExtField foundation
 

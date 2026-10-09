@@ -366,6 +366,68 @@ try {
     assert.equal(detailCalls, 1)
   }
 
+  // A stale Work Order-A list completion must not roll back or clear the Package IDs authorized by B.
+  {
+    const workOrderAListDeferred = deferred()
+    let packageListCalls = 0
+    let packageBDetailCalls = 0
+    const catalog = createQuotationCatalogReadAdapter({
+      async execute(request) {
+        if (request.path === 'biz/projPackage/queryWithRank') {
+          packageListCalls += 1
+          if (packageListCalls === 1) return workOrderAListDeferred.promise
+          return { data: [packageRow('work-order-b-authorized-package')] }
+        }
+        if (request.path === 'biz/projPackage/findById/work-order-b-authorized-package') {
+          packageBDetailCalls += 1
+          return packageDetail('work-order-b-authorized-package')
+        }
+        return { data: [] }
+      },
+    }, () => productionScope())
+    const pendingWorkOrderA = catalog.listPackages(catalogContext())
+    await Promise.resolve()
+    assert.equal((await catalog.listPackages(catalogContext({ workOrderId: 'synthetic-work-order-b' }))).state, 'succeeded')
+    workOrderAListDeferred.resolve({ data: [packageRow('work-order-a-stale-package')] })
+    snapshotFailure(await pendingWorkOrderA)
+    assert.equal((await catalog.getPackageDetail('work-order-b-authorized-package')).state, 'succeeded')
+    snapshotFailure(await catalog.getPackageDetail('work-order-a-stale-package'))
+    assert.equal(packageListCalls, 2)
+    assert.equal(packageBDetailCalls, 1)
+  }
+
+  // A stale A completion must not poison a B Package list that is still in flight.
+  {
+    const workOrderAListDeferred = deferred()
+    const workOrderBListDeferred = deferred()
+    let packageListCalls = 0
+    let packageBDetailCalls = 0
+    const catalog = createQuotationCatalogReadAdapter({
+      async execute(request) {
+        if (request.path === 'biz/projPackage/queryWithRank') {
+          packageListCalls += 1
+          return packageListCalls === 1 ? workOrderAListDeferred.promise : workOrderBListDeferred.promise
+        }
+        if (request.path === 'biz/projPackage/findById/work-order-b-pending-package') {
+          packageBDetailCalls += 1
+          return packageDetail('work-order-b-pending-package')
+        }
+        return { data: [] }
+      },
+    }, () => productionScope())
+    const pendingWorkOrderA = catalog.listPackages(catalogContext())
+    await Promise.resolve()
+    const pendingWorkOrderB = catalog.listPackages(catalogContext({ workOrderId: 'synthetic-work-order-b' }))
+    await Promise.resolve()
+    workOrderAListDeferred.resolve({ data: [packageRow('work-order-a-stale-pending-package')] })
+    snapshotFailure(await pendingWorkOrderA)
+    workOrderBListDeferred.resolve({ data: [packageRow('work-order-b-pending-package')] })
+    assert.equal((await pendingWorkOrderB).state, 'succeeded')
+    assert.equal((await catalog.getPackageDetail('work-order-b-pending-package')).state, 'succeeded')
+    assert.equal(packageListCalls, 2)
+    assert.equal(packageBDetailCalls, 1)
+  }
+
   console.log(JSON.stringify({
     productionBoundaryFixture: 'PASS',
     sourceTypeRejectedBeforeTransport: sourceTypeRejected,
@@ -382,6 +444,8 @@ try {
     workOrderContextAbaStaleListDiscarded: 'PASS',
     workOrderContextAbaStaleDetailDiscarded: 'PASS',
     sameEpochListDetail: 'PASS',
+    staleCompletionPreservesNewPackageCache: 'PASS',
+    staleCompletionDoesNotPoisonNewPendingList: 'PASS',
     externalRequests: 0,
   }))
 } finally {
