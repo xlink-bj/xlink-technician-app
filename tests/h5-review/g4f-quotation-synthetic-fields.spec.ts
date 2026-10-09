@@ -76,7 +76,7 @@ async function expectSafe(page: Page, diagnostics: Awaited<ReturnType<typeof ins
 
 async function captureSyntheticViewport(page: Page, filename: string): Promise<void> {
   await page.getByTestId('synthetic-extfield-review-panel').evaluate((element) => {
-    element.scrollIntoView({ block: 'start', inline: 'nearest', behavior: 'instant' })
+    element.scrollIntoView({ block: 'start', inline: 'nearest', behavior: 'auto' })
   })
   await page.screenshot({ path: resolve(output, filename), animations: 'disabled' })
 }
