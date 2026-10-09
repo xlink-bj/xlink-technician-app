@@ -1,50 +1,62 @@
 # G4-F Active Order ExtField Schema Shape
 
-Status: `BLOCKED_ENV`
-Evidence class: source-backed request contract; no active Production schema was read.
-Production API requests executed for this task: **0**. Business writes: **0**.
+Status: `SHAPE_READ_COMPLETE` — one bounded Production capture, sanitized.
+Evidence class: current authenticated Production tenant configuration; not a customer Order or a work-order-specific effective form.
+Capture date: 2026-10-09.
+Capture execution base: `2a8c9f9579bd571ee8b59fd8c0492e9efd420e7d` with the bounded local inspector changes described below.
 
 ## Scope and result
 
-This evidence task is limited to the active `Order` ExtField definitions returned for the currently authenticated Production account. It does not read customer orders, MongoDB directly, option contents, or any other API route. It does not authorize Dynamic Form, quotation UI, serializer, or workflow changes.
+The authorized Production quick-login path was used once, followed by exactly one `biz/extField/query`. The query returned 32 rows from a single page of 50; all 32 rows were sanitized in memory and the result was not written as a raw payload or separate response file. The capture reports `total=32`, `returned=32`, `truncated=false`.
 
-`PROD_API_SHAPE_VERIFIED = BLOCKED_ENV`. No reusable, already-verified Production session reference was available in the approved local environment. The required `XLINK_SCHEMA_API_BASE_URL`, `XLINK_SCHEMA_SESSION_REF`, and `XLINK_SCHEMA_EXISTING_SESSION_VERIFIED` inputs were absent. The script therefore made no Production request. No login was attempted, no environment file was edited, and no session/role/permission was changed.
+This is the current authenticated account's tenant-scoped active `colName=order`, mobile-detail (`showList` includes `4`) ExtField configuration. It is **not** tied to a particular ServiceAppointment, active workflow node, service type, or person type. The returned configuration includes `placeOrder`, `submitOrder`, and rows whose stage is not identified by the sanitizer. Do not interpret it as the exact effective schema for a particular quotation action.
 
-Consequently, every live-schema fact below remains `UNKNOWN`; the source trace proves how a bounded query can be formed, not what the current tenant has configured.
+No customer Orders, Work Orders, MongoDB, option contents, or other API routes were read. No dynamic form, quotation UI, serializer, or workflow behavior was changed by this evidence capture.
+
+## Execution and safety evidence
+
+| Check | Result |
+| --- | --- |
+| Local profile | Production `.env.prod.local` present; secret values were not printed or committed. |
+| Target | Exact allowlisted HTTPS Production API host and `/fsgo/wm` context path. |
+| Mock / Real writes | Mock off; Real business writes disabled. |
+| Login | One normal app quick-login through `resolveQuickLoginInput` → `AuthSessionAdapter` → `createUniAuthBackendDriver`; success. |
+| Session | Login response yielded a session snapshot with user and current role; adapter's in-memory current session matched it. The successful schema response also confirms the server accepted that session for this read. No identity or role identifiers were persisted. |
+| Role switch | `function/changeRole` not called. |
+| Schema query | Exactly one `POST biz/extField/query`; no `_all`; `page=1,size=50`. |
+| Other network requests | 0; the request guard allowed only the single login route and the single exact schema route. Redirects and retries are disabled. |
+| Business mutation | 0. No Order/Work Order/Workflow/customer action, upload, or other business mutation was sent. |
+| Persistent local storage | Not used by the capture; session adapter storage was in-memory only. |
+| MongoDB | Not connected. |
+
+The user explicitly authorized normal Production login. Login is an authentication operation and may update authentication/session/permission context as part of the existing server login flow; that is distinct from a business record mutation. The schema query route may refresh the authenticated token/session-cache TTL and the backend performs a count over the same scoped predicate. These source-backed effects are not described as “zero side effects.”
+
+If login had been rejected, incomplete, or ambiguous, the script would have stopped before the schema query. It does not retry. If the one schema request has an ambiguous result, it reports `OUTCOME_UNKNOWN_NO_RETRY` and does not resend.
 
 ## Source provenance
 
-Application baseline for this evidence slice: `d5cc9cdf063480ce52df212338377998f8c0b650` (`codex/g4f-p0-safety`).
+Application capture harness: local branch `codex/g4f-order-extfield-schema`, starting HEAD `2a8c9f9579bd571ee8b59fd8c0492e9efd420e7d`; the capture-only diff extends the inspector to use the app's normal login adapter and retains the exact single-route guard.
 
 | Source | Pinned revision | Finding |
 | --- | --- | --- |
 | R1 `business/subpackages/order/placeOrders.vue`, `getFields()` | `xlink-bj/xlink-app@6c0a97b26bcbcaee81ac4e1dfd627c6e8e70e29d` | R1 requests `biz/extField/query` for `colName=order`, enabled fields, MP detail `showList=4`, sorted by `order asc`; then interprets `frontEndConfig` for `placeOrder` / `submitOrder`, service type, and person type. |
 | R1 `business/resources/js/common.js`, `common.osg.ajax()` | same revision | The default request is POST with `application/x-www-form-urlencoded` and a `JSESSIONID` cookie. |
-| Backend `ExtFieldController.query()` | `xlink-bj/xlink-cloud-backend@5fc008d32e771205260f120621c1c4fc62d0824e` | Reads the current account and overwrites the request `tenantId` with `currentAccount.getTenantId()` before querying. |
-| Backend `FlipPageInfo.init()` / `FlipInfo` | same revision | `size` and `page` are read from request parameters; `_all=1` activates all-record behavior. Defaults are size 20 and total-count enabled. |
-| Backend `EMongoTemplate.findByPage()` | same revision | It counts the filtered query, then applies `skip` and `limit` to returned rows. With `page=1,size=50` and no `_all`, the row query is `skip(0).limit(50)`. |
-| Backend `ExtFieldServiceImpl.query()` | same revision | Queries the tenant-scoped field definitions and may read current user/org/role `Customize` data to reorder response rows and adjust response width. It changes response objects, not stored ExtField records. |
-| Backend `MobileInterceptor` / `mobile-context.xml` / `web.xml` | same revision | `/wm/*` uses the mini-program servlet. The mobile interceptor requires a non-empty `tenantId` parameter and an authenticated current account; it can load the account from the existing session or Redis token mapping. |
+| Backend `ExtFieldController.query()` | `xlink-bj/xlink-cloud-backend@5fc008d32e771205260f120621c1c4fc62d0824e` | Reads the current account and overwrites request `tenantId` with `currentAccount.getTenantId()` before querying. |
+| Backend `FlipPageInfo.init()` / `FlipInfo` | same revision | `size` and `page` are read from request parameters; `_all=1` activates all-record behavior. |
+| Backend `EMongoTemplate.findByPage()` | same revision | With `page=1,size=50` and no `_all`, the returned-row query is `skip(0).limit(50)`. Total-count is enabled by default, so the backend also counts the same scoped predicate. |
+| Backend `ExtFieldServiceImpl.query()` | same revision | Queries tenant-scoped field definitions and may read current user/org/role `Customize` data to adjust response ordering/width. It changes response objects, not stored ExtField records. |
+| Backend `MobileInterceptor` / servlet mapping | same revision | `/wm/*` requires a non-empty `tenantId` and authenticated account. It can load the account from the session or Redis token mapping and refresh the token-cache TTL. |
 
-Source worktrees were inspected at the exact pinned revisions above. No reference repository files were changed.
-
-## Identity, tenant, and role scope
-
-- The query must use an already-existing authenticated session. The inspection script has no login path and will not create credentials.
-- `MobileInterceptor` calls `getSession(true)`. If a supplied session is absent or invalid, servlet session creation is possible before the request is rejected. A current, verified session is therefore a precondition, not something this script can establish.
-- For an accepted account, `MobileInterceptor` refreshes the Redis `token_<session>` TTL to eight hours. This is an authentication/session-cache write, not a business record write. It is an observable side effect of the route and is not described as “zero side effects.”
-- The request includes a non-empty sentinel `tenantId` only because the interceptor requires that parameter. `ExtFieldController.query()` overwrites it with the authenticated account's actual tenant before service/database filtering. The sentinel is not a tenant identifier and is not used as the query scope.
-- `ExtField` is excluded from the generic role/org data-access filter list in `EMongoTemplate`. The base field definition query is tenant-scoped; the current user/org/role can affect the `Customize` response overlay (ordering/width). Therefore this must not be described as a role-filtered ExtField set or universal across tenants.
-- No `function/changeRole`, role selection, login, or customer/work-order endpoint is allowed in this task.
+Reference source worktrees were inspected at the pinned revisions. No reference repository files were changed.
 
 ## Exact bounded request contract
 
-If a verified existing session is made available later, the only request the script can issue is:
+The only schema request was:
 
 ```text
 POST /fsgo/wm/biz/extField/query
-Content-Type: application/x-www-form-urlencoded
-Cookie: JSESSIONID=<existing local session reference>
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+Cookie: JSESSIONID=<in-memory Production session reference>
 
 tenantId=__current_account_tenant__
 colName=order
@@ -56,48 +68,86 @@ page=1
 size=50
 ```
 
-`_all` is deliberately omitted. The backend reads `size` and `page` and applies `limit(50)` to the returned records. The backend also performs a count over the same scoped predicate because `FlipInfo.needTotal` defaults to `true`; the source does not expose a request parameter to disable that count. This count behavior is documented as a read-cost caveat. There is one page only: if the reported total exceeds the returned rows, the result is marked truncated and the script never requests page 2.
+The non-empty `tenantId` sentinel is required by the interceptor; the controller overwrites it with the authenticated account's actual tenant before the service query. It is not treated as a tenant identity by the capture script. `_all` was omitted. The single page was complete (`32/32`); no second page was requested.
 
-The URL must be HTTPS on the pinned Production host and exact `/fsgo/wm` context path. Redirects are rejected. The response body is capped at 1 MB in memory; the script makes no retry. An ambiguous transport outcome is reported as `OUTCOME_UNKNOWN_NO_RETRY`.
+The exact target is HTTPS on `xlink.fsgo365.cn`, context `/fsgo/wm`, with no query, fragment, credentials, or nonstandard port. The response is capped at 1 MB in memory. The inspector has zero-network default behavior; the explicit authorization flag enables only one normal login and one exact schema read. It neither persists the session nor writes the response.
 
-## Sanitization and persistence policy
+## Sanitization policy
 
-The script parses the response in memory and emits only a structural projection. It omits row/document IDs, tenant IDs, `valueOption` IDs, labels, option values, raw `frontEndConfig`, condition comparison values, URLs, formulas, executable expressions, and the raw response. It retains only safe ExtField value-key identifiers, field type, enabled/showList/required/multiple/operation metadata, stage and applicability-presence/count flags, redacted dependency aliases, and whether a provider is configured. Repeated value keys remain shared aliases; ambiguous conditional dependencies are explicitly marked `AMBIGUOUS`, never guessed.
+The final persisted projection omits ExtField row IDs, tenant IDs, option IDs and contents, labels, raw value keys, raw `frontEndConfig`, applicability values, condition comparison values, URLs, formulas, executable expressions, and the raw response. It aliases row identity as `Field-NN` and value-key identity as `ValueKey-NN`; repeated raw keys share the same opaque alias. Raw keys are used only transiently in memory to resolve duplicates/dependencies and are not emitted by the final sanitizer or persisted. Service/person restrictions are counts/presence only. Conditions use row aliases and redacted comparison values. No actual form values or customer data were queried.
 
-The script never evaluates `frontEndConfig`, follows a configured provider URL, calls an option provider, writes response data to disk, or persists a live result into this repository. Synthetic tests contain no Production data.
+The one authorized query was executed before the final alias-only output tightening; that run emitted the sanitizer's safe schema key identifiers to the local command output, but did not persist a response file or write those identifiers to the repository/GitHub. The final sanitizer and repository evidence now retain only opaque aliases. No second Production request was made.
 
-## Active schema applicability matrix
+`runtimeCapability` is a type-level comparison against the current `classifyFieldType()` capability set, not proof of end-to-end action readiness. `provider.readiness` is reported separately because a generic control can exist while its live option-provider contract is not implemented or verified. No option-provider endpoint was called.
 
-No Production field rows were returned in this task, so no role/service context can be classified from live configuration.
+## Sanitized field matrix
 
-| Area | Status | Evidence |
-| --- | --- | --- |
-| Active enabled `Order` ExtFields | `UNKNOWN` | No API request; environment preflight blocked. |
-| Mobile-detail applicability (`showList=4`) | `SOURCE_VERIFIED`, live set `UNKNOWN` | R1 request filter is source-backed; live rows were not read. |
-| `placeOrder` / `submitOrder` stage rows | `UNKNOWN` | R1 interprets these config values; actual configured rows unavailable. |
-| Required / conditional / dispensable patterns | `UNKNOWN` | Sanitizer supports redacted structural reporting; no live values were observed. |
-| Service/person applicability | `UNKNOWN` | Runtime filter shape is source-backed; actual rule values and contexts were not read. |
-| Provider kind and option definitions | `UNKNOWN` | Provider IDs/contents are intentionally excluded; no option endpoint is authorized. |
-| Required-field Runtime support | `UNKNOWN` | Requires live schema plus later mapping review; this task does not implement Runtime behavior. |
-| Existing `Order.exts` key round-trip | `UNKNOWN` | No customer Order reads or writes are in scope. |
+`required` is the raw required flag normalized to true/false/unknown. `showList` is retained because applicability to mobile detail is part of the queried contract. `Stage` is derived only from normalized `frontEndConfig.showType`; an unknown stage remains unknown. Field and value-key identities below are opaque aliases; no raw key/label is persisted.
 
-## Remaining unknowns and next smallest step
+| Row | Value-key alias | Type | Required | Stage | showList | Provider | Runtime type capability |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Field-01 | ValueKey-01 | cascade | yes | PLACE_ORDER | 4 | cascade configured | SUPPORTED_GENERIC |
+| Field-02 | ValueKey-01 | cascade | yes | PLACE_ORDER | 4 | cascade configured | SUPPORTED_GENERIC |
+| Field-03 | ValueKey-02 | text | yes | PLACE_ORDER | 4 | none | SUPPORTED_GENERIC |
+| Field-04 | ValueKey-01 | cascade | yes | PLACE_ORDER | 4 | cascade configured | SUPPORTED_GENERIC |
+| Field-05 | ValueKey-02 | text | yes | PLACE_ORDER | 4 | none | SUPPORTED_GENERIC |
+| Field-06 | ValueKey-02 | text | yes | PLACE_ORDER | 4 | none | SUPPORTED_GENERIC |
+| Field-07 | ValueKey-03 | radio | yes | PLACE_ORDER | 4 | code configured | SUPPORTED_GENERIC |
+| Field-08 | ValueKey-04 | radio | yes | SUBMIT_ORDER | 1,4 | code configured | SUPPORTED_GENERIC |
+| Field-09 | ValueKey-05 | gap | no | SUBMIT_ORDER | 4 | none | PRESENTATION_ONLY |
+| Field-10 | ValueKey-06 | text | yes | SUBMIT_ORDER | 1,4 | none | SUPPORTED_GENERIC |
+| Field-11 | ValueKey-07 | text | yes | SUBMIT_ORDER | 1,4,5 | none | SUPPORTED_GENERIC |
+| Field-12 | ValueKey-08 | text | yes | SUBMIT_ORDER | 4 | none | SUPPORTED_GENERIC |
+| Field-13 | ValueKey-09 | phone | yes | SUBMIT_ORDER | 1,4,5 | none | SUPPORTED_GENERIC |
+| Field-14 | ValueKey-10 | text | yes | UNKNOWN | 1,4 | none | SUPPORTED_GENERIC |
+| Field-15 | ValueKey-11 | text | yes | SUBMIT_ORDER | 1,4 | none | SUPPORTED_GENERIC |
+| Field-16 | ValueKey-12 | text | yes | SUBMIT_ORDER | 1,4 | none | SUPPORTED_GENERIC |
+| Field-17 | ValueKey-13 | digit | yes | PLACE_ORDER | 4 | none | SUPPORTED_GENERIC |
+| Field-18 | ValueKey-14 | button | unknown | PLACE_ORDER | 4 | none | UNSUPPORTED |
+| Field-19 | ValueKey-15 | select | no | UNKNOWN | 1,4 | code configured | SUPPORTED_GENERIC |
+| Field-20 | ValueKey-16 | text | no | UNKNOWN | 1,4 | none | SUPPORTED_GENERIC |
+| Field-21 | ValueKey-17 | select | yes | UNKNOWN | 1,4 | code configured | SUPPORTED_GENERIC |
+| Field-22 | ValueKey-18 | area | yes | UNKNOWN | 2,4,5,6 | none | UNSUPPORTED |
+| Field-23 | ValueKey-19 | text | yes | UNKNOWN | 1,4 | none | SUPPORTED_GENERIC |
+| Field-24 | ValueKey-20 | area | yes | SUBMIT_ORDER | 2,4,5 | none | UNSUPPORTED |
+| Field-25 | ValueKey-21 | text | yes | SUBMIT_ORDER | 1,4 | none | SUPPORTED_GENERIC |
+| Field-26 | ValueKey-22 | date | yes | UNKNOWN | 1,2,4 | none | SUPPORTED_GENERIC |
+| Field-27 | ValueKey-23 | textarea | no | UNKNOWN | 1,4 | none | SUPPORTED_GENERIC |
+| Field-28 | ValueKey-24 | textarea | no | UNKNOWN | 1,2,4,5 | none | SUPPORTED_GENERIC |
+| Field-29 | ValueKey-25 | gap | no | UNKNOWN | 4 | none | PRESENTATION_ONLY |
+| Field-30 | ValueKey-26 | file | yes | UNKNOWN | 1,2,4 | none | SUPPORTED_GENERIC |
+| Field-31 | ValueKey-27 | gap | unknown | UNKNOWN | 4 | none | PRESENTATION_ONLY |
+| Field-32 | ValueKey-28 | file | yes | UNKNOWN | 1,2,4 | none | SUPPORTED_GENERIC |
 
-1. A valid, already-established Production read-only session reference and its current-account verification are unavailable in this execution environment.
-2. The active tenant's ExtField row count and structure are unknown.
-3. User/org/role `Customize` response ordering and widths are unknown for the current principal.
-4. Actual service/person applicability, requiredness, visibility dependencies, provider kinds, and supported Runtime mapping remain unknown.
-5. Existing `Order.exts` preservation/round-trip behavior remains unverified.
+Summary: 9 rows are tagged `PLACE_ORDER`, 10 `SUBMIT_ORDER`, and 13 have unknown stage. Requiredness is true for 24 rows, false for 6, and unknown for 2. Type-level runtime classification is 26 `SUPPORTED_GENERIC`, 3 `PRESENTATION_ONLY` (`gap`), and 3 `UNSUPPORTED` (two `area`, one `button`). Seven rows have configured code/cascade providers (four code, three cascade); their provider data was not fetched. Two rows have dispensable rules: Field-19 and Field-20 depend on Field-21, with comparison values redacted. All returned rows normalize to `visibility=ALWAYS`; no conditional-visibility dependency was reported by this projection. `operationType` normalized to `UNKNOWN` for all 32 rows.
 
-Next step: make the already-verified existing read-only session available through the local, untracked environment expected by the script and attest `XLINK_SCHEMA_EXISTING_SESSION_VERIFIED=true` only after confirming it is the current session. Then run the explicit one-shot command once. If that precondition cannot be met without a new login, keep this issue `BLOCKED_ENV`; do not log in, broaden the route, query MongoDB, or infer the schema from R1.
+Repeated value keys are not collapsed into one field row: ValueKey-01 appears on Field-01/02/04; ValueKey-02 appears on Field-03/05/06. They share aliases but remain separate row aliases. Applicability metadata reports only whether service/person restrictions exist and the number of service-type values; actual values are omitted.
 
-## Local verification status
+## Component support and review findings
 
-- `pnpm run inspect:g4f-active-order-extfield`: `NO_NETWORK_DEFAULT`, 0 requests.
-- `pnpm run inspect:g4f-active-order-extfield --preflight-only`: `BLOCKED_ENV`, 0 requests.
-- Explicit read mode with current missing session configuration: `BLOCKED_ENV`, 0 requests.
-- `VITE_XLINK_ENVIRONMENT=test pnpm run verify`: PASS, 52 test files / 580 tests. This explicit test-only mode is needed in this shell because the app mock runtime intentionally treats an unspecified environment as Mock-off; no Production mode was used for tests.
-- Synthetic parser/request/sanitizer tests: 6 passed; no Production data involved.
-- Production API requests: **0**.
-- Production business writes / workflow mutations / customer actions: **0**.
-- MongoDB connections: **0**.
+- **Directly mapped by current Runtime type capability:** text, phone, digit, date, textarea, radio, select, and cascade types in this capture are recognized as `SUPPORTED_GENERIC`. This is not a claim that provider options or final Order serialization are already wired.
+- **Presentation-only:** the three `gap` rows are not editable values.
+- **Unsupported by current Runtime type classifier:** Field-18 (`button`, tagged `PLACE_ORDER`), Field-22 (`mailArea`, required `area`), and Field-24 (`projectArea`, required `area`). Field-22 has unknown stage; Field-24 is tagged `SUBMIT_ORDER`. Although each includes mobile-detail code `4` in `showList`, the precise effective field set still depends on service/person context and R1 stage behavior. They are explicit mapping-review items, not silently treated as supported.
+- **Provider-backed:** three cascades and four code-backed controls have a provider reference configured. Option values were not fetched, and a configured reference alone does not prove that the app has the correct provider route/options.
+- **Media:** Field-30 and Field-32 are required `file` fields with a generic type-level component. Their Order-specific upload, persistence, and `Order.exts` round-trip contract remains unverified.
+- **Applicability:** actual service-type/person-type values were intentionally omitted. Stage and restriction counts do not prove which rows apply to a specific current work order.
+
+These findings do not authorize a schema adapter, quotation UI, Order serializer, provider request, or business write. Lead review must decide how the unsupported `area`/`button` rows and media/provider semantics affect the future quotation migration.
+
+## Remaining unknowns
+
+1. The exact effective `placeOrder` field set for a concrete ServiceAppointment, service type, person type, workflow node, and form context.
+2. Human-readable labels, option values, and option-provider contracts. They were intentionally excluded from the persisted projection; no option endpoint is authorized by this capture.
+3. Whether the `button` row represents a visual control, a command, or an R1-only special case; the field type is not supported by the current generic Runtime.
+4. Whether the `area` rows are applicable to any place-order form context; one is tagged `SUBMIT_ORDER`, the other has unknown stage. Both are required in the captured config and unsupported by the current classifier.
+5. Order-specific photo wire/persistence behavior and restoration of existing `Order.exts` values.
+6. Dynamic field round-trip and serialization behavior. This task is read-only and did not read Orders.
+7. Whether tenant-wide field configuration differs from other tenants or principal-specific response overlays.
+
+## Verification
+
+- `pnpm run inspect:g4f-active-order-extfield -- --preflight-only`: `PREFLIGHT_PASS`, 0 network requests.
+- Synthetic sanitizer and safety tests: 7 passed.
+- Authorized execution: `SHAPE_READ_COMPLETE`; login 1, schema query 1, unexpected requests 0; business mutations 0.
+- Role switch / customer Order / Work Order / option-provider / MongoDB requests: 0.
+- Raw Production response or credentials persisted: **No**.

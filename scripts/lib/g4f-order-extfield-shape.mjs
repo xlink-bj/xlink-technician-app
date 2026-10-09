@@ -4,6 +4,10 @@ export const ORDER_EXTFIELD_TENANT_SENTINEL = '__current_account_tenant__'
 
 const allowedShowList = new Set([1, 2, 3, 4, 5, 6])
 const knownOperationTypes = new Set(['editable', 'readonly', 'creatable'])
+const runtimeSupportedTypes = new Set([
+  'text', 'textarea', 'phone', 'IDNumber', 'number', 'digit', 'date', 'time', 'datetime',
+  'select', 'bizSelect', 'cascade', 'radio', 'checkbox', 'switch', 'rate', 'file', 'image',
+])
 const identifierPattern = /^[A-Za-z][A-Za-z0-9_.-]{0,63}$/
 
 function record(value) {
@@ -63,6 +67,20 @@ function providerKind(fieldType, hasValueOption) {
     default:
       return hasValueOption ? 'UNCLASSIFIED_PROVIDER' : 'NONE'
   }
+}
+
+function runtimeCapability(fieldType) {
+  if (fieldType === 'gap') return 'PRESENTATION_ONLY'
+  return runtimeSupportedTypes.has(fieldType) ? 'SUPPORTED_GENERIC' : 'UNSUPPORTED'
+}
+
+function providerReadiness(kind) {
+  if (kind === 'PROVIDER_MISSING') return 'BLOCKED_PROVIDER_MISSING'
+  if (kind === 'DYNAMIC_PROVIDER_UNTRUSTED') return 'BLOCKED_DYNAMIC_PROVIDER_UNTRUSTED'
+  if (kind === 'CODE_PROVIDER' || kind === 'CASCADE_PROVIDER' || kind === 'UNCLASSIFIED_PROVIDER') {
+    return 'CONFIGURED_REQUIRES_RUNTIME_MAPPING_REVIEW'
+  }
+  return 'NOT_REQUIRED_OR_INLINE'
 }
 
 function safeShowList(value) {
@@ -135,9 +153,11 @@ export function sanitizeOrderExtFieldPage(payload) {
     const aliasesForDependency = dependency ? rowAliases.get(dependency) ?? [] : []
     const aliasesForDispensableDependency = dispensableDependency ? rowAliases.get(dispensableDependency) ?? [] : []
 
+    const fieldProvider = providerKind(type, valueOptionConfigured)
+
     return {
       row: `Field-${String(index + 1).padStart(2, '0')}`,
-      ...(key ? { valueKey: key, valueKeyAlias: keyAliases.get(key) } : { valueKey: 'UNSAFE_OR_MISSING' }),
+      valueKeyAlias: key ? keyAliases.get(key) : 'UNSAFE_OR_MISSING',
       labelConfigured: typeof field.nameDisp === 'string' && field.nameDisp.trim().length > 0,
       type,
       enabled: booleanFrom(field.state),
@@ -168,10 +188,11 @@ export function sanitizeOrderExtFieldPage(payload) {
         comparisonValue: dispensableDependency ? 'REDACTED' : null,
       },
       provider: {
-        kind: providerKind(type, valueOptionConfigured),
+        kind: fieldProvider,
         configured: valueOptionConfigured,
+        readiness: providerReadiness(fieldProvider),
       },
-      runtimeCapability: 'REQUIRES_APP_RUNTIME_REVIEW',
+      runtimeCapability: runtimeCapability(type),
     }
   })
 

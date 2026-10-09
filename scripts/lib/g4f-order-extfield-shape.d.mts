@@ -4,8 +4,7 @@ export const ORDER_EXTFIELD_TENANT_SENTINEL: '__current_account_tenant__'
 
 export interface SanitizedOrderExtField {
   readonly row: string
-  readonly valueKey: string
-  readonly valueKeyAlias?: string
+  readonly valueKeyAlias: string
   readonly labelConfigured: boolean
   readonly type: string
   readonly enabled: boolean | null
@@ -34,8 +33,9 @@ export interface SanitizedOrderExtField {
   readonly provider: {
     readonly kind: string
     readonly configured: boolean
+    readonly readiness: string
   }
-  readonly runtimeCapability: 'REQUIRES_APP_RUNTIME_REVIEW'
+  readonly runtimeCapability: 'PRESENTATION_ONLY' | 'SUPPORTED_GENERIC' | 'UNSUPPORTED'
 }
 
 export function buildOrderExtFieldRequestBody(): Readonly<Record<string, string>>
