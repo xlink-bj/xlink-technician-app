@@ -131,7 +131,7 @@
         <view v-if="composition.groups.length === 0 && isInitialEmptyWorkbench" class="quotation-content__initial-empty" data-testid="quotation-initial-empty-workbench">
           <view class="quotation-content__initial-draft-notice" data-testid="quotation-draft-notice" role="status">
             <text class="quotation-content__initial-draft-notice-mark" aria-hidden="true">i</text>
-            <text class="quotation-content__initial-draft-notice-copy">当前为本机报价草稿；通过校验并提交后才会创建正式订单。</text>
+            <text class="quotation-content__initial-draft-notice-copy">{{ props.productReviewOnly ? '演示模式仅可整理本机草稿，不会创建正式订单。' : '当前为本机报价草稿；通过校验并提交后才会创建正式订单。' }}</text>
           </view>
           <view class="quotation-content__initial-card app-surface" data-testid="quotation-initial-main-card">
             <view class="quotation-content__initial-empty-heading">
@@ -156,7 +156,7 @@
           <view class="quotation-content__initial-process app-surface" data-testid="quotation-quote-process">
             <view class="quotation-content__initial-process-heading">
               <text class="quotation-content__initial-process-title">报价流程</text>
-              <text class="quotation-content__initial-process-subtitle">三步整理报价</text>
+              <text class="quotation-content__initial-process-subtitle">{{ props.productReviewOnly ? '演示草稿 · 暂不提交订单' : '三步整理报价' }}</text>
             </view>
             <view class="quotation-content__initial-process-steps">
               <view class="quotation-content__initial-process-step">
@@ -173,8 +173,8 @@
               <text class="quotation-content__initial-process-arrow" aria-hidden="true">›</text>
               <view class="quotation-content__initial-process-step">
                 <view class="quotation-content__initial-process-symbol"><text class="quotation-content__initial-process-number">3</text><AppIcon name="complete" :size="22" color="var(--app-color-primary)" /></view>
-                <text class="quotation-content__initial-process-step-title">提交订单</text>
-                <text class="quotation-content__initial-process-step-copy">通过校验后提交</text>
+                <text class="quotation-content__initial-process-step-title">{{ props.productReviewOnly ? '核对草稿' : '提交订单' }}</text>
+                <text class="quotation-content__initial-process-step-copy">{{ props.productReviewOnly ? '正式报价提交暂未开放' : '通过校验后提交' }}</text>
               </view>
             </view>
           </view>
@@ -943,6 +943,7 @@ import {
 const props = defineProps<{
   readonly state: 'loading' | 'ready' | 'blocked' | 'failed_retryable' | 'failed_terminal'
   readonly syntheticFieldsReview?: boolean
+  readonly productReviewOnly?: boolean
   readonly syntheticReviewValidateSelection?: () => boolean
   readonly syntheticReviewFocusFirstError?: () => void
 }>()

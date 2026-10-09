@@ -14,6 +14,7 @@
     <QuotationActionContent
       :state="contentState"
       :synthetic-fields-review="syntheticReviewEnabled"
+      :product-review-only="productReviewOnly"
       :synthetic-review-validate-selection="props.syntheticReviewValidateSelection"
       :synthetic-review-focus-first-error="props.syntheticReviewFocusFirstError"
       @retry="$emit('retry')"
