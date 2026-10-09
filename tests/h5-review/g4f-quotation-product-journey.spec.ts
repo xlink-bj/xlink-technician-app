@@ -61,6 +61,14 @@ async function expectNoBusinessCommands(page: Page): Promise<void> {
   await expect(page.getByTestId('quotation-order-confirmation')).toHaveCount(0)
 }
 
+async function expandThreeSelectedItems(page: Page): Promise<void> {
+  const compact = page.getByTestId('quotation-group-collapsed-summary-quotation-group-1')
+  if (await compact.count() > 0 && await compact.isVisible()) {
+    await page.getByTestId('quotation-group-details-toggle-quotation-group-1').click()
+  }
+  await expect(page.getByTestId('quotation-composition-selection')).toHaveCount(3)
+}
+
 async function expectSafe(
   page: Page,
   diagnostics: Awaited<ReturnType<typeof installSafetyGuards>>,
@@ -153,8 +161,20 @@ for (const viewport of viewports) {
     await page.getByTestId('quotation-catalog-kind-measure').click()
     await expect(page.getByTestId('quotation-catalog-list')).toContainText('高处作业防护（示例）')
     await page.getByTestId('quotation-catalog-add-measure-mock-catalog-measure-inspection').click()
-    await expect(page.getByTestId('quotation-group-section-quotation-group-1-measure')).toContainText('高处作业防护（示例）')
-    await expect(page.getByTestId('quotation-composition-selection')).toHaveCount(3)
+    // The 3-item group is compact only in the DEV product review.
+    await expect(page.getByTestId('quotation-group-collapsed-summary-quotation-group-1'))
+      .toContainText('弹性密封材料（示例）')
+    const continueAdding = page.getByTestId('quotation-browse-quotation-group-1')
+    await continueAdding.scrollIntoViewIfNeeded()
+    await expect(continueAdding).toBeVisible()
+    await continueAdding.click()
+    await expect(page.getByTestId('quotation-catalog-page')).toBeVisible()
+    await page.getByTestId('quotation-catalog-close').click()
+    await expect(page.getByTestId('quotation-catalog-page')).toHaveCount(0)
+    // Editing remains one explicit expand action away, with quantities unchanged.
+    await expandThreeSelectedItems(page)
+    await expect(page.getByTestId('quotation-group-section-quotation-group-1-measure'))
+      .toContainText('高处作业防护（示例）')
     await capture(page, `05-selected-items-${viewport.name}.png`)
     await expect(page.getByText('报价分组草稿已保存在本机。')).toBeVisible()
     await expectNoBusinessCommands(page)
@@ -165,7 +185,7 @@ for (const viewport of viewports) {
     await expect(page.getByTestId('commercial-review-detail')).toBeVisible()
     await page.getByTestId('commercial-review-start-quotation').click()
     await expect(page).toHaveURL(/#\/pages\/product\/quotation/)
-    await expect(page.getByTestId('quotation-composition-selection')).toHaveCount(3)
+    await expandThreeSelectedItems(page)
     await expect(page.getByText('弹性密封材料（示例）', { exact: false })).toBeVisible()
     // Same-SPA navigation may retain the store in memory; hard refresh below
     // is the persistence proof and must report a storage restore explicitly.
@@ -184,13 +204,13 @@ for (const viewport of viewports) {
     await expect(page).toHaveURL(/#\/pages\/product\/detail/)
     await page.getByTestId('commercial-review-start-quotation').click()
     await expect(page).toHaveURL(/#\/pages\/product\/quotation/)
-    await expect(page.getByTestId('quotation-composition-selection')).toHaveCount(3)
+    await expandThreeSelectedItems(page)
     await expect(page.getByText('弹性密封材料（示例）', { exact: false })).toBeVisible()
 
     await page.reload({ waitUntil: 'domcontentloaded' })
     await expect(page).toHaveURL(/#\/pages\/product\/quotation/)
     await expect(page.getByTestId('quotation-state-ready')).toBeVisible()
-    await expect(page.getByTestId('quotation-composition-selection')).toHaveCount(3)
+    await expandThreeSelectedItems(page)
     await expect(page.getByText('弹性密封材料（示例）', { exact: false })).toBeVisible()
     await expect(page.getByText('已恢复本地报价分组草稿。')).toBeVisible()
     await expect(page.getByTestId('quotation-product-demo-read-only')).toContainText('正式订单提交已关闭')

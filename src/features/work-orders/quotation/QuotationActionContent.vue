@@ -1375,7 +1375,12 @@ function catalogMetadata(item: QuotationCatalogItemRead): string {
 }
 
 function areGroupDetailsCollapsed(groupId: string): boolean {
-  return groupDetailsCollapsedById.value[groupId] ?? false
+  const explicit = groupDetailsCollapsedById.value[groupId]
+  if (explicit !== undefined) return explicit
+  // Product UX review only: summarize long groups so the original "添加项目"
+  // action remains reachable without traversing a long list on small phones.
+  // Never change the default expanded state on live business routes.
+  return props.productReviewOnly === true && groupSelectionCount(groupId) >= 3
 }
 
 function toggleGroupDetails(groupId: string): void {
