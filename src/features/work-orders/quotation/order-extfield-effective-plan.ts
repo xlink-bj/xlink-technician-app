@@ -8,6 +8,13 @@ import type {
 export type OrderExtFieldStage = 'placeOrder' | 'submitOrder'
 export type OrderExtFieldRowDisposition = 'eligible' | 'filtered' | 'blocked'
 export type OrderExtFieldRequiredness = 'required' | 'optional' | 'unknown' | 'not_applicable'
+export type OrderExtFieldFinalSubmitState = 'required' | 'optional' | 'blocked' | 'not_applicable'
+
+export interface OrderExtFieldFinalSubmitRule {
+  /** Requiredness obligation only; this pure plan does not validate or submit a value. */
+  readonly state: OrderExtFieldFinalSubmitState
+  readonly reason?: string
+}
 
 export interface OrderExtFieldRawRow {
   /** Stable row identity supplied by the caller; never infer this from valueKey. */
@@ -54,6 +61,8 @@ export interface OrderExtFieldPlanRow {
   readonly mappingEvidence: 'SOURCE_VERIFIED' | 'RUNTIME_INFERRED' | 'BLOCKED'
   readonly stage?: OrderExtFieldStage
   readonly requiredness: OrderExtFieldRequiredness
+  /** R1 final placeOrder() requiredness, evaluated independently of showField visibility. */
+  readonly finalSubmit: OrderExtFieldFinalSubmitRule
   readonly reason?: string
   readonly schema?: FormFieldSchema
   readonly specialControl?: OrderExtFieldSpecialControl
@@ -67,7 +76,12 @@ export interface OrderExtFieldEffectivePlan {
   /** Only finite, ordinary editable controls. Never includes area, button, or media. */
   readonly fields: readonly FormFieldSchema[]
   readonly diagnostics: {
+    /** Required mapping/runtime blockers for the visible field / catalog-entry phase. */
     readonly requiredBlockerRowIds: readonly string[]
+    /** R1 final-submit requiredness obligations, including conditionally hidden rows. */
+    readonly finalSubmitRequiredRowIds: readonly string[]
+    /** Final-submit rules that cannot be resolved safely from the supplied context. */
+    readonly finalSubmitBlockedRowIds: readonly string[]
     readonly providerPendingRowIds: readonly string[]
     readonly blockedRowIds: readonly string[]
     readonly filteredRowIds: readonly string[]
@@ -167,6 +181,7 @@ function rowResult(
         ? 'SOURCE_VERIFIED'
         : 'RUNTIME_INFERRED',
     requiredness: 'unknown',
+    finalSubmit: { state: 'not_applicable' },
     reason,
     provider: { state: 'not_required', blocksRuntimeUse: false },
     ...extra,
@@ -247,6 +262,45 @@ function declaredRequiredness(row: OrderExtFieldRawRow): OrderExtFieldRequiredne
   return row.type === 'button' || row.type === 'gap'
     ? 'not_applicable'
     : requirednessFor(row.required)
+}
+
+function finalSubmitRuleForRow(
+  row: OrderExtFieldRawRow,
+  context: OrderExtFieldEffectiveContext,
+): OrderExtFieldFinalSubmitRule {
+  const candidate = candidateDisposition(row)
+  if (candidate.result === 'filtered') return { state: 'not_applicable', reason: candidate.reason }
+  if (candidate.result === 'blocked') return { state: 'blocked', reason: candidate.reason }
+
+  const parsedConfig = parseFrontEndConfig(row.frontEndConfig)
+  if (parsedConfig.malformed || !parsedConfig.config) {
+    return { state: 'blocked', reason: 'front_end_config_malformed' }
+  }
+  const config = parsedConfig.config
+  const stage = runtimeStage(config.showType)
+  if (!stage) return { state: 'not_applicable', reason: 'unknown_stage_excluded' }
+  if (stage !== context.stage) return { state: 'not_applicable', reason: 'different_action_stage' }
+
+  const serviceType = serviceTypeResult(config, context)
+  if (serviceType.state === 'blocked') return { state: 'blocked', reason: serviceType.reason }
+  if (serviceType.state === 'not_matched') return { state: 'not_applicable', reason: 'service_type_not_applicable' }
+
+  if (stage === 'submitOrder') {
+    const personType = personTypeResult(config, context)
+    if (personType.state === 'blocked') return { state: 'blocked', reason: personType.reason }
+    if (personType.state === 'not_matched') return { state: 'not_applicable', reason: 'person_type_not_applicable' }
+  }
+
+  const requiredness = declaredRequiredness(row)
+  if (requiredness === 'not_applicable') return { state: 'not_applicable', reason: 'control_has_no_required_value' }
+  if (requiredness === 'unknown') return { state: 'blocked', reason: 'requiredness_encoding_unverified' }
+
+  // R1's final placeOrder() requiredness loop does not consult showField/showValue.
+  // Only its explicit dispensableField/dispensableValue pair can waive a required row.
+  const dispensability = conditionFor(config, 'dispensableField', 'dispensableValue', context.values ?? {})
+  if (dispensability.state === 'blocked') return { state: 'blocked', reason: dispensability.reason }
+  if (dispensability.state === 'matched') return { state: 'optional', reason: 'dispensable_condition_matched' }
+  return { state: requiredness }
 }
 
 function serviceTypeResult(config: Readonly<Record<string, unknown>>, context: OrderExtFieldEffectiveContext): ConditionResult {
@@ -473,7 +527,12 @@ export function createOrderExtFieldEffectivePlan(
   rows: readonly OrderExtFieldRawRow[],
   context: OrderExtFieldEffectiveContext,
 ): OrderExtFieldEffectivePlan {
-  const plannedRows = blockConflictingValueKeyTypes(blockDuplicateRowIdentities(rows.map((row) => mapCandidateRow(row, context))))
+  const mappedRows = rows.map((row) => mapCandidateRow(row, context))
+  const phaseAwareRows = mappedRows.map((mapped, index) => ({
+    ...mapped,
+    finalSubmit: finalSubmitRuleForRow(rows[index], context),
+  }))
+  const plannedRows = blockConflictingValueKeyTypes(blockDuplicateRowIdentities(phaseAwareRows))
   const fields = plannedRows.flatMap((row) => row.disposition === 'eligible' && row.schema ? [row.schema] : [])
   const requiredBlockerRowIds = plannedRows
     .filter((row) => row.disposition === 'blocked' && row.requiredness === 'required' && row.rowId)
@@ -488,6 +547,12 @@ export function createOrderExtFieldEffectivePlan(
     fields,
     diagnostics: {
       requiredBlockerRowIds,
+      finalSubmitRequiredRowIds: plannedRows
+        .filter((row) => row.finalSubmit.state === 'required' && row.rowId)
+        .map((row) => row.rowId!),
+      finalSubmitBlockedRowIds: plannedRows
+        .filter((row) => row.finalSubmit.state === 'blocked' && row.rowId)
+        .map((row) => row.rowId!),
       providerPendingRowIds,
       blockedRowIds: plannedRows.filter((row) => row.disposition === 'blocked' && row.rowId).map((row) => row.rowId!),
       filteredRowIds: plannedRows.filter((row) => row.disposition === 'filtered' && row.rowId).map((row) => row.rowId!),

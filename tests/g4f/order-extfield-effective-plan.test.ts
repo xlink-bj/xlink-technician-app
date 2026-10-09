@@ -39,7 +39,7 @@ describe('Order ExtField effective plan (synthetic only)', () => {
   it('keeps stage partitions exact and excludes unknown showType values', () => {
     const result = plan([
       row({ rowId: 'place', frontEndConfig: { showType: 'placeOrder' } }),
-      row({ rowId: 'submit', frontEndConfig: { showType: 'submitOrder' } }),
+      row({ rowId: 'submit', required: '1', frontEndConfig: { showType: 'submitOrder' } }),
       row({ rowId: 'unknown', frontEndConfig: { showType: 'quote' } }),
     ])
 
@@ -51,6 +51,15 @@ describe('Order ExtField effective plan (synthetic only)', () => {
     expect(result.fields.map((field) => field.fieldId)).toEqual(['place'])
     expect(result.rows[0].mappingEvidence).toBe('RUNTIME_INFERRED')
     expect(result.rows[2].mappingEvidence).toBe('SOURCE_VERIFIED')
+    expect(result.rows[0].finalSubmit).toEqual({ state: 'optional' })
+    expect(result.rows[1].finalSubmit).toEqual({ state: 'not_applicable', reason: 'different_action_stage' })
+
+    const submitResult = plan([
+      row({ rowId: 'place', required: '1', frontEndConfig: { showType: 'placeOrder' } }),
+      row({ rowId: 'submit', required: '1', frontEndConfig: { showType: 'submitOrder' } }),
+    ], { stage: 'submitOrder' })
+    expect(submitResult.rows.map((item) => item.finalSubmit.state)).toEqual(['not_applicable', 'required'])
+    expect(submitResult.diagnostics.finalSubmitRequiredRowIds).toEqual(['submit'])
   })
 
   it('applies serviceType restrictions to both stages and does not broaden when context is missing', () => {
@@ -65,7 +74,9 @@ describe('Order ExtField effective plan (synthetic only)', () => {
 
     expect(plan([restrictedPlace], { serviceType: 'fixture-service-a' }).rows[0].disposition).toBe('eligible')
     expect(plan([restrictedPlace], { serviceType: 'fixture-service-b' }).rows[0].reason).toBe('service_type_not_applicable')
+    expect(plan([restrictedPlace], { serviceType: 'fixture-service-b' }).rows[0].finalSubmit.state).toBe('not_applicable')
     expect(plan([restrictedPlace]).rows[0]).toMatchObject({ disposition: 'blocked', reason: 'service_type_context_required' })
+    expect(plan([restrictedPlace]).rows[0].finalSubmit).toMatchObject({ state: 'blocked', reason: 'service_type_context_required' })
     expect(plan([restrictedSubmit], { stage: 'submitOrder', serviceType: 'fixture-service-a' }).rows[0].disposition).toBe('eligible')
   })
 
@@ -76,7 +87,9 @@ describe('Order ExtField effective plan (synthetic only)', () => {
     expect(plan([place]).rows[0].disposition).toBe('eligible')
     expect(plan([submit], { stage: 'submitOrder', personType: 'fixture-person-a' }).rows[0].disposition).toBe('eligible')
     expect(plan([submit], { stage: 'submitOrder', personType: 'fixture-person-b' }).rows[0].reason).toBe('person_type_not_applicable')
+    expect(plan([submit], { stage: 'submitOrder', personType: 'fixture-person-b' }).rows[0].finalSubmit.state).toBe('not_applicable')
     expect(plan([submit], { stage: 'submitOrder' }).rows[0]).toMatchObject({ disposition: 'blocked', reason: 'person_type_context_required' })
+    expect(plan([submit], { stage: 'submitOrder' }).rows[0].finalSubmit).toMatchObject({ state: 'blocked', reason: 'person_type_context_required' })
   })
 
   it('keeps row identity distinct from a shared Order.exts key but blocks duplicate row identity', () => {
@@ -110,16 +123,21 @@ describe('Order ExtField effective plan (synthetic only)', () => {
     })
   })
 
-  it('filters a verified hidden condition but blocks coercive or unresolved visibility', () => {
+  it('keeps hidden required rows out of the selection gate but retains final-submit obligations', () => {
     const conditional = row({
       rowId: 'dependent',
       required: '1',
       frontEndConfig: { showType: 'placeOrder', showField: 'fixtureMode', showValue: 'on' },
     })
 
+    // fixtureValue is deliberately absent: R1 permits entering the catalog while
+    // this field is hidden, but still requires its value at final placeOrder().
     const hidden = plan([conditional], { values: { fixtureMode: 'off' } })
     expect(hidden.rows[0]).toMatchObject({ disposition: 'filtered', reason: 'conditional_visibility_hidden' })
     expect(hidden.diagnostics.requiredBlockerRowIds).toEqual([])
+    expect(hidden.rows[0].finalSubmit).toEqual({ state: 'required' })
+    expect(hidden.diagnostics.finalSubmitRequiredRowIds).toEqual(['dependent'])
+    expect(hidden.diagnostics.finalSubmitBlockedRowIds).toEqual([])
 
     const hiddenUnsupported = plan([row({
       rowId: 'hidden-unsupported',
@@ -129,29 +147,70 @@ describe('Order ExtField effective plan (synthetic only)', () => {
     })], { values: { fixtureMode: 'off' } })
     expect(hiddenUnsupported.rows[0]).toMatchObject({ disposition: 'filtered', reason: 'conditional_visibility_hidden' })
     expect(hiddenUnsupported.diagnostics.requiredBlockerRowIds).toEqual([])
+    expect(hiddenUnsupported.rows[0].finalSubmit).toEqual({ state: 'required' })
 
     const visible = plan([conditional], { values: { fixtureMode: 'on' } })
     expect(visible.fields[0].visibility).toEqual({ kind: 'equals', path: ['fixtureMode'], value: 'on' })
     expect(visible.rows[0].requiredness).toBe('required')
+    expect(visible.rows[0].finalSubmit).toEqual({ state: 'required' })
 
     const unsupportedVisibility = plan([conditional], { values: { fixtureMode: 1 } })
     expect(unsupportedVisibility.rows[0]).toMatchObject({
       disposition: 'blocked', reason: 'r1_loose_equality_not_equivalent_to_runtime_equality',
     })
     expect(unsupportedVisibility.diagnostics.requiredBlockerRowIds).toEqual(['dependent'])
-    expect(plan([conditional]).rows[0]).toMatchObject({ disposition: 'blocked', reason: 'showField_dependency_missing' })
+    // showField is a selection/render concern in R1, not a final-submit waiver.
+    expect(unsupportedVisibility.rows[0].finalSubmit).toEqual({ state: 'required' })
+    const missingVisibilityDependency = plan([conditional])
+    expect(missingVisibilityDependency.rows[0]).toMatchObject({ disposition: 'blocked', reason: 'showField_dependency_missing' })
+    expect(missingVisibilityDependency.rows[0].finalSubmit).toEqual({ state: 'required' })
   })
 
-  it('resolves the R1 dispensable required-field exception only with safe matching values', () => {
+  it('applies dispensable only to final-submit requiredness and blocks unresolved dispensability', () => {
     const required = row({
       required: '1',
       frontEndConfig: { showType: 'placeOrder', dispensableField: 'fixtureMode', dispensableValue: 'skip' },
     })
-    expect(plan([required], { values: { fixtureMode: 'skip' } }).fields[0].required).toBe(false)
-    expect(plan([required], { values: { fixtureMode: 'keep' } }).fields[0].required).toBe(true)
-    expect(plan([required]).rows[0]).toMatchObject({ disposition: 'blocked', reason: 'dispensableField_dependency_missing' })
+    const dispensable = plan([required], { values: { fixtureMode: 'skip' } })
+    expect(dispensable.fields[0].required).toBe(false)
+    expect(dispensable.rows[0].finalSubmit).toEqual({ state: 'optional', reason: 'dispensable_condition_matched' })
+
+    const stillRequired = plan([required], { values: { fixtureMode: 'keep' } })
+    expect(stillRequired.fields[0].required).toBe(true)
+    expect(stillRequired.rows[0].finalSubmit).toEqual({ state: 'required' })
+
+    const hiddenButDispensable = plan([row({
+      rowId: 'hidden-dispensable',
+      required: '1',
+      frontEndConfig: {
+        showType: 'placeOrder',
+        showField: 'fixtureVisibility',
+        showValue: 'visible',
+        dispensableField: 'fixtureMode',
+        dispensableValue: 'skip',
+      },
+    })], { values: { fixtureVisibility: 'hidden', fixtureMode: 'skip' } })
+    expect(hiddenButDispensable.rows[0]).toMatchObject({
+      disposition: 'filtered', reason: 'conditional_visibility_hidden',
+      finalSubmit: { state: 'optional', reason: 'dispensable_condition_matched' },
+    })
+    expect(hiddenButDispensable.diagnostics.finalSubmitRequiredRowIds).toEqual([])
+
+    const unresolved = plan([required])
+    expect(unresolved.rows[0]).toMatchObject({ disposition: 'blocked', reason: 'dispensableField_dependency_missing' })
+    expect(unresolved.rows[0].finalSubmit).toMatchObject({ state: 'blocked', reason: 'dispensableField_dependency_missing' })
+    expect(unresolved.diagnostics.finalSubmitBlockedRowIds).toEqual(['fixture-row-1'])
+
+    const coercive = plan([required], { values: { fixtureMode: 1 } })
+    expect(coercive.rows[0].finalSubmit).toMatchObject({
+      state: 'blocked', reason: 'r1_loose_equality_not_equivalent_to_runtime_equality',
+    })
+
     expect(plan([row({ required: 'sometimes' })]).rows[0]).toMatchObject({
       disposition: 'blocked', reason: 'requiredness_encoding_unverified',
+    })
+    expect(plan([row({ required: 'sometimes' })]).rows[0].finalSubmit).toMatchObject({
+      state: 'blocked', reason: 'requiredness_encoding_unverified',
     })
   })
 

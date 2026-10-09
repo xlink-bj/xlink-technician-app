@@ -1,6 +1,6 @@
 # G4-F Order ExtField Effective Mapping Contract
 
-**Status:** `PURE_MAPPING_ONLY / TENANT_SHAPE_CAPTURED / EFFECTIVE_FORM_UNKNOWN / NOT_CONNECTED`
+**Status:** `PURE_MAPPING_ONLY / R1_VALIDATION_PHASES_SOURCE_MAPPED / TENANT_SHAPE_CAPTURED / EFFECTIVE_FORM_UNKNOWN / NOT_CONNECTED`
 
 This document specifies the source-backed, fail-closed plan mapper implemented for Issue #51. The mapper consumes synthetic ExtField-shaped rows and explicit stage/service/person/value context. It is not a Production adapter, a live quotation schema, a UI, or an Order serializer.
 
@@ -12,7 +12,8 @@ R1 source is pinned to `xlink-bj/xlink-app@6c0a97b26bcbcaee81ac4e1dfd627c6e8e70e
 
 - `getFields()` stage and context filters: lines 3618–3672.
 - conditional rendering: lines 31–38 and 4447–4459.
-- `required` / dispensable validation: lines 3835–3860.
+- selection-entry validation (`onSelectionOpen()`): lines 4419–4450.
+- final `placeOrder(type)` requiredness / dispensable validation: lines 3835–3860.
 - area control and value capture: lines 241–254, 2185–2210, 5320–5345.
 - button action behavior: lines 255–270 and 2215–2229.
 - `Order.exts` write projection, including file URL conversion: lines 4200–4285.
@@ -27,12 +28,23 @@ R1 source is pinned to `xlink-bj/xlink-app@6c0a97b26bcbcaee81ac4e1dfd627c6e8e70e
 | Missing or other `showType` | Filtered from both stages | Never inferred from field name/label. |
 | Configured `serviceType` | Applies to both stages | Requires explicit context. A verified array encoding is compared by exact membership. Missing context blocks instead of broadening. A scalar string restriction is blocked because R1 `.indexOf()` substring semantics do not establish its intended encoding. |
 | Configured `personType` | Applies only to `submitOrder` | Requires explicit context and same-typed safe scalar equality. No implicit R1 default (`'0'`) is injected by this mapper. |
-| `showField/showValue` absent | Unconditional visibility | Source metadata has no condition pair. |
-| `showField/showValue` matched with same-typed string/number/boolean | Runtime `equals` expression may be represented | Expression is finite and strict-equality-safe for the supplied pair. A nonmatching condition is filtered as currently hidden. |
-| Conditional dependency missing, malformed pair, object/array operand, or cross-type coercion | Blocked | R1 uses loose `==`; the mapper does not guess coercion. This is a safety subset, not a claim of full R1 parity. |
+| `showField/showValue` absent | Unconditional visibility for rendering / selection entry | Source metadata has no condition pair. Final `placeOrder()` requiredness is evaluated separately and does not use this visibility rule. |
+| `showField/showValue` matched with same-typed string/number/boolean | Runtime `equals` expression may be represented | Expression is finite and strict-equality-safe for the supplied pair. A nonmatch filters the row from rendering / selection entry, but does not remove its final-submit obligation. |
+| Conditional dependency missing, malformed pair, object/array operand, or cross-type coercion | Rendering / selection mapping is blocked | R1 uses loose `==`; the mapper does not guess coercion. Final requiredness still ignores `showField`, while unresolved `dispensableField` blocks that final rule. |
 | `required` exactly represented by `'1'`, `1`, or `true` | Required | These encodings preserve R1 `required == '1'` truth for supported primitives. |
 | `required` represented by `'0'`, `0`, or `false` | Optional | Other encodings remain unknown and block an ordinary candidate. |
-| `dispensableField/dispensableValue` matched safely | Requiredness becomes optional for this evaluated plan | Mirrors R1 validation bypass. Unresolved or coercive conditions block; a nonmatch preserves the original requiredness. |
+| `dispensableField/dispensableValue` matched safely | Final-submit requiredness becomes optional; the visible schema also carries `required: false` | This is the explicit R1 requiredness bypass. Unresolved or coercive conditions block; a nonmatch preserves the original requiredness. |
+
+## R1 validation phases are intentionally distinct
+
+The source establishes two different gates, so the mapper exposes both rather than using visibility as a proxy for final validation:
+
+1. **Render / selection-entry gate.** R1 renders conditional fields only when `showField/showValue` matches (lines 31–38, 4447–4459). Before opening product selection, `onSelectionOpen()` also checks required fields while considering that conditional visibility (lines 4419–4450). A safely evaluated hidden field is therefore `filtered` from the current fields and does not block entry to the catalog. An unresolved/coercive visibility rule remains blocked in this plan; it is never guessed to be hidden.
+2. **Final Order `placeOrder()` gate.** R1 selects the active `placeOrderFields` or `submitOrderFields` partition and checks each required row at lines 3835–3860 without checking `showField` visibility. Only a matching `dispensableField/dispensableValue` condition bypasses that requiredness check. Therefore a conditionally hidden, required, non-dispensable field remains a final-submit obligation even though it is absent from the visible/selection-entry plan.
+
+`OrderExtFieldPlanRow.disposition` and `requiredBlockerRowIds` continue to describe the visible-field / catalog-entry mapping. Each row now additionally has a `finalSubmit` rule (`required`, `optional`, `blocked`, or `not_applicable`), with `finalSubmitRequiredRowIds` and `finalSubmitBlockedRowIds` diagnostics. The separate final rule rechecks active collection/surface, stage, service type, submit-stage person type, declared requiredness, and the explicit dispensable exception; it deliberately does **not** consult `showField`. Unknown requiredness or unresolved/coercive dispensability is blocked. A `required` final rule records an obligation only; it does not claim the current value is present, validate its control-specific shape, or prove that an Order can be submitted.
+
+This is source-derived and synthetic-test-covered phase parity only. It is not connected to UI, a submit command, or a serializer, and does not resolve the concrete effective field set for any work order.
 
 Caller context must be authoritative and explicitly supplied. This mapper itself does not look up or infer work-order stage, service type, person type, or field values.
 
@@ -42,7 +54,7 @@ Caller context must be authoritative and explicitly supplied. This mapper itself
 
 The mapper exports:
 
-- `createOrderExtFieldEffectivePlan(rows, context)`: returns per-row `eligible` / `filtered` / `blocked`, mapping evidence (`SOURCE_VERIFIED`, `RUNTIME_INFERRED`, `BLOCKED`), ordinary `FormFieldSchema` candidates, provider/special-control diagnostics, and `liveRuntimeReady: false`.
+- `createOrderExtFieldEffectivePlan(rows, context)`: returns per-row `eligible` / `filtered` / `blocked`, mapping evidence (`SOURCE_VERIFIED`, `RUNTIME_INFERRED`, `BLOCKED`), ordinary `FormFieldSchema` candidates, a separate final-submit requiredness rule, provider/special-control diagnostics, and `liveRuntimeReady: false`.
 - `classifyOrderAreaPath(value)` and `orderAreaPathFromPickerValues(value)`: typed blank/partial/complete/invalid three-code path helpers; they only retain supplied code/value entries and never fetch a dictionary or fabricate a missing code.
 - `restoreOrderExtFieldValues(existingExts, plan)`: separates values mapped to current ordinary candidates from opaque unmapped/filtered/blocked values in in-memory read/edit state.
 - `projectEligibleOrderExtFieldValues(plan, values)`: a pure synthetic projection of eligible keys only. It is not called by a command or serializer. Unknown old keys remain outside this projection.
@@ -62,11 +74,11 @@ No persistence, network, workflow, or UI side effect exists in this module.
 | `gap` | Presentation-only row; never submitted as a field | R1 gap markup is not generalized to arbitrary HTML in this plan. |
 | `switch` | Blocked pending value/default parity | R1 uses active/inactive values `'1'`/`'0'` and applies a submit-time default; current Runtime uses booleans. No silent conversion is inferred. |
 
-`requiredBlockerRowIds` is diagnostic only. Any blocked applicable row remains visible in `blockedRowIds`; no UI or completion gate consumes these diagnostics yet.
+`requiredBlockerRowIds`, `finalSubmitRequiredRowIds`, and `finalSubmitBlockedRowIds` are diagnostics only. The first belongs to field rendering/catalog entry; the latter two report final R1 requiredness obligations independently of visibility. No UI, submit command, or completion gate consumes these diagnostics yet.
 
 ## Synthetic regression coverage
 
-`tests/g4f/order-extfield-effective-plan.test.ts` uses synthetic rows and values only. It covers exact stage isolation, service/person applicability and missing context, unknown stages, row identity versus shared value keys, duplicate/conflicting identities, hidden versus unsupported conditional expressions, dispensability, equality/coercion behavior, typed area path handling, button non-execution/non-projection, required media blocking, unsupported/missing/unfetched providers, and opaque legacy `Order.exts` preservation with projection exclusion.
+`tests/g4f/order-extfield-effective-plan.test.ts` uses synthetic rows and values only. It covers exact stage isolation, service/person applicability and missing context, unknown stages, row identity versus shared value keys, duplicate/conflicting identities, hidden required rows filtered from selection entry but retained as final-submit obligations, visible required rows, `submitOrder` partitioning, dispensable match/nonmatch and unresolved/coercive conditions, equality/coercion behavior, typed area path handling, button non-execution/non-projection, required media blocking, unsupported/missing/unfetched providers, and opaque legacy `Order.exts` preservation with projection exclusion.
 
 The tests do not import or parse the captured Production rows and do not exercise a live endpoint. The tenant shape document remains the only persisted Production schema evidence.
 
@@ -80,7 +92,7 @@ The tests do not import or parse the captured Production rows and do not exercis
 6. Actual prior Order `exts` values and edit/round-trip behavior; preserving unknown keys here is only a pure in-memory invariant.
 7. Numeric and remaining generic control value parity at a real UI/serializer boundary.
 
-Therefore: tenant schema shape is captured; the effective form is still `UNKNOWN`; the mapper is a source-backed pure plan only; no live quotation Runtime, UI, provider, or serializer is ready or connected. Any later live/schema/provider read and any Order write requires its own explicit authorization and gate.
+Therefore: tenant schema shape is captured; the two R1 validation phases are represented in a source-backed pure plan with synthetic regressions; the effective form is still `UNKNOWN`; no live quotation Runtime, UI, provider, or serializer is ready or connected. Any later live/schema/provider read and any Order write requires its own explicit authorization and gate.
 
 ## Verification and safety
 
