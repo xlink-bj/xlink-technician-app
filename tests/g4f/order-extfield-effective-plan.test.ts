@@ -172,7 +172,9 @@ describe('Order ExtField effective plan (synthetic only)', () => {
       frontEndConfig: { showType: 'placeOrder', dispensableField: 'fixtureMode', dispensableValue: 'skip' },
     })
     const dispensable = plan([required], { values: { fixtureMode: 'skip' } })
-    expect(dispensable.fields[0].required).toBe(false)
+    // The value is absent: R1's catalog-entry gate still treats this visible
+    // required field as required even though final submission waives it.
+    expect(dispensable.fields[0].required).toBe(true)
     expect(dispensable.rows[0].finalSubmit).toEqual({ state: 'optional', reason: 'dispensable_condition_matched' })
 
     const stillRequired = plan([required], { values: { fixtureMode: 'keep' } })
@@ -197,14 +199,15 @@ describe('Order ExtField effective plan (synthetic only)', () => {
     expect(hiddenButDispensable.diagnostics.finalSubmitRequiredRowIds).toEqual([])
 
     const unresolved = plan([required])
-    expect(unresolved.rows[0]).toMatchObject({ disposition: 'blocked', reason: 'dispensableField_dependency_missing' })
+    expect(unresolved.rows[0].disposition).toBe('eligible')
+    expect(unresolved.fields[0].required).toBe(true)
     expect(unresolved.rows[0].finalSubmit).toMatchObject({ state: 'blocked', reason: 'dispensableField_dependency_missing' })
     expect(unresolved.diagnostics.finalSubmitBlockedRowIds).toEqual(['fixture-row-1'])
 
     const coercive = plan([required], { values: { fixtureMode: 1 } })
-    expect(coercive.rows[0].finalSubmit).toMatchObject({
-      state: 'blocked', reason: 'r1_loose_equality_not_equivalent_to_runtime_equality',
-    })
+    expect(coercive.rows[0].disposition).toBe('eligible')
+    expect(coercive.fields[0].required).toBe(true)
+    expect(coercive.rows[0].finalSubmit).toMatchObject({ state: 'blocked', reason: 'r1_loose_equality_not_equivalent_to_runtime_equality' })
 
     expect(plan([row({ required: 'sometimes' })]).rows[0]).toMatchObject({
       disposition: 'blocked', reason: 'requiredness_encoding_unverified',

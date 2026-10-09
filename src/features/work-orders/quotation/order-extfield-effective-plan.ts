@@ -445,10 +445,6 @@ function mapCandidateRow(row: OrderExtFieldRawRow, context: OrderExtFieldEffecti
     return blockedEffectiveRow(row, stage, 'unmodeled_front_end_config_blocked', requiredness)
   }
 
-  const dispensability = conditionFor(config, 'dispensableField', 'dispensableValue', values)
-  if (dispensability.state === 'blocked') return blockedEffectiveRow(row, stage, dispensability.reason, requiredness)
-  const effectiveRequired = requiredness === 'required' && dispensability.state !== 'matched'
-
   const multiple = row.type === 'checkbox' ? true : row.multiple
   if (row.multiple !== undefined && typeof row.multiple !== 'boolean') {
     return blockedEffectiveRow(row, stage, 'multiple_value_semantics_unverified', requiredness)
@@ -464,7 +460,9 @@ function mapCandidateRow(row: OrderExtFieldRawRow, context: OrderExtFieldEffecti
     fieldId: row.rowId,
     valueKey: row.valueKey,
     type,
-    required: effectiveRequired,
+    // R1 selection-entry validation honors visibility but not dispensable.
+    // The dispensable exception is applied only by finalSubmitRuleForRow().
+    required: requiredness === 'required',
     ...(typeof row.multiple === 'boolean' || type === 'checkbox' ? { multiple: Boolean(multiple) } : {}),
     ...(nonEmptyString(row.valueOption) ? { valueOption: row.valueOption } : {}),
     ...(visibilityResult.state === 'mapped' ? { visibility: visibilityResult.expression } : {}),
@@ -480,7 +478,7 @@ function mapCandidateRow(row: OrderExtFieldRawRow, context: OrderExtFieldEffecti
   }
   return rowResult(row, 'eligible', 'source_mappable_ordinary_control', {
     stage,
-    requiredness: effectiveRequired ? 'required' : 'optional',
+    requiredness,
     schema,
     provider,
   })
