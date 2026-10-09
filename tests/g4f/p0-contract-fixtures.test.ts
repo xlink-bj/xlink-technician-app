@@ -179,6 +179,17 @@ describe('G4-F P0 contract evidence fixtures (synthetic only)', () => {
       expect(result).toMatchObject({ ok: false, reason: 'unsupported_capability', fieldId: 'fixture-select' })
     })
 
+    it('distinguishes an optional part-description schema from a required one', () => {
+      expect(normalizeSubmission({
+        fields: [{ fieldId: 'fixture-optional-description', valueKey: 'partDescription', type: 'text', required: false }],
+        values: {},
+      })).toEqual({ ok: true, value: { values: {} } })
+      expect(normalizeSubmission({
+        fields: [{ fieldId: 'fixture-required-description', valueKey: 'partDescription', type: 'text', required: true }],
+        values: {},
+      })).toMatchObject({ ok: false, reason: 'validation', fieldId: 'fixture-required-description' })
+    })
+
     it('preserves supplied prior values only when hidden-value preservation is explicitly requested, then JSON-round-trips them', () => {
       const fields: readonly FormFieldSchema[] = [
         { fieldId: 'fixture-controller', valueKey: 'fixtureMode', type: 'text' },
@@ -216,7 +227,7 @@ describe('G4-F P0 contract evidence fixtures (synthetic only)', () => {
   })
 
   describe('catalog sourceType transport shape', () => {
-    it('keeps absent, concrete, and invalid-empty sourceType behavior identical across all four catalog list routes', async () => {
+    it('keeps absent, concrete, null, and empty sourceType behavior explicit across all four catalog list routes', async () => {
       const execute = vi.fn(async (_request: ApiReadRequest) => ({ data: [] }))
       const catalog = createQuotationCatalogReadAdapter({ execute })
 
@@ -233,6 +244,13 @@ describe('G4-F P0 contract evidence fixtures (synthetic only)', () => {
           }[kind],
         })
         expect(Object.hasOwn(execute.mock.calls[start]?.[0]?.body ?? {}, 'sourceType')).toBe(false)
+
+        const nullValue = await read(catalog, {
+          serviceType: 'fixture-service-type',
+          sourceType: null,
+        } as unknown as { serviceType: string; sourceType?: string })
+        expect(nullValue.state).toBe('failed_terminal')
+        expect(execute.mock.calls).toHaveLength(start + 1)
 
         const concrete = await read(catalog, { serviceType: 'fixture-service-type', sourceType: 'fixture-source-type' })
         expect(concrete.state).toBe('succeeded')

@@ -59,7 +59,7 @@ Line citations below are pinned to those revisions.
 
 ### Adapter request-object fixture result
 
-The added local fixtures prove the App catalog adapter’s current deterministic request-object behavior for all four routes: absent means omitted from the `ApiReadRequest.body`; concrete means included; empty string fails before transport. The Uni transport source serializes own body entries as form-urlencoded pairs, but this slice does not claim an end-to-end transport fixture or prove R1’s native `wx.request` serialization for `null`/`undefined` or backend `FlipPageInfo` materialization. No live call was made.
+The added local fixtures prove the App catalog adapter’s current deterministic request-object behavior for all four routes: absent (`undefined`) means omitted from the `ApiReadRequest.body`; concrete means included; explicit `null` and empty string fail before transport. The Uni transport source serializes own body entries as form-urlencoded pairs, but this slice does not claim an end-to-end transport fixture or prove R1’s native `wx.request` serialization for `null`/`undefined` or backend `FlipPageInfo` materialization. No live call was made.
 
 The isolated synthetic child-process fixture confirms the package-detail identity cache is invalidated when its supplied session reference changes, before a second transport call. Current integration supplies only `sessionRef`; same-session user/role/version changes are not represented in that cache key and remain a separate adapter hardening point. The fixture performs no network request.
 
@@ -89,6 +89,7 @@ These tests report current App validator outcomes only; “ready” does **not**
 | Measure only | `group.direct_composition_incomplete` | R1 source-backed for cited flow; broader product applicability still not stated |
 | `maintainAreaNum` absent / `"0"` | `group.maintain_area_invalid` | App is stricter than R1 for `"0"`; positive threshold needs Product decision |
 | `partDescription` absent | `group.description_required` | R1 submit flow checks non-empty, but schema/conditional exceptions remain unverified |
+| Dynamic description field marked optional vs required | Optional omission succeeds; required omission fails | Synthetic Runtime behavior only; current tenant schema is unknown |
 | Dynamic required field with a caller-resolved dispensable exception | Runtime supports `runtimeRequired=false` | Resolver/mapping from ExtField condition is not implemented or verified |
 
 ## Minimum safe M1 policy proposed for Lead decision
