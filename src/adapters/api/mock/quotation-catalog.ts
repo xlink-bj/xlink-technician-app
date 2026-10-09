@@ -37,6 +37,7 @@ export const mockQuotationProcedureListResponse = {
     {
       _id: 'mock-catalog-procedure-seal',
       name: '檐口密封处理（示例）',
+      content: '檐口密封处理（示例）',
       unit: '处',
       serviceType: [mockQuotationCatalogServiceType],
       sourceTypeList: [mockQuotationCatalogSourceType],
@@ -74,6 +75,7 @@ export const mockQuotationMeasureListResponse = {
     {
       _id: 'mock-catalog-measure-inspection',
       name: '高处作业防护（示例）',
+      content: '高处作业防护（示例）',
       unit: '次',
       serviceType: [mockQuotationCatalogServiceType],
       sourceTypeList: [mockQuotationCatalogSourceType],

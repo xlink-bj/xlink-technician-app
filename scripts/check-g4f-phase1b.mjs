@@ -92,7 +92,7 @@ if (!workspace.includes('quotationCatalogBrowser.selectedCatalogItemFor(kind, ca
 if (!catalogBrowser.includes('function selectedCatalogItemFor') || !catalogBrowser.includes("catalogStatesByKind.value[kind] !== 'succeeded'")) {
   fail('selection candidates must be resolved from a successful current catalog result')
 }
-if (!catalog.includes('synthetic-package-basic') || !component.includes('添加到当前维修部位')) {
+if (!catalog.includes('synthetic-package-basic') || !/添加(?:到|至)当前维修部位/.test(component)) {
   fail('catalog selection must remain scoped to an explicitly opened repair-part group')
 }
 if (!workspace.includes('quotationComposition.addCatalogReadItem(groupId, source)')) {
