@@ -3,7 +3,7 @@ import { resolve } from 'node:path'
 
 import { expect, test, type Page } from '@playwright/test'
 
-const output = resolve(process.cwd(), '.review/g4f-ux-phase-b0/empty-workbench-approved-v1/after/phase1b')
+const output = resolve(process.cwd(), '.review/g4f-ux-phase-b0/repair-part-step-v1/after/regression/phase1b')
 
 function isLocalReviewRequest(url: string): boolean {
   if (url.startsWith('data:') || url.startsWith('blob:') || url.startsWith('about:')) return true
@@ -46,10 +46,7 @@ async function openScenario(page: Page, scenario: string): Promise<void> {
   if (scenario === 'catalog' || scenario === 'catalog-empty' || scenario === 'catalog-error') {
     await expect(page.getByTestId('quotation-state-ready')).toBeVisible()
     await page.getByTestId('quotation-add-group').click()
-    await page.getByText('屋面', { exact: true }).click()
-    await page.getByTestId('quotation-group-description-quotation-group-1').locator('textarea').fill('屋面檐口修复')
-    await page.getByTestId('quotation-group-quantity-quotation-group-1').locator('input').fill('18')
-    await page.getByTestId('quotation-browse-quotation-group-1').click()
+    await completeFirstRepairPartContext(page, '屋面檐口修复', '18')
     await expect(page.getByTestId('quotation-catalog-page')).toBeVisible()
     await expect(page.getByTestId('quotation-catalog-browser')).toBeVisible()
     await expect(page.getByTestId('quotation-catalog-target')).toContainText('屋面檐口修复')
@@ -66,17 +63,36 @@ async function openScenario(page: Page, scenario: string): Promise<void> {
   }
 }
 
+async function completeFirstRepairPartContext(page: Page, description: string, quantity: string): Promise<void> {
+  await page.getByTestId('quotation-first-step-repair-parts-trigger').click()
+  await page.getByTestId('survey-repair-part-parents').getByText('屋面', { exact: true }).click()
+  await page.getByTestId('quotation-first-step-description').getByRole('textbox').fill(description)
+  await page.getByTestId('quotation-first-step-quantity').getByRole('spinbutton').fill(quantity)
+  await page.getByTestId('quotation-first-step-select-products').click()
+}
+
+async function openCatalogForGroup(page: Page, groupId: string): Promise<void> {
+  const catalogPage = page.getByTestId('quotation-catalog-page')
+  if (await catalogPage.isVisible()) return
+
+  const firstPartStepAction = page.getByTestId('quotation-first-step-select-products')
+  if (await firstPartStepAction.isVisible()) {
+    await firstPartStepAction.click()
+  } else {
+    await page.getByTestId(`quotation-browse-${groupId}`).click()
+  }
+  await expect(catalogPage).toBeVisible()
+}
+
 async function openCatalogKind(page: Page, groupId: string, kind: 'package' | 'procedure' | 'material' | 'measure'): Promise<void> {
-  await page.getByTestId(`quotation-browse-${groupId}`).click()
-  await expect(page.getByTestId('quotation-catalog-page')).toBeVisible()
+  await openCatalogForGroup(page, groupId)
   await page.getByTestId(`quotation-catalog-kind-${kind}`).click()
 }
 
 async function openPackageConfigurationFromEditableGroup(page: Page): Promise<void> {
   await openScenario(page, 'empty')
   await page.getByTestId('quotation-add-group').click()
-  await page.getByText('屋面', { exact: true }).click()
-  await page.getByTestId('quotation-browse-quotation-group-1').click()
+  await completeFirstRepairPartContext(page, '屋面配置测试', '18')
   await expect(page.getByTestId('quotation-catalog-page')).toBeVisible()
   await page.getByTestId('quotation-package-detail-mock-catalog-package-basic').click()
   await expect(page.getByTestId('quotation-package-detail')).toBeVisible()
@@ -108,12 +124,11 @@ test('Phase 1F browses all catalog kinds and explicitly adds only direct selecti
   await mkdir(output, { recursive: true })
   await openScenario(page, 'empty')
   await page.getByTestId('quotation-add-group').click()
-  await page.getByText('屋面', { exact: true }).click()
+  await completeFirstRepairPartContext(page, '屋面檐口修复', '18')
   const groupId = 'quotation-group-1'
   let selectionCount = 0
   for (const kind of ['package', 'procedure', 'material', 'measure'] as const) {
-    await page.getByTestId(`quotation-browse-${groupId}`).click()
-    await expect(page.getByTestId('quotation-catalog-page')).toBeVisible()
+    await openCatalogForGroup(page, groupId)
     await page.getByTestId(`quotation-catalog-kind-${kind}`).click()
     const labels = {
       package: '屋面防水修缮方案（示例）',
@@ -154,7 +169,7 @@ test('isolated Phase 1B review harness keeps blocked local preview separate from
   const diagnostics = await installSafetyGuards(page)
   await openScenario(page, 'empty')
   await page.getByTestId('quotation-add-group').click()
-  await page.getByText('屋面', { exact: true }).click()
+  await completeFirstRepairPartContext(page, '屋面局部修复', '12.5')
   const groupId = 'quotation-group-1'
 
   for (const kind of ['procedure', 'material'] as const) {

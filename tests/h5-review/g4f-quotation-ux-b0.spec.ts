@@ -3,8 +3,8 @@ import { resolve } from 'node:path'
 
 import { expect, test, type Page } from '@playwright/test'
 
-const output = resolve(process.cwd(), '.review/g4f-ux-phase-b0/after')
-const visualMasterOutput = resolve(process.cwd(), '.review/g4f-ux-phase-b0/master-v1/after')
+const output = resolve(process.cwd(), '.review/g4f-ux-phase-b0/repair-part-step-v1/after/regression/ux-b0')
+const visualMasterOutput = resolve(process.cwd(), '.review/g4f-ux-phase-b0/repair-part-step-v1/after/regression/master-v1')
 
 type Diagnostics = {
   readonly pageErrors: string[]
@@ -55,6 +55,15 @@ async function openReview(page: Page, scenario: string, width = 390): Promise<vo
 
 async function createGroup(page: Page, groupId: string, part: '屋面' | '卫生间', description: string, area: string, collapseContext = true): Promise<void> {
   await page.getByTestId('quotation-add-group').last().click()
+  const firstStep = page.getByTestId('quotation-first-step-repair-parts-trigger')
+  if (await firstStep.isVisible()) {
+    await firstStep.click()
+    await page.getByTestId('survey-repair-part-parents').getByText(part, { exact: true }).click()
+    await page.getByTestId('quotation-first-step-description').getByRole('textbox').fill(description)
+    await page.getByTestId('quotation-first-step-quantity').getByRole('spinbutton').fill(area)
+    return
+  }
+
   const group = page.getByTestId(`quotation-repair-group-${groupId}`)
   await expect(group).toBeVisible()
   await group.getByText(part, { exact: true }).click()
@@ -67,6 +76,20 @@ async function createGroup(page: Page, groupId: string, part: '屋面' | '卫生
 }
 
 async function openGroupCatalog(page: Page, groupId: string): Promise<void> {
+  const firstStepAction = page.getByTestId('quotation-first-step-select-products')
+  if (await firstStepAction.isVisible()) {
+    await firstStepAction.scrollIntoViewIfNeeded()
+    await firstStepAction.click()
+    await expect(page.getByTestId('quotation-catalog-page')).toBeVisible()
+    return
+  }
+
+  const groupContext = page.getByTestId(`quotation-group-context-${groupId}`)
+  if (await groupContext.isVisible()) {
+    await page.getByTestId(`quotation-group-context-toggle-${groupId}`).click()
+    await expect(groupContext).toBeHidden()
+  }
+
   const trigger = page.getByTestId(`quotation-browse-${groupId}`)
   await trigger.scrollIntoViewIfNeeded()
   await expect(trigger).toBeEnabled()
@@ -236,7 +259,7 @@ test('Phase B0 empty and retryable catalog states are explicit and recoverable',
   const diagnostics = await installReviewSafety(page)
   await openReview(page, 'catalog-empty')
   await createGroup(page, 'quotation-group-1', '屋面', '屋面檐口修复', '18', false)
-  await expect(page.getByTestId('quotation-group-context-quotation-group-1')).toBeVisible()
+  await expect(page.getByTestId('quotation-first-repair-part-step')).toBeVisible()
   await openGroupCatalog(page, 'quotation-group-1')
   await page.getByTestId('quotation-catalog-kind-package').click()
   await expect(page.getByTestId('quotation-catalog-page')).toBeVisible()
@@ -246,7 +269,7 @@ test('Phase B0 empty and retryable catalog states are explicit and recoverable',
 
   await openReview(page, 'catalog-error')
   await createGroup(page, 'quotation-group-1', '屋面', '屋面檐口修复', '18', false)
-  await expect(page.getByTestId('quotation-group-context-quotation-group-1')).toBeVisible()
+  await expect(page.getByTestId('quotation-first-repair-part-step')).toBeVisible()
   await openGroupCatalog(page, 'quotation-group-1')
   await page.getByTestId('quotation-catalog-kind-package').click()
   await expect(page.getByTestId('quotation-catalog-list-error')).toContainText('暂时无法读取目录')
