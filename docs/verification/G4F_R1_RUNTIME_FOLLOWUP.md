@@ -155,14 +155,14 @@ The rank rows did not expose a usable `materialList[].materialId` in the inspect
 | `submitOrder` | `telphone` | 联系方式 | `phone` | 1 | — |
 | `submitOrder` | `agentExt` | 经办人 | `text` | 1 | — |
 | `submitOrder` | `agentPhone` | 经办人电话 | `text` | 1 | — |
-| `submitOrder` | `projectArea` | 施工省市区 | `area` | 1 | — |
+| `submitOrder` | Field-24 | 施工省市区 | `area` | 1 | — |
 | `submitOrder` | `projectAddress` | 施工地址 | `text` | 1 | — |
 | `other: showType=1` | `couponName` | 优惠券名称 | `text` | 0 | — |
 | `other: showType=sign` | `organizationCode` | 组织机构代码 | `text` | 1 | — |
 | `other: showType=sign` | `certificateType` | 证件类型 | `select` | 0 | `certificateType` |
 | `other: showType=sign` | `certificateNum` | 证件号 | `text` | 0 | — |
 | `other: showType=1` | `contractType` | 合同类型 | `select` | 1 | `allContractType` |
-| `other: showType=sign` | `mailArea` | 通讯省市区 | `area` | 1 | — |
+| `other: showType=sign` | Field-22 | 通讯省市区 | `area` | 1 | — |
 | `other: showType=sign` | `mailAddress` | 通讯地址 | `text` | 1 | — |
 | `other: showType=sign` | `beginDate` | 开始施工日期 | `date` | 1 | — |
 | `other: showType=sign` | `supplementaryMemo` | 补充协议 | `textarea` | 0 | — |

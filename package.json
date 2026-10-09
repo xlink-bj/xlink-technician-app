@@ -27,6 +27,7 @@
     "build:app": "uni build -p app",
     "inspect:form-schema": "node scripts/inspect-inspection-contract.mjs",
     "verify:g4f-prod-read": "node scripts/verify-g4f-prod-read.mjs",
+    "inspect:g4f-active-order-extfield": "node scripts/inspect-g4f-active-order-extfield.mjs",
     "inspect:inspection-contract": "node scripts/inspect-inspection-contract.mjs",
     "inspect:inspection-contract:beta": "node scripts/inspect-inspection-contract-beta.mjs",
     "capture:survey-contract:beta": "node scripts/capture-survey-contract-beta.mjs",
