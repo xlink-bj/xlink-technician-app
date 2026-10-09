@@ -29,9 +29,11 @@ if (pages.includes('__review') || pages.includes('g4f')) fail('production pages 
 if (workspace.includes('SyntheticOrderExtFieldReviewPanel.vue') || content.includes('SyntheticOrderExtFieldReviewPanel.vue')) {
   fail('production Action Workspace must not statically import the review panel')
 }
-if (!workspace.includes('import.meta.env.DEV') || !workspace.includes('!syntheticReviewEnabled && workspace.canSubmitQuotation')
-  || !workspace.includes('!syntheticReviewEnabled && quotationConfirmOpen')) {
-  fail('review activation must be development-only and suppress both submit affordances and confirmation')
+if (!workspace.includes('import.meta.env.DEV')
+  || !workspace.includes('!productReviewOnly && !syntheticReviewEnabled && workspace.canSubmitQuotation')
+  || !workspace.includes('!syntheticReviewEnabled && !productReviewOnly && quotationConfirmOpen')
+  || !workspace.includes('if (productionReadOnly || syntheticReviewEnabled.value || productReviewOnly.value) return')) {
+  fail('review activation must be development-only and suppress both submit affordances, confirmation and command handlers')
 }
 if (!content.includes('<slot name="synthetic-review-panel"') || !content.includes('import.meta.env.DEV')
   || !content.includes('syntheticReviewValidateSelection') || !content.includes('syntheticReviewFocusFirstError')) {

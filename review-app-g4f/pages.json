@@ -5,6 +5,24 @@
       "style": {
         "navigationBarTitleText": "报价工作区"
       }
+    },
+    {
+      "path": "pages/product/orders",
+      "style": {
+        "navigationBarTitleText": "我的工单"
+      }
+    },
+    {
+      "path": "pages/product/detail",
+      "style": {
+        "navigationBarTitleText": "工单详情"
+      }
+    },
+    {
+      "path": "pages/product/quotation",
+      "style": {
+        "navigationBarTitleText": "报价工作台"
+      }
     }
   ],
   "globalStyle": {

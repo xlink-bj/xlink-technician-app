@@ -2,7 +2,6 @@
   <view class="quotation-content" data-testid="quotation-action-content">
     <view v-if="!catalogBrowser.isOpen && !isInitialEmptyWorkbench && !isFirstRepairPartStep" class="quotation-content__heading" data-testid="quotation-workbench-heading">
       <text class="quotation-content__eyebrow">报价草稿 · 按部位组织</text>
-      <text class="quotation-content__title">报价工作台</text>
       <text class="quotation-content__description">选择维修部位，逐组整理项目；当前内容仅保存在本机。</text>
     </view>
 
@@ -132,7 +131,7 @@
         <view v-if="composition.groups.length === 0 && isInitialEmptyWorkbench" class="quotation-content__initial-empty" data-testid="quotation-initial-empty-workbench">
           <view class="quotation-content__initial-draft-notice" data-testid="quotation-draft-notice" role="status">
             <text class="quotation-content__initial-draft-notice-mark" aria-hidden="true">i</text>
-            <text class="quotation-content__initial-draft-notice-copy">当前为本机报价草稿；通过校验并提交后才会创建正式订单。</text>
+            <text class="quotation-content__initial-draft-notice-copy">{{ props.productReviewOnly ? '演示模式仅可整理本机草稿，不会创建正式订单。' : '当前为本机报价草稿；通过校验并提交后才会创建正式订单。' }}</text>
           </view>
           <view class="quotation-content__initial-card app-surface" data-testid="quotation-initial-main-card">
             <view class="quotation-content__initial-empty-heading">
@@ -157,7 +156,7 @@
           <view class="quotation-content__initial-process app-surface" data-testid="quotation-quote-process">
             <view class="quotation-content__initial-process-heading">
               <text class="quotation-content__initial-process-title">报价流程</text>
-              <text class="quotation-content__initial-process-subtitle">三步整理报价</text>
+              <text class="quotation-content__initial-process-subtitle">{{ props.productReviewOnly ? '演示草稿 · 暂不提交订单' : '三步整理报价' }}</text>
             </view>
             <view class="quotation-content__initial-process-steps">
               <view class="quotation-content__initial-process-step">
@@ -174,8 +173,8 @@
               <text class="quotation-content__initial-process-arrow" aria-hidden="true">›</text>
               <view class="quotation-content__initial-process-step">
                 <view class="quotation-content__initial-process-symbol"><text class="quotation-content__initial-process-number">3</text><AppIcon name="complete" :size="22" color="var(--app-color-primary)" /></view>
-                <text class="quotation-content__initial-process-step-title">提交订单</text>
-                <text class="quotation-content__initial-process-step-copy">通过校验后提交</text>
+                <text class="quotation-content__initial-process-step-title">{{ props.productReviewOnly ? '核对草稿' : '提交订单' }}</text>
+                <text class="quotation-content__initial-process-step-copy">{{ props.productReviewOnly ? '正式报价提交暂未开放' : '通过校验后提交' }}</text>
               </view>
             </view>
           </view>
@@ -585,6 +584,7 @@
           <view class="quotation-content__catalog-target-copy">
             <text class="quotation-content__catalog-target-label">添加至当前维修部位</text>
             <text class="quotation-content__catalog-target-title">{{ activeCatalogGroupLabel }}</text>
+            <text v-if="activeCatalogGroupPathLabel && activeCatalogGroupPathLabel !== activeCatalogGroupLabel" class="quotation-content__catalog-target-meta">维修位置 · {{ activeCatalogGroupPathLabel }}</text>
           </view>
           <text class="quotation-content__catalog-target-count">已选 {{ groupSelectionCount(activeCatalogGroupId || '') }} 项</text>
         </view>
@@ -943,6 +943,7 @@ import {
 const props = defineProps<{
   readonly state: 'loading' | 'ready' | 'blocked' | 'failed_retryable' | 'failed_terminal'
   readonly syntheticFieldsReview?: boolean
+  readonly productReviewOnly?: boolean
   readonly syntheticReviewValidateSelection?: () => boolean
   readonly syntheticReviewFocusFirstError?: () => void
 }>()
@@ -1039,10 +1040,16 @@ const activeCatalogGroupNumber = computed(() => {
   const index = composition.groups.findIndex((group) => group.groupId === activeCatalogGroupId.value)
   return index < 0 ? 1 : index + 1
 })
+const activeCatalogGroupPathLabel = computed(() => {
+  const group = activeCatalogGroup.value
+  return group ? repairPartPathLabel(group.repairParts) : ''
+})
 const activeCatalogGroupLabel = computed(() => {
   const group = activeCatalogGroup.value
   if (!group) return '未指定维修部位'
-  return repairPartPathLabel(group.repairParts) || group.partDescription.trim() || '维修部位待选择'
+  // The technician's concrete task disambiguates repairs that share a broad part path.
+  // Preserve the R1 repair-part path as separate secondary context, not as a replacement.
+  return group.partDescription.trim() || activeCatalogGroupPathLabel.value || '维修部位待选择'
 })
 const catalogSearchPlaceholder = computed(() => placeholderForCatalogKind(catalogBrowser.selectedKind))
 const catalogSectionTitle = computed(() => ({
@@ -1368,7 +1375,12 @@ function catalogMetadata(item: QuotationCatalogItemRead): string {
 }
 
 function areGroupDetailsCollapsed(groupId: string): boolean {
-  return groupDetailsCollapsedById.value[groupId] ?? false
+  const explicit = groupDetailsCollapsedById.value[groupId]
+  if (explicit !== undefined) return explicit
+  // Product UX review only: summarize long groups so the original "添加项目"
+  // action remains reachable without traversing a long list on small phones.
+  // Never change the default expanded state on live business routes.
+  return props.productReviewOnly === true && groupSelectionCount(groupId) >= 3
 }
 
 function toggleGroupDetails(groupId: string): void {
