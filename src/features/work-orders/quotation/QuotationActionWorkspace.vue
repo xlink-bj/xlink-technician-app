@@ -6,7 +6,7 @@
     :display-number="workspace.detail?.displayNumber"
     :lifecycle="workspace.lifecycle"
     :draft-status="workspace.draftStatus"
-    :can-submit="!productionReadOnly && !syntheticReviewEnabled && workspace.canSubmitQuotation"
+    :can-submit="!productionReadOnly && !productReviewOnly && !syntheticReviewEnabled && workspace.canSubmitQuotation"
     :transitioning="workspace.quotationOrderState.state === 'submitting'"
     :submit-label="workspace.quotationOrderState.state === 'submitting' ? '提交中…' : '提交订单/报价方案'"
     @submit="openQuotationConfirmation"
@@ -49,6 +49,14 @@
         quiet
         data-testid="quotation-synthetic-submit-disabled"
       />
+      <AppStatus
+        v-else-if="productReviewOnly"
+        class="quotation-production-read-only"
+        message="演示数据：可以编辑报价草稿和选择产品，正式订单提交已关闭。"
+        tone="neutral"
+        quiet
+        data-testid="quotation-product-demo-read-only"
+      />
       <AppButton
         v-else
         data-testid="action-workspace-submit"
@@ -59,7 +67,7 @@
         @tap="openQuotationConfirmation"
       >{{ workspace.quotationOrderState.state === 'submitting' ? '提交中…' : '提交订单/报价方案' }}</AppButton>
       <AppStatus
-        v-if="!productionReadOnly && !syntheticReviewEnabled && !workspace.canSubmitQuotation && !isInitialEmptyWorkbench"
+        v-if="!productionReadOnly && !syntheticReviewEnabled && !productReviewOnly && !workspace.canSubmitQuotation && !isInitialEmptyWorkbench"
         class="quotation-submit-unavailable"
         message="提交条件尚未满足；完成必需配置并通过本机校验后，此入口才会开放。"
         tone="neutral"
@@ -67,7 +75,7 @@
         data-testid="quotation-submit-unavailable"
       />
     </template>
-    <view v-if="!productionReadOnly && !syntheticReviewEnabled && quotationConfirmOpen" class="quotation-confirm-backdrop" role="presentation">
+    <view v-if="!productionReadOnly && !syntheticReviewEnabled && !productReviewOnly && quotationConfirmOpen" class="quotation-confirm-backdrop" role="presentation">
       <view class="quotation-confirm-sheet" role="dialog" aria-modal="true" data-testid="quotation-order-confirmation">
         <text class="quotation-confirm-title">确认提交订单/报价方案？</text>
         <text class="workspace-state-copy">提交会创建服务器订单，并触发后端已验证的报价单生成、工单金额更新等副作用；不会完成当前工单工作流。提交后请勿重复操作。</text>
@@ -94,6 +102,7 @@ import QuotationActionContent from './QuotationActionContent.vue'
 
 const props = defineProps<{
   readonly contentState: 'loading' | 'ready' | 'blocked' | 'failed_retryable' | 'failed_terminal'
+  readonly productReviewOnly?: boolean
   readonly syntheticFieldsReview?: boolean
   readonly syntheticReviewValidateSelection?: () => boolean
   readonly syntheticReviewFocusFirstError?: () => void
@@ -115,6 +124,7 @@ const amountPresentation = computed(() => quotationAmountPresentation({
   isLoading: workspace.quotationEngine.state === 'loading',
 }))
 const productionReadOnly = isProductionReadOnlyRuntime()
+const productReviewOnly = computed(() => import.meta.env.DEV && props.productReviewOnly === true)
 const syntheticReviewEnabled = computed(() => import.meta.env.DEV
   && props.syntheticFieldsReview === true
   && Boolean(props.syntheticReviewValidateSelection)
@@ -129,13 +139,13 @@ async function returnToGroup(groupId: string): Promise<void> {
 }
 
 async function confirmQuotationSubmit(): Promise<void> {
-  if (productionReadOnly || syntheticReviewEnabled.value) return
+  if (productionReadOnly || syntheticReviewEnabled.value || productReviewOnly.value) return
   quotationConfirmOpen.value = false
   await workspace.submitQuotationOrder()
 }
 
 function openQuotationConfirmation(): void {
-  if (productionReadOnly || syntheticReviewEnabled.value) return
+  if (productionReadOnly || syntheticReviewEnabled.value || productReviewOnly.value) return
   quotationConfirmOpen.value = true
 }
 </script>

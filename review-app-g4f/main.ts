@@ -2,7 +2,7 @@ import { createSSRApp } from 'vue'
 
 import { createApplication } from '@app/bootstrap'
 import { setBusinessMockMode } from '@app/business-mock'
-import type { AuthSessionPort, QuotationCatalogReadPort, QuotationOrderCommandPort, QuotationOrderRead, QuotationOrderReadPort, SessionSnapshot, TechnicianApiReadPort } from '@shared/ports'
+import type { AuthSessionPort, TechnicianApiCommandPort, QuotationCatalogReadPort, QuotationOrderCommandPort, QuotationOrderRead, QuotationOrderReadPort, SessionSnapshot, TechnicianApiReadPort } from '@shared/ports'
 import { asOpaqueId, createOperationError, type OperationSnapshot } from '@shared/types'
 import { createDefaultQuotationCatalogReadPort, createDefaultTechnicianApiReadPort } from '@app/composition'
 import App from './App.vue'
@@ -32,7 +32,9 @@ export function createApp() {
   // runtime. The synthetic session is local; it contains no credentials.
   setBusinessMockMode('data')
   const storage = createG4fReviewStorage()
-  const scenario = reviewScenarioFromLocation()
+  // Separate product-facing pages; old QA fixture routes keep their own scenario menu.
+  const route = typeof window === 'undefined' ? '' : `${window.location.pathname}${window.location.hash}`
+  const scenario = /\/pages\/product\/(?:orders|detail|quotation)(?:[/?#]|$)/.test(route) ? 'product' : reviewScenarioFromLocation()
   seedG4fReviewDraft(storage, scenario)
   const needsOrderReview = ['submit-ready', 'readback-pending', 'edit', 'unsupported-edit'].includes(scenario)
   const baseApiRead = createDefaultTechnicianApiReadPort(authSession)
@@ -114,7 +116,22 @@ export function createApp() {
     listTypeOneOrdersForWorkOrder: async () => succeeded({ items: [], page: 1, pageSize: 3, totalCount: 0 }),
   }
   const counters = { dispatches: 0, workflowStarts: 0, reviewBlockedCommandCalls: 0 }
-  const quotationOrderCommand: QuotationOrderCommandPort = scenario === 'dynamic-fields'
+  const blockCommand = <T>(): OperationSnapshot<T> => ({
+    state: 'failed_terminal',
+    error: createOperationError('authorization_denied', 'product review disables all business commands'),
+  })
+  const productCommand: TechnicianApiCommandPort | undefined = scenario === 'product'
+    ? {
+        inspectAcceptOrder: async () => { counters.reviewBlockedCommandCalls += 1; return blockCommand() },
+        acceptOrder: async () => { counters.reviewBlockedCommandCalls += 1; return blockCommand() },
+        readAppointmentForm: async () => blockCommand(),
+        readDynamicForm: async () => blockCommand(),
+        saveDynamicForm: async () => { counters.reviewBlockedCommandCalls += 1; return blockCommand() },
+        completeWorkflowNode: async () => { counters.reviewBlockedCommandCalls += 1; return blockCommand() },
+        submitAppointment: async () => { counters.reviewBlockedCommandCalls += 1; return blockCommand() },
+      }
+    : undefined
+  const quotationOrderCommand: QuotationOrderCommandPort = scenario === 'dynamic-fields' || scenario === 'product'
     ? {
         startOrderWorkflow: async () => {
           counters.reviewBlockedCommandCalls += 1
@@ -130,7 +147,7 @@ export function createApp() {
         upsertOfficialOrder: async () => { counters.dispatches += 1; await new Promise((resolve) => setTimeout(resolve, 650)); return succeeded('order-synthetic-review') },
       }
   if (typeof window !== 'undefined') Object.assign(window, { __G4F_REVIEW_ORDER_MUTATIONS__: counters })
-  const application = createApplication({ authSession, apiRead, storage, quotationCatalogRead: catalog, quotationOrderCommand, quotationOrderRead })
+  const application = createApplication({ authSession, apiRead, storage, ...(productCommand ? { apiCommand: productCommand } : {}), quotationCatalogRead: catalog, quotationOrderCommand, quotationOrderRead })
   const app = createSSRApp(App)
   app.use(application.pinia)
   return { app }
