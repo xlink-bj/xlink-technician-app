@@ -3,14 +3,15 @@
     <navigator class="product-detail-back" open-type="navigateBack" delta="1">‹ 返回工单</navigator>
     <view class="product-detail-card">
       <view class="product-detail-title-row">
-        <text class="product-detail-title">屋面防水维修</text>
+        <text class="product-detail-title">{{ detail.detail?.customerName || '维修服务工单' }}</text>
         <text class="product-detail-state">待报价</text>
       </view>
-      <text class="product-detail-number">工单 #MOCK-018</text>
+      <text class="product-detail-number">工单 #{{ detail.detail?.displayNumber || '—' }}</text>
       <view class="product-detail-separator" />
       <text class="product-detail-label">当前任务</text>
       <text class="product-detail-task">编制维修报价方案</text>
       <text class="product-detail-description">确认维修部位、工作量和产品配置，形成报价草稿。</text>
+      <text v-if="detail.detail?.serviceAddress" class="product-detail-address">{{ detail.detail.serviceAddress }}</text>
       <AppButton
         variant="primary"
         block
@@ -59,6 +60,7 @@ function goToQuotation(): void {
 .product-detail-title-row { align-items: center; display: flex; justify-content: space-between; }
 .product-detail-title { color: #20304b; font-size: 33rpx; font-weight: 800; }
 .product-detail-state { background: #eaf2ff; border-radius: 28rpx; color: #2875ed; font-size: 21rpx; padding: 6rpx 14rpx; }
+.product-detail-address { color: #7c8999; display: block; font-size: 22rpx; margin: -16rpx 0 24rpx; }
 .product-detail-number,.product-detail-label { color: #8491a6; display: block; font-size: 22rpx; margin-top: 14rpx; }
 .product-detail-separator { border-top: 1rpx solid #eaf0f9; margin: 30rpx 0; }
 .product-detail-task { color: #1e2f4a; display: block; font-size: 32rpx; font-weight: 800; margin-top: 9rpx; }

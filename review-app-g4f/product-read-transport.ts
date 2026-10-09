@@ -12,6 +12,8 @@ import {
 import {
   isSyntheticWorkOrderId,
   mockCommandScenarioIds,
+  mockQuotationWorkflowNodeId,
+  mockWorkOrderDetailResponses,
   mockQuotationCatalogServiceType,
   mockQuotationCatalogSourceType,
   tryMockRead,
@@ -86,6 +88,22 @@ export function createProductMockReadTransport(actor: ProductReviewActor): ApiRe
           'This read is outside the isolated synthetic product-review allowlist',
           'authorization_denied',
         )
+      }
+      // Product review deliberately presents exactly one source-backed
+      // synthetic quotation work order, mapped by the real API adapter.
+      if (request.path === 'basic/serviceAppointment/querySAWorkflowNode') {
+        const detail = mockWorkOrderDetailResponses[mockCommandScenarioIds.quotationFoundation]
+        return {
+          data: [{
+            _id: mockQuotationWorkflowNodeId,
+            state: 1,
+            nodeDef: { nodeType: 'placeOrder', name: '报价', viewableRoleIds: [actor.roleId] },
+            data: detail.data.serviceAppointment,
+          }],
+          page: 1,
+          rows: 20,
+          total: 1,
+        }
       }
       const fixture = await tryMockRead(request.path, request.body ?? request.query ?? {}, {
         latencyMs: 0,
