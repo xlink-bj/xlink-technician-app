@@ -2,7 +2,6 @@
   <view class="quotation-content" data-testid="quotation-action-content">
     <view v-if="!catalogBrowser.isOpen && !isInitialEmptyWorkbench && !isFirstRepairPartStep" class="quotation-content__heading" data-testid="quotation-workbench-heading">
       <text class="quotation-content__eyebrow">报价草稿 · 按部位组织</text>
-      <text class="quotation-content__title">报价工作台</text>
       <text class="quotation-content__description">选择维修部位，逐组整理项目；当前内容仅保存在本机。</text>
     </view>
 
@@ -585,6 +584,7 @@
           <view class="quotation-content__catalog-target-copy">
             <text class="quotation-content__catalog-target-label">添加至当前维修部位</text>
             <text class="quotation-content__catalog-target-title">{{ activeCatalogGroupLabel }}</text>
+            <text v-if="activeCatalogGroupPathLabel && activeCatalogGroupPathLabel !== activeCatalogGroupLabel" class="quotation-content__catalog-target-meta">维修位置 · {{ activeCatalogGroupPathLabel }}</text>
           </view>
           <text class="quotation-content__catalog-target-count">已选 {{ groupSelectionCount(activeCatalogGroupId || '') }} 项</text>
         </view>
@@ -1039,10 +1039,16 @@ const activeCatalogGroupNumber = computed(() => {
   const index = composition.groups.findIndex((group) => group.groupId === activeCatalogGroupId.value)
   return index < 0 ? 1 : index + 1
 })
+const activeCatalogGroupPathLabel = computed(() => {
+  const group = activeCatalogGroup.value
+  return group ? repairPartPathLabel(group.repairParts) : ''
+})
 const activeCatalogGroupLabel = computed(() => {
   const group = activeCatalogGroup.value
   if (!group) return '未指定维修部位'
-  return repairPartPathLabel(group.repairParts) || group.partDescription.trim() || '维修部位待选择'
+  // The technician's concrete task disambiguates repairs that share a broad part path.
+  // Preserve the R1 repair-part path as separate secondary context, not as a replacement.
+  return group.partDescription.trim() || activeCatalogGroupPathLabel.value || '维修部位待选择'
 })
 const catalogSearchPlaceholder = computed(() => placeholderForCatalogKind(catalogBrowser.selectedKind))
 const catalogSectionTitle = computed(() => ({

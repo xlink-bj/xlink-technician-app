@@ -112,6 +112,9 @@ for (const viewport of viewports) {
     await page.getByTestId('quotation-first-step-select-products').click()
     await expect(page.getByTestId('quotation-catalog-page')).toBeVisible()
     await expect(page.getByTestId('quotation-catalog-browser')).toBeVisible()
+    // Protect both concrete job description and broad repair-part path (R1 domain parity).
+    await expect(page.getByTestId('quotation-catalog-target')).toContainText('屋面檐口局部维修')
+    await expect(page.getByTestId('quotation-catalog-target')).toContainText('维修位置 · 屋面')
     await expect(page.getByTestId('quotation-catalog-kind-package')).toBeVisible()
     await expect(page.getByTestId('quotation-catalog-kind-procedure')).toBeVisible()
     await expect(page.getByTestId('quotation-catalog-kind-material')).toBeVisible()

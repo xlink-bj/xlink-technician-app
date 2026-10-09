@@ -2,8 +2,7 @@
   <view class="product-review-page" data-testid="commercial-review-orders">
     <view class="product-review-top">
       <text class="product-review-kicker">今日任务</text>
-      <text class="product-review-title">我的工单</text>
-      <text class="product-review-subtitle">查看需要处理的服务任务</text>
+      <text class="product-review-subtitle">选择工单，继续当前报价任务</text>
     </view>
 
     <view class="product-review-section">
@@ -55,9 +54,8 @@ watch(() => session.status, (status) => {
 
 <style scoped>
 .product-review-page { background: #f3f6fa; box-sizing: border-box; min-height: 100vh; padding: 36rpx 28rpx; }
-.product-review-top { display: flex; flex-direction: column; gap: 8rpx; padding: 16rpx 4rpx 40rpx; }
+.product-review-top { display: flex; flex-direction: column; gap: 8rpx; padding: 8rpx 4rpx 24rpx; }
 .product-review-kicker { color: #286ff0; font-size: 23rpx; font-weight: 650; }
-.product-review-title { color: #1c2940; font-size: 43rpx; font-weight: 800; }
 .product-review-subtitle { color: #77859a; font-size: 25rpx; }
 .product-review-section { background: #fff; border: 1rpx solid #e6edf7; border-radius: 24rpx; padding: 28rpx; }
 .product-review-section-heading,.product-review-row,.product-review-card-footer { align-items: center; display: flex; justify-content: space-between; }
