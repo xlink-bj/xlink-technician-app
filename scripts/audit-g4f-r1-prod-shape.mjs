@@ -285,7 +285,15 @@ async function run() {
         },
       },
     )
-    const catalogApi = catalogModule.createQuotationCatalogReadAdapter(apiTransport, () => auth.getCurrentSession()?.sessionRef ?? null)
+    const catalogApi = catalogModule.createQuotationCatalogReadAdapter(apiTransport, () => {
+      const current = auth.getCurrentSession()
+      return current ? {
+        sessionRef: current.sessionRef,
+        userId: current.user.id,
+        roleId: current.currentRole?.id ?? null,
+        roleVersion: current.roleVersion ?? null,
+      } : null
+    })
     const orderApi = orderModule.createQuotationOrderReadAdapter(apiTransport, (workOrderId) =>
       listedWorkOrderIds.has(workOrderId) && technicianApi.isWorkOrderListedForCurrentSession?.(workOrderId) === true)
 

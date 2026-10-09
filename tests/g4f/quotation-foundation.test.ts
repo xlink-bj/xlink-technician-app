@@ -174,6 +174,7 @@ describe('G4-F Phase 1A quotation action foundation', () => {
     expect(quotationFixtureRead).not.toHaveBeenCalled()
     expect(workspace.quotationContentState).toBe('ready')
     expect(workspace.detail?.quotationCatalogContext).toEqual({
+      workOrderId,
       serviceType: mockQuotationCatalogServiceType,
       sourceType: mockQuotationCatalogSourceType,
     })

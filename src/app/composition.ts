@@ -156,7 +156,16 @@ export function createDefaultQuotationCatalogReadPort(authSession: AuthSessionPo
   })
   return createQuotationCatalogReadAdapter(
     transport,
-    () => authSession.getCurrentSession()?.sessionRef ?? null,
+    () => {
+      const session = authSession.getCurrentSession()
+      if (!session) return null
+      return {
+        sessionRef: session.sessionRef,
+        userId: session.user.id,
+        roleId: session.currentRole?.id ?? null,
+        roleVersion: session.roleVersion ?? null,
+      }
+    },
   )
 }
 
