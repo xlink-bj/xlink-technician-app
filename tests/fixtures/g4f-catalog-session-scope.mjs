@@ -254,6 +254,118 @@ try {
     snapshotFailure(await pendingDetail)
   }
 
+  // A monotonic generation rejects identity A -> B -> A results even though the final fingerprint matches A.
+  {
+    let scope = productionScope()
+    const packageListDeferred = deferred()
+    let packageListCalls = 0
+    let detailCalls = 0
+    const catalog = createQuotationCatalogReadAdapter({
+      async execute(request) {
+        if (request.path === 'biz/projPackage/queryWithRank') {
+          packageListCalls += 1
+          return packageListDeferred.promise
+        }
+        if (request.path === 'biz/projPackage/findById/identity-aba-list-package') {
+          detailCalls += 1
+          return packageDetail('identity-aba-list-package')
+        }
+        return { data: [] }
+      },
+    }, () => scope)
+    const pendingList = catalog.listPackages(catalogContext())
+    await Promise.resolve()
+    scope = productionScope({ roleId: 'synthetic-role-b' })
+    assert.equal((await catalog.listMaterials(catalogContext())).state, 'succeeded')
+    scope = productionScope()
+    assert.equal((await catalog.listMaterials(catalogContext())).state, 'succeeded')
+    packageListDeferred.resolve({ data: [packageRow('identity-aba-list-package')] })
+    snapshotFailure(await pendingList)
+    snapshotFailure(await catalog.getPackageDetail('identity-aba-list-package'))
+    assert.equal(packageListCalls, 1)
+    assert.equal(detailCalls, 0, 'stale identity-ABA list must not re-register its Package ID')
+  }
+
+  // An in-flight detail is discarded after identity A -> B -> A, rather than surfacing for the restored identity.
+  {
+    let scope = productionScope()
+    const detailDeferred = deferred()
+    let detailCalls = 0
+    const catalog = createQuotationCatalogReadAdapter({
+      async execute(request) {
+        if (request.path === 'biz/projPackage/queryWithRank') return { data: [packageRow('identity-aba-detail-package')] }
+        if (request.path === 'biz/projPackage/findById/identity-aba-detail-package') {
+          detailCalls += 1
+          return detailDeferred.promise
+        }
+        return { data: [] }
+      },
+    }, () => scope)
+    assert.equal((await catalog.listPackages(catalogContext())).state, 'succeeded')
+    const pendingDetail = catalog.getPackageDetail('identity-aba-detail-package')
+    await Promise.resolve()
+    scope = productionScope({ roleId: 'synthetic-role-b' })
+    assert.equal((await catalog.listMaterials(catalogContext())).state, 'succeeded')
+    scope = productionScope()
+    assert.equal((await catalog.listMaterials(catalogContext())).state, 'succeeded')
+    detailDeferred.resolve(packageDetail('identity-aba-detail-package'))
+    snapshotFailure(await pendingDetail)
+    assert.equal(detailCalls, 1)
+  }
+
+  // A Work Order context A -> B -> A transition also invalidates an in-flight Package list.
+  {
+    const packageListDeferred = deferred()
+    let packageListCalls = 0
+    let detailCalls = 0
+    const catalog = createQuotationCatalogReadAdapter({
+      async execute(request) {
+        if (request.path === 'biz/projPackage/queryWithRank') {
+          packageListCalls += 1
+          return packageListDeferred.promise
+        }
+        if (request.path === 'biz/projPackage/findById/work-order-aba-list-package') {
+          detailCalls += 1
+          return packageDetail('work-order-aba-list-package')
+        }
+        return { data: [] }
+      },
+    }, () => productionScope())
+    const pendingList = catalog.listPackages(catalogContext())
+    await Promise.resolve()
+    assert.equal((await catalog.listMaterials(catalogContext({ workOrderId: 'synthetic-work-order-b' }))).state, 'succeeded')
+    assert.equal((await catalog.listMaterials(catalogContext())).state, 'succeeded')
+    packageListDeferred.resolve({ data: [packageRow('work-order-aba-list-package')] })
+    snapshotFailure(await pendingList)
+    snapshotFailure(await catalog.getPackageDetail('work-order-aba-list-package'))
+    assert.equal(packageListCalls, 1)
+    assert.equal(detailCalls, 0, 'stale Work Order-ABA list must not re-register its Package ID')
+  }
+
+  // An in-flight detail is discarded after Work Order context A -> B -> A.
+  {
+    const detailDeferred = deferred()
+    let detailCalls = 0
+    const catalog = createQuotationCatalogReadAdapter({
+      async execute(request) {
+        if (request.path === 'biz/projPackage/queryWithRank') return { data: [packageRow('work-order-aba-detail-package')] }
+        if (request.path === 'biz/projPackage/findById/work-order-aba-detail-package') {
+          detailCalls += 1
+          return detailDeferred.promise
+        }
+        return { data: [] }
+      },
+    }, () => productionScope())
+    assert.equal((await catalog.listPackages(catalogContext())).state, 'succeeded')
+    const pendingDetail = catalog.getPackageDetail('work-order-aba-detail-package')
+    await Promise.resolve()
+    assert.equal((await catalog.listMaterials(catalogContext({ workOrderId: 'synthetic-work-order-b' }))).state, 'succeeded')
+    assert.equal((await catalog.listMaterials(catalogContext())).state, 'succeeded')
+    detailDeferred.resolve(packageDetail('work-order-aba-detail-package'))
+    snapshotFailure(await pendingDetail)
+    assert.equal(detailCalls, 1)
+  }
+
   console.log(JSON.stringify({
     productionBoundaryFixture: 'PASS',
     sourceTypeRejectedBeforeTransport: sourceTypeRejected,
@@ -265,6 +377,11 @@ try {
     staleListDiscarded: 'PASS',
     staleWorkOrderContextListDiscarded: 'PASS',
     staleDetailDiscarded: 'PASS',
+    identityAbaStaleListDiscarded: 'PASS',
+    identityAbaStaleDetailDiscarded: 'PASS',
+    workOrderContextAbaStaleListDiscarded: 'PASS',
+    workOrderContextAbaStaleDetailDiscarded: 'PASS',
+    sameEpochListDetail: 'PASS',
     externalRequests: 0,
   }))
 } finally {

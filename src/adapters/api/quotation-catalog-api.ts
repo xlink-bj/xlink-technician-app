@@ -295,6 +295,7 @@ function readFailure<T>(error: unknown): OperationSnapshot<T> {
 class QuotationCatalogReadAdapter implements QuotationCatalogReadPort {
   private currentReadScope: string | null = null
   private currentCatalogContextKey: string | null = null
+  private authorizationContextGeneration = 0
   private readonly listedPackageIds = new Set<string>()
 
   constructor(
@@ -316,6 +317,7 @@ class QuotationCatalogReadAdapter implements QuotationCatalogReadPort {
     const nextScope = authorizationIdentityKey(identityScope)
     if (nextScope !== this.currentReadScope) {
       this.currentReadScope = nextScope
+      this.authorizationContextGeneration += 1
       this.listedPackageIds.clear()
       this.currentCatalogContextKey = null
     }
@@ -333,6 +335,7 @@ class QuotationCatalogReadAdapter implements QuotationCatalogReadPort {
       : null
     if (key !== this.currentCatalogContextKey) {
       this.currentCatalogContextKey = key
+      this.authorizationContextGeneration += 1
       this.listedPackageIds.clear()
     }
     return key
@@ -349,15 +352,14 @@ class QuotationCatalogReadAdapter implements QuotationCatalogReadPort {
     const catalogContextAtStart = productionReadOnly
       ? this.synchronizeCatalogContext(context)
       : null
+    const generationAtStart = productionReadOnly ? this.authorizationContextGeneration : null
     const result = await this.read(() => listRequest(path, context, productionReadOnly), map)
     if (!productionReadOnly) return result
 
-    const scopeAfterRead = this.synchronizeProductionReadScope()
-    if (scopeAfterRead !== scopeAtStart) {
-      return adapterFailure('authorization_denied', 'Catalog results were discarded because the authenticated user or role changed during the read. Reload the catalog for the current identity.')
-    }
-    if (catalogContextAtStart !== this.currentCatalogContextKey) {
-      return adapterFailure('authorization_denied', 'Catalog results were discarded because the Work Order catalog context changed during the read. Reload the current Work Order catalog.')
+    this.synchronizeProductionReadScope()
+    this.synchronizeCatalogContext(context)
+    if (this.authorizationContextGeneration !== generationAtStart) {
+      return adapterFailure('authorization_denied', 'Catalog results were discarded because the authenticated identity or Work Order catalog context changed during the read. Reload the current catalog.')
     }
     if (listedPackages && scopeAtStart && catalogContextAtStart && result.state === 'succeeded' && result.data) {
       for (const item of listedPackages(result.data)) {
@@ -393,6 +395,7 @@ class QuotationCatalogReadAdapter implements QuotationCatalogReadPort {
     const productionReadOnly = this.isProductionReadOnly()
     const scopeAtStart = productionReadOnly ? this.synchronizeProductionReadScope() : null
     const catalogContextAtStart = productionReadOnly ? this.currentCatalogContextKey : null
+    const generationAtStart = productionReadOnly ? this.authorizationContextGeneration : null
     if (productionReadOnly) {
       if (!scopeAtStart || !catalogContextAtStart || !this.listedPackageIds.has(packageId)) {
         return adapterFailure<QuotationPackageDetailRead>(
@@ -408,8 +411,8 @@ class QuotationCatalogReadAdapter implements QuotationCatalogReadPort {
       },
       (raw) => packageDetail(raw, packageId),
     )
-    if (productionReadOnly && (this.synchronizeProductionReadScope() !== scopeAtStart
-      || this.currentCatalogContextKey !== catalogContextAtStart)) {
+    if (productionReadOnly) this.synchronizeProductionReadScope()
+    if (productionReadOnly && this.authorizationContextGeneration !== generationAtStart) {
       return adapterFailure<QuotationPackageDetailRead>(
         'authorization_denied',
         'Package detail was discarded because the authenticated identity or Work Order catalog context changed during the read. Reload it under the current context.',
