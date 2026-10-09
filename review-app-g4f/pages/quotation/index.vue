@@ -29,9 +29,22 @@
       v-else-if="workspace.descriptor?.contentKind === 'quotation'"
       data-testid="g4f-quotation-workspace"
       :content-state="quotationContentViewState"
+      :synthetic-fields-review="syntheticFieldsReviewEnabled"
+      :synthetic-review-validate-selection="validateSyntheticSelectionEntry"
+      :synthetic-review-focus-first-error="focusSyntheticFirstError"
       @retry="reload"
       @back="exit"
-    />
+    >
+      <template #synthetic-review-panel>
+        <SyntheticOrderExtFieldReviewPanel
+          v-if="syntheticFieldsReviewEnabled && syntheticReviewIdentity"
+          ref="syntheticReviewPanel"
+          :enabled="true"
+          :identity="syntheticReviewIdentity"
+          :storage="syntheticReviewStorage"
+        />
+      </template>
+    </QuotationActionWorkspace>
 
     <view v-else-if="workspace.loadState === 'blocked' || workspace.loadState.startsWith('failed')" class="g4f-review-blocked" data-testid="g4f-workspace-blocked">
       <text class="g4f-review-blocked__title">报价工作区未能打开</text>
@@ -41,7 +54,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 import { useActionWorkspaceStore } from '@features/work-orders/action-workspace'
 import { useSessionStore } from '@shared/state'
@@ -49,11 +62,21 @@ import AppLoadingState from '@shared/ui/AppLoadingState.vue'
 import QuotationActionWorkspace from '@features/work-orders/quotation/QuotationActionWorkspace.vue'
 import { mockCommandScenarioIds, mockQuotationWorkflowNodeId } from '@adapters/api/mock'
 import { asOpaqueId } from '@shared/types'
-import { reviewScenarioFromLocation } from '../../quotation-scenarios'
+import {
+  createG4fSyntheticReviewStorage,
+  reviewScenarioFromLocation,
+} from '../../quotation-scenarios'
+import SyntheticOrderExtFieldReviewPanel from '@features/work-orders/quotation/SyntheticOrderExtFieldReviewPanel.vue'
+import type { SyntheticOrderExtFieldReviewPanelHandle } from '@features/work-orders/quotation/SyntheticOrderExtFieldReviewPanel.vue'
+import {
+  SYNTHETIC_ORDER_EXTFIELD_FIXTURE_VERSION,
+  SYNTHETIC_ORDER_EXTFIELD_SCENARIO,
+} from '@features/work-orders/quotation/synthetic-extfield-review'
 
 const session = useSessionStore()
 const workspace = useActionWorkspaceStore()
 const scenario = reviewScenarioFromLocation()
+const syntheticReviewPanel = ref<SyntheticOrderExtFieldReviewPanelHandle | null>(null)
 const routeOrderId = typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('orderId')
 const reviewScenarios = [
   { id: 'empty', label: '空草稿' },
@@ -68,7 +91,22 @@ const reviewScenarios = [
   { id: 'readback-pending', label: '读回待刷新' },
   { id: 'edit', label: '现有订单编辑' },
   { id: 'unsupported-edit', label: '不支持订单只读' },
+  { id: 'dynamic-fields', label: '合成动态字段' },
 ] as const
+const syntheticFieldsReviewEnabled = import.meta.env.DEV && scenario === SYNTHETIC_ORDER_EXTFIELD_SCENARIO
+const syntheticReviewStorage = createG4fSyntheticReviewStorage()
+const syntheticReviewIdentity = computed(() => {
+  const descriptor = workspace.descriptor
+  if (!syntheticFieldsReviewEnabled || !descriptor || descriptor.actionIntent !== 'place_order') return undefined
+  return {
+    userId: String(descriptor.userId),
+    workOrderId: String(descriptor.workOrderId),
+    workflowNodeId: String(descriptor.workflowNodeId),
+    actionIntent: String(descriptor.actionIntent),
+    scenario: SYNTHETIC_ORDER_EXTFIELD_SCENARIO,
+    fixtureVersion: SYNTHETIC_ORDER_EXTFIELD_FIXTURE_VERSION,
+  } as const
+})
 const quotationContentViewState = computed(() => workspace.quotationContentState === 'idle'
   ? 'loading'
   : workspace.quotationContentState)
@@ -82,7 +120,7 @@ watch(
       workflowNodeId: asOpaqueId<'WorkflowNodeRuntimeId'>(mockQuotationWorkflowNodeId),
       actionIntent: 'place_order',
     }).then(async (loaded) => {
-      if (loaded.state === 'succeeded' && routeOrderId) {
+      if (loaded.state === 'succeeded' && routeOrderId && scenario !== SYNTHETIC_ORDER_EXTFIELD_SCENARIO) {
         await workspace.loadQuotationOrderForEdit(routeOrderId)
       }
     })
@@ -101,6 +139,14 @@ function reload(): void {
 
 function exit(): void {
   void workspace.flushDraft()
+}
+
+function validateSyntheticSelectionEntry(): boolean {
+  return syntheticReviewPanel.value?.validateSelectionEntry() ?? false
+}
+
+function focusSyntheticFirstError(): void {
+  syntheticReviewPanel.value?.focusFirstError()
 }
 </script>
 

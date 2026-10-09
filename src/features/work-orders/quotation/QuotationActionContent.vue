@@ -312,6 +312,10 @@
               >{{ firstStepFieldError('maintainAreaNum') }}</text>
             </view>
 
+            <view v-if="syntheticReviewEnabled" data-testid="synthetic-extfield-slot">
+              <slot name="synthetic-review-panel" />
+            </view>
+
             <view class="quotation-content__first-step-products" data-testid="quotation-first-step-product-action">
               <view class="quotation-content__first-step-products-heading">
                 <text class="quotation-content__first-step-products-title">选择产品</text>
@@ -905,7 +909,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import emptyBoxArtwork from './empty-box-illustration.png'
 
 import AppButton from '@shared/ui/AppButton.vue'
@@ -938,6 +942,9 @@ import {
 
 const props = defineProps<{
   readonly state: 'loading' | 'ready' | 'blocked' | 'failed_retryable' | 'failed_terminal'
+  readonly syntheticFieldsReview?: boolean
+  readonly syntheticReviewValidateSelection?: () => boolean
+  readonly syntheticReviewFocusFirstError?: () => void
 }>()
 
 const emit = defineEmits<{
@@ -949,6 +956,10 @@ const emit = defineEmits<{
 const composition = useQuotationCompositionStore()
 const catalogBrowser = useQuotationCatalogBrowserStore()
 const workspace = useActionWorkspaceStore()
+const syntheticReviewEnabled = computed(() => import.meta.env.DEV
+  && props.syntheticFieldsReview === true
+  && Boolean(props.syntheticReviewValidateSelection)
+  && Boolean(props.syntheticReviewFocusFirstError))
 const verifiedPricing = computed(() => {
   const result = workspace.quotationEngine.result
   return result && result.draftVersion === composition.draft?.draftVersion ? result.pricing : undefined
@@ -1093,7 +1104,7 @@ function firstStepFieldError(field: QuotationValidationField): string {
   return validateQuotationDraft(draft).issues.find((issue) => issue.groupId === group.groupId && issue.field === field)?.message ?? ''
 }
 
-function selectProductsForFirstGroup(groupId: string): void {
+async function selectProductsForFirstGroup(groupId: string): Promise<void> {
   const group = firstRepairPartGroup.value
   const draft = composition.draft
   if (!canEdit.value || !group || group.groupId !== groupId || !draft || composition.repairPartOptions.length === 0) return
@@ -1104,6 +1115,12 @@ function selectProductsForFirstGroup(groupId: string): void {
       && (issue.field === 'repairParts' || issue.field === 'partDescription' || issue.field === 'maintainAreaNum'),
   )
   if (contextIssues.length > 0) return
+
+  if (syntheticReviewEnabled.value && !props.syntheticReviewValidateSelection?.()) {
+    await nextTick()
+    props.syntheticReviewFocusFirstError?.()
+    return
+  }
 
   openCatalog(groupId, 'package')
 }

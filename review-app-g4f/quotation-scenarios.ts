@@ -1,11 +1,11 @@
 import { actionDraftIdentityFor, actionDraftStorageKey } from '@runtimes/action'
 import type { StorageKey, StorageListQuery, StoragePort } from '@shared/ports'
-import { asOpaqueId, type OperationSnapshot } from '@shared/types'
+import { asOpaqueId, createOperationError, type OperationSnapshot } from '@shared/types'
 
 import { quotationDraftRecordFor } from '@features/work-orders/quotation/draft-codec'
 import type { QuotationDraft } from '@features/work-orders/quotation/model'
 
-export type G4fReviewScenario = 'empty' | 'populated' | 'restored' | 'catalog' | 'catalog-empty' | 'catalog-error' | 'invalid' | 'legacy' | 'submit-ready' | 'readback-pending' | 'edit' | 'unsupported-edit'
+export type G4fReviewScenario = 'empty' | 'populated' | 'restored' | 'catalog' | 'catalog-empty' | 'catalog-error' | 'invalid' | 'legacy' | 'submit-ready' | 'readback-pending' | 'edit' | 'unsupported-edit' | 'dynamic-fields'
 
 function succeeded<T>(data: T): OperationSnapshot<T> {
   return { state: 'succeeded', data }
@@ -14,7 +14,7 @@ function succeeded<T>(data: T): OperationSnapshot<T> {
 export function reviewScenarioFromLocation(): G4fReviewScenario {
   if (typeof window === 'undefined') return 'empty'
   const value = new URLSearchParams(window.location.search).get('scenario')
-  return ['populated', 'restored', 'catalog', 'catalog-empty', 'catalog-error', 'invalid', 'legacy', 'submit-ready', 'readback-pending', 'edit', 'unsupported-edit'].includes(value ?? '')
+  return ['populated', 'restored', 'catalog', 'catalog-empty', 'catalog-error', 'invalid', 'legacy', 'submit-ready', 'readback-pending', 'edit', 'unsupported-edit', 'dynamic-fields'].includes(value ?? '')
     ? value as G4fReviewScenario
     : 'empty'
 }
@@ -35,7 +35,99 @@ export function createG4fReviewStorage(): StoragePort {
   }
 }
 
+/** Browser-local storage isolated from the app draft store and quotation V3 keyspace. */
+export function createG4fSyntheticReviewStorage(): StoragePort {
+  const prefix = 'g4f-synthetic-review:v1:'
+  const physicalKey = (key: StorageKey): string | undefined => key.namespace === 'draft' && key.key.startsWith('g4f-synthetic-order-extfield:v1:')
+    ? `${prefix}${key.key}`
+    : undefined
+  const unavailable = <T>(): OperationSnapshot<T> => ({
+    state: 'failed_terminal',
+    error: createOperationError('server_terminal', 'synthetic review localStorage unavailable', { code: 'synthetic_review_storage_unavailable' }),
+  })
+  return {
+    read: async <T>(key: StorageKey) => {
+      const target = physicalKey(key)
+      if (!target || typeof window === 'undefined') return unavailable<T | null>()
+      try {
+        const raw = window.localStorage.getItem(target)
+        if (raw === null) return succeeded(null)
+        try {
+          return succeeded(JSON.parse(raw) as T)
+        } catch {
+          // Let the versioned repository classify corrupt serialized records;
+          // returning the raw string keeps the original value untouched.
+          return succeeded(raw as T)
+        }
+      } catch {
+        return unavailable<T | null>()
+      }
+    },
+    write: async <T>(key: StorageKey, value: T) => {
+      const target = physicalKey(key)
+      if (!target || typeof window === 'undefined') return unavailable<void>()
+      try {
+        window.localStorage.setItem(target, JSON.stringify(value))
+        return succeeded(undefined)
+      } catch {
+        return unavailable<void>()
+      }
+    },
+    remove: async (key: StorageKey) => {
+      const target = physicalKey(key)
+      if (!target || typeof window === 'undefined') return unavailable<void>()
+      try {
+        window.localStorage.removeItem(target)
+        return succeeded(undefined)
+      } catch {
+        return unavailable<void>()
+      }
+    },
+    listKeys: async ({ namespace, prefix: keyPrefix }: StorageListQuery) => {
+      if (namespace !== 'draft' || typeof window === 'undefined') return unavailable<readonly string[]>()
+      try {
+        const keys = Object.keys(window.localStorage)
+          .filter((key) => key.startsWith(prefix))
+          .map((key) => key.slice(prefix.length))
+          .filter((key) => keyPrefix === undefined || key.startsWith(keyPrefix))
+        return succeeded(keys)
+      } catch {
+        return unavailable<readonly string[]>()
+      }
+    },
+  }
+}
+
 export function seedG4fReviewDraft(storage: StoragePort, scenario: G4fReviewScenario): void {
+  if (scenario === 'dynamic-fields') {
+    const identity = actionDraftIdentityFor({
+      userId: asOpaqueId<'UserId'>('g4f-mock-review-user'),
+      workOrderId: asOpaqueId<'WorkOrderId'>('mock-work-order-018-quotation-foundation'),
+      workflowNodeId: asOpaqueId<'WorkflowNodeRuntimeId'>('mock-workflow-node-018-place-order'),
+      actionIntent: 'place_order',
+      contentKind: 'quotation',
+    })
+    const draft: QuotationDraft = {
+      workOrderId: String(identity.workOrderId),
+      workflowNodeId: String(identity.workflowNodeId),
+      draftVersion: 1,
+      groups: [{
+        groupId: 'quotation-group-synthetic-dynamic-fields',
+        repairParts: [],
+        partDescription: '',
+        maintainAreaNum: '',
+        projPackages: [],
+        procedures: [],
+        materials: [],
+        measures: [],
+      }],
+    }
+    void storage.write(
+      { namespace: 'draft', key: actionDraftStorageKey(identity) },
+      quotationDraftRecordFor(identity, draft, '2026-10-09T00:00:00.000Z'),
+    )
+    return
+  }
   if (scenario === 'submit-ready' || scenario === 'readback-pending') {
     const identity = actionDraftIdentityFor({
       userId: asOpaqueId<'UserId'>('g4f-mock-review-user'),
