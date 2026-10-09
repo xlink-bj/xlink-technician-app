@@ -136,7 +136,13 @@ async function returnWorkspaceToTop(page: Page): Promise<void> {
 
 async function openPackage(page: Page, groupId: string): Promise<void> {
   await openGroupCatalog(page, groupId)
-  await expect(page.getByTestId('quotation-catalog-target')).toContainText(`维修部位组 ${groupId.endsWith('1') ? '1' : '2'}`)
+  // Current product UX uses the specific repair objective as the destination,
+  // with its distinct repair path and visual group number alongside it.
+  const isFirst = groupId === 'quotation-group-1'
+  const target = page.getByTestId('quotation-catalog-target')
+  await expect(target).toContainText(isFirst ? '屋面檐口修复' : '卫生间墙地交界')
+  await expect(target).toContainText(isFirst ? '维修位置 · 屋面' : '维修位置 · 卫生间')
+  await expect(target.locator('.quotation-content__catalog-target-index')).toContainText(isFirst ? '01' : '02')
   await page.getByTestId('quotation-package-detail-mock-catalog-package-basic').click()
   await expect(page.getByTestId('quotation-package-config-focus')).toBeVisible()
 }
@@ -169,8 +175,9 @@ test('Phase B0 golden path: workbench → catalog → package configuration → 
 
   await openGroupCatalog(page, groupId)
   await page.getByTestId('quotation-catalog-kind-package').click()
-  await expect(page.getByTestId('quotation-catalog-target')).toContainText('维修部位组 1')
   await expect(page.getByTestId('quotation-catalog-target')).toContainText('屋面檐口修复')
+  await expect(page.getByTestId('quotation-catalog-target')).toContainText('维修位置 · 屋面')
+  await expect(page.getByTestId('quotation-catalog-target').locator('.quotation-content__catalog-target-index')).toContainText('01')
   await expect(page.getByTestId('quotation-catalog-item-package-mock-catalog-package-basic')).toContainText('屋面防水修缮方案（示例）')
   await expect(page.getByTestId('quotation-catalog-item-package-mock-catalog-package-basic')).toContainText('金额待核验')
   await expect(page.getByTestId('quotation-catalog-search')).toBeVisible()
@@ -301,12 +308,15 @@ test('Phase B1 captures the real four-state quotation journey and compact/recove
   const packageCard = page.getByTestId('quotation-catalog-item-package-mock-catalog-package-basic')
   await expect(packageCard).toContainText('屋面防水修缮方案（示例）')
   await expect(packageCard).toContainText('金额待核验')
-  await expect(packageCard).toContainText('图片未提供')
+  // The listing has illustrative art explicitly tagged 示意, not a real photo.
+  // The package detail truthfully discloses that no product image is provided.
+  await expect(packageCard).toContainText('示意')
   await packageCard.scrollIntoViewIfNeeded()
   await page.screenshot({ path: resolve(visualMasterOutput, '02-visual-catalog-390.png'), animations: 'disabled' })
 
   await page.getByTestId('quotation-package-detail-mock-catalog-package-basic').click()
   await expect(page.getByTestId('quotation-package-config-focus')).toBeVisible()
+  await expect(page.getByTestId('quotation-package-config-focus')).toContainText('图片未提供')
   await expect(page.getByTestId('quotation-package-selection-summary')).toContainText('屋面檐口修复')
   await expect(page.getByTestId('quotation-package-detail')).not.toContainText('mock-layer-1')
   await page.getByTestId('quotation-package-material-choice-string:mock-layer-1-0').click()
