@@ -17,6 +17,12 @@
           :data-testid="`g4f-review-scenario-${option.id}`"
         >{{ option.label }}</navigator>
       </view>
+      <view
+        v-if="syntheticFieldsReviewEnabled"
+        class="g4f-review-scenario g4f-review-reentry"
+        data-testid="g4f-review-fast-reentry"
+        @tap="remountSyntheticReviewPanel"
+      >快速离开并返回字段面板</view>
     </view>
 
     <AppLoadingState
@@ -36,8 +42,16 @@
       @back="exit"
     >
       <template #synthetic-review-panel>
+        <AppButton
+          class="g4f-review-synthetic-toggle"
+          variant="secondary"
+          block
+          data-testid="synthetic-panel-toggle"
+          :aria-expanded="syntheticPanelExpanded"
+          @tap="syntheticPanelExpanded = !syntheticPanelExpanded"
+        >{{ syntheticPanelExpanded ? '收起合成字段体验' : '展开合成字段体验（评审专用）' }}</AppButton>
         <SyntheticOrderExtFieldReviewPanel
-          v-if="syntheticFieldsReviewEnabled && syntheticReviewIdentity"
+          v-if="syntheticFieldsReviewEnabled && syntheticReviewIdentity && syntheticPanelExpanded && syntheticPanelMounted"
           ref="syntheticReviewPanel"
           :enabled="true"
           :identity="syntheticReviewIdentity"
@@ -54,11 +68,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 
 import { useActionWorkspaceStore } from '@features/work-orders/action-workspace'
 import { useSessionStore } from '@shared/state'
 import AppLoadingState from '@shared/ui/AppLoadingState.vue'
+import AppButton from '@shared/ui/AppButton.vue'
 import QuotationActionWorkspace from '@features/work-orders/quotation/QuotationActionWorkspace.vue'
 import { mockCommandScenarioIds, mockQuotationWorkflowNodeId } from '@adapters/api/mock'
 import { asOpaqueId } from '@shared/types'
@@ -77,6 +92,8 @@ const session = useSessionStore()
 const workspace = useActionWorkspaceStore()
 const scenario = reviewScenarioFromLocation()
 const syntheticReviewPanel = ref<SyntheticOrderExtFieldReviewPanelHandle | null>(null)
+const syntheticPanelMounted = ref(true)
+const syntheticPanelExpanded = ref(false)
 const routeOrderId = typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('orderId')
 const reviewScenarios = [
   { id: 'empty', label: '空草稿' },
@@ -128,6 +145,12 @@ watch(
   { immediate: true },
 )
 
+async function remountSyntheticReviewPanel(): Promise<void> {
+  syntheticPanelMounted.value = false
+  await nextTick()
+  syntheticPanelMounted.value = true
+}
+
 function reload(): void {
   void workspace.clear()
   void workspace.ensureLoaded({
@@ -160,6 +183,7 @@ function focusSyntheticFirstError(): void {
 .g4f-review-scenarios { display: flex; flex-wrap: wrap; gap: var(--app-space-xs); margin-top: var(--app-space-sm); }
 .g4f-review-scenario { background: var(--app-color-surface); border: 1rpx solid var(--app-color-border); border-radius: var(--app-radius-control); color: var(--app-color-text-secondary); font-size: var(--app-font-meta); padding: var(--app-space-xs) var(--app-space-sm); }
 .g4f-review-scenario--selected { background: var(--app-color-primary-soft); border-color: var(--app-color-primary); color: var(--app-color-primary); }
+.g4f-review-synthetic-toggle { margin-top: var(--app-space-md); }
 .g4f-review-blocked { background: var(--app-color-surface); border-radius: var(--app-radius-card); margin: var(--app-space-md) auto; max-width: 960rpx; padding: var(--app-card-padding); }
 .g4f-review-blocked__title { color: var(--app-color-text-primary); display: block; font-size: var(--app-font-field-label); font-weight: 800; }
 .g4f-review-blocked__copy { color: var(--app-color-text-secondary); display: block; font-size: var(--app-font-body); line-height: 1.6; margin-top: var(--app-space-sm); }

@@ -40,12 +40,16 @@ async function installSafetyGuards(page: Page) {
   return { pageErrors, consoleErrors, externalRequests }
 }
 
-async function openDynamicFields(page: Page, expectEditable = true): Promise<void> {
+async function openDynamicFields(page: Page, expectEditable = true, expandPanel = true): Promise<void> {
   await page.goto('/?scenario=dynamic-fields', { waitUntil: 'domcontentloaded' })
   await expect(page.getByTestId('g4f-quotation-workspace')).toBeVisible()
   await expect(page.getByTestId('quotation-first-repair-part-step')).toBeVisible()
-  await expect(page.getByTestId('synthetic-extfield-review-panel')).toBeVisible()
-  if (expectEditable) await expect(page.getByTestId('synthetic-editable-fields')).toBeVisible()
+  await expect(page.getByTestId('synthetic-panel-toggle')).toBeVisible()
+  if (expandPanel) {
+    await page.getByTestId('synthetic-panel-toggle').click()
+    await expect(page.getByTestId('synthetic-extfield-review-panel')).toBeVisible()
+    if (expectEditable) await expect(page.getByTestId('synthetic-editable-fields')).toBeVisible()
+  }
 }
 
 async function completeQuotationGroupContext(page: Page): Promise<void> {
@@ -81,14 +85,28 @@ async function captureSyntheticViewport(page: Page, filename: string): Promise<v
   await page.screenshot({ path: resolve(output, filename), animations: 'disabled' })
 }
 
+async function captureFocusViewport(page: Page, testId: string, filename: string): Promise<void> {
+  await page.getByTestId(testId).evaluate((element) => {
+    element.scrollIntoView({ block: 'start', inline: 'nearest', behavior: 'auto' })
+  })
+  await page.screenshot({ path: resolve(output, filename), animations: 'disabled' })
+}
+
 test('synthetic ExtField UX runs the real quotation workbench, validates both phases and restores its isolated draft', async ({ page }) => {
   const diagnostics = await installSafetyGuards(page)
   await mkdir(output, { recursive: true })
-  await openDynamicFields(page)
+  await openDynamicFields(page, false, false)
+  await expect(page.getByTestId('synthetic-extfield-review-panel')).toHaveCount(0)
+  await expect(page.getByTestId('quotation-first-step-product-action')).toBeVisible()
+  await captureFocusViewport(page, 'quotation-first-step-product-action', '00-workbench-primary-actions.png')
+  await page.getByTestId('synthetic-panel-toggle').click()
+  await expect(page.getByTestId('synthetic-editable-fields')).toBeVisible()
 
   await expect(page.getByTestId('g4f-review-title')).toContainText('报价工作区')
   await expect(page.getByTestId('quotation-repair-group-quotation-group-synthetic-dynamic-fields')).toBeVisible()
   await expect(page.getByTestId('synthetic-field-demo-conditional-required-row')).toBeVisible()
+  await expect(page.getByTestId('synthetic-phase-diagnostics')).toHaveCount(0)
+  await page.getByTestId('synthetic-diagnostics-toggle').click()
   await expect(page.getByTestId('synthetic-final-row-demo-waived-required-row')).toContainText('最终提交可选')
   await expect(page.getByTestId('synthetic-unsupported-demo-area-blocked-row')).toContainText('暂不支持安全编辑')
   await expect(page.getByTestId('synthetic-unsupported-demo-button-blocked-row')).toBeVisible()
@@ -100,6 +118,7 @@ test('synthetic ExtField UX runs the real quotation workbench, validates both ph
   await expect(page.getByTestId('synthetic-input-demo-provider-select-blocked-row')).toHaveCount(0)
   await expect(page.getByTestId('quotation-synthetic-submit-disabled')).toBeVisible()
   await expectNoBusinessCommands(page)
+  await page.getByTestId('synthetic-diagnostics-toggle').click()
 
   await captureSyntheticViewport(page, '01-synthetic-fields-and-phase-rules.png')
 
@@ -114,7 +133,9 @@ test('synthetic ExtField UX runs the real quotation workbench, validates both ph
   await page.getByTestId('synthetic-input-demo-mode-row').locator('input').fill('否')
   await expect(page.getByTestId('synthetic-field-demo-conditional-required-row')).toHaveCount(0)
   await expect(page.getByTestId('synthetic-input-demo-shared-visible-no-row').locator('input')).toHaveValue('共享 valueKey 的合成值')
+  await page.getByTestId('synthetic-diagnostics-toggle').click()
   await expect(page.getByTestId('synthetic-final-row-demo-conditional-required-row')).toContainText('已填写')
+  await page.getByTestId('synthetic-diagnostics-toggle').click()
   await page.getByTestId('synthetic-input-demo-mode-row').locator('input').fill('是')
   await expect(page.getByTestId('synthetic-field-demo-conditional-required-row')).toBeVisible()
   await expect(page.getByTestId('synthetic-input-demo-conditional-required-row').locator('textarea')).toHaveValue('合成必填说明')
@@ -122,7 +143,9 @@ test('synthetic ExtField UX runs the real quotation workbench, validates both ph
   await page.getByTestId('quotation-first-step-select-products').click()
   await expect(page.getByTestId('quotation-catalog-page')).toHaveCount(0)
   await expect(page.getByTestId('synthetic-entry-validation-error')).toContainText('目录进入必填示例')
+  await page.getByTestId('synthetic-diagnostics-toggle').click()
   await expect(page.getByTestId('synthetic-final-row-demo-waived-required-row')).toContainText('最终提交可选')
+  await page.getByTestId('synthetic-diagnostics-toggle').click()
   await page.getByTestId('synthetic-input-demo-waived-required-row').locator('textarea').fill('目录进入必填；最终提交满足豁免条件')
   await page.getByTestId('quotation-first-step-select-products').click()
   await expect(page.getByTestId('quotation-catalog-page')).toBeVisible()
@@ -135,6 +158,7 @@ test('synthetic ExtField UX runs the real quotation workbench, validates both ph
   await expect(page.getByTestId('synthetic-draft-saved')).toBeVisible()
 
   await page.reload({ waitUntil: 'domcontentloaded' })
+  await page.getByTestId('synthetic-panel-toggle').click()
   await expect(page.getByTestId('synthetic-extfield-review-panel')).toBeVisible()
   await expect(page.getByTestId('synthetic-input-demo-mode-row').locator('input')).toHaveValue('是')
   await expect(page.getByTestId('synthetic-input-demo-conditional-required-row').locator('textarea')).toHaveValue('合成必填说明')
@@ -142,6 +166,20 @@ test('synthetic ExtField UX runs the real quotation workbench, validates both ph
   await expect(page.getByTestId('synthetic-draft-saved')).toBeVisible()
   await expectNoBusinessCommands(page)
   await captureSyntheticViewport(page, '03-restored-synthetic-draft.png')
+  await expectSafe(page, diagnostics)
+})
+
+test('fast workspace leave and return restores the synthetic draft without waiting for the saved indicator', async ({ page }) => {
+  const diagnostics = await installSafetyGuards(page)
+  await openDynamicFields(page)
+  const editedValue = '快速离开并返回保留的合成值'
+  await page.getByTestId('synthetic-input-demo-shared-visible-yes-row').locator('input').fill(editedValue)
+  await expect(page.getByTestId('synthetic-draft-saved')).toHaveCount(0)
+
+  await page.getByTestId('g4f-review-fast-reentry').click()
+  await expect(page.getByTestId('synthetic-extfield-review-panel')).toBeVisible()
+  await expect(page.getByTestId('synthetic-input-demo-shared-visible-yes-row').locator('input')).toHaveValue(editedValue)
+  await expectNoBusinessCommands(page)
   await expectSafe(page, diagnostics)
 })
 

@@ -35,7 +35,7 @@ export interface SyntheticOrderExtFieldDraftRecord {
 }
 
 export type SyntheticOrderExtFieldDraftLoad =
-  | { readonly state: 'ready'; readonly values: Readonly<Record<string, unknown>>; readonly preservedUnknownValues: readonly (readonly [string, unknown])[] }
+  | { readonly state: 'ready'; readonly values: Readonly<Record<string, unknown>>; readonly preservedUnknownValues: readonly (readonly [string, unknown])[]; readonly recoveredPending: boolean }
   | { readonly state: 'empty' }
   | { readonly state: 'corrupt' }
   | { readonly state: 'unavailable' }
@@ -142,6 +142,8 @@ const knownValueKeys = new Set(syntheticOrderExtFieldRows.map((row) => row.value
 const identityFields = ['userId', 'workOrderId', 'workflowNodeId', 'actionIntent', 'scenario', 'fixtureVersion'] as const
 const keyGeneration = new Map<string, number>()
 const keyWriteChains = new Map<string, Promise<void>>()
+const keyPendingSnapshots = new Map<string, { readonly token: number; readonly values: Readonly<Record<string, unknown>> }>()
+let pendingSnapshotSequence = 0
 
 function hasOwn(value: object, key: string): boolean {
   return Object.prototype.hasOwnProperty.call(value, key)
@@ -191,7 +193,29 @@ function decodeDraft(
       preservedUnknownValues.push([key, value])
     }
   }
-  return { state: 'ready', values, preservedUnknownValues }
+  return { state: 'ready', values, preservedUnknownValues, recoveredPending: false }
+}
+
+function withPendingSnapshot(
+  loaded: SyntheticOrderExtFieldDraftLoad,
+  pending: Readonly<Record<string, unknown>> | undefined,
+): SyntheticOrderExtFieldDraftLoad {
+  if (!pending || (loaded.state !== 'ready' && loaded.state !== 'empty')) return loaded
+  const values: Record<string, unknown> = Object.create(null) as Record<string, unknown>
+  if (loaded.state === 'ready') {
+    for (const [key, value] of Object.entries(loaded.values)) values[key] = value
+  }
+  for (const [key, value] of Object.entries(pending)) {
+    if (!knownValueKeys.has(key)) continue
+    if (!validScalarDraftValue(value)) return { state: 'corrupt' }
+    values[key] = value
+  }
+  return {
+    state: 'ready',
+    values,
+    preservedUnknownValues: loaded.state === 'ready' ? loaded.preservedUnknownValues : [],
+    recoveredPending: true,
+  }
 }
 
 function failedStorageWrite(snapshot: OperationSnapshot<void>): boolean {
@@ -312,6 +336,8 @@ export function createSyntheticOrderExtFieldDraftSession(
   }
 
   function enqueueWrite(values: Readonly<Record<string, unknown>>, expectedGeneration: number): Promise<void> {
+    const pendingToken = ++pendingSnapshotSequence
+    keyPendingSnapshots.set(storageKey.key, { token: pendingToken, values: { ...values } })
     const prior = keyWriteChains.get(storageKey.key) ?? Promise.resolve()
     const next = prior.then(async () => {
       if (disposed || keyGeneration.get(storageKey.key) !== expectedGeneration) return
@@ -328,6 +354,7 @@ export function createSyntheticOrderExtFieldDraftSession(
       }
       const result = await storage.write(storageKey, record)
       if (failedStorageWrite(result)) throw new Error('synthetic draft storage write failed')
+      if (keyPendingSnapshots.get(storageKey.key)?.token === pendingToken) keyPendingSnapshots.delete(storageKey.key)
     })
     keyWriteChains.set(storageKey.key, next.catch(() => undefined))
     return next
@@ -340,7 +367,10 @@ export function createSyntheticOrderExtFieldDraftSession(
       if (disposed || keyGeneration.get(storageKey.key) !== generation || result.state !== 'succeeded') {
         loadResult = { state: 'unavailable' }
       } else {
-        loadResult = decodeDraft(result.data, identity)
+        loadResult = withPendingSnapshot(
+          decodeDraft(result.data, identity),
+          keyPendingSnapshots.get(storageKey.key)?.values,
+        )
       }
       return loadResult
     },

@@ -2,12 +2,12 @@
   <view class="synthetic-extfield-review" data-testid="synthetic-extfield-review-panel">
     <view class="synthetic-extfield-review__heading">
       <view>
-        <text class="synthetic-extfield-review__eyebrow">仅 H5 评审 · 不接入订单提交</text>
+        <text class="synthetic-extfield-review__eyebrow">仅 H5 合成评审 · 不接入订单提交</text>
         <text class="synthetic-extfield-review__title">合成动态字段</text>
       </view>
       <text class="synthetic-extfield-review__badge">Order ExtField 示例</text>
     </view>
-    <text class="synthetic-extfield-review__intro">使用已验收的字段映射器和 Dynamic Form Runtime。数据只保存在独立的本机评审草稿中，不会写入报价草稿 V3。</text>
+    <text class="synthetic-extfield-review__intro">演示字段显隐与两阶段校验；仅本机合成数据，不代表正式订单 Schema。</text>
 
     <AppStatus
       v-if="draftState === 'loading'"
@@ -94,16 +94,14 @@
       role="alert"
     />
     <AppButton
-      v-if="draftState === 'ready' || draftState === 'pending' || draftState === 'saving' || draftState === 'saved' || draftState === 'save_failed'"
-      class="synthetic-extfield-review__entry-action"
-      variant="secondary"
-      block
-      :disabled="!canEdit"
-      data-testid="synthetic-entry-validation-trigger"
-      @tap="validateSelectionEntry"
-    >验证目录进入必填</AppButton>
+      class="synthetic-extfield-review__diagnostics-toggle"
+      variant="text"
+      data-testid="synthetic-diagnostics-toggle"
+      :aria-expanded="diagnosticsExpanded"
+      @tap="diagnosticsExpanded = !diagnosticsExpanded"
+    >{{ diagnosticsExpanded ? '收起校验规则与受限能力' : '查看校验规则与受限能力' }}</AppButton>
 
-    <view class="synthetic-extfield-review__diagnostics" data-testid="synthetic-phase-diagnostics">
+    <view v-if="diagnosticsExpanded" class="synthetic-extfield-review__diagnostics" data-testid="synthetic-phase-diagnostics">
       <view class="synthetic-extfield-review__diagnostic-section" data-testid="synthetic-final-submit-readiness">
         <text class="synthetic-extfield-review__section-title">最终提交规则（只读演示）</text>
         <text class="synthetic-extfield-review__section-copy">按 R1 规则独立计算；条件隐藏不自动豁免，明确的 dispensable 条件只影响最终提交。</text>
@@ -191,7 +189,7 @@ const draftState = ref<DraftState>('disabled')
 const values = ref<Record<string, unknown>>(Object.create(null) as Record<string, unknown>)
 const fieldErrors = ref<Record<string, string>>(Object.create(null) as Record<string, string>)
 const entryValidationMessage = ref('')
-const preservedUnknownCount = ref(0)
+const diagnosticsExpanded = ref(false)
 let session: SyntheticOrderExtFieldDraftSession | undefined
 let identityGeneration = 0
 let allowDraftWrites = false
@@ -247,7 +245,6 @@ watch(identityToken, (token) => {
   stopCurrentSession()
   fieldErrors.value = Object.create(null) as Record<string, string>
   entryValidationMessage.value = ''
-  preservedUnknownCount.value = 0
   if (!token || !props.identity || !props.storage) {
     draftState.value = 'disabled'
     setValues({})
@@ -270,7 +267,6 @@ watch(identityToken, (token) => {
       allowDraftWrites = true
     } else if (result.state === 'ready') {
       setValues({ demoMode: '是', demoWaiverMode: '豁免', ...result.values })
-      preservedUnknownCount.value = result.preservedUnknownValues.length
       draftState.value = 'ready'
       allowDraftWrites = true
     } else {
@@ -349,18 +345,21 @@ function filterReasonLabel(reason?: string): string {
   return '按映射规则过滤'
 }
 
-defineExpose<SyntheticOrderExtFieldReviewPanelHandle>({ validateSelectionEntry, focusFirstError })
+defineExpose<SyntheticOrderExtFieldReviewPanelHandle>({
+  validateSelectionEntry,
+  focusFirstError,
+})
 </script>
 
 <style>
-.synthetic-extfield-review { background: var(--app-color-primary-soft); border: 1rpx solid var(--app-color-primary-border); border-radius: var(--app-radius-card); margin-top: var(--app-space-md); padding: var(--app-card-padding); }
+.synthetic-extfield-review { background: var(--app-color-primary-soft); border: 1rpx solid var(--app-color-primary-border); border-radius: var(--app-radius-card); margin-top: var(--app-space-md); padding: var(--app-space-sm) var(--app-card-padding); }
 .synthetic-extfield-review__heading { align-items: center; display: flex; flex-wrap: wrap; gap: var(--app-space-sm); justify-content: space-between; }
 .synthetic-extfield-review__eyebrow { color: var(--app-color-primary); display: block; font-size: var(--app-font-meta); font-weight: 700; }
 .synthetic-extfield-review__title { color: var(--app-color-text-primary); display: block; font-size: var(--app-font-section-title); font-weight: 800; margin-top: 4rpx; }
 .synthetic-extfield-review__badge { background: var(--app-color-surface); border-radius: 999rpx; color: var(--app-color-primary); font-size: var(--app-font-meta); padding: 6rpx 12rpx; }
-.synthetic-extfield-review__intro,.synthetic-extfield-review__section-copy { color: var(--app-color-text-secondary); display: block; font-size: var(--app-font-meta); line-height: 1.55; margin-top: var(--app-space-xs); }
+.synthetic-extfield-review__intro,.synthetic-extfield-review__section-copy { color: var(--app-color-text-secondary); display: block; font-size: var(--app-font-meta); line-height: 1.45; margin-top: var(--app-space-xs); }
 .synthetic-extfield-review__fields { display: grid; gap: var(--app-space-sm); margin-top: var(--app-space-md); }
-.synthetic-extfield-review__entry-action { margin-top: var(--app-space-sm); }
+.synthetic-extfield-review__diagnostics-toggle { justify-content: flex-start; margin-top: var(--app-space-xs); min-height: 64rpx; padding-left: 0; }
 .synthetic-extfield-review__diagnostics { display: grid; gap: var(--app-space-sm); margin-top: var(--app-space-md); }
 .synthetic-extfield-review__diagnostic-section { background: var(--app-color-surface); border: 1rpx solid var(--app-color-border); border-radius: var(--app-radius-control); padding: var(--app-space-sm); }
 .synthetic-extfield-review__section-title { color: var(--app-color-text-primary); display: block; font-size: var(--app-font-field-label); font-weight: 800; }

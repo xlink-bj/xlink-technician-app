@@ -184,6 +184,89 @@ describe('synthetic Order ExtField review integration', () => {
     vi.useRealTimers()
   })
 
+  it('recovers a final flush snapshot when the same identity re-enters before its queued write runs', async () => {
+    const base = memoryStorage()
+    const writes: unknown[] = []
+    const trackingStorage: StoragePort = {
+      ...base.storage,
+      write: async <T>(key: StorageKey, value: T) => {
+        writes.push(value)
+        return base.storage.write(key, value)
+      },
+    }
+
+    const first = createSyntheticOrderExtFieldDraftSession(trackingStorage, identity)
+    await first.load()
+    first.schedule({ demoMode: '是', demoSharedExplanation: '离开前的最后输入' })
+    const oldFlush = first.flush()
+
+    // Construct B before A's queued microtask can write. The old generation is
+    // not allowed to write; B must recover the explicitly flushed snapshot.
+    const second = createSyntheticOrderExtFieldDraftSession(trackingStorage, identity)
+    const recovered = await second.load()
+    await oldFlush
+
+    expect(writes).toHaveLength(0)
+    expect(recovered).toMatchObject({
+      state: 'ready',
+      recoveredPending: true,
+      values: { demoMode: '是', demoSharedExplanation: '离开前的最后输入' },
+    })
+    if (recovered.state !== 'ready') throw new Error('expected pending snapshot recovery')
+    second.schedule(recovered.values)
+    await second.flush()
+    expect(writes).toHaveLength(1)
+    const persisted = base.values.get(`draft:${syntheticOrderExtFieldStorageKey(identity)}`) as { values: readonly (readonly [string, unknown])[] }
+    expect(persisted.values).toContainEqual(['demoSharedExplanation', '离开前的最后输入'])
+    first.dispose()
+    second.dispose()
+  })
+
+  it('recovers a late failed in-flight write for the same identity and lets the newer session persist safely', async () => {
+    const base = memoryStorage()
+    let failFirstWrite: (() => void) | undefined
+    let firstAttempt = true
+    const delayedFailStorage: StoragePort = {
+      ...base.storage,
+      write: async <T>(key: StorageKey, value: T) => {
+        if (!firstAttempt) return base.storage.write(key, value)
+        firstAttempt = false
+        return new Promise<OperationSnapshot<void>>((resolve) => {
+          failFirstWrite = () => resolve({
+            state: 'failed_retryable',
+            error: { category: 'network_retryable', message: 'synthetic delayed write failure', retryable: true },
+          })
+        })
+      },
+    }
+
+    const first = createSyntheticOrderExtFieldDraftSession(delayedFailStorage, identity)
+    await first.load()
+    first.schedule({ demoMode: '是', demoSharedExplanation: '失败写入仍需恢复' })
+    const oldFlush = first.flush()
+    await vi.waitFor(() => expect(failFirstWrite).toBeTypeOf('function'))
+    first.dispose()
+
+    const second = createSyntheticOrderExtFieldDraftSession(delayedFailStorage, identity)
+    const secondLoad = second.load()
+    failFirstWrite?.()
+    await expect(oldFlush).rejects.toThrow('synthetic draft storage write failed')
+    const recovered = await secondLoad
+    expect(recovered).toMatchObject({
+      state: 'ready',
+      recoveredPending: true,
+      values: { demoSharedExplanation: '失败写入仍需恢复' },
+    })
+    if (recovered.state !== 'ready') throw new Error('expected failed snapshot recovery')
+
+    second.schedule({ ...recovered.values, demoSharedExplanation: '新会话更新值' })
+    await second.flush()
+    const persisted = base.values.get(`draft:${syntheticOrderExtFieldStorageKey(identity)}`) as { values: readonly (readonly [string, unknown])[] }
+    expect(persisted.values).toContainEqual(['demoSharedExplanation', '新会话更新值'])
+    expect(persisted.values).not.toContainEqual(['demoSharedExplanation', '失败写入仍需恢复'])
+    second.dispose()
+  })
+
   it('keeps a late in-flight write scoped to its original identity', async () => {
     let finishFirstWrite: (() => void) | undefined
     const base = memoryStorage()

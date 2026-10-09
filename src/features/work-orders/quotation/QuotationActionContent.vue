@@ -312,10 +312,6 @@
               >{{ firstStepFieldError('maintainAreaNum') }}</text>
             </view>
 
-            <view v-if="syntheticReviewEnabled" data-testid="synthetic-extfield-slot">
-              <slot name="synthetic-review-panel" />
-            </view>
-
             <view class="quotation-content__first-step-products" data-testid="quotation-first-step-product-action">
               <view class="quotation-content__first-step-products-heading">
                 <text class="quotation-content__first-step-products-title">选择产品</text>
@@ -329,6 +325,10 @@
                 data-testid="quotation-first-step-select-products"
                 @tap="selectProductsForFirstGroup(firstRepairPartGroup.groupId)"
               ><text class="quotation-content__first-step-products-plus" aria-hidden="true">＋</text>选择产品<AppIcon name="chevron-right" :size="16" color="#ffffff" aria-hidden="true" /></AppButton>
+            </view>
+
+            <view v-if="syntheticReviewEnabled" class="quotation-content__synthetic-review-slot" data-testid="synthetic-extfield-slot">
+              <slot name="synthetic-review-panel" />
             </view>
           </view>
         </view>
