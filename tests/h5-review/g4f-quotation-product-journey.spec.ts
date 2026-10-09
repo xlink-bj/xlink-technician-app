@@ -146,6 +146,9 @@ for (const viewport of viewports) {
     await expect(page.getByTestId('quotation-local-gross-total')).toHaveCount(0)
     await expect(page.getByText(/(?:¥|￥)\s*\d|\d+(?:\.\d{1,2})?\s*元/)).toHaveCount(0)
     await expect(page.getByTestId('quotation-product-demo-read-only')).toContainText('正式订单提交已关闭')
+    await expect(page.getByTestId('quotation-review-readiness')).toContainText('草稿待完善')
+    await expect(page.getByTestId('quotation-review-readiness')).toContainText('一项工序和一项材料')
+    await expect(page.getByTestId('quotation-engine-readiness')).toHaveCount(0)
     await expect(page.getByTestId('action-workspace-submit')).toHaveCount(0)
 
     // Exercise the remaining direct-selection tabs; a procedure + material
@@ -161,6 +164,10 @@ for (const viewport of viewports) {
     await page.getByTestId('quotation-catalog-kind-measure').click()
     await expect(page.getByTestId('quotation-catalog-list')).toContainText('高处作业防护（示例）')
     await page.getByTestId('quotation-catalog-add-measure-mock-catalog-measure-inspection').click()
+    await expect(page.getByTestId('quotation-review-readiness'))
+      .toContainText('当前工单的附加字段尚未核验')
+    await expect(page.getByTestId('quotation-review-readiness'))
+      .toContainText('正式报价不可提交')
     // The 3-item group is compact only in the DEV product review.
     await expect(page.getByTestId('quotation-group-collapsed-summary-quotation-group-1'))
       .toContainText('弹性密封材料（示例）')
