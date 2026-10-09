@@ -53,6 +53,17 @@
         data-testid="quotation-edit-state"
       />
 
+      <view v-if="productReviewOnly && composition.draft && !isFirstRepairPartStep && !catalogBrowser.isOpen"
+        class="quotation-content__review-readiness"
+        data-testid="quotation-review-readiness"
+      >
+        <text class="quotation-content__review-readiness-title">报价草稿核对</text>
+        <text data-testid="quotation-review-composition">{{ reviewPreflight?.composition.state === 'synthetic_pass' ? '维修部位与项目组合：本机校验通过' : '维修部位与项目组合：仍需完善' }}</text>
+        <text data-testid="quotation-review-schema">动态字段：尚未核实当前工单适用配置</text>
+        <text data-testid="quotation-review-pricing">金额：{{ reviewPreflight?.pricing === 'local_engine_evaluated' ? '仅有本机计算结果，尚未核验正式报价' : '尚未核验' }}</text>
+        <text class="quotation-content__review-readiness-note">可继续编辑草稿；正式报价提交暂未开放。</text>
+      </view>
+
       <view v-if="composition.groups.length > 0 && !isFirstRepairPartStep" class="quotation-content__engine" data-testid="quotation-engine-readiness">
         <AppLoadingState
           v-if="workspace.quotationEngine.state === 'loading'"
@@ -931,6 +942,7 @@ import { quotationCatalogKindLabels } from './catalog'
 import { useQuotationCatalogBrowserStore } from './catalog-browser-store'
 import type { QuotationLineKind } from './model'
 import { validateQuotationDraft, type QuotationValidationField } from './validation'
+import { evaluateLocalQuotationPreflight } from './local-preflight'
 import type { CodeOptionRead, QuotationCatalogItemRead, QuotationPackageMaterialRead } from '@shared/ports'
 import {
   quotationPackageLayerKey,
@@ -973,6 +985,11 @@ const isInitialEmptyWorkbench = computed(() => isInitialQuotationWorkbenchEmpty(
   catalogOpen: catalogBrowser.isOpen,
 }))
 const firstRepairPartGroup = computed(() => composition.groups.length === 1 ? composition.groups[0] : undefined)
+const reviewPreflight = computed(() => composition.draft ? evaluateLocalQuotationPreflight({
+  draft: composition.draft,
+  schemaEvidence: 'unverified',
+  engineResult: workspace.quotationEngine.result,
+}) : null)
 const isFirstRepairPartStep = computed(() => isFirstQuotationRepairPartStep({
   contentState: props.state,
   editState: workspace.quotationEditState.state,
@@ -1960,4 +1977,7 @@ function configuredPackageLayerLabel(
   .quotation-content__catalog-footer { margin-left: -12px; margin-right: -12px; padding-left: 12px; padding-right: 12px; }
   .quotation-content__catalog-footer > .app-button { flex-basis: 118px; }
 }
+.quotation-content__review-readiness { background: #f5f9ff; border: 1px solid #e1eafb; border-radius: 12px; color: #687d98; display: flex; flex-direction: column; font-size: 12px; gap: 5px; line-height: 1.5; margin: 10px 0; padding: 12px; }
+.quotation-content__review-readiness-title { color: #183963; font-size: 13px; font-weight: 750; }
+.quotation-content__review-readiness-note { color: #2b65b2; }
 </style>
