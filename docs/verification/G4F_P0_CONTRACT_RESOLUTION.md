@@ -1,0 +1,112 @@
+# G4-F P0 Contract Resolution — Source Audit Only
+
+**Status:** `DOMAIN_SOURCE_ACCEPTED / P0_CONTRACT_UNRESOLVED / BUSINESS_E2E_BLOCKED`
+
+**Scope:** R1/backend source at pinned revisions, the current PR #42 candidate, and synthetic local fixtures only. No Production/Beta request, Mongo access, login, business mutation, or UI/runtime change was made in this slice.
+
+## Evidence revisions
+
+| Source | Revision | Use |
+|---|---|---|
+| R1 `xlink-app` | `6c0a97b26bcbcaee81ac4e1dfd627c6e8e70e29d` | Legacy quotation field, selection, validation, and request construction |
+| Backend `xlink-cloud-backend` | `5fc008d32e771205260f120621c1c4fc62d0824e` | Catalog scope branch and tenant-configured Order pre-script execution |
+| Technician App PR #42 candidate | `599945780d7c7724ec864b25845832954a148554` | Current Draft, Runtime, catalog adapter, validator, and encoder |
+
+Line citations below are pinned to those revisions.
+
+## Decision summary
+
+| Topic | Finding | Classification | Consequence |
+|---|---|---|---|
+| R1 quotation dynamic fields | R1 reads active `order` ExtFields, splits `placeOrder` and `submitOrder`, filters by service/person context, applies show/required/dispensable rules, and stores populated values in `Order.exts`. | `SOURCE_VERIFIED` for the R1 path; current tenant schema `UNKNOWN` | The generic Dynamic Form Runtime is a viable bounded implementation base, but quotation does not yet load or round-trip this schema. Do not claim current active required fields are known. |
+| R1 option/config semantics | Code/cascade options are fetched from named providers; `bizSelect`, `evaluate`, `area`, and custom front-end configurations have additional behavior outside the finite App schema. | `PARTIAL` / `TENANT_CONFIG_DEPENDENT` | Missing/unmapped active required provider or semantics must block readiness; never silently render as plain text. |
+| Catalog `sourceType` | R1 always constructs a `sourceType` property for all four list calls. Its final HTTP parameter presence for `null`/`undefined` is not established by checked-in serialization code. Backend explicitly branches on `params.containsKey("sourceType")`. App omits absent values. | `UNKNOWN` wire parity; `BLOCKED` for missing scope until proven | Production catalog reads should fail closed when `sourceType` is unavailable, or wait for a source-backed wire-equivalence decision. This audit does not change the candidate runtime. |
+| Package/Procedure/Material/Measure rule | R1 explicitly requires a package, or both a Procedure and a Material, per group in `fillOrder()`. | `SOURCE_VERIFIED` for the cited R1 page flow only | The App’s direct-composition rule has R1 source parity for that flow; it is not proof of a universal backend invariant or every tenant’s current policy. |
+| Description / area | R1 submit path requires non-empty `partDescription` and `maintainAreaNum`; it does not prove a positive numeric area threshold (`"0"` is truthy). App requires description and a parsed area strictly greater than zero. | R1 presence rule `SOURCE_VERIFIED`; numeric threshold `PRODUCT_DECISION_REQUIRED` | App’s positive-area constraint is stricter than the inspected R1 check. Keep it visible as a parity decision; do not silently weaken or call it R1-equivalent. |
+| Backend order validation | Backend loads tenant `Ext(colName="order")` and executes its `preScriptContent` on Order create/edit paths when configured. The checked-in generic code does not reveal the active tenant’s script. | `TENANT_CONFIG_DEPENDENT` | Active backend requirements cannot be inferred from source alone. |
+
+## P0-A — Dynamic Order ExtFields
+
+### R1 behavior verified in source
+
+- `initData()` takes `serviceType`, `sourceType`, and edit identity from route parameters; `common.osg.param()` returns the route value (or `null` when no parameter object exists). [R1 `placeOrders.vue`](https://github.com/xlink-bj/xlink-app/blob/6c0a97b26bcbcaee81ac4e1dfd627c6e8e70e29d/business/subpackages/order/placeOrders.vue#L3444-L3478) · [R1 `common.js`](https://github.com/xlink-bj/xlink-app/blob/6c0a97b26bcbcaee81ac4e1dfd627c6e8e70e29d/business/resources/js/common.js#L456-L465)
+- `getFields()` requests active `colName=order`, `_all=1`, `state=1`, mobile-detail `showList=4`, ordered by `order`; it parses `frontEndConfig`, registers code/cascade providers, then selects `showType=placeOrder` and `showType=submitOrder`. Both honor configured `serviceType`; submit fields additionally honor `personType`. [R1 fields](https://github.com/xlink-bj/xlink-app/blob/6c0a97b26bcbcaee81ac4e1dfd627c6e8e70e29d/business/subpackages/order/placeOrders.vue#L3618-L3677)
+- Page rendering and pre-selection validation apply `showField == showValue`; `required == '1'` is checked for visible fields. `dispensableField == dispensableValue` skips required validation. [R1 render](https://github.com/xlink-bj/xlink-app/blob/6c0a97b26bcbcaee81ac4e1dfd627c6e8e70e29d/business/subpackages/order/placeOrders.vue#L31-L38) · [R1 validation](https://github.com/xlink-bj/xlink-app/blob/6c0a97b26bcbcaee81ac4e1dfd627c6e8e70e29d/business/subpackages/order/placeOrders.vue#L3835-L3860) · [R1 pre-selection gate](https://github.com/xlink-bj/xlink-app/blob/6c0a97b26bcbcaee81ac4e1dfd627c6e8e70e29d/business/subpackages/order/placeOrders.vue#L4419-L4464)
+- R1 initializes an empty required switch to `'0'` before validation. A numeric zero is accepted by the required predicate, and empty arrays are rejected. [R1 validation](https://github.com/xlink-bj/xlink-app/blob/6c0a97b26bcbcaee81ac4e1dfd627c6e8e70e29d/business/subpackages/order/placeOrders.vue#L3847-L3859)
+- R1 uses code/cascade providers, business-record `requestUrl` + label/value mapping, formula (`evaluate`) behavior, file handling, and area selection. [R1 controls](https://github.com/xlink-bj/xlink-app/blob/6c0a97b26bcbcaee81ac4e1dfd627c6e8e70e29d/business/subpackages/order/placeOrders.vue#L81-L185) · [business selection](https://github.com/xlink-bj/xlink-app/blob/6c0a97b26bcbcaee81ac4e1dfd627c6e8e70e29d/business/subpackages/order/placeOrders.vue#L4901-L4929) · [formula](https://github.com/xlink-bj/xlink-app/blob/6c0a97b26bcbcaee81ac4e1dfd627c6e8e70e29d/business/subpackages/order/placeOrders.vue#L3691-L3725)
+- For edit, R1 restores `Order.exts` values into the form; cascade values are split to path arrays. Before submit it maps ext-field values back under `params.exts`; file arrays become comma-separated URLs. [R1 edit restore](https://github.com/xlink-bj/xlink-app/blob/6c0a97b26bcbcaee81ac4e1dfd627c6e8e70e29d/business/subpackages/order/placeOrders.vue#L3770-L3788) · [R1 payload](https://github.com/xlink-bj/xlink-app/blob/6c0a97b26bcbcaee81ac4e1dfd627c6e8e70e29d/business/subpackages/order/placeOrders.vue#L4200-L4234)
+
+### Current App comparison
+
+- The shared Dynamic Form Runtime is finite and reusable: normalized schema has stable row `fieldId`, business `valueKey`, required/read-only/multiple, visibility, value-option, and presentation metadata. It handles visible required values, zero, booleans, arrays, normalized media references, and fails closed on unsupported types or missing option providers. [App schema](https://github.com/xlink-bj/xlink-technician-app/blob/599945780d7c7724ec864b25845832954a148554/src/runtimes/dynamic-form/types.ts#L43-L65) · [capability/provider mapping](https://github.com/xlink-bj/xlink-technician-app/blob/599945780d7c7724ec864b25845832954a148554/src/runtimes/dynamic-form/capabilities.ts#L7-L63) · [submission](https://github.com/xlink-bj/xlink-technician-app/blob/599945780d7c7724ec864b25845832954a148554/src/runtimes/dynamic-form/values.ts#L152-L213)
+- Visibility supports `equals`, `oneOf`, `includes`, `exists`, and `all`. This can represent verified `showField/showValue` semantics after an Adapter mapping; unsupported expression semantics remain fail-closed. [App visibility](https://github.com/xlink-bj/xlink-technician-app/blob/599945780d7c7724ec864b25845832954a148554/src/runtimes/dynamic-form/visibility.ts#L47-L94)
+- `runtimeRequired` can carry an already-resolved required override, but current normalized schema has no `dispensableField/dispensableValue` relationship. Therefore the Runtime can execute such a decision only after a trusted source Adapter resolves and maps it. The new App must not infer the dependency from labels.
+- `bizSelect`’s R1 `requestUrl`/label/value provider, formula `evaluate`, generic `area`, and arbitrary custom front-end code are not equivalent to the current finite App providers. `area` is explicitly unsupported; unknown field types fail closed. [App provider selection](https://github.com/xlink-bj/xlink-technician-app/blob/599945780d7c7724ec864b25845832954a148554/src/runtimes/dynamic-form/capabilities.ts#L28-L63) · [App value normalization](https://github.com/xlink-bj/xlink-technician-app/blob/599945780d7c7724ec864b25845832954a148554/src/runtimes/dynamic-form/values.ts#L72-L145)
+- Current quotation is not connected to the `order` ExtField schema. Its `QuotationDraft` contains grouped part context and catalog selections, not dynamic Order `exts`; `encodeR1OfficialOrderType1()` emits only a fixed known `exts` set. [Draft model](https://github.com/xlink-bj/xlink-technician-app/blob/599945780d7c7724ec864b25845832954a148554/src/features/work-orders/quotation/model.ts#L1-L65) · [encoder](https://github.com/xlink-bj/xlink-technician-app/blob/599945780d7c7724ec864b25845832954a148554/src/features/work-orders/quotation/order-encoder.ts#L300-L380)
+- Generic Dynamic Form `normalizeSubmission()` drops hidden values by default; its optional preservation flag is not used by the current Action adapter. The synthetic test below records both behaviors. The quotation draft/Order edit path has no established ExtField round-trip, so previously saved dynamic values remain `UNKNOWN` for this feature.
+
+**P0-A classification:** ordinary controls and supported visibility can reuse the Generic Runtime; active schema, dispensable-rule mapping, business-select providers, special controls, and Order.exts persistence remain `TENANT_CONFIG_DEPENDENT` or `UNKNOWN`. Before quote readiness, the exact active schema must be read and every visible required field must be supported and validated. An unavailable schema or required unsupported provider must block; no inferred schema may be presented as live.
+
+## P0-B — `sourceType` presence and catalog scope
+
+### Source facts
+
+- R1 initializes `sourceType` from route state and includes a `sourceType` property in every Package, Procedure, Material, and Measure list request. [R1 initialization](https://github.com/xlink-bj/xlink-app/blob/6c0a97b26bcbcaee81ac4e1dfd627c6e8e70e29d/business/subpackages/order/placeOrders.vue#L3444-L3468) · [Package](https://github.com/xlink-bj/xlink-app/blob/6c0a97b26bcbcaee81ac4e1dfd627c6e8e70e29d/business/subpackages/order/placeOrders.vue#L5498-L5509) · [Procedure](https://github.com/xlink-bj/xlink-app/blob/6c0a97b26bcbcaee81ac4e1dfd627c6e8e70e29d/business/subpackages/order/placeOrders.vue#L5561-L5572) · [Material](https://github.com/xlink-bj/xlink-app/blob/6c0a97b26bcbcaee81ac4e1dfd627c6e8e70e29d/business/subpackages/order/placeOrders.vue#L5624-L5635) · [Measure](https://github.com/xlink-bj/xlink-app/blob/6c0a97b26bcbcaee81ac4e1dfd627c6e8e70e29d/business/subpackages/order/placeOrders.vue#L5680-L5692)
+- `common.osg.ajax()` passes a JavaScript object to `wx.request` with form-urlencoded content type. The checked-in R1 code does not itself define how the target Mini Program runtime materializes an own property whose value is `null` or `undefined`. Thus R1 source proves *object property presence*, not the final server-side parameter presence for these values. [R1 Ajax](https://github.com/xlink-bj/xlink-app/blob/6c0a97b26bcbcaee81ac4e1dfd627c6e8e70e29d/business/resources/js/common.js#L112-L183)
+- Backend `GoodsServiceImpl.queryWithRank()` branches on `params.containsKey("sourceType")`. Present means add `sourceTypeList` plus `orgId`/`tenantId`, and disable the normal org/belong-to filters; absent follows another branch. [Backend branch](https://github.com/xlink-bj/xlink-cloud-backend/blob/5fc008d32e771205260f120621c1c4fc62d0824e/src/main/java/com/fsgo/service/biz/GoodsServiceImpl.java#L376-L418)
+- All four Mini catalog controllers inject `form=mini`; the previously reviewed price projection concern is closed, but it does not resolve `sourceType` wire semantics. [Package](https://github.com/xlink-bj/xlink-cloud-backend/blob/5fc008d32e771205260f120621c1c4fc62d0824e/src/main/java/com/fsgo/modulemini/biz/ProjPackageController.java#L49-L54) · [Procedure](https://github.com/xlink-bj/xlink-cloud-backend/blob/5fc008d32e771205260f120621c1c4fc62d0824e/src/main/java/com/fsgo/modulemini/biz/ProcedureController.java#L53-L58) · [Material](https://github.com/xlink-bj/xlink-cloud-backend/blob/5fc008d32e771205260f120621c1c4fc62d0824e/src/main/java/com/fsgo/modulemini/basic/MaterialController.java#L53-L58) · [Measure](https://github.com/xlink-bj/xlink-cloud-backend/blob/5fc008d32e771205260f120621c1c4fc62d0824e/src/main/java/com/fsgo/modulemini/biz/MeasureController.java#L53-L58)
+- Current App extracts `serviceType` from the ServiceAppointment and includes `sourceType` only if a non-empty string exists. The catalog adapter omits an absent source type, rejects an empty provided value, and uses the same filter shape for all four routes. [App context](https://github.com/xlink-bj/xlink-technician-app/blob/599945780d7c7724ec864b25845832954a148554/src/adapters/api/technician-api.ts#L457-L467) · [App request](https://github.com/xlink-bj/xlink-technician-app/blob/599945780d7c7724ec864b25845832954a148554/src/adapters/api/quotation-catalog-api.ts#L261-L279) · [App transport encoding](https://github.com/xlink-bj/xlink-technician-app/blob/599945780d7c7724ec864b25845832954a148554/src/adapters/api/uni-api-read-transport.ts#L27-L43)
+
+### Adapter request-object fixture result
+
+The added local fixtures prove the App catalog adapter’s current deterministic request-object behavior for all four routes: absent means omitted from the `ApiReadRequest.body`; concrete means included; empty string fails before transport. The Uni transport source serializes own body entries as form-urlencoded pairs, but this slice does not claim an end-to-end transport fixture or prove R1’s native `wx.request` serialization for `null`/`undefined` or backend `FlipPageInfo` materialization. No live call was made.
+
+The isolated synthetic child-process fixture confirms the package-detail identity cache is invalidated when its supplied session reference changes, before a second transport call. Current integration supplies only `sessionRef`; same-session user/role/version changes are not represented in that cache key and remain a separate adapter hardening point. The fixture performs no network request.
+
+**P0-B classification:** `sourceType` wire equivalence is `UNKNOWN`. Because backend property presence changes visibility scoping, missing `sourceType` must not proceed in Production until exact R1 parameter semantics are source/runtime-verified or an explicit reviewed fail-closed rule is adopted. No backend permission change or request was made.
+
+## P0-C — fixed quotation validation rules
+
+### R1 source path vs current App behavior
+
+- R1’s visible submit action calls `submitOrder()`, which checks each group’s non-empty `partDescription` and `maintainAreaNum` before `fillOrder()`. This applies on the page’s “生成报价” and “提交订单” buttons. [R1 buttons](https://github.com/xlink-bj/xlink-app/blob/6c0a97b26bcbcaee81ac4e1dfd627c6e8e70e29d/business/subpackages/order/placeOrders.vue#L1228-L1254) · [R1 submit validation](https://github.com/xlink-bj/xlink-app/blob/6c0a97b26bcbcaee81ac4e1dfd627c6e8e70e29d/business/subpackages/order/placeOrders.vue#L4984-L4997)
+- The R1 area rule is truthiness/non-empty, not a positive-number check. A string value `"0"` is truthy in this check; absence/empty is rejected. App `parseQuotationQuantity()` requires a finite value greater than zero. [App validator](https://github.com/xlink-bj/xlink-technician-app/blob/599945780d7c7724ec864b25845832954a148554/src/features/work-orders/quotation/validation.ts#L60-L78)
+- R1’s `fillOrder()` explicitly requires a package, or both a Procedure and a Material, for each group. This is direct evidence for that shipped R1 page path and resolves the earlier source-search gap. It is not evidence that all backend callers or every tenant enforce the same invariant. [R1 composition check](https://github.com/xlink-bj/xlink-app/blob/6c0a97b26bcbcaee81ac4e1dfd627c6e8e70e29d/business/subpackages/order/placeOrders.vue#L4998-L5042)
+- When adding a group, R1 takes `formData.repairParts` or defaults to the first `refreshParts` option; R1’s submit checks shown above do not separately validate that every group has a non-empty path. [R1 group construction](https://github.com/xlink-bj/xlink-app/blob/6c0a97b26bcbcaee81ac4e1dfd627c6e8e29d/business/subpackages/order/placeOrders.vue#L4419-L4478)
+- Current App validator unconditionally requires a repair-part path, non-empty description, positive area, and (without a configured package) both direct kinds; Measure alone does not satisfy that direct-composition rule. [App validation](https://github.com/xlink-bj/xlink-technician-app/blob/599945780d7c7724ec864b25845832954a148554/src/features/work-orders/quotation/validation.ts#L60-L130)
+- Backend has a tenant-scoped `Ext(colName="order")` `preScriptContent`; Order create and edit paths execute that script when present. The checked-in code proves tenant-dependent validation can run, but cannot reveal the active tenant’s script content or its constraints. [Ext model](https://github.com/xlink-bj/xlink-cloud-backend/blob/5fc008d32e771205260f120621c1c4fc62d0824e/src/main/java/com/fsgo/entity/biz/Ext.java#L15-L34) · [Order create](https://github.com/xlink-bj/xlink-cloud-backend/blob/5fc008d32e771205260f120621c1c4fc62d0824e/src/main/java/com/fsgo/service/basic/OrderServiceImpl.java#L335-L350) · [Order edit path](https://github.com/xlink-bj/xlink-cloud-backend/blob/5fc008d32e771205260f120621c1c4fc62d0824e/src/main/java/com/fsgo/service/basic/OrderServiceImpl.java#L615-L630)
+
+### Synthetic current-runtime outcome matrix
+
+These tests report current App validator outcomes only; “ready” does **not** mean the business rule has received Product approval.
+
+| Fixture | Current validator outcome | Evidence status |
+|---|---|---|
+| Configured Package only | No direct Procedure+Material issue | R1 path source-backed; package completeness still follows App configuration model |
+| Procedure only | `group.direct_composition_incomplete` | R1 source-backed for cited flow |
+| Material only | `group.direct_composition_incomplete` | R1 source-backed for cited flow |
+| Procedure + Material | No direct-composition issue | R1 source-backed for cited flow |
+| Measure only | `group.direct_composition_incomplete` | R1 source-backed for cited flow; broader product applicability still not stated |
+| `maintainAreaNum` absent / `"0"` | `group.maintain_area_invalid` | App is stricter than R1 for `"0"`; positive threshold needs Product decision |
+| `partDescription` absent | `group.description_required` | R1 submit flow checks non-empty, but schema/conditional exceptions remain unverified |
+| Dynamic required field with a caller-resolved dispensable exception | Runtime supports `runtimeRequired=false` | Resolver/mapping from ExtField condition is not implemented or verified |
+
+## Minimum safe M1 policy proposed for Lead decision
+
+1. **Dynamic fields:** before enabling quotation readiness for a real workflow, fetch the active tenant `order` field set and providers; apply `showList`, `showType`, service/person filters, visibility, required, and dispensable rules. Reuse the existing Dynamic Form Runtime for supported ordinary fields. Keep R1-specific business selectors/quotation composition outside that generic renderer. A missing schema, missing provider, unmapped required special type, or unknown required rule blocks readiness.
+2. **Catalog scope:** require a verified non-empty ServiceAppointment `sourceType` for Production catalog queries until null/undefined R1 wire behavior is established. If a Lead-approved fallback is chosen, it must explicitly preserve the backend authorization branch; do not silently omit the key. Bind any in-memory authorization identity to session + user + role/version or invalidate on the full identity change.
+3. **Group validation:** keep source-backed package-or-Procedure+Material behavior for the cited R1 page. Preserve strictness as a pre-release safety barrier, but classify `positive maintainAreaNum`, unconditional description requirement, and repair-part-path requirement as needing explicit Product approval or tenant-rule evidence before claiming exact parity. Do not silently weaken them.
+4. **Persistence:** before adding dynamic fields, model them as Order `exts` values with edit/readback round-trip, including prior values and type-aware file/array/cascade encoding. Current generic appointment form serialization is not evidence that quotation Order `exts` is wired.
+
+## Remaining UNKNOWN / blocked evidence
+
+- Current active Production/Beta `order` ExtField rows, required flags, `frontEndConfig`, option providers, dynamic `bizSelect` routes, and tenant `preScriptContent`: `UNKNOWN` (no live read authorized in this issue).
+- R1 `wx.request` server-side parameter presence for `sourceType` set to `null`/`undefined`, and exact `FlipPageInfo` handling: `UNKNOWN` from the checked-in client source.
+- Whether the same session reference can survive a user/role/version change in the catalog adapter’s actual integration: `UNKNOWN`; catalog cache callback currently exposes only `sessionRef`.
+- Whether R1 group validation is universal beyond the cited placeOrders page or enforced for all backend clients: `UNKNOWN`.
+- Whether positive area, non-empty part description, or repair-part selection have active tenant exceptions: `TENANT_CONFIG_DEPENDENT / PRODUCT_DECISION_REQUIRED`.
+- Direct Material SPU/SKU selection and configuration remain outside this P0 closure and are not equivalent to R1.
+
+## Safety statement
+
+No Production/Beta API or Mongo request, login, quote/order mutation, workflow action, file upload, customer action, or backend change occurred. The Production-shape audit script now exits in `NO_NETWORK_DEFAULT` mode unless `--authorize-bounded-prod-read` is explicitly supplied; this slice did not use that flag.

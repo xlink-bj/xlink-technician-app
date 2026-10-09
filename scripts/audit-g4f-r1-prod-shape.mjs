@@ -1,5 +1,18 @@
-import { createServer, loadEnv } from 'vite'
 import { resolve } from 'node:path'
+import { resolveAuditExecutionMode } from './lib/g4f-audit-execution-mode.mjs'
+
+const executionMode = resolveAuditExecutionMode(process.argv.slice(2))
+if (executionMode === 'no_network') {
+  console.log(JSON.stringify({ status: 'NO_NETWORK_DEFAULT', requests: 0, hint: 'Use --preflight-only for local checks; an explicit --authorize-bounded-prod-read flag is required before any authenticated read.' }))
+  process.exit(0)
+}
+if (executionMode === 'invalid_arguments') {
+  console.log(JSON.stringify({ status: 'BLOCKED_INVALID_ARGUMENTS', requests: 0 }))
+  process.exit(2)
+}
+
+// Keep the default no-network path independent of Vite and app configuration.
+const { createServer, loadEnv } = await import('vite')
 
 const counts = {
   login: 0,
@@ -158,7 +171,7 @@ async function run() {
       process.exitCode = 1
       return
     }
-    if (process.argv.includes('--preflight-only')) {
+    if (executionMode === 'preflight_only') {
       console.log(JSON.stringify({ status: 'PREFLIGHT_PASS', preflight, requests: 0 }))
       return
     }
