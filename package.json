@@ -20,6 +20,7 @@
     "test:uni-h5-g4f-phase1b-review": "playwright test --config playwright.uni-h5-g4f-review.config.ts tests/h5-review/g4f-quotation-phase1b.spec.ts",
     "check:g4f-phase1a": "node scripts/check-g4f-phase1a.mjs",
     "check:g4f-phase1b": "node scripts/check-g4f-phase1b.mjs",
+    "check:g4f-synthetic-extfield-review": "node scripts/check-g4f-synthetic-extfield-review.mjs",
     "check:g4e-review-harness": "node scripts/check-g4e-review-harness.mjs",
     "test:h5-review": "playwright test",
     "capture:g4e-review": "playwright test tests/h5-review/g4e-survey.spec.ts",
@@ -45,7 +46,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "check:boundaries": "node scripts/check-boundaries.mjs",
-    "verify": "pnpm run check:boundaries && pnpm run check:ui-governance && pnpm run check:g4f-phase1a && pnpm run check:g4f-phase1b && pnpm run typecheck && pnpm run test",
+    "verify": "pnpm run check:boundaries && pnpm run check:ui-governance && pnpm run check:g4f-phase1a && pnpm run check:g4f-phase1b && pnpm run check:g4f-synthetic-extfield-review && pnpm run typecheck && pnpm run test",
     "check:ui-governance": "node scripts/check-ui-governance.mjs"
   },
   "dependencies": {

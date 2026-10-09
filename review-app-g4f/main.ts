@@ -113,11 +113,22 @@ export function createApp() {
     },
     listTypeOneOrdersForWorkOrder: async () => succeeded({ items: [], page: 1, pageSize: 3, totalCount: 0 }),
   }
-  const counters = { dispatches: 0, workflowStarts: 0 }
-  const quotationOrderCommand: QuotationOrderCommandPort = {
-    startOrderWorkflow: async () => { counters.workflowStarts += 1; await new Promise((resolve) => setTimeout(resolve, 180)); return succeeded('workflow-synthetic-review') },
-    upsertOfficialOrder: async () => { counters.dispatches += 1; await new Promise((resolve) => setTimeout(resolve, 650)); return succeeded('order-synthetic-review') },
-  }
+  const counters = { dispatches: 0, workflowStarts: 0, reviewBlockedCommandCalls: 0 }
+  const quotationOrderCommand: QuotationOrderCommandPort = scenario === 'dynamic-fields'
+    ? {
+        startOrderWorkflow: async () => {
+          counters.reviewBlockedCommandCalls += 1
+          return { state: 'failed_terminal', error: createOperationError('authorization_denied', 'workflow command is disabled in synthetic-field review') }
+        },
+        upsertOfficialOrder: async () => {
+          counters.reviewBlockedCommandCalls += 1
+          return { state: 'failed_terminal', error: createOperationError('authorization_denied', 'order command is disabled in synthetic-field review') }
+        },
+      }
+    : {
+        startOrderWorkflow: async () => { counters.workflowStarts += 1; await new Promise((resolve) => setTimeout(resolve, 180)); return succeeded('workflow-synthetic-review') },
+        upsertOfficialOrder: async () => { counters.dispatches += 1; await new Promise((resolve) => setTimeout(resolve, 650)); return succeeded('order-synthetic-review') },
+      }
   if (typeof window !== 'undefined') Object.assign(window, { __G4F_REVIEW_ORDER_MUTATIONS__: counters })
   const application = createApplication({ authSession, apiRead, storage, quotationCatalogRead: catalog, quotationOrderCommand, quotationOrderRead })
   const app = createSSRApp(App)
