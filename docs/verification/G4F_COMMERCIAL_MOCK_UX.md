@@ -18,7 +18,7 @@ The isolated `review-app-g4f/main.ts` identifies product routes and injects a sy
 
 1. This is a **first code slice**, not the finished UX: list/detail are minimal synthetic navigation contexts; refine/reuse the real product presentation after an actual H5 run. Quotation is the production Action content.
 2. Verify true uni-H5 route navigation and back across all three pages (older harness had a `rootRef.value is null` issue); no static navigation substitutes or hidden error suppression.
-3. Verify that the expected synthetic work order is readable in the detail screen, catalog selections are functional and same-work-order quotation draft can be restored. Current review storage is in-memory; hard page refresh persistence is **not yet claimed**.
+3. Verify that the expected synthetic work order is readable in the detail screen and catalog selections are functional. Product-review `draft` storage is now versioned and isolated in browser `localStorage`, distinct from all real app draft keys; unit tests cover re-instantiation and corrupt input. **Full uni-H5 hard-refresh draft restore is not yet browser-verified**, and abrupt exit before the save indicator may still lose pending values.
 4. Confirm zero external network calls using browser interception and fixture checks. Direct adapter source now has no HTTP fallback, but other app ports/browser resources still need explicit observation.
 5. Add scoped Playwright coverage at 375×667 and 390×844, screenshots and user-flow evidence, plus verify/MP/App builds. Dev/test mocked session is not Beta or Production validation.
 

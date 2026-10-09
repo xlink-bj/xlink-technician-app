@@ -11,6 +11,7 @@ import { createProductMockReadTransport } from './product-read-transport'
 import App from './App.vue'
 import { mockQuotationWorkflowNodeId } from '@adapters/api/mock'
 import { createG4fReviewStorage, reviewScenarioFromLocation, seedG4fReviewDraft } from './quotation-scenarios'
+import { createProductReviewDraftStorage } from './product-draft-storage'
 
 const reviewSession: SessionSnapshot = {
   sessionRef: asOpaqueId<'SessionRef'>('g4f-mock-review-session'),
@@ -34,10 +35,10 @@ export function createApp() {
   // This root is development-only and hard-selects the existing bounded Mock
   // runtime. The synthetic session is local; it contains no credentials.
   setBusinessMockMode('data')
-  const storage = createG4fReviewStorage()
   // Separate product-facing pages; old QA fixture routes keep their own scenario menu.
   const route = typeof window === 'undefined' ? '' : `${window.location.pathname}${window.location.hash}`
   const scenario = /\/pages\/product\/(?:orders|detail|quotation)(?:[/?#]|$)/.test(route) ? 'product' : reviewScenarioFromLocation()
+  const storage = scenario === 'product' ? createProductReviewDraftStorage() : createG4fReviewStorage()
   if (scenario !== 'product') seedG4fReviewDraft(storage, scenario)
   const needsOrderReview = ['submit-ready', 'readback-pending', 'edit', 'unsupported-edit'].includes(scenario)
   // Product UX uses only this in-memory synthetic route adapter. Unmatched requests
