@@ -55,6 +55,8 @@ export interface WorkOrderContact {
 
 /** Catalog scope derived by the API adapter from the current ServiceAppointment. */
 export interface QuotationCatalogContext {
+  /** Current detail-read Work Order identity; local cache isolation only, not a catalog query filter. */
+  readonly workOrderId?: WorkOrderId
   readonly serviceType: string
   readonly sourceType?: string
 }

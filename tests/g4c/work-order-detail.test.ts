@@ -51,6 +51,7 @@ const detail: WorkOrderDetail = {
   customerName: 'Sanitized Customer',
   serviceAddress: 'Sanitized service address',
   quotationCatalogContext: {
+    workOrderId,
     serviceType: 'sanitized-service-type',
     sourceType: 'sanitized-source',
   },
@@ -135,6 +136,7 @@ describe('G4-C API detail mapping and route identity', () => {
     expect(result.data).not.toHaveProperty('exts')
     expect(result.data).not.toHaveProperty('workflowNode')
     expect(result.data?.quotationCatalogContext).toEqual({
+      workOrderId,
       serviceType: 'sanitized-service-type',
       sourceType: 'sanitized-source',
     })

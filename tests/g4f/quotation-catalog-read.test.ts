@@ -263,6 +263,7 @@ describe('G4-F Phase 1C quotation catalog read foundation', () => {
     const workOrder = await workOrderApi.getWorkOrderDetail(asOpaqueId<'WorkOrderId'>('sanitized-work-order'))
     expect(workOrder.state).toBe('succeeded')
     expect(workOrder.data?.quotationCatalogContext).toEqual({
+      workOrderId: asOpaqueId<'WorkOrderId'>('sanitized-work-order'),
       serviceType: 'verified-service-type',
       sourceType: 'verified-source-type',
     })
@@ -440,6 +441,7 @@ describe('G4-F Phase 1C quotation catalog read foundation', () => {
       asOpaqueId<'WorkOrderId'>('mock-work-order-001'),
     )
     expect(workOrder.data?.quotationCatalogContext).toEqual({
+      workOrderId: asOpaqueId<'WorkOrderId'>('mock-work-order-001'),
       serviceType: mockQuotationCatalogServiceType,
       sourceType: mockQuotationCatalogSourceType,
     })

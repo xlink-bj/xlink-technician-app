@@ -258,9 +258,16 @@ function packageDetail(raw: unknown, requestedId: string): QuotationPackageDetai
   }
 }
 
-function listRequest(path: string, context: QuotationCatalogContext): ApiReadRequest {
+function listRequest(path: string, context: QuotationCatalogContext, productionReadOnly: boolean): ApiReadRequest {
   if (!context || typeof context.serviceType !== 'string' || !context.serviceType.trim()) {
     throw new AdapterMappingError('work-order catalog context with service type is required')
+  }
+  if (productionReadOnly
+    && (typeof context.sourceType !== 'string' || !context.sourceType.trim())) {
+    throw new ApiReadTransportError(
+      'Production catalog browsing is blocked because this Work Order has no verified source type. Ask an administrator to configure the Work Order; the catalog request was not sent.',
+      'authorization_denied',
+    )
   }
   if (context.sourceType !== undefined && (typeof context.sourceType !== 'string' || !context.sourceType.trim())) {
     throw new AdapterMappingError('quotation catalog source type must be omitted when unavailable')
@@ -287,11 +294,12 @@ function readFailure<T>(error: unknown): OperationSnapshot<T> {
 
 class QuotationCatalogReadAdapter implements QuotationCatalogReadPort {
   private currentReadScope: string | null = null
+  private currentCatalogContextKey: string | null = null
   private readonly listedPackageIds = new Set<string>()
 
   constructor(
     private readonly transport: ApiReadTransport,
-    private readonly getSessionScope?: () => string | null,
+    private readonly getReadAuthorizationScope?: () => QuotationCatalogReadAuthorizationScope | null,
   ) {}
 
   private isProductionReadOnly(): boolean {
@@ -299,13 +307,65 @@ class QuotationCatalogReadAdapter implements QuotationCatalogReadPort {
   }
 
   private synchronizeProductionReadScope(): string | null {
-    const sessionRef = this.getSessionScope?.() ?? null
-    const nextScope = sessionRef ? scopeFingerprint(sessionRef) : null
+    let identityScope: QuotationCatalogReadAuthorizationScope | null = null
+    try {
+      identityScope = this.getReadAuthorizationScope?.() ?? null
+    } catch {
+      identityScope = null
+    }
+    const nextScope = authorizationIdentityKey(identityScope)
     if (nextScope !== this.currentReadScope) {
       this.currentReadScope = nextScope
       this.listedPackageIds.clear()
+      this.currentCatalogContextKey = null
     }
     return nextScope
+  }
+
+  private synchronizeCatalogContext(context: QuotationCatalogContext): string | null {
+    const key = typeof context?.workOrderId === 'string'
+      && context.workOrderId.trim().length > 0
+      && typeof context.serviceType === 'string'
+      && context.serviceType.trim().length > 0
+      && (context.sourceType === undefined
+        || typeof context.sourceType === 'string' && context.sourceType.trim().length > 0)
+      ? JSON.stringify([context.workOrderId, context.serviceType, context.sourceType ?? null])
+      : null
+    if (key !== this.currentCatalogContextKey) {
+      this.currentCatalogContextKey = key
+      this.listedPackageIds.clear()
+    }
+    return key
+  }
+
+  private async list<T>(
+    path: string,
+    context: QuotationCatalogContext,
+    map: (raw: unknown) => T,
+    listedPackages?: (data: T) => readonly QuotationPackageRead[],
+  ): Promise<OperationSnapshot<T>> {
+    const productionReadOnly = this.isProductionReadOnly()
+    const scopeAtStart = productionReadOnly ? this.synchronizeProductionReadScope() : null
+    const catalogContextAtStart = productionReadOnly
+      ? this.synchronizeCatalogContext(context)
+      : null
+    const result = await this.read(() => listRequest(path, context, productionReadOnly), map)
+    if (!productionReadOnly) return result
+
+    const scopeAfterRead = this.synchronizeProductionReadScope()
+    if (scopeAfterRead !== scopeAtStart) {
+      return adapterFailure('authorization_denied', 'Catalog results were discarded because the authenticated user or role changed during the read. Reload the catalog for the current identity.')
+    }
+    if (catalogContextAtStart !== this.currentCatalogContextKey) {
+      return adapterFailure('authorization_denied', 'Catalog results were discarded because the Work Order catalog context changed during the read. Reload the current Work Order catalog.')
+    }
+    if (listedPackages && scopeAtStart && catalogContextAtStart && result.state === 'succeeded' && result.data) {
+      for (const item of listedPackages(result.data)) {
+        if (this.listedPackageIds.size >= 200) break
+        this.listedPackageIds.add(item.id)
+      }
+    }
+    return result
   }
 
   private async read<T>(
@@ -320,63 +380,76 @@ class QuotationCatalogReadAdapter implements QuotationCatalogReadPort {
     }
   }
 
-  async listPackages(context: QuotationCatalogContext) {
-    const scopeAtStart = this.isProductionReadOnly() ? this.synchronizeProductionReadScope() : null
-    const result = await this.read(() => listRequest('biz/projPackage/queryWithRank', context), (raw) => pageEnvelope(raw, packageItem))
-    if (this.isProductionReadOnly() && scopeAtStart && this.synchronizeProductionReadScope() === scopeAtStart
-      && result.state === 'succeeded' && result.data) {
-      for (const item of result.data.items) {
-        if (this.listedPackageIds.size >= 200) break
-        this.listedPackageIds.add(item.id)
-      }
-    }
-    return result
+  listPackages(context: QuotationCatalogContext) {
+    return this.list(
+      'biz/projPackage/queryWithRank',
+      context,
+      (raw) => pageEnvelope(raw, packageItem),
+      (page) => page.items,
+    )
   }
 
-  getPackageDetail(packageId: string) {
-    if (this.isProductionReadOnly()) {
-      const scope = this.synchronizeProductionReadScope()
-      if (!this.getSessionScope || !scope || !this.listedPackageIds.has(packageId)) {
-        return Promise.resolve(adapterFailure<QuotationPackageDetailRead>(
+  async getPackageDetail(packageId: string) {
+    const productionReadOnly = this.isProductionReadOnly()
+    const scopeAtStart = productionReadOnly ? this.synchronizeProductionReadScope() : null
+    const catalogContextAtStart = productionReadOnly ? this.currentCatalogContextKey : null
+    if (productionReadOnly) {
+      if (!scopeAtStart || !catalogContextAtStart || !this.listedPackageIds.has(packageId)) {
+        return adapterFailure<QuotationPackageDetailRead>(
           'authorization_denied',
-          'Production package detail requires an identity from the current session\'s successful package list',
-        ))
+          'Production package detail requires a complete current user/role identity and an ID from its successful package list.',
+        )
       }
     }
-    return this.read(
+    const result = await this.read(
       () => {
         if (!packageId.trim()) throw new AdapterMappingError('quotation package identity is required')
         return { method: 'POST', path: `biz/projPackage/findById/${encodeURIComponent(packageId)}` }
       },
       (raw) => packageDetail(raw, packageId),
     )
+    if (productionReadOnly && (this.synchronizeProductionReadScope() !== scopeAtStart
+      || this.currentCatalogContextKey !== catalogContextAtStart)) {
+      return adapterFailure<QuotationPackageDetailRead>(
+        'authorization_denied',
+        'Package detail was discarded because the authenticated identity or Work Order catalog context changed during the read. Reload it under the current context.',
+      )
+    }
+    return result
   }
 
   listProcedures(context: QuotationCatalogContext) {
-    return this.read(() => listRequest('biz/procedure/queryWithRank', context), (raw) => pageEnvelope(raw, procedureItem))
+    return this.list('biz/procedure/queryWithRank', context, (raw) => pageEnvelope(raw, procedureItem))
   }
 
   listMaterials(context: QuotationCatalogContext) {
-    return this.read(() => listRequest('basic/material/queryWithRank', context), (raw) => pageEnvelope(raw, materialItem))
+    return this.list('basic/material/queryWithRank', context, (raw) => pageEnvelope(raw, materialItem))
   }
 
   listMeasures(context: QuotationCatalogContext) {
-    return this.read(() => listRequest('biz/measure/queryWithRank', context), (raw) => pageEnvelope(raw, measureItem))
+    return this.list('biz/measure/queryWithRank', context, (raw) => pageEnvelope(raw, measureItem))
   }
 }
 
-function scopeFingerprint(value: string): string {
-  let hash = 2166136261
-  for (let index = 0; index < value.length; index += 1) {
-    hash ^= value.charCodeAt(index)
-    hash = Math.imul(hash, 16777619)
-  }
-  return (hash >>> 0).toString(16)
+function authorizationIdentityKey(scope: QuotationCatalogReadAuthorizationScope | null): string | null {
+  if (!scope
+    || typeof scope.sessionRef !== 'string' || !scope.sessionRef.trim()
+    || typeof scope.userId !== 'string' || !scope.userId.trim()
+    || typeof scope.roleId !== 'string' || !scope.roleId.trim()
+    || typeof scope.roleVersion !== 'string' || !scope.roleVersion.trim()) return null
+  return JSON.stringify([scope.sessionRef, scope.userId, scope.roleId, scope.roleVersion])
+}
+
+export interface QuotationCatalogReadAuthorizationScope {
+  readonly sessionRef: string | null
+  readonly userId: string | null
+  readonly roleId: string | null
+  readonly roleVersion: string | null
 }
 
 export function createQuotationCatalogReadAdapter(
   transport: ApiReadTransport,
-  getSessionScope?: () => string | null,
+  getReadAuthorizationScope?: () => QuotationCatalogReadAuthorizationScope | null,
 ): QuotationCatalogReadPort {
-  return new QuotationCatalogReadAdapter(transport, getSessionScope)
+  return new QuotationCatalogReadAdapter(transport, getReadAuthorizationScope)
 }

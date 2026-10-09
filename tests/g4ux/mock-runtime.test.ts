@@ -405,6 +405,7 @@ describe('G4-UX business mock runtime', () => {
       displayNumber: '09077',
       taskLabel: '跟进签约',
       quotationCatalogContext: {
+        workOrderId: mockWorkOrderIds[0],
         serviceType: mockQuotationCatalogServiceType,
         sourceType: mockQuotationCatalogSourceType,
       },
@@ -674,6 +675,10 @@ describe('G4-UX business mock runtime', () => {
       ...synthetic.data,
       id: 'real-work-order-001',
       workflowRunId: 'real-workflow-run-001',
+      quotationCatalogContext: {
+        ...synthetic.data?.quotationCatalogContext,
+        workOrderId: 'real-work-order-001',
+      },
     })
   })
 
@@ -696,6 +701,7 @@ describe('G4-UX business mock runtime', () => {
       displayNumber: '19006',
       workflowRunId: 'mock-workflow-run-006',
       quotationCatalogContext: {
+        workOrderId: mockDetailScenarioIds[5],
         serviceType: mockQuotationCatalogServiceType,
         sourceType: mockQuotationCatalogSourceType,
       },

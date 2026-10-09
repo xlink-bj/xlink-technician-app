@@ -454,13 +454,14 @@ function detailPayload(raw: unknown): {
   }
 }
 
-function quotationCatalogContext(record: AdapterRecord): QuotationCatalogContext | undefined {
+function quotationCatalogContext(record: AdapterRecord, workOrderId: WorkOrderId): QuotationCatalogContext | undefined {
   // Do not derive catalog scope from display labels or workflow/UI state.
   // These are the ServiceAppointment's persisted provider fields.
   const serviceType = optionalString(record, ['serviceType'])
   if (!serviceType) return undefined
   const sourceType = optionalString(optionalRecord(record.exts) ?? {}, ['sourceType'])
   return {
+    workOrderId,
     serviceType,
     ...(sourceType ? { sourceType } : {}),
   }
@@ -497,7 +498,7 @@ function workOrderDetail(
   const distanceText = displayDistance(record)
   const contact = includeContact ? workOrderContact(record) : undefined
   const workflowNodes = rawWorkflowNodes?.map(workflowNode)
-  const catalogContext = quotationCatalogContext(record)
+  const catalogContext = quotationCatalogContext(record, id)
 
   return {
     id,

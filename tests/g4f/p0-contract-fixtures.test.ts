@@ -14,6 +14,7 @@ import {
   type QuotationPackageSelection,
 } from '@features/work-orders/quotation/model'
 import { validateQuotationDraft } from '@features/work-orders/quotation/validation'
+import orderExtFieldContractFixture from '../fixtures/g4f-order-extfield-contract.json'
 
 const catalogMethods = [
   ['package', (catalog: ReturnType<typeof createQuotationCatalogReadAdapter>, context: { serviceType: string; sourceType?: string }) => catalog.listPackages(context)],
@@ -94,7 +95,7 @@ describe('G4-F P0 contract evidence fixtures (synthetic only)', () => {
       expect(JSON.parse(conflictingRun.stdout)).toMatchObject({ status: 'BLOCKED_INVALID_ARGUMENTS', requests: 0 })
     })
 
-    it('invalidates Production package identities when the session scope changes, using an isolated synthetic child process', () => {
+    it('fails closed on Production sourceType and package identity transitions using an isolated synthetic child process', () => {
       const run = spawnSync(process.execPath, ['tests/fixtures/g4f-catalog-session-scope.mjs'], {
         encoding: 'utf8',
         env: {
@@ -105,11 +106,91 @@ describe('G4-F P0 contract evidence fixtures (synthetic only)', () => {
       })
       expect(run.status).toBe(0)
       expect(JSON.parse(run.stdout)).toEqual({
-        listState: 'succeeded',
-        detailState: 'failed_terminal',
-        detailError: 'authorization_denied',
-        transportCallsAfterList: 0,
+        productionBoundaryFixture: 'PASS',
+        sourceTypeRejectedBeforeTransport: 28,
+        sourceTypeExactRequests: 4,
+        identityDimensionInvalidations: 4,
+        unknownScopeCases: 3,
+        packageContextInvalidation: 'PASS',
+        multiplePackageLists: 'PASS',
+        staleListDiscarded: 'PASS',
+        staleWorkOrderContextListDiscarded: 'PASS',
+        staleDetailDiscarded: 'PASS',
+        externalRequests: 0,
       })
+    })
+  })
+
+  describe('synthetic Order ExtField mapping proposal (not an active schema)', () => {
+    it('keeps stage, row identity, business value key, conditions, and providers explicit', () => {
+      const fixture = orderExtFieldContractFixture as {
+        evidence: { readonly mode: string; readonly activeSchema: boolean }
+        rows: readonly {
+          readonly rowId: string
+          readonly name: string
+          readonly colName: string
+          readonly state: number
+          readonly showList: readonly number[]
+          readonly type: string
+          readonly frontEndConfig: Readonly<Record<string, unknown>>
+          readonly valueOption?: string
+          readonly serviceType?: readonly string[]
+          readonly personType?: string
+        }[]
+      }
+
+      expect(fixture.evidence).toMatchObject({ mode: 'SYNTHETIC_CONTRACT_FIXTURE', activeSchema: false })
+      expect(fixture.rows.every((row) => row.colName === 'order' && row.state === 1 && row.showList.includes(4))).toBe(true)
+      expect(new Set(fixture.rows.map((row) => row.rowId)).size).toBe(fixture.rows.length)
+      expect(fixture.rows.some((row) => row.name === 'fixtureSharedKey' && row.frontEndConfig.showType === 'placeOrder')).toBe(true)
+      expect(fixture.rows.some((row) => row.name === 'fixtureSharedKey' && row.frontEndConfig.showType === 'submitOrder')).toBe(true)
+      const repeatedValueKeyRows = fixture.rows.filter((row) => row.name === 'fixtureSharedKey')
+      expect(repeatedValueKeyRows.map((row) => row.rowId)).toEqual([
+        'synthetic-row-shared-place',
+        'synthetic-row-shared-submit',
+      ])
+      expect(repeatedValueKeyRows.map((row) => row.frontEndConfig.showType)).toEqual(['placeOrder', 'submitOrder'])
+      expect(fixture.rows.find((row) => row.name === 'fixtureSharedKey' && row.frontEndConfig.showType === 'placeOrder')?.serviceType)
+        .toEqual(['synthetic-service-type'])
+      expect(fixture.rows.find((row) => row.name === 'fixtureSharedKey' && row.frontEndConfig.showType === 'submitOrder'))
+        .toMatchObject({ serviceType: ['synthetic-service-type'], personType: 'synthetic-person-type' })
+      expect(fixture.rows.find((row) => row.name === 'fixtureConditional')?.frontEndConfig)
+        .toMatchObject({ showField: 'fixtureMode', showValue: 'enabled' })
+      expect(fixture.rows.find((row) => row.name === 'fixtureDispensable')?.frontEndConfig)
+        .toMatchObject({ dispensableField: 'fixtureMode', dispensableValue: 'optional' })
+      expect(fixture.rows.find((row) => row.type === 'code')?.valueOption).toBe('fixtureCodeProvider')
+      expect(fixture.rows.find((row) => row.type === 'cascade')?.valueOption).toBe('fixtureCascadeProvider')
+      expect(fixture.rows.find((row) => row.type === 'bizSelect')?.frontEndConfig.requestUrl).toBe('/synthetic/untrusted-provider')
+    })
+
+    it('uses only the existing finite Dynamic Form Runtime contract for a synthetic supported ordinary field', () => {
+      const fixture = orderExtFieldContractFixture as {
+        values: Readonly<Record<string, unknown>>
+        existingOrderExts: Readonly<Record<string, unknown>>
+      }
+      const field: FormFieldSchema = {
+        fieldId: 'fixture-note-row',
+        valueKey: 'fixtureNote',
+        type: 'text',
+        required: true,
+      }
+      const normalized = normalizeSubmission({
+        fields: [field],
+        values: fixture.values,
+      })
+      expect(normalized).toEqual({
+        ok: true,
+        value: { values: { fixtureNote: 'synthetic note' } },
+      })
+
+      // Proposed edit behavior: overlay only normalized supported values and retain unknown exts.
+      // This is a contract fixture, not a connected Order serializer.
+      if (normalized.ok) {
+        expect({ ...fixture.existingOrderExts, ...normalized.value.values }).toEqual({
+          fixtureUnknownLegacyKey: { opaque: true },
+          fixtureNote: 'synthetic note',
+        })
+      }
     })
   })
 
@@ -213,7 +294,7 @@ describe('G4-F P0 contract evidence fixtures (synthetic only)', () => {
       if (preserved.ok) expect(JSON.parse(JSON.stringify(preserved.value.values))).toEqual(preserved.value.values)
     })
 
-    it('can apply a caller-resolved dispensable condition through runtimeRequired, but the Order ExtField adapter contract is still absent', () => {
+    it('can apply a caller-resolved dispensable condition through runtimeRequired, while the Order ExtField mapper remains unimplemented', () => {
       const fields: readonly FormFieldSchema[] = [
         { fieldId: 'fixture-waived-required', valueKey: 'fixtureWaivedValue', type: 'text', required: true },
       ]
