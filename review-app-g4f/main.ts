@@ -5,6 +5,9 @@ import { setBusinessMockMode } from '@app/business-mock'
 import type { AuthSessionPort, TechnicianApiCommandPort, QuotationCatalogReadPort, QuotationOrderCommandPort, QuotationOrderRead, QuotationOrderReadPort, SessionSnapshot, TechnicianApiReadPort } from '@shared/ports'
 import { asOpaqueId, createOperationError, type OperationSnapshot } from '@shared/types'
 import { createDefaultQuotationCatalogReadPort, createDefaultTechnicianApiReadPort } from '@app/composition'
+import { createRoleScopedTechnicianApiReadAdapter } from '@adapters/api/technician-api'
+import { createQuotationCatalogReadAdapter } from '@adapters/api/quotation-catalog-api'
+import { createProductMockReadTransport } from './product-read-transport'
 import App from './App.vue'
 import { mockQuotationWorkflowNodeId } from '@adapters/api/mock'
 import { createG4fReviewStorage, reviewScenarioFromLocation, seedG4fReviewDraft } from './quotation-scenarios'
@@ -37,7 +40,24 @@ export function createApp() {
   const scenario = /\/pages\/product\/(?:orders|detail|quotation)(?:[/?#]|$)/.test(route) ? 'product' : reviewScenarioFromLocation()
   if (scenario !== 'product') seedG4fReviewDraft(storage, scenario)
   const needsOrderReview = ['submit-ready', 'readback-pending', 'edit', 'unsupported-edit'].includes(scenario)
-  const baseApiRead = createDefaultTechnicianApiReadPort(authSession)
+  // Product UX uses only this in-memory synthetic route adapter. Unmatched requests
+  // never enter the default HTTP transport, regardless of build-time API base URL.
+  const productRead = scenario === 'product' ? createProductMockReadTransport({
+    userId: String(reviewSession.user.id),
+    roleId: String(reviewSession.currentRole?.id ?? ''),
+  }) : null
+  const baseApiRead = productRead
+    ? createRoleScopedTechnicianApiReadAdapter(productRead, () => reviewSession.currentRole?.id ?? null, {
+        cascadeTenantId: 'synthetic-review-only',
+        codeTenantId: 'synthetic-review-only',
+        getReadAuthorizationScope: () => ({
+          sessionRef: reviewSession.sessionRef,
+          userId: reviewSession.user.id,
+          roleId: reviewSession.currentRole?.id ?? null,
+          roleVersion: reviewSession.roleVersion ?? 'synthetic-v1',
+        }),
+      })
+    : createDefaultTechnicianApiReadPort(authSession)
   const apiRead: TechnicianApiReadPort = needsOrderReview ? new Proxy(baseApiRead, {
     get(target, property) {
       if (property === 'getWorkOrderDetail') {
@@ -59,7 +79,14 @@ export function createApp() {
       return typeof value === 'function' ? value.bind(target) : value
     },
   }) : baseApiRead
-  const baseCatalog = createDefaultQuotationCatalogReadPort(authSession)
+  const baseCatalog = productRead
+    ? createQuotationCatalogReadAdapter(productRead, () => ({
+        sessionRef: reviewSession.sessionRef,
+        userId: reviewSession.user.id,
+        roleId: reviewSession.currentRole?.id ?? null,
+        roleVersion: reviewSession.roleVersion ?? 'synthetic-v1',
+      }))
+    : createDefaultQuotationCatalogReadPort(authSession)
   const catalogBase: QuotationCatalogReadPort = needsOrderReview ? {
     listPackages: async (context) => baseCatalog.listPackages(context),
     getPackageDetail: async (packageId) => baseCatalog.getPackageDetail(packageId),

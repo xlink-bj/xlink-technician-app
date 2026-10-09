@@ -12,14 +12,14 @@ Run via `pnpm run dev:uni-h5-g4f-review`; likely uni-H5 hash route `http://127.0
 
 ## Safety
 
-The isolated `review-app-g4f/main.ts` identifies product routes and injects a synthetic session and dev Mock read adapter with `https://mock-review.invalid` as the configured base. Business `TechnicianApiCommandPort` methods and both `QuotationOrderCommandPort` methods are explicitly deny-only with attempt counters. The quotation workspace receives a dev-only `productReviewOnly` prop to hide and guard official submit/confirmation. Production pages and default production composition do not pass that prop. **No real login, real customer or live API writes.**
+The isolated `review-app-g4f/main.ts` identifies product routes and injects a synthetic session and a new **strict allowlist-only** `product-read-transport.ts` wired directly into the existing Technician and Catalog mapping adapters. Unknown read shapes return an authorization/unsupported error **without any HTTP fallback**. The build's `https://mock-review.invalid` target is still configured but never used by product-review reads. Business `TechnicianApiCommandPort` methods and both `QuotationOrderCommandPort` methods are explicitly deny-only with attempt counters. The quotation workspace receives a dev-only `productReviewOnly` prop to hide and guard official submit/confirmation. Production pages and default production composition do not pass that prop. **No real login, real customer or live API writes.**
 
 ## Lead-known gaps before any technical PASS
 
 1. This is a **first code slice**, not the finished UX: list/detail are minimal synthetic navigation contexts; refine/reuse the real product presentation after an actual H5 run. Quotation is the production Action content.
 2. Verify true uni-H5 route navigation and back across all three pages (older harness had a `rootRef.value is null` issue); no static navigation substitutes or hidden error suppression.
 3. Verify that the expected synthetic work order is readable in the detail screen, catalog selections are functional and same-work-order quotation draft can be restored. Current review storage is in-memory; hard page refresh persistence is **not yet claimed**.
-4. Confirm zero external network calls, including unexpected/mock read fallthrough; prevent requests instead of assuming `.invalid` hostname is sufficient for a final Gate.
+4. Confirm zero external network calls using browser interception and fixture checks. Direct adapter source now has no HTTP fallback, but other app ports/browser resources still need explicit observation.
 5. Add scoped Playwright coverage at 375×667 and 390×844, screenshots and user-flow evidence, plus verify/MP/App builds. Dev/test mocked session is not Beta or Production validation.
 
 No merge and no G4-G.
