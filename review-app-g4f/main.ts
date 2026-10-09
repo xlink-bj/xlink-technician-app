@@ -35,7 +35,7 @@ export function createApp() {
   // Separate product-facing pages; old QA fixture routes keep their own scenario menu.
   const route = typeof window === 'undefined' ? '' : `${window.location.pathname}${window.location.hash}`
   const scenario = /\/pages\/product\/(?:orders|detail|quotation)(?:[/?#]|$)/.test(route) ? 'product' : reviewScenarioFromLocation()
-  seedG4fReviewDraft(storage, scenario)
+  if (scenario !== 'product') seedG4fReviewDraft(storage, scenario)
   const needsOrderReview = ['submit-ready', 'readback-pending', 'edit', 'unsupported-edit'].includes(scenario)
   const baseApiRead = createDefaultTechnicianApiReadPort(authSession)
   const apiRead: TechnicianApiReadPort = needsOrderReview ? new Proxy(baseApiRead, {
