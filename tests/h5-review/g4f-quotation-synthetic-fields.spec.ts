@@ -169,7 +169,7 @@ test('synthetic ExtField UX runs the real quotation workbench, validates both ph
   await expectSafe(page, diagnostics)
 })
 
-test('fast workspace leave and return restores the synthetic draft without waiting for the saved indicator', async ({ page }) => {
+test('fast synthetic panel unmount and re-entry restores the draft without waiting for the saved indicator', async ({ page }) => {
   const diagnostics = await installSafetyGuards(page)
   await openDynamicFields(page)
   const editedValue = '快速离开并返回保留的合成值'
