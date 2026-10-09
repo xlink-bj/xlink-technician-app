@@ -21,7 +21,7 @@ Result: **2/2 passed**. Local draft was observed as saved, survived same-app bac
 
 The test intercepted and rejected non-local requests while recording attempts; **0 non-local HTTP requests were attempted**, **0 uncaught page errors**, **0 `console.error` messages**, and the review counters remained `{ dispatches: 0, workflowStarts: 0, reviewBlockedCommandCalls: 0 }`. The official submit/confirmation controls were absent. No real API, login, customer data, quotation/order mutation, or workflow command was used.
 
-Screenshots are local, uncommitted evidence under `.review/g4f-commercial-mock-ux/generated/` (**14 PNGs**, seven journey states at each viewport): orders, detail, empty workbench, catalog, selected items, same-app re-entry, and hard-refresh restore. These are synthetic H5 product-review screenshots, not authenticated, native MP/App, or Owner UX approval evidence.
+Screenshots are local, uncommitted evidence under `.review/g4f-commercial-mock-ux/generated/`. The successful final run produced **14 PNGs**, seven journey states at each viewport: orders, detail, empty workbench, catalog, selected items, same-app re-entry, and hard-refresh restore. Two earlier intermediate `05-selected-item-*` captures were retained, so **16 PNGs are currently present**; no review artifacts were deleted. These are synthetic H5 product-review screenshots, not authenticated, native MP/App, or Owner UX approval evidence.
 
 Reproduce with:
 
