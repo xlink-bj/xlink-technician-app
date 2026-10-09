@@ -53,7 +53,16 @@
         data-testid="quotation-edit-state"
       />
 
-      <view v-if="composition.groups.length > 0 && !isFirstRepairPartStep" class="quotation-content__engine" data-testid="quotation-engine-readiness">
+      <view
+        v-if="productReviewReadiness && composition.groups.length > 0 && !isFirstRepairPartStep"
+        class="quotation-content__review-readiness"
+        data-testid="quotation-review-readiness"
+        role="status"
+      >
+        <text class="quotation-content__review-readiness-title">{{ productReviewReadiness.title }}</text>
+        <text class="quotation-content__review-readiness-copy">{{ productReviewReadiness.summary }}</text>
+      </view>
+      <view v-else-if="composition.groups.length > 0 && !isFirstRepairPartStep" class="quotation-content__engine" data-testid="quotation-engine-readiness">
         <AppLoadingState
           v-if="workspace.quotationEngine.state === 'loading'"
           variant="inline"
@@ -920,6 +929,8 @@ import AppStatus from '@shared/ui/AppStatus.vue'
 import { useActionWorkspaceStore } from '../action-workspace'
 import { useQuotationCompositionStore } from './composition-store'
 import { quotationAmountPresentation } from './amount-presentation'
+import { evaluateLocalQuotationPreflight } from './local-preflight'
+import { quotationReviewReadinessCopy } from './review-readiness-copy'
 import { isFirstQuotationRepairPartStep, isInitialQuotationWorkbenchEmpty } from './empty-workbench-state'
 import {
   quotationCatalogSearchMatches,
@@ -991,6 +1002,17 @@ const amountPresentation = computed(() => quotationAmountPresentation({
 }))
 const groupSubtotal = (groupId: string): number | undefined =>
   verifiedPricing.value?.fillOrder.groups.find((group) => group.groupId === groupId)?.subtotal
+
+// DEV product preview has NO source-verified effective tenant/work-order ExtFields.
+// Expose only a truthful local draft message; never use it to enable submission.
+const productReviewReadiness = computed(() => {
+  if (!import.meta.env.DEV || props.productReviewOnly !== true || !composition.draft) return null
+  return quotationReviewReadinessCopy(evaluateLocalQuotationPreflight({
+    draft: composition.draft,
+    schemaEvidence: 'unverified',
+    engineResult: workspace.quotationEngine.result,
+  }))
+})
 
 let engineRefreshTimer: ReturnType<typeof setTimeout> | undefined
 watch(
@@ -1438,6 +1460,9 @@ function configuredPackageLayerLabel(
 .quotation-content__amount-value { color: var(--app-color-text-primary); font-size: var(--app-font-value); font-weight: 800; margin-top: 2rpx; }
 .quotation-content__local-tag, .quotation-content__kind-tag { background: var(--app-color-primary-soft); border-radius: var(--app-radius-control); color: var(--app-color-primary); flex-shrink: 0; font-size: var(--app-font-meta); padding: var(--app-space-xs) var(--app-space-sm); }
 .quotation-content__local-status { margin-top: var(--app-space-sm); }
+.quotation-content__review-readiness { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4rpx 10rpx; margin-top: var(--app-space-sm); padding: 6rpx 0; }
+.quotation-content__review-readiness-title { color: var(--app-color-text-primary); font-size: var(--app-font-meta); font-weight: 750; }
+.quotation-content__review-readiness-copy { color: var(--app-color-text-secondary); font-size: var(--app-font-meta); line-height: 1.5; }
 .quotation-content__engine { background: var(--app-color-control-surface); border: 1rpx solid var(--app-color-border); border-radius: var(--app-radius-control); margin-top: var(--app-space-md); padding: var(--app-space-sm) var(--app-space-md); }
 .quotation-content__engine-total { align-items: center; display: flex; justify-content: space-between; }
 .quotation-content__engine-label, .quotation-content__engine-note { color: var(--app-color-text-secondary); display: block; font-size: var(--app-font-meta); line-height: 1.5; }
