@@ -27,6 +27,9 @@ import {
   mockSyntheticStatusCodes,
   mockQuotationCatalogServiceType,
   mockQuotationCatalogSourceType,
+  mockCommandScenarioIds,
+  mockQuotationWorkflowNodeId,
+  isMockOwnedCommand,
   mockWorkOrderActivityResponses,
   mockWorkOrderDetailResponse,
   mockWorkOrderDetailResponses,
@@ -39,6 +42,8 @@ import {
 } from '@adapters/api/mock'
 import { readFileSync } from 'node:fs'
 import { asOpaqueId } from '@shared/types'
+import { isBusinessMockQuotationPreview } from '@app/business-mock'
+import { mockActionWorkspaceScenarios } from '@app/action-workspace-harness'
 
 const mockAdapterOptions = { cascadeTenantId: 'synthetic-tenant' } as const
 
@@ -91,6 +96,43 @@ describe('G4-UX business mock runtime', () => {
     resetBusinessMockCache()
     expect(isBusinessMockDeveloperModeAvailable()).toBe(false)
     expect(isBusinessMockEnabled()).toBe(false)
+  })
+
+  it('exposes main-App quotation via the same authenticated action scenario infrastructure as Appointment', () => {
+    const scenario = mockActionWorkspaceScenarios.find((candidate) => candidate.key === 'quotation')
+    expect(scenario).toBeDefined()
+    expect(scenario?.route).toContain(encodeURIComponent(mockCommandScenarioIds.quotationFoundation))
+    expect(scenario?.route).toContain(encodeURIComponent(mockQuotationWorkflowNodeId))
+    expect(scenario?.route).toContain('action=place_order')
+    expect(scenario?.description).toContain('不创建服务器订单')
+  })
+
+  it('only enables the bounded quotation product preview for its synthetic work order in DEV Mock DATA', () => {
+    vi.stubEnv('DEV', true)
+    setBusinessMockMode('data')
+    expect(isBusinessMockQuotationPreview(mockCommandScenarioIds.quotationFoundation)).toBe(true)
+    expect(isBusinessMockQuotationPreview('ordinary-real-work-order')).toBe(false)
+    setBusinessMockMode('off')
+    expect(isBusinessMockQuotationPreview(mockCommandScenarioIds.quotationFoundation)).toBe(false)
+    setBusinessMockMode('empty')
+    expect(isBusinessMockQuotationPreview(mockCommandScenarioIds.quotationFoundation)).toBe(false)
+    vi.stubEnv('VITE_XLINK_ENVIRONMENT', 'prod')
+    resetBusinessMockCache()
+    expect(isBusinessMockQuotationPreview(mockCommandScenarioIds.quotationFoundation)).toBe(false)
+  })
+
+  it('never forwards synthetic official Order writes to real transport, even outside Mock DATA mode', () => {
+    const syntheticOrder = JSON.stringify({
+      type: 1, serviceAppointmentId: mockCommandScenarioIds.quotationFoundation,
+    })
+    expect(isMockOwnedCommand('basic/order/upsert', { order: syntheticOrder })).toBe(true)
+    expect(isMockOwnedCommand('workflow/startWorkflow/order/null/example', {
+      saId: mockCommandScenarioIds.quotationFoundation,
+    })).toBe(true)
+    expect(isMockOwnedCommand('basic/order/upsert', {
+      order: JSON.stringify({ type: 1, serviceAppointmentId: 'ordinary-real-work-order' }),
+    })).toBe(false)
+    expect(isMockOwnedCommand('basic/order/upsert', { order: 'broken-json' })).toBe(false)
   })
 
   it('requires a session before mock reads and bypasses uni.request for authenticated matches', async () => {
