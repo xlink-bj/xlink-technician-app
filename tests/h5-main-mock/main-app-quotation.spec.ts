@@ -133,6 +133,24 @@ for (const viewport of [
     await page.getByTestId('quotation-catalog-add-material-mock-catalog-material-sealant').click()
     await expect(page.getByTestId('quotation-group-section-quotation-group-2-material'))
       .toContainText('弹性密封材料（示例）')
+    await page.getByTestId('quotation-browse-quotation-group-2').click()
+    await page.getByTestId('quotation-catalog-kind-procedure').click()
+    await page.getByTestId('quotation-catalog-add-procedure-mock-catalog-procedure-seal').click()
+    await expect(page.getByTestId('quotation-group-section-quotation-group-2-procedure'))
+      .toContainText('檐口密封处理（示例）')
+    await page.getByTestId('quotation-browse-quotation-group-2').click()
+    await page.getByTestId('quotation-catalog-kind-measure').click()
+    await page.getByTestId('quotation-catalog-add-measure-mock-catalog-measure-inspection').click()
+    // Three selected lines may initially appear in compact presentation.
+    const detailsToggle = page.getByTestId('quotation-group-details-toggle-quotation-group-2')
+    if (await page.getByTestId('quotation-group-collapsed-summary-quotation-group-2').isVisible()) {
+      await detailsToggle.click()
+    }
+    await expect(page.getByTestId('quotation-group-section-quotation-group-2-material')).toBeVisible()
+    await expect(page.getByTestId('quotation-group-section-quotation-group-2-procedure'))
+      .toContainText('檐口密封处理（示例）')
+    await expect(page.getByTestId('quotation-group-section-quotation-group-2-measure'))
+      .toContainText('高处作业防护（示例）')
     await expect(page.getByTestId('quotation-group-section-quotation-group-1-package')).toBeVisible()
     await expect(page.getByTestId('quotation-group-section-quotation-group-1-material')).toBeHidden()
 
@@ -151,8 +169,15 @@ for (const viewport of [
     await expect(page.getByTestId('quotation-repair-group-quotation-group-2'))
       .toContainText('第二组：独立增项')
     await expect(page.getByTestId('quotation-group-section-quotation-group-1-package')).toBeVisible()
+    if (await page.getByTestId('quotation-group-collapsed-summary-quotation-group-2').isVisible()) {
+      await page.getByTestId('quotation-group-details-toggle-quotation-group-2').click()
+    }
     await expect(page.getByTestId('quotation-group-section-quotation-group-2-material'))
       .toContainText('弹性密封材料（示例）')
+    await expect(page.getByTestId('quotation-group-section-quotation-group-2-procedure'))
+      .toContainText('檐口密封处理（示例）')
+    await expect(page.getByTestId('quotation-group-section-quotation-group-2-measure'))
+      .toContainText('高处作业防护（示例）')
     await expect(page.getByTestId('quotation-product-demo-read-only')).toBeVisible()
     await expect(page.getByTestId('action-workspace-submit')).toHaveCount(0)
     await info.attach(`restored-two-groups-${viewport.width}`, {
