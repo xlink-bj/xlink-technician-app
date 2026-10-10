@@ -28,6 +28,11 @@ export default defineConfig({
       VITE_XLINK_AUTH_METHOD: 'phone',
       VITE_XLINK_MOCK: 'true',
       VITE_XLINK_ENABLE_REAL_WRITES: 'false',
+      // Intentionally fictitious data. CI intercepts/aborts every external
+      // request before sending; this is only a browser intent smoke test.
+      VITE_XLINK_AUTH_API_BASE_URL: 'https://xlink.fsgo365.cn',
+      VITE_XLINK_QUICK_LOGIN_PHONE: '00000000000',
+      VITE_XLINK_QUICK_LOGIN_CODE: '999999',
     },
   },
   use: {
