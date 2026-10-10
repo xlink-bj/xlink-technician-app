@@ -150,6 +150,8 @@ for (const viewport of viewports) {
     await expect(page.getByTestId('quotation-review-readiness')).toContainText('一项工序和一项材料')
     await expect(page.getByTestId('quotation-engine-readiness')).toHaveCount(0)
     await expect(page.getByTestId('action-workspace-submit')).toHaveCount(0)
+    await page.getByTestId('quotation-review-readiness').scrollIntoViewIfNeeded()
+    await capture(page, `05a-draft-incomplete-${viewport.name}.png`)
 
     // Exercise the remaining direct-selection tabs; a procedure + material
     // satisfies the currently modeled composition minimum, while measure is
@@ -159,6 +161,13 @@ for (const viewport of viewports) {
     await expect(page.getByTestId('quotation-catalog-list')).toContainText('檐口密封处理（示例）')
     await page.getByTestId('quotation-catalog-add-procedure-mock-catalog-procedure-seal').click()
     await expect(page.getByTestId('quotation-group-section-quotation-group-1-procedure')).toContainText('檐口密封处理（示例）')
+    await expect(page.getByTestId('quotation-review-readiness')).toContainText('草稿核对')
+    await expect(page.getByTestId('quotation-review-readiness')).toContainText('当前工单的附加字段尚未核验')
+    await expect(page.getByTestId('quotation-review-readiness')).toContainText('正式报价不可提交')
+    await expect(page.getByTestId('quotation-review-readiness')).toHaveCount(1)
+    await expect(page.getByTestId('quotation-engine-readiness')).toHaveCount(0)
+    await page.getByTestId('quotation-review-readiness').scrollIntoViewIfNeeded()
+    await capture(page, `05b-draft-review-${viewport.name}.png`)
 
     await page.getByTestId('quotation-browse-quotation-group-1').click()
     await page.getByTestId('quotation-catalog-kind-measure').click()
@@ -174,6 +183,28 @@ for (const viewport of viewports) {
     const continueAdding = page.getByTestId('quotation-browse-quotation-group-1')
     await continueAdding.scrollIntoViewIfNeeded()
     await expect(continueAdding).toBeVisible()
+    await expect(continueAdding).toBeInViewport()
+    const addButtonHitbox = await continueAdding.evaluate((element) => {
+      const button = element.getBoundingClientRect()
+      const footer = document.querySelector('.action-workspace-footer')?.getBoundingClientRect()
+      const hit = document.elementFromPoint(button.left + button.width / 2, button.top + button.height / 2)
+      return {
+        footerPresent: footer !== undefined,
+        aboveFooter: footer !== undefined && button.bottom <= footer.top,
+        insideViewport: button.top >= 0 && button.bottom <= window.innerHeight
+          && button.left >= 0 && button.right <= window.innerWidth,
+        minimumTouchSize: button.height >= 44 && button.width >= 44,
+        centerTappable: hit !== null && element.contains(hit),
+      }
+    })
+    expect(addButtonHitbox, '3+ item add-project button must remain visibly tappable above the fixed footer')
+      .toEqual({
+        footerPresent: true,
+        aboveFooter: true,
+        insideViewport: true,
+        minimumTouchSize: true,
+        centerTappable: true,
+      })
     await continueAdding.click()
     await expect(page.getByTestId('quotation-catalog-page')).toBeVisible()
     await page.getByTestId('quotation-catalog-close').click()
