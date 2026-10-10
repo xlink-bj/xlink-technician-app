@@ -463,6 +463,14 @@ describe('G4-UX business mock runtime', () => {
         serviceDistrict: '朝阳区',
         serviceAddress: '合成评审地址',
       },
+      {
+        id: mockCommandScenarioIds.continuousJourney,
+        displayNumber: 'MOCK-019',
+        taskLabel: '待预约',
+        customerName: '连续业务流程演示工单',
+        serviceDistrict: '朝阳区',
+        serviceAddress: '合成连续流程地址',
+      },
     ])
     expect(list.data?.items[0].id).not.toBe('mock-workflow-node-001')
     expect(requests.map((request) => request.path)).toEqual([
