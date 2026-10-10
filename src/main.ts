@@ -1,8 +1,12 @@
 import { createApplication } from '@app/bootstrap'
 
-// uni-app owns application mounting on H5, MP and App.
-// Construct one application per platform bootstrap invocation; do not
-// mount it eagerly at module import time or bypass uni-app's page router.
+// Each uni platform asks for the app instance through this factory.
+// Historical MP runtime requires an explicit root mount before page events;
+// H5's uni runtime performs its own mount and must not be mounted twice.
 export function createApp() {
-  return createApplication()
+  const application = createApplication()
+  // #ifdef MP-WEIXIN
+  application.app.mount('#app')
+  // #endif
+  return application
 }
