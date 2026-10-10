@@ -1,6 +1,7 @@
 /** Synthetic raw responses only. These fields intentionally imitate backend shapes. */
 
 import { appointmentFormDefinitionWireId } from '../appointment-contract'
+import { mockJourneyNodes, mockJourneyWorkOrderId, mockJourneyWorkflowRunId } from './journey'
 import {
   mockQuotationCatalogServiceType,
   mockQuotationCatalogSourceType,
@@ -147,12 +148,13 @@ export const mockCommandScenarioIds = {
   appointmentSuccess: 'mock-work-order-016-appointment-success',
   surveySuccess: 'mock-work-order-017-survey-success',
   quotationFoundation: 'mock-work-order-018-quotation-foundation',
+  continuousJourney: mockJourneyWorkOrderId,
 } as const
 
 export const mockQuotationWorkflowNodeId = 'mock-workflow-node-018-place-order'
 
 /** Mock DATA list order is intentionally stable for visual review. */
-export const mockListScenarioIds = [...mockDetailScenarioIds, ...mockStatusSampleIds, mockCommandScenarioIds.quotationFoundation] as const
+export const mockListScenarioIds = [...mockDetailScenarioIds, ...mockStatusSampleIds, mockCommandScenarioIds.quotationFoundation, mockCommandScenarioIds.continuousJourney] as const
 
 const mockServiceAppointmentData = {
   [mockWorkOrderIds[0]]: {
@@ -426,9 +428,31 @@ export const mockSanodeListResponse = {
       },
     },
   ],
+    {
+      _id: mockJourneyNodes.appointment,
+      state: 0,
+      nodeDef: {
+        nodeType: 'forms',
+        name: '预约上门时间',
+        formDefId: appointmentFormDefinitionWireId,
+        userChoose: ['synthetic-role'],
+      },
+      data: {
+        _id: mockJourneyWorkOrderId,
+        orderNum: 'MOCK-019',
+        name: '连续业务流程演示工单',
+        address: '合成连续流程地址',
+        district: 110105,
+        serviceType: mockQuotationCatalogServiceType,
+        exts: { sourceType: mockQuotationCatalogSourceType },
+        status: mockSyntheticStatusCodes.appointmentPending,
+        phone: '13800000019',
+        workflowRunId: mockJourneyWorkflowRunId,
+      },
+    },
   page: 1,
   rows: 20,
-  total: 11,
+  total: 12,
 } as const
 
 export const mockOrdinaryListResponse = {
@@ -781,6 +805,33 @@ export const mockWorkOrderDetailResponses = {
           name: '现场勘察',
           formDefId: mockSurveyFormDefinitionId,
           colName: 'survey',
+          userChoose: ['synthetic-role'],
+        },
+      }],
+    },
+  },
+  [mockCommandScenarioIds.continuousJourney]: {
+    data: {
+      serviceAppointment: {
+        _id: mockJourneyWorkOrderId,
+        orderNum: 'MOCK-019',
+        name: '连续业务流程演示工单',
+        address: '合成连续流程地址',
+        district: 110105,
+        serviceType: mockQuotationCatalogServiceType,
+        exts: { sourceType: mockQuotationCatalogSourceType },
+        status: mockSyntheticStatusCodes.appointmentPending,
+        phone: '13800000019',
+        workflowRunId: mockJourneyWorkflowRunId,
+      },
+      workflow: { _id: mockJourneyWorkflowRunId },
+      workflowNode: [{
+        _id: mockJourneyNodes.appointment,
+        state: 0,
+        nodeDef: {
+          nodeType: 'forms',
+          name: '预约上门时间',
+          formDefId: appointmentFormDefinitionWireId,
           userChoose: ['synthetic-role'],
         },
       }],
