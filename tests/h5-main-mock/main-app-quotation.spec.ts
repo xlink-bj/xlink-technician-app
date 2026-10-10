@@ -106,8 +106,13 @@ test('real main App Signing DEV Mock keeps official Orders distinct and all acti
   await page.getByTestId('signing-mock-order-mock-official-order-019-b').click()
   const actions = page.getByTestId('signing-mock-disabled-actions')
   await expect(actions).toBeVisible()
-  await expect(page.getByTestId('signing-mock-preview-disabled')).toBeDisabled()
-  await expect(page.getByTestId('signing-mock-apply-disabled')).toBeDisabled()
+  // uni-app renders <uni-button disabled="true">, a CUSTOM ELEMENT; native
+  // Playwright toBeDisabled() incorrectly classifies it as enabled. Assert
+  // both actual uni-app disabled prop and the shared AppButton disabled CSS.
+  for (const id of ['signing-mock-preview-disabled', 'signing-mock-apply-disabled']) {
+    await expect(page.getByTestId(id)).toHaveAttribute('disabled', 'true')
+    await expect(page.getByTestId(id)).toHaveClass(/app-button--disabled/)
+  }
   await expect(page.getByTestId('signing-mock-footer')).toContainText('无业务写入')
   await info.attach('signing-mock-390', {
     body: await page.screenshot({ fullPage: true }),
