@@ -25,3 +25,13 @@ Base: integrated Draft PR #38 exact cfe5e0a1847c2a0c14dfc0b94a9b51f6680c83f0.
 - Real main H5 Chromium: navigate from Mock Home to Review route; selection two orders, state toggle, empty/error, disabled action controls, no external network requests/browser errors. Existing 6 Mock tests + 25 legacy G4F H5 remain regression baseline.
 - CI: `pnpm run verify`, main App H5 browser, MP/App builds at **the final exact SHA**; code PASS never implies real device PASS (G5 #64), Owner Signing UX visual acceptance or Beta signing business E2E.
 - Next **business integration** requires source-verifying a signing-specific workflow node + actor entitlement and safe Contract read with tenant/ownership scope. Do not overload `place_order`, dynamically query Contracts without authorization, or merge PRs.
+
+## DEV main-App journey handoff (no implicit official Order)
+
+The ordinary MOCK-019 Appointment → Survey → Quotation **local draft** page now
+shows an explicit *developer-only* navigation to the **independent** Signing
+Mock scenario set. The page's copy states that the local draft was not submitted
+and does not create an Order/Contract. Browser regression verifies this route in
+the same main H5 journey with no outside network intent. The production
+Workflow Runtime still has **no signing action mapping**, and no real
+Quote→Order→Contract handoff is asserted.

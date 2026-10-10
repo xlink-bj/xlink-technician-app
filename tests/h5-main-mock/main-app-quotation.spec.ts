@@ -380,6 +380,15 @@ test('one MOCK-019 WorkOrder progresses Appointment → Survey → Quotation wit
   await expect(page.getByTestId('mock-journey-context-appointment')).toContainText('P1B预约备注：现场先确认屋面渗漏')
   await expect(page.getByTestId('mock-journey-context-survey')).toContainText('14.5')
   await expect(page.getByTestId('quotation-product-demo-read-only')).toBeVisible()
+  // The synthetic official Order fixtures are NOT derived from this local
+  // quotation draft. The review link explicitly states that boundary.
+  const signingLink = page.getByTestId('mock-journey-signing-review')
+  await expect(signingLink).toContainText('本机报价未提交')
+  await signingLink.click()
+  await expect(page).toHaveURL(/pages\/work-orders\/signing-mock-review/)
+  await expect(page.getByTestId('signing-mock-orders')).toContainText('模拟正式订单 A')
+  await expect(page.getByTestId('signing-mock-no-contract')).toBeVisible()
+  await expect(page.getByTestId('signing-mock-footer')).toContainText('无业务写入')
   expect(evidence.externalIntents).toEqual([])
   expect(evidence.localFailures).toEqual([])
   expect(evidence.pageErrors).toBe(0)
