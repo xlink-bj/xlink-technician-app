@@ -106,7 +106,7 @@ describe('G4-UX Detail D3 workflow projection', () => {
             title: scenario.title,
             actionIntent: scenario.action,
             domainPolicy: { allowed: true, action: scenario.action },
-            execution: 'disabled_read_only',
+            execution: 'action' in scenario && scenario.action === 'place_order' ? 'enabled' : 'disabled_read_only',
           },
         })
       } else {
@@ -356,16 +356,16 @@ describe('G4-UX Detail D3 workflow projection', () => {
       capabilityNames: [],
     } as const
     const expected = [
-      [mockDetailScenarioIds[0], 'orange'],
-      [mockDetailScenarioIds[1], 'green'],
-      [mockDetailScenarioIds[2], 'blue'],
+      [mockDetailScenarioIds[0], 'orange', 'disabled_read_only'],
+      [mockDetailScenarioIds[1], 'green', 'enabled'],
+      [mockDetailScenarioIds[2], 'blue', 'disabled_read_only'],
     ] as const
 
-    for (const [id, tone] of expected) {
+    for (const [id, tone, execution] of expected) {
       const detail = await readScenario(id)
       expect(detailWorkflowUiProjectionFor(detail.data ?? null, detailSession).currentTask).toMatchObject({
         tone,
-        execution: 'disabled_read_only',
+        execution,
       })
     }
   })

@@ -61,6 +61,35 @@ The MP-WEIXIN compile check is available locally with:
 pnpm run build:mp-weixin
 ```
 
+## Beta read-only contract discovery
+
+For local inspection-contract discovery, use the R1-compatible Beta login
+helper. It logs in with `index/phoneLogin.do`, keeps the returned opaque
+session in memory, and performs only authenticated reads. The helper rejects
+non-Beta hosts and never prints or persists the session value.
+
+```sh
+pnpm run inspect:inspection-contract:beta
+```
+
+The command automatically reuses the App quick-login configuration from the
+local `.env.local`: `VITE_XLINK_QUICK_LOGIN_PHONE`, `VITE_XLINK_AUTH_TENANT`,
+`VITE_XLINK_AUTH_METHOD`, and the optional
+`VITE_XLINK_QUICK_LOGIN_CODE`. It is available only when
+`VITE_XLINK_ENVIRONMENT` is explicitly non-production, and uses the same
+`999999` default code as the App. Phone and verification code are read only
+from the local App configuration; this command intentionally has no CLI
+credential injection path.
+
+Use `XLINK_BETA_LOGIN_METHOD=password` and `XLINK_BETA_PASSWORD` for the
+password variant; the password is also environment-only. An explicit
+`--work-order=<safe-id>` is required for discovery, and `--node` is required
+when the work order has more than one eligible Inspection node. `--output` is
+available for a controlled capture. The output is sanitized before it can be
+committed; no real write, upload, customer call, or Production request is part
+of this command. The inspector never selects a work order by list position,
+display label, historical form identity, or Mock fixture.
+
 The source ownership skeleton is under `src/`: `app` contains bootstrap,
 `shared` contains cross-cutting types/config/state/UI boundaries, `adapters`
 contains infrastructure boundaries, `runtimes` contains the future workflow

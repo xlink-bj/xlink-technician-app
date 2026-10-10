@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240">
+  <rect width="240" height="240" rx="24" fill="#eaf2ff"/>
+  <rect x="28" y="32" width="184" height="136" rx="16" fill="#2f80ed"/>
+  <circle cx="76" cy="78" r="18" fill="#ffd166"/>
+  <path d="M42 146 96 98l34 28 24-20 44 40H42Z" fill="#9dd7a8"/>
+  <text x="120" y="204" fill="#1d3557" font-family="Arial,sans-serif" font-size="22" text-anchor="middle">MOCK UPLOADED</text>
+</svg>

@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import { isProductionReadOnlyRuntime } from '@shared/config'
 
 import type {
   AcceptOrderInput,
@@ -99,6 +100,11 @@ export const useWorkOrderListStore = defineStore('workOrderList', () => {
   }
 
   async function dialContact(item: WorkOrderSummary): Promise<CapabilityResult<void>> {
+    if (isProductionReadOnlyRuntime()) {
+      const result = contactFailure('unavailable', 'Production read-only mode disables customer contact actions')
+      contactState.value = result.state
+      return result
+    }
     const contact = item.contact
     if (!contact?.normalizedPhone) {
       const result = contactFailure('unavailable', 'A direct customer phone contact is not available')
@@ -141,6 +147,7 @@ export const useWorkOrderListStore = defineStore('workOrderList', () => {
     input: AcceptOrderInput,
     confirmed = false,
   ): Promise<OperationSnapshot<void> | { readonly state: 'confirmation_required' }> {
+    if (isProductionReadOnlyRuntime()) return failure('unsupported_capability', 'Production read-only mode disables Work Order mutations')
     if (!commandApi) return failure('server_terminal', 'Work Order command API is not configured')
     if (acceptInFlightId.value) return failure('validation', 'Accept order is already in progress')
 

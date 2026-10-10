@@ -1,0 +1,135 @@
+{
+  "evidence": {
+    "mode": "SYNTHETIC_CONTRACT_FIXTURE",
+    "activeSchema": false,
+    "sourceRevisions": {
+      "r1": "6c0a97b26bcbcaee81ac4e1dfd627c6e8e70e29d",
+      "backend": "5fc008d32e771205260f120621c1c4fc62d0824e"
+    }
+  },
+  "values": {
+    "fixtureNote": "synthetic note"
+  },
+  "existingOrderExts": {
+    "fixtureUnknownLegacyKey": { "opaque": true }
+  },
+  "rows": [
+    {
+      "rowId": "synthetic-row-mode",
+      "name": "fixtureMode",
+      "nameDisp": "Synthetic mode",
+      "colName": "order",
+      "state": 1,
+      "showList": [4],
+      "type": "radio",
+      "required": "1",
+      "order": 10,
+      "frontEndConfig": { "showType": "placeOrder" }
+    },
+    {
+      "rowId": "synthetic-row-shared-place",
+      "name": "fixtureSharedKey",
+      "nameDisp": "Shared key in placeOrder",
+      "colName": "order",
+      "state": 1,
+      "showList": [4],
+      "type": "text",
+      "required": "0",
+      "serviceType": ["synthetic-service-type"],
+      "frontEndConfig": { "showType": "placeOrder" }
+    },
+    {
+      "rowId": "synthetic-row-shared-submit",
+      "name": "fixtureSharedKey",
+      "nameDisp": "Shared key in submitOrder",
+      "colName": "order",
+      "state": 1,
+      "showList": [4],
+      "type": "text",
+      "required": "0",
+      "serviceType": ["synthetic-service-type"],
+      "personType": "synthetic-person-type",
+      "frontEndConfig": { "showType": "submitOrder" }
+    },
+    {
+      "rowId": "synthetic-row-conditional",
+      "name": "fixtureConditional",
+      "nameDisp": "Conditional field",
+      "colName": "order",
+      "state": 1,
+      "showList": [4],
+      "type": "text",
+      "required": "1",
+      "frontEndConfig": {
+        "showType": "placeOrder",
+        "showField": "fixtureMode",
+        "showValue": "enabled"
+      }
+    },
+    {
+      "rowId": "synthetic-row-dispensable",
+      "name": "fixtureDispensable",
+      "nameDisp": "Dispensable required field",
+      "colName": "order",
+      "state": 1,
+      "showList": [4],
+      "type": "textarea",
+      "required": "1",
+      "frontEndConfig": {
+        "showType": "placeOrder",
+        "dispensableField": "fixtureMode",
+        "dispensableValue": "optional"
+      }
+    },
+    {
+      "rowId": "synthetic-row-code",
+      "name": "fixtureCode",
+      "nameDisp": "Code option field",
+      "colName": "order",
+      "state": 1,
+      "showList": [4],
+      "type": "code",
+      "valueOption": "fixtureCodeProvider",
+      "frontEndConfig": { "showType": "placeOrder" }
+    },
+    {
+      "rowId": "synthetic-row-cascade",
+      "name": "fixtureCascade",
+      "nameDisp": "Cascade field",
+      "colName": "order",
+      "state": 1,
+      "showList": [4],
+      "type": "cascade",
+      "valueOption": "fixtureCascadeProvider",
+      "frontEndConfig": { "showType": "placeOrder" }
+    },
+    {
+      "rowId": "synthetic-row-biz-select",
+      "name": "fixtureBusinessSelect",
+      "nameDisp": "Untrusted business selector",
+      "colName": "order",
+      "state": 1,
+      "showList": [4],
+      "type": "bizSelect",
+      "frontEndConfig": {
+        "showType": "placeOrder",
+        "requestUrl": "/synthetic/untrusted-provider",
+        "labelField": "name",
+        "valueField": "_id"
+      }
+    },
+    {
+      "rowId": "synthetic-row-formula",
+      "name": "fixtureFormula",
+      "nameDisp": "Untrusted formula field",
+      "colName": "order",
+      "state": 1,
+      "showList": [4],
+      "type": "text",
+      "frontEndConfig": {
+        "showType": "placeOrder",
+        "evaluate": "synthetic expression"
+      }
+    }
+  ]
+}

@@ -1,4 +1,9 @@
 import type { SessionRef } from '@shared/types'
+import {
+  isProductionReadOnlyReadAllowed,
+  isProductionReadOnlyTarget,
+  isProductionRoleMutationPath,
+} from '@shared/config'
 
 import {
   ApiReadTransportError,
@@ -15,6 +20,8 @@ export interface UniApiReadTransportOptions {
   readonly request?: UniApiRequestExecutor
   readonly timeoutMs?: number
   readonly mockLatencyMs?: number
+  /** When Production was used for local authentication, no business network fallback is allowed. */
+  readonly blockRealRequests?: boolean
   /** Supplies the real authenticated actor for bounded mock visibility markers. */
   readonly getMockActor?: () => MockReadActor | null
 }
@@ -76,6 +83,27 @@ export function createUniApiReadTransport(options: UniApiReadTransportOptions): 
 
   return {
     async execute(input: ApiReadRequest): Promise<unknown> {
+      const productionReadOnly = isProductionReadOnlyTarget(
+        import.meta.env.VITE_XLINK_ENVIRONMENT,
+        options.apiBaseUrl,
+      )
+
+      if (productionReadOnly && isProductionRoleMutationPath(input.path)) {
+        // The backend persists Account.permissionRoleId when a single role is
+        // selected. It is therefore not a read-only operation in Production.
+        throw new ApiReadTransportError(
+          'Production read-only mode blocks the persistent role-selection endpoint',
+          'unsupported_capability',
+        )
+      }
+
+      if (productionReadOnly && !isProductionReadOnlyReadAllowed(input)) {
+        throw new ApiReadTransportError(
+          'Production read-only mode blocks API reads without a verified safe route contract',
+          'unsupported_capability',
+        )
+      }
+
       const sessionRef = options.getSessionRef()
       if (!sessionRef) {
         throw new ApiReadTransportError('Authenticated session is required for API reads', 'session_invalid')
@@ -92,6 +120,13 @@ export function createUniApiReadTransport(options: UniApiReadTransportOptions): 
       if (mockResponse !== null) return mockResponse
       if (isMockOwnedRead(input.path, input.body ?? input.query ?? {})) {
         throw new ApiReadTransportError('Synthetic mock read is disabled', 'server_terminal')
+      }
+
+      if (options.blockRealRequests === true) {
+        throw new ApiReadTransportError(
+          'Authenticated Mock-only development mode blocks all real business API reads',
+          'unsupported_capability',
+        )
       }
 
       const header: Record<string, string> = {

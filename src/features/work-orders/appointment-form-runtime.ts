@@ -44,7 +44,8 @@ const appointmentVisitOptionValues = {
 
 function schemaFor(field: AppointmentFormFieldRead): FormFieldSchema {
   return {
-    key: field.key,
+    fieldId: field.fieldId,
+    valueKey: field.valueKey,
     type: field.type,
     required: field.required,
     readOnly: field.readOnly,
@@ -60,10 +61,10 @@ function runtimeFieldState(
 }
 
 export function appointmentVisitIntentFor(form: AppointmentFormRead): AppointmentVisitIntent {
-  const needField = form.fields.find((field) => field.key === 'need')
+  const needField = form.fields.find((field) => field.valueKey === 'need')
   if (!needField) return 'unknown'
 
-  const rawValue = form.values[needField.key]
+  const rawValue = form.values[needField.valueKey]
   if (rawValue === undefined || rawValue === null || rawValue === '') return 'unknown'
   const value = String(rawValue).trim()
   if (!needField.options?.some((option) => option.value === value)) return 'unknown'
@@ -78,7 +79,7 @@ function appointmentFieldApplicabilityFromRuntime(
   runtime: EffectiveFieldState,
 ): AppointmentFieldApplicability {
   if (runtime.capability === 'UNSUPPORTED' || !runtime.visible) return 'not_applicable'
-  if (field.key === 'datetime' && appointmentVisitIntentFor(form) === 'visit_deferred') return 'not_applicable'
+  if (field.valueKey === 'datetime' && appointmentVisitIntentFor(form) === 'visit_deferred') return 'not_applicable'
   return 'applicable'
 }
 
@@ -95,7 +96,7 @@ export function appointmentFieldApplicabilityFor(
 }
 
 export function appointmentDatetimeApplicableFor(form: AppointmentFormRead): boolean {
-  const field = form.fields.find((candidate) => candidate.key === 'datetime')
+  const field = form.fields.find((candidate) => candidate.valueKey === 'datetime')
   return field ? appointmentFieldApplicabilityFor(form, field) === 'applicable' : false
 }
 
@@ -134,16 +135,16 @@ export function appointmentFieldRolesFor(
   const fields = form.fields
     .map((field) => effectiveRuntimeFieldFor(field, form))
     .filter((field) => field.runtime.capability !== 'UNSUPPORTED')
-  const need = fields.find((field) => field.key === 'need')
-  const datetime = fields.find((field) => field.key === 'datetime')
-  const note = fields.find((field) => field.key === 'note')
-  const knownKeys = new Set(['need', 'datetime', 'note'])
+  const need = fields.find((field) => field.valueKey === 'need')
+  const datetime = fields.find((field) => field.valueKey === 'datetime')
+  const note = fields.find((field) => field.valueKey === 'note')
+  const knownValueKeys = new Set(['need', 'datetime', 'note'])
 
   return {
     ...(need ? { need } : {}),
     ...(datetime ? { datetime } : {}),
     ...(note ? { note } : {}),
-    extras: fields.filter((field) => !knownKeys.has(field.key) && field.runtime.visible),
+    extras: fields.filter((field) => !knownValueKeys.has(field.valueKey) && field.runtime.visible),
   }
 }
 
@@ -163,7 +164,7 @@ function resultFromSubmission(
       error: createOperationError(
         result.reason === 'unsupported_capability' ? 'unsupported_capability' : 'validation',
         result.message,
-        { reason: result.fieldKey },
+        { reason: result.fieldId ?? result.valueKey },
       ),
     }
   }
@@ -194,11 +195,11 @@ export function normalizeAppointmentForm(
     if (applicability === 'not_applicable') {
       // The stored draft value remains in `form.values`, but it is not an
       // effective value and must not reach validation or submission.
-      fieldContexts[field.key] = { fixedRequired: false }
+      fieldContexts[field.fieldId] = { fixedRequired: false }
       continue
     }
-    const value = form.values[field.key]
-    if (value !== undefined) values[field.key] = value
+    const value = form.values[field.valueKey]
+    if (value !== undefined) values[field.valueKey] = value
   }
 
   return resultFromSubmission(
@@ -230,7 +231,7 @@ export function normalizeAppointmentFieldValue(
   values: Readonly<Record<string, AppointmentFieldValue>>,
 ): OperationSnapshot<AppointmentFieldValue> {
   const schema = schemaFor(field)
-  const state = evaluateFieldState(schema, { values: { ...values, [field.key]: value } })
+  const state = evaluateFieldState(schema, { values: { ...values, [field.valueKey]: value } })
   if (state.capability === 'UNSUPPORTED') {
     return {
       state: 'failed_terminal',

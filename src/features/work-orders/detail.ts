@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import { isProductionReadOnlyRuntime } from '@shared/config'
 
 import type {
   NavigationPort,
@@ -224,6 +225,12 @@ export const useWorkOrderDetailStore = defineStore('workOrderDetail', () => {
   }
 
   async function dialContact(): Promise<CapabilityResult<void>> {
+    if (isProductionReadOnlyRuntime()) {
+      const result = capabilityFailure('unavailable', 'Production read-only mode disables customer contact actions')
+      contactState.value = result.state
+      contactReason.value = result.reason
+      return result
+    }
     const contact = detail.value?.contact
     if (!contact?.normalizedPhone) {
       const result = capabilityFailure(

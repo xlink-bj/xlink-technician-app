@@ -20,6 +20,8 @@ export interface CurrentTaskProjection {
   readonly title: string
   readonly category: WorkflowNodeCategory
   readonly actionIntent: DetailWorkflowActionIntent
+  readonly formPurpose?: WorkflowNodeRead['formPurpose']
+  readonly formFieldIdsReadOnly?: readonly string[]
   readonly domainPolicy: Pick<WorkflowActionPolicyDecision, 'action' | 'allowed' | 'reason'>
   /** Runtime-owned execution authorization; UI must not infer this from intent. */
   readonly execution: 'enabled' | 'disabled_read_only'
@@ -37,9 +39,11 @@ export function workflowNodeMetadataFromRead(node: WorkflowNodeRead): WorkflowNo
     id: node.id,
     category: node.category,
     lifecycle: node.lifecycle,
+    ...(node.formDefinitionId ? { formDefinitionId: node.formDefinitionId } : {}),
     ...(node.handlers ? { handlers: node.handlers } : {}),
     ...(node.visibility ? { visibility: node.visibility } : {}),
     ...(node.formPurpose ? { formPurpose: node.formPurpose } : {}),
+    ...(node.formFieldIdsReadOnly ? { formFieldIdsReadOnly: node.formFieldIdsReadOnly } : {}),
     ...(node.isSystem ? { isSystem: node.isSystem } : {}),
     ...(node.isSentinel ? { isSentinel: node.isSentinel } : {}),
   }
@@ -113,8 +117,16 @@ export function projectDetailWorkflow(
       title: candidate.title,
       category: candidate.node.category,
       actionIntent: candidate.actionIntent,
+      ...(candidate.node.formPurpose ? { formPurpose: candidate.node.formPurpose } : {}),
+      ...(candidate.node.formFieldIdsReadOnly ? { formFieldIdsReadOnly: candidate.node.formFieldIdsReadOnly } : {}),
       domainPolicy: policySummary(candidate.domainPolicy),
-      execution: candidate.actionIntent === 'set_appointment' ? 'enabled' : 'disabled_read_only',
+      // Workflow policy owns placeOrder eligibility; only form-backed actions
+      // require a form definition before their content can execute.
+      execution: candidate.actionIntent === 'set_appointment'
+        || candidate.actionIntent === 'place_order'
+        || Boolean(candidate.node.formDefinitionId)
+        ? 'enabled'
+        : 'disabled_read_only',
     },
   }
 }

@@ -1,3 +1,4 @@
+import type { FormFieldPresentation, FormFieldValue, FormFieldVisibility, FormPurpose } from '@shared/ports/api'
 import type {
   FormDataId,
   FormDefinitionId,
@@ -21,15 +22,33 @@ export type AppointmentFieldValue = string | number | boolean | null
 export interface AppointmentFormOption {
   readonly value: string
   readonly label: string
+  readonly children?: readonly AppointmentFormOption[]
 }
 
 export interface AppointmentFormFieldRead {
-  readonly key: string
+  /** Stable ExtField row identity; never used as a FormData value key. */
+  readonly fieldId: string
+  /** Backend business field name used in FormData values. May repeat across rows. */
+  readonly valueKey: string
   readonly label: string
   readonly type: string
   readonly required: boolean
   readonly readOnly: boolean
+  readonly order?: number
+  readonly state?: number | string
+  readonly fixed?: string | number | boolean
+  readonly operationType?: string | number
+  readonly showList?: readonly (string | number)[]
+  /** Backend `multiple` flag; a multi-value control must not be rendered as a scalar choice. */
+  readonly multiple?: boolean
   readonly options?: readonly AppointmentFormOption[]
+  /** Adapter-normalized conditional visibility; raw backend metadata stays out of UI. */
+  readonly visibility?: FormFieldVisibility
+  /** Adapter-normalized option provider identity, when evidenced by the field. */
+  readonly valueOption?: string
+  readonly presentation?: FormFieldPresentation
+  /** Explicit capability boundary for metadata the current Runtime cannot safely interpret. */
+  readonly unsupportedReason?: string
 }
 
 export interface AppointmentFormRead {
@@ -38,6 +57,44 @@ export interface AppointmentFormRead {
   /** Adapter-normalized definition identity used to scope local Action drafts. */
   readonly definitionId?: FormDefinitionId
   readonly dataId?: FormDataId
+  readonly purpose?: FormPurpose
+}
+
+/** Generic dynamic-form read model shared by future Action Content. */
+export interface DynamicFormRead {
+  readonly fields: readonly AppointmentFormFieldRead[]
+  readonly values: Readonly<Record<string, FormFieldValue>>
+  readonly definitionId?: FormDefinitionId
+  readonly dataId?: FormDataId
+  readonly workflowRunId?: WorkflowRunId
+  readonly purpose?: FormPurpose
+  /** Node-instance readonly context, kept separate from the field contract. */
+  readonly workflowReadOnlyFieldIds?: readonly string[]
+}
+
+export interface ReadDynamicFormInput {
+  readonly definitionId: FormDefinitionId
+  readonly formDataId?: FormDataId
+  readonly expectedWorkflowRunId?: WorkflowRunId
+  readonly workflowReadOnlyFieldIds?: readonly string[]
+}
+
+export interface SaveDynamicFormInput {
+  readonly workOrderId: WorkOrderId
+  readonly workflowNodeId: WorkflowNodeRuntimeId
+  readonly workflowRunId?: WorkflowRunId
+  readonly definitionId: FormDefinitionId
+  readonly purpose?: FormPurpose
+  readonly formDataId?: FormDataId
+  readonly values: Readonly<Record<string, FormFieldValue>>
+}
+
+export interface CompleteWorkflowNodeInput {
+  readonly workOrderId: WorkOrderId
+  readonly workflowNodeId: WorkflowNodeRuntimeId
+  readonly workflowRunId?: WorkflowRunId
+  readonly definitionId: FormDefinitionId
+  readonly formDataId: FormDataId
 }
 
 export type AppointmentVisitIntent = 'visit_required' | 'visit_deferred' | 'unknown'
@@ -58,5 +115,20 @@ export interface TechnicianApiCommandPort {
   readAppointmentForm(input: {
     readonly formDataId?: FormDataId
   }): Promise<OperationSnapshot<AppointmentFormRead>>
+  /** Optional while older test/application compositions are appointment-only. */
+  readDynamicForm?(input: ReadDynamicFormInput): Promise<OperationSnapshot<DynamicFormRead>>
+  saveDynamicForm?(input: SaveDynamicFormInput): Promise<OperationSnapshot<FormDataId>>
+  completeWorkflowNode?(input: CompleteWorkflowNodeInput): Promise<OperationSnapshot<void>>
   submitAppointment(input: SubmitAppointmentInput): Promise<OperationSnapshot<void>>
+}
+
+/** Deliberately separate from catalog reads and parent Workflow Runtime commands. */
+export interface QuotationOrderCommandPort {
+  startOrderWorkflow(input: {
+    readonly workOrderId: WorkOrderId
+    readonly workflowDefinitionId: import('@shared/types').WorkflowDefinitionId
+  }): Promise<OperationSnapshot<string>>
+  upsertOfficialOrder(input: {
+    readonly order: Readonly<Record<string, unknown>>
+  }): Promise<OperationSnapshot<string>>
 }

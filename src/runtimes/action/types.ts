@@ -1,4 +1,5 @@
 import type { FormDefinitionId, FormDataId, UserId, WorkOrderId, WorkflowNodeRuntimeId } from '@shared/types'
+import type { FormPurpose } from '@shared/ports'
 import type { WorkflowActionIntent } from '@runtimes/workflow'
 
 /** Content kinds are an explicit plug-in boundary for future Actions. */
@@ -48,6 +49,8 @@ export interface ActionIdentity {
 export interface ActionDescriptor extends ActionIdentity {
   readonly title: string
   readonly execution: ActionExecution
+  /** Semantic form identity resolved by the Adapter, not inferred from intent. */
+  readonly formPurpose?: FormPurpose
 }
 
 export interface ActionDraftIdentity {
@@ -73,6 +76,7 @@ export function actionContentKindForIntent(intent: WorkflowActionIntent): Action
     case 'set_appointment':
     case 'interact_with_form':
       return 'dynamic_form'
+    case 'place_order':
     case 'quotation':
       return 'quotation'
     case 'construction':

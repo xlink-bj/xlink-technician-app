@@ -1,0 +1,160 @@
+{
+  "schemaVersion": 1,
+  "environment": "beta",
+  "domain": "survey_onsite_checkin",
+  "semanticIdentity": "survey_lbs_onsite_checkin_contract",
+  "sanitized": true,
+  "governance": {
+    "status": "DEFERRED_NON_BLOCKING",
+    "owner": "PRODUCT",
+    "blocksFrontendEngineering": false,
+    "blocksProductionReadiness": false,
+    "reason": "The P0 requirement is retained, but Product governance defers Survey LBS onsite check-in. Historical Punch/Sign/gpsPoint research remains evidence only; no LBS implementation is authorized."
+  },
+  "businessRequirement": {
+    "priority": "P0",
+    "locationRequired": true,
+    "systemTimeRequired": true,
+    "manualCheckIn": true,
+    "appointmentNearAutomatic": "UNKNOWN_NEEDS_BUSINESS_CONFIG",
+    "output": "onsite_check_in_record",
+    "sequence": [
+      "appointment_confirmation",
+      "survey_onsite_check_in",
+      "survey",
+      "quotation"
+    ],
+    "status": "DEFERRED_NON_BLOCKING"
+  },
+  "domainSeparation": {
+    "survey": "onsite survey / 勘查",
+    "inspectionAppointment": "inspection / 巡检",
+    "photoLocationEvidence": "media watermark evidence only",
+    "checkInBusinessRecord": "separate business record",
+    "sameLocationPortAllowed": true,
+    "sharedBusinessState": false,
+    "sharedMediaQueueState": false
+  },
+  "ownership": {
+    "recordOwner": "UNKNOWN",
+    "status": "UNKNOWN",
+    "surveyEntityHasGpsPoint": false,
+    "legacyCandidates": [
+      {
+        "owner": "PunchMsg/PunchDetail/PunchPeriod",
+        "status": "LEGACY_GENERIC_NOT_PROVEN_FOR_SURVEY"
+      },
+      {
+        "owner": "Sign/SignDetail/SignAppoint",
+        "status": "LEGACY_GENERIC_NOT_PROVEN_FOR_SURVEY"
+      },
+      {
+        "owner": "ServiceAppointment.gpsPoint",
+        "status": "LOCATION_FIELD_NOT_CHECKIN_RECORD"
+      },
+      {
+        "owner": "InspectionAppointment.gpsPoint",
+        "status": "WRONG_DOMAIN_LOCATION_FIELD"
+      }
+    ]
+  },
+  "command": {
+    "endpoint": "UNKNOWN",
+    "method": "UNKNOWN",
+    "request": {},
+    "response": "UNKNOWN",
+    "status": "UNKNOWN_NOT_PROVEN_FOR_SURVEY",
+    "legacyEvidence": [
+      {
+        "endpoint": "/biz/punch/dot",
+        "status": "FOUND_LEGACY_GENERIC_ENDPOINT_NOT_PROVEN_FOR_SURVEY",
+        "request": ["latitude", "longitude", "optional ts"],
+        "asyncDispatch": true
+      },
+      {
+        "endpoint": "/biz/sign/signDetail/upsert",
+        "status": "FOUND_LEGACY_GENERIC_ENDPOINT_NOT_PROVEN_FOR_SURVEY",
+        "request": ["SignDetail JSON"]
+      }
+    ]
+  },
+  "location": {
+    "source": "LocationPort",
+    "coordinateSystem": "UNKNOWN",
+    "accuracyPolicy": "UNKNOWN",
+    "geofenceOrRadius": "UNKNOWN_NO_INVENTED_THRESHOLD",
+    "fabricatedCoordinates": false,
+    "status": "UNKNOWN"
+  },
+  "time": {
+    "deviceCaptureTime": "evidence_only",
+    "authoritativeCheckInTime": "UNKNOWN",
+    "authority": "UNKNOWN",
+    "legacyEvidence": "PunchController creates server-side createTime when ts is absent, but accepts caller-provided ts; not adopted"
+  },
+  "manual": {
+    "status": "DEFERRED_NON_BLOCKING",
+    "flow": [
+      "user_intent",
+      "LocationPort.captureCurrentLocation",
+      "validate",
+      "command",
+      "authoritative_reread"
+    ],
+    "saveSurvey": false,
+    "completeWorkflow": false,
+    "createQuote": false
+  },
+  "appointmentNear": {
+    "trigger": "UNKNOWN",
+    "timeWindow": "UNKNOWN",
+    "distanceRule": "UNKNOWN",
+    "status": "UNKNOWN_NEEDS_BUSINESS_CONFIG",
+    "autoImplemented": false,
+    "backgroundMutation": false,
+    "legacyPunchDistanceEvidence": "generic punch thresholds exist but are not Survey appointment-near semantics"
+  },
+  "idempotency": {
+    "status": "UNKNOWN",
+    "singleFlight": "NOT_IMPLEMENTED_FOR_THIS_SLICE",
+    "reconciliation": "UNKNOWN",
+    "blindRetry": false,
+    "legacyPunchImmediateAckAsync": true
+  },
+  "offline": {
+    "businessMutationQueue": false,
+    "locationEvidenceRetention": "not authoritative / not implemented",
+    "reason": "requirement does not prove queued check-in mutation"
+  },
+  "realExecution": {
+    "realWritesEnabled": false,
+    "betaWrites": "NONE",
+    "productionWrites": "NONE",
+    "mockCommand": "NOT_IMPLEMENTED_BEFORE_CONTRACT_PROOF"
+  },
+  "deferred": [
+    "Survey record owner",
+    "Survey check-in command/API and exact request/response",
+    "coordinate system/accuracy",
+    "server authoritative timestamp",
+    "appointment-near window/geofence/trigger",
+    "manual mutation lifecycle",
+    "automatic foreground/background semantics",
+    "idempotency/reconciliation",
+    "offline policy"
+  ],
+  "evidence": {
+    "currentRequirement": "user-provided Yuhong requirement",
+    "legacySources": [
+      "xlink-cloud-backend/.../PunchController.java",
+      "xlink-cloud-backend/.../PunchServiceImpl.java",
+      "xlink-cloud-backend/.../PunchMsg.java",
+      "xlink-cloud-backend/.../PunchPeriod.java",
+      "xlink-cloud-backend/.../SignDetail.java",
+      "xlink-cloud-backend/.../SignController.java",
+      "xlink-cloud-backend/.../SurveyController.java"
+    ],
+    "authority": "Yuhong requirement is current product requirement; legacy backend/R1 is supporting evidence only",
+    "rawProductionPayloadPersisted": false
+  }
+}
