@@ -21,6 +21,7 @@ export default defineConfig({
     stdout: 'pipe',
     stderr: 'pipe',
     env: {
+      VITE_XLINK_H5_OFFLINE_SMOKE: 'true',
       VITE_XLINK_ENVIRONMENT: 'dev',
       VITE_XLINK_PLATFORM: 'mp-weixin',
       VITE_XLINK_API_BASE_URL: 'https://example.invalid',
