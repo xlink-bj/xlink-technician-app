@@ -2,7 +2,7 @@
   <view v-if="!authorized" class="signing-review-blocked" data-testid="signing-mock-blocked">
     <text class="signing-review-title">签约演示不可用</text>
     <text class="signing-review-help">仅开发环境的隔离 Mock 账号可查看；不会连接真实合同或签名服务。</text>
-    <AppButton variant="secondary" @tap="back">返回</AppButton>
+    <navigator class="signing-review-back" open-type="navigateBack" :delta="1">返回</navigator>
   </view>
   <ActionWorkspaceShell
     v-else
@@ -89,7 +89,7 @@
 
     <template #actions>
       <text class="signing-review-footer" data-testid="signing-mock-footer">只读 Mock · 无业务写入 / 无流程推进</text>
-      <AppButton block variant="secondary" @tap="back">返回工单演示入口</AppButton>
+      <navigator class="signing-review-back" open-type="navigateBack" :delta="1">返回工单演示入口</navigator>
     </template>
   </ActionWorkspaceShell>
 </template>
@@ -103,7 +103,7 @@ import AppButton from '@shared/ui/AppButton.vue'
 import {
   readSigningMock, signingMockOrderIds, signingMockScenarios, signingMockStateLabel,
   type SigningMockScenario,
-} from '@features/work-orders/signing/mock-signing'
+} from '@app/signing-mock-review'
 
 const session = useSessionStore()
 const routeId = ref('')
@@ -131,11 +131,11 @@ function chooseOrder(orderId: string): void {
   selectedOrderId.value = orderId
   scenario.value = 'normal'
 }
-function back(): void { uni.navigateBack({ delta: 1 }) }
 </script>
 
 <style>
 .signing-review-page { background: var(--app-color-page); }
+.signing-review-back { border: 1rpx solid var(--app-color-border); border-radius: var(--app-radius-card); color: var(--app-color-primary); display: block; font-size: 26rpx; font-weight: 700; padding: 20rpx; text-align: center; }
 .signing-review-lead, .signing-review-section { display: flex; flex-direction: column; gap: 16rpx; margin: 24rpx; padding: 28rpx; }
 .signing-review-eyebrow { color: var(--app-color-primary); font-size: 22rpx; font-weight: 700; }
 .signing-review-title { color: var(--app-color-text-primary); font-size: 36rpx; font-weight: 800; }

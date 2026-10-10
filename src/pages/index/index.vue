@@ -313,7 +313,7 @@ import {
   type BusinessMockMode,
 } from '@app/business-mock'
 import { mockActionWorkspaceScenarios } from '@app/action-workspace-harness'
-import { isSigningMockReviewAvailable, signingMockReviewUrl } from '@features/work-orders/signing/mock-signing'
+import { isSigningMockReviewAvailable, signingMockReviewUrl } from '@app/signing-mock-review'
 import { isMockJourneyAvailable, mockJourneyRoute } from '@app/mock-journey'
 import { hasAuthenticatedSession, workOrdersRoute } from '@features/home/access'
 import LocalDraftDiagnosticsPanel from '@features/home/components/LocalDraftDiagnosticsPanel.vue'

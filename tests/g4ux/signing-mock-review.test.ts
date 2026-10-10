@@ -4,7 +4,7 @@ import { mockJourneyWorkOrderId } from '@adapters/api/mock/journey'
 import {
   isSigningMockReviewAvailable, readSigningMock, signingMockOrderIds, signingMockReviewUrl, signingMockStateLabel,
   type SigningMockScenario,
-} from '@features/work-orders/signing/mock-signing'
+} from '@app/signing-mock-review'
 
 const base = {
   workOrderId: mockJourneyWorkOrderId,
