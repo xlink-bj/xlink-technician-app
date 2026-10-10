@@ -27,6 +27,10 @@ import {
   mockSyntheticStatusCodes,
   mockQuotationCatalogServiceType,
   mockQuotationCatalogSourceType,
+  mockCommandScenarioIds,
+  mockQuotationWorkflowNodeId,
+  isMockOwnedCommand,
+  isMockOwnedRead,
   mockWorkOrderActivityResponses,
   mockWorkOrderDetailResponse,
   mockWorkOrderDetailResponses,
@@ -39,6 +43,8 @@ import {
 } from '@adapters/api/mock'
 import { readFileSync } from 'node:fs'
 import { asOpaqueId } from '@shared/types'
+import { isBusinessMockQuotationPreview } from '@app/business-mock'
+import { mockActionWorkspaceScenarios } from '@app/action-workspace-harness'
 
 const mockAdapterOptions = { cascadeTenantId: 'synthetic-tenant' } as const
 
@@ -91,6 +97,68 @@ describe('G4-UX business mock runtime', () => {
     resetBusinessMockCache()
     expect(isBusinessMockDeveloperModeAvailable()).toBe(false)
     expect(isBusinessMockEnabled()).toBe(false)
+  })
+
+  it('exposes main-App quotation via the same authenticated action scenario infrastructure as Appointment', () => {
+    const scenario = mockActionWorkspaceScenarios.find((candidate) => candidate.key === 'quotation')
+    expect(scenario).toBeDefined()
+    expect(scenario?.route).toContain(encodeURIComponent(mockCommandScenarioIds.quotationFoundation))
+    expect(scenario?.route).toContain(encodeURIComponent(mockQuotationWorkflowNodeId))
+    expect(scenario?.route).toContain('action=place_order')
+    expect(scenario?.description).toContain('不创建服务器订单')
+  })
+
+  it('only enables the bounded quotation product preview for its synthetic work order in DEV Mock DATA', () => {
+    vi.stubEnv('DEV', true)
+    setBusinessMockMode('data')
+    expect(isBusinessMockQuotationPreview(mockCommandScenarioIds.quotationFoundation)).toBe(true)
+    expect(isBusinessMockQuotationPreview('ordinary-real-work-order')).toBe(false)
+    setBusinessMockMode('off')
+    expect(isBusinessMockQuotationPreview(mockCommandScenarioIds.quotationFoundation)).toBe(false)
+    setBusinessMockMode('empty')
+    expect(isBusinessMockQuotationPreview(mockCommandScenarioIds.quotationFoundation)).toBe(false)
+    vi.stubEnv('VITE_XLINK_ENVIRONMENT', 'prod')
+    resetBusinessMockCache()
+    expect(isBusinessMockQuotationPreview(mockCommandScenarioIds.quotationFoundation)).toBe(false)
+  })
+
+  it('never forwards synthetic official Order writes to real transport, even outside Mock DATA mode', () => {
+    const syntheticOrder = JSON.stringify({
+      type: 1, serviceAppointmentId: mockCommandScenarioIds.quotationFoundation,
+    })
+    expect(isMockOwnedCommand('basic/order/upsert', { order: syntheticOrder })).toBe(true)
+    expect(isMockOwnedCommand('workflow/startWorkflow/order/null/example', {
+      saId: mockCommandScenarioIds.quotationFoundation,
+    })).toBe(true)
+    expect(isMockOwnedCommand('basic/order/upsert', {
+      order: JSON.stringify({ type: 1, serviceAppointmentId: 'ordinary-real-work-order' }),
+    })).toBe(false)
+    expect(isMockOwnedCommand('basic/order/upsert', { order: 'broken-json' })).toBe(false)
+  })
+
+  it('owns synthetic quotation Order reads without allowing a real HTTP fallback', async () => {
+    const workOrderId = mockCommandScenarioIds.quotationFoundation
+    expect(isMockOwnedRead('basic/order/query', {
+      'is:serviceAppointmentId|string#and': workOrderId,
+      'is:type|integer#and': 1,
+    })).toBe(true)
+    expect(isMockOwnedRead('basic/order/queryById', { id: 'order-synthetic-review' })).toBe(true)
+    expect(isMockOwnedRead('basic/order/query', {
+      'is:serviceAppointmentId|string#and': 'ordinary-real-work-order',
+    })).toBe(false)
+    setBusinessMockMode('data')
+    const request = vi.fn<UniApiRequestExecutor>()
+    const transport = createUniApiReadTransport({
+      apiBaseUrl: 'https://example.invalid',
+      getSessionRef: () => asOpaqueId<'SessionRef'>('synthetic-session-ref'),
+      request,
+      mockLatencyMs: 0,
+    })
+    await expect(transport.execute({
+      method: 'POST', path: 'basic/order/query',
+      body: { 'is:serviceAppointmentId|string#and': workOrderId },
+    })).rejects.toMatchObject({ category: 'server_terminal' } satisfies Partial<ApiReadTransportError>)
+    expect(request).not.toHaveBeenCalled()
   })
 
   it('requires a session before mock reads and bypasses uni.request for authenticated matches', async () => {
@@ -386,6 +454,22 @@ describe('G4-UX business mock runtime', () => {
         serviceAddress: '日坛国际贸易中心A座',
         distanceText: '1.6 km',
         communityOrderCount: 1,
+      },
+      {
+        id: mockCommandScenarioIds.quotationFoundation,
+        displayNumber: 'MOCK-018',
+        taskLabel: '待下单',
+        customerName: '演示报价工单',
+        serviceDistrict: '朝阳区',
+        serviceAddress: '合成评审地址',
+      },
+      {
+        id: mockCommandScenarioIds.continuousJourney,
+        displayNumber: 'MOCK-019',
+        taskLabel: '待预约',
+        customerName: '连续业务流程演示工单',
+        serviceDistrict: '朝阳区',
+        serviceAddress: '合成连续流程地址',
       },
     ])
     expect(list.data?.items[0].id).not.toBe('mock-workflow-node-001')

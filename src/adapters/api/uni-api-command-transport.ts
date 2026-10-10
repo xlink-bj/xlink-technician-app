@@ -19,6 +19,8 @@ export interface UniApiCommandTransportOptions {
   readonly getSessionRef: () => SessionRef | null
   readonly request?: UniApiCommandRequestExecutor
   readonly timeoutMs?: number
+  /** Auth-only Production login never authorizes a live business command/upload. */
+  readonly blockRealRequests?: boolean
 }
 
 function endpointUrl(baseUrl: string, path: string): string {
@@ -79,6 +81,12 @@ export function createUniApiCommandTransport(options: UniApiCommandTransportOpti
       if (mockResponse !== null) return normalizeCommandResponse(mockResponse)
       if (isMockOwnedCommand(input.path, input.body ?? {})) {
         throw new ApiCommandTransportError('Synthetic mock command is disabled', 'server_terminal')
+      }
+      if (options.blockRealRequests === true) {
+        throw new ApiCommandTransportError(
+          'Authenticated Mock-only development mode blocks all real business commands and uploads',
+          'unsupported_capability',
+        )
       }
       if (isProductionReadOnlyTarget(import.meta.env.VITE_XLINK_ENVIRONMENT, options.apiBaseUrl)) {
         throw new ApiCommandTransportError(

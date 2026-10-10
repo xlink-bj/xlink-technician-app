@@ -12,6 +12,14 @@ export default defineConfig(({ mode, command }) => {
   const redactProductionQuickLogin = productionProfile && command === 'build'
 
   return {
+    // The credential-free browser smoke must own its origin. If 5173 is
+    // occupied, fail instead of silently using 5174 or attaching to an old
+    // dev server (which otherwise looks like a blank/unrelated login page).
+    ...(process.env.VITE_XLINK_H5_MOCK_E2E === 'true'
+      ? { server: { host: 'localhost', port: 5174, strictPort: true } }
+      : process.env.VITE_XLINK_H5_OFFLINE_SMOKE === 'true'
+        ? { server: { host: 'localhost', port: 5173, strictPort: true } }
+        : {}),
     plugins: [uni()],
     resolve: {
       alias: {

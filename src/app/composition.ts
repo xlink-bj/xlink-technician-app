@@ -27,6 +27,7 @@ import { createUniApiReadTransport } from '@adapters/api/uni-api-read-transport'
 import { createUniApiCommandTransport } from '@adapters/api/uni-api-command-transport'
 import { createAuthSessionAdapter } from '@adapters/auth/auth-session-adapter'
 import { createUniAuthBackendDriver } from '@adapters/auth/uni-auth-backend'
+import { createDevMockUxSessionPort } from '@adapters/auth/dev-mock-ux-session'
 import { createSemanticStorageAdapter } from '@adapters/storage/storage-adapter'
 import { createUniStorageDriver } from '@adapters/storage/uni-storage-driver'
 import { createPlatformAdapters } from '@adapters/platform/platform-adapters'
@@ -61,10 +62,11 @@ export function createConfigurationBlockedAuthSession(issues: readonly string[])
 export function createDefaultAuthSessionPort(): AuthSessionPort {
   const config = loadApplicationRuntimeConfig()
   if (!config.ok) return createConfigurationBlockedAuthSession(config.issues)
+  if (config.value.devMockUxSession) return createDevMockUxSessionPort()
 
   const storage = createSemanticStorageAdapter(createUniStorageDriver())
   const backend = createUniAuthBackendDriver({
-    apiBaseUrl: config.value.environment.apiBaseUrl,
+    apiBaseUrl: config.value.authApiBaseUrl,
   })
   return createAuthSessionAdapter(backend, storage, config.value.authWireConfig)
 }
@@ -95,6 +97,7 @@ export function createDefaultTechnicianApiReadPort(authSession: AuthSessionPort)
 
   const transport = createUniApiReadTransport({
     apiBaseUrl: config.value.environment.apiBaseUrl,
+    blockRealRequests: config.value.authOnlyMockBusiness,
     getSessionRef: () => authSession.getCurrentSession()?.sessionRef ?? null,
     getMockActor: () => {
       const session = authSession.getCurrentSession()
@@ -143,6 +146,7 @@ export function createDefaultQuotationCatalogReadPort(authSession: AuthSessionPo
 
   const transport = createUniApiReadTransport({
     apiBaseUrl: config.value.environment.apiBaseUrl,
+    blockRealRequests: config.value.authOnlyMockBusiness,
     getSessionRef: () => authSession.getCurrentSession()?.sessionRef ?? null,
     getMockActor: () => {
       const session = authSession.getCurrentSession()
@@ -178,6 +182,7 @@ export function createDefaultSurveyLeakageCauseProvider(authSession: AuthSession
   }
   return createSurveyLeakageCauseProvider(createUniApiReadTransport({
     apiBaseUrl: config.value.environment.apiBaseUrl,
+    blockRealRequests: config.value.authOnlyMockBusiness,
     getSessionRef: () => authSession.getCurrentSession()?.sessionRef ?? null,
     getMockActor: () => {
       const session = authSession.getCurrentSession()
@@ -212,6 +217,7 @@ export function createDefaultTechnicianApiCommandPort(
 
   const transport = createUniApiCommandTransport({
     apiBaseUrl: config.value.environment.apiBaseUrl,
+    blockRealRequests: config.value.authOnlyMockBusiness,
     getSessionRef: () => authSession.getCurrentSession()?.sessionRef ?? null,
   })
   return createTechnicianApiCommandAdapter(transport, apiRead)
@@ -226,6 +232,7 @@ export function createDefaultQuotationOrderCommandPort(authSession: AuthSessionP
   }
   const transport = createUniApiCommandTransport({
     apiBaseUrl: config.value.environment.apiBaseUrl,
+    blockRealRequests: config.value.authOnlyMockBusiness,
     getSessionRef: () => authSession.getCurrentSession()?.sessionRef ?? null,
   })
   return createQuotationOrderCommandAdapter(transport)
@@ -244,6 +251,7 @@ export function createDefaultQuotationOrderReadPort(
   }
   const transport = createUniApiReadTransport({
     apiBaseUrl: config.value.environment.apiBaseUrl,
+    blockRealRequests: config.value.authOnlyMockBusiness,
     getSessionRef: () => authSession.getCurrentSession()?.sessionRef ?? null,
     getMockActor: () => {
       const session = authSession.getCurrentSession()
@@ -278,6 +286,7 @@ export function createDefaultUploadPort(authSession: AuthSessionPort): UploadPor
   }
   return createUniUploadPort(createUniApiCommandTransport({
     apiBaseUrl: config.value.environment.apiBaseUrl,
+    blockRealRequests: config.value.authOnlyMockBusiness,
     getSessionRef: () => authSession.getCurrentSession()?.sessionRef ?? null,
   }))
 }

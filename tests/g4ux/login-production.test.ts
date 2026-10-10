@@ -69,8 +69,14 @@ describe('G4-UX production Login flow', () => {
     expect(loginPage).toContain('class="code-button" disabled')
   })
 
-  it('mounts the application root so mini-program page VMs receive events', () => {
-    expect(appEntry).toMatch(/const application = createApplication\(\)\s+application\.app\.mount\('#app'\)/)
+  it('keeps MP and H5 root bootstrap independent without eager shared mounting', () => {
+    expect(appEntry).toMatch(/function createTechnicianApplication\(\)\s*\{\s*const application = createApplication\(\)/)
+    expect(appEntry).toContain('export { createTechnicianApplication as createApp }')
+    expect(appEntry).toMatch(/\/\/ #ifdef MP-WEIXIN\s+application\.app\.mount\('#app'\)\s+\/\/ #endif/)
     expect(appEntry).toContain('return application')
+    expect(appEntry).toContain('application.app.use(__plugin)')
+    expect(appEntry).toMatch(/\/\/ #ifdef H5\s+[^]*?import\('@app\/bootstrap'\)\.then\([\s\S]*?application\.app\.mount\('#app'\)\s+\}\)\s+\/\/ #endif/)
+    // The H5 entry must not eagerly mount a second root on module import.
+    expect(appEntry).not.toMatch(/\nconst application = createApplication\(\)/)
   })
 })

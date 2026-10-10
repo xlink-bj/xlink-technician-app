@@ -16,9 +16,14 @@
   <QuotationActionWorkspace
     v-else-if="workspace.descriptor?.contentKind === 'quotation' && workspace.descriptor.actionIntent === 'place_order'"
     :content-state="quotationContentViewState"
+    :product-review-only="isMockQuotationPreview"
     @retry="reload"
     @back="exit"
-  />
+  >
+    <template #journey-context>
+      <MockJourneyContextPanel v-if="localJourneyContext" :context="localJourneyContext" />
+    </template>
+  </QuotationActionWorkspace>
 
   <AppLoadingState v-else-if="workspace.loadState === 'loading'" variant="workspace" label="正在准备操作内容" />
 
@@ -47,6 +52,7 @@
     :submit-label="workspace.descriptor.formPurpose === 'survey' ? '完成勘查' : workspace.descriptor.actionIntent === 'interact_with_form' ? '完成' : '继续确认'"
     @submit="submitWorkspace"
   >
+    <MockJourneyContextPanel v-if="localJourneyContext" :context="localJourneyContext" />
     <SurveyActionContent v-if="workspace.descriptor.actionIntent === 'interact_with_form' && workspace.descriptor.formPurpose === 'survey'" />
     <GenericDynamicFormActionContent v-else-if="workspace.descriptor.actionIntent === 'interact_with_form'" />
     <view v-else class="action-workspace-content app-surface" :data-field-count="workspace.appointmentFields.length">
@@ -140,6 +146,23 @@
       </AppField>
       </view>
 
+    <!-- DEV-only synthetic state progression. This is NOT Workflow Complete.
+         The same 019 WorkOrderId is used by all three normal App pages. -->
+    <view
+      v-if="mockJourney && mockJourney.stage !== 'quotation'"
+      class="mock-journey-progress app-surface"
+      data-testid="mock-journey-progress"
+    >
+      <text class="mock-journey-progress__note">仅本地演示：下一步只切换模拟流程节点，不提交业务表单或订单。</text>
+      <AppButton
+        block
+        variant="secondary"
+        :disabled="isNavigating"
+        data-testid="mock-journey-advance"
+        @tap="advanceJourney"
+      >{{ mockJourney.nextLabel }}</AppButton>
+    </view>
+
     <template #actions v-if="workspace.descriptor?.actionIntent === 'interact_with_form'">
       <ActionWorkspaceFormActions
         :lifecycle="workspace.lifecycle"
@@ -176,6 +199,10 @@
 import { computed, ref, watch } from 'vue'
 import { onLoad, onUnload } from '@dcloudio/uni-app'
 
+import { isBusinessMockQuotationPreview } from '@app/business-mock'
+import { setActionWorkspacePageTitle } from '@app/action-page-title'
+import { advanceMockJourneyContext, mockJourneyContext } from '@app/mock-journey'
+import { readMockJourneyContext, type MockJourneyContextSummary } from '@app/mock-journey-context'
 import { hasAuthenticatedSession } from '@features/home/access'
 import { isProductionReadOnlyRuntime } from '@shared/config'
 import {
@@ -191,6 +218,7 @@ import ActionWorkspaceFormActions from '@shared/ui/ActionWorkspaceFormActions.vu
 import ActionWorkspaceShell from '@shared/ui/ActionWorkspaceShell.vue'
 import GenericDynamicFormActionContent from '@features/work-orders/components/GenericDynamicFormActionContent.vue'
 import SurveyActionContent from '@features/work-orders/components/SurveyActionContent.vue'
+import MockJourneyContextPanel from '@features/work-orders/components/MockJourneyContextPanel.vue'
 import AppButton from '@shared/ui/AppButton.vue'
 import AppChoiceGroup from '@shared/ui/AppChoiceGroup.vue'
 import AppField from '@shared/ui/AppField.vue'
@@ -211,17 +239,43 @@ const routeAction = ref<string | undefined>(undefined)
 const routeQuotationOrderId = ref<string | undefined>(undefined)
 const routeError = ref('')
 const isNavigating = ref(false)
+const localJourneyContext = ref<MockJourneyContextSummary | null>(null)
+let journeyContextRequest = 0
 
 const canAccess = computed(() => hasAuthenticatedSession(session.status, session.session))
 const productionReadOnly = isProductionReadOnlyRuntime()
 const appointmentDisplay = computed(() => appointmentDisplayFor(workspace.appointmentTimeValue))
+const isMockQuotationPreview = computed(() =>
+  isBusinessMockQuotationPreview(workspace.descriptor?.workOrderId),
+)
 const feedback = computed(() => actionErrorCopy(workspace.error))
+const mockJourney = computed(() => mockJourneyContext(routeId.value))
 const quotationContentViewState = computed(() => workspace.quotationContentState === 'idle'
   ? 'loading'
   : workspace.quotationContentState)
 
+const workspaceNavigationTitle = computed(() => {
+  if (routeAction.value === 'place_order' || workspace.descriptor?.contentKind === 'quotation') return '报价工作台'
+  if (workspace.descriptor?.formPurpose === 'survey') return '现场勘查'
+  if (workspace.descriptor?.actionIntent === 'interact_with_form') return '工单表单'
+  return '预约上门'
+})
+
+// The Action Workspace route hosts multiple distinct actions. The static
+// pages.json title is for appointments only; update the actual uni-app page
+// title whenever the route intent or resolved form purpose changes.
+watch(
+  [routeReady, workspaceNavigationTitle],
+  ([ready, title]) => {
+    if (ready) setActionWorkspacePageTitle(title)
+  },
+  { immediate: true },
+)
+
 async function loadWorkspace(): Promise<void> {
   if (!routeReady.value || session.status !== 'authenticated') return
+  const contextVersion = ++journeyContextRequest
+  localJourneyContext.value = null
   if (!routeId.value || !routeNodeId.value) {
     routeError.value = 'invalid-route'
     workspace.clear()
@@ -241,6 +295,16 @@ async function loadWorkspace(): Promise<void> {
   if (loaded.state === 'succeeded' && routeQuotationOrderId.value && workspace.descriptor?.contentKind === 'quotation') {
     await workspace.loadQuotationOrderForEdit(routeQuotationOrderId.value)
   }
+  const stage = mockJourney.value?.stage
+  if (loaded.state === 'succeeded' && stage && stage !== 'appointment') {
+    const context = await readMockJourneyContext(stage, (identity) => workspace.readSiblingActionDraft(identity))
+    if (contextVersion === journeyContextRequest
+      && session.status === 'authenticated'
+      && String(workspace.descriptor?.workOrderId) === context?.workOrderId
+      && mockJourney.value?.stage === stage) {
+      localJourneyContext.value = context
+    }
+  }
 }
 
 onLoad((options) => {
@@ -252,6 +316,8 @@ onLoad((options) => {
 })
 
 onUnload(() => {
+  journeyContextRequest += 1
+  localJourneyContext.value = null
   void workspace.flushDraft()
 })
 
@@ -267,6 +333,26 @@ watch(
 async function exit(): Promise<void> {
   const result = await workspace.exit()
   if (result.state !== 'succeeded') routeError.value = 'draft-save-failed'
+}
+
+async function advanceJourney(): Promise<void> {
+  const context = mockJourney.value
+  if (!context || context.stage === 'quotation' || isNavigating.value) return
+  isNavigating.value = true
+  // Preserve what the technician typed as a local Action draft; do not issue
+  // ExtForm upsert, Workflow Complete, upload, or official Order commands.
+  const saved = await workspace.flushDraft()
+  if (saved.state !== 'succeeded') {
+    routeError.value = 'draft-save-failed'
+    isNavigating.value = false
+    return
+  }
+  if (!advanceMockJourneyContext(context.stage)) {
+    routeError.value = 'mock-stage-save-failed'
+    isNavigating.value = false
+    return
+  }
+  await workspace.navigateToDetail()
 }
 
 function reload(): void {
@@ -394,4 +480,6 @@ function actionErrorCopy(error: OperationError | null): string {
 .action-success-detail { margin-bottom: var(--app-space-xs); }
 .quotation-readonly-note { color: var(--app-color-text-secondary); display: block; font-size: var(--app-font-meta); padding: var(--app-space-md) 0; text-align: center; }
 
+.mock-journey-progress { margin: 20rpx 24rpx; padding: 20rpx; display: flex; flex-direction: column; gap: 12rpx; }
+.mock-journey-progress__note { color: var(--app-color-text-secondary); font-size: 22rpx; line-height: 1.5; }
 </style>

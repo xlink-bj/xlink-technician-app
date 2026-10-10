@@ -227,7 +227,7 @@ test('first repair-part step validates existing group context and returns from c
   await expect(page.getByTestId('quotation-workbench-heading')).toHaveCount(0)
   await expect(page.getByTestId('action-workspace-context')).toHaveCount(1)
   await expect(page.getByTestId('quotation-footer-summary')).toContainText('0 项 · 1 个部位组')
-  await expect(page.getByTestId('quotation-footer-summary')).toContainText('待核验')
+  await expect(page.getByTestId('quotation-footer-summary')).toContainText(/待核验|暂不可计算/)
   await expect(page.getByTestId('action-workspace-submit')).toHaveAttribute('disabled', 'true')
   await expect(page.getByText(/(?:¥|￥)\s*\d|\d+(?:\.\d{1,2})?\s*元/)).toHaveCount(0)
 

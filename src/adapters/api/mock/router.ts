@@ -1,4 +1,5 @@
 import { isBusinessMockMode, type BusinessMockMode } from './config'
+import { isDevMockJourneyEnabled, mockJourneyNodes, mockJourneyStage, mockJourneyWorkOrderId, type MockJourneyStage } from './journey'
 import { appointmentFormDefinitionWireId } from '../appointment-contract'
 import {
   isSyntheticWorkOrderId,
@@ -71,6 +72,18 @@ export function isMockOwnedRead(
   // This is an internal, synthetic-only route. It is always mock-owned so a
   // disabled Mock mode can never fall through to a real backend endpoint.
   if (route === '__mock/quotation/action-content') return true
+  // A synthetic Work Order must never become a real Order search, even when
+  // this particular mock route has no safe fixture to return.
+  if (
+    route === 'basic/order/query'
+    && typeof requestData['is:serviceAppointmentId|string#and'] === 'string'
+    && isSyntheticWorkOrderId(requestData['is:serviceAppointmentId|string#and'])
+  ) return true
+  if (
+    route === 'basic/order/queryById'
+    && typeof requestData.id === 'string'
+    && (requestData.id.startsWith('mock-') || requestData.id.startsWith('order-synthetic-'))
+  ) return true
   if (
     quotationCatalogListRoutes.has(route)
     && typeof requestData['in:serviceType|array#and'] === 'string'
@@ -120,6 +133,20 @@ export function isMockOwnedCommand(
   requestData: Readonly<Record<string, unknown>> = {},
 ): boolean {
   const route = normalizedPath(path)
+  // Official Order writes serialize their Work Order identity in the "order"
+  // JSON field, not in sid/saId. A synthetic Order must never fall through to
+  // the real command transport, including builds with real writes enabled.
+  if (route === 'basic/order/upsert' && typeof requestData.order === 'string') {
+    try {
+      const order: unknown = JSON.parse(requestData.order)
+      if (order && typeof order === 'object' && !Array.isArray(order)) {
+        const workOrderId = (order as Record<string, unknown>).serviceAppointmentId
+        if (typeof workOrderId === 'string' && isSyntheticWorkOrderId(workOrderId)) return true
+      }
+    } catch {
+      // Non-synthetic malformed payload handling remains with the adapter.
+    }
+  }
   const syntheticFormMutation =
     route === `biz/extForm/upsert/${mockSyntheticDynamicFormDefinitionId}`
     || route === `biz/extForm/upsert/${mockSurveyFormDefinitionId}`
@@ -161,6 +188,75 @@ function mutableRecord(value: unknown): Record<string, unknown> | null {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : null
+}
+
+/**
+ * Project the same 019 WorkOrder through the three review stages. Completed
+ * nodes remain historical/read-only. This is a local read projection, not a
+ * Workflow Complete response or an official Order.
+ */
+function journeyNodeFor(stage: MockJourneyStage): Record<string, unknown> {
+  if (stage === 'appointment') {
+    return {
+      _id: mockJourneyNodes.appointment,
+      state: 0,
+      nodeDef: { nodeType: 'forms', name: '预约上门时间', formDefId: appointmentFormDefinitionWireId, userChoose: ['synthetic-role'] },
+    }
+  }
+  if (stage === 'survey') {
+    return {
+      _id: mockJourneyNodes.survey,
+      state: 0,
+      nodeDef: { nodeType: 'forms', name: '现场勘察', formDefId: mockSurveyFormDefinitionId, colName: 'survey', userChoose: ['synthetic-role'] },
+    }
+  }
+  return {
+    _id: mockJourneyNodes.quotation,
+    state: 0,
+    nodeDef: { nodeType: 'placeOrder', name: '报价', viewableRoleIds: ['synthetic-role'] },
+  }
+}
+
+function mockJourneyNodesFor(stage: MockJourneyStage): Record<string, unknown>[] {
+  const completed: Record<string, unknown>[] = []
+  if (stage !== 'appointment') completed.push({ ...journeyNodeFor('appointment'), state: 10 })
+  if (stage === 'quotation') completed.push({ ...journeyNodeFor('survey'), state: 10 })
+  return [...completed, journeyNodeFor(stage)]
+}
+
+function journeyDetailResponse(): unknown {
+  const raw = mockCommandState().detailResponses.get(mockJourneyWorkOrderId)
+  const envelope = clonedResponse(raw) as Record<string, unknown>
+  const data = mutableRecord(envelope.data)
+  if (!data) return envelope
+  const stage = mockJourneyStage()
+  data.workflowNode = mockJourneyNodesFor(stage)
+  const workOrder = mutableRecord(data.serviceAppointment)
+  if (workOrder) {
+    workOrder.status = stage === 'appointment' ? 'mock-status-appointment-pending'
+      : stage === 'survey' ? 'mock-status-onsite' : 'mock-status-order'
+  }
+  return envelope
+}
+
+function journeyListResponse(raw: unknown): unknown {
+  if (!isDevMockJourneyEnabled()) return raw
+  const clone = clonedResponse(raw)
+  const envelope = mutableRecord(clone)
+  if (!envelope || !Array.isArray(envelope.data)) return clone
+  const stage = mockJourneyStage()
+  for (const item of envelope.data) {
+    const node = mutableRecord(item)
+    if (mutableRecord(node?.data)?._id !== mockJourneyWorkOrderId || !node) continue
+    const projected = journeyNodeFor(stage)
+    node._id = projected._id
+    node.nodeDef = projected.nodeDef
+    node.state = 0
+    const order = mutableRecord(node.data)
+    if (order) order.status = stage === 'appointment' ? 'mock-status-appointment-pending'
+      : stage === 'survey' ? 'mock-status-onsite' : 'mock-status-order'
+  }
+  return clone
 }
 
 function responseForDetail(id: string): unknown | null {
@@ -411,11 +507,13 @@ function matchedResponse(
   if (route === '__mock/quotation/action-content') {
     const workOrderId = typeof requestData.workOrderId === 'string' ? requestData.workOrderId : ''
     const workflowNodeId = typeof requestData.workflowNodeId === 'string' ? requestData.workflowNodeId : ''
-    if (
-      mode !== 'data'
-      || workOrderId !== mockCommandScenarioIds.quotationFoundation
-      || workflowNodeId !== mockQuotationWorkflowNodeId
-    ) return null
+    const ordinary = workOrderId === mockCommandScenarioIds.quotationFoundation
+      && workflowNodeId === mockQuotationWorkflowNodeId
+    const journey = isDevMockJourneyEnabled()
+      && workOrderId === mockJourneyWorkOrderId
+      && workflowNodeId === mockJourneyNodes.quotation
+      && mockJourneyStage() === 'quotation'
+    if (mode !== 'data' || (!ordinary && !journey)) return null
     return {
       data: {
         workOrderId,
@@ -488,7 +586,7 @@ function matchedResponse(
     return mockWorkOrderActivityResponseFor(workOrderId)
   }
   if (route === 'basic/serviceAppointment/querySAWorkflowNode') {
-    return listResponse(mode, mockCommandState().listResponse, requestData)
+    return listResponse(mode, journeyListResponse(mockCommandState().listResponse), requestData)
   }
   if (route === 'basic/serviceAppointment/query') {
     return listResponse(mode, mockOrdinaryListResponse, requestData)
@@ -497,7 +595,10 @@ function matchedResponse(
   const detailPrefix = 'basic/serviceAppointment/queryById/'
   if (route.startsWith(detailPrefix)) {
     const requestedId = decodeURIComponent(route.slice(detailPrefix.length))
-    if (isMockOwnedRead(route)) return responseForDetail(requestedId) ?? mockWorkOrderDetailResponseFor(requestedId)
+    if (isMockOwnedRead(route)) {
+      if (isDevMockJourneyEnabled() && requestedId === mockJourneyWorkOrderId) return journeyDetailResponse()
+      return responseForDetail(requestedId) ?? mockWorkOrderDetailResponseFor(requestedId)
+    }
   }
   if (route === 'biz/extField/query' && requestData.extId === appointmentFormDefinitionWireId) {
     return mockAppointmentFormDefinitionResponse
