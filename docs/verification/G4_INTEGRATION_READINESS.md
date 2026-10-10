@@ -83,3 +83,74 @@ Result needed for #36: `READY_FOR_WEB_INTEGRATION_REVIEW` with exact CI run, loc
 ## Future slices
 
 Construction (G4-G) and Acceptance (G4-H) source/contract discovery is independently active under #37. Scope its first nonmutating UI implementation only after review of this candidate; do not add an additional dependent Draft PR chain.
+
+
+---
+
+## M1 refresh — 2026-10-10: full six-stage baseline candidate (still Draft)
+
+This section supersedes the historical commit/tip figures in the 2026-10-08
+snapshot *for integration review only*. Historical evidence remains intact.
+
+### Verified graph and reconciliation
+
+- \`main\` = \`c57fb3cc876c8ca3fb133d74dcf4833f8f755b32\`.
+  The single main-only change relative to common ancestor \`0a46d848\`
+  adds \`.github/workflows/validate.yml\`; all G4 implementation remains off main.
+- Existing PR #38 older head = \`35363dd8ab2601d6523f1173797df5cf9e86a007\`.
+- Source descendant = P1C PR #63 \`76ab783a858fd5e1c0d4fb8d49ef2fcbdc093ac3\`.
+  GitHub compare reports **159 ahead / 0 behind** from old PR #38 tip;
+  P1C includes the older integrated candidate and preserves all ancestors.
+- That descendant contains an evolved CI workflow based on the same validate
+  foundation: H5 bundle, actual main-App boot and synthetic Mock browser tests,
+  retained artifacts, original G4-F H5 regression, WeChat MP and App builds.
+  This is **not a byte-identical workflow** with current main; the expected
+  change is additional tested coverage. No main-only application source exists.
+- Prefer advancing the *existing* Draft PR #38 candidate by a normal **fast
+  forward** onto the verified descendant and a docs-only report commit.
+  This is not a merge into main, not a squash/cherry-pick, and leaves all other
+  historical Draft PRs #30/#32/#42/#58/#61/#63 unchanged and open.
+- **Do not merge PR #38 now.** This refreshed descendant needs a new exact-head
+  CI run and the Owner product UX review before integration authorization.
+
+### Latest underlying source-gate evidence
+
+| Source tip | Gate | Exact public evidence |
+| --- | --- | --- |
+| PR #61 \`5f972a8045ede0ab24ce7fa34e7d84b3f31aba3f\` | P1B cross-stage local draft context TECH_PASS | [Actions #38041235485](https://github.com/xlink-bj/xlink-technician-app/actions/runs/38041235485), 64 suites / 645 tests, main Mock 6/6, G4-F H5 25/25 |
+| PR #63 \`76ab783a858fd5e1c0d4fb8d49ef2fcbdc093ac3\` | P1C explicitly confirmed synthetic Survey→Quotation suggestion TECH_PASS | [Actions #38042719296](https://github.com/xlink-bj/xlink-technician-app/actions/runs/38042719296), 65 suites / 648 tests, main Mock 6/6, G4-F H5 25/25, H5/MP/native bundles |
+| Refreshed PR #38 | **INTEGRATED_CANDIDATE_CI_PENDING** until its own commit checks complete | Must record a different exact SHA and fresh run ID |
+
+### Acceptance matrix (do not conflate gates)
+
+| Area | Evidence | Remaining |
+| --- | --- | --- |
+| App stack, login and Work Order views, Appointment, Survey, Quotation Mock | Source CI + H5 synthetic journey | Actual users/real data contract semantics; visual Owner gate; MP and Android/iOS runtime |
+| P1C Survey quote suggestion | Local synthetic, explicit confirmation and same-user/job draft isolation | Real Survey and Quotation use **different raw repair-part code systems**; no cross-tenant production mapping |
+| Order and pricing | Existing type=1 official Order path is source-backed; local composer is review-only | Source verified effective tenant ExtFields, pricing, idempotent write/readback/Workflow E2E in approved Beta |
+| Contract Signing | Pinned R1/backend **Phase A source audit** (#39) | Signing Workbench is not implemented; no safely authorized Production Contract read adapter; sign/send/PDF/status-sync are not read-only |
+| Deployment | H5, WeChat MP, and native build | MP DevTools, iOS and Android runtime, keyboard, safe area, permissions and gray rollout |
+
+### Integration & rollback gate
+
+1. Require fresh exact-head Actions PASS after advancing PR #38;
+   recheck branch ancestry against main and compare results, changed files,
+   P1B/P1C Mock-only read/write firewall.
+2. Before merging, Owner explicitly signs off the integrated UI including
+   approved first quotation empty/repair-part states and reviewed later
+   business surfaces; Quotation catalog and grouped flows require independent
+   visual and R1 contract acceptance. Mark Signing as incomplete, not a PASS.
+3. Merge **one** reviewed PR #38 only after explicit integration authorization.
+   Do not separately merge its many stacked ancestors (#30/#32/#42/#58/#61/#63)
+   into main; avoid duplicate changes.
+4. Post-merge validate main exact SHA (CI, H5, MP/App) and provide rollback
+   through \`git revert -m 1 <merge-sha>\` on a regular merge commit (never
+   reset/force push).
+5. Release requires additional G5/G6/G7 gating independent of code integration.
+
+Source/scope risk: 300 files differ between old main and current candidate
+including generated/contract fixtures and UI. An automated green CI is **not**
+review/merge authorization for every pre-existing G4 business behavior.
+
+**Current review classification:**
+\`CANDIDATE_PREPARED / OWNER_UX_PENDING / SIGNING_PENDING / BETA_BUSINESS_E2E_BLOCKED / DEVICE_PENDING / MAIN_UNCHANGED\`.
