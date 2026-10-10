@@ -593,6 +593,28 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     error.value = null
   }
 
+  /** Read-only cross-stage context for the same authenticated user and WorkOrder.
+   * The caller supplies explicit node/action/content identities. This cannot
+   * write a draft or turn local values into authoritative workflow data. */
+  async function readSiblingActionDraft(
+    requested: Omit<ActionDraftIdentity, 'userId' | 'version'>,
+  ): Promise<OperationSnapshot<ActionDraftRecord<Readonly<Record<string, unknown>>> | null>> {
+    const configured = dependencies
+    const current = descriptor.value
+    const session = configured?.getSession()
+    if (!configured || !session || !current
+      || String(current.userId) !== String(session.user.id)
+      || String(current.workOrderId) !== String(requested.workOrderId)) {
+      return failure('unsupported_capability', 'Cross-stage draft does not belong to the active Work Order and user')
+    }
+    const identity: ActionDraftIdentity = {
+      ...requested,
+      version: 1,
+      userId: session.user.id,
+    }
+    return configured.draftRepository.read<Readonly<Record<string, unknown>>>(identity)
+  }
+
   async function restoreDraft(
     nextIdentity: ActionDraftIdentity,
     form: AppointmentFormRead,
@@ -2084,6 +2106,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     navigateToList,
     saveDraft,
     flushDraft,
+    readSiblingActionDraft,
     addQuotationCatalogSelection,
     saveDynamicForm,
     completeDynamicForm,
