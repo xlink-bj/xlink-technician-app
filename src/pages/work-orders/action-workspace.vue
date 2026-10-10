@@ -24,6 +24,7 @@
       <MockJourneyContextPanel
         v-if="localJourneyContext"
         :context="localJourneyContext"
+        :compact-quote="true"
         :can-adopt-suggestion="canAdoptSurveySuggestion"
         :suggestion-feedback="suggestionFeedback"
         @adopt-suggestion="adoptSurveySuggestion"
