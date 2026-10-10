@@ -16,11 +16,15 @@ function createTechnicianApplication() {
 export { createTechnicianApplication as createApp }
 
 // #ifdef H5
-// The pinned uni H5 compiler rewrites src/main.ts and can remove the static
-// bootstrap binding. Load the real factory as a distinct H5 module so its
-// dependency remains present and boot exactly once from this entry.
+// The pinned uni H5 compiler injects `__plugin` from @dcloudio/uni-h5 in
+// the transformed entry. Its router/components must be installed BEFORE
+// mounting the real app, just as the compiler's own createApp wrapper does.
+// This ambient declaration is erased by TypeScript; H5 receives the real
+// binding from uni, not an invented router or a synthetic Login session.
+declare const __plugin: import('vue').Plugin
 void import('@app/bootstrap').then(({ createApplication: initialize }) => {
   const application = initialize()
+  application.app.use(__plugin)
   application.app.mount('#app')
 })
 // #endif
