@@ -40,6 +40,9 @@ jobs:
           VITE_XLINK_ENVIRONMENT: test
         run: pnpm run verify
 
+      - name: Build main App H5 bundle (prevent runtime entry regressions)
+        run: pnpm run build:h5
+
       - name: Build WeChat Mini Program bundle
         run: pnpm run build:mp-weixin
 
