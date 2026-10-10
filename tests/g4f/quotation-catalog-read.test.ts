@@ -31,6 +31,7 @@ function catalogItem(id: string, name: string) {
     serviceType: [query.serviceType],
     sourceTypeList: query.sourceType ? [query.sourceType] : [],
     repairPart: '["synthetic-repair-part"]',
+    exts: { repairParts: '[&quot;roof&quot;]', constructionParts: '["site-a"]', repairProcedure: '["prep","coat"]' },
     order: 2,
     price: 120,
     minimumPrice: '80.5',
@@ -179,7 +180,10 @@ describe('G4-F Phase 1C quotation catalog read foundation', () => {
       code: 'catalog-code-1',
       ageLimit: 4,
       repairPart: '["synthetic-repair-part"]',
+      r1RepairPartsCodes: ['roof'],
+      r1ConstructionPartsCodes: ['site-a'],
     })
+    expect(results[1].data?.items[0]).toMatchObject({ kind: 'procedure', r1RepairProcedureCodes: ['prep', 'coat'] })
     expect(results[2].data?.items[0]).toMatchObject({
       kind: 'material',
       code: 'catalog-code-1',

@@ -13,6 +13,7 @@ import type {
 } from '@shared/ports'
 import type { OperationSnapshot } from '@shared/types'
 import { isProductionReadOnlyTarget } from '@shared/config'
+import { parseR1CatalogFilterCodes } from '@shared/quotation-catalog-eligibility'
 import { adapterFailure, succeeded, unknownErrorMessage, AdapterMappingError } from '../common/operations'
 import {
   asRecord,
@@ -102,6 +103,8 @@ function packageItem(raw: unknown): QuotationPackageRead {
   const ageLimit = optionalNonNegativeInteger(record, ['agelimit'])
   const repairPart = optionalString(record, ['repairPart'])
   const pricingMethod = exts ? optionalString(exts, ['pricingMethod']) : undefined
+  const parts = parseR1CatalogFilterCodes(exts?.repairParts, 'strict_array')
+  const construction = parseR1CatalogFilterCodes(exts?.constructionParts, 'strict_array')
   return {
     ...catalogItemBase(record),
     kind: 'package',
@@ -111,15 +114,19 @@ function packageItem(raw: unknown): QuotationPackageRead {
     ...(ageLimit === undefined ? {} : { ageLimit }),
     ...(pricingMethod ? { pricingMethod } : {}),
     ...(repairPart ? { repairPart } : {}),
+    ...(parts === undefined ? {} : { r1RepairPartsCodes: parts }),
+    ...(construction === undefined ? {} : { r1ConstructionPartsCodes: construction }),
   }
 }
 
 function procedureItem(raw: unknown): QuotationProcedureRead {
   const record = asRecord(raw, 'quotation procedure')
+  const codes = parseR1CatalogFilterCodes(optionalRecord(record.exts)?.repairProcedure, 'procedure')
   return {
     ...catalogItemBase(record),
     kind: 'procedure',
     ...commercialValues(record, ['guideUnitPrice', 'minimumGuideTotalPrice']),
+    ...(codes === undefined ? {} : { r1RepairProcedureCodes: codes }),
   }
 }
 
