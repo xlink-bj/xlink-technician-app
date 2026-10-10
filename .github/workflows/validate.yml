@@ -64,6 +64,20 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
+      - name: Verify G4-F legacy H5 review UX remains compatible
+        run: pnpm run test:uni-h5-g4f-review
+
+      - name: Preserve legacy G4-F H5 regression evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: g4f-h5-review-${{ github.run_id }}
+          path: |
+            test-results/
+            .review/g4f-commercial-mock-ux/generated/
+          if-no-files-found: warn
+          retention-days: 7
+
       - name: Build WeChat Mini Program bundle
         run: pnpm run build:mp-weixin
 
