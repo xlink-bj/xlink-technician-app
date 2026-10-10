@@ -27,6 +27,7 @@ import { createUniApiReadTransport } from '@adapters/api/uni-api-read-transport'
 import { createUniApiCommandTransport } from '@adapters/api/uni-api-command-transport'
 import { createAuthSessionAdapter } from '@adapters/auth/auth-session-adapter'
 import { createUniAuthBackendDriver } from '@adapters/auth/uni-auth-backend'
+import { createDevMockUxSessionPort } from '@adapters/auth/dev-mock-ux-session'
 import { createSemanticStorageAdapter } from '@adapters/storage/storage-adapter'
 import { createUniStorageDriver } from '@adapters/storage/uni-storage-driver'
 import { createPlatformAdapters } from '@adapters/platform/platform-adapters'
@@ -61,6 +62,7 @@ export function createConfigurationBlockedAuthSession(issues: readonly string[])
 export function createDefaultAuthSessionPort(): AuthSessionPort {
   const config = loadApplicationRuntimeConfig()
   if (!config.ok) return createConfigurationBlockedAuthSession(config.issues)
+  if (config.value.devMockUxSession) return createDevMockUxSessionPort()
 
   const storage = createSemanticStorageAdapter(createUniStorageDriver())
   const backend = createUniAuthBackendDriver({
