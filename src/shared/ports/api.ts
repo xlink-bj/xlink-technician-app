@@ -313,12 +313,15 @@ export interface QuotationPackageRead extends QuotationCatalogItemBaseRead {
   readonly pricingMethod?: string
   /** R1 package repair-part contract is retained as received, not interpreted here. */
   readonly repairPart?: string
+  readonly r1RepairPartsCodes?: readonly string[]
+  readonly r1ConstructionPartsCodes?: readonly string[]
 }
 
 export interface QuotationProcedureRead extends QuotationCatalogItemBaseRead {
   readonly kind: 'procedure'
   readonly guideUnitPrice?: number
   readonly minimumGuideTotalPrice?: number
+  readonly r1RepairProcedureCodes?: readonly string[]
 }
 
 export interface QuotationMaterialRead extends QuotationCatalogItemBaseRead {
