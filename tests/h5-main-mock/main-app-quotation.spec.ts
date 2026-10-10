@@ -303,9 +303,9 @@ test('one MOCK-019 WorkOrder progresses Appointment → Survey → Quotation wit
   if (await partSelector.isVisible()) {
     // Captured R1 'parts' provider puts 屋面 first. Native uni-button
     // renders an additional chevron, so exact innerText does not equal 屋面.
-    await page.getByTestId('survey-repair-part-parents').locator('button').first().click()
+    await page.getByTestId('survey-repair-part-parents').locator('.app-cascade-selector__parent').first().click({ timeout: 8000 })
     await expect(page.getByTestId('survey-repair-part-children')).toBeVisible({ timeout: 8000 })
-    await page.getByTestId('survey-repair-part-children').locator('button').first().click()
+    await page.getByTestId('survey-repair-part-children').locator('.app-cascade-selector__child').first().click({ timeout: 8000 })
   }
   await expect(page.getByTestId('dynamic-field-squareMeter'), 'captured Survey field must be editable in the real main App').toBeVisible({ timeout: 8000 })
   await page.getByTestId('dynamic-field-squareMeter').locator('input').fill('14.5')
