@@ -385,3 +385,79 @@ for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }
     expect(evidence.consoleErrors).toBe(0)
   })
 }
+
+
+// R1 package material SKU is NOT the standalone Material SKU read contract.
+// Actual uni-app main App, isolated DEV Mock, two mobile viewports and no network.
+for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }]) {
+  test('R1 package material layer SKU choices stay isolated by group at ' + viewport.width, async ({ page }, info) => {
+    await page.setViewportSize(viewport)
+    await page.goto('/#/pages/index/index', { waitUntil: 'domcontentloaded' })
+    await page.getByTestId('sku-mock-entry').click()
+    await expect(page.getByTestId('package-sku-mock-workbench')).toBeVisible()
+    await expect(page.getByTestId('package-mock-layer-1')).toBeVisible()
+    await expect(page.getByTestId('package-mock-layer-2')).toBeVisible()
+    await expect(page.getByTestId('package-mock-incomplete')).toBeVisible()
+    await info.attach('package-01-layers-' + viewport.width, {
+      body: await page.screenshot({ fullPage: true }), contentType: 'image/png',
+    })
+
+    await page.getByTestId('package-mock-material-synthetic-link-l1-roof').click()
+    await page.getByTestId('package-mock-choice-1-thickness-2').click()
+    await page.getByTestId('package-mock-choice-1-color-grey').click()
+    await expect(page.getByTestId('package-mock-incomplete')).toBeVisible()
+    await page.getByTestId('package-mock-material-synthetic-link-l2-coating').click()
+    await page.getByTestId('package-mock-choice-2-thickness-3').click()
+    await page.getByTestId('package-mock-choice-2-color-black').click()
+    await expect(page.getByTestId('package-mock-ready')).toBeVisible()
+    await expect(page.getByTestId('package-mock-selected-1')).toContainText('synthetic-sku-2-grey')
+    await expect(page.getByTestId('package-mock-selected-1')).toContainText('历史数量 3')
+    await expect(page.getByTestId('package-mock-selected-2')).toContainText('synthetic-sku-coat-3-black')
+    await info.attach('package-02-all-ready-' + viewport.width, {
+      body: await page.screenshot({ fullPage: true }), contentType: 'image/png',
+    })
+
+    await page.getByTestId('package-mock-group-B').click()
+    await expect(page.getByTestId('package-mock-incomplete')).toBeVisible()
+    await page.getByTestId('package-mock-material-synthetic-link-l1-alternative').click()
+    await page.getByTestId('package-mock-choice-1-thickness-2').click()
+    await page.getByTestId('package-mock-choice-1-color-grey').click()
+    await page.getByTestId('package-mock-material-synthetic-link-l2-coating').click()
+    await page.getByTestId('package-mock-choice-2-thickness-3').click()
+    await page.getByTestId('package-mock-choice-2-color-black').click()
+    await expect(page.getByTestId('package-mock-ready')).toBeVisible()
+    await expect(page.getByTestId('package-mock-selected-1')).toContainText('synthetic-sku-alt-2-grey')
+    await info.attach('package-03-group-B-alternative-' + viewport.width, {
+      body: await page.screenshot({ fullPage: true }), contentType: 'image/png',
+    })
+    await page.getByTestId('package-mock-group-A').click()
+    await expect(page.getByTestId('package-mock-selected-1')).toContainText('synthetic-sku-2-grey')
+    await page.getByTestId('package-mock-group-B').click()
+    await expect(page.getByTestId('package-mock-selected-1')).toContainText('synthetic-sku-alt-2-grey')
+
+    await page.getByTestId('package-mock-scenario-ambiguous').click()
+    await expect(page.getByTestId('package-mock-incomplete')).toBeVisible()
+    await page.getByTestId('package-mock-material-synthetic-link-l1-roof').click()
+    await page.getByTestId('package-mock-choice-1-thickness-2').click()
+    await page.getByTestId('package-mock-choice-1-color-grey').click()
+    await page.getByTestId('package-mock-material-synthetic-link-l2-coating').click()
+    await page.getByTestId('package-mock-choice-2-thickness-3').click()
+    await page.getByTestId('package-mock-choice-2-color-black').click()
+    await expect(page.getByTestId('package-mock-ambiguous')).toBeVisible()
+    await expect(page.getByTestId('package-mock-ready')).toHaveCount(0)
+    await info.attach('package-04-ambiguous-' + viewport.width, {
+      body: await page.screenshot({ fullPage: true }), contentType: 'image/png',
+    })
+    await page.getByTestId('package-mock-scenario-orphan').click()
+    await expect(page.getByTestId('package-mock-blocked')).toContainText('orphan_sku_parent')
+    await page.getByTestId('package-mock-scenario-duplicate').click()
+    await expect(page.getByTestId('package-mock-blocked')).toContainText('duplicate_sku_id')
+    await page.getByTestId('package-mock-scenario-pricing_other').click()
+    await expect(page.getByTestId('package-mock-not-applicable')).toBeVisible()
+    await expect(page.getByTestId('sku-mock-footer')).toContainText('不支持提交')
+    expect(evidence.externalIntents).toEqual([])
+    expect(evidence.localFailures).toEqual([])
+    expect(evidence.pageErrors).toBe(0)
+    expect(evidence.consoleErrors).toBe(0)
+  })
+}

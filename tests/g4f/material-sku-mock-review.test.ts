@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { setBusinessMockMode, resetBusinessMockCache } from '@adapters/api/mock/config'
 import { mockJourneyWorkOrderId } from '@adapters/api/mock/journey'
-import { canReadMaterialSkuMock, readMaterialSkuReview } from '@app/material-sku-mock-review'
+import { canReadMaterialSkuMock, readMaterialSkuReview, readPackageSkuMockReview } from '@app/material-sku-mock-review'
 
 beforeEach(() => {
   vi.stubEnv('VITE_XLINK_ENVIRONMENT','dev')
@@ -27,6 +27,15 @@ describe('main-App SKU Mock route is identity- and DEV-guarded',()=>{
     setBusinessMockMode('data')
     vi.stubEnv('VITE_XLINK_ENVIRONMENT','prod')
     expect(canReadMaterialSkuMock(ctx)).toBe(false)
+  })
+  it('separates package SKU Mock normal, ambiguous, orphan, duplicate and pricing path',()=>{
+    expect(readPackageSkuMockReview('normal').state).toBe('ready')
+    expect(readPackageSkuMockReview('no_skus').state).toBe('ready')
+    expect(readPackageSkuMockReview('ambiguous').state).toBe('ready')
+    expect(readPackageSkuMockReview('orphan')).toEqual({state:'blocked',reason:'orphan_sku_parent'})
+    expect(readPackageSkuMockReview('duplicate')).toEqual({state:'blocked',reason:'duplicate_sku_id'})
+    expect(readPackageSkuMockReview('pricing_other').state).toBe('not_applicable')
+    expect(readMaterialSkuReview('normal').state).toBe('ready')
   })
   it('preserves independent synthetic error outcomes',()=>{
     expect(readMaterialSkuReview('normal').state).toBe('ready')
