@@ -94,6 +94,18 @@
             <text class="mock-action-scenario-arrow" aria-hidden="true">›</text>
           </navigator>
           <navigator
+            v-if="isMaterialSkuMockAvailable()"
+            class="mock-action-scenario"
+            :url="materialSkuReviewUrl()"
+            data-testid="sku-mock-entry"
+          >
+            <view class="mock-action-scenario-copy">
+              <text class="mock-action-scenario-label">R1 材料 SPU/SKU · 只读 Mock</text>
+              <text class="mock-action-scenario-description">合成厚度、颜色与 SKU 匹配，含错误/重复/无货号，不关联真实报价</text>
+            </view>
+            <text class="mock-action-scenario-arrow" aria-hidden="true">›</text>
+          </navigator>
+          <navigator
             v-for="scenario in mockActionWorkspaceScenarios"
             :key="scenario.key"
             class="mock-action-scenario"
@@ -301,6 +313,7 @@ import {
   type BusinessMockMode,
 } from '@app/business-mock'
 import { mockActionWorkspaceScenarios } from '@app/action-workspace-harness'
+import { isMaterialSkuMockAvailable, materialSkuReviewUrl } from '@app/material-sku-mock-review'
 import { isMockJourneyAvailable, mockJourneyRoute } from '@app/mock-journey'
 import { hasAuthenticatedSession, workOrdersRoute } from '@features/home/access'
 import LocalDraftDiagnosticsPanel from '@features/home/components/LocalDraftDiagnosticsPanel.vue'

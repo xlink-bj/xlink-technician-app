@@ -25,6 +25,10 @@
       }
     },
     {
+      "path": "pages/work-orders/material-sku-mock-review",
+      "style": { "navigationBarTitleText": "材料规格 · Mock" }
+    },
+    {
       "path": "pages/work-orders/action-time",
       "style": {
         "navigationBarTitleText": "选择时间"
