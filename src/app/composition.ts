@@ -64,7 +64,7 @@ export function createDefaultAuthSessionPort(): AuthSessionPort {
 
   const storage = createSemanticStorageAdapter(createUniStorageDriver())
   const backend = createUniAuthBackendDriver({
-    apiBaseUrl: config.value.environment.apiBaseUrl,
+    apiBaseUrl: config.value.authApiBaseUrl,
   })
   return createAuthSessionAdapter(backend, storage, config.value.authWireConfig)
 }
@@ -95,6 +95,7 @@ export function createDefaultTechnicianApiReadPort(authSession: AuthSessionPort)
 
   const transport = createUniApiReadTransport({
     apiBaseUrl: config.value.environment.apiBaseUrl,
+    blockRealRequests: config.value.authOnlyMockBusiness,
     getSessionRef: () => authSession.getCurrentSession()?.sessionRef ?? null,
     getMockActor: () => {
       const session = authSession.getCurrentSession()
@@ -143,6 +144,7 @@ export function createDefaultQuotationCatalogReadPort(authSession: AuthSessionPo
 
   const transport = createUniApiReadTransport({
     apiBaseUrl: config.value.environment.apiBaseUrl,
+    blockRealRequests: config.value.authOnlyMockBusiness,
     getSessionRef: () => authSession.getCurrentSession()?.sessionRef ?? null,
     getMockActor: () => {
       const session = authSession.getCurrentSession()
@@ -178,6 +180,7 @@ export function createDefaultSurveyLeakageCauseProvider(authSession: AuthSession
   }
   return createSurveyLeakageCauseProvider(createUniApiReadTransport({
     apiBaseUrl: config.value.environment.apiBaseUrl,
+    blockRealRequests: config.value.authOnlyMockBusiness,
     getSessionRef: () => authSession.getCurrentSession()?.sessionRef ?? null,
     getMockActor: () => {
       const session = authSession.getCurrentSession()
@@ -212,6 +215,7 @@ export function createDefaultTechnicianApiCommandPort(
 
   const transport = createUniApiCommandTransport({
     apiBaseUrl: config.value.environment.apiBaseUrl,
+    blockRealRequests: config.value.authOnlyMockBusiness,
     getSessionRef: () => authSession.getCurrentSession()?.sessionRef ?? null,
   })
   return createTechnicianApiCommandAdapter(transport, apiRead)
@@ -226,6 +230,7 @@ export function createDefaultQuotationOrderCommandPort(authSession: AuthSessionP
   }
   const transport = createUniApiCommandTransport({
     apiBaseUrl: config.value.environment.apiBaseUrl,
+    blockRealRequests: config.value.authOnlyMockBusiness,
     getSessionRef: () => authSession.getCurrentSession()?.sessionRef ?? null,
   })
   return createQuotationOrderCommandAdapter(transport)
@@ -244,6 +249,7 @@ export function createDefaultQuotationOrderReadPort(
   }
   const transport = createUniApiReadTransport({
     apiBaseUrl: config.value.environment.apiBaseUrl,
+    blockRealRequests: config.value.authOnlyMockBusiness,
     getSessionRef: () => authSession.getCurrentSession()?.sessionRef ?? null,
     getMockActor: () => {
       const session = authSession.getCurrentSession()
@@ -278,6 +284,7 @@ export function createDefaultUploadPort(authSession: AuthSessionPort): UploadPor
   }
   return createUniUploadPort(createUniApiCommandTransport({
     apiBaseUrl: config.value.environment.apiBaseUrl,
+    blockRealRequests: config.value.authOnlyMockBusiness,
     getSessionRef: () => authSession.getCurrentSession()?.sessionRef ?? null,
   }))
 }
