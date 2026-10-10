@@ -64,6 +64,8 @@ test('real authenticated shell uses local-only Mock quotation with zero external
   await expect(page, 'normal uni navigation must reach the real Action Workspace').toHaveURL(/pages\/work-orders\/action-workspace/)
   await expect(page.getByTestId('quotation-footer-summary')).toBeVisible()
   await expect(page.getByTestId('quotation-product-demo-read-only')).toBeVisible()
+  await expect(page.getByTestId('quotation-product-demo-read-only')).toContainText('演示，不提交订单')
+  await expect(page.locator('.quotation-production-read-only')).toHaveCount(0)
   await expect(page.getByTestId('action-workspace-submit')).toHaveCount(0)
   await info.attach('main-quotation-390', {
     body: await page.screenshot({ fullPage: true }),
@@ -178,6 +180,15 @@ for (const viewport of [
       .toContainText('檐口密封处理（示例）')
     await expect(page.getByTestId('quotation-group-section-quotation-group-2-measure'))
       .toContainText('高处作业防护（示例）')
+    await expect(page.getByTestId('quotation-workbench-summary')).toBeVisible()
+    await expect(page.getByTestId('quotation-workbench-summary')).toContainText('维修部位报价')
+    await expect(page.getByTestId('quotation-workbench-amount')).toHaveCount(0)
+    const footerBox = await page.getByTestId('quotation-footer-summary').boundingBox()
+    expect(footerBox, 'persistent draft footer must remain visible').not.toBeNull()
+    if (footerBox) {
+      expect(footerBox.y).toBeGreaterThanOrEqual(0)
+      expect(footerBox.y + footerBox.height).toBeLessThanOrEqual(viewport.height + 1)
+    }
     await expect(page.getByTestId('quotation-product-demo-read-only')).toBeVisible()
     await expect(page.getByTestId('action-workspace-submit')).toHaveCount(0)
     await info.attach(`restored-two-groups-${viewport.width}`, {
