@@ -12,6 +12,8 @@ export interface ApplicationRuntimeConfig {
   readonly authApiBaseUrl: string
   /** DEV-only: absolutely no real business read/write/upload network fallback. */
   readonly authOnlyMockBusiness: boolean
+  /** Credential-free QA of the real DEV main App, never enabled in release builds. */
+  readonly devMockUxSession: boolean
 }
 
 export type ApplicationRuntimeConfigResult =
@@ -44,6 +46,18 @@ export function loadApplicationRuntimeConfig(
   // environment API URL and are strictly network-denied in this hybrid mode.
   const authOverride = input.VITE_XLINK_AUTH_API_BASE_URL
   const hasAuthOverride = authOverride !== undefined && authOverride !== ''
+  const mockQaRequested = input.VITE_XLINK_H5_MOCK_E2E === 'true'
+  const devMockUxSession = mockQaRequested
+    && input.DEV === true
+    && environment.ok
+    && environment.value.environment === 'dev'
+    && environment.value.apiBaseUrl === 'https://example.invalid'
+    && input.VITE_XLINK_MOCK === 'true'
+    && !hasAuthOverride
+    && input.VITE_XLINK_ENABLE_REAL_WRITES !== 'true'
+  if (mockQaRequested && !devMockUxSession) {
+    issues.push('Credential-free Mock UX requires isolated local DEV, inert business host, enabled Mock, disabled writes and no auth override')
+  }
   if (hasAuthOverride && (
     typeof authOverride !== 'string'
     || !/^https:\/\//i.test(authOverride)
@@ -63,7 +77,8 @@ export function loadApplicationRuntimeConfig(
       environment: environment.value,
       authWireConfig: { tenant, phoneLoginMethod },
       authApiBaseUrl: hasAuthOverride ? authOverride as string : environment.value.apiBaseUrl,
-      authOnlyMockBusiness: hasAuthOverride,
+      authOnlyMockBusiness: hasAuthOverride || devMockUxSession,
+      devMockUxSession,
     },
   }
 }
