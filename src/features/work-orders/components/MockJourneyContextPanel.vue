@@ -16,12 +16,23 @@
       </template>
       <text v-else class="journey-context__empty">{{ section.state === 'read_failed' ? '无法核对当前阶段的本机记录' : '该阶段尚无已保存的填写内容' }}</text>
     </view>
+    <view v-if="context.suggestion" class="journey-context__suggestion" data-testid="mock-survey-quote-suggestion">
+      <text class="journey-context__title">勘察维修部位建议 · 待确认</text>
+      <text class="journey-context__value-text">勘察记录：{{ context.suggestion.surveyPathLabel }}</text>
+      <text class="journey-context__value-text">建议报价一级部位：{{ context.suggestion.targetRepairPartLabel }}</text>
+      <text class="journey-context__notice">仅匹配演示目录的一级部位。二级部位、工程量、材料、工序及金额均需技术员重新核对填写；不会自动复制勘察面积。</text>
+      <AppButton v-if="canAdoptSuggestion" variant="secondary" block data-testid="mock-survey-quote-adopt" @tap="$emit('adopt-suggestion')">确认采用一级维修部位</AppButton>
+      <text v-else class="journey-context__empty">已有报价部位或目录尚不可用，请手动核对。</text>
+      <text v-if="suggestionFeedback" class="journey-context__value-text" data-testid="mock-survey-quote-feedback">{{ suggestionFeedback }}</text>
+    </view>
   </view>
 </template>
 
 <script setup lang="ts">
 import type { MockJourneyContextSummary } from '@app/mock-journey-context'
-defineProps<{ readonly context: MockJourneyContextSummary }>()
+import AppButton from '@shared/ui/AppButton.vue'
+defineProps<{ readonly context: MockJourneyContextSummary; readonly canAdoptSuggestion?: boolean; readonly suggestionFeedback?: string }>()
+defineEmits<{ (event: 'adopt-suggestion'): void }>()
 </script>
 
 <style scoped>
@@ -33,4 +44,6 @@ defineProps<{ readonly context: MockJourneyContextSummary }>()
 .journey-context__title { color: var(--app-color-text-primary); font-weight: 600; font-size: 24rpx; }
 .journey-context__status, .journey-context__label, .journey-context__empty { color: var(--app-color-text-secondary); font-size: 21rpx; }
 .journey-context__value { text-align: right; font-size: 22rpx; color: var(--app-color-text-primary); max-width: 66%; overflow-wrap: anywhere; }
+ .journey-context__suggestion { border-top: 1rpx solid var(--app-color-border); display: flex; flex-direction: column; gap: 9rpx; padding-top: 12rpx; }
+.journey-context__value-text { color: var(--app-color-text-primary); font-size: 22rpx; line-height: 1.45; }
 </style>
