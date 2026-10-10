@@ -17,7 +17,7 @@ export type MaterialSkuMatch =
 const blocked=(reason:MaterialSkuFailure):MaterialSkuRead=>({state:'blocked',reason})
 function saleFieldFlag(raw:unknown):boolean|null {
   if(raw===undefined || raw===null || raw==='')return false
-  let val=raw
+  let val: unknown = raw
   if(typeof raw==='string'){try{val=JSON.parse(raw) as unknown}catch{return null}}
   const value=obj(val)
   return value && typeof value.salesAttribute==='boolean'?value.salesAttribute:null
