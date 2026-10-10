@@ -154,3 +154,19 @@ review/merge authorization for every pre-existing G4 business behavior.
 
 **Current review classification:**
 \`CANDIDATE_PREPARED / OWNER_UX_PENDING / SIGNING_PENDING / BETA_BUSINESS_E2E_BLOCKED / DEVICE_PENDING / MAIN_UNCHANGED\`.
+
+
+### Reviewer execution checklist for the refreshed candidate
+
+- [ ] Verify exact refreshed HEAD on PR #38 (do not reuse #63's successful
+  CI as if it were the same SHA).
+- [ ] Confirm GitHub Actions architecture/type/unit/H5 mock/H5 G4-F regression
+  /MP/App jobs all pass on the candidate's latest SHA.
+- [ ] Compare real UI screenshots against the Owner-accepted quotation page
+  designs; mark unreviewed catalog/group and new P1C panel explicitly.
+- [ ] Confirm read/write-deny guards for Production and isolated DEV Mock.
+- [ ] Review #39 Signing source-verified but unimplemented contract; do not
+  represent a synthetic quote as a type=1 official Order.
+- [ ] Request explicit Owner integration approval before Draft→Ready or merge.
+
+This is a **review checklist**, not evidence that the unchecked tasks passed.
