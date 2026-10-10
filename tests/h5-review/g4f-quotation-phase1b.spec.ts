@@ -56,7 +56,9 @@ async function openScenario(page: Page, scenario: string): Promise<void> {
   if (scenario === 'empty') {
     await expect(page.getByTestId('quotation-initial-empty-workbench')).toBeVisible()
   } else {
-    await expect(page.getByTestId('quotation-workbench-heading')).toContainText('报价工作台')
+    // The draft workbench's authored header is scoped to local grouped editing;
+    // the action-shell page title remains 报价工作台 on the commercial route.
+    await expect(page.getByTestId('quotation-workbench-heading')).toContainText('报价草稿 · 按部位组织')
   }
   if (scenario !== 'empty') {
     await expect(page.getByText('项目概览', { exact: true })).toBeVisible()
