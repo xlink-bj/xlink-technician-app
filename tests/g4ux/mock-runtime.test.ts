@@ -455,6 +455,14 @@ describe('G4-UX business mock runtime', () => {
         distanceText: '1.6 km',
         communityOrderCount: 1,
       },
+      {
+        id: mockCommandScenarioIds.quotationFoundation,
+        displayNumber: 'MOCK-018',
+        taskLabel: '待下单',
+        customerName: '演示报价工单',
+        serviceDistrict: '朝阳区',
+        serviceAddress: '合成评审地址',
+      },
     ])
     expect(list.data?.items[0].id).not.toBe('mock-workflow-node-001')
     expect(requests.map((request) => request.path)).toEqual([
