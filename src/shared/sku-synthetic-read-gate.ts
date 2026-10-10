@@ -65,7 +65,8 @@ export function createSkuSyntheticReadGate(options: {
       const ids = input.requestedSpuIds
       if (!Array.isArray(ids) || !ids.length || ids.length > 10
         || !ids.every(valid) || new Set(ids).size !== ids.length) return deny('invalid_requested_spu')
-      if (!ids.every(id => scope.listedSpuIds.includes(id))) return deny('catalog_scope_unverified')
+      const listedSpuIds = scope.listedSpuIds
+      if (!ids.every(id => listedSpuIds.includes(id))) return deny('catalog_scope_unverified')
       const pageSize = 40
       let page: SkuMockPage
       try { page = await options.fetchSyntheticPage([...ids], pageSize) }
