@@ -152,7 +152,7 @@ export const mockCommandScenarioIds = {
 export const mockQuotationWorkflowNodeId = 'mock-workflow-node-018-place-order'
 
 /** Mock DATA list order is intentionally stable for visual review. */
-export const mockListScenarioIds = [...mockDetailScenarioIds, ...mockStatusSampleIds] as const
+export const mockListScenarioIds = [...mockDetailScenarioIds, ...mockStatusSampleIds, mockCommandScenarioIds.quotationFoundation] as const
 
 const mockServiceAppointmentData = {
   [mockWorkOrderIds[0]]: {
