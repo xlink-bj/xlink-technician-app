@@ -14,9 +14,14 @@
   >
     <view class="sku-review-card app-surface" data-testid="sku-mock-workbench">
       <text class="sku-review-eyebrow">R1 SPU → 销售属性 → SKU · 仿真</text>
-      <text class="sku-review-title">材料规格选择</text>
-      <text class="sku-review-help">独立数据契约评审，不是当前工单真实商品。套餐材料层须走另一条规格配置路径。</text>
+      <text class="sku-review-title">材料规格只读评审</text>
+      <text class="sku-review-help">两条独立业务路径；只展示当前选中的一种。无真实 SKU、报价或订单。</text>
+      <view class="sku-review-actions" data-testid="sku-mock-mode-picker">
+        <AppButton variant="secondary" :pressed="reviewMode === 'package'" data-testid="sku-mock-mode-package" @tap="setReviewMode('package')">套餐内材料</AppButton>
+        <AppButton variant="secondary" :pressed="reviewMode === 'direct'" data-testid="sku-mock-mode-direct" @tap="setReviewMode('direct')">直接材料</AppButton>
+      </view>
     </view>
+    <template v-if="reviewMode === 'direct'">
     <view class="sku-review-card app-surface">
       <text class="sku-review-section-title">异常与边界场景</text>
       <view class="sku-review-actions">
@@ -68,6 +73,8 @@
       </template>
     </view>
 
+    </template>
+    <template v-if="reviewMode === 'package'">
     <view class="sku-review-card app-surface" data-testid="package-sku-mock-workbench">
       <text class="sku-review-eyebrow">套餐材料 · 独立的 R1 SKU 配置路径</text>
       <text class="sku-review-title">套餐材料层与规格</text>
@@ -84,6 +91,9 @@
       </view>
       <text class="sku-review-help">模拟维修分组选择相互隔离，不代表正式订单创建。</text>
       <view class="sku-review-actions">
+        <AppButton variant="text" data-testid="package-mock-toggle-errors" :pressed="showPackageFailureScenarios" @tap="showPackageFailureScenarios = !showPackageFailureScenarios">{{ showPackageFailureScenarios ? "收起异常场景" : "展开异常场景" }}</AppButton>
+      </view>
+      <view v-if="showPackageFailureScenarios" class="sku-review-actions" data-testid="package-mock-failure-options">
         <AppButton
           v-for="item in packageSkuMockScenarios"
           :key="item.value"
@@ -151,6 +161,7 @@
         </view>
       </template>
     </view>
+    </template>
     <template #actions>
       <text class="sku-review-footer" data-testid="sku-mock-footer">DEV Mock 仅读 · 不支持提交或修改数量</text>
       <navigator class="sku-review-back" open-type="navigateBack" :delta="1">返回开发演示</navigator>
@@ -176,6 +187,12 @@ const session = useSessionStore()
 const routeId = ref('')
 const scenario = ref<MaterialSkuReviewScenario>('normal')
 const selected = ref<Readonly<Record<string, string>>>({})
+const reviewMode = ref<'direct' | 'package'>('package')
+const showPackageFailureScenarios = ref(false)
+function setReviewMode(next: 'direct' | 'package'): void {
+  if (!authorized.value) return
+  reviewMode.value = next
+}
 onLoad((options) => { routeId.value = typeof options?.id === 'string' ? options.id : '' })
 const authorized = computed(() =>
   session.status === 'authenticated' && canReadMaterialSkuMock({
