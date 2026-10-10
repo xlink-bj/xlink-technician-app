@@ -134,7 +134,7 @@ for (const viewport of [
     await expect(page.getByTestId('quotation-group-section-quotation-group-2-material'))
       .toContainText('弹性密封材料（示例）')
     await expect(page.getByTestId('quotation-group-section-quotation-group-1-package')).toBeVisible()
-    await expect(page.getByTestId('quotation-group-section-quotation-group-1-material')).toHaveCount(0)
+    await expect(page.getByTestId('quotation-group-section-quotation-group-1-material')).toBeHidden()
 
     await info.attach(`two-groups-${viewport.width}`, {
       body: await page.screenshot({ fullPage: true }),
