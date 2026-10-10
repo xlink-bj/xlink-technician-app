@@ -70,7 +70,8 @@ describe('G4-UX production Login flow', () => {
   })
 
   it('preserves MP root bootstrap but delegates H5 mounting to uni-app', () => {
-    expect(appEntry).toMatch(/export function createApp\(\)\s*\{\s*const application = createApplication\(\)/)
+    expect(appEntry).toMatch(/function createTechnicianApplication\(\)\s*\{\s*const application = createApplication\(\)/)
+    expect(appEntry).toContain('export { createTechnicianApplication as createApp }')
     expect(appEntry).toMatch(/\/\/ #ifdef MP-WEIXIN\s+application\.app\.mount\('#app'\)\s+\/\/ #endif/)
     expect(appEntry).toContain('return application')
     // The H5 entry must not eagerly mount a second root on module import.
