@@ -77,3 +77,41 @@ real Login succeeds and the role-visible SANODE list may return the legitimate
 `EMPTY` state. That real Beta `EMPTY` is separate evidence from deterministic
 Mock `EMPTY`. Mock mode is for deterministic UX review only and must not be used
 as evidence of Beta or production business data.
+
+## Quotation Mock in the main App (G4-F)
+
+The same authenticated development Mock panel as Appointment now includes
+**「报价草稿」** under **Action Workspace 场景** when Mock mode is **数据**.
+It opens the existing `place_order` Action Workspace for the bounded
+`mock-work-order-018-quotation-foundation` / `mock-workflow-node-018-place-order`
+identity, using the shared R1-shaped synthetic fixture and the existing
+Package / Procedure / Material / Measure mock catalog. It does not mount the
+isolated `review-app-g4f` or fabricate a session.
+
+**How to review:** use an ordinary authenticated *development* App session,
+enable `Mock 数据` → `数据` on Home, tap `报价草稿`, choose a repair part,
+enter the description and area, explore/package-configure/select catalog items,
+then return, edit and reopen the local quotation draft. The exact synthetic
+quotation ID is routed through normal Work Order detail/workflow identity and
+is scoped to the existing DEV-only `productReviewOnly` UI guard.
+
+The UI allows **local draft composition only**. Official Order confirmation,
+Order creation, workflow starts/completion, authoritative prices, effective
+tenant-specific ExtFields, signing and real readback are **not simulated**.
+The simulated Appointment command success does **not** advance the same
+Work Order into Survey and Quotation automatically. Hence this is not yet a
+continuous Appointment→Survey→Quotation workflow simulator.
+
+**Safety:** synthetic official `basic/order/upsert` payloads are identified
+by embedded `order.serviceAppointmentId` and cannot fall back to a real
+transport; synthetic `basic/order/query` work-order lookups and synthetic
+`queryById` identities are also mock-owned even without a fixture.
+Normal production business Mock stays hard-disabled and the legitimate
+Production read/write capability policies remain unchanged. Unmatched
+**non-synthetic** reads may still use the app's authenticated backend:
+this is not an offline sandbox or a replacement for real Beta E2E.
+
+**Gate:** source/CI verification and local main-App H5 test are distinct.
+A browser proof must start from authenticated main-App Home, not from the
+isolated product-review fixture's fake session. MP/App compilation is not
+native device acceptance.
