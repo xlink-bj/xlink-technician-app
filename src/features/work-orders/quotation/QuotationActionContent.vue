@@ -209,7 +209,9 @@
           <AppStatus
             v-if="!hasSharedDraftStatus"
             class="quotation-content__first-step-notice"
-            message="当前为本机报价草稿；校验并提交后才会创建正式订单。"
+            :message="props.productReviewOnly
+              ? '演示数据仅保存在本机；正式报价订单提交已关闭。'
+              : '当前为本机报价草稿；校验并提交后才会创建正式订单。'"
             variant="strip"
             icon="warning"
             quiet
