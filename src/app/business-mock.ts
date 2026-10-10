@@ -1,3 +1,4 @@
+import { isDevMockJourneyEnabled, mockJourneyStage, mockJourneyWorkOrderId } from '@adapters/api/mock/journey'
 import { loadApplicationRuntimeConfig } from './runtime-config'
 import {
   isBusinessMockDeveloperModeAvailable,
@@ -14,7 +15,8 @@ export function isBusinessMockQuotationPreview(workOrderId: string | null | unde
   return import.meta.env.DEV
     && isBusinessMockDeveloperModeAvailable()
     && isBusinessMockMode() === 'data'
-    && workOrderId === mockCommandScenarioIds.quotationFoundation
+    && (workOrderId === mockCommandScenarioIds.quotationFoundation
+      || (isDevMockJourneyEnabled() && workOrderId === mockJourneyWorkOrderId && mockJourneyStage() === 'quotation'))
 }
 
 /** Whether the local App uses Production for LOGIN only, with no business API network fallback. */
