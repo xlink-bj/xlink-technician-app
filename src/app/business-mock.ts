@@ -1,3 +1,4 @@
+import { loadApplicationRuntimeConfig } from './runtime-config'
 import {
   isBusinessMockDeveloperModeAvailable,
   isBusinessMockMode,
@@ -14,6 +15,12 @@ export function isBusinessMockQuotationPreview(workOrderId: string | null | unde
     && isBusinessMockDeveloperModeAvailable()
     && isBusinessMockMode() === 'data'
     && workOrderId === mockCommandScenarioIds.quotationFoundation
+}
+
+/** Whether the local App uses Production for LOGIN only, with no business API network fallback. */
+export function isProductionAuthBusinessMockIsolation(): boolean {
+  const config = loadApplicationRuntimeConfig()
+  return config.ok && config.value.authOnlyMockBusiness
 }
 
 /** Application-facing developer control; raw fixtures and routing stay in adapter infrastructure. */
