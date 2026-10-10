@@ -65,7 +65,7 @@ describe('R1 package material SKU: layer + body link + SPU + unique SKU pure con
     expect(project({ materialLinks: [{ ...links[0], exts: { layer: '' } }] }).state).toBe('blocked')
   })
   it('refuses unexpected SKU parents, duplicate SKU IDs, malformed row state', () => {
-    expect(project({ skuRows: [...skuRows, { ...skuRows[0], spuid: 'foreign' }] }))
+    expect(project({ skuRows: [...skuRows, { ...skuRows[0], _id: 'foreign-sku-unique-id', spuid: 'foreign' }] }))
       .toEqual({ state: 'blocked', reason: 'orphan_sku_parent' })
     expect(project({ skuRows: [...skuRows, skuRows[0]] }))
       .toEqual({ state: 'blocked', reason: 'duplicate_sku_id' })
