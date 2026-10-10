@@ -43,6 +43,12 @@ jobs:
       - name: Build main App H5 bundle (prevent runtime entry regressions)
         run: pnpm run build:h5
 
+      - name: Install headless Chromium for real H5 bootstrap smoke
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Verify real main App H5 mounts Login without auth or external API
+        run: pnpm run test:main-h5-boot
+
       - name: Build WeChat Mini Program bundle
         run: pnpm run build:mp-weixin
 
