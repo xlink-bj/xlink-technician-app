@@ -329,7 +329,7 @@ test('one MOCK-019 WorkOrder progresses Appointment → Survey → Quotation wit
   await page.getByTestId('mock-survey-quote-adopt').click()
   await expect(page.getByTestId('quotation-first-step-selected-path')).toContainText('屋面')
   await expect(page.getByTestId('mock-survey-quote-adopt')).toHaveCount(0)
-  await expect(page.getByTestId('quotation-first-step-quantity')).toHaveValue('')
+  await expect(page.getByTestId('quotation-first-step-quantity').locator('input')).toHaveValue('')
 
   await expect(page.getByTestId('quotation-product-demo-read-only')).toContainText('演示，不提交订单')
   await expect(page.getByTestId('action-workspace-submit')).toHaveCount(0)
