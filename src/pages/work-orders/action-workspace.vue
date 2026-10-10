@@ -19,7 +19,11 @@
     :product-review-only="isMockQuotationPreview"
     @retry="reload"
     @back="exit"
-  />
+  >
+    <template #journey-context>
+      <MockJourneyContextPanel v-if="localJourneyContext" :context="localJourneyContext" />
+    </template>
+  </QuotationActionWorkspace>
 
   <AppLoadingState v-else-if="workspace.loadState === 'loading'" variant="workspace" label="正在准备操作内容" />
 
@@ -48,6 +52,7 @@
     :submit-label="workspace.descriptor.formPurpose === 'survey' ? '完成勘查' : workspace.descriptor.actionIntent === 'interact_with_form' ? '完成' : '继续确认'"
     @submit="submitWorkspace"
   >
+    <MockJourneyContextPanel v-if="localJourneyContext" :context="localJourneyContext" />
     <SurveyActionContent v-if="workspace.descriptor.actionIntent === 'interact_with_form' && workspace.descriptor.formPurpose === 'survey'" />
     <GenericDynamicFormActionContent v-else-if="workspace.descriptor.actionIntent === 'interact_with_form'" />
     <view v-else class="action-workspace-content app-surface" :data-field-count="workspace.appointmentFields.length">
@@ -197,6 +202,7 @@ import { onLoad, onUnload } from '@dcloudio/uni-app'
 import { isBusinessMockQuotationPreview } from '@app/business-mock'
 import { setActionWorkspacePageTitle } from '@app/action-page-title'
 import { advanceMockJourneyContext, mockJourneyContext } from '@app/mock-journey'
+import { readMockJourneyContext, type MockJourneyContextSummary } from '@app/mock-journey-context'
 import { hasAuthenticatedSession } from '@features/home/access'
 import { isProductionReadOnlyRuntime } from '@shared/config'
 import {
@@ -212,6 +218,7 @@ import ActionWorkspaceFormActions from '@shared/ui/ActionWorkspaceFormActions.vu
 import ActionWorkspaceShell from '@shared/ui/ActionWorkspaceShell.vue'
 import GenericDynamicFormActionContent from '@features/work-orders/components/GenericDynamicFormActionContent.vue'
 import SurveyActionContent from '@features/work-orders/components/SurveyActionContent.vue'
+import MockJourneyContextPanel from '@features/work-orders/components/MockJourneyContextPanel.vue'
 import AppButton from '@shared/ui/AppButton.vue'
 import AppChoiceGroup from '@shared/ui/AppChoiceGroup.vue'
 import AppField from '@shared/ui/AppField.vue'
@@ -232,6 +239,8 @@ const routeAction = ref<string | undefined>(undefined)
 const routeQuotationOrderId = ref<string | undefined>(undefined)
 const routeError = ref('')
 const isNavigating = ref(false)
+const localJourneyContext = ref<MockJourneyContextSummary | null>(null)
+let journeyContextRequest = 0
 
 const canAccess = computed(() => hasAuthenticatedSession(session.status, session.session))
 const productionReadOnly = isProductionReadOnlyRuntime()
@@ -265,6 +274,8 @@ watch(
 
 async function loadWorkspace(): Promise<void> {
   if (!routeReady.value || session.status !== 'authenticated') return
+  const contextVersion = ++journeyContextRequest
+  localJourneyContext.value = null
   if (!routeId.value || !routeNodeId.value) {
     routeError.value = 'invalid-route'
     workspace.clear()
@@ -284,6 +295,16 @@ async function loadWorkspace(): Promise<void> {
   if (loaded.state === 'succeeded' && routeQuotationOrderId.value && workspace.descriptor?.contentKind === 'quotation') {
     await workspace.loadQuotationOrderForEdit(routeQuotationOrderId.value)
   }
+  const stage = mockJourney.value?.stage
+  if (loaded.state === 'succeeded' && stage && stage !== 'appointment') {
+    const context = await readMockJourneyContext(stage, (identity) => workspace.readSiblingActionDraft(identity))
+    if (contextVersion === journeyContextRequest
+      && session.status === 'authenticated'
+      && String(workspace.descriptor?.workOrderId) === context?.workOrderId
+      && mockJourney.value?.stage === stage) {
+      localJourneyContext.value = context
+    }
+  }
 }
 
 onLoad((options) => {
@@ -295,6 +316,8 @@ onLoad((options) => {
 })
 
 onUnload(() => {
+  journeyContextRequest += 1
+  localJourneyContext.value = null
   void workspace.flushDraft()
 })
 
