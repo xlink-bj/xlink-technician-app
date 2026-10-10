@@ -120,6 +120,20 @@ export function isMockOwnedCommand(
   requestData: Readonly<Record<string, unknown>> = {},
 ): boolean {
   const route = normalizedPath(path)
+  // Official Order writes serialize their Work Order identity in the "order"
+  // JSON field, not in sid/saId. A synthetic Order must never fall through to
+  // the real command transport, including builds with real writes enabled.
+  if (route === 'basic/order/upsert' && typeof requestData.order === 'string') {
+    try {
+      const order: unknown = JSON.parse(requestData.order)
+      if (order && typeof order === 'object' && !Array.isArray(order)) {
+        const workOrderId = (order as Record<string, unknown>).serviceAppointmentId
+        if (typeof workOrderId === 'string' && isSyntheticWorkOrderId(workOrderId)) return true
+      }
+    } catch {
+      // Non-synthetic malformed payload handling remains with the adapter.
+    }
+  }
   const syntheticFormMutation =
     route === `biz/extForm/upsert/${mockSyntheticDynamicFormDefinitionId}`
     || route === `biz/extForm/upsert/${mockSurveyFormDefinitionId}`
