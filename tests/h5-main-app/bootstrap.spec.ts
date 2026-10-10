@@ -41,6 +41,9 @@ test('ordinary uni-app H5 renders the real Login page without external traffic',
       hasH5FactoryCall: transformed.includes('createTechnicianApplication()'),
       hasH5Mount: transformed.includes("mount('#app')"),
       size: transformed.length,
+      // CI has synthetic no-login env only. Inspect the transformed entry once
+      // to diagnose what the pinned uni H5 compiler injects or drops.
+      transformedEntry: process.env.CI === 'true' ? transformed.slice(0, 3500) : undefined,
     }
     throw new Error([
       'Real main App H5 Login did not mount',
