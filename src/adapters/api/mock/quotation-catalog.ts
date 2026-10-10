@@ -14,6 +14,7 @@ export const mockQuotationPackageListResponse = {
       serviceType: [mockQuotationCatalogServiceType],
       sourceTypeList: [mockQuotationCatalogSourceType],
       order: 1,
+      exts: { repairParts: '["synthetic-roof"]', constructionParts: '["synthetic-wall"]' },
     },
     {
       _id: 'mock-catalog-package-extended',
@@ -25,11 +26,21 @@ export const mockQuotationPackageListResponse = {
       serviceType: [mockQuotationCatalogServiceType],
       sourceTypeList: [mockQuotationCatalogSourceType],
       order: 2,
+      exts: { repairParts: '["synthetic-wall"]', constructionParts: '["synthetic-wall"]' },
+    },
+    {
+      _id: 'mock-catalog-package-unknown',
+      name: '待核实适用范围的套餐（合成）',
+      type: 'mock-package-type',
+      unit: '项',
+      serviceType: [mockQuotationCatalogServiceType],
+      sourceTypeList: [mockQuotationCatalogSourceType],
+      order: 3,
     },
   ],
   page: 1,
   rows: 20,
-  total: 2,
+  total: 3,
 } as const
 
 export const mockQuotationProcedureListResponse = {
@@ -42,11 +53,22 @@ export const mockQuotationProcedureListResponse = {
       serviceType: [mockQuotationCatalogServiceType],
       sourceTypeList: [mockQuotationCatalogSourceType],
       order: 1,
+      exts: { repairProcedure: '[&quot;synthetic-seal&quot;]' },
+    },
+    {
+      _id: 'mock-catalog-procedure-prep',
+      name: '基层处理工序（示例）',
+      content: '模拟基层处理',
+      unit: '处',
+      serviceType: [mockQuotationCatalogServiceType],
+      sourceTypeList: [mockQuotationCatalogSourceType],
+      order: 2,
+      exts: { repairProcedure: '["synthetic-prep"]' },
     },
   ],
   page: 1,
   rows: 20,
-  total: 1,
+  total: 2,
 } as const
 
 export const mockQuotationMaterialListResponse = {
@@ -64,10 +86,18 @@ export const mockQuotationMaterialListResponse = {
       sourceTypeList: [mockQuotationCatalogSourceType],
       order: 1,
     },
+    {
+      _id: 'mock-catalog-material-unknown',
+      name: '材料分类待核实（合成）',
+      unit: '支',
+      serviceType: [mockQuotationCatalogServiceType],
+      sourceTypeList: [mockQuotationCatalogSourceType],
+      order: 2,
+    },
   ],
   page: 1,
   rows: 20,
-  total: 1,
+  total: 2,
 } as const
 
 export const mockQuotationMeasureListResponse = {
