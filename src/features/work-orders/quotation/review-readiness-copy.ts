@@ -16,6 +16,16 @@ export function quotationReviewReadinessCopy(report: LocalQuotationPreflight): Q
       officialSubmissionAllowed: false,
     }
   }
+  // Required fields must not be presented as already reviewed, even when
+  // the repair-group composition itself is complete (R1 final requiredness
+  // may include conditionally hidden fields).
+  if (report.selectionEntry.state === 'needs_input' || report.finalRequiredness.state === 'needs_input') {
+    return {
+      title: '草稿待完善',
+      summary: '仍有必填附加字段未填写；请先补充再核对。正式报价不可提交。',
+      officialSubmissionAllowed: false,
+    }
+  }
   if (report.selectionEntry.state === 'unverified' || report.finalRequiredness.state === 'unverified') {
     return {
       title: '草稿核对',
