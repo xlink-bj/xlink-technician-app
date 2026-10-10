@@ -319,16 +319,29 @@ test('one MOCK-019 WorkOrder progresses Appointment → Survey → Quotation wit
   await expect(page).toHaveURL(/mock-work-order-019-continuous-journey/)
   await expect(page.locator('.uni-page-head__title')).toContainText('报价工作台')
   await expect(page.getByTestId('quotation-state-ready')).toBeVisible()
+  await expect(page.getByTestId('mock-journey-context-summary')).toContainText('预约信息 已记录')
+  await expect(page.getByTestId('mock-journey-context-summary')).toContainText('勘察记录 已记录')
+  await expect(page.getByTestId('mock-journey-context-appointment')).toHaveCount(0)
+  // The real H5 quote first fold stays compact; all prior values remain
+  // available on explicit disclosure, without the Survey becoming a Quote.
+  await info.attach('019-quotation-prior-compact', {
+    body: await page.screenshot({ fullPage: true }), contentType: 'image/png',
+  })
+  await page.getByTestId('mock-journey-context-toggle').click()
   await expect(page.getByTestId('mock-journey-context-appointment')).toContainText('P1B预约备注：现场先确认屋面渗漏')
   await expect(page.getByTestId('mock-journey-context-survey')).toContainText('14.5')
   await expect(page.getByTestId('mock-journey-context-survey')).toContainText('防水施工面积')
   await expect(page.getByTestId('mock-journey-context')).toContainText('未提交后台')
+  await page.getByTestId('mock-journey-context-toggle').click()
+  await expect(page.getByTestId('mock-journey-context-survey')).toHaveCount(0)
   // P1C: explicit, synthetic-only first-level part suggestion. It never copies
   // Survey's numeric area, creates priced items or runs Order/Workflow writes.
   await expect(page.getByTestId('mock-survey-quote-suggestion')).toContainText('屋面 / 有保护平屋面')
   await page.getByTestId('mock-survey-quote-adopt').click()
   await expect(page.getByTestId('quotation-first-step-selected-path')).toContainText('屋面')
   await expect(page.getByTestId('mock-survey-quote-adopt')).toHaveCount(0)
+  await expect(page.getByTestId('mock-survey-quote-feedback')).toContainText('已加入本机报价草稿')
+  await expect(page.getByTestId('mock-survey-quote-suggestion')).not.toContainText('已有报价部位')
   await expect(page.getByTestId('quotation-first-step-quantity').locator('input')).toHaveValue('')
 
   await expect(page.getByTestId('quotation-product-demo-read-only')).toContainText('演示，不提交订单')
@@ -339,8 +352,12 @@ test('one MOCK-019 WorkOrder progresses Appointment → Survey → Quotation wit
   await page.reload({ waitUntil: 'domcontentloaded' })
   await expect(page.getByTestId('quotation-state-ready')).toBeVisible()
   await expect(page).toHaveURL(/mock-work-order-019-continuous-journey/)
+  await expect(page.getByTestId('mock-journey-context-summary')).toContainText('勘察记录 已记录')
+  await expect(page.getByTestId('mock-journey-context-survey')).toHaveCount(0)
+  await page.getByTestId('mock-journey-context-toggle').click()
   await expect(page.getByTestId('mock-journey-context-appointment')).toContainText('P1B预约备注：现场先确认屋面渗漏')
   await expect(page.getByTestId('mock-journey-context-survey')).toContainText('14.5')
+  await page.getByTestId('mock-journey-context-toggle').click()
   await expect(page.getByTestId('quotation-product-demo-read-only')).toBeVisible()
   expect(evidence.externalIntents).toEqual([])
   expect(evidence.localFailures).toEqual([])
