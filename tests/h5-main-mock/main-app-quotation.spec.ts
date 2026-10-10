@@ -62,6 +62,7 @@ test('real authenticated shell uses local-only Mock quotation with zero external
 
   await quote.click()
   await expect(page, 'normal uni navigation must reach the real Action Workspace').toHaveURL(/pages\/work-orders\/action-workspace/)
+  await expect(page.locator('.uni-page-head__title')).toContainText('报价工作台')
   await expect(page.getByTestId('quotation-footer-summary')).toBeVisible()
   await expect(page.getByTestId('quotation-product-demo-read-only')).toBeVisible()
   await expect(page.getByTestId('quotation-product-demo-read-only')).toContainText('演示，不提交订单')
@@ -237,6 +238,24 @@ test('same Mock-018 quotation is reachable from normal work order list and detai
   })
   expect(evidence.externalIntents).toEqual([])
   expect(evidence.localFailures).toEqual([])
+  expect(evidence.pageErrors).toBe(0)
+  expect(evidence.consoleErrors).toBe(0)
+})
+
+test('shared Action Workspace displays its actual operation title for appointment and survey', async ({ page }) => {
+  for (const scenario of [
+    { label: '全新预约', title: '预约上门' },
+    { label: '现场勘查', title: '现场勘查' },
+  ]) {
+    await page.goto('/#/pages/index/index', { waitUntil: 'domcontentloaded' })
+    await expect(page.locator('.home-page')).toBeVisible()
+    const entry = page.locator('.mock-action-scenario').filter({ hasText: scenario.label })
+    await expect(entry).toBeVisible()
+    await entry.click()
+    await expect(page).toHaveURL(/pages\/work-orders\/action-workspace/)
+    await expect(page.locator('.uni-page-head__title')).toContainText(scenario.title)
+  }
+  expect(evidence.externalIntents).toEqual([])
   expect(evidence.pageErrors).toBe(0)
   expect(evidence.consoleErrors).toBe(0)
 })
