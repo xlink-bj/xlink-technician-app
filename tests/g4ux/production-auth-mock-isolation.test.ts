@@ -88,8 +88,8 @@ describe('G4-F Production authentication + isolated DEV business Mock', () => {
     })
     expect(result).toHaveProperty('data')
     await expect(transport.execute({
-      method: 'POST', path: 'basic/serviceAppointment/query',
-      body: { page: 1, rows: 20, 'is:state|integer#and': 1, orderState: 'UNMATCHED' },
+      method: 'POST', path: 'basic/unsupported-business-read',
+      body: { page: 1, rows: 20 },
     })).rejects.toMatchObject({ category: 'unsupported_capability' })
     setBusinessMockMode('off')
     await expect(transport.execute({
