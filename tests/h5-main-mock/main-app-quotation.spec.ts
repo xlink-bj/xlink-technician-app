@@ -323,6 +323,14 @@ test('one MOCK-019 WorkOrder progresses Appointment → Survey → Quotation wit
   await expect(page.getByTestId('mock-journey-context-survey')).toContainText('14.5')
   await expect(page.getByTestId('mock-journey-context-survey')).toContainText('防水施工面积')
   await expect(page.getByTestId('mock-journey-context')).toContainText('未提交后台')
+  // P1C: explicit, synthetic-only first-level part suggestion. It never copies
+  // Survey's numeric area, creates priced items or runs Order/Workflow writes.
+  await expect(page.getByTestId('mock-survey-quote-suggestion')).toContainText('屋面 / 有保护平屋面')
+  await page.getByTestId('mock-survey-quote-adopt').click()
+  await expect(page.getByTestId('quotation-first-step-selected-path')).toContainText('屋面')
+  await expect(page.getByTestId('mock-survey-quote-adopt')).toHaveCount(0)
+  await expect(page.getByTestId('quotation-first-step-quantity').locator('input')).toHaveValue('')
+
   await expect(page.getByTestId('quotation-product-demo-read-only')).toContainText('演示，不提交订单')
   await expect(page.getByTestId('action-workspace-submit')).toHaveCount(0)
   await info.attach('019-quotation', { body: await page.screenshot({ fullPage: true }), contentType: 'image/png' })

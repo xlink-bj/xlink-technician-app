@@ -21,7 +21,13 @@
     @back="exit"
   >
     <template #journey-context>
-      <MockJourneyContextPanel v-if="localJourneyContext" :context="localJourneyContext" />
+      <MockJourneyContextPanel
+        v-if="localJourneyContext"
+        :context="localJourneyContext"
+        :can-adopt-suggestion="canAdoptSurveySuggestion"
+        :suggestion-feedback="suggestionFeedback"
+        @adopt-suggestion="adoptSurveySuggestion"
+      />
     </template>
   </QuotationActionWorkspace>
 
@@ -203,6 +209,7 @@ import { isBusinessMockQuotationPreview } from '@app/business-mock'
 import { setActionWorkspacePageTitle } from '@app/action-page-title'
 import { advanceMockJourneyContext, mockJourneyContext } from '@app/mock-journey'
 import { readMockJourneyContext, type MockJourneyContextSummary } from '@app/mock-journey-context'
+import { canAdoptMockSurveySuggestion } from '@app/mock-journey-quote-suggestion'
 import { hasAuthenticatedSession } from '@features/home/access'
 import { isProductionReadOnlyRuntime } from '@shared/config'
 import {
@@ -211,6 +218,7 @@ import {
   useActionWorkspaceStore,
 } from '@features/work-orders/action-workspace'
 import QuotationActionWorkspace from '@features/work-orders/quotation/QuotationActionWorkspace.vue'
+import { useQuotationCompositionStore } from '@features/work-orders/quotation/composition-store'
 import { appointmentDisplayFor } from '@features/work-orders/appointment-time'
 import { isMultilineField } from '@features/work-orders/form-presentation'
 import { useSessionStore } from '@shared/state'
@@ -232,6 +240,7 @@ import type { OperationError } from '@shared/types'
 
 const session = useSessionStore()
 const workspace = useActionWorkspaceStore()
+const quotationComposition = useQuotationCompositionStore()
 const routeReady = ref(false)
 const routeId = ref<ReturnType<typeof parseActionWorkspaceId>>(null)
 const routeNodeId = ref<ReturnType<typeof parseActionWorkspaceNodeId>>(null)
@@ -240,6 +249,7 @@ const routeQuotationOrderId = ref<string | undefined>(undefined)
 const routeError = ref('')
 const isNavigating = ref(false)
 const localJourneyContext = ref<MockJourneyContextSummary | null>(null)
+const suggestionFeedback = ref('')
 let journeyContextRequest = 0
 
 const canAccess = computed(() => hasAuthenticatedSession(session.status, session.session))
@@ -250,6 +260,24 @@ const isMockQuotationPreview = computed(() =>
 )
 const feedback = computed(() => actionErrorCopy(workspace.error))
 const mockJourney = computed(() => mockJourneyContext(routeId.value))
+const canAdoptSurveySuggestion = computed(() =>
+  routeAction.value === 'place_order'
+  && routeId.value === mockJourney.value?.workOrderId
+  && workspace.descriptor?.contentKind === 'quotation'
+  && ['fresh', 'restored', 'dirty', 'saving', 'saved_local', 'save_failed'].includes(quotationComposition.localState)
+  && canAdoptMockSurveySuggestion(localJourneyContext.value?.suggestion, quotationComposition.repairPartOptions, quotationComposition.groups.length),
+)
+
+function adoptSurveySuggestion(): void {
+  if (!canAdoptSurveySuggestion.value) return
+  const suggested = localJourneyContext.value?.suggestion
+  if (!suggested) return
+  const result = quotationComposition.createGroup({ repairParts: [suggested.targetRepairPartCode] })
+  suggestionFeedback.value = result.state === 'succeeded'
+    ? '已加入本机报价草稿。请补充部位描述、工程量及报价项目。'
+    : '未能采用建议，请手动创建报价部位。'
+}
+
 const quotationContentViewState = computed(() => workspace.quotationContentState === 'idle'
   ? 'loading'
   : workspace.quotationContentState)
@@ -276,6 +304,7 @@ async function loadWorkspace(): Promise<void> {
   if (!routeReady.value || session.status !== 'authenticated') return
   const contextVersion = ++journeyContextRequest
   localJourneyContext.value = null
+  suggestionFeedback.value = ''
   if (!routeId.value || !routeNodeId.value) {
     routeError.value = 'invalid-route'
     workspace.clear()
