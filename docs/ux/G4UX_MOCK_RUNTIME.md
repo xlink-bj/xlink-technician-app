@@ -208,3 +208,53 @@ Only after the local offline result is examined may Lead separately
 authorize another Production authentication. The prior unrecorded external
 request cannot be retroactively identified by a later successful offline
 run. The entire main-App Mock quotation journey remains a different Gate.
+
+## Repeatable credential-free main App Mock UX Gate
+
+Use the **real ordinary uni-app H5 application**, not `review-app-g4f`,
+for daily Mock UI integration and regression testing without repeated
+Production authentication. This test-only composition is explicitly
+different from actual user identity/permissions acceptance:
+
+```sh
+pnpm run test:main-h5-mock
+```
+
+The Playwright runner owns `localhost:5174` (strict port), supplies a
+non-Production DEV-only `VITE_XLINK_H5_MOCK_E2E=true` test fixture with
+`https://example.invalid` as the **sole inert business destination**,
+and **does not configure any Production auth URL, phone or code**.
+App startup restores a built-in, clearly synthetic technician Session
+and role through the **normal `AuthSessionPort`**, then uses existing
+`Mock DATA` adapters and the ordinary Home/Action Workspace routes.
+This is a *Mock-only test identity*, **not a successful Production login
+or authenticated R1 role permission proof**.
+
+The configuration validator rejects this mode unless all are true:
+local Vite `DEV`, environment `dev`, business API exactly
+`https://example.invalid`, Mock enabled, no Production authentication
+override and real-writes disabled. The resulting `authOnlyMockBusiness`
+switch blocks **all non-Mock business read/command/upload transports**
+from network fallback. The browser additionally aborts **every**
+off-origin request before sending; even a blocked attempt FAILS QA.
+Production builds and normal DEV auth remain unchanged.
+
+`test:main-h5-mock` emits structured JSON and HTML under
+`test-results/main-h5-mock/`; screenshots and traces are included
+where applicable. CI's `actions/upload-artifact` runs **even when tests
+fail**, retaining evidence for seven days. The suite must capture the
+result, stage, sanitized network intents and JS errors; it must never
+record real account data. This eliminates reliance on a manually
+retained Codex execution transcript.
+
+**Separate gates** remain:
+1. *Mock UX Gate*: frequent CI/local browser tests with no real login.
+2. *Authentication isolation Gate*: source-verified login-only
+   integration, scheduled sparingly with a strict external allowlist and
+   durable evidence installed before any request.
+3. *Real business parity Gate*: authorized Beta/R1 contract and safe
+   official Order read/write E2E, not inferred from Mock UI PASS.
+
+When Mock UX breaks, Senior Developer fixes code through GitHub and
+reruns CI; Codex is needed for actual OS/device/internal-system
+observations, **not for each front-end UI regression**.
