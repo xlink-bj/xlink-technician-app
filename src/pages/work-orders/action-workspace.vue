@@ -225,6 +225,24 @@ const quotationContentViewState = computed(() => workspace.quotationContentState
   ? 'loading'
   : workspace.quotationContentState)
 
+const workspaceNavigationTitle = computed(() => {
+  if (routeAction.value === 'place_order' || workspace.descriptor?.contentKind === 'quotation') return '报价工作台'
+  if (workspace.descriptor?.formPurpose === 'survey') return '现场勘查'
+  if (workspace.descriptor?.actionIntent === 'interact_with_form') return '工单表单'
+  return '预约上门'
+})
+
+// The Action Workspace route hosts multiple distinct actions. The static
+// pages.json title is for appointments only; update the actual uni-app page
+// title whenever the route intent or resolved form purpose changes.
+watch(
+  [routeReady, workspaceNavigationTitle],
+  ([ready, title]) => {
+    if (ready) uni.setNavigationBarTitle({ title })
+  },
+  { immediate: true },
+)
+
 async function loadWorkspace(): Promise<void> {
   if (!routeReady.value || session.status !== 'authenticated') return
   if (!routeId.value || !routeNodeId.value) {
