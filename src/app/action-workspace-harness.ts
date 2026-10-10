@@ -1,5 +1,5 @@
 import { appointmentFormDefinitionWireId } from '@adapters/api/appointment-contract'
-import { mockCommandScenarioIds } from '@adapters/api/mock'
+import { mockCommandScenarioIds, mockQuotationWorkflowNodeId } from '@adapters/api/mock'
 import { actionWorkspaceRouteFor } from '@features/work-orders/action-workspace'
 import type { AppointmentFieldValue } from '@shared/ports'
 import { asOpaqueId, type WorkOrderId, type WorkflowNodeRuntimeId } from '@shared/types'
@@ -30,6 +30,12 @@ const routeFor = (workOrderId: string, nodeSuffix: string): string =>
     appointmentNodeFor(nodeSuffix),
     'set_appointment',
   )
+
+const quotationRoute = actionWorkspaceRouteFor(
+  asOpaqueId<'WorkOrderId'>(mockCommandScenarioIds.quotationFoundation),
+  asOpaqueId<'WorkflowNodeRuntimeId'>(mockQuotationWorkflowNodeId),
+  'place_order',
+)
 
 const surveyRoute = actionWorkspaceRouteFor(
   asOpaqueId<'WorkOrderId'>(mockCommandScenarioIds.surveySuccess),
@@ -97,5 +103,11 @@ export const mockActionWorkspaceScenarios: readonly MockActionWorkspaceScenario[
     label: '现场勘查',
     description: '动态表单、照片上传、保存和完成',
     route: surveyRoute,
+  },
+  {
+    key: 'quotation',
+    label: '报价草稿',
+    description: '合成工单的维修部位、目录选品、套餐配置与本机草稿；不创建服务器订单',
+    route: quotationRoute,
   },
 ]
