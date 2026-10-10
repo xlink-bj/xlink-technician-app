@@ -212,7 +212,12 @@ test('first repair-part step validates existing group context and returns from c
   await page.setViewportSize({ width: 390, height: 844 })
   await page.getByTestId('quotation-first-step-select-products').click()
   await expect(page.getByTestId('quotation-catalog-page')).toBeVisible()
-  await expect(page.getByTestId('quotation-catalog-target')).toContainText('维修部位组 1')
+  // Catalog destination now identifies the actual repair objective and broad
+  // location, with the visual 01 badge preserving the group's identity.
+  const catalogTarget = page.getByTestId('quotation-catalog-target')
+  await expect(catalogTarget).toContainText('屋面局部修复')
+  await expect(catalogTarget).toContainText('维修位置 · 屋面')
+  await expect(catalogTarget.locator('.quotation-content__catalog-target-index')).toContainText('01')
   await page.getByTestId('quotation-catalog-close').click()
   await expect(step).toBeVisible()
   await expect(step.getByTestId('quotation-first-step-description').getByRole('textbox')).toHaveValue('屋面局部修复')
