@@ -11,6 +11,8 @@ const rec = (v: unknown): Rec | null =>
   v !== null && typeof v === 'object' && !Array.isArray(v) ? v as Rec : null
 const key = (v: unknown): string | null =>
   typeof v === 'string' && v.trim() ? v.trim() : null
+const sourceCode = (v: unknown): string | null =>
+  typeof v === 'number' && Number.isFinite(v) ? String(v) : key(v)
 
 export type PackageSkuFailure =
   | 'missing_package_identity' | 'unsupported_pricing_method'
@@ -60,8 +62,9 @@ export function projectR1PackageMaterialSku(input: {
 }): PackageMaterialSkuRead {
   const packageId = key(input.packageId)
   if (!packageId) return fail('missing_package_identity')
-  if (input.pricingMethod !== '1') {
-    if (typeof input.pricingMethod === 'string' && input.pricingMethod.trim()) {
+  const pricingMethod = sourceCode(input.pricingMethod)
+  if (pricingMethod !== '1') {
+    if (pricingMethod) {
       return { state: 'not_applicable', packageId }
     }
     return fail('unsupported_pricing_method')
@@ -77,7 +80,7 @@ export function projectR1PackageMaterialSku(input: {
   for (const raw of input.materialLinks) {
     const link = rec(raw), material = rec(link?.material), exts = rec(link?.exts)
     const linkId = key(link?._id), materialId = key(link?.materialId)
-    const layer = key(exts?.layer)
+    const layer = sourceCode(exts?.layer)
     const spuId = key(material?._id), name = key(material?.name)
     if (!linkId || !materialId || !layer || !spuId || spuId !== materialId || !name) {
       return fail('invalid_material_link')
@@ -109,7 +112,7 @@ export function projectR1PackageMaterialSku(input: {
     const options: PackageSkuMaterialOption[] = []
     for (const source of input.materialLinks) {
       const link = rec(source), exts = rec(link?.exts)
-      if (key(exts?.layer) !== layer) continue
+      if (sourceCode(exts?.layer) !== layer) continue
       const material = rec(link?.material)
       if (!material) return fail('invalid_material_link')
       const materialId = key(link?.materialId)

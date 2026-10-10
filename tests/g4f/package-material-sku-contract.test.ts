@@ -17,6 +17,18 @@ const selections: PackageSkuChoice[] = [
   { layer: '2', linkId: 'synthetic-link-l2-coating', attributes: { thickness: '3', color: 'black' } },
 ]
 describe('R1 package material SKU: layer + body link + SPU + unique SKU pure contract', () => {
+  it('accepts R1 source codes as numbers or strings without inventing layer labels or pricing', () => {
+    const linksWithNumericLayer = [
+      { ...links[0], exts: { layer: 1 } },
+      ...links.slice(1),
+    ]
+    const x = project({ materialLinks: linksWithNumericLayer, pricingMethod: 1 })
+    expect(x.state).toBe('ready')
+    if (x.state !== 'ready') return
+    expect(x.layers[0].layer).toBe('1')
+    expect(x.packageId).toBe(syntheticPackageId)
+    expect(project({ pricingMethod: 2 }).state).toBe('not_applicable')
+  })
   it('preserves original two layers with alternative material links', () => {
     const x = project()
     expect(x.state).toBe('ready')
