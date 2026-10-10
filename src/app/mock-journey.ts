@@ -11,6 +11,8 @@ import { actionWorkspaceRouteFor } from '@features/work-orders/action-workspace'
 import { asOpaqueId } from '@shared/types'
 
 /** Review-only visual navigation. Never calls Order/Workflow/ExtForm commands. */
+export function isMockJourneyAvailable(): boolean { return isDevMockJourneyEnabled() }
+
 export function mockJourneyContext(workOrderId: string | null | undefined) {
   if (!isDevMockJourneyEnabled() || workOrderId !== mockJourneyWorkOrderId) return null
   const stage = mockJourneyStage()
