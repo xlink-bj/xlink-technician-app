@@ -115,3 +115,62 @@ this is not an offline sandbox or a replacement for real Beta E2E.
 A browser proof must start from authenticated main-App Home, not from the
 isolated product-review fixture's fake session. MP/App compilation is not
 native device acceptance.
+
+## Local Production Login + Mock-only Business (G4-F DEV QA)
+
+This is the established local UX-development pattern: **real Production
+`index/phoneLogin.do` authentication only**, followed by **equivalent,
+synthetic Mock business data and local drafts**. It is NOT an invitation
+to test orders, appointment writes, surveys, uploads or other business
+operations against Production. The Production phone-login endpoint may
+update account/session permission metadata as previously authorized;
+no other server-side operation is authorized by this mode.
+
+The App explicitly separates the two API targets. Keep all private
+configuration in ignored `.env.development.local` within the isolated
+worktree. Start from the existing locally authorized Production login
+settings (never copy them into GitHub or logs). Example non-secret keys:
+
+```dotenv
+VITE_XLINK_ENVIRONMENT=dev
+VITE_XLINK_PLATFORM=mp-weixin
+VITE_XLINK_API_BASE_URL=https://example.invalid
+VITE_XLINK_AUTH_API_BASE_URL=https://xlink.fsgo365.cn
+VITE_XLINK_MOCK=true
+# The existing local Production quick-login phone, tenant, method and
+# any local-only code are reused privately; do not commit or print them.
+```
+
+`VITE_XLINK_API_BASE_URL` is deliberately a nonproduction, unusable
+business fallback address. `VITE_XLINK_AUTH_API_BASE_URL` is accepted
+**only in a local Vite DEV server, with a non-production
+`VITE_XLINK_ENVIRONMENT`, an HTTPS URL and the known Production host**;
+it is used **only by the authentication driver**. An ordinary `prod`
+business build still hard-disables Mock; this override is rejected outside
+the local DEV-only profile. A missing/invalid config fails closed.
+
+Run **`pnpm run dev:h5`** for the normal main App (NOT the synthetic-session
+`dev:uni-h5-g4f-review` and not Design System review). After successful
+real authentication: Home → Mock 数据 → 数据 → Action Workspace → 报价草稿.
+The authenticated actor may be used to bind synthetic role visibility,
+but there are NO subsequent business reads from either Production or Beta.
+
+In this **auth-only Mock isolation**, all business transports share a
+hard deny of network fallthrough: unmatched Work Order/Quotation/catalog
+reads, Order/Workflow/appointment commands, media upload and other
+adapter-routed requests return a safe failure without `uni.request`.
+This is true **even if Mock is toggled OFF/EMPTY, a route is not recognized,
+or `VITE_XLINK_ENABLE_REAL_WRITES=true` is mistakenly present**.
+Home displays `业务网络已隔离` rather than `Real API` when Mock is OFF.
+Existing general DEV/test mode without the explicit auth override retains
+its separate historical behavior; this stronger isolation only applies to
+the Production-authentication hybrid.
+
+**QA evidence:** one approved Production login request is expected; count
+**zero** subsequent business HTTP requests to Production, Beta or other
+hosts, zero real Order/Workflow/upload mutations. Screenshots, route
+navigation, Mock part/catalog selection, and local draft recovery come
+from the normal authenticated main App. A failed/unavailable login remains
+`BLOCKED_ENV` and must not be replaced with a fake session. This proves
+Mock UX only, not live-backend parity, native keyboard/device behavior, or
+same-WorkOrder Appointment→Survey→Quotation workflow progression.
