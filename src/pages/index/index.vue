@@ -284,6 +284,7 @@ import { onShow } from '@dcloudio/uni-app'
 import {
   isBusinessMockDeveloperModeAvailable,
   isBusinessMockMode,
+  isProductionAuthBusinessMockIsolation,
   setBusinessMockMode,
   type BusinessMockMode,
 } from '@app/business-mock'
@@ -339,7 +340,11 @@ const quickLoginSubtitle = computed(() => {
   return productionTarget ? '生产快捷登录仅限本机开发运行' : '仅非生产环境配置后可用'
 })
 const quickLoginBadge = computed(() => (productionTarget ? '本机' : '测试'))
-const businessDataSourceLabel = computed(() => (mockMode.value === 'off' ? 'Real API' : 'Mock'))
+const productionAuthOnly = isProductionAuthBusinessMockIsolation()
+const businessDataSourceLabel = computed(() => (
+  mockMode.value !== 'off' ? 'Mock'
+    : productionAuthOnly ? '业务网络已隔离' : 'Real API'
+))
 const feedback = computed(() => message.value || userFacingLoginMessage(session.error))
 
 watch(
