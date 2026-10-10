@@ -371,6 +371,7 @@ for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }
     await expect(page.getByTestId('sku-mock-matched')).toHaveCount(0)
     await page.getByTestId('sku-mock-mode-direct').click()
     await expect(page.getByTestId('sku-mock-matched')).toContainText('synthetic-sku-2-grey')
+    await page.getByTestId('sku-mock-matched').scrollIntoViewIfNeeded()
     await info.attach('sku-02-matched-' + viewport.width, { body: await page.screenshot({ fullPage: true }), contentType: 'image/png' })
     await page.getByTestId('sku-mock-choice-color-black').click()
     await expect(page.getByTestId('sku-mock-unavailable')).toBeVisible()
@@ -378,6 +379,7 @@ for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }
     await page.getByTestId('sku-mock-choice-thickness-2').click()
     await page.getByTestId('sku-mock-choice-color-grey').click()
     await expect(page.getByTestId('sku-mock-ambiguous')).toBeVisible()
+    await page.getByTestId('sku-mock-ambiguous').scrollIntoViewIfNeeded()
     await info.attach('sku-03-ambiguous-' + viewport.width, { body: await page.screenshot({ fullPage: true }), contentType: 'image/png' })
     await page.getByTestId('sku-mock-scenario-foreign').click()
     await expect(page.getByTestId('sku-mock-read-blocked')).toContainText('foreign_sku')
@@ -426,6 +428,7 @@ for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }
     await expect(page.getByTestId('package-mock-selected-1')).toContainText('synthetic-sku-2-grey')
     await expect(page.getByTestId('package-mock-selected-1')).toContainText('历史数量 3')
     await expect(page.getByTestId('package-mock-selected-2')).toContainText('synthetic-sku-coat-3-black')
+    await page.getByTestId('package-mock-ready').scrollIntoViewIfNeeded()
     await info.attach('package-02-all-ready-' + viewport.width, {
       body: await page.screenshot({ fullPage: true }), contentType: 'image/png',
     })
@@ -440,6 +443,7 @@ for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }
     await page.getByTestId('package-mock-choice-2-color-black').click()
     await expect(page.getByTestId('package-mock-ready')).toBeVisible()
     await expect(page.getByTestId('package-mock-selected-1')).toContainText('synthetic-sku-alt-2-grey')
+    await page.getByTestId('package-mock-selected-1').scrollIntoViewIfNeeded()
     await info.attach('package-03-group-B-alternative-' + viewport.width, {
       body: await page.screenshot({ fullPage: true }), contentType: 'image/png',
     })
@@ -460,6 +464,7 @@ for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }
     await page.getByTestId('package-mock-choice-2-color-black').click()
     await expect(page.getByTestId('package-mock-ambiguous')).toBeVisible()
     await expect(page.getByTestId('package-mock-ready')).toHaveCount(0)
+    await page.getByTestId('package-mock-ambiguous').scrollIntoViewIfNeeded()
     await info.attach('package-04-ambiguous-' + viewport.width, {
       body: await page.screenshot({ fullPage: true }), contentType: 'image/png',
     })
