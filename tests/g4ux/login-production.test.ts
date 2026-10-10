@@ -74,6 +74,7 @@ describe('G4-UX production Login flow', () => {
     expect(appEntry).toContain('export { createTechnicianApplication as createApp }')
     expect(appEntry).toMatch(/\/\/ #ifdef MP-WEIXIN\s+application\.app\.mount\('#app'\)\s+\/\/ #endif/)
     expect(appEntry).toContain('return application')
+    expect(appEntry).toContain('application.app.use(__plugin)')
     expect(appEntry).toMatch(/\/\/ #ifdef H5\s+[^]*?import\('@app\/bootstrap'\)\.then\([\s\S]*?application\.app\.mount\('#app'\)\s+\}\)\s+\/\/ #endif/)
     // The H5 entry must not eagerly mount a second root on module import.
     expect(appEntry).not.toMatch(/\nconst application = createApplication\(\)/)
