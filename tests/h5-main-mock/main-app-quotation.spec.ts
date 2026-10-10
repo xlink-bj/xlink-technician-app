@@ -99,8 +99,17 @@ for (const viewport of [
     await page.getByTestId('survey-repair-part-parents').getByText('屋面', { exact: true }).click()
     await page.getByTestId('quotation-first-step-description').locator('textarea').fill('第一组：屋面维修')
     await page.getByTestId('quotation-first-step-quantity').locator('input').fill('12')
+    // #41 design Phase A: capture each transition in the REAL main App H5,
+    // using only the isolated DEV fixture (no fake design output or business write).
+    await info.attach(`g4f-stage-01-workbench-${viewport.width}`, {
+      body: await page.screenshot({ fullPage: true }), contentType: 'image/png',
+    })
     await page.getByTestId('quotation-first-step-select-products').click()
     await expect(page.getByTestId('quotation-catalog-page')).toBeVisible()
+    await expect(page.getByTestId('quotation-package-detail-mock-catalog-package-basic')).toBeVisible()
+    await info.attach(`g4f-stage-02-catalog-${viewport.width}`, {
+      body: await page.screenshot({ fullPage: true }), contentType: 'image/png',
+    })
 
     await page.getByTestId('quotation-package-detail-mock-catalog-package-basic').click()
     await expect(page.getByTestId('quotation-package-materials')).toBeVisible()
@@ -113,6 +122,9 @@ for (const viewport of [
       await expect(layer).toContainText('已选择')
     }
     await expect(page.getByTestId('quotation-package-selection-summary')).toContainText('2/2')
+    await info.attach(`g4f-stage-03-package-config-${viewport.width}`, {
+      body: await page.screenshot({ fullPage: true }), contentType: 'image/png',
+    })
     const commit = page.getByTestId('quotation-package-configure-commit')
     await expect(commit).toBeEnabled()
     await commit.click()
@@ -121,6 +133,9 @@ for (const viewport of [
     await expect(first).toContainText('第一组：屋面维修')
     await expect(page.getByTestId('quotation-group-section-quotation-group-1-package')).toBeVisible()
     await expect(page.locator('[data-testid^="quotation-configured-package-"]')).toHaveCount(1)
+    await info.attach(`g4f-stage-04-back-to-workbench-${viewport.width}`, {
+      body: await page.screenshot({ fullPage: true }), contentType: 'image/png',
+    })
 
     // Independent second group. It must not inherit or overwrite the package
     // selected for group 1; its direct material lives under group 2 only.
