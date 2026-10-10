@@ -243,7 +243,7 @@ function journeyListResponse(raw: unknown): unknown {
   if (!isDevMockJourneyEnabled()) return raw
   const clone = clonedResponse(raw)
   const envelope = mutableRecord(clone)
-  if (!Array.isArray(envelope?.data)) return clone
+  if (!envelope || !Array.isArray(envelope.data)) return clone
   const stage = mockJourneyStage()
   for (const item of envelope.data) {
     const node = mutableRecord(item)
