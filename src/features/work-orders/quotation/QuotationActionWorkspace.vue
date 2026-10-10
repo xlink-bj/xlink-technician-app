@@ -1,6 +1,7 @@
 <template>
   <ActionWorkspaceShell
     class="quotation-workspace-shell"
+    :class="{ 'quotation-workspace-shell--review': productReviewOnly }"
     :scroll-into-view="scrollIntoView"
     :customer-name="workspace.detail?.customerName"
     :display-number="workspace.detail?.displayNumber"
@@ -25,7 +26,7 @@
       <view class="quotation-workspace-footer-summary" data-testid="quotation-footer-summary">
         <view class="quotation-workspace-footer-summary__copy">
           <text class="quotation-workspace-footer-summary__title">本机报价草稿</text>
-          <text class="quotation-workspace-footer-summary__meta">{{ composition.selectionCount }} 项 · {{ composition.groups.length }} 个部位组</text>
+          <text class="quotation-workspace-footer-summary__meta" :data-testid="productReviewOnly ? 'quotation-product-demo-read-only' : undefined">{{ composition.selectionCount }} 项 · {{ composition.groups.length }} 个部位组{{ productReviewOnly ? ' · 演示，不提交订单' : '' }}</text>
         </view>
         <view class="quotation-workspace-footer-summary__amount">
           <text class="quotation-workspace-footer-summary__amount-label">{{ amountPresentation.label }}</text>
@@ -50,16 +51,8 @@
         quiet
         data-testid="quotation-synthetic-submit-disabled"
       />
-      <AppStatus
-        v-else-if="productReviewOnly"
-        class="quotation-production-read-only"
-        message="演示数据：可以编辑报价草稿和选择产品，正式订单提交已关闭。"
-        tone="neutral"
-        quiet
-        data-testid="quotation-product-demo-read-only"
-      />
       <AppButton
-        v-else
+        v-else-if="!productReviewOnly"
         data-testid="action-workspace-submit"
         class="action-workspace-submit"
         :disabled="!workspace.canSubmitQuotation || workspace.quotationOrderState.state === 'submitting'"
@@ -162,6 +155,9 @@ function openQuotationConfirmation(): void {
 .quotation-workspace-footer-summary__copy { display: flex; flex-direction: column; min-width: 0; }
 .quotation-workspace-footer-summary__title { color: var(--app-color-text-primary); font-size: 22rpx; font-weight: 800; }
 .quotation-workspace-footer-summary__meta { color: var(--app-color-text-secondary); font-size: 22rpx; line-height: 1.35; margin-top: 4rpx; }
+.quotation-workspace-shell--review .quotation-workspace-footer-summary__meta { font-size: 20rpx; }
+.quotation-workspace-shell--review .quotation-workspace-footer-summary { margin-bottom: 2rpx; }
+.quotation-workspace-shell--review .action-workspace-footer { padding-top: 8rpx; }
 .quotation-workspace-footer-summary__amount { align-items: flex-end; display: flex; flex-direction: column; flex-shrink: 0; margin-left: var(--app-space-sm); }
 .quotation-workspace-footer-summary__amount-label { color: var(--app-color-text-secondary); font-size: 20rpx; }
 .quotation-workspace-footer-summary__amount-value { color: var(--app-color-primary); font-size: 25rpx; font-weight: 800; margin-top: 4rpx; }
