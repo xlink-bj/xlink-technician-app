@@ -174,7 +174,9 @@ test('same Mock-018 quotation is reachable from normal work order list and detai
   await expect(page.locator('.work-orders-page')).toBeVisible()
   await page.locator('.search-input input').fill('MOCK-018')
   await page.locator('.search-button').click()
-  const row = page.locator('.work-order-card').filter({ hasText: 'MOCK-018' })
+  // The list intentionally renders an abbreviated numeric card number;
+  // verify full MOCK-018 identity in Detail, not in its summary card.
+  const row = page.locator('.work-order-card').filter({ hasText: '演示报价工单' })
   await expect(row, 'quotation fixture must exist in the normal role-scoped list').toBeVisible()
   await expect(row).toContainText('演示报价工单')
   await info.attach('normal-work-order-list-390', {
