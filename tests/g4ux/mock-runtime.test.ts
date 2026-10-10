@@ -30,6 +30,7 @@ import {
   mockCommandScenarioIds,
   mockQuotationWorkflowNodeId,
   isMockOwnedCommand,
+  isMockOwnedRead,
   mockWorkOrderActivityResponses,
   mockWorkOrderDetailResponse,
   mockWorkOrderDetailResponses,
@@ -133,6 +134,31 @@ describe('G4-UX business mock runtime', () => {
       order: JSON.stringify({ type: 1, serviceAppointmentId: 'ordinary-real-work-order' }),
     })).toBe(false)
     expect(isMockOwnedCommand('basic/order/upsert', { order: 'broken-json' })).toBe(false)
+  })
+
+  it('owns synthetic quotation Order reads without allowing a real HTTP fallback', async () => {
+    const workOrderId = mockCommandScenarioIds.quotationFoundation
+    expect(isMockOwnedRead('basic/order/query', {
+      'is:serviceAppointmentId|string#and': workOrderId,
+      'is:type|integer#and': 1,
+    })).toBe(true)
+    expect(isMockOwnedRead('basic/order/queryById', { id: 'order-synthetic-review' })).toBe(true)
+    expect(isMockOwnedRead('basic/order/query', {
+      'is:serviceAppointmentId|string#and': 'ordinary-real-work-order',
+    })).toBe(false)
+    setBusinessMockMode('data')
+    const request = vi.fn<UniApiRequestExecutor>()
+    const transport = createUniApiReadTransport({
+      apiBaseUrl: 'https://example.invalid',
+      getSessionRef: () => asOpaqueId<'SessionRef'>('synthetic-session-ref'),
+      request,
+      mockLatencyMs: 0,
+    })
+    await expect(transport.execute({
+      method: 'POST', path: 'basic/order/query',
+      body: { 'is:serviceAppointmentId|string#and': workOrderId },
+    })).rejects.toMatchObject({ category: 'server_terminal' } satisfies Partial<ApiReadTransportError>)
+    expect(request).not.toHaveBeenCalled()
   })
 
   it('requires a session before mock reads and bypasses uni.request for authenticated matches', async () => {
