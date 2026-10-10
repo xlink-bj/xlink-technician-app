@@ -20,6 +20,8 @@ export interface UniApiReadTransportOptions {
   readonly request?: UniApiRequestExecutor
   readonly timeoutMs?: number
   readonly mockLatencyMs?: number
+  /** When Production was used for local authentication, no business network fallback is allowed. */
+  readonly blockRealRequests?: boolean
   /** Supplies the real authenticated actor for bounded mock visibility markers. */
   readonly getMockActor?: () => MockReadActor | null
 }
@@ -118,6 +120,13 @@ export function createUniApiReadTransport(options: UniApiReadTransportOptions): 
       if (mockResponse !== null) return mockResponse
       if (isMockOwnedRead(input.path, input.body ?? input.query ?? {})) {
         throw new ApiReadTransportError('Synthetic mock read is disabled', 'server_terminal')
+      }
+
+      if (options.blockRealRequests === true) {
+        throw new ApiReadTransportError(
+          'Authenticated Mock-only development mode blocks all real business API reads',
+          'unsupported_capability',
+        )
       }
 
       const header: Record<string, string> = {
