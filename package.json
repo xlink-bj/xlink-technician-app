@@ -8,6 +8,7 @@
     "dev:h5": "uni -p h5",
     "build:h5": "uni build -p h5",
     "test:main-h5-boot": "playwright test --config playwright.main-h5-bootstrap.config.ts",
+    "test:main-h5-mock": "playwright test --config playwright.main-h5-mock.config.ts",
     "dev:mp-weixin": "uni -p mp-weixin",
     "dev:mp-weixin:prod-readonly": "uni -p mp-weixin --mode prod",
     "dev:h5-review": "vite --config vite.review.config.ts",
