@@ -1,7 +1,9 @@
 import { expect, test } from '@playwright/test'
+import { collectOfflineBrowserSignals } from './offline-boot-diagnostics'
 
 test('ordinary uni-app H5 renders the real Login page without external traffic', async ({ page }) => {
-  const businessRequests: string[] = []
+  const signals = collectOfflineBrowserSignals(page)
+  const businessRequests = signals.externalIntents
   const runtimeErrors: string[] = []
   page.on('pageerror', (error) => runtimeErrors.push(error.message))
   page.on('console', (message) => {
@@ -25,35 +27,15 @@ test('ordinary uni-app H5 renders the real Login page without external traffic',
       'the actual app Login screen must render rather than a blank #app root',
     ).toBeVisible({ timeout: 12_000 })
   } catch (error) {
-    const diagnostics = await page.evaluate(() => ({
-      readyState: document.readyState,
-      title: document.title,
-      appHTML: document.querySelector('#app')?.innerHTML.slice(0, 400) ?? 'MISSING',
-      scripts: [...document.scripts].map((script) => script.src.split('?')[0].split('/').slice(-3).join('/')),
-      loadedModules: performance.getEntriesByType('resource')
-        .map((item) => new URL(item.name).pathname)
-        .filter((path) => /main|index|uni-h5|entry/.test(path)).slice(0, 16),
-    }))
-    const entry = await page.request.get('/src/main.ts')
-    const transformed = entry.ok() ? await entry.text() : ''
-    const entryInfo = {
-      status: entry.status(),
-      hasH5FactoryCall: transformed.includes('createTechnicianApplication()'),
-      hasH5Mount: transformed.includes("mount('#app')"),
-      size: transformed.length,
-      // CI has synthetic no-login env only. Inspect the transformed entry once
-      // to diagnose what the pinned uni H5 compiler injects or drops.
-      transformedEntry: process.env.CI === 'true' ? transformed.slice(0, 3500) : undefined,
-    }
     throw new Error([
-      'Real main App H5 Login did not mount',
-      JSON.stringify({ diagnostics, entryInfo, runtimeErrors, businessRequests }),
-      String(error),
+      'OFFLINE_BOOT_BLOCKED: real main App Login did not mount',
+      JSON.stringify(await signals.snapshot()),
+      String(error).slice(0, 160),
     ].join('\\n'))
   }
   const launchAction = page.locator('.login-page .launch-stage .launch-cta')
   await expect(launchAction, 'uni-app launch CTA must render on the actual Login page').toBeVisible()
   await expect(launchAction).toContainText('进入登录')
-  expect(runtimeErrors, 'there must be no H5 entry errors').toEqual([])
+  expect(runtimeErrors.length, 'there must be no H5 entry errors').toBe(0)
   expect(businessRequests, 'a no-login smoke must not access any external host').toEqual([])
 })
