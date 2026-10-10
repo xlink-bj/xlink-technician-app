@@ -301,7 +301,9 @@ test('one MOCK-019 WorkOrder progresses Appointment → Survey → Quotation wit
   })
   const partSelector = page.getByTestId('survey-repair-part-selector')
   if (await partSelector.isVisible()) {
-    await partSelector.getByText('屋面', { exact: true }).click()
+    // Captured R1 'parts' provider puts 屋面 first. Native uni-button
+    // renders an additional chevron, so exact innerText does not equal 屋面.
+    await page.getByTestId('survey-repair-part-parents').locator('button').first().click()
     await expect(page.getByTestId('survey-repair-part-children')).toBeVisible({ timeout: 8000 })
     await page.getByTestId('survey-repair-part-children').locator('button').first().click()
   }
