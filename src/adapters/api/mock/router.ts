@@ -71,6 +71,18 @@ export function isMockOwnedRead(
   // This is an internal, synthetic-only route. It is always mock-owned so a
   // disabled Mock mode can never fall through to a real backend endpoint.
   if (route === '__mock/quotation/action-content') return true
+  // A synthetic Work Order must never become a real Order search, even when
+  // this particular mock route has no safe fixture to return.
+  if (
+    route === 'basic/order/query'
+    && typeof requestData['is:serviceAppointmentId|string#and'] === 'string'
+    && isSyntheticWorkOrderId(requestData['is:serviceAppointmentId|string#and'])
+  ) return true
+  if (
+    route === 'basic/order/queryById'
+    && typeof requestData.id === 'string'
+    && (requestData.id.startsWith('mock-') || requestData.id.startsWith('order-synthetic-'))
+  ) return true
   if (
     quotationCatalogListRoutes.has(route)
     && typeof requestData['in:serviceType|array#and'] === 'string'
