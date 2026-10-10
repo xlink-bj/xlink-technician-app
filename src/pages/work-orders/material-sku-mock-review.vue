@@ -91,6 +91,9 @@
       </view>
       <text class="sku-review-help">模拟维修分组选择相互隔离，不代表正式订单创建。</text>
       <view class="sku-review-actions">
+        <AppButton variant="text" data-testid="package-mock-toggle-errors" :pressed="showPackageFailureScenarios" @tap="showPackageFailureScenarios = !showPackageFailureScenarios">{{ showPackageFailureScenarios ? "收起异常场景" : "展开异常场景" }}</AppButton>
+      </view>
+      <view v-if="showPackageFailureScenarios" class="sku-review-actions" data-testid="package-mock-failure-options">
         <AppButton
           v-for="item in packageSkuMockScenarios"
           :key="item.value"
@@ -185,6 +188,7 @@ const routeId = ref('')
 const scenario = ref<MaterialSkuReviewScenario>('normal')
 const selected = ref<Readonly<Record<string, string>>>({})
 const reviewMode = ref<'direct' | 'package'>('package')
+const showPackageFailureScenarios = ref(false)
 function setReviewMode(next: 'direct' | 'package'): void {
   if (!authorized.value) return
   reviewMode.value = next
