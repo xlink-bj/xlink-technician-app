@@ -167,7 +167,13 @@ for (const viewport of [
 }
 
 test('same Mock-018 quotation is reachable from normal work order list and detail', async ({ page }, info) => {
-  await page.goto('/#/pages/work-orders/work-orders', { waitUntil: 'domcontentloaded' })
+  await page.goto('/#/pages/index/index', { waitUntil: 'domcontentloaded' })
+  await expect(page.locator('.home-page')).toBeVisible()
+  await page.locator('.work-orders-entry').click()
+  await expect(page).toHaveURL(/pages\/work-orders\/work-orders/)
+  await expect(page.locator('.work-orders-page')).toBeVisible()
+  await page.locator('.search-input').fill('MOCK-018')
+  await page.locator('.search-button').click()
   const row = page.locator('.work-order-card').filter({ hasText: 'MOCK-018' })
   await expect(row, 'quotation fixture must exist in the normal role-scoped list').toBeVisible()
   await expect(row).toContainText('演示报价工单')
