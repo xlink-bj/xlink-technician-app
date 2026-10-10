@@ -178,6 +178,7 @@ import { computed, ref, watch } from 'vue'
 import { onLoad, onUnload } from '@dcloudio/uni-app'
 
 import { isBusinessMockQuotationPreview } from '@app/business-mock'
+import { setActionWorkspacePageTitle } from '@app/action-page-title'
 import { hasAuthenticatedSession } from '@features/home/access'
 import { isProductionReadOnlyRuntime } from '@shared/config'
 import {
@@ -238,7 +239,7 @@ const workspaceNavigationTitle = computed(() => {
 watch(
   [routeReady, workspaceNavigationTitle],
   ([ready, title]) => {
-    if (ready) uni.setNavigationBarTitle({ title })
+    if (ready) setActionWorkspacePageTitle(title)
   },
   { immediate: true },
 )
