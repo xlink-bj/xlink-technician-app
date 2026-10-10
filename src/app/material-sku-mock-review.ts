@@ -1,6 +1,8 @@
 import { isDevMockJourneyEnabled, mockJourneyWorkOrderId } from '@adapters/api/mock/journey'
 import { syntheticMaterialSalesFields, syntheticMaterialSkuRows, syntheticMaterialSpu } from '@adapters/api/mock/material-sku'
 import { projectR1MaterialSku, type MaterialSkuRead } from '@shared/material-sku-contract'
+import { projectR1PackageMaterialSku, type PackageMaterialSkuRead } from '@shared/package-material-sku-contract'
+import { syntheticPackageId, syntheticPackageMaterialLinks, syntheticPackageSalesFields, syntheticPackageSkuRows } from '@adapters/api/mock/package-material-sku'
 
 export const materialSkuReviewRoute = '/pages/work-orders/material-sku-mock-review' as const
 export const materialSkuReviewUrl = (): string =>
@@ -52,5 +54,39 @@ export function readMaterialSkuReview(scenario: MaterialSkuReviewScenario): Mate
   }
   return projectR1MaterialSku({
     spu: syntheticMaterialSpu, salesFields: syntheticMaterialSalesFields, skuRows: syntheticMaterialSkuRows,
+  })
+}
+
+
+export const packageSkuMockScenarios = [
+  { value: 'normal', label: '两层材料' },
+  { value: 'no_skus', label: '缺失 SKU' },
+  { value: 'ambiguous', label: '规格歧义' },
+  { value: 'orphan', label: '异源 SKU' },
+  { value: 'duplicate', label: '重复 SKU' },
+  { value: 'pricing_other', label: '非 SKU 计价' },
+] as const
+export type PackageSkuMockScenario = typeof packageSkuMockScenarios[number]['value']
+
+/** R1 one-price SKU branch only. The source is entirely synthetic. */
+export function readPackageSkuMockReview(scenario: PackageSkuMockScenario): PackageMaterialSkuRead {
+  const rows: readonly unknown[] =
+    scenario === 'no_skus'
+      ? syntheticPackageSkuRows.filter((row) => row.spuid !== 'synthetic-spu-coating')
+      : scenario === 'ambiguous'
+        ? [...syntheticPackageSkuRows,
+          { ...syntheticPackageSkuRows[0], _id: 'synthetic-sku-ambiguous-package' }]
+        : scenario === 'orphan'
+          ? [...syntheticPackageSkuRows,
+            { ...syntheticPackageSkuRows[0], _id: 'synthetic-foreign-sku', spuid: 'other-spu' }]
+          : scenario === 'duplicate'
+            ? [...syntheticPackageSkuRows, syntheticPackageSkuRows[0]]
+            : syntheticPackageSkuRows
+  return projectR1PackageMaterialSku({
+    packageId: syntheticPackageId,
+    pricingMethod: scenario === 'pricing_other' ? '2' : '1',
+    materialLinks: syntheticPackageMaterialLinks,
+    salesFields: syntheticPackageSalesFields,
+    skuRows: rows,
   })
 }

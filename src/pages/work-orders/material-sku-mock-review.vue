@@ -67,6 +67,90 @@
         </view>
       </template>
     </view>
+
+    <view class="sku-review-card app-surface" data-testid="package-sku-mock-workbench">
+      <text class="sku-review-eyebrow">套餐材料 · 独立的 R1 SKU 配置路径</text>
+      <text class="sku-review-title">套餐材料层与规格</text>
+      <text class="sku-review-help">合成套餐含两个材料层；第一层可以替换材料，每层 SKU 必须独立核实。无真实报价、价格或数量提交。</text>
+      <view class="sku-review-actions">
+        <AppButton
+          v-for="group in packageMockGroups"
+          :key="group.value"
+          variant="secondary"
+          :pressed="activePackageGroup === group.value"
+          :data-testid="'package-mock-group-' + group.value"
+          @tap="setPackageGroup(group.value)"
+        >{{ group.label }}</AppButton>
+      </view>
+      <text class="sku-review-help">模拟维修分组选择相互隔离，不代表正式订单创建。</text>
+      <view class="sku-review-actions">
+        <AppButton
+          v-for="item in packageSkuMockScenarios"
+          :key="item.value"
+          variant="secondary"
+          :pressed="packageScenario === item.value"
+          :data-testid="'package-mock-scenario-' + item.value"
+          @tap="setPackageScenario(item.value)"
+        >{{ item.label }}</AppButton>
+      </view>
+      <template v-if="packageRead.state === 'blocked'">
+        <text class="sku-review-warning" data-testid="package-mock-blocked">套餐 SKU 数据已阻止 · {{ packageRead.reason }}</text>
+      </template>
+      <template v-else-if="packageRead.state === 'not_applicable'">
+        <text class="sku-review-help" data-testid="package-mock-not-applicable">此合成套餐计价方式不走 SKU 用量分支，禁止套用 SKU 匹配。</text>
+      </template>
+      <template v-else>
+        <view v-for="layer in packageRead.layers" :key="layer.layer" class="sku-review-attribute" :data-testid="'package-mock-layer-' + layer.layer">
+          <text class="sku-review-section-title">材料层 {{ layer.layer }}</text>
+          <text class="sku-review-help">选择本层材料，不影响其他层或其他维修分组。</text>
+          <view class="sku-review-actions">
+            <AppButton
+              v-for="option in layer.options"
+              :key="option.linkId"
+              variant="secondary"
+              :pressed="packageChosenLink(layer.layer) === option.linkId"
+              :data-testid="'package-mock-material-' + option.linkId"
+              @tap="choosePackageMaterial(layer.layer, option.linkId)"
+            >{{ option.name }}</AppButton>
+          </view>
+          <template v-for="option in layer.options" :key="option.linkId">
+            <view v-if="packageChosenLink(layer.layer) === option.linkId" class="sku-review-attribute">
+              <template v-if="option.skuRead.state === 'ready' || option.skuRead.state === 'no_skus'">
+                <view v-for="field in option.skuRead.fields" :key="field.name" class="sku-review-attribute">
+                  <text class="sku-review-field">{{ field.label }} · {{ packageChosenValue(layer.layer, field.name) || '未选择' }}</text>
+                  <view class="sku-review-actions">
+                    <AppButton
+                      v-for="value in field.values"
+                      :key="value"
+                      variant="secondary"
+                      :pressed="packageChosenValue(layer.layer, field.name) === value"
+                      :data-testid="'package-mock-choice-' + layer.layer + '-' + field.name + '-' + value"
+                      @tap="choosePackageAttribute(layer.layer, field.name, value)"
+                    >{{ value }}</AppButton>
+                  </view>
+                </view>
+              </template>
+              <text v-if="option.skuRead.state === 'no_skus'" class="sku-review-warning">本材料无 SKU 列表，不能选用。</text>
+              <text v-else class="sku-review-help">属性仅用于该材料自身的 SKU 唯一匹配。</text>
+            </view>
+          </template>
+        </view>
+        <view class="sku-review-result" data-testid="package-mock-result">
+          <text class="sku-review-section-title">分组 {{ activePackageGroup }} · 套餐 SKU 核对</text>
+          <text v-if="packageMatch.state === 'incomplete'" class="sku-review-help" data-testid="package-mock-incomplete">尚未完成全部材料层和规格选择。</text>
+          <text v-else-if="packageMatch.state === 'unavailable'" class="sku-review-warning" data-testid="package-mock-unavailable">至少一个材料层找不到完全匹配的 SKU。</text>
+          <text v-else-if="packageMatch.state === 'ambiguous'" class="sku-review-warning" data-testid="package-mock-ambiguous">至少一个材料层存在多个 SKU 匹配，禁止自动选取。</text>
+          <text v-else-if="packageMatch.state === 'blocked'" class="sku-review-warning" data-testid="package-mock-choice-blocked">材料关联或属性无效，不能继续。</text>
+          <view v-else-if="packageMatch.state === 'ready'" data-testid="package-mock-ready" class="sku-review-attribute">
+            <text class="sku-review-value">所有材料层均有唯一匹配 · 仅读</text>
+            <text v-for="row in packageMatch.rows" :key="row.linkId" class="sku-review-help" :data-testid="'package-mock-selected-' + row.layer">
+              材料层 {{ row.layer }}：{{ row.skuId }} · 历史数量 {{ row.historicalQuantity ?? '未记录' }}
+            </text>
+          </view>
+          <text class="sku-review-help">未生成报价项目、SKU 用量、金额或正式订单。</text>
+        </view>
+      </template>
+    </view>
     <template #actions>
       <text class="sku-review-footer" data-testid="sku-mock-footer">DEV Mock 仅读 · 不支持提交或修改数量</text>
       <navigator class="sku-review-back" open-type="navigateBack" :delta="1">返回开发演示</navigator>
@@ -81,9 +165,11 @@ import { useSessionStore } from '@shared/state'
 import ActionWorkspaceShell from '@shared/ui/ActionWorkspaceShell.vue'
 import AppButton from '@shared/ui/AppButton.vue'
 import { matchR1MaterialSku } from '@shared/material-sku-contract'
+import { matchR1PackageMaterialSku, type PackageSkuChoice } from '@shared/package-material-sku-contract'
 import {
   materialSkuScenarios, canReadMaterialSkuMock, readMaterialSkuReview,
-  type MaterialSkuReviewScenario,
+  type MaterialSkuReviewScenario, packageSkuMockScenarios, readPackageSkuMockReview,
+  type PackageSkuMockScenario,
 } from '@app/material-sku-mock-review'
 
 const session = useSessionStore()
@@ -108,6 +194,61 @@ function setScenario(next: MaterialSkuReviewScenario): void {
   if (!authorized.value) return
   scenario.value = next
   selected.value = {}
+}
+
+
+const packageMockGroups = [
+  { value: 'A', label: '模拟维修部位 A' },
+  { value: 'B', label: '模拟维修部位 B' },
+] as const
+type PackageMockGroup = typeof packageMockGroups[number]['value']
+const activePackageGroup = ref<PackageMockGroup>('A')
+const packageScenario = ref<PackageSkuMockScenario>('normal')
+const packageSelections = ref<Readonly<Record<PackageMockGroup, readonly PackageSkuChoice[]>>>({ A: [], B: [] })
+const packageRead = computed(() => readPackageSkuMockReview(packageScenario.value))
+const currentPackageChoices = computed(() => packageSelections.value[activePackageGroup.value])
+const packageMatch = computed(() => matchR1PackageMaterialSku(packageRead.value, currentPackageChoices.value))
+function packageCurrentChoice(layer: string): PackageSkuChoice | undefined {
+  return currentPackageChoices.value.find((choice) => choice.layer === layer)
+}
+function packageChosenLink(layer: string): string {
+  return packageCurrentChoice(layer)?.linkId ?? ''
+}
+function packageChosenValue(layer: string, name: string): string {
+  return packageCurrentChoice(layer)?.attributes[name] ?? ''
+}
+function setPackageGroup(next: PackageMockGroup): void {
+  if (!authorized.value) return
+  activePackageGroup.value = next
+}
+function setPackageScenario(next: PackageSkuMockScenario): void {
+  if (!authorized.value || !packageSkuMockScenarios.some((item) => item.value === next)) return
+  packageScenario.value = next
+  packageSelections.value = { A: [], B: [] }
+}
+function choosePackageMaterial(layer: string, linkId: string): void {
+  if (!authorized.value || packageRead.value.state !== 'ready') return
+  const group = packageRead.value.layers.find((entry) => entry.layer === layer)
+  if (!group?.options.some((item) => item.linkId === linkId)) return
+  const others = currentPackageChoices.value.filter((choice) => choice.layer !== layer)
+  packageSelections.value = {
+    ...packageSelections.value,
+    [activePackageGroup.value]: [...others, { layer, linkId, attributes: {} }],
+  }
+}
+function choosePackageAttribute(layer: string, name: string, value: string): void {
+  if (!authorized.value || packageRead.value.state !== 'ready') return
+  const choice = packageCurrentChoice(layer)
+  if (!choice) return
+  const group = packageRead.value.layers.find((entry) => entry.layer === layer)
+  const option = group?.options.find((entry) => entry.linkId === choice.linkId)
+  if (!option || (option.skuRead.state !== 'ready' && option.skuRead.state !== 'no_skus')) return
+  if (!option.skuRead.fields.some((field) => field.name === name && field.values.includes(value))) return
+  packageSelections.value = {
+    ...packageSelections.value,
+    [activePackageGroup.value]: currentPackageChoices.value.map((row) =>
+      row.layer === layer ? { ...row, attributes: { ...row.attributes, [name]: value } } : row),
+  }
 }
 </script>
 <style scoped>
