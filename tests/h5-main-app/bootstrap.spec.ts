@@ -51,7 +51,9 @@ test('ordinary uni-app H5 renders the real Login page without external traffic',
       String(error),
     ].join('\\n'))
   }
-  await expect(page.getByRole('button', { name: '进入登录' })).toBeVisible()
+  const launchAction = page.locator('.login-page .launch-stage .launch-cta')
+  await expect(launchAction, 'uni-app launch CTA must render on the actual Login page').toBeVisible()
+  await expect(launchAction).toContainText('进入登录')
   expect(runtimeErrors, 'there must be no H5 entry errors').toEqual([])
   expect(businessRequests, 'a no-login smoke must not access any external host').toEqual([])
 })
