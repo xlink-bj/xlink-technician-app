@@ -62,7 +62,9 @@ describe('G4-F Production authentication + isolated DEV business Mock', () => {
       options.success?.({
         statusCode: 200,
         data: { success: true },
-      } as UniNamespace.RequestSuccessCallbackResult)
+        header: {},
+        cookies: [],
+      })
     })
     const driver = createUniAuthBackendDriver({ apiBaseUrl: prodLoginHost, request })
     await expect(driver.login({
