@@ -401,10 +401,34 @@ export const mockSanodeListResponse = {
       nodeDef: { nodeType: 'forms', name: '待评价' },
       data: mockServiceAppointmentData[mockStatusSampleIds[3]],
     },
+    // The quotation review Work Order must be discoverable from the normal
+    // technician list, not only a developer Home shortcut. Same WorkOrderId,
+    // workflow node and catalog scope as the source-shaped Detail fixture.
+    {
+      _id: mockQuotationWorkflowNodeId,
+      state: 1,
+      nodeDef: {
+        nodeType: 'placeOrder',
+        name: '报价',
+        viewableRoleIds: ['synthetic-role'],
+      },
+      data: {
+        _id: mockCommandScenarioIds.quotationFoundation,
+        orderNum: 'MOCK-018',
+        name: '演示报价工单',
+        address: '合成评审地址',
+        district: 110105,
+        serviceType: mockQuotationCatalogServiceType,
+        exts: { sourceType: mockQuotationCatalogSourceType },
+        status: mockSyntheticStatusCodes.order,
+        phone: '13800000018',
+        workflowRunId: 'mock-workflow-run-018',
+      },
+    },
   ],
   page: 1,
   rows: 20,
-  total: 10,
+  total: 11,
 } as const
 
 export const mockOrdinaryListResponse = {
