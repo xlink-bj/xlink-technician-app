@@ -105,7 +105,6 @@ export function projectR1PackageMaterialSku(input: {
   const layers: PackageSkuLayerRead[] = []
   // Map retains backend supplied order; UI may label but MUST NOT infer
   // mandatory/optional layer flags from absent body metadata.
-  let i = 0
   for (const [layer, links] of materials) {
     const options: PackageSkuMaterialOption[] = []
     for (const source of input.materialLinks) {
@@ -130,7 +129,6 @@ export function projectR1PackageMaterialSku(input: {
     }
     if (!options.length || links.length !== options.length) return fail('invalid_material_source')
     layers.push({ layer, options })
-    i += 1
   }
   return layers.length ? { state: 'ready', packageId, layers } : fail('invalid_material_source')
 }
