@@ -59,7 +59,9 @@ describe('real main App / no-login Mock UX QA isolation', () => {
 
   it('in the DEV-only switch selects the real composition port with no login executor', async () => {
     vi.stubEnv('DEV', true)
-    for (const [key, value] of Object.entries(safe)) vi.stubEnv(key, value)
+    for (const [key, value] of Object.entries(safe)) {
+      if (key !== 'DEV') vi.stubEnv(key, String(value))
+    }
     const port = createDefaultAuthSessionPort()
     const result = await port.restoreSession()
     expect(result.state).toBe('succeeded')
