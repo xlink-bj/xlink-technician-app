@@ -81,6 +81,44 @@ test('real authenticated shell uses local-only Mock quotation with zero external
 })
 
 
+test('real main App Signing DEV Mock keeps official Orders distinct and all actions disabled', async ({ page }, info) => {
+  await page.goto('/#/pages/index/index', { waitUntil: 'domcontentloaded' })
+  await expect(page.getByTestId('signing-mock-entry')).toBeVisible()
+  await page.getByTestId('signing-mock-entry').click()
+  await expect(page).toHaveURL(/pages\/work-orders\/signing-mock-review/)
+  await expect(page.getByTestId('signing-mock-workbench')).toBeVisible()
+  await expect(page.getByTestId('signing-mock-orders')).toContainText('模拟正式订单 A')
+  await expect(page.getByTestId('signing-mock-orders')).toContainText('模拟正式订单 B')
+  await expect(page.getByTestId('signing-mock-no-contract')).toBeVisible()
+  await page.getByRole('button', { name: '模拟正式订单 B' }).click()
+  await expect(page.getByTestId('signing-mock-state')).toContainText('签署中')
+  await page.getByRole('button', { name: '模拟已签署' }).click()
+  await expect(page.getByTestId('signing-mock-state')).toContainText('已签署')
+  await page.getByRole('button', { name: '模拟失败' }).click()
+  await expect(page.getByTestId('signing-mock-state')).toContainText('失败')
+  await page.getByRole('button', { name: '模拟过期' }).click()
+  await expect(page.getByTestId('signing-mock-state')).toContainText('过期')
+  await page.getByRole('button', { name: '无正式订单' }).click()
+  await expect(page.getByTestId('signing-mock-empty')).toBeVisible()
+  await page.getByRole('button', { name: '读取失败' }).click()
+  await expect(page.getByTestId('signing-mock-error')).toBeVisible()
+  await page.getByRole('button', { name: '订单与合同' }).click()
+  await page.getByRole('button', { name: '模拟正式订单 B' }).click()
+  const actions = page.getByTestId('signing-mock-disabled-actions')
+  await expect(actions).toBeVisible()
+  await expect(actions.getByRole('button', { name: /预览合同/ })).toBeDisabled()
+  await expect(actions.getByRole('button', { name: /发起签约/ })).toBeDisabled()
+  await expect(page.getByTestId('signing-mock-footer')).toContainText('无业务写入')
+  await info.attach('signing-mock-390', {
+    body: await page.screenshot({ fullPage: true }),
+    contentType: 'image/png',
+  })
+  expect(evidence.externalIntents).toEqual([])
+  expect(evidence.localFailures).toEqual([])
+  expect(evidence.pageErrors).toBe(0)
+  expect(evidence.consoleErrors).toBe(0)
+})
+
 for (const viewport of [
   { width: 375, height: 667 },
   { width: 390, height: 844 },

@@ -94,6 +94,18 @@
             <text class="mock-action-scenario-arrow" aria-hidden="true">›</text>
           </navigator>
           <navigator
+            v-if="isSigningMockReviewAvailable()"
+            class="mock-action-scenario"
+            :url="signingMockReviewUrl()"
+            data-testid="signing-mock-entry"
+          >
+            <view class="mock-action-scenario-copy">
+              <text class="mock-action-scenario-label">签约 Mock · 独立正式订单样例</text>
+              <text class="mock-action-scenario-description">同一工单 2 个合成正式订单；合同状态只读演示，无签约业务命令</text>
+            </view>
+            <text class="mock-action-scenario-arrow" aria-hidden="true">›</text>
+          </navigator>
+          <navigator
             v-for="scenario in mockActionWorkspaceScenarios"
             :key="scenario.key"
             class="mock-action-scenario"
@@ -301,6 +313,7 @@ import {
   type BusinessMockMode,
 } from '@app/business-mock'
 import { mockActionWorkspaceScenarios } from '@app/action-workspace-harness'
+import { isSigningMockReviewAvailable, signingMockReviewUrl } from '@features/work-orders/signing/mock-signing'
 import { isMockJourneyAvailable, mockJourneyRoute } from '@app/mock-journey'
 import { hasAuthenticatedSession, workOrdersRoute } from '@features/home/access'
 import LocalDraftDiagnosticsPanel from '@features/home/components/LocalDraftDiagnosticsPanel.vue'
