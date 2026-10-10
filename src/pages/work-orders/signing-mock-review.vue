@@ -27,6 +27,7 @@
         <AppButton
           v-for="item in signingMockScenarios"
           :key="item.value"
+          :data-testid="'signing-mock-scenario-' + item.value"
           variant="secondary"
           :pressed="scenario === item.value"
           @tap="scenario = item.value"
@@ -54,6 +55,7 @@
           <AppButton
             v-for="order in view.orders"
             :key="order.id"
+            :data-testid="'signing-mock-order-' + order.id"
             variant="secondary"
             :pressed="selectedOrderId === order.id"
             @tap="chooseOrder(order.id)"
@@ -82,8 +84,8 @@
       <view class="signing-review-section app-surface" data-testid="signing-mock-disabled-actions">
         <text class="signing-review-section-title">合同预览与签约操作</text>
         <text class="signing-review-help">合同读取授权、签署方、动态签约字段及文件访问尚未核验。R1 的电子/线下申请与状态同步均可能产生业务副作用。</text>
-        <AppButton disabled block variant="secondary">预览合同 · 未开放</AppButton>
-        <AppButton disabled block>发起签约 · 未开放</AppButton>
+        <AppButton disabled block variant="secondary" data-testid="signing-mock-preview-disabled">预览合同 · 未开放</AppButton>
+        <AppButton disabled block data-testid="signing-mock-apply-disabled">发起签约 · 未开放</AppButton>
       </view>
     </template>
 
