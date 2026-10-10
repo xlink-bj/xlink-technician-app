@@ -82,6 +82,18 @@
         <view v-if="mockMode === 'data'" class="mock-action-scenarios">
           <text class="mock-mode-label">Action Workspace 场景</text>
           <navigator
+            v-if="isMockJourneyAvailable()"
+            class="mock-action-scenario"
+            :url="mockJourneyRoute()"
+            data-testid="mock-continuous-journey-entry"
+          >
+            <view class="mock-action-scenario-copy">
+              <text class="mock-action-scenario-label">连续业务旅程 · MOCK-019</text>
+              <text class="mock-action-scenario-description">同一工单预约 → 勘察 → 报价；仅本机模拟阶段，无业务提交</text>
+            </view>
+            <text class="mock-action-scenario-arrow" aria-hidden="true">›</text>
+          </navigator>
+          <navigator
             v-for="scenario in mockActionWorkspaceScenarios"
             :key="scenario.key"
             class="mock-action-scenario"
@@ -289,6 +301,7 @@ import {
   type BusinessMockMode,
 } from '@app/business-mock'
 import { mockActionWorkspaceScenarios } from '@app/action-workspace-harness'
+import { isMockJourneyAvailable, mockJourneyRoute } from '@app/mock-journey'
 import { hasAuthenticatedSession, workOrdersRoute } from '@features/home/access'
 import LocalDraftDiagnosticsPanel from '@features/home/components/LocalDraftDiagnosticsPanel.vue'
 import {
