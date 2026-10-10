@@ -40,8 +40,6 @@ export interface SigningMockReadInput {
   readonly roleId?: string
   readonly orderId: string
   readonly scenario: SigningMockScenario
-  /** Explicit injection is for unit tests only; callers must use the guarded default. */
-  readonly devMockEnabled?: boolean
 }
 
 const workOrderId = mockJourneyWorkOrderId
@@ -77,8 +75,7 @@ export function isSigningMockReviewAvailable(): boolean {
  * cannot be promoted to an official Order by this demo.
  */
 export function readSigningMock(input: SigningMockReadInput): SigningMockRead {
-  const enabled = input.devMockEnabled === undefined ? isDevMockJourneyEnabled() : input.devMockEnabled
-  if (!enabled || input.workOrderId !== workOrderId
+  if (!isDevMockJourneyEnabled() || input.workOrderId !== workOrderId
     || input.userId !== 'synthetic-user' || input.roleId !== 'synthetic-role') {
     return { kind: 'blocked', reason: '签约演示仅向已授权的本地 Mock 账号开放。' }
   }
