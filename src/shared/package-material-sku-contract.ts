@@ -159,6 +159,7 @@ export function matchR1PackageMaterialSku(
     if (result.state === 'unavailable') return { state: 'unavailable' }
     if (result.state === 'blocked' || result.state === 'not_configured') return { state: 'blocked' }
     if (result.state === 'incomplete') return { state: 'incomplete' }
+    if (result.state !== 'matched') return { state: 'blocked' }
     chosen.push({
       layer: layer.layer, linkId: option.linkId, materialId: option.materialId,
       skuId: result.skuId,
