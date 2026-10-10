@@ -40,6 +40,9 @@
       <text class="sku-review-section-title">当前合成 SPU</text>
       <text class="sku-review-value">屋面防水卷材 · SPU 示例</text>
       <text class="sku-review-help">两个销售属性：厚度、颜色。必须全部明确选择后，才进行唯一 SKU 匹配。</text>
+      <text v-if="directAdmission.status === 'loading'" class="sku-review-help" data-testid="sku-mock-read-loading">正在核验合成 SKU 范围…</text>
+      <text v-else-if="directAdmission.status === 'blocked'" class="sku-review-warning" data-testid="sku-mock-read-blocked">合成 SKU 读取被阻止 · {{ directAdmission.reason }}</text>
+      <text v-else class="sku-review-help" data-testid="sku-mock-read-accepted">合成 SKU 来源已核验 · 仅限当前模拟工单</text>
       <template v-if="read.state === 'blocked'">
         <text class="sku-review-warning" data-testid="sku-mock-source-blocked">数据异常 · 不允许选择 SKU（{{ read.reason }}）</text>
       </template>
@@ -79,6 +82,9 @@
       <text class="sku-review-eyebrow">套餐材料 · 独立的 R1 SKU 配置路径</text>
       <text class="sku-review-title">套餐材料层与规格</text>
       <text class="sku-review-help">合成套餐含两个材料层；第一层可以替换材料，每层 SKU 必须独立核实。无真实报价、价格或数量提交。</text>
+      <text v-if="packageAdmission.status === 'loading'" class="sku-review-help" data-testid="package-mock-read-loading">正在核验合成套餐 SKU 范围…</text>
+      <text v-else-if="packageAdmission.status === 'blocked'" class="sku-review-warning" data-testid="package-mock-read-blocked">合成套餐 SKU 读取被阻止 · {{ packageAdmission.reason }}</text>
+      <text v-else class="sku-review-help" data-testid="package-mock-read-accepted">材料层对应 SKU 已通过模拟读取校验 · 不代表真实商品授权</text>
       <view class="sku-review-actions">
         <AppButton
           v-for="group in packageMockGroups"
@@ -170,16 +176,17 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onUnmounted, ref, watch } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { useSessionStore } from '@shared/state'
 import ActionWorkspaceShell from '@shared/ui/ActionWorkspaceShell.vue'
 import AppButton from '@shared/ui/AppButton.vue'
-import { matchR1MaterialSku } from '@shared/material-sku-contract'
-import { matchR1PackageMaterialSku, type PackageSkuChoice } from '@shared/package-material-sku-contract'
+import { matchR1MaterialSku, type MaterialSkuRead } from '@shared/material-sku-contract'
+import { matchR1PackageMaterialSku, type PackageMaterialSkuRead, type PackageSkuChoice } from '@shared/package-material-sku-contract'
+import { createSyntheticSkuReviewCoordinator, syntheticSkuReviewScope, type SyntheticReviewAdmission } from '@app/material-sku-mock-coordinator'
 import {
-  materialSkuScenarios, canReadMaterialSkuMock, readMaterialSkuReview,
-  type MaterialSkuReviewScenario, packageSkuMockScenarios, readPackageSkuMockReview,
+  materialSkuScenarios, canReadMaterialSkuMock,
+  type MaterialSkuReviewScenario, packageSkuMockScenarios,
   type PackageSkuMockScenario,
 } from '@app/material-sku-mock-review'
 
@@ -200,10 +207,12 @@ const authorized = computed(() =>
     userId: session.session?.user.id,
     roleId: session.session?.currentRole?.id,
   }))
-const read = computed(() => readMaterialSkuReview(scenario.value))
+const read = ref<MaterialSkuRead>({ state: 'blocked', reason: 'malformed_source' })
+const directAdmission = ref<SyntheticReviewAdmission | { readonly status: 'loading' }>({ status: 'loading' })
 const match = computed(() => matchR1MaterialSku(read.value, selected.value))
 function choose(name: string, value: string): void {
-  if (!authorized.value || read.value.state !== 'ready' && read.value.state !== 'no_skus') return
+  if (!authorized.value || directAdmission.value.status !== 'accepted_synthetic'
+    || read.value.state !== 'ready' && read.value.state !== 'no_skus') return
   if (!read.value.fields.some((field) => field.name === name && field.values.includes(value))) return
   selected.value = { ...selected.value, [name]: value }
 }
@@ -222,7 +231,8 @@ type PackageMockGroup = typeof packageMockGroups[number]['value']
 const activePackageGroup = ref<PackageMockGroup>('A')
 const packageScenario = ref<PackageSkuMockScenario>('normal')
 const packageSelections = ref<Readonly<Record<PackageMockGroup, readonly PackageSkuChoice[]>>>({ A: [], B: [] })
-const packageRead = computed(() => readPackageSkuMockReview(packageScenario.value))
+const packageRead = ref<PackageMaterialSkuRead>({ state: 'blocked', reason: 'invalid_material_source' })
+const packageAdmission = ref<SyntheticReviewAdmission | { readonly status: 'loading' }>({ status: 'loading' })
 const currentPackageChoices = computed(() => packageSelections.value[activePackageGroup.value])
 const packageMatch = computed(() => matchR1PackageMaterialSku(packageRead.value, currentPackageChoices.value))
 function packageCurrentChoice(layer: string): PackageSkuChoice | undefined {
@@ -244,7 +254,8 @@ function setPackageScenario(next: PackageSkuMockScenario): void {
   packageSelections.value = { A: [], B: [] }
 }
 function choosePackageMaterial(layer: string, linkId: string): void {
-  if (!authorized.value || packageRead.value.state !== 'ready') return
+  if (!authorized.value || packageAdmission.value.status !== 'accepted_synthetic'
+    || packageRead.value.state !== 'ready') return
   const group = packageRead.value.layers.find((entry) => entry.layer === layer)
   if (!group?.options.some((item) => item.linkId === linkId)) return
   const others = currentPackageChoices.value.filter((choice) => choice.layer !== layer)
@@ -254,7 +265,8 @@ function choosePackageMaterial(layer: string, linkId: string): void {
   }
 }
 function choosePackageAttribute(layer: string, name: string, value: string): void {
-  if (!authorized.value || packageRead.value.state !== 'ready') return
+  if (!authorized.value || packageAdmission.value.status !== 'accepted_synthetic'
+    || packageRead.value.state !== 'ready') return
   const choice = packageCurrentChoice(layer)
   if (!choice) return
   const group = packageRead.value.layers.find((entry) => entry.layer === layer)
@@ -267,6 +279,43 @@ function choosePackageAttribute(layer: string, name: string, value: string): voi
       row.layer === layer ? { ...row, attributes: { ...row.attributes, [name]: value } } : row),
   }
 }
+
+const readCoordinator = createSyntheticSkuReviewCoordinator({
+  enabled: () => authorized.value,
+  currentScope: () => syntheticSkuReviewScope({
+    session: session.session,
+    workOrderId: routeId.value,
+  }),
+})
+const identityRevision = computed(() => JSON.stringify([
+  session.status, session.session?.sessionRef ?? '',
+  session.session?.user.id ?? '', session.session?.currentRole?.id ?? '',
+  session.session?.roleVersion ?? '', routeId.value,
+]))
+watch([identityRevision, scenario, packageScenario], async (_values, _old, onCleanup) => {
+  let current = true
+  onCleanup(() => {
+    current = false
+    readCoordinator.invalidate()
+  })
+  directAdmission.value = { status: 'loading' }
+  packageAdmission.value = { status: 'loading' }
+  read.value = { state: 'blocked', reason: 'malformed_source' }
+  packageRead.value = { state: 'blocked', reason: 'invalid_material_source' }
+  // Do not retain stale matching rows if a principal, WorkOrder or scenario
+  // changed. The coordinator itself also rechecks identity AFTER each read.
+  if (!authorized.value) return
+  const [direct, bundled] = await Promise.all([
+    readCoordinator.direct(scenario.value),
+    readCoordinator.package(packageScenario.value),
+  ])
+  if (!current || !authorized.value) return
+  directAdmission.value = direct.admission
+  packageAdmission.value = bundled.admission
+  read.value = direct.read
+  packageRead.value = bundled.read
+}, { immediate: true })
+onUnmounted(() => readCoordinator.invalidate())
 </script>
 <style scoped>
 .sku-review-card { margin: 18rpx 24rpx; padding: 24rpx; display:flex; flex-direction:column; gap:14rpx; }
