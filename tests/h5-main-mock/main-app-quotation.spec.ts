@@ -74,3 +74,94 @@ test('real authenticated shell uses local-only Mock quotation with zero external
   expect(evidence.consoleErrors, 'console errors are not an accepted UX result').toBe(0)
   expect(evidence.localFailures).toEqual([])
 })
+
+
+for (const viewport of [
+  { width: 375, height: 667 },
+  { width: 390, height: 844 },
+]) {
+  test(`two repair groups preserve independent selections and package layers at ${viewport.width}x${viewport.height}`, async ({ page }, info) => {
+    await page.setViewportSize(viewport)
+    await page.goto('/#/pages/index/index', { waitUntil: 'domcontentloaded' })
+    await expect(page.locator('.home-page')).toBeVisible()
+    await page.locator('.mock-action-scenario').filter({ hasText: '报价草稿' }).click()
+    await expect(page.getByTestId('quotation-state-ready')).toBeVisible()
+
+    // Genuine main App Action Workspace and the same product components as the
+    // detached review tests, but no Production login or fake navigation shell.
+    await page.getByTestId('quotation-add-group').click()
+    await page.getByTestId('quotation-first-step-repair-parts-trigger').click()
+    await page.getByTestId('survey-repair-part-parents').getByText('屋面', { exact: true }).click()
+    await page.getByTestId('quotation-first-step-description').locator('textarea').fill('第一组：屋面维修')
+    await page.getByTestId('quotation-first-step-quantity').locator('input').fill('12')
+    await page.getByTestId('quotation-first-step-select-products').click()
+    await expect(page.getByTestId('quotation-catalog-page')).toBeVisible()
+
+    await page.getByTestId('quotation-package-detail-mock-catalog-package-basic').click()
+    await expect(page.getByTestId('quotation-package-materials')).toBeVisible()
+    const layers = page.locator('[data-testid^="quotation-material-layer-"]')
+    await expect(layers).toHaveCount(2)
+    for (const layer of await layers.all()) {
+      const choice = layer.locator('[data-testid^="quotation-package-material-choice-"]').first()
+      await expect(choice).toBeEnabled()
+      await choice.click()
+      await expect(layer).toContainText('已选择')
+    }
+    await expect(page.getByTestId('quotation-package-selection-summary')).toContainText('2/2')
+    const commit = page.getByTestId('quotation-package-configure-commit')
+    await expect(commit).toBeEnabled()
+    await commit.click()
+    await expect(page.getByTestId('quotation-catalog-page')).toHaveCount(0)
+    const first = page.getByTestId('quotation-repair-group-quotation-group-1')
+    await expect(first).toContainText('第一组：屋面维修')
+    await expect(page.getByTestId('quotation-group-section-quotation-group-1-package')).toBeVisible()
+    await expect(page.locator('[data-testid^="quotation-configured-package-"]')).toHaveCount(1)
+
+    // Independent second group. It must not inherit or overwrite the package
+    // selected for group 1; its direct material lives under group 2 only.
+    await page.getByTestId('quotation-add-group').click()
+    const second = page.getByTestId('quotation-repair-group-quotation-group-2')
+    await expect(second).toBeVisible()
+    await second.getByTestId('quotation-repair-part-selector-quotation-group-2')
+      .getByText('屋面', { exact: true }).click()
+    await page.getByTestId('quotation-group-description-quotation-group-2').locator('textarea')
+      .fill('第二组：独立增项')
+    await page.getByTestId('quotation-group-quantity-quotation-group-2').locator('input').fill('5')
+    await page.getByTestId('quotation-browse-quotation-group-2').click()
+    await expect(page.getByTestId('quotation-catalog-target')).toContainText('第二组：独立增项')
+    await page.getByTestId('quotation-catalog-kind-material').click()
+    await page.getByTestId('quotation-catalog-add-material-mock-catalog-material-sealant').click()
+    await expect(page.getByTestId('quotation-group-section-quotation-group-2-material'))
+      .toContainText('弹性密封材料（示例）')
+    await expect(page.getByTestId('quotation-group-section-quotation-group-1-package')).toBeVisible()
+    await expect(page.getByTestId('quotation-group-section-quotation-group-1-material')).toHaveCount(0)
+
+    await info.attach(`two-groups-${viewport.width}`, {
+      body: await page.screenshot({ fullPage: true }),
+      contentType: 'image/png',
+    })
+
+    // A hard reload destroys the in-memory Pinia state. Passing this assert
+    // proves the normal main App restored both groups from on-device draft.
+    await expect(page.getByText(/报价草稿已保存在本机|报价分组草稿已保存在本机/)).toBeVisible()
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await expect(page.getByTestId('quotation-state-ready')).toBeVisible()
+    await expect(page.getByTestId('quotation-repair-group-quotation-group-1'))
+      .toContainText('第一组：屋面维修')
+    await expect(page.getByTestId('quotation-repair-group-quotation-group-2'))
+      .toContainText('第二组：独立增项')
+    await expect(page.getByTestId('quotation-group-section-quotation-group-1-package')).toBeVisible()
+    await expect(page.getByTestId('quotation-group-section-quotation-group-2-material'))
+      .toContainText('弹性密封材料（示例）')
+    await expect(page.getByTestId('quotation-product-demo-read-only')).toBeVisible()
+    await expect(page.getByTestId('action-workspace-submit')).toHaveCount(0)
+    await info.attach(`restored-two-groups-${viewport.width}`, {
+      body: await page.screenshot({ fullPage: true }),
+      contentType: 'image/png',
+    })
+    expect(evidence.externalIntents, 'blocked outbound attempt is itself a FAIL').toEqual([])
+    expect(evidence.localFailures).toEqual([])
+    expect(evidence.pageErrors).toBe(0)
+    expect(evidence.consoleErrors).toBe(0)
+  })
+}
