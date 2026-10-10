@@ -1897,6 +1897,9 @@ function configuredPackageLayerLabel(
 .quotation-content--review .quotation-content__panel-title { font-size: 26rpx; }
 .quotation-content--review .quotation-content__line-count { margin-top: 2rpx; }
 .quotation-content--review .quotation-content__review-readiness { margin-top: 4rpx; padding: 4rpx 0; }
+/* uni-textarea defaults to ~150px; keep short repair descriptions compact.
+   Long text remains editable/scrollable inside the field. */
+.quotation-content--review .quotation-content__context-input--multiline { height: 84px; min-height: 84px; }
 
 /* G4-F catalog page: local presentation only; ActionWorkspaceShell remains shared. */
 .quotation-content__catalog-page { background: linear-gradient(160deg, #fbfdff 0%, #f0f6ff 49%, #f5f8fd 100%); padding: calc(8px + env(safe-area-inset-top)) 15px 0; }
