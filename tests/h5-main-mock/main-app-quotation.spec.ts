@@ -63,6 +63,8 @@ test('real authenticated shell uses local-only Mock quotation with zero external
   await quote.click()
   await expect(page, 'normal uni navigation must reach the real Action Workspace').toHaveURL(/pages\/work-orders\/action-workspace/)
   await expect(page.locator('.uni-page-head__title')).toContainText('报价工作台')
+  // Screenshots must capture an EDITABLE workbench, not its transient spinner.
+  await expect(page.getByTestId('quotation-state-ready')).toBeVisible()
   await expect(page.getByTestId('quotation-footer-summary')).toBeVisible()
   await expect(page.getByTestId('quotation-product-demo-read-only')).toBeVisible()
   await expect(page.getByTestId('quotation-product-demo-read-only')).toContainText('演示，不提交订单')
@@ -129,6 +131,9 @@ for (const viewport of [
       .getByText('屋面', { exact: true }).click()
     await page.getByTestId('quotation-group-description-quotation-group-2').locator('textarea')
       .fill('第二组：独立增项')
+    const descriptionBox = await page.getByTestId('quotation-group-description-quotation-group-2').boundingBox()
+    expect(descriptionBox, 'Mock group description must not consume ~150px of mobile viewport').not.toBeNull()
+    if (descriptionBox) expect(descriptionBox.height).toBeLessThanOrEqual(105)
     await page.getByTestId('quotation-group-quantity-quotation-group-2').locator('input').fill('5')
     await page.getByTestId('quotation-browse-quotation-group-2').click()
     await expect(page.getByTestId('quotation-catalog-target')).toContainText('第二组：独立增项')
