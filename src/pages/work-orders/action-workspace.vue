@@ -141,6 +141,23 @@
       </AppField>
       </view>
 
+    <!-- DEV-only synthetic state progression. This is NOT Workflow Complete.
+         The same 019 WorkOrderId is used by all three normal App pages. -->
+    <view
+      v-if="mockJourney && mockJourney.stage !== 'quotation'"
+      class="mock-journey-progress app-surface"
+      data-testid="mock-journey-progress"
+    >
+      <text class="mock-journey-progress__note">仅本地演示：下一步只切换模拟流程节点，不提交业务表单或订单。</text>
+      <AppButton
+        block
+        variant="secondary"
+        :disabled="isNavigating"
+        data-testid="mock-journey-advance"
+        @tap="advanceJourney"
+      >{{ mockJourney.nextLabel }}</AppButton>
+    </view>
+
     <template #actions v-if="workspace.descriptor?.actionIntent === 'interact_with_form'">
       <ActionWorkspaceFormActions
         :lifecycle="workspace.lifecycle"
@@ -179,6 +196,7 @@ import { onLoad, onUnload } from '@dcloudio/uni-app'
 
 import { isBusinessMockQuotationPreview } from '@app/business-mock'
 import { setActionWorkspacePageTitle } from '@app/action-page-title'
+import { advanceMockJourneyContext, mockJourneyContext } from '@app/mock-journey'
 import { hasAuthenticatedSession } from '@features/home/access'
 import { isProductionReadOnlyRuntime } from '@shared/config'
 import {
@@ -222,6 +240,7 @@ const isMockQuotationPreview = computed(() =>
   isBusinessMockQuotationPreview(workspace.descriptor?.workOrderId),
 )
 const feedback = computed(() => actionErrorCopy(workspace.error))
+const mockJourney = computed(() => mockJourneyContext(routeId.value))
 const quotationContentViewState = computed(() => workspace.quotationContentState === 'idle'
   ? 'loading'
   : workspace.quotationContentState)
@@ -291,6 +310,26 @@ watch(
 async function exit(): Promise<void> {
   const result = await workspace.exit()
   if (result.state !== 'succeeded') routeError.value = 'draft-save-failed'
+}
+
+async function advanceJourney(): Promise<void> {
+  const context = mockJourney.value
+  if (!context || context.stage === 'quotation' || isNavigating.value) return
+  isNavigating.value = true
+  // Preserve what the technician typed as a local Action draft; do not issue
+  // ExtForm upsert, Workflow Complete, upload, or official Order commands.
+  const saved = await workspace.flushDraft()
+  if (saved.state !== 'succeeded') {
+    routeError.value = 'draft-save-failed'
+    isNavigating.value = false
+    return
+  }
+  if (!advanceMockJourneyContext(context.stage)) {
+    routeError.value = 'mock-stage-save-failed'
+    isNavigating.value = false
+    return
+  }
+  await workspace.navigateToDetail()
 }
 
 function reload(): void {
@@ -418,4 +457,6 @@ function actionErrorCopy(error: OperationError | null): string {
 .action-success-detail { margin-bottom: var(--app-space-xs); }
 .quotation-readonly-note { color: var(--app-color-text-secondary); display: block; font-size: var(--app-font-meta); padding: var(--app-space-md) 0; text-align: center; }
 
+.mock-journey-progress { margin: 20rpx 24rpx; padding: 20rpx; display: flex; flex-direction: column; gap: 12rpx; }
+.mock-journey-progress__note { color: var(--app-color-text-secondary); font-size: 22rpx; line-height: 1.5; }
 </style>
