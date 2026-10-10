@@ -637,6 +637,15 @@
             <button class="quotation-content__search-action" type="button" data-testid="quotation-catalog-search-submit" @tap="confirmCatalogSearch">搜索</button>
           </view>
 
+          <view v-if="devMockCatalogFilterEnabled && mockCatalogFilterOptions.length" class="quotation-content__mock-filter" data-testid="quotation-mock-catalog-filter">
+            <text class="quotation-content__mock-filter-label">合成分类筛选 · 非真实商品适用性</text>
+            <view class="quotation-content__mock-filter-options">
+              <button type="button" class="quotation-content__mock-filter-option" :class="{ 'quotation-content__mock-filter-option--active': !mockCatalogFilterCode }" :aria-pressed="!mockCatalogFilterCode" data-testid="quotation-mock-filter-all" @tap="setMockCatalogFilter('')">全部</button>
+              <button v-for="option in mockCatalogFilterOptions" :key="option.code" type="button" class="quotation-content__mock-filter-option" :class="{ 'quotation-content__mock-filter-option--active': mockCatalogFilterCode === option.code }" :aria-pressed="mockCatalogFilterCode === option.code" :data-testid="'quotation-mock-filter-' + option.code" @tap="setMockCatalogFilter(option.code)">{{ option.label }}</button>
+            </view>
+            <text class="quotation-content__mock-filter-help">资料缺失时保留“未核实”提示，禁止从该筛选结果直接选用；不影响正式目录。</text>
+          </view>
+
           <view class="quotation-content__catalog-section-heading">
             <text class="quotation-content__catalog-section-title">{{ catalogSectionTitle }}</text>
             <text class="quotation-content__catalog-section-note">当前工单适用范围</text>
@@ -708,6 +717,7 @@
                 class="quotation-content__catalog-item"
                 :data-testid="`quotation-catalog-item-${item.kind}-${item.id}`"
               >
+                <text v-if="devMockCatalogFilterEnabled && mockCatalogFilterCode && syntheticCatalogFilterEligibility(item, mockCatalogFilterCode) === 'unverified'" class="quotation-content__mock-filter-unverified" :data-testid="'quotation-mock-unverified-' + item.id">适用性未核实 · 不能加入</text>
                 <view class="quotation-content__catalog-item-main">
                   <view class="quotation-content__catalog-thumbnail" :class="`quotation-content__catalog-thumbnail--${item.kind}`" aria-hidden="true">
                     <view class="quotation-content__catalog-art" :class="`quotation-content__catalog-art--${item.kind}`">
@@ -742,13 +752,14 @@
                     class="quotation-content__catalog-item-action"
                     variant="secondary"
                     :data-testid="`quotation-package-detail-${item.id}`"
+                    :disabled="!canSelectMockFilteredItem(item)"
                     @tap="openPackageConfiguration(item.id)"
                   >{{ packageSelectionFor(item.id)?.configuration ? '编辑配置' : '查看并配置' }}<AppIcon name="chevron-right" :size="14" color="var(--app-color-primary)" aria-hidden="true" /></AppButton>
                   <AppButton
                     v-else-if="isDirectQuotationCatalogKind(item.kind) && !catalogSelectionFor(item)"
                     class="quotation-content__catalog-item-action"
                     variant="secondary"
-                    :disabled="!canSelectCatalogItem(item)"
+                    :disabled="!canSelectCatalogItem(item) || !canSelectMockFilteredItem(item)"
                     :data-testid="`quotation-catalog-add-${item.kind}-${item.id}`"
                     @tap="addCatalogSelection(item.kind, item.id)"
                   >加入本组</AppButton>
@@ -939,6 +950,7 @@ import {
   quotationCatalogSearchPlaceholder as placeholderForCatalogKind,
   quotationCatalogSearchScopeKey,
 } from './catalog-search'
+import { syntheticCatalogFilterEligibility, syntheticCatalogFilterOptions, syntheticCatalogFilterSelectable, syntheticCatalogFilterVisible } from './mock-catalog-filter'
 import { isDirectQuotationCatalogKind } from './model'
 import { quotationCatalogKindLabels } from './catalog'
 import { useQuotationCatalogBrowserStore } from './catalog-browser-store'
@@ -1049,6 +1061,17 @@ const groupContextExpandedById = ref<Readonly<Record<string, boolean>>>({})
 const groupDetailsCollapsedById = ref<Readonly<Record<string, boolean>>>({})
 const packageDetailsExpandedBySelectionId = ref<Readonly<Record<string, boolean>>>({})
 const catalogSearchByScope = ref<Readonly<Record<string, string>>>({})
+const mockCatalogFiltersByScope = ref<Readonly<Record<string, string>>>({})
+const devMockCatalogFilterEnabled = computed(() => import.meta.env.DEV && props.productReviewOnly === true)
+const mockCatalogFilterCode = computed(() => devMockCatalogFilterEnabled.value ? (mockCatalogFiltersByScope.value[catalogSearchScope.value] ?? '') : '')
+const mockCatalogFilterOptions = computed(() => devMockCatalogFilterEnabled.value ? syntheticCatalogFilterOptions(catalogBrowser.selectedKind) : [])
+function setMockCatalogFilter(code: string): void {
+  if (!devMockCatalogFilterEnabled.value || (code && !mockCatalogFilterOptions.value.some((option) => option.code === code))) return
+  mockCatalogFiltersByScope.value = { ...mockCatalogFiltersByScope.value, [catalogSearchScope.value]: code }
+}
+function canSelectMockFilteredItem(item: QuotationCatalogItemRead): boolean {
+  return !devMockCatalogFilterEnabled.value || syntheticCatalogFilterSelectable(item, mockCatalogFilterCode.value)
+}
 const catalogSearchScope = computed(() => quotationCatalogSearchScopeKey(
   activeCatalogGroupId.value ?? '',
   catalogBrowser.selectedKind,
@@ -1105,8 +1128,10 @@ const selectedPackageLayerCount = computed(() => catalogBrowser.packageMaterialL
 ).length)
 const filteredCatalogItems = computed(() => {
   const query = catalogSearchText.value
-  if (!query) return catalogBrowser.visibleCatalogItems
-  return catalogBrowser.visibleCatalogItems.filter((item) => quotationCatalogSearchMatches(item, query))
+  return catalogBrowser.visibleCatalogItems.filter((item) =>
+    quotationCatalogSearchMatches(item, query)
+    && (!devMockCatalogFilterEnabled.value || syntheticCatalogFilterVisible(item, mockCatalogFilterCode.value)),
+  )
 })
 const packageConfigurationValidation = computed(() => {
   const packageId = currentPackageId.value
@@ -1177,6 +1202,7 @@ function catalogTabLabel(kind: QuotationLineKind): string {
 
 function canSelectCatalogItem(item: QuotationCatalogItemRead): boolean {
   return isDirectQuotationCatalogKind(item.kind)
+    && canSelectMockFilteredItem(item)
     && canEdit.value
     && Boolean(activeCatalogGroup.value?.repairParts.length)
 }
@@ -1185,6 +1211,11 @@ function addCatalogSelection(kind: QuotationLineKind, catalogId: string): void {
   const groupId = activeCatalogGroupId.value
   if (!groupId) {
     catalogSelectionError.value = '尚未指定维修部位组，目录项未加入。'
+    return
+  }
+  const item = catalogBrowser.selectedCatalogItemFor(kind, catalogId)
+  if (!item || !canSelectMockFilteredItem(item)) {
+    catalogSelectionError.value = '该合成分类下尚未核实商品适用性，未加入草稿。'
     return
   }
   const result = workspace.addQuotationCatalogSelection(groupId, kind, catalogId)
@@ -1220,6 +1251,11 @@ async function openExistingPackageConfiguration(groupId: string, packageId: stri
 }
 
 async function openPackageConfiguration(packageId: string): Promise<void> {
+  const item = catalogBrowser.packageCandidateFor(packageId)
+  if (!item || !canSelectMockFilteredItem(item)) {
+    catalogSelectionError.value = '该合成分类下套餐适用性未核实，不允许配置。'
+    return
+  }
   packageMaterialChoicesByLayer.value = {}
   catalogSelectionError.value = ''
   await catalogBrowser.openPackageDetail(packageId)
@@ -1723,6 +1759,13 @@ function configuredPackageLayerLabel(
 .quotation-content__catalog-target-title { font-size: 25rpx; line-height: 1.35; margin-top: 4rpx; }
 .quotation-content__catalog-target-meta { font-size: 20rpx; line-height: 1.4; margin-top: 4rpx; }
 .quotation-content__catalog-toolbar { padding-top: 14rpx; }
+.quotation-content__mock-filter { border: 1rpx solid #dbe8f8; background: #f7faff; border-radius: 16rpx; display: flex; flex-direction: column; gap: 10rpx; margin: 12rpx 0 16rpx; padding: 14rpx 14rpx; }
+.quotation-content__mock-filter-label { color: #305b90; font-size: 21rpx; font-weight: 750; }
+.quotation-content__mock-filter-options { display: flex; gap: 8rpx; flex-wrap: wrap; }
+.quotation-content__mock-filter-option { border: 1rpx solid #c8d9ed; background: #fff; border-radius: 12rpx; color: #42617f; font-size: 21rpx; min-height: 44px; padding: 8rpx 14rpx; }
+.quotation-content__mock-filter-option--active { background: #e2f0ff; border-color: #478bec; color: #1258bd; font-weight: 800; }
+.quotation-content__mock-filter-help { color: #7189a8; font-size: 19rpx; line-height: 1.45; }
+.quotation-content__mock-filter-unverified { color: #ad6925; font-size: 21rpx; font-weight: 700; padding: 10rpx 4rpx; }
 .quotation-content__category-grid { gap: 8rpx; }
 .quotation-content__category { border-radius: 14rpx; font-size: 22rpx; min-height: 46px; }
 .quotation-content__search-wrap { border-radius: 15rpx; margin-top: 12rpx; min-height: 48px; }
