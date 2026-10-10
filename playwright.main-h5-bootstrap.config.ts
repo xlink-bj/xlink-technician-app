@@ -1,6 +1,6 @@
 import { defineConfig, devices } from '@playwright/test'
 
-const baseURL = 'http://127.0.0.1:5173'
+const baseURL = 'http://localhost:5173'
 
 // No credentials, no Production authentication and no business network.
 // The H5 startup test must prove the REAL uni-app page renders; the isolated
