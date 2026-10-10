@@ -174,3 +174,37 @@ from the normal authenticated main App. A failed/unavailable login remains
 `BLOCKED_ENV` and must not be replaced with a fake session. This proves
 Mock UX only, not live-backend parity, native keyboard/device behavior, or
 same-WorkOrder Appointment→Survey→Quotation workflow progression.
+
+## Credential-free H5 diagnosis (no Production login authorization)
+
+When the normal main App's `进入登录` entry is absent locally, do **not**
+attempt quick login or infer an unauthorized external request. First run the
+ordinary **main-App H5** Playwright smoke with **only synthetic CI-provided**
+values:
+
+```sh
+# Use an isolated exact-HEAD worktree, with NO real browser session.
+# Do not manually start another dev:h5 server on 5173.
+pnpm run test:main-h5-boot
+```
+
+The Playwright config starts its **own** DEV server on `localhost:5173` with
+`strictPort`. Port conflict is a test-environment failure, not permission
+to attach to a stale server or choose a different port. The suite always
+intercepts and aborts **every** non-local URL, including its synthetic
+`POST index/phoneLogin.do` request. There are zero external sends. It
+does not use a real account, real auth response or a fake application
+session, and it does not run the detached G4-F Review App.
+
+If the login entry fails to appear, `OFFLINE_BOOT_BLOCKED` reports only:
+safe page route, DOM shape counts, browser error counts, local asset HTTP
+status/path and blocked external **method + origin + pathname**. No
+credentials, queries, payloads, headers, cookies, user-facing DOM text or
+transformed entry source are logged. Do not turn off request interception
+to diagnose. Treat a local bootstrap timeout as **BLOCKED_ENV**, not as
+evidence that Production authentication failed.
+
+Only after the local offline result is examined may Lead separately
+authorize another Production authentication. The prior unrecorded external
+request cannot be retroactively identified by a later successful offline
+run. The entire main-App Mock quotation journey remains a different Gate.
