@@ -165,3 +165,34 @@ for (const viewport of [
     expect(evidence.consoleErrors).toBe(0)
   })
 }
+
+test('same Mock-018 quotation is reachable from normal work order list and detail', async ({ page }, info) => {
+  await page.goto('/#/pages/work-orders/work-orders', { waitUntil: 'domcontentloaded' })
+  const row = page.locator('.work-order-card').filter({ hasText: 'MOCK-018' })
+  await expect(row, 'quotation fixture must exist in the normal role-scoped list').toBeVisible()
+  await expect(row).toContainText('演示报价工单')
+  await info.attach('normal-work-order-list-390', {
+    body: await page.screenshot({ fullPage: true }),
+    contentType: 'image/png',
+  })
+  await row.click()
+  await expect(page).toHaveURL(/pages\/work-orders\/detail/)
+  await expect(page.locator('.summary-number')).toContainText('MOCK-018')
+  const task = page.locator('.current-task-card')
+  await expect(task).toContainText('报价')
+  const openQuotation = page.locator('.primary-task-action')
+  await expect(openQuotation).toBeEnabled()
+  await openQuotation.click()
+  await expect(page).toHaveURL(/pages\/work-orders\/action-workspace/)
+  await expect(page.getByTestId('quotation-state-ready')).toBeVisible()
+  await expect(page.getByTestId('quotation-product-demo-read-only')).toBeVisible()
+  await expect(page.getByTestId('action-workspace-submit')).toHaveCount(0)
+  await info.attach('list-detail-quotation-390', {
+    body: await page.screenshot({ fullPage: true }),
+    contentType: 'image/png',
+  })
+  expect(evidence.externalIntents).toEqual([])
+  expect(evidence.localFailures).toEqual([])
+  expect(evidence.pageErrors).toBe(0)
+  expect(evidence.consoleErrors).toBe(0)
+})
