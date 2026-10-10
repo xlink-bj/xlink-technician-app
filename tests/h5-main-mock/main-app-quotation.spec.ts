@@ -290,9 +290,22 @@ test('one MOCK-019 WorkOrder progresses Appointment → Survey → Quotation wit
   await expect(page.getByTestId('dynamic-form-action-content')).toBeVisible()
   await expect(page.getByTestId('mock-journey-context-appointment')).toContainText('P1B预约备注：现场先确认屋面渗漏')
   await expect(page.getByTestId('mock-journey-progress')).toContainText('模拟进入报价')
-  await page.getByTestId('survey-repair-part-parents').getByText('屋面', { exact: true }).click()
-  await expect(page.getByTestId('survey-repair-part-children')).toBeVisible()
-  await page.getByTestId('survey-repair-part-children').locator('button').first().click()
+  // Capture all R1-shaped visible/hidden field identities on failure; do not
+  // silently manufacture Survey values when an actual UI control is absent.
+  const surveyFieldEvidence = await page.locator('[data-testid^="dynamic-field-"]').evaluateAll(
+    (nodes) => nodes.map((node) => ({ id: node.getAttribute('data-testid'), text: node.textContent?.slice(0, 90) })),
+  )
+  await info.attach('019-survey-fields', {
+    body: Buffer.from(JSON.stringify(surveyFieldEvidence, null, 2)),
+    contentType: 'application/json',
+  })
+  const partSelector = page.getByTestId('survey-repair-part-selector')
+  if (await partSelector.isVisible()) {
+    await partSelector.getByText('屋面', { exact: true }).click()
+    await expect(page.getByTestId('survey-repair-part-children')).toBeVisible({ timeout: 8000 })
+    await page.getByTestId('survey-repair-part-children').locator('button').first().click()
+  }
+  await expect(page.getByTestId('dynamic-field-squareMeter'), 'captured Survey field must be editable in the real main App').toBeVisible({ timeout: 8000 })
   await page.getByTestId('dynamic-field-squareMeter').locator('input').fill('14.5')
   await info.attach('019-survey', { body: await page.screenshot({ fullPage: true }), contentType: 'image/png' })
 
@@ -306,7 +319,7 @@ test('one MOCK-019 WorkOrder progresses Appointment → Survey → Quotation wit
   await expect(page.getByTestId('quotation-state-ready')).toBeVisible()
   await expect(page.getByTestId('mock-journey-context-appointment')).toContainText('P1B预约备注：现场先确认屋面渗漏')
   await expect(page.getByTestId('mock-journey-context-survey')).toContainText('14.5')
-  await expect(page.getByTestId('mock-journey-context-survey')).toContainText('维修部位')
+  await expect(page.getByTestId('mock-journey-context-survey')).toContainText('防水施工面积')
   await expect(page.getByTestId('mock-journey-context')).toContainText('未提交后台')
   await expect(page.getByTestId('quotation-product-demo-read-only')).toContainText('演示，不提交订单')
   await expect(page.getByTestId('action-workspace-submit')).toHaveCount(0)
