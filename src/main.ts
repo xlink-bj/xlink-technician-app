@@ -16,9 +16,11 @@ function createTechnicianApplication() {
 export { createTechnicianApplication as createApp }
 
 // #ifdef H5
-// Uni's H5 Vite entry currently imports main.ts but does not invoke the
-// aliased factory. Explicitly initialize the real App for the browser.
-// This is a distinct entry path from the MP factory mount above.
-const h5Application = createTechnicianApplication()
-h5Application.app.mount('#app')
+// The pinned uni H5 compiler rewrites src/main.ts and can remove the static
+// bootstrap binding. Load the real factory as a distinct H5 module so its
+// dependency remains present and boot exactly once from this entry.
+void import('@app/bootstrap').then(({ createApplication: initialize }) => {
+  const application = initialize()
+  application.app.mount('#app')
+})
 // #endif
