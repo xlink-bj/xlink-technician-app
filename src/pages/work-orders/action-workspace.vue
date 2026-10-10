@@ -16,6 +16,7 @@
   <QuotationActionWorkspace
     v-else-if="workspace.descriptor?.contentKind === 'quotation' && workspace.descriptor.actionIntent === 'place_order'"
     :content-state="quotationContentViewState"
+    :product-review-only="isMockQuotationPreview"
     @retry="reload"
     @back="exit"
   />
@@ -176,6 +177,7 @@
 import { computed, ref, watch } from 'vue'
 import { onLoad, onUnload } from '@dcloudio/uni-app'
 
+import { isBusinessMockQuotationPreview } from '@app/business-mock'
 import { hasAuthenticatedSession } from '@features/home/access'
 import { isProductionReadOnlyRuntime } from '@shared/config'
 import {
@@ -215,6 +217,9 @@ const isNavigating = ref(false)
 const canAccess = computed(() => hasAuthenticatedSession(session.status, session.session))
 const productionReadOnly = isProductionReadOnlyRuntime()
 const appointmentDisplay = computed(() => appointmentDisplayFor(workspace.appointmentTimeValue))
+const isMockQuotationPreview = computed(() =>
+  isBusinessMockQuotationPreview(workspace.descriptor?.workOrderId),
+)
 const feedback = computed(() => actionErrorCopy(workspace.error))
 const quotationContentViewState = computed(() => workspace.quotationContentState === 'idle'
   ? 'loading'
