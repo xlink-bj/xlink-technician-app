@@ -12,6 +12,7 @@
     :submit-label="workspace.quotationOrderState.state === 'submitting' ? '提交中…' : '提交订单/报价方案'"
     @submit="openQuotationConfirmation"
   >
+    <slot name="journey-context" />
     <QuotationActionContent
       :state="contentState"
       :synthetic-fields-review="syntheticReviewEnabled"
