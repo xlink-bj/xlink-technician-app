@@ -170,3 +170,27 @@ review/merge authorization for every pre-existing G4 business behavior.
 - [ ] Request explicit Owner integration approval before Draft→Ready or merge.
 
 This is a **review checklist**, not evidence that the unchecked tasks passed.
+
+### CI add/add conflict resolution — 2026-10-10
+
+The original `main` CI foundation and expanded candidate **both added**
+`.github/workflows/validate.yml` after their shared ancestor. The newer H5
+steps produced an add/add merge conflict when refreshing the Draft PR #38.
+
+Resolve without merging/rebasing `main`, squashing source history or
+deleting H5 smoke coverage:
+
+- Restore `.github/workflows/validate.yml` to the **exact main blob**
+  (`9f5714a6b1035be0193d302c3fe3df68ad3276b5`) so the content
+  added independently on both sides is equal.
+- Preserve all H5 build, actual main App login/Mock, 25-case G4-F H5 regression,
+  unconditional sanitized browser artifact uploads and no-write test controls
+  in a separate `.github/workflows/validate-main-h5.yml` with its own PR/push
+  trigger and 40-minute bounded job.
+- Thus the integrated candidate requires **both CI workflows** to pass on the
+  **same exact HEAD**: (1) `Validate` for boundary/type/unit + MP/App builds;
+  (2) `Validate Main H5 UX` for main App boot/Mock/G4-F Playwright runs.
+- This is workflow organization only. No JavaScript/TypeScript/Vue business
+  source changes, no Product Owner visual or merge approval implied.
+
+Do not claim complete CI until both GitHub Actions runs exist and succeed.
