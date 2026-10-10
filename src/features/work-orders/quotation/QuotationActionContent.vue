@@ -1,8 +1,8 @@
 <template>
-  <view class="quotation-content" data-testid="quotation-action-content">
+  <view class="quotation-content" :class="{ 'quotation-content--review': props.productReviewOnly }" data-testid="quotation-action-content">
     <view v-if="!catalogBrowser.isOpen && !isInitialEmptyWorkbench && !isFirstRepairPartStep" class="quotation-content__heading" data-testid="quotation-workbench-heading">
       <text class="quotation-content__eyebrow">报价草稿 · 按部位组织</text>
-      <text class="quotation-content__description">选择维修部位，逐组整理项目；当前内容仅保存在本机。</text>
+      <text v-if="!props.productReviewOnly || composition.groups.length === 0" class="quotation-content__description">选择维修部位，逐组整理项目；当前内容仅保存在本机。</text>
     </view>
 
     <view v-if="props.state === 'loading'" class="quotation-content__panel app-surface" data-testid="quotation-state-loading">
@@ -12,16 +12,16 @@
     <view v-else-if="props.state === 'ready'" v-show="!catalogBrowser.isOpen" class="quotation-content__panel quotation-content__workbench app-surface" :class="{ 'quotation-content__workbench--initial': isInitialEmptyWorkbench || isFirstRepairPartStep }" data-testid="quotation-state-ready">
       <view v-if="!isInitialEmptyWorkbench && !isFirstRepairPartStep" class="quotation-content__workbench-summary" data-testid="quotation-workbench-summary">
         <view class="quotation-content__workbench-summary-copy">
-          <text class="quotation-content__panel-title">项目概览</text>
+          <text class="quotation-content__panel-title">{{ props.productReviewOnly ? '维修部位报价' : '项目概览' }}</text>
           <text class="quotation-content__line-count">{{ composition.selectionCount }} 项 · {{ composition.groups.length }} 个维修部位</text>
         </view>
-        <view class="quotation-content__amount-summary">
+        <view v-if="!props.productReviewOnly" class="quotation-content__amount-summary">
           <text class="quotation-content__amount-label">{{ amountPresentation.label }}</text>
           <text class="quotation-content__amount-value" data-testid="quotation-workbench-amount">
             {{ amountPresentation.value }}
           </text>
         </view>
-        <text class="quotation-content__local-tag">本机草稿</text>
+        <text v-if="!props.productReviewOnly" class="quotation-content__local-tag">本机草稿</text>
       </view>
 
       <AppStatus
@@ -1887,6 +1887,14 @@ function configuredPackageLayerLabel(
   .quotation-content__package-selection-target { max-width: 110px; }
   .quotation-content__catalog-footer .quotation-content__package-config-commit { flex-basis: auto; max-width: none; }
 }
+
+/* G4-F Mock workbench UX: one compact in-flow status and one persistent
+   footer amount. Real official-quotation presentation stays unchanged. */
+.quotation-content--review .quotation-content__heading { margin-bottom: 8rpx; }
+.quotation-content--review .quotation-content__workbench-summary { align-items: center; padding-bottom: 8rpx; }
+.quotation-content--review .quotation-content__panel-title { font-size: 26rpx; }
+.quotation-content--review .quotation-content__line-count { margin-top: 2rpx; }
+.quotation-content--review .quotation-content__review-readiness { margin-top: 4rpx; padding: 4rpx 0; }
 
 /* G4-F catalog page: local presentation only; ActionWorkspaceShell remains shared. */
 .quotation-content__catalog-page { background: linear-gradient(160deg, #fbfdff 0%, #f0f6ff 49%, #f5f8fd 100%); padding: calc(8px + env(safe-area-inset-top)) 15px 0; }
