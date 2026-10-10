@@ -427,7 +427,6 @@ export const mockSanodeListResponse = {
         workflowRunId: 'mock-workflow-run-018',
       },
     },
-  ],
     {
       _id: mockJourneyNodes.appointment,
       state: 0,
@@ -450,6 +449,7 @@ export const mockSanodeListResponse = {
         workflowRunId: mockJourneyWorkflowRunId,
       },
     },
+  ],
   page: 1,
   rows: 20,
   total: 12,
