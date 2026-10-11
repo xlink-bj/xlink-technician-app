@@ -184,6 +184,9 @@ for (const viewport of [
     })
     // Editing only group 2 must produce an actionable local issue without
     // changing group 1, then clear as soon as the required field is restored.
+    if (!await page.getByTestId('quotation-group-context-quotation-group-2').isVisible()) {
+      await page.getByTestId('quotation-group-context-toggle-quotation-group-2').click()
+    }
     await page.getByTestId('quotation-group-description-quotation-group-2').locator('textarea').fill('')
     await expect(page.getByTestId('quotation-p1-review-group-quotation-group-2'))
       .toContainText('请填写维修部位描述')
