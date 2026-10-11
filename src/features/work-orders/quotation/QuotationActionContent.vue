@@ -552,6 +552,31 @@
         </view>
       </view>
 
+      <view
+        v-if="localP1Review && composition.selectionCount > 0 && !isInitialEmptyWorkbench && !isFirstRepairPartStep"
+        class="quotation-content__p1-review"
+        data-testid="quotation-p1-local-review"
+      >
+        <AppButton
+          variant="secondary"
+          block
+          :aria-expanded="p1ReviewExpanded"
+          data-testid="quotation-p1-review-toggle"
+          @tap="p1ReviewExpanded = !p1ReviewExpanded"
+        >{{ p1ReviewExpanded ? '收起本机报价核对' : '核对本机报价草稿' }}</AppButton>
+        <view v-if="p1ReviewExpanded" class="quotation-content__p1-review-body" data-testid="quotation-p1-review-details">
+          <text class="quotation-content__p1-review-title">分组草稿核对 · 尚未提交</text>
+          <text
+            v-for="group in localP1Review.groups"
+            :key="group.groupId"
+            class="quotation-content__p1-review-item"
+            :data-testid="`quotation-p1-review-group-${group.groupId}`"
+          >维修部位 {{ group.position }} · {{ group.selectedCount }} 项 · {{ group.state === 'local_complete' ? '本机结构已填写' : (group.firstIssue || '请完善本组') }}</text>
+          <text class="quotation-content__p1-review-warning" data-testid="quotation-p1-review-unverified">材料 SKU/规格来源、附加字段和金额尚未核实。此处不生成正式订单或推进工作流。</text>
+          <text class="quotation-content__p1-review-footnote" data-testid="quotation-p1-review-order-blocked">正式报价提交：未开放 · 本机核对不等于业务审核通过</text>
+        </view>
+      </view>
+
       <view v-if="composition.localState === 'save_failed'" class="quotation-content__retry">
         <AppButton variant="secondary" block @tap="composition.flushDraft">重试保存本地草稿</AppButton>
       </view>
@@ -921,6 +946,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import { reviewLocalQuotationForP1 } from './local-review-closure'
 import emptyBoxArtwork from './empty-box-illustration.png'
 
 import AppButton from '@shared/ui/AppButton.vue'
@@ -1007,6 +1033,10 @@ const groupSubtotal = (groupId: string): number | undefined =>
 
 // DEV product preview has NO source-verified effective tenant/work-order ExtFields.
 // Expose only a truthful local draft message; never use it to enable submission.
+const p1ReviewExpanded = ref(false)
+const localP1Review = computed(() => import.meta.env.DEV && props.productReviewOnly && composition.draft
+  ? reviewLocalQuotationForP1(composition.draft) : null)
+
 const productReviewReadiness = computed(() => {
   if (!import.meta.env.DEV || props.productReviewOnly !== true || !composition.draft) return null
   return quotationReviewReadinessCopy(evaluateLocalQuotationPreflight({
@@ -1462,6 +1492,12 @@ function configuredPackageLayerLabel(
 .quotation-content__amount-value { color: var(--app-color-text-primary); font-size: var(--app-font-value); font-weight: 800; margin-top: 2rpx; }
 .quotation-content__local-tag, .quotation-content__kind-tag { background: var(--app-color-primary-soft); border-radius: var(--app-radius-control); color: var(--app-color-primary); flex-shrink: 0; font-size: var(--app-font-meta); padding: var(--app-space-xs) var(--app-space-sm); }
 .quotation-content__local-status { margin-top: var(--app-space-sm); }
+.quotation-content__p1-review { border-top: 1rpx solid var(--app-color-divider); display: flex; flex-direction: column; gap: var(--app-space-sm); padding-top: var(--app-space-md); margin-top: var(--app-space-md); }
+.quotation-content__p1-review-body { display: flex; flex-direction: column; gap: var(--app-space-sm); padding: var(--app-space-sm) var(--app-space-xs); }
+.quotation-content__p1-review-title { color: var(--app-color-text-primary); font-size: var(--app-font-body); font-weight: 800; }
+.quotation-content__p1-review-item { color: var(--app-color-text-secondary); font-size: var(--app-font-meta); line-height: 1.5; }
+.quotation-content__p1-review-warning { color: var(--app-color-text-secondary); font-size: var(--app-font-meta); line-height: 1.5; }
+.quotation-content__p1-review-footnote { color: var(--app-color-primary); font-size: var(--app-font-meta); font-weight: 700; line-height: 1.5; }
 .quotation-content__review-readiness { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4rpx 10rpx; margin-top: var(--app-space-sm); padding: 6rpx 0; }
 .quotation-content__review-readiness-title { color: var(--app-color-text-primary); font-size: var(--app-font-meta); font-weight: 750; }
 .quotation-content__review-readiness-copy { color: var(--app-color-text-secondary); font-size: var(--app-font-meta); line-height: 1.5; }
