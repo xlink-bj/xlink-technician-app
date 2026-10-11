@@ -585,6 +585,17 @@
               class="quotation-content__p1-review-warning"
               data-testid="quotation-p1-same-catalog-blocked"
             >同目录 SKU 仿真来源不完整，已阻止关联。</text>
+            <text
+              v-if="props.syntheticSkuReadiness?.state === 'synthetic_structure_only'"
+              class="quotation-content__p1-review-item"
+              data-testid="quotation-p1-sku-sale-options-ready"
+            >材料销售属性仿真：{{ props.syntheticSkuReadiness.materialSpuCount }} 个 SPU · {{ props.syntheticSkuReadiness.saleFieldCount }} 项属性 · {{ props.syntheticSkuReadiness.saleOptionCount }} 个选项 · 仅合成字典</text>
+            <text
+              v-else-if="props.syntheticSkuReadiness?.state === 'blocked_synthetic'"
+              class="quotation-content__p1-review-warning"
+              data-testid="quotation-p1-sku-sale-options-blocked"
+            >材料销售属性仿真：数据来源或工单上下文未对应，已阻止。</text>
+            <text class="quotation-content__p1-review-warning" data-testid="quotation-p1-sku-server-auth-blocked">租户/工单级 SKU 授权尚未验证；合成规格选项不可用于正式报价。</text>
             <text class="quotation-content__p1-review-warning" data-testid="quotation-p1-sku-identity-warning">报价目录和独立 SKU 演示使用不同商品身份；不按名称或层级自动关联，也不视为 SKU 已配置。</text>
           </view>
           <text class="quotation-content__p1-review-warning" data-testid="quotation-p1-review-unverified">材料 SKU/规格来源、附加字段和金额尚未核实。此处不生成正式订单或推进工作流。</text>
@@ -965,6 +976,7 @@ import { reviewLocalQuotationForP1 } from './local-review-closure'
 import emptyBoxArtwork from './empty-box-illustration.png'
 import type { SkuLineageAudit } from './sku-identity-review'
 import type { SameCatalogComparison } from './sku-identity-review'
+import type { QuoteSkuReadiness } from './sku-readiness-view'
 
 import AppButton from '@shared/ui/AppButton.vue'
 import AppCascadeSelector from '@shared/ui/AppCascadeSelector.vue'
@@ -1002,6 +1014,7 @@ const props = defineProps<{
   readonly productReviewOnly?: boolean
   readonly skuLineageAudit?: SkuLineageAudit | null
   readonly sameCatalogLineage?: SameCatalogComparison | null
+  readonly syntheticSkuReadiness?: QuoteSkuReadiness | null
   readonly syntheticReviewValidateSelection?: () => boolean
   readonly syntheticReviewFocusFirstError?: () => void
 }>()
