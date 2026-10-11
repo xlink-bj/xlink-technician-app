@@ -182,6 +182,16 @@ for (const viewport of [
       body: await page.screenshot({ fullPage: true }),
       contentType: 'image/png',
     })
+    // Editing only group 2 must produce an actionable local issue without
+    // changing group 1, then clear as soon as the required field is restored.
+    await page.getByTestId('quotation-group-description-quotation-group-2').locator('textarea').fill('')
+    await expect(page.getByTestId('quotation-p1-review-group-quotation-group-2'))
+      .toContainText('请填写维修部位描述')
+    await expect(page.getByTestId('quotation-p1-review-group-quotation-group-1'))
+      .toContainText('本机结构已填写')
+    await page.getByTestId('quotation-group-description-quotation-group-2').locator('textarea').fill('第二组：独立增项')
+    await expect(page.getByTestId('quotation-p1-review-group-quotation-group-2'))
+      .toContainText('本机结构已填写')
     await page.getByTestId('quotation-p1-review-toggle').click()
     await expect(page.getByTestId('quotation-p1-review-details')).toHaveCount(0)
 
