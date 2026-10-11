@@ -34,6 +34,19 @@ for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }
     await expect(page.getByTestId('ux-tab-package')).toHaveAttribute('aria-selected', 'true')
     await expect(page.getByTestId('ux-stage-catalog')).toContainText('价格尚未核验')
     await image('02-visual-catalog')
+    for (const category of [
+      { id: 'ux-tab-procedure', label: '工序' },
+      { id: 'ux-tab-material', label: '材料' },
+      { id: 'ux-tab-measure', label: '机措' },
+    ]) {
+      await page.getByTestId(category.id).click()
+      await expect(page.getByTestId(category.id)).toHaveAttribute('aria-selected', 'true')
+      await expect(page.getByTestId('ux-package-list')).toBeHidden()
+      await expect(page.getByTestId('ux-other-list')).toContainText(category.label + '目录 · 暂无经核验的样本')
+      await expect(page.getByTestId('ux-other-list')).toContainText('暂不可选择')
+    }
+    await page.getByTestId('ux-tab-package').click()
+    await expect(page.getByTestId('ux-package-list')).toBeVisible()
     await page.getByTestId('ux-select-package').click()
 
     await expect(page.getByTestId('ux-stage-config')).toBeVisible()
