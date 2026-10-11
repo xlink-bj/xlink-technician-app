@@ -28,7 +28,9 @@ export interface PackageSkuMaterialOption {
   readonly skuRead: MaterialSkuRead
 }
 export interface PackageSkuLayerRead {
+  /** Normalized for UI only; raw typed R1 layer is retained for lineage. */
   readonly layer: string
+  readonly rawLayer: string | number
   readonly options: readonly PackageSkuMaterialOption[]
 }
 export type PackageMaterialSkuRead =
@@ -77,6 +79,7 @@ export function projectR1PackageMaterialSku(input: {
   const ids = new Set<string>()
   const materials = new Map<string, { layer: string; materialId: string; name: string; spu: unknown }[]>()
   const validParents = new Set<string>()
+  const rawLayers = new Map<string, string | number>()
   for (const raw of input.materialLinks) {
     const link = rec(raw), material = rec(link?.material), exts = rec(link?.exts)
     const linkId = key(link?._id), materialId = key(link?.materialId)
@@ -87,6 +90,10 @@ export function projectR1PackageMaterialSku(input: {
     }
     if (ids.has(linkId)) return fail('duplicate_link_id')
     ids.add(linkId)
+    const rawLayer = exts?.layer
+    if (typeof rawLayer !== 'string' && typeof rawLayer !== 'number') return fail('invalid_material_link')
+    if (rawLayers.has(layer) && rawLayers.get(layer) !== rawLayer) return fail('invalid_material_link')
+    rawLayers.set(layer, rawLayer)
     validParents.add(materialId)
     const old = materials.get(layer) ?? []
     old.push({ layer, materialId, name, spu: material })
@@ -131,7 +138,9 @@ export function projectR1PackageMaterialSku(input: {
       options.push({ linkId, layer, materialId, name, skuRead })
     }
     if (!options.length || links.length !== options.length) return fail('invalid_material_source')
-    layers.push({ layer, options })
+    const rawLayer = rawLayers.get(layer)
+    if (rawLayer === undefined) return fail('invalid_material_link')
+    layers.push({ layer, rawLayer, options })
   }
   return layers.length ? { state: 'ready', packageId, layers } : fail('invalid_material_source')
 }

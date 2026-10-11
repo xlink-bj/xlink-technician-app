@@ -46,10 +46,9 @@ function packageChildStatus(
   item: QuotationConfiguredPackageMaterial,
   source: Extract<PackageMaterialSkuRead, { readonly state: 'ready' }>,
 ): SkuLineageStatus {
-  // The P0 package SKU projection serializes original layer codes. Quote
-  // preserves type: never equate numeric 2 to string "2" without typed proof.
-  if (typeof item.layer !== 'string' || !item.layer.trim()) return 'layer_unverified'
-  const layer = source.layers.find((v) => v.layer === item.layer)
+  // Compare the exact R1 typed layer. The presentation-normalized string
+  // is not sufficient evidence for numeric versus text layer identity.
+  const layer = source.layers.find((v) => v.rawLayer === item.layer)
   if (!layer) return 'layer_unverified'
   if (!item.providerComponentId?.trim() || !item.catalogId.trim()
     || (item.providerReferenceId && item.providerReferenceId !== item.catalogId)) return 'body_id_mismatch'
