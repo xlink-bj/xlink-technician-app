@@ -180,6 +180,11 @@ for (const viewport of [
       .toContainText('4 条来源关系 · 4 条身份未对应')
     await expect(page.getByTestId('quotation-p1-same-catalog-count'))
       .toContainText('同目录 ID 仿真：4/4 条关联可对应 · 仅合成 SKU')
+    await expect(page.getByTestId('quotation-p1-sku-sale-options-ready'))
+      .toContainText('2 个 SPU · 4 项属性 · 4 个选项 · 仅合成字典')
+    await expect(page.getByTestId('quotation-p1-sku-server-auth-blocked'))
+      .toContainText('租户/工单级 SKU 授权尚未验证')
+    await expect(page.getByTestId('quotation-p1-sku-sale-options-blocked')).toHaveCount(0)
     await expect(page.getByTestId('quotation-p1-sku-identity-warning'))
       .toContainText('不按名称或层级自动关联')
 
@@ -240,6 +245,11 @@ for (const viewport of [
       .toContainText('4 条来源关系 · 4 条身份未对应')
     await expect(page.getByTestId('quotation-p1-same-catalog-count'))
       .toContainText('同目录 ID 仿真：4/4 条关联可对应 · 仅合成 SKU')
+    await expect(page.getByTestId('quotation-p1-sku-sale-options-ready'))
+      .toContainText('2 个 SPU · 4 项属性 · 4 个选项 · 仅合成字典')
+    await expect(page.getByTestId('quotation-p1-sku-server-auth-blocked'))
+      .toContainText('租户/工单级 SKU 授权尚未验证')
+    await expect(page.getByTestId('quotation-p1-sku-sale-options-blocked')).toHaveCount(0)
     await expect(page.getByTestId('quotation-p1-review-order-blocked')).toBeVisible()
     await page.getByTestId('quotation-p1-review-order-blocked').scrollIntoViewIfNeeded()
     await info.attach(`p1-quotation-review-restored-${viewport.width}`, {
