@@ -31,6 +31,15 @@
         :suggestion-feedback="suggestionFeedback"
         @adopt-suggestion="adoptSurveySuggestion"
       />
+      <navigator
+        v-if="mockJourney?.stage === 'quotation' && isSigningMockReviewAvailable()"
+        class="mock-signing-entry app-surface"
+        :url="signingMockReviewUrl()"
+        data-testid="mock-journey-signing-review"
+      >
+        <text class="mock-signing-entry__title">下一步预览 · 签约 Mock</text>
+        <text class="mock-signing-entry__note">独立合成的正式订单与合同样本；当前本机报价未提交，也没有生成可签约的订单。</text>
+      </navigator>
     </template>
   </QuotationActionWorkspace>
 
@@ -215,6 +224,7 @@ import { setActionWorkspacePageTitle } from '@app/action-page-title'
 import { advanceMockJourneyContext, mockJourneyContext } from '@app/mock-journey'
 import { readMockJourneyContext, type MockJourneyContextSummary } from '@app/mock-journey-context'
 import { canAdoptMockSurveySuggestion } from '@app/mock-journey-quote-suggestion'
+import { isSigningMockReviewAvailable, signingMockReviewUrl } from '@app/signing-mock-review'
 import { hasAuthenticatedSession } from '@features/home/access'
 import { isProductionReadOnlyRuntime } from '@shared/config'
 import {
@@ -520,6 +530,9 @@ function actionErrorCopy(error: OperationError | null): string {
 .action-success-detail { margin-bottom: var(--app-space-xs); }
 .quotation-readonly-note { color: var(--app-color-text-secondary); display: block; font-size: var(--app-font-meta); padding: var(--app-space-md) 0; text-align: center; }
 
+.mock-signing-entry { display: flex; flex-direction: column; gap: 8rpx; margin-bottom: 14rpx; padding: 18rpx 20rpx; }
+.mock-signing-entry__title { color: var(--app-color-primary); font-size: 24rpx; font-weight: 700; }
+.mock-signing-entry__note { color: var(--app-color-text-secondary); font-size: 21rpx; line-height: 1.45; }
 .mock-journey-progress { margin: 20rpx 24rpx; padding: 20rpx; display: flex; flex-direction: column; gap: 12rpx; }
 .mock-journey-progress__note { color: var(--app-color-text-secondary); font-size: 22rpx; line-height: 1.5; }
 </style>
