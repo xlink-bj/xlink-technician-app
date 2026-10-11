@@ -572,6 +572,11 @@
             class="quotation-content__p1-review-item"
             :data-testid="`quotation-p1-review-group-${group.groupId}`"
           >维修部位 {{ group.position }} · {{ group.selectedCount }} 项 · {{ group.state === 'local_complete' ? '本机结构已填写' : (group.firstIssue || '请完善本组') }}</text>
+          <view v-if="props.skuLineageAudit" class="quotation-content__p1-sku-audit" data-testid="quotation-p1-sku-identity-audit">
+            <text class="quotation-content__p1-review-title">材料身份对照 · 独立演示样本</text>
+            <text class="quotation-content__p1-review-item" data-testid="quotation-p1-sku-identity-count">{{ props.skuLineageAudit.total }} 条来源关系 · {{ props.skuLineageAudit.mismatched }} 条身份未对应</text>
+            <text class="quotation-content__p1-review-warning" data-testid="quotation-p1-sku-identity-warning">报价目录和独立 SKU 演示使用不同商品身份；不按名称或层级自动关联，也不视为 SKU 已配置。</text>
+          </view>
           <text class="quotation-content__p1-review-warning" data-testid="quotation-p1-review-unverified">材料 SKU/规格来源、附加字段和金额尚未核实。此处不生成正式订单或推进工作流。</text>
           <text class="quotation-content__p1-review-footnote" data-testid="quotation-p1-review-order-blocked">正式报价提交：未开放 · 本机核对不等于业务审核通过</text>
         </view>
@@ -948,6 +953,7 @@
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { reviewLocalQuotationForP1 } from './local-review-closure'
 import emptyBoxArtwork from './empty-box-illustration.png'
+import type { SkuLineageAudit } from './sku-identity-review'
 
 import AppButton from '@shared/ui/AppButton.vue'
 import AppCascadeSelector from '@shared/ui/AppCascadeSelector.vue'
@@ -983,6 +989,7 @@ const props = defineProps<{
   readonly state: 'loading' | 'ready' | 'blocked' | 'failed_retryable' | 'failed_terminal'
   readonly syntheticFieldsReview?: boolean
   readonly productReviewOnly?: boolean
+  readonly skuLineageAudit?: SkuLineageAudit | null
   readonly syntheticReviewValidateSelection?: () => boolean
   readonly syntheticReviewFocusFirstError?: () => void
 }>()
@@ -1493,6 +1500,7 @@ function configuredPackageLayerLabel(
 .quotation-content__local-tag, .quotation-content__kind-tag { background: var(--app-color-primary-soft); border-radius: var(--app-radius-control); color: var(--app-color-primary); flex-shrink: 0; font-size: var(--app-font-meta); padding: var(--app-space-xs) var(--app-space-sm); }
 .quotation-content__local-status { margin-top: var(--app-space-sm); }
 .quotation-content__p1-review { border-top: 1rpx solid var(--app-color-divider); display: flex; flex-direction: column; gap: var(--app-space-sm); padding-top: var(--app-space-md); margin-top: var(--app-space-md); }
+.quotation-content__p1-sku-audit { display: flex; flex-direction: column; gap: var(--app-space-xs); border-top: 1rpx solid var(--app-color-divider); padding-top: var(--app-space-sm); }
 .quotation-content__p1-review-body { display: flex; flex-direction: column; gap: var(--app-space-sm); padding: var(--app-space-sm) var(--app-space-xs); }
 .quotation-content__p1-review-title { color: var(--app-color-text-primary); font-size: var(--app-font-body); font-weight: 800; }
 .quotation-content__p1-review-item { color: var(--app-color-text-secondary); font-size: var(--app-font-meta); line-height: 1.5; }

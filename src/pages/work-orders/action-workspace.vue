@@ -17,6 +17,7 @@
     v-else-if="workspace.descriptor?.contentKind === 'quotation' && workspace.descriptor.actionIntent === 'place_order'"
     :content-state="quotationContentViewState"
     :product-review-only="isMockQuotationPreview"
+    :sku-lineage-audit="skuLineagePreview"
     @retry="reload"
     @back="exit"
   >
@@ -206,6 +207,7 @@ import { computed, ref, watch } from 'vue'
 import { onLoad, onUnload } from '@dcloudio/uni-app'
 
 import { isBusinessMockQuotationPreview } from '@app/business-mock'
+import { compareQuoteWithStandaloneSkuDemo } from '@app/quotation-sku-identity-evidence'
 import { setActionWorkspacePageTitle } from '@app/action-page-title'
 import { advanceMockJourneyContext, mockJourneyContext } from '@app/mock-journey'
 import { readMockJourneyContext, type MockJourneyContextSummary } from '@app/mock-journey-context'
@@ -241,6 +243,8 @@ import type { OperationError } from '@shared/types'
 const session = useSessionStore()
 const workspace = useActionWorkspaceStore()
 const quotationComposition = useQuotationCompositionStore()
+const skuLineagePreview = computed(() => import.meta.env.DEV && isMockQuotationPreview.value && quotationComposition.draft
+  ? compareQuoteWithStandaloneSkuDemo(quotationComposition.draft) : null)
 const routeReady = ref(false)
 const routeId = ref<ReturnType<typeof parseActionWorkspaceId>>(null)
 const routeNodeId = ref<ReturnType<typeof parseActionWorkspaceNodeId>>(null)
