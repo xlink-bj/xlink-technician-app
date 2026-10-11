@@ -253,16 +253,20 @@ function quotationOrderBrowseItem(raw: unknown): QuotationOrderBrowseItem {
   }
 }
 
-function quotationOrderBrowsePage(raw: unknown, requestedWorkOrderId: string): ReadPage<QuotationOrderBrowseItem> {
+function quotationOrderBrowsePage(raw: unknown, requestedWorkOrderId: string, requestedPageSize: 1 | 3): ReadPage<QuotationOrderBrowseItem> {
   const envelope = asRecord(raw, 'Work Order-scoped Order list response')
   const data = optionalRecord(envelope.data)
   const candidateItems = [envelope.data, envelope.items, envelope.records, data?.items, data?.records, data?.data]
   const items = candidateItems.find(Array.isArray)
   if (!Array.isArray(items)) throw new AdapterMappingError('Work Order-scoped Order list rows are missing')
-  if (items.length > 3) throw new AdapterMappingError('Work Order-scoped Order list exceeded its bounded page size')
+  if (items.length > requestedPageSize) throw new AdapterMappingError('Work Order-scoped Order list exceeded the requested bounded page size')
   const mappedItems = items.map(quotationOrderBrowseItem)
   if (mappedItems.some((item) => item.serviceAppointmentId !== requestedWorkOrderId)) {
     throw new AdapterMappingError('Work-Order-scoped Order list returned a record with mismatched ownership')
+  }
+  const ids = mappedItems.map((item) => item.id)
+  if (ids.some((id) => !id.trim()) || new Set(ids).size !== ids.length) {
+    throw new AdapterMappingError('Work-Order-scoped Order list returned duplicate or empty Order IDs')
   }
   return {
     items: mappedItems,
@@ -307,7 +311,7 @@ export class QuotationOrderReadAdapter implements QuotationOrderReadPort {
     workOrderId: string,
     pageSize: 1 | 3 = 3,
   ): Promise<OperationSnapshot<ReadPage<QuotationOrderBrowseItem>>> {
-    if (!/^[A-Za-z0-9_-]{1,100}$/.test(workOrderId)) {
+    if (!/^[A-Za-z0-9_-]{1,100}$/.test(workOrderId) || (pageSize !== 1 && pageSize !== 3)) {
       return adapterFailure('validation', 'a listed Work Order identity is required to read its quotations')
     }
     if (!this.isAuthorizedForCurrentSession(workOrderId)) {
@@ -330,7 +334,7 @@ export class QuotationOrderReadAdapter implements QuotationOrderReadPort {
       if (!this.isAuthorizedForCurrentSession(workOrderId)) {
         return adapterFailure('authorization_denied', 'Work Order session changed during quotation read')
       }
-      return succeeded(quotationOrderBrowsePage(raw, workOrderId))
+      return succeeded(quotationOrderBrowsePage(raw, workOrderId, pageSize))
     } catch (error) {
       return readFailure(error)
     }
