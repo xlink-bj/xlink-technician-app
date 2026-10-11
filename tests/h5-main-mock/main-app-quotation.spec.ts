@@ -175,6 +175,12 @@ for (const viewport of [
       .toContainText('3 项')
     await expect(page.getByTestId('quotation-p1-review-unverified'))
       .toContainText('SKU/规格来源')
+    await expect(page.getByTestId('quotation-p1-sku-identity-audit')).toBeVisible()
+    await expect(page.getByTestId('quotation-p1-sku-identity-count'))
+      .toContainText('4 条来源关系 · 4 条身份未对应')
+    await expect(page.getByTestId('quotation-p1-sku-identity-warning'))
+      .toContainText('不按名称或层级自动关联')
+
     await expect(page.getByTestId('quotation-p1-review-order-blocked'))
       .toContainText('正式报价提交：未开放')
     await page.getByTestId('quotation-p1-review-group-quotation-group-2').scrollIntoViewIfNeeded()
@@ -228,6 +234,8 @@ for (const viewport of [
       .toContainText('本机结构已填写')
     await expect(page.getByTestId('quotation-p1-review-group-quotation-group-2'))
       .toContainText('3 项')
+    await expect(page.getByTestId('quotation-p1-sku-identity-count'))
+      .toContainText('4 条来源关系 · 4 条身份未对应')
     await expect(page.getByTestId('quotation-p1-review-order-blocked')).toBeVisible()
     await page.getByTestId('quotation-p1-review-order-blocked').scrollIntoViewIfNeeded()
     await info.attach(`p1-quotation-review-restored-${viewport.width}`, {
