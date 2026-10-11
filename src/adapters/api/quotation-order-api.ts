@@ -6,6 +6,7 @@ import type {
   QuotationOrderBrowseLine,
   QuotationOrderRead,
   QuotationOrderReadPort,
+  ScopedSigningOrderReviewRead,
   ReadPage,
 } from '@shared/ports'
 import type { OperationSnapshot } from '@shared/types'
@@ -286,6 +287,9 @@ export class QuotationOrderReadAdapter implements QuotationOrderReadPort {
   constructor(
     private readonly transport: ApiReadTransport,
     private readonly isWorkOrderListedForCurrentSession: (id: string) => boolean = () => false,
+    // Absent unless a future authorized caller supplies a current authenticated
+    // session/user/roleVersion fingerprint. Never enable from a static fixture.
+    private readonly getCurrentAuthorizationIdentity: () => string | null = () => null,
   ) {}
 
   async getQuotationOrderById(id: string): Promise<OperationSnapshot<QuotationOrderRead>> {
@@ -295,6 +299,68 @@ export class QuotationOrderReadAdapter implements QuotationOrderReadPort {
       return succeeded(quotationOrderRecord(raw))
     } catch (error) {
       return readFailure(error)
+    }
+  }
+
+  private scopedReviewIdentity(): string | null {
+    try {
+      const identity = this.getCurrentAuthorizationIdentity()
+      return typeof identity === 'string' && identity.trim() === identity && identity.length > 0
+        ? identity : null
+    } catch {
+      return null
+    }
+  }
+
+  /**
+   * Signing READINESS only. QueryById has no proven server-side Order/role ACL,
+   * so this is NOT wired to any production signing UI until that backend gate.
+   * Current role-listed WorkOrder and the authorization fingerprint are checked
+   * both before transport and after response, and raw content is never returned.
+   */
+  async readScopedTypeOneOrderForSigningReview(
+    workOrderId: string,
+    orderId: string,
+  ): Promise<OperationSnapshot<ScopedSigningOrderReviewRead>> {
+    const valid = /^[A-Za-z0-9_-]{1,100}$/
+    if (!valid.test(workOrderId) || !valid.test(orderId)) {
+      return adapterFailure('validation', '当前工单和正式订单身份不完整。')
+    }
+    const identity = this.scopedReviewIdentity()
+    if (!identity || !this.isAuthorizedForCurrentSession(workOrderId)) {
+      return adapterFailure('authorization_denied', '当前工单尚未获得签约订单只读准入。')
+    }
+    try {
+      const raw = await this.transport.execute({
+        method: 'POST', path: 'basic/order/queryById', body: { id: orderId },
+      })
+      if (this.scopedReviewIdentity() !== identity || !this.isAuthorizedForCurrentSession(workOrderId)) {
+        return adapterFailure('authorization_denied', '读取期间账号或工单权限已变化。')
+      }
+      const envelope = asRecord(raw, 'scoped order detail')
+      const candidate = optionalRecord(envelope.data) ?? envelope
+      const order = quotationOrderBrowseItem(candidate)
+      if (order.id !== orderId || order.serviceAppointmentId !== workOrderId) {
+        return adapterFailure('authorization_denied', '返回的正式订单与当前工单身份不匹配。')
+      }
+      return succeeded({
+        order,
+        contractReadAuthorized: false,
+        signingAuthorized: false,
+      })
+    } catch (error) {
+      // An exception can contain provider response bodies, user fields and
+      // tokens; never propagate exception messages into Signing review UI.
+      if (this.scopedReviewIdentity() !== identity || !this.isAuthorizedForCurrentSession(workOrderId)) {
+        return adapterFailure('authorization_denied', '读取期间账号或工单权限已变化。')
+      }
+      if (error instanceof ApiReadTransportError) {
+        return adapterFailure(error.category, '正式订单只读请求暂时无法完成。')
+      }
+      return adapterFailure(
+        error instanceof AdapterMappingError ? 'server_terminal' : 'network_retryable',
+        '正式订单信息未能通过安全读取校验。',
+      )
     }
   }
 
@@ -344,6 +410,7 @@ export class QuotationOrderReadAdapter implements QuotationOrderReadPort {
 export function createQuotationOrderReadAdapter(
   transport: ApiReadTransport,
   isWorkOrderListedForCurrentSession?: (id: string) => boolean,
+  getCurrentAuthorizationIdentity?: () => string | null,
 ): QuotationOrderReadPort {
-  return new QuotationOrderReadAdapter(transport, isWorkOrderListedForCurrentSession)
+  return new QuotationOrderReadAdapter(transport, isWorkOrderListedForCurrentSession, getCurrentAuthorizationIdentity)
 }
