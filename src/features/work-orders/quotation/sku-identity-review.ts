@@ -15,7 +15,7 @@ export interface SkuLineageFinding {
   readonly skuSelected: false
 }
 export interface SkuLineageAudit {
-  readonly source: 'independent_synthetic_fixtures'
+  readonly source: 'independent_synthetic_fixtures' | 'same_quote_catalog_synthetic_overlay'
   readonly findings: readonly SkuLineageFinding[]
   readonly total: number
   readonly correlatedForDemo: number
@@ -46,10 +46,9 @@ function packageChildStatus(
   item: QuotationConfiguredPackageMaterial,
   source: Extract<PackageMaterialSkuRead, { readonly state: 'ready' }>,
 ): SkuLineageStatus {
-  // The P0 package SKU projection serializes original layer codes. Quote
-  // preserves type: never equate numeric 2 to string "2" without typed proof.
-  if (typeof item.layer !== 'string' || !item.layer.trim()) return 'layer_unverified'
-  const layer = source.layers.find((v) => v.layer === item.layer)
+  // Compare the exact R1 typed layer. The presentation-normalized string
+  // is not sufficient evidence for numeric versus text layer identity.
+  const layer = source.layers.find((v) => v.rawLayer === item.layer)
   if (!layer) return 'layer_unverified'
   if (!item.providerComponentId?.trim() || !item.catalogId.trim()
     || (item.providerReferenceId && item.providerReferenceId !== item.catalogId)) return 'body_id_mismatch'
@@ -58,7 +57,10 @@ function packageChildStatus(
   if (same.length !== 1) return 'body_id_mismatch'
   return same[0].skuRead.state === 'ready' ? 'demo_ids_correspond' : 'source_incomplete'
 }
-export function auditP1QuotationSkuLineage(draft: QuotationDraft, sources: Sources): SkuLineageAudit {
+export function auditP1QuotationSkuLineage(
+  draft: QuotationDraft, sources: Sources,
+  provenance: SkuLineageAudit['source'] = 'independent_synthetic_fixtures',
+): SkuLineageAudit {
   const findings: SkuLineageFinding[] = []
   for (const group of draft.groups) {
     for (const material of group.materials) {
@@ -87,10 +89,16 @@ export function auditP1QuotationSkuLineage(draft: QuotationDraft, sources: Sourc
     }
   }
   return {
-    source: 'independent_synthetic_fixtures',
+    source: provenance,
     findings, total: findings.length,
     correlatedForDemo: findings.filter((v) => v.status === 'demo_ids_correspond').length,
     mismatched: findings.filter((v) => ['catalog_id_mismatch', 'source_ambiguous', 'body_id_mismatch', 'layer_unverified'].includes(v.status)).length,
     realSkuAuthorized: false, officialOrderAllowed: false,
   }
 }
+
+
+/** UX typing lives in Feature, not App; App only constructs synthetic evidence. */
+export type SameCatalogComparison =
+  | { readonly state: 'blocked'; readonly reason: string }
+  | { readonly state: 'ready_synthetic_only'; readonly audit: SkuLineageAudit }

@@ -20,7 +20,8 @@ describe('R1 package material SKU: layer + body link + SPU + unique SKU pure con
   it('accepts R1 source codes as numbers or strings without inventing layer labels or pricing', () => {
     const linksWithNumericLayer = [
       { ...links[0], exts: { layer: 1 } },
-      ...links.slice(1),
+      { ...links[1], exts: { layer: 1 } },
+      ...links.slice(2),
     ]
     const x = project({ materialLinks: linksWithNumericLayer, pricingMethod: 1 })
     expect(x.state).toBe('ready')

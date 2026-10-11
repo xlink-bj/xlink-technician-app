@@ -575,6 +575,16 @@
           <view v-if="props.skuLineageAudit" class="quotation-content__p1-sku-audit" data-testid="quotation-p1-sku-identity-audit">
             <text class="quotation-content__p1-review-title">材料身份对照 · 独立演示样本</text>
             <text class="quotation-content__p1-review-item" data-testid="quotation-p1-sku-identity-count">{{ props.skuLineageAudit.total }} 条来源关系 · {{ props.skuLineageAudit.mismatched }} 条身份未对应</text>
+            <text
+              v-if="props.sameCatalogLineage?.state === 'ready_synthetic_only'"
+              class="quotation-content__p1-review-item"
+              data-testid="quotation-p1-same-catalog-count"
+            >同目录 ID 仿真：{{ props.sameCatalogLineage.audit.correlatedForDemo }}/{{ props.sameCatalogLineage.audit.total }} 条关联可对应 · 仅合成 SKU</text>
+            <text
+              v-else-if="props.sameCatalogLineage?.state === 'blocked'"
+              class="quotation-content__p1-review-warning"
+              data-testid="quotation-p1-same-catalog-blocked"
+            >同目录 SKU 仿真来源不完整，已阻止关联。</text>
             <text class="quotation-content__p1-review-warning" data-testid="quotation-p1-sku-identity-warning">报价目录和独立 SKU 演示使用不同商品身份；不按名称或层级自动关联，也不视为 SKU 已配置。</text>
           </view>
           <text class="quotation-content__p1-review-warning" data-testid="quotation-p1-review-unverified">材料 SKU/规格来源、附加字段和金额尚未核实。此处不生成正式订单或推进工作流。</text>
@@ -954,6 +964,7 @@ import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { reviewLocalQuotationForP1 } from './local-review-closure'
 import emptyBoxArtwork from './empty-box-illustration.png'
 import type { SkuLineageAudit } from './sku-identity-review'
+import type { SameCatalogComparison } from './sku-identity-review'
 
 import AppButton from '@shared/ui/AppButton.vue'
 import AppCascadeSelector from '@shared/ui/AppCascadeSelector.vue'
@@ -990,6 +1001,7 @@ const props = defineProps<{
   readonly syntheticFieldsReview?: boolean
   readonly productReviewOnly?: boolean
   readonly skuLineageAudit?: SkuLineageAudit | null
+  readonly sameCatalogLineage?: SameCatalogComparison | null
   readonly syntheticReviewValidateSelection?: () => boolean
   readonly syntheticReviewFocusFirstError?: () => void
 }>()
