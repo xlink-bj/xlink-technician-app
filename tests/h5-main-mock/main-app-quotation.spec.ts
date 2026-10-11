@@ -178,6 +178,8 @@ for (const viewport of [
     await expect(page.getByTestId('quotation-p1-sku-identity-audit')).toBeVisible()
     await expect(page.getByTestId('quotation-p1-sku-identity-count'))
       .toContainText('4 条来源关系 · 4 条身份未对应')
+    await expect(page.getByTestId('quotation-p1-same-catalog-count'))
+      .toContainText('同目录 ID 仿真：4/4 条关联可对应 · 仅合成 SKU')
     await expect(page.getByTestId('quotation-p1-sku-identity-warning'))
       .toContainText('不按名称或层级自动关联')
 
@@ -236,6 +238,8 @@ for (const viewport of [
       .toContainText('3 项')
     await expect(page.getByTestId('quotation-p1-sku-identity-count'))
       .toContainText('4 条来源关系 · 4 条身份未对应')
+    await expect(page.getByTestId('quotation-p1-same-catalog-count'))
+      .toContainText('同目录 ID 仿真：4/4 条关联可对应 · 仅合成 SKU')
     await expect(page.getByTestId('quotation-p1-review-order-blocked')).toBeVisible()
     await page.getByTestId('quotation-p1-review-order-blocked').scrollIntoViewIfNeeded()
     await info.attach(`p1-quotation-review-restored-${viewport.width}`, {
