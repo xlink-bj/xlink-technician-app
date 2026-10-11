@@ -97,7 +97,7 @@ import AppButton from '@shared/ui/AppButton.vue'
 import AppStatus from '@shared/ui/AppStatus.vue'
 import QuotationActionContent from './QuotationActionContent.vue'
 import type { SkuLineageAudit } from './sku-identity-review'
-import type { SameCatalogComparison } from '@app/quotation-sku-identity-evidence'
+import type { SameCatalogComparison } from './sku-identity-review'
 
 const props = defineProps<{
   readonly contentState: 'loading' | 'ready' | 'blocked' | 'failed_retryable' | 'failed_terminal'

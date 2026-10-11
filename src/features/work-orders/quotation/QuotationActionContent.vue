@@ -964,7 +964,7 @@ import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { reviewLocalQuotationForP1 } from './local-review-closure'
 import emptyBoxArtwork from './empty-box-illustration.png'
 import type { SkuLineageAudit } from './sku-identity-review'
-import type { SameCatalogComparison } from '@app/quotation-sku-identity-evidence'
+import type { SameCatalogComparison } from './sku-identity-review'
 
 import AppButton from '@shared/ui/AppButton.vue'
 import AppCascadeSelector from '@shared/ui/AppCascadeSelector.vue'

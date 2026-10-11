@@ -96,3 +96,9 @@ export function auditP1QuotationSkuLineage(
     realSkuAuthorized: false, officialOrderAllowed: false,
   }
 }
+
+
+/** UX typing lives in Feature, not App; App only constructs synthetic evidence. */
+export type SameCatalogComparison =
+  | { readonly state: 'blocked'; readonly reason: string }
+  | { readonly state: 'ready_synthetic_only'; readonly audit: SkuLineageAudit }
