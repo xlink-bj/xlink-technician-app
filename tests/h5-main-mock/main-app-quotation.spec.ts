@@ -81,6 +81,46 @@ test('real authenticated shell uses local-only Mock quotation with zero external
 })
 
 
+for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }]) {
+  test('M1 integrated signing Mock: two official Orders, per-Order contract and safe states at ' + viewport.width, async ({ page }, info) => {
+    await page.setViewportSize(viewport)
+    await page.goto('/#/pages/index/index', { waitUntil: 'domcontentloaded' })
+    await expect(page.getByTestId('signing-mock-entry')).toBeVisible()
+    await page.getByTestId('signing-mock-entry').click()
+    await expect(page).toHaveURL(/pages\\/work-orders\\/signing-mock-review/)
+    await expect(page.getByTestId('signing-mock-workbench')).toContainText('独立正式订单样本')
+    await expect(page.getByTestId('signing-mock-orders')).toContainText('模拟正式订单 A')
+    await expect(page.getByTestId('signing-mock-orders')).toContainText('模拟正式订单 B')
+    await expect(page.getByTestId('signing-mock-no-contract')).toBeVisible()
+    await page.getByTestId('signing-mock-order-mock-official-order-019-b').click()
+    await expect(page.getByTestId('signing-mock-state')).toContainText('签署中')
+    await page.getByTestId('signing-mock-scenario-signed').click()
+    await expect(page.getByTestId('signing-mock-state')).toContainText('已签署')
+    await page.getByTestId('signing-mock-scenario-failed').click()
+    await expect(page.getByTestId('signing-mock-state')).toContainText('失败')
+    await page.getByTestId('signing-mock-scenario-expired').click()
+    await expect(page.getByTestId('signing-mock-state')).toContainText('过期')
+    await page.getByTestId('signing-mock-scenario-no_orders').click()
+    await expect(page.getByTestId('signing-mock-empty')).toBeVisible()
+    await page.getByTestId('signing-mock-scenario-read_error').click()
+    await expect(page.getByTestId('signing-mock-error')).toBeVisible()
+    await page.getByTestId('signing-mock-scenario-normal').click()
+    await page.getByTestId('signing-mock-order-mock-official-order-019-b').click()
+    for (const id of ['signing-mock-preview-disabled', 'signing-mock-apply-disabled']) {
+      await expect(page.getByTestId(id)).toHaveAttribute('disabled', 'true')
+      await expect(page.getByTestId(id)).toHaveClass(/app-button--disabled/)
+    }
+    await expect(page.getByTestId('signing-mock-footer')).toContainText('无业务写入')
+    await info.attach('m1-integrated-signing-' + viewport.width, {
+      body: await page.screenshot({ fullPage: true }), contentType: 'image/png',
+    })
+    expect(evidence.externalIntents).toEqual([])
+    expect(evidence.localFailures).toEqual([])
+    expect(evidence.pageErrors).toBe(0)
+    expect(evidence.consoleErrors).toBe(0)
+  })
+}
+
 for (const viewport of [
   { width: 375, height: 667 },
   { width: 390, height: 844 },
@@ -412,6 +452,15 @@ test('one MOCK-019 WorkOrder progresses Appointment → Survey → Quotation wit
   await expect(page.getByTestId('mock-journey-context-appointment')).toContainText('P1B预约备注：现场先确认屋面渗漏')
   await expect(page.getByTestId('mock-journey-context-survey')).toContainText('14.5')
   await expect(page.getByTestId('quotation-product-demo-read-only')).toBeVisible()
+  // The local quotation draft is not an Order.type=1. The next stage is
+  // explicitly isolated synthetic signing review, never a workflow mutation.
+  const signingLink = page.getByTestId('mock-journey-signing-review')
+  await expect(signingLink).toContainText('本机报价未提交')
+  await signingLink.click()
+  await expect(page).toHaveURL(/pages\\/work-orders\\/signing-mock-review/)
+  await expect(page.getByTestId('signing-mock-orders')).toContainText('模拟正式订单 A')
+  await expect(page.getByTestId('signing-mock-no-contract')).toBeVisible()
+  await expect(page.getByTestId('signing-mock-footer')).toContainText('无业务写入')
   expect(evidence.externalIntents).toEqual([])
   expect(evidence.localFailures).toEqual([])
   expect(evidence.pageErrors).toBe(0)
