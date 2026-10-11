@@ -5,6 +5,7 @@ import {
 } from '@adapters/api/mock/quotation-catalog'
 import { syntheticMaterialSalesFields } from '@adapters/api/mock/material-sku'
 import type { QuotationDraft } from '@features/work-orders/quotation/model'
+import type { QuoteSkuReadiness, QuoteSkuReadinessBlock } from '@features/work-orders/quotation/sku-readiness-view'
 import { auditP1QuotationSkuLineage } from '@features/work-orders/quotation/sku-identity-review'
 import {
   preflightSkuSourceIdentity,
@@ -28,19 +29,6 @@ const rec = (v: unknown): Rec | null =>
   v !== null && typeof v === 'object' && !Array.isArray(v) ? v as Rec : null
 const validId = (v: unknown): v is string =>
   typeof v === 'string' && v.length > 0 && v.trim() === v
-
-export type QuoteSkuReadinessBlock =
-  | 'no_selected_materials' | 'catalog_unavailable'
-  | 'quote_source_identity_mismatch' | 'catalog_materials_incomplete'
-  | 'source_preflight_blocked' | 'sales_option_source_blocked'
-
-export type QuoteSkuReadiness =
-  | { readonly state: 'blocked_synthetic'; readonly reason: QuoteSkuReadinessBlock;
-      readonly realSkuAuthorized: false; readonly officialOrderAllowed: false }
-  | { readonly state: 'synthetic_structure_only'; readonly materialSpuCount: number;
-      readonly saleFieldCount: number; readonly saleOptionCount: number;
-      readonly realSkuAuthorized: false; readonly officialOrderAllowed: false;
-      readonly tenantAuthorization: 'unverified'; readonly workOrderAuthorization: 'unverified' }
 
 const deny = (reason: QuoteSkuReadinessBlock): QuoteSkuReadiness => ({
   state: 'blocked_synthetic', reason, realSkuAuthorized: false,
