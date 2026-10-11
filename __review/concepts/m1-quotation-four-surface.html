@@ -143,6 +143,7 @@ main{padding:18px 16px 26px}
     <button class="chip" type="button" role="tab" aria-selected="false" data-testid="ux-tab-measure">机措</button>
   </div>
   <div class="row" style="margin:0 2px 8px"><strong style="font-size:14px">适用于当前部位</strong><span class="micro">演示目录 · 非真实库存</span></div>
+  <div id="catalog-package-list" data-testid="ux-package-list">
   <article class="card package-card focus">
     <div class="row" style="justify-content:flex-start;gap:12px">
       <div class="thumb" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M6 32 24 12l18 20M9 32h30M15 27l8-8 9 8M15 35h18M9 39h30"/></svg></div>
@@ -159,6 +160,15 @@ main{padding:18px 16px 26px}
     <div class="body">结构化演示商品 · 配置资料不完整</div>
     <button class="button secondary full compact" type="button" disabled>尚不可配置</button>
   </article>
+  </div>
+  <div id="catalog-other-list" data-testid="ux-other-list" hidden>
+    <div class="card">
+      <span class="tag gray" id="other-category-label">工序</span>
+      <div class="title" id="other-category-title">本类商品尚未接入设计样本</div>
+      <p class="body">已保留分类入口、部位上下文和商品卡交互规范；未获得可核对的本类商品数据前，不展示虚构项目或报价。</p>
+      <button class="button full secondary" disabled type="button">暂不可选择</button>
+    </div>
+  </div>
   <p class="endmark">分类及商品名称仅作方案示意 · 不代表正式报价目录</p>
 </section>
 
@@ -269,11 +279,23 @@ main{padding:18px 16px 26px}
     document.getElementById('layer-b-label').textContent=layerB?'柔性防水材料 C':'柔性防水材料 B';
     document.getElementById('layer-b-detail').textContent=layerB?'规格选择：3 mm（合成样例）':'规格选择：2 mm（合成样例）';
   });
-  // Category tabs are visual-design-only. Do not invent procedures/stock.
+  // Every category is navigable, but no unverified procedure/material/measure
+  // product is invented. An unready category has an explicit disabled state.
   document.querySelectorAll('[role="tab"]').forEach(function(button){
     button.addEventListener('click',function(){
-      if(button.getAttribute('data-testid')!=='ux-tab-package')return;
-      document.querySelectorAll('[role="tab"]').forEach(function(b){b.classList.toggle('selected',b===button);b.setAttribute('aria-selected',String(b===button))});
+      var kind=button.getAttribute('data-testid');
+      var active=kind==='ux-tab-package';
+      document.querySelectorAll('[role="tab"]').forEach(function(b){
+        b.classList.toggle('selected',b===button);
+        b.setAttribute('aria-selected',String(b===button));
+      });
+      document.getElementById('catalog-package-list').hidden=!active;
+      document.getElementById('catalog-other-list').hidden=active;
+      if(!active){
+        var label=kind==='ux-tab-procedure'?'工序':kind==='ux-tab-material'?'材料':'机措';
+        document.getElementById('other-category-label').textContent=label;
+        document.getElementById('other-category-title').textContent=label+'目录 · 暂无经核验的样本';
+      }
     });
   });
   go(0);
