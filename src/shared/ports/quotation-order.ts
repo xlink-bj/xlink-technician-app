@@ -70,6 +70,17 @@ export interface QuotationOrderRead {
   readonly updateTime?: string
 }
 
+/**
+ * Ephemeral Signing **review** only: exposes an accepted type=1 Order display
+ * projection, never raw order, Contract contents, PDF URL, signer entitlement
+ * or a permission to send/sign. This is not a Signing action contract.
+ */
+export interface ScopedSigningOrderReviewRead {
+  readonly order: QuotationOrderBrowseItem
+  readonly contractReadAuthorized: false
+  readonly signingAuthorized: false
+}
+
 /** Quotation-owned authoritative readback boundary, separate from technician/work-order reads. */
 export interface QuotationOrderReadPort {
   getQuotationOrderById(id: string): Promise<OperationSnapshot<QuotationOrderRead>>
@@ -77,4 +88,10 @@ export interface QuotationOrderReadPort {
     workOrderId: string,
     pageSize?: 1 | 3,
   ): Promise<OperationSnapshot<ReadPage<QuotationOrderBrowseItem>>>
+  /** Explicit WorkOrder/Order scoped read for a future separately gated Signing review.
+   * Optional: existing Quotation readback providers never imply safe Signing reads.
+   */
+  readScopedTypeOneOrderForSigningReview?(
+    workOrderId: string, orderId: string,
+  ): Promise<OperationSnapshot<ScopedSigningOrderReviewRead>>
 }
