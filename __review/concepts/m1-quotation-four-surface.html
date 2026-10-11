@@ -116,7 +116,11 @@ main{padding:18px 16px 26px}
     <div class="title">屋面东侧防水修缮</div>
     <div class="body">面积约 12 m² · 本机演示值，不用于计价</div>
     <div class="divider"></div>
-    <div class="empty">当前组尚未添加商品或服务</div>
+    <div class="empty" id="workbench-empty" data-testid="ux-workbench-empty">当前组尚未添加商品或服务</div>
+    <div class="mainitem" id="workbench-picked" data-testid="ux-workbench-picked" hidden>
+      <div class="thumb" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M6 32 24 12l18 20M9 32h30M15 27l8-8 9 8M15 35h18M9 39h30"/></svg></div>
+      <div><div class="itemname">屋面局部防水修缮包</div><div class="itemmeta" id="workbench-picked-detail">已选材料层 2/2 · 本地配置，无正式 SKU</div></div>
+    </div>
     <button class="button full" style="margin-top:14px" type="button" id="open-catalog" data-testid="ux-nav-catalog">选择服务商品 →</button>
   </div>
   <div class="card">
@@ -222,7 +226,7 @@ main{padding:18px 16px 26px}
 (function(){
   'use strict';
   var names=['workbench','catalog','configure','return'];
-  var stage=0, quantity=12, layerB=0;
+  var stage=0, quantity=12, layerB=0, committed=false;
   var head=['报价工作台','商品目录','套餐配置','报价工作台'];
   var actions=['去选商品 →','配置这个套餐 →','加入当前部位','继续选商品 →'];
   function go(to){
@@ -233,7 +237,11 @@ main{padding:18px 16px 26px}
     }
     document.getElementById('header-title').textContent=head[to];
     document.getElementById('primary').textContent=actions[to];
-    document.getElementById('footer-title').textContent=to===3?'1 项 · 本机草稿':'0 项 · 本机草稿';
+    document.getElementById('footer-title').textContent=committed?'1 项 · 本机草稿':'0 项 · 本机草稿';
+    document.getElementById('workbench-empty').hidden=committed;
+    document.getElementById('workbench-picked').hidden=!committed;
+    document.getElementById('workbench-picked-detail').textContent='材料层 2/2 · '+quantity+' m² · '+(layerB===0?'防水材料 B':'防水材料 C')+' · 合成配置';
+    document.getElementById('open-catalog').textContent=committed?'继续选择服务商品 →':'选择服务商品 →';
     document.getElementById('back').textContent=to===0?'‹ 工单':'‹ 上一步';
     window.scrollTo(0,0);
   }
@@ -241,6 +249,7 @@ main{padding:18px 16px 26px}
     if(stage===0)go(1);
     else if(stage===1)go(2);
     else if(stage===2){
+      committed=true;
       document.getElementById('return-qty').textContent=String(quantity);
       document.getElementById('return-material').textContent='基层材料 A + '+(layerB===0?'防水材料 B':'防水材料 C')+' · 合成配置，未选定正式 SKU';
       go(3);
