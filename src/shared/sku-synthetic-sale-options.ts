@@ -68,12 +68,14 @@ const code = (v: unknown): string | null =>
   id(v) ? v : typeof v === 'number' && Number.isFinite(v) ? String(v) : null
 
 function salesFlag(raw: unknown): boolean | null {
+  if (raw === undefined || raw === null || raw === '') return false
   let parsed: unknown = raw
   if (typeof raw === 'string') {
     try { parsed = JSON.parse(raw) as unknown } catch { return null }
   }
-  return isRecord(parsed) && typeof parsed.salesAttribute === 'boolean'
-    ? parsed.salesAttribute : null
+  if (!isRecord(parsed)) return null
+  if (parsed.salesAttribute === undefined) return false
+  return typeof parsed.salesAttribute === 'boolean' ? parsed.salesAttribute : null
 }
 
 /** Positive result certifies test-fixture consistency ONLY. */
@@ -137,8 +139,10 @@ export function auditSyntheticSkuSalesOptions(
     usedCodeIds.add(raw.valueOption)
     const options: SyntheticSaleOption[] = []
     for (const value of selectedValues) {
-      if (value === null || !id(codes[value])) return deny('unresolved_option_value')
-      options.push({ value, label: codes[value] })
+      if (value === null) return deny('unresolved_option_value')
+      const display = codes[value]
+      if (!id(display)) return deny('unresolved_option_value')
+      options.push({ value, label: display })
     }
     fields.push({ name: raw.name, label: raw.nameDisp, valueOption: raw.valueOption, options })
   }
