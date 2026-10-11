@@ -19,6 +19,7 @@
       :product-review-only="productReviewOnly"
       :sku-lineage-audit="props.skuLineageAudit"
       :same-catalog-lineage="props.sameCatalogLineage"
+      :synthetic-sku-readiness="props.syntheticSkuReadiness"
       :synthetic-review-validate-selection="props.syntheticReviewValidateSelection"
       :synthetic-review-focus-first-error="props.syntheticReviewFocusFirstError"
       @retry="$emit('retry')"
@@ -98,12 +99,14 @@ import AppStatus from '@shared/ui/AppStatus.vue'
 import QuotationActionContent from './QuotationActionContent.vue'
 import type { SkuLineageAudit } from './sku-identity-review'
 import type { SameCatalogComparison } from './sku-identity-review'
+import type { QuoteSkuReadiness } from './sku-readiness-view'
 
 const props = defineProps<{
   readonly contentState: 'loading' | 'ready' | 'blocked' | 'failed_retryable' | 'failed_terminal'
   readonly productReviewOnly?: boolean
   readonly skuLineageAudit?: SkuLineageAudit | null
   readonly sameCatalogLineage?: SameCatalogComparison | null
+  readonly syntheticSkuReadiness?: QuoteSkuReadiness | null
   readonly syntheticFieldsReview?: boolean
   readonly syntheticReviewValidateSelection?: () => boolean
   readonly syntheticReviewFocusFirstError?: () => void

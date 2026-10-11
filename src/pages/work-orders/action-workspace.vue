@@ -19,6 +19,7 @@
     :product-review-only="isMockQuotationPreview"
     :sku-lineage-audit="skuLineagePreview"
     :same-catalog-lineage="sameCatalogLineagePreview"
+    :synthetic-sku-readiness="syntheticSkuReadinessPreview"
     @retry="reload"
     @back="exit"
   >
@@ -209,6 +210,7 @@ import { onLoad, onUnload } from '@dcloudio/uni-app'
 
 import { isBusinessMockQuotationPreview } from '@app/business-mock'
 import { compareQuoteWithStandaloneSkuDemo, compareQuoteWithSameCatalogSyntheticSku } from '@app/quotation-sku-identity-evidence'
+import { reviewP1SyntheticSkuReadiness } from '@app/p1-sku-readiness-review'
 import { setActionWorkspacePageTitle } from '@app/action-page-title'
 import { advanceMockJourneyContext, mockJourneyContext } from '@app/mock-journey'
 import { readMockJourneyContext, type MockJourneyContextSummary } from '@app/mock-journey-context'
@@ -248,6 +250,8 @@ const sameCatalogLineagePreview = computed(() => import.meta.env.DEV && isMockQu
   ? compareQuoteWithSameCatalogSyntheticSku(quotationComposition.draft) : null)
 const skuLineagePreview = computed(() => import.meta.env.DEV && isMockQuotationPreview.value && quotationComposition.draft
   ? compareQuoteWithStandaloneSkuDemo(quotationComposition.draft) : null)
+const syntheticSkuReadinessPreview = computed(() => import.meta.env.DEV && isMockQuotationPreview.value && quotationComposition.draft
+  ? reviewP1SyntheticSkuReadiness(quotationComposition.draft) : null)
 const routeReady = ref(false)
 const routeId = ref<ReturnType<typeof parseActionWorkspaceId>>(null)
 const routeNodeId = ref<ReturnType<typeof parseActionWorkspaceNodeId>>(null)
