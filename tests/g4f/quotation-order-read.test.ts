@@ -131,6 +131,40 @@ describe('G4-F Production quotation Order read adapter', () => {
     expect(result.state).toBe('failed_terminal')
   })
 
+  it('rejects two returned records when caller requested a single-row Order page', async () => {
+    const row = (id: string) => ({
+      _id: id, type: 1, serviceAppointmentId: 'work-order-synthetic',
+      bjProducts: { orderList: [] },
+    })
+    const result = await createQuotationOrderReadAdapter({
+      execute: async () => ({ data: [row('a'), row('b')] }),
+    }, () => true).listTypeOneOrdersForWorkOrder('work-order-synthetic', 1)
+    expect(result.state).toBe('failed_terminal')
+    expect(JSON.stringify(result)).not.toContain('"a"')
+    expect(JSON.stringify(result)).not.toContain('"b"')
+  })
+
+  it('rejects duplicate official Order IDs rather than offering repeated signing choices', async () => {
+    const result = await createQuotationOrderReadAdapter({
+      execute: async () => ({
+        data: [
+          { _id: 'official-duplicate', type: 1, serviceAppointmentId: 'work-order-synthetic', bjProducts: { orderList: [] } },
+          { _id: 'official-duplicate', type: 1, serviceAppointmentId: 'work-order-synthetic', bjProducts: { orderList: [] } },
+        ],
+      }),
+    }, () => true).listTypeOneOrdersForWorkOrder('work-order-synthetic', 3)
+    expect(result.state).toBe('failed_terminal')
+    expect(JSON.stringify(result)).not.toContain('official-duplicate')
+  })
+
+  it('rejects invalid page size without issuing any authenticated Order request', async () => {
+    const execute = vi.fn(async () => ({ data: [] }))
+    const result = await createQuotationOrderReadAdapter({ execute }, () => true)
+      .listTypeOneOrdersForWorkOrder('work-order-synthetic', 2 as 1)
+    expect(result.state).toBe('failed_terminal')
+    expect(execute).not.toHaveBeenCalled()
+  })
+
   it('rejects the entire quote page when any returned record belongs to another Work Order', async () => {
     const execute = vi.fn(async () => ({
       data: [
