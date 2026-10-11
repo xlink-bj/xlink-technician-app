@@ -162,6 +162,29 @@ for (const viewport of [
     await expect(page.getByTestId('quotation-group-section-quotation-group-1-package')).toBeVisible()
     await expect(page.getByTestId('quotation-group-section-quotation-group-1-material')).toBeHidden()
 
+    // P1: review actual grouped quotation in the same Action, not the
+    // standalone SKU demo. The result is LOCAL, never official Order approval.
+    await expect(page.getByTestId('quotation-p1-local-review')).toBeVisible()
+    await expect(page.getByTestId('quotation-p1-review-details')).toHaveCount(0)
+    await page.getByTestId('quotation-p1-review-toggle').click()
+    await expect(page.getByTestId('quotation-p1-review-group-quotation-group-1'))
+      .toContainText('1 项')
+    await expect(page.getByTestId('quotation-p1-review-group-quotation-group-1'))
+      .toContainText('本机结构已填写')
+    await expect(page.getByTestId('quotation-p1-review-group-quotation-group-2'))
+      .toContainText('3 项')
+    await expect(page.getByTestId('quotation-p1-review-unverified'))
+      .toContainText('SKU/规格来源')
+    await expect(page.getByTestId('quotation-p1-review-order-blocked'))
+      .toContainText('正式报价提交：未开放')
+    await page.getByTestId('quotation-p1-review-group-quotation-group-2').scrollIntoViewIfNeeded()
+    await info.attach(`p1-quotation-local-review-${viewport.width}`, {
+      body: await page.screenshot({ fullPage: true }),
+      contentType: 'image/png',
+    })
+    await page.getByTestId('quotation-p1-review-toggle').click()
+    await expect(page.getByTestId('quotation-p1-review-details')).toHaveCount(0)
+
     await info.attach(`two-groups-${viewport.width}`, {
       body: await page.screenshot({ fullPage: true }),
       contentType: 'image/png',
@@ -186,6 +209,18 @@ for (const viewport of [
       .toContainText('檐口密封处理（示例）')
     await expect(page.getByTestId('quotation-group-section-quotation-group-2-measure'))
       .toContainText('高处作业防护（示例）')
+    await expect(page.getByTestId('quotation-p1-local-review')).toBeVisible()
+    await page.getByTestId('quotation-p1-review-toggle').click()
+    await expect(page.getByTestId('quotation-p1-review-group-quotation-group-1'))
+      .toContainText('本机结构已填写')
+    await expect(page.getByTestId('quotation-p1-review-group-quotation-group-2'))
+      .toContainText('3 项')
+    await expect(page.getByTestId('quotation-p1-review-order-blocked')).toBeVisible()
+    await page.getByTestId('quotation-p1-review-order-blocked').scrollIntoViewIfNeeded()
+    await info.attach(`p1-quotation-review-restored-${viewport.width}`, {
+      body: await page.screenshot({ fullPage: true }),
+      contentType: 'image/png',
+    })
     await expect(page.getByTestId('quotation-workbench-summary')).toBeVisible()
     await expect(page.getByTestId('quotation-workbench-summary')).toContainText('维修部位报价')
     await expect(page.getByTestId('quotation-workbench-amount')).toHaveCount(0)
