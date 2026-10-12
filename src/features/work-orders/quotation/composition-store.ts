@@ -46,6 +46,7 @@ export type QuotationDraftLocalState =
   | 'saved_local'
   | 'save_failed'
   | 'legacy_requires_action'
+  | 'unscoped_requires_confirmation'
   | 'invalid'
   | 'unavailable'
 
@@ -140,6 +141,24 @@ export const useQuotationCompositionStore = defineStore('quotationComposition', 
       return localState.value
     }
     if (!stored.data) {
+      if (input.identity.roleId) {
+        // v2/v1 records have no persisted role ownership. Never silently
+        // assign one to this role; require an explicit start-new choice and
+        // preserve the old record for a future authorized recovery workflow.
+        const { roleId: _roleId, ...unscopedIdentity } = input.identity
+        const legacy = await input.repository.read<Readonly<Record<string, unknown>>>(unscopedIdentity)
+        if (currentGeneration !== generation) return localState.value
+        if (legacy.state !== 'succeeded') {
+          localState.value = 'unavailable'
+          localStateMessage.value = '无法确认历史草稿是否存在，暂不创建当前角色的新草稿。'
+          return localState.value
+        }
+        if (legacy.data) {
+          localState.value = 'unscoped_requires_confirmation'
+          localStateMessage.value = '发现未记录角色归属的历史报价草稿。原记录已保留，不会自动恢复至当前角色。'
+          return localState.value
+        }
+      }
       draft.value = createEmptyQuotationDraft(String(input.identity.workOrderId), String(input.identity.workflowNodeId))
       quantityTextBySelection.value = {}
       localState.value = 'fresh'
@@ -503,7 +522,7 @@ export const useQuotationCompositionStore = defineStore('quotationComposition', 
     return persist()
   }
 
-  async function discardStoredDraftAndStartFresh(expectedState: 'invalid' | 'legacy_requires_action'): Promise<OperationSnapshot<void>> {
+  async function discardStoredDraftAndStartFresh(expectedState: 'invalid' | 'legacy_requires_action' | 'unscoped_requires_confirmation'): Promise<OperationSnapshot<void>> {
     if (!repository || !identity || localState.value !== expectedState) {
       return failed('validation', '当前没有需要显式处理的旧草稿')
     }
@@ -544,6 +563,7 @@ export const useQuotationCompositionStore = defineStore('quotationComposition', 
     restoreServerOrderDraft,
     discardInvalidDraft: () => discardStoredDraftAndStartFresh('invalid'),
     discardLegacyDraft: () => discardStoredDraftAndStartFresh('legacy_requires_action'),
+    startNewRoleScopedDraft: () => discardStoredDraftAndStartFresh('unscoped_requires_confirmation'),
     selectionsFor: (groupId: string, kind: QuotationLineKind) => {
       const group = draft.value?.groups.find((item) => item.groupId === groupId)
       return group ? quotationSelectionsFor(group, kind) : []
