@@ -23,7 +23,7 @@ describe('M1 I2 R1 material SKU single/batch read compatibility', () => {
   it('requests a single SPU on R1 basic/material/query using spuid, never sourceType or serviceType', async () => {
     const execute = vi.fn(async (_request: ApiReadRequest) => ({ data: [sku('sku-a')], page: 1, rows: 20, total: 1 }))
     const catalog = createQuotationCatalogReadAdapter({ execute })
-    const result = await catalog.listMaterialSkuVariants!(context, ['spu-a'])
+    const result = await catalog.listMaterialSkuVariants!(context, 'direct_material', ['spu-a'])
     expect(execute).toHaveBeenCalledTimes(1)
     expect(execute).toHaveBeenCalledWith({
       method: 'POST', path: 'basic/material/query',
@@ -42,7 +42,7 @@ describe('M1 I2 R1 material SKU single/batch read compatibility', () => {
   it('requests a package batch exactly as R1 in:spuid|array#and comma-separated IDs', async () => {
     const execute = vi.fn(async (_request: ApiReadRequest) => ({ data: [sku('sku-a', 'spu-a'), sku('sku-b', 'spu-b')] }))
     const result = await createQuotationCatalogReadAdapter({ execute })
-      .listMaterialSkuVariants!(context, ['spu-a', 'spu-b'])
+      .listMaterialSkuVariants!(context, 'package_materials', ['spu-a', 'spu-b'])
     expect(execute).toHaveBeenCalledTimes(1)
     expect(execute).toHaveBeenCalledWith({
       method: 'POST', path: 'basic/material/query',
@@ -53,9 +53,30 @@ describe('M1 I2 R1 material SKU single/batch read compatibility', () => {
     ])
   })
 
+  it('keeps a ONE-SPU Package on the R1 batch query route, not the direct Material route', async () => {
+    const execute = vi.fn(async (_request: ApiReadRequest) => ({ data: [sku('sku-a')] }))
+    const catalog = createQuotationCatalogReadAdapter({ execute })
+    const result = await catalog.listMaterialSkuVariants!(context, 'package_materials', ['spu-a'])
+    expect(result.state).toBe('succeeded')
+    expect(execute).toHaveBeenCalledTimes(1)
+    expect(execute).toHaveBeenCalledWith({
+      method: 'POST', path: 'basic/material/query',
+      body: { _all: '1', 'is:state|integer#and': 1, 'in:spuid|array#and': 'spu-a' },
+    })
+    expect(execute.mock.calls[0]?.[0].body).not.toHaveProperty('spuid')
+  })
+
+  it('rejects multiple SPUs passed through direct-material route before any network call', async () => {
+    const execute = vi.fn(async (_request: ApiReadRequest) => ({ data: [] }))
+    const result = await createQuotationCatalogReadAdapter({ execute })
+      .listMaterialSkuVariants!(context, 'direct_material', ['spu-a', 'spu-b'])
+    expect(result.state).toBe('failed_terminal')
+    expect(execute).not.toHaveBeenCalled()
+  })
+
   it('treats a verified empty SKU list as empty rather than auto-selecting or inventing variants', async () => {
     const result = await createQuotationCatalogReadAdapter({ execute: async () => ({ data: [] }) })
-      .listMaterialSkuVariants!(context, ['spu-a'])
+      .listMaterialSkuVariants!(context, 'direct_material', ['spu-a'])
     expect(result).toMatchObject({ state: 'succeeded', data: { items: [] } })
   })
 
@@ -71,7 +92,7 @@ describe('M1 I2 R1 material SKU single/batch read compatibility', () => {
       [context, Array.from({ length: 31 }, (_, i) => 'spu-' + i)],
     ] as const
     for (const [scope, ids] of cases) {
-      const result = await catalog.listMaterialSkuVariants!(scope, ids)
+      const result = await catalog.listMaterialSkuVariants!(scope, 'package_materials', ids)
       expect(result.state).toBe('failed_terminal')
     }
     expect(execute).not.toHaveBeenCalled()
@@ -86,7 +107,7 @@ describe('M1 I2 R1 material SKU single/batch read compatibility', () => {
     ]) {
       const execute = vi.fn(async (_request: ApiReadRequest) => ({ data: rows }))
       const result = await createQuotationCatalogReadAdapter({ execute })
-        .listMaterialSkuVariants!(context, ['spu-a'])
+        .listMaterialSkuVariants!(context, 'direct_material', ['spu-a'])
       expect(result.state).toBe('failed_terminal')
       expect(execute).toHaveBeenCalledTimes(1)
     }
@@ -97,7 +118,7 @@ describe('M1 I2 R1 material SKU single/batch read compatibility', () => {
     vi.stubEnv('VITE_XLINK_API_BASE_URL', 'https://production.invalid')
     const execute = vi.fn(async (_request: ApiReadRequest) => ({ data: [sku('sku-a')] }))
     const result = await createQuotationCatalogReadAdapter({ execute })
-      .listMaterialSkuVariants!(context, ['spu-a'])
+      .listMaterialSkuVariants!(context, 'direct_material', ['spu-a'])
     expect(result.state).toBe('failed_terminal')
     expect(result.error?.category).toBe('authorization_denied')
     expect(execute).not.toHaveBeenCalled()
