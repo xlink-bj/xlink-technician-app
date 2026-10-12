@@ -243,7 +243,8 @@ export const useQuotationCatalogBrowserStore = defineStore('quotationCatalogBrow
    */
   async function openMaterialSkuPreview(materialId: string): Promise<void> {
     resetMaterialPreview()
-    const item = catalogItemsByKind.value.material.find(row => row.kind === 'material' && row.id === materialId)
+    const candidate = catalogItemsByKind.value.material.find(row => row.kind === 'material' && row.id === materialId)
+    const item = candidate?.kind === 'material' ? candidate : null
     if (!port?.listMaterialSalesFields || !port.listMaterialSkuVariants
       || !context || !context.workOrderId || !context.serviceType.trim()
       || !isOpen.value || selectedKind.value !== 'material'
