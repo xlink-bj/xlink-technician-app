@@ -514,6 +514,19 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
   let draftWriteInFlight: Promise<OperationSnapshot<void>> | null = null
   let draftRevision = 0
   let loadVersion = 0
+  // The unscoped v4 draft key is not proof of cross-role ownership.
+  // At minimum, never serve a cached action or finish a pending read under
+  // a different authenticated session/role than the one that began it.
+  let loadedSessionScope: string | null = null
+
+  function sessionScopeKey(session: SessionSnapshot): string {
+    return JSON.stringify([
+      String(session.sessionRef),
+      String(session.user.id),
+      session.currentRole ? String(session.currentRole.id) : null,
+      session.roleVersion ?? null,
+    ])
+  }
   let surveyLeakageCauseProviderInFlight: Promise<OperationSnapshot<readonly SurveyLeakageCauseRow[]>> | null = null
 
   function clearDraftTimer(): void {
@@ -566,6 +579,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     quotationEditState.value = { state: 'none' }
     quotationExistingOrderId.value = null
     loadVersion += 1
+    loadedSessionScope = null
     clearDraftTimer()
     draftRevision += 1
     identity = null
@@ -762,6 +776,15 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     if (loadState.value === 'loading') return failure('validation', 'Action Workspace is already loading')
     const session = configured.getSession()
     if (!session) return failure('session_invalid', 'An authenticated session is required')
+    const requestedSessionScope = sessionScopeKey(session)
+    const scopeUnchanged = (): boolean => {
+      const activeSession = configured.getSession()
+      return activeSession !== null && sessionScopeKey(activeSession) === requestedSessionScope
+    }
+    const blockStaleScope = (): OperationSnapshot<ActionDescriptor> => {
+      clear()
+      return failure('session_invalid', '账号或角色已变化，请重新进入当前工作台。')
+    }
 
     clearDraftTimer()
     if (descriptor.value?.contentKind === 'quotation') {
@@ -771,10 +794,12 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       }
     }
     if (draftWriteInFlight) await draftWriteInFlight
+    if (!scopeUnchanged()) return blockStaleScope()
     quotationComposition.clear()
     quotationCatalogBrowser.clear()
     quotationEngine.clear()
     const requestVersion = ++loadVersion
+    loadedSessionScope = null
     loadState.value = 'loading'
     lifecycle.value = 'available'
     businessResult.value = 'not_started'
@@ -802,6 +827,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
 
     const read = await configured.apiRead.getWorkOrderDetail(input.workOrderId)
     if (requestVersion !== loadVersion) return failure('cancelled', 'Action Workspace load was superseded')
+    if (!scopeUnchanged()) return blockStaleScope()
     if (read.state !== 'succeeded' || !read.data) {
       loadState.value = read.state
       lifecycle.value = lifecycleForFailure(read.state)
@@ -866,6 +892,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       identity = actionDraftIdentityFor(nextDescriptor)
       const repairPartsRead = await configured.apiRead.getCascadeCodeOptions({ codeType: 'repairParts' })
       if (requestVersion !== loadVersion) return failure('cancelled', 'Action Workspace load was superseded')
+      if (!scopeUnchanged()) return blockStaleScope()
       await quotationComposition.initialize({
         identity,
         repository: configured.draftRepository,
@@ -874,6 +901,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
         ...(configured.debounceMs !== undefined ? { debounceMs: configured.debounceMs } : {}),
       })
       if (requestVersion !== loadVersion) return failure('cancelled', 'Action Workspace load was superseded')
+      if (!scopeUnchanged()) return blockStaleScope()
       quotationOrderState.value = configured.storage
         ? await restoreQuotationOrderSubmissionState({
             userId: session.user.id,
@@ -882,6 +910,8 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
             storage: configured.storage,
           })
         : { state: 'failed_terminal', message: '本地订单防重记录不可用，暂不能安全提交。' }
+      if (!scopeUnchanged()) return blockStaleScope()
+      loadedSessionScope = requestedSessionScope
       quotationContentState.value = 'ready'
       loadState.value = 'succeeded'
       lifecycle.value = 'available'
@@ -902,6 +932,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
           })
         : failure<DynamicFormRead>('unsupported_capability', 'Dynamic form content is unavailable')
     if (requestVersion !== loadVersion) return failure('cancelled', 'Action Workspace load was superseded')
+    if (!scopeUnchanged()) return blockStaleScope()
     if (form.state !== 'succeeded' || !form.data) {
       detail.value = read.data
       loadState.value = form.state
@@ -948,6 +979,9 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     if (isAppointmentAction) await restoreDraft(nextIdentity, form.data as AppointmentFormRead)
     else await restoreDynamicDraft(nextIdentity, form.data as DynamicFormRead)
     await restoreMediaTasks(nextDescriptor)
+    if (requestVersion !== loadVersion) return failure('cancelled', 'Action Workspace load was superseded')
+    if (!scopeUnchanged()) return blockStaleScope()
+    loadedSessionScope = requestedSessionScope
     return { state: 'succeeded', data: nextDescriptor }
   }
 
@@ -1146,6 +1180,10 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     const configured = dependencies
     const session = configured?.getSession()
     const current = descriptor.value
+    if (current && loadedSessionScope && (!session || sessionScopeKey(session) !== loadedSessionScope)) {
+      clear()
+      return failure('session_invalid', '账号或角色已变化，请重新进入当前工作台。')
+    }
     const sameAction = Boolean(
       current
       && session
