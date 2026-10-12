@@ -185,6 +185,22 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
     expect(api.getWorkOrderDetail).toHaveBeenCalledTimes(1)
   })
 
+  it('blocks mounted appointment command dispatch after a role change without any route reload', async () => {
+    let activeSession: SessionSnapshot = { ...session, roleVersion: 'v1' }
+    const { store, command } = configureWorkspace(
+      appointmentDetail(), appointmentForm(), undefined, () => activeSession,
+    )
+    expect((await openWorkspace(store)).state).toBe('succeeded')
+    activeSession = {
+      ...activeSession,
+      currentRole: { id: asOpaqueId<'RoleId'>('another-role') },
+    }
+    const outcome = await store.submit()
+    expect(outcome.state).toBe('failed_terminal')
+    expect(outcome.error?.category).toBe('session_invalid')
+    expect(command.submitAppointment).not.toHaveBeenCalled()
+  })
+
   it('discards an in-flight Work Order read when the authenticated role changes', async () => {
     let activeSession: SessionSnapshot = { ...session, roleVersion: 'role-v1' }
     const { store, api, command } = configureWorkspace(
