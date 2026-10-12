@@ -340,7 +340,10 @@ export const useQuotationCompositionStore = defineStore('quotationComposition', 
     const next = upsertLocalQuotationMaterialSkuChoice(draft.value, groupId, materialId, input)
     if (next === draft.value) {
       const current = material[0]?.skuChoices?.find(row => row.skuId === input.skuId)
-      return current && JSON.stringify(current) === JSON.stringify(input)
+      return current && current.quantity === input.quantity
+        && Object.keys(current.attributes).length === Object.keys(input.attributes).length
+        && Object.entries(current.attributes).every(([key, value]) =>
+          Object.prototype.hasOwnProperty.call(input.attributes, key) && input.attributes[key] === value)
         ? succeeded() : failed('validation', '材料规格、SKU 或数量无效，未保存')
     }
     draft.value = next
