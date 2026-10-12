@@ -35,7 +35,7 @@ export default defineConfig({
       VITE_XLINK_PLATFORM: 'mp-weixin',
       VITE_XLINK_API_BASE_URL: 'https://example.invalid',
       VITE_XLINK_AUTH_API_BASE_URL: '',
-      // Pinned R1 Code-option scope; isolated DEV-only fixture, never a login.\n      VITE_XLINK_AUTH_TENANT: '1340835581184723420',
+      VITE_XLINK_AUTH_TENANT: 'synthetic-qa-tenant',
       VITE_XLINK_AUTH_METHOD: 'phone',
       VITE_XLINK_MOCK: 'true',
       VITE_XLINK_ENABLE_REAL_WRITES: 'false',
