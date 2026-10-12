@@ -8,7 +8,7 @@ import { useQuotationCatalogBrowserStore } from '@features/work-orders/quotation
 import { asOpaqueId } from '@shared/types'
 import { matchMaterialSkuSelectionPreview, projectMaterialSkuSelectionPreview } from '@features/work-orders/quotation/material-sku-selection-preview'
 
-const context = { workOrderId: 'synthetic-wo-current', serviceType: 'waterproof', sourceType: 'normal' }
+const context = { workOrderId: asOpaqueId<'WorkOrderId'>('synthetic-wo-current'), serviceType: 'waterproof', sourceType: 'normal' }
 const material: QuotationMaterialRead = {
   kind: 'material', id: 'spu-current', name: '当前材料',
   saleOptionCandidates: { thickness: ['2', '3'], color: ['black', 'grey'] },
