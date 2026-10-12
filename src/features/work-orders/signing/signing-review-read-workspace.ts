@@ -65,6 +65,13 @@ export function createSigningReviewReadWorkspace(scope: RuntimeScope): SigningRe
       return false
     }
   }
+  function staleResult(version: number): OperationSnapshot<ScopedSigningOrderReviewRead> {
+    // A new Order selection owns newer state; never clobber it.
+    // A revoked role/work-order with no replacement request must not leave
+    // the old signing preview stuck at "loading" after its response is dropped.
+    if (epoch === version) current = { state: 'failed_terminal' }
+    return denied('签约预览权限或页面范围已变化，原读取结果无效。')
+  }
   async function load(workOrderId: string, orderId: string): Promise<OperationSnapshot<ScopedSigningOrderReviewRead>> {
     const version = ++epoch
     current = { state: 'idle' }
@@ -81,7 +88,7 @@ export function createSigningReviewReadWorkspace(scope: RuntimeScope): SigningRe
       // The browse API is page-size bounded; absence from the returned page is
       // NOT evidence the Order does not exist, only that we cannot prove scope.
       const listed = await scope.port.listTypeOneOrdersForWorkOrder(workOrderId, 3)
-      if (!currentScope(version, key, workOrderId)) return denied('签约预览范围已变化，原读取结果无效。')
+      if (!currentScope(version, key, workOrderId)) return staleResult(version)
       if (listed.state !== 'succeeded' || !listed.data || !Array.isArray(listed.data.items)) {
         current = { state: listed.state === 'failed_retryable' ? 'failed_retryable' : 'failed_terminal' }
         return denied('无法核验当前工单的正式订单列表。', listed.state === 'failed_retryable')
@@ -99,7 +106,7 @@ export function createSigningReviewReadWorkspace(scope: RuntimeScope): SigningRe
         return denied('当前已授权列表不能证明目标正式订单归属，已停止签约预览。')
       }
       const read = await scope.port.readScopedTypeOneOrderForSigningReview(workOrderId, orderId)
-      if (!currentScope(version, key, workOrderId)) return denied('签约预览读取时身份发生变化。')
+      if (!currentScope(version, key, workOrderId)) return staleResult(version)
       if (read.state !== 'succeeded' || !read.data) {
         current = { state: read.state === 'failed_retryable' ? 'failed_retryable' : 'failed_terminal' }
         return denied('正式订单详情暂无法完成签约只读核验。', read.state === 'failed_retryable')
