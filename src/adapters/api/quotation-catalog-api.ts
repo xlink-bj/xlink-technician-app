@@ -4,6 +4,7 @@ import type {
   QuotationCatalogReadPort,
   QuotationMaterialRead,
   QuotationMaterialSkuVariantRead,
+  QuotationMaterialSaleFieldRead,
   QuotationMeasureRead,
   QuotationPackageMaterialRead,
   QuotationPackageDetailRead,
@@ -212,6 +213,79 @@ function materialSkuRequest(context: QuotationCatalogContext, route: 'direct_mat
   }
 }
 
+const R1_MATERIAL_CODE_TENANT = '1340835581184723420'
+
+type R1SaleFieldIdentity = Readonly<Pick<QuotationMaterialSaleFieldRead, 'name' | 'label' | 'valueOption'>>
+
+/** R1 placeOrders.vue:3498-3517; exclude non-sales ExtFields, never surface raw config. */
+function materialSaleFieldIdentities(raw: unknown): readonly R1SaleFieldIdentity[] {
+  const page = asRecord(raw, 'material sales ExtField response')
+  const rows = nestedValue(page, ['data', 'items', 'records'])
+  if (!Array.isArray(rows) || rows.length > 200) throw new AdapterMappingError('material sales ExtFields are incomplete or unbounded')
+  const fields: R1SaleFieldIdentity[] = []
+  const seen = new Set<string>()
+  for (const item of rows) {
+    const row = asRecord(item, 'material sales ExtField')
+    const config = row.frontEndConfig
+    let parsed: unknown = config
+    if (typeof config === 'string') {
+      if (!config.trim()) continue
+      try { parsed = JSON.parse(config) as unknown }
+      catch { throw new AdapterMappingError('material ExtField frontend configuration is malformed') }
+    }
+    if (parsed === undefined || parsed === null) continue
+    const flags = optionalRecord(parsed)
+    if (!flags || (flags.salesAttribute !== undefined && typeof flags.salesAttribute !== 'boolean')) {
+      throw new AdapterMappingError('material ExtField sales flag is malformed')
+    }
+    if (flags.salesAttribute !== true) continue
+    if ((row.colName !== undefined && row.colName !== 'material')
+      || (row.state !== undefined && row.state !== 1 && row.state !== '1')) {
+      throw new AdapterMappingError('material sales ExtField is not active in material domain')
+    }
+    const name = requiredString(row, ['name'], 'material sales field identity')
+    const label = requiredString(row, ['nameDisp'], 'material sales field label')
+    const valueOption = requiredString(row, ['valueOption'], 'material sales code option identity')
+    if (seen.has(name)) throw new AdapterMappingError('duplicate material sales field identity')
+    seen.add(name)
+    fields.push({ name, label, valueOption })
+    if (fields.length > 30) throw new AdapterMappingError('material sales fields are unbounded')
+  }
+  return fields
+}
+
+/** R1 placeOrders.vue:3531-3550 uses [{eleid,options:{code:label}}].
+ * Every requested dictionary must be returned unambiguously; no fabricated options.
+ */
+function materialSalesCodeOptions(raw: unknown, fields: readonly R1SaleFieldIdentity[]): ReadPage<QuotationMaterialSaleFieldRead> {
+  if (!Array.isArray(raw) || raw.length > 30) {
+    throw new AdapterMappingError('R1 material code option response is malformed')
+  }
+  const ids = new Set(fields.map(field => field.valueOption))
+  const dictionaries = new Map<string, readonly { value: string; label: string }[]>()
+  for (const item of raw) {
+    const row = asRecord(item, 'material code dictionary')
+    const codeId = requiredString(row, ['eleid'], 'material code dictionary identity')
+    if (!ids.has(codeId) || dictionaries.has(codeId)) {
+      throw new AdapterMappingError('foreign or duplicate material code dictionary')
+    }
+    const data = asRecord(row.options, 'material code dictionary options')
+    const values = Object.entries(data)
+    if (values.length > 100) throw new AdapterMappingError('material code option response is unbounded')
+    const options = values.map(([value, rawLabel]) => {
+      if (!value.trim() || typeof rawLabel !== 'string' || !rawLabel.trim()) {
+        throw new AdapterMappingError('malformed material code option')
+      }
+      return { value, label: rawLabel.trim() }
+    })
+    dictionaries.set(codeId, options)
+  }
+  if (dictionaries.size !== ids.size) {
+    throw new AdapterMappingError('material code dictionary result is incomplete')
+  }
+  return { items: fields.map(field => ({ ...field, options: dictionaries.get(field.valueOption)! })) }
+}
+
 function measureItem(raw: unknown): QuotationMeasureRead {
   const record = asRecord(raw, 'quotation measure')
   return {
@@ -377,6 +451,7 @@ class QuotationCatalogReadAdapter implements QuotationCatalogReadPort {
   constructor(
     private readonly transport: ApiReadTransport,
     private readonly getReadAuthorizationScope?: () => QuotationCatalogReadAuthorizationScope | null,
+    private readonly codeTenantId?: string,
   ) {}
 
   private isProductionReadOnly(): boolean {
@@ -508,6 +583,57 @@ class QuotationCatalogReadAdapter implements QuotationCatalogReadPort {
     return this.list('biz/measure/queryWithRank', context, (raw) => pageEnvelope(raw, measureItem))
   }
 
+  /** Existing R1 two-step read. Scoped to an authenticated WorkOrder context,
+   * exact R1 code tenant and stable current login/role; no SKU or Order writes.
+   */
+  async listMaterialSalesFields(context: QuotationCatalogContext): Promise<OperationSnapshot<ReadPage<QuotationMaterialSaleFieldRead>>> {
+    try {
+      if (this.isProductionReadOnly()) {
+        throw new ApiReadTransportError('Production material sales option reads are not enabled.', 'authorization_denied')
+      }
+      if (!context?.workOrderId || !String(context.workOrderId).trim()
+        || typeof context.serviceType !== 'string' || !context.serviceType.trim()) {
+        throw new AdapterMappingError('current WorkOrder material sales scope is missing')
+      }
+      // R1 hardcodes this tenant for i/code/selectCode.do; do not silently
+      // substitute arbitrary login-tenant IDs when they do not match R1.
+      if (this.codeTenantId !== R1_MATERIAL_CODE_TENANT) {
+        throw new ApiReadTransportError('R1 material Code tenant does not match the current configured tenant.', 'authorization_denied')
+      }
+      let firstIdentity: string | null = null
+      try { firstIdentity = authorizationIdentityKey(this.getReadAuthorizationScope?.() ?? null) }
+      catch { firstIdentity = null }
+      if (!firstIdentity) {
+        throw new ApiReadTransportError('Current authenticated user and role are required for material sale options.', 'authorization_denied')
+      }
+      const sameIdentity = (): boolean => {
+        try { return authorizationIdentityKey(this.getReadAuthorizationScope?.() ?? null) === firstIdentity }
+        catch { return false }
+      }
+      const fields = materialSaleFieldIdentities(await this.transport.execute({
+        method: 'POST', path: 'biz/extField/query',
+        body: {
+          sortField: 'order', colName: 'material', _all: '1',
+          'is:state|integer#and': 1, sortOrder: 'asc',
+        },
+      }))
+      if (!sameIdentity()) throw new ApiReadTransportError('Role changed during material sales field read.', 'authorization_denied')
+      if (!fields.length) return succeeded({ items: [] })
+      const identifiers = [...new Set(fields.map(field => field.valueOption))]
+      const codes = await this.transport.execute({
+        method: 'POST', path: 'i/code/selectCode.do',
+        body: {
+          jsonPara: JSON.stringify(identifiers.map(id => ({ codeId: id, eleid: id }))),
+          tenantId: R1_MATERIAL_CODE_TENANT,
+        },
+      })
+      if (!sameIdentity()) throw new ApiReadTransportError('Role changed during material Code options read.', 'authorization_denied')
+      return succeeded(materialSalesCodeOptions(codes, fields))
+    } catch (error) {
+      return readFailure<ReadPage<QuotationMaterialSaleFieldRead>>(error)
+    }
+  }
+
   /** R1 read-only SKU identity, intentionally not called from any UI yet.
    * The current Production allowlist does not permit basic/material/query.
    */
@@ -546,6 +672,7 @@ export interface QuotationCatalogReadAuthorizationScope {
 export function createQuotationCatalogReadAdapter(
   transport: ApiReadTransport,
   getReadAuthorizationScope?: () => QuotationCatalogReadAuthorizationScope | null,
+  codeTenantId?: string,
 ): QuotationCatalogReadPort {
-  return new QuotationCatalogReadAdapter(transport, getReadAuthorizationScope)
+  return new QuotationCatalogReadAdapter(transport, getReadAuthorizationScope, codeTenantId)
 }
