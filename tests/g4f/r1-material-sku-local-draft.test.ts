@@ -109,6 +109,14 @@ describe('M1 I2 R1 local SKU quantity choices / schema v4: NO official Order', (
     expect(store.addCatalogReadItem(groupA, { kind: 'material', id: 'spu-A', name: '材料 A' }).state).toBe('succeeded')
     expect(store.addCatalogReadItem(groupB, { kind: 'material', id: 'spu-A', name: '材料 A' }).state).toBe('succeeded')
     expect(store.saveLocalMaterialSkuChoice(groupA, 'spu-A', matchA).state).toBe('succeeded')
+    const versionAfterFirstSave = store.draft!.draftVersion
+    // Attribute insertion order is not part of SKU identity; a repeated save
+    // must be accepted without marking the draft dirty again.
+    expect(store.saveLocalMaterialSkuChoice(groupA, 'spu-A', {
+      skuId: matchA.skuId, quantity: matchA.quantity,
+      attributes: { thickness: '2', color: 'black' },
+    }).state).toBe('succeeded')
+    expect(store.draft!.draftVersion).toBe(versionAfterFirstSave)
     expect(store.saveLocalMaterialSkuChoice(groupB, 'spu-A', { ...matchA, quantity: 5 }).state).toBe('succeeded')
     expect(store.setQuantityText(groupA, store.groups[0]!.materials[0]!.selectionId, '99').state)
       .toBe('failed_terminal')
