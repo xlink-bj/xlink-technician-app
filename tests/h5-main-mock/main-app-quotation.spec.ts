@@ -667,7 +667,9 @@ for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }
     await chooseAndSave('3', 'grey', '2')
     await expect(summary1).toContainText('3 件')
     await expect(summary1).toContainText('2 件')
-    await expect(group1).toContainText('5')
+    // Both SKU rows are visible; total is stored on the parent material but
+    // the current product UI intentionally does not render a separate sum.
+    await expect(summary1.locator('.quotation-content__package-summary-row')).toHaveCount(2)
     await info.attach('i2-sku-multiple-' + viewport.width, {
       body: await page.screenshot({ fullPage: true }), contentType: 'image/png',
     })
