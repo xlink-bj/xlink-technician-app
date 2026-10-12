@@ -24,6 +24,7 @@ import {
   removeQuotationSelection,
   upsertQuotationPackageSelection,
   upsertLocalQuotationMaterialSkuChoice,
+  removeLocalQuotationMaterialSkuChoice,
   updateQuotationGroupContext,
   type QuotationDraft,
   type QuotationCatalogItem,
@@ -359,6 +360,36 @@ export const useQuotationCompositionStore = defineStore('quotationComposition', 
     return succeeded()
   }
 
+  /** Local repair group SKU removal. Last SKU removal removes its SPU as
+   * well, rather than leave a zero-quantity, submit-looking material line.
+   */
+  function removeLocalMaterialSkuChoice(
+    groupId: string,
+    materialId: string,
+    skuId: string,
+  ): OperationSnapshot<void> {
+    if (!draft.value || !canEdit()) return failed('unsupported_capability', '当前报价草稿不可编辑')
+    const material = draft.value.groups.find(group => group.groupId === groupId)
+      ?.materials.find(selection => selection.catalogId === materialId)
+    if (!material || !material.skuChoices?.some(choice => choice.skuId === skuId)) {
+      return failed('validation', '当前维修部位组没有可移除的 SKU 规格')
+    }
+    const next = removeLocalQuotationMaterialSkuChoice(draft.value, groupId, materialId, skuId)
+    if (next === draft.value) return failed('validation', 'SKU 规格已变化，未删除')
+    draft.value = next
+    const saved = next.groups.find(group => group.groupId === groupId)
+      ?.materials.find(selection => selection.selectionId === material.selectionId)
+    const nextTexts = { ...quantityTextBySelection.value }
+    const nextErrors = { ...quantityErrorBySelection.value }
+    if (saved) nextTexts[saved.selectionId] = String(saved.quantity)
+    else delete nextTexts[material.selectionId]
+    delete nextErrors[material.selectionId]
+    quantityTextBySelection.value = nextTexts
+    quantityErrorBySelection.value = nextErrors
+    markDirty()
+    return succeeded()
+  }
+
   function setQuantityText(groupId: string, selectionId: string, input: string): OperationSnapshot<void> {
     if (!draft.value || !canEdit()) return failed('unsupported_capability', '报价草稿当前不可编辑')
     const selected = draft.value.groups.find(group => group.groupId === groupId)?.materials.find(
@@ -507,6 +538,7 @@ export const useQuotationCompositionStore = defineStore('quotationComposition', 
     configurePackageReadItem,
     setQuantityText,
     saveLocalMaterialSkuChoice,
+    removeLocalMaterialSkuChoice,
     removeSelection,
     flushDraft,
     restoreServerOrderDraft,
