@@ -789,19 +789,19 @@
                 <view class="quotation-content__catalog-item-footer">
                   <text class="quotation-content__catalog-item-price-state">金额待核验</text>
                   <AppButton
+                    v-if="item.kind === 'material' && item.saleOptionCandidates && Object.keys(item.saleOptionCandidates).length"
+                    class="quotation-content__catalog-item-action"
+                    variant="secondary"
+                    :data-testid="`quotation-material-options-${item.id}`"
+                    @tap="catalogBrowser.openMaterialSkuPreview(item.id)"
+                  >查看规格（只读）</AppButton>
+                  <AppButton
                     v-if="item.kind === 'package'"
                     class="quotation-content__catalog-item-action"
                     variant="secondary"
                     :data-testid="`quotation-package-detail-${item.id}`"
                     @tap="openPackageConfiguration(item.id)"
                   >{{ packageSelectionFor(item.id)?.configuration ? '编辑配置' : '查看并配置' }}<AppIcon name="chevron-right" :size="14" color="var(--app-color-primary)" aria-hidden="true" /></AppButton>
-                  <AppButton
-                    v-else-if="item.kind === 'material' && item.saleOptionCandidates && Object.keys(item.saleOptionCandidates).length"
-                    class="quotation-content__catalog-item-action"
-                    variant="secondary"
-                    :data-testid="`quotation-material-options-${item.id}`"
-                    @tap="catalogBrowser.openMaterialSkuPreview(item.id)"
-                  >查看规格（只读）</AppButton>
                   <AppButton
                     v-else-if="isDirectQuotationCatalogKind(item.kind) && !catalogSelectionFor(item)"
                     class="quotation-content__catalog-item-action"
