@@ -140,6 +140,49 @@ describe('M1 engineering first: main App official Order → Signing read store',
     expect(f.store.snapshot).toMatchObject({ state: 'ready', orderId: other })
   })
 
+  it('revoking visible WorkOrder membership AFTER a successful read erases rendered Order synchronously', async () => {
+    const f = fixture()
+    await f.store.load(wo, orderId)
+    expect(f.store.snapshot.state).toBe('ready')
+    f.visible.value = false
+    expect(f.store.snapshot).toEqual({ state: 'idle' })
+    expect(f.store.snapshot.review).toBeUndefined()
+    const again = await f.store.load(wo, orderId)
+    expect(again.state).toBe('failed_terminal')
+    expect(f.read).toHaveBeenCalledTimes(1)
+  })
+
+  it('revocation during a SECOND authoritative Order read prevents stale render', async () => {
+    const pending = deferred<ReadResult>()
+    const f = fixture({ read: () => pending.promise })
+    const first = f.store.load(wo, orderId)
+    for (let i = 0; i < 5; i += 1) await Promise.resolve()
+    f.visible.value = false
+    pending.resolve({ state: 'succeeded', data: doc() })
+    expect((await first).state).toBe('failed_terminal')
+    expect(f.store.snapshot).toEqual({ state: 'idle' })
+  })
+
+  it('retryable transport failure can recover with a fresh, fully scoped two-read attempt', async () => {
+    let attempts = 0
+    const f = fixture({
+      read: async () => {
+        attempts += 1
+        if (attempts === 1) return {
+          state: 'failed_retryable',
+          error: createOperationError('network_retryable', 'synthetic connection lost'),
+        }
+        return { state: 'succeeded', data: doc() }
+      },
+    })
+    expect((await f.store.load(wo, orderId)).state).toBe('failed_retryable')
+    expect(f.store.snapshot.state).toBe('failed_retryable')
+    expect((await f.store.load(wo, orderId)).state).toBe('succeeded')
+    expect(f.store.snapshot.state).toBe('ready')
+    expect(f.listTypeOneOrdersForWorkOrder).toHaveBeenCalledTimes(2)
+    expect(f.read).toHaveBeenCalledTimes(2)
+  })
+
   it('transport errors are sanitized; raw exception data cannot be displayed', async () => {
     const secret = 'PRIVATE_CONTRACT_ACCESS_TOKEN_321'
     const f = fixture({ read: async () => { throw new Error(secret) } })
