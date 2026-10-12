@@ -10,6 +10,15 @@ export function isDirectQuotationCatalogKind(kind: string): kind is QuotationDir
   return (QUOTATION_DIRECT_CATALOG_KINDS as readonly string[]).includes(kind)
 }
 
+/** SKU evidence is LOCAL DRAFT ONLY. R1 records per-SKU number under a material
+ * SPU; SKU 金额、Order 编码和工作流写入均不在本阶段范围。
+ */
+export interface QuotationMaterialSkuChoice {
+  readonly skuId: string
+  readonly quantity: number
+  readonly attributes: Readonly<Record<string, string>>
+}
+
 /** Local selection only; it is not a persisted/backend quotation row. */
 export interface QuotationSelection<K extends QuotationLineKind = QuotationLineKind> {
   readonly selectionId: string
@@ -18,6 +27,8 @@ export interface QuotationSelection<K extends QuotationLineKind = QuotationLineK
   readonly label: string
   readonly unit?: string
   readonly quantity: number
+  /** Local per-SKU intent, excluded from official Order and monetary calculation. */
+  readonly skuChoices?: K extends 'material' ? readonly QuotationMaterialSkuChoice[] : never
   readonly configuration?: K extends 'package' ? QuotationPackageConfiguration : never
 }
 
@@ -229,6 +240,46 @@ export function upsertQuotationPackageSelection(
       ? [...group.projPackages, next]
       : group.projPackages.map((selection, index) => index === existingIndex ? next : selection)
     return { ...group, projPackages }
+  })
+}
+
+/** Updates one SKU amount for one already-added SPU in one local repair group.
+ * R1 aggregates SPU.number = sum(sku.number). This does NOT establish commercial Order authority.
+ * Returning the same object means the caller must report a validation failure.
+ */
+export function upsertLocalQuotationMaterialSkuChoice(
+  draft: QuotationDraft,
+  groupId: string,
+  materialId: string,
+  input: QuotationMaterialSkuChoice,
+): QuotationDraft {
+  if (!materialId.trim() || !input.skuId.trim() || !Number.isSafeInteger(input.quantity)
+    || input.quantity < 1 || input.quantity > 9999
+    || !input.attributes || !Object.keys(input.attributes).length
+    || Object.keys(input.attributes).length > 30
+    || Object.entries(input.attributes).some(([key, value]) =>
+      !key.trim() || ['__proto__', 'constructor', 'prototype'].includes(key)
+      || typeof value !== 'string' || !value.trim())) return draft
+  return updateGroup(draft, groupId, group => {
+    const materialMatches = group.materials.filter(selection => selection.catalogId === materialId)
+    if (materialMatches.length !== 1) return group
+    const existing = materialMatches[0]!
+    const choices = existing.skuChoices ?? []
+    const prior = choices.find(choice => choice.skuId === input.skuId)
+    if (prior && JSON.stringify(prior.attributes) !== JSON.stringify(input.attributes)) return group
+    if (choices.some(choice => choice.skuId !== input.skuId
+      && Object.keys(choice.attributes).length === Object.keys(input.attributes).length
+      && Object.entries(input.attributes).every(([k, v]) => choice.attributes[k] === v))) return group
+    const nextChoices = prior
+      ? choices.map(choice => choice.skuId === input.skuId ? { ...input, attributes: { ...input.attributes } } : choice)
+      : [...choices, { ...input, attributes: { ...input.attributes } }]
+    if (nextChoices.length > 50) return group
+    const total = nextChoices.reduce((sum, choice) => sum + choice.quantity, 0)
+    if (!Number.isSafeInteger(total) || total > 99999) return group
+    if (prior && JSON.stringify(prior) === JSON.stringify(input)) return group
+    return { ...group, materials: group.materials.map(selection => selection.catalogId === materialId
+      ? { ...selection, skuChoices: nextChoices, quantity: total }
+      : selection) }
   })
 }
 

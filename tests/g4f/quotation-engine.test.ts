@@ -388,7 +388,7 @@ describe('G4-F Phase 1H quotation engine', () => {
     expect(r1AmountToFixed(1.006)).toBe(1.01)
   })
 
-  it('25. persists no provider commercial metadata in the v3 grouped draft', () => {
+  it('25. persists no provider commercial metadata in the v4 grouped draft', () => {
     const identity: ActionDraftIdentity = actionDraftIdentityFor({
       userId: asOpaqueId<'UserId'>('synthetic-user'),
       workOrderId: asOpaqueId<'WorkOrderId'>('work-order-a'),
@@ -397,7 +397,7 @@ describe('G4-F Phase 1H quotation engine', () => {
       contentKind: 'quotation',
     })
     const record = quotationDraftRecordFor(identity, directDraft(), '2026-09-23T00:00:00.000Z')
-    expect(record.values.schemaVersion).toBe(3)
+    expect(record.values.schemaVersion).toBe(4)
     expect(JSON.stringify(record.values)).not.toMatch(/price|cost|subtotal|discount|token|session/i)
   })
 

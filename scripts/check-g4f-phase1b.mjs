@@ -108,8 +108,13 @@ if (!packageConfiguration.includes('configuredQuotationPackageCandidateFor')
   || !packageConfiguration.includes('validLayer')) {
   fail('Package configuration must preserve exact provider layers and validate a complete candidate before local commit')
 }
-if (!codec.includes('QUOTATION_DRAFT_SCHEMA_VERSION = 3') || !codec.includes('values.schemaVersion !== 2')) {
-  fail('Package configuration must write schema v3 while retaining grouped schema-v2 recovery')
+// A local-only material SKU intent extends the draft to v4; Package v3 records
+// and grouped v2 records must remain readable. This does NOT relax any no-price
+// or no-command checks above.
+if (!/QUOTATION_DRAFT_SCHEMA_VERSION = (3|4)/.test(codec)
+  || !codec.includes('values.schemaVersion !== 2')
+  || (codec.includes('QUOTATION_DRAFT_SCHEMA_VERSION = 4') && !codec.includes('values.schemaVersion !== 3'))) {
+  fail('Package and SKU draft schema must retain grouped v2 and Package v3 readback without adding commercial authority')
 }
 if (!compositionStore.includes('isDirectQuotationCatalogKind(source.kind)') || !compositionStore.includes('catalogId: source.id') || !compositionStore.includes('label: source.name')) {
   fail('composition must enforce its explicit kind allowlist and project provider identity into local draft fields')

@@ -101,6 +101,18 @@ function validateGroup(group: QuotationGroup, issues: QuotationValidationIssue[]
     }
   }
 
+  // Existing Order price/encoder cannot yet map a verified SKU choice
+  // to an official material line. Local proof must not become submit-ready.
+  for (const material of group.materials) {
+    if (material.skuChoices?.length) {
+      addIssue(issues, {
+        code: 'material.sku_local_only', field: 'composition', groupId: group.groupId,
+        selectionId: material.selectionId,
+        message: '材料 SKU 数量仅保存在本机，尚未核验订单价格与提交字段，不能提交正式报价。',
+      })
+    }
+  }
+
   const packages = group.projPackages
   const hasConfiguredPackage = packages.some((selection) => validConfiguration(selection.configuration))
   if (!hasConfiguredPackage) {
