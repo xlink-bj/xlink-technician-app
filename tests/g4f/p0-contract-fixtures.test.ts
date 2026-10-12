@@ -344,9 +344,18 @@ describe('G4-F P0 contract evidence fixtures (synthetic only)', () => {
         expect(concrete.state).toBe('succeeded')
         expect(execute.mock.calls[start + 1]?.[0]?.body?.sourceType).toBe('fixture-source-type')
 
-        const invalid = await read(catalog, { serviceType: 'fixture-service-type', sourceType: '' })
+        // R1 constructs sourceType:this.sourceType; an existing blank
+        // ServiceAppointment value is sent as an explicit empty property.
+        // GoodsService branches on property presence, so unlike "absent",
+        // this is a valid non-Production R1 transport shape.
+        const blank = await read(catalog, { serviceType: 'fixture-service-type', sourceType: '' })
+        expect(blank.state).toBe('succeeded')
+        expect(execute.mock.calls[start + 2]?.[0]?.body?.sourceType).toBe('')
+        expect(execute.mock.calls).toHaveLength(start + 3)
+
+        const invalid = await read(catalog, { serviceType: 'fixture-service-type', sourceType: '   ' })
         expect(invalid.state).toBe('failed_terminal')
-        expect(execute.mock.calls).toHaveLength(start + 2)
+        expect(execute.mock.calls).toHaveLength(start + 3)
       }
     })
 
