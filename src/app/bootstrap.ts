@@ -23,6 +23,7 @@ import type {
 } from '@shared/ports'
 import { useWorkOrderDetailStore } from '@features/work-orders/detail'
 import { useQuotationOrderBrowseStore } from '@features/work-orders/quotation/order-browse-store'
+import { useSigningReviewReadStore } from '@features/work-orders/signing/signing-review-read-store'
 import { useActionWorkspaceStore } from '@features/work-orders/action-workspace'
 import { useWorkOrderListStore } from '@features/work-orders/list'
 import { useLocalDraftDiagnosticsStore } from '@features/home/draft-diagnostics'
@@ -110,6 +111,14 @@ export function createApplication(dependencies: ApplicationDependencies = {}) {
   workOrderDetailStore.configureNavigation(navigation)
   const quotationOrderBrowseStore = useQuotationOrderBrowseStore(pinia)
   quotationOrderBrowseStore.configure(quotationOrderRead, () => sessionStore.session)
+  const signingReviewReadStore = useSigningReviewReadStore(pinia)
+  signingReviewReadStore.configure(
+    quotationOrderRead,
+    () => sessionStore.session,
+    (id) => workOrderDetailStore.loadState === 'succeeded'
+      && String(workOrderDetailStore.detail?.id ?? '') === id
+      && workOrderListStore.items.some((item) => String(item.id) === id),
+  )
   const actionWorkspaceStore = useActionWorkspaceStore(pinia)
   actionWorkspaceStore.configure({
     apiRead,
@@ -144,6 +153,7 @@ export function createApplication(dependencies: ApplicationDependencies = {}) {
     workOrderListStore,
     workOrderDetailStore,
     quotationOrderBrowseStore,
+    signingReviewReadStore,
     actionWorkspaceStore,
     quotationCatalogRead,
     quotationOrderRead,
