@@ -23,6 +23,7 @@ import {
   quotationSelectionsFor,
   removeQuotationSelection,
   upsertQuotationPackageSelection,
+  upsertLocalQuotationMaterialSkuChoice,
   updateQuotationGroupContext,
   type QuotationDraft,
   type QuotationCatalogItem,
@@ -322,9 +323,49 @@ export const useQuotationCompositionStore = defineStore('quotationComposition', 
     return succeeded()
   }
 
+  /** The actual R1 SKU intent is local-only until an authorized type=1 Order
+   * price/encoding contract is implemented. An existing material selection and
+   * an exact match from the current catalog preview are mandatory.
+   */
+  function saveLocalMaterialSkuChoice(
+    groupId: string,
+    materialId: string,
+    input: { readonly skuId: string; readonly quantity: number; readonly attributes: Readonly<Record<string, string>> },
+  ): OperationSnapshot<void> {
+    if (!draft.value || !canEdit()) return failed('unsupported_capability', '当前报价草稿不可编辑')
+    const group = draft.value.groups.find(item => item.groupId === groupId)
+    if (!group || !group.repairParts.length) return failed('validation', '当前维修部位组不存在或未选择部位')
+    const material = group.materials.filter(item => item.catalogId === materialId)
+    if (material.length !== 1) return failed('validation', '请先在当前维修部位组加入唯一的材料 SPU')
+    const next = upsertLocalQuotationMaterialSkuChoice(draft.value, groupId, materialId, input)
+    if (next === draft.value) {
+      const current = material[0]?.skuChoices?.find(row => row.skuId === input.skuId)
+      return current && JSON.stringify(current) === JSON.stringify(input)
+        ? succeeded() : failed('validation', '材料规格、SKU 或数量无效，未保存')
+    }
+    draft.value = next
+    const stored = next.groups.find(item => item.groupId === groupId)?.materials.find(item => item.catalogId === materialId)
+    if (stored) {
+      quantityTextBySelection.value = {
+        ...quantityTextBySelection.value,
+        [stored.selectionId]: String(stored.quantity),
+      }
+      quantityErrorBySelection.value = { ...quantityErrorBySelection.value, [stored.selectionId]: '' }
+    }
+    markDirty()
+    return succeeded()
+  }
+
   function setQuantityText(groupId: string, selectionId: string, input: string): OperationSnapshot<void> {
     if (!draft.value || !canEdit()) return failed('unsupported_capability', '报价草稿当前不可编辑')
     quantityTextBySelection.value = { ...quantityTextBySelection.value, [selectionId]: input }
+    const selected = draft.value.groups.find(group => group.groupId === groupId)?.materials.find(
+      selection => selection.selectionId === selectionId,
+    )
+    if (selected?.skuChoices?.length) {
+      quantityErrorBySelection.value = { ...quantityErrorBySelection.value, [selectionId]: '此材料按 SKU 规格分别计数，请在规格配置中修改。' }
+      return failed('validation', '此材料数量由已选 SKU 数量合计')
+    }
     const parsed = parseQuotationQuantity(input)
     if (!parsed.valid) {
       quantityErrorBySelection.value = { ...quantityErrorBySelection.value, [selectionId]: parsed.message }
@@ -462,6 +503,7 @@ export const useQuotationCompositionStore = defineStore('quotationComposition', 
     validatePackageReadItem,
     configurePackageReadItem,
     setQuantityText,
+    saveLocalMaterialSkuChoice,
     removeSelection,
     flushDraft,
     restoreServerOrderDraft,
