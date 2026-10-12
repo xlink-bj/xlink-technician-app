@@ -671,6 +671,32 @@ for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }
       body: await page.screenshot({ fullPage: true }), contentType: 'image/png',
     })
 
+    // The same SPU in a second repair group owns a distinct SKU count.
+    await page.getByTestId('quotation-add-group').click()
+    const group2 = page.getByTestId('quotation-repair-group-quotation-group-2')
+    await group2.getByTestId('quotation-repair-part-selector-quotation-group-2')
+      .getByText('屋面', { exact: true }).click()
+    await page.getByTestId('quotation-group-description-quotation-group-2').locator('textarea').fill('第2组：独立 SKU')
+    await page.getByTestId('quotation-group-quantity-quotation-group-2').locator('input').fill('5')
+    await page.getByTestId('quotation-browse-quotation-group-2').click()
+    await page.getByTestId('quotation-catalog-kind-material').click()
+    await page.getByTestId('quotation-catalog-add-material-' + materialId).click()
+    await page.getByTestId('quotation-browse-quotation-group-2').click()
+    await page.getByTestId('quotation-catalog-kind-material').click()
+    await page.getByTestId('quotation-material-options-' + materialId).click()
+    await page.getByTestId('quotation-sku-option-thickness-2').click()
+    await page.getByTestId('quotation-sku-option-color-black').click()
+    await page.getByTestId('quotation-sku-quantity-input').fill('6')
+    await page.getByTestId('quotation-sku-save-local').click()
+    await page.getByTestId('quotation-catalog-close').click()
+    const summary2 = group2.locator('[data-testid^="quotation-material-skus-"]')
+    await expect(summary2).toContainText('6 件')
+    await expect(summary1).toContainText('3 件')
+    await expect(summary1).toContainText('2 件')
+    await info.attach('i2-sku-two-groups-' + viewport.width, {
+      body: await page.screenshot({ fullPage: true }), contentType: 'image/png',
+    })
+
     // Re-entry opens the actual Material SKU editor with selected identity,
     // not a duplicate synthetic demo or a fabricated commercial Order.
     await page.getByTestId('quotation-material-sku-edit-quotation-group-1-' + materialId).click()
@@ -687,6 +713,7 @@ for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }
     await page.getByTestId('quotation-material-sku-remove-quotation-group-1-mock-material-sku-black-2').click()
     await expect(summary1).not.toContainText('4 件')
     await expect(summary1).toContainText('2 件')
+    await expect(summary2).toContainText('6 件')
     await expect(page.getByTestId('action-workspace-submit')).toHaveCount(0)
     await expect(page.getByText(/报价草稿已保存在本机|报价分组草稿已保存在本机/)).toBeVisible()
     await page.reload({ waitUntil: 'domcontentloaded' })
@@ -694,6 +721,8 @@ for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }
     const restored = page.getByTestId('quotation-repair-group-quotation-group-1')
     await expect(restored.locator('[data-testid^="quotation-material-skus-"]')).toContainText('2 件')
     await expect(page.getByTestId('quotation-material-sku-remove-quotation-group-1-mock-material-sku-black-2')).toHaveCount(0)
+    const restoredGroup2 = page.getByTestId('quotation-repair-group-quotation-group-2')
+    await expect(restoredGroup2.locator('[data-testid^="quotation-material-skus-"]')).toContainText('6 件')
     await info.attach('i2-sku-reentered-' + viewport.width, {
       body: await page.screenshot({ fullPage: true }), contentType: 'image/png',
     })
@@ -703,6 +732,7 @@ for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }
     await page.getByTestId('quotation-material-sku-remove-quotation-group-1-mock-material-sku-grey-3').click()
     await expect(restored.locator('[data-testid^="quotation-material-skus-"]')).toHaveCount(0)
     await expect(restored.getByText('弹性密封材料（示例）')).toHaveCount(0)
+    await expect(restoredGroup2.locator('[data-testid^="quotation-material-skus-"]')).toContainText('6 件')
     await expect(page.getByTestId('action-workspace-submit')).toHaveCount(0)
     expect(evidence.externalIntents, 'DEV synthetic SKU must NEVER attempt an external read').toEqual([])
     expect(evidence.localFailures).toEqual([])
