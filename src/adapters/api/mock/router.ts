@@ -30,6 +30,10 @@ import {
   mockQuotationMaterialListResponse,
   mockQuotationMeasureListResponse,
   mockQuotationPackageDetailResponse,
+  mockMaterialSkuSpuId,
+  mockMaterialSalesExtFieldsResponse,
+  mockMaterialSaleCodeOptions,
+  mockMaterialSkuVariantsResponse,
 } from './quotation-catalog'
 import type { ApiCommandRequest } from '../technician-api-commands'
 
@@ -72,6 +76,13 @@ export function isMockOwnedRead(
   // This is an internal, synthetic-only route. It is always mock-owned so a
   // disabled Mock mode can never fall through to a real backend endpoint.
   if (route === '__mock/quotation/action-content') return true
+  // Synthetic SKU IDs must never fall through to a live backend if the
+  // developer disables Mock after navigating to a saved local quotation.
+  if (route === 'basic/material/query'
+    && requestData.spuid === mockMaterialSkuSpuId) return true
+  if (route === 'basic/material/query'
+    && typeof requestData['in:spuid|array#and'] === 'string'
+    && requestData['in:spuid|array#and'].split(',').includes(mockMaterialSkuSpuId)) return true
   // A synthetic Work Order must never become a real Order search, even when
   // this particular mock route has no safe fixture to return.
   if (
@@ -523,6 +534,18 @@ function matchedResponse(
       },
     }
   }
+  // This route shape follows pinned R1 source, but the values are exclusively
+  // DEV Mock fixtures; no price, inventory or real customer data is included.
+  if (mode === 'data' && route === 'biz/extField/query'
+    && requestData.colName === 'material' && requestData.sortField === 'order'
+    && requestData._all === '1' && requestData['is:state|integer#and'] === 1) {
+    return mockMaterialSalesExtFieldsResponse
+  }
+  if (mode === 'data' && route === 'basic/material/query'
+    && requestData.spuid === mockMaterialSkuSpuId
+    && requestData._all === '1' && requestData['is:state|integer#and'] === 1) {
+    return mockMaterialSkuVariantsResponse
+  }
   if (quotationCatalogListRoutes.has(route)) {
     const matchesMockScope = requestData['in:serviceType|array#and'] === mockQuotationCatalogServiceType
       && (requestData.sourceType === undefined || requestData.sourceType === mockQuotationCatalogSourceType)
@@ -553,6 +576,28 @@ function matchedResponse(
   if (route === 'function/changeRole') return mockRoleFunctionResponse
   if (route === 'code/query' && requestData.valueOption === 'STATUS') {
     return mockStatusOptionsResponse
+  }
+  if (mode === 'data' && route === 'i/code/selectCode.do'
+    && requestData.tenantId === '1340835581184723420'
+    && typeof requestData.jsonPara === 'string') {
+    try {
+      const entries: unknown = JSON.parse(requestData.jsonPara)
+      if (Array.isArray(entries) && entries.length === 2
+        && entries.every(row => row && typeof row === 'object'
+          && typeof (row as { eleid?: unknown }).eleid === 'string'
+          && (row as { eleid: string }).eleid === (row as { codeId?: unknown }).codeId)) {
+        const names = entries.map(row => (row as { eleid: string }).eleid)
+        const available = Object.keys(mockMaterialSaleCodeOptions)
+        if (names.length === available.length && names.every(name => available.includes(name))) {
+          return names.map(name => ({
+            eleid: name,
+            options: mockMaterialSaleCodeOptions[name as keyof typeof mockMaterialSaleCodeOptions],
+          }))
+        }
+      }
+    } catch {
+      // Let the preexisting Code Mock handler handle other requests.
+    }
   }
   if (route === 'i/code/selectCode.do') {
     const rawValue = typeof requestData.jsonPara === 'string' ? requestData.jsonPara : ''
