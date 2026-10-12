@@ -24,9 +24,9 @@ const adapter = (
   identity: () => string | null = () => 'current-session:user:role:v1',
 ) => createQuotationOrderReadAdapter({ execute: read } as ApiReadTransport, listed, identity)
 
-describe('M1 signing Order detail: explicit WorkOrder scoped sanitized READ-ONLY gate', () => {
+describe('M1 signing Order precheck: bounded WorkOrder list-only sanitized READ-ONLY gate', () => {
   it('is DENY BY DEFAULT when no current authorization identity provider is configured', async () => {
-    const execute = vi.fn(async () => ({ data: validOrder() }))
+    const execute = vi.fn(async () => ({ data: [validOrder()] }))
     const port = createQuotationOrderReadAdapter({ execute }, () => true)
     const result = await port.readScopedTypeOneOrderForSigningReview!(owner, id)
     expect(result).toMatchObject({ state: 'failed_terminal', error: { category: 'authorization_denied' } })
@@ -34,14 +34,14 @@ describe('M1 signing Order detail: explicit WorkOrder scoped sanitized READ-ONLY
   })
 
   it('is DENY BY DEFAULT without a currently role-listed WorkOrder', async () => {
-    const execute = vi.fn(async () => ({ data: validOrder() }))
+    const execute = vi.fn(async () => ({ data: [validOrder()] }))
     const port = adapter(execute, () => false)
     expect((await port.readScopedTypeOneOrderForSigningReview!(owner, id)).state).toBe('failed_terminal')
     expect(execute).not.toHaveBeenCalled()
   })
 
   it('requires syntactically bounded exact WorkOrder and Order IDs, never an arbitrary query', async () => {
-    const execute = vi.fn(async () => ({ data: validOrder() }))
+    const execute = vi.fn(async () => ({ data: [validOrder()] }))
     const port = adapter(execute)
     for (const [wo, order] of [
       ['../foreign', id], [owner, ''], [owner, '../another-order'], [owner, 'a'.repeat(101)],
@@ -52,15 +52,19 @@ describe('M1 signing Order detail: explicit WorkOrder scoped sanitized READ-ONLY
     expect(execute).not.toHaveBeenCalled()
   })
 
-  it('returns only a sanitized type1 Order display projection, never legal/signing authority', async () => {
+  it('returns only a sanitized type1 Order display projection from bounded list, never legal/signing authority', async () => {
     const requests: ApiReadRequest[] = []
     const port = adapter(async (request) => {
       requests.push(request)
-      return { data: validOrder() }
+      return { data: [validOrder()] }
     })
     const result = await port.readScopedTypeOneOrderForSigningReview!(owner, id)
     expect(requests).toEqual([{
-      method: 'POST', path: 'basic/order/queryById', body: { id },
+      method: 'POST', path: 'basic/order/query', body: {
+        _all: '1', page: 1, rows: 3, sortField: 'createTime', sortOrder: 'desc',
+        'is:serviceAppointmentId|string#and': owner,
+        'is:type|integer#and': 1,
+      },
     }])
     expect(result).toMatchObject({
       state: 'succeeded',
@@ -83,7 +87,7 @@ describe('M1 signing Order detail: explicit WorkOrder scoped sanitized READ-ONLY
   })
 
   it('rejects a different returned Order ID, even with the same WorkOrder', async () => {
-    const read = vi.fn(async () => ({ data: validOrder({ _id: 'other-official-order' }) }))
+    const read = vi.fn(async () => ({ data: [validOrder({ _id: 'other-official-order' })] }))
     const result = await adapter(read).readScopedTypeOneOrderForSigningReview!(owner, id)
     expect(result?.state).toBe('failed_terminal')
     expect(JSON.stringify(result)).not.toContain('other-official-order')
@@ -95,7 +99,7 @@ describe('M1 signing Order detail: explicit WorkOrder scoped sanitized READ-ONLY
       { type: 0 },
       { type: null },
     ]) {
-      const port = adapter(async () => ({ data: validOrder(overrides) }))
+      const port = adapter(async () => ({ data: [validOrder(overrides)] }))
       const result = await port.readScopedTypeOneOrderForSigningReview!(owner, id)
       expect(result.state).toBe('failed_terminal')
       expect(JSON.stringify(result)).not.toContain('SECRET')
@@ -112,7 +116,7 @@ describe('M1 signing Order detail: explicit WorkOrder scoped sanitized READ-ONLY
       const pending = port.readScopedTypeOneOrderForSigningReview!(owner, id)
       await Promise.resolve()
       current = change === 'role' ? 'current-session:user:role:v2' : 'replacement-session:user:role:v1'
-      release({ data: validOrder() })
+      release({ data: [validOrder()] })
       const result = await pending
       expect(result).toMatchObject({ state: 'failed_terminal', error: { category: 'authorization_denied' } })
       expect(JSON.stringify(result)).not.toContain('SYN-019')
@@ -126,7 +130,7 @@ describe('M1 signing Order detail: explicit WorkOrder scoped sanitized READ-ONLY
     const port = adapter(execute, () => listed)
     const pending = port.readScopedTypeOneOrderForSigningReview!(owner, id)
     listed = false
-    release({ data: validOrder() })
+    release({ data: [validOrder()] })
     expect(await pending).toMatchObject({
       state: 'failed_terminal', error: { category: 'authorization_denied' },
     })
@@ -144,10 +148,11 @@ describe('M1 signing Order detail: explicit WorkOrder scoped sanitized READ-ONLY
     const paths: string[] = []
     const port = adapter(async req => {
       paths.push(req.path)
-      return { data: validOrder() }
+      return { data: [validOrder()] }
     })
     await port.readScopedTypeOneOrderForSigningReview!(owner, id)
-    expect(paths).toEqual(['basic/order/queryById'])
+    expect(paths).toEqual(['basic/order/query'])
+    expect(paths).not.toContain('basic/order/queryById')
   })
 
   it('does not change old Quotation edit/readback getById authority contracts or port methods', async () => {
