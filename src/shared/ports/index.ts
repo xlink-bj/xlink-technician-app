@@ -23,6 +23,7 @@ export type {
   QuotationProcedureRead,
   QuotationMaterialRead,
   QuotationMaterialSkuVariantRead,
+  QuotationMaterialSaleFieldRead,
   QuotationMeasureRead,
   QuotationPackageProcedureRead,
   QuotationPackageMaterialRead,
