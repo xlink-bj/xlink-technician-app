@@ -3,6 +3,7 @@ import type {
   QuotationCatalogItemBaseRead,
   QuotationCatalogReadPort,
   QuotationMaterialRead,
+  QuotationMaterialSkuVariantRead,
   QuotationMeasureRead,
   QuotationPackageMaterialRead,
   QuotationPackageDetailRead,
@@ -149,6 +150,68 @@ function materialItem(raw: unknown): QuotationMaterialRead {
   }
 }
 
+/** R1 SKU rows are read only as provider-owned identities here. Their
+ * commercial fields and untyped exts are deliberately not exposed until
+ * real ExtField/valueOption resolution is source-matched in the quotation UI.
+ */
+function materialSkuVariantItem(raw: unknown, expectedSpuIds: ReadonlySet<string>): QuotationMaterialSkuVariantRead {
+  const record = asRecord(raw, 'R1 material SKU')
+  const id = requiredString(record, ['_id'], 'material SKU identity')
+  const spuId = requiredString(record, ['spuid'], 'material SKU parent')
+  if (!expectedSpuIds.has(spuId)) throw new AdapterMappingError('material SKU parent does not match the requested SPU')
+  if (record.state !== undefined && record.state !== 1 && record.state !== '1') {
+    throw new AdapterMappingError('material SKU is not active')
+  }
+  const specification = optionalString(record, ['spec'])
+  const unit = optionalString(record, ['unit'])
+  return {
+    id, spuId, name: requiredString(record, ['name'], 'material SKU name'),
+    ...(specification ? { specification } : {}),
+    ...(unit ? { unit } : {}),
+  }
+}
+
+function materialSkuPage(raw: unknown, ids: readonly string[]): ReadPage<QuotationMaterialSkuVariantRead> {
+  const allowed = new Set(ids)
+  const page = pageEnvelope(raw, row => materialSkuVariantItem(row, allowed))
+  if (new Set(page.items.map(row => row.id)).size !== page.items.length) {
+    throw new AdapterMappingError('duplicate material SKU identity in read')
+  }
+  return page
+}
+
+/** Preserve R1's single-spuid vs in:spuid|array#and request contract.
+ * This is a request builder, not evidence of backend SKU authorization.
+ */
+function materialSkuRequest(context: QuotationCatalogContext, route: 'direct_material' | 'package_materials', spuIds: readonly string[]): ApiReadRequest {
+  if (!context || !context.workOrderId || !String(context.workOrderId).trim()
+    || typeof context.serviceType !== 'string' || !context.serviceType.trim()) {
+    throw new AdapterMappingError('current Work Order catalog identity is required for material SKU read')
+  }
+  if (!Array.isArray(spuIds) || !spuIds.length || spuIds.length > 30
+    || spuIds.some(id => typeof id !== 'string' || !id.trim() || id.trim() !== id || id.includes(','))) {
+    throw new AdapterMappingError('material SKU SPU identities are invalid or unbounded')
+  }
+  if (new Set(spuIds).size !== spuIds.length) throw new AdapterMappingError('duplicate material SPU IDs')
+  // R1 getMaterialSKU(spu) uses spuid; R1 getPackageMaterialSKU(list)
+  // always uses in:spuid|array#and, including a one-material Package.
+  if (!['direct_material', 'package_materials'].includes(route)
+    || (route === 'direct_material' && spuIds.length !== 1)) {
+    throw new AdapterMappingError('R1 SKU lookup route does not match its source shape')
+  }
+  return {
+    method: 'POST',
+    path: 'basic/material/query',
+    body: {
+      _all: '1',
+      'is:state|integer#and': 1,
+      ...(route === 'direct_material'
+        ? { spuid: spuIds[0] }
+        : { 'in:spuid|array#and': spuIds.join(',') }),
+    },
+  }
+}
+
 function measureItem(raw: unknown): QuotationMeasureRead {
   const record = asRecord(raw, 'quotation measure')
   return {
@@ -276,8 +339,14 @@ function listRequest(path: string, context: QuotationCatalogContext, productionR
       'authorization_denied',
     )
   }
-  if (context.sourceType !== undefined && (typeof context.sourceType !== 'string' || !context.sourceType.trim())) {
-    throw new AdapterMappingError('quotation catalog source type must be omitted when unavailable')
+  // An explicitly empty sourceType is not the same as an absent property:
+  // R1 passes sourceType:this.sourceType and GoodsService checks key presence.
+  // Production remains fail-closed above; only non-production can mirror the
+  // exact empty string taken from the existing ServiceAppointment.
+  if (context.sourceType !== undefined
+    && (typeof context.sourceType !== 'string'
+      || (context.sourceType !== '' && !context.sourceType.trim()))) {
+    throw new AdapterMappingError('quotation catalog source type is malformed')
   }
   return {
     method: 'POST',
@@ -437,6 +506,24 @@ class QuotationCatalogReadAdapter implements QuotationCatalogReadPort {
 
   listMeasures(context: QuotationCatalogContext) {
     return this.list('biz/measure/queryWithRank', context, (raw) => pageEnvelope(raw, measureItem))
+  }
+
+  /** R1 read-only SKU identity, intentionally not called from any UI yet.
+   * The current Production allowlist does not permit basic/material/query.
+   */
+  listMaterialSkuVariants(context: QuotationCatalogContext, route: 'direct_material' | 'package_materials', spuIds: readonly string[]) {
+    return this.read(
+      () => {
+        if (this.isProductionReadOnly()) {
+          throw new ApiReadTransportError(
+            'Production material SKU reads are not enabled in this review profile.',
+            'authorization_denied',
+          )
+        }
+        return materialSkuRequest(context, route, spuIds)
+      },
+      raw => materialSkuPage(raw, spuIds),
+    )
   }
 }
 

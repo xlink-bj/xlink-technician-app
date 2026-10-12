@@ -459,11 +459,18 @@ function quotationCatalogContext(record: AdapterRecord, workOrderId: WorkOrderId
   // These are the ServiceAppointment's persisted provider fields.
   const serviceType = optionalString(record, ['serviceType'])
   if (!serviceType) return undefined
-  const sourceType = optionalString(optionalRecord(record.exts) ?? {}, ['sourceType'])
+  const exts = optionalRecord(record.exts)
+  // R1 passes this.sourceType to every ranked catalog request. The existing
+  // backend distinguishes the property being present from it being absent.
+  // Retain an explicitly persisted empty string; do not synthesize a missing
+  // source type. Production catalog reads still reject empty scope.
+  const sourceType = exts?.sourceType === ''
+    ? ''
+    : optionalString(exts ?? {}, ['sourceType'])
   return {
     workOrderId,
     serviceType,
-    ...(sourceType ? { sourceType } : {}),
+    ...(sourceType === undefined ? {} : { sourceType }),
   }
 }
 

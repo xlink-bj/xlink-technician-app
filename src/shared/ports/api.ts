@@ -388,6 +388,15 @@ export interface QuotationPackageDetailRead {
   readonly measures: readonly QuotationPackageMeasureRead[]
 }
 
+/** R1 basic/material/query SKU identity only. No inferred stock, price authority or selectable sale attributes. */
+export interface QuotationMaterialSkuVariantRead {
+  readonly id: string
+  readonly spuId: string
+  readonly name: string
+  readonly specification?: string
+  readonly unit?: string
+}
+
 /** Read-only provider boundary; intentionally separate from local quotation draft composition. */
 export interface QuotationCatalogReadPort {
   listPackages(context: QuotationCatalogContext): Promise<OperationSnapshot<ReadPage<QuotationPackageRead>>>
@@ -395,6 +404,12 @@ export interface QuotationCatalogReadPort {
   listProcedures(context: QuotationCatalogContext): Promise<OperationSnapshot<ReadPage<QuotationProcedureRead>>>
   listMaterials(context: QuotationCatalogContext): Promise<OperationSnapshot<ReadPage<QuotationMaterialRead>>>
   listMeasures(context: QuotationCatalogContext): Promise<OperationSnapshot<ReadPage<QuotationMeasureRead>>>
+  /**
+   * R1 placeOrders.vue:6191–6198 / 6306–6315. Optional until the verified
+   * SKU option UI consumes this source; never enabled for Production reads
+   * by the current adapter. Does not create Order, authorize SKU or price.
+   */
+  listMaterialSkuVariants?(context: QuotationCatalogContext, route: 'direct_material' | 'package_materials', spuIds: readonly string[]): Promise<OperationSnapshot<ReadPage<QuotationMaterialSkuVariantRead>>>
 }
 
 export interface TechnicianApiReadPort {
