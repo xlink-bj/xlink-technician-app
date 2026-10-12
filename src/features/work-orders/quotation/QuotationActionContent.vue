@@ -122,7 +122,15 @@
         >服务器已返回报价单文件</view>
       </view>
 
-      <view v-if="composition.localState === 'legacy_requires_action'" class="quotation-content__blocked" data-testid="quotation-draft-legacy">
+      <view v-if="composition.localState === 'unscoped_requires_confirmation'"
+        class="quotation-content__blocked" data-testid="quotation-draft-role-unscoped">
+        <text class="quotation-content__blocked-title">发现未记录角色归属的历史报价草稿</text>
+        <text class="quotation-content__copy">旧草稿无法确认属于当前角色。系统不会自动恢复、迁移、覆盖或删除旧数据。可明确选择为当前角色新建独立草稿，历史记录仍保留，后续由授权人员处理。</text>
+        <AppButton class="quotation-content__secondary-action" variant="secondary" block
+          data-testid="quotation-draft-role-start-new"
+          @tap="composition.startNewRoleScopedDraft">为当前角色新建草稿（保留历史）</AppButton>
+      </view>
+      <view v-else-if="composition.localState === 'legacy_requires_action'" class="quotation-content__blocked" data-testid="quotation-draft-legacy">
         <text class="quotation-content__blocked-title">旧版平铺草稿已保留</text>
         <text class="quotation-content__copy">旧草稿没有可靠的维修部位和工程量归属，系统不会自动迁移、覆盖或清除。请先人工处理；如确认不再需要，可显式放弃并创建分组草稿。</text>
         <AppButton class="quotation-content__secondary-action" variant="secondary" block @tap="composition.discardLegacyDraft">确认放弃旧版草稿并新建</AppButton>
@@ -502,13 +510,20 @@
                     <view v-if="selection.kind === 'material' && selection.skuChoices?.length"
                       class="quotation-content__package-summary" :data-testid="`quotation-material-skus-${selection.selectionId}`">
                       <text class="quotation-content__package-summary-note">本机 SKU 规格明细 · 尚未核验报价金额</text>
-                      <text v-for="sku in selection.skuChoices" :key="sku.skuId"
+                      <view v-for="sku in selection.skuChoices" :key="sku.skuId"
                         class="quotation-content__package-summary-row">
-                        规格 SKU · {{ Object.values(sku.attributes).join(' / ') }} · {{ sku.quantity }} 件
-                      </text>
+                        <text>规格 SKU · {{ Object.values(sku.attributes).join(' / ') }} · {{ sku.quantity }} 件</text>
+                        <AppButton variant="text" :disabled="!canEdit"
+                          :data-testid="`quotation-material-sku-remove-${group.groupId}-${sku.skuId}`"
+                          @tap="removeLocalSkuFromRepairGroup(group.groupId, selection.selectionId, selection.catalogId, sku.skuId)">
+                          {{ selection.skuChoices.length === 1 ? '移除材料及规格' : '移除该规格' }}
+                        </AppButton>
+                      </view>
                       <AppButton variant="text" :data-testid="`quotation-material-sku-edit-${group.groupId}-${selection.catalogId}`"
                         @tap="openExistingMaterialSkuPreview(group.groupId, selection.catalogId)">编辑规格与数量</AppButton>
                     </view>
+                    <AppStatus v-if="skuLocalRemoveErrors[selection.selectionId]"
+                      :message="skuLocalRemoveErrors[selection.selectionId]" tone="warning" quiet />
                     <view class="quotation-content__line-controls">
                       <text class="quotation-content__quantity-label">数量</text>
                       <view class="quotation-content__quantity-wrap" :class="{ 'quotation-content__quantity-wrap--error': composition.quantityErrorBySelection[selection.selectionId] }">
@@ -1107,6 +1122,7 @@ const composition = useQuotationCompositionStore()
 const catalogBrowser = useQuotationCatalogBrowserStore()
 const skuQuantityText = ref('1')
 const skuLocalSaveError = ref('')
+const skuLocalRemoveErrors = ref<Readonly<Record<string, string>>>({})
 const skuLocalSaving = ref(false)
 const materialSkuPreviewStatusMessage = computed(() => {
   const preview = catalogBrowser.materialSkuPreview
@@ -1476,6 +1492,16 @@ async function openExistingMaterialSkuPreview(groupId: string, materialId: strin
   await catalogBrowser.openMaterialSkuPreview(materialId)
 }
 
+function removeLocalSkuFromRepairGroup(
+  groupId: string, selectionId: string, materialId: string, skuId: string,
+): void {
+  const result = composition.removeLocalMaterialSkuChoice(groupId, materialId, skuId)
+  const nextErrors = { ...skuLocalRemoveErrors.value }
+  if (result.state === 'succeeded') delete nextErrors[selectionId]
+  else nextErrors[selectionId] = result.error?.message ?? 'SKU 规格未移除，请重试。'
+  skuLocalRemoveErrors.value = nextErrors
+}
+
 function onSkuQuantityInput(event: unknown): void {
   const detail = event && typeof event === 'object'
     ? (event as { detail?: { value?: unknown } }).detail : undefined
@@ -1495,7 +1521,7 @@ async function saveMatchedSkuToLocalDraft(): Promise<void> {
     return
   }
   const quantity = Number(skuQuantityText.value)
-  if (!/^\\d+$/.test(skuQuantityText.value.trim())
+  if (!/^\d+$/.test(skuQuantityText.value.trim())
     || !Number.isSafeInteger(quantity) || quantity < 1 || quantity > 9999) {
     skuLocalSaveError.value = 'SKU 数量必须为 1–9999 的整数。'
     return

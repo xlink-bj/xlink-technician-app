@@ -2,13 +2,14 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import {
   actionDraftIdentityFor,
+  actionDraftStorageKey,
   createActionDraftRepository,
   type ActionDraftIdentity,
 } from '@runtimes/action'
 import type { StoragePort, StorageKey } from '@shared/ports'
 import { asOpaqueId } from '@shared/types'
 import { useQuotationCompositionStore } from '@features/work-orders/quotation/composition-store'
-import { createEmptyQuotationDraft, createQuotationGroup, upsertLocalQuotationMaterialSkuChoice, type QuotationDraft } from '@features/work-orders/quotation/model'
+import { createEmptyQuotationDraft, createQuotationGroup, upsertLocalQuotationMaterialSkuChoice, removeLocalQuotationMaterialSkuChoice, type QuotationDraft } from '@features/work-orders/quotation/model'
 import { quotationDraftRecordFor, decodeQuotationDraftRecord } from '@features/work-orders/quotation/draft-codec'
 import { validateQuotationDraft } from '@features/work-orders/quotation/validation'
 
@@ -22,7 +23,7 @@ function memoryStorage(): StoragePort {
     read: async <T>(key: StorageKey) => ok((db.get(key.key) as T | undefined) ?? null),
     write: async (key, data) => { db.set(key.key, data); return ok(undefined) },
     remove: async key => { db.delete(key.key); return ok(undefined) },
-    listKeys: async () => ok([...db.keys()]),
+    listKeys: async (input) => ok([...db.keys()].filter(key => key.startsWith(input.prefix ?? ''))),
   }
 }
 function identity(userId = 'technician-1', workOrderId = 'wo-1'): ActionDraftIdentity {
@@ -32,6 +33,10 @@ function identity(userId = 'technician-1', workOrderId = 'wo-1'): ActionDraftIde
     workflowNodeId: asOpaqueId<'WorkflowNodeRuntimeId'>('node-place-order'),
     actionIntent: 'place_order', contentKind: 'quotation',
   })
+}
+function scopedIdentity(role: string): ActionDraftIdentity {
+  const unscoped = identity()
+  return actionDraftIdentityFor(unscoped, asOpaqueId<'RoleId'>(role))
 }
 function setupDraft(workOrderId: string, nodeId: string): QuotationDraft {
   return {
@@ -49,6 +54,73 @@ function setupDraft(workOrderId: string, nodeId: string): QuotationDraft {
 
 describe('M1 I2 R1 local SKU quantity choices / schema v4: NO official Order', () => {
   beforeEach(() => setActivePinia(createPinia()))
+
+  it('saves new quotation drafts with role provenance and never auto-restores legacy drafts in another role', async () => {
+    const storage = memoryStorage()
+    const repository = createActionDraftRepository(storage)
+    const old = identity()
+    const roleA = scopedIdentity('role-a')
+    const roleB = scopedIdentity('role-b')
+    const source = upsertLocalQuotationMaterialSkuChoice(
+      setupDraft('wo-1', 'node-place-order'), 'group-a', 'spu-A', matchA,
+    )
+    const oldRecord = quotationDraftRecordFor(old, source, '2026-10-12T00:00:00.000Z')
+    expect((await repository.write(oldRecord)).state).toBe('succeeded')
+    expect(actionDraftStorageKey(old)).toContain('action-workspace:2:')
+    expect(actionDraftStorageKey(roleA)).toContain('action-workspace:3:')
+    expect(actionDraftStorageKey(roleB)).not.toBe(actionDraftStorageKey(roleA))
+
+    // Unprovenanced v1/v2 draft is kept in storage, not silently assigned to A or B.
+    expect((await repository.read(roleA)).data).toBeNull()
+    expect((await repository.read(roleB)).data).toBeNull()
+    const firstA = useQuotationCompositionStore()
+    expect(await firstA.initialize({ identity: roleA, repository, debounceMs: 60_000 }))
+      .toBe('unscoped_requires_confirmation')
+    expect(firstA.draft).toBeNull()
+    expect(firstA.createGroup({ repairParts: ['bathroom'] }).state).toBe('failed_terminal')
+    expect((await repository.read(old)).data).toMatchObject(oldRecord)
+    expect((await firstA.startNewRoleScopedDraft()).state).toBe('succeeded')
+    const group = firstA.createGroup({ repairParts: ['bathroom'] }).data!
+    expect(firstA.addCatalogReadItem(group,
+      { kind: 'material', id: 'spu-A', name: '材料 A' }).state).toBe('succeeded')
+    expect(firstA.saveLocalMaterialSkuChoice(group, 'spu-A', matchB).state).toBe('succeeded')
+    expect((await firstA.flushDraft()).state).toBe('succeeded')
+    expect((await repository.read(roleA)).data?.identity.roleId).toBe(roleA.roleId)
+    expect((await repository.read(roleB)).data).toBeNull()
+
+    setActivePinia(createPinia())
+    const reenteredA = useQuotationCompositionStore()
+    expect(await reenteredA.initialize({ identity: roleA, repository })).toBe('restored')
+    expect(reenteredA.groups[0]!.materials[0]!.skuChoices).toEqual([matchB])
+
+    setActivePinia(createPinia())
+    const reenteredB = useQuotationCompositionStore()
+    expect(await reenteredB.initialize({ identity: roleB, repository }))
+      .toBe('unscoped_requires_confirmation')
+    expect(reenteredB.groups).toEqual([])
+    expect((await reenteredB.startNewRoleScopedDraft()).state).toBe('succeeded')
+    expect(reenteredB.groups).toEqual([])
+    // Role B's empty state does not destroy either role A's or historical v2 data.
+    expect((await repository.read(old)).data).toMatchObject(oldRecord)
+    expect((await repository.read(roleA)).data?.identity.roleId).toBe(roleA.roleId)
+
+    const onlyRoleA = await repository.listForUser(roleA.userId, roleA.roleId)
+    expect(onlyRoleA.state).toBe('succeeded')
+    expect(onlyRoleA.data?.entries).toHaveLength(1)
+    expect(onlyRoleA.data?.entries[0]?.identity.roleId).toBe(roleA.roleId)
+    const onlyRoleB = await repository.listForUser(roleB.userId, roleB.roleId)
+    expect(onlyRoleB.data?.entries).toEqual([])
+    const unprovenanced = await repository.listForUser(old.userId)
+    expect(unprovenanced.data?.entries).toHaveLength(1)
+    expect(unprovenanced.data?.entries[0]?.identity.roleId).toBeUndefined()
+
+    expect((await repository.remove(roleB)).state).toBe('succeeded')
+    expect((await repository.read(roleA)).data).not.toBeNull()
+    expect((await repository.read(old)).data).not.toBeNull()
+    expect((await repository.remove(roleA)).state).toBe('succeeded')
+    expect((await repository.read(roleA)).data).toBeNull()
+    expect((await repository.read(old)).data).not.toBeNull()
+  })
 
   it('stores multiple exact SKU identities separately in EACH repair group and sums parent SPU quantities', () => {
     const draft = setupDraft('wo-1', 'node-1')
@@ -83,6 +155,83 @@ describe('M1 I2 R1 local SKU quantity choices / schema v4: NO official Order', (
       { ...matchA, attributes: { color: 'grey' } })).toBe(first)
   })
 
+  it('treats reordered attribute keys as the same SKU identity and still rejects changes', () => {
+    const draft = setupDraft('wo-1', 'node-1')
+    const first = upsertLocalQuotationMaterialSkuChoice(draft, 'group-a', 'spu-A', matchA)
+    const reordered = { skuId: matchA.skuId, quantity: matchA.quantity,
+      attributes: { thickness: '2', color: 'black' } }
+    expect(upsertLocalQuotationMaterialSkuChoice(first, 'group-a', 'spu-A', reordered)).toBe(first)
+    const updated = upsertLocalQuotationMaterialSkuChoice(first, 'group-a', 'spu-A',
+      { ...reordered, quantity: 7 })
+    expect(updated.groups[0]!.materials[0]!.quantity).toBe(7)
+    expect(updated.groups[0]!.materials[0]!.skuChoices).toHaveLength(1)
+    expect(upsertLocalQuotationMaterialSkuChoice(updated, 'group-a', 'spu-A',
+      { ...reordered, skuId: 'different-sku', quantity: 1 })).toBe(updated)
+    expect(upsertLocalQuotationMaterialSkuChoice(updated, 'group-a', 'spu-A',
+      { ...reordered, attributes: { thickness: '4', color: 'black' } })).toBe(updated)
+  })
+
+  it('removes only the requested SKU in the requested repair group and removes the last SPU without zero quantity', () => {
+    const draft = setupDraft('wo-1', 'node-1')
+    const groupA = upsertLocalQuotationMaterialSkuChoice(
+      upsertLocalQuotationMaterialSkuChoice(draft, 'group-a', 'spu-A', matchA),
+      'group-a', 'spu-A', matchB,
+    )
+    const bothGroups = upsertLocalQuotationMaterialSkuChoice(groupA, 'group-b', 'spu-A', matchA)
+    expect(removeLocalQuotationMaterialSkuChoice(bothGroups, 'foreign-group', 'spu-A', matchA.skuId))
+      .toBe(bothGroups)
+    expect(removeLocalQuotationMaterialSkuChoice(bothGroups, 'group-a', 'spu-A', 'foreign-sku'))
+      .toBe(bothGroups)
+    const oneRemoved = removeLocalQuotationMaterialSkuChoice(
+      bothGroups, 'group-a', 'spu-A', matchA.skuId,
+    )
+    expect(oneRemoved.groups[0]!.materials[0]).toMatchObject({
+      quantity: 2, skuChoices: [matchB],
+    })
+    expect(oneRemoved.groups[1]!.materials[0]).toMatchObject({
+      quantity: 3, skuChoices: [matchA],
+    })
+    const finalRemoved = removeLocalQuotationMaterialSkuChoice(
+      oneRemoved, 'group-a', 'spu-A', matchB.skuId,
+    )
+    expect(finalRemoved.groups[0]!.materials).toEqual([])
+    expect(finalRemoved.groups[1]!.materials[0]).toMatchObject({
+      quantity: 3, skuChoices: [matchA],
+    })
+    expect(finalRemoved.draftVersion).toBe(bothGroups.draftVersion + 2)
+    expect(removeLocalQuotationMaterialSkuChoice(finalRemoved, 'group-a', 'spu-A', matchB.skuId))
+      .toBe(finalRemoved)
+  })
+
+  it('persists per-SKU removal through the real local composition repository without a commercial Order', async () => {
+    const repository = createActionDraftRepository(memoryStorage())
+    const id = identity()
+    const store = useQuotationCompositionStore()
+    expect(await store.initialize({ identity: id, repository, debounceMs: 60_000 })).toBe('fresh')
+    const group = store.createGroup({ repairParts: ['bathroom'] }).data!
+    expect(store.addCatalogReadItem(group, { kind: 'material', id: 'spu-A', name: '材料 A' }).state).toBe('succeeded')
+    expect(store.saveLocalMaterialSkuChoice(group, 'spu-A', matchA).state).toBe('succeeded')
+    expect(store.saveLocalMaterialSkuChoice(group, 'spu-A', matchB).state).toBe('succeeded')
+    expect(store.removeLocalMaterialSkuChoice(group, 'spu-A', 'other-sku').state).toBe('failed_terminal')
+    expect(store.removeLocalMaterialSkuChoice(group, 'spu-A', matchA.skuId).state).toBe('succeeded')
+    expect(store.groups[0]!.materials[0]).toMatchObject({ quantity: 2, skuChoices: [matchB] })
+    expect((await store.flushDraft()).state).toBe('succeeded')
+    setActivePinia(createPinia())
+    const reopened = useQuotationCompositionStore()
+    expect(await reopened.initialize({ identity: id, repository })).toBe('restored')
+    expect(reopened.groups[0]!.materials[0]).toMatchObject({ quantity: 2, skuChoices: [matchB] })
+    expect(validateQuotationDraft(reopened.draft!).issues).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: 'material.sku_local_only' }),
+    ]))
+    expect(reopened.removeLocalMaterialSkuChoice(group, 'spu-A', matchB.skuId).state).toBe('succeeded')
+    expect(reopened.groups[0]!.materials).toEqual([])
+    expect((await reopened.flushDraft()).state).toBe('succeeded')
+    setActivePinia(createPinia())
+    const reentered = useQuotationCompositionStore()
+    expect(await reentered.initialize({ identity: id, repository })).toBe('restored')
+    expect(reentered.groups[0]!.materials).toEqual([])
+  })
+
   it('round-trips new SKU choices through the ACTUAL scoped local draft repository', async () => {
     const repository = createActionDraftRepository(memoryStorage())
     const id = identity()
@@ -93,6 +242,14 @@ describe('M1 I2 R1 local SKU quantity choices / schema v4: NO official Order', (
     expect(store.addCatalogReadItem(groupA, { kind: 'material', id: 'spu-A', name: '材料 A' }).state).toBe('succeeded')
     expect(store.addCatalogReadItem(groupB, { kind: 'material', id: 'spu-A', name: '材料 A' }).state).toBe('succeeded')
     expect(store.saveLocalMaterialSkuChoice(groupA, 'spu-A', matchA).state).toBe('succeeded')
+    const versionAfterFirstSave = store.draft!.draftVersion
+    // Attribute insertion order is not part of SKU identity; a repeated save
+    // must be accepted without marking the draft dirty again.
+    expect(store.saveLocalMaterialSkuChoice(groupA, 'spu-A', {
+      skuId: matchA.skuId, quantity: matchA.quantity,
+      attributes: { thickness: '2', color: 'black' },
+    }).state).toBe('succeeded')
+    expect(store.draft!.draftVersion).toBe(versionAfterFirstSave)
     expect(store.saveLocalMaterialSkuChoice(groupB, 'spu-A', { ...matchA, quantity: 5 }).state).toBe('succeeded')
     expect(store.setQuantityText(groupA, store.groups[0]!.materials[0]!.selectionId, '99').state)
       .toBe('failed_terminal')

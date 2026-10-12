@@ -1,4 +1,4 @@
-import type { FormDefinitionId, FormDataId, UserId, WorkOrderId, WorkflowNodeRuntimeId } from '@shared/types'
+import type { FormDefinitionId, FormDataId, RoleId, UserId, WorkOrderId, WorkflowNodeRuntimeId } from '@shared/types'
 import type { FormPurpose } from '@shared/ports'
 import type { WorkflowActionIntent } from '@runtimes/workflow'
 
@@ -61,6 +61,8 @@ export interface ActionDraftIdentity {
   readonly actionIntent: WorkflowActionIntent
   readonly contentKind: ActionContentKind
   readonly contentIdentity?: string
+  /** Role provenance for v3 scoped drafts; absent only for legacy unscoped records. */
+  readonly roleId?: RoleId
 }
 
 export interface ActionDraftRecord<TValues extends Readonly<Record<string, unknown>>> {
@@ -90,7 +92,7 @@ export function actionExecutionForWorkflowDecision(execution: 'enabled' | 'disab
   return execution === 'enabled' ? 'enabled' : 'disabled'
 }
 
-export function actionDraftIdentityFor(action: ActionIdentity): ActionDraftIdentity {
+export function actionDraftIdentityFor(action: ActionIdentity, roleId?: RoleId): ActionDraftIdentity {
   return {
     version: 1,
     userId: action.userId,
@@ -99,6 +101,7 @@ export function actionDraftIdentityFor(action: ActionIdentity): ActionDraftIdent
     actionIntent: action.actionIntent,
     contentKind: action.contentKind,
     ...(action.contentIdentity ? { contentIdentity: String(action.contentIdentity) } : {}),
+    ...(roleId ? { roleId } : {}),
   }
 }
 
@@ -111,8 +114,9 @@ export function actionDraftStorageKey(identity: ActionDraftIdentity): string {
     : `v${encodeURIComponent(String(identity.contentIdentity))}`
   return [
     'action-workspace',
-    '2',
+    identity.roleId ? '3' : '2',
     encodeURIComponent(String(identity.userId)),
+    ...(identity.roleId ? [encodeURIComponent(String(identity.roleId))] : []),
     encodeURIComponent(String(identity.workOrderId)),
     encodeURIComponent(String(identity.workflowNodeId)),
     encodeURIComponent(identity.actionIntent),
@@ -160,6 +164,8 @@ function actionDraftLegacyTaggedStorageKey(identity: ActionDraftIdentity): strin
 }
 
 export function actionDraftLegacyStorageKeys(identity: ActionDraftIdentity): readonly string[] {
+  // A role-provenanced v3 draft may NEVER recover unprovenanced v1/v2 data.
+  if (identity.roleId) return []
   return [...new Set([
     actionDraftLegacyStorageKey(identity),
     actionDraftLegacyTaggedStorageKey(identity),
@@ -168,6 +174,10 @@ export function actionDraftLegacyStorageKeys(identity: ActionDraftIdentity): rea
 
 export function actionDraftStorageKeyPrefixForUser(userId: UserId): string {
   return ['action-workspace', '2', encodeURIComponent(String(userId))].join(':') + ':'
+}
+
+export function actionDraftScopedStorageKeyPrefixForRole(userId: UserId, roleId: RoleId): string {
+  return ['action-workspace', '3', encodeURIComponent(String(userId)), encodeURIComponent(String(roleId))].join(':') + ':'
 }
 
 export function actionDraftLegacyStorageKeyPrefixForUser(userId: UserId): string {
@@ -185,4 +195,5 @@ export function actionDraftIdentityMatches(
     && left.actionIntent === right.actionIntent
     && left.contentKind === right.contentKind
     && (left.contentIdentity ?? '') === (right.contentIdentity ?? '')
+    && (left.roleId === undefined ? right.roleId === undefined : String(left.roleId) === String(right.roleId))
 }

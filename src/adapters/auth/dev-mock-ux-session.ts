@@ -18,6 +18,7 @@ export function createDevMockUxSessionPort(): AuthSessionPort {
       id: asOpaqueId<'RoleId'>('synthetic-role'),
       name: '本地技术员',
     },
+    roleVersion: 'local-dev-role-version-1',
     capabilityNames: ['work-order.read'],
   }
   let active: SessionSnapshot | null = fixture

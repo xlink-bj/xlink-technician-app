@@ -162,6 +162,69 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
     expect(store.appointmentFields.map((field) => field.valueKey)).toEqual(['need', 'datetime', 'note'])
   })
 
+  it('fails closed on same-user roleVersion change instead of reusing the cached action', async () => {
+    let activeSession: SessionSnapshot = { ...session, roleVersion: 'role-v1' }
+    const { store, api } = configureWorkspace(
+      appointmentDetail(), appointmentForm(), undefined, () => activeSession,
+    )
+    expect((await openWorkspace(store)).state).toBe('succeeded')
+    expect(store.descriptor?.actionIntent).toBe('set_appointment')
+    activeSession = {
+      ...activeSession,
+      roleVersion: 'role-v2',
+    }
+    const stale = await store.ensureLoaded({
+      workOrderId: asOpaqueId<'WorkOrderId'>('workspace-work-order'),
+      workflowNodeId: asOpaqueId<'WorkflowNodeRuntimeId'>('workspace-appointment-node'),
+      actionIntent: 'set_appointment',
+    })
+    expect(stale.state).toBe('failed_terminal')
+    expect(stale.error?.category).toBe('session_invalid')
+    expect(store.descriptor).toBeNull()
+    expect(store.loadState).toBe('idle')
+    expect(api.getWorkOrderDetail).toHaveBeenCalledTimes(1)
+  })
+
+  it('blocks mounted appointment command dispatch after a role change without any route reload', async () => {
+    let activeSession: SessionSnapshot = { ...session, roleVersion: 'v1' }
+    const { store, command } = configureWorkspace(
+      appointmentDetail(), appointmentForm(), undefined, () => activeSession,
+    )
+    expect((await openWorkspace(store)).state).toBe('succeeded')
+    activeSession = {
+      ...activeSession,
+      currentRole: { id: asOpaqueId<'RoleId'>('another-role') },
+    }
+    const outcome = await store.submit()
+    expect(outcome.state).toBe('failed_terminal')
+    expect(outcome.error?.category).toBe('session_invalid')
+    expect(command.submitAppointment).not.toHaveBeenCalled()
+  })
+
+  it('discards an in-flight Work Order read when the authenticated role changes', async () => {
+    let activeSession: SessionSnapshot = { ...session, roleVersion: 'role-v1' }
+    const { store, api, command } = configureWorkspace(
+      appointmentDetail(), appointmentForm(), undefined, () => activeSession,
+    )
+    let completeRead!: (result: OperationSnapshot<WorkOrderDetail>) => void
+    const delayedRead = new Promise<OperationSnapshot<WorkOrderDetail>>(resolve => {
+      completeRead = resolve
+    })
+    vi.mocked(api.getWorkOrderDetail).mockImplementationOnce(async () => delayedRead)
+    const loading = openWorkspace(store)
+    activeSession = {
+      ...activeSession,
+      currentRole: { id: asOpaqueId<'RoleId'>('other-workspace-role') },
+    }
+    completeRead(succeeded(appointmentDetail()))
+    const result = await loading
+    expect(result.state).toBe('failed_terminal')
+    expect(result.error?.category).toBe('session_invalid')
+    expect(store.descriptor).toBeNull()
+    expect(store.loadState).toBe('idle')
+    expect(command.readAppointmentForm).not.toHaveBeenCalled()
+  })
+
   it('blocks a disabled or unsupported action without reading or submitting content', async () => {
     const detail: WorkOrderDetail = {
       id: asOpaqueId<'WorkOrderId'>('place-order-work-order'),

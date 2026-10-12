@@ -601,3 +601,145 @@ for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }
     expect(evidence.consoleErrors).toBe(0)
   })
 }
+
+
+// M1-I2 actual main App SKU workflow: synthetic R1-shaped ExtField/Code/SKU
+// reads go through the ordinary adapter, never through the standalone SKU demo.
+for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }]) {
+  test('M1-I2 full SKU local draft on REAL quotation Vue at ' + viewport.width, async ({ page }, info) => {
+    await page.setViewportSize(viewport)
+    await page.goto('/#/pages/index/index', { waitUntil: 'domcontentloaded' })
+    await page.locator('.mock-action-scenario').filter({ hasText: '报价草稿' }).click()
+    await expect(page.getByTestId('quotation-state-ready')).toBeVisible()
+
+    await page.getByTestId('quotation-add-group').click()
+    await page.getByTestId('quotation-first-step-repair-parts-trigger').click()
+    await page.getByTestId('survey-repair-part-parents').getByText('屋面', { exact: true }).click()
+    await page.getByTestId('quotation-first-step-description').locator('textarea').fill('第1组：规格选择回归')
+    await page.getByTestId('quotation-first-step-quantity').locator('input').fill('12')
+    await page.getByTestId('quotation-first-step-select-products').click()
+    await page.getByTestId('quotation-catalog-kind-material').click()
+    const materialId = 'mock-catalog-material-sealant'
+    const addMaterial = page.getByTestId('quotation-catalog-add-material-' + materialId)
+    await expect(addMaterial).toBeVisible()
+    await addMaterial.click()
+    await expect(page.getByTestId('quotation-catalog-page')).toHaveCount(0)
+
+    const group1 = page.getByTestId('quotation-repair-group-quotation-group-1')
+    const skuQty = page.locator('input[data-testid="quotation-sku-quantity-input"], [data-testid="quotation-sku-quantity-input"] input').first()
+    const summary1 = group1.locator('[data-testid^="quotation-material-skus-"]')
+    async function openSpecs() {
+      await page.getByTestId('quotation-browse-quotation-group-1').click()
+      await page.getByTestId('quotation-catalog-kind-material').click()
+      await page.getByTestId('quotation-material-options-' + materialId).click()
+      await expect(page.getByTestId('quotation-sku-field-thickness')).toBeVisible()
+      await expect(page.getByTestId('quotation-sku-field-color')).toBeVisible()
+    }
+    async function chooseAndSave(thickness: string, color: string, quantity: string) {
+      await page.getByTestId('quotation-sku-option-thickness-' + thickness).click()
+      await page.getByTestId('quotation-sku-option-color-' + color).click()
+      await expect(page.getByTestId('quotation-sku-match-exact')).toBeVisible()
+      await skuQty.fill(quantity)
+      await page.getByTestId('quotation-sku-save-local').click()
+      await expect(page.getByTestId('quotation-sku-preview-back')).toHaveCount(0)
+      await page.getByTestId('quotation-catalog-close').click()
+      await expect(page.getByTestId('quotation-catalog-page')).toHaveCount(0)
+    }
+
+    await openSpecs()
+    // Code dictionary alone is never enough: a non-existent combination is blocked.
+    await page.getByTestId('quotation-sku-option-thickness-2').click()
+    await page.getByTestId('quotation-sku-option-color-grey').click()
+    await expect(page.getByTestId('quotation-sku-match-unavailable')).toBeVisible()
+    await expect(page.getByTestId('quotation-sku-save-local')).toHaveCount(0)
+    await page.getByTestId('quotation-sku-option-color-black').click()
+    await expect(page.getByTestId('quotation-sku-match-exact')).toBeVisible()
+    await skuQty.fill('3')
+    await page.getByTestId('quotation-sku-save-local').click()
+    await expect(page.getByTestId('quotation-sku-preview-back')).toHaveCount(0)
+    await page.getByTestId('quotation-catalog-close').click()
+    await expect(summary1).toContainText('3 件')
+    await info.attach('i2-sku-1-' + viewport.width, {
+      body: await page.screenshot({ fullPage: true }), contentType: 'image/png',
+    })
+
+    await openSpecs()
+    await chooseAndSave('3', 'grey', '2')
+    await expect(summary1).toContainText('3 件')
+    await expect(summary1).toContainText('2 件')
+    // Both SKU rows are visible; total is stored on the parent material but
+    // the current product UI intentionally does not render a separate sum.
+    await expect(summary1.locator('.quotation-content__package-summary-row')).toHaveCount(2)
+    await info.attach('i2-sku-multiple-' + viewport.width, {
+      body: await page.screenshot({ fullPage: true }), contentType: 'image/png',
+    })
+
+    // The same SPU in a second repair group owns a distinct SKU count.
+    await page.getByTestId('quotation-add-group').click()
+    const group2 = page.getByTestId('quotation-repair-group-quotation-group-2')
+    await group2.getByTestId('quotation-repair-part-selector-quotation-group-2')
+      .getByText('屋面', { exact: true }).click()
+    await page.getByTestId('quotation-group-description-quotation-group-2').locator('textarea').fill('第2组：独立 SKU')
+    await page.getByTestId('quotation-group-quantity-quotation-group-2').locator('input').fill('5')
+    await page.getByTestId('quotation-browse-quotation-group-2').click()
+    await page.getByTestId('quotation-catalog-kind-material').click()
+    await page.getByTestId('quotation-catalog-add-material-' + materialId).click()
+    await page.getByTestId('quotation-browse-quotation-group-2').click()
+    await page.getByTestId('quotation-catalog-kind-material').click()
+    await page.getByTestId('quotation-material-options-' + materialId).click()
+    await page.getByTestId('quotation-sku-option-thickness-2').click()
+    await page.getByTestId('quotation-sku-option-color-black').click()
+    await skuQty.fill('6')
+    await page.getByTestId('quotation-sku-save-local').click()
+    await page.getByTestId('quotation-catalog-close').click()
+    const summary2 = group2.locator('[data-testid^="quotation-material-skus-"]')
+    await expect(summary2).toContainText('6 件')
+    await expect(summary1).toContainText('3 件')
+    await expect(summary1).toContainText('2 件')
+    await info.attach('i2-sku-two-groups-' + viewport.width, {
+      body: await page.screenshot({ fullPage: true }), contentType: 'image/png',
+    })
+
+    // Re-entry opens the actual Material SKU editor with selected identity,
+    // not a duplicate synthetic demo or a fabricated commercial Order.
+    await page.getByTestId('quotation-material-sku-edit-quotation-group-1-' + materialId).click()
+    await page.getByTestId('quotation-sku-option-thickness-2').click()
+    await page.getByTestId('quotation-sku-option-color-black').click()
+    await expect(skuQty).toHaveValue('3')
+    await skuQty.fill('4')
+    await page.getByTestId('quotation-sku-save-local').click()
+    await page.getByTestId('quotation-catalog-close').click()
+    await expect(summary1).toContainText('4 件')
+    await expect(summary1).toContainText('2 件')
+
+    // Remove one SKU and persist; other SKU remains after full page reload.
+    await page.getByTestId('quotation-material-sku-remove-quotation-group-1-mock-material-sku-black-2').click()
+    await expect(summary1).not.toContainText('4 件')
+    await expect(summary1).toContainText('2 件')
+    await expect(summary2).toContainText('6 件')
+    await expect(page.getByTestId('action-workspace-submit')).toHaveCount(0)
+    await expect(page.getByText(/报价草稿已保存在本机|报价分组草稿已保存在本机/)).toBeVisible()
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await expect(page.getByTestId('quotation-state-ready')).toBeVisible()
+    const restored = page.getByTestId('quotation-repair-group-quotation-group-1')
+    await expect(restored.locator('[data-testid^="quotation-material-skus-"]')).toContainText('2 件')
+    await expect(page.getByTestId('quotation-material-sku-remove-quotation-group-1-mock-material-sku-black-2')).toHaveCount(0)
+    const restoredGroup2 = page.getByTestId('quotation-repair-group-quotation-group-2')
+    await expect(restoredGroup2.locator('[data-testid^="quotation-material-skus-"]')).toContainText('6 件')
+    await info.attach('i2-sku-reentered-' + viewport.width, {
+      body: await page.screenshot({ fullPage: true }), contentType: 'image/png',
+    })
+
+    // Last SKU removal removes its Material SPU rather than leaving a
+    // zero-quantity material or allowing an Order write.
+    await page.getByTestId('quotation-material-sku-remove-quotation-group-1-mock-material-sku-grey-3').click()
+    await expect(restored.locator('[data-testid^="quotation-material-skus-"]')).toHaveCount(0)
+    await expect(restored.getByText('弹性密封材料（示例）')).toHaveCount(0)
+    await expect(restoredGroup2.locator('[data-testid^="quotation-material-skus-"]')).toContainText('6 件')
+    await expect(page.getByTestId('action-workspace-submit')).toHaveCount(0)
+    expect(evidence.externalIntents, 'DEV synthetic SKU must NEVER attempt an external read').toEqual([])
+    expect(evidence.localFailures).toEqual([])
+    expect(evidence.pageErrors).toBe(0)
+    expect(evidence.consoleErrors).toBe(0)
+  })
+}

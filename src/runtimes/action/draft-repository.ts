@@ -2,6 +2,7 @@ import type { StoragePort } from '@shared/ports'
 import {
   asOpaqueId,
   type OperationSnapshot,
+  type RoleId,
   type UserId,
 } from '@shared/types'
 import type { WorkflowActionIntent } from '@runtimes/workflow'
@@ -16,6 +17,7 @@ import {
   actionDraftLegacyStorageKeys,
   actionDraftStorageKey,
   actionDraftStorageKeyPrefixForUser,
+  actionDraftScopedStorageKeyPrefixForRole,
 } from './types'
 
 export interface ActionDraftRegistryEntry {
@@ -37,7 +39,9 @@ export interface ActionDraftRepository {
     record: ActionDraftRecord<TState>,
   ): Promise<OperationSnapshot<void>>
   remove(identity: ActionDraftIdentity): Promise<OperationSnapshot<void>>
-  listForUser(userId: UserId): Promise<OperationSnapshot<ActionDraftRegistrySnapshot>>
+  /** Supplying a role returns ONLY that role's provenanced drafts; unscoped
+   * legacy drafts are never silently associated with any active role. */
+  listForUser(userId: UserId, roleId?: RoleId): Promise<OperationSnapshot<ActionDraftRegistrySnapshot>>
 }
 
 const actionIntents = new Set<WorkflowActionIntent>([
@@ -82,6 +86,8 @@ function identityFromRecord(value: unknown): ActionDraftIdentity | null {
   const workOrderId = nonEmptyString(identity?.workOrderId)
   const workflowNodeId = nonEmptyString(identity?.workflowNodeId)
   const hasContentIdentity = Boolean(identity && Object.prototype.hasOwnProperty.call(identity, 'contentIdentity'))
+  const hasRoleId = Boolean(identity && Object.prototype.hasOwnProperty.call(identity, 'roleId'))
+  const roleId = hasRoleId ? nonEmptyString(identity?.roleId) : undefined
   const contentIdentity = hasContentIdentity
     ? nonEmptyString(identity?.contentIdentity)
     : undefined
@@ -94,7 +100,8 @@ function identityFromRecord(value: unknown): ActionDraftIdentity | null {
     typeof identity.contentKind !== 'string' ||
     !actionIntents.has(identity.actionIntent as WorkflowActionIntent) ||
     !contentKinds.has(identity.contentKind as ActionContentKind) ||
-    (hasContentIdentity && !contentIdentity)
+    (hasContentIdentity && !contentIdentity) ||
+    (hasRoleId && !roleId)
   ) return null
 
   return {
@@ -105,6 +112,7 @@ function identityFromRecord(value: unknown): ActionDraftIdentity | null {
     actionIntent: identity.actionIntent as WorkflowActionIntent,
     contentKind: identity.contentKind as ActionContentKind,
     ...(contentIdentity ? { contentIdentity } : {}),
+    ...(roleId ? { roleId: asOpaqueId<'RoleId'>(roleId) } : {}),
   }
 }
 
@@ -197,12 +205,18 @@ export class SemanticActionDraftRepository implements ActionDraftRepository {
     return results.find((result) => result.state !== 'succeeded') ?? results[0]
   }
 
-  async listForUser(userId: UserId): Promise<OperationSnapshot<ActionDraftRegistrySnapshot>> {
-    const [canonicalKeys, legacyKeys] = await Promise.all([
-      this.storage.listKeys({ namespace: 'draft', prefix: actionDraftStorageKeyPrefixForUser(userId) }),
-      this.storage.listKeys({ namespace: 'draft', prefix: actionDraftLegacyStorageKeyPrefixForUser(userId) }),
-    ])
-    for (const keys of [canonicalKeys, legacyKeys]) {
+  async listForUser(userId: UserId, roleId?: RoleId): Promise<OperationSnapshot<ActionDraftRegistrySnapshot>> {
+    const prefixes: ReadonlyArray<{ readonly prefix: string; readonly format: 'canonical' | 'legacy' }> =
+      roleId
+        ? [{ prefix: actionDraftScopedStorageKeyPrefixForRole(userId, roleId), format: 'canonical' }]
+        : [
+          { prefix: actionDraftStorageKeyPrefixForUser(userId), format: 'canonical' },
+          { prefix: actionDraftLegacyStorageKeyPrefixForUser(userId), format: 'legacy' },
+        ]
+    const lists = await Promise.all(prefixes.map(({ prefix }) =>
+      this.storage.listKeys({ namespace: 'draft', prefix }),
+    ))
+    for (const keys of lists) {
       if (keys.state !== 'succeeded' || !keys.data) {
         return keys.state === 'failed_retryable'
           ? { state: 'failed_retryable', error: keys.error }
@@ -212,10 +226,10 @@ export class SemanticActionDraftRepository implements ActionDraftRepository {
 
     const candidates: Array<ActionDraftRegistryEntry & { readonly key: string; readonly format: 'canonical' | 'legacy' }> = []
     let invalidRecordCount = 0
-    const allKeys: Array<{ readonly key: string; readonly format: 'canonical' | 'legacy' }> = [
-      ...(canonicalKeys.data ?? []).map((key) => ({ key, format: 'canonical' as const })),
-      ...(legacyKeys.data ?? []).map((key) => ({ key, format: 'legacy' as const })),
-    ]
+    const allKeys: Array<{ readonly key: string; readonly format: 'canonical' | 'legacy' }> =
+      prefixes.flatMap(({ format }, index) =>
+        (lists[index]?.data ?? []).map(key => ({ key, format })),
+      )
     for (const { key, format } of allKeys) {
       const stored = await this.storage.read<unknown>({ namespace: 'draft', key })
       const storedIdentity = stored.state === 'succeeded' && stored.data
@@ -230,7 +244,8 @@ export class SemanticActionDraftRepository implements ActionDraftRepository {
         !storedIdentity ||
         !keyMatchesIdentity ||
         !validDraftRecord(stored.data, storedIdentity) ||
-        String(storedIdentity.userId) !== String(userId)
+        String(storedIdentity.userId) !== String(userId) ||
+        (roleId !== undefined && String(storedIdentity.roleId ?? '') !== String(roleId))
       ) {
         invalidRecordCount += 1
         continue

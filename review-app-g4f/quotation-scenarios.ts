@@ -5,7 +5,7 @@ import { asOpaqueId, createOperationError, type OperationSnapshot } from '@share
 import { quotationDraftRecordFor } from '@features/work-orders/quotation/draft-codec'
 import type { QuotationDraft } from '@features/work-orders/quotation/model'
 
-export type G4fReviewScenario = 'empty' | 'populated' | 'restored' | 'catalog' | 'catalog-empty' | 'catalog-error' | 'invalid' | 'legacy' | 'submit-ready' | 'readback-pending' | 'edit' | 'unsupported-edit' | 'dynamic-fields'
+export type G4fReviewScenario = 'empty' | 'populated' | 'restored' | 'catalog' | 'catalog-empty' | 'catalog-error' | 'invalid' | 'legacy' | 'submit-ready' | 'readback-pending' | 'edit' | 'unsupported-edit' | 'dynamic-fields' | 'unscoped-role'
 
 function succeeded<T>(data: T): OperationSnapshot<T> {
   return { state: 'succeeded', data }
@@ -14,7 +14,7 @@ function succeeded<T>(data: T): OperationSnapshot<T> {
 export function reviewScenarioFromLocation(): G4fReviewScenario {
   if (typeof window === 'undefined') return 'empty'
   const value = new URLSearchParams(window.location.search).get('scenario')
-  return ['populated', 'restored', 'catalog', 'catalog-empty', 'catalog-error', 'invalid', 'legacy', 'submit-ready', 'readback-pending', 'edit', 'unsupported-edit', 'dynamic-fields'].includes(value ?? '')
+  return ['populated', 'restored', 'catalog', 'catalog-empty', 'catalog-error', 'invalid', 'legacy', 'submit-ready', 'readback-pending', 'edit', 'unsupported-edit', 'dynamic-fields', 'unscoped-role'].includes(value ?? '')
     ? value as G4fReviewScenario
     : 'empty'
 }
@@ -106,7 +106,7 @@ export function seedG4fReviewDraft(storage: StoragePort, scenario: G4fReviewScen
       workflowNodeId: asOpaqueId<'WorkflowNodeRuntimeId'>('mock-workflow-node-018-place-order'),
       actionIntent: 'place_order',
       contentKind: 'quotation',
-    })
+    }, asOpaqueId<'RoleId'>('synthetic-role'))
     const draft: QuotationDraft = {
       workOrderId: String(identity.workOrderId),
       workflowNodeId: String(identity.workflowNodeId),
@@ -135,7 +135,7 @@ export function seedG4fReviewDraft(storage: StoragePort, scenario: G4fReviewScen
       workflowNodeId: asOpaqueId<'WorkflowNodeRuntimeId'>('mock-workflow-node-018-place-order'),
       actionIntent: 'place_order',
       contentKind: 'quotation',
-    })
+    }, asOpaqueId<'RoleId'>('synthetic-role'))
     const draft: QuotationDraft = {
       workOrderId: String(identity.workOrderId), workflowNodeId: String(identity.workflowNodeId), draftVersion: 8,
       groups: [{
@@ -161,14 +161,14 @@ export function seedG4fReviewDraft(storage: StoragePort, scenario: G4fReviewScen
     }
     return
   }
-  if (scenario !== 'populated' && scenario !== 'restored' && scenario !== 'invalid' && scenario !== 'legacy') return
+  if (scenario !== 'populated' && scenario !== 'restored' && scenario !== 'invalid' && scenario !== 'legacy' && scenario !== 'unscoped-role') return
   const identity = actionDraftIdentityFor({
     userId: asOpaqueId<'UserId'>('g4f-mock-review-user'),
     workOrderId: asOpaqueId<'WorkOrderId'>('mock-work-order-018-quotation-foundation'),
     workflowNodeId: asOpaqueId<'WorkflowNodeRuntimeId'>('mock-workflow-node-018-place-order'),
     actionIntent: 'place_order',
     contentKind: 'quotation',
-  })
+  }, scenario === 'unscoped-role' ? undefined : asOpaqueId<'RoleId'>('synthetic-role'))
   const common = {
     version: 1 as const,
     identity,
