@@ -243,6 +243,16 @@ export function upsertQuotationPackageSelection(
   })
 }
 
+/** SKU attribute maps are identities, not ordered JSON payloads. */
+function sameSkuAttributes(
+  left: Readonly<Record<string, string>>,
+  right: Readonly<Record<string, string>>,
+): boolean {
+  const keys = Object.keys(left)
+  return keys.length === Object.keys(right).length
+    && keys.every(key => Object.prototype.hasOwnProperty.call(right, key) && left[key] === right[key])
+}
+
 /** Updates one SKU amount for one already-added SPU in one local repair group.
  * R1 aggregates SPU.number = sum(sku.number). This does NOT establish commercial Order authority.
  * Returning the same object means the caller must report a validation failure.
@@ -266,17 +276,16 @@ export function upsertLocalQuotationMaterialSkuChoice(
     const existing = materialMatches[0]!
     const choices = existing.skuChoices ?? []
     const prior = choices.find(choice => choice.skuId === input.skuId)
-    if (prior && JSON.stringify(prior.attributes) !== JSON.stringify(input.attributes)) return group
+    if (prior && !sameSkuAttributes(prior.attributes, input.attributes)) return group
     if (choices.some(choice => choice.skuId !== input.skuId
-      && Object.keys(choice.attributes).length === Object.keys(input.attributes).length
-      && Object.entries(input.attributes).every(([k, v]) => choice.attributes[k] === v))) return group
+      && sameSkuAttributes(choice.attributes, input.attributes))) return group
     const nextChoices = prior
       ? choices.map(choice => choice.skuId === input.skuId ? { ...input, attributes: { ...input.attributes } } : choice)
       : [...choices, { ...input, attributes: { ...input.attributes } }]
     if (nextChoices.length > 50) return group
     const total = nextChoices.reduce((sum, choice) => sum + choice.quantity, 0)
     if (!Number.isSafeInteger(total) || total > 99999) return group
-    if (prior && JSON.stringify(prior) === JSON.stringify(input)) return group
+    if (prior && prior.quantity === input.quantity && sameSkuAttributes(prior.attributes, input.attributes)) return group
     return { ...group, materials: group.materials.map(selection => selection.catalogId === materialId
       ? { ...selection, skuChoices: nextChoices, quantity: total }
       : selection) }
