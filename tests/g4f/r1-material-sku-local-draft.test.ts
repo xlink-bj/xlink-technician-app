@@ -74,7 +74,12 @@ describe('M1 I2 R1 local SKU quantity choices / schema v4: NO official Order', (
     expect((await repository.read(roleA)).data).toBeNull()
     expect((await repository.read(roleB)).data).toBeNull()
     const firstA = useQuotationCompositionStore()
-    expect(await firstA.initialize({ identity: roleA, repository, debounceMs: 60_000 })).toBe('fresh')
+    expect(await firstA.initialize({ identity: roleA, repository, debounceMs: 60_000 }))
+      .toBe('unscoped_requires_confirmation')
+    expect(firstA.draft).toBeNull()
+    expect(firstA.createGroup({ repairParts: ['bathroom'] }).state).toBe('failed_terminal')
+    expect((await repository.read(old)).data).toMatchObject(oldRecord)
+    expect((await firstA.startNewRoleScopedDraft()).state).toBe('succeeded')
     const group = firstA.createGroup({ repairParts: ['bathroom'] }).data!
     expect(firstA.addCatalogReadItem(group,
       { kind: 'material', id: 'spu-A', name: '材料 A' }).state).toBe('succeeded')
@@ -90,7 +95,10 @@ describe('M1 I2 R1 local SKU quantity choices / schema v4: NO official Order', (
 
     setActivePinia(createPinia())
     const reenteredB = useQuotationCompositionStore()
-    expect(await reenteredB.initialize({ identity: roleB, repository })).toBe('fresh')
+    expect(await reenteredB.initialize({ identity: roleB, repository }))
+      .toBe('unscoped_requires_confirmation')
+    expect(reenteredB.groups).toEqual([])
+    expect((await reenteredB.startNewRoleScopedDraft()).state).toBe('succeeded')
     expect(reenteredB.groups).toEqual([])
     // Role B's empty state does not destroy either role A's or historical v2 data.
     expect((await repository.read(old)).data).toMatchObject(oldRecord)
