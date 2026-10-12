@@ -100,6 +100,10 @@ for (const vp of [{ width: 390, height: 844 }, { width: 375, height: 667 }]) {
     await expect(page.getByTestId('quotation-group-section-quotation-group-1-material')).toBeVisible()
     await expect(page.getByTestId('quotation-p1-local-review')).toBeVisible()
     await expect(page.getByTestId('action-workspace-submit')).toHaveCount(0)
+    // Quote persistence is intentionally asynchronous. Reload only after the
+    // actual UI confirms the local draft is durable, exactly as other main App
+    // regression tests do. A premature reload would be a test race.
+    await expect(page.getByText(/报价草稿已保存在本机|报价分组草稿已保存在本机/)).toBeVisible()
     await group.scrollIntoViewIfNeeded()
     await shot('04-return-to-group', 'quotation-state-ready')
 
