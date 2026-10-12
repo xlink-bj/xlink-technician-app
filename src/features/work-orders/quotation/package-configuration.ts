@@ -44,6 +44,12 @@ export function quotationPackageLayerKey(layer: string | number | undefined): st
   return `${typeof layer}:${String(layer)}`
 }
 
+/** R1 sorts package materials numerically before assigning alternatives to a layer. */
+export function compareQuotationPackageLayerKeys(a: string, b: string): number {
+  if (!a.startsWith('number:') || !b.startsWith('number:')) return 0
+  return Number(a.slice('number:'.length)) - Number(b.slice('number:'.length))
+}
+
 function validLayer(value: unknown): value is string | number {
   return (typeof value === 'string' && value.trim().length > 0)
     || (typeof value === 'number' && Number.isFinite(value))
@@ -136,7 +142,7 @@ export function configuredQuotationPackageCandidateFor(
 
   if (choices.length !== layers.size) return rejected('请为每个套餐材料层级选择且只选择一项材料。')
   const selectedMaterials: QuotationPackageConfiguration['materials'][number][] = []
-  for (const [key, layer] of layers) {
+  for (const [key, layer] of [...layers].sort(([a], [b]) => compareQuotationPackageLayerKeys(a, b))) {
     const layerChoices = choices.filter((choice) => quotationPackageLayerKey(choice.layer) === key)
     if (layerChoices.length !== 1) return rejected('请为每个套餐材料层级选择且只选择一项材料。')
     const choice = layerChoices[0]
