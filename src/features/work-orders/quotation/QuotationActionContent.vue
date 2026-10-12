@@ -869,7 +869,7 @@
               message="该规格组合没有唯一、有效的 SKU；未修改报价。" tone="warning" quiet
               data-testid="quotation-sku-match-unavailable" />
           </template>
-          <AppStatus v-else :message="catalogBrowser.materialSkuPreview?.message || '当前材料没有可用规格'"
+          <AppStatus v-else :message="materialSkuPreviewStatusMessage"
             tone="warning" quiet data-testid="quotation-sku-preview-unavailable" />
           <view class="quotation-content__catalog-footer">
             <text class="quotation-content__catalog-footer-note">数据来自 R1 现有接口。暂不提供价格、数量或加入报价操作。</text>
@@ -1079,6 +1079,10 @@ const emit = defineEmits<{
 
 const composition = useQuotationCompositionStore()
 const catalogBrowser = useQuotationCatalogBrowserStore()
+const materialSkuPreviewStatusMessage = computed(() => {
+  const preview = catalogBrowser.materialSkuPreview
+  return preview && preview.state !== 'ready' ? preview.message : '当前材料没有可用规格'
+})
 const workspace = useActionWorkspaceStore()
 const syntheticReviewEnabled = computed(() => import.meta.env.DEV
   && props.syntheticFieldsReview === true
