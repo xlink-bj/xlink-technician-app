@@ -33,6 +33,8 @@
     "inspect:form-schema": "node scripts/inspect-inspection-contract.mjs",
     "verify:g4f-prod-read": "node scripts/verify-g4f-prod-read.mjs",
     "inspect:g4f-active-order-extfield": "node scripts/inspect-g4f-active-order-extfield.mjs",
+    "inspect:i2-r1-sku": "node scripts/inspect-i2-r1-sku-bounded.mjs",
+    "check:i2-r1-sku-evidence": "node --check scripts/inspect-i2-r1-sku-bounded.mjs && node --test tests/scripts/i2-r1-sku-evidence.test.mjs && node scripts/inspect-i2-r1-sku-bounded.mjs",
     "inspect:inspection-contract": "node scripts/inspect-inspection-contract.mjs",
     "inspect:inspection-contract:beta": "node scripts/inspect-inspection-contract-beta.mjs",
     "capture:survey-contract:beta": "node scripts/capture-survey-contract-beta.mjs",
@@ -50,7 +52,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "check:boundaries": "node scripts/check-boundaries.mjs",
-    "verify": "pnpm run check:boundaries && pnpm run check:ui-governance && pnpm run check:g4f-phase1a && pnpm run check:g4f-phase1b && pnpm run check:g4f-synthetic-extfield-review && pnpm run typecheck && pnpm run test",
+    "verify": "pnpm run check:i2-r1-sku-evidence && pnpm run check:boundaries && pnpm run check:ui-governance && pnpm run check:g4f-phase1a && pnpm run check:g4f-phase1b && pnpm run check:g4f-synthetic-extfield-review && pnpm run typecheck && pnpm run test",
     "check:ui-governance": "node scripts/check-ui-governance.mjs"
   },
   "dependencies": {
