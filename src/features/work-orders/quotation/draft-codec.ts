@@ -12,10 +12,10 @@ import {
   type QuotationSelection,
 } from './model'
 
-const QUOTATION_DRAFT_SCHEMA_VERSION = 3
+const QUOTATION_DRAFT_SCHEMA_VERSION = 4
 
 export interface QuotationDraftRecordValues extends Readonly<Record<string, unknown>> {
-  readonly schemaVersion: 3
+  readonly schemaVersion: 4
   readonly quotationDraft: QuotationDraft
 }
 
@@ -83,10 +83,35 @@ function validPackageConfiguration(value: unknown): boolean {
   return new Set(materialLayers).size === materialLayers.length
 }
 
+function validSkuChoices(value: unknown, total: unknown): boolean {
+  if (!Array.isArray(value) || value.length === 0 || value.length > 50) return false
+  const ids = new Set<string>()
+  const choices = new Set<string>()
+  let sum = 0
+  for (const entry of value) {
+    const row = record(entry)
+    const attrs = record(row?.attributes)
+    if (!row || !exactKeys(row, ['skuId', 'quantity', 'attributes'])
+      || !nonEmptyString(row.skuId) || ids.has(row.skuId)
+      || !Number.isSafeInteger(row.quantity) || (row.quantity as number) < 1
+      || (row.quantity as number) > 9999 || !attrs || Object.keys(attrs).length === 0
+      || Object.keys(attrs).length > 30
+      || Object.entries(attrs).some(([k, v]) => !k.trim()
+        || ['__proto__', 'constructor', 'prototype'].includes(k)
+        || !nonEmptyString(v))) return false
+    ids.add(row.skuId)
+    const attrKey = JSON.stringify(Object.entries(attrs).sort(([a], [b]) => a.localeCompare(b)))
+    if (choices.has(attrKey)) return false
+    choices.add(attrKey)
+    sum += row.quantity as number
+  }
+  return Number.isSafeInteger(sum) && sum <= 99999 && sum === total
+}
+
 function validSelection(
   value: unknown,
   expectedKind: QuotationLineKind,
-  schemaVersion: 2 | 3,
+  schemaVersion: 2 | 3 | 4,
 ): value is QuotationSelection {
   const selection = record(value)
   if (!selection) return false
@@ -97,8 +122,11 @@ function validSelection(
     'label',
     'quantity',
     ...(Object.prototype.hasOwnProperty.call(selection, 'unit') ? ['unit'] : []),
-    ...(schemaVersion === 3 && expectedKind === 'package' && Object.prototype.hasOwnProperty.call(selection, 'configuration')
+    ...(schemaVersion >= 3 && expectedKind === 'package' && Object.prototype.hasOwnProperty.call(selection, 'configuration')
       ? ['configuration']
+      : []),
+    ...(schemaVersion === 4 && expectedKind === 'material' && Object.prototype.hasOwnProperty.call(selection, 'skuChoices')
+      ? ['skuChoices']
       : []),
   ]
   return exactKeys(selection, expectedKeys)
@@ -113,13 +141,16 @@ function validSelection(
     && (schemaVersion === 2 || expectedKind !== 'package'
       || !Object.prototype.hasOwnProperty.call(selection, 'configuration')
       || validPackageConfiguration(selection.configuration))
+    && (schemaVersion !== 4 || expectedKind !== 'material'
+      || !Object.prototype.hasOwnProperty.call(selection, 'skuChoices')
+      || validSkuChoices(selection.skuChoices, selection.quantity))
 }
 
-function validSelectionList(value: unknown, kind: QuotationLineKind, schemaVersion: 2 | 3): value is readonly QuotationSelection[] {
+function validSelectionList(value: unknown, kind: QuotationLineKind, schemaVersion: 2 | 3 | 4): value is readonly QuotationSelection[] {
   return Array.isArray(value) && value.every((selection) => validSelection(selection, kind, schemaVersion))
 }
 
-function validGroup(value: unknown, schemaVersion: 2 | 3): value is QuotationGroup {
+function validGroup(value: unknown, schemaVersion: 2 | 3 | 4): value is QuotationGroup {
   const group = record(value)
   if (!group) return false
   const expectedKeys = [
@@ -197,7 +228,7 @@ export function decodeQuotationDraftRecord(
   }
 
   if (
-    (values.schemaVersion !== 2 && values.schemaVersion !== QUOTATION_DRAFT_SCHEMA_VERSION) ||
+    (values.schemaVersion !== 2 && values.schemaVersion !== 3 && values.schemaVersion !== QUOTATION_DRAFT_SCHEMA_VERSION) ||
     !exactKeys(draftValue, ['workOrderId', 'workflowNodeId', 'draftVersion', 'groups']) ||
     !nonEmptyString(draftValue.workOrderId) ||
     !nonEmptyString(draftValue.workflowNodeId) ||
@@ -207,12 +238,12 @@ export function decodeQuotationDraftRecord(
     !Number.isSafeInteger(draftValue.draftVersion) ||
     draftValue.draftVersion < 1 ||
     !Array.isArray(draftValue.groups) ||
-    !draftValue.groups.every((group) => validGroup(group, values.schemaVersion as 2 | 3))
+    !draftValue.groups.every((group) => validGroup(group, values.schemaVersion as 2 | 3 | 4))
   ) return { state: 'invalid', reason: '新版报价分组草稿内容无效，未覆盖原记录。' }
 
   const groups = draftValue.groups as QuotationGroup[]
   const groupIds = new Set(groups.map((group) => group.groupId))
-  const duplicateConfiguredPackage = values.schemaVersion === 3 && groups.some((group) => {
+  const duplicateConfiguredPackage = Number(values.schemaVersion) >= 3 && groups.some((group) => {
     const configuredIds = group.projPackages
       .filter((selection) => selection.configuration)
       .map((selection) => selection.catalogId)
@@ -250,7 +281,11 @@ export function decodeQuotationDraftRecord(
           } : {}),
         })),
         procedures: group.procedures.map((selection) => ({ ...selection })),
-        materials: group.materials.map((selection) => ({ ...selection })),
+        materials: group.materials.map((selection) => ({ ...selection,
+          ...(selection.skuChoices ? { skuChoices: selection.skuChoices.map(choice => ({
+            ...choice, attributes: { ...choice.attributes },
+          })) } : {}),
+        })),
         measures: group.measures.map((selection) => ({ ...selection })),
       })),
     },
