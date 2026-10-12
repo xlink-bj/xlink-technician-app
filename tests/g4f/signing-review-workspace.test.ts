@@ -32,9 +32,10 @@ function setup(opts: {
 } = {}) {
   let active: SessionSnapshot | null = session()
   let visible = opts.allowed ?? true
-  const listTypeOneOrdersForWorkOrder = vi.fn(opts.listed ?? (async () => ({
-    state: 'succeeded' as const, data: { items: [row()], page: 1, pageSize: 3, totalCount: 1 },
-  })))
+  const boundedList: QuotationOrderReadPort['listTypeOneOrdersForWorkOrder'] = opts.listed ?? (async () => ({
+    state: 'succeeded', data: { items: [row()], page: 1, pageSize: 3, totalCount: 1 },
+  }))
+  const listTypeOneOrdersForWorkOrder = vi.fn(boundedList)
   const readScopedTypeOneOrderForSigningReview = vi.fn(opts.detail ?? (async () => ({
     state: 'succeeded' as const, data: data(),
   })))
@@ -59,8 +60,10 @@ describe('M1-I6 scoped signing-read handoff — no Contract or signature authori
     const x = await s.workspace.load(wo, order)
     expect(x).toMatchObject({ state: 'succeeded', data: { order: { id: order }, signingAuthorized: false, contractReadAuthorized: false } })
     expect(s.workspace.snapshot()).toMatchObject({ state: 'ready', workOrderId: wo, orderId: order })
-    expect(s.listTypeOneOrdersForWorkOrder).toHaveBeenCalledExactlyOnceWith(wo, 3)
-    expect(s.readScopedTypeOneOrderForSigningReview).toHaveBeenCalledExactlyOnceWith(wo, order)
+    expect(s.listTypeOneOrdersForWorkOrder).toHaveBeenCalledOnce()
+    expect(s.listTypeOneOrdersForWorkOrder).toHaveBeenCalledWith(wo, 3)
+    expect(s.readScopedTypeOneOrderForSigningReview).toHaveBeenCalledOnce()
+    expect(s.readScopedTypeOneOrderForSigningReview).toHaveBeenCalledWith(wo, order)
     expect(s.port.getQuotationOrderById).not.toHaveBeenCalled()
     expect(s.port).not.toHaveProperty('sendSMS')
     expect(s.port).not.toHaveProperty('generatePDF')
