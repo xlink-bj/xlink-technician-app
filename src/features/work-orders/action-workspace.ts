@@ -881,6 +881,14 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     }
 
     if (isQuotationAction) {
+      // A quotation draft must have an authenticated role provenance. Without
+      // one, do not fall back to the unscoped pre-v3 storage key.
+      if (!session.currentRole?.id) {
+        loadState.value = 'blocked'
+        lifecycle.value = 'blocked'
+        error.value = createOperationError('session_invalid', '当前角色不可用，禁止恢复无角色归属的报价草稿。')
+        return failure('session_invalid', '当前角色不可用，禁止恢复无角色归属的报价草稿。')
+      }
       const nextDescriptor: ActionDescriptor = {
         userId: session.user.id,
         workOrderId: read.data.id,
@@ -897,7 +905,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
         readPort: configured.quotationCatalogRead ?? null,
         catalogContext: read.data.quotationCatalogContext,
       })
-      identity = actionDraftIdentityFor(nextDescriptor)
+      identity = actionDraftIdentityFor(nextDescriptor, session.currentRole.id)
       const repairPartsRead = await configured.apiRead.getCascadeCodeOptions({ codeType: 'repairParts' })
       if (requestVersion !== loadVersion) return failure('cancelled', 'Action Workspace load was superseded')
       if (!scopeUnchanged()) return blockStaleScope()
