@@ -83,6 +83,22 @@ describe('M1 I2 R1 local SKU quantity choices / schema v4: NO official Order', (
       { ...matchA, attributes: { color: 'grey' } })).toBe(first)
   })
 
+  it('treats reordered attribute keys as the same SKU identity and still rejects changes', () => {
+    const draft = setupDraft('wo-1', 'node-1')
+    const first = upsertLocalQuotationMaterialSkuChoice(draft, 'group-a', 'spu-A', matchA)
+    const reordered = { skuId: matchA.skuId, quantity: matchA.quantity,
+      attributes: { thickness: '2', color: 'black' } }
+    expect(upsertLocalQuotationMaterialSkuChoice(first, 'group-a', 'spu-A', reordered)).toBe(first)
+    const updated = upsertLocalQuotationMaterialSkuChoice(first, 'group-a', 'spu-A',
+      { ...reordered, quantity: 7 })
+    expect(updated.groups[0]!.materials[0]!.quantity).toBe(7)
+    expect(updated.groups[0]!.materials[0]!.skuChoices).toHaveLength(1)
+    expect(upsertLocalQuotationMaterialSkuChoice(updated, 'group-a', 'spu-A',
+      { ...reordered, skuId: 'different-sku', quantity: 1 })).toBe(updated)
+    expect(upsertLocalQuotationMaterialSkuChoice(updated, 'group-a', 'spu-A',
+      { ...reordered, attributes: { thickness: '4', color: 'black' } })).toBe(updated)
+  })
+
   it('round-trips new SKU choices through the ACTUAL scoped local draft repository', async () => {
     const repository = createActionDraftRepository(memoryStorage())
     const id = identity()
