@@ -33,7 +33,7 @@ function identity(userId = 'technician-1', workOrderId = 'wo-1'): ActionDraftIde
     actionIntent: 'place_order', contentKind: 'quotation',
   })
 }
-function setupDraft(workOrderId: string, nodeId: string) {
+function setupDraft(workOrderId: string, nodeId: string): QuotationDraft {
   return {
     ...createEmptyQuotationDraft(workOrderId, nodeId),
     groups: [
