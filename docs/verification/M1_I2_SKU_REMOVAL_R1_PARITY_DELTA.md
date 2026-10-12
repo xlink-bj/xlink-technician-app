@@ -14,6 +14,12 @@
 | Package SKU | R1 `placeOrders.vue:6306–6352` projects Package SKU without original `spuid` and exact attribute fields | Local Package model remains separate from material SKU local-intent path | Runtime payload equivalence unresolved. |
 | Official quotation | R1 emits prices and other commercial data not supported by verified New App SKU catalog contract | `validateQuotationDraft` adds `material.sku_local_only`; Order.type=1 encoder denies SKU path | **Fail closed**: no fake price, official Order, PDF, contract, workflow completion, or Production/Beta write. |
 
+## Additional Lead direct fix: in-memory cross-role / async read guard
+
+- `src/features/work-orders/action-workspace.ts` now snapshots authenticated `sessionRef + userId + currentRole.id + roleVersion` at action load start, rejects pending Work Order / form / quotation recovery results if this identity changes, and invalidates the cached action rather than returning the previous role's descriptor from `ensureLoaded`.
+- `tests/g4d/action-workspace.test.ts` covers same-user roleVersion cache invalidation and same-user role ID transition mid-read. No fake backend authorization or migration was introduced.
+- **Residual critical gate:** historical v2/v3/v4 local drafts still have no recorded role provenance; this memory/session guard **does not prove role-safe persisted-draft re-entry after app restart or newly authorized role load**. Do not misrepresent this as complete cross-role isolation. R1 live role entitlement + old-draft migration/recovery choice must be demonstrated before I2 acceptance. No automatic deletion/migration of old local drafts.
+
 ## Implementation in Draft #104
 
 - `model.ts`: same-key/value identity check; `removeLocalQuotationMaterialSkuChoice` only touches an exact SKU in one material SPU of one repair group; final SKU removes that material.
