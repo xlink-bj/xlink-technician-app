@@ -233,7 +233,8 @@ export function encodeR1OfficialOrderType1(input: {
       if (selection.kind === 'package') {
         const blocker = packageMaterialQuantityIssue(selection, group.groupId)
         if (blocker) issues.push(blocker)
-      } else if (selection.kind === 'material' && selection.item.spuId) {
+      } else if (selection.kind === 'material' &&
+        (selection.item.spuId || selection.selection.skuChoices?.length)) {
         issues.push({
           code: 'encoding.material_sku_path_not_authorized',
           message: '此材料使用 SPU/SKU 规格路径；该选择语义未纳入本阶段。',
