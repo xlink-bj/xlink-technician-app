@@ -11,7 +11,7 @@ export function isDirectQuotationCatalogKind(kind: string): kind is QuotationDir
 }
 
 /** SKU evidence is LOCAL DRAFT ONLY. R1 records per-SKU number under a material
- * SPU; SKU prices, Order encoding and workflow writes are NOT authorized.
+ * SPU; SKU 金额、Order 编码和工作流写入均不在本阶段范围。
  */
 export interface QuotationMaterialSkuChoice {
   readonly skuId: string
@@ -27,7 +27,7 @@ export interface QuotationSelection<K extends QuotationLineKind = QuotationLineK
   readonly label: string
   readonly unit?: string
   readonly quantity: number
-  /** Local per-SKU intent, excluded from official Order and price calculation. */
+  /** Local per-SKU intent, excluded from official Order and monetary calculation. */
   readonly skuChoices?: K extends 'material' ? readonly QuotationMaterialSkuChoice[] : never
   readonly configuration?: K extends 'package' ? QuotationPackageConfiguration : never
 }
@@ -244,7 +244,7 @@ export function upsertQuotationPackageSelection(
 }
 
 /** Updates one SKU amount for one already-added SPU in one local repair group.
- * R1 aggregates SPU.number = sum(sku.number). This does NOT prove price/Order.
+ * R1 aggregates SPU.number = sum(sku.number). This does NOT establish commercial Order authority.
  * Returning the same object means the caller must report a validation failure.
  */
 export function upsertLocalQuotationMaterialSkuChoice(
