@@ -1,4 +1,6 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test } from '@playwright/test'
+import { resolve } from 'node:path'
+import { pathToFileURL } from 'node:url'
 
 /**
  * I4 Owner visual gate — reality captured from the *real* main App Vue route,
@@ -26,10 +28,13 @@ for (const vp of [{ width: 390, height: 844 }, { width: 375, height: 667 }]) {
         await route.abort('blockedbyclient')
       }
     })
+    const realScreens: Record<string, Buffer> = {}
     const shot = async (name: string, expected: string) => {
       await expect(page.getByTestId(expected)).toBeVisible()
+      const png = await page.screenshot({ fullPage: true })
+      if (vp.width === 390 && /^0[1-4]-/.test(name)) realScreens[name.slice(0, 2)] = png
       await info.attach('I4-REAL-' + name + '-' + vp.width, {
-        body: await page.screenshot({ fullPage: true }), contentType: 'image/png',
+        body: png, contentType: 'image/png',
       })
     }
     await page.goto('/#/pages/index/index', { waitUntil: 'domcontentloaded' })
@@ -106,6 +111,56 @@ for (const vp of [{ width: 390, height: 844 }, { width: 375, height: 667 }]) {
     await expect(page.getByTestId('quotation-p1-review-order-blocked')).toBeVisible()
     await expect(page.getByTestId('action-workspace-submit')).toHaveCount(0)
     await shot('05-reloaded-order-blocked', 'quotation-state-ready')
+
+    // Make one reviewable 4-row comparison image at 390px. The RIGHT
+    // column is an isolated static design concept, NOT current Vue UI and
+    // NOT an R1 screenshot. The main App screenshots above are real routes.
+    if (vp.width === 390) {
+      const design = await page.context().newPage()
+      await design.setViewportSize(vp)
+      const conceptUrl = pathToFileURL(resolve(process.cwd(), '__review/concepts/m1-quotation-four-surface.html')).href
+      const conceptScreens: Record<string, Buffer> = {}
+      try {
+        await design.goto(conceptUrl, { waitUntil: 'load' })
+        await expect(design.getByTestId('ux-stage-workbench')).toBeVisible()
+        conceptScreens['01'] = await design.screenshot({ fullPage: true })
+        await design.getByTestId('ux-nav-catalog').click()
+        await expect(design.getByTestId('ux-stage-catalog')).toBeVisible()
+        conceptScreens['02'] = await design.screenshot({ fullPage: true })
+        await design.getByTestId('ux-select-package').click()
+        await expect(design.getByTestId('ux-stage-config')).toBeVisible()
+        conceptScreens['03'] = await design.screenshot({ fullPage: true })
+        await design.getByTestId('ux-primary').click()
+        await expect(design.getByTestId('ux-stage-return')).toBeVisible()
+        conceptScreens['04'] = await design.screenshot({ fullPage: true })
+      } finally { await design.close() }
+      const headings = ['报价工作台', '可视化目录', '套餐配置', '返回维修部位']
+      const images = ['01', '02', '03', '04'].map((step, i) =>
+        '<section class="compare"><h2>' + step + ' · ' + headings[i] + '</h2>' +
+        '<div class="pair"><article><div class="source">当前真实 App · DEV 合成工单</div><img src="data:image/png;base64,' +
+        realScreens[step].toString('base64') + '" /></article><article>' +
+        '<div class="source">V2 独立高保真 UX 提案 · 非正式 UI</div><img src="data:image/png;base64,' +
+        conceptScreens[step].toString('base64') + '" /></article></div></section>'
+      ).join('')
+      const sheet = await page.context().newPage()
+      try {
+        await sheet.setViewportSize({ width: 960, height: 1200 })
+        await sheet.setContent('<!doctype html><html lang="zh"><head><meta charset="utf-8" />' +
+          '<style>*{box-sizing:border-box}body{margin:0;padding:32px;background:#f4f7fb;color:#172e47;font:14px -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif}' +
+          'h1{margin:0 0 10px;font-size:25px}p{margin:0 0 24px;color:#58708a;line-height:1.55}' +
+          '.compare{margin:22px 0 38px;break-inside:avoid}.compare h2{font-size:18px;margin:0 0 12px;padding:0 0 8px;border-bottom:1px solid #dfe7f2}' +
+          '.pair{display:grid;grid-template-columns:1fr 1fr;gap:18px}.pair article{min-width:0;background:white;padding:14px;border-radius:14px;border:1px solid #dfe7f2}' +
+          '.source{font-size:12px;color:#39638b;font-weight:700;margin:0 0 12px}.pair img{display:block;width:100%;height:auto;border:1px solid #e4eaf3}' +
+          'footer{font-size:12px;color:#59718a;margin-top:24px}</style></head><body>' +
+          '<h1>M1 I4 · 报价四屏视觉对照（390px）</h1>' +
+          '<p>左：当前 uni-app 真实页面，离线 DEV 合成数据。右：V2 独立设计概念，非 App 运行界面。两者不是同一正式商品 ID；R1 生产截图未纳入本证据。</p>' +
+          images +
+          '<footer>Owner 视觉评审候选 · KEEP / IMPROVE / DROP 详见 M1_I4_OWNER_VISUAL_DECISION_PACK.md · 未签收 · 不提交订单</footer></body></html>')
+        await info.attach('I4-OWNER-four-screen-REAL-vs-V2-390', {
+          body: await sheet.screenshot({ fullPage: true }), contentType: 'image/png',
+        })
+      } finally { await sheet.close() }
+    }
 
     expect(external, 'offline screenshots must not attempt an external request').toEqual([])
     expect(failures, 'no failed local assets').toEqual([])
