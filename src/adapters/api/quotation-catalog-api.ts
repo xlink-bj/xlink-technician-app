@@ -132,6 +132,26 @@ function procedureItem(raw: unknown): QuotationProcedureRead {
   }
 }
 
+/** Candidate value arrays are NOT verified sale options until matched against R1
+ * ExtField + Code dictionaries. No broad exts object leaves the adapter.
+ */
+function materialSaleCandidates(record: AdapterRecord): Readonly<Record<string, readonly string[]>> | undefined {
+  const exts = optionalRecord(record.exts)
+  if (!exts) return undefined
+  const values: Record<string, readonly string[]> = Object.create(null) as Record<string, readonly string[]>
+  for (const [key, candidate] of Object.entries(exts)) {
+    if (!Array.isArray(candidate) || !key || key.length > 100 || ['__proto__', 'constructor', 'prototype'].includes(key)
+      || candidate.length === 0 || candidate.length > 40) continue
+    const codes = candidate.map(value => (typeof value === 'number' && Number.isFinite(value))
+      ? String(value)
+      : typeof value === 'string' && value.trim() ? value.trim() : null)
+    if (codes.some(code => code === null) || new Set(codes).size !== codes.length) continue
+    values[key] = codes as string[]
+    if (Object.keys(values).length > 30) break
+  }
+  return Object.keys(values).length > 0 ? values : undefined
+}
+
 function materialItem(raw: unknown): QuotationMaterialRead {
   const record = asRecord(raw, 'quotation material')
   const spuId = optionalString(record, ['spuid'])
@@ -148,6 +168,7 @@ function materialItem(raw: unknown): QuotationMaterialRead {
     ...(specUnit ? { specUnit } : {}),
     ...(type === undefined ? {} : { type }),
     ...(spuId ? { spuId } : {}),
+    ...(materialSaleCandidates(record) ? { saleOptionCandidates: materialSaleCandidates(record) } : {}),
   }
 }
 
@@ -155,7 +176,7 @@ function materialItem(raw: unknown): QuotationMaterialRead {
  * commercial fields and untyped exts are deliberately not exposed until
  * real ExtField/valueOption resolution is source-matched in the quotation UI.
  */
-function materialSkuVariantItem(raw: unknown, expectedSpuIds: ReadonlySet<string>): QuotationMaterialSkuVariantRead {
+function materialSkuVariantItem(raw: unknown, expectedSpuIds: ReadonlySet<string>, saleFieldNames: readonly string[]): QuotationMaterialSkuVariantRead {
   const record = asRecord(raw, 'R1 material SKU')
   const id = requiredString(record, ['_id'], 'material SKU identity')
   const spuId = requiredString(record, ['spuid'], 'material SKU parent')
@@ -165,16 +186,26 @@ function materialSkuVariantItem(raw: unknown, expectedSpuIds: ReadonlySet<string
   }
   const specification = optionalString(record, ['spec'])
   const unit = optionalString(record, ['unit'])
+  const attrs = optionalRecord(record.exts)
+  const projected: Record<string, string> = Object.create(null) as Record<string, string>
+  for (const name of saleFieldNames) {
+    const rawValue = attrs?.[name]
+    const code = typeof rawValue === 'number' && Number.isFinite(rawValue)
+      ? String(rawValue)
+      : typeof rawValue === 'string' && rawValue.trim() ? rawValue.trim() : undefined
+    if (code) projected[name] = code
+  }
   return {
     id, spuId, name: requiredString(record, ['name'], 'material SKU name'),
     ...(specification ? { specification } : {}),
     ...(unit ? { unit } : {}),
+    ...(saleFieldNames.length ? { saleAttributeValues: projected } : {}),
   }
 }
 
-function materialSkuPage(raw: unknown, ids: readonly string[]): ReadPage<QuotationMaterialSkuVariantRead> {
+function materialSkuPage(raw: unknown, ids: readonly string[], saleFieldNames: readonly string[]): ReadPage<QuotationMaterialSkuVariantRead> {
   const allowed = new Set(ids)
-  const page = pageEnvelope(raw, row => materialSkuVariantItem(row, allowed))
+  const page = pageEnvelope(raw, row => materialSkuVariantItem(row, allowed, saleFieldNames))
   if (new Set(page.items.map(row => row.id)).size !== page.items.length) {
     throw new AdapterMappingError('duplicate material SKU identity in read')
   }
@@ -637,7 +668,7 @@ class QuotationCatalogReadAdapter implements QuotationCatalogReadPort {
   /** R1 read-only SKU identity, intentionally not called from any UI yet.
    * The current Production allowlist does not permit basic/material/query.
    */
-  listMaterialSkuVariants(context: QuotationCatalogContext, route: 'direct_material' | 'package_materials', spuIds: readonly string[]) {
+  listMaterialSkuVariants(context: QuotationCatalogContext, route: 'direct_material' | 'package_materials', spuIds: readonly string[], saleFieldNames: readonly string[] = []) {
     return this.read(
       () => {
         if (this.isProductionReadOnly()) {
@@ -646,9 +677,15 @@ class QuotationCatalogReadAdapter implements QuotationCatalogReadPort {
             'authorization_denied',
           )
         }
+        if (!Array.isArray(saleFieldNames) || saleFieldNames.length > 30
+          || saleFieldNames.some(name => typeof name !== 'string' || !name.trim() || name.length > 100
+            || ['__proto__', 'constructor', 'prototype'].includes(name))
+          || new Set(saleFieldNames).size !== saleFieldNames.length) {
+          throw new AdapterMappingError('material sales field names are not a verified bounded list')
+        }
         return materialSkuRequest(context, route, spuIds)
       },
-      raw => materialSkuPage(raw, spuIds),
+      raw => materialSkuPage(raw, spuIds, saleFieldNames),
     )
   }
 }
