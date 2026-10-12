@@ -34,7 +34,7 @@ type ListResult = Awaited<ReturnType<QuotationOrderReadPort['listTypeOneOrdersFo
 type ReadResult = Awaited<ReturnType<NonNullable<QuotationOrderReadPort['readScopedTypeOneOrderForSigningReview']>>>
 
 function fixture(overrides: {
-  readonly list?: (workOrderId: string, pageSize: 1 | 3) => Promise<ListResult>
+  readonly list?: (workOrderId: string, pageSize?: 1 | 3) => Promise<ListResult>
   readonly read?: (workOrderId: string, orderId: string) => Promise<ReadResult>
   readonly membership?: boolean
   readonly readSupported?: boolean
@@ -42,12 +42,11 @@ function fixture(overrides: {
   const current = ref<SessionSnapshot | null>(session())
   const visible = ref(overrides.membership ?? true)
   const getQuotationOrderById = vi.fn(async () => ({ state: 'failed_terminal' as const }))
-  const listTypeOneOrdersForWorkOrder = vi.fn(
-    overrides.list ?? (async () => ({
-      state: 'succeeded' as const,
-      data: { items: [order()], page: 1, pageSize: 3, totalCount: 1 },
-    })),
-  )
+  const listImpl: QuotationOrderReadPort['listTypeOneOrdersForWorkOrder'] = overrides.list ?? (async () => ({
+    state: 'succeeded',
+    data: { items: [order()], page: 1, pageSize: 3, totalCount: 1 },
+  }))
+  const listTypeOneOrdersForWorkOrder = vi.fn(listImpl)
   const read = vi.fn(
     overrides.read ?? (async () => ({ state: 'succeeded' as const, data: doc() })),
   )
