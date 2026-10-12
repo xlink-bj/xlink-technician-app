@@ -212,7 +212,7 @@ describe('G4-F Phase 1E quotation catalog browser', () => {
     expect(store.catalogItemsByKind.package).toEqual([])
   })
 
-  it('follows R1 Number(layer) semantics for package alternatives and keeps first-seen order', () => {
+  it('follows R1 Number(layer) grouping and ascending layer order for package alternatives', () => {
     const groups = quotationPackageMaterialLayersFor([
       { kind: 'material', item: null, layer: 1 },
       { kind: 'material', item: null, layer: '01' },
@@ -220,7 +220,7 @@ describe('G4-F Phase 1E quotation catalog browser', () => {
       { kind: 'material', item: null, layer: 0 },
       { kind: 'material', item: null, layer: '2' },
     ])
-    expect(groups.map((group) => group.key)).toEqual(['number:1', 'number:0', 'number:2'])
+    expect(groups.map((group) => group.key)).toEqual(['number:0', 'number:1', 'number:2'])
     expect(groups.map((group) => group.materials.length)).toEqual([2, 2, 1])
     expect(groups.map((group) => group.label)).toEqual(['材料层级 1', '材料层级 2', '材料层级 3'])
     expect(groups.map((group) => group.label).join(' ')).not.toContain('number:')
