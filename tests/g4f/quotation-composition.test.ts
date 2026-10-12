@@ -386,6 +386,25 @@ describe('G4-F quotation composition model and local draft recovery', () => {
       }] }],
     }
     expect(decodeQuotationDraftRecord(quotationDraftRecordFor(currentIdentity, duplicateLayer, '2026-09-22T09:00:00.000Z'), currentIdentity).state).toBe('invalid')
+    // R1 treats provider layer 1 and "01" as the same material layer.
+    // Restoring two selections for that logical layer must remain invalid.
+    const mixedRepresentation = {
+      ...draft,
+      groups: [{ ...draft.groups[0], projPackages: [{
+        ...configuredPackage,
+        configuration: {
+          ...configuredPackage.configuration,
+          materials: [
+            ...configuredPackage.configuration.materials,
+            { providerComponentId: 'material-body-b', catalogId: 'material-b', label: '同层另一材料', layer: '01' },
+          ],
+        },
+      }] }],
+    }
+    expect(decodeQuotationDraftRecord(
+      quotationDraftRecordFor(currentIdentity, mixedRepresentation, '2026-09-22T09:00:00.000Z'),
+      currentIdentity,
+    ).state).toBe('invalid')
 
     const duplicatePackage = {
       ...draft,
