@@ -60,6 +60,9 @@ export const mockQuotationMaterialListResponse = {
       spec: '常用包装规格（示例）',
       specUnit: '支',
       type: 1,
+      // Synthetic SPU option whitelist; raw R1 ExtField/Code and SKU routes
+      // independently verify these values before the local-only picker shows them.
+      exts: { thickness: ['2', '3'], color: ['black', 'grey'] },
       serviceType: [mockQuotationCatalogServiceType],
       sourceTypeList: [mockQuotationCatalogSourceType],
       order: 1,
@@ -182,4 +185,35 @@ export const mockQuotationPackageDetailResponse = {
       },
     ],
   },
+} as const
+
+/** R1-shaped, wholly synthetic DEV Mock SKU contract. Never production catalog data. */
+export const mockMaterialSkuSpuId = 'mock-catalog-material-sealant'
+export const mockMaterialSalesExtFieldsResponse = {
+  data: [
+    { _id: 'mock-sale-thickness', colName: 'material', state: 1,
+      name: 'thickness', nameDisp: '厚度', valueOption: 'MOCK_MATERIAL_THICKNESS',
+      frontEndConfig: JSON.stringify({ salesAttribute: true }) },
+    { _id: 'mock-sale-color', colName: 'material', state: 1,
+      name: 'color', nameDisp: '颜色', valueOption: 'MOCK_MATERIAL_COLOR',
+      frontEndConfig: JSON.stringify({ salesAttribute: true }) },
+  ],
+  page: 1, rows: 20, total: 2,
+} as const
+
+export const mockMaterialSaleCodeOptions = {
+  MOCK_MATERIAL_THICKNESS: { '2': '2毫米', '3': '3毫米' },
+  MOCK_MATERIAL_COLOR: { black: '黑色', grey: '灰色' },
+} as const
+
+export const mockMaterialSkuVariantsResponse = {
+  data: [
+    { _id: 'mock-material-sku-black-2', spuid: mockMaterialSkuSpuId,
+      name: '密封材料黑色 2毫米（仿真）', state: 1,
+      exts: { thickness: '2', color: 'black' } },
+    { _id: 'mock-material-sku-grey-3', spuid: mockMaterialSkuSpuId,
+      name: '密封材料灰色 3毫米（仿真）', state: 1,
+      exts: { thickness: '3', color: 'grey' } },
+  ],
+  page: 1, rows: 20, total: 2,
 } as const
