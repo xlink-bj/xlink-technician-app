@@ -42,6 +42,12 @@ function validId(value: string): boolean {
   return typeof value === 'string' && /^[A-Za-z0-9_-]{1,100}$/.test(value)
 }
 
+/** A route is generated only from two already listed/sanitized identities. */
+export function signingOrderReadRouteFor(workOrderId: string, orderId: string): string | null {
+  if (!validId(workOrderId) || !validId(orderId)) return null
+  return `/pages/work-orders/signing-order-read?workOrderId=${encodeURIComponent(workOrderId)}&orderId=${encodeURIComponent(orderId)}`
+}
+
 function denied(message: string, retryable = false): OperationSnapshot<ScopedSigningOrderReviewRead> {
   return {
     state: retryable ? 'failed_retryable' : 'failed_terminal',
