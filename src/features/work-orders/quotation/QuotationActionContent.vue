@@ -1513,7 +1513,7 @@ async function saveMatchedSkuToLocalDraft(): Promise<void> {
     return
   }
   const quantity = Number(skuQuantityText.value)
-  if (!/^\\d+$/.test(skuQuantityText.value.trim())
+  if (!/^\d+$/.test(skuQuantityText.value.trim())
     || !Number.isSafeInteger(quantity) || quantity < 1 || quantity > 9999) {
     skuLocalSaveError.value = 'SKU 数量必须为 1–9999 的整数。'
     return
