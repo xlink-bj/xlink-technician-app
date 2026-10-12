@@ -107,6 +107,13 @@ for (const vp of [{ width: 390, height: 844 }, { width: 375, height: 667 }]) {
     // legitimate Order, SKU price, Contract or workflow action.
     await page.reload({ waitUntil: 'domcontentloaded' })
     await expect(page.getByTestId('quotation-state-ready')).toBeVisible()
+    // Real Quotation UI legitimately restores a compact group summary after
+    // reload. Expand it before asserting visible item rows; do not confuse
+    // collapsed presentation with a lost persisted quotation selection.
+    const collapsed = page.getByTestId('quotation-group-collapsed-summary-quotation-group-1')
+    if (await collapsed.isVisible()) {
+      await page.getByTestId('quotation-group-details-toggle-quotation-group-1').click()
+    }
     await expect(page.getByTestId('quotation-group-section-quotation-group-1-package')).toBeVisible()
     await expect(page.getByTestId('quotation-group-section-quotation-group-1-material')).toBeVisible()
     await page.getByTestId('quotation-p1-review-toggle').click()
