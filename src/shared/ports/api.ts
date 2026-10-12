@@ -409,7 +409,7 @@ export interface QuotationCatalogReadPort {
    * SKU option UI consumes this source; never enabled for Production reads
    * by the current adapter. Does not create Order, authorize SKU or price.
    */
-  listMaterialSkuVariants?(context: QuotationCatalogContext, spuIds: readonly string[]): Promise<OperationSnapshot<ReadPage<QuotationMaterialSkuVariantRead>>>
+  listMaterialSkuVariants?(context: QuotationCatalogContext, route: 'direct_material' | 'package_materials', spuIds: readonly string[]): Promise<OperationSnapshot<ReadPage<QuotationMaterialSkuVariantRead>>>
 }
 
 export interface TechnicianApiReadPort {
