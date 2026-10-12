@@ -63,7 +63,7 @@ const detail: QuotationPackageDetailRead = {
       item: { kind: 'material', id: 'material-catalog-2', name: '演示材料一替代', unit: '支' },
     },
     {
-      kind: 'material', id: 'material-body-3', referenceId: 'material-catalog-3', layer: '1', unit: '桶',
+      kind: 'material', id: 'material-body-3', referenceId: 'material-catalog-3', layer: '2', unit: '桶',
       item: { kind: 'material', id: 'material-catalog-3', name: '演示材料字符串层', unit: '桶' },
     },
   ],
@@ -75,7 +75,7 @@ const detail: QuotationPackageDetailRead = {
 
 const choices: readonly QuotationPackageMaterialChoice[] = [
   { layer: 1, componentId: 'material-body-2', referenceId: 'material-catalog-2' },
-  { layer: '1', componentId: 'material-body-3', referenceId: 'material-catalog-3' },
+  { layer: '2', componentId: 'material-body-3', referenceId: 'material-catalog-3' },
 ]
 
 describe('G4-F Phase 1G package configuration contract', () => {
@@ -103,17 +103,17 @@ describe('G4-F Phase 1G package configuration contract', () => {
     ).state).toBe('failed_terminal')
   })
 
-  it('treats numeric and string layer identities as distinct and preserves both exact values', () => {
+  it('treats the R1 numeric layers 1 and "2" as distinct while preserving the provider raw values', () => {
     const result = configuredQuotationPackageCandidateFor(
       createQuotationGroup('group-a', { repairParts: ['roof'] }), packageRow, detail, choices,
     )
-    expect(result).toMatchObject({ state: 'succeeded', data: { configuration: { materials: [{ layer: 1 }, { layer: '1' }] } } })
+    expect(result).toMatchObject({ state: 'succeeded', data: { configuration: { materials: [{ layer: 1 }, { layer: '2' }] } } })
   })
 
   it.each([
     ['none', []],
     ['duplicate selection for one layer', [choices[0], choices[0], choices[1]]],
-    ['selection for an unknown layer', [choices[0], { ...choices[1], layer: 2 }]],
+    ['selection for an unknown layer', [choices[0], { ...choices[1], layer: '3' }]],
   ] as const)('requires exactly one selected Material for each layer (%s)', (_case, selected) => {
     expect(configuredQuotationPackageCandidateFor(
       createQuotationGroup('group-a', { repairParts: ['roof'] }), packageRow, detail, selected,
@@ -176,7 +176,7 @@ describe('G4-F Phase 1G package configuration contract', () => {
       procedures: [{ providerComponentId: 'procedure-body-1', providerReferenceId: 'procedure-catalog-1', catalogId: 'procedure-catalog-1', label: '演示工序', unit: '组' }],
       materials: [
         { providerComponentId: 'material-body-2', providerReferenceId: 'material-catalog-2', catalogId: 'material-catalog-2', label: '演示材料一替代', unit: '箱', layer: 1 },
-        { providerComponentId: 'material-body-3', providerReferenceId: 'material-catalog-3', catalogId: 'material-catalog-3', label: '演示材料字符串层', unit: '桶', layer: '1' },
+        { providerComponentId: 'material-body-3', providerReferenceId: 'material-catalog-3', catalogId: 'material-catalog-3', label: '演示材料字符串层', unit: '桶', layer: '2' },
       ],
       measures: [{ providerComponentId: 'measure-body-1', providerReferenceId: 'measure-catalog-1', catalogId: 'measure-catalog-1', label: '演示机措', unit: '次' }],
     })

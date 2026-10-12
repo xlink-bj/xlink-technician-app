@@ -11,7 +11,7 @@ import type {
 } from '@shared/ports'
 import type { OperationState } from '@shared/types'
 import type { QuotationLineKind } from './model'
-import { quotationPackageLayerKey } from './package-configuration'
+import { compareQuotationPackageLayerKeys, quotationPackageLayerKey } from './package-configuration'
 
 export type QuotationCatalogBrowserState = Extract<OperationState, 'idle' | 'loading' | 'succeeded' | 'failed_retryable' | 'failed_terminal'> | 'blocked'
 
@@ -46,17 +46,23 @@ function catalogListFor(
 export function quotationPackageMaterialLayersFor(
   materials: readonly QuotationPackageMaterialRead[],
 ): readonly QuotationPackageMaterialLayerGroup[] {
-  const grouped = new Map<string, { label: string; materials: QuotationPackageMaterialRead[] }>()
+  const grouped = new Map<string, QuotationPackageMaterialRead[]>()
   for (const material of materials) {
     const key = quotationPackageLayerKey(material.layer)
     const existing = grouped.get(key)
-    if (existing) existing.materials.push(material)
-    else grouped.set(key, {
-      label: material.layer === undefined ? '材料层级信息缺失' : `材料层级 ${grouped.size + 1}`,
-      materials: [material],
-    })
+    if (existing) existing.push(material)
+    else grouped.set(key, [material])
   }
-  return [...grouped].map(([key, group]) => ({ key, label: group.label, materials: group.materials }))
+  // R1 placeOrders.vue:6412,6524-6536 sorts numeric layers before showing
+  // their material alternatives. Non-numeric legacy DEV fixture groups keep
+  // their original relative order; no source layer or material ID is rewritten.
+  return [...grouped]
+    .sort(([a], [b]) => compareQuotationPackageLayerKeys(a, b))
+    .map(([key, group], index) => ({
+      key,
+      label: key === 'missing-layer' ? '材料层级信息缺失' : `材料层级 ${index + 1}`,
+      materials: group,
+    }))
 }
 
 export const useQuotationCatalogBrowserStore = defineStore('quotationCatalogBrowser', () => {

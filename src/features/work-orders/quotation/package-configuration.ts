@@ -29,9 +29,25 @@ function nonEmpty(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0
 }
 
+/**
+ * R1 placeOrders.vue:6524-6536 groups Package material alternatives using
+ * Number(exts.layer). A provider string "1" and number 1 are ONE repair
+ * layer for selection, while each chosen row retains its original raw layer.
+ *
+ * Legacy non-numeric DEV fixtures retain separate textual keys. They are
+ * not asserted to be R1 numeric repair layers.
+ */
 export function quotationPackageLayerKey(layer: string | number | undefined): string {
-  if (layer === undefined) return 'missing-layer'
+  if (layer === undefined || (typeof layer === 'string' && !layer.trim())) return 'missing-layer'
+  const numeric = Number(layer)
+  if (Number.isFinite(numeric)) return `number:${numeric}`
   return `${typeof layer}:${String(layer)}`
+}
+
+/** R1 sorts package materials numerically before assigning alternatives to a layer. */
+export function compareQuotationPackageLayerKeys(a: string, b: string): number {
+  if (!a.startsWith('number:') || !b.startsWith('number:')) return 0
+  return Number(a.slice('number:'.length)) - Number(b.slice('number:'.length))
 }
 
 function validLayer(value: unknown): value is string | number {
@@ -50,7 +66,7 @@ export function quotationPackageMaterialMatchesChoice(
   if (!validProviderIdentity(choice.componentId, choice.referenceId)) return false
   if (choice.componentId !== undefined && row.id !== choice.componentId) return false
   if (choice.referenceId !== undefined && row.referenceId !== choice.referenceId) return false
-  return row.layer === choice.layer
+  return quotationPackageLayerKey(row.layer) === quotationPackageLayerKey(choice.layer)
 }
 
 function configuredComponent(
@@ -126,7 +142,7 @@ export function configuredQuotationPackageCandidateFor(
 
   if (choices.length !== layers.size) return rejected('请为每个套餐材料层级选择且只选择一项材料。')
   const selectedMaterials: QuotationPackageConfiguration['materials'][number][] = []
-  for (const [key, layer] of layers) {
+  for (const [key, layer] of [...layers].sort(([a], [b]) => compareQuotationPackageLayerKeys(a, b))) {
     const layerChoices = choices.filter((choice) => quotationPackageLayerKey(choice.layer) === key)
     if (layerChoices.length !== 1) return rejected('请为每个套餐材料层级选择且只选择一项材料。')
     const choice = layerChoices[0]
@@ -137,7 +153,9 @@ export function configuredQuotationPackageCandidateFor(
     if (material.state !== 'succeeded' || !material.data) {
       return rejected(material.error?.message ?? '所选套餐材料引用暂不可解析，无法配置。')
     }
-    selectedMaterials.push({ ...material.data, layer: layer.value })
+    // Preserve the selected provider row's typed source value; R1's numeric
+    // grouping is a UI selection equivalence, not a SKU identity rewrite.
+    selectedMaterials.push({ ...material.data, layer: selected.layer! })
   }
   if (choices.some((choice) => !layers.has(quotationPackageLayerKey(choice.layer)))) {
     return rejected('所选材料包含当前套餐详情中不存在的层级。')
