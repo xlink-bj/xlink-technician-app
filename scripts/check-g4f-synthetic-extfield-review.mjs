@@ -52,7 +52,13 @@ if (!reviewMain.includes("scenario === 'dynamic-fields'") || !reviewMain.include
   || !reviewMain.includes('order command is disabled in synthetic-field review')) {
   fail('dynamic-fields review scenario must inject a fail-closed order/workflow command port')
 }
-if (!codec.includes('QUOTATION_DRAFT_SCHEMA_VERSION = 3')) fail('synthetic preview work must preserve quotation draft V3')
+// Synthetic ExtField review must not mutate the quotation draft schema itself.
+// V4 adds a separate R1 local-only SKU intent, while the v3 Package record
+// stays decodable and all synthetic-command isolation checks remain mandatory.
+if (!/QUOTATION_DRAFT_SCHEMA_VERSION = (3|4)/.test(codec)
+  || (codec.includes('QUOTATION_DRAFT_SCHEMA_VERSION = 4') && !codec.includes('values.schemaVersion !== 3'))) {
+  fail('synthetic preview must retain v3 Package quotation draft readback after v4 local-only extension')
+}
 if (!feature.includes('createOrderExtFieldEffectivePlan') || !feature.includes('normalizeSubmission')
   || !feature.includes('normalizeFieldValue') || !feature.includes('SYNTHETIC_ORDER_EXTFIELD_FIXTURE_VERSION')) {
   fail('synthetic UX must exercise the accepted mapper and shared Dynamic Form Runtime')
