@@ -527,6 +527,14 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       session.roleVersion ?? null,
     ])
   }
+
+  /** Mandatory at command dispatch, not just on route re-entry: an existing
+   * mounted workspace may outlive the user's active role/session.
+   */
+  function commandSessionScopeCurrent(): boolean {
+    const session = dependencies?.getSession()
+    return Boolean(session && loadedSessionScope && sessionScopeKey(session) === loadedSessionScope)
+  }
   let surveyLeakageCauseProviderInFlight: Promise<OperationSnapshot<readonly SurveyLeakageCauseRow[]>> | null = null
 
   function clearDraftTimer(): void {
@@ -1014,6 +1022,10 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     const engine = quotationEngine.result
     const session = configured?.getSession()
     const currentNode = detail.value?.workflowNodes?.find((node) => node.id === currentDescriptor?.workflowNodeId)
+    if (!commandSessionScopeCurrent()) {
+      quotationOrderState.value = { state: 'failed_terminal', message: '账号或角色已变化，禁止提交旧报价，请重新进入工单。' }
+      return quotationOrderState.value
+    }
     if (!configured?.quotationOrderCommand || !configured.quotationOrderRead || !configured.storage
       || !currentDescriptor || currentDescriptor.contentKind !== 'quotation' || currentDescriptor.actionIntent !== 'place_order'
       || currentDescriptor.execution !== 'enabled' || !currentIdentity || !currentDraft || !session) {
@@ -1021,6 +1033,10 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       return quotationOrderState.value
     }
     const flushed = await quotationComposition.flushDraft()
+    if (!commandSessionScopeCurrent()) {
+      quotationOrderState.value = { state: 'failed_terminal', message: '保存草稿期间账号或角色已变化，禁止提交旧报价。' }
+      return quotationOrderState.value
+    }
     if (flushed.state !== 'succeeded') {
       quotationOrderState.value = { state: 'failed_retryable_before_write', message: '本机报价草稿尚未保存完成，暂不能提交。' }
       return quotationOrderState.value
@@ -1616,6 +1632,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
   }
 
   async function saveDynamicForm(): Promise<OperationSnapshot<void>> {
+    if (!commandSessionScopeCurrent()) return failure('session_invalid', '账号或角色已变化，请重新进入当前表单。')
     const configured = dependencies
     const currentDescriptor = descriptor.value
     const form = dynamicForm.value
@@ -1644,6 +1661,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     }
 
     const flushed = await flushDraft()
+    if (!commandSessionScopeCurrent()) return failure('session_invalid', '保存草稿期间账号或角色已变化，禁止提交旧表单。')
     if (flushed.state !== 'succeeded') {
       error.value = flushed.error ?? null
       return flushed
@@ -1724,6 +1742,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
   }
 
   async function completeDynamicForm(): Promise<OperationSnapshot<void>> {
+    if (!commandSessionScopeCurrent()) return failure('session_invalid', '账号或角色已变化，禁止完成旧工作流。')
     const configured = dependencies
     const currentDescriptor = descriptor.value
     const form = dynamicForm.value
@@ -2012,6 +2031,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
   }
 
   async function submit(): Promise<OperationSnapshot<void>> {
+    if (!commandSessionScopeCurrent()) return failure('session_invalid', '账号或角色已变化，禁止提交旧预约。')
     const configured = dependencies
     const currentDescriptor = descriptor.value
     const form = appointmentForm.value
@@ -2033,6 +2053,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     }
 
     await flushDraft()
+    if (!commandSessionScopeCurrent()) return failure('session_invalid', '保存草稿期间账号或角色已变化，禁止提交旧预约。')
     lifecycle.value = 'submitting'
     error.value = null
     const commandResult = await configured.commandApi.submitAppointment({
