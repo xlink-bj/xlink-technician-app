@@ -162,4 +162,67 @@ describe('M1 I2 R1 material SKU single/batch read compatibility', () => {
     expect(execute).toHaveBeenCalledTimes(1)
     expect(execute.mock.calls[0]?.[0].body).not.toHaveProperty('sourceType')
   })
+
+  it('projects R1 source material sale candidate arrays only; never exposes arbitrary SPU exts', async () => {
+    const execute = vi.fn(async (_request: ApiReadRequest) => ({ data: [{
+      _id: 'spu-a', name: '真实销售属性测试材料', state: 1, type: 1,
+      exts: {
+        thickness: ['2', '3'], color: ['black', 'grey'], attributeValues: { selected: 'none' },
+        commonName: 'sensitive-provider-field', privateMetadata: { cost: 'do not expose' },
+      },
+    }] }))
+    const result = await createQuotationCatalogReadAdapter({ execute }).listMaterials(context)
+    expect(result.state).toBe('succeeded')
+    expect(result.data?.items[0]).toMatchObject({
+      id: 'spu-a', saleOptionCandidates: { thickness: ['2', '3'], color: ['black', 'grey'] },
+    })
+    expect(result.data?.items[0]).not.toHaveProperty('exts')
+    expect(result.data?.items[0]?.saleOptionCandidates).not.toHaveProperty('attributeValues')
+    expect(result.data?.items[0]?.saleOptionCandidates).not.toHaveProperty('privateMetadata')
+  })
+
+  it('projects only explicitly requested R1 sales-field names from SKU exts; not price or other attributes', async () => {
+    const execute = vi.fn(async (_request: ApiReadRequest) => ({ data: [{
+      ...sku('sku-a'), exts: { thickness: '2', color: 'black', privateCost: 'do not expose' },
+    }] }))
+    const result = await createQuotationCatalogReadAdapter({ execute })
+      .listMaterialSkuVariants!(context, 'direct_material', ['spu-a'], ['thickness', 'color'])
+    expect(result).toMatchObject({ state: 'succeeded', data: { items: [{
+      id: 'sku-a', spuId: 'spu-a',
+      saleAttributeValues: { thickness: '2', color: 'black' },
+    }] } })
+    expect(result.data?.items[0]).not.toHaveProperty('price')
+    expect(result.data?.items[0]).not.toHaveProperty('exts')
+    expect(result.data?.items[0]?.saleAttributeValues).not.toHaveProperty('privateCost')
+    expect(execute).toHaveBeenCalledWith({
+      method: 'POST', path: 'basic/material/query',
+      body: { _all: '1', 'is:state|integer#and': 1, spuid: 'spu-a' },
+    })
+  })
+
+  it('rejects unbounded or duplicate requested sales field names before SKU HTTP', async () => {
+    const execute = vi.fn(async (_request: ApiReadRequest) => ({ data: [] }))
+    const catalog = createQuotationCatalogReadAdapter({ execute })
+    for (const fields of [['thickness', 'thickness'], ['__proto__'], Array.from({ length: 31 }, (_, n) => 'f' + n)]) {
+      const result = await catalog.listMaterialSkuVariants!(context, 'direct_material', ['spu-a'], fields)
+      expect(result.state).toBe('failed_terminal')
+    }
+    expect(execute).not.toHaveBeenCalled()
+  })
+
+  it('discards a SKU read when the active authenticated role changes while HTTP is pending', async () => {
+    let actor = { sessionRef: 'session-1', userId: 'user-1', roleId: 'role-1', roleVersion: '1' }
+    let resolveRead!: (raw: unknown) => void
+    const pending = new Promise<unknown>(resolve => { resolveRead = resolve })
+    const execute = vi.fn(async (_request: ApiReadRequest) => pending)
+    const catalog = createQuotationCatalogReadAdapter({ execute }, () => actor)
+    const read = catalog.listMaterialSkuVariants!(context, 'direct_material', ['spu-a'], ['color'])
+    actor = { ...actor, roleId: 'role-2' }
+    resolveRead({ data: [{ ...sku('sku-a'), exts: { color: 'black' } }] })
+    const result = await read
+    expect(result.state).toBe('failed_terminal')
+    expect(result.error?.category).toBe('authorization_denied')
+    expect(execute).toHaveBeenCalledTimes(1)
+  })
+
 })

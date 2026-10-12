@@ -337,6 +337,9 @@ export interface QuotationMaterialRead extends QuotationCatalogItemBaseRead {
   readonly type?: number
   /** R1 SKU rows carry `spuid`; SKU-dependent prices are not enabled in Phase 1H. */
   readonly spuId?: string
+  /** Only bounded, primitive option candidates from R1 material SPU exts.
+   * Never display directly: verify using ExtField + Code dictionary first. */
+  readonly saleOptionCandidates?: Readonly<Record<string, readonly string[]>>
 }
 
 export interface QuotationMeasureRead extends QuotationCatalogItemBaseRead {
@@ -405,6 +408,8 @@ export interface QuotationMaterialSkuVariantRead {
   readonly name: string
   readonly specification?: string
   readonly unit?: string
+  /** Only explicitly requested, sales-field-named SKU ext values; no pricing. */
+  readonly saleAttributeValues?: Readonly<Record<string, string>>
 }
 
 /** Read-only provider boundary; intentionally separate from local quotation draft composition. */
@@ -419,7 +424,7 @@ export interface QuotationCatalogReadPort {
    * SKU option UI consumes this source; never enabled for Production reads
    * by the current adapter. Does not create Order, authorize SKU or price.
    */
-  listMaterialSkuVariants?(context: QuotationCatalogContext, route: 'direct_material' | 'package_materials', spuIds: readonly string[]): Promise<OperationSnapshot<ReadPage<QuotationMaterialSkuVariantRead>>>
+  listMaterialSkuVariants?(context: QuotationCatalogContext, route: 'direct_material' | 'package_materials', spuIds: readonly string[], saleFieldNames?: readonly string[]): Promise<OperationSnapshot<ReadPage<QuotationMaterialSkuVariantRead>>>
   /** R1 biz/extField/query + i/code/selectCode.do. Read-only option metadata,
    * not yet a live SKU/SPU picker. Production remains blocked. */
   listMaterialSalesFields?(context: QuotationCatalogContext): Promise<OperationSnapshot<ReadPage<QuotationMaterialSaleFieldRead>>>

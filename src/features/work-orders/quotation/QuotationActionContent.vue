@@ -632,7 +632,7 @@
       class="quotation-content__catalog-page"
       data-testid="quotation-catalog-page"
     >
-      <template v-if="!catalogBrowser.selectedPackageId">
+      <template v-if="!catalogBrowser.selectedPackageId && !catalogBrowser.selectedMaterialId">
         <view class="quotation-content__catalog-topbar">
           <AppButton class="quotation-content__catalog-back" variant="text" aria-label="返回报价工作台" data-testid="quotation-catalog-close" @tap="closeCatalog">‹ 返回</AppButton>
           <view class="quotation-content__catalog-topbar-title">
@@ -789,6 +789,13 @@
                 <view class="quotation-content__catalog-item-footer">
                   <text class="quotation-content__catalog-item-price-state">金额待核验</text>
                   <AppButton
+                    v-if="item.kind === 'material' && item.saleOptionCandidates && Object.keys(item.saleOptionCandidates).length"
+                    class="quotation-content__catalog-item-action"
+                    variant="secondary"
+                    :data-testid="`quotation-material-options-${item.id}`"
+                    @tap="catalogBrowser.openMaterialSkuPreview(item.id)"
+                  >查看规格（只读）</AppButton>
+                  <AppButton
                     v-if="item.kind === 'package'"
                     class="quotation-content__catalog-item-action"
                     variant="secondary"
@@ -824,6 +831,51 @@
             <text class="quotation-content__catalog-footer-note">本页不会创建服务器报价</text>
           </view>
           <AppButton variant="secondary" data-testid="quotation-catalog-return" @tap="closeCatalog">返回工作台</AppButton>
+        </view>
+      </template>
+
+      <template v-else-if="catalogBrowser.selectedMaterialId">
+        <view class="quotation-content__catalog-topbar" data-testid="quotation-material-sku-preview">
+          <AppButton class="quotation-content__catalog-back" variant="text"
+            data-testid="quotation-sku-preview-back" @tap="catalogBrowser.backToList()">‹ 返回材料目录</AppButton>
+          <view class="quotation-content__catalog-topbar-title">
+            <text class="quotation-content__catalog-title">选择材料规格</text>
+          </view>
+        </view>
+        <view class="quotation-content__package-detail-content">
+          <AppLoadingState v-if="catalogBrowser.materialSkuState === 'loading'"
+            label="正在核对材料规格和可选 SKU" quiet />
+          <AppStatus v-else-if="catalogBrowser.materialSkuState !== 'succeeded'"
+            :message="catalogBrowser.materialSkuErrorCopy || '规格信息暂不可用'" tone="warning" quiet />
+          <template v-else-if="catalogBrowser.materialSkuPreview?.state === 'ready'">
+            <view v-for="field in catalogBrowser.materialSkuPreview.fields" :key="field.name"
+              class="quotation-content__layer-group" :data-testid="`quotation-sku-field-${field.name}`">
+              <text class="quotation-content__package-detail-title">{{ field.label }}</text>
+              <view class="quotation-content__category-grid">
+                <button v-for="option in field.options" :key="option.value" type="button"
+                  class="quotation-content__category"
+                  :class="{ 'quotation-content__category--active': catalogBrowser.materialSkuSelections[field.name] === option.value }"
+                  :aria-pressed="catalogBrowser.materialSkuSelections[field.name] === option.value"
+                  :data-testid="`quotation-sku-option-${field.name}-${option.value}`"
+                  @tap="catalogBrowser.chooseMaterialSkuOption(field.name, option.value)">{{ option.label }}</button>
+              </view>
+            </view>
+            <AppStatus v-if="catalogBrowser.materialSkuMatch.state === 'matched'"
+              message="规格与原始 SKU 属性精确匹配。该界面只读，尚未加入报价。" quiet
+              data-testid="quotation-sku-match-exact" />
+            <AppStatus v-else-if="catalogBrowser.materialSkuMatch.state === 'incomplete'"
+              message="请选择全部规格。该界面不会创建报价或订单。" quiet />
+            <AppStatus v-else
+              message="该规格组合没有唯一、有效的 SKU；未修改报价。" tone="warning" quiet
+              data-testid="quotation-sku-match-unavailable" />
+          </template>
+          <AppStatus v-else :message="materialSkuPreviewStatusMessage"
+            tone="warning" quiet data-testid="quotation-sku-preview-unavailable" />
+          <view class="quotation-content__catalog-footer">
+            <text class="quotation-content__catalog-footer-note">数据来自 R1 现有接口。暂不提供价格、数量或加入报价操作。</text>
+            <AppButton variant="secondary" data-testid="quotation-sku-preview-return"
+              @tap="catalogBrowser.backToList()">返回材料目录</AppButton>
+          </view>
         </view>
       </template>
 
@@ -1027,6 +1079,10 @@ const emit = defineEmits<{
 
 const composition = useQuotationCompositionStore()
 const catalogBrowser = useQuotationCatalogBrowserStore()
+const materialSkuPreviewStatusMessage = computed(() => {
+  const preview = catalogBrowser.materialSkuPreview
+  return preview && preview.state !== 'ready' ? preview.message : '当前材料没有可用规格'
+})
 const workspace = useActionWorkspaceStore()
 const syntheticReviewEnabled = computed(() => import.meta.env.DEV
   && props.syntheticFieldsReview === true
