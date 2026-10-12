@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import {
   actionDraftIdentityFor,
+  actionDraftStorageKey,
   createActionDraftRepository,
   type ActionDraftIdentity,
 } from '@runtimes/action'
@@ -22,7 +23,7 @@ function memoryStorage(): StoragePort {
     read: async <T>(key: StorageKey) => ok((db.get(key.key) as T | undefined) ?? null),
     write: async (key, data) => { db.set(key.key, data); return ok(undefined) },
     remove: async key => { db.delete(key.key); return ok(undefined) },
-    listKeys: async () => ok([...db.keys()]),
+    listKeys: async (input) => ok([...db.keys()].filter(key => key.startsWith(input.prefix ?? ''))),
   }
 }
 function identity(userId = 'technician-1', workOrderId = 'wo-1'): ActionDraftIdentity {
@@ -32,6 +33,10 @@ function identity(userId = 'technician-1', workOrderId = 'wo-1'): ActionDraftIde
     workflowNodeId: asOpaqueId<'WorkflowNodeRuntimeId'>('node-place-order'),
     actionIntent: 'place_order', contentKind: 'quotation',
   })
+}
+function scopedIdentity(role: string): ActionDraftIdentity {
+  const unscoped = identity()
+  return actionDraftIdentityFor(unscoped, asOpaqueId<'RoleId'>(role))
 }
 function setupDraft(workOrderId: string, nodeId: string): QuotationDraft {
   return {
@@ -49,6 +54,65 @@ function setupDraft(workOrderId: string, nodeId: string): QuotationDraft {
 
 describe('M1 I2 R1 local SKU quantity choices / schema v4: NO official Order', () => {
   beforeEach(() => setActivePinia(createPinia()))
+
+  it('saves new quotation drafts with role provenance and never auto-restores legacy drafts in another role', async () => {
+    const storage = memoryStorage()
+    const repository = createActionDraftRepository(storage)
+    const old = identity()
+    const roleA = scopedIdentity('role-a')
+    const roleB = scopedIdentity('role-b')
+    const source = upsertLocalQuotationMaterialSkuChoice(
+      setupDraft('wo-1', 'node-place-order'), 'group-a', 'spu-A', matchA,
+    )
+    const oldRecord = quotationDraftRecordFor(old, source, '2026-10-12T00:00:00.000Z')
+    expect((await repository.write(oldRecord)).state).toBe('succeeded')
+    expect(actionDraftStorageKey(old)).toContain('action-workspace:2:')
+    expect(actionDraftStorageKey(roleA)).toContain('action-workspace:3:')
+    expect(actionDraftStorageKey(roleB)).not.toBe(actionDraftStorageKey(roleA))
+
+    // Unprovenanced v1/v2 draft is kept in storage, not silently assigned to A or B.
+    expect((await repository.read(roleA)).data).toBeNull()
+    expect((await repository.read(roleB)).data).toBeNull()
+    const firstA = useQuotationCompositionStore()
+    expect(await firstA.initialize({ identity: roleA, repository, debounceMs: 60_000 })).toBe('fresh')
+    const group = firstA.createGroup({ repairParts: ['bathroom'] }).data!
+    expect(firstA.addCatalogReadItem(group,
+      { kind: 'material', id: 'spu-A', name: '材料 A' }).state).toBe('succeeded')
+    expect(firstA.saveLocalMaterialSkuChoice(group, 'spu-A', matchB).state).toBe('succeeded')
+    expect((await firstA.flushDraft()).state).toBe('succeeded')
+    expect((await repository.read(roleA)).data?.identity.roleId).toBe(roleA.roleId)
+    expect((await repository.read(roleB)).data).toBeNull()
+
+    setActivePinia(createPinia())
+    const reenteredA = useQuotationCompositionStore()
+    expect(await reenteredA.initialize({ identity: roleA, repository })).toBe('restored')
+    expect(reenteredA.groups[0]!.materials[0]!.skuChoices).toEqual([matchB])
+
+    setActivePinia(createPinia())
+    const reenteredB = useQuotationCompositionStore()
+    expect(await reenteredB.initialize({ identity: roleB, repository })).toBe('fresh')
+    expect(reenteredB.groups).toEqual([])
+    // Role B's empty state does not destroy either role A's or historical v2 data.
+    expect((await repository.read(old)).data).toMatchObject(oldRecord)
+    expect((await repository.read(roleA)).data?.identity.roleId).toBe(roleA.roleId)
+
+    const onlyRoleA = await repository.listForUser(roleA.userId, roleA.roleId)
+    expect(onlyRoleA.state).toBe('succeeded')
+    expect(onlyRoleA.data?.entries).toHaveLength(1)
+    expect(onlyRoleA.data?.entries[0]?.identity.roleId).toBe(roleA.roleId)
+    const onlyRoleB = await repository.listForUser(roleB.userId, roleB.roleId)
+    expect(onlyRoleB.data?.entries).toEqual([])
+    const unprovenanced = await repository.listForUser(old.userId)
+    expect(unprovenanced.data?.entries).toHaveLength(1)
+    expect(unprovenanced.data?.entries[0]?.identity.roleId).toBeUndefined()
+
+    expect((await repository.remove(roleB)).state).toBe('succeeded')
+    expect((await repository.read(roleA)).data).not.toBeNull()
+    expect((await repository.read(old)).data).not.toBeNull()
+    expect((await repository.remove(roleA)).state).toBe('succeeded')
+    expect((await repository.read(roleA)).data).toBeNull()
+    expect((await repository.read(old)).data).not.toBeNull()
+  })
 
   it('stores multiple exact SKU identities separately in EACH repair group and sums parent SPU quantities', () => {
     const draft = setupDraft('wo-1', 'node-1')
