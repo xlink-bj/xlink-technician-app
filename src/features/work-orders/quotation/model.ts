@@ -292,6 +292,35 @@ export function upsertLocalQuotationMaterialSkuChoice(
   })
 }
 
+/** Remove one local SKU from exactly one repair group's Material SPU.
+ * An empty SKU collection has no valid R1 parent amount; removing the final
+ * SKU removes that material selection rather than fabricating a quantity.
+ * This remains a local draft operation, never a commercial Order write.
+ */
+export function removeLocalQuotationMaterialSkuChoice(
+  draft: QuotationDraft,
+  groupId: string,
+  materialId: string,
+  skuId: string,
+): QuotationDraft {
+  if (!materialId.trim() || !skuId.trim()) return draft
+  return updateGroup(draft, groupId, group => {
+    const matches = group.materials.filter(selection => selection.catalogId === materialId)
+    if (matches.length !== 1) return group
+    const selected = matches[0]!
+    const choices = selected.skuChoices
+    if (!choices?.some(choice => choice.skuId === skuId)) return group
+    const remaining = choices.filter(choice => choice.skuId !== skuId)
+    if (remaining.length === 0) {
+      return { ...group, materials: group.materials.filter(selection => selection.selectionId !== selected.selectionId) }
+    }
+    const total = remaining.reduce((sum, choice) => sum + choice.quantity, 0)
+    return { ...group, materials: group.materials.map(selection => selection.selectionId === selected.selectionId
+      ? { ...selection, skuChoices: remaining, quantity: total }
+      : selection) }
+  })
+}
+
 export function changeQuotationSelectionQuantity(
   draft: QuotationDraft,
   groupId: string,
