@@ -32,7 +32,7 @@ export interface QuotationConfiguredPackageComponent {
 }
 
 export interface QuotationConfiguredPackageMaterial extends QuotationConfiguredPackageComponent {
-  /** Exact provider layer value; numeric and string values remain distinct. */
+  /** Raw provider layer is kept unchanged; Package choice grouping follows R1 Number(layer). */
   readonly layer: string | number
 }
 
