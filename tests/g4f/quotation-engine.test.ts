@@ -577,4 +577,218 @@ describe('G4-F Phase 1H quotation engine', () => {
     expect(result.issues).toEqual(expect.arrayContaining([expect.objectContaining({ phase: 'validation', code: 'group.description_required' })]))
     expect(port.listProcedures).not.toHaveBeenCalled()
   })
+  // I3: one executable source-derived golden matrix. Every result is a
+  // local, synthetic type-1 *candidate projection*, not R1 live parity or
+  // authorization to send a quote / commercial Order command.
+  describe('M1-I3 offline R1 pricing and Order contract golden matrix', () => {
+    it('G1: preserves two repair-group IDs, quantities, category totals and field semantics in one bjProducts', async () => {
+      const g1 = group({
+        groupId: 'roof-zone',
+        procedures: [{ selectionId: 'p-roof', kind: 'procedure', catalogId: procedureItem.id, label: procedureItem.name, quantity: 3 }],
+        materials: [{ selectionId: 'm-roof', kind: 'material', catalogId: materialItem.id, label: materialItem.name, quantity: 2 }],
+      })
+      const g2 = group({
+        groupId: 'bath-zone', repairParts: ['bath', 'wall'], partDescription: '独立区域',
+        maintainAreaNum: '3.5',
+        procedures: [{ selectionId: 'p-bath', kind: 'procedure', catalogId: procedureItem.id, label: procedureItem.name, quantity: 1 }],
+        materials: [{ selectionId: 'm-bath', kind: 'material', catalogId: materialItem.id, label: materialItem.name, quantity: 4 }],
+      })
+      const draft: QuotationDraft = { ...createEmptyQuotationDraft('work-order-a', 'workflow-node-a'), groups: [g1, g2] }
+      const result = await evaluateQuotationDraft({ draft, catalogContext: context, catalogRead: catalogPort() })
+      expect(result.state).toBe('ready')
+      expect(result.pricing).toMatchObject({
+        calcTotalPrice: { originPrice: 67, totalPrice: 67 },
+        fillOrder: { groups: [{ groupId: 'roof-zone', subtotal: 39 }, { groupId: 'bath-zone', subtotal: 28 }], orderListTotalAmount: 67 },
+      })
+      const products = JSON.parse(result.payload!.bjProducts) as {
+        orderList: Array<{ repairParts: string[]; maintainAreaNum: string; partDescription: string; totalAmount: number;
+          procedures: { totalAmount: number; data: Array<{ number: number; amount: number; totalAmount: number }> };
+          materials: { totalAmount: number; data: Array<{ number: number; amount: number; totalAmount: number }> } }>
+      }
+      expect(products.orderList).toHaveLength(2)
+      expect(products.orderList[0]).toMatchObject({ repairParts: ['roof', 'flat-roof'], totalAmount: 39,
+        procedures: { totalAmount: 30, data: [{ number: 3, amount: 10, totalAmount: 30 }] },
+        materials: { totalAmount: 9, data: [{ number: 2, amount: 4.5, totalAmount: 9 }] } })
+      expect(products.orderList[1]).toMatchObject({ repairParts: ['bath', 'wall'], maintainAreaNum: '3.5',
+        partDescription: '独立区域', totalAmount: 28,
+        procedures: { totalAmount: 10, data: [{ number: 1, amount: 10, totalAmount: 10 }] },
+        materials: { totalAmount: 18, data: [{ number: 4, amount: 4.5, totalAmount: 18 }] } })
+    })
+
+    it('G2: package positive material markup applies R1 minimum floor before per-row rounding', async () => {
+      const port = catalogPort({ listPackages: vi.fn(async () => succeeded({
+        items: [{ ...packageItem, minimumPrice: 350 }],
+      })) })
+      const result = await evaluateQuotationDraft({
+        draft: packageDraft({ quantity: 3 }), catalogContext: context, catalogRead: port,
+      })
+      expect(result.state).toBe('ready')
+      expect(result.pricing?.calcTotalPrice).toEqual({ originPrice: 350, totalPrice: 350 })
+      const products = JSON.parse(result.payload!.bjProducts) as {
+        orderList: Array<{ projPackages: { data: Array<{
+          amount: number; markup: number; number: number; totalAmount: number;
+          materialList: Array<{ number: number; exts: { price: number } }>
+        }> } }>
+      }
+      expect(products.orderList[0].projPackages.data[0]).toMatchObject({
+        amount: 107.5, markup: 7.5, number: 3, totalAmount: 350,
+        materialList: [{ number: 1, exts: { price: 7.5 } }],
+      })
+      expect(result.payload?.discount).toBe(1)
+      expect(result.payload?.preferentialAmount).toBe(0)
+    })
+
+    it('G3: procedure floor, measure fractional quantity, direct material price remain distinct categories', async () => {
+      const port = catalogPort({
+        listProcedures: vi.fn(async () => succeeded({ items: [{ ...procedureItem, minimumGuideTotalPrice: 30 }] })),
+      })
+      const result = await evaluateQuotationDraft({
+        draft: directDraft(['procedure', 'material', 'measure'], { quantity: 2 }),
+        catalogContext: context, catalogRead: port,
+      })
+      expect(result.state).toBe('ready')
+      expect(result.pricing).toMatchObject({
+        calcTotalPrice: { originPrice: 43.5, totalPrice: 43.5 },
+        fillOrder: { groups: [{ categoryTotals: { procedure: 30, material: 9, measure: 4.5 }, subtotal: 43.5 }] },
+      })
+      const products = JSON.parse(result.payload!.bjProducts) as {
+        orderList: Array<{ procedures: { data: Array<{ amount: number; totalAmount: number }> };
+          materials: { data: Array<{ amount: number; totalAmount: number }> };
+          measures: { data: Array<{ amount: number; totalAmount: number }> } }>
+      }
+      expect(products.orderList[0]).toMatchObject({
+        procedures: { data: [{ amount: 10, totalAmount: 30 }] },
+        materials: { data: [{ amount: 4.5, totalAmount: 9 }] },
+        measures: { data: [{ amount: 2.25, totalAmount: 4.5 }] },
+      })
+    })
+
+    it('G4: calcTotalPrice versus fillOrder two-decimal rounding MUST remain separate across groups', async () => {
+      const first = group({
+        groupId: 'round-a',
+        procedures: [{ selectionId: 'rp1', kind: 'procedure', catalogId: procedureItem.id, label: procedureItem.name, quantity: 1 }],
+        materials: [{ selectionId: 'rm1', kind: 'material', catalogId: materialItem.id, label: materialItem.name, quantity: 1 }],
+      })
+      const second = group({
+        groupId: 'round-b',
+        procedures: [{ selectionId: 'rp2', kind: 'procedure', catalogId: procedureItem.id, label: procedureItem.name, quantity: 2 }],
+        materials: [{ selectionId: 'rm2', kind: 'material', catalogId: materialItem.id, label: materialItem.name, quantity: 2 }],
+      })
+      const port = catalogPort({
+        listProcedures: vi.fn(async () => succeeded({ items: [{ ...procedureItem, guideUnitPrice: 0.335 }] })),
+        listMaterials: vi.fn(async () => succeeded({ items: [{ ...materialItem, price: 0.335 }] })),
+      })
+      const result = await evaluateQuotationDraft({
+        draft: { ...createEmptyQuotationDraft('work-order-a', 'workflow-node-a'), groups: [first, second] },
+        catalogContext: context, catalogRead: port,
+      })
+      expect(result.state).toBe('ready')
+      expect(result.pricing).toMatchObject({
+        calcTotalPrice: { originPrice: 2.01, totalPrice: 2.01 },
+        fillOrder: { groups: [{ subtotal: 0.68 }, { subtotal: 1.34 }], orderListTotalAmount: 2.02 },
+      })
+      expect(result.payload?.totalPrice).toBe(2.01)
+      const bj = JSON.parse(result.payload!.bjProducts) as { orderList: Array<{ totalAmount: number }> }
+      expect(bj.orderList.map(g => g.totalAmount)).toEqual([0.68, 1.34])
+      // No hidden reconciliation to the top-level rounded amount.
+      expect(bj.orderList.reduce((sum, g) => sum + g.totalAmount, 0)).toBe(2.02)
+    })
+
+    it('G5: ceil(package quantity × coefficient / specification) is a derived wire value, not stored in draft', async () => {
+      const prepared = packageDraft({ quantity: 21 })
+      const original = JSON.stringify(prepared)
+      const result = await evaluateQuotationDraft({ draft: prepared, catalogContext: context, catalogRead: catalogPort() })
+      expect(result.state).toBe('ready')
+      const product = JSON.parse(result.payload!.bjProducts) as { orderList: Array<{
+        projPackages: { data: Array<{ materialList: Array<{ number: number }> }> }
+      }> }
+      expect(product.orderList[0].projPackages.data[0].materialList[0].number).toBe(3)
+      expect(JSON.stringify(prepared)).toBe(original)
+      expect(result.payload?.type).toBe(1)
+    })
+
+    it('G6: local SPU/SKU has no price authority; the engine may not fabricate type-1 rows or a price', async () => {
+      const port = catalogPort({ listMaterials: vi.fn(async () => succeeded({
+        items: [{ ...materialItem, spuId: 'spu-real-shape' }],
+      })) })
+      const result = await evaluateQuotationDraft({
+        draft: directDraft(['procedure', 'material']), catalogContext: context, catalogRead: port,
+      })
+      expect(result).toMatchObject({ state: 'blocked', issues: expect.arrayContaining([
+        expect.objectContaining({ phase: 'pricing', code: 'pricing.material_sku_deferred' }),
+      ]) })
+      expect(result.payload).toBeUndefined()
+      expect(JSON.stringify(result)).not.toMatch(/"skuCode":|"skus":/)
+    })
+
+    it('G7: explicit pricingMethod=1 blocks guessed package child SKU while preserving independent price diagnostics', async () => {
+      const port = catalogPort({
+        listPackages: vi.fn(async () => succeeded({ items: [{ ...packageItem, pricingMethod: '1' }] })),
+      })
+      const result = await evaluateQuotationDraft({
+        draft: packageDraft({ quantity: 2 }), catalogContext: context, catalogRead: port,
+      })
+      expect(result.state).toBe('blocked')
+      expect(result.pricing?.calcTotalPrice).toEqual({ originPrice: 215, totalPrice: 215 })
+      expect(result.issues).toContainEqual(expect.objectContaining({
+        phase: 'encoding', code: 'encoding.package_sku_path_not_authorized',
+      }))
+      expect(result.payload).toBeUndefined()
+    })
+
+    it('G8: missing price and untrusted component spec are independently fail-closed, never neutralized', async () => {
+      const missingPrice = catalogPort({ listMaterials: vi.fn(async () => succeeded({
+        items: [{ ...materialItem, price: undefined }],
+      })) })
+      const result = await evaluateQuotationDraft({
+        draft: directDraft(['procedure', 'material']), catalogContext: context, catalogRead: missingPrice,
+      })
+      expect(result).toMatchObject({ state: 'blocked', issues: expect.arrayContaining([
+        expect.objectContaining({ code: 'pricing.material_price_missing' }),
+      ]) })
+      expect(result.payload).toBeUndefined()
+      const invalid = catalogPort({
+        getPackageDetail: vi.fn(async () => succeeded(packageDetail({
+          materials: [{ ...packageMaterialRow, coefficient: 0 }],
+        }))),
+      })
+      const cannotEncode = await evaluateQuotationDraft({
+        draft: packageDraft(), catalogContext: context, catalogRead: invalid,
+      })
+      expect(cannotEncode).toMatchObject({ state: 'blocked', issues: expect.arrayContaining([
+        expect.objectContaining({ code: 'encoding.package_material_quantity_contract_invalid' }),
+      ]) })
+      expect(cannotEncode.payload).toBeUndefined()
+    })
+
+    it('G9: candidate Order envelope stays neutral and does not impersonate R1 quote type=0 or a submitted order', async () => {
+      const port = catalogPort()
+      const result = await evaluateQuotationDraft({
+        draft: directDraft(), catalogContext: context, catalogRead: port,
+        serviceAppointmentNum: '  LOCAL-TEST-ORDER  ',
+      })
+      expect(result.state).toBe('ready')
+      expect(result.payload).toMatchObject({
+        type: 1, serviceAppointmentId: 'work-order-a', productIds: '[]',
+        discount: 1, otherAmount: 0, preferentialAmount: 0,
+        exts: { serviceAppointmentNum: 'LOCAL-TEST-ORDER', coupons: '', couponsVal: 0,
+          couponsName: '', isCreateBjdPDF: '1', serviceType: 'synthetic-service-type',
+          sourceType: 'synthetic-source-type' },
+      })
+      const bj = JSON.parse(result.payload!.bjProducts) as {
+        addItems: { totalAmount: number; data: unknown[] },
+        deleteItems: { totalAmount: number; data: unknown[] }, otherItemsAmount: number,
+        preferentialAmount: number,
+      }
+      expect(bj).toMatchObject({
+        addItems: { totalAmount: 0, data: [] }, deleteItems: { totalAmount: 0, data: [] },
+        otherItemsAmount: 0, preferentialAmount: 0,
+      })
+      expect(port).not.toHaveProperty('saveOrder')
+      expect(port).not.toHaveProperty('completeWorkflow')
+      // R1 placeOrders.vue quote() uses type:0; this is an *offline type-1
+      // projection only*, not verified parity with the live R1 quote stage.
+    })
+  })
+
 })
