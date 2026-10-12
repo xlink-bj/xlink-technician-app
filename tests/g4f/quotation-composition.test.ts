@@ -80,7 +80,7 @@ describe('G4-F quotation composition model and local draft recovery', () => {
     const stored = await repository.read<Readonly<Record<string, unknown>>>(identity)
     expect(stored.state).toBe('succeeded')
     expect(stored.data?.values).toEqual({
-      schemaVersion: 3,
+      schemaVersion: 4,
       quotationDraft: {
         workOrderId: String(identity.workOrderId),
         workflowNodeId: String(identity.workflowNodeId),
@@ -218,7 +218,7 @@ describe('G4-F quotation composition model and local draft recovery', () => {
     expect(reopened.localStateMessage).toContain('已恢复本地报价分组草稿')
   })
 
-  it('restores grouped schema v2 losslessly and writes v3 after a local edit', async () => {
+  it('restores grouped schema v2 losslessly and writes v4 after a local edit', async () => {
     const currentIdentity = identityFor()
     const v2Draft = {
       workOrderId: String(currentIdentity.workOrderId),
@@ -254,7 +254,7 @@ describe('G4-F quotation composition model and local draft recovery', () => {
     expect((await store.flushDraft()).state).toBe('succeeded')
     const saved = await repository.read<Readonly<Record<string, unknown>>>(currentIdentity)
     expect(saved.data?.values).toEqual({
-      schemaVersion: 3,
+      schemaVersion: 4,
       quotationDraft: {
         ...v2Draft,
         draftVersion: 10,
@@ -352,7 +352,7 @@ describe('G4-F quotation composition model and local draft recovery', () => {
       groups: [{ ...createQuotationGroup('group-v3', { repairParts: ['roof'] }), projPackages: [configuredPackage] }],
     }
     const record = quotationDraftRecordFor(currentIdentity, draft, '2026-09-22T09:00:00.000Z')
-    expect(record.values.schemaVersion).toBe(3)
+    expect(record.values.schemaVersion).toBe(4)
     expect(decodeQuotationDraftRecord(record, currentIdentity)).toMatchObject({ state: 'valid', draft })
 
     const malformedProviderIdentity = JSON.parse(JSON.stringify(record)) as {
