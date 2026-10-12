@@ -9,6 +9,10 @@ import { execFileSync } from 'node:child_process'
 const I2 = 'f948d837d0d9e9422df774c1eaec43592a98f5fc'
 const I7 = 'f511be635e7280a9c063b70e8205f96cec3792ca'
 const MERGE = '460a8c126da7088cc578aff4aaea357517c6fa7d'
+const MAIN = 'c57fb3cc876c8ca3fb133d74dcf4833f8f755b32'
+const PRE_MAIN_MERGE = 'd8ca02af1fc1fa4cf1d26d6e7b1239045eca0588'
+const MAIN_MERGE = '1e99f85c53a1612dde41a0a0709933c88dc74d97'
+const MAIN_CI = '.github/workflows/validate.yml'
 const PARALLEL_LOCAL_PROBE = 'a950b2205acb1581ac2a17181773f331642ab59a'
 const DOC = 'docs/verification/M1_I2_SKU_REMOVAL_R1_PARITY_DELTA.md'
 const allowed = new Set([
@@ -42,7 +46,16 @@ try {
   ensure(mergeTree === git('rev-parse', I7 + '^{tree}'), 'MERGE_CHANGED_SOURCE_TREE')
   ensure(git('rev-parse', I2 + ':' + DOC) === git('rev-parse', I7 + ':' + DOC),
     'I2_SOURCE_DOC_NOT_IDENTICAL')
-  ensure(isAncestor(I2, 'HEAD') && isAncestor(I7, 'HEAD') && isAncestor(MERGE, 'HEAD'),
+  const mainParents = git('show', '-s', '--format=%P', MAIN_MERGE).split(/\s+/)
+  ensure(mainParents.length === 2 && mainParents[0] === PRE_MAIN_MERGE && mainParents[1] === MAIN,
+    'WRONG_MAIN_MERGE_PARENTS')
+  ensure(git('rev-parse', MAIN_MERGE + '^{tree}') === git('rev-parse', PRE_MAIN_MERGE + '^{tree}'),
+    'MAIN_MERGE_CHANGED_SOURCE_TREE')
+  ensure(git('rev-parse', MAIN + ':' + MAIN_CI) === git('rev-parse', PRE_MAIN_MERGE + ':' + MAIN_CI),
+    'MAIN_CI_NOT_BYTE_IDENTICAL')
+  ensure(isAncestor(I2, 'HEAD') && isAncestor(I7, 'HEAD')
+    && isAncestor(MERGE, 'HEAD') && isAncestor(MAIN, 'HEAD')
+    && isAncestor(MAIN_MERGE, 'HEAD'),
     'MISSING_RECONCILED_ANCESTRY')
   // A separately authorized local Production probe is intentionally not
   // silently included in this candidate, regardless of its passing offline CI.
@@ -58,6 +71,8 @@ try {
     status: 'RECONCILED_CANDIDATE_CODE_TREE_VERIFIED',
     i2Ancestor: true, i7Ancestor: true,
     mergeTreeIdenticalToI7: true, i2DocumentBlobIdentical: true,
+    observedMainAncestor: true, mainCiBlobIdentical: true,
+    mainMergeTreeIdenticalToCandidate: true,
     externalSkuProbeIncluded: false, permittedCandidateFiles: delta.length,
     realBusinessWrites: 'NOT_AUTHORIZED', mainMerge: 'NOT_PERFORMED',
     r1RuntimeParity: 'NOT_VERIFIED', devices: 'NOT_RUN',
