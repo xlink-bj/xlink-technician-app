@@ -502,13 +502,20 @@
                     <view v-if="selection.kind === 'material' && selection.skuChoices?.length"
                       class="quotation-content__package-summary" :data-testid="`quotation-material-skus-${selection.selectionId}`">
                       <text class="quotation-content__package-summary-note">本机 SKU 规格明细 · 尚未核验报价金额</text>
-                      <text v-for="sku in selection.skuChoices" :key="sku.skuId"
+                      <view v-for="sku in selection.skuChoices" :key="sku.skuId"
                         class="quotation-content__package-summary-row">
-                        规格 SKU · {{ Object.values(sku.attributes).join(' / ') }} · {{ sku.quantity }} 件
-                      </text>
+                        <text>规格 SKU · {{ Object.values(sku.attributes).join(' / ') }} · {{ sku.quantity }} 件</text>
+                        <AppButton variant="text" :disabled="!canEdit"
+                          :data-testid="`quotation-material-sku-remove-${group.groupId}-${sku.skuId}`"
+                          @tap="removeLocalSkuFromRepairGroup(group.groupId, selection.selectionId, selection.catalogId, sku.skuId)">
+                          {{ selection.skuChoices.length === 1 ? '移除材料及规格' : '移除该规格' }}
+                        </AppButton>
+                      </view>
                       <AppButton variant="text" :data-testid="`quotation-material-sku-edit-${group.groupId}-${selection.catalogId}`"
                         @tap="openExistingMaterialSkuPreview(group.groupId, selection.catalogId)">编辑规格与数量</AppButton>
                     </view>
+                    <AppStatus v-if="skuLocalRemoveErrors[selection.selectionId]"
+                      :message="skuLocalRemoveErrors[selection.selectionId]" tone="warning" quiet />
                     <view class="quotation-content__line-controls">
                       <text class="quotation-content__quantity-label">数量</text>
                       <view class="quotation-content__quantity-wrap" :class="{ 'quotation-content__quantity-wrap--error': composition.quantityErrorBySelection[selection.selectionId] }">
@@ -1107,6 +1114,7 @@ const composition = useQuotationCompositionStore()
 const catalogBrowser = useQuotationCatalogBrowserStore()
 const skuQuantityText = ref('1')
 const skuLocalSaveError = ref('')
+const skuLocalRemoveErrors = ref<Readonly<Record<string, string>>>({})
 const skuLocalSaving = ref(false)
 const materialSkuPreviewStatusMessage = computed(() => {
   const preview = catalogBrowser.materialSkuPreview
@@ -1474,6 +1482,16 @@ async function openExistingMaterialSkuPreview(groupId: string, materialId: strin
   catalogBrowser.open('material')
   await catalogBrowser.loadList('material')
   await catalogBrowser.openMaterialSkuPreview(materialId)
+}
+
+function removeLocalSkuFromRepairGroup(
+  groupId: string, selectionId: string, materialId: string, skuId: string,
+): void {
+  const result = composition.removeLocalMaterialSkuChoice(groupId, materialId, skuId)
+  const nextErrors = { ...skuLocalRemoveErrors.value }
+  if (result.state === 'succeeded') delete nextErrors[selectionId]
+  else nextErrors[selectionId] = result.error?.message ?? 'SKU 规格未移除，请重试。'
+  skuLocalRemoveErrors.value = nextErrors
 }
 
 function onSkuQuantityInput(event: unknown): void {
