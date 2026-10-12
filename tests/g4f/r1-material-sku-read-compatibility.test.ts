@@ -21,10 +21,11 @@ describe('M1 I2 R1 material SKU single/batch read compatibility', () => {
   afterEach(() => vi.unstubAllEnvs())
 
   it('requests a single SPU on R1 basic/material/query using spuid, never sourceType or serviceType', async () => {
-    const execute = vi.fn(async () => ({ data: [sku('sku-a')], page: 1, rows: 20, total: 1 }))
+    const execute = vi.fn(async (_request: ApiReadRequest) => ({ data: [sku('sku-a')], page: 1, rows: 20, total: 1 }))
     const catalog = createQuotationCatalogReadAdapter({ execute })
     const result = await catalog.listMaterialSkuVariants!(context, ['spu-a'])
-    expect(execute).toHaveBeenCalledExactlyOnceWith({
+    expect(execute).toHaveBeenCalledTimes(1)
+    expect(execute).toHaveBeenCalledWith({
       method: 'POST', path: 'basic/material/query',
       body: { _all: '1', 'is:state|integer#and': 1, spuid: 'spu-a' },
     })
@@ -39,10 +40,11 @@ describe('M1 I2 R1 material SKU single/batch read compatibility', () => {
   })
 
   it('requests a package batch exactly as R1 in:spuid|array#and comma-separated IDs', async () => {
-    const execute = vi.fn(async () => ({ data: [sku('sku-a', 'spu-a'), sku('sku-b', 'spu-b')] }))
+    const execute = vi.fn(async (_request: ApiReadRequest) => ({ data: [sku('sku-a', 'spu-a'), sku('sku-b', 'spu-b')] }))
     const result = await createQuotationCatalogReadAdapter({ execute })
       .listMaterialSkuVariants!(context, ['spu-a', 'spu-b'])
-    expect(execute).toHaveBeenCalledExactlyOnceWith({
+    expect(execute).toHaveBeenCalledTimes(1)
+    expect(execute).toHaveBeenCalledWith({
       method: 'POST', path: 'basic/material/query',
       body: { _all: '1', 'is:state|integer#and': 1, 'in:spuid|array#and': 'spu-a,spu-b' },
     })
@@ -58,7 +60,7 @@ describe('M1 I2 R1 material SKU single/batch read compatibility', () => {
   })
 
   it('rejects missing WorkOrder identity, invalid IDs, duplicates and unbounded batch before dispatch', async () => {
-    const execute = vi.fn(async () => ({ data: [] }))
+    const execute = vi.fn(async (_request: ApiReadRequest) => ({ data: [] }))
     const catalog = createQuotationCatalogReadAdapter({ execute })
     const cases = [
       [{ ...context, workOrderId: undefined }, ['spu-a']],
@@ -82,7 +84,7 @@ describe('M1 I2 R1 material SKU single/batch read compatibility', () => {
       [sku('same'), sku('same')],
       [{ ...sku('invalid'), _id: '' }],
     ]) {
-      const execute = vi.fn(async () => ({ data: rows }))
+      const execute = vi.fn(async (_request: ApiReadRequest) => ({ data: rows }))
       const result = await createQuotationCatalogReadAdapter({ execute })
         .listMaterialSkuVariants!(context, ['spu-a'])
       expect(result.state).toBe('failed_terminal')
@@ -93,7 +95,7 @@ describe('M1 I2 R1 material SKU single/batch read compatibility', () => {
   it('blocks even a syntactically valid material SKU read in Production before HTTP', async () => {
     vi.stubEnv('VITE_XLINK_ENVIRONMENT', 'prod')
     vi.stubEnv('VITE_XLINK_API_BASE_URL', 'https://production.invalid')
-    const execute = vi.fn(async () => ({ data: [sku('sku-a')] }))
+    const execute = vi.fn(async (_request: ApiReadRequest) => ({ data: [sku('sku-a')] }))
     const result = await createQuotationCatalogReadAdapter({ execute })
       .listMaterialSkuVariants!(context, ['spu-a'])
     expect(result.state).toBe('failed_terminal')
@@ -117,7 +119,7 @@ describe('M1 I2 R1 material SKU single/batch read compatibility', () => {
     expect(detail.state).toBe('succeeded')
     expect(detail.data?.quotationCatalogContext).toEqual({ ...context, sourceType: '' })
 
-    const execute = vi.fn(async () => ({ data: [] }))
+    const execute = vi.fn(async (_request: ApiReadRequest) => ({ data: [] }))
     const results = await Promise.all([
       createQuotationCatalogReadAdapter({ execute }).listPackages(detail.data!.quotationCatalogContext!),
       createQuotationCatalogReadAdapter({ execute }).listMaterials(detail.data!.quotationCatalogContext!),
@@ -130,7 +132,7 @@ describe('M1 I2 R1 material SKU single/batch read compatibility', () => {
   })
 
   it('preserves missing sourceType as missing; rejects whitespace-only context instead of fabricating a filter', async () => {
-    const execute = vi.fn(async () => ({ data: [] }))
+    const execute = vi.fn(async (_request: ApiReadRequest) => ({ data: [] }))
     const catalog = createQuotationCatalogReadAdapter({ execute })
     const missing = await catalog.listMaterials({ ...context, sourceType: undefined })
     const malformed = await catalog.listMaterials({ ...context, sourceType: '  ' })
