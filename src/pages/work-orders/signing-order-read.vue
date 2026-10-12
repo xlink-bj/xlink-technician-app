@@ -16,6 +16,11 @@
       data-testid="signing-order-read-blocked"
     >
       <text>当前订单暂无法完成签约前只读核验。请从当前账号可见的工单报价记录重新进入。</text>
+      <AppButton
+        v-if="session.status === 'authenticated' && review.snapshot.state === 'failed_retryable'"
+        block variant="secondary" data-testid="signing-order-read-retry"
+        @tap="retryScopedRead"
+      >重新核验当前订单</AppButton>
       <navigator open-type="navigateBack" :delta="1">返回工单</navigator>
     </view>
     <template v-else>
@@ -61,6 +66,13 @@ const routeReady = ref(false)
 const routeWorkOrderId = ref('')
 const routeOrderId = ref('')
 let requested = false
+
+function retryScopedRead(): void {
+  if (session.status !== 'authenticated' || review.snapshot.state !== 'failed_retryable') return
+  // This is a fresh, fully guarded pair of read-only scoped list requests,
+  // not a retry of any signing/Contract command.
+  void review.load(routeWorkOrderId.value, routeOrderId.value)
+}
 
 function startIfAuthorized(): void {
   if (!routeReady.value || session.status !== 'authenticated' || requested) return
