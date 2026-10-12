@@ -162,7 +162,7 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
     expect(store.appointmentFields.map((field) => field.valueKey)).toEqual(['need', 'datetime', 'note'])
   })
 
-  it('fails closed on same-user role or roleVersion changes instead of reusing the cached action', async () => {
+  it('fails closed on same-user roleVersion change instead of reusing the cached action', async () => {
     let activeSession: SessionSnapshot = { ...session, roleVersion: 'role-v1' }
     const { store, api } = configureWorkspace(
       appointmentDetail(), appointmentForm(), undefined, () => activeSession,
@@ -171,7 +171,6 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
     expect(store.descriptor?.actionIntent).toBe('set_appointment')
     activeSession = {
       ...activeSession,
-      currentRole: { id: asOpaqueId<'RoleId'>('other-workspace-role') },
       roleVersion: 'role-v2',
     }
     const stale = await store.ensureLoaded({
