@@ -8,7 +8,7 @@ import {
 import type { StoragePort, StorageKey } from '@shared/ports'
 import { asOpaqueId } from '@shared/types'
 import { useQuotationCompositionStore } from '@features/work-orders/quotation/composition-store'
-import { createEmptyQuotationDraft, createQuotationGroup, upsertLocalQuotationMaterialSkuChoice, type QuotationDraft } from '@features/work-orders/quotation/model'
+import { createEmptyQuotationDraft, createQuotationGroup, upsertLocalQuotationMaterialSkuChoice, removeLocalQuotationMaterialSkuChoice, type QuotationDraft } from '@features/work-orders/quotation/model'
 import { quotationDraftRecordFor, decodeQuotationDraftRecord } from '@features/work-orders/quotation/draft-codec'
 import { validateQuotationDraft } from '@features/work-orders/quotation/validation'
 
@@ -97,6 +97,67 @@ describe('M1 I2 R1 local SKU quantity choices / schema v4: NO official Order', (
       { ...reordered, skuId: 'different-sku', quantity: 1 })).toBe(updated)
     expect(upsertLocalQuotationMaterialSkuChoice(updated, 'group-a', 'spu-A',
       { ...reordered, attributes: { thickness: '4', color: 'black' } })).toBe(updated)
+  })
+
+  it('removes only the requested SKU in the requested repair group and removes the last SPU without zero quantity', () => {
+    const draft = setupDraft('wo-1', 'node-1')
+    const groupA = upsertLocalQuotationMaterialSkuChoice(
+      upsertLocalQuotationMaterialSkuChoice(draft, 'group-a', 'spu-A', matchA),
+      'group-a', 'spu-A', matchB,
+    )
+    const bothGroups = upsertLocalQuotationMaterialSkuChoice(groupA, 'group-b', 'spu-A', matchA)
+    expect(removeLocalQuotationMaterialSkuChoice(bothGroups, 'foreign-group', 'spu-A', matchA.skuId))
+      .toBe(bothGroups)
+    expect(removeLocalQuotationMaterialSkuChoice(bothGroups, 'group-a', 'spu-A', 'foreign-sku'))
+      .toBe(bothGroups)
+    const oneRemoved = removeLocalQuotationMaterialSkuChoice(
+      bothGroups, 'group-a', 'spu-A', matchA.skuId,
+    )
+    expect(oneRemoved.groups[0]!.materials[0]).toMatchObject({
+      quantity: 2, skuChoices: [matchB],
+    })
+    expect(oneRemoved.groups[1]!.materials[0]).toMatchObject({
+      quantity: 3, skuChoices: [matchA],
+    })
+    const finalRemoved = removeLocalQuotationMaterialSkuChoice(
+      oneRemoved, 'group-a', 'spu-A', matchB.skuId,
+    )
+    expect(finalRemoved.groups[0]!.materials).toEqual([])
+    expect(finalRemoved.groups[1]!.materials[0]).toMatchObject({
+      quantity: 3, skuChoices: [matchA],
+    })
+    expect(finalRemoved.draftVersion).toBe(bothGroups.draftVersion + 2)
+    expect(removeLocalQuotationMaterialSkuChoice(finalRemoved, 'group-a', 'spu-A', matchB.skuId))
+      .toBe(finalRemoved)
+  })
+
+  it('persists per-SKU removal through the real local composition repository without a commercial Order', async () => {
+    const repository = createActionDraftRepository(memoryStorage())
+    const id = identity()
+    const store = useQuotationCompositionStore()
+    expect(await store.initialize({ identity: id, repository, debounceMs: 60_000 })).toBe('fresh')
+    const group = store.createGroup({ repairParts: ['bathroom'] }).data!
+    expect(store.addCatalogReadItem(group, { kind: 'material', id: 'spu-A', name: '材料 A' }).state).toBe('succeeded')
+    expect(store.saveLocalMaterialSkuChoice(group, 'spu-A', matchA).state).toBe('succeeded')
+    expect(store.saveLocalMaterialSkuChoice(group, 'spu-A', matchB).state).toBe('succeeded')
+    expect(store.removeLocalMaterialSkuChoice(group, 'spu-A', 'other-sku').state).toBe('failed_terminal')
+    expect(store.removeLocalMaterialSkuChoice(group, 'spu-A', matchA.skuId).state).toBe('succeeded')
+    expect(store.groups[0]!.materials[0]).toMatchObject({ quantity: 2, skuChoices: [matchB] })
+    expect((await store.flushDraft()).state).toBe('succeeded')
+    setActivePinia(createPinia())
+    const reopened = useQuotationCompositionStore()
+    expect(await reopened.initialize({ identity: id, repository })).toBe('restored')
+    expect(reopened.groups[0]!.materials[0]).toMatchObject({ quantity: 2, skuChoices: [matchB] })
+    expect(validateQuotationDraft(reopened.draft!).issues).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: 'material.sku_local_only' }),
+    ]))
+    expect(reopened.removeLocalMaterialSkuChoice(group, 'spu-A', matchB.skuId).state).toBe('succeeded')
+    expect(reopened.groups[0]!.materials).toEqual([])
+    expect((await reopened.flushDraft()).state).toBe('succeeded')
+    setActivePinia(createPinia())
+    const reentered = useQuotationCompositionStore()
+    expect(await reentered.initialize({ identity: id, repository })).toBe('restored')
+    expect(reentered.groups[0]!.materials).toEqual([])
   })
 
   it('round-trips new SKU choices through the ACTUAL scoped local draft repository', async () => {
