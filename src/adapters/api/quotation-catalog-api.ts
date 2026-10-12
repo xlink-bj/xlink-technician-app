@@ -668,8 +668,18 @@ class QuotationCatalogReadAdapter implements QuotationCatalogReadPort {
   /** R1 read-only SKU identity, intentionally not called from any UI yet.
    * The current Production allowlist does not permit basic/material/query.
    */
-  listMaterialSkuVariants(context: QuotationCatalogContext, route: 'direct_material' | 'package_materials', spuIds: readonly string[], saleFieldNames: readonly string[] = []) {
-    return this.read(
+  async listMaterialSkuVariants(context: QuotationCatalogContext, route: 'direct_material' | 'package_materials', spuIds: readonly string[], saleFieldNames: readonly string[] = []) {
+    // The live app supplies an authenticated actor. Discard a result from any
+    // previous role/session instead of showing an old technician's SKU list.
+    let scopeAtStart: string | null = null
+    if (this.getReadAuthorizationScope) {
+      try { scopeAtStart = authorizationIdentityKey(this.getReadAuthorizationScope()) }
+      catch { scopeAtStart = null }
+      if (!scopeAtStart) {
+        return adapterFailure<ReadPage<QuotationMaterialSkuVariantRead>>('authorization_denied', 'A current authenticated role is required for material SKU reads.')
+      }
+    }
+    const result = await this.read(
       () => {
         if (this.isProductionReadOnly()) {
           throw new ApiReadTransportError(
@@ -687,6 +697,17 @@ class QuotationCatalogReadAdapter implements QuotationCatalogReadPort {
       },
       raw => materialSkuPage(raw, spuIds, saleFieldNames),
     )
+    if (this.getReadAuthorizationScope) {
+      let scopeAfter: string | null = null
+      try { scopeAfter = authorizationIdentityKey(this.getReadAuthorizationScope()) }
+      catch { scopeAfter = null }
+      if (!scopeAfter || scopeAfter !== scopeAtStart) {
+        return adapterFailure<ReadPage<QuotationMaterialSkuVariantRead>>(
+          'authorization_denied', 'Material SKU result discarded after login or role changed.',
+        )
+      }
+    }
+    return result
   }
 }
 
