@@ -388,6 +388,16 @@ export interface QuotationPackageDetailRead {
   readonly measures: readonly QuotationPackageMeasureRead[]
 }
 
+/** R1 material ExtField salesAttribute → selectCode read, before any per-SPU filtering.
+ * Global code options do not imply a particular SPU supports those values.
+ */
+export interface QuotationMaterialSaleFieldRead {
+  readonly name: string
+  readonly label: string
+  readonly valueOption: string
+  readonly options: readonly CodeOptionRead[]
+}
+
 /** R1 basic/material/query SKU identity only. No inferred stock, price authority or selectable sale attributes. */
 export interface QuotationMaterialSkuVariantRead {
   readonly id: string
@@ -410,6 +420,9 @@ export interface QuotationCatalogReadPort {
    * by the current adapter. Does not create Order, authorize SKU or price.
    */
   listMaterialSkuVariants?(context: QuotationCatalogContext, route: 'direct_material' | 'package_materials', spuIds: readonly string[]): Promise<OperationSnapshot<ReadPage<QuotationMaterialSkuVariantRead>>>
+  /** R1 biz/extField/query + i/code/selectCode.do. Read-only option metadata,
+   * not yet a live SKU/SPU picker. Production remains blocked. */
+  listMaterialSalesFields?(context: QuotationCatalogContext): Promise<OperationSnapshot<ReadPage<QuotationMaterialSaleFieldRead>>>
 }
 
 export interface TechnicianApiReadPort {

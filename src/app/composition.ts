@@ -170,6 +170,7 @@ export function createDefaultQuotationCatalogReadPort(authSession: AuthSessionPo
         roleVersion: session.roleVersion ?? null,
       }
     },
+    config.value.authWireConfig.tenant,
   )
 }
 
