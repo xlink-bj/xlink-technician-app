@@ -263,7 +263,19 @@ export function createDefaultQuotationOrderReadPort(
       return session ? { userId: session.user.id, ...(session.currentRole ? { roleId: session.currentRole.id } : {}) } : null
     },
   })
-  return createQuotationOrderReadAdapter(transport, isWorkOrderListedForCurrentSession)
+  // A live, strictly scoped identity fingerprint. Missing role/version
+  // keeps Signing precheck DENIED even when ordinary quotation browse works.
+  return createQuotationOrderReadAdapter(
+    transport,
+    isWorkOrderListedForCurrentSession,
+    () => {
+      const session = authSession.getCurrentSession()
+      if (!session?.currentRole?.id || !session.roleVersion) return null
+      return JSON.stringify([
+        session.sessionRef, session.user.id, session.currentRole.id, session.roleVersion,
+      ])
+    },
+  )
 }
 
 export function createDefaultPhonePort(): PhonePort {
