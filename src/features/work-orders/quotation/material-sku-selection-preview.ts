@@ -42,9 +42,13 @@ export function projectMaterialSkuSelectionPreview(
     const codes = candidates[field.name]
     if (!codes?.length) continue
     if (codes.length > 40 || new Set(codes).size !== codes.length) return blocked('材料属性值不完整')
-    const dictionary = new Map(field.options.map(option => [option.value, option.label]))
-    if (field.options.some(option => !option.value || !option.label || !option.label.trim())
-      || dictionary.size !== field.options.length) return blocked('属性选项标签不完整')
+    const dictionary = new Map<string, string>()
+    for (const option of field.options) {
+      if (!option.value || !option.label || !option.label.trim() || dictionary.has(option.value)) {
+        return blocked('属性选项标签不完整')
+      }
+      dictionary.set(option.value, option.label)
+    }
     const options = codes.map(value => ({ value, label: dictionary.get(value) ?? '' }))
     if (options.some(option => !option.label)) return blocked('材料属性值没有对应 Code 标签')
     active.push({ name: field.name, label: field.label, options })
