@@ -499,6 +499,16 @@
                       </template>
                       <text v-else class="quotation-content__package-summary-row">套餐尚未完成配置；现有本机记录已保留。</text>
                     </view>
+                    <view v-if="selection.kind === 'material' && selection.skuChoices?.length"
+                      class="quotation-content__package-summary" :data-testid="`quotation-material-skus-${selection.selectionId}`">
+                      <text class="quotation-content__package-summary-note">本机 SKU 规格明细 · 尚未核验报价金额</text>
+                      <text v-for="sku in selection.skuChoices" :key="sku.skuId"
+                        class="quotation-content__package-summary-row">
+                        规格 SKU · {{ Object.values(sku.attributes).join(' / ') }} · {{ sku.quantity }} 件
+                      </text>
+                      <AppButton variant="text" :data-testid="`quotation-material-sku-edit-${group.groupId}-${selection.catalogId}`"
+                        @tap="openExistingMaterialSkuPreview(group.groupId, selection.catalogId)">编辑规格与数量</AppButton>
+                    </view>
                     <view class="quotation-content__line-controls">
                       <text class="quotation-content__quantity-label">数量</text>
                       <view class="quotation-content__quantity-wrap" :class="{ 'quotation-content__quantity-wrap--error': composition.quantityErrorBySelection[selection.selectionId] }">
@@ -506,7 +516,7 @@
                           class="quotation-content__quantity"
                           type="digit"
                           :value="composition.quantityTextBySelection[selection.selectionId] ?? String(selection.quantity)"
-                          :disabled="!canEdit"
+                          :disabled="!canEdit || (selection.kind === 'material' && Boolean(selection.skuChoices?.length))"
                           :aria-label="`${selection.label}数量`"
                           :data-testid="`quotation-selection-quantity-${selection.selectionId}`"
                           @input="onQuantityInput(group.groupId, selection.selectionId, $event)"
@@ -861,18 +871,34 @@
               </view>
             </view>
             <AppStatus v-if="catalogBrowser.materialSkuMatch.state === 'matched'"
-              message="规格与原始 SKU 属性精确匹配。该界面只读，尚未加入报价。" quiet
+              message="规格与原始 SKU 属性精确匹配，可记录到当前维修组的本机草稿；正式报价未开放。" quiet
               data-testid="quotation-sku-match-exact" />
             <AppStatus v-else-if="catalogBrowser.materialSkuMatch.state === 'incomplete'"
               message="请选择全部规格。该界面不会创建报价或订单。" quiet />
             <AppStatus v-else
               message="该规格组合没有唯一、有效的 SKU；未修改报价。" tone="warning" quiet
               data-testid="quotation-sku-match-unavailable" />
+            <view v-if="catalogBrowser.materialSkuMatch.state === 'matched'"
+              class="quotation-content__line-controls" data-testid="quotation-sku-local-quantity">
+              <text class="quotation-content__quantity-label">该 SKU 数量（件）</text>
+              <input class="quotation-content__quantity" type="number"
+                :value="skuQuantityText" :disabled="!canEdit"
+                data-testid="quotation-sku-quantity-input"
+                @input="onSkuQuantityInput($event)" />
+              <AppButton variant="secondary"
+                :disabled="!canEdit || !selectedMaterialAlreadyInGroup || skuLocalSaving"
+                data-testid="quotation-sku-save-local"
+                @tap="saveMatchedSkuToLocalDraft">保存 SKU 数量到本机</AppButton>
+            </view>
+            <AppStatus v-if="!selectedMaterialAlreadyInGroup"
+              message="先返回材料目录，使用“加入本组”添加该材料，再保存规格数量。" tone="warning" quiet />
+            <AppStatus v-if="skuLocalSaveError" :message="skuLocalSaveError" tone="warning" quiet
+              data-testid="quotation-sku-local-save-error" />
           </template>
           <AppStatus v-else :message="materialSkuPreviewStatusMessage"
             tone="warning" quiet data-testid="quotation-sku-preview-unavailable" />
           <view class="quotation-content__catalog-footer">
-            <text class="quotation-content__catalog-footer-note">数据来自 R1 现有接口。暂不提供价格、数量或加入报价操作。</text>
+            <text class="quotation-content__catalog-footer-note">本机 SKU 数量仅供编辑与恢复；价格、Order 与业务提交仍禁止。</text>
             <AppButton variant="secondary" data-testid="quotation-sku-preview-return"
               @tap="catalogBrowser.backToList()">返回材料目录</AppButton>
           </view>
@@ -1079,6 +1105,9 @@ const emit = defineEmits<{
 
 const composition = useQuotationCompositionStore()
 const catalogBrowser = useQuotationCatalogBrowserStore()
+const skuQuantityText = ref('1')
+const skuLocalSaveError = ref('')
+const skuLocalSaving = ref(false)
 const materialSkuPreviewStatusMessage = computed(() => {
   const preview = catalogBrowser.materialSkuPreview
   return preview && preview.state !== 'ready' ? preview.message : '当前材料没有可用规格'
@@ -1192,6 +1221,22 @@ const activeCatalogGroupLabel = computed(() => {
   // The technician's concrete task disambiguates repairs that share a broad part path.
   // Preserve the R1 repair-part path as separate secondary context, not as a replacement.
   return group.partDescription.trim() || activeCatalogGroupPathLabel.value || '维修部位待选择'
+})
+const selectedMaterialAlreadyInGroup = computed(() => activeCatalogGroup.value?.materials.some(
+  material => material.catalogId === catalogBrowser.selectedMaterialId,
+) ?? false)
+const matchedMaterialSkuChoice = computed(() => {
+  const match = catalogBrowser.materialSkuMatch
+  if (match.state !== 'matched') return undefined
+  return activeCatalogGroup.value?.materials
+    .find(material => material.catalogId === catalogBrowser.selectedMaterialId)
+    ?.skuChoices?.find(sku => sku.skuId === match.skuId)
+})
+watch(() => [catalogBrowser.selectedMaterialId, catalogBrowser.materialSkuMatch.state,
+  catalogBrowser.materialSkuMatch.state === 'matched' ? catalogBrowser.materialSkuMatch.skuId : '',
+  activeCatalogGroupId.value] as const, () => {
+  skuLocalSaveError.value = ''
+  skuQuantityText.value = matchedMaterialSkuChoice.value ? String(matchedMaterialSkuChoice.value.quantity) : '1'
 })
 const catalogSearchPlaceholder = computed(() => placeholderForCatalogKind(catalogBrowser.selectedKind))
 const catalogSectionTitle = computed(() => ({
@@ -1421,6 +1466,53 @@ function commitPackageConfiguration(): void {
     return
   }
   catalogSelectionError.value = result.error?.message || '套餐配置未完成，未写入草稿。'
+}
+
+async function openExistingMaterialSkuPreview(groupId: string, materialId: string): Promise<void> {
+  activeCatalogGroupId.value = groupId
+  skuLocalSaveError.value = ''
+  catalogBrowser.open('material')
+  await catalogBrowser.loadList('material')
+  await catalogBrowser.openMaterialSkuPreview(materialId)
+}
+
+function onSkuQuantityInput(event: unknown): void {
+  skuQuantityText.value = eventValue(event)
+  skuLocalSaveError.value = ''
+}
+
+async function saveMatchedSkuToLocalDraft(): Promise<void> {
+  const match = catalogBrowser.materialSkuMatch
+  const groupId = activeCatalogGroupId.value
+  const materialId = catalogBrowser.selectedMaterialId
+  if (!canEdit.value || skuLocalSaving.value || match.state !== 'matched'
+    || !groupId || !materialId || !selectedMaterialAlreadyInGroup.value
+    || catalogBrowser.materialSkuPreview?.state !== 'ready') {
+    skuLocalSaveError.value = '当前材料、维修部位或规格匹配已变化，未保存。'
+    return
+  }
+  const quantity = Number(skuQuantityText.value)
+  if (!/^\\d+$/.test(skuQuantityText.value.trim())
+    || !Number.isSafeInteger(quantity) || quantity < 1 || quantity > 9999) {
+    skuLocalSaveError.value = 'SKU 数量必须为 1–9999 的整数。'
+    return
+  }
+  const selectedAttrs = { ...catalogBrowser.materialSkuSelections }
+  const updated = composition.saveLocalMaterialSkuChoice(groupId, materialId, {
+    skuId: match.skuId, quantity, attributes: selectedAttrs,
+  })
+  if (updated.state !== 'succeeded') {
+    skuLocalSaveError.value = updated.error?.message ?? 'SKU 本机选择未保存。'
+    return
+  }
+  skuLocalSaving.value = true
+  const result = await composition.flushDraft()
+  skuLocalSaving.value = false
+  if (result.state !== 'succeeded') {
+    skuLocalSaveError.value = result.error?.message ?? '本机草稿保存失败，请重试。'
+    return
+  }
+  catalogBrowser.backToList()
 }
 
 function eventValue(event: unknown): string {
