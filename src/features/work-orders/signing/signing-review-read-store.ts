@@ -19,6 +19,11 @@ export const useSigningReviewReadStore = defineStore('signingReviewRead', () => 
   let workspace: ReturnType<typeof createSigningReviewReadWorkspace> | null = null
   let getSession: () => SessionSnapshot | null = () => null
   let stopWatch: (() => void) | null = null
+  let stopMembershipWatch: (() => void) | null = null
+  let isCurrentWorkOrderListed: (id: string) => boolean = () => false
+  // The active WorkOrder is a reactive dependency: changes to the actual
+  // role-visible list/detail can revoke an ALREADY-rendered Order review.
+  const activeWorkOrderId = ref<string | null>(null)
   let generation = 0
 
   function scopeKey(): string {
@@ -32,25 +37,40 @@ export const useSigningReviewReadStore = defineStore('signingReviewRead', () => 
   function clear(): void {
     generation += 1
     workspace?.clear()
+    activeWorkOrderId.value = null
     snapshot.value = { state: 'idle' }
+  }
+
+  function safeListed(id: string): boolean {
+    try { return isCurrentWorkOrderListed(id) === true } catch { return false }
   }
 
   function configure(
     port: QuotationOrderReadPort,
     sessionProvider: () => SessionSnapshot | null,
-    isCurrentWorkOrderListed: (id: string) => boolean,
+    isCurrentWorkOrderListedForSession: (id: string) => boolean,
   ): void {
     stopWatch?.()
+    stopMembershipWatch?.()
     clear()
     getSession = sessionProvider
+    isCurrentWorkOrderListed = isCurrentWorkOrderListedForSession
     workspace = createSigningReviewReadWorkspace({
       port,
       getSession: sessionProvider,
-      isCurrentWorkOrderListed,
+      isCurrentWorkOrderListed: safeListed,
     })
     stopWatch = watch(scopeKey, (next, old) => {
       if (next !== old) clear()
     }, { immediate: true, flush: 'sync' })
+    // Keep reactive guard ACTIVE after successful reads, not only when the
+    // server responds. Clearing work-order detail or the role-visible list
+    // immediately removes previously rendered Order data.
+    stopMembershipWatch = watch(
+      () => activeWorkOrderId.value === null || safeListed(activeWorkOrderId.value),
+      (listed) => { if (!listed) clear() },
+      { flush: 'sync' },
+    )
   }
 
   async function load(
@@ -67,6 +87,14 @@ export const useSigningReviewReadStore = defineStore('signingReviewRead', () => 
         error: createOperationError('authorization_denied', '签约只读权限尚未准备完成。'),
       }
     }
+    if (!safeListed(workOrderId)) {
+      snapshot.value = { state: 'failed_terminal' }
+      return {
+        state: 'failed_terminal',
+        error: createOperationError('authorization_denied', '当前工单不在已验证的可见列表中。'),
+      }
+    }
+    activeWorkOrderId.value = workOrderId
     snapshot.value = { state: 'loading' }
     const result = await active.load(workOrderId, orderId)
     if (attempt === generation && workspace === active) {
