@@ -7,6 +7,7 @@ export {
   actionDraftLegacyStorageKeys,
   actionDraftStorageKey,
   actionDraftStorageKeyPrefixForUser,
+  actionDraftScopedStorageKeyPrefixForRole,
   actionExecutionForWorkflowDecision,
 } from './types'
 export { createActionDraftRepository, SemanticActionDraftRepository } from './draft-repository'
