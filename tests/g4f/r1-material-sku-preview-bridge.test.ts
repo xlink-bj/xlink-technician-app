@@ -102,8 +102,10 @@ describe('M1 I2: three-way real material SPU + R1 Code + raw SKU preview', () =>
   })
 
   it('discards a stale SKU response when returning from material preview', async () => {
-    let resolveSku: ((v: ReturnType<typeof success<{ items: QuotationMaterialSkuVariantRead[] }>>) => void) | null = null
-    const pending = new Promise<ReturnType<typeof success<{ items: QuotationMaterialSkuVariantRead[] }>>>(resolve => { resolveSku = resolve })
+    let resolveSku!: (result: { state: 'succeeded'; data: { items: QuotationMaterialSkuVariantRead[] } }) => void
+    const pending = new Promise<{ state: 'succeeded'; data: { items: QuotationMaterialSkuVariantRead[] } }>(
+      resolve => { resolveSku = resolve },
+    )
     const port = reader({ listMaterialSkuVariants: vi.fn(async () => pending) })
     const store = useQuotationCatalogBrowserStore()
     store.configure({ readPort: port, catalogContext: context })
@@ -112,7 +114,6 @@ describe('M1 I2: three-way real material SPU + R1 Code + raw SKU preview', () =>
     const opening = store.openMaterialSkuPreview(material.id)
     await Promise.resolve()
     store.backToList()
-    if (!resolveSku) throw new Error('test did not reach SKU transport')
     resolveSku(success({ items: [...variants] }))
     await opening
     expect(store.selectedMaterialId).toBeNull()
