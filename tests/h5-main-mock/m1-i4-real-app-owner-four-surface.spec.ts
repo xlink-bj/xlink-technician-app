@@ -79,7 +79,8 @@ for (const vp of [{ width: 390, height: 844 }, { width: 375, height: 667 }]) {
     const layers = page.locator('[data-testid^="quotation-material-layer-"]')
     await expect(layers).toHaveCount(2)
     const commit = page.getByTestId('quotation-package-configure-commit')
-    await expect(commit).toBeDisabled()
+    await expect(commit).toHaveAttribute('disabled', 'true')
+    await expect(commit).toHaveClass(/app-button--disabled/)
     for (const layer of await layers.all()) {
       const option = layer.locator('[data-testid^="quotation-package-material-choice-"]').first()
       await expect(option).toBeEnabled()
@@ -87,7 +88,8 @@ for (const vp of [{ width: 390, height: 844 }, { width: 375, height: 667 }]) {
       await expect(layer).toContainText('已选择')
     }
     await expect(page.getByTestId('quotation-package-selection-summary')).toContainText('2/2')
-    await expect(commit).toBeEnabled()
+    await expect(commit).not.toHaveAttribute('disabled', 'true')
+    await expect(commit).not.toHaveClass(/app-button--disabled/)
     await page.getByTestId('quotation-package-config-focus').scrollIntoViewIfNeeded()
     await shot('03-package-configured', 'quotation-package-detail')
 
