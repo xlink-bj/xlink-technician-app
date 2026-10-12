@@ -1477,7 +1477,10 @@ async function openExistingMaterialSkuPreview(groupId: string, materialId: strin
 }
 
 function onSkuQuantityInput(event: unknown): void {
-  skuQuantityText.value = eventValue(event)
+  const detail = event && typeof event === 'object'
+    ? (event as { detail?: { value?: unknown } }).detail : undefined
+  const raw = detail?.value
+  skuQuantityText.value = typeof raw === 'string' || typeof raw === 'number' ? String(raw) : ''
   skuLocalSaveError.value = ''
 }
 
