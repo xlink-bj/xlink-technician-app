@@ -16,6 +16,8 @@
 
 Source-level R1 `type:0` is a **fact about this page's `quote()`**, not a claim that the entire R1 application never writes `type:1`.
 
+**Additional pinned-snapshot sibling audit (same SHA):** `business/subpackages/order/orders.vue` reads `basic/order/query` with `is:type|integer#and = 0` for its quotation-filter path; `business/subpackages/order/order.vue` reads `basic/order/query` for order details. Neither sibling page provided a `type:1` creation caller or a `creatQuotation` write when inspected. This is **negative evidence limited to three inspected pages**, not a repository-wide exhaustive search, backend contract, or authorization to change `type` in New App.
+
 ## 2. Quantity / price / projection matrix
 
 | Concept | Pinned R1 page behavior | New App candidate | Required I3 evidence |
