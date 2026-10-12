@@ -170,7 +170,11 @@ export function createDefaultQuotationCatalogReadPort(authSession: AuthSessionPo
         roleVersion: session.roleVersion ?? null,
       }
     },
-    config.value.authWireConfig.tenant,
+    // R1 material-Code tenant only in credential-free, network-blocked H5 QA.
+    // Keep login, work-order, survey and other Mock tenant semantics unchanged.
+    config.value.authOnlyMockBusiness && import.meta.env.VITE_XLINK_H5_MOCK_E2E === 'true'
+      ? '1340835581184723420'
+      : config.value.authWireConfig.tenant,
   )
 }
 
