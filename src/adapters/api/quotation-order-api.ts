@@ -313,10 +313,12 @@ export class QuotationOrderReadAdapter implements QuotationOrderReadPort {
   }
 
   /**
-   * Signing READINESS only. QueryById has no proven server-side Order/role ACL,
-   * so this is NOT wired to any production signing UI until that backend gate.
-   * Current role-listed WorkOrder and the authorization fingerprint are checked
-   * both before transport and after response, and raw content is never returned.
+   * Signing PRECHECK read: deliberately re-reads only the previously audited
+   * bounded, WorkOrder-scoped type=1 list. Never invoke queryById here:
+   * queryById's server-side per-Order authorization has NOT been established.
+   *
+   * It can confirm a selected official Order for this session/role, but it
+   * proves no Contract access, PDF visibility or signing authority.
    */
   async readScopedTypeOneOrderForSigningReview(
     workOrderId: string,
@@ -331,36 +333,38 @@ export class QuotationOrderReadAdapter implements QuotationOrderReadPort {
       return adapterFailure('authorization_denied', '当前工单尚未获得签约订单只读准入。')
     }
     try {
-      const raw = await this.transport.execute({
-        method: 'POST', path: 'basic/order/queryById', body: { id: orderId },
-      })
-      if (this.scopedReviewIdentity() !== identity || !this.isAuthorizedForCurrentSession(workOrderId)) {
+      // Reuse a reviewed list endpoint rather than introducing a broader
+      // lookup. Absence from the top three is "cannot verify", NOT no Order.
+      const reread = await this.listTypeOneOrdersForWorkOrder(workOrderId, 3)
+      if (identity !== this.scopedReviewIdentity() || !this.isAuthorizedForCurrentSession(workOrderId)) {
         return adapterFailure('authorization_denied', '读取期间账号或工单权限已变化。')
       }
-      const envelope = asRecord(raw, 'scoped order detail')
-      const candidate = optionalRecord(envelope.data) ?? envelope
-      const order = quotationOrderBrowseItem(candidate)
-      if (order.id !== orderId || order.serviceAppointmentId !== workOrderId) {
-        return adapterFailure('authorization_denied', '返回的正式订单与当前工单身份不匹配。')
+      if (reread.state !== 'succeeded' || !reread.data) {
+        return adapterFailure(
+          reread.state === 'failed_retryable' ? 'network_retryable' : 'server_terminal',
+          '当前工单的正式订单二次核验暂不可用。',
+        )
+      }
+      const orders = reread.data.items
+      // listTypeOneOrdersForWorkOrder verifies every row's type, ownership,
+      // size and unique identity; independently bound the chosen Order.
+      const matching = orders.filter(item =>
+        item.id === orderId && item.serviceAppointmentId === workOrderId && item.type === 1,
+      )
+      if (matching.length !== 1) {
+        return adapterFailure('authorization_denied', '本次有限订单列表无法确认目标订单归属。')
       }
       return succeeded({
-        order,
+        order: matching[0]!,
         contractReadAuthorized: false,
         signingAuthorized: false,
       })
-    } catch (error) {
-      // An exception can contain provider response bodies, user fields and
-      // tokens; never propagate exception messages into Signing review UI.
-      if (this.scopedReviewIdentity() !== identity || !this.isAuthorizedForCurrentSession(workOrderId)) {
+    } catch {
+      // Never return response bodies, personal fields or exception messages.
+      if (identity !== this.scopedReviewIdentity() || !this.isAuthorizedForCurrentSession(workOrderId)) {
         return adapterFailure('authorization_denied', '读取期间账号或工单权限已变化。')
       }
-      if (error instanceof ApiReadTransportError) {
-        return adapterFailure(error.category, '正式订单只读请求暂时无法完成。')
-      }
-      return adapterFailure(
-        error instanceof AdapterMappingError ? 'server_terminal' : 'network_retryable',
-        '正式订单信息未能通过安全读取校验。',
-      )
+      return adapterFailure('network_retryable', '正式订单只读服务暂不可用。')
     }
   }
 
