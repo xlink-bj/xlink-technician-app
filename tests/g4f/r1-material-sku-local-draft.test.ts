@@ -8,7 +8,7 @@ import {
 import type { StoragePort, StorageKey } from '@shared/ports'
 import { asOpaqueId } from '@shared/types'
 import { useQuotationCompositionStore } from '@features/work-orders/quotation/composition-store'
-import { createEmptyQuotationDraft, createQuotationGroup, upsertLocalQuotationMaterialSkuChoice } from '@features/work-orders/quotation/model'
+import { createEmptyQuotationDraft, createQuotationGroup, upsertLocalQuotationMaterialSkuChoice, type QuotationDraft } from '@features/work-orders/quotation/model'
 import { quotationDraftRecordFor, decodeQuotationDraftRecord } from '@features/work-orders/quotation/draft-codec'
 import { validateQuotationDraft } from '@features/work-orders/quotation/validation'
 
@@ -132,19 +132,23 @@ describe('M1 I2 R1 local SKU quantity choices / schema v4: NO official Order', (
     const withSku = upsertLocalQuotationMaterialSkuChoice(draft, 'group-a', 'spu-A', matchA)
     expect(decodeQuotationDraftRecord(quotationDraftRecordFor(id, withSku,
       '2026-10-12T00:00:00.000Z'), id)).toMatchObject({ state: 'valid' })
+    type MutableDraft = { groups: Array<{ materials: Array<{
+      skuChoices: Array<{ skuId: string; quantity: number; attributes: Record<string, string> }>
+      quantity: number
+    }> }> }
     for (const broken of [
       { ...matchA, quantity: 0 },
       { ...matchA, quantity: 1.5 },
       { ...matchA, attributes: { color: '' } },
     ]) {
-      const invalid = structuredClone(withSku)
-      invalid.groups[0]!.materials[0]!.skuChoices![0] = broken
-      const record = quotationDraftRecordFor(id, invalid, '2026-10-12T00:00:00.000Z')
+      const invalid = JSON.parse(JSON.stringify(withSku)) as MutableDraft
+      invalid.groups[0]!.materials[0]!.skuChoices[0] = broken
+      const record = quotationDraftRecordFor(id, invalid as unknown as QuotationDraft, '2026-10-12T00:00:00.000Z')
       expect(decodeQuotationDraftRecord(record, id).state).toBe('invalid')
     }
-    const inconsistent = structuredClone(withSku)
+    const inconsistent = JSON.parse(JSON.stringify(withSku)) as MutableDraft
     inconsistent.groups[0]!.materials[0]!.quantity = 999
-    expect(decodeQuotationDraftRecord(quotationDraftRecordFor(id, inconsistent,
+    expect(decodeQuotationDraftRecord(quotationDraftRecordFor(id, inconsistent as unknown as QuotationDraft,
       '2026-10-12T00:00:00.000Z'), id).state).toBe('invalid')
   })
 })
