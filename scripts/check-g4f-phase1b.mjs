@@ -150,7 +150,7 @@ for (const token of ['b01-workbench-quote-list-390.png', 'b02-visual-catalog-390
 for (const token of ['autosaves grouped state only', 'restores the local quotation draft', 'different %s identity', 'malformed or incompatible', 'legacy flat v1 drafts']) {
   if (!unitTests.includes(token)) fail(`unit coverage missing: ${token}`)
 }
-for (const token of ['missing', 'numeric and string', 'unresolved selected Material', 'unresolved bundled Procedure or Measure', 'reconfigures in place', 'maintainAreaNum']) {
+for (const token of ['missing', 'R1 numeric layers', 'unresolved selected Material', 'unresolved bundled Procedure or Measure', 'reconfigures in place', 'maintainAreaNum']) {
   if (!packageConfigurationTests.includes(token)) fail(`Phase 1G package configuration coverage missing: ${token}`)
 }
 if (!validation.includes('validateQuotationDraft') || !hydration.includes('hydrateQuotationDraft')
