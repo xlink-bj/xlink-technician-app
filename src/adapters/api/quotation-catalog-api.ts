@@ -183,7 +183,7 @@ function materialSkuPage(raw: unknown, ids: readonly string[]): ReadPage<Quotati
 /** Preserve R1's single-spuid vs in:spuid|array#and request contract.
  * This is a request builder, not evidence of backend SKU authorization.
  */
-function materialSkuRequest(context: QuotationCatalogContext, spuIds: readonly string[]): ApiReadRequest {
+function materialSkuRequest(context: QuotationCatalogContext, route: 'direct_material' | 'package_materials', spuIds: readonly string[]): ApiReadRequest {
   if (!context || !context.workOrderId || !String(context.workOrderId).trim()
     || typeof context.serviceType !== 'string' || !context.serviceType.trim()) {
     throw new AdapterMappingError('current Work Order catalog identity is required for material SKU read')
@@ -193,13 +193,19 @@ function materialSkuRequest(context: QuotationCatalogContext, spuIds: readonly s
     throw new AdapterMappingError('material SKU SPU identities are invalid or unbounded')
   }
   if (new Set(spuIds).size !== spuIds.length) throw new AdapterMappingError('duplicate material SPU IDs')
+  // R1 getMaterialSKU(spu) uses spuid; R1 getPackageMaterialSKU(list)
+  // always uses in:spuid|array#and, including a one-material Package.
+  if (!['direct_material', 'package_materials'].includes(route)
+    || (route === 'direct_material' && spuIds.length !== 1)) {
+    throw new AdapterMappingError('R1 SKU lookup route does not match its source shape')
+  }
   return {
     method: 'POST',
     path: 'basic/material/query',
     body: {
       _all: '1',
       'is:state|integer#and': 1,
-      ...(spuIds.length === 1
+      ...(route === 'direct_material'
         ? { spuid: spuIds[0] }
         : { 'in:spuid|array#and': spuIds.join(',') }),
     },
@@ -505,7 +511,7 @@ class QuotationCatalogReadAdapter implements QuotationCatalogReadPort {
   /** R1 read-only SKU identity, intentionally not called from any UI yet.
    * The current Production allowlist does not permit basic/material/query.
    */
-  listMaterialSkuVariants(context: QuotationCatalogContext, spuIds: readonly string[]) {
+  listMaterialSkuVariants(context: QuotationCatalogContext, route: 'direct_material' | 'package_materials', spuIds: readonly string[]) {
     return this.read(
       () => {
         if (this.isProductionReadOnly()) {
@@ -514,7 +520,7 @@ class QuotationCatalogReadAdapter implements QuotationCatalogReadPort {
             'authorization_denied',
           )
         }
-        return materialSkuRequest(context, spuIds)
+        return materialSkuRequest(context, route, spuIds)
       },
       raw => materialSkuPage(raw, spuIds),
     )
