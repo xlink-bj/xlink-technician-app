@@ -122,7 +122,15 @@
         >服务器已返回报价单文件</view>
       </view>
 
-      <view v-if="composition.localState === 'legacy_requires_action'" class="quotation-content__blocked" data-testid="quotation-draft-legacy">
+      <view v-if="composition.localState === 'unscoped_requires_confirmation'"
+        class="quotation-content__blocked" data-testid="quotation-draft-role-unscoped">
+        <text class="quotation-content__blocked-title">发现未记录角色归属的历史报价草稿</text>
+        <text class="quotation-content__copy">旧草稿无法确认属于当前角色。系统不会自动恢复、迁移、覆盖或删除旧数据。可明确选择为当前角色新建独立草稿，历史记录仍保留，后续由授权人员处理。</text>
+        <AppButton class="quotation-content__secondary-action" variant="secondary" block
+          data-testid="quotation-draft-role-start-new"
+          @tap="composition.startNewRoleScopedDraft">为当前角色新建草稿（保留历史）</AppButton>
+      </view>
+      <view v-else-if="composition.localState === 'legacy_requires_action'" class="quotation-content__blocked" data-testid="quotation-draft-legacy">
         <text class="quotation-content__blocked-title">旧版平铺草稿已保留</text>
         <text class="quotation-content__copy">旧草稿没有可靠的维修部位和工程量归属，系统不会自动迁移、覆盖或清除。请先人工处理；如确认不再需要，可显式放弃并创建分组草稿。</text>
         <AppButton class="quotation-content__secondary-action" variant="secondary" block @tap="composition.discardLegacyDraft">确认放弃旧版草稿并新建</AppButton>
