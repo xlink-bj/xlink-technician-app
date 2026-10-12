@@ -27,7 +27,8 @@
 
 | R1 场景及源定位 | 新 App 现存实现 | 对照状态 | 用户可见后果、I1 后续证据 |
 | --- | --- | --- | --- |
-| W01 R1 `business/subpackages2/workOrder/workOrders.vue:690–705`：`basic/workOrder/query.do` 及状态、排序、日期筛选 | `src/pages/work-orders/work-orders.vue`、`src/features/work-orders/list.ts`；`src/adapters/api/technician-api.ts:1395` 实际读取 `basic/serviceAppointment/query` | **SOURCE_MAPPED / DOMAIN_DIVERGENCE_TO_RESOLVE** | R1 同时存在 WorkOrder 与 ServiceAppointment 表面，**两者不可直接视为同一个 API**；须按当前技术员默认入口的真实路由/角色验证列表语义与状态映射。禁止在新 App 擅自替换后台路径 |
+| W00 **R1 主导航** `business/pages.json:31–38,917` 指向 `pages/serviceAppointment/serviceAppointments`；对应 `business/pages/serviceAppointment/serviceAppointments.vue:1563–1567` 使用 `basic/serviceAppointment/query` 或 SANode 视角下 `querySAWorkflowNode`；另一服务单包 `business/subpackages/serviceAppointment/serviceAppointments.vue:1294–1296` 使用 `basic/serviceAppointment/query.do` | `src/pages/work-orders/work-orders.vue`、`src/features/work-orders/list.ts`；`src/adapters/api/technician-api.ts:1395` 使用 `basic/serviceAppointment/query` | **PRIMARY_DOMAIN_SOURCE_MATCHED / RESPONSE_PARITY_UNVERIFIED** | 主导航以 ServiceAppointment 为工单领域对象，新 App 不存在仅因对象名而需要改后台的问题；仍需逐字段验证 SANode、筛选、角色和分页 |
+| W01 **R1 的另一业务页** `business/subpackages2/workOrder/workOrders.vue:690–705` 请求 `basic/workOrder/query.do`；`business/pages.json:868` 对应 WorkOrder 页代码目前在注释中 | 新 App 当前主工单列表为 ServiceAppointment（同 W00），无单独专用 WorkOrder 列表 | **ALTERNATE_ROUTE_SCOPE_NOT_YET_EVIDENCED** | R1 仓库中存在另一套 WorkOrder 接口，但**不能假定它是当前技术员主流程的必需能力**。只在 R1 实际可达角色/导航证明后纳入差异，不擅自增加页面或改后台 |
 | W02 R1 `workOrders.vue:793,875` 查询 `basic/workOrder/queryWorkflowNode.do` 和 `querySAWorkflowNode.do` | `src/features/work-orders/list-actions.ts`、`detail-workflow.ts`、`src/adapters/api/technician-api.ts` | IMPLEMENTED_UNVERIFIED | 状态/节点/当前操作者必须由 R1 工作流事实决定，不可仅凭标签显示接单按钮 |
 | W03 R1 `workOrders.vue:1046–1070`：`workflow/process` 传 `sid,smodule=workOrder,workflowNodeId` 及 `currentOrgId` 或 `handlerId` | `src/features/work-orders/list-actions.ts` 生成 accept action；`src/features/work-orders/action-workspace.ts` | PARTIAL | 不同承接类型与工作流节点的操作有效性需核对；现有生产写入限制不变 |
 | W04 R1 `workOrders.vue:1180–1196`：`basic/winnerlook/getMiddleNumberBySid` 后平台拨号 | `src/pages/work-orders/detail.vue`; G4-D 联系/预约合同记录 `docs/verification/G4D_ACCEPT_CONTACT_APPOINTMENT_EVIDENCE.md` | IMPLEMENTED_UNVERIFIED | 直接/中间号、拒绝授权/拨号失败、设备电话能力分别复核 |
@@ -75,7 +76,7 @@
 
 | 优先级 | 问题 | 下一责任轮 | 最小 Done / 证据 |
 | --- | --- | --- | --- |
-| P0-DOMAIN | W01 `workOrder` vs `serviceAppointment` 双列表语义及 R1 实际技术员入口/角色 | **I1 补充核验 + I7 回归** | 当前 route+role 的源码证明、真实新 App 对应路径，标注哪些列表对等；禁止假设相同 |
+| P0-DOMAIN | W00 主导航已确认 ServiceAppointment，W01 为独立的 WorkOrder 备选路径 | **I1 源码已澄清；I7 角色/导航回归** | `business/pages.json:31,917` 主工单 tab 与新 App 主领域一致；仅当可达角色/菜单存在其他 WorkOrder 入口时才补齐，不把备用页面错判为阻塞 |
 | P0-FUNCTION | L01–L04/W02–W05/A01–A04/S01–S04 剩余表单、流程和异常分支 | **I1 锁定差异清单 + I7 端到端** | 源码路径/请求字段/回执/异常清单逐项有测试映射；授权写入未知列 NOT_RUN |
 | P0-FUNCTION | Q01–Q03，SPU/SKU 及四类目录的请求/属性与配置状态 | **I2 [#92](https://github.com/xlink-bj/xlink-technician-app/issues/92)** | R1 所有相关参数/Option Provider/允许值 + 本地交互测试；旧后台不动 |
 | P0-FUNCTION | Q04–Q05 数量/计算/Order.type=1、编辑与 readback | **I3 [#93](https://github.com/xlink-bj/xlink-technician-app/issues/93)** | 纯计算/编码黄金样例与提交失败/重复场景；Beta 真实写入独立 Gate |
