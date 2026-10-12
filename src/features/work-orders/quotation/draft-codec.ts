@@ -4,6 +4,7 @@ import {
   type ActionDraftRecord,
 } from '@runtimes/action'
 
+import { quotationPackageLayerKey } from './package-configuration'
 import {
   type QuotationDraft,
   type QuotationGroup,
@@ -78,7 +79,7 @@ function validPackageConfiguration(value: unknown): boolean {
     && Array.isArray(configuration!.measures)
     && configuration!.measures.every((component) => validConfiguredComponent(component, false)))) return false
   const materialLayers = (configuration!.materials as Array<Record<string, unknown>>)
-    .map((component) => JSON.stringify([typeof component.layer, component.layer]))
+    .map((component) => quotationPackageLayerKey(component.layer as string | number))
   return new Set(materialLayers).size === materialLayers.length
 }
 
