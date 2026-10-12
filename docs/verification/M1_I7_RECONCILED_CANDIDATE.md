@@ -11,17 +11,23 @@
 | Reconciliation merge | `460a8c126da7088cc578aff4aaea357517c6fa7d` | Exact parents, in order: #109 then #104, **not a merge to main** |
 | Reconciled source tree | `3d7f09a9f47d9f15b2bbf2505970a916449be6be` | Exactly **same Git tree** as #109; no changed source or docs at merge commit |
 | Shared I2 parity audit blob | `a5aa71bede16ea9a4090d6cc7ce28c4176b3fffc` | Byte-identical in #104, #105 and #109 before reconciliation |
+| Observed current `main` CI commit | `c57fb3cc876c8ca3fb133d74dcf4833f8f755b32` | Main's one exclusive historical commit at audit time; no branch ref modified |
+| Main ancestry reconciliation merge | `1e99f85c53a1612dde41a0a0709933c88dc74d97` | Parents: prior independent candidate `d8ca02a` then observed `main` `c57fb3c`; **identical tree** to candidate |
+| Shared `main` CI workflow blob | `9f5714a6b1035be0193d302c3fe3df68ad3276b5` | `.github/workflows/validate.yml` is byte-identical in `main` and candidate |
 | Separately authorized I2 local probe #106 | `a950b2205acb1581ac2a17181773f331642ab59a` | **Explicitly excluded**, still separate Draft; no unwitnessed Production calls imported |
 
 GitHub's original #104→#105 compare returns `diverged / ahead 3 / behind 1` because #105 branched before #104's final **documentation-only** commit. The content was already identical in both branches. This merge commit explicitly records both ancestries without changing the #109 tree; no cherry-pick is needed. **Original PRs #104/#105/#109 remain unchanged and their historical divergence continues; only this new integration candidate is reconciled.**
 
 Verified GitHub compare **#104 → reconciliation**: `ahead 14 / behind 0`; **#109 → reconciliation**: `ahead 2 / behind 0`, **0 changed files**.
 
+**Additional main history check:** before reconciliation, `main` (`c57fb3c`) and the candidate were `diverged / candidate ahead 449 / behind 1`. The sole main-exclusive commit added `validate.yml`, whose blob already matches the candidate exactly. The **second two-parent merge** `1e99f85c` records current-main ancestry while preserving the candidate tree. This does **not** mean protected/main was modified, that future main changes are included, or that the 449-commit app stack is approved for integration.
+
 ## Automated review Gate
 
 The **new Draft integration branch** `lead/m1-i7-reconciled-integration-candidate` contains this manifest, `scripts/check-m1-i7-reconciliation.mjs`, and `.github/workflows/m1-i7-integration-gate.yml`. Its workflow uses a full-history `actions/checkout@v4` with **persisted credentials disabled** to assert all of the following:
 
 1. Merge object has *exactly two parents* (#109 then #104).
+1a. Main-ancestry merge has *exactly two parents* (candidate then recorded current `main`) and an identical tree and CI workflow blob; current `main` is an ancestor of the candidate HEAD.
 2. Merge tree equals #109 tree; the #104 parity audit blob equals #109's.
 3. Both PR source tips are ancestors of candidate `HEAD`.
 4. #106's locally authorized Production evidence collector is **not** an ancestor.
