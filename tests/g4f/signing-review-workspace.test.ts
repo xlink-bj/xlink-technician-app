@@ -144,6 +144,7 @@ describe('M1-I6 scoped signing-read handoff — no Contract or signature authori
       s.changeSession(changed)
       pending.resolve({ state: 'succeeded', data: { items: [row()], page: 1, pageSize: 3, totalCount: 1 } })
       expect((await wait).state).toBe('failed_terminal')
+      expect(s.workspace.snapshot().state).toBe('failed_terminal')
       expect(s.readScopedTypeOneOrderForSigningReview).not.toHaveBeenCalled()
       expect(s.workspace.snapshot().review).toBeUndefined()
     }
@@ -162,6 +163,7 @@ describe('M1-I6 scoped signing-read handoff — no Contract or signature authori
       if (change === 'clear') s.workspace.clear()
       pending.resolve({ state: 'succeeded', data: data() })
       expect((await waiting).state).toBe('failed_terminal')
+      expect(s.workspace.snapshot().state).toBe(change === 'clear' ? 'idle' : 'failed_terminal')
       expect(s.workspace.snapshot().review).toBeUndefined()
     }
   })
