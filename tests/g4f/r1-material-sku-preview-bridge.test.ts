@@ -5,6 +5,7 @@ import type {
   QuotationMaterialSkuVariantRead,
 } from '@shared/ports'
 import { useQuotationCatalogBrowserStore } from '@features/work-orders/quotation/catalog-browser-store'
+import { asOpaqueId } from '@shared/types'
 import { matchMaterialSkuSelectionPreview, projectMaterialSkuSelectionPreview } from '@features/work-orders/quotation/material-sku-selection-preview'
 
 const context = { workOrderId: 'synthetic-wo-current', serviceType: 'waterproof', sourceType: 'normal' }
