@@ -34,6 +34,24 @@ describe('M1 R1 Package choice UI parity: numeric layer identity, raw value pres
     expect(quotationPackageLayerKey('mock-layer-1')).toBe('string:mock-layer-1')
   })
 
+  it('sorts numeric package repair layers as R1 before confirming selections', () => {
+    const rows = [material(2, 'upper'), material('0', 'primer'), material('01', 'main')]
+    const layers = quotationPackageMaterialLayersFor(rows)
+    expect(layers.map(layer => layer.key)).toEqual(['number:0', 'number:1', 'number:2'])
+    const result = configuredQuotationPackageCandidateFor(
+      createQuotationGroup('group-1', { repairParts: ['roof'] }),
+      packageRow, detail(rows), rows.map(row => quotationPackageMaterialChoiceFor(row)!),
+    )
+    expect(result).toMatchObject({
+      state: 'succeeded',
+      data: { configuration: { materials: [
+        { catalogId: 'mat-primer', layer: '0' },
+        { catalogId: 'mat-main', layer: '01' },
+        { catalogId: 'mat-upper', layer: 2 },
+      ] } },
+    })
+  })
+
   it('one choice covers alternative material bodies that differ only in layer JSON type', () => {
     const list = [material(1, 'a'), material('01', 'b'), material('2', 'c')]
     const layers = quotationPackageMaterialLayersFor(list)
