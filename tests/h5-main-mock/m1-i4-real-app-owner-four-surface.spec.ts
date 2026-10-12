@@ -102,6 +102,7 @@ for (const vp of [{ width: 390, height: 844 }, { width: 375, height: 667 }]) {
     await expect(page.getByTestId('quotation-state-ready')).toBeVisible()
     await expect(page.getByTestId('quotation-group-section-quotation-group-1-package')).toBeVisible()
     await expect(page.getByTestId('quotation-group-section-quotation-group-1-material')).toBeVisible()
+    await page.getByTestId('quotation-p1-review-toggle').click()
     await expect(page.getByTestId('quotation-p1-review-order-blocked')).toBeVisible()
     await expect(page.getByTestId('action-workspace-submit')).toHaveCount(0)
     await shot('05-reloaded-order-blocked', 'quotation-state-ready')
