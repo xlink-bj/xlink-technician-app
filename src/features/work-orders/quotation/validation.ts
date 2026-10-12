@@ -1,3 +1,4 @@
+import { quotationPackageLayerKey } from './package-configuration'
 import {
   parseQuotationQuantity,
   quotationSelectionsFor,
@@ -43,7 +44,7 @@ function validConfiguration(configuration: QuotationPackageConfiguration | undef
   for (const material of configuration.materials) {
     if ((typeof material.layer !== 'number' && typeof material.layer !== 'string')
       || (typeof material.layer === 'string' && !material.layer.trim())) return false
-    const key = `${typeof material.layer}:${String(material.layer)}`
+    const key = quotationPackageLayerKey(material.layer)
     if (layers.has(key)) return false
     layers.add(key)
   }
