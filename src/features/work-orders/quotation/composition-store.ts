@@ -358,7 +358,6 @@ export const useQuotationCompositionStore = defineStore('quotationComposition', 
 
   function setQuantityText(groupId: string, selectionId: string, input: string): OperationSnapshot<void> {
     if (!draft.value || !canEdit()) return failed('unsupported_capability', '报价草稿当前不可编辑')
-    quantityTextBySelection.value = { ...quantityTextBySelection.value, [selectionId]: input }
     const selected = draft.value.groups.find(group => group.groupId === groupId)?.materials.find(
       selection => selection.selectionId === selectionId,
     )
@@ -366,6 +365,7 @@ export const useQuotationCompositionStore = defineStore('quotationComposition', 
       quantityErrorBySelection.value = { ...quantityErrorBySelection.value, [selectionId]: '此材料按 SKU 规格分别计数，请在规格配置中修改。' }
       return failed('validation', '此材料数量由已选 SKU 数量合计')
     }
+    quantityTextBySelection.value = { ...quantityTextBySelection.value, [selectionId]: input }
     const parsed = parseQuotationQuantity(input)
     if (!parsed.valid) {
       quantityErrorBySelection.value = { ...quantityErrorBySelection.value, [selectionId]: parsed.message }
