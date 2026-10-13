@@ -225,4 +225,67 @@ describe('G4-F Phase 1E quotation catalog browser', () => {
     expect(groups.map((group) => group.label)).toEqual(['材料层级 1', '材料层级 2', '材料层级 3'])
     expect(groups.map((group) => group.label).join(' ')).not.toContain('number:')
   })
+
+  it('S1 Q01: source-matched ordinary Material remains selectable without any active SKU', async () => {
+    // Entirely synthetic row SHAPE, informed by #120 Production DB structure;
+    // neither the row identity nor its values are copied from Production.
+    const ordinary: QuotationMaterialRead = {
+      kind: 'material', id: 'synthetic-active-ordinary', name: '普通材料（结构示例）',
+      serviceTypes: ['11'], sourceTypeList: ['1', '5'],
+    }
+    const port = catalogPort({
+      listMaterials: vi.fn(async () => succeeded({ ...emptyPage(), items: [ordinary] })),
+      listMaterialSalesFields: vi.fn(async () => succeeded({ items: [
+        { name: 'color', label: '颜色', options: [{ value: 'black', label: '黑色' }] },
+      ] })),
+      listMaterialSkuVariants: vi.fn(async () => succeeded(emptyPage())),
+    })
+    const store = useQuotationCatalogBrowserStore()
+    const r1Context: QuotationCatalogContext = {
+      workOrderId: 'synthetic-service-appointment', serviceType: '11', sourceType: '1',
+    }
+    store.configure({ readPort: port, catalogContext: r1Context })
+    store.open('material')
+    await store.loadList('material')
+    expect(port.listMaterials).toHaveBeenCalledWith(r1Context)
+    expect(store.catalogStatesByKind.material).toBe('succeeded')
+    expect(store.selectedCatalogItemFor('material', ordinary.id)).toEqual(ordinary)
+    expect(port.listMaterialSkuVariants).not.toHaveBeenCalled()
+
+    // An optional attempt to view specifications must not retroactively
+    // erase or block the already returned ordinary product catalog.
+    await store.openMaterialSkuPreview(ordinary.id)
+    expect(store.materialSkuPreview?.state).toBe('not_configured')
+    expect(port.listMaterialSkuVariants).not.toHaveBeenCalled()
+    expect(store.catalogStatesByKind.material).toBe('succeeded')
+    expect(store.selectedCatalogItemFor('material', ordinary.id)).toEqual(ordinary)
+  })
+
+  it('S1 Q02: unavailable active variants block only SKU preview, never ordinary catalog', async () => {
+    const withOptions: QuotationMaterialRead = {
+      kind: 'material', id: 'synthetic-spu-with-options', name: '规格链独立结构示例',
+      serviceTypes: ['11'], sourceTypeList: ['1'],
+      saleOptionCandidates: { color: ['black'] },
+    }
+    const port = catalogPort({
+      listMaterials: vi.fn(async () => succeeded({ ...emptyPage(), items: [withOptions] })),
+      listMaterialSalesFields: vi.fn(async () => succeeded({ items: [
+        { name: 'color', label: '颜色', options: [{ value: 'black', label: '黑色' }] },
+      ] })),
+      listMaterialSkuVariants: vi.fn(async () => succeeded(emptyPage())),
+    })
+    const store = useQuotationCatalogBrowserStore()
+    store.configure({
+      readPort: port,
+      catalogContext: { workOrderId: 'synthetic-service-appointment', serviceType: '11', sourceType: '1' },
+    })
+    store.open('material')
+    await store.loadList('material')
+    await store.openMaterialSkuPreview(withOptions.id)
+    expect(port.listMaterialSkuVariants).toHaveBeenCalledTimes(1)
+    expect(store.materialSkuPreview?.state).toBe('blocked')
+    expect(store.materialSkuMatch?.state).toBe('blocked')
+    expect(store.catalogStatesByKind.material).toBe('succeeded')
+    expect(store.selectedCatalogItemFor('material', withOptions.id)).toEqual(withOptions)
+  })
 })
