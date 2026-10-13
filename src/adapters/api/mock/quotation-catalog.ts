@@ -67,10 +67,35 @@ export const mockQuotationMaterialListResponse = {
       sourceTypeList: [mockQuotationCatalogSourceType],
       order: 1,
     },
+    // The current authorized technician has active ordinary Materials but
+    // no active current-tenant SKU. These synthetic rows reproduce that
+    // structural case without copying Production IDs or values (#120).
+    {
+      _id: 'mock-catalog-material-ordinary-1',
+      name: '普通防水辅材（结构示例）',
+      code: 'DEMO-ORD-001',
+      unit: '件',
+      materialUnit: '件',
+      type: 1,
+      serviceType: [mockQuotationCatalogServiceType],
+      sourceTypeList: [mockQuotationCatalogSourceType],
+      order: 2,
+    },
+    {
+      _id: 'mock-catalog-material-ordinary-2',
+      name: '普通施工材料（结构示例）',
+      code: 'DEMO-ORD-002',
+      unit: '件',
+      materialUnit: '件',
+      type: 1,
+      serviceType: [mockQuotationCatalogServiceType],
+      sourceTypeList: [mockQuotationCatalogSourceType],
+      order: 3,
+    },
   ],
   page: 1,
   rows: 20,
-  total: 1,
+  total: 3,
 } as const
 
 export const mockQuotationMeasureListResponse = {
