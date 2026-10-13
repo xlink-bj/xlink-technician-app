@@ -26,6 +26,8 @@
       @back="$emit('back')"
       @return-to-group="returnToGroup"
     ><template #synthetic-review-panel><slot name="synthetic-review-panel" /></template></QuotationActionContent>
+    <!-- Future-stage entry follows the active quotation task, never precedes it. -->
+    <slot name="after-content" />
     <template #actions>
       <view class="quotation-workspace-footer-summary" data-testid="quotation-footer-summary">
         <view class="quotation-workspace-footer-summary__copy">
