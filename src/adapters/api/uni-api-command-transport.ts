@@ -83,6 +83,32 @@ export function isUnapprovedR1SigningCommandPath(path: string): boolean {
     || route === 'basic/contract/getSignatureUrl'
 }
 
+/**
+ * This transport does NOT own R1 quotation generation, customer order-confirm,
+ * coupon redemption or message sends. Those APIs are business mutations even
+ * when their legacy UI labels say "quote"/"preview".
+ *
+ * Source: R1 placeOrders.vue:6907-6959 + backend OrderServiceImpl:
+ * handleCreatQuotation:632-648 saves Order and optionally creates a PDF.
+ * Existing generic order write flag must NEVER implicitly authorize them.
+ */
+export function isUnapprovedR1QuotationStageMutationPath(path: string): boolean {
+  let route = path.split(/[?#]/)[0] ?? ''
+  try { route = decodeURIComponent(route) } catch { return true }
+  while (route.startsWith('/')) route = route.slice(1)
+  if (/^basic\/couponPrinting\/useCoupon\/[^/]+(?:\.do)?$/.test(route)) return true
+  return [
+    'basic/order/creatQuotation',
+    'basic/order/creatQuotation.do',
+    'basic/order/quotation',
+    'basic/order/quotation.do',
+    'basic/order/orderConfirm',
+    'basic/order/orderConfirm.do',
+    'basic/order/sendMessage',
+    'basic/order/sendMessage.do',
+  ].includes(route)
+}
+
 export function createUniApiCommandTransport(options: UniApiCommandTransportOptions): ApiCommandTransport {
   const request = options.request ?? defaultRequest
 
@@ -91,6 +117,12 @@ export function createUniApiCommandTransport(options: UniApiCommandTransportOpti
       if (isUnapprovedR1SigningCommandPath(input.path)) {
         throw new ApiCommandTransportError(
           'Contract signing, notification and cancellation commands require a separate business authorization gate',
+          'unsupported_capability',
+        )
+      }
+      if (isUnapprovedR1QuotationStageMutationPath(input.path)) {
+        throw new ApiCommandTransportError(
+          'R1 quotation generation, confirmation, coupon use and notifications require a separate business-write gate',
           'unsupported_capability',
         )
       }
