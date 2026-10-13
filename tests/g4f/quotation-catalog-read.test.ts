@@ -427,6 +427,18 @@ describe('G4-F Phase 1C quotation catalog read foundation', () => {
       specUnit: '支',
       type: 1,
     })
+    // #120 observed current-role ordinary products (not a live API echo).
+    // The default Mock must exercise that actual structural branch: active
+    // catalog item WITHOUT SKU spuid or sale-option candidates.
+    expect(materials.data?.items).toHaveLength(3)
+    const ordinaryRows = materials.data?.items.filter(item => item.id.startsWith('mock-catalog-material-ordinary-'))
+    expect(ordinaryRows).toHaveLength(2)
+    for (const row of ordinaryRows ?? []) {
+      expect(row.kind).toBe('material')
+      expect(row.spuId).toBeUndefined()
+      expect(row.saleOptionCandidates).toBeUndefined()
+      expect(row.sourceTypeList).toEqual([mockQuotationCatalogSourceType])
+    }
     expect(measures.data?.items[0]).toMatchObject({
       kind: 'measure',
       id: 'mock-catalog-measure-inspection',
