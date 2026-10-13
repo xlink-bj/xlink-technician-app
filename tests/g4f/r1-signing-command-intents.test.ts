@@ -8,6 +8,7 @@ const workOrderId='wo-019', orderId='official-001', contractId='contract-123'
 const ctx = (extra: Partial<R1SigningIntentContext> = {}): R1SigningIntentContext => ({
   workOrderId, selectedOrderId: orderId,
   currentIdentityVerified: true, currentRoleWorkOrderVerified: true,
+  currentNodeHandlerVerified: true,
   officialOrder: { id: orderId, type: 1, serviceAppointmentId: workOrderId,
     processState: 0, isAgain: 0, hasExts: true },
   contractState: 'succeeded', contracts: [], ...extra,
@@ -81,6 +82,12 @@ describe('I6 source-pinned signing command intent contracts, zero business write
     expect(result.assessment).not.toBe('candidate')
     expect(result.reasons.join(' ')).toContain('工单')
     expect(result.mayDispatch).toBe(false)
+  })
+  it.each(kinds)('%s blocks a role-visible WorkOrder if current workflow node handler is not independently verified', kind => {
+    const review = reviewR1SigningIntent(kind, ctx({ currentNodeHandlerVerified: false }))
+    expect(review.assessment).not.toBe('candidate')
+    expect(review.reasons.join(' ')).toContain('handlerIds')
+    expect(review.mayDispatch).toBe(false)
   })
   it.each(kinds)('%s fails role/identity denial before any future command',(kind)=>{
     expect(reviewR1SigningIntent(kind,ctx({currentIdentityVerified:false})).assessment).not.toBe('candidate')

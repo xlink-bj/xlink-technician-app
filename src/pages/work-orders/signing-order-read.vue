@@ -142,6 +142,9 @@ const intentReview = computed(() => {
     ...(matchingContracts.length === 1 ? { selectedContractId: matchingContracts[0]!.id } : {}),
     currentRoleWorkOrderVerified: review.snapshot.workOrderId === routeWorkOrderId.value
       && review.snapshot.orderId === routeOrderId.value,
+    // Exact R1 active WorkflowNode.handlerIds cannot be proved solely from
+    // role-listed WorkOrder / official Order reads. Do not report 'candidate'.
+    currentNodeHandlerVerified: false,
     currentIdentityVerified: session.status === 'authenticated'
       && Boolean(session.session?.currentRole?.id && session.session?.roleVersion),
   })

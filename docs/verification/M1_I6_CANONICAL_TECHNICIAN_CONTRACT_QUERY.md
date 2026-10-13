@@ -34,3 +34,7 @@
 3. **NOT_RUN real business:** actual signing/Contract cancellation/SMS/PDF, asynchronous provider readback, Beta approval, MP/Android/iOS physical device/Owner UX. No backend patch, no real business command, no main merge.
 
 Keep I6 original DoD **2/4** and M1 **1/8** formal; update after separate, narrow, explicitly authorized real-world evidence.
+
+## 5. Primary R1 isHandler gate — source-verified, not yet wired to a trusted node
+
+The technician ServiceAppointment page `business/subpackages/serviceAppointment/serviceAppointment.vue:6333–6346` defines `isHandler` from the **active current workflow node.handlerIds**: it checks `userId`, `roleId`, or `orgId + '+' + roleId`; a mere role-visible ServiceAppointment or matching official Order does **not** prove this handler gate. The main-page initial sign controls `:608–633` and Contract actions `:853–912` also require `isHandler`. The existing New App signing-intent preflight therefore adds an independent `currentNodeHandlerVerified` evidence flag, fail-closed in the actual App until a trusted current-node/actor projection is connected. Isolated unit tests may inject true to verify source condition candidates, **never** business authorization. The DEV page now truthfully marks all five commands blocked; actual dispatch has always been hard-disabled.
