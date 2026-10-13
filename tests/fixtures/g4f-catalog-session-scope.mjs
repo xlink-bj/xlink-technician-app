@@ -100,7 +100,8 @@ try {
       method: 'POST',
       path: expectedPath,
       body: {
-        _all: '1',
+        page: 1,
+        rows: 20,
         'is:state|integer#and': 1,
         'in:serviceType|array#and': 'synthetic-service-type-a',
         sourceType: 'synthetic-source-type-exact',
