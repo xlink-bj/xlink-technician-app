@@ -37,6 +37,7 @@ function fixture(overrides: {
   readonly list?: (workOrderId: string, pageSize?: 1 | 3) => Promise<ListResult>
   readonly read?: (workOrderId: string, orderId: string) => Promise<ReadResult>
   readonly membership?: boolean
+  readonly contracts?: (workOrderId: string, orderId: string) => Promise<import('@shared/types').OperationSnapshot<import('@shared/ports').R1ScopedContractRead>>
   readonly readSupported?: boolean
 } = {}) {
   const current = ref<SessionSnapshot | null>(session())
@@ -50,14 +51,20 @@ function fixture(overrides: {
   const read = vi.fn(
     overrides.read ?? (async () => ({ state: 'succeeded' as const, data: doc() })),
   )
+  const contracts = vi.fn(overrides.contracts ?? (async () => ({
+    state: 'succeeded' as const,
+    data: { completeness: 'bounded_unverified' as const,
+      items: [{ id: 'contract-1', orderId, serviceAppointmentId: wo, contractStatus: '2' }] },
+  })))
   const port: QuotationOrderReadPort = {
     getQuotationOrderById,
     listTypeOneOrdersForWorkOrder,
+    listR1ContractsForSigningReview: contracts,
     ...(overrides.readSupported === false ? {} : { readScopedTypeOneOrderForSigningReview: read }),
   }
   const store = useSigningReviewReadStore()
   store.configure(port, () => current.value, id => visible.value && id === wo)
-  return { store, current, visible, read, port, getQuotationOrderById, listTypeOneOrdersForWorkOrder }
+  return { store, current, visible, read, contracts, port, getQuotationOrderById, listTypeOneOrdersForWorkOrder }
 }
 
 describe('M1 engineering first: main App official Order → Signing read store', () => {
@@ -209,5 +216,82 @@ describe('M1 engineering first: main App official Order → Signing read store',
     expect(second.store.snapshot).toEqual({ state: 'idle' })
     expect((await second.store.load(wo, orderId)).state).toBe('failed_terminal')
     expect(second.store.snapshot.review).toBeUndefined()
+  })
+})
+
+
+describe('M1 I6 R1 Contract status read store integration', () => {
+  beforeEach(() => setActivePinia(createPinia()))
+
+  it('never fetches Contracts automatically during Order precheck', async () => {
+    const f = fixture()
+    await f.store.load(wo, orderId)
+    expect(f.contracts).not.toHaveBeenCalled()
+    expect(f.store.contractSnapshot).toEqual({ state: 'idle', items: [] })
+  })
+
+  it('allows explicitly triggered bounded read after validated Order only', async () => {
+    const f = fixture()
+    await f.store.loadContracts()
+    expect(f.contracts).not.toHaveBeenCalled()
+    await f.store.load(wo, orderId)
+    await f.store.loadContracts()
+    expect(f.contracts).toHaveBeenCalledWith(wo, orderId)
+    expect(f.store.contractSnapshot).toMatchObject({
+      state: 'succeeded', items: [{ id: 'contract-1', orderId }],
+    })
+  })
+
+  it('session or role switch immediately erases previously displayed Contract metadata', async () => {
+    const f = fixture()
+    await f.store.load(wo, orderId)
+    await f.store.loadContracts()
+    f.current.value = session('role-switch')
+    expect(f.store.snapshot).toEqual({ state: 'idle' })
+    expect(f.store.contractSnapshot).toEqual({ state: 'idle', items: [] })
+  })
+
+  it('revoked WorkOrder membership immediately clears Contract status', async () => {
+    const f = fixture()
+    await f.store.load(wo, orderId)
+    await f.store.loadContracts()
+    f.visible.value = false
+    expect(f.store.contractSnapshot).toEqual({ state: 'idle', items: [] })
+  })
+
+  it('delayed Contract read after logout never resurrects the old card', async () => {
+    const pending = deferred<import('@shared/types').OperationSnapshot<import('@shared/ports').R1ScopedContractRead>>()
+    const f = fixture({ contracts: () => pending.promise })
+    await f.store.load(wo, orderId)
+    const request = f.store.loadContracts()
+    f.current.value = null
+    pending.resolve({ state: 'succeeded', data: { completeness: 'bounded_unverified',
+      items: [{ id: 'contract-1', orderId, serviceAppointmentId: wo }] } })
+    await request
+    expect(f.store.contractSnapshot).toEqual({ state: 'idle', items: [] })
+  })
+
+  it('rejects any injected Contract row from another WorkOrder or Order', async () => {
+    for (const unexpected of [
+      { id: 'c', orderId: 'other-order', serviceAppointmentId: wo },
+      { id: 'c', orderId, serviceAppointmentId: 'other-wo' },
+    ]) {
+      setActivePinia(createPinia())
+      const f = fixture({ contracts: async () => ({
+        state: 'succeeded', data: { completeness: 'bounded_unverified', items: [unexpected] },
+      }) })
+      await f.store.load(wo, orderId)
+      await f.store.loadContracts()
+      expect(f.store.contractSnapshot).toEqual({ state: 'failed_terminal', items: [] })
+    }
+  })
+
+  it('leaves empty bounded Contract page inconclusive (never "no contract")', async () => {
+    const f = fixture({ contracts: async () => ({
+      state: 'succeeded', data: { completeness: 'bounded_unverified', items: [] },
+    }) })
+    await f.store.load(wo, orderId)
+    await f.store.loadContracts()
+    expect(f.store.contractSnapshot).toEqual({ state: 'succeeded', items: [] })
   })
 })

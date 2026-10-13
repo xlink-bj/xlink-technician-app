@@ -55,6 +55,8 @@ export type {
   QuotationOrderRead,
   QuotationOrderReadPort,
   ScopedSigningOrderReviewRead,
+  R1ScopedContractSummary,
+  R1ScopedContractRead,
 } from './quotation-order'
 export type {
   AcceptOrderInput,

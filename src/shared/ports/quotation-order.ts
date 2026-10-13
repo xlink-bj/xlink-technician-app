@@ -94,4 +94,25 @@ export interface QuotationOrderReadPort {
   readScopedTypeOneOrderForSigningReview?(
     workOrderId: string, orderId: string,
   ): Promise<OperationSnapshot<ScopedSigningOrderReviewRead>>
+  /** R1 legacy Contract query, NOT production-approved until the query-field mismatch is reconciled. */
+  listR1ContractsForSigningReview?(
+    workOrderId: string, orderId: string,
+  ): Promise<OperationSnapshot<R1ScopedContractRead>>
+}
+
+
+/** Sanitized active R1 Contract metadata only. No PDF URL, phone, signer, QR or commands. */
+export interface R1ScopedContractSummary {
+  readonly id: string
+  readonly orderId: string
+  readonly serviceAppointmentId: string
+  readonly displayNumber?: string
+  readonly contractStatus?: string
+  readonly state?: number
+  readonly signedDate?: string
+}
+/** A bounded R1 query cannot prove that all Contract records exist in its first page. */
+export interface R1ScopedContractRead {
+  readonly items: readonly R1ScopedContractSummary[]
+  readonly completeness: 'bounded_unverified'
 }

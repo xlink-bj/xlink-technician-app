@@ -3,6 +3,7 @@ import {
   r1InitialSigningButtonVisibility,
   r1ContractButtonVisibility,
   r1OrderSigningStageNotice,
+  r1ContractStatusReadNotice,
 } from '@features/work-orders/signing/r1-signing-ui-rules'
 
 describe('M1 I6 R1 signing source parity: display rules, not signing authority', () => {
@@ -60,5 +61,15 @@ describe('M1 I6 R1 signing source parity: display rules, not signing authority',
     expect(r1OrderSigningStageNotice(4)).toContain('勿重复')
     expect(r1OrderSigningStageNotice(1)).toContain('不可据此推断')
     expect(r1OrderSigningStageNotice(undefined)).toContain('不可据此推断')
+  })
+})
+
+describe('R1 sanitized Contract status labels', () => {
+  it('does not convert missing or unknown status into signing permission', () => {
+    expect(r1ContractStatusReadNotice(undefined)).toContain('尚未核验')
+    expect(r1ContractStatusReadNotice('99')).toContain('尚未核验')
+    expect(r1ContractStatusReadNotice('10')).toContain('已签署')
+    expect(r1ContractStatusReadNotice('2')).toContain('签署处理中')
+    expect(r1ContractStatusReadNotice('-3')).toContain('待核验')
   })
 })

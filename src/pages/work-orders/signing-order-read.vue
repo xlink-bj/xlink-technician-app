@@ -36,6 +36,32 @@
           部分订单明细暂不可识别，未推断缺失字段。
         </text>
       </view>
+      <view class="signing-read-section" data-testid="signing-order-read-contract-status">
+        <text class="signing-read-section-title">R1 合同状态 · 只读核验</text>
+        <text>合同可能与同一工单的其他订单关联；这里只核验当前选中的正式订单。部分结果或空结果不能证明不存在合同。</text>
+        <text v-if="productionReadOnly" data-testid="signing-contract-prod-blocked">
+          生产环境暂未开放合同列表读取，等待 R1 查询字段等价核验。
+        </text>
+        <AppButton
+          v-else-if="review.contractSnapshot.state === 'idle' || review.contractSnapshot.state === 'failed_retryable'"
+          block variant="secondary" data-testid="signing-contract-read-request" @tap="readContracts"
+        >{{ review.contractSnapshot.state === 'failed_retryable' ? '重新核验合同状态' : '读取当前订单合同状态' }}</AppButton>
+        <AppLoadingState v-if="review.contractSnapshot.state === 'loading'"
+          variant="inline" label="正在只读核验合同状态" />
+        <text v-if="review.contractSnapshot.state === 'failed_terminal'">合同核验未通过。没有读取签署文件，也没有执行签约。</text>
+        <template v-if="review.contractSnapshot.state === 'succeeded'">
+          <text v-if="review.contractSnapshot.items.length === 0" data-testid="signing-contract-inconclusive">
+            当前有限查询尚未核验到此订单合同；可能受 R1 旧字段映射或分页影响，不能认定合同不存在。
+          </text>
+          <view v-for="contract in review.contractSnapshot.items" :key="contract.id" class="signing-read-contract-item"
+            data-testid="signing-contract-matched">
+            <text>{{ contract.displayNumber || '合同编号未返回' }}</text>
+            <text>{{ r1ContractStatusReadNotice(contract.contractStatus) }}</text>
+            <text v-if="contract.signedDate">记录中的签约日期：{{ contract.signedDate }}</text>
+          </view>
+          <text class="signing-read-warning">仅限本次已核验的有限结果，不代表拥有签约权限或可访问合同文件。</text>
+        </template>
+      </view>
       <view class="signing-read-section" data-testid="signing-order-read-no-contract">
         <text class="signing-read-section-title">签约状态 · 未授权</text>
         <text>当前版本未核验合同读取权限或签署角色。正式订单存在不代表已生成合同。</text>
@@ -60,10 +86,17 @@ import AppButton from '@shared/ui/AppButton.vue'
 import AppLoadingState from '@shared/ui/AppLoadingState.vue'
 import { useSessionStore } from '@shared/state'
 import { useSigningReviewReadStore } from '@features/work-orders/signing/signing-review-read-store'
-import { r1OrderSigningStageNotice } from '@features/work-orders/signing/r1-signing-ui-rules'
+import { r1OrderSigningStageNotice, r1ContractStatusReadNotice } from '@features/work-orders/signing/r1-signing-ui-rules'
+import { isProductionReadOnlyRuntime } from '@shared/config'
 
 const session = useSessionStore()
 const review = useSigningReviewReadStore()
+const productionReadOnly = isProductionReadOnlyRuntime()
+function readContracts(): void {
+  // This is user-triggered and never bypasses Production's transport gate.
+  if (productionReadOnly || review.snapshot.state !== 'ready') return
+  void review.loadContracts()
+}
 const routeReady = ref(false)
 const routeWorkOrderId = ref('')
 const routeOrderId = ref('')

@@ -16,6 +16,12 @@ import {
  */
 export const useSigningReviewReadStore = defineStore('signingReviewRead', () => {
   const snapshot = ref<SigningReviewSnapshot>({ state: 'idle' })
+  const contractSnapshot = ref<{
+    readonly state: 'idle' | 'loading' | 'succeeded' | 'failed_retryable' | 'failed_terminal'
+    readonly items: readonly import('@shared/ports').R1ScopedContractSummary[]
+  }>({ state: 'idle', items: [] })
+  let contractAttempt = 0
+  let contractPort: QuotationOrderReadPort | null = null
   let workspace: ReturnType<typeof createSigningReviewReadWorkspace> | null = null
   let getSession: () => SessionSnapshot | null = () => null
   let stopWatch: (() => void) | null = null
@@ -36,6 +42,8 @@ export const useSigningReviewReadStore = defineStore('signingReviewRead', () => 
 
   function clear(): void {
     generation += 1
+    contractAttempt += 1
+    contractSnapshot.value = { state: 'idle', items: [] }
     workspace?.clear()
     activeWorkOrderId.value = null
     snapshot.value = { state: 'idle' }
@@ -54,6 +62,7 @@ export const useSigningReviewReadStore = defineStore('signingReviewRead', () => 
     stopMembershipWatch?.()
     clear()
     getSession = sessionProvider
+    contractPort = port
     isCurrentWorkOrderListed = isCurrentWorkOrderListedForSession
     workspace = createSigningReviewReadWorkspace({
       port,
@@ -78,6 +87,8 @@ export const useSigningReviewReadStore = defineStore('signingReviewRead', () => 
     orderId: string,
   ): Promise<OperationSnapshot<ScopedSigningOrderReviewRead>> {
     const attempt = ++generation
+    contractAttempt += 1
+    contractSnapshot.value = { state: 'idle', items: [] }
     // Fail closed if bootstrap has not finished wiring the read-only port.
     const active = workspace
     if (!active || !scopeKey()) {
@@ -103,5 +114,51 @@ export const useSigningReviewReadStore = defineStore('signingReviewRead', () => 
     return result
   }
 
-  return { snapshot, configure, load, clear }
+
+  /**
+   * Explicit user-triggered source-accurate R1 Contract read. This is not
+   * automatically performed on Order load; the Production transport still
+   * blocks the Contract route until separately approved.
+   */
+  async function loadContracts(): Promise<void> {
+    const attempt = ++contractAttempt
+    const selected = snapshot.value
+    const key = scopeKey()
+    if (selected.state !== 'ready' || !selected.workOrderId || !selected.orderId
+      || !key || !safeListed(selected.workOrderId)
+      || !contractPort?.listR1ContractsForSigningReview) {
+      contractSnapshot.value = { state: 'failed_terminal', items: [] }
+      return
+    }
+    contractSnapshot.value = { state: 'loading', items: [] }
+    try {
+      const result = await contractPort.listR1ContractsForSigningReview(selected.workOrderId, selected.orderId)
+      if (attempt !== contractAttempt || key !== scopeKey()
+        || !safeListed(selected.workOrderId) || snapshot.value.state !== 'ready'
+        || snapshot.value.workOrderId !== selected.workOrderId
+        || snapshot.value.orderId !== selected.orderId) {
+        if (attempt === contractAttempt) contractSnapshot.value = { state: 'idle', items: [] }
+        return
+      }
+      if (result.state === 'succeeded' && result.data
+        && result.data.completeness === 'bounded_unverified'
+        && Array.isArray(result.data.items)
+        && result.data.items.length <= 3
+        && result.data.items.every(item =>
+          item.orderId === selected.orderId && item.serviceAppointmentId === selected.workOrderId)) {
+        contractSnapshot.value = { state: 'succeeded', items: [...result.data.items] }
+      } else {
+        contractSnapshot.value = {
+          state: result.state === 'failed_retryable' ? 'failed_retryable' : 'failed_terminal',
+          items: [],
+        }
+      }
+    } catch {
+      if (attempt === contractAttempt) {
+        contractSnapshot.value = { state: 'failed_retryable', items: [] }
+      }
+    }
+  }
+
+  return { snapshot, contractSnapshot, configure, load, loadContracts, clear }
 })

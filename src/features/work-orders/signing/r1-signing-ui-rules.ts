@@ -61,3 +61,12 @@ export function r1OrderSigningStageNotice(processState: number | undefined): str
   if (processState === 4) return 'R1 订单阶段：签约处理中。请勿重复发起，需从正式订单／合同读取结果核实后续状态。'
   return 'R1 签约阶段尚不可确认。不可据此推断合同已签署或可支付。'
 }
+
+
+/** UI copy for a sanitized, existing Contract row; never authorizes signing. */
+export function r1ContractStatusReadNotice(status: string | undefined): string {
+  if (status === '10') return 'R1 合同记录：已签署（状态 10）；需以实际后台状态为准'
+  if (status === '2') return 'R1 合同记录：签署处理中（状态 2）；不可重复发起'
+  if (status === '-3') return 'R1 合同记录：签署异常（状态 -3）；再次签约效果待核验'
+  return 'R1 合同状态尚未核验；不能推断已签署或可发起'
+}

@@ -76,6 +76,11 @@ export function isMockOwnedRead(
   // This is an internal, synthetic-only route. It is always mock-owned so a
   // disabled Mock mode can never fall through to a real backend endpoint.
   if (route === '__mock/quotation/action-content') return true
+  // A mock WorkOrder must never request a real Contract, even when the
+  // independent R1 Contract read fixture has not been registered.
+  if (route === 'basic/contract/query.do'
+    && typeof requestData['is:workOrderId|string#and'] === 'string'
+    && isSyntheticWorkOrderId(requestData['is:workOrderId|string#and'])) return true
   // Synthetic SKU IDs must never fall through to a live backend if the
   // developer disables Mock after navigating to a saved local quotation.
   if (route === 'basic/material/query'

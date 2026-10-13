@@ -7,6 +7,8 @@ import type {
   QuotationOrderRead,
   QuotationOrderReadPort,
   ScopedSigningOrderReviewRead,
+  R1ScopedContractRead,
+  R1ScopedContractSummary,
   ReadPage,
 } from '@shared/ports'
 import type { OperationSnapshot } from '@shared/types'
@@ -365,6 +367,99 @@ export class QuotationOrderReadAdapter implements QuotationOrderReadPort {
         return adapterFailure('authorization_denied', '读取期间账号或工单权限已变化。')
       }
       return adapterFailure('network_retryable', '正式订单只读服务暂不可用。')
+    }
+  }
+
+  /**
+   * Source-accurate R1 Contract query; this does NOT expand Production's
+   * transport allowlist. The pinned R1 query uses workOrderId while its
+   * backend Contract model stores serviceAppointmentId. Zero results are
+   * therefore INCONCLUSIVE, never "no Contract".
+   */
+  async listR1ContractsForSigningReview(
+    workOrderId: string, orderId: string,
+  ): Promise<OperationSnapshot<R1ScopedContractRead>> {
+    const validId = /^[A-Za-z0-9_-]{1,100}$/
+    if (!validId.test(workOrderId) || !validId.test(orderId)) {
+      return adapterFailure('authorization_denied', '合同只读身份无效。')
+    }
+    const identity = this.scopedReviewIdentity()
+    if (!identity || !this.isAuthorizedForCurrentSession(workOrderId)) {
+      return adapterFailure('authorization_denied', '合同只读尚未获得当前角色工单准入。')
+    }
+    try {
+      // An authoritative, already-listed type=1 Order must be selected first.
+      const orders = await this.listTypeOneOrdersForWorkOrder(workOrderId, 3)
+      if (this.scopedReviewIdentity() !== identity || !this.isAuthorizedForCurrentSession(workOrderId)) {
+        return adapterFailure('authorization_denied', '身份或工单授权已变化。')
+      }
+      if (orders.state !== 'succeeded' || !orders.data) {
+        return adapterFailure(
+          orders.state === 'failed_retryable' ? 'network_retryable' : 'server_terminal',
+          '无法核验正式订单。',
+        )
+      }
+      if (orders.data.items.filter(item =>
+        item.type === 1 && item.id === orderId && item.serviceAppointmentId === workOrderId
+      ).length !== 1) {
+        return adapterFailure('authorization_denied', '目标正式订单不属于已验证列表。')
+      }
+      // Exactly R1's field/filter/sort semantics, adding only a page bound.
+      // In particular do NOT silently substitute serviceAppointmentId here.
+      const raw = await this.transport.execute({
+        method: 'POST', path: 'basic/contract/query.do',
+        body: {
+          _all: '1', page: 1, rows: 3,
+          'is:workOrderId|string#and': workOrderId,
+          'in:state|array-integer#and': '1',
+          sortField: 'updateTime', sortOrder: 'asc',
+        },
+      })
+      if (this.scopedReviewIdentity() !== identity || !this.isAuthorizedForCurrentSession(workOrderId)) {
+        return adapterFailure('authorization_denied', '合同读取期间身份或工单权限已变化。')
+      }
+      const envelope = asRecord(raw, 'R1 Contract list')
+      const data = optionalRecord(envelope.data)
+      const rawRows = [envelope.data, envelope.items, data?.items, data?.records, data?.data]
+        .find(Array.isArray)
+      if (!Array.isArray(rawRows) || rawRows.length > 3) {
+        return adapterFailure('server_terminal', '合同列表格式或数量超出本次只读范围。')
+      }
+      const seen = new Set<string>()
+      const summaries: R1ScopedContractSummary[] = []
+      for (const item of rawRows) {
+        const row = optionalRecord(item)
+        if (!row) return adapterFailure('server_terminal', '合同响应包含无效记录。')
+        const id = optionalString(row, ['_id', 'id'])
+        const owningWorkOrder = optionalString(row, ['serviceAppointmentId'])
+        const owningOrder = optionalString(row, ['orderId'])
+        if (!id || !validId.test(id) || seen.has(id) || !owningWorkOrder
+          || !owningOrder || owningWorkOrder !== workOrderId) {
+          return adapterFailure('server_terminal', '合同身份或工单归属无法核验。')
+        }
+        seen.add(id)
+        // R1 lists Contracts for the WorkOrder, which may belong to other
+        // Orders. Only project metadata attached to the exact selected Order.
+        if (owningOrder !== orderId) continue
+        const exts = optionalRecord(row.exts)
+        const rawStatus = optionalString(exts ?? {}, ['contractStatus'])
+        const status = rawStatus && /^-?\d{1,3}$/.test(rawStatus) ? rawStatus : undefined
+        const signedDate = optionalString(row, ['signedDate'])
+        const state = optionalNonNegativeInteger(row, ['state'])
+        summaries.push({
+          id, orderId, serviceAppointmentId: workOrderId,
+          ...(optionalString(row, ['contractdocNum']) ? { displayNumber: optionalString(row, ['contractdocNum']) } : {}),
+          ...(status ? { contractStatus: status } : {}),
+          ...(state === undefined ? {} : { state }),
+          ...(signedDate ? { signedDate } : {}),
+        })
+      }
+      return succeeded({ items: summaries, completeness: 'bounded_unverified' })
+    } catch {
+      if (this.scopedReviewIdentity() !== identity || !this.isAuthorizedForCurrentSession(workOrderId)) {
+        return adapterFailure('authorization_denied', '合同读取期间权限已变化。')
+      }
+      return adapterFailure('network_retryable', 'R1 合同只读请求暂不可用或未开放。')
     }
   }
 
