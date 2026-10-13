@@ -36,6 +36,11 @@
           部分订单明细暂不可识别，未推断缺失字段。
         </text>
       </view>
+      <view class="signing-read-section" data-testid="signing-review-progress">
+        <text class="signing-read-section-title">{{ signingProgress.title }}</text>
+        <text data-testid="signing-review-next">{{ signingProgress.nextStep }}</text>
+        <text class="signing-read-warning">仅供当前角色的只读核验，不开放签名、短信或合同文件操作。</text>
+      </view>
       <view class="signing-read-section" data-testid="signing-order-read-contract-status">
         <text class="signing-read-section-title">R1 合同状态 · 只读核验</text>
         <text v-if="devFixtureContractRead" data-testid="signing-contract-fixture-label">DEV 合成合同演示 · 非真实订单、非真实签约</text>
@@ -94,6 +99,7 @@
           <text>回查：{{ intentReview.descriptor.expectedReadback }}</text>
           <text v-for="(reason, index) in intentReview.reasons" :key="index"
             data-testid="signing-intent-reason">· {{ reason }}</text>
+          <AppButton variant="secondary" data-testid="signing-intent-back-to-list" @tap="selectedIntent = null">返回其他操作检查</AppButton>
           <text class="signing-read-warning" data-testid="signing-intent-no-dispatch">
             仅准备/审查 · 不发送业务命令 · 无法从本页生成真实签约请求
           </text>
@@ -127,6 +133,7 @@ import { r1OrderSigningStageNotice, r1ContractStatusReadNotice } from '@features
 import { isProductionReadOnlyRuntime } from '@shared/config'
 import { isDevSyntheticContractReadPreviewEnabled } from '@app/business-mock'
 import { reconcileR1SigningRead } from '@features/work-orders/signing/r1-signing-read-reconciliation'
+import { signingReviewProgress } from '@features/work-orders/signing/signing-review-progress'
 import { reviewR1SigningIntent, r1SigningIntentDescriptors, type R1SigningIntentKind } from '@features/work-orders/signing/r1-signing-command-intents'
 
 const session = useSessionStore()
@@ -136,6 +143,12 @@ const signingStage = computed(() => reconcileR1SigningRead(
   review.snapshot.state === 'ready' ? review.snapshot.review?.order : null,
   review.contractSnapshot,
 ))
+const signingProgress = computed(() => signingReviewProgress({
+  orderVerified: review.snapshot.state === 'ready',
+  contractState: review.contractSnapshot.state,
+  stage: signingStage.value.stage,
+  handlerState: review.handlerSnapshot.state,
+}))
 const intentKinds: readonly R1SigningIntentKind[] = ['electronic','offline','resign','resend_sms','cancel']
 const selectedIntent = ref<R1SigningIntentKind | null>(null)
 const intentReview = computed(() => {
@@ -164,17 +177,25 @@ const devFixtureContractRead = computed(() => !productionReadOnly
   && isDevSyntheticContractReadPreviewEnabled(routeWorkOrderId.value))
 function readNodeHandlerEvidence(): void {
   if (!devFixtureContractRead.value || review.snapshot.state !== 'ready') return
+  selectedIntent.value = null
   void review.loadNodeHandlerEvidence()
 }
 function readContracts(): void {
   // This is user-triggered and never bypasses Production's transport gate.
   if (!devFixtureContractRead.value || review.snapshot.state !== 'ready') return
+  selectedIntent.value = null
   void review.loadContracts()
 }
 const routeReady = ref(false)
 const routeWorkOrderId = ref('')
 const routeOrderId = ref('')
 let requested = false
+// A reviewed business intent belongs to one current role/Order/Contract revision.
+// Re-check after any status or handler evidence changes.
+watch(() => [session.session?.roleVersion, review.snapshot.workOrderId,
+  review.snapshot.orderId, review.contractSnapshot.state,
+  review.contractSnapshot.items.map(item => item.id + ':' + (item.contractStatus ?? '')).join('|'),
+  review.handlerSnapshot.state] as const, () => { selectedIntent.value = null })
 
 function retryScopedRead(): void {
   if (session.status !== 'authenticated' || review.snapshot.state !== 'failed_retryable') return
