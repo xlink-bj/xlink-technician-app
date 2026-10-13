@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, watch, type WatchStopHandle } from 'vue'
+import { workOrderReadScopeKey } from './read-identity-scope'
 import { isProductionReadOnlyRuntime } from '@shared/config'
 
 import type {
@@ -70,15 +71,24 @@ export const useWorkOrderDetailStore = defineStore('workOrderDetail', () => {
   let navigation: NavigationPort | null = null
   let lastWorkOrderId: WorkOrderId | null = null
   let loadVersion = 0
+  let stopScopeWatch: WatchStopHandle | null = null
+  let renderedScope: string | null = null
 
   function configureApi(
     nextApi: TechnicianApiReadPort,
     sessionProvider: () => SessionSnapshot | null,
     sessionInvalidation?: SessionInvalidation,
   ): void {
+    stopScopeWatch?.()
+    clear()
     api = nextApi
     getSession = sessionProvider
     invalidateSession = sessionInvalidation ?? null
+    stopScopeWatch = watch(
+      () => workOrderReadScopeKey(getSession()),
+      (next, prev) => { if (next !== prev) clear() },
+      { flush: 'sync' },
+    )
   }
 
   function configurePhone(nextPhone: PhonePort): void {
@@ -108,6 +118,7 @@ export const useWorkOrderDetailStore = defineStore('workOrderDetail', () => {
   function clear(): void {
     loadVersion += 1
     lastWorkOrderId = null
+    renderedScope = null
     clearDetailData()
     loadState.value = 'idle'
     error.value = null
@@ -141,9 +152,9 @@ export const useWorkOrderDetailStore = defineStore('workOrderDetail', () => {
       return failure('validation', 'Work Order detail request is already in progress')
     }
 
-    const sessionAtStart = getSession()
-    if (!sessionAtStart) {
-      clearDetailData()
+    const scopeAtStart = workOrderReadScopeKey(getSession())
+    if (!scopeAtStart) {
+      clear()
       const result = failure<WorkOrderDetail>(
         'session_invalid',
         'An authenticated session is required to load Work Order detail',
@@ -162,6 +173,7 @@ export const useWorkOrderDetailStore = defineStore('workOrderDetail', () => {
 
     const requestVersion = ++loadVersion
     lastWorkOrderId = id
+    renderedScope = null
     currentWorkOrderId.value = id
     detail.value = null
     clearContactState()
@@ -169,33 +181,16 @@ export const useWorkOrderDetailStore = defineStore('workOrderDetail', () => {
     error.value = null
 
     const result = await api.getWorkOrderDetail(id)
-    if (requestVersion !== loadVersion) return result
-
-    const currentSession = getSession()
+    if (requestVersion !== loadVersion || scopeAtStart !== workOrderReadScopeKey(getSession())) {
+      if (requestVersion === loadVersion) clear()
+      return failure('authorization_denied', 'Work Order detail read belongs to a changed identity/role')
+    }
     if (result.state === 'succeeded' && result.data) {
-      if (!currentSession) {
-        lastWorkOrderId = null
-        clearDetailData()
-        const invalid = failure<WorkOrderDetail>(
-          'session_invalid',
-          'The Work Order detail session is no longer available',
-        )
-        loadState.value = invalid.state
-        error.value = invalid.error ?? null
-        return invalid
+      if (String(result.data.id) !== String(id)) {
+        clear()
+        return failure('authorization_denied', 'Work Order detail does not match the requested identity')
       }
-
-      if (currentSession.sessionRef !== sessionAtStart.sessionRef) {
-        clearDetailData()
-        const stale = failure<WorkOrderDetail>(
-          'validation',
-          'The Work Order detail response belongs to an earlier session',
-        )
-        loadState.value = stale.state
-        error.value = stale.error ?? null
-        return stale
-      }
-
+      renderedScope = scopeAtStart
       detail.value = result.data
       loadState.value = 'succeeded'
       error.value = null
@@ -211,6 +206,7 @@ export const useWorkOrderDetailStore = defineStore('workOrderDetail', () => {
 
     loadVersion += 1
     lastWorkOrderId = null
+    renderedScope = null
     clearDetailData()
     const result = failure<WorkOrderDetail>('validation', 'A valid Work Order id is required')
     loadState.value = result.state
@@ -231,7 +227,8 @@ export const useWorkOrderDetailStore = defineStore('workOrderDetail', () => {
       contactReason.value = result.reason
       return result
     }
-    const contact = detail.value?.contact
+    const contact = renderedScope && renderedScope === workOrderReadScopeKey(getSession())
+      ? detail.value?.contact : undefined
     if (!contact?.normalizedPhone) {
       const result = capabilityFailure(
         'unavailable',

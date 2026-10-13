@@ -304,6 +304,7 @@ import { quotationBrowseLineRows, useQuotationOrderBrowseStore } from '@features
 import { signingOrderReadRouteFor } from '@features/work-orders/signing/signing-review-read-workspace'
 import type { QuotationOrderBrowseGroup, QuotationOrderBrowseKind } from '@shared/ports'
 import { useSessionStore } from '@shared/state'
+import { workOrderReadScopeKey } from '@features/work-orders/read-identity-scope'
 import AppIcon from '@shared/ui/AppIcon.vue'
 import AppLoadingState from '@shared/ui/AppLoadingState.vue'
 import AppStatus from '@shared/ui/AppStatus.vue'
@@ -408,16 +409,20 @@ function loadForAuthenticatedSession(): void {
 onLoad((options) => {
   routeValue.value = options?.id
   routeReady.value = true
-  loadForAuthenticatedSession()
 })
 
 watch(
-  [() => session.status, routeReady],
-  ([status, ready]) => {
-    if (ready && status === 'authenticated') loadForAuthenticatedSession()
+  [() => session.status, () => workOrderReadScopeKey(session.session), routeReady],
+  ([status, scope, ready], previous) => {
+    // Role changes during an authenticated session must re-read the detail.
+    if (ready && status === 'authenticated' && scope
+      && (!previous || previous[0] !== status || previous[1] !== scope || !previous[2])) {
+      quotationBrowse.clear()
+      loadForAuthenticatedSession()
+    }
     if (status !== 'authenticated' && status !== 'unknown') workOrder.clear()
   },
-  { immediate: true },
+  { immediate: true, flush: 'sync' },
 )
 
 async function retry(): Promise<void> {
