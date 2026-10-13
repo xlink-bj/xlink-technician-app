@@ -78,7 +78,8 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       await page.locator('.primary-task-action').click()
       await expect(page.locator('.uni-page-head__title')).toContainText('现场勘查')
       await expect(page.getByTestId('dynamic-form-action-content')).toBeVisible()
-      await expect(page.getByTestId('dynamic-field-squareMeter')).toBeVisible()
+      // Dependent fields become available AFTER selecting a repair part,
+      // so capture the genuine initial Survey first, not a fabricated state.
       await capture('03-survey-overview', 'S', '现场勘察', '动态字段与页面结构')
 
       const parts = page.getByTestId('survey-repair-part-selector')
