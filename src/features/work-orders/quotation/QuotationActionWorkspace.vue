@@ -7,7 +7,7 @@
     :display-number="workspace.detail?.displayNumber"
     :lifecycle="workspace.lifecycle"
     :draft-status="workspace.draftStatus"
-    :can-submit="!productionReadOnly && !productReviewOnly && !syntheticReviewEnabled && workspace.canSubmitQuotation"
+    :can-submit="canOpenSubmit"
     :transitioning="workspace.quotationOrderState.state === 'submitting'"
     :submit-label="workspace.quotationOrderState.state === 'submitting' ? '提交中…' : '提交订单/报价方案'"
     @submit="openQuotationConfirmation"
@@ -59,13 +59,16 @@
         v-else-if="!productReviewOnly"
         data-testid="action-workspace-submit"
         class="action-workspace-submit"
-        :disabled="!workspace.canSubmitQuotation || workspace.quotationOrderState.state === 'submitting'"
+        :disabled="!canOpenSubmit"
         :loading="workspace.quotationOrderState.state === 'submitting'"
         block
         @tap="openQuotationConfirmation"
       >{{ workspace.quotationOrderState.state === 'submitting' ? '提交中…' : '提交订单/报价方案' }}</AppButton>
+      <AppStatus v-if="!productionReadOnly && !syntheticReviewEnabled && !productReviewOnly && hasQuantityErrors"
+        class="quotation-submit-unavailable" message="部分项目数量不合法，请逐项修正后再检查提交。"
+        tone="warning" quiet data-testid="quotation-submit-invalid-quantity" />
       <AppStatus
-        v-if="!productionReadOnly && !syntheticReviewEnabled && !productReviewOnly && !workspace.canSubmitQuotation && !isInitialEmptyWorkbench"
+        v-if="!productionReadOnly && !syntheticReviewEnabled && !productReviewOnly && !canOpenSubmit && !isInitialEmptyWorkbench && !hasQuantityErrors"
         class="quotation-submit-unavailable"
         message="提交条件尚未满足；完成必需配置并通过本机校验后，此入口才会开放。"
         tone="neutral"
@@ -73,13 +76,13 @@
         data-testid="quotation-submit-unavailable"
       />
     </template>
-    <view v-if="!productionReadOnly && !syntheticReviewEnabled && !productReviewOnly && quotationConfirmOpen" class="quotation-confirm-backdrop" role="presentation">
+    <view v-if="canOpenSubmit && quotationConfirmOpen" class="quotation-confirm-backdrop" role="presentation">
       <view class="quotation-confirm-sheet" role="dialog" aria-modal="true" data-testid="quotation-order-confirmation">
         <text class="quotation-confirm-title">确认提交订单/报价方案？</text>
         <text class="workspace-state-copy">提交会创建服务器订单，并触发后端已验证的报价单生成、工单金额更新等副作用；不会完成当前工单工作流。提交后请勿重复操作。</text>
         <view class="quotation-confirm-actions">
           <AppButton variant="secondary" @tap="quotationConfirmOpen = false">返回检查</AppButton>
-          <AppButton data-testid="quotation-order-confirm" :disabled="workspace.quotationOrderState.state === 'submitting'" @tap="confirmQuotationSubmit">确认提交</AppButton>
+          <AppButton data-testid="quotation-order-confirm" :disabled="!canOpenSubmit" @tap="confirmQuotationSubmit">确认提交</AppButton>
         </view>
       </view>
     </view>
@@ -87,11 +90,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, ref } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { isProductionReadOnlyRuntime } from '@shared/config'
 import { useActionWorkspaceStore } from '../action-workspace'
 import { useQuotationCompositionStore } from './composition-store'
 import { quotationAmountPresentation } from './amount-presentation'
+import { evaluateQuotationSubmitGuard } from './quotation-submit-guard'
 import { isInitialQuotationWorkbenchEmpty } from './empty-workbench-state'
 import ActionWorkspaceShell from '@shared/ui/ActionWorkspaceShell.vue'
 import AppButton from '@shared/ui/AppButton.vue'
@@ -135,6 +139,18 @@ const syntheticReviewEnabled = computed(() => import.meta.env.DEV
   && Boolean(props.syntheticReviewFocusFirstError))
 const quotationConfirmOpen = ref(false)
 const scrollIntoView = ref('')
+const hasQuantityErrors = computed(() => Object.values(composition.quantityErrorBySelection).some(Boolean))
+const submitGate = computed(() => evaluateQuotationSubmitGuard({
+  modeBlocked: productionReadOnly || productReviewOnly.value || syntheticReviewEnabled.value,
+  contentReady: props.contentState === 'ready',
+  workspaceReady: workspace.canSubmitQuotation,
+  quantityErrors: composition.quantityErrorBySelection,
+  orderState: workspace.quotationOrderState.state,
+}))
+const canOpenSubmit = computed(() => submitGate.value === 'ready')
+// Never reuse an old confirmation for a different draft revision.
+watch(() => composition.draft?.draftVersion, () => { quotationConfirmOpen.value = false })
+watch(canOpenSubmit, allowed => { if (!allowed) quotationConfirmOpen.value = false })
 
 async function returnToGroup(groupId: string): Promise<void> {
   scrollIntoView.value = ''
@@ -143,13 +159,13 @@ async function returnToGroup(groupId: string): Promise<void> {
 }
 
 async function confirmQuotationSubmit(): Promise<void> {
-  if (productionReadOnly || syntheticReviewEnabled.value || productReviewOnly.value) return
+  if (!quotationConfirmOpen.value || !canOpenSubmit.value) return
   quotationConfirmOpen.value = false
   await workspace.submitQuotationOrder()
 }
 
 function openQuotationConfirmation(): void {
-  if (productionReadOnly || syntheticReviewEnabled.value || productReviewOnly.value) return
+  if (!canOpenSubmit.value) return
   quotationConfirmOpen.value = true
 }
 </script>

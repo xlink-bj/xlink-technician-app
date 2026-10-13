@@ -30,9 +30,13 @@ if (workspace.includes('SyntheticOrderExtFieldReviewPanel.vue') || content.inclu
   fail('production Action Workspace must not statically import the review panel')
 }
 if (!workspace.includes('import.meta.env.DEV')
-  || !workspace.includes('!productReviewOnly && !syntheticReviewEnabled && workspace.canSubmitQuotation')
-  || !workspace.includes('!syntheticReviewEnabled && !productReviewOnly && quotationConfirmOpen')
-  || !workspace.includes('if (productionReadOnly || syntheticReviewEnabled.value || productReviewOnly.value) return')) {
+  || !workspace.includes('modeBlocked: productionReadOnly || productReviewOnly.value || syntheticReviewEnabled.value')
+  || !workspace.includes(':can-submit="canOpenSubmit"')
+  || !workspace.includes('v-if="canOpenSubmit && quotationConfirmOpen"')
+  || !workspace.includes('if (!quotationConfirmOpen.value || !canOpenSubmit.value) return')
+  || !workspace.includes('if (!canOpenSubmit.value) return')
+  || !workspace.includes('watch(() => composition.draft?.draftVersion')
+  || !workspace.includes("evaluateQuotationSubmitGuard")) {
   fail('review activation must be development-only and suppress both submit affordances, confirmation and command handlers')
 }
 if (!content.includes('<slot name="synthetic-review-panel"') || !content.includes('import.meta.env.DEV')

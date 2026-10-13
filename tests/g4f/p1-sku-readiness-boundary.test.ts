@@ -23,8 +23,8 @@ describe('P1 SKU readiness: hard architecture and runtime boundary', () => {
 
   it('quotation submission and order commands remain independent of the mock review', () => {
     const workspace = text('src/features/work-orders/quotation/QuotationActionWorkspace.vue')
-    expect(workspace).toContain('!productionReadOnly && !productReviewOnly && !syntheticReviewEnabled')
-    expect(workspace).toContain('if (productionReadOnly || syntheticReviewEnabled.value || productReviewOnly.value) return')
+    expect(workspace).toContain('modeBlocked: productionReadOnly || productReviewOnly.value || syntheticReviewEnabled.value')
+    expect(workspace).toContain('if (!quotationConfirmOpen.value || !canOpenSubmit.value) return')
     expect(workspace).toContain(':synthetic-sku-readiness="props.syntheticSkuReadiness"')
     const content = text('src/features/work-orders/quotation/QuotationActionContent.vue')
     expect(content).toContain('quotation-p1-sku-server-auth-blocked')
