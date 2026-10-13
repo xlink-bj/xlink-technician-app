@@ -276,7 +276,7 @@
           v-model="phoneNumber"
           class="input"
           type="text"
-          maxlength="32"
+          maxlength="11"
           placeholder="请输入手机号"
           :disabled="isBusy"
         />
@@ -289,7 +289,7 @@
             v-model="verificationCode"
             class="code-input"
             type="number"
-            maxlength="16"
+            maxlength="6"
             placeholder="请输入短信验证码"
             :disabled="isBusy"
           />
@@ -336,6 +336,7 @@ import {
 } from '@features/home/business-data-source'
 import { useLocalDraftDiagnosticsStore } from '@features/home/draft-diagnostics'
 import { submitLogin, type LoginSubmissionState } from '@features/session/login'
+import { r1ManualLoginIssue, r1ManualLoginIssueText } from '@features/session/r1-manual-login-preflight'
 import { resolveQuickLoginInput } from '@features/session/quick-login'
 import {
   advanceLoginStage,
@@ -473,6 +474,11 @@ async function clearMockDrafts(): Promise<void> {
 async function submit(): Promise<void> {
   if (isBusy.value) return
   message.value = ''
+  const issue = r1ManualLoginIssue({ phoneNumber: phoneNumber.value, verificationCode: verificationCode.value })
+  if (issue) {
+    message.value = r1ManualLoginIssueText(issue)
+    return
+  }
   const result = await submitLogin(
     { phoneNumber: phoneNumber.value, verificationCode: verificationCode.value },
     submissionState,
