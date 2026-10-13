@@ -25,7 +25,7 @@ pnpm run check:s2-ux-sheet
     manifest.json              # 状态名/顺序/出处/commit
     frames/01-work-orders.png  # 原始独立截图
     ...
-    frames/10-signing-expired.png
+    frames/12-signing-actual-contract.png
   375x667/
     review-sheet.png
     index.html
@@ -33,7 +33,7 @@ pnpm run check:s2-ux-sheet
     frames/...                 # 同一套稳定 ID
 ```
 
-**共 20 张逐屏截图 + 2 张总览 Sheet**。GitHub Actions 上传 `s2-main-app-review-sheets-<run_id>` 文件包，保留 30 天；失败时也上传已完成的截图和浏览器痕迹。
+**共 24 张逐屏截图 + 2 张总览 Sheet**。GitHub Actions 上传 `s2-main-app-review-sheets-<run_id>` 文件包，保留 30 天；失败时也上传已完成的截图和浏览器痕迹。
 
 ## 场景索引
 
@@ -48,7 +48,9 @@ pnpm run check:s2-ux-sheet
 | 07-quote-group | Q 报价 | 分组选品、提交安全边界 | 优先审查 |
 | 08-signing-empty | C 签约 | 独立正式 Order + 无合同状态 | 优先审查 |
 | 09-signing-progress | C 签约 | 签署中与操作可用性 | 优先审查 |
-| 10-signing-expired | C 签约 | 合同过期/禁用操作 | 优先审查 |
+| 10-signing-expired | C 签约 | 滚动至合同过期/禁用操作 | 优先审查 |
+| 11-signing-actual-order | C 签约 | 真实主 App 签约只读组件，不是 Mock 场景控制页 | 优先审查 |
+| 12-signing-actual-contract | C 签约 | 合同已匹配状态与签约安全边界 | 优先审查 |
 
 **为什么不在本流程强造“真实登录界面”？** 此 DEV Mock 本身采用合成会话直接进入主 App；用户已认可登录界面，不能在合成已登录环境中伪造一个“真实生产登录态”截图。登录基线可在独立的已有未登录 H5 smoke 中补充，但不得合并成未经实际捕获的页面。
 
