@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { ref } from 'vue'
 import type { SessionSnapshot, TechnicianApiReadPort, WorkOrderDetail, WorkOrderSummary } from '@shared/ports'
-import { asOpaqueId } from '@shared/types'
+import { asOpaqueId, createCapabilityResult } from '@shared/types'
 import { workOrderReadScopeKey } from '@features/work-orders/read-identity-scope'
 import { useWorkOrderListStore } from '@features/work-orders/list'
 import { useWorkOrderDetailStore } from '@features/work-orders/detail'
@@ -133,7 +133,7 @@ describe('M1 I7 WorkOrder read scope invalidation at the feature boundary', () =
     const actor = ref<SessionSnapshot | null>(session())
     const api = { listWorkOrders: vi.fn(async () => listResponse()),
       getWorkOrderDetail: vi.fn(async () => detailResponse()) } as unknown as TechnicianApiReadPort
-    const dial = vi.fn(async () => ({ capability: 'phone' as const, state: 'granted' as const }))
+    const dial = vi.fn(async () => createCapabilityResult<void>('phone', 'granted'))
     const list = useWorkOrderListStore()
     const details = useWorkOrderDetailStore()
     list.configureApi(api, () => actor.value)
