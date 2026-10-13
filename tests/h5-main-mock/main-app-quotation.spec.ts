@@ -178,9 +178,13 @@ for (const viewport of [
     await page.getByTestId('quotation-browse-quotation-group-2').click()
     await expect(page.getByTestId('quotation-catalog-target')).toContainText('第二组：独立增项')
     await page.getByTestId('quotation-catalog-kind-material').click()
-    await page.getByTestId('quotation-catalog-add-material-mock-catalog-material-sealant').click()
+    // The current-role Production structural sample has ordinary materials
+    // but no active SKU. The actual App Mock path must not depend on SKU.
+    await expect(page.getByTestId('quotation-catalog-item-material-mock-catalog-material-ordinary-1')).toBeVisible()
+    await expect(page.getByTestId('quotation-material-options-mock-catalog-material-ordinary-1')).toHaveCount(0)
+    await page.getByTestId('quotation-catalog-add-material-mock-catalog-material-ordinary-1').click()
     await expect(page.getByTestId('quotation-group-section-quotation-group-2-material'))
-      .toContainText('弹性密封材料（示例）')
+      .toContainText('普通防水辅材（结构示例）')
     await page.getByTestId('quotation-browse-quotation-group-2').click()
     await page.getByTestId('quotation-catalog-kind-procedure').click()
     await page.getByTestId('quotation-catalog-add-procedure-mock-catalog-procedure-seal').click()
