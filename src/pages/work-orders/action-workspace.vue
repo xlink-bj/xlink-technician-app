@@ -214,7 +214,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { onLoad, onUnload } from '@dcloudio/uni-app'
 
 import { isBusinessMockQuotationPreview } from '@app/business-mock'
@@ -342,6 +342,19 @@ async function loadWorkspace(): Promise<void> {
     workflowNodeId: routeNodeId.value,
     ...(routeAction.value ? { actionIntent: routeAction.value } : {}),
   })
+  // The first reactive title update may run before uni-app has activated the
+  // destination page in H5. Reapply after the actual action descriptor has
+  // resolved AND the navigation DOM has committed. A late response for an
+  // already-unloaded page or another workflow node may not change its title.
+  if (loaded.state === 'succeeded' && contextVersion === journeyContextRequest) {
+    await nextTick()
+    if (contextVersion === journeyContextRequest && routeReady.value
+      && session.status === 'authenticated'
+      && String(workspace.descriptor?.workOrderId) === String(routeId.value)
+      && String(workspace.descriptor?.workflowNodeId) === String(routeNodeId.value)) {
+      setActionWorkspacePageTitle(workspaceNavigationTitle.value)
+    }
+  }
   if (loaded.state === 'succeeded' && routeQuotationOrderId.value && workspace.descriptor?.contentKind === 'quotation') {
     await workspace.loadQuotationOrderForEdit(routeQuotationOrderId.value)
   }
@@ -366,6 +379,7 @@ onLoad((options) => {
 })
 
 onUnload(() => {
+  routeReady.value = false
   journeyContextRequest += 1
   localJourneyContext.value = null
   void workspace.flushDraft()
