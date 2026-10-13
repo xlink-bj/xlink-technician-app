@@ -24,6 +24,12 @@ type ListRequestsByKind = Partial<Record<QuotationLineKind, Promise<void>>>
 
 const emptyItems = (): CatalogItemsByKind => ({ package: [], procedure: [], material: [], measure: [] })
 const idleStates = (): CatalogStatesByKind => ({ package: 'idle', procedure: 'idle', material: 'idle', measure: 'idle' })
+const zeros = (): Record<QuotationLineKind, number> => ({ package: 0, procedure: 0, material: 0, measure: 0 })
+const falses = (): Record<QuotationLineKind, boolean> => ({ package: false, procedure: false, material: false, measure: false })
+const morePages = (page: ReadPage<QuotationCatalogItemRead>, loadedCount: number): boolean =>
+  page.totalCount !== undefined
+    ? loadedCount < page.totalCount && page.items.length > 0
+    : page.items.length >= (page.pageSize ?? 20)
 
 export interface QuotationPackageMaterialLayerGroup {
   readonly key: string
@@ -35,12 +41,13 @@ function catalogListFor(
   port: QuotationCatalogReadPort,
   kind: QuotationLineKind,
   context: QuotationCatalogContext,
+  page?: number,
 ): Promise<import('@shared/types').OperationSnapshot<ReadPage<QuotationCatalogItemRead>>> {
   switch (kind) {
-    case 'package': return port.listPackages(context)
-    case 'procedure': return port.listProcedures(context)
-    case 'material': return port.listMaterials(context)
-    case 'measure': return port.listMeasures(context)
+    case 'package': return page === undefined ? port.listPackages(context) : port.listPackages(context, page)
+    case 'procedure': return page === undefined ? port.listProcedures(context) : port.listProcedures(context, page)
+    case 'material': return page === undefined ? port.listMaterials(context) : port.listMaterials(context, page)
+    case 'measure': return page === undefined ? port.listMeasures(context) : port.listMeasures(context, page)
   }
 }
 
@@ -72,6 +79,10 @@ export const useQuotationCatalogBrowserStore = defineStore('quotationCatalogBrow
   const selectedKind = ref<QuotationLineKind>('package')
   const isOpen = ref(false)
   const listErrorCopyByKind = ref<Partial<Record<QuotationLineKind, string>>>({})
+  const catalogPagesByKind = ref(zeros())
+  const catalogMoreByKind = ref(falses())
+  const catalogPageLoadingByKind = ref(falses())
+  const catalogPageErrorByKind = ref<Partial<Record<QuotationLineKind, string>>>({})
   const selectedPackageId = ref<string | null>(null)
   const packageDetail = ref<QuotationPackageDetailRead | null>(null)
   const packageDetailState = ref<QuotationCatalogBrowserState>('idle')
@@ -94,6 +105,8 @@ export const useQuotationCatalogBrowserStore = defineStore('quotationCatalogBrow
   let packageRequestGeneration = 0
   let materialRequestGeneration = 0
   const listRequests: ListRequestsByKind = {}
+  const pageRequests: ListRequestsByKind = {}
+  const listVersions = zeros()
 
   function clear(): void {
     generation += 1
@@ -101,12 +114,20 @@ export const useQuotationCatalogBrowserStore = defineStore('quotationCatalogBrow
     materialRequestGeneration += 1
     port = null
     context = null
-    for (const kind of quotationCatalogKinds) delete listRequests[kind]
+    for (const kind of quotationCatalogKinds) {
+      delete listRequests[kind]
+      delete pageRequests[kind]
+      listVersions[kind] += 1
+    }
     catalogItemsByKind.value = emptyItems()
     catalogStatesByKind.value = idleStates()
     selectedKind.value = 'package'
     isOpen.value = false
     listErrorCopyByKind.value = {}
+    catalogPagesByKind.value = zeros()
+    catalogMoreByKind.value = falses()
+    catalogPageLoadingByKind.value = falses()
+    catalogPageErrorByKind.value = {}
     selectedPackageId.value = null
     packageDetail.value = null
     packageDetailState.value = 'idle'
@@ -208,12 +229,18 @@ export const useQuotationCatalogBrowserStore = defineStore('quotationCatalogBrow
     }
 
     const requestGeneration = generation
+    const requestVersion = ++listVersions[kind]
+    catalogPagesByKind.value = { ...catalogPagesByKind.value, [kind]: 0 }
+    catalogMoreByKind.value = { ...catalogMoreByKind.value, [kind]: false }
+    catalogPageErrorByKind.value = { ...catalogPageErrorByKind.value, [kind]: '' }
     catalogStatesByKind.value = { ...catalogStatesByKind.value, [kind]: 'loading' }
     listErrorCopyByKind.value = { ...listErrorCopyByKind.value, [kind]: '' }
     const request = catalogListFor(port, kind, context).then((result) => {
-      if (requestGeneration !== generation) return
+      if (requestGeneration !== generation || requestVersion !== listVersions[kind]) return
       if (result.state === 'succeeded' && result.data) {
         catalogItemsByKind.value = { ...catalogItemsByKind.value, [kind]: result.data.items }
+        catalogPagesByKind.value = { ...catalogPagesByKind.value, [kind]: 1 }
+        catalogMoreByKind.value = { ...catalogMoreByKind.value, [kind]: morePages(result.data, result.data.items.length) }
         catalogStatesByKind.value = { ...catalogStatesByKind.value, [kind]: 'succeeded' }
         return
       }
@@ -228,7 +255,7 @@ export const useQuotationCatalogBrowserStore = defineStore('quotationCatalogBrow
           : '当前目录暂不可用，请稍后重试或返回工单。',
       }
     }).catch(() => {
-      if (requestGeneration !== generation) return
+      if (requestGeneration !== generation || requestVersion !== listVersions[kind]) return
       catalogStatesByKind.value = { ...catalogStatesByKind.value, [kind]: 'failed_retryable' }
       listErrorCopyByKind.value = { ...listErrorCopyByKind.value, [kind]: '暂时无法读取目录，请检查网络后重试。' }
     }).finally(() => {
@@ -236,6 +263,48 @@ export const useQuotationCatalogBrowserStore = defineStore('quotationCatalogBrow
     })
     listRequests[kind] = request
     return request
+  }
+
+  /** Explicit, one-page-at-a-time catalog read. Nothing is silently truncated
+   * or automatically fetched; page 50 is the audited safety ceiling. */
+  async function loadNextPage(kind: QuotationLineKind): Promise<void> {
+    if (pageRequests[kind]) return pageRequests[kind]
+    const page = catalogPagesByKind.value[kind] + 1
+    if (!port || !context || !isOpen.value || selectedKind.value !== kind
+      || catalogStatesByKind.value[kind] !== 'succeeded'
+      || !catalogMoreByKind.value[kind] || page > 50) return
+    const currentGeneration = generation
+    const currentVersion = listVersions[kind]
+    catalogPageLoadingByKind.value = { ...catalogPageLoadingByKind.value, [kind]: true }
+    catalogPageErrorByKind.value = { ...catalogPageErrorByKind.value, [kind]: '' }
+    const promise = catalogListFor(port, kind, context, page).then(result => {
+      if (generation !== currentGeneration || listVersions[kind] !== currentVersion) return
+      if (result.state !== 'succeeded' || !result.data
+        || (result.data.page !== undefined && result.data.page !== page)) {
+        catalogPageErrorByKind.value = { ...catalogPageErrorByKind.value, [kind]: '下一页读取失败或页码不一致，请重试。' }
+        return
+      }
+      const current = catalogItemsByKind.value[kind]
+      const seen = new Set(current.map(item => item.id))
+      if (result.data.items.some(item => seen.has(item.id))) {
+        catalogPageErrorByKind.value = { ...catalogPageErrorByKind.value, [kind]: '目录分页返回了重复项目，已保留上一页结果。' }
+        return
+      }
+      const merged = [...current, ...result.data.items]
+      catalogItemsByKind.value = { ...catalogItemsByKind.value, [kind]: merged }
+      catalogPagesByKind.value = { ...catalogPagesByKind.value, [kind]: page }
+      catalogMoreByKind.value = { ...catalogMoreByKind.value, [kind]: morePages(result.data, merged.length) }
+    }).catch(() => {
+      if (generation !== currentGeneration || listVersions[kind] !== currentVersion) return
+      catalogPageErrorByKind.value = { ...catalogPageErrorByKind.value, [kind]: '下一页读取失败，已保留当前列表。' }
+    }).finally(() => {
+      if (pageRequests[kind] === promise) delete pageRequests[kind]
+      if (generation === currentGeneration && listVersions[kind] === currentVersion) {
+        catalogPageLoadingByKind.value = { ...catalogPageLoadingByKind.value, [kind]: false }
+      }
+    })
+    pageRequests[kind] = promise
+    return promise
   }
 
   /** Read-only preview on the REAL material catalog surface; it does not
@@ -364,6 +433,10 @@ export const useQuotationCatalogBrowserStore = defineStore('quotationCatalogBrow
     selectedKind,
     isOpen,
     listErrorCopyByKind,
+    catalogPagesByKind,
+    catalogMoreByKind,
+    catalogPageLoadingByKind,
+    catalogPageErrorByKind,
     selectedPackageId,
     packageDetail,
     packageDetailState,
@@ -385,6 +458,7 @@ export const useQuotationCatalogBrowserStore = defineStore('quotationCatalogBrow
     packageCandidateFor,
     successfulPackageDetailFor,
     loadList,
+    loadNextPage,
     retryList,
     openPackageDetail,
     retryPackageDetail,
