@@ -38,7 +38,11 @@ describe('P1 same Quote Catalog IDs with explicitly SYNTHETIC sale/SKU overlay',
     const source = makeSameCatalogSkuMock()
     expect(source.state).toBe('ready_synthetic_only')
     if (source.state !== 'ready_synthetic_only') return
-    expect(source.quoteCatalogMaterialIds).toEqual(['mock-catalog-material-sealant'])
+    expect(source.quoteCatalogMaterialIds).toEqual([
+      'mock-catalog-material-sealant',
+      'mock-catalog-material-ordinary-1',
+      'mock-catalog-material-ordinary-2',
+    ])
     expect(source.direct[0].state).toBe('ready')
     expect(source.packages[0].state).toBe('ready')
     const pkg = source.packages[0]
