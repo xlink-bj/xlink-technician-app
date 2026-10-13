@@ -61,7 +61,7 @@ describe('M1 signing Order precheck: bounded WorkOrder list-only sanitized READ-
     const result = await port.readScopedTypeOneOrderForSigningReview!(owner, id)
     expect(requests).toEqual([{
       method: 'POST', path: 'basic/order/query', body: {
-        _all: '1', page: 1, rows: 3, sortField: 'createTime', sortOrder: 'desc',
+        page: 1, rows: 3, sortField: 'createTime', sortOrder: 'desc',
         'is:serviceAppointmentId|string#and': owner,
         'is:type|integer#and': 1,
       },

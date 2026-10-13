@@ -79,9 +79,12 @@ export function isMockOwnedRead(
   if (route === '__mock/quotation/action-content') return true
   // A mock WorkOrder must never request a real Contract, even when the
   // independent R1 Contract read fixture has not been registered.
-  if (route === 'basic/contract/query.do'
-    && typeof requestData['is:workOrderId|string#and'] === 'string'
-    && isSyntheticWorkOrderId(requestData['is:workOrderId|string#and'])) return true
+  if (route === 'basic/contract/query.do') {
+    const primaryId = requestData['is:serviceAppointmentId|string#and']
+    const alternativeId = requestData['is:workOrderId|string#and']
+    if ((typeof primaryId === 'string' && isSyntheticWorkOrderId(primaryId))
+      || (typeof alternativeId === 'string' && isSyntheticWorkOrderId(alternativeId))) return true
+  }
   // Synthetic SKU IDs must never fall through to a live backend if the
   // developer disables Mock after navigating to a saved local quotation.
   if (route === 'basic/material/query'
@@ -549,6 +552,7 @@ function matchedResponse(
     && route === 'basic/order/query'
     && requestData['is:serviceAppointmentId|string#and'] === mockWorkOrderIds[1]
     && requestData['is:type|integer#and'] === 1
+    && requestData._all === undefined
     && requestData.page === 1 && requestData.rows === 3) {
     return { data: [{
       _id: 'mock-official-order-001', type: 1,
@@ -565,8 +569,12 @@ function matchedResponse(
   if (mode === 'data' && import.meta.env.DEV === true
     && import.meta.env.VITE_XLINK_H5_MOCK_E2E === 'true'
     && route === 'basic/contract/query.do'
-    && requestData['is:workOrderId|string#and'] === mockWorkOrderIds[1]
-    && requestData['in:state|array-integer#and'] === '1'
+    && requestData['is:serviceAppointmentId|string#and'] === mockWorkOrderIds[1]
+    && requestData['is:state|integer#or'] === '1'
+    && requestData['is:exts.contractStatus|string#or'] === '-2'
+    && requestData['is:workOrderId|string#and'] === undefined
+    && requestData._all === undefined
+    && requestData.sortField === 'createTime' && requestData.sortOrder === 'desc'
     && requestData.page === 1 && requestData.rows === 3) {
     return { data: [{
       _id: 'mock-contract-001',

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "observedDate": "2026-10-13",
-  "evidenceCommit": "af9a872a9575a2a4ba3885fdc500d71c78ab4b55",
+  "evidenceCommit": "df9021cd3f10dbf22fff7fa94b0602c013fb9a33",
   "m1ControlIssue": 33,
   "i8Issue": 98,
   "formalAcceptedIterations": 1,
@@ -12,15 +12,15 @@
   "actualBusinessWritesRun": false,
   "evidence": {
     "validate": {
-      "run": 38353839683,
+      "run": 38358909942,
       "conclusion": "SUCCESS",
       "testSuites": 95,
-      "testCount": 962,
+      "testCount": 970,
       "mpBuild": "PASS",
       "appBuild": "PASS"
     },
     "h5": {
-      "run": 38353839578,
+      "run": 38358910049,
       "conclusion": "SUCCESS",
       "startup": 2,
       "mainMock": 23,
@@ -144,7 +144,7 @@
       "codeState": "ENGINEERING_TESTED",
       "h5State": "SYNTHETIC_ONLY",
       "realBusinessParity": "NOT_VERIFIED",
-      "risk": "合同查询 workOrderId vs serviceAppointmentId；真实签署角色、签约、短信/回执和 PDF 等业务影响未核实"
+      "risk": "主 R1 Contract 查询字段已与后台源码匹配；真实租户合同结果、当前节点 handlerIds/角色 ACL、签约/短信/回执/PDF 和真机仍 NOT_RUN"
     }
   ],
   "gates": [
@@ -172,9 +172,9 @@
     {
       "id": "contract_field",
       "issue": 39,
-      "state": "UNRESOLVED_SOURCE",
+      "state": "BLOCKED_ENV",
       "owner": "Lead + Codex read only",
-      "evidence": "R1 workOrderId filter 与固定后台 serviceAppointmentId 模型字段不一致"
+      "evidence": "R1 技术员主 ServiceAppointment 路由 serviceAppointmentId 查询字段与既有 Contract 模型/查询一致（源码已解决）；真实租户 3 条有界查询结果及当前节点处理人授权仍 NOT_RUN"
     },
     {
       "id": "signing_side_effect",

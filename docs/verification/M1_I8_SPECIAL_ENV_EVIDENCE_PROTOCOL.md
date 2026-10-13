@@ -5,8 +5,8 @@ Lead 直接承担编码、PR/CI、接口模型与验收裁决。Codex 只补当�
 ## E1｜现有租户与 R1 Contract 查询行为（READ ONLY）
 
 1. 在当前已授权角色/登录态下，选择**已有且允许查看**的工单及其单个 type=1 Order；记录匿名 WorkOrder/Order 关系摘要，不复制客户电话、身份证、签名链接、URL 或合同正文。
-2. 对照已有 R1 客户端实际请求字段 `is:workOrderId|string#and`，在不改变旧后台、不遍历全租户、不查询 PDF/QR 的前提下，记录有界结果的*条数与关联字段是否匹配*；如原接口不可执行，只标记 `NOT_RUN`，不得尝试改字段探测生产未知接口。
-3. 如需要对照 `serviceAppointmentId`，只能在已获明确授权的既有只读观察/日志或本地代码中进行；不能擅自发第二个新的生产查询或扩大范围。结论写 `OBSERVED_READ`/ `SOURCE_ONLY`/ `UNRESOLVED`，不得因查询为空断言合同不存在。
+2. 对照技术员主 R1 `serviceAppointment.vue` 的实际合同筛选 `is:serviceAppointmentId|string#and`，在不改变旧后台、不遍历全租户、不查询 PDF/QR 的前提下，记录有界结果的*条数与关联字段是否匹配*；如原接口不可执行，只标记 `NOT_RUN`，不得尝试改字段探测生产未知接口。
+3. R1 另一个 WorkOrder 页用 `is:workOrderId`，这是非主技术员路径，不得用新生产查询尝试“比较”字段。已有后台 `_all=1` 会取消分页限制，**任何经单独批准的真实读取都只能 page=1、rows=3 且不得携带 `_all`**；没有批准则保持 NOT_RUN。结果需区分 SOURCE_VERIFIED 与 OBSERVED_READ；空列表不能证明合同不存在。
 4. 记录时间、环境类别、当前角色是否可见、输入和结果的匿名结构、错误类别、源 SHA 与证据文件路径；不上传 Token/Session/PII。
 
 ## E2｜真实 SKU/价格（READ ONLY）
@@ -18,3 +18,5 @@ Lead 直接承担编码、PR/CI、接口模型与验收裁决。Codex 只补当�
 每个平台按“构建 SHA / 系统与机型 / 登录角色 / 页面与操作 / 实际结果 PASS/FAIL/NOT_RUN / 匿名截图位置”记录：六阶段可达性、下拉/键盘/返回、Action Bar 与安全区、勘察相机/媒体权限、弱网与重入；**不得点击签约、取消合同、短信重发、PDF 生成或工作流提交**。
 
 完成的证据应追加到 I7 #97、I8 #98 与对应 I2/I6 Issue，交由 Lead 复核；只有 Owner 单独批准 Beta 写入 Gate 后，才可另行规划合法沙箱的业务命令实测。
+
+5. **当前节点处理人证据（独立于工单可见性）**：R1 `serviceAppointment.vue:6333–6346` 的 `isHandler` 来自当前节点 `handlerIds` 与当前 `userId` / `roleId` / `orgId + '+' + roleId` 匹配；只可检查已获授权的当前节点匿名身份关系，不允许未经批准切角色、拓展租户或执行任何签约业务写入。记录 `NODE_HANDLER_OBSERVED` 或 `NODE_HANDLER_NOT_RUN`。

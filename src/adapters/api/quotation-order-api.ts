@@ -377,10 +377,13 @@ export class QuotationOrderReadAdapter implements QuotationOrderReadPort {
   }
 
   /**
-   * Source-accurate R1 Contract query; this does NOT expand Production's
-   * transport allowlist. The pinned R1 query uses workOrderId while its
-   * backend Contract model stores serviceAppointmentId. Zero results are
-   * therefore INCONCLUSIVE, never "no Contract".
+   * Technician R1 PRIMARY ServiceAppointment route uses serviceAppointmentId
+   * (business/subpackages/serviceAppointment/serviceAppointment.vue:9215-9229).
+   * The alternative R1 workOrder.vue uses workOrderId but is not the primary
+   * Technician workflow. Preserve source filters/sort, omit R1's _all=1:
+   * existing FlipPageInfo + EMongoTemplate expand page size to total when
+   * _all=1, making rows=3 NOT a real backend limit. Do not expand the
+   * Production transport allowlist. Zero rows remain INCONCLUSIVE.
    */
   async listR1ContractsForSigningReview(
     workOrderId: string, orderId: string,
@@ -413,15 +416,16 @@ export class QuotationOrderReadAdapter implements QuotationOrderReadPort {
       ).length !== 1) {
         return adapterFailure('authorization_denied', '目标正式订单不属于已验证列表。')
       }
-      // Exactly R1's field/filter/sort semantics, adding only a page bound.
-      // In particular do NOT silently substitute serviceAppointmentId here.
+      // Primary technician R1 query fields and OR semantics; pagination is
+      // deliberately bounded rather than copying the unbounded R1 _all flag.
       const raw = await this.transport.execute({
         method: 'POST', path: 'basic/contract/query.do',
         body: {
-          _all: '1', page: 1, rows: 3,
-          'is:workOrderId|string#and': workOrderId,
-          'in:state|array-integer#and': '1',
-          sortField: 'updateTime', sortOrder: 'asc',
+          page: 1, rows: 3,
+          'is:serviceAppointmentId|string#and': workOrderId,
+          'is:state|integer#or': '1',
+          'is:exts.contractStatus|string#or': '-2',
+          sortField: 'createTime', sortOrder: 'desc',
         },
       })
       if (this.scopedReviewIdentity() !== identity || !this.isAuthorizedForCurrentSession(workOrderId)) {
@@ -496,7 +500,7 @@ export class QuotationOrderReadAdapter implements QuotationOrderReadPort {
         method: 'POST',
         path: 'basic/order/query',
         body: {
-          _all: '1',
+          // NEVER send _all=1: FlipPageInfo overrides rows with the total.
           page: 1,
           rows: pageSize,
           sortField: 'createTime',

@@ -64,6 +64,12 @@ export interface R1SigningIntentContext {
   readonly contracts: readonly R1ScopedContractSummary[]
   readonly selectedContractId?: string
   readonly currentRoleWorkOrderVerified: boolean
+  /**
+   * R1's isHandler is derived from current workflow node.handlerIds, NOT from
+   * being able to see a WorkOrder. This fact must be independently verified
+   * using the current node and actor; unknown => false.
+   */
+  readonly currentNodeHandlerVerified: boolean
   /** Verified means trusted by the current identity, NOT signer/contract permission. */
   readonly currentIdentityVerified: boolean
 }
@@ -93,6 +99,9 @@ export function reviewR1SigningIntent(
   const order = context.officialOrder
   if (!context.currentIdentityVerified || !context.currentRoleWorkOrderVerified) {
     reasons.push('当前会话/角色及工单访问范围尚未核验')
+  }
+  if (!context.currentNodeHandlerVerified) {
+    reasons.push('尚未核验 R1 当前工作流节点 handlerIds 与用户/角色/组织角色的处理人关系')
   }
   if (!safeId(context.workOrderId) || !safeId(context.selectedOrderId)
     || !order || order.type !== 1 || order.id !== context.selectedOrderId
