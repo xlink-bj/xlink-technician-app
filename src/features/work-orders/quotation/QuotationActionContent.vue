@@ -845,6 +845,19 @@
                   <text v-else class="quotation-content__catalog-readonly">只读</text>
                 </view>
               </view>
+              <view v-if="catalogBrowser.catalogMoreByKind[catalogBrowser.selectedKind]"
+                data-testid="quotation-catalog-pagination"
+                class="quotation-content__catalog-state">
+                <AppStatus v-if="catalogBrowser.catalogPageErrorByKind[catalogBrowser.selectedKind]"
+                  :message="catalogBrowser.catalogPageErrorByKind[catalogBrowser.selectedKind]"
+                  tone="warning" quiet data-testid="quotation-catalog-page-error" />
+                <AppButton variant="secondary"
+                  :disabled="catalogBrowser.catalogPageLoadingByKind[catalogBrowser.selectedKind] || catalogBrowser.catalogPagesByKind[catalogBrowser.selectedKind] >= 50"
+                  data-testid="quotation-catalog-load-more"
+                  @tap="catalogBrowser.loadNextPage(catalogBrowser.selectedKind)">
+                  {{ catalogBrowser.catalogPagesByKind[catalogBrowser.selectedKind] >= 50 ? '目录达到单次浏览安全上限' : catalogBrowser.catalogPageLoadingByKind[catalogBrowser.selectedKind] ? '读取下一页中…' : '加载更多项目' }}
+                </AppButton>
+              </view>
             </scroll-view>
           </view>
         </view>
