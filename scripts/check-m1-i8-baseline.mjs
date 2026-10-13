@@ -81,7 +81,7 @@ for (const [index, expected] of ids.entries()) {
   }
 }
 ensure(new Set(manifest.phases.map(p => p.id)).size === ids.length, 'duplicated stage identity')
-ensure(Array.isArray(manifest.gates) && manifest.gates.length >= 9, 'incomplete gate ledger')
+ensure(Array.isArray(manifest.gates), 'invalid gate ledger')
 const requiredGates = [
   'live_role','sku_catalog','price_order','contract_field','signing_side_effect',
   'physical_mp','physical_android_ios','owner_visual','merge_release',
