@@ -4,7 +4,7 @@
 
 ## Business preflight: manual SMS login only
 
-R1 validates mobile format with the exact JavaScript expression `/^1[3-9]\\d{9}$/` and SMS verification code with `/^\\d{6}$/` (R1 method='1'). A non-empty string of 11 digits beginning with 0, 2 or 12 is **not** an R1-valid phone. R1 also checks `loginRead` consent separately.
+R1 validates mobile format with the exact JavaScript expression `/^1[3-9]\d{9}$/` and SMS verification code with `/^\d{6}$/` (R1 method='1'). A non-empty string of 11 digits beginning with 0, 2 or 12 is **not** an R1-valid phone. R1 also checks `loginRead` consent separately.
 
 The actual App manual form previously accepted any nonblank strings and allowed 32/16 input chars. `r1-manual-login-preflight.ts` now enforces both patterns before the manual `submitLogin()` network boundary; actual form limits input to 11/6. This is a source-derived syntax rule, **not** an assertion of Production authentication success or OTP delivery.
 
