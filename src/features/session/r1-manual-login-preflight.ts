@@ -14,7 +14,7 @@ export function r1ManualLoginIssue(input: LoginFormInput): R1ManualLoginIssue | 
   const phone = input.phoneNumber.trim()
   const code = input.verificationCode.trim()
   if (!phone) return 'phone_required'
-  if (!/^\d{11}$/.test(phone)) return 'phone_format'
+  if (!/^1[3-9]\d{9}$/.test(phone)) return 'phone_format'
   if (!code) return 'code_required'
   if (!/^\d{6}$/.test(code)) return 'code_format'
   return null
