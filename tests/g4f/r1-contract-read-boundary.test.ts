@@ -26,7 +26,7 @@ function fakePort(options: {
   const execute = vi.fn(options.read)
   const port = createQuotationOrderReadAdapter(
     { execute }, () => options.listed?.() ?? true,
-    () => options.identity?.() ?? 'session-user-role-version',
+    () => options.identity ? options.identity() : 'session-user-role-version',
   )
   return { port, execute }
 }
