@@ -4,6 +4,7 @@ import {
   isBusinessMockDeveloperModeAvailable,
   isBusinessMockMode,
   mockCommandScenarioIds,
+  mockWorkOrderIds,
 } from '@adapters/api/mock'
 
 /**
@@ -35,3 +36,16 @@ export {
   setBusinessMockMode,
 } from '@adapters/api/mock'
 export type { BusinessMockMode } from '@adapters/api/mock'
+
+/**
+ * I6 Contract read is permitted ONLY against a fixed offline DEV fixture.
+ * A staging/Beta backend, a production login, or a real WorkOrder is NEVER
+ * sufficient authorization. The adapter repeats this test independently.
+ */
+export function isDevSyntheticContractReadPreviewEnabled(workOrderId: string | null | undefined): boolean {
+  return import.meta.env.DEV === true
+    && import.meta.env.VITE_XLINK_H5_MOCK_E2E === 'true'
+    && isBusinessMockDeveloperModeAvailable()
+    && isBusinessMockMode() === 'data'
+    && workOrderId === mockWorkOrderIds[1]
+}

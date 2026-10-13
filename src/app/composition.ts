@@ -43,7 +43,7 @@ import { createDisabledRealMediaPostUploadProcessor } from '@adapters/upload/uni
 import { createSurveyLeakageCauseProvider } from '@adapters/api/survey-leakage-cause'
 
 import { loadApplicationRuntimeConfig } from './runtime-config'
-import { isBusinessMockMode } from './business-mock'
+import { isBusinessMockMode, isDevSyntheticContractReadPreviewEnabled } from './business-mock'
 
 function configurationFailure<T>(message: string): OperationSnapshot<T> {
   return { state: 'failed_terminal', error: createOperationError('server_terminal', message) }
@@ -263,7 +263,20 @@ export function createDefaultQuotationOrderReadPort(
       return session ? { userId: session.user.id, ...(session.currentRole ? { roleId: session.currentRole.id } : {}) } : null
     },
   })
-  return createQuotationOrderReadAdapter(transport, isWorkOrderListedForCurrentSession)
+  // A live, strictly scoped identity fingerprint. Missing role/version
+  // keeps Signing precheck DENIED even when ordinary quotation browse works.
+  return createQuotationOrderReadAdapter(
+    transport,
+    isWorkOrderListedForCurrentSession,
+    () => {
+      const session = authSession.getCurrentSession()
+      if (!session?.currentRole?.id || !session.roleVersion) return null
+      return JSON.stringify([
+        session.sessionRef, session.user.id, session.currentRole.id, session.roleVersion,
+      ])
+    },
+    isDevSyntheticContractReadPreviewEnabled,
+  )
 }
 
 export function createDefaultPhonePort(): PhonePort {

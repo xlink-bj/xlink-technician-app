@@ -25,6 +25,10 @@
       }
     },
     {
+      "path": "pages/work-orders/signing-order-read",
+      "style": { "navigationBarTitleText": "签约前订单核验 · 只读" }
+    },
+    {
       "path": "pages/work-orders/signing-mock-review",
       "style": { "navigationBarTitleText": "签约工作台 · Mock" }
     },

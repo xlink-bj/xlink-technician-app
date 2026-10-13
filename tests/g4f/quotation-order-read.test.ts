@@ -78,7 +78,7 @@ describe('G4-F Production quotation Order read adapter', () => {
       method: 'POST',
       path: 'basic/order/query',
       body: {
-        _all: '1',
+        // DB-bounded first page: no _all, which overrides rows in the existing backend.
         page: 1,
         rows: 3,
         sortField: 'createTime',

@@ -261,6 +261,14 @@
                 <text v-if="!group.contentSupported" class="quotation-read-warning">该分组含未识别字段，以上仅为可确认内容。</text>
               </view>
               <text class="quotation-read-pdf-note">报价 PDF 未打开或下载。</text>
+              <navigator
+                v-if="signingOrderReadRouteFor(String(detail?.id ?? ''), order.id)"
+                class="state-action quotation-retry"
+                :url="signingOrderReadRouteFor(String(detail?.id ?? ''), order.id) || undefined"
+                data-testid="production-signing-order-read-entry"
+              >
+                签约前核验 · 只读
+              </navigator>
             </view>
           </view>
         </view>
@@ -293,6 +301,7 @@ import { actionWorkspaceRouteFor } from '@features/work-orders/action-workspace'
 import { detailTabs, type DetailTabKey } from '@features/work-orders/detail-tabs'
 import { detailWorkflowUiProjectionFor } from '@features/work-orders/detail-workflow'
 import { quotationBrowseLineRows, useQuotationOrderBrowseStore } from '@features/work-orders/quotation/order-browse-store'
+import { signingOrderReadRouteFor } from '@features/work-orders/signing/signing-review-read-workspace'
 import type { QuotationOrderBrowseGroup, QuotationOrderBrowseKind } from '@shared/ports'
 import { useSessionStore } from '@shared/state'
 import AppIcon from '@shared/ui/AppIcon.vue'

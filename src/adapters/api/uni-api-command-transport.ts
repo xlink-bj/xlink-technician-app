@@ -67,11 +67,33 @@ function isRealMutationPath(path: string): boolean {
     || /^workflow\/startWorkflow\/order\/null\/[^/]+$/.test(route)
 }
 
+/**
+ * Independent hard stop for all Contract/Signing COMMAND routes.
+ * Generic VITE_XLINK_ENABLE_REAL_WRITES does not approve legally binding
+ * signatures, SMS notifications, cancellation, or external provider calls.
+ * Only a separate, explicitly reviewed implementation can lift this fence.
+ */
+export function isUnapprovedR1SigningCommandPath(path: string): boolean {
+  let route = path.split(/[?#]/)[0] ?? ''
+  try { route = decodeURIComponent(route) } catch { return true }
+  while (route.startsWith('/')) route = route.slice(1)
+  return route.startsWith('signature/')
+    || route === 'basic/contract/remove'
+    || route === 'basic/contract/upsert'
+    || route === 'basic/contract/getSignatureUrl'
+}
+
 export function createUniApiCommandTransport(options: UniApiCommandTransportOptions): ApiCommandTransport {
   const request = options.request ?? defaultRequest
 
   return {
     async execute(input: ApiCommandRequest): Promise<unknown> {
+      if (isUnapprovedR1SigningCommandPath(input.path)) {
+        throw new ApiCommandTransportError(
+          'Contract signing, notification and cancellation commands require a separate business authorization gate',
+          'unsupported_capability',
+        )
+      }
       const sessionRef = options.getSessionRef()
       if (!sessionRef) {
         throw new ApiCommandTransportError('Authenticated session is required for API commands', 'session_invalid')

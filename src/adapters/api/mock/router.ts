@@ -20,6 +20,7 @@ import {
   mockSurveyLeakageCauseResponse,
   mockWorkOrderActivityResponseFor,
   mockWorkOrderDetailResponses,
+  mockWorkOrderIds,
   mockWorkOrderDetailResponseFor,
 } from './fixtures'
 import {
@@ -76,6 +77,14 @@ export function isMockOwnedRead(
   // This is an internal, synthetic-only route. It is always mock-owned so a
   // disabled Mock mode can never fall through to a real backend endpoint.
   if (route === '__mock/quotation/action-content') return true
+  // A mock WorkOrder must never request a real Contract, even when the
+  // independent R1 Contract read fixture has not been registered.
+  if (route === 'basic/contract/query.do') {
+    const primaryId = requestData['is:serviceAppointmentId|string#and']
+    const alternativeId = requestData['is:workOrderId|string#and']
+    if ((typeof primaryId === 'string' && isSyntheticWorkOrderId(primaryId))
+      || (typeof alternativeId === 'string' && isSyntheticWorkOrderId(alternativeId))) return true
+  }
   // Synthetic SKU IDs must never fall through to a live backend if the
   // developer disables Mock after navigating to a saved local quotation.
   if (route === 'basic/material/query'
@@ -533,6 +542,47 @@ function matchedResponse(
         quotation: null,
       },
     }
+  }
+
+  // I6: an explicit, isolated synthetic type=1 Order + Contract, never a
+  // submitted order, never an authorization source, never a real tenant.
+  // All other Contract/Order routes remain unsupported in DEV Mock mode.
+  if (mode === 'data' && import.meta.env.DEV === true
+    && import.meta.env.VITE_XLINK_H5_MOCK_E2E === 'true'
+    && route === 'basic/order/query'
+    && requestData['is:serviceAppointmentId|string#and'] === mockWorkOrderIds[1]
+    && requestData['is:type|integer#and'] === 1
+    && requestData._all === undefined
+    && requestData.page === 1 && requestData.rows === 3) {
+    return { data: [{
+      _id: 'mock-official-order-001', type: 1,
+      serviceAppointmentId: mockWorkOrderIds[1],
+      orderNumber: 'DEV-SYNTHETIC-NOT-SUBMITTED',
+      state: 1, processState: 4, totalPrice: 0, exts: { isAgain: 0 },
+      bjProducts: { orderList: [{
+        repairParts: ['DEV-SYNTHETIC'], partDescription: '合成数据，仅供界面验证',
+        projPackages: { data: [] }, procedures: { data: [] },
+        materials: { data: [] }, measures: { data: [] },
+      }] },
+    }], page: 1, rows: 3, total: 1 }
+  }
+  if (mode === 'data' && import.meta.env.DEV === true
+    && import.meta.env.VITE_XLINK_H5_MOCK_E2E === 'true'
+    && route === 'basic/contract/query.do'
+    && requestData['is:serviceAppointmentId|string#and'] === mockWorkOrderIds[1]
+    && requestData['is:state|integer#or'] === '1'
+    && requestData['is:exts.contractStatus|string#or'] === '-2'
+    && requestData['is:workOrderId|string#and'] === undefined
+    && requestData._all === undefined
+    && requestData.sortField === 'createTime' && requestData.sortOrder === 'desc'
+    && requestData.page === 1 && requestData.rows === 3) {
+    return { data: [{
+      _id: 'mock-contract-001',
+      orderId: 'mock-official-order-001',
+      serviceAppointmentId: mockWorkOrderIds[1],
+      contractdocNum: 'DEV-SYNTHETIC-CONTRACT',
+      state: 1, exts: { contractStatus: '2' },
+    }], page: 1, rows: 3, total: 1 }
   }
   // This route shape follows pinned R1 source, but the values are exclusively
   // DEV Mock fixtures; no price, inventory or real customer data is included.
