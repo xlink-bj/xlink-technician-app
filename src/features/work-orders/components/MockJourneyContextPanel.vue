@@ -3,7 +3,7 @@
     <view class="journey-context__head">
       <view class="journey-context__head-copy">
         <text class="journey-context__heading">{{ compact ? '前序信息已保留' : '前序信息 · 本机草稿' }}</text>
-        <text v-if="compact" class="journey-context__head-hint">仅本机记录 · 不代表后台已提交</text>
+        <text v-if="compact" class="journey-context__head-hint">仅本机记录 · 未提交后台</text>
       </view>
       <button v-if="compact" class="journey-context__toggle" data-testid="mock-journey-context-toggle"
         :aria-expanded="expanded" @tap="expanded = !expanded">{{ expanded ? '收起' : '查看详情' }}</button>
