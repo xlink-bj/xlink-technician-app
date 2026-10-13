@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, watch, type WatchStopHandle } from 'vue'
+import { ref, toRaw, watch, type WatchStopHandle } from 'vue'
 import { workOrderReadScopeKey } from './read-identity-scope'
 import { isProductionReadOnlyRuntime } from '@shared/config'
 
@@ -116,7 +116,7 @@ export const useWorkOrderListStore = defineStore('workOrderList', () => {
       return result
     }
     const current = renderedScope && renderedScope === workOrderReadScopeKey(getSession())
-      ? items.value.find(row => row === item && row.id === item.id) : undefined
+      ? items.value.find(row => row.id === item.id && toRaw(row) === toRaw(item)) : undefined
     const contact = current?.contact
     if (!contact?.normalizedPhone) {
       const result = contactFailure('unavailable', 'A direct customer phone contact is not available')
