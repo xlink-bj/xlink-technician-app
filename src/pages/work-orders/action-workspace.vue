@@ -32,6 +32,8 @@
         :suggestion-feedback="suggestionFeedback"
         @adopt-suggestion="adoptSurveySuggestion"
       />
+    </template>
+    <template #after-content>
       <navigator
         v-if="mockJourney?.stage === 'quotation' && isSigningMockReviewAvailable()"
         class="mock-signing-entry app-surface"
