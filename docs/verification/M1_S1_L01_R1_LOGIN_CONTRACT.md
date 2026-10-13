@@ -4,7 +4,13 @@ Source of truth: R1 `xlink-app@6c0a97b26bcbcaee81ac4e1dfd627c6e8e70e29d`, `busin
 
 ## Narrow scope / provenance
 
-R1's **manually typed** phone login preflight requires an 11-digit mobile string and a six-digit SMS code. Before this PR the real main App `src/features/session/login.ts` only verified nonblank fields, while the H5 login form allowed 32/16 characters. The new `r1-manual-login-preflight.ts` is a pure, side-effect-free validator used at the manual UI's `submit()` before the existing `submitLogin()` call. The login Auth Port/wire endpoint, tenant, token/session, production role, and QUICK login path remain untouched; the "request SMS" button remains disabled.
+R1's **manually typed** phone login preflight requires a mobile matching `^1[3-9]\\d{9}# M1-S1 / L01 — Source-verified manual login business preflight
+
+Source of truth: R1 `xlink-app@6c0a97b26bcbcaee81ac4e1dfd627c6e8e70e29d`, `business/subpackages/login/loginAuth.vue:300–323`, Codex #120 `CONTRACT_MATRIX L01`.
+
+## Narrow scope / provenance
+
+R1's **manually typed** phone login preflight requires  and a six-digit SMS code. Before this PR the real main App `src/features/session/login.ts` only verified nonblank fields, while the H5 login form allowed 32/16 characters. The new `r1-manual-login-preflight.ts` is a pure, side-effect-free validator used at the manual UI's `submit()` before the existing `submitLogin()` call. The login Auth Port/wire endpoint, tenant, token/session, production role, and QUICK login path remain untouched; the "request SMS" button remains disabled.
 
 Contract classification: **R1 SOURCE_VERIFIED / MAIN_APP_CODE_IMPLEMENTED / LIVE_MANUAL_LOGIN_NOT_RUN**. Test phone/code strings are entirely synthetic; not actual user credentials. This does not prove an external SMS sent/received or production authentication.
 
