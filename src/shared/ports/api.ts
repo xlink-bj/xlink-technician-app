@@ -414,11 +414,11 @@ export interface QuotationMaterialSkuVariantRead {
 
 /** Read-only provider boundary; intentionally separate from local quotation draft composition. */
 export interface QuotationCatalogReadPort {
-  listPackages(context: QuotationCatalogContext): Promise<OperationSnapshot<ReadPage<QuotationPackageRead>>>
+  listPackages(context: QuotationCatalogContext, page?: number): Promise<OperationSnapshot<ReadPage<QuotationPackageRead>>>
   getPackageDetail(packageId: string): Promise<OperationSnapshot<QuotationPackageDetailRead>>
-  listProcedures(context: QuotationCatalogContext): Promise<OperationSnapshot<ReadPage<QuotationProcedureRead>>>
-  listMaterials(context: QuotationCatalogContext): Promise<OperationSnapshot<ReadPage<QuotationMaterialRead>>>
-  listMeasures(context: QuotationCatalogContext): Promise<OperationSnapshot<ReadPage<QuotationMeasureRead>>>
+  listProcedures(context: QuotationCatalogContext, page?: number): Promise<OperationSnapshot<ReadPage<QuotationProcedureRead>>>
+  listMaterials(context: QuotationCatalogContext, page?: number): Promise<OperationSnapshot<ReadPage<QuotationMaterialRead>>>
+  listMeasures(context: QuotationCatalogContext, page?: number): Promise<OperationSnapshot<ReadPage<QuotationMeasureRead>>>
   /**
    * R1 placeOrders.vue:6191–6198 / 6306–6315. Optional until the verified
    * SKU option UI consumes this source; never enabled for Production reads
