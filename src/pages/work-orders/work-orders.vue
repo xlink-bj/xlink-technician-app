@@ -248,6 +248,7 @@ import { workOrderListActionFor } from '@features/work-orders/list-actions'
 import { useWorkOrderListStore } from '@features/work-orders/list'
 import type { WorkOrderSummary } from '@shared/ports'
 import { useSessionStore } from '@shared/state'
+import { workOrderReadScopeKey } from '@features/work-orders/read-identity-scope'
 import AppIcon from '@shared/ui/AppIcon.vue'
 import AppLoadingState from '@shared/ui/AppLoadingState.vue'
 import AppStatus from '@shared/ui/AppStatus.vue'
@@ -295,11 +296,19 @@ watch(
 onBeforeUnmount(clearLoadingSkeletonTimer)
 
 watch(
-  () => session.status,
-  (status) => {
-    if (status === 'authenticated') void workOrders.refresh()
+  [() => session.status, () => workOrderReadScopeKey(session.session)],
+  ([status, scope], previous) => {
+    if (status === 'authenticated' && scope
+      && (!previous || previous[0] !== status || previous[1] !== scope)) {
+      acceptCandidate.value = null
+      void workOrders.refresh()
+    }
+    if (status !== 'authenticated' && status !== 'unknown') {
+      acceptCandidate.value = null
+      workOrders.clear()
+    }
   },
-  { immediate: true },
+  { immediate: true, flush: 'sync' },
 )
 
 async function submitSearch(): Promise<void> {

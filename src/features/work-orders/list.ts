@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, watch, type WatchStopHandle } from 'vue'
+import { workOrderReadScopeKey } from './read-identity-scope'
 import { isProductionReadOnlyRuntime } from '@shared/config'
 
 import type {
@@ -64,15 +65,24 @@ export const useWorkOrderListStore = defineStore('workOrderList', () => {
   const acceptError = ref<OperationError | null>(null)
   let lastLoadWasAppend = false
   let loadVersion = 0
+  let stopScopeWatch: WatchStopHandle | null = null
+  let renderedScope: string | null = null
 
   function configureApi(
     nextApi: TechnicianApiReadPort,
     sessionProvider: () => SessionSnapshot | null,
     sessionInvalidation?: SessionInvalidation,
   ): void {
+    stopScopeWatch?.()
+    clear()
     api = nextApi
     getSession = sessionProvider
     invalidateSession = sessionInvalidation ?? null
+    stopScopeWatch = watch(
+      () => workOrderReadScopeKey(getSession()),
+      (next, prev) => { if (next !== prev) clear() },
+      { flush: 'sync' },
+    )
   }
 
   function configurePhone(nextPhone: PhonePort): void {
@@ -105,7 +115,9 @@ export const useWorkOrderListStore = defineStore('workOrderList', () => {
       contactState.value = result.state
       return result
     }
-    const contact = item.contact
+    const current = renderedScope && renderedScope === workOrderReadScopeKey(getSession())
+      ? items.value.find(row => row === item && row.id === item.id) : undefined
+    const contact = current?.contact
     if (!contact?.normalizedPhone) {
       const result = contactFailure('unavailable', 'A direct customer phone contact is not available')
       contactState.value = result.state
@@ -138,6 +150,7 @@ export const useWorkOrderListStore = defineStore('workOrderList', () => {
   function clearList(): void {
     loadVersion += 1
     items.value = []
+    renderedScope = null
     page.value = 1
     totalCount.value = undefined
     hasMore.value = undefined
@@ -225,7 +238,8 @@ export const useWorkOrderListStore = defineStore('workOrderList', () => {
       return failure('validation', 'Work Order list request is already in progress')
     }
 
-    if (!getSession()) {
+    const scopeAtStart = workOrderReadScopeKey(getSession())
+    if (!scopeAtStart) {
       clearList()
       const result = failure<ReadPage<WorkOrderSummary>>(
         'session_invalid',
@@ -257,12 +271,16 @@ export const useWorkOrderListStore = defineStore('workOrderList', () => {
       pageSize: pageSize.value,
       ...(normalizedSearchText ? { searchText: normalizedSearchText } : {}),
     })
-    if (requestVersion !== loadVersion) return result
+    if (requestVersion !== loadVersion || scopeAtStart !== workOrderReadScopeKey(getSession())) {
+      if (requestVersion === loadVersion) clear()
+      return failure('authorization_denied', 'Work Order list read belongs to a changed identity/role')
+    }
     if (result.state === 'succeeded' && result.data) {
       const responsePage = result.data.page ?? requestedPage
       const responsePageSize = result.data.pageSize ?? pageSize.value
       const nextItems = append ? [...items.value, ...result.data.items] : [...result.data.items]
       items.value = nextItems
+      renderedScope = scopeAtStart
       page.value = responsePage
       pageSize.value = responsePageSize
       totalCount.value = result.data.totalCount
