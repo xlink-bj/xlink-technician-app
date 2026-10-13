@@ -112,7 +112,8 @@ describe('G4-F Phase 1C quotation catalog read foundation', () => {
         method: 'POST',
         path: 'biz/projPackage/queryWithRank',
         body: {
-          _all: '1',
+          page: 1,
+        rows: 20,
           'is:state|integer#and': 1,
           'in:serviceType|array#and': query.serviceType,
           sourceType: query.sourceType,
@@ -124,7 +125,8 @@ describe('G4-F Phase 1C quotation catalog read foundation', () => {
         method: 'POST',
         path: 'biz/procedure/queryWithRank',
         body: {
-          _all: '1',
+          page: 1,
+        rows: 20,
           'is:state|integer#and': 1,
           'in:serviceType|array#and': query.serviceType,
           sourceType: query.sourceType,
@@ -136,7 +138,8 @@ describe('G4-F Phase 1C quotation catalog read foundation', () => {
         method: 'POST',
         path: 'basic/material/queryWithRank',
         body: {
-          _all: '1',
+          page: 1,
+        rows: 20,
           'is:state|integer#and': 1,
           'in:serviceType|array#and': query.serviceType,
           sourceType: query.sourceType,
@@ -148,7 +151,8 @@ describe('G4-F Phase 1C quotation catalog read foundation', () => {
         method: 'POST',
         path: 'biz/measure/queryWithRank',
         body: {
-          _all: '1',
+          page: 1,
+        rows: 20,
           'is:state|integer#and': 1,
           'in:serviceType|array#and': query.serviceType,
           sourceType: query.sourceType,
@@ -224,7 +228,8 @@ describe('G4-F Phase 1C quotation catalog read foundation', () => {
       method: 'POST',
       path: 'biz/projPackage/queryWithRank',
       body: {
-        _all: '1',
+        page: 1,
+        rows: 20,
         'is:state|integer#and': 1,
         'in:serviceType|array#and': 'service-type-1',
         sortField: 'order,_id',
@@ -280,7 +285,8 @@ describe('G4-F Phase 1C quotation catalog read foundation', () => {
       method: 'POST',
       path: 'biz/projPackage/queryWithRank',
       body: {
-        _all: '1',
+        page: 1,
+        rows: 20,
         'is:state|integer#and': 1,
         'in:serviceType|array#and': 'verified-service-type',
         sourceType: 'verified-source-type',
@@ -482,7 +488,9 @@ describe('G4-F Phase 1C quotation catalog read foundation', () => {
       method: 'POST',
       header: { Cookie: `JSESSIONID=${sessionRef}` },
     })
-    expect(requestBody.get('_all')).toBe('1')
+    expect(requestBody.get('_all')).toBeNull()
+    expect(requestBody.get('page')).toBe('1')
+    expect(requestBody.get('rows')).toBe('20')
     expect(requestBody.get('in:serviceType|array#and')).toBe(query.serviceType)
     expect(requestBody.get('sourceType')).toBe(query.sourceType)
     expect(requestBody.get('sortField')).toBe('order,_id')
@@ -521,4 +529,38 @@ describe('G4-F Phase 1C quotation catalog read foundation', () => {
     expect(composition).not.toContain('QuotationCatalogReadPort')
     expect(content).not.toContain('quotationCatalogRead')
   })
+  it('S1 Q01: bounded page 2 preserves R1 filters and never requests all rows', async () => {
+    const execute = vi.fn(async (request: ApiReadRequest) => ({
+      data: request.body?.page === 2 ? [catalogItem('catalog-page-2', '页二样例')] : [],
+      page: request.body?.page, rows: 20, total: 21,
+    }))
+    const catalog = createQuotationCatalogReadAdapter({ execute })
+    const result = await catalog.listMaterials(query, 2)
+    expect(result).toMatchObject({ state: 'succeeded', data: { page: 2, pageSize: 20, totalCount: 21 } })
+    expect(result.data?.items[0]?.id).toBe('catalog-page-2')
+    expect(execute).toHaveBeenCalledWith({ method: 'POST', path: 'basic/material/queryWithRank', body: {
+      page: 2, rows: 20, 'is:state|integer#and': 1,
+      'in:serviceType|array#and': query.serviceType, sourceType: query.sourceType,
+      sortField: 'order,_id', sortOrder: 'asc',
+    } })
+    for (const invalidPage of [0, 51, -1, 1.5, Number.NaN]) {
+      const oldCalls = execute.mock.calls.length
+      const invalid = await catalog.listMaterials(query, invalidPage)
+      expect(invalid.state).toBe('failed_terminal')
+      expect(execute).toHaveBeenCalledTimes(oldCalls)
+    }
+  })
+
+  it('S1 Q01: the real Mock adapter returns page-aware data and never calls network', async () => {
+    setBusinessMockMode('data')
+    const network = vi.fn()
+    const catalog = mockAdapter(network)
+    const ctx = { serviceType: mockQuotationCatalogServiceType, sourceType: mockQuotationCatalogSourceType }
+    const first = await catalog.listPackages(ctx, 1)
+    const second = await catalog.listPackages(ctx, 2)
+    expect(first.data?.items).toHaveLength(2)
+    expect(second).toMatchObject({ state: 'succeeded', data: { items: [], page: 2, pageSize: 20, totalCount: 2 } })
+    expect(network).not.toHaveBeenCalled()
+  })
+
 })
