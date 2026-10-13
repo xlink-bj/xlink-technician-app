@@ -1,8 +1,15 @@
 <template>
-  <view class="journey-context app-surface" data-testid="mock-journey-context">
-    <text class="journey-context__heading">前序信息 · 本机草稿</text>
-    <text class="journey-context__notice">仅供当前演示工单核对；未提交后台，不代表业务节点已完成，也不参与报价金额计算。</text>
-    <view v-for="section in context.sections" :key="section.stage" class="journey-context__section" :data-testid="`mock-journey-context-${section.stage}`">
+  <view class="journey-context app-surface" :class="{ 'journey-context--compact': compact }" data-testid="mock-journey-context">
+    <view class="journey-context__head">
+      <view class="journey-context__head-copy">
+        <text class="journey-context__heading">{{ compact ? '前序信息已保留' : '前序信息 · 本机草稿' }}</text>
+        <text v-if="compact" class="journey-context__head-hint">仅本机记录 · 不代表后台已提交</text>
+      </view>
+      <button v-if="compact" class="journey-context__toggle" data-testid="mock-journey-context-toggle"
+        :aria-expanded="expanded" @tap="expanded = !expanded">{{ expanded ? '收起' : '查看详情' }}</button>
+    </view>
+    <text v-if="!compact || expanded" class="journey-context__notice">仅供当前演示工单核对；未提交后台，不代表业务节点已完成，也不参与报价金额计算。</text>
+    <view v-for="section in context.sections" v-show="!compact || expanded" :key="section.stage" class="journey-context__section" :data-testid="`mock-journey-context-${section.stage}`">
       <view class="journey-context__row">
         <text class="journey-context__title">{{ section.title }}</text>
         <text class="journey-context__status">{{ section.state === 'saved_local' ? '本机已保存' : section.state === 'read_failed' ? '读取失败' : '尚无本机记录' }}</text>
@@ -20,7 +27,7 @@
       <text class="journey-context__title">勘察维修部位建议 · 待确认</text>
       <text class="journey-context__value-text">勘察记录：{{ context.suggestion.surveyPathLabel }}</text>
       <text class="journey-context__value-text">建议报价一级部位：{{ context.suggestion.targetRepairPartLabel }}</text>
-      <text class="journey-context__notice">仅匹配演示目录的一级部位。二级部位、工程量、材料、工序及金额均需技术员重新核对填写；不会自动复制勘察面积。</text>
+      <text v-if="!compact || expanded" class="journey-context__notice">仅匹配演示目录的一级部位。二级部位、工程量、材料、工序及金额均需技术员重新核对填写；不会自动复制勘察面积。</text>
       <AppButton v-if="canAdoptSuggestion" variant="secondary" block data-testid="mock-survey-quote-adopt" @tap="$emit('adopt-suggestion')">确认采用一级维修部位</AppButton>
       <text v-else class="journey-context__empty">已有报价部位或目录尚不可用，请手动核对。</text>
       <text v-if="suggestionFeedback" class="journey-context__value-text" data-testid="mock-survey-quote-feedback">{{ suggestionFeedback }}</text>
@@ -29,14 +36,26 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
 import type { MockJourneyContextSummary } from '@app/mock-journey-context'
 import AppButton from '@shared/ui/AppButton.vue'
-defineProps<{ readonly context: MockJourneyContextSummary; readonly canAdoptSuggestion?: boolean; readonly suggestionFeedback?: string }>()
+defineProps<{ readonly context: MockJourneyContextSummary; readonly compact?: boolean; readonly canAdoptSuggestion?: boolean; readonly suggestionFeedback?: string }>()
+const expanded = ref(false)
 defineEmits<{ (event: 'adopt-suggestion'): void }>()
 </script>
 
 <style scoped>
 .journey-context { margin-bottom: 16rpx; padding: 20rpx; display: flex; flex-direction: column; gap: 12rpx; }
+.journey-context--compact { padding: 16rpx 20rpx; gap: 8rpx; }
+.journey-context__head { display: flex; align-items: center; justify-content: space-between; gap: 12rpx; }
+.journey-context__head-copy { display: flex; flex-direction: column; gap: 2rpx; min-width: 0; }
+.journey-context__head-hint { color: var(--app-color-text-secondary); font-size: var(--app-font-meta); line-height: 1.4; }
+.journey-context__toggle { border: 1rpx solid var(--app-color-primary-border); border-radius: var(--app-radius-control);
+  background: var(--app-color-surface); color: var(--app-color-primary); font-size: var(--app-font-body);
+  font-weight: 650; min-height: 64rpx; margin: 0; padding: 4rpx 18rpx; line-height: 1.4; white-space: nowrap; }
+.journey-context__toggle::after { border: 0; }
+.journey-context--compact .journey-context__suggestion { padding-top: 10rpx; gap: 7rpx; }
+.journey-context--compact .journey-context__value-text { font-size: var(--app-font-body); }
 .journey-context__heading { font-size: 27rpx; font-weight: 700; color: var(--app-color-text-primary); }
 .journey-context__notice { font-size: 21rpx; line-height: 1.5; color: var(--app-color-text-secondary); }
 .journey-context__section { border-top: 1rpx solid var(--app-color-border); padding-top: 12rpx; display: flex; flex-direction: column; gap: 8rpx; }
