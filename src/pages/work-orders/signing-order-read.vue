@@ -28,6 +28,7 @@
         <text class="signing-read-section-title">已核验的正式订单</text>
         <text data-testid="signing-order-read-display-number">{{ review.snapshot.review?.order.displayNumber || '正式订单' }}</text>
         <text>仅限当前工单 · {{ review.snapshot.review?.order.groups.length || 0 }} 个维修分组</text>
+        <text data-testid="signing-order-read-r1-stage">{{ r1OrderSigningStageNotice(review.snapshot.review?.order.processState) }}</text>
         <text v-if="review.snapshot.review?.order.totalPrice !== undefined">
           订单金额：¥{{ review.snapshot.review.order.totalPrice.toFixed(2) }}
         </text>
@@ -59,6 +60,7 @@ import AppButton from '@shared/ui/AppButton.vue'
 import AppLoadingState from '@shared/ui/AppLoadingState.vue'
 import { useSessionStore } from '@shared/state'
 import { useSigningReviewReadStore } from '@features/work-orders/signing/signing-review-read-store'
+import { r1OrderSigningStageNotice } from '@features/work-orders/signing/r1-signing-ui-rules'
 
 const session = useSessionStore()
 const review = useSigningReviewReadStore()
