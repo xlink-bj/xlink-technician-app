@@ -28,7 +28,7 @@ import { useActionWorkspaceStore } from '@features/work-orders/action-workspace'
 import { useWorkOrderListStore } from '@features/work-orders/list'
 import { useLocalDraftDiagnosticsStore } from '@features/home/draft-diagnostics'
 import { useSessionStore } from '@shared/state'
-import { isBusinessMockDeveloperModeAvailable, isBusinessMockMode } from './business-mock'
+import { isBusinessMockDeveloperModeAvailable, isBusinessMockMode, isDevSyntheticContractReadPreviewEnabled } from './business-mock'
 
 import {
   createDefaultAuthSessionPort,
@@ -118,6 +118,8 @@ export function createApplication(dependencies: ApplicationDependencies = {}) {
     (id) => workOrderDetailStore.loadState === 'succeeded'
       && String(workOrderDetailStore.detail?.id ?? '') === id
       && workOrderListStore.items.some((item) => String(item.id) === id),
+    apiRead,
+    isDevSyntheticContractReadPreviewEnabled,
   )
   const actionWorkspaceStore = useActionWorkspaceStore(pinia)
   actionWorkspaceStore.configure({

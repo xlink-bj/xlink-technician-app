@@ -524,6 +524,7 @@ export const mockWorkOrderDetailResponses = {
         {
           _id: 'mock-workflow-node-002-current',
           state: 0,
+          handlerIds: ['synthetic-user'],
           nodeDef: { nodeType: 'placeOrder', name: '下单', viewableRoleIds: ['synthetic-role'] },
         },
       ],

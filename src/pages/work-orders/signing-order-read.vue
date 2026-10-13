@@ -52,7 +52,7 @@
         <text v-if="review.contractSnapshot.state === 'failed_terminal'">合同核验未通过。没有读取签署文件，也没有执行签约。</text>
         <template v-if="review.contractSnapshot.state === 'succeeded'">
           <text v-if="review.contractSnapshot.items.length === 0" data-testid="signing-contract-inconclusive">
-            当前有限查询尚未核验到此订单合同；可能受 R1 旧字段映射或分页影响，不能认定合同不存在。
+            当前有限查询尚未核验到此订单合同；可能受分页及可见范围影响，不能认定合同不存在。
           </text>
           <view v-for="contract in review.contractSnapshot.items" :key="contract.id" class="signing-read-contract-item"
             data-testid="signing-contract-matched">
@@ -71,6 +71,13 @@
       </view>
       <view v-if="devFixtureContractRead" class="signing-read-section" data-testid="signing-command-preflight">
         <text class="signing-read-section-title">R1 操作前置条件审查 · DEV 合成演示</text>
+        <AppButton block variant="secondary" data-testid="signing-handler-evidence-check"
+          :disabled="review.handlerSnapshot.state === 'loading'" @tap="readNodeHandlerEvidence">
+          {{ review.handlerSnapshot.state === 'loading' ? '正在核验当前节点' : '核验当前工作流节点处理人 · 只读' }}
+        </AppButton>
+        <text data-testid="signing-handler-evidence-result">
+          {{ review.handlerSnapshot.reason || '处理人身份尚未进行独立只读核验' }}
+        </text>
         <text>这是命令契约和风险提示，不是确认签约；此页没有签约 API 发送功能。</text>
         <AppButton v-for="kind in intentKinds" :key="kind" block variant="secondary"
           :data-testid="'signing-intent-' + kind" @tap="inspectIntent(kind)">
@@ -142,9 +149,9 @@ const intentReview = computed(() => {
     ...(matchingContracts.length === 1 ? { selectedContractId: matchingContracts[0]!.id } : {}),
     currentRoleWorkOrderVerified: review.snapshot.workOrderId === routeWorkOrderId.value
       && review.snapshot.orderId === routeOrderId.value,
-    // Exact R1 active WorkflowNode.handlerIds cannot be proved solely from
-    // role-listed WorkOrder / official Order reads. Do not report 'candidate'.
-    currentNodeHandlerVerified: false,
+    // Only a separate fresh, identity-bound current-node read can prove R1
+    // handler display eligibility. This never proves backend signer authority.
+    currentNodeHandlerVerified: review.handlerSnapshot.state === 'verified',
     currentIdentityVerified: session.status === 'authenticated'
       && Boolean(session.session?.currentRole?.id && session.session?.roleVersion),
   })
@@ -155,6 +162,10 @@ function inspectIntent(kind: R1SigningIntentKind): void {
 }
 const devFixtureContractRead = computed(() => !productionReadOnly
   && isDevSyntheticContractReadPreviewEnabled(routeWorkOrderId.value))
+function readNodeHandlerEvidence(): void {
+  if (!devFixtureContractRead.value || review.snapshot.state !== 'ready') return
+  void review.loadNodeHandlerEvidence()
+}
 function readContracts(): void {
   // This is user-triggered and never bypasses Production's transport gate.
   if (!devFixtureContractRead.value || review.snapshot.state !== 'ready') return
