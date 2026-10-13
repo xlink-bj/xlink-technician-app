@@ -22,7 +22,7 @@ export interface ReviewSession {
 }
 
 const OUTPUT = resolve(process.cwd(), '.review/m1-s2/generated')
-const allowedId = /^[a-z][a-z0-9-]{2,70}$/
+const allowedId = /^[0-9]{2}-[a-z][a-z0-9-]{2,70}$/
 const escapeHtml = (str: string): string => str
   .replaceAll('&', '&amp;')
   .replaceAll('<', '&lt;')
@@ -44,6 +44,11 @@ export async function captureReviewFrame(
   }
   const image = await page.screenshot({ animations: 'disabled', caret: 'hide', fullPage: false })
   session.frames.push({ ...input, path: new URL(page.url()).hash.split('?')[0], image })
+  // Keep partial capture evidence even if a later UI state or sheet fails.
+  // The final contact sheet is generated only after every required frame.
+  const shotDir = join(OUTPUT, `${width}x${height}`, 'frames')
+  await mkdir(shotDir, { recursive: true })
+  await writeFile(join(shotDir, input.id + '.png'), image)
 }
 
 function layout(
