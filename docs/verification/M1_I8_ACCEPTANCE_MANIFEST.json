@@ -1,0 +1,222 @@
+{
+  "schemaVersion": 1,
+  "observedDate": "2026-10-13",
+  "evidenceCommit": "af9a872a9575a2a4ba3885fdc500d71c78ab4b55",
+  "m1ControlIssue": 33,
+  "i8Issue": 98,
+  "formalAcceptedIterations": 1,
+  "totalIterations": 8,
+  "finalBusinessRelease": "NOT_APPROVED",
+  "ownerUXApproval": "NOT_GIVEN",
+  "backendChanged": false,
+  "actualBusinessWritesRun": false,
+  "evidence": {
+    "validate": {
+      "run": 38353839683,
+      "conclusion": "SUCCESS",
+      "testSuites": 95,
+      "testCount": 962,
+      "mpBuild": "PASS",
+      "appBuild": "PASS"
+    },
+    "h5": {
+      "run": 38353839578,
+      "conclusion": "SUCCESS",
+      "startup": 2,
+      "mainMock": 23,
+      "legacy": 26
+    },
+    "device": {
+      "mpWeixin": "NOT_RUN",
+      "android": "NOT_RUN",
+      "ios": "NOT_RUN"
+    },
+    "productionTenantSigning": "NOT_RUN",
+    "betaSigning": "NOT_RUN"
+  },
+  "phases": [
+    {
+      "id": "login",
+      "label": "登录/身份",
+      "i1Refs": [
+        "L01",
+        "L02",
+        "L03",
+        "L04"
+      ],
+      "appPaths": [
+        "src/pages/index/index.vue",
+        "src/features/session/login-flow.ts"
+      ],
+      "codeState": "PARTIAL_CODE",
+      "h5State": "SYNTHETIC_ONLY",
+      "realBusinessParity": "NOT_VERIFIED",
+      "risk": "R1 电话/验证码/隐私与当前角色行为尚缺完整实租户复核"
+    },
+    {
+      "id": "work_orders",
+      "label": "工单列表与详情",
+      "i1Refs": [
+        "W00",
+        "W02",
+        "W03",
+        "W04",
+        "W05"
+      ],
+      "appPaths": [
+        "src/pages/work-orders/work-orders.vue",
+        "src/pages/work-orders/detail.vue"
+      ],
+      "codeState": "PARTIAL_CODE",
+      "h5State": "SYNTHETIC_ONLY",
+      "realBusinessParity": "NOT_VERIFIED",
+      "risk": "主工单为 ServiceAppointment；角色可见节点、接单及外呼真实授权尚未逐场景证明"
+    },
+    {
+      "id": "appointment",
+      "label": "预约上门",
+      "i1Refs": [
+        "A01",
+        "A02",
+        "A03",
+        "A04"
+      ],
+      "appPaths": [
+        "src/pages/work-orders/action-workspace.vue",
+        "src/features/work-orders/appointment-form-runtime.ts"
+      ],
+      "codeState": "ENGINEERING_TESTED",
+      "h5State": "SYNTHETIC_ONLY",
+      "realBusinessParity": "NOT_VERIFIED",
+      "risk": "预约动态字段/回写/Workflow Complete 未经 Beta 授权实测"
+    },
+    {
+      "id": "survey",
+      "label": "现场勘察",
+      "i1Refs": [
+        "S01",
+        "S02",
+        "S03",
+        "S04"
+      ],
+      "appPaths": [
+        "src/features/work-orders/components/SurveyActionContent.vue",
+        "src/features/work-orders/components/GenericDynamicFormActionContent.vue"
+      ],
+      "codeState": "ENGINEERING_TESTED",
+      "h5State": "SYNTHETIC_ONLY",
+      "realBusinessParity": "NOT_VERIFIED",
+      "risk": "真实勘察图像/水印/媒体上传及完成节点、MP/App 真机仍未跑"
+    },
+    {
+      "id": "quotation",
+      "label": "报价、SKU 与订单",
+      "i1Refs": [
+        "Q01",
+        "Q02",
+        "Q03",
+        "Q04",
+        "Q05",
+        "Q06"
+      ],
+      "appPaths": [
+        "src/features/work-orders/quotation/QuotationActionWorkspace.vue",
+        "src/adapters/api/quotation-order-api.ts"
+      ],
+      "codeState": "PARTIAL_CODE",
+      "h5State": "SYNTHETIC_ONLY",
+      "realBusinessParity": "NOT_VERIFIED",
+      "risk": "R1 活跃 SKU 真实选规/定价、Order.type=1 实际写入与 readback；Owner 报价四屏视觉均未签收"
+    },
+    {
+      "id": "signing",
+      "label": "合同签约",
+      "i1Refs": [
+        "C01",
+        "C02",
+        "C03",
+        "C04"
+      ],
+      "appPaths": [
+        "src/pages/work-orders/signing-order-read.vue",
+        "src/features/work-orders/signing/r1-signing-command-intents.ts"
+      ],
+      "codeState": "ENGINEERING_TESTED",
+      "h5State": "SYNTHETIC_ONLY",
+      "realBusinessParity": "NOT_VERIFIED",
+      "risk": "合同查询 workOrderId vs serviceAppointmentId；真实签署角色、签约、短信/回执和 PDF 等业务影响未核实"
+    }
+  ],
+  "gates": [
+    {
+      "id": "live_role",
+      "issue": 29,
+      "state": "BLOCKED_APPROVAL",
+      "owner": "Codex special environment",
+      "evidence": "当前角色/租户权限与真实账号需最小范围只读确认"
+    },
+    {
+      "id": "sku_catalog",
+      "issue": 92,
+      "state": "BLOCKED_ENV",
+      "owner": "Codex special environment",
+      "evidence": "现有授权租户缺可用 active SPU/SKU，真实销售属性与报价未证实"
+    },
+    {
+      "id": "price_order",
+      "issue": 93,
+      "state": "BLOCKED_ENV",
+      "owner": "Codex special environment",
+      "evidence": "R1 合同金额、真实 type=1 Order 构造/readback 未经业务写入 Gate"
+    },
+    {
+      "id": "contract_field",
+      "issue": 39,
+      "state": "UNRESOLVED_SOURCE",
+      "owner": "Lead + Codex read only",
+      "evidence": "R1 workOrderId filter 与固定后台 serviceAppointmentId 模型字段不一致"
+    },
+    {
+      "id": "signing_side_effect",
+      "issue": 96,
+      "state": "BLOCKED_APPROVAL",
+      "owner": "Owner Beta authorization",
+      "evidence": "签名、合同生成、短信、取消与异步回执业务写入未授权"
+    },
+    {
+      "id": "physical_mp",
+      "issue": 64,
+      "state": "NOT_RUN",
+      "owner": "Codex real device",
+      "evidence": "微信开发者工具/真机 UI、媒体权限"
+    },
+    {
+      "id": "physical_android_ios",
+      "issue": 64,
+      "state": "NOT_RUN",
+      "owner": "Codex real device",
+      "evidence": "Android/iOS 原生安装、路由、安全区、图片处理、弱网"
+    },
+    {
+      "id": "owner_visual",
+      "issue": 94,
+      "state": "DEFERRED_OWNER",
+      "owner": "Owner",
+      "evidence": "I4/I5 视觉 Phase 2 及 I8 产品体验签收"
+    },
+    {
+      "id": "merge_release",
+      "issue": 97,
+      "state": "BLOCKED_APPROVAL",
+      "owner": "Lead/Owner",
+      "evidence": "Draft PR 不可自行 merge；无 Production/Beta 发布许可"
+    }
+  ],
+  "architectureAuthorities": [
+    "docs/architecture/TARGET_ARCHITECTURE.md",
+    "docs/architecture/ACTION_WORKSPACE_ARCHITECTURE.md",
+    "docs/design-system/ACTION_WORKSPACE_UX_STANDARD.md",
+    "docs/verification/M1_I1_R1_SIX_STAGE_PARITY_LEDGER.md",
+    "docs/verification/M1_I7_RECONCILED_CANDIDATE.md"
+  ]
+}

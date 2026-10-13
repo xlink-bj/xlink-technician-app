@@ -50,8 +50,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "check:boundaries": "node scripts/check-boundaries.mjs",
-    "verify": "pnpm run check:boundaries && pnpm run check:ui-governance && pnpm run check:g4f-phase1a && pnpm run check:g4f-phase1b && pnpm run check:g4f-synthetic-extfield-review && pnpm run typecheck && pnpm run test",
-    "check:ui-governance": "node scripts/check-ui-governance.mjs"
+    "verify": "pnpm run check:boundaries && pnpm run check:ui-governance && pnpm run check:m1-i8-baseline && pnpm run check:g4f-phase1a && pnpm run check:g4f-phase1b && pnpm run check:g4f-synthetic-extfield-review && pnpm run typecheck && pnpm run test",
+    "check:ui-governance": "node scripts/check-ui-governance.mjs",
+    "check:m1-i8-baseline": "node scripts/check-m1-i8-baseline.mjs"
   },
   "dependencies": {
     "@dcloudio/uni-app": "3.0.0-5010520260709002",
