@@ -78,6 +78,15 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       await page.locator('.primary-task-action').click()
       await expect(page.locator('.uni-page-head__title')).toContainText('现场勘查')
       await expect(page.getByTestId('dynamic-form-action-content')).toBeVisible()
+      // Actual S2 UX: keep DEV upstream data available, but folded so the
+      // commercial dynamic form is not buried below diagnostic prose.
+      await expect(page.getByTestId('mock-journey-context-toggle')).toBeVisible()
+      await expect(page.getByTestId('mock-journey-context-appointment')).toBeHidden()
+      await page.getByTestId('mock-journey-context-toggle').click()
+      await expect(page.getByTestId('mock-journey-context-appointment')).toBeVisible()
+      await expect(page.getByTestId('mock-journey-context-appointment')).toContainText('S2审查')
+      await page.getByTestId('mock-journey-context-toggle').click()
+      await expect(page.getByTestId('mock-journey-context-appointment')).toBeHidden()
       // Dependent fields become available AFTER selecting a repair part,
       // so capture the genuine initial Survey first, not a fabricated state.
       await capture('03-survey-overview', 'S', '现场勘察', '动态字段与页面结构')
@@ -97,6 +106,8 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       await page.locator('.primary-task-action').click()
       await expect(page.getByTestId('quotation-state-ready')).toBeVisible()
       await expect(page.getByTestId('mock-journey-context-survey')).toContainText('14.5')
+      await expect(page.getByTestId('mock-journey-context-survey')).toBeHidden()
+      await expect(page.getByTestId('mock-survey-quote-adopt')).toBeVisible()
       await capture('05-quote-entry', 'Q', '报价工作台', '首次进入与工单上下文')
       await expect(page.getByTestId('mock-survey-quote-adopt')).toBeVisible()
       await page.getByTestId('mock-survey-quote-adopt').click()
