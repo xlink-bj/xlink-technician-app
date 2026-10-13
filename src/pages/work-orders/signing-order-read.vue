@@ -69,6 +69,29 @@
         <text data-testid="signing-read-stage-detail">{{ signingStage.detail }}</text>
         <text class="signing-read-warning">本页没有调用签署、取消合同、发送短信、创建 PDF 或工作流提交接口。</text>
       </view>
+      <view v-if="devFixtureContractRead" class="signing-read-section" data-testid="signing-command-preflight">
+        <text class="signing-read-section-title">R1 操作前置条件审查 · DEV 合成演示</text>
+        <text>这是命令契约和风险提示，不是确认签约；此页没有签约 API 发送功能。</text>
+        <AppButton v-for="kind in intentKinds" :key="kind" block variant="secondary"
+          :data-testid="'signing-intent-' + kind" @tap="inspectIntent(kind)">
+          检查{{ r1SigningIntentDescriptors[kind].title }}条件
+        </AppButton>
+        <view v-if="intentReview" data-testid="signing-intent-review">
+          <text data-testid="signing-intent-assessment">
+            {{ intentReview.assessment === 'candidate' ? 'R1 界面条件候选（真实操作仍禁止）'
+              : intentReview.assessment === 'source_conflict' ? 'R1 前后端源码存在冲突'
+                : '条件不足：拒绝执行' }}
+          </text>
+          <text data-testid="signing-intent-route">源码接口：{{ intentReview.descriptor.route }}</text>
+          <text>影响：{{ intentReview.descriptor.effect }}</text>
+          <text>回查：{{ intentReview.descriptor.expectedReadback }}</text>
+          <text v-for="(reason, index) in intentReview.reasons" :key="index"
+            data-testid="signing-intent-reason">· {{ reason }}</text>
+          <text class="signing-read-warning" data-testid="signing-intent-no-dispatch">
+            仅准备/审查 · 不发送业务命令 · 无法从本页生成真实签约请求
+          </text>
+        </view>
+      </view>
       <view class="signing-read-section" data-testid="signing-order-read-no-contract">
         <text class="signing-read-section-title">签约业务操作 · 未开放</text>
         <text>即使 DEV 样本显示合同记录，也不授予真实合同查看、签章或重复发送权限。</text>
@@ -97,6 +120,7 @@ import { r1OrderSigningStageNotice, r1ContractStatusReadNotice } from '@features
 import { isProductionReadOnlyRuntime } from '@shared/config'
 import { isDevSyntheticContractReadPreviewEnabled } from '@app/business-mock'
 import { reconcileR1SigningRead } from '@features/work-orders/signing/r1-signing-read-reconciliation'
+import { reviewR1SigningIntent, r1SigningIntentDescriptors, type R1SigningIntentKind } from '@features/work-orders/signing/r1-signing-command-intents'
 
 const session = useSessionStore()
 const review = useSigningReviewReadStore()
@@ -105,6 +129,27 @@ const signingStage = computed(() => reconcileR1SigningRead(
   review.snapshot.state === 'ready' ? review.snapshot.review?.order : null,
   review.contractSnapshot,
 ))
+const intentKinds: readonly R1SigningIntentKind[] = ['electronic','offline','resign','resend_sms','cancel']
+const selectedIntent = ref<R1SigningIntentKind | null>(null)
+const intentReview = computed(() => {
+  if (!selectedIntent.value || !devFixtureContractRead.value || review.snapshot.state !== 'ready') return null
+  const order = review.snapshot.review?.order ?? null
+  const matchingContracts = review.contractSnapshot.items.filter(c => c.orderId === routeOrderId.value)
+  return reviewR1SigningIntent(selectedIntent.value, {
+    workOrderId: routeWorkOrderId.value, selectedOrderId: routeOrderId.value,
+    officialOrder: order,
+    contractState: review.contractSnapshot.state, contracts: review.contractSnapshot.items,
+    ...(matchingContracts.length === 1 ? { selectedContractId: matchingContracts[0]!.id } : {}),
+    currentRoleWorkOrderVerified: review.snapshot.workOrderId === routeWorkOrderId.value
+      && review.snapshot.orderId === routeOrderId.value,
+    currentIdentityVerified: session.status === 'authenticated'
+      && Boolean(session.session?.currentRole?.id && session.session?.roleVersion),
+  })
+})
+function inspectIntent(kind: R1SigningIntentKind): void {
+  if (!devFixtureContractRead.value || review.snapshot.state !== 'ready') return
+  selectedIntent.value = kind
+}
 const devFixtureContractRead = computed(() => !productionReadOnly
   && isDevSyntheticContractReadPreviewEnabled(routeWorkOrderId.value))
 function readContracts(): void {

@@ -554,7 +554,7 @@ function matchedResponse(
       _id: 'mock-official-order-001', type: 1,
       serviceAppointmentId: mockWorkOrderIds[1],
       orderNumber: 'DEV-SYNTHETIC-NOT-SUBMITTED',
-      state: 1, processState: 4, totalPrice: 0,
+      state: 1, processState: 4, totalPrice: 0, exts: { isAgain: 0 },
       bjProducts: { orderList: [{
         repairParts: ['DEV-SYNTHETIC'], partDescription: '合成数据，仅供界面验证',
         projPackages: { data: [] }, procedures: { data: [] },

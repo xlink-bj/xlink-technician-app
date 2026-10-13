@@ -40,6 +40,9 @@ export interface QuotationOrderBrowseItem {
   readonly displayNumber?: string
   readonly state?: number
   readonly processState?: number
+  /** Sanitized R1 initial-sign guard; missing fields are NOT assumed false. */
+  readonly hasExts?: boolean
+  readonly isAgain?: number
   readonly updateTime?: string
   readonly originPrice?: number
   readonly totalPrice?: number

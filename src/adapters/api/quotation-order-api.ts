@@ -247,6 +247,10 @@ function quotationOrderBrowseItem(raw: unknown): QuotationOrderBrowseItem {
     ...(optionalString(record, ['orderNumber']) ? { displayNumber: optionalString(record, ['orderNumber']) } : {}),
     ...(optionalNonNegativeInteger(record, ['state']) !== undefined ? { state: optionalNonNegativeInteger(record, ['state']) } : {}),
     ...(optionalNonNegativeInteger(record, ['processState']) !== undefined ? { processState: optionalNonNegativeInteger(record, ['processState']) } : {}),
+    ...(exts ? { hasExts: true } : {}),
+    ...(exts && optionalNonNegativeInteger(exts, ['isAgain']) !== undefined
+      ? { isAgain: optionalNonNegativeInteger(exts, ['isAgain']) }
+      : {}),
     ...(optionalString(record, ['updateTime']) ? { updateTime: optionalString(record, ['updateTime']) } : {}),
     ...(browseAmount(record, ['originPrice']) === undefined ? {} : { originPrice: browseAmount(record, ['originPrice']) }),
     ...(browseAmount(record, ['totalPrice']) === undefined ? {} : { totalPrice: browseAmount(record, ['totalPrice']) }),
