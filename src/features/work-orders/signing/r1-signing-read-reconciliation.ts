@@ -52,7 +52,7 @@ export function reconcileR1SigningRead(
   }
   if (contracts.length === 0) {
     return result('contract_query_inconclusive', '本次范围内未核验到合同',
-      'R1 查询字段与历史存储仍有差异，有限结果为空不等于合同不存在。')
+      '有界查询未返回匹配合同；可能存在后续分页或权限限制，不能判定合同不存在。')
   }
   const contract = contracts[0]!
   const status = contract.contractStatus
