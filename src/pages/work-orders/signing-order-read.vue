@@ -1,0 +1,215 @@
+<template>
+  <view class="signing-read-page">
+    <view class="signing-read-header">
+      <text class="signing-read-title">签约前订单核验 · 只读</text>
+      <text class="signing-read-help">只展示当前已授权工单的正式订单摘要。无法查看合同、生成 PDF、发送短信或发起签署。</text>
+    </view>
+
+    <AppLoadingState
+      v-if="session.status === 'unknown' || review.snapshot.state === 'loading'"
+      variant="inline" label="正在核验工单与正式订单"
+      data-testid="signing-order-read-loading"
+    />
+    <view
+      v-else-if="session.status !== 'authenticated' || review.snapshot.state !== 'ready'"
+      class="signing-read-section"
+      data-testid="signing-order-read-blocked"
+    >
+      <text>当前订单暂无法完成签约前只读核验。请从当前账号可见的工单报价记录重新进入。</text>
+      <AppButton
+        v-if="session.status === 'authenticated' && review.snapshot.state === 'failed_retryable'"
+        block variant="secondary" data-testid="signing-order-read-retry"
+        @tap="retryScopedRead"
+      >重新核验当前订单</AppButton>
+      <navigator open-type="navigateBack" :delta="1">返回工单</navigator>
+    </view>
+    <template v-else>
+      <view class="signing-read-section" data-testid="signing-order-read-verified">
+        <text class="signing-read-section-title">已核验的正式订单</text>
+        <text data-testid="signing-order-read-display-number">{{ review.snapshot.review?.order.displayNumber || '正式订单' }}</text>
+        <text>仅限当前工单 · {{ review.snapshot.review?.order.groups.length || 0 }} 个维修分组</text>
+        <text data-testid="signing-order-read-r1-stage">{{ r1OrderSigningStageNotice(review.snapshot.review?.order.processState) }}</text>
+        <text v-if="review.snapshot.review?.order.totalPrice !== undefined">
+          订单金额：¥{{ review.snapshot.review.order.totalPrice.toFixed(2) }}
+        </text>
+        <text v-if="!review.snapshot.review?.order.contentSupported" class="signing-read-warning">
+          部分订单明细暂不可识别，未推断缺失字段。
+        </text>
+      </view>
+      <view class="signing-read-section" data-testid="signing-order-read-contract-status">
+        <text class="signing-read-section-title">R1 合同状态 · 只读核验</text>
+        <text v-if="devFixtureContractRead" data-testid="signing-contract-fixture-label">DEV 合成合同演示 · 非真实订单、非真实签约</text>
+        <text>合同可能与同一工单的其他订单关联；这里只核验当前选中的正式订单。部分结果或空结果不能证明不存在合同。</text>
+        <text v-if="!devFixtureContractRead" data-testid="signing-contract-prod-blocked">
+          真实环境合同读取尚未开放。仅 DEV 隔离合成样本可核验状态，不能代表生产签约。
+        </text>
+        <AppButton
+          v-else-if="review.contractSnapshot.state === 'idle' || review.contractSnapshot.state === 'failed_retryable'"
+          block variant="secondary" data-testid="signing-contract-read-request" @tap="readContracts"
+        >{{ review.contractSnapshot.state === 'failed_retryable' ? '重新核验合同状态' : '读取当前订单合同状态' }}</AppButton>
+        <AppLoadingState v-if="review.contractSnapshot.state === 'loading'"
+          variant="inline" label="正在只读核验合同状态" />
+        <text v-if="review.contractSnapshot.state === 'failed_terminal'">合同核验未通过。没有读取签署文件，也没有执行签约。</text>
+        <template v-if="review.contractSnapshot.state === 'succeeded'">
+          <text v-if="review.contractSnapshot.items.length === 0" data-testid="signing-contract-inconclusive">
+            当前有限查询尚未核验到此订单合同；可能受分页及可见范围影响，不能认定合同不存在。
+          </text>
+          <view v-for="contract in review.contractSnapshot.items" :key="contract.id" class="signing-read-contract-item"
+            data-testid="signing-contract-matched">
+            <text>{{ contract.displayNumber || '合同编号未返回' }}</text>
+            <text>{{ r1ContractStatusReadNotice(contract.contractStatus) }}</text>
+            <text v-if="contract.signedDate">记录中的签约日期：{{ contract.signedDate }}</text>
+          </view>
+          <text class="signing-read-warning">仅限本次已核验的有限结果，不代表拥有签约权限或可访问合同文件。</text>
+        </template>
+      </view>
+      <view class="signing-read-section" data-testid="signing-read-reconciled-status">
+        <text class="signing-read-section-title">签约阶段综合核验 · 只读</text>
+        <text data-testid="signing-read-stage-title">{{ signingStage.title }}</text>
+        <text data-testid="signing-read-stage-detail">{{ signingStage.detail }}</text>
+        <text class="signing-read-warning">本页没有调用签署、取消合同、发送短信、创建 PDF 或工作流提交接口。</text>
+      </view>
+      <view v-if="devFixtureContractRead" class="signing-read-section" data-testid="signing-command-preflight">
+        <text class="signing-read-section-title">R1 操作前置条件审查 · DEV 合成演示</text>
+        <AppButton block variant="secondary" data-testid="signing-handler-evidence-check"
+          :disabled="review.handlerSnapshot.state === 'loading'" @tap="readNodeHandlerEvidence">
+          {{ review.handlerSnapshot.state === 'loading' ? '正在核验当前节点' : '核验当前工作流节点处理人 · 只读' }}
+        </AppButton>
+        <text data-testid="signing-handler-evidence-result">
+          {{ review.handlerSnapshot.reason || '处理人身份尚未进行独立只读核验' }}
+        </text>
+        <text>这是命令契约和风险提示，不是确认签约；此页没有签约 API 发送功能。</text>
+        <AppButton v-for="kind in intentKinds" :key="kind" block variant="secondary"
+          :data-testid="'signing-intent-' + kind" @tap="inspectIntent(kind)">
+          检查{{ r1SigningIntentDescriptors[kind].title }}条件
+        </AppButton>
+        <view v-if="intentReview" data-testid="signing-intent-review">
+          <text data-testid="signing-intent-assessment">
+            {{ intentReview.assessment === 'candidate' ? 'R1 界面条件候选（真实操作仍禁止）'
+              : intentReview.assessment === 'source_conflict' ? 'R1 前后端源码存在冲突'
+                : '条件不足：拒绝执行' }}
+          </text>
+          <text data-testid="signing-intent-route">源码接口：{{ intentReview.descriptor.route }}</text>
+          <text>影响：{{ intentReview.descriptor.effect }}</text>
+          <text>回查：{{ intentReview.descriptor.expectedReadback }}</text>
+          <text v-for="(reason, index) in intentReview.reasons" :key="index"
+            data-testid="signing-intent-reason">· {{ reason }}</text>
+          <text class="signing-read-warning" data-testid="signing-intent-no-dispatch">
+            仅准备/审查 · 不发送业务命令 · 无法从本页生成真实签约请求
+          </text>
+        </view>
+      </view>
+      <view class="signing-read-section" data-testid="signing-order-read-no-contract">
+        <text class="signing-read-section-title">签约业务操作 · 未开放</text>
+        <text>即使 DEV 样本显示合同记录，也不授予真实合同查看、签章或重复发送权限。</text>
+        <AppButton disabled block variant="secondary" data-testid="signing-order-read-contract-disabled">
+          查看合同 · 未开放
+        </AppButton>
+        <AppButton disabled block data-testid="signing-order-read-sign-disabled">
+          发起签署 · 未开放
+        </AppButton>
+      </view>
+    </template>
+    <view class="signing-read-footer" data-testid="signing-order-read-no-write">
+      全程只读 · 不创建订单、不推进流程、不发起签约
+    </view>
+  </view>
+</template>
+
+<script setup lang="ts">
+import { computed, ref, watch } from 'vue'
+import { onLoad, onUnload } from '@dcloudio/uni-app'
+import AppButton from '@shared/ui/AppButton.vue'
+import AppLoadingState from '@shared/ui/AppLoadingState.vue'
+import { useSessionStore } from '@shared/state'
+import { useSigningReviewReadStore } from '@features/work-orders/signing/signing-review-read-store'
+import { r1OrderSigningStageNotice, r1ContractStatusReadNotice } from '@features/work-orders/signing/r1-signing-ui-rules'
+import { isProductionReadOnlyRuntime } from '@shared/config'
+import { isDevSyntheticContractReadPreviewEnabled } from '@app/business-mock'
+import { reconcileR1SigningRead } from '@features/work-orders/signing/r1-signing-read-reconciliation'
+import { reviewR1SigningIntent, r1SigningIntentDescriptors, type R1SigningIntentKind } from '@features/work-orders/signing/r1-signing-command-intents'
+
+const session = useSessionStore()
+const review = useSigningReviewReadStore()
+const productionReadOnly = isProductionReadOnlyRuntime()
+const signingStage = computed(() => reconcileR1SigningRead(
+  review.snapshot.state === 'ready' ? review.snapshot.review?.order : null,
+  review.contractSnapshot,
+))
+const intentKinds: readonly R1SigningIntentKind[] = ['electronic','offline','resign','resend_sms','cancel']
+const selectedIntent = ref<R1SigningIntentKind | null>(null)
+const intentReview = computed(() => {
+  if (!selectedIntent.value || !devFixtureContractRead.value || review.snapshot.state !== 'ready') return null
+  const order = review.snapshot.review?.order ?? null
+  const matchingContracts = review.contractSnapshot.items.filter(c => c.orderId === routeOrderId.value)
+  return reviewR1SigningIntent(selectedIntent.value, {
+    workOrderId: routeWorkOrderId.value, selectedOrderId: routeOrderId.value,
+    officialOrder: order,
+    contractState: review.contractSnapshot.state, contracts: review.contractSnapshot.items,
+    ...(matchingContracts.length === 1 ? { selectedContractId: matchingContracts[0]!.id } : {}),
+    currentRoleWorkOrderVerified: review.snapshot.workOrderId === routeWorkOrderId.value
+      && review.snapshot.orderId === routeOrderId.value,
+    // Only a separate fresh, identity-bound current-node read can prove R1
+    // handler display eligibility. This never proves backend signer authority.
+    currentNodeHandlerVerified: review.handlerSnapshot.state === 'verified',
+    currentIdentityVerified: session.status === 'authenticated'
+      && Boolean(session.session?.currentRole?.id && session.session?.roleVersion),
+  })
+})
+function inspectIntent(kind: R1SigningIntentKind): void {
+  if (!devFixtureContractRead.value || review.snapshot.state !== 'ready') return
+  selectedIntent.value = kind
+}
+const devFixtureContractRead = computed(() => !productionReadOnly
+  && isDevSyntheticContractReadPreviewEnabled(routeWorkOrderId.value))
+function readNodeHandlerEvidence(): void {
+  if (!devFixtureContractRead.value || review.snapshot.state !== 'ready') return
+  void review.loadNodeHandlerEvidence()
+}
+function readContracts(): void {
+  // This is user-triggered and never bypasses Production's transport gate.
+  if (!devFixtureContractRead.value || review.snapshot.state !== 'ready') return
+  void review.loadContracts()
+}
+const routeReady = ref(false)
+const routeWorkOrderId = ref('')
+const routeOrderId = ref('')
+let requested = false
+
+function retryScopedRead(): void {
+  if (session.status !== 'authenticated' || review.snapshot.state !== 'failed_retryable') return
+  // This is a fresh, fully guarded pair of read-only scoped list requests,
+  // not a retry of any signing/Contract command.
+  void review.load(routeWorkOrderId.value, routeOrderId.value)
+}
+
+function startIfAuthorized(): void {
+  if (!routeReady.value || session.status !== 'authenticated' || requested) return
+  requested = true
+  void review.load(routeWorkOrderId.value, routeOrderId.value)
+}
+
+onLoad((options) => {
+  routeWorkOrderId.value = typeof options?.workOrderId === 'string' ? options.workOrderId : ''
+  routeOrderId.value = typeof options?.orderId === 'string' ? options.orderId : ''
+  routeReady.value = true
+  startIfAuthorized()
+})
+watch(() => session.status, (status) => {
+  if (status === 'authenticated') startIfAuthorized()
+  else if (status !== 'unknown') review.clear()
+}, { immediate: true })
+onUnload(() => {
+  requested = true
+  review.clear()
+})
+</script>
+
+<style>
+.signing-read-page { min-height: 100vh; padding: 28rpx; background: var(--app-color-page); color: var(--app-color-text-primary); }
+.signing-read-header, .signing-read-section { display: flex; flex-direction: column; gap: 18rpx; padding: 28rpx; margin-bottom: 20rpx; background: var(--app-color-surface); border: 1rpx solid var(--app-color-border); border-radius: var(--app-radius-card); }
+.signing-read-title { font-size: 36rpx; font-weight: 800; }
+.signing-read-section-title { font-size: 29rpx; font-weight: 700; }
+.signing-read-help, .signing-read-warning, .signing-read-footer { font-size: 24rpx; color: var(--app-color-text-secondary); line-height: 1.6; }
+.signing-read-footer { text-align: center; margin: 28rpx 0 52rpx; }
+</style>

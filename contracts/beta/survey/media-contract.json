@@ -1,0 +1,688 @@
+{
+  "schemaVersion": 1,
+  "environment": "beta",
+  "lifecycleEvidence": "historical_inactive",
+  "domain": "survey",
+  "semanticPurpose": "survey_media",
+  "semanticIdentity": "media_rows_derived_only_from_verified_survey_extfields",
+  "sanitized": true,
+  "source": {
+    "contract": "contracts/beta/survey/historical.json",
+    "fingerprint": "9ed17f08b2d786fd6810b1afcddd60ac6d53eb9cd711173334bd00e6e6fa4aa6",
+    "authority": "R1 behavior plus Backend Survey typed persistence",
+    "noLiveWrite": true
+  },
+  "fieldRowCount": 24,
+  "rows": [
+    {
+      "fieldId": "survey-field-029",
+      "valueKey": "surveyDrawing",
+      "label": "测绘图",
+      "backendType": "file",
+      "required": true,
+      "mobileApplicable": true,
+      "condition": null,
+      "persistedShape": "LIST_OF_MEDIA_OBJECTS_URL_NAME_EXTNAME",
+      "mediaKind": "survey_drawing",
+      "selectionMode": "SPECIAL_SURVEY_TOOL",
+      "onlineStatus": "UNKNOWN_SPECIAL_TOOL",
+      "maxCount": 1,
+      "watermarkPolicy": "UNKNOWN_SPECIAL_TOOL",
+      "locationPolicy": "UNKNOWN_SPECIAL_TOOL"
+    },
+    {
+      "fieldId": "survey-field-030",
+      "valueKey": "images1",
+      "label": "大面全景",
+      "backendType": "file",
+      "required": true,
+      "mobileApplicable": true,
+      "condition": null,
+      "persistedShape": "LIST_OF_MEDIA_OBJECTS_URL_NAME_EXTNAME",
+      "mediaKind": "survey_photo",
+      "selectionMode": "CAMERA_OR_ALBUM_EVIDENCED",
+      "onlineStatus": "PARTIAL_LIBRARY_UPLOAD",
+      "maxCount": "UNKNOWN",
+      "watermarkPolicy": "CAMERA_SERVER_WATERMARK_EVIDENCED_NOT_IMPLEMENTED",
+      "locationPolicy": "REQUIRED_FOR_CAMERA_WATERMARK"
+    },
+    {
+      "fieldId": "survey-field-031",
+      "valueKey": "images2",
+      "label": "渗漏部位",
+      "backendType": "file",
+      "required": true,
+      "mobileApplicable": true,
+      "condition": null,
+      "persistedShape": "LIST_OF_MEDIA_OBJECTS_URL_NAME_EXTNAME",
+      "mediaKind": "survey_photo",
+      "selectionMode": "CAMERA_OR_ALBUM_EVIDENCED",
+      "onlineStatus": "PARTIAL_LIBRARY_UPLOAD",
+      "maxCount": "UNKNOWN",
+      "watermarkPolicy": "CAMERA_SERVER_WATERMARK_EVIDENCED_NOT_IMPLEMENTED",
+      "locationPolicy": "REQUIRED_FOR_CAMERA_WATERMARK"
+    },
+    {
+      "fieldId": "survey-field-032",
+      "valueKey": "images3",
+      "label": "防水层大面",
+      "backendType": "file",
+      "required": false,
+      "mobileApplicable": true,
+      "condition": {
+        "showField": "part",
+        "showValue": [
+          [
+            "survey-option-6b86b273ff34",
+            "survey-option-38d66d9692ac"
+          ],
+          [
+            "survey-option-6b86b273ff34",
+            "survey-option-dbae772db290"
+          ]
+        ]
+      },
+      "persistedShape": "LIST_OF_MEDIA_OBJECTS_URL_NAME_EXTNAME",
+      "mediaKind": "survey_photo",
+      "selectionMode": "CAMERA_OR_ALBUM_EVIDENCED",
+      "onlineStatus": "PARTIAL_LIBRARY_UPLOAD",
+      "maxCount": "UNKNOWN",
+      "watermarkPolicy": "CAMERA_SERVER_WATERMARK_EVIDENCED_NOT_IMPLEMENTED",
+      "locationPolicy": "REQUIRED_FOR_CAMERA_WATERMARK"
+    },
+    {
+      "fieldId": "survey-field-033",
+      "valueKey": "images4",
+      "label": "搭接缝",
+      "backendType": "file",
+      "required": false,
+      "mobileApplicable": true,
+      "condition": {
+        "showField": "part",
+        "showValue": [
+          [
+            "survey-option-6b86b273ff34",
+            "survey-option-38d66d9692ac"
+          ],
+          [
+            "survey-option-6b86b273ff34",
+            "survey-option-dbae772db290"
+          ]
+        ]
+      },
+      "persistedShape": "LIST_OF_MEDIA_OBJECTS_URL_NAME_EXTNAME",
+      "mediaKind": "survey_photo",
+      "selectionMode": "CAMERA_OR_ALBUM_EVIDENCED",
+      "onlineStatus": "PARTIAL_LIBRARY_UPLOAD",
+      "maxCount": "UNKNOWN",
+      "watermarkPolicy": "CAMERA_SERVER_WATERMARK_EVIDENCED_NOT_IMPLEMENTED",
+      "locationPolicy": "REQUIRED_FOR_CAMERA_WATERMARK"
+    },
+    {
+      "fieldId": "survey-field-034",
+      "valueKey": "images5",
+      "label": "落水口",
+      "backendType": "file",
+      "required": false,
+      "mobileApplicable": true,
+      "condition": {
+        "showField": "part",
+        "showValue": [
+          [
+            "survey-option-6b86b273ff34",
+            "survey-option-9bdb2af67992"
+          ],
+          [
+            "survey-option-6b86b273ff34",
+            "survey-option-2abaca4911e6"
+          ],
+          [
+            "survey-option-6b86b273ff34",
+            "survey-option-38d66d9692ac"
+          ],
+          [
+            "survey-option-6b86b273ff34",
+            "survey-option-dbae772db290"
+          ]
+        ]
+      },
+      "persistedShape": "LIST_OF_MEDIA_OBJECTS_URL_NAME_EXTNAME",
+      "mediaKind": "survey_photo",
+      "selectionMode": "CAMERA_OR_ALBUM_EVIDENCED",
+      "onlineStatus": "PARTIAL_LIBRARY_UPLOAD",
+      "maxCount": "UNKNOWN",
+      "watermarkPolicy": "CAMERA_SERVER_WATERMARK_EVIDENCED_NOT_IMPLEMENTED",
+      "locationPolicy": "REQUIRED_FOR_CAMERA_WATERMARK"
+    },
+    {
+      "fieldId": "survey-field-035",
+      "valueKey": "images6",
+      "label": "排气孔",
+      "backendType": "file",
+      "required": false,
+      "mobileApplicable": true,
+      "condition": {
+        "showField": "part",
+        "showValue": [
+          [
+            "survey-option-6b86b273ff34",
+            "survey-option-9bdb2af67992"
+          ],
+          [
+            "survey-option-6b86b273ff34",
+            "survey-option-2abaca4911e6"
+          ],
+          [
+            "survey-option-6b86b273ff34",
+            "survey-option-38d66d9692ac"
+          ],
+          [
+            "survey-option-6b86b273ff34",
+            "survey-option-dbae772db290"
+          ]
+        ]
+      },
+      "persistedShape": "LIST_OF_MEDIA_OBJECTS_URL_NAME_EXTNAME",
+      "mediaKind": "survey_photo",
+      "selectionMode": "CAMERA_OR_ALBUM_EVIDENCED",
+      "onlineStatus": "PARTIAL_LIBRARY_UPLOAD",
+      "maxCount": "UNKNOWN",
+      "watermarkPolicy": "CAMERA_SERVER_WATERMARK_EVIDENCED_NOT_IMPLEMENTED",
+      "locationPolicy": "REQUIRED_FOR_CAMERA_WATERMARK"
+    },
+    {
+      "fieldId": "survey-field-036",
+      "valueKey": "images7",
+      "label": "女儿墙顶",
+      "backendType": "file",
+      "required": false,
+      "mobileApplicable": true,
+      "condition": {
+        "showField": "part",
+        "showValue": [
+          [
+            "survey-option-6b86b273ff34",
+            "survey-option-9bdb2af67992"
+          ],
+          [
+            "survey-option-6b86b273ff34",
+            "survey-option-2abaca4911e6"
+          ],
+          [
+            "survey-option-6b86b273ff34",
+            "survey-option-38d66d9692ac"
+          ],
+          [
+            "survey-option-6b86b273ff34",
+            "survey-option-dbae772db290"
+          ]
+        ]
+      },
+      "persistedShape": "LIST_OF_MEDIA_OBJECTS_URL_NAME_EXTNAME",
+      "mediaKind": "survey_photo",
+      "selectionMode": "CAMERA_OR_ALBUM_EVIDENCED",
+      "onlineStatus": "PARTIAL_LIBRARY_UPLOAD",
+      "maxCount": "UNKNOWN",
+      "watermarkPolicy": "CAMERA_SERVER_WATERMARK_EVIDENCED_NOT_IMPLEMENTED",
+      "locationPolicy": "REQUIRED_FOR_CAMERA_WATERMARK"
+    },
+    {
+      "fieldId": "survey-field-037",
+      "valueKey": "images8",
+      "label": "天（檐）沟",
+      "backendType": "file",
+      "required": false,
+      "mobileApplicable": true,
+      "condition": {
+        "showField": "part",
+        "showValue": [
+          [
+            "survey-option-6b86b273ff34",
+            "survey-option-9bdb2af67992"
+          ],
+          [
+            "survey-option-6b86b273ff34",
+            "survey-option-2abaca4911e6"
+          ],
+          [
+            "survey-option-6b86b273ff34",
+            "survey-option-38d66d9692ac"
+          ],
+          [
+            "survey-option-6b86b273ff34",
+            "survey-option-dbae772db290"
+          ],
+          [
+            "survey-option-2c624232cdd2"
+          ],
+          [
+            "survey-option-19581e27de7c"
+          ]
+        ]
+      },
+      "persistedShape": "LIST_OF_MEDIA_OBJECTS_URL_NAME_EXTNAME",
+      "mediaKind": "survey_photo",
+      "selectionMode": "CAMERA_OR_ALBUM_EVIDENCED",
+      "onlineStatus": "PARTIAL_LIBRARY_UPLOAD",
+      "maxCount": "UNKNOWN",
+      "watermarkPolicy": "CAMERA_SERVER_WATERMARK_EVIDENCED_NOT_IMPLEMENTED",
+      "locationPolicy": "REQUIRED_FOR_CAMERA_WATERMARK"
+    },
+    {
+      "fieldId": "survey-field-038",
+      "valueKey": "images9",
+      "label": "立面收口",
+      "backendType": "file",
+      "required": false,
+      "mobileApplicable": true,
+      "condition": {
+        "showField": "part",
+        "showValue": [
+          [
+            "survey-option-6b86b273ff34",
+            "survey-option-9bdb2af67992"
+          ],
+          [
+            "survey-option-6b86b273ff34",
+            "survey-option-2abaca4911e6"
+          ],
+          [
+            "survey-option-6b86b273ff34",
+            "survey-option-38d66d9692ac"
+          ],
+          [
+            "survey-option-6b86b273ff34",
+            "survey-option-dbae772db290"
+          ]
+        ]
+      },
+      "persistedShape": "LIST_OF_MEDIA_OBJECTS_URL_NAME_EXTNAME",
+      "mediaKind": "survey_photo",
+      "selectionMode": "CAMERA_OR_ALBUM_EVIDENCED",
+      "onlineStatus": "PARTIAL_LIBRARY_UPLOAD",
+      "maxCount": "UNKNOWN",
+      "watermarkPolicy": "CAMERA_SERVER_WATERMARK_EVIDENCED_NOT_IMPLEMENTED",
+      "locationPolicy": "REQUIRED_FOR_CAMERA_WATERMARK"
+    },
+    {
+      "fieldId": "survey-field-039",
+      "valueKey": "images10",
+      "label": "设备基座",
+      "backendType": "file",
+      "required": false,
+      "mobileApplicable": true,
+      "condition": {
+        "showField": "part",
+        "showValue": [
+          [
+            "survey-option-6b86b273ff34",
+            "survey-option-9bdb2af67992"
+          ],
+          [
+            "survey-option-6b86b273ff34",
+            "survey-option-2abaca4911e6"
+          ],
+          [
+            "survey-option-6b86b273ff34",
+            "survey-option-38d66d9692ac"
+          ],
+          [
+            "survey-option-6b86b273ff34",
+            "survey-option-dbae772db290"
+          ]
+        ]
+      },
+      "persistedShape": "LIST_OF_MEDIA_OBJECTS_URL_NAME_EXTNAME",
+      "mediaKind": "survey_photo",
+      "selectionMode": "CAMERA_OR_ALBUM_EVIDENCED",
+      "onlineStatus": "PARTIAL_LIBRARY_UPLOAD",
+      "maxCount": "UNKNOWN",
+      "watermarkPolicy": "CAMERA_SERVER_WATERMARK_EVIDENCED_NOT_IMPLEMENTED",
+      "locationPolicy": "REQUIRED_FOR_CAMERA_WATERMARK"
+    },
+    {
+      "fieldId": "survey-field-040",
+      "valueKey": "images11",
+      "label": "立墙",
+      "backendType": "file",
+      "required": false,
+      "mobileApplicable": true,
+      "condition": {
+        "showField": "part",
+        "showValue": [
+          [
+            "survey-option-6b86b273ff34",
+            "survey-option-9bdb2af67992"
+          ],
+          [
+            "survey-option-6b86b273ff34",
+            "survey-option-2abaca4911e6"
+          ],
+          [
+            "survey-option-6b86b273ff34",
+            "survey-option-38d66d9692ac"
+          ],
+          [
+            "survey-option-6b86b273ff34",
+            "survey-option-dbae772db290"
+          ]
+        ]
+      },
+      "persistedShape": "LIST_OF_MEDIA_OBJECTS_URL_NAME_EXTNAME",
+      "mediaKind": "survey_photo",
+      "selectionMode": "CAMERA_OR_ALBUM_EVIDENCED",
+      "onlineStatus": "PARTIAL_LIBRARY_UPLOAD",
+      "maxCount": "UNKNOWN",
+      "watermarkPolicy": "CAMERA_SERVER_WATERMARK_EVIDENCED_NOT_IMPLEMENTED",
+      "locationPolicy": "REQUIRED_FOR_CAMERA_WATERMARK"
+    },
+    {
+      "fieldId": "survey-field-041",
+      "valueKey": "images12",
+      "label": "排水系统",
+      "backendType": "file",
+      "required": false,
+      "mobileApplicable": true,
+      "condition": {
+        "showField": "part",
+        "showValue": [
+          [
+            "survey-option-6b86b273ff34",
+            "survey-option-9bdb2af67992"
+          ],
+          [
+            "survey-option-6b86b273ff34",
+            "survey-option-2abaca4911e6"
+          ],
+          [
+            "survey-option-6b86b273ff34",
+            "survey-option-38d66d9692ac"
+          ],
+          [
+            "survey-option-6b86b273ff34",
+            "survey-option-dbae772db290"
+          ]
+        ]
+      },
+      "persistedShape": "LIST_OF_MEDIA_OBJECTS_URL_NAME_EXTNAME",
+      "mediaKind": "survey_photo",
+      "selectionMode": "CAMERA_OR_ALBUM_EVIDENCED",
+      "onlineStatus": "PARTIAL_LIBRARY_UPLOAD",
+      "maxCount": "UNKNOWN",
+      "watermarkPolicy": "CAMERA_SERVER_WATERMARK_EVIDENCED_NOT_IMPLEMENTED",
+      "locationPolicy": "REQUIRED_FOR_CAMERA_WATERMARK"
+    },
+    {
+      "fieldId": "survey-field-042",
+      "valueKey": "images13",
+      "label": "起鼓水包",
+      "backendType": "file",
+      "required": false,
+      "mobileApplicable": true,
+      "condition": {
+        "showField": "part",
+        "showValue": [
+          [
+            "survey-option-6b86b273ff34",
+            "survey-option-38d66d9692ac"
+          ],
+          [
+            "survey-option-6b86b273ff34",
+            "survey-option-dbae772db290"
+          ]
+        ]
+      },
+      "persistedShape": "LIST_OF_MEDIA_OBJECTS_URL_NAME_EXTNAME",
+      "mediaKind": "survey_photo",
+      "selectionMode": "CAMERA_OR_ALBUM_EVIDENCED",
+      "onlineStatus": "PARTIAL_LIBRARY_UPLOAD",
+      "maxCount": "UNKNOWN",
+      "watermarkPolicy": "CAMERA_SERVER_WATERMARK_EVIDENCED_NOT_IMPLEMENTED",
+      "locationPolicy": "REQUIRED_FOR_CAMERA_WATERMARK"
+    },
+    {
+      "fieldId": "survey-field-043",
+      "valueKey": "images14",
+      "label": "立墙交界处",
+      "backendType": "file",
+      "required": false,
+      "mobileApplicable": true,
+      "condition": {
+        "showField": "part",
+        "showValue": [
+          [
+            "survey-option-2c624232cdd2"
+          ],
+          [
+            "survey-option-19581e27de7c"
+          ]
+        ]
+      },
+      "persistedShape": "LIST_OF_MEDIA_OBJECTS_URL_NAME_EXTNAME",
+      "mediaKind": "survey_photo",
+      "selectionMode": "CAMERA_OR_ALBUM_EVIDENCED",
+      "onlineStatus": "PARTIAL_LIBRARY_UPLOAD",
+      "maxCount": "UNKNOWN",
+      "watermarkPolicy": "CAMERA_SERVER_WATERMARK_EVIDENCED_NOT_IMPLEMENTED",
+      "locationPolicy": "REQUIRED_FOR_CAMERA_WATERMARK"
+    },
+    {
+      "fieldId": "survey-field-044",
+      "valueKey": "images15",
+      "label": "固定件",
+      "backendType": "file",
+      "required": false,
+      "mobileApplicable": true,
+      "condition": {
+        "showField": "part",
+        "showValue": [
+          [
+            "survey-option-19581e27de7c"
+          ]
+        ]
+      },
+      "persistedShape": "LIST_OF_MEDIA_OBJECTS_URL_NAME_EXTNAME",
+      "mediaKind": "survey_photo",
+      "selectionMode": "CAMERA_OR_ALBUM_EVIDENCED",
+      "onlineStatus": "PARTIAL_LIBRARY_UPLOAD",
+      "maxCount": "UNKNOWN",
+      "watermarkPolicy": "CAMERA_SERVER_WATERMARK_EVIDENCED_NOT_IMPLEMENTED",
+      "locationPolicy": "REQUIRED_FOR_CAMERA_WATERMARK"
+    },
+    {
+      "fieldId": "survey-field-045",
+      "valueKey": "images16",
+      "label": "密封胶条",
+      "backendType": "file",
+      "required": false,
+      "mobileApplicable": true,
+      "condition": {
+        "showField": "part",
+        "showValue": [
+          [
+            "survey-option-2c624232cdd2"
+          ]
+        ]
+      },
+      "persistedShape": "LIST_OF_MEDIA_OBJECTS_URL_NAME_EXTNAME",
+      "mediaKind": "survey_photo",
+      "selectionMode": "CAMERA_OR_ALBUM_EVIDENCED",
+      "onlineStatus": "PARTIAL_LIBRARY_UPLOAD",
+      "maxCount": "UNKNOWN",
+      "watermarkPolicy": "CAMERA_SERVER_WATERMARK_EVIDENCED_NOT_IMPLEMENTED",
+      "locationPolicy": "REQUIRED_FOR_CAMERA_WATERMARK"
+    },
+    {
+      "fieldId": "survey-field-046",
+      "valueKey": "images17",
+      "label": "外墙情况",
+      "backendType": "file",
+      "required": false,
+      "mobileApplicable": true,
+      "condition": {
+        "showField": "part",
+        "showValue": [
+          [
+            "survey-option-4e07408562be",
+            "survey-option-226f76b55acb"
+          ],
+          [
+            "survey-option-4e07408562be",
+            "survey-option-88820462180e"
+          ]
+        ]
+      },
+      "persistedShape": "LIST_OF_MEDIA_OBJECTS_URL_NAME_EXTNAME",
+      "mediaKind": "survey_photo",
+      "selectionMode": "CAMERA_OR_ALBUM_EVIDENCED",
+      "onlineStatus": "PARTIAL_LIBRARY_UPLOAD",
+      "maxCount": "UNKNOWN",
+      "watermarkPolicy": "CAMERA_SERVER_WATERMARK_EVIDENCED_NOT_IMPLEMENTED",
+      "locationPolicy": "REQUIRED_FOR_CAMERA_WATERMARK"
+    },
+    {
+      "fieldId": "survey-field-047",
+      "valueKey": "images18",
+      "label": "地漏",
+      "backendType": "file",
+      "required": false,
+      "mobileApplicable": true,
+      "condition": {
+        "showField": "part",
+        "showValue": [
+          [
+            "survey-option-d4735e3a265e",
+            "survey-option-d29d53701d3c"
+          ],
+          [
+            "survey-option-d4735e3a265e",
+            "survey-option-36790ecd55c2"
+          ]
+        ]
+      },
+      "persistedShape": "LIST_OF_MEDIA_OBJECTS_URL_NAME_EXTNAME",
+      "mediaKind": "survey_photo",
+      "selectionMode": "CAMERA_OR_ALBUM_EVIDENCED",
+      "onlineStatus": "PARTIAL_LIBRARY_UPLOAD",
+      "maxCount": "UNKNOWN",
+      "watermarkPolicy": "CAMERA_SERVER_WATERMARK_EVIDENCED_NOT_IMPLEMENTED",
+      "locationPolicy": "REQUIRED_FOR_CAMERA_WATERMARK"
+    },
+    {
+      "fieldId": "survey-field-048",
+      "valueKey": "images19",
+      "label": "过门石周边",
+      "backendType": "file",
+      "required": false,
+      "mobileApplicable": true,
+      "condition": {
+        "showField": "part",
+        "showValue": [
+          [
+            "survey-option-d4735e3a265e",
+            "survey-option-d29d53701d3c"
+          ],
+          [
+            "survey-option-d4735e3a265e",
+            "survey-option-36790ecd55c2"
+          ]
+        ]
+      },
+      "persistedShape": "LIST_OF_MEDIA_OBJECTS_URL_NAME_EXTNAME",
+      "mediaKind": "survey_photo",
+      "selectionMode": "CAMERA_OR_ALBUM_EVIDENCED",
+      "onlineStatus": "PARTIAL_LIBRARY_UPLOAD",
+      "maxCount": "UNKNOWN",
+      "watermarkPolicy": "CAMERA_SERVER_WATERMARK_EVIDENCED_NOT_IMPLEMENTED",
+      "locationPolicy": "REQUIRED_FOR_CAMERA_WATERMARK"
+    },
+    {
+      "fieldId": "survey-field-049",
+      "valueKey": "images20",
+      "label": "卫生间外墙体",
+      "backendType": "file",
+      "required": false,
+      "mobileApplicable": true,
+      "condition": {
+        "showField": "part",
+        "showValue": [
+          [
+            "survey-option-d4735e3a265e",
+            "survey-option-d29d53701d3c"
+          ],
+          [
+            "survey-option-d4735e3a265e",
+            "survey-option-36790ecd55c2"
+          ]
+        ]
+      },
+      "persistedShape": "LIST_OF_MEDIA_OBJECTS_URL_NAME_EXTNAME",
+      "mediaKind": "survey_photo",
+      "selectionMode": "CAMERA_OR_ALBUM_EVIDENCED",
+      "onlineStatus": "PARTIAL_LIBRARY_UPLOAD",
+      "maxCount": "UNKNOWN",
+      "watermarkPolicy": "CAMERA_SERVER_WATERMARK_EVIDENCED_NOT_IMPLEMENTED",
+      "locationPolicy": "REQUIRED_FOR_CAMERA_WATERMARK"
+    },
+    {
+      "fieldId": "survey-field-051",
+      "valueKey": "infraredImageList",
+      "label": "红外照片现场图",
+      "backendType": "file",
+      "required": false,
+      "mobileApplicable": true,
+      "condition": null,
+      "persistedShape": "LIST_OF_MEDIA_OBJECTS_URL_NAME_EXTNAME",
+      "mediaKind": "infrared_photo",
+      "selectionMode": "ALBUM_ONLY_UNVERIFIED_DEVICE_SEMANTICS",
+      "onlineStatus": "PARTIAL_LIBRARY_UPLOAD",
+      "maxCount": 4,
+      "watermarkPolicy": "UNKNOWN",
+      "locationPolicy": "UNKNOWN"
+    },
+    {
+      "fieldId": "survey-field-054",
+      "valueKey": "beforeMoldRemoval",
+      "label": "除霉前",
+      "backendType": "file",
+      "required": false,
+      "mobileApplicable": true,
+      "condition": {
+        "showField": "isMoldRemoved",
+        "showValue": "survey-option-6b86b273ff34"
+      },
+      "persistedShape": "LIST_OF_MEDIA_OBJECTS_URL_NAME_EXTNAME",
+      "mediaKind": "mold_photo",
+      "selectionMode": "CAMERA_OR_ALBUM_EVIDENCED",
+      "onlineStatus": "PARTIAL_LIBRARY_UPLOAD",
+      "maxCount": "UNKNOWN",
+      "watermarkPolicy": "CAMERA_SERVER_WATERMARK_EVIDENCED_NOT_IMPLEMENTED",
+      "locationPolicy": "REQUIRED_FOR_CAMERA_WATERMARK"
+    },
+    {
+      "fieldId": "survey-field-055",
+      "valueKey": "afterMoldRemoval",
+      "label": "除霉后",
+      "backendType": "file",
+      "required": false,
+      "mobileApplicable": true,
+      "condition": {
+        "showField": "isMoldRemoved",
+        "showValue": "survey-option-6b86b273ff34"
+      },
+      "persistedShape": "LIST_OF_MEDIA_OBJECTS_URL_NAME_EXTNAME",
+      "mediaKind": "mold_photo",
+      "selectionMode": "CAMERA_OR_ALBUM_EVIDENCED",
+      "onlineStatus": "PARTIAL_LIBRARY_UPLOAD",
+      "maxCount": "UNKNOWN",
+      "watermarkPolicy": "CAMERA_SERVER_WATERMARK_EVIDENCED_NOT_IMPLEMENTED",
+      "locationPolicy": "REQUIRED_FOR_CAMERA_WATERMARK"
+    }
+  ],
+  "policies": {
+    "aggregateMaxCount": "UNKNOWN",
+    "offlineSupport": "NOT_IMPLEMENTED",
+    "uploadIsSeparateFromFormSave": true,
+    "formSaveIsSeparateFromWorkflowCompletion": true
+  }
+}

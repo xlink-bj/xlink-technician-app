@@ -65,15 +65,15 @@ function appointmentForm(values: AppointmentFormRead['values'] = {}): Appointmen
     definitionId: asOpaqueId<'FormDefinitionId'>('workspace-appointment-definition'),
     fields: [
       {
-        key: 'need',
+        fieldId: 'need', valueKey: 'need',
         label: '是否需要上门',
         type: 'radio',
         required: true,
         readOnly: false,
         options: [{ value: '1', label: '需要上门' }, { value: '0', label: '暂不上门' }],
       },
-      { key: 'datetime', label: '预约时间', type: 'datetime', required: true, readOnly: false },
-      { key: 'note', label: '备注', type: 'textarea', required: false, readOnly: false },
+      { fieldId: 'datetime', valueKey: 'datetime', label: '预约时间', type: 'datetime', required: true, readOnly: false },
+      { fieldId: 'note', valueKey: 'note', label: '备注', type: 'textarea', required: false, readOnly: false },
     ],
     values,
   }
@@ -159,7 +159,70 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
       title: '预约上门时间',
     })
     expect(command.readAppointmentForm).toHaveBeenCalledTimes(1)
-    expect(store.appointmentFields.map((field) => field.key)).toEqual(['need', 'datetime', 'note'])
+    expect(store.appointmentFields.map((field) => field.valueKey)).toEqual(['need', 'datetime', 'note'])
+  })
+
+  it('fails closed on same-user roleVersion change instead of reusing the cached action', async () => {
+    let activeSession: SessionSnapshot = { ...session, roleVersion: 'role-v1' }
+    const { store, api } = configureWorkspace(
+      appointmentDetail(), appointmentForm(), undefined, () => activeSession,
+    )
+    expect((await openWorkspace(store)).state).toBe('succeeded')
+    expect(store.descriptor?.actionIntent).toBe('set_appointment')
+    activeSession = {
+      ...activeSession,
+      roleVersion: 'role-v2',
+    }
+    const stale = await store.ensureLoaded({
+      workOrderId: asOpaqueId<'WorkOrderId'>('workspace-work-order'),
+      workflowNodeId: asOpaqueId<'WorkflowNodeRuntimeId'>('workspace-appointment-node'),
+      actionIntent: 'set_appointment',
+    })
+    expect(stale.state).toBe('failed_terminal')
+    expect(stale.error?.category).toBe('session_invalid')
+    expect(store.descriptor).toBeNull()
+    expect(store.loadState).toBe('idle')
+    expect(api.getWorkOrderDetail).toHaveBeenCalledTimes(1)
+  })
+
+  it('blocks mounted appointment command dispatch after a role change without any route reload', async () => {
+    let activeSession: SessionSnapshot = { ...session, roleVersion: 'v1' }
+    const { store, command } = configureWorkspace(
+      appointmentDetail(), appointmentForm(), undefined, () => activeSession,
+    )
+    expect((await openWorkspace(store)).state).toBe('succeeded')
+    activeSession = {
+      ...activeSession,
+      currentRole: { id: asOpaqueId<'RoleId'>('another-role') },
+    }
+    const outcome = await store.submit()
+    expect(outcome.state).toBe('failed_terminal')
+    expect(outcome.error?.category).toBe('session_invalid')
+    expect(command.submitAppointment).not.toHaveBeenCalled()
+  })
+
+  it('discards an in-flight Work Order read when the authenticated role changes', async () => {
+    let activeSession: SessionSnapshot = { ...session, roleVersion: 'role-v1' }
+    const { store, api, command } = configureWorkspace(
+      appointmentDetail(), appointmentForm(), undefined, () => activeSession,
+    )
+    let completeRead!: (result: OperationSnapshot<WorkOrderDetail>) => void
+    const delayedRead = new Promise<OperationSnapshot<WorkOrderDetail>>(resolve => {
+      completeRead = resolve
+    })
+    vi.mocked(api.getWorkOrderDetail).mockImplementationOnce(async () => delayedRead)
+    const loading = openWorkspace(store)
+    activeSession = {
+      ...activeSession,
+      currentRole: { id: asOpaqueId<'RoleId'>('other-workspace-role') },
+    }
+    completeRead(succeeded(appointmentDetail()))
+    const result = await loading
+    expect(result.state).toBe('failed_terminal')
+    expect(result.error?.category).toBe('session_invalid')
+    expect(store.descriptor).toBeNull()
+    expect(store.loadState).toBe('idle')
+    expect(command.readAppointmentForm).not.toHaveBeenCalled()
   })
 
   it('blocks a disabled or unsupported action without reading or submitting content', async () => {
@@ -167,9 +230,9 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
       id: asOpaqueId<'WorkOrderId'>('place-order-work-order'),
       workflowNodes: [{
         id: asOpaqueId<'WorkflowNodeRuntimeId'>('place-order-node'),
-        category: 'placeOrder',
+        category: 'forms',
         lifecycle: 'active',
-        displayName: '下单',
+        displayName: '普通表单',
         visibility: { evidenceState: 'verified', viewableRoleIds: [roleId] },
       }],
     }
@@ -177,7 +240,7 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
     const result = await store.load({
       workOrderId: detail.id,
       workflowNodeId: detail.workflowNodes![0].id,
-      actionIntent: 'place_order',
+      actionIntent: 'interact_with_form',
     })
 
     expect(result.error?.category).toBe('unsupported_capability')
@@ -431,7 +494,7 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
     expect(store.appointmentDatetimeApplicable).toBe(false)
     expect(store.appointmentTimeField?.runtime.visible).toBe(false)
     expect(store.appointmentTimeField?.runtime.required).toBe(false)
-    expect(store.appointmentFields.map((field) => field.key)).toEqual(['need', 'note'])
+    expect(store.appointmentFields.map((field) => field.valueKey)).toEqual(['need', 'note'])
     expect(store.appointmentForm?.values.datetime).toBe('2026-04-20 11:00')
     expect(store.setAppointmentTime('2026-04-21 14:00').state).toBe('failed_terminal')
 
@@ -694,8 +757,12 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
       actionIntent: 'set_appointment',
     })
     expect(result.state).toBe('succeeded')
-    store.setField('need', '1')
-    store.setField('datetime', '2026-04-20 10:00')
+    const needField = store.appointmentForm?.fields.find((field) => field.valueKey === 'need')
+    const datetimeField = store.appointmentForm?.fields.find((field) => field.valueKey === 'datetime')
+    expect(needField?.fieldId).toBe('mock-form-field-need')
+    expect(datetimeField?.fieldId).toBe('mock-form-field-datetime')
+    store.setField(needField!.fieldId, '1')
+    store.setField(datetimeField!.fieldId, '2026-04-20 10:00')
     expect((await store.submit()).state).toBe('succeeded')
     expect(store.refreshStatus).toBe('refreshed')
     expect(storage.values.size).toBe(0)

@@ -25,6 +25,18 @@
       }
     },
     {
+      "path": "pages/work-orders/signing-order-read",
+      "style": { "navigationBarTitleText": "签约前订单核验 · 只读" }
+    },
+    {
+      "path": "pages/work-orders/signing-mock-review",
+      "style": { "navigationBarTitleText": "签约工作台 · Mock" }
+    },
+    {
+      "path": "pages/work-orders/material-sku-mock-review",
+      "style": { "navigationBarTitleText": "材料规格 · Mock" }
+    },
+    {
       "path": "pages/work-orders/action-time",
       "style": {
         "navigationBarTitleText": "选择时间"

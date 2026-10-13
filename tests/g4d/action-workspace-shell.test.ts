@@ -73,6 +73,16 @@ describe('Action Workspace Shell structural contract', () => {
     expect(confirmation).toContain('<template #success-actions>')
   })
 
+  it('keeps template comments outside component attribute lists', async () => {
+    const workspace = await readFile(pagePaths[0], 'utf8')
+    const tagStart = workspace.indexOf('<ActionWorkspaceShell')
+    const tagEnd = workspace.indexOf('>', tagStart)
+
+    expect(tagStart).toBeGreaterThanOrEqual(0)
+    expect(tagEnd).toBeGreaterThan(tagStart)
+    expect(workspace.slice(tagStart, tagEnd)).not.toContain('<!--')
+  })
+
   it('places the single draft strip before Action Content and suppresses it after success', async () => {
     const shell = await readFile(shellPath, 'utf8')
     const draftStatusIndex = shell.indexOf('displayedDraftStatus === \'saving\'')

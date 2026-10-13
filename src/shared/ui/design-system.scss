@@ -1,5 +1,5 @@
 /*
- * App UI Design System v0.1
+ * App UI Design System v0.2
  *
  * These are semantic, platform-safe tokens. Keep this file deliberately small:
  * it is a shared visual contract, not a utility framework.
@@ -66,7 +66,7 @@ page {
   --app-motion-loading-slide-duration: 1.1s;
   --app-input-padding-x: 32rpx;
   --app-input-padding-y: 16rpx;
-  --app-textarea-min-height: 112rpx;
+  --app-textarea-min-height: 160rpx;
   --app-information-value-max-width: 68%;
 }
 
@@ -215,6 +215,7 @@ page {
 
 /* Choice grammar */
 .app-choice-group { display: flex; gap: var(--app-control-gap); }
+.app-choice-group--multi { flex-wrap: wrap; }
 .app-choice {
   background: var(--app-color-control-surface);
   border: 1rpx solid var(--app-color-border-control);
@@ -233,6 +234,8 @@ page {
 .app-choice::after { border: 0; }
 .app-choice--selected { background: var(--app-color-primary-soft); border-color: var(--app-color-primary); color: var(--app-color-primary); }
 .app-choice--disabled { background: var(--app-color-disabled-surface); color: var(--app-color-disabled); }
+.app-choice--multi { flex: 0 1 calc(50% - 6rpx); min-height: var(--app-control-height); height: auto; line-height: 1.35; padding-bottom: var(--app-space-sm); padding-top: var(--app-space-sm); }
+.app-choice__indicator { color: currentColor; display: inline-block; font-weight: 800; margin-right: var(--app-space-xs); min-width: 22rpx; }
 .app-choice:active { opacity: 0.9; }
 
 /* Notice / status grammar */

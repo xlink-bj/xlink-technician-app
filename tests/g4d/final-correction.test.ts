@@ -53,13 +53,13 @@ function formDefinition(id = 'appointment-definition'): FormDefinitionRead {
     id: asOpaqueId<'FormDefinitionId'>(id),
     purpose: 'appointment',
     fields: [
-      { key: 'need', label: '是否需要上门', type: 'radio', required: true, readOnly: false, options: [
+      { fieldId: 'need', valueKey: 'need', label: '是否需要上门', type: 'radio', required: true, readOnly: false, options: [
         { value: '1', label: '需要上门' },
         { value: '0', label: '暂不上门' },
       ] },
-      { key: 'datetime', label: '预约时间', type: 'datetime', required: true, readOnly: false },
-      { key: 'note', label: '备注', type: 'textarea', required: false, readOnly: false },
-      { key: 'source', label: '来源', type: 'text', required: false, readOnly: true },
+      { fieldId: 'datetime', valueKey: 'datetime', label: '预约时间', type: 'datetime', required: true, readOnly: false },
+      { fieldId: 'note', valueKey: 'note', label: '备注', type: 'textarea', required: false, readOnly: false },
+      { fieldId: 'source', valueKey: 'source', label: '来源', type: 'text', required: false, readOnly: true },
     ],
   }
 }
@@ -288,12 +288,12 @@ describe('G4-D final functional and safety corrections', () => {
       values: { source: 'backend value' },
     }
     const fields = appointmentRuntimeFieldsFor(form)
-    expect(fields.map((field) => field.key)).toEqual(['need', 'datetime', 'note', 'source'])
-    expect(fields.find((field) => field.key === 'need')?.runtime.optionProvider).toEqual({
+    expect(fields.map((field) => field.valueKey)).toEqual(['need', 'datetime', 'note', 'source'])
+    expect(fields.find((field) => field.valueKey === 'need')?.runtime.optionProvider).toEqual({
       state: 'provider',
       provider: { kind: 'inline' },
     })
-    expect(fields.find((field) => field.key === 'source')?.runtime).toMatchObject({
+    expect(fields.find((field) => field.valueKey === 'source')?.runtime).toMatchObject({
       readOnly: true,
       required: false,
     })

@@ -1,0 +1,10 @@
+{
+  "name": "XLink G4-F Quotation Review",
+  "appid": "__UNI__XLINKG4FREVIEW",
+  "description": "Development-only synthetic quotation Action review app",
+  "versionName": "0.1.0",
+  "versionCode": "1",
+  "transformPx": false,
+  "uniStatistics": { "enable": false },
+  "h5": { "title": "G4-F Quotation Review" }
+}

@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>M1 报价四屏交互设计 · Owner Review</title>
+<style>
+:root{--blue:#2878f2;--ink:#1d2b40;--body:#536681;--mute:#8190a6;--line:#e4eaf2;--bg:#f3f6fa;--soft:#edf4ff;--white:#fff;--radius:18px;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
+button{font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+button:focus-visible{outline:3px solid #8bb9ff;outline-offset:2px}
+.phone{max-width:480px;margin:0 auto;min-height:100dvh;padding-bottom:calc(88px + env(safe-area-inset-bottom))}
+.topbar{background:var(--white);border-bottom:1px solid var(--line);padding:12px 18px 10px;position:sticky;top:0;z-index:10}
+.topline{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.back{padding:8px 0;background:none;border:0;font-size:14px;font-weight:650;color:var(--blue);min-width:64px;text-align:left}
+.heading{font-size:16px;letter-spacing:.01em;font-weight:750}
+.mock{font-size:9px;font-weight:750;letter-spacing:.07em;color:#587394;background:#f1f5f9;border:1px solid #dfe9f3;border-radius:6px;padding:5px 7px;white-space:nowrap}
+.stagebar{margin-top:10px;display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+.step{height:3px;border-radius:99px;background:#e0e8f3}
+.step.active,.step.passed{background:var(--blue)}
+main{padding:18px 16px 26px}
+.screen{display:none}
+.screen.active{display:block}
+.eyebrow{font-size:11px;color:var(--blue);font-weight:800;letter-spacing:.04em;margin:0 0 7px}
+.h1{font-size:24px;line-height:1.28;letter-spacing:-.03em;font-weight:780;margin:0 0 8px}
+.lead{font-size:13px;color:var(--body);line-height:1.6;margin:0 0 18px}
+.card{background:var(--white);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin:12px 0;box-shadow:0 5px 16px rgba(32,55,90,.035)}
+.card.focus{border:1.5px solid #96bfff;box-shadow:0 4px 18px rgba(40,120,242,.09)}
+.row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.micro{font-size:11px;color:var(--mute)}
+.kicker{font-size:11px;font-weight:700;color:var(--body)}
+.title{font-size:17px;font-weight:780;line-height:1.35;margin:7px 0}
+.body{font-size:13px;line-height:1.6;color:var(--body)}
+.tag{font-size:10px;color:#2168d6;font-weight:700;padding:5px 8px;background:#edf4ff;border-radius:8px;display:inline-block}
+.tag.gray{background:#f4f6f9;color:#687c95}
+.sectionhead{display:flex;align-items:center;justify-content:space-between;margin:21px 1px 9px}
+.sectionhead strong{font-size:15px}
+.link{border:0;background:transparent;color:var(--blue);font-size:12px;font-weight:750;padding:6px}
+.job{padding:13px 15px;border-radius:14px;background:#eaf2ff;border:1px solid #d8e6ff;margin:13px 0}
+.job .row{margin-bottom:4px}
+.job small{font-size:11px;color:#526d94}
+.job strong{font-size:14px}
+.location{font-size:12px;color:#345782;line-height:1.6}
+.groupno{font-size:12px;font-weight:780;color:var(--blue)}
+.mainitem{border-top:1px solid var(--line);padding:13px 0 0;margin-top:13px;display:flex;gap:11px;align-items:flex-start}
+.thumb{height:56px;width:58px;flex-shrink:0;border-radius:11px;background:#eef3fa;border:1px solid #e3ebf5;display:grid;place-items:center;overflow:hidden}
+.thumb svg{width:42px;height:42px;stroke:#6d94cf;fill:none;stroke-width:1.7}
+.itemname{font-size:13px;font-weight:750}
+.itemmeta{font-size:11px;color:var(--body);line-height:1.6;margin-top:4px}
+.empty{background:#f8fafc;border:1px dashed #d5e1f0;border-radius:11px;padding:18px 12px;text-align:center;color:#60738e;font-size:12px}
+.divider{border-top:1px solid var(--line);margin:12px 0}
+.note{font-size:11px;line-height:1.5;color:#7d8ba1}
+.button{min-height:44px;border-radius:12px;padding:11px 14px;font-size:13px;font-weight:800;border:1px solid transparent;background:var(--blue);color:var(--white);display:inline-flex;align-items:center;justify-content:center;gap:7px}
+.button.secondary{background:var(--white);color:var(--blue);border-color:#bdd7ff}
+.button.ghost{background:#f3f7ff;color:var(--blue)}
+.button:disabled{background:#edf0f4;color:#a4afbd;border-color:#e4eaf1;cursor:not-allowed}
+.button.full{width:100%}
+.button.compact{min-height:38px}
+.chips{display:flex;gap:8px;overflow-x:auto;margin:11px -2px 15px;padding:2px 2px 6px}
+.chip{white-space:nowrap;background:white;color:#69809d;border:1px solid #dce5f0;border-radius:50px;font-size:12px;font-weight:700;padding:9px 13px;min-height:39px}
+.chip.selected{background:var(--soft);color:var(--blue);border-color:#a8caff}
+.search{border:1px solid #dce5ef;border-radius:12px;background:#fff;padding:13px;font-size:12px;color:#9ba9b9;display:flex;gap:8px;align-items:center}
+.counter{background:#e9f2ff;border-radius:9px;padding:6px 10px;font-size:11px;font-weight:800;color:#226bdc}
+.package-title{font-size:16px;font-weight:780;line-height:1.35;margin-bottom:4px}
+.package-card .body{margin:5px 0 10px}
+.spec-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--line)}
+.spec-row:first-of-type{border:0}
+.spec-row span{font-size:12px;color:var(--body)}
+.spec-row strong{font-size:13px}
+.selection{border:1px solid #e0e9f5;padding:12px;border-radius:11px;display:flex;justify-content:space-between;align-items:center;gap:8px;margin:9px 0}
+.selection.chosen{background:#f1f7ff;border-color:#abcafe}
+.selection strong{font-size:12px}
+.selection small{font-size:10px;color:var(--mute);display:block;margin-top:4px}
+.selection .check{font-size:13px;color:var(--blue);font-weight:850}
+.quantity{display:flex;align-items:center;gap:9px}
+.quantity button{width:38px;height:38px;border:1px solid var(--line);background:white;border-radius:10px;font-size:18px}
+.quantity span{min-width:36px;text-align:center;font-weight:800;font-size:16px}
+.banner{border:1px solid #cee7db;background:#ecf9f1;border-radius:12px;padding:12px 13px;display:flex;gap:9px;align-items:flex-start;margin:12px 0}
+.banner strong{display:block;font-size:13px;color:#15744d}
+.banner span{display:block;font-size:11px;line-height:1.5;color:#437d64;margin-top:3px}
+.bottom{background:rgba(255,255,255,.97);border-top:1px solid var(--line);position:fixed;bottom:0;left:0;right:0;z-index:20;padding:10px max(16px,calc((100vw - 448px)/2)) calc(12px + env(safe-area-inset-bottom))}
+.bottom-inner{max-width:448px;margin:0 auto;display:flex;gap:12px;justify-content:space-between;align-items:center}
+.bottom-copy{display:flex;flex-direction:column;gap:3px;min-width:115px}
+.bottom-copy strong{font-size:13px}
+.bottom-copy small{font-size:10px;color:var(--mute)}
+.bottom .button{min-width:150px}
+.endmark{font-size:11px;color:#8fa0b5;text-align:center;margin:24px 5px}
+@media(max-width:359px){.h1{font-size:22px}.bottom .button{min-width:130px}.card{padding:14px}.topbar{padding:10px 14px}main{padding:15px 12px}}
+@media(min-width:600px){body{padding:32px}.phone{min-height:844px;height:auto;border-radius:25px;overflow:clip;box-shadow:0 20px 65px rgba(24,51,90,.15)}.bottom{position:sticky;padding:10px 16px 12px}}
+</style>
+</head>
+<body>
+<div class="phone" data-testid="ux-prototype">
+<header class="topbar">
+  <div class="topline">
+    <button type="button" class="back" id="back" data-testid="ux-back">‹ 返回</button>
+    <span class="heading" id="header-title">报价工作台</span>
+    <span class="mock" data-testid="ux-synthetic-badge">设计方案 · 合成数据</span>
+  </div>
+  <div class="stagebar" aria-hidden="true"><span class="step active"></span><span class="step"></span><span class="step"></span><span class="step"></span></div>
+</header>
+<main>
+<section class="screen active" id="workbench" data-testid="ux-stage-workbench">
+  <p class="eyebrow">01 / 报价工作台</p>
+  <h1 class="h1">按维修部位组织报价</h1>
+  <p class="lead">先确认本次维修位置，再挑选服务与材料。所做选择仅保存在本地演示中。</p>
+  <div class="job">
+    <div class="row"><small>当前工单</small><span class="tag">操作中的部位</span></div>
+    <strong>MOCK-019 · 屋面渗漏维修</strong>
+    <div class="location">朝阳区 · 屋面东侧局部渗漏（示例位置）</div>
+  </div>
+  <div class="sectionhead"><strong>维修部位</strong><span class="micro">1 / 2 正在编辑</span></div>
+  <div class="card focus">
+    <div class="row"><span class="groupno">部位 01 · 屋面</span><span class="tag gray">当前组</span></div>
+    <div class="title">屋面东侧防水修缮</div>
+    <div class="body">面积约 12 m² · 本机演示值，不用于计价</div>
+    <div class="divider"></div>
+    <div class="empty" id="workbench-empty" data-testid="ux-workbench-empty">当前组尚未添加商品或服务</div>
+    <div class="mainitem" id="workbench-picked" data-testid="ux-workbench-picked" hidden>
+      <div class="thumb" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M6 32 24 12l18 20M9 32h30M15 27l8-8 9 8M15 35h18M9 39h30"/></svg></div>
+      <div><div class="itemname">屋面局部防水修缮包</div><div class="itemmeta" id="workbench-picked-detail">已选材料层 2/2 · 本地配置，无正式 SKU</div></div>
+    </div>
+    <button class="button full" style="margin-top:14px" type="button" id="open-catalog" data-testid="ux-nav-catalog">选择服务商品 →</button>
+  </div>
+  <div class="card">
+    <div class="row"><strong style="font-size:13px">部位 02 · 外墙</strong><span class="tag gray">未编辑</span></div>
+    <div class="body" style="margin-top:6px">另一个部位独立管理，返回不会覆盖第一组。</div>
+  </div>
+  <p class="endmark">仅交互设计评审 · 无正式订单或后台写入</p>
+</section>
+
+<section class="screen" id="catalog" data-testid="ux-stage-catalog">
+  <p class="eyebrow">02 / 可视化商品目录</p>
+  <h1 class="h1">为屋面选择施工方案</h1>
+  <p class="lead">已锁定部位 01 · 屋面。挑选后继续配置，再返回原部位。</p>
+  <div class="search">⌕　搜索套餐、工序、材料或机措（设计占位）</div>
+  <div class="chips" role="tablist" aria-label="目录类型">
+    <button class="chip selected" type="button" role="tab" aria-selected="true" data-testid="ux-tab-package">套餐</button>
+    <button class="chip" type="button" role="tab" aria-selected="false" data-testid="ux-tab-procedure">工序</button>
+    <button class="chip" type="button" role="tab" aria-selected="false" data-testid="ux-tab-material">材料</button>
+    <button class="chip" type="button" role="tab" aria-selected="false" data-testid="ux-tab-measure">机措</button>
+  </div>
+  <div class="row" style="margin:0 2px 8px"><strong style="font-size:14px">适用于当前部位</strong><span class="micro">演示目录 · 非真实库存</span></div>
+  <div id="catalog-package-list" data-testid="ux-package-list">
+  <article class="card package-card focus">
+    <div class="row" style="justify-content:flex-start;gap:12px">
+      <div class="thumb" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M6 32 24 12l18 20M9 32h30M15 27l8-8 9 8M15 35h18M9 39h30"/></svg></div>
+      <div><span class="tag">服务套餐</span><div class="package-title">屋面局部防水修缮包</div></div>
+    </div>
+    <p class="body">包含基层处理及防水材料层；具体材料须在下一步按层选择。</p>
+    <div class="row"><span class="micro">2 个材料层 · 价格尚未核验</span><button class="button secondary compact" id="select-package" data-testid="ux-select-package">查看并配置 →</button></div>
+  </article>
+  <article class="card package-card">
+    <div class="row" style="justify-content:flex-start;gap:12px">
+      <div class="thumb" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M9 34 18 14h12l9 20M14 27h20M9 38h30"/></svg></div>
+      <div><span class="tag gray">服务套餐</span><div class="package-title">局部裂缝处理包</div></div>
+    </div>
+    <div class="body">结构化演示商品 · 配置资料不完整</div>
+    <button class="button secondary full compact" type="button" disabled>尚不可配置</button>
+  </article>
+  </div>
+  <div id="catalog-other-list" data-testid="ux-other-list" hidden>
+    <div class="card">
+      <span class="tag gray" id="other-category-label">工序</span>
+      <div class="title" id="other-category-title">本类商品尚未接入设计样本</div>
+      <p class="body">已保留分类入口、部位上下文和商品卡交互规范；未获得可核对的本类商品数据前，不展示虚构项目或报价。</p>
+      <button class="button full secondary" disabled type="button">暂不可选择</button>
+    </div>
+  </div>
+  <p class="endmark">分类及商品名称仅作方案示意 · 不代表正式报价目录</p>
+</section>
+
+<section class="screen" id="configure" data-testid="ux-stage-config">
+  <p class="eyebrow">03 / 套餐配置</p>
+  <h1 class="h1">确认材料层与工程量</h1>
+  <p class="lead">屋面局部防水修缮包 · 配置完成后添加回原维修部位。</p>
+  <div class="card" style="margin-top:10px">
+    <span class="tag">套餐内容</span>
+    <div class="title">屋面局部防水修缮包</div>
+    <div class="spec-row"><span>施工工序</span><strong>基层清理与防水处理</strong></div>
+    <div class="spec-row"><span>本次示意工程量</span><div class="quantity"><button id="qty-minus" type="button" aria-label="减少数量" data-testid="ux-qty-minus">−</button><span id="qty" data-testid="ux-quantity">12</span><button id="qty-plus" type="button" aria-label="增加数量" data-testid="ux-qty-plus">+</button><small>m²</small></div></div>
+    <p class="note">数量仅为本机 UX 演示。真实计量、系数及计价规则尚未核验。</p>
+  </div>
+  <div class="sectionhead"><strong>按材料层进行配置</strong><span class="counter" data-testid="ux-layer-count">2 / 2 已选择</span></div>
+  <div class="card focus" style="margin-top:7px">
+    <div class="row"><strong style="font-size:13px">材料层 A · 基层处理</strong><span class="tag">示意必选</span></div>
+    <button type="button" class="selection chosen" id="layer-a" data-testid="ux-select-layer-a">
+      <span style="text-align:left"><strong>基层处理材料 A</strong><small>规格选择：标准（合成样例）</small></span><span class="check">✓</span>
+    </button>
+    <div class="row" style="margin-top:15px"><strong style="font-size:13px">材料层 B · 防水层</strong><span class="tag">示意必选</span></div>
+    <button type="button" class="selection chosen" id="layer-b" data-testid="ux-select-layer-b">
+      <span style="text-align:left"><strong id="layer-b-label">柔性防水材料 B</strong><small id="layer-b-detail">规格选择：2 mm（合成样例）</small></span><span class="check">✓</span>
+    </button>
+    <p class="note">“必选”仅为视觉交互示例，不表示已验证 R1 的层级必选规则或真实 SKU。</p>
+  </div>
+  <p class="endmark">合成配置 · 未选择正式 SKU · 不计算金额</p>
+</section>
+
+<section class="screen" id="return" data-testid="ux-stage-return">
+  <p class="eyebrow">04 / 返回报价工作台</p>
+  <h1 class="h1">所选套餐已添加到屋面</h1>
+  <p class="lead">回到原维修部位；可直接修改配置或继续添加，不丢失其他部位。</p>
+  <div class="banner" data-testid="ux-confirmation">
+    <div style="font-size:16px;color:#178658">✓</div>
+    <div><strong>本地草稿已更新</strong><span>新增 1 项服务套餐 · 未向服务器提交正式订单</span></div>
+  </div>
+  <div class="card focus">
+    <div class="row"><span class="groupno">部位 01 · 屋面</span><span class="tag">已选 1 项</span></div>
+    <div class="title">屋面东侧防水修缮</div>
+    <div class="body">本组工程量示意：<strong id="return-qty" data-testid="ux-return-quantity">12</strong> m²</div>
+    <div class="mainitem">
+      <div class="thumb" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M6 32 24 12l18 20M9 32h30M15 27l8-8 9 8M15 35h18M9 39h30"/></svg></div>
+      <div style="flex:1"><div class="itemname">屋面局部防水修缮包</div><div class="itemmeta" id="return-material" data-testid="ux-return-material">基层材料 A + 防水材料 B<br>来源：合成配置 · 正式 SKU 未选定</div></div>
+    </div>
+    <div class="row" style="margin-top:16px">
+      <button class="button secondary compact" type="button" id="change-package" data-testid="ux-change-config">修改配置</button>
+      <button class="link" type="button" id="more-catalog" data-testid="ux-more-catalog">继续选商品 →</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="row"><strong style="font-size:13px">部位 02 · 外墙</strong><span class="tag gray">未变更</span></div>
+    <div class="body" style="margin-top:6px">独立维修部位保持原状态；没有合并为同一正式订单。</div>
+  </div>
+  <p class="endmark">签约须基于后端已确认的 type=1 正式订单，不能从此合成草稿直接进入</p>
+</section>
+</main>
+<footer class="bottom">
+  <div class="bottom-inner">
+    <div class="bottom-copy"><strong id="footer-title" data-testid="ux-footer-title">0 项 · 本机草稿</strong><small>金额未核验 · 不提交</small></div>
+    <button class="button" type="button" id="primary" data-testid="ux-primary">去选商品 →</button>
+  </div>
+</footer>
+</div>
+<script>
+(function(){
+  'use strict';
+  var names=['workbench','catalog','configure','return'];
+  var stage=0, quantity=12, layerB=0, committed=false;
+  var head=['报价工作台','商品目录','套餐配置','报价工作台'];
+  var actions=['去选商品 →','配置这个套餐 →','加入当前部位','继续选商品 →'];
+  function go(to){
+    stage=to;
+    for(var i=0;i<names.length;i++){
+      document.getElementById(names[i]).classList.toggle('active',i===to);
+      document.querySelectorAll('.step')[i].className='step'+(i===to?' active':i<to?' passed':'');
+    }
+    document.getElementById('header-title').textContent=head[to];
+    document.getElementById('primary').textContent=actions[to];
+    document.getElementById('footer-title').textContent=committed?'1 项 · 本机草稿':'0 项 · 本机草稿';
+    document.getElementById('workbench-empty').hidden=committed;
+    document.getElementById('workbench-picked').hidden=!committed;
+    document.getElementById('workbench-picked-detail').textContent='材料层 2/2 · '+quantity+' m² · '+(layerB===0?'防水材料 B':'防水材料 C')+' · 合成配置';
+    document.getElementById('open-catalog').textContent=committed?'继续选择服务商品 →':'选择服务商品 →';
+    document.getElementById('back').textContent=to===0?'‹ 工单':'‹ 上一步';
+    window.scrollTo(0,0);
+  }
+  function submit(){
+    if(stage===0)go(1);
+    else if(stage===1)go(2);
+    else if(stage===2){
+      committed=true;
+      document.getElementById('return-qty').textContent=String(quantity);
+      document.getElementById('return-material').textContent='基层材料 A + '+(layerB===0?'防水材料 B':'防水材料 C')+' · 合成配置，未选定正式 SKU';
+      go(3);
+    }else go(1);
+  }
+  document.getElementById('primary').addEventListener('click',submit);
+  document.getElementById('open-catalog').addEventListener('click',function(){go(1)});
+  document.getElementById('select-package').addEventListener('click',function(){go(2)});
+  document.getElementById('change-package').addEventListener('click',function(){go(2)});
+  document.getElementById('more-catalog').addEventListener('click',function(){go(1)});
+  document.getElementById('back').addEventListener('click',function(){go(Math.max(0,stage-1))});
+  document.getElementById('qty-minus').addEventListener('click',function(){quantity=Math.max(1,quantity-1);document.getElementById('qty').textContent=String(quantity)});
+  document.getElementById('qty-plus').addEventListener('click',function(){quantity=Math.min(999,quantity+1);document.getElementById('qty').textContent=String(quantity)});
+  document.getElementById('layer-b').addEventListener('click',function(){
+    layerB=1-layerB;
+    document.getElementById('layer-b-label').textContent=layerB?'柔性防水材料 C':'柔性防水材料 B';
+    document.getElementById('layer-b-detail').textContent=layerB?'规格选择：3 mm（合成样例）':'规格选择：2 mm（合成样例）';
+  });
+  // Every category is navigable, but no unverified procedure/material/measure
+  // product is invented. An unready category has an explicit disabled state.
+  document.querySelectorAll('[role="tab"]').forEach(function(button){
+    button.addEventListener('click',function(){
+      var kind=button.getAttribute('data-testid');
+      var active=kind==='ux-tab-package';
+      document.querySelectorAll('[role="tab"]').forEach(function(b){
+        b.classList.toggle('selected',b===button);
+        b.setAttribute('aria-selected',String(b===button));
+      });
+      document.getElementById('catalog-package-list').hidden=!active;
+      document.getElementById('catalog-other-list').hidden=active;
+      if(!active){
+        var label=kind==='ux-tab-procedure'?'工序':kind==='ux-tab-material'?'材料':'机措';
+        document.getElementById('other-category-label').textContent=label;
+        document.getElementById('other-category-title').textContent=label+'目录 · 暂无经核验的样本';
+      }
+    });
+  });
+  go(0);
+})();
+</script>
+</body></html>

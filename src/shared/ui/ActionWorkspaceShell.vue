@@ -1,8 +1,8 @@
 <template>
-  <view class="action-workspace-page">
-    <scroll-view class="action-workspace-scroll" scroll-y enable-flex>
+  <view class="action-workspace-page" data-testid="action-workspace-shell">
+    <scroll-view class="action-workspace-scroll" scroll-y enable-flex :scroll-into-view="scrollIntoView">
       <view class="action-workspace-body">
-        <view class="action-workspace-context app-surface app-surface--compact">
+        <view class="action-workspace-context app-surface app-surface--compact" data-testid="action-workspace-context">
           <text class="action-workspace-context-label">当前工单</text>
           <view class="action-workspace-context-row">
             <text class="action-workspace-context-customer">{{ customerName || '工单' }}</text>
@@ -51,7 +51,14 @@
           <slot name="success" />
         </template>
 
-        <AppStatus v-if="businessFeedback" class="action-workspace-business-feedback" :message="businessFeedback" tone="danger" quiet />
+        <AppStatus
+          v-if="businessFeedback"
+          data-testid="action-workspace-feedback"
+          class="action-workspace-business-feedback"
+          :message="businessFeedback"
+          tone="danger"
+          quiet
+        />
 
         <AppStatus v-if="lifecycle === 'submitting'" class="action-workspace-operation-status" message="正在提交" quiet />
       </view>
@@ -62,6 +69,7 @@
         <template v-if="lifecycle !== 'succeeded'">
           <slot name="actions">
             <AppButton
+              data-testid="action-workspace-submit"
               class="action-workspace-submit"
               :disabled="!canSubmit || transitioning"
               :loading="lifecycle === 'submitting' || transitioning"
@@ -95,6 +103,7 @@ const props = defineProps<{
   readonly transitioning?: boolean
   readonly canSubmit: boolean
   readonly submitLabel: string
+  readonly scrollIntoView?: string
   readonly businessFeedback?: string
 }>()
 

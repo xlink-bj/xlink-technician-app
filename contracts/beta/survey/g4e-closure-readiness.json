@@ -1,0 +1,356 @@
+{
+  "schemaVersion": 1,
+  "environment": "beta",
+  "domain": "g4e_survey_onsite",
+  "sanitized": true,
+  "head": "381582b224d2102aa052cd4ca70ea7d82816a1cc",
+  "branch": "rebuild/g4e-onsite-inspection",
+  "foundation": {
+    "surveyDomainTruth": "PASS",
+    "surveyInspectionSeparation": "PASS",
+    "effectiveSurveyContract": "PASS",
+    "mobileDetailApplicability": "PASS",
+    "visibilityRuntime": "PASS",
+    "genericDynamicFormRuntime": "PASS",
+    "leakageCauseControlledExperience": "PASS",
+    "neutralMediaValueRefAndSurveyCodec": "PASS",
+    "durableMediaStore": "PASS",
+    "persistentMediaUploadQueue": "PASS",
+    "formAndTaskIsolation": "PASS",
+    "proofBasedPostSaveCleanup": "PASS",
+    "sourceUploadCheckpoint": "PASS",
+    "cameraPostUploadArchitecture": "PASS",
+    "preUploadWatermarkPreflight": "PASS"
+  },
+  "implemented": [
+    {
+      "id": "survey-contract-and-runtime",
+      "status": "PASS",
+      "owner": "FRONTEND",
+      "blocksFrontendEngineering": false,
+      "blocksProductionReadiness": false,
+      "evidence": "61-row sanitized Survey contract; 45 mobile-detail rows; Adapter and Runtime preserve row identity, value keys, visibility and applicability."
+    },
+    {
+      "id": "required-visible-form-execution",
+      "status": "PASS",
+      "owner": "FRONTEND",
+      "blocksFrontendEngineering": false,
+      "blocksProductionReadiness": false,
+      "evidence": "No visible required field remains UNKNOWN or UNSUPPORTED after explicit deferred-field exclusion."
+    },
+    {
+      "id": "ordinary-media-source-backed-foundation",
+      "status": "PASS",
+      "owner": "FRONTEND",
+      "blocksFrontendEngineering": false,
+      "blocksProductionReadiness": false,
+      "evidence": "Mock/source-backed LocalMedia, durable store, queue, upload boundary and explicit form-save boundary are implemented."
+    },
+    {
+      "id": "camera-watermark-architecture",
+      "status": "PASS",
+      "owner": "FRONTEND",
+      "blocksFrontendEngineering": false,
+      "blocksProductionReadiness": false,
+      "evidence": "Generic post-upload processor, source checkpoint and pre-upload fail-closed preflight are implemented; real adapter remains disabled."
+    }
+  ],
+  "productDeferred": [
+    {
+      "id": "serviceGoods-projPackage",
+      "status": "DEFERRED_NON_BLOCKING",
+      "owner": "PRODUCT",
+      "blocksFrontendEngineering": false,
+      "blocksProductionReadiness": false,
+      "evidence": "Historical recommendation capability; production adoption and provider contract are not proven; Product Owner deferred it."
+    },
+    {
+      "id": "surveyDrawing-surveyTool",
+      "status": "DEFERRED_NON_BLOCKING",
+      "owner": "PRODUCT",
+      "blocksFrontendEngineering": false,
+      "blocksProductionReadiness": false,
+      "evidence": "Special surveyTool protocol is not implemented; field is excluded from rendering/submission and never falls back to generic media."
+    },
+    {
+      "id": "survey-onsite-checkin",
+      "status": "DEFERRED_NON_BLOCKING",
+      "owner": "PRODUCT",
+      "blocksFrontendEngineering": false,
+      "blocksProductionReadiness": false,
+      "evidence": "The P0 Survey LBS onsite check-in requirement remains recorded, but Product governance defers implementation. Historical Punch/Sign/gpsPoint research remains evidence only; no LBS code is implemented."
+    }
+  ],
+  "externalDependencies": [
+    {
+      "id": "real-watermark-coordinate-contract",
+      "status": "BLOCKED_EXTERNAL",
+      "owner": "BACKEND",
+      "blocksFrontendEngineering": false,
+      "blocksProductionReadiness": true,
+      "evidence": "R1 caller uses GCJ02 while the backend reverse-geocoder implementation expects GPS84/WGS84 semantics; automatic conversion is disabled."
+    },
+    {
+      "id": "real-watermark-idempotency-and-reconciliation",
+      "status": "BLOCKED_EXTERNAL",
+      "owner": "BACKEND",
+      "blocksFrontendEngineering": false,
+      "blocksProductionReadiness": true,
+      "evidence": "uploadAddLogo idempotency and authoritative reconciliation are unproven."
+    },
+    {
+      "id": "real-watermark-backend-temp-file-concurrency",
+      "status": "BLOCKED_EXTERNAL",
+      "owner": "BACKEND",
+      "blocksFrontendEngineering": false,
+      "blocksProductionReadiness": true,
+      "evidence": "Backend currently uses fixed temporary paths image.jpg and waterImageFinal.jpg; concurrent-request safety is unproven."
+    }
+  ],
+  "liveValidationPending": [
+    {
+      "id": "schema-live-environment",
+      "status": "LIVE_CONTRACT_REVALIDATION_PENDING",
+      "owner": "ENVIRONMENT",
+      "blocksFrontendEngineering": false,
+      "blocksProductionReadiness": true,
+      "observed": {
+        "XLINK_SCHEMA_API_BASE_URL": "ABSENT",
+        "XLINK_SCHEMA_SESSION_REF": "ABSENT"
+      },
+      "evidence": "Required live Beta contract-discovery environment values are absent; accepted deterministic/source-backed architecture remains valid."
+    },
+    {
+      "id": "beta-active-survey-schema",
+      "status": "LIVE_VALIDATION_PENDING",
+      "owner": "ENVIRONMENT",
+      "blocksFrontendEngineering": false,
+      "blocksProductionReadiness": true,
+      "evidence": "The committed Survey family is historical and sanitized; active Beta Survey schema has not been revalidated in this audit."
+    },
+    {
+      "id": "real-survey-read",
+      "status": "LIVE_VALIDATION_PENDING",
+      "owner": "ENVIRONMENT",
+      "blocksFrontendEngineering": false,
+      "blocksProductionReadiness": true,
+      "evidence": "No live active Survey read was performed in this closure audit."
+    },
+    {
+      "id": "real-media-upload",
+      "status": "NOT_AUTHORIZED",
+      "owner": "PRODUCT",
+      "blocksFrontendEngineering": false,
+      "blocksProductionReadiness": true,
+      "evidence": "Real Beta/Qiniu upload was not authorized."
+    },
+    {
+      "id": "real-survey-save",
+      "status": "NOT_AUTHORIZED",
+      "owner": "PRODUCT",
+      "blocksFrontendEngineering": false,
+      "blocksProductionReadiness": true,
+      "evidence": "Real Survey save mutation was not authorized."
+    },
+    {
+      "id": "workflow-completion",
+      "status": "NOT_AUTHORIZED",
+      "owner": "PRODUCT",
+      "blocksFrontendEngineering": false,
+      "blocksProductionReadiness": true,
+      "evidence": "Real workflow completion mutation was not authorized."
+    }
+  ],
+  "deviceValidationPending": [
+    {
+      "id": "mp-weixin-device-restart",
+      "status": "DEVICE_VALIDATION_PENDING",
+      "owner": "DEVICE_QA",
+      "blocksFrontendEngineering": false,
+      "blocksProductionReadiness": true,
+      "evidence": "Build is verified; MP device restart recovery and durable local file survival have not been smoked."
+    },
+    {
+      "id": "app-device-restart",
+      "status": "DEVICE_VALIDATION_PENDING",
+      "owner": "DEVICE_QA",
+      "blocksFrontendEngineering": false,
+      "blocksProductionReadiness": true,
+      "evidence": "Build is verified; App device restart recovery and durable local file survival have not been smoked."
+    },
+    {
+      "id": "camera-permission-behavior",
+      "status": "DEVICE_VALIDATION_PENDING",
+      "owner": "DEVICE_QA",
+      "blocksFrontendEngineering": false,
+      "blocksProductionReadiness": true,
+      "evidence": "Permission-denied behavior is covered by boundaries/ports but not accepted on authenticated devices in this audit."
+    },
+    {
+      "id": "location-permission-behavior",
+      "status": "DEVICE_VALIDATION_PENDING",
+      "owner": "DEVICE_QA",
+      "blocksFrontendEngineering": false,
+      "blocksProductionReadiness": true,
+      "evidence": "Location driver behavior is source-backed; authenticated device permission smoke is pending."
+    }
+  ],
+  "visualValidationPending": [
+    {
+      "id": "authenticated-mp-survey-ui",
+      "status": "VISUAL_VALIDATION_PENDING",
+      "owner": "VISUAL_QA",
+      "blocksFrontendEngineering": false,
+      "blocksProductionReadiness": true,
+      "evidence": "No accepted authenticated MP Survey visual review is recorded."
+    },
+    {
+      "id": "authenticated-app-survey-ui",
+      "status": "VISUAL_VALIDATION_PENDING",
+      "owner": "VISUAL_QA",
+      "blocksFrontendEngineering": false,
+      "blocksProductionReadiness": true,
+      "evidence": "No accepted authenticated App Survey visual review is recorded."
+    },
+    {
+      "id": "required-optional-media-states",
+      "status": "VISUAL_VALIDATION_PENDING",
+      "owner": "VISUAL_QA",
+      "blocksFrontendEngineering": false,
+      "blocksProductionReadiness": true,
+      "evidence": "Required/optional media presentation states need accepted authenticated review."
+    },
+    {
+      "id": "leakage-cause-ux",
+      "status": "VISUAL_VALIDATION_PENDING",
+      "owner": "VISUAL_QA",
+      "blocksFrontendEngineering": false,
+      "blocksProductionReadiness": true,
+      "evidence": "Controlled Leakage Cause behavior is implemented and tested; accepted authenticated UX review is pending."
+    },
+    {
+      "id": "weak-network-media-states",
+      "status": "VISUAL_VALIDATION_PENDING",
+      "owner": "VISUAL_QA",
+      "blocksFrontendEngineering": false,
+      "blocksProductionReadiness": true,
+      "evidence": "Queue/error/retry presentation needs device-level product review."
+    },
+    {
+      "id": "media-error-retry-states",
+      "status": "VISUAL_VALIDATION_PENDING",
+      "owner": "VISUAL_QA",
+      "blocksFrontendEngineering": false,
+      "blocksProductionReadiness": true,
+      "evidence": "Error and retry states are covered by runtime tests but lack accepted authenticated visual evidence."
+    },
+    {
+      "id": "survey-form-information-hierarchy",
+      "status": "VISUAL_VALIDATION_PENDING",
+      "owner": "VISUAL_QA",
+      "blocksFrontendEngineering": false,
+      "blocksProductionReadiness": true,
+      "evidence": "Survey form hierarchy has no accepted authenticated MP/App product review in this audit."
+    }
+  ],
+  "formExecutability": {
+    "mobileDetailFieldCount": 45,
+    "requiredVisibleOrdinaryFieldKeys": [
+      "part",
+      "squareMeter",
+      "gapLength",
+      "length",
+      "width",
+      "perimeter",
+      "planeArea",
+      "height",
+      "leakageCause"
+    ],
+    "requiredVisibleOrdinaryStatus": "PASS",
+    "requiredVisibleMediaFieldKeys": ["images1", "images2"],
+    "requiredVisibleMediaSourceBackedStatus": "PASS",
+    "requiredVisibleMediaProductionStatus": "PARTIAL",
+    "deferredExcludedFieldKeys": ["serviceGoods", "surveyDrawing"],
+    "deferredExcludedStatus": "DEFERRED_NON_BLOCKING",
+    "requiredVisibleUnsupportedFieldKeys": [],
+    "requiredVisibleUnknownFieldKeys": [],
+    "status": "PASS",
+    "owner": "FRONTEND",
+    "blocksFrontendEngineering": false,
+    "evidence": "The two deferred fields are excluded by explicit governance; ordinary required controls and controlled Leakage Cause have supported Runtime paths; required media is executable through the Mock/source-backed queue path."
+  },
+  "residualEvidence": [
+    {
+      "id": "unknown-survey-providers",
+      "observedStatus": "UNKNOWN",
+      "status": "DEFERRED_NON_BLOCKING",
+      "owner": "PRODUCT",
+      "scope": "projPackage provider and serviceGoods",
+      "blocksFrontendEngineering": false,
+      "blocksProductionReadiness": false,
+      "reason": "Product-deferred legacy recommendation capability."
+    },
+    {
+      "id": "unknown-survey-drawing-tool",
+      "observedStatus": "UNKNOWN_SPECIAL_TOOL",
+      "status": "DEFERRED_NON_BLOCKING",
+      "owner": "PRODUCT",
+      "scope": "surveyDrawing / surveyTool",
+      "blocksFrontendEngineering": false,
+      "blocksProductionReadiness": false,
+      "reason": "Product-deferred special tool; generic media fallback prohibited."
+    },
+    {
+      "id": "partial-survey-media-rows",
+      "observedStatus": "PARTIAL",
+      "status": "LIVE_VALIDATION_PENDING",
+      "owner": "BACKEND",
+      "scope": "images1-images20, infraredImageList, beforeMoldRemoval, afterMoldRemoval",
+      "blocksFrontendEngineering": false,
+      "blocksProductionReadiness": true,
+      "reason": "Generic source-backed path exists; complete production media/cardinality/watermark semantics are not proven."
+    },
+    {
+      "id": "unknown-media-cardinality-and-policy",
+      "observedStatus": "UNKNOWN",
+      "status": "BLOCKED_EXTERNAL",
+      "owner": "BACKEND",
+      "scope": "ordinary media maxCount/aggregate limit and camera location/watermark policy",
+      "blocksFrontendEngineering": false,
+      "blocksProductionReadiness": true,
+      "reason": "Backend/production contract is not complete; no client-side rule was invented."
+    },
+    {
+      "id": "partial-platform-media-recovery",
+      "observedStatus": "PARTIAL",
+      "status": "DEVICE_VALIDATION_PENDING",
+      "owner": "DEVICE_QA",
+      "scope": "MP/App durable local media restart recovery",
+      "blocksFrontendEngineering": false,
+      "blocksProductionReadiness": true,
+      "reason": "Implementation exists; device restart smoke is pending."
+    },
+    {
+      "id": "deferred-onsite-checkin-contract-unknowns",
+      "observedStatus": "UNKNOWN",
+      "status": "DEFERRED_NON_BLOCKING",
+      "owner": "PRODUCT",
+      "scope": "Survey record owner, command, coordinate/time authority, reconciliation and appointment-near semantics",
+      "blocksFrontendEngineering": false,
+      "blocksProductionReadiness": false,
+      "reason": "The unknowns are retained as historical contract research. Product governance defers the capability, so they are not G4-E frontend or production-readiness blockers in this gate."
+    }
+  ],
+  "realMutationAuthorization": "NOT_AUTHORIZED",
+  "frontendEngineeringStatus": "PASS",
+  "productCompletionStatus": "PARTIAL",
+  "productionReadinessStatus": "PARTIAL",
+  "recommendation": {
+    "frontendFoundation": "G4-E FRONTEND ENGINEERING READY FOR PRODUCT/INTEGRATION GATE",
+    "productScope": "PARTIAL_EXTERNAL_DEPENDENCIES_AND_PRODUCT_DEFERMENTS",
+    "productionReadiness": "PARTIAL_LIVE_DEVICE_VISUAL_VALIDATION_REQUIRED"
+  },
+  "g4fAuthorized": false,
+  "rawProductionPayloadPersisted": false
+}

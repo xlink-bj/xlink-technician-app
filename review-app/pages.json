@@ -1,0 +1,16 @@
+{
+  "pages": [
+    {
+      "path": "pages/design-system/index",
+      "style": {
+        "navigationBarTitleText": "Design System Gallery"
+      }
+    }
+  ],
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "Design System Gallery",
+    "navigationBarBackgroundColor": "#ffffff",
+    "backgroundColor": "#f3f6fa"
+  }
+}

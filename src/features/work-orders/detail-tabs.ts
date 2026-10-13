@@ -1,4 +1,4 @@
-export type DetailTabKey = 'follow-up' | 'customer' | 'order' | 'files'
+export type DetailTabKey = 'follow-up' | 'customer' | 'order' | 'files' | 'quotation'
 
 export interface DetailTab {
   readonly key: DetailTabKey
