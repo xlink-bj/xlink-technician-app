@@ -39,7 +39,7 @@ describe('I6 source-pinned signing command intent contracts, zero business write
     expect(result.assessment).toBe('candidate')
     expect(result.mayDispatch).toBe(false)
     expect(result.backendPermissionProven).toBe(false)
-    expect(result.reasons).toContain(expect.stringContaining('所有业务写入禁止'))
+    expect(result.reasons.join(' ')).toContain('所有业务写入禁止')
   })
   it.each(['electronic','offline'] as const)('%s rejects missing isAgain, already signing and existing Contract',(kind)=>{
     expect(reviewR1SigningIntent(kind,ctx({officialOrder:{id:orderId,type:1,serviceAppointmentId:workOrderId,processState:0}})).assessment).toBe('blocked')
