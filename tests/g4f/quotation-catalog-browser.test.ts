@@ -290,4 +290,60 @@ describe('G4-F Phase 1E quotation catalog browser', () => {
     expect(store.catalogStatesByKind.material).toBe('succeeded')
     expect(store.selectedCatalogItemFor('material', withOptions.id)).toEqual(withOptions)
   })
+
+  it('S1 Q01: loads only the first bounded page until the user explicitly continues', async () => {
+    const page1: ReadPage<QuotationPackageRead> = { items: [packageRow], page: 1, pageSize: 20, totalCount: 2 }
+    const page2: ReadPage<QuotationPackageRead> = {
+      items: [{ kind: 'package', id: 'package-2', name: '方案二' }],
+      page: 2, pageSize: 20, totalCount: 2,
+    }
+    const listPackages = vi.fn(async (_ctx: QuotationCatalogContext, page?: number) =>
+      succeeded(page === 2 ? page2 : page1))
+    const store = useQuotationCatalogBrowserStore()
+    store.configure({ readPort: catalogPort({ listPackages }), catalogContext: context })
+    store.open('package')
+    await store.loadList('package')
+    expect(listPackages).toHaveBeenCalledTimes(1)
+    expect(listPackages).toHaveBeenNthCalledWith(1, context)
+    expect(store.visibleCatalogItems.map(item => item.id)).toEqual(['package-1'])
+    expect(store.catalogMoreByKind.package).toBe(true)
+    await store.loadNextPage('package')
+    expect(listPackages).toHaveBeenNthCalledWith(2, context, 2)
+    expect(store.visibleCatalogItems.map(item => item.id)).toEqual(['package-1', 'package-2'])
+    expect(store.catalogPagesByKind.package).toBe(2)
+    expect(store.catalogMoreByKind.package).toBe(false)
+    await store.loadNextPage('package')
+    expect(listPackages).toHaveBeenCalledTimes(2)
+  })
+
+  it('S1 Q01: a failed or duplicate page cannot erase verified earlier catalog choices', async () => {
+    const first: ReadPage<QuotationPackageRead> = { items: [packageRow], page: 1, pageSize: 20, totalCount: 3 }
+    const next: ReadPage<QuotationPackageRead> = {
+      items: [{ kind: 'package', id: 'package-2', name: '方案二' }],
+      page: 2, pageSize: 20, totalCount: 3,
+    }
+    let attempts = 0
+    const listPackages = vi.fn(async (_ctx: QuotationCatalogContext, page?: number) => {
+      if (!page) return succeeded(first)
+      attempts++
+      if (attempts === 1) return { state: 'failed_retryable' as const }
+      if (attempts === 2) return succeeded({ ...next, items: [packageRow] })
+      return succeeded(next)
+    })
+    const store = useQuotationCatalogBrowserStore()
+    store.configure({ readPort: catalogPort({ listPackages }), catalogContext: context })
+    store.open('package')
+    await store.loadList('package')
+    await store.loadNextPage('package')
+    expect(store.catalogPageErrorByKind.package).toContain('失败')
+    expect(store.selectedCatalogItemFor('package', packageRow.id)).toEqual(packageRow)
+    await store.loadNextPage('package')
+    expect(store.catalogPageErrorByKind.package).toContain('重复')
+    expect(store.catalogPagesByKind.package).toBe(1)
+    expect(store.catalogItemsByKind.package).toEqual([packageRow])
+    await store.loadNextPage('package')
+    expect(store.catalogPageErrorByKind.package).toBe('')
+    expect(store.catalogPagesByKind.package).toBe(2)
+    expect(store.catalogItemsByKind.package).toHaveLength(2)
+  })
 })
