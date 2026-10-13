@@ -10,6 +10,8 @@ describe('M1-S1 L01 — R1 source-backed manual login preflight', () => {
   it('accepts only 11 digits of mobile and 6 digits of code', () => {
     expect(r1ManualLoginIssue(input('13800000000', '000123'))).toBeNull()
     expect(r1ManualLoginIssue(input(' 13800000000 ', ' 012345 '))).toBeNull()
+    expect(r1ManualLoginIssue(input('12800000000', '123456'))).toBe('phone_format')
+    expect(r1ManualLoginIssue(input('00000000000', '123456'))).toBe('phone_format')
     expect(r1ManualLoginIssue(input('1380000000', '123456'))).toBe('phone_format')
     expect(r1ManualLoginIssue(input('138000000000', '123456'))).toBe('phone_format')
     expect(r1ManualLoginIssue(input('1380000000a', '123456'))).toBe('phone_format')
