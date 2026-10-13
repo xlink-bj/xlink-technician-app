@@ -123,11 +123,44 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       await capture('08-signing-empty', 'C', '签约合同空态', '独立正式订单样本；无真实合同')
       await page.getByTestId('signing-mock-order-mock-official-order-019-b').click()
       await expect(page.getByTestId('signing-mock-state')).toContainText('签署中')
-      await capture('09-signing-progress', 'C', '签署中', '合同状态与不可执行操作')
+      // The contract status card is below the fold on mobile. A screenshot
+      // of the top developer-control buttons is NOT useful signing evidence.
+      await page.getByTestId('signing-mock-contract').scrollIntoViewIfNeeded()
+      await capture('09-signing-progress', 'C', '签署中', '实际滚动至合同状态区域')
       await page.getByTestId('signing-mock-scenario-expired').click()
       await expect(page.getByTestId('signing-mock-state')).toContainText('过期')
       await expect(page.getByTestId('signing-mock-apply-disabled')).toHaveAttribute('disabled', 'true')
-      await capture('10-signing-expired', 'C', '合同过期', '异常态，无业务写入及盲重试')
+      await page.getByTestId('signing-mock-contract').scrollIntoViewIfNeeded()
+      await capture('10-signing-expired', 'C', '合同过期', '状态区域、禁用签约操作')
+
+      // Actual commercial signing-read component, NOT the detached developer
+      // status harness. This is a separate synthetic official Order fixture;
+      // never promote a local quotation draft to a formal Order.
+      await page.goto('/#/pages/index/index', { waitUntil: 'domcontentloaded' })
+      await page.locator('.work-orders-entry').click()
+      await page.locator('.search-input input').fill('04009')
+      await page.locator('.search-button').click()
+      await page.locator('.work-order-card').filter({ hasText: '演示客户乙' }).click()
+      await expect(page.locator('.summary-number')).toContainText('04009')
+      await page.evaluate(() => {
+        const uni = (window as Window & {
+          uni?: { navigateTo: (options: { url: string }) => void }
+        }).uni
+        if (!uni) throw new Error('Real uni-app navigation unavailable for signing review')
+        uni.navigateTo({
+          url: '/pages/work-orders/signing-order-read?workOrderId=mock-work-order-002&orderId=mock-official-order-001',
+        })
+      })
+      await expect(page.getByTestId('signing-order-read-verified')).toBeVisible()
+      await expect(page.getByTestId('signing-order-read-display-number'))
+        .toContainText('DEV-SYNTHETIC-NOT-SUBMITTED')
+      await expect(page.getByTestId('signing-contract-fixture-label')).toContainText('非真实订单')
+      await capture('11-signing-actual-order', 'C', '签约只读工作台', '真正的主 App 订单核验页面')
+      await page.getByTestId('signing-contract-read-request').click()
+      await expect(page.getByTestId('signing-contract-matched')).toContainText('DEV-SYNTHETIC-CONTRACT')
+      await expect(page.getByTestId('signing-read-stage-title')).toContainText('签约处理中')
+      await page.getByTestId('signing-order-read-contract-status').scrollIntoViewIfNeeded()
+      await capture('12-signing-actual-contract', 'C', '合同核验反馈', '来源受限且真实签约仍不可执行')
 
       assertSafe(audit)
       const output = await finishReviewSession(browser, session)
