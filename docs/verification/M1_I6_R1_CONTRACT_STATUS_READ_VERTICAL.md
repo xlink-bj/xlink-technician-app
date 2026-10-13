@@ -1,3 +1,5 @@
+> **Canonical technician R1 Contract query correction (2026-10-13):** This document's older `workOrder.vue` / `workOrderId` references describe an **alternative WorkOrder page**, not the primary Technician `ServiceAppointment` route. Primary `serviceAppointment.vue:9215–9229` uses `is:serviceAppointmentId|string#and` and `is:state|integer#or` / `is:exts.contractStatus|string#or`. The existing backend stores and looks up `serviceAppointmentId`. Importantly, backend `_all=1` overrides `rows`, so bounded New App reads **must omit _all**. This source-only correction is documented in [`M1_I6_CANONICAL_TECHNICIAN_CONTRACT_QUERY.md`](M1_I6_CANONICAL_TECHNICIAN_CONTRACT_QUERY.md). Real tenant parity and signer permissions are still NOT_RUN; real Contract reads remain disabled.
+
 # M1 I6 — R1 Contract status read-side vertical slice
 
 **Engineering-only; Production Contract API disabled.** New App is a frontend-only refactor; existing backend remains unchanged.

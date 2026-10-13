@@ -32,7 +32,7 @@ function fakePort(options: {
   return { port, execute }
 }
 describe('M1 I6 actual R1 Contract metadata read — source-accurate, NOT production enabled', () => {
-  it('matches the exact R1 Contract query fields, but binds a previously listed type1 Order', async () => {
+  it('matches the PRIMARY R1 ServiceAppointment Contract query with DB-bounded pagination and verified type1 Order', async () => {
     const reqs: ApiReadRequest[] = []
     const f = fakePort({ read: async req => {
       reqs.push(req)
@@ -48,13 +48,15 @@ describe('M1 I6 actual R1 Contract metadata read — source-accurate, NOT produc
     } })
     expect(reqs).toEqual([
       { method: 'POST', path: 'basic/order/query', body: {
-        _all: '1', page: 1, rows: 3, sortField: 'createTime', sortOrder: 'desc',
+        page: 1, rows: 3, sortField: 'createTime', sortOrder: 'desc',
         'is:serviceAppointmentId|string#and': workOrderId, 'is:type|integer#and': 1,
       } },
       { method: 'POST', path: 'basic/contract/query.do', body: {
-        _all: '1', page: 1, rows: 3,
-        'is:workOrderId|string#and': workOrderId, 'in:state|array-integer#and': '1',
-        sortField: 'updateTime', sortOrder: 'asc',
+        page: 1, rows: 3,
+        'is:serviceAppointmentId|string#and': workOrderId,
+        'is:state|integer#or': '1',
+        'is:exts.contractStatus|string#or': '-2',
+        sortField: 'createTime', sortOrder: 'desc',
       } },
     ])
     const serialized = JSON.stringify(result)
@@ -69,6 +71,28 @@ describe('M1 I6 actual R1 Contract metadata read — source-accurate, NOT produc
       req.path === 'basic/order/query' ? { data: [baseOrder] } : { data: [] } })
     expect(await f.port.listR1ContractsForSigningReview!(workOrderId, orderId))
       .toMatchObject({ state: 'succeeded', data: { items: [], completeness: 'bounded_unverified' } })
+  })
+
+
+  it('never adds _all to a bounded official Order or Contract request', async () => {
+    const f = fakePort({ read: async req =>
+      req.path === 'basic/order/query' ? { data: [baseOrder] } : { data: [contract()] } })
+    await f.port.listR1ContractsForSigningReview!(workOrderId, orderId)
+    expect(f.execute).toHaveBeenCalledTimes(2)
+    for (const [req] of f.execute.mock.calls) {
+      expect(req.body).not.toHaveProperty('_all')
+      expect(req.body).toMatchObject({ page: 1, rows: 3 })
+    }
+  })
+
+  it('allows R1 OR-filtered cancellation record to be represented without promoting it to signed', async () => {
+    const f = fakePort({ read: async req => req.path === 'basic/order/query'
+      ? { data: [baseOrder] }
+      : { data: [contract({ _id: 'contract-void', state: 0, exts: { contractStatus: '-2' } })] } })
+    const result = await f.port.listR1ContractsForSigningReview!(workOrderId, orderId)
+    expect(result).toMatchObject({ state: 'succeeded', data: { items: [
+      { id: 'contract-void', state: 0, contractStatus: '-2' },
+    ] } })
   })
 
   it('filters other Orders within the same WorkOrder without exposing their metadata', async () => {
@@ -147,8 +171,9 @@ describe('M1 I6 actual R1 Contract metadata read — source-accurate, NOT produc
 
   it('Production transport explicitly rejects R1 Contract route until separately approved', () => {
     const body = {
-      _all: '1', page: 1, rows: 3, 'is:workOrderId|string#and': workOrderId,
-      'in:state|array-integer#and': '1', sortField: 'updateTime', sortOrder: 'asc',
+      page: 1, rows: 3, 'is:serviceAppointmentId|string#and': workOrderId,
+      'is:state|integer#or': '1',
+      'is:exts.contractStatus|string#or': '-2', sortField: 'createTime', sortOrder: 'desc',
     }
     expect(isProductionReadOnlyReadAllowed({ method: 'POST', path: 'basic/contract/query.do', body })).toBe(false)
     expect(isProductionReadOnlyReadAllowed({ method: 'POST', path: 'signature/applyForElectronicSignature',
@@ -158,6 +183,10 @@ describe('M1 I6 actual R1 Contract metadata read — source-accurate, NOT produc
   })
 
   it('mock-owned synthetic WorkOrders cannot fall through to a real Contract endpoint', () => {
+    expect(isMockOwnedRead('basic/contract/query.do', {
+      'is:serviceAppointmentId|string#and': 'mock-work-order-001',
+    })).toBe(true)
+    // The alternative legacy R1 WorkOrder route must also never fall through.
     expect(isMockOwnedRead('basic/contract/query.do', {
       'is:workOrderId|string#and': 'mock-work-order-001',
     })).toBe(true)
