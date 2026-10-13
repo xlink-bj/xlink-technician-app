@@ -222,8 +222,10 @@ for (const viewport of [
     await expect(page.getByTestId('quotation-p1-sku-identity-audit')).toBeVisible()
     await expect(page.getByTestId('quotation-p1-sku-identity-count'))
       .toContainText('4 条来源关系 · 4 条身份未对应')
+    // Only 3 of 4 quote lines have deliberately synthetic SKU overlays.
+    // The current-role structural ordinary material is NOT SKU-eligible.
     await expect(page.getByTestId('quotation-p1-same-catalog-count'))
-      .toContainText('同目录 ID 仿真：4/4 条关联可对应 · 仅合成 SKU')
+      .toContainText('同目录 ID 仿真：3/4 条关联可对应 · 仅合成 SKU')
     await expect(page.getByTestId('quotation-p1-sku-sale-options-ready'))
       .toContainText('2 个 SPU · 4 项属性 · 4 个选项 · 仅合成字典')
     await expect(page.getByTestId('quotation-p1-sku-server-auth-blocked'))
@@ -274,7 +276,7 @@ for (const viewport of [
       await page.getByTestId('quotation-group-details-toggle-quotation-group-2').click()
     }
     await expect(page.getByTestId('quotation-group-section-quotation-group-2-material'))
-      .toContainText('弹性密封材料（示例）')
+      .toContainText('普通防水辅材（结构示例）')
     await expect(page.getByTestId('quotation-group-section-quotation-group-2-procedure'))
       .toContainText('檐口密封处理（示例）')
     await expect(page.getByTestId('quotation-group-section-quotation-group-2-measure'))
@@ -288,7 +290,7 @@ for (const viewport of [
     await expect(page.getByTestId('quotation-p1-sku-identity-count'))
       .toContainText('4 条来源关系 · 4 条身份未对应')
     await expect(page.getByTestId('quotation-p1-same-catalog-count'))
-      .toContainText('同目录 ID 仿真：4/4 条关联可对应 · 仅合成 SKU')
+      .toContainText('同目录 ID 仿真：3/4 条关联可对应 · 仅合成 SKU')
     await expect(page.getByTestId('quotation-p1-sku-sale-options-ready'))
       .toContainText('2 个 SPU · 4 项属性 · 4 个选项 · 仅合成字典')
     await expect(page.getByTestId('quotation-p1-sku-server-auth-blocked'))
