@@ -118,6 +118,8 @@ export function createApplication(dependencies: ApplicationDependencies = {}) {
     (id) => workOrderDetailStore.loadState === 'succeeded'
       && String(workOrderDetailStore.detail?.id ?? '') === id
       && workOrderListStore.items.some((item) => String(item.id) === id),
+    apiRead,
+    isDevSyntheticContractReadPreviewEnabled,
   )
   const actionWorkspaceStore = useActionWorkspaceStore(pinia)
   actionWorkspaceStore.configure({
