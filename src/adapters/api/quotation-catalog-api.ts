@@ -433,7 +433,12 @@ function packageDetail(raw: unknown, requestedId: string): QuotationPackageDetai
   }
 }
 
-function listRequest(path: string, context: QuotationCatalogContext, productionReadOnly: boolean): ApiReadRequest {
+/** Pinned backend FlipPageInfo reads page/rows and EMongoTemplate applies skip/limit.
+ * Never send R1's historical _all=1 to a Production catalog endpoint. */
+function listRequest(path: string, context: QuotationCatalogContext, productionReadOnly: boolean, page: number): ApiReadRequest {
+  if (!Number.isInteger(page) || page < 1 || page > 50) {
+    throw new AdapterMappingError('catalog page exceeds the bounded 1–50 read window')
+  }
   if (!context || typeof context.serviceType !== 'string' || !context.serviceType.trim()) {
     throw new AdapterMappingError('work-order catalog context with service type is required')
   }
@@ -457,7 +462,8 @@ function listRequest(path: string, context: QuotationCatalogContext, productionR
     method: 'POST',
     path,
     body: {
-      _all: '1',
+      page,
+      rows: 20,
       'is:state|integer#and': 1,
       'in:serviceType|array#and': context.serviceType,
       ...(context.sourceType === undefined ? {} : { sourceType: context.sourceType }),
@@ -528,6 +534,7 @@ class QuotationCatalogReadAdapter implements QuotationCatalogReadPort {
     context: QuotationCatalogContext,
     map: (raw: unknown) => T,
     listedPackages?: (data: T) => readonly QuotationPackageRead[],
+    page = 1,
   ): Promise<OperationSnapshot<T>> {
     const productionReadOnly = this.isProductionReadOnly()
     const scopeAtStart = productionReadOnly ? this.synchronizeProductionReadScope() : null
@@ -535,7 +542,7 @@ class QuotationCatalogReadAdapter implements QuotationCatalogReadPort {
       ? this.synchronizeCatalogContext(context)
       : null
     const generationAtStart = productionReadOnly ? this.authorizationContextGeneration : null
-    const result = await this.read(() => listRequest(path, context, productionReadOnly), map)
+    const result = await this.read(() => listRequest(path, context, productionReadOnly, page), map)
     if (!productionReadOnly) return result
 
     this.synchronizeProductionReadScope()
@@ -563,12 +570,13 @@ class QuotationCatalogReadAdapter implements QuotationCatalogReadPort {
     }
   }
 
-  listPackages(context: QuotationCatalogContext) {
+  listPackages(context: QuotationCatalogContext, page = 1) {
     return this.list(
       'biz/projPackage/queryWithRank',
       context,
       (raw) => pageEnvelope(raw, packageItem),
-      (page) => page.items,
+      (result) => result.items,
+      page,
     )
   }
 
@@ -602,16 +610,16 @@ class QuotationCatalogReadAdapter implements QuotationCatalogReadPort {
     return result
   }
 
-  listProcedures(context: QuotationCatalogContext) {
-    return this.list('biz/procedure/queryWithRank', context, (raw) => pageEnvelope(raw, procedureItem))
+  listProcedures(context: QuotationCatalogContext, page = 1) {
+    return this.list('biz/procedure/queryWithRank', context, (raw) => pageEnvelope(raw, procedureItem), undefined, page)
   }
 
-  listMaterials(context: QuotationCatalogContext) {
-    return this.list('basic/material/queryWithRank', context, (raw) => pageEnvelope(raw, materialItem))
+  listMaterials(context: QuotationCatalogContext, page = 1) {
+    return this.list('basic/material/queryWithRank', context, (raw) => pageEnvelope(raw, materialItem), undefined, page)
   }
 
-  listMeasures(context: QuotationCatalogContext) {
-    return this.list('biz/measure/queryWithRank', context, (raw) => pageEnvelope(raw, measureItem))
+  listMeasures(context: QuotationCatalogContext, page = 1) {
+    return this.list('biz/measure/queryWithRank', context, (raw) => pageEnvelope(raw, measureItem), undefined, page)
   }
 
   /** Existing R1 two-step read. Scoped to an authenticated WorkOrder context,

@@ -597,15 +597,22 @@ function matchedResponse(
     return mockMaterialSkuVariantsResponse
   }
   if (quotationCatalogListRoutes.has(route)) {
+    // Identical paging envelope to R1 FlipPageInfo: page, rows and total.
+    // A bad or unbounded Mock request is rejected, not silently reinterpreted.
+    const page = requestData.page
+    const rows = requestData.rows
+    if (requestData._all !== undefined || !Number.isInteger(page) || typeof page !== 'number'
+      || page < 1 || page > 50 || rows !== 20) return null
     const matchesMockScope = requestData['in:serviceType|array#and'] === mockQuotationCatalogServiceType
       && (requestData.sourceType === undefined || requestData.sourceType === mockQuotationCatalogSourceType)
     if (mode === 'empty' || !matchesMockScope) {
-      return { data: [], page: 1, rows: 20, total: 0 }
+      return { data: [], page, rows, total: 0 }
     }
-    if (route === 'biz/projPackage/queryWithRank') return mockQuotationPackageListResponse
-    if (route === 'biz/procedure/queryWithRank') return mockQuotationProcedureListResponse
-    if (route === 'basic/material/queryWithRank') return mockQuotationMaterialListResponse
-    return mockQuotationMeasureListResponse
+    const fixture = route === 'biz/projPackage/queryWithRank' ? mockQuotationPackageListResponse
+      : route === 'biz/procedure/queryWithRank' ? mockQuotationProcedureListResponse
+      : route === 'basic/material/queryWithRank' ? mockQuotationMaterialListResponse
+      : mockQuotationMeasureListResponse
+    return { data: fixture.data.slice((page - 1) * rows, page * rows), page, rows, total: fixture.total }
   }
   const packageDetailPrefix = 'biz/projPackage/findById/'
   if (route.startsWith(packageDetailPrefix)) {

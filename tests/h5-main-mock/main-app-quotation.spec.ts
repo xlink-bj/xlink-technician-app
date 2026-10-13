@@ -81,6 +81,40 @@ test('real authenticated shell uses local-only Mock quotation with zero external
 })
 
 
+
+for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }]) {
+  test('S1 ordinary Material joins real App quote without SKU at ' + viewport.width, async ({ page }, info) => {
+    await page.setViewportSize(viewport)
+    await page.goto('/#/pages/index/index', { waitUntil: 'domcontentloaded' })
+    await expect(page.locator('.mock-source-indicator')).toContainText('Mock')
+    await page.locator('.mock-action-scenario').filter({ hasText: '报价草稿' }).click()
+    await expect(page.getByTestId('quotation-state-ready')).toBeVisible()
+    await page.getByTestId('quotation-add-group').click()
+    await page.getByTestId('quotation-first-step-repair-parts-trigger').click()
+    await page.getByTestId('survey-repair-part-parents').getByText('屋面', { exact: true }).click()
+    await page.getByTestId('quotation-first-step-description').locator('textarea').fill('普通材料独立选品验证')
+    await page.getByTestId('quotation-first-step-quantity').locator('input').fill('1')
+    await page.getByTestId('quotation-first-step-select-products').click()
+    await page.getByTestId('quotation-catalog-kind-material').click()
+    const id = 'mock-catalog-material-ordinary-1'
+    await expect(page.getByTestId('quotation-catalog-item-material-' + id)).toBeVisible()
+    await expect(page.getByTestId('quotation-material-options-' + id)).toHaveCount(0)
+    const add = page.getByTestId('quotation-catalog-add-material-' + id)
+    await expect(add).toBeEnabled()
+    await add.click()
+    await expect(page.getByTestId('quotation-group-section-quotation-group-1-material'))
+      .toContainText('普通防水辅材（结构示例）')
+    await expect(page.getByTestId('action-workspace-submit')).toHaveCount(0)
+    expect(evidence.externalIntents).toEqual([])
+    expect(evidence.pageErrors).toBe(0)
+    expect(evidence.consoleErrors).toBe(0)
+    expect(evidence.localFailures).toEqual([])
+    await info.attach('s1-ordinary-material-no-sku-' + viewport.width, {
+      body: await page.screenshot({ fullPage: true }), contentType: 'image/png',
+    })
+  })
+}
+
 for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }]) {
   test('M1 integrated signing Mock: two official Orders, per-Order contract and safe states at ' + viewport.width, async ({ page }, info) => {
     await page.setViewportSize(viewport)
@@ -178,6 +212,13 @@ for (const viewport of [
     await page.getByTestId('quotation-browse-quotation-group-2').click()
     await expect(page.getByTestId('quotation-catalog-target')).toContainText('第二组：独立增项')
     await page.getByTestId('quotation-catalog-kind-material').click()
+    // The current-role Production structural sample has ordinary materials
+    // but no active SKU. The actual App Mock path must not depend on SKU.
+    await expect(page.getByTestId('quotation-catalog-item-material-mock-catalog-material-ordinary-1')).toBeVisible()
+    await expect(page.getByTestId('quotation-material-options-mock-catalog-material-ordinary-1')).toHaveCount(0)
+    await expect(page.getByTestId('quotation-catalog-add-material-mock-catalog-material-ordinary-1')).toBeEnabled()
+    // Ordinary product can be selected without SKU; the legacy all-SKU
+    // golden path remains focused on the separate synthetic option-bearing SPU.
     await page.getByTestId('quotation-catalog-add-material-mock-catalog-material-sealant').click()
     await expect(page.getByTestId('quotation-group-section-quotation-group-2-material'))
       .toContainText('弹性密封材料（示例）')

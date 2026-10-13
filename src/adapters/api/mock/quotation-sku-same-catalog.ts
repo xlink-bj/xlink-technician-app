@@ -73,13 +73,29 @@ export function makeSameCatalogSkuMock(input: {
       || !add(material)) return { state: 'blocked', reason: 'incomplete_layer_reference' }
   }
 
-  // The synthetic sale attributes are deliberately explicit test overlays.
-  // Never copy historical quantity/price from this to actual quotation draft.
+  // Pinned Production structural evidence (#120) contains ordinary active
+  // Materials WITHOUT a sale-attribute value and WITHOUT an active SKU.
+  // They must remain ordinary catalog items, never gain a synthetic SKU here.
+  // The demo SKU overlay is explicit only where the test source declares
+  // sale attributes, or for the separately synthetic Package detail pathway.
+  const eligibleDirectSkuIds = new Set(directs.flatMap(raw => {
+    const row = object(raw), exts = object(row?.exts), key = id(row?._id)
+    return key && exts && ['thickness', 'color'].some(field =>
+      Array.isArray(exts[field]) && (exts[field] as unknown[]).length > 0
+    ) ? [key] : []
+  }))
+  const packageSkuIds = new Set(detail.materialList.map(entry => id(object(entry)?.materialId)).filter(
+    (key): key is string => key !== null,
+  ))
+  const eligibleSkuIds = new Set([...eligibleDirectSkuIds, ...packageSkuIds])
+
+  // Purely synthetic R1 sales-field overlay; never copy quantity/price to
+  // real quotation drafts, never infer an existing Production activity SKU.
   const materialWithDemoFields = (key: string): Rec => ({
     ...spuById.get(key)!,
     exts: { thickness: ['2'], color: ['grey'] },
   })
-  const skuRows = [...spuById.keys()].map(key => ({
+  const skuRows = [...eligibleSkuIds].map(key => ({
     _id: 'same-catalog-demo-sku:' + key,
     spuid: key, state: 1,
     exts: { thickness: '2', color: 'grey' },
@@ -89,7 +105,7 @@ export function makeSameCatalogSkuMock(input: {
     const body = object(entry)!, key = id(body.materialId)!
     return { ...body, material: materialWithDemoFields(key) }
   })
-  const direct = quoteCatalogMaterialIds.map(key => projectR1MaterialSku({
+  const direct = quoteCatalogMaterialIds.filter(key => eligibleDirectSkuIds.has(key)).map(key => projectR1MaterialSku({
     spu: materialWithDemoFields(key),
     salesFields: syntheticMaterialSalesFields,
     skuRows: skuRows.filter(s => s.spuid === key),

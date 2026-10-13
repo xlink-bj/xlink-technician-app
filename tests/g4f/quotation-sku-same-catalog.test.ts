@@ -38,7 +38,15 @@ describe('P1 same Quote Catalog IDs with explicitly SYNTHETIC sale/SKU overlay',
     const source = makeSameCatalogSkuMock()
     expect(source.state).toBe('ready_synthetic_only')
     if (source.state !== 'ready_synthetic_only') return
-    expect(source.quoteCatalogMaterialIds).toEqual(['mock-catalog-material-sealant'])
+    expect(source.quoteCatalogMaterialIds).toEqual([
+      'mock-catalog-material-sealant',
+      'mock-catalog-material-ordinary-1',
+      'mock-catalog-material-ordinary-2',
+    ])
+    // All three IDs remain in the ordinary Quotation Catalog. Only the
+    // synthetic option-bearing SPU is eligible for this DEV-only SKU overlay.
+    // The two ordinary, optionless products never acquire an invented SKU.
+    expect(source.direct).toHaveLength(1)
     expect(source.direct[0].state).toBe('ready')
     expect(source.packages[0].state).toBe('ready')
     const pkg = source.packages[0]
