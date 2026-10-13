@@ -20,6 +20,7 @@ import {
   mockSurveyLeakageCauseResponse,
   mockWorkOrderActivityResponseFor,
   mockWorkOrderDetailResponses,
+  mockWorkOrderIds,
   mockWorkOrderDetailResponseFor,
 } from './fixtures'
 import {
@@ -538,6 +539,42 @@ function matchedResponse(
         quotation: null,
       },
     }
+  }
+
+  // I6: an explicit, isolated synthetic type=1 Order + Contract, never a
+  // submitted order, never an authorization source, never a real tenant.
+  // All other Contract/Order routes remain unsupported in DEV Mock mode.
+  if (mode === 'data' && import.meta.env.DEV === true
+    && import.meta.env.VITE_XLINK_H5_MOCK_E2E === 'true'
+    && route === 'basic/order/query'
+    && requestData['is:serviceAppointmentId|string#and'] === mockWorkOrderIds[1]
+    && requestData['is:type|integer#and'] === 1
+    && requestData.page === 1 && requestData.rows === 3) {
+    return { data: [{
+      _id: 'mock-official-order-001', type: 1,
+      serviceAppointmentId: mockWorkOrderIds[1],
+      orderNumber: 'DEV-SYNTHETIC-NOT-SUBMITTED',
+      state: 1, processState: 4, totalPrice: 0,
+      bjProducts: { orderList: [{
+        repairParts: ['DEV-SYNTHETIC'], partDescription: '合成数据，仅供界面验证',
+        projPackages: { data: [] }, procedures: { data: [] },
+        materials: { data: [] }, measures: { data: [] },
+      }] },
+    }], page: 1, rows: 3, total: 1 }
+  }
+  if (mode === 'data' && import.meta.env.DEV === true
+    && import.meta.env.VITE_XLINK_H5_MOCK_E2E === 'true'
+    && route === 'basic/contract/query.do'
+    && requestData['is:workOrderId|string#and'] === mockWorkOrderIds[1]
+    && requestData['in:state|array-integer#and'] === '1'
+    && requestData.page === 1 && requestData.rows === 3) {
+    return { data: [{
+      _id: 'mock-contract-001',
+      orderId: 'mock-official-order-001',
+      serviceAppointmentId: mockWorkOrderIds[1],
+      contractdocNum: 'DEV-SYNTHETIC-CONTRACT',
+      state: 1, exts: { contractStatus: '2' },
+    }], page: 1, rows: 3, total: 1 }
   }
   // This route shape follows pinned R1 source, but the values are exclusively
   // DEV Mock fixtures; no price, inventory or real customer data is included.

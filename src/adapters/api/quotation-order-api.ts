@@ -292,6 +292,8 @@ export class QuotationOrderReadAdapter implements QuotationOrderReadPort {
     // Absent unless a future authorized caller supplies a current authenticated
     // session/user/roleVersion fingerprint. Never enable from a static fixture.
     private readonly getCurrentAuthorizationIdentity: () => string | null = () => null,
+    /** Never infer Contract read authorization from environment != prod. */
+    private readonly allowSyntheticContractRead: (workOrderId: string) => boolean = () => false,
   ) {}
 
   async getQuotationOrderById(id: string): Promise<OperationSnapshot<QuotationOrderRead>> {
@@ -382,6 +384,9 @@ export class QuotationOrderReadAdapter implements QuotationOrderReadPort {
     const validId = /^[A-Za-z0-9_-]{1,100}$/
     if (!validId.test(workOrderId) || !validId.test(orderId)) {
       return adapterFailure('authorization_denied', '合同只读身份无效。')
+    }
+    if (!this.allowSyntheticContractRead(workOrderId)) {
+      return adapterFailure('unsupported_capability', '真实环境合同读取未获验收，不执行请求。')
     }
     const identity = this.scopedReviewIdentity()
     if (!identity || !this.isAuthorizedForCurrentSession(workOrderId)) {
@@ -510,6 +515,7 @@ export function createQuotationOrderReadAdapter(
   transport: ApiReadTransport,
   isWorkOrderListedForCurrentSession?: (id: string) => boolean,
   getCurrentAuthorizationIdentity?: () => string | null,
+  allowSyntheticContractRead?: (workOrderId: string) => boolean,
 ): QuotationOrderReadPort {
-  return new QuotationOrderReadAdapter(transport, isWorkOrderListedForCurrentSession, getCurrentAuthorizationIdentity)
+  return new QuotationOrderReadAdapter(transport, isWorkOrderListedForCurrentSession, getCurrentAuthorizationIdentity, allowSyntheticContractRead)
 }

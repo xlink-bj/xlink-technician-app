@@ -43,7 +43,7 @@ import { createDisabledRealMediaPostUploadProcessor } from '@adapters/upload/uni
 import { createSurveyLeakageCauseProvider } from '@adapters/api/survey-leakage-cause'
 
 import { loadApplicationRuntimeConfig } from './runtime-config'
-import { isBusinessMockMode } from './business-mock'
+import { isBusinessMockMode, isDevSyntheticContractReadPreviewEnabled } from './business-mock'
 
 function configurationFailure<T>(message: string): OperationSnapshot<T> {
   return { state: 'failed_terminal', error: createOperationError('server_terminal', message) }
@@ -275,6 +275,7 @@ export function createDefaultQuotationOrderReadPort(
         session.sessionRef, session.user.id, session.currentRole.id, session.roleVersion,
       ])
     },
+    isDevSyntheticContractReadPreviewEnabled,
   )
 }
 

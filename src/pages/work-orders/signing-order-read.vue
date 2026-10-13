@@ -38,9 +38,10 @@
       </view>
       <view class="signing-read-section" data-testid="signing-order-read-contract-status">
         <text class="signing-read-section-title">R1 合同状态 · 只读核验</text>
+        <text v-if="devFixtureContractRead" data-testid="signing-contract-fixture-label">DEV 合成合同演示 · 非真实订单、非真实签约</text>
         <text>合同可能与同一工单的其他订单关联；这里只核验当前选中的正式订单。部分结果或空结果不能证明不存在合同。</text>
-        <text v-if="productionReadOnly" data-testid="signing-contract-prod-blocked">
-          生产环境暂未开放合同列表读取，等待 R1 查询字段等价核验。
+        <text v-if="!devFixtureContractRead" data-testid="signing-contract-prod-blocked">
+          真实环境合同读取尚未开放。仅 DEV 隔离合成样本可核验状态，不能代表生产签约。
         </text>
         <AppButton
           v-else-if="review.contractSnapshot.state === 'idle' || review.contractSnapshot.state === 'failed_retryable'"
@@ -62,9 +63,15 @@
           <text class="signing-read-warning">仅限本次已核验的有限结果，不代表拥有签约权限或可访问合同文件。</text>
         </template>
       </view>
+      <view class="signing-read-section" data-testid="signing-read-reconciled-status">
+        <text class="signing-read-section-title">签约阶段综合核验 · 只读</text>
+        <text data-testid="signing-read-stage-title">{{ signingStage.title }}</text>
+        <text data-testid="signing-read-stage-detail">{{ signingStage.detail }}</text>
+        <text class="signing-read-warning">本页没有调用签署、取消合同、发送短信、创建 PDF 或工作流提交接口。</text>
+      </view>
       <view class="signing-read-section" data-testid="signing-order-read-no-contract">
-        <text class="signing-read-section-title">签约状态 · 未授权</text>
-        <text>当前版本未核验合同读取权限或签署角色。正式订单存在不代表已生成合同。</text>
+        <text class="signing-read-section-title">签约业务操作 · 未开放</text>
+        <text>即使 DEV 样本显示合同记录，也不授予真实合同查看、签章或重复发送权限。</text>
         <AppButton disabled block variant="secondary" data-testid="signing-order-read-contract-disabled">
           查看合同 · 未开放
         </AppButton>
@@ -80,7 +87,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { onLoad, onUnload } from '@dcloudio/uni-app'
 import AppButton from '@shared/ui/AppButton.vue'
 import AppLoadingState from '@shared/ui/AppLoadingState.vue'
@@ -88,13 +95,21 @@ import { useSessionStore } from '@shared/state'
 import { useSigningReviewReadStore } from '@features/work-orders/signing/signing-review-read-store'
 import { r1OrderSigningStageNotice, r1ContractStatusReadNotice } from '@features/work-orders/signing/r1-signing-ui-rules'
 import { isProductionReadOnlyRuntime } from '@shared/config'
+import { isDevSyntheticContractReadPreviewEnabled } from '@app/business-mock'
+import { reconcileR1SigningRead } from '@features/work-orders/signing/r1-signing-read-reconciliation'
 
 const session = useSessionStore()
 const review = useSigningReviewReadStore()
 const productionReadOnly = isProductionReadOnlyRuntime()
+const signingStage = computed(() => reconcileR1SigningRead(
+  review.snapshot.state === 'ready' ? review.snapshot.review?.order : null,
+  review.contractSnapshot,
+))
+const devFixtureContractRead = computed(() => !productionReadOnly
+  && isDevSyntheticContractReadPreviewEnabled(routeWorkOrderId.value))
 function readContracts(): void {
   // This is user-triggered and never bypasses Production's transport gate.
-  if (productionReadOnly || review.snapshot.state !== 'ready') return
+  if (!devFixtureContractRead.value || review.snapshot.state !== 'ready') return
   void review.loadContracts()
 }
 const routeReady = ref(false)

@@ -27,6 +27,7 @@ function fakePort(options: {
   const port = createQuotationOrderReadAdapter(
     { execute }, () => options.listed?.() ?? true,
     () => options.identity ? options.identity() : 'session-user-role-version',
+    () => true,
   )
   return { port, execute }
 }
@@ -160,5 +161,22 @@ describe('M1 I6 actual R1 Contract metadata read — source-accurate, NOT produc
     expect(isMockOwnedRead('basic/contract/query.do', {
       'is:workOrderId|string#and': 'mock-work-order-001',
     })).toBe(true)
+  })
+})
+
+
+describe('Contract read capability gate is deny-by-default across environments', () => {
+  it('a normal adapter never makes Contract or even Order requests for a Contract preview', async () => {
+    const execute = vi.fn(async () => ({ data: [baseOrder] }))
+    const port = createQuotationOrderReadAdapter({ execute }, () => true, () => 'role-authenticated')
+    const result = await port.listR1ContractsForSigningReview!(workOrderId, orderId)
+    expect(result).toMatchObject({ state: 'failed_terminal', error: { category: 'unsupported_capability' } })
+    expect(execute).not.toHaveBeenCalled()
+  })
+  it('even a TEST explicit read grant remains identity-bound and Order-scoped', async () => {
+    const execute = vi.fn(async () => ({ data: [] }))
+    const port = createQuotationOrderReadAdapter({ execute }, () => false, () => 'role-authenticated', () => true)
+    expect((await port.listR1ContractsForSigningReview!(workOrderId, orderId)).state).toBe('failed_terminal')
+    expect(execute).not.toHaveBeenCalled()
   })
 })
