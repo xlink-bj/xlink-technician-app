@@ -27,6 +27,7 @@
       <MockJourneyContextPanel
         v-if="localJourneyContext"
         :context="localJourneyContext"
+        compact
         :can-adopt-suggestion="canAdoptSurveySuggestion"
         :suggestion-feedback="suggestionFeedback"
         @adopt-suggestion="adoptSurveySuggestion"
@@ -70,7 +71,8 @@
     :submit-label="workspace.descriptor.formPurpose === 'survey' ? '完成勘查' : workspace.descriptor.actionIntent === 'interact_with_form' ? '完成' : '继续确认'"
     @submit="submitWorkspace"
   >
-    <MockJourneyContextPanel v-if="localJourneyContext" :context="localJourneyContext" />
+    <MockJourneyContextPanel v-if="localJourneyContext" :context="localJourneyContext"
+      :compact="workspace.descriptor.formPurpose === 'survey'" />
     <SurveyActionContent v-if="workspace.descriptor.actionIntent === 'interact_with_form' && workspace.descriptor.formPurpose === 'survey'" />
     <GenericDynamicFormActionContent v-else-if="workspace.descriptor.actionIntent === 'interact_with_form'" />
     <view v-else class="action-workspace-content app-surface" :data-field-count="workspace.appointmentFields.length">
