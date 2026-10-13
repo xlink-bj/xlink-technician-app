@@ -8,6 +8,7 @@ import type {
   QuotationPackageRead,
   QuotationProcedureRead,
   QuotationMaterialRead,
+  QuotationMaterialSkuVariantRead,
   QuotationMeasureRead,
   ReadPage,
 } from '@shared/ports'
@@ -238,7 +239,7 @@ describe('G4-F Phase 1E quotation catalog browser', () => {
       listMaterialSalesFields: vi.fn(async () => succeeded({ items: [
         { name: 'color', label: '颜色', options: [{ value: 'black', label: '黑色' }] },
       ] })),
-      listMaterialSkuVariants: vi.fn(async () => succeeded(emptyPage())),
+      listMaterialSkuVariants: vi.fn(async () => succeeded(emptyPage<QuotationMaterialSkuVariantRead>())),
     })
     const store = useQuotationCatalogBrowserStore()
     const r1Context: QuotationCatalogContext = {
@@ -272,7 +273,7 @@ describe('G4-F Phase 1E quotation catalog browser', () => {
       listMaterialSalesFields: vi.fn(async () => succeeded({ items: [
         { name: 'color', label: '颜色', options: [{ value: 'black', label: '黑色' }] },
       ] })),
-      listMaterialSkuVariants: vi.fn(async () => succeeded(emptyPage())),
+      listMaterialSkuVariants: vi.fn(async () => succeeded(emptyPage<QuotationMaterialSkuVariantRead>())),
     })
     const store = useQuotationCatalogBrowserStore()
     store.configure({
