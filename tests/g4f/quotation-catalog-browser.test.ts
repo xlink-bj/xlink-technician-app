@@ -13,6 +13,7 @@ import type {
   ReadPage,
 } from '@shared/ports'
 import type { OperationSnapshot } from '@shared/types'
+import { asOpaqueId } from '@shared/types'
 import { useQuotationCatalogBrowserStore, quotationPackageMaterialLayersFor } from '@features/work-orders/quotation/catalog-browser-store'
 
 function succeeded<T>(data: T): OperationSnapshot<T> {
@@ -237,13 +238,13 @@ describe('G4-F Phase 1E quotation catalog browser', () => {
     const port = catalogPort({
       listMaterials: vi.fn(async () => succeeded({ ...emptyPage(), items: [ordinary] })),
       listMaterialSalesFields: vi.fn(async () => succeeded({ items: [
-        { name: 'color', label: '颜色', options: [{ value: 'black', label: '黑色' }] },
+        { name: 'color', label: '颜色', valueOption: 'color', options: [{ value: 'black', label: '黑色' }] },
       ] })),
       listMaterialSkuVariants: vi.fn(async () => succeeded(emptyPage<QuotationMaterialSkuVariantRead>())),
     })
     const store = useQuotationCatalogBrowserStore()
     const r1Context: QuotationCatalogContext = {
-      workOrderId: 'synthetic-service-appointment', serviceType: '11', sourceType: '1',
+      workOrderId: asOpaqueId<'WorkOrderId'>('synthetic-service-appointment'), serviceType: '11', sourceType: '1',
     }
     store.configure({ readPort: port, catalogContext: r1Context })
     store.open('material')
@@ -271,14 +272,14 @@ describe('G4-F Phase 1E quotation catalog browser', () => {
     const port = catalogPort({
       listMaterials: vi.fn(async () => succeeded({ ...emptyPage(), items: [withOptions] })),
       listMaterialSalesFields: vi.fn(async () => succeeded({ items: [
-        { name: 'color', label: '颜色', options: [{ value: 'black', label: '黑色' }] },
+        { name: 'color', label: '颜色', valueOption: 'color', options: [{ value: 'black', label: '黑色' }] },
       ] })),
       listMaterialSkuVariants: vi.fn(async () => succeeded(emptyPage<QuotationMaterialSkuVariantRead>())),
     })
     const store = useQuotationCatalogBrowserStore()
     store.configure({
       readPort: port,
-      catalogContext: { workOrderId: 'synthetic-service-appointment', serviceType: '11', sourceType: '1' },
+      catalogContext: { workOrderId: asOpaqueId<'WorkOrderId'>('synthetic-service-appointment'), serviceType: '11', sourceType: '1' },
     })
     store.open('material')
     await store.loadList('material')
