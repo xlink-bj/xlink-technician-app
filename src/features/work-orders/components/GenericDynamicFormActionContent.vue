@@ -1,5 +1,5 @@
 <template>
-  <view class="dynamic-action-content" :class="{ 'dynamic-action-content--survey': isSurvey }"
+  <view class="dynamic-action-content" :class="{ 'app-surface': !isSurvey, 'dynamic-action-content--survey': isSurvey }"
     data-action-content="dynamic-form" data-testid="dynamic-form-action-content">
     <view class="dynamic-action-heading" :class="{ 'dynamic-action-heading--survey': isSurvey }">
       <view class="dynamic-action-title-row">
