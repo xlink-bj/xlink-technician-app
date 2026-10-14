@@ -87,6 +87,9 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       await expect(page.getByTestId('mock-journey-context-appointment')).toContainText('S2审查')
       await page.getByTestId('mock-journey-context-toggle').click()
       await expect(page.getByTestId('mock-journey-context-appointment')).toBeHidden()
+      // Scroll back to the task header: previous DEV-context expansion
+      // must not turn the S01 overview into a screenshot of the page tail.
+      await page.getByTestId('action-workspace-context').scrollIntoViewIfNeeded()
       // Dependent fields become available AFTER selecting a repair part,
       // so capture the genuine initial Survey first, not a fabricated state.
       await capture('03-survey-overview', 'S', '现场勘察', '动态字段与页面结构')
