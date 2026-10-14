@@ -101,7 +101,9 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       await capture('04-survey-filled', 'S', '勘察填写状态', '部位/面积与操作层级')
       const mediaPanel = page.locator('.dynamic-action-media').first()
       await expect(mediaPanel).toBeVisible()
-      await expect(mediaPanel.locator('.dynamic-action-media-header')).toContainText('现场照片')
+      // FormDef may model a photo-bearing field as file rather than image.
+      // The capture audits the actual media UI, not a hardcoded media type.
+      await expect(mediaPanel.locator('.dynamic-action-media-title')).toContainText(/现场照片|现场附件/)
       await expect(mediaPanel.locator('.dynamic-action-media-grid')).toBeVisible()
       await mediaPanel.scrollIntoViewIfNeeded()
       await capture('04-survey-media', 'S', '勘察媒体', '图片采集、数量与待处理状态')
