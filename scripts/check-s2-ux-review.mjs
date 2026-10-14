@@ -8,7 +8,7 @@ import { join, resolve } from 'node:path'
 const root = resolve(process.cwd(), '.review/m1-s2/generated')
 const required = [
   '01-work-orders', '02-appointment',
-  '03-survey-overview', '04-survey-filled', '04-survey-media',
+  '03-survey-overview', '03-survey-parts', '04-survey-filled', '04-survey-media', '04-survey-reasons',
   '05-quote-entry', '06-quote-catalog', '07-quote-group',
   '08-signing-empty', '09-signing-progress', '10-signing-expired',
   '11-signing-actual-order', '12-signing-actual-contract',
@@ -65,4 +65,4 @@ if (failures) {
   console.error('[s2-ux-sheet] FAILED: ' + failures + ' artifact contract violations')
   process.exit(1)
 }
-console.log('[s2-ux-sheet] PASS: two viewports, 26 ordered real-App screenshots, 2 PNG sheets, manifests and HTML index')
+console.log('[s2-ux-sheet] PASS: two viewports, 30 ordered real-App screenshots, 2 PNG sheets, manifests and HTML index')
