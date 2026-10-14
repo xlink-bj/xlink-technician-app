@@ -410,6 +410,16 @@ test('shared Action Workspace displays its actual operation title for appointmen
     await entry.click()
     await expect(page).toHaveURL(/pages\/work-orders\/action-workspace/)
     await expect(page.locator('.uni-page-head__title')).toContainText(scenario.title)
+    if (scenario.title === '现场勘查') {
+      // An independent Survey has no continuous-journey context. It must not
+      // duplicate the generic form or fall through to the Appointment UI.
+      await expect(page.getByTestId('dynamic-form-action-content')).toHaveCount(1)
+      await expect(page.locator('.dynamic-action-title')).toContainText('勘查记录')
+      await expect(page.locator('.action-content-heading')).toHaveCount(0)
+    } else {
+      await expect(page.locator('.action-content-heading')).toHaveCount(1)
+      await expect(page.getByTestId('dynamic-form-action-content')).toHaveCount(0)
+    }
   }
   expect(evidence.externalIntents).toEqual([])
   expect(evidence.pageErrors).toBe(0)
