@@ -12,13 +12,13 @@
             </view>
             <view class="action-workspace-context-survey-status"><view class="action-workspace-context-status-dot" aria-hidden="true" />勘查中</view>
           </view>
-          <template v-else>
+          <view v-else class="action-workspace-context-default">
             <text class="action-workspace-context-label">当前工单</text>
             <view class="action-workspace-context-row">
               <text class="action-workspace-context-customer">{{ customerName || '工单' }}</text>
               <text v-if="displayNumber" class="action-workspace-context-number">#{{ displayNumber }}</text>
             </view>
-          </template>
+          </view>
         </view>
         <view v-if="commercialSurvey && demoSurvey" class="action-workspace-survey-demo-note" data-testid="survey-commercial-draft-provenance">
           <text class="action-workspace-survey-demo-note-label">本机草稿</text>
