@@ -95,6 +95,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       if (await parts.isVisible()) {
         await parts.click()
         await expect(page.getByTestId('survey-part-picker-panel')).toBeVisible()
+        await capture('03-survey-parts', 'S', 'S02 维修部位', '底部级联选择')
         await page.getByTestId('survey-repair-part-parents').locator('.app-cascade-selector__parent').first().click()
         await expect(page.getByTestId('survey-repair-part-children')).toBeVisible()
         await page.getByTestId('survey-repair-part-children').locator('.app-cascade-selector__child').first().click()
@@ -107,10 +108,16 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       await expect(mediaPanel).toBeVisible()
       // FormDef may model a photo-bearing field as file rather than image.
       // The capture audits the actual media UI, not a hardcoded media type.
-      await expect(mediaPanel.locator('.dynamic-action-media-title')).toContainText(/现场照片|现场附件/)
+      await expect(mediaPanel.locator('.dynamic-action-media-title')).toContainText('拍摄或上传')
       await expect(mediaPanel.locator('.dynamic-action-media-grid')).toBeVisible()
       await mediaPanel.scrollIntoViewIfNeeded()
-      await capture('04-survey-media', 'S', '勘察媒体', '图片采集、数量与待处理状态')
+      await capture('04-survey-media', 'S', '勘察媒体', '主表单直接上传与查看状态')
+      const reason = page.getByTestId('survey-leakage-cause-trigger')
+      await expect(reason).toBeVisible()
+      await reason.click()
+      await expect(page.getByTestId('survey-leakage-cause-panel')).toBeVisible()
+      await capture('04-survey-reasons', 'S', 'S03 渗漏原因', '分类多选，返回表单')
+      await page.locator('.survey-leakage-cause__close').click()
       await page.getByTestId('mock-journey-advance').click()
 
       await expect(page).toHaveURL(/pages\/work-orders\/detail/)
