@@ -4,7 +4,7 @@
       <view class="action-workspace-body">
         <view class="action-workspace-context app-surface app-surface--compact" data-testid="action-workspace-context">
           <view v-if="commercialSurvey" class="action-workspace-context-survey">
-            <view class="action-workspace-context-house" aria-hidden="true">⌂</view>
+            <view class="action-workspace-context-house" aria-hidden="true"><AppIcon name="home" :size="25" color="#f19436" /></view>
             <view class="action-workspace-context-survey-main">
               <text class="action-workspace-context-label">当前工单</text>
               <text v-if="displayNumber" class="action-workspace-context-survey-number">{{ displayNumber }}</text>
@@ -19,6 +19,7 @@
           </view>
         </view>
         <view v-if="commercialSurvey && demoSurvey" class="action-workspace-survey-demo-note" data-testid="survey-commercial-draft-provenance">
+          <AppIcon name="warning" :size="15" color="var(--app-color-primary)" />
           <text class="action-workspace-survey-demo-note-label">本机草稿</text>
           <text>· 未提交后台</text>
         </view>
@@ -106,6 +107,7 @@ import { ref, watch } from 'vue'
 
 import type { AppActionDraftStatus, AppActionLifecycle } from './types'
 import AppButton from './AppButton.vue'
+import AppIcon from './AppIcon.vue'
 import AppStatus from './AppStatus.vue'
 
 const props = defineProps<{
@@ -252,4 +254,9 @@ defineEmits<{
   border-radius:12rpx; padding:12rpx 16rpx; font-size:var(--app-font-meta); }
 .action-workspace-survey-demo-note-label { color:var(--app-color-primary); font-weight:750; }
 .action-workspace-page--survey .action-workspace-footer { background:var(--app-color-surface); box-shadow:0 -4rpx 15rpx rgba(30,50,85,.04); }
+.action-workspace-page--survey .action-workspace-context { padding:20rpx 22rpx; }
+.action-workspace-page--survey .action-workspace-context-survey { min-height:80rpx; }
+.action-workspace-context-house { font-size:0; }
+.action-workspace-survey-demo-note { min-height:38rpx; padding:9rpx 14rpx; font-size:22rpx; }
+.action-workspace-page--survey .action-workspace-body { padding-bottom:30rpx; }
 </style>
