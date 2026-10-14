@@ -26,8 +26,8 @@
             <AppIcon :name="block.kind === 'media' ? 'image' : block.kind === 'measure' ? 'appointment' : 'location'"
               :size="21" color="#fff" />
           </view>
-          <text class="dynamic-action-block__title">{{ block.kind === 'part' ? '维修部位' : block.kind === 'measure' ? '现场测量' : surveyMediaTitle(block.fields) }}</text>
-          <text v-if="block.kind === 'part' && block.fields.some(field => field.runtime.required)" class="dynamic-action-block__required">*</text>
+          <text class="dynamic-action-block__title">{{ block.kind === 'part' ? '维修部位' : block.kind === 'measure' ? '现场测量' : block.fields.length === 1 ? block.fields[0].label : surveyMediaTitle(block.fields) }}</text>
+          <text v-if="(block.kind === 'part' || block.kind === 'media' && block.fields.length === 1) && block.fields.some(field => field.runtime.required)" class="dynamic-action-block__required">*</text>
           <text class="dynamic-action-block__tag"
             :class="{ 'dynamic-action-block__tag--selected': block.kind === 'part' && arrayValue(workspace.dynamicForm?.values[block.fields[0].valueKey]).length > 0 }">
             {{ block.kind === 'part' ? (arrayValue(workspace.dynamicForm?.values[block.fields[0].valueKey]).length ? '已选择' : '待选择') : block.kind === 'measure' ? '适用字段' : '按字段上传' }}
@@ -61,7 +61,7 @@
         }"
         :data-testid="`dynamic-field-${field.valueKey}`"
         :label="field.label"
-        :hide-label="isSurvey && block.kind === 'part'"
+        :hide-label="isSurvey && (block.kind === 'part' || (block.kind === 'media' && block.fields.length === 1))"
         :required="field.runtime.required"
       >
         <SurveyPartPicker
