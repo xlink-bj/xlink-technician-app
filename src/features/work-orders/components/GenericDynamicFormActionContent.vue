@@ -7,9 +7,35 @@
         <text class="dynamic-action-title">{{ isSurvey ? '勘查记录' : title }}</text>
       </view>
       <text class="dynamic-action-caption">{{ caption }}</text>
+      <text v-if="isSurvey && surveyRequiredVisible" class="dynamic-action-required-note">* 必填字段按当前表单显示</text>
     </view>
 
-    <template v-for="field in workspace.dynamicFields" :key="field.fieldId">
+    <template v-for="block in presentationBlocks" :key="block.key">
+      <view class="dynamic-action-block"
+        :class="{
+          'dynamic-action-block--survey': isSurvey,
+          'dynamic-action-block--part': isSurvey && block.kind === 'part',
+          'dynamic-action-block--measure': isSurvey && block.kind === 'measure',
+          'dynamic-action-block--media': isSurvey && block.kind === 'media',
+          'dynamic-action-block--field': block.kind === 'field',
+        }"
+        :data-testid="isSurvey && block.kind !== 'field' ? `survey-${block.kind}-section` : undefined"
+      >
+        <view v-if="isSurvey && block.kind !== 'field'" class="dynamic-action-block__heading">
+          <view class="dynamic-action-block__icon" :class="`dynamic-action-block__icon--${block.kind}`" aria-hidden="true">
+            <AppIcon :name="block.kind === 'media' ? 'image' : block.kind === 'measure' ? 'appointment' : 'location'"
+              :size="21" color="#fff" />
+          </view>
+          <text class="dynamic-action-block__title">{{ block.kind === 'part' ? '维修部位' : block.kind === 'measure' ? '现场测量' : block.fields.every(field => field.type === 'file') ? '现场附件' : '现场照片' }}</text>
+          <text class="dynamic-action-block__tag"
+            :class="{ 'dynamic-action-block__tag--selected': block.kind === 'part' && arrayValue(workspace.dynamicForm?.values[block.fields[0].valueKey]).length > 0 }">
+            {{ block.kind === 'part' ? (arrayValue(workspace.dynamicForm?.values[block.fields[0].valueKey]).length ? '已选择' : '待选择') : block.kind === 'measure' ? '适用字段' : '按字段上传' }}
+          </text>
+        </view>
+        <view class="dynamic-action-block__fields"
+          :class="{ 'dynamic-action-block__fields--media': isSurvey && block.kind === 'media',
+            'dynamic-action-block__fields--single': isSurvey && block.kind === 'media' && block.fields.length === 1 }">
+    <template v-for="field in block.fields" :key="field.fieldId">
       <view
         v-if="!props.excludedFieldIds.includes(field.fieldId) && field.runtime.visible && field.runtime.capability === 'PRESENTATION_ONLY'"
         class="dynamic-action-presentation-divider"
@@ -157,6 +183,12 @@
         />
       </AppField>
     </template>
+        </view>
+        <text v-if="isSurvey && block.kind === 'media'" class="dynamic-action-block__helper">
+          照片状态由上传结果决定，未上传不计入已完成。
+        </text>
+      </view>
+    </template>
 
     <slot name="experience" />
     <view v-if="previewUrl" class="dynamic-action-photo-preview" data-testid="survey-media-lightbox"
@@ -214,6 +246,41 @@ const props = withDefaults(defineProps<{
 
 const workspace = useActionWorkspaceStore()
 const isSurvey = computed(() => workspace.dynamicForm?.purpose === 'survey')
+type RenderField = (typeof workspace.dynamicFields)[number]
+type RenderKind = 'field' | 'part' | 'measure' | 'media'
+interface RenderBlock {
+  key: string
+  kind: RenderKind
+  fields: RenderField[]
+}
+/** Only group *adjacent, visible* same-kind fields. Presentation dividers
+ * and conditions always break a group; no business field or value is moved. */
+const presentationBlocks = computed<RenderBlock[]>(() => {
+  const blocks: RenderBlock[] = []
+  for (const field of workspace.dynamicFields) {
+    if (!field.runtime.visible || props.excludedFieldIds.includes(field.fieldId)
+      || field.runtime.capability === 'UNSUPPORTED') continue
+    let kind: RenderKind = 'field'
+    if (isSurvey.value && field.runtime.capability !== 'PRESENTATION_ONLY') {
+      if (field.type === 'cascade' && field.valueKey === 'part') kind = 'part'
+      else if (field.type === 'digit' || field.type === 'number') kind = 'measure'
+      else if (field.type === 'image' || field.type === 'file') kind = 'media'
+    }
+    const previous = blocks[blocks.length - 1]
+    if ((kind === 'measure' || kind === 'media') && previous?.kind === kind) {
+      previous.fields.push(field)
+    } else {
+      blocks.push({ key: field.fieldId, kind, fields: [field] })
+    }
+  }
+  return blocks
+})
+const surveyRequiredVisible = computed(() => workspace.dynamicFields.some(field =>
+  field.runtime.visible && field.runtime.required
+  && field.runtime.capability !== 'UNSUPPORTED'
+  && field.runtime.capability !== 'PRESENTATION_ONLY'
+  && !props.excludedFieldIds.includes(field.fieldId),
+))
 const title = computed(() => props.title)
 const caption = computed(() => props.caption)
 const unsupportedMessage = computed(() => {
@@ -467,6 +534,60 @@ async function pickMedia(fieldId: string): Promise<void> {
 .dynamic-action-content--survey .dynamic-action-presentation-divider--gap {
   height:12rpx; background:transparent; margin:0;
 }
+/* S2 visual-fidelity pass: real Runtime field order stays untouched.
+   Each adjacent group is a single coherent technician task, not a fixed form schema. */
+.dynamic-action-required-note { display:none; }
+.dynamic-action-content--survey .dynamic-action-heading--survey { display:flex; flex-wrap:wrap; align-items:flex-end; column-gap:12rpx; padding-bottom:13rpx; }
+.dynamic-action-content--survey .dynamic-action-title-row { flex:1 1 100%; }
+.dynamic-action-content--survey .dynamic-action-caption { flex:1; }
+.dynamic-action-content--survey .dynamic-action-required-note { display:block; font-size:21rpx; color:#e47736; font-weight:650; padding-bottom:2rpx; }
+.dynamic-action-block--survey { background:var(--app-color-surface); border:1rpx solid var(--app-color-border);
+  border-radius:22rpx; margin-bottom:16rpx; padding:18rpx 18rpx 20rpx;
+  box-shadow:0 5rpx 18rpx rgba(25,50,81,.035); overflow:hidden; }
+.dynamic-action-block--survey.dynamic-action-block--field { background:transparent; border:0; padding:0;
+  box-shadow:none; overflow:visible; margin-bottom:0; }
+.dynamic-action-block--survey .dynamic-action-block__heading { display:flex; align-items:center; gap:14rpx;
+  padding-bottom:14rpx; margin-bottom:12rpx; border-bottom:1rpx solid var(--app-color-divider); }
+.dynamic-action-block__icon { width:42rpx; height:42rpx; border-radius:10rpx; flex:none;
+  display:flex; align-items:center; justify-content:center; background:#3989f4; }
+.dynamic-action-block__icon--media { background:#22ba84; }
+.dynamic-action-block__icon--measure { background:#438cf5; }
+.dynamic-action-block__title { color:var(--app-color-text-primary); font-size:var(--app-font-section-title); font-weight:800; flex:1; min-width:0; }
+.dynamic-action-block__tag { color:var(--app-color-text-secondary); background:var(--app-color-control-surface);
+  border-radius:999rpx; padding:5rpx 11rpx; font-size:21rpx; font-weight:600; white-space:nowrap; }
+.dynamic-action-block__tag--selected { background:var(--app-color-success-soft); color:var(--app-color-success); }
+.dynamic-action-content--survey .dynamic-action-block--part .dynamic-action-field--survey-cascade,
+.dynamic-action-content--survey .dynamic-action-block--measure .dynamic-action-field--survey-measure,
+.dynamic-action-content--survey .dynamic-action-block--media .dynamic-action-field--survey-media {
+  margin:0; border:0; border-radius:0; box-shadow:none; padding:0; background:transparent; }
+.dynamic-action-content--survey .dynamic-action-block--part .dynamic-action-field--survey-cascade .app-field__label { display:none; }
+.dynamic-action-content--survey .dynamic-action-block--part .dynamic-action-field--survey-cascade .app-field__label::before { display:none; }
+.dynamic-action-content--survey .dynamic-action-block--part .survey-part-picker__trigger { min-height:86rpx;
+  padding:12rpx 2rpx; }
+.dynamic-action-content--survey .dynamic-action-block--measure .dynamic-action-field--survey-measure {
+  display:flex; align-items:center; min-height:76rpx; gap:16rpx; }
+.dynamic-action-content--survey .dynamic-action-block--measure .dynamic-action-field--survey-measure + .dynamic-action-field--survey-measure {
+  border-top:1rpx solid var(--app-color-divider); border-radius:0; margin-top:0; padding-top:12rpx; }
+.dynamic-action-content--survey .dynamic-action-block--measure .dynamic-action-field--survey-measure .app-input {
+  background:var(--app-color-control-surface); min-height:72rpx; }
+.dynamic-action-block--media .dynamic-action-block__fields--media { display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr)); gap:16rpx; }
+.dynamic-action-block--media .dynamic-action-block__fields--single { grid-template-columns:minmax(0,1fr); }
+.dynamic-action-content--survey .dynamic-action-block--media .dynamic-action-field--survey-media {
+  display:block; box-sizing:border-box; width:auto; min-width:0; min-height:0;
+  margin:0; }
+.dynamic-action-content--survey .dynamic-action-block--media .dynamic-action-field--survey-media .app-field__label {
+  display:block; min-height:0; margin:0 0 8rpx; color:var(--app-color-text-primary);
+  font-size:var(--app-font-field-label); line-height:1.45; font-weight:700; }
+.dynamic-action-content--survey .dynamic-action-block--media .dynamic-action-media-header { margin-bottom:8rpx; }
+.dynamic-action-content--survey .dynamic-action-block--media .dynamic-action-media-grid { margin-top:6rpx; }
+.dynamic-action-content--survey .dynamic-action-block--media .dynamic-action-media-tile {
+  min-height:140rpx; height:140rpx; width:100%; flex:1 1 100%; }
+.dynamic-action-content--survey .dynamic-action-block--media .dynamic-action-media-count {
+  padding:2rpx 8rpx; background:transparent; color:var(--app-color-text-secondary); }
+.dynamic-action-block__helper { display:block; margin-top:14rpx; color:var(--app-color-text-secondary);
+  font-size:21rpx; line-height:1.55; }
+.dynamic-action-content--survey .dynamic-action-block--field .dynamic-action-field--survey { margin-bottom:16rpx; }
 /* S04: media stays inline for capture/upload. Only tapping an existing
    verified preview invokes a larger in-app view, without platform API calls. */
 .dynamic-action-photo-preview { position:fixed; z-index:160; inset:0; background:#111d30;
