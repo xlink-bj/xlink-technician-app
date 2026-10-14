@@ -17,6 +17,10 @@ Use this order when designing or reviewing mobile UI:
 5. MP-WEIXIN Review App for platform-fidelity calibration;
 6. real MP/App device smoke for release/platform validation.
 
+For **M1 S2 Commercial UX/UI**, the [XLink Taste adaptation](../../skills/xlink-s2-commercial-taste/SKILL.md) is a **mandatory visual review method**, below accepted business and Appointment UX authority. Read both vendored upstream skills (`skills/taste-redesign/SKILL.md`, `skills/taste-minimalist/SKILL.md`); use scan → diagnose → targeted fix → actual browser screenshots without applying marketing-site layout, new external assets or unverified business UI semantics.
+
+**CODE_PASS and PNG-sheet generation are NOT commercial visual acceptance.** Require Owner review of actual technician task hierarchy, operator copy, primary action, mobile density, loading/empty/error states and dominant DEV scaffolding at matched 375×667 / 390×844 viewports. The DEV synthetic provenance and non-submission safety labels remain explicit and subordinate, never suppressed to simulate live connectivity.
+
 The raw H5 harness is a fast semantic/state harness only. It is not visual
 authority.
 
