@@ -109,8 +109,24 @@
                 </button>
               </scroll-view>
             </view>
-            <AppButton class="survey-leakage-cause__done" variant="primary" block @tap="close">
-              完成选择
+            <view class="survey-leakage-cause__selected" data-testid="survey-leakage-cause-selected">
+              <view class="survey-leakage-cause__selected-header">
+                <text>已选 {{ draftIds.length }} 项</text>
+                <button class="survey-leakage-cause__clear" :disabled="draftIds.length === 0"
+                  @tap="clearDraft">清空</button>
+              </view>
+              <view v-if="draftChoices.length" class="survey-leakage-cause__chips">
+                <button v-for="choice in draftChoices" :key="choice.value"
+                  class="survey-leakage-cause__chip" :disabled="workspace.lifecycle === 'submitting'"
+                  :aria-label="`移除${choice.label}`" @tap="toggleOption(choice.value)">
+                  {{ choice.label }} <text aria-hidden="true">×</text>
+                </button>
+              </view>
+              <text v-else class="survey-leakage-cause__selected-empty">尚未选择渗漏原因</text>
+            </view>
+            <AppButton class="survey-leakage-cause__done" variant="primary" block
+              :disabled="workspace.lifecycle === 'submitting'" @tap="confirm">
+              确认选择
             </AppButton>
           </template>
         </view>
@@ -130,6 +146,13 @@ import AppStatus from '@shared/ui/AppStatus.vue'
 
 const workspace = useActionWorkspaceStore()
 const isOpen = ref(false)
+const draftIds = ref<readonly string[]>([])
+const draftChoices = computed(() => {
+  const chosen = new Set(draftIds.value)
+  return workspace.surveyLeakageCauseOptions
+    .flatMap(group => group.children)
+    .filter(option => chosen.has(option.value))
+})
 const activeGroupValue = ref<string | undefined>()
 const selectedCount = computed(() => workspace.surveyLeakageCauseSelectedIds.length)
 const selectedLabels = computed(() => workspace.surveyLeakageCauseLabels.join('、'))
@@ -147,6 +170,7 @@ watch(
 )
 
 async function open(): Promise<void> {
+  draftIds.value = [...workspace.surveyLeakageCauseSelectedIds]
   isOpen.value = true
   const result = await workspace.loadSurveyLeakageCauseOptions()
   if (result.state === 'succeeded') activeGroupValue.value = workspace.surveyLeakageCauseOptions[0]?.value
@@ -154,6 +178,17 @@ async function open(): Promise<void> {
 
 function close(): void {
   isOpen.value = false
+  draftIds.value = []
+}
+
+function clearDraft(): void {
+  if (workspace.lifecycle !== 'submitting') draftIds.value = []
+}
+
+function confirm(): void {
+  if (workspace.lifecycle === 'submitting' || workspace.surveyLeakageCauseReadOnly) return
+  workspace.setSurveyLeakageCauseSelection(draftIds.value)
+  close()
 }
 
 async function retry(): Promise<void> {
@@ -164,20 +199,20 @@ async function retry(): Promise<void> {
 function selectedCountFor(groupValue: string): number {
   const group = workspace.surveyLeakageCauseOptions.find((candidate) => candidate.value === groupValue)
   if (!group) return 0
-  const selected = new Set(workspace.surveyLeakageCauseSelectedIds)
+  const selected = new Set(draftIds.value)
   return group.children.filter((option) => selected.has(option.value)).length
 }
 
 function isSelected(value: string): boolean {
-  return workspace.surveyLeakageCauseSelectedIds.includes(value)
+  return draftIds.value.includes(value)
 }
 
 function toggleOption(value: string): void {
-  const next = new Set(workspace.surveyLeakageCauseSelectedIds)
+  const next = new Set(draftIds.value)
   if (next.has(value)) next.delete(value)
   else next.add(value)
   const ordered = workspace.surveyLeakageCauseOptions.flatMap((group) => group.children.map((option) => option.value))
-  workspace.setSurveyLeakageCauseSelection(ordered.filter((candidate) => next.has(candidate)))
+  draftIds.value = ordered.filter((candidate) => next.has(candidate))
 }
 </script>
 
@@ -250,4 +285,21 @@ function toggleOption(value: string): void {
 .survey-leakage-cause__trigger { min-height:86rpx; padding:12rpx 2rpx; }
 .survey-leakage-cause__summary { flex:1; min-width:0; }
 .survey-leakage-cause__required { margin-left:-9rpx; font-size:26rpx; font-weight:750; color:#e47736; }
+/* S03: draft selection and visible chips; closing the panel cancels
+   provisional edits, only Confirm updates the existing Form Runtime. */
+.survey-leakage-cause__sheet-body { flex:1 1 auto; min-height:240rpx; height:min(41vh,610rpx); }
+.survey-leakage-cause__selected { border-top:1rpx solid var(--app-color-divider);
+  padding:13rpx 2rpx 3rpx; margin-top:13rpx; flex:none; }
+.survey-leakage-cause__selected-header { display:flex; align-items:center; justify-content:space-between;
+  color:var(--app-color-text-secondary); font-size:22rpx; font-weight:650; }
+.survey-leakage-cause__clear { background:transparent; border:0; color:var(--app-color-primary);
+  font-size:22rpx; min-height:54rpx; padding:0 12rpx; margin:0; }
+.survey-leakage-cause__clear::after, .survey-leakage-cause__chip::after { border:0; }
+.survey-leakage-cause__clear[disabled] { color:var(--app-color-text-muted); }
+.survey-leakage-cause__chips { display:flex; flex-wrap:wrap; gap:9rpx; max-height:116rpx; overflow-y:auto; margin-top:4rpx; }
+.survey-leakage-cause__chip { display:flex; align-items:center; gap:8rpx; background:var(--app-color-primary-soft);
+  color:var(--app-color-primary); border:0; border-radius:999rpx; padding:8rpx 14rpx;
+  margin:0; font-size:21rpx; min-height:52rpx; max-width:100%; }
+.survey-leakage-cause__selected-empty { color:var(--app-color-text-muted); font-size:21rpx; display:block; padding:7rpx 0; }
+.survey-leakage-cause__done { margin-top:12rpx; flex:none; }
 </style>
