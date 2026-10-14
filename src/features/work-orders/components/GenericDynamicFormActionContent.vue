@@ -416,6 +416,50 @@ async function pickMedia(fieldId: string): Promise<void> {
 .dynamic-action-content--survey .dynamic-action-media-tile { flex-basis:174rpx; width:174rpx; height:174rpx; border-radius:14rpx; }
 .dynamic-action-content--survey .dynamic-action-media-tile--add { border:2rpx dashed var(--app-color-primary-border); background:var(--app-color-primary-soft); }
 .dynamic-action-content--survey .dynamic-action-media-tile--preview { cursor:pointer; }
+/* Measurement stays on the S01 surface; consecutive numeric fields read
+   as one compact data-entry section rather than independent debug cards. */
+.dynamic-action-content--survey .dynamic-action-field--survey-measure {
+  box-sizing:border-box; display:flex; align-items:center; gap:14rpx;
+  min-height:94rpx; padding:14rpx 22rpx;
+}
+.dynamic-action-content--survey .dynamic-action-field--survey-measure .app-field__label {
+  flex:1; min-width:0; margin:0; font-size:var(--app-font-body); font-weight:650;
+}
+.dynamic-action-content--survey .dynamic-action-field--survey-measure .app-input {
+  width:44%; flex:0 0 44%; min-width:0; box-sizing:border-box; text-align:right;
+  padding:0 18rpx; min-height:72rpx; font-size:var(--app-font-body);
+}
+.dynamic-action-content--survey .dynamic-action-field--survey-measure + .dynamic-action-field--survey-measure {
+  border-top-color:var(--app-color-divider); border-top-left-radius:0;
+  border-top-right-radius:0; margin-top:-17rpx; box-shadow:none;
+}
+/* Each `image/file` field retains its own fieldId, max, provider and
+   media queue; only the visual affordance forms the paired S01 photo grid. */
+.dynamic-action-content--survey .dynamic-action-field--survey-media {
+  display:inline-block; box-sizing:border-box; vertical-align:top;
+  width:48.3%; margin:0 1.7% 16rpx 0; padding:16rpx;
+  min-height:252rpx;
+}
+.dynamic-action-content--survey .dynamic-action-field--survey-media .app-field__label {
+  font-size:var(--app-font-meta); min-height:48rpx; line-height:1.35;
+}
+.dynamic-action-content--survey .dynamic-action-field--survey-media .dynamic-action-media-header-copy { display:none; }
+.dynamic-action-content--survey .dynamic-action-field--survey-media .dynamic-action-media-count {
+  padding:3rpx 9rpx; font-size:var(--app-font-meta); margin-bottom:6rpx;
+}
+.dynamic-action-content--survey .dynamic-action-field--survey-media .dynamic-action-media-grid {
+  margin-top:6rpx; gap:8rpx;
+}
+.dynamic-action-content--survey .dynamic-action-field--survey-media .dynamic-action-media-tile {
+  width:100%; height:148rpx; flex:1 1 100%; min-width:0;
+}
+.dynamic-action-content--survey .dynamic-action-field--survey-media .dynamic-action-media-tile--add {
+  background:var(--app-color-primary-soft); border:2rpx dashed var(--app-color-primary-border);
+}
+.dynamic-action-content--survey .dynamic-action-field--survey-media .dynamic-action-media-hint {
+  font-size:var(--app-font-meta); margin-top:10rpx; padding-top:9rpx;
+}
+
 .dynamic-action-content--survey .dynamic-action-presentation-divider:not(.dynamic-action-presentation-divider--gap) {
   margin:22rpx 0 14rpx; padding-left:6rpx;
 }
