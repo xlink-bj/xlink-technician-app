@@ -13,6 +13,18 @@
     <AppButton class="workspace-state-action" @tap="exit">返回工单详情</AppButton>
   </view>
 
+  <QuotationOrderHub
+    v-else-if="quotationHubVisible"
+    ref="quotationHubRef"
+    :work-order-id="String(workspace.descriptor?.workOrderId ?? '')"
+    :display-number="workspace.detail?.displayNumber"
+    :customer-name="workspace.detail?.customerName"
+    :local-draft-group-count="quotationComposition.groups.length"
+    :read-only="productionReadOnly"
+    @create="openQuotationEditor"
+    @edit="openExistingQuotationEditor"
+  />
+
   <QuotationActionWorkspace
     v-else-if="workspace.descriptor?.contentKind === 'quotation' && workspace.descriptor.actionIntent === 'place_order'"
     :content-state="quotationContentViewState"
@@ -251,6 +263,7 @@ import {
   useActionWorkspaceStore,
 } from '@features/work-orders/action-workspace'
 import QuotationActionWorkspace from '@features/work-orders/quotation/QuotationActionWorkspace.vue'
+import QuotationOrderHub from '@features/work-orders/quotation/QuotationOrderHub.vue'
 import { useQuotationCompositionStore } from '@features/work-orders/quotation/composition-store'
 import { appointmentDisplayFor } from '@features/work-orders/appointment-time'
 import { isMultilineField } from '@features/work-orders/form-presentation'
@@ -286,6 +299,29 @@ const routeId = ref<ReturnType<typeof parseActionWorkspaceId>>(null)
 const routeNodeId = ref<ReturnType<typeof parseActionWorkspaceNodeId>>(null)
 const routeAction = ref<string | undefined>(undefined)
 const routeQuotationOrderId = ref<string | undefined>(undefined)
+const routeQuotationEntry = ref<string | undefined>(undefined)
+const quotationEditorOpened = ref(false)
+const quotationHubRef = ref<{ finishEdit: (message?: string) => void } | null>(null)
+const quotationHubVisible = computed(() =>
+  routeQuotationEntry.value === 'orders' && !quotationEditorOpened.value
+  && !routeQuotationOrderId.value && workspace.descriptor?.contentKind === 'quotation'
+  && workspace.descriptor.actionIntent === 'place_order',
+)
+function openQuotationEditor(): void {
+  if (productionReadOnly || !quotationHubVisible.value) return
+  quotationEditorOpened.value = true
+}
+async function openExistingQuotationEditor(orderId: string): Promise<void> {
+  if (productionReadOnly || !quotationHubVisible.value || !orderId.trim()) return
+  const result = await workspace.loadQuotationOrderForEdit(orderId)
+  if (result.state === 'succeeded') {
+    quotationEditorOpened.value = true
+  } else {
+    quotationHubRef.value?.finishEdit(
+      workspace.quotationEditState.message || '未能安全恢复该订单；已保留服务器记录与当前草稿。',
+    )
+  }
+}
 const routeError = ref('')
 const isNavigating = ref(false)
 const localJourneyContext = ref<MockJourneyContextSummary | null>(null)
@@ -323,6 +359,7 @@ const quotationContentViewState = computed(() => workspace.quotationContentState
   : workspace.quotationContentState)
 
 const workspaceNavigationTitle = computed(() => {
+  if (quotationHubVisible.value) return '订单管理'
   if (routeAction.value === 'place_order' || workspace.descriptor?.contentKind === 'quotation') return '报价工作台'
   if (workspace.descriptor?.formPurpose === 'survey') return '现场勘查'
   if (workspace.descriptor?.actionIntent === 'interact_with_form') return '工单表单'
@@ -394,6 +431,8 @@ onLoad((options) => {
   routeNodeId.value = parseActionWorkspaceNodeId(options?.node)
   routeAction.value = typeof options?.action === 'string' ? options.action : undefined
   routeQuotationOrderId.value = typeof options?.orderId === 'string' && options.orderId.trim() ? options.orderId.trim() : undefined
+  routeQuotationEntry.value = options?.entry === 'orders' && routeAction.value === 'place_order' ? 'orders' : undefined
+  quotationEditorOpened.value = false
   routeReady.value = true
 })
 
