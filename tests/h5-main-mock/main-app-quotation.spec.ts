@@ -384,6 +384,9 @@ test('same Mock-018 quotation is reachable from normal work order list and detai
   const openQuotation = page.locator('.primary-task-action')
   await expect(openQuotation).toBeEnabled()
   await openQuotation.click()
+  await expect(page.getByTestId('quotation-order-hub')).toBeVisible()
+  await expect(page.getByTestId('quotation-hub-start-new')).toBeEnabled()
+  await page.getByTestId('quotation-hub-start-new').click()
   await expect(page).toHaveURL(/pages\/work-orders\/action-workspace/)
   await expect(page.getByTestId('quotation-state-ready')).toBeVisible()
   await expect(page.getByTestId('quotation-product-demo-read-only')).toBeVisible()
@@ -481,6 +484,8 @@ test('one MOCK-019 WorkOrder progresses Appointment → Survey → Quotation wit
   await expect(page.locator('.summary-number')).toContainText('MOCK-019')
   await expect(page.locator('.current-task-card')).toContainText('报价')
   await page.locator('.primary-task-action').click()
+  await expect(page.getByTestId('quotation-order-hub')).toBeVisible()
+  await page.getByTestId('quotation-hub-start-new').click()
   await expect(page).toHaveURL(/mock-work-order-019-continuous-journey/)
   await expect(page.locator('.uni-page-head__title')).toContainText('报价工作台')
   await expect(page.getByTestId('quotation-state-ready')).toBeVisible()
@@ -502,6 +507,8 @@ test('one MOCK-019 WorkOrder progresses Appointment → Survey → Quotation wit
 
   // Reload must not reset the simulated stage to appointment or switch ids.
   await page.reload({ waitUntil: 'domcontentloaded' })
+  await expect(page.getByTestId('quotation-order-hub')).toBeVisible()
+  await page.getByTestId('quotation-hub-start-new').click()
   await expect(page.getByTestId('quotation-state-ready')).toBeVisible()
   await expect(page).toHaveURL(/mock-work-order-019-continuous-journey/)
   await expect(page.getByTestId('mock-journey-context-appointment')).toContainText('P1B预约备注：现场先确认屋面渗漏')
