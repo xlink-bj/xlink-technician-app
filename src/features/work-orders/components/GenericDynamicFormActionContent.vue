@@ -159,6 +159,15 @@
     </template>
 
     <slot name="experience" />
+    <view v-if="previewUrl" class="dynamic-action-photo-preview" data-testid="survey-media-lightbox"
+      role="dialog" aria-modal="true">
+      <view class="dynamic-action-photo-preview__header">
+        <text>查看现场照片</text>
+        <button class="dynamic-action-photo-preview__close" @tap="previewUrl = null" aria-label="关闭预览">×</button>
+      </view>
+      <image class="dynamic-action-photo-preview__image" :src="previewUrl" mode="aspectFit" />
+      <button class="dynamic-action-photo-preview__done" @tap="previewUrl = null">返回表单</button>
+    </view>
 
     <AppStatus
       v-if="workspace.dynamicUnsupportedFields.length > 0"
@@ -174,7 +183,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 
 import { useActionWorkspaceStore } from '@features/work-orders/action-workspace'
 import type { FormFieldValue } from '@shared/ports'
@@ -285,13 +294,14 @@ function setField(fieldId: string, value: FormFieldValue): void {
   workspace.setField(fieldId, value)
 }
 
+const previewUrl = ref<string | null>(null)
 function previewMedia(fieldId: string, url: string): void {
   const urls = workspace.mediaByField[fieldId]?.map((item) => item.url) ?? []
   const knownUrls = urls.length ? urls : workspace.dynamicFields
     .filter((field) => field.fieldId === fieldId)
     .flatMap((field) => mediaPreviewsFor(field).map((item) => item.url))
   if (!knownUrls.includes(url)) return
-  uni.previewImage({ urls: [...knownUrls], current: url })
+  previewUrl.value = url
 }
 
 async function pickMedia(fieldId: string): Promise<void> {
@@ -413,4 +423,15 @@ async function pickMedia(fieldId: string): Promise<void> {
 .dynamic-action-content--survey .dynamic-action-presentation-divider--gap {
   height:12rpx; background:transparent; margin:0;
 }
+/* S04: media stays inline for capture/upload. Only tapping an existing
+   verified preview invokes a larger in-app view, without platform API calls. */
+.dynamic-action-photo-preview { position:fixed; z-index:160; inset:0; background:#111d30;
+  display:flex; flex-direction:column; justify-content:space-between; padding:calc(24rpx + env(safe-area-inset-top)) 24rpx calc(30rpx + env(safe-area-inset-bottom)); box-sizing:border-box; }
+.dynamic-action-photo-preview__header { display:flex; align-items:center; justify-content:space-between;
+  color:white; font-size:var(--app-font-body); font-weight:750; }
+.dynamic-action-photo-preview__close { border:0; color:white; background:transparent; margin:0; font-size:44rpx; min-height:72rpx; }
+.dynamic-action-photo-preview__close::after { border:0; }
+.dynamic-action-photo-preview__image { width:100%; flex:1; min-height:0; }
+.dynamic-action-photo-preview__done { background:white; color:var(--app-color-text-primary);
+  font-weight:750; border-radius:12rpx; min-height:86rpx; }
 </style>
