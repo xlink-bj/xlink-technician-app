@@ -1,5 +1,7 @@
 <template>
-  <view class="action-workspace-form-actions" data-testid="action-workspace-form-actions">
+  <view class="action-workspace-form-actions-wrap" data-testid="action-workspace-form-actions-wrap">
+    <text v-if="hint" class="action-workspace-form-actions__hint" data-testid="survey-complete-hint">{{ hint }}</text>
+    <view class="action-workspace-form-actions" data-testid="action-workspace-form-actions">
     <AppButton
       data-testid="dynamic-form-save"
       class="action-workspace-form-actions__save"
@@ -21,6 +23,7 @@
     >
       {{ lifecycle === 'submitting' ? '提交中…' : submitLabel }}
     </AppButton>
+    </view>
   </view>
 </template>
 
@@ -35,6 +38,7 @@ withDefaults(
     readonly canSubmit: boolean
     readonly transitioning?: boolean
     readonly submitLabel?: string
+    readonly hint?: string
   }>(),
   {
     transitioning: false,
@@ -49,6 +53,8 @@ defineEmits<{
 </script>
 
 <style>
+.action-workspace-form-actions-wrap { display:flex; flex-direction:column; gap:9rpx; width:100%; }
+.action-workspace-form-actions__hint { text-align:center; color:var(--app-color-text-secondary); font-size:var(--app-font-meta); line-height:1.4; }
 .action-workspace-form-actions {
   display: flex;
   gap: var(--app-action-bar-gap);
