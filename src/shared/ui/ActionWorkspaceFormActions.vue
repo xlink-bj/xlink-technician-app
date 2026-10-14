@@ -1,6 +1,9 @@
 <template>
   <view class="action-workspace-form-actions-wrap" data-testid="action-workspace-form-actions-wrap">
-    <text v-if="hint" class="action-workspace-form-actions__hint" data-testid="survey-complete-hint">{{ hint }}</text>
+    <view v-if="hint" class="action-workspace-form-actions__hint" data-testid="survey-complete-hint">
+      <AppIcon name="warning" :size="14" color="#db8a2e" />
+      <text>{{ hint }}</text>
+    </view>
     <view class="action-workspace-form-actions" data-testid="action-workspace-form-actions">
     <AppButton
       data-testid="dynamic-form-save"
@@ -29,6 +32,7 @@
 
 <script setup lang="ts">
 import AppButton from './AppButton.vue'
+import AppIcon from './AppIcon.vue'
 import type { AppActionLifecycle } from './types'
 
 withDefaults(
@@ -65,4 +69,5 @@ defineEmits<{
   flex: 1 1 0;
   min-width: 0;
 }
-</style>
+.action-workspace-form-actions__hint { display:flex; align-items:center; justify-content:center;
+  gap:8rpx; font-size:22rpx; color:#ad6b28; line-height:1.45; padding:0 4rpx; }</style>
