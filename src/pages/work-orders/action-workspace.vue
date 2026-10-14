@@ -65,6 +65,8 @@
     v-else-if="workspace.descriptor && (workspace.appointmentForm || workspace.dynamicForm)"
     :customer-name="workspace.detail?.customerName"
     :display-number="workspace.detail?.displayNumber"
+    :commercial-survey="workspace.descriptor.formPurpose === 'survey'"
+    :demo-survey="Boolean(localJourneyContext)"
     :lifecycle="workspace.lifecycle"
     :draft-status="workspace.draftStatus"
     :transitioning="isNavigating"
@@ -73,9 +75,11 @@
     :submit-label="workspace.descriptor.formPurpose === 'survey' ? '完成勘查' : workspace.descriptor.actionIntent === 'interact_with_form' ? '完成' : '继续确认'"
     @submit="submitWorkspace"
   >
-    <MockJourneyContextPanel v-if="localJourneyContext" :context="localJourneyContext"
-      :compact="workspace.descriptor.formPurpose === 'survey'" />
+    <MockJourneyContextPanel v-if="localJourneyContext && workspace.descriptor.formPurpose !== 'survey'"
+      :context="localJourneyContext" />
     <SurveyActionContent v-if="workspace.descriptor.actionIntent === 'interact_with_form' && workspace.descriptor.formPurpose === 'survey'" />
+    <MockJourneyContextPanel v-if="localJourneyContext && workspace.descriptor.formPurpose === 'survey'"
+      :context="localJourneyContext" compact />
     <GenericDynamicFormActionContent v-else-if="workspace.descriptor.actionIntent === 'interact_with_form'" />
     <view v-else class="action-workspace-content app-surface" :data-field-count="workspace.appointmentFields.length">
       <view class="action-content-heading">
@@ -193,7 +197,8 @@
         :transitioning="isNavigating"
         :submit-label="workspace.descriptor.formPurpose === 'survey' ? '完成勘查' : '完成'"
         @save="workspace.saveDynamicForm"
-        @submit="submitWorkspace"
+        :hint="workspace.descriptor.formPurpose === 'survey' && !workspace.canSubmit ? '当前填写或权限条件未满足，暂不能完成勘查' : undefined"
+        @submit="requestSurveyCompletion"
       />
     </template>
 
@@ -214,6 +219,22 @@
   <view v-else class="workspace-state workspace-state--centered">
     <text class="workspace-state-title">操作内容暂不可用</text>
     <AppButton class="workspace-state-action" @tap="exit">返回工单详情</AppButton>
+  </view>
+
+  <view v-if="surveyConfirmOpen" class="survey-complete-backdrop"
+    data-testid="survey-complete-confirm" role="dialog" aria-modal="true">
+    <view class="survey-complete-sheet">
+      <view class="survey-complete-check" aria-hidden="true">✓</view>
+      <text class="survey-complete-title">确认完成勘查？</text>
+      <text class="survey-complete-description">完成前请确认现场记录已核对。确认后将按当前工单流程提交，不等同于保存本机草稿。</text>
+      <view class="survey-complete-actions">
+        <AppButton variant="secondary" block data-testid="survey-complete-cancel"
+          @tap="surveyConfirmOpen = false">再检查一下</AppButton>
+        <AppButton block data-testid="survey-complete-confirm-action"
+          :disabled="!workspace.canSubmit || workspace.lifecycle === 'submitting'"
+          @tap="confirmSurveyCompletion">确认完成</AppButton>
+      </view>
+    </view>
   </view>
 </template>
 
@@ -451,6 +472,22 @@ async function continueToConfirmation(): Promise<void> {
   if (result.state !== 'succeeded') isNavigating.value = false
 }
 
+const surveyConfirmOpen = ref(false)
+
+function requestSurveyCompletion(): void {
+  if (workspace.descriptor?.formPurpose === 'survey') {
+    if (workspace.canSubmit && workspace.lifecycle !== 'submitting') surveyConfirmOpen.value = true
+    return
+  }
+  void submitWorkspace()
+}
+
+async function confirmSurveyCompletion(): Promise<void> {
+  if (!surveyConfirmOpen.value || !workspace.canSubmit || workspace.lifecycle === 'submitting') return
+  surveyConfirmOpen.value = false
+  await submitWorkspace()
+}
+
 async function submitWorkspace(): Promise<void> {
   if (workspace.descriptor?.actionIntent === 'interact_with_form') {
     await workspace.completeDynamicForm()
@@ -553,4 +590,19 @@ function actionErrorCopy(error: OperationError | null): string {
 .mock-signing-entry__note { color: var(--app-color-text-secondary); font-size: 21rpx; line-height: 1.45; }
 .mock-journey-progress { margin: 20rpx 24rpx; padding: 20rpx; display: flex; flex-direction: column; gap: 12rpx; }
 .mock-journey-progress__note { color: var(--app-color-text-secondary); font-size: 22rpx; line-height: 1.5; }
+/* S05 review is a consent step only. Real workflow remains behind
+   the original Runtime-gated completeDynamicForm() call. */
+.survey-complete-backdrop { position:fixed; z-index:140; inset:0; background:rgba(14,29,49,.53);
+  display:flex; align-items:flex-end; justify-content:center; }
+.survey-complete-sheet { box-sizing:border-box; background:var(--app-color-surface);
+  border-radius:26rpx 26rpx 0 0; width:100%; max-width:960rpx;
+  padding:34rpx var(--app-page-gutter) calc(30rpx + env(safe-area-inset-bottom));
+  display:flex; flex-direction:column; align-items:center; text-align:center; gap:18rpx; }
+.survey-complete-check { background:var(--app-color-primary-soft); color:var(--app-color-primary);
+  border-radius:999rpx; width:84rpx; height:84rpx; display:flex; align-items:center; justify-content:center;
+  font-size:49rpx; font-weight:800; }
+.survey-complete-title { color:var(--app-color-text-primary); font-size:var(--app-font-section-title); font-weight:800; }
+.survey-complete-description { color:var(--app-color-text-secondary); font-size:var(--app-font-body); line-height:1.55; }
+.survey-complete-actions { width:100%; display:flex; gap:16rpx; margin-top:12rpx; }
+.survey-complete-actions .app-button { flex:1; min-width:0; }
 </style>
