@@ -30,6 +30,9 @@ Rules:
 
 - R2 Live Mobile is the primary visual truth for G4-UX.
 - Frontend visual work must explicitly use `skills/xlink-r2-frontend-qa/SKILL.md`.
+- **M1 S2 commercial UI work MUST ALSO use `skills/xlink-s2-commercial-taste/SKILL.md`** (offline Taste Skill v2 `redesign-existing-projects` + `minimalist-ui` pinned in `skills/taste-*/SKILL.md`, MIT notice in `skills/taste-license/LICENSE`).
+- Commercial UI quality is a **separate Owner visual gate**: `CODE_PASS` / `Screenshot generated` do **not** imply `COMMERCIAL_UI_ACCEPTED`; show matched-viewport actual-App before/after and deliberately reject debug-shell hierarchy.
+- Never replace approved Login/WorkOrder/Appointment visuals merely to apply a generic design trend; survey, quotation and signing are the active S2 targets.
 - Visual implementation requires matched-viewport screenshot QA before handoff.
 - Production-grade frontend quality is a review requirement; weak engineering-shell UI is a blocker.
 - R2 visual reference does not authorize unsupported business semantics.
