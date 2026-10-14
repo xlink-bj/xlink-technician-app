@@ -78,8 +78,6 @@
     <MockJourneyContextPanel v-if="localJourneyContext && workspace.descriptor.formPurpose !== 'survey'"
       :context="localJourneyContext" />
     <SurveyActionContent v-if="workspace.descriptor.actionIntent === 'interact_with_form' && workspace.descriptor.formPurpose === 'survey'" />
-    <MockJourneyContextPanel v-if="localJourneyContext && workspace.descriptor.formPurpose === 'survey'"
-      :context="localJourneyContext" compact />
     <GenericDynamicFormActionContent v-else-if="workspace.descriptor.actionIntent === 'interact_with_form'" />
     <view v-else class="action-workspace-content app-surface" :data-field-count="workspace.appointmentFields.length">
       <view class="action-content-heading">
@@ -171,6 +169,9 @@
         />
       </AppField>
       </view>
+
+    <MockJourneyContextPanel v-if="localJourneyContext && workspace.descriptor.formPurpose === 'survey'"
+      :context="localJourneyContext" compact />
 
     <!-- DEV-only synthetic state progression. This is NOT Workflow Complete.
          The same 019 WorkOrderId is used by all three normal App pages. -->
