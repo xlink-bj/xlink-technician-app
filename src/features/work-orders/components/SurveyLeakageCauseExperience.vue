@@ -11,6 +11,7 @@
     </view>
     <AppField
       class="survey-leakage-cause__field"
+      hide-label
       :label="workspace.surveyLeakageCauseExperience.valueField.label"
       :required="workspace.surveyLeakageCauseExperience.valueField.required"
       :supporting="workspace.surveyLeakageCauseReadOnly ? '仅查看已保存的选择' : '按维修部位选择一个或多个渗漏原因'"
