@@ -65,8 +65,13 @@
           :data-testid="`dynamic-media-${field.valueKey}`"
         >
           <view class="dynamic-action-media-header">
+            <view class="dynamic-action-media-header-copy">
+              <text class="dynamic-action-media-title">{{ field.type === 'image' ? '现场照片' : '现场附件' }}</text>
+              <text class="dynamic-action-media-subtitle">按当前勘察要求补充记录</text>
+            </view>
             <text class="dynamic-action-media-count" :data-testid="`dynamic-media-count-${field.valueKey}`">
-              已选 {{ mediaCountFor(field.fieldId) }} 项<text v-if="mediaMaxFor(field) !== undefined"> / {{ mediaMaxFor(field) }}</text>
+              {{ mediaCountFor(field.fieldId) }}<text v-if="mediaMaxFor(field) !== undefined"> / {{ mediaMaxFor(field) }}</text>
+              <text class="dynamic-action-media-count-unit"> 项</text>
             </text>
           </view>
 
@@ -84,7 +89,7 @@
               :data-testid="`dynamic-media-local-${field.valueKey}`"
             >
               <AppIcon name="image" :size="24" color="var(--app-color-text-secondary)" />
-              <text>本地媒体</text>
+              <text>待处理</text>
             </view>
             <view
               v-if="mediaAddTileLabel(field)"
@@ -94,7 +99,7 @@
               tabindex="0"
               @tap="pickMedia(field.fieldId)"
             >
-              <AppIcon name="image" :size="24" color="var(--app-color-primary)" />
+              <AppIcon name="image" :size="22" color="var(--app-color-primary)" />
               <text>{{ mediaAddTileLabel(field) }}</text>
             </view>
           </view>
@@ -287,39 +292,44 @@ async function pickMedia(fieldId: string): Promise<void> {
 .dynamic-action-title { color: var(--app-color-text-primary); font-size: var(--app-font-section-title); font-weight: 800; }
 .dynamic-action-caption { color: var(--app-color-text-secondary); display: block; font-size: var(--app-font-field-label); margin-top: var(--app-space-xs); }
 .dynamic-action-field { margin-top: var(--app-space-lg); }
+/* A field-service media section, not a generic engineering upload grid.
+   State, authorization and retries remain entirely owned by the media Port. */
 .dynamic-action-media {
-  background: var(--app-color-control);
+  background: var(--app-color-surface);
   border: 1rpx solid var(--app-color-border);
-  border-radius: var(--app-radius-control);
+  border-radius: var(--app-radius-surface);
   display: block;
-  padding: var(--app-space-md);
+  padding: 20rpx;
 }
-.dynamic-action-media-header { align-items: center; display: flex; justify-content: flex-end; }
-.dynamic-action-media-count { color: var(--app-color-text-secondary); font-size: var(--app-font-caption); }
-.dynamic-action-media-grid { display: flex; flex-wrap: wrap; gap: var(--app-control-gap); margin-top: var(--app-space-md); }
+.dynamic-action-media-header { align-items: center; display: flex; justify-content: space-between; gap: 16rpx; }
+.dynamic-action-media-header-copy { display: flex; flex-direction: column; gap: 2rpx; min-width: 0; }
+.dynamic-action-media-title { color: var(--app-color-text-primary); font-size: var(--app-font-body); font-weight: 700; }
+.dynamic-action-media-subtitle { color: var(--app-color-text-secondary); font-size: var(--app-font-meta); line-height: 1.4; }
+.dynamic-action-media-count { flex: none; color: var(--app-color-text-primary); background: var(--app-color-control-surface); border-radius: 10rpx; font-size: var(--app-font-body); font-weight: 700; padding: 6rpx 12rpx; }
+.dynamic-action-media-count-unit { color: var(--app-color-text-secondary); font-size: var(--app-font-meta); font-weight: 400; }
+.dynamic-action-media-grid { display: flex; flex-wrap: wrap; gap: 16rpx; margin-top: 18rpx; }
 .dynamic-action-media-tile {
   align-items: center;
   background: var(--app-color-control-surface);
   border: 1rpx solid var(--app-color-border-control);
-  border-radius: var(--app-radius-control);
+  border-radius: 14rpx;
   box-sizing: border-box;
   display: flex;
-  flex-basis: 17vw;
+  flex: 0 0 148rpx;
   flex-direction: column;
-  flex-grow: 0;
-  flex-shrink: 0;
-  height: 17vw;
+  gap: 5rpx;
+  height: 148rpx;
   justify-content: center;
   overflow: hidden;
-  width: 17vw;
+  width: 148rpx;
 }
-.dynamic-action-media-tile--pending { border-style: dashed; color: var(--app-color-text-secondary); gap: var(--app-space-xs); padding: var(--app-space-xs); text-align: center; }
-.dynamic-action-media-tile--add { color: var(--app-color-primary); cursor: pointer; font-size: var(--app-font-caption); gap: var(--app-space-xs); }
+.dynamic-action-media-tile--pending { border-style: dashed; color: var(--app-color-text-secondary); font-size: var(--app-font-meta); padding: 12rpx; text-align: center; }
+.dynamic-action-media-tile--add { background: var(--app-color-primary-soft); border-color: var(--app-color-primary-border); border-style: dashed; color: var(--app-color-primary); cursor: pointer; font-size: var(--app-font-meta); font-weight: 650; padding: 8rpx; text-align: center; }
 .dynamic-action-media-tile--add:active { opacity: 0.78; }
 .dynamic-action-media-thumbnail { display: block; height: 100%; object-fit: cover; width: 100%; }
-.dynamic-action-media-hint { background: var(--app-color-page); color: var(--app-color-text-secondary); display: block; font-size: var(--app-font-caption); line-height: 1.5; margin-top: var(--app-space-md); padding: var(--app-space-sm) var(--app-space-md); }
-.dynamic-action-media-actions { margin-top: var(--app-space-md); }
-.dynamic-action-media-readonly { color: var(--app-color-text-secondary); font-size: var(--app-font-caption); }
+.dynamic-action-media-hint { border-top: 1rpx solid var(--app-color-divider); color: var(--app-color-text-secondary); display: block; font-size: var(--app-font-meta); line-height: 1.5; margin-top: 16rpx; padding-top: 12rpx; }
+.dynamic-action-media-actions { margin-top: 16rpx; }
+.dynamic-action-media-readonly { color: var(--app-color-text-secondary); font-size: var(--app-font-meta); }
 .dynamic-action-presentation-divider { align-items: center; display: flex; gap: var(--app-space-sm); margin-top: var(--app-space-lg); }
 .dynamic-action-presentation-divider--gap { background: var(--app-color-page); border-radius: var(--app-radius-control); height: var(--app-space-lg); margin-left: calc(var(--app-card-padding) * -1); margin-right: calc(var(--app-card-padding) * -1); }
 .dynamic-action-presentation-line { background: var(--app-color-divider); flex: 1; height: 1rpx; }
