@@ -7,7 +7,7 @@
         <text class="dynamic-action-title">{{ isSurvey ? '勘查记录' : title }}</text>
       </view>
       <text class="dynamic-action-caption">{{ caption }}</text>
-      <text v-if="isSurvey && surveyRequiredVisible" class="dynamic-action-required-note">* 必填字段按当前表单显示</text>
+      <text v-if="isSurvey && surveyRequiredVisible" class="dynamic-action-required-note">* 必填</text>
     </view>
 
     <template v-for="block in presentationBlocks" :key="block.key">
