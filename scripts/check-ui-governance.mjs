@@ -108,4 +108,23 @@ if (!packageJson.scripts?.verify?.includes('check:ui-governance')) {
   fail('pnpm run verify must include UI governance')
 }
 
+// The XLink commercial-quality skill must be available offline to future
+// agents; external repos/plugins are never a runtime requirement.
+const [commercialSkill, pinnedRedesign, pinnedMinimalist, license, agentRules] = await Promise.all([
+  read('skills/xlink-s2-commercial-taste/SKILL.md'),
+  read('skills/taste-redesign/SKILL.md'),
+  read('skills/taste-minimalist/SKILL.md'),
+  read('skills/taste-license/LICENSE'),
+  read('AGENTS.md'),
+])
+if (!commercialSkill.includes('a60a36dc2bb3bb77ccf17f2f62041f5ca8a458b9')
+  || !commercialSkill.includes('COMMERCIAL_UI_ACCEPTED')
+  || !pinnedRedesign.includes('Scan') || !pinnedRedesign.includes('Diagnose')
+  || !pinnedMinimalist.includes('Premium Utilitarian Minimalism')
+  || !license.includes('Copyright (c) 2026 Leonxlnx')
+  || !agentRules.includes('skills/xlink-s2-commercial-taste/SKILL.md')
+  || !workflow.includes('CODE_PASS and PNG-sheet generation are NOT commercial visual acceptance')) {
+  fail('pinned Taste Skill and commercial UI Owner gate must remain available')
+}
+
 console.log('UI governance check passed: shared UX contract, Gallery coverage, and delivery gates are intact')
