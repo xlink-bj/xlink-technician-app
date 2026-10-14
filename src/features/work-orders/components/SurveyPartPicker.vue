@@ -113,7 +113,7 @@ function commitPicker(): void {
 .survey-part-picker__current-label { font-weight:750; color:var(--app-color-text-primary); flex:1; }
 .survey-part-picker__options { height:51vh; min-height:270rpx; margin:16rpx 0; }
 .survey-part-picker__sheet .app-cascade-selector--hierarchical { display:flex; align-items:flex-start; gap:12rpx; }
-.survey-part-picker__sheet .app-cascade-selector__parents { flex:0 0 28%; grid-template-columns:1fr; gap:4rpx; }
+.survey-part-picker__sheet .app-cascade-selector__parents { display:flex; flex:0 0 28%; flex-direction:column; min-width:0; gap:4rpx; }
 .survey-part-picker__sheet .app-cascade-selector__parent { justify-content:flex-start; border:0; border-left:4rpx solid transparent;
   border-radius:8rpx; background:transparent; font-size:var(--app-font-body); text-align:left; }
 .survey-part-picker__sheet .app-cascade-selector__parent--active { border-left-color:var(--app-color-primary);
