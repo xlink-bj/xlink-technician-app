@@ -152,8 +152,18 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       const firstCause = page.getByTestId('survey-leakage-cause-option').first()
       await firstCause.click()
       await expect(firstCause).toHaveClass(/survey-leakage-cause__option--selected/)
+      await expect(page.getByTestId('survey-leakage-cause-selected')).toContainText('已选 1 项')
+      await expect(page.locator('.survey-leakage-cause__chip')).toHaveCount(1)
       await capture('04-survey-reasons-selected', 'S', 'S03 渗漏原因已选', '真实分组多选状态反馈')
+      // Cancel must not write provisional choice into the underlying Form Runtime.
       await page.locator('.survey-leakage-cause__close').click()
+      await expect(reason).toContainText('请选择渗漏原因')
+      await reason.click()
+      await expect(page.getByTestId('survey-leakage-cause-panel')).toBeVisible()
+      await expect(page.getByTestId('survey-leakage-cause-selected')).toContainText('已选 0 项')
+      await page.getByTestId('survey-leakage-cause-option').first().click()
+      await page.locator('.survey-leakage-cause__done').click()
+      await expect(reason).toContainText('已选择 1 项')
       await page.getByTestId('mock-journey-advance').click()
 
       await expect(page).toHaveURL(/pages\/work-orders\/detail/)
