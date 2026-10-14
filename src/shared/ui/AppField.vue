@@ -1,6 +1,6 @@
 <template>
   <view class="app-field" :class="{ 'app-field--error': Boolean(error) }">
-    <text class="app-field__label">
+    <text v-if="!hideLabel" class="app-field__label">
       {{ label }}<text v-if="required" class="app-field__required"> *</text><text v-else-if="showOptional" class="app-field__optional">（选填）</text>
     </text>
     <slot />
@@ -14,6 +14,7 @@ import { computed } from 'vue'
 
 const props = defineProps<{
   readonly label: string
+  readonly hideLabel?: boolean
   readonly required?: boolean
   readonly optional?: boolean
   readonly supporting?: string
