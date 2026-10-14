@@ -28,7 +28,7 @@
     <view v-else-if="browse.state === 'failed_retryable' || browse.state === 'failed_terminal'" class="quotation-hub__empty app-surface" data-testid="quotation-hub-read-error">
       <text class="quotation-hub__empty-title">暂时无法核对已有订单</text>
       <text class="quotation-hub__empty-detail">{{ browse.errorMessage || '当前订单列表暂不可用。' }}新建本机草稿不代表不存在历史订单。</text>
-      <AppButton variant="secondary" :disabled="browse.state === 'loading'" @tap="refresh">重试读取</AppButton>
+      <AppButton variant="secondary" @tap="refresh">重试读取</AppButton>
     </view>
     <view v-else-if="records.length === 0" class="quotation-hub__empty app-surface" data-testid="quotation-hub-no-records">
       <view class="quotation-hub__empty-icon" aria-hidden="true">＋</view>
