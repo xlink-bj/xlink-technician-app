@@ -1,5 +1,7 @@
 # M1 S2 — Survey 勘查商用 UI 设计计划 & 通用表单 UX 规范 v0.1
 
+> **历史计划 / 已被设计冻结规范 v1 取代。** 用户已认可 S01 主表单与 S02–S05 局部交互设计，明确“现场照片和现场测量应直接在主表单填写，无需另开弹层”。**实施权威：[`DYNAMIC_FORM_COMMERCIAL_UI_UX_STANDARD_V1.md`](./DYNAMIC_FORM_COMMERCIAL_UI_UX_STANDARD_V1.md)**。下文原“6 张设计稿”和状态规划仅为早期设计探索，不应再驱动新增页面或强制照片弹层。
+
 **状态：DESIGN PROPOSAL / 待 Owner 评审；未授权实施。** 2026-10-14
 
 ## 0. 主计划位置与本轮交付门禁
