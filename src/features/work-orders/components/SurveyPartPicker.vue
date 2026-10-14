@@ -118,4 +118,13 @@ function commitPicker(): void {
   display:flex; align-items:center; justify-content:center; }
 .survey-part-picker__confirm[disabled] { background:var(--app-color-disabled-surface); color:var(--app-color-text-muted); }
 .survey-part-picker__confirm::after { border:0; }
+/* S02 design-fidelity: keep options flexible and confirm anchored above safe area. */
+.survey-part-picker__backdrop { background:rgba(16,30,49,.50); }
+.survey-part-picker__sheet { max-height:80vh; padding-top:26rpx; border-radius:30rpx 30rpx 0 0; }
+.survey-part-picker__current { background:#eef5ff; margin-top:20rpx; padding:19rpx 16rpx; }
+.survey-part-picker__meta { flex:none; }
+.survey-part-picker__current-label { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.survey-part-picker__options { height:min(49vh,640rpx); min-height:300rpx; margin:16rpx 0 22rpx; }
+.survey-part-picker__confirm { min-height:88rpx; background:#2878f1; border-radius:12rpx; }
+.survey-part-picker__confirm[disabled] { background:#edf0f4; color:#9aa9bd; }
 </style>
