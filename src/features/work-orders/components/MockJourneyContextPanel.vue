@@ -25,7 +25,7 @@
     </view>
     <view v-if="context.suggestion" class="journey-context__suggestion" data-testid="mock-survey-quote-suggestion">
       <text v-if="!taskFocus || expanded" class="journey-context__title">勘察维修部位建议 · 待确认</text>
-      <text v-if="taskFocus && !expanded" class="journey-context__focus-suggestion">勘察建议 · {{ context.suggestion.targetRepairPartLabel }} <text class="journey-context__focus-pending">待确认</text></text>
+      <text v-if="taskFocus && !expanded" class="journey-context__focus-suggestion">勘察记录 · {{ context.suggestion.surveyPathLabel }} <text class="journey-context__focus-pending">待确认</text></text>
       <text v-if="!taskFocus || expanded" class="journey-context__value-text">勘察记录：{{ context.suggestion.surveyPathLabel }}</text>
       <text v-if="!taskFocus || expanded" class="journey-context__value-text">建议报价一级部位：{{ context.suggestion.targetRepairPartLabel }}</text>
       <text v-if="!compact || expanded" class="journey-context__notice">仅匹配演示目录的一级部位。二级部位、工程量、材料、工序及金额均需技术员重新核对填写；不会自动复制勘察面积。</text>
