@@ -221,21 +221,12 @@
     <AppButton class="workspace-state-action" @tap="exit">返回工单详情</AppButton>
   </view>
 
-  <view v-if="surveyConfirmOpen" class="survey-complete-backdrop"
-    data-testid="survey-complete-confirm" role="dialog" aria-modal="true">
-    <view class="survey-complete-sheet">
-      <view class="survey-complete-check" aria-hidden="true">✓</view>
-      <text class="survey-complete-title">确认完成勘查？</text>
-      <text class="survey-complete-description">完成前请确认现场记录已核对。确认后将按当前工单流程提交，不等同于保存本机草稿。</text>
-      <view class="survey-complete-actions">
-        <AppButton variant="secondary" block data-testid="survey-complete-cancel"
-          @tap="surveyConfirmOpen = false">再检查一下</AppButton>
-        <AppButton block data-testid="survey-complete-confirm-action"
-          :disabled="!workspace.canSubmit || workspace.lifecycle === 'submitting'"
-          @tap="confirmSurveyCompletion">确认完成</AppButton>
-      </view>
-    </view>
-  </view>
+  <SurveyCompleteConfirmation v-if="surveyConfirmOpen"
+    :can-submit="workspace.canSubmit"
+    :submitting="workspace.lifecycle === 'submitting'"
+    @cancel="surveyConfirmOpen = false"
+    @confirm="confirmSurveyCompletion"
+  />
 </template>
 
 <script setup lang="ts">
@@ -266,6 +257,7 @@ import ActionWorkspaceFormActions from '@shared/ui/ActionWorkspaceFormActions.vu
 import ActionWorkspaceShell from '@shared/ui/ActionWorkspaceShell.vue'
 import GenericDynamicFormActionContent from '@features/work-orders/components/GenericDynamicFormActionContent.vue'
 import SurveyActionContent from '@features/work-orders/components/SurveyActionContent.vue'
+import SurveyCompleteConfirmation from '@features/work-orders/components/SurveyCompleteConfirmation.vue'
 import MockJourneyContextPanel from '@features/work-orders/components/MockJourneyContextPanel.vue'
 import AppButton from '@shared/ui/AppButton.vue'
 import AppChoiceGroup from '@shared/ui/AppChoiceGroup.vue'
@@ -590,19 +582,4 @@ function actionErrorCopy(error: OperationError | null): string {
 .mock-signing-entry__note { color: var(--app-color-text-secondary); font-size: 21rpx; line-height: 1.45; }
 .mock-journey-progress { margin: 20rpx 24rpx; padding: 20rpx; display: flex; flex-direction: column; gap: 12rpx; }
 .mock-journey-progress__note { color: var(--app-color-text-secondary); font-size: 22rpx; line-height: 1.5; }
-/* S05 review is a consent step only. Real workflow remains behind
-   the original Runtime-gated completeDynamicForm() call. */
-.survey-complete-backdrop { position:fixed; z-index:140; inset:0; background:rgba(14,29,49,.53);
-  display:flex; align-items:flex-end; justify-content:center; }
-.survey-complete-sheet { box-sizing:border-box; background:var(--app-color-surface);
-  border-radius:26rpx 26rpx 0 0; width:100%; max-width:960rpx;
-  padding:34rpx var(--app-page-gutter) calc(30rpx + env(safe-area-inset-bottom));
-  display:flex; flex-direction:column; align-items:center; text-align:center; gap:18rpx; }
-.survey-complete-check { background:var(--app-color-primary-soft); color:var(--app-color-primary);
-  border-radius:999rpx; width:84rpx; height:84rpx; display:flex; align-items:center; justify-content:center;
-  font-size:49rpx; font-weight:800; }
-.survey-complete-title { color:var(--app-color-text-primary); font-size:var(--app-font-section-title); font-weight:800; }
-.survey-complete-description { color:var(--app-color-text-secondary); font-size:var(--app-font-body); line-height:1.55; }
-.survey-complete-actions { width:100%; display:flex; gap:16rpx; margin-top:12rpx; }
-.survey-complete-actions .app-button { flex:1; min-width:0; }
 </style>
