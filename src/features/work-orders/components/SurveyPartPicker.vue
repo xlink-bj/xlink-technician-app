@@ -31,6 +31,7 @@
             :model-value="draft"
             :disabled="disabled"
             hierarchical
+            split-layout
             @update:model-value="selectDraft"
           />
         </scroll-view>
@@ -112,19 +113,6 @@ function commitPicker(): void {
 .survey-part-picker__meta { color:var(--app-color-text-secondary); font-size:var(--app-font-meta); }
 .survey-part-picker__current-label { font-weight:750; color:var(--app-color-text-primary); flex:1; }
 .survey-part-picker__options { height:51vh; min-height:270rpx; margin:16rpx 0; }
-.survey-part-picker__sheet .app-cascade-selector--hierarchical { display:flex; align-items:flex-start; gap:12rpx; }
-.survey-part-picker__sheet .app-cascade-selector__parents { display:flex; flex:0 0 28%; flex-direction:column; min-width:0; gap:4rpx; }
-.survey-part-picker__sheet .app-cascade-selector__parent { justify-content:flex-start; border:0; border-left:4rpx solid transparent;
-  border-radius:8rpx; background:transparent; font-size:var(--app-font-body); text-align:left; }
-.survey-part-picker__sheet .app-cascade-selector__parent--active { border-left-color:var(--app-color-primary);
-  background:var(--app-color-primary-soft); color:var(--app-color-primary); }
-.survey-part-picker__sheet .app-cascade-selector__children { flex:1; margin-top:0; padding:6rpx;
-  min-width:0; background:var(--app-color-surface); border:0; }
-.survey-part-picker__sheet .app-cascade-selector__children-options { grid-template-columns:1fr; gap:6rpx; }
-.survey-part-picker__sheet .app-cascade-selector__child { text-align:left; border-color:var(--app-color-border);
-  background:var(--app-color-control-surface); min-height:74rpx; }
-.survey-part-picker__sheet .app-cascade-selector__child.app-choice--selected { background:var(--app-color-primary-soft);
-  border-color:var(--app-color-primary); }
 .survey-part-picker__confirm { width:100%; flex-shrink:0; border:0; color:white; font-size:var(--app-font-body);
   font-weight:800; background:var(--app-color-primary); border-radius:12rpx; min-height:88rpx;
   display:flex; align-items:center; justify-content:center; }
