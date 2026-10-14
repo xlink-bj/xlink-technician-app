@@ -177,6 +177,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       await expect(page.locator('.journey-context--task-focus')).toBeVisible()
       await expect(page.locator('.journey-context--task-focus')).toContainText('未提交后台')
       await expect(page.locator('.journey-context__focus-suggestion')).toBeVisible()
+      await expect(page.locator('.journey-context__focus-suggestion')).toContainText('屋面 / 有保护平屋面')
       await expect(page.getByTestId('mock-journey-context-survey')).toBeHidden()
       const firstAction = await page.getByTestId('quotation-add-group').boundingBox()
       const taskFooter = await page.getByTestId('quotation-footer-summary').boundingBox()
