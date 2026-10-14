@@ -1,13 +1,28 @@
 <template>
-  <view class="action-workspace-page" data-testid="action-workspace-shell">
+  <view class="action-workspace-page" :class="{ 'action-workspace-page--survey': commercialSurvey }" data-testid="action-workspace-shell">
     <scroll-view class="action-workspace-scroll" scroll-y enable-flex :scroll-into-view="scrollIntoView">
       <view class="action-workspace-body">
         <view class="action-workspace-context app-surface app-surface--compact" data-testid="action-workspace-context">
-          <text class="action-workspace-context-label">当前工单</text>
-          <view class="action-workspace-context-row">
-            <text class="action-workspace-context-customer">{{ customerName || '工单' }}</text>
-            <text v-if="displayNumber" class="action-workspace-context-number">#{{ displayNumber }}</text>
+          <view v-if="commercialSurvey" class="action-workspace-context-survey">
+            <view class="action-workspace-context-house" aria-hidden="true">⌂</view>
+            <view class="action-workspace-context-survey-main">
+              <text class="action-workspace-context-label">当前工单</text>
+              <text v-if="displayNumber" class="action-workspace-context-survey-number">{{ displayNumber }}</text>
+              <text class="action-workspace-context-survey-customer">{{ customerName || '工单' }}</text>
+            </view>
+            <view class="action-workspace-context-survey-status"><text class="action-workspace-context-status-dot">●</text>勘查中</view>
           </view>
+          <template v-else>
+            <text class="action-workspace-context-label">当前工单</text>
+            <view class="action-workspace-context-row">
+              <text class="action-workspace-context-customer">{{ customerName || '工单' }}</text>
+              <text v-if="displayNumber" class="action-workspace-context-number">#{{ displayNumber }}</text>
+            </view>
+          </template>
+        </view>
+        <view v-if="commercialSurvey && demoSurvey" class="action-workspace-survey-demo-note" data-testid="survey-commercial-draft-provenance">
+          <text class="action-workspace-survey-demo-note-label">本机草稿</text>
+          <text>· 未提交后台</text>
         </view>
 
         <AppStatus
@@ -96,6 +111,8 @@ import AppButton from './AppButton.vue'
 import AppStatus from './AppStatus.vue'
 
 const props = defineProps<{
+  readonly commercialSurvey?: boolean
+  readonly demoSurvey?: boolean
   readonly customerName?: string
   readonly displayNumber?: string
   readonly lifecycle: AppActionLifecycle
@@ -213,4 +230,22 @@ defineEmits<{
   width: 100%;
 }
 
+/* Survey-only S01 commercial work-order context; do not change accepted Appointment. */
+.action-workspace-page--survey .action-workspace-body { padding-top:16rpx; }
+.action-workspace-page--survey .action-workspace-context { border-radius:var(--app-radius-card); padding:20rpx; }
+.action-workspace-context-survey { display:flex; align-items:center; gap:15rpx; min-height:80rpx; }
+.action-workspace-context-house { width:64rpx; height:64rpx; flex:none; border-radius:14rpx;
+  background:#fff0e1; color:#f29a3c; display:flex; align-items:center; justify-content:center; font-size:48rpx; font-weight:700; }
+.action-workspace-context-survey-main { flex:1; min-width:0; display:flex; flex-direction:column; gap:3rpx; }
+.action-workspace-context-survey-number { color:var(--app-color-text-primary); font-size:var(--app-font-section-title); font-weight:800; }
+.action-workspace-context-survey-customer { color:var(--app-color-text-secondary); font-size:var(--app-font-meta); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.action-workspace-context-survey-status { flex:none; align-self:flex-start; display:flex; align-items:center; gap:5rpx;
+  border-radius:999rpx; background:var(--app-color-success-soft); color:var(--app-color-success);
+  font-size:var(--app-font-meta); font-weight:750; padding:6rpx 13rpx; }
+.action-workspace-context-status-dot { font-size:12rpx; }
+.action-workspace-survey-demo-note { margin-top:12rpx; background:var(--app-color-primary-soft);
+  color:var(--app-color-text-secondary); display:flex; gap:10rpx; align-items:center;
+  border-radius:12rpx; padding:12rpx 16rpx; font-size:var(--app-font-meta); }
+.action-workspace-survey-demo-note-label { color:var(--app-color-primary); font-weight:750; }
+.action-workspace-page--survey .action-workspace-footer { background:var(--app-color-surface); box-shadow:0 -4rpx 15rpx rgba(30,50,85,.04); }
 </style>
