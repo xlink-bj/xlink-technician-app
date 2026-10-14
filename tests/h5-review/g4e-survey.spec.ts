@@ -143,7 +143,7 @@ test('overview mounts the real review path and is not the production guard', asy
   await expect(page.getByTestId('g4e-review-mock-label')).toHaveText('MOCK_PRODUCT_REVIEW')
   await expect(page.getByTestId('g4e-review-title')).toContainText('Survey / 勘查')
   await expect(page.getByTestId('dynamic-form-action-content')).toBeVisible()
-  await expect(page.getByText('现场勘查', { exact: true })).toBeVisible()
+  await expect(page.getByText('勘查记录', { exact: true })).toBeVisible()
   await expect(page.getByTestId('g4e-review-scenario')).toBeVisible()
   await assertHealthy(page, evidence)
 })
