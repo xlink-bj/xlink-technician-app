@@ -112,7 +112,9 @@ watch(
   () => props.modelValue[0],
   (value) => {
     if (!value || !props.options.some((option) => option.value === value)) {
-      activeParentValue.value = undefined
+      activeParentValue.value = props.hierarchical
+        ? props.options.find((option) => option.children?.length)?.value
+        : undefined
       return
     }
     activeParentValue.value = value
@@ -146,14 +148,22 @@ function select(valuePath: readonly string[]): void {
 
 <style>
 .app-cascade-selector--hierarchical {
-  display: block;
+  display: flex;
+  align-items: flex-start;
+  gap: 12rpx;
 }
 
-.app-cascade-selector__parents,
+.app-cascade-selector__parents {
+  display: flex;
+  flex: 0 0 28%;
+  flex-direction: column;
+  gap: 8rpx;
+  min-width: 0;
+}
 .app-cascade-selector__children-options {
   display: grid;
-  gap: var(--app-control-gap);
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10rpx;
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .app-cascade-selector__parent,
@@ -168,7 +178,7 @@ function select(valuePath: readonly string[]): void {
 .app-cascade-selector__parent {
   align-items: center;
   display: flex;
-  justify-content: center;
+  justify-content: flex-start;
   min-height: var(--app-control-height);
   padding-left: var(--app-space-sm);
   padding-right: var(--app-space-sm);
@@ -191,8 +201,10 @@ function select(valuePath: readonly string[]): void {
   background: var(--app-color-page);
   border: 1rpx solid var(--app-color-divider);
   border-radius: var(--app-radius-control);
-  margin-top: var(--app-space-md);
-  padding: var(--app-space-md);
+  margin-top: 0;
+  padding: var(--app-space-sm);
+  flex: 1;
+  min-width: 0;
 }
 
 .app-cascade-selector__children-heading {
