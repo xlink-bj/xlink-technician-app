@@ -91,11 +91,15 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       // so capture the genuine initial Survey first, not a fabricated state.
       await capture('03-survey-overview', 'S', '现场勘察', '动态字段与页面结构')
 
-      const parts = page.getByTestId('survey-repair-part-selector')
+      const parts = page.getByTestId('survey-part-picker-trigger')
       if (await parts.isVisible()) {
+        await parts.click()
+        await expect(page.getByTestId('survey-part-picker-panel')).toBeVisible()
         await page.getByTestId('survey-repair-part-parents').locator('.app-cascade-selector__parent').first().click()
         await expect(page.getByTestId('survey-repair-part-children')).toBeVisible()
         await page.getByTestId('survey-repair-part-children').locator('.app-cascade-selector__child').first().click()
+        await page.getByTestId('survey-part-picker-confirm').click()
+        await expect(page.getByTestId('survey-part-picker-panel')).toHaveCount(0)
       }
       await page.getByTestId('dynamic-field-squareMeter').locator('input').fill('14.5')
       await capture('04-survey-filled', 'S', '勘察填写状态', '部位/面积与操作层级')
