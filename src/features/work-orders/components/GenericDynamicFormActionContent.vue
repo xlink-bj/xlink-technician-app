@@ -26,7 +26,8 @@
             <AppIcon :name="block.kind === 'media' ? 'image' : block.kind === 'measure' ? 'appointment' : 'location'"
               :size="21" color="#fff" />
           </view>
-          <text class="dynamic-action-block__title">{{ block.kind === 'part' ? '维修部位' : block.kind === 'measure' ? '现场测量' : block.fields.every(field => field.type === 'file') ? '现场附件' : '现场照片' }}</text>
+          <text class="dynamic-action-block__title">{{ block.kind === 'part' ? '维修部位' : block.kind === 'measure' ? '现场测量' : surveyMediaTitle(block.fields) }}</text>
+          <text v-if="block.kind === 'part' && block.fields.some(field => field.runtime.required)" class="dynamic-action-block__required">*</text>
           <text class="dynamic-action-block__tag"
             :class="{ 'dynamic-action-block__tag--selected': block.kind === 'part' && arrayValue(workspace.dynamicForm?.values[block.fields[0].valueKey]).length > 0 }">
             {{ block.kind === 'part' ? (arrayValue(workspace.dynamicForm?.values[block.fields[0].valueKey]).length ? '已选择' : '待选择') : block.kind === 'measure' ? '适用字段' : '按字段上传' }}
@@ -60,6 +61,7 @@
         }"
         :data-testid="`dynamic-field-${field.valueKey}`"
         :label="field.label"
+        :hide-label="isSurvey && block.kind === 'part'"
         :required="field.runtime.required"
       >
         <SurveyPartPicker
@@ -275,6 +277,12 @@ const presentationBlocks = computed<RenderBlock[]>(() => {
   }
   return blocks
 })
+/** A historical file field may still be a photo picker (e.g. 大面全景).
+ * Prefer explicit field labels over assuming file === document attachment. */
+function surveyMediaTitle(fields: readonly RenderField[]): string {
+  return fields.some(field => field.type === 'image' || /照片|全景|图片|现场图|渗漏部位|红外/.test(field.label))
+    ? '现场照片' : '现场附件'
+}
 const surveyRequiredVisible = computed(() => workspace.dynamicFields.some(field =>
   field.runtime.visible && field.runtime.required
   && field.runtime.capability !== 'UNSUPPORTED'
@@ -588,6 +596,7 @@ async function pickMedia(fieldId: string): Promise<void> {
 .dynamic-action-block__helper { display:block; margin-top:14rpx; color:var(--app-color-text-secondary);
   font-size:21rpx; line-height:1.55; }
 .dynamic-action-content--survey .dynamic-action-block--field .dynamic-action-field--survey { margin-bottom:16rpx; }
+.dynamic-action-block__required { color:#e47736; font-size:26rpx; font-weight:750; margin-left:-9rpx; }
 /* S04: media stays inline for capture/upload. Only tapping an existing
    verified preview invokes a larger in-app view, without platform API calls. */
 .dynamic-action-photo-preview { position:fixed; z-index:160; inset:0; background:#111d30;
