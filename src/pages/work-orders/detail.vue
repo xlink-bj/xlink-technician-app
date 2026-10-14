@@ -468,7 +468,11 @@ async function handleCurrentTaskAction(): Promise<void> {
   if (productionReadOnly && currentTask.actionIntent !== 'place_order') return
   const id = detail.value?.id
   if (!id) return
-  await workOrder.navigateTo(actionWorkspaceRouteFor(id, currentTask.nodeId, currentTask.actionIntent))
+  const target = actionWorkspaceRouteFor(id, currentTask.nodeId, currentTask.actionIntent)
+  // Quotation entry is an Action task, while the archived Order tab remains
+  // independent. Production keeps its established read-only entry.
+  await workOrder.navigateTo(currentTask.actionIntent === 'place_order' && !productionReadOnly
+    ? `${target}&entry=orders` : target)
 }
 
 async function handleQuickAction(action: QuickActionKey): Promise<void> {
