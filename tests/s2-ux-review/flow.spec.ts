@@ -99,6 +99,14 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       }
       await page.getByTestId('dynamic-field-squareMeter').locator('input').fill('14.5')
       await capture('04-survey-filled', 'S', '勘察填写状态', '部位/面积与操作层级')
+      const mediaPanel = page.locator('.dynamic-action-media').first()
+      await expect(mediaPanel).toBeVisible()
+      // FormDef may model a photo-bearing field as file rather than image.
+      // The capture audits the actual media UI, not a hardcoded media type.
+      await expect(mediaPanel.locator('.dynamic-action-media-title')).toContainText(/现场照片|现场附件/)
+      await expect(mediaPanel.locator('.dynamic-action-media-grid')).toBeVisible()
+      await mediaPanel.scrollIntoViewIfNeeded()
+      await capture('04-survey-media', 'S', '勘察媒体', '图片采集、数量与待处理状态')
       await page.getByTestId('mock-journey-advance').click()
 
       await expect(page).toHaveURL(/pages\/work-orders\/detail/)
@@ -123,6 +131,10 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       await page.getByTestId('quotation-catalog-kind-material').click()
       const ordinary = 'mock-catalog-material-ordinary-1'
       await expect(page.getByTestId('quotation-catalog-item-material-' + ordinary)).toBeVisible()
+      // Category marks convey catalog type; faux generic product artwork
+      // or decorative '示意' photos do not masquerade as real SKU assets.
+      await expect(page.getByTestId('quotation-catalog-item-material-' + ordinary).locator('.quotation-content__catalog-thumbnail-mark')).toBeVisible()
+      await expect(page.getByTestId('quotation-catalog-item-material-' + ordinary).locator('.quotation-content__catalog-art')).toHaveCount(0)
       await expect(page.getByTestId('quotation-material-options-' + ordinary)).toHaveCount(0)
       await capture('06-quote-catalog', 'Q', '报价材料目录', '普通材料无需 SKU 的真实结构')
 
@@ -168,6 +180,8 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
         })
       })
       await expect(page.getByTestId('signing-order-read-verified')).toBeVisible()
+      await expect(page.getByTestId('signing-command-preflight-toggle')).toBeVisible()
+      await expect(page.getByTestId('signing-command-preflight-details')).toBeHidden()
       await expect(page.getByTestId('signing-order-read-display-number'))
         .toContainText('DEV-SYNTHETIC-NOT-SUBMITTED')
       await expect(page.getByTestId('signing-contract-fixture-label')).toContainText('非真实订单')

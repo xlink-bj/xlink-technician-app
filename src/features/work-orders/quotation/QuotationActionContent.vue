@@ -798,14 +798,7 @@
               >
                 <view class="quotation-content__catalog-item-main">
                   <view class="quotation-content__catalog-thumbnail" :class="`quotation-content__catalog-thumbnail--${item.kind}`" aria-hidden="true">
-                    <view class="quotation-content__catalog-art" :class="`quotation-content__catalog-art--${item.kind}`">
-                      <view class="quotation-content__catalog-art-shape quotation-content__catalog-art-shape--back" />
-                      <view class="quotation-content__catalog-art-shape quotation-content__catalog-art-shape--main" />
-                      <view class="quotation-content__catalog-art-shape quotation-content__catalog-art-shape--detail" />
-                      <view class="quotation-content__catalog-art-spark quotation-content__catalog-art-spark--one" />
-                      <view class="quotation-content__catalog-art-spark quotation-content__catalog-art-spark--two" />
-                    </view>
-                    <text class="quotation-content__catalog-thumbnail-caption">示意</text>
+                    <text class="quotation-content__catalog-thumbnail-mark">{{ catalogKindMark(item.kind) }}</text>
                   </view>
                   <view class="quotation-content__catalog-item-copy">
                     <view class="quotation-content__catalog-item-heading">
@@ -2268,5 +2261,64 @@ function configuredPackageLayerLabel(
   .quotation-content__catalog-item-action { min-width: 104px; padding-left: 8px; padding-right: 8px; }
   .quotation-content__catalog-footer { margin-left: -12px; margin-right: -12px; padding-left: 12px; padding-right: 12px; }
   .quotation-content__catalog-footer > .app-button { flex-basis: 118px; }
+}
+
+/* S2 Commercial/Taste product pass — operator catalog and grouped quote.
+   Preserve all source-backed catalog/selection/quantity/role semantics. */
+.quotation-content__catalog-page { background: var(--app-color-page); }
+.quotation-content__catalog-topbar { border-bottom: 1rpx solid var(--app-color-divider); padding-bottom: 8rpx; }
+.quotation-content__catalog-target { align-items: center; display: flex; gap: 12rpx; background: var(--app-color-surface); border-color: var(--app-color-border); padding: 14rpx 16rpx; }
+.quotation-content__catalog-target-index { align-items: center; background: var(--app-color-primary-soft); color: var(--app-color-primary); display: flex; flex: 0 0 38rpx; height: 38rpx; justify-content: center; border-radius: 8rpx; font-size: var(--app-font-meta); font-weight: 700; }
+.quotation-content__catalog-target-copy { flex: 1; min-width: 0; }
+.quotation-content__catalog-target-title { font-weight: 700; overflow-wrap: anywhere; }
+.quotation-content__catalog-target-count { flex: none; font-size: var(--app-font-meta); color: var(--app-color-primary); font-weight: 650; }
+.quotation-content__catalog-intro { margin-top: 14rpx; }
+.quotation-content__catalog-intro-title { color: var(--app-color-text-primary); font-weight: 750; }
+.quotation-content__catalog-intro-description { color: var(--app-color-text-secondary); }
+.quotation-content__catalog-main { margin-top: 8rpx; }
+.quotation-content__category-grid { border-bottom: 1rpx solid var(--app-color-border); gap: 0; }
+.quotation-content__category { border-radius: 0; border: 0; border-bottom: 4rpx solid transparent; background: transparent; color: var(--app-color-text-secondary); font-weight: 650; min-height: 48px; padding: 8rpx 2rpx; }
+.quotation-content__category--active { color: var(--app-color-primary); border-bottom-color: var(--app-color-primary); background: transparent; }
+.quotation-content__search-wrap { background: var(--app-color-surface); margin-top: 14rpx; border-color: var(--app-color-border-control); min-height: 46px; }
+.quotation-content__catalog-section-heading { margin-top: 12rpx; }
+.quotation-content__catalog-section-note { color: var(--app-color-text-muted); }
+.quotation-content__catalog-item { display: flex; flex-direction: column; align-items: stretch; gap: 12rpx; min-height: 0; padding: 18rpx; margin-bottom: 12rpx; border-color: var(--app-color-border); border-radius: var(--app-radius-surface); box-shadow: none; }
+.quotation-content__catalog-item-main { display: flex; align-items: flex-start; gap: 14rpx; }
+.quotation-content__catalog-thumbnail { flex: 0 0 56px; height: 56px; width: 56px; border: 0; border-radius: 12rpx; background: var(--app-color-control-surface); }
+.quotation-content__catalog-thumbnail::before { display: none; }
+.quotation-content__catalog-thumbnail--material { background: var(--app-color-primary-soft); }
+.quotation-content__catalog-thumbnail-mark { color: var(--app-color-text-secondary); font-size: 25rpx; font-weight: 750; }
+.quotation-content__catalog-thumbnail--material .quotation-content__catalog-thumbnail-mark { color: var(--app-color-primary); }
+.quotation-content__catalog-item-title { font-size: 26rpx; font-weight: 750; line-height: 1.4; min-width: 0; }
+.quotation-content__catalog-kind-pill { border-radius: 8rpx; font-size: var(--app-font-meta); padding: 3rpx 9rpx; }
+.quotation-content__catalog-item-details { gap: 6rpx; }
+.quotation-content__catalog-item-detail { border-radius: 7rpx; font-size: var(--app-font-meta); padding: 4rpx 7rpx; }
+.quotation-content__catalog-item-footer { align-items: center; display: flex; gap: 10rpx; border-top: 1rpx solid var(--app-color-divider); padding-top: 10rpx; margin-top: 0; }
+.quotation-content__catalog-item-price-state { color: var(--app-color-text-secondary); flex: 1; font-size: var(--app-font-meta); margin: 0; }
+.quotation-content__catalog-item-action { min-width: 100px; }
+.quotation-content__catalog-item .app-button { max-width: none; min-height: 44px; padding-left: 16rpx; padding-right: 16rpx; }
+.quotation-content__catalog-footer { border-radius: 0; padding-bottom: calc(12rpx + env(safe-area-inset-bottom)); }
+.quotation-content__catalog-footer-copy .quotation-content__catalog-footer-note:last-child { font-size: var(--app-font-meta); }
+
+/* Quotation group: a repair location with selected work, not stacked
+   dashboard cards. Keep editing, prices and product IDs untouched. */
+.quotation-content__groups { gap: 16rpx; padding-top: 16rpx; }
+.quotation-content__group { border-radius: var(--app-radius-surface); box-shadow: none; padding: 20rpx; }
+.quotation-content__group-heading { align-items: flex-start; padding-bottom: 14rpx; }
+.quotation-content__group-index { background: var(--app-color-control-surface); border: 0; color: var(--app-color-text-secondary); flex-basis: 40rpx; height: 40rpx; font-size: var(--app-font-meta); }
+.quotation-content__group-eyebrow { color: var(--app-color-text-secondary); font-weight: 650; }
+.quotation-content__group-title { color: var(--app-color-text-primary); font-weight: 750; }
+.quotation-content__group-count { background: var(--app-color-primary-soft); border-radius: 8rpx; color: var(--app-color-primary); }
+.quotation-content__group-context { background: var(--app-color-control-surface); border-radius: 12rpx; border-color: var(--app-color-border); }
+.quotation-content__composition { margin-top: 12rpx; }
+.quotation-content__composition-heading { background: transparent; border-bottom: 1rpx solid var(--app-color-divider); border-radius: 0; padding: 12rpx 0; }
+.quotation-content__composition-title { color: var(--app-color-text-primary); font-weight: 750; }
+.quotation-content__selection { border-color: var(--app-color-divider); box-shadow: none; border-radius: 12rpx; }
+.quotation-content__browse-catalog { min-height: 48px; }
+@media (max-width: 360px) {
+  .quotation-content__catalog-item { align-items: stretch; flex-direction: column; flex-wrap: nowrap; }
+  .quotation-content__catalog-thumbnail { flex-basis: 50px; height: 50px; width: 50px; }
+  .quotation-content__catalog-item .app-button { margin-left: 0; min-width: 100px; width: auto; }
+  .quotation-content__catalog-item-footer { flex-wrap: wrap; }
 }
 </style>

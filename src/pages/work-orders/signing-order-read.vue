@@ -3,7 +3,7 @@
     <view class="signing-read-header">
       <text class="signing-read-eyebrow">订单签约 · 当前工单</text>
       <text class="signing-read-title">签约进度</text>
-      <text class="signing-read-help">核对正式订单及合同状态。签名、短信与合同文件操作暂未开放。</text>
+      <text class="signing-read-help">查看订单与合同进度，了解当前签约状态。</text>
     </view>
 
     <AppLoadingState
@@ -78,13 +78,25 @@
         </template>
       </view>
       <view class="signing-read-section" data-testid="signing-read-reconciled-status">
-        <text class="signing-read-section-title">综合核验</text>
+        <text class="signing-read-section-title">当前结果</text>
         <text class="signing-read-progress-title" data-testid="signing-read-stage-title">{{ signingStage.title }}</text>
         <text class="signing-read-body" data-testid="signing-read-stage-detail">{{ signingStage.detail }}</text>
         <text class="signing-read-warning">本页没有调用签署、取消合同、发送短信、创建 PDF 或工作流提交接口。</text>
       </view>
-      <view v-if="devFixtureContractRead" class="signing-read-section" data-testid="signing-command-preflight">
-        <text class="signing-read-section-title">R1 操作前置条件审查 · DEV 合成演示</text>
+      <view v-if="devFixtureContractRead" class="signing-read-section signing-read-section--diagnostics" data-testid="signing-command-preflight">
+        <view class="signing-read-heading-row">
+          <view class="signing-read-diagnostics-copy">
+            <text class="signing-read-section-title">测试环境 · 技术核验</text>
+            <text class="signing-read-help">仅供内部核对，不是签约业务操作</text>
+          </view>
+          <button class="signing-read-diagnostics-toggle"
+            data-testid="signing-command-preflight-toggle"
+            :aria-expanded="devAuditExpanded"
+            @tap="devAuditExpanded = !devAuditExpanded">
+            {{ devAuditExpanded ? '收起' : '查看详情' }}
+          </button>
+        </view>
+        <view v-show="devAuditExpanded" class="signing-read-diagnostics-details" data-testid="signing-command-preflight-details">
         <AppButton block variant="secondary" data-testid="signing-handler-evidence-check"
           :disabled="review.handlerSnapshot.state === 'loading'" @tap="readNodeHandlerEvidence">
           {{ review.handlerSnapshot.state === 'loading' ? '正在核验当前节点' : '核验当前工作流节点处理人 · 只读' }}
@@ -112,6 +124,7 @@
           <text class="signing-read-warning" data-testid="signing-intent-no-dispatch">
             仅准备/审查 · 不发送业务命令 · 无法从本页生成真实签约请求
           </text>
+        </view>
         </view>
       </view>
       <view class="signing-read-section" data-testid="signing-order-read-no-contract">
@@ -160,6 +173,7 @@ const signingProgress = computed(() => signingReviewProgress({
 }))
 const intentKinds: readonly R1SigningIntentKind[] = ['electronic','offline','resign','resend_sms','cancel']
 const selectedIntent = ref<R1SigningIntentKind | null>(null)
+const devAuditExpanded = ref(false)
 const intentReview = computed(() => {
   if (!selectedIntent.value || !devFixtureContractRead.value || review.snapshot.state !== 'ready') return null
   const order = review.snapshot.review?.order ?? null
@@ -279,4 +293,14 @@ onUnload(() => {
   font-weight: 750; overflow-wrap: anywhere; }
 .signing-read-contract-state { display: block; color: var(--app-color-text-body); font-size: var(--app-font-body); line-height: 1.6; }
 .signing-read-footer { text-align: center; margin: 28rpx 0 52rpx; }
+.signing-read-section--diagnostics { border-style: dashed; background: var(--app-color-control-surface); }
+.signing-read-diagnostics-copy { display: flex; flex-direction: column; min-width: 0; gap: 5rpx; }
+.signing-read-diagnostics-copy .signing-read-section-title { font-size: var(--app-font-body); font-weight: 700; }
+.signing-read-diagnostics-toggle { flex: none; border: 1rpx solid var(--app-color-border-control); border-radius: 12rpx;
+  background: var(--app-color-surface); color: var(--app-color-text-body); font-size: var(--app-font-body);
+  min-height: 44px; line-height: 1.4; padding: 9rpx 18rpx; margin: 0; }
+.signing-read-diagnostics-toggle::after { border: 0; }
+.signing-read-diagnostics-details { display: flex; flex-direction: column; gap: 15rpx; border-top: 1rpx solid var(--app-color-border); padding-top: 18rpx; }
+.signing-read-section--progress { background: var(--app-color-surface); border-left: 5rpx solid var(--app-color-primary); }
+.signing-read-contract-item { border: 1rpx solid var(--app-color-border); }
 </style>

@@ -308,9 +308,10 @@ test('Phase B1 captures the real four-state quotation journey and compact/recove
   const packageCard = page.getByTestId('quotation-catalog-item-package-mock-catalog-package-basic')
   await expect(packageCard).toContainText('屋面防水修缮方案（示例）')
   await expect(packageCard).toContainText('金额待核验')
-  // The listing has illustrative art explicitly tagged 示意, not a real photo.
+  // S2 commercial catalog uses truthful category marks, not fabricated product imagery.
   // The package detail truthfully discloses that no product image is provided.
-  await expect(packageCard).toContainText('示意')
+  await expect(packageCard.locator('.quotation-content__catalog-thumbnail-mark')).toHaveText('套')
+  await expect(packageCard.locator('.quotation-content__catalog-art')).toHaveCount(0)
   await packageCard.scrollIntoViewIfNeeded()
   await page.screenshot({ path: resolve(visualMasterOutput, '02-visual-catalog-390.png'), animations: 'disabled' })
 
