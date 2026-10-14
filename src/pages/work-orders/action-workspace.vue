@@ -65,6 +65,8 @@
     v-else-if="workspace.descriptor && (workspace.appointmentForm || workspace.dynamicForm)"
     :customer-name="workspace.detail?.customerName"
     :display-number="workspace.detail?.displayNumber"
+    :commercial-survey="workspace.descriptor.formPurpose === 'survey'"
+    :demo-survey="Boolean(localJourneyContext)"
     :lifecycle="workspace.lifecycle"
     :draft-status="workspace.draftStatus"
     :transitioning="isNavigating"
@@ -73,8 +75,8 @@
     :submit-label="workspace.descriptor.formPurpose === 'survey' ? '完成勘查' : workspace.descriptor.actionIntent === 'interact_with_form' ? '完成' : '继续确认'"
     @submit="submitWorkspace"
   >
-    <MockJourneyContextPanel v-if="localJourneyContext" :context="localJourneyContext"
-      :compact="workspace.descriptor.formPurpose === 'survey'" />
+    <MockJourneyContextPanel v-if="localJourneyContext && workspace.descriptor.formPurpose !== 'survey'"
+      :context="localJourneyContext" />
     <SurveyActionContent v-if="workspace.descriptor.actionIntent === 'interact_with_form' && workspace.descriptor.formPurpose === 'survey'" />
     <GenericDynamicFormActionContent v-else-if="workspace.descriptor.actionIntent === 'interact_with_form'" />
     <view v-else class="action-workspace-content app-surface" :data-field-count="workspace.appointmentFields.length">
@@ -168,6 +170,9 @@
       </AppField>
       </view>
 
+    <MockJourneyContextPanel v-if="localJourneyContext && workspace.descriptor.formPurpose === 'survey'"
+      :context="localJourneyContext" compact />
+
     <!-- DEV-only synthetic state progression. This is NOT Workflow Complete.
          The same 019 WorkOrderId is used by all three normal App pages. -->
     <view
@@ -193,7 +198,8 @@
         :transitioning="isNavigating"
         :submit-label="workspace.descriptor.formPurpose === 'survey' ? '完成勘查' : '完成'"
         @save="workspace.saveDynamicForm"
-        @submit="submitWorkspace"
+        :hint="workspace.descriptor.formPurpose === 'survey' && !workspace.canSubmit ? '当前填写或权限条件未满足，暂不能完成勘查' : undefined"
+        @submit="requestSurveyCompletion"
       />
     </template>
 
@@ -215,6 +221,13 @@
     <text class="workspace-state-title">操作内容暂不可用</text>
     <AppButton class="workspace-state-action" @tap="exit">返回工单详情</AppButton>
   </view>
+
+  <SurveyCompleteConfirmation v-if="surveyConfirmOpen"
+    :can-submit="workspace.canSubmit"
+    :submitting="workspace.lifecycle === 'submitting'"
+    @cancel="surveyConfirmOpen = false"
+    @confirm="confirmSurveyCompletion"
+  />
 </template>
 
 <script setup lang="ts">
@@ -245,6 +258,7 @@ import ActionWorkspaceFormActions from '@shared/ui/ActionWorkspaceFormActions.vu
 import ActionWorkspaceShell from '@shared/ui/ActionWorkspaceShell.vue'
 import GenericDynamicFormActionContent from '@features/work-orders/components/GenericDynamicFormActionContent.vue'
 import SurveyActionContent from '@features/work-orders/components/SurveyActionContent.vue'
+import SurveyCompleteConfirmation from '@features/work-orders/components/SurveyCompleteConfirmation.vue'
 import MockJourneyContextPanel from '@features/work-orders/components/MockJourneyContextPanel.vue'
 import AppButton from '@shared/ui/AppButton.vue'
 import AppChoiceGroup from '@shared/ui/AppChoiceGroup.vue'
@@ -449,6 +463,22 @@ async function continueToConfirmation(): Promise<void> {
   isNavigating.value = true
   const result = await workspace.continueToConfirmation()
   if (result.state !== 'succeeded') isNavigating.value = false
+}
+
+const surveyConfirmOpen = ref(false)
+
+function requestSurveyCompletion(): void {
+  if (workspace.descriptor?.formPurpose === 'survey') {
+    if (workspace.canSubmit && workspace.lifecycle !== 'submitting') surveyConfirmOpen.value = true
+    return
+  }
+  void submitWorkspace()
+}
+
+async function confirmSurveyCompletion(): Promise<void> {
+  if (!surveyConfirmOpen.value || !workspace.canSubmit || workspace.lifecycle === 'submitting') return
+  surveyConfirmOpen.value = false
+  await submitWorkspace()
 }
 
 async function submitWorkspace(): Promise<void> {

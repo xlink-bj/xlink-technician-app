@@ -1,5 +1,10 @@
 <template>
-  <view class="action-workspace-form-actions" data-testid="action-workspace-form-actions">
+  <view class="action-workspace-form-actions-wrap" data-testid="action-workspace-form-actions-wrap">
+    <view v-if="hint" class="action-workspace-form-actions__hint" data-testid="survey-complete-hint">
+      <AppIcon name="warning" :size="14" color="#db8a2e" />
+      <text>{{ hint }}</text>
+    </view>
+    <view class="action-workspace-form-actions" data-testid="action-workspace-form-actions">
     <AppButton
       data-testid="dynamic-form-save"
       class="action-workspace-form-actions__save"
@@ -21,11 +26,13 @@
     >
       {{ lifecycle === 'submitting' ? '提交中…' : submitLabel }}
     </AppButton>
+    </view>
   </view>
 </template>
 
 <script setup lang="ts">
 import AppButton from './AppButton.vue'
+import AppIcon from './AppIcon.vue'
 import type { AppActionLifecycle } from './types'
 
 withDefaults(
@@ -35,6 +42,7 @@ withDefaults(
     readonly canSubmit: boolean
     readonly transitioning?: boolean
     readonly submitLabel?: string
+    readonly hint?: string
   }>(),
   {
     transitioning: false,
@@ -49,6 +57,8 @@ defineEmits<{
 </script>
 
 <style>
+.action-workspace-form-actions-wrap { display:flex; flex-direction:column; gap:9rpx; width:100%; }
+.action-workspace-form-actions__hint { text-align:center; color:var(--app-color-text-secondary); font-size:var(--app-font-meta); line-height:1.4; }
 .action-workspace-form-actions {
   display: flex;
   gap: var(--app-action-bar-gap);
@@ -59,4 +69,5 @@ defineEmits<{
   flex: 1 1 0;
   min-width: 0;
 }
-</style>
+.action-workspace-form-actions__hint { display:flex; align-items:center; justify-content:center;
+  gap:8rpx; font-size:22rpx; color:#ad6b28; line-height:1.45; padding:0 4rpx; }</style>

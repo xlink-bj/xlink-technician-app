@@ -2,6 +2,7 @@ export type AppIconName =
   | 'search'
   | 'refresh'
   | 'location'
+  | 'home'
   | 'phone'
   | 'task'
   | 'contact'
@@ -18,6 +19,7 @@ const appIconTypeByName: Readonly<Record<AppIconName, string>> = {
   search: 'search',
   refresh: 'refresh',
   location: 'location-filled',
+  home: 'home-filled',
   phone: 'phone-filled',
   task: 'list',
   contact: 'contact-filled',

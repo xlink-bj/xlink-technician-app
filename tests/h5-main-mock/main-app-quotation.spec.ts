@@ -410,6 +410,16 @@ test('shared Action Workspace displays its actual operation title for appointmen
     await entry.click()
     await expect(page).toHaveURL(/pages\/work-orders\/action-workspace/)
     await expect(page.locator('.uni-page-head__title')).toContainText(scenario.title)
+    if (scenario.title === '现场勘查') {
+      // An independent Survey has no continuous-journey context. It must not
+      // duplicate the generic form or fall through to the Appointment UI.
+      await expect(page.getByTestId('dynamic-form-action-content')).toHaveCount(1)
+      await expect(page.locator('.dynamic-action-title')).toContainText('勘查记录')
+      await expect(page.locator('.action-content-heading')).toHaveCount(0)
+    } else {
+      await expect(page.locator('.action-content-heading')).toHaveCount(1)
+      await expect(page.getByTestId('dynamic-form-action-content')).toHaveCount(0)
+    }
   }
   expect(evidence.externalIntents).toEqual([])
   expect(evidence.pageErrors).toBe(0)
@@ -450,13 +460,17 @@ test('one MOCK-019 WorkOrder progresses Appointment → Survey → Quotation wit
     body: Buffer.from(JSON.stringify(surveyFieldEvidence, null, 2)),
     contentType: 'application/json',
   })
-  const partSelector = page.getByTestId('survey-repair-part-selector')
+  const partSelector = page.getByTestId('survey-part-picker-trigger')
   if (await partSelector.isVisible()) {
-    // Captured R1 'parts' provider puts 屋面 first. Native uni-button
-    // renders an additional chevron, so exact innerText does not equal 屋面.
+    // S02: use the approved bottom-sheet picker, but preserve the R1
+    // provider value path and dependent Survey field assertion.
+    await partSelector.click({ timeout: 8000 })
+    await expect(page.getByTestId('survey-part-picker-panel')).toBeVisible()
     await page.getByTestId('survey-repair-part-parents').locator('.app-cascade-selector__parent').first().click({ timeout: 8000 })
     await expect(page.getByTestId('survey-repair-part-children')).toBeVisible({ timeout: 8000 })
     await page.getByTestId('survey-repair-part-children').locator('.app-cascade-selector__child').first().click({ timeout: 8000 })
+    await page.getByTestId('survey-part-picker-confirm').click()
+    await expect(page.getByTestId('survey-part-picker-panel')).toHaveCount(0)
   }
   await expect(page.getByTestId('dynamic-field-squareMeter'), 'captured Survey field must be editable in the real main App').toBeVisible({ timeout: 8000 })
   await page.getByTestId('dynamic-field-squareMeter').locator('input').fill('14.5')
