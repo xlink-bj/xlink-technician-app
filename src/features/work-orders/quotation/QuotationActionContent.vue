@@ -2321,4 +2321,38 @@ function configuredPackageLayerLabel(
   .quotation-content__catalog-item .app-button { margin-left: 0; min-width: 100px; width: auto; }
   .quotation-content__catalog-item-footer { flex-wrap: wrap; }
 }
+
+/* Q01 task-first visual standard, scoped to the existing Quotation content.
+ * Pure presentation: catalog authority, quantities, identity and submit guards unchanged. */
+.quotation-content__initial-card { padding: 18rpx 18rpx 20rpx; }
+.quotation-content__initial-empty-heading { margin-bottom: 12rpx; }
+.quotation-content__initial-empty-title { font-size: 29rpx; font-weight: 800; color: var(--app-color-text-primary); }
+.quotation-content__initial-empty-description { font-size: 23rpx; line-height: 1.45; color: var(--app-color-text-secondary); }
+.quotation-content__initial-empty-surface {
+  background: var(--app-color-surface); border: 1rpx solid var(--app-color-divider);
+  padding: 15rpx; gap: 8rpx; border-radius: 15rpx;
+}
+.quotation-content__initial-empty-surface .quotation-content__empty-title { font-size: 24rpx; font-weight: 750; }
+.quotation-content__initial-empty-copy { font-size: 22rpx; line-height: 1.4; color: var(--app-color-text-secondary); }
+.quotation-content__initial-empty-action { margin-top: 6rpx; min-height: 88rpx; }
+.quotation-content__initial-empty-artwork { height: 36rpx; opacity: .23; }
+.quotation-content__initial-process { padding: 17rpx 18rpx; }
+.quotation-content__initial-process-heading { margin-bottom: 8rpx; }
+.quotation-content__initial-process-step { padding: 7rpx 3rpx; }
+.quotation-content__initial-process-step-copy { font-size: 19rpx; line-height: 1.38; }
+.quotation-content__group { border-radius: 18rpx; padding: 20rpx; }
+.quotation-content__group-title { font-size: 26rpx; line-height: 1.4; }
+.quotation-content__group-location { line-height: 1.45; font-size: 21rpx; }
+.quotation-content__group-heading-actions { gap: 6rpx; }
+.quotation-content__composition { border-top: 1rpx solid var(--app-color-divider); margin-top: 14rpx; padding-top: 13rpx; }
+.quotation-content__composition-title { font-size: 25rpx; font-weight: 750; }
+.quotation-content__composition-meta { font-size: 20rpx; color: var(--app-color-text-secondary); }
+.quotation-content__selection { border-color: var(--app-color-border); box-shadow: none; }
+.quotation-content__catalog-item { border-radius: 14rpx; padding: 17rpx; gap: 10rpx; }
+.quotation-content__catalog-item-title { color: var(--app-color-text-primary); font-size: 26rpx; font-weight: 750; line-height: 1.38; }
+.quotation-content__catalog-item-detail { background: var(--app-color-control-surface); color: var(--app-color-text-secondary); border: 1rpx solid var(--app-color-border); }
+.quotation-content__catalog-item-footer { gap: 8rpx; }
+.quotation-content__catalog-item-price-state { color: var(--app-color-text-secondary); }
+.quotation-content__catalog-target { box-shadow: none; border-radius: 15rpx; }
+
 </style>

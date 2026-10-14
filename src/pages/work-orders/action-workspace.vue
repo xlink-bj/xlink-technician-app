@@ -28,6 +28,7 @@
         v-if="localJourneyContext"
         :context="localJourneyContext"
         compact
+        task-focus
         :can-adopt-suggestion="canAdoptSurveySuggestion"
         :suggestion-feedback="suggestionFeedback"
         @adopt-suggestion="adoptSurveySuggestion"

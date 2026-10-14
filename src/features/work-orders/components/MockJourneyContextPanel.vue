@@ -1,5 +1,5 @@
 <template>
-  <view class="journey-context app-surface" :class="{ 'journey-context--compact': compact }" data-testid="mock-journey-context">
+  <view class="journey-context app-surface" :class="{ 'journey-context--compact': compact, 'journey-context--task-focus': taskFocus }" data-testid="mock-journey-context">
     <view class="journey-context__head">
       <view class="journey-context__head-copy">
         <text class="journey-context__heading">{{ compact ? '前序信息已保留' : '前序信息 · 本机草稿' }}</text>
@@ -24,9 +24,10 @@
       <text v-else class="journey-context__empty">{{ section.state === 'read_failed' ? '无法核对当前阶段的本机记录' : '该阶段尚无已保存的填写内容' }}</text>
     </view>
     <view v-if="context.suggestion" class="journey-context__suggestion" data-testid="mock-survey-quote-suggestion">
-      <text class="journey-context__title">勘察维修部位建议 · 待确认</text>
-      <text class="journey-context__value-text">勘察记录：{{ context.suggestion.surveyPathLabel }}</text>
-      <text class="journey-context__value-text">建议报价一级部位：{{ context.suggestion.targetRepairPartLabel }}</text>
+      <text v-if="!taskFocus || expanded" class="journey-context__title">勘察维修部位建议 · 待确认</text>
+      <text v-if="taskFocus && !expanded" class="journey-context__focus-suggestion">勘察记录 · {{ context.suggestion.surveyPathLabel }} <text class="journey-context__focus-pending">待确认</text></text>
+      <text v-if="!taskFocus || expanded" class="journey-context__value-text">勘察记录：{{ context.suggestion.surveyPathLabel }}</text>
+      <text v-if="!taskFocus || expanded" class="journey-context__value-text">建议报价一级部位：{{ context.suggestion.targetRepairPartLabel }}</text>
       <text v-if="!compact || expanded" class="journey-context__notice">仅匹配演示目录的一级部位。二级部位、工程量、材料、工序及金额均需技术员重新核对填写；不会自动复制勘察面积。</text>
       <AppButton v-if="canAdoptSuggestion" variant="secondary" block data-testid="mock-survey-quote-adopt" @tap="$emit('adopt-suggestion')">确认采用一级维修部位</AppButton>
       <text v-else class="journey-context__empty">已有报价部位或目录尚不可用，请手动核对。</text>
@@ -39,7 +40,7 @@
 import { ref } from 'vue'
 import type { MockJourneyContextSummary } from '@app/mock-journey-context'
 import AppButton from '@shared/ui/AppButton.vue'
-defineProps<{ readonly context: MockJourneyContextSummary; readonly compact?: boolean; readonly canAdoptSuggestion?: boolean; readonly suggestionFeedback?: string }>()
+defineProps<{ readonly context: MockJourneyContextSummary; readonly compact?: boolean; readonly taskFocus?: boolean; readonly canAdoptSuggestion?: boolean; readonly suggestionFeedback?: string }>()
 const expanded = ref(false)
 defineEmits<{ (event: 'adopt-suggestion'): void }>()
 </script>
@@ -65,4 +66,13 @@ defineEmits<{ (event: 'adopt-suggestion'): void }>()
 .journey-context__value { text-align: right; font-size: 22rpx; color: var(--app-color-text-primary); max-width: 66%; overflow-wrap: anywhere; }
  .journey-context__suggestion { border-top: 1rpx solid var(--app-color-border); display: flex; flex-direction: column; gap: 9rpx; padding-top: 12rpx; }
 .journey-context__value-text { color: var(--app-color-text-primary); font-size: 22rpx; line-height: 1.45; }
+/* Only the Quotation task-focus variant is compacted; Survey's accepted panel stays unchanged. */
+.journey-context--task-focus { padding: 14rpx 18rpx; gap: 8rpx; border-color: var(--app-color-border); }
+.journey-context--task-focus .journey-context__heading { font-size: 23rpx; }
+.journey-context--task-focus .journey-context__head-hint { font-size: 20rpx; }
+.journey-context--task-focus .journey-context__toggle { min-height: 56rpx; font-size: 23rpx; padding: 3rpx 14rpx; }
+.journey-context--task-focus .journey-context__suggestion { padding-top: 10rpx; gap: 8rpx; }
+.journey-context__focus-suggestion { color: var(--app-color-text-primary); font-size: 24rpx; font-weight: 750; line-height: 1.4; }
+.journey-context__focus-pending { color: var(--app-color-text-secondary); font-weight: 500; font-size: 20rpx; margin-left: 8rpx; }
+.journey-context--task-focus .journey-context__suggestion .app-button { min-height: 76rpx; }
 </style>
