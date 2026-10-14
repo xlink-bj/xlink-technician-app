@@ -33,7 +33,7 @@ pnpm run check:s2-ux-sheet
     frames/...                 # 同一套稳定 ID
 ```
 
-**共 24 张逐屏截图 + 2 张总览 Sheet**。GitHub Actions 上传 `s2-main-app-review-sheets-<run_id>` 文件包，保留 30 天；失败时也上传已完成的截图和浏览器痕迹。
+**共 26 张逐屏截图 + 2 张总览 Sheet**。GitHub Actions 上传 `s2-main-app-review-sheets-<run_id>` 文件包，保留 30 天；失败时也上传已完成的截图和浏览器痕迹。
 
 ## 场景索引
 
@@ -43,6 +43,7 @@ pnpm run check:s2-ux-sheet
 | 02-appointment | A 预约 | 新设计 UX | 已认可基线，原则上不改 |
 | 03-survey-overview | S 勘察 | 信息层级/动态表单 | 优先审查 |
 | 04-survey-filled | S 勘察 | 部位、面积与字段反馈 | 优先审查 |
+| 04-survey-media | S 勘察 | 实际媒体采集 UI 与处理状态 | 优先审查 |
 | 05-quote-entry | Q 报价 | 首屏 CTA、上下文提示 | 优先审查 |
 | 06-quote-catalog | Q 报价 | 普通材料目录，无 SKU | 优先审查 |
 | 07-quote-group | Q 报价 | 分组选品、提交安全边界 | 优先审查 |
