@@ -1,7 +1,7 @@
 <template>
   <GenericDynamicFormActionContent
-    title="现场勘查"
-    caption="按动态表单记录现场情况，完成后提交本次勘查。"
+    title="勘查记录"
+    caption="依据现场情况填写"
     :excluded-field-ids="workspace.surveyLeakageCauseFieldIds"
   >
     <template #experience>
