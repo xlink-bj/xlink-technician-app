@@ -1,6 +1,6 @@
 <template>
   <GenericDynamicFormActionContent
-    title="勘查记录"
+    title="现场勘查"
     caption="依据现场情况填写"
     :excluded-field-ids="workspace.surveyLeakageCauseFieldIds"
   >
