@@ -116,6 +116,8 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
         const firstChild = page.getByTestId('survey-repair-part-children').locator('.app-cascade-selector__child').first()
         await firstChild.click()
         await expect(firstChild.locator('.app-cascade-selector__choice-indicator--selected')).toBeVisible()
+        await expect(page.getByTestId('survey-part-picker-current')).not.toContainText('尚未选择')
+        await capture('03-survey-parts-selected', 'S', 'S02 维修部位已选', '单选反馈、当前路径与确认操作')
         await page.getByTestId('survey-part-picker-confirm').click()
         await expect(page.getByTestId('survey-part-picker-panel')).toHaveCount(0)
       }
@@ -147,6 +149,10 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       await expect(page.getByTestId('survey-leakage-cause-panel')).toBeVisible()
       await expect(page.getByTestId('survey-leakage-cause-options')).toBeVisible()
       await capture('04-survey-reasons', 'S', 'S03 渗漏原因', '分类多选，返回表单')
+      const firstCause = page.getByTestId('survey-leakage-cause-option').first()
+      await firstCause.click()
+      await expect(firstCause).toHaveClass(/survey-leakage-cause__option--selected/)
+      await capture('04-survey-reasons-selected', 'S', 'S03 渗漏原因已选', '真实分组多选状态反馈')
       await page.locator('.survey-leakage-cause__close').click()
       await page.getByTestId('mock-journey-advance').click()
 
