@@ -10,7 +10,7 @@
               <text v-if="displayNumber" class="action-workspace-context-survey-number">{{ displayNumber }}</text>
               <text class="action-workspace-context-survey-customer">{{ customerName || '工单' }}</text>
             </view>
-            <view class="action-workspace-context-survey-status"><text class="action-workspace-context-status-dot">●</text>勘查中</view>
+            <view class="action-workspace-context-survey-status"><view class="action-workspace-context-status-dot" aria-hidden="true" />勘查中</view>
           </view>
           <template v-else>
             <text class="action-workspace-context-label">当前工单</text>
@@ -242,7 +242,7 @@ defineEmits<{
 .action-workspace-context-survey-status { flex:none; align-self:flex-start; display:flex; align-items:center; gap:5rpx;
   border-radius:999rpx; background:var(--app-color-success-soft); color:var(--app-color-success);
   font-size:var(--app-font-meta); font-weight:750; padding:6rpx 13rpx; }
-.action-workspace-context-status-dot { font-size:12rpx; }
+.action-workspace-context-status-dot { background:currentColor; width:11rpx; height:11rpx; border-radius:999rpx; display:inline-block; }
 .action-workspace-survey-demo-note { margin-top:12rpx; background:var(--app-color-primary-soft);
   color:var(--app-color-text-secondary); display:flex; gap:10rpx; align-items:center;
   border-radius:12rpx; padding:12rpx 16rpx; font-size:var(--app-font-meta); }
