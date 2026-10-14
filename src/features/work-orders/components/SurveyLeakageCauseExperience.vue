@@ -7,6 +7,8 @@
     <view class="survey-leakage-cause__task-header">
       <view class="survey-leakage-cause__task-icon" aria-hidden="true"><AppIcon name="location" :size="21" color="#fff" /></view>
       <text class="survey-leakage-cause__task-title">渗漏原因</text>
+      <text v-if="workspace.surveyLeakageCauseExperience.valueField.required"
+        class="survey-leakage-cause__required">*</text>
       <text class="survey-leakage-cause__task-status">{{ selectedCount > 0 ? '已选择 ' + selectedCount + ' 项' : '待选择' }}</text>
     </view>
     <AppField
@@ -247,4 +249,5 @@ function toggleOption(value: string): void {
 .survey-leakage-cause__field .app-field__label { display:none; }
 .survey-leakage-cause__trigger { min-height:86rpx; padding:12rpx 2rpx; }
 .survey-leakage-cause__summary { flex:1; min-width:0; }
+.survey-leakage-cause__required { margin-left:-9rpx; font-size:26rpx; font-weight:750; color:#e47736; }
 </style>
