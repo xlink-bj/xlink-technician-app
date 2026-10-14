@@ -4,7 +4,7 @@
     <view class="dynamic-action-heading" :class="{ 'dynamic-action-heading--survey': isSurvey }">
       <view class="dynamic-action-title-row">
         <view class="dynamic-action-icon" aria-hidden="true"><AppIcon name="task" :size="20" /></view>
-        <text class="dynamic-action-title">{{ title }}</text>
+        <text class="dynamic-action-title">{{ isSurvey ? '勘查记录' : title }}</text>
       </view>
       <text class="dynamic-action-caption">{{ caption }}</text>
     </view>
