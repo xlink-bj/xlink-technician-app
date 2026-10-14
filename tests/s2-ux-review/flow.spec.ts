@@ -90,6 +90,10 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       // Scroll back to the task header: previous DEV-context expansion
       // must not turn the S01 overview into a screenshot of the page tail.
       await page.getByTestId('action-workspace-context').scrollIntoViewIfNeeded()
+      const surveyAction = await page.getByTestId('action-workspace-submit').boundingBox()
+      expect(surveyAction, 'Survey must keep its fixed completion bar visible').not.toBeNull()
+      expect(surveyAction!.y + surveyAction!.height, 'Survey completion button must fit within mobile H5 viewport')
+        .toBeLessThanOrEqual(viewport.height)
       // Dependent fields become available AFTER selecting a repair part,
       // so capture the genuine initial Survey first, not a fabricated state.
       await capture('03-survey-overview', 'S', '现场勘察', '动态字段与页面结构')
