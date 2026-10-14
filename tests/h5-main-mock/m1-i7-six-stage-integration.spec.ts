@@ -73,11 +73,15 @@ for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }
     await page.locator('.primary-task-action').click()
     await expect(page.locator('.uni-page-head__title')).toContainText('现场勘查')
     await expect(page.getByTestId('mock-journey-context-appointment')).toContainText('I7阶段隔离')
-    const parts = page.getByTestId('survey-repair-part-selector')
+    const parts = page.getByTestId('survey-part-picker-trigger')
     if (await parts.isVisible()) {
+      await parts.click()
+      await expect(page.getByTestId('survey-part-picker-panel')).toBeVisible()
       await page.getByTestId('survey-repair-part-parents').locator('.app-cascade-selector__parent').first().click()
       await expect(page.getByTestId('survey-repair-part-children')).toBeVisible()
       await page.getByTestId('survey-repair-part-children').locator('.app-cascade-selector__child').first().click()
+      await page.getByTestId('survey-part-picker-confirm').click()
+      await expect(page.getByTestId('survey-part-picker-panel')).toHaveCount(0)
     }
     await expect(page.getByTestId('dynamic-field-squareMeter')).toBeVisible()
     await page.getByTestId('dynamic-field-squareMeter').locator('input').fill('14.5')
