@@ -229,6 +229,12 @@ defineEmits<{
 }
 
 /* Survey-only S01 commercial work-order context; do not change accepted Appointment. */
+/* #ifdef H5 */
+/* uni-page-head uses a 44px H5 navigation bar above the page body.
+   Survey-only subtraction keeps the approved S01 bottom actions inside
+   the visible viewport. Native MP/App preserve the original page height. */
+.action-workspace-page--survey { height:calc(100vh - 44px); }
+/* #endif */
 .action-workspace-page--survey .action-workspace-body { padding-top:16rpx; }
 .action-workspace-page--survey .action-workspace-context { border-radius:var(--app-radius-card); padding:20rpx; }
 .action-workspace-context-survey { display:flex; align-items:center; gap:15rpx; min-height:80rpx; }
