@@ -1,6 +1,7 @@
 <template>
-  <view class="dynamic-action-content app-surface" data-action-content="dynamic-form" data-testid="dynamic-form-action-content">
-    <view class="dynamic-action-heading">
+  <view class="dynamic-action-content" :class="{ 'dynamic-action-content--survey': isSurvey }"
+    data-action-content="dynamic-form" data-testid="dynamic-form-action-content">
+    <view class="dynamic-action-heading" :class="{ 'dynamic-action-heading--survey': isSurvey }">
       <view class="dynamic-action-title-row">
         <view class="dynamic-action-icon" aria-hidden="true"><AppIcon name="task" :size="20" /></view>
         <text class="dynamic-action-title">{{ title }}</text>
@@ -25,12 +26,25 @@
       <AppField
         v-if="!props.excludedFieldIds.includes(field.fieldId) && field.runtime.visible && field.runtime.capability !== 'UNSUPPORTED' && field.runtime.capability !== 'PRESENTATION_ONLY'"
         class="dynamic-action-field"
+        :class="{
+          'dynamic-action-field--survey': isSurvey,
+          'dynamic-action-field--survey-media': isSurvey && (field.type === 'image' || field.type === 'file'),
+          'dynamic-action-field--survey-cascade': isSurvey && field.type === 'cascade',
+          'dynamic-action-field--survey-measure': isSurvey && (field.type === 'digit' || field.type === 'number'),
+        }"
         :data-testid="`dynamic-field-${field.valueKey}`"
         :label="field.label"
         :required="field.runtime.required"
       >
+        <SurveyPartPicker
+          v-if="isSurvey && field.type === 'cascade' && field.valueKey === 'part' && field.options?.length"
+          :options="field.options"
+          :model-value="arrayValue(workspace.dynamicForm?.values[field.valueKey])"
+          :disabled="field.runtime.readOnly || workspace.lifecycle === 'submitting'"
+          @update:model-value="setField(field.fieldId, $event)"
+        />
         <AppCascadeSelector
-          v-if="field.type === 'cascade' && field.options?.length"
+          v-else-if="field.type === 'cascade' && field.options?.length"
           :options="field.options"
           :model-value="arrayValue(workspace.dynamicForm?.values[field.valueKey])"
           :hierarchical="workspace.dynamicForm?.purpose === 'survey' && field.valueKey === 'part'"
@@ -66,8 +80,8 @@
         >
           <view class="dynamic-action-media-header">
             <view class="dynamic-action-media-header-copy">
-              <text class="dynamic-action-media-title">{{ field.type === 'image' ? '现场照片' : '现场附件' }}</text>
-              <text class="dynamic-action-media-subtitle">按当前勘察要求补充记录</text>
+              <text class="dynamic-action-media-title">{{ isSurvey ? '拍摄或上传' : field.type === 'image' ? '现场照片' : '现场附件' }}</text>
+              <text class="dynamic-action-media-subtitle">{{ isSurvey ? '按此字段单独记录现场资料' : '按当前勘察要求补充记录' }}</text>
             </view>
             <text class="dynamic-action-media-count" :data-testid="`dynamic-media-count-${field.valueKey}`">
               {{ mediaCountFor(field.fieldId) }}<text v-if="mediaMaxFor(field) !== undefined"> / {{ mediaMaxFor(field) }}</text>
@@ -79,7 +93,11 @@
             <view
               v-for="media in mediaPreviewsFor(field)"
               :key="media.url"
-              class="dynamic-action-media-tile"
+              class="dynamic-action-media-tile dynamic-action-media-tile--preview"
+              role="button"
+              tabindex="0"
+              aria-label="查看已上传的媒体"
+              @tap="previewMedia(field.fieldId, media.url)"
             >
               <image class="dynamic-action-media-thumbnail" :src="media.url" mode="aspectFill" />
             </view>
@@ -173,6 +191,7 @@ import AppInput from '@shared/ui/AppInput.vue'
 import AppMultiChoiceGroup from '@shared/ui/AppMultiChoiceGroup.vue'
 import AppStatus from '@shared/ui/AppStatus.vue'
 import AppTextarea from '@shared/ui/AppTextarea.vue'
+import SurveyPartPicker from './SurveyPartPicker.vue'
 
 const props = withDefaults(defineProps<{
   readonly title?: string
@@ -185,6 +204,7 @@ const props = withDefaults(defineProps<{
 })
 
 const workspace = useActionWorkspaceStore()
+const isSurvey = computed(() => workspace.dynamicForm?.purpose === 'survey')
 const title = computed(() => props.title)
 const caption = computed(() => props.caption)
 const unsupportedMessage = computed(() => {
@@ -265,6 +285,15 @@ function setField(fieldId: string, value: FormFieldValue): void {
   workspace.setField(fieldId, value)
 }
 
+function previewMedia(fieldId: string, url: string): void {
+  const urls = workspace.mediaByField[fieldId]?.map((item) => item.url) ?? []
+  const knownUrls = urls.length ? urls : workspace.dynamicFields
+    .filter((field) => field.fieldId === fieldId)
+    .flatMap((field) => mediaPreviewsFor(field).map((item) => item.url))
+  if (!knownUrls.includes(url)) return
+  uni.previewImage({ urls: [...knownUrls], current: url })
+}
+
 async function pickMedia(fieldId: string): Promise<void> {
   if (workspace.mediaCanRetryDynamic(fieldId)) {
     await workspace.retryDynamicMedia(fieldId)
@@ -335,4 +364,53 @@ async function pickMedia(fieldId: string): Promise<void> {
 .dynamic-action-presentation-line { background: var(--app-color-divider); flex: 1; height: 1rpx; }
 .dynamic-action-presentation-label { color: var(--app-color-text-tertiary); font-size: var(--app-font-caption); }
 .dynamic-action-unsupported { margin-top: var(--app-space-sm); }
+/* S01 approved commercial visual system: Survey only. Other dynamic forms
+   keep their existing renderer and layout until separately reviewed. */
+.dynamic-action-content--survey { background: transparent; padding: 0; margin-top: 20rpx; }
+.dynamic-action-heading--survey { padding: 0 2rpx 16rpx; border-bottom: 0; }
+.dynamic-action-content--survey .dynamic-action-title-row { gap: 0; }
+.dynamic-action-content--survey .dynamic-action-icon { display: none; }
+.dynamic-action-content--survey .dynamic-action-title { font-size: 38rpx; line-height: 1.35; font-weight: 800; }
+.dynamic-action-content--survey .dynamic-action-caption { margin-top: 6rpx; color: var(--app-color-text-secondary); font-size: var(--app-font-body); }
+.dynamic-action-content--survey .dynamic-action-field--survey {
+  display: block; margin: 0 0 16rpx; background: var(--app-color-surface);
+  border: 1rpx solid var(--app-color-border); border-radius: var(--app-radius-card);
+  padding: 22rpx 22rpx 24rpx; box-shadow: 0 5rpx 18rpx rgba(25,50,81,.035);
+}
+.dynamic-action-content--survey .dynamic-action-field--survey .app-field__label {
+  display:block; margin:0 0 12rpx; color:var(--app-color-text-primary);
+  font-size:var(--app-font-body); font-weight:750; line-height:1.4;
+}
+.dynamic-action-content--survey .dynamic-action-field--survey-cascade .app-field__label {
+  padding-left: 54rpx; position:relative; font-size:var(--app-font-section-title);
+}
+.dynamic-action-content--survey .dynamic-action-field--survey-cascade .app-field__label::before {
+  position:absolute; left:0; top:0; background:var(--app-color-primary-soft);
+  border-radius:10rpx; width:40rpx; height:40rpx; content:'⌖';
+  display:flex; align-items:center; justify-content:center;
+  color:var(--app-color-primary); font-size:26rpx;
+}
+.dynamic-action-content--survey .dynamic-action-field--survey-media .app-field__label {
+  font-size:var(--app-font-section-title); margin-bottom:12rpx;
+}
+.dynamic-action-content--survey .dynamic-action-field--survey-measure .app-input {
+  min-height:72rpx; background:var(--app-color-control-surface);
+  border-radius:12rpx; text-align:right;
+}
+.dynamic-action-content--survey .dynamic-action-media { border:0; padding:0; background:transparent; }
+.dynamic-action-content--survey .dynamic-action-media-header { margin-bottom:5rpx; }
+.dynamic-action-content--survey .dynamic-action-media-title { color:var(--app-color-text-secondary); font-size:var(--app-font-meta); font-weight:500; }
+.dynamic-action-content--survey .dynamic-action-media-subtitle { display:none; }
+.dynamic-action-content--survey .dynamic-action-media-count { background:var(--app-color-control-surface); font-size:var(--app-font-meta); }
+.dynamic-action-content--survey .dynamic-action-media-grid { margin-top:12rpx; gap:14rpx; }
+.dynamic-action-content--survey .dynamic-action-media-tile { flex-basis:174rpx; width:174rpx; height:174rpx; border-radius:14rpx; }
+.dynamic-action-content--survey .dynamic-action-media-tile--add { border:2rpx dashed var(--app-color-primary-border); background:var(--app-color-primary-soft); }
+.dynamic-action-content--survey .dynamic-action-media-tile--preview { cursor:pointer; }
+.dynamic-action-content--survey .dynamic-action-presentation-divider:not(.dynamic-action-presentation-divider--gap) {
+  margin:22rpx 0 14rpx; padding-left:6rpx;
+}
+.dynamic-action-content--survey .dynamic-action-presentation-label { font-size:var(--app-font-body); font-weight:750; color:var(--app-color-text-primary); }
+.dynamic-action-content--survey .dynamic-action-presentation-divider--gap {
+  height:12rpx; background:transparent; margin:0;
+}
 </style>
