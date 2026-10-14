@@ -33,7 +33,7 @@
       <view v-if="isOpen" class="survey-leakage-cause__backdrop">
         <view class="survey-leakage-cause__sheet" data-testid="survey-leakage-cause-panel">
           <view class="survey-leakage-cause__sheet-header">
-            <text class="survey-leakage-cause__sheet-title">渗漏原因</text>
+            <text class="survey-leakage-cause__sheet-title">选择渗漏原因</text>
             <button class="survey-leakage-cause__close" aria-label="关闭" @tap="close">×</button>
           </view>
 
@@ -216,4 +216,15 @@ function toggleOption(value: string): void {
 .survey-leakage-cause__option--selected .survey-leakage-cause__option-indicator { background: var(--app-color-primary); border-color: var(--app-color-primary); color: #fff; }
 .survey-leakage-cause__done { margin-top: var(--app-space-md); }
 .survey-leakage-cause__readonly-summary { background: var(--app-color-disabled-surface); }
+/* S03 matches the approved focused selection panel; source options and
+   multiselect identity are still owned by the existing Survey Runtime. */
+.survey-leakage-cause { border:1rpx solid var(--app-color-border); background:var(--app-color-surface);
+  border-radius:var(--app-radius-card); padding:20rpx 22rpx; margin-top:14rpx; box-shadow:0 5rpx 18rpx rgba(25,50,81,.035); }
+.survey-leakage-cause__field { margin:0; }
+.survey-leakage-cause__field .app-field__label { font-size:var(--app-font-section-title); font-weight:750; }
+.survey-leakage-cause__trigger { background:var(--app-color-surface); border:0; padding-left:0; padding-right:0; }
+.survey-leakage-cause__sheet { max-height:84vh; border-radius:30rpx 30rpx 0 0; }
+.survey-leakage-cause__option { border-radius:12rpx; }
+.survey-leakage-cause__option-indicator { border-radius:8rpx; }
+.survey-leakage-cause__group { min-height:74rpx; }
 </style>
