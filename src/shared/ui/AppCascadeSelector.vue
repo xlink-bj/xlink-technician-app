@@ -1,7 +1,7 @@
 <template>
   <view
     class="app-choice-group app-choice-group--multi app-cascade-selector"
-    :class="{ 'app-cascade-selector--hierarchical': hierarchical }"
+    :class="{ 'app-cascade-selector--hierarchical': hierarchical, 'app-cascade-selector--split': hierarchical && splitLayout }"
     :data-testid="testId ?? (hierarchical ? 'survey-repair-part-selector' : undefined)"
   >
     <template v-if="hierarchical">
@@ -78,9 +78,11 @@ const props = withDefaults(
     readonly disabled?: boolean
     /** Survey uses a readable parent -> child presentation; value paths stay unchanged. */
     readonly hierarchical?: boolean
+    /** Opt-in S02 parent/child side-by-side layout, without changing other cascade usages. */
+    readonly splitLayout?: boolean
     readonly testId?: string
   }>(),
-  { disabled: false, hierarchical: false },
+  { disabled: false, hierarchical: false, splitLayout: false },
 )
 
 const emit = defineEmits<{
@@ -156,6 +158,50 @@ function select(valuePath: readonly string[]): void {
   display: grid;
   gap: var(--app-control-gap);
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/* S02-only mobile selection layout; style this component's own nodes
+   rather than relying on cross-component uni-app descendant styling. */
+.app-cascade-selector--split {
+  display: flex;
+  align-items: flex-start;
+  gap: 12rpx;
+}
+.app-cascade-selector--split .app-cascade-selector__parents {
+  display: flex;
+  flex: 0 0 28%;
+  flex-direction: column;
+  gap: 4rpx;
+  min-width: 0;
+}
+.app-cascade-selector--split .app-cascade-selector__parent {
+  justify-content: flex-start;
+  text-align: left;
+  border: 0;
+  border-left: 4rpx solid transparent;
+  border-radius: 8rpx;
+  background: transparent;
+}
+.app-cascade-selector--split .app-cascade-selector__parent--active {
+  border-left-color: var(--app-color-primary);
+  background: var(--app-color-primary-soft);
+  color: var(--app-color-primary);
+}
+.app-cascade-selector--split .app-cascade-selector__children {
+  flex: 1;
+  min-width: 0;
+  margin-top: 0;
+  padding: 6rpx;
+  border: 0;
+  background: var(--app-color-surface);
+}
+.app-cascade-selector--split .app-cascade-selector__children-options {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6rpx;
+}
+.app-cascade-selector--split .app-cascade-selector__child {
+  text-align: left;
+  min-height: 74rpx;
 }
 
 .app-cascade-selector__parent,
