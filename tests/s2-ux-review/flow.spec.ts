@@ -119,6 +119,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       await expect(reason).toBeVisible()
       await reason.click()
       await expect(page.getByTestId('survey-leakage-cause-panel')).toBeVisible()
+      await expect(page.getByTestId('survey-leakage-cause-options')).toBeVisible()
       await capture('04-survey-reasons', 'S', 'S03 渗漏原因', '分类多选，返回表单')
       await page.locator('.survey-leakage-cause__close').click()
       await page.getByTestId('mock-journey-advance').click()
