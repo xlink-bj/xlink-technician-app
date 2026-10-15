@@ -24,6 +24,7 @@
     :dev-visual-sample="devQuotationOrderPreview"
     @create="openQuotationEditor"
     @edit="openExistingQuotationEditor"
+    @mode-change="quotationChoiceVisible = $event"
   />
 
   <QuotationActionWorkspace
@@ -308,6 +309,7 @@ const devQuotationOrderPreview = computed(() =>
 )
 const quotationEditorOpened = ref(false)
 const quotationHubRef = ref<{ finishEdit: (message?: string) => void } | null>(null)
+const quotationChoiceVisible = ref(false)
 const quotationHubVisible = computed(() =>
   routeQuotationEntry.value === 'orders' && !quotationEditorOpened.value
   && !routeQuotationOrderId.value && workspace.descriptor?.contentKind === 'quotation'
@@ -365,7 +367,7 @@ const quotationContentViewState = computed(() => workspace.quotationContentState
   : workspace.quotationContentState)
 
 const workspaceNavigationTitle = computed(() => {
-  if (quotationHubVisible.value) return '订单管理'
+  if (quotationHubVisible.value) return quotationChoiceVisible.value ? '选择下单方式' : '订单管理'
   if (routeAction.value === 'place_order' || workspace.descriptor?.contentKind === 'quotation') return '报价工作台'
   if (workspace.descriptor?.formPurpose === 'survey') return '现场勘查'
   if (workspace.descriptor?.actionIntent === 'interact_with_form') return '工单表单'
@@ -443,6 +445,7 @@ onLoad((options) => {
     && (options?.q00Preview === 'orders' || options?.q00Preview === 'empty')
       ? options.q00Preview : undefined
   quotationEditorOpened.value = false
+  quotationChoiceVisible.value = false
   routeReady.value = true
 })
 
