@@ -2664,7 +2664,7 @@ function configuredPackageLayerLabel(
   flex:0 0 62px; width:62px; height:68px;
 }
 .quotation-content__catalog-browser--faceted .quotation-content__catalog-item-title {
-  font-size:13px; line-height:1.45; font-weight:750; margin:0;
+  font-size:15px; line-height:1.36; font-weight:750; margin:0;
 }
 .quotation-content__catalog-browser--faceted .quotation-content__catalog-kind-pill {
   padding:2px 4px; font-size:9.5px;
