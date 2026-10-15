@@ -2915,4 +2915,150 @@ function configuredPackageLayerLabel(
  .quotation-content__first-step-card-heading { gap:7px; }
  .quotation-content__first-step-card-title { font-size:16px; }
 }
+
+/* M1-S2 375/390 fidelity finish — presentation only, business gates unchanged.
+   Native textarea is border-box to prevent hidden 18px inflation. */
+.quotation-content__first-step-card,
+.quotation-content__first-repair-part-step .quotation-content__commercial-section {
+  border:1px solid #e2e8f1; border-radius:14px;
+  background:#fff; box-shadow:0 2px 10px rgba(24,51,85,.04);
+}
+.quotation-content__first-step-card { padding:13px 15px 12px; }
+.quotation-content__first-step-card-heading {
+  margin:0 0 8px; padding:0 0 10px; border-bottom:1px solid #e9edf3;
+}
+.quotation-content__first-step-index,
+.quotation-content__section-number {
+  background:#2477e4; border-radius:9px; width:30px;
+  min-width:30px; height:30px; font-size:14px; font-weight:750;
+}
+.quotation-content__first-step-card-title,
+.quotation-content__first-step-products-title,
+.quotation-content__initial-cost-title {
+  color:#1a2d48; font-size:17px; line-height:1.4; font-weight:780;
+}
+.quotation-content__save-draft { color:#256dc5; font-size:12px; min-height:35px; }
+.quotation-content__first-step-field { margin-top:9px; }
+.quotation-content__first-step-label {
+  display:block; margin-bottom:6px; font-size:14px; line-height:1.35;
+  font-weight:700; color:#283b54;
+}
+.quotation-content__first-step-selector-trigger,
+.quotation-content__first-step-textarea,
+.quotation-content__first-step-quantity {
+  box-sizing:border-box; width:100%; background:#f8fafc;
+  border:1px solid #dce5ef; border-radius:10px; color:#20334e;
+}
+.quotation-content__first-step-selector-trigger { min-height:47px; padding:9px 12px; }
+.quotation-content__first-step-selector-value { color:#2f70bf; font-size:14px; font-weight:710; }
+.quotation-content__first-step-textarea {
+  min-height:58px; height:58px; padding:11px 12px; font-size:14px; line-height:1.45;
+}
+.quotation-content__first-step-quantity {
+  min-height:45px; height:45px; padding:8px 12px; font-size:15px; font-weight:700;
+}
+.quotation-content__first-repair-part-step .quotation-content__commercial-section {
+  margin-top:10px; padding:13px 15px;
+}
+.quotation-content__first-repair-part-step .quotation-content__section-heading {
+  min-height:30px; margin:0 0 10px; padding:0 0 9px; border-bottom:1px solid #e9edf3;
+}
+.quotation-content__first-repair-part-step .quotation-content__select-tile {
+  border:1px solid #cfdef2; border-radius:11px;
+  min-height:66px; padding:10px 12px; background:#fbfdff;
+}
+.quotation-content__first-repair-part-step .quotation-content__select-icon {
+  width:41px; height:41px; flex-basis:41px;
+  border-radius:11px; background:#eaf3ff;
+}
+.quotation-content__first-repair-part-step .quotation-content__select-tile-name {
+  font-size:15px; color:#193a63; font-weight:730;
+}
+
+/* Q03: avoid duplicate heading, keep source-backed taxonomy and all states. */
+.quotation-content__catalog-page { background:#f5f7fa; }
+.quotation-content__catalog-topbar {
+  min-height:51px; background:#fff; border-bottom:1px solid #e8edf3;
+}
+.quotation-content__catalog-title { font-size:18px; font-weight:780; color:#182b46; }
+.quotation-content__catalog-mode {
+  background:#eef4fd; color:#306fbe; border-radius:8px; font-size:11px;
+}
+.quotation-content__catalog-target {
+  min-height:55px; padding:10px 12px;
+  background:#fff; border:1px solid #e4eaf2; border-radius:12px; box-shadow:none;
+}
+.quotation-content__catalog-target-title {
+  color:#263a55; font-size:13px; font-weight:730; line-height:1.4;
+}
+.quotation-content__catalog-target-count {
+  color:#497bb9; background:#f1f6fc; border-radius:8px;
+  font-size:10.5px; padding:5px 7px;
+}
+.quotation-content__catalog-intro { display:none; }
+.quotation-content__catalog-main {
+  background:#fff; border:1px solid #e8edf4;
+  border-radius:14px; padding:0 9px 7px; margin-top:10px;
+}
+.quotation-content__search-wrap {
+  background:#f8fafc; border:1px solid #dce5f0;
+  border-radius:10px; min-height:44px; margin-top:10px; padding:0 9px;
+}
+.quotation-content__search-input { color:#263a53; font-size:13px; }
+.quotation-content__search-action {
+  background:#eaf3ff; color:#286fc8; min-height:33px; border-radius:8px;
+}
+.quotation-content__category-grid { height:46px; flex-basis:46px; }
+.quotation-content__category {
+  min-height:44px; font-size:14px; font-weight:700;
+  color:#75869d; border-bottom-width:3px;
+}
+.quotation-content__category--active { color:#236fe0; border-bottom-color:#236fe0; }
+.quotation-content__catalog-section-heading { margin:8px 4px 7px; padding:0; min-height:21px; }
+.quotation-content__catalog-section-title { font-size:15px; font-weight:760; }
+.quotation-content__catalog-facets { width:66px; background:#f4f7fb; }
+.quotation-content__catalog-facet {
+  min-height:46px; font-size:12px; padding:9px 6px;
+  color:#8090a5; border-left-width:3px;
+}
+.quotation-content__catalog-facet--selected {
+  color:#236fce; background:#eaf3ff; border-left-color:#236fce;
+}
+.quotation-content__catalog-facet--disabled { color:#a4aebd; opacity:.8; }
+.quotation-content__catalog-browser--faceted .quotation-content__catalog-list {
+  margin-left:68px; width:calc(100% - 68px);
+}
+.quotation-content__catalog-browser--faceted .quotation-content__catalog-state { margin-left:68px; }
+.quotation-content__catalog-browser--faceted .quotation-content__catalog-item {
+  min-height:141px; padding:11px 9px 52px;
+  margin-bottom:8px; border:1px solid #e1e8f1;
+  border-radius:11px; background:#fff;
+}
+.quotation-content__catalog-browser--faceted .quotation-content__catalog-item-main { gap:9px; }
+.quotation-content__catalog-browser--faceted .quotation-content__catalog-thumbnail {
+  flex:0 0 49px; width:49px; height:54px;
+  border:1px solid #dce9fa; border-radius:10px; background:#edf4fd;
+}
+.quotation-content__catalog-browser--faceted .quotation-content__catalog-item-title {
+  font-size:14px; font-weight:750; line-height:1.4; color:#20334f;
+}
+.quotation-content__catalog-browser--faceted .quotation-content__catalog-kind-pill {
+  font-size:10px; border-radius:5px; color:#3878c6;
+  background:#edf4ff; padding:2px 5px;
+}
+.quotation-content__catalog-browser--faceted .quotation-content__catalog-item-detail {
+  font-size:10px; color:#7b8da5; background:#f6f8fb;
+  border:1px solid #e5ebf3; border-radius:5px;
+}
+.quotation-content__catalog-browser--faceted .quotation-content__catalog-item-footer {
+  bottom:8px; left:9px; right:9px; min-height:38px;
+}
+.quotation-content__catalog-browser--faceted .quotation-content__catalog-item-price-state {
+  font-size:10.5px; color:#8695a8;
+}
+.quotation-content__catalog-browser--faceted .quotation-content__catalog-item-action {
+  min-width:100px; min-height:38px; font-size:12px;
+  border-radius:9px; padding:0 7px;
+}
+
 </style>
