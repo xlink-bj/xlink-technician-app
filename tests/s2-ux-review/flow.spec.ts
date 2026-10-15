@@ -187,6 +187,14 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       await expect(page.getByTestId('quotation-hub-design-sample')).toBeVisible()
       await expect(page.getByTestId('quotation-hub-records')).toBeVisible()
       await expect(page.getByTestId('quotation-hub-records').locator('.quotation-hub__order')).toHaveCount(2)
+      // Commercial reference: the work-order identity and customer detail
+      // occupy separate, visually grouped rows rather than one cramped stack.
+      await expect(page.locator('.quotation-hub__work-order-meta')).toContainText('客户名称')
+      const heroTop = await page.locator('.quotation-hub__work-order-top').boundingBox()
+      const heroMeta = await page.locator('.quotation-hub__work-order-meta').boundingBox()
+      expect(heroTop).not.toBeNull()
+      expect(heroMeta).not.toBeNull()
+      expect(heroMeta!.y).toBeGreaterThan(heroTop!.y + 42)
       // Screenshot generation alone is not a typography or spacing review:
       // Q00's former 19rpx labels were only ~10px on a 390px screen.
       const orderTitleSize = await page.locator('.quotation-hub__order-number').first().evaluate(
@@ -216,6 +224,13 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       await expect(page.locator('.journey-context__focus-suggestion')).toContainText('屋面 / 有保护平屋面')
       await expect(page.getByTestId('mock-journey-context-survey')).toBeHidden()
       const firstAction = await page.getByTestId('quotation-add-group').boundingBox()
+      // Q01 visual contract: numbered section header is a horizontal row.
+      const firstStepNumber = await page.locator('.quotation-content__initial-empty-heading .quotation-content__section-number').boundingBox()
+      const firstStepTitle = await page.locator('.quotation-content__initial-empty-heading .quotation-content__initial-empty-title').boundingBox()
+      expect(firstStepNumber).not.toBeNull()
+      expect(firstStepTitle).not.toBeNull()
+      expect(firstStepTitle!.x).toBeGreaterThan(firstStepNumber!.x + 24)
+      expect(Math.abs(firstStepTitle!.y - firstStepNumber!.y)).toBeLessThan(12)
       const taskFooter = await page.getByTestId('quotation-footer-summary').boundingBox()
       expect(firstAction, 'quote add-repair-part action must be visible').not.toBeNull()
       expect(taskFooter, 'quote safety footer must remain visible').not.toBeNull()
