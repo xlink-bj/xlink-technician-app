@@ -71,9 +71,15 @@
         :data-testid="`quotation-hub-order-${order.id}`">
         <view class="quotation-hub__order-heading">
           <text class="quotation-hub__order-number">{{ order.displayNumber || order.id }}</text>
-          <text class="quotation-hub__order-badge">{{ isVisualSample ? '演示订单' : '正式订单' }}</text>
+          <view class="quotation-hub__order-pills">
+            <text class="quotation-hub__order-badge">{{ isVisualSample ? (order.id.endsWith('-1') ? '订单 1' : '订单 2') : '正式订单' }}</text>
+            <text v-if="isVisualSample" class="quotation-hub__order-badge"
+              :class="order.id.endsWith('-1') ? 'quotation-hub__order-badge--pending' : 'quotation-hub__order-badge--signed'">
+              {{ order.id.endsWith('-1') ? '演示 · 待签约' : '演示 · 已签约' }}
+            </text>
+          </view>
         </view>
-        <text class="quotation-hub__order-subtitle">{{ isVisualSample ? '视觉演示 · 无真实修改或签约操作' : '当前权限可见 · 状态未核实时不推断签约进度' }}</text>
+        <text class="quotation-hub__order-subtitle">{{ isVisualSample ? order.groups[0]?.partDescription || '演示维修方案' : '当前权限可见 · 状态未核实时不推断签约进度' }}</text>
         <view class="quotation-hub__order-lines">
           <view class="quotation-hub__order-line">
             <text>产品总额</text>
@@ -162,6 +168,7 @@ const sampleRecords = computed((): readonly QuotationOrderBrowseItem[] => [3500,
   serviceAppointmentId: props.workOrderId,
   totalPrice: amount,
   originPrice: amount,
+  updateTime: index === 0 ? '2026-08-05 17:55:07' : '2026-08-04 16:22:11',
   groups: [{
     repairParts: ['示例'],
     partDescription: index === 0 ? '屋面防水维修' : '卫生间局部维修',
@@ -437,4 +444,8 @@ watch(() => props.workOrderId, () => {
  .quotation-hub__work-order-number { font-size: 14px; }
  .quotation-hub__section-title { font-size: 17px; }
 }
+
+.quotation-hub__order-pills { display:flex; align-items:center; flex-wrap:wrap; gap:5px; justify-content:flex-end; }
+.quotation-hub__order-badge--pending { background:#fff0ed; color:#e15d4c; }
+.quotation-hub__order-badge--signed { background:#eaf3ff; color:#2775c7; }
 </style>
