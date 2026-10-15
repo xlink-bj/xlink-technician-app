@@ -70,7 +70,7 @@ test('approved catalog page renders all four categories and matches R1 search sc
   const diagnostics = await installSafetyGuards(page)
   await openCatalog(page)
 
-  await expect(page.getByTestId('quotation-catalog-page')).toContainText('服务目录')
+  await expect(page.getByTestId('quotation-catalog-page')).toContainText('选择产品')
   await expect(page.getByTestId('quotation-catalog-target')).toContainText('屋面')
   await expect(page.getByTestId('quotation-catalog-kind-package')).toContainText('套餐')
   await expect(page.getByTestId('quotation-catalog-kind-procedure')).toContainText('工序')
