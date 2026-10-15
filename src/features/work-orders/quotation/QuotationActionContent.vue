@@ -2196,7 +2196,7 @@ function configuredPackageLayerLabel(
 .quotation-content__initial-draft-notice-copy { display: block; min-width: 0; }
 .quotation-content__initial-card, .quotation-content__initial-process { background: var(--app-color-surface); border-color: var(--app-color-border); border-radius: var(--app-radius-card); box-shadow: none; }
 .quotation-content__initial-card { box-sizing: border-box; display: flex; flex-direction: column; padding: 24rpx 20rpx 20rpx; }
-.quotation-content__initial-empty-heading { display: flex; flex-direction: column; gap: 6rpx; padding: 0 4rpx 18rpx; }
+.quotation-content__initial-empty-heading { display:flex; flex-direction:row; align-items:center; justify-content:flex-start; gap:11px; padding:0 0 10px; text-align:left; }
 .quotation-content__initial-empty-title { color: var(--app-color-text-primary); display: block; font-size: var(--app-font-section-title); font-weight: 750; line-height: 1.35; }
 .quotation-content__initial-empty-description { color: var(--app-color-text-body); display: block; font-size: var(--app-font-body); line-height: 1.5; }
 .quotation-content__initial-empty-surface { align-items: stretch; background: var(--app-color-control-surface); border: 1rpx solid var(--app-color-border); border-radius: var(--app-radius-surface); display: flex; flex-direction: column; padding: 20rpx; text-align: left; }
