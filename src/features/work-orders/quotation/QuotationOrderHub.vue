@@ -3,7 +3,7 @@
     
     <view class="quotation-hub__work-order app-surface">
       <view class="quotation-hub__work-order-top">
-        <view class="quotation-hub__house" aria-hidden="true"><AppIcon name="home" :size="24" color="#f08d3d" /></view>
+        <view class="quotation-hub__house" aria-hidden="true"><AppIcon name="home" :size="23" color="#286cbf" /></view>
         <view class="quotation-hub__work-order-copy">
           <text class="quotation-hub__eyebrow">当前工单</text>
           <text class="quotation-hub__work-order-number">{{ displayNumber || workOrderId }}</text>
@@ -254,38 +254,38 @@ watch(() => props.workOrderId, () => {
 /* Q00 commercial system. One canonical visual owner, no additive override
    blocks; all numbers correspond to the owner-reviewed phone content. */
 .quotation-hub {
-  --q-bg:#f4f8fc;
+  --q-bg:#f5f7fa;
   --q-card:#fff;
-  --q-navy:#192b46;
-  --q-label:#7a8ba4;
-  --q-blue:#1677f4;
-  --q-border:#e5ecf5;
-  --q-radius:15px;
-  --q-shadow:0 4px 18px rgba(35,72,120,.055);
+  --q-navy:#172a44;
+  --q-label:#75869d;
+  --q-blue:#2376df;
+  --q-border:#e3e9f2;
+  --q-radius:14px;
+  --q-shadow:0 2px 12px rgba(24,51,85,.045);
   box-sizing:border-box; min-height:100%; background:var(--q-bg);
-  color:var(--q-navy); padding:13px 13px calc(108px + env(safe-area-inset-bottom));
+  color:var(--q-navy); padding:13px 14px calc(108px + env(safe-area-inset-bottom));
   font-family:-apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
 }
 .quotation-hub__work-order {
-  display:flex; flex-direction:column; padding:14px 15px 12px;
+  display:flex; flex-direction:column; padding:15px 15px 13px;
   background:var(--q-card); border:1px solid var(--q-border);
   border-radius:var(--q-radius); box-shadow:var(--q-shadow);
 }
 .quotation-hub__work-order-top { display:flex; align-items:center; gap:12px; min-height:57px; }
 .quotation-hub__house {
   display:flex; align-items:center; justify-content:center; flex:none;
-  width:43px; height:43px; border-radius:11px; background:#fff1e6;
+  width:43px; height:43px; border-radius:12px; background:#eaf3ff;
 }
 .quotation-hub__work-order-copy { display:flex; flex:1; min-width:0; flex-direction:column; gap:5px; }
 .quotation-hub__eyebrow,.quotation-hub__meta-label {
   font-size:12px; line-height:1.35; color:var(--q-label);
 }
 .quotation-hub__work-order-number {
-  font-size:17px; line-height:1.25; font-weight:800; color:#172a44; overflow-wrap:anywhere;
+  font-size:17px; line-height:1.3; font-weight:780; color:#172a44; overflow-wrap:anywhere;
 }
 .quotation-hub__work-order-state {
-  align-self:flex-start; flex:none; color:#da7944; background:#fff0e9;
-  border-radius:8px; padding:5px 9px; font-size:12px; font-weight:700;
+  align-self:flex-start; flex:none; color:#496581; background:#eef3f9;
+  border-radius:7px; padding:5px 9px; font-size:11px; font-weight:700;
 }
 .quotation-hub__work-order-meta {
   border-top:1px solid #eff2f7; margin-top:11px; padding-top:12px;
@@ -294,8 +294,9 @@ watch(() => props.workOrderId, () => {
 .quotation-hub__work-order-meta-cell { display:flex; flex-direction:column; min-width:0; gap:5px; }
 .quotation-hub__work-order-customer { color:var(--q-navy); font-size:14px; font-weight:650; line-height:1.35; }
 .quotation-hub__sample-label {
-  margin:9px 0 0; padding:7px 10px; background:#edf5ff;
-  color:#6182aa; font-size:11px; line-height:1.45; border-radius:9px;
+  margin:9px 0 0; padding:4px 9px; background:transparent;
+  color:#74879e; font-size:11px; line-height:1.5; border-radius:0;
+  border-left:2px solid #b7cbe5;
 }
 .quotation-hub__notice {
   display:flex; align-items:flex-start; gap:7px; margin:10px 0 18px;
@@ -307,14 +308,14 @@ watch(() => props.workOrderId, () => {
   margin:17px 1px 12px; min-height:44px;
 }
 .quotation-hub__section-title {
-  font-size:20px; font-weight:800; line-height:1.3; color:#192b46;
+  font-size:19px; font-weight:790; line-height:1.3; color:#172a44;
 }
 .quotation-hub__new-outline {
   min-height:40px; font-size:13px; font-weight:700; border-radius:10px;
 }
 .quotation-hub__list { display:flex; flex-direction:column; gap:12px; }
 .quotation-hub__order {
-  box-sizing:border-box; padding:15px 15px 14px;
+  box-sizing:border-box; padding:15px 15px 15px;
   background:var(--q-card); border:1px solid var(--q-border);
   border-radius:var(--q-radius); box-shadow:var(--q-shadow);
 }
@@ -323,12 +324,12 @@ watch(() => props.workOrderId, () => {
   align-items:center; gap:8px;
 }
 .quotation-hub__order-number {
-  font-size:15px; line-height:1.35; font-weight:780; color:var(--q-navy);
+  font-size:15px; line-height:1.35; font-weight:770; color:var(--q-navy);
   overflow-wrap:anywhere; min-width:0;
 }
 .quotation-hub__order-pills { display:flex; flex-wrap:wrap; align-items:center; gap:5px; }
 .quotation-hub__order-badge {
-  border-radius:6px; background:#eaf3ff; color:#2777d5;
+  border-radius:6px; background:#edf4ff; color:#2a6fc4;
   font-size:11px; font-weight:700; padding:4px 7px; line-height:1.3;
 }
 .quotation-hub__order-badge--pending { background:#fff0ed; color:#d95748; }
@@ -350,13 +351,13 @@ watch(() => props.workOrderId, () => {
   text-align:left; overflow-wrap:anywhere;
 }
 .quotation-hub__order-line .quotation-hub__order-amount {
-  color:#dc4a4d; font-size:15px; font-weight:800; letter-spacing:.1px;
+  color:#225da1; font-size:15px; font-weight:780; letter-spacing:.1px;
 }
 .quotation-hub__order-actions {
-  border-top:1px solid #eef2f7; display:flex; gap:9px; padding-top:11px;
+  border-top:1px solid #ecf0f5; display:flex; gap:9px; padding-top:12px;
 }
 .quotation-hub__order-actions .app-button {
-  flex:1; min-width:0; min-height:43px; border-radius:10px;
+  flex:1; min-width:0; min-height:44px; border-radius:10px;
   font-size:13px; font-weight:700; padding:0 5px;
 }
 .quotation-hub__order-actions .app-button__label {
@@ -374,13 +375,13 @@ watch(() => props.workOrderId, () => {
 .quotation-hub__detail-warning { color:#b07a3d; }
 .quotation-hub__empty {
   display:flex; flex-direction:column; align-items:center; text-align:center;
-  gap:15px; padding:40px 24px 26px; background:#fff;
+  gap:14px; padding:36px 24px 25px; background:#fff;
   border:1px solid var(--q-border); border-radius:var(--q-radius);
   min-height:350px; box-shadow:var(--q-shadow);
 }
 .quotation-hub__empty-icon {
   display:flex; align-items:center; justify-content:center; position:relative;
-  width:108px; height:108px; border-radius:50%; background:#edf5ff; color:#1677f4;
+  width:98px; height:98px; border-radius:50%; background:#edf4ff; color:#2476de;
   margin-bottom:5px;
 }
 .quotation-hub__empty-icon-plus {
@@ -435,7 +436,7 @@ watch(() => props.workOrderId, () => {
   position:fixed; z-index:10; left:0; right:0; bottom:0;
   display:flex; flex-direction:column; gap:6px;
   background:rgba(255,255,255,.99); border-top:1px solid #e8eef6;
-  padding:13px 14px calc(15px + env(safe-area-inset-bottom));
+  padding:12px 14px calc(15px + env(safe-area-inset-bottom));
 }
 .quotation-hub__new { min-height:49px; font-size:15px; font-weight:750; border-radius:11px; }
 @media (max-width:360px) {
