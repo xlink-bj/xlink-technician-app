@@ -3,10 +3,15 @@ import { resolve } from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
 
 type Screen = 'Q00' | 'Q01' | 'Q03'
-const screen = (process.env.S2_FOCUS_SCREEN || 'Q00').toUpperCase()
-if (!['Q00', 'Q01', 'Q03'].includes(screen)) {
-  throw new Error('S2_FOCUS_SCREEN must be Q00, Q01 or Q03')
+const requested = (process.env.S2_FOCUS_SCREEN || 'Q00').toUpperCase()
+if (!['Q00', 'Q01', 'Q03', 'ALL'].includes(requested)) {
+  throw new Error('S2_FOCUS_SCREEN must be Q00, Q01, Q03 or CI-only ALL')
 }
+// Every workflow_dispatch remains single-scene; the feature's own PR validates
+// all three entry points before the on-demand runner is accepted.
+const screens: Screen[] = requested === 'ALL'
+  ? ['Q00', 'Q01', 'Q03']
+  : [requested as Screen]
 
 async function guardLocalOnly(page: Page) {
   const external: string[] = []
@@ -37,6 +42,7 @@ async function guardLocalOnly(page: Page) {
   }
 }
 
+for (const screen of screens) {
 for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }]) {
   test('L2 actual main-App ' + screen + ' focused visual / ' + viewport.width, async ({ page }, info) => {
     await page.setViewportSize(viewport)
@@ -105,4 +111,5 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
     await info.attach(name, { body: shot, contentType: 'image/png' })
     assertSafe()
   })
+}
 }
