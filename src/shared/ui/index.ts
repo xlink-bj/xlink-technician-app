@@ -3,6 +3,7 @@ export const sharedUiBoundary = 'presentation-only' as const
 export { default as AppIcon } from './AppIcon.vue'
 export { default as AppInformationRow } from './AppInformationRow.vue'
 export { default as AppButton } from './AppButton.vue'
+export { default as AppActionBar } from './AppActionBar.vue'
 export { default as AppChoiceGroup } from './AppChoiceGroup.vue'
 export { default as AppMultiChoiceGroup } from './AppMultiChoiceGroup.vue'
 export { default as AppTreeMultiChoiceGroup } from './AppTreeMultiChoiceGroup.vue'

@@ -87,7 +87,7 @@
       </view>
     </scroll-view>
 
-    <view class="action-workspace-footer">
+    <AppActionBar class="action-workspace-footer" :label="`当前工单操作`">
       <view class="action-workspace-footer-inner">
         <template v-if="lifecycle !== 'succeeded'">
           <slot name="actions">
@@ -107,7 +107,7 @@
           <slot name="success-actions" />
         </template>
       </view>
-    </view>
+    </AppActionBar>
   </view>
 </template>
 
@@ -116,6 +116,7 @@ import { ref, watch } from 'vue'
 
 import type { AppActionDraftStatus, AppActionLifecycle } from './types'
 import AppButton from './AppButton.vue'
+import AppActionBar from './AppActionBar.vue'
 import AppIcon from './AppIcon.vue'
 import AppStatus from './AppStatus.vue'
 
@@ -223,12 +224,12 @@ defineEmits<{
 .action-workspace-draft-status { margin-top: var(--app-space-sm); padding-top: 0; }
 
 .action-workspace-footer {
-  background: var(--app-color-page);
-  border-top: 1rpx solid var(--app-color-border);
+  background: var(--app-action-bar-background);
+  border-top: 1rpx solid var(--app-action-bar-border);
   box-sizing: border-box;
   flex-shrink: 0;
-  padding: var(--app-space-sm) 0 calc(16rpx + constant(safe-area-inset-bottom));
-  padding-bottom: calc(16rpx + env(safe-area-inset-bottom));
+  padding: var(--app-space-sm) 0 calc(var(--app-action-bar-inset) + constant(safe-area-inset-bottom));
+  padding-bottom: calc(var(--app-action-bar-inset) + env(safe-area-inset-bottom));
   width: 100%;
 }
 
