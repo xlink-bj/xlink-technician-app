@@ -31,7 +31,8 @@ jobs:
     timeout-minutes: 15
     env:
       VITE_XLINK_ENABLE_REAL_WRITES: 'false'
-      S2_FOCUS_SCREEN: ${{ inputs.screen || 'Q00' }}
+      # PR validates all entry points once; manual runs select just one page.
+      S2_FOCUS_SCREEN: ${{ github.event_name == 'pull_request' && 'ALL' || inputs.screen || 'Q00' }}
     steps:
       - name: Check out exact source
         uses: actions/checkout@v4
