@@ -62,7 +62,7 @@ test('real authenticated shell uses local-only Mock quotation with zero external
 
   await quote.click()
   await expect(page, 'normal uni navigation must reach the real Action Workspace').toHaveURL(/pages\/work-orders\/action-workspace/)
-  await expect(page.locator('.uni-page-head__title')).toContainText('报价工作台')
+  await expect(page.locator('.uni-page-head__title')).toContainText('新增订单')
   // Screenshots must capture an EDITABLE workbench, not its transient spinner.
   await expect(page.getByTestId('quotation-state-ready')).toBeVisible()
   await expect(page.getByTestId('quotation-footer-summary')).toBeVisible()
@@ -487,7 +487,7 @@ test('one MOCK-019 WorkOrder progresses Appointment → Survey → Quotation wit
   await expect(page.getByTestId('quotation-order-hub')).toBeVisible()
   await page.getByTestId('quotation-hub-create-unverified').click()
   await expect(page).toHaveURL(/mock-work-order-019-continuous-journey/)
-  await expect(page.locator('.uni-page-head__title')).toContainText('报价工作台')
+  await expect(page.locator('.uni-page-head__title')).toContainText('新增订单')
   await expect(page.getByTestId('quotation-state-ready')).toBeVisible()
   await expect(page.getByTestId('mock-journey-context-appointment')).toContainText('P1B预约备注：现场先确认屋面渗漏')
   await expect(page.getByTestId('mock-journey-context-survey')).toContainText('14.5')
