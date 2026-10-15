@@ -235,12 +235,6 @@
             data-testid="quotation-first-step-draft-notice"
           />
 
-          <view class="quotation-content__first-step-title-row">
-            <text class="quotation-content__first-step-page-title">订单内容</text>
-            <AppButton v-if="canEdit" class="quotation-content__save-draft" variant="text"
-              data-testid="quotation-first-step-save-draft" @tap="composition.flushDraft">保存草稿</AppButton>
-          </view>
-
           <view
             class="quotation-content__first-step-card app-surface"
             :data-testid="`quotation-repair-group-${firstRepairPartGroup.groupId}`"
@@ -251,6 +245,8 @@
                 <text class="quotation-content__first-step-card-title">维修部位</text>
                 <text class="quotation-content__first-step-card-subtitle">按当前工单创建独立报价</text>
               </view>
+              <AppButton v-if="canEdit" class="quotation-content__save-draft" variant="text"
+                data-testid="quotation-first-step-save-draft" @tap="composition.flushDraft">保存草稿</AppButton>
             </view>
 
             <view class="quotation-content__first-step-field">
@@ -2885,4 +2881,34 @@ function configuredPackageLayerLabel(
 .quotation-content__package-summary-row { font-size:12px; line-height:1.5; }
 .quotation-content__package-edit,.quotation-content__package-details-toggle { font-size:12px; }
 .quotation-content__adjustments { border-radius:15px; background:white; margin-top:12px; }
+
+/* High-fidelity Q01 390/320 reachability: remove redundant page heading,
+ * keep readable controls and make the first actionable catalog CTA reachable
+ * before the fixed footer in its fully filled state. */
+.quotation-content__first-repair-part-step { padding-top:0; }
+.quotation-content__first-step-card { padding:13px 15px 12px; }
+.quotation-content__first-step-card-heading {
+  display:flex; align-items:center; gap:10px;
+  padding:0 0 9px; margin:0 0 8px;
+}
+.quotation-content__first-step-card-copy { flex:1 1 0; min-width:0; }
+.quotation-content__first-step-card-subtitle { display:none; }
+.quotation-content__save-draft { flex:none; margin-left:auto; font-size:13px; min-height:32px; padding:2px 4px; }
+.quotation-content__first-step-field { margin-top:9px; }
+.quotation-content__first-step-label { margin-bottom:5px; line-height:1.3; }
+.quotation-content__first-step-selector-trigger { min-height:48px; padding:8px 11px; }
+.quotation-content__first-step-selector-hint,
+.quotation-content__first-step-selected-path,
+.quotation-content__first-step-hint { display:none; }
+.quotation-content__first-step-textarea { min-height:52px; height:52px; padding:9px 12px; }
+.quotation-content__first-step-quantity { min-height:44px; padding:8px 12px; }
+.quotation-content__first-repair-part-step .quotation-content__commercial-section { margin-top:9px; padding:11px 14px; }
+.quotation-content__first-repair-part-step .quotation-content__section-heading { margin-bottom:9px; padding-bottom:7px; min-height:28px; }
+.quotation-content__first-repair-part-step .quotation-content__select-tile { min-height:67px; padding:9px 12px; }
+.quotation-content__first-repair-part-step .quotation-content__select-icon { width:41px; height:41px; flex-basis:41px; }
+@media (max-width:360px) {
+ .quotation-content__first-step-card { padding-left:12px; padding-right:12px; }
+ .quotation-content__first-step-card-heading { gap:7px; }
+ .quotation-content__first-step-card-title { font-size:16px; }
+}
 </style>
