@@ -106,6 +106,12 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       expect(action).not.toBeNull()
       expect(action!.height, 'Q00 new-order CTA target').toBeGreaterThanOrEqual(40)
     } else if (screen === 'Q01') {
+      // The real editor can legitimately start in its empty state. Enter
+      // the editable first repair group before inspecting field geometry.
+      if (await page.locator('.quotation-content__first-step-label').count() === 0) {
+        await page.getByTestId('quotation-add-group').click()
+      }
+      await expect(page.locator('.quotation-content__first-step-label').first()).toBeVisible()
       const label = await page.locator('.quotation-content__first-step-label').first().evaluate(
         el => parseFloat(getComputedStyle(el).fontSize),
       )
