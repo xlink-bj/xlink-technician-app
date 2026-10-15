@@ -152,48 +152,38 @@
           </view>
           <view class="quotation-content__initial-card app-surface" data-testid="quotation-initial-main-card">
             <view class="quotation-content__initial-empty-heading">
-              <text class="quotation-content__initial-empty-title">维修部位报价</text>
-              <text class="quotation-content__initial-empty-description">请添加维修部位，再选择相应的套餐、工序、材料或机措。</text>
+              <text class="quotation-content__initial-empty-title">新增订单</text>
+              <text class="quotation-content__initial-empty-description">请依次填写维修部位、工程量并添加报价产品。</text>
             </view>
             <view class="quotation-content__initial-empty-surface">
-              <text class="quotation-content__empty-title">暂无维修部位</text>
-              <text class="quotation-content__initial-empty-copy">先选择维修部位，再添加对应的材料与施工项目。</text>
+              <text class="quotation-content__initial-field-label">防水维修部位 <text class="quotation-content__first-step-required">*</text></text>
+              <text class="quotation-content__initial-field-value">请选择维修部位 <text aria-hidden="true">›</text></text>
+              <text class="quotation-content__initial-field-label">维修部位描述 <text class="quotation-content__first-step-required">*</text></text>
+              <text class="quotation-content__initial-field-placeholder">添加维修部位后填写描述</text>
+              <text class="quotation-content__initial-field-label">工程量 <text class="quotation-content__first-step-required">*</text></text>
+              <text class="quotation-content__initial-field-placeholder">添加维修部位后填写工程量</text>
+              <text class="quotation-content__initial-empty-copy">先建立维修部位，即可填写上述信息并选择产品。</text>
               <AppButton
                 class="quotation-content__initial-empty-action"
                 data-testid="quotation-add-group"
                 :disabled="!canEdit"
                 @tap="createRepairGroup()"
-              >添加维修部位</AppButton>
+              >＋ 添加维修部位</AppButton>
               <view class="quotation-content__initial-empty-artwork" aria-hidden="true">
                 <view class="quotation-content__initial-empty-ground" />
                 <image class="quotation-content__initial-empty-illustration" :src="emptyBoxArtwork" mode="aspectFit" data-testid="quotation-empty-illustration" />
               </view>
             </view>
           </view>
-          <view class="quotation-content__initial-process app-surface" data-testid="quotation-quote-process">
-            <view class="quotation-content__initial-process-heading">
-              <text class="quotation-content__initial-process-title">报价流程</text>
-              <text class="quotation-content__initial-process-subtitle">{{ props.productReviewOnly ? '演示草稿 · 暂不提交订单' : '三步整理报价' }}</text>
+          <view class="quotation-content__initial-cost-preview app-surface" data-testid="quotation-quote-process">
+            <text class="quotation-content__initial-cost-title">费用与优惠</text>
+            <view class="quotation-content__initial-cost-row">
+              <text>增项 / 减项</text><text class="quotation-content__initial-cost-unavailable">选择产品后，按已核验规则填写</text>
             </view>
-            <view class="quotation-content__initial-process-steps">
-              <view class="quotation-content__initial-process-step">
-                <view class="quotation-content__initial-process-symbol"><text class="quotation-content__initial-process-number">1</text><AppIcon name="task" :size="22" color="var(--app-color-primary)" /></view>
-                <text class="quotation-content__initial-process-step-title">选择维修部位</text>
-                <text class="quotation-content__initial-process-step-copy">如屋面、卫生间等</text>
-              </view>
-              <text class="quotation-content__initial-process-arrow" aria-hidden="true">›</text>
-              <view class="quotation-content__initial-process-step">
-                <view class="quotation-content__initial-process-symbol"><text class="quotation-content__initial-process-number">2</text><AppIcon name="order" :size="22" color="var(--app-color-primary)" /></view>
-                <text class="quotation-content__initial-process-step-title">添加项目</text>
-                <text class="quotation-content__initial-process-step-copy">选择套餐、工序、材料与机措</text>
-              </view>
-              <text class="quotation-content__initial-process-arrow" aria-hidden="true">›</text>
-              <view class="quotation-content__initial-process-step">
-                <view class="quotation-content__initial-process-symbol"><text class="quotation-content__initial-process-number">3</text><AppIcon name="complete" :size="22" color="var(--app-color-primary)" /></view>
-                <text class="quotation-content__initial-process-step-title">{{ props.productReviewOnly ? '核对草稿' : '提交订单' }}</text>
-                <text class="quotation-content__initial-process-step-copy">{{ props.productReviewOnly ? '正式报价提交暂未开放' : '通过校验后提交' }}</text>
-              </view>
+            <view class="quotation-content__initial-cost-row">
+              <text>折扣 / 优惠金额</text><text class="quotation-content__initial-cost-unavailable">业务规则尚待核验</text>
             </view>
+            <text class="quotation-content__initial-cost-note">金额不会依据未核验目录或自定义优惠进行推算。</text>
           </view>
         </view>
         <view v-else-if="composition.groups.length === 0" class="quotation-content__empty" data-testid="quotation-draft-empty">
@@ -227,7 +217,7 @@
           />
 
           <view class="quotation-content__first-step-title-row">
-            <text class="quotation-content__first-step-page-title">维修部位报价</text>
+            <text class="quotation-content__first-step-page-title">新增订单</text>
             <text class="quotation-content__first-step-count">已添加 {{ composition.groups.length }} 个部位</text>
           </view>
 
@@ -238,8 +228,8 @@
             <view class="quotation-content__first-step-card-heading">
               <view class="quotation-content__first-step-index" aria-hidden="true">01</view>
               <view class="quotation-content__first-step-card-copy">
-                <text class="quotation-content__first-step-card-title">维修部位信息</text>
-                <text class="quotation-content__first-step-card-subtitle">设置当前部位，下一步选择产品</text>
+                <text class="quotation-content__first-step-card-title">维修部位</text>
+                <text class="quotation-content__first-step-card-subtitle">按当前工单创建独立报价</text>
               </view>
             </view>
 
@@ -310,7 +300,7 @@
             </view>
 
             <view class="quotation-content__first-step-field">
-              <text class="quotation-content__first-step-label">工程总量 <text class="quotation-content__first-step-required">*</text></text>
+              <text class="quotation-content__first-step-label">工程量 <text class="quotation-content__first-step-required">*</text></text>
               <input
                 class="quotation-content__first-step-quantity"
                 type="digit"
@@ -335,7 +325,7 @@
                 <text class="quotation-content__first-step-products-title">选择产品</text>
                 <text class="quotation-content__first-step-products-status">尚未选择</text>
               </view>
-              <text class="quotation-content__first-step-products-copy">部位信息填写完成后，可进入目录选择套餐、工序、材料或机措。</text>
+              <text class="quotation-content__first-step-products-copy">按维修部位选择套餐、工序、材料或机措。</text>
               <AppButton
                 class="quotation-content__first-step-products-button"
                 block
@@ -574,6 +564,25 @@
             :disabled="!canEdit"
             @tap="createRepairGroup()"
           >＋ 添加维修部位组</AppButton>
+        </view>
+        <view v-if="composition.groups.length > 0" class="quotation-content__adjustments app-surface" data-testid="quotation-cost-adjustments">
+          <view class="quotation-content__adjustments-title-row">
+            <text class="quotation-content__adjustments-title">费用与优惠</text>
+            <text class="quotation-content__adjustments-badge">业务规则待核验</text>
+          </view>
+          <view class="quotation-content__adjustments-row">
+            <text>增项 / 减项</text>
+            <text class="quotation-content__adjustments-unavailable">尚未开放 <text aria-hidden="true">›</text></text>
+          </view>
+          <view class="quotation-content__adjustments-row">
+            <text>折扣</text>
+            <text class="quotation-content__adjustments-unavailable">暂不支持修改</text>
+          </view>
+          <view class="quotation-content__adjustments-row">
+            <text>优惠金额</text>
+            <text class="quotation-content__adjustments-unavailable">待核验</text>
+          </view>
+          <text class="quotation-content__adjustments-hint">以上字段沿用 R1 业务语义，待价格计算和服务端提交契约核验后启用；不影响现有草稿填写。</text>
         </view>
       </view>
 
@@ -2355,4 +2364,45 @@ function configuredPackageLayerLabel(
 .quotation-content__catalog-item-price-state { color: var(--app-color-text-secondary); }
 .quotation-content__catalog-target { box-shadow: none; border-radius: 15rpx; }
 
+
+/* Q01 commercial design baseline: editable repair fields first; costs follow;
+   no decorative multi-step wizard, and no unverified amount values. */
+.quotation-content__initial-process { display:none; }
+.quotation-content__initial-card { background:var(--app-color-surface); border-radius:22rpx; padding:22rpx; }
+.quotation-content__initial-empty-heading { padding-bottom:12rpx; }
+.quotation-content__initial-empty-title { font-size:30rpx; }
+.quotation-content__initial-empty-description { color:var(--app-color-text-secondary); font-size:22rpx; }
+.quotation-content__initial-empty-surface { gap:0; padding:0; border:0; background:transparent; }
+.quotation-content__initial-field-label { font-size:23rpx; font-weight:730; padding:14rpx 2rpx 6rpx; color:var(--app-color-text-primary); }
+.quotation-content__initial-field-value { min-height:74rpx; background:var(--app-color-control-surface); border:1rpx solid var(--app-color-border);
+  padding:12rpx 18rpx; border-radius:12rpx; box-sizing:border-box; display:flex; justify-content:space-between; align-items:center;
+  font-size:23rpx; color:var(--app-color-text-secondary); }
+.quotation-content__initial-field-placeholder { background:var(--app-color-control-surface); border:1rpx solid var(--app-color-border);
+  border-radius:12rpx; padding:15rpx 18rpx; color:var(--app-color-text-muted); font-size:21rpx; }
+.quotation-content__initial-empty-copy { margin-top:13rpx; color:var(--app-color-text-secondary); }
+.quotation-content__initial-empty-artwork { display:none; }
+.quotation-content__initial-empty-action { min-height:88rpx; margin-top:15rpx; }
+.quotation-content__initial-cost-preview, .quotation-content__adjustments {
+  background:var(--app-color-surface); border:1rpx solid var(--app-color-border); border-radius:20rpx;
+  padding:19rpx 22rpx; display:flex; flex-direction:column; margin-top:14rpx; gap:0; }
+.quotation-content__initial-cost-title, .quotation-content__adjustments-title { font-size:26rpx; font-weight:780; color:var(--app-color-text-primary); }
+.quotation-content__initial-cost-row, .quotation-content__adjustments-row { display:flex; align-items:center; justify-content:space-between;
+  gap:18rpx; min-height:70rpx; font-size:23rpx; border-bottom:1rpx solid var(--app-color-divider); }
+.quotation-content__initial-cost-row:last-of-type, .quotation-content__adjustments-row:last-of-type { border-bottom:0; }
+.quotation-content__initial-cost-unavailable, .quotation-content__adjustments-unavailable { text-align:right; color:var(--app-color-text-muted); font-size:21rpx; }
+.quotation-content__initial-cost-note, .quotation-content__adjustments-hint { display:block; line-height:1.5; color:var(--app-color-text-secondary); font-size:20rpx; margin-top:8rpx; }
+.quotation-content__adjustments-title-row { display:flex; align-items:center; justify-content:space-between; gap:12rpx; padding-bottom:7rpx; }
+.quotation-content__adjustments-badge { font-size:19rpx; color:var(--app-color-text-secondary); background:var(--app-color-control-surface); padding:6rpx 10rpx; border-radius:999rpx; }
+.quotation-content__first-step-title-row { margin-bottom:13rpx; }
+.quotation-content__first-step-page-title { font-size:30rpx; font-weight:800; }
+.quotation-content__first-step-count { font-size:20rpx; padding:7rpx 12rpx; }
+.quotation-content__first-step-card { border-radius:22rpx; box-shadow:none; padding:21rpx 22rpx; border:1rpx solid var(--app-color-border); }
+.quotation-content__first-step-card::before { display:none; }
+.quotation-content__first-step-card-heading { margin-bottom:12rpx; gap:12rpx; }
+.quotation-content__first-step-index { flex-basis:52rpx; height:52rpx; border-radius:12rpx; font-size:24rpx; background:var(--app-color-primary-soft); }
+.quotation-content__first-step-card-title { font-size:26rpx; }
+.quotation-content__first-step-field { margin-top:13rpx; }
+.quotation-content__first-step-label { font-size:23rpx; color:var(--app-color-text-primary); }
+.quotation-content__first-step-products { margin-top:19rpx; }
+.quotation-content__first-step-products-title { font-size:25rpx; }
 </style>
