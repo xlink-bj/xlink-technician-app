@@ -240,7 +240,14 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       await capture('06-quote-packages', 'Q', 'Q03 套餐目录', '套餐分类与卡片真实组件；价格无权威来源时不伪造')
       await page.getByTestId('quotation-package-detail-mock-catalog-package-basic').click()
       await expect(page.getByTestId('quotation-package-detail')).toBeVisible()
-      await capture('06-quote-package-detail', 'Q', 'Q03 套餐配置', '套餐包含项、工程量与规格配置')
+      // A mounted scroll-view is not sufficient: loading-only captures are
+      // visually blank and must never be accepted as a high-fidelity screen.
+      await expect(page.getByTestId('quotation-package-config-focus')).toBeVisible({ timeout: 15000 })
+      await expect(page.getByTestId('quotation-package-procedures')).toBeVisible()
+      await expect(page.getByTestId('quotation-package-materials')).toBeVisible()
+      await expect(page.getByTestId('quotation-package-config-footer')).toBeVisible()
+      await expect(page.getByTestId('quotation-package-detail-error')).toHaveCount(0)
+      await capture('06-quote-package-detail', 'Q', 'Q03 套餐配置', '真实套餐名称、工序、材料层级和配置操作全部完成加载')
       await page.getByTestId('quotation-package-detail-back').click()
       await expect(page.getByTestId('quotation-catalog-page')).toBeVisible()
       await page.getByTestId('quotation-catalog-kind-material').click()
