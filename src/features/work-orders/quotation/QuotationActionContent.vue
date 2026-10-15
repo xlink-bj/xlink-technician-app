@@ -157,18 +157,16 @@
             </view>
             <view class="quotation-content__initial-empty-surface">
               <text class="quotation-content__initial-field-label">防水维修部位 <text class="quotation-content__first-step-required">*</text></text>
-              <text class="quotation-content__initial-field-value">请选择维修部位 <text aria-hidden="true">›</text></text>
+              <button class="quotation-content__initial-field-value" type="button"
+                data-testid="quotation-add-group" :disabled="!canEdit"
+                aria-label="添加维修部位" @tap="createRepairGroup()">
+                <text>请选择维修部位</text><text class="quotation-content__initial-field-chevron" aria-hidden="true">›</text>
+              </button>
               <text class="quotation-content__initial-field-label">维修部位描述 <text class="quotation-content__first-step-required">*</text></text>
               <text class="quotation-content__initial-field-placeholder">添加维修部位后填写描述</text>
               <text class="quotation-content__initial-field-label">工程量 <text class="quotation-content__first-step-required">*</text></text>
               <text class="quotation-content__initial-field-placeholder">添加维修部位后填写工程量</text>
               <text class="quotation-content__initial-empty-copy">先建立维修部位，即可填写上述信息并选择产品。</text>
-              <AppButton
-                class="quotation-content__initial-empty-action"
-                data-testid="quotation-add-group"
-                :disabled="!canEdit"
-                @tap="createRepairGroup()"
-              >＋ 添加维修部位</AppButton>
               <view class="quotation-content__initial-empty-artwork" aria-hidden="true">
                 <view class="quotation-content__initial-empty-ground" />
                 <image class="quotation-content__initial-empty-illustration" :src="emptyBoxArtwork" mode="aspectFit" data-testid="quotation-empty-illustration" />
@@ -2478,4 +2476,13 @@ function configuredPackageLayerLabel(
 .quotation-content__catalog-item-title { font-size:25rpx; }
 .quotation-content__catalog-item-footer { border-top:0; padding-top:5rpx; }
 .quotation-content__catalog-item-price-state { border-radius:9rpx; background:transparent; padding:4rpx 0; }
+
+/* Q01 375px: the first real operation must be above the sticky bottom bar.
+   The repair-part field itself is the entry; eliminate a repeated CTA below
+   three inactive placeholders. */
+.quotation-content__initial-field-value { width:100%; margin:0; min-height:94rpx; text-align:left;
+  color:var(--app-color-primary); font-weight:750; }
+.quotation-content__initial-field-value::after { border:0; }
+.quotation-content__initial-field-value[disabled] { opacity:.55; }
+.quotation-content__initial-field-chevron { font-size:30rpx; font-weight:400; }
 </style>
