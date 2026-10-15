@@ -823,7 +823,8 @@
               >
                 <view class="quotation-content__catalog-item-main">
                   <view class="quotation-content__catalog-thumbnail" :class="`quotation-content__catalog-thumbnail--${item.kind}`" aria-hidden="true">
-                    <text class="quotation-content__catalog-thumbnail-mark">{{ catalogKindMark(item.kind) }}</text>
+                    <AppIcon v-if="item.kind === 'package'" name="home" :size="32" color="#257bf1" />
+                    <text v-else class="quotation-content__catalog-thumbnail-mark">{{ catalogKindMark(item.kind) }}</text>
                   </view>
                   <view class="quotation-content__catalog-item-copy">
                     <view class="quotation-content__catalog-item-heading">
@@ -2646,4 +2647,39 @@ function configuredPackageLayerLabel(
 }
 .quotation-content__catalog-facet--disabled::after { border:0; }
 .quotation-content__catalog-facets { background:#f4f7fb; }
+
+/* Q03 photo-less packages: a legitimate category icon instead of a giant
+ * text glyph pretending to be a product photo. Keep the missing-image
+ * distinction visible; do not synthesize actual catalogue assets. */
+.quotation-content__catalog-thumbnail--package {
+  background:#eaf3ff; border:1px solid #dfedff; display:flex;
+  align-items:center; justify-content:center;
+}
+.quotation-content__catalog-browser--faceted .quotation-content__catalog-item {
+  position:relative; padding:12px 9px 61px; min-height:161px;
+  box-sizing:border-box; gap:0;
+}
+.quotation-content__catalog-browser--faceted .quotation-content__catalog-item-main { gap:8px; align-items:flex-start; }
+.quotation-content__catalog-browser--faceted .quotation-content__catalog-thumbnail {
+  flex:0 0 62px; width:62px; height:68px;
+}
+.quotation-content__catalog-browser--faceted .quotation-content__catalog-item-title {
+  font-size:13px; line-height:1.45; font-weight:750; margin:0;
+}
+.quotation-content__catalog-browser--faceted .quotation-content__catalog-kind-pill {
+  padding:2px 4px; font-size:9.5px;
+}
+.quotation-content__catalog-browser--faceted .quotation-content__catalog-item-details { gap:3px; }
+.quotation-content__catalog-browser--faceted .quotation-content__catalog-item-detail { font-size:9.5px; padding:2px 4px; }
+.quotation-content__catalog-browser--faceted .quotation-content__catalog-item-footer {
+  position:absolute; bottom:9px; left:9px; right:9px;
+  margin:0; padding:0; border:0; min-height:39px;
+  align-items:center;
+}
+.quotation-content__catalog-browser--faceted .quotation-content__catalog-item-price-state {
+  flex:1 1 0; min-width:0; font-size:10.5px;
+}
+.quotation-content__catalog-browser--faceted .quotation-content__catalog-item-action {
+  min-width:100px; min-height:39px; font-size:11.5px; padding:0 7px;
+}
 </style>
