@@ -1,5 +1,6 @@
 <template>
   <ActionWorkspaceShell
+    commercial-quotation
     class="quotation-workspace-shell"
     :class="{ 'quotation-workspace-shell--review': productReviewOnly }"
     :scroll-into-view="scrollIntoView"
