@@ -1,5 +1,5 @@
 <template>
-  <view class="journey-context app-surface" :class="{ 'journey-context--compact': compact, 'journey-context--task-focus': taskFocus }" data-testid="mock-journey-context">
+  <view class="journey-context app-surface" :class="{ 'journey-context--compact': compact, 'journey-context--task-focus': taskFocus, 'journey-context--expanded': expanded }" data-testid="mock-journey-context">
     <view class="journey-context__head">
       <view class="journey-context__head-copy">
         <text class="journey-context__heading">{{ compact ? '前序信息已保留' : '前序信息 · 本机草稿' }}</text>
@@ -29,7 +29,7 @@
       <text v-if="!taskFocus || expanded" class="journey-context__value-text">勘察记录：{{ context.suggestion.surveyPathLabel }}</text>
       <text v-if="!taskFocus || expanded" class="journey-context__value-text">建议报价一级部位：{{ context.suggestion.targetRepairPartLabel }}</text>
       <text v-if="!compact || expanded" class="journey-context__notice">仅匹配演示目录的一级部位。二级部位、工程量、材料、工序及金额均需技术员重新核对填写；不会自动复制勘察面积。</text>
-      <AppButton v-if="canAdoptSuggestion" variant="secondary" block data-testid="mock-survey-quote-adopt" @tap="$emit('adopt-suggestion')">确认采用一级维修部位</AppButton>
+      <AppButton v-if="canAdoptSuggestion" variant="secondary" block data-testid="mock-survey-quote-adopt" @tap="$emit('adopt-suggestion')">{{ taskFocus && !expanded ? '采用建议' : '确认采用一级维修部位' }}</AppButton>
       <text v-else class="journey-context__empty">已有报价部位或目录尚不可用，请手动核对。</text>
       <text v-if="suggestionFeedback" class="journey-context__value-text" data-testid="mock-survey-quote-feedback">{{ suggestionFeedback }}</text>
     </view>
@@ -75,4 +75,22 @@ defineEmits<{ (event: 'adopt-suggestion'): void }>()
 .journey-context__focus-suggestion { color: var(--app-color-text-primary); font-size: 24rpx; font-weight: 750; line-height: 1.4; }
 .journey-context__focus-pending { color: var(--app-color-text-secondary); font-weight: 500; font-size: 20rpx; margin-left: 8rpx; }
 .journey-context--task-focus .journey-context__suggestion .app-button { min-height: 76rpx; }
+
+/* Quote-only compact source suggestion. The earlier full-width adopt button
+ * consumed >120px of the first viewport. Keep the complete survey path,
+ * local-only provenance and expand action, but let the actual Q01 form lead. */
+.journey-context--task-focus { padding:11px 13px; gap:5px; margin-bottom:9px; border-radius:13px; }
+.journey-context--task-focus .journey-context__heading { font-size:13px; line-height:1.35; }
+.journey-context--task-focus .journey-context__head-hint { font-size:11px; line-height:1.4; }
+.journey-context--task-focus .journey-context__toggle { min-height:32px; font-size:12px; border-radius:9px; padding:3px 10px; }
+.journey-context--task-focus:not(.journey-context--expanded) .journey-context__suggestion {
+  display:grid; grid-template-columns:minmax(0,1fr) 104px; align-items:center;
+  gap:7px; padding-top:8px;
+}
+.journey-context--task-focus .journey-context__focus-suggestion { font-size:13px; line-height:1.5; }
+.journey-context--task-focus .journey-context__focus-pending { font-size:11px; margin-left:5px; }
+.journey-context--task-focus:not(.journey-context--expanded) .journey-context__suggestion .app-button {
+  min-height:39px; font-size:12px; line-height:1.25; width:104px;
+  margin:0; padding:5px; border-radius:9px;
+}
 </style>
