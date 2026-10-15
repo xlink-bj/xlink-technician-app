@@ -187,6 +187,18 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       await expect(page.getByTestId('quotation-hub-design-sample')).toBeVisible()
       await expect(page.getByTestId('quotation-hub-records')).toBeVisible()
       await expect(page.getByTestId('quotation-hub-records').locator('.quotation-hub__order')).toHaveCount(2)
+      // Screenshot generation alone is not a typography or spacing review:
+      // Q00's former 19rpx labels were only ~10px on a 390px screen.
+      const orderTitleSize = await page.locator('.quotation-hub__order-number').first().evaluate(
+        element => parseFloat(getComputedStyle(element).fontSize),
+      )
+      const orderMetaSize = await page.locator('.quotation-hub__order-line').first().evaluate(
+        element => parseFloat(getComputedStyle(element).fontSize),
+      )
+      const orderCard = await page.locator('.quotation-hub__order').first().boundingBox()
+      expect(orderTitleSize).toBeGreaterThanOrEqual(viewport.width < 390 ? 13 : 14)
+      expect(orderMetaSize).toBeGreaterThanOrEqual(12)
+      expect(orderCard!.height, 'Order card needs the signed-off readable information rhythm').toBeGreaterThanOrEqual(195)
       await capture('05-quote-orders-sample', 'Q', 'Q00 已有订单', '明确标注合成数据的多订单列表视觉评审')
       await page.getByTestId('quotation-hub-add-inline').click()
       await expect(page.getByTestId('quotation-hub-mode')).toBeVisible()
@@ -231,12 +243,21 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       await page.getByTestId('quotation-first-step-quantity').locator('input').fill('12')
       await expect(page.getByTestId('quotation-cost-adjustments')).toContainText('折扣')
       await expect(page.getByTestId('quotation-cost-adjustments')).toContainText('优惠金额')
+      const partLabelPx = await page.locator('.quotation-content__first-step-label').first().evaluate(
+        element => parseFloat(getComputedStyle(element).fontSize),
+      )
+      expect(partLabelPx, 'Q01 field labels must meet the approved visual reading size').toBeGreaterThanOrEqual(14)
       await page.getByTestId('quotation-first-repair-part-step').scrollIntoViewIfNeeded()
       await capture('05-quote-fields', 'Q', 'Q01 维修部位表单', '维修部位、描述、工程量、费用分组已标准化')
       await page.getByTestId('quotation-first-step-select-products').click()
       await expect(page.getByTestId('quotation-catalog-page')).toBeVisible()
       await expect(page.getByTestId('quotation-catalog-kind-package')).toBeVisible()
+      await expect(page.getByTestId('quotation-catalog-facets')).toBeVisible()
       await expect(page.getByTestId('quotation-package-detail-mock-catalog-package-basic')).toBeVisible()
+      const catalogTitlePx = await page.locator('.quotation-content__catalog-item-title').first().evaluate(
+        element => parseFloat(getComputedStyle(element).fontSize),
+      )
+      expect(catalogTitlePx, 'Q03 catalog product name must not revert to 10px').toBeGreaterThanOrEqual(15)
       await capture('06-quote-packages', 'Q', 'Q03 套餐目录', '套餐分类与卡片真实组件；价格无权威来源时不伪造')
       await page.getByTestId('quotation-package-detail-mock-catalog-package-basic').click()
       await expect(page.getByTestId('quotation-package-detail')).toBeVisible()
