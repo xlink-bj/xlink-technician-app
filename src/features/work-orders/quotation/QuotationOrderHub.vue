@@ -448,4 +448,13 @@ watch(() => props.workOrderId, () => {
 .quotation-hub__order-pills { display:flex; align-items:center; flex-wrap:wrap; gap:5px; justify-content:flex-end; }
 .quotation-hub__order-badge--pending { background:#fff0ed; color:#e15d4c; }
 .quotation-hub__order-badge--signed { background:#eaf3ff; color:#2775c7; }
+
+/* Q00 high fidelity 390×844: show both order action rows above the
+ * fixed primary CTA without reducing readable type or hiding order data. */
+.quotation-hub__list { gap:10px; }
+.quotation-hub__order { padding:13px 14px; }
+.quotation-hub__order-subtitle { padding:6px 0 8px; margin-bottom:0; }
+.quotation-hub__order-lines { gap:7px; padding:6px 0 5px; }
+.quotation-hub__order-actions { padding-top:9px; }
+.quotation-hub__order-actions .app-button { min-height:42px; }
 </style>
