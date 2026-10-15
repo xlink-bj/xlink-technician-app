@@ -741,16 +741,20 @@
           />
 
           <view class="quotation-content__catalog-browser"
-            :class="{ 'quotation-content__catalog-browser--faceted': catalogFacets.length > 0 }"
+            :class="{ 'quotation-content__catalog-browser--faceted': catalogNavigationFacets.length > 0 }"
             data-testid="quotation-catalog-browser">
-            <scroll-view v-if="catalogFacets.length > 0" class="quotation-content__catalog-facets" scroll-y
+            <scroll-view v-if="catalogNavigationFacets.length > 0" class="quotation-content__catalog-facets" scroll-y
               data-testid="quotation-catalog-facets">
               <button class="quotation-content__catalog-facet"
                 :class="{ 'quotation-content__catalog-facet--selected': !selectedCatalogFacet }"
                 :aria-pressed="!selectedCatalogFacet" @tap="selectedCatalogFacet = ''">全部</button>
-              <button v-for="facet in catalogFacets" :key="facet.value"
+              <button v-for="facet in catalogNavigationFacets" :key="facet.value"
                 class="quotation-content__catalog-facet"
-                :class="{ 'quotation-content__catalog-facet--selected': selectedCatalogFacet === facet.value }"
+                :class="{
+                  'quotation-content__catalog-facet--selected': selectedCatalogFacet === facet.value,
+                  'quotation-content__catalog-facet--disabled': !catalogFacetAvailable(facet.value),
+                }"
+                :disabled="!catalogFacetAvailable(facet.value)"
                 :data-testid="`quotation-catalog-facet-${facet.value}`"
                 :aria-pressed="selectedCatalogFacet === facet.value"
                 @tap="selectedCatalogFacet = facet.value">{{ facet.label }}</button>
@@ -1332,6 +1336,14 @@ const filteredCatalogItems = computed(() => {
 const selectedCatalogFacet = ref('')
 function descendantCodes(node: CodeOptionRead): readonly string[] {
   return [node.value, ...(node.children ?? []).flatMap(descendantCodes)]
+}
+// The left-hand part taxonomy is structural (R1 visual convention), whereas
+// enabled facet actions still require source-backed package classification.
+const catalogNavigationFacets = computed(() =>
+  catalogBrowser.selectedKind === 'package' ? composition.repairPartOptions : [],
+)
+function catalogFacetAvailable(code: string): boolean {
+  return catalogFacets.value.some(facet => facet.value === code)
 }
 const catalogFacets = computed(() => {
   if (catalogBrowser.selectedKind !== 'package') return []
@@ -2625,4 +2637,13 @@ function configuredPackageLayerLabel(
   .quotation-content__catalog-browser--faceted .quotation-content__catalog-thumbnail { flex-basis: 56px; width:56px; }
   .quotation-content__catalog-item-action { min-width: 100px; font-size: 12px; }
 }
+
+/* A stable left navigation rail is part of the accepted Q03 IA. Options
+ * whose package mapping is not verified remain visibly disabled and do not
+ * hide or reclassify any product. */
+.quotation-content__catalog-facet--disabled {
+  color:#9ba9bb; opacity:.62; background:#f4f7fb;
+}
+.quotation-content__catalog-facet--disabled::after { border:0; }
+.quotation-content__catalog-facets { background:#f4f7fb; }
 </style>
