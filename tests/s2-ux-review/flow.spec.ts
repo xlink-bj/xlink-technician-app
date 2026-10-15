@@ -181,6 +181,9 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       await expect(page.getByTestId('quotation-hub-empty-create')).toBeEnabled()
       await capture('05-quote-orders-empty', 'Q', 'Q00 无订单空状态', '明确标注合成数据的空状态视觉评审')
       await page.goto(page.url().replace('q00Preview=empty', 'q00Preview=orders'), { waitUntil: 'domcontentloaded' })
+      // Changing only the hash query can reuse the same uni-app page instance.
+      // Reload so onLoad consumes the exact new DEV preview option.
+      await page.reload({ waitUntil: 'domcontentloaded' })
       await expect(page.getByTestId('quotation-hub-design-sample')).toBeVisible()
       await expect(page.getByTestId('quotation-hub-records')).toBeVisible()
       await expect(page.getByTestId('quotation-hub-records').locator('.quotation-hub__order')).toHaveCount(2)
