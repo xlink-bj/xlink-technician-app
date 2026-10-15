@@ -2,7 +2,7 @@
   <view class="quotation-hub" data-testid="quotation-order-hub">
     
     <view class="quotation-hub__work-order app-surface">
-      <view class="quotation-hub__house" aria-hidden="true">⌂</view>
+      <view class="quotation-hub__house" aria-hidden="true"><AppIcon name="home" :size="25" color="#f08d3d" /></view>
       <view class="quotation-hub__work-order-copy">
         <text class="quotation-hub__eyebrow">当前工单</text>
         <text class="quotation-hub__work-order-number">{{ displayNumber || workOrderId }}</text>
@@ -27,7 +27,7 @@
       <text class="quotation-hub__mode-caption">为当前工单创建另一笔独立的报价订单</text>
       <button class="quotation-hub__mode-option quotation-hub__mode-option--active" type="button"
         :aria-pressed="true" data-testid="quotation-hub-mode-new" @tap="startEditor">
-        <view class="quotation-hub__mode-icon">＋</view>
+        <view class="quotation-hub__mode-icon"><text aria-hidden="true">＋</text></view>
         <view class="quotation-hub__mode-description">
           <text class="quotation-hub__mode-name">新增订单</text>
           <text class="quotation-hub__mode-detail">选择维修部位，添加产品，形成新的报价草稿</text>
@@ -35,7 +35,7 @@
         <text class="quotation-hub__mode-radio" aria-hidden="true">●</text>
       </button>
       <view class="quotation-hub__mode-option quotation-hub__mode-option--disabled" role="group" aria-disabled="true">
-        <view class="quotation-hub__mode-icon quotation-hub__mode-icon--muted">▤</view>
+        <view class="quotation-hub__mode-icon quotation-hub__mode-icon--muted"><AppIcon name="order" :size="26" color="#71829b" /></view>
         <view class="quotation-hub__mode-description">
           <text class="quotation-hub__mode-name">基于已有订单复制</text>
           <text class="quotation-hub__mode-detail">尚无已验证的复制业务接口，暂不可选</text>
@@ -59,7 +59,7 @@
         @tap="startEditor">＋ 新建报价草稿</AppButton>
     </view>
     <view v-else-if="records.length === 0" class="quotation-hub__empty app-surface" data-testid="quotation-hub-no-records">
-      <view class="quotation-hub__empty-icon" aria-hidden="true">▤<text class="quotation-hub__empty-icon-plus">＋</text></view>
+      <view class="quotation-hub__empty-icon" aria-hidden="true"><AppIcon name="order" :size="56" color="#1677f9" /><text class="quotation-hub__empty-icon-plus">＋</text></view>
       <text class="quotation-hub__empty-title">{{ isVisualSample ? '当前工单尚无订单' : '本次未发现正式订单' }}</text>
       <text class="quotation-hub__empty-detail">请根据现场勘查结果创建报价订单，也可为不同维修部位分别建立订单。</text>
       <AppButton v-if="!readOnly" block class="quotation-hub__empty-action" data-testid="quotation-hub-empty-create"
@@ -134,6 +134,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import AppButton from '@shared/ui/AppButton.vue'
+import AppIcon from '@shared/ui/AppIcon.vue'
 import { useQuotationOrderBrowseStore } from './order-browse-store'
 import type { QuotationOrderBrowseItem } from '@shared/ports'
 
@@ -316,4 +317,117 @@ watch(() => props.workOrderId, () => {
 .quotation-hub__action-area { display:flex; flex-direction:column; gap:2rpx; }
 .quotation-hub__sample-label { color:#4279a8; background:#e9f3ff; padding:10rpx 13rpx; border-radius:10rpx;
   font-size:19rpx; line-height:1.4; margin:0 0 12rpx; }
+
+/* Q00 / High fidelity visual correction v2.
+ * H5 uses 750rpx/viewport; earlier 19–23rpx metadata was rendered at
+ * ~10px on a 390px phone, not the 13–16px operator UI in the approved
+ * Q00 reference. Pixel-sized typography here is intentional and applies
+ * to Q00 alone; no domain rules or server record identity change. */
+.quotation-hub {
+  padding: 16px 13px calc(114px + env(safe-area-inset-bottom));
+  background: #f3f7fc;
+}
+.quotation-hub__work-order {
+  min-height: 95px; padding: 15px 14px; box-sizing: border-box;
+  border-radius: 14px; gap: 12px;
+  box-shadow: 0 3px 16px rgba(20,50,94,.05);
+}
+.quotation-hub__house {
+  width: 42px; height: 42px; border-radius: 10px; background: #fff2e7;
+}
+.quotation-hub__work-order-copy { gap: 4px; }
+.quotation-hub__eyebrow { font-size: 12px; color: #8191a9; }
+.quotation-hub__work-order-number { font-size: 16px; color: #14253f; line-height: 1.28; }
+.quotation-hub__work-order-customer { font-size: 12px; line-height: 1.35; }
+.quotation-hub__work-order-state {
+  font-size: 12px; padding: 5px 9px; color: #e2743b; background: #fff2e8;
+}
+.quotation-hub__sample-label {
+  margin: 10px 1px 2px; padding: 6px 9px; font-size: 11px; line-height: 1.4;
+  background: #edf5ff; color: #4a709d; border-radius: 8px;
+}
+.quotation-hub__notice {
+  margin: 9px 0 21px; padding: 10px 12px; gap: 7px; min-height: 0;
+  background: #e9f3ff; color: #4274b5; font-size: 11.5px;
+  line-height: 1.5; border-radius: 9px;
+}
+.quotation-hub__section-heading { min-height: 45px; margin-bottom: 11px; }
+.quotation-hub__section-title {
+  font-size: 18px; color: #182843; font-weight: 800; letter-spacing: -.1px;
+}
+.quotation-hub__new-outline { min-height: 40px; font-size: 13px; border-radius: 10px; }
+.quotation-hub__list { gap: 13px; }
+.quotation-hub__order {
+  background: #fff; border: 1px solid #edf1f8; padding: 16px 15px;
+  border-radius: 14px; box-shadow: 0 2px 12px rgba(20,50,94,.045);
+}
+.quotation-hub__order-heading { gap: 7px; align-items: center; }
+.quotation-hub__order-number { font-size: 15px; line-height: 1.38; color: #192b45; }
+.quotation-hub__order-badge {
+  font-size: 11px; padding: 5px 8px; border-radius: 7px;
+  background: #eaf3ff; color: #2875cb;
+}
+.quotation-hub__order-subtitle {
+  font-size: 12px; color: #798aa4; line-height: 1.4;
+  padding: 9px 0 12px; margin-bottom: 3px;
+}
+.quotation-hub__order-lines { gap: 11px; padding: 10px 0 9px; }
+.quotation-hub__order-line {
+  align-items: flex-start; font-size: 13px; line-height: 1.4; gap: 12px;
+  color: #7284a0;
+}
+.quotation-hub__order-line text:last-child { font-size: 13px; font-weight: 600; }
+.quotation-hub__order-line .quotation-hub__order-amount {
+  font-size: 15px; font-weight: 800; color: #cf4153 !important;
+}
+.quotation-hub__order-actions { gap: 10px; padding-top: 15px; }
+.quotation-hub__order-actions .app-button {
+  min-height: 44px; border-radius: 10px; font-size: 13px; padding: 0 6px;
+}
+.quotation-hub__details { margin-top: 14px; padding-top: 14px; }
+.quotation-hub__detail-group { padding: 12px 0; }
+.quotation-hub__detail-title { font-size: 14px; line-height: 1.4; }
+.quotation-hub__detail-note, .quotation-hub__detail-warning { font-size: 12px; }
+.quotation-hub__mode { gap: 13px; }
+.quotation-hub__mode-title { font-size: 19px; margin-top: 8px; color: #192b45; }
+.quotation-hub__mode-caption { font-size: 12px; margin-bottom: 9px; line-height: 1.6; }
+.quotation-hub__mode-option {
+  min-height: 108px; padding: 17px 15px; border-radius: 14px; gap: 12px;
+  box-shadow: 0 3px 14px rgba(20,50,94,.035);
+}
+.quotation-hub__mode-icon { width: 49px; height: 49px; font-size: 34px; flex-shrink:0; }
+.quotation-hub__mode-name { font-size: 16px; line-height: 1.35; color: #172b46; }
+.quotation-hub__mode-detail { font-size: 12px; line-height: 1.55; }
+.quotation-hub__mode-radio { font-size: 23px; }
+.quotation-hub__mode-safety { font-size: 11px; line-height: 1.4; margin-top: 9px; }
+.quotation-hub__empty {
+  min-height: 335px; padding: 42px 25px 28px; gap: 15px;
+  border-radius: 14px; box-shadow: 0 3px 14px rgba(20,50,94,.04);
+}
+.quotation-hub__empty-icon {
+  width: 105px; height: 105px; background: #eaf3ff;
+  font-size: 55px; margin: 0 auto 8px;
+}
+.quotation-hub__empty-icon-plus { width: 38px; height: 38px; font-size: 25px; border-width: 3px; }
+.quotation-hub__empty-title { font-size: 18px; color: #192b45; line-height: 1.35; }
+.quotation-hub__empty-detail {
+  font-size: 13px; line-height: 1.65; max-width: 285px; color: #74859e;
+}
+.quotation-hub__empty-action { min-height: 48px; margin-top: 10px; }
+.quotation-hub__empty-provenance { font-size: 11px; line-height: 1.4; }
+.quotation-hub__error,.quotation-hub__draft-note {
+  font-size: 12px; padding: 11px 13px; line-height: 1.5;
+}
+.quotation-hub__action-area {
+  padding: 13px 14px calc(14px + env(safe-area-inset-bottom));
+  background: rgba(255,255,255,.98);
+}
+.quotation-hub__new { min-height: 50px; font-size: 15px; border-radius: 11px; }
+@media (max-width: 360px) {
+ .quotation-hub { padding-left: 11px; padding-right: 11px; }
+ .quotation-hub__order { padding: 13px; }
+ .quotation-hub__order-number { font-size: 13px; }
+ .quotation-hub__work-order-number { font-size: 14px; }
+ .quotation-hub__section-title { font-size: 17px; }
+}
 </style>
