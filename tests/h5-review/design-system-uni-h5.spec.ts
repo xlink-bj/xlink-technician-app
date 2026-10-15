@@ -223,6 +223,7 @@ test('DS-01 shared commercial controls: 320/375/390px, states, geometry, one tap
     await expect(counter).toHaveText(String(before))
     await button.click()
     await expect(counter).toHaveText(String(before + 1))
+    await expect(button).toHaveCSS('background-color', 'rgb(29, 110, 207)')
     await assertNoHorizontalOverflow(page)
     await page.getByTestId('gallery-example-buttons').scrollIntoViewIfNeeded()
     await page.screenshot({

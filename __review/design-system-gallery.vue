@@ -310,6 +310,9 @@ html, body, #app { background: var(--app-color-page); margin: 0; min-height: 100
 body { color: var(--app-color-text-primary); font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; }
 view, scroll-view { display: block; }
 text { display: inline; }
+.gallery-page, .gallery-page uni-text, .gallery-page uni-button {
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+}
 .gallery-page { box-sizing: border-box; margin: 0 auto; max-width: 960rpx; min-height: 100vh; overflow-x: hidden; padding: 24rpx 24rpx 64rpx; width: 100%; }
 .gallery-header { padding: 12rpx 4rpx 24rpx; }
 .gallery-eyebrow { color: var(--app-color-primary); display: block; font-size: var(--app-font-meta); font-weight: 800; letter-spacing: 1rpx; }

@@ -40,6 +40,7 @@ Source: `src/shared/ui/design-system.scss`. Existing `--app-color-*`, typography
 
 - `variant = primary | secondary | text`. Primary = one dominant task CTA; Secondary = safe alternative; Text = low-emphasis local action.
 - `size = compact | regular | large`, default regular. Compact cannot become a tiny touch target.
+- Native uni-app default button hover class is disabled in favor of the shared pressed-state style. After a tap, the primary CTA retains its accessible blue rather than falling back to the platform's grey hover skin.
 - `block` width, `disabled`, `loading`, `pressed`, `ariaLabel`, optional `leading` and `trailing` slots. Default slot is action text.
 - Disabled or loading prevents native action **and** guards synthetic `tap`. Never dispatch multiple business commands. The *consumer* owns in-flight/idempotency; the button does not invent a business state machine.
 - Long Chinese wraps safely; explicit accessible labels for icon-only or ambiguous actions. Enabled primary/secondary button text must meet **WCAG AA 4.5:1** contrast in the actual uni-app H5 runtime.

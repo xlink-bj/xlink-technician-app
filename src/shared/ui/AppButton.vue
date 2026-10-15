@@ -12,6 +12,7 @@
       },
     ]"
     :disabled="disabled || loading"
+    hover-class="none"
     :aria-label="ariaLabel"
     :aria-disabled="disabled || loading"
     :aria-busy="loading"
