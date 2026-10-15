@@ -6,9 +6,9 @@
         <text v-else class="journey-context__focus-suggestion">勘查建议未提供</text>
         <text class="journey-context__task-source">本机记录 · 未提交后台</text>
       </view>
-      <AppButton v-if="context.suggestion && canAdoptSuggestion" variant="secondary"
+      <button v-if="context.suggestion && canAdoptSuggestion" type="button"
         class="journey-context__task-adopt" data-testid="mock-survey-quote-adopt"
-        @tap="$emit('adopt-suggestion')">采用</AppButton>
+        @tap="$emit('adopt-suggestion')">采用建议</button>
       <button class="journey-context__task-detail" data-testid="mock-journey-context-toggle"
         :aria-expanded="false" @tap="expanded = true">详情</button>
     </view>
@@ -125,9 +125,12 @@ defineEmits<{ (event: 'adopt-suggestion'): void }>()
 }
 .journey-context__task-source { font-size:11px; color:#7c8da5; line-height:1.3; }
 .journey-context--task-focus .journey-context__task-adopt {
-  width:66px; flex:0 0 66px; min-height:36px;
-  padding:2px 4px; font-size:12px; border-radius:9px; margin:0;
+  box-sizing:border-box; width:83px; flex:0 0 83px; height:36px; min-height:36px;
+  display:flex; align-items:center; justify-content:center; white-space:nowrap;
+  padding:0 5px; margin:0; background:#fff; color:#1677f4; font-weight:700;
+  border:1px solid #b5d2ff; border-radius:9px; font-size:12px; line-height:1;
 }
+.journey-context--task-focus .journey-context__task-adopt::after { border:0; }
 .journey-context__task-detail {
   border:0; background:transparent; margin:0; padding:5px 2px;
   color:#1677f4; font-size:12px; font-weight:700;
