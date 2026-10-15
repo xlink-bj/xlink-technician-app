@@ -369,7 +369,7 @@ const quotationContentViewState = computed(() => workspace.quotationContentState
 const workspaceNavigationTitle = computed(() => {
   if (quotationHubVisible.value) return quotationChoiceVisible.value ? '选择下单方式' : '订单管理'
   if (routeAction.value === 'place_order' || workspace.descriptor?.contentKind === 'quotation') {
-    return routeQuotationOrderId.value || workspace.quotationEditState.state === 'succeeded' ? '修改订单' : '新增订单'
+    return routeQuotationOrderId.value || workspace.quotationEditState.state === 'ready' ? '修改订单' : '新增订单'
   }
   if (workspace.descriptor?.formPurpose === 'survey') return '现场勘查'
   if (workspace.descriptor?.actionIntent === 'interact_with_form') return '工单表单'
