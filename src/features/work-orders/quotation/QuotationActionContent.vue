@@ -2485,4 +2485,144 @@ function configuredPackageLayerLabel(
 .quotation-content__initial-field-value::after { border:0; }
 .quotation-content__initial-field-value[disabled] { opacity:.55; }
 .quotation-content__initial-field-chevron { font-size:30rpx; font-weight:400; }
+
+/* Q01/Q03 actual H5 commercial visual scale correction. The prior
+ * ~20rpx typography equalled ~10px at the target 390px viewport, which
+ * was dramatically smaller than the signed-off phone design. Explicit
+ * pixel rhythm is intentional; domain/price/permissions stay untouched. */
+.quotation-content__initial-empty-title,
+.quotation-content__first-step-page-title { font-size: 20px; line-height: 1.3; color: #162b49; }
+.quotation-content__initial-empty-description { font-size: 12px; line-height: 1.5; color: #7587a1; }
+.quotation-content__initial-card, .quotation-content__first-step-card {
+  border-radius: 15px; padding: 17px 16px; border-color: #e4eaf4;
+  background: #fff; box-shadow: 0 2px 12px rgba(17,56,103,.04);
+}
+.quotation-content__initial-field-label,
+.quotation-content__first-step-label {
+  font-size: 14px; line-height: 1.5; font-weight: 730;
+  color: #273b59;
+}
+.quotation-content__initial-field-label { padding: 14px 1px 8px; }
+.quotation-content__initial-field-value,
+.quotation-content__initial-field-placeholder {
+  font-size: 14px; min-height: 48px; padding: 12px 14px;
+  line-height: 1.4; border-radius: 10px;
+}
+.quotation-content__initial-field-chevron { font-size: 20px; }
+.quotation-content__initial-empty-copy { font-size: 12px; line-height: 1.5; margin-top: 10px; }
+.quotation-content__initial-cost-preview,
+.quotation-content__adjustments {
+  border-radius: 15px; padding: 17px 16px; margin-top: 14px;
+  border-color: #e4eaf4; box-shadow: 0 2px 12px rgba(17,56,103,.04);
+}
+.quotation-content__initial-cost-title,
+.quotation-content__adjustments-title { font-size: 17px; line-height: 1.4; font-weight: 800; }
+.quotation-content__initial-cost-row,.quotation-content__adjustments-row {
+  gap: 15px; min-height: 48px; font-size: 14px; line-height: 1.4;
+}
+.quotation-content__initial-cost-unavailable,
+.quotation-content__adjustments-unavailable { font-size: 12px; line-height: 1.5; }
+.quotation-content__initial-cost-note,
+.quotation-content__adjustments-hint { font-size: 11.5px; line-height: 1.55; }
+.quotation-content__adjustments-badge { font-size: 11px; padding: 4px 8px; }
+.quotation-content__first-step-title-row { margin: 11px 1px 13px; }
+.quotation-content__first-step-count { font-size: 12px; padding: 5px 8px; }
+.quotation-content__first-step-card-heading { margin-bottom: 13px; }
+.quotation-content__first-step-index {
+  flex-basis: 33px; height: 33px; font-size: 13px;
+  border-radius: 9px;
+}
+.quotation-content__first-step-card-title { font-size: 17px; line-height: 1.4; }
+.quotation-content__first-step-card-subtitle { font-size: 12px; line-height: 1.45; }
+.quotation-content__first-step-field { margin-top: 15px; }
+.quotation-content__first-step-selector-trigger { border-radius: 11px; min-height: 56px; padding: 12px 14px; }
+.quotation-content__first-step-selector-value { font-size: 15px; line-height: 1.35; }
+.quotation-content__first-step-selector-hint,
+.quotation-content__first-step-selected-path,
+.quotation-content__first-step-hint { font-size: 11.5px; line-height: 1.5; }
+.quotation-content__first-step-textarea {
+  font-size: 14px; padding: 11px 13px; min-height: 64px; height: 64px;
+  border-radius: 11px;
+}
+.quotation-content__first-step-quantity {
+  font-size: 18px; font-weight: 750; min-height: 54px;
+  padding: 12px 13px; border-radius: 11px;
+}
+.quotation-content__first-step-products {
+  border-radius: 14px; padding: 16px 14px; margin-top: 15px;
+}
+.quotation-content__first-step-products-title { font-size: 16px; }
+.quotation-content__first-step-products-copy { font-size: 12px; line-height: 1.5; }
+.quotation-content__first-step-products-status { font-size: 11px; }
+.quotation-content__first-step-products-button {
+  height: 49px; min-height: 49px; font-size: 15px;
+  border-radius: 11px; box-shadow: 0 5px 12px rgba(29,109,240,.13);
+}
+.quotation-content__first-step-products-plus { font-size: 22px; }
+/* Q03 operator-friendly catalog, not a dense engineering inspection list. */
+.quotation-content__catalog-page { padding: 11px 12px calc(12px + env(safe-area-inset-bottom)); }
+.quotation-content__catalog-topbar {
+  min-height: 45px; padding: 8px 13px; margin: -11px -12px 8px;
+}
+.quotation-content__catalog-title { font-size: 17px; font-weight: 800; }
+.quotation-content__catalog-step { font-size: 11px; }
+.quotation-content__catalog-target {
+  border-radius: 12px; padding: 14px 13px; margin-top: 9px;
+}
+.quotation-content__catalog-target-title { font-size: 14px; }
+.quotation-content__catalog-target-index { flex-basis: 29px; height: 29px; font-size: 12px; }
+.quotation-content__catalog-target-count { font-size: 11px; }
+.quotation-content__catalog-intro { padding: 9px 2px 8px; }
+.quotation-content__catalog-intro-title { font-size: 18px; }
+.quotation-content__catalog-intro-description { font-size: 12px; line-height: 1.4; }
+.quotation-content__catalog-main { border-radius: 14px; padding: 0 9px 8px; }
+.quotation-content__category-grid { height: 48px; flex-basis: 48px; }
+.quotation-content__category { font-size: 15px; min-height: 46px; }
+.quotation-content__search-wrap { min-height: 43px; margin-top: 11px; }
+.quotation-content__catalog-section-heading { margin: 12px 3px 10px; }
+.quotation-content__catalog-section-title { font-size: 15px; }
+.quotation-content__catalog-section-note { font-size: 11px; }
+.quotation-content__catalog-item {
+  padding: 14px 12px; gap: 10px; border-radius: 14px;
+  margin-bottom: 12px; background: #fff; border-color: #e0e8f4;
+}
+.quotation-content__catalog-item-main { gap: 12px; align-items: center; }
+.quotation-content__catalog-thumbnail {
+  flex: 0 0 80px; width: 80px; height: 84px;
+  border-radius: 12px; background: #e8f3ff;
+}
+.quotation-content__catalog-thumbnail-mark { font-size: 25px; font-weight: 800; color: #247af0; }
+.quotation-content__catalog-item-heading { gap: 5px; margin-bottom: 5px; }
+.quotation-content__catalog-kind-pill,.quotation-content__catalog-selected-tag { font-size: 10px; padding: 3px 6px; }
+.quotation-content__catalog-item-title { font-size: 15px; font-weight: 800; line-height: 1.4; }
+.quotation-content__catalog-item-description { font-size: 12px; line-height: 1.45; }
+.quotation-content__catalog-item-detail { font-size: 10.5px; padding: 3px 6px; }
+.quotation-content__catalog-item-footer { padding-top: 9px; gap: 8px; align-items: center; }
+.quotation-content__catalog-item-price-state { font-size: 12px; }
+.quotation-content__catalog-item-action {
+  min-width: 115px; border-radius: 10px; min-height: 42px; font-size: 13px;
+}
+.quotation-content__catalog-facets { width: 75px; border-radius: 9px 0 0 9px; }
+.quotation-content__catalog-facet { min-height: 51px; font-size: 13px; padding: 9px 5px; }
+.quotation-content__catalog-browser--faceted .quotation-content__catalog-list {
+  margin-left: 77px; width: calc(100% - 77px);
+}
+.quotation-content__catalog-browser--faceted .quotation-content__catalog-state { margin-left: 77px; }
+.quotation-content__catalog-browser--faceted .quotation-content__catalog-item {
+  padding: 12px 9px;
+}
+.quotation-content__catalog-browser--faceted .quotation-content__catalog-item-main { gap: 8px; }
+.quotation-content__catalog-browser--faceted .quotation-content__catalog-thumbnail {
+  width: 66px; flex-basis: 66px; height: 72px;
+}
+.quotation-content__catalog-footer { min-height: 80px; padding: 12px 12px calc(12px + env(safe-area-inset-bottom)); }
+.quotation-content__catalog-footer-title { font-size: 14px; }
+.quotation-content__catalog-footer-note { font-size: 11px; }
+.quotation-content__catalog-footer > .app-button { min-height: 44px; }
+@media (max-width: 360px) {
+  .quotation-content__catalog-item { padding: 11px; }
+  .quotation-content__catalog-thumbnail { width: 68px; flex-basis:68px; height: 72px; }
+  .quotation-content__catalog-browser--faceted .quotation-content__catalog-thumbnail { flex-basis: 56px; width:56px; }
+  .quotation-content__catalog-item-action { min-width: 100px; font-size: 12px; }
+}
 </style>
