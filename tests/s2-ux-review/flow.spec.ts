@@ -219,6 +219,12 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       // uni-app renders <uni-button disabled="true">, not native HTMLButtonElement.
       // Assert the adapter's exact disabled attr; this control has no submit handler.
       await expect(page.getByTestId('quotation-submit-disabled-preview')).toHaveAttribute('disabled', 'true')
+      const totalRect = await page.getByTestId('quotation-footer-summary').boundingBox()
+      const submitRect = await page.getByTestId('quotation-submit-disabled-preview').boundingBox()
+      expect(totalRect).not.toBeNull()
+      expect(submitRect).not.toBeNull()
+      expect(submitRect!.x, 'Q01 total must be to the left of the submit control').toBeGreaterThan(totalRect!.x + 80)
+      expect(Math.abs(submitRect!.y - totalRect!.y), 'Q01 total and submit must share a footer row').toBeLessThan(25)
       await expect(page.getByTestId('mock-survey-quote-adopt')).toBeVisible()
       await page.getByTestId('mock-survey-quote-adopt').click()
       await page.getByTestId('quotation-first-step-description').locator('textarea').fill('S2审查：屋面修缮报价')
