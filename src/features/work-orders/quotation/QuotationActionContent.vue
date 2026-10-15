@@ -3061,4 +3061,48 @@ function configuredPackageLayerLabel(
   border-radius:9px; padding:0 7px;
 }
 
+
+/* Q01 first-entry fidelity: inactive follow-up fields are concise previews,
+   not oversized fake edit controls. The repair-part action remains 48px. */
+.quotation-content__initial-empty .quotation-content__initial-card {
+  padding:14px 15px 13px; border:1px solid #e2e8f1;
+  border-radius:14px; background:#fff; box-shadow:0 2px 10px rgba(24,51,85,.04);
+}
+.quotation-content__initial-empty .quotation-content__section-heading {
+  min-height:30px; margin:0 0 10px; padding:0 0 9px;
+  gap:10px; border-bottom:1px solid #e9edf3;
+}
+.quotation-content__initial-empty-title {
+  color:#1a2d48; font-size:17px; font-weight:780; line-height:1.4;
+}
+.quotation-content__initial-empty .quotation-content__initial-field-label {
+  display:block; font-size:14px; line-height:1.35; font-weight:700;
+  color:#283b54; padding:10px 0 5px;
+}
+.quotation-content__initial-empty .quotation-content__initial-field-value {
+  box-sizing:border-box; min-height:48px; height:48px;
+  background:#f8fafc; border:1px solid #dce5ef; border-radius:10px;
+  color:#286fc7; font-size:14px; font-weight:730; padding:10px 12px;
+}
+.quotation-content__initial-empty .quotation-content__initial-field-placeholder {
+  display:flex; align-items:center; box-sizing:border-box;
+  min-height:40px; padding:9px 12px; border-radius:9px;
+  font-size:12px; line-height:1.4; color:#a0acbc;
+  background:#fafbfd; border:1px dashed #e2e8f0;
+}
+.quotation-content__initial-empty .quotation-content__initial-empty-copy {
+  font-size:11.5px; line-height:1.4; color:#8090a5;
+  margin-top:9px;
+}
+.quotation-content__initial-empty .quotation-content__commercial-section {
+  margin-top:10px; padding:13px 15px; border-radius:14px;
+}
+.quotation-content__initial-empty .quotation-content__select-tile {
+  min-height:65px; padding:10px 12px;
+}
+.quotation-content__initial-draft-notice {
+  border-radius:8px; border-color:#dce8f7;
+  background:#f0f6fd;
+}
+
 </style>
