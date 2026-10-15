@@ -58,7 +58,8 @@
       <AppButton v-if="!readOnly" block class="quotation-hub__empty-action" data-testid="quotation-hub-create-unverified"
         @tap="startEditor">＋ 新建报价草稿</AppButton>
     </view>
-    <view v-else-if="records.length === 0" class="quotation-hub__empty app-surface" data-testid="quotation-hub-no-records">
+    <template v-else-if="records.length === 0">
+    <view class="quotation-hub__empty app-surface" data-testid="quotation-hub-no-records">
       <view class="quotation-hub__empty-icon" aria-hidden="true"><AppIcon name="order" :size="56" color="#1677f9" /><text class="quotation-hub__empty-icon-plus">＋</text></view>
       <text class="quotation-hub__empty-title">{{ isVisualSample ? '当前工单尚无订单' : '本次未发现正式订单' }}</text>
       <text class="quotation-hub__empty-detail">请根据现场勘查结果创建报价订单，也可为不同维修部位分别建立订单。</text>
@@ -66,6 +67,13 @@
         @tap="startEditor">＋ 创建第一笔订单</AppButton>
       <text class="quotation-hub__empty-provenance">{{ isVisualSample ? '空状态为合成数据，仅用于视觉评审。' : '仅确认本次读取，未证明完整历史为空。' }}</text>
     </view>
+    <view class="quotation-hub__multi-order-tips">
+      <text class="quotation-hub__tips-heading">ⓘ 一个工单可以有多个订单</text>
+      <text class="quotation-hub__tips-line">· 支持为不同维修部位创建独立订单</text>
+      <text class="quotation-hub__tips-line">· 可根据维修方案或时间分批创建</text>
+      <text class="quotation-hub__tips-line">· 创建后可在订单档案中查询历史记录</text>
+    </view>
+    </template>
     <view v-else class="quotation-hub__list" data-testid="quotation-hub-records">
       <view v-for="order in records" :key="order.id" class="quotation-hub__order app-surface"
         :data-testid="`quotation-hub-order-${order.id}`">
@@ -457,4 +465,12 @@ watch(() => props.workOrderId, () => {
 .quotation-hub__order-lines { gap:7px; padding:6px 0 5px; }
 .quotation-hub__order-actions { padding-top:9px; }
 .quotation-hub__order-actions .app-button { min-height:42px; }
+
+.quotation-hub__multi-order-tips {
+  margin-top:13px; padding:16px 15px; border-radius:13px;
+  background:#eaf3ff; color:#5278aa;
+  display:flex; flex-direction:column; gap:6px;
+}
+.quotation-hub__tips-heading { display:block; color:#1a71ed; font-size:14px; font-weight:800; line-height:1.45; margin-bottom:2px; }
+.quotation-hub__tips-line { display:block; font-size:12.5px; line-height:1.5; }
 </style>
