@@ -206,6 +206,10 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       const orderCard = await page.locator('.quotation-hub__order').first().boundingBox()
       expect(orderTitleSize).toBeGreaterThanOrEqual(viewport.width < 390 ? 13 : 14)
       expect(orderMetaSize).toBeGreaterThanOrEqual(12)
+      const orderFont = await page.locator('.quotation-hub__order-number').first().evaluate(
+        element => getComputedStyle(element).fontFamily,
+      )
+      expect(orderFont.toLowerCase(), 'Q00 must not regress to serif number typography').toContain('sans-serif')
       expect(orderCard!.height, 'Order card needs the signed-off readable information rhythm').toBeGreaterThanOrEqual(195)
       await capture('05-quote-orders-sample', 'Q', 'Q00 已有订单', '明确标注合成数据的多订单列表视觉评审')
       await page.getByTestId('quotation-hub-add-inline').click()
@@ -243,6 +247,10 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       expect(nextStage!.y).toBeGreaterThan(quote!.y)
       await capture('05-quote-entry', 'Q', '新增订单', '首次进入与工单上下文')
       await expect(page.getByTestId('quotation-quote-process')).toContainText('费用与优惠')
+      const fieldFont = await page.locator('.quotation-content__initial-empty-title').evaluate(
+        element => getComputedStyle(element).fontFamily,
+      )
+      expect(fieldFont.toLowerCase(), 'Q01 must use the same sans-serif commercial type system').toContain('sans-serif')
       // uni-app renders <uni-button disabled="true">, not native HTMLButtonElement.
       // Assert the adapter's exact disabled attr; this control has no submit handler.
       await expect(page.getByTestId('quotation-submit-disabled-preview')).toHaveAttribute('disabled', 'true')
