@@ -100,16 +100,29 @@ for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }
     await expect(page.getByTestId('quotation-hub-create-unverified')).toBeEnabled()
     await page.getByTestId('quotation-hub-create-unverified').click()
     await expect(page.getByTestId('quotation-state-ready')).toBeVisible()
+    // Commercial Q01 folds upstream details by default. Validate that the
+    // preserved records are available after explicit expansion, never missing
+    // or leaked across work orders.
+    await expect(page.getByTestId('mock-journey-context-appointment')).toHaveCount(0)
+    await expect(page.getByTestId('mock-journey-context-survey')).toHaveCount(0)
+    await expect(page.getByTestId('mock-journey-context-toggle')).toBeVisible()
+    await expect(page.getByTestId('mock-journey-context')).toContainText('未提交后台')
+    await page.getByTestId('mock-journey-context-toggle').click()
     await expect(page.getByTestId('mock-journey-context-appointment')).toContainText('I7阶段隔离')
     await expect(page.getByTestId('mock-journey-context-survey')).toContainText('14.5')
-    await expect(page.getByTestId('mock-journey-context')).toContainText('未提交后台')
+    await page.getByTestId('mock-journey-context-toggle').click()
+    await expect(page.getByTestId('mock-journey-context-appointment')).toHaveCount(0)
     await expect(page.getByTestId('action-workspace-submit')).toHaveCount(0)
     await page.reload({ waitUntil: 'domcontentloaded' })
     await expect(page.getByTestId('quotation-order-hub')).toBeVisible()
     await page.getByTestId('quotation-hub-create-unverified').click()
     await expect(page.getByTestId('quotation-state-ready')).toBeVisible()
     await expect(page).toHaveURL(/mock-work-order-019-continuous-journey/)
+    await expect(page.getByTestId('mock-journey-context-appointment')).toHaveCount(0)
+    await page.getByTestId('mock-journey-context-toggle').click()
     await expect(page.getByTestId('mock-journey-context-appointment')).toContainText('I7阶段隔离')
+    await expect(page.getByTestId('mock-journey-context-survey')).toContainText('14.5')
+    await page.getByTestId('mock-journey-context-toggle').click()
 
     // 6. Signing is ONLY an independent synthetic type=1 Order fixture,
     // never the local draft. Test two exact identities and a forged route.
