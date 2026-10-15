@@ -2701,4 +2701,14 @@ function configuredPackageLayerLabel(
   margin-bottom:9px;
 }
 .quotation-content__catalog-browser--faceted .quotation-content__catalog-item { min-height:151px; padding-bottom:55px; }
+
+/* Q01 390/320 viewport reachability: recover ~25px of vertical space
+ * without shrinking 14px fields, so the first select-product button
+ * never disappears behind the fixed amount/submit footer. */
+.quotation-content__first-step-field { margin-top:10px; }
+.quotation-content__first-step-card-heading { margin-bottom:9px; }
+.quotation-content__first-step-textarea { min-height:59px; height:59px; }
+.quotation-content__first-step-quantity { min-height:49px; }
+.quotation-content__first-step-products { margin-top:10px; padding:13px 13px; }
+.quotation-content__first-step-products-copy { margin-top:3px; }
 </style>
