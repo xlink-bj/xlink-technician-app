@@ -175,7 +175,12 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       await capture('05-quote-orders', 'Q', 'Q00 订单读取失败', '当前源未返回可核验的服务器订单')
       // Real uni-app UI with explicitly labelled DEV-only view data.
       // Never assert these records came from the provider read port.
-      await page.goto(page.url() + '&q00Preview=orders', { waitUntil: 'domcontentloaded' })
+      await page.goto(page.url() + '&q00Preview=empty', { waitUntil: 'domcontentloaded' })
+      await expect(page.getByTestId('quotation-hub-design-sample')).toBeVisible()
+      await expect(page.getByTestId('quotation-hub-no-records')).toBeVisible()
+      await expect(page.getByTestId('quotation-hub-empty-create')).toBeEnabled()
+      await capture('05-quote-orders-empty', 'Q', 'Q00 无订单空状态', '明确标注合成数据的空状态视觉评审')
+      await page.goto(page.url().replace('q00Preview=empty', 'q00Preview=orders'), { waitUntil: 'domcontentloaded' })
       await expect(page.getByTestId('quotation-hub-design-sample')).toBeVisible()
       await expect(page.getByTestId('quotation-hub-records')).toBeVisible()
       await expect(page.getByTestId('quotation-hub-records').locator('.quotation-hub__order')).toHaveCount(2)
