@@ -226,7 +226,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       expect(quote).not.toBeNull()
       expect(nextStage).not.toBeNull()
       expect(nextStage!.y).toBeGreaterThan(quote!.y)
-      await capture('05-quote-entry', 'Q', '报价工作台', '首次进入与工单上下文')
+      await capture('05-quote-entry', 'Q', '新增订单', '首次进入与工单上下文')
       await expect(page.getByTestId('quotation-quote-process')).toContainText('费用与优惠')
       // uni-app renders <uni-button disabled="true">, not native HTMLButtonElement.
       // Assert the adapter's exact disabled attr; this control has no submit handler.
