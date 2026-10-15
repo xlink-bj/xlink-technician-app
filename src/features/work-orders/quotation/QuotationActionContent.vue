@@ -2835,4 +2835,54 @@ function configuredPackageLayerLabel(
   min-height:37px; gap:12px; margin:2px 0 10px; }
 .quotation-content__first-step-page-title { font-size:18px; color:#182b49; font-weight:800; }
 .quotation-content__save-draft { color:#1477f5; font-size:14px; font-weight:700; min-height:36px; }
+
+/* Selected-product return state shares the same phone-readable hierarchy
+ * as Q01's first-step cards. No mutations, calculations, or catalog joins. */
+.quotation-content__groups { display:flex; flex-direction:column; gap:12px; }
+.quotation-content__group {
+  background:#fff; border:1px solid #e5edf8; border-radius:15px;
+  padding:15px 15px 16px; box-shadow:0 2px 12px rgba(24,63,106,.04);
+}
+.quotation-content__group-heading { gap:10px; padding-bottom:12px; }
+.quotation-content__group-index {
+  width:31px; min-width:31px; height:31px; border-radius:50%;
+  background:#1677f4; color:white; font-size:13px;
+  display:flex; align-items:center; justify-content:center;
+}
+.quotation-content__group-eyebrow { font-size:11px; color:#8191aa; }
+.quotation-content__group-title { font-size:16px; font-weight:800; line-height:1.35; color:#172b49; }
+.quotation-content__group-location { font-size:12px; line-height:1.4; margin-top:4px; }
+.quotation-content__group-subtotal { font-size:13px; color:#2378eb; font-weight:750; }
+.quotation-content__group-count { font-size:11px; padding:4px 7px; }
+.quotation-content__context-toggle { font-size:12.5px; font-weight:700; }
+.quotation-content__group-context { padding:12px 0; }
+.quotation-content__context-label { font-size:13px; color:#465b77; line-height:1.45; }
+.quotation-content__context-input { font-size:14px; border-radius:10px; padding:10px 12px; }
+.quotation-content__composition { margin-top:13px; padding-top:12px; }
+.quotation-content__composition-heading { padding:7px 0 10px; }
+.quotation-content__composition-title { font-size:16px; font-weight:800; }
+.quotation-content__composition-meta { font-size:12px; }
+.quotation-content__details-toggle { font-size:12.5px; }
+.quotation-content__group-section { margin-top:12px; }
+.quotation-content__group-section-title { font-size:14px; }
+.quotation-content__group-section-count { font-size:11px; }
+.quotation-content__selection {
+  border-radius:12px; border:1px solid #e1e8f3;
+  padding:12px 11px; margin-top:9px;
+}
+.quotation-content__line-title { font-size:14px; font-weight:750; line-height:1.4; }
+.quotation-content__line-kind,.quotation-content__selection-unit { font-size:11px; }
+.quotation-content__line-kind-mark { font-size:15px; }
+.quotation-content__line-controls { gap:9px; padding-top:11px; }
+.quotation-content__quantity-label { font-size:13px; }
+.quotation-content__quantity { font-size:15px; }
+.quotation-content__quantity-wrap { min-height:45px; border-radius:9px; }
+.quotation-content__unit { font-size:12px; }
+.quotation-content__remove-button { font-size:13px; }
+.quotation-content__package-summary-title { font-size:14px; }
+.quotation-content__package-summary-note,
+.quotation-content__package-summary-count,
+.quotation-content__package-summary-row { font-size:12px; line-height:1.5; }
+.quotation-content__package-edit,.quotation-content__package-details-toggle { font-size:12px; }
+.quotation-content__adjustments { border-radius:15px; background:white; margin-top:12px; }
 </style>
