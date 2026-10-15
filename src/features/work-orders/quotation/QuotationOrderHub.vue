@@ -11,9 +11,9 @@
       <text class="quotation-hub__work-order-state">当前工单</text>
     </view>
     <view v-if="isVisualSample" class="quotation-hub__sample-label" role="status" data-testid="quotation-hub-design-sample">
-      仅 DEV 设计评审：以下订单是合成展示数据，不代表已读取服务器订单。
+      DEV 视觉样例 · 模拟数据，非服务器真实订单
     </view>
-    <view class="quotation-hub__notice" role="status">
+    <view v-if="!choosingMode && !isVisualSample" class="quotation-hub__notice" role="status">
       <text aria-hidden="true">ⓘ</text>
       <text>当前工单支持多笔独立订单；以下只显示本次已核验的记录（最多 3 笔）。</text>
     </view>
@@ -23,7 +23,7 @@
         data-testid="quotation-hub-add-inline" @tap="chooseNewOrder">＋ 新增订单</AppButton>
     </view>
     <view v-if="choosingMode" class="quotation-hub__mode" data-testid="quotation-hub-mode">
-      <text class="quotation-hub__mode-title">选择下单方式</text>
+      <text class="quotation-hub__mode-title">选择操作</text>
       <text class="quotation-hub__mode-caption">为当前工单创建另一笔独立的报价订单</text>
       <button class="quotation-hub__mode-option quotation-hub__mode-option--active" type="button"
         :aria-pressed="true" data-testid="quotation-hub-mode-new" @tap="startEditor">
@@ -126,7 +126,7 @@
         :disabled="readOnly || editingId !== null" @tap="chooseNewOrder">
         {{ hasLocalDraft ? '继续本机报价草稿' : '＋ 新增订单' }}
       </AppButton>
-      <AppButton v-if="choosingMode" variant="text" block data-testid="quotation-hub-mode-cancel" @tap="choosingMode = false">取消</AppButton>
+      <AppButton v-if="choosingMode" variant="text" block data-testid="quotation-hub-mode-cancel" @tap="cancelMode">取消</AppButton>
     </view>
   </view>
 </template>
@@ -150,6 +150,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   (event: 'create'): void
   (event: 'edit', id: string): void
+  (event: 'mode-change', open: boolean): void
 }>()
 const browse = useQuotationOrderBrowseStore()
 const isVisualSample = computed(() => import.meta.env.DEV
@@ -200,6 +201,11 @@ function chooseNewOrder(): void {
     return
   }
   choosingMode.value = true
+  emit('mode-change', true)
+}
+function cancelMode(): void {
+  choosingMode.value = false
+  emit('mode-change', false)
 }
 function edit(id: string): void {
   if (props.readOnly || hasLocalDraft.value || editingId.value) return
@@ -217,6 +223,7 @@ watch(() => props.workOrderId, () => {
   expandedId.value = null
   editingId.value = null
   choosingMode.value = false
+  emit('mode-change', false)
   refresh()
 })
 </script>
