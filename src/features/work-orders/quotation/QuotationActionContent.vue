@@ -236,8 +236,9 @@
           />
 
           <view class="quotation-content__first-step-title-row">
-            <text class="quotation-content__first-step-page-title">新增订单</text>
-            <text class="quotation-content__first-step-count">已添加 {{ composition.groups.length }} 个部位</text>
+            <text class="quotation-content__first-step-page-title">订单内容</text>
+            <AppButton v-if="canEdit" class="quotation-content__save-draft" variant="text"
+              data-testid="quotation-first-step-save-draft" @tap="composition.flushDraft">保存草稿</AppButton>
           </view>
 
           <view
@@ -2829,4 +2830,9 @@ function configuredPackageLayerLabel(
  * visual sections, just like the editable form and the approved design. */
 .quotation-content__commercial-section + .quotation-content__commercial-section { margin-top:12px; }
 .quotation-content__initial-empty .quotation-content__commercial-section { gap:0; }
+
+.quotation-content__first-step-title-row { display:flex; align-items:center; justify-content:space-between;
+  min-height:37px; gap:12px; margin:2px 0 10px; }
+.quotation-content__first-step-page-title { font-size:18px; color:#182b49; font-weight:800; }
+.quotation-content__save-draft { color:#1477f5; font-size:14px; font-weight:700; min-height:36px; }
 </style>
