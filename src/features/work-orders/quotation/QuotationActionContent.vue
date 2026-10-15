@@ -740,18 +740,6 @@
         </view>
 
         <view class="quotation-content__catalog-main" data-testid="quotation-catalog-main">
-          <view class="quotation-content__category-grid" data-testid="quotation-catalog-categories">
-            <button
-              v-for="kind in catalogKinds"
-              :key="kind"
-              class="quotation-content__category"
-              :class="{ 'quotation-content__category--active': catalogBrowser.selectedKind === kind }"
-              type="button"
-              :aria-pressed="catalogBrowser.selectedKind === kind"
-              :data-testid="`quotation-catalog-kind-${kind}`"
-              @tap="selectCatalogKind(kind)"
-            >{{ catalogTabLabel(kind) }}</button>
-          </view>
           <view class="quotation-content__search-wrap">
             <AppIcon class="quotation-content__search-mark" name="search" :size="19" color="#91a2ba" aria-hidden="true" />
             <input
@@ -768,6 +756,18 @@
             <button class="quotation-content__search-action" type="button" data-testid="quotation-catalog-search-submit" @tap="confirmCatalogSearch">搜索</button>
           </view>
 
+          <view class="quotation-content__category-grid" data-testid="quotation-catalog-categories">
+            <button
+              v-for="kind in catalogKinds"
+              :key="kind"
+              class="quotation-content__category"
+              :class="{ 'quotation-content__category--active': catalogBrowser.selectedKind === kind }"
+              type="button"
+              :aria-pressed="catalogBrowser.selectedKind === kind"
+              :data-testid="`quotation-catalog-kind-${kind}`"
+              @tap="selectCatalogKind(kind)"
+            >{{ catalogTabLabel(kind) }}</button>
+          </view>
           <view class="quotation-content__catalog-section-heading">
             <text class="quotation-content__catalog-section-title">{{ catalogSectionTitle }}</text>
             <text class="quotation-content__catalog-section-note">当前工单适用</text>
