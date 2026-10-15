@@ -10,12 +10,15 @@
       </view>
       <text class="quotation-hub__work-order-state">当前工单</text>
     </view>
+    <view v-if="isVisualSample" class="quotation-hub__sample-label" role="status" data-testid="quotation-hub-design-sample">
+      仅 DEV 设计评审：以下订单是合成展示数据，不代表已读取服务器订单。
+    </view>
     <view class="quotation-hub__notice" role="status">
       <text aria-hidden="true">ⓘ</text>
       <text>当前工单支持多笔独立订单；以下只显示本次已核验的记录（最多 3 笔）。</text>
     </view>
     <view v-if="!choosingMode" class="quotation-hub__section-heading">
-      <text class="quotation-hub__section-title">订单列表 <text v-if="browse.state === 'succeeded'">({{ records.length }})</text></text>
+      <text class="quotation-hub__section-title">订单列表 <text v-if="browse.state === 'succeeded' || isVisualSample">({{ records.length }})</text></text>
       <AppButton v-if="records.length > 0 && !readOnly" class="quotation-hub__new-outline" variant="secondary"
         data-testid="quotation-hub-add-inline" @tap="chooseNewOrder">＋ 新增订单</AppButton>
     </view>
@@ -42,11 +45,11 @@
       <text class="quotation-hub__mode-safety">当前操作只进入本机草稿，不会自动创建服务器订单。</text>
     </view>
     <template v-else>
-    <view v-if="browse.state === 'loading' || browse.state === 'idle'" class="quotation-hub__empty app-surface" data-testid="quotation-hub-loading">
+    <view v-if="!isVisualSample && (browse.state === 'loading' || browse.state === 'idle')" class="quotation-hub__empty app-surface" data-testid="quotation-hub-loading">
       <text class="quotation-hub__empty-title">正在核对订单记录</text>
       <text class="quotation-hub__empty-detail">不会读取其他工单的订单，也不会修改服务器数据。</text>
     </view>
-    <view v-else-if="browse.state === 'failed_retryable' || browse.state === 'failed_terminal'" class="quotation-hub__empty app-surface" data-testid="quotation-hub-read-error">
+    <view v-else-if="!isVisualSample && (browse.state === 'failed_retryable' || browse.state === 'failed_terminal')" class="quotation-hub__empty app-surface" data-testid="quotation-hub-read-error">
       <view class="quotation-hub__empty-icon" aria-hidden="true">!</view>
       <text class="quotation-hub__empty-title">暂无法读取已有订单</text>
       <text class="quotation-hub__empty-detail">{{ browse.errorMessage || '订单读取暂不可用，请稍后重试。' }}</text>
@@ -68,9 +71,9 @@
         :data-testid="`quotation-hub-order-${order.id}`">
         <view class="quotation-hub__order-heading">
           <text class="quotation-hub__order-number">{{ order.displayNumber || order.id }}</text>
-          <text class="quotation-hub__order-badge">正式订单</text>
+          <text class="quotation-hub__order-badge">{{ isVisualSample ? '演示订单' : '正式订单' }}</text>
         </view>
-        <text class="quotation-hub__order-subtitle">当前权限可见 · 状态未核实时不推断签约进度</text>
+        <text class="quotation-hub__order-subtitle">{{ isVisualSample ? '视觉演示 · 无真实修改或签约操作' : '当前权限可见 · 状态未核实时不推断签约进度' }}</text>
         <view class="quotation-hub__order-lines">
           <view class="quotation-hub__order-line">
             <text>合计金额</text>
@@ -90,7 +93,7 @@
             :aria-expanded="expandedId === order.id" @tap="toggleDetails(order.id)">
             {{ expandedId === order.id ? '收起详情' : '查看详情' }}
           </AppButton>
-          <AppButton v-if="!readOnly" variant="secondary"
+          <AppButton v-if="!readOnly && !isVisualSample" variant="secondary"
             :disabled="editingId !== null || hasLocalDraft"
             :data-testid="`quotation-hub-edit-${order.id}`" @tap="edit(order.id)">
             {{ editingId === order.id ? '核验中…' : '修改订单' }}
@@ -112,7 +115,7 @@
     <view v-if="hasLocalDraft" class="quotation-hub__draft-note" data-testid="quotation-hub-local-draft">
       当前已有 {{ localDraftGroupCount }} 个维修部位组的本机草稿；继续编辑不会自动创建另一笔订单。
     </view>
-    <view v-if="choosingMode || records.length > 0 && browse.state === 'succeeded'" class="quotation-hub__action-area">
+    <view v-if="choosingMode || records.length > 0 && (browse.state === 'succeeded' || isVisualSample)" class="quotation-hub__action-area">
       <AppButton v-if="choosingMode" block class="quotation-hub__new" data-testid="quotation-hub-mode-next"
         :disabled="readOnly" @tap="startEditor">下一步</AppButton>
       <AppButton v-else block class="quotation-hub__new" data-testid="quotation-hub-start-new"
@@ -136,14 +139,36 @@ const props = defineProps<{
   readonly customerName?: string
   readonly localDraftGroupCount: number
   readonly readOnly: boolean
+  /** Explicit DEV source-modelled preview. Never substituted for an R1 API read. */
+  readonly devVisualSample?: boolean
 }>()
 const emit = defineEmits<{
   (event: 'create'): void
   (event: 'edit', id: string): void
 }>()
 const browse = useQuotationOrderBrowseStore()
-const records = computed(() => browse.state === 'succeeded'
-  && browse.fetchedWorkOrderId === props.workOrderId ? browse.items : [] as readonly QuotationOrderBrowseItem[])
+const isVisualSample = computed(() => import.meta.env.DEV && props.devVisualSample === true)
+const sampleRecords = computed((): readonly QuotationOrderBrowseItem[] => [3500, 1200].map((amount, index) => ({
+  id: `DEV-Q00-ORDER-${index + 1}`,
+  displayNumber: `演示订单 0${index + 1}`,
+  type: 1 as const,
+  serviceAppointmentId: props.workOrderId,
+  totalPrice: amount,
+  originPrice: amount,
+  groups: [{
+    repairParts: ['示例'],
+    partDescription: index === 0 ? '屋面防水维修' : '卫生间局部维修',
+    maintainAreaNum: index === 0 ? '30' : '8',
+    lines: [],
+    contentSupported: true,
+  }],
+  contentSupported: true,
+  pdfState: 'absent' as const,
+})))
+const records = computed((): readonly QuotationOrderBrowseItem[] => isVisualSample.value
+  ? sampleRecords.value
+  : browse.state === 'succeeded' && browse.fetchedWorkOrderId === props.workOrderId
+    ? browse.items : [])
 const expandedId = ref<string | null>(null)
 const editingId = ref<string | null>(null)
 const editError = ref('')
@@ -284,4 +309,6 @@ watch(() => props.workOrderId, () => {
 .quotation-hub__mode-radio--muted { color:var(--app-color-text-secondary); }
 .quotation-hub__mode-safety { font-size:20rpx; color:var(--app-color-text-secondary); margin-top:5rpx; }
 .quotation-hub__action-area { display:flex; flex-direction:column; gap:2rpx; }
+.quotation-hub__sample-label { color:#4279a8; background:#e9f3ff; padding:10rpx 13rpx; border-radius:10rpx;
+  font-size:19rpx; line-height:1.4; margin:0 0 12rpx; }
 </style>
