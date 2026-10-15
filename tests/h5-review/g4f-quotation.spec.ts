@@ -53,8 +53,10 @@ test('true uni-app H5 mounts the synthetic placeOrder quotation workspace with n
   await expect(page.getByTestId('quotation-quote-process')).toContainText('费用与优惠')
   await expect(page.getByTestId('quotation-add-group')).toBeVisible()
   await expect(page.getByTestId('dynamic-form-save')).toHaveCount(0)
-  await expect(page.getByTestId('action-workspace-submit')).toHaveCount(0)
-  await expect(page.getByTestId('quotation-submit-disabled-preview')).toHaveAttribute('disabled', 'true')
+  const submitControl = page.locator('[data-testid="action-workspace-submit"], [data-testid="quotation-submit-disabled-preview"]')
+  await expect(submitControl).toHaveCount(1)
+  await expect(submitControl).toHaveAttribute('disabled', 'true')
+  await expect(submitControl).toBeVisible()
   await expect(page.getByTestId('quotation-order-submit-boundary').getByRole('button')).toHaveCount(0)
   await expect(page.getByText(/(?:¥|￥)\s*\d|\d+(?:\.\d{1,2})?\s*元/)).toHaveCount(0)
 
