@@ -1,7 +1,7 @@
 <template>
   <view class="gallery-page" data-testid="design-system-gallery">
     <view class="gallery-header">
-      <text class="gallery-eyebrow">APP UI DESIGN SYSTEM v0.2</text>
+      <text class="gallery-eyebrow">APP UI DESIGN SYSTEM v1 · DS-01 Foundation</text>
       <text class="gallery-title">共享移动组件 Gallery</text>
       <text class="gallery-subtitle">H5_VISUAL_PROXY · DESIGN_SYSTEM_REVIEW · 仅使用真实共享组件与确定性展示夹具</text>
     </view>
@@ -66,13 +66,18 @@
             </template>
 
             <template v-else-if="example.kind === 'buttons'">
-              <view class="gallery-button-grid">
-                <AppButton>主要操作</AppButton>
-                <AppButton variant="secondary">次要操作</AppButton>
-                <AppButton variant="text">文字操作</AppButton>
-                <AppButton disabled>不可用</AppButton>
-                <AppButton loading>加载中…</AppButton>
+              <view class="gallery-button-grid" data-testid="ds01-button-matrix">
+                <AppButton data-testid="ds01-button-primary" @tap="reviewTapCount += 1">主要操作</AppButton>
+                <AppButton data-testid="ds01-button-secondary" variant="secondary">次要操作</AppButton>
+                <AppButton data-testid="ds01-button-text" variant="text">文字操作</AppButton>
+                <AppButton data-testid="ds01-button-disabled" disabled @tap="reviewTapCount += 100">不可用</AppButton>
+                <AppButton data-testid="ds01-button-loading" loading @tap="reviewTapCount += 100">加载中…</AppButton>
+                <AppButton data-testid="ds01-button-compact" size="compact">紧凑但可触达</AppButton>
+                <AppButton data-testid="ds01-button-large" size="large">重要操作</AppButton>
+                <AppButton data-testid="ds01-button-long" variant="secondary">这是需要完整显示的较长中文操作名称</AppButton>
+                <AppButton data-testid="ds01-button-leading" aria-label="查看示例" variant="secondary"><template #leading><AppIcon name="home" :size="16" /></template>带图标操作</AppButton>
               </view>
+              <text data-testid="ds01-button-tap-count" class="gallery-meta-copy">{{ reviewTapCount }}</text>
             </template>
 
             <template v-else-if="example.kind === 'fields'">
@@ -181,7 +186,16 @@
               <view class="gallery-action-stack">
                 <view class="gallery-action-single">
                   <text class="pattern-title">Single action</text>
-                  <AppButton block>继续</AppButton>
+                  <AppActionBar preview label="单操作演示">
+                    <AppButton data-testid="ds01-action-single" block>继续</AppButton>
+                  </AppActionBar>
+                </view>
+                <view class="gallery-action-stack__separated">
+                  <text class="pattern-title">Dual action · secondary first</text>
+                  <AppActionBar layout="dual" preview label="双操作演示" data-testid="ds01-action-dual">
+                    <AppButton data-testid="ds01-action-secondary" variant="secondary">返回修改</AppButton>
+                    <AppButton data-testid="ds01-action-primary">确认提交</AppButton>
+                  </AppActionBar>
                 </view>
                 <view data-testid="gallery-action-state-unsaved" class="gallery-action-state gallery-action-stack__separated">
                   <text class="pattern-title">Unsaved</text>
@@ -223,6 +237,8 @@
 import { ref } from 'vue'
 
 import AppButton from '@shared/ui/AppButton.vue'
+import AppActionBar from '@shared/ui/AppActionBar.vue'
+import AppIcon from '@shared/ui/AppIcon.vue'
 import AppCascadeSelector from '@shared/ui/AppCascadeSelector.vue'
 import AppChoiceGroup from '@shared/ui/AppChoiceGroup.vue'
 import AppField from '@shared/ui/AppField.vue'
@@ -235,6 +251,8 @@ import AppTextarea from '@shared/ui/AppTextarea.vue'
 import AppTreeMultiChoiceGroup from '@shared/ui/AppTreeMultiChoiceGroup.vue'
 import ActionWorkspaceFormActions from '@shared/ui/ActionWorkspaceFormActions.vue'
 import { designSystemSections } from './design-system-gallery-fixtures'
+
+const reviewTapCount = ref(0)
 
 const foundationColors = [
   { name: 'primary', value: '#2878f2' },

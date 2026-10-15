@@ -155,3 +155,63 @@ test('captures the uni-app H5 visual review evidence without establishing baseli
   await assertNoHorizontalOverflow(page)
   await assertHealthy(page, evidence)
 })
+
+
+test('DS-01 shared commercial controls: 320/375/390px, states, geometry, one tap and no overflow', async ({ page }) => {
+  for (const width of [320, 375, 390]) {
+    await page.setViewportSize({ width, height: 844 })
+    const evidence = installBrowserSafetyGuards(page)
+    await openReview(page, evidence)
+    const button = page.getByTestId('ds01-button-primary')
+    const compact = page.getByTestId('ds01-button-compact')
+    const large = page.getByTestId('ds01-button-large')
+    const disabled = page.getByTestId('ds01-button-disabled')
+    const loading = page.getByTestId('ds01-button-loading')
+    const long = page.getByTestId('ds01-button-long')
+    const actionBar = page.getByTestId('ds01-action-dual')
+    await expect(button).toBeVisible()
+    await assertDisabled(disabled)
+    await assertDisabled(loading)
+    const metrics = await Promise.all([button, compact, large, long].map(element =>
+      element.evaluate(node => ({
+        width: node.getBoundingClientRect().width,
+        height: node.getBoundingClientRect().height,
+        scrollWidth: node.scrollWidth,
+        fontSize: parseFloat(getComputedStyle(node).fontSize),
+      })),
+    ))
+    for (const metric of metrics) {
+      expect(metric.height, 'button hit target >=44px').toBeGreaterThanOrEqual(43.5)
+      expect(metric.width, 'button must fit mobile viewport').toBeLessThanOrEqual(width)
+      expect(metric.scrollWidth, 'button text should not clip horizontally').toBeLessThanOrEqual(metric.width + 1)
+    }
+    expect(metrics[2].height).toBeGreaterThan(metrics[0].height)
+    await expect(actionBar).toBeVisible()
+    const dual = await actionBar.getByTestId('ds01-action-primary').boundingBox()
+    const secondary = await actionBar.getByTestId('ds01-action-secondary').boundingBox()
+    expect(dual).not.toBeNull()
+    expect(secondary).not.toBeNull()
+    expect(dual!.height).toBeGreaterThanOrEqual(43.5)
+    expect(secondary!.height).toBeGreaterThanOrEqual(43.5)
+    expect(dual!.x).toBeGreaterThan(secondary!.x)
+    expect(dual!.x + dual!.width).toBeLessThanOrEqual(width)
+    await expect(page.getByTestId('ds01-button-tap-count')).toHaveText('0')
+    await disabled.click({ force: true })
+    await loading.click({ force: true })
+    await expect(page.getByTestId('ds01-button-tap-count')).toHaveText('0')
+    await button.click()
+    await expect(page.getByTestId('ds01-button-tap-count')).toHaveText('1')
+    await assertNoHorizontalOverflow(page)
+    await page.getByTestId('gallery-example-buttons').scrollIntoViewIfNeeded()
+    await page.screenshot({
+      path: join(screenshotDirectory, `ds01-buttons-${width}.png`),
+      animations: 'disabled',
+    })
+    await actionBar.scrollIntoViewIfNeeded()
+    await page.screenshot({
+      path: join(screenshotDirectory, `ds01-action-bar-${width}.png`),
+      animations: 'disabled',
+    })
+    await assertHealthy(page, evidence)
+  }
+})

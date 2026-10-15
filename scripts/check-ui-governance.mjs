@@ -23,6 +23,10 @@ const [
   textarea,
   formActions,
   gallery,
+  commercialButton,
+  actionBar,
+  workspace,
+  commercialTokens,
 ] = await Promise.all([
   read('package.json'),
   read('docs/design-system/ACTION_WORKSPACE_UX_STANDARD.md'),
@@ -32,6 +36,10 @@ const [
   read('src/shared/ui/AppTextarea.vue'),
   read('src/shared/ui/ActionWorkspaceFormActions.vue'),
   read('__review/design-system-gallery.vue'),
+  read('src/shared/ui/AppButton.vue'),
+  read('src/shared/ui/AppActionBar.vue'),
+  read('src/shared/ui/ActionWorkspaceShell.vue'),
+  read('src/shared/ui/design-system.scss'),
 ])
 
 const packageJson = JSON.parse(packageJsonSource)
@@ -58,6 +66,7 @@ if (
 
 const governedGalleryComponents = [
   'AppButton',
+  'AppActionBar',
   'AppField',
   'AppInput',
   'AppTextarea',
@@ -125,6 +134,21 @@ if (!commercialSkill.includes('a60a36dc2bb3bb77ccf17f2f62041f5ca8a458b9')
   || !agentRules.includes('skills/xlink-s2-commercial-taste/SKILL.md')
   || !workflow.includes('CODE_PASS and PNG-sheet generation are NOT commercial visual acceptance')) {
   fail('pinned Taste Skill and commercial UI Owner gate must remain available')
+}
+
+// DS-01: mechanically enforce the shared component API and its real Workspace
+// integration. Visual checks run separately on compiled uni-app H5.
+if (
+  !commercialButton.includes("size?: 'compact' | 'regular' | 'large'")
+  || !commercialButton.includes('if (props.disabled || props.loading) return')
+  || !actionBar.includes('class="app-action-bar"')
+  || !workspace.includes('<AppActionBar class="action-workspace-footer"')
+  || !commercialTokens.includes('--app-button-height-regular')
+  || !commercialTokens.includes('--app-action-bar-background')
+  || !gallery.includes('ds01-button-matrix')
+  || !gallery.includes('ds01-action-dual')
+) {
+  fail('DS-01 Button/ActionBar shared contracts, real Workspace integration or Gallery evidence missing')
 }
 
 console.log('UI governance check passed: shared UX contract, Gallery coverage, and delivery gates are intact')
