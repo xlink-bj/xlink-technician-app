@@ -2,13 +2,20 @@
   <view class="quotation-hub" data-testid="quotation-order-hub">
     
     <view class="quotation-hub__work-order app-surface">
-      <view class="quotation-hub__house" aria-hidden="true"><AppIcon name="home" :size="25" color="#f08d3d" /></view>
-      <view class="quotation-hub__work-order-copy">
-        <text class="quotation-hub__eyebrow">当前工单</text>
-        <text class="quotation-hub__work-order-number">{{ displayNumber || workOrderId }}</text>
-        <text v-if="customerName" class="quotation-hub__work-order-customer">{{ customerName }}</text>
+      <view class="quotation-hub__work-order-top">
+        <view class="quotation-hub__house" aria-hidden="true"><AppIcon name="home" :size="24" color="#f08d3d" /></view>
+        <view class="quotation-hub__work-order-copy">
+          <text class="quotation-hub__eyebrow">当前工单</text>
+          <text class="quotation-hub__work-order-number">{{ displayNumber || workOrderId }}</text>
+        </view>
+        <text class="quotation-hub__work-order-state">工单</text>
       </view>
-      <text class="quotation-hub__work-order-state">当前工单</text>
+      <view v-if="customerName" class="quotation-hub__work-order-meta">
+        <view class="quotation-hub__work-order-meta-cell">
+          <text class="quotation-hub__meta-label">客户名称</text>
+          <text class="quotation-hub__work-order-customer">{{ customerName }}</text>
+        </view>
+      </view>
     </view>
     <view v-if="isVisualSample" class="quotation-hub__sample-label" role="status" data-testid="quotation-hub-design-sample">
       DEV 视觉样例 · 模拟数据，非服务器真实订单
@@ -109,12 +116,12 @@
         <view class="quotation-hub__order-actions">
           <AppButton variant="secondary" :data-testid="`quotation-hub-view-${order.id}`"
             :aria-expanded="expandedId === order.id" @tap="toggleDetails(order.id)">
-            {{ expandedId === order.id ? '收起详情' : '查看详情' }}
+            <AppIcon name="task" :size="17" color="#2479eb" />{{ expandedId === order.id ? '收起详情' : '查看详情' }}
           </AppButton>
           <AppButton v-if="!readOnly" variant="secondary"
             :disabled="isVisualSample || editingId !== null || hasLocalDraft"
             :data-testid="`quotation-hub-edit-${order.id}`" @tap="edit(order.id)">
-            {{ editingId === order.id ? '核验中…' : '修改订单' }}
+            <AppIcon name="order" :size="17" color="#2479eb" />{{ editingId === order.id ? '核验中…' : '修改订单' }}
           </AppButton>
         </view>
         <view v-if="expandedId === order.id" class="quotation-hub__details"
@@ -244,233 +251,198 @@ watch(() => props.workOrderId, () => {
 </script>
 
 <style>
-.quotation-hub { box-sizing:border-box; min-height:100%; padding:22rpx 24rpx calc(155rpx + env(safe-area-inset-bottom));
-  background:var(--app-color-page); color:var(--app-color-text-primary); }
-.quotation-hub__navigation { display:flex; flex-direction:column; gap:6rpx; margin:4rpx 2rpx 18rpx; }
-.quotation-hub__page-title { font-size:35rpx; font-weight:800; }
-.quotation-hub__page-caption { color:var(--app-color-text-secondary); font-size:22rpx; }
-.quotation-hub__work-order { display:flex; align-items:center; padding:20rpx; gap:14rpx; border-radius:22rpx; }
-.quotation-hub__house { display:flex; align-items:center; justify-content:center; border-radius:12rpx; width:66rpx; height:66rpx;
-  color:#f08d3d; background:#fff0e3; font-size:36rpx; flex:none; }
-.quotation-hub__work-order-copy { display:flex; flex-direction:column; gap:3rpx; min-width:0; flex:1; }
-.quotation-hub__eyebrow,.quotation-hub__work-order-customer { color:var(--app-color-text-secondary); font-size:20rpx; }
-.quotation-hub__work-order-number { font-weight:800; font-size:26rpx; overflow-wrap:anywhere; }
-.quotation-hub__work-order-state { color:#df873e; background:#fff0e3; padding:8rpx 12rpx; border-radius:999rpx; font-size:21rpx; }
-.quotation-hub__notice { background:#eaf3ff; color:#49739f; margin:15rpx 0 22rpx; border-radius:10rpx;
-  padding:13rpx 16rpx; display:flex; gap:12rpx; font-size:20rpx; line-height:1.55; }
-.quotation-hub__section-heading { display:flex; align-items:center; justify-content:space-between; margin:0 2rpx 16rpx; }
-.quotation-hub__section-title { font-size:28rpx; font-weight:800; }
-.quotation-hub__count { font-size:21rpx; color:var(--app-color-text-secondary); }
-.quotation-hub__list { display:flex; flex-direction:column; gap:14rpx; }
-.quotation-hub__order { padding:19rpx; border-radius:19rpx; }
-.quotation-hub__order-heading { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:6rpx; }
-.quotation-hub__order-number { font-weight:750; font-size:24rpx; overflow-wrap:anywhere; }
-.quotation-hub__order-badge { color:#2977bb; border-radius:8rpx; background:#ebf4ff; font-size:20rpx; padding:5rpx 10rpx; }
-.quotation-hub__order-subtitle { color:var(--app-color-text-secondary); font-size:21rpx; padding:7rpx 0 12rpx; }
-.quotation-hub__order-lines { display:flex; flex-direction:column; gap:9rpx; padding:10rpx 0;
-  border-top:1rpx solid var(--app-color-divider); }
-.quotation-hub__order-line { display:flex; justify-content:space-between; gap:16rpx; font-size:22rpx; color:var(--app-color-text-secondary); }
-.quotation-hub__order-line text:last-child { text-align:right; color:var(--app-color-text-primary); }
-.quotation-hub__order-line .quotation-hub__order-amount { color:var(--app-color-primary); font-weight:800; }
-.quotation-hub__order-actions { display:flex; flex-wrap:wrap; gap:12rpx; padding-top:12rpx; }
-.quotation-hub__order-actions .app-button { flex:1; min-height:78rpx; font-size:22rpx; }
-.quotation-hub__empty { display:flex; flex-direction:column; gap:16rpx; align-items:center;
-  padding:55rpx 24rpx; border-radius:20rpx; text-align:center; }
-.quotation-hub__empty-icon { display:flex; align-items:center; justify-content:center; border-radius:50%;
-  background:#eaf3ff; color:var(--app-color-primary); width:95rpx; height:95rpx; font-size:58rpx; }
-.quotation-hub__empty-title { font-weight:800; font-size:27rpx; }
-.quotation-hub__empty-detail { color:var(--app-color-text-secondary); font-size:22rpx; line-height:1.55; }
-.quotation-hub__details { margin-top:17rpx; border-top:1rpx solid var(--app-color-divider); padding-top:12rpx; }
-.quotation-hub__detail-group { display:flex; flex-direction:column; gap:6rpx; padding:12rpx 0; }
-.quotation-hub__detail-group + .quotation-hub__detail-group { border-top:1rpx solid var(--app-color-divider); }
-.quotation-hub__detail-title { font-weight:750; font-size:23rpx; }
-.quotation-hub__detail-note { color:var(--app-color-text-secondary); font-size:21rpx; }
-.quotation-hub__detail-warning { color:#b2773d; font-size:21rpx; }
-.quotation-hub__error,.quotation-hub__draft-note { margin-top:16rpx; padding:15rpx;
-  border-radius:12rpx; font-size:21rpx; line-height:1.45; }
-.quotation-hub__error { background:#fff2ea; color:#bd6037; }
-.quotation-hub__draft-note { background:#eaf3ff; color:#4279a8; }
-.quotation-hub__action-area { background:var(--app-color-surface); position:fixed; z-index:10; bottom:0; left:0; right:0;
-  border-top:1rpx solid var(--app-color-divider); padding:14rpx 24rpx calc(16rpx + env(safe-area-inset-bottom)); }
-.quotation-hub__new { min-height:88rpx; }
-.quotation-hub__footer-help { display:block; font-size:19rpx; color:var(--app-color-text-secondary); text-align:center; padding-top:8rpx; }
-
-/* Q00 high-fidelity work-order Action visual system. The native page
-   header already displays 订单管理; do not repeat a second page title. */
-.quotation-hub { padding-top:18rpx; }
-.quotation-hub__work-order { background:var(--app-color-surface); gap:13rpx; border-radius:20rpx; }
-.quotation-hub__house { width:58rpx; height:58rpx; font-size:32rpx; }
-.quotation-hub__work-order-state { font-size:20rpx; color:#d26d39; }
-.quotation-hub__notice { margin:12rpx 0 22rpx; padding:11rpx 14rpx; font-size:19rpx; }
-.quotation-hub__section-heading { min-height:64rpx; }
-.quotation-hub__new-outline { min-height:59rpx; font-size:20rpx; }
-.quotation-hub__order { padding:20rpx; background:var(--app-color-surface); box-shadow:0 5rpx 22rpx rgba(30,54,93,.035); }
-.quotation-hub__order-heading { gap:8rpx; }
-.quotation-hub__order-subtitle { border-bottom:1rpx solid var(--app-color-divider); padding-bottom:13rpx; }
-.quotation-hub__order-lines { border:0; }
-.quotation-hub__order-amount { font-weight:800; }
-.quotation-hub__empty { padding:56rpx 24rpx 30rpx; gap:14rpx; }
-.quotation-hub__empty-icon { width:126rpx; height:126rpx; border-radius:50%; position:relative; font-size:56rpx; font-weight:600; }
-.quotation-hub__empty-icon-plus { position:absolute; bottom:2rpx; right:-2rpx; width:48rpx; height:48rpx;
-  display:flex; align-items:center; justify-content:center; border-radius:50%; background:var(--app-color-primary);
-  color:#fff; border:4rpx solid #fff; font-size:32rpx; }
-.quotation-hub__empty-title { font-size:27rpx; margin-top:6rpx; }
-.quotation-hub__empty-detail { max-width:510rpx; }
-.quotation-hub__empty-action { width:100%; margin-top:17rpx; min-height:86rpx; }
-.quotation-hub__empty-provenance { color:var(--app-color-text-secondary); font-size:18rpx; margin-top:2rpx; }
-.quotation-hub__mode { display:flex; flex-direction:column; gap:14rpx; }
-.quotation-hub__mode-title { font-size:30rpx; font-weight:800; margin-top:14rpx; }
-.quotation-hub__mode-caption { color:var(--app-color-text-secondary); font-size:21rpx; margin-bottom:10rpx; }
-.quotation-hub__mode-option { box-sizing:border-box; text-align:left; background:var(--app-color-surface); border:1rpx solid var(--app-color-border);
-  border-radius:18rpx; padding:22rpx 17rpx; display:flex; align-items:center; width:100%;
-  gap:15rpx; min-height:143rpx; margin:0; }
-.quotation-hub__mode-option::after { border:0; }
-.quotation-hub__mode-option--active { border:2rpx solid var(--app-color-primary); }
-.quotation-hub__mode-option--disabled { opacity:.57; }
-.quotation-hub__mode-icon { width:66rpx; height:66rpx; border-radius:50%; flex:none;
-  color:#fff; background:var(--app-color-primary); display:flex; align-items:center; justify-content:center; font-size:37rpx; }
-.quotation-hub__mode-icon--muted { color:var(--app-color-text-secondary); background:#edf1f6; }
-.quotation-hub__mode-description { display:flex; flex-direction:column; gap:7rpx; flex:1; min-width:0; }
-.quotation-hub__mode-name { font-size:25rpx; font-weight:750; color:var(--app-color-text-primary); }
-.quotation-hub__mode-detail { font-size:20rpx; line-height:1.45; color:var(--app-color-text-secondary); }
-.quotation-hub__mode-radio { color:var(--app-color-primary); font-size:34rpx; }
-.quotation-hub__mode-radio--muted { color:var(--app-color-text-secondary); }
-.quotation-hub__mode-safety { font-size:20rpx; color:var(--app-color-text-secondary); margin-top:5rpx; }
-.quotation-hub__action-area { display:flex; flex-direction:column; gap:2rpx; }
-.quotation-hub__sample-label { color:#4279a8; background:#e9f3ff; padding:10rpx 13rpx; border-radius:10rpx;
-  font-size:19rpx; line-height:1.4; margin:0 0 12rpx; }
-
-/* Q00 / High fidelity visual correction v2.
- * H5 uses 750rpx/viewport; earlier 19–23rpx metadata was rendered at
- * ~10px on a 390px phone, not the 13–16px operator UI in the approved
- * Q00 reference. Pixel-sized typography here is intentional and applies
- * to Q00 alone; no domain rules or server record identity change. */
+/* Q00 commercial system. One canonical visual owner, no additive override
+   blocks; all numbers correspond to the owner-reviewed phone content. */
 .quotation-hub {
-  padding: 16px 13px calc(114px + env(safe-area-inset-bottom));
-  background: #f3f7fc;
+  --q-bg:#f4f8fc;
+  --q-card:#fff;
+  --q-navy:#192b46;
+  --q-label:#7a8ba4;
+  --q-blue:#1677f4;
+  --q-border:#e5ecf5;
+  --q-radius:15px;
+  --q-shadow:0 4px 18px rgba(35,72,120,.055);
+  box-sizing:border-box; min-height:100%; background:var(--q-bg);
+  color:var(--q-navy); padding:13px 13px calc(108px + env(safe-area-inset-bottom));
 }
 .quotation-hub__work-order {
-  min-height: 95px; padding: 15px 14px; box-sizing: border-box;
-  border-radius: 14px; gap: 12px;
-  box-shadow: 0 3px 16px rgba(20,50,94,.05);
+  display:flex; flex-direction:column; padding:14px 15px 12px;
+  background:var(--q-card); border:1px solid var(--q-border);
+  border-radius:var(--q-radius); box-shadow:var(--q-shadow);
 }
+.quotation-hub__work-order-top { display:flex; align-items:center; gap:12px; min-height:57px; }
 .quotation-hub__house {
-  width: 42px; height: 42px; border-radius: 10px; background: #fff2e7;
+  display:flex; align-items:center; justify-content:center; flex:none;
+  width:43px; height:43px; border-radius:11px; background:#fff1e6;
 }
-.quotation-hub__work-order-copy { gap: 4px; }
-.quotation-hub__eyebrow { font-size: 12px; color: #8191a9; }
-.quotation-hub__work-order-number { font-size: 16px; color: #14253f; line-height: 1.28; }
-.quotation-hub__work-order-customer { font-size: 12px; line-height: 1.35; }
+.quotation-hub__work-order-copy { display:flex; flex:1; min-width:0; flex-direction:column; gap:5px; }
+.quotation-hub__eyebrow,.quotation-hub__meta-label {
+  font-size:12px; line-height:1.35; color:var(--q-label);
+}
+.quotation-hub__work-order-number {
+  font-size:17px; line-height:1.25; font-weight:800; color:#172a44; overflow-wrap:anywhere;
+}
 .quotation-hub__work-order-state {
-  font-size: 12px; padding: 5px 9px; color: #e2743b; background: #fff2e8;
+  align-self:flex-start; flex:none; color:#da7944; background:#fff0e9;
+  border-radius:8px; padding:5px 9px; font-size:12px; font-weight:700;
 }
+.quotation-hub__work-order-meta {
+  border-top:1px solid #eff2f7; margin-top:11px; padding-top:12px;
+  display:flex; gap:20px;
+}
+.quotation-hub__work-order-meta-cell { display:flex; flex-direction:column; min-width:0; gap:5px; }
+.quotation-hub__work-order-customer { color:var(--q-navy); font-size:14px; font-weight:650; line-height:1.35; }
 .quotation-hub__sample-label {
-  margin: 10px 1px 2px; padding: 6px 9px; font-size: 11px; line-height: 1.4;
-  background: #edf5ff; color: #4a709d; border-radius: 8px;
+  margin:9px 0 0; padding:7px 10px; background:#edf5ff;
+  color:#6182aa; font-size:11px; line-height:1.45; border-radius:9px;
 }
 .quotation-hub__notice {
-  margin: 9px 0 21px; padding: 10px 12px; gap: 7px; min-height: 0;
-  background: #e9f3ff; color: #4274b5; font-size: 11.5px;
-  line-height: 1.5; border-radius: 9px;
+  display:flex; align-items:flex-start; gap:7px; margin:10px 0 18px;
+  background:#eaf3ff; color:#5c7fae; border-radius:9px; padding:10px 12px;
+  font-size:12px; line-height:1.55;
 }
-.quotation-hub__section-heading { min-height: 45px; margin-bottom: 11px; }
+.quotation-hub__section-heading {
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  margin:17px 1px 12px; min-height:44px;
+}
 .quotation-hub__section-title {
-  font-size: 18px; color: #182843; font-weight: 800; letter-spacing: -.1px;
+  font-size:20px; font-weight:800; line-height:1.3; color:#192b46;
 }
-.quotation-hub__new-outline { min-height: 40px; font-size: 13px; border-radius: 10px; }
-.quotation-hub__list { gap: 13px; }
+.quotation-hub__new-outline {
+  min-height:40px; font-size:13px; font-weight:700; border-radius:10px;
+}
+.quotation-hub__list { display:flex; flex-direction:column; gap:12px; }
 .quotation-hub__order {
-  background: #fff; border: 1px solid #edf1f8; padding: 16px 15px;
-  border-radius: 14px; box-shadow: 0 2px 12px rgba(20,50,94,.045);
+  box-sizing:border-box; padding:15px 15px 14px;
+  background:var(--q-card); border:1px solid var(--q-border);
+  border-radius:var(--q-radius); box-shadow:var(--q-shadow);
 }
-.quotation-hub__order-heading { gap: 7px; align-items: center; }
-.quotation-hub__order-number { font-size: 15px; line-height: 1.38; color: #192b45; }
+.quotation-hub__order-heading {
+  display:flex; flex-wrap:wrap; justify-content:space-between;
+  align-items:center; gap:8px;
+}
+.quotation-hub__order-number {
+  font-size:15px; line-height:1.35; font-weight:780; color:var(--q-navy);
+  overflow-wrap:anywhere; min-width:0;
+}
+.quotation-hub__order-pills { display:flex; flex-wrap:wrap; align-items:center; gap:5px; }
 .quotation-hub__order-badge {
-  font-size: 11px; padding: 5px 8px; border-radius: 7px;
-  background: #eaf3ff; color: #2875cb;
+  border-radius:6px; background:#eaf3ff; color:#2777d5;
+  font-size:11px; font-weight:700; padding:4px 7px; line-height:1.3;
 }
+.quotation-hub__order-badge--pending { background:#fff0ed; color:#d95748; }
+.quotation-hub__order-badge--signed { background:#eaf3ff; color:#2775c7; }
 .quotation-hub__order-subtitle {
-  font-size: 12px; color: #798aa4; line-height: 1.4;
-  padding: 9px 0 12px; margin-bottom: 3px;
+  display:block; color:#7e8da6; font-size:12px; line-height:1.45;
+  padding:7px 0 11px;
 }
-.quotation-hub__order-lines { gap: 11px; padding: 10px 0 9px; }
+.quotation-hub__order-lines {
+  display:flex; flex-direction:column; gap:7px; padding:0 0 11px;
+}
 .quotation-hub__order-line {
-  align-items: flex-start; font-size: 13px; line-height: 1.4; gap: 12px;
-  color: #7284a0;
+  display:grid; grid-template-columns:92px minmax(0,1fr);
+  align-items:baseline; gap:8px; color:#788ba4;
+  font-size:13px; line-height:1.5; min-width:0;
 }
-.quotation-hub__order-line text:last-child { font-size: 13px; font-weight: 600; }
+.quotation-hub__order-line text:last-child {
+  color:#243650; font-size:13px; font-weight:650;
+  text-align:left; overflow-wrap:anywhere;
+}
 .quotation-hub__order-line .quotation-hub__order-amount {
-  font-size: 15px; font-weight: 800; color: #cf4153 !important;
+  color:#dc4a4d; font-size:15px; font-weight:800; letter-spacing:.1px;
 }
-.quotation-hub__order-actions { gap: 10px; padding-top: 15px; }
+.quotation-hub__order-actions {
+  border-top:1px solid #eef2f7; display:flex; gap:9px; padding-top:11px;
+}
 .quotation-hub__order-actions .app-button {
-  min-height: 44px; border-radius: 10px; font-size: 13px; padding: 0 6px;
+  flex:1; min-width:0; min-height:43px; border-radius:10px;
+  font-size:13px; font-weight:700; padding:0 5px;
 }
-.quotation-hub__details { margin-top: 14px; padding-top: 14px; }
-.quotation-hub__detail-group { padding: 12px 0; }
-.quotation-hub__detail-title { font-size: 14px; line-height: 1.4; }
-.quotation-hub__detail-note, .quotation-hub__detail-warning { font-size: 12px; }
-.quotation-hub__mode { gap: 13px; }
-.quotation-hub__mode-title { font-size: 19px; margin-top: 8px; color: #192b45; }
-.quotation-hub__mode-caption { font-size: 12px; margin-bottom: 9px; line-height: 1.6; }
-.quotation-hub__mode-option {
-  min-height: 108px; padding: 17px 15px; border-radius: 14px; gap: 12px;
-  box-shadow: 0 3px 14px rgba(20,50,94,.035);
+.quotation-hub__order-actions .app-button__label {
+  display:flex; justify-content:center; align-items:center; gap:6px;
 }
-.quotation-hub__mode-icon { width: 49px; height: 49px; font-size: 34px; flex-shrink:0; }
-.quotation-hub__mode-name { font-size: 16px; line-height: 1.35; color: #172b46; }
-.quotation-hub__mode-detail { font-size: 12px; line-height: 1.55; }
-.quotation-hub__mode-radio { font-size: 23px; }
-.quotation-hub__mode-safety { font-size: 11px; line-height: 1.4; margin-top: 9px; }
+.quotation-hub__details {
+  margin-top:13px; padding-top:12px; border-top:1px solid #eef2f7;
+}
+.quotation-hub__detail-group {
+  display:flex; flex-direction:column; gap:6px; padding:11px 0;
+}
+.quotation-hub__detail-group+.quotation-hub__detail-group { border-top:1px solid #eef2f7; }
+.quotation-hub__detail-title { color:var(--q-navy); font-size:14px; font-weight:750; }
+.quotation-hub__detail-note,.quotation-hub__detail-warning { font-size:12px; line-height:1.5; color:#798ba3; }
+.quotation-hub__detail-warning { color:#b07a3d; }
 .quotation-hub__empty {
-  min-height: 335px; padding: 42px 25px 28px; gap: 15px;
-  border-radius: 14px; box-shadow: 0 3px 14px rgba(20,50,94,.04);
+  display:flex; flex-direction:column; align-items:center; text-align:center;
+  gap:15px; padding:40px 24px 26px; background:#fff;
+  border:1px solid var(--q-border); border-radius:var(--q-radius);
+  min-height:350px; box-shadow:var(--q-shadow);
 }
 .quotation-hub__empty-icon {
-  width: 105px; height: 105px; background: #eaf3ff;
-  font-size: 55px; margin: 0 auto 8px;
+  display:flex; align-items:center; justify-content:center; position:relative;
+  width:108px; height:108px; border-radius:50%; background:#edf5ff; color:#1677f4;
+  margin-bottom:5px;
 }
-.quotation-hub__empty-icon-plus { width: 38px; height: 38px; font-size: 25px; border-width: 3px; }
-.quotation-hub__empty-title { font-size: 18px; color: #192b45; line-height: 1.35; }
-.quotation-hub__empty-detail {
-  font-size: 13px; line-height: 1.65; max-width: 285px; color: #74859e;
+.quotation-hub__empty-icon-plus {
+  position:absolute; right:-2px; bottom:2px; display:flex; justify-content:center; align-items:center;
+  background:#1677f4; color:#fff; border:3px solid #fff; border-radius:50%;
+  width:39px; height:39px; font-size:25px;
 }
-.quotation-hub__empty-action { min-height: 48px; margin-top: 10px; }
-.quotation-hub__empty-provenance { font-size: 11px; line-height: 1.4; }
-.quotation-hub__error,.quotation-hub__draft-note {
-  font-size: 12px; padding: 11px 13px; line-height: 1.5;
+.quotation-hub__empty-title {
+  font-size:19px; font-weight:800; line-height:1.4; color:#1b2d48;
 }
-.quotation-hub__action-area {
-  padding: 13px 14px calc(14px + env(safe-area-inset-bottom));
-  background: rgba(255,255,255,.98);
-}
-.quotation-hub__new { min-height: 50px; font-size: 15px; border-radius: 11px; }
-@media (max-width: 360px) {
- .quotation-hub { padding-left: 11px; padding-right: 11px; }
- .quotation-hub__order { padding: 13px; }
- .quotation-hub__order-number { font-size: 13px; }
- .quotation-hub__work-order-number { font-size: 14px; }
- .quotation-hub__section-title { font-size: 17px; }
-}
-
-.quotation-hub__order-pills { display:flex; align-items:center; flex-wrap:wrap; gap:5px; justify-content:flex-end; }
-.quotation-hub__order-badge--pending { background:#fff0ed; color:#e15d4c; }
-.quotation-hub__order-badge--signed { background:#eaf3ff; color:#2775c7; }
-
-/* Q00 high fidelity 390×844: show both order action rows above the
- * fixed primary CTA without reducing readable type or hiding order data. */
-.quotation-hub__list { gap:10px; }
-.quotation-hub__order { padding:13px 14px; }
-.quotation-hub__order-subtitle { padding:6px 0 8px; margin-bottom:0; }
-.quotation-hub__order-lines { gap:7px; padding:6px 0 5px; }
-.quotation-hub__order-actions { padding-top:9px; }
-.quotation-hub__order-actions .app-button { min-height:42px; }
-
+.quotation-hub__empty-detail { max-width:290px; color:#7a8ba5; font-size:13px; line-height:1.7; }
+.quotation-hub__empty-action { width:100%; min-height:50px; margin-top:10px; font-size:15px; border-radius:11px; }
+.quotation-hub__empty-provenance { color:#9ba9bb; font-size:11px; line-height:1.45; }
 .quotation-hub__multi-order-tips {
-  margin-top:13px; padding:16px 15px; border-radius:13px;
-  background:#eaf3ff; color:#5278aa;
-  display:flex; flex-direction:column; gap:6px;
+  display:flex; flex-direction:column; gap:7px; margin-top:12px;
+  padding:16px 16px; border-radius:13px;
+  background:#eaf3ff; color:#5879a5;
 }
-.quotation-hub__tips-heading { display:block; color:#1a71ed; font-size:14px; font-weight:800; line-height:1.45; margin-bottom:2px; }
-.quotation-hub__tips-line { display:block; font-size:12.5px; line-height:1.5; }
+.quotation-hub__tips-heading { color:#1877ef; font-size:14px; font-weight:800; line-height:1.4; margin-bottom:3px; }
+.quotation-hub__tips-line { font-size:12px; line-height:1.55; }
+.quotation-hub__mode { display:flex; flex-direction:column; gap:13px; padding-top:14px; }
+.quotation-hub__mode-title { font-size:19px; font-weight:800; color:var(--q-navy); line-height:1.4; }
+.quotation-hub__mode-caption { font-size:12px; color:#7d8ca4; line-height:1.5; margin-bottom:9px; }
+.quotation-hub__mode-option {
+  box-sizing:border-box; display:flex; align-items:center; gap:13px;
+  width:100%; margin:0; padding:18px 15px; min-height:110px;
+  border:1px solid var(--q-border); border-radius:14px;
+  text-align:left; background:#fff; box-shadow:var(--q-shadow);
+}
+.quotation-hub__mode-option::after { border:0; }
+.quotation-hub__mode-option--active { border:1.5px solid #1677f4; }
+.quotation-hub__mode-option--disabled { opacity:.56; }
+.quotation-hub__mode-icon {
+  width:49px; height:49px; border-radius:50%; flex:none;
+  display:flex; align-items:center; justify-content:center;
+  font-size:32px; color:#fff; background:#288bf7;
+}
+.quotation-hub__mode-icon--muted { background:#eef2f7; color:#8a9cb4; }
+.quotation-hub__mode-description { display:flex; flex:1; flex-direction:column; gap:6px; min-width:0; }
+.quotation-hub__mode-name { font-size:16px; font-weight:750; color:var(--q-navy); }
+.quotation-hub__mode-detail { font-size:12px; line-height:1.55; color:#7a8ca5; }
+.quotation-hub__mode-radio { color:#1677f4; font-size:22px; }
+.quotation-hub__mode-radio--muted { color:#9aaabd; }
+.quotation-hub__mode-safety { font-size:11px; line-height:1.5; color:#7c8da8; }
+.quotation-hub__error,.quotation-hub__draft-note {
+  margin-top:13px; border-radius:10px; padding:11px 13px;
+  font-size:12px; line-height:1.5;
+}
+.quotation-hub__error { background:#fff0e8; color:#b7643d; }
+.quotation-hub__draft-note { background:#eaf3ff; color:#5d7fa7; }
+.quotation-hub__action-area {
+  position:fixed; z-index:10; left:0; right:0; bottom:0;
+  display:flex; flex-direction:column; gap:6px;
+  background:rgba(255,255,255,.99); border-top:1px solid #e8eef6;
+  padding:13px 14px calc(15px + env(safe-area-inset-bottom));
+}
+.quotation-hub__new { min-height:49px; font-size:15px; font-weight:750; border-radius:11px; }
+@media (max-width:360px) {
+  .quotation-hub { padding-left:11px; padding-right:11px; }
+  .quotation-hub__order { padding:13px 12px; }
+  .quotation-hub__order-line { grid-template-columns:83px minmax(0,1fr); }
+  .quotation-hub__order-number { font-size:14px; }
+  .quotation-hub__order-actions { gap:7px; }
+  .quotation-hub__order-actions .app-button { font-size:12px; }
+}
 </style>
