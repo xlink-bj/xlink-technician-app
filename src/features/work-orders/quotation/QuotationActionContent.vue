@@ -151,9 +151,9 @@
             <text class="quotation-content__initial-draft-notice-copy">{{ props.productReviewOnly ? '演示模式仅可整理本机草稿，不会创建正式订单。' : '当前为本机报价草稿；通过校验并提交后才会创建正式订单。' }}</text>
           </view>
           <view class="quotation-content__initial-card app-surface" data-testid="quotation-initial-main-card">
-            <view class="quotation-content__initial-empty-heading">
-              <text class="quotation-content__initial-empty-title">新增订单</text>
-              <text class="quotation-content__initial-empty-description">请依次填写维修部位、工程量并添加报价产品。</text>
+            <view class="quotation-content__initial-empty-heading quotation-content__section-heading">
+              <view class="quotation-content__section-number">1</view>
+              <text class="quotation-content__initial-empty-title">维修部位</text>
             </view>
             <view class="quotation-content__initial-empty-surface">
               <text class="quotation-content__initial-field-label">防水维修部位 <text class="quotation-content__first-step-required">*</text></text>
@@ -166,22 +166,41 @@
               <text class="quotation-content__initial-field-placeholder">添加维修部位后填写描述</text>
               <text class="quotation-content__initial-field-label">工程量 <text class="quotation-content__first-step-required">*</text></text>
               <text class="quotation-content__initial-field-placeholder">添加维修部位后填写工程量</text>
-              <text class="quotation-content__initial-empty-copy">先建立维修部位，即可填写上述信息并选择产品。</text>
+              <text class="quotation-content__initial-empty-copy">先选择维修部位，再填写描述及工程量。</text>
               <view class="quotation-content__initial-empty-artwork" aria-hidden="true">
                 <view class="quotation-content__initial-empty-ground" />
                 <image class="quotation-content__initial-empty-illustration" :src="emptyBoxArtwork" mode="aspectFit" data-testid="quotation-empty-illustration" />
               </view>
             </view>
           </view>
-          <view class="quotation-content__initial-cost-preview app-surface" data-testid="quotation-quote-process">
-            <text class="quotation-content__initial-cost-title">费用与优惠</text>
-            <view class="quotation-content__initial-cost-row">
-              <text>增项 / 减项</text><text class="quotation-content__initial-cost-unavailable">选择产品后，按已核验规则填写</text>
+          <view class="quotation-content__initial-cost-preview app-surface quotation-content__commercial-section" data-testid="quotation-quote-process">
+            <view class="quotation-content__section-heading">
+              <view class="quotation-content__section-number">2</view>
+              <text class="quotation-content__initial-cost-title">选择产品</text>
             </view>
-            <view class="quotation-content__initial-cost-row">
-              <text>折扣 / 优惠金额</text><text class="quotation-content__initial-cost-unavailable">业务规则尚待核验</text>
+            <view class="quotation-content__select-tile quotation-content__select-tile--disabled" aria-disabled="true">
+              <view class="quotation-content__select-icon"><AppIcon name="package" :size="22" color="#257cf5" /></view>
+              <view class="quotation-content__select-tile-copy">
+                <text class="quotation-content__select-tile-name">选择产品</text>
+                <text class="quotation-content__select-tile-help">套餐、工序、材料、机措</text>
+              </view>
+              <AppIcon name="chevron-right" :size="17" color="#9caabd" />
             </view>
-            <text class="quotation-content__initial-cost-note">金额不会依据未核验目录或自定义优惠进行推算。</text>
+            <view class="quotation-content__adjustment-actions">
+              <button class="quotation-content__adjustment-button" disabled>＋ 增项</button>
+              <button class="quotation-content__adjustment-button" disabled>－ 减项</button>
+            </view>
+            <view class="quotation-content__section-heading quotation-content__section-heading--fees">
+              <view class="quotation-content__section-number">3</view>
+              <text class="quotation-content__initial-cost-title">费用与优惠</text>
+            </view>
+            <view class="quotation-content__initial-cost-row"><text>折扣</text><text class="quotation-content__fee-value">不打折 <text aria-hidden="true">›</text></text></view>
+            <view class="quotation-content__initial-cost-row"><text>优惠金额（元）</text><text class="quotation-content__initial-cost-unavailable">完成选品后按业务规则填写</text></view>
+          </view>
+          <view class="quotation-content__order-explainer">
+            <text class="quotation-content__order-explainer-title">ⓘ 订单说明</text>
+            <text>提交后才会产生正式订单；本机草稿不等于服务器订单。</text>
+            <text>正式下单需满足现有字段、金额及权限校验。</text>
           </view>
         </view>
         <view v-else-if="composition.groups.length === 0" class="quotation-content__empty" data-testid="quotation-draft-empty">
@@ -224,7 +243,7 @@
             :data-testid="`quotation-repair-group-${firstRepairPartGroup.groupId}`"
           >
             <view class="quotation-content__first-step-card-heading">
-              <view class="quotation-content__first-step-index" aria-hidden="true">01</view>
+              <view class="quotation-content__first-step-index" aria-hidden="true">1</view>
               <view class="quotation-content__first-step-card-copy">
                 <text class="quotation-content__first-step-card-title">维修部位</text>
                 <text class="quotation-content__first-step-card-subtitle">按当前工单创建独立报价</text>
@@ -318,24 +337,50 @@
               >{{ firstStepFieldError('maintainAreaNum') }}</text>
             </view>
 
-            <view class="quotation-content__first-step-products" data-testid="quotation-first-step-product-action">
-              <view class="quotation-content__first-step-products-heading">
-                <text class="quotation-content__first-step-products-title">选择产品</text>
-                <text class="quotation-content__first-step-products-status">尚未选择</text>
+          </view>
+          <view class="quotation-content__commercial-section app-surface" data-testid="quotation-first-step-product-action">
+            <view class="quotation-content__section-heading">
+              <view class="quotation-content__section-number">2</view>
+              <text class="quotation-content__first-step-products-title">选择产品</text>
+            </view>
+            <button class="quotation-content__select-tile" type="button"
+              :disabled="!canEdit || composition.repairPartOptions.length === 0"
+              data-testid="quotation-first-step-select-products"
+              @tap="selectProductsForFirstGroup(firstRepairPartGroup.groupId)">
+              <view class="quotation-content__select-icon"><AppIcon name="package" :size="24" color="#1679f5" /></view>
+              <view class="quotation-content__select-tile-copy">
+                <text class="quotation-content__select-tile-name">选择产品</text>
+                <text class="quotation-content__select-tile-help">选择套餐、工序、材料、机措等产品</text>
               </view>
-              <text class="quotation-content__first-step-products-copy">按维修部位选择套餐、工序、材料或机措。</text>
-              <AppButton
-                class="quotation-content__first-step-products-button"
-                block
-                :disabled="!canEdit || composition.repairPartOptions.length === 0"
-                data-testid="quotation-first-step-select-products"
-                @tap="selectProductsForFirstGroup(firstRepairPartGroup.groupId)"
-              ><text class="quotation-content__first-step-products-plus" aria-hidden="true">＋</text>选择产品<AppIcon name="chevron-right" :size="16" color="#ffffff" aria-hidden="true" /></AppButton>
+              <AppIcon name="chevron-right" :size="18" color="#6d829d" />
+            </button>
+            <view class="quotation-content__adjustment-actions">
+              <button class="quotation-content__adjustment-button" disabled aria-label="增项尚未开放">＋ 增项</button>
+              <button class="quotation-content__adjustment-button" disabled aria-label="减项尚未开放">－ 减项</button>
             </view>
-
-            <view v-if="syntheticReviewEnabled" class="quotation-content__synthetic-review-slot" data-testid="synthetic-extfield-slot">
-              <slot name="synthetic-review-panel" />
+          </view>
+          <view class="quotation-content__commercial-section app-surface" data-testid="quotation-cost-adjustments">
+            <view class="quotation-content__section-heading">
+              <view class="quotation-content__section-number">3</view>
+              <text class="quotation-content__initial-cost-title">费用与优惠</text>
             </view>
+            <view class="quotation-content__initial-cost-row">
+              <text>折扣</text>
+              <text class="quotation-content__fee-value">不打折 <text aria-hidden="true">›</text></text>
+            </view>
+            <view class="quotation-content__initial-cost-row">
+              <text>优惠金额（元）</text>
+              <text class="quotation-content__initial-cost-unavailable">报价规则待核验</text>
+            </view>
+            <text class="quotation-content__initial-cost-note">折扣、优惠及增减项需以 R1 已验证的业务规则和服务端金额为准。</text>
+          </view>
+          <view class="quotation-content__order-explainer">
+            <text class="quotation-content__order-explainer-title">ⓘ 订单说明</text>
+            <text>提交后生成正式订单，可在订单档案中查看。</text>
+            <text>需要完成相应的业务校验及权限核对，才能提交。</text>
+          </view>
+          <view v-if="syntheticReviewEnabled" class="quotation-content__synthetic-review-slot" data-testid="synthetic-extfield-slot">
+            <slot name="synthetic-review-panel" />
           </view>
         </view>
 
@@ -563,7 +608,7 @@
             @tap="createRepairGroup()"
           >＋ 添加维修部位组</AppButton>
         </view>
-        <view v-if="composition.groups.length > 0" class="quotation-content__adjustments app-surface" data-testid="quotation-cost-adjustments">
+        <view v-if="composition.groups.length > 0 && !isFirstRepairPartStep" class="quotation-content__adjustments app-surface" data-testid="quotation-cost-adjustments">
           <view class="quotation-content__adjustments-title-row">
             <text class="quotation-content__adjustments-title">费用与优惠</text>
             <text class="quotation-content__adjustments-badge">业务规则待核验</text>
@@ -2711,4 +2756,64 @@ function configuredPackageLayerLabel(
 .quotation-content__first-step-quantity { min-height:49px; }
 .quotation-content__first-step-products { margin-top:10px; padding:13px 13px; }
 .quotation-content__first-step-products-copy { margin-top:3px; }
+
+/* Commercial Q01 restructured to match signed-off hierarchy: three distinct
+ * task cards, no nested product CTA, and one consistent fee section. */
+.quotation-content__commercial-section {
+  box-sizing:border-box; display:flex; flex-direction:column; gap:0;
+  background:#fff; border:1px solid #e9eef6; padding:17px 16px 14px;
+  border-radius:15px; margin-top:13px; box-shadow:0 2px 14px rgba(23,63,112,.035);
+}
+.quotation-content__section-heading {
+  display:flex; align-items:center; gap:11px;
+  min-height:34px; padding:0 0 12px;
+  margin:0 0 12px; border-bottom:1px solid #e9eef5;
+}
+.quotation-content__section-number {
+  width:31px; height:31px; min-width:31px; border-radius:50%;
+  background:#1677f4; color:#fff; font-size:15px; font-weight:800;
+  display:flex; align-items:center; justify-content:center;
+}
+.quotation-content__initial-empty-heading.quotation-content__section-heading { margin-bottom:3px; }
+.quotation-content__initial-cost-preview .quotation-content__section-heading { margin-bottom:9px; }
+.quotation-content__section-heading--fees { margin-top:14px !important; }
+.quotation-content__first-step-index { border-radius:50%; background:#1677f4; color:#fff; }
+.quotation-content__first-step-card-subtitle { display:none; }
+.quotation-content__first-step-products-title,
+.quotation-content__initial-cost-title { font-size:17px; color:#182a47; font-weight:800; }
+.quotation-content__select-tile {
+  display:flex; align-items:center; gap:12px; width:100%; box-sizing:border-box;
+  background:#fff; padding:13px 12px; min-height:83px;
+  border:1px solid #b5d2ff; border-radius:12px; text-align:left; margin:0;
+}
+.quotation-content__select-tile::after { border:0; }
+.quotation-content__select-tile--disabled { opacity:.6; }
+.quotation-content__select-icon {
+  flex:0 0 48px; width:48px; height:48px; border-radius:50%; background:#e8f3ff;
+  display:flex; align-items:center; justify-content:center;
+}
+.quotation-content__select-tile-copy {
+  flex:1; min-width:0; display:flex; flex-direction:column; gap:5px;
+}
+.quotation-content__select-tile-name { font-size:16px; color:#1c2e4a; font-weight:760; }
+.quotation-content__select-tile-help { font-size:12px; color:#788aa5; line-height:1.4; }
+.quotation-content__adjustment-actions { display:flex; gap:10px; margin-top:12px; }
+.quotation-content__adjustment-button {
+  flex:1; border:1px solid #dce6f4; background:#fff; border-radius:10px;
+  min-height:45px; font-size:14px; font-weight:600; color:#126ff0;
+}
+.quotation-content__adjustment-button::after { border:0; }
+.quotation-content__adjustment-button[disabled] { color:#9faabb; background:#f8fafc; }
+.quotation-content__fee-value { font-size:14px; color:#5b6b84; }
+.quotation-content__order-explainer {
+  margin-top:13px; padding:15px 16px; background:#edf5ff; border-radius:13px;
+  display:flex; flex-direction:column; gap:5px;
+  font-size:12px; line-height:1.5; color:#667f9e;
+}
+.quotation-content__order-explainer-title { color:#207af0; font-size:15px; font-weight:790; margin-bottom:4px; }
+.quotation-content__first-step-card { padding-bottom:15px; }
+.quotation-content__first-step-card-heading {
+  border-bottom:1px solid #e9eef5; padding-bottom:13px; margin-bottom:12px;
+}
+.quotation-content__first-step-field:last-child { margin-bottom:0; }
 </style>
