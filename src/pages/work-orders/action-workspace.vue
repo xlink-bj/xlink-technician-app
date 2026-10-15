@@ -301,12 +301,10 @@ const routeNodeId = ref<ReturnType<typeof parseActionWorkspaceNodeId>>(null)
 const routeAction = ref<string | undefined>(undefined)
 const routeQuotationOrderId = ref<string | undefined>(undefined)
 const routeQuotationEntry = ref<string | undefined>(undefined)
-const routeQuotationVisualSample = ref(false)
+const routeQuotationVisualSample = ref<'orders' | 'empty' | undefined>()
 const devQuotationOrderPreview = computed(() =>
-  import.meta.env.DEV
-  && routeQuotationVisualSample.value
-  && isMockQuotationPreview.value
-  && !productionReadOnly,
+  import.meta.env.DEV && isMockQuotationPreview.value && !productionReadOnly
+    ? routeQuotationVisualSample.value : undefined,
 )
 const quotationEditorOpened = ref(false)
 const quotationHubRef = ref<{ finishEdit: (message?: string) => void } | null>(null)
@@ -441,7 +439,9 @@ onLoad((options) => {
   routeQuotationOrderId.value = typeof options?.orderId === 'string' && options.orderId.trim() ? options.orderId.trim() : undefined
   routeQuotationEntry.value = options?.entry === 'orders' && routeAction.value === 'place_order' ? 'orders' : undefined
   // Route opt-in only. This is a UX screenshot fixture, not an authoritative Order.
-  routeQuotationVisualSample.value = import.meta.env.DEV && options?.q00Preview === 'orders'
+  routeQuotationVisualSample.value = import.meta.env.DEV
+    && (options?.q00Preview === 'orders' || options?.q00Preview === 'empty')
+      ? options.q00Preview : undefined
   quotationEditorOpened.value = false
   routeReady.value = true
 })
