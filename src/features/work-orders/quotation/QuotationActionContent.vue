@@ -687,8 +687,8 @@
 
         <view class="quotation-content__catalog-intro">
           <view class="quotation-content__catalog-intro-copy">
-            <text class="quotation-content__catalog-intro-title">选择服务项目</text>
-            <text class="quotation-content__catalog-intro-description">浏览套餐、工序、材料和机措</text>
+            <text class="quotation-content__catalog-intro-title">选择产品</text>
+            <text class="quotation-content__catalog-intro-description">套餐、工序、材料、机措 · 按当前维修部位选品</text>
           </view>
           <text class="quotation-content__catalog-step">第 2 步 · 选品</text>
         </view>
@@ -724,7 +724,7 @@
 
           <view class="quotation-content__catalog-section-heading">
             <text class="quotation-content__catalog-section-title">{{ catalogSectionTitle }}</text>
-            <text class="quotation-content__catalog-section-note">当前工单适用范围</text>
+            <text class="quotation-content__catalog-section-note">当前工单适用</text>
           </view>
 
           <AppStatus
@@ -742,7 +742,21 @@
             quiet
           />
 
-          <view class="quotation-content__catalog-browser" data-testid="quotation-catalog-browser">
+          <view class="quotation-content__catalog-browser"
+            :class="{ 'quotation-content__catalog-browser--faceted': catalogFacets.length > 0 }"
+            data-testid="quotation-catalog-browser">
+            <scroll-view v-if="catalogFacets.length > 0" class="quotation-content__catalog-facets" scroll-y
+              data-testid="quotation-catalog-facets">
+              <button class="quotation-content__catalog-facet"
+                :class="{ 'quotation-content__catalog-facet--selected': !selectedCatalogFacet }"
+                :aria-pressed="!selectedCatalogFacet" @tap="selectedCatalogFacet = ''">全部</button>
+              <button v-for="facet in catalogFacets" :key="facet.value"
+                class="quotation-content__catalog-facet"
+                :class="{ 'quotation-content__catalog-facet--selected': selectedCatalogFacet === facet.value }"
+                :data-testid="`quotation-catalog-facet-${facet.value}`"
+                :aria-pressed="selectedCatalogFacet === facet.value"
+                @tap="selectedCatalogFacet = facet.value">{{ facet.label }}</button>
+            </scroll-view>
             <AppLoadingState
               v-if="catalogBrowser.catalogStatesByKind[catalogBrowser.selectedKind] === 'loading'"
               class="quotation-content__catalog-state"
@@ -778,7 +792,7 @@
               >重试读取</AppButton>
             </view>
             <view
-              v-else-if="catalogBrowser.catalogStatesByKind[catalogBrowser.selectedKind] === 'succeeded' && filteredCatalogItems.length === 0"
+              v-else-if="catalogBrowser.catalogStatesByKind[catalogBrowser.selectedKind] === 'succeeded' && displayedCatalogItems.length === 0"
               class="quotation-content__catalog-state quotation-content__catalog-state-card"
               data-testid="quotation-catalog-empty"
             >
@@ -800,7 +814,7 @@
             </view>
             <scroll-view v-else class="quotation-content__catalog-list" scroll-y data-testid="quotation-catalog-list">
               <view
-                v-for="item in filteredCatalogItems"
+                v-for="item in displayedCatalogItems"
                 :key="item.id"
                 class="quotation-content__catalog-item"
                 :data-testid="`quotation-catalog-item-${item.kind}-${item.id}`"
@@ -1314,6 +1328,29 @@ const filteredCatalogItems = computed(() => {
   if (!query) return catalogBrowser.visibleCatalogItems
   return catalogBrowser.visibleCatalogItems.filter((item) => quotationCatalogSearchMatches(item, query))
 })
+// R1 repair-part facets appear ONLY when the current package records expose
+// compatible authoritative classification codes. Never assign a category
+// by product name or hide unclassified packages on the default "全部".
+const selectedCatalogFacet = ref('')
+function descendantCodes(node: CodeOptionRead): readonly string[] {
+  return [node.value, ...(node.children ?? []).flatMap(descendantCodes)]
+}
+const catalogFacets = computed(() => {
+  if (catalogBrowser.selectedKind !== 'package') return []
+  const packages = filteredCatalogItems.value.filter(item => item.kind === 'package' && item.r1RepairPartsCodes?.length)
+  if (!packages.length) return []
+  return composition.repairPartOptions.filter(facet => {
+    const codes = new Set(descendantCodes(facet))
+    return packages.some(item => item.r1RepairPartsCodes?.some(code => codes.has(code)))
+  })
+})
+const displayedCatalogItems = computed(() => {
+  const facet = catalogFacets.value.find(option => option.value === selectedCatalogFacet.value)
+  if (!facet) return filteredCatalogItems.value
+  const codes = new Set(descendantCodes(facet))
+  return filteredCatalogItems.value.filter(item => item.kind !== 'package'
+    || item.r1RepairPartsCodes?.some(code => codes.has(code)))
+})
 const packageConfigurationValidation = computed(() => {
   const packageId = currentPackageId.value
   if (!packageId || catalogBrowser.packageDetailState !== 'succeeded') {
@@ -1328,6 +1365,7 @@ const packageConfigurationValidation = computed(() => {
 const kindLabels = quotationCatalogKindLabels
 
 function openCatalog(groupId: string, kind: QuotationLineKind): void {
+  selectedCatalogFacet.value = ''
   activeCatalogGroupId.value = groupId
   catalogSelectionError.value = ''
   packageMaterialChoicesByLayer.value = {}
@@ -1373,6 +1411,7 @@ function closeCatalog(): void {
 
 
 function selectCatalogKind(kind: QuotationLineKind): void {
+  selectedCatalogFacet.value = ''
   catalogSelectionError.value = ''
   catalogBrowser.selectKind(kind)
 }
@@ -2405,4 +2444,35 @@ function configuredPackageLayerLabel(
 .quotation-content__first-step-label { font-size:23rpx; color:var(--app-color-text-primary); }
 .quotation-content__first-step-products { margin-top:19rpx; }
 .quotation-content__first-step-products-title { font-size:25rpx; }
+
+/* Q03: R1-like navigation hierarchy without inventing non-existent catalog
+   taxonomy. Show left rail only when package data supplies actual part codes. */
+.quotation-content__catalog-page { padding:10rpx 16rpx calc(15rpx + env(safe-area-inset-bottom)); background:var(--app-color-page); }
+.quotation-content__catalog-topbar { background:var(--app-color-surface); border-radius:0; margin:-10rpx -16rpx 8rpx; padding:5rpx 18rpx; min-height:88rpx; }
+.quotation-content__catalog-title { font-size:27rpx; }
+.quotation-content__catalog-target { padding:12rpx 14rpx; margin-top:9rpx; border-radius:16rpx; }
+.quotation-content__catalog-intro { padding:14rpx 2rpx 10rpx; }
+.quotation-content__catalog-intro-title { font-size:27rpx; font-weight:800; }
+.quotation-content__catalog-intro-description { font-size:19rpx; }
+.quotation-content__catalog-main { background:var(--app-color-surface); border-radius:19rpx; overflow:hidden; padding:0 10rpx 9rpx; }
+.quotation-content__category-grid { height:88rpx; flex-basis:88rpx; }
+.quotation-content__category { font-size:24rpx; }
+.quotation-content__catalog-section-heading { padding:10rpx 4rpx 8rpx; }
+.quotation-content__catalog-browser { position:relative; min-width:0; }
+.quotation-content__catalog-browser--faceted .quotation-content__catalog-list { margin-left:120rpx; width:calc(100% - 120rpx); }
+.quotation-content__catalog-browser--faceted .quotation-content__catalog-state { margin-left:120rpx; }
+.quotation-content__catalog-facets { position:absolute; top:0; bottom:0; left:0; width:112rpx; z-index:1;
+  background:var(--app-color-control-surface); border-radius:12rpx 0 0 12rpx; }
+.quotation-content__catalog-facet { width:100%; margin:0; border:0; background:transparent; color:var(--app-color-text-secondary);
+  border-left:5rpx solid transparent; min-height:88rpx; text-align:left; padding:12rpx 8rpx;
+  line-height:1.35; font-size:22rpx; border-radius:0; white-space:normal; }
+.quotation-content__catalog-facet::after { border:0; }
+.quotation-content__catalog-facet--selected { background:var(--app-color-primary-soft); color:var(--app-color-primary);
+  border-left-color:var(--app-color-primary); font-weight:800; }
+.quotation-content__catalog-item { border:1rpx solid var(--app-color-border); box-shadow:none; border-radius:15rpx; }
+.quotation-content__catalog-thumbnail { border-radius:12rpx; }
+.quotation-content__catalog-item-heading { gap:8rpx; }
+.quotation-content__catalog-item-title { font-size:25rpx; }
+.quotation-content__catalog-item-footer { border-top:0; padding-top:5rpx; }
+.quotation-content__catalog-item-price-state { border-radius:9rpx; background:transparent; padding:4rpx 0; }
 </style>
