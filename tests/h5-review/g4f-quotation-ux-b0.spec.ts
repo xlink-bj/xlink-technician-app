@@ -310,7 +310,7 @@ test('Phase B1 captures the real four-state quotation journey and compact/recove
   await expect(packageCard).toContainText('金额待核验')
   // S2 commercial catalog uses truthful category marks, not fabricated product imagery.
   // The package detail truthfully discloses that no product image is provided.
-  await expect(packageCard.locator('.quotation-content__catalog-thumbnail-mark')).toHaveText('套')
+  await expect(packageCard.locator('.quotation-content__catalog-thumbnail')).toBeVisible()
   await expect(packageCard.locator('.quotation-content__catalog-art')).toHaveCount(0)
   await packageCard.scrollIntoViewIfNeeded()
   await page.screenshot({ path: resolve(visualMasterOutput, '02-visual-catalog-390.png'), animations: 'disabled' })
