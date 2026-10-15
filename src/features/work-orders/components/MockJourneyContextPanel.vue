@@ -1,5 +1,18 @@
 <template>
   <view class="journey-context app-surface" :class="{ 'journey-context--compact': compact, 'journey-context--task-focus': taskFocus, 'journey-context--expanded': expanded }" data-testid="mock-journey-context">
+    <view v-if="taskFocus && compact && !expanded" class="journey-context__task-summary" data-testid="mock-survey-quote-suggestion">
+      <view class="journey-context__task-info">
+        <text v-if="context.suggestion" class="journey-context__focus-suggestion">勘查 · {{ context.suggestion.surveyPathLabel }}</text>
+        <text v-else class="journey-context__focus-suggestion">勘查建议未提供</text>
+        <text class="journey-context__task-source">本机记录 · 未提交后台</text>
+      </view>
+      <AppButton v-if="context.suggestion && canAdoptSuggestion" variant="secondary"
+        class="journey-context__task-adopt" data-testid="mock-survey-quote-adopt"
+        @tap="$emit('adopt-suggestion')">采用</AppButton>
+      <button class="journey-context__task-detail" data-testid="mock-journey-context-toggle"
+        :aria-expanded="false" @tap="expanded = true">详情</button>
+    </view>
+    <template v-else>
     <view class="journey-context__head">
       <view class="journey-context__head-copy">
         <text class="journey-context__heading">{{ compact ? '前序信息已保留' : '前序信息 · 本机草稿' }}</text>
@@ -33,6 +46,7 @@
       <text v-else class="journey-context__empty">已有报价部位或目录尚不可用，请手动核对。</text>
       <text v-if="suggestionFeedback" class="journey-context__value-text" data-testid="mock-survey-quote-feedback">{{ suggestionFeedback }}</text>
     </view>
+    </template>
   </view>
 </template>
 
@@ -94,4 +108,30 @@ defineEmits<{ (event: 'adopt-suggestion'): void }>()
   margin:0; padding:5px; border-radius:9px;
 }
 
+/* A genuine task-specific collapsed variant. It replaces the full panel's
+   DOM while collapsed instead of hiding important text with grid overflow.
+   Expanded Survey provenance and the original S01/S02 UI are unchanged. */
+.journey-context--task-focus:not(.journey-context--expanded) {
+  padding:9px 11px; margin-bottom:9px; min-height:56px;
+  border-radius:12px; box-sizing:border-box;
+}
+.journey-context__task-summary { display:flex; gap:8px; align-items:center; min-width:0; }
+.journey-context__task-info {
+  display:flex; flex:1 1 0; flex-direction:column; gap:4px; min-width:0;
+}
+.journey-context--task-focus .journey-context__task-info .journey-context__focus-suggestion {
+  font-size:12.5px; font-weight:730; color:#1c3454; line-height:1.3;
+  display:block; overflow:hidden; white-space:nowrap; text-overflow:ellipsis;
+}
+.journey-context__task-source { font-size:11px; color:#7c8da5; line-height:1.3; }
+.journey-context--task-focus .journey-context__task-adopt {
+  width:66px; flex:0 0 66px; min-height:36px;
+  padding:2px 4px; font-size:12px; border-radius:9px; margin:0;
+}
+.journey-context__task-detail {
+  border:0; background:transparent; margin:0; padding:5px 2px;
+  color:#1677f4; font-size:12px; font-weight:700;
+  flex:0 0 35px; min-height:35px;
+}
+.journey-context__task-detail::after { border:0; }
 </style>
