@@ -1337,7 +1337,10 @@ function descendantCodes(node: CodeOptionRead): readonly string[] {
 }
 const catalogFacets = computed(() => {
   if (catalogBrowser.selectedKind !== 'package') return []
-  const packages = filteredCatalogItems.value.filter(item => item.kind === 'package' && item.r1RepairPartsCodes?.length)
+  const packages = filteredCatalogItems.value.filter(
+    (item): item is Extract<QuotationCatalogItemRead, { kind: 'package' }> =>
+      item.kind === 'package' && Boolean(item.r1RepairPartsCodes?.length),
+  )
   if (!packages.length) return []
   return composition.repairPartOptions.filter(facet => {
     const codes = new Set(descendantCodes(facet))
