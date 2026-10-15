@@ -218,15 +218,19 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       await capture('05-quote-order-method', 'Q', 'Q00 选择下单方式', '只允许新建；不具备契约的复制能力明确禁用')
       await page.getByTestId('quotation-hub-mode-next').click()
       await expect(page.getByTestId('quotation-state-ready')).toBeVisible()
-      await expect(page.getByTestId('mock-journey-context-survey')).toContainText('14.5')
-      await expect(page.getByTestId('mock-journey-context-survey')).toBeHidden()
+      await expect(page.getByTestId('mock-journey-context-survey')).toHaveCount(0)
       await expect(page.getByTestId('mock-survey-quote-adopt')).toBeVisible()
       // Q01: compact preceding DEV data without hiding provenance or the adopt control.
       await expect(page.locator('.journey-context--task-focus')).toBeVisible()
       await expect(page.locator('.journey-context--task-focus')).toContainText('未提交后台')
       await expect(page.locator('.journey-context__focus-suggestion')).toBeVisible()
       await expect(page.locator('.journey-context__focus-suggestion')).toContainText('屋面 / 有保护平屋面')
-      await expect(page.getByTestId('mock-journey-context-survey')).toBeHidden()
+      // The complete original Survey record is reachable only when the
+      // compact task summary is explicitly expanded.
+      await page.getByTestId('mock-journey-context-toggle').click()
+      await expect(page.getByTestId('mock-journey-context-survey')).toContainText('14.5')
+      await page.getByTestId('mock-journey-context-toggle').click()
+      await expect(page.getByTestId('mock-journey-context-survey')).toHaveCount(0)
       const firstAction = await page.getByTestId('quotation-add-group').boundingBox()
       // Q01 visual contract: numbered section header is a horizontal row.
       const firstStepNumber = await page.locator('.quotation-content__initial-empty-heading .quotation-content__section-number').boundingBox()
