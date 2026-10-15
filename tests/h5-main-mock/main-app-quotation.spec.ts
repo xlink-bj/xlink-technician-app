@@ -489,10 +489,13 @@ test('one MOCK-019 WorkOrder progresses Appointment → Survey → Quotation wit
   await expect(page).toHaveURL(/mock-work-order-019-continuous-journey/)
   await expect(page.locator('.uni-page-head__title')).toContainText('新增订单')
   await expect(page.getByTestId('quotation-state-ready')).toBeVisible()
+  await expect(page.getByTestId('mock-journey-context')).toContainText('未提交后台')
+  await expect(page.getByTestId('mock-journey-context-survey')).toHaveCount(0)
+  await page.getByTestId('mock-journey-context-toggle').click()
   await expect(page.getByTestId('mock-journey-context-appointment')).toContainText('P1B预约备注：现场先确认屋面渗漏')
   await expect(page.getByTestId('mock-journey-context-survey')).toContainText('14.5')
   await expect(page.getByTestId('mock-journey-context-survey')).toContainText('防水施工面积')
-  await expect(page.getByTestId('mock-journey-context')).toContainText('未提交后台')
+  await page.getByTestId('mock-journey-context-toggle').click()
   // P1C: explicit, synthetic-only first-level part suggestion. It never copies
   // Survey's numeric area, creates priced items or runs Order/Workflow writes.
   await expect(page.getByTestId('mock-survey-quote-suggestion')).toContainText('屋面 / 有保护平屋面')
@@ -511,8 +514,11 @@ test('one MOCK-019 WorkOrder progresses Appointment → Survey → Quotation wit
   await page.getByTestId('quotation-hub-create-unverified').click()
   await expect(page.getByTestId('quotation-state-ready')).toBeVisible()
   await expect(page).toHaveURL(/mock-work-order-019-continuous-journey/)
+  await expect(page.getByTestId('mock-journey-context-survey')).toHaveCount(0)
+  await page.getByTestId('mock-journey-context-toggle').click()
   await expect(page.getByTestId('mock-journey-context-appointment')).toContainText('P1B预约备注：现场先确认屋面渗漏')
   await expect(page.getByTestId('mock-journey-context-survey')).toContainText('14.5')
+  await page.getByTestId('mock-journey-context-toggle').click()
   await expect(page.getByTestId('quotation-product-demo-read-only')).toBeVisible()
   // The local quotation draft is not an Order.type=1. The next stage is
   // explicitly isolated synthetic signing review, never a workflow mutation.
