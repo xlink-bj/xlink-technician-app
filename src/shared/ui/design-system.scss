@@ -84,63 +84,98 @@ page {
   box-shadow: 0 8rpx 26rpx rgba(32, 55, 90, 0.05);
 }
 
-/* Button grammar: components own behavior/state; these classes own visuals. */
+/* Shared Button anatomy. Business pages may choose variant and size but must
+   not independently redraw border, radius, font or visual state. */
 .app-button {
   border: 0;
-  border-radius: var(--app-radius-control);
   box-sizing: border-box;
-  font-size: var(--app-font-body);
-  font-weight: 800;
-  height: var(--app-control-height);
-  line-height: var(--app-control-height);
   margin: 0;
   padding: 0 var(--app-control-padding-x);
   text-align: center;
-}
-
-.app-button::after { border: 0; }
-.app-button--block { width: 100%; }
-.app-button--primary { background: var(--app-color-primary); color: var(--app-color-surface); }
-.app-button--secondary { background: var(--app-color-surface); border: 1rpx solid var(--app-color-primary-border); color: var(--app-color-primary); }
-.app-button--text { background: transparent; color: var(--app-color-primary); padding-left: var(--app-space-sm); padding-right: var(--app-space-sm); }
-.app-button:active { opacity: 0.86; }
-.app-button--pressed { opacity: 0.86; }
-.app-button--disabled { background: var(--app-color-disabled-surface); border-color: var(--app-color-border); color: var(--app-color-disabled); opacity: 1; }
-.app-button--primary.app-button--disabled { background: var(--app-color-primary); color: var(--app-color-surface); opacity: 0.48; }
-.app-button--loading { opacity: 0.78; }
-.app-button--primary.app-button--loading { background: var(--app-color-primary); color: var(--app-color-surface); }
-.app-button__content {
+  display: flex;
   align-items: center;
-  display: inline-flex;
   justify-content: center;
   max-width: 100%;
-  vertical-align: top;
+  min-height: 44px;
+  height: var(--app-button-height-regular);
+  border-radius: var(--app-button-radius);
+  font-size: var(--app-button-font-regular);
+  line-height: 1.35;
+  font-weight: 750;
+  white-space: normal;
+  transition: opacity 120ms ease, background-color 120ms ease;
 }
-
+.app-button::after { border: 0; }
+.app-button--block { width: 100%; }
+.app-button--text { padding-left: var(--app-space-sm); padding-right: var(--app-space-sm); }
+.app-button__content {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--app-space-xs);
+  min-width: 0;
+  line-height: 1.35;
+}
 .app-button__label {
   display: block;
   max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+  text-align: center;
 }
-
+.app-button--size-compact {
+  min-height: 44px;
+  height: var(--app-button-height-compact);
+  font-size: var(--app-button-font-compact);
+  padding-left: var(--app-space-md);
+  padding-right: var(--app-space-md);
+}
+.app-button--size-large {
+  min-height: 50px;
+  height: var(--app-button-height-large);
+  font-size: var(--app-button-font-large);
+}
+.app-button--primary { background: var(--app-color-primary-action); color: var(--app-color-surface); }
+.app-button--primary.app-button--loading { background: var(--app-color-primary-action); }
+.app-button--secondary {
+  background: var(--app-color-surface);
+  border: 1rpx solid var(--app-color-primary-border);
+  color: var(--app-color-primary-action);
+}
+.app-button--text { background: transparent; color: var(--app-color-primary-action); }
+.app-button:active, .app-button--pressed { opacity: var(--app-button-press-opacity); }
+.app-button--disabled, .app-button--disabled:active {
+  opacity: 1;
+  background: var(--app-color-disabled-surface);
+  color: var(--app-color-disabled);
+  border-color: var(--app-color-border);
+}
+.app-button--primary.app-button--disabled {
+  opacity: .50;
+  background: var(--app-color-primary-action);
+  color: var(--app-color-surface);
+}
+.app-button--loading { opacity: .82; }
+.app-button--loading.app-button--disabled { opacity: .82; }
+.app-button__leading,.app-button__trailing {
+  display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto;
+}
 .app-button__loading-slot {
   border: 4rpx solid currentColor;
   border-radius: 50%;
   border-right-color: transparent;
   box-sizing: border-box;
   height: 22rpx;
-  margin-right: 10rpx;
-  visibility: hidden;
   width: 22rpx;
+  flex: 0 0 22rpx;
+  visibility: hidden;
 }
-
 .app-button__loading-slot--active {
   animation: app-loading-spin var(--app-motion-loading-spinner-duration) linear infinite;
   visibility: visible;
 }
-.app-button__loading-slot--trailing { margin-left: 10rpx; margin-right: 0; }
+.app-button__loading-slot--trailing { margin: 0; }
 
 /* Field grammar */
 .app-field { margin-top: var(--app-field-gap); }
@@ -283,4 +318,55 @@ page {
 @keyframes app-loading-slide {
   0% { transform: translateX(-110%); }
   100% { transform: translateX(330%); }
+}
+
+
+/* DS-01 Commercial Foundation v1 — additive tokens, inherited by existing
+   consumers. Keep the v0.2 semantic palette as the single source of truth. */
+:root,
+page {
+  --app-button-height-compact: 88rpx;
+  --app-button-height-regular: var(--app-control-height);
+  --app-button-height-large: 100rpx;
+  --app-button-radius: var(--app-radius-control);
+  --app-button-font-compact: var(--app-font-field-label);
+  --app-button-font-regular: var(--app-font-body);
+  --app-button-font-large: var(--app-font-body);
+  --app-button-press-opacity: .90;
+  /* White/blue action contrast 5.02:1; brand blue remains #2878f2. */
+  --app-color-primary-action: #1d6ecf;
+  --app-action-bar-background: var(--app-color-surface);
+  --app-action-bar-border: var(--app-color-border);
+  --app-action-bar-inset: 16rpx;
+}
+/* In-place ActionBar. Never position:fixed in a business content fragment:
+   ActionWorkspaceShell owns the fixed footer and scroll/keyboard boundary. */
+.app-action-bar {
+  box-sizing: border-box;
+  flex-shrink: 0;
+  background: var(--app-action-bar-background);
+  border-top: 1rpx solid var(--app-action-bar-border);
+  padding-top: var(--app-space-sm);
+  padding-bottom: calc(var(--app-action-bar-inset) + env(safe-area-inset-bottom));
+  width: 100%;
+}
+.app-action-bar__inner {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0 auto;
+}
+.app-action-bar--dual .app-action-bar__inner {
+  display: flex;
+  gap: var(--app-action-bar-gap);
+  align-items: center;
+}
+.app-action-bar--dual .app-action-bar__inner > .app-button {
+  min-width: 0;
+  flex: 1 1 0;
+}
+.app-action-bar--preview {
+  position: relative; border: 1rpx solid var(--app-color-border);
+  border-radius: var(--app-radius-surface);
+  padding: var(--app-space-md);
+  background: var(--app-color-surface);
 }

@@ -168,3 +168,20 @@ The Design System v0.2 cross-platform calibration established:
 - material divergence: none.
 
 This baseline may be revised only with new reviewed evidence.
+
+
+## DS-01 commercial component enforcement (2026-10)
+
+- The existing `AppButton` and `AppActionBar` are the canonical shared
+  controls. Page authors choose **semantic** variant and size; they must not
+  recreate button typography, radius, color or loading/disabled appearance.
+- Run the true uni-app H5 Gallery `DS-01` matrix and Action Bar scenarios
+  at 320, 375, 390 before changing any shared Button/Action Bar tokens.
+- Workflow eligibility, pricing, draft persistence and order Submit are
+  **never** computed by shared UI. A disabled/loading `AppButton` never emits
+  even when a synthetic `tap` is dispatched.
+- Existing feature-specific CSS overrides are legacy debt; migrate only
+  after visual parity. Do not append fresh overrides as an alternative
+  to editing shared components and adding Gallery evidence.
+- Gallery and compiled H5 automated PASS are **not** product visual signoff;
+  MP-Weixin simulator calibration and device checks remain distinct.

@@ -1,0 +1,63 @@
+name: DS01 Commercial Foundation Review
+
+on:
+  pull_request:
+    paths:
+      - 'src/shared/ui/**'
+      - '__review/design-system-gallery.vue'
+      - '__review/design-system-gallery-fixtures.ts'
+      - 'tests/h5-review/design-system-uni-h5.spec.ts'
+      - 'scripts/check-ui-governance.mjs'
+      - 'docs/design-system/DS01_COMMERCIAL_FOUNDATION_V1.md'
+      - '.github/workflows/ds01-commercial-foundation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ds01-real-uni-gallery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Verify shared component governance and type contracts
+        run: |
+          pnpm run check:ui-governance
+          pnpm run typecheck
+      - name: Cache Playwright Chromium
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}
+      - name: Install Chromium and CJK fonts
+        run: |
+          pnpm exec playwright install --with-deps chromium
+          sudo apt-get update -qq
+          sudo apt-get install -y fonts-noto-cjk
+      - name: Real uni-app H5 Design System and DS01 geometry regression
+        run: pnpm run test:uni-h5-review
+      - name: Build MP-Weixin Review for cross-platform calibration
+        run: pnpm run build:mp-weixin-review
+      - name: Preserve review screenshots and failures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ds01-commercial-foundation-${{ github.run_id }}
+          path: |
+            .review/design-system-uni-h5/generated/
+            test-results/
+          if-no-files-found: warn
+          retention-days: 30

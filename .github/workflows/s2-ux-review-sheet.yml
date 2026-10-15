@@ -10,6 +10,8 @@ on:
       - '.github/workflows/s2-ux-review-sheet.yml'
       - 'src/pages/**'
       - 'src/features/work-orders/**'
+      # Shared visual anatomy is rendered throughout Q00–Q03 and S01.
+      - 'src/shared/ui/**'
       - 'src/components/**'
       - 'src/styles/**'
   workflow_dispatch:
