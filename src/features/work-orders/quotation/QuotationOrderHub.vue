@@ -60,11 +60,11 @@
     </view>
     <view v-else-if="records.length === 0" class="quotation-hub__empty app-surface" data-testid="quotation-hub-no-records">
       <view class="quotation-hub__empty-icon" aria-hidden="true">▤<text class="quotation-hub__empty-icon-plus">＋</text></view>
-      <text class="quotation-hub__empty-title">本次未发现正式订单</text>
+      <text class="quotation-hub__empty-title">{{ isVisualSample ? '当前工单尚无订单' : '本次未发现正式订单' }}</text>
       <text class="quotation-hub__empty-detail">请根据现场勘查结果创建报价订单，也可为不同维修部位分别建立订单。</text>
       <AppButton v-if="!readOnly" block class="quotation-hub__empty-action" data-testid="quotation-hub-empty-create"
         @tap="startEditor">＋ 创建第一笔订单</AppButton>
-      <text class="quotation-hub__empty-provenance">仅确认本次读取，未证明完整历史为空。</text>
+      <text class="quotation-hub__empty-provenance">{{ isVisualSample ? '空状态为合成数据，仅用于视觉评审。' : '仅确认本次读取，未证明完整历史为空。' }}</text>
     </view>
     <view v-else class="quotation-hub__list" data-testid="quotation-hub-records">
       <view v-for="order in records" :key="order.id" class="quotation-hub__order app-surface"
@@ -76,7 +76,11 @@
         <text class="quotation-hub__order-subtitle">{{ isVisualSample ? '视觉演示 · 无真实修改或签约操作' : '当前权限可见 · 状态未核实时不推断签约进度' }}</text>
         <view class="quotation-hub__order-lines">
           <view class="quotation-hub__order-line">
-            <text>合计金额</text>
+            <text>产品总额</text>
+            <text>{{ money(order.originPrice) }}</text>
+          </view>
+          <view class="quotation-hub__order-line">
+            <text>实际金额</text>
             <text class="quotation-hub__order-amount">{{ money(order.totalPrice) }}</text>
           </view>
           <view class="quotation-hub__order-line">
@@ -93,8 +97,8 @@
             :aria-expanded="expandedId === order.id" @tap="toggleDetails(order.id)">
             {{ expandedId === order.id ? '收起详情' : '查看详情' }}
           </AppButton>
-          <AppButton v-if="!readOnly && !isVisualSample" variant="secondary"
-            :disabled="editingId !== null || hasLocalDraft"
+          <AppButton v-if="!readOnly" variant="secondary"
+            :disabled="isVisualSample || editingId !== null || hasLocalDraft"
             :data-testid="`quotation-hub-edit-${order.id}`" @tap="edit(order.id)">
             {{ editingId === order.id ? '核验中…' : '修改订单' }}
           </AppButton>
@@ -140,14 +144,15 @@ const props = defineProps<{
   readonly localDraftGroupCount: number
   readonly readOnly: boolean
   /** Explicit DEV source-modelled preview. Never substituted for an R1 API read. */
-  readonly devVisualSample?: boolean
+  readonly devVisualSample?: 'orders' | 'empty'
 }>()
 const emit = defineEmits<{
   (event: 'create'): void
   (event: 'edit', id: string): void
 }>()
 const browse = useQuotationOrderBrowseStore()
-const isVisualSample = computed(() => import.meta.env.DEV && props.devVisualSample === true)
+const isVisualSample = computed(() => import.meta.env.DEV
+  && (props.devVisualSample === 'orders' || props.devVisualSample === 'empty'))
 const sampleRecords = computed((): readonly QuotationOrderBrowseItem[] => [3500, 1200].map((amount, index) => ({
   id: `DEV-Q00-ORDER-${index + 1}`,
   displayNumber: `演示订单 0${index + 1}`,
@@ -166,7 +171,7 @@ const sampleRecords = computed((): readonly QuotationOrderBrowseItem[] => [3500,
   pdfState: 'absent' as const,
 })))
 const records = computed((): readonly QuotationOrderBrowseItem[] => isVisualSample.value
-  ? sampleRecords.value
+  ? props.devVisualSample === 'orders' ? sampleRecords.value : []
   : browse.state === 'succeeded' && browse.fetchedWorkOrderId === props.workOrderId
     ? browse.items : [])
 const expandedId = ref<string | null>(null)
