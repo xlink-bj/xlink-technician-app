@@ -2682,4 +2682,23 @@ function configuredPackageLayerLabel(
 .quotation-content__catalog-browser--faceted .quotation-content__catalog-item-action {
   min-width:100px; min-height:39px; font-size:11.5px; padding:0 7px;
 }
+
+/* High-fidelity Q03 viewport density: one active repair-part strip and
+ * one catalog heading are enough; the earlier duplicated captions consumed
+ * 80px before the user could see a second package in the 844px viewport. */
+.quotation-content__catalog-target {
+  min-height: 62px; padding: 9px 11px; margin-top: 6px; box-sizing:border-box;
+}
+.quotation-content__catalog-target-label,
+.quotation-content__catalog-target-meta { display:none; }
+.quotation-content__catalog-target-title { font-size:14px; line-height:1.35; }
+.quotation-content__catalog-intro { margin:0; padding:8px 2px 4px; min-height:36px; }
+.quotation-content__catalog-intro-title { font-size:17px; }
+.quotation-content__catalog-intro-description,.quotation-content__catalog-step { display:none; }
+.quotation-content__catalog-main { margin-top:5px; }
+.quotation-content__catalog-section-heading { margin:7px 3px 6px; }
+.quotation-content__catalog-item {
+  margin-bottom:9px;
+}
+.quotation-content__catalog-browser--faceted .quotation-content__catalog-item { min-height:151px; padding-bottom:55px; }
 </style>
