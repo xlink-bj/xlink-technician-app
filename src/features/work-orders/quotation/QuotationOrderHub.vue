@@ -3,7 +3,7 @@
     
     <view class="quotation-hub__work-order app-surface">
       <view class="quotation-hub__work-order-top">
-        <view class="quotation-hub__house" aria-hidden="true"><AppIcon name="home" :size="23" color="#286cbf" /></view>
+        <view class="quotation-hub__house" aria-hidden="true"><AppIcon name="home" :size="23" color="#ef8d3d" /></view>
         <view class="quotation-hub__work-order-copy">
           <text class="quotation-hub__eyebrow">当前工单</text>
           <text class="quotation-hub__work-order-number">{{ displayNumber || workOrderId }}</text>
@@ -274,7 +274,7 @@ watch(() => props.workOrderId, () => {
 .quotation-hub__work-order-top { display:flex; align-items:center; gap:12px; min-height:57px; }
 .quotation-hub__house {
   display:flex; align-items:center; justify-content:center; flex:none;
-  width:43px; height:43px; border-radius:12px; background:#eaf3ff;
+  width:43px; height:43px; border-radius:12px; background:#fff1e5;
 }
 .quotation-hub__work-order-copy { display:flex; flex:1; min-width:0; flex-direction:column; gap:5px; }
 .quotation-hub__eyebrow,.quotation-hub__meta-label {
