@@ -3040,7 +3040,7 @@ function configuredPackageLayerLabel(
   border:1px solid #dce9fa; border-radius:10px; background:#edf4fd;
 }
 .quotation-content__catalog-browser--faceted .quotation-content__catalog-item-title {
-  font-size:14px; font-weight:750; line-height:1.4; color:#20334f;
+  font-size:15px; font-weight:750; line-height:1.38; color:#20334f;
 }
 .quotation-content__catalog-browser--faceted .quotation-content__catalog-kind-pill {
   font-size:10px; border-radius:5px; color:#3878c6;
