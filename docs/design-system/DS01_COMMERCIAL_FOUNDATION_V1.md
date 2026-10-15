@@ -18,7 +18,7 @@ Source: `src/shared/ui/design-system.scss`. Existing `--app-color-*`, typography
 
 | Contract | v1.0 value / relation | Meaning |
 | --- | --- | --- |
-| Primary | `--app-color-primary: #2878f2` | one dominant action |
+| Brand primary | `--app-color-primary: #2878f2` | brand selection color; not sufficient for small white text |\n| Accessible action primary | `--app-color-primary-action: #1d6ecf` | >=5:1 white foreground for normal text; secondary text >=5:1 on white |
 | Page/Surface | `#f3f6fa` / `#fff` | low-noise workspace |
 | Primary text | `#1d2b40` | high-contrast headings / actions |
 | Border / disabled | existing semantic color tokens | no feature-specific greys |
@@ -42,7 +42,7 @@ Source: `src/shared/ui/design-system.scss`. Existing `--app-color-*`, typography
 - `size = compact | regular | large`, default regular. Compact cannot become a tiny touch target.
 - `block` width, `disabled`, `loading`, `pressed`, `ariaLabel`, optional `leading` and `trailing` slots. Default slot is action text.
 - Disabled or loading prevents native action **and** guards synthetic `tap`. Never dispatch multiple business commands. The *consumer* owns in-flight/idempotency; the button does not invent a business state machine.
-- Long Chinese wraps safely; explicit accessible labels for icon-only or ambiguous actions.
+- Long Chinese wraps safely; explicit accessible labels for icon-only or ambiguous actions. Enabled primary/secondary button text must meet **WCAG AA 4.5:1** contrast in the actual uni-app H5 runtime.
 - `Primary/Secondary/Text`, `enabled/disabled/pressed/loading`, three sizes, leading icon and long label are gallery-owned verified states.
 - Do **not** add one-off page CSS for common button colors, font sizes, heights, radii, pressed or loading/disabled states. Choose semantic props.
 

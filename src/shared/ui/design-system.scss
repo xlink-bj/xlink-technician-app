@@ -298,6 +298,8 @@ page {
   --app-button-font-regular: var(--app-font-body);
   --app-button-font-large: var(--app-font-body);
   --app-button-press-opacity: .90;
+  /* White/blue action contrast 5.02:1; brand blue remains #2878f2. */
+  --app-color-primary-action: #1d6ecf;
   --app-action-bar-background: var(--app-color-surface);
   --app-action-bar-border: var(--app-color-border);
   --app-action-bar-inset: 16rpx;
@@ -344,13 +346,14 @@ page {
   height: var(--app-button-height-large);
   font-size: var(--app-button-font-large);
 }
-.app-button--primary { background: var(--app-color-primary); color: var(--app-color-surface); }
+.app-button--primary { background: var(--app-color-primary-action); color: var(--app-color-surface); }
+.app-button--primary.app-button--loading { background: var(--app-color-primary-action); }
 .app-button--secondary {
   background: var(--app-color-surface);
   border: 1rpx solid var(--app-color-primary-border);
-  color: var(--app-color-primary);
+  color: var(--app-color-primary-action);
 }
-.app-button--text { background: transparent; color: var(--app-color-primary); }
+.app-button--text { background: transparent; color: var(--app-color-primary-action); }
 .app-button:active, .app-button--pressed { opacity: var(--app-button-press-opacity); }
 .app-button--disabled, .app-button--disabled:active {
   opacity: 1;
@@ -360,7 +363,7 @@ page {
 }
 .app-button--primary.app-button--disabled {
   opacity: .50;
-  background: var(--app-color-primary);
+  background: var(--app-color-primary-action);
   color: var(--app-color-surface);
 }
 .app-button--loading { opacity: .82; }

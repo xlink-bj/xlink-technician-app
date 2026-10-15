@@ -186,6 +186,27 @@ test('DS-01 shared commercial controls: 320/375/390px, states, geometry, one tap
       expect(metric.scrollWidth, 'button text should not clip horizontally').toBeLessThanOrEqual(metric.width + 1)
     }
     expect(metrics[2].height).toBeGreaterThan(metrics[0].height)
+    // WCAG AA body-size action label contrast: primary white-on-blue and
+    // secondary blue-on-white >=4.5:1 in the compiled uni-app runtime.
+    for (const item of [
+      page.getByTestId('ds01-button-primary'),
+      page.getByTestId('ds01-button-secondary'),
+    ]) {
+      const contrast = await item.evaluate(element => {
+        const read = (value: string) => (value.match(/[\d.]+/g) ?? []).slice(0, 3).map(Number)
+        const linear = (value: number) => {
+          const fraction = value / 255
+          return fraction <= .04045 ? fraction / 12.92 : ((fraction + .055) / 1.055) ** 2.4
+        }
+        const luminance = (rgb: number[]) =>
+          .2126 * linear(rgb[0] ?? 0) + .7152 * linear(rgb[1] ?? 0) + .0722 * linear(rgb[2] ?? 0)
+        const style = getComputedStyle(element)
+        const fore = luminance(read(style.color))
+        const back = luminance(read(style.backgroundColor))
+        return (Math.max(fore, back) + .05) / (Math.min(fore, back) + .05)
+      })
+      expect(contrast, 'DS01 action label contrast must meet WCAG AA').toBeGreaterThanOrEqual(4.5)
+    }
     await expect(actionBar).toBeVisible()
     const dual = await actionBar.getByTestId('ds01-action-primary').boundingBox()
     const secondary = await actionBar.getByTestId('ds01-action-secondary').boundingBox()

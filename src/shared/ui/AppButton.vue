@@ -19,13 +19,13 @@
     @tap="handleTap"
   >
     <view class="app-button__content">
-      <view v-if="$slots.leading" class="app-button__leading"><slot name="leading" /></view>
       <view
-        v-else
+        v-if="loading || !$slots.leading"
         class="app-button__loading-slot"
         :class="{ 'app-button__loading-slot--active': loading }"
         aria-hidden="true"
       />
+      <view v-else class="app-button__leading"><slot name="leading" /></view>
       <view class="app-button__label"><slot /></view>
       <view v-if="$slots.trailing" class="app-button__trailing"><slot name="trailing" /></view>
       <view v-else class="app-button__loading-slot app-button__loading-slot--trailing" aria-hidden="true" />
