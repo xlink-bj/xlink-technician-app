@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
-import { readFile } from 'node:fs/promises'
+import { readFile, readdir } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
-import { resolve } from 'node:path'
+import { join, resolve } from 'node:path'
 
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)))
 
@@ -149,6 +149,43 @@ if (
   || !gallery.includes('ds01-action-dual')
 ) {
   fail('DS-01 Button/ActionBar shared contracts, real Workspace integration or Gallery evidence missing')
+}
+
+// DS-01 no-regression migration budget. Existing business-side AppButton
+// selectors predate DS-01 and are debt; freezes their exact source-local count.
+// Newly added feature files start at zero. Reductions are encouraged.
+// A business author may consume AppButton through props, not redraw its CSS.
+const existingVisualOverrideBudget = {
+  'src/features/work-orders/components/MockJourneyContextPanel.vue': 2,
+  'src/features/work-orders/components/SurveyCompleteConfirmation.vue': 1,
+  'src/features/work-orders/quotation/QuotationActionContent.vue': 12,
+  'src/features/work-orders/quotation/QuotationActionWorkspace.vue': 1,
+  'src/features/work-orders/quotation/QuotationOrderHub.vue': 2,
+  'src/pages/work-orders/material-sku-mock-review.vue': 1,
+  'src/pages/work-orders/signing-mock-review.vue': 2,
+}
+
+async function walkPresentationSources(dir) {
+  const found = []
+  for (const entry of await readdir(resolve(root, dir), { withFileTypes: true })) {
+    const path = join(dir, entry.name).replace(/\\/g, '/')
+    if (entry.isDirectory()) found.push(...await walkPresentationSources(path))
+    else if (/\.(vue|scss)$/.test(entry.name)) found.push(path)
+  }
+  return found
+}
+
+for (const file of [
+  ...await walkPresentationSources('src/features'),
+  ...await walkPresentationSources('src/pages'),
+]) {
+  const source = await read(file)
+  const style = file.endsWith('.vue') ? source.slice(source.indexOf('<style') < 0 ? source.length : source.indexOf('<style')) : source
+  const buttonOverrides = (style.match(/\.app-button\b/g) ?? []).length
+  const permitted = existingVisualOverrideBudget[file] ?? 0
+  if (buttonOverrides > permitted) {
+    fail(`DS-01: ${file} defines ${buttonOverrides} AppButton style references (legacy allowance ${permitted}); reuse shared component props instead`)
+  }
 }
 
 console.log('UI governance check passed: shared UX contract, Gallery coverage, and delivery gates are intact')

@@ -66,7 +66,7 @@ Source: `src/shared/ui/design-system.scss`. Existing `--app-color-*`, typography
 5. **Cross-platform:** `pnpm run build:mp-weixin-review` and existing calibration rubric. MP simulator **visual inspection is mandatory** for shared control geometry/token changes; real devices and keyboard/safe-area scenarios remain a separate release gate.
 6. **Owner gate:** real-screen visual comparison with approved Appointment/S01 direction. Code PASS, screenshot generation or simulator build alone are **not** `COMMERCIAL_UI_ACCEPTED`.
 
-## 6. Migration and exceptions
+## 6. Migration and exceptions\n\nDS-01 governance scans business Vue/SCSS and prohibits **new** selectors targeting `.app-button` visual anatomy. Existing selectors are frozen by per-file counts; a UI migration can only keep or reduce them. It deliberately does not prohibit correct semantic `AppButton` usage or hard-fail legacy screens.
 
 DS-01 uses backward-compatible default Button API. Existing CSS overrides in Quotation and specialized screens are tracked as legacy debt, **not certified as DS-01 consumers by default**. Do not rewrite all Q00–Q03 in this scope. On the next touched business screen, choose shared Button/Action Bar first; if a proven domain variant cannot fit, document and test the exception rather than copy/paste new visual CSS.
 

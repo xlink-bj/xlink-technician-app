@@ -309,7 +309,7 @@ page {
   align-items: center;
   justify-content: center;
   max-width: 100%;
-  min-height: max(44px, var(--app-button-height-regular));
+  min-height: 44px;
   height: var(--app-button-height-regular);
   border-radius: var(--app-button-radius);
   font-size: var(--app-button-font-regular);
@@ -333,14 +333,14 @@ page {
   text-align: center;
 }
 .app-button--size-compact {
-  min-height: max(44px, var(--app-button-height-compact));
+  min-height: 44px;
   height: var(--app-button-height-compact);
   font-size: var(--app-button-font-compact);
   padding-left: var(--app-space-md);
   padding-right: var(--app-space-md);
 }
 .app-button--size-large {
-  min-height: max(50px, var(--app-button-height-large));
+  min-height: 50px;
   height: var(--app-button-height-large);
   font-size: var(--app-button-font-large);
 }
