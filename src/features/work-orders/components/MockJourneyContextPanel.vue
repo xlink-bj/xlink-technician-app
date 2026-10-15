@@ -93,4 +93,32 @@ defineEmits<{ (event: 'adopt-suggestion'): void }>()
   min-height:39px; font-size:12px; line-height:1.25; width:104px;
   margin:0; padding:5px; border-radius:9px;
 }
+
+/* Q01: keep upstream Survey provenance and one-tap adoption, but compress
+ * the initial hint into a single secondary strip. The full read-only
+ * upstream record remains reachable through "查看详情". Survey UI is untouched. */
+.journey-context--task-focus:not(.journey-context--expanded) {
+  display:flex; flex-direction:row; align-items:center;
+  gap:7px; padding:8px 10px; min-height:51px; box-sizing:border-box;
+}
+.journey-context--task-focus:not(.journey-context--expanded) .journey-context__head {
+  order:2; flex:0 0 auto; align-items:center;
+}
+.journey-context--task-focus:not(.journey-context--expanded) .journey-context__head-copy { display:none; }
+.journey-context--task-focus:not(.journey-context--expanded) .journey-context__toggle {
+  min-height:35px; height:35px; padding:3px 8px; font-size:11px;
+}
+.journey-context--task-focus:not(.journey-context--expanded) .journey-context__suggestion {
+  order:1; flex:1 1 0; min-width:0; display:flex; align-items:center;
+  gap:7px; padding:0; border-top:0;
+}
+.journey-context--task-focus:not(.journey-context--expanded) .journey-context__focus-suggestion {
+  display:block; flex:1 1 0; min-width:0; max-height:40px;
+  font-size:12px; line-height:1.45; overflow:hidden;
+}
+.journey-context--task-focus:not(.journey-context--expanded) .journey-context__focus-pending { display:none; }
+.journey-context--task-focus:not(.journey-context--expanded) .journey-context__suggestion .app-button {
+  flex:0 0 78px; width:78px; min-height:35px; height:35px;
+  padding:3px 4px; font-size:11px; line-height:1.2;
+}
 </style>
