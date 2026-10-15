@@ -90,6 +90,52 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       }
     }
 
+    // Check actual typography/touch geometry, not just that PNG generation
+    // happened. Fixed thresholds are review guardrails, not design signoff.
+    if (screen === 'Q00') {
+      const cards = page.locator('.quotation-hub__order')
+      const first = cards.first()
+      const font = await first.locator('.quotation-hub__order-number').evaluate(
+        el => parseFloat(getComputedStyle(el).fontSize),
+      )
+      expect(font, 'Q00 order identity must be legible at mobile width').toBeGreaterThanOrEqual(14)
+      const rect = await first.boundingBox()
+      expect(rect).not.toBeNull()
+      expect(rect!.width).toBeLessThanOrEqual(viewport.width)
+      const action = await page.getByTestId('quotation-hub-add-inline').boundingBox()
+      expect(action).not.toBeNull()
+      expect(action!.height, 'Q00 new-order CTA target').toBeGreaterThanOrEqual(40)
+    } else if (screen === 'Q01') {
+      // The real editor can legitimately start in its empty state. Enter
+      // the editable first repair group before inspecting field geometry.
+      if (await page.locator('.quotation-content__first-step-label').count() === 0) {
+        await page.getByTestId('quotation-add-group').click()
+      }
+      await expect(page.locator('.quotation-content__first-step-label').first()).toBeVisible()
+      const label = await page.locator('.quotation-content__first-step-label').first().evaluate(
+        el => parseFloat(getComputedStyle(el).fontSize),
+      )
+      expect(label, 'Q01 field labels must remain legible').toBeGreaterThanOrEqual(14)
+      const textArea = await page.getByTestId('quotation-first-step-description').boundingBox()
+      expect(textArea).not.toBeNull()
+      expect(textArea!.height, 'Q01 textarea must not double-count padding').toBeLessThanOrEqual(70)
+      const selector = await page.getByTestId('quotation-first-step-repair-parts-trigger').boundingBox()
+      expect(selector).not.toBeNull()
+      expect(selector!.height).toBeGreaterThanOrEqual(44)
+    } else {
+      await expect(page.locator('.quotation-content__catalog-intro')).toBeHidden()
+      const title = await page.locator('.quotation-content__catalog-item-title').first().evaluate(
+        el => parseFloat(getComputedStyle(el).fontSize),
+      )
+      expect(title, 'Q03 product titles must remain legible').toBeGreaterThanOrEqual(14)
+      const firstItem = await page.getByTestId(
+        'quotation-catalog-item-package-mock-catalog-package-basic',
+      ).boundingBox()
+      expect(firstItem).not.toBeNull()
+      expect(firstItem!.width).toBeLessThan(viewport.width)
+      await expect(page.getByTestId('quotation-catalog-facets')).toBeVisible()
+    }
+
     assertSafe()
     const dir = resolve(process.cwd(), '.review/m1-s2/focus')
     await mkdir(dir, { recursive: true })

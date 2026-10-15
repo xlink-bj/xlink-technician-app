@@ -6,6 +6,9 @@ on:
       - '.github/workflows/s2-ux-focus.yml'
       - 'playwright.s2-ux-focus.config.ts'
       - 'tests/s2-ux-focus/**'
+      - 'src/features/work-orders/quotation/QuotationOrderHub.vue'
+      - 'src/features/work-orders/quotation/QuotationActionContent.vue'
+      - 'src/features/work-orders/quotation/QuotationActionWorkspace.vue'
   workflow_dispatch:
     inputs:
       screen:
