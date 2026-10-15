@@ -716,9 +716,9 @@
         <view class="quotation-content__catalog-topbar">
           <AppButton class="quotation-content__catalog-back" variant="text" aria-label="返回报价工作台" data-testid="quotation-catalog-close" @tap="closeCatalog">‹ 返回</AppButton>
           <view class="quotation-content__catalog-topbar-title">
-            <text class="quotation-content__catalog-title">服务目录</text>
+            <text class="quotation-content__catalog-title">选择产品</text>
           </view>
-          <text class="quotation-content__catalog-mode">选品中</text>
+          <text class="quotation-content__catalog-mode">已选 {{ groupSelectionCount(activeCatalogGroupId || '') }} 项</text>
         </view>
 
         <view class="quotation-content__catalog-target" data-testid="quotation-catalog-target">
