@@ -1815,6 +1815,10 @@ function configuredPackageLayerLabel(
 </script>
 
 <style>
+.quotation-content { font-family:-apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif; }
+.quotation-content__amount-value,
+.quotation-content__engine-amount,
+.quotation-content__line-price { font-variant-numeric: tabular-nums; }
 .quotation-content { margin-top: var(--app-space-md); }
 .quotation-content__heading { display: flex; flex-direction: column; margin: 0 var(--app-space-xs) var(--app-space-md); }
 .quotation-content__eyebrow { color: var(--app-color-primary); font-size: var(--app-font-meta); font-weight: 800; letter-spacing: .6px; }
