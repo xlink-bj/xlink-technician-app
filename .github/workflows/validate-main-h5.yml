@@ -2,8 +2,10 @@ name: Validate Main H5 UX
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
   push:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -14,6 +16,8 @@ concurrency:
 
 jobs:
   h5-ux:
+    # L3 runs only when PR leaves Draft, or on main/manual execution.
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     timeout-minutes: 40
     env:
@@ -37,6 +41,11 @@ jobs:
       - name: Build main App H5 bundle (prevent runtime entry regressions)
         run: pnpm run build:h5
 
+      - name: Cache Playwright Chromium
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}
       - name: Install headless Chromium for real H5 bootstrap smoke
         run: pnpm exec playwright install --with-deps chromium
 

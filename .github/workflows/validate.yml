@@ -2,8 +2,10 @@ name: Validate
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
   push:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -13,7 +15,44 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  quick:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+    steps:
+      - name: Check out PR source
+        uses: actions/checkout@v4
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Boundary, UI governance, baseline and type checks
+        env:
+          VITE_XLINK_ENVIRONMENT: test
+        run: |
+          pnpm run check:boundaries
+          pnpm run check:ui-governance
+          pnpm run check:m1-i8-baseline
+          pnpm run typecheck
+      - name: Targeted quotation contract unit tests
+        env:
+          VITE_XLINK_ENVIRONMENT: test
+        run: |
+          pnpm exec vitest run \
+            tests/g4f/quotation-order-browse-handoff.test.ts \
+            tests/g4f/quotation-order-read.test.ts \
+            tests/g4f/quotation-order-signing-read-boundary.test.ts \
+            tests/g4f/quotation-local-review-closure.test.ts
   verify:
+    # L3: no full suite during Draft; run on Ready PR, main push or manual dispatch.
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     timeout-minutes: 40
     env:
