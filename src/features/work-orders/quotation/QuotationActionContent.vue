@@ -173,7 +173,7 @@
               </view>
             </view>
           </view>
-          <view class="quotation-content__initial-cost-preview app-surface quotation-content__commercial-section" data-testid="quotation-quote-process">
+          <view class="quotation-content__initial-cost-preview app-surface quotation-content__commercial-section">
             <view class="quotation-content__section-heading">
               <view class="quotation-content__section-number">2</view>
               <text class="quotation-content__initial-cost-title">选择产品</text>
@@ -190,7 +190,9 @@
               <button class="quotation-content__adjustment-button" disabled>＋ 增项</button>
               <button class="quotation-content__adjustment-button" disabled>－ 减项</button>
             </view>
-            <view class="quotation-content__section-heading quotation-content__section-heading--fees">
+          </view>
+          <view class="quotation-content__initial-cost-preview app-surface quotation-content__commercial-section" data-testid="quotation-quote-process">
+            <view class="quotation-content__section-heading">
               <view class="quotation-content__section-number">3</view>
               <text class="quotation-content__initial-cost-title">费用与优惠</text>
             </view>
@@ -882,8 +884,8 @@
                     </view>
                     <text class="quotation-content__catalog-item-title">{{ item.name }}</text>
                     <text v-if="item.description || item.content" class="quotation-content__catalog-item-description">{{ item.description || item.content }}</text>
-                    <view v-if="catalogDetails(item).length" class="quotation-content__catalog-item-details">
-                      <text v-for="detail in catalogDetails(item)" :key="detail" class="quotation-content__catalog-item-detail">{{ detail }}</text>
+                    <view v-if="catalogCardDetails(item).length" class="quotation-content__catalog-item-details">
+                      <text v-for="detail in catalogCardDetails(item)" :key="detail" class="quotation-content__catalog-item-detail">{{ detail }}</text>
                     </view>
                   </view>
                 </view>
@@ -1760,6 +1762,12 @@ function catalogDetails(item: QuotationCatalogItemRead): string[] {
 function catalogMetadata(item: QuotationCatalogItemRead): string {
   const parts = catalogDetails(item)
   return parts.length ? parts.join(' · ') : kindLabels[item.kind]
+}
+// Product cards prioritize attributes useful for selection. Keep the provider
+// code available in actual product detail and search, rather than displaying
+// implementation identifiers as primary commerce badges.
+function catalogCardDetails(item: QuotationCatalogItemRead): string[] {
+  return catalogDetails(item).filter(detail => !detail.startsWith('编码 '))
 }
 
 function areGroupDetailsCollapsed(groupId: string): boolean {
@@ -2816,4 +2824,9 @@ function configuredPackageLayerLabel(
   border-bottom:1px solid #e9eef5; padding-bottom:13px; margin-bottom:12px;
 }
 .quotation-content__first-step-field:last-child { margin-bottom:0; }
+
+/* Q01 reading rhythm: the empty first-order form shows three independent
+ * visual sections, just like the editable form and the approved design. */
+.quotation-content__commercial-section + .quotation-content__commercial-section { margin-top:12px; }
+.quotation-content__initial-empty .quotation-content__commercial-section { gap:0; }
 </style>
