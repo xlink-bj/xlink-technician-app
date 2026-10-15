@@ -176,7 +176,9 @@ test('first repair-part step validates existing group context and returns from c
   await page.getByTestId('quotation-add-group').click()
   const step = page.getByTestId('quotation-first-repair-part-step')
   await expect(step).toBeVisible()
-  await expect(step).toContainText('订单内容')
+  await expect(step).toContainText('维修部位')
+  // Save draft now lives alongside the repair-part heading to keep the
+  // catalog entry visible above the sticky order footer.
   await expect(page.getByTestId('quotation-first-step-save-draft')).toBeVisible()
   await expect(step).toContainText('防水维修部位')
   await expect(step).toContainText('维修部位描述')
