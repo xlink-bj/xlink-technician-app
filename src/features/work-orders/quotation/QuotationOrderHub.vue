@@ -264,6 +264,7 @@ watch(() => props.workOrderId, () => {
   --q-shadow:0 4px 18px rgba(35,72,120,.055);
   box-sizing:border-box; min-height:100%; background:var(--q-bg);
   color:var(--q-navy); padding:13px 13px calc(108px + env(safe-area-inset-bottom));
+  font-family:-apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
 }
 .quotation-hub__work-order {
   display:flex; flex-direction:column; padding:14px 15px 12px;
