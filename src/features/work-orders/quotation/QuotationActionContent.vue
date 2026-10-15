@@ -179,7 +179,7 @@
               <text class="quotation-content__initial-cost-title">选择产品</text>
             </view>
             <view class="quotation-content__select-tile quotation-content__select-tile--disabled" aria-disabled="true">
-              <view class="quotation-content__select-icon"><AppIcon name="package" :size="22" color="#257cf5" /></view>
+              <view class="quotation-content__select-icon"><AppIcon name="order" :size="22" color="#257cf5" /></view>
               <view class="quotation-content__select-tile-copy">
                 <text class="quotation-content__select-tile-name">选择产品</text>
                 <text class="quotation-content__select-tile-help">套餐、工序、材料、机措</text>
@@ -347,7 +347,7 @@
               :disabled="!canEdit || composition.repairPartOptions.length === 0"
               data-testid="quotation-first-step-select-products"
               @tap="selectProductsForFirstGroup(firstRepairPartGroup.groupId)">
-              <view class="quotation-content__select-icon"><AppIcon name="package" :size="24" color="#1679f5" /></view>
+              <view class="quotation-content__select-icon"><AppIcon name="order" :size="24" color="#1679f5" /></view>
               <view class="quotation-content__select-tile-copy">
                 <text class="quotation-content__select-tile-name">选择产品</text>
                 <text class="quotation-content__select-tile-help">选择套餐、工序、材料、机措等产品</text>
