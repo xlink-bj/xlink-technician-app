@@ -216,7 +216,9 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       expect(nextStage!.y).toBeGreaterThan(quote!.y)
       await capture('05-quote-entry', 'Q', '报价工作台', '首次进入与工单上下文')
       await expect(page.getByTestId('quotation-quote-process')).toContainText('费用与优惠')
-      await expect(page.getByTestId('quotation-submit-disabled-preview')).toBeDisabled()
+      // uni-app renders <uni-button disabled="true">, not native HTMLButtonElement.
+      // Assert the adapter's exact disabled attr; this control has no submit handler.
+      await expect(page.getByTestId('quotation-submit-disabled-preview')).toHaveAttribute('disabled', 'true')
       await expect(page.getByTestId('mock-survey-quote-adopt')).toBeVisible()
       await page.getByTestId('mock-survey-quote-adopt').click()
       await page.getByTestId('quotation-first-step-description').locator('textarea').fill('S2审查：屋面修缮报价')
