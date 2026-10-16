@@ -20,6 +20,7 @@ on:
           - Q00
           - Q01
           - Q03
+          - C01
 
 permissions:
   contents: read
