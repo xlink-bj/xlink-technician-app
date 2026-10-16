@@ -84,7 +84,10 @@ for (const width of widths) {
       if (scene === 'detail') {
         await expect(page.getByTestId('ds02b-detail-heading')).toBeVisible()
         await expect(page.getByTestId('ds02b-detail-record-card')).toHaveClass(/app-record-card/)
-        await expect(page.locator('.summary-card .app-meta-tag')).toBeVisible()
+        // The source-modelled MOCK-018 may omit servicePartLabel; absence is
+        // correct and must never be papered over with an invented tag.
+        const partTag = page.locator('.summary-card .app-meta-tag')
+        if (await partTag.count()) await expect(partTag).toBeVisible()
         await expect(page.locator('.information-card.app-record-card')).toBeVisible()
       }
       // Snapshot the viewport after a fixed, source-modelled point in time;

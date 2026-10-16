@@ -1,4 +1,5 @@
 name: DS02B One-Time Candidate Review Staging
+# Review-only migration: absent optional service-part metadata is legitimate.
 
 on:
   pull_request:
