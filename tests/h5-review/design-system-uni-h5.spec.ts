@@ -266,6 +266,11 @@ test('DS-01.1 commercial visual masters: four hierarchies, spinner, split layout
       expect(rect!.height, 'mature button touch >=44px').toBeGreaterThanOrEqual(43.5)
       expect(rect!.x, 'button remains in viewport').toBeGreaterThanOrEqual(0)
       expect(rect!.x + rect!.width, 'button remains in viewport').toBeLessThanOrEqual(width + 1)
+      // Two-column 320px buttons must not wrap four-character labels because
+      // a hidden loading indicator consumed horizontal space.
+      const label = await button.locator('.app-button__label').boundingBox()
+      expect(label).not.toBeNull()
+      expect(label!.height, 'short action label should stay on one line').toBeLessThanOrEqual(25)
     }
 
     const loading = page.getByTestId('ds01-button-loading')

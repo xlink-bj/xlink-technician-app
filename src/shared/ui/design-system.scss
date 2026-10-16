@@ -139,7 +139,8 @@ page {
   flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center;
 }
 .app-button__loading-slot {
-  display: block; box-sizing: border-box; flex: 0 0 16px;
+  display: block; box-sizing: border-box;
+  position: absolute; left: 8px; top: calc(50% - 8px);
   width: 16px; height: 16px; max-width: 16px; max-height: 16px;
   min-height: 0; border: 2px solid currentColor;
   border-top-color: transparent; border-radius: 50%; visibility: hidden;
@@ -164,6 +165,7 @@ page {
   background: transparent; border-color: transparent;
 }
 .app-button--loading { opacity: 1; }
+.app-button--loading .app-button__label { padding-left: 8px; }
 .app-button--primary.app-button--loading { background: var(--app-color-primary-action); color: #fff; }
 @media (prefers-reduced-motion: reduce) {
   .app-button { transition: none; }

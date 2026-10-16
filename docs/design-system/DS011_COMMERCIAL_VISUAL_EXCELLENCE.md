@@ -42,3 +42,7 @@ Reference rules are adapted, not copied pixel-for-pixel; illustration colors, pu
 
 ### Non-goals
 No new UI package, pricing changes, workflow changes, authoritative order mutation, production read/write, or speculative server success. No broad rewrite of business UI files.
+
+### Narrow-screen visual correction
+
+The old Button reserved two invisible spinner columns in *every* state. At 320px, four-character Chinese commands wrapped even when the visible button width was sufficient. DS-01.1 eliminates those phantom slots: the optional loading indicator is absolutely positioned, normal labels are centered without reserved space, and real H5 tests enforce single-line short labels on 320/375/390. Long texts still wrap intentionally and never clip.
