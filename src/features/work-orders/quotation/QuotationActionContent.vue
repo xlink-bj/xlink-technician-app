@@ -235,18 +235,32 @@
             data-testid="quotation-first-step-draft-notice"
           />
 
+          <!-- Three-stage wayfinding only, never an authorization or Workflow state. -->
+          <view class="quotation-content__journey-steps" aria-label="报价操作步骤" data-testid="quotation-q01-journey">
+            <view class="quotation-content__journey-step quotation-content__journey-step--current">
+              <view class="quotation-content__journey-circle">1</view>
+              <text>维修部位</text>
+            </view>
+            <view class="quotation-content__journey-connector" aria-hidden="true" />
+            <view class="quotation-content__journey-step">
+              <view class="quotation-content__journey-circle">2</view>
+              <text>报价项目</text>
+            </view>
+            <view class="quotation-content__journey-connector" aria-hidden="true" />
+            <view class="quotation-content__journey-step">
+              <view class="quotation-content__journey-circle">3</view>
+              <text>订单确认</text>
+            </view>
+          </view>
+          <view class="quotation-content__first-step-page-head">
+            <text class="quotation-content__first-step-kicker">报价编辑 · 第一步</text>
+            <text class="quotation-content__first-step-card-title">维修部位信息</text>
+            <text class="quotation-content__first-step-page-help">请填写本次维修的部位和基本信息，再添加报价项目。</text>
+          </view>
           <view
             class="quotation-content__first-step-card app-surface"
             :data-testid="`quotation-repair-group-${firstRepairPartGroup.groupId}`"
           >
-            <view class="quotation-content__first-step-card-heading">
-              <view class="quotation-content__first-step-card-copy">
-                <text class="quotation-content__first-step-kicker">报价编辑 · 第一步</text>
-                <text class="quotation-content__first-step-card-title">维修部位信息</text>
-              </view>
-              <AppButton v-if="canEdit" class="quotation-content__save-draft" variant="text"
-                data-testid="quotation-first-step-save-draft" @tap="composition.flushDraft">保存草稿</AppButton>
-            </view>
 
             <view class="quotation-content__first-step-field">
               <text class="quotation-content__first-step-label">防水维修部位 <text class="quotation-content__first-step-required">*</text></text>
@@ -266,15 +280,27 @@
                   </view>
                   <AppIcon name="chevron-right" :size="16" color="var(--app-color-text-secondary)" aria-hidden="true" />
                 </button>
-                <view v-if="repairPartSelectorOpen" class="quotation-content__first-step-selector-options">
-                  <AppCascadeSelector
-                    :options="composition.repairPartOptions"
-                    :model-value="firstRepairPartGroup.repairParts"
-                    :hierarchical="true"
-                    :test-id="`quotation-repair-part-selector-${firstRepairPartGroup.groupId}`"
-                    :disabled="!canEdit"
-                    @update:model-value="onRepairPartChange(firstRepairPartGroup.groupId, $event)"
-                  />
+                <view v-if="repairPartSelectorOpen" class="quotation-content__picker-backdrop"
+                  data-testid="quotation-repair-part-picker" @tap="repairPartSelectorOpen = false">
+                  <view class="quotation-content__picker-sheet" role="dialog" aria-modal="true"
+                    aria-label="选择维修部位" @tap.stop>
+                    <view class="quotation-content__picker-grabber" aria-hidden="true" />
+                    <view class="quotation-content__picker-header">
+                      <AppButton variant="text" size="compact" @tap="repairPartSelectorOpen = false">取消</AppButton>
+                      <text class="quotation-content__picker-title">选择维修部位</text>
+                      <AppButton variant="text" size="compact" @tap="repairPartSelectorOpen = false">完成</AppButton>
+                    </view>
+                    <view class="quotation-content__picker-content">
+                      <AppCascadeSelector
+                        :options="composition.repairPartOptions"
+                        :model-value="firstRepairPartGroup.repairParts"
+                        :hierarchical="true"
+                        :test-id="`quotation-repair-part-selector-${firstRepairPartGroup.groupId}`"
+                        :disabled="!canEdit"
+                        @update:model-value="onRepairPartChange(firstRepairPartGroup.groupId, $event)"
+                      />
+                    </view>
+                  </view>
                 </view>
               </view>
               <text v-if="firstRepairPartGroup.repairParts.length > 0" class="quotation-content__first-step-selected-path" data-testid="quotation-first-step-selected-path">已选择：{{ repairPartPathLabel(firstRepairPartGroup.repairParts) }}</text>
@@ -1200,6 +1226,7 @@ const emit = defineEmits<{
   (event: 'retry'): void
   (event: 'back'): void
   (event: 'return-to-group', groupId: string): void
+  (event: 'first-step-presentation', state: { active: boolean; canEdit: boolean }): void
 }>()
 
 const composition = useQuotationCompositionStore()
@@ -1286,6 +1313,9 @@ onBeforeUnmount(() => {
 })
 const catalogKinds: readonly QuotationLineKind[] = ['package', 'procedure', 'material', 'measure']
 const canEdit = computed(() => ['fresh', 'restored', 'dirty', 'saving', 'saved_local', 'save_failed'].includes(composition.localState))
+watch([isFirstRepairPartStep, canEdit], ([active, permitted]) => {
+  emit('first-step-presentation', { active, canEdit: permitted })
+}, { immediate: true })
 const activeCatalogGroupId = ref<string | null>(null)
 const catalogSelectionError = ref('')
 const firstStepValidationRequestedFor = ref<string | null>(null)
@@ -1433,7 +1463,13 @@ function firstStepFieldError(field: QuotationValidationField): string {
   return validateQuotationDraft(draft).issues.find((issue) => issue.groupId === group.groupId && issue.field === field)?.message ?? ''
 }
 
-async function selectProductsForFirstGroup(groupId: string): Promise<void> {
+async function advanceFirstRepairPartStep(): Promise<void> {
+  const group = firstRepairPartGroup.value
+  return group ? selectProductsForFirstGroup(group.groupId) : Promise.resolve()
+}
+defineExpose({ advanceFirstRepairPartStep })
+
+function selectProductsForFirstGroup(groupId: string): Promise<void> {
   const group = firstRepairPartGroup.value
   const draft = composition.draft
   if (!canEdit.value || !group || group.groupId !== groupId || !draft || composition.repairPartOptions.length === 0) return
@@ -3231,6 +3267,120 @@ function configuredPackageLayerLabel(
 @media (max-width: 360px) {
   .quotation-content__first-repair-part-step .quotation-content__first-step-card,
   .quotation-content__first-repair-part-step .quotation-content__commercial-section { padding-left: 13px; padding-right: 13px; }
+}
+
+
+/* DS-03.B2 Q01: mobile-native visual direction. First-stage only:
+   consistent spacing, hierarchy and a true sheet for the existing selector.
+   Source/validation/ability to submit remain unchanged. */
+.quotation-content__first-repair-part-step .quotation-content__journey-steps {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  padding: 21px 15px 18px; gap: 5px;
+}
+.quotation-content__journey-step {
+  display: flex; flex-direction: column; align-items: center;
+  flex: 0 0 76px; gap: 8px;
+  color: var(--app-content-muted-ink);
+  font-size: 11px; font-weight: 570; line-height: 1.4;
+  white-space: nowrap;
+}
+.quotation-content__journey-circle {
+  display: flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; border: 1px solid var(--app-outline-control);
+  border-radius: 999px; background: var(--app-surface-raised);
+  font-size: 13px; font-weight: 700; color: var(--app-content-muted-ink);
+}
+.quotation-content__journey-step--current { color: var(--app-color-primary-action); font-weight: 720; }
+.quotation-content__journey-step--current .quotation-content__journey-circle {
+  background: var(--app-color-primary-action);
+  border-color: var(--app-color-primary-action);
+  color: #fff;
+}
+.quotation-content__journey-connector {
+  height: 1px; flex: 1 1 0; min-width: 8px;
+  margin-top: 15px; background: var(--app-outline-control);
+}
+.quotation-content__first-step-page-head {
+  padding: 12px 4px 17px; display: flex; flex-direction: column; gap: 5px;
+}
+.quotation-content__first-step-page-head .quotation-content__first-step-kicker {
+  color: var(--app-content-muted-ink); font-size: 12px; margin: 0;
+}
+.quotation-content__first-step-page-head .quotation-content__first-step-card-title {
+  color: var(--app-text-strong); font-size: 23px; font-weight: 760;
+  letter-spacing: -.45px; line-height: 1.28;
+}
+.quotation-content__first-step-page-help {
+  color: var(--app-content-muted-ink);
+  font-size: 12px; line-height: 1.55; margin-top: 3px;
+}
+.quotation-content__first-repair-part-step .quotation-content__first-step-card {
+  padding: 6px 17px 22px; border-radius: 16px;
+}
+.quotation-content__first-repair-part-step .quotation-content__first-step-field { margin-top: 20px; }
+.quotation-content__first-repair-part-step .quotation-content__first-step-field:first-child { margin-top: 13px; }
+.quotation-content__first-repair-part-step .quotation-content__first-step-label {
+  font-size: 14px; font-weight: 700; margin-bottom: 9px;
+}
+.quotation-content__first-repair-part-step .quotation-content__first-step-selector-trigger {
+  background: var(--app-surface-muted);
+  min-height: 56px; border-radius: 12px; padding: 12px 15px;
+}
+.quotation-content__first-repair-part-step .quotation-content__first-step-textarea {
+  background: var(--app-surface-raised);
+  min-height: 80px; height: 80px; border-radius: 12px;
+  padding: 14px 15px; font-size: 14px; line-height: 1.5;
+}
+.quotation-content__first-repair-part-step .quotation-content__first-step-quantity {
+  background: var(--app-surface-raised);
+  border-radius: 12px; min-height: 53px; height: 53px; 
+  padding: 12px 15px; font-size: 15px;
+}
+.quotation-content__first-repair-part-step .quotation-content__commercial-section {
+  box-shadow: none; border-radius: 14px;
+  margin-top: 14px; padding: 16px 17px;
+}
+.quotation-content__first-repair-part-step .quotation-content__select-tile {
+  background: var(--app-surface-muted);
+  border-radius: 12px; min-height: 59px;
+}
+.quotation-content__picker-backdrop {
+  position: fixed; inset: 0; z-index: 1200;
+  display: flex; flex-direction: column; justify-content: flex-end;
+  background: rgba(18, 31, 53, .36);
+}
+.quotation-content__picker-sheet {
+  background: var(--app-surface-raised);
+  border-radius: 20px 20px 0 0;
+  padding: 8px 16px calc(24px + env(safe-area-inset-bottom));
+  max-height: min(78vh, 680px);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.quotation-content__picker-grabber {
+  background: var(--app-outline-control); border-radius: 999px;
+  height: 4px; width: 36px; flex: 0 0 4px; align-self: center;
+  margin-bottom: 8px;
+}
+.quotation-content__picker-header {
+  display: flex; align-items: center; justify-content: space-between;
+  min-height: 52px; gap: 8px;
+  border-bottom: 1px solid var(--app-outline-subtle);
+}
+.quotation-content__picker-title {
+  color: var(--app-text-strong);
+  font-size: 16px; font-weight: 750; text-align: center;
+}
+.quotation-content__picker-header .app-button {
+  min-width: 58px; min-height: 44px;
+}
+.quotation-content__picker-content {
+  flex: 1; min-height: 0; overflow-y: auto;
+  overscroll-behavior: contain; padding: 12px 0 10px;
+}
+@media(max-width:360px) {
+  .quotation-content__journey-step { flex-basis: 72px; }
+  .quotation-content__first-step-page-head .quotation-content__first-step-card-title { font-size: 21px; }
 }
 
 </style>
