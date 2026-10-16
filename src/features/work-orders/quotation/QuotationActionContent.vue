@@ -240,10 +240,9 @@
             :data-testid="`quotation-repair-group-${firstRepairPartGroup.groupId}`"
           >
             <view class="quotation-content__first-step-card-heading">
-              <view class="quotation-content__first-step-index" aria-hidden="true">1</view>
               <view class="quotation-content__first-step-card-copy">
-                <text class="quotation-content__first-step-card-title">维修部位</text>
-                <text class="quotation-content__first-step-card-subtitle">按当前工单创建独立报价</text>
+                <text class="quotation-content__first-step-kicker">报价编辑 · 第一步</text>
+                <text class="quotation-content__first-step-card-title">维修部位信息</text>
               </view>
               <AppButton v-if="canEdit" class="quotation-content__save-draft" variant="text"
                 data-testid="quotation-first-step-save-draft" @tap="composition.flushDraft">保存草稿</AppButton>
@@ -338,25 +337,22 @@
 
           </view>
           <view class="quotation-content__commercial-section app-surface" data-testid="quotation-first-step-product-action">
-            <view class="quotation-content__section-heading">
-              <view class="quotation-content__section-number">2</view>
-              <text class="quotation-content__first-step-products-title">选择产品</text>
+            <view class="quotation-content__section-heading quotation-content__next-heading">
+              <view class="quotation-content__next-heading-copy">
+                <text class="quotation-content__first-step-products-title">报价项目</text>
+                <text class="quotation-content__next-heading-meta">第二步 · 选择维修方案</text>
+              </view>
             </view>
             <button class="quotation-content__select-tile" type="button"
               :disabled="!canEdit || composition.repairPartOptions.length === 0"
               data-testid="quotation-first-step-select-products"
               @tap="selectProductsForFirstGroup(firstRepairPartGroup.groupId)">
-              <view class="quotation-content__select-icon"><AppIcon name="order" :size="24" color="#1679f5" /></view>
               <view class="quotation-content__select-tile-copy">
-                <text class="quotation-content__select-tile-name">选择产品</text>
-                <text class="quotation-content__select-tile-help">选择套餐、工序、材料、机措等产品</text>
+                <text class="quotation-content__select-tile-name">添加报价项目</text>
+                <text class="quotation-content__select-tile-help">套餐、工序、材料、机措</text>
               </view>
-              <AppIcon name="chevron-right" :size="18" color="#6d829d" />
+              <AppIcon name="chevron-right" :size="20" color="var(--app-color-primary-action)" />
             </button>
-            <view class="quotation-content__adjustment-actions">
-              <button class="quotation-content__adjustment-button" disabled aria-label="增项尚未开放">＋ 增项</button>
-              <button class="quotation-content__adjustment-button" disabled aria-label="减项尚未开放">－ 减项</button>
-            </view>
           </view>
           <view class="quotation-content__commercial-section app-surface" data-testid="quotation-cost-adjustments">
             <view class="quotation-content__section-heading">
@@ -3103,6 +3099,138 @@ function configuredPackageLayerLabel(
 .quotation-content__initial-draft-notice {
   border-radius:8px; border-color:#dce8f7;
   background:#f0f6fd;
+}
+
+
+/* DS-03.B — Q01 mobile operator-first entry.
+   One visually quiet hierarchy: select a part, record scope, add items.
+   All overrides below are scoped to the first-stage real page and consume
+   shared design-system roles; no additional per-page palette or price logic. */
+.quotation-content__first-repair-part-step .quotation-content__first-step-card,
+.quotation-content__first-repair-part-step .quotation-content__commercial-section {
+  background: var(--app-surface-raised);
+  border: 1px solid var(--app-outline-subtle);
+  border-radius: var(--app-content-card-radius);
+  box-shadow: var(--app-content-card-elevation);
+}
+.quotation-content__first-repair-part-step .quotation-content__first-step-card {
+  padding: 18px 16px 16px;
+}
+.quotation-content__first-repair-part-step .quotation-content__first-step-card-heading {
+  gap: 8px;
+  margin: 0 0 16px;
+  padding: 0 0 13px;
+  border-bottom: 1px solid var(--app-outline-subtle);
+}
+.quotation-content__first-step-kicker {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--app-content-muted-ink);
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1.3;
+  letter-spacing: .15px;
+}
+.quotation-content__first-repair-part-step .quotation-content__first-step-card-title {
+  color: var(--app-text-strong);
+  font-size: 19px;
+  font-weight: 750;
+  letter-spacing: -.2px;
+  line-height: 1.3;
+}
+.quotation-content__first-repair-part-step .quotation-content__save-draft.app-button {
+  min-height: 44px;
+  padding: 0 8px;
+  font-size: 13px;
+  align-self: center;
+}
+.quotation-content__first-repair-part-step .quotation-content__first-step-field {
+  margin-top: 13px;
+}
+.quotation-content__first-repair-part-step .quotation-content__first-step-label {
+  color: var(--app-text-strong);
+  font-size: 13px;
+  font-weight: 650;
+  margin-bottom: 7px;
+}
+.quotation-content__first-repair-part-step .quotation-content__first-step-selector-trigger,
+.quotation-content__first-repair-part-step .quotation-content__first-step-textarea,
+.quotation-content__first-repair-part-step .quotation-content__first-step-quantity {
+  background: var(--app-surface-raised);
+  border: 1px solid var(--app-outline-control);
+  border-radius: var(--app-shape-control);
+  color: var(--app-text-strong);
+  box-sizing: border-box;
+}
+.quotation-content__first-repair-part-step .quotation-content__first-step-selector-trigger {
+  min-height: 50px;
+  padding: 10px 13px;
+}
+.quotation-content__first-repair-part-step .quotation-content__first-step-selector-value {
+  color: var(--app-color-primary-action);
+  font-size: 14px;
+  font-weight: 670;
+}
+.quotation-content__first-repair-part-step .quotation-content__first-step-textarea {
+  min-height: 62px;
+  height: 62px;
+  padding: 11px 13px;
+  font-size: 14px;
+}
+.quotation-content__first-repair-part-step .quotation-content__first-step-quantity {
+  min-height: 48px;
+  height: 48px;
+  padding: 10px 13px;
+  font-size: 15px;
+  font-weight: 650;
+}
+.quotation-content__first-repair-part-step [aria-invalid="true"] {
+  border-color: var(--app-color-danger);
+}
+.quotation-content__first-repair-part-step .quotation-content__commercial-section {
+  padding: 16px;
+  margin-top: 12px;
+}
+.quotation-content__first-repair-part-step .quotation-content__next-heading {
+  border: 0;
+  margin: 0 0 10px;
+  padding: 0;
+  min-height: 0;
+}
+.quotation-content__next-heading-copy { display: flex; flex-direction: column; gap: 3px; }
+.quotation-content__first-repair-part-step .quotation-content__first-step-products-title {
+  color: var(--app-text-strong);
+  font-size: 17px;
+  font-weight: 740;
+  line-height: 1.4;
+}
+.quotation-content__next-heading-meta {
+  color: var(--app-content-muted-ink);
+  font-size: 11px;
+  line-height: 1.4;
+}
+.quotation-content__first-repair-part-step .quotation-content__select-tile {
+  background: var(--app-surface-muted);
+  border: 1px solid var(--app-outline-control);
+  border-radius: var(--app-shape-control);
+  min-height: 68px;
+  padding: 12px 14px;
+  text-align: left;
+}
+.quotation-content__first-repair-part-step .quotation-content__select-tile-name {
+  color: var(--app-color-primary-action);
+  font-size: 15px;
+  font-weight: 710;
+  line-height: 1.35;
+}
+.quotation-content__first-repair-part-step .quotation-content__select-tile-help {
+  color: var(--app-content-muted-ink);
+  font-size: 11px;
+  line-height: 1.45;
+}
+@media (max-width: 360px) {
+  .quotation-content__first-repair-part-step .quotation-content__first-step-card,
+  .quotation-content__first-repair-part-step .quotation-content__commercial-section { padding-left: 13px; padding-right: 13px; }
 }
 
 </style>
