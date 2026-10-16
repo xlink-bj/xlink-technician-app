@@ -272,13 +272,20 @@ test('DS-01.1 commercial visual masters: four hierarchies, spinner, split layout
     await expect(loading).toHaveAttribute('aria-busy', 'true')
     const spinner = loading.locator('.app-button__loading-slot--active')
     await expect(spinner).toBeVisible()
+    // A rotating square can have a 22px screen-space bounding box at
+    // 45 degrees even with a 16px CSS diameter. Measure its layout box,
+    // not the transformed, animated bounding rect.
     const spinnerMetrics = await spinner.evaluate(el => ({
-      height: el.getBoundingClientRect().height,
+      height: Number.parseFloat(getComputedStyle(el).height),
+      width: Number.parseFloat(getComputedStyle(el).width),
       border: getComputedStyle(el).borderTopWidth,
     }))
     expect(spinnerMetrics.height).toBeGreaterThanOrEqual(14)
     expect(spinnerMetrics.height).toBeLessThanOrEqual(20)
     expect(Number.parseFloat(spinnerMetrics.border)).toBeLessThanOrEqual(2.5)
+    expect(spinnerMetrics.width).toBeGreaterThanOrEqual(14)
+    expect(spinnerMetrics.width).toBeLessThanOrEqual(20)
+    await expect(loading).toHaveCSS('background-color', 'rgb(29, 110, 207)')
 
     const split = page.getByTestId('ds011-action-split')
     const left = await split.getByTestId('ds011-action-split-secondary').boundingBox()
