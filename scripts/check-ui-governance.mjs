@@ -188,4 +188,14 @@ for (const file of [
   }
 }
 
+// DS-01.1: mature visual matrix and passive feedback may not disappear.
+// Keep user-facing variant semantics centralized in the shared component.
+const passiveFeedback = await read('src/shared/ui/AppActionFeedback.vue')
+if (!commercialButton.includes("'tertiary' | 'ghost'") || !commercialButton.includes("shape?: 'rounded' | 'pill'")
+  || !actionBar.includes("'split' | 'trailing'") || !gallery.includes('ds011-button-master')
+  || !gallery.includes('ds011-action-split') || !gallery.includes('ds011-feedback-master')
+  || !passiveFeedback.includes("state === 'success'") || !passiveFeedback.includes('aria-live')) {
+  fail('DS-01.1 commercial hierarchy, composed Action Bar or passive status rendering missing')
+}
+
 console.log('UI governance check passed: shared UX contract, Gallery coverage, and delivery gates are intact')
