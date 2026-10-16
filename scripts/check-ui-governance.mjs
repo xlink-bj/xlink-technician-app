@@ -244,4 +244,21 @@ if (/useWorkOrder|Workflow|submitOrder|calculate|fetch|axios|@tap=|@click=/.test
   fail('DS-03: amount primitive must only display caller-provided, already-formatted values')
 }
 
+// DS-04: one-page Design-to-Code architecture is a permanent engineering gate.
+// Never return the Q01 first-stage view to a 3000-line CSS/business component.
+const [q01Entry, q01Controller, q01Spec] = await Promise.all([
+  read('src/features/work-orders/quotation/Q01EntryScreen.vue'),
+  read('src/features/work-orders/quotation/QuotationActionContent.vue'),
+  read('docs/design-system/DS04_Q01_DESIGN_FIRST_SPEC.md'),
+])
+if (!q01Controller.includes('<Q01EntryScreen') || q01Controller.includes('Q01FirstStep.css')
+  || !q01Entry.includes('defineProps') || !q01Entry.includes('defineEmits')
+  || !q01Entry.includes('quotation-first-step-quantity')
+  || !q01Spec.includes('390 × 844')) {
+  fail('DS-04: independent real-Q01 design/presentation contract has regressed')
+}
+if (/useQuotationCompositionStore|useActionWorkspaceStore|useQuotationCatalogBrowserStore|fetch\\(|axios|quotationEngine|submitOrder|WorkflowRuntime/.test(q01Entry)) {
+  fail('DS-04: Q01 visual component may not own quotation stores, pricing, networking or workflow')
+}
+
 console.log('UI governance check passed: shared UX contract, Gallery coverage, and delivery gates are intact')
