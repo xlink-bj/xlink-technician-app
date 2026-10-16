@@ -66,18 +66,64 @@
             </template>
 
             <template v-else-if="example.kind === 'buttons'">
-              <view class="gallery-button-grid" data-testid="ds01-button-matrix">
-                <AppButton data-testid="ds01-button-primary" @tap="reviewTapCount += 1">主要操作</AppButton>
-                <AppButton data-testid="ds01-button-secondary" variant="secondary">次要操作</AppButton>
-                <AppButton data-testid="ds01-button-text" variant="text">文字操作</AppButton>
-                <AppButton data-testid="ds01-button-disabled" disabled @tap="reviewTapCount += 100">不可用</AppButton>
-                <AppButton data-testid="ds01-button-loading" loading @tap="reviewTapCount += 100">加载中…</AppButton>
-                <AppButton data-testid="ds01-button-compact" size="compact">紧凑但可触达</AppButton>
-                <AppButton data-testid="ds01-button-large" size="large">重要操作</AppButton>
-                <AppButton data-testid="ds01-button-long" variant="secondary">这是需要完整显示的较长中文操作名称</AppButton>
-                <AppButton data-testid="ds01-button-leading" aria-label="查看示例" variant="secondary"><template #leading><AppIcon name="home" :size="16" /></template>带图标操作</AppButton>
+              <view class="gallery-commercial-master" data-testid="ds011-button-master">
+                <view class="gallery-commercial-master__heading">
+                  <text class="gallery-commercial-master__eyebrow">XLINK / BUTTON VISUAL MASTER 1.1</text>
+                  <text class="gallery-commercial-master__title">成熟的操作层级</text>
+                  <text class="gallery-commercial-master__description">以一眼可辨的主次关系、稳定的布局和真实触控反馈构建商业级按钮。</text>
+                </view>
+                <view class="gallery-commercial-matrix" data-testid="ds01-button-matrix">
+                  <view class="gallery-commercial-column" data-testid="ds011-primary-column">
+                    <text class="gallery-commercial-column__title">Primary</text>
+                    <text class="gallery-commercial-column__sub">最重要的下一步</text>
+                    <AppButton data-testid="ds01-button-primary" shape="pill" block @tap="reviewTapCount += 1">确认操作</AppButton>
+                    <AppButton elevated shape="pill" block>强调操作</AppButton>
+                    <AppButton data-testid="ds01-button-disabled" shape="pill" block disabled @tap="reviewTapCount += 100">不可操作</AppButton>
+                    <AppButton shape="pill" block pressed>按下反馈</AppButton>
+                    <AppButton data-testid="ds01-button-loading" shape="pill" block loading @tap="reviewTapCount += 100">提交中…</AppButton>
+                  </view>
+                  <view class="gallery-commercial-column" data-testid="ds011-secondary-column">
+                    <text class="gallery-commercial-column__title">Secondary</text>
+                    <text class="gallery-commercial-column__sub">轻量的备选操作</text>
+                    <AppButton data-testid="ds01-button-secondary" variant="secondary" shape="pill" block>返回修改</AppButton>
+                    <AppButton elevated variant="secondary" shape="pill" block>查看记录</AppButton>
+                    <AppButton variant="secondary" shape="pill" block disabled>暂不可用</AppButton>
+                    <AppButton variant="secondary" shape="pill" block pressed>按下反馈</AppButton>
+                    <AppButton variant="secondary" shape="pill" block loading>准备中…</AppButton>
+                  </view>
+                  <view class="gallery-commercial-column" data-testid="ds011-tertiary-column">
+                    <text class="gallery-commercial-column__title">Tertiary</text>
+                    <text class="gallery-commercial-column__sub">不打断流程的操作</text>
+                    <AppButton data-testid="ds011-button-tertiary" variant="tertiary" shape="pill" block>+ 添加项目</AppButton>
+                    <AppButton data-testid="ds01-button-text" variant="text" block>查看帮助</AppButton>
+                    <AppButton variant="tertiary" block disabled>不可用</AppButton>
+                    <AppButton variant="tertiary" block pressed>按下反馈</AppButton>
+                    <AppButton variant="tertiary" block loading>读取中…</AppButton>
+                  </view>
+                  <view class="gallery-commercial-column" data-testid="ds011-ghost-column">
+                    <text class="gallery-commercial-column__title">Ghost</text>
+                    <text class="gallery-commercial-column__sub">浅色表面上的轮廓操作</text>
+                    <AppButton data-testid="ds011-button-ghost" variant="ghost" shape="pill" block>查看详情</AppButton>
+                    <AppButton variant="ghost" shape="pill" block elevated>打开选择</AppButton>
+                    <AppButton variant="ghost" shape="pill" block disabled>暂不可用</AppButton>
+                    <AppButton variant="ghost" shape="pill" block pressed>按下反馈</AppButton>
+                    <AppButton variant="ghost" shape="pill" block loading>处理中…</AppButton>
+                  </view>
+                </view>
+                <view class="gallery-commercial-sizes">
+                  <text class="gallery-commercial-sizes__title">Size / Content resilience</text>
+                  <view class="gallery-commercial-sizes__row">
+                    <AppButton data-testid="ds01-button-compact" size="compact">紧凑操作</AppButton>
+                    <AppButton size="regular">标准操作</AppButton>
+                    <AppButton data-testid="ds01-button-large" size="large">重要操作</AppButton>
+                  </view>
+                  <AppButton data-testid="ds01-button-long" variant="secondary" block>这是需要完整显示的较长中文操作名称</AppButton>
+                  <AppButton data-testid="ds01-button-leading" variant="ghost" aria-label="查看示例">
+                    <template #leading><AppIcon name="home" :size="16" /></template>带图标操作
+                  </AppButton>
+                  <text data-testid="ds01-button-tap-count" class="gallery-meta-copy">{{ reviewTapCount }}</text>
+                </view>
               </view>
-              <text data-testid="ds01-button-tap-count" class="gallery-meta-copy">{{ reviewTapCount }}</text>
             </template>
 
             <template v-else-if="example.kind === 'fields'">
@@ -197,6 +243,29 @@
                     <AppButton data-testid="ds01-action-primary">确认提交</AppButton>
                   </AppActionBar>
                 </view>
+                <view class="gallery-action-stack__separated">
+                  <text class="pattern-title">Split bar · secondary left, primary right</text>
+                  <AppActionBar preview layout="split" elevated label="分布式操作演示" data-testid="ds011-action-split">
+                    <AppButton data-testid="ds011-action-split-secondary" variant="ghost">返回</AppButton>
+                    <AppButton data-testid="ds011-action-split-primary">确认下一步</AppButton>
+                  </AppActionBar>
+                </view>
+                <view class="gallery-action-stack__separated">
+                  <text class="pattern-title">Trailing bar · compact modal actions</text>
+                  <AppActionBar preview layout="trailing" label="弹层操作演示" data-testid="ds011-action-trailing">
+                    <AppButton variant="secondary">取消</AppButton>
+                    <AppButton>保存修改</AppButton>
+                  </AppActionBar>
+                </view>
+                <view class="gallery-action-stack__separated" data-testid="ds011-feedback-master">
+                  <text class="pattern-title">Feedback · server-derived status only</text>
+                  <view class="gallery-feedback-states">
+                    <AppActionFeedback state="busy" label="提交中，请稍候" data-testid="ds011-feedback-busy" />
+                    <AppActionFeedback state="success" label="已确认提交" data-testid="ds011-feedback-success" />
+                    <AppActionFeedback state="error" label="提交未完成，请重试" data-testid="ds011-feedback-error" />
+                  </view>
+                  <text class="gallery-feedback-caution">以上均为 Gallery 演示状态。正式业务必须等待服务端确认，不自动切换至成功。</text>
+                </view>
                 <view data-testid="gallery-action-state-unsaved" class="gallery-action-state gallery-action-stack__separated">
                   <text class="pattern-title">Unsaved</text>
                   <ActionWorkspaceFormActions lifecycle="in_progress" save-state="not_saved" :can-submit="false" submit-label="完成勘查" />
@@ -238,6 +307,7 @@ import { ref } from 'vue'
 
 import AppButton from '@shared/ui/AppButton.vue'
 import AppActionBar from '@shared/ui/AppActionBar.vue'
+import AppActionFeedback from '@shared/ui/AppActionFeedback.vue'
 import AppIcon from '@shared/ui/AppIcon.vue'
 import AppCascadeSelector from '@shared/ui/AppCascadeSelector.vue'
 import AppChoiceGroup from '@shared/ui/AppChoiceGroup.vue'
@@ -381,4 +451,35 @@ text { display: inline; }
   .gallery-page { padding-left: 32rpx; padding-right: 32rpx; }
   .gallery-example-render { padding-left: 8rpx; padding-right: 8rpx; }
 }
+
+/* DS-01.1 visual master — Gallery only. Never redefine .app-button here. */
+.gallery-commercial-master {
+  background:#ffffff; border:1px solid #e4eaf3; border-radius:17px;
+  padding:18px 14px; box-shadow:0 2px 12px rgba(19,42,70,.035);
+}
+.gallery-commercial-master__heading { padding:0 4px 14px; border-bottom:1px solid #eaf0f7; }
+.gallery-commercial-master__eyebrow {
+  display:block; color:#426b9d; font-size:10px; font-weight:720; letter-spacing:1.1px;
+}
+.gallery-commercial-master__title { display:block; margin-top:6px; font-size:20px; font-weight:730; color:#1c2a40; }
+.gallery-commercial-master__description { display:block; margin-top:6px; font-size:12px; line-height:1.55; color:#75849a; }
+.gallery-commercial-matrix {
+  display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px 12px;
+  margin-top:17px;
+}
+.gallery-commercial-column { min-width:0; display:flex; flex-direction:column; gap:11px; }
+.gallery-commercial-column__title { font-size:15px; font-weight:730; color:#1b2d46; }
+.gallery-commercial-column__sub { font-size:10.5px; color:#8190a5; min-height:22px; line-height:1.4; }
+.gallery-commercial-column > .app-button { flex:0 0 auto; width:100%; }
+.gallery-commercial-sizes { margin-top:19px; border-top:1px solid #eaf0f7; padding-top:15px; display:flex; flex-direction:column; gap:11px; }
+.gallery-commercial-sizes__title { font-size:12px; font-weight:720; color:#344765; }
+.gallery-commercial-sizes__row { display:flex; flex-wrap:wrap; gap:7px; align-items:center; }
+.gallery-commercial-sizes__row > .app-button { max-width:100%; }
+.gallery-feedback-states { display:flex; flex-wrap:wrap; gap:8px; }
+.gallery-feedback-states > .app-action-feedback { flex:1 1 140px; min-width:0; }
+.gallery-feedback-caution { color:#7c8da4; font-size:11px; line-height:1.6; display:block; margin-top:10px; }
+@media (min-width: 680px) {
+  .gallery-commercial-matrix { grid-template-columns:repeat(4,minmax(0,1fr)); }
+}
+
 </style>

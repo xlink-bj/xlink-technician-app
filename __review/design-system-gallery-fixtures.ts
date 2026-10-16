@@ -37,7 +37,7 @@ export const designSystemSections: readonly DesignSystemSection[] = [
   {
     id: '02-actions',
     title: 'Actions',
-    examples: [{ id: 'buttons', title: '按钮状态', state: 'primary / secondary / text', note: 'DS-01 · 三尺寸、四状态与长文本的真实共享按钮', kind: 'buttons' }],
+    examples: [{ id: 'buttons', title: '按钮状态', state: 'primary / secondary / text', note: 'DS-01.1 · 四级操作层级、交互矩阵及长中文母版', kind: 'buttons' }],
   },
   {
     id: '03-fields-inputs',
@@ -66,7 +66,7 @@ export const designSystemSections: readonly DesignSystemSection[] = [
   {
     id: '07-action-workspace-footer',
     title: 'Action Workspace Footer',
-    examples: [{ id: 'action-bar', title: '底部 Action Bar', state: 'single / dual / save lifecycle', note: 'DS-01 · 单/双操作与保存状态，真实共享 Action Bar', kind: 'action-bar' }],
+    examples: [{ id: 'action-bar', title: '底部 Action Bar', state: 'single / dual / save lifecycle', note: 'DS-01.1 · 单/双/分布式操作与服务端确认状态', kind: 'action-bar' }],
   },
 ]
 
