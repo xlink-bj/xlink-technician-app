@@ -15,11 +15,10 @@ on:
       - 'src/pages/work-orders/**'
   workflow_dispatch:
 
-# Candidate snapshots are initially staged only on DS02A's *exact* internal
-# review branch. Fork PRs and normal PRs never receive write credentials to
-# rebaseline visuals, and regression steps never invoke --update-snapshots.
+# Golden candidates have been staged in PR #141. Ordinary CI is now
+# absolutely read-only: no baseline creation, updates or silent approvals.
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -33,21 +32,17 @@ jobs:
       VITE_XLINK_ENABLE_REAL_WRITES: 'false'
       H5_VISUAL_OWNER_APPROVAL: 'PENDING'
     steps:
-      - name: Check out exact PR head branch for snapshots
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
-          persist-credentials: true
+          persist-credentials: false
 
-      - name: Configure Node and pnpm
-        uses: pnpm/action-setup@v4
-
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: pnpm
 
-      - name: Install dependencies
+      - name: Install frozen dependencies
         run: pnpm install --frozen-lockfile
 
       - name: Cache Playwright Chromium
@@ -56,7 +51,7 @@ jobs:
           path: ~/.cache/ms-playwright
           key: ${{ runner.os }}-ds02a-playwright-${{ hashFiles('pnpm-lock.yaml') }}
 
-      - name: Install browser and pinned environment fonts
+      - name: Install Chromium and deterministic Chinese fonts
         run: |
           pnpm exec playwright install --with-deps chromium
           sudo apt-get update -qq
@@ -64,64 +59,22 @@ jobs:
           fc-match 'Noto Sans CJK SC' | head -1
           pnpm exec playwright --version
 
-      - name: Check expected baseline cardinality
-        id: baselines
+      - name: Fail closed if committed visual candidates are incomplete
         shell: bash
         run: |
-          count=0
-          if [ -d tests/ds02a-gallery/snapshots ]; then
-            count=$((count + $(find tests/ds02a-gallery/snapshots -type f -name '*.png' | wc -l)))
-          fi
-          if [ -d tests/ds02a-main/snapshots ]; then
-            count=$((count + $(find tests/ds02a-main/snapshots -type f -name '*.png' | wc -l)))
-          fi
-          echo "count=$count" >> "$GITHUB_OUTPUT"
-          echo "Baseline count: $count (expected 15)"
-          if [ "$count" -ne 0 ] && [ "$count" -ne 15 ]; then
-            echo "::error::Partial baseline collection: expected exactly 15, found $count. Do not silently rebaseline."
-            exit 1
-          fi
-
-      - name: Initial candidate snapshot generation (branch-scoped, one-time)
-        if: >-
-          steps.baselines.outputs.count == '0'
-          && github.event_name == 'pull_request'
-          && github.event.pull_request.head.repo.full_name == github.repository
-          && github.head_ref == 'design-system/ds02a-h5-visual-foundation'
-        run: |
-          pnpm exec playwright test --config playwright.ds02a-gallery.config.ts --update-snapshots
-          pnpm exec playwright test --config playwright.ds02a-main.config.ts --update-snapshots
-
-      - name: Stage candidate PNGs in DS02A branch only
-        if: >-
-          steps.baselines.outputs.count == '0'
-          && github.event_name == 'pull_request'
-          && github.event.pull_request.head.repo.full_name == github.repository
-          && github.head_ref == 'design-system/ds02a-h5-visual-foundation'
-        shell: bash
-        env:
-          TARGET_BRANCH: ${{ github.head_ref }}
-        run: |
-          test "$(find tests/ds02a-gallery/snapshots tests/ds02a-main/snapshots -type f -name '*.png' | wc -l)" -eq 15
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add tests/ds02a-gallery/snapshots tests/ds02a-main/snapshots
-          git commit -m 'test(ds02a): stage initial H5 golden candidates (Owner review pending)'
-          git push origin "HEAD:refs/heads/$TARGET_BRANCH"
-
-      - name: Enforce tracked snapshots or fail closed
-        shell: bash
-        run: |
+          test -d tests/ds02a-gallery/snapshots || exit 1
+          test -d tests/ds02a-main/snapshots || exit 1
           count=$(find tests/ds02a-gallery/snapshots tests/ds02a-main/snapshots -type f -name '*.png' | wc -l)
-          test "$count" -eq 15 || (echo "::error::Cannot compare H5 screenshots without all 15 baselines" && exit 1)
+          echo "Committed H5 baselines: $count (required: 15)"
+          test "$count" -eq 15 || (echo "::error::15 tracked golden candidates required; CI never auto-rebaselines" && exit 1)
 
-      - name: Compare real uni-app Gallery against tracked candidates
+      - name: Compare actual uni-app H5 Gallery against tracked PNGs
         run: pnpm test:ds02a:gallery
 
-      - name: Compare real work-order list/detail/Q01 against tracked candidates
+      - name: Compare actual main H5 list, detail and Q01
         run: pnpm test:ds02a:business
 
-      - name: Preserve expected/actual/diff/trace for UX review
+      - name: Preserve expected, actual, diff and trace for review
         if: always()
         uses: actions/upload-artifact@v4
         with:

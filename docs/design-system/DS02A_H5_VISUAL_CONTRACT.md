@@ -29,11 +29,18 @@ The canonical token source remains `src/shared/ui/design-system.scss` — **addi
 
 ## Baseline admission and governance
 
-1. Exact-target PR branch creates baseline **candidates** only if snapshot files are missing. A GitHub Actions job runs `--update-snapshots`, commits generated PNG into *that PR branch only*, then the new HEAD re-runs strict pixel comparisons. This prevents a false green simply because no baseline existed.
-2. **Normal PR/commit runs never overwrite snapshots.** To change baseline later: intentionally update PNG in a reviewed PR with screenshot-diff explanation. CI must reject unreviewed drift. No broad `--update-snapshots` in regression mode.
-3. A passing diff test means *unchanged from the committed candidate*, not "this design is beautiful." The user/Owner must review Gallery and live business screenshots and then explicitly mark the approved baseline set for future use. Until then report `ENGINEERING PASS / VISUAL OWNER REVIEW PENDING`.
-4. The capture runner must not fetch Production, credentials or external APIs. `VITE_XLINK_ENABLE_REAL_WRITES=false`, no auth override, no synthetic financial success.
-5. If a stable content fixture changes, update it deliberately and re-review all affected baselines. Do not mask business text, amounts, status, or buttons to hide failures.
+1. **Bootstrap completed exactly once in PR #141:** 15 PNGs were created by a restricted internal staging workflow and committed to that PR branch as **CANDIDATES**. At this point the workflow has been intentionally replaced with **read-only** PR regression; it can no longer create or rewrite baselines.
+2. Baselines are now regular reviewed source-controlled assets. Normal CI has `contents: read` and never invokes `--update-snapshots`; missing/partial baseline collections fail closed. No bot or developer may rebaseline implicitly.
+3. Any later deliberate visual change requires a dedicated PR change to the relevant PNGs, a screenshot diff/reason and Owner visual approval before labeling it `GOLDEN`. A green comparison means identical to committed candidate, not automatically aesthetically excellent.
+4. The fixtures use only local DEV Mock, no production reads/writes, no realistic user credentials or authorized Order mutations. Do not mask prices, business statuses, warnings, labels, loading indicators or controls to hide differences.
+5. Current milestone status is `ENGINEERING CANDIDATE / OWNER VISUAL REVIEW PENDING`; a future signed baseline cannot be inferred from green CI alone.
+
+## Initial UX audit — examples from real H5 screenshots (390px)
+
+- **Work-order list:** task/customer identity is readable, but the dense location/meta line, tone-varied status markers and card footer actions still need a shared Card/Status design grammar (DS-02.B).
+- **Work-order detail:** work-order context, task CTA and tabs are functionally clear, yet secondary information, tab typography and empty-state density should be normalized across List/Detail (DS-02.B/C).
+- **Q01 quotation:** structured sections and action progression are stronger; reuse this direction without copying its feature CSS into future pages.
+- These are evidence-backed migration priorities, *not* approval of the present screenshots as visually finished. DS-02.A intentionally does not patch each screen with another layer of CSS.
 
 ## H5 acceptance checklist
 

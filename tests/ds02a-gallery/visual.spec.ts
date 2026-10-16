@@ -32,6 +32,18 @@ for (const width of widths) {
     await expect(page.getByTestId('design-system-gallery')).toBeVisible()
     await expect(page.getByTestId('gallery-notice')).toContainText('不连接 API')
     await page.evaluate(async () => { await document.fonts.ready })
+    // The semantic foundation must be available to every shared component.
+    const roles = await page.evaluate(() => {
+      const css = getComputedStyle(document.documentElement)
+      return [
+        '--app-type-display-size', '--app-type-body-size', '--app-type-caption-size',
+        '--app-text-strong', '--app-text-secondary', '--app-surface-raised',
+        '--app-outline-subtle', '--app-elevation-card', '--app-shape-control',
+        '--app-icon-sm', '--app-feedback-success-ink', '--app-feedback-error-ink',
+        '--app-disabled-ink',
+      ].map(role => ({ role, value: css.getPropertyValue(role).trim() }))
+    })
+    for (const { role, value } of roles) expect(value, `missing visual contract ${role}`).not.toBe('')
     await page.addStyleTag({ content: 'uni-page-head { visibility: hidden !important }' })
 
     const button = page.getByTestId('ds011-button-master')
