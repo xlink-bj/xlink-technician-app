@@ -140,7 +140,11 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       expect(rect!.width).toBeLessThanOrEqual(viewport.width)
       const action = await page.getByTestId('quotation-hub-add-inline').boundingBox()
       expect(action).not.toBeNull()
-      expect(action!.height, 'Q00 new-order CTA target').toBeGreaterThanOrEqual(40)
+      expect(action!.height, 'Q00 new-order CTA target').toBeGreaterThanOrEqual(43.5)
+      const amount = first.locator('.app-amount-value')
+      await expect(amount).toHaveClass(/app-amount-value--prominent/)
+      const amountFont = await amount.evaluate(el => parseFloat(getComputedStyle(el).fontSize))
+      expect(amountFont, 'Q00 actual amount must be a primary financial value').toBeGreaterThanOrEqual(20)
     } else if (screen === 'Q01') {
       // The real editor can legitimately start in its empty state. Enter
       // the editable first repair group before inspecting field geometry.
