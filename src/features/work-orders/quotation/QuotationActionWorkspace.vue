@@ -34,9 +34,8 @@
       <view class="quotation-workspace-footer-summary" data-testid="quotation-footer-summary">
         <view class="quotation-workspace-footer-summary__amount">
           <text class="quotation-workspace-footer-summary__amount-label">{{ amountPresentation.label }}</text>
-          <text class="quotation-workspace-footer-summary__amount-value">
-            {{ amountPresentation.value }}
-          </text>
+          <AppAmountValue class="quotation-workspace-footer-summary__amount-value" size="prominent"
+            tone="primary" :value="amountPresentation.value" />
         </view>
         <view class="quotation-workspace-footer-summary__copy">
           <text class="quotation-workspace-footer-summary__title">本机报价草稿</text>
@@ -99,6 +98,7 @@
 </template>
 
 <script setup lang="ts">
+import AppAmountValue from '@shared/ui/AppAmountValue.vue'
 import { computed, nextTick, ref, watch } from 'vue'
 import { isProductionReadOnlyRuntime } from '@shared/config'
 import { useActionWorkspaceStore } from '../action-workspace'
@@ -181,7 +181,7 @@ function openQuotationConfirmation(): void {
 
 <style>
 .quotation-workspace-shell { font-family:-apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif; }
-.quotation-workspace-footer-summary__amount-value { font-variant-numeric: tabular-nums; }
+
 .quotation-confirm-backdrop { align-items: center; background: rgba(20, 32, 52, .42); display: flex; inset: 0; justify-content: center; padding: var(--app-page-gutter); position: fixed; z-index: 1100; }
 .quotation-confirm-sheet { background: var(--app-color-surface); border: 1rpx solid var(--app-color-border); border-radius: var(--app-radius-card); box-sizing: border-box; max-width: 640rpx; padding: var(--app-card-padding); width: 100%; }
 .quotation-confirm-title { color: var(--app-color-text-primary); display: block; font-size: var(--app-font-section-title); font-weight: 800; }
@@ -197,7 +197,7 @@ function openQuotationConfirmation(): void {
 .quotation-workspace-shell--review .action-workspace-footer { padding-top: 8rpx; }
 .quotation-workspace-footer-summary__amount { align-items: flex-end; display: flex; flex-direction: column; flex-shrink: 0; margin-left: var(--app-space-sm); }
 .quotation-workspace-footer-summary__amount-label { color: var(--app-color-text-secondary); font-size: 20rpx; }
-.quotation-workspace-footer-summary__amount-value { color: var(--app-color-primary); font-size: 25rpx; font-weight: 800; margin-top: 4rpx; }
+.quotation-workspace-footer-summary__amount-value { margin-top: 4rpx; }
 .quotation-submit-unavailable { margin-top: var(--app-space-sm); }
 .quotation-workspace-shell .action-workspace-body { padding-bottom: calc(320rpx + env(safe-area-inset-bottom)); }
 /* #ifdef H5 */
@@ -213,7 +213,7 @@ function openQuotationConfirmation(): void {
   gap:6rpx; flex-direction:column; min-width:0; }
 .quotation-workspace-footer-summary__amount { align-items:flex-start; margin-left:0; }
 .quotation-workspace-footer-summary__amount-label { color:var(--app-color-text-secondary); font-size:20rpx; }
-.quotation-workspace-footer-summary__amount-value { font-size:27rpx; color:var(--app-color-primary); margin-top:2rpx; }
+.quotation-workspace-footer-summary__amount-value { margin-top:2rpx; }
 .quotation-workspace-footer-summary__copy { display:block; }
 .quotation-workspace-footer-summary__title { display:none; }
 .quotation-workspace-footer-summary__meta { font-size:19rpx; color:var(--app-color-text-secondary); margin-top:4rpx; }
