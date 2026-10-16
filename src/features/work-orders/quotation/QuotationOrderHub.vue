@@ -339,7 +339,9 @@ watch(() => props.workOrderId, () => {
   text-align:left; overflow-wrap:anywhere;
 }
 .quotation-hub__order-line .quotation-hub__order-amount {
-  color:var(--app-color-primary-action);
+  color: var(--app-color-primary-action);
+  font-size: var(--app-transaction-money-regular-size);
+  font-weight: 750;
 }
 .quotation-hub__order-actions {
   border-top:1px solid #ecf0f5; display:flex; gap:9px; padding-top:12px;
