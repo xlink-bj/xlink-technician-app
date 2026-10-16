@@ -5,7 +5,7 @@ export default defineConfig({
   ...original,
   testDir: './tests/ds02a-gallery',
   testMatch: '**/*.spec.ts',
-  snapshotPathTemplate: '{testDir}/snapshots/{arg}',
+  snapshotPathTemplate: '{testDir}/snapshots/{arg}{ext}',
   outputDir: 'test-results/ds02a-gallery',
   workers: 1,
   fullyParallel: false,
