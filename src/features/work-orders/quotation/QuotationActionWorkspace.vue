@@ -7,6 +7,8 @@
     :scroll-into-view="scrollIntoView"
     :customer-name="workspace.detail?.customerName"
     :display-number="workspace.detail?.displayNumber"
+    :service-address="workspace.detail?.serviceAddress"
+    :service-district="workspace.detail?.serviceDistrict"
     :lifecycle="workspace.lifecycle"
     :draft-status="workspace.draftStatus"
     :can-submit="canOpenSubmit"
