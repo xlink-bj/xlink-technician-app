@@ -60,6 +60,33 @@ for (const width of widths) {
       const assertSafe = await guardLocal(page)
       await openScene(page, scene)
       await page.evaluate(async () => { await document.fonts.ready })
+      // DS-02.B: both REAL consumers must use canonical content components.
+      // A visual diff by itself cannot prove reuse, touch or text resilience.
+      if (scene === 'list') {
+        await expect(page.getByTestId('ds02b-list-heading')).toBeVisible()
+        const records = page.getByTestId('ds02b-work-order-card-surface')
+        expect(await records.count()).toBeGreaterThan(0)
+        await expect(records.first()).toHaveClass(/app-record-card--horizontal/)
+        const tags = records.first().locator('.app-meta-tag')
+        await expect(tags.first()).toBeVisible()
+        const phone = records.first().locator('.card-phone-button')
+        const contactSize = await phone.boundingBox()
+        expect(contactSize).not.toBeNull()
+        expect(contactSize!.height, 'contact target >=44px').toBeGreaterThanOrEqual(43.5)
+        expect(contactSize!.width, 'contact target >=44px').toBeGreaterThanOrEqual(43.5)
+        const accept = page.locator('.card-accept-button').first()
+        await expect(accept).toBeVisible()
+        await expect(accept).toHaveClass(/app-button--size-compact/)
+        const acceptSize = await accept.boundingBox()
+        expect(acceptSize).not.toBeNull()
+        expect(acceptSize!.height, 'shared accept CTA >=44px').toBeGreaterThanOrEqual(43.5)
+      }
+      if (scene === 'detail') {
+        await expect(page.getByTestId('ds02b-detail-heading')).toBeVisible()
+        await expect(page.getByTestId('ds02b-detail-record-card')).toHaveClass(/app-record-card/)
+        await expect(page.locator('.summary-card .app-meta-tag')).toBeVisible()
+        await expect(page.locator('.information-card.app-record-card')).toBeVisible()
+      }
       // Snapshot the viewport after a fixed, source-modelled point in time;
       // no production reads, no order Submit, no financial writes.
       await expect(page).toHaveScreenshot(`ds02a-${scene}-${width}.png`)

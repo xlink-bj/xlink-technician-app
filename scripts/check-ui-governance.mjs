@@ -198,4 +198,27 @@ if (!commercialButton.includes("'tertiary' | 'ghost'") || !commercialButton.incl
   fail('DS-01.1 commercial hierarchy, composed Action Bar or passive status rendering missing')
 }
 
+// DS-02.B: each shared content primitive must have two real consumers;
+ // no Workflow decision, business writes or inferred status in shared UI.
+const [listView, detailView, recordCard, metaTag, sectionHeading] = await Promise.all([
+  read('src/pages/work-orders/work-orders.vue'),
+  read('src/pages/work-orders/detail.vue'),
+  read('src/shared/ui/AppRecordCard.vue'),
+  read('src/shared/ui/AppMetaTag.vue'),
+  read('src/shared/ui/AppSectionHeading.vue'),
+])
+for (const consumer of [listView, detailView]) {
+  for (const name of ['AppRecordCard', 'AppMetaTag', 'AppSectionHeading']) {
+    if (!consumer.includes(`<${name}`)) fail(`DS-02.B: missing ${name} in actual list/detail consumer`)
+  }
+}
+for (const [name, source] of [['RecordCard', recordCard], ['MetaTag', metaTag], ['SectionHeading', sectionHeading]]) {
+  if (/fetch\(|axios|useWorkOrder|submitOrder|placeOrder|WorkflowRuntime|@tap=|@click=/.test(source)) {
+    fail(`DS-02.B: ${name} may only present caller-supplied data`)
+  }
+}
+if (!commercialTokens.includes('--app-content-card-radius') || !commercialTokens.includes('--app-tag-info-ink')) {
+  fail('DS-02.B: semantic card/tag token contract missing')
+}
+
 console.log('UI governance check passed: shared UX contract, Gallery coverage, and delivery gates are intact')
