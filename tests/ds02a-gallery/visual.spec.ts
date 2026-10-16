@@ -7,7 +7,11 @@ async function guard(page: Page) {
   const pageErrors: string[] = []
   page.on('pageerror', e => pageErrors.push(e.message))
   await page.route('**/*', async route => {
-    const u = new URL(route.request().url())
+    const resource = route.request().url()
+    if (resource.startsWith('data:') || resource.startsWith('blob:') || resource.startsWith('about:')) {
+      return route.continue()
+    }
+    const u = new URL(resource)
     if ((u.hostname === '127.0.0.1' || u.hostname === 'localhost') && u.port === '5174') {
       return route.continue()
     }

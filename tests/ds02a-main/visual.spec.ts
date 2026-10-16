@@ -15,7 +15,11 @@ async function guardLocal(page: Page) {
     }
   })
   await page.route('**/*', route => {
-    const u = new URL(route.request().url())
+    const resource = route.request().url()
+    if (resource.startsWith('data:') || resource.startsWith('blob:') || resource.startsWith('about:')) {
+      return route.continue()
+    }
+    const u = new URL(resource)
     if (u.hostname === 'localhost' && u.port === '5174') return route.continue()
     external.push(route.request().method() + ' ' + u.origin)
     return route.abort('blockedbyclient')
