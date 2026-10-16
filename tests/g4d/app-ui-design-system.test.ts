@@ -74,11 +74,14 @@ describe('App UI Design System v0.2', () => {
       readFile(uiPath('AppLoadingState.vue'), 'utf8'),
       readFile(actionWorkspaceFormActionsPath, 'utf8'),
     ])
-    expect(button).toContain("variant?: 'primary' | 'secondary' | 'text'")
+    expect(button).toContain("variant?: 'primary' | 'secondary' | 'tertiary' | 'ghost' | 'text'")
     expect(button).toContain('loading?: boolean')
     expect(button).toContain("'app-button--loading': loading")
     expect(button).toContain("'app-button--pressed': pressed")
-    expect(button).toContain(':disabled="disabled || loading"')
+    expect(button).toContain(':disabled="disabled && !loading"')
+    expect(button).toContain(':aria-disabled="disabled || loading"')
+    expect(button).toContain('if (props.disabled || props.loading) return')
+    expect(button).toContain("shape?: 'rounded' | 'pill'")
     expect(button).toContain(':aria-busy="loading"')
     expect(button).toContain('app-button__loading-slot--active')
     expect(button).toContain('app-button__label')
