@@ -15,6 +15,7 @@
   >
     <slot name="journey-context" />
     <QuotationActionContent
+      ref="quotationContentRef"
       :state="contentState"
       :synthetic-fields-review="syntheticReviewEnabled"
       :product-review-only="productReviewOnly"
@@ -26,11 +27,32 @@
       @retry="$emit('retry')"
       @back="$emit('back')"
       @return-to-group="returnToGroup"
+      @first-step-presentation="onFirstStepPresentation"
     ><template #synthetic-review-panel><slot name="synthetic-review-panel" /></template></QuotationActionContent>
     <!-- Future-stage entry follows the active quotation task, never precedes it. -->
     <slot name="after-content" />
     <template #actions>
-      <view class="quotation-workspace-footer-main">
+      <view v-if="firstStepActive" class="quotation-workspace-first-stage-footer" data-testid="quotation-first-step-footer">
+        <view class="quotation-workspace-first-stage-status" data-testid="quotation-footer-summary">
+          <text>本机草稿</text>
+          <text>{{ amountPresentation.label }} · {{ amountPresentation.value }}</text>
+        </view>
+        <view class="quotation-workspace-first-stage-actions">
+          <AppButton variant="secondary" class="quotation-workspace-save"
+            data-testid="quotation-first-step-save-draft"
+            :disabled="!firstStepCanEdit" @tap="composition.flushDraft">
+            保存草稿
+          </AppButton>
+          <AppButton class="quotation-workspace-next" data-testid="quotation-first-step-next"
+            :disabled="!firstStepCanEdit"
+            @tap="advanceFirstRepairStep">
+            下一步 · 添加报价项目
+          </AppButton>
+        </view>
+        <text v-if="productReviewOnly || syntheticReviewEnabled || productionReadOnly"
+          class="quotation-workspace-first-stage-caution">演示 / 只读环境不支持创建正式订单</text>
+      </view>
+      <view v-else class="quotation-workspace-footer-main">
       <view class="quotation-workspace-footer-summary" data-testid="quotation-footer-summary">
         <view class="quotation-workspace-footer-summary__amount">
           <text class="quotation-workspace-footer-summary__amount-label">{{ amountPresentation.label }}</text>
@@ -147,6 +169,17 @@ const syntheticReviewEnabled = computed(() => import.meta.env.DEV
   && Boolean(props.syntheticReviewValidateSelection)
   && Boolean(props.syntheticReviewFocusFirstError))
 const quotationConfirmOpen = ref(false)
+const firstStepActive = ref(false)
+const firstStepCanEdit = ref(false)
+const quotationContentRef = ref<InstanceType<typeof QuotationActionContent> | null>(null)
+function onFirstStepPresentation(state: { active: boolean; canEdit: boolean }): void {
+  firstStepActive.value = state.active
+  firstStepCanEdit.value = state.canEdit
+}
+function advanceFirstRepairStep(): void {
+  if (!firstStepActive.value || !firstStepCanEdit.value) return
+  void quotationContentRef.value?.advanceFirstRepairPartStep()
+}
 const scrollIntoView = ref('')
 const hasQuantityErrors = computed(() => Object.values(composition.quantityErrorBySelection).some(Boolean))
 const submitGate = computed(() => evaluateQuotationSubmitGuard({
@@ -239,4 +272,51 @@ function openQuotationConfirmation(): void {
   opacity:1 !important; background:#ecf0f6 !important; color:#8593a6 !important;
   border:1rpx solid #dae2ed !important;
 }
+
+/* DS-03.B2: first repair-part entry uses the same native mobile action grammar
+   as the design reference. Real submission stays in its original guarded path
+   for subsequent stages; this CTA delegates to the EXISTING local catalog
+   action (with original required-field validation). */
+.quotation-workspace-first-stage-footer {
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 8px 0 6px;
+}
+.quotation-workspace-first-stage-status {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 12px; color: var(--app-content-muted-ink);
+  font-size: 11px; line-height: 1.4;
+}
+.quotation-workspace-first-stage-status text:last-child {
+  text-align: right; min-width: 0; overflow-wrap: anywhere;
+}
+.quotation-workspace-first-stage-actions {
+  display: flex; align-items: stretch; gap: 10px;
+  width: 100%; min-width: 0;
+}
+.quotation-workspace-first-stage-actions .quotation-workspace-save,
+.quotation-workspace-first-stage-actions .quotation-workspace-next {
+  min-height: 52px; border-radius: 13px;
+  font-size: 14px; font-weight: 720;
+  margin: 0;
+}
+.quotation-workspace-first-stage-actions .quotation-workspace-save {
+  flex: 0 0 31%; width: 31%; min-width: 0;
+}
+.quotation-workspace-first-stage-actions .quotation-workspace-next {
+  flex: 1 1 0; min-width: 0;
+}
+.quotation-workspace-first-stage-caution {
+  color: var(--app-content-muted-ink);
+  font-size: 10px; line-height: 1.4;
+  text-align: center;
+}
+.quotation-workspace-shell .action-workspace-footer {
+  box-shadow: 0 -3px 16px rgba(23, 43, 71, .045);
+}
+@media (max-width: 360px) {
+ .quotation-workspace-first-stage-actions { gap: 7px; }
+ .quotation-workspace-first-stage-actions .quotation-workspace-save { flex-basis: 30%; width: 30%; }
+ .quotation-workspace-first-stage-actions .quotation-workspace-next { font-size: 13px; }
+}
+
 </style>
