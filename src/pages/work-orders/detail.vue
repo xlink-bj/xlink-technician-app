@@ -597,6 +597,7 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
 .location-row {
   background: var(--app-surface-muted);
   border-radius: 12px;
+  box-sizing: border-box;
   gap: 12rpx;
   margin-top: 22rpx;
   min-height: 72rpx;
