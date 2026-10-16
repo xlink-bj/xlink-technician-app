@@ -102,9 +102,9 @@
             <text>产品总额</text>
             <text>{{ money(order.originPrice) }}</text>
           </view>
-          <view class="quotation-hub__order-line">
+          <view class="quotation-hub__order-line quotation-hub__order-line--total">
             <text>实际金额</text>
-            <AppAmountValue class="quotation-hub__order-amount" size="regular" tone="primary" :value="money(order.totalPrice)" />
+            <AppAmountValue class="quotation-hub__order-amount" size="prominent" tone="primary" :value="money(order.totalPrice)" />
           </view>
           <view class="quotation-hub__order-line">
             <text>维修部位组</text>
@@ -305,7 +305,7 @@ watch(() => props.workOrderId, () => {
   font-size:19px; font-weight:790; line-height:1.3; color:#172a44;
 }
 .quotation-hub__new-outline {
-  min-height:40px; font-size:13px; font-weight:700; border-radius:10px;
+  min-height:44px; font-size:13px; font-weight:700; border-radius:10px;
 }
 .quotation-hub__list { display:flex; flex-direction:column; gap:12px; }
 .quotation-hub__order {
@@ -342,6 +342,14 @@ watch(() => props.workOrderId, () => {
   color: var(--app-color-primary-action);
   font-size: var(--app-transaction-money-regular-size);
   font-weight: 750;
+}
+.quotation-hub__order-line--total {
+  padding: 6px 0 8px;
+  align-items: center;
+}
+.quotation-hub__order-line--total .quotation-hub__order-amount {
+  font-size: var(--app-transaction-money-prominent-size);
+  font-weight: 770;
 }
 .quotation-hub__order-actions {
   border-top:1px solid #ecf0f5; display:flex; gap:9px; padding-top:12px;
