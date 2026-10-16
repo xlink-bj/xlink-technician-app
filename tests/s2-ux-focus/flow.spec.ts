@@ -171,6 +171,17 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       const selector = await page.getByTestId('quotation-first-step-repair-parts-trigger').boundingBox()
       expect(selector).not.toBeNull()
       expect(selector!.height).toBeGreaterThanOrEqual(44)
+      if (viewport.height >= 800) {
+        // First value: at 390x844 the technician must see all three required
+        // inputs BEFORE the fixed action bar, without scrolling or obstruction.
+        const quantity = await page.getByTestId('quotation-first-step-quantity').boundingBox()
+        const footer = await page.getByTestId('quotation-first-step-footer').boundingBox()
+        expect(quantity).not.toBeNull()
+        expect(footer).not.toBeNull()
+        expect(quantity!.y + quantity!.height,
+          'Q01 all required fields should fit above the sticky actions at 390x844')
+          .toBeLessThanOrEqual(footer!.y + 2)
+      }
     } else {
       await expect(page.locator('.quotation-content__catalog-intro')).toBeHidden()
       const title = await page.locator('.quotation-content__catalog-item-title').first().evaluate(
