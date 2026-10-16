@@ -238,3 +238,86 @@ test('DS-01 shared commercial controls: 320/375/390px, states, geometry, one tap
     await assertHealthy(page, evidence)
   }
 })
+
+
+test('DS-01.1 commercial visual masters: four hierarchies, spinner, split layout and caller-owned feedback', async ({ page }) => {
+  for (const width of [320, 375, 390]) {
+    await page.setViewportSize({ width, height: 844 })
+    const evidence = installBrowserSafetyGuards(page)
+    await openReview(page, evidence)
+
+    const master = page.getByTestId('ds011-button-master')
+    await expect(master).toBeVisible()
+    for (const name of ['primary','secondary','tertiary','ghost']) {
+      await expect(page.getByTestId(`ds011-${name}-column`)).toBeVisible()
+    }
+    const primary = page.getByTestId('ds01-button-primary')
+    const secondary = page.getByTestId('ds01-button-secondary')
+    const tertiary = page.getByTestId('ds011-button-tertiary')
+    const ghost = page.getByTestId('ds011-button-ghost')
+    await expect(primary).toHaveClass(/app-button--shape-pill/)
+    await expect(secondary).toHaveClass(/app-button--secondary/)
+    await expect(tertiary).toHaveClass(/app-button--tertiary/)
+    await expect(ghost).toHaveClass(/app-button--ghost/)
+
+    for (const button of [primary, secondary, tertiary, ghost]) {
+      const rect = await button.boundingBox()
+      expect(rect).not.toBeNull()
+      expect(rect!.height, 'mature button touch >=44px').toBeGreaterThanOrEqual(43.5)
+      expect(rect!.x, 'button remains in viewport').toBeGreaterThanOrEqual(0)
+      expect(rect!.x + rect!.width, 'button remains in viewport').toBeLessThanOrEqual(width + 1)
+      // Two-column 320px buttons must not wrap four-character labels because
+      // a hidden loading indicator consumed horizontal space.
+      const label = await button.locator('.app-button__label').boundingBox()
+      expect(label).not.toBeNull()
+      expect(label!.height, 'short action label should stay on one line').toBeLessThanOrEqual(25)
+    }
+
+    const loading = page.getByTestId('ds01-button-loading')
+    await expect(loading).toHaveAttribute('aria-busy', 'true')
+    const spinner = loading.locator('.app-button__loading-slot--active')
+    await expect(spinner).toBeVisible()
+    // A rotating square can have a 22px screen-space bounding box at
+    // 45 degrees even with a 16px CSS diameter. Measure its layout box,
+    // not the transformed, animated bounding rect.
+    const spinnerMetrics = await spinner.evaluate(el => ({
+      height: Number.parseFloat(getComputedStyle(el).height),
+      width: Number.parseFloat(getComputedStyle(el).width),
+      border: getComputedStyle(el).borderTopWidth,
+    }))
+    expect(spinnerMetrics.height).toBeGreaterThanOrEqual(14)
+    expect(spinnerMetrics.height).toBeLessThanOrEqual(20)
+    expect(Number.parseFloat(spinnerMetrics.border)).toBeLessThanOrEqual(2.5)
+    expect(spinnerMetrics.width).toBeGreaterThanOrEqual(14)
+    expect(spinnerMetrics.width).toBeLessThanOrEqual(20)
+    await expect(loading).toHaveCSS('background-color', 'rgb(29, 110, 207)')
+
+    const split = page.getByTestId('ds011-action-split')
+    const left = await split.getByTestId('ds011-action-split-secondary').boundingBox()
+    const right = await split.getByTestId('ds011-action-split-primary').boundingBox()
+    expect(left).not.toBeNull()
+    expect(right).not.toBeNull()
+    expect(left!.x + left!.width).toBeLessThan(right!.x)
+    expect(right!.x + right!.width).toBeLessThanOrEqual(width + 1)
+    await expect(page.getByTestId('ds011-action-trailing')).toBeVisible()
+
+    for (const state of ['busy','success','error']) {
+      const node = page.getByTestId(`ds011-feedback-${state}`)
+      await expect(node).toHaveClass(new RegExp(`app-action-feedback--${state}`))
+      await expect(node).toHaveAttribute('role', 'status')
+      await expect(node).toHaveAttribute('aria-live', state === 'error' ? 'assertive' : 'polite')
+    }
+    await assertNoHorizontalOverflow(page)
+    // A long element screenshot scrolls past uni-app's fixed page-head. Hide
+    // only that REVIEW chrome in the capture frame so it cannot be stitched
+    // through the middle of the component master. Production UI is untouched.
+    await page.addStyleTag({ content: 'uni-page-head { visibility: hidden !important; }' })
+    await master.screenshot({ path: join(screenshotDirectory, `ds011-button-master-${width}.png`), animations:'disabled' })
+    await page.getByTestId('ds011-action-split').scrollIntoViewIfNeeded()
+    await page.getByTestId('gallery-example-action-bar').screenshot({
+      path: join(screenshotDirectory, `ds011-action-master-${width}.png`),
+      animations:'disabled',
+    })
+    await assertHealthy(page, evidence)
+  }
+})

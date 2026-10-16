@@ -185,3 +185,11 @@ This baseline may be revised only with new reviewed evidence.
   to editing shared components and adding Gallery evidence.
 - Gallery and compiled H5 automated PASS are **not** product visual signoff;
   MP-Weixin simulator calibration and device checks remain distinct.
+
+## DS-01.1 / Commercial Visual Excellence
+
+- Design references: Apple HIG's action hierarchy / 44pt minimum touch / press feedback; Ant Design Mobile's fill/shape/size/disabled/loading; TDesign/WeUI Chinese mobile conventions. Reference systems influence visual quality—not package dependencies or copied copyrighted assets.
+- One canonical shared AppButton implements Primary, Secondary, Tertiary, Ghost and backward-compatible `text` variant with `shape=rounded|pill`, `size=compact|regular|large`, optional `elevated`, native press and loading feedback.
+- AppActionBar supports `single|dual|split|trailing`; Shell remains responsible for placement and safe area. Feedback's `state=busy|success|error` is **strictly caller supplied** and must come from real server-authoritative state for success or failure.
+- The DS-01.1 Gallery has complete state matrices; Playwright captures 320/375/390 real uni-app images and checks layout, text, touch and icon geometry. Review screenshots are *golden candidates*, not accepted baselines until Owner explicitly signs off.
+- No fresh business-page CSS should redefine shared Button anatomy. Commercial visual acceptance requires reuse in a real current Q01 Action Workspace and MP simulator calibration in addition to Gallery.
