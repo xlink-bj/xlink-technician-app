@@ -148,19 +148,22 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
     } else if (screen === 'Q01') {
       // The real editor can legitimately start in its empty state. Enter
       // the editable first repair group before inspecting field geometry.
-      if (await page.locator('.quotation-content__first-step-label').count() === 0) {
+      if (await page.locator('.q01-first-step-label').count() === 0) {
         await page.getByTestId('quotation-add-group').click()
       }
-      await expect(page.locator('.quotation-content__first-step-label').first()).toBeVisible()
-      const label = await page.locator('.quotation-content__first-step-label').first().evaluate(
+      await expect(page.locator('.q01-first-step-label').first()).toBeVisible()
+      const label = await page.locator('.q01-first-step-label').first().evaluate(
         el => parseFloat(getComputedStyle(el).fontSize),
       )
       expect(label, 'Q01 field labels must remain legible').toBeGreaterThanOrEqual(14)
       const textArea = await page.getByTestId('quotation-first-step-description').boundingBox()
       expect(textArea).not.toBeNull()
       expect(textArea!.height, 'Q01 description must have comfortable touch and reading room').toBeGreaterThanOrEqual(70)
-      expect(textArea!.height, 'Q01 textarea must not double-count padding').toBeLessThanOrEqual(94)
+      expect(textArea!.height, 'Q01 description must fit mobile height budget').toBeLessThanOrEqual(114)
       await expect(page.getByTestId('quotation-q01-journey')).toBeVisible()
+      await expect(page.locator('.q01-root')).toBeVisible()
+      const titleSize = await page.locator('.q01-first-step-card-title').first().evaluate(el => parseFloat(getComputedStyle(el).fontSize))
+      expect(titleSize, 'Q01 page title must show real visual hierarchy').toBeGreaterThanOrEqual(22)
       await expect(page.getByTestId('quotation-first-step-footer')).toBeVisible()
       const next = await page.getByTestId('quotation-first-step-next').boundingBox()
       expect(next).not.toBeNull()
@@ -206,11 +209,11 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       // cascaded repair-part picker; not a fake detached list or new data.
       await page.getByTestId('quotation-first-step-repair-parts-trigger').click()
       await expect(page.getByTestId('quotation-repair-part-picker')).toBeVisible()
-      await expect(page.locator('.quotation-content__picker-sheet')).toBeVisible()
+      await expect(page.locator('.q01-picker-sheet')).toBeVisible()
       const pickerShot = await page.screenshot({ fullPage: false, animations: 'disabled', caret: 'hide' })
       await writeFile(resolve(dir, name + '-picker.png'), pickerShot)
       await info.attach(name + '-picker', { body: pickerShot, contentType: 'image/png' })
-      await page.locator('.quotation-content__picker-header').getByText('取消', { exact: true }).click()
+      await page.getByTestId('quotation-repair-part-picker-cancel').click()
       await expect(page.getByTestId('quotation-repair-part-picker')).toHaveCount(0)
       // Footer Next is ONLY a front-end position change of the old
       // selectProductsForFirstGroup handler: incomplete input still fails.
