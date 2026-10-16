@@ -209,40 +209,40 @@ watch(() => props.group.repairParts, (path) => {
   box-sizing: border-box; width: 100%; min-width: 0; padding-bottom: 28px;
   color: var(--q01-ink);
 }
-.q01-screen__provenance { margin: 1px 0 5px; }
+.q01-screen__provenance { margin: 0 0 3px; }
 .q01-screen__stepper {
   box-sizing: border-box; width: 100%; display: flex;
-  align-items: flex-start; padding: 19px 16px 20px;
+  align-items: center; padding: 12px 5px 14px;
 }
 .q01-screen__step {
-  color: var(--q01-muted); display: flex; flex-direction: column; align-items: center;
-  justify-content: flex-start; flex: 0 0 77px; gap: 8px;
-  font-size: 12px; font-weight: 580; white-space: nowrap;
+  color: var(--q01-muted); display: flex; flex-direction: row; align-items: center;
+  justify-content: center; flex: 0 0 auto; gap: 6px;
+  font-size: 11px; font-weight: 600; white-space: nowrap;
 }
 .q01-screen__step--active { color: var(--q01-blue); font-weight: 730; }
 .q01-screen__step-number {
-  box-sizing: border-box; width: 31px; height: 31px;
+  box-sizing: border-box; width: 25px; height: 25px;
   display: flex; justify-content: center; align-items: center;
-  border: 1px solid var(--q01-line); border-radius: 50%;
+  border: 1px solid var(--q01-line); border-radius: 50%; flex: 0 0 25px;
   background: var(--q01-white); color: var(--q01-muted);
-  font-size: 13px; font-weight: 700; line-height: 1;
+  font-size: 11px; font-weight: 700; line-height: 1;
 }
 .q01-screen__step--active .q01-screen__step-number {
   background: var(--q01-blue); border-color: var(--q01-blue); color: white;
 }
 .q01-screen__step-line {
-  flex: 1 1 0; min-width: 6px; height: 1px; margin-top: 15px;
+  flex: 1 1 0; min-width: 6px; height: 1px; margin: 0 6px;
   background: var(--q01-line);
 }
 .q01-screen__heading {
-  display: flex; flex-direction: column; gap: 6px;
-  padding: 13px 3px 18px;
+  display: flex; flex-direction: column; gap: 5px;
+  padding: 9px 3px 14px;
 }
 .q01-screen__eyebrow {
   color: var(--q01-muted); font-size: 12px; font-weight: 610; line-height: 1.5;
 }
 .q01-screen__title {
-  color: var(--q01-ink); font-size: 25px; font-weight: 780;
+  color: var(--q01-ink); font-size: 23px; font-weight: 770;
   letter-spacing: -.45px; line-height: 1.25;
 }
 .q01-screen__subtitle {
@@ -250,18 +250,18 @@ watch(() => props.group.repairParts, (path) => {
 }
 .q01-screen__form {
   display: flex; flex-direction: column; box-sizing: border-box;
-  width: 100%; padding: 7px 17px 22px;
+  width: 100%; padding: 5px 17px 18px;
   background: var(--q01-white); border: 1px solid var(--q01-subtle);
   border-radius: 19px; box-shadow: var(--app-content-card-elevation);
 }
-.q01-screen__field { display: flex; flex-direction: column; min-width: 0; padding-top: 19px; }
+.q01-screen__field { display: flex; flex-direction: column; min-width: 0; padding-top: 16px; }
 .q01-screen__label {
   font-size: 15px; color: var(--q01-ink); font-weight: 720;
-  line-height: 1.4; margin-bottom: 11px;
+  line-height: 1.4; margin-bottom: 8px;
 }
 .q01-screen__required { color: var(--app-color-danger); }
 .q01-screen__selector {
-  width: 100%; min-height: 68px; margin: 0;
+  width: 100%; min-height: 60px; margin: 0;
   border: 1px solid var(--q01-line); border-radius: 13px;
   padding: 10px 14px; display: flex; align-items: center;
   gap: 10px; background: var(--q01-soft); text-align: left; box-sizing: border-box;
@@ -291,8 +291,8 @@ watch(() => props.group.repairParts, (path) => {
   padding: 13px 15px; margin: 0;
   font-size: 16px; line-height: 1.5; outline: 0;
 }
-.q01-screen__description { height: 103px; min-height: 103px; }
-.q01-screen__quantity { height: 56px; min-height: 56px; font-weight: 590; }
+.q01-screen__description { height: 90px; min-height: 90px; }
+.q01-screen__quantity { height: 54px; min-height: 54px; font-weight: 590; }
 .q01-screen__description:focus, .q01-screen__quantity:focus {
   border-color: var(--q01-blue);
 }
@@ -358,8 +358,9 @@ watch(() => props.group.repairParts, (path) => {
   flex: 1; min-height: 0; overflow-y: auto; padding: 12px 0 10px;
 }
 @media (max-width: 360px) {
-  .q01-screen__stepper { padding-left: 7px; padding-right: 7px; }
-  .q01-screen__step { flex-basis: 73px; font-size: 11px; }
+  .q01-screen__stepper { padding-left: 0; padding-right: 0; }
+  .q01-screen__step { font-size: 10px; gap: 4px; }
+  .q01-screen__step-line { margin-left: 3px; margin-right: 3px; }
   .q01-screen__heading { padding-left: 1px; padding-right: 1px; }
   .q01-screen__form { padding-left: 14px; padding-right: 14px; }
   .q01-screen__title { font-size: 23px; }
