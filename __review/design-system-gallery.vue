@@ -284,6 +284,36 @@
                 </view>
               </view>
             </template>
+
+            <template v-else-if="example.kind === 'records'">
+              <view class="gallery-records-master" data-testid="ds02b-content-master">
+                <AppSectionHeading title="商业内容组件" subtitle="同一套信息层级，支持多种真实业务容器">
+                  <template #trailing><AppMetaTag tone="info" label="已加载 3 条" /></template>
+                </AppSectionHeading>
+                <AppRecordCard class="gallery-records-master__card" layout="vertical" tone="blue" data-testid="ds02b-gallery-record">
+                  <view class="gallery-records-master__header">
+                    <text class="gallery-records-master__title">现场勘查与维修服务</text>
+                    <text class="gallery-records-master__number">#00821</text>
+                  </view>
+                  <view class="gallery-records-master__tags">
+                    <AppMetaTag label="屋面" />
+                    <AppMetaTag tone="info" label="同小区 2" />
+                  </view>
+                  <text class="gallery-records-master__copy">北京市朝阳区 · 望京示例区域</text>
+                  <view class="gallery-records-master__footer">
+                    <text class="gallery-records-master__footnote">仅为确定性的展示内容</text>
+                    <AppButton size="compact">查看详情</AppButton>
+                  </view>
+                </AppRecordCard>
+                <AppRecordCard class="gallery-records-master__card gallery-records-master__card--quiet" data-testid="ds02b-gallery-record-secondary">
+                  <view class="gallery-records-master__header">
+                    <text class="gallery-records-master__title">服务记录与信息确认</text>
+                    <AppMetaTag label="待处理" tone="warning" />
+                  </view>
+                  <text class="gallery-records-master__copy">复杂业务信息留在页面，卡片只负责商业级容器。</text>
+                </AppRecordCard>
+              </view>
+            </template>
           </view>
         </view>
       </view>
@@ -308,6 +338,9 @@ import { ref } from 'vue'
 import AppButton from '@shared/ui/AppButton.vue'
 import AppActionBar from '@shared/ui/AppActionBar.vue'
 import AppActionFeedback from '@shared/ui/AppActionFeedback.vue'
+import AppRecordCard from '@shared/ui/AppRecordCard.vue'
+import AppMetaTag from '@shared/ui/AppMetaTag.vue'
+import AppSectionHeading from '@shared/ui/AppSectionHeading.vue'
 import AppIcon from '@shared/ui/AppIcon.vue'
 import AppCascadeSelector from '@shared/ui/AppCascadeSelector.vue'
 import AppChoiceGroup from '@shared/ui/AppChoiceGroup.vue'
@@ -482,4 +515,16 @@ text { display: inline; }
   .gallery-commercial-matrix { grid-template-columns:repeat(4,minmax(0,1fr)); }
 }
 
+
+/* DS-02.B Gallery: synthetic content, actual shared components. */
+.gallery-records-master { display:flex; flex-direction:column; gap:13px; }
+.gallery-records-master__card { display:flex; flex-direction:column; gap:12px; padding:18px; }
+.gallery-records-master__card--quiet { box-shadow: var(--app-elevation-flat); }
+.gallery-records-master__header { display:flex; align-items:center; justify-content:space-between; gap:10px; min-width:0; }
+.gallery-records-master__title { color:var(--app-text-strong); font-weight:720; font-size:16px; line-height:1.35; }
+.gallery-records-master__number { color:var(--app-content-muted-ink); font-size:11px; flex:0 0 auto; }
+.gallery-records-master__tags { display:flex; flex-wrap:wrap; gap:8px; }
+.gallery-records-master__copy { color:var(--app-content-muted-ink); font-size:12.5px; line-height:1.5; }
+.gallery-records-master__footer { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.gallery-records-master__footnote { color:var(--app-content-muted-ink); font-size:11px; line-height:1.4; flex:1; }
 </style>

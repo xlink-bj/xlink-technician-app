@@ -321,3 +321,23 @@ test('DS-01.1 commercial visual masters: four hierarchies, spinner, split layout
     await assertHealthy(page, evidence)
   }
 })
+
+test('DS-02.B actual shared content Gallery stays legible at 320/375/390', async ({ page }) => {
+  for (const width of [320, 375, 390]) {
+    await page.setViewportSize({ width, height: 844 })
+    const evidence = installBrowserSafetyGuards(page)
+    await openReview(page, evidence)
+    const master = page.getByTestId('ds02b-content-master')
+    await expect(master).toBeVisible()
+    await expect(page.getByTestId('ds02b-gallery-record')).toHaveClass(/app-record-card/)
+    await expect(master.locator('.app-section-heading')).toBeVisible()
+    await expect(master.locator('.app-meta-tag').first()).toBeVisible()
+    await assertNoHorizontalOverflow(page)
+    await page.addStyleTag({ content: 'uni-page-head { visibility: hidden !important; }' })
+    await master.screenshot({
+      path: join(screenshotDirectory, `ds02b-content-master-${width}.png`),
+      animations: 'disabled',
+    })
+    await assertHealthy(page, evidence)
+  }
+})
