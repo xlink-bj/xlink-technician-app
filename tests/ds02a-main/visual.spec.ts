@@ -97,6 +97,11 @@ for (const width of widths) {
         expect(taskTarget).not.toBeNull()
         expect(taskTarget!.height, 'detail primary task touch target >=44px').toBeGreaterThanOrEqual(43.5)
         await expect(page.locator('.summary-card .location-label')).toHaveText('服务地址')
+        for (const quickAction of await page.locator('.summary-card .summary-action').all()) {
+          const target = await quickAction.boundingBox()
+          expect(target).not.toBeNull()
+          expect(target!.height, 'detail quick action touch target >=44px').toBeGreaterThanOrEqual(43.5)
+        }
         // Visual hierarchy must not change Workflow-derived action intent,
         // disabled handling or production read-only authorization.
       }
