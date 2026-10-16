@@ -3138,7 +3138,7 @@ function configuredPackageLayerLabel(
   letter-spacing: -.2px;
   line-height: 1.3;
 }
-.quotation-content__first-repair-part-step .quotation-content__save-draft.app-button {
+.quotation-content__first-repair-part-step .quotation-content__save-draft {
   min-height: 44px;
   padding: 0 8px;
   font-size: 13px;
