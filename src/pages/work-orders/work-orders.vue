@@ -128,6 +128,9 @@
       </view>
 
       <view v-else-if="workOrders.loadState === 'succeeded' || isRefreshing" class="list-content">
+        <AppSectionHeading class="list-section-heading" title="当前工单" subtitle="按当前账号权限展示" data-testid="ds02b-list-heading">
+          <template #trailing><text v-if="workOrders.loadState === 'succeeded'" class="list-loaded-count">已加载 {{ workOrders.items.length }} 条</text></template>
+        </AppSectionHeading>
         <view v-if="isRefreshing" class="inline-refresh" aria-label="正在刷新工单">
           <view class="inline-refresh-indicator" />
         </view>
@@ -138,6 +141,7 @@
           hover-class="work-order-card-hover"
           :url="listActionFor(item).detailAccessible ? workOrderDetailRouteFor(item.id) : ''"
         >
+          <AppRecordCard class="work-order-card-surface" layout="horizontal" :tone="workOrderCardToneFor(item.taskLabel)" interactive data-testid="ds02b-work-order-card-surface">
           <view
             class="card-accent"
             :class="`card-accent--${workOrderCardToneFor(item.taskLabel)}`"
@@ -160,7 +164,7 @@
               <view class="card-title-cluster">
                 <view class="card-title-line">
                   <text v-if="item.taskLabel" class="card-task">{{ item.taskLabel }}</text>
-                  <text v-if="item.servicePartLabel" class="card-part-badge">{{ item.servicePartLabel }}</text>
+                  <AppMetaTag v-if="item.servicePartLabel" class="card-part-badge" :label="item.servicePartLabel" />
                 </view>
               </view>
               <text v-if="item.displayNumber" class="card-number">{{ cardNumber(item.displayNumber) }}</text>
@@ -181,9 +185,7 @@
                 v-if="item.communityOrderCount !== undefined || listActionFor(item).contactAvailable || listActionFor(item).acceptOrder"
                 class="card-footer"
               >
-                <text v-if="item.communityOrderCount !== undefined" class="nearby-chip">
-                  同小区 {{ item.communityOrderCount }}
-                </text>
+                <AppMetaTag v-if="item.communityOrderCount !== undefined" class="nearby-chip" tone="info" :label="`同小区 ${item.communityOrderCount}`" />
                 <view
                   v-if="listActionFor(item).contactAvailable"
                   class="card-phone-button"
@@ -214,6 +216,7 @@
               </view>
             </view>
           </view>
+          </AppRecordCard>
         </navigator>
 
         <button v-if="workOrders.hasMore === true" class="state-action load-more" @tap="loadMore">加载更多</button>
@@ -252,6 +255,9 @@ import { workOrderReadScopeKey } from '@features/work-orders/read-identity-scope
 import AppIcon from '@shared/ui/AppIcon.vue'
 import AppLoadingState from '@shared/ui/AppLoadingState.vue'
 import AppStatus from '@shared/ui/AppStatus.vue'
+import AppRecordCard from '@shared/ui/AppRecordCard.vue'
+import AppMetaTag from '@shared/ui/AppMetaTag.vue'
+import AppSectionHeading from '@shared/ui/AppSectionHeading.vue'
 import { appLoadingSkeletonDelayMs } from '@shared/ui/loading'
 
 const session = useSessionStore()
@@ -469,40 +475,38 @@ function cancelAccept(): void {
 .list-content {
   display: flex;
   flex-direction: column;
-  margin: 20rpx 8rpx 0;
+  margin: 18rpx 8rpx 0;
 }
+.work-order-card-surface { width: 100%; min-height: 100px; }
+.list-section-heading { margin: 4px 2px 14px; }
+.list-loaded-count { color: var(--app-content-muted-ink); font-size: 12px; white-space: nowrap; }
 
 .work-order-card {
-  align-items: stretch;
-  background: #ffffff;
-  border: 1rpx solid #e2e8f1;
-  border-radius: 28rpx;
-  box-shadow: 0 12rpx 28rpx rgba(27, 48, 82, 0.075);
+  display: block;
   box-sizing: border-box;
-  display: flex;
-  margin-bottom: 18rpx;
-  min-height: 184rpx;
-  overflow: hidden;
-  position: relative;
-  transition: transform 120ms ease;
+  margin-bottom: 14px;
+  min-width: 0;
   width: 100%;
+  overflow: visible;
 }
 
-.work-order-card-hover {
-  transform: scale(0.99);
+.work-order-card-hover .work-order-card-surface {
+  transform: translateY(1px);
+  box-shadow: var(--app-elevation-flat);
 }
 
 .card-accent {
-  flex: 0 0 6rpx;
-  width: 6rpx;
+  flex: 0 0 3px;
+  width: 3px;
+  opacity: .68;
 }
 
-.card-accent--blue { background: #2878f2; }
-.card-accent--red { background: #f06445; }
-.card-accent--orange { background: #ff941f; }
-.card-accent--purple { background: #8a69e8; }
-.card-accent--green { background: #35b978; }
-.card-accent--gray { background: #9aa6b8; }
+.card-accent--blue { background: var(--app-color-primary-action); }
+.card-accent--red { background: #c65d4b; }
+.card-accent--orange { background: #b77926; }
+.card-accent--purple { background: #8067b5; }
+.card-accent--green { background: #21895e; }
+.card-accent--gray { background: #91a1b5; }
 
 .card-main {
   box-sizing: border-box;
@@ -510,7 +514,7 @@ function cancelAccept(): void {
   flex: 1;
   flex-direction: column;
   min-width: 0;
-  padding: 24rpx 20rpx 28rpx 18rpx;
+  padding: 17px 15px 17px;
 }
 
 .card-top-row {
@@ -553,12 +557,12 @@ function cancelAccept(): void {
 }
 
 .card-task {
-  color: #172239;
+  color: var(--app-text-strong);
   display: -webkit-box;
   flex: 0 1 auto;
-  font-size: 30rpx;
-  font-weight: 850;
-  line-height: 1.35;
+  font-size: var(--app-content-title-size);
+  font-weight: 720;
+  line-height: 1.34;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -567,21 +571,14 @@ function cancelAccept(): void {
 }
 
 .card-part-badge {
-  background: #f1f3f6;
-  border-radius: 6rpx;
-  color: #263044;
-  flex: 0 0 auto;
-  font-size: 21rpx;
-  font-weight: 800;
-  line-height: 1.35;
-  padding: 4rpx 10rpx;
+  flex: 0 1 auto;
 }
 
 .card-number {
-  color: #627492;
+  color: var(--app-content-muted-ink);
   flex: 0 0 auto;
-  font-size: 24rpx;
-  font-weight: 800;
+  font-size: 11px;
+  font-weight: 600;
   line-height: 1.3;
   max-width: 30%;
   overflow: hidden;
@@ -599,9 +596,9 @@ function cancelAccept(): void {
 .card-location {
   align-items: flex-start;
   box-sizing: border-box;
-  color: #71829e;
+  color: var(--app-content-muted-ink);
   display: flex;
-  font-size: 24rpx;
+  font-size: 12.5px;
   gap: 8rpx;
   line-height: 1.5;
   margin-left: -70rpx;
@@ -631,7 +628,7 @@ function cancelAccept(): void {
 }
 
 .location-address {
-  color: #75849b;
+  color: var(--app-content-muted-ink);
   display: -webkit-box;
   flex: 1;
   min-width: 0;
@@ -698,13 +695,7 @@ function cancelAccept(): void {
 }
 
 .nearby-chip {
-  background: #edf4ff;
-  border-radius: 6rpx;
-  color: #2878f2;
-  font-size: 21rpx;
-  font-weight: 700;
-  line-height: 32rpx;
-  padding: 0 10rpx;
+  flex-shrink: 0;
 }
 
 .card-phone-button {
