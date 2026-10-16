@@ -204,15 +204,15 @@
                     aria-hidden="true"
                   />
                 </view>
-                <button
-                  v-if="listActionFor(item).acceptOrder"
-                  class="card-accept-button"
-                  :class="`card-accept-button--${workOrderCardToneFor(item.taskLabel)}`"
-                  :disabled="workOrders.acceptInFlightId === item.id"
-                  @tap.stop="requestAccept(item)"
-                >
-                  {{ workOrders.acceptInFlightId === item.id ? '接单中' : '接单' }}
-                </button>
+                <view v-if="listActionFor(item).acceptOrder" class="card-accept-control" @tap.stop>
+                  <AppButton
+                    class="card-accept-button"
+                    size="compact"
+                    :loading="workOrders.acceptInFlightId === item.id"
+                    :disabled="workOrders.acceptInFlightId === item.id"
+                    @tap="requestAccept(item)"
+                  >{{ workOrders.acceptInFlightId === item.id ? '接单中' : '接单' }}</AppButton>
+                </view>
               </view>
             </view>
           </view>
@@ -253,6 +253,7 @@ import type { WorkOrderSummary } from '@shared/ports'
 import { useSessionStore } from '@shared/state'
 import { workOrderReadScopeKey } from '@features/work-orders/read-identity-scope'
 import AppIcon from '@shared/ui/AppIcon.vue'
+import AppButton from '@shared/ui/AppButton.vue'
 import AppLoadingState from '@shared/ui/AppLoadingState.vue'
 import AppStatus from '@shared/ui/AppStatus.vue'
 import AppRecordCard from '@shared/ui/AppRecordCard.vue'
@@ -700,39 +701,23 @@ function cancelAccept(): void {
 
 .card-phone-button {
   align-items: center;
-  border: 1rpx solid #edf0f5;
-  border-radius: 50%;
-  box-shadow: 0 6rpx 14rpx rgba(27, 48, 82, 0.06);
+  background: var(--app-surface-raised);
+  border: 1px solid var(--app-outline-subtle);
+  border-radius: 14px;
   display: flex;
-  flex: 0 0 58rpx;
-  height: 58rpx;
+  flex: 0 0 44px;
+  height: 44px;
   justify-content: center;
-  margin-right: 2rpx;
-  width: 58rpx;
+  margin-right: 2px;
+  width: 44px;
+  box-sizing: border-box;
+  box-shadow: var(--app-elevation-flat);
 }
 
 .card-phone-button--loading { opacity: 0.48; }
 
-.card-accept-button {
-  border: 0;
-  border-radius: 10rpx;
-  color: #ffffff;
-  flex: 0 0 auto;
-  font-size: 22rpx;
-  font-weight: 800;
-  line-height: 54rpx;
-  margin: 0 2rpx 0 12rpx;
-  min-height: 54rpx;
-  padding: 0 22rpx;
-}
-
-.card-accept-button--blue { background: #2878f2; }
-.card-accept-button--red { background: #f06445; }
-.card-accept-button--orange { background: #ff941f; }
-.card-accept-button--purple { background: #8a69e8; }
-.card-accept-button--green { background: #35b978; }
-.card-accept-button--gray { background: #8d99aa; }
-.card-accept-button[disabled] { opacity: 0.52; }
+.card-accept-control { flex: 0 0 auto; margin-left: 10px; }
+.card-accept-button { min-width: 80px; }
 
 .accept-confirm-backdrop {
   align-items: center;
