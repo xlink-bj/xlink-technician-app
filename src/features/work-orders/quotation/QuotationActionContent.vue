@@ -1212,13 +1212,6 @@ const catalogSectionTitle = computed(() => ({
   material: '材料目录',
   measure: '机措项目',
 }[catalogBrowser.selectedKind]))
-watch(
-  () => firstRepairPartGroup.value?.repairParts,
-  (repairParts) => {
-    if (repairParts?.length) repairPartSelectorOpen.value = false
-  },
-  { deep: true },
-)
 const activeCatalogGroupTitle = computed(() => {
   if (!activeCatalogGroup.value) return '未指定分组'
   const index = composition.groups.findIndex((group) => group.groupId === activeCatalogGroup.value?.groupId)
