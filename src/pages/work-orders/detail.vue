@@ -660,19 +660,19 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
   align-items: center;
   background: #ffffff;
   border: 1rpx solid #dce7f5;
-  border-radius: 14rpx;
+  border-radius: 10px;
   box-sizing: border-box;
   color: #2878f2;
   display: flex;
   flex: 1;
-  font-size: 18rpx;
+  font-size: 12px;
   font-weight: 800;
-  gap: 6rpx;
+  gap: 5px;
   justify-content: center;
   margin: 0;
   min-width: 0;
-  min-height: 64rpx;
-  padding: 0 4rpx;
+  min-height: 44px;
+  padding: 0 4px;
   white-space: nowrap;
 }
 
