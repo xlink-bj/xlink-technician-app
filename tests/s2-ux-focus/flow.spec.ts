@@ -158,7 +158,13 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       expect(label, 'Q01 field labels must remain legible').toBeGreaterThanOrEqual(14)
       const textArea = await page.getByTestId('quotation-first-step-description').boundingBox()
       expect(textArea).not.toBeNull()
-      expect(textArea!.height, 'Q01 textarea must not double-count padding').toBeLessThanOrEqual(70)
+      expect(textArea!.height, 'Q01 description must have comfortable touch and reading room').toBeGreaterThanOrEqual(70)
+      expect(textArea!.height, 'Q01 textarea must not double-count padding').toBeLessThanOrEqual(94)
+      await expect(page.getByTestId('quotation-q01-journey')).toBeVisible()
+      await expect(page.getByTestId('quotation-first-step-footer')).toBeVisible()
+      const next = await page.getByTestId('quotation-first-step-next').boundingBox()
+      expect(next).not.toBeNull()
+      expect(next!.height, 'real catalog CTA is >=44px and reachable').toBeGreaterThanOrEqual(44)
       const selector = await page.getByTestId('quotation-first-step-repair-parts-trigger').boundingBox()
       expect(selector).not.toBeNull()
       expect(selector!.height).toBeGreaterThanOrEqual(44)
@@ -195,6 +201,23 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       gitCommit: process.env.GITHUB_SHA ?? 'local',
     }, null, 2))
     await info.attach(name, { body: shot, contentType: 'image/png' })
+    if (screen === 'Q01') {
+      // A real bottom-sheet presentation of the EXISTING source-backed
+      // cascaded repair-part picker; not a fake detached list or new data.
+      await page.getByTestId('quotation-first-step-repair-parts-trigger').click()
+      await expect(page.getByTestId('quotation-repair-part-picker')).toBeVisible()
+      await expect(page.locator('.quotation-content__picker-sheet')).toBeVisible()
+      const pickerShot = await page.screenshot({ fullPage: false, animations: 'disabled', caret: 'hide' })
+      await writeFile(resolve(dir, name + '-picker.png'), pickerShot)
+      await info.attach(name + '-picker', { body: pickerShot, contentType: 'image/png' })
+      await page.locator('.quotation-content__picker-header').getByText('取消', { exact: true }).click()
+      await expect(page.getByTestId('quotation-repair-part-picker')).toHaveCount(0)
+      // Footer Next is ONLY a front-end position change of the old
+      // selectProductsForFirstGroup handler: incomplete input still fails.
+      await page.getByTestId('quotation-first-step-next').click()
+      await expect(page.getByTestId('quotation-first-step-repair-parts-error')).not.toBeEmpty()
+      await expect(page.getByTestId('action-workspace-submit')).toHaveCount(0)
+    }
     assertSafe()
   })
 }
