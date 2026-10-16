@@ -3149,7 +3149,7 @@ function configuredPackageLayerLabel(
 }
 .quotation-content__first-repair-part-step .quotation-content__first-step-label {
   color: var(--app-text-strong);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 650;
   margin-bottom: 7px;
 }
