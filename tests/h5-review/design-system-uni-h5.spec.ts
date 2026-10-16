@@ -303,6 +303,10 @@ test('DS-01.1 commercial visual masters: four hierarchies, spinner, split layout
       await expect(node).toHaveAttribute('aria-live', state === 'error' ? 'assertive' : 'polite')
     }
     await assertNoHorizontalOverflow(page)
+    // A long element screenshot scrolls past uni-app's fixed page-head. Hide
+    // only that REVIEW chrome in the capture frame so it cannot be stitched
+    // through the middle of the component master. Production UI is untouched.
+    await page.addStyleTag({ content: 'uni-page-head { visibility: hidden !important; }' })
     await master.screenshot({ path: join(screenshotDirectory, `ds011-button-master-${width}.png`), animations:'disabled' })
     await page.getByTestId('ds011-action-split').scrollIntoViewIfNeeded()
     await page.getByTestId('gallery-example-action-bar').screenshot({
