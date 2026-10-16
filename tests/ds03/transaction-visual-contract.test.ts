@@ -15,7 +15,7 @@ describe('DS-03 transaction visual system', () => {
   it('has one shared, presentation-only amount typography contract', () => {
     expect(amount).toContain('readonly value: string')
     expect(amount).toContain('{{ value }}')
-    expect(amount).not.toMatch(/useWorkOrder|calculate|fetch\\(|submitOrder|@tap|@click/)
+    expect(amount).not.toMatch(/useWorkOrder|calculate|fetch|submitOrder|@tap|@click/)
     expect(tokens).toContain('--app-transaction-money-regular-size')
     expect(tokens).toContain('--app-transaction-money-prominent-size')
   })
