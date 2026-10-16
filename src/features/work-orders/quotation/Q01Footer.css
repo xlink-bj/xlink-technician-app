@@ -1,0 +1,53 @@
+/* Only the first Q01 form stage. No global .app-button re-skinning. */
+.q01-footer {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  padding: 1px 0 5px;
+}
+.q01-footer-status {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; margin-bottom: 8px;
+  color: var(--app-content-muted-ink);
+  font-size: 11px; line-height: 1.4;
+}
+.q01-footer-status text:last-child {
+  text-align: right; min-width: 0; overflow-wrap: anywhere;
+}
+.q01-footer-actions {
+  display: flex; align-items: stretch;
+  gap: 12px; width: 100%; min-width: 0;
+}
+.q01-footer-actions .q01-footer-save {
+  min-height: 52px;
+  flex: 0 0 98px;
+  width: 98px;
+  padding: 0 5px;
+  border-radius: 12px;
+  color: var(--app-content-muted-ink);
+  font-weight: 630; font-size: 13px;
+}
+.q01-footer-actions .q01-footer-next {
+  min-height: 52px;
+  flex: 1 1 0; min-width: 0;
+  padding: 0 10px; border-radius: 13px;
+  font-size: 14px; font-weight: 720;
+  white-space: normal;
+}
+.q01-footer-caution {
+  display: block;
+  text-align: center;
+  margin-top: 7px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--app-content-muted-ink);
+}
+.quotation-workspace-shell .action-workspace-footer {
+  background: var(--app-surface-raised);
+  box-shadow: 0 -5px 22px rgba(20, 43, 71, .055);
+}
+@media(max-width:360px) {
+  .q01-footer-actions { gap: 7px; }
+  .q01-footer-actions .q01-footer-save { flex-basis: 87px; width: 87px; }
+  .q01-footer-actions .q01-footer-next { font-size: 13px; }
+}
