@@ -70,7 +70,7 @@ test('approved catalog page renders all four categories and matches R1 search sc
   const diagnostics = await installSafetyGuards(page)
   await openCatalog(page)
 
-  await expect(page.getByTestId('quotation-catalog-page')).toContainText('服务目录')
+  await expect(page.getByTestId('quotation-catalog-page')).toContainText('选择产品')
   await expect(page.getByTestId('quotation-catalog-target')).toContainText('屋面')
   await expect(page.getByTestId('quotation-catalog-kind-package')).toContainText('套餐')
   await expect(page.getByTestId('quotation-catalog-kind-procedure')).toContainText('工序')
@@ -79,7 +79,7 @@ test('approved catalog page renders all four categories and matches R1 search sc
   await expect(page.getByTestId('quotation-catalog-search')).toHaveAttribute('aria-label', '请输入套餐名称')
   await expect(page.getByTestId('quotation-catalog-item-package-mock-catalog-package-basic')).toContainText('屋面防水修缮方案（示例）')
   await expect(page.getByTestId('quotation-catalog-item-package-mock-catalog-package-basic')).toContainText('金额待核验')
-  await expect(page.getByTestId('quotation-catalog-item-package-mock-catalog-package-basic').locator('.quotation-content__catalog-thumbnail-mark')).toHaveText('套')
+  await expect(page.getByTestId('quotation-catalog-item-package-mock-catalog-package-basic').locator('.quotation-content__catalog-thumbnail')).toBeVisible()
   await expect(page.getByTestId('quotation-catalog-item-package-mock-catalog-package-basic').locator('.quotation-content__catalog-art')).toHaveCount(0)
   await expect(page.getByText(/(?:¥|￥)\s*\d|\d+(?:\.\d{1,2})?\s*元/)).toHaveCount(0)
   await capture(page, '01-catalog-package-390.png')

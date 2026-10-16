@@ -13,6 +13,20 @@
     <AppButton class="workspace-state-action" @tap="exit">返回工单详情</AppButton>
   </view>
 
+  <QuotationOrderHub
+    v-else-if="quotationHubVisible"
+    ref="quotationHubRef"
+    :work-order-id="String(workspace.descriptor?.workOrderId ?? '')"
+    :display-number="workspace.detail?.displayNumber"
+    :customer-name="workspace.detail?.customerName"
+    :local-draft-group-count="quotationComposition.groups.length"
+    :read-only="productionReadOnly"
+    :dev-visual-sample="devQuotationOrderPreview"
+    @create="openQuotationEditor"
+    @edit="openExistingQuotationEditor"
+    @mode-change="quotationChoiceVisible = $event"
+  />
+
   <QuotationActionWorkspace
     v-else-if="workspace.descriptor?.contentKind === 'quotation' && workspace.descriptor.actionIntent === 'place_order'"
     :content-state="quotationContentViewState"
@@ -251,6 +265,7 @@ import {
   useActionWorkspaceStore,
 } from '@features/work-orders/action-workspace'
 import QuotationActionWorkspace from '@features/work-orders/quotation/QuotationActionWorkspace.vue'
+import QuotationOrderHub from '@features/work-orders/quotation/QuotationOrderHub.vue'
 import { useQuotationCompositionStore } from '@features/work-orders/quotation/composition-store'
 import { appointmentDisplayFor } from '@features/work-orders/appointment-time'
 import { isMultilineField } from '@features/work-orders/form-presentation'
@@ -286,6 +301,35 @@ const routeId = ref<ReturnType<typeof parseActionWorkspaceId>>(null)
 const routeNodeId = ref<ReturnType<typeof parseActionWorkspaceNodeId>>(null)
 const routeAction = ref<string | undefined>(undefined)
 const routeQuotationOrderId = ref<string | undefined>(undefined)
+const routeQuotationEntry = ref<string | undefined>(undefined)
+const routeQuotationVisualSample = ref<'orders' | 'empty' | undefined>()
+const devQuotationOrderPreview = computed(() =>
+  import.meta.env.DEV && isMockQuotationPreview.value && !productionReadOnly
+    ? routeQuotationVisualSample.value : undefined,
+)
+const quotationEditorOpened = ref(false)
+const quotationHubRef = ref<{ finishEdit: (message?: string) => void } | null>(null)
+const quotationChoiceVisible = ref(false)
+const quotationHubVisible = computed(() =>
+  routeQuotationEntry.value === 'orders' && !quotationEditorOpened.value
+  && !routeQuotationOrderId.value && workspace.descriptor?.contentKind === 'quotation'
+  && workspace.descriptor.actionIntent === 'place_order',
+)
+function openQuotationEditor(): void {
+  if (productionReadOnly || !quotationHubVisible.value) return
+  quotationEditorOpened.value = true
+}
+async function openExistingQuotationEditor(orderId: string): Promise<void> {
+  if (productionReadOnly || !quotationHubVisible.value || !orderId.trim()) return
+  const result = await workspace.loadQuotationOrderForEdit(orderId)
+  if (result.state === 'succeeded') {
+    quotationEditorOpened.value = true
+  } else {
+    quotationHubRef.value?.finishEdit(
+      workspace.quotationEditState.message || '未能安全恢复该订单；已保留服务器记录与当前草稿。',
+    )
+  }
+}
 const routeError = ref('')
 const isNavigating = ref(false)
 const localJourneyContext = ref<MockJourneyContextSummary | null>(null)
@@ -323,7 +367,10 @@ const quotationContentViewState = computed(() => workspace.quotationContentState
   : workspace.quotationContentState)
 
 const workspaceNavigationTitle = computed(() => {
-  if (routeAction.value === 'place_order' || workspace.descriptor?.contentKind === 'quotation') return '报价工作台'
+  if (quotationHubVisible.value) return quotationChoiceVisible.value ? '选择下单方式' : '订单管理'
+  if (routeAction.value === 'place_order' || workspace.descriptor?.contentKind === 'quotation') {
+    return routeQuotationOrderId.value || workspace.quotationEditState.state === 'ready' ? '修改订单' : '新增订单'
+  }
   if (workspace.descriptor?.formPurpose === 'survey') return '现场勘查'
   if (workspace.descriptor?.actionIntent === 'interact_with_form') return '工单表单'
   return '预约上门'
@@ -394,6 +441,13 @@ onLoad((options) => {
   routeNodeId.value = parseActionWorkspaceNodeId(options?.node)
   routeAction.value = typeof options?.action === 'string' ? options.action : undefined
   routeQuotationOrderId.value = typeof options?.orderId === 'string' && options.orderId.trim() ? options.orderId.trim() : undefined
+  routeQuotationEntry.value = options?.entry === 'orders' && routeAction.value === 'place_order' ? 'orders' : undefined
+  // Route opt-in only. This is a UX screenshot fixture, not an authoritative Order.
+  routeQuotationVisualSample.value = import.meta.env.DEV
+    && (options?.q00Preview === 'orders' || options?.q00Preview === 'empty')
+      ? options.q00Preview : undefined
+  quotationEditorOpened.value = false
+  quotationChoiceVisible.value = false
   routeReady.value = true
 })
 

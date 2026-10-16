@@ -1,5 +1,6 @@
 <template>
   <ActionWorkspaceShell
+    commercial-quotation
     class="quotation-workspace-shell"
     :class="{ 'quotation-workspace-shell--review': productReviewOnly }"
     :scroll-into-view="scrollIntoView"
@@ -29,17 +30,32 @@
     <!-- Future-stage entry follows the active quotation task, never precedes it. -->
     <slot name="after-content" />
     <template #actions>
+      <view class="quotation-workspace-footer-main">
       <view class="quotation-workspace-footer-summary" data-testid="quotation-footer-summary">
-        <view class="quotation-workspace-footer-summary__copy">
-          <text class="quotation-workspace-footer-summary__title">本机报价草稿</text>
-          <text class="quotation-workspace-footer-summary__meta" :data-testid="productReviewOnly ? 'quotation-product-demo-read-only' : undefined">{{ composition.selectionCount }} 项 · {{ composition.groups.length }} 个部位组{{ productReviewOnly ? ' · 演示，不提交订单' : '' }}</text>
-        </view>
         <view class="quotation-workspace-footer-summary__amount">
           <text class="quotation-workspace-footer-summary__amount-label">{{ amountPresentation.label }}</text>
           <text class="quotation-workspace-footer-summary__amount-value">
             {{ amountPresentation.value }}
           </text>
         </view>
+        <view class="quotation-workspace-footer-summary__copy">
+          <text class="quotation-workspace-footer-summary__title">本机报价草稿</text>
+          <text class="quotation-workspace-footer-summary__meta" :data-testid="productReviewOnly ? 'quotation-product-demo-read-only' : undefined">{{ composition.selectionCount }} 项 · {{ composition.groups.length }} 个部位组{{ productReviewOnly ? ' · 演示，不提交订单' : '' }}</text>
+        </view>
+      </view>
+      <AppButton
+        v-if="!productionReadOnly && !syntheticReviewEnabled && !productReviewOnly"
+        data-testid="action-workspace-submit"
+        class="action-workspace-submit"
+        :disabled="!canOpenSubmit"
+        :loading="workspace.quotationOrderState.state === 'submitting'"
+        block
+        @tap="openQuotationConfirmation"
+      >{{ workspace.quotationOrderState.state === 'submitting' ? '提交中…' : '提交订单/报价方案' }}</AppButton>
+      <AppButton v-if="productionReadOnly || syntheticReviewEnabled || productReviewOnly"
+        class="quotation-workspace-disabled-submit" disabled block data-testid="quotation-submit-disabled-preview"
+      >提交订单</AppButton>
+
       </view>
       <AppStatus
         v-if="productionReadOnly"
@@ -57,15 +73,6 @@
         quiet
         data-testid="quotation-synthetic-submit-disabled"
       />
-      <AppButton
-        v-else-if="!productReviewOnly"
-        data-testid="action-workspace-submit"
-        class="action-workspace-submit"
-        :disabled="!canOpenSubmit"
-        :loading="workspace.quotationOrderState.state === 'submitting'"
-        block
-        @tap="openQuotationConfirmation"
-      >{{ workspace.quotationOrderState.state === 'submitting' ? '提交中…' : '提交订单/报价方案' }}</AppButton>
       <AppStatus v-if="!productionReadOnly && !syntheticReviewEnabled && !productReviewOnly && hasQuantityErrors"
         class="quotation-submit-unavailable" message="部分项目数量不合法，请逐项修正后再检查提交。"
         tone="warning" quiet data-testid="quotation-submit-invalid-quantity" />
@@ -173,6 +180,8 @@ function openQuotationConfirmation(): void {
 </script>
 
 <style>
+.quotation-workspace-shell { font-family:-apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif; }
+.quotation-workspace-footer-summary__amount-value { font-variant-numeric: tabular-nums; }
 .quotation-confirm-backdrop { align-items: center; background: rgba(20, 32, 52, .42); display: flex; inset: 0; justify-content: center; padding: var(--app-page-gutter); position: fixed; z-index: 1100; }
 .quotation-confirm-sheet { background: var(--app-color-surface); border: 1rpx solid var(--app-color-border); border-radius: var(--app-radius-card); box-sizing: border-box; max-width: 640rpx; padding: var(--app-card-padding); width: 100%; }
 .quotation-confirm-title { color: var(--app-color-text-primary); display: block; font-size: var(--app-font-section-title); font-weight: 800; }
@@ -194,4 +203,40 @@ function openQuotationConfirmation(): void {
 /* #ifdef H5 */
 .quotation-workspace-shell.action-workspace-page { height: calc(100vh - 44px); min-height: 0; }
 /* #endif */
+
+/* Q01 fixed summary: amount + primary action on the same horizontal row.
+   Disabled preview still appears for visual parity, never issues an intent. */
+.quotation-workspace-shell .action-workspace-footer-inner {
+  display:grid; grid-template-columns:minmax(0, 1fr) minmax(160rpx, 34%); column-gap:12rpx; align-items:center;
+}
+.quotation-workspace-footer-summary { grid-column:1; grid-row:1; margin-bottom:0; display:flex; align-items:flex-start;
+  gap:6rpx; flex-direction:column; min-width:0; }
+.quotation-workspace-footer-summary__amount { align-items:flex-start; margin-left:0; }
+.quotation-workspace-footer-summary__amount-label { color:var(--app-color-text-secondary); font-size:20rpx; }
+.quotation-workspace-footer-summary__amount-value { font-size:27rpx; color:var(--app-color-primary); margin-top:2rpx; }
+.quotation-workspace-footer-summary__copy { display:block; }
+.quotation-workspace-footer-summary__title { display:none; }
+.quotation-workspace-footer-summary__meta { font-size:19rpx; color:var(--app-color-text-secondary); margin-top:4rpx; }
+.quotation-workspace-shell .action-workspace-submit, .quotation-workspace-disabled-submit {
+  grid-column:2; grid-row:1; width:100%; min-width:0; min-height:82rpx; font-size:24rpx; }
+.quotation-workspace-shell .quotation-production-read-only,
+.quotation-workspace-shell .quotation-submit-unavailable { grid-column:1 / -1; }
+.quotation-workspace-disabled-submit { background:#e6eaf1; color:#9ca8b9; border:0; }
+.quotation-workspace-shell--review .quotation-workspace-footer-summary { margin-bottom:0; }
+
+/* The footer is a true two-column row, not separate slot fragments whose
+   uni-app wrapper may cause grid auto-placement and hiding of the CTA. */
+.quotation-workspace-shell .action-workspace-footer-inner { display:block !important; }
+.quotation-workspace-footer-main { display:flex; align-items:center; justify-content:space-between;
+  gap:14rpx; min-width:0; width:100%; }
+.quotation-workspace-footer-main .quotation-workspace-footer-summary { flex:1 1 0; min-width:0; width:auto; margin:0; }
+.quotation-workspace-footer-main .action-workspace-submit,
+.quotation-workspace-footer-main .quotation-workspace-disabled-submit {
+  flex:0 0 38%; width:38%; max-width:38%; height:84rpx; min-height:84rpx; box-sizing:border-box;
+  margin:0; font-size:23rpx;
+}
+.quotation-workspace-footer-main .quotation-workspace-disabled-submit.app-button {
+  opacity:1 !important; background:#ecf0f6 !important; color:#8593a6 !important;
+  border:1rpx solid #dae2ed !important;
+}
 </style>

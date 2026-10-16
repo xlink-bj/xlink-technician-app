@@ -108,8 +108,8 @@ for (const viewport of viewports) {
     await expect(page.getByTestId('action-workspace-context')).toContainText('MOCK-018')
     await expect(page.getByTestId('quotation-state-ready')).toBeVisible()
     await expect(page.getByTestId('quotation-add-group')).toBeVisible()
-    await expect(page.getByTestId('quotation-quote-process')).toContainText('核对草稿')
-    await expect(page.getByTestId('quotation-quote-process')).toContainText('正式报价提交暂未开放')
+    await expect(page.getByTestId('quotation-quote-process')).toContainText('费用与优惠')
+    await expect(page.getByTestId('quotation-quote-process')).toContainText('完成选品后按业务规则填写')
     await expect(page.getByText(/G4-F 报价工作区|H5_VISUAL_PROXY|MOCK_PRODUCT_REVIEW|scenario/i)).toHaveCount(0)
     await capture(page, `03-workbench-empty-${viewport.name}.png`)
 

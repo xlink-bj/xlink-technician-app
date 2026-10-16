@@ -169,17 +169,76 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       await expect(page).toHaveURL(/pages\/work-orders\/detail/)
       await expect(page.locator('.current-task-card')).toContainText('报价')
       await page.locator('.primary-task-action').click()
+      await expect(page.getByTestId('quotation-order-hub')).toBeVisible()
+      await expect(page.getByTestId('quotation-hub-read-error')).toBeVisible()
+      await expect(page.getByTestId('quotation-hub-create-unverified')).toBeEnabled()
+      await capture('05-quote-orders', 'Q', 'Q00 订单读取失败', '当前源未返回可核验的服务器订单')
+      // Real uni-app UI with explicitly labelled DEV-only view data.
+      // Never assert these records came from the provider read port.
+      await page.goto(page.url() + '&q00Preview=empty', { waitUntil: 'domcontentloaded' })
+      await expect(page.getByTestId('quotation-hub-design-sample')).toBeVisible()
+      await expect(page.getByTestId('quotation-hub-no-records')).toBeVisible()
+      await expect(page.getByTestId('quotation-hub-empty-create')).toBeEnabled()
+      await capture('05-quote-orders-empty', 'Q', 'Q00 无订单空状态', '明确标注合成数据的空状态视觉评审')
+      await page.goto(page.url().replace('q00Preview=empty', 'q00Preview=orders'), { waitUntil: 'domcontentloaded' })
+      // Changing only the hash query can reuse the same uni-app page instance.
+      // Reload so onLoad consumes the exact new DEV preview option.
+      await page.reload({ waitUntil: 'domcontentloaded' })
+      await expect(page.getByTestId('quotation-hub-design-sample')).toBeVisible()
+      await expect(page.getByTestId('quotation-hub-records')).toBeVisible()
+      await expect(page.getByTestId('quotation-hub-records').locator('.quotation-hub__order')).toHaveCount(2)
+      // Commercial reference: the work-order identity and customer detail
+      // occupy separate, visually grouped rows rather than one cramped stack.
+      await expect(page.locator('.quotation-hub__work-order-meta')).toContainText('客户名称')
+      const heroTop = await page.locator('.quotation-hub__work-order-top').boundingBox()
+      const heroMeta = await page.locator('.quotation-hub__work-order-meta').boundingBox()
+      expect(heroTop).not.toBeNull()
+      expect(heroMeta).not.toBeNull()
+      expect(heroMeta!.y).toBeGreaterThan(heroTop!.y + 42)
+      // Screenshot generation alone is not a typography or spacing review:
+      // Q00's former 19rpx labels were only ~10px on a 390px screen.
+      const orderTitleSize = await page.locator('.quotation-hub__order-number').first().evaluate(
+        element => parseFloat(getComputedStyle(element).fontSize),
+      )
+      const orderMetaSize = await page.locator('.quotation-hub__order-line').first().evaluate(
+        element => parseFloat(getComputedStyle(element).fontSize),
+      )
+      const orderCard = await page.locator('.quotation-hub__order').first().boundingBox()
+      expect(orderTitleSize).toBeGreaterThanOrEqual(viewport.width < 390 ? 13 : 14)
+      expect(orderMetaSize).toBeGreaterThanOrEqual(12)
+      const orderFont = await page.locator('.quotation-hub__order-number').first().evaluate(
+        element => getComputedStyle(element).fontFamily,
+      )
+      expect(orderFont.toLowerCase(), 'Q00 must not regress to serif number typography').toContain('sans-serif')
+      expect(orderCard!.height, 'Order card needs the signed-off readable information rhythm').toBeGreaterThanOrEqual(195)
+      await capture('05-quote-orders-sample', 'Q', 'Q00 已有订单', '明确标注合成数据的多订单列表视觉评审')
+      await page.getByTestId('quotation-hub-add-inline').click()
+      await expect(page.getByTestId('quotation-hub-mode')).toBeVisible()
+      await expect(page.getByText('基于已有订单复制')).toBeVisible()
+      await capture('05-quote-order-method', 'Q', 'Q00 选择下单方式', '只允许新建；不具备契约的复制能力明确禁用')
+      await page.getByTestId('quotation-hub-mode-next').click()
       await expect(page.getByTestId('quotation-state-ready')).toBeVisible()
-      await expect(page.getByTestId('mock-journey-context-survey')).toContainText('14.5')
-      await expect(page.getByTestId('mock-journey-context-survey')).toBeHidden()
+      await expect(page.getByTestId('mock-journey-context-survey')).toHaveCount(0)
       await expect(page.getByTestId('mock-survey-quote-adopt')).toBeVisible()
       // Q01: compact preceding DEV data without hiding provenance or the adopt control.
       await expect(page.locator('.journey-context--task-focus')).toBeVisible()
       await expect(page.locator('.journey-context--task-focus')).toContainText('未提交后台')
       await expect(page.locator('.journey-context__focus-suggestion')).toBeVisible()
       await expect(page.locator('.journey-context__focus-suggestion')).toContainText('屋面 / 有保护平屋面')
-      await expect(page.getByTestId('mock-journey-context-survey')).toBeHidden()
+      // The complete original Survey record is reachable only when the
+      // compact task summary is explicitly expanded.
+      await page.getByTestId('mock-journey-context-toggle').click()
+      await expect(page.getByTestId('mock-journey-context-survey')).toContainText('14.5')
+      await page.getByTestId('mock-journey-context-toggle').click()
+      await expect(page.getByTestId('mock-journey-context-survey')).toHaveCount(0)
       const firstAction = await page.getByTestId('quotation-add-group').boundingBox()
+      // Q01 visual contract: numbered section header is a horizontal row.
+      const firstStepNumber = await page.locator('.quotation-content__initial-empty-heading .quotation-content__section-number').boundingBox()
+      const firstStepTitle = await page.locator('.quotation-content__initial-empty-heading .quotation-content__initial-empty-title').boundingBox()
+      expect(firstStepNumber).not.toBeNull()
+      expect(firstStepTitle).not.toBeNull()
+      expect(firstStepTitle!.x).toBeGreaterThan(firstStepNumber!.x + 24)
+      expect(Math.abs(firstStepTitle!.y - firstStepNumber!.y)).toBeLessThan(12)
       const taskFooter = await page.getByTestId('quotation-footer-summary').boundingBox()
       expect(firstAction, 'quote add-repair-part action must be visible').not.toBeNull()
       expect(taskFooter, 'quote safety footer must remain visible').not.toBeNull()
@@ -190,12 +249,57 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       expect(quote).not.toBeNull()
       expect(nextStage).not.toBeNull()
       expect(nextStage!.y).toBeGreaterThan(quote!.y)
-      await capture('05-quote-entry', 'Q', '报价工作台', '首次进入与工单上下文')
+      await capture('05-quote-entry', 'Q', '新增订单', '首次进入与工单上下文')
+      await expect(page.getByTestId('quotation-quote-process')).toContainText('费用与优惠')
+      const fieldFont = await page.locator('.quotation-content__initial-empty-title').evaluate(
+        element => getComputedStyle(element).fontFamily,
+      )
+      expect(fieldFont.toLowerCase(), 'Q01 must use the same sans-serif commercial type system').toContain('sans-serif')
+      // uni-app renders <uni-button disabled="true">, not native HTMLButtonElement.
+      // Assert the adapter's exact disabled attr; this control has no submit handler.
+      await expect(page.getByTestId('quotation-submit-disabled-preview')).toHaveAttribute('disabled', 'true')
+      const totalRect = await page.getByTestId('quotation-footer-summary').boundingBox()
+      const submitRect = await page.getByTestId('quotation-submit-disabled-preview').boundingBox()
+      expect(totalRect).not.toBeNull()
+      expect(submitRect).not.toBeNull()
+      expect(submitRect!.x, 'Q01 total must be to the left of the submit control').toBeGreaterThan(totalRect!.x + 80)
+      expect(Math.abs(submitRect!.y - totalRect!.y), 'Q01 total and submit must share a footer row').toBeLessThan(25)
       await expect(page.getByTestId('mock-survey-quote-adopt')).toBeVisible()
       await page.getByTestId('mock-survey-quote-adopt').click()
       await page.getByTestId('quotation-first-step-description').locator('textarea').fill('S2审查：屋面修缮报价')
       await page.getByTestId('quotation-first-step-quantity').locator('input').fill('12')
+      await expect(page.getByTestId('quotation-cost-adjustments')).toContainText('折扣')
+      await expect(page.getByTestId('quotation-cost-adjustments')).toContainText('优惠金额')
+      const partLabelPx = await page.locator('.quotation-content__first-step-label').first().evaluate(
+        element => parseFloat(getComputedStyle(element).fontSize),
+      )
+      expect(partLabelPx, 'Q01 field labels must meet the approved visual reading size').toBeGreaterThanOrEqual(14)
+      await page.getByTestId('quotation-first-repair-part-step').scrollIntoViewIfNeeded()
+      await capture('05-quote-fields', 'Q', 'Q01 维修部位表单', '维修部位、描述与工程量字段')
+      await page.getByTestId('quotation-cost-adjustments').scrollIntoViewIfNeeded()
+      await expect(page.getByTestId('quotation-cost-adjustments')).toBeVisible()
+      await capture('05-quote-fees', 'Q', 'Q01 费用与优惠', '独立费用分组、不可用操作和底部金额提交状态')
       await page.getByTestId('quotation-first-step-select-products').click()
+      await expect(page.getByTestId('quotation-catalog-page')).toBeVisible()
+      await expect(page.getByTestId('quotation-catalog-kind-package')).toBeVisible()
+      await expect(page.getByTestId('quotation-catalog-facets')).toBeVisible()
+      await expect(page.getByTestId('quotation-package-detail-mock-catalog-package-basic')).toBeVisible()
+      const catalogTitlePx = await page.locator('.quotation-content__catalog-item-title').first().evaluate(
+        element => parseFloat(getComputedStyle(element).fontSize),
+      )
+      expect(catalogTitlePx, 'Q03 catalog product name must not revert to 10px').toBeGreaterThanOrEqual(15)
+      await capture('06-quote-packages', 'Q', 'Q03 套餐目录', '套餐分类与卡片真实组件；价格无权威来源时不伪造')
+      await page.getByTestId('quotation-package-detail-mock-catalog-package-basic').click()
+      await expect(page.getByTestId('quotation-package-detail')).toBeVisible()
+      // A mounted scroll-view is not sufficient: loading-only captures are
+      // visually blank and must never be accepted as a high-fidelity screen.
+      await expect(page.getByTestId('quotation-package-config-focus')).toBeVisible({ timeout: 15000 })
+      await expect(page.getByTestId('quotation-package-procedures')).toBeVisible()
+      await expect(page.getByTestId('quotation-package-materials')).toBeVisible()
+      await expect(page.getByTestId('quotation-package-config-footer')).toBeVisible()
+      await expect(page.getByTestId('quotation-package-detail-error')).toHaveCount(0)
+      await capture('06-quote-package-detail', 'Q', 'Q03 套餐配置', '真实套餐名称、工序、材料层级和配置操作全部完成加载')
+      await page.getByTestId('quotation-package-detail-back').click()
       await expect(page.getByTestId('quotation-catalog-page')).toBeVisible()
       await page.getByTestId('quotation-catalog-kind-material').click()
       const ordinary = 'mock-catalog-material-ordinary-1'

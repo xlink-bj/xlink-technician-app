@@ -62,7 +62,7 @@ test('real authenticated shell uses local-only Mock quotation with zero external
 
   await quote.click()
   await expect(page, 'normal uni navigation must reach the real Action Workspace').toHaveURL(/pages\/work-orders\/action-workspace/)
-  await expect(page.locator('.uni-page-head__title')).toContainText('报价工作台')
+  await expect(page.locator('.uni-page-head__title')).toContainText('新增订单')
   // Screenshots must capture an EDITABLE workbench, not its transient spinner.
   await expect(page.getByTestId('quotation-state-ready')).toBeVisible()
   await expect(page.getByTestId('quotation-footer-summary')).toBeVisible()
@@ -384,6 +384,9 @@ test('same Mock-018 quotation is reachable from normal work order list and detai
   const openQuotation = page.locator('.primary-task-action')
   await expect(openQuotation).toBeEnabled()
   await openQuotation.click()
+  await expect(page.getByTestId('quotation-order-hub')).toBeVisible()
+  await expect(page.getByTestId('quotation-hub-create-unverified')).toBeEnabled()
+  await page.getByTestId('quotation-hub-create-unverified').click()
   await expect(page).toHaveURL(/pages\/work-orders\/action-workspace/)
   await expect(page.getByTestId('quotation-state-ready')).toBeVisible()
   await expect(page.getByTestId('quotation-product-demo-read-only')).toBeVisible()
@@ -481,13 +484,18 @@ test('one MOCK-019 WorkOrder progresses Appointment → Survey → Quotation wit
   await expect(page.locator('.summary-number')).toContainText('MOCK-019')
   await expect(page.locator('.current-task-card')).toContainText('报价')
   await page.locator('.primary-task-action').click()
+  await expect(page.getByTestId('quotation-order-hub')).toBeVisible()
+  await page.getByTestId('quotation-hub-create-unverified').click()
   await expect(page).toHaveURL(/mock-work-order-019-continuous-journey/)
-  await expect(page.locator('.uni-page-head__title')).toContainText('报价工作台')
+  await expect(page.locator('.uni-page-head__title')).toContainText('新增订单')
   await expect(page.getByTestId('quotation-state-ready')).toBeVisible()
+  await expect(page.getByTestId('mock-journey-context')).toContainText('未提交后台')
+  await expect(page.getByTestId('mock-journey-context-survey')).toHaveCount(0)
+  await page.getByTestId('mock-journey-context-toggle').click()
   await expect(page.getByTestId('mock-journey-context-appointment')).toContainText('P1B预约备注：现场先确认屋面渗漏')
   await expect(page.getByTestId('mock-journey-context-survey')).toContainText('14.5')
   await expect(page.getByTestId('mock-journey-context-survey')).toContainText('防水施工面积')
-  await expect(page.getByTestId('mock-journey-context')).toContainText('未提交后台')
+  await page.getByTestId('mock-journey-context-toggle').click()
   // P1C: explicit, synthetic-only first-level part suggestion. It never copies
   // Survey's numeric area, creates priced items or runs Order/Workflow writes.
   await expect(page.getByTestId('mock-survey-quote-suggestion')).toContainText('屋面 / 有保护平屋面')
@@ -502,10 +510,15 @@ test('one MOCK-019 WorkOrder progresses Appointment → Survey → Quotation wit
 
   // Reload must not reset the simulated stage to appointment or switch ids.
   await page.reload({ waitUntil: 'domcontentloaded' })
+  await expect(page.getByTestId('quotation-order-hub')).toBeVisible()
+  await page.getByTestId('quotation-hub-create-unverified').click()
   await expect(page.getByTestId('quotation-state-ready')).toBeVisible()
   await expect(page).toHaveURL(/mock-work-order-019-continuous-journey/)
+  await expect(page.getByTestId('mock-journey-context-survey')).toHaveCount(0)
+  await page.getByTestId('mock-journey-context-toggle').click()
   await expect(page.getByTestId('mock-journey-context-appointment')).toContainText('P1B预约备注：现场先确认屋面渗漏')
   await expect(page.getByTestId('mock-journey-context-survey')).toContainText('14.5')
+  await page.getByTestId('mock-journey-context-toggle').click()
   await expect(page.getByTestId('quotation-product-demo-read-only')).toBeVisible()
   // The local quotation draft is not an Order.type=1. The next stage is
   // explicitly isolated synthetic signing review, never a workflow mutation.

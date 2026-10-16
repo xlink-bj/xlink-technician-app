@@ -151,49 +151,58 @@
             <text class="quotation-content__initial-draft-notice-copy">{{ props.productReviewOnly ? '演示模式仅可整理本机草稿，不会创建正式订单。' : '当前为本机报价草稿；通过校验并提交后才会创建正式订单。' }}</text>
           </view>
           <view class="quotation-content__initial-card app-surface" data-testid="quotation-initial-main-card">
-            <view class="quotation-content__initial-empty-heading">
-              <text class="quotation-content__initial-empty-title">维修部位报价</text>
-              <text class="quotation-content__initial-empty-description">请添加维修部位，再选择相应的套餐、工序、材料或机措。</text>
+            <view class="quotation-content__initial-empty-heading quotation-content__section-heading">
+              <view class="quotation-content__section-number">1</view>
+              <text class="quotation-content__initial-empty-title">维修部位</text>
             </view>
             <view class="quotation-content__initial-empty-surface">
-              <text class="quotation-content__empty-title">暂无维修部位</text>
-              <text class="quotation-content__initial-empty-copy">先选择维修部位，再添加对应的材料与施工项目。</text>
-              <AppButton
-                class="quotation-content__initial-empty-action"
-                data-testid="quotation-add-group"
-                :disabled="!canEdit"
-                @tap="createRepairGroup()"
-              >添加维修部位</AppButton>
+              <text class="quotation-content__initial-field-label">防水维修部位 <text class="quotation-content__first-step-required">*</text></text>
+              <button class="quotation-content__initial-field-value" type="button"
+                data-testid="quotation-add-group" :disabled="!canEdit"
+                aria-label="添加维修部位" @tap="createRepairGroup()">
+                <text>请选择维修部位</text><text class="quotation-content__initial-field-chevron" aria-hidden="true">›</text>
+              </button>
+              <text class="quotation-content__initial-field-label">维修部位描述 <text class="quotation-content__first-step-required">*</text></text>
+              <text class="quotation-content__initial-field-placeholder">添加维修部位后填写描述</text>
+              <text class="quotation-content__initial-field-label">工程量 <text class="quotation-content__first-step-required">*</text></text>
+              <text class="quotation-content__initial-field-placeholder">添加维修部位后填写工程量</text>
+              <text class="quotation-content__initial-empty-copy">先选择维修部位，再填写描述及工程量。</text>
               <view class="quotation-content__initial-empty-artwork" aria-hidden="true">
                 <view class="quotation-content__initial-empty-ground" />
                 <image class="quotation-content__initial-empty-illustration" :src="emptyBoxArtwork" mode="aspectFit" data-testid="quotation-empty-illustration" />
               </view>
             </view>
           </view>
-          <view class="quotation-content__initial-process app-surface" data-testid="quotation-quote-process">
-            <view class="quotation-content__initial-process-heading">
-              <text class="quotation-content__initial-process-title">报价流程</text>
-              <text class="quotation-content__initial-process-subtitle">{{ props.productReviewOnly ? '演示草稿 · 暂不提交订单' : '三步整理报价' }}</text>
+          <view class="quotation-content__initial-cost-preview app-surface quotation-content__commercial-section">
+            <view class="quotation-content__section-heading">
+              <view class="quotation-content__section-number">2</view>
+              <text class="quotation-content__initial-cost-title">选择产品</text>
             </view>
-            <view class="quotation-content__initial-process-steps">
-              <view class="quotation-content__initial-process-step">
-                <view class="quotation-content__initial-process-symbol"><text class="quotation-content__initial-process-number">1</text><AppIcon name="task" :size="22" color="var(--app-color-primary)" /></view>
-                <text class="quotation-content__initial-process-step-title">选择维修部位</text>
-                <text class="quotation-content__initial-process-step-copy">如屋面、卫生间等</text>
+            <view class="quotation-content__select-tile quotation-content__select-tile--disabled" aria-disabled="true">
+              <view class="quotation-content__select-icon"><AppIcon name="order" :size="22" color="#257cf5" /></view>
+              <view class="quotation-content__select-tile-copy">
+                <text class="quotation-content__select-tile-name">选择产品</text>
+                <text class="quotation-content__select-tile-help">套餐、工序、材料、机措</text>
               </view>
-              <text class="quotation-content__initial-process-arrow" aria-hidden="true">›</text>
-              <view class="quotation-content__initial-process-step">
-                <view class="quotation-content__initial-process-symbol"><text class="quotation-content__initial-process-number">2</text><AppIcon name="order" :size="22" color="var(--app-color-primary)" /></view>
-                <text class="quotation-content__initial-process-step-title">添加项目</text>
-                <text class="quotation-content__initial-process-step-copy">选择套餐、工序、材料与机措</text>
-              </view>
-              <text class="quotation-content__initial-process-arrow" aria-hidden="true">›</text>
-              <view class="quotation-content__initial-process-step">
-                <view class="quotation-content__initial-process-symbol"><text class="quotation-content__initial-process-number">3</text><AppIcon name="complete" :size="22" color="var(--app-color-primary)" /></view>
-                <text class="quotation-content__initial-process-step-title">{{ props.productReviewOnly ? '核对草稿' : '提交订单' }}</text>
-                <text class="quotation-content__initial-process-step-copy">{{ props.productReviewOnly ? '正式报价提交暂未开放' : '通过校验后提交' }}</text>
-              </view>
+              <AppIcon name="chevron-right" :size="17" color="#9caabd" />
             </view>
+            <view class="quotation-content__adjustment-actions">
+              <button class="quotation-content__adjustment-button" disabled>＋ 增项</button>
+              <button class="quotation-content__adjustment-button" disabled>－ 减项</button>
+            </view>
+          </view>
+          <view class="quotation-content__initial-cost-preview app-surface quotation-content__commercial-section" data-testid="quotation-quote-process">
+            <view class="quotation-content__section-heading">
+              <view class="quotation-content__section-number">3</view>
+              <text class="quotation-content__initial-cost-title">费用与优惠</text>
+            </view>
+            <view class="quotation-content__initial-cost-row"><text>折扣</text><text class="quotation-content__fee-value">不打折 <text aria-hidden="true">›</text></text></view>
+            <view class="quotation-content__initial-cost-row"><text>优惠金额（元）</text><text class="quotation-content__initial-cost-unavailable">完成选品后按业务规则填写</text></view>
+          </view>
+          <view class="quotation-content__order-explainer">
+            <text class="quotation-content__order-explainer-title">ⓘ 订单说明</text>
+            <text>提交后才会产生正式订单；本机草稿不等于服务器订单。</text>
+            <text>正式下单需满足现有字段、金额及权限校验。</text>
           </view>
         </view>
         <view v-else-if="composition.groups.length === 0" class="quotation-content__empty" data-testid="quotation-draft-empty">
@@ -226,21 +235,18 @@
             data-testid="quotation-first-step-draft-notice"
           />
 
-          <view class="quotation-content__first-step-title-row">
-            <text class="quotation-content__first-step-page-title">维修部位报价</text>
-            <text class="quotation-content__first-step-count">已添加 {{ composition.groups.length }} 个部位</text>
-          </view>
-
           <view
             class="quotation-content__first-step-card app-surface"
             :data-testid="`quotation-repair-group-${firstRepairPartGroup.groupId}`"
           >
             <view class="quotation-content__first-step-card-heading">
-              <view class="quotation-content__first-step-index" aria-hidden="true">01</view>
+              <view class="quotation-content__first-step-index" aria-hidden="true">1</view>
               <view class="quotation-content__first-step-card-copy">
-                <text class="quotation-content__first-step-card-title">维修部位信息</text>
-                <text class="quotation-content__first-step-card-subtitle">设置当前部位，下一步选择产品</text>
+                <text class="quotation-content__first-step-card-title">维修部位</text>
+                <text class="quotation-content__first-step-card-subtitle">按当前工单创建独立报价</text>
               </view>
+              <AppButton v-if="canEdit" class="quotation-content__save-draft" variant="text"
+                data-testid="quotation-first-step-save-draft" @tap="composition.flushDraft">保存草稿</AppButton>
             </view>
 
             <view class="quotation-content__first-step-field">
@@ -310,7 +316,7 @@
             </view>
 
             <view class="quotation-content__first-step-field">
-              <text class="quotation-content__first-step-label">工程总量 <text class="quotation-content__first-step-required">*</text></text>
+              <text class="quotation-content__first-step-label">工程量 <text class="quotation-content__first-step-required">*</text></text>
               <input
                 class="quotation-content__first-step-quantity"
                 type="digit"
@@ -330,24 +336,50 @@
               >{{ firstStepFieldError('maintainAreaNum') }}</text>
             </view>
 
-            <view class="quotation-content__first-step-products" data-testid="quotation-first-step-product-action">
-              <view class="quotation-content__first-step-products-heading">
-                <text class="quotation-content__first-step-products-title">选择产品</text>
-                <text class="quotation-content__first-step-products-status">尚未选择</text>
+          </view>
+          <view class="quotation-content__commercial-section app-surface" data-testid="quotation-first-step-product-action">
+            <view class="quotation-content__section-heading">
+              <view class="quotation-content__section-number">2</view>
+              <text class="quotation-content__first-step-products-title">选择产品</text>
+            </view>
+            <button class="quotation-content__select-tile" type="button"
+              :disabled="!canEdit || composition.repairPartOptions.length === 0"
+              data-testid="quotation-first-step-select-products"
+              @tap="selectProductsForFirstGroup(firstRepairPartGroup.groupId)">
+              <view class="quotation-content__select-icon"><AppIcon name="order" :size="24" color="#1679f5" /></view>
+              <view class="quotation-content__select-tile-copy">
+                <text class="quotation-content__select-tile-name">选择产品</text>
+                <text class="quotation-content__select-tile-help">选择套餐、工序、材料、机措等产品</text>
               </view>
-              <text class="quotation-content__first-step-products-copy">部位信息填写完成后，可进入目录选择套餐、工序、材料或机措。</text>
-              <AppButton
-                class="quotation-content__first-step-products-button"
-                block
-                :disabled="!canEdit || composition.repairPartOptions.length === 0"
-                data-testid="quotation-first-step-select-products"
-                @tap="selectProductsForFirstGroup(firstRepairPartGroup.groupId)"
-              ><text class="quotation-content__first-step-products-plus" aria-hidden="true">＋</text>选择产品<AppIcon name="chevron-right" :size="16" color="#ffffff" aria-hidden="true" /></AppButton>
+              <AppIcon name="chevron-right" :size="18" color="#6d829d" />
+            </button>
+            <view class="quotation-content__adjustment-actions">
+              <button class="quotation-content__adjustment-button" disabled aria-label="增项尚未开放">＋ 增项</button>
+              <button class="quotation-content__adjustment-button" disabled aria-label="减项尚未开放">－ 减项</button>
             </view>
-
-            <view v-if="syntheticReviewEnabled" class="quotation-content__synthetic-review-slot" data-testid="synthetic-extfield-slot">
-              <slot name="synthetic-review-panel" />
+          </view>
+          <view class="quotation-content__commercial-section app-surface" data-testid="quotation-cost-adjustments">
+            <view class="quotation-content__section-heading">
+              <view class="quotation-content__section-number">3</view>
+              <text class="quotation-content__initial-cost-title">费用与优惠</text>
             </view>
+            <view class="quotation-content__initial-cost-row">
+              <text>折扣</text>
+              <text class="quotation-content__fee-value">不打折 <text aria-hidden="true">›</text></text>
+            </view>
+            <view class="quotation-content__initial-cost-row">
+              <text>优惠金额（元）</text>
+              <text class="quotation-content__initial-cost-unavailable">报价规则待核验</text>
+            </view>
+            <text class="quotation-content__initial-cost-note">折扣、优惠及增减项需以 R1 已验证的业务规则和服务端金额为准。</text>
+          </view>
+          <view class="quotation-content__order-explainer">
+            <text class="quotation-content__order-explainer-title">ⓘ 订单说明</text>
+            <text>提交后生成正式订单，可在订单档案中查看。</text>
+            <text>需要完成相应的业务校验及权限核对，才能提交。</text>
+          </view>
+          <view v-if="syntheticReviewEnabled" class="quotation-content__synthetic-review-slot" data-testid="synthetic-extfield-slot">
+            <slot name="synthetic-review-panel" />
           </view>
         </view>
 
@@ -575,6 +607,25 @@
             @tap="createRepairGroup()"
           >＋ 添加维修部位组</AppButton>
         </view>
+        <view v-if="composition.groups.length > 0 && !isFirstRepairPartStep" class="quotation-content__adjustments app-surface" data-testid="quotation-cost-adjustments">
+          <view class="quotation-content__adjustments-title-row">
+            <text class="quotation-content__adjustments-title">费用与优惠</text>
+            <text class="quotation-content__adjustments-badge">业务规则待核验</text>
+          </view>
+          <view class="quotation-content__adjustments-row">
+            <text>增项 / 减项</text>
+            <text class="quotation-content__adjustments-unavailable">尚未开放 <text aria-hidden="true">›</text></text>
+          </view>
+          <view class="quotation-content__adjustments-row">
+            <text>折扣</text>
+            <text class="quotation-content__adjustments-unavailable">暂不支持修改</text>
+          </view>
+          <view class="quotation-content__adjustments-row">
+            <text>优惠金额</text>
+            <text class="quotation-content__adjustments-unavailable">待核验</text>
+          </view>
+          <text class="quotation-content__adjustments-hint">以上字段沿用 R1 业务语义，待价格计算和服务端提交契约核验后启用；不影响现有草稿填写。</text>
+        </view>
       </view>
 
       <view
@@ -661,9 +712,9 @@
         <view class="quotation-content__catalog-topbar">
           <AppButton class="quotation-content__catalog-back" variant="text" aria-label="返回报价工作台" data-testid="quotation-catalog-close" @tap="closeCatalog">‹ 返回</AppButton>
           <view class="quotation-content__catalog-topbar-title">
-            <text class="quotation-content__catalog-title">服务目录</text>
+            <text class="quotation-content__catalog-title">选择产品</text>
           </view>
-          <text class="quotation-content__catalog-mode">选品中</text>
+          <text class="quotation-content__catalog-mode">已选 {{ groupSelectionCount(activeCatalogGroupId || '') }} 项</text>
         </view>
 
         <view class="quotation-content__catalog-target" data-testid="quotation-catalog-target">
@@ -678,25 +729,13 @@
 
         <view class="quotation-content__catalog-intro">
           <view class="quotation-content__catalog-intro-copy">
-            <text class="quotation-content__catalog-intro-title">选择服务项目</text>
-            <text class="quotation-content__catalog-intro-description">浏览套餐、工序、材料和机措</text>
+            <text class="quotation-content__catalog-intro-title">选择产品</text>
+            <text class="quotation-content__catalog-intro-description">套餐、工序、材料、机措 · 按当前维修部位选品</text>
           </view>
           <text class="quotation-content__catalog-step">第 2 步 · 选品</text>
         </view>
 
         <view class="quotation-content__catalog-main" data-testid="quotation-catalog-main">
-          <view class="quotation-content__category-grid" data-testid="quotation-catalog-categories">
-            <button
-              v-for="kind in catalogKinds"
-              :key="kind"
-              class="quotation-content__category"
-              :class="{ 'quotation-content__category--active': catalogBrowser.selectedKind === kind }"
-              type="button"
-              :aria-pressed="catalogBrowser.selectedKind === kind"
-              :data-testid="`quotation-catalog-kind-${kind}`"
-              @tap="selectCatalogKind(kind)"
-            >{{ catalogTabLabel(kind) }}</button>
-          </view>
           <view class="quotation-content__search-wrap">
             <AppIcon class="quotation-content__search-mark" name="search" :size="19" color="#91a2ba" aria-hidden="true" />
             <input
@@ -713,9 +752,21 @@
             <button class="quotation-content__search-action" type="button" data-testid="quotation-catalog-search-submit" @tap="confirmCatalogSearch">搜索</button>
           </view>
 
+          <view class="quotation-content__category-grid" data-testid="quotation-catalog-categories">
+            <button
+              v-for="kind in catalogKinds"
+              :key="kind"
+              class="quotation-content__category"
+              :class="{ 'quotation-content__category--active': catalogBrowser.selectedKind === kind }"
+              type="button"
+              :aria-pressed="catalogBrowser.selectedKind === kind"
+              :data-testid="`quotation-catalog-kind-${kind}`"
+              @tap="selectCatalogKind(kind)"
+            >{{ catalogTabLabel(kind) }}</button>
+          </view>
           <view class="quotation-content__catalog-section-heading">
             <text class="quotation-content__catalog-section-title">{{ catalogSectionTitle }}</text>
-            <text class="quotation-content__catalog-section-note">当前工单适用范围</text>
+            <text class="quotation-content__catalog-section-note">当前工单适用</text>
           </view>
 
           <AppStatus
@@ -733,7 +784,25 @@
             quiet
           />
 
-          <view class="quotation-content__catalog-browser" data-testid="quotation-catalog-browser">
+          <view class="quotation-content__catalog-browser"
+            :class="{ 'quotation-content__catalog-browser--faceted': catalogNavigationFacets.length > 0 }"
+            data-testid="quotation-catalog-browser">
+            <scroll-view v-if="catalogNavigationFacets.length > 0" class="quotation-content__catalog-facets" scroll-y
+              data-testid="quotation-catalog-facets">
+              <button class="quotation-content__catalog-facet"
+                :class="{ 'quotation-content__catalog-facet--selected': !selectedCatalogFacet }"
+                :aria-pressed="!selectedCatalogFacet" @tap="selectedCatalogFacet = ''">全部</button>
+              <button v-for="facet in catalogNavigationFacets" :key="facet.value"
+                class="quotation-content__catalog-facet"
+                :class="{
+                  'quotation-content__catalog-facet--selected': selectedCatalogFacet === facet.value,
+                  'quotation-content__catalog-facet--disabled': !catalogFacetAvailable(facet.value),
+                }"
+                :disabled="!catalogFacetAvailable(facet.value)"
+                :data-testid="`quotation-catalog-facet-${facet.value}`"
+                :aria-pressed="selectedCatalogFacet === facet.value"
+                @tap="selectedCatalogFacet = facet.value">{{ facet.label }}</button>
+            </scroll-view>
             <AppLoadingState
               v-if="catalogBrowser.catalogStatesByKind[catalogBrowser.selectedKind] === 'loading'"
               class="quotation-content__catalog-state"
@@ -769,7 +838,7 @@
               >重试读取</AppButton>
             </view>
             <view
-              v-else-if="catalogBrowser.catalogStatesByKind[catalogBrowser.selectedKind] === 'succeeded' && filteredCatalogItems.length === 0"
+              v-else-if="catalogBrowser.catalogStatesByKind[catalogBrowser.selectedKind] === 'succeeded' && displayedCatalogItems.length === 0"
               class="quotation-content__catalog-state quotation-content__catalog-state-card"
               data-testid="quotation-catalog-empty"
             >
@@ -791,14 +860,15 @@
             </view>
             <scroll-view v-else class="quotation-content__catalog-list" scroll-y data-testid="quotation-catalog-list">
               <view
-                v-for="item in filteredCatalogItems"
+                v-for="item in displayedCatalogItems"
                 :key="item.id"
                 class="quotation-content__catalog-item"
                 :data-testid="`quotation-catalog-item-${item.kind}-${item.id}`"
               >
                 <view class="quotation-content__catalog-item-main">
                   <view class="quotation-content__catalog-thumbnail" :class="`quotation-content__catalog-thumbnail--${item.kind}`" aria-hidden="true">
-                    <text class="quotation-content__catalog-thumbnail-mark">{{ catalogKindMark(item.kind) }}</text>
+                    <AppIcon v-if="item.kind === 'package'" name="home" :size="32" color="#257bf1" />
+                    <text v-else class="quotation-content__catalog-thumbnail-mark">{{ catalogKindMark(item.kind) }}</text>
                   </view>
                   <view class="quotation-content__catalog-item-copy">
                     <view class="quotation-content__catalog-item-heading">
@@ -811,8 +881,8 @@
                     </view>
                     <text class="quotation-content__catalog-item-title">{{ item.name }}</text>
                     <text v-if="item.description || item.content" class="quotation-content__catalog-item-description">{{ item.description || item.content }}</text>
-                    <view v-if="catalogDetails(item).length" class="quotation-content__catalog-item-details">
-                      <text v-for="detail in catalogDetails(item)" :key="detail" class="quotation-content__catalog-item-detail">{{ detail }}</text>
+                    <view v-if="catalogCardDetails(item).length" class="quotation-content__catalog-item-details">
+                      <text v-for="detail in catalogCardDetails(item)" :key="detail" class="quotation-content__catalog-item-detail">{{ detail }}</text>
                     </view>
                   </view>
                 </view>
@@ -1305,6 +1375,40 @@ const filteredCatalogItems = computed(() => {
   if (!query) return catalogBrowser.visibleCatalogItems
   return catalogBrowser.visibleCatalogItems.filter((item) => quotationCatalogSearchMatches(item, query))
 })
+// R1 repair-part facets appear ONLY when the current package records expose
+// compatible authoritative classification codes. Never assign a category
+// by product name or hide unclassified packages on the default "全部".
+const selectedCatalogFacet = ref('')
+function descendantCodes(node: CodeOptionRead): readonly string[] {
+  return [node.value, ...(node.children ?? []).flatMap(descendantCodes)]
+}
+// The left-hand part taxonomy is structural (R1 visual convention), whereas
+// enabled facet actions still require source-backed package classification.
+const catalogNavigationFacets = computed(() =>
+  catalogBrowser.selectedKind === 'package' ? composition.repairPartOptions : [],
+)
+function catalogFacetAvailable(code: string): boolean {
+  return catalogFacets.value.some(facet => facet.value === code)
+}
+const catalogFacets = computed(() => {
+  if (catalogBrowser.selectedKind !== 'package') return []
+  const packages = filteredCatalogItems.value.filter(
+    (item): item is Extract<QuotationCatalogItemRead, { kind: 'package' }> =>
+      item.kind === 'package' && Boolean(item.r1RepairPartsCodes?.length),
+  )
+  if (!packages.length) return []
+  return composition.repairPartOptions.filter(facet => {
+    const codes = new Set(descendantCodes(facet))
+    return packages.some(item => item.r1RepairPartsCodes?.some(code => codes.has(code)))
+  })
+})
+const displayedCatalogItems = computed(() => {
+  const facet = catalogFacets.value.find(option => option.value === selectedCatalogFacet.value)
+  if (!facet) return filteredCatalogItems.value
+  const codes = new Set(descendantCodes(facet))
+  return filteredCatalogItems.value.filter(item => item.kind !== 'package'
+    || item.r1RepairPartsCodes?.some(code => codes.has(code)))
+})
 const packageConfigurationValidation = computed(() => {
   const packageId = currentPackageId.value
   if (!packageId || catalogBrowser.packageDetailState !== 'succeeded') {
@@ -1319,6 +1423,7 @@ const packageConfigurationValidation = computed(() => {
 const kindLabels = quotationCatalogKindLabels
 
 function openCatalog(groupId: string, kind: QuotationLineKind): void {
+  selectedCatalogFacet.value = ''
   activeCatalogGroupId.value = groupId
   catalogSelectionError.value = ''
   packageMaterialChoicesByLayer.value = {}
@@ -1364,6 +1469,7 @@ function closeCatalog(): void {
 
 
 function selectCatalogKind(kind: QuotationLineKind): void {
+  selectedCatalogFacet.value = ''
   catalogSelectionError.value = ''
   catalogBrowser.selectKind(kind)
 }
@@ -1654,6 +1760,12 @@ function catalogMetadata(item: QuotationCatalogItemRead): string {
   const parts = catalogDetails(item)
   return parts.length ? parts.join(' · ') : kindLabels[item.kind]
 }
+// Product cards prioritize attributes useful for selection. Keep the provider
+// code available in actual product detail and search, rather than displaying
+// implementation identifiers as primary commerce badges.
+function catalogCardDetails(item: QuotationCatalogItemRead): string[] {
+  return catalogDetails(item).filter(detail => !detail.startsWith('编码 '))
+}
 
 function areGroupDetailsCollapsed(groupId: string): boolean {
   const explicit = groupDetailsCollapsedById.value[groupId]
@@ -1703,6 +1815,10 @@ function configuredPackageLayerLabel(
 </script>
 
 <style>
+.quotation-content { font-family:-apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif; }
+.quotation-content__amount-value,
+.quotation-content__engine-amount,
+.quotation-content__line-price { font-variant-numeric: tabular-nums; }
 .quotation-content { margin-top: var(--app-space-md); }
 .quotation-content__heading { display: flex; flex-direction: column; margin: 0 var(--app-space-xs) var(--app-space-md); }
 .quotation-content__eyebrow { color: var(--app-color-primary); font-size: var(--app-font-meta); font-weight: 800; letter-spacing: .6px; }
@@ -2084,7 +2200,7 @@ function configuredPackageLayerLabel(
 .quotation-content__initial-draft-notice-copy { display: block; min-width: 0; }
 .quotation-content__initial-card, .quotation-content__initial-process { background: var(--app-color-surface); border-color: var(--app-color-border); border-radius: var(--app-radius-card); box-shadow: none; }
 .quotation-content__initial-card { box-sizing: border-box; display: flex; flex-direction: column; padding: 24rpx 20rpx 20rpx; }
-.quotation-content__initial-empty-heading { display: flex; flex-direction: column; gap: 6rpx; padding: 0 4rpx 18rpx; }
+.quotation-content__initial-empty-heading { display:flex; flex-direction:row; align-items:center; justify-content:flex-start; gap:11px; padding:0 0 10px; text-align:left; }
 .quotation-content__initial-empty-title { color: var(--app-color-text-primary); display: block; font-size: var(--app-font-section-title); font-weight: 750; line-height: 1.35; }
 .quotation-content__initial-empty-description { color: var(--app-color-text-body); display: block; font-size: var(--app-font-body); line-height: 1.5; }
 .quotation-content__initial-empty-surface { align-items: stretch; background: var(--app-color-control-surface); border: 1rpx solid var(--app-color-border); border-radius: var(--app-radius-surface); display: flex; flex-direction: column; padding: 20rpx; text-align: left; }
@@ -2354,5 +2470,639 @@ function configuredPackageLayerLabel(
 .quotation-content__catalog-item-footer { gap: 8rpx; }
 .quotation-content__catalog-item-price-state { color: var(--app-color-text-secondary); }
 .quotation-content__catalog-target { box-shadow: none; border-radius: 15rpx; }
+
+
+/* Q01 commercial design baseline: editable repair fields first; costs follow;
+   no decorative multi-step wizard, and no unverified amount values. */
+.quotation-content__initial-process { display:none; }
+.quotation-content__initial-card { background:var(--app-color-surface); border-radius:22rpx; padding:22rpx; }
+.quotation-content__initial-empty-heading { padding-bottom:12rpx; }
+.quotation-content__initial-empty-title { font-size:30rpx; }
+.quotation-content__initial-empty-description { color:var(--app-color-text-secondary); font-size:22rpx; }
+.quotation-content__initial-empty-surface { gap:0; padding:0; border:0; background:transparent; }
+.quotation-content__initial-field-label { font-size:23rpx; font-weight:730; padding:14rpx 2rpx 6rpx; color:var(--app-color-text-primary); }
+.quotation-content__initial-field-value { min-height:74rpx; background:var(--app-color-control-surface); border:1rpx solid var(--app-color-border);
+  padding:12rpx 18rpx; border-radius:12rpx; box-sizing:border-box; display:flex; justify-content:space-between; align-items:center;
+  font-size:23rpx; color:var(--app-color-text-secondary); }
+.quotation-content__initial-field-placeholder { background:var(--app-color-control-surface); border:1rpx solid var(--app-color-border);
+  border-radius:12rpx; padding:15rpx 18rpx; color:var(--app-color-text-muted); font-size:21rpx; }
+.quotation-content__initial-empty-copy { margin-top:13rpx; color:var(--app-color-text-secondary); }
+.quotation-content__initial-empty-artwork { display:none; }
+.quotation-content__initial-empty-action { min-height:88rpx; margin-top:15rpx; }
+.quotation-content__initial-cost-preview, .quotation-content__adjustments {
+  background:var(--app-color-surface); border:1rpx solid var(--app-color-border); border-radius:20rpx;
+  padding:19rpx 22rpx; display:flex; flex-direction:column; margin-top:14rpx; gap:0; }
+.quotation-content__initial-cost-title, .quotation-content__adjustments-title { font-size:26rpx; font-weight:780; color:var(--app-color-text-primary); }
+.quotation-content__initial-cost-row, .quotation-content__adjustments-row { display:flex; align-items:center; justify-content:space-between;
+  gap:18rpx; min-height:70rpx; font-size:23rpx; border-bottom:1rpx solid var(--app-color-divider); }
+.quotation-content__initial-cost-row:last-of-type, .quotation-content__adjustments-row:last-of-type { border-bottom:0; }
+.quotation-content__initial-cost-unavailable, .quotation-content__adjustments-unavailable { text-align:right; color:var(--app-color-text-muted); font-size:21rpx; }
+.quotation-content__initial-cost-note, .quotation-content__adjustments-hint { display:block; line-height:1.5; color:var(--app-color-text-secondary); font-size:20rpx; margin-top:8rpx; }
+.quotation-content__adjustments-title-row { display:flex; align-items:center; justify-content:space-between; gap:12rpx; padding-bottom:7rpx; }
+.quotation-content__adjustments-badge { font-size:19rpx; color:var(--app-color-text-secondary); background:var(--app-color-control-surface); padding:6rpx 10rpx; border-radius:999rpx; }
+.quotation-content__first-step-title-row { margin-bottom:13rpx; }
+.quotation-content__first-step-page-title { font-size:30rpx; font-weight:800; }
+.quotation-content__first-step-count { font-size:20rpx; padding:7rpx 12rpx; }
+.quotation-content__first-step-card { border-radius:22rpx; box-shadow:none; padding:21rpx 22rpx; border:1rpx solid var(--app-color-border); }
+.quotation-content__first-step-card::before { display:none; }
+.quotation-content__first-step-card-heading { margin-bottom:12rpx; gap:12rpx; }
+.quotation-content__first-step-index { flex-basis:52rpx; height:52rpx; border-radius:12rpx; font-size:24rpx; background:var(--app-color-primary-soft); }
+.quotation-content__first-step-card-title { font-size:26rpx; }
+.quotation-content__first-step-field { margin-top:13rpx; }
+.quotation-content__first-step-label { font-size:23rpx; color:var(--app-color-text-primary); }
+.quotation-content__first-step-products { margin-top:19rpx; }
+.quotation-content__first-step-products-title { font-size:25rpx; }
+
+/* Q03: R1-like navigation hierarchy without inventing non-existent catalog
+   taxonomy. Show left rail only when package data supplies actual part codes. */
+.quotation-content__catalog-page { padding:10rpx 16rpx calc(15rpx + env(safe-area-inset-bottom)); background:var(--app-color-page); }
+.quotation-content__catalog-topbar { background:var(--app-color-surface); border-radius:0; margin:-10rpx -16rpx 8rpx; padding:5rpx 18rpx; min-height:88rpx; }
+.quotation-content__catalog-title { font-size:27rpx; }
+.quotation-content__catalog-target { padding:12rpx 14rpx; margin-top:9rpx; border-radius:16rpx; }
+.quotation-content__catalog-intro { padding:14rpx 2rpx 10rpx; }
+.quotation-content__catalog-intro-title { font-size:27rpx; font-weight:800; }
+.quotation-content__catalog-intro-description { font-size:19rpx; }
+.quotation-content__catalog-main { background:var(--app-color-surface); border-radius:19rpx; overflow:hidden; padding:0 10rpx 9rpx; }
+.quotation-content__category-grid { height:88rpx; flex-basis:88rpx; }
+.quotation-content__category { font-size:24rpx; }
+.quotation-content__catalog-section-heading { padding:10rpx 4rpx 8rpx; }
+.quotation-content__catalog-browser { position:relative; min-width:0; }
+.quotation-content__catalog-browser--faceted .quotation-content__catalog-list { margin-left:120rpx; width:calc(100% - 120rpx); }
+.quotation-content__catalog-browser--faceted .quotation-content__catalog-state { margin-left:120rpx; }
+.quotation-content__catalog-facets { position:absolute; top:0; bottom:0; left:0; width:112rpx; z-index:1;
+  background:var(--app-color-control-surface); border-radius:12rpx 0 0 12rpx; }
+.quotation-content__catalog-facet { width:100%; margin:0; border:0; background:transparent; color:var(--app-color-text-secondary);
+  border-left:5rpx solid transparent; min-height:88rpx; text-align:left; padding:12rpx 8rpx;
+  line-height:1.35; font-size:22rpx; border-radius:0; white-space:normal; }
+.quotation-content__catalog-facet::after { border:0; }
+.quotation-content__catalog-facet--selected { background:var(--app-color-primary-soft); color:var(--app-color-primary);
+  border-left-color:var(--app-color-primary); font-weight:800; }
+.quotation-content__catalog-item { border:1rpx solid var(--app-color-border); box-shadow:none; border-radius:15rpx; }
+.quotation-content__catalog-thumbnail { border-radius:12rpx; }
+.quotation-content__catalog-item-heading { gap:8rpx; }
+.quotation-content__catalog-item-title { font-size:25rpx; }
+.quotation-content__catalog-item-footer { border-top:0; padding-top:5rpx; }
+.quotation-content__catalog-item-price-state { border-radius:9rpx; background:transparent; padding:4rpx 0; }
+
+/* Q01 375px: the first real operation must be above the sticky bottom bar.
+   The repair-part field itself is the entry; eliminate a repeated CTA below
+   three inactive placeholders. */
+.quotation-content__initial-field-value { width:100%; margin:0; min-height:94rpx; text-align:left;
+  color:var(--app-color-primary); font-weight:750; }
+.quotation-content__initial-field-value::after { border:0; }
+.quotation-content__initial-field-value[disabled] { opacity:.55; }
+.quotation-content__initial-field-chevron { font-size:30rpx; font-weight:400; }
+
+/* Q01/Q03 actual H5 commercial visual scale correction. The prior
+ * ~20rpx typography equalled ~10px at the target 390px viewport, which
+ * was dramatically smaller than the signed-off phone design. Explicit
+ * pixel rhythm is intentional; domain/price/permissions stay untouched. */
+.quotation-content__initial-empty-title,
+.quotation-content__first-step-page-title { font-size: 20px; line-height: 1.3; color: #162b49; }
+.quotation-content__initial-empty-description { font-size: 12px; line-height: 1.5; color: #7587a1; }
+.quotation-content__initial-card, .quotation-content__first-step-card {
+  border-radius: 15px; padding: 17px 16px; border-color: #e4eaf4;
+  background: #fff; box-shadow: 0 2px 12px rgba(17,56,103,.04);
+}
+.quotation-content__initial-field-label,
+.quotation-content__first-step-label {
+  font-size: 14px; line-height: 1.5; font-weight: 730;
+  color: #273b59;
+}
+.quotation-content__initial-field-label { padding: 14px 1px 8px; }
+.quotation-content__initial-field-value,
+.quotation-content__initial-field-placeholder {
+  font-size: 14px; min-height: 48px; padding: 12px 14px;
+  line-height: 1.4; border-radius: 10px;
+}
+.quotation-content__initial-field-chevron { font-size: 20px; }
+.quotation-content__initial-empty-copy { font-size: 12px; line-height: 1.5; margin-top: 10px; }
+.quotation-content__initial-cost-preview,
+.quotation-content__adjustments {
+  border-radius: 15px; padding: 17px 16px; margin-top: 14px;
+  border-color: #e4eaf4; box-shadow: 0 2px 12px rgba(17,56,103,.04);
+}
+.quotation-content__initial-cost-title,
+.quotation-content__adjustments-title { font-size: 17px; line-height: 1.4; font-weight: 800; }
+.quotation-content__initial-cost-row,.quotation-content__adjustments-row {
+  gap: 15px; min-height: 48px; font-size: 14px; line-height: 1.4;
+}
+.quotation-content__initial-cost-unavailable,
+.quotation-content__adjustments-unavailable { font-size: 12px; line-height: 1.5; }
+.quotation-content__initial-cost-note,
+.quotation-content__adjustments-hint { font-size: 11.5px; line-height: 1.55; }
+.quotation-content__adjustments-badge { font-size: 11px; padding: 4px 8px; }
+.quotation-content__first-step-title-row { margin: 11px 1px 13px; }
+.quotation-content__first-step-count { font-size: 12px; padding: 5px 8px; }
+.quotation-content__first-step-card-heading { margin-bottom: 13px; }
+.quotation-content__first-step-index {
+  flex-basis: 33px; height: 33px; font-size: 13px;
+  border-radius: 9px;
+}
+.quotation-content__first-step-card-title { font-size: 17px; line-height: 1.4; }
+.quotation-content__first-step-card-subtitle { font-size: 12px; line-height: 1.45; }
+.quotation-content__first-step-field { margin-top: 15px; }
+.quotation-content__first-step-selector-trigger { border-radius: 11px; min-height: 56px; padding: 12px 14px; }
+.quotation-content__first-step-selector-value { font-size: 15px; line-height: 1.35; }
+.quotation-content__first-step-selector-hint,
+.quotation-content__first-step-selected-path,
+.quotation-content__first-step-hint { font-size: 11.5px; line-height: 1.5; }
+.quotation-content__first-step-textarea {
+  font-size: 14px; padding: 11px 13px; min-height: 64px; height: 64px;
+  border-radius: 11px;
+}
+.quotation-content__first-step-quantity {
+  font-size: 18px; font-weight: 750; min-height: 54px;
+  padding: 12px 13px; border-radius: 11px;
+}
+.quotation-content__first-step-products {
+  border-radius: 14px; padding: 16px 14px; margin-top: 15px;
+}
+.quotation-content__first-step-products-title { font-size: 16px; }
+.quotation-content__first-step-products-copy { font-size: 12px; line-height: 1.5; }
+.quotation-content__first-step-products-status { font-size: 11px; }
+.quotation-content__first-step-products-button {
+  height: 49px; min-height: 49px; font-size: 15px;
+  border-radius: 11px; box-shadow: 0 5px 12px rgba(29,109,240,.13);
+}
+.quotation-content__first-step-products-plus { font-size: 22px; }
+/* Q03 operator-friendly catalog, not a dense engineering inspection list. */
+.quotation-content__catalog-page { padding: 11px 12px calc(12px + env(safe-area-inset-bottom)); }
+.quotation-content__catalog-topbar {
+  min-height: 45px; padding: 8px 13px; margin: -11px -12px 8px;
+}
+.quotation-content__catalog-title { font-size: 17px; font-weight: 800; }
+.quotation-content__catalog-step { font-size: 11px; }
+.quotation-content__catalog-target {
+  border-radius: 12px; padding: 14px 13px; margin-top: 9px;
+}
+.quotation-content__catalog-target-title { font-size: 14px; }
+.quotation-content__catalog-target-index { flex-basis: 29px; height: 29px; font-size: 12px; }
+.quotation-content__catalog-target-count { font-size: 11px; }
+.quotation-content__catalog-intro { padding: 9px 2px 8px; }
+.quotation-content__catalog-intro-title { font-size: 18px; }
+.quotation-content__catalog-intro-description { font-size: 12px; line-height: 1.4; }
+.quotation-content__catalog-main { border-radius: 14px; padding: 0 9px 8px; }
+.quotation-content__category-grid { height: 48px; flex-basis: 48px; }
+.quotation-content__category { font-size: 15px; min-height: 46px; }
+.quotation-content__search-wrap { min-height: 43px; margin-top: 11px; }
+.quotation-content__catalog-section-heading { margin: 12px 3px 10px; }
+.quotation-content__catalog-section-title { font-size: 15px; }
+.quotation-content__catalog-section-note { font-size: 11px; }
+.quotation-content__catalog-item {
+  padding: 14px 12px; gap: 10px; border-radius: 14px;
+  margin-bottom: 12px; background: #fff; border-color: #e0e8f4;
+}
+.quotation-content__catalog-item-main { gap: 12px; align-items: center; }
+.quotation-content__catalog-thumbnail {
+  flex: 0 0 80px; width: 80px; height: 84px;
+  border-radius: 12px; background: #e8f3ff;
+}
+.quotation-content__catalog-thumbnail-mark { font-size: 25px; font-weight: 800; color: #247af0; }
+.quotation-content__catalog-item-heading { gap: 5px; margin-bottom: 5px; }
+.quotation-content__catalog-kind-pill,.quotation-content__catalog-selected-tag { font-size: 10px; padding: 3px 6px; }
+.quotation-content__catalog-item-title { font-size: 15px; font-weight: 800; line-height: 1.4; }
+.quotation-content__catalog-item-description { font-size: 12px; line-height: 1.45; }
+.quotation-content__catalog-item-detail { font-size: 10.5px; padding: 3px 6px; }
+.quotation-content__catalog-item-footer { padding-top: 9px; gap: 8px; align-items: center; }
+.quotation-content__catalog-item-price-state { font-size: 12px; }
+.quotation-content__catalog-item-action {
+  min-width: 115px; border-radius: 10px; min-height: 42px; font-size: 13px;
+}
+.quotation-content__catalog-facets { width: 75px; border-radius: 9px 0 0 9px; }
+.quotation-content__catalog-facet { min-height: 51px; font-size: 13px; padding: 9px 5px; }
+.quotation-content__catalog-browser--faceted .quotation-content__catalog-list {
+  margin-left: 77px; width: calc(100% - 77px);
+}
+.quotation-content__catalog-browser--faceted .quotation-content__catalog-state { margin-left: 77px; }
+.quotation-content__catalog-browser--faceted .quotation-content__catalog-item {
+  padding: 12px 9px;
+}
+.quotation-content__catalog-browser--faceted .quotation-content__catalog-item-main { gap: 8px; }
+.quotation-content__catalog-browser--faceted .quotation-content__catalog-thumbnail {
+  width: 66px; flex-basis: 66px; height: 72px;
+}
+.quotation-content__catalog-footer { min-height: 80px; padding: 12px 12px calc(12px + env(safe-area-inset-bottom)); }
+.quotation-content__catalog-footer-title { font-size: 14px; }
+.quotation-content__catalog-footer-note { font-size: 11px; }
+.quotation-content__catalog-footer > .app-button { min-height: 44px; }
+@media (max-width: 360px) {
+  .quotation-content__catalog-item { padding: 11px; }
+  .quotation-content__catalog-thumbnail { width: 68px; flex-basis:68px; height: 72px; }
+  .quotation-content__catalog-browser--faceted .quotation-content__catalog-thumbnail { flex-basis: 56px; width:56px; }
+  .quotation-content__catalog-item-action { min-width: 100px; font-size: 12px; }
+}
+
+/* A stable left navigation rail is part of the accepted Q03 IA. Options
+ * whose package mapping is not verified remain visibly disabled and do not
+ * hide or reclassify any product. */
+.quotation-content__catalog-facet--disabled {
+  color:#9ba9bb; opacity:.62; background:#f4f7fb;
+}
+.quotation-content__catalog-facet--disabled::after { border:0; }
+.quotation-content__catalog-facets { background:#f4f7fb; }
+
+/* Q03 photo-less packages: a legitimate category icon instead of a giant
+ * text glyph pretending to be a product photo. Keep the missing-image
+ * distinction visible; do not synthesize actual catalogue assets. */
+.quotation-content__catalog-thumbnail--package {
+  background:#eaf3ff; border:1px solid #dfedff; display:flex;
+  align-items:center; justify-content:center;
+}
+.quotation-content__catalog-browser--faceted .quotation-content__catalog-item {
+  position:relative; padding:12px 9px 61px; min-height:161px;
+  box-sizing:border-box; gap:0;
+}
+.quotation-content__catalog-browser--faceted .quotation-content__catalog-item-main { gap:8px; align-items:flex-start; }
+.quotation-content__catalog-browser--faceted .quotation-content__catalog-thumbnail {
+  flex:0 0 62px; width:62px; height:68px;
+}
+.quotation-content__catalog-browser--faceted .quotation-content__catalog-item-title {
+  font-size:15px; line-height:1.36; font-weight:750; margin:0;
+}
+.quotation-content__catalog-browser--faceted .quotation-content__catalog-kind-pill {
+  padding:2px 4px; font-size:9.5px;
+}
+.quotation-content__catalog-browser--faceted .quotation-content__catalog-item-details { gap:3px; }
+.quotation-content__catalog-browser--faceted .quotation-content__catalog-item-detail { font-size:9.5px; padding:2px 4px; }
+.quotation-content__catalog-browser--faceted .quotation-content__catalog-item-footer {
+  position:absolute; bottom:9px; left:9px; right:9px;
+  margin:0; padding:0; border:0; min-height:39px;
+  align-items:center;
+}
+.quotation-content__catalog-browser--faceted .quotation-content__catalog-item-price-state {
+  flex:1 1 0; min-width:0; font-size:10.5px;
+}
+.quotation-content__catalog-browser--faceted .quotation-content__catalog-item-action {
+  min-width:100px; min-height:39px; font-size:11.5px; padding:0 7px;
+}
+
+/* High-fidelity Q03 viewport density: one active repair-part strip and
+ * one catalog heading are enough; the earlier duplicated captions consumed
+ * 80px before the user could see a second package in the 844px viewport. */
+.quotation-content__catalog-target {
+  min-height: 62px; padding: 9px 11px; margin-top: 6px; box-sizing:border-box;
+}
+.quotation-content__catalog-target-label,
+.quotation-content__catalog-target-meta { display:none; }
+.quotation-content__catalog-target-title { font-size:14px; line-height:1.35; }
+.quotation-content__catalog-intro { margin:0; padding:8px 2px 4px; min-height:36px; }
+.quotation-content__catalog-intro-title { font-size:17px; }
+.quotation-content__catalog-intro-description,.quotation-content__catalog-step { display:none; }
+.quotation-content__catalog-main { margin-top:5px; }
+.quotation-content__catalog-section-heading { margin:7px 3px 6px; }
+.quotation-content__catalog-item {
+  margin-bottom:9px;
+}
+.quotation-content__catalog-browser--faceted .quotation-content__catalog-item { min-height:151px; padding-bottom:55px; }
+
+/* Q01 390/320 viewport reachability: recover ~25px of vertical space
+ * without shrinking 14px fields, so the first select-product button
+ * never disappears behind the fixed amount/submit footer. */
+.quotation-content__first-step-field { margin-top:10px; }
+.quotation-content__first-step-card-heading { margin-bottom:9px; }
+.quotation-content__first-step-textarea { min-height:59px; height:59px; }
+.quotation-content__first-step-quantity { min-height:49px; }
+.quotation-content__first-step-products { margin-top:10px; padding:13px 13px; }
+.quotation-content__first-step-products-copy { margin-top:3px; }
+
+/* Commercial Q01 restructured to match signed-off hierarchy: three distinct
+ * task cards, no nested product CTA, and one consistent fee section. */
+.quotation-content__commercial-section {
+  box-sizing:border-box; display:flex; flex-direction:column; gap:0;
+  background:#fff; border:1px solid #e9eef6; padding:17px 16px 14px;
+  border-radius:15px; margin-top:13px; box-shadow:0 2px 14px rgba(23,63,112,.035);
+}
+.quotation-content__section-heading {
+  display:flex; align-items:center; gap:11px;
+  min-height:34px; padding:0 0 12px;
+  margin:0 0 12px; border-bottom:1px solid #e9eef5;
+}
+.quotation-content__section-number {
+  width:31px; height:31px; min-width:31px; border-radius:50%;
+  background:#1677f4; color:#fff; font-size:15px; font-weight:800;
+  display:flex; align-items:center; justify-content:center;
+}
+.quotation-content__initial-empty-heading.quotation-content__section-heading { margin-bottom:3px; }
+.quotation-content__initial-cost-preview .quotation-content__section-heading { margin-bottom:9px; }
+.quotation-content__section-heading--fees { margin-top:14px !important; }
+.quotation-content__first-step-index { border-radius:50%; background:#1677f4; color:#fff; }
+.quotation-content__first-step-card-subtitle { display:none; }
+.quotation-content__first-step-products-title,
+.quotation-content__initial-cost-title { font-size:17px; color:#182a47; font-weight:800; }
+.quotation-content__select-tile {
+  display:flex; align-items:center; gap:12px; width:100%; box-sizing:border-box;
+  background:#fff; padding:13px 12px; min-height:83px;
+  border:1px solid #b5d2ff; border-radius:12px; text-align:left; margin:0;
+}
+.quotation-content__select-tile::after { border:0; }
+.quotation-content__select-tile--disabled { opacity:.6; }
+.quotation-content__select-icon {
+  flex:0 0 48px; width:48px; height:48px; border-radius:50%; background:#e8f3ff;
+  display:flex; align-items:center; justify-content:center;
+}
+.quotation-content__select-tile-copy {
+  flex:1; min-width:0; display:flex; flex-direction:column; gap:5px;
+}
+.quotation-content__select-tile-name { font-size:16px; color:#1c2e4a; font-weight:760; }
+.quotation-content__select-tile-help { font-size:12px; color:#788aa5; line-height:1.4; }
+.quotation-content__adjustment-actions { display:flex; gap:10px; margin-top:12px; }
+.quotation-content__adjustment-button {
+  flex:1; border:1px solid #dce6f4; background:#fff; border-radius:10px;
+  min-height:45px; font-size:14px; font-weight:600; color:#126ff0;
+}
+.quotation-content__adjustment-button::after { border:0; }
+.quotation-content__adjustment-button[disabled] { color:#9faabb; background:#f8fafc; }
+.quotation-content__fee-value { font-size:14px; color:#5b6b84; }
+.quotation-content__order-explainer {
+  margin-top:13px; padding:15px 16px; background:#edf5ff; border-radius:13px;
+  display:flex; flex-direction:column; gap:5px;
+  font-size:12px; line-height:1.5; color:#667f9e;
+}
+.quotation-content__order-explainer-title { color:#207af0; font-size:15px; font-weight:790; margin-bottom:4px; }
+.quotation-content__first-step-card { padding-bottom:15px; }
+.quotation-content__first-step-card-heading {
+  border-bottom:1px solid #e9eef5; padding-bottom:13px; margin-bottom:12px;
+}
+.quotation-content__first-step-field:last-child { margin-bottom:0; }
+
+/* Q01 reading rhythm: the empty first-order form shows three independent
+ * visual sections, just like the editable form and the approved design. */
+.quotation-content__commercial-section + .quotation-content__commercial-section { margin-top:12px; }
+.quotation-content__initial-empty .quotation-content__commercial-section { gap:0; }
+
+.quotation-content__first-step-title-row { display:flex; align-items:center; justify-content:space-between;
+  min-height:37px; gap:12px; margin:2px 0 10px; }
+.quotation-content__first-step-page-title { font-size:18px; color:#182b49; font-weight:800; }
+.quotation-content__save-draft { color:#1477f5; font-size:14px; font-weight:700; min-height:36px; }
+
+/* Selected-product return state shares the same phone-readable hierarchy
+ * as Q01's first-step cards. No mutations, calculations, or catalog joins. */
+.quotation-content__groups { display:flex; flex-direction:column; gap:12px; }
+.quotation-content__group {
+  background:#fff; border:1px solid #e5edf8; border-radius:15px;
+  padding:15px 15px 16px; box-shadow:0 2px 12px rgba(24,63,106,.04);
+}
+.quotation-content__group-heading { gap:10px; padding-bottom:12px; }
+.quotation-content__group-index {
+  width:31px; min-width:31px; height:31px; border-radius:50%;
+  background:#1677f4; color:white; font-size:13px;
+  display:flex; align-items:center; justify-content:center;
+}
+.quotation-content__group-eyebrow { font-size:11px; color:#8191aa; }
+.quotation-content__group-title { font-size:16px; font-weight:800; line-height:1.35; color:#172b49; }
+.quotation-content__group-location { font-size:12px; line-height:1.4; margin-top:4px; }
+.quotation-content__group-subtotal { font-size:13px; color:#2378eb; font-weight:750; }
+.quotation-content__group-count { font-size:11px; padding:4px 7px; }
+.quotation-content__context-toggle { font-size:12.5px; font-weight:700; }
+.quotation-content__group-context { padding:12px 0; }
+.quotation-content__context-label { font-size:13px; color:#465b77; line-height:1.45; }
+.quotation-content__context-input { font-size:14px; border-radius:10px; padding:10px 12px; }
+.quotation-content__composition { margin-top:13px; padding-top:12px; }
+.quotation-content__composition-heading { padding:7px 0 10px; }
+.quotation-content__composition-title { font-size:16px; font-weight:800; }
+.quotation-content__composition-meta { font-size:12px; }
+.quotation-content__details-toggle { font-size:12.5px; }
+.quotation-content__group-section { margin-top:12px; }
+.quotation-content__group-section-title { font-size:14px; }
+.quotation-content__group-section-count { font-size:11px; }
+.quotation-content__selection {
+  border-radius:12px; border:1px solid #e1e8f3;
+  padding:12px 11px; margin-top:9px;
+}
+.quotation-content__line-title { font-size:14px; font-weight:750; line-height:1.4; }
+.quotation-content__line-kind,.quotation-content__selection-unit { font-size:11px; }
+.quotation-content__line-kind-mark { font-size:15px; }
+.quotation-content__line-controls { gap:9px; padding-top:11px; }
+.quotation-content__quantity-label { font-size:13px; }
+.quotation-content__quantity { font-size:15px; }
+.quotation-content__quantity-wrap { min-height:45px; border-radius:9px; }
+.quotation-content__unit { font-size:12px; }
+.quotation-content__remove-button { font-size:13px; }
+.quotation-content__package-summary-title { font-size:14px; }
+.quotation-content__package-summary-note,
+.quotation-content__package-summary-count,
+.quotation-content__package-summary-row { font-size:12px; line-height:1.5; }
+.quotation-content__package-edit,.quotation-content__package-details-toggle { font-size:12px; }
+.quotation-content__adjustments { border-radius:15px; background:white; margin-top:12px; }
+
+/* High-fidelity Q01 390/320 reachability: remove redundant page heading,
+ * keep readable controls and make the first actionable catalog CTA reachable
+ * before the fixed footer in its fully filled state. */
+.quotation-content__first-repair-part-step { padding-top:0; }
+.quotation-content__first-step-card { padding:13px 15px 12px; }
+.quotation-content__first-step-card-heading {
+  display:flex; align-items:center; gap:10px;
+  padding:0 0 9px; margin:0 0 8px;
+}
+.quotation-content__first-step-card-copy { flex:1 1 0; min-width:0; }
+.quotation-content__first-step-card-subtitle { display:none; }
+.quotation-content__save-draft { flex:none; margin-left:auto; font-size:13px; min-height:32px; padding:2px 4px; }
+.quotation-content__first-step-field { margin-top:9px; }
+.quotation-content__first-step-label { margin-bottom:5px; line-height:1.3; }
+.quotation-content__first-step-selector-trigger { min-height:48px; padding:8px 11px; }
+.quotation-content__first-step-selector-hint,
+.quotation-content__first-step-selected-path,
+.quotation-content__first-step-hint { display:none; }
+.quotation-content__first-step-textarea { min-height:52px; height:52px; padding:9px 12px; }
+.quotation-content__first-step-quantity { min-height:44px; padding:8px 12px; }
+.quotation-content__first-repair-part-step .quotation-content__commercial-section { margin-top:9px; padding:11px 14px; }
+.quotation-content__first-repair-part-step .quotation-content__section-heading { margin-bottom:9px; padding-bottom:7px; min-height:28px; }
+.quotation-content__first-repair-part-step .quotation-content__select-tile { min-height:67px; padding:9px 12px; }
+.quotation-content__first-repair-part-step .quotation-content__select-icon { width:41px; height:41px; flex-basis:41px; }
+@media (max-width:360px) {
+ .quotation-content__first-step-card { padding-left:12px; padding-right:12px; }
+ .quotation-content__first-step-card-heading { gap:7px; }
+ .quotation-content__first-step-card-title { font-size:16px; }
+}
+
+/* M1-S2 375/390 fidelity finish — presentation only, business gates unchanged.
+   Native textarea is border-box to prevent hidden 18px inflation. */
+.quotation-content__first-step-card,
+.quotation-content__first-repair-part-step .quotation-content__commercial-section {
+  border:1px solid #e2e8f1; border-radius:14px;
+  background:#fff; box-shadow:0 2px 10px rgba(24,51,85,.04);
+}
+.quotation-content__first-step-card { padding:13px 15px 12px; }
+.quotation-content__first-step-card-heading {
+  margin:0 0 8px; padding:0 0 10px; border-bottom:1px solid #e9edf3;
+}
+.quotation-content__first-step-index,
+.quotation-content__section-number {
+  background:#2477e4; border-radius:9px; width:30px;
+  min-width:30px; height:30px; font-size:14px; font-weight:750;
+}
+.quotation-content__first-step-card-title,
+.quotation-content__first-step-products-title,
+.quotation-content__initial-cost-title {
+  color:#1a2d48; font-size:17px; line-height:1.4; font-weight:780;
+}
+.quotation-content__save-draft { color:#256dc5; font-size:12px; min-height:35px; }
+.quotation-content__first-step-field { margin-top:9px; }
+.quotation-content__first-step-label {
+  display:block; margin-bottom:6px; font-size:14px; line-height:1.35;
+  font-weight:700; color:#283b54;
+}
+.quotation-content__first-step-selector-trigger,
+.quotation-content__first-step-textarea,
+.quotation-content__first-step-quantity {
+  box-sizing:border-box; width:100%; background:#f8fafc;
+  border:1px solid #dce5ef; border-radius:10px; color:#20334e;
+}
+.quotation-content__first-step-selector-trigger { min-height:47px; padding:9px 12px; }
+.quotation-content__first-step-selector-value { color:#2f70bf; font-size:14px; font-weight:710; }
+.quotation-content__first-step-textarea {
+  min-height:58px; height:58px; padding:11px 12px; font-size:14px; line-height:1.45;
+}
+.quotation-content__first-step-quantity {
+  min-height:45px; height:45px; padding:8px 12px; font-size:15px; font-weight:700;
+}
+.quotation-content__first-repair-part-step .quotation-content__commercial-section {
+  margin-top:10px; padding:13px 15px;
+}
+.quotation-content__first-repair-part-step .quotation-content__section-heading {
+  min-height:30px; margin:0 0 10px; padding:0 0 9px; border-bottom:1px solid #e9edf3;
+}
+.quotation-content__first-repair-part-step .quotation-content__select-tile {
+  border:1px solid #cfdef2; border-radius:11px;
+  min-height:66px; padding:10px 12px; background:#fbfdff;
+}
+.quotation-content__first-repair-part-step .quotation-content__select-icon {
+  width:41px; height:41px; flex-basis:41px;
+  border-radius:11px; background:#eaf3ff;
+}
+.quotation-content__first-repair-part-step .quotation-content__select-tile-name {
+  font-size:15px; color:#193a63; font-weight:730;
+}
+
+/* Q03: avoid duplicate heading, keep source-backed taxonomy and all states. */
+.quotation-content__catalog-page { background:#f5f7fa; }
+.quotation-content__catalog-topbar {
+  min-height:51px; background:#fff; border-bottom:1px solid #e8edf3;
+}
+.quotation-content__catalog-title { font-size:18px; font-weight:780; color:#182b46; }
+.quotation-content__catalog-mode {
+  background:#eef4fd; color:#306fbe; border-radius:8px; font-size:11px;
+}
+.quotation-content__catalog-target {
+  min-height:55px; padding:10px 12px;
+  background:#fff; border:1px solid #e4eaf2; border-radius:12px; box-shadow:none;
+}
+.quotation-content__catalog-target-title {
+  color:#263a55; font-size:13px; font-weight:730; line-height:1.4;
+}
+.quotation-content__catalog-target-count {
+  color:#497bb9; background:#f1f6fc; border-radius:8px;
+  font-size:10.5px; padding:5px 7px;
+}
+.quotation-content__catalog-intro { display:none; }
+.quotation-content__catalog-main {
+  background:#fff; border:1px solid #e8edf4;
+  border-radius:14px; padding:0 9px 7px; margin-top:10px;
+}
+.quotation-content__search-wrap {
+  background:#f8fafc; border:1px solid #dce5f0;
+  border-radius:10px; min-height:44px; margin-top:10px; padding:0 9px;
+}
+.quotation-content__search-input { color:#263a53; font-size:13px; }
+.quotation-content__search-action {
+  background:#eaf3ff; color:#286fc8; min-height:33px; border-radius:8px;
+}
+.quotation-content__category-grid { height:46px; flex-basis:46px; }
+.quotation-content__category {
+  min-height:44px; font-size:14px; font-weight:700;
+  color:#75869d; border-bottom-width:3px;
+}
+.quotation-content__category--active { color:#236fe0; border-bottom-color:#236fe0; }
+.quotation-content__catalog-section-heading { margin:8px 4px 7px; padding:0; min-height:21px; }
+.quotation-content__catalog-section-title { font-size:15px; font-weight:760; }
+.quotation-content__catalog-facets { width:66px; background:#f4f7fb; }
+.quotation-content__catalog-facet {
+  min-height:46px; font-size:12px; padding:9px 6px;
+  color:#8090a5; border-left-width:3px;
+}
+.quotation-content__catalog-facet--selected {
+  color:#236fce; background:#eaf3ff; border-left-color:#236fce;
+}
+.quotation-content__catalog-facet--disabled { color:#a4aebd; opacity:.8; }
+.quotation-content__catalog-browser--faceted .quotation-content__catalog-list {
+  margin-left:68px; width:calc(100% - 68px);
+}
+.quotation-content__catalog-browser--faceted .quotation-content__catalog-state { margin-left:68px; }
+.quotation-content__catalog-browser--faceted .quotation-content__catalog-item {
+  min-height:141px; padding:11px 9px 52px;
+  margin-bottom:8px; border:1px solid #e1e8f1;
+  border-radius:11px; background:#fff;
+}
+.quotation-content__catalog-browser--faceted .quotation-content__catalog-item-main { gap:9px; }
+.quotation-content__catalog-browser--faceted .quotation-content__catalog-thumbnail {
+  flex:0 0 49px; width:49px; height:54px;
+  border:1px solid #dce9fa; border-radius:10px; background:#edf4fd;
+}
+.quotation-content__catalog-browser--faceted .quotation-content__catalog-item-title {
+  font-size:15px; font-weight:750; line-height:1.38; color:#20334f;
+}
+.quotation-content__catalog-browser--faceted .quotation-content__catalog-kind-pill {
+  font-size:10px; border-radius:5px; color:#3878c6;
+  background:#edf4ff; padding:2px 5px;
+}
+.quotation-content__catalog-browser--faceted .quotation-content__catalog-item-detail {
+  font-size:10px; color:#7b8da5; background:#f6f8fb;
+  border:1px solid #e5ebf3; border-radius:5px;
+}
+.quotation-content__catalog-browser--faceted .quotation-content__catalog-item-footer {
+  bottom:8px; left:9px; right:9px; min-height:38px;
+}
+.quotation-content__catalog-browser--faceted .quotation-content__catalog-item-price-state {
+  font-size:10.5px; color:#8695a8;
+}
+.quotation-content__catalog-browser--faceted .quotation-content__catalog-item-action {
+  min-width:100px; min-height:38px; font-size:12px;
+  border-radius:9px; padding:0 7px;
+}
+
+
+/* Q01 first-entry fidelity: inactive follow-up fields are concise previews,
+   not oversized fake edit controls. The repair-part action remains 48px. */
+.quotation-content__initial-empty .quotation-content__initial-card {
+  padding:14px 15px 13px; border:1px solid #e2e8f1;
+  border-radius:14px; background:#fff; box-shadow:0 2px 10px rgba(24,51,85,.04);
+}
+.quotation-content__initial-empty .quotation-content__section-heading {
+  min-height:30px; margin:0 0 10px; padding:0 0 9px;
+  gap:10px; border-bottom:1px solid #e9edf3;
+}
+.quotation-content__initial-empty-title {
+  color:#1a2d48; font-size:17px; font-weight:780; line-height:1.4;
+}
+.quotation-content__initial-empty .quotation-content__initial-field-label {
+  display:block; font-size:14px; line-height:1.35; font-weight:700;
+  color:#283b54; padding:10px 0 5px;
+}
+.quotation-content__initial-empty .quotation-content__initial-field-value {
+  box-sizing:border-box; min-height:48px; height:48px;
+  background:#f8fafc; border:1px solid #dce5ef; border-radius:10px;
+  color:#286fc7; font-size:14px; font-weight:730; padding:10px 12px;
+}
+.quotation-content__initial-empty .quotation-content__initial-field-placeholder {
+  display:flex; align-items:center; box-sizing:border-box;
+  min-height:40px; padding:9px 12px; border-radius:9px;
+  font-size:12px; line-height:1.4; color:#a0acbc;
+  background:#fafbfd; border:1px dashed #e2e8f0;
+}
+.quotation-content__initial-empty .quotation-content__initial-empty-copy {
+  font-size:11.5px; line-height:1.4; color:#8090a5;
+  margin-top:9px;
+}
+.quotation-content__initial-empty .quotation-content__commercial-section {
+  margin-top:10px; padding:13px 15px; border-radius:14px;
+}
+.quotation-content__initial-empty .quotation-content__select-tile {
+  min-height:65px; padding:10px 12px;
+}
+.quotation-content__initial-draft-notice {
+  border-radius:8px; border-color:#dce8f7;
+  background:#f0f6fd;
+}
 
 </style>

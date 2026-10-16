@@ -1,5 +1,5 @@
 <template>
-  <view class="action-workspace-page" :class="{ 'action-workspace-page--survey': commercialSurvey }" data-testid="action-workspace-shell">
+  <view class="action-workspace-page" :class="{ 'action-workspace-page--survey': commercialSurvey, 'action-workspace-page--quotation': commercialQuotation }" data-testid="action-workspace-shell">
     <scroll-view class="action-workspace-scroll" scroll-y enable-flex :scroll-into-view="scrollIntoView">
       <view class="action-workspace-body">
         <view class="action-workspace-context app-surface app-surface--compact" data-testid="action-workspace-context">
@@ -12,8 +12,17 @@
             </view>
             <view class="action-workspace-context-survey-status"><view class="action-workspace-context-status-dot" aria-hidden="true" />勘查中</view>
           </view>
-          <text v-if="!commercialSurvey" class="action-workspace-context-label">当前工单</text>
-          <view v-if="!commercialSurvey" class="action-workspace-context-row">
+          <view v-else-if="commercialQuotation" class="action-workspace-context-quotation">
+            <view class="action-workspace-context-house" aria-hidden="true"><AppIcon name="home" :size="24" color="#f19436" /></view>
+            <view class="action-workspace-context-survey-main">
+              <text class="action-workspace-context-label">当前工单</text>
+              <text class="action-workspace-context-survey-number">{{ displayNumber || '工单' }}</text>
+              <text class="action-workspace-context-survey-customer">{{ customerName || '报价任务' }}</text>
+            </view>
+            <view class="action-workspace-context-quotation-state">本机报价</view>
+          </view>
+          <text v-if="!commercialSurvey && !commercialQuotation" class="action-workspace-context-label">当前工单</text>
+          <view v-if="!commercialSurvey && !commercialQuotation" class="action-workspace-context-row">
             <text class="action-workspace-context-customer">{{ customerName || '工单' }}</text>
             <text v-if="displayNumber" class="action-workspace-context-number">#{{ displayNumber }}</text>
           </view>
@@ -78,7 +87,7 @@
       </view>
     </scroll-view>
 
-    <view class="action-workspace-footer">
+    <AppActionBar class="action-workspace-footer" :label="`当前工单操作`">
       <view class="action-workspace-footer-inner">
         <template v-if="lifecycle !== 'succeeded'">
           <slot name="actions">
@@ -98,7 +107,7 @@
           <slot name="success-actions" />
         </template>
       </view>
-    </view>
+    </AppActionBar>
   </view>
 </template>
 
@@ -107,11 +116,14 @@ import { ref, watch } from 'vue'
 
 import type { AppActionDraftStatus, AppActionLifecycle } from './types'
 import AppButton from './AppButton.vue'
+import AppActionBar from './AppActionBar.vue'
 import AppIcon from './AppIcon.vue'
 import AppStatus from './AppStatus.vue'
 
 const props = defineProps<{
   readonly commercialSurvey?: boolean
+  /** Same visual system as accepted Survey; Quotation-only, no behavior changes. */
+  readonly commercialQuotation?: boolean
   readonly demoSurvey?: boolean
   readonly customerName?: string
   readonly displayNumber?: string
@@ -212,12 +224,12 @@ defineEmits<{
 .action-workspace-draft-status { margin-top: var(--app-space-sm); padding-top: 0; }
 
 .action-workspace-footer {
-  background: var(--app-color-page);
-  border-top: 1rpx solid var(--app-color-border);
+  background: var(--app-action-bar-background);
+  border-top: 1rpx solid var(--app-action-bar-border);
   box-sizing: border-box;
   flex-shrink: 0;
-  padding: var(--app-space-sm) 0 calc(16rpx + constant(safe-area-inset-bottom));
-  padding-bottom: calc(16rpx + env(safe-area-inset-bottom));
+  padding: var(--app-space-sm) 0 calc(var(--app-action-bar-inset) + constant(safe-area-inset-bottom));
+  padding-bottom: calc(var(--app-action-bar-inset) + env(safe-area-inset-bottom));
   width: 100%;
 }
 
@@ -259,4 +271,11 @@ defineEmits<{
 .action-workspace-context-house { font-size:0; }
 .action-workspace-survey-demo-note { min-height:38rpx; padding:9rpx 14rpx; font-size:22rpx; }
 .action-workspace-page--survey .action-workspace-body { padding-bottom:30rpx; }
+
+/* Quotation-only S01-matched work-order heading; Appointment/Survey untouched. */
+.action-workspace-page--quotation .action-workspace-body { padding-top:16rpx; }
+.action-workspace-page--quotation .action-workspace-context { border-radius:var(--app-radius-card); padding:18rpx 20rpx; }
+.action-workspace-context-quotation { display:flex; gap:15rpx; align-items:center; min-height:75rpx; }
+.action-workspace-context-quotation-state { align-self:flex-start; margin-left:auto; border-radius:999rpx;
+  padding:7rpx 11rpx; background:#eaf3ff; color:var(--app-color-primary); font-size:20rpx; white-space:nowrap; }
 </style>

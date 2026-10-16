@@ -155,3 +155,189 @@ test('captures the uni-app H5 visual review evidence without establishing baseli
   await assertNoHorizontalOverflow(page)
   await assertHealthy(page, evidence)
 })
+
+
+test('DS-01 shared commercial controls: 320/375/390px, states, geometry, one tap and no overflow', async ({ page }) => {
+  for (const width of [320, 375, 390]) {
+    await page.setViewportSize({ width, height: 844 })
+    const evidence = installBrowserSafetyGuards(page)
+    await openReview(page, evidence)
+    const button = page.getByTestId('ds01-button-primary')
+    const compact = page.getByTestId('ds01-button-compact')
+    const large = page.getByTestId('ds01-button-large')
+    const disabled = page.getByTestId('ds01-button-disabled')
+    const loading = page.getByTestId('ds01-button-loading')
+    const long = page.getByTestId('ds01-button-long')
+    const actionBar = page.getByTestId('ds01-action-dual')
+    await expect(button).toBeVisible()
+    await assertDisabled(disabled)
+    await assertDisabled(loading)
+    const metrics = await Promise.all([button, compact, large, long].map(element =>
+      element.evaluate(node => ({
+        width: node.getBoundingClientRect().width,
+        height: node.getBoundingClientRect().height,
+        scrollWidth: node.scrollWidth,
+        fontSize: parseFloat(getComputedStyle(node).fontSize),
+      })),
+    ))
+    for (const metric of metrics) {
+      expect(metric.height, 'button hit target >=44px').toBeGreaterThanOrEqual(43.5)
+      expect(metric.width, 'button must fit mobile viewport').toBeLessThanOrEqual(width)
+      expect(metric.scrollWidth, 'button text should not clip horizontally').toBeLessThanOrEqual(metric.width + 1)
+    }
+    expect(metrics[2].height).toBeGreaterThan(metrics[0].height)
+    // WCAG AA body-size action label contrast: primary white-on-blue and
+    // secondary blue-on-white >=4.5:1 in the compiled uni-app runtime.
+    for (const item of [
+      page.getByTestId('ds01-button-primary'),
+      page.getByTestId('ds01-button-secondary'),
+    ]) {
+      const contrast = await item.evaluate(element => {
+        const read = (value: string) => (value.match(/[\d.]+/g) ?? []).slice(0, 3).map(Number)
+        const linear = (value: number) => {
+          const fraction = value / 255
+          return fraction <= .04045 ? fraction / 12.92 : ((fraction + .055) / 1.055) ** 2.4
+        }
+        const luminance = (rgb: number[]) =>
+          .2126 * linear(rgb[0] ?? 0) + .7152 * linear(rgb[1] ?? 0) + .0722 * linear(rgb[2] ?? 0)
+        const style = getComputedStyle(element)
+        const fore = luminance(read(style.color))
+        const back = luminance(read(style.backgroundColor))
+        return (Math.max(fore, back) + .05) / (Math.min(fore, back) + .05)
+      })
+      expect(contrast, 'DS01 action label contrast must meet WCAG AA').toBeGreaterThanOrEqual(4.5)
+    }
+    await expect(actionBar).toBeVisible()
+    const dual = await actionBar.getByTestId('ds01-action-primary').boundingBox()
+    const secondary = await actionBar.getByTestId('ds01-action-secondary').boundingBox()
+    expect(dual).not.toBeNull()
+    expect(secondary).not.toBeNull()
+    expect(dual!.height).toBeGreaterThanOrEqual(43.5)
+    expect(secondary!.height).toBeGreaterThanOrEqual(43.5)
+    expect(dual!.x).toBeGreaterThan(secondary!.x)
+    expect(dual!.x + dual!.width).toBeLessThanOrEqual(width)
+    const counter = page.getByTestId('ds01-button-tap-count')
+    const before = Number(await counter.textContent())
+    await disabled.dispatchEvent('tap')
+    await loading.dispatchEvent('tap')
+    await expect(counter).toHaveText(String(before))
+    await button.click()
+    await expect(counter).toHaveText(String(before + 1))
+    await expect(button).toHaveCSS('background-color', 'rgb(29, 110, 207)')
+    await assertNoHorizontalOverflow(page)
+    await page.getByTestId('gallery-example-buttons').scrollIntoViewIfNeeded()
+    await page.screenshot({
+      path: join(screenshotDirectory, `ds01-buttons-${width}.png`),
+      animations: 'disabled',
+    })
+    await actionBar.scrollIntoViewIfNeeded()
+    await page.screenshot({
+      path: join(screenshotDirectory, `ds01-action-bar-${width}.png`),
+      animations: 'disabled',
+    })
+    await assertHealthy(page, evidence)
+  }
+})
+
+
+test('DS-01.1 commercial visual masters: four hierarchies, spinner, split layout and caller-owned feedback', async ({ page }) => {
+  for (const width of [320, 375, 390]) {
+    await page.setViewportSize({ width, height: 844 })
+    const evidence = installBrowserSafetyGuards(page)
+    await openReview(page, evidence)
+
+    const master = page.getByTestId('ds011-button-master')
+    await expect(master).toBeVisible()
+    for (const name of ['primary','secondary','tertiary','ghost']) {
+      await expect(page.getByTestId(`ds011-${name}-column`)).toBeVisible()
+    }
+    const primary = page.getByTestId('ds01-button-primary')
+    const secondary = page.getByTestId('ds01-button-secondary')
+    const tertiary = page.getByTestId('ds011-button-tertiary')
+    const ghost = page.getByTestId('ds011-button-ghost')
+    await expect(primary).toHaveClass(/app-button--shape-pill/)
+    await expect(secondary).toHaveClass(/app-button--secondary/)
+    await expect(tertiary).toHaveClass(/app-button--tertiary/)
+    await expect(ghost).toHaveClass(/app-button--ghost/)
+
+    for (const button of [primary, secondary, tertiary, ghost]) {
+      const rect = await button.boundingBox()
+      expect(rect).not.toBeNull()
+      expect(rect!.height, 'mature button touch >=44px').toBeGreaterThanOrEqual(43.5)
+      expect(rect!.x, 'button remains in viewport').toBeGreaterThanOrEqual(0)
+      expect(rect!.x + rect!.width, 'button remains in viewport').toBeLessThanOrEqual(width + 1)
+      // Two-column 320px buttons must not wrap four-character labels because
+      // a hidden loading indicator consumed horizontal space.
+      const label = await button.locator('.app-button__label').boundingBox()
+      expect(label).not.toBeNull()
+      expect(label!.height, 'short action label should stay on one line').toBeLessThanOrEqual(25)
+    }
+
+    const loading = page.getByTestId('ds01-button-loading')
+    await expect(loading).toHaveAttribute('aria-busy', 'true')
+    const spinner = loading.locator('.app-button__loading-slot--active')
+    await expect(spinner).toBeVisible()
+    // A rotating square can have a 22px screen-space bounding box at
+    // 45 degrees even with a 16px CSS diameter. Measure its layout box,
+    // not the transformed, animated bounding rect.
+    const spinnerMetrics = await spinner.evaluate(el => ({
+      height: Number.parseFloat(getComputedStyle(el).height),
+      width: Number.parseFloat(getComputedStyle(el).width),
+      border: getComputedStyle(el).borderTopWidth,
+    }))
+    expect(spinnerMetrics.height).toBeGreaterThanOrEqual(14)
+    expect(spinnerMetrics.height).toBeLessThanOrEqual(20)
+    expect(Number.parseFloat(spinnerMetrics.border)).toBeLessThanOrEqual(2.5)
+    expect(spinnerMetrics.width).toBeGreaterThanOrEqual(14)
+    expect(spinnerMetrics.width).toBeLessThanOrEqual(20)
+    await expect(loading).toHaveCSS('background-color', 'rgb(29, 110, 207)')
+
+    const split = page.getByTestId('ds011-action-split')
+    const left = await split.getByTestId('ds011-action-split-secondary').boundingBox()
+    const right = await split.getByTestId('ds011-action-split-primary').boundingBox()
+    expect(left).not.toBeNull()
+    expect(right).not.toBeNull()
+    expect(left!.x + left!.width).toBeLessThan(right!.x)
+    expect(right!.x + right!.width).toBeLessThanOrEqual(width + 1)
+    await expect(page.getByTestId('ds011-action-trailing')).toBeVisible()
+
+    for (const state of ['busy','success','error']) {
+      const node = page.getByTestId(`ds011-feedback-${state}`)
+      await expect(node).toHaveClass(new RegExp(`app-action-feedback--${state}`))
+      await expect(node).toHaveAttribute('role', 'status')
+      await expect(node).toHaveAttribute('aria-live', state === 'error' ? 'assertive' : 'polite')
+    }
+    await assertNoHorizontalOverflow(page)
+    // A long element screenshot scrolls past uni-app's fixed page-head. Hide
+    // only that REVIEW chrome in the capture frame so it cannot be stitched
+    // through the middle of the component master. Production UI is untouched.
+    await page.addStyleTag({ content: 'uni-page-head { visibility: hidden !important; }' })
+    await master.screenshot({ path: join(screenshotDirectory, `ds011-button-master-${width}.png`), animations:'disabled' })
+    await page.getByTestId('ds011-action-split').scrollIntoViewIfNeeded()
+    await page.getByTestId('gallery-example-action-bar').screenshot({
+      path: join(screenshotDirectory, `ds011-action-master-${width}.png`),
+      animations:'disabled',
+    })
+    await assertHealthy(page, evidence)
+  }
+})
+
+test('DS-02.B actual shared content Gallery stays legible at 320/375/390', async ({ page }) => {
+  for (const width of [320, 375, 390]) {
+    await page.setViewportSize({ width, height: 844 })
+    const evidence = installBrowserSafetyGuards(page)
+    await openReview(page, evidence)
+    const master = page.getByTestId('ds02b-content-master')
+    await expect(master).toBeVisible()
+    await expect(page.getByTestId('ds02b-gallery-record')).toHaveClass(/app-record-card/)
+    await expect(master.locator('.app-section-heading')).toBeVisible()
+    await expect(master.locator('.app-meta-tag').first()).toBeVisible()
+    await assertNoHorizontalOverflow(page)
+    await page.addStyleTag({ content: 'uni-page-head { visibility: hidden !important; }' })
+    await master.screenshot({
+      path: join(screenshotDirectory, `ds02b-content-master-${width}.png`),
+      animations: 'disabled',
+    })
+    await assertHealthy(page, evidence)
+  }
+})

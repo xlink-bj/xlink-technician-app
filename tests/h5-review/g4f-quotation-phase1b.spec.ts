@@ -113,7 +113,7 @@ test('Phase 1D empty quotation draft starts from a repair-part group', async ({ 
   await mkdir(output, { recursive: true })
   await openScenario(page, 'empty')
   await expect(page.getByTestId('g4f-review-scenario-selector')).toBeVisible()
-  await expect(page.getByTestId('quotation-initial-empty-workbench')).toContainText('暂无维修部位')
+  await expect(page.getByTestId('quotation-initial-empty-workbench')).toContainText('请选择维修部位')
   await expect(page.getByTestId('quotation-add-group')).toBeVisible()
   await expect(page.getByText(/(?:¥|￥)\s*\d|\d+(?:\.\d{1,2})?\s*元/)).toHaveCount(0)
   await page.getByTestId('quotation-initial-empty-workbench').scrollIntoViewIfNeeded()

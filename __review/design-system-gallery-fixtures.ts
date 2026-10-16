@@ -8,6 +8,7 @@ export type DesignSystemExampleKind =
   | 'feedback'
   | 'patterns'
   | 'action-bar'
+  | 'records'
 
 export interface DesignSystemExample {
   readonly id: string
@@ -37,7 +38,7 @@ export const designSystemSections: readonly DesignSystemSection[] = [
   {
     id: '02-actions',
     title: 'Actions',
-    examples: [{ id: 'buttons', title: '按钮状态', state: 'primary / secondary / text', note: '共享 AppButton 行为与状态', kind: 'buttons' }],
+    examples: [{ id: 'buttons', title: '按钮状态', state: 'primary / secondary / text', note: 'DS-01.1 · 四级操作层级、交互矩阵及长中文母版', kind: 'buttons' }],
   },
   {
     id: '03-fields-inputs',
@@ -66,7 +67,12 @@ export const designSystemSections: readonly DesignSystemSection[] = [
   {
     id: '07-action-workspace-footer',
     title: 'Action Workspace Footer',
-    examples: [{ id: 'action-bar', title: '底部 Action Bar', state: 'single / dual / save lifecycle', note: 'Workspace Action 永远位于持久底部区域', kind: 'action-bar' }],
+    examples: [{ id: 'action-bar', title: '底部 Action Bar', state: 'single / dual / save lifecycle', note: 'DS-01.1 · 单/双/分布式操作与服务端确认状态', kind: 'action-bar' }],
+  },
+  {
+    id: '08-commercial-content',
+    title: 'Commercial Content',
+    examples: [{ id: 'records', title: '商业级卡片 / 分组 / 元标签', state: 'record / section / metadata', note: 'DS-02.B · 真实列表和详情共享的商业内容母版', kind: 'records' }],
   },
 ]
 
