@@ -25,7 +25,6 @@
             <view v-if="serviceDistrict || serviceAddress" class="q01-context-address" data-testid="q01-source-address">
               <AppIcon name="location" :size="16" color="var(--app-content-muted-ink)" />
               <text class="q01-context-address-text">{{ serviceDistrict }}{{ serviceDistrict && serviceAddress ? ' · ' : '' }}{{ serviceAddress }}</text>
-              <AppIcon name="chevron-right" :size="15" color="var(--app-content-muted-ink)" />
             </view>
           </view>
           <view v-else-if="commercialQuotation" class="action-workspace-context-quotation">
