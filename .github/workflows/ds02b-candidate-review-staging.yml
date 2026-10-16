@@ -1,0 +1,68 @@
+name: DS02B One-Time Candidate Review Staging
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/ds02b-candidate-review-staging.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ds02b-candidate-one-time-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  stage-reviewed-change:
+    if: >-
+      github.event_name == 'pull_request'
+      && github.event.pull_request.head.repo.full_name == github.repository
+      && github.head_ref == 'design-system/ds02b-commercial-content'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: true
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-ds02a-playwright-${{ hashFiles('pnpm-lock.yaml') }}
+      - run: |
+          pnpm exec playwright install --with-deps chromium
+          sudo apt-get update -qq
+          sudo apt-get install -y fonts-noto-cjk
+      - name: Generate only intentional real-app H5 list and detail candidates
+        run: |
+          test ! -f tests/ds02a-main/snapshots/DS02B_CANDIDATES_STAGED.md
+          pnpm exec playwright test --config playwright.ds02a-main.config.ts --update-snapshots --grep 'Real H5 (list|detail)'
+      - name: Ensure only six named candidate screenshots have changed
+        shell: bash
+        run: |
+          changed="$(git diff --name-only -- '*.png')"
+          echo "$changed"
+          test "$(printf '%s\n' "$changed" | grep -c '^tests/ds02a-main/snapshots/ds02a-\(list\|detail\)-\(320\|375\|390\)\.png$')" -eq 6
+          if printf '%s\n' "$changed" | grep -v '^tests/ds02a-main/snapshots/ds02a-\(list\|detail\)-\(320\|375\|390\)\.png$' | grep .; then
+            echo "::error::DS02B is allowed to stage only 6 list/detail PNGs"
+            exit 1
+          fi
+      - name: Commit six review CANDIDATES (not signed Golden)
+        env:
+          TARGET: ${{ github.head_ref }}
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          printf '%s\n' 'DS-02.B six list/detail candidate PNG updates staged from real H5.' 'OWNER VISUAL REVIEW PENDING. Not signed Golden.' > tests/ds02a-main/snapshots/DS02B_CANDIDATES_STAGED.md
+          git add tests/ds02a-main/snapshots/ds02a-list-*.png tests/ds02a-main/snapshots/ds02a-detail-*.png tests/ds02a-main/snapshots/DS02B_CANDIDATES_STAGED.md
+          git commit -m 'test(ds02b): explicitly stage six before/after H5 candidate screenshots'
+          git push origin "HEAD:refs/heads/$TARGET"
