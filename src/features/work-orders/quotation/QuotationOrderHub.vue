@@ -334,22 +334,15 @@ watch(() => props.workOrderId, () => {
   align-items:baseline; gap:8px; color:#788ba4;
   font-size:13px; line-height:1.5; min-width:0;
 }
-.quotation-hub__order-line text:last-child {
-  color:#243650; font-size:13px; font-weight:650;
+/* Descriptive values may inherit local metadata typography. Shared money
+   must retain AppAmountValue size/tone and can never be reset by this page. */
+.quotation-hub__order-line text:last-child:not(.app-amount-value) {
+  color:var(--app-text-strong); font-size:13px; font-weight:650;
   text-align:left; overflow-wrap:anywhere;
-}
-.quotation-hub__order-line .quotation-hub__order-amount {
-  color: var(--app-color-primary-action);
-  font-size: var(--app-transaction-money-regular-size);
-  font-weight: 750;
 }
 .quotation-hub__order-line--total {
   padding: 6px 0 8px;
   align-items: center;
-}
-.quotation-hub__order-line--total .quotation-hub__order-amount {
-  font-size: var(--app-transaction-money-prominent-size);
-  font-weight: 770;
 }
 .quotation-hub__order-actions {
   border-top:1px solid #ecf0f5; display:flex; gap:9px; padding-top:12px;
