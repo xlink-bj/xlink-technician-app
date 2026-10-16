@@ -1463,13 +1463,13 @@ function firstStepFieldError(field: QuotationValidationField): string {
   return validateQuotationDraft(draft).issues.find((issue) => issue.groupId === group.groupId && issue.field === field)?.message ?? ''
 }
 
-async function advanceFirstRepairPartStep(): Promise<void> {
+function advanceFirstRepairPartStep(): Promise<void> {
   const group = firstRepairPartGroup.value
   return group ? selectProductsForFirstGroup(group.groupId) : Promise.resolve()
 }
 defineExpose({ advanceFirstRepairPartStep })
 
-function selectProductsForFirstGroup(groupId: string): Promise<void> {
+async function selectProductsForFirstGroup(groupId: string): Promise<void> {
   const group = firstRepairPartGroup.value
   const draft = composition.draft
   if (!canEdit.value || !group || group.groupId !== groupId || !draft || composition.repairPartOptions.length === 0) return
