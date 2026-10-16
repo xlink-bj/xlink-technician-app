@@ -56,13 +56,14 @@
     </view>
 
     <view v-else-if="workOrder.loadState === 'succeeded' && detail" class="detail-content">
-      <view class="summary-card">
+      <AppSectionHeading class="detail-section-heading" title="工单概览" subtitle="服务信息与当前处理进度" data-testid="ds02b-detail-heading" />
+      <AppRecordCard class="summary-card" data-testid="ds02b-detail-record-card">
         <view class="summary-top-row">
           <view class="summary-identity">
             <view class="summary-copy">
               <view v-if="detail.customerName || detail.servicePartLabel" class="summary-title-row">
                 <text v-if="detail.customerName" class="summary-customer">{{ detail.customerName }}</text>
-                <text v-if="detail.servicePartLabel" class="part-badge">{{ detail.servicePartLabel }}</text>
+                <AppMetaTag v-if="detail.servicePartLabel" class="part-badge" :label="detail.servicePartLabel" />
               </view>
             </view>
           </view>
@@ -107,7 +108,7 @@
         />
         <text v-if="!canDial && detail.contact" class="action-hint">暂无可直接拨打的客户电话</text>
         <text v-if="contactFeedback || actionFeedback" class="action-feedback">{{ contactFeedback || actionFeedback }}</text>
-      </view>
+      </AppRecordCard>
 
       <view
         v-if="workflowProjection.currentTask"
@@ -127,7 +128,7 @@
         <text v-if="workflowProjection.currentTask.execution !== 'enabled' || (productionReadOnly && workflowProjection.currentTask.actionIntent !== 'place_order')" class="task-action-note">当前环境只开放读取，不会提交、接单或推进流程</text>
       </view>
 
-      <view class="information-card">
+      <AppRecordCard class="information-card">
         <scroll-view class="detail-tabs" scroll-x="true" show-scrollbar="false">
           <view
             v-for="tab in visibleDetailTabs"
@@ -279,7 +280,7 @@
             <text class="tab-empty-copy">工单相关资料将在对应业务数据接入后展示。</text>
           </view>
         </view>
-      </view>
+      </AppRecordCard>
 
     </view>
 
@@ -308,6 +309,9 @@ import { workOrderReadScopeKey } from '@features/work-orders/read-identity-scope
 import AppIcon from '@shared/ui/AppIcon.vue'
 import AppLoadingState from '@shared/ui/AppLoadingState.vue'
 import AppStatus from '@shared/ui/AppStatus.vue'
+import AppRecordCard from '@shared/ui/AppRecordCard.vue'
+import AppMetaTag from '@shared/ui/AppMetaTag.vue'
+import AppSectionHeading from '@shared/ui/AppSectionHeading.vue'
 import { appLoadingSkeletonDelayMs } from '@shared/ui/loading'
 
 const session = useSessionStore()
@@ -527,12 +531,8 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
 }
 
 .summary-card,
-.information-card {
-  background: #ffffff;
-  border: 1rpx solid #e4eaf2;
-  border-radius: 24rpx;
-  box-shadow: 0 10rpx 34rpx rgba(32, 55, 90, 0.07);
-}
+.information-card { width: 100%; min-width: 0; }
+.detail-section-heading { width: calc(100% - 6px); margin: 2px 3px 1px; }
 
 .summary-card {
   padding: 28rpx 28rpx 24rpx;
@@ -569,9 +569,9 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
 }
 
 .summary-customer {
-  color: #172033;
-  font-size: 34rpx;
-  font-weight: 800;
+  color: var(--app-text-strong);
+  font-size: var(--app-content-section-size);
+  font-weight: 730;
   max-width: 450rpx;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -579,26 +579,20 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
 }
 
 .part-badge {
-  background: #f0f2f5;
-  border-radius: 6rpx;
-  color: #303945;
-  flex: 0 0 auto;
-  font-size: 18rpx;
-  font-weight: 700;
-  padding: 5rpx 10rpx;
+  flex: 0 1 auto;
 }
 
 .summary-number {
-  color: #60718d;
+  color: var(--app-content-muted-ink);
   flex: 0 0 auto;
-  font-size: 26rpx;
-  font-weight: 800;
+  font-size: 12px;
+  font-weight: 630;
   padding-top: 4rpx;
 }
 
 .location-row {
-  color: #647895;
-  font-size: 24rpx;
+  color: var(--app-content-muted-ink);
+  font-size: 12.5px;
   gap: 8rpx;
   margin-top: 24rpx;
   min-width: 0;
@@ -786,9 +780,9 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
 .detail-tab {
   align-items: center;
   box-sizing: border-box;
-  color: #73819a;
+  color: var(--app-content-muted-ink);
   display: inline-flex;
-  font-size: 22rpx;
+  font-size: 13px;
   height: 82rpx;
   justify-content: center;
   margin: 0 20rpx;
@@ -800,8 +794,8 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
 }
 
 .detail-tab--active {
-  color: #2878f2;
-  font-weight: 800;
+  color: var(--app-color-primary-action);
+  font-weight: 720;
 }
 
 .detail-tab--active::after {
