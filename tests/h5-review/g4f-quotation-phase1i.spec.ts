@@ -45,11 +45,33 @@ test('Phase 1I actual quotation workspace confirms once, locks in flight, then r
   await submit.click()
   await expect(page.getByTestId('quotation-order-confirmation')).toBeVisible()
   expect(await page.evaluate(() => (window as any).__G4F_REVIEW_ORDER_MUTATIONS__.dispatches)).toBe(0)
+  // Observe the true intermediate UI before initiating the synthetic server
+  // promise. The server can complete faster than a subsequent Playwright
+  // assertion, making a correct transient '提交中' state easy to miss.
+  await page.evaluate(() => {
+    const audit = { sawSubmittingLabel: false, sawBusy: false }
+    const record = () => {
+      const el = document.querySelector('[data-testid="action-workspace-submit"]')
+      if (!el) return
+      if (el.textContent?.includes('提交中')) audit.sawSubmittingLabel = true
+      if (el.getAttribute('aria-busy') === 'true') audit.sawBusy = true
+    }
+    const observer = new MutationObserver(record)
+    observer.observe(document.body, { attributes: true, characterData: true, childList: true, subtree: true })
+    ;(window as any).__G4F_SUBMIT_VISUAL_AUDIT__ = audit
+    ;(window as any).__G4F_SUBMIT_VISUAL_OBSERVER__ = observer
+    record()
+  })
   await page.getByTestId('quotation-order-confirm').click()
-  await expect(submit).toHaveAttribute('disabled', 'true')
-  await expect(submit).toContainText('提交中')
   await expect.poll(() => page.evaluate(() => (window as any).__G4F_REVIEW_ORDER_MUTATIONS__.dispatches)).toBe(1)
   await expect(page.getByText('订单已提交并完成服务器核对。')).toBeVisible()
+  const audit = await page.evaluate(() => {
+    ;(window as any).__G4F_SUBMIT_VISUAL_OBSERVER__?.disconnect()
+    return (window as any).__G4F_SUBMIT_VISUAL_AUDIT__ as { sawSubmittingLabel: boolean; sawBusy: boolean }
+  })
+  expect(audit.sawSubmittingLabel, 'must render transient submitting label').toBe(true)
+  expect(audit.sawBusy, 'must render busy state').toBe(true)
+  await expect(submit).toHaveAttribute('disabled', 'true')
   await expect(page.getByTestId('quotation-order-confirmation')).toHaveCount(0)
   await expectReviewSafe(page, diagnostics)
 })
