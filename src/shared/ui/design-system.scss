@@ -140,7 +140,8 @@ page {
 }
 .app-button__loading-slot {
   display: block; box-sizing: border-box; flex: 0 0 16px;
-  width: 16px; height: 16px; border: 2px solid currentColor;
+  width: 16px; height: 16px; max-width: 16px; max-height: 16px;
+  min-height: 0; border: 2px solid currentColor;
   border-top-color: transparent; border-radius: 50%; visibility: hidden;
 }
 .app-button__loading-slot--active {

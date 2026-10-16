@@ -13,7 +13,7 @@
         'app-button--elevated': elevated,
       },
     ]"
-    :disabled="disabled || loading"
+    :disabled="disabled && !loading"
     hover-class="app-button--pressed"
     :hover-start-time="0"
     :hover-stay-time="70"

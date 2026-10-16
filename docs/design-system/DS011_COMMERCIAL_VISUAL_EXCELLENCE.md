@@ -22,7 +22,7 @@ Reference rules are adapted, not copied pixel-for-pixel; illustration colors, pu
 - Secondary: white surface with restrained neutral boundary, dark text. Ghost: blue outline, blue text. Tertiary: quiet blue text, no boundary. Legacy `text` remains valid.
 - Pill is **opt-in**; regular rounded default preserves the current form and footer grammar. Elevation is contextual, never used for every button.
 - Physical dimensions: compact ≥44px, regular 48px, large 52px. Preferred 14/15/16px Chinese typography; padding/spacing consistent across widths.
-- Normal state, elevated, disabled, pressed and loading are separate visual states. Disabled never emits a command. Busy indicator must not make the label shift appreciably; pressed feedback should not remain stuck.
+- Normal state, elevated, disabled, pressed and loading are separate visual states. Disabled never emits a command. Loading uses `aria-disabled` and a component-side guard rather than a native disabled attribute to avoid uni-app's disabled grey skin; it is never allowed to emit a business command. Busy indicator must not make the label shift appreciably; pressed feedback should not remain stuck.
 - Default Action Bar is in the Workspace flow, not a floating overlay; dual is balanced, split separates safe vs. primary actions, trailing groups modal actions on the right. Safe-area padding survives all modes.
 - Feedback state API is strictly presentational: `busy`, `success`, `error` exist **only** as current caller-supplied business states. Do not set success on a timer, CSS animation completion or optimistic fake network event.
 
