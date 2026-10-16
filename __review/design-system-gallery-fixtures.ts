@@ -65,14 +65,14 @@ export const designSystemSections: readonly DesignSystemSection[] = [
     examples: [{ id: 'patterns', title: '已验证共享模式', state: 'presentation-only', note: '不携带 Survey 业务语义的模式示例', kind: 'patterns' }],
   },
   {
-    id: '08-commercial-content',
-    title: 'Commercial Content',
-    examples: [{ id: 'records', title: '商业级卡片 / 分组 / 元标签', state: 'record / section / metadata', note: 'DS-02.B · 真实列表和详情共享的商业内容母版', kind: 'records' }],
-  },
-  {
     id: '07-action-workspace-footer',
     title: 'Action Workspace Footer',
     examples: [{ id: 'action-bar', title: '底部 Action Bar', state: 'single / dual / save lifecycle', note: 'DS-01.1 · 单/双/分布式操作与服务端确认状态', kind: 'action-bar' }],
+  },
+  {
+    id: '08-commercial-content',
+    title: 'Commercial Content',
+    examples: [{ id: 'records', title: '商业级卡片 / 分组 / 元标签', state: 'record / section / metadata', note: 'DS-02.B · 真实列表和详情共享的商业内容母版', kind: 'records' }],
   },
 ]
 
