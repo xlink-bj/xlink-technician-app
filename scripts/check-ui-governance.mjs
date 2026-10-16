@@ -240,7 +240,7 @@ if (quoteHub.includes('--q-') || !quotationFooter.includes('<AppAmountValue')
   || !commercialTokens.includes('.app-amount-value--prominent')) {
   fail('DS-03: legacy Q00 page palette or common financial typography contract has regressed')
 }
-if (/useWorkOrder|Workflow|submitOrder|calculate|fetch\\(|axios|@tap=|@click=/.test(amountValue)) {
+if (/useWorkOrder|Workflow|submitOrder|calculate|fetch|axios|@tap=|@click=/.test(amountValue)) {
   fail('DS-03: amount primitive must only display caller-provided, already-formatted values')
 }
 
