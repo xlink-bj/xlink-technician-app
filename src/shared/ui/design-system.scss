@@ -104,6 +104,16 @@ page {
   --app-feedback-warning-surface: var(--app-color-warning-soft);
   --app-disabled-ink: var(--app-button-disabled-text);
   --app-disabled-surface: var(--app-button-disabled-bg);
+  --app-content-card-radius: 18px;
+  --app-content-card-elevation: 0 3px 16px rgba(28, 48, 80, .065);
+  --app-content-section-size: 18px;
+  --app-content-title-size: 17px;
+  --app-content-meta-size: 12px;
+  --app-content-muted-ink: #65758b;
+  --app-tag-neutral-ink: #596a80;
+  --app-tag-neutral-surface: #eff3f8;
+  --app-tag-info-ink: #215ba6;
+  --app-tag-info-surface: #eaf2fe;
 }
 
 /* Surface / card grammar */
@@ -425,3 +435,51 @@ page {
 @media (prefers-reduced-motion: reduce) {
   .app-action-feedback__spinner { animation-duration: 1600ms; }
 }
+
+/* DS-02.B Commercial Content Master: one semantic grammar across actual
+   Work Orders and Detail. Domain selectors may position contents but must
+   not reinvent card elevation, typography or tag status colors. */
+.app-record-card {
+  box-sizing: border-box; min-width: 0; overflow: hidden;
+  background: var(--app-surface-raised);
+  border: 1px solid var(--app-outline-subtle);
+  border-radius: var(--app-content-card-radius);
+  box-shadow: var(--app-content-card-elevation);
+  --app-record-accent: var(--app-color-primary-action);
+}
+.app-record-card--horizontal { display: flex; align-items: stretch; }
+.app-record-card--tone-neutral, .app-record-card--tone-gray { --app-record-accent: #91a1b5; }
+.app-record-card--tone-blue { --app-record-accent: var(--app-color-primary-action); }
+.app-record-card--tone-red { --app-record-accent: #c65d4b; }
+.app-record-card--tone-orange { --app-record-accent: #b77926; }
+.app-record-card--tone-purple { --app-record-accent: #8067b5; }
+.app-record-card--tone-green { --app-record-accent: #21895e; }
+.app-record-card--interactive { transition: box-shadow 160ms ease, transform 160ms ease; }
+.app-record-card--interactive:active { box-shadow: var(--app-elevation-flat); transform: translateY(1px); }
+
+.app-meta-tag {
+  box-sizing: border-box; min-width: 0; max-width: 100%;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 7px; padding: 4px 9px;
+  background: var(--app-tag-neutral-surface);
+  color: var(--app-tag-neutral-ink);
+  font-size: var(--app-content-meta-size); font-weight: 610; line-height: 1.4;
+}
+.app-meta-tag__label { min-width: 0; overflow-wrap: anywhere; }
+.app-meta-tag--info { color: var(--app-tag-info-ink); background: var(--app-tag-info-surface); }
+.app-meta-tag--success { color: var(--app-feedback-success-ink); background: var(--app-feedback-success-surface); }
+.app-meta-tag--warning { color: var(--app-feedback-warning-ink); background: var(--app-feedback-warning-surface); }
+.app-section-heading {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; min-width: 0; padding: 0 1px;
+}
+.app-section-heading__copy { display: flex; flex-direction: column; min-width: 0; gap: 3px; }
+.app-section-heading__title {
+  color: var(--app-text-strong); font-size: var(--app-content-section-size);
+  font-weight: 720; line-height: 1.33; letter-spacing: .1px;
+}
+.app-section-heading__subtitle {
+  color: var(--app-text-secondary); font-size: var(--app-content-meta-size);
+  line-height: 1.42;
+}
+.app-section-heading__trailing { min-width: 0; flex-shrink: 0; color: var(--app-text-secondary); font-size: var(--app-content-meta-size); }
