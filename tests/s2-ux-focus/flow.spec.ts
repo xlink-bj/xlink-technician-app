@@ -201,6 +201,23 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       gitCommit: process.env.GITHUB_SHA ?? 'local',
     }, null, 2))
     await info.attach(name, { body: shot, contentType: 'image/png' })
+    if (screen === 'Q01') {
+      // A real bottom-sheet presentation of the EXISTING source-backed
+      // cascaded repair-part picker; not a fake detached list or new data.
+      await page.getByTestId('quotation-first-step-repair-parts-trigger').click()
+      await expect(page.getByTestId('quotation-repair-part-picker')).toBeVisible()
+      await expect(page.locator('.quotation-content__picker-sheet')).toBeVisible()
+      const pickerShot = await page.screenshot({ fullPage: false, animations: 'disabled', caret: 'hide' })
+      await writeFile(resolve(dir, name + '-picker.png'), pickerShot)
+      await info.attach(name + '-picker', { body: pickerShot, contentType: 'image/png' })
+      await page.locator('.quotation-content__picker-header').getByText('取消', { exact: true }).click()
+      await expect(page.getByTestId('quotation-repair-part-picker')).toHaveCount(0)
+      // Footer Next is ONLY a front-end position change of the old
+      // selectProductsForFirstGroup handler: incomplete input still fails.
+      await page.getByTestId('quotation-first-step-next').click()
+      await expect(page.getByTestId('quotation-first-step-repair-parts-error')).not.toBeEmpty()
+      await expect(page.getByTestId('action-workspace-submit')).toHaveCount(0)
+    }
     assertSafe()
   })
 }
