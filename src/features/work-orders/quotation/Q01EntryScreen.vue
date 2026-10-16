@@ -162,7 +162,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import AppStatus from '@shared/ui/AppStatus.vue'
 import AppButton from '@shared/ui/AppButton.vue'
 import AppIcon from '@shared/ui/AppIcon.vue'
@@ -170,7 +170,7 @@ import AppCascadeSelector from '@shared/ui/AppCascadeSelector.vue'
 import type { CodeOptionRead } from '@shared/ports'
 import type { QuotationGroup } from './model'
 
-defineProps<{
+const props = defineProps<{
   readonly group: QuotationGroup
   readonly options: readonly CodeOptionRead[]
   readonly canEdit: boolean
@@ -191,6 +191,10 @@ const emit = defineEmits<{
   (event: 'select-products'): void
 }>()
 const pickerOpen = ref(false)
+watch(() => props.group.repairParts, (path) => {
+  if (path.length) pickerOpen.value = false
+}, { deep: true })
+
 </script>
 
 <style scoped>
