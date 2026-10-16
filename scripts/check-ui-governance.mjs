@@ -257,7 +257,7 @@ if (!q01Controller.includes('<Q01EntryScreen') || q01Controller.includes('Q01Fir
   || !q01Spec.includes('390 × 844')) {
   fail('DS-04: independent real-Q01 design/presentation contract has regressed')
 }
-if (/useQuotationCompositionStore|useActionWorkspaceStore|useQuotationCatalogBrowserStore|fetch\\(|axios|quotationEngine|submitOrder|WorkflowRuntime/.test(q01Entry)) {
+if (/useQuotationCompositionStore|useActionWorkspaceStore|useQuotationCatalogBrowserStore|fetch|axios|quotationEngine|submitOrder|WorkflowRuntime/.test(q01Entry)) {
   fail('DS-04: Q01 visual component may not own quotation stores, pricing, networking or workflow')
 }
 
