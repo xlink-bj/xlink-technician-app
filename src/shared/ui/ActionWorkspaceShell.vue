@@ -300,15 +300,17 @@ defineEmits<{
 
 /* Q01 first-entry layout contract; applies to no other quotation stages. */
 .action-workspace-page--q01-entry .action-workspace-body {
-  padding-top: 9px;
-  padding-bottom: 22px;
+  padding-top: 7px;
+  padding-bottom: 18px;
 }
 .action-workspace-page--q01-entry .action-workspace-context {
-  border-radius: 15px;
-  padding: 13px 14px;
+  border-radius: 14px;
+  padding: 9px 12px;
   box-shadow: var(--app-content-card-elevation);
 }
-.action-workspace-page--q01-entry .action-workspace-context-quotation { min-height: 55px; }
+.action-workspace-page--q01-entry .action-workspace-context-quotation { min-height: 43px; gap: 9px; }
+.action-workspace-page--q01-entry .action-workspace-context-house { width: 38px; height: 38px; flex: 0 0 38px; border-radius: 9px; }
+.action-workspace-page--q01-entry .action-workspace-context-label { font-size: 10px; }
 .action-workspace-page--q01-entry .action-workspace-context-survey-number { font-size: 15px; }
 .action-workspace-page--q01-entry .action-workspace-context-survey-customer {
   font-size: 11px;
@@ -316,13 +318,13 @@ defineEmits<{
 .action-workspace-page--q01-entry .action-workspace-context-quotation-state { font-size: 11px; }
 .q01-context-address {
   display: flex; align-items: center; gap: 9px;
-  min-height: 36px; padding-top: 10px;
-  margin-top: 10px; border-top: 1px solid var(--app-outline-subtle);
+  min-height: 24px; padding-top: 5px;
+  margin-top: 6px; border-top: 1px solid var(--app-outline-subtle);
   color: var(--app-text-strong);
 }
 .q01-context-address-text {
   flex: 1; min-width: 0; color: var(--app-text-strong);
-  font-size: 12px; font-weight: 590; line-height: 1.5;
+  font-size: 11px; font-weight: 570; line-height: 1.4;
   overflow-wrap: anywhere;
 }
 /* #ifdef H5 */

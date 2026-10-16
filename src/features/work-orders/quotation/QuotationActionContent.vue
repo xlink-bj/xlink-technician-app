@@ -218,195 +218,29 @@
           >添加维修部位组</AppButton>
         </view>
 
-        <view
-          v-else-if="isFirstRepairPartStep && firstRepairPartGroup"
-          class="q01-root"
-          data-testid="quotation-first-repair-part-step"
-        >
-          <AppStatus
-            v-if="!hasSharedDraftStatus"
-            class="q01-first-step-notice"
-            :message="props.productReviewOnly
-              ? '演示数据仅保存在本机；正式报价订单提交已关闭。'
-              : '当前为本机报价草稿；校验并提交后才会创建正式订单。'"
-            variant="strip"
-            icon="warning"
-            quiet
-            data-testid="quotation-first-step-draft-notice"
+        <template v-else-if="isFirstRepairPartStep && firstRepairPartGroup">
+          <Q01EntryScreen
+            :group="firstRepairPartGroup"
+            :options="composition.repairPartOptions"
+            :can-edit="canEdit"
+            :show-draft-notice="!hasSharedDraftStatus"
+            :product-review-only="props.productReviewOnly"
+            :repair-parts-label="repairPartPathLabel(firstRepairPartGroup.repairParts)"
+            :errors="{
+              repairParts: firstStepFieldError('repairParts'),
+              partDescription: firstStepFieldError('partDescription'),
+              maintainAreaNum: firstStepFieldError('maintainAreaNum'),
+            }"
+            @repair-parts-change="onRepairPartChange(firstRepairPartGroup.groupId, $event)"
+            @description-input="onGroupDescriptionInput(firstRepairPartGroup.groupId, $event)"
+            @quantity-input="onGroupQuantityInput(firstRepairPartGroup.groupId, $event)"
+            @select-products="selectProductsForFirstGroup(firstRepairPartGroup.groupId)"
           />
-
-          <!-- Three-stage wayfinding only, never an authorization or Workflow state. -->
-          <view class="q01-journey-steps" aria-label="报价操作步骤" data-testid="quotation-q01-journey">
-            <view class="q01-journey-step q01-journey-step--current">
-              <view class="q01-journey-circle">1</view>
-              <text>维修部位</text>
-            </view>
-            <view class="q01-journey-connector" aria-hidden="true" />
-            <view class="q01-journey-step">
-              <view class="q01-journey-circle">2</view>
-              <text>报价项目</text>
-            </view>
-            <view class="q01-journey-connector" aria-hidden="true" />
-            <view class="q01-journey-step">
-              <view class="q01-journey-circle">3</view>
-              <text>订单确认</text>
-            </view>
-          </view>
-          <view class="q01-first-step-page-head">
-            <text class="q01-first-step-kicker">报价编辑 · 第一步</text>
-            <text class="q01-first-step-card-title">维修部位信息</text>
-            <text class="q01-first-step-page-help">请填写本次维修的部位和基本信息，再添加报价项目。</text>
-          </view>
-          <view
-            class="q01-first-step-card"
-            :data-testid="`quotation-repair-group-${firstRepairPartGroup.groupId}`"
-          >
-
-            <view class="q01-first-step-field">
-              <text class="q01-first-step-label">防水维修部位 <text class="q01-first-step-required">*</text></text>
-              <view data-testid="quotation-first-step-repair-parts">
-                <button
-                  class="q01-first-step-selector-trigger"
-                  type="button"
-                  :disabled="!canEdit || composition.repairPartOptions.length === 0"
-                  :aria-expanded="repairPartSelectorOpen"
-                  :aria-invalid="Boolean(firstStepFieldError('repairParts'))"
-                  data-testid="quotation-first-step-repair-parts-trigger"
-                  @tap="repairPartSelectorOpen = !repairPartSelectorOpen"
-                >
-                  <view class="q01-first-step-selector-icon" aria-hidden="true">
-                    <AppIcon name="location" :size="20" color="var(--app-color-primary-action)" />
-                  </view>
-                  <view class="q01-first-step-selector-copy">
-                    <text class="q01-first-step-selector-value">{{ repairPartPathLabel(firstRepairPartGroup.repairParts) || '请选择维修部位' }}</text>
-                    <text class="q01-first-step-selector-hint">{{ firstRepairPartGroup.repairParts.length ? '已选择维修部位' : '选择具体维修位置' }}</text>
-                  </view>
-                  <AppIcon name="chevron-right" :size="16" color="var(--app-color-text-secondary)" aria-hidden="true" />
-                </button>
-                <view v-if="repairPartSelectorOpen" class="q01-picker-backdrop"
-                  data-testid="quotation-repair-part-picker" @tap="repairPartSelectorOpen = false">
-                  <view class="q01-picker-sheet" role="dialog" aria-modal="true"
-                    aria-label="选择维修部位" @tap.stop>
-                    <view class="q01-picker-grabber" aria-hidden="true" />
-                    <view class="q01-picker-header">
-                      <AppButton variant="text" size="regular" data-testid="quotation-repair-part-picker-cancel" @tap="repairPartSelectorOpen = false">取消</AppButton>
-                      <text class="q01-picker-title">选择维修部位</text>
-                      <AppButton variant="text" size="regular" data-testid="quotation-repair-part-picker-done" @tap="repairPartSelectorOpen = false">完成</AppButton>
-                    </view>
-                    <view class="q01-picker-content">
-                      <AppCascadeSelector
-                        :options="composition.repairPartOptions"
-                        :model-value="firstRepairPartGroup.repairParts"
-                        :hierarchical="true"
-                        :test-id="`quotation-repair-part-selector-${firstRepairPartGroup.groupId}`"
-                        :disabled="!canEdit"
-                        @update:model-value="onRepairPartChange(firstRepairPartGroup.groupId, $event)"
-                      />
-                    </view>
-                  </view>
-                </view>
-              </view>
-              <text v-if="firstRepairPartGroup.repairParts.length > 0" class="q01-first-step-selected-path" data-testid="quotation-first-step-selected-path">已选择：{{ repairPartPathLabel(firstRepairPartGroup.repairParts) }}</text>
-              <AppStatus
-                v-if="composition.repairPartOptions.length === 0"
-                class="q01-first-step-source-state"
-                message="维修部位选项暂不可用；无法安全进入商品目录。"
-                tone="warning"
-                quiet
-                data-testid="quotation-first-step-options-unavailable"
-              />
-              <text
-                v-else
-                class="q01-first-step-error-slot"
-                :class="{ 'q01-first-step-error-slot--visible': firstStepFieldError('repairParts') }"
-                role="alert"
-                data-testid="quotation-first-step-repair-parts-error"
-              >{{ firstStepFieldError('repairParts') }}</text>
-            </view>
-
-            <view class="q01-first-step-field">
-              <text class="q01-first-step-label">维修部位描述 <text class="q01-first-step-required">*</text></text>
-              <textarea
-                class="q01-first-step-textarea"
-                :value="firstRepairPartGroup.partDescription"
-                :disabled="!canEdit"
-                :aria-invalid="Boolean(firstStepFieldError('partDescription'))"
-                placeholder="描述当前维修部位"
-                data-testid="quotation-first-step-description"
-                @input="onGroupDescriptionInput(firstRepairPartGroup.groupId, $event)"
-              />
-              <text
-                class="q01-first-step-error-slot"
-                :class="{ 'q01-first-step-error-slot--visible': firstStepFieldError('partDescription') }"
-                role="alert"
-                data-testid="quotation-first-step-description-error"
-              >{{ firstStepFieldError('partDescription') }}</text>
-            </view>
-
-            <view class="q01-first-step-field">
-              <text class="q01-first-step-label">工程量 <text class="q01-first-step-required">*</text></text>
-              <input
-                class="q01-first-step-quantity"
-                type="digit"
-                :value="firstRepairPartGroup.maintainAreaNum"
-                :disabled="!canEdit"
-                :aria-invalid="Boolean(firstStepFieldError('maintainAreaNum'))"
-                placeholder="填写工程总量"
-                data-testid="quotation-first-step-quantity"
-                @input="onGroupQuantityInput(firstRepairPartGroup.groupId, $event)"
-              />
-              <text class="q01-first-step-hint">用于当前维修部位的报价计算，实际单位由产品规则确定。</text>
-              <text
-                class="q01-first-step-error-slot"
-                :class="{ 'q01-first-step-error-slot--visible': firstStepFieldError('maintainAreaNum') }"
-                role="alert"
-                data-testid="quotation-first-step-quantity-error"
-              >{{ firstStepFieldError('maintainAreaNum') }}</text>
-            </view>
-
-          </view>
-          <view class="q01-next-section" data-testid="quotation-first-step-product-action">
-            <view class="q01-section-heading q01-next-heading">
-              <view class="q01-next-heading-copy">
-                <text class="q01-first-step-products-title">报价项目</text>
-                <text class="q01-next-heading-meta">第二步 · 选择维修方案</text>
-              </view>
-            </view>
-            <button class="q01-select-tile" type="button"
-              :disabled="!canEdit || composition.repairPartOptions.length === 0"
-              data-testid="quotation-first-step-select-products"
-              @tap="selectProductsForFirstGroup(firstRepairPartGroup.groupId)">
-              <view class="q01-select-tile-copy">
-                <text class="q01-select-tile-name">添加报价项目</text>
-                <text class="q01-select-tile-help">套餐、工序、材料、机措</text>
-              </view>
-              <AppIcon name="chevron-right" :size="20" color="var(--app-color-primary-action)" />
-            </button>
-          </view>
-          <view class="q01-cost-section" data-testid="quotation-cost-adjustments">
-            <view class="q01-section-heading">
-              <view class="q01-section-number">3</view>
-              <text class="q01-initial-cost-title">费用与优惠</text>
-            </view>
-            <view class="q01-initial-cost-row">
-              <text>折扣</text>
-              <text class="q01-fee-value">不打折 <text aria-hidden="true">›</text></text>
-            </view>
-            <view class="q01-initial-cost-row">
-              <text>优惠金额（元）</text>
-              <text class="q01-initial-cost-unavailable">报价规则待核验</text>
-            </view>
-            <text class="q01-initial-cost-note">折扣、优惠及增减项需以 R1 已验证的业务规则和服务端金额为准。</text>
-          </view>
-          <view class="q01-order-explainer">
-            <text class="q01-order-explainer-title">ⓘ 订单说明</text>
-            <text>提交后生成正式订单，可在订单档案中查看。</text>
-            <text>需要完成相应的业务校验及权限核对，才能提交。</text>
-          </view>
-          <view v-if="syntheticReviewEnabled" class="q01-synthetic-review-slot" data-testid="synthetic-extfield-slot">
+          <view v-if="syntheticReviewEnabled" class="quotation-content__synthetic-review-slot"
+            data-testid="synthetic-extfield-slot">
             <slot name="synthetic-review-panel" />
           </view>
-        </view>
+        </template>
 
         <view v-else class="quotation-content__groups" data-testid="quotation-draft-groups">
           <view
@@ -1184,6 +1018,7 @@ import type { SkuLineageAudit } from './sku-identity-review'
 import type { SameCatalogComparison } from './sku-identity-review'
 import type { QuoteSkuReadiness } from './sku-readiness-view'
 
+import Q01EntryScreen from './Q01EntryScreen.vue'
 import AppButton from '@shared/ui/AppButton.vue'
 import AppCascadeSelector from '@shared/ui/AppCascadeSelector.vue'
 import AppIcon from '@shared/ui/AppIcon.vue'
@@ -1322,7 +1157,6 @@ watch([isFirstRepairPartStep, canEdit], ([active, permitted]) => {
 const activeCatalogGroupId = ref<string | null>(null)
 const catalogSelectionError = ref('')
 const firstStepValidationRequestedFor = ref<string | null>(null)
-const repairPartSelectorOpen = ref(false)
 const packageMaterialChoicesByLayer = ref<Readonly<Record<string, QuotationPackageMaterialChoice>>>({})
 const pendingPackageChoicesByTarget = ref<Readonly<Record<string, Readonly<Record<string, QuotationPackageMaterialChoice>>>>>({})
 const groupContextExpandedById = ref<Readonly<Record<string, boolean>>>({})
@@ -1378,13 +1212,6 @@ const catalogSectionTitle = computed(() => ({
   material: '材料目录',
   measure: '机措项目',
 }[catalogBrowser.selectedKind]))
-watch(
-  () => firstRepairPartGroup.value?.repairParts,
-  (repairParts) => {
-    if (repairParts?.length) repairPartSelectorOpen.value = false
-  },
-  { deep: true },
-)
 const activeCatalogGroupTitle = computed(() => {
   if (!activeCatalogGroup.value) return '未指定分组'
   const index = composition.groups.findIndex((group) => group.groupId === activeCatalogGroup.value?.groupId)
@@ -3143,4 +2970,3 @@ function configuredPackageLayerLabel(
 
 </style>
 
-<style src="./Q01FirstStep.css"></style>

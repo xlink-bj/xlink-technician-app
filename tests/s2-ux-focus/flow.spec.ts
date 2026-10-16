@@ -148,11 +148,11 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
     } else if (screen === 'Q01') {
       // The real editor can legitimately start in its empty state. Enter
       // the editable first repair group before inspecting field geometry.
-      if (await page.locator('.q01-first-step-label').count() === 0) {
+      if (await page.locator('.q01-screen__label').count() === 0) {
         await page.getByTestId('quotation-add-group').click()
       }
-      await expect(page.locator('.q01-first-step-label').first()).toBeVisible()
-      const label = await page.locator('.q01-first-step-label').first().evaluate(
+      await expect(page.locator('.q01-screen__label').first()).toBeVisible()
+      const label = await page.locator('.q01-screen__label').first().evaluate(
         el => parseFloat(getComputedStyle(el).fontSize),
       )
       expect(label, 'Q01 field labels must remain legible').toBeGreaterThanOrEqual(14)
@@ -161,8 +161,8 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       expect(textArea!.height, 'Q01 description must have comfortable touch and reading room').toBeGreaterThanOrEqual(70)
       expect(textArea!.height, 'Q01 description must fit mobile height budget').toBeLessThanOrEqual(114)
       await expect(page.getByTestId('quotation-q01-journey')).toBeVisible()
-      await expect(page.locator('.q01-root')).toBeVisible()
-      const titleSize = await page.locator('.q01-first-step-card-title').first().evaluate(el => parseFloat(getComputedStyle(el).fontSize))
+      await expect(page.locator('.q01-screen')).toBeVisible()
+      const titleSize = await page.locator('.q01-screen__title').first().evaluate(el => parseFloat(getComputedStyle(el).fontSize))
       expect(titleSize, 'Q01 page title must show real visual hierarchy').toBeGreaterThanOrEqual(22)
       await expect(page.getByTestId('quotation-first-step-footer')).toBeVisible()
       const next = await page.getByTestId('quotation-first-step-next').boundingBox()
@@ -171,6 +171,17 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       const selector = await page.getByTestId('quotation-first-step-repair-parts-trigger').boundingBox()
       expect(selector).not.toBeNull()
       expect(selector!.height).toBeGreaterThanOrEqual(44)
+      if (viewport.height >= 800) {
+        // First value: at 390x844 the technician must see all three required
+        // inputs BEFORE the fixed action bar, without scrolling or obstruction.
+        const quantity = await page.getByTestId('quotation-first-step-quantity').boundingBox()
+        const footer = await page.getByTestId('quotation-first-step-footer').boundingBox()
+        expect(quantity).not.toBeNull()
+        expect(footer).not.toBeNull()
+        expect(quantity!.y + quantity!.height,
+          'Q01 all required fields should fit above the sticky actions at 390x844')
+          .toBeLessThanOrEqual(footer!.y + 2)
+      }
     } else {
       await expect(page.locator('.quotation-content__catalog-intro')).toBeHidden()
       const title = await page.locator('.quotation-content__catalog-item-title').first().evaluate(
@@ -209,7 +220,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       // cascaded repair-part picker; not a fake detached list or new data.
       await page.getByTestId('quotation-first-step-repair-parts-trigger').click()
       await expect(page.getByTestId('quotation-repair-part-picker')).toBeVisible()
-      await expect(page.locator('.q01-picker-sheet')).toBeVisible()
+      await expect(page.locator('.q01-screen__sheet')).toBeVisible()
       const pickerShot = await page.screenshot({ fullPage: false, animations: 'disabled', caret: 'hide' })
       await writeFile(resolve(dir, name + '-picker.png'), pickerShot)
       await info.attach(name + '-picker', { body: pickerShot, contentType: 'image/png' })
