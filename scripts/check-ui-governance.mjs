@@ -221,4 +221,27 @@ if (!commercialTokens.includes('--app-content-card-radius') || !commercialTokens
   fail('DS-02.B: semantic card/tag token contract missing')
 }
 
+// DS-03: quotation and signing must use the same presentation-only grammar.
+// Business status, authorization, amounts and quotation mutations stay caller-owned.
+const [quoteHub, signingRead, quotationFooter, amountValue] = await Promise.all([
+  read('src/features/work-orders/quotation/QuotationOrderHub.vue'),
+  read('src/pages/work-orders/signing-order-read.vue'),
+  read('src/features/work-orders/quotation/QuotationActionWorkspace.vue'),
+  read('src/shared/ui/AppAmountValue.vue'),
+])
+for (const [surface, source] of [['Q00', quoteHub], ['Signing', signingRead]]) {
+  for (const component of ['AppRecordCard', 'AppSectionHeading', 'AppMetaTag', 'AppAmountValue']) {
+    if (!source.includes(`<${component}`)) fail(`DS-03: ${surface} must reuse ${component}`)
+  }
+  if (!source.includes('app-transaction-page')) fail(`DS-03: ${surface} misses transaction surface contract`)
+}
+if (quoteHub.includes('--q-') || !quotationFooter.includes('<AppAmountValue')
+  || !commercialTokens.includes('--app-transaction-card-padding')
+  || !commercialTokens.includes('.app-amount-value--prominent')) {
+  fail('DS-03: legacy Q00 page palette or common financial typography contract has regressed')
+}
+if (/useWorkOrder|Workflow|submitOrder|calculate|fetch|axios|@tap=|@click=/.test(amountValue)) {
+  fail('DS-03: amount primitive must only display caller-provided, already-formatted values')
+}
+
 console.log('UI governance check passed: shared UX contract, Gallery coverage, and delivery gates are intact')

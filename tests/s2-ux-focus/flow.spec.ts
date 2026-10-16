@@ -2,15 +2,15 @@ import { mkdir, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
 
-type Screen = 'Q00' | 'Q01' | 'Q03'
+type Screen = 'Q00' | 'Q01' | 'Q03' | 'C01'
 const requested = (process.env.S2_FOCUS_SCREEN || 'Q00').toUpperCase()
-if (!['Q00', 'Q01', 'Q03', 'ALL'].includes(requested)) {
-  throw new Error('S2_FOCUS_SCREEN must be Q00, Q01, Q03 or CI-only ALL')
+if (!['Q00', 'Q01', 'Q03', 'C01', 'ALL'].includes(requested)) {
+  throw new Error('S2_FOCUS_SCREEN must be Q00, Q01, Q03, C01 or CI-only ALL')
 }
 // Every workflow_dispatch remains single-scene; the feature's own PR validates
 // all three entry points before the on-demand runner is accepted.
 const screens: Screen[] = requested === 'ALL'
-  ? ['Q00', 'Q01', 'Q03']
+  ? ['Q00', 'Q01', 'Q03', 'C01']
   : [requested as Screen]
 
 async function guardLocalOnly(page: Page) {
@@ -48,6 +48,30 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
     await page.setViewportSize(viewport)
     const assertSafe = await guardLocalOnly(page)
 
+    if (screen === 'C01') {
+      // Real signing-read page, not a detached developer/status proxy.
+      // This is a separate DEV synthetic official Order; no order creation,
+      // PDF, SMS, signing command or production read is authorized.
+      await page.goto('/#/pages/index/index', { waitUntil: 'domcontentloaded' })
+      await expect(page.locator('.mock-source-indicator')).toContainText('Mock')
+      await page.locator('.work-orders-entry').click()
+      await page.locator('.search-input input').fill('04009')
+      await page.locator('.search-button').click()
+      await page.locator('.work-order-card').filter({ hasText: '演示客户乙' }).click()
+      await expect(page.locator('.summary-number')).toContainText('04009')
+      await page.evaluate(() => {
+        const uni = (window as Window & {
+          uni?: { navigateTo: (options: { url: string }) => void }
+        }).uni
+        if (!uni) throw new Error('Real uni-app navigation unavailable')
+        uni.navigateTo({ url: '/pages/work-orders/signing-order-read?workOrderId=mock-work-order-002&orderId=mock-official-order-001' })
+      })
+      await expect(page.getByTestId('signing-order-read-verified')).toBeVisible()
+      await expect(page.getByTestId('signing-contract-fixture-label')).toContainText('非真实订单')
+      await expect(page.getByTestId('signing-order-read-contract-disabled')).toHaveAttribute('disabled', 'true')
+      await expect(page.getByTestId('signing-order-read-sign-disabled')).toHaveAttribute('disabled', 'true')
+      await page.getByTestId('signing-order-read-verified').scrollIntoViewIfNeeded()
+    } else {
     // Enter through the REAL App and the same work-order-scoped route as L3.
     // No credential, real customer, Production network or business mutation.
     await page.goto('/#/pages/index/index', { waitUntil: 'domcontentloaded' })
@@ -90,9 +114,21 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       }
     }
 
+    }
+
     // Check actual typography/touch geometry, not just that PNG generation
     // happened. Fixed thresholds are review guardrails, not design signoff.
-    if (screen === 'Q00') {
+    if (screen === 'C01') {
+      const cards = page.getByTestId('signing-order-read-verified')
+      await expect(cards).toHaveClass(/app-record-card/)
+      const heading = cards.locator('.app-section-heading').first()
+      await expect(heading).toBeVisible()
+      const box = await cards.boundingBox()
+      expect(box).not.toBeNull()
+      expect(box!.width).toBeLessThanOrEqual(viewport.width)
+      const money = cards.locator('.app-amount-value')
+      if (await money.count()) await expect(money).toHaveClass(/app-amount-value--prominent/)
+    } else if (screen === 'Q00') {
       const cards = page.locator('.quotation-hub__order')
       const first = cards.first()
       const font = await first.locator('.quotation-hub__order-number').evaluate(
@@ -104,7 +140,11 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       expect(rect!.width).toBeLessThanOrEqual(viewport.width)
       const action = await page.getByTestId('quotation-hub-add-inline').boundingBox()
       expect(action).not.toBeNull()
-      expect(action!.height, 'Q00 new-order CTA target').toBeGreaterThanOrEqual(40)
+      expect(action!.height, 'Q00 new-order CTA target').toBeGreaterThanOrEqual(43.5)
+      const amount = first.locator('.app-amount-value')
+      await expect(amount).toHaveClass(/app-amount-value--prominent/)
+      const amountFont = await amount.evaluate(el => parseFloat(getComputedStyle(el).fontSize))
+      expect(amountFont, 'Q00 actual amount must be a primary financial value').toBeGreaterThanOrEqual(20)
     } else if (screen === 'Q01') {
       // The real editor can legitimately start in its empty state. Enter
       // the editable first repair group before inspecting field geometry.
@@ -148,7 +188,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       viewport,
       provenance: 'DEV_ONLY_SOURCE_MODELED_MOCK',
       actualApp: true,
-      workOrder: 'MOCK-018',
+      workOrder: screen === 'C01' ? 'MOCK-04009' : 'MOCK-018',
       officialOrderCreated: false,
       businessWrites: 0,
       externalRequests: 0,

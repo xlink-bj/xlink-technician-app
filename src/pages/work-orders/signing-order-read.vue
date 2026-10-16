@@ -1,9 +1,8 @@
 <template>
-  <view class="signing-read-page">
+  <view class="signing-read-page app-transaction-page">
     <view class="signing-read-header">
       <text class="signing-read-eyebrow">订单签约 · 当前工单</text>
-      <text class="signing-read-title">签约进度</text>
-      <text class="signing-read-help">查看订单与合同进度，了解当前签约状态。</text>
+      <AppSectionHeading title="签约进度" subtitle="查看订单与合同进度，了解当前签约状态。" />
     </view>
 
     <AppLoadingState
@@ -11,7 +10,7 @@
       variant="inline" label="正在核验工单与正式订单"
       data-testid="signing-order-read-loading"
     />
-    <view
+    <AppRecordCard
       v-else-if="session.status !== 'authenticated' || review.snapshot.state !== 'ready'"
       class="signing-read-section"
       data-testid="signing-order-read-blocked"
@@ -23,35 +22,33 @@
         @tap="retryScopedRead"
       >重新核验当前订单</AppButton>
       <navigator open-type="navigateBack" :delta="1">返回工单</navigator>
-    </view>
+    </AppRecordCard>
     <template v-else>
-      <view class="signing-read-section" data-testid="signing-order-read-verified">
-        <view class="signing-read-heading-row">
-          <text class="signing-read-section-title">订单信息</text>
-          <text class="signing-read-tag">身份已核验</text>
-        </view>
+      <AppRecordCard class="signing-read-section" data-testid="signing-order-read-verified">
+        <AppSectionHeading title="订单信息">
+          <template #trailing><AppMetaTag label="身份已核验" tone="success" /></template>
+        </AppSectionHeading>
         <text class="signing-read-order-number" data-testid="signing-order-read-display-number">{{ review.snapshot.review?.order.displayNumber || '正式订单' }}</text>
         <text class="signing-read-meta">仅限当前工单 · {{ review.snapshot.review?.order.groups.length || 0 }} 个维修分组</text>
         <text class="signing-read-order-note" data-testid="signing-order-read-r1-stage">{{ r1OrderSigningStageNotice(review.snapshot.review?.order.processState) }}</text>
         <view v-if="review.snapshot.review?.order.totalPrice !== undefined" class="signing-read-amount">
           <text class="signing-read-meta">订单金额</text>
-          <text class="signing-read-amount-value">¥{{ review.snapshot.review.order.totalPrice.toFixed(2) }}</text>
+          <AppAmountValue class="signing-read-amount-value" size="prominent" :value="`¥${review.snapshot.review.order.totalPrice.toFixed(2)}`" />
         </view>
         <text v-if="!review.snapshot.review?.order.contentSupported" class="signing-read-warning">
           部分订单明细暂不可识别，未推断缺失字段。
         </text>
-      </view>
-      <view class="signing-read-section signing-read-section--progress" data-testid="signing-review-progress">
-        <text class="signing-read-section-title">签约进度</text>
+      </AppRecordCard>
+      <AppRecordCard class="signing-read-section signing-read-section--progress" data-testid="signing-review-progress">
+        <AppSectionHeading title="签约进度" />
         <text class="signing-read-progress-title">{{ signingProgress.title }}</text>
         <text class="signing-read-body" data-testid="signing-review-next">{{ signingProgress.nextStep }}</text>
         <text class="signing-read-warning">只读进度，不代表当前账号具有签署或短信发送权限。</text>
-      </view>
-      <view class="signing-read-section" data-testid="signing-order-read-contract-status">
-        <view class="signing-read-heading-row">
-          <text class="signing-read-section-title">合同状态</text>
-          <text class="signing-read-tag signing-read-tag--neutral">仅核验</text>
-        </view>
+      </AppRecordCard>
+      <AppRecordCard class="signing-read-section" data-testid="signing-order-read-contract-status">
+        <AppSectionHeading title="合同状态">
+          <template #trailing><AppMetaTag label="仅核验" /></template>
+        </AppSectionHeading>
         <text v-if="devFixtureContractRead" class="signing-read-dev-note" data-testid="signing-contract-fixture-label">DEV 合成合同演示 · 非真实订单、非真实签约</text>
         <text class="signing-read-help">按当前正式订单核验合同，不包含其他订单。查询为空或不完整时，不能认定合同不存在。</text>
         <text v-if="!devFixtureContractRead" data-testid="signing-contract-prod-blocked">
@@ -76,14 +73,14 @@
           </view>
           <text class="signing-read-warning">仅限本次已核验的有限结果，不代表拥有签约权限或可访问合同文件。</text>
         </template>
-      </view>
-      <view class="signing-read-section" data-testid="signing-read-reconciled-status">
-        <text class="signing-read-section-title">当前结果</text>
+      </AppRecordCard>
+      <AppRecordCard class="signing-read-section" data-testid="signing-read-reconciled-status">
+        <AppSectionHeading title="当前结果" />
         <text class="signing-read-progress-title" data-testid="signing-read-stage-title">{{ signingStage.title }}</text>
         <text class="signing-read-body" data-testid="signing-read-stage-detail">{{ signingStage.detail }}</text>
         <text class="signing-read-warning">本页没有调用签署、取消合同、发送短信、创建 PDF 或工作流提交接口。</text>
-      </view>
-      <view v-if="devFixtureContractRead" class="signing-read-section signing-read-section--diagnostics" data-testid="signing-command-preflight">
+      </AppRecordCard>
+      <AppRecordCard v-if="devFixtureContractRead" class="signing-read-section signing-read-section--diagnostics" data-testid="signing-command-preflight">
         <view class="signing-read-heading-row">
           <view class="signing-read-diagnostics-copy">
             <text class="signing-read-section-title">测试环境 · 技术核验</text>
@@ -126,8 +123,8 @@
           </text>
         </view>
         </view>
-      </view>
-      <view class="signing-read-section" data-testid="signing-order-read-no-contract">
+      </AppRecordCard>
+      <AppRecordCard class="signing-read-section" data-testid="signing-order-read-no-contract">
         <text class="signing-read-section-title">签约业务操作 · 未开放</text>
         <text>即使 DEV 样本显示合同记录，也不授予真实合同查看、签章或重复发送权限。</text>
         <AppButton disabled block variant="secondary" data-testid="signing-order-read-contract-disabled">
@@ -136,7 +133,7 @@
         <AppButton disabled block data-testid="signing-order-read-sign-disabled">
           发起签署 · 未开放
         </AppButton>
-      </view>
+      </AppRecordCard>
     </template>
     <view class="signing-read-footer" data-testid="signing-order-read-no-write">
       全程只读 · 不创建订单、不推进流程、不发起签约
@@ -149,6 +146,10 @@ import { computed, ref, watch } from 'vue'
 import { onLoad, onUnload } from '@dcloudio/uni-app'
 import AppButton from '@shared/ui/AppButton.vue'
 import AppLoadingState from '@shared/ui/AppLoadingState.vue'
+import AppRecordCard from '@shared/ui/AppRecordCard.vue'
+import AppMetaTag from '@shared/ui/AppMetaTag.vue'
+import AppSectionHeading from '@shared/ui/AppSectionHeading.vue'
+import AppAmountValue from '@shared/ui/AppAmountValue.vue'
 import { useSessionStore } from '@shared/state'
 import { useSigningReviewReadStore } from '@features/work-orders/signing/signing-review-read-store'
 import { r1OrderSigningStageNotice, r1ContractStatusReadNotice } from '@features/work-orders/signing/r1-signing-ui-rules'
@@ -252,35 +253,33 @@ onUnload(() => {
 <style>
 .signing-read-page {
   min-height: 100vh;
-  padding: var(--app-page-gutter);
+  padding: var(--app-transaction-gutter);
   background: var(--app-color-page);
   color: var(--app-color-text-primary);
-  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+
   font-size: var(--app-font-body);
   line-height: 1.55;
 }
-.signing-read-header, .signing-read-section {
+.signing-read-header {
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 6px 2px 14px; margin-bottom: 4px;
+}
+.signing-read-section {
   display: flex; flex-direction: column; gap: 14rpx;
-  padding: var(--app-card-padding); margin-bottom: 20rpx;
-  background: var(--app-color-surface);
-  border: 1rpx solid var(--app-color-border);
-  border-radius: var(--app-radius-card);
+  padding: var(--app-transaction-card-padding);
+  margin-bottom: var(--app-transaction-gap);
 }
 .signing-read-eyebrow { color: var(--app-color-primary); font-size: var(--app-font-meta); font-weight: 700; }
-.signing-read-title { display: block; font-size: var(--app-font-major-title); font-weight: 800; line-height: 1.3; }
 .signing-read-heading-row { display: flex; align-items: center; justify-content: space-between; gap: 12rpx; }
 .signing-read-section-title { display: block; font-size: var(--app-font-section-title); font-weight: 750; line-height: 1.4; }
-.signing-read-tag { flex: none; background: var(--app-color-success-soft); color: var(--app-color-success);
-  padding: 5rpx 13rpx; border-radius: 10rpx; font-size: var(--app-font-status); font-weight: 700; }
-.signing-read-tag--neutral { color: var(--app-color-text-body); background: var(--app-color-control-surface); }
 .signing-read-order-number { display: block; font-size: 29rpx; font-weight: 750; line-height: 1.4; overflow-wrap: anywhere; }
 .signing-read-meta { display: block; font-size: var(--app-font-meta); color: var(--app-color-text-secondary); }
 .signing-read-order-note { display: block; color: var(--app-color-text-body); font-size: var(--app-font-body);
   line-height: 1.5; padding-top: 12rpx; border-top: 1rpx solid var(--app-color-divider); }
 .signing-read-amount { display: flex; align-items: center; justify-content: space-between;
   padding-top: 12rpx; border-top: 1rpx solid var(--app-color-divider); }
-.signing-read-amount-value { color: var(--app-color-text-primary); font-size: var(--app-font-section-title); font-weight: 750; }
-.signing-read-section--progress { border-color: var(--app-color-border-soft); }
+.signing-read-amount-value { min-width: 0; text-align: right; }
+.signing-read-section--progress { border-color: var(--app-outline-subtle); }
 .signing-read-progress-title { display: block; color: var(--app-color-text-primary); font-size: 28rpx; font-weight: 750; }
 .signing-read-body { display: block; color: var(--app-color-text-body); font-size: var(--app-font-body); line-height: 1.55; }
 .signing-read-help, .signing-read-warning, .signing-read-footer { display: block; color: var(--app-color-text-secondary);
@@ -301,6 +300,6 @@ onUnload(() => {
   min-height: 44px; line-height: 1.4; padding: 9rpx 18rpx; margin: 0; }
 .signing-read-diagnostics-toggle::after { border: 0; }
 .signing-read-diagnostics-details { display: flex; flex-direction: column; gap: 15rpx; border-top: 1rpx solid var(--app-color-border); padding-top: 18rpx; }
-.signing-read-section--progress { background: var(--app-color-surface); border-left: 5rpx solid var(--app-color-primary); }
+.signing-read-section--progress { border-left: 3px solid var(--app-color-primary-action); }
 .signing-read-contract-item { border: 1rpx solid var(--app-color-border); }
 </style>

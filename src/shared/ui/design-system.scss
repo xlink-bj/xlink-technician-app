@@ -114,6 +114,18 @@ page {
   --app-tag-neutral-surface: #eff3f8;
   --app-tag-info-ink: #215ba6;
   --app-tag-info-surface: #eaf2fe;
+  /* DS-03: one cross-journey quotation/signing visual contract.
+     Transaction variants consume the same foundation; never copy a page palette. */
+  --app-transaction-gutter: 14px;
+  --app-transaction-gap: 12px;
+  --app-transaction-card-padding: 16px;
+  --app-transaction-heading-size: 18px;
+  --app-transaction-body-size: 13px;
+  --app-transaction-caption-size: 12px;
+  --app-transaction-money-regular-size: 17px;
+  --app-transaction-money-prominent-size: 23px;
+  --app-transaction-money-ink: var(--app-text-strong);
+
 }
 
 /* Surface / card grammar */
@@ -483,3 +495,28 @@ page {
   line-height: 1.42;
 }
 .app-section-heading__trailing { min-width: 0; flex-shrink: 0; color: var(--app-text-secondary); font-size: var(--app-content-meta-size); }
+
+/* DS-03 shared financial and transaction presentation grammar.
+   Amount text is caller-provided: no calculation, approximation or price fallback. */
+.app-transaction-page {
+  color: var(--app-text-strong);
+  background: var(--app-surface-page);
+  box-sizing: border-box;
+  min-height: 100%;
+}
+.app-amount-value {
+  color: var(--app-transaction-money-ink);
+  display: inline-block;
+  font-variant-numeric: tabular-nums;
+  font-weight: 750;
+  letter-spacing: -.015em;
+  line-height: 1.35;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.app-amount-value--compact { font-size: 14px; }
+.app-amount-value--regular { font-size: var(--app-transaction-money-regular-size); }
+.app-amount-value--prominent { font-size: var(--app-transaction-money-prominent-size); }
+.app-amount-value--strong { color: var(--app-text-strong); }
+.app-amount-value--primary { color: var(--app-color-primary-action); }
+.app-amount-value--muted { color: var(--app-content-muted-ink); }
