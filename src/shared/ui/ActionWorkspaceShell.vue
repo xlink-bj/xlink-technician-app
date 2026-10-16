@@ -12,6 +12,22 @@
             </view>
             <view class="action-workspace-context-survey-status"><view class="action-workspace-context-status-dot" aria-hidden="true" />勘查中</view>
           </view>
+          <view v-if="commercialQuotation && compactQuoteEntry" class="action-workspace-context-quotation-wrap">
+            <view class="action-workspace-context-quotation">
+              <view class="action-workspace-context-house" aria-hidden="true"><AppIcon name="home" :size="24" color="#f19436" /></view>
+              <view class="action-workspace-context-survey-main">
+                <text class="action-workspace-context-label">当前工单</text>
+                <text class="action-workspace-context-survey-number">{{ displayNumber || '工单' }}</text>
+                <text class="action-workspace-context-survey-customer">{{ customerName || '报价任务' }}</text>
+              </view>
+              <view class="action-workspace-context-quotation-state">本机报价</view>
+            </view>
+            <view v-if="serviceDistrict || serviceAddress" class="q01-context-address" data-testid="q01-source-address">
+              <AppIcon name="location" :size="16" color="var(--app-content-muted-ink)" />
+              <text class="q01-context-address-text">{{ serviceDistrict }}{{ serviceDistrict && serviceAddress ? ' · ' : '' }}{{ serviceAddress }}</text>
+              <AppIcon name="chevron-right" :size="15" color="var(--app-content-muted-ink)" />
+            </view>
+          </view>
           <view v-else-if="commercialQuotation" class="action-workspace-context-quotation">
             <view class="action-workspace-context-house" aria-hidden="true"><AppIcon name="home" :size="24" color="#f19436" /></view>
             <view class="action-workspace-context-survey-main">
@@ -128,6 +144,8 @@ const props = defineProps<{
   readonly compactQuoteEntry?: boolean
   readonly demoSurvey?: boolean
   readonly customerName?: string
+  readonly serviceAddress?: string
+  readonly serviceDistrict?: string
   readonly displayNumber?: string
   readonly lifecycle: AppActionLifecycle
   readonly draftStatus: AppActionDraftStatus
@@ -297,6 +315,17 @@ defineEmits<{
   font-size: 11px;
 }
 .action-workspace-page--q01-entry .action-workspace-context-quotation-state { font-size: 11px; }
+.q01-context-address {
+  display: flex; align-items: center; gap: 9px;
+  min-height: 36px; padding-top: 10px;
+  margin-top: 10px; border-top: 1px solid var(--app-outline-subtle);
+  color: var(--app-text-strong);
+}
+.q01-context-address-text {
+  flex: 1; min-width: 0; color: var(--app-text-strong);
+  font-size: 12px; font-weight: 590; line-height: 1.5;
+  overflow-wrap: anywhere;
+}
 /* #ifdef H5 */
 .action-workspace-page--q01-entry { height: calc(100vh - 44px); }
 /* #endif */
