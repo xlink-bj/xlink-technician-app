@@ -1,5 +1,5 @@
 <template>
-  <view class="action-workspace-page" :class="{ 'action-workspace-page--survey': commercialSurvey, 'action-workspace-page--quotation': commercialQuotation }" data-testid="action-workspace-shell">
+  <view class="action-workspace-page" :class="{ 'action-workspace-page--survey': commercialSurvey, 'action-workspace-page--quotation': commercialQuotation, 'action-workspace-page--q01-entry': compactQuoteEntry }" data-testid="action-workspace-shell">
     <scroll-view class="action-workspace-scroll" scroll-y enable-flex :scroll-into-view="scrollIntoView">
       <view class="action-workspace-body">
         <view class="action-workspace-context app-surface app-surface--compact" data-testid="action-workspace-context">
@@ -124,6 +124,8 @@ const props = defineProps<{
   readonly commercialSurvey?: boolean
   /** Same visual system as accepted Survey; Quotation-only, no behavior changes. */
   readonly commercialQuotation?: boolean
+  /** Presentation only: the first quotation repair-part stage, not Workflow state. */
+  readonly compactQuoteEntry?: boolean
   readonly demoSurvey?: boolean
   readonly customerName?: string
   readonly displayNumber?: string
@@ -278,4 +280,25 @@ defineEmits<{
 .action-workspace-context-quotation { display:flex; gap:15rpx; align-items:center; min-height:75rpx; }
 .action-workspace-context-quotation-state { align-self:flex-start; margin-left:auto; border-radius:999rpx;
   padding:7rpx 11rpx; background:#eaf3ff; color:var(--app-color-primary); font-size:20rpx; white-space:nowrap; }
+
+/* Q01 first-entry layout contract; applies to no other quotation stages. */
+.action-workspace-page--q01-entry .action-workspace-body {
+  padding-top: 9px;
+  padding-bottom: 22px;
+}
+.action-workspace-page--q01-entry .action-workspace-context {
+  border-radius: 15px;
+  padding: 13px 14px;
+  box-shadow: var(--app-content-card-elevation);
+}
+.action-workspace-page--q01-entry .action-workspace-context-quotation { min-height: 55px; }
+.action-workspace-page--q01-entry .action-workspace-context-survey-number { font-size: 15px; }
+.action-workspace-page--q01-entry .action-workspace-context-survey-customer {
+  font-size: 11px;
+}
+.action-workspace-page--q01-entry .action-workspace-context-quotation-state { font-size: 11px; }
+/* #ifdef H5 */
+.action-workspace-page--q01-entry { height: calc(100vh - 44px); }
+/* #endif */
+
 </style>
