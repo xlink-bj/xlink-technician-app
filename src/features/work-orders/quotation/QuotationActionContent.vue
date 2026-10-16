@@ -3371,9 +3371,6 @@ function configuredPackageLayerLabel(
   color: var(--app-text-strong);
   font-size: 16px; font-weight: 750; text-align: center;
 }
-.quotation-content__picker-header .app-button {
-  min-width: 58px; min-height: 44px;
-}
 .quotation-content__picker-content {
   flex: 1; min-height: 0; overflow-y: auto;
   overscroll-behavior: contain; padding: 12px 0 10px;
