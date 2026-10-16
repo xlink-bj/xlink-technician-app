@@ -68,6 +68,42 @@ page {
   --app-input-padding-y: 16rpx;
   --app-textarea-min-height: 160rpx;
   --app-information-value-max-width: 68%;
+
+  /* DS-02.A semantic visual contracts, additive and platform-neutral.
+     These roles are the shared source for future business-card extraction.
+     No business view should invent an equivalent local color/radius value. */
+  --app-type-display-size: var(--app-font-major-title);
+  --app-type-section-size: var(--app-font-section-title);
+  --app-type-body-size: var(--app-font-body);
+  --app-type-caption-size: var(--app-font-meta);
+  --app-type-strong-weight: 700;
+  --app-type-body-line-height: 1.5;
+  --app-type-compact-line-height: 1.35;
+  --app-text-strong: var(--app-color-text-primary);
+  --app-text-secondary: var(--app-color-text-secondary);
+  --app-text-tertiary: var(--app-color-text-muted);
+  --app-surface-page: var(--app-color-page);
+  --app-surface-raised: var(--app-color-surface);
+  --app-surface-muted: var(--app-color-control-surface);
+  --app-outline-subtle: var(--app-color-border);
+  --app-outline-control: var(--app-color-border-control);
+  --app-elevation-flat: none;
+  --app-elevation-card: 0 3px 14px rgba(29, 45, 74, 0.055);
+  --app-elevation-overlay: 0 12px 32px rgba(29, 45, 74, 0.12);
+  --app-shape-control: 12px;
+  --app-shape-section: var(--app-radius-surface);
+  --app-shape-card: var(--app-radius-card);
+  --app-icon-sm: 16px;
+  --app-icon-md: 20px;
+  --app-icon-lg: 24px;
+  --app-feedback-success-ink: #14673b;
+  --app-feedback-success-surface: #e7f8ee;
+  --app-feedback-error-ink: #ad3d25;
+  --app-feedback-error-surface: var(--app-color-danger-soft);
+  --app-feedback-warning-ink: #84530c;
+  --app-feedback-warning-surface: var(--app-color-warning-soft);
+  --app-disabled-ink: var(--app-button-disabled-text);
+  --app-disabled-surface: var(--app-button-disabled-bg);
 }
 
 /* Surface / card grammar */
