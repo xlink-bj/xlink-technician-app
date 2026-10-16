@@ -49,7 +49,8 @@ jobs:
             tests/g4f/quotation-order-browse-handoff.test.ts \
             tests/g4f/quotation-order-read.test.ts \
             tests/g4f/quotation-order-signing-read-boundary.test.ts \
-            tests/g4f/quotation-local-review-closure.test.ts
+            tests/g4f/quotation-local-review-closure.test.ts \
+            tests/ds03/transaction-visual-contract.test.ts
   verify:
     # L3: no full suite during Draft; run on Ready PR, main push or manual dispatch.
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
