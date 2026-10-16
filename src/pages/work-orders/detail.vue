@@ -58,25 +58,24 @@
     <view v-else-if="workOrder.loadState === 'succeeded' && detail" class="detail-content">
       <AppSectionHeading class="detail-section-heading" title="工单概览" subtitle="服务信息与当前处理进度" data-testid="ds02b-detail-heading" />
       <AppRecordCard class="summary-card" data-testid="ds02b-detail-record-card">
-        <view class="summary-top-row">
-          <view class="summary-identity">
-            <view class="summary-copy">
-              <view v-if="detail.customerName || detail.servicePartLabel" class="summary-title-row">
-                <text v-if="detail.customerName" class="summary-customer">{{ detail.customerName }}</text>
-                <AppMetaTag v-if="detail.servicePartLabel" class="part-badge" :label="detail.servicePartLabel" />
-              </view>
+        <view class="summary-kicker-row">
+          <text class="summary-kicker">服务工单</text>
+          <text v-if="detail.displayNumber" class="summary-number">工单号 #{{ detail.displayNumber }}</text>
+        </view>
+        <view v-if="detail.customerName || detail.servicePartLabel" class="summary-identity">
+          <text v-if="detail.customerName" class="summary-customer">{{ detail.customerName }}</text>
+          <AppMetaTag v-if="detail.servicePartLabel" class="part-badge" :label="detail.servicePartLabel" />
+        </view>
+        <view v-if="detail.serviceDistrict || detail.serviceAddress || detail.distanceText" class="location-row">
+          <view class="location-icon" aria-hidden="true"><AppIcon name="location" :size="16" color="#7890ae" /></view>
+          <view class="location-copy">
+            <text class="location-label">服务地址</text>
+            <view class="location-value">
+              <text v-if="detail.serviceDistrict" class="location-district">{{ detail.serviceDistrict }}</text>
+              <text v-if="detail.serviceAddress" class="location-address">{{ detail.serviceAddress }}</text>
+              <text v-if="!detail.serviceDistrict && !detail.serviceAddress" class="location-address">—</text>
             </view>
           </view>
-          <text v-if="detail.displayNumber" class="summary-number">#{{ detail.displayNumber }}</text>
-        </view>
-
-        <view
-          v-if="detail.serviceDistrict || detail.serviceAddress || detail.distanceText"
-          class="location-row"
-        >
-          <text v-if="detail.serviceDistrict" class="location-district">{{ detail.serviceDistrict }}</text>
-          <text v-if="detail.serviceDistrict && detail.serviceAddress" class="location-space"> </text>
-          <text v-if="detail.serviceAddress" class="location-address">{{ detail.serviceAddress }}</text>
           <text v-if="detail.distanceText" class="location-distance">{{ detail.distanceText }}</text>
         </view>
 
@@ -110,23 +109,31 @@
         <text v-if="contactFeedback || actionFeedback" class="action-feedback">{{ contactFeedback || actionFeedback }}</text>
       </AppRecordCard>
 
-      <view
+      <AppRecordCard
         v-if="workflowProjection.currentTask"
         class="current-task-card"
-        :class="`current-task-card--${workflowProjection.currentTask.tone}`"
+        :tone="workflowProjection.currentTask.tone"
+        data-testid="ds02b-current-task"
       >
-        <text class="task-eyebrow" :class="`task-eyebrow--${workflowProjection.currentTask.tone}`">当前任务</text>
+        <view class="task-heading-row">
+          <view class="task-heading-label">
+            <view class="task-accent" :class="`task-accent--${workflowProjection.currentTask.tone}`" aria-hidden="true" />
+            <text class="task-eyebrow">当前任务</text>
+          </view>
+        </view>
         <text class="task-title">{{ workflowProjection.currentTask.title }}</text>
-        <button
+        <AppButton
           class="primary-task-action"
-          :class="`primary-task-action--${workflowProjection.currentTask.tone}`"
+          variant="primary"
+          size="regular"
+          block
           :disabled="workflowProjection.currentTask.execution !== 'enabled' || (productionReadOnly && workflowProjection.currentTask.actionIntent !== 'place_order')"
           @tap="handleCurrentTaskAction"
         >
           {{ productionReadOnly ? (workflowProjection.currentTask.actionIntent === 'place_order' ? '查看报价方案' : '生产只读') : workflowProjection.currentTask.actionLabel }}
-        </button>
+        </AppButton>
         <text v-if="workflowProjection.currentTask.execution !== 'enabled' || (productionReadOnly && workflowProjection.currentTask.actionIntent !== 'place_order')" class="task-action-note">当前环境只开放读取，不会提交、接单或推进流程</text>
-      </view>
+      </AppRecordCard>
 
       <AppRecordCard class="information-card">
         <scroll-view class="detail-tabs" scroll-x="true" show-scrollbar="false">
@@ -312,6 +319,7 @@ import AppStatus from '@shared/ui/AppStatus.vue'
 import AppRecordCard from '@shared/ui/AppRecordCard.vue'
 import AppMetaTag from '@shared/ui/AppMetaTag.vue'
 import AppSectionHeading from '@shared/ui/AppSectionHeading.vue'
+import AppButton from '@shared/ui/AppButton.vue'
 import { appLoadingSkeletonDelayMs } from '@shared/ui/loading'
 
 const session = useSessionStore()
@@ -538,99 +546,108 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
   padding: 28rpx 28rpx 24rpx;
 }
 
-.summary-top-row,
+.summary-kicker-row,
 .summary-identity,
-.summary-title-row,
 .location-row,
-.section-heading-row,
+.location-value,
+.task-heading-row,
+.task-heading-label,
 .detail-row {
   align-items: center;
   display: flex;
 }
 
-.summary-top-row {
-  align-items: flex-start;
+.summary-kicker-row {
   justify-content: space-between;
-  gap: 20rpx;
+  gap: 12rpx;
+}
+
+.summary-kicker {
+  color: var(--app-content-muted-ink);
+  font-size: 11px;
+  font-weight: 680;
+  letter-spacing: .3px;
+}
+
+.summary-number {
+  color: var(--app-content-muted-ink);
+  font-size: 11px;
+  font-weight: 650;
+  text-align: right;
 }
 
 .summary-identity {
-  min-width: 0;
-  gap: 18rpx;
-}
-
-.summary-copy {
-  min-width: 0;
-}
-
-.summary-title-row {
-  gap: 12rpx;
+  flex-wrap: wrap;
+  gap: 10rpx;
+  margin-top: 12rpx;
   min-width: 0;
 }
 
 .summary-customer {
   color: var(--app-text-strong);
-  font-size: var(--app-content-section-size);
-  font-weight: 730;
-  max-width: 450rpx;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  font-size: 20px;
+  font-weight: 750;
+  line-height: 1.35;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
-.part-badge {
-  flex: 0 1 auto;
-}
-
-.summary-number {
-  color: var(--app-content-muted-ink);
-  flex: 0 0 auto;
-  font-size: 12px;
-  font-weight: 630;
-  padding-top: 4rpx;
-}
+.part-badge { flex: 0 0 auto; }
 
 .location-row {
+  background: var(--app-surface-muted);
+  border-radius: 12px;
+  box-sizing: border-box;
+  gap: 12rpx;
+  margin-top: 22rpx;
+  min-height: 72rpx;
+  padding: 12rpx 16rpx;
+  width: 100%;
+}
+
+.location-icon {
+  flex: 0 0 20px;
+  align-items: center;
+  display: flex;
+  justify-content: center;
+}
+
+.location-copy {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.location-label {
   color: var(--app-content-muted-ink);
-  font-size: 12.5px;
-  gap: 8rpx;
-  margin-top: 24rpx;
+  display: block;
+  font-size: 10.5px;
+  line-height: 1.3;
+}
+
+.location-value {
+  flex-wrap: wrap;
+  gap: 0 6rpx;
   min-width: 0;
 }
 
 .location-district,
 .location-address {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.location-address {
-  flex: 1;
+  color: var(--app-text-strong);
+  font-size: 12.5px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
 }
 
 .location-distance {
-  color: #60718d;
+  color: var(--app-content-muted-ink);
   flex: 0 0 auto;
-  font-size: 22rpx;
-  font-weight: 700;
+  font-size: 11px;
+  font-weight: 650;
   margin-left: auto;
-}
-
-.section-heading-row {
-  justify-content: space-between;
-  gap: 16rpx;
-}
-
-.section-heading {
-  color: #1d2b40;
-  font-size: 26rpx;
-  font-weight: 800;
-}
-
-.section-caption {
-  color: #91a0b5;
-  font-size: 20rpx;
+  text-align: right;
 }
 
 .summary-actions {
@@ -643,19 +660,19 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
   align-items: center;
   background: #ffffff;
   border: 1rpx solid #dce7f5;
-  border-radius: 14rpx;
+  border-radius: 10px;
   box-sizing: border-box;
   color: #2878f2;
   display: flex;
   flex: 1;
-  font-size: 18rpx;
+  font-size: 12px;
   font-weight: 800;
-  gap: 6rpx;
+  gap: 5px;
   justify-content: center;
   margin: 0;
   min-width: 0;
-  min-height: 64rpx;
-  padding: 0 4rpx;
+  min-height: 44px;
+  padding: 0 4px;
   white-space: nowrap;
 }
 
@@ -683,89 +700,53 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
 }
 
 .current-task-card {
-  border: 2rpx solid;
-  border-radius: 24rpx;
-  box-shadow: 0 10rpx 34rpx rgba(32, 55, 90, 0.07);
   margin-top: 18rpx;
-  padding: 24rpx 26rpx 22rpx;
-}
-
-.current-task-card--blue { background: #f7fbff; border-color: #cfe3ff; }
-.current-task-card--red { background: #fff8f9; border-color: #ffd1d7; }
-.current-task-card--orange { background: #fffaf4; border-color: #ffd9ad; }
-.current-task-card--purple { background: #fbf8ff; border-color: #dccfff; }
-.current-task-card--green { background: #f7fffa; border-color: #ccefdc; }
-.current-task-card--gray { background: #fbfcfe; border-color: #d8dde6; }
-
-.task-eyebrow {
-  display: block;
-  font-size: 20rpx;
-  font-weight: 700;
-}
-
-.task-eyebrow--blue { color: #2878f2; }
-.task-eyebrow--red { color: #f06445; }
-.task-eyebrow--orange { color: #ff941f; }
-.task-eyebrow--purple { color: #8a69e8; }
-.task-eyebrow--green { color: #35b978; }
-.task-eyebrow--gray { color: #8d99aa; }
-
-.task-title {
-  color: #1d2b40;
-  display: block;
-  font-size: 30rpx;
-  font-weight: 800;
-  margin-top: 12rpx;
-}
-
-.task-description {
-  color: #697386;
-  display: block;
-  font-size: 22rpx;
-  line-height: 1.6;
-  margin-top: 8rpx;
-}
-
-.primary-task-action {
-  border-radius: 14rpx;
-  color: #ffffff;
-  font-size: 24rpx;
-  font-weight: 800;
-  height: 68rpx;
-  line-height: 68rpx;
-  margin: 22rpx 0 0;
-  opacity: 1;
-  padding: 0;
+  padding: 24rpx 26rpx 26rpx;
   width: 100%;
 }
 
-.primary-task-action--blue,
-.primary-task-action--blue[disabled] { background: #2878f2; }
-.primary-task-action--red,
-.primary-task-action--red[disabled] { background: #f06445; }
-.primary-task-action--orange,
-.primary-task-action--orange[disabled] { background: #ff941f; }
-.primary-task-action--purple,
-.primary-task-action--purple[disabled] { background: #8a69e8; }
-.primary-task-action--green,
-.primary-task-action--green[disabled] { background: #35b978; }
-.primary-task-action--gray,
-.primary-task-action--gray[disabled] { background: #8d99aa; }
+.task-heading-row { justify-content: space-between; gap: 12rpx; }
+.task-heading-label { gap: 10rpx; }
+.task-accent {
+  border-radius: 999px;
+  flex: 0 0 7px;
+  height: 7px;
+  width: 7px;
+}
+.task-accent--blue { background: #2878f2; }
+.task-accent--red { background: #f06445; }
+.task-accent--orange { background: #d18a2a; }
+.task-accent--purple { background: #8663c6; }
+.task-accent--green { background: #18ae65; }
+.task-accent--gray { background: #8d99aa; }
 
-.primary-task-action[disabled] {
-  color: #ffffff;
-  opacity: 1;
+.task-eyebrow {
+  color: var(--app-content-muted-ink);
+  display: block;
+  font-size: 11px;
+  font-weight: 680;
 }
 
-.primary-task-action::after {
-  border: 0;
+.task-title {
+  color: var(--app-text-strong);
+  display: block;
+  font-size: 19px;
+  font-weight: 750;
+  line-height: 1.4;
+  margin-top: 14rpx;
+}
+
+.primary-task-action {
+  margin-top: 20rpx;
+  width: 100%;
 }
 
 .task-action-note {
-  color: #a39a91;
+  color: var(--app-content-muted-ink);
   display: block;
-  font-size: 20rpx;
-  margin-top: 10rpx;
+  font-size: 11px;
+  line-height: 1.5;
+  margin-top: 12rpx;
   text-align: center;
 }
 
