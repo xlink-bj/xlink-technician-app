@@ -84,98 +84,90 @@ page {
   box-shadow: 0 8rpx 26rpx rgba(32, 55, 90, 0.05);
 }
 
-/* Shared Button anatomy. Business pages may choose variant and size but must
-   not independently redraw border, radius, font or visual state. */
+/* DS-01.1 Button Visual Master. One grammar, no page-owned re-styling.
+   Apple HIG: touch/press; Ant Mobile: hierarchy/shape/loading; WeUI: clarity.
+   Regular is the legacy API; refined visual tokens apply without migration. */
 .app-button {
-  border: 0;
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0 var(--app-control-padding-x);
-  text-align: center;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  max-width: 100%;
-  min-height: 44px;
-  height: var(--app-button-height-regular);
-  border-radius: var(--app-button-radius);
-  font-size: var(--app-button-font-regular);
-  line-height: 1.35;
-  font-weight: 750;
-  white-space: normal;
-  transition: opacity 120ms ease, background-color 120ms ease;
+  box-sizing: border-box; display: flex; align-items: center; justify-content: center;
+  position: relative; max-width: 100%; margin: 0; outline: 0;
+  min-height: 48px; height: var(--app-button-height-regular);
+  padding: 0 18px; border: 1px solid transparent;
+  border-radius: var(--app-button-radius); background: transparent;
+  font-family: inherit; font-size: 15px; font-weight: 660;
+  line-height: 1.3; letter-spacing: .1px; text-align: center;
+  white-space: normal; -webkit-tap-highlight-color: transparent;
+  transition: background-color 150ms ease, border-color 150ms ease,
+    box-shadow 150ms ease, opacity 150ms ease, transform 150ms ease;
 }
-.app-button::after { border: 0; }
+.app-button::after { border: none; }
 .app-button--block { width: 100%; }
-.app-button--text { padding-left: var(--app-space-sm); padding-right: var(--app-space-sm); }
+.app-button--shape-rounded { border-radius: 12px; }
+.app-button--shape-pill { border-radius: 999px; }
+.app-button--size-compact { min-height: 44px; height: var(--app-button-height-compact); padding: 0 14px; font-size: 14px; }
+.app-button--size-large { min-height: 52px; height: var(--app-button-height-large); padding: 0 22px; font-size: 16px; }
+.app-button--primary {
+  background: var(--app-color-primary-action); color: #fff;
+  box-shadow: 0 2px 5px rgba(24,82,156,.09);
+}
+.app-button--secondary {
+  background: var(--app-color-surface); color: var(--app-color-text-primary);
+  border-color: var(--app-button-secondary-border);
+}
+.app-button--tertiary, .app-button--text {
+  background: transparent; border-color: transparent; color: var(--app-color-primary-action);
+  padding-left: 10px; padding-right: 10px;
+}
+.app-button--ghost {
+  background: transparent; color: var(--app-color-primary-action);
+  border: 1px solid var(--app-color-primary-action);
+}
+.app-button--elevated.app-button--primary { box-shadow: 0 5px 12px rgba(24,84,168,.21), 0 1px 3px rgba(24,84,168,.09); }
+.app-button--elevated.app-button--secondary { box-shadow: 0 5px 14px rgba(20,36,64,.11), 0 1px 3px rgba(20,36,64,.05); }
+.app-button:active:not(.app-button--disabled), .app-button--pressed:not(.app-button--disabled) {
+  transform: translateY(1px); filter: brightness(.94); box-shadow: none;
+}
 .app-button__content {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--app-space-xs);
-  min-width: 0;
-  line-height: 1.35;
+  min-width: 0; max-width: 100%; display: inline-flex; gap: 8px;
+  justify-content: center; align-items: center; line-height: 1.3;
 }
 .app-button__label {
-  display: block;
-  max-width: 100%;
-  white-space: normal;
-  overflow-wrap: anywhere;
-  line-height: 1.35;
+  display: block; max-width: 100%; min-width: 0;
+  white-space: normal; overflow-wrap: anywhere; line-height: 1.32;
   text-align: center;
 }
-.app-button--size-compact {
-  min-height: 44px;
-  height: var(--app-button-height-compact);
-  font-size: var(--app-button-font-compact);
-  padding-left: var(--app-space-md);
-  padding-right: var(--app-space-md);
-}
-.app-button--size-large {
-  min-height: 50px;
-  height: var(--app-button-height-large);
-  font-size: var(--app-button-font-large);
-}
-.app-button--primary { background: var(--app-color-primary-action); color: var(--app-color-surface); }
-.app-button--primary.app-button--loading { background: var(--app-color-primary-action); }
-.app-button--secondary {
-  background: var(--app-color-surface);
-  border: 1rpx solid var(--app-color-primary-border);
-  color: var(--app-color-primary-action);
-}
-.app-button--text { background: transparent; color: var(--app-color-primary-action); }
-.app-button:active, .app-button--pressed { opacity: var(--app-button-press-opacity); }
-.app-button--disabled, .app-button--disabled:active {
-  opacity: 1;
-  background: var(--app-color-disabled-surface);
-  color: var(--app-color-disabled);
-  border-color: var(--app-color-border);
-}
-.app-button--primary.app-button--disabled {
-  opacity: .50;
-  background: var(--app-color-primary-action);
-  color: var(--app-color-surface);
-}
-.app-button--loading { opacity: .82; }
-.app-button--loading.app-button--disabled { opacity: .82; }
 .app-button__leading,.app-button__trailing {
-  display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto;
+  flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center;
 }
 .app-button__loading-slot {
-  border: 4rpx solid currentColor;
-  border-radius: 50%;
-  border-right-color: transparent;
-  box-sizing: border-box;
-  height: 22rpx;
-  width: 22rpx;
-  flex: 0 0 22rpx;
-  visibility: hidden;
+  display: block; box-sizing: border-box; flex: 0 0 16px;
+  width: 16px; height: 16px; border: 2px solid currentColor;
+  border-top-color: transparent; border-radius: 50%; visibility: hidden;
 }
 .app-button__loading-slot--active {
-  animation: app-loading-spin var(--app-motion-loading-spinner-duration) linear infinite;
-  visibility: visible;
+  visibility: visible; animation: app-loading-spin 850ms linear infinite;
 }
-.app-button__loading-slot--trailing { margin: 0; }
+.app-button__loading-slot--trailing { border: 0; }
+.app-button--disabled, .app-button--disabled:active,
+.app-button--loading.app-button--disabled {
+  cursor: default; transform: none; filter: none; box-shadow: none;
+}
+.app-button--disabled:not(.app-button--loading) {
+  color: var(--app-button-disabled-text); background: var(--app-button-disabled-bg);
+  border-color: transparent; opacity: 1;
+}
+.app-button--ghost.app-button--disabled:not(.app-button--loading) {
+  background: transparent; border-color: var(--app-button-disabled-border);
+}
+.app-button--tertiary.app-button--disabled:not(.app-button--loading),
+.app-button--text.app-button--disabled:not(.app-button--loading) {
+  background: transparent; border-color: transparent;
+}
+.app-button--loading { opacity: 1; }
+.app-button--primary.app-button--loading { background: var(--app-color-primary-action); color: #fff; }
+@media (prefers-reduced-motion: reduce) {
+  .app-button { transition: none; }
+  .app-button__loading-slot--active { animation-duration: 1600ms; }
+}
 
 /* Field grammar */
 .app-field { margin-top: var(--app-field-gap); }
@@ -325,10 +317,15 @@ page {
    consumers. Keep the v0.2 semantic palette as the single source of truth. */
 :root,
 page {
-  --app-button-height-compact: 88rpx;
-  --app-button-height-regular: var(--app-control-height);
-  --app-button-height-large: 100rpx;
-  --app-button-radius: var(--app-radius-control);
+  /* Preferred heights + guaranteed physical tap sizes at 320/375/390px. */
+  --app-button-height-compact: 44px;
+  --app-button-height-regular: 48px;
+  --app-button-height-large: 52px;
+  --app-button-radius: 12px;
+  --app-button-secondary-border: #e5eaf1;
+  --app-button-disabled-bg: #e4e8ef;
+  --app-button-disabled-text: #788598;
+  --app-button-disabled-border: #c9d0db;
   --app-button-font-compact: var(--app-font-field-label);
   --app-button-font-regular: var(--app-font-body);
   --app-button-font-large: var(--app-font-body);
@@ -339,34 +336,53 @@ page {
   --app-action-bar-border: var(--app-color-border);
   --app-action-bar-inset: 16rpx;
 }
-/* In-place ActionBar. Never position:fixed in a business content fragment:
-   ActionWorkspaceShell owns the fixed footer and scroll/keyboard boundary. */
+/* DS-01.1 Action Bar Visual Master — presentation, not workflow. */
 .app-action-bar {
-  box-sizing: border-box;
-  flex-shrink: 0;
+  box-sizing: border-box; flex-shrink: 0; width: 100%;
   background: var(--app-action-bar-background);
-  border-top: 1rpx solid var(--app-action-bar-border);
-  padding-top: var(--app-space-sm);
-  padding-bottom: calc(var(--app-action-bar-inset) + env(safe-area-inset-bottom));
-  width: 100%;
+  border-top: 1px solid var(--app-action-bar-border);
+  padding: 10px 0 calc(var(--app-action-bar-inset) + env(safe-area-inset-bottom));
 }
-.app-action-bar__inner {
-  box-sizing: border-box;
-  width: 100%;
-  margin: 0 auto;
+.app-action-bar__inner { box-sizing: border-box; width: 100%; margin: 0 auto; }
+.app-action-bar--dual .app-action-bar__inner,
+.app-action-bar--split .app-action-bar__inner,
+.app-action-bar--trailing .app-action-bar__inner {
+  display: flex; align-items: center; gap: var(--app-action-bar-gap);
 }
-.app-action-bar--dual .app-action-bar__inner {
-  display: flex;
-  gap: var(--app-action-bar-gap);
-  align-items: center;
-}
-.app-action-bar--dual .app-action-bar__inner > .app-button {
-  min-width: 0;
-  flex: 1 1 0;
-}
+.app-action-bar--dual .app-action-bar__inner > .app-button { min-width: 0; flex: 1 1 0; }
+.app-action-bar--split .app-action-bar__inner { justify-content: space-between; }
+.app-action-bar--split .app-action-bar__inner > .app-button { flex: 0 1 auto; min-width: 0; }
+.app-action-bar--trailing .app-action-bar__inner { justify-content: flex-end; }
+.app-action-bar--trailing .app-action-bar__inner > .app-button { flex: 0 1 auto; min-width: 0; }
 .app-action-bar--preview {
-  position: relative; border: 1rpx solid var(--app-color-border);
-  border-radius: var(--app-radius-surface);
-  padding: var(--app-space-md);
-  background: var(--app-color-surface);
+  position: relative; padding: 14px; border: 1px solid var(--app-color-border);
+  border-radius: 15px; background: #fff; box-shadow: 0 2px 10px rgba(26,44,72,.035);
+}
+.app-action-bar--preview.app-action-bar--elevated { box-shadow: 0 9px 27px rgba(29,45,74,.1); }
+.app-action-bar--elevated:not(.app-action-bar--preview) { box-shadow: 0 -4px 16px rgba(26,42,69,.07); }
+
+/* Passive feedback: parent-supplied state only, never autonomous success. */
+.app-action-feedback {
+  box-sizing: border-box; display: inline-flex; justify-content: center;
+  align-items: center; gap: 9px; padding: 10px 14px; min-height: 44px;
+  border-radius: 12px; background: var(--app-color-control-surface);
+  color: var(--app-color-text-body); font-size: 14px; font-weight: 660;
+}
+.app-action-feedback--busy { background: var(--app-color-primary-soft); color: var(--app-color-primary-action); }
+.app-action-feedback--success { background: #e7f8ee; color: #14673b; }
+.app-action-feedback--error { background: var(--app-color-danger-soft); color: #ad3d25; }
+.app-action-feedback__label { line-height: 1.4; }
+.app-action-feedback__icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 27px; height: 27px; border-radius: 50%; flex: 0 0 27px;
+  background: #16a05a;
+}
+.app-action-feedback--error .app-action-feedback__icon { background: #c24c33; }
+.app-action-feedback__spinner {
+  box-sizing: border-box; width: 19px; height: 19px; border-radius: 50%;
+  border: 2px solid rgba(29,110,207,.2); border-top-color: #1d6ecf;
+  animation: app-loading-spin 850ms linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-action-feedback__spinner { animation-duration: 1600ms; }
 }
