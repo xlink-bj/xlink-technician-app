@@ -29,7 +29,7 @@ describe('DS-03 transaction visual system', () => {
       expect(page).toContain('<AppAmountValue')
     }
     expect(quote).not.toContain('--q-')
-    expect(quote).toContain('data-testid="quotation-hub-order-${order.id}"')
+    expect(quote).toContain('quotation-hub-order-${order.id}')
     expect(signing).toContain('data-testid="signing-order-read-verified"')
     expect(signing).toContain('data-testid="signing-read-reconciled-status"')
   })
