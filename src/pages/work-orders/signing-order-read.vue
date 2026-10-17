@@ -144,7 +144,13 @@
       </AppRecordCard>
       <AppRecordCard class="signing-read-section xl-craft__surface xl-craft__surface--flat" data-testid="signing-order-read-no-contract">
         <text class="signing-read-section-title">签约业务操作 · 未开放</text>
-        <text>即使 DEV 样本显示合同记录，也不授予真实合同查看、签章或重复发送权限。</text>
+        <AppStatus
+          message="即使 DEV 样本显示合同记录，也不授予真实合同查看、签章或重复发送权限。"
+          variant="strip"
+          tone="warning"
+          quiet
+          data-testid="ds07c4b-signing-authority-note"
+        />
         <AppButton disabled block variant="secondary" data-testid="signing-order-read-contract-disabled">
           查看合同 · 未开放
         </AppButton>
@@ -168,6 +174,7 @@ import AppRecordCard from '@shared/ui/AppRecordCard.vue'
 import AppMetaTag from '@shared/ui/AppMetaTag.vue'
 import AppSectionHeading from '@shared/ui/AppSectionHeading.vue'
 import AppAmountValue from '@shared/ui/AppAmountValue.vue'
+import AppStatus from '@shared/ui/AppStatus.vue'
 import AppCraftHeading from '@shared/ui/AppCraftHeading.vue'
 import { useSessionStore } from '@shared/state'
 import { useSigningReviewReadStore } from '@features/work-orders/signing/signing-review-read-store'
