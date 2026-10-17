@@ -505,7 +505,8 @@ test('one MOCK-019 WorkOrder progresses Appointment → Survey → Quotation wit
   await expect(page.getByTestId('mock-survey-quote-adopt')).toHaveCount(0)
   await expect(page.getByTestId('quotation-first-step-quantity').locator('input')).toHaveValue('')
 
-  await expect(page.getByTestId('quotation-product-demo-read-only')).toContainText('演示，不提交订单')
+  await expect(page.getByTestId('quotation-first-repair-part-step')).toBeVisible()
+  await expect(page.locator('.q01-screen__disclosure')).toContainText('本机草稿不会自动提交')
   await expect(page.getByTestId('action-workspace-submit')).toHaveCount(0)
   await info.attach('019-quotation', { body: await page.screenshot({ fullPage: true }), contentType: 'image/png' })
 
@@ -520,7 +521,9 @@ test('one MOCK-019 WorkOrder progresses Appointment → Survey → Quotation wit
   await expect(page.getByTestId('mock-journey-context-appointment')).toContainText('P1B预约备注：现场先确认屋面渗漏')
   await expect(page.getByTestId('mock-journey-context-survey')).toContainText('14.5')
   await page.getByTestId('mock-journey-context-toggle').click()
-  await expect(page.getByTestId('quotation-product-demo-read-only')).toBeVisible()
+  await expect(page.getByTestId('quotation-first-repair-part-step')).toBeVisible()
+  await expect(page.locator('.q01-screen__disclosure')).toContainText('本机草稿不会自动提交')
+  await expect(page.getByTestId('action-workspace-submit')).toHaveCount(0)
   // The local quotation draft is not an Order.type=1. The next stage is
   // explicitly isolated synthetic signing review, never a workflow mutation.
   const signingLink = page.getByTestId('mock-journey-signing-review')
