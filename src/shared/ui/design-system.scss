@@ -30,6 +30,33 @@ page {
   --app-color-control-surface: #f8fafc;
   --app-color-shadow: rgba(32, 55, 90, 0.07);
 
+  /*
+   * DS-07 canonical Commercial Craft semantic palette.
+   * Migration-only bridge: preserve the legacy --app-color-* values and
+   * existing rendering. The former --xl-* namespace now aliases these
+   * tokens; NEW consumers must use shared App primitives, not raw paint.
+   */
+  --app-craft-ink: #17243a;
+  --app-craft-secondary: #53657b;
+  --app-craft-caption: #68788d;
+  --app-craft-placeholder: #607188;
+  --app-craft-label: #27364b;
+  --app-craft-action: #1769dc;
+  --app-craft-action-pressed: #125abe;
+  --app-craft-action-surface: #eef4fd;
+  --app-craft-canvas: #f7f9fc;
+  --app-craft-surface: #ffffff;
+  --app-craft-field-surface: #f1f5fa;
+  --app-craft-control-stroke: #e5ecf4;
+  --app-craft-divider: #e6ecf3;
+  --app-craft-danger: #d44e5a;
+  --app-craft-page-inset: 20px;
+  --app-craft-control-radius: 12px;
+  --app-craft-surface-radius: 16px;
+  --app-craft-surface-shadow: 0 1px 2px rgba(17,42,71,.022),0 9px 22px rgba(17,42,71,.032);
+  --app-craft-actionbar-shadow: 0 -5px 22px rgba(16,39,68,.045);
+
+
   --app-space-xs: 8rpx;
   --app-space-sm: 12rpx;
   --app-space-md: 16rpx;

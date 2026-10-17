@@ -261,4 +261,8 @@ if (/useQuotationCompositionStore|useActionWorkspaceStore|useQuotationCatalogBro
   fail('DS-04: Q01 visual component may not own quotation stores, pricing, networking or workflow')
 }
 
+// DS-07: immutable old-page style baseline + canonical root-token ownership.
+// Included in every existing pnpm run check:ui-governance, not optional manual work.
+await import('./check-ui-style-ownership.mjs')
+
 console.log('UI governance check passed: shared UX contract, Gallery coverage, and delivery gates are intact')

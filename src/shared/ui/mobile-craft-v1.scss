@@ -2,28 +2,30 @@
  * XLink Mobile Craft v1 · opt-in pilot
  * Visual Master: Q01 V2 / 390 x 844, then C01 signing read-only.
  * All values live here; business screens compose classes, not redesign inputs.
+ * DS-07 compatibility layer ONLY: aliases the single global --app-craft-*
+ * token authority. Do not add new values here or consume --xl-* from new pages.
  * NO global re-skin of legacy routes or Workflow state.
  */
 .xl-craft {
-  --xl-ink: #17243a;
-  --xl-secondary: #53657b;
-  --xl-caption: #68788d;
-  --xl-placeholder: #607188;
-  --xl-label: #27364b;
-  --xl-blue: #1769dc;
-  --xl-blue-pressed: #125abe;
-  --xl-blue-surface: #eef4fd;
-  --xl-bg: #f7f9fc;
-  --xl-white: #ffffff;
-  --xl-field-bg: #f1f5fa;
-  --xl-stroke: #e5ecf4;
-  --xl-divider: #e6ecf3;
-  --xl-danger: #d44e5a;
-  --xl-inset: 20px;
-  --xl-radius-control: 12px;
-  --xl-radius-surface: 16px;
-  --xl-shadow-surface: 0 1px 2px rgba(17,42,71,.022),0 9px 22px rgba(17,42,71,.032);
-  --xl-shadow-bar: 0 -5px 22px rgba(16,39,68,.045);
+  --xl-ink: var(--app-craft-ink);
+  --xl-secondary: var(--app-craft-secondary);
+  --xl-caption: var(--app-craft-caption);
+  --xl-placeholder: var(--app-craft-placeholder);
+  --xl-label: var(--app-craft-label);
+  --xl-blue: var(--app-craft-action);
+  --xl-blue-pressed: var(--app-craft-action-pressed);
+  --xl-blue-surface: var(--app-craft-action-surface);
+  --xl-bg: var(--app-craft-canvas);
+  --xl-white: var(--app-craft-surface);
+  --xl-field-bg: var(--app-craft-field-surface);
+  --xl-stroke: var(--app-craft-control-stroke);
+  --xl-divider: var(--app-craft-divider);
+  --xl-danger: var(--app-craft-danger);
+  --xl-inset: var(--app-craft-page-inset);
+  --xl-radius-control: var(--app-craft-control-radius);
+  --xl-radius-surface: var(--app-craft-surface-radius);
+  --xl-shadow-surface: var(--app-craft-surface-shadow);
+  --xl-shadow-bar: var(--app-craft-actionbar-shadow);
   color: var(--xl-ink);
   background: var(--xl-bg);
   font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
