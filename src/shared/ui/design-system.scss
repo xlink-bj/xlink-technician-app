@@ -520,3 +520,6 @@ page {
 .app-amount-value--strong { color: var(--app-text-strong); }
 .app-amount-value--primary { color: var(--app-color-primary-action); }
 .app-amount-value--muted { color: var(--app-content-muted-ink); }
+
+/* DS-05 opt-in visual craft, scoped under .xl-craft. */
+@import './mobile-craft-v1.scss';
