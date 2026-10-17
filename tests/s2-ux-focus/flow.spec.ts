@@ -142,7 +142,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
           background: style.backgroundColor,
           radius: style.borderTopLeftRadius,
           titleSize: title ? getComputedStyle(title).fontSize : '',
-          buttonColor: getComputedStyle(el.querySelector('button')!).backgroundColor,
+          buttonColor: getComputedStyle(el.querySelector('.task-focus-panel__action')!).backgroundColor,
         }
       })
       expect(paint).toEqual({
