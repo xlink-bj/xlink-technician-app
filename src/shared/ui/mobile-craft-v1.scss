@@ -168,6 +168,9 @@
   font-size: 11px;
   line-height: 17px;
 }
+.xl-craft__badge--success {
+  color: #31754b; background: #ecf7ef; border-color: #ecf7ef;
+}
 .xl-craft__divider { border-top: 1px solid var(--xl-divider); }
 .xl-craft__progress-labels {
   display: flex;
