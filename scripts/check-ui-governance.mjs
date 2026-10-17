@@ -314,4 +314,45 @@ if (detailCSS.includes('.current-task-card {')
   fail('DS-07.C2: Work Order Detail must not reintroduce competing current-task visual styles')
 }
 
+// DS-07.C3: both active business pages compose the same reviewed state
+// primitives; visual material cannot creep back into page-local CSS.
+const listBusiness = await read('src/pages/work-orders/work-orders.vue')
+const workOrderStateUI = await Promise.all([
+  read('src/shared/ui/AppSearchBar.vue'),
+  read('src/shared/ui/AppFeedbackState.vue'),
+  read('src/shared/ui/AppWorkOrderSkeleton.vue'),
+  read('src/shared/ui/AppWorkOrderEmptyState.vue'),
+])
+const feedbackGallery = await read('__review/work-order-state-matrix.vue')
+for (const [component, source] of [
+  ['AppSearchBar', workOrderStateUI[0]],
+  ['AppFeedbackState', workOrderStateUI[1]],
+  ['AppWorkOrderSkeleton', workOrderStateUI[2]],
+  ['AppWorkOrderEmptyState', workOrderStateUI[3]],
+]) {
+  if (!listBusiness.includes(`<${component}`)) fail('DS-07.C3: list must use shared '+component)
+  if (!feedbackGallery.includes(`<${component}`)) fail('DS-07.C3: actual H5 Gallery missing '+component)
+  if (/\\bfetch\\s*\\(|axios|submitOrder|useWorkOrderListStore|WorkflowRuntime/.test(source)) {
+    fail('DS-07.C3: shared feedback/search components must remain presentation-only')
+  }
+}
+for (const component of ['AppFeedbackState', 'AppWorkOrderSkeleton']) {
+  if (!detailFile.includes(`<${component}`)) fail('DS-07.C3: detail must use shared '+component)
+}
+const listBusinessCSS = listBusiness.split('<style>')[1]?.split('</style>')[0] ?? ''
+for (const stale of ['.search-band {', '.skeleton-list {', '.empty-state-card {',
+  '.state-icon-error {', '.state-illustration-search {']) {
+  if (listBusinessCSS.includes(stale)) fail('DS-07.C3: list reintroduced old component CSS '+stale)
+}
+for (const stale of ['.detail-skeleton {', '.skeleton-surface {', '.state-icon--retry {', '.state-title {']) {
+  if (detailCSS.includes(stale)) fail('DS-07.C3: detail reintroduced old component CSS '+stale)
+}
+if (!listBusiness.includes('@search="submitSearch"')
+  || !listBusiness.includes('@action="retry"')
+  || !listBusiness.includes('@action="clearSearch"')
+  || !listBusiness.includes('@action="refresh"')
+  || !detailFile.includes('@action="retry"')) {
+  fail('DS-07.C3: existing business-search, retry and refresh handlers must remain caller-owned')
+}
+
 console.log('UI governance check passed: shared UX contract, Gallery coverage, and delivery gates are intact')
