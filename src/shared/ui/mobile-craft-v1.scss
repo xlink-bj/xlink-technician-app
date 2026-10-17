@@ -158,6 +158,16 @@
   line-height: 18px;
   font-weight: 600;
 }
+.xl-craft__notice {
+  display: block;
+  padding: 8px 10px;
+  color: var(--xl-secondary);
+  background: var(--xl-blue-surface);
+  border: 1px solid #e6effc;
+  border-radius: 9px;
+  font-size: 11px;
+  line-height: 17px;
+}
 .xl-craft__divider { border-top: 1px solid var(--xl-divider); }
 .xl-craft__progress-labels {
   display: flex;
