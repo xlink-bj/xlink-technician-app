@@ -46,7 +46,8 @@ const emit = defineEmits<{ (event: 'action'): void }>()
   min-height: 400rpx;
   padding: 48rpx 36rpx;
 }
-.app-feedback-state--detail {
+ .app-feedback-state--detail {
+  min-height: 58vh;
   margin: 0 auto;
   max-width: 960rpx;
 }
