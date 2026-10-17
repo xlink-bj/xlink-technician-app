@@ -141,26 +141,14 @@
           hover-class="work-order-card-hover"
           :url="listActionFor(item).detailAccessible ? workOrderDetailRouteFor(item.id) : ''"
         >
-          <AppRecordCard class="work-order-card-surface" layout="horizontal" :tone="workOrderCardToneFor(item.taskLabel)" interactive data-testid="ds02b-work-order-card-surface">
-          <view
-            class="card-accent"
-            :class="`card-accent--${workOrderCardToneFor(item.taskLabel)}`"
-            aria-hidden="true"
-          />
+          <AppRecordCard class="work-order-card-surface" layout="horizontal" :tone="workOrderCardToneFor(item.taskLabel)" accent interactive data-testid="ds02b-work-order-card-surface">
           <view class="card-main">
             <view class="card-top-row">
-              <view
-                class="card-mark"
-                :class="`card-mark--${workOrderCardToneFor(item.taskLabel)}`"
-                aria-hidden="true"
-              >
-                <AppIcon
-                  :name="workOrderCardIconFor(item.taskLabel)"
-                  :size="19"
-                  :color="workOrderCardIconColorFor(item.taskLabel)"
-                  aria-hidden="true"
-                />
-              </view>
+              <AppRecordMark
+                :icon="workOrderCardIconFor(item.taskLabel)"
+                :size="19"
+                :color="workOrderCardIconColorFor(item.taskLabel)"
+              />
               <view class="card-title-cluster">
                 <view class="card-title-line">
                   <text v-if="item.taskLabel" class="card-task">{{ item.taskLabel }}</text>
@@ -257,6 +245,7 @@ import AppButton from '@shared/ui/AppButton.vue'
 import AppLoadingState from '@shared/ui/AppLoadingState.vue'
 import AppStatus from '@shared/ui/AppStatus.vue'
 import AppRecordCard from '@shared/ui/AppRecordCard.vue'
+import AppRecordMark from '@shared/ui/AppRecordMark.vue'
 import AppMetaTag from '@shared/ui/AppMetaTag.vue'
 import AppSectionHeading from '@shared/ui/AppSectionHeading.vue'
 import { appLoadingSkeletonDelayMs } from '@shared/ui/loading'
@@ -496,19 +485,6 @@ function cancelAccept(): void {
   box-shadow: var(--app-elevation-flat);
 }
 
-.card-accent {
-  flex: 0 0 3px;
-  width: 3px;
-  opacity: .68;
-}
-
-.card-accent--blue { background: var(--app-color-primary-action); }
-.card-accent--red { background: #c65d4b; }
-.card-accent--orange { background: #b77926; }
-.card-accent--purple { background: #8067b5; }
-.card-accent--green { background: #21895e; }
-.card-accent--gray { background: #91a1b5; }
-
 .card-main {
   box-sizing: border-box;
   display: flex;
@@ -524,26 +500,6 @@ function cancelAccept(): void {
   gap: 16rpx;
   min-width: 0;
 }
-
-.card-mark {
-  align-items: center;
-  background: #edf4ff;
-  border: 1rpx solid #d5e5ff;
-  border-radius: 16rpx;
-  box-sizing: border-box;
-  display: flex;
-  flex: 0 0 54rpx;
-  height: 54rpx;
-  justify-content: center;
-  width: 54rpx;
-}
-
-.card-mark--blue { background: #edf4ff; border-color: #d5e5ff; color: #2878f2; }
-.card-mark--red { background: #fff1ed; border-color: #ffd9cf; color: #f06445; }
-.card-mark--orange { background: #fff4e8; border-color: #ffdfbd; color: #ff941f; }
-.card-mark--purple { background: #f3efff; border-color: #e2d7ff; color: #8a69e8; }
-.card-mark--green { background: #eaf9f1; border-color: #c8efd9; color: #35b978; }
-.card-mark--gray { background: #f1f3f6; border-color: #e1e5eb; color: #8d99aa; }
 
 .card-title-cluster {
   flex: 1;
