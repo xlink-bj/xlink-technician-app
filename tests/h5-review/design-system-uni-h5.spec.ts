@@ -341,3 +341,53 @@ test('DS-02.B actual shared content Gallery stays legible at 320/375/390', async
     await assertHealthy(page, evidence)
   }
 })
+
+
+test('DS-07.B shared Craft mode: real App components, full state matrix and unchanged legacy skin', async ({ page }) => {
+  for (const width of [320, 375, 390]) {
+    await page.setViewportSize({ width, height: 844 })
+    const evidence = installBrowserSafetyGuards(page)
+    await openReview(page, evidence)
+    const master = page.getByTestId('ds07-craft-matrix')
+    await expect(master).toBeVisible()
+    for (const family of ['buttons', 'fields', 'selection', 'status', 'records', 'actionbar']) {
+      await expect(page.getByTestId(`ds07-craft-${family}`)).toBeVisible()
+    }
+    const button = page.getByTestId('ds07-craft-primary')
+    const input = page.getByTestId('ds07-craft-input')
+    const error = page.getByTestId('ds07-craft-input-error')
+    const card = page.getByTestId('ds07-craft-record')
+    const actionBar = page.getByTestId('ds07-craft-actionbar')
+    const buttonSize = await button.boundingBox()
+    expect(buttonSize).not.toBeNull()
+    expect(buttonSize!.height).toBeGreaterThanOrEqual(44)
+    await expect(button).toHaveCSS('background-color', 'rgb(23, 105, 220)')
+    await expect(input).toHaveCSS('background-color', 'rgb(241, 245, 250)')
+    await expect(input).toHaveCSS('border-top-left-radius', '12px')
+    await expect(error).toHaveCSS('border-top-color', 'rgb(212, 78, 90)')
+    await expect(card).toHaveCSS('border-top-left-radius', '16px')
+    await expect(actionBar).toHaveCSS('background-color', 'rgb(255, 255, 255)')
+    await assertDisabled(page.getByTestId('ds07-craft-button-disabled'))
+    await assertDisabled(page.getByTestId('ds07-craft-button-loading'))
+    const tapCounter = page.getByTestId('ds07-craft-tap-count')
+    await expect(tapCounter).toHaveText('0')
+    await button.click()
+    await expect(tapCounter).toHaveText('1')
+    const selector = page.getByTestId('ds07-craft-selector')
+    await selector.click()
+    await expect(page.getByTestId('ds07-craft-selector-taps')).toHaveText('1')
+    await input.click()
+    await expect(input).toHaveClass(/app-input--focused/)
+    await expect(input).toHaveCSS('border-top-color', 'rgb(23, 105, 220)')
+
+    // Old AppButton consumer outside the opt-in scope retains its frozen material.
+    await expect(page.getByTestId('ds01-button-primary')).toHaveCSS('background-color', 'rgb(29, 110, 207)')
+    await assertNoHorizontalOverflow(page)
+    await page.addStyleTag({ content: 'uni-page-head { visibility: hidden !important; }' })
+    await master.screenshot({
+      path: join(screenshotDirectory, `ds07b-shared-craft-${width}.png`),
+      animations: 'disabled',
+    })
+    await assertHealthy(page, evidence)
+  }
+})
