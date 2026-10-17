@@ -70,7 +70,7 @@ for (const [_, token] of aliases) {
 }
 // Parse values explicitly: a regex lookahead after optional spaces can
 // backtrack and incorrectly flag valid "var(...)" aliases.
-const definitions = [...declaration.matchAll(/--xl-[\\w-]+:\\s*([^;]+);/g)]
+const definitions = [...declaration.matchAll(/--xl-[\w-]+:\s*([^;]+);/g)]
 if (definitions.length !== 19 || definitions.some(([, value]) =>
   !value.trim().startsWith('var(--app-craft-'))) {
   fail('visual values must be owned by design-system.scss, not the --xl adapter')
