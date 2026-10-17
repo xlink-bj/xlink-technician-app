@@ -18,10 +18,10 @@
       "sharedOverrides": 0
     },
     "src/pages/work-orders/detail.vue": {
-      "hex": 109,
-      "rgb": 1,
-      "fontSize": 35,
-      "radius": 15,
+      "hex": 80,
+      "rgb": 0,
+      "fontSize": 30,
+      "radius": 13,
       "sharedOverrides": 0
     },
     "src/pages/work-orders/action-workspace.vue": {
