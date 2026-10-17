@@ -27,7 +27,7 @@
           <AppInput data-testid="ds07-craft-input-error" placeholder="请检查输入" error />
         </AppField>
         <AppField label="维修说明" supporting="填写现场可验证的信息">
-          <AppTextarea data-testid="ds07-craft-textarea" auto-height="false" placeholder="填写维修情况" />
+          <AppTextarea data-testid="ds07-craft-textarea" :auto-height="false" placeholder="填写维修情况" />
         </AppField>
       </view>
 
