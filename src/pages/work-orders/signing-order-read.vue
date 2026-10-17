@@ -30,7 +30,7 @@
       <AppRecordCard class="signing-read-section signing-read-hero xl-craft__surface" data-testid="signing-order-read-verified">
         <view class="signing-read-hero-top">
           <text class="signing-read-hero-title">当前订单</text>
-          <AppMetaTag label="身份已核验" tone="success" />
+          <AppMetaTag class="xl-craft__badge xl-craft__badge--success" label="身份已核验" tone="success" />
         </view>
         <view class="signing-read-order-identity">
           <text class="xl-craft__caption">订单编号</text>
@@ -301,7 +301,7 @@ onUnload(() => {
 }
 .signing-read-hero-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .signing-read-hero-title { color: var(--xl-ink); font-size: 14px; font-weight: 600; line-height: 22px; }
-.signing-read-hero .app-meta-tag { background: #ecf7ef; color: #31754b; border: 0; }
+
 .signing-read-order-identity { display: flex; flex-direction: column; gap: 4px; margin-top: 15px; }
 .signing-read-order-number {
   display: block; text-align: left;
