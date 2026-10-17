@@ -38,6 +38,7 @@ const indicators = {
   hex: /#[0-9a-fA-F]{3,8}\b/g,
   rgb: /\brgba?\s*\(/gi,
   fontSize: /\bfont-size\s*:\s*(?:\d|\.)/gi,
+  sharedOverrides: /\.app-(?:button|input|textarea|field|selector|record-card|surface|status|action-bar)(?=[\s.:#\[-])/g,
   radius: /\bborder-radius\s*:\s*(?:\d|\.)/gi,
 }
 let sum = { hex: 0, rgb: 0, fontSize: 0, radius: 0, sharedOverrides: 0 }
