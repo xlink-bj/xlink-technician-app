@@ -1,5 +1,5 @@
 <template>
-  <view class="app-action-content-heading" :class="{ 'app-action-content-heading--survey': variant === 'survey' }">
+  <view data-testid="app-action-content-heading" class="app-action-content-heading" :class="{ 'app-action-content-heading--survey': variant === 'survey' }">
     <view class="app-action-content-heading__row">
       <view v-if="variant !== 'survey'" class="app-action-content-heading__icon" aria-hidden="true">
         <AppIcon :name="icon" :size="20" />
