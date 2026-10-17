@@ -78,6 +78,20 @@
 defineProps<{ readonly variant: 'list' | 'detail' }>()
 </script>
 <style scoped>
+/* Former list-state shell: preserve original geometry when page CSS is removed. */
+.app-workorder-skeleton--list {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1rpx solid #e2e8f1;
+  border-radius: 28rpx;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 400rpx;
+  padding: 48rpx 36rpx;
+  text-align: center;
+}
 .app-workorder-skeleton--list {
   align-items: stretch;
   background: transparent;
