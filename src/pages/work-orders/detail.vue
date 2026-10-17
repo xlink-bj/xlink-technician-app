@@ -678,92 +678,9 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
   color: #2878f2;
 }
 
-.current-task-card {
-  border: 2rpx solid;
-  border-radius: 24rpx;
-  box-shadow: 0 10rpx 34rpx rgba(32, 55, 90, 0.07);
-  margin-top: 18rpx;
-  padding: 24rpx 26rpx 22rpx;
-}
-
-.current-task-card--blue { background: #f7fbff; border-color: #cfe3ff; }
-.current-task-card--red { background: #fff8f9; border-color: #ffd1d7; }
-.current-task-card--orange { background: #fffaf4; border-color: #ffd9ad; }
-.current-task-card--purple { background: #fbf8ff; border-color: #dccfff; }
-.current-task-card--green { background: #f7fffa; border-color: #ccefdc; }
-.current-task-card--gray { background: #fbfcfe; border-color: #d8dde6; }
-
-.task-eyebrow {
-  display: block;
-  font-size: 20rpx;
-  font-weight: 700;
-}
-
-.task-eyebrow--blue { color: #2878f2; }
-.task-eyebrow--red { color: #f06445; }
-.task-eyebrow--orange { color: #ff941f; }
-.task-eyebrow--purple { color: #8a69e8; }
-.task-eyebrow--green { color: #35b978; }
-.task-eyebrow--gray { color: #8d99aa; }
-
-.task-title {
-  color: #1d2b40;
-  display: block;
-  font-size: 30rpx;
-  font-weight: 800;
-  margin-top: 12rpx;
-}
-
-.task-description {
-  color: #697386;
-  display: block;
-  font-size: 22rpx;
-  line-height: 1.6;
-  margin-top: 8rpx;
-}
-
-.primary-task-action {
-  border-radius: 14rpx;
-  color: #ffffff;
-  font-size: 24rpx;
-  font-weight: 800;
-  height: 68rpx;
-  line-height: 68rpx;
-  margin: 22rpx 0 0;
-  opacity: 1;
-  padding: 0;
-  width: 100%;
-}
-
-.primary-task-action--blue,
-.primary-task-action--blue[disabled] { background: #2878f2; }
-.primary-task-action--red,
-.primary-task-action--red[disabled] { background: #f06445; }
-.primary-task-action--orange,
-.primary-task-action--orange[disabled] { background: #ff941f; }
-.primary-task-action--purple,
-.primary-task-action--purple[disabled] { background: #8a69e8; }
-.primary-task-action--green,
-.primary-task-action--green[disabled] { background: #35b978; }
-.primary-task-action--gray,
-.primary-task-action--gray[disabled] { background: #8d99aa; }
-
-.primary-task-action[disabled] {
-  color: #ffffff;
-  opacity: 1;
-}
-
-.primary-task-action::after {
-  border: 0;
-}
-
-.task-action-note {
-  color: #a39a91;
-  display: block;
-  font-size: 20rpx;
-  margin-top: 10rpx;
-  text-align: center;
-}
+/* DS-07.C2: former current-task-card / primary-task-action skin removed.
+   Task presentation is owned by WorkOrderTaskFocus.vue (DS-06).
+   Keep this business page free of a competing task palette. */
 
 .detail-tabs {
   border-bottom: 1rpx solid #edf1f6;
