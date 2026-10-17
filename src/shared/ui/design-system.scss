@@ -485,14 +485,49 @@ page {
   border-radius: var(--app-content-card-radius);
   box-shadow: var(--app-content-card-elevation);
   --app-record-accent: var(--app-color-primary-action);
+  --app-record-mark-surface: #edf4ff;
+  --app-record-mark-stroke: #d5e5ff;
+  --app-record-mark-ink: #2878f2;
 }
 .app-record-card--horizontal { display: flex; align-items: stretch; }
-.app-record-card--tone-neutral, .app-record-card--tone-gray { --app-record-accent: #91a1b5; }
+/* DS-07.C: presentational record marker/accent owned by this primitive.
+   The work-order screen now provides only task label, icon, and tone. */
+.app-record-card__accent {
+  flex: 0 0 3px; width: 3px; opacity: .68;
+  background: var(--app-record-accent);
+}
+.app-record-mark {
+  align-items: center;
+  display: flex; justify-content: center;
+  box-sizing: border-box;
+  flex: 0 0 54rpx; height: 54rpx; width: 54rpx;
+  border: 1rpx solid var(--app-record-mark-stroke);
+  border-radius: 16rpx;
+  background: var(--app-record-mark-surface);
+  color: var(--app-record-mark-ink);
+}
+
+.app-record-card--tone-neutral, .app-record-card--tone-gray {
+  --app-record-accent: #91a1b5;
+  --app-record-mark-surface: #f1f3f6; --app-record-mark-stroke: #e1e5eb; --app-record-mark-ink: #8d99aa;
+}
 .app-record-card--tone-blue { --app-record-accent: var(--app-color-primary-action); }
-.app-record-card--tone-red { --app-record-accent: #c65d4b; }
-.app-record-card--tone-orange { --app-record-accent: #b77926; }
-.app-record-card--tone-purple { --app-record-accent: #8067b5; }
-.app-record-card--tone-green { --app-record-accent: #21895e; }
+.app-record-card--tone-red {
+  --app-record-accent: #c65d4b;
+  --app-record-mark-surface: #fff1ed; --app-record-mark-stroke: #ffd9cf; --app-record-mark-ink: #f06445;
+}
+.app-record-card--tone-orange {
+  --app-record-accent: #b77926;
+  --app-record-mark-surface: #fff4e8; --app-record-mark-stroke: #ffdfbd; --app-record-mark-ink: #ff941f;
+}
+.app-record-card--tone-purple {
+  --app-record-accent: #8067b5;
+  --app-record-mark-surface: #f3efff; --app-record-mark-stroke: #e2d7ff; --app-record-mark-ink: #8a69e8;
+}
+.app-record-card--tone-green {
+  --app-record-accent: #21895e;
+  --app-record-mark-surface: #eaf9f1; --app-record-mark-stroke: #c8efd9; --app-record-mark-ink: #35b978;
+}
 .app-record-card--interactive { transition: box-shadow 160ms ease, transform 160ms ease; }
 .app-record-card--interactive:active { box-shadow: var(--app-elevation-flat); transform: translateY(1px); }
 

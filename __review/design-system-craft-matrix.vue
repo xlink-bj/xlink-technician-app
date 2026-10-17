@@ -55,6 +55,14 @@
           <text class="craft-review__record-title">示例工单</text>
           <text class="craft-review__record-meta">仅展示视觉、无业务提交</text>
         </AppRecordCard>
+        <AppRecordCard class="craft-review__record craft-review__record--row" accent layout="horizontal" tone="red" data-testid="ds07-craft-record-red">
+          <AppRecordMark icon="contact" />
+          <text class="craft-review__record-title">联系客户 · 提示状态</text>
+        </AppRecordCard>
+        <AppRecordCard class="craft-review__record craft-review__record--row" accent layout="horizontal" tone="green" data-testid="ds07-craft-record-green">
+          <AppRecordMark icon="complete" />
+          <text class="craft-review__record-title">已完成 · 成功状态</text>
+        </AppRecordCard>
       </view>
 
       <view class="craft-review__group" data-testid="ds07-craft-actionbar-group">
@@ -78,6 +86,7 @@ import AppTextarea from '@shared/ui/AppTextarea.vue'
 import AppSelector from '@shared/ui/AppSelector.vue'
 import AppStatus from '@shared/ui/AppStatus.vue'
 import AppRecordCard from '@shared/ui/AppRecordCard.vue'
+import AppRecordMark from '@shared/ui/AppRecordMark.vue'
 import AppActionBar from '@shared/ui/AppActionBar.vue'
 
 const tapCount = ref(0)
@@ -92,6 +101,7 @@ const selectorTapCount = ref(0)
 .craft-review__row > .app-button { flex: 1 1 125px; }
 .craft-review__counter { font-size: 12px; color: var(--app-craft-caption); }
 .craft-review__record { padding: 17px; display: flex; flex-direction: column; gap: 6px; }
+ .craft-review__record--row { flex-direction: row; align-items: center; }
 .craft-review__record-title { font-size: 15px; color: var(--app-craft-ink); font-weight: 600; }
 .craft-review__record-meta { font-size: 12px; color: var(--app-craft-caption); }
 </style>
