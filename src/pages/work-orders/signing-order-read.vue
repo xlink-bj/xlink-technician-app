@@ -15,7 +15,7 @@
     />
     <AppRecordCard
       v-else-if="session.status !== 'authenticated' || review.snapshot.state !== 'ready'"
-      class="signing-read-section xl-craft__surface"
+      class="signing-read-section xl-craft__surface xl-craft__surface--flat"
       data-testid="signing-order-read-blocked"
     >
       <text>当前订单暂无法完成签约前只读核验。请从当前账号可见的工单报价记录重新进入。</text>
@@ -31,7 +31,10 @@
         <AppSectionHeading title="订单信息">
           <template #trailing><AppMetaTag label="身份已核验" tone="success" /></template>
         </AppSectionHeading>
-        <text class="signing-read-order-number xl-craft__section-title" data-testid="signing-order-read-display-number">{{ review.snapshot.review?.order.displayNumber || '正式订单' }}</text>
+        <view class="signing-read-order-identity">
+          <text class="xl-craft__caption">订单编号</text>
+          <text class="signing-read-order-number xl-craft__value" data-testid="signing-order-read-display-number">{{ review.snapshot.review?.order.displayNumber || '正式订单' }}</text>
+        </view>
         <text class="signing-read-meta xl-craft__meta">仅限当前工单 · {{ review.snapshot.review?.order.groups.length || 0 }} 个维修分组</text>
         <text class="signing-read-order-note" data-testid="signing-order-read-r1-stage">{{ r1OrderSigningStageNotice(review.snapshot.review?.order.processState) }}</text>
         <view v-if="review.snapshot.review?.order.totalPrice !== undefined" class="signing-read-amount xl-craft__row">
@@ -42,17 +45,17 @@
           部分订单明细暂不可识别，未推断缺失字段。
         </text>
       </AppRecordCard>
-      <AppRecordCard class="signing-read-section signing-read-section--progress xl-craft__surface" data-testid="signing-review-progress">
-        <AppSectionHeading title="签约进度" />
+      <AppRecordCard class="signing-read-section signing-read-section--progress xl-craft__surface xl-craft__surface--flat" data-testid="signing-review-progress">
+        <AppSectionHeading title="当前步骤" />
         <text class="signing-read-progress-title xl-craft__section-title">{{ signingProgress.title }}</text>
         <text class="signing-read-body" data-testid="signing-review-next">{{ signingProgress.nextStep }}</text>
         <text class="signing-read-warning xl-craft__caption">只读进度，不代表当前账号具有签署或短信发送权限。</text>
       </AppRecordCard>
-      <AppRecordCard class="signing-read-section xl-craft__surface" data-testid="signing-order-read-contract-status">
+      <AppRecordCard class="signing-read-section xl-craft__surface xl-craft__surface--flat" data-testid="signing-order-read-contract-status">
         <AppSectionHeading title="合同状态">
           <template #trailing><AppMetaTag label="仅核验" /></template>
         </AppSectionHeading>
-        <text v-if="devFixtureContractRead" class="signing-read-dev-note" data-testid="signing-contract-fixture-label">DEV 合成合同演示 · 非真实订单、非真实签约</text>
+        <text v-if="devFixtureContractRead" class="signing-read-dev-note xl-craft__notice" data-testid="signing-contract-fixture-label">DEV 合成合同演示 · 非真实订单、非真实签约</text>
         <text class="signing-read-help">按当前正式订单核验合同，不包含其他订单。查询为空或不完整时，不能认定合同不存在。</text>
         <text v-if="!devFixtureContractRead" data-testid="signing-contract-prod-blocked">
           真实环境合同读取尚未开放。仅 DEV 隔离合成样本可核验状态，不能代表生产签约。
@@ -77,7 +80,7 @@
           <text class="signing-read-warning xl-craft__caption">仅限本次已核验的有限结果，不代表拥有签约权限或可访问合同文件。</text>
         </template>
       </AppRecordCard>
-      <AppRecordCard class="signing-read-section xl-craft__surface" data-testid="signing-read-reconciled-status">
+      <AppRecordCard class="signing-read-section xl-craft__surface xl-craft__surface--flat" data-testid="signing-read-reconciled-status">
         <AppSectionHeading title="当前结果" />
         <text class="signing-read-progress-title" data-testid="signing-read-stage-title">{{ signingStage.title }}</text>
         <text class="signing-read-body" data-testid="signing-read-stage-detail">{{ signingStage.detail }}</text>
@@ -127,7 +130,7 @@
         </view>
         </view>
       </AppRecordCard>
-      <AppRecordCard class="signing-read-section xl-craft__surface" data-testid="signing-order-read-no-contract">
+      <AppRecordCard class="signing-read-section xl-craft__surface xl-craft__surface--flat" data-testid="signing-order-read-no-contract">
         <text class="signing-read-section-title">签约业务操作 · 未开放</text>
         <text>即使 DEV 样本显示合同记录，也不授予真实合同查看、签章或重复发送权限。</text>
         <AppButton disabled block variant="secondary" data-testid="signing-order-read-contract-disabled">
@@ -279,7 +282,8 @@ onUnload(() => {
   color: var(--xl-caption);
   font-size: 12px;
 }
-.signing-read-order-number { overflow-wrap: anywhere; }
+ .signing-read-order-identity { display: flex; flex-direction: column; gap: 4px; }
+.signing-read-order-number { display: block; overflow-wrap: anywhere; text-align: left; font-variant-numeric: tabular-nums; }
 .signing-read-order-note {
   color: var(--xl-secondary);
   font-size: 12px;
@@ -295,15 +299,8 @@ onUnload(() => {
   font-size: 13px; line-height: 1.55;
 }
 .signing-read-warning { line-height: 1.55; }
-.signing-read-dev-note {
-  padding: 8px 11px;
-  color: #245ead;
-  background: var(--xl-blue-surface);
-  border: 1px solid var(--xl-divider);
-  border-radius: 9px;
-  font-size: 11px; line-height: 1.5;
-}
-.signing-read-section--progress { border-left: 3px solid var(--xl-blue); }
+
+.signing-read-section--progress { border-left: 1px solid var(--xl-divider); }
 .signing-read-contract-item {
   display: flex; flex-direction: column; gap: 8px; padding: 13px 14px;
   border: 1px solid var(--xl-divider); border-radius: var(--xl-radius-control);
