@@ -332,7 +332,8 @@ for (const [component, source] of [
 ]) {
   if (!listBusiness.includes(`<${component}`)) fail('DS-07.C3: list must use shared '+component)
   if (!feedbackGallery.includes(`<${component}`)) fail('DS-07.C3: actual H5 Gallery missing '+component)
-  if (/\\bfetch\\s*\\(|axios|submitOrder|useWorkOrderListStore|WorkflowRuntime/.test(source)) {
+  if (['fetch(', 'axios', 'submitOrder', 'useWorkOrderListStore', 'WorkflowRuntime']
+    .some(forbidden => source.includes(forbidden))) {
     fail('DS-07.C3: shared feedback/search components must remain presentation-only')
   }
 }
