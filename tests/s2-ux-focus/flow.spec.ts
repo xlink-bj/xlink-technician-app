@@ -2,15 +2,15 @@ import { mkdir, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
 
-type Screen = 'Q00' | 'Q01' | 'Q03' | 'C01'
+type Screen = 'Q00' | 'Q01' | 'Q03' | 'C01' | 'DETAIL'
 const requested = (process.env.S2_FOCUS_SCREEN || 'Q00').toUpperCase()
-if (!['Q00', 'Q01', 'Q03', 'C01', 'ALL'].includes(requested)) {
-  throw new Error('S2_FOCUS_SCREEN must be Q00, Q01, Q03, C01 or CI-only ALL')
+if (!['Q00', 'Q01', 'Q03', 'C01', 'DETAIL', 'ALL'].includes(requested)) {
+  throw new Error('S2_FOCUS_SCREEN must be Q00, Q01, Q03, C01, DETAIL or CI-only ALL')
 }
 // Every workflow_dispatch remains single-scene; the feature's own PR validates
 // all three entry points before the on-demand runner is accepted.
 const screens: Screen[] = requested === 'ALL'
-  ? ['Q00', 'Q01', 'Q03', 'C01']
+  ? ['Q00', 'Q01', 'Q03', 'C01', 'DETAIL']
   : [requested as Screen]
 
 async function guardLocalOnly(page: Page) {
@@ -82,10 +82,16 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
     await page.locator('.search-button').click()
     await page.locator('.work-order-card').filter({ hasText: '演示报价工单' }).click()
     await expect(page.locator('.summary-number')).toContainText('MOCK-018')
-    await page.locator('.primary-task-action').click()
-    await expect(page.getByTestId('quotation-order-hub')).toBeVisible()
+    if (screen !== 'DETAIL') {
+      await page.locator('.primary-task-action').click()
+      await expect(page.getByTestId('quotation-order-hub')).toBeVisible()
+    }
 
-    if (screen === 'Q00') {
+    if (screen === 'DETAIL') {
+      await expect(page.getByTestId('task-focus-panel')).toBeVisible()
+      await expect(page.getByTestId('task-focus-title')).toHaveText('报价')
+      await expect(page.getByTestId('task-focus-action')).toHaveText(/去下单/)
+    } else if (screen === 'Q00') {
       // Explicitly tagged synthetic two-order design state, NOT server data.
       await page.goto(page.url() + '&q00Preview=orders', { waitUntil: 'domcontentloaded' })
       await page.reload({ waitUntil: 'domcontentloaded' })
@@ -118,7 +124,45 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
 
     // Check actual typography/touch geometry, not just that PNG generation
     // happened. Fixed thresholds are review guardrails, not design signoff.
-    if (screen === 'C01') {
+    if (screen === 'DETAIL') {
+      const card = page.getByTestId('task-focus-panel')
+      const button = page.getByTestId('task-focus-action')
+      const cardBox = await card.boundingBox()
+      const buttonBox = await button.boundingBox()
+      expect(cardBox).not.toBeNull()
+      expect(buttonBox).not.toBeNull()
+      expect(cardBox!.height, 'exact master target height 169px').toBeGreaterThanOrEqual(168.5)
+      expect(cardBox!.height).toBeLessThanOrEqual(169.5)
+      expect(buttonBox!.height, 'master CTA 51px').toBeGreaterThanOrEqual(50.5)
+      expect(buttonBox!.height).toBeLessThanOrEqual(51.5)
+      const paint = await card.evaluate(el => {
+        const style = getComputedStyle(el)
+        const title = el.querySelector('.task-focus-panel__title')
+        return {
+          background: style.backgroundColor,
+          radius: style.borderTopLeftRadius,
+          titleSize: title ? getComputedStyle(title).fontSize : '',
+          buttonColor: getComputedStyle(el.querySelector('.task-focus-panel__action')!).backgroundColor,
+        }
+      })
+      expect(paint).toEqual({
+        background: 'rgb(22, 44, 74)',
+        radius: '19px',
+        titleSize: '25px',
+        buttonColor: 'rgb(23, 105, 220)',
+      })
+      const channels = paint.buttonColor.match(/[0-9]+/g)?.slice(0, 3).map(Number)
+      expect(channels, 'button colors must be machine-readable RGB').toHaveLength(3)
+      const linear = (value: number): number => {
+        const v = value / 255
+        return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4
+      }
+      const luminance = 0.2126 * linear(channels![0])
+        + 0.7152 * linear(channels![1])
+        + 0.0722 * linear(channels![2])
+      expect(1.05 / (luminance + 0.05), 'WCAG: white action text contrast >= 4.5:1')
+        .toBeGreaterThanOrEqual(4.5)
+    } else if (screen === 'C01') {
       const cards = page.getByTestId('signing-order-read-verified')
       await expect(cards).toHaveClass(/app-record-card/)
       await expect(cards.locator('.signing-read-hero-title')).toHaveText('当前订单')

@@ -110,23 +110,18 @@
         <text v-if="contactFeedback || actionFeedback" class="action-feedback">{{ contactFeedback || actionFeedback }}</text>
       </AppRecordCard>
 
-      <view
+      <WorkOrderTaskFocus
         v-if="workflowProjection.currentTask"
-        class="current-task-card"
-        :class="`current-task-card--${workflowProjection.currentTask.tone}`"
-      >
-        <text class="task-eyebrow" :class="`task-eyebrow--${workflowProjection.currentTask.tone}`">当前任务</text>
-        <text class="task-title">{{ workflowProjection.currentTask.title }}</text>
-        <button
-          class="primary-task-action"
-          :class="`primary-task-action--${workflowProjection.currentTask.tone}`"
-          :disabled="workflowProjection.currentTask.execution !== 'enabled' || (productionReadOnly && workflowProjection.currentTask.actionIntent !== 'place_order')"
-          @tap="handleCurrentTaskAction"
-        >
-          {{ productionReadOnly ? (workflowProjection.currentTask.actionIntent === 'place_order' ? '查看报价方案' : '生产只读') : workflowProjection.currentTask.actionLabel }}
-        </button>
-        <text v-if="workflowProjection.currentTask.execution !== 'enabled' || (productionReadOnly && workflowProjection.currentTask.actionIntent !== 'place_order')" class="task-action-note">当前环境只开放读取，不会提交、接单或推进流程</text>
-      </view>
+        :title="workflowProjection.currentTask.title"
+        :action-label="productionReadOnly
+          ? (workflowProjection.currentTask.actionIntent === 'place_order' ? '查看报价方案' : '生产只读')
+          : workflowProjection.currentTask.actionLabel"
+        :tone="workflowProjection.currentTask.tone"
+        :disabled="workflowProjection.currentTask.execution !== 'enabled'
+          || (productionReadOnly && workflowProjection.currentTask.actionIntent !== 'place_order')"
+        note="当前环境只开放读取，不会提交、接单或推进流程"
+        @action="handleCurrentTaskAction"
+      />
 
       <AppRecordCard class="information-card">
         <scroll-view class="detail-tabs" scroll-x="true" show-scrollbar="false">
@@ -312,6 +307,7 @@ import AppStatus from '@shared/ui/AppStatus.vue'
 import AppRecordCard from '@shared/ui/AppRecordCard.vue'
 import AppMetaTag from '@shared/ui/AppMetaTag.vue'
 import AppSectionHeading from '@shared/ui/AppSectionHeading.vue'
+import WorkOrderTaskFocus from '@features/work-orders/WorkOrderTaskFocus.vue'
 import { appLoadingSkeletonDelayMs } from '@shared/ui/loading'
 
 const session = useSessionStore()
