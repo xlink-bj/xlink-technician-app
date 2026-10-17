@@ -36,24 +36,28 @@
       </view>
     </view>
 
-    <view v-else-if="workOrder.loadState === 'failed_retryable'" class="detail-state">
-      <view class="state-icon state-icon--retry" aria-hidden="true">!</view>
-      <text class="state-title">暂时无法加载详情</text>
-      <text class="state-detail">请检查网络后重试。</text>
-      <button class="state-action" @tap="retry">重新加载</button>
-    </view>
-
-    <view v-else-if="workOrder.loadState === 'failed_terminal'" class="detail-state">
-      <view class="state-icon" aria-hidden="true">!</view>
-      <text class="state-title">工单详情暂不可用</text>
-      <text class="state-detail">{{ failureCopy }}</text>
-      <button class="state-action" @tap="retry">再次尝试</button>
-    </view>
-
-    <view v-else-if="workOrder.loadState === 'succeeded' && detail && preAcceptBlocked" class="detail-state">
-      <text class="state-title">工单待接单</text>
-      <text class="state-detail">接单后可查看工单详情。</text>
-    </view>
+    <AppFeedbackState
+      v-else-if="workOrder.loadState === 'failed_retryable'"
+      layout="detail" appearance="retry"
+      title="暂时无法加载详情"
+      description="请检查网络后重试。"
+      action-label="重新加载"
+      @action="retry"
+    />
+    <AppFeedbackState
+      v-else-if="workOrder.loadState === 'failed_terminal'"
+      layout="detail" appearance="error"
+      title="工单详情暂不可用"
+      :description="failureCopy"
+      action-label="再次尝试"
+      @action="retry"
+    />
+    <AppFeedbackState
+      v-else-if="workOrder.loadState === 'succeeded' && detail && preAcceptBlocked"
+      layout="detail" appearance="blocked"
+      title="工单待接单"
+      description="接单后可查看工单详情。"
+    />
 
     <view v-else-if="workOrder.loadState === 'succeeded' && detail" class="detail-content">
       <AppSectionHeading class="detail-section-heading" title="工单概览" subtitle="服务信息与当前处理进度" data-testid="ds02b-detail-heading" />
@@ -307,6 +311,7 @@ import AppStatus from '@shared/ui/AppStatus.vue'
 import AppRecordCard from '@shared/ui/AppRecordCard.vue'
 import AppMetaTag from '@shared/ui/AppMetaTag.vue'
 import AppSectionHeading from '@shared/ui/AppSectionHeading.vue'
+import AppFeedbackState from '@shared/ui/AppFeedbackState.vue'
 import WorkOrderTaskFocus from '@features/work-orders/WorkOrderTaskFocus.vue'
 import { appLoadingSkeletonDelayMs } from '@shared/ui/loading'
 
