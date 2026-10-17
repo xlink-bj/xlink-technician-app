@@ -20,10 +20,15 @@
     <view v-if="isVisualSample" class="quotation-hub__sample-label" role="status" data-testid="quotation-hub-design-sample">
       DEV 视觉样例 · 模拟数据，非服务器真实订单
     </view>
-    <view v-if="!choosingMode && !isVisualSample" class="quotation-hub__notice" role="status">
-      <text aria-hidden="true">ⓘ</text>
-      <text>当前工单支持多笔独立订单；以下只显示本次已核验的记录（最多 3 笔）。</text>
-    </view>
+    <AppStatus
+      v-if="!choosingMode && !isVisualSample"
+      class="quotation-hub__notice"
+      variant="strip"
+      tone="neutral"
+      quiet
+      message="当前工单支持多笔独立订单；以下只显示本次已核验的记录（最多 3 笔）。"
+      data-testid="ds07c4b-quotation-scope-note"
+    />
     <AppSectionHeading v-if="!choosingMode" class="quotation-hub__section-heading"
       :title="`订单列表${browse.state === 'succeeded' || isVisualSample ? ` (${records.length})` : ''}`">
       <template #trailing>
@@ -162,6 +167,7 @@ import AppRecordCard from '@shared/ui/AppRecordCard.vue'
 import AppMetaTag from '@shared/ui/AppMetaTag.vue'
 import AppSectionHeading from '@shared/ui/AppSectionHeading.vue'
 import AppAmountValue from '@shared/ui/AppAmountValue.vue'
+import AppStatus from '@shared/ui/AppStatus.vue'
 import { useQuotationOrderBrowseStore } from './order-browse-store'
 import type { QuotationOrderBrowseItem } from '@shared/ports'
 
@@ -292,11 +298,7 @@ watch(() => props.workOrderId, () => {
   color:#74879e; font-size:11px; line-height:1.5; border-radius:0;
   border-left:2px solid #b7cbe5;
 }
-.quotation-hub__notice {
-  display:flex; align-items:flex-start; gap:7px; margin:10px 0 18px;
-  background:#eaf3ff; color:#5c7fae; border-radius:9px; padding:10px 12px;
-  font-size:12px; line-height:1.55;
-}
+.quotation-hub__notice { margin:10px 0 18px; }
 .quotation-hub__section-heading {
   display:flex; align-items:center; justify-content:space-between; gap:12px;
   margin:17px 1px 12px; min-height:44px;
