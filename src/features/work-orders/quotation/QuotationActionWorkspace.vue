@@ -38,7 +38,12 @@
       <view v-if="firstStepActive" class="q01-footer" data-testid="quotation-first-step-footer">
         <view class="q01-footer-status" data-testid="quotation-footer-summary">
           <text>本机草稿</text>
-          <text>{{ amountPresentation.label }} · {{ amountPresentation.value }}</text>
+          <AppAmountValue
+            size="compact"
+            tone="muted"
+            :value="`${amountPresentation.label} · ${amountPresentation.value}`"
+            data-testid="ds07c4b-q01-amount-display"
+          />
         </view>
         <view class="q01-footer-actions">
           <AppButton variant="secondary" class="q01-footer-save xl-craft__action-secondary"
