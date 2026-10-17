@@ -149,7 +149,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
         background: 'rgb(22, 44, 74)',
         radius: '19px',
         titleSize: '25px',
-        buttonColor: 'rgb(38, 119, 237)',
+        buttonColor: 'rgb(23, 105, 220)',
       })
     } else if (screen === 'C01') {
       const cards = page.getByTestId('signing-order-read-verified')
