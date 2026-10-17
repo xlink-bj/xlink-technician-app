@@ -416,7 +416,7 @@ test('DS-07.C3: shared search, retry, no-result, empty and loading components ac
     const beforeSearch = Number(await searchCount.textContent())
     await search.locator('.search-button').click()
     await expect(searchCount).toHaveText(String(beforeSearch + 1))
-    await expect(page.getByTestId('app-search-bar').nth(1).locator('.search-button')).toBeDisabled()
+    await assertDisabled(page.getByTestId('app-search-bar').nth(1).locator('.search-button'))
 
     const feedback = page.getByTestId('app-feedback-state')
     await expect(feedback).toHaveCount(4)
