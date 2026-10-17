@@ -265,4 +265,40 @@ if (/useQuotationCompositionStore|useActionWorkspaceStore|useQuotationCatalogBro
 // Included in every existing pnpm run check:ui-governance, not optional manual work.
 await import('./check-ui-style-ownership.mjs')
 
+// DS-07.B: shared Craft must remain an opt-in component visual contract.
+// These checks prevent silently moving presentation CSS back into pages or
+// replacing real App* components with showcase-specific mock controls.
+const [craftScope, craftStyles, craftGallery, craftFixture, craftStateSpec] = await Promise.all([
+  read('src/shared/ui/AppVisualScope.vue'),
+  read('src/shared/ui/component-craft.scss'),
+  read('__review/design-system-craft-matrix.vue'),
+  read('__review/design-system-gallery-fixtures.ts'),
+  read('docs/design-system/DS07B_SHARED_COMPONENT_STATE_STANDARD.md'),
+])
+if (!craftScope.includes("mode === 'craft'") || !craftScope.includes("mode: 'standard'")
+  || !commercialTokens.includes("component-craft.scss")
+  || !craftFixture.includes('09-shared-craft-components')
+  || !craftFixture.includes('09-shared-craft-state-matrix.png')
+  || !craftStateSpec.includes('AppActionBar')) {
+  fail('DS-07.B: shared opt-in Craft scope, canonical import, gallery or contract missing')
+}
+for (const component of [
+  'AppVisualScope', 'AppButton', 'AppField', 'AppInput', 'AppTextarea',
+  'AppSelector', 'AppStatus', 'AppRecordCard', 'AppActionBar',
+]) {
+  if (!craftGallery.includes(`<${component}`)) {
+    fail(`DS-07.B: review matrix must use real shared ${component} component`)
+  }
+}
+for (const selector of [
+  '.app-button--primary', '.app-input--focused', '.app-textarea--error',
+  '.app-selector--selected', '.app-status--strip', '.app-record-card',
+  '.app-action-bar',
+]) {
+  if (!craftStyles.includes(selector)) fail('DS-07.B: missing shared state visual rule ' + selector)
+}
+if (/\bfetch\s*\(|axios|submitOrder|useWorkOrder|WorkflowRuntime|readContracts/.test(craftGallery)) {
+  fail('DS-07.B: review-only shared components must remain independent of business data')
+}
+
 console.log('UI governance check passed: shared UX contract, Gallery coverage, and delivery gates are intact')
