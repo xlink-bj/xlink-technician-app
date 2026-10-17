@@ -95,13 +95,7 @@
     <SurveyActionContent v-if="workspace.descriptor.actionIntent === 'interact_with_form' && workspace.descriptor.formPurpose === 'survey'" />
     <GenericDynamicFormActionContent v-else-if="workspace.descriptor.actionIntent === 'interact_with_form'" />
     <view v-else class="action-workspace-content app-surface" :data-field-count="workspace.appointmentFields.length">
-      <view class="action-content-heading">
-        <view class="action-content-title-row">
-          <view class="action-content-icon" aria-hidden="true"><AppIcon name="appointment" :size="20" /></view>
-          <text class="action-content-title">预约信息</text>
-        </view>
-        <text class="action-content-caption">请与客户确认上门时间安排</text>
-      </view>
+      <AppActionContentHeading title="预约信息" caption="请与客户确认上门时间安排" icon="appointment" />
 
       <AppField
         v-if="workspace.appointmentChoiceField"
@@ -276,6 +270,7 @@ import GenericDynamicFormActionContent from '@features/work-orders/components/Ge
 import SurveyActionContent from '@features/work-orders/components/SurveyActionContent.vue'
 import SurveyCompleteConfirmation from '@features/work-orders/components/SurveyCompleteConfirmation.vue'
 import MockJourneyContextPanel from '@features/work-orders/components/MockJourneyContextPanel.vue'
+import AppActionContentHeading from '@shared/ui/AppActionContentHeading.vue'
 import AppButton from '@shared/ui/AppButton.vue'
 import AppChoiceGroup from '@shared/ui/AppChoiceGroup.vue'
 import AppField from '@shared/ui/AppField.vue'
@@ -602,24 +597,8 @@ function actionErrorCopy(error: OperationError | null): string {
   padding: var(--app-card-padding);
 }
 
-.action-content-heading { border-bottom: 1rpx solid var(--app-color-divider); padding-bottom: var(--app-space-lg); }
-.action-content-title-row { align-items: center; display: flex; }
 
-.action-content-icon {
-  align-items: center;
-  background: var(--app-color-primary-soft);
-  border-radius: 10rpx;
-  color: var(--app-color-primary);
-  display: flex;
-  font-size: 22rpx;
-  height: 42rpx;
-  justify-content: center;
-  margin-right: var(--app-space-sm);
-  width: 42rpx;
-}
 
-.action-content-title { color: var(--app-color-text-primary); font-size: var(--app-font-section-title); font-weight: 800; }
-.action-content-caption { color: var(--app-color-text-secondary); display: block; font-size: var(--app-font-field-label); margin-top: var(--app-space-xs); }
 
 .appointment-time-selector { color: var(--app-color-text-primary); }
 .appointment-time-placeholder { color: var(--app-color-text-muted); font-size: var(--app-font-body); }

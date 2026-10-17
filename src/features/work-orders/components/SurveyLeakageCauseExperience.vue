@@ -4,13 +4,13 @@
     class="survey-leakage-cause"
     data-testid="survey-leakage-cause"
   >
-    <view class="survey-leakage-cause__task-header">
-      <view class="survey-leakage-cause__task-icon" aria-hidden="true"><AppIcon name="location" :size="21" color="#fff" /></view>
-      <text class="survey-leakage-cause__task-title">渗漏原因</text>
-      <text v-if="workspace.surveyLeakageCauseExperience.valueField.required"
-        class="survey-leakage-cause__required">*</text>
-      <text class="survey-leakage-cause__task-status">{{ selectedCount > 0 ? '已选择 ' + selectedCount + ' 项' : '待选择' }}</text>
-    </view>
+    <SurveyTaskSectionHeading
+      title="渗漏原因"
+      icon="location"
+      tone="cause"
+      :required="workspace.surveyLeakageCauseExperience.valueField.required"
+      :status="selectedCount > 0 ? '已选择 ' + selectedCount + ' 项' : '待选择'"
+    />
     <AppField
       class="survey-leakage-cause__field"
       hide-label
@@ -141,7 +141,7 @@ import { computed, ref, watch } from 'vue'
 import { useActionWorkspaceStore } from '../action-workspace'
 import AppButton from '@shared/ui/AppButton.vue'
 import AppField from '@shared/ui/AppField.vue'
-import AppIcon from '@shared/ui/AppIcon.vue'
+import SurveyTaskSectionHeading from './SurveyTaskSectionHeading.vue'
 import AppStatus from '@shared/ui/AppStatus.vue'
 
 const workspace = useActionWorkspaceStore()
@@ -273,18 +273,9 @@ function toggleOption(value: string): void {
 .survey-leakage-cause__group { min-height:74rpx; }
 /* S03 is its own domain experience, visually equal to S01 task sections. */
 .survey-leakage-cause { padding:18rpx 18rpx 20rpx; border-radius:22rpx; margin:0 0 16rpx; box-shadow:0 5rpx 18rpx rgba(25,50,81,.035); }
-.survey-leakage-cause__task-header { display:flex; align-items:center; gap:14rpx; padding-bottom:14rpx;
-  border-bottom:1rpx solid var(--app-color-divider); margin-bottom:12rpx; }
-.survey-leakage-cause__task-icon { display:flex; justify-content:center; align-items:center;
-  width:42rpx; height:42rpx; border-radius:10rpx; background:#9a65ec; flex:none; }
-.survey-leakage-cause__task-title { color:var(--app-color-text-primary); font-size:var(--app-font-section-title);
-  font-weight:800; flex:1; }
-.survey-leakage-cause__task-status { background:var(--app-color-control-surface); border-radius:999rpx;
-  color:var(--app-color-text-secondary); font-size:21rpx; padding:5rpx 11rpx; }
 .survey-leakage-cause__field .app-field__label { display:none; }
 .survey-leakage-cause__trigger { min-height:86rpx; padding:12rpx 2rpx; }
 .survey-leakage-cause__summary { flex:1; min-width:0; }
-.survey-leakage-cause__required { margin-left:-9rpx; font-size:26rpx; font-weight:750; color:#e47736; }
 /* S03: draft selection and visible chips; closing the panel cancels
    provisional edits, only Confirm updates the existing Form Runtime. */
 .survey-leakage-cause__sheet-body { flex:1 1 auto; min-height:240rpx; height:min(41vh,610rpx); }

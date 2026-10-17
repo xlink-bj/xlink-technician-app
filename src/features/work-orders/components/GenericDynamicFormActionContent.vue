@@ -1,14 +1,13 @@
 <template>
   <view class="dynamic-action-content" :class="{ 'app-surface': !isSurvey, 'dynamic-action-content--survey': isSurvey }"
     data-action-content="dynamic-form" data-testid="dynamic-form-action-content">
-    <view class="dynamic-action-heading" :class="{ 'dynamic-action-heading--survey': isSurvey }">
-      <view class="dynamic-action-title-row">
-        <view class="dynamic-action-icon" aria-hidden="true"><AppIcon name="task" :size="20" /></view>
-        <text class="dynamic-action-title">{{ isSurvey ? '勘查记录' : title }}</text>
-      </view>
-      <text class="dynamic-action-caption">{{ caption }}</text>
-      <text v-if="isSurvey && surveyRequiredVisible" class="dynamic-action-required-note">* 必填</text>
-    </view>
+    <AppActionContentHeading
+      :title="isSurvey ? '勘查记录' : title"
+      :caption="caption"
+      icon="task"
+      :variant="isSurvey ? 'survey' : 'default'"
+      :required-note="isSurvey && surveyRequiredVisible"
+    />
 
     <template v-for="block in presentationBlocks" :key="block.key">
       <view class="dynamic-action-block"
@@ -21,18 +20,15 @@
         }"
         :data-testid="isSurvey && block.kind !== 'field' ? `survey-${block.kind}-section` : undefined"
       >
-        <view v-if="isSurvey && block.kind !== 'field'" class="dynamic-action-block__heading">
-          <view class="dynamic-action-block__icon" :class="`dynamic-action-block__icon--${block.kind}`" aria-hidden="true">
-            <AppIcon :name="block.kind === 'media' ? 'image' : block.kind === 'measure' ? 'appointment' : 'location'"
-              :size="21" color="#fff" />
-          </view>
-          <text class="dynamic-action-block__title">{{ block.kind === 'part' ? '维修部位' : block.kind === 'measure' ? '现场测量' : block.fields.length === 1 ? block.fields[0].label : surveyMediaTitle(block.fields) }}</text>
-          <text v-if="(block.kind === 'part' || block.kind === 'media' && block.fields.length === 1) && block.fields.some(field => field.runtime.required)" class="dynamic-action-block__required">*</text>
-          <text class="dynamic-action-block__tag"
-            :class="{ 'dynamic-action-block__tag--selected': block.kind === 'part' && arrayValue(workspace.dynamicForm?.values[block.fields[0].valueKey]).length > 0 }">
-            {{ block.kind === 'part' ? (arrayValue(workspace.dynamicForm?.values[block.fields[0].valueKey]).length ? '已选择' : '待选择') : block.kind === 'measure' ? '适用字段' : '按字段上传' }}
-          </text>
-        </view>
+        <SurveyTaskSectionHeading
+          v-if="isSurvey && block.kind !== 'field'"
+          :icon="block.kind === 'media' ? 'image' : block.kind === 'measure' ? 'appointment' : 'location'"
+          :tone="block.kind === 'part' ? 'part' : block.kind === 'measure' ? 'measure' : 'media'"
+          :title="block.kind === 'part' ? '维修部位' : block.kind === 'measure' ? '现场测量' : block.fields.length === 1 ? block.fields[0].label : surveyMediaTitle(block.fields)"
+          :required="(block.kind === 'part' || block.kind === 'media' && block.fields.length === 1) && block.fields.some(field => field.runtime.required)"
+          :selected="block.kind === 'part' && arrayValue(workspace.dynamicForm?.values[block.fields[0].valueKey]).length > 0"
+          :status="block.kind === 'part' ? (arrayValue(workspace.dynamicForm?.values[block.fields[0].valueKey]).length ? '已选择' : '待选择') : block.kind === 'measure' ? '适用字段' : '按字段上传'"
+        />
         <view class="dynamic-action-block__fields"
           :class="{ 'dynamic-action-block__fields--media': isSurvey && block.kind === 'media',
             'dynamic-action-block__fields--single': isSurvey && block.kind === 'media' && block.fields.length === 1 }">
@@ -225,6 +221,7 @@ import { isMediaValueRef } from '@shared/types'
 import type { AppChoiceOption } from '@shared/ui/types'
 import { isMultilineField } from '../form-presentation'
 import { mediaPickerLabelFor, verifiedMediaMaxFor } from '../media-presentation'
+import AppActionContentHeading from '@shared/ui/AppActionContentHeading.vue'
 import AppButton from '@shared/ui/AppButton.vue'
 import AppCascadeSelector from '@shared/ui/AppCascadeSelector.vue'
 import AppChoiceGroup from '@shared/ui/AppChoiceGroup.vue'
@@ -235,6 +232,7 @@ import AppMultiChoiceGroup from '@shared/ui/AppMultiChoiceGroup.vue'
 import AppStatus from '@shared/ui/AppStatus.vue'
 import AppTextarea from '@shared/ui/AppTextarea.vue'
 import SurveyPartPicker from './SurveyPartPicker.vue'
+import SurveyTaskSectionHeading from './SurveyTaskSectionHeading.vue'
 
 const props = withDefaults(defineProps<{
   readonly title?: string
@@ -391,20 +389,6 @@ async function pickMedia(fieldId: string): Promise<void> {
 
 <style>
 .dynamic-action-content { margin-top: var(--app-space-md); padding: var(--app-card-padding); }
-.dynamic-action-heading { border-bottom: 1rpx solid var(--app-color-divider); padding-bottom: var(--app-space-lg); }
-.dynamic-action-title-row { align-items: center; display: flex; }
-.dynamic-action-icon {
-  align-items: center;
-  background: var(--app-color-primary-soft);
-  border-radius: 10rpx;
-  display: flex;
-  height: 42rpx;
-  justify-content: center;
-  margin-right: var(--app-space-sm);
-  width: 42rpx;
-}
-.dynamic-action-title { color: var(--app-color-text-primary); font-size: var(--app-font-section-title); font-weight: 800; }
-.dynamic-action-caption { color: var(--app-color-text-secondary); display: block; font-size: var(--app-font-field-label); margin-top: var(--app-space-xs); }
 .dynamic-action-field { margin-top: var(--app-space-lg); }
 /* A field-service media section, not a generic engineering upload grid.
    State, authorization and retries remain entirely owned by the media Port. */
@@ -452,11 +436,6 @@ async function pickMedia(fieldId: string): Promise<void> {
 /* S01 approved commercial visual system: Survey only. Other dynamic forms
    keep their existing renderer and layout until separately reviewed. */
 .dynamic-action-content--survey { background: transparent; padding: 0; margin-top: 20rpx; }
-.dynamic-action-heading--survey { padding: 0 2rpx 16rpx; border-bottom: 0; }
-.dynamic-action-content--survey .dynamic-action-title-row { gap: 0; }
-.dynamic-action-content--survey .dynamic-action-icon { display: none; }
-.dynamic-action-content--survey .dynamic-action-title { font-size: 38rpx; line-height: 1.35; font-weight: 800; }
-.dynamic-action-content--survey .dynamic-action-caption { margin-top: 6rpx; color: var(--app-color-text-secondary); font-size: var(--app-font-body); }
 .dynamic-action-content--survey .dynamic-action-field--survey {
   display: block; margin: 0 0 16rpx; background: var(--app-color-surface);
   border: 1rpx solid var(--app-color-border); border-radius: var(--app-radius-card);
@@ -544,26 +523,11 @@ async function pickMedia(fieldId: string): Promise<void> {
 }
 /* S2 visual-fidelity pass: real Runtime field order stays untouched.
    Each adjacent group is a single coherent technician task, not a fixed form schema. */
-.dynamic-action-required-note { display:none; }
-.dynamic-action-content--survey .dynamic-action-heading--survey { display:flex; flex-wrap:wrap; align-items:flex-end; column-gap:12rpx; padding-bottom:13rpx; }
-.dynamic-action-content--survey .dynamic-action-title-row { flex:1 1 100%; }
-.dynamic-action-content--survey .dynamic-action-caption { flex:1; }
-.dynamic-action-content--survey .dynamic-action-required-note { display:block; font-size:21rpx; color:#e47736; font-weight:650; padding-bottom:2rpx; }
 .dynamic-action-block--survey { background:var(--app-color-surface); border:1rpx solid var(--app-color-border);
   border-radius:22rpx; margin-bottom:16rpx; padding:18rpx 18rpx 20rpx;
   box-shadow:0 5rpx 18rpx rgba(25,50,81,.035); overflow:hidden; }
 .dynamic-action-block--survey.dynamic-action-block--field { background:transparent; border:0; padding:0;
   box-shadow:none; overflow:visible; margin-bottom:0; }
-.dynamic-action-block--survey .dynamic-action-block__heading { display:flex; align-items:center; gap:14rpx;
-  padding-bottom:14rpx; margin-bottom:12rpx; border-bottom:1rpx solid var(--app-color-divider); }
-.dynamic-action-block__icon { width:42rpx; height:42rpx; border-radius:10rpx; flex:none;
-  display:flex; align-items:center; justify-content:center; background:#3989f4; }
-.dynamic-action-block__icon--media { background:#22ba84; }
-.dynamic-action-block__icon--measure { background:#438cf5; }
-.dynamic-action-block__title { color:var(--app-color-text-primary); font-size:var(--app-font-section-title); font-weight:800; flex:1; min-width:0; }
-.dynamic-action-block__tag { color:var(--app-color-text-secondary); background:var(--app-color-control-surface);
-  border-radius:999rpx; padding:5rpx 11rpx; font-size:21rpx; font-weight:600; white-space:nowrap; }
-.dynamic-action-block__tag--selected { background:var(--app-color-success-soft); color:var(--app-color-success); }
 .dynamic-action-content--survey .dynamic-action-block--part .dynamic-action-field--survey-cascade,
 .dynamic-action-content--survey .dynamic-action-block--measure .dynamic-action-field--survey-measure,
 .dynamic-action-content--survey .dynamic-action-block--media .dynamic-action-field--survey-media {
@@ -596,7 +560,6 @@ async function pickMedia(fieldId: string): Promise<void> {
 .dynamic-action-block__helper { display:block; margin-top:14rpx; color:var(--app-color-text-secondary);
   font-size:21rpx; line-height:1.55; }
 .dynamic-action-content--survey .dynamic-action-block--field .dynamic-action-field--survey { margin-bottom:16rpx; }
-.dynamic-action-block__required { color:#e47736; font-size:26rpx; font-weight:750; margin-left:-9rpx; }
 /* S04: media stays inline for capture/upload. Only tapping an existing
    verified preview invokes a larger in-app view, without platform API calls. */
 .dynamic-action-photo-preview { position:fixed; z-index:160; inset:0; background:#111d30;

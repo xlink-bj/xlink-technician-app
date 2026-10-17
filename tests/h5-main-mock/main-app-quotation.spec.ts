@@ -417,10 +417,11 @@ test('shared Action Workspace displays its actual operation title for appointmen
       // An independent Survey has no continuous-journey context. It must not
       // duplicate the generic form or fall through to the Appointment UI.
       await expect(page.getByTestId('dynamic-form-action-content')).toHaveCount(1)
-      await expect(page.locator('.dynamic-action-title')).toContainText('勘查记录')
-      await expect(page.locator('.action-content-heading')).toHaveCount(0)
+      await expect(page.getByTestId('app-action-content-heading')).toContainText('勘查记录')
+      await expect(page.getByTestId('app-action-content-heading')).toHaveCount(1)
+      await expect(page.getByTestId('app-action-content-heading')).toHaveClass(/app-action-content-heading--survey/)
     } else {
-      await expect(page.locator('.action-content-heading')).toHaveCount(1)
+      await expect(page.getByTestId('app-action-content-heading')).toContainText('预约信息')
       await expect(page.getByTestId('dynamic-form-action-content')).toHaveCount(0)
     }
   }
@@ -439,7 +440,7 @@ test('one MOCK-019 WorkOrder progresses Appointment → Survey → Quotation wit
   await expect(page).toHaveURL(/pages\/work-orders\/action-workspace/)
   await expect(page).toHaveURL(/mock-work-order-019-continuous-journey/)
   await expect(page.locator('.uni-page-head__title')).toContainText('预约上门')
-  await expect(page.locator('.action-content-title')).toContainText('预约信息')
+  await expect(page.getByTestId('app-action-content-heading')).toContainText('预约信息')
   await expect(page.getByTestId('mock-journey-progress')).toContainText('不提交业务表单或订单')
   await page.locator('.action-content-field--note textarea').fill('P1B预约备注：现场先确认屋面渗漏')
   await info.attach('019-appointment', { body: await page.screenshot({ fullPage: true }), contentType: 'image/png' })
@@ -504,7 +505,8 @@ test('one MOCK-019 WorkOrder progresses Appointment → Survey → Quotation wit
   await expect(page.getByTestId('mock-survey-quote-adopt')).toHaveCount(0)
   await expect(page.getByTestId('quotation-first-step-quantity').locator('input')).toHaveValue('')
 
-  await expect(page.getByTestId('quotation-product-demo-read-only')).toContainText('演示，不提交订单')
+  await expect(page.getByTestId('quotation-first-repair-part-step')).toBeVisible()
+  await expect(page.locator('.q01-screen__disclosure')).toContainText('本机草稿不会自动提交')
   await expect(page.getByTestId('action-workspace-submit')).toHaveCount(0)
   await info.attach('019-quotation', { body: await page.screenshot({ fullPage: true }), contentType: 'image/png' })
 
@@ -519,7 +521,21 @@ test('one MOCK-019 WorkOrder progresses Appointment → Survey → Quotation wit
   await expect(page.getByTestId('mock-journey-context-appointment')).toContainText('P1B预约备注：现场先确认屋面渗漏')
   await expect(page.getByTestId('mock-journey-context-survey')).toContainText('14.5')
   await page.getByTestId('mock-journey-context-toggle').click()
-  await expect(page.getByTestId('quotation-product-demo-read-only')).toBeVisible()
+  // After reload, R1 Mock may render the original workbench or the Q01 first-step.
+  // Both must independently disclose their local-only nature; neither may submit.
+  if (await page.getByTestId('quotation-first-repair-part-step').count()) {
+    await expect(page.locator('.q01-screen__disclosure')).toContainText('本机草稿不会自动提交')
+  } else {
+    await expect(page.getByTestId('quotation-product-demo-read-only')).toContainText('演示，不提交订单')
+    // uni-app renders <uni-button>; Playwright's native :disabled predicate
+    // does not recognize custom-element disabled semantics. Assert the
+    // framework's disabled attribute, ARIA contract and shared button class.
+    const mockSubmit = page.getByTestId('quotation-submit-disabled-preview')
+    await expect(mockSubmit).toHaveAttribute('disabled', 'true')
+    await expect(mockSubmit).toHaveAttribute('aria-disabled', 'true')
+    await expect(mockSubmit).toHaveClass(/app-button--disabled/)
+  }
+  await expect(page.getByTestId('action-workspace-submit')).toHaveCount(0)
   // The local quotation draft is not an Order.type=1. The next stage is
   // explicitly isolated synthetic signing review, never a workflow mutation.
   const signingLink = page.getByTestId('mock-journey-signing-review')
@@ -807,6 +823,48 @@ for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }
     await expect(page.getByTestId('action-workspace-submit')).toHaveCount(0)
     expect(evidence.externalIntents, 'DEV synthetic SKU must NEVER attempt an external read').toEqual([])
     expect(evidence.localFailures).toEqual([])
+    expect(evidence.pageErrors).toBe(0)
+    expect(evidence.consoleErrors).toBe(0)
+  })
+}
+
+
+// DS-07.C4.A: actual main App H5 at all three governed mobile widths.
+// This test is additive: screenshot *evidence*, not automatic Golden promotion.
+for (const width of [320, 375, 390] as const) {
+  test(`DS-07.C4.A renders appointment and Survey shared presentation without business requests at ${width}px`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: 844 })
+    await page.goto('/#/pages/index/index', { waitUntil: 'domcontentloaded' })
+    await expect(page.locator('.mock-source-indicator')).toContainText('Mock')
+    await page.locator('.mock-action-scenario').filter({ hasText: '全新预约' }).click()
+    const appointmentHeading = page.getByTestId('app-action-content-heading')
+    await expect(appointmentHeading).toContainText('预约信息')
+    await expect(appointmentHeading).not.toHaveClass(/--survey/)
+    await expect(page.getByTestId('dynamic-form-action-content')).toHaveCount(0)
+    await expect(page.locator('.action-workspace-content')).toBeVisible()
+    await info.attach(`ds07c4-appointment-${width}`, {
+      body: await page.screenshot({ animations: 'disabled', fullPage: true }),
+      contentType: 'image/png',
+    })
+
+    await page.goto('/#/pages/index/index', { waitUntil: 'domcontentloaded' })
+    await expect(page.locator('.mock-source-indicator')).toContainText('Mock')
+    await page.locator('.mock-action-scenario').filter({ hasText: '现场勘查' }).click()
+    await expect(page.getByTestId('dynamic-form-action-content')).toBeVisible()
+    const surveyHeading = page.getByTestId('app-action-content-heading')
+    await expect(surveyHeading).toContainText('勘查记录')
+    await expect(surveyHeading).toHaveClass(/app-action-content-heading--survey/)
+    const sections = page.getByTestId('survey-task-section-heading')
+    expect(await sections.count(), 'real Survey task sections are rendered').toBeGreaterThanOrEqual(1)
+    await expect(sections.first()).toContainText(/维修部位|现场测量|拍摄|现场照片/)
+    const overflow = await page.evaluate(() =>
+      Math.max(document.documentElement.scrollWidth, document.body.scrollWidth) - innerWidth)
+    expect(overflow, 'no horizontal page overflow').toBeLessThanOrEqual(0)
+    await info.attach(`ds07c4-survey-${width}`, {
+      body: await page.screenshot({ animations: 'disabled', fullPage: true }),
+      contentType: 'image/png',
+    })
+    expect(evidence.externalIntents, 'browser must never attempt external requests').toEqual([])
     expect(evidence.pageErrors).toBe(0)
     expect(evidence.consoleErrors).toBe(0)
   })
