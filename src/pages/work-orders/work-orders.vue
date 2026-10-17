@@ -53,30 +53,10 @@
         @action="clearSearch"
       />
 
-      <view v-else-if="workOrders.loadState === 'succeeded' && workOrders.items.length === 0" class="list-state empty-state">
-        <view class="empty-state-card">
-          <view class="empty-illustration" aria-hidden="true">
-            <view class="empty-illustration-shadow" />
-            <view class="empty-illustration-spark empty-illustration-spark-left" />
-            <view class="empty-illustration-spark empty-illustration-spark-right" />
-            <view class="empty-clipboard">
-              <view class="empty-clipboard-sheet">
-                <view class="empty-clipboard-line empty-clipboard-line-long" />
-                <view class="empty-clipboard-line empty-clipboard-line-medium" />
-                <view class="empty-clipboard-line empty-clipboard-line-short" />
-              </view>
-              <view class="empty-clipboard-clip"><view class="empty-clipboard-clip-hole" /></view>
-              <view class="empty-clipboard-badge"><view class="empty-clipboard-minus" /></view>
-            </view>
-          </view>
-          <text class="empty-state-title">当前暂无工单</text>
-          <text class="empty-state-detail">当前角色暂时没有可处理的工单，可稍后刷新再试。</text>
-          <button class="empty-state-action" @tap="refresh">
-            <AppIcon name="refresh" :size="18" color="#ffffff" aria-hidden="true" />
-            <text>刷新工单</text>
-          </button>
-        </view>
-      </view>
+      <AppWorkOrderEmptyState
+        v-else-if="workOrders.loadState === 'succeeded' && workOrders.items.length === 0"
+        @action="refresh"
+      />
 
       <view v-else-if="workOrders.loadState === 'succeeded' || isRefreshing" class="list-content">
         <AppSectionHeading class="list-section-heading" title="当前工单" subtitle="按当前账号权限展示" data-testid="ds02b-list-heading">
@@ -202,6 +182,7 @@ import AppSectionHeading from '@shared/ui/AppSectionHeading.vue'
 import AppSearchBar from '@shared/ui/AppSearchBar.vue'
 import AppFeedbackState from '@shared/ui/AppFeedbackState.vue'
 import AppWorkOrderSkeleton from '@shared/ui/AppWorkOrderSkeleton.vue'
+import AppWorkOrderEmptyState from '@shared/ui/AppWorkOrderEmptyState.vue'
 import { appLoadingSkeletonDelayMs } from '@shared/ui/loading'
 
 const session = useSessionStore()
@@ -620,223 +601,6 @@ function cancelAccept(): void {
 .accept-confirm-button--secondary { background: #f1f4f8; color: #5f708b; }
 .accept-confirm-button--primary { background: #2878f2; color: #ffffff; }
 
-.list-state {
-  align-items: center;
-  background: rgba(255, 255, 255, 0.92);
-  border: 1rpx solid #e2e8f1;
-  border-radius: 28rpx;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  min-height: 400rpx;
-  padding: 48rpx 36rpx;
-  text-align: center;
-}
-
-.empty-state {
-  align-items: stretch;
-  background: transparent;
-  border: 0;
-  border-radius: 0;
-  min-height: 0;
-  margin: 32rpx 8rpx 0;
-  padding: 0;
-  width: auto;
-}
-
-.empty-state-card {
-  align-items: center;
-  background: #ffffff;
-  border: 1rpx solid #e7edf6;
-  border-radius: 28rpx;
-  box-shadow: 0 14rpx 34rpx rgba(48, 89, 150, 0.08);
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  min-height: 660rpx;
-  padding: 46rpx 24rpx 40rpx;
-  text-align: center;
-  width: 100%;
-}
-
-.empty-illustration {
-  height: 280rpx;
-  position: relative;
-  width: 320rpx;
-}
-
-.empty-illustration-shadow {
-  background: #eef5ff;
-  border-radius: 50%;
-  bottom: 30rpx;
-  height: 24rpx;
-  left: 54rpx;
-  position: absolute;
-  width: 214rpx;
-}
-
-.empty-illustration-spark {
-  background: #9dc4ff;
-  border-radius: 999rpx;
-  height: 30rpx;
-  position: absolute;
-  width: 7rpx;
-}
-
-.empty-illustration-spark::after {
-  background: inherit;
-  border-radius: inherit;
-  content: '';
-  height: 7rpx;
-  position: absolute;
-  width: 22rpx;
-}
-
-.empty-illustration-spark-left {
-  left: 46rpx;
-  top: 124rpx;
-  transform: rotate(-38deg);
-}
-
-.empty-illustration-spark-left::after {
-  left: -7rpx;
-  top: 31rpx;
-}
-
-.empty-illustration-spark-right {
-  right: 62rpx;
-  top: 44rpx;
-  transform: rotate(8deg);
-}
-
-.empty-illustration-spark-right::after {
-  left: 13rpx;
-  top: 31rpx;
-  transform: rotate(45deg);
-}
-
-.empty-clipboard {
-  bottom: 48rpx;
-  height: 194rpx;
-  left: 68rpx;
-  position: absolute;
-  width: 184rpx;
-}
-
-.empty-clipboard-sheet {
-  background: #ffffff;
-  border: 12rpx solid #dceaff;
-  border-radius: 16rpx;
-  bottom: 0;
-  box-sizing: border-box;
-  height: 180rpx;
-  left: 12rpx;
-  position: absolute;
-  width: 158rpx;
-}
-
-.empty-clipboard-clip {
-  background: #6fa6fb;
-  border-radius: 10rpx;
-  height: 28rpx;
-  left: 55rpx;
-  position: absolute;
-  top: 0;
-  width: 66rpx;
-}
-
-.empty-clipboard-clip-hole {
-  background: #dceaff;
-  border-radius: 50%;
-  height: 12rpx;
-  left: 27rpx;
-  position: absolute;
-  top: -7rpx;
-  width: 12rpx;
-}
-
-.empty-clipboard-line {
-  background: #d5e3f9;
-  border-radius: 999rpx;
-  height: 9rpx;
-  left: 26rpx;
-  position: absolute;
-}
-
-.empty-clipboard-line-long {
-  top: 48rpx;
-  width: 92rpx;
-}
-
-.empty-clipboard-line-medium {
-  top: 78rpx;
-  width: 98rpx;
-}
-
-.empty-clipboard-line-short {
-  top: 108rpx;
-  width: 70rpx;
-}
-
-.empty-clipboard-badge {
-  align-items: center;
-  background: #89b8ff;
-  border-radius: 50%;
-  bottom: -8rpx;
-  display: flex;
-  height: 82rpx;
-  justify-content: center;
-  position: absolute;
-  right: -10rpx;
-  width: 82rpx;
-}
-
-.empty-clipboard-minus {
-  background: #ffffff;
-  border-radius: 999rpx;
-  height: 8rpx;
-  width: 30rpx;
-}
-
-.empty-state-title {
-  color: #1b2940;
-  font-size: 38rpx;
-  font-weight: 850;
-  line-height: 1.35;
-  margin-top: 4rpx;
-}
-
-.empty-state-detail {
-  color: #7c8ba2;
-  font-size: 26rpx;
-  line-height: 1.6;
-  margin-top: 14rpx;
-  max-width: 620rpx;
-}
-
-.empty-state-action {
-  align-items: center;
-  background: #2878f2;
-  border-radius: 20rpx;
-  box-shadow: 0 12rpx 24rpx rgba(40, 120, 242, 0.22);
-  color: #ffffff;
-  display: flex;
-  font-size: 28rpx;
-  font-weight: 800;
-  gap: 12rpx;
-  height: 84rpx;
-  justify-content: center;
-  line-height: 1;
-  margin: 32rpx 0 0;
-  padding: 0;
-  width: 320rpx;
-}
-
-.empty-state-action::after {
-  border: 0;
-}
-
 .inline-refresh {
   background: #e7eef8;
   border-radius: 999rpx;
@@ -854,119 +618,24 @@ function cancelAccept(): void {
   width: 32%;
 }
 
-.state-illustration {
-  height: 112rpx;
-  position: relative;
-  width: 164rpx;
-}
-
-.illustration-card {
-  background: #ffffff;
-  border: 2rpx solid #c7dcff;
-  border-radius: 14rpx;
-  box-shadow: 0 10rpx 20rpx rgba(45, 101, 181, 0.09);
-  height: 58rpx;
-  left: 42rpx;
-  position: absolute;
-  top: 18rpx;
-  transform: rotate(-5deg);
-  width: 80rpx;
-}
-
-.illustration-line {
-  background: #cfe0ff;
-  border-radius: 999rpx;
-  height: 7rpx;
-  left: 55rpx;
-  position: absolute;
-}
-
-.illustration-line-short {
-  top: 44rpx;
-  width: 42rpx;
-}
-
-.illustration-line-long {
-  left: 26rpx;
-  top: 78rpx;
-  width: 112rpx;
-}
-
-.state-illustration-search {
-  height: 112rpx;
-}
-
-.illustration-ring {
-  border: 7rpx solid #c7dcff;
-  border-radius: 50%;
-  height: 54rpx;
-  left: 48rpx;
-  position: absolute;
-  top: 16rpx;
-  width: 54rpx;
-}
-
-.illustration-handle {
-  background: #78a8f6;
-  border-radius: 999rpx;
-  height: 8rpx;
-  left: 98rpx;
-  position: absolute;
-  top: 72rpx;
-  transform: rotate(45deg);
-  width: 34rpx;
-}
-
-.state-icon,
+/* Auth guard remains page-owned; error and search feedback now share AppFeedbackState. */
 .guard-icon {
   align-items: center;
   border-radius: 50%;
   display: flex;
   justify-content: center;
 }
-
-.state-icon {
-  font-size: 40rpx;
-  font-weight: 900;
-  height: 96rpx;
-  width: 96rpx;
-}
-
-.state-icon-error {
-  background: #fff0ef;
-  color: #d64545;
-}
-
-.state-title,
 .guard-title {
   color: #1b2940;
   font-size: 32rpx;
   font-weight: 850;
   line-height: 1.4;
 }
-
-.state-title {
-  margin-top: 24rpx;
-}
-
-.state-detail,
 .guard-copy {
   color: #7c8ba2;
   font-size: 25rpx;
   line-height: 1.6;
   margin-top: 12rpx;
-}
-
-.state-action {
-  background: #2878f2;
-  border-radius: 16rpx;
-  color: #ffffff;
-  font-size: 27rpx;
-  font-weight: 800;
-  line-height: 1;
-  margin: 28rpx 0 0;
-  min-height: 76rpx;
-  padding: 0 34rpx;
 }
 
 .load-more {
