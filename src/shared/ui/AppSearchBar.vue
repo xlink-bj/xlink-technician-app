@@ -29,8 +29,12 @@ const emit = defineEmits<{
   (event: 'update:modelValue', value: string): void
   (event: 'search'): void
 }>()
-function handleInput(event: { detail: { value: string } }): void {
-  emit('update:modelValue', event.detail.value)
+function handleInput(event: Event): void {
+  // uni-app's native input sends detail.value at runtime, whereas Vue's
+  // template type declares Event. Normalize both without changing input timing.
+  const native = event as Event & { detail?: { value?: string } }
+  const value = native.detail?.value ?? (event.target as HTMLInputElement | null)?.value ?? ''
+  emit('update:modelValue', value)
 }
 </script>
 <style scoped>
