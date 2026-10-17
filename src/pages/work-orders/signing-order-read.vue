@@ -41,7 +41,7 @@
             <text class="signing-read-meta xl-craft__meta">订单金额</text>
             <AppAmountValue class="signing-read-amount-value" size="prominent" :value="`¥${review.snapshot.review.order.totalPrice.toFixed(2)}`" />
           </view>
-          <text class="signing-read-meta xl-craft__meta">仅限当前工单 · {{ review.snapshot.review?.order.groups.length || 0 }} 个维修分组</text>
+          <text class="signing-read-meta xl-craft__meta">{{ review.snapshot.review?.order.groups.length || 0 }} 个维修分组</text>
         </view>
         <text class="signing-read-order-note" data-testid="signing-order-read-r1-stage">{{ r1OrderSigningStageNotice(review.snapshot.review?.order.processState) }}</text>
         <text v-if="!review.snapshot.review?.order.contentSupported" class="signing-read-warning xl-craft__caption">
