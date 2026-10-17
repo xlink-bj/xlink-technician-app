@@ -285,6 +285,10 @@
               </view>
             </template>
 
+            <template v-else-if="example.kind === 'craft-matrix'">
+              <DesignSystemCraftMatrix />
+            </template>
+
             <template v-else-if="example.kind === 'records'">
               <view class="gallery-records-master" data-testid="ds02b-content-master">
                 <AppSectionHeading title="商业内容组件" subtitle="同一套信息层级，支持多种真实业务容器">
@@ -335,6 +339,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 
+import DesignSystemCraftMatrix from './design-system-craft-matrix.vue'
 import AppButton from '@shared/ui/AppButton.vue'
 import AppActionBar from '@shared/ui/AppActionBar.vue'
 import AppActionFeedback from '@shared/ui/AppActionFeedback.vue'
