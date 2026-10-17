@@ -4,7 +4,7 @@
   <view class="q01-screen xl-craft" data-testid="quotation-first-repair-part-step">
     <AppStatus
       v-if="showDraftNotice"
-      class="q01-screen__provenance"
+      class="q01-screen__provenance xl-craft__notice"
       :message="productReviewOnly
         ? '演示数据仅保存在本机；正式报价订单提交已关闭。'
         : '当前为本机报价草稿；校验并提交后才会创建正式订单。'"
