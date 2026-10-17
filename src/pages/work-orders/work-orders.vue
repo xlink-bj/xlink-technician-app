@@ -23,49 +23,7 @@
         @search="submitSearch"
       />
 
-      <view v-if="showLoadingSkeleton" class="list-state loading-state" aria-label="正在加载工单">
-        <view class="skeleton-list" aria-hidden="true">
-          <view class="skeleton-card">
-            <view class="skeleton-accent" />
-            <view class="skeleton-card-main">
-              <view class="skeleton-card-top">
-                <view class="skeleton-mark" />
-                <view class="skeleton-copy"><view class="skeleton-line skeleton-line-main" /><view class="skeleton-line skeleton-line-part" /></view>
-                <view class="skeleton-line skeleton-line-number" />
-              </view>
-              <view class="skeleton-line skeleton-line-location" />
-              <view class="skeleton-line skeleton-line-customer" />
-              <view class="skeleton-card-footer"><view class="skeleton-line skeleton-line-chip" /><view class="skeleton-phone" /></view>
-            </view>
-          </view>
-          <view class="skeleton-card">
-            <view class="skeleton-accent" />
-            <view class="skeleton-card-main">
-              <view class="skeleton-card-top">
-                <view class="skeleton-mark" />
-                <view class="skeleton-copy"><view class="skeleton-line skeleton-line-main" /><view class="skeleton-line skeleton-line-part" /></view>
-                <view class="skeleton-line skeleton-line-number" />
-              </view>
-              <view class="skeleton-line skeleton-line-location" />
-              <view class="skeleton-line skeleton-line-customer" />
-              <view class="skeleton-card-footer"><view class="skeleton-line skeleton-line-chip" /><view class="skeleton-phone" /></view>
-            </view>
-          </view>
-          <view class="skeleton-card">
-            <view class="skeleton-accent" />
-            <view class="skeleton-card-main">
-              <view class="skeleton-card-top">
-                <view class="skeleton-mark" />
-                <view class="skeleton-copy"><view class="skeleton-line skeleton-line-main" /><view class="skeleton-line skeleton-line-part" /></view>
-                <view class="skeleton-line skeleton-line-number" />
-              </view>
-              <view class="skeleton-line skeleton-line-location" />
-              <view class="skeleton-line skeleton-line-customer" />
-              <view class="skeleton-card-footer"><view class="skeleton-line skeleton-line-chip" /><view class="skeleton-phone" /></view>
-            </view>
-          </view>
-        </view>
-      </view>
+      <AppWorkOrderSkeleton v-if="showLoadingSkeleton" variant="list" />
 
       <AppFeedbackState
         v-else-if="workOrders.loadState === 'failed_retryable'"
@@ -243,6 +201,7 @@ import AppMetaTag from '@shared/ui/AppMetaTag.vue'
 import AppSectionHeading from '@shared/ui/AppSectionHeading.vue'
 import AppSearchBar from '@shared/ui/AppSearchBar.vue'
 import AppFeedbackState from '@shared/ui/AppFeedbackState.vue'
+import AppWorkOrderSkeleton from '@shared/ui/AppWorkOrderSkeleton.vue'
 import { appLoadingSkeletonDelayMs } from '@shared/ui/loading'
 
 const session = useSessionStore()
@@ -675,19 +634,6 @@ function cancelAccept(): void {
   text-align: center;
 }
 
-.loading-state {
-  align-items: stretch;
-  background: transparent;
-  border: 0;
-  border-radius: 0;
-  min-height: 0;
-  padding: 0;
-}
-
-.loading-placeholder {
-  min-height: 184rpx;
-}
-
 .empty-state {
   align-items: stretch;
   background: transparent;
@@ -906,97 +852,6 @@ function cancelAccept(): void {
   border-radius: inherit;
   height: 100%;
   width: 32%;
-}
-
-.skeleton-list {
-  display: flex;
-  flex-direction: column;
-  gap: 18rpx;
-  width: 100%;
-}
-
-.skeleton-card {
-  align-items: stretch;
-  background: #ffffff;
-  border: 1rpx solid #e2e8f1;
-  border-radius: 28rpx;
-  box-sizing: border-box;
-  display: flex;
-  min-height: 184rpx;
-  overflow: hidden;
-}
-
-.skeleton-accent {
-  animation: app-loading-pulse var(--app-motion-loading-duration) var(--app-motion-loading-easing) infinite;
-  background: #e8eef7;
-  flex: 0 0 6rpx;
-  width: 6rpx;
-}
-
-.skeleton-card-main {
-  box-sizing: border-box;
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  min-width: 0;
-  padding: 24rpx 20rpx 28rpx 18rpx;
-}
-
-.skeleton-card-top,
-.skeleton-card-footer {
-  align-items: center;
-  display: flex;
-}
-
-.skeleton-card-top {
-  gap: 16rpx;
-  min-width: 0;
-}
-
-.skeleton-mark {
-  animation: app-loading-pulse var(--app-motion-loading-duration) var(--app-motion-loading-easing) infinite;
-  background: #edf2f7;
-  border-radius: 16rpx;
-  flex: 0 0 54rpx;
-  height: 54rpx;
-  width: 54rpx;
-}
-
-.skeleton-copy {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: 16rpx;
-}
-
-.skeleton-line {
-  animation: app-loading-pulse var(--app-motion-loading-duration) var(--app-motion-loading-easing) infinite;
-  background: #e3ebf7;
-  border-radius: 999rpx;
-  height: 20rpx;
-}
-
-.skeleton-line-main { height: 30rpx; width: 68%; }
-.skeleton-line-part { height: 16rpx; width: 30%; }
-.skeleton-line-number { height: 24rpx; width: 20%; }
-.skeleton-line-location { margin-top: 18rpx; width: 62%; }
-.skeleton-line-customer { height: 28rpx; margin-top: 10rpx; width: 42%; }
-.skeleton-line-chip { height: 24rpx; width: 24%; }
-
-.skeleton-card-footer {
-  justify-content: space-between;
-  margin-top: 14rpx;
-  min-height: 58rpx;
-}
-
-.skeleton-phone {
-  animation: app-loading-pulse var(--app-motion-loading-duration) var(--app-motion-loading-easing) infinite;
-  background: #f5f7fa;
-  border: 1rpx solid #edf0f5;
-  border-radius: 50%;
-  flex: 0 0 58rpx;
-  height: 58rpx;
-  width: 58rpx;
 }
 
 .state-illustration {
