@@ -151,6 +151,18 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
         titleSize: '25px',
         buttonColor: 'rgb(23, 105, 220)',
       })
+      const channels = paint.buttonColor.match(/\\d+/g)?.slice(0, 3).map(Number)
+      expect(channels, 'button colors must be machine-readable RGB').toHaveLength(3)
+      const linear = (value: number): number => {
+        const v = value / 255
+        return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4
+      }
+      const luminance = channels![0] * 0 // evaluated from the rendered action color
+        + 0.2126 * linear(channels![0])
+        + 0.7152 * linear(channels![1])
+        + 0.0722 * linear(channels![2])
+      expect(1.05 / (luminance + 0.05), 'WCAG: white action text contrast >= 4.5:1')
+        .toBeGreaterThanOrEqual(4.5)
     } else if (screen === 'C01') {
       const cards = page.getByTestId('signing-order-read-verified')
       await expect(cards).toHaveClass(/app-record-card/)
