@@ -1,79 +1,91 @@
 {
   "schemaVersion": 1,
   "capturedFrom": "DS-06 PR #151 HEAD 31fa5d296f6d3acf4fc21ecedabd83e5198f86cc",
-  "policy": "Upper bounds for existing hard-coded style debt. Reduce after migration. No new page-specific material/type constants.",
+  "policy": "Upper bounds for existing hard-coded style debt. Reduce after migration. No new page-specific material/type constants. Shared primitive selector overrides are also frozen; future pages default to zero.",
   "allowed": {
     "src/pages/index/index.vue": {
       "hex": 101,
       "rgb": 10,
       "fontSize": 47,
-      "radius": 21
+      "radius": 21,
+      "sharedOverrides": 0
     },
     "src/pages/work-orders/work-orders.vue": {
       "hex": 85,
       "rgb": 5,
       "fontSize": 20,
-      "radius": 32
+      "radius": 32,
+      "sharedOverrides": 0
     },
     "src/pages/work-orders/detail.vue": {
       "hex": 109,
       "rgb": 1,
       "fontSize": 35,
-      "radius": 15
+      "radius": 15,
+      "sharedOverrides": 0
     },
     "src/pages/work-orders/action-workspace.vue": {
       "hex": 0,
       "rgb": 0,
       "fontSize": 4,
-      "radius": 2
+      "radius": 2,
+      "sharedOverrides": 0
     },
     "src/pages/work-orders/action-time.vue": {
       "hex": 0,
       "rgb": 0,
       "fontSize": 1,
-      "radius": 1
+      "radius": 1,
+      "sharedOverrides": 0
     },
     "src/pages/work-orders/signing-order-read.vue": {
       "hex": 0,
       "rgb": 0,
       "fontSize": 14,
-      "radius": 0
+      "radius": 0,
+      "sharedOverrides": 0
     },
     "src/pages/work-orders/action-confirmation.vue": {
       "hex": 0,
       "rgb": 0,
       "fontSize": 2,
-      "radius": 2
+      "radius": 2,
+      "sharedOverrides": 0
     },
     "src/pages/work-orders/material-sku-mock-review.vue": {
       "hex": 0,
       "rgb": 0,
       "fontSize": 9,
-      "radius": 1
+      "radius": 1,
+      "sharedOverrides": 1
     },
     "src/pages/work-orders/signing-mock-review.vue": {
       "hex": 0,
       "rgb": 0,
       "fontSize": 9,
-      "radius": 0
+      "radius": 0,
+      "sharedOverrides": 1
     },
     "src/features/work-orders/quotation/Q01EntryScreen.vue": {
       "hex": 1,
       "rgb": 1,
       "fontSize": 11,
-      "radius": 1
+      "radius": 1,
+      "sharedOverrides": 0
     },
     "src/features/work-orders/quotation/QuotationOrderHub.vue": {
       "hex": 43,
       "rgb": 1,
       "fontSize": 32,
-      "radius": 13
+      "radius": 13,
+      "sharedOverrides": 2
     },
     "src/features/work-orders/components/GenericDynamicFormActionContent.vue": {
       "hex": 6,
       "rgb": 2,
       "fontSize": 7,
-      "radius": 12
+      "radius": 12,
+      "sharedOverrides": 3
     }
   }
 }
