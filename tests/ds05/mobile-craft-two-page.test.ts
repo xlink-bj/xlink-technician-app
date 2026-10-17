@@ -39,7 +39,7 @@ describe('DS-05: Q01 V2 Mobile Craft reused by C01', () => {
   })
   it('does not grant signing, business submission or quotation authority to craft primitives', () => {
     expect(q01).toContain("@input=\"emit('quantity-input', $event)\"")
-    expect(q01).toContain("@repair-parts-change")
+    expect(q01).toContain("emit('repair-parts-change'")
       // Parent remains the only owner of all quotation actions
     expect(q01Footer).toContain('@tap="advanceFirstRepairStep"')
     expect(q01Footer).toContain('@tap="composition.flushDraft"')
