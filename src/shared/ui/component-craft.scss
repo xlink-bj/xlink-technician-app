@@ -1,0 +1,149 @@
+/*
+ * DS-07.B — Shared component material/interaction grammar.
+ * All paint is controlled here through canonical --app-craft-* root tokens.
+ * Opt-in .app-visual-scope--craft; NEVER page CSS, NEVER implicit retheme.
+ * No third palette, no business state, no external assets.
+ */
+.app-visual-scope--craft {
+  color: var(--app-craft-ink);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.app-visual-scope--craft .app-field { margin-top: 0; }
+.app-visual-scope--craft .app-field__label {
+  color: var(--app-craft-label);
+  font-size: 14px; line-height: 21px; font-weight: 600; margin-bottom: 9px;
+}
+.app-visual-scope--craft .app-field__required,
+.app-visual-scope--craft .app-field--error .app-field__label { color: var(--app-craft-danger); }
+.app-visual-scope--craft .app-field__supporting,
+.app-visual-scope--craft .app-field__optional {
+  color: var(--app-craft-caption); font-size: 12px; line-height: 18px;
+}
+.app-visual-scope--craft .app-field__error {
+  color: var(--app-craft-danger); font-size: 12px; line-height: 18px;
+}
+.app-visual-scope--craft .app-input,
+.app-visual-scope--craft .app-textarea,
+.app-visual-scope--craft .app-selector {
+  box-sizing: border-box;
+  width: 100%; margin: 0; border: 1px solid var(--app-craft-control-stroke);
+  border-radius: var(--app-craft-control-radius);
+  background: var(--app-craft-field-surface);
+  color: var(--app-craft-ink);
+  font-size: 14px; line-height: 1.5; font-weight: 400;
+  transition: border-color .16s ease, box-shadow .16s ease;
+}
+.app-visual-scope--craft .app-input,
+.app-visual-scope--craft .app-selector {
+  height: 53px; min-height: 53px; padding: 0 15px;
+}
+.app-visual-scope--craft .app-textarea {
+  height: 96px; min-height: 96px; padding: 13px 15px;
+}
+.app-visual-scope--craft .app-input__placeholder,
+.app-visual-scope--craft .app-textarea__placeholder,
+.app-visual-scope--craft .app-selector__placeholder {
+  color: var(--app-craft-placeholder); opacity: 1; font-weight: 400;
+}
+.app-visual-scope--craft .app-selector__value {
+  color: var(--app-craft-ink); font-weight: 600; font-size: 14px;
+}
+.app-visual-scope--craft .app-selector__chevron { color: var(--app-craft-secondary); }
+.app-visual-scope--craft .app-input--focused,
+.app-visual-scope--craft .app-textarea--focused,
+.app-visual-scope--craft .app-selector:focus-visible {
+  border-color: var(--app-craft-action);
+  box-shadow: 0 0 0 3px rgba(23,105,220,.10);
+}
+.app-visual-scope--craft .app-input--error,
+.app-visual-scope--craft .app-textarea--error,
+.app-visual-scope--craft .app-selector--error {
+  border-color: var(--app-craft-danger);
+  box-shadow: none;
+}
+.app-visual-scope--craft .app-input--disabled,
+.app-visual-scope--craft .app-textarea--disabled,
+.app-visual-scope--craft .app-selector--disabled {
+  background: var(--app-color-disabled-surface);
+  color: var(--app-craft-caption);
+  opacity: .68;
+}
+.app-visual-scope--craft .app-input--readonly,
+.app-visual-scope--craft .app-textarea--readonly,
+.app-visual-scope--craft .app-selector--readonly {
+  background: var(--app-color-disabled-surface);
+  color: var(--app-craft-secondary);
+}
+.app-visual-scope--craft .app-selector--selected:not(.app-selector--disabled) {
+  background: var(--app-craft-action-surface);
+  border-color: var(--app-craft-action);
+}
+.app-visual-scope--craft .app-button {
+  border-radius: var(--app-craft-control-radius);
+  font-size: 14px; font-weight: 600; letter-spacing: 0;
+  min-height: 44px;
+}
+.app-visual-scope--craft .app-button--primary {
+  background: var(--app-craft-action);
+  border-color: var(--app-craft-action);
+  color: var(--app-craft-surface);
+  box-shadow: 0 3px 9px rgba(23,105,220,.12);
+}
+.app-visual-scope--craft .app-button--secondary {
+  background: var(--app-craft-surface);
+  color: var(--app-craft-secondary);
+  border-color: var(--app-craft-control-stroke);
+  box-shadow: none;
+}
+.app-visual-scope--craft .app-button--tertiary,
+.app-visual-scope--craft .app-button--text,
+.app-visual-scope--craft .app-button--ghost {
+  color: var(--app-craft-action);
+}
+.app-visual-scope--craft .app-button--ghost { border-color: var(--app-craft-action); }
+.app-visual-scope--craft .app-button--primary.app-button--pressed:not(.app-button--disabled),
+.app-visual-scope--craft .app-button--primary:active:not(.app-button--disabled) {
+  background: var(--app-craft-action-pressed);
+  border-color: var(--app-craft-action-pressed);
+  transform: translateY(1px); box-shadow: none;
+}
+.app-visual-scope--craft .app-button--loading,
+.app-visual-scope--craft .app-button--disabled { box-shadow: none; }
+.app-visual-scope--craft .app-record-card,
+.app-visual-scope--craft .app-surface {
+  background: var(--app-craft-surface);
+  border: 1px solid var(--app-craft-divider);
+  border-radius: var(--app-craft-surface-radius);
+  box-shadow: var(--app-craft-surface-shadow);
+}
+.app-visual-scope--craft .app-status--strip {
+  border-color: var(--app-craft-control-stroke);
+  border-radius: var(--app-craft-control-radius);
+  background: var(--app-craft-field-surface);
+}
+.app-visual-scope--craft .app-status--strip.app-status--success {
+  background: var(--app-color-success-soft); border-color: var(--app-color-success-soft);
+}
+.app-visual-scope--craft .app-status--strip.app-status--warning {
+  background: var(--app-color-warning-soft); border-color: var(--app-color-warning-soft);
+}
+.app-visual-scope--craft .app-status--strip.app-status--danger {
+  background: var(--app-color-danger-soft); border-color: var(--app-color-danger-soft);
+}
+.app-visual-scope--craft .app-action-bar {
+  background: var(--app-craft-surface);
+  border-top: 1px solid var(--app-craft-divider);
+  box-shadow: var(--app-craft-actionbar-shadow);
+}
+.app-visual-scope--craft .app-action-bar--preview {
+  box-shadow: var(--app-craft-surface-shadow);
+  border: 1px solid var(--app-craft-divider);
+  border-radius: var(--app-craft-surface-radius);
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-visual-scope--craft .app-input,
+  .app-visual-scope--craft .app-textarea,
+  .app-visual-scope--craft .app-selector,
+  .app-visual-scope--craft .app-button { transition: none; }
+}
