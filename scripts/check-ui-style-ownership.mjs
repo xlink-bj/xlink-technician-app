@@ -40,13 +40,13 @@ const indicators = {
   fontSize: /\bfont-size\s*:\s*(?:\d|\.)/gi,
   radius: /\bborder-radius\s*:\s*(?:\d|\.)/gi,
 }
-let sum = { hex: 0, rgb: 0, fontSize: 0, radius: 0 }
+let sum = { hex: 0, rgb: 0, fontSize: 0, radius: 0, sharedOverrides: 0 }
 let checked = 0
 for (const path of [...sources].sort()) {
   const source = await read(path)
   const styles = [...source.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi)]
     .map(match => match[1]).join('\n')
-  const allowed = baseline.allowed[path] ?? { hex: 0, rgb: 0, fontSize: 0, radius: 0 }
+  const allowed = baseline.allowed[path] ?? { hex: 0, rgb: 0, fontSize: 0, radius: 0, sharedOverrides: 0 }
   for (const [name, pattern] of Object.entries(indicators)) {
     const found = (styles.match(pattern) ?? []).length
     if (!Number.isSafeInteger(allowed[name]) || allowed[name] < 0) fail(path + ' has invalid baseline ' + name)
