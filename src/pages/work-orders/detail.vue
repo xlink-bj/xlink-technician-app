@@ -9,51 +9,30 @@
   </view>
 
   <view v-else class="detail-page">
-    <view v-if="showLoadingSkeleton" class="detail-state detail-loading-state" aria-label="正在加载工单详情">
-      <view class="detail-skeleton" aria-hidden="true">
-        <view class="skeleton-surface skeleton-summary">
-          <view class="skeleton-summary-top">
-            <view class="skeleton-line skeleton-line--customer" />
-            <view class="skeleton-line skeleton-line--number" />
-          </view>
-          <view class="skeleton-line skeleton-line--location" />
-          <view class="skeleton-actions skeleton-actions--summary">
-            <view /><view /><view /><view />
-          </view>
-        </view>
+    <AppWorkOrderSkeleton v-if="showLoadingSkeleton" variant="detail" />
 
-        <view class="skeleton-surface skeleton-task">
-          <view class="skeleton-line skeleton-line--eyebrow" />
-          <view class="skeleton-line skeleton-line--task-title" />
-          <view class="skeleton-button" />
-        </view>
-
-        <view class="skeleton-surface skeleton-information">
-          <view class="skeleton-tabs"><view /><view /><view /><view /></view>
-          <view class="skeleton-information-row"><view /><view /></view>
-          <view class="skeleton-information-row"><view /><view /></view>
-        </view>
-      </view>
-    </view>
-
-    <view v-else-if="workOrder.loadState === 'failed_retryable'" class="detail-state">
-      <view class="state-icon state-icon--retry" aria-hidden="true">!</view>
-      <text class="state-title">暂时无法加载详情</text>
-      <text class="state-detail">请检查网络后重试。</text>
-      <button class="state-action" @tap="retry">重新加载</button>
-    </view>
-
-    <view v-else-if="workOrder.loadState === 'failed_terminal'" class="detail-state">
-      <view class="state-icon" aria-hidden="true">!</view>
-      <text class="state-title">工单详情暂不可用</text>
-      <text class="state-detail">{{ failureCopy }}</text>
-      <button class="state-action" @tap="retry">再次尝试</button>
-    </view>
-
-    <view v-else-if="workOrder.loadState === 'succeeded' && detail && preAcceptBlocked" class="detail-state">
-      <text class="state-title">工单待接单</text>
-      <text class="state-detail">接单后可查看工单详情。</text>
-    </view>
+    <AppFeedbackState
+      v-else-if="workOrder.loadState === 'failed_retryable'"
+      layout="detail" appearance="retry"
+      title="暂时无法加载详情"
+      description="请检查网络后重试。"
+      action-label="重新加载"
+      @action="retry"
+    />
+    <AppFeedbackState
+      v-else-if="workOrder.loadState === 'failed_terminal'"
+      layout="detail" appearance="error"
+      title="工单详情暂不可用"
+      :description="failureCopy"
+      action-label="再次尝试"
+      @action="retry"
+    />
+    <AppFeedbackState
+      v-else-if="workOrder.loadState === 'succeeded' && detail && preAcceptBlocked"
+      layout="detail" appearance="blocked"
+      title="工单待接单"
+      description="接单后可查看工单详情。"
+    />
 
     <view v-else-if="workOrder.loadState === 'succeeded' && detail" class="detail-content">
       <AppSectionHeading class="detail-section-heading" title="工单概览" subtitle="服务信息与当前处理进度" data-testid="ds02b-detail-heading" />
@@ -307,6 +286,8 @@ import AppStatus from '@shared/ui/AppStatus.vue'
 import AppRecordCard from '@shared/ui/AppRecordCard.vue'
 import AppMetaTag from '@shared/ui/AppMetaTag.vue'
 import AppSectionHeading from '@shared/ui/AppSectionHeading.vue'
+import AppFeedbackState from '@shared/ui/AppFeedbackState.vue'
+import AppWorkOrderSkeleton from '@shared/ui/AppWorkOrderSkeleton.vue'
 import WorkOrderTaskFocus from '@features/work-orders/WorkOrderTaskFocus.vue'
 import { appLoadingSkeletonDelayMs } from '@shared/ui/loading'
 
@@ -960,131 +941,8 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
   text-align: center;
 }
 
-.detail-skeleton {
-  display: flex;
-  flex-direction: column;
-  gap: 18rpx;
-  padding: 0;
-  width: 100%;
-}
-
-.detail-loading-state {
-  align-items: stretch;
-  justify-content: flex-start;
-  min-height: 0;
-}
-
-.detail-loading-placeholder {
-  min-height: 184rpx;
-}
-
-.skeleton-surface {
-  background: #ffffff;
-  border: 1rpx solid #e4eaf2;
-  border-radius: 24rpx;
-  box-sizing: border-box;
-  overflow: hidden;
-}
-
-.skeleton-summary {
-  padding: 28rpx 28rpx 24rpx;
-}
-
-.skeleton-summary-top,
-.skeleton-tabs,
-.skeleton-information-row {
-  align-items: center;
-  display: flex;
-}
-
-.skeleton-summary-top {
-  justify-content: space-between;
-}
-
-.skeleton-line {
-  background: #edf2f7;
-  border-radius: 999rpx;
-  height: 22rpx;
-  animation: app-loading-pulse var(--app-motion-loading-duration) var(--app-motion-loading-easing) infinite;
-}
-
-.skeleton-line--customer { height: 32rpx; width: 42%; }
-.skeleton-line--number { height: 24rpx; width: 20%; }
-.skeleton-line--location { margin-top: 24rpx; width: 64%; }
-.skeleton-line--eyebrow { height: 20rpx; width: 18%; }
-.skeleton-line--task-title { height: 30rpx; margin-top: 14rpx; width: 30%; }
-
-.skeleton-actions--summary {
-  margin-top: 24rpx;
-}
-
-.skeleton-actions {
-  display: flex;
-  gap: 18rpx;
-}
-
-.skeleton-actions view {
-  background: #edf2f7;
-  border-radius: 14rpx;
-  flex: 1;
-  height: 64rpx;
-  animation: app-loading-pulse var(--app-motion-loading-duration) var(--app-motion-loading-easing) infinite;
-}
-
-.skeleton-task {
-  background: #ffffff;
-  border-color: #e4eaf2;
-  padding: 24rpx 26rpx 22rpx;
-}
-
-.skeleton-button {
-  background: #edf2f7;
-  border-radius: 14rpx;
-  height: 68rpx;
-  margin-top: 22rpx;
-  animation: app-loading-pulse var(--app-motion-loading-duration) var(--app-motion-loading-easing) infinite;
-}
-
-.skeleton-information {
-  padding-bottom: 12rpx;
-}
-
-.skeleton-tabs {
-  border-bottom: 1rpx solid #edf1f6;
-  gap: 28rpx;
-  height: 82rpx;
-  padding: 0 28rpx;
-}
-
-.skeleton-tabs view {
-  background: #edf2f7;
-  border-radius: 999rpx;
-  height: 20rpx;
-  width: 76rpx;
-  animation: app-loading-pulse var(--app-motion-loading-duration) var(--app-motion-loading-easing) infinite;
-}
-
-.skeleton-information-row {
-  border-bottom: 1rpx solid #edf1f6;
-  justify-content: space-between;
-  margin: 0 28rpx;
-  min-height: 82rpx;
-}
-
-.skeleton-information-row view {
-  background: #edf2f7;
-  border-radius: 999rpx;
-  height: 20rpx;
-  width: 22%;
-  animation: app-loading-pulse var(--app-motion-loading-duration) var(--app-motion-loading-easing) infinite;
-}
-
-.skeleton-information-row view:last-child {
-  width: 34%;
-}
-
-.guard-mark,
-.state-icon {
+/* Authentication visual remains local; feedback loading/error styling is shared. */
+.guard-mark {
   align-items: center;
   border-radius: 50%;
   display: flex;
@@ -1092,33 +950,14 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
   justify-content: center;
   margin-bottom: 22rpx;
   width: 74rpx;
-}
-
-.guard-mark {
   background: #eaf2ff;
 }
-
-.state-icon {
-  background: #fff0f0;
-  color: #e05252;
-  font-size: 26rpx;
-  font-weight: 800;
-}
-
-.state-icon--retry {
-  background: #fff7e7;
-  color: #e28a19;
-}
-
-.guard-title,
-.state-title {
+.guard-title {
   color: #172033;
   font-size: 30rpx;
   font-weight: 800;
 }
-
-.guard-copy,
-.state-detail {
+.guard-copy {
   color: #8290a4;
   font-size: 24rpx;
   line-height: 1.6;

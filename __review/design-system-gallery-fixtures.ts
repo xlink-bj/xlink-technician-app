@@ -10,6 +10,7 @@ export type DesignSystemExampleKind =
   | 'action-bar'
   | 'records'
   | 'craft-matrix'
+  | 'workorder-states'
 
 export interface DesignSystemExample {
   readonly id: string
@@ -76,6 +77,11 @@ export const designSystemSections: readonly DesignSystemSection[] = [
     examples: [{ id: 'records', title: '商业级卡片 / 分组 / 元标签', state: 'record / section / metadata', note: 'DS-02.B · 真实列表和详情共享的商业内容母版', kind: 'records' }],
   },
   {
+    id: '10-workorder-state-patterns',
+    title: 'Work Order State Patterns / DS-07.C3',
+    examples: [{ id: 'workorder-states', title: '搜索、反馈、空状态、加载骨架', state: 'search / error / retry / empty / loading', note: '同一组 App* 组件在工单列表及详情跨页复用', kind: 'workorder-states' }],
+  },
+  {
     id: '09-shared-craft-components',
     title: 'Canonical Component Craft / DS-07',
     examples: [{ id: 'craft-matrix', title: '统一视觉状态矩阵', state: 'button / field / selector / status / surface / action-bar', note: '直接渲染 App* 共享组件，不在业务页面重复定义视觉', kind: 'craft-matrix' }],
@@ -92,4 +98,5 @@ export const designSystemScreenshotContracts: readonly DesignSystemScreenshotCon
   { filename: '07-complex-patterns.png', focusExampleId: 'patterns' },
   { filename: '08-action-bar.png', focusExampleId: 'action-bar' },
   { filename: '09-shared-craft-state-matrix.png', focusExampleId: 'craft-matrix' },
+  { filename: '10-workorder-states.png', focusExampleId: 'workorder-states' },
 ]

@@ -399,3 +399,50 @@ test('DS-07.B shared Craft mode: real App components, full state matrix and unch
     await assertHealthy(page, evidence)
   }
 })
+
+
+test('DS-07.C3: shared search, retry, no-result, empty and loading components across list/detail', async ({ page }) => {
+  for (const width of [320, 375, 390]) {
+    await page.setViewportSize({ width, height: 844 })
+    const evidence = installBrowserSafetyGuards(page)
+    await openReview(page, evidence)
+    const matrix = page.getByTestId('ds07c3-state-gallery')
+    await expect(matrix).toBeVisible()
+
+    const search = page.getByTestId('app-search-bar').first()
+    await expect(search).toBeVisible()
+    await expect(search.locator('.search-input-shell')).toHaveCSS('background-color', 'rgb(255, 255, 255)')
+    const searchCount = page.getByTestId('ds07c3-search-count')
+    const beforeSearch = Number(await searchCount.textContent())
+    await search.locator('.search-button').click()
+    await expect(searchCount).toHaveText(String(beforeSearch + 1))
+    await assertDisabled(page.getByTestId('app-search-bar').nth(1).locator('.search-button'))
+
+    const feedback = page.getByTestId('app-feedback-state')
+    await expect(feedback).toHaveCount(4)
+    await expect(feedback.nth(0)).toContainText('暂时无法加载工单')
+    await expect(feedback.nth(1)).toContainText('没有找到匹配工单')
+    await expect(feedback.nth(2)).toContainText('暂时无法加载详情')
+    await expect(feedback.nth(3)).toContainText('工单待接单')
+    const retryCount = page.getByTestId('ds07c3-retry-count')
+    const beforeRetry = Number(await retryCount.textContent())
+    await feedback.nth(0).locator('.app-feedback-state__action').click()
+    await expect(retryCount).toHaveText(String(beforeRetry + 1))
+
+    const empty = page.getByTestId('work-order-empty-state')
+    const emptyAction = page.getByTestId('ds07c3-empty-action-count')
+    const beforeEmpty = Number(await emptyAction.textContent())
+    await expect(empty).toContainText('当前暂无工单')
+    await empty.locator('.empty-state-action').click()
+    await expect(emptyAction).toHaveText(String(beforeEmpty + 1))
+    await expect(page.getByTestId('work-order-skeleton-list').locator('.skeleton-card')).toHaveCount(3)
+    await expect(page.getByTestId('work-order-skeleton-detail').locator('.skeleton-surface')).toHaveCount(3)
+    await assertNoHorizontalOverflow(page)
+    await page.addStyleTag({ content: 'uni-page-head { visibility: hidden !important; }' })
+    await matrix.screenshot({
+      path: join(screenshotDirectory, `ds07c3-workorder-states-${width}.png`),
+      animations: 'disabled',
+    })
+    await assertHealthy(page, evidence)
+  }
+})
