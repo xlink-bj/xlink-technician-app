@@ -103,7 +103,7 @@ function activate(): void {
   border: 0;
   border-radius: 12px;
   color: #fff;
-  background: #2677ed;
+  background: #1769dc;
   box-shadow: 0 3px 6px rgba(4,29,70,.10);
   font-size: 15px;
   font-weight: 650;
