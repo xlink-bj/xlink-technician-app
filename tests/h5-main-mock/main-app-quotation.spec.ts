@@ -527,7 +527,13 @@ test('one MOCK-019 WorkOrder progresses Appointment → Survey → Quotation wit
     await expect(page.locator('.q01-screen__disclosure')).toContainText('本机草稿不会自动提交')
   } else {
     await expect(page.getByTestId('quotation-product-demo-read-only')).toContainText('演示，不提交订单')
-    await expect(page.getByTestId('quotation-submit-disabled-preview')).toBeDisabled()
+    // uni-app renders <uni-button>; Playwright's native :disabled predicate
+    // does not recognize custom-element disabled semantics. Assert the
+    // framework's disabled attribute, ARIA contract and shared button class.
+    const mockSubmit = page.getByTestId('quotation-submit-disabled-preview')
+    await expect(mockSubmit).toHaveAttribute('disabled', 'true')
+    await expect(mockSubmit).toHaveAttribute('aria-disabled', 'true')
+    await expect(mockSubmit).toHaveClass(/app-button--disabled/)
   }
   await expect(page.getByTestId('action-workspace-submit')).toHaveCount(0)
   // The local quotation draft is not an Order.type=1. The next stage is
