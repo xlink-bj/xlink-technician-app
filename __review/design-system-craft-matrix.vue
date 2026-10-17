@@ -57,7 +57,7 @@
         </AppRecordCard>
       </view>
 
-      <view class="craft-review__group" data-testid="ds07-craft-actionbar">
+      <view class="craft-review__group" data-testid="ds07-craft-actionbar-group">
         <text class="craft-review__heading">06 / Action bar · source-owned action</text>
         <AppActionBar preview layout="dual" label="共享操作栏视觉示例" data-testid="ds07-craft-actionbar">
           <AppButton variant="secondary">返回</AppButton>
