@@ -1,14 +1,13 @@
 <template>
   <view class="dynamic-action-content" :class="{ 'app-surface': !isSurvey, 'dynamic-action-content--survey': isSurvey }"
     data-action-content="dynamic-form" data-testid="dynamic-form-action-content">
-    <view class="dynamic-action-heading" :class="{ 'dynamic-action-heading--survey': isSurvey }">
-      <view class="dynamic-action-title-row">
-        <view class="dynamic-action-icon" aria-hidden="true"><AppIcon name="task" :size="20" /></view>
-        <text class="dynamic-action-title">{{ isSurvey ? '勘查记录' : title }}</text>
-      </view>
-      <text class="dynamic-action-caption">{{ caption }}</text>
-      <text v-if="isSurvey && surveyRequiredVisible" class="dynamic-action-required-note">* 必填</text>
-    </view>
+    <AppActionContentHeading
+      :title="isSurvey ? '勘查记录' : title"
+      :caption="caption"
+      icon="task"
+      :variant="isSurvey ? 'survey' : 'default'"
+      :required-note="isSurvey && surveyRequiredVisible"
+    />
 
     <template v-for="block in presentationBlocks" :key="block.key">
       <view class="dynamic-action-block"
@@ -225,6 +224,7 @@ import { isMediaValueRef } from '@shared/types'
 import type { AppChoiceOption } from '@shared/ui/types'
 import { isMultilineField } from '../form-presentation'
 import { mediaPickerLabelFor, verifiedMediaMaxFor } from '../media-presentation'
+import AppActionContentHeading from '@shared/ui/AppActionContentHeading.vue'
 import AppButton from '@shared/ui/AppButton.vue'
 import AppCascadeSelector from '@shared/ui/AppCascadeSelector.vue'
 import AppChoiceGroup from '@shared/ui/AppChoiceGroup.vue'
@@ -391,20 +391,6 @@ async function pickMedia(fieldId: string): Promise<void> {
 
 <style>
 .dynamic-action-content { margin-top: var(--app-space-md); padding: var(--app-card-padding); }
-.dynamic-action-heading { border-bottom: 1rpx solid var(--app-color-divider); padding-bottom: var(--app-space-lg); }
-.dynamic-action-title-row { align-items: center; display: flex; }
-.dynamic-action-icon {
-  align-items: center;
-  background: var(--app-color-primary-soft);
-  border-radius: 10rpx;
-  display: flex;
-  height: 42rpx;
-  justify-content: center;
-  margin-right: var(--app-space-sm);
-  width: 42rpx;
-}
-.dynamic-action-title { color: var(--app-color-text-primary); font-size: var(--app-font-section-title); font-weight: 800; }
-.dynamic-action-caption { color: var(--app-color-text-secondary); display: block; font-size: var(--app-font-field-label); margin-top: var(--app-space-xs); }
 .dynamic-action-field { margin-top: var(--app-space-lg); }
 /* A field-service media section, not a generic engineering upload grid.
    State, authorization and retries remain entirely owned by the media Port. */
@@ -452,11 +438,6 @@ async function pickMedia(fieldId: string): Promise<void> {
 /* S01 approved commercial visual system: Survey only. Other dynamic forms
    keep their existing renderer and layout until separately reviewed. */
 .dynamic-action-content--survey { background: transparent; padding: 0; margin-top: 20rpx; }
-.dynamic-action-heading--survey { padding: 0 2rpx 16rpx; border-bottom: 0; }
-.dynamic-action-content--survey .dynamic-action-title-row { gap: 0; }
-.dynamic-action-content--survey .dynamic-action-icon { display: none; }
-.dynamic-action-content--survey .dynamic-action-title { font-size: 38rpx; line-height: 1.35; font-weight: 800; }
-.dynamic-action-content--survey .dynamic-action-caption { margin-top: 6rpx; color: var(--app-color-text-secondary); font-size: var(--app-font-body); }
 .dynamic-action-content--survey .dynamic-action-field--survey {
   display: block; margin: 0 0 16rpx; background: var(--app-color-surface);
   border: 1rpx solid var(--app-color-border); border-radius: var(--app-radius-card);
@@ -544,11 +525,6 @@ async function pickMedia(fieldId: string): Promise<void> {
 }
 /* S2 visual-fidelity pass: real Runtime field order stays untouched.
    Each adjacent group is a single coherent technician task, not a fixed form schema. */
-.dynamic-action-required-note { display:none; }
-.dynamic-action-content--survey .dynamic-action-heading--survey { display:flex; flex-wrap:wrap; align-items:flex-end; column-gap:12rpx; padding-bottom:13rpx; }
-.dynamic-action-content--survey .dynamic-action-title-row { flex:1 1 100%; }
-.dynamic-action-content--survey .dynamic-action-caption { flex:1; }
-.dynamic-action-content--survey .dynamic-action-required-note { display:block; font-size:21rpx; color:#e47736; font-weight:650; padding-bottom:2rpx; }
 .dynamic-action-block--survey { background:var(--app-color-surface); border:1rpx solid var(--app-color-border);
   border-radius:22rpx; margin-bottom:16rpx; padding:18rpx 18rpx 20rpx;
   box-shadow:0 5rpx 18rpx rgba(25,50,81,.035); overflow:hidden; }
