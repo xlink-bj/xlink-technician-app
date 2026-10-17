@@ -550,3 +550,6 @@ page {
 
 /* DS-05 opt-in visual craft, scoped under .xl-craft. */
 @import './mobile-craft-v1.scss';
+
+/* DS-07.B component-level opt-in Craft state grammar. */
+@import './component-craft.scss';
