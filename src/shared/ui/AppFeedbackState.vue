@@ -106,7 +106,7 @@ const emit = defineEmits<{ (event: 'action'): void }>()
   border-radius: 14rpx; font-size: 24rpx; min-width: 260rpx;
 }
 .app-feedback-state__search-illustration {
-  height: 112rpx; position: relative; width: 320rpx;
+  height: 112rpx; position: relative; width: 164rpx;
 }
 .app-feedback-state__search-ring {
   border: 7rpx solid #c7dcff;
