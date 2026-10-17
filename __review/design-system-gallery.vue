@@ -285,6 +285,10 @@
               </view>
             </template>
 
+            <template v-else-if="example.kind === 'workorder-states'">
+              <WorkOrderStateMatrix />
+            </template>
+
             <template v-else-if="example.kind === 'craft-matrix'">
               <DesignSystemCraftMatrix />
             </template>
@@ -340,6 +344,7 @@
 import { ref } from 'vue'
 
 import DesignSystemCraftMatrix from './design-system-craft-matrix.vue'
+import WorkOrderStateMatrix from './work-order-state-matrix.vue'
 import AppButton from '@shared/ui/AppButton.vue'
 import AppActionBar from '@shared/ui/AppActionBar.vue'
 import AppActionFeedback from '@shared/ui/AppActionFeedback.vue'
