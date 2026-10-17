@@ -9,6 +9,7 @@
       { 'app-record-card--interactive': interactive },
     ]"
   >
+    <view v-if="accent" class="app-record-card__accent" aria-hidden="true" />
     <slot />
   </view>
 </template>
@@ -18,5 +19,7 @@ withDefaults(defineProps<{
   readonly layout?: 'vertical' | 'horizontal'
   readonly tone?: 'neutral' | 'blue' | 'red' | 'orange' | 'purple' | 'green' | 'gray'
   readonly interactive?: boolean
-}>(), { layout: 'vertical', tone: 'neutral', interactive: false })
+  /** Optional decorative accent, driven by the shared tone palette. */
+  readonly accent?: boolean
+}>(), { layout: 'vertical', tone: 'neutral', interactive: false, accent: false })
 </script>
