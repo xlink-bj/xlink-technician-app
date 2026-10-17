@@ -1,6 +1,6 @@
 <template>
   <!-- Survey presentation only. Business field requirements and selection state are caller-owned. -->
-  <view class="survey-task-heading" :class="`survey-task-heading--${tone}`">
+  <view data-testid="survey-task-section-heading" class="survey-task-heading" :class="`survey-task-heading--${tone}`">
     <view class="survey-task-heading__icon" aria-hidden="true">
       <AppIcon :name="icon" :size="21" color="#fff" />
     </view>
