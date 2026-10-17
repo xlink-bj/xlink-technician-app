@@ -1,8 +1,8 @@
 <template>
-  <view class="action-workspace-page" :class="{ 'action-workspace-page--survey': commercialSurvey, 'action-workspace-page--quotation': commercialQuotation, 'action-workspace-page--q01-entry': compactQuoteEntry }" data-testid="action-workspace-shell">
+  <view class="action-workspace-page" :class="{ 'action-workspace-page--survey': commercialSurvey, 'action-workspace-page--quotation': commercialQuotation, 'action-workspace-page--q01-entry': compactQuoteEntry, 'xl-craft': compactQuoteEntry }" data-testid="action-workspace-shell">
     <scroll-view class="action-workspace-scroll" scroll-y enable-flex :scroll-into-view="scrollIntoView">
       <view class="action-workspace-body">
-        <view class="action-workspace-context app-surface app-surface--compact" data-testid="action-workspace-context">
+        <view class="action-workspace-context app-surface app-surface--compact" :class="{ 'xl-craft__surface': compactQuoteEntry }" data-testid="action-workspace-context">
           <view v-if="commercialSurvey" class="action-workspace-context-survey">
             <view class="action-workspace-context-house" aria-hidden="true"><AppIcon name="home" :size="25" color="#f19436" /></view>
             <view class="action-workspace-context-survey-main">
@@ -102,7 +102,7 @@
       </view>
     </scroll-view>
 
-    <AppActionBar class="action-workspace-footer" :label="`当前工单操作`">
+    <AppActionBar class="action-workspace-footer" :class="{ 'xl-craft__action-bar': compactQuoteEntry }" :label="`当前工单操作`">
       <view class="action-workspace-footer-inner">
         <template v-if="lifecycle !== 'succeeded'">
           <slot name="actions">

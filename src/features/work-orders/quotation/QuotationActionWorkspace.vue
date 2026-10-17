@@ -41,10 +41,10 @@
           <text>{{ amountPresentation.label }} · {{ amountPresentation.value }}</text>
         </view>
         <view class="q01-footer-actions">
-          <AppButton variant="text" class="q01-footer-save"
+          <AppButton variant="secondary" class="q01-footer-save xl-craft__action-secondary"
             data-testid="quotation-first-step-save-draft"
             :disabled="!firstStepCanEdit" @tap="composition.flushDraft">保存草稿</AppButton>
-          <AppButton class="q01-footer-next"
+          <AppButton class="q01-footer-next xl-craft__action-primary"
             data-testid="quotation-first-step-next"
             :disabled="!firstStepCanEdit"
             @tap="advanceFirstRepairStep">下一步 · 添加报价项目 →</AppButton>
