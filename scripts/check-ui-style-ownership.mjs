@@ -68,9 +68,14 @@ if (aliases.length !== 19) fail('expected exactly 19 canonical bridge aliases; f
 for (const [_, token] of aliases) {
   if (!canonical.includes(token + ':')) fail('canonical foundation token not found: ' + token)
 }
-if (/--xl-[\w-]+:\s*(?!var\(--app-craft-)/.test(declaration)) {
+// Parse values explicitly: a regex lookahead after optional spaces can
+// backtrack and incorrectly flag valid "var(...)" aliases.
+const definitions = [...declaration.matchAll(/--xl-[\\w-]+:\\s*([^;]+);/g)]
+if (definitions.length !== 19 || definitions.some(([, value]) =>
+  !value.trim().startsWith('var(--app-craft-'))) {
   fail('visual values must be owned by design-system.scss, not the --xl adapter')
 }
+
 process.stdout.write('DS-07 UI ownership ratchet PASS: ' + checked
   + ' page/feature files, 19 global bridge tokens; CSS debt at or below frozen limits: '
   + JSON.stringify(sum) + '\n')
