@@ -351,7 +351,7 @@ test('DS-07.B shared Craft mode: real App components, full state matrix and unch
     const master = page.getByTestId('ds07-craft-matrix')
     await expect(master).toBeVisible()
     for (const family of ['buttons', 'fields', 'selection', 'status', 'records', 'actionbar']) {
-      await expect(page.getByTestId(`ds07-craft-${family}`)).toBeVisible()
+      await expect(page.getByTestId(family === "actionbar" ? "ds07-craft-actionbar-group" : `ds07-craft-${family}`)).toBeVisible()
     }
     const button = page.getByTestId('ds07-craft-primary')
     const input = page.getByTestId('ds07-craft-input')
