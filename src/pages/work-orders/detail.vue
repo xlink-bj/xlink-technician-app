@@ -941,8 +941,8 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
   text-align: center;
 }
 
-.guard-mark,
-.state-icon {
+/* Authentication visual remains local; feedback loading/error styling is shared. */
+.guard-mark {
   align-items: center;
   border-radius: 50%;
   display: flex;
@@ -950,33 +950,14 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
   justify-content: center;
   margin-bottom: 22rpx;
   width: 74rpx;
-}
-
-.guard-mark {
   background: #eaf2ff;
 }
-
-.state-icon {
-  background: #fff0f0;
-  color: #e05252;
-  font-size: 26rpx;
-  font-weight: 800;
-}
-
-.state-icon--retry {
-  background: #fff7e7;
-  color: #e28a19;
-}
-
-.guard-title,
-.state-title {
+.guard-title {
   color: #172033;
   font-size: 30rpx;
   font-weight: 800;
 }
-
-.guard-copy,
-.state-detail {
+.guard-copy {
   color: #8290a4;
   font-size: 24rpx;
   line-height: 1.6;
