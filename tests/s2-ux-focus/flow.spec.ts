@@ -121,8 +121,19 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
     if (screen === 'C01') {
       const cards = page.getByTestId('signing-order-read-verified')
       await expect(cards).toHaveClass(/app-record-card/)
-      const heading = cards.locator('.app-section-heading').first()
-      await expect(heading).toBeVisible()
+      await expect(cards.locator('.signing-read-hero-title')).toHaveText('当前订单')
+      await expect(page.getByTestId('signing-review-progress')).toBeVisible()
+      await expect(page.getByTestId('signing-order-read-contract-status')).toBeVisible()
+      const stageFont = await page.locator('.signing-read-stage .signing-read-progress-title')
+        .evaluate(el => parseFloat(getComputedStyle(el).fontSize))
+      expect(stageFont, 'C01 current-stage heading must be a primary visual level')
+        .toBeGreaterThanOrEqual(17)
+      const amount = cards.locator('.app-amount-value')
+      if (await amount.count()) {
+        const amountFont = await amount.evaluate(el => parseFloat(getComputedStyle(el).fontSize))
+        expect(amountFont, 'C01 verified official amount must be visually prominent')
+          .toBeGreaterThanOrEqual(25)
+      }
       const box = await cards.boundingBox()
       expect(box).not.toBeNull()
       expect(box!.width).toBeLessThanOrEqual(viewport.width)
