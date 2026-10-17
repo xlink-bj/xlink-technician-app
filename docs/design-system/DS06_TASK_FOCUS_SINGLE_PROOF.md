@@ -19,7 +19,7 @@ Independent editable HTML reference and 390×844 PNG are delivered with the revi
 - Panel material: flat deep navy `#162C4A`, radius **19px**, height **169px**, subtle stacked shadow; no gradients, animations, decorative business claims.
 - Eyebrow: `当前任务` 12/17px `#B7C8DF`, with a purely decorative 6px source-toned indicator.
 - Primary content: *source title*, 25/33px white, ~720 weight; only one visual focal point.
-- Action: *source action label*, 51px tall, blue `#2677ED`, 12px radius, right chevron, explicit press and disabled states. Business guard remains caller-owned.
+- Action: *source action label*, 51px tall, blue `#1769DC`, 12px radius, right chevron, explicit press and disabled states. Business guard remains caller-owned.
 - Disabled: do not permit interaction; preserve exact existing note. No new authoritative action.
 - No direct store, session, Workflow, pricing, API or navigation dependency inside the component.
 
@@ -28,9 +28,12 @@ Independent editable HTML reference and 390×844 PNG are delivered with the revi
 2. **Design target:** locally reproducible editable HTML and its deterministic 390×844 rendering. This visual represents one changed region, not a newly designed whole app.
 3. **After:** exact-HEAD real uni-app H5 screenshot generated in GitHub Actions, same route/sample/viewport.
 
-Objective module acceptance: 169±0.5px height, RGB `(22,44,74)` surface, 19px radius, 25px title, 51±0.5px action, RGB `(38,119,237)` action; zero horizontal overflow, no failed resources/business writes, original button destination and disabled restrictions intact.
+Objective module acceptance: 169±0.5px height, RGB `(22,44,74)` surface, 19px radius, 25px title, 51±0.5px action, RGB `(23,105,220)` action; zero horizontal overflow, no failed resources/business writes, original button destination and disabled restrictions intact.
 
 **Important:** numerical geometry PASS proves implementation fidelity, NOT premium aesthetics. Owner judges whether this is genuinely preferable to original or if the master must be redesigned. No Golden promotion or Merge until that decision.
 
 ## Reusability gate
 After the Owner approves actual H5, consider moving the token group into `mobile-craft-v1.scss` and apply as a single component to a second business task, with no new per-page styles. For now, limit the experiment to this one task.
+
+### Visual legibility check
+- White main-action text on #1769DC: **5.13:1** contrast, above the 4.5:1 text threshold. Former #2677ED only reached 4.25:1; this is a design correction, not a Workflow change.
