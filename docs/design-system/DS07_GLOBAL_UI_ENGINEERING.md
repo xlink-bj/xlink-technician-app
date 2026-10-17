@@ -54,7 +54,7 @@ The default is to **reuse**; a genuinely special UX pattern requires a design ra
 
 **DS-07.A — contract & ratchet (this PR):**
 - Add one canonical foundation token owner; DS05 theme aliases preserve current screenshot output.
-- Record legacy page color-literal counts and an automated **ratchet**: no growth in first active legacy surfaces. This does not declare them acceptable; it blocks additional drift while migration continues.
+- Record legacy page color/type/radius literals **and shared component selector overrides** with an automated **ratchet**: no growth in first active legacy surfaces. This does not declare them acceptable; it blocks additional drift while migration continues.
 - Extend `check:ui-governance` so the ratchet executes in the normal CI and local verification.
 - No business view is globally restyled and no reference Golden is rewritten.
 
