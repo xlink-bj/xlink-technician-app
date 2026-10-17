@@ -16,23 +16,12 @@
         quiet
         data-testid="production-read-only-notice"
       />
-      <view class="search-band">
-        <view class="search-input-shell">
-          <AppIcon class="search-icon" name="search" :size="17" color="#71829e" aria-hidden="true" />
-          <input
-            v-model="searchDraft"
-            class="search-input"
-            placeholder="搜索任务、客户、地址"
-            placeholder-class="search-placeholder"
-            confirm-type="search"
-            :disabled="isLoading"
-            @confirm="submitSearch"
-          />
-        </view>
-        <button class="search-button" :disabled="isLoading" @tap="submitSearch">
-          搜索
-        </button>
-      </view>
+      <AppSearchBar
+        v-model="searchDraft"
+        placeholder="搜索任务、客户、地址"
+        :disabled="isLoading"
+        @search="submitSearch"
+      />
 
       <view v-if="showLoadingSkeleton" class="list-state loading-state" aria-label="正在加载工单">
         <view class="skeleton-list" aria-hidden="true">
@@ -78,29 +67,33 @@
         </view>
       </view>
 
-      <view v-else-if="workOrders.loadState === 'failed_retryable'" class="list-state error-state">
-        <view class="state-icon state-icon-error" aria-hidden="true">!</view>
-        <text class="state-title">暂时无法加载工单</text>
-        <text class="state-detail">请检查网络后重试。</text>
-        <button class="state-action" @tap="retry">重新加载</button>
-      </view>
-
-      <view v-else-if="workOrders.loadState === 'failed_terminal'" class="list-state error-state">
-        <view class="state-icon state-icon-error" aria-hidden="true">!</view>
-        <text class="state-title">工单加载失败</text>
-        <text class="state-detail">请稍后再试。</text>
-        <button class="state-action" @tap="retry">再次尝试</button>
-      </view>
-
-      <view v-else-if="workOrders.loadState === 'succeeded' && workOrders.items.length === 0 && workOrders.searchText" class="list-state search-empty-state">
-        <view class="state-illustration state-illustration-search" aria-hidden="true">
-          <view class="illustration-ring" />
-          <view class="illustration-handle" />
-        </view>
-        <text class="state-title">没有找到匹配工单</text>
-        <text class="state-detail">请尝试其他任务、客户或地址。</text>
-        <button class="state-action" @tap="clearSearch">清除搜索</button>
-      </view>
+      <AppFeedbackState
+        v-else-if="workOrders.loadState === 'failed_retryable'"
+        layout="list"
+        appearance="error"
+        title="暂时无法加载工单"
+        description="请检查网络后重试。"
+        action-label="重新加载"
+        @action="retry"
+      />
+      <AppFeedbackState
+        v-else-if="workOrders.loadState === 'failed_terminal'"
+        layout="list"
+        appearance="error"
+        title="工单加载失败"
+        description="请稍后再试。"
+        action-label="再次尝试"
+        @action="retry"
+      />
+      <AppFeedbackState
+        v-else-if="workOrders.loadState === 'succeeded' && workOrders.items.length === 0 && workOrders.searchText"
+        layout="list"
+        appearance="search-empty"
+        title="没有找到匹配工单"
+        description="请尝试其他任务、客户或地址。"
+        action-label="清除搜索"
+        @action="clearSearch"
+      />
 
       <view v-else-if="workOrders.loadState === 'succeeded' && workOrders.items.length === 0" class="list-state empty-state">
         <view class="empty-state-card">
@@ -248,6 +241,8 @@ import AppRecordCard from '@shared/ui/AppRecordCard.vue'
 import AppRecordMark from '@shared/ui/AppRecordMark.vue'
 import AppMetaTag from '@shared/ui/AppMetaTag.vue'
 import AppSectionHeading from '@shared/ui/AppSectionHeading.vue'
+import AppSearchBar from '@shared/ui/AppSearchBar.vue'
+import AppFeedbackState from '@shared/ui/AppFeedbackState.vue'
 import { appLoadingSkeletonDelayMs } from '@shared/ui/loading'
 
 const session = useSessionStore()
@@ -399,68 +394,6 @@ function cancelAccept(): void {
 }
 
 .production-read-only-notice { display: block; margin: 0 0 14rpx; }
-
-.search-band {
-  align-items: center;
-  box-sizing: border-box;
-  display: flex;
-  gap: 16rpx;
-  margin: 12rpx 8rpx 0;
-  padding: 0;
-  width: auto;
-}
-
-.search-input-shell {
-  align-items: center;
-  background: #ffffff;
-  border: 1rpx solid #e1e7f0;
-  border-radius: 24rpx;
-  box-sizing: border-box;
-  display: flex;
-  flex: 1;
-  gap: 12rpx;
-  height: 88rpx;
-  min-width: 0;
-  padding: 0 22rpx;
-}
-
-.search-icon {
-  color: #71819b;
-  flex: 0 0 auto;
-  font-size: 32rpx;
-  line-height: 1;
-  transform: rotate(-18deg);
-}
-
-.search-input {
-  color: #17243a;
-  flex: 1;
-  font-size: 26rpx;
-  height: 88rpx;
-  line-height: 88rpx;
-  min-width: 0;
-}
-
-.search-placeholder {
-  color: #98a6ba;
-}
-
-.search-button {
-  background: #2878f2;
-  border-radius: 24rpx;
-  color: #ffffff;
-  flex: 0 0 128rpx;
-  font-size: 28rpx;
-  font-weight: 800;
-  height: 88rpx;
-  line-height: 88rpx;
-  margin: 0;
-  padding: 0;
-}
-
-.search-button[disabled] {
-  opacity: 0.58;
-}
 
 .list-content {
   display: flex;
