@@ -9,6 +9,8 @@ on:
       - 'src/features/work-orders/quotation/QuotationOrderHub.vue'
       - 'src/features/work-orders/quotation/QuotationActionContent.vue'
       - 'src/features/work-orders/quotation/QuotationActionWorkspace.vue'
+      - 'src/pages/work-orders/detail.vue'
+      - 'src/features/work-orders/WorkOrderTaskFocus.vue'
   workflow_dispatch:
     inputs:
       screen:
@@ -21,6 +23,7 @@ on:
           - Q01
           - Q03
           - C01
+          - DETAIL
 
 permissions:
   contents: read
