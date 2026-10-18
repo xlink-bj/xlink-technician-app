@@ -1,0 +1,102 @@
+name: EQ03 Canonical Developer Verification (read-only)
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - '.github/workflows/eq03-quality-gate.yml'
+      - 'package.json'
+      - 'scripts/eq01-quality-census.mjs'
+      - 'tests/engineering/eq03-quality-census.test.ts'
+      - 'docs/engineering/EQ03_TEST_LANES_AND_METRICS.md'
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  unified-quick-and-full:
+    if: github.event.pull_request.draft == true && github.event.pull_request.head.ref == 'engineering/eq03-unified-verification-quality-gate'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Exact EQ02 parent and developer-tool-only five-path delta
+        shell: bash
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor 6be71e5633e50c8e20d5e6910613ae53faf03786 HEAD
+          git diff --name-only 6be71e5633e50c8e20d5e6910613ae53faf03786 HEAD | sort > /tmp/eq03-actual.txt
+          cat > /tmp/eq03-expected.txt <<'EOF'
+          .github/workflows/eq03-quality-gate.yml
+          docs/engineering/EQ03_TEST_LANES_AND_METRICS.md
+          package.json
+          scripts/eq01-quality-census.mjs
+          tests/engineering/eq03-quality-census.test.ts
+          EOF
+          sort -o /tmp/eq03-expected.txt /tmp/eq03-expected.txt
+          diff -u /tmp/eq03-expected.txt /tmp/eq03-actual.txt
+          test "$(git diff --name-only 6be71e5633e50c8e20d5e6910613ae53faf03786 HEAD -- src/ pnpm-lock.yaml tests/ds02a-main/snapshots tests/ds02a-gallery/snapshots | wc -l)" -eq 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Fast canonical lane (no Production identity)
+        env:
+          VITE_XLINK_ENVIRONMENT: test
+        run: pnpm verify:quick
+      - name: Full canonical lane (no skipped old guards)
+        env:
+          VITE_XLINK_ENVIRONMENT: test
+        run: pnpm verify:full
+      - name: Honest quality census with CSS/SCSS counted
+        run: node scripts/eq01-quality-census.mjs --check --output .review/eq03/quality-census.json
+      - name: Non-test H5 bundle
+        run: pnpm build:h5
+      - name: Non-test MP-Weixin bundle
+        run: pnpm build:mp-weixin
+      - name: Non-test App bundle
+        run: pnpm build:app
+      - name: Upload local quality/candidate metrics only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eq03-census-${{ github.run_id }}
+          path: .review/eq03/
+          if-no-files-found: warn
+          retention-days: 30
+
+  approved-visual:
+    if: github.event.pull_request.draft == true && github.event.pull_request.head.ref == 'engineering/eq03-unified-verification-quality-gate'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+      H5_VISUAL_OWNER_APPROVAL: 'PENDING'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Deterministic Chromium + CJK fonts
+        run: |
+          pnpm exec playwright install --with-deps chromium
+          sudo apt-get update -qq
+          sudo apt-get install -y fonts-noto-cjk
+      - name: Approved Gallery
+        run: pnpm test:ds02a:gallery
+      - name: Approved real H5 list/detail/Q01
+        run: pnpm test:ds02a:business
