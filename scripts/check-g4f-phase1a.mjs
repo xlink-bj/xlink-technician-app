@@ -24,6 +24,8 @@ const [pages, actionTypes, projection, workspace, adapter, mockRouter, commandPo
   read('src/features/work-orders/quotation/QuotationActionWorkspace.vue'),
   read('package.json'),
 ])
+// Ownership rules now live independently of the stateful Mock response router.
+const mockOwnership = await read('src/adapters/api/mock/ownership.ts')
 const packageJson = JSON.parse(packageSource)
 
 if (pages.includes('__review') || pages.includes('g4f-phase1a') || pages.includes('quotation-review')) {
@@ -49,7 +51,9 @@ if (
 if (!adapter.includes("path: '__mock/quotation/action-content'")) {
   fail('quotation foundation must use the synthetic-only Adapter route')
 }
-if (!mockRouter.includes("route === '__mock/quotation/action-content') return true")) {
+if (!mockRouter.includes("export { isMockOwnedRead, isMockOwnedCommand } from './ownership'")
+  || !mockOwnership.includes("route === '__mock/quotation/action-content') return true")
+  || !mockOwnership.includes("export function isMockOwnedRead(")) {
   fail('quotation foundation route must stay Mock-owned even when Mock is disabled')
 }
 if (/createQuotation|updateQuotation|sendQuotation|convertQuotation/.test(commandPort)) {
