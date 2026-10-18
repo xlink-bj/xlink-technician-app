@@ -6,6 +6,8 @@ import { detailTabs } from '@features/work-orders/detail-tabs'
 const detailPage = readFileSync(new URL('../../src/pages/work-orders/detail.vue', import.meta.url), 'utf8')
 const detailTabsSource = readFileSync(new URL('../../src/features/work-orders/detail-tabs.ts', import.meta.url), 'utf8')
 const quotationWorkspace = readFileSync(new URL('../../src/features/work-orders/quotation/QuotationActionWorkspace.vue', import.meta.url), 'utf8')
+const taskFocusSource = readFileSync(new URL('../../src/features/work-orders/WorkOrderTaskFocus.vue', import.meta.url), 'utf8')
+const skeletonSource = readFileSync(new URL('../../src/shared/ui/AppWorkOrderSkeleton.vue', import.meta.url), 'utf8')
 
 describe('G4-UX detail D3 semantic boundary', () => {
   it('keeps the accepted summary, quick-action shell, and read-only tabs', () => {
@@ -56,10 +58,14 @@ describe('G4-UX detail D3 semantic boundary', () => {
 
   it('renders only a valid read-only current-task projection and keeps deferred blocks collapsed', () => {
     expect(detailPage).not.toContain('class="progress-card"')
-    expect(detailPage).toContain('class="current-task-card"')
+    expect(detailPage).toContain('<WorkOrderTaskFocus')
+    expect(taskFocusSource).toContain('class="current-task-card task-focus-panel"')
+    expect(taskFocusSource).toContain(':disabled="disabled" :aria-disabled="disabled"')
+    expect(taskFocusSource).toContain('if (props.disabled) return')
     expect(detailPage).toContain('detailWorkflowUiProjectionFor')
     expect(detailPage).toContain('workflowProjection.currentTask')
-    expect(detailPage).toContain('current-task-card--${workflowProjection.currentTask.tone}')
+    expect(detailPage).toContain(':tone="workflowProjection.currentTask.tone"')
+    expect(taskFocusSource).toContain('task-focus-panel--${tone}')
     expect(detailPage).toContain('workflowProjection.currentTask.actionLabel')
     expect(detailPage).toContain('workOrderCardToneFor(detail.taskLabel)')
     expect(detailPage).toContain('row-value--${workOrderCardToneFor(detail.taskLabel)}')
@@ -80,11 +86,12 @@ describe('G4-UX detail D3 semantic boundary', () => {
     expect(detailPage).toContain('v-if="showLoadingSkeleton"')
     expect(detailPage).toContain('appLoadingSkeletonDelayMs')
     expect(detailPage).toContain('}, appLoadingSkeletonDelayMs)')
-    expect(detailPage).toContain('detail-loading-state')
-    expect(detailPage).toContain('skeleton-summary')
-    expect(detailPage).toContain('skeleton-task')
-    expect(detailPage).toContain('skeleton-information')
-    expect(detailPage).toContain('.skeleton-task {\n  background: #ffffff;\n  border-color: #e4eaf2;')
+    expect(detailPage).toContain('<AppWorkOrderSkeleton v-if="showLoadingSkeleton" variant="detail" />')
+    expect(skeletonSource).toContain('detail-loading-state')
+    expect(skeletonSource).toContain('skeleton-summary')
+    expect(skeletonSource).toContain('skeleton-task')
+    expect(skeletonSource).toContain('skeleton-information')
+    expect(skeletonSource).toContain('.skeleton-task {\n  background: #ffffff;\n  border-color: #e4eaf2;')
     expect(detailPage).not.toContain('skeleton-progress')
     expect(detailPage).not.toContain('<text class="state-title">正在加载工单详情</text>')
     expect(detailPage).toContain("workOrder.loadState === 'failed_retryable'")
