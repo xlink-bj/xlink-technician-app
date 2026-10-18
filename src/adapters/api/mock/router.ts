@@ -38,6 +38,7 @@ import type { ApiCommandRequest } from '../technician-api-commands'
 import { isMockOwnedRead, isMockOwnedCommand, normalizedPath, quotationCatalogListRoutes } from './ownership'
 import { mockCommandState } from './command-state'
 import { createMockCommandTransitionEngine } from './command-transitions'
+import { mockCommandFailureFor } from './scenario-policy'
 export { resetMockCommandState } from './command-state'
 export { isMockOwnedRead, isMockOwnedCommand } from './ownership'
 
@@ -497,8 +498,8 @@ function matchedCommandResponse(request: ApiCommandRequest): unknown | null {
   }
   if (route === 'biz/extForm/upsert/' + appointmentFormDefinitionWireId) {
     const id = commandWorkOrderId(data)
-    if (id === mockCommandScenarioIds.appointmentRetryable) return mockFailureResponse('retryable')
-    if (id === mockCommandScenarioIds.appointmentTerminal) return mockFailureResponse('terminal')
+    const failure = mockCommandFailureFor('appointment', id)
+    if (failure) return mockFailureResponse(failure)
     const formDataId = saveMockAppointment(data.dataStr)
     return { data: { _id: formDataId } }
   }
@@ -513,8 +514,8 @@ function matchedCommandResponse(request: ApiCommandRequest): unknown | null {
   if (route === 'workflow/process') {
     const id = typeof data.sid === 'string' ? data.sid : ''
     if (!isSyntheticWorkOrderId(id)) return null
-    if (id === mockCommandScenarioIds.acceptRetryable) return mockFailureResponse('retryable')
-    if (id === mockCommandScenarioIds.acceptTerminal) return mockFailureResponse('terminal')
+    const failure = mockCommandFailureFor('accept', id)
+    if (failure) return mockFailureResponse(failure)
     if (data.nodeFormDefId === appointmentFormDefinitionWireId) {
       const formDataId = typeof data.nodeFormDataId === 'string' ? data.nodeFormDataId : ''
       completeMockAppointment(id, formDataId)
