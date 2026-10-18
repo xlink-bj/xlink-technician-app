@@ -56,7 +56,10 @@
     "check:ui-governance": "node scripts/check-ui-governance.mjs",
     "check:m1-i8-baseline": "node scripts/check-m1-i8-baseline.mjs",
     "test:ds02a:gallery": "playwright test --config playwright.ds02a-gallery.config.ts",
-    "test:ds02a:business": "playwright test --config playwright.ds02a-main.config.ts"
+    "test:ds02a:business": "playwright test --config playwright.ds02a-main.config.ts",
+    "check:quality": "node scripts/eq01-quality-census.mjs --check",
+    "verify:quick": "pnpm run check:boundaries && pnpm run check:ui-governance && pnpm run check:m1-i8-baseline && pnpm run typecheck && pnpm exec vitest run tests/g4f/quotation-order-browse-handoff.test.ts tests/g4f/quotation-order-read.test.ts tests/g4f/quotation-order-signing-read-boundary.test.ts tests/g4f/quotation-local-review-closure.test.ts tests/ds03/transaction-visual-contract.test.ts tests/ds05/mobile-craft-two-page.test.ts tests/engineering/eq01-mock-scenarios.test.ts tests/engineering/eq02-action-draft-helpers.test.ts",
+    "verify:full": "pnpm run verify && pnpm run check:quality"
   },
   "dependencies": {
     "@dcloudio/uni-app": "3.0.0-5010520260709002",
