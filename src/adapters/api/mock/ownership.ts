@@ -12,7 +12,7 @@ import {
 } from './fixtures'
 import { mockMaterialSkuSpuId } from './quotation-catalog'
 
-function normalizedPath(path: string): string {
+export function normalizedPath(path: string): string {
   return path.replace(/^\/+/, '').split('?')[0]
 }
 
