@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { createUniApiCommandTransport, type UniApiCommandRequestExecutor } from '@adapters/api/uni-api-command-transport'
 import { createUniApiReadTransport } from '@adapters/api/uni-api-read-transport'
+import { createQuotationOrderReadAdapter } from '@adapters/api/quotation-order-api'
 import {
   createRoleScopedTechnicianApiReadAdapter,
   createTechnicianApiReadAdapter,
@@ -90,7 +91,7 @@ describe('Production read-only profile', () => {
       method: 'POST',
       path: 'basic/order/query',
       body: {
-        _all: '1', page: 1, rows: 3, sortField: 'createTime', sortOrder: 'desc',
+        page: 1, rows: 3, sortField: 'createTime', sortOrder: 'desc',
         'is:serviceAppointmentId|string#and': 'synthetic-listed-work-order',
         'is:type|integer#and': 1,
       },
@@ -99,7 +100,7 @@ describe('Production read-only profile', () => {
       method: 'POST',
       path: 'basic/order/query',
       body: {
-        _all: '1', page: 1, rows: 4, sortField: 'createTime', sortOrder: 'desc',
+        page: 1, rows: 4, sortField: 'createTime', sortOrder: 'desc',
         'is:serviceAppointmentId|string#and': 'synthetic-listed-work-order',
         'is:type|integer#and': 1,
       },
@@ -108,7 +109,7 @@ describe('Production read-only profile', () => {
       method: 'POST',
       path: 'basic/order/query',
       body: {
-        _all: '1', page: 1, rows: 3, sortField: 'createTime', sortOrder: 'desc',
+        page: 1, rows: 3, sortField: 'createTime', sortOrder: 'desc',
         'is:serviceAppointmentId|string#and': 'synthetic-listed-work-order',
       },
     })).rejects.toMatchObject({ category: 'unsupported_capability' })
@@ -116,9 +117,49 @@ describe('Production read-only profile', () => {
       method: 'POST',
       path: 'basic/order/query',
       body: {
-        _all: '1', page: 1, rows: 3, sortField: 'createTime', sortOrder: 'desc',
+        page: 1, rows: 3, sortField: 'createTime', sortOrder: 'desc',
         'is:serviceAppointmentId|string#and': 'arbitrary-work-order',
         'is:type|integer#and': 0,
+      },
+    })).rejects.toMatchObject({ category: 'unsupported_capability' })
+    // Never allow _all even when rows is 1 or 3: FlipPageInfo expands
+    // the backend result limit whenever this flag is present.
+    for (const rows of [1, 3]) {
+      await expect(transport.execute({
+        method: 'POST',
+        path: 'basic/order/query',
+        body: {
+          _all: '1', page: 1, rows, sortField: 'createTime', sortOrder: 'desc',
+          'is:serviceAppointmentId|string#and': 'synthetic-listed-work-order',
+          'is:type|integer#and': 1,
+        },
+      })).rejects.toMatchObject({ category: 'unsupported_capability' })
+    }
+    // Unexpected filters, pagination escape, missing WorkOrder ID and
+    // tenant-scope bypass hints still fail before any uni.request.
+    for (const extra of [
+      { notFilterOrgId: '1' },
+      { 'is:orgId|string#and': 'unverified-org' },
+      { _all: '0' },
+    ]) {
+      await expect(transport.execute({
+        method: 'POST',
+        path: 'basic/order/query',
+        body: {
+          page: 1, rows: 3, sortField: 'createTime', sortOrder: 'desc',
+          'is:serviceAppointmentId|string#and': 'synthetic-listed-work-order',
+          'is:type|integer#and': 1,
+          ...extra,
+        },
+      })).rejects.toMatchObject({ category: 'unsupported_capability' })
+    }
+    await expect(transport.execute({
+      method: 'POST',
+      path: 'basic/order/query',
+      body: {
+        page: 1, rows: 3, sortField: 'createTime', sortOrder: 'desc',
+        'is:serviceAppointmentId|string#and': '../unlisted',
+        'is:type|integer#and': 1,
       },
     })).rejects.toMatchObject({ category: 'unsupported_capability' })
     await expect(transport.execute({
@@ -127,6 +168,47 @@ describe('Production read-only profile', () => {
       body: { id: 'arbitrary-order' },
     })).rejects.toMatchObject({ category: 'unsupported_capability' })
 
+    expect(request).toHaveBeenCalledTimes(1)
+  })
+
+
+  it('passes the actual bounded official-Order adapter request through the Production transport without _all', async () => {
+    vi.stubEnv('VITE_XLINK_ENVIRONMENT', 'prod')
+    vi.stubEnv('VITE_XLINK_ENABLE_REAL_WRITES', 'true')
+    const actualCalls: UniNamespace.RequestOptions[] = []
+    const request = vi.fn((options: UniNamespace.RequestOptions) => {
+      actualCalls.push(options)
+      options.success?.({ statusCode: 200, data: { data: [], page: 1, rows: 3 } } as never)
+    })
+    const transport = createUniApiReadTransport({
+      apiBaseUrl: 'https://production.invalid',
+      getSessionRef: () => 'synthetic-authorized-session' as never,
+      request,
+    })
+    const port = createQuotationOrderReadAdapter(
+      transport,
+      (id) => id === 'synthetic-listed-work-order',
+    )
+
+    const listed = await port.listTypeOneOrdersForWorkOrder('synthetic-listed-work-order')
+    expect(listed.state).toBe('succeeded')
+    expect(request).toHaveBeenCalledTimes(1)
+    const wire = actualCalls[0]!
+    expect(new URL(String(wire.url)).pathname).toBe('/basic/order/query')
+    expect(wire.method).toBe('POST')
+    const body = new URLSearchParams(String(wire.data))
+    expect(body.has('_all')).toBe(false)
+    expect(body.get('page')).toBe('1')
+    expect(body.get('rows')).toBe('3')
+    expect(body.get('is:serviceAppointmentId|string#and')).toBe('synthetic-listed-work-order')
+    expect(body.get('is:type|integer#and')).toBe('1')
+    expect([...body.keys()].sort()).toEqual([
+      'is:serviceAppointmentId|string#and', 'is:type|integer#and',
+      'page', 'rows', 'sortField', 'sortOrder',
+    ].sort())
+
+    const denied = await port.listTypeOneOrdersForWorkOrder('unlisted-work-order')
+    expect(denied.state).toBe('failed_terminal')
     expect(request).toHaveBeenCalledTimes(1)
   })
 
