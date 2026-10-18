@@ -40,6 +40,7 @@ jobs:
           .github/workflows/eq01-quality-mock-baseline.yml
           docs/engineering/EQ01_QUALITY_BASELINE_AND_MOCK_CONTRACT.md
           scripts/eq01-quality-census.mjs
+          scripts/check-g4f-phase1a.mjs
           src/adapters/api/mock/index.ts
           src/adapters/api/mock/ownership.ts
           src/adapters/api/mock/router.ts
