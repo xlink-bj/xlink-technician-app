@@ -1,0 +1,110 @@
+name: DS07 C9 P0 Order Read Safety Contract (NO live calls)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'src/shared/config/production-read-only.ts'
+      - 'tests/g4f/production-read-only.test.ts'
+      - 'docs/verification/DS07C9_P0_ORDER_READ_CONTRACT.md'
+      - '.github/workflows/ds07c9-order-read-contract.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  p0-source-and-unit:
+    if: github.event.pull_request.draft == true && github.event.pull_request.head.ref == 'security/ds07c9-production-order-read-boundary'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Assert pinned C8 parent and four-file-only P0 change
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          test "$(git merge-base 3e99d96973d0e903475d037bbb25e10e5f97508a HEAD)" = "3e99d96973d0e903475d037bbb25e10e5f97508a"
+          git diff --name-only 3e99d96973d0e903475d037bbb25e10e5f97508a HEAD | sort > /tmp/ds07c9-actual.txt
+          printf '%s\n' \
+            '.github/workflows/ds07c9-order-read-contract.yml' \
+            'docs/verification/DS07C9_P0_ORDER_READ_CONTRACT.md' \
+            'src/shared/config/production-read-only.ts' \
+            'tests/g4f/production-read-only.test.ts' | sort > /tmp/ds07c9-expected.txt
+          diff -u /tmp/ds07c9-expected.txt /tmp/ds07c9-actual.txt
+          test "$(git diff --name-only 3e99d96973d0e903475d037bbb25e10e5f97508a HEAD -- src/adapters src/features src/shared/ports tests/ds02a-main/snapshots tests/ds02a-gallery/snapshots | wc -l)" -eq 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Focused Production read/write boundary and R1 Order/Contract source truth
+        env:
+          VITE_XLINK_ENVIRONMENT: test
+        run: |
+          pnpm exec vitest run \
+            tests/g4f/production-read-only.test.ts \
+            tests/g4f/production-read-only-workspace.test.ts \
+            tests/g4f/quotation-order-read.test.ts \
+            tests/g4f/r1-contract-read-boundary.test.ts \
+            tests/g4f/r1-signing-write-fence.test.ts \
+            tests/g4f/quotation-order-submission.test.ts
+      - name: Full governance / TypeScript / complete tests, no skipped tests
+        env:
+          VITE_XLINK_ENVIRONMENT: test
+        run: pnpm verify
+      - name: Build H5 without test-only environment
+        run: pnpm build:h5
+      - name: Build WeChat Mini Program
+        run: pnpm build:mp-weixin
+      - name: Build native App
+        run: pnpm build:app
+
+  approved-golden-regression:
+    if: github.event.pull_request.draft == true && github.event.pull_request.head.ref == 'security/ds07c9-production-order-read-boundary'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+      H5_VISUAL_OWNER_APPROVAL: 'PENDING'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Install deterministic Chromium and CJK fonts
+        run: |
+          pnpm exec playwright install --with-deps chromium
+          sudo apt-get update -qq
+          sudo apt-get install -y fonts-noto-cjk
+      - name: Unchanged Gallery
+        run: pnpm test:ds02a:gallery
+      - name: Approved official List/Detail/Q01 Golden
+        run: pnpm test:ds02a:business
+      - name: Preserve review evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ds07-c9-h5-${{ github.run_id }}
+          path: |
+            test-results/ds02a-gallery/
+            test-results/ds02a-main/
+          if-no-files-found: warn
+          retention-days: 30
