@@ -1,0 +1,152 @@
+{
+  "schemaVersion": 1,
+  "track": "M1_DS07_MAIN_PREFLIGHT_DRAFT_NO_MERGE",
+  "observedDate": "2026-10-18",
+  "main": {
+    "branch": "main",
+    "sha": "c57fb3cc876c8ca3fb133d74dcf4833f8f755b32"
+  },
+  "segments": [
+    {
+      "gate": "existing_m1_main_candidate",
+      "pr": 116,
+      "sha": "05316a47d266c56bf11236ac1cbd320488b31076",
+      "parent": "main",
+      "expectedCommits": 488
+    },
+    {
+      "gate": "m1_s2_productization",
+      "pr": 132,
+      "sha": "27fb98a15e0495204b1cab83da5c9f900e33930b",
+      "parent": "existing_m1_main_candidate",
+      "expectedCommits": 249
+    },
+    {
+      "gate": "ds07_c7_full_engineering",
+      "pr": 164,
+      "sha": "fbadc26ab20ba5da327b26eb9094460157b306c5",
+      "parent": "m1_s2_productization",
+      "expectedCommits": 184
+    }
+  ],
+  "designReviewChain": [
+    {
+      "pr": 146,
+      "sha": "f870ff57d046e2ed17b66ed55dc4d5252ba498d8"
+    },
+    {
+      "pr": 147,
+      "sha": "af64e0d2950e7bd0734afbc956efac58d2a46776"
+    },
+    {
+      "pr": 148,
+      "sha": "05e1773cec13581ea5fd4dc722e322a568dcba1c"
+    },
+    {
+      "pr": 149,
+      "sha": "e43ecceb1ead004c15482b6c5d2d21a81b11c9cd"
+    },
+    {
+      "pr": 150,
+      "sha": "7700f47fa0c5c415d8155f6307f83d8170d3b42a"
+    },
+    {
+      "pr": 151,
+      "sha": "31fa5d296f6d3acf4fc21ecedabd83e5198f86cc"
+    },
+    {
+      "pr": 152,
+      "sha": "1c0d971270423f90cf87252c839ab6813aa00d40"
+    },
+    {
+      "pr": 153,
+      "sha": "5574e018e1f3d099fc17cd0ae5e10b6257105f38"
+    },
+    {
+      "pr": 154,
+      "sha": "c3d5209b3450cb0606c3a9764607b15449fdcb3e"
+    },
+    {
+      "pr": 155,
+      "sha": "f38ae34318a170b8c5d52d5e9717bd5b10e4fe94"
+    },
+    {
+      "pr": 156,
+      "sha": "07fe1baa59be7108f7d766725a4357d7b654140a"
+    },
+    {
+      "pr": 158,
+      "sha": "9b478d90b5544af11f60768cc8d0feeed8982448"
+    },
+    {
+      "pr": 159,
+      "sha": "e1caa4f6beddae59f5a8dc3fff1052407061cbe1"
+    },
+    {
+      "pr": 160,
+      "sha": "222c1b39b0c7bdf1f40174f29599b0289a2f6602"
+    },
+    {
+      "pr": 162,
+      "sha": "7bc728d096fc09af800420976dc9e17e0d8af8b2"
+    },
+    {
+      "pr": 163,
+      "sha": "34e90736d0819a8692c5ac4a00da48ecda30ef6b"
+    },
+    {
+      "pr": 164,
+      "sha": "fbadc26ab20ba5da327b26eb9094460157b306c5"
+    }
+  ],
+  "excludedIndependent": [
+    {
+      "pr": 106,
+      "sha": "a950b2205acb1581ac2a17181773f331642ab59a",
+      "reason": "Production SKU probe not executed"
+    },
+    {
+      "pr": 111,
+      "sha": "4b2572b5f6af6b8e5abfa5831de6eeb5912b5796",
+      "reason": "separate Owner UX review not accepted"
+    }
+  ],
+  "latestEngineering": {
+    "head": "fbadc26ab20ba5da327b26eb9094460157b306c5",
+    "ciRun": 39107075118,
+    "unitPassed": 1053,
+    "unitTotal": 1053,
+    "h5Passed": 39,
+    "h5Total": 39,
+    "bundleResults": [
+      "H5_PASS",
+      "MP_WEIXIN_PASS",
+      "APP_PASS"
+    ],
+    "goldenApproved": [
+      "detail_320",
+      "detail_375",
+      "detail_390",
+      "quote_320",
+      "quote_375",
+      "quote_390"
+    ]
+  },
+  "acceptance": {
+    "mainMerge": "NOT_APPROVED",
+    "productionRelease": "NOT_APPROVED",
+    "productionWrites": "NOT_APPROVED",
+    "realTenantParity": "NOT_VERIFIED",
+    "backendSignedContract": "NOT_VERIFIED",
+    "physicalDevices": "NOT_VERIFIED",
+    "M1Formal": "1/8",
+    "i7DoD": "1/4",
+    "i8DoD": "0/4"
+  },
+  "allowedChangesAfterC7": [
+    ".github/workflows/ds07c8-main-preflight.yml",
+    "docs/verification/DS07C8_MAIN_INTEGRATION_MANIFEST.json",
+    "docs/verification/DS07C8_MAIN_INTEGRATION_PREFLIGHT.md",
+    "scripts/check-ds07c8-main-preflight.mjs"
+  ]
+}
