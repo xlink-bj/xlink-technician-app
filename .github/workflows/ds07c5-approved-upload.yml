@@ -81,13 +81,17 @@ jobs:
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "222c1b39b0c7bdf1f40174f29599b0289a2f6602"
           target='design-system/ds07c5-golden-only'
-          git -c http.extraheader="AUTHORIZATION: bearer ${GH_TOKEN}" fetch origin "refs/heads/${target}"
+          test -n "${GH_TOKEN}" || (echo "::error::Missing GitHub credential" && exit 1)
+          # checkout intentionally does not persist credentials; authenticate
+          # just these two isolated remote operations.
+          auth_remote="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git fetch "${auth_remote}" "refs/heads/${target}"
           test "$(git rev-parse FETCH_HEAD)" = "222c1b39b0c7bdf1f40174f29599b0289a2f6602" || (echo "::error::Target branch moved, fail closed" && exit 1)
           git add -- tests/ds02a-main/snapshots/ds02a-detail-{320,375,390}.png tests/ds02a-main/snapshots/ds02a-quote-{320,375,390}.png
           git diff --cached --name-only | sort > .review/ds07c5-promote/staged-files.txt
           diff -u .review/ds07c5-promote/expected-files.txt .review/ds07c5-promote/staged-files.txt
           git -c user.name='xlink-ds07c5-ci' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'DS07 C5: approved six-screen visual Golden candidates only'
-          git -c http.extraheader="AUTHORIZATION: bearer ${GH_TOKEN}" push origin "HEAD:refs/heads/${target}"
+          git push "${auth_remote}" "HEAD:refs/heads/${target}"
       - name: Preserve audit proof
         if: always()
         uses: actions/upload-artifact@v4
