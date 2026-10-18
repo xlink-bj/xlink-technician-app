@@ -84,6 +84,8 @@ describe('Production read-only profile', () => {
     const transport = createUniApiReadTransport({
       apiBaseUrl: 'https://production.invalid',
       getSessionRef: () => 'production-session' as never,
+      isOrderWorkOrderListedForCurrentSession: id => id === 'synthetic-listed-work-order',
+      getOrderReadAuthorizationIdentity: () => 'synthetic-session:user:role:v1',
       request,
     })
 
@@ -184,6 +186,8 @@ describe('Production read-only profile', () => {
     const transport = createUniApiReadTransport({
       apiBaseUrl: 'https://production.invalid',
       getSessionRef: () => 'synthetic-authorized-session' as never,
+      isOrderWorkOrderListedForCurrentSession: id => id === 'synthetic-listed-work-order',
+      getOrderReadAuthorizationIdentity: () => 'synthetic-session:user:role:v1',
       request,
     })
     const port = createQuotationOrderReadAdapter(
