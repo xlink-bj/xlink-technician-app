@@ -50,3 +50,6 @@ export {
   mockQuotationCatalogServiceType,
   mockQuotationCatalogSourceType,
 } from './quotation-catalog'
+
+export { mockBusinessScenarioFor, mockBusinessScenarios } from './scenario-registry'
+export type { MockBusinessScenario, MockBusinessScenarioKey, MockScenarioFamily, MockScenarioOutcome } from './scenario-registry'
