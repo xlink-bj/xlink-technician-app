@@ -1,0 +1,103 @@
+name: EQ05B Isolated Mock Transitions (NO Production)
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'src/adapters/api/mock/router.ts'
+      - 'src/adapters/api/mock/command-transitions.ts'
+      - 'src/adapters/api/mock/scenario-policy.ts'
+      - 'tests/engineering/eq05b-command-transitions.test.ts'
+      - 'docs/engineering/EQ05B_MOCK_TRANSITIONS_AND_SCENARIO_POLICY.md'
+      - '.github/workflows/eq05b-mock-transitions.yml'
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  mock-engine-and-complete:
+    if: github.event.pull_request.draft == true && github.event.pull_request.head.ref == 'engineering/eq05b-scenario-transitions'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Enforce exact parent and six paths — no app/remote authority changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor 4b00a3ccff29b60c10b11d750168c31b84e80999 HEAD
+          git diff --name-only 4b00a3ccff29b60c10b11d750168c31b84e80999 HEAD | sort > /tmp/eq05b-actual.txt
+          cat > /tmp/eq05b-expected.txt <<'EOF'
+          .github/workflows/eq05b-mock-transitions.yml
+          docs/engineering/EQ05B_MOCK_TRANSITIONS_AND_SCENARIO_POLICY.md
+          src/adapters/api/mock/command-transitions.ts
+          src/adapters/api/mock/router.ts
+          src/adapters/api/mock/scenario-policy.ts
+          tests/engineering/eq05b-command-transitions.test.ts
+          EOF
+          sort -o /tmp/eq05b-expected.txt /tmp/eq05b-expected.txt
+          diff -u /tmp/eq05b-expected.txt /tmp/eq05b-actual.txt
+          test "$(git diff --name-only 4b00a3ccff29b60c10b11d750168c31b84e80999 HEAD -- src/features src/shared src/runtimes src/adapters/api/uni-api-read-transport.ts src/adapters/api/uni-api-command-transport.ts tests/ds02a-main/snapshots tests/ds02a-gallery/snapshots | wc -l)" -eq 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Independent transitions and old Mock/prod safety regression
+        env:
+          VITE_XLINK_ENVIRONMENT: test
+        run: |
+          pnpm exec vitest run \
+            tests/engineering/eq05b-command-transitions.test.ts \
+            tests/engineering/eq05-mock-command-state.test.ts \
+            tests/engineering/eq01-mock-scenarios.test.ts \
+            tests/g4ux/mock-runtime.test.ts \
+            tests/g4ux/production-auth-mock-isolation.test.ts
+      - name: Full existing engineering and measured LOC gate
+        env:
+          VITE_XLINK_ENVIRONMENT: test
+        run: pnpm verify:full
+      - name: H5, mini-program and native app build (Mock writes disabled)
+        run: |
+          pnpm build:h5
+          pnpm build:mp-weixin
+          pnpm build:app
+
+  existing-golden-and-h5:
+    if: github.event.pull_request.draft == true && github.event.pull_request.head.ref == 'engineering/eq05b-scenario-transitions'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+      H5_VISUAL_OWNER_APPROVAL: 'PENDING'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: |
+          pnpm exec playwright install --with-deps chromium
+          sudo apt-get update -qq
+          sudo apt-get install -y fonts-noto-cjk
+      - run: pnpm test:ds02a:gallery
+      - run: pnpm test:ds02a:business
+      - name: Real H5 safe Quotation / Contract mock paths
+        run: |
+          pnpm exec playwright test --config playwright.main-h5-mock.config.ts \
+            tests/h5-main-mock/main-app-quotation.spec.ts \
+            tests/h5-main-mock/ds07c4b-quote-signing.spec.ts \
+            tests/h5-main-mock/ds07c4b-signing-state-visual.spec.ts \
+            tests/h5-main-mock/m1-signing-official-order-read.spec.ts
