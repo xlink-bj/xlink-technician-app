@@ -29,11 +29,12 @@ function cloneWire<T>(value: T): T {
 }
 
 export function createIsolatedMockCommandStateStore(
-  seeds: MockCommandSeeds = defaultSeeds,
+  seeds?: MockCommandSeeds,
 ) {
-  // Snapshot caller-provided seeds at construction: later external mutation
-  // of the seed record must not leak into independent fixtures.
-  const baseline = {
+  // Caller-supplied seeds are frozen by value immediately; the default app
+  // Mock state must stay lazy, especially in real builds with Mock disabled.
+  // This avoids cloning all large fixture objects on application import.
+  const baseline = seeds === undefined ? null : {
     listResponse: cloneWire(seeds.listResponse),
     detailResponses: Object.fromEntries(
       Object.entries(seeds.detailResponses).map(([id, raw]) => [id, cloneWire(raw)]),
@@ -43,10 +44,11 @@ export function createIsolatedMockCommandStateStore(
 
   function current(): MockCommandState {
     if (!state) {
+      const source = baseline ?? defaultSeeds
       state = {
-        listResponse: cloneWire(baseline.listResponse),
+        listResponse: cloneWire(source.listResponse),
         detailResponses: new Map(
-          Object.entries(baseline.detailResponses).map(([id, raw]) => [id, cloneWire(raw)]),
+          Object.entries(source.detailResponses).map(([id, raw]) => [id, cloneWire(raw)]),
         ),
         formData: new Map(),
       }
