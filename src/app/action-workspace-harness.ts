@@ -1,5 +1,5 @@
 import { appointmentFormDefinitionWireId } from '@adapters/api/appointment-contract'
-import { mockCommandScenarioIds, mockQuotationWorkflowNodeId } from '@adapters/api/mock'
+import { mockBusinessScenarioFor, mockCommandScenarioIds } from '@adapters/api/mock'
 import { actionWorkspaceRouteFor } from '@features/work-orders/action-workspace'
 import type { AppointmentFieldValue } from '@shared/ports'
 import { asOpaqueId, type WorkOrderId, type WorkflowNodeRuntimeId } from '@shared/types'
@@ -32,13 +32,13 @@ const routeFor = (workOrderId: string, nodeSuffix: string): string =>
   )
 
 const quotationRoute = actionWorkspaceRouteFor(
-  asOpaqueId<'WorkOrderId'>(mockCommandScenarioIds.quotationFoundation),
-  asOpaqueId<'WorkflowNodeRuntimeId'>(mockQuotationWorkflowNodeId),
+  asOpaqueId<'WorkOrderId'>(mockBusinessScenarioFor('quotationFoundation').workOrderId),
+  asOpaqueId<'WorkflowNodeRuntimeId'>(mockBusinessScenarioFor('quotationFoundation').workflowNodeId!),
   'place_order',
 )
 
 const surveyRoute = actionWorkspaceRouteFor(
-  asOpaqueId<'WorkOrderId'>(mockCommandScenarioIds.surveySuccess),
+  asOpaqueId<'WorkOrderId'>(mockBusinessScenarioFor('surveySuccess').workOrderId),
   asOpaqueId<'WorkflowNodeRuntimeId'>('mock-workflow-node-017-inspection'),
   'interact_with_form',
 )
