@@ -1,0 +1,98 @@
+name: DS07 C5 one-time approved Golden publication
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - '.github/workflows/ds07c5-approved-upload.yml'
+permissions:
+  contents: write
+concurrency:
+  group: ds07c5-approved-golden-publication
+  cancel-in-progress: false
+jobs:
+  publish-to-golden-only-branch:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'automation/ds07c5-golden-upload-once' &&
+      github.event.pull_request.base.ref == 'design-system/ds07c5-visual-baseline-candidate' &&
+      github.event.pull_request.base.sha == '222c1b39b0c7bdf1f40174f29599b0289a2f6602' &&
+      github.event.pull_request.draft == true
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+      H5_VISUAL_OWNER_APPROVAL: 'PENDING'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - name: Install deterministic dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Install browser and font
+        run: |
+          pnpm exec playwright install --with-deps chromium
+          sudo apt-get update -qq
+          sudo apt-get install -y fonts-noto-cjk
+      - name: Original Gallery must pass
+        run: pnpm test:ds02a:gallery
+      - name: Original business comparison must have EXACT six historical failures
+        shell: bash
+        run: |
+          mkdir -p .review/ds07c5-promote
+          set +e
+          pnpm exec playwright test --config playwright.ds02a-main.config.ts --reporter=json > .review/ds07c5-promote/old-report.json
+          exit_code=$?
+          set -e
+          test "$exit_code" -eq 1
+          node scripts/check-ds07c5-legacy-visual.mjs .review/ds07c5-promote/old-report.json
+      - name: Regenerate precisely six already reviewed 320/375/390 PNGs
+        run: pnpm exec playwright test --config playwright.ds02a-main.config.ts --update-snapshots=changed --reporter=line
+      - name: Hash-verify approved candidate bytes and 6-only changed files
+        shell: bash
+        run: |
+          set -euo pipefail
+          for scene in detail quote; do
+            for width in 320 375 390; do
+              echo "tests/ds02a-main/snapshots/ds02a-${scene}-${width}.png"
+            done
+          done | sort > .review/ds07c5-promote/expected-files.txt
+          git diff --name-only | sort > .review/ds07c5-promote/changed-files.txt
+          diff -u .review/ds07c5-promote/expected-files.txt .review/ds07c5-promote/changed-files.txt
+          cat > .review/ds07c5-promote/approved.sha256 <<'END_HASHES'
+          81463d6bb93a6332f2c150cdfbfa14975f39a16c00a26a9e8bcbc10d2164e742  tests/ds02a-main/snapshots/ds02a-detail-320.png
+          f20792e3993ebff01eff767a0daa07162bf22d93d6fdbc04eb63e3f3aac4e002  tests/ds02a-main/snapshots/ds02a-detail-375.png
+          c2e4227207a1a221f96f5244720aa4bfeb88864906ac776e9a18f6074316dc92  tests/ds02a-main/snapshots/ds02a-detail-390.png
+          667499f14ad1db32432b45d419696844e6aaec1b58637df0e8ac9c1d2f6b210b  tests/ds02a-main/snapshots/ds02a-quote-320.png
+          78594411519870f8f02599f36cf3c811ddb46572d7133513b2a7f3c1cb81d8fb  tests/ds02a-main/snapshots/ds02a-quote-375.png
+          57601f82a36b66743fb87b428ad69638c1482b624f0c4c4d862c31eb9af19446  tests/ds02a-main/snapshots/ds02a-quote-390.png
+          END_HASHES
+          sha256sum --check .review/ds07c5-promote/approved.sha256
+      - name: Publish EXACT six PNGs to already-created Golden-only branch (never main)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "222c1b39b0c7bdf1f40174f29599b0289a2f6602"
+          target='design-system/ds07c5-golden-only'
+          git -c http.extraheader="AUTHORIZATION: bearer ${GH_TOKEN}" fetch origin "refs/heads/${target}"
+          test "$(git rev-parse FETCH_HEAD)" = "222c1b39b0c7bdf1f40174f29599b0289a2f6602" || (echo "::error::Target branch moved, fail closed" && exit 1)
+          git add -- tests/ds02a-main/snapshots/ds02a-detail-{320,375,390}.png tests/ds02a-main/snapshots/ds02a-quote-{320,375,390}.png
+          git diff --cached --name-only | sort > .review/ds07c5-promote/staged-files.txt
+          diff -u .review/ds07c5-promote/expected-files.txt .review/ds07c5-promote/staged-files.txt
+          git -c user.name='xlink-ds07c5-ci' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'DS07 C5: approved six-screen visual Golden candidates only'
+          git -c http.extraheader="AUTHORIZATION: bearer ${GH_TOKEN}" push origin "HEAD:refs/heads/${target}"
+      - name: Preserve audit proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ds07c5-approved-promotion-${{ github.run_id }}
+          path: .review/ds07c5-promote/
+          if-no-files-found: warn
+          retention-days: 30
