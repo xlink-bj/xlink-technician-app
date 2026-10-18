@@ -22,7 +22,7 @@ export function mockFaultWireResponse(kind: MockFaultKind): Readonly<{
   })
 }
 
-export function validatedMockLatency(input: number | undefined, fallbackMs = 300): number {
+export function validatedMockLatency(input: number | undefined = undefined, fallbackMs = 300): number {
   const value = input ?? fallbackMs
   // A typo must not cause an unbounded test hang or accidental rapid retry.
   if (!Number.isSafeInteger(value) || value < 0 || value > 5000) {
