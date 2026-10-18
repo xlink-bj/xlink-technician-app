@@ -133,8 +133,10 @@ function isBoundedQuotationCatalogListBody(body: Readonly<Record<string, unknown
 
 function isBoundedWorkOrderQuotationListBody(body: Readonly<Record<string, unknown>> | undefined): boolean {
   if (!body) return false
+  // R1 FlipPageInfo treats _all=1 as an instruction to expand rows to the
+  // total. Requiring it here would block the actual bounded adapter request;
+  // allowing it would bypass the backend 1/3-row limit. Fail closed on _all.
   const required = [
-    '_all',
     'page',
     'rows',
     'sortField',
@@ -145,8 +147,7 @@ function isBoundedWorkOrderQuotationListBody(body: Readonly<Record<string, unkno
   const keys = Object.keys(body)
   if (required.length !== keys.length || required.some((key) => !hasOwn(body, key))) return false
   const workOrderId = body['is:serviceAppointmentId|string#and']
-  return body._all === '1'
-    && body.page === 1
+  return body.page === 1
     && (body.rows === 1 || body.rows === 3)
     && body.sortField === 'createTime'
     && body.sortOrder === 'desc'
