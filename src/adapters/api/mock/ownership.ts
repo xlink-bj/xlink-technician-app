@@ -16,7 +16,7 @@ export function normalizedPath(path: string): string {
   return path.replace(/^\/+/, '').split('?')[0]
 }
 
-const quotationCatalogListRoutes = new Set([
+export const quotationCatalogListRoutes = new Set([
   'biz/projPackage/queryWithRank',
   'biz/procedure/queryWithRank',
   'basic/material/queryWithRank',
