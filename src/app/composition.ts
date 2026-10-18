@@ -254,10 +254,19 @@ export function createDefaultQuotationOrderReadPort(
       listTypeOneOrdersForWorkOrder: async () => configurationFailure(`Quotation Order read configuration is unavailable: ${config.issues.join('; ')}`),
     }
   }
+  const authorizationIdentity = (): string | null => {
+    const session = authSession.getCurrentSession()
+    if (!session?.currentRole?.id || !session.roleVersion) return null
+    return JSON.stringify([
+      session.sessionRef, session.user.id, session.currentRole.id, session.roleVersion,
+    ])
+  }
   const transport = createUniApiReadTransport({
     apiBaseUrl: config.value.environment.apiBaseUrl,
     blockRealRequests: config.value.authOnlyMockBusiness,
     getSessionRef: () => authSession.getCurrentSession()?.sessionRef ?? null,
+    isOrderWorkOrderListedForCurrentSession: isWorkOrderListedForCurrentSession,
+    getOrderReadAuthorizationIdentity: authorizationIdentity,
     getMockActor: () => {
       const session = authSession.getCurrentSession()
       return session ? { userId: session.user.id, ...(session.currentRole ? { roleId: session.currentRole.id } : {}) } : null
@@ -268,13 +277,7 @@ export function createDefaultQuotationOrderReadPort(
   return createQuotationOrderReadAdapter(
     transport,
     isWorkOrderListedForCurrentSession,
-    () => {
-      const session = authSession.getCurrentSession()
-      if (!session?.currentRole?.id || !session.roleVersion) return null
-      return JSON.stringify([
-        session.sessionRef, session.user.id, session.currentRole.id, session.roleVersion,
-      ])
-    },
+    authorizationIdentity,
     isDevSyntheticContractReadPreviewEnabled,
   )
 }
