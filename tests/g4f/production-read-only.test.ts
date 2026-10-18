@@ -137,11 +137,12 @@ describe('Production read-only profile', () => {
     }
     // Unexpected filters, pagination escape, missing WorkOrder ID and
     // tenant-scope bypass hints still fail before any uni.request.
-    for (const extra of [
+    const forbiddenExtras: readonly Readonly<Record<string, string>>[] = [
       { notFilterOrgId: '1' },
       { 'is:orgId|string#and': 'unverified-org' },
       { _all: '0' },
-    ]) {
+    ]
+    for (const extra of forbiddenExtras) {
       await expect(transport.execute({
         method: 'POST',
         path: 'basic/order/query',
