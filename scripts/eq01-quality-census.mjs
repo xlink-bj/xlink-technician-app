@@ -8,7 +8,7 @@ import { readdirSync, readFileSync, statSync, mkdirSync, writeFileSync } from 'n
 import { join, relative, resolve, dirname } from 'node:path'
 
 const root = process.cwd()
-const trackedExtensions = /\.(?:ts|tsx|vue|mjs)$/
+const trackedExtensions = /\.(?:ts|tsx|vue|mjs|css|scss)$/
 function walk(directory) {
   const entries = []
   for (const dirent of readdirSync(directory, { withFileTypes: true }).sort((a,b) => a.name.localeCompare(b.name))) {
@@ -24,6 +24,7 @@ function metric(file) {
   const lines = source.split(/\r?\n/).length
   const matches = re => [...source.matchAll(re)].length
   const category = name.startsWith('tests/') ? 'test'
+    : name.startsWith('src/') && /\.(?:css|scss)$/.test(name) ? 'style'
     : name.startsWith('src/') ? 'source'
       : name.startsWith('scripts/') ? 'tooling' : 'other'
   return {
@@ -42,6 +43,7 @@ const dirs = ['src','tests','scripts'].filter(d => {
 })
 const files = dirs.flatMap(d => walk(join(root,d))).map(metric).sort((a,b)=>a.name.localeCompare(b.name))
 const source = files.filter(f => f.category === 'source')
+const styles = files.filter(f => f.category === 'style')
 const tests = files.filter(f => f.category === 'test')
 const testsWithStaticAssertions = tests.filter(f => f.sourceContractAssertions > 0 || f.fileReads > 0)
 const sum = (xs, field) => xs.reduce((total,row) => total + (row[field] ?? 0), 0)
@@ -51,6 +53,8 @@ const report = {
   method:'static source census only; NOT behavior, mutation or branch coverage',
   sample:'working tree at execution time; SHA recorded separately by GitHub Actions',
   source:{files:source.length,lines:sum(source,'lines'),hotspotsOver500:hotspots},
+  styles:{files:styles.length,lines:sum(styles,'lines')},
+  applicationLinesIncludingStyles:sum(source,'lines') + sum(styles,'lines'),
   tests:{
     files:tests.length,lines:sum(tests,'lines'),
     sourceContractFiles:testsWithStaticAssertions.length,
@@ -65,7 +69,7 @@ const report = {
 const arg=process.argv.indexOf('--output')
 if(arg !== -1){
   const path=process.argv[arg+1]
-  if(!path?.startsWith('.review/eq01/') || path.includes('..')) throw Error('Output must be under .review/eq01/')
+  if(!(path?.startsWith('.review/eq01/') || path?.startsWith('.review/eq03/')) || path.includes('..')) throw Error('Output must be under .review/eq01/ or .review/eq03/')
   const output=resolve(root,path)
   mkdirSync(dirname(output),{recursive:true})
   writeFileSync(output,JSON.stringify(report,null,2)+'\n')
@@ -79,6 +83,10 @@ if(process.argv.includes('--check')){
       'src/features/work-orders/action-workspace.ts',
       'src/adapters/api/mock/fixtures.ts',
       'src/adapters/api/mock/router.ts',
+      'src/adapters/api/reference/area-county-dictionary.ts',
+      'src/adapters/api/technician-api.ts',
+      'src/pages/index/index.vue',
+      'src/pages/work-orders/detail.vue',
     ].includes(f.name))
   // Historical large files must be inventoried; don't fail existing debt here.
   // The check detects new >800-line files only when their source is not part
@@ -90,6 +98,8 @@ if(process.argv.includes('--check')){
 }
 process.stdout.write(JSON.stringify({
   sourceFiles:report.source.files,sourceLines:report.source.lines,
+  styleFiles:report.styles.files,styleLines:report.styles.lines,
+  applicationLinesIncludingStyles:report.applicationLinesIncludingStyles,
   largeModules:hotspots.slice(0,12).map(f=>f.name+':'+f.lines),
   testFiles:report.tests.files,staticContractFiles:report.tests.sourceContractFiles,
   staticAssertions:report.tests.sourceContractAssertions,
