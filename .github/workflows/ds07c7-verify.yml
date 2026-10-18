@@ -65,3 +65,56 @@ jobs:
         run: pnpm build:mp-weixin
       - name: Build native App without test fixture
         run: pnpm build:app
+
+  actual-h5-source-identical:
+    if: github.event.pull_request.head.ref == 'design-system/ds07c7-legacy-source-test-reconciliation' && github.event.pull_request.draft == true
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+      H5_VISUAL_OWNER_APPROVAL: 'PENDING'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Lock source and Golden provenance to exact C6 baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor 34e90736d0819a8692c5ac4a00da48ecda30ef6b HEAD
+          test "$(git diff --name-only 34e90736d0819a8692c5ac4a00da48ecda30ef6b HEAD -- src tests/ds02a-main/snapshots tests/ds02a-gallery/snapshots | wc -l)" -eq 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Install headless Chromium and deterministic CJK font
+        run: |
+          pnpm exec playwright install --with-deps chromium
+          sudo apt-get update -qq
+          sudo apt-get install -y fonts-noto-cjk
+      - name: Approved DS02A Gallery (3)
+        run: pnpm test:ds02a:gallery
+      - name: Approved DS02A main App List/Detail/Q01 (9)
+        run: pnpm test:ds02a:business
+      - name: All actual M1 Appointment/Survey/Quotation/Signing Mock, blocked signing (27)
+        run: |
+          pnpm exec playwright test --config playwright.main-h5-mock.config.ts \
+            tests/h5-main-mock/main-app-quotation.spec.ts \
+            tests/h5-main-mock/ds07c4b-quote-signing.spec.ts \
+            tests/h5-main-mock/ds07c4b-signing-state-visual.spec.ts \
+            tests/h5-main-mock/m1-signing-official-order-read.spec.ts
+      - name: Retain test evidence; never update screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ds07-c7-final-integration-${{ github.run_id }}
+          path: |
+            test-results/ds02a-gallery/
+            test-results/ds02a-main/
+            test-results/main-h5-mock/
+          if-no-files-found: warn
+          retention-days: 30
