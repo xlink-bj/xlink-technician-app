@@ -15,7 +15,7 @@ const actorA: Actor = {
 const roleTree = {
   data: { functionList: [{
     order: 1, exts: { tabDisplay: '1' },
-    action: '/pages/serviceAppointment/serviceAppointments?type=SANode&orderState=ready',
+    action: '/pages/serviceAppointment/serviceAppointments',
   }] },
 }
 const workOrderA = 'work-order-a-synthetic'
@@ -42,7 +42,7 @@ function fixture(onOrder: (wire: Wire) => void = (wire) => {
     const path = new URL(String(wire.url)).pathname
     if (path === '/function/queryTreeByRoleId') {
       wire.success?.({ statusCode: 200, data: roleTree } as never)
-    } else if (path === '/basic/serviceAppointment/querySAWorkflowNode') {
+    } else if (path === '/basic/serviceAppointment/query') {
       const id = actor.roleId === 'role-a' ? workOrderA : workOrderB
       wire.success?.({ statusCode: 200, data: { data: [{ _id: id }], page: 1, rows: 20, total: 1 } } as never)
     } else if (path === '/basic/order/query') {
@@ -90,7 +90,7 @@ describe('C10 P0 synthetic role/tenant negative proof — no live Production API
     }] } })
     expect(JSON.stringify(list)).not.toMatch(/SECRET-DO-NOT-RENDER|private\.pdf|ownerPhone|bjdPDFurl/)
     expect(f.sent.map(w => new URL(String(w.url)).pathname)).toEqual([
-      '/function/queryTreeByRoleId', '/basic/serviceAppointment/querySAWorkflowNode', '/basic/order/query',
+      '/function/queryTreeByRoleId', '/basic/serviceAppointment/query', '/basic/order/query',
     ])
     const params = new URLSearchParams(String(f.sent[2]?.data))
     expect(params.has('_all')).toBe(false)
