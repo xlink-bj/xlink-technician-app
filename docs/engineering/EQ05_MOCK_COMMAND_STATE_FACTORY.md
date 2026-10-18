@@ -8,7 +8,7 @@ The legacy `mock/router.ts` holds module-global mutable `commandState` containin
 
 ## Bounded implementation
 
-`mock/command-state.ts` owns `createIsolatedMockCommandStateStore(seeds?)`. Each new store **deep-clones constructor seeds once**, then lazily deep-clones separate independent snapshots on `current()`; `reset()` discards only that instance's mutations. Detail/List and local FormData maps never share references across stores. No generated IDs/timestamps or network access. It is allowed to construct a controller for tests without importing the HTTP transport.
+`mock/command-state.ts` owns `createIsolatedMockCommandStateStore(seeds?)`. Explicit caller-provided seeds are **deep-cloned at construction**, while the default application's large fixture baseline stays **lazy (no eager JSON cloning on Production module import)**; each `current()` creates its own independent cloned snapshot; `reset()` discards only that instance's mutations. Detail/List and local FormData maps never share references across stores. No generated IDs/timestamps or network access. It is allowed to construct a controller for tests without importing the HTTP transport.
 
 The existing application Mock router keeps **one default state instance** to retain all legacy state transitions, command responses and reset semantics; the external `resetMockCommandState` export is unchanged. The router no longer owns the module-global mutable state itself, but its business transition functions are intentionally unchanged.
 
