@@ -38,6 +38,7 @@ const [pages, workspace, component, model, codec, catalog, catalogBrowser, compo
   read('tests/g4f/quotation-engine.test.ts'),
   read('docs/verification/G4F_PHASE_1H_QUOTATION_ENGINE_COMPLETION.md'),
 ])
+const quoteBridge = await read('src/features/work-orders/quotation/catalog-selection-bridge.ts')
 const packageJson = JSON.parse(packageSource)
 
 if (pages.includes('__review') || pages.includes('g4f-phase1b')) fail('production pages.json must not expose the review route')
@@ -86,7 +87,9 @@ if (component.includes('composition.addCatalogItem') || !component.includes('wor
 if (!component.includes("item.kind === 'package'") || !component.includes('套餐配置') || !component.includes('quotation-package-configure-commit')) {
   fail('Package must use its distinct material-configuration UX, not the generic direct-selection action')
 }
-if (!workspace.includes('quotationCatalogBrowser.selectedCatalogItemFor(kind, catalogId)') || !workspace.includes('isDirectQuotationCatalogKind(kind)')) {
+if (!workspace.includes('createQuotationCatalogSelectionBridge')
+  || !quoteBridge.includes('quotationCatalogBrowser.selectedCatalogItemFor(kind, catalogId)')
+  || !quoteBridge.includes('isDirectQuotationCatalogKind(kind)')) {
   fail('Action Workspace must accept only current successful reads of the explicit direct-selection kinds')
 }
 if (!catalogBrowser.includes('function selectedCatalogItemFor') || !catalogBrowser.includes("catalogStatesByKind.value[kind] !== 'succeeded'")) {
@@ -95,12 +98,14 @@ if (!catalogBrowser.includes('function selectedCatalogItemFor') || !catalogBrows
 if (!catalog.includes('synthetic-package-basic') || !/添加(?:到|至)当前维修部位/.test(component)) {
   fail('catalog selection must remain scoped to an explicitly opened repair-part group')
 }
-if (!workspace.includes('quotationComposition.addCatalogReadItem(groupId, source)')) {
+if (!workspace.includes('addQuotationCatalogSelection')
+  || !quoteBridge.includes('quotationComposition.addCatalogReadItem(groupId, source)')) {
   fail('Action Workspace must bridge verified read records into local composition')
 }
-if (!workspace.includes('quotationCatalogBrowser.packageCandidateFor(packageId)')
-  || !workspace.includes('quotationCatalogBrowser.successfulPackageDetailFor(packageId)')
-  || !workspace.includes('quotationComposition.configurePackageReadItem')) {
+if (!workspace.includes('configureQuotationPackageSelection')
+  || !quoteBridge.includes('quotationCatalogBrowser.packageCandidateFor(packageId)')
+  || !quoteBridge.includes('quotationCatalogBrowser.successfulPackageDetailFor(packageId)')
+  || !quoteBridge.includes('quotationComposition.configurePackageReadItem')) {
   fail('Package configuration must be gated by current successful list/detail reads and use its separate Action Workspace bridge')
 }
 if (!packageConfiguration.includes('configuredQuotationPackageCandidateFor')
