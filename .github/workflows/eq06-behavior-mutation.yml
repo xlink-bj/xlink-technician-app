@@ -1,0 +1,127 @@
+name: EQ06 Real H5 Behavior + Mutation Sensitivity (NO release)
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'tests/h5-main-mock/eq06-real-q01-component-behavior.spec.ts'
+      - 'tests/engineering/eq06-critical-domain-branches.test.ts'
+      - 'scripts/eq06-mutation-probes.mjs'
+      - 'docs/engineering/EQ06_BEHAVIOR_MUTATION_AND_COVERAGE_EVIDENCE.md'
+      - '.github/workflows/eq06-behavior-mutation.yml'
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  verified-domain-and-two-mutants:
+    if: github.event.pull_request.draft == true && github.event.pull_request.head.ref == 'engineering/eq06-real-h5-component-behavior'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Enforce exact EQ05B parent and test-tooling-only five files
+        shell: bash
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor b80c3dc7f83a4eaa17306227206010652cca0d94 HEAD
+          git diff --name-only b80c3dc7f83a4eaa17306227206010652cca0d94 HEAD | sort > /tmp/eq06-actual.txt
+          cat > /tmp/eq06-expected.txt <<'EOF'
+          .github/workflows/eq06-behavior-mutation.yml
+          docs/engineering/EQ06_BEHAVIOR_MUTATION_AND_COVERAGE_EVIDENCE.md
+          scripts/eq06-mutation-probes.mjs
+          tests/engineering/eq06-critical-domain-branches.test.ts
+          tests/h5-main-mock/eq06-real-q01-component-behavior.spec.ts
+          EOF
+          sort -o /tmp/eq06-expected.txt /tmp/eq06-expected.txt
+          diff -u /tmp/eq06-expected.txt /tmp/eq06-actual.txt
+          test "$(git diff --name-only b80c3dc7f83a4eaa17306227206010652cca0d94 HEAD -- src pnpm-lock.yaml package.json tests/ds02a-main/snapshots tests/ds02a-gallery/snapshots | wc -l)" -eq 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Real domain safety cases plus all earlier Mock / UI branch tests
+        env:
+          VITE_XLINK_ENVIRONMENT: test
+        run: |
+          pnpm exec vitest run \
+            tests/engineering/eq06-critical-domain-branches.test.ts \
+            tests/engineering/eq05b-command-transitions.test.ts \
+            tests/engineering/eq04-quotation-catalog-bridge.test.ts \
+            tests/engineering/eq05-mock-command-state.test.ts \
+            tests/g4f/quotation-engine.test.ts
+      - name: Full original quality and TypeScript gate
+        env:
+          VITE_XLINK_ENVIRONMENT: test
+        run: pnpm verify:full
+      - name: Mutate two critical branches — both must FAIL their tests, then restore
+        run: node scripts/eq06-mutation-probes.mjs --output .review/eq06/mutation-probes.json
+      - name: Assert no mutant survived as a modified source file
+        run: git diff --exit-code -- src/features/work-orders/quotation/model.ts src/features/work-orders/quotation/validation.ts
+      - name: Real H5 / MP-Weixin / native App bundles
+        run: |
+          pnpm build:h5
+          pnpm build:mp-weixin
+          pnpm build:app
+      - name: Archive small mutation sensitivity evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eq06-mutants-${{ github.run_id }}
+          path: .review/eq06/
+          if-no-files-found: warn
+          retention-days: 30
+
+  true-h5-ui-and-existing-golden:
+    if: github.event.pull_request.draft == true && github.event.pull_request.head.ref == 'engineering/eq06-real-h5-component-behavior'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+      H5_VISUAL_OWNER_APPROVAL: 'PENDING'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: |
+          pnpm exec playwright install --with-deps chromium
+          sudo apt-get update -qq
+          sudo apt-get install -y fonts-noto-cjk
+      - name: No Golden updates — Gallery
+        run: pnpm test:ds02a:gallery
+      - name: No Golden updates — real WorkOrder list/detail/Q01
+        run: pnpm test:ds02a:business
+      - name: Real rendered Vue Q01 validation/recovery + existing safe H5 flows
+        run: |
+          pnpm exec playwright test --config playwright.main-h5-mock.config.ts \
+            tests/h5-main-mock/eq06-real-q01-component-behavior.spec.ts \
+            tests/h5-main-mock/main-app-quotation.spec.ts \
+            tests/h5-main-mock/ds07c4b-quote-signing.spec.ts \
+            tests/h5-main-mock/ds07c4b-signing-state-visual.spec.ts \
+            tests/h5-main-mock/m1-signing-official-order-read.spec.ts
+      - name: Preserve screenshot and runtime JS-byte diagnostics (not source coverage)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eq06-h5-behavior-${{ github.run_id }}
+          path: |
+            test-results/ds02a-gallery/
+            test-results/ds02a-main/
+            test-results/main-h5-mock/
+          if-no-files-found: warn
+          retention-days: 30
