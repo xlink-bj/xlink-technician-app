@@ -37,11 +37,14 @@ import {
 import type { ApiCommandRequest } from '../technician-api-commands'
 import { isMockOwnedRead, isMockOwnedCommand, normalizedPath, quotationCatalogListRoutes } from './ownership'
 import { mockCommandState } from './command-state'
+import { mockFaultWireResponse, validatedMockLatency, type MockFaultKind } from './fault-scenarios'
 export { resetMockCommandState } from './command-state'
 export { isMockOwnedRead, isMockOwnedCommand } from './ownership'
 
 export interface MockReadOptions {
   readonly latencyMs?: number
+  /** Test-only fault is applied ONLY after a real synthetic fixture matched. */
+  readonly fault?: MockFaultKind
   /** Authenticated actor values used only to bind bounded fixture markers. */
   readonly actor?: MockReadActor | null
 }
@@ -664,7 +667,10 @@ export async function tryMockRead(
   if (mode === 'off') return null
   const response = matchedResponse(path, mode, requestData)
   if (response === null) return null
-  await delay(options.latencyMs ?? 300)
+  // Owner-only route policy remains the authority; a request-scoped fault may
+  // replace a MATCHED fixture, never create a new mock route or hit network.
+  await delay(validatedMockLatency(options.latencyMs))
+  if (options.fault) return mockFaultWireResponse(options.fault)
   return bindMockActorMarkers(clonedResponse(response), options.actor)
 }
 
