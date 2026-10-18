@@ -34,6 +34,10 @@ for (const width of [320, 375, 390] as const) {
 
     await expect(page.getByTestId('signing-mock-state')).toContainText('签署中')
     await expect(page.getByTestId('signing-mock-contract')).toContainText('不是后端')
+    // The App uses an inner scrollable workspace: fullPage does NOT imply
+    // that a below-the-fold contract state is actually in the PNG.
+    await page.getByTestId('signing-mock-state').scrollIntoViewIfNeeded()
+    await expect(page.getByTestId('signing-mock-state')).toBeInViewport()
     await info.attach(`signing-pending-${width}`, {
       body: await page.screenshot({ animations: 'disabled', fullPage: true }),
       contentType: 'image/png',
@@ -49,6 +53,8 @@ for (const width of [320, 375, 390] as const) {
       await expect(action).toHaveClass(/app-button--disabled/)
     }
     await expect(page.getByTestId('signing-mock-footer')).toContainText('无业务写入')
+    await page.getByTestId('signing-mock-state').scrollIntoViewIfNeeded()
+    await expect(page.getByTestId('signing-mock-state')).toBeInViewport()
     await info.attach(`signing-signed-${width}`, {
       body: await page.screenshot({ animations: 'disabled', fullPage: true }),
       contentType: 'image/png',
