@@ -24,6 +24,13 @@ export interface UniApiReadTransportOptions {
   readonly blockRealRequests?: boolean
   /** Supplies the real authenticated actor for bounded mock visibility markers. */
   readonly getMockActor?: () => MockReadActor | null
+  /**
+   * Defense-in-depth for Production basic/order/query only. A valid WorkOrder ID
+   * is not proof of role authorization; absent callbacks must DENY, not skip.
+   */
+  readonly isOrderWorkOrderListedForCurrentSession?: (workOrderId: string) => boolean
+  /** Current session, user, role and roleVersion fingerprint, never persisted. */
+  readonly getOrderReadAuthorizationIdentity?: () => string | null
 }
 
 function endpointUrl(baseUrl: string, path: string): string {
@@ -104,6 +111,36 @@ export function createUniApiReadTransport(options: UniApiReadTransportOptions): 
         )
       }
 
+      let orderReadGuard:
+        | { readonly workOrderId: string; readonly sessionRef: SessionRef; readonly identity: string }
+        | undefined
+      // Even a syntactically bounded query must not be directly executable from
+      // a generic transport without the real role-scoped WorkOrder membership.
+      if (productionReadOnly && input.path === 'basic/order/query') {
+        const workOrderId = input.body?.['is:serviceAppointmentId|string#and']
+        let identity: string | null = null
+        let listed = false
+        try {
+          identity = options.getOrderReadAuthorizationIdentity?.() ?? null
+          listed = typeof workOrderId === 'string'
+            && options.isOrderWorkOrderListedForCurrentSession?.(workOrderId) === true
+        } catch {
+          listed = false
+        }
+        if (typeof workOrderId !== 'string' || !identity || !identity.trim()
+          || identity !== identity.trim() || !listed) {
+          throw new ApiReadTransportError(
+            'Production official Order read requires an active role-scoped WorkOrder authorization',
+            'authorization_denied',
+          )
+        }
+        const current = options.getSessionRef()
+        if (!current) {
+          throw new ApiReadTransportError('Authenticated session is required for API reads', 'session_invalid')
+        }
+        orderReadGuard = { workOrderId, sessionRef: current, identity }
+      }
+
       const sessionRef = options.getSessionRef()
       if (!sessionRef) {
         throw new ApiReadTransportError('Authenticated session is required for API reads', 'session_invalid')
@@ -117,7 +154,21 @@ export function createUniApiReadTransport(options: UniApiReadTransportOptions): 
           ...(options.getMockActor ? { actor: options.getMockActor() } : {}),
         },
       )
-      if (mockResponse !== null) return mockResponse
+      if (mockResponse !== null) {
+        if (orderReadGuard) {
+          let stillListed = false
+          let identity: string | null = null
+          try {
+            stillListed = options.isOrderWorkOrderListedForCurrentSession?.(orderReadGuard.workOrderId) === true
+            identity = options.getOrderReadAuthorizationIdentity?.() ?? null
+          } catch { stillListed = false }
+          if (!stillListed || identity !== orderReadGuard.identity
+            || options.getSessionRef() !== orderReadGuard.sessionRef) {
+            throw new ApiReadTransportError('Production Order authorization changed during read', 'authorization_denied')
+          }
+        }
+        return mockResponse
+      }
       if (isMockOwnedRead(input.path, input.body ?? input.query ?? {})) {
         throw new ApiReadTransportError('Synthetic mock read is disabled', 'server_terminal')
       }
@@ -149,6 +200,19 @@ export function createUniApiReadTransport(options: UniApiReadTransportOptions): 
           error instanceof Error ? error.message : 'API read request failed',
           'network_retryable',
         )
+      }
+
+      if (orderReadGuard) {
+        let stillListed = false
+        let identity: string | null = null
+        try {
+          stillListed = options.isOrderWorkOrderListedForCurrentSession?.(orderReadGuard.workOrderId) === true
+          identity = options.getOrderReadAuthorizationIdentity?.() ?? null
+        } catch { stillListed = false }
+        if (!stillListed || identity !== orderReadGuard.identity
+          || options.getSessionRef() !== orderReadGuard.sessionRef) {
+          throw new ApiReadTransportError('Production Order authorization changed during read', 'authorization_denied')
+        }
       }
 
       if (!isSuccessStatus(response.statusCode)) {
