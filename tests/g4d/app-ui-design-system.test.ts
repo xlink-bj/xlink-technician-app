@@ -163,7 +163,11 @@ describe('App UI Design System v0.2', () => {
     expect(workspace).toContain('variant="workspace"')
     expect(workspace).not.toContain('正在准备操作内容</text>')
     expect(workspace).toContain('appChoiceOptionsFor')
-    expect(workspace).toContain('AppIcon name="appointment"')
+    // C4.A owns the icon in a shared presentation component; caller owns the appointment intent.
+    const headingSource = await readFile(uiPath('AppActionContentHeading.vue'), 'utf8')
+    expect(workspace).toContain('<AppActionContentHeading title="预约信息"')
+    expect(workspace).toContain('icon="appointment"')
+    expect(headingSource).toContain('<AppIcon :name="icon" :size="20" />')
     expect(workspace).not.toContain('action-content-input')
     expect(workspace).not.toContain('action-content-note')
     expect(time).toContain('app-surface')
