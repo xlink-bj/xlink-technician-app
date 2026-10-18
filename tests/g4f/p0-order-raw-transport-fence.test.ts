@@ -59,10 +59,10 @@ describe('C11 P0 raw Production official Order transport role fence', () => {
   })
 
   it.each([
-    ['missing identity', () => null],
-    ['blank identity', () => ''],
-    ['uncanonical identity', () => ' session:user:role:v1 '],
-    ['throwing identity source', () => { throw Error('synthetic-context-error') }],
+    ['missing identity', (): string | null => null],
+    ['blank identity', (): string | null => ''],
+    ['uncanonical identity', (): string | null => ' session:user:role:v1 '],
+    ['throwing identity source', (): string | null => { throw Error('synthetic-context-error') }],
   ] as const)('fails closed on %s even when WorkOrder membership returns true', async (_case, identity) => {
     vi.stubEnv('VITE_XLINK_ENVIRONMENT', 'prod')
     const { adapter, request } = transport({ listed: () => true, identity })
