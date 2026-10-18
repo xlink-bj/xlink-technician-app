@@ -1,0 +1,112 @@
+name: EQ05 Mock Command State Isolation (NO Release)
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - '.github/workflows/eq05-mock-command-state.yml'
+      - 'docs/engineering/EQ05_MOCK_COMMAND_STATE_FACTORY.md'
+      - 'src/adapters/api/mock/command-state.ts'
+      - 'src/adapters/api/mock/router.ts'
+      - 'tests/engineering/eq05-mock-command-state.test.ts'
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  safety-state-and-complete:
+    if: github.event.pull_request.draft == true && github.event.pull_request.head.ref == 'engineering/eq05-isolated-mock-command-state'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Enforce exact EQ04 parent and five paths only
+        shell: bash
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor 5df64b0e9704ea04f60958a9da42f895def32256 HEAD
+          git diff --name-only 5df64b0e9704ea04f60958a9da42f895def32256 HEAD | sort > /tmp/eq05-actual.txt
+          cat > /tmp/eq05-allowed.txt <<'EOF'
+          .github/workflows/eq05-mock-command-state.yml
+          docs/engineering/EQ05_MOCK_COMMAND_STATE_FACTORY.md
+          src/adapters/api/mock/command-state.ts
+          src/adapters/api/mock/router.ts
+          tests/engineering/eq05-mock-command-state.test.ts
+          EOF
+          sort -o /tmp/eq05-allowed.txt /tmp/eq05-allowed.txt
+          diff -u /tmp/eq05-allowed.txt /tmp/eq05-actual.txt
+          test "$(git diff --name-only 5df64b0e9704ea04f60958a9da42f895def32256 HEAD -- src/features src/shared src/runtimes src/adapters/api/uni-api-read-transport.ts src/adapters/api/uni-api-command-transport.ts tests/ds02a-main/snapshots tests/ds02a-gallery/snapshots | wc -l)" -eq 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Isolated state and existing Mock/local business flows
+        env:
+          VITE_XLINK_ENVIRONMENT: test
+        run: |
+          pnpm exec vitest run \
+            tests/engineering/eq05-mock-command-state.test.ts \
+            tests/engineering/eq01-mock-scenarios.test.ts \
+            tests/g4ux/mock-runtime.test.ts \
+            tests/g4ux/production-auth-mock-isolation.test.ts \
+            tests/g4d/action-workspace.test.ts
+      - name: Complete tested governance, TS, all contracts and file budgets
+        env:
+          VITE_XLINK_ENVIRONMENT: test
+        run: pnpm verify:full
+      - name: Real H5, MP-Weixin and App bundles
+        run: |
+          pnpm build:h5
+          pnpm build:mp-weixin
+          pnpm build:app
+
+  unchanged-golden-and-h5:
+    if: github.event.pull_request.draft == true && github.event.pull_request.head.ref == 'engineering/eq05-isolated-mock-command-state'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+      H5_VISUAL_OWNER_APPROVAL: 'PENDING'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: |
+          pnpm exec playwright install --with-deps chromium
+          sudo apt-get update -qq
+          sudo apt-get install -y fonts-noto-cjk
+      - run: pnpm test:ds02a:gallery
+      - run: pnpm test:ds02a:business
+      - name: Real H5 functional Mock and signing fail-closed
+        run: |
+          pnpm exec playwright test --config playwright.main-h5-mock.config.ts \
+            tests/h5-main-mock/main-app-quotation.spec.ts \
+            tests/h5-main-mock/ds07c4b-quote-signing.spec.ts \
+            tests/h5-main-mock/ds07c4b-signing-state-visual.spec.ts \
+            tests/h5-main-mock/m1-signing-official-order-read.spec.ts
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eq05-h5-visual-${{ github.run_id }}
+          path: |
+            test-results/ds02a-gallery/
+            test-results/ds02a-main/
+            test-results/main-h5-mock/
+          if-no-files-found: warn
+          retention-days: 30
