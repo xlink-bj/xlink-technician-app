@@ -8,7 +8,6 @@ import {
   mockRepairPartsCascadeResponse,
   mockSurveyPartsCascadeResponse,
   mockRoleFunctionResponse,
-  mockSanodeListResponse,
   mockStatusOptionsResponse,
   mockSurveyCodeOptionsResponse,
   mockCommandScenarioIds,
@@ -19,7 +18,6 @@ import {
   mockSurveyFormDefinitionResponse,
   mockSurveyLeakageCauseResponse,
   mockWorkOrderActivityResponseFor,
-  mockWorkOrderDetailResponses,
   mockWorkOrderIds,
   mockWorkOrderDetailResponseFor,
 } from './fixtures'
@@ -38,6 +36,8 @@ import {
 } from './quotation-catalog'
 import type { ApiCommandRequest } from '../technician-api-commands'
 import { isMockOwnedRead, isMockOwnedCommand, normalizedPath, quotationCatalogListRoutes } from './ownership'
+import { mockCommandState } from './command-state'
+export { resetMockCommandState } from './command-state'
 export { isMockOwnedRead, isMockOwnedCommand } from './ownership'
 
 export interface MockReadOptions {
@@ -51,33 +51,8 @@ export interface MockReadActor {
   readonly roleId?: string
 }
 
-interface MockCommandState {
-  listResponse: unknown
-  detailResponses: Map<string, unknown>
-  formData: Map<string, unknown>
-}
-
-let commandState: MockCommandState | null = null
-
 function clonedResponse<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T
-}
-
-function mockCommandState(): MockCommandState {
-  if (!commandState) {
-    commandState = {
-      listResponse: clonedResponse(mockSanodeListResponse),
-      detailResponses: new Map(
-        Object.entries(mockWorkOrderDetailResponses).map(([id, response]) => [id, clonedResponse(response)]),
-      ),
-      formData: new Map(),
-    }
-  }
-  return commandState
-}
-
-export function resetMockCommandState(): void {
-  commandState = null
 }
 
 function mutableRecord(value: unknown): Record<string, unknown> | null {
