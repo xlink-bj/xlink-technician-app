@@ -15,7 +15,7 @@
 - Actual H5 Gallery and WorkOrder List/Detail/Q01 **pixel-equivalent approved Goldens**, 320/375/390; fail on any CSS cascade/layout drift.
 - Actual H5 main-App Mock + signing fail-closed flows; external network attempts forbidden.
 - H5/MP-Weixin/App builds, no test-only env in output.
-- Exactly 5 changed paths: two existing SFC/store files, new CSS, new utility, new test, plus this document and workflow (**7 paths total**).
+- Exactly **7** changed paths: two existing SFC/store files, new CSS, new utility, new direct behavior test, this document and workflow.
 
 ## Non-goals
 
