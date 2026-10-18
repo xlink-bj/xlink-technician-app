@@ -51,9 +51,15 @@ function fixture(onOrder: (wire: Wire) => void = (wire) => {
       wire.fail?.({ errMsg: 'Unexpected synthetic route' } as never)
     }
   })
+  // The raw transport uses the same mutable, role-scoped WorkOrder source.
+  // No path to basic/order/query may bypass this callback in Production.
+  let listedWorkOrder: (id: string) => boolean = () => false
   const transport = createUniApiReadTransport({
     apiBaseUrl: 'https://production.invalid',
     getSessionRef: () => actor.sessionRef as never,
+    isOrderWorkOrderListedForCurrentSession: id => listedWorkOrder(id),
+    getOrderReadAuthorizationIdentity: () =>
+      JSON.stringify([actor.sessionRef, actor.userId, actor.roleId, actor.roleVersion]),
     request,
   })
   const workOrders = createRoleScopedTechnicianApiReadAdapter(
@@ -61,6 +67,7 @@ function fixture(onOrder: (wire: Wire) => void = (wire) => {
     () => asOpaqueId<'RoleId'>(actor.roleId),
     { getReadAuthorizationScope: () => actor },
   )
+  listedWorkOrder = id => Boolean(workOrders.isWorkOrderListedForCurrentSession?.(id))
   const orders = createQuotationOrderReadAdapter(
     transport,
     (id) => Boolean(workOrders.isWorkOrderListedForCurrentSession?.(id)),
