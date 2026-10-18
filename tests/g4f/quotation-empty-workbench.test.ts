@@ -88,6 +88,7 @@ describe('Action Workspace context ownership', () => {
   const appointmentAndSurveyWorkspace = source('src/pages/work-orders/action-workspace.vue')
   const quotationWorkspace = source('src/features/work-orders/quotation/QuotationActionWorkspace.vue')
   const quotationContent = source('src/features/work-orders/quotation/QuotationActionContent.vue')
+  const q01Entry = source('src/features/work-orders/quotation/Q01EntryScreen.vue')
 
   it('uses the exact same shared context shell for Appointment, Survey, and Quotation', () => {
     const sharedImport = "import ActionWorkspaceShell from '@shared/ui/ActionWorkspaceShell.vue'"
@@ -109,13 +110,30 @@ describe('Action Workspace context ownership', () => {
     expect(quotationContent).not.toContain('quotation-content__initial-empty-mark')
   })
 
-  it('keeps the repair-part step inside the existing content and shared selector contracts', () => {
-    expect(quotationContent).toContain('data-testid="quotation-first-repair-part-step"')
-    expect(quotationContent).toContain('data-testid="quotation-first-step-repair-parts"')
-    expect(quotationContent).toContain('data-testid="quotation-first-step-description"')
-    expect(quotationContent).toContain('data-testid="quotation-first-step-quantity"')
-    expect(quotationContent).toContain('data-testid="quotation-first-step-select-products"')
+  it('keeps Q01 presentation extracted, but repair-part edits routed to the existing composition controller', () => {
+    // Q01EntryScreen owns display; QuotationActionContent owns all draft state,
+    // option sources and catalog dispatch. Removing either contract must fail.
+    expect(quotationContent).toContain('<Q01EntryScreen')
+    for (const testId of [
+      'quotation-first-repair-part-step',
+      'quotation-first-step-repair-parts',
+      'quotation-first-step-description',
+      'quotation-first-step-quantity',
+      'quotation-first-step-select-products',
+    ]) {
+      expect(q01Entry).toContain(`data-testid="${testId}"`)
+    }
+    expect(q01Entry).toContain('<AppCascadeSelector')
+    expect(q01Entry).toContain(':options="options"')
+    expect(q01Entry).toContain('@update:model-value="emit(\'repair-parts-change\', $event)"')
+    expect(q01Entry).toContain('@input="emit(\'description-input\', $event)"')
+    expect(q01Entry).toContain('@input="emit(\'quantity-input\', $event)"')
+    expect(q01Entry).toContain('@tap="emit(\'select-products\')"')
     expect(quotationContent).toContain(':options="composition.repairPartOptions"')
+    expect(quotationContent).toContain('@repair-parts-change="onRepairPartChange(firstRepairPartGroup.groupId, $event)"')
+    expect(quotationContent).toContain('@description-input="onGroupDescriptionInput(firstRepairPartGroup.groupId, $event)"')
+    expect(quotationContent).toContain('@quantity-input="onGroupQuantityInput(firstRepairPartGroup.groupId, $event)"')
+    expect(quotationContent).toContain('@select-products="selectProductsForFirstGroup(firstRepairPartGroup.groupId)"')
     expect(quotationContent).toContain('composition.updateGroupContext(groupId, { partDescription: eventValue(event) })')
     expect(quotationContent).toContain('composition.updateGroupContext(groupId, { maintainAreaNum: eventValue(event) })')
     expect(quotationContent).toContain("openCatalog(group.groupId, 'package')")
