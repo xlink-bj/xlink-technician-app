@@ -1,5 +1,7 @@
 import {
   evaluateFieldState,
+  evaluateVisibility,
+  isFieldApplicable,
   normalizeFieldValue,
   normalizeSubmission,
 } from '@runtimes/dynamic-form'
@@ -49,6 +51,15 @@ function schemaFor(field: AppointmentFormFieldRead): FormFieldSchema {
     type: field.type,
     required: field.required,
     readOnly: field.readOnly,
+    ...(field.order !== undefined ? { order: field.order } : {}),
+    ...(field.state !== undefined ? { state: field.state } : {}),
+    ...(field.fixed !== undefined ? { fixed: field.fixed } : {}),
+    ...(field.operationType !== undefined ? { operationType: field.operationType } : {}),
+    ...(field.showList ? { showList: field.showList } : {}),
+    ...(field.multiple !== undefined ? { multiple: field.multiple } : {}),
+    ...(field.visibility ? { visibility: field.visibility } : {}),
+    ...(field.valueOption ? { valueOption: field.valueOption } : {}),
+    ...(field.unsupportedReason ? { unsupportedReason: field.unsupportedReason } : {}),
     ...(field.options?.length ? { inlineOptions: field.options } : {}),
   }
 }
@@ -57,7 +68,7 @@ function runtimeFieldState(
   field: AppointmentFormFieldRead,
   values: Readonly<Record<string, AppointmentFieldValue>>,
 ): EffectiveFieldState {
-  return evaluateFieldState(schemaFor(field), { values })
+  return evaluateFieldState(schemaFor(field), { values, surface: 'mobile_detail' })
 }
 
 export function appointmentVisitIntentFor(form: AppointmentFormRead): AppointmentVisitIntent {
@@ -191,6 +202,33 @@ export function normalizeAppointmentForm(
   const values: Record<string, AppointmentFieldValue> = {}
   const fieldContexts: Record<string, { readonly fixedRequired: boolean }> = {}
   for (const field of form.fields) {
+    const schema = schemaFor(field)
+    // A non-mobile row is not part of this Action surface, even when its
+    // persisted value remains in the local draft.
+    if (!isFieldApplicable(schema, 'mobile_detail')) {
+      fieldContexts[field.fieldId] = { fixedRequired: false }
+      continue
+    }
+    const visibility = evaluateVisibility(field.visibility, form.values)
+    if (visibility.state === 'unsupported') {
+      return {
+        state: 'failed_terminal',
+        error: createOperationError('unsupported_capability', visibility.reason ?? 'Appointment visibility rule is unsupported', {
+          reason: field.fieldId,
+        }),
+      }
+    }
+    const runtime = runtimeFieldState(field, form.values)
+    // A visible unsupported backend field must fail closed. Merely hiding it
+    // in the specialized Appointment UI must never make submission possible.
+    if (runtime.capability === 'UNSUPPORTED' && visibility.state !== 'hidden') {
+      return {
+        state: 'failed_terminal',
+        error: createOperationError('unsupported_capability', runtime.reason ?? 'Appointment field is unsupported', {
+          reason: field.fieldId,
+        }),
+      }
+    }
     const applicability = appointmentFieldApplicabilityFor(form, field)
     if (applicability === 'not_applicable') {
       // The stored draft value remains in `form.values`, but it is not an
@@ -206,6 +244,7 @@ export function normalizeAppointmentForm(
     normalizeSubmission({
       fields: form.fields.map(schemaFor),
       values,
+      surface: 'mobile_detail',
       ...(Object.keys(fieldContexts).length > 0 ? { fieldContexts } : {}),
     }),
   )
@@ -231,7 +270,7 @@ export function normalizeAppointmentFieldValue(
   values: Readonly<Record<string, AppointmentFieldValue>>,
 ): OperationSnapshot<AppointmentFieldValue> {
   const schema = schemaFor(field)
-  const state = evaluateFieldState(schema, { values: { ...values, [field.valueKey]: value } })
+  const state = evaluateFieldState(schema, { values: { ...values, [field.valueKey]: value }, surface: 'mobile_detail' })
   if (state.capability === 'UNSUPPORTED') {
     return {
       state: 'failed_terminal',
@@ -251,7 +290,7 @@ export function normalizeAppointmentFieldValue(
     }
   }
 
-  const normalized = normalizeFieldValue(schema.type, value, schema.inlineOptions)
+  const normalized = normalizeFieldValue(schema.type, value, schema.inlineOptions, schema.multiple)
   if (!normalized.ok) {
     return {
       state: 'failed_terminal',
