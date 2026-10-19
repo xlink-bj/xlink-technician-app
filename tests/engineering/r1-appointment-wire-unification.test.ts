@@ -24,7 +24,7 @@ describe('R1 A03 single authoritative appointment FormData serializer',()=>{
   it('saveOnly persists FormData once with no Workflow Complete and filters null values',async()=>{
     const execute=vi.fn(async(_request:ApiCommandRequest)=>savedEnvelope())
     const command=adapter(execute)
-    const result=await command.saveDynamicForm({
+    const result=await command.saveDynamicForm!({
       workOrderId,workflowNodeId,definitionId,formDataId,
       values:{need:'1',datetime:'2026-04-21 10:00',note:null},
     })
