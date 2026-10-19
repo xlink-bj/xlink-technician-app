@@ -155,10 +155,6 @@ function failureFrom<T, U>(result: OperationSnapshot<T>): OperationSnapshot<U> {
     : { state: result.state, ...(result.error ? { error: result.error } : {}) }
 }
 
-function mapSubmitValues(values: Readonly<Record<string, string | number | boolean | null>>): Record<string, unknown> {
-  return Object.fromEntries(Object.entries(values).filter(([, value]) => value !== null))
-}
-
 function mapDynamicValues(
   values: Readonly<Record<string, unknown>>,
   purpose?: FormPurpose,
@@ -332,7 +328,13 @@ export class TechnicianApiCommandAdapter implements TechnicianApiCommandPort {
     })
   }
 
-  async saveDynamicForm(input: SaveDynamicFormInput): Promise<OperationSnapshot<FormDataId>> {
+  /** Purely persists FormData; NEVER completes a workflow node. The only
+   * deferred-time variation is a transport-owned fail-closed safety marker.
+   * All appointment branches share one payload serializer. */
+  private async saveDynamicFormWithSafety(
+    input: SaveDynamicFormInput,
+    safety?: ApiCommandRequest['safety'],
+  ): Promise<OperationSnapshot<FormDataId>> {
     let formData: Record<string, unknown>
     try {
       formData = {
@@ -352,9 +354,15 @@ export class TechnicianApiCommandAdapter implements TechnicianApiCommandPort {
         method: 'POST',
         path: `biz/extForm/upsert/${encodeURIComponent(String(input.definitionId))}`,
         body: { dataStr: JSON.stringify(formData) },
+        ...(safety ? { safety } : {}),
       },
       formDataIdFromResponse,
     )
+  }
+
+  /** saveOnly semantics: saving a draft never runs workflow/process. */
+  saveDynamicForm(input: SaveDynamicFormInput): Promise<OperationSnapshot<FormDataId>> {
+    return this.saveDynamicFormWithSafety(input)
   }
 
   completeWorkflowNode(input: CompleteWorkflowNodeInput): Promise<OperationSnapshot<void>> {
@@ -375,34 +383,18 @@ export class TechnicianApiCommandAdapter implements TechnicianApiCommandPort {
   }
 
   async submitAppointment(input: SubmitAppointmentInput): Promise<OperationSnapshot<void>> {
-    const saved = input.visitIntent === 'visit_deferred'
-      ? await this.command<FormDataId>(
-          {
-            method: 'POST',
-            path: `biz/extForm/upsert/${appointmentFormDefinitionWireId}`,
-            body: {
-              dataStr: JSON.stringify({
-                ...mapSubmitValues(input.values),
-                sid: input.workOrderId,
-                smodule: 'serviceAppointment',
-                nodeId: input.workflowNodeId,
-                ...(input.workflowRunId ? { workflowId: input.workflowRunId } : {}),
-                ...(input.formDataId ? { _id: input.formDataId } : {}),
-                state: 1,
-              }),
-            },
-            safety: 'deferred_appointment_datetime_encoding_unknown',
-          },
-          formDataIdFromResponse,
-        )
-      : await this.saveDynamicForm({
-          workOrderId: input.workOrderId,
-          workflowNodeId: input.workflowNodeId,
-          ...(input.workflowRunId ? { workflowRunId: input.workflowRunId } : {}),
-          definitionId: appointmentFormDefinitionWireId as FormDefinitionId,
-          ...(input.formDataId ? { formDataId: input.formDataId } : {}),
-          values: input.values,
-        })
+    // R1 separates form upsert from workflow/process. Both branches write
+    // the exact same shape; deferred visit remains read-only until the
+    // original need=0 datetime wire contract is verified.
+    const saved = await this.saveDynamicFormWithSafety({
+      workOrderId: input.workOrderId,
+      workflowNodeId: input.workflowNodeId,
+      ...(input.workflowRunId ? { workflowRunId: input.workflowRunId } : {}),
+      definitionId: appointmentFormDefinitionWireId as FormDefinitionId,
+      ...(input.formDataId ? { formDataId: input.formDataId } : {}),
+      values: input.values,
+    }, input.visitIntent === 'visit_deferred'
+      ? 'deferred_appointment_datetime_encoding_unknown' : undefined)
     if (saved.state !== 'succeeded') return failureFrom<FormDataId, void>(saved)
     if (!saved.data) return adapterFailure('server_terminal', 'Saved appointment form data id is missing')
 
