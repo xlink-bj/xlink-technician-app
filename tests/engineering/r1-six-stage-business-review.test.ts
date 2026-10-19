@@ -69,6 +69,16 @@ describe('R1 original source -> six-stage simulator evidence is not business acc
     expect(swapped.status).not.toBe(0)
     expect(swapped.output).toContain('UNPINNED_OR_CHANGED_R1_BLOB')
   })
+  it('cannot erase the original Survey persistence side-effect or tenant-dependent catalog pricing rules',()=>{
+    const noSurvey=run(m=>{m.stages[3].r1BackendEvidence=[]})
+    expect(noSurvey.status).not.toBe(0)
+    expect(noSurvey.output).toContain('MISSING_BACKEND_SOURCE_PROOF:survey')
+    const falsePrice=run(m=>{
+      m.stages[4].r1BackendEvidence[0].fact='new app local money calculation is always an authoritative catalog total'
+    })
+    expect(falsePrice.status).not.toBe(0)
+    expect(falsePrice.output).toContain('CATALOG_PRICE_CONTEXT_SILENCED')
+  })
   it('cannot erase saveOnly/full FormData upsert versus Workflow stage distinction',()=>{
     const r=run(m=>{
       m.stages[2].r1Evidence=m.stages[2].r1Evidence.filter(
