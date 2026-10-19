@@ -57,7 +57,8 @@ describe('R1 L02 explicit manual-login consent and legal provenance', () => {
     const start=vi.fn(async(_request:AuthStartRequest)=>ok)
     const state={inFlight:false}
     expect((await submitR1ManualLogin(input,state,true,valid,start)).state).toBe('succeeded')
-    expect(start).toHaveBeenCalledExactlyOnceWith(input)
+    expect(start).toHaveBeenCalledTimes(1)
+    expect(start).toHaveBeenCalledWith(input)
     expect(state.inFlight).toBe(false)
   })
   it('keeps user consent out of persisted authentication payload, and quick login unaffected',()=>{
