@@ -1487,7 +1487,7 @@ function userFacingLoginMessage(error: OperationError | null | undefined): strin
   display: flex;
   font-size: 25rpx;
   gap: 6rpx;
-  color: #34435c;
+  color: inherit;
 }
 .login-legal-links {
   display: flex;
@@ -1498,16 +1498,16 @@ function userFacingLoginMessage(error: OperationError | null | undefined): strin
 .login-legal-link {
   background: transparent;
   border: 0;
-  color: #1478f2;
+  color: var(--login-link-color, royalblue);
   font-size: 24rpx;
   margin: 0;
   padding: 0;
 }
 .login-legal-link--disabled {
-  color: #8895a8;
+  color: gray;
 }
 .login-consent-unavailable {
-  color: #b42318;
+  color: firebrick;
   font-size: 22rpx;
 }
 .form-stage > .submit {
