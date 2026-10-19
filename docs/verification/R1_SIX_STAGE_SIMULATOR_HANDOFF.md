@@ -31,6 +31,15 @@ R1 主工单页面 `business/subpackages/serviceAppointment/serviceAppointment.v
 
 **当前显著差异：**新 App 把无需上门时的 `datetime` 排除出有效命令值；被检查的 R1 `saveForm` 分支未显示等价的删除操作。可以继续保留新 App 更保守的防脏数据实现，但必须把 wire 等价状态标为 **UNVERIFIED**，等已授权的原始 ExtForm 表单与服务端保存规则证明后，再决定是否需要序列化兼容处理。不能仅凭 Mock 测试把这项标为 PASS。
 
+### 后端 Survey 实体与目录价格的明确副作用
+
+此次同时读取旧后台 `xlink-cloud-backend@5fc008d` 的两个实际业务服务（路径和精确 Blob SHA 保存在机器清单中）：
+
+- **Survey 与表单数据不能混为一体。** `ExtFormServiceImpl.java:143–187`：在 `ext.colName='survey'` 且新增记录时，后端把 FormData 解析为 `Survey`，根据 `sid` 读取 ServiceAppointment，复制服务、来源、组织和联系信息，可能更新 SLA，再保存 Survey 集合。其他 `InspectionAppointment` 是独立分支。前端 Dynamic Form 保存成功的 Mock 提示不意味着这些持久化副作用已经跑过。
+- **目录金额不是无条件的“商品价格”。** `GoodsServiceImpl.java:376–448`：`queryWithRank` 以当前用户、账户、租户作为查询上下文；带 `sourceType` 时改写来源渠道和组织过滤；在 `form=mini` 条件下，Material 可能把 `servicePrice` 投影为 `price`，Procedure/Measure 也可能采用本组织审批后的指导价。新 App 目录适配器及原 R1 调用是否带 `form=mini` 必须以**各请求实际发送的 body**为准，不能臆测所有请求都会改价。也不能在未有源 SKU 价/租户样本时把本地计算结果用于正式 type=1 Order。
+
+两处均为**固定版本后端源码观察**，并未登录或请求旧后台生产数据，也不能证明具体租户所有权限校验都正确。
+
 ## 交给本地 Codex 的执行约束
 
 本地 Codex 的首轮职责应限于：**本地检出已确认的候选提交 → 构建 → 模拟器打开 → 逐个体验 → 记录事实和最小缺陷任务**。
