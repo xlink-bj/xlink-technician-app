@@ -1,0 +1,74 @@
+name: R1 A03 Appointment Wire Consolidation (NO writes)
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - '.github/workflows/r1-appointment-wire.yml'
+      - 'docs/engineering/R1_APPOINTMENT_SAVE_WIRE_UNIFICATION.md'
+      - 'src/adapters/api/technician-api-commands.ts'
+      - 'tests/engineering/r1-appointment-wire-unification.test.ts'
+permissions:
+  contents: read
+jobs:
+  full-source-contract:
+    if: github.event.pull_request.draft == true && github.event.pull_request.head.ref == 'engineering/r1-a03-appointment-command-unification'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      VITE_XLINK_ENVIRONMENT: test
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Base and four exact paths only
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor 1082a24d27c0e09e3c5faaec8fca38e140cc0f60 HEAD
+          git diff --name-only 1082a24d27c0e09e3c5faaec8fca38e140cc0f60 HEAD | sort > /tmp/actual
+          printf '%s\n' '.github/workflows/r1-appointment-wire.yml' 'docs/engineering/R1_APPOINTMENT_SAVE_WIRE_UNIFICATION.md' 'src/adapters/api/technician-api-commands.ts' 'tests/engineering/r1-appointment-wire-unification.test.ts' | sort > /tmp/expected
+          diff -u /tmp/expected /tmp/actual
+          test "$(git diff --name-only 1082a24d27c0e09e3c5faaec8fca38e140cc0f60 HEAD -- src/pages src/shared src/runtimes pnpm-lock.yaml tests/ds02a-main/snapshots tests/ds02a-gallery/snapshots | wc -l)" -eq 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: |
+          pnpm exec vitest run \
+            tests/engineering/r1-appointment-wire-unification.test.ts \
+            tests/g4d/accept-appointment.test.ts \
+            tests/g4d/appointment-action-content.test.ts \
+            tests/g4e/survey-capabilities.test.ts \
+            tests/g4f/m1-i3-quotation-stage-command-fence.test.ts
+      - run: pnpm verify:critical
+      - run: pnpm verify:full
+      - run: pnpm build:h5 && pnpm build:mp-weixin && pnpm build:app
+  unchanged-real-h5:
+    if: github.event.pull_request.draft == true && github.event.pull_request.head.ref == 'engineering/r1-a03-appointment-command-unification'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+      H5_VISUAL_OWNER_APPROVAL: 'PENDING'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: |
+          pnpm exec playwright install --with-deps chromium
+          sudo apt-get update -qq
+          sudo apt-get install -y fonts-noto-cjk
+      - run: pnpm exec playwright test --config playwright.main-h5-mock.config.ts tests/h5-main-mock/m1-i7-six-stage-integration.spec.ts
+      - run: pnpm test:ds02a:gallery
+      - run: pnpm test:ds02a:business
