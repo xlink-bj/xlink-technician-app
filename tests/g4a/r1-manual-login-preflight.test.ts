@@ -35,7 +35,10 @@ describe('M1-S1 L01 — R1 source-backed manual login preflight', () => {
     expect(manual).toContain('const issue = r1ManualLoginIssue(')
     expect(manual).toContain('message.value = r1ManualLoginIssueText(issue)')
     expect(manual).toContain('if (issue) {')
-    expect(manual?.indexOf('return')).toBeLessThan(manual?.indexOf('const result = await submitLogin(') ?? -1)
+    expect(manual).toContain('const consentIssue = manualLoginConsentIssue(')
+    expect(manual?.indexOf('return')).toBeLessThan(manual?.indexOf('const result = await submitR1ManualLogin(') ?? -1)
+    expect(manual?.indexOf('const consentIssue = manualLoginConsentIssue('))
+      .toBeLessThan(manual?.indexOf('const result = await submitR1ManualLogin(') ?? -1)
     expect(page).toContain('maxlength="11"')
     expect(page).toContain('maxlength="6"')
     const quick = page.split('async function quickLogin(): Promise<void> {')[1]?.split('\nasync function handleMockToggle')[0]
