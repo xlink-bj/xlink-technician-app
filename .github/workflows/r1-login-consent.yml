@@ -1,0 +1,85 @@
+name: R1 L02 Manual Consent (NO release)
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - '.github/workflows/r1-login-consent.yml'
+      - 'docs/engineering/R1_LOGIN_CONSENT_GATE.md'
+      - 'src/features/session/login-consent.ts'
+      - 'src/pages/index/index.vue'
+      - 'src/pages/legal/legal.vue'
+      - 'src/pages.json'
+      - 'tests/engineering/r1-manual-login-consent.test.ts'
+      - 'tests/h5-main-app/r1-manual-consent.spec.ts'
+permissions:
+  contents: read
+jobs:
+  feature-and-full:
+    if: github.event.pull_request.draft == true && github.event.pull_request.head.ref == 'engineering/r1-l01-consent-gate'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      VITE_XLINK_ENVIRONMENT: test
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Pinned parent and eight paths only
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor 1082a24d27c0e09e3c5faaec8fca38e140cc0f60 HEAD
+          git diff --name-only 1082a24d27c0e09e3c5faaec8fca38e140cc0f60 HEAD | sort > /tmp/actual
+          printf '%s\n' '.github/workflows/r1-login-consent.yml' 'docs/engineering/R1_LOGIN_CONSENT_GATE.md' 'src/features/session/login-consent.ts' 'src/pages/index/index.vue' 'src/pages/legal/legal.vue' 'src/pages.json' 'tests/engineering/r1-manual-login-consent.test.ts' 'tests/h5-main-app/r1-manual-consent.spec.ts' | sort > /tmp/expected
+          diff -u /tmp/expected /tmp/actual
+          test "$(git diff --name-only 1082a24d27c0e09e3c5faaec8fca38e140cc0f60 HEAD -- src/adapters src/shared src/runtimes pnpm-lock.yaml tests/ds02a-main/snapshots tests/ds02a-gallery/snapshots | wc -l)" -eq 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: R1 business consent + old login/session regressions
+        run: |
+          pnpm exec vitest run tests/engineering/r1-manual-login-consent.test.ts tests/g4a/login-session.test.ts tests/g4a/r1-manual-login-preflight.test.ts tests/g4ux/login-production.test.ts
+      - run: pnpm verify:critical
+      - run: pnpm verify:full
+      - run: pnpm build:h5 && pnpm build:mp-weixin && pnpm build:app
+  offline-ux-and-original-golden:
+    if: github.event.pull_request.draft == true && github.event.pull_request.head.ref == 'engineering/r1-l01-consent-gate'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+      H5_VISUAL_OWNER_APPROVAL: 'PENDING'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: |
+          pnpm exec playwright install --with-deps chromium
+          sudo apt-get update -qq
+          sudo apt-get install -y fonts-noto-cjk
+      - name: Real main H5 offline manual consent browser contract
+        run: pnpm exec playwright test --config playwright.main-h5-bootstrap.config.ts tests/h5-main-app/r1-manual-consent.spec.ts
+      - name: Real main H5 six-stage Mock
+        run: pnpm exec playwright test --config playwright.main-h5-mock.config.ts tests/h5-main-mock/m1-i7-six-stage-integration.spec.ts
+      - run: pnpm test:ds02a:gallery
+      - run: pnpm test:ds02a:business
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r1-consent-safe-h5-${{ github.run_id }}
+          path: |
+            test-results/
+          if-no-files-found: warn
+          retention-days: 20
