@@ -21,7 +21,3 @@ onLoad((query) => {
 })
 </script>
 
-<style scoped>
-.legal-page { min-height: 100vh; background: #fff; }
-.legal-unavailable { padding: 48rpx; font-size: 28rpx; color: #b42318; }
-</style>
