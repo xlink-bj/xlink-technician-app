@@ -89,6 +89,12 @@ for(const [idx,id] of expectedIds.entries()){
     assert(typeof x.fact==='string'&&x.fact.length>=25,'MISSING_BUSINESS_SOURCE_FACT:'+id)
   }
 }
+const appointment=m.stages[2]
+assert(appointment.r1Evidence.some(e=>e.fact.includes('saveOnly'))
+  && appointment.r1Evidence.some(e=>e.fact.includes('dataStr:JSON.stringify(params)'))
+  && appointment.r1Evidence.some(e=>e.fact.includes('workflow/process'))
+  && appointment.confirmedOpenGaps.some(e=>e.includes('datetime')),
+  'APPOINTMENT_SAVE_WIRE_OR_WORKFLOW_GAP_SILENCED')
 const q=m.stages[4]
 assert(q.r1Evidence.length===3&&q.r1Evidence.some(e=>e.fact.includes('creatQuotation'))
   && q.r1Evidence.some(e=>e.fact.includes('upsert'))
