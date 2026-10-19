@@ -274,6 +274,7 @@
         <text class="label">手机号</text>
         <input
           v-model="phoneNumber"
+          data-testid="r1-manual-phone"
           class="input"
           type="text"
           maxlength="11"
@@ -287,6 +288,7 @@
         <view class="code-input-wrap">
           <input
             v-model="verificationCode"
+            data-testid="r1-manual-code"
             class="code-input"
             type="number"
             maxlength="6"
