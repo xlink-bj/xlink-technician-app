@@ -253,7 +253,7 @@
 
       <text v-if="feedback" class="feedback method-feedback" role="alert">{{ feedback }}</text>
 
-      <text class="policy-note">登录即表示同意《用户协议》与《隐私政策》</text>
+      <text class="policy-note">手机号登录须主动阅读并同意用户协议与隐私政策</text>
       <button class="back-link" @tap="loginStage = 'launch'">返回</button>
     </view>
 
@@ -298,6 +298,20 @@
         <text class="field-hint">请输入已收到的验证码</text>
       </view>
 
+      <view class="login-consent-panel" data-testid="r1-login-consent">
+        <checkbox-group @change="onLoginConsentChange">
+          <label class="login-consent-label">
+            <checkbox value="accepted" :checked="manualConsent" :disabled="isBusy || !loginPoliciesReady" />
+            <text>我已阅读并同意以下协议</text>
+          </label>
+        </checkbox-group>
+        <view class="login-legal-links">
+          <button class="login-legal-link" :disabled="!loginPolicies.privacyUrl" @tap="openLoginPolicy('privacy')">隐私政策</button>
+          <button class="login-legal-link" :disabled="!loginPolicies.agreementUrl" @tap="openLoginPolicy('agreement')">用户协议</button>
+        </view>
+        <text v-if="!loginPoliciesReady" class="login-consent-unavailable">登录协议尚未配置，请联系管理员</text>
+      </view>
+
       <text v-if="feedback" class="feedback" role="alert">{{ feedback }}</text>
       <text v-if="session.status === 'authenticating'" class="in-flight">登录中，请稍候…</text>
 
@@ -336,6 +350,10 @@ import {
 } from '@features/home/business-data-source'
 import { useLocalDraftDiagnosticsStore } from '@features/home/draft-diagnostics'
 import { submitLogin, type LoginSubmissionState } from '@features/session/login'
+import {
+  legalLoginPolicies, manualLoginConsentIssue, manualLoginConsentMessage,
+  submitR1ManualLogin,
+} from '@features/session/login-consent'
 import { r1ManualLoginIssue, r1ManualLoginIssueText } from '@features/session/r1-manual-login-preflight'
 import { resolveQuickLoginInput } from '@features/session/quick-login'
 import {
@@ -356,6 +374,9 @@ const workOrderDetail = useWorkOrderDetailStore()
 const draftDiagnostics = useLocalDraftDiagnosticsStore()
 const phoneNumber = ref('')
 const verificationCode = ref('')
+const manualConsent = ref(false)
+const loginPolicies = legalLoginPolicies(import.meta.env)
+const loginPoliciesReady = computed(() => Boolean(loginPolicies.privacyUrl && loginPolicies.agreementUrl))
 const loginStage = ref<LoginStage>('launch')
 const message = ref('')
 const logoutInFlight = ref(false)
@@ -471,6 +492,17 @@ async function clearMockDrafts(): Promise<void> {
   await draftDiagnostics.clearMockDrafts()
 }
 
+function onLoginConsentChange(event: Event): void {
+  const values = (event as Event & { detail?: { value?: string[] } }).detail?.value ?? []
+  manualConsent.value = loginPoliciesReady.value && values.includes('accepted')
+}
+
+function openLoginPolicy(kind: 'privacy' | 'agreement'): void {
+  if (kind === 'privacy' && !loginPolicies.privacyUrl) return
+  if (kind === 'agreement' && !loginPolicies.agreementUrl) return
+  void uni.navigateTo({ url: '/pages/legal/legal?kind=' + kind })
+}
+
 async function submit(): Promise<void> {
   if (isBusy.value) return
   message.value = ''
@@ -479,9 +511,16 @@ async function submit(): Promise<void> {
     message.value = r1ManualLoginIssueText(issue)
     return
   }
-  const result = await submitLogin(
+  const consentIssue = manualLoginConsentIssue(manualConsent.value, loginPolicies)
+  if (consentIssue) {
+    message.value = manualLoginConsentMessage(consentIssue)
+    return
+  }
+  const result = await submitR1ManualLogin(
     { phoneNumber: phoneNumber.value, verificationCode: verificationCode.value },
     submissionState,
+    manualConsent.value,
+    loginPolicies,
     (request) => session.login(request),
   )
   if (result.state === 'succeeded') {
@@ -1443,6 +1482,38 @@ function userFacingLoginMessage(error: OperationError | null | undefined): strin
   color: #526079;
 }
 
+.login-consent-panel {
+  margin-top: 24rpx;
+  padding: 14rpx 0;
+}
+.login-consent-label {
+  align-items: center;
+  display: flex;
+  font-size: 25rpx;
+  gap: 6rpx;
+  color: #34435c;
+}
+.login-legal-links {
+  display: flex;
+  justify-content: flex-start;
+  gap: 14rpx;
+  margin-top: 4rpx;
+}
+.login-legal-link {
+  background: transparent;
+  border: 0;
+  color: #1478f2;
+  font-size: 24rpx;
+  margin: 0;
+  padding: 0;
+}
+.login-legal-link[disabled] {
+  color: #8895a8;
+}
+.login-consent-unavailable {
+  color: #b42318;
+  font-size: 22rpx;
+}
 .form-stage > .submit {
   margin-top: 40rpx;
 }
