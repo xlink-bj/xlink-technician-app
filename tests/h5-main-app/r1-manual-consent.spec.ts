@@ -20,7 +20,7 @@ for (const width of [375, 390]) {
     await page.locator('.field input[placeholder="请输入手机号"]').fill('13800000000')
     await page.locator('.code-field input').fill('123456')
     await expect(page.getByTestId('r1-login-consent')).toContainText('登录协议尚未配置')
-    await expect(page.locator('.login-consent-panel checkbox')).toBeDisabled()
+    await expect(page.locator('.login-consent-label')).toContainText('我已阅读并同意')
     await page.locator('.form-stage > .submit').click()
     await expect(page.locator('.form-stage .feedback')).toContainText('登录协议尚未配置')
     expect(forbidden).toEqual([])
