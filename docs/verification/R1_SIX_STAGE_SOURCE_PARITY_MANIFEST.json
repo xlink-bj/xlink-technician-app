@@ -215,9 +215,26 @@
       "confirmedOpenGaps": [
         "R1 Survey 与 InspectionAppointment 是不同实体，不得按界面术语混用；FormData→Survey 后端副作用未实测",
         "真实勘察 ExtField 表单值规则、图片水印/上传及读回未闭环",
-        "真机相机、断网恢复与 Workflow Complete 未验收"
+        "真机相机、断网恢复与 Workflow Complete 未验收",
+        "旧后台 ExtFormServiceImpl 的新建 Survey 会复制 ServiceAppointment 客户/服务/组织字段并更新 SLA；新 App Mock 表单保存不证明上述后端副作用"
       ],
-      "simulatorGoal": "实际主 App 勘察动态字段、维修部位、漏水原因、媒体状态和错误恢复"
+      "simulatorGoal": "实际主 App 勘察动态字段、维修部位、漏水原因、媒体状态和错误恢复",
+      "r1BackendEvidence": [
+        {
+          "path": "src/main/java/com/fsgo/service/biz/ExtFormServiceImpl.java",
+          "blob": "3f6a8f6c546c0cbcd2fdb9f3fd7442dac3062be6",
+          "from": 143,
+          "to": 187,
+          "fact": "R1 ExtForm upsert 根据租户和 Ext.colName 分支：新增 survey 会解析成 Survey、根据 sid 查 ServiceAppointment 并复制服务类型/客户/组织字段，执行 SLA 更新后保存独立 Survey 实体；InspectionAppointment 是另一个分支"
+        },
+        {
+          "path": "src/main/java/com/fsgo/entity/basic/Survey.java",
+          "blob": "a65e7390af36973f317388a10624f8f103f50e9f",
+          "from": 1,
+          "to": 29,
+          "fact": "R1 Survey 是 ExtDataEntity 的独立 survey collection，字段包括 surveyNum/name/phone/sid 等，不能因为使用 ExtField 动态表单而替换成 InspectionAppointment"
+        }
+      ]
     },
     {
       "id": "quotation",
@@ -270,9 +287,19 @@
         "同一个 R1 报价页面的两条不同写入链路不得互换；creatQuotation 仍禁止调用",
         "真实 active SPU/SKU 选规价格、渠道/租户适用范围及 sourceType 未验证",
         "优惠券、折扣、加减项及套餐 SKU 计价路径不应被 UI 默认为全量支持",
-        "正式 type=1 Order 写入与回读、金额一致性需独立业务写入授权"
+        "正式 type=1 Order 写入与回读、金额一致性需独立业务写入授权",
+        "后端 GoodsServiceImpl 的 form=mini/组织价格覆盖与 sourceType 过滤必须核对原 R1 实际调用上下文；不可简单把任何返回的 price 当作已授权真实 SKU 成交价"
       ],
-      "simulatorGoal": "四类目录、维修组、套餐材料、金额本地计算、报价/正式订单状态区分，不创建真实订单"
+      "simulatorGoal": "四类目录、维修组、套餐材料、金额本地计算、报价/正式订单状态区分，不创建真实订单",
+      "r1BackendEvidence": [
+        {
+          "path": "src/main/java/com/fsgo/service/biz/GoodsServiceImpl.java",
+          "blob": "09f7fe784418e901d60e50e549987e40395b8c31",
+          "from": 376,
+          "to": 448,
+          "fact": "R1 GoodsServiceImpl.queryWithRank 以 currentUser/currentAccount/tenantId 过滤；sourceType 分支改写 sourceTypeList 与组织范围；form=mini 还可能用 servicePrice 覆盖 Material.price、用组织已审核价覆盖 Procedure/Measure 指导价；这不证明前端价格对当前工单具有权威性"
+        }
+      ]
     },
     {
       "id": "signing",
