@@ -69,6 +69,15 @@ describe('R1 original source -> six-stage simulator evidence is not business acc
     expect(swapped.status).not.toBe(0)
     expect(swapped.output).toContain('UNPINNED_OR_CHANGED_R1_BLOB')
   })
+  it('cannot erase saveOnly/full FormData upsert versus Workflow stage distinction',()=>{
+    const r=run(m=>{
+      m.stages[2].r1Evidence=m.stages[2].r1Evidence.filter(
+        (e:{fact:string})=>!e.fact.includes('dataStr:JSON.stringify(params)')
+      )
+    })
+    expect(r.status).not.toBe(0)
+    expect(r.output).toContain('APPOINTMENT_SAVE_WIRE_OR_WORKFLOW_GAP_SILENCED')
+  })
   it('cannot label a Mock browser fixture as real device/tenant validation',()=>{
     const r=run(m=>{m.simulator.kind='PRODUCTION_ACCEPTANCE'})
     expect(r.status).not.toBe(0)
