@@ -1485,7 +1485,6 @@ function userFacingLoginMessage(error: OperationError | null | undefined): strin
 .login-consent-label {
   align-items: center;
   display: flex;
-  font-size: 25rpx;
   gap: 6rpx;
   color: inherit;
 }
@@ -1499,7 +1498,6 @@ function userFacingLoginMessage(error: OperationError | null | undefined): strin
   background: transparent;
   border: 0;
   color: var(--login-link-color, royalblue);
-  font-size: 24rpx;
   margin: 0;
   padding: 0;
 }
@@ -1508,7 +1506,6 @@ function userFacingLoginMessage(error: OperationError | null | undefined): strin
 }
 .login-consent-unavailable {
   color: firebrick;
-  font-size: 22rpx;
 }
 .form-stage > .submit {
   margin-top: 40rpx;
