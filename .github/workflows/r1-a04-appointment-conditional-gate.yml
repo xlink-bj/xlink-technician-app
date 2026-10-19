@@ -1,0 +1,65 @@
+name: R1 A04 Appointment conditional runtime (NO business writes)
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'src/features/work-orders/appointment-form-runtime.ts'
+      - 'tests/engineering/r1-appointment-conditional-runtime.test.ts'
+      - '.github/workflows/r1-a04-appointment-conditional-gate.yml'
+permissions:
+  contents: read
+jobs:
+  source-contract-and-all-platforms:
+    if: github.event.pull_request.draft == true && github.event.pull_request.head.ref == 'engineering/r1-appointment-conditional-runtime-fence'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      VITE_XLINK_ENVIRONMENT: test
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Exact changed-contract regression
+        run: |
+          pnpm exec vitest run \
+            tests/engineering/r1-appointment-conditional-runtime.test.ts \
+            tests/engineering/r1-appointment-wire-unification.test.ts \
+            tests/g4d/appointment-action-content.test.ts \
+            tests/g4d/accept-appointment.test.ts
+      - run: pnpm verify:critical
+      - run: pnpm verify:full
+      - run: pnpm build:h5 && pnpm build:mp-weixin && pnpm build:app
+  h5-main-journey-and-unchanged-goldens:
+    if: github.event.pull_request.draft == true && github.event.pull_request.head.ref == 'engineering/r1-appointment-conditional-runtime-fence'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+      H5_VISUAL_OWNER_APPROVAL: 'PENDING'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: |
+          pnpm exec playwright install --with-deps chromium
+          sudo apt-get update -qq
+          sudo apt-get install -y fonts-noto-cjk
+      - run: pnpm exec playwright test --config playwright.main-h5-mock.config.ts tests/h5-main-mock/m1-i7-six-stage-integration.spec.ts
+      - run: pnpm test:ds02a:gallery
+      - run: pnpm test:ds02a:business
