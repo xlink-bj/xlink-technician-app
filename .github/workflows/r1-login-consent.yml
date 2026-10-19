@@ -10,6 +10,7 @@ on:
       - 'src/pages/legal/legal.vue'
       - 'src/pages.json'
       - 'tests/engineering/r1-manual-login-consent.test.ts'
+      - 'tests/g4a/r1-manual-login-preflight.test.ts'
       - 'tests/h5-main-app/r1-manual-consent.spec.ts'
 permissions:
   contents: read
@@ -27,12 +28,12 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
           persist-credentials: false
-      - name: Pinned parent and eight paths only
+      - name: Pinned parent and nine paths only
         run: |
           set -euo pipefail
           git merge-base --is-ancestor 1082a24d27c0e09e3c5faaec8fca38e140cc0f60 HEAD
           git diff --name-only 1082a24d27c0e09e3c5faaec8fca38e140cc0f60 HEAD | sort > /tmp/actual
-          printf '%s\n' '.github/workflows/r1-login-consent.yml' 'docs/engineering/R1_LOGIN_CONSENT_GATE.md' 'src/features/session/login-consent.ts' 'src/pages/index/index.vue' 'src/pages/legal/legal.vue' 'src/pages.json' 'tests/engineering/r1-manual-login-consent.test.ts' 'tests/h5-main-app/r1-manual-consent.spec.ts' | sort > /tmp/expected
+          printf '%s\n' '.github/workflows/r1-login-consent.yml' 'docs/engineering/R1_LOGIN_CONSENT_GATE.md' 'src/features/session/login-consent.ts' 'src/pages/index/index.vue' 'src/pages/legal/legal.vue' 'src/pages.json' 'tests/engineering/r1-manual-login-consent.test.ts' 'tests/g4a/r1-manual-login-preflight.test.ts' 'tests/h5-main-app/r1-manual-consent.spec.ts' | sort > /tmp/expected
           diff -u /tmp/expected /tmp/actual
           test "$(git diff --name-only 1082a24d27c0e09e3c5faaec8fca38e140cc0f60 HEAD -- src/adapters src/shared src/runtimes pnpm-lock.yaml tests/ds02a-main/snapshots tests/ds02a-gallery/snapshots | wc -l)" -eq 0
       - uses: pnpm/action-setup@v4
