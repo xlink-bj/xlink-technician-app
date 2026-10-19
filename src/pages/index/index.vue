@@ -306,8 +306,10 @@
           </label>
         </checkbox-group>
         <view class="login-legal-links">
-          <button class="login-legal-link" :disabled="!loginPolicies.privacyUrl" @tap="openLoginPolicy('privacy')">隐私政策</button>
-          <button class="login-legal-link" :disabled="!loginPolicies.agreementUrl" @tap="openLoginPolicy('agreement')">用户协议</button>
+          <navigator v-if="loginPolicies.privacyUrl" class="login-legal-link" url="/pages/legal/legal?kind=privacy">隐私政策</navigator>
+          <text v-else class="login-legal-link login-legal-link--disabled">隐私政策</text>
+          <navigator v-if="loginPolicies.agreementUrl" class="login-legal-link" url="/pages/legal/legal?kind=agreement">用户协议</navigator>
+          <text v-else class="login-legal-link login-legal-link--disabled">用户协议</text>
         </view>
         <text v-if="!loginPoliciesReady" class="login-consent-unavailable">登录协议尚未配置，请联系管理员</text>
       </view>
@@ -495,12 +497,6 @@ async function clearMockDrafts(): Promise<void> {
 function onLoginConsentChange(event: Event): void {
   const values = (event as Event & { detail?: { value?: string[] } }).detail?.value ?? []
   manualConsent.value = loginPoliciesReady.value && values.includes('accepted')
-}
-
-function openLoginPolicy(kind: 'privacy' | 'agreement'): void {
-  if (kind === 'privacy' && !loginPolicies.privacyUrl) return
-  if (kind === 'agreement' && !loginPolicies.agreementUrl) return
-  void uni.navigateTo({ url: '/pages/legal/legal?kind=' + kind })
 }
 
 async function submit(): Promise<void> {
@@ -1507,7 +1503,7 @@ function userFacingLoginMessage(error: OperationError | null | undefined): strin
   margin: 0;
   padding: 0;
 }
-.login-legal-link[disabled] {
+.login-legal-link--disabled {
   color: #8895a8;
 }
 .login-consent-unavailable {
