@@ -18,12 +18,18 @@
 | --- | --- | --- | --- |
 | ① 登录与角色 | `loginAuth.vue:324–349` 登录前协议同意；`phoneLogin.do` 的 method/phone/code/tenantId；`:438–454` 按 roleIds 加载菜单 | 短信码登录及 L01 格式预检、Session/角色模型、隔离 Mock 入口 | **用户协议同意阻断与密码登录模式尚未证明等价**；真实角色树、token 生命周期、错误/退出 |
 | ② 工单列表及详情 | 主技术员导航是 ServiceAppointment；普通 `query` / SANode `querySAWorkflowNode`；详情 `queryById/{id}` 返回 workflow/node | 列表、搜索、详情、当前节点、权限及 Order 只读有界守卫 | 不同角色/租户的真实列表、节点 Handler、接单、手机号中间号，不能借用其他 WorkOrder 包 |
-| ③ 预约 | 当前工作流表单驱动“是否需要上门/日期/备注”及保存/Workflow Complete | 动态表单引擎、`need=1/0` 分支、持久草稿、Mock Workflow | **`need=0` 时 datetime wire 语义未知**；保存与工作流完成必须分离，真实回读/撤销 |
+| ③ 预约 | `saveForm` 用 `dataStr:JSON.stringify(formData+sid/smodule/nodeId)` 调 `biz/extForm/upsert`，`saveOnly` 不校验必填/不处理 Workflow；普通提交按 `showType` 校验，`need=1` 才尝试手机日历 | 动态表单引擎、`need=1/0` 分支、持久草稿、Mock Workflow | **R1 在检查的保存路径未显式剔除 `need=0` 的 datetime；新 App 会排除该无效字段**。两者 wire 不能直接判为等价；另需保存/Workflow/process 分离及权威回读 |
 | ④ 现场勘察 | ServiceAppointment 当前流程；Ext/ExtField/FormData、后端 Survey 为独立业务实体 | Survey 领域组件、动态字段、渗漏原因、维修部位、媒体合同 | **Survey ≠ InspectionAppointment**；真实 ExtField、摄像/水印/上传/弱网与节点完成回读 |
 | ⑤ 报价与订单 | `placeOrders.vue:4204–4253` type0/type1 分支；`:6913–6959` `creatQuotation` 用 data；`:4320–4345` `upsert` 用 order | 目录/套餐/组、R1 纯金额规则、type1 编码与严格提交门禁 | **报价 type0 ≠ 正式 Order type1**；SKU 销售属性/有效价格、折扣与优惠、真实订单存取均未验收 |
 | ⑥ 合同与签署 | 主 ServiceAppointment `contract/query.do` 用 serviceAppointmentId；线下签 `.do` 带 type1，电子签不是同一调用 | 正式 Order 有界预读、合同只读隔离、Signing UI 与命令意图拒绝执行 | **合同生成、短信、PDF、签署人 ACL、正式签署回读均未验证**；Mock signed 只代表展示 |
 
 以上属于**源证据与代码核对**，对照可复核，但真实账号和设备/后端运行时行为在特殊环境完成之前一律 NOT_VERIFIED。
+
+### 预约 FormData 细项（源码核验，而非生产写入）
+
+R1 主工单页面 `business/subpackages/serviceAppointment/serviceAppointment.vue:7114–7184`：`saveOnly` 跳过必填；通常提交在字段可见且需要填写时校验，然后把扩展字段写入 `exts`。`:7208–7240` 将当前 `formData` 作为 `params`，附加 `sid`、`smodule`、`workflowId` 和 `nodeId`；`:7400–7455` 发出 `biz/extForm/upsert/{nodeFormDefId}`，Body 是 JSON 字符串字段 `dataStr`。仅 `need='1'` 时尝试添加日历，日历失败不能阻断业务保存；`:7528–7622` 的 `workflow/process` 是另一个需要真实命令许可的步骤。
+
+**当前显著差异：**新 App 把无需上门时的 `datetime` 排除出有效命令值；被检查的 R1 `saveForm` 分支未显示等价的删除操作。可以继续保留新 App 更保守的防脏数据实现，但必须把 wire 等价状态标为 **UNVERIFIED**，等已授权的原始 ExtForm 表单与服务端保存规则证明后，再决定是否需要序列化兼容处理。不能仅凭 Mock 测试把这项标为 PASS。
 
 ## 交给本地 Codex 的执行约束
 
