@@ -52,6 +52,15 @@ const originalSources={
   quotation: {'business/subpackages/order/placeOrders.vue':'b8d8cad48783397eea907f6bb0c6f42e05673cc7'},
   signing: {'business/subpackages/serviceAppointment/serviceAppointment.vue':'466cdbfb26850fae13149ef05b22740e93aed9be'},
 }
+const backendOriginalSources={
+  survey:{
+    'src/main/java/com/fsgo/service/biz/ExtFormServiceImpl.java':'3f6a8f6c546c0cbcd2fdb9f3fd7442dac3062be6',
+    'src/main/java/com/fsgo/entity/basic/Survey.java':'a65e7390af36973f317388a10624f8f103f50e9f',
+  },
+  quotation:{
+    'src/main/java/com/fsgo/service/biz/GoodsServiceImpl.java':'09f7fe784418e901d60e50e549987e40395b8c31',
+  },
+}
 const expectedIds=['login','work_orders','appointment','survey','quotation','signing']
 const stageRefs={
   login:['L01','L02','L03','L04'],
@@ -95,6 +104,26 @@ assert(appointment.r1Evidence.some(e=>e.fact.includes('saveOnly'))
   && appointment.r1Evidence.some(e=>e.fact.includes('workflow/process'))
   && appointment.confirmedOpenGaps.some(e=>e.includes('datetime')),
   'APPOINTMENT_SAVE_WIRE_OR_WORKFLOW_GAP_SILENCED')
+for(const id of ['survey','quotation']){
+  const stage=m.stages[expectedIds.indexOf(id)]
+  const pins=backendOriginalSources[id]
+  const records=stage.r1BackendEvidence
+  assert(Array.isArray(records)&&records.length===Object.keys(pins).length,
+    'MISSING_BACKEND_SOURCE_PROOF:'+id)
+  assert(new Set(records.map(x=>x.path)).size===records.length,'DUPLICATED_BACKEND_SOURCE:'+id)
+  for(const x of records){
+    assert(Object.hasOwn(pins,x.path)&&pins[x.path]===x.blob,'UNPINNED_BACKEND_BLOB:'+id)
+    assert(Number.isInteger(x.from)&&x.from>0&&Number.isInteger(x.to)
+      &&x.to>=x.from&&x.to-x.from<=150,'UNBOUNDED_BACKEND_LINES:'+id)
+    assert(typeof x.fact==='string'&&x.fact.length>=45,'UNEXPLAINED_BACKEND_SIDE_EFFECT:'+id)
+  }
+}
+assert(m.stages[3].r1BackendEvidence.some(x=>x.fact.includes('SLA')
+    && x.fact.includes('ServiceAppointment')&&x.fact.includes('Survey')),
+    'SURVEY_TYPED_SIDE_EFFECT_SILENCED')
+assert(m.stages[4].r1BackendEvidence.some(x=>x.fact.includes('form=mini')
+    && x.fact.includes('sourceType')&&x.fact.includes('tenantId')),
+    'CATALOG_PRICE_CONTEXT_SILENCED')
 const q=m.stages[4]
 assert(q.r1Evidence.length===3&&q.r1Evidence.some(e=>e.fact.includes('creatQuotation'))
   && q.r1Evidence.some(e=>e.fact.includes('upsert'))
@@ -124,7 +153,7 @@ const result={
   state:'R1_SOURCE_GROUNDED_SYNTHETIC_ENGINEERING_ONLY',
   sourcePins:{frontend:front,backend},
   stages:expectedIds,
-  frozenEvidenceAnchors:m.stages.reduce((a,s)=>a+s.r1Evidence.length,0),
+  frozenEvidenceAnchors:m.stages.reduce((a,s)=>a+s.r1Evidence.length+(s.r1BackendEvidence?.length??0),0),
   linkedBehaviorTests:new Set(allTests).size,
   distinctR1Writes:['type0:basic/order/creatQuotation','type1:basic/order/upsert',
     'signing:signature/applyForElectronicSignature'],
