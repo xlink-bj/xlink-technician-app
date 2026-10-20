@@ -300,4 +300,109 @@ describe('G4-F Phase 1I order submission', () => {
     expect((await submitQuotationOrder(ctx.input)).state).toBe('write_succeeded_readback_pending')
     expect(ctx.finalizeDraft).not.toHaveBeenCalled()
   })
+  it('fails closed on a durable receipt from a different role/session, even for the same user and WorkOrder', async () => {
+    const ctx = setup()
+    expect((await submitQuotationOrder(ctx.input)).state).toBe('succeeded')
+    const switched = { ...ctx.input, authorizationIdentityKey: 'synthetic-session:role-b:v2' }
+    const before = vi.mocked(ctx.command.upsertOfficialOrder).mock.calls.length
+    expect((await restoreQuotationOrderSubmissionState({
+      userId: ctx.input.userId, authorizationIdentityKey: switched.authorizationIdentityKey,
+      workOrderId, workflowNodeId: nodeId, storage: ctx.port,
+    })).state).toBe('failed_terminal')
+    expect((await retryQuotationOrderReadback(switched)).state).toBe('failed_terminal')
+    expect((await submitQuotationOrder(switched)).state).toBe('failed_ambiguous_after_dispatch')
+    expect(vi.mocked(ctx.command.upsertOfficialOrder).mock.calls.length).toBe(before)
+  })
+
+  it('prevents a different-role concurrent flight while preserving same-role coalescing', async () => {
+    let release!: (value: OperationSnapshot<string>) => void
+    const start = vi.fn(() => new Promise<OperationSnapshot<string>>(resolve => { release = resolve }))
+    const ctx = setup({ start })
+    const first = submitQuotationOrder(ctx.input)
+    const same = submitQuotationOrder(ctx.input)
+    await vi.waitFor(() => expect(start).toHaveBeenCalledTimes(1))
+    const other = await submitQuotationOrder({
+      ...ctx.input, authorizationIdentityKey: 'role-b-same-order',
+    })
+    expect(other.state).toBe('failed_terminal')
+    release(success('synthetic-same-workflow'))
+    expect((await first).state).toBe('succeeded')
+    expect((await same).state).toBe('succeeded')
+    expect(start).toHaveBeenCalledTimes(1)
+    expect(ctx.command.upsertOfficialOrder).toHaveBeenCalledTimes(1)
+  })
+
+  it('never restarts a dispatched child workflow after terminal-shaped response', async () => {
+    const ctx = setup({ start: vi.fn(async () => fail<string>('server_terminal')) })
+    expect((await submitQuotationOrder(ctx.input)).state).toBe('failed_ambiguous_after_dispatch')
+    expect((await submitQuotationOrder(ctx.input)).state).toBe('failed_ambiguous_after_dispatch')
+    expect(ctx.command.startOrderWorkflow).toHaveBeenCalledTimes(1)
+    expect(ctx.command.upsertOfficialOrder).not.toHaveBeenCalled()
+    const restored = await restoreQuotationOrderSubmissionState({
+      userId: ctx.input.userId, authorizationIdentityKey: ctx.input.authorizationIdentityKey,
+      workOrderId, workflowNodeId: nodeId, storage: ctx.port,
+    })
+    expect(restored.state).toBe('failed_ambiguous_after_dispatch')
+  })
+
+  it('stops Order upsert if role is revoked after a confirmed workflow start', async () => {
+    let authorized = true
+    const ctx = setup({ start: vi.fn(async () => {
+      authorized = false
+      return success('confirmed-workflow')
+    }) })
+    const input = { ...ctx.input, authorizationCurrent: () => authorized }
+    expect((await submitQuotationOrder(input)).state).toBe('failed_terminal')
+    expect(ctx.command.startOrderWorkflow).toHaveBeenCalledTimes(1)
+    expect(ctx.command.upsertOfficialOrder).not.toHaveBeenCalled()
+    authorized = true
+    expect((await submitQuotationOrder(input)).state).toBe('succeeded')
+    expect(ctx.command.startOrderWorkflow).toHaveBeenCalledTimes(1)
+    expect(ctx.command.upsertOfficialOrder).toHaveBeenCalledTimes(1)
+  })
+
+  it('persists confirmed Order identity without reading or cleaning on revoked role', async () => {
+    let authorized = true
+    const ctx = setup({ upsert: vi.fn(async () => {
+      authorized = false
+      return success(orderId)
+    }) })
+    const input = { ...ctx.input, authorizationCurrent: () => authorized }
+    expect((await submitQuotationOrder(input)).state).toBe('write_succeeded_readback_pending')
+    expect(ctx.read).not.toHaveBeenCalled()
+    expect(ctx.finalizeDraft).not.toHaveBeenCalled()
+    authorized = true
+    expect((await retryQuotationOrderReadback(input)).state).toBe('succeeded')
+    expect(ctx.command.upsertOfficialOrder).toHaveBeenCalledTimes(1)
+    expect(ctx.finalizeDraft).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not finalize a draft when authorization changes while readback is in flight', async () => {
+    let authorized = true
+    const ctx = setup({ read: vi.fn(async () => {
+      authorized = false
+      return success(authoritativeOrder())
+    }) })
+    const input = { ...ctx.input, authorizationCurrent: () => authorized }
+    expect((await submitQuotationOrder(input)).state).toBe('write_succeeded_readback_pending')
+    expect(ctx.finalizeDraft).not.toHaveBeenCalled()
+    expect(ctx.command.upsertOfficialOrder).toHaveBeenCalledTimes(1)
+  })
+
+  it('quarantines legacy receipts with no actor provenance instead of silently adopting them', async () => {
+    const ctx = setup()
+    const key = `draft:quotation-order-receipt:v1:${encodeURIComponent(String(ctx.input.userId))}:${encodeURIComponent(String(workOrderId))}:${encodeURIComponent(String(nodeId))}`
+    ctx.values.set(key, {
+      version: 1, workOrderId, workflowNodeId: nodeId,
+      fingerprint: 'legacy-unscoped', draftVersion: 4, state: 'prepared',
+    })
+    expect((await restoreQuotationOrderSubmissionState({
+      userId: ctx.input.userId, authorizationIdentityKey: ctx.input.authorizationIdentityKey,
+      workOrderId, workflowNodeId: nodeId, storage: ctx.port,
+    })).state).toBe('failed_terminal')
+    expect((await submitQuotationOrder(ctx.input)).state).toBe('failed_terminal')
+    expect(ctx.command.startOrderWorkflow).not.toHaveBeenCalled()
+    expect(ctx.command.upsertOfficialOrder).not.toHaveBeenCalled()
+  })
+
 })
