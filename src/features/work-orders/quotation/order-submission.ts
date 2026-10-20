@@ -19,6 +19,8 @@ export interface QuotationOrderReceipt {
   readonly workOrderId: string
   readonly workflowNodeId: string
   readonly fingerprint: string
+  /** Local actor fingerprint; never store a bearer token. */
+  readonly authorizationFingerprint: string
   readonly draftVersion: number
   readonly state: 'prepared' | 'workflow_start_dispatched' | 'workflow_started' | 'order_upsert_dispatched' | 'ambiguous' | 'write_succeeded_readback_pending' | 'succeeded'
   readonly workflowId?: string
@@ -33,6 +35,8 @@ export interface QuotationOrderSubmissionSnapshot {
 
 export interface QuotationOrderSubmissionInput {
   readonly userId: UserId
+  readonly authorizationIdentityKey: string
+  readonly authorizationCurrent: () => boolean
   readonly workOrderId: WorkOrderId
   readonly workflowNodeId: WorkflowNodeRuntimeId
   readonly workflowDefinitionId?: WorkflowDefinitionId
@@ -74,10 +78,23 @@ function validReceipt(value: unknown): value is QuotationOrderReceipt {
     && typeof receipt.workOrderId === 'string'
     && typeof receipt.workflowNodeId === 'string'
     && typeof receipt.fingerprint === 'string'
+    && typeof receipt.authorizationFingerprint === 'string'
+    && /^[0-9a-f]{16}$/.test(receipt.authorizationFingerprint)
     && Number.isInteger(receipt.draftVersion)
     && ['prepared', 'workflow_start_dispatched', 'workflow_started', 'order_upsert_dispatched', 'ambiguous', 'write_succeeded_readback_pending', 'succeeded'].includes(String(receipt.state))
     && (receipt.workflowId === undefined || typeof receipt.workflowId === 'string')
     && (receipt.orderId === undefined || typeof receipt.orderId === 'string')
+}
+
+function authorizationValid(input: QuotationOrderSubmissionInput): boolean {
+  return typeof input.authorizationIdentityKey === 'string'
+    && input.authorizationIdentityKey.length > 0
+    && input.authorizationCurrent()
+}
+
+function authorizationMatches(scope: string, receipt: QuotationOrderReceipt): boolean {
+  return typeof scope === 'string' && scope.length > 0
+    && receipt.authorizationFingerprint === fingerprint(scope)
 }
 
 function safeMessage(state: QuotationOrderSubmissionState): string {
@@ -96,6 +113,7 @@ async function readReceipt(input: QuotationOrderSubmissionInput): Promise<Operat
   if (result.state !== 'succeeded') return { state: result.state, ...(result.error ? { error: result.error } : {}) }
   if (result.data === null) return { state: 'succeeded', data: null }
   if (!validReceipt(result.data)
+    || !authorizationMatches(input.authorizationIdentityKey, result.data)
     || result.data.workOrderId !== input.workOrderId
     || result.data.workflowNodeId !== input.workflowNodeId) {
     return { state: 'failed_terminal' }
@@ -106,6 +124,7 @@ async function readReceipt(input: QuotationOrderSubmissionInput): Promise<Operat
 /** Restores the duplicate-protection state before the submit CTA can be enabled after app restart. */
 export async function restoreQuotationOrderSubmissionState(input: {
   readonly userId: UserId
+  readonly authorizationIdentityKey: string
   readonly workOrderId: WorkOrderId
   readonly workflowNodeId: WorkflowNodeRuntimeId
   readonly storage: StoragePort
@@ -114,6 +133,7 @@ export async function restoreQuotationOrderSubmissionState(input: {
   if (result.state !== 'succeeded') return { state: 'failed_terminal', message: '本地订单防重记录无法读取，暂不能安全提交。' }
   if (result.data === null) return { state: 'idle' }
   if (!validReceipt(result.data)
+    || !authorizationMatches(input.authorizationIdentityKey, result.data)
     || result.data.workOrderId !== input.workOrderId
     || result.data.workflowNodeId !== input.workflowNodeId) {
     return { state: 'failed_terminal', message: '本地订单防重记录无效，暂不能安全提交。' }
@@ -138,10 +158,14 @@ async function writeReceipt(input: QuotationOrderSubmissionInput, receipt: Quota
 }
 
 async function reconcile(input: QuotationOrderSubmissionInput, receipt: QuotationOrderReceipt): Promise<QuotationOrderSubmissionSnapshot> {
+  if (!authorizationValid(input) || !authorizationMatches(input.authorizationIdentityKey, receipt)) {
+    return { state: 'failed_terminal', message: '账号或角色归属已变化；禁止跨角色读取或清理订单草稿。' }
+  }
   if (!receipt.orderId || !input.readApi.getQuotationOrderById) {
     return { state: 'write_succeeded_readback_pending', message: safeMessage('write_succeeded_readback_pending') }
   }
   const read = await input.readApi.getQuotationOrderById(receipt.orderId)
+  if (!authorizationValid(input)) return { state: 'write_succeeded_readback_pending', message: safeMessage('write_succeeded_readback_pending') }
   if (read.state !== 'succeeded' || !read.data
     || read.data.id !== receipt.orderId
     || read.data.type !== 1
@@ -155,7 +179,8 @@ async function reconcile(input: QuotationOrderSubmissionInput, receipt: Quotatio
   // Local cleanup is post-success only and only when the currently held local
   // draft is still the exact version/payload that produced this Order write.
   // A later edit must never be deleted by a delayed readback.
-  if (receipt.draftVersion === input.expectedDraftVersion
+  if (authorizationValid(input)
+    && receipt.draftVersion === input.expectedDraftVersion
     && receipt.fingerprint === fingerprint(input.payload)) {
     await input.finalizeDraft()
   }
@@ -163,6 +188,7 @@ async function reconcile(input: QuotationOrderSubmissionInput, receipt: Quotatio
 }
 
 async function submitQuotationOrderOnce(input: QuotationOrderSubmissionInput): Promise<QuotationOrderSubmissionSnapshot> {
+  if (!authorizationValid(input)) return { state: 'failed_terminal', message: '账号或角色归属不完整，禁止提交订单。' }
   if (input.payload.type !== 1
     || input.payload.serviceAppointmentId !== input.workOrderId
     || input.expectedDraftVersion !== input.evaluatedDraftVersion
@@ -177,6 +203,7 @@ async function submitQuotationOrderOnce(input: QuotationOrderSubmissionInput): P
   if (input.existingOrderId) {
     if (!input.readApi.getQuotationOrderById) return { state: 'failed_terminal', message: safeMessage('failed_terminal') }
     const existing = await input.readApi.getQuotationOrderById(input.existingOrderId)
+    if (!authorizationValid(input)) return { state: 'failed_terminal', message: '读取现有订单期间权限已失效。' }
     if (existing.state !== 'succeeded' || !existing.data
       || existing.data.id !== input.existingOrderId
       || existing.data.type !== 1
@@ -189,6 +216,7 @@ async function submitQuotationOrderOnce(input: QuotationOrderSubmissionInput): P
   }
 
   const existing = await readReceipt(input)
+  if (!authorizationValid(input)) return { state: 'failed_terminal', message: '读取防重记录期间权限已失效。' }
   if (existing.state !== 'succeeded') return { state: 'failed_terminal', message: safeMessage('failed_terminal') }
   const old = existing.data
   if (old) {
@@ -210,37 +238,40 @@ async function submitQuotationOrderOnce(input: QuotationOrderSubmissionInput): P
     workOrderId: input.workOrderId,
     workflowNodeId: input.workflowNodeId,
     fingerprint: fingerprint(input.payload),
+    authorizationFingerprint: fingerprint(input.authorizationIdentityKey),
     draftVersion: input.expectedDraftVersion,
     state: old?.state === 'workflow_started' ? 'workflow_started' : 'prepared',
     ...(old?.workflowId ? { workflowId: old.workflowId } : {}),
     ...(input.existingOrderId ? { orderId: input.existingOrderId } : {}),
   }
   if (!(await writeReceipt(input, nextReceipt))) return { state: 'failed_retryable_before_write', message: safeMessage('failed_retryable_before_write') }
+  if (!authorizationValid(input)) return { state: 'failed_terminal', message: '提交前账号或角色已变化；未发送业务写入。' }
 
   let workflowId = nextReceipt.workflowId
   if (!input.existingOrderId && !workflowId) {
+    if (!authorizationValid(input)) return { state: 'failed_terminal', message: '业务写入前权限已失效。' }
     if (!(await writeReceipt(input, { ...nextReceipt, state: 'workflow_start_dispatched' }))) {
       return { state: 'failed_retryable_before_write', message: safeMessage('failed_retryable_before_write') }
     }
+    if (!authorizationValid(input)) return { state: 'failed_ambiguous_after_dispatch', message: safeMessage('failed_ambiguous_after_dispatch') }
     const started = await input.command.startOrderWorkflow({
       workOrderId: input.workOrderId,
       workflowDefinitionId: input.workflowDefinitionId!,
     })
     if (started.state !== 'succeeded' || !started.data) {
-      const ambiguous = started.error?.category === 'network_retryable'
-      if (ambiguous) await writeReceipt(input, { ...nextReceipt, state: 'ambiguous' })
-      else await input.storage.remove({ namespace: 'draft', key: receiptKey(input) })
-      return {
-        state: ambiguous ? 'failed_ambiguous_after_dispatch' : 'failed_retryable_before_write',
-        message: safeMessage(ambiguous ? 'failed_ambiguous_after_dispatch' : 'failed_retryable_before_write'),
-      }
+      // Any dispatched write is uncertain without authoritative readback,
+      // regardless of the envelope's terminal/retryable classification.
+      await writeReceipt(input, { ...nextReceipt, state: 'ambiguous' })
+      return { state: 'failed_ambiguous_after_dispatch', message: safeMessage('failed_ambiguous_after_dispatch') }
     }
     workflowId = started.data
     if (!(await writeReceipt(input, { ...nextReceipt, state: 'workflow_started', workflowId }))) {
       return { state: 'failed_ambiguous_after_dispatch', message: '子流程已启动，但本地确认记录未保存；为避免重复启动，已阻止继续提交。' }
     }
+    if (!authorizationValid(input)) return { state: 'failed_terminal', message: '启动流程后角色已变化，禁止写入正式订单。' }
   }
 
+  if (!authorizationValid(input)) return { state: 'failed_terminal', message: '订单写入前权限已失效。' }
   const originalExts = typeof existingOrderSnapshot?.exts === 'object' && existingOrderSnapshot.exts !== null && !Array.isArray(existingOrderSnapshot.exts)
     ? existingOrderSnapshot.exts as Readonly<Record<string, unknown>>
     : {}
@@ -260,22 +291,12 @@ async function submitQuotationOrderOnce(input: QuotationOrderSubmissionInput): P
   if (!(await writeReceipt(input, dispatchReceipt))) {
     return { state: 'failed_terminal', message: '提交保护记录无法保存，未发送订单请求。' }
   }
+  if (!authorizationValid(input)) return { state: 'failed_ambiguous_after_dispatch', message: safeMessage('failed_ambiguous_after_dispatch') }
   const saved = await input.command.upsertOfficialOrder({ order })
   if (saved.state !== 'succeeded' || !saved.data) {
-    const ambiguous = saved.error?.category === 'network_retryable'
-    if (ambiguous) {
-      await writeReceipt(input, { ...nextReceipt, state: 'ambiguous', ...(workflowId ? { workflowId } : {}) })
-    } else if (workflowId) {
-      // A child workflow already exists. Do not restart it; a later explicit
-      // attempt may continue with the persisted workflow identity.
-      await writeReceipt(input, { ...nextReceipt, state: 'workflow_started', workflowId })
-    } else {
-      await input.storage.remove({ namespace: 'draft', key: receiptKey(input) })
-    }
-    return {
-      state: ambiguous ? 'failed_ambiguous_after_dispatch' : 'failed_terminal',
-      message: safeMessage(ambiguous ? 'failed_ambiguous_after_dispatch' : 'failed_terminal'),
-    }
+    // A terminal response does not prove the server did not apply type=1 upsert.
+    await writeReceipt(input, { ...dispatchReceipt, state: 'ambiguous' })
+    return { state: 'failed_ambiguous_after_dispatch', message: safeMessage('failed_ambiguous_after_dispatch') }
   }
   const receipt: QuotationOrderReceipt = {
     ...nextReceipt,
@@ -286,13 +307,14 @@ async function submitQuotationOrderOnce(input: QuotationOrderSubmissionInput): P
   if (!(await writeReceipt(input, receipt))) {
     return { state: 'write_succeeded_readback_pending', message: safeMessage('write_succeeded_readback_pending') }
   }
+  if (!authorizationValid(input)) return { state: 'write_succeeded_readback_pending', message: safeMessage('write_succeeded_readback_pending') }
   return reconcile(input, receipt)
 }
 
 const submissionFlights = new Map<string, Promise<QuotationOrderSubmissionSnapshot>>()
 
 export function submitQuotationOrder(input: QuotationOrderSubmissionInput): Promise<QuotationOrderSubmissionSnapshot> {
-  const key = receiptKey(input)
+  const key = `${receiptKey(input)}:${fingerprint(input.authorizationIdentityKey)}`
   const active = submissionFlights.get(key)
   if (active) return active
   const flight = submitQuotationOrderOnce(input).finally(() => {
@@ -305,7 +327,9 @@ export function submitQuotationOrder(input: QuotationOrderSubmissionInput): Prom
 export async function retryQuotationOrderReadback(
   input: QuotationOrderSubmissionInput,
 ): Promise<QuotationOrderSubmissionSnapshot> {
+  if (!authorizationValid(input)) return { state: 'failed_terminal', message: '当前角色无权回读订单。' }
   const receipt = await readReceipt(input)
+  if (!authorizationValid(input)) return { state: 'failed_terminal', message: '回读期间账号或角色已变化。' }
   if (receipt.state !== 'succeeded' || !receipt.data
     || !['write_succeeded_readback_pending', 'succeeded'].includes(receipt.data.state)) {
     return { state: 'failed_terminal', message: safeMessage('failed_terminal') }
