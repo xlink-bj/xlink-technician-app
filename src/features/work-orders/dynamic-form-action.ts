@@ -5,9 +5,10 @@ import {
   normalizeFieldValue,
   normalizeSubmission,
 } from '@runtimes/dynamic-form'
-import type { EffectiveFieldState, FormFieldSchema, FormRuntimeSurface, NormalizedFieldValue } from '@runtimes/dynamic-form'
+import type { EffectiveFieldState, FormFieldSchema, NormalizedFieldValue } from '@runtimes/dynamic-form'
 import type { DynamicFormRead, AppointmentFormFieldRead } from '@shared/ports'
 import type { FormFieldValue } from '@shared/ports/api'
+import { actionFormSchemaFor, ACTION_FORM_SURFACE } from './action-form-schema'
 import { createOperationError } from '@shared/types'
 import type { OperationSnapshot } from '@shared/types'
 import { surveyMediaDescriptorFor } from './survey-media'
@@ -20,8 +21,6 @@ import {
 export interface DynamicActionField extends AppointmentFormFieldRead {
   readonly runtime: EffectiveFieldState
 }
-
-const ACTION_FORM_SURFACE: FormRuntimeSurface = 'mobile_detail'
 
 /** Product-owned Survey fields retained in evidence, excluded from this action. */
 export function isDeferredSurveyField(
@@ -55,25 +54,9 @@ function schemaFor(
   values: Readonly<Record<string, FormFieldValue>> = {},
   formPurpose?: DynamicFormRead['purpose'],
 ): FormFieldSchema {
-  const unsupportedReason = actionUnsupportedReasonFor(field, values, formPurpose)
-  return {
-    fieldId: field.fieldId,
-    valueKey: field.valueKey,
-    type: field.type,
-    required: field.required,
-    readOnly: field.readOnly,
-    ...(field.order !== undefined ? { order: field.order } : {}),
-    ...(field.state !== undefined ? { state: field.state } : {}),
-    ...(field.fixed !== undefined ? { fixed: field.fixed } : {}),
-    ...(field.operationType !== undefined ? { operationType: field.operationType } : {}),
-    ...(field.presentation ? { presentation: field.presentation as Readonly<Record<string, string | number | boolean>> } : {}),
-    ...(field.showList ? { showList: field.showList } : {}),
-    ...(field.multiple ? { multiple: field.multiple } : {}),
-    ...(field.options?.length ? { inlineOptions: field.options } : {}),
-    ...(field.visibility ? { visibility: field.visibility } : {}),
-    ...(field.valueOption ? { valueOption: field.valueOption } : {}),
-    ...(unsupportedReason ? { unsupportedReason } : {}),
-  }
+  return actionFormSchemaFor(field, {
+    unsupportedReason: actionUnsupportedReasonFor(field, values, formPurpose),
+  })
 }
 
 function toFormValue(value: NormalizedFieldValue): FormFieldValue {
