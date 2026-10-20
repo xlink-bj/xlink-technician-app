@@ -34,6 +34,18 @@ const payload: R1OfficialOrderType1Payload = {
   },
 }
 
+function actorFingerprint(text: string): string {
+  let first = 2166136261
+  let second = 2246822519
+  for (let i = 0; i < text.length; i += 1) {
+    const code = text.charCodeAt(i)
+    first ^= code
+    first = Math.imul(first, 16777619)
+    second ^= code + i
+    second = Math.imul(second, 3266489917)
+  }
+  return `${(first >>> 0).toString(16).padStart(8, '0')}${(second >>> 0).toString(16).padStart(8, '0')}`
+}
 function success<T>(data: T): OperationSnapshot<T> { return { state: 'succeeded', data } }
 function fail<T>(category: 'network_retryable' | 'server_terminal' = 'network_retryable'): OperationSnapshot<T> {
   return { state: 'failed_retryable', error: createOperationError(category, 'sanitized test failure') }
@@ -255,7 +267,7 @@ describe('G4-F Phase 1I order submission', () => {
       workOrderId,
       workflowNodeId: nodeId,
       fingerprint: 'prior-local-only-fingerprint',
-      authorizationFingerprint: 'replace-after-prepared',
+      authorizationFingerprint: actorFingerprint(ctx.input.authorizationIdentityKey),
       draftVersion: 3,
       state: 'prepared',
     })
