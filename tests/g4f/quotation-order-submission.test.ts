@@ -34,7 +34,8 @@ const payload: R1OfficialOrderType1Payload = {
   },
 }
 
-function actorFingerprint(text: string): string {
+function actorFingerprint(input: string): string {
+  const text = JSON.stringify(input)
   let first = 2166136261
   let second = 2246822519
   for (let i = 0; i < text.length; i += 1) {
