@@ -542,7 +542,26 @@ class QuotationCatalogReadAdapter implements QuotationCatalogReadPort {
       ? this.synchronizeCatalogContext(context)
       : null
     const generationAtStart = productionReadOnly ? this.authorizationContextGeneration : null
-    const result = await this.read(() => listRequest(path, context, productionReadOnly, page), map)
+    // Validate the R1 request shape first, without I/O. This keeps the
+    // established sourceType rejection semantics even for malformed contexts,
+    // while the subsequent authorization fence still denies transport.
+    let request: ApiReadRequest
+    try {
+      request = listRequest(path, context, productionReadOnly, page)
+    } catch (error) {
+      return readFailure<T>(error)
+    }
+    // Price-bearing catalog rows cannot be trusted after identity revocation or
+    // without a WorkOrder-derived serviceType/sourceType context. The raw
+    // transport may deny Production catalog routes as well; keep this fence
+    // independent so enabling an authorized route cannot bypass it.
+    if (productionReadOnly && (!scopeAtStart || !catalogContextAtStart)) {
+      return adapterFailure<T>(
+        'authorization_denied',
+        'Production catalog reads require the current authenticated user/role and a Work Order-scoped catalog context.',
+      )
+    }
+    const result = await this.read(request, map)
     if (!productionReadOnly) return result
 
     this.synchronizeProductionReadScope()
