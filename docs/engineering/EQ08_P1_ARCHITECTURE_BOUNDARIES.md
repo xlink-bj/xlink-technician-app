@@ -13,6 +13,9 @@ Status: **Draft candidate**, not production/R1 runtime parity. Base: EQ07 P0 exa
 | `features/work-orders/action-workspace.ts` | User/role + WorkOrder Action state, P0 revision fencing, explicit save vs completion transition | Low-level R1 endpoint encoding |
 | `adapters/api/action-command-wires.ts` | **Pure** R1 FormData upsert and Workflow Process wire representations | Dispatch, retries, optimistic workflow success, price inference |
 | `adapters/api/technician-api-commands.ts` | Transport invocation, response normalization, save then complete ordering (where permitted) | Duplicated field metadata and raw command JSON assembly |
+| `@runtimes/workflow` + `detail-workflow.ts` | Pure actor-visible task selection; UI-only action labels and tone | Ad-hoc workflow state or command encoding in the page/Action Workspace |
+| `quotation/engine.ts` + `quotation/pricing.ts` | Validation → catalog hydration → effective pricing calculation → type=1 payload encoding | Workflow process side effects; page-local price calculations |
+| `quotation/order-submission.ts` | Deliberate formal Order submit, receipt and readback reconciliation | Dynamic-form save semantics; optimistic inferred Order success |
 
 ## Non-negotiable invariants
 
@@ -28,6 +31,6 @@ Status: **Draft candidate**, not production/R1 runtime parity. Base: EQ07 P0 exa
 
 This stacked PR includes the **source-backed conditional Appointment runtime** and five tests from independent Draft #185 on the EQ07 stack. Keep #185 Draft until lead decides reconciliation; this PR does not merge or close it. #186 catalog price-scope remains an independent Draft, not silently incorporated.
 
-The EQ08 read-only CI lane requires isolated schema/wire parity + existing R1 Appointment, Survey, Order regression tests, critical and full checks, H5/MP/App builds, original H5 main Mock journey and unchanged approved Gallery/Business Goldens. Tests are synthetic/offline only.
+The EQ08 read-only CI lane additionally ratchets the **already-correct** Workflow Runtime and Quotation Engine/Order boundary without introducing speculative behavior. It requires isolated schema/wire parity + existing R1 Appointment, Survey, Order regression tests, critical and full checks, H5/MP/App builds, original H5 main Mock journey and unchanged approved Gallery/Business Goldens. Tests are synthetic/offline only.
 
 Real R1 workflows, tenant/SKU effective prices, deferred visit datetime encoding, and device parity remain separate blocked runtime evidence gates.
