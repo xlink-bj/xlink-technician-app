@@ -583,6 +583,8 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
   async function restoreMediaTasks(nextDescriptor: ActionDescriptor): Promise<void> {
     const configured = dependencies
     if (!configured?.mediaUploadQueue || !dynamicForm.value) return
+    const restoreVersion = loadVersion
+    const belongsToLoadingAction = () => loadVersion === restoreVersion && descriptor.value === nextDescriptor
     const listed = await configured.mediaUploadQueue.listForAction({
       userId: nextDescriptor.userId,
       workOrderId: nextDescriptor.workOrderId,
@@ -590,6 +592,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       ...(nextDescriptor.contentIdentity ? { formDefinitionId: String(nextDescriptor.contentIdentity) as FormDefinitionId } : {}),
       ...(dynamicForm.value.dataId ? { formDataId: dynamicForm.value.dataId } : {}),
     })
+    if (!belongsToLoadingAction()) return
     if (listed.state !== 'succeeded' || !listed.data) {
       // Queue metadata is auxiliary to the business read. Keep the form usable
       // while retaining the error for diagnostics instead of inventing values.
@@ -599,9 +602,11 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
 
     let restoredBusinessValue = false
     for (const listedTask of listed.data.filter((candidate) => mediaTaskMatchesDynamicForm(candidate, nextDescriptor, dynamicForm.value!))) {
+      if (!belongsToLoadingAction()) return
       const task = listedTask.state === 'postprocessing'
         ? (await configured.mediaUploadQueue.process(listedTask.taskId)).data ?? listedTask
         : listedTask
+      if (!belongsToLoadingAction()) return
       rememberMediaTask(task)
       if (task.state === 'uploaded' && task.uploadedRef) {
         const fieldUploaded = mediaByField.value[task.scope.fieldId] ?? []
@@ -1669,6 +1674,14 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
 
   async function selectDynamicMedia(fieldId: string, source: 'camera' | 'library'): Promise<OperationSnapshot<void>> {
     const configured = dependencies
+    const commandVersion = loadVersion
+    const currentDescriptor = descriptor.value
+    if (!currentDescriptor || !actionCommandScopeCurrent(commandVersion, currentDescriptor)) {
+      return failure('session_invalid', '照片操作对应的工单或角色已失效。')
+    }
+    if (lifecycle.value === 'submitting' || businessResult.value === 'succeeded') {
+      return failure('validation', '提交期间或业务完成后不可再上传媒体。')
+    }
     const form = dynamicForm.value
     const field = form?.fields.find((candidate) => candidate.fieldId === fieldId)
     const effective = dynamicFields.value.find((candidate) => candidate.fieldId === fieldId)
@@ -1701,10 +1714,14 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     mediaInFlightField.value = fieldId
     mediaStateByField.value = { ...mediaStateByField.value, [fieldId]: 'picking' }
     error.value = null
+    const current = () => actionCommandScopeCurrent(commandVersion, currentDescriptor)
+      && lifecycle.value !== 'submitting' && businessResult.value !== 'succeeded'
+    const stale = () => failure<void>('cancelled', '照片操作对应的工单、角色或状态已改变，结果不再应用。')
     try {
       const picked = source === 'library'
         ? await configured.mediaFilePicker!.pick()
         : await configured.mediaCapture!.capture().then((result) => result.value ? { ...result, value: [result.value] } : result)
+      if (!current()) return stale()
       const selected = picked.state === 'granted' && picked.value
         ? (Array.isArray(picked.value) ? picked.value : [picked.value])
         : []
@@ -1731,10 +1748,12 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
           : result as OperationSnapshot<void>
       }
       for (const media of selected) {
+        if (!current()) return stale()
         const policy = surveyMediaPostUploadPolicyFor(form.purpose, field, media.source)
         let location: MediaEvidenceContext['location'] | undefined
         if (policy === 'remote_location_watermark' && configured.location) {
           const capturedLocation = await configured.location.captureCurrentLocation()
+          if (!current()) return stale()
           if (capturedLocation.state === 'granted' && capturedLocation.value) location = capturedLocation.value
         }
         const evidence: MediaEvidenceContext = {
@@ -1746,10 +1765,10 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
         if (configured.mediaUploadQueue) {
           const queued = await configured.mediaUploadQueue.enqueue({
             scope: {
-              userId: configured.getSession()!.user.id,
-              workOrderId: descriptor.value!.workOrderId,
-              workflowNodeId: descriptor.value!.workflowNodeId,
-              ...(descriptor.value!.contentIdentity ? { formDefinitionId: descriptor.value!.contentIdentity as FormDefinitionId } : {}),
+              userId: currentDescriptor.userId,
+              workOrderId: currentDescriptor.workOrderId,
+              workflowNodeId: currentDescriptor.workflowNodeId,
+              ...(currentDescriptor.contentIdentity ? { formDefinitionId: currentDescriptor.contentIdentity as FormDefinitionId } : {}),
               ...(form.dataId ? { formDataId: form.dataId as FormDataId } : {}),
               fieldId,
               valueKey: field.valueKey,
@@ -1757,14 +1776,17 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
             media,
             evidence,
           })
+          if (!current()) return stale()
           if (queued.state !== 'succeeded' || !queued.data) return processFailure(queued)
           rememberMediaTask(queued.data)
           const processed = await configured.mediaUploadQueue.process(queued.data.taskId)
+          if (!current()) return stale()
           if (processed.data) rememberMediaTask(processed.data)
           if (processed.state !== 'succeeded' || !processed.data?.uploadedRef) return processFailure(processed)
           uploaded.push(processed.data.uploadedRef)
         } else {
           const result = await configured.upload!.upload(media)
+          if (!current()) return stale()
           if (result.state !== 'succeeded' || !result.data) {
             error.value = result.error ?? createOperationError('network_retryable', 'Media upload failed')
             mediaStateByField.value = {
@@ -1779,6 +1801,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
         }
       }
 
+      if (!current()) return stale()
       const previous = mediaByField.value[fieldId] ?? []
       mediaByField.value = {
         ...mediaByField.value,
@@ -1797,7 +1820,9 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       }
       return { state: 'succeeded', data: undefined }
     } finally {
-      mediaInFlightField.value = null
+      if (commandVersion === loadVersion && descriptor.value === currentDescriptor) {
+        mediaInFlightField.value = null
+      }
     }
   }
 
@@ -1811,6 +1836,17 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
 
   async function retryDynamicMedia(fieldId: string): Promise<OperationSnapshot<void>> {
     const configured = dependencies
+    const commandVersion = loadVersion
+    const currentDescriptor = descriptor.value
+    if (!currentDescriptor || !actionCommandScopeCurrent(commandVersion, currentDescriptor)) {
+      return failure('session_invalid', '旧照片处理任务的工单或角色已失效。')
+    }
+    if (lifecycle.value === 'submitting' || businessResult.value === 'succeeded') {
+      return failure('validation', '提交期间或业务完成后不可重试媒体。')
+    }
+    const current = () => actionCommandScopeCurrent(commandVersion, currentDescriptor)
+      && lifecycle.value !== 'submitting' && businessResult.value !== 'succeeded'
+    const stale = () => failure<void>('cancelled', '旧媒体处理结果已失效，不得更新当前工单。')
     const queue = configured?.mediaUploadQueue
     const tasks = mediaTasksByField.value[fieldId] ?? []
     if (!queue || tasks.length === 0) return failure('unsupported_capability', '没有可重试的媒体上传')
@@ -1825,9 +1861,11 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     try {
       const uploaded: UploadedMediaRef[] = []
       for (const task of resumableTasks) {
+        if (!current()) return stale()
         const result = task.state === 'source_uploaded'
           ? await queue.process(task.taskId)
           : await queue.retry(task.taskId)
+        if (!current()) return stale()
         if (result.data) rememberMediaTask(result.data)
         if (result.state !== 'succeeded' || !result.data?.uploadedRef) {
           error.value = result.error ?? createOperationError('network_retryable', 'Media upload failed')
@@ -1837,6 +1875,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
         }
         uploaded.push(result.data.uploadedRef)
       }
+      if (!current()) return stale()
       const previous = mediaByField.value[fieldId] ?? []
       mediaByField.value = {
         ...mediaByField.value,
@@ -1851,14 +1890,18 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       }
       return { state: 'succeeded', data: undefined }
     } finally {
-      mediaInFlightField.value = null
+      if (commandVersion === loadVersion && descriptor.value === currentDescriptor) {
+        mediaInFlightField.value = null
+      }
     }
   }
 
   function canPickDynamicMedia(fieldId: string): boolean {
     const field = dynamicFields.value.find((candidate) => candidate.fieldId === fieldId)
     return Boolean(
-      field
+      lifecycle.value !== 'submitting'
+      && businessResult.value !== 'succeeded'
+      && field
       && (field.type === 'image' || field.type === 'file')
       && field.runtime.capability !== 'UNSUPPORTED'
       && field.runtime.visible
