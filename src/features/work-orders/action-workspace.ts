@@ -945,7 +945,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
         if (!actionCommandScopeCurrent(commandVersion, currentDescriptor)
           || identity !== currentIdentity
           || quotationComposition.draft?.draftVersion !== currentDraft.draftVersion) {
-          return failure('cancelled', '本地报价已变化，保留草稿以避免错误清理。')
+          return failure<void>('cancelled', '本地报价已变化，保留草稿以避免错误清理。')
         }
         const removed = await configured.draftRepository.remove(currentIdentity)
         if (removed.state === 'succeeded'
@@ -1086,7 +1086,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
         if (!actionCommandScopeCurrent(commandVersion, currentDescriptor)
           || identity !== currentIdentity
           || quotationComposition.draft?.draftVersion !== currentDraft.draftVersion) {
-          return failure('cancelled', '角色或草稿已改变，禁止清理。')
+          return failure<void>('cancelled', '角色或草稿已改变，禁止清理。')
         }
         const removed = await configured.draftRepository.remove(currentIdentity)
         if (removed.state === 'succeeded'
