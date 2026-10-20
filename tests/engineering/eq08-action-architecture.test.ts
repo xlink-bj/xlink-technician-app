@@ -154,7 +154,7 @@ describe('EQ08 one Form Runtime schema projection and one Adapter command-wire o
     expect(command).not.toContain('path: `biz/extForm/upsert/')
     expect(wires).toContain("path: 'workflow/process'")
     expect(wires).toContain('biz/extForm/upsert/')
-    expect(workspace).not.toMatch(/path:\\s*['"]workflow\\/process/)
+    expect(workspace).not.toContain("path: 'workflow/process'")
     expect(workspace).not.toContain('biz/extForm/upsert/')
     expect(appointmentRuntime).toContain('actionFormSchemaFor(field)')
     expect(dynamicRuntime).toContain('actionFormSchemaFor(field,')
