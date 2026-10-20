@@ -310,7 +310,7 @@ describe('G4-F Phase 1I order submission', () => {
       workOrderId, workflowNodeId: nodeId, storage: ctx.port,
     })).state).toBe('failed_terminal')
     expect((await retryQuotationOrderReadback(switched)).state).toBe('failed_terminal')
-    expect((await submitQuotationOrder(switched)).state).toBe('failed_ambiguous_after_dispatch')
+    expect((await submitQuotationOrder(switched)).state).toBe('failed_terminal')
     expect(vi.mocked(ctx.command.upsertOfficialOrder).mock.calls.length).toBe(before)
   })
 
