@@ -1046,6 +1046,10 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     const currentDraft = quotationComposition.draft
     const session = configured?.getSession()
     const engine = quotationEngine.result
+    const commandVersion = loadVersion
+    if (!commandSessionScopeCurrent()) {
+      return { state: 'failed_terminal', message: '角色已切换，禁止回读旧报价。' }
+    }
     if (!configured?.quotationOrderCommand || !configured.quotationOrderRead || !configured.storage
       || !currentDescriptor || !currentIdentity || !currentDraft || !session || !engine?.payload) {
       quotationOrderState.value = { state: 'failed_terminal', message: '当前无法安全刷新已提交订单。' }
@@ -1053,6 +1057,10 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     }
     const result = await retryQuotationOrderReadback({
       userId: session.user.id,
+      authorizationIdentityKey: sessionScopeKey(session),
+      authorizationCurrent: () => actionCommandScopeCurrent(commandVersion, currentDescriptor)
+        && identity === currentIdentity
+        && quotationComposition.draft?.draftVersion === currentDraft.draftVersion,
       workOrderId: currentDescriptor.workOrderId,
       workflowNodeId: currentDescriptor.workflowNodeId,
       expectedDraftVersion: currentDraft.draftVersion,
@@ -1063,15 +1071,24 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       readApi: configured.quotationOrderRead,
       storage: configured.storage,
       finalizeDraft: async () => {
+        if (!actionCommandScopeCurrent(commandVersion, currentDescriptor)
+          || identity !== currentIdentity
+          || quotationComposition.draft?.draftVersion !== currentDraft.draftVersion) {
+          return failure('cancelled', '角色或草稿已改变，禁止清理。')
+        }
         const removed = await configured.draftRepository.remove(currentIdentity)
-        if (removed.state === 'succeeded') {
+        if (removed.state === 'succeeded'
+          && actionCommandScopeCurrent(commandVersion, currentDescriptor)
+          && identity === currentIdentity) {
           quotationComposition.clear()
           draftStatus.value = 'clean'
         }
         return removed
       },
     })
-    quotationOrderState.value = result
+    if (actionCommandScopeCurrent(commandVersion, currentDescriptor) && identity === currentIdentity) {
+      quotationOrderState.value = result
+    }
     return result
   }
 
