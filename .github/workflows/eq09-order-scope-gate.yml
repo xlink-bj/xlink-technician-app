@@ -1,0 +1,79 @@
+name: EQ09 P1 Order scope and idempotency (NO business writes)
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'src/features/work-orders/action-workspace.ts'
+      - 'src/features/work-orders/quotation/order-submission.ts'
+      - 'src/adapters/api/quotation-catalog-api.ts'
+      - 'tests/g4f/quotation-order-submission.test.ts'
+      - 'tests/engineering/r1-catalog-price-identity-fence.test.ts'
+      - 'docs/engineering/EQ09_P1_ORDER_SCOPE_RELIABILITY.md'
+      - '.github/workflows/eq09-order-scope-gate.yml'
+permissions:
+  contents: read
+jobs:
+  actor-scope-and-cross-platform:
+    if: github.event.pull_request.draft == true && github.event.pull_request.head.ref == 'engineering/eq09-p1-order-scope-idempotency'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    env:
+      VITE_XLINK_ENVIRONMENT: test
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify exact EQ08 parent and isolated change scope
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor 2fab824a7aff97eb5c36134db45cdad817d7d462 HEAD
+          git diff --name-only 2fab824a7aff97eb5c36134db45cdad817d7d462 HEAD | sort > /tmp/actual
+          printf '%s\n' '.github/workflows/eq09-order-scope-gate.yml' 'docs/engineering/EQ09_P1_ORDER_SCOPE_RELIABILITY.md' 'src/adapters/api/quotation-catalog-api.ts' 'src/features/work-orders/action-workspace.ts' 'src/features/work-orders/quotation/order-submission.ts' 'tests/engineering/r1-catalog-price-identity-fence.test.ts' 'tests/g4f/quotation-order-submission.test.ts' | sort > /tmp/expected
+          diff -u /tmp/expected /tmp/actual
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Current actor, type 1, R1 form and order regressions
+        run: |
+          pnpm exec vitest run \
+            tests/g4f/quotation-order-submission.test.ts \
+            tests/engineering/r1-catalog-price-identity-fence.test.ts \
+            tests/g4f/p0-role-order-tenant-negative.test.ts \
+            tests/g4f/quotation-write-safety.test.ts \
+            tests/g4f/quotation-catalog-read.test.ts \
+            tests/engineering/eq07-command-state-consistency.test.ts \
+            tests/engineering/eq08-action-architecture.test.ts
+      - run: pnpm verify:critical
+      - run: pnpm verify:full
+      - run: pnpm build:h5 && pnpm build:mp-weixin && pnpm build:app
+  original-mock-and-visual-baseline:
+    if: github.event.pull_request.draft == true && github.event.pull_request.head.ref == 'engineering/eq09-p1-order-scope-idempotency'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+      H5_VISUAL_OWNER_APPROVAL: 'PENDING'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: |
+          pnpm exec playwright install --with-deps chromium
+          sudo apt-get update -qq
+          sudo apt-get install -y fonts-noto-cjk
+      - run: pnpm exec playwright test --config playwright.main-h5-mock.config.ts tests/h5-main-mock/m1-i7-six-stage-integration.spec.ts
+      - run: pnpm test:ds02a:gallery
+      - run: pnpm test:ds02a:business
