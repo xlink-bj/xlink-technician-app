@@ -5,6 +5,8 @@ import { useActionWorkspaceStore } from '@features/work-orders/action-workspace'
 import type {
   AppointmentFormRead,
   DynamicFormRead,
+  MediaFilePickerPort,
+  UploadPort,
   SessionSnapshot,
   StoragePort,
   TechnicianApiCommandPort,
@@ -12,7 +14,8 @@ import type {
   WorkOrderDetail,
 } from '@shared/ports'
 import {
-  asOpaqueId, type FormDataId, type OperationSnapshot,
+  asOpaqueId, createCapabilityResult, type FormDataId,
+  type LocalMedia, type OperationSnapshot, type UploadedMediaRef,
 } from '@shared/types'
 
 function success<T>(data: T): OperationSnapshot<T> { return { state: 'succeeded', data } }
@@ -50,6 +53,7 @@ function fixture(kind: 'survey' | 'appointment') {
     fields: [
       { fieldId: 'summary', valueKey: 'summary', label: '情况', type: 'textarea', required: true, readOnly: false },
       { fieldId: 'note', valueKey: 'note', label: '备注', type: 'textarea', required: false, readOnly: false },
+      { fieldId: 'photo', valueKey: 'photo', label: '照片', type: 'image', required: false, readOnly: false },
     ],
     values: {},
   }
@@ -76,6 +80,20 @@ function fixture(kind: 'survey' | 'appointment') {
     remove: vi.fn(async () => success(undefined)),
     listKeys: vi.fn(async () => success([])),
   } as unknown as StoragePort
+  const picker: MediaFilePickerPort = {
+    pick: vi.fn(async () => createCapabilityResult<readonly LocalMedia[]>('photo-library', 'granted', [{
+      ref: asOpaqueId<'LocalMediaRef'>('eq07-local-photo'),
+      localPath: '/tmp/eq07-local-only.jpg',
+      mimeType: 'image/jpeg',
+      source: 'library' as const,
+    }])),
+  }
+  const upload: UploadPort = {
+    upload: vi.fn(async (): Promise<OperationSnapshot<UploadedMediaRef>> => success({
+      url: 'https://mock-upload.invalid/eq07-local-photo', source: 'library',
+      mimeType: 'image/jpeg', uploadState: 'uploaded' as const,
+    })),
+  }
   let activeSession: SessionSnapshot | null = session
   const store = useActionWorkspaceStore()
   store.configure({
@@ -83,10 +101,11 @@ function fixture(kind: 'survey' | 'appointment') {
     draftRepository: createActionDraftRepository(storage),
     navigation: { navigate: vi.fn(async () => undefined) },
     getSession: () => activeSession,
+    mediaFilePicker: picker, upload,
     debounceMs: 60000,
   })
   return {
-    store, api, command, storage, intent,
+    store, api, command, storage, picker, upload, intent,
     changeSession(next: SessionSnapshot | null) { activeSession = next },
     async load() {
       const result = await store.load({ workOrderId, workflowNodeId: nodeId, actionIntent: intent })
@@ -290,4 +309,55 @@ describe('EQ07 P0 command and form revision consistency / synthetic, no business
     expect(x.store.businessResult).toBe('not_started')
     expect(x.store.lifecycle).toBe('available')
   })
+  it('abandons a picker result after changing Action and never starts a stale upload', async () => {
+    const x = fixture('survey')
+    await x.load()
+    const pickerGate = deferred<Awaited<ReturnType<MediaFilePickerPort['pick']>>>()
+    vi.mocked(x.picker.pick).mockImplementationOnce(async () => pickerGate.promise)
+    const pending = x.store.pickDynamicMedia('photo')
+    expect(x.store.mediaInFlightField).toBe('photo')
+    x.store.clear()
+    await x.load()
+    pickerGate.resolve(createCapabilityResult<readonly LocalMedia[]>('photo-library', 'granted', [{
+      ref: asOpaqueId<'LocalMediaRef'>('eq07-old-photo'),
+      localPath: '/tmp/old-only.jpg', mimeType: 'image/jpeg', source: 'library',
+    }]))
+    expect((await pending).error?.category).toBe('cancelled')
+    expect(x.upload.upload).not.toHaveBeenCalled()
+    expect(x.store.dynamicForm?.values.photo).toBeUndefined()
+  })
+
+  it('does not mount a delayed upload response onto a newly loaded form', async () => {
+    const x = fixture('survey')
+    await x.load()
+    const uploadGate = deferred<OperationSnapshot<UploadedMediaRef>>()
+    vi.mocked(x.upload.upload).mockImplementationOnce(async () => uploadGate.promise)
+    const pending = x.store.pickDynamicMedia('photo')
+    await vi.waitFor(() => expect(x.upload.upload).toHaveBeenCalledTimes(1))
+    x.store.clear()
+    await x.load()
+    uploadGate.resolve(success({
+      url: 'https://mock-upload.invalid/old-photo', source: 'library',
+      mimeType: 'image/jpeg', uploadState: 'uploaded',
+    }))
+    expect((await pending).error?.category).toBe('cancelled')
+    expect(x.store.dynamicForm?.values.photo).toBeUndefined()
+    expect(x.store.mediaByField.photo).toBeUndefined()
+  })
+
+  it('does not let media operations edit a form while Workflow Complete is in flight', async () => {
+    const x = fixture('survey')
+    await x.load()
+    x.fill()
+    expect((await x.store.saveDynamicForm()).state).toBe('succeeded')
+    const completionGate = deferred<OperationSnapshot<void>>()
+    vi.mocked(x.command.completeWorkflowNode!).mockImplementationOnce(async () => completionGate.promise)
+    const pending = x.store.completeDynamicForm()
+    expect(x.store.canPickDynamicMedia('photo')).toBe(false)
+    expect((await x.store.pickDynamicMedia('photo')).error?.category).toBe('validation')
+    expect(x.picker.pick).not.toHaveBeenCalled()
+    completionGate.resolve(success(undefined))
+    expect((await pending).state).toBe('succeeded')
+  })
+
 })
