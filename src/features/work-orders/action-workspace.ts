@@ -205,9 +205,10 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
   const quotationOrderState = ref<QuotationOrderSubmissionSnapshot>({ state: 'idle' })
   const quotationEditState = ref<{ readonly state: 'none' | 'loading' | 'ready' | 'blocked'; readonly message?: string }>({ state: 'none' })
   const quotationExistingOrderId = ref<string | null>(null)
-  let quotationOrderInFlight: Promise<QuotationOrderSubmissionSnapshot> | null = null
+  let quotationOrderInFlight: { readonly version: number; readonly promise: Promise<QuotationOrderSubmissionSnapshot> } | null = null
   const canSubmitQuotation = computed(() => Boolean(
     !isProductionReadOnlyRuntime()
+      && commandSessionScopeCurrent()
       && descriptor.value?.contentKind === 'quotation'
       && descriptor.value.actionIntent === 'place_order'
       && descriptor.value.execution === 'enabled'
@@ -774,6 +775,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       quotationOrderState.value = configured.storage
         ? await restoreQuotationOrderSubmissionState({
             userId: session.user.id,
+            authorizationIdentityKey: requestedSessionScope,
             workOrderId: read.data.id,
             workflowNodeId: currentTask.nodeId,
             storage: configured.storage,
@@ -871,7 +873,20 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
   }
 
   async function runQuotationOrderSubmission(): Promise<QuotationOrderSubmissionSnapshot> {
-    if (quotationOrderInFlight) return quotationOrderInFlight
+    if (quotationOrderInFlight?.version === loadVersion) return quotationOrderInFlight.promise
+    const version = loadVersion
+    const flight = submitQuotationOrderScoped()
+    quotationOrderInFlight = { version, promise: flight }
+    try {
+      return await flight
+    } finally {
+      if (quotationOrderInFlight?.version === version && quotationOrderInFlight.promise === flight) {
+        quotationOrderInFlight = null
+      }
+    }
+  }
+
+  async function submitQuotationOrderScoped(): Promise<QuotationOrderSubmissionSnapshot> {
     if (isProductionReadOnlyRuntime()) {
       quotationOrderState.value = { state: 'failed_terminal', message: '生产环境仅开放报价只读查看；不会提交或修改订单。' }
       return quotationOrderState.value
@@ -882,6 +897,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     const currentDraft = quotationComposition.draft
     const engine = quotationEngine.result
     const session = configured?.getSession()
+    const commandVersion = loadVersion
     const currentNode = detail.value?.workflowNodes?.find((node) => node.id === currentDescriptor?.workflowNodeId)
     if (!commandSessionScopeCurrent()) {
       quotationOrderState.value = { state: 'failed_terminal', message: '账号或角色已变化，禁止提交旧报价，请重新进入工单。' }
@@ -893,10 +909,10 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       quotationOrderState.value = { state: 'failed_terminal', message: '当前报价动作尚未具备安全提交条件。' }
       return quotationOrderState.value
     }
+    quotationOrderState.value = { state: 'submitting', message: '正在核对本地报价草稿…' }
     const flushed = await quotationComposition.flushDraft()
-    if (!commandSessionScopeCurrent()) {
-      quotationOrderState.value = { state: 'failed_terminal', message: '保存草稿期间账号或角色已变化，禁止提交旧报价。' }
-      return quotationOrderState.value
+    if (!actionCommandScopeCurrent(commandVersion, currentDescriptor) || identity !== currentIdentity) {
+      return { state: 'failed_terminal', message: '工单或角色已切换，旧报价不再授权写入。' }
     }
     if (flushed.state !== 'succeeded') {
       quotationOrderState.value = { state: 'failed_retryable_before_write', message: '本机报价草稿尚未保存完成，暂不能提交。' }
@@ -910,6 +926,10 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     }
     const input = {
       userId: session.user.id,
+      authorizationIdentityKey: sessionScopeKey(session),
+      authorizationCurrent: () => actionCommandScopeCurrent(commandVersion, currentDescriptor)
+        && identity === currentIdentity
+        && quotationComposition.draft?.draftVersion === currentDraft.draftVersion,
       workOrderId: currentDescriptor.workOrderId,
       workflowNodeId: currentDescriptor.workflowNodeId,
       ...(currentNode?.childWorkflowDefinitionId ? { workflowDefinitionId: currentNode.childWorkflowDefinitionId } : {}),
@@ -922,20 +942,26 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       readApi: configured.quotationOrderRead,
       storage: configured.storage,
       finalizeDraft: async () => {
+        if (!actionCommandScopeCurrent(commandVersion, currentDescriptor)
+          || identity !== currentIdentity
+          || quotationComposition.draft?.draftVersion !== currentDraft.draftVersion) {
+          return failure('cancelled', '本地报价已变化，保留草稿以避免错误清理。')
+        }
         const removed = await configured.draftRepository.remove(currentIdentity)
-        if (removed.state === 'succeeded') {
+        if (removed.state === 'succeeded'
+          && actionCommandScopeCurrent(commandVersion, currentDescriptor)
+          && identity === currentIdentity) {
           quotationComposition.clear()
           draftStatus.value = 'clean'
         }
         return removed
       },
     }
-    quotationOrderState.value = { state: 'submitting', message: '正在提交订单…' }
-    quotationOrderInFlight = submitQuotationOrder(input).then((result) => {
+    const result = await submitQuotationOrder(input)
+    if (actionCommandScopeCurrent(commandVersion, currentDescriptor) && identity === currentIdentity) {
       quotationOrderState.value = result
-      return result
-    }).finally(() => { quotationOrderInFlight = null })
-    return quotationOrderInFlight
+    }
+    return result
   }
 
   async function loadQuotationOrderForEdit(orderId: string): Promise<OperationSnapshot<void>> {
