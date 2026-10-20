@@ -1,0 +1,73 @@
+name: EQ07 P0 Command state consistency (NO business writes)
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'src/features/work-orders/action-workspace.ts'
+      - 'tests/engineering/eq07-command-state-consistency.test.ts'
+      - '.github/workflows/eq07-command-state-gate.yml'
+permissions:
+  contents: read
+jobs:
+  deterministic-regression-and-platforms:
+    if: github.event.pull_request.draft == true && github.event.pull_request.head.ref == 'engineering/eq07-p0-command-state-consistency'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    env:
+      VITE_XLINK_ENVIRONMENT: test
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify expected base and restricted scope
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor b511cb572902fa0118ca02957e4d77ce6b9528da HEAD
+          git diff --name-only b511cb572902fa0118ca02957e4d77ce6b9528da HEAD | sort > /tmp/actual
+          printf '%s\n' '.github/workflows/eq07-command-state-gate.yml' 'src/features/work-orders/action-workspace.ts' 'tests/engineering/eq07-command-state-consistency.test.ts' | sort > /tmp/expected
+          diff -u /tmp/expected /tmp/actual
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: P0 deterministic interleavings and existing source contracts
+        run: |
+          pnpm exec vitest run \
+            tests/engineering/eq07-command-state-consistency.test.ts \
+            tests/g4e/onsite-inspection.test.ts \
+            tests/g4d/accept-appointment.test.ts \
+            tests/engineering/r1-appointment-wire-unification.test.ts \
+            tests/g4f/quotation-order-submission.test.ts
+      - run: pnpm verify:critical
+      - run: pnpm verify:full
+      - run: pnpm build:h5 && pnpm build:mp-weixin && pnpm build:app
+  no-regression-h5-and-goldens:
+    if: github.event.pull_request.draft == true && github.event.pull_request.head.ref == 'engineering/eq07-p0-command-state-consistency'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+      H5_VISUAL_OWNER_APPROVAL: 'PENDING'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: |
+          pnpm exec playwright install --with-deps chromium
+          sudo apt-get update -qq
+          sudo apt-get install -y fonts-noto-cjk
+      - run: pnpm exec playwright test --config playwright.main-h5-mock.config.ts tests/h5-main-mock/m1-i7-six-stage-integration.spec.ts
+      - run: pnpm test:ds02a:gallery
+      - run: pnpm test:ds02a:business
