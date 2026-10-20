@@ -355,6 +355,9 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
   let draftWriteInFlight: Promise<OperationSnapshot<void>> | null = null
   let draftRevision = 0
   let loadVersion = 0
+  // A save may continue after a local edit changes its presentation state.
+  // Keep a separate per-generation in-flight lease to reject duplicate writes.
+  let dynamicSaveInFlightVersion: number | null = null
   // The unscoped v4 draft key is not proof of cross-role ownership.
   // At minimum, never serve a cached action or finish a pending read under
   // a different authenticated session/role than the one that began it.
@@ -375,6 +378,10 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
   function commandSessionScopeCurrent(): boolean {
     const session = dependencies?.getSession()
     return Boolean(session && loadedSessionScope && sessionScopeKey(session) === loadedSessionScope)
+  }
+
+  function actionCommandScopeCurrent(version: number, target: ActionDescriptor): boolean {
+    return version === loadVersion && descriptor.value === target && commandSessionScopeCurrent()
   }
   let surveyLeakageCauseProviderInFlight: Promise<OperationSnapshot<readonly SurveyLeakageCauseRow[]>> | null = null
 
@@ -1064,6 +1071,9 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
   }
 
   function setField(fieldId: string, value: FormFieldValue): OperationSnapshot<void> {
+    if (lifecycle.value === 'submitting' || businessResult.value === 'succeeded') {
+      return failure('validation', '当前业务动作正在提交或已完成，禁止修改表单。')
+    }
     const dynamic = dynamicForm.value
     if (dynamic) {
       const field = dynamic.fields.find((candidate) => candidate.fieldId === fieldId)
@@ -1141,6 +1151,9 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
   }
 
   function setSurveyLeakageCauseSelection(selectedIds: readonly string[]): OperationSnapshot<void> {
+    if (lifecycle.value === 'submitting' || businessResult.value === 'succeeded') {
+      return failure('validation', '当前业务动作正在提交或已完成，禁止修改表单。')
+    }
     const form = dynamicForm.value
     if (!form || surveyLeakageCauseProviderState.value !== 'succeeded') {
       return failure('network_retryable', 'Leakage-cause options are not available')
@@ -1422,15 +1435,20 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     if (!commandSessionScopeCurrent()) return failure('session_invalid', '账号或角色已变化，请重新进入当前表单。')
     const configured = dependencies
     const currentDescriptor = descriptor.value
+    const currentIdentity = identity
     const form = dynamicForm.value
-    if (!configured || !currentDescriptor || !form || !isDynamicFormAction.value) {
+    if (!configured || !currentDescriptor || !currentIdentity || !form || !isDynamicFormAction.value) {
       return failure('validation', 'Dynamic form content is not ready')
     }
     if (!configured.commandApi.saveDynamicForm || !currentDescriptor.contentIdentity) {
       return failure('unsupported_capability', 'Dynamic form saving is unavailable')
     }
-    if (dynamicFormSaveState.value === 'saving') {
+    const commandVersion = loadVersion
+    if (dynamicSaveInFlightVersion === commandVersion) {
       return failure('validation', 'Dynamic form is already saving')
+    }
+    if (lifecycle.value === 'submitting' || businessResult.value === 'succeeded') {
+      return failure('validation', '已完成或正在完成的表单不能再次保存')
     }
     if (dynamicRequiredMediaPending.value || dynamicMediaUploading.value) {
       const mediaError = createOperationError('validation', 'Required media must finish uploading before the form can be saved')
@@ -1447,57 +1465,97 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       return { state: validation.state, ...(validation.error ? { error: validation.error } : {}) }
     }
 
-    const flushed = await flushDraft()
-    if (!commandSessionScopeCurrent()) return failure('session_invalid', '保存草稿期间账号或角色已变化，禁止提交旧表单。')
-    if (flushed.state !== 'succeeded') {
-      error.value = flushed.error ?? null
-      return flushed
-    }
-
+    const savedRevision = draftRevision
+    const stillThisAction = () => commandVersion === loadVersion
+      && descriptor.value === currentDescriptor
+      && identity === currentIdentity
+    const staleDraft = () => failure<void>('cancelled', '表单在保存过程中已被修改，请重新保存最新内容。')
+    // Reserve before the first await: a second tap cannot dispatch a duplicate
+    // FormData mutation while local draft persistence is still pending.
+    dynamicSaveInFlightVersion = commandVersion
     dynamicFormSaveState.value = 'saving'
     error.value = null
-    const result = await configured.commandApi.saveDynamicForm({
-      workOrderId: currentDescriptor.workOrderId,
-      workflowNodeId: currentDescriptor.workflowNodeId,
-      ...(detail.value?.workflowRunId ? { workflowRunId: detail.value.workflowRunId } : {}),
-      definitionId: currentDescriptor.contentIdentity as FormDefinitionId,
-      ...(form.purpose ? { purpose: form.purpose } : {}),
-      ...(form.dataId ? { formDataId: form.dataId } : {}),
-      values: validation.data,
-    })
-    if (result.state !== 'succeeded' || !result.data) {
-      dynamicFormSaveState.value = 'failed'
-      error.value = result.error ?? null
-      return result.state === 'succeeded'
-        ? failure('server_terminal', 'Dynamic form save did not return a record identity')
-        : result as OperationSnapshot<void>
-    }
+    try {
+      const flushed = await flushDraft()
+      if (!stillThisAction()) return failure('cancelled', '已切换工单或表单，忽略旧保存响应。')
+      if (!commandSessionScopeCurrent()) {
+        dynamicFormSaveState.value = 'not_saved'
+        return failure('session_invalid', '保存草稿期间账号或角色已变化，禁止提交旧表单。')
+      }
+      if (savedRevision !== draftRevision) {
+        dynamicFormSaveState.value = 'not_saved'
+        return staleDraft()
+      }
+      if (flushed.state !== 'succeeded') {
+        dynamicFormSaveState.value = 'failed'
+        error.value = flushed.error ?? null
+        return flushed
+      }
 
-    dynamicForm.value = { ...form, values: validation.data, dataId: result.data }
-    dynamicFormSaveState.value = 'saved'
-    lifecycle.value = 'in_progress'
-    error.value = null
-    if (configured.mediaUploadQueue) {
-      for (const task of Object.values(mediaTasksByField.value).flat()) {
-        if (
-          task.state !== 'uploaded'
-          || !task.uploadedRef
-          || !mediaTaskMatchesDynamicForm(task, currentDescriptor, form)
-          || !formValueContainsUploadedRef(validation.data[task.scope.valueKey], task.uploadedRef)
-        ) continue
-        const finalized = await configured.mediaUploadQueue.finalizeAfterSave(task.taskId)
-        if (finalized.state === 'succeeded') {
-          const remaining = (mediaTasksByField.value[task.scope.fieldId] ?? [])
-            .filter((candidate) => String(candidate.taskId) !== String(task.taskId))
-          mediaTasksByField.value = { ...mediaTasksByField.value, [task.scope.fieldId]: remaining }
-          mediaStateByField.value = {
-            ...mediaStateByField.value,
-            [task.scope.fieldId]: taskStateForField(remaining),
+      const result = await configured.commandApi.saveDynamicForm({
+        workOrderId: currentDescriptor.workOrderId,
+        workflowNodeId: currentDescriptor.workflowNodeId,
+        ...(detail.value?.workflowRunId ? { workflowRunId: detail.value.workflowRunId } : {}),
+        definitionId: currentDescriptor.contentIdentity as FormDefinitionId,
+        ...(form.purpose ? { purpose: form.purpose } : {}),
+        ...(form.dataId ? { formDataId: form.dataId } : {}),
+        values: validation.data,
+      })
+      if (!stillThisAction()) return failure('cancelled', '已切换工单或表单，忽略旧保存响应。')
+      if (!commandSessionScopeCurrent()) {
+        dynamicFormSaveState.value = 'not_saved'
+        return failure('session_invalid', '账号或角色已变化，旧表单保存结果不再授权完成工作流。')
+      }
+      if (result.state !== 'succeeded' || !result.data) {
+        if (savedRevision === draftRevision) {
+          dynamicFormSaveState.value = 'failed'
+          error.value = result.error ?? createOperationError('server_terminal', 'Dynamic form save did not return a record identity')
+        }
+        return result.state === 'succeeded'
+          ? failure('server_terminal', 'Dynamic form save did not return a record identity')
+          : result as OperationSnapshot<void>
+      }
+
+      // The server ID is authoritative even if the user edited while awaiting
+      // the response: reuse it for a subsequent upsert, but NEVER overwrite
+      // newer local values or declare the latest revision saved.
+      if (savedRevision !== draftRevision) {
+        dynamicForm.value = { ...dynamicForm.value!, dataId: result.data }
+        dynamicFormSaveState.value = 'not_saved'
+        return staleDraft()
+      }
+      dynamicForm.value = { ...form, values: validation.data, dataId: result.data }
+      dynamicFormSaveState.value = 'saved'
+      lifecycle.value = 'in_progress'
+      error.value = null
+      if (configured.mediaUploadQueue) {
+        for (const task of Object.values(mediaTasksByField.value).flat()) {
+          if (
+            !stillThisAction() || !commandSessionScopeCurrent() || savedRevision !== draftRevision
+          ) break
+          if (
+            task.state !== 'uploaded'
+            || !task.uploadedRef
+            || !mediaTaskMatchesDynamicForm(task, currentDescriptor, form)
+            || !formValueContainsUploadedRef(validation.data[task.scope.valueKey], task.uploadedRef)
+          ) continue
+          const finalized = await configured.mediaUploadQueue.finalizeAfterSave(task.taskId)
+          if (!stillThisAction() || !commandSessionScopeCurrent()) break
+          if (finalized.state === 'succeeded') {
+            const remaining = (mediaTasksByField.value[task.scope.fieldId] ?? [])
+              .filter((candidate) => String(candidate.taskId) !== String(task.taskId))
+            mediaTasksByField.value = { ...mediaTasksByField.value, [task.scope.fieldId]: remaining }
+            mediaStateByField.value = {
+              ...mediaStateByField.value,
+              [task.scope.fieldId]: taskStateForField(remaining),
+            }
           }
         }
       }
+      return { state: 'succeeded', data: undefined }
+    } finally {
+      if (dynamicSaveInFlightVersion === commandVersion) dynamicSaveInFlightVersion = null
     }
-    return { state: 'succeeded', data: undefined }
   }
 
   async function reconcileAfterFailedCompletion(): Promise<void> {
