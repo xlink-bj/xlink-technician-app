@@ -1322,7 +1322,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       }
       if (result.state === 'succeeded') {
         draftStatus.value = 'saved_local'
-        lifecycle.value = 'draft_local'
+        if (lifecycle.value !== 'submitting') lifecycle.value = 'draft_local'
       } else {
         draftStatus.value = 'save_failed'
         error.value = result.error ?? null
@@ -1366,8 +1366,12 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
   async function clearPersistedDraft(): Promise<OperationSnapshot<void>> {
     const configured = dependencies
     const currentIdentity = identity
+    const currentForm = appointmentForm.value ?? dynamicForm.value
+    const currentVersion = loadVersion
+    const stillCurrent = () => currentVersion === loadVersion && currentIdentity === identity
     if (!configured || !currentIdentity) return { state: 'succeeded', data: undefined }
     const result = await configured.draftRepository.remove(currentIdentity)
+    if (!stillCurrent()) return result
     if (result.state === 'succeeded') {
       draftStatus.value = 'clean'
       return result
@@ -1375,32 +1379,34 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
 
     // A completed tombstone prevents an unfinished record from being restored
     // if a platform storage remove operation is temporarily unavailable.
-    const form = appointmentForm.value ?? dynamicForm.value
-    if (form) {
+    if (currentForm) {
       const tombstone: ActionDraftRecord<Readonly<Record<string, FormFieldValue>>> = {
         version: 1,
         identity: currentIdentity,
-        values: form.values,
+        values: currentForm.values,
         updatedAt: configured.now?.() ?? new Date().toISOString(),
         status: 'completed',
       }
       const markedCompleted = await configured.draftRepository.write(tombstone)
-      if (markedCompleted.state === 'succeeded') {
+      if (markedCompleted.state === 'succeeded' && stillCurrent()) {
         draftStatus.value = 'clean'
-        return markedCompleted
       }
+      if (markedCompleted.state === 'succeeded') return markedCompleted
     }
     return result
   }
 
-  async function finalizeBusinessSuccess(): Promise<OperationSnapshot<void>> {
+  async function finalizeBusinessSuccess(
+    expectedAction: ActionDescriptor,
+    expectedVersion: number,
+  ): Promise<OperationSnapshot<void>> {
     const configured = dependencies
-    const currentDescriptor = descriptor.value
-    if (!configured || !currentDescriptor) return failure('server_terminal', 'Action Workspace is not configured')
-
-    // The command has already succeeded. Cleanup and reread are deliberately
-    // separate states and can never turn the business result back into a
-    // submit failure or invite a duplicate mutation.
+    if (!configured) return failure('server_terminal', 'Action Workspace is not configured')
+    // Once the business command succeeded, never report a recoverable submit
+    // failure that could invite a duplicate server-side mutation.
+    if (!actionCommandScopeCurrent(expectedVersion, expectedAction)) {
+      return { state: 'succeeded', data: undefined }
+    }
     businessResult.value = 'succeeded'
     lifecycle.value = 'succeeded'
     loadState.value = 'succeeded'
@@ -1409,12 +1415,18 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     postSuccessError.value = null
 
     const draftCleanup = await clearPersistedDraft()
+    if (!actionCommandScopeCurrent(expectedVersion, expectedAction)) {
+      return { state: 'succeeded', data: undefined }
+    }
     if (draftCleanup.state === 'succeeded') {
       draftFinalization.value = 'completed'
     } else {
       postSuccessError.value = draftCleanup.error ?? createOperationError('network_retryable', 'Local draft cleanup is pending')
     }
-    const reread = await configured.apiRead.getWorkOrderDetail(currentDescriptor.workOrderId)
+    const reread = await configured.apiRead.getWorkOrderDetail(expectedAction.workOrderId)
+    if (!actionCommandScopeCurrent(expectedVersion, expectedAction)) {
+      return { state: 'succeeded', data: undefined }
+    }
     if (reread.state !== 'succeeded' || !reread.data) {
       refreshStatus.value = 'pending'
       postSuccessError.value = postSuccessError.value
@@ -1426,8 +1438,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
 
     detail.value = reread.data
     refreshStatus.value = 'refreshed'
-    if (!postSuccessError.value) error.value = null
-    else error.value = postSuccessError.value
+    error.value = postSuccessError.value
     return { state: 'succeeded', data: undefined }
   }
 
@@ -1558,18 +1569,21 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     }
   }
 
-  async function reconcileAfterFailedCompletion(): Promise<void> {
+  async function reconcileAfterFailedCompletion(
+    expectedAction: ActionDescriptor,
+    expectedVersion: number,
+  ): Promise<void> {
     const configured = dependencies
-    const currentDescriptor = descriptor.value
-    if (!configured || !currentDescriptor) return
-    const reread = await configured.apiRead.getWorkOrderDetail(currentDescriptor.workOrderId)
+    if (!configured || !actionCommandScopeCurrent(expectedVersion, expectedAction)) return
+    const reread = await configured.apiRead.getWorkOrderDetail(expectedAction.workOrderId)
+    if (!actionCommandScopeCurrent(expectedVersion, expectedAction)) return
     if (reread.state === 'succeeded' && reread.data) {
       detail.value = reread.data
       const currentTask = detailWorkflowProjectionFor(reread.data, configured.getSession()).currentTask
       const sameActionStillAvailable = Boolean(
         currentTask
-        && String(currentTask.nodeId) === String(currentDescriptor.workflowNodeId)
-        && currentTask.actionIntent === currentDescriptor.actionIntent
+        && String(currentTask.nodeId) === String(expectedAction.workflowNodeId)
+        && currentTask.actionIntent === expectedAction.actionIntent
         && currentTask.execution === 'enabled',
       )
       completionReconciled.value = sameActionStillAvailable
@@ -1626,7 +1640,9 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     const savedForm = dynamicForm.value
     if (!savedForm?.dataId) return failure('server_terminal', 'Dynamic form data identity is unavailable')
 
+    const commandVersion = loadVersion
     lifecycle.value = 'submitting'
+    completionReconciled.value = false
     error.value = null
     const commandResult = await configured.commandApi.completeWorkflowNode({
       workOrderId: currentDescriptor.workOrderId,
@@ -1635,17 +1651,20 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       definitionId: currentDescriptor.contentIdentity as FormDefinitionId,
       formDataId: savedForm.dataId,
     })
+    if (!actionCommandScopeCurrent(commandVersion, currentDescriptor)) {
+      return failure('cancelled', '原工作流已切换或会话已失效；旧命令结果不得覆盖当前工作台。')
+    }
     if (commandResult.state !== 'succeeded') {
       businessResult.value = 'failed'
       lifecycle.value = lifecycleForFailure(commandResult.state)
       error.value = commandResult.error ?? null
-      // Never automatically resend a workflow command. A read reconciliation
-      // is the only thing that can make a later manual retry eligible.
-      await reconcileAfterFailedCompletion()
+      // No automatic command retry: only an authoritative read can reopen
+      // the manual retry gate after any possibly dispatched mutation.
+      await reconcileAfterFailedCompletion(currentDescriptor, commandVersion)
       return commandResult
     }
 
-    return finalizeBusinessSuccess()
+    return finalizeBusinessSuccess(currentDescriptor, commandVersion)
   }
 
   async function selectDynamicMedia(fieldId: string, source: 'camera' | 'library'): Promise<OperationSnapshot<void>> {
@@ -1897,10 +1916,26 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       return { state: validation.state, ...(validation.error ? { error: validation.error } : {}) }
     }
 
-    await flushDraft()
-    if (!commandSessionScopeCurrent()) return failure('session_invalid', '保存草稿期间账号或角色已变化，禁止提交旧预约。')
+    const commandVersion = loadVersion
+    const submitRevision = draftRevision
+    // Claim the submit lease BEFORE local flush, preventing two quick taps
+    // from dispatching two appointment FormData / Workflow mutations.
     lifecycle.value = 'submitting'
     error.value = null
+    const flushed = await flushDraft()
+    if (!actionCommandScopeCurrent(commandVersion, currentDescriptor) || identity !== currentIdentity) {
+      return failure('cancelled', '已切换工单或角色，禁止使用旧预约请求。')
+    }
+    if (submitRevision !== draftRevision) {
+      lifecycle.value = 'in_progress'
+      return failure('cancelled', '预约在提交前发生修改，请重新确认最新内容。')
+    }
+    if (flushed.state !== 'succeeded') {
+      lifecycle.value = 'in_progress'
+      error.value = flushed.error ?? null
+      return flushed
+    }
+
     const commandResult = await configured.commandApi.submitAppointment({
       workOrderId: currentDescriptor.workOrderId,
       workflowNodeId: currentDescriptor.workflowNodeId,
@@ -1909,6 +1944,9 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       visitIntent: appointmentVisitIntent.value,
       values: validation.data ?? {},
     })
+    if (!actionCommandScopeCurrent(commandVersion, currentDescriptor)) {
+      return failure('cancelled', '旧预约命令响应不得覆盖已切换的工作台。')
+    }
     if (commandResult.state !== 'succeeded') {
       businessResult.value = 'failed'
       lifecycle.value = lifecycleForFailure(commandResult.state)
@@ -1916,7 +1954,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       return commandResult
     }
 
-    return finalizeBusinessSuccess()
+    return finalizeBusinessSuccess(currentDescriptor, commandVersion)
   }
 
   async function exit(): Promise<OperationSnapshot<void>> {
