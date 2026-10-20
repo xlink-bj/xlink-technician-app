@@ -94,6 +94,8 @@ function setup(options: {
   const finalizeDraft = options.finalize ?? vi.fn(async () => success(undefined))
   const input: QuotationOrderSubmissionInput = {
     userId: asOpaqueId<'UserId'>(`user-synthetic-${++setupCounter}`),
+    authorizationIdentityKey: `synthetic-session:role-a:v1:${setupCounter}`,
+    authorizationCurrent: () => true,
     workOrderId,
     workflowNodeId: nodeId,
     workflowDefinitionId,
@@ -136,6 +138,7 @@ describe('G4-F Phase 1I order submission', () => {
     // before offering only a readback retry, never another business mutation.
     const restored = await restoreQuotationOrderSubmissionState({
       userId: ctx.input.userId,
+      authorizationIdentityKey: ctx.input.authorizationIdentityKey,
       workOrderId,
       workflowNodeId: nodeId,
       storage: ctx.port,
@@ -170,6 +173,7 @@ describe('G4-F Phase 1I order submission', () => {
     expect(ctx.finalizeDraft).not.toHaveBeenCalled()
     expect(await restoreQuotationOrderSubmissionState({
       userId: ctx.input.userId,
+      authorizationIdentityKey: ctx.input.authorizationIdentityKey,
       workOrderId,
       workflowNodeId: nodeId,
       storage: ctx.port,
@@ -211,7 +215,7 @@ describe('G4-F Phase 1I order submission', () => {
     const result = await submitQuotationOrder(ctx.input)
     expect(result.state).toBe('succeeded')
     const receipt = [...ctx.values.values()][0] as Record<string, unknown>
-    expect(Object.keys(receipt).sort()).toEqual(['draftVersion', 'fingerprint', 'orderId', 'state', 'version', 'workflowId', 'workflowNodeId', 'workOrderId'].sort())
+    expect(Object.keys(receipt).sort()).toEqual(['draftVersion', 'fingerprint', 'authorizationFingerprint', 'orderId', 'state', 'version', 'workflowId', 'workflowNodeId', 'workOrderId'].sort())
     expect(JSON.stringify(receipt)).not.toContain('Synthetic')
     expect(JSON.stringify(receipt)).not.toContain('service-synthetic')
   })
@@ -231,12 +235,16 @@ describe('G4-F Phase 1I order submission', () => {
     expect(ctx.command.upsertOfficialOrder).not.toHaveBeenCalled()
   })
 
-  it('keeps the prior prepared workflow identity and does not start it twice', async () => {
+  it('does NOT retry a dispatched type=1 write on terminal-shaped failure', async () => {
     const ctx = setup({ upsert: vi.fn(async () => fail<string>('server_terminal')) })
-    expect((await submitQuotationOrder(ctx.input)).state).toBe('failed_terminal')
-    expect((await submitQuotationOrder(ctx.input)).state).toBe('failed_terminal')
+    expect((await submitQuotationOrder(ctx.input)).state).toBe('failed_ambiguous_after_dispatch')
+    expect((await submitQuotationOrder(ctx.input)).state).toBe('failed_ambiguous_after_dispatch')
     expect(ctx.command.startOrderWorkflow).toHaveBeenCalledTimes(1)
-    expect(ctx.command.upsertOfficialOrder).toHaveBeenCalledTimes(2)
+    expect(ctx.command.upsertOfficialOrder).toHaveBeenCalledTimes(1)
+    expect((await restoreQuotationOrderSubmissionState({
+      userId: ctx.input.userId, authorizationIdentityKey: ctx.input.authorizationIdentityKey,
+      workOrderId, workflowNodeId: nodeId, storage: ctx.port,
+    })).state).toBe('failed_ambiguous_after_dispatch')
   })
 
   it('safely replaces a prepared pre-dispatch receipt when the local payload changed', async () => {
@@ -247,6 +255,7 @@ describe('G4-F Phase 1I order submission', () => {
       workOrderId,
       workflowNodeId: nodeId,
       fingerprint: 'prior-local-only-fingerprint',
+      authorizationFingerprint: 'replace-after-prepared',
       draftVersion: 3,
       state: 'prepared',
     })
@@ -266,6 +275,7 @@ describe('G4-F Phase 1I order submission', () => {
     expect(ctx.finalizeDraft).toHaveBeenCalledTimes(1)
     expect(await restoreQuotationOrderSubmissionState({
       userId: ctx.input.userId,
+      authorizationIdentityKey: ctx.input.authorizationIdentityKey,
       workOrderId,
       workflowNodeId: nodeId,
       storage: ctx.port,
