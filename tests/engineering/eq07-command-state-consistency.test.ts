@@ -185,7 +185,7 @@ describe('EQ07 P0 command and form revision consistency / synthetic, no business
     vi.mocked(x.command.saveDynamicForm!).mockImplementationOnce(async () => gate.promise)
     const pending = x.store.saveDynamicForm()
     await vi.waitFor(() => expect(x.command.saveDynamicForm).toHaveBeenCalledTimes(1))
-    x.changeSession({ ...session, roleVersion: 44 })
+    x.changeSession({ ...session, roleVersion: '44' })
     gate.resolve(success(dataId))
     expect((await pending).error?.category).toBe('session_invalid')
     expect(x.store.dynamicFormSaveState).toBe('not_saved')
