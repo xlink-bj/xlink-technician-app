@@ -972,13 +972,21 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     }
     const configured = dependencies
     const currentDescriptor = descriptor.value
+    const currentIdentity = identity
+    const commandVersion = loadVersion
+    const current = () => Boolean(currentDescriptor && currentIdentity
+      && identity === currentIdentity
+      && actionCommandScopeCurrent(commandVersion, currentDescriptor))
+    if (!current()) return failure('session_invalid', '账号或角色已变化，禁止恢复旧订单编辑。')
     if (!configured || !orderId.trim() || !currentDescriptor || currentDescriptor.contentKind !== 'quotation'
-      || !configured.quotationOrderRead || !configured.quotationCatalogRead) {
+      || !configured.quotationOrderRead || !configured.quotationCatalogRead
+      || currentDescriptor.execution !== 'enabled') {
       quotationEditState.value = { state: 'blocked', message: '当前无法安全读取待编辑订单。' }
       return failure('unsupported_capability', '当前无法安全读取待编辑订单。')
     }
     quotationEditState.value = { state: 'loading' }
     const orderRead = await configured.quotationOrderRead.getQuotationOrderById(orderId)
+    if (!current()) return failure('cancelled', '订单读取期间角色或工单已切换。')
     if (orderRead.state !== 'succeeded' || !orderRead.data
       || orderRead.data.id !== orderId
       || orderRead.data.type !== 1
@@ -997,11 +1005,11 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       quotationEditState.value = { state: 'blocked', message: reconstructed.reason }
       return failure('unsupported_capability', reconstructed.reason)
     }
-    const currentIdentity = identity
     const userSession = configured.getSession()
     const stored = currentIdentity
       ? await configured.draftRepository.read<Readonly<Record<string, unknown>>>(currentIdentity)
       : failure<import('@runtimes/action').ActionDraftRecord<Readonly<Record<string, unknown>>> | null>('unsupported_capability', 'Action draft identity is unavailable')
+    if (!current()) return failure('cancelled', '本地草稿读取期间角色或工单已切换。')
     if (!userSession || stored.state !== 'succeeded' || stored.data !== null || quotationComposition.localState !== 'fresh') {
       const message = '当前存在未处理的本地报价草稿；服务器订单不会覆盖它。'
       quotationEditState.value = { state: 'blocked', message }
@@ -1013,12 +1021,15 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       context: detail.value?.quotationCatalogContext,
       port: configured.quotationCatalogRead,
     })
+    if (!current()) return failure('cancelled', '目录核验期间角色或工单已切换。')
     if (hydrated.state !== 'succeeded') {
       const message = '服务器订单中的目录身份或套餐组成与当前目录不一致；订单保持只读。'
       quotationEditState.value = { state: 'blocked', message }
       return failure('unsupported_capability', message)
     }
+    if (!current()) return failure('cancelled', '当前角色已失去订单编辑权限。')
     const restored = await quotationComposition.restoreServerOrderDraft(currentDraft)
+    if (!current()) return failure('cancelled', '草稿恢复期间角色或工单已切换。')
     if (restored.state !== 'succeeded') {
       const message = restored.error?.message ?? '服务器订单未能安全恢复到本地编辑器。'
       quotationEditState.value = { state: 'blocked', message }
@@ -1026,6 +1037,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     }
     quotationExistingOrderId.value = orderId
     const engine = await refreshQuotationEngine()
+    if (!current()) return failure('cancelled', '价格复核期间角色或工单已切换。')
     if (!engine || engine.state !== 'ready') {
       const message = '当前目录或价格校验未通过；现有订单保持只读。'
       quotationEditState.value = { state: 'blocked', message }
