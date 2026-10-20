@@ -311,16 +311,26 @@ async function submitQuotationOrderOnce(input: QuotationOrderSubmissionInput): P
   return reconcile(input, receipt)
 }
 
-const submissionFlights = new Map<string, Promise<QuotationOrderSubmissionSnapshot>>()
+const submissionFlights = new Map<string, {
+  readonly authorizationFingerprint: string
+  readonly promise: Promise<QuotationOrderSubmissionSnapshot>
+}>()
 
 export function submitQuotationOrder(input: QuotationOrderSubmissionInput): Promise<QuotationOrderSubmissionSnapshot> {
-  const key = `${receiptKey(input)}:${fingerprint(input.authorizationIdentityKey)}`
+  const key = receiptKey(input)
+  const actor = fingerprint(input.authorizationIdentityKey)
   const active = submissionFlights.get(key)
-  if (active) return active
+  if (active) {
+    // Same actor joins the existing attempt. Different actor must NEVER
+    // coalesce with another role's in-flight mutation or race its receipt.
+    return active.authorizationFingerprint === actor
+      ? active.promise
+      : Promise.resolve({ state: 'failed_terminal', message: '另一角色存在未完成的订单请求，禁止并行写入。' })
+  }
   const flight = submitQuotationOrderOnce(input).finally(() => {
-    if (submissionFlights.get(key) === flight) submissionFlights.delete(key)
+    if (submissionFlights.get(key)?.promise === flight) submissionFlights.delete(key)
   })
-  submissionFlights.set(key, flight)
+  submissionFlights.set(key, { authorizationFingerprint: actor, promise: flight })
   return flight
 }
 
