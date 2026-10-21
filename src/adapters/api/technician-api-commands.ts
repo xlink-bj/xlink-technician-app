@@ -14,6 +14,7 @@ import type {
   TechnicianApiReadPort,
 } from '@shared/ports'
 import type { FormDataId, FormDefinitionId, OperationSnapshot } from '@shared/types'
+import { requiresR1SpecialWorkflowWire } from '@shared/types'
 
 import { appointmentFormDefinitionWireId } from './appointment-contract'
 import type { ApiRequestMethod, ApiRequestValue } from './technician-api'
@@ -305,6 +306,8 @@ export class TechnicianApiCommandAdapter implements TechnicianApiCommandPort {
     safety?: ApiCommandRequest['safety'],
   ): Promise<OperationSnapshot<FormDataId>> {
     try {
+      if (requiresR1SpecialWorkflowWire(input.sourceNodeType))
+        return adapterFailure('unsupported_capability', 'R1 multi-form/repeat/subflow requires its own source-backed write contract')
       // Also cover the public saveDynamicForm Port when used directly for the
       // R1 Appointment definition, not only submitAppointment's UI path.
       if (String(input.definitionId) === appointmentFormDefinitionWireId
@@ -334,6 +337,8 @@ export class TechnicianApiCommandAdapter implements TechnicianApiCommandPort {
 
   async completeWorkflowNode(input: CompleteWorkflowNodeInput): Promise<OperationSnapshot<void>> {
     try {
+      if (requiresR1SpecialWorkflowWire(input.sourceNodeType))
+        return adapterFailure('unsupported_capability', 'R1 special node cannot complete with one FormData ID')
       if (!input.mutation) return adapterFailure('unsupported_capability', 'Durable Workflow checkpoint is required')
       const request = workflowCompleteCommand(input)
       const reserved = await input.mutation.beforeWorkflowDispatch(input.formDataId)
@@ -348,6 +353,8 @@ export class TechnicianApiCommandAdapter implements TechnicianApiCommandPort {
   }
 
   async submitAppointment(input: SubmitAppointmentInput): Promise<OperationSnapshot<void>> {
+    if (requiresR1SpecialWorkflowWire(input.sourceNodeType))
+      return adapterFailure('unsupported_capability', 'R1 special Appointment node requires a verified multi-form/child workflow contract')
     // R1 separates form upsert from workflow/process. Both branches write
     // the exact same shape; deferred visit remains read-only until the
     // original need=0 datetime wire contract is verified.
@@ -364,6 +371,7 @@ export class TechnicianApiCommandAdapter implements TechnicianApiCommandPort {
     const saved = await this.saveDynamicFormWithSafety({
       workOrderId: input.workOrderId,
       workflowNodeId: input.workflowNodeId,
+      ...(input.sourceNodeType ? { sourceNodeType: input.sourceNodeType } : {}),
       ...(input.workflowRunId ? { workflowRunId: input.workflowRunId } : {}),
       definitionId: appointmentFormDefinitionWireId as FormDefinitionId,
       ...(input.formDataId ? { formDataId: input.formDataId } : {}),
@@ -376,6 +384,7 @@ export class TechnicianApiCommandAdapter implements TechnicianApiCommandPort {
     return this.completeWorkflowNode({
       workOrderId: input.workOrderId,
       workflowNodeId: input.workflowNodeId,
+      ...(input.sourceNodeType ? { sourceNodeType: input.sourceNodeType } : {}),
       ...(input.workflowRunId ? { workflowRunId: input.workflowRunId } : {}),
       definitionId: appointmentFormDefinitionWireId as FormDefinitionId,
       formDataId: saved.data,
