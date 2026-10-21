@@ -62,9 +62,14 @@
             <text class="r1-node-forms__item-title">{{ intent.title }}</text>
             <text class="r1-node-forms__state">{{ intentLabel(intent.kind) }} · 未同步</text>
           </view>
+          <AppButton v-if="intent.kind === 'new'" size="compact" variant="secondary"
+            :disabled="loadingFields" @tap="openFieldEditor(intent.localId)">编辑字段</AppButton>
           <AppButton size="compact" variant="text" @tap="discard(intent.localId)">撤销</AppButton>
         </view>
       </view>
+      <text v-if="loadingFields" class="r1-node-forms__hint">正在读取 DEV 合成表单定义…</text>
+      <R1LocalFormFieldEditor v-if="activeDefinition && activeIntent"
+        :definition="activeDefinition" :intent="activeIntent" @close="closeFieldEditor" />
       <text v-if="draftStore.message" class="r1-node-forms__hint" data-testid="r1-form-draft-message">
         {{ draftStore.message }}
       </text>
@@ -74,9 +79,10 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
-import type { WorkflowNodeRead, R1NodeFormReference } from '@shared/ports'
+import type { WorkflowNodeRead, R1NodeFormReference, FormDefinitionRead } from '@shared/ports'
 import AppButton from '@shared/ui/AppButton.vue'
 import AppInput from '@shared/ui/AppInput.vue'
+import R1LocalFormFieldEditor from './R1LocalFormFieldEditor.vue'
 import { useR1LocalFormDraftStore, type R1LocalFormIntent } from './r1-local-form-drafts'
 
 const props = defineProps<{
@@ -88,6 +94,30 @@ const draftStore=useR1LocalFormDraftStore()
 const newTitle=ref('')
 const editTitle=ref('')
 const editingRecordId=ref<string|null>(null)
+const activeDefinition=ref<FormDefinitionRead|null>(null)
+const activeLocalId=ref<string|null>(null)
+const loadingFields=ref(false)
+let fieldLoadSeq=0
+const activeIntent=computed(()=>draftStore.snapshot.intents.find(x=>x.localId===activeLocalId.value && x.kind==='new')??null)
+function closeFieldEditor(){
+  fieldLoadSeq++
+  activeLocalId.value=null
+  activeDefinition.value=null
+  loadingFields.value=false
+}
+async function openFieldEditor(localId:string){
+  closeFieldEditor()
+  const ticket=fieldLoadSeq
+  loadingFields.value=true
+  try {
+    const definition=await draftStore.loadDraftDefinition(localId)
+    if(ticket!==fieldLoadSeq || !definition)return
+    activeLocalId.value=localId
+    activeDefinition.value=definition
+  }finally {
+    if(ticket===fieldLoadSeq)loadingFields.value=false
+  }
+}
 const countText=computed(()=>{
   const list=props.node?.formList
   if(!list||list.evidence!=='available')return ''
@@ -105,6 +135,7 @@ function intentLabel(kind:R1LocalFormIntent['kind']){
 function stagedFor(id:string){return draftStore.snapshot.intents.find(x=>x.targetFormDataId===id)}
 watch(()=>[props.node,props.workOrderId,props.actorScope] as const,([node,workOrderId,actorScope])=>{
   editingRecordId.value=null
+  closeFieldEditor()
   if(!node?.formList||!workOrderId||!actorScope||!['forms','repeat'].includes(node.sourceNodeType??'')){
     draftStore.clear();return
   }
@@ -114,7 +145,7 @@ watch(()=>[props.node,props.workOrderId,props.actorScope] as const,([node,workOr
     ...(node.formDefinitionId?{formDefinitionId:String(node.formDefinitionId)}:{}),
   },node)
 },{immediate:true})
-onBeforeUnmount(()=>draftStore.clear())
+onBeforeUnmount(()=>{closeFieldEditor();draftStore.clear()})
 function selectEditing(id:string,title:string){editingRecordId.value=id;editTitle.value=title}
 async function createDraft(){
   if(await draftStore.add(newTitle.value))newTitle.value=''
@@ -124,7 +155,10 @@ async function applyEdit(){
   if(id&&await draftStore.stageEditTitle(id,editTitle.value))editingRecordId.value=null
 }
 async function markDelete(id:string){await draftStore.stageDelete(id)}
-async function discard(id:string){await draftStore.discard(id)}
+async function discard(id:string){
+  if(id===activeLocalId.value)closeFieldEditor()
+  await draftStore.discard(id)
+}
 </script>
 
 <style scoped>
