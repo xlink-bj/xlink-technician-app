@@ -627,6 +627,8 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     readonly workOrderId: WorkOrderId
     readonly workflowNodeId: WorkflowNodeRuntimeId
     readonly actionIntent?: string
+    /** Exact synthetic H5 E2E-only read/edit preview; never grants command permission. */
+    readonly localPreviewOnly?: boolean
   }): Promise<OperationSnapshot<ActionDescriptor>> {
     const configured = dependencies
     if (!configured) return failure('server_terminal', 'Action Workspace is not configured')
@@ -695,12 +697,26 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     const projection = detailWorkflowProjectionFor(read.data, session)
     const currentTask = projection.currentTask
     const node = read.data.workflowNodes?.find((candidate) => candidate.id === input.workflowNodeId)
+    // A synthetic six-stage tour may inspect/edit LOCAL drafts on otherwise
+    // ineligible R1 'forms' nodes. Keep descriptor.execution disabled so
+    // no FormData/Workflow command can become executable via this preview.
+    // Never accept an arbitrary caller-supplied preview flag in real builds.
+    const syntheticReadOnlyPreview = input.localPreviewOnly === true
+      && import.meta.env.DEV === true
+      && import.meta.env.VITE_XLINK_H5_MOCK_E2E === 'true'
+      && String(input.workOrderId) === 'mock-work-order-019-continuous-journey'
+      && String(input.workflowNodeId) === (input.actionIntent === 'set_appointment'
+        ? 'mock-workflow-node-019-appointment'
+        : input.actionIntent === 'interact_with_form'
+          ? 'mock-workflow-node-019-survey' : '')
+      && (currentTask?.sourceNodeType === 'forms' || currentTask?.sourceNodeType === 'repeat')
+      && currentTask?.execution === 'disabled_read_only'
     if (
       !currentTask ||
       !node ||
       String(currentTask.nodeId) !== String(input.workflowNodeId) ||
       (input.actionIntent && currentTask.actionIntent !== input.actionIntent) ||
-      currentTask.execution !== 'enabled'
+      (currentTask.execution !== 'enabled' && !syntheticReadOnlyPreview)
     ) {
       detail.value = read.data
       loadState.value = 'blocked'
@@ -1152,6 +1168,8 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     readonly workOrderId: WorkOrderId
     readonly workflowNodeId: WorkflowNodeRuntimeId
     readonly actionIntent?: string
+    /** Exact synthetic H5 E2E-only read/edit preview; never grants command permission. */
+    readonly localPreviewOnly?: boolean
   }): Promise<OperationSnapshot<ActionDescriptor>> {
     const configured = dependencies
     const session = configured?.getSession()
