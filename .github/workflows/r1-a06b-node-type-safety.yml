@@ -16,6 +16,9 @@ on:
       - 'src/shared/types/r1-node-contract.ts'
       - 'tests/engineering/r1-a06b-node-type-safety.test.ts'
       - 'tests/g4d/action-workspace.test.ts'
+      - 'tests/g4c/work-order-detail.test.ts'
+      - 'tests/g4d/final-correction.test.ts'
+      - 'tests/g4ux/mock-runtime.test.ts'
 permissions:
   contents: read
 concurrency:
@@ -41,7 +44,7 @@ jobs:
           test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
           git merge-base --is-ancestor d07225d0b604fdded722b1db6e3fa14c3296173e HEAD
           git diff --name-only d07225d0b604fdded722b1db6e3fa14c3296173e HEAD | sort > /tmp/changed-paths
-          printf '%s\n' '.github/workflows/r1-a06b-node-type-safety.yml' 'docs/engineering/R1_A06B_NODE_TYPE_SAFETY.md' 'src/adapters/api/technician-api-commands.ts' 'src/adapters/api/technician-api.ts' 'src/features/work-orders/action-workspace.ts' 'src/runtimes/action/types.ts' 'src/runtimes/workflow/detail-projection.ts' 'src/shared/ports/api.ts' 'src/shared/ports/commands.ts' 'src/shared/types/index.ts' 'src/shared/types/r1-node-contract.ts' 'tests/engineering/r1-a06b-node-type-safety.test.ts' 'tests/g4d/action-workspace.test.ts' | sort > /tmp/expected-paths
+          printf '%s\n' '.github/workflows/r1-a06b-node-type-safety.yml' 'docs/engineering/R1_A06B_NODE_TYPE_SAFETY.md' 'src/adapters/api/technician-api-commands.ts' 'src/adapters/api/technician-api.ts' 'src/features/work-orders/action-workspace.ts' 'src/runtimes/action/types.ts' 'src/runtimes/workflow/detail-projection.ts' 'src/shared/ports/api.ts' 'src/shared/ports/commands.ts' 'src/shared/types/index.ts' 'src/shared/types/r1-node-contract.ts' 'tests/engineering/r1-a06b-node-type-safety.test.ts' 'tests/g4d/action-workspace.test.ts' 'tests/g4c/work-order-detail.test.ts' 'tests/g4d/final-correction.test.ts' 'tests/g4ux/mock-runtime.test.ts' | sort > /tmp/expected-paths
           diff -u /tmp/expected-paths /tmp/changed-paths
           test "$(git diff --name-only d07225d0b604fdded722b1db6e3fa14c3296173e HEAD -- pnpm-lock.yaml tests/ds02a-main/snapshots tests/ds02a-gallery/snapshots src/pages | wc -l)" -eq 0
       - uses: pnpm/action-setup@v4
