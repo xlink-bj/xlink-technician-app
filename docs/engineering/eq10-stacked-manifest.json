@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "purpose": "offline-draft-stack-convergence-NOT-production-parity",
+  "anchorCommit": "a5d494cd1cbed4d89b60bac31178559ccd50807a",
+  "ancestry": [
+    {
+      "pr": 184,
+      "sha": "b511cb572902fa0118ca02957e4d77ce6b9528da",
+      "scope": "R1 combined base"
+    },
+    {
+      "pr": 187,
+      "sha": "934cca0c8aa5bd92fbb1317cd056c90eebc8b93e",
+      "scope": "P0 async consistency"
+    },
+    {
+      "pr": 188,
+      "sha": "2fab824a7aff97eb5c36134db45cdad817d7d462",
+      "scope": "P1 architecture"
+    },
+    {
+      "pr": 189,
+      "sha": "a5d494cd1cbed4d89b60bac31178559ccd50807a",
+      "scope": "P1 actor and Order reliability"
+    }
+  ],
+  "siblingEvidence": {
+    "appointment": {
+      "pr": 185,
+      "behaviorTest": "tests/engineering/r1-appointment-conditional-runtime.test.ts",
+      "status": "behavior-port-to-EQ08-not-merge"
+    },
+    "catalog": {
+      "pr": 186,
+      "path": "src/adapters/api/quotation-catalog-api.ts",
+      "gitBlobSha": "38280537f23c783c1d4152d05365b256f40a76ba",
+      "test": "tests/engineering/r1-catalog-price-identity-fence.test.ts",
+      "status": "source-and-tests-ported-to-EQ09-not-merge"
+    }
+  },
+  "governanceOnlyPaths": [
+    ".github/workflows/eq10-quality-integration-gate.yml",
+    ".github/workflows/validate.yml",
+    "docs/engineering/EQ10_QUALITY_FINAL_REVIEW.md",
+    "docs/engineering/eq10-stacked-manifest.json",
+    "package.json",
+    "scripts/check-eq10-ownership.mjs",
+    "scripts/check-eq10-stack.mjs",
+    "scripts/verify-critical-behavior.mjs",
+    "tests/engineering/eq10-governance.test.ts"
+  ],
+  "alwaysOff": [
+    "Production/Beta business writes",
+    "Main merge",
+    "Production release",
+    "Backend contract mutation",
+    "Golden snapshot promotion"
+  ],
+  "unverified": [
+    "real R1 workflow command parity",
+    "tenant/SKU effective price authority",
+    "backend-enforced idempotency",
+    "deferred need=0 datetime wire format"
+  ]
+}
