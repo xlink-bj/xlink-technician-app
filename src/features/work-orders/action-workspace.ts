@@ -827,6 +827,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       title: currentTask.title,
       execution: actionExecutionForWorkflowDecision(currentTask.execution),
       ...(formPurpose ? { formPurpose } : {}),
+      ...(currentTask.sourceNodeType ? { sourceNodeType: currentTask.sourceNodeType } : {}),
       ...(form.data.definitionId ? { contentIdentity: form.data.definitionId } : {}),
     }
     let loadedForm = form.data
@@ -1618,6 +1619,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
         return reserved
       }
       const result = await configured.commandApi.saveDynamicForm({
+        ...(currentDescriptor.sourceNodeType ? { sourceNodeType: currentDescriptor.sourceNodeType } : {}),
         workOrderId: currentDescriptor.workOrderId,
         workflowNodeId: currentDescriptor.workflowNodeId,
         ...(detail.value?.workflowRunId ? { workflowRunId: detail.value.workflowRunId } : {}),
@@ -1777,6 +1779,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     completionReconciled.value = false
     error.value = null
     const commandResult = await configured.commandApi.completeWorkflowNode({
+      ...(currentDescriptor.sourceNodeType ? { sourceNodeType: currentDescriptor.sourceNodeType } : {}),
       workOrderId: currentDescriptor.workOrderId,
       workflowNodeId: currentDescriptor.workflowNodeId,
       ...(detail.value?.workflowRunId ? { workflowRunId: detail.value.workflowRunId } : {}),
@@ -2128,6 +2131,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       return reserved
     }
     const commandResult = await configured.commandApi.submitAppointment({
+      ...(currentDescriptor.sourceNodeType ? { sourceNodeType: currentDescriptor.sourceNodeType } : {}),
       workOrderId: currentDescriptor.workOrderId,
       workflowNodeId: currentDescriptor.workflowNodeId,
       ...(detail.value?.workflowRunId ? { workflowRunId: detail.value.workflowRunId } : {}),
