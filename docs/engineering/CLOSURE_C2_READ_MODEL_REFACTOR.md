@@ -25,7 +25,7 @@ The existing Workspace retains the **only** business mutation lifecycle owner: F
 
 - New read model tests, P0 EQ07 race, EQ08 shared Form Runtime, R1 conditional Appointment, EQ09 actor scope and original Action Workspace tests all pass.
 - Root `pnpm check:engineering-ownership`, critical and full tests, types, H5/MP-Weixin/App builds, original H5 six-stage Mock and both approved Gallery/Business Goldens all pass.
-- Diff only in: `src/features/work-orders/action-workspace.ts`, `src/features/work-orders/action-workspace-read-model.ts`, `tests/engineering/closure-c2-read-model.test.ts`, this doc and one C2 CI workflow.
+- Diff only in: `src/features/work-orders/action-workspace.ts`, `src/features/work-orders/action-workspace-read-model.ts`, `tests/engineering/closure-c2-read-model.test.ts`, `scripts/check-closure-c1-integration.mjs`, this doc and the C2 CI workflow. The inherited C1 source-provenance script now inspects **the immutable C1 commit tree** rather than diffing newer descendants against #190; C2's own gate separately verifies its exact six-file diff. This removes a false failure on legitimate future phases without relaxing C1 provenance or allowing arbitrary C2 changes.
 - No main merge, deployment, Production/Beta business writes, new SKU effective price calculations or unsafe appointment `need=0` encoding.
 
 ## Remaining explicit engineering debt
