@@ -15,6 +15,8 @@ export type {
   FormPurpose,
   FormDefinitionRead,
   ReadPage,
+  R1NodeFormListRead,
+  R1NodeFormReference,
   QuotationCatalogContext,
   QuotationCatalogItemBaseRead,
   QuotationCatalogItemRead,
