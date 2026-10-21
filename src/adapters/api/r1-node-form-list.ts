@@ -1,5 +1,7 @@
 import type { R1NodeFormListRead, R1NodeFormReference } from '@shared/ports'
 import { asOpaqueId } from '@shared/types'
+import type { FormDefinitionId, WorkflowRunId } from '@shared/types'
+import type { ApiReadRequest } from './technician-api'
 
 type Plain = Readonly<Record<string, unknown>>
 const CAP = 50
@@ -47,4 +49,33 @@ export function readR1NodeFormList(
     })
   }
   return { source, evidence: 'available', entries, truncated: value.length > CAP }
+}
+
+/**
+ * R1 serviceAppointment.vue:getFormList uses workflowId equality and
+ * excludes state=-1. Backend modulemini ExtFormController uses FlipPageInfo;
+ * bounded page/rows are applied before any optional read.
+ * This function ONLY builds a request; it never dispatches it.
+ */
+export function buildR1RepeatFormListQuery(input: {
+  readonly definitionId: FormDefinitionId
+  readonly workflowRunId: WorkflowRunId
+  readonly page: number
+  readonly pageSize: number
+}): ApiReadRequest {
+  if (!String(input.definitionId).trim() || !String(input.workflowRunId).trim()
+    || !Number.isInteger(input.page) || input.page < 1 || input.page > 10
+    || !Number.isInteger(input.pageSize) || input.pageSize < 1 || input.pageSize > 20) {
+    throw new Error('Repeat query requires authoritative node/form scope and bounded page/rows')
+  }
+  return {
+    method: 'POST',
+    path: `biz/extForm/query/${encodeURIComponent(String(input.definitionId))}`,
+    body: {
+      sortField: 'createTime', sortOrder: 'desc',
+      'is:workflowId|string#and': String(input.workflowRunId),
+      'ne:state|integer#and': -1,
+      page: input.page, rows: input.pageSize,
+    },
+  }
 }
