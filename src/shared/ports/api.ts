@@ -155,6 +155,21 @@ export interface WorkflowDefinitionRead {
   readonly id: WorkflowDefinitionId
 }
 
+/** Bounded R1 list from an already authorized WorkOrder detail.
+ * Absent repeat formDataList means unknown, NOT zero records. */
+export interface R1NodeFormListRead {
+  readonly source: 'exts.formList' | 'formDataList'
+  readonly evidence: 'available' | 'invalid'
+  readonly entries: readonly R1NodeFormReference[]
+  readonly truncated: boolean
+}
+export interface R1NodeFormReference {
+  readonly id: FormDataId
+  readonly formDefinitionId?: FormDefinitionId
+  readonly title?: string
+  readonly state: 'active' | 'deleted' | 'unknown'
+}
+
 export interface WorkflowNodeRead {
   readonly id: WorkflowNodeRuntimeId
   readonly definitionId?: WorkflowDefinitionId
@@ -175,6 +190,8 @@ export interface WorkflowNodeRead {
    * command solely from normalized category.
    */
   readonly sourceNodeType?: string
+  /** Existing form references; neither raw FormData nor write authorization. */
+  readonly formList?: R1NodeFormListRead
   readonly category: WorkflowNodeCategory
   readonly lifecycle: WorkflowNodeLifecycle
   readonly handlers?: readonly WorkflowHandlerIdentity[]
