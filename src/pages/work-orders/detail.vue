@@ -102,6 +102,10 @@
         @action="handleCurrentTaskAction"
       />
 
+      <!-- Source-backed list already included in the current R1 detail.
+           No additional business API reads and no write affordances. -->
+      <R1NodeFormsOverview v-if="currentR1FormNode?.formList" :node="currentR1FormNode" />
+
       <AppRecordCard class="information-card">
         <scroll-view class="detail-tabs" scroll-x="true" show-scrollbar="false">
           <view
@@ -290,6 +294,7 @@ import AppSectionHeading from '@shared/ui/AppSectionHeading.vue'
 import AppFeedbackState from '@shared/ui/AppFeedbackState.vue'
 import AppWorkOrderSkeleton from '@shared/ui/AppWorkOrderSkeleton.vue'
 import WorkOrderTaskFocus from '@features/work-orders/WorkOrderTaskFocus.vue'
+import R1NodeFormsOverview from '@features/work-orders/R1NodeFormsOverview.vue'
 import { appLoadingSkeletonDelayMs } from '@shared/ui/loading'
 
 const session = useSessionStore()
@@ -307,6 +312,11 @@ const customerServiceAddress = computed(() => {
   return [district, address].filter(Boolean).join(' ') || '—'
 })
 const workflowProjection = computed(() => detailWorkflowUiProjectionFor(detail.value, session.session))
+const currentR1FormNode = computed(() => {
+  const task = workflowProjection.value.currentTask
+  if (!task || (task.sourceNodeType !== 'forms' && task.sourceNodeType !== 'repeat')) return undefined
+  return detail.value?.workflowNodes?.find(node => node.id === task.nodeId)
+})
 const allowLocalMockPreview = computed(() => {
   const stage = mockJourneyContext(String(detail.value?.id ?? ''))
   const task = workflowProjection.value.currentTask
