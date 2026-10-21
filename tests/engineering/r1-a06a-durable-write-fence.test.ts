@@ -6,6 +6,7 @@ import {
   recordActionWorkflowCompleted,
   type ActionMutationScope,
 } from '@features/work-orders/action-mutation-receipt'
+import { appointmentFormDefinitionWireId } from '@adapters/api/appointment-contract'
 import type { StorageKey, StoragePort } from '@shared/ports'
 import { asOpaqueId, type OperationSnapshot } from '@shared/types'
 import type { FormMutationCheckpoints, TechnicianApiReadPort } from '@shared/ports'
@@ -180,6 +181,23 @@ describe('A06-A durable FormData / Workflow dispatch fence', () => {
     expect((await loadActionMutationReceipt(storage, scope)).data).toMatchObject({ phase: 'form_dispatched' })
     expect((await adapter.saveDynamicForm!(input)).state).toBe('failed_terminal')
     expect(execute).toHaveBeenCalledTimes(1)
+  })
+
+  it('direct Appointment FormData save cannot bypass need=0 denial or reserve a receipt', async () => {
+    const { storage, records } = memoryStore()
+    const beforeFormDispatch = vi.fn(async()=>({state:'succeeded' as const}))
+    const execute = vi.fn(async()=>({success:true,data:{_id:id}}))
+    const adapter = createTechnicianApiCommandAdapter({ execute }, {} as TechnicianApiReadPort)
+    const result = await adapter.saveDynamicForm!({
+      ...commandInput,
+      definitionId: asOpaqueId<'FormDefinitionId'>(appointmentFormDefinitionWireId),
+      values: { need: '0' },
+      mutation: { ...checkpoints(storage, scope), beforeFormDispatch },
+    })
+    expect(result.error?.category).toBe('unsupported_capability')
+    expect(beforeFormDispatch).not.toHaveBeenCalled()
+    expect(execute).not.toHaveBeenCalled()
+    expect(records.size).toBe(0)
   })
 
   it('persists a save ACK before Process and blocks Process retry after a failure', async () => {
