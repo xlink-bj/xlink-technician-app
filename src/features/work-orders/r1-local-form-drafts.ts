@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import type { StoragePort, StorageKey, WorkflowNodeRead } from '@shared/ports'
+import type { StoragePort, StorageKey, WorkflowNodeRead, FormDefinitionRead, FormFieldValue } from '@shared/ports'
+import { normalizeR1LocalFieldPatch, type R1LocalFieldValue } from './r1-local-form-fields'
 
 /**
  * Client-only multi-form action queue. Every operation is a DRAFT INTENT,
@@ -13,6 +14,8 @@ export interface R1LocalFormIntent {
   readonly targetFormDataId?: string
   readonly definitionId: string
   readonly title: string
+  /** Field-value drafts only; no FormData business write. */
+  readonly values?: Readonly<Record<string,R1LocalFieldValue>>
 }
 export interface R1LocalFormScope {
   readonly actorScope: string
@@ -50,6 +53,19 @@ function validated(value: unknown): value is R1LocalFormSnapshot {
       ||typeof q.title!=='string'||q.title.length>80)return false
     if(q.kind!=='new' && (typeof q.targetFormDataId!=='string'||!q.targetFormDataId.trim()))return false
     if(q.kind==='new' && q.targetFormDataId!==undefined)return false
+    if(q.values!==undefined) {
+      if(q.kind!=='new'||!q.values||typeof q.values!=='object'||Array.isArray(q.values))return false
+      const map=q.values as Record<string,unknown>
+      if(Object.keys(map).length>50)return false
+      for(const [key,value] of Object.entries(map)){
+        if(!key.trim()||key.length>120)return false
+        if(typeof value==='string' && value.length<=4000)continue
+        if(typeof value==='number' && Number.isFinite(value))continue
+        if(typeof value==='boolean')continue
+        if(Array.isArray(value)&&value.length<=30&&value.every(x=>typeof x==='string'&&x.length<=256))continue
+        return false
+      }
+    }
     seen.add(q.localId)
   }
   return true
@@ -157,8 +173,23 @@ export const useR1LocalFormDraftStore=defineStore('r1LocalFormDraft',()=>{
           targetFormDataId:recordId,definitionId:String(definition),title:name}]}
     })
   }
+  async function setDraftField(
+    localId:string,definition:FormDefinitionRead,key:string,value:FormFieldValue|undefined,
+  ):Promise<boolean>{
+    return update(previous=>{
+      const target=previous.intents.find(x=>x.localId===localId && x.kind==='new')
+      if(!target || String(definition.id)!==target.definitionId) {
+        message.value='草稿及表单定义不匹配，未更新任何字段。'
+        return undefined
+      }
+      const values=normalizeR1LocalFieldPatch(definition,target.values??{},key,value)
+      if(!values){message.value='字段为只读、未知或内容格式不受支持。';return undefined}
+      return {...previous,intents:previous.intents.map(intent=>intent.localId===localId
+        ? {...intent,values} : intent)}
+    })
+  }
   async function discard(localId:string):Promise<boolean> {
     return update(previous=>({...previous,intents:previous.intents.filter(x=>x.localId!==localId)}))
   }
-  return {state,snapshot,message,configure,clear,open,add,stageDelete,stageEditTitle,discard}
+  return {state,snapshot,message,configure,clear,open,add,stageDelete,stageEditTitle,setDraftField,discard}
 })
