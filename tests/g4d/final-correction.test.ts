@@ -30,8 +30,12 @@ import { detailWorkflowProjectionFor } from '@features/work-orders/detail-workfl
 import type {
   FormDataRead,
   FormDefinitionRead,
+  FormMutationCheckpoints,
   ReadPage,
   SessionSnapshot,
+  StorageKey,
+  StoragePort,
+  SubmitAppointmentInput,
   TechnicianApiReadPort,
   WorkOrderDetail,
 } from '@shared/ports'
@@ -46,6 +50,21 @@ const session: SessionSnapshot = {
 
 function succeeded<T>(data: T): OperationSnapshot<T> {
   return { state: 'succeeded', data }
+}
+const wireCheckpoints: FormMutationCheckpoints = {
+  beforeFormDispatch: async () => ({ state: 'succeeded' }),
+  afterFormSaved: async () => ({ state: 'succeeded' }),
+  beforeWorkflowDispatch: async () => ({ state: 'succeeded' }),
+  afterWorkflowCompleted: async () => ({ state: 'succeeded' }),
+}
+function memoryStorage(): StoragePort {
+  const values = new Map<string, unknown>()
+  return {
+    read: vi.fn(async <T>(key: StorageKey) => ({ state: 'succeeded' as const, data: (values.get(key.key) ?? null) as T | null })),
+    write: vi.fn(async (key: StorageKey, value: unknown) => { values.set(key.key, value); return succeeded(undefined) }),
+    remove: vi.fn(async (key: StorageKey) => { values.delete(key.key); return succeeded(undefined) }),
+    listKeys: vi.fn(async () => succeeded([...values.keys()])),
+  } as unknown as StoragePort
 }
 
 function formDefinition(id = 'appointment-definition'): FormDefinitionRead {
@@ -222,24 +241,27 @@ describe('G4-D final functional and safety corrections', () => {
     } as unknown as TechnicianApiReadPort
     const command = {
       readAppointmentForm: vi.fn(async () => succeeded({
+        definitionId: formDefinition().id,
         fields: formDefinition().fields!,
         values: { source: 'backend value' },
       })),
-      submitAppointment: vi.fn(async () => succeeded(undefined)),
+      submitAppointment: vi.fn(async (input: SubmitAppointmentInput) => {
+        const id = asOpaqueId<'FormDataId'>('final-correction-saved-form')
+        await input.mutation?.afterFormSaved(id)
+        await input.mutation?.beforeWorkflowDispatch(id)
+        await input.mutation?.afterWorkflowCompleted()
+        return succeeded(undefined)
+      }),
       inspectAcceptOrder: vi.fn(),
       acceptOrder: vi.fn(),
     }
-    const storage = {
-      read: vi.fn(async () => succeeded(null)),
-      write: vi.fn(async () => succeeded(undefined)),
-      remove: vi.fn(async () => succeeded(undefined)),
-      listKeys: vi.fn(async () => succeeded([])),
-    }
+    const storage = memoryStorage()
     const store = useActionWorkspaceStore()
     store.configure({
       apiRead: api,
       commandApi: command,
       draftRepository: createActionDraftRepository(storage),
+      storage,
       navigation: { navigate: vi.fn(async () => undefined), back: vi.fn(async () => undefined) },
       getSession: () => session,
       debounceMs: 0,
@@ -333,6 +355,7 @@ describe('G4-D final functional and safety corrections', () => {
     } as unknown as TechnicianApiReadPort
     const command = {
       readAppointmentForm: vi.fn(async () => succeeded({
+        definitionId: formDefinition().id,
         fields: formDefinition().fields!,
         values: { need: '1', datetime: '2026-04-20 10:00' },
       })),
@@ -343,17 +366,13 @@ describe('G4-D final functional and safety corrections', () => {
       inspectAcceptOrder: vi.fn(),
       acceptOrder: vi.fn(),
     }
-    const storage = {
-      read: vi.fn(async () => succeeded(null)),
-      write: vi.fn(async () => succeeded(undefined)),
-      remove: vi.fn(async () => succeeded(undefined)),
-      listKeys: vi.fn(async () => succeeded([])),
-    }
+    const storage = memoryStorage()
     const store = useActionWorkspaceStore()
     store.configure({
       apiRead: api,
       commandApi: command,
       draftRepository: createActionDraftRepository(storage),
+      storage,
       navigation: { navigate: vi.fn(async () => undefined), back: vi.fn(async () => undefined) },
       getSession: () => session,
       debounceMs: 0,
@@ -449,6 +468,7 @@ describe('G4-D final functional and safety corrections', () => {
       const result = await command.submitAppointment({
         workOrderId: id,
         workflowNodeId: projection.currentTask!.nodeId,
+        mutation: wireCheckpoints,
         values: { need: '1', datetime: '2026-04-20 10:00' },
       })
       expect(result.state).toBe(id === appointmentFailureIds[0] ? 'failed_retryable' : 'failed_terminal')

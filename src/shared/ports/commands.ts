@@ -87,6 +87,7 @@ export interface SaveDynamicFormInput {
   readonly purpose?: FormPurpose
   readonly formDataId?: FormDataId
   readonly values: Readonly<Record<string, FormFieldValue>>
+  readonly mutation?: Pick<FormMutationCheckpoints, 'beforeFormDispatch' | 'afterFormSaved'>
 }
 
 export interface CompleteWorkflowNodeInput {
@@ -95,6 +96,15 @@ export interface CompleteWorkflowNodeInput {
   readonly workflowRunId?: WorkflowRunId
   readonly definitionId: FormDefinitionId
   readonly formDataId: FormDataId
+  readonly mutation?: Pick<FormMutationCheckpoints, 'beforeWorkflowDispatch' | 'afterWorkflowCompleted'>
+}
+
+/** Required at the command adapter boundary before any FormData/Workflow write. */
+export interface FormMutationCheckpoints {
+  readonly beforeFormDispatch: () => Promise<OperationSnapshot<void>>
+  readonly afterFormSaved: (formDataId: FormDataId) => Promise<OperationSnapshot<void>>
+  readonly beforeWorkflowDispatch: (formDataId: FormDataId) => Promise<OperationSnapshot<void>>
+  readonly afterWorkflowCompleted: () => Promise<OperationSnapshot<void>>
 }
 
 export type AppointmentVisitIntent = 'visit_required' | 'visit_deferred' | 'unknown'
@@ -107,6 +117,7 @@ export interface SubmitAppointmentInput {
   /** Feature-projected branch used by the transport safety boundary. */
   readonly visitIntent?: AppointmentVisitIntent
   readonly values: Readonly<Record<string, AppointmentFieldValue>>
+  readonly mutation?: FormMutationCheckpoints
 }
 
 export interface TechnicianApiCommandPort {

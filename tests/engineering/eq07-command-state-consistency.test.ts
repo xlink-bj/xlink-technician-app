@@ -9,6 +9,7 @@ import type {
   UploadPort,
   SessionSnapshot,
   StoragePort,
+  SubmitAppointmentInput,
   TechnicianApiCommandPort,
   TechnicianApiReadPort,
   WorkOrderDetail,
@@ -72,13 +73,20 @@ function fixture(kind: 'survey' | 'appointment') {
     readAppointmentForm: vi.fn(async () => success(appointment)),
     saveDynamicForm: vi.fn(async () => success(dataId)),
     completeWorkflowNode: vi.fn(async () => success(undefined)),
-    submitAppointment: vi.fn(async () => success(undefined)),
+    submitAppointment: vi.fn(async (input: SubmitAppointmentInput) => {
+      const saved = await input.mutation?.afterFormSaved(dataId)
+      if (saved?.state !== 'succeeded') return saved ?? { state: 'failed_terminal' }
+      const reserved = await input.mutation?.beforeWorkflowDispatch(dataId)
+      if (reserved?.state !== 'succeeded') return reserved ?? { state: 'failed_terminal' }
+      return input.mutation!.afterWorkflowCompleted()
+    }),
   } as unknown as TechnicianApiCommandPort
+  const stored = new Map<string, unknown>()
   const storage = {
-    read: vi.fn(async () => success(null)),
-    write: vi.fn(async () => success(undefined)),
-    remove: vi.fn(async () => success(undefined)),
-    listKeys: vi.fn(async () => success([])),
+    read: vi.fn(async (key: { key: string }) => success(stored.get(key.key) ?? null)),
+    write: vi.fn(async (key: { key: string }, value: unknown) => { stored.set(key.key, value); return success(undefined) }),
+    remove: vi.fn(async (key: { key: string }) => { stored.delete(key.key); return success(undefined) }),
+    listKeys: vi.fn(async () => success([...stored.keys()])),
   } as unknown as StoragePort
   const picker: MediaFilePickerPort = {
     pick: vi.fn(async () => createCapabilityResult<readonly LocalMedia[]>('photo-library', 'granted', [{
@@ -99,6 +107,7 @@ function fixture(kind: 'survey' | 'appointment') {
   store.configure({
     apiRead: api, commandApi: command,
     draftRepository: createActionDraftRepository(storage),
+    storage,
     navigation: { navigate: vi.fn(async () => undefined) },
     getSession: () => activeSession,
     mediaFilePicker: picker, upload,
@@ -222,12 +231,11 @@ describe('EQ07 P0 command and form revision consistency / synthetic, no business
     const pending = x.store.saveDynamicForm()
     await vi.waitFor(() => expect(x.command.saveDynamicForm).toHaveBeenCalledTimes(1))
     x.store.clear()
-    await x.load()
-    expect(x.store.dynamicFormSaveState).toBe('not_saved')
+    const reopened = await x.store.load({ workOrderId, workflowNodeId: nodeId, actionIntent: 'interact_with_form' })
+    expect(reopened.state).toBe('failed_terminal')
     gate.resolve(success(dataId))
     expect((await pending).error?.category).toBe('cancelled')
-    expect(x.store.dynamicFormSaveState).toBe('not_saved')
-    expect(x.store.dynamicForm?.dataId).toBeUndefined()
+    expect(x.store.loadState).toBe('blocked')
   })
 
   it('locks Workflow Complete while dispatched and until failed-command reconciliation finishes', async () => {
@@ -243,7 +251,7 @@ describe('EQ07 P0 command and form revision consistency / synthetic, no business
     expect(x.store.canSubmit).toBe(false)
     expect((await x.store.completeDynamicForm()).error?.category).toBe('validation')
     expect(x.store.setField('note', '禁止提交期间修改').error?.category).toBe('validation')
-    expect(x.command.completeWorkflowNode).toHaveBeenCalledTimes(1)
+    await vi.waitFor(() => expect(x.command.completeWorkflowNode).toHaveBeenCalledTimes(1))
     gate.resolve({
       state: 'failed_retryable', error: { category: 'network_retryable', message: 'ambiguous command', retryable: true },
     })
@@ -259,7 +267,7 @@ describe('EQ07 P0 command and form revision consistency / synthetic, no business
       }],
     }))
     expect((await pending).state).toBe('failed_retryable')
-    expect(x.store.canSubmit).toBe(true)
+    expect(x.store.canSubmit).toBe(false)
     expect(x.command.completeWorkflowNode).toHaveBeenCalledTimes(1)
   })
 
@@ -303,11 +311,12 @@ describe('EQ07 P0 command and form revision consistency / synthetic, no business
     const first = x.store.submit()
     await vi.waitFor(() => expect(x.command.submitAppointment).toHaveBeenCalledTimes(1))
     x.store.clear()
-    await x.load()
+    const reopened = await x.store.load({ workOrderId, workflowNodeId: nodeId, actionIntent: 'set_appointment' })
+    expect(reopened.state).toBe('failed_terminal')
     gate.resolve(success(undefined))
-    expect((await first).error?.category).toBe('cancelled')
+    expect((await first).error?.category).toBe('unsupported_capability')
     expect(x.store.businessResult).toBe('not_started')
-    expect(x.store.lifecycle).toBe('available')
+    expect(x.store.lifecycle).toBe('blocked')
   })
   it('abandons a picker result after changing Action and never starts a stale upload', async () => {
     const x = fixture('survey')

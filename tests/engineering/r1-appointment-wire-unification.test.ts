@@ -3,13 +3,19 @@ import {
   createTechnicianApiCommandAdapter, ApiCommandTransportError,
   type ApiCommandRequest, type ApiCommandTransport,
 } from '@adapters/api/technician-api-commands'
-import type { TechnicianApiReadPort } from '@shared/ports'
+import type { FormMutationCheckpoints, TechnicianApiReadPort } from '@shared/ports'
 import { asOpaqueId } from '@shared/types'
 
 const workOrderId=asOpaqueId<'WorkOrderId'>('synthetic-appointment')
 const workflowNodeId=asOpaqueId<'WorkflowNodeRuntimeId'>('synthetic-workflow-node')
 const definitionId=asOpaqueId<'FormDefinitionId'>('synthetic-form-definition')
 const formDataId=asOpaqueId<'FormDataId'>('synthetic-existing-form')
+const wireCheckpoints: FormMutationCheckpoints = {
+  beforeFormDispatch: async () => ({ state: 'succeeded' }),
+  afterFormSaved: async () => ({ state: 'succeeded' }),
+  beforeWorkflowDispatch: async () => ({ state: 'succeeded' }),
+  afterWorkflowCompleted: async () => ({ state: 'succeeded' }),
+}
 function adapter(execute: (request:ApiCommandRequest)=>Promise<unknown>) {
   return createTechnicianApiCommandAdapter({execute} as ApiCommandTransport, {} as TechnicianApiReadPort)
 }
@@ -25,7 +31,7 @@ describe('R1 A03 single authoritative appointment FormData serializer',()=>{
     const execute=vi.fn(async(_request:ApiCommandRequest)=>savedEnvelope())
     const command=adapter(execute)
     const result=await command.saveDynamicForm!({
-      workOrderId,workflowNodeId,definitionId,formDataId,
+      workOrderId,workflowNodeId,definitionId,formDataId,mutation:wireCheckpoints,
       values:{need:'1',datetime:'2026-04-21 10:00',note:null},
     })
     expect(result).toMatchObject({state:'succeeded',data:'synthetic-upserted-form'})
@@ -45,7 +51,7 @@ describe('R1 A03 single authoritative appointment FormData serializer',()=>{
       request.path.startsWith('biz/extForm/upsert')?savedEnvelope():{success:true})
     const command=adapter(execute)
     const result=await command.submitAppointment({
-      workOrderId,workflowNodeId,visitIntent:'visit_required',
+      workOrderId,workflowNodeId,visitIntent:'visit_required',mutation:wireCheckpoints,
       values:{need:'1',datetime:'2026-04-21 10:00',note:null},
     })
     expect(result.state).toBe('succeeded')
@@ -71,7 +77,7 @@ describe('R1 A03 single authoritative appointment FormData serializer',()=>{
       return savedEnvelope()
     })
     const result=await adapter(execute).submitAppointment({
-      workOrderId,workflowNodeId,visitIntent:'visit_deferred',
+      workOrderId,workflowNodeId,visitIntent:'visit_deferred',mutation:wireCheckpoints,
       values:{need:'0',note:null},
     })
     expect(result.state).toBe('failed_terminal')
@@ -88,7 +94,7 @@ describe('R1 A03 single authoritative appointment FormData serializer',()=>{
   it('save failure NEVER triggers Workflow Process or simulates appointment success',async()=>{
     const execute=vi.fn(async()=>{throw new ApiCommandTransportError('synthetic rejection','server_terminal')})
     const result=await adapter(execute).submitAppointment({
-      workOrderId,workflowNodeId,visitIntent:'visit_required',
+      workOrderId,workflowNodeId,visitIntent:'visit_required',mutation:wireCheckpoints,
       values:{need:'1',datetime:'2026-04-21 10:00'},
     })
     expect(result.state).toBe('failed_terminal')

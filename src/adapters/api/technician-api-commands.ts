@@ -9,6 +9,7 @@ import type {
   ReadDynamicFormInput,
   SaveDynamicFormInput,
   SubmitAppointmentInput,
+  FormMutationCheckpoints,
   TechnicianApiCommandPort,
   TechnicianApiReadPort,
 } from '@shared/ports'
@@ -304,10 +305,17 @@ export class TechnicianApiCommandAdapter implements TechnicianApiCommandPort {
     safety?: ApiCommandRequest['safety'],
   ): Promise<OperationSnapshot<FormDataId>> {
     try {
-      return await this.command<FormDataId>(
-        formDataUpsertCommand(input, safety),
+      if (!input.mutation) return adapterFailure('unsupported_capability', 'Durable FormData checkpoint is required')
+      const request = formDataUpsertCommand(input, safety)
+      const reserved = await input.mutation.beforeFormDispatch()
+      if (reserved.state !== 'succeeded') return failureFrom(reserved)
+      const saved = await this.command<FormDataId>(
+        request,
         formDataIdFromResponse,
       )
+      if (saved.state !== 'succeeded' || !saved.data) return saved
+      const recorded = await input.mutation.afterFormSaved(saved.data)
+      return recorded.state === 'succeeded' ? saved : failureFrom(recorded)
     } catch (error) {
       return commandFailure(error)
     }
@@ -318,14 +326,27 @@ export class TechnicianApiCommandAdapter implements TechnicianApiCommandPort {
     return this.saveDynamicFormWithSafety(input)
   }
 
-  completeWorkflowNode(input: CompleteWorkflowNodeInput): Promise<OperationSnapshot<void>> {
-    return this.command<void>(workflowCompleteCommand(input), () => undefined)
+  async completeWorkflowNode(input: CompleteWorkflowNodeInput): Promise<OperationSnapshot<void>> {
+    try {
+      if (!input.mutation) return adapterFailure('unsupported_capability', 'Durable Workflow checkpoint is required')
+      const request = workflowCompleteCommand(input)
+      const reserved = await input.mutation.beforeWorkflowDispatch(input.formDataId)
+      if (reserved.state !== 'succeeded') return failureFrom(reserved)
+      const completed = await this.command<void>(request, () => undefined)
+      if (completed.state !== 'succeeded') return completed
+      const recorded = await input.mutation.afterWorkflowCompleted()
+      return recorded.state === 'succeeded' ? completed : failureFrom(recorded)
+    } catch (error) {
+      return commandFailure(error)
+    }
   }
 
   async submitAppointment(input: SubmitAppointmentInput): Promise<OperationSnapshot<void>> {
     // R1 separates form upsert from workflow/process. Both branches write
     // the exact same shape; deferred visit remains read-only until the
     // original need=0 datetime wire contract is verified.
+    if (!input.mutation) return adapterFailure('unsupported_capability', 'Durable Appointment checkpoints are required')
+    const mutation: FormMutationCheckpoints = input.mutation
     const saved = await this.saveDynamicFormWithSafety({
       workOrderId: input.workOrderId,
       workflowNodeId: input.workflowNodeId,
@@ -333,6 +354,7 @@ export class TechnicianApiCommandAdapter implements TechnicianApiCommandPort {
       definitionId: appointmentFormDefinitionWireId as FormDefinitionId,
       ...(input.formDataId ? { formDataId: input.formDataId } : {}),
       values: input.values,
+      mutation,
     }, input.visitIntent === 'visit_deferred'
       ? 'deferred_appointment_datetime_encoding_unknown' : undefined)
     if (saved.state !== 'succeeded') return failureFrom<FormDataId, void>(saved)
@@ -344,6 +366,7 @@ export class TechnicianApiCommandAdapter implements TechnicianApiCommandPort {
       ...(input.workflowRunId ? { workflowRunId: input.workflowRunId } : {}),
       definitionId: appointmentFormDefinitionWireId as FormDefinitionId,
       formDataId: saved.data,
+      mutation,
     })
   }
 }

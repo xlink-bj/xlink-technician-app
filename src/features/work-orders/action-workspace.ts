@@ -31,6 +31,7 @@ import type {
   AppointmentFormRead,
   DynamicFormRead,
   FormFieldValue,
+  FormMutationCheckpoints,
   MediaCapturePort,
   MediaFilePickerPort,
   MediaUploadQueuePort,
@@ -89,6 +90,14 @@ import {
   type DynamicActionField,
 } from './dynamic-form-action'
 import { surveyMediaDescriptorFor, surveyMediaPostUploadPolicyFor } from './survey-media'
+import {
+  beginActionMutation,
+  loadActionMutationReceipt,
+  mutationReceiptDenial,
+  recordActionFormSaved,
+  recordActionWorkflowCompleted,
+  type ActionMutationScope,
+} from './action-mutation-receipt'
 import { useQuotationCompositionStore } from './quotation/composition-store'
 import { useQuotationCatalogBrowserStore } from './quotation/catalog-browser-store'
 import { useQuotationEngineStore } from './quotation/engine-store'
@@ -298,6 +307,65 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       session.currentRole ? String(session.currentRole.id) : null,
       session.roleVersion ?? null,
     ])
+  }
+
+  function mutationScopeFor(action: ActionDescriptor): ActionMutationScope | null {
+    const session = dependencies?.getSession()
+    if (!session || !loadedSessionScope || !action.contentIdentity
+      || String(session.user.id) !== String(action.userId)) return null
+    return {
+      userId: String(action.userId),
+      workOrderId: String(action.workOrderId),
+      workflowNodeId: String(action.workflowNodeId),
+      formDefinitionId: String(action.contentIdentity),
+      authorizationScope: loadedSessionScope,
+    }
+  }
+
+  function mutationCheckpointsFor(action: ActionDescriptor): FormMutationCheckpoints | null {
+    const storage = dependencies?.storage
+    const scope = mutationScopeFor(action)
+    if (!storage || !scope) return null
+    let formReserved = false
+    let workflowReserved = false
+    let savedId: FormDataId | null = null
+    let completed = false
+    const current = () => commandSessionScopeCurrent() && descriptor.value === action
+    return {
+      async beforeFormDispatch() {
+        if (!current()) return failure('session_invalid', '账号或角色已变化，禁止保存旧表单。')
+        if (formReserved) return { state: 'succeeded' }
+        const knownId = dynamicForm.value?.dataId ?? appointmentForm.value?.dataId
+        const result = await beginActionMutation(storage, scope, 'form_dispatched', knownId)
+        if (result.state !== 'succeeded') return failureFrom(result)
+        if (!current()) return failure('session_invalid', '保存前账号或角色已变化，结果待核查。')
+        formReserved = true
+        return { state: 'succeeded' }
+      },
+      async afterFormSaved(formDataId) {
+        if (savedId === formDataId) return { state: 'succeeded' }
+        const result = await recordActionFormSaved(storage, scope, formDataId)
+        if (result.state !== 'succeeded') return failureFrom(result)
+        savedId = formDataId
+        return { state: 'succeeded' }
+      },
+      async beforeWorkflowDispatch(formDataId) {
+        if (!current()) return failure('session_invalid', '账号或角色已变化，禁止完成旧工作流。')
+        if (workflowReserved) return { state: 'succeeded' }
+        const result = await beginActionMutation(storage, scope, 'workflow_dispatched', formDataId)
+        if (result.state !== 'succeeded') return failureFrom(result)
+        if (!current()) return failure('session_invalid', '完成前账号或角色已变化，结果待核查。')
+        workflowReserved = true
+        return { state: 'succeeded' }
+      },
+      async afterWorkflowCompleted() {
+        if (completed) return { state: 'succeeded' }
+        const result = await recordActionWorkflowCompleted(storage, scope)
+        if (result.state !== 'succeeded') return failureFrom(result)
+        completed = true
+        return { state: 'succeeded' }
+      },
+    }
   }
 
   /** Mandatory at command dispatch, not just on route re-entry: an existing
@@ -761,12 +829,60 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       ...(formPurpose ? { formPurpose } : {}),
       ...(form.data.definitionId ? { contentIdentity: form.data.definitionId } : {}),
     }
+    let loadedForm = form.data
+    if (configured.storage && nextDescriptor.contentIdentity) {
+      const receipt = await loadActionMutationReceipt(configured.storage, {
+        userId: String(nextDescriptor.userId),
+        workOrderId: String(nextDescriptor.workOrderId),
+        workflowNodeId: String(nextDescriptor.workflowNodeId),
+        formDefinitionId: String(nextDescriptor.contentIdentity),
+        authorizationScope: requestedSessionScope,
+      })
+      if (requestVersion !== loadVersion) return failure('cancelled', 'Action Workspace load was superseded')
+      if (!scopeUnchanged()) return blockStaleScope()
+      if (receipt.state !== 'succeeded' || (receipt.data && receipt.data.phase !== 'form_saved')) {
+        detail.value = read.data
+        loadState.value = 'blocked'
+        lifecycle.value = 'blocked'
+        error.value = receipt.error ?? mutationReceiptDenial().error ?? null
+        return failure('unsupported_capability', error.value?.message ?? '写入结果待核查，禁止再次提交。')
+      }
+      if (receipt.data?.formDataId) {
+        const savedId = receipt.data.formDataId as FormDataId
+        if (node.formDataId && String(node.formDataId) !== String(savedId)) {
+          loadState.value = 'blocked'
+          lifecycle.value = 'blocked'
+          error.value = createOperationError('unsupported_capability', '服务器表单 ID 与本地防重回执不一致，请人工核对。')
+          return failure('unsupported_capability', error.value.message)
+        }
+        const recovered = isAppointmentAction
+          ? await configured.commandApi.readAppointmentForm({ formDataId: savedId })
+          : configured.commandApi.readDynamicForm
+            ? await configured.commandApi.readDynamicForm({
+                definitionId: node.formDefinitionId!, formDataId: savedId,
+                ...(read.data.workflowRunId ? { expectedWorkflowRunId: read.data.workflowRunId } : {}),
+                ...(currentTask.formFieldIdsReadOnly ? { workflowReadOnlyFieldIds: currentTask.formFieldIdsReadOnly } : {}),
+              })
+            : failure<DynamicFormRead>('unsupported_capability', '表单 ID 回读能力不可用。')
+        if (requestVersion !== loadVersion) return failure('cancelled', 'Action Workspace load was superseded')
+        if (!scopeUnchanged()) return blockStaleScope()
+        if (recovered.state !== 'succeeded' || !recovered.data
+          || String(recovered.data.dataId) !== String(savedId)
+          || String(recovered.data.definitionId) !== String(nextDescriptor.contentIdentity)) {
+          loadState.value = 'blocked'
+          lifecycle.value = 'blocked'
+          error.value = createOperationError('unsupported_capability', '无法按防重回执确认服务器表单，禁止继续工作流。')
+          return failure('unsupported_capability', error.value.message)
+        }
+        loadedForm = recovered.data
+      }
+    }
     const nextIdentity = actionDraftIdentityFor(nextDescriptor)
     detail.value = read.data
     descriptor.value = nextDescriptor
-    appointmentForm.value = isAppointmentAction ? form.data as AppointmentFormRead : null
-    dynamicForm.value = isDynamicAction ? { ...(form.data as DynamicFormRead), ...(formPurpose ? { purpose: formPurpose } : {}) } : null
-    dynamicFormSaveState.value = isDynamicAction && form.data.dataId ? 'saved' : 'not_saved'
+    appointmentForm.value = isAppointmentAction ? loadedForm as AppointmentFormRead : null
+    dynamicForm.value = isDynamicAction ? { ...(loadedForm as DynamicFormRead), ...(formPurpose ? { purpose: formPurpose } : {}) } : null
+    dynamicFormSaveState.value = isDynamicAction && loadedForm.dataId ? 'saved' : 'not_saved'
     mediaByField.value = {}
     mediaInFlightField.value = null
     completionReconciled.value = true
@@ -774,8 +890,8 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     loadState.value = 'succeeded'
     lifecycle.value = 'available'
     error.value = null
-    if (isAppointmentAction) await restoreDraft(nextIdentity, form.data as AppointmentFormRead)
-    else await restoreDynamicDraft(nextIdentity, form.data as DynamicFormRead)
+    if (isAppointmentAction) await restoreDraft(nextIdentity, loadedForm as AppointmentFormRead)
+    else await restoreDynamicDraft(nextIdentity, loadedForm as DynamicFormRead)
     await restoreMediaTasks(nextDescriptor)
     if (requestVersion !== loadVersion) return failure('cancelled', 'Action Workspace load was superseded')
     if (!scopeUnchanged()) return blockStaleScope()
@@ -1490,6 +1606,17 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
         return flushed
       }
 
+      const mutation = mutationCheckpointsFor(currentDescriptor)
+      if (!mutation) {
+        dynamicFormSaveState.value = 'failed'
+        return failure('unsupported_capability', '持久化防重能力不可用，禁止保存表单。')
+      }
+      const reserved = await mutation.beforeFormDispatch()
+      if (reserved.state !== 'succeeded') {
+        dynamicFormSaveState.value = 'failed'
+        error.value = reserved.error ?? null
+        return reserved
+      }
       const result = await configured.commandApi.saveDynamicForm({
         workOrderId: currentDescriptor.workOrderId,
         workflowNodeId: currentDescriptor.workflowNodeId,
@@ -1498,7 +1625,12 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
         ...(form.purpose ? { purpose: form.purpose } : {}),
         ...(form.dataId ? { formDataId: form.dataId } : {}),
         values: validation.data,
+        mutation,
       })
+      if (result.state === 'succeeded' && result.data) {
+        const recorded = await mutation.afterFormSaved(result.data)
+        if (recorded.state !== 'succeeded') return recorded
+      }
       if (!stillThisAction()) return failure('cancelled', '已切换工单或表单，忽略旧保存响应。')
       if (!commandSessionScopeCurrent()) {
         dynamicFormSaveState.value = 'not_saved'
@@ -1573,7 +1705,9 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
         && currentTask.actionIntent === expectedAction.actionIntent
         && currentTask.execution === 'enabled',
       )
-      completionReconciled.value = sameActionStillAvailable
+      // An active readback is not proof that a dispatched Process had no
+      // scripts or side effects. The durable receipt remains the retry gate.
+      completionReconciled.value = false
       if (!sameActionStillAvailable) {
         loadState.value = 'blocked'
         lifecycle.value = 'blocked'
@@ -1629,6 +1763,17 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
 
     const commandVersion = loadVersion
     lifecycle.value = 'submitting'
+    const mutation = mutationCheckpointsFor(currentDescriptor)
+    if (!mutation) {
+      lifecycle.value = 'failed_terminal'
+      return failure('unsupported_capability', '持久化防重能力不可用，禁止完成工作流。')
+    }
+    const reserved = await mutation.beforeWorkflowDispatch(savedForm.dataId)
+    if (reserved.state !== 'succeeded') {
+      lifecycle.value = lifecycleForFailure(reserved.state)
+      error.value = reserved.error ?? null
+      return reserved
+    }
     completionReconciled.value = false
     error.value = null
     const commandResult = await configured.commandApi.completeWorkflowNode({
@@ -1637,7 +1782,12 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       ...(detail.value?.workflowRunId ? { workflowRunId: detail.value.workflowRunId } : {}),
       definitionId: currentDescriptor.contentIdentity as FormDefinitionId,
       formDataId: savedForm.dataId,
+      mutation,
     })
+    if (commandResult.state === 'succeeded') {
+      const recorded = await mutation.afterWorkflowCompleted()
+      if (recorded.state !== 'succeeded') return recorded
+    }
     if (!actionCommandScopeCurrent(commandVersion, currentDescriptor)) {
       return failure('cancelled', '原工作流已切换或会话已失效；旧命令结果不得覆盖当前工作台。')
     }
@@ -1961,6 +2111,17 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       return flushed
     }
 
+    const mutation = mutationCheckpointsFor(currentDescriptor)
+    if (!mutation) {
+      lifecycle.value = 'failed_terminal'
+      return failure('unsupported_capability', '持久化防重能力不可用，禁止提交预约。')
+    }
+    const reserved = await mutation.beforeFormDispatch()
+    if (reserved.state !== 'succeeded') {
+      lifecycle.value = lifecycleForFailure(reserved.state)
+      error.value = reserved.error ?? null
+      return reserved
+    }
     const commandResult = await configured.commandApi.submitAppointment({
       workOrderId: currentDescriptor.workOrderId,
       workflowNodeId: currentDescriptor.workflowNodeId,
@@ -1968,7 +2129,15 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       ...(form.dataId ? { formDataId: form.dataId } : {}),
       visitIntent: appointmentVisitIntent.value,
       values: validation.data ?? {},
+      mutation,
     })
+    if (commandResult.state === 'succeeded') {
+      const scope = mutationScopeFor(currentDescriptor)
+      const receipt = scope ? await loadActionMutationReceipt(configured.storage, scope) : mutationReceiptDenial()
+      if (receipt.state !== 'succeeded' || receipt.data?.phase !== 'completed') {
+        return failure('unsupported_capability', '预约写入回执不完整，结果待核查。')
+      }
+    }
     if (!actionCommandScopeCurrent(commandVersion, currentDescriptor)) {
       return failure('cancelled', '旧预约命令响应不得覆盖已切换的工作台。')
     }

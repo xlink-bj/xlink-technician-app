@@ -30,8 +30,11 @@ import { useWorkOrderListStore } from '@features/work-orders/list'
 import type {
   FormDataRead,
   FormDefinitionRead,
+  FormMutationCheckpoints,
+  SubmitAppointmentInput,
   ReadPage,
   SessionSnapshot,
+  StoragePort,
   TechnicianApiReadPort,
   WorkOrderDetail,
 } from '@shared/ports'
@@ -52,6 +55,12 @@ const appointmentNode = {
   displayName: '预约上门时间',
   formPurpose: 'appointment' as const,
   visibility: { evidenceState: 'verified' as const, viewableRoleIds: [roleId] },
+}
+const wireCheckpoints: FormMutationCheckpoints = {
+  beforeFormDispatch: async () => ({ state: 'succeeded' }),
+  afterFormSaved: async () => ({ state: 'succeeded' }),
+  beforeWorkflowDispatch: async () => ({ state: 'succeeded' }),
+  afterWorkflowCompleted: async () => ({ state: 'succeeded' }),
 }
 
 function succeeded<T>(data: T): OperationSnapshot<T> {
@@ -148,6 +157,7 @@ describe('G4-D accept and appointment semantics', () => {
       workOrderId,
       workflowNodeId: nodeId,
       formDataId: asOpaqueId<'FormDataId'>('existing-form-data'),
+      mutation: wireCheckpoints,
       values: { datetime: '2026-04-21 10:00', note: null },
     })).state).toBe('succeeded')
 
@@ -213,6 +223,7 @@ describe('G4-D accept and appointment semantics', () => {
       workOrderId: row.id,
       workflowNodeId: projection.currentTask!.nodeId,
       workflowRunId: acceptedDetail.data?.workflowRunId,
+      mutation: wireCheckpoints,
       values: { need: '1', datetime: '2026-04-20 10:00', note: '客户已确认' },
     })
     const completeDetail = await read.getWorkOrderDetail(row.id)
@@ -251,24 +262,33 @@ describe('G4-D accept and appointment semantics', () => {
     } as unknown as TechnicianApiReadPort
     const command = {
       readAppointmentForm: vi.fn(async () => succeeded({
+        definitionId: asOpaqueId<'FormDefinitionId'>('accept-store-appointment-definition'),
         fields: [{ fieldId: 'datetime', valueKey: 'datetime', label: '预约时间', type: 'datetime', required: true, readOnly: false }],
         values: {},
       })),
-      submitAppointment: vi.fn(async () => succeeded(undefined)),
+      submitAppointment: vi.fn(async (input: SubmitAppointmentInput) => {
+        const saved = asOpaqueId<'FormDataId'>('accept-store-saved-form')
+        await input.mutation?.afterFormSaved(saved)
+        await input.mutation?.beforeWorkflowDispatch(saved)
+        await input.mutation?.afterWorkflowCompleted()
+        return succeeded(undefined)
+      }),
       inspectAcceptOrder: vi.fn(),
       acceptOrder: vi.fn(),
     }
+    const stored = new Map<string, unknown>()
     const storage = {
-      read: vi.fn(async () => succeeded(null)),
-      write: vi.fn(async () => succeeded(undefined)),
+      read: vi.fn(async (key: { key: string }) => succeeded(stored.get(key.key) ?? null)),
+      write: vi.fn(async (key: { key: string }, value: unknown) => { stored.set(key.key, value); return succeeded(undefined) }),
       remove: vi.fn(async () => succeeded(undefined)),
       listKeys: vi.fn(async () => succeeded([])),
-    }
+    } as unknown as StoragePort
     const store = useActionWorkspaceStore()
     store.configure({
       apiRead: api,
       commandApi: command,
       draftRepository: createActionDraftRepository(storage),
+      storage,
       navigation: { navigate: vi.fn(async () => undefined), back: vi.fn(async () => undefined) },
       getSession: () => session,
       debounceMs: 0,

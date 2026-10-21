@@ -18,8 +18,10 @@ import {
   actionWorkspaceTimeRouteFor,
   useActionWorkspaceStore,
 } from '@features/work-orders/action-workspace'
+import { beginActionMutation, recordActionFormSaved } from '@features/work-orders/action-mutation-receipt'
 import type {
   AppointmentFormRead,
+  SubmitAppointmentInput,
   SessionSnapshot,
   StorageKey,
   StoragePort,
@@ -120,14 +122,23 @@ function configureWorkspace(
     getWorkOrderDetail: vi.fn(async () => succeeded(detail)),
   } as unknown as TechnicianApiReadPort
   const command: TechnicianApiCommandPort = {
-    readAppointmentForm: vi.fn(async () => succeeded(form)),
-    submitAppointment: vi.fn(async () => succeeded(undefined)),
+    readAppointmentForm: vi.fn(async (input: { formDataId?: string }) => succeeded(
+      input.formDataId ? { ...form, dataId: asOpaqueId<'FormDataId'>(input.formDataId) } : form,
+    )),
+    submitAppointment: vi.fn(async (input: SubmitAppointmentInput) => {
+      const saved = asOpaqueId<'FormDataId'>('workspace-saved-form')
+      if ((await input.mutation?.afterFormSaved(saved))?.state !== 'succeeded') return { state: 'failed_terminal' }
+      if ((await input.mutation?.beforeWorkflowDispatch(saved))?.state !== 'succeeded') return { state: 'failed_terminal' }
+      if ((await input.mutation?.afterWorkflowCompleted())?.state !== 'succeeded') return { state: 'failed_terminal' }
+      return succeeded(undefined)
+    }),
   } as unknown as TechnicianApiCommandPort
   const store = useActionWorkspaceStore()
   store.configure({
     apiRead: api,
     commandApi: command,
     draftRepository,
+    storage: storage.storage,
     navigation: nextNavigation,
     getSession,
     debounceMs,
@@ -160,6 +171,25 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
     })
     expect(command.readAppointmentForm).toHaveBeenCalledTimes(1)
     expect(store.appointmentFields.map((field) => field.valueKey)).toEqual(['need', 'datetime', 'note'])
+  })
+
+  it('rehydrates a saved FormData ID across a new Pinia instance before allowing continuation', async () => {
+    const shared = storageFor()
+    const actionScope = {
+      userId: String(session.user.id),
+      workOrderId: 'workspace-work-order',
+      workflowNodeId: 'workspace-appointment-node',
+      formDefinitionId: 'workspace-appointment-definition',
+      authorizationScope: JSON.stringify([String(session.sessionRef), String(session.user.id), String(roleId), null]),
+    }
+    expect((await beginActionMutation(shared.storage, actionScope, 'form_dispatched')).state).toBe('succeeded')
+    const savedId = asOpaqueId<'FormDataId'>('server-saved-appointment')
+    expect((await recordActionFormSaved(shared.storage, actionScope, savedId)).state).toBe('succeeded')
+    setActivePinia(createPinia())
+    const { store, command } = configureWorkspace(appointmentDetail(), appointmentForm(), shared)
+    expect((await openWorkspace(store)).state).toBe('succeeded')
+    expect(store.appointmentForm?.dataId).toBe(savedId)
+    expect(command.readAppointmentForm).toHaveBeenLastCalledWith({ formDataId: savedId })
   })
 
   it('fails closed on same-user roleVersion change instead of reusing the cached action', async () => {
@@ -405,7 +435,7 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
     expect(result.state).toBe('failed_retryable')
     expect(store.lifecycle).toBe('failed_retryable')
     expect(store.appointmentForm?.values.datetime).toBe('2026-04-20 10:00')
-    expect(storage.values.size).toBe(1)
+    expect(storage.values.size).toBe(2)
     expect((await draftRepository.listForUser(session.user.id)).data?.entries).toHaveLength(1)
   })
 
@@ -420,7 +450,7 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
     expect(result.state).toBe('succeeded')
     expect(store.lifecycle).toBe('succeeded')
     expect(storage.storage.remove).toHaveBeenCalledTimes(1)
-    expect(storage.values.size).toBe(0)
+    expect(storage.values.size).toBe(1)
     expect(api.getWorkOrderDetail).toHaveBeenCalledTimes(2)
     expect((await draftRepository.listForUser(session.user.id)).data?.entries).toHaveLength(0)
   })
@@ -440,10 +470,11 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
       state: 'failed_retryable',
       error: { category: 'network_retryable', message: 'storage unavailable', retryable: true },
     })
-    vi.mocked(storage.storage.write).mockResolvedValue({
-      state: 'failed_retryable',
-      error: { category: 'network_retryable', message: 'storage unavailable', retryable: true },
-    })
+    const originalWrite = vi.mocked(storage.storage.write).getMockImplementation()!
+    vi.mocked(storage.storage.write).mockImplementation(async (key, value) =>
+      key.key.startsWith('action-mutation%3Av1:')
+        ? originalWrite(key, value)
+        : { state: 'failed_retryable', error: { category: 'network_retryable', message: 'storage unavailable', retryable: true } })
 
     const result = await store.submit()
     expect(result.state).toBe('succeeded')
@@ -746,6 +777,7 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
       apiRead: read,
       commandApi: command,
       draftRepository: createActionDraftRepository(storage.storage),
+      storage: storage.storage,
       navigation: navigation(),
       getSession: () => session,
       debounceMs: 0,
@@ -765,7 +797,7 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
     store.setField(datetimeField!.fieldId, '2026-04-20 10:00')
     expect((await store.submit()).state).toBe('succeeded')
     expect(store.refreshStatus).toBe('refreshed')
-    expect(storage.values.size).toBe(0)
+    expect(storage.values.size).toBe(1)
   })
 
   it('keeps Appointment content dynamic-form driven and never embeds a raw endpoint or storage API', async () => {

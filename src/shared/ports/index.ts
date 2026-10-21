@@ -70,6 +70,7 @@ export type {
   DynamicFormRead,
   ReadDynamicFormInput,
   SaveDynamicFormInput,
+  FormMutationCheckpoints,
   SubmitAppointmentInput,
   TechnicianApiCommandPort,
   QuotationOrderCommandPort,

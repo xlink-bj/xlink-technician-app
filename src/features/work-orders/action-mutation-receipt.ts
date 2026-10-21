@@ -26,7 +26,9 @@ export interface ActionMutationReceipt {
   readonly phase: ActionMutationPhase
   readonly formDataId?: string
 }
-const locks = new WeakMap<StoragePort, Set<string>>()
+// All StoragePort wrappers in one app runtime share this reservation. H5 also
+// takes a browser Web Lock around the read/write pair below.
+const locks = new Set<string>()
 function digest(value: string): string {
   let a = 2166136261
   let b = 2246822519
@@ -55,6 +57,7 @@ function valid(value: unknown, s: ActionMutationScope): value is ActionMutationR
     && /^[0-9a-f]{16}$/.test(r.actorFingerprint)
     && ['form_dispatched','form_saved','workflow_dispatched','completed'].includes(String(r.phase))
     && (r.formDataId === undefined || (typeof r.formDataId === 'string' && r.formDataId.trim().length > 0))
+    && (r.phase === 'form_dispatched' || typeof r.formDataId === 'string')
 }
 function denial(message: string): OperationSnapshot<never> {
   return { state: 'failed_terminal', error: {
@@ -70,7 +73,9 @@ export async function loadActionMutationReceipt(
 ): Promise<OperationSnapshot<ActionMutationReceipt | null>> {
   if (!storage || !scope.authorizationScope || !scope.formDefinitionId || !scope.userId)
     return denial('持久化防重能力或会话身份不可用，禁止业务写入。')
-  const read = await storage.read<unknown>(storageKey(scope))
+  let read: OperationSnapshot<unknown | null>
+  try { read = await storage.read<unknown>(storageKey(scope)) }
+  catch { return denial('防重记录读取异常，禁止业务写入。') }
   if (read.state !== 'succeeded') return denial('防重记录读取失败，禁止业务写入。')
   if (read.data === null) return { state: 'succeeded', data: null }
   if (!valid(read.data, scope) || read.data.actorFingerprint !== digest(scope.authorizationScope))
@@ -91,14 +96,11 @@ async function persist(
     actorFingerprint: digest(scope.authorizationScope),
     phase, ...(formDataId ? { formDataId } : {}),
   }
-  const result = await storage.write(storageKey(scope), record)
+  let result: OperationSnapshot<void>
+  try { result = await storage.write(storageKey(scope), record) }
+  catch { return denial('防重记录落盘异常，禁止业务写入或继续完成工作流。') }
   if (result.state !== 'succeeded') return denial('防重记录落盘失败，禁止业务写入或继续完成工作流。')
   return { state: 'succeeded', data: record }
-}
-function claims(storage: StoragePort): Set<string> {
-  let entries=locks.get(storage)
-  if (!entries) { entries=new Set();locks.set(storage,entries) }
-  return entries
 }
 /** Dispatch reservation is taken before ANY async storage read/write. */
 export async function beginActionMutation(
@@ -109,21 +111,30 @@ export async function beginActionMutation(
 ): Promise<OperationSnapshot<ActionMutationReceipt>> {
   if (!storage) return denial('必须持久化未知结果防重记录，禁止请求。')
   const key=receiptKey(scope)
-  const active=claims(storage)
-  if (active.has(key)) return mutationReceiptDenial()
-  active.add(key)
-  try {
-    const read=await loadActionMutationReceipt(storage,scope)
-    if (read.state !== 'succeeded') return read as OperationSnapshot<ActionMutationReceipt>
-    const old=read.data
-    if (old && old.phase !== 'form_saved') return mutationReceiptDenial()
-    if (old && (!knownFormDataId || old.formDataId !== String(knownFormDataId))) return mutationReceiptDenial()
-    if (phase === 'workflow_dispatched' && (!knownFormDataId || (old && old.formDataId !== String(knownFormDataId))))
-      return mutationReceiptDenial()
-    return persist(storage,scope,phase,knownFormDataId ? String(knownFormDataId) : undefined)
-  } finally {
-    active.delete(key)
+  const reserve = async (): Promise<OperationSnapshot<ActionMutationReceipt>> => {
+    if (locks.has(key)) return mutationReceiptDenial()
+    locks.add(key)
+    try {
+      const read=await loadActionMutationReceipt(storage,scope)
+      if (read.state !== 'succeeded') return read as OperationSnapshot<ActionMutationReceipt>
+      const old=read.data
+      if (old && old.phase !== 'form_saved') return mutationReceiptDenial()
+      if (old && (!knownFormDataId || old.formDataId !== String(knownFormDataId))) return mutationReceiptDenial()
+      if (phase === 'workflow_dispatched' && (!knownFormDataId || (old && old.formDataId !== String(knownFormDataId))))
+        return mutationReceiptDenial()
+      return persist(storage,scope,phase,knownFormDataId ? String(knownFormDataId) : undefined)
+    } finally {
+      locks.delete(key)
+    }
   }
+  // MP and App-Plus use the runtime-wide reservation. Browser tabs require an
+  // atomic same-origin lock; without Web Locks, H5 writes fail closed.
+  if (typeof window !== 'undefined' && !('plus' in globalThis) && !('wx' in globalThis)) {
+    if (typeof navigator === 'undefined' || !navigator.locks) return denial('浏览器缺少跨窗口防重锁，禁止业务写入。')
+    try { return await navigator.locks.request(key, { mode: 'exclusive' }, reserve) }
+    catch { return denial('跨窗口防重锁不可用，禁止业务写入。') }
+  }
+  return reserve()
 }
 /** For a save ACK, retain authoritative ID even if the view/session has switched. */
 export async function recordActionFormSaved(
@@ -133,7 +144,8 @@ export async function recordActionFormSaved(
 ): Promise<OperationSnapshot<ActionMutationReceipt>> {
   const read=await loadActionMutationReceipt(storage,scope)
   if (read.state !== 'succeeded' || !read.data
-    || read.data.phase !== 'form_dispatched') return mutationReceiptDenial()
+    || read.data.phase !== 'form_dispatched'
+    || (read.data.formDataId && read.data.formDataId !== String(formDataId))) return mutationReceiptDenial()
   return persist(storage,scope,'form_saved',String(formDataId))
 }
 export async function recordActionWorkflowCompleted(

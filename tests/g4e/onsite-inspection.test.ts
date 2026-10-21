@@ -35,6 +35,7 @@ import type {
   DynamicFormRead,
   FormFieldVisibility,
   FormFieldValue,
+  FormMutationCheckpoints,
   LocationPort,
   LocationSnapshot,
   MediaCapturePort,
@@ -144,6 +145,12 @@ function storageFor() {
   } as unknown as StoragePort
   return { storage, values }
 }
+const wireCheckpoints: FormMutationCheckpoints = {
+  beforeFormDispatch: async () => ({ state: 'succeeded' }),
+  afterFormSaved: async () => ({ state: 'succeeded' }),
+  beforeWorkflowDispatch: async () => ({ state: 'succeeded' }),
+  afterWorkflowCompleted: async () => ({ state: 'succeeded' }),
+}
 
 function configureWorkspace(
   commandResult: OperationSnapshot<void> = succeeded(undefined),
@@ -194,6 +201,7 @@ function configureWorkspace(
     apiRead: api,
     commandApi: command,
     draftRepository: createActionDraftRepository(storage.storage),
+    storage: storage.storage,
     navigation,
     getSession: () => session,
     mediaFilePicker: picker,
@@ -723,7 +731,7 @@ describe('G4-E Survey dynamic Action Content', () => {
     expect(api.getWorkOrderDetail).toHaveBeenCalledTimes(2)
     expect(store.businessResult).toBe('succeeded')
     expect(store.refreshStatus).toBe('refreshed')
-    expect(storage.values.size).toBe(0)
+    expect(storage.values.size).toBe(1)
     const serialized = JSON.stringify([...storage.values.values()])
     expect(serialized).not.toContain('not-persisted')
   })
@@ -804,7 +812,7 @@ describe('G4-E Survey dynamic Action Content', () => {
     expect(complete).toHaveBeenCalledTimes(1)
     expect(api.getWorkOrderDetail).toHaveBeenCalledTimes(2)
     expect(store.businessResult).toBe('failed')
-    expect(store.canSubmit).toBe(true)
+    expect(store.canSubmit).toBe(false)
   })
 
   it('blocks retry when reconciliation shows the workflow node is no longer current', async () => {
@@ -935,6 +943,7 @@ describe('G4-E Survey dynamic Action Content', () => {
       workflowNodeId: node!.id,
       workflowRunId: detail.data?.workflowRunId,
       definitionId: node!.formDefinitionId!,
+      mutation: wireCheckpoints,
       values: { memo: '按现场条件继续施工' },
     })
     expect(saved.state).toBe('succeeded')
@@ -956,6 +965,7 @@ describe('G4-E Survey dynamic Action Content', () => {
       workflowRunId: detail.data?.workflowRunId,
       definitionId: node!.formDefinitionId!,
       formDataId: saved.data!,
+      mutation: wireCheckpoints,
     })
     expect(completed.state).toBe('succeeded')
     const after = await read.getWorkOrderDetail(asOpaqueId<'WorkOrderId'>(mockCommandScenarioIds.surveySuccess))
@@ -977,6 +987,7 @@ describe('G4-E Survey dynamic Action Content', () => {
       workflowNodeId,
       definitionId: formDefinitionId,
       purpose: 'survey',
+      mutation: wireCheckpoints,
       values: {
         images1: [{
           url: 'https://media.invalid/object-002',
@@ -1005,6 +1016,7 @@ describe('G4-E Survey dynamic Action Content', () => {
       workOrderId,
       workflowNodeId,
       definitionId: formDefinitionId,
+      mutation: wireCheckpoints,
       values: {
         attachment: [{ url: 'https://media.invalid/generic-object' }],
       },
@@ -1030,6 +1042,7 @@ describe('G4-E Survey dynamic Action Content', () => {
       workflowNodeId,
       definitionId: formDefinitionId,
       purpose: 'survey',
+      mutation: wireCheckpoints,
       values: { images1: value },
     })
 
