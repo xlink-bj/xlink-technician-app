@@ -305,6 +305,12 @@ export class TechnicianApiCommandAdapter implements TechnicianApiCommandPort {
     safety?: ApiCommandRequest['safety'],
   ): Promise<OperationSnapshot<FormDataId>> {
     try {
+      // Also cover the public saveDynamicForm Port when used directly for the
+      // R1 Appointment definition, not only submitAppointment's UI path.
+      if (String(input.definitionId) === appointmentFormDefinitionWireId
+        && String(input.values.need ?? '') === '0') {
+        return adapterFailure('unsupported_capability', 'Deferred Appointment wire is unverified; no FormData was dispatched')
+      }
       if (!input.mutation) return adapterFailure('unsupported_capability', 'Durable FormData checkpoint is required')
       const request = formDataUpsertCommand(input, safety)
       const reserved = await input.mutation.beforeFormDispatch()
