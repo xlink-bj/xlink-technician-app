@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { readR1NodeFormList } from '@adapters/api/r1-node-form-list'
+import { buildR1RepeatFormListQuery, readR1NodeFormList } from '@adapters/api/r1-node-form-list'
 import { createTechnicianApiReadAdapter } from '@adapters/api/technician-api'
 import {
   mockDetailScenarioIds, mockStatusOptionsResponse,
@@ -42,6 +42,54 @@ describe('F1 R1 multi-form existing records — source-bound, privacy-safe read'
     const list = readR1NodeFormList({ exts: { formList: entries } }, 'forms')
     expect(list?.entries).toHaveLength(50)
     expect(list?.truncated).toBe(true)
+  })
+  it('encodes original R1 repeat query with effective workflowId and bounded FlipPageInfo', () => {
+    const req = buildR1RepeatFormListQuery({
+      definitionId: asOpaqueId<'FormDefinitionId'>('def-repeat'),
+      workflowRunId: asOpaqueId<'WorkflowRunId'>('child-workflow-run'),
+      page: 1, pageSize: 10,
+    })
+    expect(req).toEqual({
+      method: 'POST', path: 'biz/extForm/query/def-repeat',
+      body: {
+        sortField: 'createTime', sortOrder: 'desc',
+        'is:workflowId|string#and': 'child-workflow-run',
+        'ne:state|integer#and': -1,
+        page: 1, rows: 10,
+      },
+    })
+    for (const [page,pageSize] of [[0,10],[1,0],[1,21],[11,10]]) {
+      expect(() => buildR1RepeatFormListQuery({
+        definitionId: asOpaqueId<'FormDefinitionId'>('def-repeat'),
+        workflowRunId: asOpaqueId<'WorkflowRunId'>('child-run'),
+        page, pageSize,
+      })).toThrow()
+    }
+  })
+  it('reads only scoped repeat references from a synthetic transport without returning form values', async () => {
+    const execute = vi.fn(async () => ({ data: [
+      { _id: 'saved-repeat-1', state: 1, formTitle: '合成重复记录', phone: 'private' },
+    ], total: 1, page: 1, rows: 10 }))
+    const adapter = createTechnicianApiReadAdapter({execute})
+    const result = await adapter.listRepeatFormReferences!({
+      definitionId: asOpaqueId<'FormDefinitionId'>('def-repeat'),
+      workflowRunId: asOpaqueId<'WorkflowRunId'>('verified-child-workflow'),
+      page: 1, pageSize: 10,
+    })
+    expect(result.state).toBe('succeeded')
+    expect(result.data?.items).toEqual([{ id: 'saved-repeat-1', title: '合成重复记录', state: 'active' }])
+    expect(JSON.stringify(result.data)).not.toContain('private')
+    expect(execute).toHaveBeenCalledTimes(1)
+    expect(execute).toHaveBeenCalledWith(expect.objectContaining({body: expect.objectContaining({
+      'is:workflowId|string#and': 'verified-child-workflow',
+    })}))
+    const denied = await adapter.listRepeatFormReferences!({
+      definitionId: asOpaqueId<'FormDefinitionId'>('def-repeat'),
+      workflowRunId: asOpaqueId<'WorkflowRunId'>('verified-child-workflow'),
+      page: 0, pageSize: 30,
+    })
+    expect(denied.error?.category).toBe('validation')
+    expect(execute).toHaveBeenCalledTimes(1)
   })
   it('preserves real-shaped already-read forms evidence through the existing authorized detail adapter', async () => {
     const id = mockDetailScenarioIds[0]
