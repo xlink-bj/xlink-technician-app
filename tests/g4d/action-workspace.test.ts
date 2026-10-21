@@ -360,8 +360,11 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
     store.setField('need', '1')
     store.setAppointmentTime('2026-04-20 11:00')
 
-    await new Promise((resolve) => setTimeout(resolve, 10))
-    expect(storage.storage.write).toHaveBeenCalledTimes(1)
+    // Wait on the actual persisted-write boundary, not wall-clock 10ms.
+    // CI scheduling delays may exceed debounceMs even with valid behavior.
+    await vi.waitFor(() => expect(storage.storage.write).toHaveBeenCalledTimes(1), {
+      timeout: 1500, interval: 5,
+    })
 
     store.setField('need', '0')
     store.setField('note', '快速切换后的备注')
