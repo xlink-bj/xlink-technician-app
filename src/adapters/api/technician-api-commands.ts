@@ -348,7 +348,9 @@ export class TechnicianApiCommandAdapter implements TechnicianApiCommandPort {
     // A deferred appointment is source-unverified and is denied before any
     // durable receipt is reserved. A transport-only rejection would leave an
     // incorrect unknown-after-dispatch marker even though no request was sent.
-    if (input.visitIntent === 'visit_deferred' || String(input.values.need ?? '') === '0') {
+    const deferredSafety: ApiCommandRequest['safety'] = input.visitIntent === 'visit_deferred'
+      ? 'deferred_appointment_datetime_encoding_unknown' : undefined
+    if (deferredSafety || String(input.values.need ?? '') === '0') {
       return adapterFailure('unsupported_capability', 'R1 deferred appointment encoding is not verified; no command was dispatched')
     }
     if (!input.mutation) return adapterFailure('unsupported_capability', 'Durable Appointment checkpoints are required')
@@ -361,8 +363,7 @@ export class TechnicianApiCommandAdapter implements TechnicianApiCommandPort {
       ...(input.formDataId ? { formDataId: input.formDataId } : {}),
       values: input.values,
       mutation,
-    }, input.visitIntent === 'visit_deferred'
-      ? 'deferred_appointment_datetime_encoding_unknown' : undefined)
+    }, deferredSafety)
     if (saved.state !== 'succeeded') return failureFrom<FormDataId, void>(saved)
     if (!saved.data) return adapterFailure('server_terminal', 'Saved appointment form data id is missing')
 
