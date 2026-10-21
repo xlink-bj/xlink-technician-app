@@ -125,7 +125,7 @@ export function auditOwnership(sourceFiles) {
   if (/\b(?:calculateQuotationPricing|encodeR1OfficialOrderType1)\s*\(/.test(has('workspace')))
     issues.push(canon.workspace + ': quote price/order calculation bypasses Engine')
   if (!/\bcalculateQuotationPricing\s*\(/.test(has('pricing'))
-    || !/\bencodeR1OfficialOrderType1\s*\(/.test(has('pricing'))))
+    || !/\bencodeR1OfficialOrderType1\s*\(/.test(has('pricing')))
     issues.push(canon.pricing + ': pure Quotation Engine calculation/encoding stage missing')
   if (!/authorizationFingerprint/.test(has('order'))
     || !/authorizationCurrent/.test(has('order'))
