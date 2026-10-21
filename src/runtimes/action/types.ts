@@ -49,6 +49,8 @@ export interface ActionIdentity {
 export interface ActionDescriptor extends ActionIdentity {
   readonly title: string
   readonly execution: ActionExecution
+  /** Source-preserved R1 nodeDef.nodeType; separate from display category. */
+  readonly sourceNodeType?: string
   /** Semantic form identity resolved by the Adapter, not inferred from intent. */
   readonly formPurpose?: FormPurpose
 }
