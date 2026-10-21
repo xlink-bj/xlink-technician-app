@@ -759,7 +759,7 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
     expect(navigation.back).not.toHaveBeenCalled()
   })
 
-  it('uses the same Mock raw read/command path as the real Action Workspace', async () => {
+  it('reads real-shaped Mock forms nodeType but refuses its incompatible one-record command', async () => {
     vi.stubEnv('VITE_XLINK_ENVIRONMENT', 'test')
     setBusinessMockMode('data')
     resetMockCommandState()
@@ -797,16 +797,12 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
       workflowNodeId: asOpaqueId<'WorkflowNodeRuntimeId'>('mock-workflow-node-016-appointment'),
       actionIntent: 'set_appointment',
     })
-    expect(result.state).toBe('succeeded')
-    const needField = store.appointmentForm?.fields.find((field) => field.valueKey === 'need')
-    const datetimeField = store.appointmentForm?.fields.find((field) => field.valueKey === 'datetime')
-    expect(needField?.fieldId).toBe('mock-form-field-need')
-    expect(datetimeField?.fieldId).toBe('mock-form-field-datetime')
-    store.setField(needField!.fieldId, '1')
-    store.setField(datetimeField!.fieldId, '2026-04-20 10:00')
-    expect((await store.submit()).state).toBe('succeeded')
-    expect(store.refreshStatus).toBe('refreshed')
-    expect(storage.values.size).toBe(1)
+    expect(result.state).toBe('failed_terminal')
+    expect(result.error?.category).toBe('unsupported_capability')
+    expect(store.lifecycle).toBe('blocked')
+    expect(store.descriptor).toBeNull()
+    expect((await store.submit()).state).toBe('failed_terminal')
+    expect([...storage.values.keys()].some(key=>key.startsWith('action-mutation'))).toBe(false)
   })
 
   it('keeps Appointment content dynamic-form driven and never embeds a raw endpoint or storage API', async () => {
