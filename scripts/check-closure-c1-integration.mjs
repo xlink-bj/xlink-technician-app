@@ -4,10 +4,12 @@
  * All reads are local Git objects/source; no API or production network access.
  * This is NOT an approval to merge main or proof of live R1 business parity.
  */
-import { readFileSync } from 'node:fs'
 import { spawnSync } from 'node:child_process'
 
 const upstream = 'ffed2fd4e6494dd1cd4a37936ded364654072f9f' // #190
+// Freeze the candidate being attested. Later legitimate stacked refactors must
+// not fail C1 just because HEAD contains new files with their OWN scoped gate.
+const c1Candidate = 'ac715c96c36af1fe6caa4fc7be1a6bf092358aa3'
 const ancestors = Object.freeze([
   ['#182 login consent', 'f7ee7360e302d576dd4a44164592b5bcdf2c1b0e'],
   ['#183 appointment wire', '18ae65d85713cadc40cc00b87a44d3dba90ffdeb'],
@@ -43,20 +45,28 @@ function git(...args) {
 }
 
 function collectProof() {
-  const delta = git('diff', '--name-only', upstream, 'HEAD')
+  const delta = git('diff', '--name-only', upstream, c1Candidate)
   if (!delta.ok) throw new Error('Cannot compare candidate to pinned #190')
   const checked = git('rev-parse', 'HEAD')
   if (!checked.ok) throw new Error('Cannot determine exact candidate commit')
+  if (!git('merge-base', '--is-ancestor', c1Candidate, 'HEAD').ok) {
+    throw new Error('C1 proven candidate is not an ancestor of the checked-out branch')
+  }
   const parent = git('show', '-s', '--format=%P', ancestors[2][1])
   const blobs = Object.fromEntries(Object.keys(provenPortBlobs).map(file => {
-    const x = git('hash-object', file)
+    const x = git('rev-parse', `${c1Candidate}:${file}`)
     return [file, x.ok ? x.value : 'NOT_READABLE']
   }))
-  const actorRuntime = readFileSync('src/features/work-orders/appointment-form-runtime.ts','utf8')
-  const dynamicRuntime = readFileSync('src/features/work-orders/dynamic-form-action.ts','utf8')
-  const sharedSchema = readFileSync('src/features/work-orders/action-form-schema.ts','utf8')
-  const cmdAdapter = readFileSync('src/adapters/api/technician-api-commands.ts','utf8')
-  const wireOwner = readFileSync('src/adapters/api/action-command-wires.ts','utf8')
+  const pinnedSource = file => {
+    const result = git('show', `${c1Candidate}:${file}`)
+    if (!result.ok) throw new Error('Pinned C1 source cannot be read: ' + file)
+    return result.value
+  }
+  const actorRuntime = pinnedSource('src/features/work-orders/appointment-form-runtime.ts')
+  const dynamicRuntime = pinnedSource('src/features/work-orders/dynamic-form-action.ts')
+  const sharedSchema = pinnedSource('src/features/work-orders/action-form-schema.ts')
+  const cmdAdapter = pinnedSource('src/adapters/api/technician-api-commands.ts')
+  const wireOwner = pinnedSource('src/adapters/api/action-command-wires.ts')
   return {
     head: checked.value,
     paths: delta.value ? delta.value.split('\n') : [],
