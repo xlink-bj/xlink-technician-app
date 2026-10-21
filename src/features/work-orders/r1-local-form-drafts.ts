@@ -1,6 +1,9 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import type { StoragePort, StorageKey, WorkflowNodeRead, FormDefinitionRead, FormFieldValue } from '@shared/ports'
+import type { StoragePort, StorageKey, WorkflowNodeRead, FormDefinitionRead, FormFieldValue, TechnicianApiReadPort } from '@shared/ports'
+import { asOpaqueId } from '@shared/types'
+import { isBusinessMockDeveloperModeAvailable, isBusinessMockMode } from '@app/business-mock'
+import { allowsR1LocalDefinitionPreview } from './r1-local-form-fields'
 import { normalizeR1LocalFieldPatch, type R1LocalFieldValue } from './r1-local-form-fields'
 
 /**
@@ -75,11 +78,12 @@ export const useR1LocalFormDraftStore=defineStore('r1LocalFormDraft',()=>{
   const snapshot=ref<R1LocalFormSnapshot>(initial)
   const message=ref('')
   let storage:StoragePort|null=null
+  let apiRead:TechnicianApiReadPort|null=null
   let current:R1LocalFormScope|null=null
   let currentNode:WorkflowNodeRead|null=null
   let version=0
 
-  function configure(port:StoragePort){storage=port}
+  function configure(port:StoragePort,read?:TechnicianApiReadPort){storage=port;apiRead=read??null}
   function clear() {
     version++;current=null;currentNode=null
     snapshot.value=initial;state.value='idle';message.value=''
@@ -173,6 +177,34 @@ export const useR1LocalFormDraftStore=defineStore('r1LocalFormDraft',()=>{
           targetFormDataId:recordId,definitionId:String(definition),title:name}]}
     })
   }
+  /** Explicit DEV + synthetic Mock only; never queries a real tenant. */
+  async function loadDraftDefinition(localId:string):Promise<FormDefinitionRead|null>{
+    const scope=current
+    const intent=snapshot.value.intents.find(x=>x.localId===localId&&x.kind==='new')
+    if(!scope || !intent || state.value!=='ready' || !permitted() || !apiRead
+      || !allowsR1LocalDefinitionPreview({
+        dev:import.meta.env.DEV===true,
+        mockDataMode:isBusinessMockDeveloperModeAvailable() && isBusinessMockMode()==='data',
+        workOrderId:scope.workOrderId,
+        definitionId:intent.definitionId,
+      })) {
+      message.value='真实表单定义尚未获得读取授权；仅允许 DEV 合成数据字段预览。'
+      return null
+    }
+    const ticket=version
+    const scopedKey=key(scope).key
+    try {
+      const reply=await apiRead.getFormDefinition(asOpaqueId<'FormDefinitionId'>(intent.definitionId))
+      if(ticket!==version||!current||key(current).key!==scopedKey||state.value!=='ready')
+        return null
+      if(reply.state!=='succeeded'||!reply.data||String(reply.data.id)!==intent.definitionId
+        ||!reply.data.fields||reply.data.fields.length===0||reply.data.fields.length>50){
+        message.value='合成表单定义不完整或与草稿不一致。'
+        return null
+      }
+      return reply.data
+    }catch{if(ticket===version)message.value='合成表单定义读取失败。';return null}
+  }
   async function setDraftField(
     localId:string,definition:FormDefinitionRead,key:string,value:FormFieldValue|undefined,
   ):Promise<boolean>{
@@ -191,5 +223,5 @@ export const useR1LocalFormDraftStore=defineStore('r1LocalFormDraft',()=>{
   async function discard(localId:string):Promise<boolean> {
     return update(previous=>({...previous,intents:previous.intents.filter(x=>x.localId!==localId)}))
   }
-  return {state,snapshot,message,configure,clear,open,add,stageDelete,stageEditTitle,setDraftField,discard}
+  return {state,snapshot,message,configure,clear,open,add,stageDelete,stageEditTitle,loadDraftDefinition,setDraftField,discard}
 })
