@@ -126,7 +126,8 @@ export function projectDetailWorkflow(
       domainPolicy: policySummary(candidate.domainPolicy),
       // Workflow policy owns placeOrder eligibility; only form-backed actions
       // require a form definition before their content can execute.
-      execution: requiresR1SpecialWorkflowWire(candidate.node.sourceNodeType)
+      execution: (candidate.actionIntent === 'set_appointment' || candidate.actionIntent === 'interact_with_form')
+        && requiresR1SpecialWorkflowWire(candidate.node.sourceNodeType)
         ? 'disabled_read_only'
         : (candidate.actionIntent === 'set_appointment'
           || candidate.actionIntent === 'place_order'
