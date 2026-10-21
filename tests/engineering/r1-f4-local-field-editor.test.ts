@@ -99,6 +99,29 @@ describe('F4 guarded field editor – source-backed local repeat field values',(
     await restored.open({...scope,actorScope:'different-role'},node)
     expect(restored.snapshot.intents).toHaveLength(0)
   })
+  it('commits multi-field edits in one durable local write, rejects unknown keys atomically',async()=>{
+    const {storage,map}=storageHarness()
+    const store=useR1LocalFormDraftStore()
+    store.configure(storage)
+    await store.open(scope,node)
+    expect(await store.add('输入字段')).toBe(true)
+    const writesBefore=vi.mocked(storage.write).mock.calls.length
+    expect(await store.saveDraftValues('local-1',def,{
+      inspectionText:'已现场检查',area:22.5,result:'fix',
+    })).toBe(true)
+    expect(vi.mocked(storage.write).mock.calls.length).toBe(writesBefore+1)
+    expect(store.snapshot.intents[0]?.values).toEqual({
+      inspectionText:'已现场检查',area:22.5,result:'fix',
+    })
+    expect(await store.saveDraftValues('local-1',def,{
+      inspectionText:'新文案',invalidField:'not defined',
+    })).toBe(false)
+    expect(store.snapshot.intents[0]?.values?.inspectionText).toBe('已现场检查')
+    expect([...map.values()]).toHaveLength(1)
+    const wrong={...def,id:asOpaqueId<'FormDefinitionId'>('unrelated-definition')}
+    expect(await store.saveDraftValues('local-1',wrong,{inspectionText:'tamper'})).toBe(false)
+    expect(store.snapshot.intents[0]?.values?.inspectionText).toBe('已现场检查')
+  })
   it('never permits FormDefinition read for real WorkOrders or real definition IDs',()=>{
     expect(allowsR1LocalDefinitionPreview({
       dev:true,mockDataMode:true,workOrderId:'mock-work-order-synthetic',
