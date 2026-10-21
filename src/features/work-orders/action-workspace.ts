@@ -3,6 +3,7 @@ import { defineStore } from 'pinia'
 import { isProductionReadOnlyRuntime } from '@shared/config'
 
 import { detailWorkflowProjectionFor } from './detail-workflow'
+import { createActionWorkspaceReadModel } from './action-workspace-read-model'
 import {
   appointmentValue,
   draftRecordFor,
@@ -241,114 +242,40 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
   const mediaTasksByField = ref<Readonly<Record<string, readonly MediaUploadTask[]>>>({})
   const completionReconciled = ref(false)
   const error = ref<OperationError | null>(null)
-  const appointmentFields = computed<readonly AppointmentRuntimeField[]>(() =>
-    appointmentForm.value ? appointmentRuntimeFieldsFor(appointmentForm.value) : [],
-  )
-  const appointmentFieldRoles = computed(() =>
-    appointmentForm.value
-      ? appointmentFieldRolesFor(appointmentForm.value)
-      : { extras: [] },
-  )
-  const appointmentVisitIntent = computed<AppointmentVisitIntent>(() =>
-    appointmentForm.value ? appointmentVisitIntentFor(appointmentForm.value) : 'unknown',
-  )
-  const appointmentChoiceField = computed(() => appointmentFieldRoles.value.need)
-  const appointmentTimeField = computed(() => appointmentFieldRoles.value.datetime)
-  const appointmentDatetimeApplicable = computed(() =>
-    appointmentForm.value ? appointmentDatetimeApplicableFor(appointmentForm.value) : false,
-  )
-  const appointmentNoteField = computed(() => appointmentFieldRoles.value.note)
-  const appointmentExtraFields = computed(() => appointmentFieldRoles.value.extras)
-  const appointmentTimeValue = computed(() => {
-    const valueKey = appointmentTimeField.value?.valueKey
-    return appointmentDatetimeApplicable.value && valueKey ? appointmentForm.value?.values[valueKey] : undefined
+  // The Workspace owns mutation; all UI read projections are computed in
+  // one dependency-injected read model with explicit reactive inputs.
+  const {
+    appointmentFields,
+    appointmentFieldRoles,
+    appointmentVisitIntent,
+    appointmentChoiceField,
+    appointmentTimeField,
+    appointmentDatetimeApplicable,
+    appointmentNoteField,
+    appointmentExtraFields,
+    appointmentTimeValue,
+    dynamicFields,
+    dynamicUnsupportedFields,
+    dynamicValidation,
+    surveyLeakageCauseExperience,
+    surveyLeakageCauseFieldIds,
+    surveyLeakageCauseCurrentPart,
+    surveyLeakageCausePartLabels,
+    surveyLeakageCauseSelectedIds,
+    surveyLeakageCauseLabelsValue,
+    surveyLeakageCauseOptions,
+    surveyLeakageCauseReadOnly,
+    surveyLeakageCauseVisible,
+    surveyLeakageCauseCanOpen,
+    isDynamicFormAction,
+    dynamicRequiredMediaPending,
+    dynamicMediaUploading,
+    canSubmit,
+  } = createActionWorkspaceReadModel({
+    appointmentForm, dynamicForm, descriptor, surveyLeakageCauseRows,
+    mediaTasksByField, mediaInFlightField, loadState, lifecycle,
+    businessResult, dynamicFormSaveState, completionReconciled,
   })
-  const dynamicFields = computed<readonly DynamicActionField[]>(() =>
-    dynamicForm.value ? dynamicActionFieldsFor(dynamicForm.value) : [],
-  )
-  const dynamicUnsupportedFields = computed<readonly DynamicActionField[]>(() =>
-    dynamicForm.value ? dynamicActionUnsupportedFieldsFor(dynamicForm.value) : [],
-  )
-  const dynamicValidation = computed(() =>
-    dynamicForm.value
-      ? normalizeDynamicForm(dynamicForm.value)
-      : failure<Readonly<Record<string, FormFieldValue>>>('validation', 'Action content is not ready'),
-  )
-  const surveyLeakageCauseExperience = computed(() =>
-    dynamicForm.value ? surveyLeakageCauseExperienceFor(dynamicForm.value) : undefined,
-  )
-  const surveyLeakageCauseFieldIds = computed(() =>
-    dynamicForm.value ? surveyLeakageCauseFieldIdsFor(dynamicForm.value) : [],
-  )
-  const surveyLeakageCauseCurrentPart = computed(() =>
-    dynamicForm.value ? currentPartForLeakageCause(dynamicForm.value.values.part) : undefined,
-  )
-  const surveyLeakageCausePartLabels = computed(() =>
-    dynamicForm.value ? surveyLeakageCausePartLabelsFor(dynamicForm.value) : new Map<string, string>(),
-  )
-  const surveyLeakageCauseSelectedIds = computed<readonly string[]>(() => {
-    const experience = surveyLeakageCauseExperience.value
-    if (!dynamicForm.value || !experience) return []
-    return surveyLeakageCausePersistedIds(dynamicForm.value.values[experience.valueField.valueKey]) ?? []
-  })
-  const surveyLeakageCauseLabelsValue = computed(() =>
-    surveyLeakageCauseLabels(surveyLeakageCauseSelectedIds.value, surveyLeakageCauseRows.value),
-  )
-  const surveyLeakageCauseOptions = computed(() =>
-    surveyLeakageCauseGroups(
-      surveyLeakageCauseRows.value,
-      surveyLeakageCauseCurrentPart.value,
-      surveyLeakageCausePartLabels.value,
-    ),
-  )
-  const surveyLeakageCauseReadOnly = computed(() => {
-    const experience = surveyLeakageCauseExperience.value
-    if (!dynamicForm.value || !experience) return false
-    return surveyLeakageCauseFieldStateFor(dynamicForm.value, experience.valueField)?.readOnly ?? false
-  })
-  const surveyLeakageCauseVisible = computed(() => {
-    const experience = surveyLeakageCauseExperience.value
-    if (!dynamicForm.value || !experience) return false
-    return surveyLeakageCauseFieldStateFor(dynamicForm.value, experience.valueField)?.visible ?? false
-  })
-  const surveyLeakageCauseCanOpen = computed(() => Boolean(
-    surveyLeakageCauseExperience.value
-    && surveyLeakageCauseCurrentPart.value
-    && !surveyLeakageCauseReadOnly.value,
-  ))
-  const isDynamicFormAction = computed(() => descriptor.value?.actionIntent === 'interact_with_form')
-  const dynamicRequiredMediaPending = computed(() => dynamicFields.value.some((field) => {
-    if (isDeferredSurveyField(dynamicForm.value?.purpose, field)) return false
-    if (!field.runtime.visible || !field.runtime.required || (field.type !== 'image' && field.type !== 'file')) return false
-    const value = dynamicForm.value?.values[field.valueKey]
-    const hasAuthoritativeRemoteValue = Array.isArray(value)
-      ? value.length > 0
-      : isMediaValueRef(value) || Boolean(value)
-    if (hasAuthoritativeRemoteValue) return false
-    const tasks = mediaTasksByField.value[field.fieldId] ?? []
-    return tasks.some((task) => task.state !== 'uploaded')
-  }))
-  const dynamicMediaUploading = computed(() => mediaInFlightField.value !== null || Object.values(mediaTasksByField.value).some((tasks) =>
-    tasks.some((task) => ['queued', 'preprocessing', 'ready_to_upload', 'uploading'].includes(task.state)),
-  ))
-  const canSubmit = computed(() => isDynamicFormAction.value
-    ? loadState.value === 'succeeded' &&
-      lifecycle.value !== 'submitting' &&
-      businessResult.value !== 'succeeded' &&
-      descriptor.value?.execution === 'enabled' &&
-      dynamicForm.value !== null &&
-      dynamicFormSaveState.value === 'saved' &&
-      Boolean(dynamicForm.value.dataId) &&
-      dynamicUnsupportedFields.value.length === 0 &&
-      dynamicValidation.value.state === 'succeeded' &&
-      !dynamicRequiredMediaPending.value &&
-      !dynamicMediaUploading.value &&
-      completionReconciled.value
-    : loadState.value === 'succeeded' &&
-      lifecycle.value !== 'submitting' &&
-      businessResult.value !== 'succeeded' &&
-      descriptor.value?.execution === 'enabled' &&
-      appointmentForm.value !== null)
 
   let dependencies: ActionWorkspaceDependencies | null = null
   let identity: ActionDraftIdentity | null = null
