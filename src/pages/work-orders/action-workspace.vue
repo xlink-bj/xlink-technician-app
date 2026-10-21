@@ -402,6 +402,10 @@ async function loadWorkspace(): Promise<void> {
     workOrderId: routeId.value,
     workflowNodeId: routeNodeId.value,
     ...(routeAction.value ? { actionIntent: routeAction.value } : {}),
+    // Only the explicit DEV synthetic tour may open a local, read-only form
+    // preview. The Store enforces the exact MOCK-019 + build-level gate again.
+    ...(mockJourney.value && !productionReadOnly && mockJourney.value.stage !== 'quotation'
+      ? { localPreviewOnly: true } : {}),
   })
   // The first reactive title update may run before uni-app has activated the
   // destination page in H5. Reapply after the actual action descriptor has
