@@ -38,6 +38,8 @@ jobs:
           VITE_XLINK_ENVIRONMENT: test
         run: |
           pnpm run check:boundaries
+          pnpm run check:engineering-ownership
+          pnpm run check:critical
           pnpm run check:ui-governance
           pnpm run check:m1-i8-baseline
           pnpm run typecheck
