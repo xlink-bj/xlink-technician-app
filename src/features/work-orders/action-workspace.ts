@@ -2084,6 +2084,11 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     if (currentDescriptor.execution !== 'enabled') return failure('unsupported_capability', 'This Action is read-only')
     if (lifecycle.value === 'submitting') return failure('validation', 'Action is already being submitted')
 
+    // A known, pre-transport denial must not become a durable unknown receipt.
+    if (appointmentVisitIntent.value === 'visit_deferred') {
+      return failure('unsupported_capability', '暂不上门的 R1 日期编码尚未核验，未发送任何业务请求。')
+    }
+
     const validation = normalizeAppointmentForm(form)
     if (validation.state !== 'succeeded') {
       error.value = validation.error ?? null
