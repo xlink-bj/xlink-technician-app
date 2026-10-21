@@ -67,7 +67,8 @@ function valid(r: unknown,s:R1MultiStepScope): r is R1MultiStepReceipt {
     && x.sourceNodeType===s.sourceNodeType && x.actorHash===hash(s.authorizationScope)
     && Array.isArray(steps) && steps.length>0 && steps.length<=50
     && steps.every(y=>['form_upsert','repeat_form_upsert','forms_exts_update','workflow_process'].includes(String(y)))
-    && Number.isInteger(x.stepIndex) && Number(x.stepIndex)>=0 && Number(x.stepIndex)<steps.length
+    && typeof x.stepIndex==='number' && Number.isInteger(x.stepIndex)
+    && x.stepIndex>=0 && x.stepIndex<steps.length
     && ['may_have_dispatched','acknowledged','completed'].includes(String(x.state))
     && Array.isArray(saved) && saved.length<=50
     && saved.every(y=>typeof y==='string' && y.trim().length>0)
