@@ -5,6 +5,7 @@ on:
     paths:
       - '.github/workflows/closure-c2-read-model-gate.yml'
       - 'docs/engineering/CLOSURE_C2_READ_MODEL_REFACTOR.md'
+      - 'scripts/check-closure-c1-integration.mjs'
       - 'src/features/work-orders/action-workspace.ts'
       - 'src/features/work-orders/action-workspace-read-model.ts'
       - 'tests/engineering/closure-c2-read-model.test.ts'
@@ -27,13 +28,13 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
           persist-credentials: false
-      - name: Verified Closure C1 base and exactly scoped five files
+      - name: Verified Closure C1 base and exactly scoped six files
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
           git merge-base --is-ancestor ac715c96c36af1fe6caa4fc7be1a6bf092358aa3 HEAD
           git diff --name-only ac715c96c36af1fe6caa4fc7be1a6bf092358aa3 HEAD | sort > /tmp/actual
-          printf '%s\n' '.github/workflows/closure-c2-read-model-gate.yml' 'docs/engineering/CLOSURE_C2_READ_MODEL_REFACTOR.md' 'src/features/work-orders/action-workspace.ts' 'src/features/work-orders/action-workspace-read-model.ts' 'tests/engineering/closure-c2-read-model.test.ts' | sort > /tmp/expected
+          printf '%s\n' '.github/workflows/closure-c2-read-model-gate.yml' 'docs/engineering/CLOSURE_C2_READ_MODEL_REFACTOR.md' 'scripts/check-closure-c1-integration.mjs' 'src/features/work-orders/action-workspace.ts' 'src/features/work-orders/action-workspace-read-model.ts' 'tests/engineering/closure-c2-read-model.test.ts' | sort > /tmp/expected
           diff -u /tmp/expected /tmp/actual
           test "$(git diff --name-only ac715c96c36af1fe6caa4fc7be1a6bf092358aa3 HEAD -- src/adapters/ src/runtimes/ src/shared/ pnpm-lock.yaml tests/ds02a-main/snapshots tests/ds02a-gallery/snapshots | wc -l)" -eq 0
       - uses: pnpm/action-setup@v4
