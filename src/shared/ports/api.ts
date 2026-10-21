@@ -467,6 +467,15 @@ export interface TechnicianApiReadPort {
     parentNodeId: WorkflowNodeRuntimeId,
   ): Promise<OperationSnapshot<readonly WorkflowNodeRead[]>>
   getFormDefinition(id: FormDefinitionId): Promise<OperationSnapshot<FormDefinitionRead>>
+  /** R1 repeat-node form references, scoped by the ACTUAL node.workflowId.
+   * Only invoke after source/tenant/role read approval and verified node identity.
+   */
+  listRepeatFormReferences?(input: {
+    readonly definitionId: FormDefinitionId
+    readonly workflowRunId: WorkflowRunId
+    readonly page: number
+    readonly pageSize: number
+  }): Promise<OperationSnapshot<ReadPage<R1NodeFormReference>>>
   getFormData(input: {
     readonly definitionId: FormDefinitionId
     readonly dataId?: FormDataId
