@@ -1,0 +1,82 @@
+name: R1 A06-B Source NodeType Contract (offline)
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - '.github/workflows/r1-a06b-node-type-safety.yml'
+      - 'docs/engineering/R1_A06B_NODE_TYPE_SAFETY.md'
+      - 'src/adapters/api/technician-api-commands.ts'
+      - 'src/adapters/api/technician-api.ts'
+      - 'src/features/work-orders/action-workspace.ts'
+      - 'src/runtimes/action/types.ts'
+      - 'src/runtimes/workflow/detail-projection.ts'
+      - 'src/shared/ports/api.ts'
+      - 'src/shared/ports/commands.ts'
+      - 'src/shared/types/index.ts'
+      - 'src/shared/types/r1-node-contract.ts'
+      - 'tests/engineering/r1-a06b-node-type-safety.test.ts'
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  source-node-routing-and-platform:
+    if: github.event.pull_request.draft == true && github.event.pull_request.head.ref == 'engineering/r1-a06b-node-type-safety'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      VITE_XLINK_ENVIRONMENT: test
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify exact source, C2/A06-A ancestry and scoped diff
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          git merge-base --is-ancestor d07225d0b604fdded722b1db6e3fa14c3296173e HEAD
+          git diff --name-only d07225d0b604fdded722b1db6e3fa14c3296173e HEAD | sort > /tmp/changed-paths
+          printf '%s\n' '.github/workflows/r1-a06b-node-type-safety.yml' 'docs/engineering/R1_A06B_NODE_TYPE_SAFETY.md' 'src/adapters/api/technician-api-commands.ts' 'src/adapters/api/technician-api.ts' 'src/features/work-orders/action-workspace.ts' 'src/runtimes/action/types.ts' 'src/runtimes/workflow/detail-projection.ts' 'src/shared/ports/api.ts' 'src/shared/ports/commands.ts' 'src/shared/types/index.ts' 'src/shared/types/r1-node-contract.ts' 'tests/engineering/r1-a06b-node-type-safety.test.ts' | sort > /tmp/expected-paths
+          diff -u /tmp/expected-paths /tmp/changed-paths
+          test "$(git diff --name-only d07225d0b604fdded722b1db6e3fa14c3296173e HEAD -- pnpm-lock.yaml tests/ds02a-main/snapshots tests/ds02a-gallery/snapshots src/pages | wc -l)" -eq 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Source node type projections, direct adapter negative checks, A06-A safety
+        run: pnpm exec vitest run tests/engineering/r1-a06b-node-type-safety.test.ts tests/engineering/r1-a06a-durable-write-fence.test.ts tests/g4ux/workflow-projection.test.ts tests/g4d/action-workspace.test.ts
+      - run: pnpm verify:critical
+      - run: pnpm verify:full
+      - run: pnpm build:h5 && pnpm build:mp-weixin && pnpm build:app
+  original-mock-journey-and-goldens:
+    if: github.event.pull_request.draft == true && github.event.pull_request.head.ref == 'engineering/r1-a06b-node-type-safety'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    env:
+      VITE_XLINK_ENVIRONMENT: test
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+      H5_VISUAL_OWNER_APPROVAL: 'PENDING'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: |
+          pnpm exec playwright install --with-deps chromium
+          sudo apt-get update -qq
+          sudo apt-get install -y fonts-noto-cjk
+      - run: pnpm exec playwright test --config playwright.main-h5-mock.config.ts tests/h5-main-mock/m1-i7-six-stage-integration.spec.ts
+      - run: pnpm test:ds02a:gallery
+      - run: pnpm test:ds02a:business
