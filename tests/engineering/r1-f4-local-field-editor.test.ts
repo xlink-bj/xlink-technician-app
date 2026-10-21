@@ -113,8 +113,8 @@ describe('F4 guarded field editor – source-backed local repeat field values',(
   })
   it('blocks live definition reads from an ordinary runtime even with an injected adapter',async()=>{
     const {storage}=storageHarness()
-    const reader=({getFormDefinition:vi.fn(async()=>({state:'succeeded' as const,data:def}))}
-      as unknown) as TechnicianApiReadPort
+    const mockGetDefinition = vi.fn(async () => ({state:'succeeded' as const, data:def}))
+    const reader = {getFormDefinition:mockGetDefinition} as unknown as TechnicianApiReadPort
     const store=useR1LocalFormDraftStore()
     store.configure(storage,reader)
     await store.open(scope,node)
