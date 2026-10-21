@@ -424,7 +424,7 @@ describe('G4-D final functional and safety corrections', () => {
     expect(request).not.toHaveBeenCalled()
   })
 
-  it('runs direct, confirmation, validation, success, and failure fixtures through the same Mock command path', async () => {
+  it('preserves accept Mock commands but blocks raw forms Appointment on single-record command path', async () => {
     setBusinessMockMode('data')
     const commandRequests = vi.fn<UniApiCommandRequestExecutor>()
     const commandTransport = createUniApiCommandTransport({
@@ -463,15 +463,18 @@ describe('G4-D final functional and safety corrections', () => {
     for (const id of appointmentFailureIds) {
       const detail = await read.getWorkOrderDetail(id)
       const projection = detailWorkflowProjectionFor(detail.data ?? null, session)
-      expect(projection.currentTask?.execution).toBe('enabled')
+      expect(projection.currentTask?.sourceNodeType).toBe('forms')
+      expect(projection.currentTask?.execution).toBe('disabled_read_only')
       const form = await command.readAppointmentForm({})
       const result = await command.submitAppointment({
         workOrderId: id,
         workflowNodeId: projection.currentTask!.nodeId,
+        sourceNodeType: projection.currentTask!.sourceNodeType,
         mutation: wireCheckpoints,
         values: { need: '1', datetime: '2026-04-20 10:00' },
       })
-      expect(result.state).toBe(id === appointmentFailureIds[0] ? 'failed_retryable' : 'failed_terminal')
+      expect(result.state).toBe('failed_terminal')
+      expect(result.error?.category).toBe('unsupported_capability')
       expect(form.state).toBe('succeeded')
     }
 
