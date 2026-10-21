@@ -79,11 +79,18 @@ export const useR1LocalFormDraftStore=defineStore('r1LocalFormDraft',()=>{
   const message=ref('')
   let storage:StoragePort|null=null
   let apiRead:TechnicianApiReadPort|null=null
+  let trustedDefaultMockReader=false
   let current:R1LocalFormScope|null=null
   let currentNode:WorkflowNodeRead|null=null
   let version=0
 
-  function configure(port:StoragePort,read?:TechnicianApiReadPort){storage=port;apiRead=read??null}
+  function configure(port:StoragePort,read?:TechnicianApiReadPort,options?:{
+    readonly trustedDefaultMockReader?:boolean
+  }){
+    storage=port;apiRead=read??null
+    // A caller-supplied read adapter is not automatically a Mock transport.
+    trustedDefaultMockReader=options?.trustedDefaultMockReader===true
+  }
   function clear() {
     version++;current=null;currentNode=null
     snapshot.value=initial;state.value='idle';message.value=''
@@ -181,7 +188,7 @@ export const useR1LocalFormDraftStore=defineStore('r1LocalFormDraft',()=>{
   async function loadDraftDefinition(localId:string):Promise<FormDefinitionRead|null>{
     const scope=current
     const intent=snapshot.value.intents.find(x=>x.localId===localId&&x.kind==='new')
-    if(!scope || !intent || state.value!=='ready' || !permitted() || !apiRead
+    if(!scope || !intent || state.value!=='ready' || !permitted() || !apiRead || !trustedDefaultMockReader
       || !allowsR1LocalDefinitionPreview({
         dev:import.meta.env.DEV===true,
         mockDataMode:isBusinessMockDeveloperModeAvailable() && isBusinessMockMode()==='data',
