@@ -626,7 +626,7 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
     })
   })
 
-  it('submits current effective state before the debounce can persist it', async () => {
+  it('rejects unsupported deferred intent before debounce flush or remote submission', async () => {
     const shared = storageFor()
     const { store, command } = configureWorkspace(
       appointmentDetail(),
@@ -643,14 +643,17 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
     store.setField('need', '0')
     const result = await store.submit()
 
-    expect(result.state).toBe('succeeded')
+    expect(result.error?.category).toBe('unsupported_capability')
+    expect(store.appointmentVisitIntent).toBe('visit_deferred')
+    expect(command.submitAppointment).not.toHaveBeenCalled()
+    expect([...shared.values.keys()].some(key => key.startsWith('action-mutation'))).toBe(false)
+    store.setField('need', '1')
+    expect((await store.submit()).state).toBe('succeeded')
     expect(command.submitAppointment).toHaveBeenCalledWith(expect.objectContaining({
-      visitIntent: 'visit_deferred',
-      values: { need: '0' },
+      visitIntent: 'visit_required',
+      values: { need: '1', datetime: '2026-04-20 11:00' },
     }))
-    expect(vi.mocked(command.submitAppointment).mock.calls[0][0].values).not.toHaveProperty('datetime')
   })
-
   it('keeps the selected datetime in the dynamic form and routes to confirmation', async () => {
     const { store, navigation } = configureWorkspace()
     await openWorkspace(store)
