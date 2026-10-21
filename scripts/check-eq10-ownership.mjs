@@ -147,14 +147,15 @@ if (issues.length) {
 }
 if (process.argv.includes('--self-test')) {
   if (issues.length) throw new Error('Real source audit must pass before testing negative sentinels')
+  const actual = name => all.get(canon[name]) ?? ''
   const failures = [
     ['direct business codec import', 'src/pages/eq10-negative.ts', "import { formDataUpsertCommand } from '@adapters/api/action-command-wires'"],
     ['page pricing import', 'src/pages/eq10-negative.ts', "import { calculateQuotationPricing } from '@features/work-orders/quotation/pricing'"],
     ['raw Workflow dispatch in feature', 'src/features/eq10-negative.ts', "const request = { path: 'workflow/process' }"],
-    ['missing form owner import', canon.appointment, has('appointment').replace("import { actionFormSchemaFor, ACTION_FORM_SURFACE } from './action-form-schema'", '')],
-    ['adapter raw wire bypass', canon.command, has('command') + "\nconst eq10Unsafe = { path: 'workflow/process' }"],
-    ['Action Workspace pricing bypass', canon.workspace, has('workspace') + '\ncalculateQuotationPricing(hydration)'],
-    ['removed actor receipt scope', canon.order, has('order').replaceAll('authorizationFingerprint', 'legacyFingerprint').replaceAll('authorizationCurrent', 'legacyCurrent')],
+    ['missing form owner import', canon.appointment, actual('appointment').replace("import { actionFormSchemaFor, ACTION_FORM_SURFACE } from './action-form-schema'", '')],
+    ['adapter raw wire bypass', canon.command, actual('command') + "\nconst eq10Unsafe = { path: 'workflow/process' }"],
+    ['Action Workspace pricing bypass', canon.workspace, actual('workspace') + '\ncalculateQuotationPricing(hydration)'],
+    ['removed actor receipt scope', canon.order, actual('order').replaceAll('authorizationFingerprint', 'legacyFingerprint').replaceAll('authorizationCurrent', 'legacyCurrent')],
   ]
   for (const [label, filename, source] of failures) {
     const modified = new Map(all)
