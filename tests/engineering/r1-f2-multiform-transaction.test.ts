@@ -152,8 +152,12 @@ describe('F2 R1 durable multistep offline simulator, no real transport',()=>{
     expect(executor).not.toHaveBeenCalled()
   })
   it('does not send the next mutation when saving a previous ACK receipt fails',async()=>{
-    const {storage}=repository()
-    vi.mocked(storage.write).mockImplementationOnce(async()=>({state:'succeeded'}))
+    const {storage,values}=repository()
+    // First pre-dispatch ACK must genuinely persist, even in the failure harness.
+    vi.mocked(storage.write).mockImplementationOnce(async(key,value)=>{
+      values.set(key.key,value)
+      return {state:'succeeded'}
+    })
       .mockImplementationOnce(async()=>({state:'failed_terminal',error:{
         category:'server_terminal',message:'disk failed',retryable:false,
       }}))
