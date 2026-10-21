@@ -14,6 +14,7 @@ import type {
   QuotationCatalogContext,
   FormPurpose,
   ReadPage,
+  R1NodeFormReference,
   TechnicianApiReadPort,
   WorkOrderActivity,
   WorkOrderDetail,
@@ -59,7 +60,7 @@ import {
 } from '../common/records'
 import { countyList } from './reference/area-county-dictionary'
 import { appointmentFormDefinitionWireId } from './appointment-contract'
-import { readR1NodeFormList } from './r1-node-form-list'
+import { buildR1RepeatFormListQuery, readR1NodeFormList } from './r1-node-form-list'
 import { isProductionReadOnlyTarget } from '@shared/config'
 
 export type ApiRequestMethod = 'GET' | 'POST'
@@ -690,7 +691,7 @@ function workflowNode(raw: unknown): WorkflowNodeRead {
   const record = asRecord(raw, 'workflow node')
   const nodeDef = nestedRecord(record, ['nodeDef'])
   const definitionId = optionalOpaqueId<'WorkflowDefinitionId'>(record, ['definitionId', 'defId'])
-  const runId = optionalOpaqueId<'WorkflowRunId'>(record, ['runId', 'workflowRunId'])
+  const runId = optionalOpaqueId<'WorkflowRunId'>(record, ['runId', 'workflowRunId', 'workflowId'])
   const parentNodeId = optionalOpaqueId<'WorkflowNodeRuntimeId'>(record, [
     'parentNodeId',
     'parentWorkflowNodeId',
@@ -1580,6 +1581,29 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
         }
       },
     )
+  }
+
+  /** Inert until a caller with approved scope invokes it. No automatic
+   * network, no cross-tenant enumeration, and no FormData values returned. */
+  listRepeatFormReferences(input: {
+    readonly definitionId: FormDefinitionId
+    readonly workflowRunId: WorkflowRunId
+    readonly page: number
+    readonly pageSize: number
+  }): Promise<OperationSnapshot<ReadPage<R1NodeFormReference>>> {
+    let request: ApiReadRequest
+    try { request = buildR1RepeatFormListQuery(input) }
+    catch {
+      return Promise.resolve(adapterFailure('validation', 'Repeat list must be scoped to a known runtime node with bounded paging'))
+    }
+    return this.read<ReadPage<R1NodeFormReference>>(request, (raw) => {
+      const rawPage = pageEnvelope(raw, item => item)
+      const list = readR1NodeFormList({ formDataList: rawPage.items }, 'repeat')
+      if (!list || list.evidence !== 'available' || list.truncated) {
+        throw new AdapterMappingError('repeat list response identities are malformed or unbounded')
+      }
+      return { ...rawPage, items: list.entries }
+    })
   }
 
   getFormData(input: {
