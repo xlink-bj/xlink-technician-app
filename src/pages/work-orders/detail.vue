@@ -96,7 +96,7 @@
           ? (workflowProjection.currentTask.actionIntent === 'place_order' ? '查看报价方案' : '生产只读')
           : workflowProjection.currentTask.actionLabel"
         :tone="workflowProjection.currentTask.tone"
-        :disabled="workflowProjection.currentTask.execution !== 'enabled'
+        :disabled="(workflowProjection.currentTask.execution !== 'enabled' && !allowLocalMockPreview)
           || (productionReadOnly && workflowProjection.currentTask.actionIntent !== 'place_order')"
         note="当前环境只开放读取，不会提交、接单或推进流程"
         @action="handleCurrentTaskAction"
@@ -268,6 +268,7 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 
+import { mockJourneyContext } from '@app/mock-journey'
 import { hasAuthenticatedSession } from '@features/home/access'
 import { isProductionReadOnlyRuntime } from '@shared/config'
 import { workOrderCardToneFor } from '@features/work-orders/card'
@@ -306,6 +307,16 @@ const customerServiceAddress = computed(() => {
   return [district, address].filter(Boolean).join(' ') || '—'
 })
 const workflowProjection = computed(() => detailWorkflowUiProjectionFor(detail.value, session.session))
+const allowLocalMockPreview = computed(() => {
+  const stage = mockJourneyContext(String(detail.value?.id ?? ''))
+  const task = workflowProjection.value.currentTask
+  // Synthetic-only navigation never changes the R1 command permission. The
+  // store still requires DEV H5-E2E + exact MOCK-019 identity to load drafts.
+  return !productionReadOnly && stage?.stage === 'survey'
+    && task?.actionIntent === 'interact_with_form'
+    && task?.sourceNodeType === 'forms'
+    && task?.execution === 'disabled_read_only'
+})
 const preAcceptBlocked = computed(() => Boolean(
   detail.value?.workflowNodes?.some((node) => node.category === 'accept' && node.lifecycle === 'active'),
 ))
@@ -445,7 +456,7 @@ async function dialContact(): Promise<void> {
 
 async function handleCurrentTaskAction(): Promise<void> {
   const currentTask = workflowProjection.value.currentTask
-  if (!currentTask || currentTask.execution !== 'enabled') return
+  if (!currentTask || (currentTask.execution !== 'enabled' && !allowLocalMockPreview.value)) return
   if (productionReadOnly && currentTask.actionIntent !== 'place_order') return
   const id = detail.value?.id
   if (!id) return
