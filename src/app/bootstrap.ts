@@ -87,7 +87,7 @@ export function createApplication(dependencies: ApplicationDependencies = {}) {
   const storage = dependencies.storage ?? createDefaultStoragePort()
   const draftRepository = dependencies.draftRepository ?? createActionDraftRepository(storage)
   const r1LocalFormDraftStore = useR1LocalFormDraftStore(pinia)
-  r1LocalFormDraftStore.configure(storage, apiRead)
+  r1LocalFormDraftStore.configure(storage, apiRead, { trustedDefaultMockReader: !dependencies.apiRead })
   const mediaCapture = dependencies.mediaCapture ?? createDefaultMediaCapturePort()
   const mediaFilePicker = dependencies.mediaFilePicker ?? createDefaultMediaFilePickerPort()
   const location = dependencies.location ?? createDefaultLocationPort()
