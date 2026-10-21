@@ -59,6 +59,7 @@ import {
 } from '../common/records'
 import { countyList } from './reference/area-county-dictionary'
 import { appointmentFormDefinitionWireId } from './appointment-contract'
+import { readR1NodeFormList } from './r1-node-form-list'
 import { isProductionReadOnlyTarget } from '@shared/config'
 
 export type ApiRequestMethod = 'GET' | 'POST'
@@ -712,11 +713,13 @@ function workflowNode(raw: unknown): WorkflowNodeRead {
   const isSystem = record.isSystem === true
   const isSentinel = record.isSentinel === true
   const sourceNodeType = optionalString(nodeDef ?? {}, ['nodeType', 'nodeTypeOld'])
+  const formList = readR1NodeFormList(record, sourceNodeType)
 
   return {
     id: requiredOpaqueId<'WorkflowNodeRuntimeId'>(record, ['id', '_id', 'workflowNodeId'], 'workflow node id'),
     category: workflowNodeCategory(nodeDef),
     ...(sourceNodeType ? { sourceNodeType } : {}),
+    ...(formList ? { formList } : {}),
     lifecycle: workflowNodeLifecycle(record),
     visibility,
     ...(displayName ? { displayName } : {}),
