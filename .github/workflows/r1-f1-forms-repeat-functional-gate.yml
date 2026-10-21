@@ -13,6 +13,7 @@ on:
       - 'src/shared/ports/api.ts'
       - 'tests/engineering/r1-f1-existing-form-list.test.ts'
       - 'tests/engineering/r1-f1-special-workflow-wires.test.ts'
+      - 'tests/g4d/action-workspace.test.ts'
 permissions:
   contents: read
 concurrency:
@@ -38,7 +39,7 @@ jobs:
           test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
           git merge-base --is-ancestor 345dbe79bfdbe53af4ce75721ab6ef188c25b1ef HEAD
           git diff --name-only 345dbe79bfdbe53af4ce75721ab6ef188c25b1ef HEAD | sort > /tmp/actual
-          printf '%s\n' '.github/workflows/r1-f1-forms-repeat-functional-gate.yml' 'docs/verification/R1_FOUR_PHASE_FUNCTIONAL_LEDGER.md' 'src/adapters/api/r1-node-form-list.ts' 'src/adapters/api/r1-special-workflow-wires.ts' 'src/adapters/api/technician-api.ts' 'src/features/work-orders/R1NodeFormsOverview.vue' 'src/pages/work-orders/detail.vue' 'src/shared/ports/api.ts' 'tests/engineering/r1-f1-existing-form-list.test.ts' 'tests/engineering/r1-f1-special-workflow-wires.test.ts' | sort > /tmp/expected
+          printf '%s\n' '.github/workflows/r1-f1-forms-repeat-functional-gate.yml' 'docs/verification/R1_FOUR_PHASE_FUNCTIONAL_LEDGER.md' 'src/adapters/api/r1-node-form-list.ts' 'src/adapters/api/r1-special-workflow-wires.ts' 'src/adapters/api/technician-api.ts' 'src/features/work-orders/R1NodeFormsOverview.vue' 'src/pages/work-orders/detail.vue' 'src/shared/ports/api.ts' 'tests/engineering/r1-f1-existing-form-list.test.ts' 'tests/engineering/r1-f1-special-workflow-wires.test.ts' 'tests/g4d/action-workspace.test.ts' | sort > /tmp/expected
           diff -u /tmp/expected /tmp/actual
           test "$(git diff --name-only 345dbe79bfdbe53af4ce75721ab6ef188c25b1ef HEAD -- pnpm-lock.yaml src/adapters/api/technician-api-commands.ts src/features/work-orders/action-mutation-receipt.ts | wc -l)" -eq 0
       - uses: pnpm/action-setup@v4
