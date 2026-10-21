@@ -170,6 +170,11 @@ export interface WorkflowNodeRead {
   readonly formDataId?: FormDataId
   /** Node-instance readonly context; never baked into the field definition. */
   readonly formFieldIdsReadOnly?: readonly string[]
+  /** Exact R1 nodeDef.nodeType (fallback nodeTypeOld), not UI category.
+   * Missing means source provenance is unknown; never infer a single-record
+   * command solely from normalized category.
+   */
+  readonly sourceNodeType?: string
   readonly category: WorkflowNodeCategory
   readonly lifecycle: WorkflowNodeLifecycle
   readonly handlers?: readonly WorkflowHandlerIdentity[]
