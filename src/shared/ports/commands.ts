@@ -82,6 +82,8 @@ export interface ReadDynamicFormInput {
 export interface SaveDynamicFormInput {
   readonly workOrderId: WorkOrderId
   readonly workflowNodeId: WorkflowNodeRuntimeId
+  /** Exact R1 nodeDef.nodeType when available; special nodes cannot use one-ID wire. */
+  readonly sourceNodeType?: string
   readonly workflowRunId?: WorkflowRunId
   readonly definitionId: FormDefinitionId
   readonly purpose?: FormPurpose
@@ -93,6 +95,8 @@ export interface SaveDynamicFormInput {
 export interface CompleteWorkflowNodeInput {
   readonly workOrderId: WorkOrderId
   readonly workflowNodeId: WorkflowNodeRuntimeId
+  /** Exact R1 nodeDef.nodeType when available; special nodes cannot use one-ID wire. */
+  readonly sourceNodeType?: string
   readonly workflowRunId?: WorkflowRunId
   readonly definitionId: FormDefinitionId
   readonly formDataId: FormDataId
@@ -112,6 +116,8 @@ export type AppointmentVisitIntent = 'visit_required' | 'visit_deferred' | 'unkn
 export interface SubmitAppointmentInput {
   readonly workOrderId: WorkOrderId
   readonly workflowNodeId: WorkflowNodeRuntimeId
+  /** Exact R1 nodeDef.nodeType when available; special nodes cannot use one-ID wire. */
+  readonly sourceNodeType?: string
   readonly workflowRunId?: WorkflowRunId
   readonly formDataId?: FormDataId
   /** Feature-projected branch used by the transport safety boundary. */
