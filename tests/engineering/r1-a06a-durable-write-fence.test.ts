@@ -126,6 +126,44 @@ describe('A06-A durable FormData / Workflow dispatch fence', () => {
     expect(storage.write).toHaveBeenCalledTimes(1)
   })
 
+  it.each(['wx','plus'] as const)('H5 ignores injected %s bridge global and denies writes without Web Locks', async (bridge) => {
+    vi.stubGlobal('window', {})
+    vi.stubGlobal(bridge, { injectedBridge: true })
+    vi.stubGlobal('navigator', {})
+    const { storage } = memoryStore()
+    expect((await beginActionMutation(storage, scope, 'form_dispatched')).state).toBe('failed_terminal')
+    expect(storage.read).not.toHaveBeenCalled()
+    expect(storage.write).not.toHaveBeenCalled()
+  })
+
+  it('serializes two isolated H5 module instances with shared storage using the origin Web Lock', async () => {
+    vi.stubGlobal('window', {})
+    vi.stubGlobal('wx', { injectedBridge: true })
+    const tails = new Map<string, Promise<void>>()
+    const request = vi.fn(async (
+      key: string, _options: unknown, run: () => Promise<OperationSnapshot<unknown>>,
+    ) => {
+      const previous = tails.get(key) ?? Promise.resolve()
+      let release!: () => void
+      const finished = new Promise<void>((resolve) => { release = resolve })
+      tails.set(key, previous.then(() => finished))
+      await previous
+      try { return await run() } finally { release() }
+    })
+    vi.stubGlobal('navigator', { locks: { request } })
+    const { storage } = memoryStore()
+    const firstInstance = await import('@features/work-orders/action-mutation-receipt')
+    vi.resetModules()
+    const secondInstance = await import('@features/work-orders/action-mutation-receipt')
+    const [a,b] = await Promise.all([
+      firstInstance.beginActionMutation(storage, scope, 'form_dispatched'),
+      secondInstance.beginActionMutation(storage, scope, 'form_dispatched'),
+    ])
+    expect([a.state,b.state].sort()).toEqual(['failed_terminal','succeeded'])
+    expect(request).toHaveBeenCalledTimes(2)
+    expect(storage.write).toHaveBeenCalledTimes(1)
+  })
+
   it.each([
     ['timeout', new ApiCommandTransportError('synthetic timeout', 'network_retryable')],
     ['HTTP 500', new ApiCommandTransportError('synthetic 500', 'server_terminal')],
