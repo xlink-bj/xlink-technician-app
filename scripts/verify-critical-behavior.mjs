@@ -31,8 +31,20 @@ const suites = Object.freeze({
     'tests/engineering/eq05-mock-command-state.test.ts',
     'tests/engineering/eq05b-mock-fault-scenarios.test.ts',
   ],
+  // EQ07: stale async saves/edits must never unlock a workflow write.
+  'async-form-workflow-p0': [
+    'tests/engineering/eq07-command-state-consistency.test.ts',
+    'tests/engineering/r1-appointment-wire-unification.test.ts',
+    'tests/engineering/r1-appointment-conditional-runtime.test.ts',
+  ],
+  // EQ09: actor isolation and durable Order replay fences are business-critical.
+  'actor-price-and-order-isolation': [
+    'tests/engineering/r1-catalog-price-identity-fence.test.ts',
+    'tests/g4f/p0-role-order-tenant-negative.test.ts',
+    'tests/g4f/quotation-order-browse-handoff.test.ts',
+  ],
 })
-const required = ['quotation-financial-sku','authorization-transport','action-draft-catalog','mock-isolation-failure']
+const required = ['quotation-financial-sku','authorization-transport','action-draft-catalog','mock-isolation-failure','async-form-workflow-p0','actor-price-and-order-isolation']
 const all = []
 for (const category of required) {
   const paths = suites[category]
