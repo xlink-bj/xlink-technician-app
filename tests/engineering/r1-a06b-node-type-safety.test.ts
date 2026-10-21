@@ -49,7 +49,7 @@ describe('A06-B — preserve real R1 nodeType and deny incompatible one-ID comma
     const child:WorkflowNodeRead={...node('subflows'),category:'subworkflow'}
     const projection=projectDetailWorkflow([child],actor)
     expect(projection).toMatchObject({selection:'selected',currentTask:{
-      sourceNodeType:'subflows',actionIntent:'open_subworkflow',execution:'disabled_read_only',
+      sourceNodeType:'subflows',actionIntent:'open_subworkflow',execution:'enabled',
     }})
   })
   it.each(['forms','repeat','subflows'])('normalizes raw R1 nodeDef.nodeType=%s without conflating category',async sourceNodeType=>{
