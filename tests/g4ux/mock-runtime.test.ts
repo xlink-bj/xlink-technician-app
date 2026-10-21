@@ -536,6 +536,7 @@ describe('G4-UX business mock runtime', () => {
           id: 'mock-workflow-node-001-current',
           displayName: '勘察',
           category: 'forms',
+          sourceNodeType: 'forms',
           lifecycle: 'active',
           visibility: {
             evidenceState: 'verified',
@@ -800,6 +801,7 @@ describe('G4-UX business mock runtime', () => {
           id: 'mock-workflow-node-006-current',
           displayName: '待核验',
           category: 'unsupported',
+          sourceNodeType: 'unverified-node-type',
           lifecycle: 'unknown',
           visibility: { evidenceState: 'missing' },
         },
