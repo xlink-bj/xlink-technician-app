@@ -1,4 +1,5 @@
 import type { WorkflowNodeRead } from '@shared/ports'
+import { requiresR1SpecialWorkflowWire } from '@shared/types'
 
 import { evaluateNodeVisibility, evaluateWorkflowAction } from './policy'
 import type {
@@ -19,6 +20,8 @@ export interface CurrentTaskProjection {
   readonly nodeId: WorkflowNodeRead['id']
   readonly title: string
   readonly category: WorkflowNodeCategory
+  /** True raw R1 nodeDef.nodeType; never inferred from a UI category. */
+  readonly sourceNodeType?: string
   readonly actionIntent: DetailWorkflowActionIntent
   readonly formPurpose?: WorkflowNodeRead['formPurpose']
   readonly formFieldIdsReadOnly?: readonly string[]
@@ -116,17 +119,20 @@ export function projectDetailWorkflow(
       nodeId: candidate.node.id,
       title: candidate.title,
       category: candidate.node.category,
+      ...(candidate.node.sourceNodeType ? { sourceNodeType: candidate.node.sourceNodeType } : {}),
       actionIntent: candidate.actionIntent,
       ...(candidate.node.formPurpose ? { formPurpose: candidate.node.formPurpose } : {}),
       ...(candidate.node.formFieldIdsReadOnly ? { formFieldIdsReadOnly: candidate.node.formFieldIdsReadOnly } : {}),
       domainPolicy: policySummary(candidate.domainPolicy),
       // Workflow policy owns placeOrder eligibility; only form-backed actions
       // require a form definition before their content can execute.
-      execution: candidate.actionIntent === 'set_appointment'
-        || candidate.actionIntent === 'place_order'
-        || Boolean(candidate.node.formDefinitionId)
-        ? 'enabled'
-        : 'disabled_read_only',
+      execution: requiresR1SpecialWorkflowWire(candidate.node.sourceNodeType)
+        ? 'disabled_read_only'
+        : (candidate.actionIntent === 'set_appointment'
+          || candidate.actionIntent === 'place_order'
+          || Boolean(candidate.node.formDefinitionId))
+          ? 'enabled'
+          : 'disabled_read_only',
     },
   }
 }
