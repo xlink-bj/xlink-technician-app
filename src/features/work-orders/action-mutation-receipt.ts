@@ -129,7 +129,14 @@ export async function beginActionMutation(
   }
   // MP and App-Plus use the runtime-wide reservation. Browser tabs require an
   // atomic same-origin lock; without Web Locks, H5 writes fail closed.
-  if (typeof window !== 'undefined' && !('plus' in globalThis) && !('wx' in globalThis)) {
+  // Bridge globals (wx/plus) can exist in H5. Only the compile-time Uni
+  // target may exempt native/mini-program builds from cross-tab Web Locks.
+  // Any unknown browser target fails closed rather than using a tab-local Set.
+  const target = import.meta.env.UNI_PLATFORM
+  const requiresBrowserLock = target === 'h5'
+    || (target !== 'app' && target !== 'app-plus'
+      && target !== 'mp-weixin' && typeof window !== 'undefined')
+  if (requiresBrowserLock) {
     if (typeof navigator === 'undefined' || !navigator.locks) return denial('浏览器缺少跨窗口防重锁，禁止业务写入。')
     try { return await navigator.locks.request(key, { mode: 'exclusive' }, reserve) }
     catch { return denial('跨窗口防重锁不可用，禁止业务写入。') }
