@@ -69,27 +69,23 @@ describe('R1 A03 single authoritative appointment FormData serializer',()=>{
     })
     expect((process.body as Record<string,unknown>).nodeFormDefId).toBeTruthy()
   })
-  it('deferred visit is encoded with one same FormData wire but flagged for transport-level denial',async()=>{
-    const execute=vi.fn(async(request:ApiCommandRequest)=>{
-      if(request.safety==='deferred_appointment_datetime_encoding_unknown') {
-        throw new ApiCommandTransportError('R1 need=0 datetime encoding unknown','unsupported_capability')
-      }
-      return savedEnvelope()
-    })
-    const result=await adapter(execute).submitAppointment({
-      workOrderId,workflowNodeId,visitIntent:'visit_deferred',mutation:wireCheckpoints,
-      values:{need:'0',note:null},
-    })
-    expect(result.state).toBe('failed_terminal')
-    expect(execute).toHaveBeenCalledTimes(1)
-    const req=execute.mock.calls[0]![0] as ApiCommandRequest
-    expect(req.safety).toBe('deferred_appointment_datetime_encoding_unknown')
-    expect(exactWire(req)).toMatchObject({
-      need:'0',sid:workOrderId,smodule:'serviceAppointment',nodeId:workflowNodeId,state:1,
-    })
-    expect(exactWire(req)).not.toHaveProperty('datetime')
-    expect(exactWire(req)).not.toHaveProperty('note')
-    expect(execute.mock.calls.some(([x])=>(x as ApiCommandRequest).path==='workflow/process')).toBe(false)
+  it('rejects an unverified deferred visit before checkpoint or transport, including inconsistent intent',async()=>{
+    const execute=vi.fn(async (_request:ApiCommandRequest)=>savedEnvelope())
+    const beforeFormDispatch=vi.fn(async()=>({state:'succeeded' as const}))
+    const mutation={...wireCheckpoints,beforeFormDispatch}
+    const command=adapter(execute)
+    for(const input of [
+      { visitIntent:'visit_deferred' as const,values:{need:'0',note:null} },
+      { visitIntent:'visit_required' as const,values:{need:'0',note:null} },
+    ]) {
+      const result=await command.submitAppointment({
+        workOrderId,workflowNodeId,mutation,...input,
+      })
+      expect(result.state).toBe('failed_terminal')
+      expect(result.error?.category).toBe('unsupported_capability')
+    }
+    expect(beforeFormDispatch).not.toHaveBeenCalled()
+    expect(execute).not.toHaveBeenCalled()
   })
   it('save failure NEVER triggers Workflow Process or simulates appointment success',async()=>{
     const execute=vi.fn(async()=>{throw new ApiCommandTransportError('synthetic rejection','server_terminal')})
