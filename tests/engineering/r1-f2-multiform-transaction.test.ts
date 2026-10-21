@@ -13,7 +13,7 @@ const scope:R1MultiStepScope={
 }
 function repository() {
   const values=new Map<string,unknown>()
-  const storage:StoragePort={
+  const storage={
     read:vi.fn(async (key:StorageKey)=>({state:'succeeded' as const,data:values.get(key.key)??null})),
     write:vi.fn(async (key:StorageKey,value:unknown)=>{
       values.set(key.key,value)
@@ -24,7 +24,7 @@ function repository() {
       return {state:'succeeded' as const}
     }),
     listKeys:vi.fn(async()=>({state:'succeeded' as const,data:[...values.keys()]})),
-  }
+  } as unknown as StoragePort
   return {values,storage}
 }
 const success: R1StepExecutor = vi.fn(async context=>({
@@ -99,7 +99,7 @@ describe('F2 R1 durable multistep offline simulator, no real transport',()=>{
       expect(receipt.state).toBe('may_have_dispatched')
       if(step!=='form_upsert')expect(savedFormDataIds).toEqual(['saved-form-id'])
       calls.push(step)
-      return {state:'succeeded',data:step==='form_upsert'?{savedFormDataId:'saved-form-id'}:{}}
+      return {state:'succeeded' as const,data:step==='form_upsert'?{savedFormDataId:'saved-form-id'}:{}}
     })
     const result=await executeR1MultiStepOffline(storage,scope,
       ['form_upsert','forms_exts_update','workflow_process'],executor)
@@ -118,7 +118,7 @@ describe('F2 R1 durable multistep offline simulator, no real transport',()=>{
     const {storage}=repository()
     const executor:R1StepExecutor=vi.fn(async ({step,stepIndex,savedFormDataIds})=>{
       if(step==='workflow_process')expect(savedFormDataIds).toEqual(['f-0','f-1'])
-      return {state:'succeeded',data:step==='workflow_process'?{}:{savedFormDataId:'f-'+stepIndex}}
+      return {state:'succeeded' as const,data:step==='workflow_process'?{}:{savedFormDataId:'f-'+stepIndex}}
     })
     expect((await executeR1MultiStepOffline(storage,s,
       ['repeat_form_upsert','repeat_form_upsert','workflow_process'],executor)).state).toBe('succeeded')
@@ -130,7 +130,7 @@ describe('F2 R1 durable multistep offline simulator, no real transport',()=>{
       const {storage}=repository()
       const executor=vi.fn<R1StepExecutor>(async ({step})=>
         step===failedStep ? {state:'failed_retryable',error:{category:'network_retryable',message:'synthetic timeout',retryable:true}}
-          : {state:'succeeded',data:step==='form_upsert'?{savedFormDataId:'saved-on-server'}:{}}
+          : {state:'succeeded' as const,data:step==='form_upsert'?{savedFormDataId:'saved-on-server'}:{}}
       )
       expect((await executeR1MultiStepOffline(storage,scope,
         ['form_upsert','forms_exts_update','workflow_process'],executor)).state).toBe('failed_terminal')
@@ -161,7 +161,7 @@ describe('F2 R1 durable multistep offline simulator, no real transport',()=>{
       .mockImplementationOnce(async()=>({state:'failed_terminal',error:{
         category:'server_terminal',message:'disk failed',retryable:false,
       }}))
-    const executor:R1StepExecutor=vi.fn(async()=>({state:'succeeded',data:{savedFormDataId:'real-ack-id'}}))
+    const executor:R1StepExecutor=vi.fn(async()=>({state:'succeeded' as const,data:{savedFormDataId:'real-ack-id'}}))
     expect((await executeR1MultiStepOffline(storage,scope,
       ['form_upsert','forms_exts_update','workflow_process'],executor)).state).toBe('failed_terminal')
     expect(executor).toHaveBeenCalledTimes(1)
