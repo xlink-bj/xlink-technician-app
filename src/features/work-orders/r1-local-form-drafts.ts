@@ -212,6 +212,30 @@ export const useR1LocalFormDraftStore=defineStore('r1LocalFormDraft',()=>{
       return reply.data
     }catch{if(ticket===version)message.value='合成表单定义读取失败。';return null}
   }
+  /** Atomic local save after editor confirmation; never persist on every keypress.
+   * All fields are revalidated against exactly the chosen FormDefinition. */
+  async function saveDraftValues(
+    localId:string,definition:FormDefinitionRead,raw:Readonly<Record<string,R1LocalFieldValue>>,
+  ):Promise<boolean>{
+    return update(previous=>{
+      const target=previous.intents.find(x=>x.localId===localId && x.kind==='new')
+      if(!target||String(definition.id)!==target.definitionId
+        ||Object.keys(raw).length>50||!definition.fields||definition.fields.length>50)return undefined
+      let normalized:Readonly<Record<string,R1LocalFieldValue>>={}
+      // Definition order is source-defined. Unknown business keys are denied.
+      for(const field of definition.fields){
+        if(!Object.prototype.hasOwnProperty.call(raw,field.valueKey))continue
+        const next=normalizeR1LocalFieldPatch(definition,normalized,field.valueKey,raw[field.valueKey])
+        if(!next){message.value='本机草稿存在未核验或无效字段，已拒绝保存。';return undefined}
+        normalized=next
+      }
+      if(Object.keys(normalized).length!==Object.keys(raw).length) {
+        message.value='字段身份不匹配，未保存。';return undefined
+      }
+      return {...previous,intents:previous.intents.map(intent=>intent.localId===localId
+        ? {...intent,values:normalized} : intent)}
+    })
+  }
   async function setDraftField(
     localId:string,definition:FormDefinitionRead,key:string,value:FormFieldValue|undefined,
   ):Promise<boolean>{
@@ -230,5 +254,5 @@ export const useR1LocalFormDraftStore=defineStore('r1LocalFormDraft',()=>{
   async function discard(localId:string):Promise<boolean> {
     return update(previous=>({...previous,intents:previous.intents.filter(x=>x.localId!==localId)}))
   }
-  return {state,snapshot,message,configure,clear,open,add,stageDelete,stageEditTitle,loadDraftDefinition,setDraftField,discard}
+  return {state,snapshot,message,configure,clear,open,add,stageDelete,stageEditTitle,loadDraftDefinition,setDraftField,saveDraftValues,discard}
 })
