@@ -711,10 +711,12 @@ function workflowNode(raw: unknown): WorkflowNodeRead {
   const formFieldIdsReadOnly = workflowNodeReadOnlyFieldIds(record, nodeDef)
   const isSystem = record.isSystem === true
   const isSentinel = record.isSentinel === true
+  const sourceNodeType = optionalString(nodeDef ?? {}, ['nodeType', 'nodeTypeOld'])
 
   return {
     id: requiredOpaqueId<'WorkflowNodeRuntimeId'>(record, ['id', '_id', 'workflowNodeId'], 'workflow node id'),
     category: workflowNodeCategory(nodeDef),
+    ...(sourceNodeType ? { sourceNodeType } : {}),
     lifecycle: workflowNodeLifecycle(record),
     visibility,
     ...(displayName ? { displayName } : {}),
