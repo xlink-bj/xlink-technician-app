@@ -75,6 +75,89 @@ describe('Closure C3 — offline production deny & release recovery drills', () 
     expect(realRequest).not.toHaveBeenCalled()
   })
 
+
+  it.each([
+    [401,'session_invalid'],
+    [403,'authorization_denied'],
+    [500,'network_retryable'],
+    [422,'server_terminal'],
+  ] as const)('classifies synthetic HTTP %s without a real network connection', async (http,category) => {
+    vi.stubEnv('VITE_XLINK_ENVIRONMENT','staging')
+    vi.stubEnv('VITE_XLINK_ENABLE_REAL_WRITES','false')
+    const request=vi.fn((options: UniNamespace.RequestOptions) => {
+      options.success?.({statusCode:http,data:{success:false}} as never)
+    })
+    const transport=createUniApiCommandTransport({
+      apiBaseUrl:'https://synthetic.invalid',
+      getSessionRef:()=> 'synthetic-session' as never,
+      request,
+    })
+    await expect(transport.execute({method:'POST',path:'synthetic/diagnostic-only',body:{}}))
+      .rejects.toMatchObject({category})
+    expect(request).toHaveBeenCalledTimes(1)
+  })
+
+  it('classifies callback network errors and malformed success envelopes independently', async () => {
+    vi.stubEnv('VITE_XLINK_ENVIRONMENT','staging')
+    const fail=vi.fn((options: UniNamespace.RequestOptions) => {
+      options.fail?.({errMsg:'synthetic network disconnected'} as never)
+    })
+    const errorTransport=createUniApiCommandTransport({
+      apiBaseUrl:'https://synthetic.invalid',
+      getSessionRef:()=> 'synthetic-session' as never,
+      request:fail,
+    })
+    await expect(errorTransport.execute({method:'POST',path:'synthetic/diagnostic-only'}))
+      .rejects.toMatchObject({category:'network_retryable'})
+
+    const malformed=vi.fn((options: UniNamespace.RequestOptions) => {
+      options.success?.({statusCode:200,data:{success:'not-a-boolean'}} as never)
+    })
+    const malformedTransport=createUniApiCommandTransport({
+      apiBaseUrl:'https://synthetic.invalid',
+      getSessionRef:()=> 'synthetic-session' as never,
+      request:malformed,
+    })
+    await expect(malformedTransport.execute({method:'POST',path:'synthetic/diagnostic-only'}))
+      .rejects.toMatchObject({category:'server_terminal'})
+    expect(fail).toHaveBeenCalledTimes(1)
+    expect(malformed).toHaveBeenCalledTimes(1)
+  })
+
+  it('refuses mocked transport execution when no session or explicit blockRealRequests applies', async () => {
+    vi.stubEnv('VITE_XLINK_ENVIRONMENT','staging')
+    const request=vi.fn(() => {throw Error('must not reach executor')})
+    const noSession=createUniApiCommandTransport({
+      apiBaseUrl:'https://synthetic.invalid',
+      getSessionRef:()=>null,request,
+    })
+    await expect(noSession.execute({method:'POST',path:'synthetic/diagnostic-only'}))
+      .rejects.toMatchObject({category:'session_invalid'})
+    const blocked=createUniApiCommandTransport({
+      apiBaseUrl:'https://synthetic.invalid',
+      getSessionRef:()=> 'synthetic-session' as never,
+      blockRealRequests:true,request,
+    })
+    await expect(blocked.execute({method:'POST',path:'synthetic/diagnostic-only'}))
+      .rejects.toMatchObject({category:'unsupported_capability'})
+    expect(request).not.toHaveBeenCalled()
+  })
+
+  it('accepts only synthetic 200 responses through the injected executor, without issuing a network request', async () => {
+    vi.stubEnv('VITE_XLINK_ENVIRONMENT','staging')
+    const request=vi.fn((options: UniNamespace.RequestOptions)=>{
+      options.success?.({statusCode:200,data:{success:true,data:{id:'synthetic'}}} as never)
+    })
+    const transport=createUniApiCommandTransport({
+      apiBaseUrl:'https://synthetic.invalid',
+      getSessionRef:()=> 'synthetic-session' as never,request,
+    })
+    await expect(transport.execute({
+      method:'POST',path:'synthetic/diagnostic-only',body:{example:'1'},
+    })).resolves.toMatchObject({success:true})
+    expect(request).toHaveBeenCalledTimes(1)
+  })
+
   it('release evidence check rejects nine unsafe synthetic changes and holds Production approval', () => {
     const result=execFileSync(process.execPath,['scripts/check-closure-c3-release.mjs','--self-test'],{
       cwd:process.cwd(),encoding:'utf8',timeout:20000,
