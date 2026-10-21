@@ -56,3 +56,5 @@ export {
   isCapabilityGranted,
 } from './capability'
 export type { CapabilityMetadata, CapabilityResult, CapabilityState } from './capability'
+
+export { requiresR1SpecialWorkflowWire } from './r1-node-contract'
