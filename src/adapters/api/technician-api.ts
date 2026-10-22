@@ -1574,15 +1574,28 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
           const workflowRunId = requiredOpaqueId<'WorkflowRunId'>(
             workflow, ['_id', 'id', 'workflowId'], 'child workflow run id',
           )
-          assertMatchingWireIdentity(workflow, ['parentWorkflowNodeId', 'parentNodeId'], String(parentNodeId), 'Child workflow parent')
+          assertMatchingWireIdentity(workflow, ['_id', 'id', 'workflowId'], String(workflowRunId), 'Child workflow run')
+          // R1 Workflow.parentFlowNodeId points to the *outer* subflows node.
+          // WorkflowNode.parentWorkflowNodeId instead points to a predecessor
+          // *inside* this child run. They are different relationships.
+          assertMatchingWireIdentity(
+            workflow, ['parentFlowNodeId', 'parentWorkflowNodeId', 'parentNodeId'],
+            String(parentNodeId), 'Child workflow outer parent',
+          )
           if (!Array.isArray(workflow.workflowNodeList)) {
             throw new AdapterMappingError('Child workflow node list is missing')
           }
           return workflow.workflowNodeList.map((rawNode) => {
             const node = asRecord(rawNode, 'child workflow node')
             assertMatchingWireIdentity(node, ['runId', 'workflowRunId', 'workflowId'], String(workflowRunId), 'Child workflow node run')
-            assertMatchingWireIdentity(node, ['parentNodeId', 'parentWorkflowNodeId'], String(parentNodeId), 'Child workflow node parent')
-            return workflowNode({ ...node, workflowId: workflowRunId, parentWorkflowNodeId: parentNodeId })
+            const internalParents = ['parentNodeId', 'parentWorkflowNodeId']
+              .map((key) => optionalString(node, [key]))
+              .filter((id): id is string => Boolean(id))
+            if (new Set(internalParents).size > 1) {
+              throw new AdapterMappingError('Child workflow node internal predecessor identities conflict')
+            }
+            // Never overwrite an internal predecessor with the outer parent.
+            return workflowNode({ ...node, workflowId: workflowRunId })
           })
         })
       },

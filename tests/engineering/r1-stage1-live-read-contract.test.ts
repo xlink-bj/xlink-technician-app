@@ -43,19 +43,26 @@ describe('R1 Stage1 production read contracts — synthetic only', () => {
     }
   })
 
-  it('flattens child Workflow[] with embedded workflowNodeList and correct identities', async () => {
+  it('flattens child Workflow[] while preserving predecessor links inside the child run', async () => {
     const execute = vi.fn(async () => ({ data: [{
       _id: 'synthetic-child-run',
-      parentWorkflowNodeId: 'synthetic-parent-node',
-      workflowNodeList: [{ _id: 'synthetic-child-node', nodeDef: { nodeType: 'forms' } }],
+      parentFlowNodeId: 'synthetic-parent-node',
+      workflowNodeList: [
+        { _id: 'synthetic-entry-node', workflowId: 'synthetic-child-run', nodeDef: { nodeType: 'forms' } },
+        { _id: 'synthetic-child-node', workflowId: 'synthetic-child-run',
+          parentWorkflowNodeId: 'synthetic-entry-node', nodeDef: { nodeType: 'repeat' } },
+      ],
     }] }))
     const adapter = createTechnicianApiReadAdapter({ execute })
     const result = await adapter.getChildWorkflowNodes(parentNodeId)
 
-    expect(result).toMatchObject({ state: 'succeeded', data: [{
-      id: 'synthetic-child-node', runId: 'synthetic-child-run',
-      parentNodeId: 'synthetic-parent-node', sourceNodeType: 'forms',
-    }] })
+    expect(result).toMatchObject({ state: 'succeeded', data: [
+      { id: 'synthetic-entry-node', runId: 'synthetic-child-run', sourceNodeType: 'forms' },
+      { id: 'synthetic-child-node', runId: 'synthetic-child-run',
+        parentNodeId: 'synthetic-entry-node', sourceNodeType: 'repeat' },
+    ] })
+    expect(result.data?.[0]).not.toHaveProperty('parentNodeId')
+    expect(result.data?.[1]?.parentNodeId).not.toBe(parentNodeId)
     expect(execute).toHaveBeenCalledWith({
       method: 'POST', path: 'workflow/queryByParentWorkflowNodeId/synthetic-parent-node',
     })
@@ -66,13 +73,18 @@ describe('R1 Stage1 production read contracts — synthetic only', () => {
     expect(await adapter.getChildWorkflowNodes(parentNodeId)).toEqual({ state: 'succeeded', data: [] })
   })
 
-  it('rejects a child Workflow without its node list, or a mismatched child identity', async () => {
+  it('rejects a child Workflow without its node list, or a mismatched outer parent/run identity', async () => {
     for (const workflow of [
       { _id: 'synthetic-child-run' },
       { _id: 'synthetic-child-run', workflowNodeList: [{}] },
       { _id: 'synthetic-child-run', parentNodeId: 'other-parent', workflowNodeList: [] },
+      { _id: 'synthetic-child-run', parentFlowNodeId: 'other-parent', workflowNodeList: [] },
+      { _id: 'synthetic-child-run', parentFlowNodeId: 'synthetic-parent-node',
+        parentNodeId: 'other-parent', workflowNodeList: [] },
       { _id: 'synthetic-child-run', workflowNodeList: [{ _id: 'node', workflowId: 'other-run' }] },
-      { _id: 'synthetic-child-run', workflowNodeList: [{ _id: 'node', parentWorkflowNodeId: 'other-parent' }] },
+      { _id: 'synthetic-child-run', workflowNodeList: [{ _id: 'node', runId: 'synthetic-child-run', workflowId: 'other-run' }] },
+      { _id: 'synthetic-child-run', workflowNodeList: [{ _id: 'node', parentNodeId: 'previous-a',
+        parentWorkflowNodeId: 'previous-b' }] },
     ]) {
       const adapter = createTechnicianApiReadAdapter({ execute: async () => ({ data: [workflow] }) })
       expect((await adapter.getChildWorkflowNodes(parentNodeId)).state).toBe('failed_terminal')

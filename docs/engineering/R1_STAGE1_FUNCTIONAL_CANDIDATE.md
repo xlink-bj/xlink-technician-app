@@ -49,6 +49,20 @@ Issue [#199 只读取证](https://github.com/xlink-bj/xlink-technician-app/issue
 以上是**合成契约回归的代码修复**，不是对 Production 的再次请求或现场验收；
 勘察 PDF、副作用、真实保存顺序、复杂字段及真机 UX 均未据此宣告完成。
 
+### 2026-10-22 子流程真实读取复验：仍需再次验证
+
+后续 [#199 复验](https://github.com/xlink-bj/xlink-technician-app/issues/199#issuecomment-6336995328)
+证实主流程、repeat 列表、FormData 详情均可只读返回，但子流程因父节点语义混淆而 **FAIL / P0**：
+
+- 子 `Workflow.parentFlowNodeId` 是外层 `subflows` 运行节点 ID；须按请求的父节点校验。
+- 子 `WorkflowNode.parentWorkflowNodeId` 是**子流程内部前置节点** ID，不是外层 `subflows` 节点；映射时保留该值，且不再强制等于外层父节点。
+- 对子节点所属 child run ID 仍做身份冲突校验；对子节点同时出现的内部前置节点别名也拒绝冲突。
+
+已增加仅含合成 ID 的“两子节点、第二节点指向内部第一节点”回归测试。
+此处是针对真实证据的**离线修复**，未在新提交上复验 Production；
+`CHILD_WORKFLOW=AWAITING_RECHECK`、`MP_REAL_DATA=NOT_REACHABLE`，
+**Stage 1 真实读取验收仍为 FAIL**。真正开放小程序生产只读多表单入口须单独设计和批准。
+
 ## 关键安全约束
 
 1. **无真实业务写入。** `executeR1Stage1FunctionalCandidate` 需要外部注入网关，未连接真实页面或 API 组合根。它用于合成 Gateway 离线测试。用户点击只能产生本机草稿，不会调用后端。
