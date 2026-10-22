@@ -34,7 +34,32 @@
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
 }
-.xl-craft, .xl-craft * { box-sizing: border-box; }
+/* WXSS does not accept the universal selector; cover the native nodes used by
+   the opt-in surfaces while keeping the same scoped border-box sizing. */
+.xl-craft,
+.xl-craft view,
+.xl-craft text,
+.xl-craft button,
+.xl-craft input,
+.xl-craft textarea,
+.xl-craft scroll-view,
+.xl-craft picker,
+.xl-craft navigator,
+.xl-craft label,
+.xl-craft form,
+.xl-craft image,
+.xl-craft switch,
+.xl-craft checkbox,
+.xl-craft radio,
+.xl-craft slider,
+.xl-craft swiper,
+.xl-craft swiper-item,
+.xl-craft movable-area,
+.xl-craft movable-view,
+.xl-craft cover-view,
+.xl-craft cover-image {
+  box-sizing: border-box;
+}
 .xl-craft__eyebrow {
   display: block;
   color: #587399;
