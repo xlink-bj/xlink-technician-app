@@ -30,6 +30,25 @@
 4. **真实执行身份**：`7213–7236` 区分子流程的 `currentNode._id/workflowId` 和主节点的 `activeTab.detail.name._id/workflowId`；`7645–7659` 重复完成使用 `subNode._id` 及其 `formDataList`。需要 #199 明确运行节点和子节点对应关系，禁止父子身份猜测。
 5. **真实字段行为**：`6879–6969` 的字典、级联、Groovy 求值、媒体/多选，及 `7069–7145` 的“保存/提交”与必填验证，尚未获得试点真实字段矩阵。现有本机字段编辑不是完整 R1 表单编辑能力，复杂字段应明确不支持。
 
+## 2026-10-22 Production 只读契约核验与离线修复
+
+Issue [#199 只读取证](https://github.com/xlink-bj/xlink-technician-app/issues/199#issuecomment-6335747195)
+已在既有受限角色范围内核对 R1 源码、只读数据库和 Production API 的工单、节点、流程、表单记录身份关联。
+样本是**已完成的勘察类 repeat**，只证明读取关系；不能充当安全写入试点。
+
+新 App 只读适配器据此修正两个契约差异：
+
+1. `workflow/queryNode/{runId}` 的响应 `data` 为节点数组；
+   `workflow/queryByParentWorkflowNodeId/{parentNodeId}` 的 `data` 为子 Workflow 数组，
+   由其中的 `workflowNodeList` 展开节点。适配器保留既有测试封装的兼容路径，
+   检查运行/父节点身份冲突，缺少必要的子节点集合则明确失败。
+2. `biz/extForm/query/{formDefId}` 返回的普通 FormData 记录可以不含 `formDefId`；
+   其定义身份取自**已限定的请求 URL**，如响应另有定义标识则必须一致。
+   单条详情仍要求准确 FormData ID、唯一命中与受限分页，不扩大读取权限。
+
+以上是**合成契约回归的代码修复**，不是对 Production 的再次请求或现场验收；
+勘察 PDF、副作用、真实保存顺序、复杂字段及真机 UX 均未据此宣告完成。
+
 ## 关键安全约束
 
 1. **无真实业务写入。** `executeR1Stage1FunctionalCandidate` 需要外部注入网关，未连接真实页面或 API 组合根。它用于合成 Gateway 离线测试。用户点击只能产生本机草稿，不会调用后端。

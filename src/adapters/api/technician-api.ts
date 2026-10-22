@@ -131,6 +131,31 @@ function pageEnvelope<T>(raw: unknown, mapItem: (value: unknown) => T): ReadPage
   }
 }
 
+/** R1 workflow read handlers return `data: []`; earlier mock/read paths may
+ * return a nested `data.items`. Both require an explicit array, never an
+ * inferred empty collection when the envelope is malformed. */
+function workflowResponseRows(raw: unknown, label: string): readonly unknown[] {
+  const envelope = asRecord(raw, label)
+  const data = envelope.data
+  const rows = Array.isArray(data)
+    ? data
+    : optionalRecord(data)?.items ?? envelope.items
+  if (!Array.isArray(rows)) throw new AdapterMappingError(`${label} items are missing`)
+  return rows
+}
+
+function assertMatchingWireIdentity(
+  record: AdapterRecord,
+  keys: readonly string[],
+  expected: string,
+  label: string,
+): void {
+  const candidates = keys.map((key) => optionalString(record, [key])).filter((id): id is string => Boolean(id))
+  if (candidates.some((id) => id !== expected)) {
+    throw new AdapterMappingError(`${label} conflicts with the requested identity`)
+  }
+}
+
 function serviceDistrictLabel(record: AdapterRecord): string | undefined {
   const rawDistrict = record.district
   const code =
@@ -1049,19 +1074,29 @@ function formValues(record: AdapterRecord, codec?: FormValueCodec): Readonly<Rec
   return Object.keys(values).length > 0 ? values : undefined
 }
 
-function formData(raw: unknown, codec?: FormValueCodec): FormDataRead {
+function formData(raw: unknown, codec?: FormValueCodec, expectedDefinitionId?: FormDefinitionId): FormDataRead {
   const record = asRecord(raw, 'form data')
   const workflow = nestedRecord(record, ['workflow'])
   const values = formValues(record, codec)
+  // Real R1 dynamic FormData rows may not repeat their FormDefinition ID.
+  // The definition is already fixed by the query URL; never invent it from
+  // arbitrary data or silently override contradictory response metadata.
+  const wireDefinitionIds = ['definitionId', 'extId', 'formDefId']
+    .map((key) => optionalString(record, [key]))
+    .filter((id): id is string => Boolean(id))
+  if (new Set(wireDefinitionIds).size > 1) {
+    throw new AdapterMappingError('FormData definition identity is contradictory')
+  }
+  if (expectedDefinitionId) {
+    assertMatchingWireIdentity(record, ['definitionId', 'extId', 'formDefId'], String(expectedDefinitionId), 'FormData definition')
+  }
+  const definitionId = expectedDefinitionId
+    ?? requiredOpaqueId<'FormDefinitionId'>(record, ['definitionId', 'extId', 'formDefId'], 'form definition id')
   return {
     id: requiredOpaqueId<'FormDataId'>(record, ['id', '_id', 'dataId'], 'form data id'),
-    definitionId: requiredOpaqueId<'FormDefinitionId'>(
-      record,
-      ['definitionId', 'extId', 'formDefId'],
-      'form definition id',
-    ),
-    ...(optionalOpaqueId<'WorkflowRunId'>(record, ['workflowRunId', 'runId'])
-      ? { workflowRunId: optionalOpaqueId<'WorkflowRunId'>(record, ['workflowRunId', 'runId']) }
+    definitionId,
+    ...(optionalOpaqueId<'WorkflowRunId'>(record, ['workflowRunId', 'runId', 'workflowId'])
+      ? { workflowRunId: optionalOpaqueId<'WorkflowRunId'>(record, ['workflowRunId', 'runId', 'workflowId']) }
       : workflow && optionalOpaqueId<'WorkflowRunId'>(workflow, ['runId', 'workflowRunId'])
         ? { workflowRunId: optionalOpaqueId<'WorkflowRunId'>(workflow, ['runId', 'workflowRunId']) }
         : {}),
@@ -1513,10 +1548,12 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
     return this.read<readonly WorkflowNodeRead[]>(
       { method: 'POST', path: `workflow/queryNode/${encodeURIComponent(runId)}` },
       (raw) => {
-        const envelope = asRecord(raw, 'workflow node response')
-        const items = nestedValue(envelope, ['data', 'items'])
-        if (!Array.isArray(items)) throw new AdapterMappingError('workflow node response items are missing')
-        return items.map(workflowNode)
+        const items = workflowResponseRows(raw, 'workflow node response')
+        return items.map((rawNode) => {
+          const node = asRecord(rawNode, 'workflow node')
+          assertMatchingWireIdentity(node, ['runId', 'workflowRunId', 'workflowId'], String(runId), 'Workflow node run')
+          return workflowNode({ ...node, workflowId: runId })
+        })
       },
     )
   }
@@ -1528,10 +1565,26 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
         path: `workflow/queryByParentWorkflowNodeId/${encodeURIComponent(parentNodeId)}`,
       },
       (raw) => {
-        const envelope = asRecord(raw, 'child workflow node response')
-        const items = nestedValue(envelope, ['data', 'items'])
-        if (!Array.isArray(items)) throw new AdapterMappingError('child workflow node items are missing')
-        return items.map(workflowNode)
+        const items = workflowResponseRows(raw, 'child workflow response')
+        return items.flatMap((rawWorkflow) => {
+          // R1 WorkflowService.queryByParentWorkflowNodeId returns Workflow[];
+          // each workflow carries its own runtime _id and workflowNodeList.
+          // Flatten *nodes*, not Workflow objects masquerading as nodes.
+          const workflow = asRecord(rawWorkflow, 'child workflow')
+          const workflowRunId = requiredOpaqueId<'WorkflowRunId'>(
+            workflow, ['_id', 'id', 'workflowId'], 'child workflow run id',
+          )
+          assertMatchingWireIdentity(workflow, ['parentWorkflowNodeId', 'parentNodeId'], String(parentNodeId), 'Child workflow parent')
+          if (!Array.isArray(workflow.workflowNodeList)) {
+            throw new AdapterMappingError('Child workflow node list is missing')
+          }
+          return workflow.workflowNodeList.map((rawNode) => {
+            const node = asRecord(rawNode, 'child workflow node')
+            assertMatchingWireIdentity(node, ['runId', 'workflowRunId', 'workflowId'], String(workflowRunId), 'Child workflow node run')
+            assertMatchingWireIdentity(node, ['parentNodeId', 'parentWorkflowNodeId'], String(parentNodeId), 'Child workflow node parent')
+            return workflowNode({ ...node, workflowId: workflowRunId, parentWorkflowNodeId: parentNodeId })
+          })
+        })
       },
     )
   }
@@ -1626,7 +1679,7 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
         path: `biz/extForm/query/${encodeURIComponent(input.definitionId)}`,
         body,
       },
-      (raw) => pageEnvelope(raw, (item) => formData(item, input.valueCodec)),
+      (raw) => pageEnvelope(raw, (item) => formData(item, input.valueCodec, input.definitionId)),
     )
   }
 
@@ -1652,7 +1705,7 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
           },
         },
         (raw) => {
-          const page = pageEnvelope(raw, (item) => formData(item, input.valueCodec))
+          const page = pageEnvelope(raw, (item) => formData(item, input.valueCodec, input.definitionId))
           if (page.items.length !== 1
             || String(page.items[0]?.id) !== String(input.dataId)
             || String(page.items[0]?.definitionId) !== String(input.definitionId)) {
@@ -1671,7 +1724,7 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
       (raw) => {
         const envelope = asRecord(raw, 'form detail response')
         const data = nestedValue(envelope, ['data', 'entity'])
-        return formData(data ?? envelope, input.valueCodec)
+        return formData(data ?? envelope, input.valueCodec, input.definitionId)
       },
     )
   }
