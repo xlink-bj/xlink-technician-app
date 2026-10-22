@@ -354,7 +354,11 @@ describe('Production read-only profile', () => {
       if (input.path === 'basic/serviceAppointment/query') return { data: [{ _id: 'synthetic-listed' }] }
       if (input.path === 'basic/serviceAppointment/queryById/synthetic-listed') return { data: {
         _id: 'synthetic-listed', workflow: { _id: 'synthetic-main-run' },
-        workflowNode: [{ _id: 'synthetic-parent', workflowId: 'synthetic-main-run', nodeDef: { nodeType: 'subflows' } }],
+        workflowNode: [
+          { _id: 'synthetic-parent', workflowId: 'synthetic-main-run', nodeDef: { nodeType: 'subflows' } },
+          { _id: 'synthetic-main-repeat', workflowId: 'synthetic-main-run',
+            nodeDef: { nodeType: 'repeat', formDefId: 'synthetic-def' } },
+        ],
       } }
       if (input.path === 'workflow/queryByParentWorkflowNodeId/synthetic-parent') return { data: [{
         _id: 'synthetic-child-run', parentFlowNodeId: 'synthetic-parent',
@@ -380,6 +384,10 @@ describe('Production read-only profile', () => {
     expect((await api.listRepeatFormReferences!(repeat)).state).toBe('failed_terminal')
     await api.listWorkOrders({ page: 1, pageSize: 20 })
     await api.getWorkOrderDetail(asOpaqueId<'WorkOrderId'>('synthetic-listed'))
+    const mainRepeat = { ...repeat,
+      workflowRunId: asOpaqueId<'WorkflowRunId'>('synthetic-main-run') }
+    expect(api.isRepeatFormContextAuthorizedForCurrentSession?.('synthetic-def', 'synthetic-main-run')).toBe(true)
+    expect((await api.listRepeatFormReferences!(mainRepeat)).state).toBe('succeeded')
     expect(api.isRepeatFormContextAuthorizedForCurrentSession?.('synthetic-def', 'synthetic-child-run')).toBe(false)
     expect((await api.listRepeatFormReferences!(repeat)).state).toBe('failed_terminal')
     await api.getChildWorkflowNodes(asOpaqueId<'WorkflowNodeRuntimeId'>('synthetic-parent'))

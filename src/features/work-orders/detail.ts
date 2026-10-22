@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, watch, type WatchStopHandle } from 'vue'
 import { workOrderReadScopeKey } from './read-identity-scope'
+import { detailWorkflowUiProjectionFor } from './detail-workflow'
 import { isProductionReadOnlyRuntime } from '@shared/config'
 
 import type {
@@ -81,7 +82,9 @@ export const useWorkOrderDetailStore = defineStore('workOrderDetail', () => {
   const childReadNodes = ref<readonly WorkflowNodeRead[]>([])
   const childReadError = ref<OperationError | null>(null)
   const repeatReadByNode = ref<Readonly<Record<string, R1RepeatRecordsReadState>>>({})
+  const mainRepeatRead = ref<R1RepeatRecordsReadState>({ state: 'idle', entries: [], hasMore: false })
   let childReadVersion = 0
+  let mainRepeatReadVersion = 0
 
   let api: TechnicianApiReadPort | null = null
   let getSession: () => SessionSnapshot | null = () => null
@@ -130,6 +133,7 @@ export const useWorkOrderDetailStore = defineStore('workOrderDetail', () => {
 
   function clearDetailData(): void {
     clearChildRead()
+    clearMainRepeatRead()
     currentWorkOrderId.value = null
     detail.value = null
     clearContactState()
@@ -142,6 +146,11 @@ export const useWorkOrderDetailStore = defineStore('workOrderDetail', () => {
     childReadNodes.value = []
     childReadError.value = null
     repeatReadByNode.value = {}
+  }
+
+  function clearMainRepeatRead(): void {
+    mainRepeatReadVersion += 1
+    mainRepeatRead.value = { state: 'idle', entries: [], hasMore: false }
   }
 
   function clear(): void {
@@ -206,6 +215,7 @@ export const useWorkOrderDetailStore = defineStore('workOrderDetail', () => {
     currentWorkOrderId.value = id
     detail.value = null
     clearChildRead()
+    clearMainRepeatRead()
     clearContactState()
     loadState.value = 'loading'
     error.value = null
@@ -330,6 +340,79 @@ export const useWorkOrderDetailStore = defineStore('workOrderDetail', () => {
     repeatReadByNode.value = { ...repeatReadByNode.value, [nodeId]: snapshot }
   }
 
+  function currentMainRepeat(nodeId: string, scope: string | null): WorkflowNodeRead | null {
+    const current = detail.value
+    if (!isProductionReadOnlyRuntime() || !api?.listRepeatFormReferences
+      || !api.isWorkOrderListedForCurrentSession || !api.isRepeatFormContextAuthorizedForCurrentSession
+      || !scope || renderedScope !== scope || loadState.value !== 'succeeded' || !current
+      || !api.isWorkOrderListedForCurrentSession(String(current.id))) return null
+    const task = detailWorkflowUiProjectionFor(current, getSession()).currentTask
+    if (task?.nodeId !== nodeId || task.sourceNodeType !== 'repeat') return null
+    const node = current.workflowNodes?.find((candidate) => String(candidate.id) === nodeId
+      && candidate.category === 'repeat' && candidate.sourceNodeType === 'repeat'
+      && candidate.runId && candidate.formDefinitionId)
+    if (!node?.runId || !node.formDefinitionId || !current.workflowRunId
+      || String(node.runId) !== String(current.workflowRunId)
+      || !api.isRepeatFormContextAuthorizedForCurrentSession(
+        String(node.formDefinitionId), String(node.runId))) return null
+    return node
+  }
+
+  async function loadMainRepeatRecords(nodeId: string): Promise<void> {
+    if (mainRepeatRead.value.state === 'loading') return
+    const scopeAtStart = workOrderReadScopeKey(getSession())
+    const node = currentMainRepeat(nodeId, scopeAtStart)
+    if (!node || !api?.listRepeatFormReferences) {
+      mainRepeatRead.value = {
+        state: 'failed_terminal', entries: [], hasMore: false,
+        error: createOperationError('authorization_denied', 'Current role and repeat node do not authorize this read'),
+      }
+      return
+    }
+    const version = ++mainRepeatReadVersion
+    const detailVersion = loadVersion
+    const workOrderId = String(detail.value!.id)
+    const definitionId = node.formDefinitionId!
+    const workflowRunId = node.runId!
+    mainRepeatRead.value = { state: 'loading', entries: [], hasMore: false }
+    let result: Awaited<ReturnType<NonNullable<TechnicianApiReadPort['listRepeatFormReferences']>>>
+    try {
+      result = await api.listRepeatFormReferences({ definitionId, workflowRunId, page: 1, pageSize: 20 })
+    } catch {
+      if (version === mainRepeatReadVersion) {
+        mainRepeatRead.value = {
+          state: 'failed_retryable', entries: [], hasMore: false,
+          error: createOperationError('network_retryable', 'Repeat record read did not complete'),
+        }
+      }
+      return
+    }
+    const currentNode = currentMainRepeat(nodeId, workOrderReadScopeKey(getSession()))
+    if (version !== mainRepeatReadVersion || detailVersion !== loadVersion
+      || scopeAtStart !== workOrderReadScopeKey(getSession())
+      || String(detail.value?.id ?? '') !== workOrderId
+      || currentNode?.formDefinitionId !== definitionId || currentNode?.runId !== workflowRunId) {
+      if (version === mainRepeatReadVersion) {
+        mainRepeatRead.value = {
+          state: 'failed_terminal', entries: [], hasMore: false,
+          error: createOperationError('authorization_denied', 'Repeat read authority changed during request'),
+        }
+      }
+      return
+    }
+    mainRepeatRead.value = result.state === 'succeeded' && result.data
+      ? {
+          state: 'succeeded', entries: result.data.items,
+          hasMore: result.data.totalCount === undefined
+            ? result.data.items.length >= 20 : result.data.totalCount > result.data.items.length,
+        }
+      : {
+          state: result.state === 'failed_retryable' ? 'failed_retryable' : 'failed_terminal',
+          entries: [], hasMore: false,
+          ...(result.error ? { error: result.error } : {}),
+        }
+  }
+
   async function dialContact(): Promise<CapabilityResult<void>> {
     if (isProductionReadOnlyRuntime()) {
       const result = capabilityFailure('unavailable', 'Production read-only mode disables customer contact actions')
@@ -388,6 +471,7 @@ export const useWorkOrderDetailStore = defineStore('workOrderDetail', () => {
     childReadNodes,
     childReadError,
     repeatReadByNode,
+    mainRepeatRead,
     configureApi,
     configurePhone,
     configureNavigation,
@@ -398,6 +482,7 @@ export const useWorkOrderDetailStore = defineStore('workOrderDetail', () => {
     retry,
     loadChildWorkflowForms,
     loadChildRepeatRecords,
+    loadMainRepeatRecords,
     dialContact,
   }
 })

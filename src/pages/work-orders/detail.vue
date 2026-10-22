@@ -102,9 +102,13 @@
         @action="handleCurrentTaskAction"
       />
 
-      <!-- Source-backed list already included in the current R1 detail.
-           No additional business API reads and no write affordances. -->
-      <R1NodeFormsOverview v-if="currentR1FormNode" :node="currentR1FormNode"
+      <!-- Current source-backed forms/repeat node only; Production repeat reads
+           a bounded list after an explicit tap and never exposes write actions. -->
+      <R1ProductionMainRepeatPanel
+        v-if="productionReadOnly && currentR1FormNode?.sourceNodeType === 'repeat'"
+        :node="currentR1FormNode" :read="workOrder.mainRepeatRead"
+        @read="loadMainRepeatForms" />
+      <R1NodeFormsOverview v-else-if="currentR1FormNode" :node="currentR1FormNode"
         :work-order-id="String(detail.id)" :actor-scope="workOrderReadScopeKey(session.session)" />
       <R1ProductionChildFormsPanel
         v-if="productionReadOnly && productionChildParents.length"
@@ -308,6 +312,7 @@ import AppWorkOrderSkeleton from '@shared/ui/AppWorkOrderSkeleton.vue'
 import WorkOrderTaskFocus from '@features/work-orders/WorkOrderTaskFocus.vue'
 import R1NodeFormsOverview from '@features/work-orders/R1NodeFormsOverview.vue'
 import R1ProductionChildFormsPanel from '@features/work-orders/R1ProductionChildFormsPanel.vue'
+import R1ProductionMainRepeatPanel from '@features/work-orders/R1ProductionMainRepeatPanel.vue'
 import { appLoadingSkeletonDelayMs } from '@shared/ui/loading'
 
 const session = useSessionStore()
@@ -454,6 +459,10 @@ async function loadChildForms(parentNodeId: string): Promise<void> {
 
 async function loadRepeatForms(nodeId: string): Promise<void> {
   await workOrder.loadChildRepeatRecords(nodeId)
+}
+
+async function loadMainRepeatForms(nodeId: string): Promise<void> {
+  await workOrder.loadMainRepeatRecords(nodeId)
 }
 
 function selectTab(tab: DetailTabKey): void {
