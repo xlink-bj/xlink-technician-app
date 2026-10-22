@@ -104,7 +104,7 @@
 
       <!-- Source-backed list already included in the current R1 detail.
            No additional business API reads and no write affordances. -->
-      <R1NodeFormsOverview v-if="currentR1FormNode?.formList" :node="currentR1FormNode"
+      <R1NodeFormsOverview v-if="currentR1FormNode" :node="currentR1FormNode"
         :work-order-id="String(detail.id)" :actor-scope="workOrderReadScopeKey(session.session)" />
 
       <AppRecordCard class="information-card">

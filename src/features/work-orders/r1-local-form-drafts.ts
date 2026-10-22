@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import type { StoragePort, StorageKey, WorkflowNodeRead, FormDefinitionRead, FormFieldValue, TechnicianApiReadPort } from '@shared/ports'
+import type { StoragePort, StorageKey, WorkflowNodeRead, FormDefinitionRead, FormFieldValue, TechnicianApiReadPort, R1FormsAddOptionRead, R1NodeFormListRead } from '@shared/ports'
 import { asOpaqueId } from '@shared/types'
 import { isBusinessMockDeveloperModeAvailable, isBusinessMockMode } from '@app/business-mock'
 import { allowsR1LocalDefinitionPreview } from './r1-local-form-fields'
@@ -57,7 +57,7 @@ function validated(value: unknown): value is R1LocalFormSnapshot {
     if(q.kind!=='new' && (typeof q.targetFormDataId!=='string'||!q.targetFormDataId.trim()))return false
     if(q.kind==='new' && q.targetFormDataId!==undefined)return false
     if(q.values!==undefined) {
-      if(q.kind!=='new'||!q.values||typeof q.values!=='object'||Array.isArray(q.values))return false
+      if(!['new','edit_title'].includes(String(q.kind))||!q.values||typeof q.values!=='object'||Array.isArray(q.values))return false
       const map=q.values as Record<string,unknown>
       if(Object.keys(map).length>50)return false
       for(const [key,value] of Object.entries(map)){
@@ -77,6 +77,8 @@ export const useR1LocalFormDraftStore=defineStore('r1LocalFormDraft',()=>{
   const state=ref<DraftState>('idle')
   const snapshot=ref<R1LocalFormSnapshot>(initial)
   const message=ref('')
+  const availableAddOptions=ref<readonly R1FormsAddOptionRead[]>([])
+  const repeatList=ref<R1NodeFormListRead|null>(null)
   let storage:StoragePort|null=null
   let apiRead:TechnicianApiReadPort|null=null
   let trustedDefaultMockReader=false
@@ -94,6 +96,7 @@ export const useR1LocalFormDraftStore=defineStore('r1LocalFormDraft',()=>{
   function clear() {
     version++;current=null;currentNode=null
     snapshot.value=initial;state.value='idle';message.value=''
+    availableAddOptions.value=[];repeatList.value=null
   }
   async function open(scope:R1LocalFormScope,node:WorkflowNodeRead):Promise<void> {
     clear()
@@ -118,10 +121,59 @@ export const useR1LocalFormDraftStore=defineStore('r1LocalFormDraft',()=>{
   }
   function permitted():boolean{
     if(!current||!currentNode||!storage||state.value!=='ready')return false
-    const list=currentNode.formList
+    const list=repeatList.value??currentNode.formList
     return list?.evidence==='available' && !list.truncated && list.entries.length<=50
       && String(currentNode.id)===current.runtimeNodeId
       && currentNode.sourceNodeType===current.sourceNodeType
+  }
+  function syntheticReaderAllowed():boolean {
+    return Boolean(current && apiRead && trustedDefaultMockReader && import.meta.env.DEV===true
+      && isBusinessMockDeveloperModeAvailable() && isBusinessMockMode()==='data'
+      && current.workOrderId.startsWith('mock-'))
+  }
+  /** Explicit local Mock lookup; a missing embedded repeat list is UNKNOWN. */
+  async function loadRepeatReferences():Promise<boolean>{
+    const node=currentNode,scope=current,ticket=version
+    if(!syntheticReaderAllowed()||!scope||!node||scope.sourceNodeType!=='repeat'
+      ||!node.formDefinitionId||!node.runId||!apiRead?.listRepeatFormReferences
+      ||!String(node.formDefinitionId).startsWith('mock-')){
+      message.value='重复表单仅允许在 DEV 合成数据下主动加载；真实租户未开放。';return false
+    }
+    try{
+      const result=await apiRead.listRepeatFormReferences({
+        definitionId:node.formDefinitionId,workflowRunId:node.runId,page:1,pageSize:20})
+      if(ticket!==version)return false
+      if(result.state!=='succeeded'||!result.data || result.data.items.length>=20){
+        message.value='重复表单列表缺少完整可信分页，仅可查看。';return false
+      }
+      repeatList.value={source:'formDataList',evidence:'available',entries:result.data.items,truncated:false}
+      message.value='仅在本机预览 R1 重复表单记录，未发起业务写入。'
+      return true
+    }catch{if(ticket===version)message.value='重复表单读取失败。';return false}
+  }
+  /** R1 forms nodeDef.addFormCodeId -> code/query -> exts.formDefId. */
+  async function loadAddOptions():Promise<boolean>{
+    const node=currentNode,scope=current,ticket=version
+    if(!syntheticReaderAllowed()||!scope||!node||scope.sourceNodeType!=='forms'
+      ||!node.addFormCodeId||!apiRead?.listR1FormsAddOptions){
+      message.value='新增表单选项须使用 R1 已核验编码；真实环境未授权读取。';return false
+    }
+    try {
+      const result=await apiRead.listR1FormsAddOptions(node.addFormCodeId)
+      if(ticket!==version)return false
+      if(result.state!=='succeeded'||!result.data || result.data.items.length>50
+        ||result.data.items.some(x=>!String(x.formDefinitionId).startsWith('mock-'))){
+        message.value='R1 表单选项身份不完整，拒绝使用。';return false
+      }
+      availableAddOptions.value=result.data.items
+      message.value='已加载合成表单选项；新增仅写入本机草稿。'
+      return true
+    }catch{if(ticket===version)message.value='R1 新增表单选项读取失败。';return false}
+  }
+  async function addFromOption(index:number):Promise<boolean>{
+    const option=availableAddOptions.value[index]
+    if(!option)return false
+    return add(option.label,String(option.formDefinitionId))
   }
   async function update(create:(previous:R1LocalFormSnapshot,node:WorkflowNodeRead,scope:R1LocalFormScope)=>R1LocalFormSnapshot|undefined):Promise<boolean>{
     const port=storage,scope=current,node=currentNode
@@ -187,7 +239,8 @@ export const useR1LocalFormDraftStore=defineStore('r1LocalFormDraft',()=>{
   /** Explicit DEV + synthetic Mock only; never queries a real tenant. */
   async function loadDraftDefinition(localId:string):Promise<FormDefinitionRead|null>{
     const scope=current
-    const intent=snapshot.value.intents.find(x=>x.localId===localId&&x.kind==='new')
+    const intent=snapshot.value.intents.find(x=>x.localId===localId
+      && (x.kind==='new'||x.kind==='edit_title'))
     if(!scope || !intent || state.value!=='ready' || !permitted() || !apiRead || !trustedDefaultMockReader
       || !allowsR1LocalDefinitionPreview({
         dev:import.meta.env.DEV===true,
@@ -212,13 +265,41 @@ export const useR1LocalFormDraftStore=defineStore('r1LocalFormDraft',()=>{
       return reply.data
     }catch{if(ticket===version)message.value='合成表单定义读取失败。';return null}
   }
+  async function loadEditableExisting(localId:string):Promise<{
+    definition:FormDefinitionRead;values:Readonly<Record<string,R1LocalFieldValue>>
+  }|null>{
+    const intent=snapshot.value.intents.find(x=>x.localId===localId&&x.kind==='edit_title')
+    const scope=current,ticket=version
+    if(!intent?.targetFormDataId || !scope || !syntheticReaderAllowed()
+      ||!apiRead || !intent.targetFormDataId.startsWith('mock-'))return null
+    const definition=await loadDraftDefinition(localId)
+    if(!definition)return null
+    try{
+      const read=await apiRead.getFormDetail({
+        definitionId:asOpaqueId<'FormDefinitionId'>(intent.definitionId),
+        dataId:asOpaqueId<'FormDataId'>(intent.targetFormDataId),
+      })
+      if(ticket!==version||read.state!=='succeeded'||!read.data
+        ||String(read.data.id)!==intent.targetFormDataId
+        ||String(read.data.definitionId)!==intent.definitionId)return null
+      let values:Readonly<Record<string,R1LocalFieldValue>>={}
+      for(const field of definition.fields??[]){
+        const value=read.data.values?.[field.valueKey]
+        if(value===undefined)continue
+        const next=normalizeR1LocalFieldPatch(definition,values,field.valueKey,value)
+        if(next)values=next
+      }
+      return {definition,values:{...values,...intent.values}}
+    }catch{return null}
+  }
   /** Atomic local save after editor confirmation; never persist on every keypress.
    * All fields are revalidated against exactly the chosen FormDefinition. */
   async function saveDraftValues(
     localId:string,definition:FormDefinitionRead,raw:Readonly<Record<string,R1LocalFieldValue>>,
   ):Promise<boolean>{
     return update(previous=>{
-      const target=previous.intents.find(x=>x.localId===localId && x.kind==='new')
+      const target=previous.intents.find(x=>x.localId===localId
+        && (x.kind==='new'||x.kind==='edit_title'))
       if(!target||String(definition.id)!==target.definitionId
         ||Object.keys(raw).length>50||!definition.fields||definition.fields.length>50)return undefined
       let normalized:Readonly<Record<string,R1LocalFieldValue>>={}
@@ -254,5 +335,7 @@ export const useR1LocalFormDraftStore=defineStore('r1LocalFormDraft',()=>{
   async function discard(localId:string):Promise<boolean> {
     return update(previous=>({...previous,intents:previous.intents.filter(x=>x.localId!==localId)}))
   }
-  return {state,snapshot,message,configure,clear,open,add,stageDelete,stageEditTitle,loadDraftDefinition,setDraftField,saveDraftValues,discard}
+  return {state,snapshot,message,availableAddOptions,repeatList,configure,clear,open,add,
+    addFromOption,loadAddOptions,loadRepeatReferences,loadEditableExisting,
+    stageDelete,stageEditTitle,loadDraftDefinition,setDraftField,saveDraftValues,discard}
 })

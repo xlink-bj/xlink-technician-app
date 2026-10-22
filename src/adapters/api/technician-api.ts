@@ -15,6 +15,7 @@ import type {
   FormPurpose,
   ReadPage,
   R1NodeFormReference,
+  R1FormsAddOptionRead,
   TechnicianApiReadPort,
   WorkOrderActivity,
   WorkOrderDetail,
@@ -714,12 +715,15 @@ function workflowNode(raw: unknown): WorkflowNodeRead {
   const isSystem = record.isSystem === true
   const isSentinel = record.isSentinel === true
   const sourceNodeType = optionalString(nodeDef ?? {}, ['nodeType', 'nodeTypeOld'])
+  const addFormCodeId = sourceNodeType === 'forms'
+    ? optionalString(nodeDef ?? {}, ['addFormCodeId']) : undefined
   const formList = readR1NodeFormList(record, sourceNodeType)
 
   return {
     id: requiredOpaqueId<'WorkflowNodeRuntimeId'>(record, ['id', '_id', 'workflowNodeId'], 'workflow node id'),
     category: workflowNodeCategory(nodeDef),
     ...(sourceNodeType ? { sourceNodeType } : {}),
+    ...(addFormCodeId ? { addFormCodeId } : {}),
     ...(formList ? { formList } : {}),
     lifecycle: workflowNodeLifecycle(record),
     visibility,
@@ -1653,6 +1657,22 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
       { method: 'POST', path: 'code/query', ...(Object.keys(body).length > 0 ? { body } : {}) },
       (raw) => pageEnvelope(raw, codeOption),
     )
+  }
+
+  listR1FormsAddOptions(addFormCodeId:string) {
+    if (!addFormCodeId.trim())
+      return Promise.resolve(adapterFailure<ReadPage<R1FormsAddOptionRead>>('validation','R1 addFormCodeId is missing'))
+    return this.read<ReadPage<R1FormsAddOptionRead>>({
+      method:'POST',path:'code/query',body:{parentId:addFormCodeId,'is:state|integer#and':1,
+        page:1,rows:50},
+    },(raw)=>pageEnvelope(raw,(item)=>{
+      const option=asRecord(item,'R1 forms add option')
+      const exts=optionalRecord(option.exts)
+      return {
+        label:requiredString(option,['name','label','text','codelabel'],'R1 form choice label'),
+        formDefinitionId:requiredString(exts??{},['formDefId'],'R1 add option FormDefinition ID') as FormDefinitionId,
+      }
+    }))
   }
 
   getDynamicCodeOptions(query: { readonly valueOption: string }) {

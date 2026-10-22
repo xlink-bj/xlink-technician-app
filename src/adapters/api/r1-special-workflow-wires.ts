@@ -7,7 +7,7 @@
  * branches; the original one-FormData workflowCompleteCommand is ineligible.
  */
 import type { ApiCommandRequest } from './technician-api-commands'
-import type { FormDataId, FormDefinitionId, WorkOrderId, WorkflowNodeRuntimeId } from '@shared/types'
+import type { FormDataId, FormDefinitionId, WorkOrderId, WorkflowNodeRuntimeId, WorkflowRunId } from '@shared/types'
 
 interface R1Base {
   readonly workOrderId: WorkOrderId
@@ -20,7 +20,7 @@ function id(value: unknown, kind: string): string {
 }
 function wire(input: R1Base, definition: string, data: string): ApiCommandRequest {
   return {
-    method: 'POST', path: 'workflow/process',
+    method: 'POST', path: 'workflow/process', r1Special: true,
     body: {
       workflowNodeId: id(input.workflowNodeId, 'runtime node'),
       nodeFormDefId: definition, nodeFormDataId: data,
@@ -63,4 +63,49 @@ export function r1RepeatBatchProcess(input: R1Base & {
   const identifiers = input.savedFormDataIds.map(x => id(x, 'repeat FormData'))
   if (new Set(identifiers).size !== identifiers.length) throw new Error('Duplicate repeat FormData ID')
   return wire(input, id(input.definitionId, 'repeat definition'), identifiers.join(','))
+}
+
+/** R1 biz/extForm/upsert, one record per POST. Raw FormData values are transient. */
+export function r1SpecialFormUpsert(input: {
+  readonly sourceNodeType: 'forms' | 'repeat'
+  readonly definitionId: FormDefinitionId
+  readonly formData: Readonly<Record<string, string | number | boolean>>
+  readonly workOrderId: WorkOrderId
+  readonly workflowNodeId: WorkflowNodeRuntimeId
+  readonly workflowRunId?: WorkflowRunId
+  readonly existingFormDataId?: FormDataId
+  readonly state: 1 | -1
+}): ApiCommandRequest {
+  if (!['forms','repeat'].includes(input.sourceNodeType)) throw new Error('Unsupported R1 node type')
+  if (!input.definitionId||!input.workOrderId||!input.workflowNodeId)throw new Error('R1 FormData identity missing')
+  if(input.sourceNodeType==='repeat'&&!input.workflowRunId)throw new Error('R1 repeat requires actual workflow run identity')
+  const forbidden=new Set(['_id','state','nodeId','workflowId','sid','smodule','dataStr'])
+  if(Object.keys(input.formData).some(key=>forbidden.has(key)))
+    throw new Error('R1 form field collides with server-owned identity')
+  const data={...input.formData,sid:input.workOrderId,smodule:'serviceAppointment',
+    nodeId:input.workflowNodeId,...(input.workflowRunId?{workflowId:input.workflowRunId}:{}),
+    ...(input.existingFormDataId?{_id:input.existingFormDataId}:{}),state:input.state}
+  return { method:'POST', path:`biz/extForm/upsert/${encodeURIComponent(input.definitionId)}`,
+    r1Special:true, body:{dataStr:JSON.stringify(data)} }
+}
+
+export function r1FormsUpdateExtsCommand(input: {
+  readonly sourceNodeType: 'forms'
+  readonly planned: { readonly path: string; readonly contentType:'application/json'; readonly body: Readonly<Record<string,unknown>> }
+}): ApiCommandRequest {
+  if (input.sourceNodeType !== 'forms' || !/^workflowNode\/updateExts\/[^/]+$/.test(input.planned.path))
+    throw new Error('Invalid R1 full-fidelity Exts plan')
+  return {method:'POST',path:input.planned.path,r1Special:true,jsonBody:input.planned.body}
+}
+
+/** Legacy repeat deletion is separate from forms' soft-delete Exts contract. */
+export function r1RepeatRemoveCommand(input: {
+  readonly sourceNodeType:'repeat'
+  readonly definitionId: FormDefinitionId
+  readonly formDataId: FormDataId
+}): ApiCommandRequest {
+  if (input.sourceNodeType !== 'repeat' || !input.definitionId || !input.formDataId)
+    throw new Error('R1 repeat removal requires saved identities')
+  return {method:'POST',path:`biz/extForm/remove/${encodeURIComponent(input.definitionId)}`,
+    r1Special:true,body:{formDataId:input.formDataId}}
 }

@@ -17,6 +17,7 @@ export type {
   ReadPage,
   R1NodeFormListRead,
   R1NodeFormReference,
+  R1FormsAddOptionRead,
   QuotationCatalogContext,
   QuotationCatalogItemBaseRead,
   QuotationCatalogItemRead,

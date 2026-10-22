@@ -180,6 +180,8 @@ export interface WorkflowNodeRead {
   readonly displayName?: string
   /** Adapter-normalized opaque form definition identity, when supplied by the node. */
   readonly formDefinitionId?: FormDefinitionId
+  /** R1 forms nodeDef.addFormCodeId, parent for add-form choices. */
+  readonly addFormCodeId?: string
   /** Semantic form purpose; the raw form definition identity stays Adapter-owned. */
   readonly formPurpose?: FormPurpose
   readonly formDataId?: FormDataId
@@ -299,6 +301,12 @@ export interface CodeOptionRead {
   readonly value: string
   readonly label: string
   readonly children?: readonly CodeOptionRead[]
+}
+
+/** R1 forms add choices from code/query; ext.formDefId is the definition ID. */
+export interface R1FormsAddOptionRead {
+  readonly label: string
+  readonly formDefinitionId: FormDefinitionId
 }
 
 export interface CodeOptionsQuery {
@@ -453,6 +461,8 @@ export interface QuotationCatalogReadPort {
 }
 
 export interface TechnicianApiReadPort {
+  /** Passive source metadata; caller must still guard tenant/role/node scope. */
+  listR1FormsAddOptions?(addFormCodeId:string): Promise<OperationSnapshot<ReadPage<R1FormsAddOptionRead>>>
   listWorkOrders(
     query: WorkOrderListQuery,
   ): Promise<OperationSnapshot<ReadPage<WorkOrderSummary>>>

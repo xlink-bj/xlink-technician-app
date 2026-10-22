@@ -11,11 +11,15 @@ import type { OperationSnapshot } from '@shared/types'
  * recovery/replay, even when an executor reports HTTP failure: the backend
  * might have committed the mutation before the response was lost.
  */
-export type R1MultiStepKind = 'form_upsert' | 'repeat_form_upsert' | 'forms_exts_update' | 'workflow_process'
+export type R1MultiStepKind =
+  | 'form_upsert' | 'repeat_form_upsert' | 'forms_exts_update'
+  | 'forms_soft_delete' | 'repeat_remove' | 'workflow_process'
 export interface R1MultiStepScope {
   readonly userId: string
   readonly workOrderId: string
   readonly runtimeNodeId: string
+  /** Actual node workflow run; required by R1 repeat FormData saves. */
+  readonly workflowRunId?: string
   readonly formDefinitionId: string
   readonly sourceNodeType: 'forms' | 'repeat'
   readonly authorizationScope: string
@@ -24,6 +28,7 @@ export interface R1MultiStepReceipt {
   readonly version: 1
   readonly workOrderId: string
   readonly runtimeNodeId: string
+  readonly workflowRunId?: string
   readonly userId: string
   readonly formDefinitionId: string
   readonly sourceNodeType: 'forms' | 'repeat'
@@ -40,6 +45,14 @@ export interface R1StepExecutionContext {
 }
 export interface R1StepAcknowledgement {
   readonly savedFormDataId?: string
+}
+export interface R1AuthoritativeCompletionReadback {
+  readonly workOrderId: string
+  readonly runtimeNodeId: string
+  readonly sourceNodeType: 'forms' | 'repeat'
+  readonly savedFormDataIds: readonly string[]
+  /** Verified workflow readback after Process, not merely an HTTP ACK. */
+  readonly workflowCompleted: true
 }
 export type R1StepExecutor = (context: R1StepExecutionContext) =>
   Promise<OperationSnapshot<R1StepAcknowledgement>>
@@ -64,9 +77,10 @@ function valid(r: unknown,s:R1MultiStepScope): r is R1MultiStepReceipt {
   const steps=x.steps, saved=x.savedFormDataIds
   return x.version===1 && x.userId===s.userId && x.workOrderId===s.workOrderId
     && x.runtimeNodeId===s.runtimeNodeId && x.formDefinitionId===s.formDefinitionId
+    && x.workflowRunId===s.workflowRunId
     && x.sourceNodeType===s.sourceNodeType && x.actorHash===hash(s.authorizationScope)
     && Array.isArray(steps) && steps.length>0 && steps.length<=50
-    && steps.every(y=>['form_upsert','repeat_form_upsert','forms_exts_update','workflow_process'].includes(String(y)))
+    && steps.every(y=>['form_upsert','repeat_form_upsert','forms_exts_update','forms_soft_delete','repeat_remove','workflow_process'].includes(String(y)))
     && typeof x.stepIndex==='number' && Number.isInteger(x.stepIndex)
     && x.stepIndex>=0 && x.stepIndex<steps.length
     && ['may_have_dispatched','acknowledged','completed'].includes(String(x.state))
@@ -90,14 +104,37 @@ async function persist(storage:StoragePort,s:R1MultiStepScope,r:R1MultiStepRecei
 }
 function validatePlan(s:R1MultiStepScope,steps:readonly R1MultiStepKind[]):boolean {
   if (!s.userId || !s.workOrderId || !s.runtimeNodeId || !s.formDefinitionId || !s.authorizationScope
-    || steps.length<2 || steps.length>50 || steps.at(-1)!=='workflow_process')return false
+    || steps.length<1 || steps.length>50)return false
   if (s.sourceNodeType==='forms') {
-    return steps.length===3 && steps[0]==='form_upsert' && steps[1]==='forms_exts_update'
+    return (steps.length===3 && steps[0]==='form_upsert'
+      && steps[1]==='forms_exts_update' && steps[2]==='workflow_process')
+      || (steps.length===2 && steps[0]==='form_upsert' && steps[1]==='forms_exts_update')
+      || (steps.length===2 && steps[0]==='forms_soft_delete' && steps[1]==='forms_exts_update')
+      || (steps.length===1 && steps[0]==='workflow_process')
   }
-  return steps.slice(0,-1).every(x=>x==='repeat_form_upsert')
+  return (steps.length===1 && (steps[0]==='repeat_form_upsert' || steps[0]==='repeat_remove'
+    || steps[0]==='workflow_process'))
+    || (steps.length>=2 && steps.at(-1)==='workflow_process'
+      && steps.slice(0,-1).every(x=>x==='repeat_form_upsert'))
 }
 export async function inspectR1MultiStepReceipt(storage:StoragePort,s:R1MultiStepScope) {
   return read(storage,s)
+}
+
+/** The completed receipt remains a replay fence until a separate, authoritative
+ * workflow and FormData read confirms the server's state. Never clear on ACK. */
+export async function closeCompletedR1ReceiptAfterReadback(
+  storage:StoragePort, scope:R1MultiStepScope,
+  readback:R1AuthoritativeCompletionReadback,
+):Promise<boolean>{
+  const receipt=await read(storage,scope)
+  if(receipt.state!=='succeeded'||!receipt.data||receipt.data.state!=='completed')return false
+  const r=receipt.data
+  if(readback.workflowCompleted!==true || readback.workOrderId!==r.workOrderId
+    || readback.runtimeNodeId!==r.runtimeNodeId||readback.sourceNodeType!==r.sourceNodeType
+    || readback.savedFormDataIds.length!==r.savedFormDataIds.length
+    || r.savedFormDataIds.some(x=>!readback.savedFormDataIds.includes(x)))return false
+  try{return (await storage.remove(key(scope))).state==='succeeded'}catch{return false}
 }
 
 /**
@@ -107,8 +144,15 @@ export async function inspectR1MultiStepReceipt(storage:StoragePort,s:R1MultiSte
 export async function executeR1MultiStepOffline(
   storage:StoragePort, scope:R1MultiStepScope,
   steps:readonly R1MultiStepKind[], executor:R1StepExecutor,
+  /** Only separately verified server FormData IDs may be used for finalize-only Process. */
+  authoritativeSavedIds:readonly string[] = [],
 ):Promise<OperationSnapshot<R1MultiStepReceipt>> {
   if(!validatePlan(scope,steps))return fail('R1 特殊节点事务计划无效。')
+  if(authoritativeSavedIds.length>50 || new Set(authoritativeSavedIds).size!==authoritativeSavedIds.length
+    || authoritativeSavedIds.some(x=>!x.trim()||x.startsWith('local-'))
+    || (steps.length!==1 && authoritativeSavedIds.length>0)
+    || (steps.length===1 && steps[0]==='workflow_process' && authoritativeSavedIds.length===0))
+    return fail('R1 完成节点缺少服务端已核验 FormData 身份。')
   const storageKey=key(scope).key
   const work=async():Promise<OperationSnapshot<R1MultiStepReceipt>>=>{
     if(currentLocks.has(storageKey))return fail('同一节点正在处理另一笔事务。')
@@ -117,12 +161,13 @@ export async function executeR1MultiStepOffline(
       const existing=await read(storage,scope)
       if(existing.state!=='succeeded')return fail('事务防重复记录读取失败。')
       if(existing.data!==null)return fail('事务已存在，需核对服务端状态；禁止自动重放。')
-      const ids:string[]=[]
+      const ids:string[]=[...authoritativeSavedIds]
       for(let stepIndex=0;stepIndex<steps.length;stepIndex++){
         const step=steps[stepIndex]!
         const base:Omit<R1MultiStepReceipt,'state'>={
           version:1,userId:scope.userId,workOrderId:scope.workOrderId,
           runtimeNodeId:scope.runtimeNodeId,formDefinitionId:scope.formDefinitionId,
+          ...(scope.workflowRunId?{workflowRunId:scope.workflowRunId}:{}),
           sourceNodeType:scope.sourceNodeType,actorHash:hash(scope.authorizationScope),
           steps:[...steps],stepIndex,savedFormDataIds:[...ids],
         }
@@ -136,7 +181,8 @@ export async function executeR1MultiStepOffline(
           return fail('事务步骤未收到可信成功回执；人工核对服务端结果。')
         if(step==='form_upsert'||step==='repeat_form_upsert'){
           const id=ack.data.savedFormDataId
-          if(!id || !id.trim() || ids.includes(id))return fail('事务保存回执未返回唯一 FormData ID。')
+          if(!id || !id.trim() || id.startsWith('local-') || ids.includes(id))
+            return fail('事务保存回执未返回唯一 FormData ID。')
           ids.push(id)
         }
         if(!await persist(storage,scope,{
