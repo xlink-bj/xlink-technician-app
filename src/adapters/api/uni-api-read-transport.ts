@@ -31,6 +31,10 @@ export interface UniApiReadTransportOptions {
   readonly isOrderWorkOrderListedForCurrentSession?: (workOrderId: string) => boolean
   /** Current session, user, role and roleVersion fingerprint, never persisted. */
   readonly getOrderReadAuthorizationIdentity?: () => string | null
+  /** Verified from a role-listed Work Order detail, never from a caller's node ID. */
+  readonly isChildWorkflowParentListedForCurrentSession?: (nodeId: string) => boolean
+  /** Identity must change on session, user, role or roleVersion changes. */
+  readonly getChildWorkflowReadAuthorizationIdentity?: () => string | null
 }
 
 function endpointUrl(baseUrl: string, path: string): string {
@@ -141,6 +145,49 @@ export function createUniApiReadTransport(options: UniApiReadTransportOptions): 
         orderReadGuard = { workOrderId, sessionRef: current, identity }
       }
 
+      let childWorkflowReadGuard:
+        | { readonly parentNodeId: string; readonly sessionRef: SessionRef; readonly identity: string }
+        | undefined
+      const childPrefix = 'workflow/queryByParentWorkflowNodeId/'
+      if (productionReadOnly && input.path.startsWith(childPrefix)) {
+        const parentNodeId = input.path.slice(childPrefix.length)
+        let identity: string | null = null
+        let authorized = false
+        try {
+          identity = options.getChildWorkflowReadAuthorizationIdentity?.() ?? null
+          authorized = options.isChildWorkflowParentListedForCurrentSession?.(parentNodeId) === true
+        } catch {
+          authorized = false
+        }
+        const current = options.getSessionRef()
+        if (!current || !identity || !identity.trim() || identity !== identity.trim() || !authorized) {
+          throw new ApiReadTransportError(
+            'Production child Workflow read requires a role-listed Work Order and verified detail parent',
+            'authorization_denied',
+          )
+        }
+        childWorkflowReadGuard = { parentNodeId, sessionRef: current, identity }
+      }
+
+      const verifyChildWorkflowReadScope = (): void => {
+        if (!childWorkflowReadGuard) return
+        let identity: string | null = null
+        let authorized = false
+        try {
+          identity = options.getChildWorkflowReadAuthorizationIdentity?.() ?? null
+          authorized = options.isChildWorkflowParentListedForCurrentSession?.(childWorkflowReadGuard.parentNodeId) === true
+        } catch {
+          authorized = false
+        }
+        if (!authorized || identity !== childWorkflowReadGuard.identity
+          || options.getSessionRef() !== childWorkflowReadGuard.sessionRef) {
+          throw new ApiReadTransportError(
+            'Production child Workflow authorization changed during read',
+            'authorization_denied',
+          )
+        }
+      }
+
       const sessionRef = options.getSessionRef()
       if (!sessionRef) {
         throw new ApiReadTransportError('Authenticated session is required for API reads', 'session_invalid')
@@ -155,6 +202,7 @@ export function createUniApiReadTransport(options: UniApiReadTransportOptions): 
         },
       )
       if (mockResponse !== null) {
+        verifyChildWorkflowReadScope()
         if (orderReadGuard) {
           let stillListed = false
           let identity: string | null = null
@@ -214,6 +262,8 @@ export function createUniApiReadTransport(options: UniApiReadTransportOptions): 
           throw new ApiReadTransportError('Production Order authorization changed during read', 'authorization_denied')
         }
       }
+
+      verifyChildWorkflowReadScope()
 
       if (!isSuccessStatus(response.statusCode)) {
         throw new ApiReadTransportError(

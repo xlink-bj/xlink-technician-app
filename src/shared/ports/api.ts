@@ -468,6 +468,8 @@ export interface TechnicianApiReadPort {
   ): Promise<OperationSnapshot<ReadPage<WorkOrderSummary>>>
   /** True only when this ID was returned by a successful list in the current authenticated session. */
   isWorkOrderListedForCurrentSession?(id: string): boolean
+  /** True only for a subworkflow parent found in an authorized Work Order detail in the active role scope. */
+  isChildWorkflowParentListedForCurrentSession?(id: string): boolean
   getWorkOrderDetail(id: WorkOrderId): Promise<OperationSnapshot<WorkOrderDetail>>
   getWorkflowDefinition(
     id: WorkflowDefinitionId,

@@ -174,6 +174,113 @@ describe('Production read-only profile', () => {
     expect(request).toHaveBeenCalledTimes(1)
   })
 
+  it('blocks Production child Workflow reads without proven detail ownership and rechecks scope after request', async () => {
+    vi.stubEnv('VITE_XLINK_ENVIRONMENT', 'prod')
+    let identity = 'synthetic-session:user:role:v1'
+    let listed = false
+    const request = vi.fn((options: UniNamespace.RequestOptions) => {
+      options.success?.({ statusCode: 200, data: { data: [] } } as never)
+    })
+    const transport = createUniApiReadTransport({
+      apiBaseUrl: 'https://production.invalid',
+      getSessionRef: () => 'synthetic-session' as never,
+      getChildWorkflowReadAuthorizationIdentity: () => identity,
+      isChildWorkflowParentListedForCurrentSession: id => listed && id === 'synthetic-detail-subflows',
+      request,
+    })
+    const childRead = { method: 'POST' as const, path: 'workflow/queryByParentWorkflowNodeId/synthetic-detail-subflows' }
+
+    await expect(transport.execute(childRead)).rejects.toMatchObject({ category: 'authorization_denied' })
+    await expect(transport.execute({ ...childRead, path: 'workflow/queryByParentWorkflowNodeId/arbitrary-node' }))
+      .rejects.toMatchObject({ category: 'authorization_denied' })
+    expect(request).not.toHaveBeenCalled()
+
+    listed = true
+    await expect(transport.execute(childRead)).resolves.toMatchObject({ data: [] })
+    expect(request).toHaveBeenCalledTimes(1)
+
+    for (const invalid of [
+      { ...childRead, body: { type: 'query' } },
+      { ...childRead, path: `${childRead.path}/another` },
+      { ...childRead, path: `${childRead.path}?roleId=other` },
+      { ...childRead, path: `/${childRead.path}` },
+      { ...childRead, method: 'GET' as const },
+    ]) {
+      await expect(transport.execute(invalid)).rejects.toMatchObject({ category: 'unsupported_capability' })
+    }
+    expect(request).toHaveBeenCalledTimes(1)
+
+    const changeRoleDuringRequest = vi.fn((options: UniNamespace.RequestOptions) => {
+      identity = 'synthetic-session:user:other-role:v2'
+      options.success?.({ statusCode: 200, data: { data: [{ sensitive: 'must-not-leak' }] } } as never)
+    })
+    const transportWithRace = createUniApiReadTransport({
+      apiBaseUrl: 'https://production.invalid',
+      getSessionRef: () => 'synthetic-session' as never,
+      getChildWorkflowReadAuthorizationIdentity: () => identity,
+      isChildWorkflowParentListedForCurrentSession: id => id === 'synthetic-detail-subflows',
+      request: changeRoleDuringRequest,
+    })
+    identity = 'synthetic-session:user:role:v1'
+    await expect(transportWithRace.execute(childRead)).rejects.toMatchObject({ category: 'authorization_denied' })
+    expect(changeRoleDuringRequest).toHaveBeenCalledTimes(1)
+  })
+
+  it('derives child Workflow parent authority only from a role-listed Work Order detail, never a raw ID', async () => {
+    vi.stubEnv('VITE_XLINK_ENVIRONMENT', 'prod')
+    let authScope = {
+      sessionRef: 'synthetic-session', userId: 'synthetic-user',
+      roleId: 'synthetic-role', roleVersion: 'v1',
+    }
+    const execute = vi.fn(async (input: { path: string }) => {
+      if (input.path === 'function/queryTreeByRoleId') {
+        return { data: { functionList: [{ action: '/pages/serviceAppointment/serviceAppointments', exts: { tabDisplay: '1' } }] } }
+      }
+      if (input.path === 'basic/serviceAppointment/query') {
+        return { data: [{ _id: 'synthetic-listed-work-order' }] }
+      }
+      if (input.path === 'basic/serviceAppointment/queryById/synthetic-listed-work-order') {
+        return { data: {
+          _id: 'synthetic-listed-work-order',
+          workflow: { _id: 'synthetic-root-run' },
+          workflowNode: [
+            { _id: 'synthetic-detail-subflows', workflowId: 'synthetic-root-run', nodeDef: { nodeType: 'subflows' } },
+            { _id: 'synthetic-ordinary-node', workflowId: 'synthetic-root-run', nodeDef: { nodeType: 'forms' } },
+          ],
+        } }
+      }
+      if (input.path === 'workflow/queryByParentWorkflowNodeId/synthetic-detail-subflows') {
+        return { data: [{
+          _id: 'synthetic-child-run', parentFlowNodeId: 'synthetic-detail-subflows',
+          workflowNodeList: [{ _id: 'synthetic-child-node', workflowId: 'synthetic-child-run', nodeDef: { nodeType: 'repeat' } }],
+        }] }
+      }
+      throw new Error('Unexpected synthetic route')
+    })
+    const api = createRoleScopedTechnicianApiReadAdapter(
+      { execute },
+      () => asOpaqueId<'RoleId'>(authScope.roleId),
+      { getReadAuthorizationScope: () => authScope },
+    )
+    const parentId = asOpaqueId<'WorkflowNodeRuntimeId'>('synthetic-detail-subflows')
+    expect(api.isChildWorkflowParentListedForCurrentSession?.(parentId)).toBe(false)
+    expect((await api.getChildWorkflowNodes(parentId)).state).toBe('failed_terminal')
+    expect(execute).not.toHaveBeenCalled()
+    expect((await api.listWorkOrders({ page: 1, pageSize: 20 })).state).toBe('succeeded')
+    expect(api.isChildWorkflowParentListedForCurrentSession?.(parentId)).toBe(false)
+    expect((await api.getWorkOrderDetail(asOpaqueId<'WorkOrderId'>('synthetic-listed-work-order'))).state).toBe('succeeded')
+    expect(api.isChildWorkflowParentListedForCurrentSession?.(parentId)).toBe(true)
+    expect(api.isChildWorkflowParentListedForCurrentSession?.('synthetic-ordinary-node')).toBe(false)
+    const childRead = await api.getChildWorkflowNodes(parentId)
+    expect(childRead.state).toBe('succeeded')
+    expect(childRead.data?.map(node => String(node.id))).toEqual(['synthetic-child-node'])
+
+    authScope = { ...authScope, roleVersion: 'v2' }
+    expect(api.isChildWorkflowParentListedForCurrentSession?.(parentId)).toBe(false)
+    expect((await api.getChildWorkflowNodes(parentId)).state).toBe('failed_terminal')
+    expect(execute).toHaveBeenCalledTimes(4)
+  })
+
 
   it('passes the actual bounded official-Order adapter request through the Production transport without _all', async () => {
     vi.stubEnv('VITE_XLINK_ENVIRONMENT', 'prod')

@@ -75,6 +75,18 @@ export function isProductionReadOnlyReadAllowed(input: {
       && (input.body === undefined || Object.keys(input.body).length === 0)
   }
 
+  // Contract-verified POST read. The transport *also* requires the parent ID
+  // to have appeared in a role-listed Work Order's authorized detail and
+  // rechecks session/role before exposing any response.
+  const childWorkflowPrefix = 'workflow/queryByParentWorkflowNodeId/'
+  if (path.startsWith(childWorkflowPrefix)) {
+    const parentNodeId = path.slice(childWorkflowPrefix.length)
+    return input.path === path
+      && /^[A-Za-z0-9_-]{1,100}$/.test(parentNodeId)
+      && queryKeys.length === 0
+      && (input.body === undefined || Object.keys(input.body).length === 0)
+  }
+
   if (quotationCatalogListRoutes.has(path)) {
     return queryKeys.length === 0 && isBoundedQuotationCatalogListBody(input.body)
   }

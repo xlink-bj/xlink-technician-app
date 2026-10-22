@@ -1353,6 +1353,7 @@ function readFailure<T>(error: unknown): OperationSnapshot<T> {
 export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
   private currentReadScope: string | null = null
   private readonly listedWorkOrderIds = new Set<string>()
+  private readonly authorizedChildWorkflowParentIds = new Set<string>()
 
   constructor(
     private readonly transport: ApiReadTransport,
@@ -1385,6 +1386,7 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
     if (nextScope !== this.currentReadScope) {
       this.currentReadScope = nextScope
       this.listedWorkOrderIds.clear()
+      this.authorizedChildWorkflowParentIds.clear()
     }
     return nextScope
   }
@@ -1482,18 +1484,18 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
     }
   }
 
-  getWorkOrderDetail(id: WorkOrderId) {
+  async getWorkOrderDetail(id: WorkOrderId) {
     const productionReadOnly = this.isProductionReadOnly()
+    const scopeAtStart = this.synchronizeReadScope()
     if (productionReadOnly) {
-      const scope = this.synchronizeReadScope()
-      if (!this.options.getReadAuthorizationScope || !scope || !this.listedWorkOrderIds.has(String(id))) {
-        return Promise.resolve(adapterFailure<WorkOrderDetail>(
+      if (!this.options.getReadAuthorizationScope || !scopeAtStart || !this.listedWorkOrderIds.has(String(id))) {
+        return adapterFailure<WorkOrderDetail>(
           'authorization_denied',
           'Production Work Order detail requires an ID returned by the current session\'s role-scoped list',
-        ))
+        )
       }
     }
-    return this.read<WorkOrderDetail>(
+    const result = await this.read<WorkOrderDetail>(
       {
         method: 'POST',
         path: `basic/serviceAppointment/queryById/${encodeURIComponent(id)}`,
@@ -1512,11 +1514,35 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
           : detail
       },
     )
+    // A role-listed Work Order followed by its successful, identity-matched
+    // detail is the only source of Production child-workflow parent authority.
+    // In particular, a caller-supplied node ID is never a capability token.
+    if (productionReadOnly && scopeAtStart && result.state === 'succeeded'
+      && result.data && String(result.data.id) === String(id)
+      && this.synchronizeReadScope() === scopeAtStart
+      && this.listedWorkOrderIds.has(String(id))) {
+      for (const node of result.data.workflowNodes ?? []) {
+        if (this.authorizedChildWorkflowParentIds.size >= 100) break
+        if (node.category === 'subworkflow'
+          && ['subflows', 'subflow', 'subworkflow'].includes(node.sourceNodeType ?? '')
+          && (!node.runId || !result.data.workflowRunId
+            || String(node.runId) === String(result.data.workflowRunId))) {
+          this.authorizedChildWorkflowParentIds.add(String(node.id))
+        }
+      }
+    }
+    return result
   }
 
   isWorkOrderListedForCurrentSession(id: string): boolean {
     const scope = this.synchronizeReadScope()
     return Boolean(this.workOrderScopeResolver && scope && id.trim() && this.listedWorkOrderIds.has(id))
+  }
+
+  isChildWorkflowParentListedForCurrentSession(id: string): boolean {
+    const scope = this.synchronizeReadScope()
+    return Boolean(this.workOrderScopeResolver && scope && id.trim()
+      && this.authorizedChildWorkflowParentIds.has(id))
   }
 
   private readWorkOrderActivities(id: WorkOrderId) {
@@ -1558,8 +1584,17 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
     )
   }
 
-  getChildWorkflowNodes(parentNodeId: WorkflowNodeRuntimeId) {
-    return this.read<readonly WorkflowNodeRead[]>(
+  async getChildWorkflowNodes(parentNodeId: WorkflowNodeRuntimeId) {
+    const productionReadOnly = this.isProductionReadOnly()
+    const scopeAtStart = this.synchronizeReadScope()
+    if (productionReadOnly && (!scopeAtStart
+      || !this.isChildWorkflowParentListedForCurrentSession(String(parentNodeId)))) {
+      return adapterFailure<readonly WorkflowNodeRead[]>(
+        'authorization_denied',
+        'Production child Workflow read requires an authorized Work Order detail parent',
+      )
+    }
+    const result = await this.read<readonly WorkflowNodeRead[]>(
       {
         method: 'POST',
         path: `workflow/queryByParentWorkflowNodeId/${encodeURIComponent(parentNodeId)}`,
@@ -1600,6 +1635,13 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
         })
       },
     )
+    if (productionReadOnly && (this.synchronizeReadScope() !== scopeAtStart
+      || !this.isChildWorkflowParentListedForCurrentSession(String(parentNodeId)))) {
+      return adapterFailure<readonly WorkflowNodeRead[]>(
+        'authorization_denied', 'Production child Workflow authorization changed during read',
+      )
+    }
+    return result
   }
 
   getFormDefinition(id: FormDefinitionId) {
