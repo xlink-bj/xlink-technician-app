@@ -112,6 +112,15 @@ export function createDefaultTechnicianApiReadPort(authSession: AuthSessionPort)
         session.roleVersion ?? null,
       ])
     },
+    isRepeatFormContextAuthorizedForCurrentSession: (definitionId, runId) =>
+      technicianReadPort?.isRepeatFormContextAuthorizedForCurrentSession?.(definitionId, runId) === true,
+    getRepeatFormReadAuthorizationIdentity: () => {
+      const session = authSession.getCurrentSession()
+      if (!session || !session.currentRole?.id) return null
+      return JSON.stringify([
+        session.sessionRef, session.user.id, session.currentRole.id, session.roleVersion ?? null,
+      ])
+    },
     getMockActor: () => {
       const session = authSession.getCurrentSession()
       return session

@@ -1354,6 +1354,7 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
   private currentReadScope: string | null = null
   private readonly listedWorkOrderIds = new Set<string>()
   private readonly authorizedChildWorkflowParentIds = new Set<string>()
+  private readonly authorizedRepeatFormContexts = new Set<string>()
 
   constructor(
     private readonly transport: ApiReadTransport,
@@ -1387,6 +1388,7 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
       this.currentReadScope = nextScope
       this.listedWorkOrderIds.clear()
       this.authorizedChildWorkflowParentIds.clear()
+      this.authorizedRepeatFormContexts.clear()
     }
     return nextScope
   }
@@ -1530,6 +1532,9 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
           this.authorizedChildWorkflowParentIds.add(String(node.id))
         }
       }
+      for (const node of result.data.workflowNodes ?? []) {
+        this.rememberRepeatFormContext(node)
+      }
     }
     return result
   }
@@ -1543,6 +1548,24 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
     const scope = this.synchronizeReadScope()
     return Boolean(this.workOrderScopeResolver && scope && id.trim()
       && this.authorizedChildWorkflowParentIds.has(id))
+  }
+
+  private repeatFormContextKey(definitionId: string, runId: string): string {
+    return JSON.stringify([definitionId, runId])
+  }
+
+  private rememberRepeatFormContext(node: WorkflowNodeRead): void {
+    if (node.sourceNodeType !== 'repeat' || !node.formDefinitionId || !node.runId
+      || this.authorizedRepeatFormContexts.size >= 100) return
+    this.authorizedRepeatFormContexts.add(
+      this.repeatFormContextKey(String(node.formDefinitionId), String(node.runId)),
+    )
+  }
+
+  isRepeatFormContextAuthorizedForCurrentSession(definitionId: string, runId: string): boolean {
+    const scope = this.synchronizeReadScope()
+    return Boolean(this.workOrderScopeResolver && scope && definitionId && runId
+      && this.authorizedRepeatFormContexts.has(this.repeatFormContextKey(definitionId, runId)))
   }
 
   private readWorkOrderActivities(id: WorkOrderId) {
@@ -1641,6 +1664,9 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
         'authorization_denied', 'Production child Workflow authorization changed during read',
       )
     }
+    if (productionReadOnly && result.state === 'succeeded' && result.data) {
+      for (const node of result.data) this.rememberRepeatFormContext(node)
+    }
     return result
   }
 
@@ -1697,25 +1723,48 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
 
   /** Inert until a caller with approved scope invokes it. No automatic
    * network, no cross-tenant enumeration, and no FormData values returned. */
-  listRepeatFormReferences(input: {
+  async listRepeatFormReferences(input: {
     readonly definitionId: FormDefinitionId
     readonly workflowRunId: WorkflowRunId
     readonly page: number
     readonly pageSize: number
   }): Promise<OperationSnapshot<ReadPage<R1NodeFormReference>>> {
+    const productionReadOnly = this.isProductionReadOnly()
+    const scopeAtStart = this.synchronizeReadScope()
+    if (productionReadOnly && (!scopeAtStart || input.page !== 1 || input.pageSize > 20
+      || !this.isRepeatFormContextAuthorizedForCurrentSession(String(input.definitionId), String(input.workflowRunId)))) {
+      return adapterFailure('authorization_denied', 'Production repeat list requires a proven workflow node and current role')
+    }
     let request: ApiReadRequest
     try { request = buildR1RepeatFormListQuery(input) }
     catch {
-      return Promise.resolve(adapterFailure('validation', 'Repeat list must be scoped to a known runtime node with bounded paging'))
+      return adapterFailure('validation', 'Repeat list must be scoped to a known runtime node with bounded paging')
     }
-    return this.read<ReadPage<R1NodeFormReference>>(request, (raw) => {
+    const result = await this.read<ReadPage<R1NodeFormReference>>(request, (raw) => {
       const rawPage = pageEnvelope(raw, item => item)
+      if (rawPage.items.length > input.pageSize) {
+        throw new AdapterMappingError('Repeat response exceeds the requested bounded page')
+      }
+      for (const item of rawPage.items) {
+        const record = asRecord(item, 'repeat form reference')
+        // The backend may omit formDefId, but explicit contradictory identity
+        // is never permitted to cross the role-scoped read boundary.
+        assertMatchingWireIdentity(record, ['workflowId', 'workflowRunId'],
+          String(input.workflowRunId), 'Repeat FormData workflow run')
+        assertMatchingWireIdentity(record, ['formDefId', 'formDefinitionId'],
+          String(input.definitionId), 'Repeat FormData definition')
+      }
       const list = readR1NodeFormList({ formDataList: rawPage.items }, 'repeat')
       if (!list || list.evidence !== 'available' || list.truncated) {
         throw new AdapterMappingError('repeat list response identities are malformed or unbounded')
       }
       return { ...rawPage, items: list.entries }
     })
+    if (productionReadOnly && (this.synchronizeReadScope() !== scopeAtStart
+      || !this.isRepeatFormContextAuthorizedForCurrentSession(String(input.definitionId), String(input.workflowRunId)))) {
+      return adapterFailure('authorization_denied', 'Production repeat list authorization changed during read')
+    }
+    return result
   }
 
   getFormData(input: {

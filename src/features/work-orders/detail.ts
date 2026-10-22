@@ -9,6 +9,8 @@ import type {
   SessionSnapshot,
   TechnicianApiReadPort,
   WorkOrderDetail,
+  WorkflowNodeRead,
+  R1NodeFormReference,
 } from '@shared/ports'
 import {
   asOpaqueId,
@@ -21,6 +23,9 @@ import {
   type OperationSnapshot,
   type OperationState,
   type WorkOrderId,
+  type WorkflowNodeRuntimeId,
+  type FormDefinitionId,
+  type WorkflowRunId,
 } from '@shared/types'
 
 export const workOrderDetailRoute = '/pages/work-orders/detail' as const
@@ -40,6 +45,13 @@ export type WorkOrderDetailLoadState = Extract<
 >
 
 export type SessionInvalidation = () => Promise<unknown>
+
+export interface R1RepeatRecordsReadState {
+  readonly state: WorkOrderDetailLoadState
+  readonly entries: readonly R1NodeFormReference[]
+  readonly hasMore: boolean
+  readonly error?: OperationError
+}
 
 function failure<T>(category: ErrorCategory, message: string): OperationSnapshot<T> {
   return {
@@ -63,6 +75,13 @@ export const useWorkOrderDetailStore = defineStore('workOrderDetail', () => {
   const contactState = ref<CapabilityState>('not_requested')
   const contactReason = ref<string | undefined>(undefined)
   const contactInFlight = ref(false)
+  // Read-only Production child nodes are never part of the editable action workspace.
+  const childReadState = ref<WorkOrderDetailLoadState>('idle')
+  const childReadParentId = ref<string | null>(null)
+  const childReadNodes = ref<readonly WorkflowNodeRead[]>([])
+  const childReadError = ref<OperationError | null>(null)
+  const repeatReadByNode = ref<Readonly<Record<string, R1RepeatRecordsReadState>>>({})
+  let childReadVersion = 0
 
   let api: TechnicianApiReadPort | null = null
   let getSession: () => SessionSnapshot | null = () => null
@@ -110,9 +129,19 @@ export const useWorkOrderDetailStore = defineStore('workOrderDetail', () => {
   }
 
   function clearDetailData(): void {
+    clearChildRead()
     currentWorkOrderId.value = null
     detail.value = null
     clearContactState()
+  }
+
+  function clearChildRead(): void {
+    childReadVersion += 1
+    childReadState.value = 'idle'
+    childReadParentId.value = null
+    childReadNodes.value = []
+    childReadError.value = null
+    repeatReadByNode.value = {}
   }
 
   function clear(): void {
@@ -176,6 +205,7 @@ export const useWorkOrderDetailStore = defineStore('workOrderDetail', () => {
     renderedScope = null
     currentWorkOrderId.value = id
     detail.value = null
+    clearChildRead()
     clearContactState()
     loadState.value = 'loading'
     error.value = null
@@ -218,6 +248,86 @@ export const useWorkOrderDetailStore = defineStore('workOrderDetail', () => {
     return lastWorkOrderId
       ? load(lastWorkOrderId)
       : Promise.resolve(failure('validation', 'No Work Order detail is available to retry'))
+  }
+
+  async function loadChildWorkflowForms(parentNodeId: string): Promise<OperationSnapshot<readonly WorkflowNodeRead[]>> {
+    const scopeAtStart = workOrderReadScopeKey(getSession())
+    const parent = detail.value?.workflowNodes?.find((node) =>
+      String(node.id) === parentNodeId && node.category === 'subworkflow'
+      && ['subflows', 'subflow', 'subworkflow'].includes(node.sourceNodeType ?? ''),
+    )
+    if (!isProductionReadOnlyRuntime() || !api || !parent || !scopeAtStart
+      || renderedScope !== scopeAtStart || loadState.value !== 'succeeded') {
+      return failure('authorization_denied', 'Current role and Work Order detail do not authorize this child view')
+    }
+    const version = ++childReadVersion
+    const workOrderId = String(detail.value!.id)
+    childReadParentId.value = parentNodeId
+    childReadNodes.value = []
+    childReadError.value = null
+    repeatReadByNode.value = {}
+    childReadState.value = 'loading'
+    const result = await api.getChildWorkflowNodes(parentNodeId as WorkflowNodeRuntimeId)
+    if (version !== childReadVersion || renderedScope !== scopeAtStart
+      || scopeAtStart !== workOrderReadScopeKey(getSession())
+      || String(detail.value?.id ?? '') !== workOrderId
+      || !detail.value?.workflowNodes?.some((node) => node.id === parent.id)) {
+      return failure('authorization_denied', 'Child view authority changed during read')
+    }
+    if (result.state !== 'succeeded' || !result.data) {
+      childReadState.value = result.state === 'failed_retryable' ? 'failed_retryable' : 'failed_terminal'
+      childReadError.value = result.error ?? null
+      return result
+    }
+    const ids = result.data.map((node) => String(node.id))
+    if (ids.length > 50 || new Set(ids).size !== ids.length) {
+      const invalid = failure<readonly WorkflowNodeRead[]>('server_terminal', 'Child Workflow returned invalid node identities')
+      childReadState.value = 'failed_terminal'
+      childReadError.value = invalid.error ?? null
+      return invalid
+    }
+    childReadNodes.value = result.data.filter((node) =>
+      node.sourceNodeType === 'forms' || node.sourceNodeType === 'repeat')
+    childReadState.value = 'succeeded'
+    return result
+  }
+
+  async function loadChildRepeatRecords(nodeId: string): Promise<void> {
+    const scopeAtStart = workOrderReadScopeKey(getSession())
+    const node = childReadNodes.value.find((candidate) => String(candidate.id) === nodeId
+      && candidate.sourceNodeType === 'repeat' && candidate.runId && candidate.formDefinitionId)
+    if (!isProductionReadOnlyRuntime() || !api?.listRepeatFormReferences || !node || !scopeAtStart
+      || renderedScope !== scopeAtStart || childReadState.value !== 'succeeded') return
+    const version = childReadVersion
+    const workOrderId = String(detail.value?.id ?? '')
+    repeatReadByNode.value = {
+      ...repeatReadByNode.value,
+      [nodeId]: { state: 'loading', entries: [], hasMore: false },
+    }
+    const result = await api.listRepeatFormReferences({
+      definitionId: node.formDefinitionId as FormDefinitionId,
+      workflowRunId: node.runId as WorkflowRunId,
+      page: 1,
+      pageSize: 20,
+    })
+    if (version !== childReadVersion || renderedScope !== scopeAtStart
+      || workOrderId !== String(detail.value?.id ?? '')
+      || scopeAtStart !== workOrderReadScopeKey(getSession())
+      || !childReadNodes.value.some((candidate) => candidate.id === node.id)) return
+    const snapshot: R1RepeatRecordsReadState = result.state === 'succeeded' && result.data
+      ? {
+          state: 'succeeded', entries: result.data.items,
+          // A full first page without totalCount is not proof of completeness.
+          hasMore: result.data.totalCount === undefined
+            ? result.data.items.length >= 20
+            : result.data.totalCount > result.data.items.length,
+        }
+      : {
+          state: result.state === 'failed_retryable' ? 'failed_retryable' : 'failed_terminal',
+          entries: [], hasMore: false,
+          ...(result.error ? { error: result.error } : {}),
+        }
+    repeatReadByNode.value = { ...repeatReadByNode.value, [nodeId]: snapshot }
   }
 
   async function dialContact(): Promise<CapabilityResult<void>> {
@@ -273,6 +383,11 @@ export const useWorkOrderDetailStore = defineStore('workOrderDetail', () => {
     contactState,
     contactReason,
     contactInFlight,
+    childReadState,
+    childReadParentId,
+    childReadNodes,
+    childReadError,
+    repeatReadByNode,
     configureApi,
     configurePhone,
     configureNavigation,
@@ -281,6 +396,8 @@ export const useWorkOrderDetailStore = defineStore('workOrderDetail', () => {
     load,
     loadFromRoute,
     retry,
+    loadChildWorkflowForms,
+    loadChildRepeatRecords,
     dialContact,
   }
 })

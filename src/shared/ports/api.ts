@@ -478,6 +478,8 @@ export interface TechnicianApiReadPort {
   getChildWorkflowNodes(
     parentNodeId: WorkflowNodeRuntimeId,
   ): Promise<OperationSnapshot<readonly WorkflowNodeRead[]>>
+  /** Production: only an authenticated, source-proven repeat node can authorize its exact definition/run pair. */
+  isRepeatFormContextAuthorizedForCurrentSession?(definitionId: string, runId: string): boolean
   getFormDefinition(id: FormDefinitionId): Promise<OperationSnapshot<FormDefinitionRead>>
   /** R1 repeat-node form references, scoped by the ACTUAL node.workflowId.
    * Only invoke after source/tenant/role read approval and verified node identity.

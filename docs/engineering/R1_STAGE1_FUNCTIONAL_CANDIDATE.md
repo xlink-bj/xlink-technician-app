@@ -1,6 +1,6 @@
 # R1 多表单 Stage 1 — 离线功能候选与验收边界
 
-**Status: OFFLINE FUNCTIONAL CANDIDATE. NOT LIVE-INTEGRATED, NOT ACCEPTED, NOT RELEASED.**
+**Status: OFFLINE WRITE FUNCTIONAL CANDIDATE + SCOPED PRODUCTION READ-ONLY UI CANDIDATE. NOT WRITE-INTEGRATED, NOT ACCEPTED, NOT RELEASED.**
 
 本变更以 `xlink-app` 固定证据 `6c0a97b26bcbcaee81ac4e1dfd627c6e8e70e29d`
 中 `business/subpackages/serviceAppointment/serviceAppointment.vue` 的
@@ -49,7 +49,7 @@ Issue [#199 只读取证](https://github.com/xlink-bj/xlink-technician-app/issue
 以上是**合成契约回归的代码修复**，不是对 Production 的再次请求或现场验收；
 勘察 PDF、副作用、真实保存顺序、复杂字段及真机 UX 均未据此宣告完成。
 
-### 2026-10-22 子流程真实读取复验：仍需再次验证
+### 2026-10-22 子流程真实读取复验：历史阻断与修复
 
 后续 [#199 复验](https://github.com/xlink-bj/xlink-technician-app/issues/199#issuecomment-6336995328)
 证实主流程、repeat 列表、FormData 详情均可只读返回，但子流程因父节点语义混淆而 **FAIL / P0**：
@@ -59,9 +59,30 @@ Issue [#199 只读取证](https://github.com/xlink-bj/xlink-technician-app/issue
 - 对子节点所属 child run ID 仍做身份冲突校验；对子节点同时出现的内部前置节点别名也拒绝冲突。
 
 已增加仅含合成 ID 的“两子节点、第二节点指向内部第一节点”回归测试。
-此处是针对真实证据的**离线修复**，未在新提交上复验 Production；
-`CHILD_WORKFLOW=AWAITING_RECHECK`、`MP_REAL_DATA=NOT_REACHABLE`，
-**Stage 1 真实读取验收仍为 FAIL**。真正开放小程序生产只读多表单入口须单独设计和批准。
+该段记录的是当时 `7f2713a9` 之前的阻断；后续真实复验结果见下一节。
+
+### 2026-10-22 有界生产只读入口候选
+
+在精确提交 `05d15b01`，[#199 证据](https://github.com/xlink-bj/xlink-technician-app/issues/199#issuecomment-6340074169)
+确认 App 默认只读链路 `ROLE_LIST → WORK_ORDER_DETAIL → CHILD_WORKFLOW` 已通过，
+包括 CASE_B 两个子节点的相同运行 ID 与内部前置节点关系。首轮每页 100 条被现有
+50 条上限本地拒绝，改用 50 后成功；**零业务写入**。
+
+本次后续候选新增一个独立于 Action Workspace 的 Production 子流程表单展示区：
+
+1. 只从当前角色列表中已授权工单详情提供的 `subflows` 父节点出发，主动点击后读取子节点；
+   无匹配父节点、角色变化、响应节点身份异常均失败关闭。
+2. 对 `forms` 仅展示经节点 `exts.formList` 提供的已有表单引用及状态；缺失或异常不伪装成空列表。
+3. 对 `repeat` 只允许已授权主/子流程节点证明的 `(formDefId, workflowRunId)` 组合，
+   主动查询 `biz/extForm/query/{formDefId}` 的第一页、最多 20 条、`state != -1`；
+   传输层与适配器均做角色身份与组合权限的前后校验。任何单条 FormData、字段定义、
+   `_all`、额外 filter、第二页与任意 ID 查询都仍被 Production 门禁拦截。
+4. 此 UI **不渲染服务端 FormData 字段值，不编辑本机草稿，不调用写入、上传、PDF 或 Workflow Process**。
+   未读完的分页会明确标识，不将缺失总数视为已完整获取。
+
+这只是新 App 的**代码与合成回归候选**。当前 Production 实际 CASE_B `repeat` 列表读取、
+微信开发者工具中的真实页面、实体设备字号/触控、完整 FormData 内容与表单编辑写入
+仍未因此完成验收，`STAGE1_END_TO_END=FAIL`；需 #199 同步追加脱敏证据与 Owner UX Gate。
 
 ## 关键安全约束
 
@@ -69,7 +90,7 @@ Issue [#199 只读取证](https://github.com/xlink-bj/xlink-technician-app/issue
 2. 真实命令传输在既有 `VITE_XLINK_ENABLE_REAL_WRITES` 之外还需要独立 `VITE_XLINK_ENABLE_R1_SPECIAL_WRITES=true`。Production Read-Only 仍然绝对拦截。R1 特殊 Exts/Remove 路由必须显式标记；Exts 使用 JSON。
 3. 每一步实际尝试之前，持久化 `may_have_dispatched`；网络错误、ACK 异常、授权变化或本机持久化失败会停机。即使已完成，收据在服务端权威读取确认之前也不自动清除。
 4. FormData 字段原值、Exts 全量对象只在单次调用中临时使用，**不会**进入防重放收据、埋点或列表投影。
-5. 对表单定义、表单现值、repeat 记录及新增选项的主动 UI 读取，限制在真实 DEV Mock 数据模式和 `mock-` 合成工单内。注入一个 `TechnicianApiReadPort` 本身不产生读取许可。
+5. 原编辑草稿模块对表单定义、表单现值、repeat 记录及新增选项的主动读取，仍限制在 DEV Mock 数据模式和 `mock-` 合成工单内。新建的独立 Production 只读面板仅能执行上一节明确限定的子节点与 repeat **引用列表**读取；不能复用草稿读写能力。注入一个 `TechnicianApiReadPort` 本身不产生读取许可。
 
 ## 外部验收门槛（尚未完成）
 

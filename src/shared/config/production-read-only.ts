@@ -87,6 +87,16 @@ export function isProductionReadOnlyReadAllowed(input: {
       && (input.body === undefined || Object.keys(input.body).length === 0)
   }
 
+  // Repeat list, never arbitrary FormData detail. Runtime transport separately
+  // proves the exact (form definition, workflow run) pair from a role-listed
+  // Work Order's verified main/child node; syntax alone grants no authority.
+  const repeatFormPrefix = 'biz/extForm/query/'
+  if (path.startsWith(repeatFormPrefix)) {
+    const definitionId = decodePathIdentity(path.slice(repeatFormPrefix.length))
+    return input.path === path && definitionId !== null
+      && queryKeys.length === 0 && isBoundedRepeatFormListBody(input.body)
+  }
+
   if (quotationCatalogListRoutes.has(path)) {
     return queryKeys.length === 0 && isBoundedQuotationCatalogListBody(input.body)
   }
@@ -127,6 +137,22 @@ function decodePathIdentity(encoded: string): string | null {
     return null
   }
   return /^[A-Za-z0-9_-]{1,100}$/.test(id) ? id : null
+}
+
+function isBoundedRepeatFormListBody(body: Readonly<Record<string, unknown>> | undefined): boolean {
+  if (!body) return false
+  const required = [
+    'sortField', 'sortOrder', 'is:workflowId|string#and',
+    'ne:state|integer#and', 'page', 'rows',
+  ]
+  const keys = Object.keys(body)
+  const runId = body['is:workflowId|string#and']
+  return keys.length === required.length && required.every((key) => hasOwn(body, key))
+    && body.sortField === 'createTime' && body.sortOrder === 'desc'
+    && typeof runId === 'string' && /^[A-Za-z0-9_-]{1,100}$/.test(runId)
+    && body['ne:state|integer#and'] === -1
+    && body.page === 1 && Number.isInteger(body.rows)
+    && typeof body.rows === 'number' && body.rows >= 1 && body.rows <= 20
 }
 
 function isBoundedQuotationCatalogListBody(body: Readonly<Record<string, unknown>> | undefined): boolean {

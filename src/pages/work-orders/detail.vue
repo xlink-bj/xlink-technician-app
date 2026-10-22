@@ -106,6 +106,17 @@
            No additional business API reads and no write affordances. -->
       <R1NodeFormsOverview v-if="currentR1FormNode" :node="currentR1FormNode"
         :work-order-id="String(detail.id)" :actor-scope="workOrderReadScopeKey(session.session)" />
+      <R1ProductionChildFormsPanel
+        v-if="productionReadOnly && productionChildParents.length"
+        :parents="productionChildParents"
+        :selected-parent-id="workOrder.childReadParentId"
+        :nodes="workOrder.childReadNodes"
+        :state="workOrder.childReadState"
+        :error="workOrder.childReadError"
+        :repeat-by-node="workOrder.repeatReadByNode"
+        @load-child="loadChildForms"
+        @load-repeat="loadRepeatForms"
+      />
 
       <AppRecordCard class="information-card">
         <scroll-view class="detail-tabs" scroll-x="true" show-scrollbar="false">
@@ -296,6 +307,7 @@ import AppFeedbackState from '@shared/ui/AppFeedbackState.vue'
 import AppWorkOrderSkeleton from '@shared/ui/AppWorkOrderSkeleton.vue'
 import WorkOrderTaskFocus from '@features/work-orders/WorkOrderTaskFocus.vue'
 import R1NodeFormsOverview from '@features/work-orders/R1NodeFormsOverview.vue'
+import R1ProductionChildFormsPanel from '@features/work-orders/R1ProductionChildFormsPanel.vue'
 import { appLoadingSkeletonDelayMs } from '@shared/ui/loading'
 
 const session = useSessionStore()
@@ -318,6 +330,10 @@ const currentR1FormNode = computed(() => {
   if (!task || (task.sourceNodeType !== 'forms' && task.sourceNodeType !== 'repeat')) return undefined
   return detail.value?.workflowNodes?.find(node => node.id === task.nodeId)
 })
+const productionChildParents = computed(() => (productionReadOnly
+  ? detail.value?.workflowNodes?.filter((node) => node.category === 'subworkflow'
+    && ['subflows', 'subflow', 'subworkflow'].includes(node.sourceNodeType ?? '')) ?? []
+  : []))
 const allowLocalMockPreview = computed(() => {
   const stage = mockJourneyContext(String(detail.value?.id ?? ''))
   const task = workflowProjection.value.currentTask
@@ -430,6 +446,14 @@ watch(
 
 async function retry(): Promise<void> {
   await workOrder.retry()
+}
+
+async function loadChildForms(parentNodeId: string): Promise<void> {
+  await workOrder.loadChildWorkflowForms(parentNodeId)
+}
+
+async function loadRepeatForms(nodeId: string): Promise<void> {
+  await workOrder.loadChildRepeatRecords(nodeId)
 }
 
 function selectTab(tab: DetailTabKey): void {
