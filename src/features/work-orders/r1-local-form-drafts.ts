@@ -216,7 +216,7 @@ export const useR1LocalFormDraftStore=defineStore('r1LocalFormDraft',()=>{
   }
   async function stageDelete(recordId:string):Promise<boolean> {
     return update((previous,node)=>{
-      const existing=node.formList?.entries.find(x=>String(x.id)===recordId&&x.state!=='deleted')
+      const existing=(repeatList.value??node.formList)?.entries.find(x=>String(x.id)===recordId&&x.state!=='deleted')
       if(!existing||previous.intents.some(x=>x.targetFormDataId===recordId))return undefined
       return {...previous,nextSequence:previous.nextSequence+1,
         intents:[...previous.intents,{localId:`local-${previous.nextSequence}`,kind:'delete',
@@ -228,7 +228,7 @@ export const useR1LocalFormDraftStore=defineStore('r1LocalFormDraft',()=>{
     const name=title.trim().slice(0,80)
     if(!name)return false
     return update((previous,node)=>{
-      const existing=node.formList?.entries.find(x=>String(x.id)===recordId&&x.state!=='deleted')
+      const existing=(repeatList.value??node.formList)?.entries.find(x=>String(x.id)===recordId&&x.state!=='deleted')
       const definition=existing?.formDefinitionId??node.formDefinitionId
       if(!existing||!definition||previous.intents.some(x=>x.targetFormDataId===recordId))return undefined
       return {...previous,nextSequence:previous.nextSequence+1,

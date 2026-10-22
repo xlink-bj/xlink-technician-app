@@ -16,6 +16,45 @@ import {
 
 /** Synthetic-only legacy harness form; it is not the G4-E Survey contract. */
 export const mockSyntheticDynamicFormDefinitionId = 'mock-form-definition-inspection'
+/** DEV-only R1 local-draft walkthrough. These IDs never represent FormData persistence. */
+export const mockR1FormsWorkOrderId = 'mock-work-order-020-local-forms'
+export const mockR1RepeatWorkOrderId = 'mock-work-order-021-local-repeat'
+export const mockR1AddFormCodeId = 'mock-code-local-form-types'
+export const mockR1NoteFormDefinitionId = 'mock-form-definition-local-note'
+export const mockR1FormData = {
+  formsFirst: 'mock-form-data-020-existing-a',
+  formsSecond: 'mock-form-data-020-existing-b',
+  repeatFirst: 'mock-form-data-021-existing-a',
+  repeatSecond: 'mock-form-data-021-existing-b',
+} as const
+export const mockR1NoteFormDefinitionResponse = {
+  data: [{ _id: 'mock-local-note-field', name: 'note', nameDisp: '服务备注',
+    type: 'textarea', required: '0', state: 1 }],
+  page: 1, rows: 20, total: 1,
+} as const
+export const mockR1AddFormOptionsResponse = {
+  data: [
+    { name: '现场记录', state: 1, exts: { formDefId: mockSyntheticDynamicFormDefinitionId } },
+    { name: '服务备注', state: 1, exts: { formDefId: mockR1NoteFormDefinitionId } },
+  ], page: 1, rows: 50, total: 2,
+} as const
+export const mockR1ExistingFormData = {
+  [mockR1FormData.formsFirst]: { _id: mockR1FormData.formsFirst,
+    extId: mockSyntheticDynamicFormDefinitionId, formDefId: mockSyntheticDynamicFormDefinitionId,
+    formTitle: '合成现场记录', state: 1,
+    exts: { inspectionSummary: '合成内容：已查看屋面', inspectionResult: 'follow_up' } },
+  [mockR1FormData.formsSecond]: { _id: mockR1FormData.formsSecond,
+    extId: mockR1NoteFormDefinitionId, formDefId: mockR1NoteFormDefinitionId,
+    formTitle: '合成服务备注', state: 1, exts: { note: '仅供本地草稿走查' } },
+  [mockR1FormData.repeatFirst]: { _id: mockR1FormData.repeatFirst,
+    extId: mockSyntheticDynamicFormDefinitionId, formDefId: mockSyntheticDynamicFormDefinitionId,
+    formTitle: '合成重复记录一', workflowId: 'mock-workflow-run-021', state: 1,
+    exts: { inspectionSummary: '合成记录一' } },
+  [mockR1FormData.repeatSecond]: { _id: mockR1FormData.repeatSecond,
+    extId: mockSyntheticDynamicFormDefinitionId, formDefId: mockSyntheticDynamicFormDefinitionId,
+    formTitle: '合成重复记录二', workflowId: 'mock-workflow-run-021', state: 1,
+    exts: { inspectionSummary: '合成记录二' } },
+} as const
 
 export {
   mockSurveyFormDefinitionId,
@@ -455,6 +494,27 @@ export const mockSanodeListResponse = {
   total: 12,
 } as const
 
+/** Opt-in DEV QA rows; the established 12-row visual baseline stays fixed. */
+export const mockR1MpUxListRows = [
+  {
+    _id: 'mock-workflow-node-020-forms', state: 0,
+    nodeDef: { nodeType: 'forms', name: '合成多表单',
+      formDefId: mockSyntheticDynamicFormDefinitionId,
+      addFormCodeId: mockR1AddFormCodeId, userChoose: ['synthetic-role'] },
+    data: { _id: mockR1FormsWorkOrderId, orderNum: 'MOCK-020',
+      name: '多表单本机草稿走查', address: '合成地址',
+      status: mockSyntheticStatusCodes.onsite, workflowRunId: 'mock-workflow-run-020' },
+  },
+  {
+    _id: 'mock-workflow-node-021-repeat', state: 0,
+    nodeDef: { nodeType: 'repeat', name: '合成重复表单',
+      formDefId: mockSyntheticDynamicFormDefinitionId, userChoose: ['synthetic-role'] },
+    data: { _id: mockR1RepeatWorkOrderId, orderNum: 'MOCK-021',
+      name: '重复表单本机草稿走查', address: '合成地址',
+      status: mockSyntheticStatusCodes.onsite, workflowRunId: 'mock-workflow-run-021' },
+  },
+] as const
+
 export const mockOrdinaryListResponse = {
   data: [
     mockServiceAppointmentData[mockWorkOrderIds[0]],
@@ -497,6 +557,31 @@ export const mockRepairPartsCascadeResponse = [
 ] as const
 
 export const mockWorkOrderDetailResponses = {
+  [mockR1FormsWorkOrderId]: {
+    data: {
+      serviceAppointment: { _id: mockR1FormsWorkOrderId, orderNum: 'MOCK-020',
+        name: '多表单本机草稿走查', address: '合成地址',
+        status: mockSyntheticStatusCodes.onsite, workflowRunId: 'mock-workflow-run-020' },
+      workflow: { _id: 'mock-workflow-run-020' },
+      workflowNode: [{ _id: 'mock-workflow-node-020-forms', workflowId: 'mock-workflow-run-020', state: 0,
+        nodeDef: { nodeType: 'forms', name: '合成多表单',
+          formDefId: mockSyntheticDynamicFormDefinitionId,
+          addFormCodeId: mockR1AddFormCodeId, userChoose: ['synthetic-role'] },
+        exts: { formList: [mockR1ExistingFormData[mockR1FormData.formsFirst],
+          mockR1ExistingFormData[mockR1FormData.formsSecond]] } }],
+    },
+  },
+  [mockR1RepeatWorkOrderId]: {
+    data: {
+      serviceAppointment: { _id: mockR1RepeatWorkOrderId, orderNum: 'MOCK-021',
+        name: '重复表单本机草稿走查', address: '合成地址',
+        status: mockSyntheticStatusCodes.onsite, workflowRunId: 'mock-workflow-run-021' },
+      workflow: { _id: 'mock-workflow-run-021' },
+      workflowNode: [{ _id: 'mock-workflow-node-021-repeat', workflowId: 'mock-workflow-run-021', state: 0,
+        nodeDef: { nodeType: 'repeat', name: '合成重复表单',
+          formDefId: mockSyntheticDynamicFormDefinitionId, userChoose: ['synthetic-role'] } }],
+    },
+  },
   [mockWorkOrderIds[0]]: {
     data: {
       serviceAppointment: {

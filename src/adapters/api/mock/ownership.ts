@@ -9,6 +9,8 @@ import {
   isSyntheticWorkOrderId,
   mockSyntheticDynamicFormDefinitionId,
   mockSurveyFormDefinitionId,
+  mockR1AddFormCodeId,
+  mockR1NoteFormDefinitionId,
 } from './fixtures'
 import { mockMaterialSkuSpuId } from './quotation-catalog'
 
@@ -29,6 +31,7 @@ export function isMockOwnedRead(
   requestData: Readonly<Record<string, unknown>> = {},
 ): boolean {
   const route = normalizedPath(path)
+  if (route === 'code/query' && requestData.parentId === mockR1AddFormCodeId) return true
   // This is an internal, synthetic-only route. It is always mock-owned so a
   // disabled Mock mode can never fall through to a real backend endpoint.
   if (route === '__mock/quotation/action-content') return true
@@ -76,12 +79,14 @@ export function isMockOwnedRead(
     route === 'biz/extField/query' &&
     typeof requestData.extId === 'string' &&
     (requestData.extId === mockSyntheticDynamicFormDefinitionId
-      || requestData.extId === mockSurveyFormDefinitionId)
+      || requestData.extId === mockSurveyFormDefinitionId
+      || requestData.extId === mockR1NoteFormDefinitionId)
   ) return true
   if (
     route.startsWith('biz/extForm/query/') &&
     (route.slice('biz/extForm/query/'.length) === mockSyntheticDynamicFormDefinitionId
-      || route.slice('biz/extForm/query/'.length) === mockSurveyFormDefinitionId)
+      || route.slice('biz/extForm/query/'.length) === mockSurveyFormDefinitionId
+      || route.slice('biz/extForm/query/'.length) === mockR1NoteFormDefinitionId)
   ) return true
   const detailPrefix = 'basic/serviceAppointment/queryById/'
   if (route.startsWith(detailPrefix)) {
