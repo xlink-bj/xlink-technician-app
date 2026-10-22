@@ -20,6 +20,16 @@
 | repeat 批量完成 | 每条先保存，然后 Process 使用逗号连接服务端 FormData IDs | 按服务端 ACK 收集，拒绝本地 ID/重复 ID |
 | 字段编辑 | 表单定义决定可编辑字段；未知/只读/媒体不猜测 | DEV 合成本机草稿编辑（新增及已保存记录的本机编辑意图） |
 
+## 2026-10-22 源码二次核对：真实联调前 P0
+
+固定 R1 源 `serviceAppointment.vue@6c0a97b` 再确认：
+
+1. **一般 FormData 读取**：`6987–7017` 用 `biz/extForm/query/{formDefId}` 按 `is:_id|string#and` 查询并展平 `exts`；只有特定施工验收表单定义 `3285058246984486156` 例外使用 `findByIdWithWorkflow`。本 PR 已加入精确 ID / 唯一结果校验；不采用 R1 某些施工验收情形的 `notFilterBelongTo` 权限绕行。
+2. **forms 删除存在时序差异**：`10347–10375` 原 UI 先发节点 `updateExts` 后发 FormData 状态 -1，且 `saveNodeExts` 在活动状态 `state==0` 可继续调用 `process`。本候选目前采用防重放的 FormData → Exts 两步，**不得以离线成功认定删除等价**；需首试点验证服务端一致性/并发后明确顺序与推进策略。
+3. **repeat 勘察特定副作用**：`7313–7328`、`7409–7419` 指定勘察表单保存可触发 `createSurveyPDFUrl` 和 `surveyToolUpsert`。这些不是纯表单保存；未验证其幂等/权限/副作用前，本候选不自动调用。不能用真实勘察记录试写。
+4. **真实执行身份**：`7213–7236` 区分子流程的 `currentNode._id/workflowId` 和主节点的 `activeTab.detail.name._id/workflowId`；`7645–7659` 重复完成使用 `subNode._id` 及其 `formDataList`。需要 #199 明确运行节点和子节点对应关系，禁止父子身份猜测。
+5. **真实字段行为**：`6879–6969` 的字典、级联、Groovy 求值、媒体/多选，及 `7069–7145` 的“保存/提交”与必填验证，尚未获得试点真实字段矩阵。现有本机字段编辑不是完整 R1 表单编辑能力，复杂字段应明确不支持。
+
 ## 关键安全约束
 
 1. **无真实业务写入。** `executeR1Stage1FunctionalCandidate` 需要外部注入网关，未连接真实页面或 API 组合根。它用于合成 Gateway 离线测试。用户点击只能产生本机草稿，不会调用后端。

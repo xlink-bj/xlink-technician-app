@@ -1635,6 +1635,33 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
     readonly dataId: FormDataId
     readonly valueCodec?: FormValueCodec
   }) {
+    // R1 serviceAppointment.vue:6987-7013: ordinary forms/repeat edit uses
+    // biz/extForm/query/{formDefId} filtered by the exact saved _id.
+    // findByIdWithWorkflow is a special-case contract for one construction
+    // acceptance FormDef only. Never use its different read semantics for an
+    // arbitrary R1 multi-form node.
+    if (String(input.definitionId) !== '3285058246984486156') {
+      return this.read<FormDataRead>(
+        {
+          method: 'POST',
+          path: `biz/extForm/query/${encodeURIComponent(input.definitionId)}`,
+          body: {
+            sortField: 'createTime', sortOrder: 'desc',
+            'is:_id|string#and': input.dataId,
+            page: 1, rows: 2,
+          },
+        },
+        (raw) => {
+          const page = pageEnvelope(raw, (item) => formData(item, input.valueCodec))
+          if (page.items.length !== 1
+            || String(page.items[0]?.id) !== String(input.dataId)
+            || String(page.items[0]?.definitionId) !== String(input.definitionId)) {
+            throw new AdapterMappingError('R1 form detail identity is absent or ambiguous')
+          }
+          return page.items[0]!
+        },
+      )
+    }
     return this.read<FormDataRead>(
       {
         method: 'GET',
