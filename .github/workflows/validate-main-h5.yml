@@ -15,6 +15,25 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  r1-main-repeat-ui:
+    # Synthetic component contract runs on Draft PRs; real Production reads
+    # and device UX remain separate manual acceptance gates.
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Verify credential-free Production repeat panel interaction
+        run: pnpm run test:r1-main-repeat-ui
+
   h5-ux:
     # L3 runs only when PR leaves Draft, or on main/manual execution.
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
