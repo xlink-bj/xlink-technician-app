@@ -57,6 +57,8 @@ export interface FormFieldSchema {
   readonly operationType?: string | number
   readonly presentation?: Readonly<Record<string, string | number | boolean>>
   readonly showList?: readonly (string | number)[]
+  readonly mobileDetailHidden?: boolean
+  readonly presentationOnly?: boolean
   readonly multiple?: boolean
   readonly visibility?: VisibilityExpression
   readonly valueOption?: string

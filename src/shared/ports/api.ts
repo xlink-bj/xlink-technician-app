@@ -192,6 +192,9 @@ export interface WorkflowNodeRead {
    * command solely from normalized category.
    */
   readonly sourceNodeType?: string
+  /** Provenance of the category: a supplied runtime nodeDef, or no usable type.
+   * Definition/runtime list position alone never establishes node identity. */
+  readonly nodeTypeEvidence?: 'runtime_node_def' | 'unresolved'
   /** Existing form references; neither raw FormData nor write authorization. */
   readonly formList?: R1NodeFormListRead
   readonly category: WorkflowNodeCategory
@@ -222,6 +225,10 @@ export interface FormFieldRead {
   readonly fixed?: string | number | boolean
   readonly operationType?: string | number
   readonly showList?: readonly (string | number)[]
+  /** R1 frontEndConfig.mpDetailHide is a mobile-detail exclusion, not a write permission. */
+  readonly mobileDetailHidden?: boolean
+  /** A display-only R1 source control must not be converted into a media/file command. */
+  readonly presentationOnly?: boolean
   /** Backend `multiple` flag; a multi-value control must not be rendered as a scalar choice. */
   readonly multiple?: boolean
   readonly options?: readonly FormFieldOptionRead[]

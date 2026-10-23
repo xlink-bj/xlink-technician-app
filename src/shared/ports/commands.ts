@@ -39,6 +39,8 @@ export interface AppointmentFormFieldRead {
   readonly fixed?: string | number | boolean
   readonly operationType?: string | number
   readonly showList?: readonly (string | number)[]
+  readonly mobileDetailHidden?: boolean
+  readonly presentationOnly?: boolean
   /** Backend `multiple` flag; a multi-value control must not be rendered as a scalar choice. */
   readonly multiple?: boolean
   readonly options?: readonly AppointmentFormOption[]

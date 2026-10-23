@@ -65,6 +65,7 @@ const detail: WorkOrderDetail = {
       id: asOpaqueId<'WorkflowNodeRuntimeId'>('workflow-node-001'),
       category: 'unsupported',
       sourceNodeType: 'sanitized',
+      nodeTypeEvidence: 'runtime_node_def',
       lifecycle: 'unknown',
       visibility: { evidenceState: 'missing' },
     },

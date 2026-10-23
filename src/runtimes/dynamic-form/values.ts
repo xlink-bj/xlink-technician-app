@@ -98,6 +98,9 @@ export function normalizeFieldValue(
     }
   }
   if (type === 'switch') {
+    // R1 <van-switch active-value="1" inactive-value="0"> sends wire strings.
+    // Preserve them; boolean-only normalization silently changes the FormData contract.
+    if (value === '1' || value === '0') return { ok: true, value }
     if (typeof value === 'boolean') return { ok: true, value }
     if (value === 'true') return { ok: true, value: true }
     if (value === 'false') return { ok: true, value: false }
@@ -139,6 +142,7 @@ export function normalizeFieldValue(
       if (values.some((item) => item === undefined || item === null)) return invalid(`${type} contains an unsupported value`)
       return { ok: true, value: values as NormalizedFieldValue }
     }
+    if (type === 'checkbox') return invalid('checkbox requires an array of choices')
     const result = scalar(value)
     return result === undefined ? invalid(`${type} requires a value or value array`) : { ok: true, value: result }
   }

@@ -7,7 +7,9 @@ export function evaluateFieldState(
   field: FormFieldSchema,
   context: FieldStateContext = {},
 ): EffectiveFieldState {
-  const capability = classifyFieldType(field.type)
+  const capability = field.presentationOnly
+    ? { capability: 'PRESENTATION_ONLY' as const }
+    : classifyFieldType(field.type)
   const optionProvider = selectOptionProvider(field)
   if (!isFieldApplicable(field, context.surface)) {
     return {

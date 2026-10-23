@@ -14,7 +14,7 @@ import type {
 import type { OperationSnapshot } from '@shared/types'
 
 import { AdapterMappingError, adapterFailure, succeeded, unknownErrorMessage } from '../common/operations'
-import { asRecord, assertMatchingWireIdentity, optionalNonNegativeInteger, optionalRecord, optionalString, requiredString, type AdapterRecord } from '../common/records'
+import { asRecord, assertMatchingWireIdentity, consistentWireIdentity, optionalNonNegativeInteger, optionalRecord, optionalString, requiredString, type AdapterRecord } from '../common/records'
 import { ApiReadTransportError, type ApiReadTransport } from './technician-api'
 
 function quotationOrderRecord(raw: unknown, requestedId: string): QuotationOrderRead {
@@ -116,14 +116,26 @@ function browseIdentity(
       : kind === 'material' ? 'materialId' : 'measureId'
   const nestedExts = optionalRecord(embedded?.exts)
   const exts = optionalRecord(row.exts)
+  // Distinguish SPU catalog identity from SKU variant identity. Conflicting
+  // aliases or nested-vs-row parent claims must not be silently preferred.
+  const rowSpu = consistentWireIdentity(row, ['spuid', 'spuId'], 'Order line SPU')
+  const nestedSpu = embedded ? consistentWireIdentity(embedded, ['spuid', 'spuId'], 'Order product SPU') : undefined
+  if (rowSpu && nestedSpu && rowSpu !== nestedSpu) {
+    throw new AdapterMappingError('Order line and nested product SPU disagree')
+  }
+  const rowSku = optionalString(row, ['skuId'])
+  const nestedSku = optionalString(embedded ?? {}, ['skuId'])
+  if (rowSku && nestedSku && rowSku !== nestedSku) {
+    throw new AdapterMappingError('Order line and nested product SKU disagree')
+  }
   return {
     ...(stringIdentity(row, ['_id']) ? { providerRowId: stringIdentity(row, ['_id']) } : {}),
     ...(referenceKey && stringIdentity(row, [referenceKey]) ? { providerReferenceId: stringIdentity(row, [referenceKey]) } : {}),
-    ...(stringIdentity(embedded ?? {}, ['spuid', 'spuId']) || stringIdentity(row, ['spuid', 'spuId'])
-      ? { spuId: stringIdentity(embedded ?? {}, ['spuid', 'spuId']) || stringIdentity(row, ['spuid', 'spuId']) }
+    ...(nestedSpu || rowSpu
+      ? { spuId: nestedSpu || rowSpu }
       : {}),
-    ...(stringIdentity(embedded ?? {}, ['skuId']) || stringIdentity(row, ['skuId'])
-      ? { skuId: stringIdentity(embedded ?? {}, ['skuId']) || stringIdentity(row, ['skuId']) }
+    ...(nestedSku || rowSku
+      ? { skuId: nestedSku || rowSku }
       : {}),
     ...(stringIdentity(embedded ?? {}, ['spuCode']) || stringIdentity(nestedExts ?? {}, ['spuCode']) || stringIdentity(exts ?? {}, ['spuCode'])
       ? { spuCode: stringIdentity(embedded ?? {}, ['spuCode']) || stringIdentity(nestedExts ?? {}, ['spuCode']) || stringIdentity(exts ?? {}, ['spuCode']) }
@@ -469,6 +481,13 @@ export class QuotationOrderReadAdapter implements QuotationOrderReadPort {
         const status = rawStatus && /^-?\d{1,3}$/.test(rawStatus) ? rawStatus : undefined
         const signedDate = optionalString(row, ['signedDate'])
         const state = optionalNonNegativeInteger(row, ['state'])
+        // The R1 query is state=1 OR exts.contractStatus=-2, not AND.
+        // Check contradictory explicit witnesses only; omitted fields do not
+        // prove an exclusion, and neither branch grants signing authority.
+        if (row.state !== undefined && exts?.contractStatus !== undefined
+          && state !== 1 && status !== '-2') {
+          return adapterFailure('server_terminal', '合同状态不符合本次只读查询条件。')
+        }
         summaries.push({
           id, orderId, serviceAppointmentId: workOrderId,
           ...(optionalString(row, ['contractdocNum']) ? { displayNumber: optionalString(row, ['contractdocNum']) } : {}),

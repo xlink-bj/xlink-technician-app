@@ -783,6 +783,7 @@ function workflowNode(raw: unknown): WorkflowNodeRead {
   return {
     id,
     category: workflowNodeCategory(nodeDef),
+    nodeTypeEvidence: sourceNodeType ? 'runtime_node_def' : 'unresolved',
     ...(sourceNodeType ? { sourceNodeType } : {}),
     ...(addFormCodeId ? { addFormCodeId } : {}),
     ...(formList ? { formList } : {}),
@@ -1004,6 +1005,17 @@ function formField(raw: unknown, rowIndex: number): FormFieldRead | null {
   const showList = Array.isArray(record.showList)
     ? record.showList.filter((value): value is string | number => typeof value === 'string' || typeof value === 'number')
     : undefined
+  const malformedShowList = record.showList !== undefined
+    && (!Array.isArray(record.showList) || showList?.length !== record.showList.length)
+  // In R1 serviceAppointment.getFields, image is a list of reference pictures,
+  // not a file uploader. Mock-created image controls retain their separate behavior.
+  const presentationOnly = type === 'image' || type === 'title' || type === 'gap'
+  const malformedFrontEndConfig = record.frontEndConfig !== undefined
+    && record.frontEndConfig !== null
+    && record.frontEndConfig !== ''
+    && !config
+  const invalidDetailHide = config?.mpDetailHide !== undefined
+    && typeof config.mpDetailHide !== 'boolean'
   const presentation = fieldPresentation(record, config)
 
   return {
@@ -1018,6 +1030,8 @@ function formField(raw: unknown, rowIndex: number): FormFieldRead | null {
     ...(fixed !== undefined ? { fixed } : {}),
     ...(operationType !== undefined ? { operationType } : {}),
     ...(showList ? { showList } : {}),
+    ...(config?.mpDetailHide === true ? { mobileDetailHidden: true } : {}),
+    ...(presentationOnly ? { presentationOnly: true } : {}),
     ...(multiple ? { multiple } : {}),
     ...(options && options.length > 0 ? { options } : {}),
     ...(conditional.visibility ? { visibility: conditional.visibility } : {}),
@@ -1029,6 +1043,10 @@ function formField(raw: unknown, rowIndex: number): FormFieldRead | null {
         ? { unsupportedReason: conditional.unsupportedReason }
         : malformedOptions
           ? { unsupportedReason: 'Field option metadata is malformed' }
+          : malformedShowList
+            ? { unsupportedReason: 'Mobile field applicability metadata is malformed' }
+            : malformedFrontEndConfig || invalidDetailHide
+              ? { unsupportedReason: 'Field frontend configuration is malformed' }
           : {}),
   }
 }
