@@ -180,6 +180,8 @@ export interface WorkflowNodeRead {
   readonly displayName?: string
   /** Adapter-normalized opaque form definition identity, when supplied by the node. */
   readonly formDefinitionId?: FormDefinitionId
+  /** R1 forms nodeDef.addFormCodeId, parent for add-form choices. */
+  readonly addFormCodeId?: string
   /** Semantic form purpose; the raw form definition identity stays Adapter-owned. */
   readonly formPurpose?: FormPurpose
   readonly formDataId?: FormDataId
@@ -299,6 +301,12 @@ export interface CodeOptionRead {
   readonly value: string
   readonly label: string
   readonly children?: readonly CodeOptionRead[]
+}
+
+/** R1 forms add choices from code/query; ext.formDefId is the definition ID. */
+export interface R1FormsAddOptionRead {
+  readonly label: string
+  readonly formDefinitionId: FormDefinitionId
 }
 
 export interface CodeOptionsQuery {
@@ -453,11 +461,15 @@ export interface QuotationCatalogReadPort {
 }
 
 export interface TechnicianApiReadPort {
+  /** Passive source metadata; caller must still guard tenant/role/node scope. */
+  listR1FormsAddOptions?(addFormCodeId:string): Promise<OperationSnapshot<ReadPage<R1FormsAddOptionRead>>>
   listWorkOrders(
     query: WorkOrderListQuery,
   ): Promise<OperationSnapshot<ReadPage<WorkOrderSummary>>>
   /** True only when this ID was returned by a successful list in the current authenticated session. */
   isWorkOrderListedForCurrentSession?(id: string): boolean
+  /** True only for a subworkflow parent found in an authorized Work Order detail in the active role scope. */
+  isChildWorkflowParentListedForCurrentSession?(id: string): boolean
   getWorkOrderDetail(id: WorkOrderId): Promise<OperationSnapshot<WorkOrderDetail>>
   getWorkflowDefinition(
     id: WorkflowDefinitionId,
@@ -466,6 +478,8 @@ export interface TechnicianApiReadPort {
   getChildWorkflowNodes(
     parentNodeId: WorkflowNodeRuntimeId,
   ): Promise<OperationSnapshot<readonly WorkflowNodeRead[]>>
+  /** Production: only an authenticated, source-proven repeat node can authorize its exact definition/run pair. */
+  isRepeatFormContextAuthorizedForCurrentSession?(definitionId: string, runId: string): boolean
   getFormDefinition(id: FormDefinitionId): Promise<OperationSnapshot<FormDefinitionRead>>
   /** R1 repeat-node form references, scoped by the ACTUAL node.workflowId.
    * Only invoke after source/tenant/role read approval and verified node identity.

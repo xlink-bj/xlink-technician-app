@@ -17,6 +17,13 @@ import {
   mockSurveyFormDefinitionId,
   mockSurveyFormDefinitionResponse,
   mockSurveyLeakageCauseResponse,
+  mockR1AddFormCodeId,
+  mockR1AddFormOptionsResponse,
+  mockR1NoteFormDefinitionId,
+  mockR1NoteFormDefinitionResponse,
+  mockR1ExistingFormData,
+  mockR1FormData,
+  mockR1MpUxListRows,
   mockWorkOrderActivityResponseFor,
   mockWorkOrderIds,
   mockWorkOrderDetailResponseFor,
@@ -131,6 +138,16 @@ function journeyListResponse(raw: unknown): unknown {
       : stage === 'survey' ? 'mock-status-onsite' : 'mock-status-order'
   }
   return clone
+}
+
+function r1MpUxListResponse(raw: unknown): unknown {
+  if (import.meta.env.DEV !== true
+    || import.meta.env.VITE_XLINK_R1_MP_UX_FIXTURES !== 'true') return raw
+  const envelope = mutableRecord(clonedResponse(raw))
+  if (!envelope || !Array.isArray(envelope.data)) return raw
+  envelope.data.push(...Array.from(clonedResponse(mockR1MpUxListRows)))
+  envelope.total = envelope.data.length
+  return envelope
 }
 
 function responseForDetail(id: string): unknown | null {
@@ -488,6 +505,9 @@ function matchedResponse(
   if (route === 'code/query' && requestData.valueOption === 'STATUS') {
     return mockStatusOptionsResponse
   }
+  if (mode === 'data' && route === 'code/query' && requestData.parentId === mockR1AddFormCodeId) {
+    return mockR1AddFormOptionsResponse
+  }
   if (mode === 'data' && route === 'i/code/selectCode.do'
     && requestData.tenantId === '1340835581184723420'
     && typeof requestData.jsonPara === 'string') {
@@ -542,7 +562,7 @@ function matchedResponse(
     return mockWorkOrderActivityResponseFor(workOrderId)
   }
   if (route === 'basic/serviceAppointment/querySAWorkflowNode') {
-    return listResponse(mode, journeyListResponse(mockCommandState().listResponse), requestData)
+    return listResponse(mode, r1MpUxListResponse(journeyListResponse(mockCommandState().listResponse)), requestData)
   }
   if (route === 'basic/serviceAppointment/query') {
     return listResponse(mode, mockOrdinaryListResponse, requestData)
@@ -562,6 +582,9 @@ function matchedResponse(
   if (route === 'biz/extField/query' && requestData.extId === mockSyntheticDynamicFormDefinitionId) {
     return mockSyntheticInspectionFormDefinitionResponse
   }
+  if (route === 'biz/extField/query' && requestData.extId === mockR1NoteFormDefinitionId) {
+    return mockR1NoteFormDefinitionResponse
+  }
   if (route === 'biz/extField/query' && requestData.extId === mockSurveyFormDefinitionId) {
     return mockSurveyFormDefinitionResponse
   }
@@ -578,7 +601,19 @@ function matchedResponse(
   if (route.startsWith('biz/extForm/query/') && route.slice('biz/extForm/query/'.length) === mockSyntheticDynamicFormDefinitionId) {
     const exactDataId = requestData['is:_id|string#and']
     const dataId = typeof exactDataId === 'string' ? exactDataId : undefined
-    const formData = dataId ? mockCommandState().formData.get(dataId) : undefined
+    const workflowId = requestData['is:workflowId|string#and']
+    const repeatRows = workflowId === 'mock-workflow-run-021'
+      ? [mockR1ExistingFormData[mockR1FormData.repeatFirst],
+        mockR1ExistingFormData[mockR1FormData.repeatSecond]] : []
+    const formData = dataId ? mockR1ExistingFormData[dataId as keyof typeof mockR1ExistingFormData]
+      ?? mockCommandState().formData.get(dataId) : undefined
+    const rows = dataId ? (formData ? [formData] : []) : repeatRows
+    return { data: rows, page: 1, rows: 20, total: rows.length }
+  }
+  if (route.startsWith('biz/extForm/query/') && route.slice('biz/extForm/query/'.length) === mockR1NoteFormDefinitionId) {
+    const dataId = requestData['is:_id|string#and']
+    const formData = dataId === mockR1FormData.formsSecond
+      ? mockR1ExistingFormData[mockR1FormData.formsSecond] : undefined
     return { data: formData ? [formData] : [], page: 1, rows: 20, total: formData ? 1 : 0 }
   }
   if (route.startsWith('biz/extForm/query/') && route.slice('biz/extForm/query/'.length) === mockSurveyFormDefinitionId) {

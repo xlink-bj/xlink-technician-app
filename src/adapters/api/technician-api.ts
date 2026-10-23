@@ -15,6 +15,7 @@ import type {
   FormPurpose,
   ReadPage,
   R1NodeFormReference,
+  R1FormsAddOptionRead,
   TechnicianApiReadPort,
   WorkOrderActivity,
   WorkOrderDetail,
@@ -127,6 +128,31 @@ function pageEnvelope<T>(raw: unknown, mapItem: (value: unknown) => T): ReadPage
     page: optionalPositiveInteger(envelope, ['page']),
     pageSize: optionalPositiveInteger(envelope, ['rows', 'pageSize']),
     totalCount: optionalNonNegativeInteger(envelope, ['total', 'dataCount', 'totalCount']),
+  }
+}
+
+/** R1 workflow read handlers return `data: []`; earlier mock/read paths may
+ * return a nested `data.items`. Both require an explicit array, never an
+ * inferred empty collection when the envelope is malformed. */
+function workflowResponseRows(raw: unknown, label: string): readonly unknown[] {
+  const envelope = asRecord(raw, label)
+  const data = envelope.data
+  const rows = Array.isArray(data)
+    ? data
+    : optionalRecord(data)?.items ?? envelope.items
+  if (!Array.isArray(rows)) throw new AdapterMappingError(`${label} items are missing`)
+  return rows
+}
+
+function assertMatchingWireIdentity(
+  record: AdapterRecord,
+  keys: readonly string[],
+  expected: string,
+  label: string,
+): void {
+  const candidates = keys.map((key) => optionalString(record, [key])).filter((id): id is string => Boolean(id))
+  if (candidates.some((id) => id !== expected)) {
+    throw new AdapterMappingError(`${label} conflicts with the requested identity`)
   }
 }
 
@@ -714,12 +740,15 @@ function workflowNode(raw: unknown): WorkflowNodeRead {
   const isSystem = record.isSystem === true
   const isSentinel = record.isSentinel === true
   const sourceNodeType = optionalString(nodeDef ?? {}, ['nodeType', 'nodeTypeOld'])
+  const addFormCodeId = sourceNodeType === 'forms'
+    ? optionalString(nodeDef ?? {}, ['addFormCodeId']) : undefined
   const formList = readR1NodeFormList(record, sourceNodeType)
 
   return {
     id: requiredOpaqueId<'WorkflowNodeRuntimeId'>(record, ['id', '_id', 'workflowNodeId'], 'workflow node id'),
     category: workflowNodeCategory(nodeDef),
     ...(sourceNodeType ? { sourceNodeType } : {}),
+    ...(addFormCodeId ? { addFormCodeId } : {}),
     ...(formList ? { formList } : {}),
     lifecycle: workflowNodeLifecycle(record),
     visibility,
@@ -1045,19 +1074,29 @@ function formValues(record: AdapterRecord, codec?: FormValueCodec): Readonly<Rec
   return Object.keys(values).length > 0 ? values : undefined
 }
 
-function formData(raw: unknown, codec?: FormValueCodec): FormDataRead {
+function formData(raw: unknown, codec?: FormValueCodec, expectedDefinitionId?: FormDefinitionId): FormDataRead {
   const record = asRecord(raw, 'form data')
   const workflow = nestedRecord(record, ['workflow'])
   const values = formValues(record, codec)
+  // Real R1 dynamic FormData rows may not repeat their FormDefinition ID.
+  // The definition is already fixed by the query URL; never invent it from
+  // arbitrary data or silently override contradictory response metadata.
+  const wireDefinitionIds = ['definitionId', 'extId', 'formDefId']
+    .map((key) => optionalString(record, [key]))
+    .filter((id): id is string => Boolean(id))
+  if (new Set(wireDefinitionIds).size > 1) {
+    throw new AdapterMappingError('FormData definition identity is contradictory')
+  }
+  if (expectedDefinitionId) {
+    assertMatchingWireIdentity(record, ['definitionId', 'extId', 'formDefId'], String(expectedDefinitionId), 'FormData definition')
+  }
+  const definitionId = expectedDefinitionId
+    ?? requiredOpaqueId<'FormDefinitionId'>(record, ['definitionId', 'extId', 'formDefId'], 'form definition id')
   return {
     id: requiredOpaqueId<'FormDataId'>(record, ['id', '_id', 'dataId'], 'form data id'),
-    definitionId: requiredOpaqueId<'FormDefinitionId'>(
-      record,
-      ['definitionId', 'extId', 'formDefId'],
-      'form definition id',
-    ),
-    ...(optionalOpaqueId<'WorkflowRunId'>(record, ['workflowRunId', 'runId'])
-      ? { workflowRunId: optionalOpaqueId<'WorkflowRunId'>(record, ['workflowRunId', 'runId']) }
+    definitionId,
+    ...(optionalOpaqueId<'WorkflowRunId'>(record, ['workflowRunId', 'runId', 'workflowId'])
+      ? { workflowRunId: optionalOpaqueId<'WorkflowRunId'>(record, ['workflowRunId', 'runId', 'workflowId']) }
       : workflow && optionalOpaqueId<'WorkflowRunId'>(workflow, ['runId', 'workflowRunId'])
         ? { workflowRunId: optionalOpaqueId<'WorkflowRunId'>(workflow, ['runId', 'workflowRunId']) }
         : {}),
@@ -1314,6 +1353,8 @@ function readFailure<T>(error: unknown): OperationSnapshot<T> {
 export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
   private currentReadScope: string | null = null
   private readonly listedWorkOrderIds = new Set<string>()
+  private readonly authorizedChildWorkflowParentIds = new Set<string>()
+  private readonly authorizedRepeatFormContexts = new Set<string>()
 
   constructor(
     private readonly transport: ApiReadTransport,
@@ -1346,6 +1387,8 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
     if (nextScope !== this.currentReadScope) {
       this.currentReadScope = nextScope
       this.listedWorkOrderIds.clear()
+      this.authorizedChildWorkflowParentIds.clear()
+      this.authorizedRepeatFormContexts.clear()
     }
     return nextScope
   }
@@ -1443,18 +1486,18 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
     }
   }
 
-  getWorkOrderDetail(id: WorkOrderId) {
+  async getWorkOrderDetail(id: WorkOrderId) {
     const productionReadOnly = this.isProductionReadOnly()
+    const scopeAtStart = this.synchronizeReadScope()
     if (productionReadOnly) {
-      const scope = this.synchronizeReadScope()
-      if (!this.options.getReadAuthorizationScope || !scope || !this.listedWorkOrderIds.has(String(id))) {
-        return Promise.resolve(adapterFailure<WorkOrderDetail>(
+      if (!this.options.getReadAuthorizationScope || !scopeAtStart || !this.listedWorkOrderIds.has(String(id))) {
+        return adapterFailure<WorkOrderDetail>(
           'authorization_denied',
           'Production Work Order detail requires an ID returned by the current session\'s role-scoped list',
-        ))
+        )
       }
     }
-    return this.read<WorkOrderDetail>(
+    const result = await this.read<WorkOrderDetail>(
       {
         method: 'POST',
         path: `basic/serviceAppointment/queryById/${encodeURIComponent(id)}`,
@@ -1473,11 +1516,56 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
           : detail
       },
     )
+    // A role-listed Work Order followed by its successful, identity-matched
+    // detail is the only source of Production child-workflow parent authority.
+    // In particular, a caller-supplied node ID is never a capability token.
+    if (productionReadOnly && scopeAtStart && result.state === 'succeeded'
+      && result.data && String(result.data.id) === String(id)
+      && this.synchronizeReadScope() === scopeAtStart
+      && this.listedWorkOrderIds.has(String(id))) {
+      for (const node of result.data.workflowNodes ?? []) {
+        if (this.authorizedChildWorkflowParentIds.size >= 100) break
+        if (node.category === 'subworkflow'
+          && ['subflows', 'subflow', 'subworkflow'].includes(node.sourceNodeType ?? '')
+          && (!node.runId || !result.data.workflowRunId
+            || String(node.runId) === String(result.data.workflowRunId))) {
+          this.authorizedChildWorkflowParentIds.add(String(node.id))
+        }
+      }
+      for (const node of result.data.workflowNodes ?? []) {
+        this.rememberRepeatFormContext(node)
+      }
+    }
+    return result
   }
 
   isWorkOrderListedForCurrentSession(id: string): boolean {
     const scope = this.synchronizeReadScope()
     return Boolean(this.workOrderScopeResolver && scope && id.trim() && this.listedWorkOrderIds.has(id))
+  }
+
+  isChildWorkflowParentListedForCurrentSession(id: string): boolean {
+    const scope = this.synchronizeReadScope()
+    return Boolean(this.workOrderScopeResolver && scope && id.trim()
+      && this.authorizedChildWorkflowParentIds.has(id))
+  }
+
+  private repeatFormContextKey(definitionId: string, runId: string): string {
+    return JSON.stringify([definitionId, runId])
+  }
+
+  private rememberRepeatFormContext(node: WorkflowNodeRead): void {
+    if (node.sourceNodeType !== 'repeat' || !node.formDefinitionId || !node.runId
+      || this.authorizedRepeatFormContexts.size >= 100) return
+    this.authorizedRepeatFormContexts.add(
+      this.repeatFormContextKey(String(node.formDefinitionId), String(node.runId)),
+    )
+  }
+
+  isRepeatFormContextAuthorizedForCurrentSession(definitionId: string, runId: string): boolean {
+    const scope = this.synchronizeReadScope()
+    return Boolean(this.workOrderScopeResolver && scope && definitionId && runId
+      && this.authorizedRepeatFormContexts.has(this.repeatFormContextKey(definitionId, runId)))
   }
 
   private readWorkOrderActivities(id: WorkOrderId) {
@@ -1509,27 +1597,77 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
     return this.read<readonly WorkflowNodeRead[]>(
       { method: 'POST', path: `workflow/queryNode/${encodeURIComponent(runId)}` },
       (raw) => {
-        const envelope = asRecord(raw, 'workflow node response')
-        const items = nestedValue(envelope, ['data', 'items'])
-        if (!Array.isArray(items)) throw new AdapterMappingError('workflow node response items are missing')
-        return items.map(workflowNode)
+        const items = workflowResponseRows(raw, 'workflow node response')
+        return items.map((rawNode) => {
+          const node = asRecord(rawNode, 'workflow node')
+          assertMatchingWireIdentity(node, ['runId', 'workflowRunId', 'workflowId'], String(runId), 'Workflow node run')
+          return workflowNode({ ...node, workflowId: runId })
+        })
       },
     )
   }
 
-  getChildWorkflowNodes(parentNodeId: WorkflowNodeRuntimeId) {
-    return this.read<readonly WorkflowNodeRead[]>(
+  async getChildWorkflowNodes(parentNodeId: WorkflowNodeRuntimeId) {
+    const productionReadOnly = this.isProductionReadOnly()
+    const scopeAtStart = this.synchronizeReadScope()
+    if (productionReadOnly && (!scopeAtStart
+      || !this.isChildWorkflowParentListedForCurrentSession(String(parentNodeId)))) {
+      return adapterFailure<readonly WorkflowNodeRead[]>(
+        'authorization_denied',
+        'Production child Workflow read requires an authorized Work Order detail parent',
+      )
+    }
+    const result = await this.read<readonly WorkflowNodeRead[]>(
       {
         method: 'POST',
         path: `workflow/queryByParentWorkflowNodeId/${encodeURIComponent(parentNodeId)}`,
       },
       (raw) => {
-        const envelope = asRecord(raw, 'child workflow node response')
-        const items = nestedValue(envelope, ['data', 'items'])
-        if (!Array.isArray(items)) throw new AdapterMappingError('child workflow node items are missing')
-        return items.map(workflowNode)
+        const items = workflowResponseRows(raw, 'child workflow response')
+        return items.flatMap((rawWorkflow) => {
+          // R1 WorkflowService.queryByParentWorkflowNodeId returns Workflow[];
+          // each workflow carries its own runtime _id and workflowNodeList.
+          // Flatten *nodes*, not Workflow objects masquerading as nodes.
+          const workflow = asRecord(rawWorkflow, 'child workflow')
+          const workflowRunId = requiredOpaqueId<'WorkflowRunId'>(
+            workflow, ['_id', 'id', 'workflowId'], 'child workflow run id',
+          )
+          assertMatchingWireIdentity(workflow, ['_id', 'id', 'workflowId'], String(workflowRunId), 'Child workflow run')
+          // R1 Workflow.parentFlowNodeId points to the *outer* subflows node.
+          // WorkflowNode.parentWorkflowNodeId instead points to a predecessor
+          // *inside* this child run. They are different relationships.
+          assertMatchingWireIdentity(
+            workflow, ['parentFlowNodeId', 'parentWorkflowNodeId', 'parentNodeId'],
+            String(parentNodeId), 'Child workflow outer parent',
+          )
+          if (!Array.isArray(workflow.workflowNodeList)) {
+            throw new AdapterMappingError('Child workflow node list is missing')
+          }
+          return workflow.workflowNodeList.map((rawNode) => {
+            const node = asRecord(rawNode, 'child workflow node')
+            assertMatchingWireIdentity(node, ['runId', 'workflowRunId', 'workflowId'], String(workflowRunId), 'Child workflow node run')
+            const internalParents = ['parentNodeId', 'parentWorkflowNodeId']
+              .map((key) => optionalString(node, [key]))
+              .filter((id): id is string => Boolean(id))
+            if (new Set(internalParents).size > 1) {
+              throw new AdapterMappingError('Child workflow node internal predecessor identities conflict')
+            }
+            // Never overwrite an internal predecessor with the outer parent.
+            return workflowNode({ ...node, workflowId: workflowRunId })
+          })
+        })
       },
     )
+    if (productionReadOnly && (this.synchronizeReadScope() !== scopeAtStart
+      || !this.isChildWorkflowParentListedForCurrentSession(String(parentNodeId)))) {
+      return adapterFailure<readonly WorkflowNodeRead[]>(
+        'authorization_denied', 'Production child Workflow authorization changed during read',
+      )
+    }
+    if (productionReadOnly && result.state === 'succeeded' && result.data) {
+      for (const node of result.data) this.rememberRepeatFormContext(node)
+    }
+    return result
   }
 
   getFormDefinition(id: FormDefinitionId) {
@@ -1585,25 +1723,48 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
 
   /** Inert until a caller with approved scope invokes it. No automatic
    * network, no cross-tenant enumeration, and no FormData values returned. */
-  listRepeatFormReferences(input: {
+  async listRepeatFormReferences(input: {
     readonly definitionId: FormDefinitionId
     readonly workflowRunId: WorkflowRunId
     readonly page: number
     readonly pageSize: number
   }): Promise<OperationSnapshot<ReadPage<R1NodeFormReference>>> {
+    const productionReadOnly = this.isProductionReadOnly()
+    const scopeAtStart = this.synchronizeReadScope()
+    if (productionReadOnly && (!scopeAtStart || input.page !== 1 || input.pageSize > 20
+      || !this.isRepeatFormContextAuthorizedForCurrentSession(String(input.definitionId), String(input.workflowRunId)))) {
+      return adapterFailure('authorization_denied', 'Production repeat list requires a proven workflow node and current role')
+    }
     let request: ApiReadRequest
     try { request = buildR1RepeatFormListQuery(input) }
     catch {
-      return Promise.resolve(adapterFailure('validation', 'Repeat list must be scoped to a known runtime node with bounded paging'))
+      return adapterFailure('validation', 'Repeat list must be scoped to a known runtime node with bounded paging')
     }
-    return this.read<ReadPage<R1NodeFormReference>>(request, (raw) => {
+    const result = await this.read<ReadPage<R1NodeFormReference>>(request, (raw) => {
       const rawPage = pageEnvelope(raw, item => item)
+      if (rawPage.items.length > input.pageSize) {
+        throw new AdapterMappingError('Repeat response exceeds the requested bounded page')
+      }
+      for (const item of rawPage.items) {
+        const record = asRecord(item, 'repeat form reference')
+        // The backend may omit formDefId, but explicit contradictory identity
+        // is never permitted to cross the role-scoped read boundary.
+        assertMatchingWireIdentity(record, ['workflowId', 'workflowRunId'],
+          String(input.workflowRunId), 'Repeat FormData workflow run')
+        assertMatchingWireIdentity(record, ['formDefId', 'formDefinitionId'],
+          String(input.definitionId), 'Repeat FormData definition')
+      }
       const list = readR1NodeFormList({ formDataList: rawPage.items }, 'repeat')
       if (!list || list.evidence !== 'available' || list.truncated) {
         throw new AdapterMappingError('repeat list response identities are malformed or unbounded')
       }
       return { ...rawPage, items: list.entries }
     })
+    if (productionReadOnly && (this.synchronizeReadScope() !== scopeAtStart
+      || !this.isRepeatFormContextAuthorizedForCurrentSession(String(input.definitionId), String(input.workflowRunId)))) {
+      return adapterFailure('authorization_denied', 'Production repeat list authorization changed during read')
+    }
+    return result
   }
 
   getFormData(input: {
@@ -1622,7 +1783,7 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
         path: `biz/extForm/query/${encodeURIComponent(input.definitionId)}`,
         body,
       },
-      (raw) => pageEnvelope(raw, (item) => formData(item, input.valueCodec)),
+      (raw) => pageEnvelope(raw, (item) => formData(item, input.valueCodec, input.definitionId)),
     )
   }
 
@@ -1631,6 +1792,33 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
     readonly dataId: FormDataId
     readonly valueCodec?: FormValueCodec
   }) {
+    // R1 serviceAppointment.vue:6987-7013: ordinary forms/repeat edit uses
+    // biz/extForm/query/{formDefId} filtered by the exact saved _id.
+    // findByIdWithWorkflow is a special-case contract for one construction
+    // acceptance FormDef only. Never use its different read semantics for an
+    // arbitrary R1 multi-form node.
+    if (String(input.definitionId) !== '3285058246984486156') {
+      return this.read<FormDataRead>(
+        {
+          method: 'POST',
+          path: `biz/extForm/query/${encodeURIComponent(input.definitionId)}`,
+          body: {
+            sortField: 'createTime', sortOrder: 'desc',
+            'is:_id|string#and': input.dataId,
+            page: 1, rows: 2,
+          },
+        },
+        (raw) => {
+          const page = pageEnvelope(raw, (item) => formData(item, input.valueCodec, input.definitionId))
+          if (page.items.length !== 1
+            || String(page.items[0]?.id) !== String(input.dataId)
+            || String(page.items[0]?.definitionId) !== String(input.definitionId)) {
+            throw new AdapterMappingError('R1 form detail identity is absent or ambiguous')
+          }
+          return page.items[0]!
+        },
+      )
+    }
     return this.read<FormDataRead>(
       {
         method: 'GET',
@@ -1640,7 +1828,7 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
       (raw) => {
         const envelope = asRecord(raw, 'form detail response')
         const data = nestedValue(envelope, ['data', 'entity'])
-        return formData(data ?? envelope, input.valueCodec)
+        return formData(data ?? envelope, input.valueCodec, input.definitionId)
       },
     )
   }
@@ -1653,6 +1841,22 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
       { method: 'POST', path: 'code/query', ...(Object.keys(body).length > 0 ? { body } : {}) },
       (raw) => pageEnvelope(raw, codeOption),
     )
+  }
+
+  listR1FormsAddOptions(addFormCodeId:string) {
+    if (!addFormCodeId.trim())
+      return Promise.resolve(adapterFailure<ReadPage<R1FormsAddOptionRead>>('validation','R1 addFormCodeId is missing'))
+    return this.read<ReadPage<R1FormsAddOptionRead>>({
+      method:'POST',path:'code/query',body:{parentId:addFormCodeId,'is:state|integer#and':1,
+        page:1,rows:50},
+    },(raw)=>pageEnvelope(raw,(item)=>{
+      const option=asRecord(item,'R1 forms add option')
+      const exts=optionalRecord(option.exts)
+      return {
+        label:requiredString(option,['name','label','text','codelabel'],'R1 form choice label'),
+        formDefinitionId:requiredString(exts??{},['formDefId'],'R1 add option FormDefinition ID') as FormDefinitionId,
+      }
+    }))
   }
 
   getDynamicCodeOptions(query: { readonly valueOption: string }) {

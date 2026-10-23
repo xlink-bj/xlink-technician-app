@@ -27,6 +27,10 @@ export interface ApiCommandRequest {
   readonly method: Extract<ApiRequestMethod, 'POST'>
   readonly path: string
   readonly body?: Readonly<Record<string, ApiRequestValue>>
+  /** Full-fidelity R1 node Exts uses JSON, never form-urlencoded. */
+  readonly jsonBody?: Readonly<Record<string, unknown>>
+  /** All R1 special mutations additionally require a dedicated opt-in fence. */
+  readonly r1Special?: true
   /** Internal safety metadata; never serialized into the backend request. */
   readonly safety?: 'deferred_appointment_datetime_encoding_unknown'
 }

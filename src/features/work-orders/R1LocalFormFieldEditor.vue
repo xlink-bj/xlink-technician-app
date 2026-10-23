@@ -1,7 +1,7 @@
 <template>
   <view class="r1-field-editor" data-testid="r1-local-field-editor">
     <text class="r1-field-editor__title">本机字段草稿 · {{ intent.title }}</text>
-    <text class="r1-field-editor__hint">字段定义来自 DEV 合成表单，仅保存在本机，未提交至业务系统。</text>
+    <text class="r1-field-editor__hint">字段定义来自 DEV 合成数据，仅保存在本机，未提交至业务系统。</text>
     <template v-for="field in fields" :key="field.fieldId">
       <AppField v-if="field.supported" :label="field.label" :required="field.required">
         <AppMultiChoiceGroup v-if="field.type === 'checkbox'" :options="field.options"
@@ -46,10 +46,11 @@ import AppButton from '@shared/ui/AppButton.vue'
 import { useR1LocalFormDraftStore, type R1LocalFormIntent } from './r1-local-form-drafts'
 import { normalizeR1LocalFieldPatch, projectR1LocalFields, type R1LocalFieldValue } from './r1-local-form-fields'
 
-const props=defineProps<{readonly definition:FormDefinitionRead;readonly intent:R1LocalFormIntent}>()
+const props=defineProps<{readonly definition:FormDefinitionRead;readonly intent:R1LocalFormIntent;
+  readonly initialValues?:Readonly<Record<string,R1LocalFieldValue>>}>()
 const emit=defineEmits<{(event:'close'):void}>()
 const draft=useR1LocalFormDraftStore()
-const values=ref<Readonly<Record<string,R1LocalFieldValue>>>({...props.intent.values})
+const values=ref<Readonly<Record<string,R1LocalFieldValue>>>({...props.initialValues??props.intent.values})
 const error=ref('')
 const saving=ref(false)
 const fields=computed(()=>projectR1LocalFields(props.definition,values.value))

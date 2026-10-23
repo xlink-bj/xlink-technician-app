@@ -63,6 +63,8 @@ function isRealMutationPath(path: string): boolean {
   const route = path.replace(/^\/+/, '').split('?')[0]
   return route === 'workflow/process'
     || route.startsWith('biz/extForm/upsert/')
+    || /^workflowNode\/updateExts\/[^/]+$/.test(route)
+    || /^biz\/extForm\/remove\/[^/]+$/.test(route)
     || route === 'basic/order/upsert'
     || /^workflow\/startWorkflow\/order\/null\/[^/]+$/.test(route)
 }
@@ -160,16 +162,30 @@ export function createUniApiCommandTransport(options: UniApiCommandTransportOpti
           'unsupported_capability',
         )
       }
+      // Generic write permission is not authority for R1's multi-command forms/repeat
+      // workflow. Even an accidental direct transport invocation must fail closed.
+      if (input.r1Special && import.meta.env.VITE_XLINK_ENABLE_R1_SPECIAL_WRITES !== 'true') {
+        throw new ApiCommandTransportError('R1 special form writes are not explicitly enabled', 'unsupported_capability')
+      }
+      const normalizedRoute = input.path.replace(/^\/+/, '').split('?')[0]
+      const jsonExts = /^workflowNode\/updateExts\/[^/]+$/.test(normalizedRoute)
+      const repeatRemove = /^biz\/extForm\/remove\/[^/]+$/.test(normalizedRoute)
+      if ((jsonExts || repeatRemove) && !input.r1Special) {
+        throw new ApiCommandTransportError('R1 mutation needs source-specific transaction authorization', 'unsupported_capability')
+      }
+      if (jsonExts !== Boolean(input.jsonBody)) {
+        throw new ApiCommandTransportError('R1 Exts JSON encoding mismatch', 'unsupported_capability')
+      }
 
       let response: UniNamespace.RequestSuccessCallbackResult
       try {
         response = await requestResponse(request, {
           url: endpointUrl(options.apiBaseUrl, input.path),
           method: input.method,
-          data: formEncode(input.body ?? {}),
+          data: jsonExts ? JSON.stringify(input.jsonBody) : formEncode(input.body ?? {}),
           header: {
             Cookie: `JSESSIONID=${sessionRef}`,
-            'Content-Type': 'application/x-www-form-urlencoded',
+            'Content-Type': jsonExts ? 'application/json' : 'application/x-www-form-urlencoded',
           },
           dataType: 'json',
           ...(options.timeoutMs === undefined ? {} : { timeout: options.timeoutMs }),

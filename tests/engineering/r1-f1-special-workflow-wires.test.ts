@@ -14,7 +14,7 @@ const b = asOpaqueId<'FormDataId'>('saved-b')
 describe('F1 source-matched R1 special node workflow/process wire builders (NOT executed)', () => {
   it('forms after updateExts ACK clears both IDs (R1 process(formDataId))', () => {
     const wire = r1FormsAfterSaveProcess({ ...base, sourceNodeType:'forms', updatedFormListAcknowledged:true })
-    expect(wire).toEqual({ method:'POST', path:'workflow/process', body: {
+    expect(wire).toEqual({ method:'POST', path:'workflow/process', r1Special:true, body: {
       workflowNodeId:'runtime-node-synthetic',nodeFormDefId:'',nodeFormDataId:'',
       smodule:'serviceAppointment',sid:'workorder-synthetic',
     }})

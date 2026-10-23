@@ -95,10 +95,32 @@ export function createDefaultTechnicianApiReadPort(authSession: AuthSessionPort)
     }
   }
 
+  let technicianReadPort: TechnicianApiReadPort | null = null
   const transport = createUniApiReadTransport({
     apiBaseUrl: config.value.environment.apiBaseUrl,
     blockRealRequests: config.value.authOnlyMockBusiness,
     getSessionRef: () => authSession.getCurrentSession()?.sessionRef ?? null,
+    isChildWorkflowParentListedForCurrentSession: (nodeId) =>
+      technicianReadPort?.isChildWorkflowParentListedForCurrentSession?.(nodeId) === true,
+    getChildWorkflowReadAuthorizationIdentity: () => {
+      const session = authSession.getCurrentSession()
+      if (!session || !session.currentRole?.id) return null
+      return JSON.stringify([
+        session.sessionRef,
+        session.user.id,
+        session.currentRole.id,
+        session.roleVersion ?? null,
+      ])
+    },
+    isRepeatFormContextAuthorizedForCurrentSession: (definitionId, runId) =>
+      technicianReadPort?.isRepeatFormContextAuthorizedForCurrentSession?.(definitionId, runId) === true,
+    getRepeatFormReadAuthorizationIdentity: () => {
+      const session = authSession.getCurrentSession()
+      if (!session || !session.currentRole?.id) return null
+      return JSON.stringify([
+        session.sessionRef, session.user.id, session.currentRole.id, session.roleVersion ?? null,
+      ])
+    },
     getMockActor: () => {
       const session = authSession.getCurrentSession()
       return session
@@ -110,7 +132,7 @@ export function createDefaultTechnicianApiReadPort(authSession: AuthSessionPort)
     },
   })
 
-  return createRoleScopedTechnicianApiReadAdapter(
+  technicianReadPort = createRoleScopedTechnicianApiReadAdapter(
     transport,
     () => authSession.getCurrentSession()?.currentRole?.id ?? null,
     {
@@ -128,6 +150,7 @@ export function createDefaultTechnicianApiReadPort(authSession: AuthSessionPort)
       },
     },
   )
+  return technicianReadPort
 }
 
 export function createDefaultQuotationCatalogReadPort(authSession: AuthSessionPort): QuotationCatalogReadPort {

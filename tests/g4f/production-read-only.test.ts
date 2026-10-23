@@ -174,6 +174,237 @@ describe('Production read-only profile', () => {
     expect(request).toHaveBeenCalledTimes(1)
   })
 
+  it('blocks Production child Workflow reads without proven detail ownership and rechecks scope after request', async () => {
+    vi.stubEnv('VITE_XLINK_ENVIRONMENT', 'prod')
+    let identity = 'synthetic-session:user:role:v1'
+    let listed = false
+    const request = vi.fn((options: UniNamespace.RequestOptions) => {
+      options.success?.({ statusCode: 200, data: { data: [] } } as never)
+    })
+    const transport = createUniApiReadTransport({
+      apiBaseUrl: 'https://production.invalid',
+      getSessionRef: () => 'synthetic-session' as never,
+      getChildWorkflowReadAuthorizationIdentity: () => identity,
+      isChildWorkflowParentListedForCurrentSession: id => listed && id === 'synthetic-detail-subflows',
+      request,
+    })
+    const childRead = { method: 'POST' as const, path: 'workflow/queryByParentWorkflowNodeId/synthetic-detail-subflows' }
+
+    await expect(transport.execute(childRead)).rejects.toMatchObject({ category: 'authorization_denied' })
+    await expect(transport.execute({ ...childRead, path: 'workflow/queryByParentWorkflowNodeId/arbitrary-node' }))
+      .rejects.toMatchObject({ category: 'authorization_denied' })
+    expect(request).not.toHaveBeenCalled()
+
+    listed = true
+    await expect(transport.execute(childRead)).resolves.toMatchObject({ data: [] })
+    expect(request).toHaveBeenCalledTimes(1)
+
+    for (const invalid of [
+      { ...childRead, body: { type: 'query' } },
+      { ...childRead, path: `${childRead.path}/another` },
+      { ...childRead, path: `${childRead.path}?roleId=other` },
+      { ...childRead, path: `/${childRead.path}` },
+      { ...childRead, method: 'GET' as const },
+    ]) {
+      await expect(transport.execute(invalid)).rejects.toMatchObject({ category: 'unsupported_capability' })
+    }
+    expect(request).toHaveBeenCalledTimes(1)
+
+    const changeRoleDuringRequest = vi.fn((options: UniNamespace.RequestOptions) => {
+      identity = 'synthetic-session:user:other-role:v2'
+      options.success?.({ statusCode: 200, data: { data: [{ sensitive: 'must-not-leak' }] } } as never)
+    })
+    const transportWithRace = createUniApiReadTransport({
+      apiBaseUrl: 'https://production.invalid',
+      getSessionRef: () => 'synthetic-session' as never,
+      getChildWorkflowReadAuthorizationIdentity: () => identity,
+      isChildWorkflowParentListedForCurrentSession: id => id === 'synthetic-detail-subflows',
+      request: changeRoleDuringRequest,
+    })
+    identity = 'synthetic-session:user:role:v1'
+    await expect(transportWithRace.execute(childRead)).rejects.toMatchObject({ category: 'authorization_denied' })
+    expect(changeRoleDuringRequest).toHaveBeenCalledTimes(1)
+  })
+
+  it('derives child Workflow parent authority only from a role-listed Work Order detail, never a raw ID', async () => {
+    vi.stubEnv('VITE_XLINK_ENVIRONMENT', 'prod')
+    let authScope = {
+      sessionRef: 'synthetic-session', userId: 'synthetic-user',
+      roleId: 'synthetic-role', roleVersion: 'v1',
+    }
+    const execute = vi.fn(async (input: { path: string }) => {
+      if (input.path === 'function/queryTreeByRoleId') {
+        return { data: { functionList: [{ action: '/pages/serviceAppointment/serviceAppointments', exts: { tabDisplay: '1' } }] } }
+      }
+      if (input.path === 'basic/serviceAppointment/query') {
+        return { data: [{ _id: 'synthetic-listed-work-order' }] }
+      }
+      if (input.path === 'basic/serviceAppointment/queryById/synthetic-listed-work-order') {
+        return { data: {
+          _id: 'synthetic-listed-work-order',
+          workflow: { _id: 'synthetic-root-run' },
+          workflowNode: [
+            { _id: 'synthetic-detail-subflows', workflowId: 'synthetic-root-run', nodeDef: { nodeType: 'subflows' } },
+            { _id: 'synthetic-ordinary-node', workflowId: 'synthetic-root-run', nodeDef: { nodeType: 'forms' } },
+          ],
+        } }
+      }
+      if (input.path === 'workflow/queryByParentWorkflowNodeId/synthetic-detail-subflows') {
+        return { data: [{
+          _id: 'synthetic-child-run', parentFlowNodeId: 'synthetic-detail-subflows',
+          workflowNodeList: [{ _id: 'synthetic-child-node', workflowId: 'synthetic-child-run', nodeDef: { nodeType: 'repeat' } }],
+        }] }
+      }
+      throw new Error('Unexpected synthetic route')
+    })
+    const api = createRoleScopedTechnicianApiReadAdapter(
+      { execute },
+      () => asOpaqueId<'RoleId'>(authScope.roleId),
+      { getReadAuthorizationScope: () => authScope },
+    )
+    const parentId = asOpaqueId<'WorkflowNodeRuntimeId'>('synthetic-detail-subflows')
+    expect(api.isChildWorkflowParentListedForCurrentSession?.(parentId)).toBe(false)
+    expect((await api.getChildWorkflowNodes(parentId)).state).toBe('failed_terminal')
+    expect(execute).not.toHaveBeenCalled()
+    expect((await api.listWorkOrders({ page: 1, pageSize: 20 })).state).toBe('succeeded')
+    expect(api.isChildWorkflowParentListedForCurrentSession?.(parentId)).toBe(false)
+    expect((await api.getWorkOrderDetail(asOpaqueId<'WorkOrderId'>('synthetic-listed-work-order'))).state).toBe('succeeded')
+    expect(api.isChildWorkflowParentListedForCurrentSession?.(parentId)).toBe(true)
+    expect(api.isChildWorkflowParentListedForCurrentSession?.('synthetic-ordinary-node')).toBe(false)
+    const childRead = await api.getChildWorkflowNodes(parentId)
+    expect(childRead.state).toBe('succeeded')
+    expect(childRead.data?.map(node => String(node.id))).toEqual(['synthetic-child-node'])
+
+    authScope = { ...authScope, roleVersion: 'v2' }
+    expect(api.isChildWorkflowParentListedForCurrentSession?.(parentId)).toBe(false)
+    expect((await api.getChildWorkflowNodes(parentId)).state).toBe('failed_terminal')
+    expect(execute).toHaveBeenCalledTimes(4)
+  })
+
+  it('allows only bounded Production repeat lists for an already-proven definition/run pair', async () => {
+    vi.stubEnv('VITE_XLINK_ENVIRONMENT', 'prod')
+    let authorized = true
+    let identity = 'synthetic-session:user:role:v1'
+    const request = vi.fn((options: UniNamespace.RequestOptions) => {
+      options.success?.({ statusCode: 200, data: { data: [] } } as never)
+    })
+    const transport = createUniApiReadTransport({
+      apiBaseUrl: 'https://production.invalid',
+      getSessionRef: () => 'synthetic-session' as never,
+      getRepeatFormReadAuthorizationIdentity: () => identity,
+      isRepeatFormContextAuthorizedForCurrentSession: (definition, run) =>
+        authorized && definition === 'synthetic-definition' && run === 'synthetic-run',
+      request,
+    })
+    const safe = {
+      method: 'POST' as const, path: 'biz/extForm/query/synthetic-definition',
+      body: {
+        sortField: 'createTime', sortOrder: 'desc',
+        'is:workflowId|string#and': 'synthetic-run',
+        'ne:state|integer#and': -1, page: 1, rows: 20,
+      },
+    }
+    authorized = false
+    await expect(transport.execute(safe)).rejects.toMatchObject({ category: 'authorization_denied' })
+    authorized = true
+    await expect(transport.execute(safe)).resolves.toMatchObject({ data: [] })
+    expect(request).toHaveBeenCalledTimes(1)
+
+    for (const invalid of [
+      { ...safe, path: 'biz/extForm/query/arbitrary-definition' },
+      { ...safe, body: { ...safe.body, 'is:workflowId|string#and': 'arbitrary-run' } },
+    ]) await expect(transport.execute(invalid)).rejects.toMatchObject({ category: 'authorization_denied' })
+    for (const invalid of [
+      { ...safe, body: { ...safe.body, page: 2 } },
+      { ...safe, body: { ...safe.body, rows: 21 } },
+      { ...safe, body: { ...safe.body, _all: '1' } },
+      { ...safe, body: { ...safe.body, 'is:_id|string#and': 'arbitrary-data' } },
+      { ...safe, body: { ...safe.body, notFilterBelongTo: '1' } },
+      { ...safe, path: `${safe.path}?extra=1` },
+      { ...safe, method: 'GET' as const },
+    ]) await expect(transport.execute(invalid)).rejects.toMatchObject({ category: 'unsupported_capability' })
+    expect(request).toHaveBeenCalledTimes(1)
+
+    const raceRequest = vi.fn((options: UniNamespace.RequestOptions) => {
+      identity = 'synthetic-session:user:other-role:v2'
+      options.success?.({ statusCode: 200, data: { data: [{ secret: 'must-not-leak' }] } } as never)
+    })
+    const race = createUniApiReadTransport({
+      apiBaseUrl: 'https://production.invalid',
+      getSessionRef: () => 'synthetic-session' as never,
+      getRepeatFormReadAuthorizationIdentity: () => identity,
+      isRepeatFormContextAuthorizedForCurrentSession: () => true,
+      request: raceRequest,
+    })
+    identity = 'synthetic-session:user:role:v1'
+    await expect(race.execute(safe)).rejects.toMatchObject({ category: 'authorization_denied' })
+    expect(raceRequest).toHaveBeenCalledTimes(1)
+  })
+
+  it('authorizes repeat list context only from source-proven detail or child node for the same role', async () => {
+    vi.stubEnv('VITE_XLINK_ENVIRONMENT', 'prod')
+    let roleVersion = 'v1'
+    let repeatRows: ReadonlyArray<Record<string, unknown>> = [
+      { _id: 'synthetic-record', formTitle: '合成记录', state: 1 },
+    ]
+    const execute = vi.fn(async (input: { path: string }) => {
+      if (input.path === 'function/queryTreeByRoleId') return {
+        data: { functionList: [{ action: '/pages/serviceAppointment/serviceAppointments', exts: { tabDisplay: '1' } }] },
+      }
+      if (input.path === 'basic/serviceAppointment/query') return { data: [{ _id: 'synthetic-listed' }] }
+      if (input.path === 'basic/serviceAppointment/queryById/synthetic-listed') return { data: {
+        _id: 'synthetic-listed', workflow: { _id: 'synthetic-main-run' },
+        workflowNode: [
+          { _id: 'synthetic-parent', workflowId: 'synthetic-main-run', nodeDef: { nodeType: 'subflows' } },
+          { _id: 'synthetic-main-repeat', workflowId: 'synthetic-main-run',
+            nodeDef: { nodeType: 'repeat', formDefId: 'synthetic-def' } },
+        ],
+      } }
+      if (input.path === 'workflow/queryByParentWorkflowNodeId/synthetic-parent') return { data: [{
+        _id: 'synthetic-child-run', parentFlowNodeId: 'synthetic-parent',
+        workflowNodeList: [{ _id: 'synthetic-repeat-node', workflowId: 'synthetic-child-run',
+          nodeDef: { nodeType: 'repeat', formDefId: 'synthetic-def' } }],
+      }] }
+      if (input.path === 'biz/extForm/query/synthetic-def') return {
+        data: repeatRows, totalCount: repeatRows.length,
+      }
+      throw new Error('Unexpected route')
+    })
+    const api = createRoleScopedTechnicianApiReadAdapter(
+      { execute }, () => asOpaqueId<'RoleId'>('synthetic-role'),
+      { getReadAuthorizationScope: () => ({
+        sessionRef: 'synthetic-session', userId: 'synthetic-user', roleId: 'synthetic-role', roleVersion,
+      }) },
+    )
+    const repeat = {
+      definitionId: asOpaqueId<'FormDefinitionId'>('synthetic-def'),
+      workflowRunId: asOpaqueId<'WorkflowRunId'>('synthetic-child-run'),
+      page: 1, pageSize: 20,
+    }
+    expect((await api.listRepeatFormReferences!(repeat)).state).toBe('failed_terminal')
+    await api.listWorkOrders({ page: 1, pageSize: 20 })
+    await api.getWorkOrderDetail(asOpaqueId<'WorkOrderId'>('synthetic-listed'))
+    const mainRepeat = { ...repeat,
+      workflowRunId: asOpaqueId<'WorkflowRunId'>('synthetic-main-run') }
+    expect(api.isRepeatFormContextAuthorizedForCurrentSession?.('synthetic-def', 'synthetic-main-run')).toBe(true)
+    expect((await api.listRepeatFormReferences!(mainRepeat)).state).toBe('succeeded')
+    expect(api.isRepeatFormContextAuthorizedForCurrentSession?.('synthetic-def', 'synthetic-child-run')).toBe(false)
+    expect((await api.listRepeatFormReferences!(repeat)).state).toBe('failed_terminal')
+    await api.getChildWorkflowNodes(asOpaqueId<'WorkflowNodeRuntimeId'>('synthetic-parent'))
+    expect(api.isRepeatFormContextAuthorizedForCurrentSession?.('synthetic-def', 'synthetic-child-run')).toBe(true)
+    expect((await api.listRepeatFormReferences!(repeat)).state).toBe('succeeded')
+    repeatRows = [{ _id: 'synthetic-record', workflowId: 'other-run', state: 1 }]
+    expect((await api.listRepeatFormReferences!(repeat)).state).toBe('failed_terminal')
+    repeatRows = [{ _id: 'synthetic-record', formDefId: 'other-def', state: 1 }]
+    expect((await api.listRepeatFormReferences!(repeat)).state).toBe('failed_terminal')
+    repeatRows = Array.from({ length: 21 }, (_, index) => ({ _id: `synthetic-record-${index}`, state: 1 }))
+    expect((await api.listRepeatFormReferences!(repeat)).state).toBe('failed_terminal')
+    expect((await api.listRepeatFormReferences!({ ...repeat, page: 2 })).state).toBe('failed_terminal')
+    roleVersion = 'v2'
+    expect(api.isRepeatFormContextAuthorizedForCurrentSession?.('synthetic-def', 'synthetic-child-run')).toBe(false)
+    expect((await api.listRepeatFormReferences!(repeat)).state).toBe('failed_terminal')
+  })
+
 
   it('passes the actual bounded official-Order adapter request through the Production transport without _all', async () => {
     vi.stubEnv('VITE_XLINK_ENVIRONMENT', 'prod')

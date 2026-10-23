@@ -31,6 +31,13 @@ export interface UniApiReadTransportOptions {
   readonly isOrderWorkOrderListedForCurrentSession?: (workOrderId: string) => boolean
   /** Current session, user, role and roleVersion fingerprint, never persisted. */
   readonly getOrderReadAuthorizationIdentity?: () => string | null
+  /** Verified from a role-listed Work Order detail, never from a caller's node ID. */
+  readonly isChildWorkflowParentListedForCurrentSession?: (nodeId: string) => boolean
+  /** Identity must change on session, user, role or roleVersion changes. */
+  readonly getChildWorkflowReadAuthorizationIdentity?: () => string | null
+  /** Exact repeat FormDefinition + child/main Workflow run proven by the current role-scoped detail. */
+  readonly isRepeatFormContextAuthorizedForCurrentSession?: (definitionId: string, runId: string) => boolean
+  readonly getRepeatFormReadAuthorizationIdentity?: () => string | null
 }
 
 function endpointUrl(baseUrl: string, path: string): string {
@@ -141,6 +148,90 @@ export function createUniApiReadTransport(options: UniApiReadTransportOptions): 
         orderReadGuard = { workOrderId, sessionRef: current, identity }
       }
 
+      let childWorkflowReadGuard:
+        | { readonly parentNodeId: string; readonly sessionRef: SessionRef; readonly identity: string }
+        | undefined
+      const childPrefix = 'workflow/queryByParentWorkflowNodeId/'
+      if (productionReadOnly && input.path.startsWith(childPrefix)) {
+        const parentNodeId = input.path.slice(childPrefix.length)
+        let identity: string | null = null
+        let authorized = false
+        try {
+          identity = options.getChildWorkflowReadAuthorizationIdentity?.() ?? null
+          authorized = options.isChildWorkflowParentListedForCurrentSession?.(parentNodeId) === true
+        } catch {
+          authorized = false
+        }
+        const current = options.getSessionRef()
+        if (!current || !identity || !identity.trim() || identity !== identity.trim() || !authorized) {
+          throw new ApiReadTransportError(
+            'Production child Workflow read requires a role-listed Work Order and verified detail parent',
+            'authorization_denied',
+          )
+        }
+        childWorkflowReadGuard = { parentNodeId, sessionRef: current, identity }
+      }
+
+      let repeatReadGuard:
+        | { readonly definitionId: string; readonly runId: string; readonly sessionRef: SessionRef; readonly identity: string }
+        | undefined
+      const repeatPrefix = 'biz/extForm/query/'
+      if (productionReadOnly && input.path.startsWith(repeatPrefix)) {
+        const definitionId = input.path.slice(repeatPrefix.length)
+        const runId = input.body?.['is:workflowId|string#and']
+        let identity: string | null = null
+        let authorized = false
+        try {
+          identity = options.getRepeatFormReadAuthorizationIdentity?.() ?? null
+          authorized = typeof runId === 'string'
+            && options.isRepeatFormContextAuthorizedForCurrentSession?.(definitionId, runId) === true
+        } catch { authorized = false }
+        const current = options.getSessionRef()
+        if (!current || !identity || !identity.trim() || identity !== identity.trim()
+          || typeof runId !== 'string' || !authorized) {
+          throw new ApiReadTransportError(
+            'Production repeat FormData list requires a proven node and unchanged role-scoped session',
+            'authorization_denied',
+          )
+        }
+        repeatReadGuard = { definitionId, runId, sessionRef: current, identity }
+      }
+
+      const verifyChildWorkflowReadScope = (): void => {
+        if (!childWorkflowReadGuard) return
+        let identity: string | null = null
+        let authorized = false
+        try {
+          identity = options.getChildWorkflowReadAuthorizationIdentity?.() ?? null
+          authorized = options.isChildWorkflowParentListedForCurrentSession?.(childWorkflowReadGuard.parentNodeId) === true
+        } catch {
+          authorized = false
+        }
+        if (!authorized || identity !== childWorkflowReadGuard.identity
+          || options.getSessionRef() !== childWorkflowReadGuard.sessionRef) {
+          throw new ApiReadTransportError(
+            'Production child Workflow authorization changed during read',
+            'authorization_denied',
+          )
+        }
+      }
+
+      const verifyRepeatReadScope = (): void => {
+        if (!repeatReadGuard) return
+        let identity: string | null = null
+        let authorized = false
+        try {
+          identity = options.getRepeatFormReadAuthorizationIdentity?.() ?? null
+          authorized = options.isRepeatFormContextAuthorizedForCurrentSession?.(
+            repeatReadGuard.definitionId, repeatReadGuard.runId,
+          ) === true
+        } catch { authorized = false }
+        if (!authorized || identity !== repeatReadGuard.identity
+          || options.getSessionRef() !== repeatReadGuard.sessionRef) {
+          throw new ApiReadTransportError('Production repeat list authorization changed during read', 'authorization_denied')
+        }
+      }
+
       const sessionRef = options.getSessionRef()
       if (!sessionRef) {
         throw new ApiReadTransportError('Authenticated session is required for API reads', 'session_invalid')
@@ -155,6 +246,8 @@ export function createUniApiReadTransport(options: UniApiReadTransportOptions): 
         },
       )
       if (mockResponse !== null) {
+        verifyChildWorkflowReadScope()
+        verifyRepeatReadScope()
         if (orderReadGuard) {
           let stillListed = false
           let identity: string | null = null
@@ -214,6 +307,9 @@ export function createUniApiReadTransport(options: UniApiReadTransportOptions): 
           throw new ApiReadTransportError('Production Order authorization changed during read', 'authorization_denied')
         }
       }
+
+      verifyChildWorkflowReadScope()
+      verifyRepeatReadScope()
 
       if (!isSuccessStatus(response.statusCode)) {
         throw new ApiReadTransportError(
