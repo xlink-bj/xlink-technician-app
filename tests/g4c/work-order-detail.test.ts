@@ -94,6 +94,29 @@ function createAuthSession(endSession: AuthSessionPort['endSession']): AuthSessi
 }
 
 describe('G4-C API detail mapping and route identity', () => {
+  it.each([
+    { _id: 'unexpected-work-order' },
+    { id: 'unexpected-work-order' },
+    { _id: 'work-order-001', id: 'unexpected-work-order' },
+  ])('rejects a detail response whose source identity conflicts with the requested ID: %j', async (wireIds) => {
+    const execute = vi.fn(async () => ({ data: { serviceAppointment: wireIds } }))
+    const result = await createTechnicianApiReadAdapter({ execute }).getWorkOrderDetail(workOrderId)
+
+    expect(result.state).toBe('failed_terminal')
+    expect(result.error?.category).toBe('server_terminal')
+    expect(result.data).toBeUndefined()
+    expect(execute).toHaveBeenCalledTimes(1)
+  })
+
+  it('rejects conflicting list item id aliases before exposing the page', async () => {
+    const api = createTechnicianApiReadAdapter({
+      execute: async () => ({ data: [{ id: 'work-order-001', _id: 'different-order' }] }),
+    })
+    const result = await api.listWorkOrders({ page: 1, pageSize: 20 })
+    expect(result.state).toBe('failed_terminal')
+    expect(result.data).toBeUndefined()
+  })
+
   it('maps the detail envelope to semantic fields without leaking backend DTOs', async () => {
     const requests: ApiReadRequest[] = []
     const transport: ApiReadTransport = {

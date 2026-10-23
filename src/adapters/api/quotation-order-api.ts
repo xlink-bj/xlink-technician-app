@@ -17,7 +17,7 @@ import { AdapterMappingError, adapterFailure, succeeded, unknownErrorMessage } f
 import { asRecord, optionalNonNegativeInteger, optionalRecord, optionalString, requiredString, type AdapterRecord } from '../common/records'
 import { ApiReadTransportError, type ApiReadTransport } from './technician-api'
 
-function quotationOrderRecord(raw: unknown): QuotationOrderRead {
+function quotationOrderRecord(raw: unknown, requestedId: string): QuotationOrderRead {
   const envelope = asRecord(raw, 'quotation order read')
   const record = optionalRecord(envelope.data) ?? envelope
   const parseObject = (value: unknown): AdapterRecord | undefined => {
@@ -27,6 +27,12 @@ function quotationOrderRecord(raw: unknown): QuotationOrderRead {
     return optionalRecord(value)
   }
   const id = requiredString(record, ['_id', 'id'], 'quotation order id')
+  if (id !== requestedId || ['_id', 'id'].some((key) => {
+    const wireId = optionalString(record, [key])
+    return wireId !== undefined && wireId !== requestedId
+  })) {
+    throw new AdapterMappingError('Quotation Order conflicts with the requested identity')
+  }
   const type = optionalNonNegativeInteger(record, ['type'])
   const serviceAppointmentId = optionalString(record, ['serviceAppointmentId'])
   const bjProducts = parseObject(record.bjProducts)
@@ -304,7 +310,9 @@ export class QuotationOrderReadAdapter implements QuotationOrderReadPort {
     if (!id.trim()) return adapterFailure('validation', 'quotation order id is required')
     try {
       const raw = await this.transport.execute({ method: 'POST', path: 'basic/order/queryById', body: { id } })
-      return succeeded(quotationOrderRecord(raw))
+      // Callers also verify Work Order ownership; the adapter itself must
+      // reject mismatched Order identities before projecting a read snapshot.
+      return succeeded(quotationOrderRecord(raw, id))
     } catch (error) {
       return readFailure(error)
     }

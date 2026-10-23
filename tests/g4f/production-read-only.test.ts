@@ -281,6 +281,125 @@ describe('Production read-only profile', () => {
     expect(execute).toHaveBeenCalledTimes(4)
   })
 
+  it('does not return an in-flight Production Work Order list after the role scope changes', async () => {
+    vi.stubEnv('VITE_XLINK_ENVIRONMENT', 'prod')
+    let roleVersion = 'v1'
+    const execute = vi.fn(async (input: { path: string }) => {
+      if (input.path === 'function/queryTreeByRoleId') return {
+        data: { functionList: [{ action: '/pages/serviceAppointment/serviceAppointments', exts: { tabDisplay: '1' } }] },
+      }
+      if (input.path === 'basic/serviceAppointment/query') {
+        roleVersion = 'v2'
+        return { data: [{ _id: 'synthetic-stale-work-order' }] }
+      }
+      throw new Error('Unexpected synthetic route')
+    })
+    const api = createRoleScopedTechnicianApiReadAdapter(
+      { execute }, () => asOpaqueId<'RoleId'>('synthetic-role'),
+      { getReadAuthorizationScope: () => ({
+        sessionRef: 'synthetic-session', userId: 'synthetic-user', roleId: 'synthetic-role', roleVersion,
+      }) },
+    )
+
+    const result = await api.listWorkOrders({ page: 1, pageSize: 20 })
+    expect(result.state).toBe('failed_terminal')
+    expect(result.error?.category).toBe('authorization_denied')
+    expect(result.data).toBeUndefined()
+    expect(api.isWorkOrderListedForCurrentSession?.('synthetic-stale-work-order')).toBe(false)
+  })
+
+  it('refuses Production list reads with no authenticated session/user/role scope', async () => {
+    vi.stubEnv('VITE_XLINK_ENVIRONMENT', 'prod')
+    const execute = vi.fn(async () => { throw new Error('no read should be dispatched') })
+    const api = createRoleScopedTechnicianApiReadAdapter(
+      { execute }, () => asOpaqueId<'RoleId'>('synthetic-role'),
+    )
+    const result = await api.listWorkOrders({ page: 1, pageSize: 20 })
+    expect(result.state).toBe('failed_terminal')
+    expect(result.error?.category).toBe('authorization_denied')
+    expect(execute).not.toHaveBeenCalled()
+  })
+
+  it('does not even dispatch a Production Work Order list if role changes during resolver lookup', async () => {
+    vi.stubEnv('VITE_XLINK_ENVIRONMENT', 'prod')
+    let roleVersion = 'v1'
+    const execute = vi.fn(async (input: { path: string }) => {
+      if (input.path === 'function/queryTreeByRoleId') {
+        roleVersion = 'v2'
+        return { data: { functionList: [{
+          action: '/pages/serviceAppointment/serviceAppointments', exts: { tabDisplay: '1' },
+        }] } }
+      }
+      throw new Error('Production list must not be dispatched under a changed role')
+    })
+    const api = createRoleScopedTechnicianApiReadAdapter(
+      { execute }, () => asOpaqueId<'RoleId'>('synthetic-role'),
+      { getReadAuthorizationScope: () => ({
+        sessionRef: 'synthetic-session', userId: 'synthetic-user', roleId: 'synthetic-role', roleVersion,
+      }) },
+    )
+
+    const result = await api.listWorkOrders({ page: 1, pageSize: 20 })
+    expect(result.state).toBe('failed_terminal')
+    expect(result.error?.category).toBe('authorization_denied')
+    expect(execute).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not expose in-flight Production detail after changing roles, even with a previously listed ID', async () => {
+    vi.stubEnv('VITE_XLINK_ENVIRONMENT', 'prod')
+    let roleVersion = 'v1'
+    const execute = vi.fn(async (input: { path: string }) => {
+      if (input.path === 'function/queryTreeByRoleId') return {
+        data: { functionList: [{ action: '/pages/serviceAppointment/serviceAppointments', exts: { tabDisplay: '1' } }] },
+      }
+      if (input.path === 'basic/serviceAppointment/query') return { data: [{ _id: 'synthetic-listed-work-order' }] }
+      if (input.path === 'basic/serviceAppointment/queryById/synthetic-listed-work-order') {
+        roleVersion = 'v2'
+        return { data: { _id: 'synthetic-listed-work-order', name: 'must-not-leak', workflowNode: [] } }
+      }
+      throw new Error('Unexpected synthetic route')
+    })
+    const api = createRoleScopedTechnicianApiReadAdapter(
+      { execute }, () => asOpaqueId<'RoleId'>('synthetic-role'),
+      { getReadAuthorizationScope: () => ({
+        sessionRef: 'synthetic-session', userId: 'synthetic-user', roleId: 'synthetic-role', roleVersion,
+      }) },
+    )
+    expect((await api.listWorkOrders({ page: 1, pageSize: 20 })).state).toBe('succeeded')
+
+    const result = await api.getWorkOrderDetail(asOpaqueId<'WorkOrderId'>('synthetic-listed-work-order'))
+    expect(result.state).toBe('failed_terminal')
+    expect(result.error?.category).toBe('authorization_denied')
+    expect(JSON.stringify(result)).not.toContain('must-not-leak')
+  })
+
+  it('never derives Production child-node authority from a detail payload that omits Work Order identity', async () => {
+    vi.stubEnv('VITE_XLINK_ENVIRONMENT', 'prod')
+    const execute = vi.fn(async (input: { path: string }) => {
+      if (input.path === 'function/queryTreeByRoleId') return {
+        data: { functionList: [{ action: '/pages/serviceAppointment/serviceAppointments', exts: { tabDisplay: '1' } }] },
+      }
+      if (input.path === 'basic/serviceAppointment/query') return { data: [{ _id: 'synthetic-listed' }] }
+      if (input.path === 'basic/serviceAppointment/queryById/synthetic-listed') return { data: {
+        workflow: { _id: 'synthetic-run' },
+        workflowNode: [{ _id: 'synthetic-parent', workflowId: 'synthetic-run', nodeDef: { nodeType: 'subflows' } }],
+      } }
+      throw new Error('Unexpected synthetic route')
+    })
+    const api = createRoleScopedTechnicianApiReadAdapter(
+      { execute }, () => asOpaqueId<'RoleId'>('synthetic-role'),
+      { getReadAuthorizationScope: () => ({
+        sessionRef: 'synthetic-session', userId: 'synthetic-user', roleId: 'synthetic-role', roleVersion: 'v1',
+      }) },
+    )
+    expect((await api.listWorkOrders({ page: 1, pageSize: 20 })).state).toBe('succeeded')
+
+    const result = await api.getWorkOrderDetail(asOpaqueId<'WorkOrderId'>('synthetic-listed'))
+    expect(result.state).toBe('failed_terminal')
+    expect(result.data).toBeUndefined()
+    expect(api.isChildWorkflowParentListedForCurrentSession?.('synthetic-parent')).toBe(false)
+  })
+
   it('allows only bounded Production repeat lists for an already-proven definition/run pair', async () => {
     vi.stubEnv('VITE_XLINK_ENVIRONMENT', 'prod')
     let authorized = true
@@ -472,7 +591,13 @@ describe('Production read-only profile', () => {
       getSessionRef: () => 'production-session' as never,
       request,
     })
-    const api = createRoleScopedTechnicianApiReadAdapter(transport, () => asOpaqueId<'RoleId'>('synthetic-role'))
+    const api = createRoleScopedTechnicianApiReadAdapter(
+      transport, () => asOpaqueId<'RoleId'>('synthetic-role'),
+      { getReadAuthorizationScope: () => ({
+        sessionRef: 'production-session', userId: 'synthetic-user',
+        roleId: 'synthetic-role', roleVersion: 'v1',
+      }) },
+    )
 
     await expect(api.listWorkOrders({ page: 1, pageSize: 20 })).resolves.toMatchObject({ state: 'succeeded' })
 
@@ -512,24 +637,30 @@ describe('Production read-only profile', () => {
   it('omits the permission-bypass flag from Production detail requests created by the adapter', async () => {
     vi.stubEnv('VITE_XLINK_ENVIRONMENT', 'prod')
     const execute = vi.fn(async (request) => {
+      if (request.path === 'function/queryTreeByRoleId') {
+        return { data: { functionList: [{
+          action: '/pages/serviceAppointment/serviceAppointments', exts: { tabDisplay: '1' },
+        }] } }
+      }
       if (request.path === 'basic/serviceAppointment/query') {
         return { data: [{ _id: 'synthetic-work-order' }] }
       }
       throw new Error('synthetic stop after request capture')
     })
-    const api = createTechnicianApiReadAdapter({ execute }, {
-      getReadAuthorizationScope: () => ({
+    const api = createRoleScopedTechnicianApiReadAdapter(
+      { execute }, () => asOpaqueId<'RoleId'>('synthetic-role'),
+      { getReadAuthorizationScope: () => ({
         sessionRef: 'synthetic-session',
         userId: 'synthetic-user',
         roleId: 'synthetic-role',
         roleVersion: 'synthetic-role-version',
-      }),
-    })
+      }) },
+    )
 
     await api.listWorkOrders({ page: 1, pageSize: 20 })
     await api.getWorkOrderDetail(asOpaqueId<'WorkOrderId'>('synthetic-work-order'))
 
-    expect(execute).toHaveBeenCalledTimes(2)
+    expect(execute).toHaveBeenCalledTimes(3)
     expect(execute).toHaveBeenCalledWith({
       method: 'POST',
       path: 'basic/serviceAppointment/queryById/synthetic-work-order',
