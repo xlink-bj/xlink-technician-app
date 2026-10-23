@@ -33,10 +33,17 @@ export function readR1NodeFormList(
   const seen = new Set<string>()
   for (const raw of value.slice(0, CAP)) {
     const record = asPlain(raw)
-    const id = record && identifier(record._id ?? record.id)
+    const id = record && identifier(record._id ?? record.id ?? record.dataId)
     if (!record || !id || seen.has(id)) return invalid()
+    if (['_id', 'id', 'dataId'].some((key) => identifier(record[key]) !== null && identifier(record[key]) !== id)) {
+      return invalid()
+    }
     seen.add(id)
-    const definitionId = identifier(record.formDefId)
+    const definitionId = identifier(record.formDefId ?? record.formDefinitionId ?? record.extId)
+    if (definitionId && ['formDefId', 'formDefinitionId', 'extId']
+      .some((key) => identifier(record[key]) !== null && identifier(record[key]) !== definitionId)) {
+      return invalid()
+    }
     const title = typeof record.formTitle === 'string'
       ? record.formTitle.trim().slice(0, 80) : ''
     const state: R1NodeFormReference['state'] = record.state === -1

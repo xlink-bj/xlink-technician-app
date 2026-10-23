@@ -54,6 +54,7 @@ jobs:
             tests/g4f/production-read-only.test.ts \
             tests/engineering/r1-stage1-live-read-contract.test.ts \
             tests/engineering/r1-stage1-form-detail-read-contract.test.ts \
+            tests/engineering/r1-model-contract-parity.test.ts \
             tests/g4f/quotation-order-browse-handoff.test.ts \
             tests/g4f/quotation-order-read.test.ts \
             tests/g4f/quotation-order-signing-read-boundary.test.ts \

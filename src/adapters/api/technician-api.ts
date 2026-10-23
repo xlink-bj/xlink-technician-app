@@ -49,6 +49,8 @@ import {
 } from '../common/operations'
 import {
   asRecord,
+  assertMatchingWireIdentity,
+  consistentWireIdentity,
   firstString,
   nestedRecord,
   nestedValue,
@@ -142,18 +144,6 @@ function workflowResponseRows(raw: unknown, label: string): readonly unknown[] {
     : optionalRecord(data)?.items ?? envelope.items
   if (!Array.isArray(rows)) throw new AdapterMappingError(`${label} items are missing`)
   return rows
-}
-
-function assertMatchingWireIdentity(
-  record: AdapterRecord,
-  keys: readonly string[],
-  expected: string,
-  label: string,
-): void {
-  const candidates = keys.map((key) => optionalString(record, [key])).filter((id): id is string => Boolean(id))
-  if (candidates.some((id) => id !== expected)) {
-    throw new AdapterMappingError(`${label} conflicts with the requested identity`)
-  }
 }
 
 function assertUniqueRuntimeNodeIds(nodes: readonly WorkflowNodeRead[], label: string): void {
@@ -579,6 +569,11 @@ function workOrderDetail(
 function workflowDefinition(raw: unknown, requestedId: WorkflowDefinitionId): WorkflowDefinitionRead {
   const envelope = asRecord(raw, 'workflow definition response')
   const entity = nestedRecord(envelope, ['entity', 'data'])
+  // The requested URL is authoritative, but contradictory source identities
+  // must fail instead of being masked by a successful HTTP response.
+  assertMatchingWireIdentity(
+    entity ?? envelope, ['id', '_id', 'defId'], String(requestedId), 'Workflow definition',
+  )
   const id = entity
     ? optionalOpaqueId<'WorkflowDefinitionId'>(entity, ['id', '_id', 'defId'])
     : optionalOpaqueId<'WorkflowDefinitionId'>(envelope, ['id', '_id', 'defId'])
@@ -755,6 +750,8 @@ function workflowNode(raw: unknown): WorkflowNodeRead {
   if (declaredFormDefinition) {
     assertMatchingWireIdentity(nodeDef ?? {}, ['formDefId', 'formDefinitionId'], declaredFormDefinition, 'Workflow node form definition')
   }
+  consistentWireIdentity(record, ['runId', 'workflowRunId', 'workflowId'], 'Workflow node run')
+  consistentWireIdentity(record, ['parentNodeId', 'parentWorkflowNodeId'], 'Workflow node predecessor')
   const definitionId = optionalOpaqueId<'WorkflowDefinitionId'>(record, ['definitionId', 'defId'])
   const runId = optionalOpaqueId<'WorkflowRunId'>(record, ['runId', 'workflowRunId', 'workflowId'])
   const parentNodeId = optionalOpaqueId<'WorkflowNodeRuntimeId'>(record, [
@@ -962,10 +959,10 @@ function formFieldVisibility(record: AdapterRecord): {
 }
 
 function formField(raw: unknown, rowIndex: number): FormFieldRead | null {
-  const record = optionalRecord(raw)
-  if (!record) return null
+  const record = asRecord(raw, 'FormDefinition field row')
   const valueKey = optionalString(record, ['name', 'key', 'fieldName'])?.trim()
-  if (!valueKey) return null
+  if (!valueKey) throw new AdapterMappingError('FormDefinition field row is missing its value key')
+  consistentWireIdentity(record, ['_id', 'id', 'fieldId'], 'FormDefinition field row')
   const rawFieldId = optionalString(record, ['_id', 'id', 'fieldId'])?.trim()
   const fieldId = rawFieldId ?? `unidentified-field-row-${rowIndex + 1}`
   const label = optionalString(record, ['nameDisp', 'label', 'displayName', 'name'])?.trim() ?? valueKey
@@ -1146,6 +1143,12 @@ function formData(raw: unknown, codec?: FormValueCodec, expectedDefinitionId?: F
   if (new Set(workflowRunIds).size > 1) {
     throw new AdapterMappingError('FormData workflow run identity is contradictory')
   }
+  const nestedWorkflowRun = workflow
+    ? consistentWireIdentity(workflow, ['workflowRunId', 'runId', 'workflowId'], 'FormData nested Workflow run')
+    : undefined
+  if (nestedWorkflowRun && workflowRunIds.length > 0 && nestedWorkflowRun !== workflowRunIds[0]) {
+    throw new AdapterMappingError('FormData nested Workflow run contradicts saved record')
+  }
   // Real R1 dynamic FormData rows may not repeat their FormDefinition ID.
   // The definition is already fixed by the query URL; never invent it from
   // arbitrary data or silently override contradictory response metadata.
@@ -1163,11 +1166,9 @@ function formData(raw: unknown, codec?: FormValueCodec, expectedDefinitionId?: F
   return {
     id: dataId,
     definitionId,
-    ...(optionalOpaqueId<'WorkflowRunId'>(record, ['workflowRunId', 'runId', 'workflowId'])
-      ? { workflowRunId: optionalOpaqueId<'WorkflowRunId'>(record, ['workflowRunId', 'runId', 'workflowId']) }
-      : workflow && optionalOpaqueId<'WorkflowRunId'>(workflow, ['runId', 'workflowRunId'])
-        ? { workflowRunId: optionalOpaqueId<'WorkflowRunId'>(workflow, ['runId', 'workflowRunId']) }
-        : {}),
+    ...(workflowRunIds[0] || nestedWorkflowRun
+      ? { workflowRunId: asOpaqueId<'WorkflowRunId'>((workflowRunIds[0] ?? nestedWorkflowRun)!) }
+      : {}),
     ...(values ? { values } : {}),
   }
 }
@@ -1852,11 +1853,12 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
       }
       for (const item of rawPage.items) {
         const record = asRecord(item, 'repeat form reference')
+        consistentWireIdentity(record, ['_id', 'id', 'dataId'], 'Repeat FormData record')
         // The backend may omit formDefId, but explicit contradictory identity
         // is never permitted to cross the role-scoped read boundary.
-        assertMatchingWireIdentity(record, ['workflowId', 'workflowRunId'],
+        assertMatchingWireIdentity(record, ['workflowId', 'workflowRunId', 'runId'],
           String(input.workflowRunId), 'Repeat FormData workflow run')
-        assertMatchingWireIdentity(record, ['formDefId', 'formDefinitionId'],
+        assertMatchingWireIdentity(record, ['formDefId', 'formDefinitionId', 'extId'],
           String(input.definitionId), 'Repeat FormData definition')
       }
       const list = readR1NodeFormList({ formDataList: rawPage.items }, 'repeat')
@@ -1888,7 +1890,14 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
         path: `biz/extForm/query/${encodeURIComponent(input.definitionId)}`,
         body,
       },
-      (raw) => pageEnvelope(raw, (item) => formData(item, input.valueCodec, input.definitionId)),
+      (raw) => {
+        const page = pageEnvelope(raw, (item) => formData(item, input.valueCodec, input.definitionId))
+        if (input.dataId && (page.items.length !== 1 || String(page.items[0]?.id) !== String(input.dataId)
+          || (page.totalCount !== undefined && page.totalCount !== 1))) {
+          throw new AdapterMappingError('R1 exact-ID FormData query returned an unrelated or ambiguous row')
+        }
+        return page
+      },
     )
   }
 
@@ -1917,7 +1926,8 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
           const page = pageEnvelope(raw, (item) => formData(item, input.valueCodec, input.definitionId))
           if (page.items.length !== 1
             || String(page.items[0]?.id) !== String(input.dataId)
-            || String(page.items[0]?.definitionId) !== String(input.definitionId)) {
+            || String(page.items[0]?.definitionId) !== String(input.definitionId)
+            || (page.totalCount !== undefined && page.totalCount !== 1)) {
             throw new AdapterMappingError('R1 form detail identity is absent or ambiguous')
           }
           return page.items[0]!
@@ -1933,7 +1943,15 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
       (raw) => {
         const envelope = asRecord(raw, 'form detail response')
         const data = nestedValue(envelope, ['data', 'entity'])
-        const saved = formData(data ?? envelope, input.valueCodec, input.definitionId)
+        // R1 serviceAppointment.vue:getFormData uses res.data.data for this
+        // exceptional endpoint; other accepted transports unwrap one layer.
+        // Preserve only these evidenced wrappers and still check exact ID.
+        const wrapper = optionalRecord(data)
+        const nestedSaved = optionalRecord(wrapper?.data)
+        if (nestedSaved && wrapper) {
+          assertMatchingWireIdentity(wrapper, ['_id', 'id', 'dataId'], String(input.dataId), 'R1 acceptance wrapper')
+        }
+        const saved = formData(nestedSaved ?? data ?? envelope, input.valueCodec, input.definitionId)
         // The special construction-acceptance read uses a different endpoint,
         // but it must prove the same exact saved-record identity as ordinary
         // forms/repeat queries before any consumer can render its values.

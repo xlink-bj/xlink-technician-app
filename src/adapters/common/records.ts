@@ -28,6 +28,32 @@ export function optionalString(record: AdapterRecord, keys: readonly string[]): 
   return firstString(record, keys)
 }
 
+/** IDs may arrive under legacy and modern aliases. A present second alias
+ * must corroborate the first; choosing the first one is not provenance. */
+export function consistentWireIdentity(
+  record: AdapterRecord,
+  keys: readonly string[],
+  label: string,
+): string | undefined {
+  const ids = keys
+    .map((key) => optionalString(record, [key]))
+    .filter((id): id is string => Boolean(id))
+  if (new Set(ids).size > 1) throw new AdapterMappingError(`${label} contains contradictory identities`)
+  return ids[0]
+}
+
+export function assertMatchingWireIdentity(
+  record: AdapterRecord,
+  keys: readonly string[],
+  expected: string,
+  label: string,
+): void {
+  const id = consistentWireIdentity(record, keys, label)
+  if (id !== undefined && id !== expected) {
+    throw new AdapterMappingError(`${label} conflicts with the requested identity`)
+  }
+}
+
 export function optionalPositiveInteger(
   record: AdapterRecord,
   keys: readonly string[],
