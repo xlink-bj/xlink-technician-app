@@ -39,6 +39,8 @@ The `quick` gate runs architecture/boundary/critical-behavior checks, TypeScript
 
 For an individual change: identify its source/API evidence → write a synthetic failing boundary test → implement the narrowest adapter/store fix → rerun `verify:quick` → perform the relevant H5/MP or authorized readonly check → submit Draft PR with exact commit/check results. Never substitute H5 screenshot evidence for WeChat real-device UX approval.
 
+For containerized builds affected by Node `os.networkInterfaces()` / `uv_interface_addresses` in DCloud's online version-check path, the installed Uni CLI's `checkUpdate` returns early when `CI=1`. Verified **locally in this container** with `CI=1 VITE_XLINK_ENVIRONMENT=test corepack pnpm run build:h5`, `build:mp-weixin` (including `verify-mp-app-bootstrap.mjs`), and `build:app`. This is a build-environment workaround, **not** an authentication bypass, a change to Production configuration, or proof of physical-device behavior. Keep Mac/WeChat real-device evidence separate.
+
 ## 4. Evidence and acceptance — keep the gates independent
 
 | Gate | Meaning | Current conclusion |
@@ -58,3 +60,14 @@ For an individual change: identify its source/API evidence → write a synthetic
 3. **Cross-platform proof**: for contract-affecting slices run TypeScript/unit/H5 first, then build MP-WEIXIN and perform simulator or physical-device checks in the local Mac environment. Record UI-device findings separately; do not delay backend contract work for cosmetic polish.
 
 Owner roles: **ChatGPT Lead** develops/reviews/tests and maintains Draft PRs; **local Codex** assists only with inaccessible Mac/WeChat DevTools/intranet data, and reports sanitized reproducible evidence. **Human Lead** decides Production access expansions, real writes, device UX acceptance, and merges/deploys.
+
+## 6. Saved FormData identity gate (follow-on Draft)
+
+R1 has **two different exact-saved-record read routes**; they must obey the same identity rule without changing either API:
+
+| R1 read route | Legitimate source shape | Evidence needed to expose values |
+| --- | --- | --- |
+| Ordinary `forms` / `repeat`: `POST biz/extForm/query/{definitionId}` filtered by `_id` | Bounded list of saved FormData rows; definition may be omitted in the row | Exactly one returned record with the requested ID and no contradictory `id` / `_id` / `dataId` or definition aliases |
+| Construction acceptance FormDefinition `3285058246984486156`: `GET biz/extForm/findByIdWithWorkflow` | One saved FormData object (R1-specific exception) | Returned ID must equal the requested `dataId`; the same alias and definition checks apply |
+
+For both routes, contradictory top-level `workflowRunId` / `runId` / `workflowId` aliases are mapping failures. A single alias or omitted optional workflow ID retains its original meaning. These are **synthetic contract tests**, not evidence that a Production tenant was queried. `readDynamicForm` and its Action Workspace consumers keep their separate workflow, scope and write gates. The source route distinction is documented in `R1_STAGE1_FUNCTIONAL_CANDIDATE.md` and exercised in `tests/engineering/r1-stage1-form-detail-read-contract.test.ts` and `r1-stage1-live-read-contract.test.ts`, now included in Fast Loop and GitHub `quick`.
