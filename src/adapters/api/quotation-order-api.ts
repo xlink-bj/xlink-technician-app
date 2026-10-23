@@ -14,7 +14,7 @@ import type {
 import type { OperationSnapshot } from '@shared/types'
 
 import { AdapterMappingError, adapterFailure, succeeded, unknownErrorMessage } from '../common/operations'
-import { asRecord, assertMatchingWireIdentity, consistentWireIdentity, optionalNonNegativeInteger, optionalRecord, optionalString, requiredString, type AdapterRecord } from '../common/records'
+import { asRecord, assertMatchingWireIdentity, consistentWireIdentity, optionalNonNegativeInteger, optionalSignedInteger, optionalRecord, optionalString, requiredString, type AdapterRecord } from '../common/records'
 import { ApiReadTransportError, type ApiReadTransport } from './technician-api'
 
 function quotationOrderRecord(raw: unknown, requestedId: string): QuotationOrderRead {
@@ -67,8 +67,8 @@ function quotationOrderRecord(raw: unknown, requestedId: string): QuotationOrder
     id,
     type,
     serviceAppointmentId,
-    ...(optionalNonNegativeInteger(record, ['state']) !== undefined ? { state: optionalNonNegativeInteger(record, ['state']) } : {}),
-    ...(optionalNonNegativeInteger(record, ['processState']) !== undefined ? { processState: optionalNonNegativeInteger(record, ['processState']) } : {}),
+    ...(optionalSignedInteger(record, ['state']) !== undefined ? { state: optionalSignedInteger(record, ['state']) } : {}),
+    ...(optionalSignedInteger(record, ['processState']) !== undefined ? { processState: optionalSignedInteger(record, ['processState']) } : {}),
     ...(optionalString(record, ['workflowId']) ? { workflowId: optionalString(record, ['workflowId']) } : {}),
     ...(optionalString(record, ['ownerName']) ? { ownerName: optionalString(record, ['ownerName']) } : {}),
     ...(optionalString(record, ['description']) ? { description: optionalString(record, ['description']) } : {}),
@@ -264,8 +264,8 @@ function quotationOrderBrowseItem(raw: unknown): QuotationOrderBrowseItem {
     type: 1,
     serviceAppointmentId,
     ...(optionalString(record, ['orderNumber']) ? { displayNumber: optionalString(record, ['orderNumber']) } : {}),
-    ...(optionalNonNegativeInteger(record, ['state']) !== undefined ? { state: optionalNonNegativeInteger(record, ['state']) } : {}),
-    ...(optionalNonNegativeInteger(record, ['processState']) !== undefined ? { processState: optionalNonNegativeInteger(record, ['processState']) } : {}),
+    ...(optionalSignedInteger(record, ['state']) !== undefined ? { state: optionalSignedInteger(record, ['state']) } : {}),
+    ...(optionalSignedInteger(record, ['processState']) !== undefined ? { processState: optionalSignedInteger(record, ['processState']) } : {}),
     ...(exts ? { hasExts: true } : {}),
     ...(exts && optionalNonNegativeInteger(exts, ['isAgain']) !== undefined
       ? { isAgain: optionalNonNegativeInteger(exts, ['isAgain']) }
@@ -480,7 +480,7 @@ export class QuotationOrderReadAdapter implements QuotationOrderReadPort {
         const rawStatus = optionalString(exts ?? {}, ['contractStatus'])
         const status = rawStatus && /^-?\d{1,3}$/.test(rawStatus) ? rawStatus : undefined
         const signedDate = optionalString(row, ['signedDate'])
-        const state = optionalNonNegativeInteger(row, ['state'])
+        const state = optionalSignedInteger(row, ['state'])
         // The R1 query is state=1 OR exts.contractStatus=-2, not AND.
         // Check contradictory explicit witnesses only; omitted fields do not
         // prove an exclusion, and neither branch grants signing authority.

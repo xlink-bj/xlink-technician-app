@@ -166,4 +166,39 @@ describe('R1 three-pillar source-backed contract matrix — synthetic only', () 
     expect(isProductionReadOnlyReadAllowed({ method: 'POST', path: 'basic/contract/query.do' })).toBe(false)
     expect(isProductionReadOnlyReadAllowed({ method: 'POST', path: 'workflowDef/queryById/private-def' })).toBe(false)
   })
+
+  it('retains source-valid negative Order and Contract lifecycle states instead of erasing them', async () => {
+    const row = officialOrder({ state: -1, processState: -2 })
+    const transport = { execute: async (request: { path: string }) => request.path === 'basic/order/queryById'
+      ? { data: row }
+      : { data: [row] } }
+    const adapter = createQuotationOrderReadAdapter(transport, () => true)
+    const list = await adapter.listTypeOneOrdersForWorkOrder(orderWorkOrderId)
+    expect(list).toMatchObject({
+      state: 'succeeded', data: { items: [{ state: -1, processState: -2 }] },
+    })
+    const detail = await adapter.getQuotationOrderById(orderId)
+    expect(detail).toMatchObject({ state: 'succeeded', data: { state: -1, processState: -2 } })
+
+    const contract = createQuotationOrderReadAdapter({
+      execute: async (request) => request.path === 'basic/order/query'
+        ? { data: [officialOrder()] }
+        : { data: [{ _id: 'contract-cancelled', orderId, serviceAppointmentId: orderWorkOrderId,
+          state: -1, exts: { contractStatus: '-2' } }] },
+    }, () => true, () => 'synthetic-role-session', () => true)
+    expect(await contract.listR1ContractsForSigningReview!(orderWorkOrderId, orderId))
+      .toMatchObject({ state: 'succeeded', data: { items: [{ state: -1, contractStatus: '-2' }] } })
+  })
+
+  it('does not turn missing or malformed lifecycle codes into a valid zero-state action', async () => {
+    for (const raw of [null, '', 'not-a-status', 1.25, Number.POSITIVE_INFINITY]) {
+      const adapter = createQuotationOrderReadAdapter({
+        execute: async () => ({ data: [officialOrder({ state: raw, processState: raw })] }),
+      }, () => true)
+      const result = await adapter.listTypeOneOrdersForWorkOrder(orderWorkOrderId)
+      expect(result.state).toBe('succeeded')
+      expect(result.data?.items[0]).not.toHaveProperty('state')
+      expect(result.data?.items[0]).not.toHaveProperty('processState')
+    }
+  })
 })

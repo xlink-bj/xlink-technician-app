@@ -55,6 +55,7 @@ R1 历史渲染在 `getSubWorkflow` 中先读取 `workflowDef/queryById/{defId}`
 | 概念 | R1 来源和判定身份 | 本次硬边界 | 尚未证明的部分 |
 | --- | --- | --- | --- |
 | WorkOrder–Order | `serviceAppointmentId` 是 Order 归属；`_id/id` 是 Order 身份，`type=1` 是正式单，非工单 | 精确身份一致、类型一致、有限列表、重复行拒绝 | 生产列表只读内容及完成态语义 |
+| Order 生命周期 | `state`、`processState` 是有符号的状态码；历史生产样本实际存在 `state=-1` 和 `processState=-1/-2` | 在列表及精确详情投影保留负数，缺失/非法值仍不制造状态；签约、替换编辑只在其自身明确准入状态下进行 | 状态码完整字典与合法转移仍未证明 |
 | 订单列表来源 | R1 技师页面用 `basic/order/clearOrderFieldQuery`，`_all=1`，订单状态筛选；新 App 当前用 `basic/order/query` 限制 `type=1`、WorkOrder、最多 3 行 | **两条接口不宣称同义**；新接口是 scoped review，不是 R1 视觉订单全量复刻 | 这两路响应、分页、取消/变更单关系 |
 | `bjProducts.orderList[]` | 订单按 `repairParts` 分组，子项 `projPackages/procedures/materials/measures` | 显示投影保留类别，不能把未知内容算已验证；嵌套/行级 SPU 与 SKU 身份冲突即拒绝 | 全量商业价格和规格保存/读回 |
 | SPU | 材料目录 `_id`，候选销售属性 `exts[fieldName]`；SKU 通过 `spuid` 关联 | 不能把 SPU 视作 SKU；只允许已定义选项进入选择器 | 活跃租户当前销售属性完整性 |
@@ -62,6 +63,20 @@ R1 历史渲染在 `getSubWorkflow` 中先读取 `workflowDef/queryById/{defId}`
 | Contract | R1 技师页面 `basic/contract/query.do` 按 `serviceAppointmentId`，`state=1` **OR** `exts.contractStatus=-2` | 当前测试通路仍限定为人工合成，必须先确认同工单 `type=1` Order；显式违反查询条件拒绝；不可读 PDF 或签名 | 生产读授权、文件权限、签约结果/命令 |
 
 `basic/order/queryById` 返回的是详情读模型，不等于 `clearOrderFieldQuery` 的聚合列表。R1 `getOrderById` 对 `bjProducts` JSON 进行解析；新 App 的有限 `OrderBrowse` 仅作为只读结构摘要，不能代表完整编辑/结算快照，也不能授权改价、取消、发送合同。
+
+## 已有真实只读证据复用（无需重复访问 Production）
+
+这一节与上面固定 R1 源码及人工合成测试**不同证据等级**。只引用已提交的脱敏历史报告，不重新取客户数据、真实 ID、字段值或合同内容；历史快照不自动代表 2026-10-24 的最新租户配置。
+
+| 证据来源 | 已得到的真实结构 | 可用的结论与限制 |
+| --- | --- | --- |
+| [2026-10-09 Production Order ExtField capture](../verification/G4F_ACTIVE_ORDER_EXTFIELD_SCHEMA_SHAPE.md) | 同账号租户 `colName=order`、移动详情的**完整当页 32/32 行**；`placeOrder=9`、`submitOrder=10`、其他/未识别=13；字段型 26 generic、3 gap、3 unsupported（2 area、1 button）；7 行需选项 provider | 证明这一租户在该时点的 Order *定义结构*；不是某个工单生效的表单，也未读取 Code/级联选项，更不能推广到普通 Workflow FormDefinition |
+| [2026-09-22 Beta Order/Workflow read](../verification/G4F_R1_RUNTIME_FOLLOWUP.md) | 当时 Beta 一个 `placeOrder` Workflow 定义、1 个 type-1 Order 的工单归属与 `bjProducts.orderList[]` 结构；Beta `order` 定义查询 55 行，移动详情有效 34 行（9/11/14） | Beta 不等于当前 Production；34 与 32 的差异既可能是环境也可能是时间/租户条件，**不能据此断言系统 schema 漂移**；但可重用 `repairParts` 等字段类型的 R1 语义样本 |
+| [2026-10-08 Production Order snapshot](../verification/G4F_PHASE_1J_BETA_CLOSURE_HARDENING.md) | 已授权关系内的 38 个活跃工单、54 个 type-1 Orders；54/54 `bjProducts` 可解析；`state=-1` **17** 行、`processState=-1` **4** 行和 `-2` **1** 行；33 个 Order 的套餐行有 `skuCode`/`spuCode` 标记 | 证明负状态码和复杂 SKU 标记是真实语义，不允许当“未提供”或认为可编辑；不证明当前账号能对这些 Order 读全量、更不授权变更 |
+| [2026-10 Production bounded App Order smoke](../verification/G4F_PHASE_1K_PROD_READ_INTEGRATION.md) | 3 个角色工单、3 次逐单 `basic/order/query` 有限查询，3 个正式 Order 身份一致、3 组/21 项结构识别；没有识别出的 SKU/SPU ID | 证明这条**有界接口**可用于工单只读摘要，不证明 R1 `clearOrderFieldQuery`、`queryById` 与之完全同义 |
+| [2026-10-22 role-scoped child reads](https://github.com/xlink-bj/xlink-technician-app/issues/199#issuecomment-6342521732) | 5 个授权父节点，子节点数为 2/2/2/2/4，共 12 个运行节点；全部缺少 `sourceNodeType` | 运行身份读取通过，但 12 个动作类型仍未知，不能按数组位置补造 `repeat/forms` |
+
+**剩余最小证据缺口**：① 在原有 5 个外层节点的同一权限范围内，能否以被授权的定义 ID/运行节点 ID 将 12 条 child runtime 精确对应到 `nodeDef`，或明确该读取被门禁拦截；② 同一角色已知具体业务动作下的 *effective* ExtField/Code/provider（不是重查租户 32 行）；③ 对同一 list-derived WorkOrder，`clearOrderFieldQuery` 与 `basic/order/query` 是否为相同过滤与分页语义。后两项可能涉及目前未准入的 Production 路由，**没有新授权就应记录 `BLOCKED_SCOPE`，不得自行加白名单或试探 API**。
 
 ## 证据等级与验收结论
 
