@@ -43,11 +43,15 @@ jobs:
           pnpm run check:ui-governance
           pnpm run check:m1-i8-baseline
           pnpm run typecheck
-      - name: Targeted quotation contract unit tests
+      - name: Targeted R1 read-identity, role-scope and quotation contract tests
         env:
           VITE_XLINK_ENVIRONMENT: test
         run: |
           pnpm exec vitest run \
+            tests/g4c/work-order-detail.test.ts \
+            tests/g4f/m1-i7-work-order-read-scope.test.ts \
+            tests/g4f/production-read-only.test.ts \
+            tests/engineering/r1-stage1-live-read-contract.test.ts \
             tests/g4f/quotation-order-browse-handoff.test.ts \
             tests/g4f/quotation-order-read.test.ts \
             tests/g4f/quotation-order-signing-read-boundary.test.ts \

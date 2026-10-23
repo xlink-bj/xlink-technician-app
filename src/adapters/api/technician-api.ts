@@ -373,6 +373,7 @@ function workOrderSummary(
 ): WorkOrderSummary {
   const record = asRecord(raw, 'work-order summary')
   const id = requiredOpaqueId<'WorkOrderId'>(record, ['id', '_id'], 'work-order id')
+  assertMatchingWireIdentity(record, ['id', '_id'], String(id), 'Work Order list item')
   const displayNumber = optionalString(record, ['orderNum'])
   const taskLabel = serviceAppointmentTaskLabel(record, statusLabels)
   const servicePartLabelValue = servicePartLabel(record, partLabels)
@@ -1444,6 +1445,12 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
 
   async listWorkOrders(query: WorkOrderListQuery) {
     const scopeAtStart = this.synchronizeReadScope()
+    const productionReadOnly = this.isProductionReadOnly()
+    if (productionReadOnly && (!scopeAtStart || !this.workOrderScopeResolver)) {
+      return adapterFailure<ReadPage<WorkOrderSummary>>(
+        'authorization_denied', 'Production Work Order list requires an authenticated role-scoped resolver',
+      )
+    }
     if (!this.workOrderScopeResolver) {
       const result = await this.read<ReadPage<WorkOrderSummary>>(
         {
@@ -1467,6 +1474,11 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
 
     try {
       const scope = await this.workOrderScopeResolver.resolve()
+      if (productionReadOnly && this.synchronizeReadScope() !== scopeAtStart) {
+        return adapterFailure<ReadPage<WorkOrderSummary>>(
+          'authorization_denied', 'Production Work Order list authorization changed before query',
+        )
+      }
       const result = await this.read<ReadPage<WorkOrderSummary>>(
         buildWorkOrderListRequest(query, scope),
         async (raw) => {
@@ -1479,6 +1491,11 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
           )
         },
       )
+      if (productionReadOnly && (this.synchronizeReadScope() !== scopeAtStart || !scopeAtStart)) {
+        return adapterFailure<ReadPage<WorkOrderSummary>>(
+          'authorization_denied', 'Production Work Order list authorization changed during read',
+        )
+      }
       this.rememberListedWorkOrders(result, scopeAtStart)
       return result
     } catch (error) {
@@ -1506,6 +1523,14 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
         body: productionReadOnly ? {} : { type: 'query' },
       },
       async (raw) => {
+        // Detail is authoritative only when the returned ServiceAppointment
+        // identity agrees with the requested, previously role-listed ID.
+        // In Production, a missing identity cannot authorize child reads.
+        const record = detailPayload(raw).record
+        if (productionReadOnly && !optionalString(record, ['id', '_id'])) {
+          throw new AdapterMappingError('Production Work Order detail identity is missing')
+        }
+        assertMatchingWireIdentity(record, ['id', '_id'], String(id), 'Work Order detail')
         const statusLabels = await this.detailStatusLabelsFor(raw)
         const partLabels = await this.partLabelsFor(servicePartCodesFromDetail(raw))
         const detail = workOrderDetail(raw, id, statusLabels, partLabels, !productionReadOnly)
@@ -1516,6 +1541,12 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
           : detail
       },
     )
+    if (productionReadOnly && (this.synchronizeReadScope() !== scopeAtStart
+      || !this.listedWorkOrderIds.has(String(id)))) {
+      return adapterFailure<WorkOrderDetail>(
+        'authorization_denied', 'Production Work Order detail authorization changed during read',
+      )
+    }
     // A role-listed Work Order followed by its successful, identity-matched
     // detail is the only source of Production child-workflow parent authority.
     // In particular, a caller-supplied node ID is never a capability token.

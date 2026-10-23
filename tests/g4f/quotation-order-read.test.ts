@@ -274,6 +274,24 @@ describe('G4-F Production quotation Order read adapter', () => {
     expect(JSON.stringify(result)).not.toContain('must-not-leak')
   })
 
+  it.each([
+    { _id: 'unrelated-order' },
+    { _id: 'order-synthetic', id: 'unrelated-order' },
+  ])('rejects a queryById payload with contradictory official Order identity: %j', async (wireIds) => {
+    const execute = vi.fn(async () => ({ data: {
+      ...wireIds,
+      type: 1,
+      serviceAppointmentId: 'work-order-synthetic',
+      bjProducts: { orderList: [] },
+    } }))
+    const result = await createQuotationOrderReadAdapter({ execute }).getQuotationOrderById('order-synthetic')
+
+    expect(result.state).toBe('failed_terminal')
+    expect(result.error?.category).toBe('server_terminal')
+    expect(result.data).toBeUndefined()
+    expect(execute).toHaveBeenCalledTimes(1)
+  })
+
   it('fails closed if the authoritative order has no recognizable grouped read structure', async () => {
     const result = await createQuotationOrderReadAdapter({
       execute: async () => ({ _id: 'order-synthetic', type: 1, serviceAppointmentId: 'work-order-synthetic', bjProducts: '{}' }),
