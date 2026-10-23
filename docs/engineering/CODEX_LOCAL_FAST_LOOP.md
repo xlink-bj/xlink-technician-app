@@ -1,11 +1,11 @@
 # Codex Local Fast Loop — XLink Technician App
 
-> **Status:** FL-01 working protocol / review candidate. **Owner:** ChatGPT Lead (routing and acceptance); **Executor:** Codex local (runtime, browser, WeChat DevTools, intranet evidence).  
+> **Status:** FL-01 working protocol / review candidate. **Owner / implementer:** ChatGPT Lead (scope, code, available tests, CI and acceptance). **Local-only assistant:** Codex (Mac-only tools, WeChat DevTools, unavailable intranet environments).  
 > **Evidence baseline:** [Issue #209](https://github.com/xlink-bj/xlink-technician-app/issues/209#issuecomment-6360398417), measured on exact `9f02d6fcc3e3e8ab24d825cbf72835fe9f2d8609`, 2026-10-23. **This is not Stage 1 acceptance or Production write approval.**
 
 ## 1. Purpose and invariants
 
-Fast Loop is the shortest **safe and honest** route from a task to evidence: **task → correct runtime → existing fixture/auth mode → focused test/interaction → redacted evidence → Lead decision**.
+Fast Loop is the shortest **safe and honest** route from a task to evidence: **task → correct runtime → existing fixture/auth mode → focused test/interaction → redacted evidence → Lead decision**. **ChatGPT Lead owns and implements code changes and all tests it can execute directly (including GitHub CI); Codex is invoked only for evidence or tooling that cannot be reached from ChatGPT's execution environment.**
 
 - **Reuse the existing uni-app/Vue3/Vite code and tests.** Do not create another browser app, simulated authentication layer, fixture universe, runner, or second command convention.
 - **The whole App matters.** An isolated repeat component passing does not establish Home → List → Detail → Action Workspace. H5 success does not establish WeChat Mini Program (MP) behavior, and simulator success does not establish device UX.
@@ -150,14 +150,15 @@ Two sequential local runs at `9f02d6fc`:
 
 First local boot to visible Login CTA: 1.997s after dependencies were cached; navigation-to-first-paint: 0.914s; warmed same-server reload: 0.182s. These are **not true cold-cache** numbers. Nineteen Mock network evidence artifacts had no reported external attempts/console/page errors; there was **no consistent whole-suite aggregate**, so do not assert global zero.
 
-**Current six main-App failures to diagnose (not ignore):**
-- 2 × `m1-r1-contract-preview.spec.ts` expected “步骤 2/3”, actual “当前阶段 02 / 03”. Verify approved product copy before editing.
-- 4 × `main-app-quotation.spec.ts` timeout waiting for `[data-testid=app-action-content-heading]`. The shared `AppActionContentHeading.vue` still defines this test ID; inspect actual navigation, descriptors, conditional branches and trace/DOM before altering selectors or UX code.
+**Six historical failures: root cause established in [Issue #209 diagnosis](https://github.com/xlink-bj/xlink-technician-app/issues/209#issuecomment-6363493080):**
+- 2 × signing preview: current visual contract shows “当前阶段 02 / 03” while semantic model text remains “步骤 2/3”; browser expectation was stale.
+- 4 × Action Workspace: independent MOCK-016/017 `forms` nodes are correctly rejected by R1's fail-closed guard; the title component must not render there. Treat this as a safety boundary, not a selector issue.
 
-**Next actions:**
-1. Codex local: focused, redacted trace/DOM diagnosis of the 4 missing-heading failures; verify canonical copy behind the other 2. Avoid repeated full ~250s runs until root cause fixed.
-2. Lead: independently review diagnosis, approve a scoped correction and tests. Re-run exact affected tests, then a full Mock suite before lifting its FAIL gate.
-3. Consider consistent machine-readable first-paint, network and console aggregates **only as a small enhancement to existing Playwright reports**; no second harness.
+**Implementation and verification assignment (2026-10-23):**
+1. **ChatGPT Lead** directly owns [Draft PR #211](https://github.com/xlink-bj/xlink-technician-app/pull/211): positive headings/mobile layout through DEV-only MOCK-019, explicit blocked assertions for MOCK-016/017, corrected scenario copy and signing visual assertions. R1 guards and live business behavior stay unchanged.
+2. **ChatGPT Lead** verifies its work using CI, including the path-triggered **Main H5 Mock Baseline** workflow for Draft PR changes. A green quick/typecheck gate alone is not proof of the whole Mock suite; check the exact full-suite pass/fail/skip result before updating the H5 Mock gate.
+3. **Codex local** is reserved for Mac/WeChat DevTools, physical-device capture or authorized intranet evidence not available to ChatGPT. Do not independently assign Codex code repairs that ChatGPT can carry out.
+4. Consider consistent machine-readable first-paint, network and console aggregates **only as a small enhancement to existing Playwright reports**; no second harness.
 
 **Unresolved:** H5 real Auth+Mock CORS/login timings, opt-in `MOCK-021` main-App coverage, physical-device UX. Existing `#205` remains Draft; Stage 1 FAIL; no merge/deploy or Production business write authorized.
 
