@@ -58,6 +58,9 @@ export function mediaTaskMatchesDynamicForm(
   descriptor: ActionDescriptor,
   form: DynamicFormRead,
 ): boolean {
+  if (String(task.scope.userId) !== String(descriptor.userId)
+    || String(task.scope.workOrderId) !== String(descriptor.workOrderId)
+    || String(task.scope.workflowNodeId) !== String(descriptor.workflowNodeId)) return false
   const taskDefinitionId = task.scope.formDefinitionId
   const currentDefinitionId = descriptor.contentIdentity ?? form.definitionId
   if (!taskDefinitionId || !currentDefinitionId) return false
@@ -106,6 +109,7 @@ export function draftRecordFor(
     actionIntent: rawIdentity.actionIntent as ActionDraftIdentity['actionIntent'],
     contentKind: rawIdentity.contentKind as ActionDraftIdentity['contentKind'],
     ...(typeof rawIdentity.contentIdentity === 'string' ? { contentIdentity: rawIdentity.contentIdentity } : {}),
+    ...(typeof rawIdentity.roleId === 'string' ? { roleId: rawIdentity.roleId as ActionDraftIdentity['roleId'] } : {}),
   }
   if (!actionDraftIdentityMatches(storedIdentity, identity)) return null
 
@@ -158,6 +162,7 @@ export function dynamicDraftRecordFor(
     actionIntent: rawIdentity.actionIntent as ActionDraftIdentity['actionIntent'],
     contentKind: rawIdentity.contentKind as ActionDraftIdentity['contentKind'],
     ...(typeof rawIdentity.contentIdentity === 'string' ? { contentIdentity: rawIdentity.contentIdentity } : {}),
+    ...(typeof rawIdentity.roleId === 'string' ? { roleId: rawIdentity.roleId as ActionDraftIdentity['roleId'] } : {}),
   }
   if (!actionDraftIdentityMatches(storedIdentity, identity)) return null
 

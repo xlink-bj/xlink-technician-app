@@ -396,6 +396,7 @@ describe('G4-E Survey dynamic Action Content', () => {
 
   it('addresses repeated Survey rows by fieldId while storing the shared valueKey', async () => {
     const form: DynamicFormRead = {
+      definitionId: formDefinitionId,
       fields: [
         { fieldId: 'survey-length-row-001', valueKey: 'length', label: '长度（结构）', type: 'digit', required: false, readOnly: false },
         { fieldId: 'survey-length-row-002', valueKey: 'length', label: '长度（局部）', type: 'digit', required: false, readOnly: false },

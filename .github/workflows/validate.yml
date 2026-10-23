@@ -59,7 +59,13 @@ jobs:
             tests/g4f/quotation-order-signing-read-boundary.test.ts \
             tests/g4f/quotation-local-review-closure.test.ts \
             tests/ds03/transaction-visual-contract.test.ts \
-            tests/ds05/mobile-craft-two-page.test.ts
+            tests/ds05/mobile-craft-two-page.test.ts \
+            tests/engineering/r1-action-workspace-foundation.test.ts \
+            tests/engineering/eq07-command-state-consistency.test.ts \
+            tests/g4d/action-workspace.test.ts \
+            tests/g4d/draft-diagnostics.test.ts \
+            tests/g4e/onsite-inspection.test.ts \
+            tests/g4e/survey-leakage-cause.test.ts
   verify:
     # L3: no full suite during Draft; run on Ready PR, main push or manual dispatch.
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
