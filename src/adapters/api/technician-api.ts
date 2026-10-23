@@ -156,6 +156,14 @@ function assertMatchingWireIdentity(
   }
 }
 
+function assertUniqueRuntimeNodeIds(nodes: readonly WorkflowNodeRead[], label: string): void {
+  const ids = new Set<string>()
+  for (const node of nodes) {
+    if (ids.has(String(node.id))) throw new AdapterMappingError(`${label} contains duplicate runtime node identities`)
+    ids.add(String(node.id))
+  }
+}
+
 function serviceDistrictLabel(record: AdapterRecord): string | undefined {
   const rawDistrict = record.district
   const code =
@@ -524,6 +532,12 @@ function workOrderDetail(
   const workflowRunId =
     optionalOpaqueId<'WorkflowRunId'>(record, ['workflowRunId', 'runId']) ??
     (workflow ? optionalOpaqueId<'WorkflowRunId'>(workflow, ['workflowRunId', 'runId', '_id']) : undefined)
+  if (workflowRunId) {
+    assertMatchingWireIdentity(record, ['workflowRunId', 'runId'], String(workflowRunId), 'Work Order workflow run')
+    if (workflow) {
+      assertMatchingWireIdentity(workflow, ['workflowRunId', 'runId', '_id'], String(workflowRunId), 'Work Order nested workflow run')
+    }
+  }
 
   const displayNumber = optionalString(record, ['orderNum'])
   const taskLabel = serviceAppointmentTaskLabel(record, statusLabels)
@@ -534,6 +548,16 @@ function workOrderDetail(
   const distanceText = displayDistance(record)
   const contact = includeContact ? workOrderContact(record) : undefined
   const workflowNodes = rawWorkflowNodes?.map(workflowNode)
+  if (workflowNodes) {
+    assertUniqueRuntimeNodeIds(workflowNodes, 'Work Order detail')
+    if (workflowRunId) {
+      for (const node of workflowNodes) {
+        if (node.runId && String(node.runId) !== String(workflowRunId)) {
+          throw new AdapterMappingError('Work Order detail node belongs to a different workflow run')
+        }
+      }
+    }
+  }
   const catalogContext = quotationCatalogContext(record, id)
 
   return {
@@ -717,6 +741,20 @@ function workflowNodeReadOnlyFieldIds(record: AdapterRecord, nodeDef: AdapterRec
 function workflowNode(raw: unknown): WorkflowNodeRead {
   const record = asRecord(raw, 'workflow node')
   const nodeDef = nestedRecord(record, ['nodeDef'])
+  const id = requiredOpaqueId<'WorkflowNodeRuntimeId'>(record, ['id', '_id', 'workflowNodeId'], 'workflow node id')
+  assertMatchingWireIdentity(record, ['id', '_id', 'workflowNodeId'], String(id), 'Workflow runtime node')
+  const declaredDefinition = optionalString(record, ['definitionId', 'defId'])
+  if (declaredDefinition) {
+    assertMatchingWireIdentity(record, ['definitionId', 'defId'], declaredDefinition, 'Workflow node definition')
+  }
+  const declaredFormData = optionalString(record, ['formDataId', 'dataId'])
+  if (declaredFormData) {
+    assertMatchingWireIdentity(record, ['formDataId', 'dataId'], declaredFormData, 'Workflow node FormData')
+  }
+  const declaredFormDefinition = optionalString(nodeDef ?? {}, ['formDefId', 'formDefinitionId'])
+  if (declaredFormDefinition) {
+    assertMatchingWireIdentity(nodeDef ?? {}, ['formDefId', 'formDefinitionId'], declaredFormDefinition, 'Workflow node form definition')
+  }
   const definitionId = optionalOpaqueId<'WorkflowDefinitionId'>(record, ['definitionId', 'defId'])
   const runId = optionalOpaqueId<'WorkflowRunId'>(record, ['runId', 'workflowRunId', 'workflowId'])
   const parentNodeId = optionalOpaqueId<'WorkflowNodeRuntimeId'>(record, [
@@ -746,7 +784,7 @@ function workflowNode(raw: unknown): WorkflowNodeRead {
   const formList = readR1NodeFormList(record, sourceNodeType)
 
   return {
-    id: requiredOpaqueId<'WorkflowNodeRuntimeId'>(record, ['id', '_id', 'workflowNodeId'], 'workflow node id'),
+    id,
     category: workflowNodeCategory(nodeDef),
     ...(sourceNodeType ? { sourceNodeType } : {}),
     ...(addFormCodeId ? { addFormCodeId } : {}),
@@ -1003,6 +1041,18 @@ function formDefinition(raw: unknown, requestedId: FormDefinitionId): FormDefini
   const fieldRows = Array.isArray(envelope.data) ? envelope.data : undefined
   const first = fieldRows ? optionalRecord(fieldRows[0]) : undefined
   const record = nestedRecord(envelope, ['entity', 'definition']) ?? first
+  if (fieldRows) {
+    // `extField.query` returns FIELD rows: their `_id` identifies a field row,
+    // but their `extId`, when present, identifies the FormDefinition.
+    for (const field of fieldRows) {
+      const row = optionalRecord(field)
+      if (row) {
+        assertMatchingWireIdentity(row, ['extId', 'formDefId', 'definitionId'], String(requestedId), 'Form field definition')
+      }
+    }
+  } else {
+    assertMatchingWireIdentity(record ?? envelope, ['id', '_id', 'extId', 'definitionId', 'formDefId'], String(requestedId), 'Form definition')
+  }
   const id = fieldRows
     ? requestedId
     : record
@@ -1016,6 +1066,13 @@ function formDefinition(raw: unknown, requestedId: FormDefinitionId): FormDefini
   const fields = rawFields
     .map((field, index) => formField(field, index))
     .filter((value): value is FormFieldRead => Boolean(value))
+  const fieldRowIds = new Set<string>()
+  for (const field of fields) {
+    if (fieldRowIds.has(field.fieldId)) {
+      throw new AdapterMappingError('Form definition contains duplicate field-row identities')
+    }
+    fieldRowIds.add(field.fieldId)
+  }
   const purpose = fieldRows
     // `colName` is the Ext identity on field rows. Do not interpret an
     // arbitrary field-level `purpose` value as the form's semantic identity;
@@ -1568,13 +1625,16 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
         if (this.authorizedChildWorkflowParentIds.size >= 100) break
         if (node.category === 'subworkflow'
           && ['subflows', 'subflow', 'subworkflow'].includes(node.sourceNodeType ?? '')
-          && (!node.runId || !result.data.workflowRunId
-            || String(node.runId) === String(result.data.workflowRunId))) {
+          && node.runId && result.data.workflowRunId
+          && String(node.runId) === String(result.data.workflowRunId)) {
           this.authorizedChildWorkflowParentIds.add(String(node.id))
         }
       }
       for (const node of result.data.workflowNodes ?? []) {
-        this.rememberRepeatFormContext(node)
+        if (node.runId && result.data.workflowRunId
+          && String(node.runId) === String(result.data.workflowRunId)) {
+          this.rememberRepeatFormContext(node)
+        }
       }
     }
     return result
@@ -1639,11 +1699,13 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
       { method: 'POST', path: `workflow/queryNode/${encodeURIComponent(runId)}` },
       (raw) => {
         const items = workflowResponseRows(raw, 'workflow node response')
-        return items.map((rawNode) => {
+        const nodes = items.map((rawNode) => {
           const node = asRecord(rawNode, 'workflow node')
           assertMatchingWireIdentity(node, ['runId', 'workflowRunId', 'workflowId'], String(runId), 'Workflow node run')
           return workflowNode({ ...node, workflowId: runId })
         })
+        assertUniqueRuntimeNodeIds(nodes, 'Workflow node response')
+        return nodes
       },
     )
   }
@@ -1665,7 +1727,7 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
       },
       (raw) => {
         const items = workflowResponseRows(raw, 'child workflow response')
-        return items.flatMap((rawWorkflow) => {
+        const nodes = items.flatMap((rawWorkflow) => {
           // R1 WorkflowService.queryByParentWorkflowNodeId returns Workflow[];
           // each workflow carries its own runtime _id and workflowNodeList.
           // Flatten *nodes*, not Workflow objects masquerading as nodes.
@@ -1697,6 +1759,8 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
             return workflowNode({ ...node, workflowId: workflowRunId })
           })
         })
+        assertUniqueRuntimeNodeIds(nodes, 'Child workflow response')
+        return nodes
       },
     )
     if (productionReadOnly && (this.synchronizeReadScope() !== scopeAtStart
