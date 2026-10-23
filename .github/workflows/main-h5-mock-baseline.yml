@@ -1,0 +1,45 @@
+name: Main H5 Mock Baseline
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
+    paths:
+      - 'tests/h5-main-mock/**'
+      - 'src/app/action-workspace-harness.ts'
+      - 'playwright.main-h5-mock.config.ts'
+      - '.github/workflows/main-h5-mock-baseline.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  main-h5-mock:
+    # Run the actual application H5 browser suite on relevant Draft changes.
+    # Tests use DEV-only synthetic fixtures and abort any external request.
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Verify full real main App H5 Mock browser baseline
+        run: pnpm run test:main-h5-mock
+      - name: Preserve synthetic-only Mock QA report, traces and screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: main-h5-mock-baseline-${{ github.run_id }}
+          path: test-results/main-h5-mock/
+          if-no-files-found: warn
+          retention-days: 7
