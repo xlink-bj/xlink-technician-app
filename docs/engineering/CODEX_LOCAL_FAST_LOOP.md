@@ -63,7 +63,7 @@ Run from the recorded worktree; use the repository's installed/pinned package to
 
 **Known optional scenario:** Main-App `MOCK-019` continuous journey uses `mock-continuous-journey-entry`. The `MOCK-021` R1 repeat main-App case in `tests/h5-main-mock/r1-repeat-read.spec.ts` requires explicit `VITE_XLINK_R1_MP_UX_FIXTURES=true` and is skipped by default; never silently count that skip as covered.
 
-Playwright configs: `playwright.main-h5-bootstrap.config.ts`, `playwright.main-h5-mock.config.ts`, `playwright.r1-main-repeat-ui.config.ts`. Outputs: their own `test-results/` screenshots/traces/JSON/HTML. Keep real-client screenshots and identifiers in local, access-controlled evidence; only post sanitized summaries.
+Playwright configs: `playwright.main-h5-bootstrap.config.ts`, `playwright.main-h5-mock.config.ts`, `playwright.r1-main-repeat-ui.config.ts`. **Reporters differ by lane:** main-App Mock config produces JSON + HTML reports; the isolated repeat harness has an HTML reporter; main-App boot uses the list reporter. Screenshots, trace archives and other attachments depend on each test and its retry/failure settings, so verify the actual output path from that run instead of assuming identical artifacts across all three. Keep real-client screenshots and identifiers in local, access-controlled evidence; only post sanitized summaries.
 
 ## 5. Login and data modes — never conflate
 
