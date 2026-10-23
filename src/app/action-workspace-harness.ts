@@ -83,25 +83,25 @@ export const mockActionWorkspaceScenarios: readonly MockActionWorkspaceScenario[
   {
     key: 'fresh',
     label: '全新预约',
-    description: '空白表单，可体验必填校验与成功提交',
+    description: 'R1 表单节点受限，当前不可提交；可从 MOCK-019 进入本机合成预约预览',
     route: routeFor(mockCommandScenarioIds.appointmentSuccess, '016'),
   },
   {
     key: 'retryable',
     label: '可重试失败',
-    description: '提交失败后保留输入，可再次提交',
+    description: 'R1 表单节点受限，当前不可执行提交或重试',
     route: routeFor(mockCommandScenarioIds.appointmentRetryable, '014'),
   },
   {
     key: 'terminal',
     label: '终止失败',
-    description: '终止失败后保留可恢复输入',
+    description: 'R1 表单节点受限，当前不可执行提交或恢复',
     route: routeFor(mockCommandScenarioIds.appointmentTerminal, '015'),
   },
   {
     key: 'survey',
     label: '现场勘查',
-    description: '动态表单、照片上传、保存和完成',
+    description: 'R1 表单节点受限，当前不可保存；可从 MOCK-019 进入本机合成勘查预览',
     route: surveyRoute,
   },
   {
