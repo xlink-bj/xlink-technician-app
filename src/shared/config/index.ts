@@ -15,6 +15,15 @@ export type {
   TargetPlatform,
 } from './environment'
 export {
+  apiHostForSafetyCheck,
+  isProductionApiHost,
+  isProductionReadOnlyReadAllowed,
+  isProductionReadOnlyRuntime,
+  isProductionReadOnlyTarget,
+  isProductionRoleMutationPath,
+  normalizedApiRoute,
+} from './production-read-only'
+export {
   getActiveCompatibilityEntry,
   isCompatibilityEntryActive,
   validateCompatibilityEntry,

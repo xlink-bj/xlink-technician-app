@@ -36,8 +36,20 @@ describe('G4-UX production Login flow', () => {
       VITE_XLINK_ENVIRONMENT: 'prod',
       VITE_XLINK_QUICK_LOGIN_PHONE: 'test-phone',
     })).toBeNull()
+    expect(resolveQuickLoginInput({
+      VITE_XLINK_ENVIRONMENT: 'prod',
+      VITE_XLINK_LOCAL_DEV: 'true',
+      VITE_XLINK_QUICK_LOGIN_PHONE: 'production-phone',
+      VITE_XLINK_QUICK_LOGIN_CODE: 'configured-production-code',
+    })).toEqual({ phoneNumber: 'production-phone', verificationCode: 'configured-production-code' })
+    expect(resolveQuickLoginInput({
+      VITE_XLINK_ENVIRONMENT: 'prod',
+      VITE_XLINK_LOCAL_DEV: 'true',
+      VITE_XLINK_QUICK_LOGIN_PHONE: 'production-phone',
+    })).toEqual({ phoneNumber: 'production-phone', verificationCode: '999999' })
     expect(loginPage).toContain('@tap="quickLogin"')
     expect(loginPage).toContain('一键使用测试账号登录')
+    expect(loginPage).toContain('本机生产账号，业务数据只读')
     expect(loginPage).not.toContain('18600372156')
   })
 
@@ -57,8 +69,15 @@ describe('G4-UX production Login flow', () => {
     expect(loginPage).toContain('class="code-button" disabled')
   })
 
-  it('mounts the application root so mini-program page VMs receive events', () => {
-    expect(appEntry).toMatch(/const application = createApplication\(\)\s+application\.app\.mount\('#app'\)/)
+  it('registers MP App before page attachment and keeps H5 root bootstrap independent', () => {
+    expect(appEntry).toMatch(/function createTechnicianApplication\(\)\s*\{[\s\S]*?const application = createApplication\(\)/)
+    expect(appEntry).toContain('export { createTechnicianApplication as createApp }')
+    expect(appEntry).toMatch(/\/\/ #ifdef MP-WEIXIN\s+application\.app\.mount\('#app'\)\s+mountedMiniProgram = application\s+\/\/ #endif/)
+    expect(appEntry).toMatch(/\/\/ #ifdef MP-WEIXIN\s+createTechnicianApplication\(\)\s+\/\/ #endif/)
     expect(appEntry).toContain('return application')
+    expect(appEntry).toContain('application.app.use(__plugin)')
+    expect(appEntry).toMatch(/\/\/ #ifdef H5\s+[^]*?import\('@app\/bootstrap'\)\.then\([\s\S]*?application\.app\.mount\('#app'\)\s+\}\)\s+\/\/ #endif/)
+    // The H5 entry must not eagerly mount a second root on module import.
+    expect(appEntry).not.toMatch(/\nconst application = createApplication\(\)/)
   })
 })

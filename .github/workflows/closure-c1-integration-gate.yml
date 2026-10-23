@@ -1,0 +1,87 @@
+name: Closure C1 — Unified Engineering Candidate (OFFLINE / NO release)
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - '.github/workflows/closure-c1-integration-gate.yml'
+      - 'docs/engineering/CLOSURE_C1_INTEGRATION_DECISION.md'
+      - 'scripts/check-closure-c1-integration.mjs'
+      - 'tests/engineering/closure-c1-integration.test.ts'
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  integrated-contract-and-cross-platform:
+    if: github.event.pull_request.draft == true && github.event.pull_request.head.ref == 'engineering/closure-c1-integrated-candidate'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      VITE_XLINK_ENVIRONMENT: test
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Exact head, real ancestry and no application/golden changes
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          node scripts/check-closure-c1-integration.mjs --self-test
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: All independent R1 and EQ07-EQ10 high-risk contracts
+        run: |
+          pnpm exec vitest run \
+            tests/engineering/closure-c1-integration.test.ts \
+            tests/engineering/r1-manual-login-consent.test.ts \
+            tests/engineering/r1-appointment-wire-unification.test.ts \
+            tests/engineering/r1-appointment-conditional-runtime.test.ts \
+            tests/engineering/eq07-command-state-consistency.test.ts \
+            tests/engineering/eq08-action-architecture.test.ts \
+            tests/engineering/r1-catalog-price-identity-fence.test.ts \
+            tests/g4f/p0-role-order-tenant-negative.test.ts \
+            tests/g4f/quotation-order-submission.test.ts \
+            tests/engineering/eq10-governance.test.ts
+      - name: Mandatory critical behavior suites and architecture audit
+        run: pnpm verify:critical && pnpm check:engineering-ownership
+      - name: Canonical full suite, typecheck and static quality census
+        run: pnpm verify:full
+      - name: Original H5, WeChat Mini Program and native App bundles
+        run: pnpm build:h5 && pnpm build:mp-weixin && pnpm build:app
+  integrated-mock-and-approved-goldens:
+    if: github.event.pull_request.draft == true && github.event.pull_request.head.ref == 'engineering/closure-c1-integrated-candidate'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    env:
+      VITE_XLINK_ENVIRONMENT: test
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+      H5_VISUAL_OWNER_APPROVAL: 'PENDING'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: |
+          pnpm exec playwright install --with-deps chromium
+          sudo apt-get update -qq
+          sudo apt-get install -y fonts-noto-cjk
+      - name: H5 six-stage Mock user path without Production/Beta writes
+        run: pnpm exec playwright test --config playwright.main-h5-mock.config.ts tests/h5-main-mock/m1-i7-six-stage-integration.spec.ts
+      - name: Unchanged approved Gallery Golden
+        run: pnpm test:ds02a:gallery
+      - name: Unchanged approved Business Golden
+        run: pnpm test:ds02a:business

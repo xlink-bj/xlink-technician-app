@@ -1,0 +1,277 @@
+{
+  "schemaVersion": 1,
+  "environment": "beta",
+  "contractKind": "inspection-form",
+  "captureStatus": "verified_read_only_observation",
+  "capturedAt": "2026-09-17",
+  "source": {
+    "authority": "authenticated_beta_read",
+    "productionParity": "unknown",
+    "r1": "historical_wire_and_runtime_reference",
+    "r2": "presentation_reference_only"
+  },
+  "form": {
+    "id": "inspection-form-definition",
+    "fieldCount": 15
+  },
+  "workflowContextShape": {
+    "activeNode": true,
+    "nodeCategory": "forms",
+    "formDefinitionId": "inspection-form-definition",
+    "workflowRunId": "workflow-run",
+    "formDataId": "optional",
+    "formFieldIdsReadOnly": "optional"
+  },
+  "fields": [
+    {
+      "identity": "field-001",
+      "order": 1,
+      "key": "part",
+      "label": "部位",
+      "type": "cascade",
+      "required": true,
+      "readOnly": false,
+      "multiple": false,
+      "state": 1,
+      "valueOption": "parts",
+      "visibility": { "showType": "1" }
+    },
+    {
+      "identity": "field-002",
+      "order": 2,
+      "key": "village",
+      "label": "小区名称",
+      "type": "text",
+      "required": true,
+      "readOnly": false,
+      "multiple": false,
+      "state": 1,
+      "visibility": { "showType": "3", "showField": "part", "showFieldPreset": 1, "showValue": [] }
+    },
+    {
+      "identity": "field-003",
+      "order": 3,
+      "key": "length",
+      "label": "长",
+      "type": "digit",
+      "required": true,
+      "readOnly": false,
+      "multiple": false,
+      "state": 1,
+      "visibility": { "showType": "3", "showField": "part", "showFieldPreset": 1, "showValue": [["repair-part-code-001"], ["repair-part-code-002"]] }
+    },
+    {
+      "identity": "field-004",
+      "order": 4,
+      "key": "width",
+      "label": "宽",
+      "type": "digit",
+      "required": true,
+      "readOnly": false,
+      "multiple": false,
+      "state": 1,
+      "visibility": { "showType": "3", "showField": "part", "showFieldPreset": 1, "showValue": [["repair-part-code-001"], ["repair-part-code-002"]] }
+    },
+    {
+      "identity": "field-005",
+      "order": 5,
+      "key": "planeArea",
+      "label": "平面面积（㎡）",
+      "type": "digit",
+      "required": true,
+      "readOnly": false,
+      "multiple": false,
+      "state": 1,
+      "visibility": { "showType": "3", "showField": "part", "showFieldPreset": 1, "showValue": [["repair-part-code-001"], ["repair-part-code-002"]] }
+    },
+    {
+      "identity": "field-006",
+      "order": 6,
+      "key": "inspectionSOP",
+      "label": "巡检SOP",
+      "type": "request",
+      "required": false,
+      "readOnly": false,
+      "multiple": false,
+      "state": 1,
+      "frontEndConfig": { "componentType": "observed" }
+    },
+    {
+      "identity": "field-007",
+      "order": 7,
+      "key": "inspectionContent",
+      "label": "巡检内容",
+      "type": "select",
+      "required": false,
+      "readOnly": false,
+      "multiple": true,
+      "state": 1
+    },
+    {
+      "identity": "field-008",
+      "order": 8,
+      "key": "requirement",
+      "label": "质量要求",
+      "type": "text",
+      "required": false,
+      "readOnly": false,
+      "multiple": false,
+      "state": 1
+    },
+    {
+      "identity": "field-009",
+      "order": 9,
+      "key": "isQualified",
+      "label": "是否合格",
+      "type": "select",
+      "required": false,
+      "readOnly": false,
+      "multiple": false,
+      "state": 1,
+      "valueOption": "qualified"
+    },
+    {
+      "identity": "field-010",
+      "order": 10,
+      "key": "reason",
+      "label": "不合格原因",
+      "type": "text",
+      "required": false,
+      "readOnly": false,
+      "multiple": false,
+      "state": 1,
+      "visibility": { "showType": "3", "showField": "isQualified", "showFieldPreset": 1, "showValue": "0" }
+    },
+    {
+      "identity": "field-011",
+      "order": 11,
+      "key": "otherReason",
+      "label": "其他原因",
+      "type": "text",
+      "required": false,
+      "readOnly": false,
+      "multiple": false,
+      "state": 1
+    },
+    {
+      "identity": "field-012",
+      "order": 12,
+      "key": "serviceGoods",
+      "label": "套餐名称",
+      "type": "bizSelect",
+      "required": true,
+      "readOnly": false,
+      "multiple": true,
+      "state": 1,
+      "valueOption": "projPackage",
+      "frontEndConfig": { "componentType": "observed" }
+    },
+    {
+      "identity": "field-013",
+      "order": 13,
+      "key": "suggest",
+      "label": "巡检建议",
+      "type": "text",
+      "required": true,
+      "readOnly": false,
+      "multiple": false,
+      "state": 1
+    },
+    {
+      "identity": "field-014",
+      "order": 14,
+      "key": "surveyDrawing",
+      "label": "测绘图",
+      "type": "file",
+      "required": true,
+      "readOnly": false,
+      "multiple": false,
+      "state": 1,
+      "visibility": { "showType": "3", "showField": "part", "showFieldPreset": 1, "showValue": [["repair-part-code-001"], ["repair-part-code-002"], ["repair-part-code-003"]] },
+      "frontEndConfig": { "max": 1, "surveyTool": true }
+    },
+    {
+      "identity": "field-015",
+      "order": 15,
+      "key": "reformDate",
+      "label": "不合格整改日期",
+      "type": "date",
+      "required": false,
+      "readOnly": false,
+      "multiple": false,
+      "state": 1
+    }
+  ],
+  "providers": [
+    {
+      "id": "parts",
+      "kind": "r1_multistage_code",
+      "verification": "VERIFIED",
+      "endpoint": "i/code/selectMultistageCode.do",
+      "requestKeys": ["types", "tenantId"],
+      "responseShape": { "kind": "grouped_cascade", "groupKey": "type", "childrenKey": "children", "valueKey": "value", "labelKey": "name" },
+      "options": [
+        { "value": "repair-part-code-001", "label": "屋面" },
+        { "value": "repair-part-code-002", "label": "外墙" },
+        { "value": "repair-part-code-003", "label": "卫生间" }
+      ]
+    },
+    {
+      "id": "qualified",
+      "kind": "r1_batch_code",
+      "verification": "VERIFIED",
+      "endpoint": "i/code/selectCode.do",
+      "requestKeys": ["jsonPara", "tenantId"],
+      "responseShape": { "kind": "element_options", "elementKey": "eleid", "optionsKey": "options" },
+      "options": [
+        { "value": "0", "label": "不合格" },
+        { "value": "1", "label": "合格" }
+      ]
+    },
+    {
+      "id": "projPackage",
+      "kind": "business_record",
+      "verification": "UNKNOWN",
+      "endpoint": "biz/projPackage/queryWithRank",
+      "requestKeys": ["_all", "is:state|integer#and", "in:serviceType|array#and", "sourceType", "sortField", "sortOrder"],
+      "responseShape": { "kind": "business_record_options", "valueKey": "_id", "labelKey": "name", "relationshipKey": "exts.repairPart" },
+      "options": []
+    },
+    {
+      "id": "inspectionSOP",
+      "kind": "custom_record",
+      "verification": "UNKNOWN",
+      "endpoint": "biz/extForm/queryByColName/inspectionSOP",
+      "requestKeys": ["_all", "is:state|integer#and", "all:part|array#and", "sortField", "sortOrder"],
+      "responseShape": { "kind": "inspection_sop_records", "partKey": "part", "contentKey": "content", "qualificationKey": "isQualified", "mediaKey": "inspectionImg" },
+      "options": []
+    },
+    {
+      "id": "inspectionContent",
+      "kind": "unknown",
+      "verification": "UNKNOWN",
+      "endpoint": "unknown",
+      "requestKeys": [],
+      "responseShape": { "kind": "unknown" },
+      "options": [],
+      "reason": "multi_value_provider_not_observed"
+    }
+  ],
+  "formDataShape": {
+    "observed": true,
+    "recordCount": 1,
+    "recordId": "opaque_sanitized_alias",
+    "definitionRelation": "form_definition_id_matches_requested",
+    "workflowRelation": "workflow_run_id_optional",
+    "rootValueKeys": ["part", "village", "length", "width", "planeArea", "inspectionSOPData", "inspectionContent", "requirement", "isQualified", "reason", "otherReason", "serviceGoods", "suggest", "surveyDrawing", "reformDate"],
+    "valueShapes": {
+      "part": "array",
+      "inspectionSOPData": "array",
+      "inspectionContent": "array",
+      "serviceGoods": "array",
+      "surveyDrawing": "array"
+    },
+    "extensionsContainer": "exts"
+  },
+  "fingerprint": "c106d2fdb93d368bd243223943864df6130946cc799c408a73670330840b624a"
+}

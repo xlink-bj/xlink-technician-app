@@ -8,118 +8,60 @@
 
   <view v-else class="work-orders-page">
     <view class="list-shell">
-      <view class="search-band">
-        <view class="search-input-shell">
-          <AppIcon class="search-icon" name="search" :size="17" color="#71829e" aria-hidden="true" />
-          <input
-            v-model="searchDraft"
-            class="search-input"
-            placeholder="搜索任务、客户、地址"
-            placeholder-class="search-placeholder"
-            confirm-type="search"
-            :disabled="isLoading"
-            @confirm="submitSearch"
-          />
-        </view>
-        <button class="search-button" :disabled="isLoading" @tap="submitSearch">
-          搜索
-        </button>
-      </view>
+      <AppStatus
+        v-if="productionReadOnly"
+        class="production-read-only-notice"
+        message="生产数据只读：可查看当前账号有权限的工单；接单、联系客户和业务修改已关闭。"
+        tone="warning"
+        quiet
+        data-testid="production-read-only-notice"
+      />
+      <AppSearchBar
+        v-model="searchDraft"
+        placeholder="搜索任务、客户、地址"
+        :disabled="isLoading"
+        @search="submitSearch"
+      />
 
-      <view v-if="showLoadingSkeleton" class="list-state loading-state" aria-label="正在加载工单">
-        <view class="skeleton-list" aria-hidden="true">
-          <view class="skeleton-card">
-            <view class="skeleton-accent" />
-            <view class="skeleton-card-main">
-              <view class="skeleton-card-top">
-                <view class="skeleton-mark" />
-                <view class="skeleton-copy"><view class="skeleton-line skeleton-line-main" /><view class="skeleton-line skeleton-line-part" /></view>
-                <view class="skeleton-line skeleton-line-number" />
-              </view>
-              <view class="skeleton-line skeleton-line-location" />
-              <view class="skeleton-line skeleton-line-customer" />
-              <view class="skeleton-card-footer"><view class="skeleton-line skeleton-line-chip" /><view class="skeleton-phone" /></view>
-            </view>
-          </view>
-          <view class="skeleton-card">
-            <view class="skeleton-accent" />
-            <view class="skeleton-card-main">
-              <view class="skeleton-card-top">
-                <view class="skeleton-mark" />
-                <view class="skeleton-copy"><view class="skeleton-line skeleton-line-main" /><view class="skeleton-line skeleton-line-part" /></view>
-                <view class="skeleton-line skeleton-line-number" />
-              </view>
-              <view class="skeleton-line skeleton-line-location" />
-              <view class="skeleton-line skeleton-line-customer" />
-              <view class="skeleton-card-footer"><view class="skeleton-line skeleton-line-chip" /><view class="skeleton-phone" /></view>
-            </view>
-          </view>
-          <view class="skeleton-card">
-            <view class="skeleton-accent" />
-            <view class="skeleton-card-main">
-              <view class="skeleton-card-top">
-                <view class="skeleton-mark" />
-                <view class="skeleton-copy"><view class="skeleton-line skeleton-line-main" /><view class="skeleton-line skeleton-line-part" /></view>
-                <view class="skeleton-line skeleton-line-number" />
-              </view>
-              <view class="skeleton-line skeleton-line-location" />
-              <view class="skeleton-line skeleton-line-customer" />
-              <view class="skeleton-card-footer"><view class="skeleton-line skeleton-line-chip" /><view class="skeleton-phone" /></view>
-            </view>
-          </view>
-        </view>
-      </view>
+      <AppWorkOrderSkeleton v-if="showLoadingSkeleton" variant="list" />
 
-      <view v-else-if="workOrders.loadState === 'failed_retryable'" class="list-state error-state">
-        <view class="state-icon state-icon-error" aria-hidden="true">!</view>
-        <text class="state-title">暂时无法加载工单</text>
-        <text class="state-detail">请检查网络后重试。</text>
-        <button class="state-action" @tap="retry">重新加载</button>
-      </view>
+      <AppFeedbackState
+        v-else-if="workOrders.loadState === 'failed_retryable'"
+        layout="list"
+        appearance="error"
+        title="暂时无法加载工单"
+        description="请检查网络后重试。"
+        action-label="重新加载"
+        @action="retry"
+      />
+      <AppFeedbackState
+        v-else-if="workOrders.loadState === 'failed_terminal'"
+        layout="list"
+        appearance="error"
+        title="工单加载失败"
+        description="请稍后再试。"
+        action-label="再次尝试"
+        @action="retry"
+      />
+      <AppFeedbackState
+        v-else-if="workOrders.loadState === 'succeeded' && workOrders.items.length === 0 && workOrders.searchText"
+        layout="list"
+        appearance="search-empty"
+        title="没有找到匹配工单"
+        description="请尝试其他任务、客户或地址。"
+        action-label="清除搜索"
+        @action="clearSearch"
+      />
 
-      <view v-else-if="workOrders.loadState === 'failed_terminal'" class="list-state error-state">
-        <view class="state-icon state-icon-error" aria-hidden="true">!</view>
-        <text class="state-title">工单加载失败</text>
-        <text class="state-detail">请稍后再试。</text>
-        <button class="state-action" @tap="retry">再次尝试</button>
-      </view>
-
-      <view v-else-if="workOrders.loadState === 'succeeded' && workOrders.items.length === 0 && workOrders.searchText" class="list-state search-empty-state">
-        <view class="state-illustration state-illustration-search" aria-hidden="true">
-          <view class="illustration-ring" />
-          <view class="illustration-handle" />
-        </view>
-        <text class="state-title">没有找到匹配工单</text>
-        <text class="state-detail">请尝试其他任务、客户或地址。</text>
-        <button class="state-action" @tap="clearSearch">清除搜索</button>
-      </view>
-
-      <view v-else-if="workOrders.loadState === 'succeeded' && workOrders.items.length === 0" class="list-state empty-state">
-        <view class="empty-state-card">
-          <view class="empty-illustration" aria-hidden="true">
-            <view class="empty-illustration-shadow" />
-            <view class="empty-illustration-spark empty-illustration-spark-left" />
-            <view class="empty-illustration-spark empty-illustration-spark-right" />
-            <view class="empty-clipboard">
-              <view class="empty-clipboard-sheet">
-                <view class="empty-clipboard-line empty-clipboard-line-long" />
-                <view class="empty-clipboard-line empty-clipboard-line-medium" />
-                <view class="empty-clipboard-line empty-clipboard-line-short" />
-              </view>
-              <view class="empty-clipboard-clip"><view class="empty-clipboard-clip-hole" /></view>
-              <view class="empty-clipboard-badge"><view class="empty-clipboard-minus" /></view>
-            </view>
-          </view>
-          <text class="empty-state-title">当前暂无工单</text>
-          <text class="empty-state-detail">当前角色暂时没有可处理的工单，可稍后刷新再试。</text>
-          <button class="empty-state-action" @tap="refresh">
-            <AppIcon name="refresh" :size="18" color="#ffffff" aria-hidden="true" />
-            <text>刷新工单</text>
-          </button>
-        </view>
-      </view>
+      <AppWorkOrderEmptyState
+        v-else-if="workOrders.loadState === 'succeeded' && workOrders.items.length === 0"
+        @action="refresh"
+      />
 
       <view v-else-if="workOrders.loadState === 'succeeded' || isRefreshing" class="list-content">
+        <AppSectionHeading class="list-section-heading" title="当前工单" subtitle="按当前账号权限展示" data-testid="ds02b-list-heading">
+          <template #trailing><text v-if="workOrders.loadState === 'succeeded'" class="list-loaded-count">已加载 {{ workOrders.items.length }} 条</text></template>
+        </AppSectionHeading>
         <view v-if="isRefreshing" class="inline-refresh" aria-label="正在刷新工单">
           <view class="inline-refresh-indicator" />
         </view>
@@ -130,29 +72,18 @@
           hover-class="work-order-card-hover"
           :url="listActionFor(item).detailAccessible ? workOrderDetailRouteFor(item.id) : ''"
         >
-          <view
-            class="card-accent"
-            :class="`card-accent--${workOrderCardToneFor(item.taskLabel)}`"
-            aria-hidden="true"
-          />
+          <AppRecordCard class="work-order-card-surface" layout="horizontal" :tone="workOrderCardToneFor(item.taskLabel)" accent interactive data-testid="ds02b-work-order-card-surface">
           <view class="card-main">
             <view class="card-top-row">
-              <view
-                class="card-mark"
-                :class="`card-mark--${workOrderCardToneFor(item.taskLabel)}`"
-                aria-hidden="true"
-              >
-                <AppIcon
-                  :name="workOrderCardIconFor(item.taskLabel)"
-                  :size="19"
-                  :color="workOrderCardIconColorFor(item.taskLabel)"
-                  aria-hidden="true"
-                />
-              </view>
+              <AppRecordMark
+                :icon="workOrderCardIconFor(item.taskLabel)"
+                :size="19"
+                :color="workOrderCardIconColorFor(item.taskLabel)"
+              />
               <view class="card-title-cluster">
                 <view class="card-title-line">
                   <text v-if="item.taskLabel" class="card-task">{{ item.taskLabel }}</text>
-                  <text v-if="item.servicePartLabel" class="card-part-badge">{{ item.servicePartLabel }}</text>
+                  <AppMetaTag v-if="item.servicePartLabel" class="card-part-badge" :label="item.servicePartLabel" />
                 </view>
               </view>
               <text v-if="item.displayNumber" class="card-number">{{ cardNumber(item.displayNumber) }}</text>
@@ -173,9 +104,7 @@
                 v-if="item.communityOrderCount !== undefined || listActionFor(item).contactAvailable || listActionFor(item).acceptOrder"
                 class="card-footer"
               >
-                <text v-if="item.communityOrderCount !== undefined" class="nearby-chip">
-                  同小区 {{ item.communityOrderCount }}
-                </text>
+                <AppMetaTag v-if="item.communityOrderCount !== undefined" class="nearby-chip" tone="info" :label="`同小区 ${item.communityOrderCount}`" />
                 <view
                   v-if="listActionFor(item).contactAvailable"
                   class="card-phone-button"
@@ -194,18 +123,19 @@
                     aria-hidden="true"
                   />
                 </view>
-                <button
-                  v-if="listActionFor(item).acceptOrder"
-                  class="card-accept-button"
-                  :class="`card-accept-button--${workOrderCardToneFor(item.taskLabel)}`"
-                  :disabled="workOrders.acceptInFlightId === item.id"
-                  @tap.stop="requestAccept(item)"
-                >
-                  {{ workOrders.acceptInFlightId === item.id ? '接单中' : '接单' }}
-                </button>
+                <view v-if="listActionFor(item).acceptOrder" class="card-accept-control" @tap.stop>
+                  <AppButton
+                    class="card-accept-button"
+                    size="compact"
+                    :loading="workOrders.acceptInFlightId === item.id"
+                    :disabled="workOrders.acceptInFlightId === item.id"
+                    @tap="requestAccept(item)"
+                  >{{ workOrders.acceptInFlightId === item.id ? '接单中' : '接单' }}</AppButton>
+                </view>
               </view>
             </view>
           </view>
+          </AppRecordCard>
         </navigator>
 
         <button v-if="workOrders.hasMore === true" class="state-action load-more" @tap="loadMore">加载更多</button>
@@ -233,14 +163,26 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 
 import { hasAuthenticatedSession } from '@features/home/access'
+import { isProductionReadOnlyRuntime } from '@shared/config'
 import { workOrderCardIconColorFor, workOrderCardIconFor, workOrderCardToneFor } from '@features/work-orders/card'
 import { workOrderDetailRouteFor } from '@features/work-orders/detail'
 import { workOrderListActionFor } from '@features/work-orders/list-actions'
 import { useWorkOrderListStore } from '@features/work-orders/list'
 import type { WorkOrderSummary } from '@shared/ports'
 import { useSessionStore } from '@shared/state'
+import { workOrderReadScopeKey } from '@features/work-orders/read-identity-scope'
 import AppIcon from '@shared/ui/AppIcon.vue'
+import AppButton from '@shared/ui/AppButton.vue'
 import AppLoadingState from '@shared/ui/AppLoadingState.vue'
+import AppStatus from '@shared/ui/AppStatus.vue'
+import AppRecordCard from '@shared/ui/AppRecordCard.vue'
+import AppRecordMark from '@shared/ui/AppRecordMark.vue'
+import AppMetaTag from '@shared/ui/AppMetaTag.vue'
+import AppSectionHeading from '@shared/ui/AppSectionHeading.vue'
+import AppSearchBar from '@shared/ui/AppSearchBar.vue'
+import AppFeedbackState from '@shared/ui/AppFeedbackState.vue'
+import AppWorkOrderSkeleton from '@shared/ui/AppWorkOrderSkeleton.vue'
+import AppWorkOrderEmptyState from '@shared/ui/AppWorkOrderEmptyState.vue'
 import { appLoadingSkeletonDelayMs } from '@shared/ui/loading'
 
 const session = useSessionStore()
@@ -248,6 +190,7 @@ const workOrders = useWorkOrderListStore()
 const acceptCandidate = ref<WorkOrderSummary | null>(null)
 const searchDraft = ref(workOrders.searchText)
 const canAccess = computed(() => hasAuthenticatedSession(session.status, session.session))
+const productionReadOnly = isProductionReadOnlyRuntime()
 const isLoading = computed(() => workOrders.loadState === 'loading')
 const isRefreshing = computed(() => isLoading.value && workOrders.items.length > 0)
 const showLoadingSkeleton = ref(false)
@@ -284,11 +227,19 @@ watch(
 onBeforeUnmount(clearLoadingSkeletonTimer)
 
 watch(
-  () => session.status,
-  (status) => {
-    if (status === 'authenticated') void workOrders.refresh()
+  [() => session.status, () => workOrderReadScopeKey(session.session)],
+  ([status, scope], previous) => {
+    if (status === 'authenticated' && scope
+      && (!previous || previous[0] !== status || previous[1] !== scope)) {
+      acceptCandidate.value = null
+      void workOrders.refresh()
+    }
+    if (status !== 'authenticated' && status !== 'unknown') {
+      acceptCandidate.value = null
+      workOrders.clear()
+    }
   },
-  { immediate: true },
+  { immediate: true, flush: 'sync' },
 )
 
 async function submitSearch(): Promise<void> {
@@ -319,10 +270,14 @@ async function dialContact(item: Parameters<typeof workOrders.dialContact>[0]): 
 }
 
 function listActionFor(item: WorkOrderSummary) {
-  return workOrderListActionFor(item, session.session)
+  const action = workOrderListActionFor(item, session.session)
+  return productionReadOnly
+    ? { detailAccessible: action.detailAccessible, contactAvailable: false }
+    : action
 }
 
 async function requestAccept(item: WorkOrderSummary): Promise<void> {
+  if (productionReadOnly) return
   const action = listActionFor(item).acceptOrder
   if (!action) return
   const result = await workOrders.acceptOrder({
@@ -336,6 +291,10 @@ async function requestAccept(item: WorkOrderSummary): Promise<void> {
 }
 
 async function confirmAccept(): Promise<void> {
+  if (productionReadOnly) {
+    acceptCandidate.value = null
+    return
+  }
   const item = acceptCandidate.value
   if (!item) return
   const action = listActionFor(item).acceptOrder
@@ -374,105 +333,30 @@ function cancelAccept(): void {
   max-width: none;
 }
 
-.search-band {
-  align-items: center;
-  box-sizing: border-box;
-  display: flex;
-  gap: 16rpx;
-  margin: 12rpx 8rpx 0;
-  padding: 0;
-  width: auto;
-}
-
-.search-input-shell {
-  align-items: center;
-  background: #ffffff;
-  border: 1rpx solid #e1e7f0;
-  border-radius: 24rpx;
-  box-sizing: border-box;
-  display: flex;
-  flex: 1;
-  gap: 12rpx;
-  height: 88rpx;
-  min-width: 0;
-  padding: 0 22rpx;
-}
-
-.search-icon {
-  color: #71819b;
-  flex: 0 0 auto;
-  font-size: 32rpx;
-  line-height: 1;
-  transform: rotate(-18deg);
-}
-
-.search-input {
-  color: #17243a;
-  flex: 1;
-  font-size: 26rpx;
-  height: 88rpx;
-  line-height: 88rpx;
-  min-width: 0;
-}
-
-.search-placeholder {
-  color: #98a6ba;
-}
-
-.search-button {
-  background: #2878f2;
-  border-radius: 24rpx;
-  color: #ffffff;
-  flex: 0 0 128rpx;
-  font-size: 28rpx;
-  font-weight: 800;
-  height: 88rpx;
-  line-height: 88rpx;
-  margin: 0;
-  padding: 0;
-}
-
-.search-button[disabled] {
-  opacity: 0.58;
-}
+.production-read-only-notice { display: block; margin: 0 0 14rpx; }
 
 .list-content {
   display: flex;
   flex-direction: column;
-  margin: 20rpx 8rpx 0;
+  margin: 18rpx 8rpx 0;
 }
+.work-order-card-surface { width: 100%; min-height: 100px; }
+.list-section-heading { margin: 4px 2px 14px; }
+.list-loaded-count { color: var(--app-content-muted-ink); font-size: 12px; white-space: nowrap; }
 
 .work-order-card {
-  align-items: stretch;
-  background: #ffffff;
-  border: 1rpx solid #e2e8f1;
-  border-radius: 28rpx;
-  box-shadow: 0 12rpx 28rpx rgba(27, 48, 82, 0.075);
+  display: block;
   box-sizing: border-box;
-  display: flex;
-  margin-bottom: 18rpx;
-  min-height: 184rpx;
-  overflow: hidden;
-  position: relative;
-  transition: transform 120ms ease;
+  margin-bottom: 14px;
+  min-width: 0;
   width: 100%;
+  overflow: visible;
 }
 
-.work-order-card-hover {
-  transform: scale(0.99);
+.work-order-card-hover .work-order-card-surface {
+  transform: translateY(1px);
+  box-shadow: var(--app-elevation-flat);
 }
-
-.card-accent {
-  flex: 0 0 6rpx;
-  width: 6rpx;
-}
-
-.card-accent--blue { background: #2878f2; }
-.card-accent--red { background: #f06445; }
-.card-accent--orange { background: #ff941f; }
-.card-accent--purple { background: #8a69e8; }
-.card-accent--green { background: #35b978; }
-.card-accent--gray { background: #9aa6b8; }
 
 .card-main {
   box-sizing: border-box;
@@ -480,7 +364,7 @@ function cancelAccept(): void {
   flex: 1;
   flex-direction: column;
   min-width: 0;
-  padding: 24rpx 20rpx 28rpx 18rpx;
+  padding: 17px 15px 17px;
 }
 
 .card-top-row {
@@ -489,26 +373,6 @@ function cancelAccept(): void {
   gap: 16rpx;
   min-width: 0;
 }
-
-.card-mark {
-  align-items: center;
-  background: #edf4ff;
-  border: 1rpx solid #d5e5ff;
-  border-radius: 16rpx;
-  box-sizing: border-box;
-  display: flex;
-  flex: 0 0 54rpx;
-  height: 54rpx;
-  justify-content: center;
-  width: 54rpx;
-}
-
-.card-mark--blue { background: #edf4ff; border-color: #d5e5ff; color: #2878f2; }
-.card-mark--red { background: #fff1ed; border-color: #ffd9cf; color: #f06445; }
-.card-mark--orange { background: #fff4e8; border-color: #ffdfbd; color: #ff941f; }
-.card-mark--purple { background: #f3efff; border-color: #e2d7ff; color: #8a69e8; }
-.card-mark--green { background: #eaf9f1; border-color: #c8efd9; color: #35b978; }
-.card-mark--gray { background: #f1f3f6; border-color: #e1e5eb; color: #8d99aa; }
 
 .card-title-cluster {
   flex: 1;
@@ -523,12 +387,12 @@ function cancelAccept(): void {
 }
 
 .card-task {
-  color: #172239;
+  color: var(--app-text-strong);
   display: -webkit-box;
   flex: 0 1 auto;
-  font-size: 30rpx;
-  font-weight: 850;
-  line-height: 1.35;
+  font-size: var(--app-content-title-size);
+  font-weight: 720;
+  line-height: 1.34;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -537,21 +401,14 @@ function cancelAccept(): void {
 }
 
 .card-part-badge {
-  background: #f1f3f6;
-  border-radius: 6rpx;
-  color: #263044;
-  flex: 0 0 auto;
-  font-size: 21rpx;
-  font-weight: 800;
-  line-height: 1.35;
-  padding: 4rpx 10rpx;
+  flex: 0 1 auto;
 }
 
 .card-number {
-  color: #627492;
+  color: var(--app-content-muted-ink);
   flex: 0 0 auto;
-  font-size: 24rpx;
-  font-weight: 800;
+  font-size: 11px;
+  font-weight: 600;
   line-height: 1.3;
   max-width: 30%;
   overflow: hidden;
@@ -569,9 +426,9 @@ function cancelAccept(): void {
 .card-location {
   align-items: flex-start;
   box-sizing: border-box;
-  color: #71829e;
+  color: var(--app-content-muted-ink);
   display: flex;
-  font-size: 24rpx;
+  font-size: 12.5px;
   gap: 8rpx;
   line-height: 1.5;
   margin-left: -70rpx;
@@ -601,7 +458,7 @@ function cancelAccept(): void {
 }
 
 .location-address {
-  color: #75849b;
+  color: var(--app-content-muted-ink);
   display: -webkit-box;
   flex: 1;
   min-width: 0;
@@ -668,50 +525,28 @@ function cancelAccept(): void {
 }
 
 .nearby-chip {
-  background: #edf4ff;
-  border-radius: 6rpx;
-  color: #2878f2;
-  font-size: 21rpx;
-  font-weight: 700;
-  line-height: 32rpx;
-  padding: 0 10rpx;
+  flex-shrink: 0;
 }
 
 .card-phone-button {
   align-items: center;
-  border: 1rpx solid #edf0f5;
-  border-radius: 50%;
-  box-shadow: 0 6rpx 14rpx rgba(27, 48, 82, 0.06);
+  background: var(--app-surface-raised);
+  border: 1px solid var(--app-outline-subtle);
+  border-radius: 14px;
   display: flex;
-  flex: 0 0 58rpx;
-  height: 58rpx;
+  flex: 0 0 44px;
+  height: 44px;
   justify-content: center;
-  margin-right: 2rpx;
-  width: 58rpx;
+  margin-right: 2px;
+  width: 44px;
+  box-sizing: border-box;
+  box-shadow: var(--app-elevation-flat);
 }
 
 .card-phone-button--loading { opacity: 0.48; }
 
-.card-accept-button {
-  border: 0;
-  border-radius: 10rpx;
-  color: #ffffff;
-  flex: 0 0 auto;
-  font-size: 22rpx;
-  font-weight: 800;
-  line-height: 54rpx;
-  margin: 0 2rpx 0 12rpx;
-  min-height: 54rpx;
-  padding: 0 22rpx;
-}
-
-.card-accept-button--blue { background: #2878f2; }
-.card-accept-button--red { background: #f06445; }
-.card-accept-button--orange { background: #ff941f; }
-.card-accept-button--purple { background: #8a69e8; }
-.card-accept-button--green { background: #35b978; }
-.card-accept-button--gray { background: #8d99aa; }
-.card-accept-button[disabled] { opacity: 0.52; }
+.card-accept-control { flex: 0 0 auto; margin-left: 10px; }
+.card-accept-button { min-width: 80px; }
 
 .accept-confirm-backdrop {
   align-items: center;
@@ -766,236 +601,6 @@ function cancelAccept(): void {
 .accept-confirm-button--secondary { background: #f1f4f8; color: #5f708b; }
 .accept-confirm-button--primary { background: #2878f2; color: #ffffff; }
 
-.list-state {
-  align-items: center;
-  background: rgba(255, 255, 255, 0.92);
-  border: 1rpx solid #e2e8f1;
-  border-radius: 28rpx;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  min-height: 400rpx;
-  padding: 48rpx 36rpx;
-  text-align: center;
-}
-
-.loading-state {
-  align-items: stretch;
-  background: transparent;
-  border: 0;
-  border-radius: 0;
-  min-height: 0;
-  padding: 0;
-}
-
-.loading-placeholder {
-  min-height: 184rpx;
-}
-
-.empty-state {
-  align-items: stretch;
-  background: transparent;
-  border: 0;
-  border-radius: 0;
-  min-height: 0;
-  margin: 32rpx 8rpx 0;
-  padding: 0;
-  width: auto;
-}
-
-.empty-state-card {
-  align-items: center;
-  background: #ffffff;
-  border: 1rpx solid #e7edf6;
-  border-radius: 28rpx;
-  box-shadow: 0 14rpx 34rpx rgba(48, 89, 150, 0.08);
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  min-height: 660rpx;
-  padding: 46rpx 24rpx 40rpx;
-  text-align: center;
-  width: 100%;
-}
-
-.empty-illustration {
-  height: 280rpx;
-  position: relative;
-  width: 320rpx;
-}
-
-.empty-illustration-shadow {
-  background: #eef5ff;
-  border-radius: 50%;
-  bottom: 30rpx;
-  height: 24rpx;
-  left: 54rpx;
-  position: absolute;
-  width: 214rpx;
-}
-
-.empty-illustration-spark {
-  background: #9dc4ff;
-  border-radius: 999rpx;
-  height: 30rpx;
-  position: absolute;
-  width: 7rpx;
-}
-
-.empty-illustration-spark::after {
-  background: inherit;
-  border-radius: inherit;
-  content: '';
-  height: 7rpx;
-  position: absolute;
-  width: 22rpx;
-}
-
-.empty-illustration-spark-left {
-  left: 46rpx;
-  top: 124rpx;
-  transform: rotate(-38deg);
-}
-
-.empty-illustration-spark-left::after {
-  left: -7rpx;
-  top: 31rpx;
-}
-
-.empty-illustration-spark-right {
-  right: 62rpx;
-  top: 44rpx;
-  transform: rotate(8deg);
-}
-
-.empty-illustration-spark-right::after {
-  left: 13rpx;
-  top: 31rpx;
-  transform: rotate(45deg);
-}
-
-.empty-clipboard {
-  bottom: 48rpx;
-  height: 194rpx;
-  left: 68rpx;
-  position: absolute;
-  width: 184rpx;
-}
-
-.empty-clipboard-sheet {
-  background: #ffffff;
-  border: 12rpx solid #dceaff;
-  border-radius: 16rpx;
-  bottom: 0;
-  box-sizing: border-box;
-  height: 180rpx;
-  left: 12rpx;
-  position: absolute;
-  width: 158rpx;
-}
-
-.empty-clipboard-clip {
-  background: #6fa6fb;
-  border-radius: 10rpx;
-  height: 28rpx;
-  left: 55rpx;
-  position: absolute;
-  top: 0;
-  width: 66rpx;
-}
-
-.empty-clipboard-clip-hole {
-  background: #dceaff;
-  border-radius: 50%;
-  height: 12rpx;
-  left: 27rpx;
-  position: absolute;
-  top: -7rpx;
-  width: 12rpx;
-}
-
-.empty-clipboard-line {
-  background: #d5e3f9;
-  border-radius: 999rpx;
-  height: 9rpx;
-  left: 26rpx;
-  position: absolute;
-}
-
-.empty-clipboard-line-long {
-  top: 48rpx;
-  width: 92rpx;
-}
-
-.empty-clipboard-line-medium {
-  top: 78rpx;
-  width: 98rpx;
-}
-
-.empty-clipboard-line-short {
-  top: 108rpx;
-  width: 70rpx;
-}
-
-.empty-clipboard-badge {
-  align-items: center;
-  background: #89b8ff;
-  border-radius: 50%;
-  bottom: -8rpx;
-  display: flex;
-  height: 82rpx;
-  justify-content: center;
-  position: absolute;
-  right: -10rpx;
-  width: 82rpx;
-}
-
-.empty-clipboard-minus {
-  background: #ffffff;
-  border-radius: 999rpx;
-  height: 8rpx;
-  width: 30rpx;
-}
-
-.empty-state-title {
-  color: #1b2940;
-  font-size: 38rpx;
-  font-weight: 850;
-  line-height: 1.35;
-  margin-top: 4rpx;
-}
-
-.empty-state-detail {
-  color: #7c8ba2;
-  font-size: 26rpx;
-  line-height: 1.6;
-  margin-top: 14rpx;
-  max-width: 620rpx;
-}
-
-.empty-state-action {
-  align-items: center;
-  background: #2878f2;
-  border-radius: 20rpx;
-  box-shadow: 0 12rpx 24rpx rgba(40, 120, 242, 0.22);
-  color: #ffffff;
-  display: flex;
-  font-size: 28rpx;
-  font-weight: 800;
-  gap: 12rpx;
-  height: 84rpx;
-  justify-content: center;
-  line-height: 1;
-  margin: 32rpx 0 0;
-  padding: 0;
-  width: 320rpx;
-}
-
-.empty-state-action::after {
-  border: 0;
-}
-
 .inline-refresh {
   background: #e7eef8;
   border-radius: 999rpx;
@@ -1013,210 +618,24 @@ function cancelAccept(): void {
   width: 32%;
 }
 
-.skeleton-list {
-  display: flex;
-  flex-direction: column;
-  gap: 18rpx;
-  width: 100%;
-}
-
-.skeleton-card {
-  align-items: stretch;
-  background: #ffffff;
-  border: 1rpx solid #e2e8f1;
-  border-radius: 28rpx;
-  box-sizing: border-box;
-  display: flex;
-  min-height: 184rpx;
-  overflow: hidden;
-}
-
-.skeleton-accent {
-  animation: app-loading-pulse var(--app-motion-loading-duration) var(--app-motion-loading-easing) infinite;
-  background: #e8eef7;
-  flex: 0 0 6rpx;
-  width: 6rpx;
-}
-
-.skeleton-card-main {
-  box-sizing: border-box;
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  min-width: 0;
-  padding: 24rpx 20rpx 28rpx 18rpx;
-}
-
-.skeleton-card-top,
-.skeleton-card-footer {
-  align-items: center;
-  display: flex;
-}
-
-.skeleton-card-top {
-  gap: 16rpx;
-  min-width: 0;
-}
-
-.skeleton-mark {
-  animation: app-loading-pulse var(--app-motion-loading-duration) var(--app-motion-loading-easing) infinite;
-  background: #edf2f7;
-  border-radius: 16rpx;
-  flex: 0 0 54rpx;
-  height: 54rpx;
-  width: 54rpx;
-}
-
-.skeleton-copy {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: 16rpx;
-}
-
-.skeleton-line {
-  animation: app-loading-pulse var(--app-motion-loading-duration) var(--app-motion-loading-easing) infinite;
-  background: #e3ebf7;
-  border-radius: 999rpx;
-  height: 20rpx;
-}
-
-.skeleton-line-main { height: 30rpx; width: 68%; }
-.skeleton-line-part { height: 16rpx; width: 30%; }
-.skeleton-line-number { height: 24rpx; width: 20%; }
-.skeleton-line-location { margin-top: 18rpx; width: 62%; }
-.skeleton-line-customer { height: 28rpx; margin-top: 10rpx; width: 42%; }
-.skeleton-line-chip { height: 24rpx; width: 24%; }
-
-.skeleton-card-footer {
-  justify-content: space-between;
-  margin-top: 14rpx;
-  min-height: 58rpx;
-}
-
-.skeleton-phone {
-  animation: app-loading-pulse var(--app-motion-loading-duration) var(--app-motion-loading-easing) infinite;
-  background: #f5f7fa;
-  border: 1rpx solid #edf0f5;
-  border-radius: 50%;
-  flex: 0 0 58rpx;
-  height: 58rpx;
-  width: 58rpx;
-}
-
-.state-illustration {
-  height: 112rpx;
-  position: relative;
-  width: 164rpx;
-}
-
-.illustration-card {
-  background: #ffffff;
-  border: 2rpx solid #c7dcff;
-  border-radius: 14rpx;
-  box-shadow: 0 10rpx 20rpx rgba(45, 101, 181, 0.09);
-  height: 58rpx;
-  left: 42rpx;
-  position: absolute;
-  top: 18rpx;
-  transform: rotate(-5deg);
-  width: 80rpx;
-}
-
-.illustration-line {
-  background: #cfe0ff;
-  border-radius: 999rpx;
-  height: 7rpx;
-  left: 55rpx;
-  position: absolute;
-}
-
-.illustration-line-short {
-  top: 44rpx;
-  width: 42rpx;
-}
-
-.illustration-line-long {
-  left: 26rpx;
-  top: 78rpx;
-  width: 112rpx;
-}
-
-.state-illustration-search {
-  height: 112rpx;
-}
-
-.illustration-ring {
-  border: 7rpx solid #c7dcff;
-  border-radius: 50%;
-  height: 54rpx;
-  left: 48rpx;
-  position: absolute;
-  top: 16rpx;
-  width: 54rpx;
-}
-
-.illustration-handle {
-  background: #78a8f6;
-  border-radius: 999rpx;
-  height: 8rpx;
-  left: 98rpx;
-  position: absolute;
-  top: 72rpx;
-  transform: rotate(45deg);
-  width: 34rpx;
-}
-
-.state-icon,
+/* Auth guard remains page-owned; error and search feedback now share AppFeedbackState. */
 .guard-icon {
   align-items: center;
   border-radius: 50%;
   display: flex;
   justify-content: center;
 }
-
-.state-icon {
-  font-size: 40rpx;
-  font-weight: 900;
-  height: 96rpx;
-  width: 96rpx;
-}
-
-.state-icon-error {
-  background: #fff0ef;
-  color: #d64545;
-}
-
-.state-title,
 .guard-title {
   color: #1b2940;
   font-size: 32rpx;
   font-weight: 850;
   line-height: 1.4;
 }
-
-.state-title {
-  margin-top: 24rpx;
-}
-
-.state-detail,
 .guard-copy {
   color: #7c8ba2;
   font-size: 25rpx;
   line-height: 1.6;
   margin-top: 12rpx;
-}
-
-.state-action {
-  background: #2878f2;
-  border-radius: 16rpx;
-  color: #ffffff;
-  font-size: 27rpx;
-  font-weight: 800;
-  line-height: 1;
-  margin: 28rpx 0 0;
-  min-height: 76rpx;
-  padding: 0 34rpx;
 }
 
 .load-more {

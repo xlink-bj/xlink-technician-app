@@ -1,0 +1,113 @@
+name: EQ04 Quotation Catalog Bridge — Behavior and Golden (NO release)
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - '.github/workflows/eq04-quotation-catalog-bridge.yml'
+      - 'docs/engineering/EQ04_QUOTATION_SELECTION_BRIDGE.md'
+      - 'scripts/check-g4f-phase1b.mjs'
+      - 'src/features/work-orders/action-workspace.ts'
+      - 'src/features/work-orders/quotation/catalog-selection-bridge.ts'
+      - 'tests/engineering/eq04-quotation-catalog-bridge.test.ts'
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  engineering:
+    if: github.event.pull_request.draft == true && github.event.pull_request.head.ref == 'engineering/eq04-quotation-catalog-bridge'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Exact base and only six bridge scope paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor df9ffa72a7fcd45c3e08760f7eb049d417130559 HEAD
+          git diff --name-only df9ffa72a7fcd45c3e08760f7eb049d417130559 HEAD | sort > /tmp/eq04-actual.txt
+          cat > /tmp/eq04-expected.txt <<'EOF'
+          .github/workflows/eq04-quotation-catalog-bridge.yml
+          docs/engineering/EQ04_QUOTATION_SELECTION_BRIDGE.md
+          scripts/check-g4f-phase1b.mjs
+          src/features/work-orders/action-workspace.ts
+          src/features/work-orders/quotation/catalog-selection-bridge.ts
+          tests/engineering/eq04-quotation-catalog-bridge.test.ts
+          EOF
+          sort -o /tmp/eq04-expected.txt /tmp/eq04-expected.txt
+          diff -u /tmp/eq04-expected.txt /tmp/eq04-actual.txt
+          test "$(git diff --name-only df9ffa72a7fcd45c3e08760f7eb049d417130559 HEAD -- src/adapters src/runtimes src/shared tests/ds02a-main/snapshots tests/ds02a-gallery/snapshots | wc -l)" -eq 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: New bridge + old catalog/package/Store regression
+        env:
+          VITE_XLINK_ENVIRONMENT: test
+        run: |
+          pnpm exec vitest run \
+            tests/engineering/eq04-quotation-catalog-bridge.test.ts \
+            tests/g4d/action-workspace.test.ts \
+            tests/g4f/quotation-composition.test.ts \
+            tests/g4f/package-configuration.test.ts \
+            tests/g4f/quotation-order-submission.test.ts
+      - name: Full canonical gate — boundaries/TypeScript/whole suite/size review
+        env:
+          VITE_XLINK_ENVIRONMENT: test
+        run: pnpm verify:full
+      - name: Actual H5, WeChat, App bundles
+        run: |
+          pnpm build:h5
+          pnpm build:mp-weixin
+          pnpm build:app
+
+  existing-golden-and-real-h5:
+    if: github.event.pull_request.draft == true && github.event.pull_request.head.ref == 'engineering/eq04-quotation-catalog-bridge'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+      H5_VISUAL_OWNER_APPROVAL: 'PENDING'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: |
+          pnpm exec playwright install --with-deps chromium
+          sudo apt-get update -qq
+          sudo apt-get install -y fonts-noto-cjk
+      - run: pnpm test:ds02a:gallery
+      - run: pnpm test:ds02a:business
+      - name: Main App safe Mock H5 workflows
+        run: |
+          pnpm exec playwright test --config playwright.main-h5-mock.config.ts \
+            tests/h5-main-mock/main-app-quotation.spec.ts \
+            tests/h5-main-mock/ds07c4b-quote-signing.spec.ts \
+            tests/h5-main-mock/ds07c4b-signing-state-visual.spec.ts \
+            tests/h5-main-mock/m1-signing-official-order-read.spec.ts
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eq04-h5-visual-${{ github.run_id }}
+          path: |
+            test-results/ds02a-main/
+            test-results/ds02a-gallery/
+            test-results/main-h5-mock/
+          if-no-files-found: warn
+          retention-days: 30

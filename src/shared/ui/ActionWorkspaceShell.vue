@@ -1,13 +1,51 @@
 <template>
-  <view class="action-workspace-page">
-    <scroll-view class="action-workspace-scroll" scroll-y enable-flex>
+  <view class="action-workspace-page" :class="{ 'action-workspace-page--survey': commercialSurvey, 'action-workspace-page--quotation': commercialQuotation, 'action-workspace-page--q01-entry': compactQuoteEntry, 'xl-craft': compactQuoteEntry }" data-testid="action-workspace-shell">
+    <scroll-view class="action-workspace-scroll" scroll-y enable-flex :scroll-into-view="scrollIntoView">
       <view class="action-workspace-body">
-        <view class="action-workspace-context app-surface app-surface--compact">
-          <text class="action-workspace-context-label">当前工单</text>
-          <view class="action-workspace-context-row">
+        <view class="action-workspace-context app-surface app-surface--compact" :class="{ 'xl-craft__surface': compactQuoteEntry }" data-testid="action-workspace-context">
+          <view v-if="commercialSurvey" class="action-workspace-context-survey">
+            <view class="action-workspace-context-house" aria-hidden="true"><AppIcon name="home" :size="25" color="#f19436" /></view>
+            <view class="action-workspace-context-survey-main">
+              <text class="action-workspace-context-label">当前工单</text>
+              <text v-if="displayNumber" class="action-workspace-context-survey-number">{{ displayNumber }}</text>
+              <text class="action-workspace-context-survey-customer">{{ customerName || '工单' }}</text>
+            </view>
+            <view class="action-workspace-context-survey-status"><view class="action-workspace-context-status-dot" aria-hidden="true" />勘查中</view>
+          </view>
+          <view v-if="commercialQuotation && compactQuoteEntry" class="action-workspace-context-quotation-wrap">
+            <view class="action-workspace-context-quotation">
+              <view class="action-workspace-context-house" aria-hidden="true"><AppIcon name="home" :size="24" color="#f19436" /></view>
+              <view class="action-workspace-context-survey-main">
+                <text class="action-workspace-context-label">当前工单</text>
+                <text class="action-workspace-context-survey-number">{{ displayNumber || '工单' }}</text>
+                <text class="action-workspace-context-survey-customer">{{ customerName || '报价任务' }}</text>
+              </view>
+              <view class="action-workspace-context-quotation-state">本机报价</view>
+            </view>
+            <view v-if="serviceDistrict || serviceAddress" class="q01-context-address" data-testid="q01-source-address">
+              <AppIcon name="location" :size="16" color="var(--app-content-muted-ink)" />
+              <text class="q01-context-address-text">{{ serviceDistrict }}{{ serviceDistrict && serviceAddress ? ' · ' : '' }}{{ serviceAddress }}</text>
+            </view>
+          </view>
+          <view v-else-if="commercialQuotation" class="action-workspace-context-quotation">
+            <view class="action-workspace-context-house" aria-hidden="true"><AppIcon name="home" :size="24" color="#f19436" /></view>
+            <view class="action-workspace-context-survey-main">
+              <text class="action-workspace-context-label">当前工单</text>
+              <text class="action-workspace-context-survey-number">{{ displayNumber || '工单' }}</text>
+              <text class="action-workspace-context-survey-customer">{{ customerName || '报价任务' }}</text>
+            </view>
+            <view class="action-workspace-context-quotation-state">本机报价</view>
+          </view>
+          <text v-if="!commercialSurvey && !commercialQuotation" class="action-workspace-context-label">当前工单</text>
+          <view v-if="!commercialSurvey && !commercialQuotation" class="action-workspace-context-row">
             <text class="action-workspace-context-customer">{{ customerName || '工单' }}</text>
             <text v-if="displayNumber" class="action-workspace-context-number">#{{ displayNumber }}</text>
           </view>
+        </view>
+        <view v-if="commercialSurvey && demoSurvey" class="action-workspace-survey-demo-note" data-testid="survey-commercial-draft-provenance">
+          <AppIcon name="warning" :size="15" color="var(--app-color-primary)" />
+          <text class="action-workspace-survey-demo-note-label">本机草稿</text>
+          <text>· 未提交后台</text>
         </view>
 
         <AppStatus
@@ -51,17 +89,25 @@
           <slot name="success" />
         </template>
 
-        <AppStatus v-if="businessFeedback" class="action-workspace-business-feedback" :message="businessFeedback" tone="danger" quiet />
+        <AppStatus
+          v-if="businessFeedback"
+          data-testid="action-workspace-feedback"
+          class="action-workspace-business-feedback"
+          :message="businessFeedback"
+          tone="danger"
+          quiet
+        />
 
         <AppStatus v-if="lifecycle === 'submitting'" class="action-workspace-operation-status" message="正在提交" quiet />
       </view>
     </scroll-view>
 
-    <view class="action-workspace-footer">
+    <AppActionBar class="action-workspace-footer" :class="{ 'xl-craft__action-bar': compactQuoteEntry }" :label="`当前工单操作`">
       <view class="action-workspace-footer-inner">
         <template v-if="lifecycle !== 'succeeded'">
           <slot name="actions">
             <AppButton
+              data-testid="action-workspace-submit"
               class="action-workspace-submit"
               :disabled="!canSubmit || transitioning"
               :loading="lifecycle === 'submitting' || transitioning"
@@ -76,7 +122,7 @@
           <slot name="success-actions" />
         </template>
       </view>
-    </view>
+    </AppActionBar>
   </view>
 </template>
 
@@ -85,16 +131,27 @@ import { ref, watch } from 'vue'
 
 import type { AppActionDraftStatus, AppActionLifecycle } from './types'
 import AppButton from './AppButton.vue'
+import AppActionBar from './AppActionBar.vue'
+import AppIcon from './AppIcon.vue'
 import AppStatus from './AppStatus.vue'
 
 const props = defineProps<{
+  readonly commercialSurvey?: boolean
+  /** Same visual system as accepted Survey; Quotation-only, no behavior changes. */
+  readonly commercialQuotation?: boolean
+  /** Presentation only: the first quotation repair-part stage, not Workflow state. */
+  readonly compactQuoteEntry?: boolean
+  readonly demoSurvey?: boolean
   readonly customerName?: string
+  readonly serviceAddress?: string
+  readonly serviceDistrict?: string
   readonly displayNumber?: string
   readonly lifecycle: AppActionLifecycle
   readonly draftStatus: AppActionDraftStatus
   readonly transitioning?: boolean
   readonly canSubmit: boolean
   readonly submitLabel: string
+  readonly scrollIntoView?: string
   readonly businessFeedback?: string
 }>()
 
@@ -186,12 +243,12 @@ defineEmits<{
 .action-workspace-draft-status { margin-top: var(--app-space-sm); padding-top: 0; }
 
 .action-workspace-footer {
-  background: var(--app-color-page);
-  border-top: 1rpx solid var(--app-color-border);
+  background: var(--app-action-bar-background);
+  border-top: 1rpx solid var(--app-action-bar-border);
   box-sizing: border-box;
   flex-shrink: 0;
-  padding: var(--app-space-sm) 0 calc(16rpx + constant(safe-area-inset-bottom));
-  padding-bottom: calc(16rpx + env(safe-area-inset-bottom));
+  padding: var(--app-space-sm) 0 calc(var(--app-action-bar-inset) + constant(safe-area-inset-bottom));
+  padding-bottom: calc(var(--app-action-bar-inset) + env(safe-area-inset-bottom));
   width: 100%;
 }
 
@@ -203,5 +260,75 @@ defineEmits<{
   padding-right: var(--app-action-bar-padding-x);
   width: 100%;
 }
+
+/* Survey-only S01 commercial work-order context; do not change accepted Appointment. */
+/* #ifdef H5 */
+/* uni-page-head uses a 44px H5 navigation bar above the page body.
+   Survey-only subtraction keeps the approved S01 bottom actions inside
+   the visible viewport. Native MP/App preserve the original page height. */
+.action-workspace-page--survey { height:calc(100vh - 44px); }
+/* #endif */
+.action-workspace-page--survey .action-workspace-body { padding-top:16rpx; }
+.action-workspace-page--survey .action-workspace-context { border-radius:var(--app-radius-card); padding:20rpx; }
+.action-workspace-context-survey { display:flex; align-items:center; gap:15rpx; min-height:80rpx; }
+.action-workspace-context-house { width:64rpx; height:64rpx; flex:none; border-radius:14rpx;
+  background:#fff0e1; color:#f29a3c; display:flex; align-items:center; justify-content:center; font-size:48rpx; font-weight:700; }
+.action-workspace-context-survey-main { flex:1; min-width:0; display:flex; flex-direction:column; gap:3rpx; }
+.action-workspace-context-survey-number { color:var(--app-color-text-primary); font-size:var(--app-font-section-title); font-weight:800; }
+.action-workspace-context-survey-customer { color:var(--app-color-text-secondary); font-size:var(--app-font-meta); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.action-workspace-context-survey-status { flex:none; align-self:flex-start; display:flex; align-items:center; gap:5rpx;
+  border-radius:999rpx; background:var(--app-color-success-soft); color:var(--app-color-success);
+  font-size:var(--app-font-meta); font-weight:750; padding:6rpx 13rpx; }
+.action-workspace-context-status-dot { background:currentColor; width:11rpx; height:11rpx; border-radius:999rpx; display:inline-block; }
+.action-workspace-survey-demo-note { margin-top:12rpx; background:var(--app-color-primary-soft);
+  color:var(--app-color-text-secondary); display:flex; gap:10rpx; align-items:center;
+  border-radius:12rpx; padding:12rpx 16rpx; font-size:var(--app-font-meta); }
+.action-workspace-survey-demo-note-label { color:var(--app-color-primary); font-weight:750; }
+.action-workspace-page--survey .action-workspace-footer { background:var(--app-color-surface); box-shadow:0 -4rpx 15rpx rgba(30,50,85,.04); }
+.action-workspace-page--survey .action-workspace-context { padding:20rpx 22rpx; }
+.action-workspace-page--survey .action-workspace-context-survey { min-height:80rpx; }
+.action-workspace-context-house { font-size:0; }
+.action-workspace-survey-demo-note { min-height:38rpx; padding:9rpx 14rpx; font-size:22rpx; }
+.action-workspace-page--survey .action-workspace-body { padding-bottom:30rpx; }
+
+/* Quotation-only S01-matched work-order heading; Appointment/Survey untouched. */
+.action-workspace-page--quotation .action-workspace-body { padding-top:16rpx; }
+.action-workspace-page--quotation .action-workspace-context { border-radius:var(--app-radius-card); padding:18rpx 20rpx; }
+.action-workspace-context-quotation { display:flex; gap:15rpx; align-items:center; min-height:75rpx; }
+.action-workspace-context-quotation-state { align-self:flex-start; margin-left:auto; border-radius:999rpx;
+  padding:7rpx 11rpx; background:#eaf3ff; color:var(--app-color-primary); font-size:20rpx; white-space:nowrap; }
+
+/* Q01 first-entry layout contract; applies to no other quotation stages. */
+.action-workspace-page--q01-entry .action-workspace-body {
+  padding-top: 7px;
+  padding-bottom: 18px;
+}
+.action-workspace-page--q01-entry .action-workspace-context {
+  border-radius: 14px;
+  padding: 9px 12px;
+  box-shadow: var(--app-content-card-elevation);
+}
+.action-workspace-page--q01-entry .action-workspace-context-quotation { min-height: 43px; gap: 9px; }
+.action-workspace-page--q01-entry .action-workspace-context-house { width: 38px; height: 38px; flex: 0 0 38px; border-radius: 9px; }
+.action-workspace-page--q01-entry .action-workspace-context-label { font-size: 10px; }
+.action-workspace-page--q01-entry .action-workspace-context-survey-number { font-size: 15px; }
+.action-workspace-page--q01-entry .action-workspace-context-survey-customer {
+  font-size: 11px;
+}
+.action-workspace-page--q01-entry .action-workspace-context-quotation-state { font-size: 11px; }
+.q01-context-address {
+  display: flex; align-items: center; gap: 9px;
+  min-height: 24px; padding-top: 5px;
+  margin-top: 6px; border-top: 1px solid var(--app-outline-subtle);
+  color: var(--app-text-strong);
+}
+.q01-context-address-text {
+  flex: 1; min-width: 0; color: var(--app-text-strong);
+  font-size: 11px; font-weight: 570; line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+/* #ifdef H5 */
+.action-workspace-page--q01-entry { height: calc(100vh - 44px); }
+/* #endif */
 
 </style>

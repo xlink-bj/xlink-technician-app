@@ -1,0 +1,260 @@
+# G4-E Dynamic Form / Survey Contract — Sanitized Beta Observation
+
+Status: historical inactive Survey evidence; not a Production schema registry.
+Repository: `xlink-bj/xlink-technician-app`  
+Branch: `rebuild/g4e-onsite-inspection`
+
+## Purpose
+
+This record establishes how the Technician application obtains the real
+dynamic-form shape. The machine-readable historical Survey contract is
+committed at `contracts/beta/survey/historical.json`. It is a sanitized,
+deterministic snapshot from an authenticated read-only Beta observation on
+2026-09-18. It
+contains no form values, customer data, tenant/session/token material, media
+references, or raw response payloads.
+
+Dev and Beta are the same development environment for this slice. Therefore
+this historical Beta family is the development Mock contract authority for
+this bounded slice. It is not an assertion about active membership or
+Production parity.
+
+## Read method
+
+The production path is:
+
+```text
+authenticated session
+  -> ApiReadTransport
+  -> POST biz/extField/query
+  -> Technician API Adapter
+  -> FormDefinitionRead
+  -> Dynamic Form Runtime
+```
+
+Field definitions are read with the R1-verified request shape:
+
+```text
+extId: <FormDefinitionId>
+sortField: order
+sortOrder: asc
+is:state|integer#and: 1
+_all: 1
+```
+
+When existing form data is needed, the read remains definition-scoped and
+exact-record scoped:
+
+```text
+POST biz/extForm/query/<FormDefinitionId>
+sortField: createTime
+sortOrder: desc
+is:_id|string#and: <FormDataId>
+```
+
+The repeatable read-only contract inspector for the older Inspection hybrid
+evidence is:
+
+```text
+pnpm run inspect:inspection-contract -- --work-order=<safe-id>
+```
+
+It requires runtime-only `XLINK_SCHEMA_API_BASE_URL`,
+`XLINK_SCHEMA_SESSION_REF`, and an explicit `XLINK_SCHEMA_WORK_ORDER_ID` (or
+`--work-order`). `XLINK_SCHEMA_INSPECTION_NODE_ID` (or `--node`) is required
+when the selected work order has multiple eligible Inspection nodes. The
+inspector discovers the active `repeat` Inspection node and its
+`formDefinitionId`; it never selects a work order by list position or uses a
+historical ID, page title, field name, generic `forms` node, or Mock fixture as
+a fallback. If the identity is not safe, it stops with a sanitized discovery
+error.
+
+The Beta wrapper has a hard read-route allowlist. It permits only the login,
+service-appointment detail/workflow, field-definition, exact form-data,
+evidenced code/provider, package, and Inspection SOP read routes. Workflow
+process, form upsert/remove/delete, accept/order, upload/media, and unknown
+routes are rejected before network access. The inspector performs only
+authenticated POST reads. It can write a sanitized candidate only when
+`XLINK_SCHEMA_OUTPUT_FILE` or `--output` is explicitly supplied. It never
+prints or persists raw form values, cookies, tokens, tenant identifiers,
+customer data, or media references.
+
+The committed historical Survey snapshot can be checked without Beta credentials:
+
+```text
+pnpm run check:survey-contract
+```
+
+To recapture a sanitized historical Survey family in a controlled non-production
+environment, use the App login settings from the local environment and supply
+the form identity only at runtime:
+
+```text
+XLINK_SCHEMA_SURVEY_FORM_ID=<runtime-only-id> pnpm run capture:survey-contract:beta
+```
+
+The command performs authenticated reads only, writes aliases and structural
+metadata to the dedicated artifact, and never persists the raw form identity
+or response payload. A capture is historical evidence until its workflow
+membership and lifecycle are separately verified.
+
+In a controlled authenticated Beta environment, append `--live` (or set
+`XLINK_SCHEMA_CHECK_LIVE=true`) to capture the current sanitized contract and
+compare its deterministic fingerprint with the committed snapshot. CI does
+not require Beta credentials.
+
+## Local Beta login and capture
+
+The repository now includes the same R1 login flow used by the existing
+business tooling. It posts `method`, `phone`, `code`, and `tenantId` to
+`index/phoneLogin.do`; the returned opaque `data.token` is held in memory and
+sent as `Cookie: JSESSIONID=...` for subsequent read-only requests. The CLI
+only permits the Beta host and never prints or persists the session value.
+
+The command automatically reuses the App quick-login configuration from the
+existing local `.env.local`. It follows the App quick-login contract, is
+available only in an explicitly non-production environment, and uses the
+same `999999` test-code default. No per-run phone or verification-code
+injection is required or used. Credentials are never printed, committed or
+sent to chat:
+
+```text
+pnpm run inspect:inspection-contract:beta -- --work-order=<safe-id>
+```
+
+Password login remains available as a separately explicit diagnostic path
+with `XLINK_BETA_LOGIN_METHOD=password` and `XLINK_BETA_PASSWORD`; no password
+CLI argument exists. `--tenant`, `--base-url`, `--work-order`, `--node`, and
+`--output` are available for a controlled invocation. The command performs
+login and contract discovery in one process, so the Session never needs to be
+copied into `XLINK_SCHEMA_SESSION_REF`. Missing or ambiguous Inspection
+identity fails closed; it does not fall back to an Appointment, Rating, or
+historical Inspection form.
+
+## Development observation
+
+### Domain-truth reclassification (2026-09-17)
+
+The deeper Survey domain investigation is recorded in
+`docs/verification/G4E_SURVEY_DOMAIN_TRUTH.md`. It supersedes any inference
+that this 15-field artifact is the active Survey or InspectionAppointment
+contract: the artifact is now classified as a shared/historical hybrid. A
+separate sanitized Beta structural scan found a 61-field historical inactive
+repeat `勘察` family, five occurrences and zero active repeat nodes. The
+snapshot below remains unchanged for compatibility and review history; it is
+not promoted as current domain truth.
+
+The previous Beta observation found an Inspection form family with 15 field
+rows. The numeric form identity is intentionally not persisted; the snapshot
+uses a deterministic opaque alias and preserves relationships only. A later
+bounded scan found no active Inspection node, so this snapshot must not be
+described as the currently active Beta contract without a new explicit
+read-only capture.
+
+| Field key | Type | Required | Multiple | Option/provider | Conditional metadata |
+| --- | --- | ---: | ---: | --- | --- |
+| `part` | `cascade` | yes | no | `parts` | none; always visible |
+| `village` | `text` | yes | no | — | `showType=3`, source `part`, preset source |
+| `length` | `digit` | yes | no | — | `showType=3`, source `part`, preset source |
+| `width` | `digit` | yes | no | — | `showType=3`, source `part`, preset source |
+| `planeArea` | `digit` | yes | no | — | `showType=3`, source `part`, preset source |
+| `inspectionSOP` | `request` | no | no | custom config | custom widget metadata |
+| `inspectionContent` | `select` | no | yes | no verified provider in this read | multi-value |
+| `requirement` | `text` | no | no | — | none |
+| `isQualified` | `select` | no | no | `qualified` | none |
+| `reason` | `text` | no | no | — | `showType=3`, source `isQualified`, preset source |
+| `otherReason` | `text` | no | no | — | none |
+| `serviceGoods` | `bizSelect` | yes | yes | `projPackage` | custom config |
+| `suggest` | `text` | yes | no | — | none |
+| `surveyDrawing` | `file` | yes | no | — | `showType=3`, source `part`, preset source |
+| `reformDate` | `date` | no | no | — | none |
+
+The observed data records expose business-field keys at the record root, with
+an `exts` object also present. Observed value shapes include scalar strings,
+arrays and nested inspection-related arrays. Values themselves are excluded
+from this record.
+
+## Engineering decisions
+
+- `FormDefinitionRead.id` is always the requested form identity for field-row
+  responses; a field row `_id` is never treated as the form identity.
+- The Adapter now carries `multiple` so a multi-value `select`/`bizSelect`
+  cannot be rendered through scalar `AppChoiceGroup` semantics.
+- `record.exts.showValue` is part of the verified visibility evidence. The
+  Adapter normalizes it without exposing `frontEndConfig` or `nodeDef` to Vue.
+- `showType=1` remains unconditionally visible unless an explicit legacy
+  `frontEndConfig.showField` expression exists. `showType=3` remains a bounded
+  value condition and does not use array position.
+- The verified R1 code providers (`i/code/selectCode.do`) and multistage
+  provider (`i/code/selectMultistageCode.do`) now resolve the Survey `regions`,
+  `IS` and `parts` providers through the Adapter before the form reaches
+  Runtime. Cascade paths retain their hierarchy, and option-bearing
+  checkbox/multi-value select fields use array-valued controls rather than
+  scalar choices. The legacy `qualified` provider belongs only to the
+  quarantined Inspection compatibility artifact.
+- `request`, business-record `bizSelect` without a verified record provider,
+  and multi-value fields without an option source remain explicit capability
+  boundaries. They are not rendered as ordinary text inputs and still block
+  completion until their provider/control contract is verified.
+- The Survey workspace now resolves the sanitized 61-row historical Survey
+  shape through the normal Mock read/Adapter/Runtime path. The contract also
+  preserves ExtField `showList`; the current Action Workspace is the mobile
+  detail surface (`showList` code `4`), so rows without that applicability are
+  excluded before rendering, warnings or submission. The former 15-field
+  hybrid and four-field fixture remain available only for low-level historical
+  compatibility regression; neither is the default Survey simulator form.
+  Unsupported fields are intentionally blocked rather than silently presented
+  as executable controls.
+
+## Authority and remaining unknowns
+
+- R1 is the authority for endpoint/request and legacy dynamic-form semantics.
+- The current Beta read is evidence of one active form family only.
+- R2 remains presentation/IA reference only.
+- Production active-form membership/parity, complete business-record and
+  custom-widget providers, server validation, and media persistence remain
+  UNKNOWN.
+- No write command, upload, or production endpoint was executed for this
+  snapshot.
+
+## Mock source of truth
+
+The G4-E Survey Mock is mechanically derived from the sanitized 61-row Survey
+contract in `contracts/beta/survey/historical.json` by
+`src/adapters/api/mock/survey-contract.ts`. The Adapter still receives
+backend-shaped field rows and provider responses, so the runtime path remains:
+
+```text
+sanitized Survey family inventory
+  -> generated Mock raw response
+  -> existing Adapter
+  -> Dynamic Form Runtime
+  -> Action Workspace
+```
+
+The Survey `parts` provider is retained as an independently evidenced R1
+multistage provider with synthetic option aliases. The Survey `projPackage`
+provider remains UNKNOWN, and no options are fabricated for the multi-value
+`serviceGoods` field. Unsupported Survey row types remain explicit capability
+boundaries.
+
+The former 15-field artifact is isolated as historical hybrid evidence under
+`contracts/beta/inspection/current.json` and is not imported by the G4-E
+application Mock. Its Inspection-like fields do not define Survey behavior.
+
+The semantic boundary is explicit: generic dynamic forms have no Survey
+purpose by default; only Adapter-proven `survey` identity receives
+Survey-specific copy and `SurveyActionContent`. Appointment remains a separate
+`appointment` purpose. The current historical contract is captured by the
+read-only helper `pnpm run capture:survey-contract:beta` (with the form
+identity supplied only through the local runtime environment) and validated by
+`pnpm run check:survey-contract`. Capture refuses to emit the artifact unless
+every raw ExtField row independently proves `colName=survey`. Its row-level
+metadata includes labels,
+ordering, required/read-only flags, duplicate value keys, visibility sources,
+`showList` applicability, presentation structure and provider status.
+The artifact also carries the machine-checkable semantic marker
+`semanticIdentity=all_extfield_rows_colName_survey`; the contract checker
+requires this marker and the Live Adapter applies the same all-rows rule.
+`projPackage` and custom
+`leakageCause` behavior remain unresolved and fail closed.

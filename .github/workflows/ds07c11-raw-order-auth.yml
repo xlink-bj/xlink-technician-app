@@ -1,0 +1,117 @@
+name: DS07 C11 P0 Raw Order Transport Auth Fence (NO live API)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - '.github/workflows/ds07c11-raw-order-auth.yml'
+      - 'docs/verification/DS07C11_RAW_ORDER_AUTH_FENCE.md'
+      - 'src/adapters/api/uni-api-read-transport.ts'
+      - 'src/app/composition.ts'
+      - 'tests/g4f/p0-order-raw-transport-fence.test.ts'
+      - 'tests/g4f/p0-role-order-tenant-negative.test.ts'
+      - 'tests/g4f/production-read-only.test.ts'
+
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  p0-transports-full:
+    if: github.event.pull_request.draft == true && github.event.pull_request.head.ref == 'security/ds07c11-raw-order-read-scope-fence'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Enforce fixed C10 ancestry and seven-file-only client gate delta
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          git merge-base --is-ancestor fb2404d4e2724ea9dcd1774ec0e83406c6d6cacc HEAD
+          git diff --name-only fb2404d4e2724ea9dcd1774ec0e83406c6d6cacc HEAD | sort > /tmp/ds07c11-actual.txt
+          printf '%s\n' \
+            '.github/workflows/ds07c11-raw-order-auth.yml' \
+            'docs/verification/DS07C11_RAW_ORDER_AUTH_FENCE.md' \
+            'src/adapters/api/uni-api-read-transport.ts' \
+            'src/app/composition.ts' \
+            'tests/g4f/p0-order-raw-transport-fence.test.ts' \
+            'tests/g4f/p0-role-order-tenant-negative.test.ts' \
+            'tests/g4f/production-read-only.test.ts' | sort > /tmp/ds07c11-expected.txt
+          diff -u /tmp/ds07c11-expected.txt /tmp/ds07c11-actual.txt
+          test "$(git diff --name-only fb2404d4e2724ea9dcd1774ec0e83406c6d6cacc HEAD -- src/features src/shared/config src/adapters/api/uni-api-command-transport.ts tests/ds02a-main/snapshots tests/ds02a-gallery/snapshots | wc -l)" -eq 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Raw route guard, role/tenant, SKU and signing negative contracts
+        env:
+          VITE_XLINK_ENVIRONMENT: test
+        run: |
+          pnpm exec vitest run \
+            tests/g4f/p0-order-raw-transport-fence.test.ts \
+            tests/g4f/p0-role-order-tenant-negative.test.ts \
+            tests/g4f/production-read-only.test.ts \
+            tests/g4f/quotation-order-read.test.ts \
+            tests/g4f/quotation-order-signing-read-boundary.test.ts \
+            tests/g4f/quotation-engine.test.ts \
+            tests/g4f/quotation-sku-identity-review.test.ts \
+            tests/g4f/quotation-sku-same-catalog.test.ts
+      - name: Full governance, boundaries, TS, all unit/contract tests
+        env:
+          VITE_XLINK_ENVIRONMENT: test
+        run: pnpm verify
+      - name: Build actual H5 App (no test fixture)
+        run: pnpm build:h5
+      - name: Build actual MP-Weixin (no test fixture)
+        run: pnpm build:mp-weixin
+      - name: Build actual uni-app native bundle (no test fixture)
+        run: pnpm build:app
+
+  visual-existing-golden:
+    if: github.event.pull_request.draft == true && github.event.pull_request.head.ref == 'security/ds07c11-raw-order-read-scope-fence'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+      H5_VISUAL_OWNER_APPROVAL: 'PENDING'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Chromium + deterministic CJK rendering
+        run: |
+          pnpm exec playwright install --with-deps chromium
+          sudo apt-get update -qq
+          sudo apt-get install -y fonts-noto-cjk
+      - name: Original approved Gallery 3
+        run: pnpm test:ds02a:gallery
+      - name: Original approved real main H5 List/Detail/Q01 9
+        run: pnpm test:ds02a:business
+      - name: Keep render contract evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ds07-c11-h5-${{ github.run_id }}
+          path: |
+            test-results/ds02a-gallery/
+            test-results/ds02a-main/
+          if-no-files-found: warn
+          retention-days: 30

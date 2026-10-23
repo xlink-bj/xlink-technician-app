@@ -1,0 +1,67 @@
+name: EQ06 Critical Behavior Lane (NO release)
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - '.github/workflows/eq06-critical-behavior.yml'
+      - 'docs/engineering/EQ06_CRITICAL_BEHAVIOR_GATE.md'
+      - 'scripts/verify-critical-behavior.mjs'
+      - 'package.json'
+permissions:
+  contents: read
+jobs:
+  critical-and-full:
+    if: github.event.pull_request.draft == true && github.event.pull_request.head.ref == 'engineering/eq06-critical-path-behavior-gate'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+      VITE_XLINK_ENVIRONMENT: test
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Check exact parent and no app/lockfile/snapshot changes
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor 2ea0e358dc55fcf569539dd89ba49fdca383ffb2 HEAD
+          git diff --name-only 2ea0e358dc55fcf569539dd89ba49fdca383ffb2 HEAD | sort > /tmp/actual
+          printf '%s\n' '.github/workflows/eq06-critical-behavior.yml' 'docs/engineering/EQ06_CRITICAL_BEHAVIOR_GATE.md' 'scripts/verify-critical-behavior.mjs' 'package.json' | sort > /tmp/expected
+          diff -u /tmp/expected /tmp/actual
+          test "$(git diff --name-only 2ea0e358dc55fcf569539dd89ba49fdca383ffb2 HEAD -- src/ pnpm-lock.yaml tests/ds02a-main/snapshots tests/ds02a-gallery/snapshots | wc -l)" -eq 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check:critical
+      - run: pnpm verify:critical
+      - run: pnpm verify:full
+      - run: pnpm build:h5 && pnpm build:mp-weixin && pnpm build:app
+  original-golden:
+    if: github.event.pull_request.draft == true && github.event.pull_request.head.ref == 'engineering/eq06-critical-path-behavior-gate'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+      H5_VISUAL_OWNER_APPROVAL: 'PENDING'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: |
+          pnpm exec playwright install --with-deps chromium
+          sudo apt-get update -qq
+          sudo apt-get install -y fonts-noto-cjk
+      - run: pnpm test:ds02a:gallery
+      - run: pnpm test:ds02a:business

@@ -18,8 +18,10 @@ import {
   actionWorkspaceTimeRouteFor,
   useActionWorkspaceStore,
 } from '@features/work-orders/action-workspace'
+import { beginActionMutation, recordActionFormSaved } from '@features/work-orders/action-mutation-receipt'
 import type {
   AppointmentFormRead,
+  SubmitAppointmentInput,
   SessionSnapshot,
   StorageKey,
   StoragePort,
@@ -65,15 +67,15 @@ function appointmentForm(values: AppointmentFormRead['values'] = {}): Appointmen
     definitionId: asOpaqueId<'FormDefinitionId'>('workspace-appointment-definition'),
     fields: [
       {
-        key: 'need',
+        fieldId: 'need', valueKey: 'need',
         label: '是否需要上门',
         type: 'radio',
         required: true,
         readOnly: false,
         options: [{ value: '1', label: '需要上门' }, { value: '0', label: '暂不上门' }],
       },
-      { key: 'datetime', label: '预约时间', type: 'datetime', required: true, readOnly: false },
-      { key: 'note', label: '备注', type: 'textarea', required: false, readOnly: false },
+      { fieldId: 'datetime', valueKey: 'datetime', label: '预约时间', type: 'datetime', required: true, readOnly: false },
+      { fieldId: 'note', valueKey: 'note', label: '备注', type: 'textarea', required: false, readOnly: false },
     ],
     values,
   }
@@ -120,14 +122,23 @@ function configureWorkspace(
     getWorkOrderDetail: vi.fn(async () => succeeded(detail)),
   } as unknown as TechnicianApiReadPort
   const command: TechnicianApiCommandPort = {
-    readAppointmentForm: vi.fn(async () => succeeded(form)),
-    submitAppointment: vi.fn(async () => succeeded(undefined)),
+    readAppointmentForm: vi.fn(async (input: { formDataId?: string }) => succeeded(
+      input.formDataId ? { ...form, dataId: asOpaqueId<'FormDataId'>(input.formDataId) } : form,
+    )),
+    submitAppointment: vi.fn(async (input: SubmitAppointmentInput) => {
+      const saved = asOpaqueId<'FormDataId'>('workspace-saved-form')
+      if ((await input.mutation?.afterFormSaved(saved))?.state !== 'succeeded') return { state: 'failed_terminal' }
+      if ((await input.mutation?.beforeWorkflowDispatch(saved))?.state !== 'succeeded') return { state: 'failed_terminal' }
+      if ((await input.mutation?.afterWorkflowCompleted())?.state !== 'succeeded') return { state: 'failed_terminal' }
+      return succeeded(undefined)
+    }),
   } as unknown as TechnicianApiCommandPort
   const store = useActionWorkspaceStore()
   store.configure({
     apiRead: api,
     commandApi: command,
     draftRepository,
+    storage: storage.storage,
     navigation: nextNavigation,
     getSession,
     debounceMs,
@@ -159,7 +170,89 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
       title: '预约上门时间',
     })
     expect(command.readAppointmentForm).toHaveBeenCalledTimes(1)
-    expect(store.appointmentFields.map((field) => field.key)).toEqual(['need', 'datetime', 'note'])
+    expect(store.appointmentFields.map((field) => field.valueKey)).toEqual(['need', 'datetime', 'note'])
+  })
+
+  it('rehydrates a saved FormData ID across a new Pinia instance before allowing continuation', async () => {
+    const shared = storageFor()
+    const actionScope = {
+      userId: String(session.user.id),
+      workOrderId: 'workspace-work-order',
+      workflowNodeId: 'workspace-appointment-node',
+      formDefinitionId: 'workspace-appointment-definition',
+      authorizationScope: JSON.stringify([String(session.sessionRef), String(session.user.id), String(roleId), null]),
+    }
+    expect((await beginActionMutation(shared.storage, actionScope, 'form_dispatched')).state).toBe('succeeded')
+    const savedId = asOpaqueId<'FormDataId'>('server-saved-appointment')
+    expect((await recordActionFormSaved(shared.storage, actionScope, savedId)).state).toBe('succeeded')
+    setActivePinia(createPinia())
+    const { store, command } = configureWorkspace(appointmentDetail(), appointmentForm(), shared)
+    expect((await openWorkspace(store)).state).toBe('succeeded')
+    expect(store.appointmentForm?.dataId).toBe(savedId)
+    expect(command.readAppointmentForm).toHaveBeenLastCalledWith({ formDataId: savedId })
+  })
+
+  it('fails closed on same-user roleVersion change instead of reusing the cached action', async () => {
+    let activeSession: SessionSnapshot = { ...session, roleVersion: 'role-v1' }
+    const { store, api } = configureWorkspace(
+      appointmentDetail(), appointmentForm(), undefined, () => activeSession,
+    )
+    expect((await openWorkspace(store)).state).toBe('succeeded')
+    expect(store.descriptor?.actionIntent).toBe('set_appointment')
+    activeSession = {
+      ...activeSession,
+      roleVersion: 'role-v2',
+    }
+    const stale = await store.ensureLoaded({
+      workOrderId: asOpaqueId<'WorkOrderId'>('workspace-work-order'),
+      workflowNodeId: asOpaqueId<'WorkflowNodeRuntimeId'>('workspace-appointment-node'),
+      actionIntent: 'set_appointment',
+    })
+    expect(stale.state).toBe('failed_terminal')
+    expect(stale.error?.category).toBe('session_invalid')
+    expect(store.descriptor).toBeNull()
+    expect(store.loadState).toBe('idle')
+    expect(api.getWorkOrderDetail).toHaveBeenCalledTimes(1)
+  })
+
+  it('blocks mounted appointment command dispatch after a role change without any route reload', async () => {
+    let activeSession: SessionSnapshot = { ...session, roleVersion: 'v1' }
+    const { store, command } = configureWorkspace(
+      appointmentDetail(), appointmentForm(), undefined, () => activeSession,
+    )
+    expect((await openWorkspace(store)).state).toBe('succeeded')
+    activeSession = {
+      ...activeSession,
+      currentRole: { id: asOpaqueId<'RoleId'>('another-role') },
+    }
+    const outcome = await store.submit()
+    expect(outcome.state).toBe('failed_terminal')
+    expect(outcome.error?.category).toBe('session_invalid')
+    expect(command.submitAppointment).not.toHaveBeenCalled()
+  })
+
+  it('discards an in-flight Work Order read when the authenticated role changes', async () => {
+    let activeSession: SessionSnapshot = { ...session, roleVersion: 'role-v1' }
+    const { store, api, command } = configureWorkspace(
+      appointmentDetail(), appointmentForm(), undefined, () => activeSession,
+    )
+    let completeRead!: (result: OperationSnapshot<WorkOrderDetail>) => void
+    const delayedRead = new Promise<OperationSnapshot<WorkOrderDetail>>(resolve => {
+      completeRead = resolve
+    })
+    vi.mocked(api.getWorkOrderDetail).mockImplementationOnce(async () => delayedRead)
+    const loading = openWorkspace(store)
+    activeSession = {
+      ...activeSession,
+      currentRole: { id: asOpaqueId<'RoleId'>('other-workspace-role') },
+    }
+    completeRead(succeeded(appointmentDetail()))
+    const result = await loading
+    expect(result.state).toBe('failed_terminal')
+    expect(result.error?.category).toBe('session_invalid')
+    expect(store.descriptor).toBeNull()
+    expect(store.loadState).toBe('idle')
+    expect(command.readAppointmentForm).not.toHaveBeenCalled()
   })
 
   it('blocks a disabled or unsupported action without reading or submitting content', async () => {
@@ -167,9 +260,9 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
       id: asOpaqueId<'WorkOrderId'>('place-order-work-order'),
       workflowNodes: [{
         id: asOpaqueId<'WorkflowNodeRuntimeId'>('place-order-node'),
-        category: 'placeOrder',
+        category: 'forms',
         lifecycle: 'active',
-        displayName: '下单',
+        displayName: '普通表单',
         visibility: { evidenceState: 'verified', viewableRoleIds: [roleId] },
       }],
     }
@@ -177,7 +270,7 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
     const result = await store.load({
       workOrderId: detail.id,
       workflowNodeId: detail.workflowNodes![0].id,
-      actionIntent: 'place_order',
+      actionIntent: 'interact_with_form',
     })
 
     expect(result.error?.category).toBe('unsupported_capability')
@@ -267,8 +360,11 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
     store.setField('need', '1')
     store.setAppointmentTime('2026-04-20 11:00')
 
-    await new Promise((resolve) => setTimeout(resolve, 10))
-    expect(storage.storage.write).toHaveBeenCalledTimes(1)
+    // Wait on the actual persisted-write boundary, not wall-clock 10ms.
+    // CI scheduling delays may exceed debounceMs even with valid behavior.
+    await vi.waitFor(() => expect(storage.storage.write).toHaveBeenCalledTimes(1), {
+      timeout: 1500, interval: 5,
+    })
 
     store.setField('need', '0')
     store.setField('note', '快速切换后的备注')
@@ -342,7 +438,7 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
     expect(result.state).toBe('failed_retryable')
     expect(store.lifecycle).toBe('failed_retryable')
     expect(store.appointmentForm?.values.datetime).toBe('2026-04-20 10:00')
-    expect(storage.values.size).toBe(1)
+    expect(storage.values.size).toBe(2)
     expect((await draftRepository.listForUser(session.user.id)).data?.entries).toHaveLength(1)
   })
 
@@ -357,7 +453,7 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
     expect(result.state).toBe('succeeded')
     expect(store.lifecycle).toBe('succeeded')
     expect(storage.storage.remove).toHaveBeenCalledTimes(1)
-    expect(storage.values.size).toBe(0)
+    expect(storage.values.size).toBe(1)
     expect(api.getWorkOrderDetail).toHaveBeenCalledTimes(2)
     expect((await draftRepository.listForUser(session.user.id)).data?.entries).toHaveLength(0)
   })
@@ -377,10 +473,11 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
       state: 'failed_retryable',
       error: { category: 'network_retryable', message: 'storage unavailable', retryable: true },
     })
-    vi.mocked(storage.storage.write).mockResolvedValue({
-      state: 'failed_retryable',
-      error: { category: 'network_retryable', message: 'storage unavailable', retryable: true },
-    })
+    const originalWrite = vi.mocked(storage.storage.write).getMockImplementation()!
+    vi.mocked(storage.storage.write).mockImplementation(async (key, value) =>
+      key.key.startsWith('action-mutation%3Av1:')
+        ? originalWrite(key, value)
+        : { state: 'failed_retryable', error: { category: 'network_retryable', message: 'storage unavailable', retryable: true } })
 
     const result = await store.submit()
     expect(result.state).toBe('succeeded')
@@ -431,7 +528,7 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
     expect(store.appointmentDatetimeApplicable).toBe(false)
     expect(store.appointmentTimeField?.runtime.visible).toBe(false)
     expect(store.appointmentTimeField?.runtime.required).toBe(false)
-    expect(store.appointmentFields.map((field) => field.key)).toEqual(['need', 'note'])
+    expect(store.appointmentFields.map((field) => field.valueKey)).toEqual(['need', 'note'])
     expect(store.appointmentForm?.values.datetime).toBe('2026-04-20 11:00')
     expect(store.setAppointmentTime('2026-04-21 14:00').state).toBe('failed_terminal')
 
@@ -481,21 +578,27 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
     expect(second.store.appointmentForm?.values.datetime).toBe('2026-04-20 11:00')
   })
 
-  it('submits only effective values for a deferred visit branch', async () => {
-    const { store, command } = configureWorkspace()
+  it('blocks a deferred visit without a durable receipt, then allows valid visit-required submit', async () => {
+    const { store, command, storage } = configureWorkspace()
     await openWorkspace(store)
     store.setField('need', '1')
     store.setAppointmentTime('2026-04-20 11:00')
     store.setField('need', '0')
 
-    expect((await store.submit()).state).toBe('succeeded')
-    expect(command.submitAppointment).toHaveBeenCalledWith(expect.objectContaining({
-      visitIntent: 'visit_deferred',
-      values: { need: '0' },
-    }))
-    expect(vi.mocked(command.submitAppointment).mock.calls[0][0].values).not.toHaveProperty('datetime')
-  })
+    expect(store.appointmentVisitIntent).toBe('visit_deferred')
+    expect((await store.submit()).error?.category).toBe('unsupported_capability')
+    expect(command.submitAppointment).not.toHaveBeenCalled()
+    expect([...storage.values.keys()].some(key => key.startsWith('action-mutation'))).toBe(false)
 
+    store.setField('need', '1')
+    expect(store.appointmentVisitIntent).toBe('visit_required')
+    expect((await store.submit()).state).toBe('succeeded')
+    expect(command.submitAppointment).toHaveBeenCalledTimes(1)
+    expect(command.submitAppointment).toHaveBeenCalledWith(expect.objectContaining({
+      visitIntent: 'visit_required',
+      values: { need: '1', datetime: '2026-04-20 11:00' },
+    }))
+  })
   it('flushes the current deferred editing state before fast confirmation navigation', async () => {
     const shared = storageFor()
     const { store, navigation } = configureWorkspace(
@@ -526,7 +629,7 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
     })
   })
 
-  it('submits current effective state before the debounce can persist it', async () => {
+  it('rejects unsupported deferred intent before debounce flush or remote submission', async () => {
     const shared = storageFor()
     const { store, command } = configureWorkspace(
       appointmentDetail(),
@@ -543,14 +646,17 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
     store.setField('need', '0')
     const result = await store.submit()
 
-    expect(result.state).toBe('succeeded')
+    expect(result.error?.category).toBe('unsupported_capability')
+    expect(store.appointmentVisitIntent).toBe('visit_deferred')
+    expect(command.submitAppointment).not.toHaveBeenCalled()
+    expect([...shared.values.keys()].some(key => key.startsWith('action-mutation'))).toBe(false)
+    store.setField('need', '1')
+    expect((await store.submit()).state).toBe('succeeded')
     expect(command.submitAppointment).toHaveBeenCalledWith(expect.objectContaining({
-      visitIntent: 'visit_deferred',
-      values: { need: '0' },
+      visitIntent: 'visit_required',
+      values: { need: '1', datetime: '2026-04-20 11:00' },
     }))
-    expect(vi.mocked(command.submitAppointment).mock.calls[0][0].values).not.toHaveProperty('datetime')
   })
-
   it('keeps the selected datetime in the dynamic form and routes to confirmation', async () => {
     const { store, navigation } = configureWorkspace()
     await openWorkspace(store)
@@ -656,7 +762,7 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
     expect(navigation.back).not.toHaveBeenCalled()
   })
 
-  it('uses the same Mock raw read/command path as the real Action Workspace', async () => {
+  it('reads real-shaped Mock forms nodeType but refuses its incompatible one-record command', async () => {
     vi.stubEnv('VITE_XLINK_ENVIRONMENT', 'test')
     setBusinessMockMode('data')
     resetMockCommandState()
@@ -683,6 +789,7 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
       apiRead: read,
       commandApi: command,
       draftRepository: createActionDraftRepository(storage.storage),
+      storage: storage.storage,
       navigation: navigation(),
       getSession: () => session,
       debounceMs: 0,
@@ -693,12 +800,12 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
       workflowNodeId: asOpaqueId<'WorkflowNodeRuntimeId'>('mock-workflow-node-016-appointment'),
       actionIntent: 'set_appointment',
     })
-    expect(result.state).toBe('succeeded')
-    store.setField('need', '1')
-    store.setField('datetime', '2026-04-20 10:00')
-    expect((await store.submit()).state).toBe('succeeded')
-    expect(store.refreshStatus).toBe('refreshed')
-    expect(storage.values.size).toBe(0)
+    expect(result.state).toBe('failed_terminal')
+    expect(result.error?.category).toBe('unsupported_capability')
+    expect(store.lifecycle).toBe('blocked')
+    expect(store.descriptor).toBeNull()
+    expect((await store.submit()).state).toBe('failed_terminal')
+    expect([...storage.values.keys()].some(key=>key.startsWith('action-mutation'))).toBe(false)
   })
 
   it('keeps Appointment content dynamic-form driven and never embeds a raw endpoint or storage API', async () => {

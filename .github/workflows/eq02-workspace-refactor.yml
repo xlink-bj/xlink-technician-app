@@ -1,0 +1,130 @@
+name: EQ02 Workspace Refactor + Golden Regression (No Release)
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'src/features/work-orders/action-workspace.ts'
+      - 'src/features/work-orders/action-workspace-draft-utils.ts'
+      - 'src/features/work-orders/quotation/QuotationActionContent.vue'
+      - 'src/features/work-orders/quotation/QuotationActionContent.styles.css'
+      - 'tests/engineering/eq02-action-draft-helpers.test.ts'
+      - 'docs/engineering/EQ02_ACTION_WORKSPACE_AND_QUOTATION_SPLIT.md'
+      - '.github/workflows/eq02-workspace-refactor.yml'
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  full-engineering:
+    if: github.event.pull_request.draft == true && github.event.pull_request.head.ref == 'engineering/eq02-action-workspace-quotation-modules'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Enforce EQ01 exact ancestry and seven-file-only UI/state refactor
+        shell: bash
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor f0008682fa5142e16d567c25df7864b5840b0185 HEAD
+          git diff --name-only f0008682fa5142e16d567c25df7864b5840b0185 HEAD | sort > /tmp/eq02-actual.txt
+          cat > /tmp/eq02-expected.txt <<'EOF'
+          .github/workflows/eq02-workspace-refactor.yml
+          docs/engineering/EQ02_ACTION_WORKSPACE_AND_QUOTATION_SPLIT.md
+          src/features/work-orders/action-workspace-draft-utils.ts
+          src/features/work-orders/action-workspace.ts
+          src/features/work-orders/quotation/QuotationActionContent.styles.css
+          src/features/work-orders/quotation/QuotationActionContent.vue
+          tests/engineering/eq02-action-draft-helpers.test.ts
+          EOF
+          sort -o /tmp/eq02-expected.txt /tmp/eq02-expected.txt
+          diff -u /tmp/eq02-expected.txt /tmp/eq02-actual.txt
+          test "$(git diff --name-only f0008682fa5142e16d567c25df7864b5840b0185 HEAD -- src/adapters/ src/runtimes/ src/shared/ tests/ds02a-main/snapshots/ tests/ds02a-gallery/snapshots/ | wc -l)" -eq 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Direct draft/identity and actual store/media behavior
+        env:
+          VITE_XLINK_ENVIRONMENT: test
+        run: |
+          pnpm exec vitest run \
+            tests/engineering/eq02-action-draft-helpers.test.ts \
+            tests/g4d/action-workspace.test.ts \
+            tests/g4f/quotation-composition.test.ts \
+            tests/g4f/quotation-empty-workbench.test.ts \
+            tests/g4ux/mock-runtime.test.ts
+      - name: Full code boundaries, types, unit/contracts
+        env:
+          VITE_XLINK_ENVIRONMENT: test
+        run: pnpm verify
+      - name: Real H5 bundle
+        run: pnpm build:h5
+      - name: Real WeChat mini-program bundle
+        run: pnpm build:mp-weixin
+      - name: Real native App bundle
+        run: pnpm build:app
+      - name: EQ02 quality metrics
+        run: node scripts/eq01-quality-census.mjs --output .review/eq01/quality-census.json
+      - name: Keep audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eq02-quality-${{ github.run_id }}
+          path: .review/eq01/
+          if-no-files-found: warn
+          retention-days: 30
+
+  exact-visual-and-ux:
+    if: github.event.pull_request.draft == true && github.event.pull_request.head.ref == 'engineering/eq02-action-workspace-quotation-modules'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+      H5_VISUAL_OWNER_APPROVAL: 'PENDING'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Chromium/CJK for exact pixel regression
+        run: |
+          pnpm exec playwright install --with-deps chromium
+          sudo apt-get update -qq
+          sudo apt-get install -y fonts-noto-cjk
+      - name: Original DS02A Gallery
+        run: pnpm test:ds02a:gallery
+      - name: Original DS02A Real H5 Detail + Q01 visual
+        run: pnpm test:ds02a:business
+      - name: Real H5 Appointment/Survey/Quote/Signing Mock paths
+        run: |
+          pnpm exec playwright test --config playwright.main-h5-mock.config.ts \
+            tests/h5-main-mock/main-app-quotation.spec.ts \
+            tests/h5-main-mock/ds07c4b-quote-signing.spec.ts \
+            tests/h5-main-mock/ds07c4b-signing-state-visual.spec.ts \
+            tests/h5-main-mock/m1-signing-official-order-read.spec.ts
+      - name: Preserve screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eq02-visual-${{ github.run_id }}
+          path: |
+            test-results/ds02a-main/
+            test-results/ds02a-gallery/
+            test-results/main-h5-mock/
+          if-no-files-found: warn
+          retention-days: 30

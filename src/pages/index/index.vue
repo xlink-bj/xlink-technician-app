@@ -82,6 +82,42 @@
         <view v-if="mockMode === 'data'" class="mock-action-scenarios">
           <text class="mock-mode-label">Action Workspace 场景</text>
           <navigator
+            v-if="isMockJourneyAvailable()"
+            class="mock-action-scenario"
+            :url="mockJourneyRoute()"
+            data-testid="mock-continuous-journey-entry"
+          >
+            <view class="mock-action-scenario-copy">
+              <text class="mock-action-scenario-label">连续业务旅程 · MOCK-019</text>
+              <text class="mock-action-scenario-description">同一工单预约 → 勘察 → 报价；仅本机模拟阶段，无业务提交</text>
+            </view>
+            <text class="mock-action-scenario-arrow" aria-hidden="true">›</text>
+          </navigator>
+          <navigator
+            v-if="isMaterialSkuMockAvailable()"
+            class="mock-action-scenario"
+            :url="materialSkuReviewUrl()"
+            data-testid="sku-mock-entry"
+          >
+            <view class="mock-action-scenario-copy">
+              <text class="mock-action-scenario-label">R1 材料 SPU/SKU · 只读 Mock</text>
+              <text class="mock-action-scenario-description">合成厚度、颜色与 SKU 匹配，含错误/重复/无货号，不关联真实报价</text>
+            </view>
+            <text class="mock-action-scenario-arrow" aria-hidden="true">›</text>
+          </navigator>
+          <navigator
+            v-if="isSigningMockReviewAvailable()"
+            class="mock-action-scenario"
+            :url="signingMockReviewUrl()"
+            data-testid="signing-mock-entry"
+          >
+            <view class="mock-action-scenario-copy">
+              <text class="mock-action-scenario-label">签约 Mock · 独立正式订单样例</text>
+              <text class="mock-action-scenario-description">同一工单 2 个合成正式订单；合同状态只读演示，无签约业务命令</text>
+            </view>
+            <text class="mock-action-scenario-arrow" aria-hidden="true">›</text>
+          </navigator>
+          <navigator
             v-for="scenario in mockActionWorkspaceScenarios"
             :key="scenario.key"
             class="mock-action-scenario"
@@ -208,16 +244,16 @@
           <view class="method-copy">
             <text class="method-title" :class="{ 'method-title-muted': !quickLoginAvailable }">快捷登录</text>
             <text class="method-subtitle">
-              {{ quickLoginAvailable ? '一键使用测试账号登录' : '仅非生产环境配置后可用' }}
+              {{ quickLoginSubtitle }}
             </text>
           </view>
-          <text v-if="quickLoginAvailable" class="method-badge method-badge-amber">测试</text>
+          <text v-if="quickLoginAvailable" class="method-badge method-badge-amber">{{ quickLoginBadge }}</text>
         </button>
       </view>
 
       <text v-if="feedback" class="feedback method-feedback" role="alert">{{ feedback }}</text>
 
-      <text class="policy-note">登录即表示同意《用户协议》与《隐私政策》</text>
+      <text class="policy-note">手机号登录须主动阅读并同意用户协议与隐私政策</text>
       <button class="back-link" @tap="loginStage = 'launch'">返回</button>
     </view>
 
@@ -238,9 +274,10 @@
         <text class="label">手机号</text>
         <input
           v-model="phoneNumber"
+          data-testid="r1-manual-phone"
           class="input"
           type="text"
-          maxlength="32"
+          maxlength="11"
           placeholder="请输入手机号"
           :disabled="isBusy"
         />
@@ -251,15 +288,32 @@
         <view class="code-input-wrap">
           <input
             v-model="verificationCode"
+            data-testid="r1-manual-code"
             class="code-input"
             type="number"
-            maxlength="16"
+            maxlength="6"
             placeholder="请输入短信验证码"
             :disabled="isBusy"
           />
           <button class="code-button" disabled>获取验证码</button>
         </view>
         <text class="field-hint">请输入已收到的验证码</text>
+      </view>
+
+      <view class="login-consent-panel" data-testid="r1-login-consent">
+        <checkbox-group @change="onLoginConsentChange">
+          <label class="login-consent-label">
+            <checkbox value="accepted" :checked="manualConsent" :disabled="isBusy || !loginPoliciesReady" />
+            <text>我已阅读并同意以下协议</text>
+          </label>
+        </checkbox-group>
+        <view class="login-legal-links">
+          <navigator v-if="loginPolicies.privacyUrl" class="login-legal-link" url="/pages/legal/legal?kind=privacy">隐私政策</navigator>
+          <text v-else class="login-legal-link login-legal-link--disabled">隐私政策</text>
+          <navigator v-if="loginPolicies.agreementUrl" class="login-legal-link" url="/pages/legal/legal?kind=agreement">用户协议</navigator>
+          <text v-else class="login-legal-link login-legal-link--disabled">用户协议</text>
+        </view>
+        <text v-if="!loginPoliciesReady" class="login-consent-unavailable">登录协议尚未配置，请联系管理员</text>
       </view>
 
       <text v-if="feedback" class="feedback" role="alert">{{ feedback }}</text>
@@ -284,10 +338,14 @@ import { onShow } from '@dcloudio/uni-app'
 import {
   isBusinessMockDeveloperModeAvailable,
   isBusinessMockMode,
+  isProductionAuthBusinessMockIsolation,
   setBusinessMockMode,
   type BusinessMockMode,
 } from '@app/business-mock'
 import { mockActionWorkspaceScenarios } from '@app/action-workspace-harness'
+import { isSigningMockReviewAvailable, signingMockReviewUrl } from '@app/signing-mock-review'
+import { isMaterialSkuMockAvailable, materialSkuReviewUrl } from '@app/material-sku-mock-review'
+import { isMockJourneyAvailable, mockJourneyRoute } from '@app/mock-journey'
 import { hasAuthenticatedSession, workOrdersRoute } from '@features/home/access'
 import LocalDraftDiagnosticsPanel from '@features/home/components/LocalDraftDiagnosticsPanel.vue'
 import {
@@ -296,6 +354,11 @@ import {
 } from '@features/home/business-data-source'
 import { useLocalDraftDiagnosticsStore } from '@features/home/draft-diagnostics'
 import { submitLogin, type LoginSubmissionState } from '@features/session/login'
+import {
+  legalLoginPolicies, manualLoginConsentIssue, manualLoginConsentMessage,
+  submitR1ManualLogin,
+} from '@features/session/login-consent'
+import { r1ManualLoginIssue, r1ManualLoginIssueText } from '@features/session/r1-manual-login-preflight'
 import { resolveQuickLoginInput } from '@features/session/quick-login'
 import {
   advanceLoginStage,
@@ -315,6 +378,9 @@ const workOrderDetail = useWorkOrderDetailStore()
 const draftDiagnostics = useLocalDraftDiagnosticsStore()
 const phoneNumber = ref('')
 const verificationCode = ref('')
+const manualConsent = ref(false)
+const loginPolicies = legalLoginPolicies(import.meta.env)
+const loginPoliciesReady = computed(() => Boolean(loginPolicies.privacyUrl && loginPolicies.agreementUrl))
 const loginStage = ref<LoginStage>('launch')
 const message = ref('')
 const logoutInFlight = ref(false)
@@ -331,7 +397,19 @@ const isBusy = computed(
 )
 const showHome = computed(() => hasAuthenticatedSession(session.status, session.session))
 const quickLoginAvailable = computed(() => resolveQuickLoginInput() !== null)
-const businessDataSourceLabel = computed(() => (mockMode.value === 'off' ? 'Real API' : 'Mock'))
+const productionTarget = import.meta.env.VITE_XLINK_ENVIRONMENT === 'prod'
+const quickLoginSubtitle = computed(() => {
+  if (quickLoginAvailable.value) {
+    return productionTarget ? '本机生产账号，业务数据只读' : '一键使用测试账号登录'
+  }
+  return productionTarget ? '生产快捷登录仅限本机开发运行' : '仅非生产环境配置后可用'
+})
+const quickLoginBadge = computed(() => (productionTarget ? '本机' : '测试'))
+const productionAuthOnly = isProductionAuthBusinessMockIsolation()
+const businessDataSourceLabel = computed(() => (
+  mockMode.value !== 'off' ? 'Mock'
+    : productionAuthOnly ? '业务网络已隔离' : 'Real API'
+))
 const feedback = computed(() => message.value || userFacingLoginMessage(session.error))
 
 watch(
@@ -366,7 +444,7 @@ async function quickLogin(): Promise<void> {
   if (isBusy.value) return
   const input = resolveQuickLoginInput()
   if (!input) {
-    message.value = '快捷登录仅在非生产环境配置后可用'
+    message.value = '快捷登录仅在本机开发运行或非生产环境配置后可用'
     return
   }
 
@@ -418,12 +496,29 @@ async function clearMockDrafts(): Promise<void> {
   await draftDiagnostics.clearMockDrafts()
 }
 
+function onLoginConsentChange(event: Event): void {
+  const values = (event as Event & { detail?: { value?: string[] } }).detail?.value ?? []
+  manualConsent.value = loginPoliciesReady.value && values.includes('accepted')
+}
+
 async function submit(): Promise<void> {
   if (isBusy.value) return
   message.value = ''
-  const result = await submitLogin(
+  const issue = r1ManualLoginIssue({ phoneNumber: phoneNumber.value, verificationCode: verificationCode.value })
+  if (issue) {
+    message.value = r1ManualLoginIssueText(issue)
+    return
+  }
+  const consentIssue = manualLoginConsentIssue(manualConsent.value, loginPolicies)
+  if (consentIssue) {
+    message.value = manualLoginConsentMessage(consentIssue)
+    return
+  }
+  const result = await submitR1ManualLogin(
     { phoneNumber: phoneNumber.value, verificationCode: verificationCode.value },
     submissionState,
+    manualConsent.value,
+    loginPolicies,
     (request) => session.login(request),
   )
   if (result.state === 'succeeded') {
@@ -1385,6 +1480,35 @@ function userFacingLoginMessage(error: OperationError | null | undefined): strin
   color: #526079;
 }
 
+.login-consent-panel {
+  margin-top: 24rpx;
+  padding: 14rpx 0;
+}
+.login-consent-label {
+  align-items: center;
+  display: flex;
+  gap: 6rpx;
+  color: inherit;
+}
+.login-legal-links {
+  display: flex;
+  justify-content: flex-start;
+  gap: 14rpx;
+  margin-top: 4rpx;
+}
+.login-legal-link {
+  background: transparent;
+  border: 0;
+  color: var(--login-link-color, royalblue);
+  margin: 0;
+  padding: 0;
+}
+.login-legal-link--disabled {
+  color: gray;
+}
+.login-consent-unavailable {
+  color: firebrick;
+}
 .form-stage > .submit {
   margin-top: 40rpx;
 }

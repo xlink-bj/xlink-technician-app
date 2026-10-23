@@ -1,0 +1,96 @@
+name: DS07 C5 Owner Visual Candidate (NO baseline writes)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'scripts/check-ds07c5-legacy-visual.mjs'
+      - '.github/workflows/ds07c5-visual-candidate.yml'
+      - 'docs/design-system/DS07C5_VISUAL_CANDIDATE.md'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  prepare-owner-candidate:
+    if: github.event.pull_request.head.ref == 'design-system/ds07c5-visual-baseline-candidate'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+      H5_VISUAL_OWNER_APPROVAL: 'PENDING'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - name: Freeze dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Install deterministic headless browser/fonts
+        run: |
+          pnpm exec playwright install --with-deps chromium
+          sudo apt-get update -qq
+          sudo apt-get install -y fonts-noto-cjk
+          fc-match 'Noto Sans CJK SC' | head -1
+          pnpm exec playwright --version
+      - name: Protect previously accepted Gallery candidates
+        run: pnpm test:ds02a:gallery
+      - name: Validate six inherited historical failures, fail on any new pattern
+        shell: bash
+        run: |
+          mkdir -p .review/ds07c5
+          set +e
+          pnpm exec playwright test --config playwright.ds02a-main.config.ts --reporter=json > .review/ds07c5/legacy-visual-run.json
+          result=$?
+          set -e
+          echo "Expected legacy comparison exit: $result"
+          test "$result" -eq 1 || (echo "::error::Unexpected DS02A legacy visual exit" && exit 1)
+          node scripts/check-ds07c5-legacy-visual.mjs .review/ds07c5/legacy-visual-run.json
+      - name: Generate updated visual candidates in ephemeral runner ONLY
+        run: pnpm exec playwright test --config playwright.ds02a-main.config.ts --update-snapshots=changed --reporter=line
+      - name: Fail closed unless exactly six expected PNGs changed
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .review/ds07c5/golden-before .review/ds07c5/candidates
+          git diff --name-only -- tests/ds02a-main/snapshots/ | sort > .review/ds07c5/changed-files.txt
+          for scene in detail quote; do
+            for width in 320 375 390; do
+              echo "tests/ds02a-main/snapshots/ds02a-${scene}-${width}.png"
+            done
+          done | sort > .review/ds07c5/expected-files.txt
+          diff -u .review/ds07c5/expected-files.txt .review/ds07c5/changed-files.txt
+          for scene in detail quote; do
+            for width in 320 375 390; do
+              file="ds02a-${scene}-${width}.png"
+              git show "HEAD:tests/ds02a-main/snapshots/$file" > ".review/ds07c5/golden-before/$file"
+              cp "tests/ds02a-main/snapshots/$file" ".review/ds07c5/candidates/$file"
+            done
+          done
+          sha256sum .review/ds07c5/golden-before/*.png .review/ds07c5/candidates/*.png > .review/ds07c5/SHA256SUMS.txt
+          git diff --numstat -- tests/ds02a-main/snapshots/ > .review/ds07c5/diff-numstat.txt
+          echo "Exactly six changed Golden candidates prepared WITHOUT repository writes"
+      - name: Guard that no code/data/contract changed
+        shell: bash
+        run: |
+          test "$(git diff --name-only | grep -vc '^tests/ds02a-main/snapshots/' || true)" -eq 0
+          test "${{ github.event.pull_request.draft }}" = "true"
+      - name: Upload owner review package without committing or promoting Golden
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ds07c5-owner-candidate-${{ github.run_id }}
+          path: |
+            .review/ds07c5/
+            test-results/ds02a-main/
+            test-results/ds02a-gallery/
+          if-no-files-found: warn
+          retention-days: 30

@@ -1,0 +1,120 @@
+name: DS07 C7 Full Legacy Guard Verify (NO merge)
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  legacy-guard-full-regression:
+    if: github.event.pull_request.head.ref == 'design-system/ds07c7-legacy-source-test-reconciliation' && github.event.pull_request.draft == true
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Confirm exact C6 ancestry and test-only delta
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          git merge-base --is-ancestor 34e90736d0819a8692c5ac4a00da48ecda30ef6b HEAD
+          git diff --name-only 34e90736d0819a8692c5ac4a00da48ecda30ef6b HEAD | sort > /tmp/ds07c7-actual.txt
+          cat > /tmp/ds07c7-allowed.txt <<'END_ALLOW'
+          .github/workflows/ds07c7-verify.yml
+          docs/design-system/DS07C7_LEGACY_SOURCE_TEST_RECONCILIATION.md
+          tests/g4d/app-ui-design-system.test.ts
+          tests/g4f/quotation-empty-workbench.test.ts
+          tests/g4ux/detail-production.test.ts
+          tests/g4ux/home-list-production.test.ts
+          END_ALLOW
+          sort -o /tmp/ds07c7-allowed.txt /tmp/ds07c7-allowed.txt
+          diff -u /tmp/ds07c7-allowed.txt /tmp/ds07c7-actual.txt
+          test "$(git diff --name-only 34e90736d0819a8692c5ac4a00da48ecda30ef6b HEAD -- src | wc -l)" -eq 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Full Verify — boundaries, UI, typecheck, all unit/contract tests
+        env:
+          VITE_XLINK_ENVIRONMENT: test
+        run: pnpm verify
+      - name: Approved six Golden image hashes remain identical
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s\n' \
+            '81463d6bb93a6332f2c150cdfbfa14975f39a16c00a26a9e8bcbc10d2164e742  tests/ds02a-main/snapshots/ds02a-detail-320.png' \
+            'f20792e3993ebff01eff767a0daa07162bf22d93d6fdbc04eb63e3f3aac4e002  tests/ds02a-main/snapshots/ds02a-detail-375.png' \
+            'c2e4227207a1a221f96f5244720aa4bfeb88864906ac776e9a18f6074316dc92  tests/ds02a-main/snapshots/ds02a-detail-390.png' \
+            '667499f14ad1db32432b45d419696844e6aaec1b58637df0e8ac9c1d2f6b210b  tests/ds02a-main/snapshots/ds02a-quote-320.png' \
+            '78594411519870f8f02599f36cf3c811ddb46572d7133513b2a7f3c1cb81d8fb  tests/ds02a-main/snapshots/ds02a-quote-375.png' \
+            '57601f82a36b66743fb87b428ad69638c1482b624f0c4c4d862c31eb9af19446  tests/ds02a-main/snapshots/ds02a-quote-390.png' | sha256sum --check
+      - name: Build actual uni-app H5 without test fixture
+        run: pnpm build:h5
+      - name: Build MP-Weixin without test fixture
+        run: pnpm build:mp-weixin
+      - name: Build native App without test fixture
+        run: pnpm build:app
+
+  actual-h5-source-identical:
+    if: github.event.pull_request.head.ref == 'design-system/ds07c7-legacy-source-test-reconciliation' && github.event.pull_request.draft == true
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+      H5_VISUAL_OWNER_APPROVAL: 'PENDING'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Lock source and Golden provenance to exact C6 baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor 34e90736d0819a8692c5ac4a00da48ecda30ef6b HEAD
+          test "$(git diff --name-only 34e90736d0819a8692c5ac4a00da48ecda30ef6b HEAD -- src tests/ds02a-main/snapshots tests/ds02a-gallery/snapshots | wc -l)" -eq 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Install headless Chromium and deterministic CJK font
+        run: |
+          pnpm exec playwright install --with-deps chromium
+          sudo apt-get update -qq
+          sudo apt-get install -y fonts-noto-cjk
+      - name: Approved DS02A Gallery (3)
+        run: pnpm test:ds02a:gallery
+      - name: Approved DS02A main App List/Detail/Q01 (9)
+        run: pnpm test:ds02a:business
+      - name: All actual M1 Appointment/Survey/Quotation/Signing Mock, blocked signing (27)
+        run: |
+          pnpm exec playwright test --config playwright.main-h5-mock.config.ts \
+            tests/h5-main-mock/main-app-quotation.spec.ts \
+            tests/h5-main-mock/ds07c4b-quote-signing.spec.ts \
+            tests/h5-main-mock/ds07c4b-signing-state-visual.spec.ts \
+            tests/h5-main-mock/m1-signing-official-order-read.spec.ts
+      - name: Retain test evidence; never update screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ds07-c7-final-integration-${{ github.run_id }}
+          path: |
+            test-results/ds02a-gallery/
+            test-results/ds02a-main/
+            test-results/main-h5-mock/
+          if-no-files-found: warn
+          retention-days: 30

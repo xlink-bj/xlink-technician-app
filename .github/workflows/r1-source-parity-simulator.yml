@@ -1,0 +1,120 @@
+name: R1 Source Parity and Simulator Handoff (NO live API)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - '.github/workflows/r1-source-parity-simulator.yml'
+      - '.github/ISSUE_TEMPLATE/r1-simulator-parity.md'
+      - 'docs/verification/R1_SIX_STAGE_SOURCE_PARITY_MANIFEST.json'
+      - 'docs/verification/R1_SIX_STAGE_SIMULATOR_HANDOFF.md'
+      - 'scripts/check-r1-six-stage-parity.mjs'
+      - 'tests/engineering/r1-six-stage-business-review.test.ts'
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  source-and-engineering:
+    if: github.event.pull_request.draft == true && github.event.pull_request.head.ref == 'engineering/r1-source-parity-simulator-readiness'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+      VITE_XLINK_ENVIRONMENT: test
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Enforce pinned EQ06 parent and zero app/lockfile/Golden change
+        shell: bash
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor 2c3fa331c31fb48e1a6f7e1f6b0b9b6f949b25e3 HEAD
+          git diff --name-only 2c3fa331c31fb48e1a6f7e1f6b0b9b6f949b25e3 HEAD | sort > /tmp/r1-actual
+          printf '%s\n' \
+            '.github/ISSUE_TEMPLATE/r1-simulator-parity.md' \
+            '.github/workflows/r1-source-parity-simulator.yml' \
+            'docs/verification/R1_SIX_STAGE_SIMULATOR_HANDOFF.md' \
+            'docs/verification/R1_SIX_STAGE_SOURCE_PARITY_MANIFEST.json' \
+            'scripts/check-r1-six-stage-parity.mjs' \
+            'tests/engineering/r1-six-stage-business-review.test.ts' | sort > /tmp/r1-expected
+          diff -u /tmp/r1-expected /tmp/r1-actual
+          test "$(git diff --name-only 2c3fa331c31fb48e1a6f7e1f6b0b9b6f949b25e3 HEAD -- src/ pnpm-lock.yaml tests/ds02a-main/snapshots tests/ds02a-gallery/snapshots | wc -l)" -eq 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Pinned original R1 six-stage truth and honest live gates
+        run: node scripts/check-r1-six-stage-parity.mjs --output .review/r1-parity/source-evidence.json
+      - name: Adversarial R1 route and business side-effect tests
+        run: |
+          pnpm exec vitest run \
+            tests/engineering/r1-six-stage-business-review.test.ts \
+            tests/g4f/m1-i3-quotation-stage-command-fence.test.ts \
+            tests/g4f/r1-contract-read-boundary.test.ts \
+            tests/g4f/quotation-order-command-adapter.test.ts
+      - name: Canonical critical business behavior lane
+        run: pnpm verify:critical
+      - name: Full governance/typecheck/complete unit suite
+        run: pnpm verify:full
+      - name: Real platform compilation without fixture write permission
+        run: |
+          pnpm build:h5
+          pnpm build:mp-weixin
+          pnpm build:app
+      - name: Archive redacted six-stage proof only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r1-source-review-${{ github.run_id }}
+          path: .review/r1-parity/
+          if-no-files-found: warn
+          retention-days: 30
+
+  credential-free-simulator-h5:
+    if: github.event.pull_request.draft == true && github.event.pull_request.head.ref == 'engineering/r1-source-parity-simulator-readiness'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+      H5_VISUAL_OWNER_APPROVAL: 'PENDING'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Chromium and deterministic CJK fonts
+        run: |
+          pnpm exec playwright install --with-deps chromium
+          sudo apt-get update -qq
+          sudo apt-get install -y fonts-noto-cjk
+      - name: Six R1-mapped stages in the real main H5 App, Mock only
+        run: pnpm exec playwright test --config playwright.main-h5-mock.config.ts tests/h5-main-mock/m1-i7-six-stage-integration.spec.ts
+      - name: Approved Gallery Goldens
+        run: pnpm test:ds02a:gallery
+      - name: Approved commercial List/Detail/Q01 Goldens
+        run: pnpm test:ds02a:business
+      - name: Keep synthetic screenshots and failure traces only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r1-h5-simulator-${{ github.run_id }}
+          path: |
+            test-results/main-h5-mock/
+            test-results/ds02a-gallery/
+            test-results/ds02a-main/
+          if-no-files-found: warn
+          retention-days: 30

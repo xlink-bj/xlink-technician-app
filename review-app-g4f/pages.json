@@ -1,0 +1,34 @@
+{
+  "pages": [
+    {
+      "path": "pages/quotation/index",
+      "style": {
+        "navigationBarTitleText": "报价工作区"
+      }
+    },
+    {
+      "path": "pages/product/orders",
+      "style": {
+        "navigationBarTitleText": "我的工单"
+      }
+    },
+    {
+      "path": "pages/product/detail",
+      "style": {
+        "navigationBarTitleText": "工单详情"
+      }
+    },
+    {
+      "path": "pages/product/quotation",
+      "style": {
+        "navigationBarTitleText": "报价工作台"
+      }
+    }
+  ],
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "报价工作区",
+    "navigationBarBackgroundColor": "#ffffff",
+    "backgroundColor": "#f3f6fa"
+  }
+}

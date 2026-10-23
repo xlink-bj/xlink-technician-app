@@ -1,5 +1,7 @@
 import {
   evaluateFieldState,
+  evaluateVisibility,
+  isFieldApplicable,
   normalizeFieldValue,
   normalizeSubmission,
 } from '@runtimes/dynamic-form'
@@ -14,6 +16,7 @@ import type {
   AppointmentFormRead,
   AppointmentVisitIntent,
 } from '@shared/ports'
+import { actionFormSchemaFor, ACTION_FORM_SURFACE } from './action-form-schema'
 import { createOperationError, type OperationSnapshot } from '@shared/types'
 
 export interface AppointmentRuntimeField extends AppointmentFormFieldRead {
@@ -43,27 +46,21 @@ const appointmentVisitOptionValues = {
 } as const
 
 function schemaFor(field: AppointmentFormFieldRead): FormFieldSchema {
-  return {
-    key: field.key,
-    type: field.type,
-    required: field.required,
-    readOnly: field.readOnly,
-    ...(field.options?.length ? { inlineOptions: field.options } : {}),
-  }
+  return actionFormSchemaFor(field)
 }
 
 function runtimeFieldState(
   field: AppointmentFormFieldRead,
   values: Readonly<Record<string, AppointmentFieldValue>>,
 ): EffectiveFieldState {
-  return evaluateFieldState(schemaFor(field), { values })
+  return evaluateFieldState(schemaFor(field), { values, surface: ACTION_FORM_SURFACE })
 }
 
 export function appointmentVisitIntentFor(form: AppointmentFormRead): AppointmentVisitIntent {
-  const needField = form.fields.find((field) => field.key === 'need')
+  const needField = form.fields.find((field) => field.valueKey === 'need')
   if (!needField) return 'unknown'
 
-  const rawValue = form.values[needField.key]
+  const rawValue = form.values[needField.valueKey]
   if (rawValue === undefined || rawValue === null || rawValue === '') return 'unknown'
   const value = String(rawValue).trim()
   if (!needField.options?.some((option) => option.value === value)) return 'unknown'
@@ -78,7 +75,7 @@ function appointmentFieldApplicabilityFromRuntime(
   runtime: EffectiveFieldState,
 ): AppointmentFieldApplicability {
   if (runtime.capability === 'UNSUPPORTED' || !runtime.visible) return 'not_applicable'
-  if (field.key === 'datetime' && appointmentVisitIntentFor(form) === 'visit_deferred') return 'not_applicable'
+  if (field.valueKey === 'datetime' && appointmentVisitIntentFor(form) === 'visit_deferred') return 'not_applicable'
   return 'applicable'
 }
 
@@ -95,7 +92,7 @@ export function appointmentFieldApplicabilityFor(
 }
 
 export function appointmentDatetimeApplicableFor(form: AppointmentFormRead): boolean {
-  const field = form.fields.find((candidate) => candidate.key === 'datetime')
+  const field = form.fields.find((candidate) => candidate.valueKey === 'datetime')
   return field ? appointmentFieldApplicabilityFor(form, field) === 'applicable' : false
 }
 
@@ -134,16 +131,16 @@ export function appointmentFieldRolesFor(
   const fields = form.fields
     .map((field) => effectiveRuntimeFieldFor(field, form))
     .filter((field) => field.runtime.capability !== 'UNSUPPORTED')
-  const need = fields.find((field) => field.key === 'need')
-  const datetime = fields.find((field) => field.key === 'datetime')
-  const note = fields.find((field) => field.key === 'note')
-  const knownKeys = new Set(['need', 'datetime', 'note'])
+  const need = fields.find((field) => field.valueKey === 'need')
+  const datetime = fields.find((field) => field.valueKey === 'datetime')
+  const note = fields.find((field) => field.valueKey === 'note')
+  const knownValueKeys = new Set(['need', 'datetime', 'note'])
 
   return {
     ...(need ? { need } : {}),
     ...(datetime ? { datetime } : {}),
     ...(note ? { note } : {}),
-    extras: fields.filter((field) => !knownKeys.has(field.key) && field.runtime.visible),
+    extras: fields.filter((field) => !knownValueKeys.has(field.valueKey) && field.runtime.visible),
   }
 }
 
@@ -163,7 +160,7 @@ function resultFromSubmission(
       error: createOperationError(
         result.reason === 'unsupported_capability' ? 'unsupported_capability' : 'validation',
         result.message,
-        { reason: result.fieldKey },
+        { reason: result.fieldId ?? result.valueKey },
       ),
     }
   }
@@ -190,21 +187,49 @@ export function normalizeAppointmentForm(
   const values: Record<string, AppointmentFieldValue> = {}
   const fieldContexts: Record<string, { readonly fixedRequired: boolean }> = {}
   for (const field of form.fields) {
+    const schema = schemaFor(field)
+    // A non-mobile row is not part of this Action surface, even when its
+    // persisted value remains in the local draft.
+    if (!isFieldApplicable(schema, 'mobile_detail')) {
+      fieldContexts[field.fieldId] = { fixedRequired: false }
+      continue
+    }
+    const visibility = evaluateVisibility(field.visibility, form.values)
+    if (visibility.state === 'unsupported') {
+      return {
+        state: 'failed_terminal',
+        error: createOperationError('unsupported_capability', visibility.reason ?? 'Appointment visibility rule is unsupported', {
+          reason: field.fieldId,
+        }),
+      }
+    }
+    const runtime = runtimeFieldState(field, form.values)
+    // A visible unsupported backend field must fail closed. Merely hiding it
+    // in the specialized Appointment UI must never make submission possible.
+    if (runtime.capability === 'UNSUPPORTED' && visibility.state !== 'hidden') {
+      return {
+        state: 'failed_terminal',
+        error: createOperationError('unsupported_capability', runtime.reason ?? 'Appointment field is unsupported', {
+          reason: field.fieldId,
+        }),
+      }
+    }
     const applicability = appointmentFieldApplicabilityFor(form, field)
     if (applicability === 'not_applicable') {
       // The stored draft value remains in `form.values`, but it is not an
       // effective value and must not reach validation or submission.
-      fieldContexts[field.key] = { fixedRequired: false }
+      fieldContexts[field.fieldId] = { fixedRequired: false }
       continue
     }
-    const value = form.values[field.key]
-    if (value !== undefined) values[field.key] = value
+    const value = form.values[field.valueKey]
+    if (value !== undefined) values[field.valueKey] = value
   }
 
   return resultFromSubmission(
     normalizeSubmission({
       fields: form.fields.map(schemaFor),
       values,
+      surface: ACTION_FORM_SURFACE,
       ...(Object.keys(fieldContexts).length > 0 ? { fieldContexts } : {}),
     }),
   )
@@ -230,7 +255,7 @@ export function normalizeAppointmentFieldValue(
   values: Readonly<Record<string, AppointmentFieldValue>>,
 ): OperationSnapshot<AppointmentFieldValue> {
   const schema = schemaFor(field)
-  const state = evaluateFieldState(schema, { values: { ...values, [field.key]: value } })
+  const state = evaluateFieldState(schema, { values: { ...values, [field.valueKey]: value }, surface: ACTION_FORM_SURFACE })
   if (state.capability === 'UNSUPPORTED') {
     return {
       state: 'failed_terminal',
@@ -250,7 +275,7 @@ export function normalizeAppointmentFieldValue(
     }
   }
 
-  const normalized = normalizeFieldValue(schema.type, value, schema.inlineOptions)
+  const normalized = normalizeFieldValue(schema.type, value, schema.inlineOptions, schema.multiple)
   if (!normalized.ok) {
     return {
       state: 'failed_terminal',

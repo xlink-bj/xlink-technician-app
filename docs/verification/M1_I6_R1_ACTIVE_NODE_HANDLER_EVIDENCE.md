@@ -1,0 +1,11 @@
+# M1 I6 — R1 active-node handler evidence (DEV-only read preflight)
+
+**Engineering source baseline:** `xlink-bj/xlink-app@6c0a97b26bcbcaee81ac4e1dfd627c6e8e70e29d/business/subpackages/serviceAppointment/serviceAppointment.vue:6333–6346`. R1's `isHandler` is a three-way membership test against active `currentNode.handlerIds`: `userId`, `roleId`, `orgId + '+' + roleId`. Visibility through the WorkOrder list is **not** authorization to sign.
+
+**Implement:** a reusable pure `reviewR1ActivePlaceOrderHandler` checks one active `placeOrder` node in a fresh role-scoped `getWorkOrderDetail` response; requires full work-order identity, handler structural validity and current SessionSnapshot role/version. Same runId mismatches, duplicate active nodes, missing nodes, stale role and membership changes all deny. Uses the existing `isHandlerMatch` Workflow Runtime, not an invented ACL.
+
+**Important source limitation:** current `SessionSnapshot` has no verified organization ID; org+role matches cannot be proven even if the raw node contains one. Do NOT add backend fields or infer org from UI labels. Unknown => denied. A successful R1 handler condition is only **frontend display eligibility**, not actual backend signer entitlement.
+
+**Integration:** actual main App signing read store makes a *user-triggered* fresh ServiceAppointment detail read, never trusts the Detail page cache. The call requires a verified type=1 Order review, live role-visible WorkOrder membership, unchanged session/roleVersion and explicitly DEV-isolated synthetic preview callback. All requests produce only `verified/blocked` sanitized state; no handler arrays, identity, phone, Contract URL or PDF leave the evaluator. Role change, WorkOrder revocation, selection change or unload clears evidence synchronously; any stale async response is discarded. The five command inspectors can show R1 candidate only for a verified synthetic current node, but `mayDispatch=false`, backend permission is unproven and the signing/Contract transport hard fence remains unchanged.
+
+**Not executed:** authorized tenant read, current real production role/handler mapping, Qiyuesuo/SMS/PDF, MP/Android/iOS physical runtime; Beta/Production Contract read and all signing writes remain disabled. Engineering tests and browser H5 alone do not elevate I6 from formal **2/4** or M1 from **1/8**.

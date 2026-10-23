@@ -29,7 +29,16 @@
     "tests/**/*.ts",
     "vite.config.ts",
     "vitest.config.ts",
-    "scripts/**/*.mjs"
+    "scripts/**/*.mjs",
+    "scripts/**/*.d.ts",
+    "playwright.config.ts",
+    "playwright.uni-h5-g4f-review.config.ts",
+    "vite.uni-h5-g4f-review.config.ts",
+    "review-app-g4f/**/*.ts",
+    "review-app-g4f/**/*.vue",
+    "__review/**/*.ts",
+    "__review/**/*.vue",
+    "vite.review.config.ts"
   ],
   "exclude": ["node_modules", "dist", "unpackage"]
 }

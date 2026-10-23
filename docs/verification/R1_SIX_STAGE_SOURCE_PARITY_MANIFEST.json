@@ -1,0 +1,364 @@
+{
+  "schemaVersion": 1,
+  "observedDate": "2026-10-19",
+  "scope": "PINNED_R1_SOURCE_TO_NEW_APP_STATIC_AND_SYNTHETIC_ONLY",
+  "r1Frontend": {
+    "repository": "xlink-bj/xlink-app",
+    "commit": "6c0a97b26bcbcaee81ac4e1dfd627c6e8e70e29d"
+  },
+  "r1Backend": {
+    "repository": "xlink-bj/xlink-cloud-backend",
+    "commit": "5fc008d32e771205260f120621c1c4fc62d0824e"
+  },
+  "newAppParent": {
+    "repository": "xlink-bj/xlink-technician-app",
+    "commit": "2c3fa331c31fb48e1a6f7e1f6b0b9b6f949b25e3"
+  },
+  "acceptance": {
+    "formalM1Iterations": "1/8",
+    "mainMerge": "NOT_APPROVED",
+    "productionRead": "NOT_AUTHORIZED_BY_THIS_AUDIT",
+    "productionWrite": "NOT_APPROVED",
+    "backendTenantACL": "NOT_VERIFIED",
+    "skuSourcePrice": "NOT_VERIFIED",
+    "officialOrderTypeOneRealReadback": "NOT_VERIFIED",
+    "backendSignedContract": "NOT_VERIFIED",
+    "physicalMpWeixin": "NOT_RUN",
+    "physicalApp": "NOT_RUN",
+    "realR1Parity": "NOT_VERIFIED"
+  },
+  "stages": [
+    {
+      "id": "login",
+      "label": "登录与身份",
+      "i1Refs": [
+        "L01",
+        "L02",
+        "L03",
+        "L04"
+      ],
+      "r1Evidence": [
+        {
+          "path": "business/subpackages/login/loginAuth.vue",
+          "blob": "2425a3a6c39ff32629736cc89f2b77193eacf186",
+          "from": 324,
+          "to": 349,
+          "fact": "必须同意隐私及用户协议后登录；phoneLogin.do body 包含 method/phone/code/tenantId"
+        },
+        {
+          "path": "business/subpackages/login/loginAuth.vue",
+          "blob": "2425a3a6c39ff32629736cc89f2b77193eacf186",
+          "from": 438,
+          "to": 454,
+          "fact": "getCurrentRoleFunctions 使用 function/changeRole 按当前角色加载功能菜单"
+        }
+      ],
+      "appPaths": [
+        "src/pages/index/index.vue",
+        "src/features/session/login.ts",
+        "src/features/session/r1-manual-login-preflight.ts"
+      ],
+      "tests": [
+        "tests/g4a/r1-manual-login-preflight.test.ts",
+        "tests/g4f/m1-i8-engineering-acceptance.test.ts"
+      ],
+      "codeEvidence": "PARTIAL_SOURCE_CONTRACT",
+      "liveParity": "NOT_VERIFIED",
+      "confirmedOpenGaps": [
+        "R1 用户协议勾选阻断：当前新 App 登录表单源码未发现相同准入状态；需补业务行为及 UI 验证",
+        "R1 密码模式、新 App 当前仅验证短信码方式；不可声称登录方式等价",
+        "真实 token/角色菜单刷新和多账户权限未验证"
+      ],
+      "simulatorGoal": "DEV 合成入口、模拟登录和不同角色工单列表，不使用生产短信"
+    },
+    {
+      "id": "work_orders",
+      "label": "工单列表、接单与详情",
+      "i1Refs": [
+        "W00",
+        "W02",
+        "W03",
+        "W04",
+        "W05"
+      ],
+      "r1Evidence": [
+        {
+          "path": "business/pages/serviceAppointment/serviceAppointments.vue",
+          "blob": "dbdad9e07d72ed5e395803aa3c07e78b390370c4",
+          "from": 1530,
+          "to": 1574,
+          "fact": "主技术员工单为 ServiceAppointment；SANode 用 querySAWorkflowNode，普通列表用 query"
+        },
+        {
+          "path": "business/subpackages/serviceAppointment/serviceAppointment.vue",
+          "blob": "466cdbfb26850fae13149ef05b22740e93aed9be",
+          "from": 6182,
+          "to": 6204,
+          "fact": "详情通过 basic/serviceAppointment/queryById/{id} 读取 serviceAppointment/workflow/workflowNode"
+        }
+      ],
+      "appPaths": [
+        "src/features/work-orders/list.ts",
+        "src/pages/work-orders/work-orders.vue",
+        "src/pages/work-orders/detail.vue"
+      ],
+      "tests": [
+        "tests/g4b/work-orders.test.ts",
+        "tests/g4c/work-order-detail.test.ts",
+        "tests/g4f/m1-i7-work-order-read-scope.test.ts"
+      ],
+      "codeEvidence": "SOURCE_LINKED_ENGINEERING_TESTED",
+      "liveParity": "NOT_VERIFIED",
+      "confirmedOpenGaps": [
+        "主 SANode 与普通列表的真实分页、菜单与角色过滤未完成双角色只读验证",
+        "接单处理人/组织条件与 R1 工作流真实返回未逐场景核对",
+        "电话中间号和设备呼叫行为尚未真机验收"
+      ],
+      "simulatorGoal": "不同工单详情、筛选、当前任务及无授权场景导航"
+    },
+    {
+      "id": "appointment",
+      "label": "联系与预约上门",
+      "i1Refs": [
+        "A01",
+        "A02",
+        "A03",
+        "A04"
+      ],
+      "r1Evidence": [
+        {
+          "path": "business/subpackages/serviceAppointment/serviceAppointment.vue",
+          "blob": "466cdbfb26850fae13149ef05b22740e93aed9be",
+          "from": 6182,
+          "to": 6230,
+          "fact": "当前 ServiceAppointment/WorkflowNode 是预约业务准入上下文；不能由页面标签猜测下一节点"
+        },
+        {
+          "path": "business/subpackages/serviceAppointment/serviceAppointment.vue",
+          "blob": "466cdbfb26850fae13149ef05b22740e93aed9be",
+          "from": 7114,
+          "to": 7184,
+          "fact": "R1 saveForm(type) 对 saveOnly 不做必填校验；普通保存按 showType 判断可见必填字段并把扩展字段投影到 exts"
+        },
+        {
+          "path": "business/subpackages/serviceAppointment/serviceAppointment.vue",
+          "blob": "466cdbfb26850fae13149ef05b22740e93aed9be",
+          "from": 7208,
+          "to": 7240,
+          "fact": "R1 把 this.formData 整体作为 params，附加 sid、smodule、workflowId、nodeId，并为缺失 state 设置默认值"
+        },
+        {
+          "path": "business/subpackages/serviceAppointment/serviceAppointment.vue",
+          "blob": "466cdbfb26850fae13149ef05b22740e93aed9be",
+          "from": 7400,
+          "to": 7455,
+          "fact": "R1 biz/extForm/upsert/{nodeFormDefId} 发送 dataStr:JSON.stringify(params)，need==1 才追加手机日历；未在此路径看到 need==0 datetime 显式删除"
+        },
+        {
+          "path": "business/subpackages/serviceAppointment/serviceAppointment.vue",
+          "blob": "466cdbfb26850fae13149ef05b22740e93aed9be",
+          "from": 7528,
+          "to": 7622,
+          "fact": "R1 workflow/process 的 workflowNodeId/nodeFormDefId/nodeFormDataId/smodule/sid 是保存后的单独工作流命令，不应由本地草稿成功代替"
+        }
+      ],
+      "appPaths": [
+        "src/features/work-orders/appointment-form-runtime.ts",
+        "src/features/work-orders/action-workspace.ts",
+        "src/pages/work-orders/action-workspace.vue"
+      ],
+      "tests": [
+        "tests/g4d/accept-appointment.test.ts",
+        "tests/g4d/appointment-action-content.test.ts",
+        "tests/g4d/action-workspace.test.ts"
+      ],
+      "codeEvidence": "SOURCE_LINKED_ENGINEERING_TESTED",
+      "liveParity": "NOT_VERIFIED",
+      "confirmedOpenGaps": [
+        "R1 saveForm(type) 以整个 formData 加 sid/smodule/nodeId 发送 dataStr；need=0 时 datetime 未见显式剔除，新 App 则从有效命令值排除。保存 wire 的空值/省略/哨兵语义必须按后端确认，不能宣称完全等价",
+        "真实预约 FormData 保存、Workflow Complete 与权威回读未执行",
+        "不同角色预约可见性和跨设备草稿恢复缺实账号与设备样本",
+        "R1 saveOnly 跳过必填并不处理 Workflow，普通提交的 showType/只读/必填与日历 need==1 副作用应单独对照"
+      ],
+      "simulatorGoal": "需要/无需上门分支、切换恢复、保存草稿但不调用真实 Workflow Complete"
+    },
+    {
+      "id": "survey",
+      "label": "现场勘察",
+      "i1Refs": [
+        "S01",
+        "S02",
+        "S03",
+        "S04"
+      ],
+      "r1Evidence": [
+        {
+          "path": "business/subpackages/serviceAppointment/serviceAppointment.vue",
+          "blob": "466cdbfb26850fae13149ef05b22740e93aed9be",
+          "from": 6182,
+          "to": 6230,
+          "fact": "勘察属于活跃 ServiceAppointment 工作流表单；需按 ExtField/节点身份识别"
+        }
+      ],
+      "appPaths": [
+        "src/features/work-orders/components/SurveyActionContent.vue",
+        "src/features/work-orders/components/GenericDynamicFormActionContent.vue",
+        "src/adapters/api/survey-form-codec.ts"
+      ],
+      "tests": [
+        "tests/g4e/survey-capabilities.test.ts",
+        "tests/g4e/survey-media-contract.test.ts",
+        "tests/g4e/survey-leakage-cause.test.ts"
+      ],
+      "codeEvidence": "SOURCE_LINKED_ENGINEERING_TESTED",
+      "liveParity": "NOT_VERIFIED",
+      "confirmedOpenGaps": [
+        "R1 Survey 与 InspectionAppointment 是不同实体，不得按界面术语混用；FormData→Survey 后端副作用未实测",
+        "真实勘察 ExtField 表单值规则、图片水印/上传及读回未闭环",
+        "真机相机、断网恢复与 Workflow Complete 未验收",
+        "旧后台 ExtFormServiceImpl 的新建 Survey 会复制 ServiceAppointment 客户/服务/组织字段并更新 SLA；新 App Mock 表单保存不证明上述后端副作用"
+      ],
+      "simulatorGoal": "实际主 App 勘察动态字段、维修部位、漏水原因、媒体状态和错误恢复",
+      "r1BackendEvidence": [
+        {
+          "path": "src/main/java/com/fsgo/service/biz/ExtFormServiceImpl.java",
+          "blob": "3f6a8f6c546c0cbcd2fdb9f3fd7442dac3062be6",
+          "from": 143,
+          "to": 187,
+          "fact": "R1 ExtForm upsert 根据租户和 Ext.colName 分支：新增 survey 会解析成 Survey、根据 sid 查 ServiceAppointment 并复制服务类型/客户/组织字段，执行 SLA 更新后保存独立 Survey 实体；InspectionAppointment 是另一个分支"
+        },
+        {
+          "path": "src/main/java/com/fsgo/entity/basic/Survey.java",
+          "blob": "a65e7390af36973f317388a10624f8f103f50e9f",
+          "from": 1,
+          "to": 29,
+          "fact": "R1 Survey 是 ExtDataEntity 的独立 survey collection，字段包括 surveyNum/name/phone/sid 等，不能因为使用 ExtField 动态表单而替换成 InspectionAppointment"
+        }
+      ]
+    },
+    {
+      "id": "quotation",
+      "label": "报价、SKU 与正式订单",
+      "i1Refs": [
+        "Q01",
+        "Q02",
+        "Q03",
+        "Q04",
+        "Q05",
+        "Q06"
+      ],
+      "r1Evidence": [
+        {
+          "path": "business/subpackages/order/placeOrders.vue",
+          "blob": "b8d8cad48783397eea907f6bb0c6f42e05673cc7",
+          "from": 4204,
+          "to": 4253,
+          "fact": "R1 同页下单组装存在 type=0 报价与 type=1 订单分支；不可合并为一次写入"
+        },
+        {
+          "path": "business/subpackages/order/placeOrders.vue",
+          "blob": "b8d8cad48783397eea907f6bb0c6f42e05673cc7",
+          "from": 4320,
+          "to": 4345,
+          "fact": "type=1 正式订单调用 basic/order/upsert 且 body.order 是 JSON 字符串"
+        },
+        {
+          "path": "business/subpackages/order/placeOrders.vue",
+          "blob": "b8d8cad48783397eea907f6bb0c6f42e05673cc7",
+          "from": 6913,
+          "to": 6959,
+          "fact": "type=0 生成报价调用 basic/order/creatQuotation 且 body.data 是 JSON 字符串"
+        }
+      ],
+      "appPaths": [
+        "src/features/work-orders/quotation/pricing.ts",
+        "src/features/work-orders/quotation/order-encoder.ts",
+        "src/adapters/api/quotation-order-commands.ts"
+      ],
+      "tests": [
+        "tests/g4f/quotation-engine.test.ts",
+        "tests/g4f/m1-i3-quotation-stage-command-fence.test.ts",
+        "tests/g4f/quotation-order-command-adapter.test.ts",
+        "tests/g4f/quotation-sku-identity-review.test.ts"
+      ],
+      "codeEvidence": "SOURCE_LINKED_PARTIAL_AND_WRITE_FENCED",
+      "liveParity": "NOT_VERIFIED",
+      "confirmedOpenGaps": [
+        "同一个 R1 报价页面的两条不同写入链路不得互换；creatQuotation 仍禁止调用",
+        "真实 active SPU/SKU 选规价格、渠道/租户适用范围及 sourceType 未验证",
+        "优惠券、折扣、加减项及套餐 SKU 计价路径不应被 UI 默认为全量支持",
+        "正式 type=1 Order 写入与回读、金额一致性需独立业务写入授权",
+        "后端 GoodsServiceImpl 的 form=mini/组织价格覆盖与 sourceType 过滤必须核对原 R1 实际调用上下文；不可简单把任何返回的 price 当作已授权真实 SKU 成交价"
+      ],
+      "simulatorGoal": "四类目录、维修组、套餐材料、金额本地计算、报价/正式订单状态区分，不创建真实订单",
+      "r1BackendEvidence": [
+        {
+          "path": "src/main/java/com/fsgo/service/biz/GoodsServiceImpl.java",
+          "blob": "09f7fe784418e901d60e50e549987e40395b8c31",
+          "from": 376,
+          "to": 448,
+          "fact": "R1 GoodsServiceImpl.queryWithRank 以 currentUser/currentAccount/tenantId 过滤；sourceType 分支改写 sourceTypeList 与组织范围；form=mini 还可能用 servicePrice 覆盖 Material.price、用组织已审核价覆盖 Procedure/Measure 指导价；这不证明前端价格对当前工单具有权威性"
+        }
+      ]
+    },
+    {
+      "id": "signing",
+      "label": "合同与签约",
+      "i1Refs": [
+        "C01",
+        "C02",
+        "C03",
+        "C04"
+      ],
+      "r1Evidence": [
+        {
+          "path": "business/subpackages/serviceAppointment/serviceAppointment.vue",
+          "blob": "466cdbfb26850fae13149ef05b22740e93aed9be",
+          "from": 9216,
+          "to": 9235,
+          "fact": "主技术员合同列表以 serviceAppointmentId 筛选，R1 _all=1 不适合作为新 App 有界分页证据"
+        },
+        {
+          "path": "business/subpackages/serviceAppointment/serviceAppointment.vue",
+          "blob": "466cdbfb26850fae13149ef05b22740e93aed9be",
+          "from": 9757,
+          "to": 9799,
+          "fact": "线下签约 .do 带 type=1；电子签约不带 type，二者可能生成合同/PDF/SMS，均是真实业务写入"
+        }
+      ],
+      "appPaths": [
+        "src/features/work-orders/signing/r1-signing-command-intents.ts",
+        "src/features/work-orders/signing/signing-review-read-workspace.ts",
+        "src/pages/work-orders/signing-order-read.vue"
+      ],
+      "tests": [
+        "tests/g4f/r1-contract-read-boundary.test.ts",
+        "tests/g4f/quotation-order-signing-read-boundary.test.ts",
+        "tests/g4f/r1-signing-write-fence.test.ts"
+      ],
+      "codeEvidence": "SOURCE_LINKED_READ_ONLY_PARTIAL",
+      "liveParity": "NOT_VERIFIED",
+      "confirmedOpenGaps": [
+        "真实签约角色/handlerId/合同归属与后端 Contract 回读缺授权测试",
+        "短信、PDF、电子签、线下签/再次签约均有副作用，不能在模拟器做成功态伪造",
+        "DEV signed 截图不是权威后端签约完成；真机文件预览未验证"
+      ],
+      "simulatorGoal": "模拟正式订单 A/B、不同合同状态、误绑定拦截和签约按钮禁用"
+    }
+  ],
+  "simulator": {
+    "kind": "CREDENTIAL_FREE_SYNTHETIC_PREVIEW_ONLY",
+    "mainH5Test": "tests/h5-main-mock/m1-i7-six-stage-integration.spec.ts",
+    "playwrightConfig": "playwright.main-h5-mock.config.ts",
+    "unitCriticalCommand": "pnpm verify:critical",
+    "fullCommand": "pnpm verify:full",
+    "bundleCommands": [
+      "pnpm build:h5",
+      "pnpm build:mp-weixin",
+      "pnpm build:app"
+    ],
+    "localH5Command": "pnpm dev:h5",
+    "localMpCommand": "pnpm dev:mp-weixin",
+    "sourceOfTruth": "R1 pinned source plus typed New App adapter and workflow state, never generated Mock success"
+  }
+}

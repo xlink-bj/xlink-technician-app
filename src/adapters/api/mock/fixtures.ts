@@ -1,6 +1,68 @@
 /** Synthetic raw responses only. These fields intentionally imitate backend shapes. */
 
 import { appointmentFormDefinitionWireId } from '../appointment-contract'
+import { mockJourneyNodes, mockJourneyWorkOrderId, mockJourneyWorkflowRunId } from './journey'
+import {
+  mockQuotationCatalogServiceType,
+  mockQuotationCatalogSourceType,
+} from './quotation-catalog'
+import {
+  mockSurveyFormDefinitionId,
+  mockSurveyFormDefinitionResponse,
+  mockSurveyPartsCascadeResponse,
+  mockSurveyLeakageCauseResponse,
+  mockSurveyCodeOptionsResponse,
+} from './survey-contract'
+
+/** Synthetic-only legacy harness form; it is not the G4-E Survey contract. */
+export const mockSyntheticDynamicFormDefinitionId = 'mock-form-definition-inspection'
+/** DEV-only R1 local-draft walkthrough. These IDs never represent FormData persistence. */
+export const mockR1FormsWorkOrderId = 'mock-work-order-020-local-forms'
+export const mockR1RepeatWorkOrderId = 'mock-work-order-021-local-repeat'
+export const mockR1AddFormCodeId = 'mock-code-local-form-types'
+export const mockR1NoteFormDefinitionId = 'mock-form-definition-local-note'
+export const mockR1FormData = {
+  formsFirst: 'mock-form-data-020-existing-a',
+  formsSecond: 'mock-form-data-020-existing-b',
+  repeatFirst: 'mock-form-data-021-existing-a',
+  repeatSecond: 'mock-form-data-021-existing-b',
+} as const
+export const mockR1NoteFormDefinitionResponse = {
+  data: [{ _id: 'mock-local-note-field', name: 'note', nameDisp: '服务备注',
+    type: 'textarea', required: '0', state: 1 }],
+  page: 1, rows: 20, total: 1,
+} as const
+export const mockR1AddFormOptionsResponse = {
+  data: [
+    { name: '现场记录', state: 1, exts: { formDefId: mockSyntheticDynamicFormDefinitionId } },
+    { name: '服务备注', state: 1, exts: { formDefId: mockR1NoteFormDefinitionId } },
+  ], page: 1, rows: 50, total: 2,
+} as const
+export const mockR1ExistingFormData = {
+  [mockR1FormData.formsFirst]: { _id: mockR1FormData.formsFirst,
+    extId: mockSyntheticDynamicFormDefinitionId, formDefId: mockSyntheticDynamicFormDefinitionId,
+    formTitle: '合成现场记录', state: 1,
+    exts: { inspectionSummary: '合成内容：已查看屋面', inspectionResult: 'follow_up' } },
+  [mockR1FormData.formsSecond]: { _id: mockR1FormData.formsSecond,
+    extId: mockR1NoteFormDefinitionId, formDefId: mockR1NoteFormDefinitionId,
+    formTitle: '合成服务备注', state: 1, exts: { note: '仅供本地草稿走查' } },
+  [mockR1FormData.repeatFirst]: { _id: mockR1FormData.repeatFirst,
+    extId: mockSyntheticDynamicFormDefinitionId, formDefId: mockSyntheticDynamicFormDefinitionId,
+    formTitle: '合成重复记录一', workflowId: 'mock-workflow-run-021', state: 1,
+    exts: { inspectionSummary: '合成记录一' } },
+  [mockR1FormData.repeatSecond]: { _id: mockR1FormData.repeatSecond,
+    extId: mockSyntheticDynamicFormDefinitionId, formDefId: mockSyntheticDynamicFormDefinitionId,
+    formTitle: '合成重复记录二', workflowId: 'mock-workflow-run-021', state: 1,
+    exts: { inspectionSummary: '合成记录二' } },
+} as const
+
+export {
+  mockSurveyFormDefinitionId,
+  mockSurveyFormDefinitionResponse,
+  mockSurveyPartsCascadeResponse,
+  mockSurveyLeakageCauseResponse,
+  mockSurveyCodeOptionsResponse,
+}
 
 export const mockAppointmentFormDefinitionResponse = {
   data: [
@@ -36,6 +98,50 @@ export const mockAppointmentFormDefinitionResponse = {
   page: 1,
   rows: 20,
   total: 3,
+} as const
+
+export const mockSyntheticInspectionFormDefinitionResponse = {
+  data: [
+    {
+      _id: 'mock-inspection-field-summary',
+      name: 'inspectionSummary',
+      nameDisp: '现场情况',
+      type: 'textarea',
+      required: '1',
+      state: 1,
+    },
+    {
+      _id: 'mock-inspection-field-result',
+      name: 'inspectionResult',
+      nameDisp: '勘察结论',
+      type: 'radio',
+      required: '1',
+      state: 1,
+      options: [
+        { value: 'safe', name: '可继续施工' },
+        { value: 'follow_up', name: '需要跟进' },
+      ],
+    },
+    {
+      _id: 'mock-inspection-field-photo',
+      name: 'inspectionPhoto',
+      nameDisp: '现场照片',
+      type: 'image',
+      required: '1',
+      state: 1,
+    },
+    {
+      _id: 'mock-inspection-field-note',
+      name: 'inspectionNote',
+      nameDisp: '备注',
+      type: 'textarea',
+      required: '0',
+      state: 1,
+    },
+  ],
+  page: 1,
+  rows: 20,
+  total: 4,
 } as const
 
 export const mockWorkOrderIds = [
@@ -79,10 +185,15 @@ export const mockCommandScenarioIds = {
   appointmentRetryable: 'mock-work-order-014-appointment-retryable',
   appointmentTerminal: 'mock-work-order-015-appointment-terminal',
   appointmentSuccess: 'mock-work-order-016-appointment-success',
+  surveySuccess: 'mock-work-order-017-survey-success',
+  quotationFoundation: 'mock-work-order-018-quotation-foundation',
+  continuousJourney: mockJourneyWorkOrderId,
 } as const
 
+export const mockQuotationWorkflowNodeId = 'mock-workflow-node-018-place-order'
+
 /** Mock DATA list order is intentionally stable for visual review. */
-export const mockListScenarioIds = [...mockDetailScenarioIds, ...mockStatusSampleIds] as const
+export const mockListScenarioIds = [...mockDetailScenarioIds, ...mockStatusSampleIds, mockCommandScenarioIds.quotationFoundation, mockCommandScenarioIds.continuousJourney] as const
 
 const mockServiceAppointmentData = {
   [mockWorkOrderIds[0]]: {
@@ -237,6 +348,20 @@ const mockServiceAppointmentData = {
   },
 } as const
 
+function mockServiceAppointmentDetailData(
+  id: keyof typeof mockServiceAppointmentData,
+): Record<string, unknown> {
+  const appointment = mockServiceAppointmentData[id] as unknown as Record<string, unknown>
+  const extensions = typeof appointment.exts === 'object' && appointment.exts !== null
+    ? appointment.exts as Record<string, unknown>
+    : {}
+  return {
+    ...appointment,
+    serviceType: mockQuotationCatalogServiceType,
+    exts: { ...extensions, sourceType: mockQuotationCatalogSourceType },
+  }
+}
+
 export const mockRoleFunctionResponse = {
   data: {
     functionList: [
@@ -317,11 +442,78 @@ export const mockSanodeListResponse = {
       nodeDef: { nodeType: 'forms', name: '待评价' },
       data: mockServiceAppointmentData[mockStatusSampleIds[3]],
     },
+    // The quotation review Work Order must be discoverable from the normal
+    // technician list, not only a developer Home shortcut. Same WorkOrderId,
+    // workflow node and catalog scope as the source-shaped Detail fixture.
+    {
+      _id: mockQuotationWorkflowNodeId,
+      state: 1,
+      nodeDef: {
+        nodeType: 'placeOrder',
+        name: '报价',
+        viewableRoleIds: ['synthetic-role'],
+      },
+      data: {
+        _id: mockCommandScenarioIds.quotationFoundation,
+        orderNum: 'MOCK-018',
+        name: '演示报价工单',
+        address: '合成评审地址',
+        district: 110105,
+        serviceType: mockQuotationCatalogServiceType,
+        exts: { sourceType: mockQuotationCatalogSourceType },
+        status: mockSyntheticStatusCodes.order,
+        phone: '13800000018',
+        workflowRunId: 'mock-workflow-run-018',
+      },
+    },
+    {
+      _id: mockJourneyNodes.appointment,
+      state: 0,
+      nodeDef: {
+        nodeType: 'forms',
+        name: '预约上门时间',
+        formDefId: appointmentFormDefinitionWireId,
+        userChoose: ['synthetic-role'],
+      },
+      data: {
+        _id: mockJourneyWorkOrderId,
+        orderNum: 'MOCK-019',
+        name: '连续业务流程演示工单',
+        address: '合成连续流程地址',
+        district: 110105,
+        serviceType: mockQuotationCatalogServiceType,
+        exts: { sourceType: mockQuotationCatalogSourceType },
+        status: mockSyntheticStatusCodes.appointmentPending,
+        phone: '13800000019',
+        workflowRunId: mockJourneyWorkflowRunId,
+      },
+    },
   ],
   page: 1,
   rows: 20,
-  total: 10,
+  total: 12,
 } as const
+
+/** Opt-in DEV QA rows; the established 12-row visual baseline stays fixed. */
+export const mockR1MpUxListRows = [
+  {
+    _id: 'mock-workflow-node-020-forms', state: 0,
+    nodeDef: { nodeType: 'forms', name: '合成多表单',
+      formDefId: mockSyntheticDynamicFormDefinitionId,
+      addFormCodeId: mockR1AddFormCodeId, userChoose: ['synthetic-role'] },
+    data: { _id: mockR1FormsWorkOrderId, orderNum: 'MOCK-020',
+      name: '多表单本机草稿走查', address: '合成地址',
+      status: mockSyntheticStatusCodes.onsite, workflowRunId: 'mock-workflow-run-020' },
+  },
+  {
+    _id: 'mock-workflow-node-021-repeat', state: 0,
+    nodeDef: { nodeType: 'repeat', name: '合成重复表单',
+      formDefId: mockSyntheticDynamicFormDefinitionId, userChoose: ['synthetic-role'] },
+    data: { _id: mockR1RepeatWorkOrderId, orderNum: 'MOCK-021',
+      name: '重复表单本机草稿走查', address: '合成地址',
+      status: mockSyntheticStatusCodes.onsite, workflowRunId: 'mock-workflow-run-021' },
+  },
+] as const
 
 export const mockOrdinaryListResponse = {
   data: [
@@ -365,10 +557,35 @@ export const mockRepairPartsCascadeResponse = [
 ] as const
 
 export const mockWorkOrderDetailResponses = {
+  [mockR1FormsWorkOrderId]: {
+    data: {
+      serviceAppointment: { _id: mockR1FormsWorkOrderId, orderNum: 'MOCK-020',
+        name: '多表单本机草稿走查', address: '合成地址',
+        status: mockSyntheticStatusCodes.onsite, workflowRunId: 'mock-workflow-run-020' },
+      workflow: { _id: 'mock-workflow-run-020' },
+      workflowNode: [{ _id: 'mock-workflow-node-020-forms', workflowId: 'mock-workflow-run-020', state: 0,
+        nodeDef: { nodeType: 'forms', name: '合成多表单',
+          formDefId: mockSyntheticDynamicFormDefinitionId,
+          addFormCodeId: mockR1AddFormCodeId, userChoose: ['synthetic-role'] },
+        exts: { formList: [mockR1ExistingFormData[mockR1FormData.formsFirst],
+          mockR1ExistingFormData[mockR1FormData.formsSecond]] } }],
+    },
+  },
+  [mockR1RepeatWorkOrderId]: {
+    data: {
+      serviceAppointment: { _id: mockR1RepeatWorkOrderId, orderNum: 'MOCK-021',
+        name: '重复表单本机草稿走查', address: '合成地址',
+        status: mockSyntheticStatusCodes.onsite, workflowRunId: 'mock-workflow-run-021' },
+      workflow: { _id: 'mock-workflow-run-021' },
+      workflowNode: [{ _id: 'mock-workflow-node-021-repeat', workflowId: 'mock-workflow-run-021', state: 0,
+        nodeDef: { nodeType: 'repeat', name: '合成重复表单',
+          formDefId: mockSyntheticDynamicFormDefinitionId, userChoose: ['synthetic-role'] } }],
+    },
+  },
   [mockWorkOrderIds[0]]: {
     data: {
       serviceAppointment: {
-        ...mockServiceAppointmentData[mockWorkOrderIds[0]],
+        ...mockServiceAppointmentDetailData(mockWorkOrderIds[0]),
         workflowRunId: 'mock-workflow-run-001',
       },
       workflow: { _id: 'mock-workflow-run-001' },
@@ -384,7 +601,7 @@ export const mockWorkOrderDetailResponses = {
   [mockWorkOrderIds[1]]: {
     data: {
       serviceAppointment: {
-        ...mockServiceAppointmentData[mockWorkOrderIds[1]],
+        ...mockServiceAppointmentDetailData(mockWorkOrderIds[1]),
         workflowRunId: 'mock-workflow-run-002',
       },
       workflow: { _id: 'mock-workflow-run-002' },
@@ -392,6 +609,7 @@ export const mockWorkOrderDetailResponses = {
         {
           _id: 'mock-workflow-node-002-current',
           state: 0,
+          handlerIds: ['synthetic-user'],
           nodeDef: { nodeType: 'placeOrder', name: '下单', viewableRoleIds: ['synthetic-role'] },
         },
       ],
@@ -400,7 +618,7 @@ export const mockWorkOrderDetailResponses = {
   [mockWorkOrderIds[2]]: {
     data: {
       serviceAppointment: {
-        ...mockServiceAppointmentData[mockWorkOrderIds[2]],
+        ...mockServiceAppointmentDetailData(mockWorkOrderIds[2]),
         workflowRunId: 'mock-workflow-run-003',
       },
       workflow: { _id: 'mock-workflow-run-003' },
@@ -417,7 +635,7 @@ export const mockWorkOrderDetailResponses = {
   [mockDetailScenarioIds[3]]: {
     data: {
       serviceAppointment: {
-        ...mockServiceAppointmentData[mockDetailScenarioIds[3]],
+        ...mockServiceAppointmentDetailData(mockDetailScenarioIds[3]),
         workflowRunId: 'mock-workflow-run-004',
       },
       workflow: { _id: 'mock-workflow-run-004' },
@@ -438,7 +656,7 @@ export const mockWorkOrderDetailResponses = {
   [mockDetailScenarioIds[4]]: {
     data: {
       serviceAppointment: {
-        ...mockServiceAppointmentData[mockDetailScenarioIds[4]],
+        ...mockServiceAppointmentDetailData(mockDetailScenarioIds[4]),
         workflowRunId: 'mock-workflow-run-005',
       },
       workflow: { _id: 'mock-workflow-run-005' },
@@ -454,7 +672,7 @@ export const mockWorkOrderDetailResponses = {
   [mockDetailScenarioIds[5]]: {
     data: {
       serviceAppointment: {
-        ...mockServiceAppointmentData[mockDetailScenarioIds[5]],
+        ...mockServiceAppointmentDetailData(mockDetailScenarioIds[5]),
         workflowRunId: 'mock-workflow-run-006',
       },
       workflow: { _id: 'mock-workflow-run-006' },
@@ -470,7 +688,7 @@ export const mockWorkOrderDetailResponses = {
   [mockStatusSampleIds[0]]: {
     data: {
       serviceAppointment: {
-        ...mockServiceAppointmentData[mockStatusSampleIds[0]],
+        ...mockServiceAppointmentDetailData(mockStatusSampleIds[0]),
         workflowRunId: 'mock-workflow-run-007',
       },
       workflow: { _id: 'mock-workflow-run-007' },
@@ -480,7 +698,7 @@ export const mockWorkOrderDetailResponses = {
   [mockStatusSampleIds[1]]: {
     data: {
       serviceAppointment: {
-        ...mockServiceAppointmentData[mockStatusSampleIds[1]],
+        ...mockServiceAppointmentDetailData(mockStatusSampleIds[1]),
         workflowRunId: 'mock-workflow-run-008',
       },
       workflow: { _id: 'mock-workflow-run-008' },
@@ -490,7 +708,7 @@ export const mockWorkOrderDetailResponses = {
   [mockStatusSampleIds[2]]: {
     data: {
       serviceAppointment: {
-        ...mockServiceAppointmentData[mockStatusSampleIds[2]],
+        ...mockServiceAppointmentDetailData(mockStatusSampleIds[2]),
         workflowRunId: 'mock-workflow-run-009',
       },
       workflow: { _id: 'mock-workflow-run-009' },
@@ -500,7 +718,7 @@ export const mockWorkOrderDetailResponses = {
   [mockStatusSampleIds[3]]: {
     data: {
       serviceAppointment: {
-        ...mockServiceAppointmentData[mockStatusSampleIds[3]],
+        ...mockServiceAppointmentDetailData(mockStatusSampleIds[3]),
         workflowRunId: 'mock-workflow-run-010',
       },
       workflow: { _id: 'mock-workflow-run-010' },
@@ -647,6 +865,84 @@ export const mockWorkOrderDetailResponses = {
           name: '预约上门时间',
           formDefId: appointmentFormDefinitionWireId,
           userChoose: ['synthetic-role'],
+        },
+      }],
+    },
+  },
+  [mockCommandScenarioIds.surveySuccess]: {
+    data: {
+      serviceAppointment: {
+        _id: mockCommandScenarioIds.surveySuccess,
+        orderNum: '19017',
+        name: '演示现场勘察样本',
+        address: '演示地址七',
+        district: 110105,
+        exts: { distance: 1.7, communityOrdersTotal: 0 },
+        status: mockSyntheticStatusCodes.onsite,
+        phone: '13800000017',
+        workflowRunId: 'mock-workflow-run-017',
+      },
+      workflow: { _id: 'mock-workflow-run-017' },
+      workflowNode: [{
+        _id: 'mock-workflow-node-017-inspection',
+        state: 0,
+        nodeDef: {
+          nodeType: 'forms',
+          name: '现场勘察',
+          formDefId: mockSurveyFormDefinitionId,
+          colName: 'survey',
+          userChoose: ['synthetic-role'],
+        },
+      }],
+    },
+  },
+  [mockCommandScenarioIds.continuousJourney]: {
+    data: {
+      serviceAppointment: {
+        _id: mockJourneyWorkOrderId,
+        orderNum: 'MOCK-019',
+        name: '连续业务流程演示工单',
+        address: '合成连续流程地址',
+        district: 110105,
+        serviceType: mockQuotationCatalogServiceType,
+        exts: { sourceType: mockQuotationCatalogSourceType },
+        status: mockSyntheticStatusCodes.appointmentPending,
+        phone: '13800000019',
+        workflowRunId: mockJourneyWorkflowRunId,
+      },
+      workflow: { _id: mockJourneyWorkflowRunId },
+      workflowNode: [{
+        _id: mockJourneyNodes.appointment,
+        state: 0,
+        nodeDef: {
+          nodeType: 'forms',
+          name: '预约上门时间',
+          formDefId: appointmentFormDefinitionWireId,
+          userChoose: ['synthetic-role'],
+        },
+      }],
+    },
+  },
+  [mockCommandScenarioIds.quotationFoundation]: {
+    data: {
+      serviceAppointment: {
+        _id: mockCommandScenarioIds.quotationFoundation,
+        orderNum: 'MOCK-018',
+        name: '演示报价工单',
+        address: '合成评审地址',
+        district: 110105,
+        serviceType: mockQuotationCatalogServiceType,
+        exts: { sourceType: mockQuotationCatalogSourceType },
+        workflowRunId: 'mock-workflow-run-018',
+      },
+      workflow: { _id: 'mock-workflow-run-018' },
+      workflowNode: [{
+        _id: mockQuotationWorkflowNodeId,
+        state: 0,
+        nodeDef: {
+          nodeType: 'placeOrder',
+          name: '报价',
+          viewableRoleIds: ['synthetic-role'],
         },
       }],
     },

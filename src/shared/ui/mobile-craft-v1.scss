@@ -1,0 +1,280 @@
+/*
+ * XLink Mobile Craft v1 · opt-in pilot
+ * Visual Master: Q01 V2 / 390 x 844, then C01 signing read-only.
+ * All values live here; business screens compose classes, not redesign inputs.
+ * DS-07 compatibility layer ONLY: aliases the single global --app-craft-*
+ * token authority. Do not add new values here or consume --xl-* from new pages.
+ * NO global re-skin of legacy routes or Workflow state.
+ */
+.xl-craft {
+  --xl-ink: var(--app-craft-ink);
+  --xl-secondary: var(--app-craft-secondary);
+  --xl-caption: var(--app-craft-caption);
+  --xl-placeholder: var(--app-craft-placeholder);
+  --xl-label: var(--app-craft-label);
+  --xl-blue: var(--app-craft-action);
+  --xl-blue-pressed: var(--app-craft-action-pressed);
+  --xl-blue-surface: var(--app-craft-action-surface);
+  --xl-bg: var(--app-craft-canvas);
+  --xl-white: var(--app-craft-surface);
+  --xl-field-bg: var(--app-craft-field-surface);
+  --xl-stroke: var(--app-craft-control-stroke);
+  --xl-divider: var(--app-craft-divider);
+  --xl-danger: var(--app-craft-danger);
+  --xl-inset: var(--app-craft-page-inset);
+  --xl-radius-control: var(--app-craft-control-radius);
+  --xl-radius-surface: var(--app-craft-surface-radius);
+  --xl-shadow-surface: var(--app-craft-surface-shadow);
+  --xl-shadow-bar: var(--app-craft-actionbar-shadow);
+  color: var(--xl-ink);
+  background: var(--xl-bg);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+/* WXSS does not accept the universal selector; cover the native nodes used by
+   the opt-in surfaces while keeping the same scoped border-box sizing. */
+.xl-craft,
+.xl-craft view,
+.xl-craft text,
+.xl-craft button,
+.xl-craft input,
+.xl-craft textarea,
+.xl-craft scroll-view,
+.xl-craft picker,
+.xl-craft navigator,
+.xl-craft label,
+.xl-craft form,
+.xl-craft image,
+.xl-craft switch,
+.xl-craft checkbox,
+.xl-craft radio,
+.xl-craft slider,
+.xl-craft swiper,
+.xl-craft swiper-item,
+.xl-craft movable-area,
+.xl-craft movable-view,
+.xl-craft cover-view,
+.xl-craft cover-image {
+  box-sizing: border-box;
+}
+.xl-craft__eyebrow {
+  display: block;
+  color: #587399;
+  font-size: 11px;
+  line-height: 18px;
+  font-weight: 600;
+  letter-spacing: .01em;
+}
+.xl-craft__title {
+  display: block;
+  color: var(--xl-ink);
+  font-size: 26px;
+  line-height: 35px;
+  font-weight: 700;
+  letter-spacing: -.5px;
+}
+.xl-craft__subtitle {
+  display: block;
+  color: var(--xl-secondary);
+  font-size: 12px;
+  line-height: 20px;
+  font-weight: 400;
+}
+.xl-craft__section-title {
+  display: block;
+  color: var(--xl-ink);
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 600;
+}
+.xl-craft__caption {
+  display: block;
+  color: var(--xl-caption);
+  font-size: 11px;
+  line-height: 17px;
+  font-weight: 400;
+}
+.xl-craft__meta {
+  display: block;
+  color: var(--xl-secondary);
+  font-size: 12px;
+  line-height: 18px;
+}
+.xl-craft__surface {
+  background: var(--xl-white);
+  border: 1px solid var(--xl-divider);
+  border-radius: var(--xl-radius-surface);
+  box-shadow: var(--xl-shadow-surface);
+}
+.xl-craft__surface--flat { box-shadow: none; }
+.xl-craft__label {
+  display: block;
+  color: var(--xl-label);
+  font-size: 14px;
+  line-height: 21px;
+  font-weight: 600;
+}
+.xl-craft__required { color: var(--xl-danger); margin-left: 4px; font-weight: 700; }
+.xl-craft__control {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--xl-stroke);
+  border-radius: var(--xl-radius-control);
+  background: var(--xl-field-bg);
+  color: var(--xl-ink);
+  font-size: 14px;
+  line-height: 24px;
+  font-weight: 400;
+  box-shadow: inset 0 1px 1px rgba(20,43,73,.008);
+  outline: none;
+  transition: border-color .18s ease, box-shadow .18s ease;
+}
+.xl-craft__control--selector { height: 58px; padding: 0 15px; gap: 12px; }
+.xl-craft__control--textarea {
+  display: block;
+  height: 96px;
+  min-height: 96px;
+  padding: 14px 15px;
+}
+.xl-craft__control--input { height: 53px; min-height: 53px; padding: 0 15px; }
+.xl-craft__control:focus, .xl-craft__control:focus-within {
+  border-color: var(--xl-blue);
+  box-shadow: 0 0 0 3px rgba(23,105,220,.10);
+}
+.xl-craft__control[aria-invalid="true"], .xl-craft__control--error {
+  border-color: var(--xl-danger);
+}
+.xl-craft__control:disabled {
+  color: var(--xl-caption);
+  opacity: .65;
+}
+.xl-craft__control::placeholder,
+.xl-craft__control textarea::placeholder,
+.xl-craft__control input::placeholder {
+  color: var(--xl-placeholder);
+  opacity: 1;
+}
+.xl-craft__hint {
+  display: block;
+  margin-top: 9px;
+  color: var(--xl-caption);
+  font-size: 11px;
+  line-height: 17px;
+}
+.xl-craft__error {
+  display: block;
+  margin-top: 7px;
+  color: var(--xl-danger);
+  font-size: 12px;
+  line-height: 18px;
+}
+.xl-craft__badge {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #e6effc;
+  background: var(--xl-blue-surface);
+  color: #245ead;
+  border-radius: 9px;
+  padding: 4px 10px;
+  font-size: 11px;
+  line-height: 18px;
+  font-weight: 600;
+}
+.xl-craft__notice {
+  display: block;
+  padding: 8px 10px;
+  color: var(--xl-secondary);
+  background: var(--xl-blue-surface);
+  border: 1px solid #e6effc;
+  border-radius: 9px;
+  font-size: 11px;
+  line-height: 17px;
+}
+.xl-craft__badge--success {
+  color: #31754b; background: #ecf7ef; border-color: #ecf7ef;
+}
+.xl-craft__divider { border-top: 1px solid var(--xl-divider); }
+.xl-craft__progress-labels {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+.xl-craft__progress-track { display: flex; gap: 6px; height: 3px; margin-top: 10px; }
+.xl-craft__progress-track > view {
+  height: 3px;
+  flex: 1;
+  border-radius: 999px;
+  background: #e2e8f0;
+}
+.xl-craft__progress-track > view.is-active { background: var(--xl-blue); }
+.xl-craft__action-bar {
+  background: var(--xl-white);
+  border-top: 1px solid var(--xl-divider);
+  box-shadow: var(--xl-shadow-bar);
+}
+.xl-craft__action-primary, .xl-craft__action-secondary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 52px;
+  min-height: 52px;
+  border-radius: var(--xl-radius-control);
+  line-height: 20px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.xl-craft__action-primary {
+  border: 1px solid var(--xl-blue);
+  background: var(--xl-blue);
+  color: #fff;
+  box-shadow: 0 3px 9px rgba(23,105,220,.12);
+}
+.xl-craft__action-secondary {
+  border: 1px solid #d5dfeb;
+  background: var(--xl-white);
+  color: #405571;
+  font-size: 13px;
+}
+.xl-craft__action-primary:active { background: var(--xl-blue-pressed); }
+.xl-craft__action-primary:disabled, .xl-craft__action-secondary:disabled {
+  opacity: .58;
+  box-shadow: none;
+}
+.xl-craft__action-note {
+  color: #718096;
+  font-size: 11px;
+  line-height: 16px;
+  text-align: center;
+}
+.xl-craft__sheet {
+  background: var(--xl-white);
+  border-radius: 20px 20px 0 0;
+  box-shadow: 0 -12px 32px rgba(17,42,71,.08);
+}
+.xl-craft__sheet-title { color: var(--xl-ink); font-size: 16px; font-weight: 600; }
+.xl-craft__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--xl-divider);
+}
+.xl-craft__row:last-child { border-bottom: 0; }
+.xl-craft__value {
+  color: var(--xl-ink);
+  font-size: 14px;
+  line-height: 21px;
+  font-weight: 600;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+@media (prefers-reduced-motion: reduce) {
+  .xl-craft__control { transition: none; }
+}

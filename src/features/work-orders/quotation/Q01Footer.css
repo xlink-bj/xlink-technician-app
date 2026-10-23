@@ -1,0 +1,19 @@
+/* DS-05: only sticky-CTA COMPOSITION is page-owned; all visual craft is shared. */
+.q01-footer { width: 100%; min-width: 0; padding: 0; }
+.q01-footer-status {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 12px; margin-bottom: 8px;
+  color: var(--xl-caption); font-size: 11px; line-height: 17px;
+}
+.q01-footer-status text:last-child { text-align: right; min-width: 0; overflow-wrap: anywhere; }
+.q01-footer-actions { display: flex; align-items: stretch; gap: 12px; width: 100%; }
+.q01-footer-actions .q01-footer-save { flex: 0 0 102px; width: 102px; }
+.q01-footer-actions .q01-footer-next { flex: 1 1 auto; min-width: 0; }
+.q01-footer-caution {
+  display: block; margin-top: 7px; text-align: center;
+  color: var(--xl-caption); font-size: 11px; line-height: 16px;
+}
+@media(max-width:360px) {
+  .q01-footer-actions { gap: 8px; }
+  .q01-footer-actions .q01-footer-save { flex-basis: 90px; width: 90px; }
+}

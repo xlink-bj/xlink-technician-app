@@ -1,0 +1,57 @@
+name: M1 DS07 C8 Main Integration Preflight (READ ONLY)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - '.github/workflows/ds07c8-main-preflight.yml'
+      - 'docs/verification/DS07C8_MAIN_INTEGRATION_PREFLIGHT.md'
+      - 'docs/verification/DS07C8_MAIN_INTEGRATION_MANIFEST.json'
+      - 'scripts/check-ds07c8-main-preflight.mjs'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ancestry-inventory:
+    if: >-
+      github.event.pull_request.draft == true &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'lead/m1-ds07-main-integration-preflight' &&
+      github.event.pull_request.base.ref == 'design-system/ds07c7-legacy-source-test-reconciliation' &&
+      github.event.pull_request.base.sha == 'fbadc26ab20ba5da327b26eb9094460157b306c5'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+    steps:
+      - name: Read-only full-history checkout of exact review HEAD
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Assert full ancestry, excluded commits, review-only delta, original main SHA
+        run: node scripts/check-ds07c8-main-preflight.mjs --output .review/ds07c8/source-inventory.json
+      - name: Store machine-readable cumulative diff census without changing main
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .review/ds07c8
+          git diff --name-status c57fb3cc876c8ca3fb133d74dcf4833f8f755b32 fbadc26ab20ba5da327b26eb9094460157b306c5 > .review/ds07c8/main-to-c7-name-status.tsv
+          git diff --numstat c57fb3cc876c8ca3fb133d74dcf4833f8f755b32 fbadc26ab20ba5da327b26eb9094460157b306c5 > .review/ds07c8/main-to-c7-numstat.tsv
+          git log --format='%h %s' c57fb3cc876c8ca3fb133d74dcf4833f8f755b32..fbadc26ab20ba5da327b26eb9094460157b306c5 > .review/ds07c8/921-commit-chronology.txt
+          test "$(wc -l < .review/ds07c8/921-commit-chronology.txt)" -eq 921
+          git diff --check fbadc26ab20ba5da327b26eb9094460157b306c5 HEAD
+      - name: Preserve full preflight evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ds07-c8-main-review-inventory-${{ github.run_id }}
+          path: .review/ds07c8/
+          if-no-files-found: warn
+          retention-days: 30
