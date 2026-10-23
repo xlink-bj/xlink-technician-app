@@ -83,7 +83,7 @@ describe('Home local draft diagnostics', () => {
       actionIntent: 'set_appointment',
       contentKind: 'dynamic_form',
       contentIdentity: 'diagnostic-form',
-    })
+    }, asOpaqueId<'RoleId'>('diagnostic-role'))
     await repository.write({
       version: 1,
       identity: otherIdentity,
@@ -128,5 +128,30 @@ describe('Home local draft diagnostics', () => {
     expect(store.entries).toEqual([])
     expect(store.seedAvailable).toBe(false)
     expect(store.cleanupAvailable).toBe(false)
+  })
+
+  it('does not list a same-user draft from another role or an unscoped legacy record', async () => {
+    const repository = createActionDraftRepository(storageFor())
+    const sameUser = asOpaqueId<'UserId'>('diagnostic-user')
+    const base = {
+      userId: sameUser, workOrderId: asOpaqueId<'WorkOrderId'>('shared-work-order'),
+      workflowNodeId: asOpaqueId<'WorkflowNodeRuntimeId'>('shared-node'),
+      actionIntent: 'set_appointment' as const, contentKind: 'dynamic_form' as const,
+    }
+    for (const [identity, note] of [
+      [actionDraftIdentityFor(base, asOpaqueId<'RoleId'>('diagnostic-role')), 'visible'],
+      [actionDraftIdentityFor(base, asOpaqueId<'RoleId'>('other-role')), 'other-role'],
+      [actionDraftIdentityFor(base), 'legacy-unscoped'],
+    ] as const) {
+      await repository.write({ version: 1, identity, status: 'unfinished', values: { note }, updatedAt: '2026-10-23T12:00:00Z' })
+    }
+    const store = useLocalDraftDiagnosticsStore()
+    store.configure({
+      repository, getSession: () => sessionFor('diagnostic-user'),
+      isDeveloperModeAvailable: () => true, getMockMode: () => 'data', mockDraftSeeds: [],
+    })
+    expect((await store.refresh()).state).toBe('succeeded')
+    expect(store.entries).toHaveLength(1)
+    expect(store.entries[0]?.identity.roleId).toBe(asOpaqueId<'RoleId'>('diagnostic-role'))
   })
 })

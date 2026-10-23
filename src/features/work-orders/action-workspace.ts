@@ -468,29 +468,42 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     const configured = dependencies
     const current = descriptor.value
     const session = configured?.getSession()
-    if (!configured || !session || !current
+    if (!configured || !session || !current || !session.currentRole?.id || !commandSessionScopeCurrent()
       || String(current.userId) !== String(session.user.id)
       || String(current.workOrderId) !== String(requested.workOrderId)) {
-      return failure('unsupported_capability', 'Cross-stage draft does not belong to the active Work Order and user')
+      return failure('session_invalid', 'Cross-stage draft requires the active authenticated role and Work Order')
     }
-    const identity: ActionDraftIdentity = {
+    const readVersion = loadVersion
+    const readDescriptor = current
+    const draftIdentity: ActionDraftIdentity = {
       ...requested,
       version: 1,
       userId: session.user.id,
+      roleId: session.currentRole.id,
     }
-    return configured.draftRepository.read<Readonly<Record<string, unknown>>>(identity)
+    const result = await configured.draftRepository.read<Readonly<Record<string, unknown>>>(draftIdentity)
+    if (!actionCommandScopeCurrent(readVersion, readDescriptor)) {
+      return failure('session_invalid', '账号或角色已变化，旧阶段草稿不可读取。')
+    }
+    if (result.state === 'succeeded' && result.data
+      && !actionDraftIdentityMatches(result.data.identity, draftIdentity)) {
+      return failure('unsupported_capability', '跨阶段草稿回读身份不一致。')
+    }
+    return result
   }
 
   async function restoreDraft(
     nextIdentity: ActionDraftIdentity,
     form: AppointmentFormRead,
+    stillCurrent: () => boolean,
   ): Promise<void> {
     const configured = dependencies
     if (!configured) return
     const stored = await configured.draftRepository.read<Readonly<Record<string, AppointmentFieldValue>>>(nextIdentity)
+    if (!stillCurrent()) return
     if (stored.state !== 'succeeded' || !stored.data) return
     const draft = draftRecordFor(stored.data, nextIdentity, form)
-    if (!draft) return
+    if (!draft || !stillCurrent()) return
 
     appointmentForm.value = {
       ...form,
@@ -503,13 +516,15 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
   async function restoreDynamicDraft(
     nextIdentity: ActionDraftIdentity,
     form: DynamicFormRead,
+    stillCurrent: () => boolean,
   ): Promise<void> {
     const configured = dependencies
     if (!configured) return
     const stored = await configured.draftRepository.read<Readonly<Record<string, FormFieldValue>>>(nextIdentity)
+    if (!stillCurrent()) return
     if (stored.state !== 'succeeded' || !stored.data) return
     const draft = dynamicDraftRecordFor(stored.data, nextIdentity, form)
-    if (!draft) return
+    if (!draft || !stillCurrent()) return
 
     dynamicForm.value = {
       ...form,
@@ -576,11 +591,9 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     return true
   }
 
-  async function restoreMediaTasks(nextDescriptor: ActionDescriptor): Promise<void> {
+  async function restoreMediaTasks(nextDescriptor: ActionDescriptor, stillCurrent: () => boolean): Promise<void> {
     const configured = dependencies
     if (!configured?.mediaUploadQueue || !dynamicForm.value) return
-    const restoreVersion = loadVersion
-    const belongsToLoadingAction = () => loadVersion === restoreVersion && descriptor.value === nextDescriptor
     const listed = await configured.mediaUploadQueue.listForAction({
       userId: nextDescriptor.userId,
       workOrderId: nextDescriptor.workOrderId,
@@ -588,7 +601,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       ...(nextDescriptor.contentIdentity ? { formDefinitionId: String(nextDescriptor.contentIdentity) as FormDefinitionId } : {}),
       ...(dynamicForm.value.dataId ? { formDataId: dynamicForm.value.dataId } : {}),
     })
-    if (!belongsToLoadingAction()) return
+    if (!stillCurrent()) return
     if (listed.state !== 'succeeded' || !listed.data) {
       // Queue metadata is auxiliary to the business read. Keep the form usable
       // while retaining the error for diagnostics instead of inventing values.
@@ -598,11 +611,11 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
 
     let restoredBusinessValue = false
     for (const listedTask of listed.data.filter((candidate) => mediaTaskMatchesDynamicForm(candidate, nextDescriptor, dynamicForm.value!))) {
-      if (!belongsToLoadingAction()) return
+      if (!stillCurrent()) return
       const task = listedTask.state === 'postprocessing'
         ? (await configured.mediaUploadQueue.process(listedTask.taskId)).data ?? listedTask
         : listedTask
-      if (!belongsToLoadingAction()) return
+      if (!stillCurrent()) return
       rememberMediaTask(task)
       if (task.state === 'uploaded' && task.uploadedRef) {
         const fieldUploaded = mediaByField.value[task.scope.fieldId] ?? []
@@ -692,6 +705,18 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       lifecycle.value = lifecycleForFailure(read.state)
       error.value = read.error ?? null
       return failureFrom<WorkOrderDetail, ActionDescriptor>(read)
+    }
+    if (String(read.data.id) !== String(input.workOrderId)) {
+      loadState.value = 'blocked'
+      lifecycle.value = 'blocked'
+      error.value = createOperationError('unsupported_capability', 'Work Order response identity does not match the requested order')
+      return failure('unsupported_capability', error.value.message)
+    }
+    if (!session.currentRole?.id) {
+      loadState.value = 'blocked'
+      lifecycle.value = 'blocked'
+      error.value = createOperationError('session_invalid', '当前角色不可用，禁止恢复无角色归属的工作台草稿。')
+      return failure('session_invalid', error.value.message)
     }
 
     const projection = detailWorkflowProjectionFor(read.data, session)
@@ -822,6 +847,13 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       error.value = form.error ?? null
       return failureFrom<AppointmentFormRead | DynamicFormRead, ActionDescriptor>(form)
     }
+    if (isDynamicAction && String(form.data.definitionId ?? '') !== String(node.formDefinitionId)) {
+      detail.value = read.data
+      loadState.value = 'blocked'
+      lifecycle.value = 'blocked'
+      error.value = createOperationError('unsupported_capability', '表单定义与当前工作流节点不一致，禁止打开工作台。')
+      return failure('unsupported_capability', error.value.message)
+    }
 
     const formPurpose = isAppointmentAction
       ? 'appointment' as const
@@ -894,7 +926,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
         loadedForm = recovered.data
       }
     }
-    const nextIdentity = actionDraftIdentityFor(nextDescriptor)
+    const nextIdentity = actionDraftIdentityFor(nextDescriptor, session.currentRole.id)
     detail.value = read.data
     descriptor.value = nextDescriptor
     appointmentForm.value = isAppointmentAction ? loadedForm as AppointmentFormRead : null
@@ -907,9 +939,18 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     loadState.value = 'succeeded'
     lifecycle.value = 'available'
     error.value = null
-    if (isAppointmentAction) await restoreDraft(nextIdentity, loadedForm as AppointmentFormRead)
-    else await restoreDynamicDraft(nextIdentity, loadedForm as DynamicFormRead)
-    await restoreMediaTasks(nextDescriptor)
+    // Vue proxies values stored in refs; compare the mounted descriptor,
+    // not the raw object assigned above, when checking asynchronous leases.
+    const loadingDescriptor = descriptor.value
+    const stillLoadingAction = () => requestVersion === loadVersion
+      && descriptor.value === loadingDescriptor && scopeUnchanged()
+    if (isAppointmentAction) await restoreDraft(nextIdentity, loadedForm as AppointmentFormRead, stillLoadingAction)
+    else await restoreDynamicDraft(nextIdentity, loadedForm as DynamicFormRead, stillLoadingAction)
+    if (!stillLoadingAction()) {
+      if (requestVersion === loadVersion && !scopeUnchanged()) return blockStaleScope()
+      return failure('cancelled', 'Action Workspace load was superseded')
+    }
+    await restoreMediaTasks(nextDescriptor, stillLoadingAction)
     if (requestVersion !== loadVersion) return failure('cancelled', 'Action Workspace load was superseded')
     if (!scopeUnchanged()) return blockStaleScope()
     loadedSessionScope = requestedSessionScope
@@ -1193,6 +1234,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
   }
 
   function setField(fieldId: string, value: FormFieldValue): OperationSnapshot<void> {
+    if (!commandSessionScopeCurrent()) return failure('session_invalid', '账号或角色已变化，禁止编辑旧表单。')
     if (lifecycle.value === 'submitting' || businessResult.value === 'succeeded') {
       return failure('validation', '当前业务动作正在提交或已完成，禁止修改表单。')
     }
@@ -1242,6 +1284,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
 
   async function loadSurveyLeakageCauseOptions(): Promise<OperationSnapshot<readonly SurveyLeakageCauseRow[]>> {
     const configured = dependencies
+    if (!commandSessionScopeCurrent()) return failure('session_invalid', '账号或角色已变化，禁止读取旧工作台选项。')
     if (!configured?.surveyLeakageCauseProvider) {
       const unavailable = createOperationError('unsupported_capability', 'Leakage-cause provider is unavailable')
       surveyLeakageCauseProviderState.value = 'failed_terminal'
@@ -1255,7 +1298,9 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     const providerLoadVersion = loadVersion
     let request: Promise<OperationSnapshot<readonly SurveyLeakageCauseRow[]>>
     request = configured.surveyLeakageCauseProvider.query().then((result) => {
-      if (providerLoadVersion !== loadVersion) return result
+      if (providerLoadVersion !== loadVersion || !commandSessionScopeCurrent()) {
+        return failure<readonly SurveyLeakageCauseRow[]>('session_invalid', '账号或角色已变化，旧选项不可应用。')
+      }
       if (result.state === 'succeeded' && result.data) {
         surveyLeakageCauseRows.value = result.data
         surveyLeakageCauseProviderState.value = 'succeeded'
@@ -1273,6 +1318,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
   }
 
   function setSurveyLeakageCauseSelection(selectedIds: readonly string[]): OperationSnapshot<void> {
+    if (!commandSessionScopeCurrent()) return failure('session_invalid', '账号或角色已变化，禁止编辑旧表单。')
     if (lifecycle.value === 'submitting' || businessResult.value === 'succeeded') {
       return failure('validation', '当前业务动作正在提交或已完成，禁止修改表单。')
     }
@@ -1424,6 +1470,9 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     if (!configured || !currentIdentity || !form || draftStatus.value === 'clean') {
       return { state: 'succeeded', data: undefined }
     }
+    if (!commandSessionScopeCurrent()) {
+      return failure('session_invalid', '账号或角色已变化，禁止保存旧工作台草稿。')
+    }
     if (draftWriteInFlight) return draftWriteInFlight
 
     const writeRevision = draftRevision
@@ -1461,6 +1510,9 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
 
   async function flushDraft(): Promise<OperationSnapshot<void>> {
     clearDraftTimer()
+    if (descriptor.value && !commandSessionScopeCurrent()) {
+      return failure('session_invalid', '账号或角色已变化，禁止保存旧工作台草稿。')
+    }
     if (descriptor.value?.contentKind === 'quotation') return quotationComposition.flushDraft()
     if (draftWriteInFlight) {
       const inFlight = await draftWriteInFlight

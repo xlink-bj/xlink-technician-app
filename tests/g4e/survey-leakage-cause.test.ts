@@ -56,6 +56,7 @@ const session = {
 function surveyForm(values: Readonly<Record<string, unknown>> = {}): DynamicFormRead {
   return {
     purpose: 'survey',
+    definitionId: formDefinitionId,
     fields: [
       {
         fieldId: 'trigger',
@@ -178,38 +179,45 @@ describe('G4-E Survey leakage-cause contract', () => {
   })
 
   it('crosses the Mock raw-response path and falls through to the same Real read path', async () => {
-    const mockRequest = vi.fn(() => { throw new Error('Mock provider must not use network') })
-    setBusinessMockMode('data')
-    const mockProvider = createSurveyLeakageCauseProvider(createUniApiReadTransport({
-      apiBaseUrl: 'https://example.invalid',
-      getSessionRef: () => asOpaqueId<'SessionRef'>('survey-provider-session'),
-      request: mockRequest,
-      mockLatencyMs: 0,
-    }))
-    const mockResult = await mockProvider.query()
-    expect(mockResult.state).toBe('succeeded')
-    expect(mockResult.data?.every((row) => row.id.startsWith('mock-leakage-cause-'))).toBe(true)
-    expect(mockRequest).not.toHaveBeenCalled()
+    // This case explicitly exercises DEV Mock, independent of the shell's
+    // default environment. Restore both flags and cache even on assertion failure.
+    vi.stubEnv('VITE_XLINK_ENVIRONMENT', 'test')
+    try {
+      const mockRequest = vi.fn(() => { throw new Error('Mock provider must not use network') })
+      setBusinessMockMode('data')
+      const mockProvider = createSurveyLeakageCauseProvider(createUniApiReadTransport({
+        apiBaseUrl: 'https://example.invalid',
+        getSessionRef: () => asOpaqueId<'SessionRef'>('survey-provider-session'),
+        request: mockRequest,
+        mockLatencyMs: 0,
+      }))
+      const mockResult = await mockProvider.query()
+      expect(mockResult.state).toBe('succeeded')
+      expect(mockResult.data?.every((row) => row.id.startsWith('mock-leakage-cause-'))).toBe(true)
+      expect(mockRequest).not.toHaveBeenCalled()
 
-    resetBusinessMockCache()
-    setBusinessMockMode('off')
-    const realRequest = vi.fn((options: UniNamespace.RequestOptions) => {
-      options.success?.({
-        statusCode: 200,
-        data: { data: [{ part: 'roof', leakageCause: 'real-read-cause', label: 'Real read option' }] },
-      } as unknown as UniNamespace.RequestSuccessCallbackResult)
-    })
-    const realProvider = createSurveyLeakageCauseProvider(createUniApiReadTransport({
-      apiBaseUrl: 'https://beta.example.invalid',
-      getSessionRef: () => asOpaqueId<'SessionRef'>('survey-provider-session'),
-      request: realRequest,
-      mockLatencyMs: 0,
-    }))
-    const realResult = await realProvider.query()
-    expect(realResult).toMatchObject({ state: 'succeeded', data: [{ id: 'real-read-cause' }] })
-    expect(realRequest).toHaveBeenCalledTimes(1)
-    expect(String(realRequest.mock.calls[0]?.[0]?.url)).not.toContain('mock-leakage-cause')
-    resetBusinessMockCache()
+      resetBusinessMockCache()
+      setBusinessMockMode('off')
+      const realRequest = vi.fn((options: UniNamespace.RequestOptions) => {
+        options.success?.({
+          statusCode: 200,
+          data: { data: [{ part: 'roof', leakageCause: 'real-read-cause', label: 'Real read option' }] },
+        } as unknown as UniNamespace.RequestSuccessCallbackResult)
+      })
+      const realProvider = createSurveyLeakageCauseProvider(createUniApiReadTransport({
+        apiBaseUrl: 'https://beta.example.invalid',
+        getSessionRef: () => asOpaqueId<'SessionRef'>('survey-provider-session'),
+        request: realRequest,
+        mockLatencyMs: 0,
+      }))
+      const realResult = await realProvider.query()
+      expect(realResult).toMatchObject({ state: 'succeeded', data: [{ id: 'real-read-cause' }] })
+      expect(realRequest).toHaveBeenCalledTimes(1)
+      expect(String(realRequest.mock.calls[0]?.[0]?.url)).not.toContain('mock-leakage-cause')
+    } finally {
+      resetBusinessMockCache()
+      vi.unstubAllEnvs()
+    }
   })
 
   it('fails closed on malformed provider rows', async () => {
