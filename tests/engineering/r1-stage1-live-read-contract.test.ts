@@ -43,6 +43,18 @@ describe('R1 Stage1 production read contracts — synthetic only', () => {
     }
   })
 
+  it('does not normalize contradictory runtime node aliases or duplicate node identities', async () => {
+    for (const rows of [
+      [{ ...rawNode, id: 'another-runtime-node' }],
+      [{ ...rawNode, workflowNodeId: 'another-runtime-node' }],
+      [{ ...rawNode, dataId: 'form-record-a', formDataId: 'form-record-b' }],
+      [rawNode, { ...rawNode }],
+    ]) {
+      const adapter = createTechnicianApiReadAdapter({ execute: async () => ({ data: rows }) })
+      expect((await adapter.getWorkflowNodes(runId)).state).toBe('failed_terminal')
+    }
+  })
+
   it('flattens child Workflow[] while preserving predecessor links inside the child run', async () => {
     const execute = vi.fn(async () => ({ data: [{
       _id: 'synthetic-child-run',
@@ -85,6 +97,8 @@ describe('R1 Stage1 production read contracts — synthetic only', () => {
       { _id: 'synthetic-child-run', workflowNodeList: [{ _id: 'node', runId: 'synthetic-child-run', workflowId: 'other-run' }] },
       { _id: 'synthetic-child-run', workflowNodeList: [{ _id: 'node', parentNodeId: 'previous-a',
         parentWorkflowNodeId: 'previous-b' }] },
+      { _id: 'synthetic-child-run', workflowNodeList: [{ _id: 'node', id: 'another-node' }] },
+      { _id: 'synthetic-child-run', workflowNodeList: [{ _id: 'node' }, { _id: 'node' }] },
     ]) {
       const adapter = createTechnicianApiReadAdapter({ execute: async () => ({ data: [workflow] }) })
       expect((await adapter.getChildWorkflowNodes(parentNodeId)).state).toBe('failed_terminal')

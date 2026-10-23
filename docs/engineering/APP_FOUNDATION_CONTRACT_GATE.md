@@ -71,3 +71,16 @@ R1 has **two different exact-saved-record read routes**; they must obey the same
 | Construction acceptance FormDefinition `3285058246984486156`: `GET biz/extForm/findByIdWithWorkflow` | One saved FormData object (R1-specific exception) | Returned ID must equal the requested `dataId`; the same alias and definition checks apply |
 
 For both routes, contradictory top-level `workflowRunId` / `runId` / `workflowId` aliases are mapping failures. A single alias or omitted optional workflow ID retains its original meaning. These are **synthetic contract tests**, not evidence that a Production tenant was queried. `readDynamicForm` and its Action Workspace consumers keep their separate workflow, scope and write gates. The source route distinction is documented in `R1_STAGE1_FUNCTIONAL_CANDIDATE.md` and exercised in `tests/engineering/r1-stage1-form-detail-read-contract.test.ts` and `r1-stage1-live-read-contract.test.ts`, now included in Fast Loop and GitHub `quick`.
+
+## 7. Workflow and FormDefinition identity gate (follow-on Draft)
+
+R1's FormDefinition `biz/extField/query` returns *field rows*, not FormDefinition objects. `field._id` is a **field-row identity**; `field.extId` is its FormDefinition identity. This distinction is essential: multiple distinct rows may legitimately share the same `name`/value key (observed in Survey). No synthetic normalization may collapse those rows or demand unique value keys.
+
+This gate checks **identities rather than display semantics** at the read adapter boundary:
+
+1. Field-row `extId` / explicit form-definition aliases must agree with the queried FormDefinition ID; a legacy object/entity definition's explicit ID aliases must also agree. Omitted optional aliases remain supported. Repeated row `_id`/field-row IDs fail; repeated `name` values with **different row IDs** are retained.
+2. Workflow runtime node `id` / `_id` / `workflowNodeId` aliases must agree. The mapped main run, child run and Work Order detail cannot publish duplicated runtime node identities. Existing R1 child predecessor semantics stay intact; a child's internal `parentWorkflowNodeId` is not compared to the outer `Workflow.parentFlowNodeId`.
+3. A Work Order detail's explicit `workflowRunId`/`runId` and nested Workflow run identifiers must agree when both are supplied. Nodes explicitly assigned to a different run fail the whole detail mapping rather than seeding unrelated repeat/child contexts.
+4. Production authority for a child-parent node or repeat FormDefinition/run pair requires **both** the Work Order's authoritative workflow run and the node's matching runtime run. A detail without that proof may still render harmless summary data, but cannot issue new child/repeat read authority.
+
+Synthetic red/green evidence is in `tests/g3c/adapters.test.ts`, `tests/engineering/r1-stage1-live-read-contract.test.ts`, and `tests/g4f/production-read-only.test.ts`; all three are included in local Fast Loop (`verify:quick`) and GitHub `quick`. Tests never call Production or mutate business data. This protects **known** source-mapped aliases; it does not infer or assert undocumented legacy field semantics, does not enable record editing, and cannot satisfy Stage 1 physical-device acceptance.

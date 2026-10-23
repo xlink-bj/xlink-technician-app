@@ -321,6 +321,33 @@ describe('G3-C API adapter foundation', () => {
     expect(result.data?.id).not.toBe('field-row-001')
   })
 
+  it('rejects conflicting form-definition identities from R1 field rows or a legacy entity', async () => {
+    const requestedId = asOpaqueId<'FormDefinitionId'>('appointment-definition')
+    for (const payload of [
+      { data: [{ _id: 'row-1', extId: 'different-definition', name: 'datetime' }] },
+      { data: [
+        { _id: 'row-1', extId: 'appointment-definition', name: 'datetime' },
+        { _id: 'row-2', extId: 'different-definition', name: 'remark' },
+      ] },
+      { entity: { id: 'different-definition', fields: [] } },
+      { entity: { id: 'appointment-definition', extId: 'different-definition', fields: [] } },
+    ]) {
+      const api = createTechnicianApiReadAdapter(new FixtureApiTransport({ 'biz/extField/query': payload }))
+      expect((await api.getFormDefinition(requestedId)).state).toBe('failed_terminal')
+    }
+  })
+
+  it('rejects duplicate R1 field-row identities while permitting legitimate repeated value keys', async () => {
+    const requestedId = asOpaqueId<'FormDefinitionId'>('survey-definition')
+    const api = createTechnicianApiReadAdapter(new FixtureApiTransport({
+      'biz/extField/query': { data: [
+        { _id: 'same-field-row', extId: 'survey-definition', name: 'length' },
+        { _id: 'same-field-row', extId: 'survey-definition', name: 'length' },
+      ] },
+    }))
+    expect((await api.getFormDefinition(requestedId)).state).toBe('failed_terminal')
+  })
+
   it('normalizes R1 Survey media rows without losing object identity or list shape', async () => {
     const transport = new FixtureApiTransport({
       'biz/extForm/query/survey-definition': {

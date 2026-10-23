@@ -48,6 +48,7 @@ jobs:
           VITE_XLINK_ENVIRONMENT: test
         run: |
           pnpm exec vitest run \
+            tests/g3c/adapters.test.ts \
             tests/g4c/work-order-detail.test.ts \
             tests/g4f/m1-i7-work-order-read-scope.test.ts \
             tests/g4f/production-read-only.test.ts \

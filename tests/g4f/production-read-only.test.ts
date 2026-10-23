@@ -524,6 +524,68 @@ describe('Production read-only profile', () => {
     expect((await api.listRepeatFormReferences!(repeat)).state).toBe('failed_terminal')
   })
 
+  it('does not grant Production child/repeat read authority from a detail with mismatched workflow ownership', async () => {
+    vi.stubEnv('VITE_XLINK_ENVIRONMENT', 'prod')
+    for (const workflowOwnership of [
+      { workflow: { _id: 'main-run' }, workflowNode: [
+        { _id: 'foreign-repeat', workflowId: 'foreign-run', nodeDef: { nodeType: 'repeat', formDefId: 'foreign-def' } },
+        { _id: 'foreign-parent', workflowId: 'foreign-run', nodeDef: { nodeType: 'subflows' } },
+      ] },
+      { workflow: { _id: 'main-run' }, workflowRunId: 'foreign-run', workflowNode: [
+        { _id: 'foreign-repeat', workflowId: 'foreign-run', nodeDef: { nodeType: 'repeat', formDefId: 'foreign-def' } },
+      ] },
+    ]) {
+      const execute = vi.fn(async (input: { path: string }) => {
+        if (input.path === 'function/queryTreeByRoleId') return {
+          data: { functionList: [{ action: '/pages/serviceAppointment/serviceAppointments', exts: { tabDisplay: '1' } }] },
+        }
+        if (input.path === 'basic/serviceAppointment/query') return { data: [{ _id: 'listed-work-order' }] }
+        if (input.path === 'basic/serviceAppointment/queryById/listed-work-order') {
+          return { data: { _id: 'listed-work-order', ...workflowOwnership } }
+        }
+        throw new Error('Unexpected route')
+      })
+      const api = createRoleScopedTechnicianApiReadAdapter(
+        { execute }, () => asOpaqueId<'RoleId'>('synthetic-role'),
+        { getReadAuthorizationScope: () => ({
+          sessionRef: 'synthetic-session', userId: 'synthetic-user', roleId: 'synthetic-role', roleVersion: 'v1',
+        }) },
+      )
+      expect((await api.listWorkOrders({ page: 1, pageSize: 20 })).state).toBe('succeeded')
+      expect((await api.getWorkOrderDetail(asOpaqueId<'WorkOrderId'>('listed-work-order'))).state).toBe('failed_terminal')
+      expect(api.isRepeatFormContextAuthorizedForCurrentSession?.('foreign-def', 'foreign-run')).toBe(false)
+      expect(api.isChildWorkflowParentListedForCurrentSession?.('foreign-parent')).toBe(false)
+    }
+  })
+
+  it('does not treat a node-owned run ID as proof of the Work Order workflow when the detail omits its run', async () => {
+    vi.stubEnv('VITE_XLINK_ENVIRONMENT', 'prod')
+    const execute = vi.fn(async (input: { path: string }) => {
+      if (input.path === 'function/queryTreeByRoleId') return {
+        data: { functionList: [{ action: '/pages/serviceAppointment/serviceAppointments', exts: { tabDisplay: '1' } }] },
+      }
+      if (input.path === 'basic/serviceAppointment/query') return { data: [{ _id: 'listed-work-order' }] }
+      if (input.path === 'basic/serviceAppointment/queryById/listed-work-order') return { data: {
+        _id: 'listed-work-order', workflowNode: [
+          { _id: 'unproven-repeat', workflowId: 'unproven-run',
+            nodeDef: { nodeType: 'repeat', formDefId: 'unproven-definition' } },
+          { _id: 'unproven-parent', workflowId: 'unproven-run', nodeDef: { nodeType: 'subflows' } },
+        ],
+      } }
+      throw new Error('Unexpected route')
+    })
+    const api = createRoleScopedTechnicianApiReadAdapter(
+      { execute }, () => asOpaqueId<'RoleId'>('synthetic-role'),
+      { getReadAuthorizationScope: () => ({
+        sessionRef: 'synthetic-session', userId: 'synthetic-user', roleId: 'synthetic-role', roleVersion: 'v1',
+      }) },
+    )
+    expect((await api.listWorkOrders({ page: 1, pageSize: 20 })).state).toBe('succeeded')
+    expect((await api.getWorkOrderDetail(asOpaqueId<'WorkOrderId'>('listed-work-order'))).state).toBe('succeeded')
+    expect(api.isRepeatFormContextAuthorizedForCurrentSession?.('unproven-definition', 'unproven-run')).toBe(false)
+    expect(api.isChildWorkflowParentListedForCurrentSession?.('unproven-parent')).toBe(false)
+  })
+
 
   it('passes the actual bounded official-Order adapter request through the Production transport without _all', async () => {
     vi.stubEnv('VITE_XLINK_ENVIRONMENT', 'prod')
