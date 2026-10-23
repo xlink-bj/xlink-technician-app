@@ -1,6 +1,6 @@
 # R1 三大契约对齐：Workflow / 动态表单 / Order–SKU–Contract
 
-状态：**SOURCE_VERIFIED / SYNTHETIC_TEST；LIVE_SCHEMA_INCOMPLETE；不是生产验收**。
+状态：**SOURCE_VERIFIED / SYNTHETIC_TEST / BOUNDED_LIVE_READ_EVIDENCE；LIVE_CAPABILITY_INCOMPLETE；不是生产验收**。
 
 ## 权威来源与边界
 
@@ -24,7 +24,7 @@
 
 **关键结构区别**：`workflow/queryByParentWorkflowNodeId/{outerNodeId}` 返回的是 `Workflow[]`，每个子 Workflow 的 `_id` 是子运行 ID、`parentFlowNodeId` 指向外层 `subflows` 节点、`workflowNodeList[]` 中的 `parentWorkflowNodeId` 是**子流程内部前驱**。三种 ID 不能互相替代。
 
-R1 历史渲染在 `getSubWorkflow` 中先读取 `workflowDef/queryById/{defId}` 的 `def.nodes`，再把 `workflow/queryNode/{runId}` 的运行节点**依索引**覆盖定义列表，并给没有 `nodeDef` 的未运行节点包一层 `nodeDef`。这解释旧页面为何有时能显示定义节点，但数组位置并非可靠 runtime-node/definition-node 身份证明。新 App 不按位置补造分类：读到运行节点 `nodeDef` 才标记 `nodeTypeEvidence=runtime_node_def`；缺失则 `unresolved/unsupported`。此前 Issue #199 已记录的 12 条真实子节点缺失类型**仍未解除**。
+R1 历史渲染在 `getSubWorkflow` 中先读取 `workflowDef/queryById/{defId}` 的 `def.nodes`，再把 `workflow/queryNode/{runId}` 的运行节点**依索引**覆盖定义列表，并给没有 `nodeDef` 的未运行节点包一层 `nodeDef`。这解释旧页面为何有时能显示定义节点，但数组位置并非可靠 runtime-node/definition-node 身份证明。新 App 不按位置补造分类：读到运行节点 `nodeDef.nodeType` 才标记 `nodeTypeEvidence=runtime_node_def`；缺失则 `unresolved/unsupported`。当前 Production 已证实子流程定义本身不提供 `forms/repeat` 分类。运行节点的 `formDefId` 是独立的**只读表单定义引用**，不能用于推导动作、读取 FormData 或授权业务命令；取消节点仍保持 `inactive`。
 
 ## B. R1 ExtField 动态表单矩阵
 
@@ -76,7 +76,22 @@ R1 历史渲染在 `getSubWorkflow` 中先读取 `workflowDef/queryById/{defId}`
 | [2026-10 Production bounded App Order smoke](../verification/G4F_PHASE_1K_PROD_READ_INTEGRATION.md) | 3 个角色工单、3 次逐单 `basic/order/query` 有限查询，3 个正式 Order 身份一致、3 组/21 项结构识别；没有识别出的 SKU/SPU ID | 证明这条**有界接口**可用于工单只读摘要，不证明 R1 `clearOrderFieldQuery`、`queryById` 与之完全同义 |
 | [2026-10-22 role-scoped child reads](https://github.com/xlink-bj/xlink-technician-app/issues/199#issuecomment-6342521732) | 5 个授权父节点，子节点数为 2/2/2/2/4，共 12 个运行节点；全部缺少 `sourceNodeType` | 运行身份读取通过，但 12 个动作类型仍未知，不能按数组位置补造 `repeat/forms` |
 
-**剩余最小证据缺口**：① 在原有 5 个外层节点的同一权限范围内，能否以被授权的定义 ID/运行节点 ID 将 12 条 child runtime 精确对应到 `nodeDef`，或明确该读取被门禁拦截；② 同一角色已知具体业务动作下的 *effective* ExtField/Code/provider（不是重查租户 32 行）；③ 对同一 list-derived WorkOrder，`clearOrderFieldQuery` 与 `basic/order/query` 是否为相同过滤与分页语义。后两项可能涉及目前未准入的 Production 路由，**没有新授权就应记录 `BLOCKED_SCOPE`，不得自行加白名单或试探 API**。
+## 2026-10-24 Production 有界交叉验证增量（#199）
+
+来源：[Issue #199 脱敏报告](https://github.com/xlink-bj/xlink-technician-app/issues/199#issuecomment-6370200739)。此为 Owner 单独授权的最小化只读调用，**不是 App Production API 白名单扩张**；不包含原始 ID、字段值、价格或客户数据。
+
+| 维度 | 已证实的真实事实 | 本 App 的安全处理 |
+| --- | --- | --- |
+| 子流程身份 | 同一角色范围有 5 个外层 `subflows` 节点、6 个子 Workflow；`parentFlowNodeId` 和 `parentFlowId` 与外层身份分别 **6/6** 匹配；14 条运行节点（取消 2 条）均 **14/14** 按 `workflowId`、`defId`、`nodeId`、`formDefId` 唯一配对 | 展示有界只读子节点，包括取消节点；`formDefId` 仅作为引用，绝不按位置、`type=node` 或 Form ID 推断 `forms/repeat` |
+| 子流程动作 | `workflowDef/queryById` 返回的 2 个定义节点 `nodeType` **0/2**；6 份启动定义快照共 12 个定义节点同样没有 `nodeType` | `category=unsupported/nodeTypeEvidence=unresolved`；`repeat` 查询、编辑、表单提交保持关闭 |
+| 有效 Order ExtField | 启用 Order 字段 58，移动详情 32/32；此角色 `serviceType=11` 的 `placeOrder` 生效 **4 项**：`cascade/text/digit/button` 各一；必填 3、未设置 1，无条件依赖 | 纯映射器保留类型与过滤；`button` 不生成通用控件，一般字段也不自动构造正式 Order.exts |
+| 级联 Provider | 相同字段的 `selectMultistageCode.do` 返回 1 根、7 直接子节点、总计 16 树节点；有 `children`、`parentId/value` | 保持树语义，不能压成字符串 Label 或视为特殊按钮的执行授权 |
+| 同工单两路 Order API | `basic/order/query` 返回 **2 条 type=1**（`state=1` 和 `state=-1`，均带非空 `bjProducts`）；R1 `clearOrderFieldQuery` 返回 **1 条 state=1**，其 `bjProducts` 被清空 | 两接口不等价；前者仅是有界只读摘要，不能把取消订单当 R1 可签约候选；意图评审要求 `state=0/1` |
+| Contract 与 SKU 身份 | 同一有效订单与合同 `Order.contractId ↔ Contract._id`、`Contract.orderId ↔ Order._id`，工单一致 **1/1**；产品有 2 个包级 `skuCode`、2 个 `spuCode`、3 个包内材料 `skuCode` | 仅证明身份关联存在，不证明当前商品价格/版本、合同签约、PDF 权限及订单修改安全 |
+
+**已关闭的取证缺口**：子节点 `nodeType` 缺失原因、当前场景真实有效字段及 Provider 树结构、两路 Order API 的等价性，均已得到可审计结论（分别为**源数据没有动作类型 / 只有四个有效字段且含特殊控制 / 不等价**）。不需重复访问 Production。
+
+**仍需专项设计/安全验收**：① 通用子流程表单内容读取的角色授权模型；② `button` 命令、副作用与受控 UI；③ SKU 当前价格/版本、正式订单编辑与合同签署/文件权限。本轮仅增加只读子节点引用展示与取消订单签约候选阻断，没有开启上述能力。
 
 ## 证据等级与验收结论
 
@@ -84,11 +99,12 @@ R1 历史渲染在 `getSubWorkflow` 中先读取 `workflowDef/queryById/{defId}`
 | --- | --- |
 | R1 代码路径/数据语义对照 | `SOURCE_VERIFIED`：上述固定提交和函数行号 |
 | 三类适配器、动态表单、SPU/SKU、Contract 构造性与反例测试 | `SYNTHETIC_TEST`：参见 `tests/engineering/r1-three-pillar-contract-matrix.test.ts`；PR 需附精确 CI / 本地执行结果 |
-| 当前租户全部子流程节点类型 | `NOT_VERIFIED`：现有 12 条缺少 `nodeDef`；不推断动作 |
-| 动态表单真实字段全集、Code 字典、复杂 `area/bizSelect` | `PARTIAL`：源码确认，仍需权限内脱敏字段形状样本 |
-| Order–SKU–Contract 全量语义与写入读回 | `NOT_VERIFIED`：真实生产写入/签约不在本次授权内 |
+| 子流程运行↔定义身份 | `BOUNDED_LIVE_READ_VERIFIED`：14/14 精确匹配；`nodeType` 确认缺失，不能分类为 forms/repeat |
+| 有效 Order 字段与级联选项 | `BOUNDED_LIVE_READ_VERIFIED`：当前角色 placeOrder 4 项、级联一棵树；button/写回未验证 |
+| 两路 Order API 语义与业务身份 | `BOUNDED_LIVE_READ_VERIFIED`：API 不等价，Order↔Contract 身份和 SKU 标记证实；价格、签署未验证 |
+| Order–SKU–Contract 全量商业权限与写入读回 | `NOT_VERIFIED`：真实生产写入/签约不在本次授权内 |
 | 小程序实体设备 UX / Stage 1 | `FAIL`：本次代码契约不替代设备验收 |
 
-**仅需 Codex 辅助的剩余本地/内网取证**（在既有授权范围内，不扩大）：在已核实的工单/子流程读取路径记录 12 个子节点 `nodeDef` 与 definition identity 的**字段存在性、类型、节点数与 ID 匹配方式**；同一有限作用域记录 `biz/extField/query` 的 `type/showList/frontEndConfig` 结构和已开放的 Order 查询**字段形状差异**。仅提交汇总计数和脱敏字段名，绝不提交客户内容、真实 ID、URL、手机号/合同原文；若需要未获准的新接口则直接 `BLOCKED` 等待授权。
+**Codex 本地/内网取证**：上述 #199 已完成，无需重复读取。若未来确需新接口或业务数据，应另行界定授权与验收边界，不能将临时取证脚本的访问能力迁移到 App Production。
 
 **发布决定：HOLD。** 可复核为前端契约治理补强，不可称真实生产三链路贯通；所有 Draft PR 未合并、未部署。

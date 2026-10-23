@@ -537,7 +537,7 @@ function workOrderDetail(
   const serviceAddress = optionalString(record, ['address'])
   const distanceText = displayDistance(record)
   const contact = includeContact ? workOrderContact(record) : undefined
-  const workflowNodes = rawWorkflowNodes?.map(workflowNode)
+  const workflowNodes = rawWorkflowNodes?.map((node) => workflowNode(node))
   if (workflowNodes) {
     assertUniqueRuntimeNodeIds(workflowNodes, 'Work Order detail')
     if (workflowRunId) {
@@ -733,7 +733,7 @@ function workflowNodeReadOnlyFieldIds(record: AdapterRecord, nodeDef: AdapterRec
   return ids.length > 0 ? ids : []
 }
 
-function workflowNode(raw: unknown): WorkflowNodeRead {
+function workflowNode(raw: unknown, scope: 'default' | 'child' = 'default'): WorkflowNodeRead {
   const record = asRecord(raw, 'workflow node')
   const nodeDef = nestedRecord(record, ['nodeDef'])
   const id = requiredOpaqueId<'WorkflowNodeRuntimeId'>(record, ['id', '_id', 'workflowNodeId'], 'workflow node id')
@@ -750,6 +750,15 @@ function workflowNode(raw: unknown): WorkflowNodeRead {
   if (declaredFormDefinition) {
     assertMatchingWireIdentity(nodeDef ?? {}, ['formDefId', 'formDefinitionId'], declaredFormDefinition, 'Workflow node form definition')
   }
+  // R1 Production child WorkflowNode records carry formDefId on the runtime
+  // node itself even though their definition snapshots have only type=node
+  // (no forms/repeat nodeType). Keep the reference, not a fabricated action.
+  const runtimeFormDefinition = scope === 'child'
+    ? consistentWireIdentity(record, ['formDefId', 'formDefinitionId'], 'Workflow runtime form definition')
+    : undefined
+  if (runtimeFormDefinition && declaredFormDefinition && runtimeFormDefinition !== declaredFormDefinition) {
+    throw new AdapterMappingError('Workflow runtime and embedded node form definitions disagree')
+  }
   consistentWireIdentity(record, ['runId', 'workflowRunId', 'workflowId'], 'Workflow node run')
   consistentWireIdentity(record, ['parentNodeId', 'parentWorkflowNodeId'], 'Workflow node predecessor')
   const definitionId = optionalOpaqueId<'WorkflowDefinitionId'>(record, ['definitionId', 'defId'])
@@ -760,10 +769,9 @@ function workflowNode(raw: unknown): WorkflowNodeRead {
   ])
   const childWorkflowDefinitionId = optionalOpaqueId<'WorkflowDefinitionId'>(nodeDef ?? {}, ['nodeTypeDef'])
   const displayName = optionalString(nodeDef ?? {}, ['name'])
-  const formDefinitionId = optionalOpaqueId<'FormDefinitionId'>(nodeDef ?? {}, [
-    'formDefId',
-    'formDefinitionId',
-  ])
+  const formDefinitionId = declaredFormDefinition || runtimeFormDefinition
+    ? asOpaqueId<'FormDefinitionId'>((declaredFormDefinition ?? runtimeFormDefinition)!)
+    : undefined
   const formDataId = optionalOpaqueId<'FormDataId'>(record, ['formDataId', 'dataId'])
   const formPurpose =
     verifiedFormPurpose(nodeDef)
@@ -791,6 +799,7 @@ function workflowNode(raw: unknown): WorkflowNodeRead {
     visibility,
     ...(displayName ? { displayName } : {}),
     ...(formDefinitionId ? { formDefinitionId } : {}),
+    ...(formDefinitionId ? { formDefinitionIdEvidence: declaredFormDefinition ? 'runtime_node_def' as const : 'runtime_node' as const } : {}),
     ...(formPurpose ? { formPurpose } : {}),
     ...(formFieldIdsReadOnly ? { formFieldIdsReadOnly } : {}),
     ...(formDataId ? { formDataId } : {}),
@@ -1775,7 +1784,7 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
               throw new AdapterMappingError('Child workflow node internal predecessor identities conflict')
             }
             // Never overwrite an internal predecessor with the outer parent.
-            return workflowNode({ ...node, workflowId: workflowRunId })
+            return workflowNode({ ...node, workflowId: workflowRunId }, 'child')
           })
         })
         assertUniqueRuntimeNodeIds(nodes, 'Child workflow response')

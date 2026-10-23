@@ -5,6 +5,7 @@ import { createQuotationOrderReadAdapter } from '@adapters/api/quotation-order-a
 import { actionFormSchemaFor, ACTION_FORM_SURFACE } from '@features/work-orders/action-form-schema'
 import { evaluateFieldState, normalizeFieldValue, normalizeSubmission } from '@runtimes/dynamic-form'
 import { projectR1MaterialSku } from '@shared/material-sku-contract'
+import { createOrderExtFieldEffectivePlan } from '@features/work-orders/quotation/order-extfield-effective-plan'
 import { isProductionReadOnlyReadAllowed } from '@shared/config'
 import { asOpaqueId } from '@shared/types'
 
@@ -70,6 +71,37 @@ describe('R1 three-pillar source-backed contract matrix — synthetic only', () 
     expect(child?.formDefinitionId).toBeUndefined()
   })
 
+  it('retains a real child runtime formDefId as read-only provenance without inventing forms/repeat', async () => {
+    const adapter = createTechnicianApiReadAdapter({ execute: async () => ({ data: [{
+      _id: 'matrix-child-run', parentFlowNodeId: 'matrix-outer-parent',
+      workflowNodeList: [
+        { _id: 'child-confirmed', workflowId: 'matrix-child-run', state: 10,
+          defId: 'child-workflow-definition', nodeId: 'child-definition-node',
+          formDefId: 'actual-form-definition' },
+        { _id: 'child-cancelled', workflowId: 'matrix-child-run', state: -1,
+          defId: 'child-workflow-definition', formDefId: 'cancelled-form-definition' },
+      ],
+    }] }) })
+    const result = await adapter.getChildWorkflowNodes(parent)
+    expect(result.state).toBe('succeeded')
+    expect(result.data).toMatchObject([
+      { category: 'unsupported', lifecycle: 'closed', nodeTypeEvidence: 'unresolved',
+        formDefinitionId: 'actual-form-definition', formDefinitionIdEvidence: 'runtime_node' },
+      { category: 'unsupported', lifecycle: 'inactive', nodeTypeEvidence: 'unresolved',
+        formDefinitionId: 'cancelled-form-definition', formDefinitionIdEvidence: 'runtime_node' },
+    ])
+    expect(result.data?.every((node) => !node.sourceNodeType && !node.formList)).toBe(true)
+  })
+
+  it('rejects contradictory child root/embedded FormDefinition identity instead of choosing one', async () => {
+    const adapter = createTechnicianApiReadAdapter({ execute: async () => ({ data: [{
+      _id: 'matrix-child-run', parentFlowNodeId: 'matrix-outer-parent',
+      workflowNodeList: [{ _id: 'child-conflict', workflowId: 'matrix-child-run',
+        formDefId: 'root-form', nodeDef: { nodeType: 'forms', formDefId: 'other-form' } }],
+    }] }) })
+    expect((await adapter.getChildWorkflowNodes(parent)).state).toBe('failed_terminal')
+  })
+
   it('projects R1 mobile detail visibility and presentation-only image/title fields, without upload capability', async () => {
     const adapter = createTechnicianApiReadAdapter({ execute: async () => ({ data: [
       fieldRecord('image', { frontEndConfig: JSON.stringify({ list: ['https://synthetic.invalid/guide.jpg'] }) }),
@@ -113,6 +145,42 @@ describe('R1 three-pillar source-backed contract matrix — synthetic only', () 
       const field = (await adapter.getFormDefinition(formDefinitionId)).data?.fields?.[0]
       expect(field?.unsupportedReason).toBeTruthy()
     }
+  })
+
+  it('models the four verified effective control kinds without promoting button or cascade to a write-ready form', () => {
+    // The types/count and serviceType=11 were verified on #199. The field
+    // identities and placement of requiredness below are synthetic examples.
+    const fields = ['cascade', 'text', 'digit', 'button'].map((type, index) => ({
+      rowId: `synthetic-row-${index}`, valueKey: `synthetic-key-${index}`,
+      colName: 'order', state: 1, showList: ['4'], type,
+      ...(index === 3 ? {} : { required: '1' }),
+      ...(type === 'cascade' ? { valueOption: 'synthetic-tree-provider' } : {}),
+      frontEndConfig: { showType: 'placeOrder', serviceType: ['11'] },
+    }))
+    const plan = createOrderExtFieldEffectivePlan(fields, { stage: 'placeOrder', serviceType: '11' })
+    expect(plan.rows.map(row => row.controlType)).toEqual(['cascade', 'text', 'digit', 'button'])
+    expect(plan.fields.map(field => field.type)).toEqual(['text', 'digit'])
+    expect(plan.rows[0]).toMatchObject({ disposition: 'blocked', provider: { state: 'configured_not_fetched' } })
+    expect(plan.rows[3]).toMatchObject({ disposition: 'blocked', specialControl: { kind: 'button', state: 'blocked' } })
+    expect(plan.diagnostics.liveRuntimeReady).toBe(false)
+    expect(createOrderExtFieldEffectivePlan(fields, { stage: 'placeOrder', serviceType: 'other' }).fields).toEqual([])
+  })
+
+  it('preserves the verified multistage provider hierarchy using a sanitized 1/7/16 shape', async () => {
+    const root = {
+      type: 'synthetic-tree-provider', children: Array.from({ length: 7 }, (_, i) => ({
+        value: `level-one-${i}`, name: `示例层级 ${i}`, parentId: 'synthetic-root',
+        children: i < 4 ? [0, 1].map(j => ({ value: `level-two-${i}-${j}`, name: `示例子项 ${i}-${j}` })) : [],
+      })),
+    }
+    const execute = vi.fn(async () => [root])
+    const read = createTechnicianApiReadAdapter({ execute }, { cascadeTenantId: 'synthetic-tenant' })
+    const result = await read.getCascadeCodeOptions({ codeType: root.type })
+    expect(result.state).toBe('succeeded')
+    expect(result.data?.items).toHaveLength(7)
+    expect(result.data?.items.reduce((n, item) => n + 1 + (item.children?.length ?? 0), 0)).toBe(15)
+    expect(execute).toHaveBeenCalledWith({ method: 'POST', path: 'i/code/selectMultistageCode.do',
+      body: { types: root.type, tenantId: 'synthetic-tenant' } })
   })
 
   it('rejects SKU alias conflicts before a wrong SPU or SKU reaches a selection preview', async () => {

@@ -180,6 +180,10 @@ export interface WorkflowNodeRead {
   readonly displayName?: string
   /** Adapter-normalized opaque form definition identity, when supplied by the node. */
   readonly formDefinitionId?: FormDefinitionId
+  /** A child node may carry formDefId directly even when nodeDef has no
+   * action type. This is read-only identity evidence, NEVER repeat/forms
+   * classification or permission to load a FormData record. */
+  readonly formDefinitionIdEvidence?: 'runtime_node_def' | 'runtime_node'
   /** R1 forms nodeDef.addFormCodeId, parent for add-form choices. */
   readonly addFormCodeId?: string
   /** Semantic form purpose; the raw form definition identity stays Adapter-owned. */

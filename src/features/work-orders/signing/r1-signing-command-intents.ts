@@ -58,7 +58,7 @@ export const r1SigningIntentDescriptors: Readonly<Record<R1SigningIntentKind, R1
 export interface R1SigningIntentContext {
   readonly workOrderId: string
   readonly selectedOrderId: string
-  readonly officialOrder: Pick<QuotationOrderBrowseItem, 'id' | 'type' | 'serviceAppointmentId' | 'processState'>
+  readonly officialOrder: Pick<QuotationOrderBrowseItem, 'id' | 'type' | 'serviceAppointmentId' | 'state' | 'processState'>
     & { readonly isAgain?: number; readonly hasExts?: boolean } | null
   readonly contractState: 'idle' | 'loading' | 'succeeded' | 'failed_retryable' | 'failed_terminal'
   readonly contracts: readonly R1ScopedContractSummary[]
@@ -107,6 +107,12 @@ export function reviewR1SigningIntent(
     || !order || order.type !== 1 || order.id !== context.selectedOrderId
     || order.serviceAppointmentId !== context.workOrderId) {
     reasons.push('正式订单身份/工单归属尚未核验，不可使用报价草稿')
+  }
+  // Live R1 evidence disproved equivalence: basic/order/query may include
+  // state=-1 whereas R1 clearOrderFieldQuery filters state IN (0,1).
+  // Unknown state also cannot prove that this source-filter requirement holds.
+  if (order && order.state !== 0 && order.state !== 1) {
+    reasons.push('订单生命周期不符合 R1 原列表允许的 state=0/1；不能将取消或未知订单作为签约候选')
   }
   const active = context.contractState === 'succeeded'
   const records = context.contracts

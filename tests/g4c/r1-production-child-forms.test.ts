@@ -64,6 +64,33 @@ describe('R1 Production child multi-form read presentation store', () => {
     expect(store.repeatReadByNode).toEqual({})
   })
 
+  it('preserves untyped and cancelled child references in read-only state without granting repeat record reads', async () => {
+    const generic: readonly WorkflowNodeRead[] = [
+      { id: asOpaqueId<'WorkflowNodeRuntimeId'>('generic-form'),
+        runId: asOpaqueId<'WorkflowRunId'>('synthetic-child-run'),
+        formDefinitionId: asOpaqueId<'FormDefinitionId'>('synthetic-form-definition'),
+        formDefinitionIdEvidence: 'runtime_node', nodeTypeEvidence: 'unresolved',
+        category: 'unsupported', lifecycle: 'closed' },
+      { id: asOpaqueId<'WorkflowNodeRuntimeId'>('cancelled-form'),
+        runId: asOpaqueId<'WorkflowRunId'>('synthetic-child-run'),
+        nodeTypeEvidence: 'unresolved', category: 'unsupported', lifecycle: 'inactive' },
+    ]
+    const listRepeatFormReferences = vi.fn()
+    const store = useWorkOrderDetailStore()
+    store.configureApi({
+      getWorkOrderDetail: async () => ({ state: 'succeeded', data: detail }),
+      getChildWorkflowNodes: async () => ({ state: 'succeeded', data: generic }),
+      listRepeatFormReferences,
+    } as unknown as TechnicianApiReadPort, () => session)
+    await store.load(workOrderId)
+    expect((await store.loadChildWorkflowForms(String(parentId))).state).toBe('succeeded')
+    expect(store.childReadNodes).toEqual(generic)
+    await store.loadChildRepeatRecords('generic-form')
+    await store.loadChildRepeatRecords('cancelled-form')
+    expect(listRepeatFormReferences).not.toHaveBeenCalled()
+    expect(store.repeatReadByNode).toEqual({})
+  })
+
   it('discards a child result when the current role changes during the request', async () => {
     let actor: SessionSnapshot = session
     let deliver: ((data: readonly WorkflowNodeRead[]) => void) | undefined
