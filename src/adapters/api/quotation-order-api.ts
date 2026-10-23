@@ -14,7 +14,7 @@ import type {
 import type { OperationSnapshot } from '@shared/types'
 
 import { AdapterMappingError, adapterFailure, succeeded, unknownErrorMessage } from '../common/operations'
-import { asRecord, optionalNonNegativeInteger, optionalRecord, optionalString, requiredString, type AdapterRecord } from '../common/records'
+import { asRecord, assertMatchingWireIdentity, optionalNonNegativeInteger, optionalRecord, optionalString, requiredString, type AdapterRecord } from '../common/records'
 import { ApiReadTransportError, type ApiReadTransport } from './technician-api'
 
 function quotationOrderRecord(raw: unknown, requestedId: string): QuotationOrderRead {
@@ -234,6 +234,7 @@ function quotationOrderBrowseItem(raw: unknown): QuotationOrderBrowseItem {
   const type = optionalNonNegativeInteger(record, ['type'])
   if (type !== 1) throw new AdapterMappingError('Work Order-scoped Order list returned a non-type-1 record')
   const id = requiredString(record, ['_id', 'id'], 'quotation order identity')
+  assertMatchingWireIdentity(record, ['_id', 'id'], id, 'Quotation Order list identity')
   const serviceAppointmentId = requiredString(record, ['serviceAppointmentId'], 'quotation work-order identity')
   const productsValue = record.bjProducts
   let products: AdapterRecord | undefined
@@ -452,6 +453,7 @@ export class QuotationOrderReadAdapter implements QuotationOrderReadPort {
         const row = optionalRecord(item)
         if (!row) return adapterFailure('server_terminal', '合同响应包含无效记录。')
         const id = optionalString(row, ['_id', 'id'])
+        if (id) assertMatchingWireIdentity(row, ['_id', 'id'], id, 'R1 Contract identity')
         const owningWorkOrder = optionalString(row, ['serviceAppointmentId'])
         const owningOrder = optionalString(row, ['orderId'])
         if (!id || !validId.test(id) || seen.has(id) || !owningWorkOrder
@@ -476,9 +478,12 @@ export class QuotationOrderReadAdapter implements QuotationOrderReadPort {
         })
       }
       return succeeded({ items: summaries, completeness: 'bounded_unverified' })
-    } catch {
+    } catch (error) {
       if (this.scopedReviewIdentity() !== identity || !this.isAuthorizedForCurrentSession(workOrderId)) {
         return adapterFailure('authorization_denied', '合同读取期间权限已变化。')
+      }
+      if (error instanceof AdapterMappingError) {
+        return adapterFailure('server_terminal', '合同身份或响应结构无法核验。')
       }
       return adapterFailure('network_retryable', 'R1 合同只读请求暂不可用或未开放。')
     }
