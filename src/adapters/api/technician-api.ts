@@ -1079,6 +1079,16 @@ function formData(raw: unknown, codec?: FormValueCodec, expectedDefinitionId?: F
   const record = asRecord(raw, 'form data')
   const workflow = nestedRecord(record, ['workflow'])
   const values = formValues(record, codec)
+  const dataId = requiredOpaqueId<'FormDataId'>(record, ['id', '_id', 'dataId'], 'form data id')
+  // R1 responses may expose several aliases of the same saved row. Never let
+  // the first alias conceal a contradictory persisted FormData identity.
+  assertMatchingWireIdentity(record, ['id', '_id', 'dataId'], String(dataId), 'FormData record')
+  const workflowRunIds = ['workflowRunId', 'runId', 'workflowId']
+    .map((key) => optionalString(record, [key]))
+    .filter((id): id is string => Boolean(id))
+  if (new Set(workflowRunIds).size > 1) {
+    throw new AdapterMappingError('FormData workflow run identity is contradictory')
+  }
   // Real R1 dynamic FormData rows may not repeat their FormDefinition ID.
   // The definition is already fixed by the query URL; never invent it from
   // arbitrary data or silently override contradictory response metadata.
@@ -1094,7 +1104,7 @@ function formData(raw: unknown, codec?: FormValueCodec, expectedDefinitionId?: F
   const definitionId = expectedDefinitionId
     ?? requiredOpaqueId<'FormDefinitionId'>(record, ['definitionId', 'extId', 'formDefId'], 'form definition id')
   return {
-    id: requiredOpaqueId<'FormDataId'>(record, ['id', '_id', 'dataId'], 'form data id'),
+    id: dataId,
     definitionId,
     ...(optionalOpaqueId<'WorkflowRunId'>(record, ['workflowRunId', 'runId', 'workflowId'])
       ? { workflowRunId: optionalOpaqueId<'WorkflowRunId'>(record, ['workflowRunId', 'runId', 'workflowId']) }
@@ -1859,7 +1869,14 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
       (raw) => {
         const envelope = asRecord(raw, 'form detail response')
         const data = nestedValue(envelope, ['data', 'entity'])
-        return formData(data ?? envelope, input.valueCodec, input.definitionId)
+        const saved = formData(data ?? envelope, input.valueCodec, input.definitionId)
+        // The special construction-acceptance read uses a different endpoint,
+        // but it must prove the same exact saved-record identity as ordinary
+        // forms/repeat queries before any consumer can render its values.
+        if (String(saved.id) !== String(input.dataId)) {
+          throw new AdapterMappingError('R1 construction-acceptance FormData identity does not match the requested record')
+        }
+        return saved
       },
     )
   }

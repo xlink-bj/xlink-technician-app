@@ -51,4 +51,18 @@ describe('R1 Stage1 existing FormData detail — source-specific read contract',
       path:'biz/extForm/findByIdWithWorkflow',
       query:{extId:'3285058246984486156',id:'special-saved'}})
   })
+  it('rejects an unrelated or alias-conflicting saved record on the construction-acceptance exception path', async () => {
+    const input={
+      definitionId:asOpaqueId<'FormDefinitionId'>('3285058246984486156'),
+      dataId:asOpaqueId<'FormDataId'>('special-saved'),
+    }
+    for(const record of [
+      {_id:'other-saved',formDefId:'3285058246984486156'},
+      {_id:'special-saved',id:'other-saved',formDefId:'3285058246984486156'},
+      {_id:'special-saved',formDefId:'other-definition'},
+    ]){
+      const adapter=createTechnicianApiReadAdapter({execute:async()=>({data:record})})
+      expect((await adapter.getFormDetail(input)).state).toBe('failed_terminal')
+    }
+  })
 })

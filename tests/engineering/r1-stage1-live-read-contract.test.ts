@@ -125,6 +125,16 @@ describe('R1 Stage1 production read contracts — synthetic only', () => {
     })
   })
 
+  it('fails the dynamic-form list read when saved-record aliases disagree', async () => {
+    const adapter = createTechnicianApiReadAdapter({
+      execute: async () => ({ data: [{
+        _id: 'synthetic-form-data', id: 'different-form-data',
+        formDefId: 'synthetic-form-def',
+      }] }),
+    })
+    expect((await adapter.getFormData({ definitionId, dataId })).state).toBe('failed_terminal')
+  })
+
   it('rejects a FormData definition contradiction even with a valid exact record ID', async () => {
     for (const item of [
       { _id: 'synthetic-form-data', formDefId: 'other-definition' },
@@ -140,6 +150,17 @@ describe('R1 Stage1 production read contracts — synthetic only', () => {
       { _id: 'synthetic-form-data' }, { _id: 'synthetic-form-data' },
     ]]) {
       const adapter = createTechnicianApiReadAdapter({ execute: async () => ({ data: rows }) })
+      expect((await adapter.getFormDetail({ definitionId, dataId })).state).toBe('failed_terminal')
+    }
+  })
+
+  it('rejects conflicting saved-record and workflow-run ID aliases before they reach Action Workspace', async () => {
+    for (const item of [
+      { _id: 'synthetic-form-data', id: 'other-form-data' },
+      { _id: 'synthetic-form-data', dataId: 'other-form-data' },
+      { _id: 'synthetic-form-data', workflowId: 'synthetic-run-1', runId: 'other-run' },
+    ]) {
+      const adapter = createTechnicianApiReadAdapter({ execute: async () => ({ data: [item] }) })
       expect((await adapter.getFormDetail({ definitionId, dataId })).state).toBe('failed_terminal')
     }
   })
