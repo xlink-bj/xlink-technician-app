@@ -65,8 +65,10 @@ for (const viewport of [{width:375,height:667},{width:390,height:844}]) {
     await expect(page.getByTestId('signing-mock-orders')).toContainText('模拟正式订单 B')
     await page.getByTestId('signing-mock-order-mock-official-order-019-b').click()
     await expect(page.getByTestId('signing-mock-contract')).toContainText('MOCK-CONTRACT-019-B')
-    await expect(page.getByTestId('signing-mock-preview-disabled')).toBeDisabled()
-    await expect(page.getByTestId('signing-mock-apply-disabled')).toBeDisabled()
+    // uni-app H5 renders custom <uni-button disabled="true"> nodes. Their
+    // disabled contract is aria-disabled, not a native button's :disabled.
+    await expect(page.getByTestId('signing-mock-preview-disabled')).toHaveAttribute('aria-disabled', 'true')
+    await expect(page.getByTestId('signing-mock-apply-disabled')).toHaveAttribute('aria-disabled', 'true')
     await info.attach(`mock-contract-${viewport.width}`, {body: await page.screenshot({fullPage:true}), contentType:'image/png'})
 
     expect(external).toEqual([])
