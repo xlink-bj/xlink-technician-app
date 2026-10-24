@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { planR1FormsUpdateExts } from '@features/work-orders/r1-forms-exts-plan'
 import {
   executeR1MultiStepOffline, inspectR1MultiStepReceipt,
+  closeCompletedR1ReceiptAfterReadback, closeCompletedR1MutationReceiptAfterReadback,
   type R1MultiStepScope, type R1StepExecutor,
 } from '@features/work-orders/r1-multistep-offline-transaction'
 import type { StorageKey, StoragePort } from '@shared/ports'
@@ -133,6 +134,73 @@ describe('F2 R1 durable multistep offline simulator, no real transport',()=>{
     expect((await executeR1MultiStepOffline(storage,s,
       ['repeat_form_upsert','repeat_form_upsert','workflow_process'],executor)).state).toBe('succeeded')
     expect(executor).toHaveBeenCalledTimes(3)
+  })
+  it('does not conflate a saved form with completed Workflow and requires field+EXTS readback',async()=>{
+    const {storage}=repository()
+    const executor:R1StepExecutor=vi.fn(async({step})=>({state:'succeeded' as const,
+      data:step==='form_upsert'?{savedFormDataId:'saved-1'}:{}}))
+    expect((await executeR1MultiStepOffline(storage,scope,
+      ['form_upsert','forms_exts_update'],executor)).state).toBe('succeeded')
+    expect(await closeCompletedR1ReceiptAfterReadback(storage,scope,{
+      workOrderId:scope.workOrderId,runtimeNodeId:scope.runtimeNodeId,
+      sourceNodeType:'forms',savedFormDataIds:['saved-1'],workflowCompleted:true,
+    })).toBe(false)
+    const readback={workOrderId:scope.workOrderId,runtimeNodeId:scope.runtimeNodeId,
+      formDefinitionId:scope.formDefinitionId,sourceNodeType:'forms' as const,
+      formData:{_id:'saved-1',sid:scope.workOrderId,nodeId:scope.runtimeNodeId,
+        smodule:'serviceAppointment',state:1,note:'new'},expectedFields:{note:'new'},
+      formsExts:{formList:[{_id:'saved-1',state:1}]}}
+    expect(await closeCompletedR1MutationReceiptAfterReadback(storage,scope,{
+      ...readback,expectedFields:{note:'stale'},
+    })).toBe(false)
+    expect(await closeCompletedR1MutationReceiptAfterReadback(storage,scope,{
+      ...readback,formsExts:{formList:[]},
+    })).toBe(false)
+    expect((await inspectR1MultiStepReceipt(storage,scope)).data).not.toBeNull()
+    expect(await closeCompletedR1MutationReceiptAfterReadback(storage,scope,readback)).toBe(true)
+    expect((await inspectR1MultiStepReceipt(storage,scope)).data).toBeNull()
+  })
+  it('requires BOTH FormData and node EXTS readback for forms soft-delete',async()=>{
+    const {storage}=repository()
+    const executor:R1StepExecutor=vi.fn(async()=>({state:'succeeded' as const,data:{}}))
+    expect((await executeR1MultiStepOffline(storage,scope,
+      ['forms_exts_update','forms_soft_delete'],executor,[],'deleted-1')).state).toBe('succeeded')
+    const readback={workOrderId:scope.workOrderId,runtimeNodeId:scope.runtimeNodeId,
+      formDefinitionId:scope.formDefinitionId,sourceNodeType:'forms' as const,
+      formsExts:{formList:[{_id:'deleted-1',state:-1}]},
+      formData:{_id:'deleted-1',sid:scope.workOrderId,nodeId:scope.runtimeNodeId,state:-1}}
+    expect(await closeCompletedR1MutationReceiptAfterReadback(storage,scope,{
+      ...readback,formData:{...readback.formData,state:1},
+    })).toBe(false)
+    expect(await closeCompletedR1MutationReceiptAfterReadback(storage,scope,{
+      ...readback,formsExts:{formList:[{_id:'deleted-1',state:1}]},
+    })).toBe(false)
+    expect(await closeCompletedR1MutationReceiptAfterReadback(storage,scope,readback)).toBe(true)
+  })
+  it('requires an exact complete workflow-scoped repeat list after remove',async()=>{
+    const s={...scope,sourceNodeType:'repeat' as const,workflowRunId:'repeat-run-1'}
+    const {storage}=repository()
+    const executor:R1StepExecutor=vi.fn(async()=>({state:'succeeded' as const,data:{}}))
+    expect((await executeR1MultiStepOffline(storage,s,
+      ['repeat_remove'],executor,[],'removed-1')).state).toBe('succeeded')
+    const readback={workOrderId:s.workOrderId,runtimeNodeId:s.runtimeNodeId,
+      formDefinitionId:s.formDefinitionId,workflowRunId:s.workflowRunId,
+      sourceNodeType:'repeat' as const,
+      repeatList:{complete:true as const,workflowRunId:s.workflowRunId,savedIds:['other-1']}}
+    expect(await closeCompletedR1MutationReceiptAfterReadback(storage,s,{
+      ...readback,repeatList:{...readback.repeatList,savedIds:['removed-1']},
+    })).toBe(false)
+    expect(await closeCompletedR1MutationReceiptAfterReadback(storage,s,{
+      ...readback,repeatList:{...readback.repeatList,workflowRunId:'another-run'},
+    })).toBe(false)
+    expect(await closeCompletedR1MutationReceiptAfterReadback(storage,s,readback)).toBe(true)
+  })
+  it('never creates a delete receipt without an exact server target identity',async()=>{
+    const {storage}=repository(),executor=vi.fn(success)
+    expect((await executeR1MultiStepOffline(storage,scope,
+      ['forms_exts_update','forms_soft_delete'],executor)).state).toBe('failed_terminal')
+    expect(executor).not.toHaveBeenCalled()
+    expect(storage.write).not.toHaveBeenCalled()
   })
   it.each(['form_upsert','forms_exts_update','workflow_process'] as const)(
     'holds after an unknown %s ACK even across another process instance and role change',

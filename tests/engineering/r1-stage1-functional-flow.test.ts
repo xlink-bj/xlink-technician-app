@@ -111,6 +111,64 @@ describe('R1 Stage 1 source-backed offline choreography',()=>{
       expect(storage.write).not.toHaveBeenCalled()
     }
   })
+  it('preflights the full EXTS list before creating any new FormData',async()=>{
+    for(const authoritativeExts of [
+      {},{formList:'unavailable'},
+      {formList:[{_id:'duplicate'},{_id:'duplicate'}]},
+      {formList:Array.from({length:100},(_,i)=>({_id:`occupied-${i}`}))},
+    ]){
+      const {storage}=store(),{command}=gateway()
+      const result=await executeR1Stage1FunctionalCandidate(storage,{
+        kind:'forms_save',sourceNodeType:'forms',scope:forms,fields:{note:'new'},
+        title:'新表单',authoritativeExts,processActive:true,
+      },command)
+      expect(result.state).toBe('failed_terminal')
+      expect(command.dispatch).not.toHaveBeenCalled()
+      expect(storage.write).not.toHaveBeenCalled()
+    }
+  })
+  it('never silently appends an edit absent or deleted in authoritative EXTS',async()=>{
+    for(const authoritativeExts of [
+      {formList:[]},{formList:[{_id:'server-existing',state:-1}]},
+    ]){
+      const {storage}=store(),{command}=gateway()
+      const result=await executeR1Stage1FunctionalCandidate(storage,{
+        kind:'forms_save',sourceNodeType:'forms',scope:forms,
+        fields:{note:'replace'},title:'编辑',processActive:false,
+        existingFormDataId:'server-existing',
+        authoritativeOriginal:{_id:'server-existing',note:'old'},authoritativeExts,
+      },command)
+      expect(result.state).toBe('failed_terminal')
+      expect(command.dispatch).not.toHaveBeenCalled()
+      expect(storage.write).not.toHaveBeenCalled()
+    }
+  })
+  it('validates every row in repeat batch before first network or receipt',async()=>{
+    const {storage}=store(),{command}=gateway()
+    const result=await executeR1Stage1FunctionalCandidate(storage,{
+      kind:'repeat_batch',sourceNodeType:'repeat',scope:repeat,
+      forms:[{note:'valid'},
+        {note:'bad',state:9} as unknown as Readonly<Record<string,string|number|boolean>>],
+    },command)
+    expect(result.state).toBe('failed_terminal')
+    expect(command.dispatch).not.toHaveBeenCalled()
+    expect(storage.write).not.toHaveBeenCalled()
+  })
+  it('refuses lossy primitive conversion or unbounded fields before any mutation',async()=>{
+    for(const fields of [
+      {note:Number.NaN},{note:Infinity},{note:{nested:'unsupported'}},
+      {note:'x'.repeat(4001)},
+    ]){
+      const {storage}=store(),{command}=gateway()
+      const result=await executeR1Stage1FunctionalCandidate(storage,{
+        kind:'repeat_save',sourceNodeType:'repeat',scope:repeat,
+        fields:fields as unknown as Readonly<Record<string,string|number|boolean>>,
+      },command)
+      expect(result.state).toBe('failed_terminal')
+      expect(command.dispatch).not.toHaveBeenCalled()
+      expect(storage.write).not.toHaveBeenCalled()
+    }
+  })
   it('refuses invalid source data before the first EXTS delete write',async()=>{
     const {storage}=store(),{command}=gateway()
     const result=await executeR1Stage1FunctionalCandidate(storage,{

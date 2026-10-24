@@ -36,6 +36,14 @@
 - forms `exts.formList` 的已有项修改只覆盖已确认的标题/状态/定义等属性，保留未知服务端元数据；源 `Exts` 仍为全量只读快照。这不替代并发版本检查，正式写入前必须读取权威新鲜快照并经过 Owner 特别授权。
 - 本轮改动仍仅存在于 `executeR1Stage1FunctionalCandidate` 的隔离注入式离线编排中，**没有连接 App 的真实命令组合根**。不能据此认定完成真实表单编辑、删除及 Workflow Process。
 
+### 2026-10-24 第二轮：发送前预检与非 Process 回读闭环
+
+- 对 `forms_save`，**在 FormData upsert 之前**先验证全量节点 Exts 可修改、现有记录尚存在且未删除，以及新增不会超过列表上限。原先可能“先建 FormData，后发现 Exts 非法”的路径改为第一笔收据/请求之前拒绝。预检的占位 ID 只用于内存计算，绝不发送。
+- 对 `repeat_batch`，先逐一构建并验证全部行的 FormData 命令；第二行存在保留字段、非有限数字、嵌套对象等不支持字段时，禁止先提交第一行。`repeat_delete` 和仅 Process 的操作也提前检查命令结构。此处字段限制为有界的简单标量；复杂控件值仍需后续精确 R1 契约，不可擅自序列化。
+- 对**不包含 `workflow_process` 的事务**，新增独立回读闭环：forms 保存/编辑须核对同一 FormData 的服务端身份、修改字段及完整 `exts.formList` 状态；forms 删除须看到记录和 Exts 均为删除态；repeat 保存/删除须核对同一 workflowRun 下完整非截断列表中的存在/不存在。事务收据只持久化安全身份（编辑/删除目标 ID），不保存原始字段或业务详情。证据不充分时，收据继续拦截重复写入。
+- 之前只用于工作流推进的 `closeCompletedR1ReceiptAfterReadback` 现在拒绝结清不含 `workflow_process` 的事务。新回读接口必须由后续授权的业务适配器通过**独立新鲜 R1 查询**提供证据；测试注入的记录、单次 HTTP ACK、UI 投影、未分页完列表都不能称为真实验收。
+- 以上仍为 Mock/离线执行候选。没有赋予现有 Production 会话业务写入权限，没有发起现场表单、工作流或数据记录写入。
+
 ## 2026-10-22 Production 只读契约核验与离线修复
 
 Issue [#199 只读取证](https://github.com/xlink-bj/xlink-technician-app/issues/199#issuecomment-6335747195)

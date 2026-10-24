@@ -38,3 +38,9 @@ Until these decisions are resolved, no calendar deadline for *fully integrated r
 - Editing an existing `exts.formList` entry retains unrecognized server metadata.
 - Forms deletion choreography matches the audited R1 order (`updateExts` then FormData soft-delete); partial success remains fenced as uncertain and **is not claimed to be atomic or R1-equivalent in a real environment**. R1 active-node `Process` side effect still needs an approved pilot contract.
 - The offline functional candidate remains disconnected from live App composition; no change here grants Production business-write permission.
+
+## Next offline transaction gate (2026-10-24)
+
+All source-only transaction inputs are now preflighted before reserving any receipt: full EXTS structure/capacity and existing-record membership for `forms`; every row and supported primitive field for `repeat` batches; delete identity; and finalize wire validity. A later invalid row cannot intentionally create earlier FormData records. This does **not** make a partially executed multi-request transaction atomic.
+
+After a non-Process operation, a separate mutation-specific receipt closer now requires fresh complete server evidence for both the FormData and its enclosing forms EXTS, or for a complete workflow-scoped repeat list, including exact saved/deleted IDs and changed-field values. A `workflow_process` readback can no longer be used to close a mere save/delete transaction. These guards remain offline-only and are not evidence of permission to call live write endpoints.

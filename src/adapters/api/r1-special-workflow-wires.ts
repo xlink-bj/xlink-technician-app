@@ -83,8 +83,16 @@ export function r1SpecialFormUpsert(input: {
   if (!input.definitionId||!input.workOrderId||!input.workflowNodeId)throw new Error('R1 FormData identity missing')
   if(input.sourceNodeType==='repeat'&&!input.workflowRunId)throw new Error('R1 repeat requires actual workflow run identity')
   const forbidden=new Set(['_id','state','nodeId','workflowId','sid','smodule','dataStr'])
-  if(Object.keys(input.formData).some(key=>forbidden.has(key)))
-    throw new Error('R1 form field collides with server-owned identity')
+  if(!input.formData || typeof input.formData!=='object' || Array.isArray(input.formData)
+    || Object.keys(input.formData).length>50)throw new Error('Unbounded or invalid R1 form field patch')
+  for(const [key,value] of Object.entries(input.formData)){
+    if(!key.trim()||key.length>120||forbidden.has(key))
+      throw new Error('R1 form field collides with server-owned identity')
+    if(!((typeof value==='string'&&value.length<=4000)
+      || (typeof value==='number'&&Number.isFinite(value))
+      || typeof value==='boolean'))
+      throw new Error('R1 form field value requires a supported bounded primitive')
+  }
   let original: Record<string, unknown> = {}
   if (input.existingFormDataId) {
     const source=input.authoritativeOriginal
