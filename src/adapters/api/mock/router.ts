@@ -1,5 +1,5 @@
 import { isBusinessMockMode, type BusinessMockMode } from './config'
-import { advanceMockJourneyAfterProcess, isDevMockJourneyEnabled, mockJourneyNodes, mockJourneyStage, mockJourneyWorkOrderId, persistMockJourneyFormData, readMockJourneyFormData, type MockJourneyStage } from './journey'
+import { advanceMockJourneyAfterProcess, isDevMockJourneyEnabled, mockJourneyNodes, mockJourneyStage, mockJourneyWorkOrderId, mockJourneyOrderWorkflowDefinitionId, mockJourneyOrderWorkflowRunId, mockJourneyOfficialOrderId, persistMockJourneyFormData, persistMockJourneyOfficialOrder, readMockJourneyFormData, readMockJourneyOrderWorkflow, readMockJourneyOfficialOrder, startMockJourneyOrderWorkflow, type MockJourneyStage } from './journey'
 import { appointmentFormDefinitionWireId } from '../appointment-contract'
 import {
   isSyntheticWorkOrderId,
@@ -94,7 +94,8 @@ function journeyNodeFor(stage: MockJourneyStage): Record<string, unknown> {
   return {
     _id: mockJourneyNodes.quotation,
     state: 0,
-    nodeDef: { nodeType: 'placeOrder', name: '报价', viewableRoleIds: ['synthetic-role'] },
+    nodeDef: { nodeType: 'placeOrder', name: '报价', nodeTypeDef: mockJourneyOrderWorkflowDefinitionId,
+      viewableRoleIds: ['synthetic-role'] },
   }
 }
 
@@ -421,6 +422,42 @@ function mockFailureResponse(kind: 'retryable' | 'terminal'): unknown {
   }
 }
 
+/** Test-only R1 type=1 Order, never a payable or signed business record.
+ * Its payload is validated here because the generic Order transport must
+ * never grant a synthetic ID broader business command authorization. */
+function saveMockJourneyOfficialOrder(serialized: unknown): string {
+  if (!isDevMockJourneyEnabled() || mockJourneyStage() !== 'quotation'
+    || typeof serialized !== 'string' || serialized.length > 200000
+    || readMockJourneyOrderWorkflow() !== mockJourneyOrderWorkflowRunId
+    || readMockJourneyOfficialOrder() !== null) throw new Error('Mock Order scope is not writable')
+  const order = mutableRecord(JSON.parse(serialized))
+  const exts = mutableRecord(order?.exts)
+  const bjProducts = typeof order?.bjProducts === 'string'
+    ? mutableRecord(JSON.parse(order.bjProducts)) : null
+  const lines = bjProducts?.orderList
+  if (!order || !exts || order._id !== undefined || order.type !== 1
+    || order.serviceAppointmentId !== mockJourneyWorkOrderId
+    || order.workflowId !== mockJourneyOrderWorkflowRunId
+    || order.productIds !== '[]' || order.discount !== 1
+    || typeof order.totalPrice !== 'number' || !Number.isFinite(order.totalPrice) || order.totalPrice <= 0
+    || typeof order.originPrice !== 'number' || !Number.isFinite(order.originPrice) || order.originPrice <= 0
+    || order.otherAmount !== 0 || order.preferentialAmount !== 0
+    || order.totalPrice !== order.originPrice
+    || exts.serviceType !== mockQuotationCatalogServiceType
+    || exts.sourceType !== mockQuotationCatalogSourceType
+    || exts.coupons !== '' || exts.couponsVal !== 0 || exts.couponsName !== ''
+    || exts.isCreateBjdPDF !== '1'
+    || !Array.isArray(lines) || lines.length === 0 || lines.length > 50
+    || lines.some((line) => !Array.isArray(mutableRecord(line)?.repairParts)
+      || (mutableRecord(line)?.repairParts as unknown[]).length === 0)) {
+    throw new Error('Mock official Order type=1 payload failed source-shaped checks')
+  }
+  const persisted = { ...order, _id: mockJourneyOfficialOrderId,
+    state: 1, processState: 0, orderNumber: 'MOCK-019-NOT-A-REAL-ORDER' }
+  if (!persistMockJourneyOfficialOrder(persisted)) throw new Error('Mock Order persistence failed')
+  return mockJourneyOfficialOrderId
+}
+
 /**
  * Positive Detail fixtures use explicit synthetic identity markers so their
  * raw workflow shapes stay deterministic. In the running app, bind those
@@ -522,6 +559,19 @@ function matchedResponse(
   requestData: Readonly<Record<string, unknown>>,
 ): unknown | null {
   const route = normalizedPath(path)
+  if (isDevMockJourneyEnabled() && mode === 'data'
+    && route === 'basic/order/queryById' && requestData.id === mockJourneyOfficialOrderId) {
+    const order = readMockJourneyOfficialOrder()
+    return order ? { data: order } : { success: false, code: 'TERMINAL' }
+  }
+  if (isDevMockJourneyEnabled() && mode === 'data'
+    && route === 'basic/order/query'
+    && requestData['is:serviceAppointmentId|string#and'] === mockJourneyWorkOrderId
+    && requestData['is:type|integer#and'] === 1
+    && requestData._all === undefined && requestData.page === 1 && requestData.rows === 3) {
+    const order = readMockJourneyOfficialOrder()
+    return { data: order ? [order] : [], page: 1, rows: 3, total: order ? 1 : 0 }
+  }
   if (route === '__mock/quotation/action-content') {
     const workOrderId = typeof requestData.workOrderId === 'string' ? requestData.workOrderId : ''
     const workflowNodeId = typeof requestData.workflowNodeId === 'string' ? requestData.workflowNodeId : ''
@@ -759,6 +809,21 @@ function matchedResponse(
 function matchedCommandResponse(request: ApiCommandRequest): unknown | null {
   const route = normalizedPath(request.path)
   const data = request.body ?? {}
+  if (route.startsWith('workflow/startWorkflow/order/null/')
+    && data.saId === mockJourneyWorkOrderId) {
+    if (route !== `workflow/startWorkflow/order/null/${mockJourneyOrderWorkflowDefinitionId}`
+      || !startMockJourneyOrderWorkflow()) return mockFailureResponse('terminal')
+    return { status: 1, entity: { _id: mockJourneyOrderWorkflowRunId } }
+  }
+  if (route === 'basic/order/upsert' && typeof data.order === 'string') {
+    // The 'order' payload uses serviceAppointmentId, not sid.
+    let owner = ''
+    try { owner = String(mutableRecord(JSON.parse(data.order))?.serviceAppointmentId ?? '') } catch { /* malformed */ }
+    if (owner === mockJourneyWorkOrderId) {
+      try { return { status: 1, data: { _id: saveMockJourneyOfficialOrder(data.order) } } }
+      catch { return mockFailureResponse('terminal') }
+    }
+  }
   if (route === 'back/super/file/upToken.do') {
     return { token: 'synthetic-upload-token' }
   }

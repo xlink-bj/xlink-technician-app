@@ -14,6 +14,13 @@ import {
 } from './fixtures'
 import { mockMaterialSkuSpuId } from './quotation-catalog'
 
+/** Unknown mock-work-order IDs must fail locally. An absent fixture never
+ * grants fall-through to an enabled real-write transport. */
+function syntheticWorkOrderNamespace(value: unknown): boolean {
+  return typeof value === 'string'
+    && (isSyntheticWorkOrderId(value) || value.startsWith('mock-work-order-'))
+}
+
 export function normalizedPath(path: string): string {
   return path.replace(/^\/+/, '').split('?')[0]
 }
@@ -40,8 +47,8 @@ export function isMockOwnedRead(
   if (route === 'basic/contract/query.do') {
     const primaryId = requestData['is:serviceAppointmentId|string#and']
     const alternativeId = requestData['is:workOrderId|string#and']
-    if ((typeof primaryId === 'string' && isSyntheticWorkOrderId(primaryId))
-      || (typeof alternativeId === 'string' && isSyntheticWorkOrderId(alternativeId))) return true
+    if (syntheticWorkOrderNamespace(primaryId)
+      || syntheticWorkOrderNamespace(alternativeId)) return true
   }
   // Synthetic SKU IDs must never fall through to a live backend if the
   // developer disables Mock after navigating to a saved local quotation.
@@ -55,7 +62,7 @@ export function isMockOwnedRead(
   if (
     route === 'basic/order/query'
     && typeof requestData['is:serviceAppointmentId|string#and'] === 'string'
-    && isSyntheticWorkOrderId(requestData['is:serviceAppointmentId|string#and'])
+    && syntheticWorkOrderNamespace(requestData['is:serviceAppointmentId|string#and'])
   ) return true
   if (
     route === 'basic/order/queryById'
@@ -91,7 +98,7 @@ export function isMockOwnedRead(
   const detailPrefix = 'basic/serviceAppointment/queryById/'
   if (route.startsWith(detailPrefix)) {
     try {
-      return isSyntheticWorkOrderId(decodeURIComponent(route.slice(detailPrefix.length)))
+      return syntheticWorkOrderNamespace(decodeURIComponent(route.slice(detailPrefix.length)))
     } catch {
       return false
     }
@@ -102,7 +109,7 @@ export function isMockOwnedRead(
     requestData.bizType === 'serviceAppointment' &&
     typeof requestData.sid === 'string'
   ) {
-    return isSyntheticWorkOrderId(requestData.sid)
+    return syntheticWorkOrderNamespace(requestData.sid)
   }
 
   return false
@@ -113,6 +120,15 @@ export function isMockOwnedCommand(
   requestData: Readonly<Record<string, unknown>> = {},
 ): boolean {
   const route = normalizedPath(path)
+  // R1 special commands encode runtime/definition identity in the PATH;
+  // their JSON EXTS body need not carry a WorkOrder sid. Never allow a mock
+  // node or definition to escape into a configured real-write transport.
+  if (/^workflowNode\/updateExts\/mock-workflow-node-/.test(route)
+    || /^biz\/extForm\/remove\/mock-form-definition-/.test(route)
+    || /^workflow\/startWorkflow\/order\/null\/mock-workflow-definition-/.test(route)) return true
+  if (route === 'workflow/process'
+    && typeof requestData.workflowNodeId === 'string'
+    && requestData.workflowNodeId.startsWith('mock-workflow-node-')) return true
   // Official Order writes serialize their Work Order identity in the "order"
   // JSON field, not in sid/saId. A synthetic Order must never fall through to
   // the real command transport, including builds with real writes enabled.
@@ -121,7 +137,7 @@ export function isMockOwnedCommand(
       const order: unknown = JSON.parse(requestData.order)
       if (order && typeof order === 'object' && !Array.isArray(order)) {
         const workOrderId = (order as Record<string, unknown>).serviceAppointmentId
-        if (typeof workOrderId === 'string' && isSyntheticWorkOrderId(workOrderId)) return true
+        if (syntheticWorkOrderNamespace(workOrderId)) return true
       }
     } catch {
       // Non-synthetic malformed payload handling remains with the adapter.
@@ -140,6 +156,6 @@ export function isMockOwnedCommand(
       // A malformed command is still handled by the real adapter as a failure.
     }
   }
-  return syntheticFormMutation || values.some((value) => typeof value === 'string' && isSyntheticWorkOrderId(value))
+  return syntheticFormMutation || values.some(syntheticWorkOrderNamespace)
 }
 
