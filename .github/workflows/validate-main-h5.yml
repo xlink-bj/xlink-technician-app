@@ -33,6 +33,20 @@ jobs:
       - run: pnpm exec playwright install --with-deps chromium
       - name: Verify credential-free Production repeat panel interaction
         run: pnpm run test:r1-main-repeat-ui
+      # Draft PRs intentionally skip the broader L3 H5 UX job below. Exercise
+      # this fully synthetic, deny-external-network closure on the same browser
+      # already installed for the repeat panel, so Draft cannot appear green
+      # without the actual form → Workflow → commercial navigation working.
+      - name: Verify DEV Mock saved-form to commercial handoff at two mobile widths
+        run: pnpm exec playwright test --config playwright.main-h5-mock.config.ts tests/h5-main-mock/mock-business-closure.spec.ts
+      - name: Preserve Draft Mock closure trace and screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: draft-mock-business-closure-${{ github.run_id }}
+          path: test-results/main-h5-mock/
+          if-no-files-found: warn
+          retention-days: 7
 
   h5-ux:
     # L3 runs only when PR leaves Draft, or on main/manual execution.
