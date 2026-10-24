@@ -22,7 +22,7 @@ test('DEV Mock renders actual child panel for unknown, cancelled, empty and fail
   await expect(page.getByText('子流程节点 · 只读预览')).toBeVisible()
   await expect(page.getByTestId('production-child-form-view')).toBeVisible()
 
-  await page.getByText('查看节点', { exact: true }).click()
+  await page.locator('.child-forms__parent .app-button').click()
   await expect(page.getByTestId('child-form-node')).toHaveCount(3)
   await expect(page.getByTestId('child-form-untyped-guard')).toHaveCount(3)
   await expect(page.getByTestId('child-form-generic-reference')).toHaveCount(2)
@@ -32,14 +32,14 @@ test('DEV Mock renders actual child panel for unknown, cancelled, empty and fail
     body: await page.screenshot({ animations: 'disabled' }), contentType: 'image/png',
   })
 
-  await page.getByText('已取消', { exact: true }).click()
-  await page.getByText('查看节点', { exact: true }).click()
+  await page.locator('.child-review-scenarios .app-button').filter({ hasText: '已取消' }).click()
+  await page.locator('.child-forms__parent .app-button').click()
   await expect(page.getByTestId('child-form-node')).toHaveCount(1)
-  await page.getByText('空节点', { exact: true }).click()
-  await page.getByText('查看节点', { exact: true }).click()
+  await page.locator('.child-review-scenarios .app-button').filter({ hasText: '空节点' }).click()
+  await page.locator('.child-forms__parent .app-button').click()
   await expect(page.getByTestId('child-form-empty')).toBeVisible()
-  await page.getByText('读取失败', { exact: true }).click()
-  await page.getByText('查看节点', { exact: true }).click()
+  await page.locator('.child-review-scenarios .app-button').filter({ hasText: '读取失败' }).click()
+  await page.locator('.child-forms__parent .app-button').click()
   await expect(page.getByTestId('child-form-error')).toBeVisible()
 
   await page.goto('/#/pages/work-orders/child-subflow-mock-review?id=other', { waitUntil: 'domcontentloaded' })
