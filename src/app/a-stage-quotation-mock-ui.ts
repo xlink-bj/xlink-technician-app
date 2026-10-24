@@ -7,13 +7,17 @@ import {
 } from '@adapters/api/mock/journey'
 import { tryMockRead, tryMockCommand } from '@adapters/api/mock/router'
 import { createQuotationOrderCommandAdapter } from '@adapters/api/quotation-order-commands'
-import { QuotationOrderReadAdapter } from '@adapters/api/quotation-order-api'
+import {
+  QuotationOrderReadAdapter, projectExactQuotationOrderReadForBrowse,
+} from '@adapters/api/quotation-order-api'
 import {
   restoreQuotationOrderSubmissionState, submitQuotationOrder,
 } from '@features/work-orders/quotation/order-submission'
 import type { QuotationEngineResult } from '@features/work-orders/quotation/engine'
 import type { StoragePort } from '@shared/ports'
+import type { QuotationOrderBrowseItem } from '@shared/ports'
 import { asOpaqueId } from '@shared/types'
+import { createDefaultStoragePort } from './composition'
 
 export interface AStageQuoteActor { readonly userId: string; readonly roleId: string; readonly identity: string }
 export function isAStageMockOrderEnabled(input: {
@@ -141,5 +145,37 @@ export function createAStageMockQuoteOrderController(options: {
     }
     return { state: 'confirmed', message: '只读回查已确认本机 Mock 订单及金额；待确认回执仍保留，不会再次创建订单。' }
   }
-  return { submit, readStatus, verifyPending }
+  /** A single exact-id synthetic read for the Main App Order hub. The normal
+   * role-scoped business Order-list API is intentionally NOT substituted or
+   * granted by this local fixture. */
+  async function readMockOrder(): Promise<{
+    readonly state: 'confirmed' | 'unavailable' | 'blocked'
+    readonly order?: QuotationOrderBrowseItem
+  }> {
+    if (!authorized()) return { state: 'blocked' }
+    try {
+      const result = await readApi.getQuotationOrderById(mockJourneyOfficialOrderId)
+      if (!authorized()) return { state: 'blocked' }
+      if (result.state !== 'succeeded' || !result.data) return { state: 'unavailable' }
+      const order = result.data
+      if (order.id !== mockJourneyOfficialOrderId || order.type !== 1
+        || order.serviceAppointmentId !== mockJourneyWorkOrderId
+        || order.workflowId !== mockJourneyOrderWorkflowRunId
+        || order.originPrice === undefined || order.totalPrice === undefined
+        || !Number.isFinite(order.originPrice) || !Number.isFinite(order.totalPrice)
+        || order.totalPrice <= 0) return { state: 'blocked' }
+      const display = projectExactQuotationOrderReadForBrowse(order)
+      if (display.id !== mockJourneyOfficialOrderId
+        || display.serviceAppointmentId !== mockJourneyWorkOrderId) return { state: 'blocked' }
+      return { state: 'confirmed', order: display }
+    } catch { return { state: 'unavailable' } }
+  }
+  return { submit, readStatus, verifyPending, readMockOrder }
+}
+
+/** Keep local persistence wiring in the application layer: pages own only
+ * the actor and present the strictly synthetic, exact-ID read result. */
+export function readAStageMockOrderForActor(getActor: () => AStageQuoteActor | null) {
+  return createAStageMockQuoteOrderController({ getActor,
+    storage: createDefaultStoragePort() }).readMockOrder()
 }

@@ -279,6 +279,17 @@ function quotationOrderBrowseItem(raw: unknown): QuotationOrderBrowseItem {
   }
 }
 
+/** Project a single, already-authorized exact Order read into the same
+ * immutable display format as a bounded Order list. Does not grant list
+ * access, infer signing entitlement, or initiate any business command. */
+export function projectExactQuotationOrderReadForBrowse(order: QuotationOrderRead): QuotationOrderBrowseItem {
+  return quotationOrderBrowseItem({ ...order.replaceSnapshot,
+    id: order.id, type: order.type,
+    serviceAppointmentId: order.serviceAppointmentId,
+    bjProducts: order.bjProducts,
+  })
+}
+
 function quotationOrderBrowsePage(raw: unknown, requestedWorkOrderId: string, requestedPageSize: 1 | 3): ReadPage<QuotationOrderBrowseItem> {
   const envelope = asRecord(raw, 'Work Order-scoped Order list response')
   const data = optionalRecord(envelope.data)

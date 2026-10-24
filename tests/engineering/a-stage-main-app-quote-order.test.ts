@@ -86,8 +86,17 @@ describe('A priced Mock quotation → exact type=1 Order UI controller', () => {
     } }, payload: { type: 1, serviceAppointmentId: mockJourneyWorkOrderId, totalPrice: 107 } })
     const ui = createAStageMockQuoteOrderController({ storage: storage(), getActor: () => actor })
     expect(await ui.readStatus(engine)).toBe('ready')
+    expect((await ui.readMockOrder()).state).toBe('unavailable')
     expect(await ui.submit(engine)).toMatchObject({ state: 'succeeded' })
     expect(await ui.readStatus(engine)).toBe('succeeded')
+    expect(await ui.readMockOrder()).toMatchObject({ state: 'confirmed', order: {
+      id: 'mock-official-order-019-protocol', type: 1,
+      serviceAppointmentId: mockJourneyWorkOrderId,
+      originPrice: 107, totalPrice: 107,
+      groups: [{ partDescription: '平屋顶防水局部修缮' }],
+    } })
+    const reopened = createAStageMockQuoteOrderController({ storage: storage(), getActor: () => actor })
+    expect((await reopened.readMockOrder()).state).toBe('confirmed')
     resetMockCommandState()
     expect(await tryMockRead('basic/order/query', {
       'is:serviceAppointmentId|string#and': mockJourneyWorkOrderId,

@@ -140,6 +140,9 @@
         @changed="retry" />
       <R1NodeFormsOverview v-else-if="currentR1FormNode" :node="currentR1FormNode"
         :work-order-id="String(detail.id)" :actor-scope="workOrderReadScopeKey(session.session)" />
+      <AppStatus v-if="aStageCompletedSpecialNode" tone="success" quiet
+        message="当前现场表单节点已完成（仅本机 Mock）；完成状态已回读，重新进入也会保留。"
+        data-testid="a-special-complete" />
       <R1ProductionChildFormsPanel
         v-if="productionReadOnly && productionChildParents.length"
         :parents="productionChildParents"
@@ -383,6 +386,19 @@ const aStageSpecialKind = computed<AStageSpecialKind | null>(() => {
           current.currentRole.id, current.roleVersion ?? null]) } : null
   return isAStageSpecialMockAvailable(source, String(detail.value?.id ?? ''), actor)
     ? source : null
+})
+const aStageCompletedSpecialNode = computed(() => {
+  if (productionReadOnly) return null
+  const current = session.session
+  const actor = current?.user.id && current.currentRole?.id && current.sessionRef
+    ? { userId: String(current.user.id), roleId: String(current.currentRole.id),
+        identity: JSON.stringify([current.sessionRef, current.user.id,
+          current.currentRole.id, current.roleVersion ?? null]) } : null
+  return detail.value?.workflowNodes?.find(node =>
+    (node.sourceNodeType === 'forms' || node.sourceNodeType === 'repeat')
+      && node.lifecycle === 'closed'
+      && isAStageSpecialMockAvailable(node.sourceNodeType,
+        String(detail.value?.id ?? ''), actor)) ?? null
 })
 const productionChildParents = computed(() => (productionReadOnly
   ? detail.value?.workflowNodes?.filter((node) => node.category === 'subworkflow'

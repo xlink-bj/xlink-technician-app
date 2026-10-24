@@ -22,10 +22,12 @@
     :local-draft-group-count="quotationComposition.groups.length"
     :read-only="productionReadOnly"
     :dev-mock-order="aStageMockOrderEnabled"
+    :dev-mock-order-read="mockOrderRead"
     :dev-visual-sample="devQuotationOrderPreview"
     @create="openQuotationEditor"
     @edit="openExistingQuotationEditor"
     @mode-change="quotationChoiceVisible = $event"
+    @mock-read-retry="loadMockOrderRead"
   >
     <template #after-content>
       <MockCommercialFlowLinks v-if="mockJourney?.stage === 'quotation'"
@@ -257,7 +259,7 @@ import { compareQuoteWithStandaloneSkuDemo, compareQuoteWithSameCatalogSynthetic
 import { reviewP1SyntheticSkuReadiness } from '@app/p1-sku-readiness-review'
 import { setActionWorkspacePageTitle } from '@app/action-page-title'
 import { mockJourneyContext } from '@app/mock-journey'
-import { isAStageMockOrderEnabled } from '@app/a-stage-quotation-mock-ui'
+import { readAStageMockOrderForActor, isAStageMockOrderEnabled } from '@app/a-stage-quotation-mock-ui'
 import { advanceMockJourneyWithSavedDraft } from '@app/mock-journey-closure'
 import { readMockJourneyContext, type MockJourneyContextSummary } from '@app/mock-journey-context'
 import { canAdoptMockSurveySuggestion } from '@app/mock-journey-quote-suggestion'
@@ -293,6 +295,7 @@ import AppSelector from '@shared/ui/AppSelector.vue'
 import AppTextarea from '@shared/ui/AppTextarea.vue'
 import type { AppChoiceOption } from '@shared/ui/types'
 import type { OperationError } from '@shared/types'
+import type { QuotationOrderBrowseItem } from '@shared/ports'
 
 const session = useSessionStore()
 const workspace = useActionWorkspaceStore()
@@ -355,6 +358,26 @@ const aStageMockOrderEnabled = computed(() => !productionReadOnly && isAStageMoc
   userId: String(session.session?.user.id ?? ''),
   roleId: String(session.session?.currentRole?.id ?? ''),
 }))
+const mockOrderRead = ref<{ readonly state: 'loading' | 'confirmed' | 'unavailable' | 'blocked';
+  readonly order?: QuotationOrderBrowseItem }>({ state: 'loading' })
+let mockOrderReadRevision = 0
+async function loadMockOrderRead(): Promise<void> {
+  const ticket = ++mockOrderReadRevision
+  mockOrderRead.value = { state: 'loading' }
+  if (!aStageMockOrderEnabled.value || !quotationHubVisible.value) return
+  const result = await readAStageMockOrderForActor(() => {
+      const current = session.session
+      return current?.user.id && current.currentRole?.id && current.sessionRef
+        ? { userId: String(current.user.id), roleId: String(current.currentRole.id),
+            identity: JSON.stringify([current.sessionRef, current.user.id,
+              current.currentRole.id, current.roleVersion ?? null]) } : null
+    })
+  if (ticket === mockOrderReadRevision && aStageMockOrderEnabled.value
+    && quotationHubVisible.value) mockOrderRead.value = result
+}
+watch(() => [aStageMockOrderEnabled.value, quotationHubVisible.value,
+  session.session?.sessionRef, session.session?.currentRole?.id,
+  session.session?.roleVersion] as const, () => { void loadMockOrderRead() }, { immediate: true })
 const feedback = computed(() => actionErrorCopy(workspace.error))
 const mockJourney = computed(() => mockJourneyContext(routeId.value))
 const canAdoptSurveySuggestion = computed(() =>
@@ -470,6 +493,7 @@ onLoad((options) => {
 
 onUnload(() => {
   routeReady.value = false
+  mockOrderReadRevision += 1
   journeyContextRequest += 1
   localJourneyContext.value = null
   void workspace.flushDraft()
