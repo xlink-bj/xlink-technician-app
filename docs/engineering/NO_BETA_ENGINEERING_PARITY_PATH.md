@@ -11,6 +11,16 @@ Keep two independent gates:
 - **Engineering candidate / OFFLINE_FUNCTIONAL:** R1-source-backed request encoders, screen-to-command path, local state change and server-shaped readback, permissions, restart/replay, error UX, H5/MP CI and visual/device Mock tests.
 - **R1 live-integrated / WRITE_VERIFIED:** A specific authorized actor/work order/node in an isolated R1-backed data store; exact command, reply, side effects, reload/readback, rollback/reconciliation and device run. This gate cannot be inferred from the former.
 
+## Owner-approved A / B / C execution lanes (2026-10-24)
+
+| Lane | Required exit | Current independently established result |
+| --- | --- | --- |
+| **A — full protocol-equivalent Mock** | Main-App UI can save/edit, read back and advance each authorized synthetic action with R1-shaped command/status/failure semantics; appointment, survey, dynamic forms, Workflow, quotation/SKU/Order/Contract all accounted for | **IN PROGRESS.** The 019 page journey, recovery and commercial reference review have H5 golden-path evidence, but 019 is explicitly local-only, not an R1 Process/Order write. The command Mock now rejects FormData without an active, exact WorkOrder/node/definition/run; Process needs same-scope saved FormData and a live node, and replay cannot report another success. See `tests/engineering/abc-mock-formdata-workflow-parity.test.ts`. This is a necessary protocol slice, not full A acceptance. |
+| **B — Production read-only** | Current role-authorized App pages use official bounded API reads; Production database used only to reconcile semantics and redacted inconsistencies; no business commands/uploads | **PARTIAL, existing read evidence.** #199 and the three-pillar contract matrix verify bounded WorkOrder/Workflow/FormData/Order/Contract shapes, plus explicitly distinct Order query semantics. No new Production network request is required to repeat that historical evidence. Full live App/WeChat read-path UX acceptance remains open; default allowlists must not expand by inference. |
+| **C — isolated Beta/test writes** | Owner-approved R1-backed disposable scope, audited FormData/EXTS/Workflow and later commercial actions, server ACK plus fresh authoritative readback and cleanup | **HOLD — no approved writable R1-backed fixture.** Offline stateful shadow and scoped staging gateway exist but remain outside the default App. Production business writes are categorically forbidden. |
+
+These lanes are sequential evidence grades, not three switches that can be enabled at once. A Mock response that passes an adapter is never proof of R1 server persistence, and a read-only Production result never grants a Beta write or a new Production read route.
+
 The implementation should advance through the first gate immediately. A missing Beta affects the **second** gate only; do not let it create artificial blockers for source mapping, offline functionality, regression or UI/UX review preparation.
 
 ## Available evidence, ordered by strength

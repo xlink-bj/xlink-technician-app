@@ -179,6 +179,63 @@ function detailNodesForWorkOrder(id: string): unknown[] | null {
   return Array.isArray(payload.workflowNode) ? payload.workflowNode : null
 }
 
+function hasActiveMockFormNode(id: string, nodeId: string, definitionId: string): boolean {
+  // Journey 019 is a local draft/review projection, NOT a command-backed R1 flow.
+  if (id === mockJourneyWorkOrderId) return false
+  return detailNodesForWorkOrder(id)?.some((value) => {
+    const node = mutableRecord(value)
+    const nodeDef = mutableRecord(node?.nodeDef)
+    return node?._id === nodeId && node.state === 0
+      && nodeDef?.nodeType === 'forms' && nodeDef.formDefId === definitionId
+  }) === true
+}
+
+function matchesMockFormWireScope(
+  values: Record<string, unknown>, workOrderId: string, nodeId: string, definitionId: string,
+): boolean {
+  if (values.smodule !== 'serviceAppointment' || values.state !== 1
+    || !hasActiveMockFormNode(workOrderId, nodeId, definitionId)) return false
+  const payload = mutableRecord(mutableRecord(responseForDetail(workOrderId))?.data)
+  const runId = mutableRecord(payload?.workflow)?._id
+  return values.workflowId === undefined || (typeof runId === 'string' && values.workflowId === runId)
+}
+
+function canSaveMockFormData(dataId: string, id: string, nodeId: string, definitionId: string): boolean {
+  if (!dataId.startsWith('mock-') || Object.prototype.hasOwnProperty.call(mockR1ExistingFormData, dataId)) return false
+  const previous = mockCommandState().formData.get(dataId)
+  if (previous === undefined) return true
+  const record = mutableRecord(previous)
+  return record?.sid === id && record.nodeId === nodeId && record.extId === definitionId
+    && record.state === 1
+}
+
+function nextMockFormDataId(id: string, definitionId: string): string {
+  const prefix = `mock-form-data-${id}-${definitionId}`
+  let sequence = 1
+  while (mockCommandState().formData.has(`${prefix}-${sequence}`)) sequence += 1
+  return `${prefix}-${sequence}`
+}
+
+function hasSavedMockFormData(id: string, nodeId: string, definitionId: string, dataId: string): boolean {
+  if (!hasActiveMockFormNode(id, nodeId, definitionId)) return false
+  const record = mutableRecord(mockCommandState().formData.get(dataId))
+  return record?._id === dataId && record.sid === id && record.nodeId === nodeId
+    && record.extId === definitionId && record.state === 1
+}
+
+function hasActiveMockAcceptNode(id: string, nodeId: string): boolean {
+  // The R1 pending-accept task is a list node; Detail can still contain the
+  // older dispatch/subflows projection until the accept command succeeds.
+  const node = listItemForWorkOrder(id)
+  if (node?._id === nodeId && node.state === 0
+    && mutableRecord(node.nodeDef)?.nodeType === 'accept') return true
+  return detailNodesForWorkOrder(id)?.some((value) => {
+    const current = mutableRecord(value)
+    return current?._id === nodeId && current.state === 0
+      && mutableRecord(current.nodeDef)?.nodeType === 'accept'
+  }) === true
+}
+
 function acceptMockWorkOrder(id: string): void {
   const listItem = listItemForWorkOrder(id)
   const listNode = mutableRecord(listItem)
@@ -211,12 +268,25 @@ function acceptMockWorkOrder(id: string): void {
 function saveMockAppointment(dataStr: unknown): string {
   if (typeof dataStr !== 'string') throw new Error('Appointment form data is missing')
   const values = JSON.parse(dataStr) as Record<string, unknown>
+  const workOrderId = values.sid
+  const nodeId = values.nodeId
+  if (typeof workOrderId !== 'string' || typeof nodeId !== 'string'
+    || !isSyntheticWorkOrderId(workOrderId)
+    || !matchesMockFormWireScope(values, workOrderId, nodeId, appointmentFormDefinitionWireId)) {
+    throw new Error('Appointment Mock source scope is not active')
+  }
   const formDataId = typeof values._id === 'string' && values._id.length > 0
     ? values._id
-    : 'mock-form-data-003-appointment'
+    : nextMockFormDataId(workOrderId, appointmentFormDefinitionWireId)
+  if ((values._id !== undefined && mockCommandState().formData.get(formDataId) === undefined)
+    || !canSaveMockFormData(formDataId, workOrderId, nodeId, appointmentFormDefinitionWireId)) {
+    throw new Error('Appointment Mock record identity conflicts')
+  }
   mockCommandState().formData.set(formDataId, {
     _id: formDataId,
     extId: appointmentFormDefinitionWireId,
+    sid: workOrderId,
+    nodeId,
     exts: {
       need: values.need ?? null,
       datetime: values.datetime ?? null,
@@ -227,14 +297,14 @@ function saveMockAppointment(dataStr: unknown): string {
   return formDataId
 }
 
-function completeMockAppointment(id: string, formDataId: string): void {
+function completeMockAppointment(id: string, nodeId: string, formDataId: string): void {
   const nodes = detailNodesForWorkOrder(id)
   if (!nodes) return
   for (const value of nodes) {
     const node = mutableRecord(value)
     if (!node) continue
     const nodeDef = mutableRecord(node.nodeDef)
-    if (nodeDef?.formDefId === appointmentFormDefinitionWireId) {
+    if (node._id === nodeId && nodeDef?.formDefId === appointmentFormDefinitionWireId) {
       node.state = 10
       node.formDataId = formDataId
     }
@@ -244,14 +314,27 @@ function completeMockAppointment(id: string, formDataId: string): void {
 function saveMockDynamicForm(dataStr: unknown, definitionId: string): string {
   if (typeof dataStr !== 'string') throw new Error('Dynamic form data is missing')
   const values = JSON.parse(dataStr) as Record<string, unknown>
+  const workOrderId = values.sid
+  const nodeId = values.nodeId
+  if (typeof workOrderId !== 'string' || typeof nodeId !== 'string'
+    || !isSyntheticWorkOrderId(workOrderId)
+    || !matchesMockFormWireScope(values, workOrderId, nodeId, definitionId)) {
+    throw new Error('Dynamic Mock source scope is not active')
+  }
   const formDataId = typeof values._id === 'string' && values._id.length > 0
     ? values._id
-    : `mock-form-data-${definitionId}`
+    : nextMockFormDataId(workOrderId, definitionId)
+  if ((values._id !== undefined && mockCommandState().formData.get(formDataId) === undefined)
+    || !canSaveMockFormData(formDataId, workOrderId, nodeId, definitionId)) {
+    throw new Error('Dynamic Mock record identity conflicts')
+  }
   const metadata = new Set(['_id', 'sid', 'smodule', 'nodeId', 'workflowId', 'state'])
   const formValues = Object.fromEntries(Object.entries(values).filter(([key]) => !metadata.has(key)))
   mockCommandState().formData.set(formDataId, {
     _id: formDataId,
     extId: definitionId,
+    sid: workOrderId,
+    nodeId,
     exts: formValues,
     ...(typeof values.workflowId === 'string'
       ? { workflowId: values.workflowId, workflowRunId: values.workflowId }
@@ -261,13 +344,13 @@ function saveMockDynamicForm(dataStr: unknown, definitionId: string): string {
   return formDataId
 }
 
-function completeMockDynamicForm(id: string, formDataId: string, definitionId: string): void {
+function completeMockDynamicForm(id: string, nodeId: string, formDataId: string, definitionId: string): void {
   const nodes = detailNodesForWorkOrder(id)
   if (!nodes) return
   for (const value of nodes) {
     const node = mutableRecord(value)
     const nodeDef = mutableRecord(node?.nodeDef)
-    if (nodeDef?.formDefId === definitionId && node) {
+    if (node?._id === nodeId && nodeDef?.formDefId === definitionId && node) {
       node.state = 10
       node.formDataId = formDataId
     }
@@ -595,7 +678,8 @@ function matchedResponse(
       : typeof requestData.id === 'string'
         ? requestData.id
         : undefined
-    const formData = dataId ? mockCommandState().formData.get(dataId) : undefined
+    const candidate = dataId ? mockCommandState().formData.get(dataId) : undefined
+    const formData = mutableRecord(candidate)?.extId === appointmentFormDefinitionWireId ? candidate : undefined
     return { data: formData ? [formData] : [], page: 1, rows: 20, total: formData ? 1 : 0 }
   }
   if (route.startsWith('biz/extForm/query/') && route.slice('biz/extForm/query/'.length) === mockSyntheticDynamicFormDefinitionId) {
@@ -605,8 +689,9 @@ function matchedResponse(
     const repeatRows = workflowId === 'mock-workflow-run-021'
       ? [mockR1ExistingFormData[mockR1FormData.repeatFirst],
         mockR1ExistingFormData[mockR1FormData.repeatSecond]] : []
-    const formData = dataId ? mockR1ExistingFormData[dataId as keyof typeof mockR1ExistingFormData]
+    const candidate = dataId ? mockR1ExistingFormData[dataId as keyof typeof mockR1ExistingFormData]
       ?? mockCommandState().formData.get(dataId) : undefined
+    const formData = mutableRecord(candidate)?.extId === mockSyntheticDynamicFormDefinitionId ? candidate : undefined
     const rows = dataId ? (formData ? [formData] : []) : repeatRows
     return { data: rows, page: 1, rows: 20, total: rows.length }
   }
@@ -619,7 +704,8 @@ function matchedResponse(
   if (route.startsWith('biz/extForm/query/') && route.slice('biz/extForm/query/'.length) === mockSurveyFormDefinitionId) {
     const exactDataId = requestData['is:_id|string#and']
     const dataId = typeof exactDataId === 'string' ? exactDataId : undefined
-    const formData = dataId ? mockCommandState().formData.get(dataId) : undefined
+    const candidate = dataId ? mockCommandState().formData.get(dataId) : undefined
+    const formData = mutableRecord(candidate)?.extId === mockSurveyFormDefinitionId ? candidate : undefined
     return { data: formData ? [formData] : [], page: 1, rows: 20, total: formData ? 1 : 0 }
   }
 
@@ -651,32 +737,51 @@ function matchedCommandResponse(request: ApiCommandRequest): unknown | null {
     const id = commandWorkOrderId(data)
     if (id === mockCommandScenarioIds.appointmentRetryable) return mockFailureResponse('retryable')
     if (id === mockCommandScenarioIds.appointmentTerminal) return mockFailureResponse('terminal')
-    const formDataId = saveMockAppointment(data.dataStr)
-    return { data: { _id: formDataId } }
+    try {
+      const formDataId = saveMockAppointment(data.dataStr)
+      return { data: { _id: formDataId } }
+    } catch {
+      return mockFailureResponse('terminal')
+    }
   }
   if (
     route === 'biz/extForm/upsert/' + mockSyntheticDynamicFormDefinitionId
     || route === 'biz/extForm/upsert/' + mockSurveyFormDefinitionId
   ) {
     const definitionId = route.slice('biz/extForm/upsert/'.length)
-    const formDataId = saveMockDynamicForm(data.dataStr, definitionId)
-    return { data: { _id: formDataId } }
+    try {
+      const formDataId = saveMockDynamicForm(data.dataStr, definitionId)
+      return { data: { _id: formDataId } }
+    } catch {
+      return mockFailureResponse('terminal')
+    }
   }
   if (route === 'workflow/process') {
     const id = typeof data.sid === 'string' ? data.sid : ''
     if (!isSyntheticWorkOrderId(id)) return null
+    if (id === mockJourneyWorkOrderId) return mockFailureResponse('terminal')
     if (id === mockCommandScenarioIds.acceptRetryable) return mockFailureResponse('retryable')
     if (id === mockCommandScenarioIds.acceptTerminal) return mockFailureResponse('terminal')
+    const nodeId = typeof data.workflowNodeId === 'string' ? data.workflowNodeId : ''
+    if (data.smodule !== 'serviceAppointment' || !nodeId) return mockFailureResponse('terminal')
     if (data.nodeFormDefId === appointmentFormDefinitionWireId) {
       const formDataId = typeof data.nodeFormDataId === 'string' ? data.nodeFormDataId : ''
-      completeMockAppointment(id, formDataId)
+      if (!hasSavedMockFormData(id, nodeId, appointmentFormDefinitionWireId, formDataId)) {
+        return mockFailureResponse('terminal')
+      }
+      completeMockAppointment(id, nodeId, formDataId)
     } else if (
       data.nodeFormDefId === mockSyntheticDynamicFormDefinitionId
       || data.nodeFormDefId === mockSurveyFormDefinitionId
     ) {
       const formDataId = typeof data.nodeFormDataId === 'string' ? data.nodeFormDataId : ''
-      completeMockDynamicForm(id, formDataId, data.nodeFormDefId)
+      if (!hasSavedMockFormData(id, nodeId, data.nodeFormDefId, formDataId)) {
+        return mockFailureResponse('terminal')
+      }
+      completeMockDynamicForm(id, nodeId, formDataId, data.nodeFormDefId)
     } else {
+      if (data.nodeFormDefId !== undefined || data.nodeFormDataId !== undefined
+        || !hasActiveMockAcceptNode(id, nodeId)) return mockFailureResponse('terminal')
       acceptMockWorkOrder(id)
     }
     return { success: true, data: {} }
