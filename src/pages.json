@@ -43,6 +43,12 @@
       }
     },
     {
+      "path": "pages/work-orders/child-subflow-mock-review",
+      "style": {
+        "navigationBarTitleText": "子流程只读 · Mock"
+      }
+    },
+    {
       "path": "pages/work-orders/action-time",
       "style": {
         "navigationBarTitleText": "选择时间"

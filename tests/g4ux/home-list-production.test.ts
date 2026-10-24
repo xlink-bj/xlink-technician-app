@@ -118,7 +118,9 @@ describe('G4-UX Work Order List card', () => {
 
   it('keeps session guard and semantic detail navigation intact', () => {
     expect(listTemplate).toContain('!canAccess')
-    expect(listTemplate).toContain(':url="listActionFor(item).detailAccessible ? workOrderDetailRouteFor(item.id) : \'\'"')
+    expect(listTemplate).not.toContain("workOrderDetailRouteFor(item.id) : ''")
+    expect(listTemplate).toContain('@tap="openDetailIfAccessible(item)"')
+    expect(listPage).toContain('if (!listActionFor(item).detailAccessible) return')
     expect(listTemplate).toContain('listActionFor(item).acceptOrder')
     expect(listPage).toContain('await workOrders.navigateTo(workOrderDetailRouteFor(item.id))')
     expect(listPage).toContain('session.status')

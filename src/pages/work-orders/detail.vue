@@ -121,6 +121,10 @@
         @load-child="loadChildForms"
         @load-repeat="loadRepeatForms"
       />
+      <navigator v-if="showChildSubflowMockPreview" class="child-subflow-mock-entry"
+        :url="childSubflowMockReviewUrl()" data-testid="child-subflow-mock-preview-entry">
+        开发验收：查看合成子流程节点（仅 Mock）
+      </navigator>
 
       <AppRecordCard class="information-card">
         <scroll-view class="detail-tabs" scroll-x="true" show-scrollbar="false">
@@ -289,6 +293,7 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 
 import { mockJourneyContext } from '@app/mock-journey'
+import { childSubflowMockReviewUrl, childSubflowMockWorkOrderId, isChildSubflowMockPreviewAvailable } from '@app/child-subflow-mock-review'
 import { hasAuthenticatedSession } from '@features/home/access'
 import { isProductionReadOnlyRuntime } from '@shared/config'
 import { workOrderCardToneFor } from '@features/work-orders/card'
@@ -339,6 +344,11 @@ const productionChildParents = computed(() => (productionReadOnly
   ? detail.value?.workflowNodes?.filter((node) => node.category === 'subworkflow'
     && ['subflows', 'subflow', 'subworkflow'].includes(node.sourceNodeType ?? '')) ?? []
   : []))
+const showChildSubflowMockPreview = computed(() => !productionReadOnly
+  && isChildSubflowMockPreviewAvailable()
+  && String(detail.value?.id ?? '') === childSubflowMockWorkOrderId
+  && session.session?.user.id === 'synthetic-user'
+  && session.session?.currentRole?.id === 'synthetic-role')
 const allowLocalMockPreview = computed(() => {
   const stage = mockJourneyContext(String(detail.value?.id ?? ''))
   const task = workflowProjection.value.currentTask
@@ -546,6 +556,7 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
 }
 
 .production-read-only-notice { display: block; margin-top: 16rpx; }
+.child-subflow-mock-entry { background: var(--app-color-primary-soft); border: 1rpx dashed var(--app-color-primary-border); border-radius: var(--app-radius-control); color: var(--app-color-primary); display: block; font-size: var(--app-font-body); font-weight: 650; line-height: 1.5; margin-top: 20rpx; padding: 20rpx 24rpx; text-align: center; }
 
 .detail-content,
 .detail-state,
