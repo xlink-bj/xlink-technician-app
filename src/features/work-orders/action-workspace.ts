@@ -492,6 +492,21 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     return result
   }
 
+  /** DEV review's synthetic actor/role/work-order guard. Checked again before
+   * every Mock protocol dispatch; it never enables the real command port. */
+  function isCurrentMockJourneyScope(stage: 'appointment' | 'survey'): boolean {
+    const current = descriptor.value
+    const session = dependencies?.getSession()
+    return Boolean(commandSessionScopeCurrent() && current && session?.currentRole
+      && String(session.user.id) === 'synthetic-user'
+      && String(session.currentRole.id) === 'synthetic-role'
+      && String(current.workOrderId) === 'mock-work-order-019-continuous-journey'
+      && String(current.workflowNodeId) === (stage === 'appointment'
+        ? 'mock-workflow-node-019-appointment' : 'mock-workflow-node-019-survey')
+      && current.actionIntent === (stage === 'appointment' ? 'set_appointment' : 'interact_with_form')
+      && current.execution !== 'enabled')
+  }
+
   async function restoreDraft(
     nextIdentity: ActionDraftIdentity,
     form: AppointmentFormRead,
@@ -2322,6 +2337,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     saveDraft,
     flushDraft,
     readSiblingActionDraft,
+    isCurrentMockJourneyScope,
     addQuotationCatalogSelection,
     saveDynamicForm,
     completeDynamicForm,

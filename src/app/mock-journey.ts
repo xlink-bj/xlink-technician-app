@@ -1,5 +1,4 @@
 import {
-  advanceMockJourney,
   isDevMockJourneyEnabled,
   mockJourneyNodes,
   mockJourneyStage,
@@ -22,10 +21,6 @@ export function mockJourneyContext(workOrderId: string | null | undefined) {
     workOrderId: mockJourneyWorkOrderId,
     nextLabel: stage === 'appointment' ? '模拟进入现场勘察' : stage === 'survey' ? '模拟进入报价' : '',
   }
-}
-
-export function advanceMockJourneyContext(expected: MockJourneyStage): boolean {
-  return advanceMockJourney(expected) !== null
 }
 
 export function mockJourneyRoute(): string {

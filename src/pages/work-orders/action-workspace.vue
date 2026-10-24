@@ -483,23 +483,27 @@ async function exit(): Promise<void> {
 async function advanceJourney(): Promise<void> {
   const context = mockJourney.value
   if (!context || context.stage === 'quotation' || isNavigating.value) return
+  const stage = context.stage
   isNavigating.value = true
   journeyFeedback.value = ''
-  // Preserve what the technician typed as a local Action draft; do not issue
-  // ExtForm upsert, Workflow Complete, upload, or official Order commands.
+  // Preserve the Action draft first. The DEV Mock handoff performs synthetic
+  // FormData → Workflow commands with exact readback; never a real write.
   const saved = await workspace.flushDraft()
   if (saved.state !== 'succeeded') {
     journeyFeedback.value = '本机记录保存失败，当前节点未改变。请重试。'
     isNavigating.value = false
     return
   }
-  const next = await advanceMockJourneyWithSavedDraft(context.stage,
-    (identity) => workspace.readSiblingActionDraft(identity))
+  const next = await advanceMockJourneyWithSavedDraft(stage,
+    (identity) => workspace.readSiblingActionDraft(identity),
+    () => workspace.isCurrentMockJourneyScope(stage))
   if (next.state !== 'advanced') {
     journeyFeedback.value = next.reason === 'missing_draft'
       ? '尚无可核对的本机表单记录。请填写内容并保存后继续。'
       : next.reason === 'read_failed'
         ? '本机记录读取失败，节点未改变。请重试。'
+        : next.reason === 'protocol_failed'
+          ? '模拟表单或流程校验未通过。未提交真实后台，请刷新检查当前节点。'
         : '身份或本机阶段发生变化，无法继续；节点未改变。'
     isNavigating.value = false
     return

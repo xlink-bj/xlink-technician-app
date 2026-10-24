@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { resetBusinessMockCache, setBusinessMockMode } from '@adapters/api/mock/config'
-import { advanceMockJourney, resetMockJourney, mockJourneyWorkOrderId } from '@adapters/api/mock/journey'
+import { resetMockJourney, mockJourneyWorkOrderId } from '@adapters/api/mock/journey'
+import { reachMockQuotationForTest } from './mock-journey-test-fixture'
 import {
   canReviewMockCommercial, confirmMockCommercialCheckpoint,
   pauseMockCommercialReview, readMockCommercialProgress,
@@ -28,16 +29,11 @@ afterEach(() => {
   vi.unstubAllEnvs()
   vi.unstubAllGlobals()
 })
-function reachQuotation() {
-  expect(advanceMockJourney('appointment')).toBe('survey')
-  expect(advanceMockJourney('survey')).toBe('quotation')
-}
-
 describe('synthetic 019 cross-page commercial checkpoints', () => {
-  it('requires the previous saved Workflow stage and all 3 checkpoints in order', () => {
+  it('requires the previous saved Workflow stage and all 3 checkpoints in order', async () => {
     expect(canReviewMockCommercial(scope)).toBe(false)
     expect(confirmMockCommercialCheckpoint(scope, 'quotation_preview')).toBe(false)
-    reachQuotation()
+    await reachMockQuotationForTest()
     expect(canReviewMockCommercial(scope)).toBe(true)
     expect(confirmMockCommercialCheckpoint(scope, 'order_contract_review')).toBe(false)
     expect(confirmMockCommercialCheckpoint(scope, 'sku_review')).toBe(false)
@@ -56,8 +52,8 @@ describe('synthetic 019 cross-page commercial checkpoints', () => {
     expect(confirmMockCommercialCheckpoint(scope, 'order_contract_review')).toBe(true)
   })
 
-  it('pauses, recovers saved checkpoints on re-read, resumes and resets', () => {
-    reachQuotation()
+  it('pauses, recovers saved checkpoints on re-read, resumes and resets', async () => {
+    await reachMockQuotationForTest()
     expect(confirmMockCommercialCheckpoint(scope, 'quotation_preview')).toBe(true)
     expect(pauseMockCommercialReview(scope)).toBe(true)
     expect(confirmMockCommercialCheckpoint(scope, 'sku_review')).toBe(false)
@@ -73,8 +69,8 @@ describe('synthetic 019 cross-page commercial checkpoints', () => {
     expect(readMockCommercialProgress(scope)).toEqual({ confirmed: [], paused: false, complete: false })
   })
 
-  it('rejects other principals, work orders, malformed storage and disabled DEV mode', () => {
-    reachQuotation()
+  it('rejects other principals, work orders, malformed storage and disabled DEV mode', async () => {
+    await reachMockQuotationForTest()
     expect(confirmMockCommercialCheckpoint({ ...scope, roleId: 'other-role' }, 'quotation_preview')).toBe(false)
     expect(confirmMockCommercialCheckpoint({ ...scope, workOrderId: 'other-order' }, 'quotation_preview')).toBe(false)
     expect(confirmMockCommercialCheckpoint(scope, 'quotation_preview')).toBe(true)
@@ -87,8 +83,8 @@ describe('synthetic 019 cross-page commercial checkpoints', () => {
     expect(readMockCommercialProgress(scope).confirmed).toEqual([])
   })
 
-  it('never reports success on storage failure', () => {
-    reachQuotation()
+  it('never reports success on storage failure', async () => {
+    await reachMockQuotationForTest()
     vi.stubGlobal('uni', {
       getStorageSync: () => undefined,
       setStorageSync: () => { throw new Error('storage disabled') },

@@ -1,5 +1,5 @@
 import { isBusinessMockMode, type BusinessMockMode } from './config'
-import { isDevMockJourneyEnabled, mockJourneyNodes, mockJourneyStage, mockJourneyWorkOrderId, type MockJourneyStage } from './journey'
+import { advanceMockJourneyAfterProcess, isDevMockJourneyEnabled, mockJourneyNodes, mockJourneyStage, mockJourneyWorkOrderId, persistMockJourneyFormData, readMockJourneyFormData, type MockJourneyStage } from './journey'
 import { appointmentFormDefinitionWireId } from '../appointment-contract'
 import {
   isSyntheticWorkOrderId,
@@ -72,9 +72,9 @@ function mutableRecord(value: unknown): Record<string, unknown> | null {
 }
 
 /**
- * Project the same 019 WorkOrder through the three review stages. Completed
- * nodes remain historical/read-only. This is a local read projection, not a
- * Workflow Complete response or an official Order.
+ * Project the same 019 WorkOrder through the three DEV Mock stages. Completed
+ * nodes remain historical/read-only. State may advance only from a matching
+ * synthetic FormData → Workflow Process command, never an official Order.
  */
 function journeyNodeFor(stage: MockJourneyStage): Record<string, unknown> {
   if (stage === 'appointment') {
@@ -98,10 +98,24 @@ function journeyNodeFor(stage: MockJourneyStage): Record<string, unknown> {
   }
 }
 
+function journeySavedFormData(stage: 'appointment' | 'survey'): Record<string, unknown> | null {
+  const row = mutableRecord(readMockJourneyFormData(stage))
+  const definitionId = stage === 'appointment' ? appointmentFormDefinitionWireId : mockSurveyFormDefinitionId
+  if (row?.sid !== mockJourneyWorkOrderId || row.nodeId !== mockJourneyNodes[stage]
+    || row.extId !== definitionId || row.state !== 1
+    || typeof row._id !== 'string' || !row._id.startsWith(`mock-form-data-${mockJourneyWorkOrderId}-`)
+    || !mutableRecord(row.exts)) return null
+  return row
+}
+
 function mockJourneyNodesFor(stage: MockJourneyStage): Record<string, unknown>[] {
   const completed: Record<string, unknown>[] = []
-  if (stage !== 'appointment') completed.push({ ...journeyNodeFor('appointment'), state: 10 })
-  if (stage === 'quotation') completed.push({ ...journeyNodeFor('survey'), state: 10 })
+  const appointment = journeySavedFormData('appointment')
+  const survey = journeySavedFormData('survey')
+  if (stage !== 'appointment') completed.push({ ...journeyNodeFor('appointment'), state: 10,
+    ...(appointment ? { formDataId: appointment._id } : {}) })
+  if (stage === 'quotation') completed.push({ ...journeyNodeFor('survey'), state: 10,
+    ...(survey ? { formDataId: survey._id } : {}) })
   return [...completed, journeyNodeFor(stage)]
 }
 
@@ -180,8 +194,13 @@ function detailNodesForWorkOrder(id: string): unknown[] | null {
 }
 
 function hasActiveMockFormNode(id: string, nodeId: string, definitionId: string): boolean {
-  // Journey 019 is a local draft/review projection, NOT a command-backed R1 flow.
-  if (id === mockJourneyWorkOrderId) return false
+  if (id === mockJourneyWorkOrderId) {
+    if (!isDevMockJourneyEnabled()) return false
+    const stage = mockJourneyStage()
+    return (stage === 'appointment' || stage === 'survey')
+      && mockJourneyNodes[stage] === nodeId
+      && (stage === 'appointment' ? appointmentFormDefinitionWireId : mockSurveyFormDefinitionId) === definitionId
+  }
   return detailNodesForWorkOrder(id)?.some((value) => {
     const node = mutableRecord(value)
     const nodeDef = mutableRecord(node?.nodeDef)
@@ -218,9 +237,19 @@ function nextMockFormDataId(id: string, definitionId: string): string {
 
 function hasSavedMockFormData(id: string, nodeId: string, definitionId: string, dataId: string): boolean {
   if (!hasActiveMockFormNode(id, nodeId, definitionId)) return false
-  const record = mutableRecord(mockCommandState().formData.get(dataId))
+  const record = mutableRecord(formDataForExactRead(dataId, definitionId))
   return record?._id === dataId && record.sid === id && record.nodeId === nodeId
     && record.extId === definitionId && record.state === 1
+}
+
+function formDataForExactRead(dataId: string, definitionId: string): unknown | null {
+  if (dataId.startsWith(`mock-form-data-${mockJourneyWorkOrderId}-`)) {
+    const stage = definitionId === appointmentFormDefinitionWireId ? 'appointment'
+      : definitionId === mockSurveyFormDefinitionId ? 'survey' : null
+    const persisted = stage ? journeySavedFormData(stage) : null
+    return persisted?._id === dataId ? persisted : null
+  }
+  return mockCommandState().formData.get(dataId) ?? null
 }
 
 function hasActiveMockAcceptNode(id: string, nodeId: string): boolean {
@@ -277,12 +306,14 @@ function saveMockAppointment(dataStr: unknown): string {
   }
   const formDataId = typeof values._id === 'string' && values._id.length > 0
     ? values._id
-    : nextMockFormDataId(workOrderId, appointmentFormDefinitionWireId)
+    : (workOrderId === mockJourneyWorkOrderId
+      ? journeySavedFormData('appointment')?._id as string | undefined : undefined)
+      ?? nextMockFormDataId(workOrderId, appointmentFormDefinitionWireId)
   if ((values._id !== undefined && mockCommandState().formData.get(formDataId) === undefined)
     || !canSaveMockFormData(formDataId, workOrderId, nodeId, appointmentFormDefinitionWireId)) {
     throw new Error('Appointment Mock record identity conflicts')
   }
-  mockCommandState().formData.set(formDataId, {
+  const savedRecord = {
     _id: formDataId,
     extId: appointmentFormDefinitionWireId,
     sid: workOrderId,
@@ -292,8 +323,15 @@ function saveMockAppointment(dataStr: unknown): string {
       datetime: values.datetime ?? null,
       note: values.note ?? null,
     },
+    ...(typeof values.workflowId === 'string'
+      ? { workflowId: values.workflowId, workflowRunId: values.workflowId }
+      : {}),
     state: 1,
-  })
+  }
+  if (workOrderId === mockJourneyWorkOrderId && !persistMockJourneyFormData('appointment', savedRecord)) {
+    throw new Error('Appointment Mock persistence failed')
+  }
+  mockCommandState().formData.set(formDataId, savedRecord)
   return formDataId
 }
 
@@ -323,14 +361,16 @@ function saveMockDynamicForm(dataStr: unknown, definitionId: string): string {
   }
   const formDataId = typeof values._id === 'string' && values._id.length > 0
     ? values._id
-    : nextMockFormDataId(workOrderId, definitionId)
+    : (workOrderId === mockJourneyWorkOrderId
+      ? journeySavedFormData('survey')?._id as string | undefined : undefined)
+      ?? nextMockFormDataId(workOrderId, definitionId)
   if ((values._id !== undefined && mockCommandState().formData.get(formDataId) === undefined)
     || !canSaveMockFormData(formDataId, workOrderId, nodeId, definitionId)) {
     throw new Error('Dynamic Mock record identity conflicts')
   }
   const metadata = new Set(['_id', 'sid', 'smodule', 'nodeId', 'workflowId', 'state'])
   const formValues = Object.fromEntries(Object.entries(values).filter(([key]) => !metadata.has(key)))
-  mockCommandState().formData.set(formDataId, {
+  const savedRecord = {
     _id: formDataId,
     extId: definitionId,
     sid: workOrderId,
@@ -340,7 +380,11 @@ function saveMockDynamicForm(dataStr: unknown, definitionId: string): string {
       ? { workflowId: values.workflowId, workflowRunId: values.workflowId }
       : {}),
     state: 1,
-  })
+  }
+  if (workOrderId === mockJourneyWorkOrderId && !persistMockJourneyFormData('survey', savedRecord)) {
+    throw new Error('Survey Mock persistence failed')
+  }
+  mockCommandState().formData.set(formDataId, savedRecord)
   return formDataId
 }
 
@@ -678,7 +722,7 @@ function matchedResponse(
       : typeof requestData.id === 'string'
         ? requestData.id
         : undefined
-    const candidate = dataId ? mockCommandState().formData.get(dataId) : undefined
+    const candidate = dataId ? formDataForExactRead(dataId, appointmentFormDefinitionWireId) : undefined
     const formData = mutableRecord(candidate)?.extId === appointmentFormDefinitionWireId ? candidate : undefined
     return { data: formData ? [formData] : [], page: 1, rows: 20, total: formData ? 1 : 0 }
   }
@@ -704,7 +748,7 @@ function matchedResponse(
   if (route.startsWith('biz/extForm/query/') && route.slice('biz/extForm/query/'.length) === mockSurveyFormDefinitionId) {
     const exactDataId = requestData['is:_id|string#and']
     const dataId = typeof exactDataId === 'string' ? exactDataId : undefined
-    const candidate = dataId ? mockCommandState().formData.get(dataId) : undefined
+    const candidate = dataId ? formDataForExactRead(dataId, mockSurveyFormDefinitionId) : undefined
     const formData = mutableRecord(candidate)?.extId === mockSurveyFormDefinitionId ? candidate : undefined
     return { data: formData ? [formData] : [], page: 1, rows: 20, total: formData ? 1 : 0 }
   }
@@ -759,11 +803,21 @@ function matchedCommandResponse(request: ApiCommandRequest): unknown | null {
   if (route === 'workflow/process') {
     const id = typeof data.sid === 'string' ? data.sid : ''
     if (!isSyntheticWorkOrderId(id)) return null
-    if (id === mockJourneyWorkOrderId) return mockFailureResponse('terminal')
     if (id === mockCommandScenarioIds.acceptRetryable) return mockFailureResponse('retryable')
     if (id === mockCommandScenarioIds.acceptTerminal) return mockFailureResponse('terminal')
     const nodeId = typeof data.workflowNodeId === 'string' ? data.workflowNodeId : ''
     if (data.smodule !== 'serviceAppointment' || !nodeId) return mockFailureResponse('terminal')
+    if (id === mockJourneyWorkOrderId) {
+      if (!isDevMockJourneyEnabled()) return mockFailureResponse('terminal')
+      const stage = mockJourneyStage()
+      if (stage !== 'appointment' && stage !== 'survey') return mockFailureResponse('terminal')
+      const definitionId = stage === 'appointment' ? appointmentFormDefinitionWireId : mockSurveyFormDefinitionId
+      const formDataId = typeof data.nodeFormDataId === 'string' ? data.nodeFormDataId : ''
+      if (nodeId !== mockJourneyNodes[stage] || data.nodeFormDefId !== definitionId
+        || !hasSavedMockFormData(id, nodeId, definitionId, formDataId)
+        || advanceMockJourneyAfterProcess(stage, formDataId) === null) return mockFailureResponse('terminal')
+      return { success: true, data: {} }
+    }
     if (data.nodeFormDefId === appointmentFormDefinitionWireId) {
       const formDataId = typeof data.nodeFormDataId === 'string' ? data.nodeFormDataId : ''
       if (!hasSavedMockFormData(id, nodeId, appointmentFormDefinitionWireId, formDataId)) {

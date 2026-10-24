@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { resetBusinessMockCache, setBusinessMockMode } from '@adapters/api/mock/config'
-import { advanceMockJourney, resetMockJourney, mockJourneyNodes, mockJourneyWorkOrderId } from '@adapters/api/mock/journey'
+import { resetMockJourney, mockJourneyNodes, mockJourneyWorkOrderId } from '@adapters/api/mock/journey'
+import { advanceMockJourneyForTest, reachMockQuotationForTest } from './mock-journey-test-fixture'
 import { readMockJourneyContext, type ReadPriorDraft } from '@app/mock-journey-context'
 import type { ActionDraftRecord } from '@runtimes/action'
 import { asOpaqueId } from '@shared/types'
@@ -51,12 +52,12 @@ describe('MOCK-019 previous-stage read-only draft projection', () => {
       }
     }
     expect(await readMockJourneyContext('appointment', read)).toBeNull()
-    expect(advanceMockJourney('appointment')).toBe('survey')
+    expect(await advanceMockJourneyForTest('appointment')).toBe('survey')
     const survey = await readMockJourneyContext('survey', read)
     expect(survey?.sections).toHaveLength(1)
     expect(survey?.sections[0].lines).toContainEqual({ label: '预约备注', value: '演示前序预约备注' })
     expect(JSON.stringify(survey)).not.toContain('must-not-display')
-    expect(advanceMockJourney('survey')).toBe('quotation')
+    expect(await advanceMockJourneyForTest('survey')).toBe('quotation')
     const quote = await readMockJourneyContext('quotation', read)
     expect(touched).toEqual([mockJourneyNodes.appointment, mockJourneyNodes.appointment, mockJourneyNodes.survey])
     expect(quote?.sections.map((item) => item.state)).toEqual(['saved_local', 'saved_local'])
@@ -65,8 +66,7 @@ describe('MOCK-019 previous-stage read-only draft projection', () => {
   })
 
   it('shows missing and failed reads explicitly rather than fabricating completion', async () => {
-    advanceMockJourney('appointment')
-    advanceMockJourney('survey')
+    await reachMockQuotationForTest()
     let calls = 0
     const read: ReadPriorDraft = async () => {
       calls += 1
@@ -77,7 +77,7 @@ describe('MOCK-019 previous-stage read-only draft projection', () => {
   })
 
   it('never reads context when DEV-only isolation is disabled', async () => {
-    advanceMockJourney('appointment')
+    await advanceMockJourneyForTest('appointment')
     vi.stubEnv('VITE_XLINK_H5_MOCK_E2E', 'false')
     const read = vi.fn<ReadPriorDraft>()
     expect(await readMockJourneyContext('survey', read)).toBeNull()

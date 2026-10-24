@@ -5,12 +5,13 @@ import {
 } from '@adapters/api/mock/journey'
 import { mockSurveyFormDefinitionId } from '@adapters/api/mock/survey-contract'
 import type { ReadPriorDraft } from './mock-journey-context'
-import { advanceMockJourneyContext } from './mock-journey'
+import { commitMockJourneyStage } from './mock-journey-protocol'
+import type { FormFieldValue } from '@shared/ports'
 import { asOpaqueId } from '@shared/types'
 
 export type MockJourneyAdvanceResult =
   | { readonly state: 'advanced'; readonly next: MockJourneyStage }
-  | { readonly state: 'blocked'; readonly reason: 'scope' | 'missing_draft' | 'read_failed' | 'storage_failed' }
+  | { readonly state: 'blocked'; readonly reason: 'scope' | 'missing_draft' | 'read_failed' | 'protocol_failed' }
 
 const appointmentEvidenceKeys = ['need', 'datetime', 'note'] as const
 const surveyEvidenceKeys = [
@@ -36,13 +37,14 @@ export function hasLocalJourneyEvidence(
 }
 
 /** Called only after Workspace.flushDraft; re-read the exact persisted draft.
- * Does not send a Workflow command, create a server FormData, Order or Contract.
- * The Production runtime cannot reach this code path through the DEV gate. */
+ * Then issue DEV Mock-only R1-shaped FormData/Workflow commands and readbacks.
+ * This never creates real server FormData, an Order or a Contract. */
 export async function advanceMockJourneyWithSavedDraft(
   expected: 'appointment' | 'survey',
   read: ReadPriorDraft,
+  authorizationCurrent: () => boolean,
 ): Promise<MockJourneyAdvanceResult> {
-  if (!isDevMockJourneyEnabled() || mockJourneyStage() !== expected) {
+  if (!isDevMockJourneyEnabled() || mockJourneyStage() !== expected || !authorizationCurrent()) {
     return { state: 'blocked', reason: 'scope' }
   }
   const identity = {
@@ -58,7 +60,7 @@ export async function advanceMockJourneyWithSavedDraft(
   } catch {
     return { state: 'blocked', reason: 'read_failed' }
   }
-  if (!isDevMockJourneyEnabled() || mockJourneyStage() !== expected) {
+  if (!isDevMockJourneyEnabled() || mockJourneyStage() !== expected || !authorizationCurrent()) {
     return { state: 'blocked', reason: 'scope' }
   }
   if (result.state !== 'succeeded') return { state: 'blocked', reason: 'read_failed' }
@@ -72,6 +74,8 @@ export async function advanceMockJourneyWithSavedDraft(
     || !record.values || !hasLocalJourneyEvidence(expected, record.values)) {
     return { state: 'blocked', reason: 'missing_draft' }
   }
-  if (!advanceMockJourneyContext(expected)) return { state: 'blocked', reason: 'storage_failed' }
+  const outcome = await commitMockJourneyStage(expected,
+    record.values as Readonly<Record<string, FormFieldValue>>, authorizationCurrent)
+  if (outcome !== 'advanced') return { state: 'blocked', reason: 'protocol_failed' }
   return { state: 'advanced', next: mockJourneyStage() }
 }

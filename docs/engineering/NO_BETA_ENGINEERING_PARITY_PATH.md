@@ -15,7 +15,7 @@ Keep two independent gates:
 
 | Lane | Required exit | Current independently established result |
 | --- | --- | --- |
-| **A — full protocol-equivalent Mock** | Main-App UI can save/edit, read back and advance each authorized synthetic action with R1-shaped command/status/failure semantics; appointment, survey, dynamic forms, Workflow, quotation/SKU/Order/Contract all accounted for | **IN PROGRESS.** The 019 page journey, recovery and commercial reference review have H5 golden-path evidence, but 019 is explicitly local-only, not an R1 Process/Order write. The command Mock now rejects FormData without an active, exact WorkOrder/node/definition/run; Process needs same-scope saved FormData and a live node, and replay cannot report another success. See `tests/engineering/abc-mock-formdata-workflow-parity.test.ts`. This is a necessary protocol slice, not full A acceptance. |
+| **A — full protocol-equivalent Mock** | Main-App UI can save/edit, read back and advance each authorized synthetic action with R1-shaped command/status/failure semantics; appointment, survey, dynamic forms, Workflow, quotation/SKU/Order/Contract all accounted for | **IN PROGRESS — 019 FormData/Workflow slice implemented.** The main 019 page now re-reads an exact local role-scoped draft, sends its R1-shaped Appointment/Survey FormData Upsert directly to the DEV Mock router, verifies the exact synthetic FormData, performs Workflow Process and verifies historical + next nodes and their FormData pointers on WorkOrder detail. Synthetic FormData persists across Mock router restart; wrong node, wrong FormData, stale stage and replay fail closed. The role/session guard is rechecked before each Mock dispatch. The commercial quotation/SKU/Order/Contract journey still consists of explicit non-business review checkpoints; there is **no official Order or Contract write**, no general repeat-form write closure, and no assertion of complete A acceptance. See `tests/g4ux/mock-journey-closure.test.ts` and `tests/engineering/abc-mock-formdata-workflow-parity.test.ts`. |
 | **B — Production read-only** | Current role-authorized App pages use official bounded API reads; Production database used only to reconcile semantics and redacted inconsistencies; no business commands/uploads | **PARTIAL, existing read evidence.** #199 and the three-pillar contract matrix verify bounded WorkOrder/Workflow/FormData/Order/Contract shapes, plus explicitly distinct Order query semantics. No new Production network request is required to repeat that historical evidence. Full live App/WeChat read-path UX acceptance remains open; default allowlists must not expand by inference. |
 | **C — isolated Beta/test writes** | Owner-approved R1-backed disposable scope, audited FormData/EXTS/Workflow and later commercial actions, server ACK plus fresh authoritative readback and cleanup | **HOLD — no approved writable R1-backed fixture.** Offline stateful shadow and scoped staging gateway exist but remain outside the default App. Production business writes are categorically forbidden. |
 
@@ -49,6 +49,20 @@ The implementation should advance through the first gate immediately. A missing 
 - Network: a command may have been applied even if the ACK is lost. Preserve the durable receipt and prevent automatic replay until authoritative evidence or manual reconciliation.
 - Commercial: quote/Order/SKU/Contract display may use source-backed read models, but order modifications, signing, PDF and media side effects remain unavailable without confirmed contracts and command authorization.
 - Environment: even a developer flag must never activate R1 writes in Production. Default App composition stays unmounted from the isolated pilot executor.
+
+## A closeout remaining scope (current branch)
+
+| Gate | 019 DEV Mock slice | Required before **A PASS** |
+| --- | --- | --- |
+| Appointment / Survey | Source-shaped save → exact FormData query → Process → exact detail readback; actor scope guard, reload recovery and replay rejection tested | Re-run real H5/MP device path; validate required fields and R1 option/visibility branch behavior end-to-end |
+| Other dynamic/repeat/EXTS | Separate command fixture and offline transaction tests exist; 019 only uses single survey FormData | Integrate authorized multi-form/repeat and EXTS transitions into the main App, including safe uncertain-ACK recovery |
+| Quotation / SKU / Official Order | Source-backed read/catalog and local review route exist | One coherent synthetic typed Order write → authoritative Order readback; prices/unknown SKU must block, workflow child ID and lost ACK must be reconciled |
+| Contract / signing | Bounded synthetic official Order/Contract read review | Closed Mock state transitions only for R1-mapped and legally safe actions; unsupported signature/PDF/SMS stay explicitly disabled |
+| Cross-platform visual | Prior H5 019 golden evidence exists; current branch unit tests and H5/MP build can run | H5 browser screenshots and interactive checks at both viewports, WeChat DevTools device run and Owner UX sign-off independently recorded |
+
+The main 019 DEV Mock path uses protocol-shaped **synthetic** writes; it is deliberately
+not the server's authoritative R1 Workflow. This upgrades the old local-only
+stage handoff but does not lift any real write gate or authorize `main` merge.
 
 ## Acceptance labels and next external input
 
