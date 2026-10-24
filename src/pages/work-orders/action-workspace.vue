@@ -182,14 +182,14 @@
     <MockJourneyContextPanel v-if="localJourneyContext && workspace.descriptor.formPurpose === 'survey'"
       :context="localJourneyContext" compact />
 
-    <!-- DEV-only synthetic state progression. This is NOT Workflow Complete.
+    <!-- DEV-only synthetic FormData/Process/readback; never a real Workflow write.
          The same 019 WorkOrderId is used by all three normal App pages. -->
     <view
       v-if="mockJourney && mockJourney.stage !== 'quotation'"
       class="mock-journey-progress app-surface"
       data-testid="mock-journey-progress"
     >
-      <text class="mock-journey-progress__note">仅本地演示：下一步只切换模拟流程节点，不提交业务表单或订单。</text>
+      <text class="mock-journey-progress__note">仅 Mock 演示：会模拟提交表单并推进流程，数据只保存在本机，不写入真实业务后台。</text>
       <text class="mock-journey-progress__note" data-testid="mock-journey-save-state">
         {{ workspace.draftStatus === 'saved_local' || workspace.draftStatus === 'restore_available'
           ? '本机字段记录已保存，可核对后进入模拟下一节点'

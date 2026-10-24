@@ -66,7 +66,7 @@ for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }
     await expect(page).toHaveURL(/mock-work-order-019-continuous-journey/)
     await expect(page.locator('.uni-page-head__title')).toContainText('预约上门')
     await page.locator('.action-content-field--note textarea').fill('I7阶段隔离：屋面与外墙')
-    await expect(page.getByTestId('mock-journey-progress')).toContainText('不提交业务表单或订单')
+    await expect(page.getByTestId('mock-journey-progress')).toContainText('数据只保存在本机，不写入真实业务后台')
     await page.getByTestId('mock-journey-advance').click()
 
     // 4. Survey: WorkOrder identity stays 019; no estimate or job write.

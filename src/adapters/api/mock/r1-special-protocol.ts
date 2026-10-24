@@ -1,6 +1,7 @@
 import type { ApiCommandRequest } from '../technician-api-commands'
 import { mockCommandState } from './command-state'
 import { isDevMockJourneyEnabled } from './journey'
+import { restoreMockR1SpecialState, updateMockR1SpecialState } from './r1-special-state'
 import {
   mockR1FormsWorkOrderId, mockR1RepeatWorkOrderId,
   mockSyntheticDynamicFormDefinitionId,
@@ -38,23 +39,43 @@ function saveSpecialForm(kind: Kind, serialized: unknown): unknown {
   try { data = object(JSON.parse(serialized)) } catch { return denied() }
   if (!data || data.sid !== target.sid || data.smodule !== 'serviceAppointment'
     || data.nodeId !== target.node || data.workflowId !== target.run
-    || data._id !== undefined || data.state !== 1) return denied()
+    || ![1, -1].includes(data.state as number)) return denied()
+  const idPrefix = `mock-special-form-data-${kind}-`
+  const previousId = data._id
+  const previous = typeof previousId === 'string' && previousId.startsWith(idPrefix)
+    ? object(mockCommandState().formData.get(previousId)) : null
+  if (previousId !== undefined && (!previous || previous.state !== 1
+    || previous.sid !== target.sid || previous.nodeId !== target.node
+    || previous.workflowId !== target.run || data.extId !== mockSyntheticDynamicFormDefinitionId
+    || data.formDefId !== mockSyntheticDynamicFormDefinitionId
+    || !same(data.exts, previous.exts))) return denied()
+  if (!previous && data.state !== 1) return denied()
   const fields = Object.entries(data).filter(([key]) =>
-    !['_id', 'sid', 'smodule', 'nodeId', 'workflowId', 'state'].includes(key))
-  if (!fields.length || fields.length > 50 || fields.some(([key, value]) =>
+    !['_id', 'sid', 'smodule', 'nodeId', 'workflowId', 'state',
+      'extId', 'formDefId', 'exts'].includes(key))
+  if (!previous && (data.extId !== undefined || data.exts !== undefined
+    || data.formDefId !== undefined)) return denied()
+  if ((!previous && !fields.length) || fields.length > 50 || fields.some(([key, value]) =>
     !key.trim() || key.length > 120 || !(
       (typeof value === 'string' && value.length <= 4000)
       || (typeof value === 'number' && Number.isFinite(value)) || typeof value === 'boolean'))) return denied()
-  const idPrefix = `mock-special-form-data-${kind}-`
   let sequence = 1
   while (mockCommandState().formData.has(`${idPrefix}${sequence}`)) sequence += 1
-  const id = `${idPrefix}${sequence}`
-  mockCommandState().formData.set(id, {
+  const id = previous ? previousId as string : `${idPrefix}${sequence}`
+  const saved = {
+    ...(previous ?? {}),
     _id: id, extId: mockSyntheticDynamicFormDefinitionId,
     formDefId: mockSyntheticDynamicFormDefinitionId,
     sid: target.sid, smodule: 'serviceAppointment', nodeId: target.node,
-    workflowId: target.run, state: 1, exts: Object.fromEntries(fields),
-  })
+    workflowId: target.run, state: data.state,
+    exts: { ...(object(previous?.exts) ?? {}), ...Object.fromEntries(fields) },
+  }
+  if (!updateMockR1SpecialState((draft) => {
+    if (draft[kind].state !== 0 || (previous
+      ? !same(draft.rows[id], previous) : draft.rows[id] !== undefined)) return false
+    draft.rows[id] = saved
+    return true
+  })) return denied()
   return { data: { _id: id } }
 }
 
@@ -65,23 +86,43 @@ function updateFormsExts(request: ApiCommandRequest): unknown {
   const oldRows = previous?.formList
   const newRows = proposed?.formList
   if (!node || !previous || !proposed || !Array.isArray(oldRows)
-    || !Array.isArray(newRows) || newRows.length !== oldRows.length + 1
-    || newRows.length > 100) return denied()
-  // The source-backed planner must preserve every unknown EXTS attribute and
-  // old form-list row. This first admitted Mock slice permits only append;
-  // update and soft-delete are separate unfinished A actions.
+    || !Array.isArray(newRows) || newRows.length < oldRows.length
+    || newRows.length > oldRows.length + 1 || newRows.length > 100) return denied()
+  // Full-fidelity EXTS: preserve unknown top-level metadata and all untouched
+  // rows. One append, one summary edit, or one soft-delete per command.
   const oldMeta = Object.fromEntries(Object.entries(previous).filter(([key]) => key !== 'formList'))
   const newMeta = Object.fromEntries(Object.entries(proposed).filter(([key]) => key !== 'formList'))
-  if (!same(oldMeta, newMeta) || !same(newRows.slice(0, -1), oldRows)) return denied()
-  const appended = object(newRows[newRows.length - 1])
-  const saved = appended && typeof appended._id === 'string'
-    ? object(mockCommandState().formData.get(appended._id)) : null
-  if (!appended || !saved || saved.sid !== targets.forms.sid
-    || saved.nodeId !== targets.forms.node || saved.state !== 1
-    || appended.state !== 1 || appended.formDefId !== mockSyntheticDynamicFormDefinitionId
-    || newRows.some((item) => !object(item) || typeof object(item)?._id !== 'string')
+  if (!same(oldMeta, newMeta) || newRows.some((item) => !object(item)
+    || typeof object(item)?._id !== 'string')
     || new Set(newRows.map((item) => object(item)?._id)).size !== newRows.length) return denied()
-  node.exts = JSON.parse(JSON.stringify(proposed)) as unknown
+  if (newRows.length === oldRows.length + 1) {
+    const appended = object(newRows[newRows.length - 1])
+    const saved = appended && typeof appended._id === 'string'
+      ? object(mockCommandState().formData.get(appended._id)) : null
+    if (!same(newRows.slice(0, -1), oldRows) || !appended || !saved
+      || saved.sid !== targets.forms.sid || saved.nodeId !== targets.forms.node
+      || saved.state !== 1 || appended.state !== 1
+      || appended.formDefId !== mockSyntheticDynamicFormDefinitionId) return denied()
+  } else {
+    const changed = oldRows.map((item, index) => same(item, newRows[index]) ? -1 : index)
+      .filter((index) => index !== -1)
+    if (changed.length !== 1) return denied()
+    const oldRow = object(oldRows[changed[0]])
+    const newRow = object(newRows[changed[0]])
+    if (!oldRow || !newRow || oldRow._id !== newRow._id || oldRow.state === -1) return denied()
+    const oldOther = Object.fromEntries(Object.entries(oldRow).filter(([key]) => !['state', 'formTitle'].includes(key)))
+    const newOther = Object.fromEntries(Object.entries(newRow).filter(([key]) => !['state', 'formTitle'].includes(key)))
+    if (!same(oldOther, newOther) || ![1, -1].includes(newRow.state as number)
+      || (newRow.state === -1 && newRow.formTitle !== oldRow.formTitle)
+      || (newRow.state === 1 && newRow.formTitle === oldRow.formTitle)
+      || (newRow.formTitle !== undefined && (typeof newRow.formTitle !== 'string'
+        || newRow.formTitle.length > 120))) return denied()
+  }
+  if (!updateMockR1SpecialState((draft) => {
+    if (draft.forms.state !== 0 || !same(draft.forms.exts, previous)) return false
+    draft.forms.exts = JSON.parse(JSON.stringify(proposed)) as Record<string, unknown>
+    return true
+  })) return denied()
   return { success: true, data: {} }
 }
 
@@ -93,12 +134,21 @@ function completeSpecial(kind: Kind, requestData: Readonly<Record<string, unknow
   if (kind === 'forms') {
     const exts = object(node.exts)
     const rows = exts?.formList
+    const activeRecords = Array.isArray(rows) ? rows.filter((row) =>
+      object(row)?.state === 1 && typeof object(row)?._id === 'string') : []
     const hasAppended = Array.isArray(rows) && rows.some((row) => {
       const id = object(row)?._id
       const saved = typeof id === 'string' ? object(mockCommandState().formData.get(id)) : null
-      return saved?.sid === target.sid && saved.nodeId === target.node && saved.state === 1
+      return object(row)?.state === 1 && saved?.sid === target.sid
+        && saved.nodeId === target.node && saved.state === 1
     })
-    if (!hasAppended || requestData.nodeFormDefId !== '' || requestData.nodeFormDataId !== '') return denied()
+    // R1 distinguishes Process(saved FormData ID) with two blank slots from
+    // Process('complate') for a pre-existing forms list with a definition slot.
+    const afterSave = requestData.nodeFormDefId === '' && requestData.nodeFormDataId === ''
+      && hasAppended
+    const finalize = requestData.nodeFormDefId === mockSyntheticDynamicFormDefinitionId
+      && requestData.nodeFormDataId === '' && activeRecords.length > 0
+    if (!afterSave && !finalize) return denied()
   } else {
     if (requestData.nodeFormDefId !== mockSyntheticDynamicFormDefinitionId
       || typeof requestData.nodeFormDataId !== 'string') return denied()
@@ -109,7 +159,27 @@ function completeSpecial(kind: Kind, requestData: Readonly<Record<string, unknow
         || saved.workflowId !== target.run || saved.state !== 1
     })) return denied()
   }
-  node.state = 10
+  if (!updateMockR1SpecialState((draft) => {
+    if (draft[kind].state !== 0) return false
+    draft[kind].state = 10
+    return true
+  })) return denied()
+  return { success: true, data: {} }
+}
+
+function removeSpecialRepeat(request: ApiCommandRequest): unknown {
+  const formDataId = request.body?.formDataId
+  if (typeof formDataId !== 'string' || !formDataId.startsWith('mock-special-form-data-repeat-')) return denied()
+  const row = object(mockCommandState().formData.get(formDataId))
+  if (!activeNode('repeat') || !row || row.sid !== targets.repeat.sid
+    || row.nodeId !== targets.repeat.node || row.workflowId !== targets.repeat.run
+    || row.state !== 1) return denied()
+  if (!updateMockR1SpecialState((draft) => {
+    const existing = draft.rows[formDataId]
+    if (draft.repeat.state !== 0 || !same(existing, row)) return false
+    draft.rows[formDataId] = { ...existing, state: -1 }
+    return true
+  })) return denied()
   return { success: true, data: {} }
 }
 
@@ -123,6 +193,7 @@ export async function tryMockR1SpecialCommand(
   if (!isDevMockJourneyEnabled() || request.r1Special !== true || request.method !== 'POST') return null
   if (actor.userId !== 'synthetic-user' || actor.roleId !== 'synthetic-role'
     || !authorizationCurrent()) return denied()
+  if (!restoreMockR1SpecialState()) return denied()
   if (request.path === `biz/extForm/upsert/${mockSyntheticDynamicFormDefinitionId}`) {
     const data = object(request.body)
     let scope: string | null = null
@@ -133,6 +204,10 @@ export async function tryMockR1SpecialCommand(
   if (request.path === `workflowNode/updateExts/${targets.forms.node}`) {
     if (request.body !== undefined || !request.jsonBody) return denied()
     return updateFormsExts(request)
+  }
+  if (request.path === `biz/extForm/remove/${mockSyntheticDynamicFormDefinitionId}`) {
+    if (request.jsonBody !== undefined || request.body?.formDataId === undefined) return denied()
+    return removeSpecialRepeat(request)
   }
   if (request.path === 'workflow/process' && request.body) {
     const sid = request.body.sid

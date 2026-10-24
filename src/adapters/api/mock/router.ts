@@ -23,6 +23,8 @@ import {
   mockR1NoteFormDefinitionResponse,
   mockR1ExistingFormData,
   mockR1FormData,
+  mockR1FormsWorkOrderId,
+  mockR1RepeatWorkOrderId,
   mockR1MpUxListRows,
   mockWorkOrderActivityResponseFor,
   mockWorkOrderIds,
@@ -44,6 +46,7 @@ import {
 import type { ApiCommandRequest } from '../technician-api-commands'
 import { isMockOwnedRead, isMockOwnedCommand, normalizedPath, quotationCatalogListRoutes } from './ownership'
 import { mockCommandState } from './command-state'
+import { restoreMockR1SpecialState } from './r1-special-state'
 import { mockFaultWireResponse, validatedMockLatency, type MockFaultKind } from './fault-scenarios'
 export { resetMockCommandState } from './command-state'
 export { isMockOwnedRead, isMockOwnedCommand } from './ownership'
@@ -782,10 +785,16 @@ function matchedResponse(
     const workflowId = requestData['is:workflowId|string#and']
     const repeatRows = workflowId === 'mock-workflow-run-021'
       ? [mockR1ExistingFormData[mockR1FormData.repeatFirst],
-        mockR1ExistingFormData[mockR1FormData.repeatSecond]] : []
+        mockR1ExistingFormData[mockR1FormData.repeatSecond],
+        ...[...mockCommandState().formData.values()].filter((value) => {
+          const row = mutableRecord(value)
+          return row?.workflowId === workflowId && row.sid === mockR1RepeatWorkOrderId
+            && row.state === 1 && row.extId === mockSyntheticDynamicFormDefinitionId
+        })] : []
     const candidate = dataId ? mockR1ExistingFormData[dataId as keyof typeof mockR1ExistingFormData]
       ?? mockCommandState().formData.get(dataId) : undefined
-    const formData = mutableRecord(candidate)?.extId === mockSyntheticDynamicFormDefinitionId ? candidate : undefined
+    const formData = mutableRecord(candidate)?.extId === mockSyntheticDynamicFormDefinitionId
+      && mutableRecord(candidate)?.state !== -1 ? candidate : undefined
     const rows = dataId ? (formData ? [formData] : []) : repeatRows
     return { data: rows, page: 1, rows: 20, total: rows.length }
   }
@@ -924,6 +933,16 @@ export async function tryMockRead(
 ): Promise<unknown | null> {
   const mode = isBusinessMockMode()
   if (mode === 'off') return null
+  const route = normalizedPath(path)
+  // Rehydrate synthetic R1 multi-form/repeat server state before any exact
+  // detail/FormData read; a corrupt persisted snapshot must fail closed.
+  if (isDevMockJourneyEnabled() && (
+    route === `basic/serviceAppointment/queryById/${mockR1FormsWorkOrderId}`
+    || route === `basic/serviceAppointment/queryById/${mockR1RepeatWorkOrderId}`
+    || route === `biz/extForm/query/${mockSyntheticDynamicFormDefinitionId}`
+  ) && !restoreMockR1SpecialState()) {
+    return { success: false, code: 'TERMINAL', message: 'Synthetic special state unavailable' }
+  }
   const response = matchedResponse(path, mode, requestData)
   if (response === null) return null
   // Owner-only route policy remains the authority; a request-scoped fault may
