@@ -32,12 +32,16 @@
           <text v-if="entry.state === 'deleted'" class="special-forms__muted">已删除</text>
           <view v-else-if="entry.editable && !viewState.receiptPending && viewState.nodeActive"
             class="special-forms__row-actions">
-            <AppButton variant="text" size="compact" :disabled="busy" @tap="edit(entry.id)">编辑</AppButton>
-            <AppButton variant="text" size="compact" :disabled="busy" @tap="confirmDeleteId = entry.id">删除</AppButton>
+            <AppButton variant="text" size="compact" :disabled="busy"
+              :data-testid="`a-special-edit-${entry.id}`" @tap="edit(entry.id)">编辑</AppButton>
+            <AppButton variant="text" size="compact" :disabled="busy"
+              :data-testid="`a-special-delete-${entry.id}`" @tap="confirmDeleteId = entry.id">删除</AppButton>
           </view>
           <view v-if="confirmDeleteId === entry.id" class="special-forms__confirmation">
             <text>确定删除这条记录？</text>
-            <AppButton size="compact" :disabled="busy" @tap="run({ kind: 'delete', id: entry.id })">确认删除</AppButton>
+            <AppButton size="compact" :disabled="busy"
+              :data-testid="`a-special-confirm-delete-${entry.id}`"
+              @tap="run({ kind: 'delete', id: entry.id })">确认删除</AppButton>
             <AppButton variant="text" size="compact" @tap="confirmDeleteId = null">取消</AppButton>
           </view>
         </view>
@@ -84,7 +88,8 @@
             @tap="confirmFinish = true">完成当前节点</AppButton>
           <view v-else class="special-forms__confirmation">
             <text>确认记录已齐全并完成当前节点？</text>
-            <AppButton :disabled="busy" @tap="run({ kind: 'finish' })">确认完成</AppButton>
+            <AppButton :disabled="busy" data-testid="a-special-finish-confirm"
+              @tap="run({ kind: 'finish' })">确认完成</AppButton>
             <AppButton variant="text" :disabled="busy" @tap="confirmFinish = false">返回检查</AppButton>
           </view>
         </view>
