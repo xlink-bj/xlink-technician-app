@@ -21,7 +21,7 @@ import { createOperationError } from '@shared/types'
 
 type Fields = Readonly<Record<string,string|number|boolean>>
 interface Base { readonly scope:R1MultiStepScope }
-type R1Stage1Intent =
+export type R1Stage1Intent =
   | (Base & {readonly kind:'forms_save';readonly sourceNodeType:'forms';
       readonly fields:Fields;readonly authoritativeExts:R1JsonObject;
       readonly title:string;readonly processActive:boolean;
