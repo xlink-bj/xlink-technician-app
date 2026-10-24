@@ -4,6 +4,7 @@ import { resetMockCommandState } from '@adapters/api/mock/command-state'
 import { mockJourneyNodes, mockJourneyWorkOrderId, resetMockJourney } from '@adapters/api/mock/journey'
 import { mockQuotationCatalogServiceType, mockQuotationCatalogSourceType } from '@adapters/api/mock/quotation-catalog'
 import { tryMockRead } from '@adapters/api/mock/router'
+import * as mockRouter from '@adapters/api/mock/router'
 import { createQuotationCatalogReadAdapter } from '@adapters/api/quotation-catalog-api'
 import { createAStageMockQuoteOrderController, isAStageMockOrderEnabled } from '@app/a-stage-quotation-mock-ui'
 import { evaluateQuotationDraft } from '@features/work-orders/quotation/engine'
@@ -40,6 +41,7 @@ beforeEach(() => {
 afterEach(() => {
   resetBusinessMockCache(); resetMockCommandState()
   vi.unstubAllGlobals(); vi.unstubAllEnvs()
+  vi.restoreAllMocks()
 })
 async function evaluateMockQuote(catalogId = 'mock-catalog-material-ordinary-1') {
   let draft = createEmptyQuotationDraft(mockJourneyWorkOrderId, mockJourneyNodes.quotation)
@@ -114,5 +116,27 @@ describe('A priced Mock quotation → exact type=1 Order UI controller', () => {
     expect(await ui.readStatus(engine)).toBe('blocked')
     expect((await ui.submit(engine)).state).not.toBe('succeeded')
     expect(local.has('xlink.dev.mock.journey.019.official-order.v1')).toBe(false)
+  })
+
+  it('read-only verifies a persisted Order after a lost Upsert ACK but never releases the ambiguous replay fence', async () => {
+    await reachMockQuotationForTest()
+    const actual = mockRouter.tryMockCommand
+    vi.spyOn(mockRouter, 'tryMockCommand').mockImplementation(async (path, body) => {
+      const reply = await actual(path, body)
+      if (path === 'basic/order/upsert') throw new Error('ACK lost after Mock commit')
+      return reply
+    })
+    const engine = await evaluateMockQuote()
+    const ui = createAStageMockQuoteOrderController({ storage: storage(), getActor: () => actor })
+    expect((await ui.submit(engine)).state).toBe('uncertain')
+    expect(await ui.readStatus(engine)).toBe('uncertain')
+    expect(await ui.verifyPending(engine)).toMatchObject({ state: 'confirmed' })
+    const reopened = createAStageMockQuoteOrderController({ storage: storage(), getActor: () => actor })
+    expect(await reopened.readStatus(engine)).toBe('uncertain')
+    expect((await reopened.submit(engine)).state).not.toBe('succeeded')
+    expect(await tryMockRead('basic/order/query', {
+      'is:serviceAppointmentId|string#and': mockJourneyWorkOrderId,
+      'is:type|integer#and': 1, page: 1, rows: 3,
+    }, { latencyMs: 0 })).toMatchObject({ total: 1 })
   })
 })

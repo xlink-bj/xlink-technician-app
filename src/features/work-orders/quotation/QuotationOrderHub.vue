@@ -95,13 +95,13 @@
           <text class="quotation-hub__order-number">{{ order.displayNumber || order.id }}</text>
           <view class="quotation-hub__order-pills">
             <AppMetaTag class="quotation-hub__order-badge" tone="info"
-              :label="isVisualSample ? (order.id.endsWith('-1') ? '订单 1' : '订单 2') : '正式订单'" />
+              :label="isVisualSample ? (order.id.endsWith('-1') ? '订单 1' : '订单 2') : mockJourneyOrder ? '本机 Mock 订单' : '正式订单'" />
             <AppMetaTag v-if="isVisualSample" class="quotation-hub__order-badge"
               :tone="order.id.endsWith('-1') ? 'warning' : 'success'"
               :label="order.id.endsWith('-1') ? '演示 · 待签约' : '演示 · 已签约'" />
           </view>
         </view>
-        <text class="quotation-hub__order-subtitle">{{ isVisualSample ? order.groups[0]?.partDescription || '演示维修方案' : '当前权限可见 · 状态未核实时不推断签约进度' }}</text>
+        <text class="quotation-hub__order-subtitle">{{ isVisualSample ? order.groups[0]?.partDescription || '演示维修方案' : mockJourneyOrder ? '合成数据，仅用于本机流程验收 · 未提交后台' : '当前权限可见 · 状态未核实时不推断签约进度' }}</text>
         <view class="quotation-hub__order-lines">
           <view class="quotation-hub__order-line">
             <text>产品总额</text>
@@ -125,7 +125,7 @@
             :aria-expanded="expandedId === order.id" @tap="toggleDetails(order.id)">
             <AppIcon name="task" :size="17" color="#2479eb" />{{ expandedId === order.id ? '收起详情' : '查看详情' }}
           </AppButton>
-          <AppButton v-if="!readOnly" variant="secondary"
+          <AppButton v-if="!readOnly && !mockJourneyOrder" variant="secondary"
             :disabled="isVisualSample || editingId !== null || hasLocalDraft"
             :data-testid="`quotation-hub-edit-${order.id}`" @tap="edit(order.id)">
             <AppIcon name="order" :size="17" color="#2479eb" />{{ editingId === order.id ? '核验中…' : '修改订单' }}
@@ -178,6 +178,8 @@ const props = defineProps<{
   readonly customerName?: string
   readonly localDraftGroupCount: number
   readonly readOnly: boolean
+  /** Projected by the App composition root, never inferred in a feature from adapter fixtures. */
+  readonly devMockOrder?: boolean
   /** Explicit DEV source-modelled preview. Never substituted for an R1 API read. */
   readonly devVisualSample?: 'orders' | 'empty'
 }>()
@@ -189,6 +191,7 @@ const emit = defineEmits<{
 const browse = useQuotationOrderBrowseStore()
 const isVisualSample = computed(() => import.meta.env.DEV
   && (props.devVisualSample === 'orders' || props.devVisualSample === 'empty'))
+const mockJourneyOrder = computed(() => import.meta.env.DEV && props.devMockOrder === true)
 const sampleRecords = computed((): readonly QuotationOrderBrowseItem[] => [3500, 1200].map((amount, index) => ({
   id: `DEV-Q00-ORDER-${index + 1}`,
   displayNumber: `演示订单 0${index + 1}`,

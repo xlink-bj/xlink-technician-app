@@ -23,6 +23,12 @@
       data-testid="a-stage-order-readback" />
     <AppStatus v-if="status === 'uncertain'" tone="warning" quiet
       message="订单结果待核查，已保留本机防重回执，禁止重复提交。" data-testid="a-stage-order-uncertain" />
+    <view v-if="status === 'uncertain'" class="mock-quote-order__readback">
+      <AppButton variant="secondary" block :loading="checking" :disabled="checking || busy"
+        data-testid="a-stage-order-verify" @tap="verifyPending">只读核对订单记录</AppButton>
+      <AppStatus v-if="verification" :tone="verification === 'confirmed' ? 'success' : 'warning'"
+        quiet :message="verificationMessage" data-testid="a-stage-order-verify-result" />
+    </view>
     <text v-if="feedback" class="mock-quote-order__feedback" role="alert">{{ feedback }}</text>
     <view v-if="status !== 'succeeded'" class="mock-quote-order__actions">
       <AppButton v-if="!confirm" block :disabled="!canSubmit || busy || status === 'uncertain'"
@@ -56,7 +62,10 @@ const amount = computed(() => engine.value?.pricing
 const status = ref<'ready' | 'blocked' | 'uncertain' | 'succeeded'>('blocked')
 const feedback = ref('')
 const busy = ref(false)
+const checking = ref(false)
 const confirm = ref(false)
+const verification = ref<'confirmed' | 'not_found' | 'blocked' | 'unknown' | null>(null)
+const verificationMessage = ref('')
 const canSubmit = computed(() => Boolean(engine.value?.state === 'ready' && engine.value.payload
   && engine.value.payload.totalPrice > 0 && composition.draft
   && engine.value.draftVersion === composition.draft.draftVersion && status.value === 'ready'))
@@ -76,6 +85,8 @@ watch(() => [engine.value?.draftVersion, engine.value?.state, session.session?.s
     const ticket = ++generation
     confirm.value = false
     feedback.value = ''
+    verification.value = null
+    verificationMessage.value = ''
     if (!engine.value || engine.value.state !== 'ready') { status.value = 'blocked'; return }
     const state = await controller.readStatus(engine.value)
     if (ticket === generation) status.value = state
@@ -99,6 +110,18 @@ async function submit(): Promise<void> {
     feedback.value = result.message
   } finally { busy.value = false }
 }
+async function verifyPending(): Promise<void> {
+  if (!engine.value || status.value !== 'uncertain' || busy.value || checking.value) return
+  const current = engine.value
+  checking.value = true
+  verification.value = null
+  try {
+    const result = await controller.verifyPending(current)
+    if (engine.value !== current) return
+    verification.value = result.state
+    verificationMessage.value = result.message
+  } finally { checking.value = false }
+}
 </script>
 
 <style scoped>
@@ -107,7 +130,7 @@ async function submit(): Promise<void> {
 .mock-quote-order__caption,.mock-quote-order__amount-label,.mock-quote-order__warning { display:block; font-size:23rpx; line-height:1.55; color:var(--app-color-text-secondary); margin-top:6rpx; }
 .mock-quote-order__summary { display:flex; justify-content:space-between; align-items:end; gap:12rpx; padding:22rpx 0; }
 .mock-quote-order__amount { display:block; color:var(--app-color-text-primary); font-size:43rpx; font-weight:750; margin-top:6rpx; }
-.mock-quote-order__actions,.mock-quote-order__feedback { display:block; margin-top:18rpx; }
+.mock-quote-order__actions,.mock-quote-order__feedback,.mock-quote-order__readback { display:block; margin-top:18rpx; }
 .mock-quote-order__confirm { display:flex; flex-wrap:wrap; align-items:center; gap:18rpx; }
 .mock-quote-order__feedback { font-size:24rpx; color:var(--app-color-text-secondary); line-height:1.5; }
 </style>

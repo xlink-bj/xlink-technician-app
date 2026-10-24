@@ -64,6 +64,16 @@ The main 019 DEV Mock path uses protocol-shaped **synthetic** writes; it is deli
 not the server's authoritative R1 Workflow. This upgrades the old local-only
 stage handoff but does not lift any real write gate or authorize `main` merge.
 
+**2026-10-24 A-P1 evidence update:** the 020/021 forms and 019 quotation UIs now expose
+fail-closed pending-receipt/readback guidance, confirmed local-receipt recovery
+without command replay, and clearer synthetic Order labeling. The cross-page
+operation → command → Mock persistence → readback → regression trace and the
+two-viewport H5 CI screenshot gate are enumerated in
+`docs/engineering/A_STAGE_P1_ACCEPTANCE_EVIDENCE.md`. Local full verification
+and H5/MP-WEIXIN/App builds passed; real Chromium H5 CI and Mac WeChat DevTools
+gesture-level review remain independent gates, as do Owner visual acceptance
+and all live R1 write verification.
+
 ## Acceptance labels and next external input
 
 Do not declare Stage 1 PASS because all offline gates turn green. The most accurate interim label is **`OFFLINE_FUNCTIONAL / LIVE_WRITE_UNVERIFIED`**. It allows engineering to move ahead, and makes the final risk explicit.

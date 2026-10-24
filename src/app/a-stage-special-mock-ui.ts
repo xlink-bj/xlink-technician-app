@@ -33,6 +33,8 @@ export interface AStageSpecialView {
   readonly nodeActive: boolean
   readonly entries: readonly AStageSpecialRecord[]
   readonly receiptPending: boolean
+  readonly pendingRecoverable: boolean
+  readonly pendingNeedsOriginalText: boolean
 }
 export type AStageSpecialOutcome =
   | { readonly state: 'succeeded'; readonly view: AStageSpecialView }
@@ -126,7 +128,64 @@ export function createAStageSpecialMockController(options: {
     const receipt = await inspectR1MultiStepReceipt(options.storage, scope(kind, expected!))
     if (receipt.state !== 'succeeded') throw new Error('防重回执不可读取，操作已停止。')
     return { kind, nodeActive: node.state === 0, entries,
-      receiptPending: receipt.data !== null }
+      receiptPending: receipt.data !== null,
+      pendingRecoverable: receipt.data?.state === 'completed',
+      pendingNeedsOriginalText: receipt.data?.state === 'completed'
+        && ['form_upsert', 'repeat_form_upsert'].includes(receipt.data.steps[0] ?? ''),
+    }
+  }
+
+  /** Resume only LOCAL receipt reconciliation. This performs fresh Mock reads
+   * but never dispatches a FormData, EXTS, remove or Process command. A
+   * may-have-dispatched ACK can NEVER be converted into safe-to-retry here. */
+  async function recoverCompleted(originalSummary: string): Promise<AStageSpecialOutcome> {
+    if (inFlight) return { state: 'blocked', message: '已有操作正在处理，请稍后再核对。' }
+    inFlight = true
+    try {
+      if (!authorized()) return { state: 'blocked', message: '角色或环境已变化，禁止跨角色恢复。' }
+      const s = scope(kind, expected!)
+      const found = await inspectR1MultiStepReceipt(options.storage, s)
+      if (found.state !== 'succeeded' || !found.data) return { state: 'blocked',
+        message: '没有可恢复的有效事务记录；禁止猜测并重发。' }
+      const receipt = found.data
+      if (receipt.state !== 'completed') return { state: 'uncertain',
+        message: '已有步骤可能执行，但未获得完整 ACK；无法自动消除防重复提交保护。' }
+      const node = await rawDetail(kind)
+      if (!authorized()) return { state: 'blocked', message: '读取期间角色发生变化。' }
+      const saving = ['form_upsert', 'repeat_form_upsert'].includes(receipt.steps[0] ?? '')
+      const deleting = ['forms_soft_delete', 'repeat_remove'].some(step => receipt.steps.includes(step as typeof receipt.steps[number]))
+      let closed = false
+      if (receipt.steps.includes('workflow_process')) {
+        closed = node.state === 10 && await closeCompletedR1ReceiptAfterReadback(options.storage, s,
+          { workOrderId: s.workOrderId, runtimeNodeId: s.runtimeNodeId,
+            sourceNodeType: kind, savedFormDataIds: receipt.savedFormDataIds,
+            workflowCompleted: true })
+      } else if (saving || deleting) {
+        const id = saving ? receipt.savedFormDataIds[0] : receipt.targetFormDataId
+        if (!id) return { state: 'uncertain', message: '回执缺少可核验记录 ID，不能清理。' }
+        const confirmedText = originalSummary.trim()
+        if (saving && (!confirmedText || confirmedText.length > 4000)) return {
+          state: 'blocked', message: '请重新填写原保存的现场情况，以便与最新记录逐字核对。',
+        }
+        const record = (await scopedForms(kind, id))[0]
+        const rows = kind === 'repeat' ? await scopedForms('repeat') : []
+        if (!authorized()) return { state: 'blocked', message: '回查期间身份已变化。' }
+        closed = await closeCompletedR1MutationReceiptAfterReadback(options.storage, s, {
+          workOrderId: s.workOrderId, runtimeNodeId: s.runtimeNodeId,
+          formDefinitionId: definition, workflowRunId: s.workflowRunId,
+          sourceNodeType: kind,
+          ...(record ? { formData: record } : {}),
+          ...(saving ? { expectedFields: { inspectionSummary: confirmedText } } : {}),
+          ...(kind === 'forms' ? { formsExts: object(node.exts) ?? {} }
+            : { repeatList: { complete: true as const, workflowRunId: s.workflowRunId!,
+                savedIds: rows.map(row => String(row._id)) } }),
+        })
+      }
+      if (!closed || !authorized()) return { state: 'uncertain',
+        message: '权威 Mock 回读仍不能证明完整执行；原防重回执已保留。' }
+      return { state: 'succeeded', view: await load() }
+    } catch { return { state: 'uncertain', message: '只读核对未能完成；未重新发送任何业务命令。' } }
+    finally { inFlight = false }
   }
 
   async function execute(action: AStageSpecialAction): Promise<AStageSpecialOutcome> {
@@ -227,5 +286,5 @@ export function createAStageSpecialMockController(options: {
       return { state: 'uncertain', message: '表单操作结果未能完整确认，禁止盲目重试。' }
     } finally { inFlight = false }
   }
-  return { load, execute }
+  return { load, execute, recoverCompleted }
 }

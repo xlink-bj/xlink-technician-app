@@ -21,6 +21,7 @@
     :customer-name="workspace.detail?.customerName"
     :local-draft-group-count="quotationComposition.groups.length"
     :read-only="productionReadOnly"
+    :dev-mock-order="aStageMockOrderEnabled"
     :dev-visual-sample="devQuotationOrderPreview"
     @create="openQuotationEditor"
     @edit="openExistingQuotationEditor"

@@ -16,6 +16,8 @@
       <AppButton variant="secondary" size="compact" :disabled="busy" @tap="refresh">重新读取</AppButton>
     </view>
     <template v-else-if="viewState">
+      <AppStatus v-if="operationFeedback" tone="warning" quiet
+        :message="operationFeedback" data-testid="a-special-operation-feedback" />
       <view class="special-forms__section-heading">
         <text>已保存记录</text>
         <text class="special-forms__count">{{ viewState.entries.filter(row => row.state === 'active').length }} 条</text>
@@ -41,8 +43,27 @@
         </view>
       </view>
       <AppStatus v-if="viewState.receiptPending" tone="warning" quiet
-        message="上一笔操作结果尚未核对，已保留防重复提交记录。请停止操作并核查。"
+        message="上一笔操作仍有防重复提交记录。系统不会自动重发保存或完成命令。"
         data-testid="a-special-receipt-pending" />
+      <view v-if="viewState.receiptPending" class="special-forms__recovery" data-testid="a-special-recovery">
+        <template v-if="viewState.pendingRecoverable">
+          <text class="special-forms__finish-copy">可读取最新 Mock 记录并核对。通过后只清理本机防重回执。</text>
+          <template v-if="viewState.pendingNeedsOriginalText">
+            <text class="special-forms__label">原保存的现场情况 <text class="special-forms__required">*</text></text>
+            <AppTextarea :model-value="summary" :maxlength="4000" :disabled="busy"
+              placeholder="请填写原保存的文字；必须与权威记录一致"
+              @update:model-value="summary = $event" />
+          </template>
+          <AppButton block variant="secondary" :loading="busy"
+            :disabled="busy || (viewState.pendingNeedsOriginalText && !summary.trim())"
+            data-testid="a-special-recover" @tap="recoverCompleted">只读核对并恢复</AppButton>
+        </template>
+        <AppStatus v-else tone="warning" quiet
+          message="写入 ACK 尚未全部确认，暂不能自动解除防重保护；请联系支持人员核查。"
+          data-testid="a-special-unresolved" />
+        <AppStatus v-if="recoveryFeedback" tone="warning" quiet
+          :message="recoveryFeedback" data-testid="a-special-recovery-feedback" />
+      </view>
       <template v-else-if="viewState.nodeActive">
         <view class="special-forms__editor">
           <text class="special-forms__section-title">{{ editingId ? '修改现场记录' : '新增现场记录' }}</text>
@@ -94,6 +115,8 @@ const viewState = ref<AStageSpecialView | null>(null)
 const loading = ref(true)
 const busy = ref(false)
 const error = ref('')
+const operationFeedback = ref('')
+const recoveryFeedback = ref('')
 const summary = ref('')
 const editingId = ref<string | null>(null)
 const confirmDeleteId = ref<string | null>(null)
@@ -117,6 +140,7 @@ async function refresh(): Promise<void> {
   if (!current) return
   loading.value = true
   error.value = ''
+  recoveryFeedback.value = ''
   try {
     const next = await current.load()
     if (revision !== ticket) return
@@ -131,6 +155,8 @@ watch(() => [props.kind, props.workOrderId, props.node.id,
   revision++
   viewState.value = null
   error.value = ''
+  operationFeedback.value = ''
+  recoveryFeedback.value = ''
   summary.value = ''
   editingId.value = null
   confirmDeleteId.value = null
@@ -160,15 +186,36 @@ async function run(action: AStageSpecialAction): Promise<void> {
   if (!current || busy.value) return
   busy.value = true
   error.value = ''
+  operationFeedback.value = ''
   const ticket = revision
   try {
     const result = await current.execute(action)
     if (ticket !== revision) return
-    if (result.state !== 'succeeded') { error.value = result.message; await refresh(); return }
+    if (result.state !== 'succeeded') {
+      await refresh()
+      if (ticket === revision) operationFeedback.value = result.message
+      return
+    }
     viewState.value = result.view
     cancelEdit()
     confirmDeleteId.value = null
     confirmFinish.value = false
+    emit('changed')
+  } finally { if (ticket === revision) busy.value = false }
+}
+async function recoverCompleted(): Promise<void> {
+  const current = controller
+  if (!current || busy.value || !viewState.value?.pendingRecoverable) return
+  busy.value = true
+  operationFeedback.value = ''
+  recoveryFeedback.value = ''
+  const ticket = revision
+  try {
+    const result = await current.recoverCompleted(summary.value)
+    if (ticket !== revision) return
+    if (result.state !== 'succeeded') { recoveryFeedback.value = result.message; return }
+    viewState.value = result.view
+    cancelEdit()
     emit('changed')
   } finally { if (ticket === revision) busy.value = false }
 }
@@ -190,6 +237,7 @@ async function run(action: AStageSpecialAction): Promise<void> {
 .special-forms__record-summary { margin-top:8rpx; overflow-wrap:anywhere; }
 .special-forms__row-actions { margin-top:10rpx; }
 .special-forms__editor,.special-forms__finish { border-top:1rpx solid var(--app-color-border); margin-top:22rpx; padding-top:24rpx; }
+.special-forms__recovery { border-top:1rpx solid var(--app-color-border); margin-top:18rpx; padding-top:18rpx; }
 .special-forms__section-title { display:block; font-size:29rpx; font-weight:700; color:var(--app-color-text-primary); margin-bottom:20rpx; }
 .special-forms__label { display:block; font-size:26rpx; font-weight:600; margin-bottom:12rpx; }
 .special-forms__required { color:#b55343; }

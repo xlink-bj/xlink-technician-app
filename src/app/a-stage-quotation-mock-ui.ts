@@ -3,6 +3,7 @@
 import {
   isDevMockJourneyEnabled, mockJourneyNodes, mockJourneyOrderWorkflowDefinitionId,
   mockJourneyStage, mockJourneyWorkOrderId, mockJourneyOfficialOrderId,
+  mockJourneyOrderWorkflowRunId,
 } from '@adapters/api/mock/journey'
 import { tryMockRead, tryMockCommand } from '@adapters/api/mock/router'
 import { createQuotationOrderCommandAdapter } from '@adapters/api/quotation-order-commands'
@@ -114,5 +115,31 @@ export function createAStageMockQuoteOrderController(options: {
       : result.state === 'failed_ambiguous_after_dispatch' || result.state === 'write_succeeded_readback_pending'
         ? 'uncertain' as const : 'ready' as const
   }
-  return { submit, readStatus }
+  /** Manual read-only diagnosis for a lost ACK. This never clears an ambiguous
+   * receipt, retries a mutation, or infers that a missing read means no write. */
+  async function verifyPending(engine: QuotationEngineResult): Promise<{
+    readonly state: 'confirmed' | 'not_found' | 'blocked' | 'unknown'
+    readonly message: string
+  }> {
+    if (!authorized()) return { state: 'blocked', message: '账号或角色已变化，不能跨角色回查。' }
+    const ctx = input(engine)
+    if (!ctx || await readStatus(engine) !== 'uncertain') {
+      return { state: 'blocked', message: '当前没有可独立核对的待确认订单回执。' }
+    }
+    const read = await readApi.getQuotationOrderById(mockJourneyOfficialOrderId)
+    if (!authorized()) return { state: 'blocked', message: '回查过程中身份已变化。' }
+    if (read.state !== 'succeeded' || !read.data) {
+      return { state: 'not_found', message: '暂未确认订单记录；无法证明请求未执行，防重复提交保护仍然有效。' }
+    }
+    const order = read.data
+    if (order.id !== mockJourneyOfficialOrderId || order.type !== 1
+      || order.serviceAppointmentId !== mockJourneyWorkOrderId
+      || order.workflowId !== mockJourneyOrderWorkflowRunId
+      || order.totalPrice !== ctx.payload.totalPrice
+      || order.originPrice !== ctx.payload.originPrice) {
+      return { state: 'unknown', message: '回查订单与本次报价不一致；已保留防重复提交保护。' }
+    }
+    return { state: 'confirmed', message: '只读回查已确认本机 Mock 订单及金额；待确认回执仍保留，不会再次创建订单。' }
+  }
+  return { submit, readStatus, verifyPending }
 }
