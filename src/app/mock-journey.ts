@@ -9,6 +9,7 @@ import {
 } from '@adapters/api/mock/journey'
 import { actionWorkspaceRouteFor } from '@features/work-orders/action-workspace'
 import { asOpaqueId } from '@shared/types'
+import { resetMockCommercialReview } from '@app/mock-commercial-journey'
 
 /** Review-only visual navigation. Never calls Order/Workflow/ExtForm commands. */
 export function isMockJourneyAvailable(): boolean { return isDevMockJourneyEnabled() }
@@ -39,6 +40,7 @@ export function mockJourneyRoute(): string {
 }
 
 export function resetAndOpenMockJourney(): string {
+  resetMockCommercialReview()
   resetMockJourney()
   return mockJourneyRoute()
 }

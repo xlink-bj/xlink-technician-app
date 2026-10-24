@@ -119,6 +119,13 @@
           </view>
         </view>
         <text class="mock-workflow-track__hint">已走过的节点表示本机演示进度，不代表 R1 Workflow 已完成。</text>
+        <view v-if="localMockWorkflowStage === 'quotation'" class="mock-workflow-track__review"
+          data-testid="mock-journey-commercial-summary">
+          <text class="mock-workflow-track__label">报价 / SKU / 订单与合同 · 本机核对</text>
+          <text class="mock-workflow-track__hint">
+            {{ mockCommercialProgress.complete ? '资料核对完成（非业务完成或已签约）' : mockCommercialProgress.paused ? '资料核对已暂停，可从报价入口恢复' : `已核对 ${mockCommercialProgress.confirmed.length}/3 项；未生成正式订单` }}
+          </text>
+        </view>
       </view>
 
       <!-- Current source-backed forms/repeat node only; Production repeat reads
@@ -309,9 +316,10 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
-import { onLoad } from '@dcloudio/uni-app'
+import { onLoad, onShow } from '@dcloudio/uni-app'
 
 import { mockJourneyContext } from '@app/mock-journey'
+import { readMockCommercialProgress } from '@app/mock-commercial-journey'
 import { childSubflowMockReviewUrl, childSubflowMockWorkOrderId, isChildSubflowMockPreviewAvailable } from '@app/child-subflow-mock-review'
 import { hasAuthenticatedSession } from '@features/home/access'
 import { isProductionReadOnlyRuntime } from '@shared/config'
@@ -383,6 +391,13 @@ const localMockWorkflowStage = computed(() => !productionReadOnly
   && session.session?.user.id === 'synthetic-user'
   && session.session?.currentRole?.id === 'synthetic-role'
   ? mockJourneyContext(String(detail.value?.id ?? ''))?.stage ?? null : null)
+const mockReviewRevision = ref(0)
+onShow(() => { mockReviewRevision.value += 1 })
+const mockCommercialProgress = computed(() => {
+  void mockReviewRevision.value
+  return readMockCommercialProgress({ workOrderId: String(detail.value?.id ?? ''),
+    userId: session.session?.user.id, roleId: session.session?.currentRole?.id })
+})
 const localMockWorkflowSteps = computed(() => {
   const keys = [
     {key:'appointment',label:'预约'}, {key:'survey',label:'勘查'}, {key:'quotation',label:'报价'},
@@ -602,6 +617,7 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
 .mock-workflow-track__label { color: var(--app-color-text-primary); font-weight: 600; font-size: var(--app-font-body); }
 .mock-workflow-track__state { color: var(--app-color-text-secondary); font-size: var(--app-font-meta); }
 .mock-workflow-track__hint { display: block; margin-top: 12rpx; }
+.mock-workflow-track__review { border-top: 1rpx solid var(--app-color-divider); margin-top: 16rpx; padding-top: 16rpx; display: flex; flex-direction: column; gap: 6rpx; }
 
 .detail-content,
 .detail-state,
