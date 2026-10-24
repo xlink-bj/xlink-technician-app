@@ -95,6 +95,5 @@ function revokeLast(): void {
 .mock-commerce-links__help { color: var(--app-color-text-secondary); font-size: 22rpx; line-height: 1.5; }
 .mock-commerce-links__arrow { color: var(--app-color-text-secondary); font-size: 36rpx; }
 .mock-commerce-links__review-actions { display: flex; flex-wrap: wrap; gap: 12rpx; margin: 14rpx 0; }
-.mock-commerce-links__review-actions .app-button { min-height: 88rpx; }
 .mock-commerce-links__check { color: var(--app-color-primary); font-size: 22rpx; font-weight: 650; }
 </style>

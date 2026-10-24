@@ -1,4 +1,7 @@
 import { isDevMockJourneyEnabled, mockJourneyStage, mockJourneyWorkOrderId } from '@adapters/api/mock/journey'
+import {
+  clearCommercialReviewStorage, readCommercialReviewStorage, writeCommercialReviewStorage,
+} from '@adapters/api/mock/commercial-review-storage'
 
 /**
  * DEV Mock review ledger, deliberately independent of R1 Workflow/Order/Contract.
@@ -27,7 +30,6 @@ interface PersistedProgress {
   readonly confirmed: readonly MockCommercialCheckpoint[]
   readonly paused: boolean
 }
-const key = 'xlink.dev.mock.journey.019.commercial-review.v1'
 const empty: MockCommercialProgress = { confirmed: [], paused: false, complete: false }
 
 export function canReviewMockCommercial(scope: MockCommercialScope): boolean {
@@ -50,10 +52,8 @@ function validStored(raw: unknown, scope: MockCommercialScope): raw is Persisted
 
 function stored(scope: MockCommercialScope): PersistedProgress | null {
   if (!canReviewMockCommercial(scope)) return null
-  try {
-    const raw: unknown = uni.getStorageSync(key)
-    return validStored(raw, scope) ? raw : null
-  } catch { return null }
+  const raw = readCommercialReviewStorage()
+  return validStored(raw, scope) ? raw : null
 }
 
 export function readMockCommercialProgress(scope: MockCommercialScope): MockCommercialProgress {
@@ -68,15 +68,13 @@ export function readMockCommercialProgress(scope: MockCommercialScope): MockComm
 
 function persist(scope: MockCommercialScope, state: Pick<PersistedProgress, 'confirmed' | 'paused'>): boolean {
   if (!canReviewMockCommercial(scope)) return false
-  try {
-    uni.setStorageSync(key, {
-      version: 1, workOrderId: scope.workOrderId, userId: scope.userId!, roleId: scope.roleId!,
-      confirmed: [...state.confirmed], paused: state.paused,
-    } satisfies PersistedProgress)
-    const saved = stored(scope)
-    return saved !== null && saved.paused === state.paused
-      && JSON.stringify(saved.confirmed) === JSON.stringify(state.confirmed)
-  } catch { return false }
+  if (!writeCommercialReviewStorage({
+    version: 1, workOrderId: scope.workOrderId, userId: scope.userId!, roleId: scope.roleId!,
+    confirmed: [...state.confirmed], paused: state.paused,
+  } satisfies PersistedProgress)) return false
+  const saved = stored(scope)
+  return saved !== null && saved.paused === state.paused
+    && JSON.stringify(saved.confirmed) === JSON.stringify(state.confirmed)
 }
 
 /** Only the next checkpoint can advance; arbitrary or repeated writes fail closed. */
@@ -113,8 +111,5 @@ export function revokeLastMockCommercialCheckpoint(scope: MockCommercialScope): 
 /** Separate from the R1 WorkOrder and stage reset; never accesses backend. */
 export function resetMockCommercialReview(): boolean {
   if (!isDevMockJourneyEnabled()) return false
-  try {
-    uni.removeStorageSync(key)
-    return true
-  } catch { return false }
+  return clearCommercialReviewStorage()
 }

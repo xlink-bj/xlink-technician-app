@@ -354,7 +354,7 @@ onUnmounted(() => readCoordinator.invalidate())
 .sku-review-actions {display:flex;flex-wrap:wrap;gap:12rpx;}
 .sku-review-actions .app-button {min-height:44px;min-width:90px;}
 .sku-review-footer {display:block;text-align:center;font-size:21rpx;color:var(--app-color-text-secondary);margin-bottom:14rpx;}
-.sku-review-local-checkpoint {display:flex;flex-direction:column;gap:12rpx;font-size:22rpx;color:var(--app-color-text-secondary);margin-bottom:16rpx;}
+.sku-review-local-checkpoint {display:flex;flex-direction:column;gap:12rpx;color:var(--app-color-text-secondary);margin-bottom:16rpx;}
 .sku-review-back {display:block;text-align:center;padding:20rpx;border:1rpx solid var(--app-color-border);border-radius:16rpx;color:var(--app-color-primary);font-size:26rpx;}
 .sku-review-blocked {min-height:70vh;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:20rpx;padding:32rpx;text-align:center;}
 </style>
