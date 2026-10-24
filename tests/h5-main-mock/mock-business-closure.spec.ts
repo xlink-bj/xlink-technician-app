@@ -69,7 +69,11 @@ for (const viewport of [{width:375,height:667},{width:390,height:844}]) {
     // disabled contract is aria-disabled, not a native button's :disabled.
     await expect(page.getByTestId('signing-mock-preview-disabled')).toHaveAttribute('aria-disabled', 'true')
     await expect(page.getByTestId('signing-mock-apply-disabled')).toHaveAttribute('aria-disabled', 'true')
-    await info.attach(`mock-contract-${viewport.width}`, {body: await page.screenshot({fullPage:true}), contentType:'image/png'})
+    // The signing review scrolls within a uni-app page container; capture
+    // the selected contract itself, rather than a viewport-only page top.
+    await info.attach(`mock-contract-${viewport.width}`, {
+      body: await page.getByTestId('signing-mock-contract').screenshot(), contentType:'image/png',
+    })
 
     expect(external).toEqual([])
     expect(errors).toEqual([])
