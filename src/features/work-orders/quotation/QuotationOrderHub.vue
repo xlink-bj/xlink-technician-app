@@ -26,11 +26,13 @@
       variant="strip"
       tone="neutral"
       quiet
-      message="当前工单支持多笔独立订单；以下只显示本次已核验的记录（最多 3 笔）。"
+      :message="mockJourneyOrder
+        ? '本机合成订单仅供协议回读验收；不代表真实订单记录或后台提交。'
+        : '当前工单支持多笔独立订单；以下只显示本次已核验的记录（最多 3 笔）。'"
       data-testid="ds07c4b-quotation-scope-note"
     />
     <AppSectionHeading v-if="!choosingMode" class="quotation-hub__section-heading"
-      :title="`订单列表${browse.state === 'succeeded' || isVisualSample ? ` (${records.length})` : ''}`">
+      :title="`订单列表${displayReadState === 'succeeded' || isVisualSample ? ` (${records.length})` : ''}`">
       <template #trailing>
         <AppButton v-if="records.length > 0 && !readOnly" class="quotation-hub__new-outline" variant="secondary"
           data-testid="quotation-hub-add-inline" @tap="chooseNewOrder">＋ 新增订单</AppButton>
@@ -59,14 +61,14 @@
       <text class="quotation-hub__mode-safety">当前操作只进入本机草稿，不会自动创建服务器订单。</text>
     </view>
     <template v-else>
-    <AppRecordCard v-if="!isVisualSample && (browse.state === 'loading' || browse.state === 'idle')" class="quotation-hub__empty" data-testid="quotation-hub-loading">
+    <AppRecordCard v-if="!isVisualSample && (displayReadState === 'loading' || displayReadState === 'idle')" class="quotation-hub__empty" data-testid="quotation-hub-loading">
       <text class="quotation-hub__empty-title">正在核对订单记录</text>
       <text class="quotation-hub__empty-detail">不会读取其他工单的订单，也不会修改服务器数据。</text>
     </AppRecordCard>
-    <AppRecordCard v-else-if="!isVisualSample && (browse.state === 'failed_retryable' || browse.state === 'failed_terminal')" class="quotation-hub__empty" data-testid="quotation-hub-read-error">
+    <AppRecordCard v-else-if="!isVisualSample && (displayReadState === 'failed_retryable' || displayReadState === 'failed_terminal')" class="quotation-hub__empty" data-testid="quotation-hub-read-error">
       <view class="quotation-hub__empty-icon" aria-hidden="true">!</view>
       <text class="quotation-hub__empty-title">暂无法读取已有订单</text>
-      <text class="quotation-hub__empty-detail">{{ browse.errorMessage || '订单读取暂不可用，请稍后重试。' }}</text>
+      <text class="quotation-hub__empty-detail">{{ displayReadError || '订单读取暂不可用，请稍后重试。' }}</text>
       <AppButton variant="secondary" @tap="refresh">重新读取</AppButton>
       <text class="quotation-hub__empty-detail">仍可创建本机草稿，但无法据此判断是否已有订单。</text>
       <AppButton v-if="!readOnly" block class="quotation-hub__empty-action" data-testid="quotation-hub-create-unverified"
@@ -75,11 +77,11 @@
     <template v-else-if="records.length === 0">
     <AppRecordCard class="quotation-hub__empty" data-testid="quotation-hub-no-records">
       <view class="quotation-hub__empty-icon" aria-hidden="true"><AppIcon name="order" :size="56" color="#1677f9" /><text class="quotation-hub__empty-icon-plus">＋</text></view>
-      <text class="quotation-hub__empty-title">{{ isVisualSample ? '当前工单尚无订单' : '本次未发现正式订单' }}</text>
+      <text class="quotation-hub__empty-title">{{ isVisualSample ? '当前工单尚无订单' : mockJourneyOrder ? '尚未确认本机 Mock 订单' : '本次未发现正式订单' }}</text>
       <text class="quotation-hub__empty-detail">请根据现场勘查结果创建报价订单，也可为不同维修部位分别建立订单。</text>
       <AppButton v-if="!readOnly" block class="quotation-hub__empty-action" data-testid="quotation-hub-empty-create"
         @tap="startEditor">＋ 创建第一笔订单</AppButton>
-      <text class="quotation-hub__empty-provenance">{{ isVisualSample ? '空状态为合成数据，仅用于视觉评审。' : '仅确认本次读取，未证明完整历史为空。' }}</text>
+      <text class="quotation-hub__empty-provenance">{{ isVisualSample ? '空状态为合成数据，仅用于视觉评审。' : mockJourneyOrder ? '仅代表本机精确 ID 的 Mock 回读；未核验其他订单。' : '仅确认本次读取，未证明完整历史为空。' }}</text>
     </AppRecordCard>
     <view class="quotation-hub__multi-order-tips">
       <text class="quotation-hub__tips-heading">ⓘ 一个工单可以有多个订单</text>
@@ -95,13 +97,13 @@
           <text class="quotation-hub__order-number">{{ order.displayNumber || order.id }}</text>
           <view class="quotation-hub__order-pills">
             <AppMetaTag class="quotation-hub__order-badge" tone="info"
-              :label="isVisualSample ? (order.id.endsWith('-1') ? '订单 1' : '订单 2') : '正式订单'" />
+              :label="isVisualSample ? (order.id.endsWith('-1') ? '订单 1' : '订单 2') : mockJourneyOrder ? '本机 Mock 订单' : '正式订单'" />
             <AppMetaTag v-if="isVisualSample" class="quotation-hub__order-badge"
               :tone="order.id.endsWith('-1') ? 'warning' : 'success'"
               :label="order.id.endsWith('-1') ? '演示 · 待签约' : '演示 · 已签约'" />
           </view>
         </view>
-        <text class="quotation-hub__order-subtitle">{{ isVisualSample ? order.groups[0]?.partDescription || '演示维修方案' : '当前权限可见 · 状态未核实时不推断签约进度' }}</text>
+        <text class="quotation-hub__order-subtitle">{{ isVisualSample ? order.groups[0]?.partDescription || '演示维修方案' : mockJourneyOrder ? '合成数据，仅用于本机流程验收 · 未提交后台' : '当前权限可见 · 状态未核实时不推断签约进度' }}</text>
         <view class="quotation-hub__order-lines">
           <view class="quotation-hub__order-line">
             <text>产品总额</text>
@@ -113,7 +115,7 @@
           </view>
           <view class="quotation-hub__order-line">
             <text>维修部位组</text>
-            <text>{{ order.groups.length }} 组</text>
+            <text>{{ order.contentSupported ? `${order.groups.length} 组` : '明细待核验' }}</text>
           </view>
           <view v-if="order.updateTime" class="quotation-hub__order-line">
             <text>更新时间</text>
@@ -125,7 +127,7 @@
             :aria-expanded="expandedId === order.id" @tap="toggleDetails(order.id)">
             <AppIcon name="task" :size="17" color="#2479eb" />{{ expandedId === order.id ? '收起详情' : '查看详情' }}
           </AppButton>
-          <AppButton v-if="!readOnly" variant="secondary"
+          <AppButton v-if="!readOnly && !mockJourneyOrder" variant="secondary"
             :disabled="isVisualSample || editingId !== null || hasLocalDraft"
             :data-testid="`quotation-hub-edit-${order.id}`" @tap="edit(order.id)">
             <AppIcon name="order" :size="17" color="#2479eb" />{{ editingId === order.id ? '核验中…' : '修改订单' }}
@@ -147,7 +149,7 @@
     <view v-if="hasLocalDraft" class="quotation-hub__draft-note" data-testid="quotation-hub-local-draft">
       当前已有 {{ localDraftGroupCount }} 个维修部位组的本机草稿；继续编辑不会自动创建另一笔订单。
     </view>
-    <view v-if="choosingMode || records.length > 0 && (browse.state === 'succeeded' || isVisualSample)" class="quotation-hub__action-area">
+    <view v-if="choosingMode || records.length > 0 && (displayReadState === 'succeeded' || isVisualSample)" class="quotation-hub__action-area">
       <AppButton v-if="choosingMode" block class="quotation-hub__new" data-testid="quotation-hub-mode-next"
         :disabled="readOnly" @tap="startEditor">下一步</AppButton>
       <AppButton v-else block class="quotation-hub__new" data-testid="quotation-hub-start-new"
@@ -156,6 +158,7 @@
       </AppButton>
       <AppButton v-if="choosingMode" variant="text" block data-testid="quotation-hub-mode-cancel" @tap="cancelMode">取消</AppButton>
     </view>
+    <slot name="after-content" />
   </view>
 </template>
 
@@ -177,6 +180,12 @@ const props = defineProps<{
   readonly customerName?: string
   readonly localDraftGroupCount: number
   readonly readOnly: boolean
+  /** Projected by the App composition root, never inferred in a feature from adapter fixtures. */
+  readonly devMockOrder?: boolean
+  readonly devMockOrderRead?: {
+    readonly state: 'loading' | 'confirmed' | 'unavailable' | 'blocked'
+    readonly order?: QuotationOrderBrowseItem
+  }
   /** Explicit DEV source-modelled preview. Never substituted for an R1 API read. */
   readonly devVisualSample?: 'orders' | 'empty'
 }>()
@@ -184,10 +193,21 @@ const emit = defineEmits<{
   (event: 'create'): void
   (event: 'edit', id: string): void
   (event: 'mode-change', open: boolean): void
+  (event: 'mock-read-retry'): void
 }>()
 const browse = useQuotationOrderBrowseStore()
 const isVisualSample = computed(() => import.meta.env.DEV
   && (props.devVisualSample === 'orders' || props.devVisualSample === 'empty'))
+const mockJourneyOrder = computed(() => import.meta.env.DEV && props.devMockOrder === true)
+const displayReadState = computed(() => mockJourneyOrder.value
+  ? props.devMockOrderRead?.state === 'confirmed' ? 'succeeded'
+    : props.devMockOrderRead?.state === 'loading' ? 'loading' : 'failed_terminal'
+  : browse.state)
+const displayReadError = computed(() => mockJourneyOrder.value
+  ? props.devMockOrderRead?.state === 'blocked'
+    ? '本机角色或订单归属核对失败，未展示订单。'
+    : '本机精确订单回读尚未确认；无法据此判断是否已经写入。'
+  : browse.errorMessage)
 const sampleRecords = computed((): readonly QuotationOrderBrowseItem[] => [3500, 1200].map((amount, index) => ({
   id: `DEV-Q00-ORDER-${index + 1}`,
   displayNumber: `演示订单 0${index + 1}`,
@@ -208,6 +228,9 @@ const sampleRecords = computed((): readonly QuotationOrderBrowseItem[] => [3500,
 })))
 const records = computed((): readonly QuotationOrderBrowseItem[] => isVisualSample.value
   ? props.devVisualSample === 'orders' ? sampleRecords.value : []
+  : mockJourneyOrder.value
+    ? props.devMockOrderRead?.state === 'confirmed' && props.devMockOrderRead.order
+      ? [props.devMockOrderRead.order] : []
   : browse.state === 'succeeded' && browse.fetchedWorkOrderId === props.workOrderId
     ? browse.items : [])
 const expandedId = ref<string | null>(null)
@@ -219,6 +242,7 @@ const money = (amount: number | undefined): string => amount === undefined || !N
   ? '金额待核验' : `¥ ${amount.toFixed(2)}`
 function refresh(): void {
   editError.value = ''
+  if (mockJourneyOrder.value) { emit('mock-read-retry'); return }
   void browse.load(props.workOrderId, 3)
 }
 function toggleDetails(id: string): void {
@@ -252,7 +276,7 @@ function finishEdit(message?: string): void {
   editError.value = message || ''
 }
 defineExpose({ finishEdit })
-onMounted(refresh)
+onMounted(() => { if (!mockJourneyOrder.value) refresh() })
 watch(() => props.workOrderId, () => {
   expandedId.value = null
   editingId.value = null

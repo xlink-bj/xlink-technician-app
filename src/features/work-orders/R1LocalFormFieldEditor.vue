@@ -11,9 +11,9 @@
           :options="field.options" :model-value="scalarValue(field.valueKey)"
           @update:model-value="set(field.valueKey,$event)" />
         <AppChoiceGroup v-else-if="field.type === 'switch'"
-          :options="[{value:'true',label:'是'},{value:'false',label:'否'}]"
+          :options="[{value:'1',label:'是'},{value:'0',label:'否'}]"
           :model-value="scalarValue(field.valueKey)"
-          @update:model-value="set(field.valueKey,$event === 'true')" />
+          @update:model-value="set(field.valueKey,$event)" />
         <AppTextarea v-else-if="field.type === 'textarea'"
           :model-value="scalarValue(field.valueKey)" placeholder="仅存入本机草稿"
           @update:model-value="set(field.valueKey,$event)" />

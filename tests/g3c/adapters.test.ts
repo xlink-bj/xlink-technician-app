@@ -126,6 +126,7 @@ describe('G3-C API adapter foundation', () => {
         runId: 'workflow-run-001',
         parentNodeId: 'workflow-node-parent',
         category: 'unsupported',
+        nodeTypeEvidence: 'unresolved',
         lifecycle: 'unknown',
         visibility: { evidenceState: 'missing' },
       },

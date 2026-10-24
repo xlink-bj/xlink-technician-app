@@ -87,6 +87,13 @@
         <AppButton disabled block variant="secondary" data-testid="signing-mock-preview-disabled">预览合同 · 未开放</AppButton>
         <AppButton disabled block data-testid="signing-mock-apply-disabled">发起签约 · 未开放</AppButton>
       </view>
+      <view class="signing-review-section app-surface" data-testid="signing-mock-local-checkpoint">
+        <text class="signing-review-section-title">独立样本关系核对</text>
+        <text class="signing-review-help">仅当选中的订单 B 与待签合同 ID 双向一致，且样本读取正常时，可记录本机核对。不会签约、生成订单或推进真实 Workflow。</text>
+        <AppButton block variant="secondary" data-testid="signing-mock-confirm-relation"
+          :disabled="!canConfirmRelation" @tap="confirmRelation">完成身份关系核对 · 本机</AppButton>
+        <text v-if="reviewFeedback" class="signing-review-help" data-testid="signing-mock-review-feedback">{{ reviewFeedback }}</text>
+      </view>
     </template>
 
     <template #actions>
@@ -106,11 +113,13 @@ import {
   readSigningMock, signingMockOrderIds, signingMockScenarios, signingMockStateLabel,
   type SigningMockScenario,
 } from '@app/signing-mock-review'
+import { confirmMockCommercialCheckpoint, readMockCommercialProgress } from '@app/mock-commercial-journey'
 
 const session = useSessionStore()
 const routeId = ref('')
 const selectedOrderId = ref(signingMockOrderIds[0])
 const scenario = ref<SigningMockScenario>('normal')
+const reviewFeedback = ref('')
 const shown = ref(0)
 onLoad((options) => {
   routeId.value = typeof options?.id === 'string' ? options.id : ''
@@ -127,11 +136,26 @@ const view = computed(() => {
   })
 })
 const authorized = computed(() => session.status === 'authenticated' && view.value.kind !== 'blocked')
+const commercialScope = computed(() => ({ workOrderId: routeId.value,
+  userId: session.session?.user.id, roleId: session.session?.currentRole?.id }))
+const canConfirmRelation = computed(() => view.value.kind === 'ready'
+  && scenario.value === 'normal' && view.value.contract !== null
+  && view.value.contract.orderId === view.value.selectedOrder.id
+  && view.value.contract.workOrderId === routeId.value)
+function confirmRelation(): void {
+  if (!canConfirmRelation.value) return
+  const ok = confirmMockCommercialCheckpoint(commercialScope.value, 'order_contract_review')
+  const previous = readMockCommercialProgress(commercialScope.value)
+  reviewFeedback.value = ok ? '订单与合同身份已核对，本机演示资料闭环完成；后台工单与签约状态未变化。'
+    : previous.paused ? '本机核对已暂停，返回报价页恢复后再试。'
+      : '请先在报价页完成报价入口和 SKU 核对。'
+}
 function chooseOrder(orderId: string): void {
   // A forged route/unknown id never gets promoted into a real order read.
   if (!signingMockOrderIds.includes(orderId) || !authorized.value) return
   selectedOrderId.value = orderId
   scenario.value = 'normal'
+  reviewFeedback.value = ''
 }
 </script>
 

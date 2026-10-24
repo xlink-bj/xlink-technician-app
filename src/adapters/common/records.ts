@@ -78,6 +78,21 @@ export function optionalNonNegativeInteger(
   return undefined
 }
 
+/** R1 lifecycle enums may include meaningful negative values (for example,
+ * Order state=-1 and processState=-1/-2). Missing/null/blank is not zero. */
+export function optionalSignedInteger(
+  record: AdapterRecord,
+  keys: readonly string[],
+): number | undefined {
+  for (const key of keys) {
+    const value = record[key]
+    if (typeof value !== 'number' && (typeof value !== 'string' || !value.trim())) continue
+    const parsed = typeof value === 'number' ? value : Number(value)
+    if (Number.isSafeInteger(parsed)) return parsed
+  }
+  return undefined
+}
+
 export function requiredString(record: AdapterRecord, keys: readonly string[], label: string): string {
   const value = firstString(record, keys)
   if (!value) throw new AdapterMappingError(`${label} is missing`)

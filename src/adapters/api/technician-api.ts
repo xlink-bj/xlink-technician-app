@@ -537,7 +537,7 @@ function workOrderDetail(
   const serviceAddress = optionalString(record, ['address'])
   const distanceText = displayDistance(record)
   const contact = includeContact ? workOrderContact(record) : undefined
-  const workflowNodes = rawWorkflowNodes?.map(workflowNode)
+  const workflowNodes = rawWorkflowNodes?.map((node) => workflowNode(node))
   if (workflowNodes) {
     assertUniqueRuntimeNodeIds(workflowNodes, 'Work Order detail')
     if (workflowRunId) {
@@ -733,7 +733,7 @@ function workflowNodeReadOnlyFieldIds(record: AdapterRecord, nodeDef: AdapterRec
   return ids.length > 0 ? ids : []
 }
 
-function workflowNode(raw: unknown): WorkflowNodeRead {
+function workflowNode(raw: unknown, scope: 'default' | 'child' = 'default'): WorkflowNodeRead {
   const record = asRecord(raw, 'workflow node')
   const nodeDef = nestedRecord(record, ['nodeDef'])
   const id = requiredOpaqueId<'WorkflowNodeRuntimeId'>(record, ['id', '_id', 'workflowNodeId'], 'workflow node id')
@@ -750,6 +750,15 @@ function workflowNode(raw: unknown): WorkflowNodeRead {
   if (declaredFormDefinition) {
     assertMatchingWireIdentity(nodeDef ?? {}, ['formDefId', 'formDefinitionId'], declaredFormDefinition, 'Workflow node form definition')
   }
+  // R1 Production child WorkflowNode records carry formDefId on the runtime
+  // node itself even though their definition snapshots have only type=node
+  // (no forms/repeat nodeType). Keep the reference, not a fabricated action.
+  const runtimeFormDefinition = scope === 'child'
+    ? consistentWireIdentity(record, ['formDefId', 'formDefinitionId'], 'Workflow runtime form definition')
+    : undefined
+  if (runtimeFormDefinition && declaredFormDefinition && runtimeFormDefinition !== declaredFormDefinition) {
+    throw new AdapterMappingError('Workflow runtime and embedded node form definitions disagree')
+  }
   consistentWireIdentity(record, ['runId', 'workflowRunId', 'workflowId'], 'Workflow node run')
   consistentWireIdentity(record, ['parentNodeId', 'parentWorkflowNodeId'], 'Workflow node predecessor')
   const definitionId = optionalOpaqueId<'WorkflowDefinitionId'>(record, ['definitionId', 'defId'])
@@ -760,10 +769,9 @@ function workflowNode(raw: unknown): WorkflowNodeRead {
   ])
   const childWorkflowDefinitionId = optionalOpaqueId<'WorkflowDefinitionId'>(nodeDef ?? {}, ['nodeTypeDef'])
   const displayName = optionalString(nodeDef ?? {}, ['name'])
-  const formDefinitionId = optionalOpaqueId<'FormDefinitionId'>(nodeDef ?? {}, [
-    'formDefId',
-    'formDefinitionId',
-  ])
+  const formDefinitionId = declaredFormDefinition || runtimeFormDefinition
+    ? asOpaqueId<'FormDefinitionId'>((declaredFormDefinition ?? runtimeFormDefinition)!)
+    : undefined
   const formDataId = optionalOpaqueId<'FormDataId'>(record, ['formDataId', 'dataId'])
   const formPurpose =
     verifiedFormPurpose(nodeDef)
@@ -783,6 +791,7 @@ function workflowNode(raw: unknown): WorkflowNodeRead {
   return {
     id,
     category: workflowNodeCategory(nodeDef),
+    nodeTypeEvidence: sourceNodeType ? 'runtime_node_def' : 'unresolved',
     ...(sourceNodeType ? { sourceNodeType } : {}),
     ...(addFormCodeId ? { addFormCodeId } : {}),
     ...(formList ? { formList } : {}),
@@ -790,6 +799,7 @@ function workflowNode(raw: unknown): WorkflowNodeRead {
     visibility,
     ...(displayName ? { displayName } : {}),
     ...(formDefinitionId ? { formDefinitionId } : {}),
+    ...(formDefinitionId ? { formDefinitionIdEvidence: declaredFormDefinition ? 'runtime_node_def' as const : 'runtime_node' as const } : {}),
     ...(formPurpose ? { formPurpose } : {}),
     ...(formFieldIdsReadOnly ? { formFieldIdsReadOnly } : {}),
     ...(formDataId ? { formDataId } : {}),
@@ -1004,6 +1014,17 @@ function formField(raw: unknown, rowIndex: number): FormFieldRead | null {
   const showList = Array.isArray(record.showList)
     ? record.showList.filter((value): value is string | number => typeof value === 'string' || typeof value === 'number')
     : undefined
+  const malformedShowList = record.showList !== undefined
+    && (!Array.isArray(record.showList) || showList?.length !== record.showList.length)
+  // In R1 serviceAppointment.getFields, image is a list of reference pictures,
+  // not a file uploader. Mock-created image controls retain their separate behavior.
+  const presentationOnly = type === 'image' || type === 'title' || type === 'gap'
+  const malformedFrontEndConfig = record.frontEndConfig !== undefined
+    && record.frontEndConfig !== null
+    && record.frontEndConfig !== ''
+    && !config
+  const invalidDetailHide = config?.mpDetailHide !== undefined
+    && typeof config.mpDetailHide !== 'boolean'
   const presentation = fieldPresentation(record, config)
 
   return {
@@ -1018,6 +1039,8 @@ function formField(raw: unknown, rowIndex: number): FormFieldRead | null {
     ...(fixed !== undefined ? { fixed } : {}),
     ...(operationType !== undefined ? { operationType } : {}),
     ...(showList ? { showList } : {}),
+    ...(config?.mpDetailHide === true ? { mobileDetailHidden: true } : {}),
+    ...(presentationOnly ? { presentationOnly: true } : {}),
     ...(multiple ? { multiple } : {}),
     ...(options && options.length > 0 ? { options } : {}),
     ...(conditional.visibility ? { visibility: conditional.visibility } : {}),
@@ -1029,6 +1052,10 @@ function formField(raw: unknown, rowIndex: number): FormFieldRead | null {
         ? { unsupportedReason: conditional.unsupportedReason }
         : malformedOptions
           ? { unsupportedReason: 'Field option metadata is malformed' }
+          : malformedShowList
+            ? { unsupportedReason: 'Mobile field applicability metadata is malformed' }
+            : malformedFrontEndConfig || invalidDetailHide
+              ? { unsupportedReason: 'Field frontend configuration is malformed' }
           : {}),
   }
 }
@@ -1757,7 +1784,7 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
               throw new AdapterMappingError('Child workflow node internal predecessor identities conflict')
             }
             // Never overwrite an internal predecessor with the outer parent.
-            return workflowNode({ ...node, workflowId: workflowRunId })
+            return workflowNode({ ...node, workflowId: workflowRunId }, 'child')
           })
         })
         assertUniqueRuntimeNodeIds(nodes, 'Child workflow response')

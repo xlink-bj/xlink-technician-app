@@ -52,6 +52,8 @@ export function projectR1MaterialSku(input:{readonly spu:unknown;readonly salesF
   for(const raw of input.skuRows){
     const row=obj(raw),id=code(row?._id),parent=code(row?.spuid),attrs=obj(row?.exts)
     if(!row||!id||!parent||!attrs)return blocked('inactive_or_malformed_sku')
+    if((code(row.id)!==null && code(row.id)!==id)
+      || (code(row.spuId)!==null && code(row.spuId)!==parent))return blocked('malformed_source')
     if(parent!==spuId)return blocked('cross_spu_sku')
     if(row.state!==1)return blocked('inactive_or_malformed_sku')
     if(skuIds.has(id))return blocked('duplicate_sku_id')

@@ -1,10 +1,10 @@
 <template>
   <view v-if="parents.length" class="child-forms" data-testid="production-child-form-view">
     <view class="child-forms__header">
-      <text class="child-forms__heading">子流程表单</text>
+      <text class="child-forms__heading">子流程节点</text>
       <text class="child-forms__readonly">仅查看</text>
     </view>
-    <text class="child-forms__hint">仅显示当前工单已核验的子流程节点与表单记录。不会创建、编辑、删除或提交。</text>
+    <text class="child-forms__hint">展示当前工单的子流程节点及已核验的只读引用。节点类型未知时不推断表单动作；不会创建、编辑、删除或提交。</text>
 
     <view v-for="parent in parents" :key="String(parent.id)" class="child-forms__parent">
       <view class="child-forms__parent-main">
@@ -24,14 +24,16 @@
       </text>
       <template v-else-if="state === 'succeeded'">
         <text v-if="!nodes.length" class="child-forms__hint" data-testid="child-form-empty">
-          当前子流程响应中没有可展示的 forms/repeat 表单节点。
+          当前子流程响应没有节点记录。
         </text>
         <view v-for="node in nodes" :key="String(node.id)" class="child-forms__node"
           data-testid="child-form-node">
           <view class="child-forms__node-heading">
-            <text class="child-forms__name">{{ node.displayName || (node.sourceNodeType === 'repeat' ? '重复表单' : '多表单') }}</text>
-            <text class="child-forms__type">{{ node.sourceNodeType === 'repeat' ? '重复记录' : '表单集合' }}</text>
+            <text class="child-forms__name">{{ node.displayName || (node.sourceNodeType === 'repeat' ? '重复表单' : node.sourceNodeType === 'forms' ? '多表单' : '子流程步骤') }}</text>
+            <text class="child-forms__type">{{ node.sourceNodeType === 'repeat' ? '重复记录' : node.sourceNodeType === 'forms' ? '表单集合' : '类型未定义' }}</text>
           </view>
+
+          <text v-if="node.lifecycle === 'inactive'" class="child-forms__notice">该节点已取消，仅供核对历史流程。</text>
 
           <template v-if="node.sourceNodeType === 'forms'">
             <text v-if="!node.formList" class="child-forms__hint">节点尚未提供表单列表；不能据此判断记录数。</text>
@@ -74,6 +76,13 @@
                 <text v-if="repeatByNode[String(node.id)]?.hasMore" class="child-forms__hint">当前只读列表未证实包含全部记录；更多记录尚未读取。</text>
               </template>
             </template>
+          </template>
+          <template v-else>
+            <text v-if="node.formDefinitionId && node.formDefinitionIdEvidence" class="child-forms__hint" data-testid="child-form-generic-reference">
+              已识别关联表单定义的只读身份；具体表单内容尚未读取。
+            </text>
+            <text v-else class="child-forms__hint">该节点未提供可信的表单定义引用。</text>
+            <text class="child-forms__notice" data-testid="child-form-untyped-guard">来源没有 forms/repeat 动作类型，不能据此读取重复记录或启用表单操作。</text>
           </template>
         </view>
       </template>

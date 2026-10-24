@@ -19,6 +19,7 @@ import { parseR1CatalogFilterCodes } from '@shared/quotation-catalog-eligibility
 import { adapterFailure, succeeded, unknownErrorMessage, AdapterMappingError } from '../common/operations'
 import {
   asRecord,
+  assertMatchingWireIdentity,
   nestedValue,
   optionalNonNegativeInteger,
   optionalPositiveInteger,
@@ -180,6 +181,9 @@ function materialSkuVariantItem(raw: unknown, expectedSpuIds: ReadonlySet<string
   const record = asRecord(raw, 'R1 material SKU')
   const id = requiredString(record, ['_id'], 'material SKU identity')
   const spuId = requiredString(record, ['spuid'], 'material SKU parent')
+  // A second nonempty ID/SPU alias is corroboration, not an alternate SKU.
+  assertMatchingWireIdentity(record, ['_id', 'id'], id, 'R1 material SKU')
+  assertMatchingWireIdentity(record, ['spuid', 'spuId'], spuId, 'R1 material SKU parent')
   if (!expectedSpuIds.has(spuId)) throw new AdapterMappingError('material SKU parent does not match the requested SPU')
   if (record.state !== undefined && record.state !== 1 && record.state !== '1') {
     throw new AdapterMappingError('material SKU is not active')

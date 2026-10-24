@@ -296,8 +296,10 @@ export const useWorkOrderDetailStore = defineStore('workOrderDetail', () => {
       childReadError.value = invalid.error ?? null
       return invalid
     }
-    childReadNodes.value = result.data.filter((node) =>
-      node.sourceNodeType === 'forms' || node.sourceNodeType === 'repeat')
+    // R1's real child runs use type=node and have no nodeType; filtering only
+    // forms/repeat erased every legitimate node. Preserve their read-only
+    // identities, including cancelled nodes, but never enable commands.
+    childReadNodes.value = result.data
     childReadState.value = 'succeeded'
     return result
   }

@@ -28,6 +28,8 @@ export function actionFormSchemaFor(
     ...(field.operationType !== undefined ? { operationType: field.operationType } : {}),
     ...(field.presentation ? { presentation: field.presentation as Readonly<Record<string, string | number | boolean>> } : {}),
     ...(field.showList ? { showList: field.showList } : {}),
+    ...(field.mobileDetailHidden ? { mobileDetailHidden: true } : {}),
+    ...(field.presentationOnly ? { presentationOnly: true } : {}),
     ...(field.multiple !== undefined ? { multiple: field.multiple } : {}),
     ...(field.options?.length ? { inlineOptions: field.options } : {}),
     ...(field.visibility ? { visibility: field.visibility } : {}),

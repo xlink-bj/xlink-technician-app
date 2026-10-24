@@ -2,6 +2,8 @@
 
 **Status: OFFLINE WRITE FUNCTIONAL CANDIDATE + SCOPED PRODUCTION READ-ONLY UI CANDIDATE. NOT WRITE-INTEGRATED, NOT ACCEPTED, NOT RELEASED.**
 
+2026-10-24：增加了独立隔离试点网关 `r1-stage1-scoped-gateway.ts`：必须同时满足显式试点许可、非 Production 目标、同一会话角色、已在当前会话列表出现的工单及最新详情/节点可见性；支持子流程父节点再核验，且每笔命令前重新读角色和节点。真实 App 组合根仍未接入，**不存在默认真实写入通道**。修复已知拒绝在收据创建之后才发生的问题：先权限预检，再持久化/按步验证。专项合成测试覆盖跨步骤角色变更、无许可、Production、未知节点、子流程和 repeat 多条 Process。
+
 本变更以 `xlink-app` 固定证据 `6c0a97b26bcbcaee81ac4e1dfd627c6e8e70e29d`
 中 `business/subpackages/serviceAppointment/serviceAppointment.vue` 的
 `saveNodeExts` / `process` / `doProcess` 行为为参照。只在新 App 仓库实现，不修改 R1。
@@ -25,10 +27,24 @@
 固定 R1 源 `serviceAppointment.vue@6c0a97b` 再确认：
 
 1. **一般 FormData 读取**：`6987–7017` 用 `biz/extForm/query/{formDefId}` 按 `is:_id|string#and` 查询并展平 `exts`；只有特定施工验收表单定义 `3285058246984486156` 例外使用 `findByIdWithWorkflow`。本 PR 已加入精确 ID / 唯一结果校验；不采用 R1 某些施工验收情形的 `notFilterBelongTo` 权限绕行。
-2. **forms 删除存在时序差异**：`10347–10375` 原 UI 先发节点 `updateExts` 后发 FormData 状态 -1，且 `saveNodeExts` 在活动状态 `state==0` 可继续调用 `process`。本候选目前采用防重放的 FormData → Exts 两步，**不得以离线成功认定删除等价**；需首试点验证服务端一致性/并发后明确顺序与推进策略。
+2. **forms 删除时序**：`10347–10375` 原 UI 先发节点 `updateExts` 后发 FormData 状态 -1，且 `saveNodeExts` 在活动状态 `state==0` 可继续调用 `process`。后续源顺序修正已将本候选改为 **Exts → FormData**，每步发送前保留防重放收据，并在任何未知结果处停止。**活动节点删除后是否继续 Process 仍待试点核实**，此候选不隐式推进；离线编排通过不等于真实删除等价或事务原子性。
 3. **repeat 勘察特定副作用**：`7313–7328`、`7409–7419` 指定勘察表单保存可触发 `createSurveyPDFUrl` 和 `surveyToolUpsert`。这些不是纯表单保存；未验证其幂等/权限/副作用前，本候选不自动调用。不能用真实勘察记录试写。
 4. **真实执行身份**：`7213–7236` 区分子流程的 `currentNode._id/workflowId` 和主节点的 `activeTab.detail.name._id/workflowId`；`7645–7659` 重复完成使用 `subNode._id` 及其 `formDataList`。需要 #199 明确运行节点和子节点对应关系，禁止父子身份猜测。
 5. **真实字段行为**：`6879–6969` 的字典、级联、Groovy 求值、媒体/多选，及 `7069–7145` 的“保存/提交”与必填验证，尚未获得试点真实字段矩阵。现有本机字段编辑不是完整 R1 表单编辑能力，复杂字段应明确不支持。
+
+### 既有 FormData 更新的完整性门槛
+
+- 已存在的 FormData 不能仅使用 `FormDataRead.values`（可能是脱敏/筛选后的 UI 投影）重建整行 upsert；需要精确 `_id` 对应、身份一致的原始完整记录，以源 JSON 为底保留所有未知字段，仅覆盖经过字段编辑器验证的本次修改值。缺少原始记录或 `sid`、`nodeId`、定义等身份互相冲突时，**在第一笔事务收据/网络发送前拒绝**。
+- forms `exts.formList` 的已有项修改只覆盖已确认的标题/状态/定义等属性，保留未知服务端元数据；源 `Exts` 仍为全量只读快照。这不替代并发版本检查，正式写入前必须读取权威新鲜快照并经过 Owner 特别授权。
+- 本轮改动仍仅存在于 `executeR1Stage1FunctionalCandidate` 的隔离注入式离线编排中，**没有连接 App 的真实命令组合根**。不能据此认定完成真实表单编辑、删除及 Workflow Process。
+
+### 2026-10-24 第二轮：发送前预检与非 Process 回读闭环
+
+- 对 `forms_save`，**在 FormData upsert 之前**先验证全量节点 Exts 可修改、现有记录尚存在且未删除，以及新增不会超过列表上限。原先可能“先建 FormData，后发现 Exts 非法”的路径改为第一笔收据/请求之前拒绝。预检的占位 ID 只用于内存计算，绝不发送。
+- 对 `repeat_batch`，先逐一构建并验证全部行的 FormData 命令；第二行存在保留字段、非有限数字、嵌套对象等不支持字段时，禁止先提交第一行。`repeat_delete` 和仅 Process 的操作也提前检查命令结构。此处字段限制为有界的简单标量；复杂控件值仍需后续精确 R1 契约，不可擅自序列化。
+- 对**不包含 `workflow_process` 的事务**，新增独立回读闭环：forms 保存/编辑须核对同一 FormData 的服务端身份、修改字段及完整 `exts.formList` 状态；forms 删除须看到记录和 Exts 均为删除态；repeat 保存/删除须核对同一 workflowRun 下完整非截断列表中的存在/不存在。事务收据只持久化安全身份（编辑/删除目标 ID），不保存原始字段或业务详情。证据不充分时，收据继续拦截重复写入。
+- 之前只用于工作流推进的 `closeCompletedR1ReceiptAfterReadback` 现在拒绝结清不含 `workflow_process` 的事务。新回读接口必须由后续授权的业务适配器通过**独立新鲜 R1 查询**提供证据；测试注入的记录、单次 HTTP ACK、UI 投影、未分页完列表都不能称为真实验收。
+- 以上仍为 Mock/离线执行候选。没有赋予现有 Production 会话业务写入权限，没有发起现场表单、工作流或数据记录写入。
 
 ## 2026-10-22 Production 只读契约核验与离线修复
 

@@ -9,7 +9,7 @@ const ctx = (extra: Partial<R1SigningIntentContext> = {}): R1SigningIntentContex
   workOrderId, selectedOrderId: orderId,
   currentIdentityVerified: true, currentRoleWorkOrderVerified: true,
   currentNodeHandlerVerified: true,
-  officialOrder: { id: orderId, type: 1, serviceAppointmentId: workOrderId,
+  officialOrder: { id: orderId, type: 1, state: 1, serviceAppointmentId: workOrderId,
     processState: 0, isAgain: 0, hasExts: true },
   contractState: 'succeeded', contracts: [], ...extra,
 })
@@ -47,6 +47,13 @@ describe('I6 source-pinned signing command intent contracts, zero business write
     expect(reviewR1SigningIntent(kind,ctx({officialOrder:{id:orderId,type:1,serviceAppointmentId:workOrderId,processState:4,isAgain:0,hasExts:true}})).assessment).toBe('blocked')
     expect(reviewR1SigningIntent(kind,ctx({officialOrder:{id:orderId,type:1,serviceAppointmentId:workOrderId,processState:0,isAgain:1,hasExts:true}})).assessment).toBe('blocked')
     expect(reviewR1SigningIntent(kind,ctx({contracts:[contract('2')]})).assessment).toBe('blocked')
+  })
+  it.each(['electronic','offline'] as const)('%s never promotes a cancelled Order from basic/order/query into a signing candidate',(kind)=>{
+    const cancelled = { ...ctx().officialOrder!, state: -1, processState: 0 }
+    const result = reviewR1SigningIntent(kind, ctx({ officialOrder: cancelled }))
+    expect(result.assessment).toBe('blocked')
+    expect(result.reasons.join(' ')).toContain('订单生命周期')
+    expect(result.mayDispatch).toBe(false)
   })
   it('R1 -3 resign source conflict is explicitly surfaced, not treated as a safe retry',()=>{
     const result=reviewR1SigningIntent('resign',ctx({

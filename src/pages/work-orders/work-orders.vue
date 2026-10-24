@@ -65,12 +65,14 @@
         <view v-if="isRefreshing" class="inline-refresh" aria-label="正在刷新工单">
           <view class="inline-refresh-indicator" />
         </view>
-        <navigator
+        <view
           v-for="item in workOrders.items"
           :key="String(item.id)"
           class="work-order-card"
-          hover-class="work-order-card-hover"
-          :url="listActionFor(item).detailAccessible ? workOrderDetailRouteFor(item.id) : ''"
+          :hover-class="listActionFor(item).detailAccessible ? 'work-order-card-hover' : 'none'"
+          :role="listActionFor(item).detailAccessible ? 'link' : undefined"
+          :aria-disabled="!listActionFor(item).detailAccessible"
+          @tap="openDetailIfAccessible(item)"
         >
           <AppRecordCard class="work-order-card-surface" layout="horizontal" :tone="workOrderCardToneFor(item.taskLabel)" accent interactive data-testid="ds02b-work-order-card-surface">
           <view class="card-main">
@@ -136,7 +138,7 @@
             </view>
           </view>
           </AppRecordCard>
-        </navigator>
+        </view>
 
         <button v-if="workOrders.hasMore === true" class="state-action load-more" @tap="loadMore">加载更多</button>
       </view>
@@ -274,6 +276,13 @@ function listActionFor(item: WorkOrderSummary) {
   return productionReadOnly
     ? { detailAccessible: action.detailAccessible, contactAvailable: false }
     : action
+}
+
+async function openDetailIfAccessible(item: WorkOrderSummary): Promise<void> {
+  // A non-actionable card must not instantiate a navigator with an empty URL:
+  // MP-WEIXIN reports a runtime error even when the card is never followed.
+  if (!listActionFor(item).detailAccessible) return
+  await workOrders.navigateTo(workOrderDetailRouteFor(item.id))
 }
 
 async function requestAccept(item: WorkOrderSummary): Promise<void> {

@@ -98,9 +98,35 @@
         :tone="workflowProjection.currentTask.tone"
         :disabled="(workflowProjection.currentTask.execution !== 'enabled' && !allowLocalMockPreview)
           || (productionReadOnly && workflowProjection.currentTask.actionIntent !== 'place_order')"
-        note="当前环境只开放读取，不会提交、接单或推进流程"
+        :note="aStageSpecialKind ? '请在下方记录现场情况；仅保存至本机 Mock。' : '当前环境只开放读取，不会提交、接单或推进流程'"
         @action="handleCurrentTaskAction"
       />
+
+      <view v-if="localMockWorkflowStage" class="mock-workflow-track app-surface"
+        data-testid="mock-journey-workflow-state">
+        <view class="mock-workflow-track__top">
+          <text class="mock-workflow-track__heading">本机业务流转</text>
+          <text class="mock-workflow-track__scope">Mock · 未提交后台</text>
+        </view>
+        <view class="mock-workflow-track__steps">
+          <view v-for="(stage,index) in localMockWorkflowSteps" :key="stage.key"
+            class="mock-workflow-track__step"
+            :class="{ 'mock-workflow-track__step--active': stage.key === localMockWorkflowStage }"
+            :data-testid="`mock-stage-${stage.key}`">
+            <text class="mock-workflow-track__number">{{ index + 1 }}</text>
+            <text class="mock-workflow-track__label">{{ stage.label }}</text>
+            <text class="mock-workflow-track__state">{{ stage.state }}</text>
+          </view>
+        </view>
+        <text class="mock-workflow-track__hint">已走过的节点表示本机演示进度，不代表 R1 Workflow 已完成。</text>
+        <view v-if="localMockWorkflowStage === 'quotation'" class="mock-workflow-track__review"
+          data-testid="mock-journey-commercial-summary">
+          <text class="mock-workflow-track__label">报价 / SKU / 订单与合同 · 本机核对</text>
+          <text class="mock-workflow-track__hint">
+            {{ mockCommercialProgress.complete ? '资料核对完成（非业务完成或已签约）' : mockCommercialProgress.paused ? '资料核对已暂停，可从报价入口恢复' : `已核对 ${mockCommercialProgress.confirmed.length}/3 项；未生成正式订单` }}
+          </text>
+        </view>
+      </view>
 
       <!-- Current source-backed forms/repeat node only; Production repeat reads
            a bounded list after an explicit tap and never exposes write actions. -->
@@ -108,8 +134,15 @@
         v-if="productionReadOnly && currentR1FormNode?.sourceNodeType === 'repeat'"
         :node="currentR1FormNode" :read="workOrder.mainRepeatRead"
         @read="loadMainRepeatForms" />
+      <R1SpecialMockTransactionPanel v-else-if="aStageSpecialKind && currentR1FormNode"
+        :key="String(currentR1FormNode.id)" :kind="aStageSpecialKind"
+        :node="currentR1FormNode" :work-order-id="String(detail.id)"
+        @changed="retry" />
       <R1NodeFormsOverview v-else-if="currentR1FormNode" :node="currentR1FormNode"
         :work-order-id="String(detail.id)" :actor-scope="workOrderReadScopeKey(session.session)" />
+      <AppStatus v-if="aStageCompletedSpecialNode" tone="success" quiet
+        message="当前现场表单节点已完成（仅本机 Mock）；完成状态已回读，重新进入也会保留。"
+        data-testid="a-special-complete" />
       <R1ProductionChildFormsPanel
         v-if="productionReadOnly && productionChildParents.length"
         :parents="productionChildParents"
@@ -121,6 +154,10 @@
         @load-child="loadChildForms"
         @load-repeat="loadRepeatForms"
       />
+      <navigator v-if="showChildSubflowMockPreview" class="child-subflow-mock-entry"
+        :url="childSubflowMockReviewUrl()" data-testid="child-subflow-mock-preview-entry">
+        开发验收：查看合成子流程节点（仅 Mock）
+      </navigator>
 
       <AppRecordCard class="information-card">
         <scroll-view class="detail-tabs" scroll-x="true" show-scrollbar="false">
@@ -286,9 +323,11 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
-import { onLoad } from '@dcloudio/uni-app'
+import { onLoad, onShow } from '@dcloudio/uni-app'
 
 import { mockJourneyContext } from '@app/mock-journey'
+import { readMockCommercialProgress } from '@app/mock-commercial-journey'
+import { childSubflowMockReviewUrl, childSubflowMockWorkOrderId, isChildSubflowMockPreviewAvailable } from '@app/child-subflow-mock-review'
 import { hasAuthenticatedSession } from '@features/home/access'
 import { isProductionReadOnlyRuntime } from '@shared/config'
 import { workOrderCardToneFor } from '@features/work-orders/card'
@@ -311,6 +350,8 @@ import AppFeedbackState from '@shared/ui/AppFeedbackState.vue'
 import AppWorkOrderSkeleton from '@shared/ui/AppWorkOrderSkeleton.vue'
 import WorkOrderTaskFocus from '@features/work-orders/WorkOrderTaskFocus.vue'
 import R1NodeFormsOverview from '@features/work-orders/R1NodeFormsOverview.vue'
+import R1SpecialMockTransactionPanel from '@features/work-orders/R1SpecialMockTransactionPanel.vue'
+import { isAStageSpecialMockAvailable, type AStageSpecialKind } from '@app/a-stage-special-mock-ui'
 import R1ProductionChildFormsPanel from '@features/work-orders/R1ProductionChildFormsPanel.vue'
 import R1ProductionMainRepeatPanel from '@features/work-orders/R1ProductionMainRepeatPanel.vue'
 import { appLoadingSkeletonDelayMs } from '@shared/ui/loading'
@@ -335,10 +376,39 @@ const currentR1FormNode = computed(() => {
   if (!task || (task.sourceNodeType !== 'forms' && task.sourceNodeType !== 'repeat')) return undefined
   return detail.value?.workflowNodes?.find(node => node.id === task.nodeId)
 })
+const aStageSpecialKind = computed<AStageSpecialKind | null>(() => {
+  const source = currentR1FormNode.value?.sourceNodeType
+  if (source !== 'forms' && source !== 'repeat' || productionReadOnly) return null
+  const current = session.session
+  const actor = current?.user.id && current.currentRole?.id && current.sessionRef
+    ? { userId: String(current.user.id), roleId: String(current.currentRole.id),
+        identity: JSON.stringify([current.sessionRef, current.user.id,
+          current.currentRole.id, current.roleVersion ?? null]) } : null
+  return isAStageSpecialMockAvailable(source, String(detail.value?.id ?? ''), actor)
+    ? source : null
+})
+const aStageCompletedSpecialNode = computed(() => {
+  if (productionReadOnly) return null
+  const current = session.session
+  const actor = current?.user.id && current.currentRole?.id && current.sessionRef
+    ? { userId: String(current.user.id), roleId: String(current.currentRole.id),
+        identity: JSON.stringify([current.sessionRef, current.user.id,
+          current.currentRole.id, current.roleVersion ?? null]) } : null
+  return detail.value?.workflowNodes?.find(node =>
+    (node.sourceNodeType === 'forms' || node.sourceNodeType === 'repeat')
+      && node.lifecycle === 'closed'
+      && isAStageSpecialMockAvailable(node.sourceNodeType,
+        String(detail.value?.id ?? ''), actor)) ?? null
+})
 const productionChildParents = computed(() => (productionReadOnly
   ? detail.value?.workflowNodes?.filter((node) => node.category === 'subworkflow'
     && ['subflows', 'subflow', 'subworkflow'].includes(node.sourceNodeType ?? '')) ?? []
   : []))
+const showChildSubflowMockPreview = computed(() => !productionReadOnly
+  && isChildSubflowMockPreviewAvailable()
+  && String(detail.value?.id ?? '') === childSubflowMockWorkOrderId
+  && session.session?.user.id === 'synthetic-user'
+  && session.session?.currentRole?.id === 'synthetic-role')
 const allowLocalMockPreview = computed(() => {
   const stage = mockJourneyContext(String(detail.value?.id ?? ''))
   const task = workflowProjection.value.currentTask
@@ -348,6 +418,27 @@ const allowLocalMockPreview = computed(() => {
     && task?.actionIntent === 'interact_with_form'
     && task?.sourceNodeType === 'forms'
     && task?.execution === 'disabled_read_only'
+})
+const localMockWorkflowStage = computed(() => !productionReadOnly
+  && session.status === 'authenticated'
+  && session.session?.user.id === 'synthetic-user'
+  && session.session?.currentRole?.id === 'synthetic-role'
+  ? mockJourneyContext(String(detail.value?.id ?? ''))?.stage ?? null : null)
+const mockReviewRevision = ref(0)
+onShow(() => { mockReviewRevision.value += 1 })
+const mockCommercialProgress = computed(() => {
+  void mockReviewRevision.value
+  return readMockCommercialProgress({ workOrderId: String(detail.value?.id ?? ''),
+    userId: session.session?.user.id, roleId: session.session?.currentRole?.id })
+})
+const localMockWorkflowSteps = computed(() => {
+  const keys = [
+    {key:'appointment',label:'预约'}, {key:'survey',label:'勘查'}, {key:'quotation',label:'报价'},
+  ] as const
+  const stageIndex = keys.findIndex((item) => item.key === localMockWorkflowStage.value)
+  return keys.map((item,index) => ({...item,
+    state: stageIndex === index ? '当前模拟节点' : stageIndex > index ? '本机已走过' : '尚未开始',
+  }))
 })
 const preAcceptBlocked = computed(() => Boolean(
   detail.value?.workflowNodes?.some((node) => node.category === 'accept' && node.lifecycle === 'active'),
@@ -546,6 +637,20 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
 }
 
 .production-read-only-notice { display: block; margin-top: 16rpx; }
+.child-subflow-mock-entry { background: var(--app-color-primary-soft); border: 1rpx dashed var(--app-color-primary-border); border-radius: var(--app-radius-control); color: var(--app-color-primary); display: block; font-size: var(--app-font-body); font-weight: 650; line-height: 1.5; margin-top: 20rpx; padding: 20rpx 24rpx; text-align: center; }
+.mock-workflow-track { margin-top: 16rpx; padding: 20rpx 24rpx; }
+.mock-workflow-track__top { display: flex; justify-content: space-between; align-items: baseline; gap: 12rpx; margin-bottom: 16rpx; }
+.mock-workflow-track__heading { color: var(--app-color-text-primary); font-size: var(--app-font-section-title); font-weight: 650; }
+.mock-workflow-track__scope,.mock-workflow-track__hint { color: var(--app-color-text-secondary); font-size: var(--app-font-status); line-height: 1.5; }
+.mock-workflow-track__steps { display: flex; gap: 10rpx; }
+.mock-workflow-track__step { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6rpx;
+  border-top: 3rpx solid var(--app-color-border); padding-top: 10rpx; }
+.mock-workflow-track__step--active { border-color: var(--app-color-primary); }
+.mock-workflow-track__number { color: var(--app-color-text-secondary); font-size: var(--app-font-status); }
+.mock-workflow-track__label { color: var(--app-color-text-primary); font-weight: 600; font-size: var(--app-font-body); }
+.mock-workflow-track__state { color: var(--app-color-text-secondary); font-size: var(--app-font-meta); }
+.mock-workflow-track__hint { display: block; margin-top: 12rpx; }
+.mock-workflow-track__review { border-top: 1rpx solid var(--app-color-divider); margin-top: 16rpx; padding-top: 16rpx; display: flex; flex-direction: column; gap: 6rpx; }
 
 .detail-content,
 .detail-state,

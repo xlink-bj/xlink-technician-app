@@ -49,7 +49,7 @@ describe('R1 Stage 1 source-backed offline choreography',()=>{
       formList:[{_id:'server-1',formDefId:'form-def-1',formTitle:'勘察表',state:1}]})
     expect(called[2]?.body).toMatchObject({nodeFormDefId:'',nodeFormDataId:''})
     expect([...map.values()][0]).not.toHaveProperty('customerNote')
-    expect(command.revalidate).toHaveBeenCalledTimes(3)
+    expect(command.revalidate).toHaveBeenCalledTimes(4)
   })
   it('forms save does not Process on inactive node',async()=>{
     const {storage}=store(),{command,called}=gateway()
@@ -59,17 +59,126 @@ describe('R1 Stage 1 source-backed offline choreography',()=>{
     },command)).state).toBe('succeeded')
     expect(called.map(x=>x.path)).toEqual(['biz/extForm/upsert/form-def-1','workflowNode/updateExts/runtime-1'])
   })
-  it('forms delete updates source state=-1 and JSON EXTS without Process',async()=>{
+  it('forms delete updates JSON EXTS before FormData soft-delete (R1 source order), without implicit Process',async()=>{
     const {storage}=store(),{command,called}=gateway()
     const result=await executeR1Stage1FunctionalCandidate(storage,{
       kind:'forms_delete',sourceNodeType:'forms',scope:forms,existingFormDataId:'server-existing',
-      sourceFormData:{title:'existing'},authoritativeExts:{formList:[{_id:'server-existing',state:1}],foreign:'untouched'},
+      sourceFormData:{_id:'server-existing',title:'existing',foreignFormField:{nested:'keep'}},
+      authoritativeExts:{formList:[{_id:'server-existing',state:1}],foreign:'untouched'},
     },command)
-    expect(result.state).toBe('succeeded')
+    expect(result.state, JSON.stringify(result)).toBe('succeeded')
     expect(called).toHaveLength(2)
-    expect(JSON.parse(String(called[0]?.body?.dataStr))).toMatchObject({_id:'server-existing',state:-1,
+    expect(called.map(x=>x.path)).toEqual(['workflowNode/updateExts/runtime-1','biz/extForm/upsert/form-def-1'])
+    expect(called[0]?.jsonBody).toMatchObject({foreign:'untouched',formList:[{_id:'server-existing',state:-1}]})
+    expect(JSON.parse(String(called[1]?.body?.dataStr))).toMatchObject({_id:'server-existing',state:-1,
+      foreignFormField:{nested:'keep'},
       sid:'work-order-1',nodeId:'runtime-1'})
-    expect(called[1]?.jsonBody).toMatchObject({foreign:'untouched',formList:[{_id:'server-existing',state:-1}]})
+  })
+  it('edits an existing R1 FormData using a full authoritative snapshot, retaining untouched fields',async()=>{
+    const {storage}=store(),{command,called}=gateway()
+    const result=await executeR1Stage1FunctionalCandidate(storage,{
+      kind:'forms_save',sourceNodeType:'forms',scope:forms,
+      fields:{note:'new'},title:'修改已有表单',processActive:false,
+      existingFormDataId:'server-existing',
+      authoritativeOriginal:{_id:'server-existing',sid:'work-order-1',nodeId:'runtime-1',
+        formDefId:'form-def-1',note:'old',hiddenValue:{config:['preserve']},serverState:'kept'},
+      authoritativeExts:{formList:[{_id:'server-existing',formTitle:'旧标题',state:1,custom:'EXTS-keep'}]},
+    },command)
+    expect(result.state, JSON.stringify(result)).toBe('succeeded')
+    expect(called).toHaveLength(2)
+    expect(JSON.parse(String(called[0]?.body?.dataStr))).toMatchObject({
+      _id:'server-existing',note:'new',hiddenValue:{config:['preserve']},serverState:'kept',state:1,
+    })
+    expect(called[1]?.jsonBody).toMatchObject({formList:[{
+      _id:'server-existing',formTitle:'修改已有表单',custom:'EXTS-keep',state:1,
+    }]})
+  })
+  it('fails before any dispatch or receipt when an existing source row is incomplete or mismatched',async()=>{
+    for(const original of [undefined,{_id:'other-record'},
+      {_id:'server-existing',sid:'other-workorder'},
+      {_id:'server-existing',formDefId:'other-definition'},
+      {_id:'server-existing',state:-1}]){
+      const {storage}=store(),{command}=gateway()
+      const result=await executeR1Stage1FunctionalCandidate(storage,{
+        kind:'forms_save',sourceNodeType:'forms',scope:forms,
+        fields:{note:'replacement'},title:'旧记录',processActive:false,
+        existingFormDataId:'server-existing',
+        ...(original?{authoritativeOriginal:original}:{}),
+        authoritativeExts:{formList:[{_id:'server-existing',state:1}]},
+      },command)
+      expect(result.state).toBe('failed_terminal')
+      expect(command.dispatch).not.toHaveBeenCalled()
+      expect(storage.write).not.toHaveBeenCalled()
+    }
+  })
+  it('preflights the full EXTS list before creating any new FormData',async()=>{
+    for(const authoritativeExts of [
+      {},{formList:'unavailable'},
+      {formList:[{_id:'duplicate'},{_id:'duplicate'}]},
+      {formList:Array.from({length:100},(_,i)=>({_id:`occupied-${i}`}))},
+    ]){
+      const {storage}=store(),{command}=gateway()
+      const result=await executeR1Stage1FunctionalCandidate(storage,{
+        kind:'forms_save',sourceNodeType:'forms',scope:forms,fields:{note:'new'},
+        title:'新表单',authoritativeExts,processActive:true,
+      },command)
+      expect(result.state).toBe('failed_terminal')
+      expect(command.dispatch).not.toHaveBeenCalled()
+      expect(storage.write).not.toHaveBeenCalled()
+    }
+  })
+  it('never silently appends an edit absent or deleted in authoritative EXTS',async()=>{
+    for(const authoritativeExts of [
+      {formList:[]},{formList:[{_id:'server-existing',state:-1}]},
+    ]){
+      const {storage}=store(),{command}=gateway()
+      const result=await executeR1Stage1FunctionalCandidate(storage,{
+        kind:'forms_save',sourceNodeType:'forms',scope:forms,
+        fields:{note:'replace'},title:'编辑',processActive:false,
+        existingFormDataId:'server-existing',
+        authoritativeOriginal:{_id:'server-existing',note:'old'},authoritativeExts,
+      },command)
+      expect(result.state).toBe('failed_terminal')
+      expect(command.dispatch).not.toHaveBeenCalled()
+      expect(storage.write).not.toHaveBeenCalled()
+    }
+  })
+  it('validates every row in repeat batch before first network or receipt',async()=>{
+    const {storage}=store(),{command}=gateway()
+    const result=await executeR1Stage1FunctionalCandidate(storage,{
+      kind:'repeat_batch',sourceNodeType:'repeat',scope:repeat,
+      forms:[{note:'valid'},
+        {note:'bad',state:9} as unknown as Readonly<Record<string,string|number|boolean>>],
+    },command)
+    expect(result.state).toBe('failed_terminal')
+    expect(command.dispatch).not.toHaveBeenCalled()
+    expect(storage.write).not.toHaveBeenCalled()
+  })
+  it('refuses lossy primitive conversion or unbounded fields before any mutation',async()=>{
+    for(const fields of [
+      {note:Number.NaN},{note:Infinity},{note:{nested:'unsupported'}},
+      {note:'x'.repeat(4001)},
+    ]){
+      const {storage}=store(),{command}=gateway()
+      const result=await executeR1Stage1FunctionalCandidate(storage,{
+        kind:'repeat_save',sourceNodeType:'repeat',scope:repeat,
+        fields:fields as unknown as Readonly<Record<string,string|number|boolean>>,
+      },command)
+      expect(result.state).toBe('failed_terminal')
+      expect(command.dispatch).not.toHaveBeenCalled()
+      expect(storage.write).not.toHaveBeenCalled()
+    }
+  })
+  it('refuses invalid source data before the first EXTS delete write',async()=>{
+    const {storage}=store(),{command}=gateway()
+    const result=await executeR1Stage1FunctionalCandidate(storage,{
+      kind:'forms_delete',sourceNodeType:'forms',scope:forms,existingFormDataId:'server-existing',
+      sourceFormData:{_id:'server-existing',sid:'other-order'},
+      authoritativeExts:{formList:[{_id:'server-existing',state:1}]},
+    },command)
+    expect(result.state).toBe('failed_terminal')
+    expect(command.dispatch).not.toHaveBeenCalled()
+    expect(storage.write).not.toHaveBeenCalled()
   })
   it('forms finalize needs server ids and sends definition with blank data ID',async()=>{
     const {storage}=store(),{command,called}=gateway()

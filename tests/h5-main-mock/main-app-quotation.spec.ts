@@ -441,7 +441,7 @@ test('one MOCK-019 WorkOrder progresses Appointment → Survey → Quotation wit
   await expect(page).toHaveURL(/mock-work-order-019-continuous-journey/)
   await expect(page.locator('.uni-page-head__title')).toContainText('预约上门')
   await expect(page.getByTestId('app-action-content-heading')).toContainText('预约信息')
-  await expect(page.getByTestId('mock-journey-progress')).toContainText('不提交业务表单或订单')
+  await expect(page.getByTestId('mock-journey-progress')).toContainText('数据只保存在本机，不写入真实业务后台')
   await page.locator('.action-content-field--note textarea').fill('P1B预约备注：现场先确认屋面渗漏')
   await info.attach('019-appointment', { body: await page.screenshot({ fullPage: true }), contentType: 'image/png' })
 

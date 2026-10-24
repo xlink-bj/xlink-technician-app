@@ -22,7 +22,9 @@ export default defineConfig({
     ['html', { outputFolder: 'test-results/main-h5-mock/html', open: 'never' }],
   ],
   webServer: {
-    command: 'pnpm run dev:h5',
+    // Use the already installed workspace executable. Invoking pnpm can
+    // unexpectedly reinstall dependencies during a browser verification run.
+    command: './node_modules/.bin/uni -p h5',
     url: baseURL,
     timeout: 120_000,
     reuseExistingServer: false,

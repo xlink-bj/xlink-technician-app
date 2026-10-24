@@ -21,11 +21,20 @@
     :customer-name="workspace.detail?.customerName"
     :local-draft-group-count="quotationComposition.groups.length"
     :read-only="productionReadOnly"
+    :dev-mock-order="aStageMockOrderEnabled"
+    :dev-mock-order-read="mockOrderRead"
     :dev-visual-sample="devQuotationOrderPreview"
     @create="openQuotationEditor"
     @edit="openExistingQuotationEditor"
     @mode-change="quotationChoiceVisible = $event"
-  />
+    @mock-read-retry="loadMockOrderRead"
+  >
+    <template #after-content>
+      <MockCommercialFlowLinks v-if="mockJourney?.stage === 'quotation'"
+        :work-order-id="String(routeId ?? '')" :user-id="String(session.session?.user.id ?? '')"
+        :role-id="String(session.session?.currentRole?.id ?? '')" />
+    </template>
+  </QuotationOrderHub>
 
   <QuotationActionWorkspace
     v-else-if="workspace.descriptor?.contentKind === 'quotation' && workspace.descriptor.actionIntent === 'place_order'"
@@ -49,15 +58,10 @@
       />
     </template>
     <template #after-content>
-      <navigator
-        v-if="mockJourney?.stage === 'quotation' && isSigningMockReviewAvailable()"
-        class="mock-signing-entry app-surface"
-        :url="signingMockReviewUrl()"
-        data-testid="mock-journey-signing-review"
-      >
-        <text class="mock-signing-entry__title">下一步预览 · 签约 Mock</text>
-        <text class="mock-signing-entry__note">独立合成的正式订单与合同样本；当前本机报价未提交，也没有生成可签约的订单。</text>
-      </navigator>
+      <AStageMockQuoteOrderPanel v-if="aStageMockOrderEnabled" />
+      <MockCommercialFlowLinks v-if="mockJourney?.stage === 'quotation'"
+        :work-order-id="String(routeId ?? '')" :user-id="String(session.session?.user.id ?? '')"
+        :role-id="String(session.session?.currentRole?.id ?? '')" />
     </template>
   </QuotationActionWorkspace>
 
@@ -182,14 +186,21 @@
     <MockJourneyContextPanel v-if="localJourneyContext && workspace.descriptor.formPurpose === 'survey'"
       :context="localJourneyContext" compact />
 
-    <!-- DEV-only synthetic state progression. This is NOT Workflow Complete.
+    <!-- DEV-only synthetic FormData/Process/readback; never a real Workflow write.
          The same 019 WorkOrderId is used by all three normal App pages. -->
     <view
       v-if="mockJourney && mockJourney.stage !== 'quotation'"
       class="mock-journey-progress app-surface"
       data-testid="mock-journey-progress"
     >
-      <text class="mock-journey-progress__note">仅本地演示：下一步只切换模拟流程节点，不提交业务表单或订单。</text>
+      <text class="mock-journey-progress__note">仅 Mock 演示：会模拟提交表单并推进流程，数据只保存在本机，不写入真实业务后台。</text>
+      <text class="mock-journey-progress__note" data-testid="mock-journey-save-state">
+        {{ workspace.draftStatus === 'saved_local' || workspace.draftStatus === 'restore_available'
+          ? '本机字段记录已保存，可核对后进入模拟下一节点'
+          : '请先填写至少一项有效信息；进入下一节点前会核对本机保存记录' }}
+      </text>
+      <text v-if="journeyFeedback" class="mock-journey-progress__error" role="alert"
+        data-testid="mock-journey-feedback">{{ journeyFeedback }}</text>
       <AppButton
         block
         variant="secondary"
@@ -247,10 +258,13 @@ import { isBusinessMockQuotationPreview } from '@app/business-mock'
 import { compareQuoteWithStandaloneSkuDemo, compareQuoteWithSameCatalogSyntheticSku } from '@app/quotation-sku-identity-evidence'
 import { reviewP1SyntheticSkuReadiness } from '@app/p1-sku-readiness-review'
 import { setActionWorkspacePageTitle } from '@app/action-page-title'
-import { advanceMockJourneyContext, mockJourneyContext } from '@app/mock-journey'
+import { mockJourneyContext } from '@app/mock-journey'
+import { readAStageMockOrderForActor, isAStageMockOrderEnabled } from '@app/a-stage-quotation-mock-ui'
+import { advanceMockJourneyWithSavedDraft } from '@app/mock-journey-closure'
 import { readMockJourneyContext, type MockJourneyContextSummary } from '@app/mock-journey-context'
 import { canAdoptMockSurveySuggestion } from '@app/mock-journey-quote-suggestion'
-import { isSigningMockReviewAvailable, signingMockReviewUrl } from '@app/signing-mock-review'
+import MockCommercialFlowLinks from '@features/work-orders/quotation/MockCommercialFlowLinks.vue'
+import AStageMockQuoteOrderPanel from '@features/work-orders/quotation/AStageMockQuoteOrderPanel.vue'
 import { hasAuthenticatedSession } from '@features/home/access'
 import { isProductionReadOnlyRuntime } from '@shared/config'
 import {
@@ -281,6 +295,7 @@ import AppSelector from '@shared/ui/AppSelector.vue'
 import AppTextarea from '@shared/ui/AppTextarea.vue'
 import type { AppChoiceOption } from '@shared/ui/types'
 import type { OperationError } from '@shared/types'
+import type { QuotationOrderBrowseItem } from '@shared/ports'
 
 const session = useSessionStore()
 const workspace = useActionWorkspaceStore()
@@ -329,6 +344,7 @@ const routeError = ref('')
 const isNavigating = ref(false)
 const localJourneyContext = ref<MockJourneyContextSummary | null>(null)
 const suggestionFeedback = ref('')
+const journeyFeedback = ref('')
 let journeyContextRequest = 0
 
 const canAccess = computed(() => hasAuthenticatedSession(session.status, session.session))
@@ -337,6 +353,31 @@ const appointmentDisplay = computed(() => appointmentDisplayFor(workspace.appoin
 const isMockQuotationPreview = computed(() =>
   isBusinessMockQuotationPreview(workspace.descriptor?.workOrderId),
 )
+const aStageMockOrderEnabled = computed(() => !productionReadOnly && isAStageMockOrderEnabled({
+  workOrderId: String(workspace.descriptor?.workOrderId ?? ''),
+  userId: String(session.session?.user.id ?? ''),
+  roleId: String(session.session?.currentRole?.id ?? ''),
+}))
+const mockOrderRead = ref<{ readonly state: 'loading' | 'confirmed' | 'unavailable' | 'blocked';
+  readonly order?: QuotationOrderBrowseItem }>({ state: 'loading' })
+let mockOrderReadRevision = 0
+async function loadMockOrderRead(): Promise<void> {
+  const ticket = ++mockOrderReadRevision
+  mockOrderRead.value = { state: 'loading' }
+  if (!aStageMockOrderEnabled.value || !quotationHubVisible.value) return
+  const result = await readAStageMockOrderForActor(() => {
+      const current = session.session
+      return current?.user.id && current.currentRole?.id && current.sessionRef
+        ? { userId: String(current.user.id), roleId: String(current.currentRole.id),
+            identity: JSON.stringify([current.sessionRef, current.user.id,
+              current.currentRole.id, current.roleVersion ?? null]) } : null
+    })
+  if (ticket === mockOrderReadRevision && aStageMockOrderEnabled.value
+    && quotationHubVisible.value) mockOrderRead.value = result
+}
+watch(() => [aStageMockOrderEnabled.value, quotationHubVisible.value,
+  session.session?.sessionRef, session.session?.currentRole?.id,
+  session.session?.roleVersion] as const, () => { void loadMockOrderRead() }, { immediate: true })
 const feedback = computed(() => actionErrorCopy(workspace.error))
 const mockJourney = computed(() => mockJourneyContext(routeId.value))
 const canAdoptSurveySuggestion = computed(() =>
@@ -452,6 +493,7 @@ onLoad((options) => {
 
 onUnload(() => {
   routeReady.value = false
+  mockOrderReadRevision += 1
   journeyContextRequest += 1
   localJourneyContext.value = null
   void workspace.flushDraft()
@@ -474,17 +516,28 @@ async function exit(): Promise<void> {
 async function advanceJourney(): Promise<void> {
   const context = mockJourney.value
   if (!context || context.stage === 'quotation' || isNavigating.value) return
+  const stage = context.stage
   isNavigating.value = true
-  // Preserve what the technician typed as a local Action draft; do not issue
-  // ExtForm upsert, Workflow Complete, upload, or official Order commands.
+  journeyFeedback.value = ''
+  // Preserve the Action draft first. The DEV Mock handoff performs synthetic
+  // FormData → Workflow commands with exact readback; never a real write.
   const saved = await workspace.flushDraft()
   if (saved.state !== 'succeeded') {
-    routeError.value = 'draft-save-failed'
+    journeyFeedback.value = '本机记录保存失败，当前节点未改变。请重试。'
     isNavigating.value = false
     return
   }
-  if (!advanceMockJourneyContext(context.stage)) {
-    routeError.value = 'mock-stage-save-failed'
+  const next = await advanceMockJourneyWithSavedDraft(stage,
+    (identity) => workspace.readSiblingActionDraft(identity),
+    () => workspace.isCurrentMockJourneyScope(stage))
+  if (next.state !== 'advanced') {
+    journeyFeedback.value = next.reason === 'missing_draft'
+      ? '尚无可核对的本机表单记录。请填写内容并保存后继续。'
+      : next.reason === 'read_failed'
+        ? '本机记录读取失败，节点未改变。请重试。'
+        : next.reason === 'protocol_failed'
+          ? '模拟表单或流程校验未通过。未提交真实后台，请刷新检查当前节点。'
+        : '身份或本机阶段发生变化，无法继续；节点未改变。'
     isNavigating.value = false
     return
   }
@@ -616,9 +669,7 @@ function actionErrorCopy(error: OperationError | null): string {
 .action-success-detail { margin-bottom: var(--app-space-xs); }
 .quotation-readonly-note { color: var(--app-color-text-secondary); display: block; font-size: var(--app-font-meta); padding: var(--app-space-md) 0; text-align: center; }
 
-.mock-signing-entry { display: flex; flex-direction: column; gap: 8rpx; margin-bottom: 14rpx; padding: 18rpx 20rpx; }
-.mock-signing-entry__title { color: var(--app-color-primary); font-size: 24rpx; font-weight: 700; }
-.mock-signing-entry__note { color: var(--app-color-text-secondary); font-size: 21rpx; line-height: 1.45; }
 .mock-journey-progress { margin: 20rpx 24rpx; padding: 20rpx; display: flex; flex-direction: column; gap: 12rpx; }
 .mock-journey-progress__note { color: var(--app-color-text-secondary); font-size: 22rpx; line-height: 1.5; }
+.mock-journey-progress__error { color: var(--app-color-danger); font-size: 24rpx; line-height: 1.5; }
 </style>

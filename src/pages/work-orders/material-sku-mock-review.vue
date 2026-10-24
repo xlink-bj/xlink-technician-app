@@ -169,6 +169,11 @@
     </view>
     </template>
     <template #actions>
+      <view v-if="canConfirmSku" class="sku-review-local-checkpoint" data-testid="sku-mock-review-ready">
+        <text>仅记录已核对唯一 SKU。不会创建报价项目或订单。</text>
+        <AppButton block variant="secondary" data-testid="sku-mock-confirm-review" @tap="confirmSkuReview">完成 SKU 核对 · 本机</AppButton>
+      </view>
+      <text v-if="reviewFeedback" class="sku-review-footer" data-testid="sku-mock-review-feedback">{{ reviewFeedback }}</text>
       <text class="sku-review-footer" data-testid="sku-mock-footer">DEV Mock 仅读 · 不支持提交或修改数量</text>
       <navigator class="sku-review-back" open-type="navigateBack" :delta="1">返回开发演示</navigator>
     </template>
@@ -189,6 +194,7 @@ import {
   type MaterialSkuReviewScenario, packageSkuMockScenarios,
   type PackageSkuMockScenario,
 } from '@app/material-sku-mock-review'
+import { confirmMockCommercialCheckpoint, readMockCommercialProgress } from '@app/mock-commercial-journey'
 
 const session = useSessionStore()
 const routeId = ref('')
@@ -207,6 +213,11 @@ const authorized = computed(() =>
     userId: session.session?.user.id,
     roleId: session.session?.currentRole?.id,
   }))
+const reviewFeedback = ref('')
+const commercialScope = computed(() => ({
+  workOrderId: routeId.value, userId: session.session?.user.id,
+  roleId: session.session?.currentRole?.id,
+}))
 const read = ref<MaterialSkuRead>({ state: 'blocked', reason: 'malformed_source' })
 const directAdmission = ref<SyntheticReviewAdmission | { readonly status: 'loading' }>({ status: 'loading' })
 const match = computed(() => matchR1MaterialSku(read.value, selected.value))
@@ -235,6 +246,19 @@ const packageRead = ref<PackageMaterialSkuRead>({ state: 'blocked', reason: 'inv
 const packageAdmission = ref<SyntheticReviewAdmission | { readonly status: 'loading' }>({ status: 'loading' })
 const currentPackageChoices = computed(() => packageSelections.value[activePackageGroup.value])
 const packageMatch = computed(() => matchR1PackageMaterialSku(packageRead.value, currentPackageChoices.value))
+const canConfirmSku = computed(() => authorized.value && (
+  reviewMode.value === 'direct'
+    ? directAdmission.value.status === 'accepted_synthetic' && match.value.state === 'matched'
+    : packageAdmission.value.status === 'accepted_synthetic' && packageMatch.value.state === 'ready'
+))
+function confirmSkuReview(): void {
+  if (!canConfirmSku.value) return
+  const ok = confirmMockCommercialCheckpoint(commercialScope.value, 'sku_review')
+  const previous = readMockCommercialProgress(commercialScope.value)
+  reviewFeedback.value = ok ? 'SKU 身份已核对（本机），可继续核对独立订单与合同。'
+    : previous.paused ? '本机核对已暂停，请先返回报价页恢复。'
+      : '请先在报价页确认报价入口，且只能核对一次。'
+}
 function packageCurrentChoice(layer: string): PackageSkuChoice | undefined {
   return currentPackageChoices.value.find((choice) => choice.layer === layer)
 }
@@ -330,6 +354,7 @@ onUnmounted(() => readCoordinator.invalidate())
 .sku-review-actions {display:flex;flex-wrap:wrap;gap:12rpx;}
 .sku-review-actions .app-button {min-height:44px;min-width:90px;}
 .sku-review-footer {display:block;text-align:center;font-size:21rpx;color:var(--app-color-text-secondary);margin-bottom:14rpx;}
+.sku-review-local-checkpoint {display:flex;flex-direction:column;gap:12rpx;color:var(--app-color-text-secondary);margin-bottom:16rpx;}
 .sku-review-back {display:block;text-align:center;padding:20rpx;border:1rpx solid var(--app-color-border);border-radius:16rpx;color:var(--app-color-primary);font-size:26rpx;}
 .sku-review-blocked {min-height:70vh;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:20rpx;padding:32rpx;text-align:center;}
 </style>

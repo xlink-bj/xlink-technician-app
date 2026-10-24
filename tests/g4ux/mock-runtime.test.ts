@@ -537,6 +537,7 @@ describe('G4-UX business mock runtime', () => {
           displayName: '勘察',
           category: 'forms',
           sourceNodeType: 'forms',
+          nodeTypeEvidence: 'runtime_node_def',
           lifecycle: 'active',
           visibility: {
             evidenceState: 'verified',
@@ -802,6 +803,7 @@ describe('G4-UX business mock runtime', () => {
           displayName: '待核验',
           category: 'unsupported',
           sourceNodeType: 'unverified-node-type',
+          nodeTypeEvidence: 'runtime_node_def',
           lifecycle: 'unknown',
           visibility: { evidenceState: 'missing' },
         },
