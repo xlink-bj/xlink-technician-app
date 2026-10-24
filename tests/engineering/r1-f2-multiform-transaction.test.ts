@@ -51,7 +51,7 @@ describe('F2 R1 forms full-fidelity source updateExts planner',()=>{
     })
     expect(plan.body).toEqual({
       unseenFlag:'server-owned',complex:{nested:[1,2]},
-      formList:[{_id:'a',formDefId:'d',formTitle:'new',state:1},
+      formList:[{_id:'a',formDefId:'d',formTitle:'new',state:1,custom:'KEEP'},
         {_id:'b',formDefId:'e',formTitle:'other',state:1}],
     })
     expect(exts.formList[0]?.formTitle).toBe('old')
@@ -70,6 +70,16 @@ describe('F2 R1 forms full-fidelity source updateExts planner',()=>{
     })
     expect(deleted.body.formList).toEqual([{_id:'a',state:-1,custom:'keep'}])
     expect(deleted.body.otherServerKey).toBe(17)
+  })
+  it('never loses unknown metadata while updating an existing forms row',()=>{
+    const original={formList:[{_id:'saved-a',formDefId:'def',formTitle:'旧标题',state:1,
+      serverExtension:{hidden:'must-survive'},metadataOrder:3}],version:'keep'}
+    const updated=planR1FormsUpdateExts({workflowNodeId:'node',sourceNodeType:'forms',
+      authoritativeExts:original,
+      change:{kind:'saved',record:{_id:'saved-a',formDefId:'def',formTitle:'新标题',state:1}}})
+    expect(updated.body.formList).toEqual([{_id:'saved-a',formDefId:'def',formTitle:'新标题',
+      state:1,serverExtension:{hidden:'must-survive'},metadataOrder:3}])
+    expect(original.formList[0]?.formTitle).toBe('旧标题')
   })
   it('blocks redacted lists, duplicate IDs, malformed rows, and deletion of unknown ID',()=>{
     const cases=[

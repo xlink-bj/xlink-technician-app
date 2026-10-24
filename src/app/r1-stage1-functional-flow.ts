@@ -25,14 +25,16 @@ type R1Stage1Intent =
   | (Base & {readonly kind:'forms_save';readonly sourceNodeType:'forms';
       readonly fields:Fields;readonly authoritativeExts:R1JsonObject;
       readonly title:string;readonly processActive:boolean;
+      readonly authoritativeOriginal?:R1JsonObject;
       readonly existingFormDataId?:string})
   | (Base & {readonly kind:'forms_delete';readonly sourceNodeType:'forms';
       readonly existingFormDataId:string;readonly authoritativeExts:R1JsonObject;
-      readonly sourceFormData:Fields})
+      readonly sourceFormData:R1JsonObject})
   | (Base & {readonly kind:'forms_finalize';readonly sourceNodeType:'forms';
       readonly authoritativeSavedIds:readonly string[]})
   | (Base & {readonly kind:'repeat_save';readonly sourceNodeType:'repeat';
-      readonly fields:Fields;readonly existingFormDataId?:string})
+      readonly fields:Fields;readonly existingFormDataId?:string;
+      readonly authoritativeOriginal?:R1JsonObject})
   | (Base & {readonly kind:'repeat_delete';readonly sourceNodeType:'repeat';
       readonly existingFormDataId:string})
   | (Base & {readonly kind:'repeat_batch';readonly sourceNodeType:'repeat';
@@ -93,7 +95,9 @@ export async function executeR1Stage1FunctionalCandidate(
     case 'forms_save':steps=intent.processActive
       ? ['form_upsert','forms_exts_update','workflow_process']
       : ['form_upsert','forms_exts_update'];break
-    case 'forms_delete':steps=['forms_soft_delete','forms_exts_update'];break
+    // R1 first removes the EXTS reference and then soft-deletes FormData.
+    // An unknown outcome at either step is a manual reconciliation fence.
+    case 'forms_delete':steps=['forms_exts_update','forms_soft_delete'];break
     case 'forms_finalize':steps=['workflow_process'];break
     case 'repeat_save':steps=['repeat_form_upsert'];break
     case 'repeat_delete':steps=['repeat_remove'];break
@@ -104,6 +108,32 @@ export async function executeR1Stage1FunctionalCandidate(
   }
   if(['forms_finalize','repeat_finalize'].includes(intent.kind)
     && authoritativeIds.length===0)return failure('Empty R1 form list cannot finalize')
+  // Validate every source-only request that can be built before reserving the
+  // first transaction receipt. Missing full originals must never surface only
+  // after an earlier EXTS write has already reached the backend.
+  try {
+    if(intent.kind==='forms_save'||intent.kind==='repeat_save'){
+      r1SpecialFormUpsert({sourceNodeType:intent.sourceNodeType,
+        definitionId:opaque<FormDefinitionId>(scope.formDefinitionId),
+        formData:intent.fields,workOrderId:opaque<WorkOrderId>(scope.workOrderId),
+        workflowNodeId:opaque<WorkflowNodeRuntimeId>(scope.runtimeNodeId),
+        ...(scope.workflowRunId?{workflowRunId:opaque<WorkflowRunId>(scope.workflowRunId)}:{}),
+        ...(intent.existingFormDataId?{existingFormDataId:opaque<FormDataId>(intent.existingFormDataId)}:{}),
+        ...(intent.authoritativeOriginal?{authoritativeOriginal:intent.authoritativeOriginal}:{}),state:1})
+    }
+    if(intent.kind==='forms_delete'){
+      planR1FormsUpdateExts({workflowNodeId:scope.runtimeNodeId,sourceNodeType:'forms',
+        authoritativeExts:intent.authoritativeExts,
+        change:{kind:'delete',recordId:intent.existingFormDataId}})
+      r1SpecialFormUpsert({sourceNodeType:'forms',
+        definitionId:opaque<FormDefinitionId>(scope.formDefinitionId),
+        formData:{},authoritativeOriginal:intent.sourceFormData,
+        workOrderId:opaque<WorkOrderId>(scope.workOrderId),
+        workflowNodeId:opaque<WorkflowNodeRuntimeId>(scope.runtimeNodeId),
+        ...(scope.workflowRunId?{workflowRunId:opaque<WorkflowRunId>(scope.workflowRunId)}:{}),
+        existingFormDataId:opaque<FormDataId>(intent.existingFormDataId),state:-1})
+    }
+  }catch{return failure('R1 原始记录或命令身份不完整，事务未启动。')}
   return executeR1MultiStepOffline(storage,scope,steps,async({step,stepIndex,savedFormDataIds})=>{
     if(!await gateway.revalidate(scope))
       return {state:'failed_terminal',error:createOperationError('authorization_denied',
@@ -122,6 +152,8 @@ export async function executeR1Stage1FunctionalCandidate(
           formData:fields,workOrderId:opaque<WorkOrderId>(scope.workOrderId),
           workflowNodeId:opaque<WorkflowNodeRuntimeId>(scope.runtimeNodeId),
           ...(scope.workflowRunId?{workflowRunId:opaque<WorkflowRunId>(scope.workflowRunId)}:{}),
+          ...(intent.kind==='forms_save'||intent.kind==='repeat_save'
+            ? intent.authoritativeOriginal?{authoritativeOriginal:intent.authoritativeOriginal}:{}:{}),
           ...(existingId?{existingFormDataId:opaque<FormDataId>(existingId)}:{}),state:1})
         const id=savedId(await gateway.dispatch(request))
         if(existingId&&existingId!==id)throw new Error('Existing R1 form identity unexpectedly changed')
@@ -134,7 +166,8 @@ export async function executeR1Stage1FunctionalCandidate(
           workOrderId:opaque<WorkOrderId>(scope.workOrderId),
           workflowNodeId:opaque<WorkflowNodeRuntimeId>(scope.runtimeNodeId),
           ...(scope.workflowRunId?{workflowRunId:opaque<WorkflowRunId>(scope.workflowRunId)}:{}),
-          formData:intent.sourceFormData,
+          formData:{},
+          authoritativeOriginal:intent.sourceFormData,
           existingFormDataId:opaque<FormDataId>(intent.existingFormDataId),state:-1})
         const id=savedId(await gateway.dispatch(request))
         if(id!==intent.existingFormDataId)throw new Error('R1 delete ACK identity changed')

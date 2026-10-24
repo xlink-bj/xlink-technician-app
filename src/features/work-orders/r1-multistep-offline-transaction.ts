@@ -109,7 +109,7 @@ function validatePlan(s:R1MultiStepScope,steps:readonly R1MultiStepKind[]):boole
     return (steps.length===3 && steps[0]==='form_upsert'
       && steps[1]==='forms_exts_update' && steps[2]==='workflow_process')
       || (steps.length===2 && steps[0]==='form_upsert' && steps[1]==='forms_exts_update')
-      || (steps.length===2 && steps[0]==='forms_soft_delete' && steps[1]==='forms_exts_update')
+      || (steps.length===2 && steps[0]==='forms_exts_update' && steps[1]==='forms_soft_delete')
       || (steps.length===1 && steps[0]==='workflow_process')
   }
   return (steps.length===1 && (steps[0]==='repeat_form_upsert' || steps[0]==='repeat_remove'

@@ -70,7 +70,9 @@ export function planR1FormsUpdateExts(input: {
     if (candidate.formDefId !== undefined && typeof candidate.formDefId !== 'string')
       throw new Error('Invalid saved FormDefinition ID')
     changed = existing.includes(id)
-      ? items.map(item => identified(item) === id ? saved : item)
+      // A saved-row summary is not the entire authoritative EXTS row.
+      // Preserve unknown source metadata when editing an existing record.
+      ? items.map(item => identified(item) === id ? { ...item, ...saved } : item)
       : [...items, saved]
   } else {
     const id = input.change.recordId

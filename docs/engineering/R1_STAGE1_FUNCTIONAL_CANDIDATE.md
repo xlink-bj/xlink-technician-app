@@ -25,10 +25,16 @@
 固定 R1 源 `serviceAppointment.vue@6c0a97b` 再确认：
 
 1. **一般 FormData 读取**：`6987–7017` 用 `biz/extForm/query/{formDefId}` 按 `is:_id|string#and` 查询并展平 `exts`；只有特定施工验收表单定义 `3285058246984486156` 例外使用 `findByIdWithWorkflow`。本 PR 已加入精确 ID / 唯一结果校验；不采用 R1 某些施工验收情形的 `notFilterBelongTo` 权限绕行。
-2. **forms 删除存在时序差异**：`10347–10375` 原 UI 先发节点 `updateExts` 后发 FormData 状态 -1，且 `saveNodeExts` 在活动状态 `state==0` 可继续调用 `process`。本候选目前采用防重放的 FormData → Exts 两步，**不得以离线成功认定删除等价**；需首试点验证服务端一致性/并发后明确顺序与推进策略。
+2. **forms 删除时序**：`10347–10375` 原 UI 先发节点 `updateExts` 后发 FormData 状态 -1，且 `saveNodeExts` 在活动状态 `state==0` 可继续调用 `process`。后续源顺序修正已将本候选改为 **Exts → FormData**，每步发送前保留防重放收据，并在任何未知结果处停止。**活动节点删除后是否继续 Process 仍待试点核实**，此候选不隐式推进；离线编排通过不等于真实删除等价或事务原子性。
 3. **repeat 勘察特定副作用**：`7313–7328`、`7409–7419` 指定勘察表单保存可触发 `createSurveyPDFUrl` 和 `surveyToolUpsert`。这些不是纯表单保存；未验证其幂等/权限/副作用前，本候选不自动调用。不能用真实勘察记录试写。
 4. **真实执行身份**：`7213–7236` 区分子流程的 `currentNode._id/workflowId` 和主节点的 `activeTab.detail.name._id/workflowId`；`7645–7659` 重复完成使用 `subNode._id` 及其 `formDataList`。需要 #199 明确运行节点和子节点对应关系，禁止父子身份猜测。
 5. **真实字段行为**：`6879–6969` 的字典、级联、Groovy 求值、媒体/多选，及 `7069–7145` 的“保存/提交”与必填验证，尚未获得试点真实字段矩阵。现有本机字段编辑不是完整 R1 表单编辑能力，复杂字段应明确不支持。
+
+### 既有 FormData 更新的完整性门槛
+
+- 已存在的 FormData 不能仅使用 `FormDataRead.values`（可能是脱敏/筛选后的 UI 投影）重建整行 upsert；需要精确 `_id` 对应、身份一致的原始完整记录，以源 JSON 为底保留所有未知字段，仅覆盖经过字段编辑器验证的本次修改值。缺少原始记录或 `sid`、`nodeId`、定义等身份互相冲突时，**在第一笔事务收据/网络发送前拒绝**。
+- forms `exts.formList` 的已有项修改只覆盖已确认的标题/状态/定义等属性，保留未知服务端元数据；源 `Exts` 仍为全量只读快照。这不替代并发版本检查，正式写入前必须读取权威新鲜快照并经过 Owner 特别授权。
+- 本轮改动仍仅存在于 `executeR1Stage1FunctionalCandidate` 的隔离注入式离线编排中，**没有连接 App 的真实命令组合根**。不能据此认定完成真实表单编辑、删除及 Workflow Process。
 
 ## 2026-10-22 Production 只读契约核验与离线修复
 

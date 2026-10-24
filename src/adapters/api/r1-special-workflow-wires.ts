@@ -70,6 +70,9 @@ export function r1SpecialFormUpsert(input: {
   readonly sourceNodeType: 'forms' | 'repeat'
   readonly definitionId: FormDefinitionId
   readonly formData: Readonly<Record<string, string | number | boolean>>
+  /** Full, same-record R1 source snapshot is mandatory for an existing row.
+   * A projected FormDataRead.values map is NOT a full update payload. */
+  readonly authoritativeOriginal?: Readonly<Record<string, unknown>>
   readonly workOrderId: WorkOrderId
   readonly workflowNodeId: WorkflowNodeRuntimeId
   readonly workflowRunId?: WorkflowRunId
@@ -82,7 +85,39 @@ export function r1SpecialFormUpsert(input: {
   const forbidden=new Set(['_id','state','nodeId','workflowId','sid','smodule','dataStr'])
   if(Object.keys(input.formData).some(key=>forbidden.has(key)))
     throw new Error('R1 form field collides with server-owned identity')
-  const data={...input.formData,sid:input.workOrderId,smodule:'serviceAppointment',
+  let original: Record<string, unknown> = {}
+  if (input.existingFormDataId) {
+    const source=input.authoritativeOriginal
+    if (!source || typeof source!=='object' || Array.isArray(source))
+      throw new Error('Existing R1 FormData update requires authoritative full original record')
+    // Never reconstruct an existing FormData from its redacted/UI projection.
+    let serialized:string|undefined
+    try {serialized=JSON.stringify(source)} catch {throw new Error('Invalid R1 source FormData JSON')}
+    if (!serialized || serialized.length>200000)
+      throw new Error('Unbounded or invalid R1 source FormData')
+    original=JSON.parse(serialized) as Record<string,unknown>
+    if (!original || typeof original!=='object' || Array.isArray(original)
+      || Object.keys(original).length!==Object.keys(source).length
+      || original._id!==input.existingFormDataId || original.state===-1)
+      throw new Error('Authoritative saved FormData identity or state mismatch')
+    const identities:readonly [string,string][]=[
+      ['id',input.existingFormDataId],['dataId',input.existingFormDataId],
+      ['formDataId',input.existingFormDataId],['sid',input.workOrderId],
+      ['smodule','serviceAppointment'],['nodeId',input.workflowNodeId],
+      ['formDefId',input.definitionId],['definitionId',input.definitionId],
+      ['extId',input.definitionId],
+    ]
+    for(const [key,expected] of identities){
+      if(original[key]!==undefined && original[key]!==expected)
+        throw new Error(`Authoritative saved FormData ${key} mismatch`)
+    }
+    if(input.sourceNodeType==='repeat' && original.workflowId!==undefined
+      && original.workflowId!==input.workflowRunId)
+      throw new Error('Authoritative saved FormData workflowId mismatch')
+  } else if (input.authoritativeOriginal !== undefined) {
+    throw new Error('New R1 FormData must not reuse an existing source record')
+  }
+  const data={...original,...input.formData,sid:input.workOrderId,smodule:'serviceAppointment',
     nodeId:input.workflowNodeId,...(input.workflowRunId?{workflowId:input.workflowRunId}:{}),
     ...(input.existingFormDataId?{_id:input.existingFormDataId}:{}),state:input.state}
   return { method:'POST', path:`biz/extForm/upsert/${encodeURIComponent(input.definitionId)}`,
