@@ -21,7 +21,9 @@
         <text class="r1-node-forms__index">{{ index + 1 }}</text>
         <view class="r1-node-forms__item-main">
           <text class="r1-node-forms__item-title">{{ entry.title || '未命名表单' }}</text>
-          <text class="r1-node-forms__state">{{ stateName(entry.state) }}</text>
+          <text class="r1-node-forms__state" :data-testid="`r1-form-entry-state-${entry.id}`">
+            {{ stagedFor(String(entry.id)) ? '已有本机待处理修改' : stateName(entry.state) }}
+          </text>
           <view v-if="draftStore.state === 'ready' && entry.state !== 'deleted'" class="r1-node-forms__row-actions">
             <AppButton variant="text" size="compact" :disabled="!canStage || Boolean(stagedFor(String(entry.id)))"
               @tap="selectEditing(String(entry.id),entry.title||'未命名表单')">编辑标题草稿</AppButton>
@@ -76,7 +78,9 @@
           data-testid="r1-form-staged-item">
           <view class="r1-node-forms__item-main">
             <text class="r1-node-forms__item-title">{{ intent.title }}</text>
-            <text class="r1-node-forms__state">{{ intentLabel(intent.kind) }} · 未同步</text>
+            <text class="r1-node-forms__state">{{ intentLabel(intent.kind) }} · 已存本机，未同步后台
+              <template v-if="intent.values && Object.keys(intent.values).length"> · {{ Object.keys(intent.values).length }} 项字段已保存</template>
+            </text>
           </view>
           <AppButton v-if="intent.kind === 'new' || intent.kind==='edit_title'" size="compact" variant="secondary"
             :disabled="loadingFields" @tap="openFieldEditor(intent.localId)">编辑字段</AppButton>

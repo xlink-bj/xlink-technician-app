@@ -102,6 +102,25 @@
         @action="handleCurrentTaskAction"
       />
 
+      <view v-if="localMockWorkflowStage" class="mock-workflow-track app-surface"
+        data-testid="mock-journey-workflow-state">
+        <view class="mock-workflow-track__top">
+          <text class="mock-workflow-track__heading">本机业务流转</text>
+          <text class="mock-workflow-track__scope">Mock · 未提交后台</text>
+        </view>
+        <view class="mock-workflow-track__steps">
+          <view v-for="(stage,index) in localMockWorkflowSteps" :key="stage.key"
+            class="mock-workflow-track__step"
+            :class="{ 'mock-workflow-track__step--active': stage.key === localMockWorkflowStage }"
+            :data-testid="`mock-stage-${stage.key}`">
+            <text class="mock-workflow-track__number">{{ index + 1 }}</text>
+            <text class="mock-workflow-track__label">{{ stage.label }}</text>
+            <text class="mock-workflow-track__state">{{ stage.state }}</text>
+          </view>
+        </view>
+        <text class="mock-workflow-track__hint">已走过的节点表示本机演示进度，不代表 R1 Workflow 已完成。</text>
+      </view>
+
       <!-- Current source-backed forms/repeat node only; Production repeat reads
            a bounded list after an explicit tap and never exposes write actions. -->
       <R1ProductionMainRepeatPanel
@@ -359,6 +378,20 @@ const allowLocalMockPreview = computed(() => {
     && task?.sourceNodeType === 'forms'
     && task?.execution === 'disabled_read_only'
 })
+const localMockWorkflowStage = computed(() => !productionReadOnly
+  && session.status === 'authenticated'
+  && session.session?.user.id === 'synthetic-user'
+  && session.session?.currentRole?.id === 'synthetic-role'
+  ? mockJourneyContext(String(detail.value?.id ?? ''))?.stage ?? null : null)
+const localMockWorkflowSteps = computed(() => {
+  const keys = [
+    {key:'appointment',label:'预约'}, {key:'survey',label:'勘查'}, {key:'quotation',label:'报价'},
+  ] as const
+  const stageIndex = keys.findIndex((item) => item.key === localMockWorkflowStage.value)
+  return keys.map((item,index) => ({...item,
+    state: stageIndex === index ? '当前模拟节点' : stageIndex > index ? '本机已走过' : '尚未开始',
+  }))
+})
 const preAcceptBlocked = computed(() => Boolean(
   detail.value?.workflowNodes?.some((node) => node.category === 'accept' && node.lifecycle === 'active'),
 ))
@@ -557,6 +590,18 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
 
 .production-read-only-notice { display: block; margin-top: 16rpx; }
 .child-subflow-mock-entry { background: var(--app-color-primary-soft); border: 1rpx dashed var(--app-color-primary-border); border-radius: var(--app-radius-control); color: var(--app-color-primary); display: block; font-size: var(--app-font-body); font-weight: 650; line-height: 1.5; margin-top: 20rpx; padding: 20rpx 24rpx; text-align: center; }
+.mock-workflow-track { margin-top: 16rpx; padding: 20rpx 24rpx; }
+.mock-workflow-track__top { display: flex; justify-content: space-between; align-items: baseline; gap: 12rpx; margin-bottom: 16rpx; }
+.mock-workflow-track__heading { color: var(--app-color-text-primary); font-size: var(--app-font-section-title); font-weight: 650; }
+.mock-workflow-track__scope,.mock-workflow-track__hint { color: var(--app-color-text-secondary); font-size: var(--app-font-status); line-height: 1.5; }
+.mock-workflow-track__steps { display: flex; gap: 10rpx; }
+.mock-workflow-track__step { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6rpx;
+  border-top: 3rpx solid var(--app-color-border); padding-top: 10rpx; }
+.mock-workflow-track__step--active { border-color: var(--app-color-primary); }
+.mock-workflow-track__number { color: var(--app-color-text-secondary); font-size: var(--app-font-status); }
+.mock-workflow-track__label { color: var(--app-color-text-primary); font-weight: 600; font-size: var(--app-font-body); }
+.mock-workflow-track__state { color: var(--app-color-text-secondary); font-size: var(--app-font-meta); }
+.mock-workflow-track__hint { display: block; margin-top: 12rpx; }
 
 .detail-content,
 .detail-state,

@@ -156,6 +156,7 @@
       </AppButton>
       <AppButton v-if="choosingMode" variant="text" block data-testid="quotation-hub-mode-cancel" @tap="cancelMode">取消</AppButton>
     </view>
+    <slot name="after-content" />
   </view>
 </template>
 
