@@ -39,6 +39,12 @@ Until these decisions are resolved, no calendar deadline for *fully integrated r
 - Forms deletion choreography matches the audited R1 order (`updateExts` then FormData soft-delete); partial success remains fenced as uncertain and **is not claimed to be atomic or R1-equivalent in a real environment**. R1 active-node `Process` side effect still needs an approved pilot contract.
 - The offline functional candidate remains disconnected from live App composition; no change here grants Production business-write permission.
 
+### Isolated pilot execution boundary (2026-10-24)
+
+`src/app/r1-stage1-scoped-gateway.ts` now supplies an opt-in **pilot-only** command gateway. Before a transaction and before every R1 mutation it independently re-reads a role-listed WorkOrder and verifies the exact active `forms/repeat` runtime node, form definition, workflow run and actor/role. Child nodes also require a verified outer `subflows` parent read. Commands are allowlisted to the scoped R1 upsert/EXTS/remove/Process routes; Production environment or host is categorically rejected. The gateway is intentionally not wired into the App composition root, and there is no approved pilot grant.
+
+Known authorization denial now occurs **before** creating a durable may-have-dispatched receipt; a role change between steps still fences replay after any possibly sent command. This is functional command-layer code verified by synthetic transport tests, not a claim of true server business-write or WeChat device verification.
+
 ## Next offline transaction gate (2026-10-24)
 
 All source-only transaction inputs are now preflighted before reserving any receipt: full EXTS structure/capacity and existing-record membership for `forms`; every row and supported primitive field for `repeat` batches; delete identity; and finalize wire validity. A later invalid row cannot intentionally create earlier FormData records. This does **not** make a partially executed multi-request transaction atomic.

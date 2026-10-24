@@ -2,6 +2,8 @@
 
 **Status: OFFLINE WRITE FUNCTIONAL CANDIDATE + SCOPED PRODUCTION READ-ONLY UI CANDIDATE. NOT WRITE-INTEGRATED, NOT ACCEPTED, NOT RELEASED.**
 
+2026-10-24：增加了独立隔离试点网关 `r1-stage1-scoped-gateway.ts`：必须同时满足显式试点许可、非 Production 目标、同一会话角色、已在当前会话列表出现的工单及最新详情/节点可见性；支持子流程父节点再核验，且每笔命令前重新读角色和节点。真实 App 组合根仍未接入，**不存在默认真实写入通道**。修复已知拒绝在收据创建之后才发生的问题：先权限预检，再持久化/按步验证。专项合成测试覆盖跨步骤角色变更、无许可、Production、未知节点、子流程和 repeat 多条 Process。
+
 本变更以 `xlink-app` 固定证据 `6c0a97b26bcbcaee81ac4e1dfd627c6e8e70e29d`
 中 `business/subpackages/serviceAppointment/serviceAppointment.vue` 的
 `saveNodeExts` / `process` / `doProcess` 行为为参照。只在新 App 仓库实现，不修改 R1。

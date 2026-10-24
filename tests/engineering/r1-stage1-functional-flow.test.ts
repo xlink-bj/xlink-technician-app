@@ -49,7 +49,7 @@ describe('R1 Stage 1 source-backed offline choreography',()=>{
       formList:[{_id:'server-1',formDefId:'form-def-1',formTitle:'勘察表',state:1}]})
     expect(called[2]?.body).toMatchObject({nodeFormDefId:'',nodeFormDataId:''})
     expect([...map.values()][0]).not.toHaveProperty('customerNote')
-    expect(command.revalidate).toHaveBeenCalledTimes(3)
+    expect(command.revalidate).toHaveBeenCalledTimes(4)
   })
   it('forms save does not Process on inactive node',async()=>{
     const {storage}=store(),{command,called}=gateway()

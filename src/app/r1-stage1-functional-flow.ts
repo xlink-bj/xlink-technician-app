@@ -176,6 +176,13 @@ export async function executeR1Stage1FunctionalCandidate(
     if(finalize)sourceWire(scope,authoritativeIds,intent.sourceNodeType,
       intent.kind==='forms_finalize')
   }catch{return failure('R1 原始记录或命令身份不完整，事务未启动。')}
+  // A known-denied actor/role/node must not create a may-have-dispatched
+  // receipt. Each step still revalidates after receipt reservation, because
+  // authorization may change between this preflight and the next request.
+  try {
+    if(!await gateway.revalidate(scope))
+      return failure('R1 工单、账号或节点未获授权，事务未启动。')
+  }catch{return failure('R1 写入权限预检失败，事务未启动。')}
   return executeR1MultiStepOffline(storage,scope,steps,async({step,stepIndex,savedFormDataIds})=>{
     if(!await gateway.revalidate(scope))
       return {state:'failed_terminal',error:createOperationError('authorization_denied',
