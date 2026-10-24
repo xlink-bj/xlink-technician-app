@@ -38,6 +38,7 @@ export const mockQuotationProcedureListResponse = {
       _id: 'mock-catalog-procedure-seal',
       name: '檐口密封处理（示例）',
       content: '檐口密封处理（示例）',
+      guideUnitPrice: 68.4,
       unit: '处',
       serviceType: [mockQuotationCatalogServiceType],
       sourceTypeList: [mockQuotationCatalogSourceType],
@@ -74,6 +75,9 @@ export const mockQuotationMaterialListResponse = {
       _id: 'mock-catalog-material-ordinary-1',
       name: '普通防水辅材（结构示例）',
       code: 'DEMO-ORD-001',
+      // Synthetic only: the field name and R1 calculation come from the
+      // source contract, but this is NOT an authorized tenant SKU sale price.
+      price: 38.6,
       unit: '件',
       materialUnit: '件',
       type: 1,
@@ -85,6 +89,7 @@ export const mockQuotationMaterialListResponse = {
       _id: 'mock-catalog-material-ordinary-2',
       name: '普通施工材料（结构示例）',
       code: 'DEMO-ORD-002',
+      price: 26.8,
       unit: '件',
       materialUnit: '件',
       type: 1,
@@ -104,6 +109,7 @@ export const mockQuotationMeasureListResponse = {
       _id: 'mock-catalog-measure-inspection',
       name: '高处作业防护（示例）',
       content: '高处作业防护（示例）',
+      guideUnitPrice: 54.2,
       unit: '次',
       serviceType: [mockQuotationCatalogServiceType],
       sourceTypeList: [mockQuotationCatalogSourceType],

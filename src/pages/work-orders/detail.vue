@@ -98,7 +98,7 @@
         :tone="workflowProjection.currentTask.tone"
         :disabled="(workflowProjection.currentTask.execution !== 'enabled' && !allowLocalMockPreview)
           || (productionReadOnly && workflowProjection.currentTask.actionIntent !== 'place_order')"
-        note="当前环境只开放读取，不会提交、接单或推进流程"
+        :note="aStageSpecialKind ? '请在下方记录现场情况；仅保存至本机 Mock。' : '当前环境只开放读取，不会提交、接单或推进流程'"
         @action="handleCurrentTaskAction"
       />
 
@@ -134,6 +134,10 @@
         v-if="productionReadOnly && currentR1FormNode?.sourceNodeType === 'repeat'"
         :node="currentR1FormNode" :read="workOrder.mainRepeatRead"
         @read="loadMainRepeatForms" />
+      <R1SpecialMockTransactionPanel v-else-if="aStageSpecialKind && currentR1FormNode"
+        :key="String(currentR1FormNode.id)" :kind="aStageSpecialKind"
+        :node="currentR1FormNode" :work-order-id="String(detail.id)"
+        @changed="retry" />
       <R1NodeFormsOverview v-else-if="currentR1FormNode" :node="currentR1FormNode"
         :work-order-id="String(detail.id)" :actor-scope="workOrderReadScopeKey(session.session)" />
       <R1ProductionChildFormsPanel
@@ -343,6 +347,8 @@ import AppFeedbackState from '@shared/ui/AppFeedbackState.vue'
 import AppWorkOrderSkeleton from '@shared/ui/AppWorkOrderSkeleton.vue'
 import WorkOrderTaskFocus from '@features/work-orders/WorkOrderTaskFocus.vue'
 import R1NodeFormsOverview from '@features/work-orders/R1NodeFormsOverview.vue'
+import R1SpecialMockTransactionPanel from '@features/work-orders/R1SpecialMockTransactionPanel.vue'
+import { isAStageSpecialMockAvailable, type AStageSpecialKind } from '@app/a-stage-special-mock-ui'
 import R1ProductionChildFormsPanel from '@features/work-orders/R1ProductionChildFormsPanel.vue'
 import R1ProductionMainRepeatPanel from '@features/work-orders/R1ProductionMainRepeatPanel.vue'
 import { appLoadingSkeletonDelayMs } from '@shared/ui/loading'
@@ -366,6 +372,17 @@ const currentR1FormNode = computed(() => {
   const task = workflowProjection.value.currentTask
   if (!task || (task.sourceNodeType !== 'forms' && task.sourceNodeType !== 'repeat')) return undefined
   return detail.value?.workflowNodes?.find(node => node.id === task.nodeId)
+})
+const aStageSpecialKind = computed<AStageSpecialKind | null>(() => {
+  const source = currentR1FormNode.value?.sourceNodeType
+  if (source !== 'forms' && source !== 'repeat' || productionReadOnly) return null
+  const current = session.session
+  const actor = current?.user.id && current.currentRole?.id && current.sessionRef
+    ? { userId: String(current.user.id), roleId: String(current.currentRole.id),
+        identity: JSON.stringify([current.sessionRef, current.user.id,
+          current.currentRole.id, current.roleVersion ?? null]) } : null
+  return isAStageSpecialMockAvailable(source, String(detail.value?.id ?? ''), actor)
+    ? source : null
 })
 const productionChildParents = computed(() => (productionReadOnly
   ? detail.value?.workflowNodes?.filter((node) => node.category === 'subworkflow'

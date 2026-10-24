@@ -55,6 +55,7 @@
       />
     </template>
     <template #after-content>
+      <AStageMockQuoteOrderPanel v-if="aStageMockOrderEnabled" />
       <MockCommercialFlowLinks v-if="mockJourney?.stage === 'quotation'"
         :work-order-id="String(routeId ?? '')" :user-id="String(session.session?.user.id ?? '')"
         :role-id="String(session.session?.currentRole?.id ?? '')" />
@@ -255,10 +256,12 @@ import { compareQuoteWithStandaloneSkuDemo, compareQuoteWithSameCatalogSynthetic
 import { reviewP1SyntheticSkuReadiness } from '@app/p1-sku-readiness-review'
 import { setActionWorkspacePageTitle } from '@app/action-page-title'
 import { mockJourneyContext } from '@app/mock-journey'
+import { isAStageMockOrderEnabled } from '@app/a-stage-quotation-mock-ui'
 import { advanceMockJourneyWithSavedDraft } from '@app/mock-journey-closure'
 import { readMockJourneyContext, type MockJourneyContextSummary } from '@app/mock-journey-context'
 import { canAdoptMockSurveySuggestion } from '@app/mock-journey-quote-suggestion'
 import MockCommercialFlowLinks from '@features/work-orders/quotation/MockCommercialFlowLinks.vue'
+import AStageMockQuoteOrderPanel from '@features/work-orders/quotation/AStageMockQuoteOrderPanel.vue'
 import { hasAuthenticatedSession } from '@features/home/access'
 import { isProductionReadOnlyRuntime } from '@shared/config'
 import {
@@ -346,6 +349,11 @@ const appointmentDisplay = computed(() => appointmentDisplayFor(workspace.appoin
 const isMockQuotationPreview = computed(() =>
   isBusinessMockQuotationPreview(workspace.descriptor?.workOrderId),
 )
+const aStageMockOrderEnabled = computed(() => !productionReadOnly && isAStageMockOrderEnabled({
+  workOrderId: String(workspace.descriptor?.workOrderId ?? ''),
+  userId: String(session.session?.user.id ?? ''),
+  roleId: String(session.session?.currentRole?.id ?? ''),
+}))
 const feedback = computed(() => actionErrorCopy(workspace.error))
 const mockJourney = computed(() => mockJourneyContext(routeId.value))
 const canAdoptSurveySuggestion = computed(() =>

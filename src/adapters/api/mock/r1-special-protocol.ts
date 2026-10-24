@@ -68,6 +68,7 @@ function saveSpecialForm(kind: Kind, serialized: unknown): unknown {
     formDefId: mockSyntheticDynamicFormDefinitionId,
     sid: target.sid, smodule: 'serviceAppointment', nodeId: target.node,
     workflowId: target.run, state: data.state,
+    ...Object.fromEntries(fields),
     exts: { ...(object(previous?.exts) ?? {}), ...Object.fromEntries(fields) },
   }
   if (!updateMockR1SpecialState((draft) => {
@@ -106,7 +107,26 @@ function updateFormsExts(request: ApiCommandRequest): unknown {
   } else {
     const changed = oldRows.map((item, index) => same(item, newRows[index]) ? -1 : index)
       .filter((index) => index !== -1)
-    if (changed.length !== 1) return denied()
+    // R1 sends a full EXTS snapshot after editing FormData even when the
+    // presentation title is unchanged. Accept this strictly scoped no-op only
+    // for an existing, active, Mock-owned FormData. The readback coordinator
+    // still checks the edited field before releasing its duplicate guard.
+    if (changed.length === 0) {
+      const hasOwnedActiveRow = newRows.some((row) => {
+        const candidate = object(row)
+        const saved = typeof candidate?._id === 'string'
+          ? object(mockCommandState().formData.get(candidate._id)) : null
+        return candidate?.state === 1 && candidate._id?.toString().startsWith('mock-special-form-data-forms-')
+          && saved?.state === 1 && saved.sid === targets.forms.sid
+          && saved.nodeId === targets.forms.node && saved.workflowId === targets.forms.run
+      })
+      if (!hasOwnedActiveRow) return denied()
+    } else if (changed.length !== 1) return denied()
+    if (changed.length === 0) {
+      // Keep the authoritative EXTS snapshot unchanged, but ACK the source
+      // transaction step so FormData field-only edits may proceed to readback.
+      return { success: true, data: {} }
+    }
     const oldRow = object(oldRows[changed[0]])
     const newRow = object(newRows[changed[0]])
     if (!oldRow || !newRow || oldRow._id !== newRow._id || oldRow.state === -1) return denied()

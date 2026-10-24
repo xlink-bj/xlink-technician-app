@@ -793,8 +793,11 @@ function matchedResponse(
         })] : []
     const candidate = dataId ? mockR1ExistingFormData[dataId as keyof typeof mockR1ExistingFormData]
       ?? mockCommandState().formData.get(dataId) : undefined
-    const formData = mutableRecord(candidate)?.extId === mockSyntheticDynamicFormDefinitionId
-      && mutableRecord(candidate)?.state !== -1 ? candidate : undefined
+    // R1 forms soft-delete remains queryable by exact FormData ID for
+    // authoritative deletion readback; repeat/remove is absent from the list.
+    const row = mutableRecord(candidate)
+    const formData = row?.extId === mockSyntheticDynamicFormDefinitionId
+      && (row.state !== -1 || row.sid === mockR1FormsWorkOrderId) ? candidate : undefined
     const rows = dataId ? (formData ? [formData] : []) : repeatRows
     return { data: rows, page: 1, rows: 20, total: rows.length }
   }
