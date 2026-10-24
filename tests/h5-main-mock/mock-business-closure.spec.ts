@@ -34,6 +34,18 @@ for (const viewport of [{width:375,height:667},{width:390,height:844}]) {
 
     await page.locator('.primary-task-action').click()
     await expect(page.getByTestId('mock-journey-context-appointment')).toContainText('平屋顶渗漏')
+    // R1 survey field visibility depends on the repair-part cascade; choose
+    // the actual option before asserting a conditional measurement control.
+    const repairPart = page.getByTestId('survey-part-picker-trigger')
+    if (await repairPart.isVisible()) {
+      await repairPart.click()
+      await expect(page.getByTestId('survey-part-picker-panel')).toBeVisible()
+      await page.getByTestId('survey-repair-part-parents').locator('.app-cascade-selector__parent').first().click()
+      await page.getByTestId('survey-repair-part-children').locator('.app-cascade-selector__child').first().click()
+      await page.getByTestId('survey-part-picker-confirm').click()
+      await expect(page.getByTestId('survey-part-picker-panel')).toHaveCount(0)
+    }
+    await expect(page.getByTestId('dynamic-field-squareMeter')).toBeVisible()
     await page.getByTestId('dynamic-field-squareMeter').locator('input').fill('18.5')
     await page.getByTestId('mock-journey-advance').click()
     await expect(page).toHaveURL(/work-orders\/detail/)
