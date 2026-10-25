@@ -2,6 +2,34 @@
 
 Date: 2026-10-24. Branch/PR: Draft #217. Owner: ChatGPT Lead.
 
+## Final exact-source acceptance update (2026-10-25)
+
+This section supersedes the historical *status at authoring* rows and Mac
+handoff instructions below. The engineering/Mock gate and the later commercial
+visual gate are deliberately separate, as the Owner has directed Stage A
+functional closure **before** the dedicated UX/UI phase.
+
+- **Code baseline:** `d822bb77670df66b60368b2c3090a191dd063d53`, Draft
+  [#217](https://github.com/xlink-bj/xlink-technician-app/pull/217). On this
+  exact code, all four applicable CI lanes passed: [Validate](https://github.com/xlink-bj/xlink-technician-app/actions/runs/40191966481),
+  [Main H5 UX](https://github.com/xlink-bj/xlink-technician-app/actions/runs/40191966540),
+  [DS02A](https://github.com/xlink-bj/xlink-technician-app/actions/runs/40191966438),
+  [M1 S2 Focus](https://github.com/xlink-bj/xlink-technician-app/actions/runs/40191966511).
+- **Mac native:** [375×667 DEV Mock WeChat DevTools `MP_DEVICE_PASS`](https://github.com/xlink-bj/xlink-technician-app/pull/217#issuecomment-6398597783),
+  subsequently [accepted by the Lead for this scoped simulator gate](https://github.com/xlink-bj/xlink-technician-app/pull/217#issuecomment-6398758924).
+  MOCK-020/021 save/edit/delete/complete/relaunch and right-edge layout
+  passed; the application-component WXSS selector warnings were absent.
+  MOCK-019 ¥107 local Order was already verified in the preceding native run.
+- **Viewport scope:** **375×667 is the only Stage A native acceptance size.**
+  The previous 390×844 H5 evidence remains valid but another native device
+  size, physical handset and compatibility sweeps are deliberately deferred.
+- **Boundary:** A PASS here is *offline source-shaped Mock functionality*,
+  never an assertion that arbitrary Production workflows, effective SKU prices,
+  actual signing/PDF/SMS or R1 business writes were exercised. Owner commercial
+  UX/UI review is the subsequent product phase, not a retroactive Stage A
+  code/contract blocker. See `A_STAGE_ENGINEERING_EXIT.md` for the complete
+  scenario and evidence ledger.
+
 ## The three A-P1 gates
 
 1. **P1-R / Error and recovery:** duplicate tap, timeout or missing ACK, role switch, reload/re-entry, incomplete readback and corrupt local receipt must produce a clear operator state. Only *confirmed completed* receipts may be reconciled using fresh Mock reads. An ambiguous request is never automatically replayed or unlocked.

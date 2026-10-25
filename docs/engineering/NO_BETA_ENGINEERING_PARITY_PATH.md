@@ -15,7 +15,7 @@ Keep two independent gates:
 
 | Lane | Required exit | Current independently established result |
 | --- | --- | --- |
-| **A — full protocol-equivalent Mock** | Main-App UI can save/edit, read back and advance each authorized synthetic action with R1-shaped command/status/failure semantics; appointment, survey, dynamic forms, Workflow, quotation/SKU/Order/Contract all accounted for | **IN PROGRESS — not full A.** 019 appointment/survey uses the actual Main App pages and scoped FormData/Process/readback. **A-P0 forms/repeat:** 020/021 Main App detail pages now provide create/edit/delete/finalize through the real Stage 1 transaction coordinator and exact R1-shaped Mock gateway, persistent state, fresh readback and durable replay fence. **A-P0 priced quotation:** 019 Main App quotation workbench now has an isolated, double-confirmed synthetic Order action using the real engine/encoder, Workflow Start → type=1 Upsert → queryById/readback, with strictly Mock-only transport, authenticated actor/role checks and durable duplicate protection. Synthetic, positively priced ordinary materials and procedures make the complete eligible quote path runnable; missing **SKU effective price** remains visibly blocked and is not replaced with zero or a guessed price. The ordinary App business submit remains disabled. Contract/PDF/signature/SMS are not executed. Device/browser visual acceptance and other remaining A items are open; no Production/Beta writes or live R1 parity proof. See `tests/engineering/a-stage-main-app-special-controller.test.ts`, `tests/engineering/a-stage-main-app-quote-order.test.ts`, and the existing protocol suites. |
+| **A — source-shaped offline Mock, including explicit unsupported gates** | Main-App UI can save/edit, read back and advance each *supported* synthetic action with R1-shaped command/status/failure semantics; appointment, survey, dynamic forms, Workflow, quotation/SKU/Order/Contract have a supported or explicitly blocked outcome | **A ENGINEERING EXIT ACCEPTED (bounded).** The two P0 paths and three P1 gates have end-to-end Mock/function/negative tests. 019 appointment→survey→quotation, 020 forms and 021 repeat save/edit/delete/finalize, plus 019 priced ordinary Material+procedure → synthetic `type=1` Order with fresh readback/restart and no real submit, passed H5 and 375×667 Mac native acceptance at the pinned code tree. Unknown effective SKU price, unsupported field providers and Contract/sign/PDF/SMS remain **explicitly blocked**; they are *not* treated as completed positive business paths. This is an offline Mock engineering exit, **not full live R1 parity**. See [`A_STAGE_ENGINEERING_EXIT.md`](./A_STAGE_ENGINEERING_EXIT.md) and the [exact-source MP acceptance](https://github.com/xlink-bj/xlink-technician-app/pull/217#issuecomment-6398758924). |
 | **B — Production read-only** | Current role-authorized App pages use official bounded API reads; Production database used only to reconcile semantics and redacted inconsistencies; no business commands/uploads | **PARTIAL, existing read evidence.** #199 and the three-pillar contract matrix verify bounded WorkOrder/Workflow/FormData/Order/Contract shapes, plus explicitly distinct Order query semantics. No new Production network request is required to repeat that historical evidence. Full live App/WeChat read-path UX acceptance remains open; default allowlists must not expand by inference. |
 | **C — isolated Beta/test writes** | Owner-approved R1-backed disposable scope, audited FormData/EXTS/Workflow and later commercial actions, server ACK plus fresh authoritative readback and cleanup | **HOLD — no approved writable R1-backed fixture.** Offline stateful shadow and scoped staging gateway exist but remain outside the default App. Production business writes are categorically forbidden. |
 
@@ -50,15 +50,15 @@ The implementation should advance through the first gate immediately. A missing 
 - Commercial: quote/Order/SKU/Contract display may use source-backed read models, but order modifications, signing, PDF and media side effects remain unavailable without confirmed contracts and command authorization.
 - Environment: even a developer flag must never activate R1 writes in Production. Default App composition stays unmounted from the isolated pilot executor.
 
-## A closeout remaining scope (current branch)
+## A closure checklist (engineering accepted, with explicit capability boundaries)
 
 | Gate | 019 DEV Mock slice | Required before **A PASS** |
 | --- | --- | --- |
-| Appointment / Survey | Source-shaped save → exact FormData query → Process → exact detail readback; actor scope guard, reload recovery and replay rejection tested | Re-run real H5/MP device path; validate required fields and R1 option/visibility branch behavior end-to-end |
-| Other dynamic/repeat/EXTS | **A-P0 Mock path implemented.** Source 020/021 exact gateway and coordinator are connected to detail-page record list + editor + deletion/finalize confirmations. Full EXTS, readback, local durable receipts and role switching guards are covered by new Main App controller tests. | H5 viewport/MP DevTools gesture-level acceptance and permission/error copy; baseline read-only records cannot be removed through this synthetic UI; Production-only quirks not inferred |
-| Quotation / SKU / Official Order | **A-P0 priced non-SKU Mock path implemented.** 019 workbench offers a separately gated synthetic create command; prices come only from Mock catalog's mapped R1 fields; real quote engine/order encoder/command and read adapters, persisted child Workflow and Order, queryById reconciliation, restart/idempotency guard. Generic product-review submit remains disabled; unverified SKU effective price is blocked. | H5/MP gesture-level acceptance; add verified SKU effective-price calculation only when the source contract is evidenced; no inference of PDF/contract/signature side effects |
-| Contract / signing | Bounded synthetic official Order/Contract read review | Closed Mock state transitions only for R1-mapped and legally safe actions; unsupported signature/PDF/SMS stay explicitly disabled |
-| Cross-platform visual | Prior H5 019 golden evidence exists; current branch unit tests and H5/MP build can run | H5 browser screenshots and interactive checks at both viewports, WeChat DevTools device run and Owner UX sign-off independently recorded |
+| Appointment / Survey | Source-shaped local FormData readback, R1-shape command/Process and exact detail readback; actor guards, restart/replay rejection, switch/conditional repair-part UX tested | **A PASS:** Main H5 019 and the synthetic protocol tests. Real R1-dependent options remain B read-only evidence, not guessed |
+| Other dynamic/repeat/EXTS | **A-P0 PASS:** 020/021 Main App editor, R1-shaped gateway + full EXTS/readback, soft delete, batch finalize, durable receipt/role safeguards | **A PASS:** H5 020/021, Mac 375×667 native save/restart/layout, WXSS clean for application components |
+| Quotation / SKU / Official Order | **A-P0 PASS within proven pricing:** 019 ordinary material + procedure → double-confirmed local `type=1` Order, distinct child Workflow/queryById, receipt+restart/reconciliation | **A PASS for priced synthetic path.** Effective SKU price UNKNOWN is a verified negative gate. Do not infer price or enable generic real submit |
+| Contract / signing | Bounded synthetic official Order/Contract identity/read-only review | **A NEGATIVE GATE PASS:** no simulated signed/issued contract, signature/PDF/SMS mutation or unsupported button action. Real effect path remains C HOLD |
+| Cross-platform visual | H5 full interaction/capture and 375×667 Mac simulated native Mock evidence accepted | **A technical PASS.** Owner commercial visual review starts in the subsequent UX/UI stage; additional sizes/physical phone are deferred by Owner |
 
 The main 019 DEV Mock path uses protocol-shaped **synthetic** writes; it is deliberately
 not the server's authoritative R1 Workflow. This upgrades the old local-only
@@ -70,9 +70,11 @@ without command replay, and clearer synthetic Order labeling. The cross-page
 operation → command → Mock persistence → readback → regression trace and the
 two-viewport H5 CI screenshot gate are enumerated in
 `docs/engineering/A_STAGE_P1_ACCEPTANCE_EVIDENCE.md`. Local full verification
-and H5/MP-WEIXIN/App builds passed; real Chromium H5 CI and Mac WeChat DevTools
-gesture-level review remain independent gates, as do Owner visual acceptance
-and all live R1 write verification.
+and H5/MP-WEIXIN/App builds passed. **2026-10-25 update:** the exact-tree H5 CI
+and scoped 375×667 Mac WeChat DevTools gesture-level review subsequently
+passed; see the canonical A engineering exit ledger. Owner commercial visual
+acceptance is the next design stage; all live R1 write verification remains a
+separate, unauthorized Stage C gate.
 
 ## Acceptance labels and next external input
 
