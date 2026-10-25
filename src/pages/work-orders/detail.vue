@@ -35,7 +35,7 @@
     />
 
     <view v-else-if="workOrder.loadState === 'succeeded' && detail" class="detail-content"
-      :class="{ 'detail-content--mock-qa': Boolean(aStageSpecialKind) }">
+      :class="{ 'detail-content--mock-qa': Boolean(aStageSpecialKind || aStageCompletedSpecialNode) }">
       <AppSectionHeading class="detail-section-heading" title="工单概览" subtitle="服务信息与当前处理进度" data-testid="ds02b-detail-heading" />
       <AppRecordCard class="summary-card" data-testid="ds02b-detail-record-card">
         <view class="summary-top-row">

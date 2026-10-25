@@ -26,6 +26,19 @@ test.describe('A-stage P1 real-H5 operator acceptance', () => {
     expect(errors, 'No browser console error or uncaught JS exception').toEqual([])
   })
 
+  async function expectDetailOverviewWithinViewport(page: Page) {
+    // WeChat DevTools found the 020/021 identifier and the last quick action
+    // clipped at both operator widths. Guard the same geometry in real H5.
+    const viewportWidth = page.viewportSize()?.width ?? 0
+    for (const element of [page.getByTestId('ds02b-detail-record-card'),
+      page.locator('.summary-number'), ...await page.locator('.summary-action').all()]) {
+      const rect = await element.boundingBox()
+      expect(rect, 'Detail overview control must be visible').not.toBeNull()
+      expect(rect!.x, 'Detail overview must not overflow left').toBeGreaterThanOrEqual(-1)
+      expect(rect!.x + rect!.width, 'Detail overview must not overflow right').toBeLessThanOrEqual(viewportWidth + 1)
+    }
+  }
+
   async function openSpecial(page: Page, number: '020' | '021') {
     await page.goto('/#/pages/index/index', { waitUntil: 'domcontentloaded' })
     await expect(page.locator('.mock-source-indicator')).toContainText('Mock')
@@ -38,16 +51,7 @@ test.describe('A-stage P1 real-H5 operator acceptance', () => {
     await card.click()
     await expect(page).toHaveURL(/pages\/work-orders\/detail/)
     await expect(page.locator('.summary-number')).toContainText(number)
-    // WeChat DevTools found the 020/021 identifier and the last quick action
-    // clipped at both operator widths. Guard the same geometry in real H5.
-    const viewportWidth = page.viewportSize()?.width ?? 0
-    for (const element of [page.getByTestId('ds02b-detail-record-card'),
-      page.locator('.summary-number'), ...await page.locator('.summary-action').all()]) {
-      const rect = await element.boundingBox()
-      expect(rect, 'Detail overview control must be visible').not.toBeNull()
-      expect(rect!.x, 'Detail overview must not overflow left').toBeGreaterThanOrEqual(-1)
-      expect(rect!.x + rect!.width, 'Detail overview must not overflow right').toBeLessThanOrEqual(viewportWidth + 1)
-    }
+    await expectDetailOverviewWithinViewport(page)
     await expect(page.getByTestId('a-stage-special-panel')).toBeVisible()
     await expect(page.getByTestId('a-stage-special-panel')).toContainText('未提交后台')
   }
@@ -99,6 +103,7 @@ test.describe('A-stage P1 real-H5 operator acceptance', () => {
       await page.getByTestId('a-special-finish-request').click()
       await page.getByTestId('a-special-finish-confirm').click()
       await expect(page.getByTestId('a-special-complete')).toBeVisible()
+      await expectDetailOverviewWithinViewport(page)
       await info.attach(`a-p1-forms-complete-${viewport.width}`, {
         body: await page.screenshot({ fullPage: true }), contentType: 'image/png',
       })
@@ -125,6 +130,7 @@ test.describe('A-stage P1 real-H5 operator acceptance', () => {
       await expect(page.getByTestId('a-special-complete')).toBeVisible()
       await page.reload({ waitUntil: 'domcontentloaded' })
       await expect(page.getByTestId('a-special-complete')).toBeVisible()
+      await expectDetailOverviewWithinViewport(page)
       await info.attach(`a-p1-repeat-complete-${viewport.width}`, {
         body: await page.screenshot({ fullPage: true }), contentType: 'image/png',
       })
