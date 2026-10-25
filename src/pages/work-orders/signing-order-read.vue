@@ -39,7 +39,7 @@
         </view>
         <text class="signing-read-progress-title xl-craft__section-title">{{ signingPhaseTitle }}</text>
         <text class="signing-read-next-label">下一步</text>
-        <text class="signing-read-body" data-testid="signing-review-next">{{ signingProgress.nextStep }}</text>
+        <text class="signing-read-body" data-testid="signing-review-next">{{ signingNextActionDisplay }}</text>
         <text class="signing-read-warning xl-craft__caption">{{ uxStateLanguage.signingReadOnly }}</text>
       </view>
       <AppRecordCard class="signing-read-section signing-read-hero xl-craft__surface" data-testid="signing-order-read-verified">
@@ -104,7 +104,7 @@
         <view class="signing-read-heading-row">
           <view class="signing-read-diagnostics-copy">
             <text class="signing-read-section-title">测试环境 · 技术核验</text>
-            <text class="signing-read-help">仅供内部核对，不是签约业务操作</text>
+          <text class="signing-read-help">仅供内部核对，不是签约业务操作。技术提示：{{ signingProgress.nextStep }}</text>
           </view>
           <button class="signing-read-diagnostics-toggle"
             data-testid="signing-command-preflight-toggle"
@@ -210,6 +210,23 @@ const signingStepIndex = computed(() => {
 const signingPhaseTitle = computed(() => signingProgress.value.title.replace(
   /^步骤\s*[123]\s*\/\s*3\s*[·•:：\s]*/, '',
 ))
+/** Task-facing language derived only from the authoritative read state. */
+const signingNextActionDisplay = computed(() => {
+  switch (review.contractSnapshot.state) {
+    case 'idle': return devFixtureContractRead.value
+      ? '核验当前订单的合同状态。' : '合同状态读取暂未开放，请等待授权。'
+    case 'loading': return '正在读取合同状态，请稍候。'
+    case 'failed_retryable': return devFixtureContractRead.value
+      ? '合同读取失败，可在下方重新核验。' : '合同读取失败，暂不可执行签署。'
+    case 'failed_terminal': return '合同状态无法确认，请联系支持人员核对。'
+    case 'succeeded': {
+      if (signingStage.value.stage === 'signing_in_progress') return '等待签约结果更新，请勿重复发起。'
+      if (signingStage.value.stage === 'record_signed') return '已读取签约记录，合同文件及签名真实性仍待核实。'
+      return '请核对下方合同状态；当前没有可执行的签约操作。'
+    }
+  }
+  return '合同状态暂不可确认，请勿发起签约。'
+})
 const intentKinds: readonly R1SigningIntentKind[] = ['electronic','offline','resign','resend_sms','cancel']
 const selectedIntent = ref<R1SigningIntentKind | null>(null)
 const devAuditExpanded = ref(false)

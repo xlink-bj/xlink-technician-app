@@ -78,6 +78,10 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@v4
+        with:
+          # Several pinned engineering-gate tests inspect ancestry and compare
+          # exact historical commits; the default shallow checkout omits them.
+          fetch-depth: 0
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
