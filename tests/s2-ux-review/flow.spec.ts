@@ -272,7 +272,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       await page.getByTestId('quotation-first-step-quantity').locator('input').fill('12')
       await expect(page.getByTestId('quotation-cost-adjustments')).toContainText('折扣')
       await expect(page.getByTestId('quotation-cost-adjustments')).toContainText('优惠金额')
-      const partLabelPx = await page.locator('.quotation-content__first-step-label').first().evaluate(
+      const partLabelPx = await page.locator('.q01-screen__label').first().evaluate(
         element => parseFloat(getComputedStyle(element).fontSize),
       )
       expect(partLabelPx, 'Q01 field labels must meet the approved visual reading size').toBeGreaterThanOrEqual(14)

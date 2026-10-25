@@ -36,7 +36,9 @@ for (const width of widths) {
     await page.locator('.primary-task-action').click()
     await expect(page.getByTestId('quotation-order-hub')).toBeVisible()
     const scope = page.getByTestId('ds07c4b-quotation-scope-note')
-    await expect(scope).toContainText('最多 3 笔')
+    // A failed remote read does not establish a bounded successful result.
+    await expect(page.getByTestId('quotation-hub-read-error')).toBeVisible()
+    await expect(scope).toContainText('本次读取未完成，不能判断有无订单')
     await expect(scope).toHaveClass(/app-status--strip/)
     await info.attach(`ds07c4b-q00-${width}`, {
       body: await page.screenshot({ animations: 'disabled', fullPage: true }),

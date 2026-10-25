@@ -83,25 +83,25 @@ export const mockActionWorkspaceScenarios: readonly MockActionWorkspaceScenario[
   {
     key: 'fresh',
     label: '全新预约',
-    description: '空白表单，可体验必填校验与成功提交',
+    description: '旧版独立节点权限核对：当前安全阻断；请从 MOCK-019 体验预约',
     route: routeFor(mockCommandScenarioIds.appointmentSuccess, '016'),
   },
   {
     key: 'retryable',
     label: '可重试失败',
-    description: '提交失败后保留输入，可再次提交',
+    description: '旧版独立节点权限核对：当前安全阻断，不会发起业务提交',
     route: routeFor(mockCommandScenarioIds.appointmentRetryable, '014'),
   },
   {
     key: 'terminal',
     label: '终止失败',
-    description: '终止失败后保留可恢复输入',
+    description: '旧版独立节点权限核对：当前安全阻断，不会发起业务提交',
     route: routeFor(mockCommandScenarioIds.appointmentTerminal, '015'),
   },
   {
     key: 'survey',
     label: '现场勘查',
-    description: '动态表单、照片上传、保存和完成',
+    description: '旧版独立节点权限核对：当前安全阻断；请从 MOCK-019 体验表单',
     route: surveyRoute,
   },
   {

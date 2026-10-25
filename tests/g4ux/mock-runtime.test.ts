@@ -108,6 +108,14 @@ describe('G4-UX business mock runtime', () => {
     expect(scenario?.description).toContain('不创建服务器订单')
   })
 
+  it('labels legacy standalone Appointment and Survey scenarios as blocked instead of promising unsafe form submission', () => {
+    for (const key of ['fresh', 'retryable', 'terminal', 'survey']) {
+      const scenario = mockActionWorkspaceScenarios.find(candidate => candidate.key === key)
+      expect(scenario?.description).toContain('当前安全阻断')
+      expect(scenario?.description).not.toContain('成功提交')
+    }
+  })
+
   it('only enables the bounded quotation product preview for its synthetic work order in DEV Mock DATA', () => {
     vi.stubEnv('DEV', true)
     setBusinessMockMode('data')

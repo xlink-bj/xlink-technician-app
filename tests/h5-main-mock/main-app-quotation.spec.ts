@@ -401,7 +401,7 @@ test('same Mock-018 quotation is reachable from normal work order list and detai
   expect(evidence.consoleErrors).toBe(0)
 })
 
-test('shared Action Workspace displays its actual operation title for appointment and survey', async ({ page }) => {
+test('legacy standalone Mock appointment and survey routes retain their title but fail closed', async ({ page }) => {
   for (const scenario of [
     { label: '全新预约', title: '预约上门' },
     { label: '现场勘查', title: '现场勘查' },
@@ -413,17 +413,12 @@ test('shared Action Workspace displays its actual operation title for appointmen
     await entry.click()
     await expect(page).toHaveURL(/pages\/work-orders\/action-workspace/)
     await expect(page.locator('.uni-page-head__title')).toContainText(scenario.title)
-    if (scenario.title === '现场勘查') {
-      // An independent Survey has no continuous-journey context. It must not
-      // duplicate the generic form or fall through to the Appointment UI.
-      await expect(page.getByTestId('dynamic-form-action-content')).toHaveCount(1)
-      await expect(page.getByTestId('app-action-content-heading')).toContainText('勘查记录')
-      await expect(page.getByTestId('app-action-content-heading')).toHaveCount(1)
-      await expect(page.getByTestId('app-action-content-heading')).toHaveClass(/app-action-content-heading--survey/)
-    } else {
-      await expect(page.getByTestId('app-action-content-heading')).toContainText('预约信息')
-      await expect(page.getByTestId('dynamic-form-action-content')).toHaveCount(0)
-    }
+    // Stage A denies execution for old standalone R1 forms nodes. The
+    // authenticated MOCK-019 journey is the positive form-interaction path.
+    await expect(page.locator('.workspace-state-title')).toContainText('当前操作暂不可用')
+    await expect(page.locator('.workspace-state-copy')).toContainText('返回工单详情')
+    await expect(page.getByTestId('app-action-content-heading')).toHaveCount(0)
+    await expect(page.getByTestId('dynamic-form-action-content')).toHaveCount(0)
   }
   expect(evidence.externalIntents).toEqual([])
   expect(evidence.pageErrors).toBe(0)
@@ -829,19 +824,19 @@ for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }
 }
 
 
-// DS-07.C4.A: actual main App H5 at all three governed mobile widths.
-// This test is additive: screenshot *evidence*, not automatic Golden promotion.
+// DS-07.C4.A: old standalone scenario links must not bypass Stage A workflow
+// authorization. Genuine editable Appointment / Survey states are exercised
+// using the scoped MOCK-019 continuous journey in this same suite.
 for (const width of [320, 375, 390] as const) {
-  test(`DS-07.C4.A renders appointment and Survey shared presentation without business requests at ${width}px`, async ({ page }, info) => {
+  test(`DS-07.C4.A blocks legacy standalone Appointment and Survey actions at ${width}px`, async ({ page }, info) => {
     await page.setViewportSize({ width, height: 844 })
     await page.goto('/#/pages/index/index', { waitUntil: 'domcontentloaded' })
     await expect(page.locator('.mock-source-indicator')).toContainText('Mock')
     await page.locator('.mock-action-scenario').filter({ hasText: '全新预约' }).click()
-    const appointmentHeading = page.getByTestId('app-action-content-heading')
-    await expect(appointmentHeading).toContainText('预约信息')
-    await expect(appointmentHeading).not.toHaveClass(/--survey/)
+    await expect(page.locator('.uni-page-head__title')).toContainText('预约上门')
+    await expect(page.locator('.workspace-state-title')).toContainText('当前操作暂不可用')
+    await expect(page.getByTestId('app-action-content-heading')).toHaveCount(0)
     await expect(page.getByTestId('dynamic-form-action-content')).toHaveCount(0)
-    await expect(page.locator('.action-workspace-content')).toBeVisible()
     await info.attach(`ds07c4-appointment-${width}`, {
       body: await page.screenshot({ animations: 'disabled', fullPage: true }),
       contentType: 'image/png',
@@ -850,13 +845,9 @@ for (const width of [320, 375, 390] as const) {
     await page.goto('/#/pages/index/index', { waitUntil: 'domcontentloaded' })
     await expect(page.locator('.mock-source-indicator')).toContainText('Mock')
     await page.locator('.mock-action-scenario').filter({ hasText: '现场勘查' }).click()
-    await expect(page.getByTestId('dynamic-form-action-content')).toBeVisible()
-    const surveyHeading = page.getByTestId('app-action-content-heading')
-    await expect(surveyHeading).toContainText('勘查记录')
-    await expect(surveyHeading).toHaveClass(/app-action-content-heading--survey/)
-    const sections = page.getByTestId('survey-task-section-heading')
-    expect(await sections.count(), 'real Survey task sections are rendered').toBeGreaterThanOrEqual(1)
-    await expect(sections.first()).toContainText(/维修部位|现场测量|拍摄|现场照片/)
+    await expect(page.locator('.uni-page-head__title')).toContainText('现场勘查')
+    await expect(page.locator('.workspace-state-title')).toContainText('当前操作暂不可用')
+    await expect(page.getByTestId('dynamic-form-action-content')).toHaveCount(0)
     const overflow = await page.evaluate(() =>
       Math.max(document.documentElement.scrollWidth, document.body.scrollWidth) - innerWidth)
     expect(overflow, 'no horizontal page overflow').toBeLessThanOrEqual(0)
