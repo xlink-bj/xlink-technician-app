@@ -574,7 +574,7 @@
           <view class="quotation-content__catalog-topbar-title">
             <text class="quotation-content__catalog-title">选择产品</text>
           </view>
-          <text class="quotation-content__catalog-mode">已选 {{ groupSelectionCount(activeCatalogGroupId || '') }} 项</text>
+          <text class="quotation-content__catalog-mode">第 2 步 · 选品</text>
         </view>
 
         <view class="quotation-content__catalog-target" data-testid="quotation-catalog-target">
@@ -800,9 +800,9 @@
 
         <view class="quotation-content__catalog-footer" data-testid="quotation-catalog-footer">
           <view class="quotation-content__catalog-footer-copy">
-            <text class="quotation-content__catalog-footer-title">当前维修部位 · {{ groupSelectionCount(activeCatalogGroupId || '') }} 项已选</text>
-            <text class="quotation-content__catalog-footer-note">返回后保留已填写的部位信息</text>
-            <text class="quotation-content__catalog-footer-note quotation-content__catalog-footer-note--last">本页不会创建服务器报价</text>
+            <text class="quotation-content__catalog-footer-title">返回当前维修部位</text>
+            <text class="quotation-content__catalog-footer-note">已选项目会保留在当前分组</text>
+            <text class="quotation-content__catalog-footer-note quotation-content__catalog-footer-note--last">本机草稿 · 不会创建服务器报价</text>
           </view>
           <AppButton variant="secondary" data-testid="quotation-catalog-return" @tap="closeCatalog">返回工作台</AppButton>
         </view>

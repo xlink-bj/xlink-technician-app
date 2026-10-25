@@ -70,7 +70,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       await expect(page.getByTestId('signing-contract-fixture-label')).toContainText('非真实订单')
       await expect(page.getByTestId('signing-order-read-contract-disabled')).toHaveAttribute('disabled', 'true')
       await expect(page.getByTestId('signing-order-read-sign-disabled')).toHaveAttribute('disabled', 'true')
-      await page.getByTestId('signing-order-read-verified').scrollIntoViewIfNeeded()
+      await page.getByTestId('signing-review-progress').scrollIntoViewIfNeeded()
     } else {
     // Enter through the REAL App and the same work-order-scoped route as L3.
     // No credential, real customer, Production network or business mutation.
@@ -97,7 +97,8 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       await page.reload({ waitUntil: 'domcontentloaded' })
       await expect(page.getByTestId('quotation-hub-design-sample')).toBeVisible()
       await expect(page.getByTestId('quotation-hub-records').locator('.quotation-hub__order')).toHaveCount(2)
-      await expect(page.getByTestId('quotation-hub-add-inline')).toBeVisible()
+      await expect(page.getByTestId('quotation-hub-start-new')).toBeVisible()
+      await expect(page.getByTestId('quotation-hub-add-inline')).toHaveCount(0)
     } else {
       // Only local editor, no authoritative Order or financial mutation.
       await page.getByTestId('quotation-hub-create-unverified').click()
@@ -167,7 +168,13 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       await expect(cards).toHaveClass(/app-record-card/)
       await expect(cards.locator('.signing-read-hero-title')).toHaveText('当前订单')
       await expect(page.getByTestId('signing-review-progress')).toBeVisible()
+      await expect(cards).toContainText('合成订单已核对 · 仅本机演示')
       await expect(page.getByTestId('signing-order-read-contract-status')).toBeVisible()
+      const stageRect = await page.getByTestId('signing-review-progress').boundingBox()
+      const orderRect = await cards.boundingBox()
+      expect(stageRect).not.toBeNull()
+      expect(orderRect).not.toBeNull()
+      expect(stageRect!.y, 'C01 shows current state before the technical Order details').toBeLessThan(orderRect!.y)
       const stageFont = await page.locator('.signing-read-stage .signing-read-progress-title')
         .evaluate(el => parseFloat(getComputedStyle(el).fontSize))
       expect(stageFont, 'C01 current-stage heading must be a primary visual level')
@@ -193,7 +200,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       const rect = await first.boundingBox()
       expect(rect).not.toBeNull()
       expect(rect!.width).toBeLessThanOrEqual(viewport.width)
-      const action = await page.getByTestId('quotation-hub-add-inline').boundingBox()
+      const action = await page.getByTestId('quotation-hub-start-new').boundingBox()
       expect(action).not.toBeNull()
       expect(action!.height, 'Q00 new-order CTA target').toBeGreaterThanOrEqual(43.5)
       const amount = first.locator('.app-amount-value')

@@ -54,7 +54,7 @@
 .quotation-content__group-title { color: var(--app-color-text-primary); display: block; font-size: var(--app-font-field-label); font-weight: 800; margin-top: var(--app-space-xs); overflow-wrap: anywhere; }
 .quotation-content__group-location { color: var(--app-color-text-secondary); display: block; font-size: var(--app-font-meta); line-height: 1.45; margin-top: var(--app-space-xs); }
 .quotation-content__group-count { color: var(--app-color-primary); font-size: var(--app-font-meta); font-weight: 800; }
-.quotation-content__context-toggle { margin-top: var(--app-space-xs); min-height: 36px; padding-left: 0; padding-right: 0; }
+.quotation-content__context-toggle { margin-top: var(--app-space-xs); min-height: 44px; padding-left: 0; padding-right: 0; }
 .quotation-content__group-subtotal { color: var(--app-color-primary); display: block; font-size: var(--app-font-meta); font-weight: 700; margin-top: var(--app-space-xs); }
 .quotation-content__group-context { border-bottom: 1rpx solid var(--app-color-divider); display: flex; flex-direction: column; gap: var(--app-space-sm); padding: var(--app-space-md) 0; }
 .quotation-content__context-label { color: var(--app-color-text-secondary); display: block; font-size: var(--app-font-meta); font-weight: 700; }
@@ -1167,14 +1167,14 @@
 }
 .quotation-content__catalog-target {
   min-height:55px; padding:10px 12px;
-  background:#fff; border:1px solid #e4eaf2; border-radius:12px; box-shadow:none;
+  background:#eef5ff; border:1px solid #cfe2ff; border-radius:12px; box-shadow:none;
 }
 .quotation-content__catalog-target-title {
-  color:#263a55; font-size:13px; font-weight:730; line-height:1.4;
+  color:#183f76; font-size:14px; font-weight:750; line-height:1.4;
 }
 .quotation-content__catalog-target-count {
-  color:#497bb9; background:#f1f6fc; border-radius:8px;
-  font-size:10.5px; padding:5px 7px;
+  color:#1768c5; background:#fff; border:1px solid #d6e8ff; border-radius:8px;
+  font-size:11px; padding:6px 8px;
 }
 .quotation-content__catalog-intro { display:none; }
 .quotation-content__catalog-main {
@@ -1187,7 +1187,7 @@
 }
 .quotation-content__search-input { color:#263a53; font-size:13px; }
 .quotation-content__search-action {
-  background:#eaf3ff; color:#286fc8; min-height:33px; border-radius:8px;
+  background:#eaf3ff; color:#286fc8; min-height:44px; border-radius:8px;
 }
 .quotation-content__category-grid { height:46px; flex-basis:46px; }
 .quotation-content__category {
@@ -1238,7 +1238,7 @@
   font-size:10.5px; color:#8695a8;
 }
 .quotation-content__catalog-browser--faceted .quotation-content__catalog-item-action {
-  min-width:100px; min-height:38px; font-size:12px;
+  min-width:100px; min-height:44px; font-size:12px;
   border-radius:9px; padding:0 7px;
 }
 

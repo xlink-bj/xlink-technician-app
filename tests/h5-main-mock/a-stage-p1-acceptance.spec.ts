@@ -54,6 +54,7 @@ test.describe('A-stage P1 real-H5 operator acceptance', () => {
     await expectDetailOverviewWithinViewport(page)
     await expect(page.getByTestId('a-stage-special-panel')).toBeVisible()
     await expect(page.getByTestId('a-stage-special-panel')).toContainText('未提交后台')
+    await expect(page.getByTestId('a-special-task-state')).toContainText('正在填写')
   }
 
   async function open019Quotation(page: Page) {

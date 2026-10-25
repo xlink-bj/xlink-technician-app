@@ -96,7 +96,7 @@ defineEmits<{ (event: 'adopt-suggestion'): void }>()
 .journey-context--task-focus { padding:11px 13px; gap:5px; margin-bottom:9px; border-radius:13px; }
 .journey-context--task-focus .journey-context__heading { font-size:13px; line-height:1.35; }
 .journey-context--task-focus .journey-context__head-hint { font-size:11px; line-height:1.4; }
-.journey-context--task-focus .journey-context__toggle { min-height:32px; font-size:12px; border-radius:9px; padding:3px 10px; }
+.journey-context--task-focus .journey-context__toggle { min-height:44px; font-size:12px; border-radius:9px; padding:3px 10px; }
 .journey-context--task-focus:not(.journey-context--expanded) .journey-context__suggestion {
   display:grid; grid-template-columns:minmax(0,1fr) 104px; align-items:center;
   gap:7px; padding-top:8px;
@@ -104,7 +104,7 @@ defineEmits<{ (event: 'adopt-suggestion'): void }>()
 .journey-context--task-focus .journey-context__focus-suggestion { font-size:13px; line-height:1.5; }
 .journey-context--task-focus .journey-context__focus-pending { font-size:11px; margin-left:5px; }
 .journey-context--task-focus:not(.journey-context--expanded) .journey-context__suggestion .app-button {
-  min-height:39px; font-size:12px; line-height:1.25; width:104px;
+  min-height:44px; font-size:12px; line-height:1.25; width:104px;
   margin:0; padding:5px; border-radius:9px;
 }
 
@@ -112,7 +112,7 @@ defineEmits<{ (event: 'adopt-suggestion'): void }>()
    DOM while collapsed instead of hiding important text with grid overflow.
    Expanded Survey provenance and the original S01/S02 UI are unchanged. */
 .journey-context--task-focus:not(.journey-context--expanded) {
-  padding:9px 11px; margin-bottom:9px; min-height:56px;
+  padding:9px 11px; margin-bottom:9px; min-height:64px;
   border-radius:12px; box-sizing:border-box;
 }
 .journey-context__task-summary { display:flex; gap:8px; align-items:center; min-width:0; }
@@ -125,7 +125,7 @@ defineEmits<{ (event: 'adopt-suggestion'): void }>()
 }
 .journey-context__task-source { font-size:11px; color:#7c8da5; line-height:1.3; }
 .journey-context--task-focus .journey-context__task-adopt {
-  box-sizing:border-box; width:83px; flex:0 0 83px; height:36px; min-height:36px;
+  box-sizing:border-box; width:83px; flex:0 0 83px; height:44px; min-height:44px;
   display:flex; align-items:center; justify-content:center; white-space:nowrap;
   padding:0 5px; margin:0; background:#fff; color:#1677f4; font-weight:700;
   border:1px solid #b5d2ff; border-radius:9px; font-size:12px; line-height:1;
@@ -134,7 +134,7 @@ defineEmits<{ (event: 'adopt-suggestion'): void }>()
 .journey-context__task-detail {
   border:0; background:transparent; margin:0; padding:5px 2px;
   color:#1677f4; font-size:12px; font-weight:700;
-  flex:0 0 35px; min-height:35px;
+  flex:0 0 44px; min-height:44px;
 }
 .journey-context__task-detail::after { border:0; }
 </style>

@@ -27,25 +27,20 @@
       tone="neutral"
       quiet
       :message="mockJourneyOrder
-        ? '本机合成订单仅供协议回读验收；不代表真实订单记录或后台提交。'
-        : '当前工单支持多笔独立订单；以下只显示本次已核验的记录（最多 3 笔）。'"
+        ? displayReadState === 'succeeded' ? uxStateLanguage.syntheticOrder : uxStateLanguage.syntheticOrderPending
+        : displayReadState === 'succeeded' ? uxStateLanguage.scopedOrders : uxStateLanguage.scopedOrdersPending"
       data-testid="ds07c4b-quotation-scope-note"
     />
     <AppSectionHeading v-if="!choosingMode" class="quotation-hub__section-heading"
-      :title="`订单列表${displayReadState === 'succeeded' || isVisualSample ? ` (${records.length})` : ''}`">
-      <template #trailing>
-        <AppButton v-if="records.length > 0 && !readOnly" class="quotation-hub__new-outline" variant="secondary"
-          data-testid="quotation-hub-add-inline" @tap="chooseNewOrder">＋ 新增订单</AppButton>
-      </template>
-    </AppSectionHeading>
+      :title="`订单记录${displayReadState === 'succeeded' || isVisualSample ? ` (${records.length})` : ''}`" />
     <view v-if="choosingMode" class="quotation-hub__mode" data-testid="quotation-hub-mode">
       <text class="quotation-hub__mode-title">选择操作</text>
-      <text class="quotation-hub__mode-caption">为当前工单创建另一笔独立的报价订单</text>
+      <text class="quotation-hub__mode-caption">为当前工单开始另一份报价草稿；正式订单尚未创建</text>
       <button class="quotation-hub__mode-option quotation-hub__mode-option--active" type="button"
         :aria-pressed="true" data-testid="quotation-hub-mode-new" @tap="startEditor">
         <view class="quotation-hub__mode-icon"><text aria-hidden="true">＋</text></view>
         <view class="quotation-hub__mode-description">
-          <text class="quotation-hub__mode-name">新增订单</text>
+          <text class="quotation-hub__mode-name">新建报价草稿</text>
           <text class="quotation-hub__mode-detail">选择维修部位，添加产品，形成新的报价草稿</text>
         </view>
         <text class="quotation-hub__mode-radio" aria-hidden="true">●</text>
@@ -77,17 +72,15 @@
     <template v-else-if="records.length === 0">
     <AppRecordCard class="quotation-hub__empty" data-testid="quotation-hub-no-records">
       <view class="quotation-hub__empty-icon" aria-hidden="true"><AppIcon name="order" :size="56" color="#1677f9" /><text class="quotation-hub__empty-icon-plus">＋</text></view>
-      <text class="quotation-hub__empty-title">{{ isVisualSample ? '当前工单尚无订单' : mockJourneyOrder ? '尚未确认本机 Mock 订单' : '本次未发现正式订单' }}</text>
-      <text class="quotation-hub__empty-detail">请根据现场勘查结果创建报价订单，也可为不同维修部位分别建立订单。</text>
+      <text class="quotation-hub__empty-title">{{ isVisualSample ? '当前工单尚无订单' : mockJourneyOrder ? '尚未确认本机 Mock 订单' : uxStateLanguage.scopedOrderReadTitle }}</text>
+      <text class="quotation-hub__empty-detail">先按维修部位填写报价草稿，核对组成及金额后再进入后续流程。</text>
       <AppButton v-if="!readOnly" block class="quotation-hub__empty-action" data-testid="quotation-hub-empty-create"
-        @tap="startEditor">＋ 创建第一笔订单</AppButton>
+        @tap="startEditor">＋ {{ uxStateLanguage.draftAction }}</AppButton>
       <text class="quotation-hub__empty-provenance">{{ isVisualSample ? '空状态为合成数据，仅用于视觉评审。' : mockJourneyOrder ? '仅代表本机精确 ID 的 Mock 回读；未核验其他订单。' : '仅确认本次读取，未证明完整历史为空。' }}</text>
     </AppRecordCard>
     <view class="quotation-hub__multi-order-tips">
-      <text class="quotation-hub__tips-heading">ⓘ 一个工单可以有多个订单</text>
-      <text class="quotation-hub__tips-line">· 支持为不同维修部位创建独立订单</text>
-      <text class="quotation-hub__tips-line">· 可根据维修方案或时间分批创建</text>
-      <text class="quotation-hub__tips-line">· 创建后可在订单档案中查询历史记录</text>
+      <text class="quotation-hub__tips-heading">一个工单可对应多笔订单</text>
+      <text class="quotation-hub__tips-line">不同维修部位可分开报价；新建草稿不会自动创建正式订单。</text>
     </view>
     </template>
     <view v-else class="quotation-hub__list" data-testid="quotation-hub-records">
@@ -97,7 +90,7 @@
           <text class="quotation-hub__order-number">{{ order.displayNumber || order.id }}</text>
           <view class="quotation-hub__order-pills">
             <AppMetaTag class="quotation-hub__order-badge" tone="info"
-              :label="isVisualSample ? (order.id.endsWith('-1') ? '订单 1' : '订单 2') : mockJourneyOrder ? '本机 Mock 订单' : '正式订单'" />
+              :label="isVisualSample ? (order.id.endsWith('-1') ? '订单 1' : '订单 2') : mockJourneyOrder ? '本机 Mock 订单' : '正式订单 · 只读'" />
             <AppMetaTag v-if="isVisualSample" class="quotation-hub__order-badge"
               :tone="order.id.endsWith('-1') ? 'warning' : 'success'"
               :label="order.id.endsWith('-1') ? '演示 · 待签约' : '演示 · 已签约'" />
@@ -132,6 +125,12 @@
             :data-testid="`quotation-hub-edit-${order.id}`" @tap="edit(order.id)">
             <AppIcon name="order" :size="17" color="#2479eb" />{{ editingId === order.id ? '核验中…' : '修改订单' }}
           </AppButton>
+          <navigator v-if="!isVisualSample && !mockJourneyOrder && signingOrderReadRouteFor(workOrderId, order.id)"
+            class="quotation-hub__order-signing"
+            :url="signingOrderReadRouteFor(workOrderId, order.id) || undefined"
+            :data-testid="`quotation-hub-signing-${order.id}`">
+            查签约进度
+          </navigator>
         </view>
         <view v-if="expandedId === order.id" class="quotation-hub__details"
           :data-testid="`quotation-hub-details-${order.id}`">
@@ -154,7 +153,7 @@
         :disabled="readOnly" @tap="startEditor">下一步</AppButton>
       <AppButton v-else block class="quotation-hub__new" data-testid="quotation-hub-start-new"
         :disabled="readOnly || editingId !== null" @tap="chooseNewOrder">
-        {{ hasLocalDraft ? '继续本机报价草稿' : '＋ 新增订单' }}
+        {{ hasLocalDraft ? uxStateLanguage.draftResumeAction : `＋ ${uxStateLanguage.draftAction}` }}
       </AppButton>
       <AppButton v-if="choosingMode" variant="text" block data-testid="quotation-hub-mode-cancel" @tap="cancelMode">取消</AppButton>
     </view>
@@ -171,8 +170,10 @@ import AppMetaTag from '@shared/ui/AppMetaTag.vue'
 import AppSectionHeading from '@shared/ui/AppSectionHeading.vue'
 import AppAmountValue from '@shared/ui/AppAmountValue.vue'
 import AppStatus from '@shared/ui/AppStatus.vue'
+import { uxStateLanguage } from '@shared/ui/ux-state-language'
 import { useQuotationOrderBrowseStore } from './order-browse-store'
 import type { QuotationOrderBrowseItem } from '@shared/ports'
+import { signingOrderReadRouteFor } from '@features/work-orders/signing/signing-review-read-workspace'
 
 const props = defineProps<{
   readonly workOrderId: string
@@ -330,9 +331,6 @@ watch(() => props.workOrderId, () => {
 .quotation-hub__section-title {
   font-size:19px; font-weight:790; line-height:1.3; color:#172a44;
 }
-.quotation-hub__new-outline {
-  min-height:44px; font-size:13px; font-weight:700; border-radius:10px;
-}
 .quotation-hub__list { display:flex; flex-direction:column; gap:12px; }
 .quotation-hub__order {
   box-sizing:border-box; padding:15px 15px 15px;
@@ -379,6 +377,12 @@ watch(() => props.workOrderId, () => {
 }
 .quotation-hub__order-actions .app-button__label {
   display:flex; justify-content:center; align-items:center; gap:6px;
+}
+.quotation-hub__order-signing {
+  flex:1; min-height:44px; min-width:0; box-sizing:border-box;
+  display:flex; justify-content:center; align-items:center;
+  border-radius:10px; border:1px solid var(--app-color-primary-border); color:var(--app-color-primary);
+  background:var(--app-color-primary-soft); font-size:13px; font-weight:700; text-align:center;
 }
 .quotation-hub__details {
   margin-top:13px; padding-top:12px; border-top:1px solid #eef2f7;

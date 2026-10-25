@@ -2,13 +2,13 @@
   <view class="special-forms app-surface" data-testid="a-stage-special-panel">
     <view class="special-forms__header">
       <view class="special-forms__header-copy">
-        <text class="special-forms__title">{{ kind === 'repeat' ? '现场复检记录' : '现场表单记录' }}</text>
-        <text class="special-forms__subtitle">{{ kind === 'repeat' ? '每次记录单独保存' : '可新增、编辑或移除记录' }}</text>
+        <text class="special-forms__title">{{ kind === 'repeat' ? '现场复检' : '现场记录' }}</text>
+        <text class="special-forms__subtitle">{{ kind === 'repeat' ? '每次复检独立保存，再完成模拟节点' : '填写现场情况，保存后可补充多条记录' }}</text>
       </view>
-      <text class="special-forms__scope">Mock · 未提交后台</text>
+      <text class="special-forms__scope">本机 Mock</text>
     </view>
     <AppStatus class="special-forms__notice" quiet
-      message="当前为合成工单，保存与完成操作仅写入本机 Mock 协议记录。" />
+      message="仅保存本机模拟记录 · 未提交后台" />
     <view v-if="loading" class="special-forms__message" data-testid="a-special-loading">正在读取表单…</view>
     <view v-else-if="error" class="special-forms__message special-forms__message--error"
       data-testid="a-special-error" role="alert">
@@ -18,8 +18,12 @@
     <template v-else-if="viewState">
       <AppStatus v-if="operationFeedback" tone="warning" quiet
         :message="operationFeedback" data-testid="a-special-operation-feedback" />
+      <view class="special-forms__task-state" data-testid="a-special-task-state">
+        <text class="special-forms__task-marker">{{ viewState.receiptPending ? '结果待核对' : viewState.nodeActive ? '正在填写' : '本机模拟已完成' }}</text>
+        <text class="special-forms__task-detail">{{ viewState.receiptPending ? '保留原有记录，先核对回执，勿重复提交' : viewState.nodeActive ? '保存每条记录后，确认齐全再完成节点' : '记录已锁定，可查看已保存内容' }}</text>
+      </view>
       <view class="special-forms__section-heading">
-        <text>已保存记录</text>
+        <text>记录列表</text>
         <text class="special-forms__count">{{ viewState.entries.filter(row => row.state === 'active').length }} 条</text>
       </view>
       <text v-if="!viewState.entries.length" class="special-forms__empty">暂无记录，可从下方新增。</text>
@@ -51,7 +55,7 @@
         data-testid="a-special-receipt-pending" />
       <view v-if="viewState.receiptPending" class="special-forms__recovery" data-testid="a-special-recovery">
         <template v-if="viewState.pendingRecoverable">
-          <text class="special-forms__finish-copy">可读取最新 Mock 记录并核对。通过后只清理本机防重回执。</text>
+          <text class="special-forms__finish-copy">{{ uxStateLanguage.pendingReceipt }}可只读核对最新记录，确认后仅清理本机防重回执。</text>
           <template v-if="viewState.pendingNeedsOriginalText">
             <text class="special-forms__label">原保存的现场情况 <text class="special-forms__required">*</text></text>
             <AppTextarea :model-value="summary" :maxlength="4000" :disabled="busy"
@@ -70,7 +74,7 @@
       </view>
       <template v-else-if="viewState.nodeActive">
         <view class="special-forms__editor">
-          <text class="special-forms__section-title">{{ editingId ? '修改现场记录' : '新增现场记录' }}</text>
+          <text class="special-forms__section-title">{{ editingId ? '编辑已保存记录' : '新增一条记录' }}</text>
           <text class="special-forms__label">现场情况 <text class="special-forms__required">*</text></text>
           <AppTextarea :model-value="summary" :maxlength="4000" :disabled="busy"
             placeholder="例如：平屋顶防水层老化，女儿墙根部出现裂缝"
@@ -82,10 +86,10 @@
           </view>
         </view>
         <view class="special-forms__finish">
-          <text class="special-forms__finish-copy">完成当前节点后不能再编辑这些记录。</text>
+          <text class="special-forms__finish-copy">{{ canFinish ? '记录齐全后可完成模拟节点；完成后不可再编辑。' : '请先保存至少一条有效记录。' }}</text>
           <AppButton v-if="!confirmFinish" variant="secondary" block
             :disabled="busy || !canFinish" data-testid="a-special-finish-request"
-            @tap="confirmFinish = true">完成当前节点</AppButton>
+            @tap="confirmFinish = true">完成模拟节点</AppButton>
           <view v-else class="special-forms__confirmation">
             <text>确认记录已齐全并完成当前节点？</text>
             <AppButton :disabled="busy" data-testid="a-special-finish-confirm"
@@ -94,7 +98,7 @@
           </view>
         </view>
       </template>
-      <AppStatus v-else tone="success" quiet message="当前节点已完成（仅本机 Mock）。" data-testid="a-special-complete" />
+      <AppStatus v-else tone="success" quiet :message="uxStateLanguage.syntheticNode" data-testid="a-special-complete" />
     </template>
   </view>
 </template>
@@ -111,6 +115,7 @@ import { useSessionStore } from '@shared/state'
 import AppButton from '@shared/ui/AppButton.vue'
 import AppTextarea from '@shared/ui/AppTextarea.vue'
 import AppStatus from '@shared/ui/AppStatus.vue'
+import { uxStateLanguage } from '@shared/ui/ux-state-language'
 
 const props = defineProps<{ readonly kind: AStageSpecialKind; readonly workOrderId: string;
   readonly node: WorkflowNodeRead }>()
@@ -227,14 +232,17 @@ async function recoverCompleted(): Promise<void> {
 </script>
 
 <style scoped>
-.special-forms { margin-top: 22rpx; padding: 30rpx 28rpx; border-radius: var(--app-radius-card); }
+.special-forms { margin-top: 22rpx; padding: 26rpx 24rpx; border-radius: var(--app-radius-card); }
 .special-forms__header,.special-forms__section-heading,.special-forms__record,.special-forms__buttons,.special-forms__row-actions,.special-forms__confirmation { display:flex; align-items:center; gap:16rpx; }
 .special-forms__header,.special-forms__section-heading { justify-content:space-between; }
 .special-forms__header-copy,.special-forms__record-main { flex:1; min-width:0; }
 .special-forms__title { display:block; font-size:var(--app-font-section-title); font-weight:700; color:var(--app-color-text-primary); }
 .special-forms__subtitle,.special-forms__scope,.special-forms__notice,.special-forms__count,.special-forms__record-summary,.special-forms__muted,.special-forms__finish-copy { display:block; font-size:23rpx; line-height:1.5; color:var(--app-color-text-secondary); }
-.special-forms__scope { flex-shrink:0; }
+.special-forms__scope { flex-shrink:0; align-self:flex-start; background:#edf5ff; color:#2465ae; border-radius:12rpx; padding:7rpx 12rpx; font-weight:650; }
 .special-forms__notice { margin-top:18rpx; }
+.special-forms__task-state { margin-top:22rpx; border:1rpx solid #d7e7fc; background:#f1f7ff; border-radius:16rpx; padding:20rpx; display:flex; flex-direction:column; gap:6rpx; }
+.special-forms__task-marker { font-weight:750; font-size:29rpx; color:#1d5796; }
+.special-forms__task-detail { color:#4b6484; font-size:23rpx; line-height:1.5; }
 .special-forms__section-heading { margin-top:28rpx; margin-bottom:8rpx; font-weight:700; font-size:29rpx; color:var(--app-color-text-primary); }
 .special-forms__record { align-items:flex-start; border-top:1rpx solid var(--app-color-border); min-height:100rpx; padding:22rpx 0; }
 .special-forms__record-index { color:var(--app-color-text-secondary); font-size:25rpx; min-width:30rpx; }

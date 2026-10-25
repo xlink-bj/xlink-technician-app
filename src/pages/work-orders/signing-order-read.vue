@@ -4,7 +4,7 @@
       <AppCraftHeading
         title="签约进度"
         eyebrow="订单签约 · 当前工单"
-        subtitle="查看订单与合同进度，了解当前签约状态。"
+        subtitle="先看当前状态，再核对合同记录。"
       />
     </view>
 
@@ -27,10 +27,26 @@
       <navigator open-type="navigateBack" :delta="1">返回工单</navigator>
     </AppRecordCard>
     <template v-else>
+      <view class="signing-read-stage xl-craft__surface" data-testid="signing-review-progress">
+        <view class="xl-craft__progress-labels">
+          <text class="xl-craft__caption">当前签约状态 · {{ devFixtureContractRead ? '本机演示' : '订单只读' }}</text>
+          <text v-if="signingStepIndex > 0" class="signing-read-stage-index">步骤 {{ signingStepIndex }}/3</text>
+        </view>
+        <view v-if="signingStepIndex > 0" class="xl-craft__progress-track" aria-hidden="true">
+          <view :class="{ 'is-active': signingStepIndex >= 1 }" />
+          <view :class="{ 'is-active': signingStepIndex >= 2 }" />
+          <view :class="{ 'is-active': signingStepIndex >= 3 }" />
+        </view>
+        <text class="signing-read-progress-title xl-craft__section-title">{{ signingPhaseTitle }}</text>
+        <text class="signing-read-next-label">下一步</text>
+        <text class="signing-read-body" data-testid="signing-review-next">{{ signingProgress.nextStep }}</text>
+        <text class="signing-read-warning xl-craft__caption">{{ uxStateLanguage.signingReadOnly }}</text>
+      </view>
       <AppRecordCard class="signing-read-section signing-read-hero xl-craft__surface" data-testid="signing-order-read-verified">
         <view class="signing-read-hero-top">
           <text class="signing-read-hero-title">当前订单</text>
-          <AppMetaTag class="xl-craft__badge xl-craft__badge--success" label="身份已核验" tone="success" />
+          <AppMetaTag class="xl-craft__badge" :label="devFixtureContractRead ? uxStateLanguage.syntheticOrderVerified : uxStateLanguage.verifiedOrder"
+            :tone="devFixtureContractRead ? 'info' : 'success'" />
         </view>
         <view class="signing-read-order-identity">
           <text class="xl-craft__caption">订单编号</text>
@@ -48,26 +64,12 @@
           部分订单明细暂不可识别，未推断缺失字段。
         </text>
       </AppRecordCard>
-      <view class="signing-read-stage" data-testid="signing-review-progress">
-        <view class="xl-craft__progress-labels">
-          <text class="xl-craft__caption">当前阶段</text>
-          <text v-if="signingStepIndex > 0" class="signing-read-stage-index">0{{ signingStepIndex }} / 03</text>
-        </view>
-        <view v-if="signingStepIndex > 0" class="xl-craft__progress-track" aria-hidden="true">
-          <view :class="{ 'is-active': signingStepIndex >= 1 }" />
-          <view :class="{ 'is-active': signingStepIndex >= 2 }" />
-          <view :class="{ 'is-active': signingStepIndex >= 3 }" />
-        </view>
-        <text class="signing-read-progress-title xl-craft__section-title">{{ signingPhaseTitle }}</text>
-        <text class="signing-read-body" data-testid="signing-review-next">{{ signingProgress.nextStep }}</text>
-        <text class="signing-read-warning xl-craft__caption">只读进度，不代表当前账号具有签署或短信发送权限。</text>
-      </view>
       <AppRecordCard class="signing-read-section xl-craft__surface xl-craft__surface--flat" data-testid="signing-order-read-contract-status">
         <AppSectionHeading title="合同状态">
           <template #trailing><AppMetaTag label="仅核验" /></template>
         </AppSectionHeading>
-        <text v-if="devFixtureContractRead" class="signing-read-dev-note xl-craft__notice" data-testid="signing-contract-fixture-label">DEV 合成合同演示 · 非真实订单、非真实签约</text>
-        <text class="signing-read-help">按当前正式订单核验合同，不包含其他订单。查询为空或不完整时，不能认定合同不存在。</text>
+        <text v-if="devFixtureContractRead" class="signing-read-dev-note xl-craft__notice" data-testid="signing-contract-fixture-label">本机合成合同 · 非真实订单或签约</text>
+        <text class="signing-read-help">只核对当前订单；没有读到合同不代表合同不存在。</text>
         <text v-if="!devFixtureContractRead" data-testid="signing-contract-prod-blocked">
           真实环境合同读取尚未开放。仅 DEV 隔离合成样本可核验状态，不能代表生产签约。
         </text>
@@ -176,6 +178,7 @@ import AppSectionHeading from '@shared/ui/AppSectionHeading.vue'
 import AppAmountValue from '@shared/ui/AppAmountValue.vue'
 import AppStatus from '@shared/ui/AppStatus.vue'
 import AppCraftHeading from '@shared/ui/AppCraftHeading.vue'
+import { uxStateLanguage } from '@shared/ui/ux-state-language'
 import { useSessionStore } from '@shared/state'
 import { useSigningReviewReadStore } from '@features/work-orders/signing/signing-review-read-store'
 import { r1OrderSigningStageNotice, r1ContractStatusReadNotice } from '@features/work-orders/signing/r1-signing-ui-rules'
@@ -304,12 +307,12 @@ onUnload(() => {
   color: var(--xl-caption); font-size: 11px;
 }
 .signing-read-hero {
-  gap: 0; padding: 18px 19px 17px; margin-bottom: 0;
+  gap: 0; padding: 16px 18px 15px; margin-bottom: 13px;
 }
 .signing-read-hero-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .signing-read-hero-title { color: var(--xl-ink); font-size: 14px; font-weight: 600; line-height: 22px; }
 
-.signing-read-order-identity { display: flex; flex-direction: column; gap: 4px; margin-top: 15px; }
+.signing-read-order-identity { display: flex; flex-direction: column; gap: 4px; margin-top: 12px; }
 .signing-read-order-number {
   display: block; text-align: left;
   font-size: 13px; line-height: 20px; font-weight: 600;
@@ -317,7 +320,7 @@ onUnload(() => {
 }
 .signing-read-hero-money {
   display: flex; justify-content: space-between; gap: 12px;
-  align-items: flex-end; margin-top: 18px;
+  align-items: flex-end; margin-top: 13px;
 }
 .signing-read-hero-amount { display: flex; flex-direction: column; gap: 2px; }
 .signing-read-amount-value {
@@ -332,20 +335,25 @@ onUnload(() => {
   display: block; color: var(--xl-secondary);
   font-size: 11px; line-height: 18px;
   border-top: 1px solid var(--xl-divider);
-  margin-top: 17px; padding-top: 12px;
+  margin-top: 12px; padding-top: 9px;
 }
-.signing-read-stage { margin: 26px 0; display: flex; flex-direction: column; }
+.signing-read-stage {
+  display: flex; flex-direction: column; gap: 4px; margin: 0 0 13px;
+  padding: 19px; border: 1px solid var(--app-color-primary-border);
+  background: var(--app-color-primary-soft);
+}
 .signing-read-stage-index {
   color: var(--xl-blue); font-size: 11px; line-height: 18px;
   font-weight: 700; font-variant-numeric: tabular-nums;
 }
-.signing-read-stage .xl-craft__progress-track { margin-bottom: 18px; }
+.signing-read-stage .xl-craft__progress-track { margin-bottom: 10px; }
 .signing-read-progress-title {
   display: block; color: var(--xl-ink); font-size: 18px;
   line-height: 26px; font-weight: 600;
 }
-.signing-read-stage .signing-read-body { margin-top: 8px; }
-.signing-read-stage .signing-read-warning { margin-top: 6px; }
+.signing-read-next-label { color:var(--xl-blue); font-weight:700; margin-top:9px; }
+.signing-read-stage .signing-read-body { margin-top: 0; line-height:1.5; color:var(--xl-ink); }
+.signing-read-stage .signing-read-warning { margin-top: 10px; }
 .signing-read-body, .signing-read-help {
   display: block; color: var(--xl-secondary);
   font-size: 12px; line-height: 19px;
