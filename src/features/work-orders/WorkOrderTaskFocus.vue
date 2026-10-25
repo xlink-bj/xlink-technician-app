@@ -9,9 +9,10 @@
     </view>
     <text class="task-focus-panel__title" data-testid="task-focus-title">{{ title }}</text>
     <button class="primary-task-action task-focus-panel__action" type="button"
+      :class="{ 'task-focus-panel__action--disabled': disabled }"
       :disabled="disabled" :aria-disabled="disabled"
       :aria-label="actionLabel"
-      hover-class="task-focus-panel__action--pressed"
+      :hover-class="disabled ? 'none' : 'task-focus-panel__action--pressed'"
       :hover-start-time="0" :hover-stay-time="70"
       data-testid="task-focus-action" @tap="activate">
       <text class="task-focus-panel__action-label">{{ actionLabel }}</text>
@@ -113,11 +114,11 @@ function activate(): void {
   transition: background-color .15s ease, transform .15s ease;
 }
 .task-focus-panel .primary-task-action.task-focus-panel__action::after { border: 0; }
-.task-focus-panel .primary-task-action.task-focus-panel__action--pressed:not([disabled]) {
+.task-focus-panel .primary-task-action.task-focus-panel__action--pressed {
   background: #1765d8;
   transform: translateY(1px);
 }
-.task-focus-panel .primary-task-action.task-focus-panel__action[disabled] {
+.task-focus-panel .primary-task-action.task-focus-panel__action--disabled {
   background: #385371;
   color: #c9d5e5;
   box-shadow: none;

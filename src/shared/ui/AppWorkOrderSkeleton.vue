@@ -54,7 +54,7 @@
           </view>
           <view class="skeleton-line skeleton-line--location" />
           <view class="skeleton-actions skeleton-actions--summary">
-            <view /><view /><view /><view />
+            <view class="skeleton-rect" /><view class="skeleton-rect" /><view class="skeleton-rect" /><view class="skeleton-rect" />
           </view>
         </view>
 
@@ -65,9 +65,9 @@
         </view>
 
         <view class="skeleton-surface skeleton-information">
-          <view class="skeleton-tabs"><view /><view /><view /><view /></view>
-          <view class="skeleton-information-row"><view /><view /></view>
-          <view class="skeleton-information-row"><view /><view /></view>
+          <view class="skeleton-tabs"><view class="skeleton-rect" /><view class="skeleton-rect" /><view class="skeleton-rect" /><view class="skeleton-rect" /></view>
+          <view class="skeleton-information-row"><view class="skeleton-rect" /><view class="skeleton-rect skeleton-rect--last" /></view>
+          <view class="skeleton-information-row"><view class="skeleton-rect" /><view class="skeleton-rect skeleton-rect--last" /></view>
         </view>
       </view>
     </view>
@@ -203,7 +203,7 @@ defineProps<{ readonly variant: 'list' | 'detail' }>()
 }.app-workorder-skeleton--detail .skeleton-actions {
   display: flex;
   gap: 18rpx;
-}.app-workorder-skeleton--detail .skeleton-actions view {
+}.app-workorder-skeleton--detail .skeleton-actions .skeleton-rect {
   background: #edf2f7;
   border-radius: 14rpx;
   flex: 1;
@@ -226,7 +226,7 @@ defineProps<{ readonly variant: 'list' | 'detail' }>()
   gap: 28rpx;
   height: 82rpx;
   padding: 0 28rpx;
-}.app-workorder-skeleton--detail .skeleton-tabs view {
+}.app-workorder-skeleton--detail .skeleton-tabs .skeleton-rect {
   background: #edf2f7;
   border-radius: 999rpx;
   height: 20rpx;
@@ -237,13 +237,13 @@ defineProps<{ readonly variant: 'list' | 'detail' }>()
   justify-content: space-between;
   margin: 0 28rpx;
   min-height: 82rpx;
-}.app-workorder-skeleton--detail .skeleton-information-row view {
+}.app-workorder-skeleton--detail .skeleton-information-row .skeleton-rect {
   background: #edf2f7;
   border-radius: 999rpx;
   height: 20rpx;
   width: 22%;
   animation: app-loading-pulse var(--app-motion-loading-duration) var(--app-motion-loading-easing) infinite;
-}.app-workorder-skeleton--detail .skeleton-information-row view:last-child {
+}.app-workorder-skeleton--detail .skeleton-information-row .skeleton-rect--last {
   width: 34%;
 }
 

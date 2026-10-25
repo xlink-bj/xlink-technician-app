@@ -14,7 +14,8 @@
         @confirm="emit('search')"
       />
     </view>
-    <button class="search-button" :disabled="disabled" @tap="emit('search')">{{ actionLabel }}</button>
+    <button class="search-button" :class="{ 'search-button--disabled': disabled }"
+      :disabled="disabled" @tap="emit('search')">{{ actionLabel }}</button>
   </view>
 </template>
 <script setup lang="ts">
@@ -96,7 +97,7 @@ function handleInput(event: Event): void {
   padding: 0;
 }
 
-.search-button[disabled] {
+.search-button--disabled {
   opacity: 0.58;
 }
 </style>

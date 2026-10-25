@@ -38,6 +38,7 @@
       :class="{ 'detail-content--mock-qa': Boolean(aStageSpecialKind || aStageCompletedSpecialNode) }">
       <AppSectionHeading class="detail-section-heading" title="工单概览" subtitle="服务信息与当前处理进度" data-testid="ds02b-detail-heading" />
       <AppRecordCard class="summary-card" data-testid="ds02b-detail-record-card">
+        <view class="summary-card__content">
         <view class="summary-top-row">
           <view class="summary-identity">
             <view class="summary-copy">
@@ -88,6 +89,7 @@
         />
         <text v-if="!canDial && detail.contact" class="action-hint">暂无可直接拨打的客户电话</text>
         <text v-if="contactFeedback || actionFeedback" class="action-feedback">{{ contactFeedback || actionFeedback }}</text>
+        </view>
       </AppRecordCard>
 
       <WorkOrderTaskFocus
@@ -682,6 +684,22 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
 
 .summary-card {
   padding: 28rpx 28rpx 24rpx;
+}
+
+/* MP custom-component host receives .summary-card while the white card is
+   rendered inside AppRecordCard. A 100%-wide content-box host with padding
+   overflows right in WXSS even though H5 global box-sizing masks it. In the
+   opt-in 020/021 QA scope, keep the host border-box and move the padding to
+   slot content, inside the actual white card. Ordinary detail stays frozen. */
+.detail-content--mock-qa .summary-card {
+  box-sizing: border-box;
+  padding: 0;
+}
+.detail-content--mock-qa .summary-card__content {
+  box-sizing: border-box;
+  min-width: 0;
+  padding: 28rpx 28rpx 24rpx;
+  width: 100%;
 }
 
 .summary-top-row,

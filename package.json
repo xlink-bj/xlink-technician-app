@@ -31,7 +31,7 @@
     "check:g4e-review-harness": "node scripts/check-g4e-review-harness.mjs",
     "test:h5-review": "playwright test",
     "capture:g4e-review": "playwright test tests/h5-review/g4e-survey.spec.ts",
-    "build:mp-weixin": "uni build -p mp-weixin && node scripts/verify-mp-app-bootstrap.mjs",
+    "build:mp-weixin": "uni build -p mp-weixin && node scripts/verify-mp-app-bootstrap.mjs && node scripts/check-mp-wxss-stage-a.mjs",
     "build:app": "uni build -p app",
     "inspect:form-schema": "node scripts/inspect-inspection-contract.mjs",
     "verify:g4f-prod-read": "node scripts/verify-g4f-prod-read.mjs",
