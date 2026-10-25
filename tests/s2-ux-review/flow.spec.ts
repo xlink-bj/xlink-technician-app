@@ -125,7 +125,8 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       await expect(page.getByTestId('survey-part-section')).toBeVisible()
       await expect(page.getByTestId('survey-measure-section')).toBeVisible()
       await expect(page.getByTestId('survey-media-section').first()).toBeVisible()
-      await expect(page.getByTestId('survey-media-section').first().locator('.dynamic-action-block__title')).toContainText('现场照片')
+      await expect(page.getByTestId('survey-media-section').first().getByTestId('survey-task-section-heading'))
+        .toContainText('现场照片')
       // Adjacent fields are one business photo section, not separate outer cards.
       const mediaFields = page.getByTestId('survey-media-section').first().locator('.dynamic-action-field--survey-media')
       expect(await mediaFields.count()).toBeGreaterThanOrEqual(2)
