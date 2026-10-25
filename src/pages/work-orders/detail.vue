@@ -34,7 +34,8 @@
       description="接单后可查看工单详情。"
     />
 
-    <view v-else-if="workOrder.loadState === 'succeeded' && detail" class="detail-content">
+    <view v-else-if="workOrder.loadState === 'succeeded' && detail" class="detail-content"
+      :class="{ 'detail-content--mock-qa': Boolean(aStageSpecialKind) }">
       <AppSectionHeading class="detail-section-heading" title="工单概览" subtitle="服务信息与当前处理进度" data-testid="ds02b-detail-heading" />
       <AppRecordCard class="summary-card" data-testid="ds02b-detail-record-card">
         <view class="summary-top-row">
@@ -655,11 +656,16 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
 .detail-content,
 .detail-state,
 .guard-page {
-  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   margin: 0 auto;
   max-width: 960rpx;
+}
+
+/* Only the opt-in 020/021 synthetic QA detail gets the native MP width fix.
+   Keep the frozen ordinary WorkOrder/Detail visual baseline untouched. */
+.detail-content--mock-qa {
+  box-sizing: border-box;
   min-width: 0;
   width: 100%;
 }
@@ -695,13 +701,11 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
 }
 
 .summary-identity {
-  flex: 1 1 0;
   min-width: 0;
   gap: 18rpx;
 }
 
 .summary-copy {
-  flex: 1 1 0;
   min-width: 0;
 }
 
@@ -712,7 +716,6 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
 
 .summary-customer {
   color: var(--app-text-strong);
-  flex: 0 1 auto;
   font-size: var(--app-content-section-size);
   font-weight: 730;
   max-width: 450rpx;
@@ -723,7 +726,6 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
 
 .part-badge {
   flex: 0 1 auto;
-  min-width: 0;
 }
 
 .summary-number {
@@ -732,7 +734,6 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
   font-size: 12px;
   font-weight: 630;
   padding-top: 4rpx;
-  white-space: nowrap;
 }
 
 .location-row {
@@ -779,12 +780,9 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
 }
 
 .summary-actions {
-  box-sizing: border-box;
   display: flex;
   gap: 12rpx;
   margin-top: 24rpx;
-  min-width: 0;
-  width: 100%;
 }
 
 .summary-action {
@@ -795,16 +793,31 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
   box-sizing: border-box;
   color: #2878f2;
   display: flex;
-  flex: 1 1 0;
+  flex: 1;
   font-size: 18rpx;
   font-weight: 800;
   gap: 6rpx;
   justify-content: center;
   margin: 0;
   min-width: 0;
-  min-height: 88rpx;
+  min-height: 64rpx;
   padding: 0 4rpx;
   white-space: nowrap;
+}
+
+.detail-content--mock-qa .summary-identity,
+.detail-content--mock-qa .summary-copy { flex: 1 1 0; }
+.detail-content--mock-qa .summary-customer { flex: 0 1 auto; }
+.detail-content--mock-qa .part-badge { min-width: 0; }
+.detail-content--mock-qa .summary-number { white-space: nowrap; }
+.detail-content--mock-qa .summary-actions {
+  box-sizing: border-box;
+  min-width: 0;
+  width: 100%;
+}
+.detail-content--mock-qa .summary-action {
+  flex: 1 1 0;
+  min-height: 88rpx;
 }
 
 .summary-action--disabled {
