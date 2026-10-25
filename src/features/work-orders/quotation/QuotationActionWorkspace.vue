@@ -22,6 +22,7 @@
       :state="contentState"
       :synthetic-fields-review="syntheticReviewEnabled"
       :product-review-only="productReviewOnly"
+      :a-stage-mock-order="props.aStageMockOrder"
       :sku-lineage-audit="props.skuLineageAudit"
       :same-catalog-lineage="props.sameCatalogLineage"
       :synthetic-sku-readiness="props.syntheticSkuReadiness"
@@ -39,6 +40,7 @@
         <view class="q01-footer-status" data-testid="quotation-footer-summary">
           <text>本机草稿</text>
           <AppAmountValue
+            class="q01-footer-status__amount"
             size="compact"
             tone="muted"
             :value="`${amountPresentation.label} · ${amountPresentation.value}`"
@@ -144,6 +146,8 @@ import type { QuoteSkuReadiness } from './sku-readiness-view'
 const props = defineProps<{
   readonly contentState: 'loading' | 'ready' | 'blocked' | 'failed_retryable' | 'failed_terminal'
   readonly productReviewOnly?: boolean
+  /** Only the exact DEV Mock order flow may show local-readback wording. */
+  readonly aStageMockOrder?: boolean
   readonly skuLineageAudit?: SkuLineageAudit | null
   readonly sameCatalogLineage?: SameCatalogComparison | null
   readonly syntheticSkuReadiness?: QuoteSkuReadiness | null

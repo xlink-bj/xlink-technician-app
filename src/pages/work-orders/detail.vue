@@ -655,10 +655,13 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
 .detail-content,
 .detail-state,
 .guard-page {
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   margin: 0 auto;
   max-width: 960rpx;
+  min-width: 0;
+  width: 100%;
 }
 
 .back-link {
@@ -692,11 +695,13 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
 }
 
 .summary-identity {
+  flex: 1 1 0;
   min-width: 0;
   gap: 18rpx;
 }
 
 .summary-copy {
+  flex: 1 1 0;
   min-width: 0;
 }
 
@@ -707,6 +712,7 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
 
 .summary-customer {
   color: var(--app-text-strong);
+  flex: 0 1 auto;
   font-size: var(--app-content-section-size);
   font-weight: 730;
   max-width: 450rpx;
@@ -717,6 +723,7 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
 
 .part-badge {
   flex: 0 1 auto;
+  min-width: 0;
 }
 
 .summary-number {
@@ -725,6 +732,7 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
   font-size: 12px;
   font-weight: 630;
   padding-top: 4rpx;
+  white-space: nowrap;
 }
 
 .location-row {
@@ -771,9 +779,12 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
 }
 
 .summary-actions {
+  box-sizing: border-box;
   display: flex;
   gap: 12rpx;
   margin-top: 24rpx;
+  min-width: 0;
+  width: 100%;
 }
 
 .summary-action {
@@ -784,14 +795,14 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
   box-sizing: border-box;
   color: #2878f2;
   display: flex;
-  flex: 1;
+  flex: 1 1 0;
   font-size: 18rpx;
   font-weight: 800;
   gap: 6rpx;
   justify-content: center;
   margin: 0;
   min-width: 0;
-  min-height: 64rpx;
+  min-height: 88rpx;
   padding: 0 4rpx;
   white-space: nowrap;
 }

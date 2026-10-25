@@ -40,6 +40,7 @@
     v-else-if="workspace.descriptor?.contentKind === 'quotation' && workspace.descriptor.actionIntent === 'place_order'"
     :content-state="quotationContentViewState"
     :product-review-only="isMockQuotationPreview"
+    :a-stage-mock-order="aStageMockOrderEnabled"
     :sku-lineage-audit="skuLineagePreview"
     :same-catalog-lineage="sameCatalogLineagePreview"
     :synthetic-sku-readiness="syntheticSkuReadinessPreview"

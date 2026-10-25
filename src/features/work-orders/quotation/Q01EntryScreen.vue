@@ -29,7 +29,7 @@
     </AppCraftHeading>
 
     <view class="q01-screen__form" :data-testid="`quotation-repair-group-${group.groupId}`">
-      <view class="q01-screen__field">
+      <view class="q01-screen__field q01-screen__field--first">
         <text class="q01-screen__label xl-craft__label">防水维修部位 <text class="xl-craft__required">*</text></text>
         <view data-testid="quotation-first-step-repair-parts">
           <button
@@ -105,7 +105,7 @@
         <text class="q01-screen__next-title">报价项目</text>
         <text class="q01-screen__next-eyebrow">下一步</text>
       </view>
-      <button class="q01-screen__next-tile" type="button"
+      <button class="q01-screen__next-tile" :class="{ 'q01-screen__next-tile--disabled': !canEdit || options.length === 0 }" type="button"
         :disabled="!canEdit || options.length === 0"
         data-testid="quotation-first-step-select-products"
         @tap="emit('select-products')">
@@ -119,13 +119,13 @@
 
     <view class="q01-screen__cost xl-craft__surface xl-craft__surface--flat" data-testid="quotation-cost-adjustments">
       <text class="q01-screen__next-title">费用与优惠</text>
-      <view class="q01-screen__cost-row"><text>折扣</text><text>未设置</text></view>
-      <view class="q01-screen__cost-row"><text>优惠金额</text><text>报价规则待核验</text></view>
+      <view class="q01-screen__cost-row q01-screen__cost-row--first"><text>折扣</text><text class="q01-screen__cost-value">未设置</text></view>
+      <view class="q01-screen__cost-row"><text>优惠金额</text><text class="q01-screen__cost-value">报价规则待核验</text></view>
       <text class="q01-screen__cost-hint">折扣、优惠及增减项应以已验证的业务规则和服务端金额为准。</text>
     </view>
     <view class="q01-screen__disclosure">
-      <text>订单说明</text>
-      <text>完成业务校验并主动提交后才会创建正式订单，本机草稿不会自动提交。</text>
+      <text class="q01-screen__disclosure-line">订单说明</text>
+      <text class="q01-screen__disclosure-line">完成业务校验并主动提交后才会创建正式订单，本机草稿不会自动提交。</text>
     </view>
 
     <view v-if="pickerOpen" class="q01-screen__overlay"
@@ -202,7 +202,7 @@ watch(() => props.group.repairParts, (path) => {
 .q01-screen__heading { margin-top: 20px; }
 .q01-screen__form { display: flex; flex-direction: column; margin-top: 21px; }
 .q01-screen__field { display: flex; flex-direction: column; min-width: 0; margin-top: 21px; }
-.q01-screen__field:first-child { margin-top: 0; }
+.q01-screen__field--first { margin-top: 0; }
 .q01-screen__label { margin-bottom: 10px; }
 .q01-screen__selector { margin: 0; text-align: left; justify-content: space-between; }
 .q01-screen__selector::after { border: 0; }
@@ -224,16 +224,16 @@ watch(() => props.group.repairParts, (path) => {
   background: var(--xl-field-bg); text-align: left;
 }
 .q01-screen__next-tile::after { border: 0; }
-.q01-screen__next-tile:disabled { opacity: .6; }
+.q01-screen__next-tile--disabled { opacity: .6; }
 .q01-screen__next-copy { display: flex; flex: 1; flex-direction: column; gap: 3px; }
 .q01-screen__next-name { color: var(--xl-blue); font-size: 14px; font-weight: 600; }
 .q01-screen__next-detail { color: var(--xl-caption); font-size: 11px; }
 .q01-screen__cost-row { display: flex; justify-content: space-between; gap: 12px; padding: 12px 0; border-top: 1px solid var(--xl-divider); font-size: 13px; }
-.q01-screen__cost-row:first-of-type { margin-top: 9px; }
-.q01-screen__cost-row text:last-child { color: var(--xl-caption); }
+.q01-screen__cost-row--first { margin-top: 9px; }
+.q01-screen__cost-value { color: var(--xl-caption); }
 .q01-screen__cost-hint, .q01-screen__disclosure { display: block; color: var(--xl-caption); font-size: 11px; line-height: 17px; }
 .q01-screen__disclosure { margin: 15px 3px 0; }
-.q01-screen__disclosure text { display: block; }
+.q01-screen__disclosure-line { display: block; }
 .q01-screen__overlay { position: fixed; inset: 0; z-index: 1200; display: flex; flex-direction: column; justify-content: flex-end; background: rgba(16,31,53,.38); }
 .q01-screen__sheet { display: flex; flex-direction: column; width: 100%; max-height: 78vh; overflow: hidden; padding: 8px 16px calc(24px + env(safe-area-inset-bottom)); }
 .q01-screen__handle { width: 36px; height: 4px; flex: 0 0 4px; align-self: center; margin-bottom: 9px; background: var(--xl-stroke); border-radius: 100px; }

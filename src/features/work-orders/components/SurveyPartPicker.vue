@@ -36,6 +36,7 @@
           />
         </scroll-view>
         <button class="survey-part-picker__confirm"
+          :class="{ 'survey-part-picker__confirm--disabled': disabled || !draft.length }"
           data-testid="survey-part-picker-confirm"
           :disabled="disabled || !draft.length"
           @tap="commitPicker">确认选择</button>
@@ -116,7 +117,7 @@ function commitPicker(): void {
 .survey-part-picker__confirm { width:100%; flex-shrink:0; border:0; color:white; font-size:var(--app-font-body);
   font-weight:800; background:var(--app-color-primary); border-radius:12rpx; min-height:88rpx;
   display:flex; align-items:center; justify-content:center; }
-.survey-part-picker__confirm[disabled] { background:var(--app-color-disabled-surface); color:var(--app-color-text-muted); }
+.survey-part-picker__confirm--disabled { background:var(--app-color-disabled-surface); color:var(--app-color-text-muted); }
 .survey-part-picker__confirm::after { border:0; }
 /* S02 design-fidelity: keep options flexible and confirm anchored above safe area. */
 .survey-part-picker__backdrop { background:rgba(16,30,49,.50); }
@@ -126,5 +127,5 @@ function commitPicker(): void {
 .survey-part-picker__current-label { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .survey-part-picker__options { height:min(49vh,640rpx); min-height:300rpx; margin:16rpx 0 22rpx; }
 .survey-part-picker__confirm { min-height:88rpx; background:#2878f1; border-radius:12rpx; }
-.survey-part-picker__confirm[disabled] { background:#edf0f4; color:#9aa9bd; }
+.survey-part-picker__confirm--disabled { background:#edf0f4; color:#9aa9bd; }
 </style>

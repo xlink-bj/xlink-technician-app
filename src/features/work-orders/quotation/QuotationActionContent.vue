@@ -104,7 +104,7 @@
       <view v-if="!isInitialEmptyWorkbench && !isFirstRepairPartStep" class="quotation-content__submission" data-testid="quotation-order-submit-boundary">
         <AppStatus
           v-if="workspace.quotationOrderState.message"
-          :message="workspace.quotationOrderState.message"
+          :message="submissionStatusMessage"
           :tone="workspace.quotationOrderState.state === 'succeeded' ? 'success' : workspace.quotationOrderState.state === 'failed_terminal' || workspace.quotationOrderState.state === 'failed_ambiguous_after_dispatch' ? 'warning' : 'neutral'"
           quiet
         />
@@ -158,6 +158,7 @@
             <view class="quotation-content__initial-empty-surface">
               <text class="quotation-content__initial-field-label">防水维修部位 <text class="quotation-content__first-step-required">*</text></text>
               <button class="quotation-content__initial-field-value" type="button"
+                :class="{ 'quotation-content__initial-field-value--disabled': !canEdit }"
                 data-testid="quotation-add-group" :disabled="!canEdit"
                 aria-label="添加维修部位" @tap="createRepairGroup()">
                 <text>请选择维修部位</text><text class="quotation-content__initial-field-chevron" aria-hidden="true">›</text>
@@ -187,8 +188,8 @@
               <AppIcon name="chevron-right" :size="17" color="#9caabd" />
             </view>
             <view class="quotation-content__adjustment-actions">
-              <button class="quotation-content__adjustment-button" disabled>＋ 增项</button>
-              <button class="quotation-content__adjustment-button" disabled>－ 减项</button>
+              <button class="quotation-content__adjustment-button quotation-content__adjustment-button--disabled" disabled>＋ 增项</button>
+              <button class="quotation-content__adjustment-button quotation-content__adjustment-button--disabled" disabled>－ 减项</button>
             </view>
           </view>
           <view class="quotation-content__initial-cost-preview app-surface quotation-content__commercial-section" data-testid="quotation-quote-process">
@@ -197,7 +198,7 @@
               <text class="quotation-content__initial-cost-title">费用与优惠</text>
             </view>
             <view class="quotation-content__initial-cost-row"><text>折扣</text><text class="quotation-content__fee-value">不打折 <text aria-hidden="true">›</text></text></view>
-            <view class="quotation-content__initial-cost-row"><text>优惠金额（元）</text><text class="quotation-content__initial-cost-unavailable">完成选品后按业务规则填写</text></view>
+            <view class="quotation-content__initial-cost-row quotation-content__initial-cost-row--last"><text>优惠金额（元）</text><text class="quotation-content__initial-cost-unavailable">完成选品后按业务规则填写</text></view>
           </view>
           <view class="quotation-content__order-explainer">
             <text class="quotation-content__order-explainer-title">ⓘ 订单说明</text>
@@ -479,7 +480,7 @@
             <text>折扣</text>
             <text class="quotation-content__adjustments-unavailable">暂不支持修改</text>
           </view>
-          <view class="quotation-content__adjustments-row">
+          <view class="quotation-content__adjustments-row quotation-content__adjustments-row--last">
             <text>优惠金额</text>
             <text class="quotation-content__adjustments-unavailable">待核验</text>
           </view>
@@ -602,6 +603,7 @@
               type="search"
               :value="catalogSearchText"
               :placeholder="catalogSearchPlaceholder"
+              placeholder-style="color:#91a0b8; opacity:1"
               confirm-type="search"
               :aria-label="catalogSearchPlaceholder"
               data-testid="quotation-catalog-search"
@@ -800,7 +802,7 @@
           <view class="quotation-content__catalog-footer-copy">
             <text class="quotation-content__catalog-footer-title">当前维修部位 · {{ groupSelectionCount(activeCatalogGroupId || '') }} 项已选</text>
             <text class="quotation-content__catalog-footer-note">返回后保留已填写的部位信息</text>
-            <text class="quotation-content__catalog-footer-note">本页不会创建服务器报价</text>
+            <text class="quotation-content__catalog-footer-note quotation-content__catalog-footer-note--last">本页不会创建服务器报价</text>
           </view>
           <AppButton variant="secondary" data-testid="quotation-catalog-return" @tap="closeCatalog">返回工作台</AppButton>
         </view>
@@ -1039,6 +1041,7 @@ import { isDirectQuotationCatalogKind } from './model'
 import { quotationCatalogKindLabels } from './catalog'
 import { useQuotationCatalogBrowserStore } from './catalog-browser-store'
 import type { QuotationLineKind } from './model'
+import { quotationSubmissionDisplayCopy } from './submission-display-copy'
 import { validateQuotationDraft, type QuotationValidationField } from './validation'
 import type { CodeOptionRead, QuotationCatalogItemRead, QuotationPackageMaterialRead } from '@shared/ports'
 import {
@@ -1053,6 +1056,7 @@ const props = defineProps<{
   readonly state: 'loading' | 'ready' | 'blocked' | 'failed_retryable' | 'failed_terminal'
   readonly syntheticFieldsReview?: boolean
   readonly productReviewOnly?: boolean
+  readonly aStageMockOrder?: boolean
   readonly skuLineageAudit?: SkuLineageAudit | null
   readonly sameCatalogLineage?: SameCatalogComparison | null
   readonly syntheticSkuReadiness?: QuoteSkuReadiness | null
@@ -1078,6 +1082,11 @@ const materialSkuPreviewStatusMessage = computed(() => {
   return preview && preview.state !== 'ready' ? preview.message : '当前材料没有可用规格'
 })
 const workspace = useActionWorkspaceStore()
+const submissionStatusMessage = computed(() => quotationSubmissionDisplayCopy({
+  state: workspace.quotationOrderState.state,
+  message: workspace.quotationOrderState.message,
+  aStageMockOrder: import.meta.env.DEV && props.aStageMockOrder === true,
+}))
 const syntheticReviewEnabled = computed(() => import.meta.env.DEV
   && props.syntheticFieldsReview === true
   && Boolean(props.syntheticReviewValidateSelection)

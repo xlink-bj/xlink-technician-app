@@ -112,7 +112,7 @@
             <view class="survey-leakage-cause__selected" data-testid="survey-leakage-cause-selected">
               <view class="survey-leakage-cause__selected-header">
                 <text>已选 {{ draftIds.length }} 项</text>
-                <button class="survey-leakage-cause__clear" :disabled="draftIds.length === 0"
+                <button class="survey-leakage-cause__clear" :class="{ 'survey-leakage-cause__clear--disabled': draftIds.length === 0 }" :disabled="draftIds.length === 0"
                   @tap="clearDraft">清空</button>
               </view>
               <view v-if="draftChoices.length" class="survey-leakage-cause__chips">
@@ -286,7 +286,7 @@ function toggleOption(value: string): void {
 .survey-leakage-cause__clear { background:transparent; border:0; color:var(--app-color-primary);
   font-size:22rpx; min-height:54rpx; padding:0 12rpx; margin:0; }
 .survey-leakage-cause__clear::after, .survey-leakage-cause__chip::after { border:0; }
-.survey-leakage-cause__clear[disabled] { color:var(--app-color-text-muted); }
+.survey-leakage-cause__clear--disabled { color:var(--app-color-text-muted); }
 .survey-leakage-cause__chips { display:flex; flex-wrap:wrap; gap:9rpx; max-height:116rpx; overflow-y:auto; margin-top:4rpx; }
 .survey-leakage-cause__chip { display:flex; align-items:center; gap:8rpx; background:var(--app-color-primary-soft);
   color:var(--app-color-primary); border:0; border-radius:999rpx; padding:8rpx 14rpx;

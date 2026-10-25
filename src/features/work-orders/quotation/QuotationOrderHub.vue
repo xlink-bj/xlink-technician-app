@@ -107,7 +107,7 @@
         <view class="quotation-hub__order-lines">
           <view class="quotation-hub__order-line">
             <text>产品总额</text>
-            <text>{{ money(order.originPrice) }}</text>
+            <text class="quotation-hub__order-line-value">{{ money(order.originPrice) }}</text>
           </view>
           <view class="quotation-hub__order-line quotation-hub__order-line--total">
             <text>实际金额</text>
@@ -115,11 +115,11 @@
           </view>
           <view class="quotation-hub__order-line">
             <text>维修部位组</text>
-            <text>{{ order.contentSupported ? `${order.groups.length} 组` : '明细待核验' }}</text>
+            <text class="quotation-hub__order-line-value">{{ order.contentSupported ? `${order.groups.length} 组` : '明细待核验' }}</text>
           </view>
           <view v-if="order.updateTime" class="quotation-hub__order-line">
             <text>更新时间</text>
-            <text>{{ order.updateTime }}</text>
+            <text class="quotation-hub__order-line-value">{{ order.updateTime }}</text>
           </view>
         </view>
         <view class="quotation-hub__order-actions">
@@ -362,7 +362,7 @@ watch(() => props.workOrderId, () => {
 }
 /* Descriptive values may inherit local metadata typography. Shared money
    must retain AppAmountValue size/tone and can never be reset by this page. */
-.quotation-hub__order-line text:last-child:not(.app-amount-value) {
+.quotation-hub__order-line-value {
   color:var(--app-text-strong); font-size:13px; font-weight:650;
   text-align:left; overflow-wrap:anywhere;
 }
