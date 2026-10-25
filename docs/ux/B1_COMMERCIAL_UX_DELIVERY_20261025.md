@@ -38,9 +38,9 @@
 
 | 验证层 | 本地/CI 要求 | 执行状态 |
 | --- | --- | --- |
-| 类型与自动单测 | `vue-tsc --noEmit`、全量 `vitest run`、`check-ui-governance` | 本地第一轮：Typecheck PASS；155 文件 / 1,456 测试 PASS；UI 治理最终 PASS。待精确最终提交 CI 再确认。 |
+| 类型与自动单测 | `vue-tsc --noEmit`、`VITE_XLINK_ENVIRONMENT=test vitest run`、`check-ui-governance` | 本地 Typecheck PASS；155 文件 / **1,457** 测试 PASS；UI 治理 PASS。最终提交以 GitHub 对应 SHA 的 CI 为准。 |
 | 编译 | H5、MP-WEIXIN、App `uni build` | 三种构建本地 PASS；提交后仍复查。 |
-| 375×667 截图 | S2 Focus Q00/Q01/Q03/C01 + S2 Main App 全景 Sheet；与 B0 对应同 ID 画面比较 | **CI 精确 B1 HEAD 证据待附**，不得以 Stage A/B0 旧图替代。 |
+| 375×667 截图 | S2 Focus Q00/Q01/Q03/C01 + S2 Main App 全景 Sheet；与 B0 对应同 ID 画面比较 | [S2 Main App Sheet / 25 张图](https://github.com/xlink-bj/xlink-technician-app/actions/runs/40245478569) 与 [S2 Focus](https://github.com/xlink-bj/xlink-technician-app/actions/runs/40245478576) 已在 `2d66cb8` 生成并逐屏审核；后续如有新 HEAD 须重新取对应的 CI/截图证据。 |
 | 特殊节点连续操作 | MOCK-020/021 保存、修改、删除、完成、重启、未知回执恢复；MOCK-019 ¥107 回读 | A 阶段协议回归已通过，B1 的原生 UI 复测待接入。 |
 | Mac 原生模拟器 | Codex 在 WeChat DevTools **仅 375×667** 运行精确 B1 SHA，脱敏截图及控制台警告审计 | **独立后续 Gate**，仅 DEV Mock，零生产写入。 |
 | Owner 集中视觉评审 | 一套截图 + 可点击 Mock App；只审“任务优先、报价心智、签约信任”三件事 | `COMMERCIAL_UI_NOT_ACCEPTED`，待 Owner 实际评审。 |

@@ -404,7 +404,7 @@ test('same Mock-018 quotation is reachable from normal work order list and detai
 test('legacy standalone Mock appointment and survey routes retain their title but fail closed', async ({ page }) => {
   for (const scenario of [
     { label: '全新预约', title: '预约上门' },
-    { label: '现场勘查', title: '现场勘查' },
+    { label: '现场勘查', title: '工单表单' },
   ]) {
     await page.goto('/#/pages/index/index', { waitUntil: 'domcontentloaded' })
     await expect(page.locator('.home-page')).toBeVisible()
@@ -845,7 +845,7 @@ for (const width of [320, 375, 390] as const) {
     await page.goto('/#/pages/index/index', { waitUntil: 'domcontentloaded' })
     await expect(page.locator('.mock-source-indicator')).toContainText('Mock')
     await page.locator('.mock-action-scenario').filter({ hasText: '现场勘查' }).click()
-    await expect(page.locator('.uni-page-head__title')).toContainText('现场勘查')
+    await expect(page.locator('.uni-page-head__title')).toContainText('工单表单')
     await expect(page.locator('.workspace-state-title')).toContainText('当前操作暂不可用')
     await expect(page.getByTestId('dynamic-form-action-content')).toHaveCount(0)
     const overflow = await page.evaluate(() =>

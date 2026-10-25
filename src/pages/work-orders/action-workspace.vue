@@ -409,7 +409,9 @@ const workspaceNavigationTitle = computed(() => {
     return routeQuotationOrderId.value || workspace.quotationEditState.state === 'ready' ? '修改订单' : '新增订单'
   }
   if (workspace.descriptor?.formPurpose === 'survey') return '现场勘查'
-  if (workspace.descriptor?.actionIntent === 'interact_with_form') return '工单表单'
+  // A denied legacy route has no verified descriptor, so keep the requested
+  // form intent visible without claiming its survey purpose was authorized.
+  if (routeAction.value === 'interact_with_form' || workspace.descriptor?.actionIntent === 'interact_with_form') return '工单表单'
   return '预约上门'
 })
 
