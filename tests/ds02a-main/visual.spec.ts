@@ -34,14 +34,15 @@ async function guardLocal(page: Page) {
 async function openScene(page: Page, scene: Scene) {
   await page.goto('/#/pages/index/index', { waitUntil: 'domcontentloaded' })
   await expect(page.locator('.home-page')).toBeVisible()
-  await expect(page.locator('.mock-source-indicator')).toContainText('Mock')
+  await expect(page.getByTestId('dev-review-tools')).toHaveCount(0)
+  await expect(page.getByTestId('business-mode-provenance')).toBeVisible()
   await page.locator('.work-orders-entry').click()
   await expect(page.locator('.work-order-card').first()).toBeVisible()
   if (scene === 'list') return
   await page.locator('.search-input input').fill('MOCK-018')
   await page.locator('.search-button').click()
   await page.locator('.work-order-card').filter({ hasText: '演示报价工单' }).click()
-  await expect(page.locator('.summary-number')).toContainText('MOCK-018')
+  await expect(page.locator('.summary-number')).toContainText('#018')
   if (scene === 'detail') return
   await page.locator('.primary-task-action').click()
   await expect(page.getByTestId('quotation-order-hub')).toBeVisible()

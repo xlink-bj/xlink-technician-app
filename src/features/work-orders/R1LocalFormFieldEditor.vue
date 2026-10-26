@@ -1,7 +1,7 @@
 <template>
   <view class="r1-field-editor" data-testid="r1-local-field-editor">
     <text class="r1-field-editor__title">本机字段草稿 · {{ intent.title }}</text>
-    <text class="r1-field-editor__hint">字段定义来自 DEV 合成数据，仅保存在本机，未提交至业务系统。</text>
+    <text class="r1-field-editor__hint">体验表单 · 记录仅保存在本机，未提交后台。</text>
     <template v-for="field in fields" :key="field.fieldId">
       <AppField v-if="field.supported" :label="field.label" :required="field.required">
         <AppMultiChoiceGroup v-if="field.type === 'checkbox'" :options="field.options"

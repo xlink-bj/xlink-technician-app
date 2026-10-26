@@ -6,7 +6,7 @@
         <view class="quotation-hub__house" aria-hidden="true"><AppIcon name="home" :size="23" color="#ef8d3d" /></view>
         <view class="quotation-hub__work-order-copy">
           <text class="quotation-hub__eyebrow">当前工单</text>
-          <text class="quotation-hub__work-order-number">{{ displayNumber || workOrderId }}</text>
+          <text class="quotation-hub__work-order-number">{{ workOrderNumberDisplay(displayNumber || workOrderId, syntheticFixture, devReviewModeEnabled) }}</text>
         </view>
         <AppMetaTag class="quotation-hub__work-order-state" label="当前" />
       </view>
@@ -18,7 +18,7 @@
       </view>
     </AppRecordCard>
     <view v-if="isVisualSample" class="quotation-hub__sample-label" role="status" data-testid="quotation-hub-design-sample">
-      模拟订单记录 · 未向后台创建订单
+      体验数据 · 不会创建后台订单
     </view>
     <AppStatus
       v-if="!choosingMode && !isVisualSample"
@@ -35,7 +35,7 @@
       :title="`订单记录${displayReadState === 'succeeded' || isVisualSample ? ` (${records.length})` : ''}`" />
     <view v-if="choosingMode" class="quotation-hub__mode" data-testid="quotation-hub-mode">
       <text class="quotation-hub__mode-title">选择操作</text>
-      <text class="quotation-hub__mode-caption">为当前工单开始另一份报价草稿；正式订单尚未创建</text>
+      <text class="quotation-hub__mode-caption">为当前工单开始另一份报价草稿</text>
       <button class="quotation-hub__mode-option quotation-hub__mode-option--active" type="button"
         :aria-pressed="true" data-testid="quotation-hub-mode-new" @tap="startEditor">
         <view class="quotation-hub__mode-icon"><text aria-hidden="true">＋</text></view>
@@ -49,7 +49,7 @@
         <view class="quotation-hub__mode-icon quotation-hub__mode-icon--muted"><AppIcon name="order" :size="26" color="#71829b" /></view>
         <view class="quotation-hub__mode-description">
           <text class="quotation-hub__mode-name">基于已有订单复制</text>
-          <text class="quotation-hub__mode-detail">尚无已验证的复制业务接口，暂不可选</text>
+          <text class="quotation-hub__mode-detail">此操作暂未开放</text>
         </view>
         <text class="quotation-hub__mode-radio quotation-hub__mode-radio--muted" aria-hidden="true">○</text>
       </view>
@@ -58,7 +58,7 @@
     <template v-else>
     <AppRecordCard v-if="!isVisualSample && (displayReadState === 'loading' || displayReadState === 'idle')" class="quotation-hub__empty" data-testid="quotation-hub-loading">
       <text class="quotation-hub__empty-title">正在核对订单记录</text>
-      <text class="quotation-hub__empty-detail">不会读取其他工单的订单，也不会修改服务器数据。</text>
+      <text class="quotation-hub__empty-detail">正在读取当前工单的可见订单。</text>
     </AppRecordCard>
     <AppRecordCard v-else-if="!isVisualSample && (displayReadState === 'failed_retryable' || displayReadState === 'failed_terminal')" class="quotation-hub__empty" data-testid="quotation-hub-read-error">
       <view class="quotation-hub__empty-icon" aria-hidden="true">!</view>
@@ -72,11 +72,11 @@
     <template v-else-if="records.length === 0">
     <AppRecordCard class="quotation-hub__empty" data-testid="quotation-hub-no-records">
       <view class="quotation-hub__empty-icon" aria-hidden="true"><AppIcon name="order" :size="56" color="#1677f9" /><text class="quotation-hub__empty-icon-plus">＋</text></view>
-      <text class="quotation-hub__empty-title">{{ isVisualSample ? '当前工单尚无订单' : mockJourneyOrder ? '尚未确认本机 Mock 订单' : uxStateLanguage.scopedOrderReadTitle }}</text>
+      <text class="quotation-hub__empty-title">{{ isVisualSample ? '当前工单尚无订单' : mockJourneyOrder ? '暂无已确认的本机订单' : uxStateLanguage.scopedOrderReadTitle }}</text>
       <text class="quotation-hub__empty-detail">先按维修部位填写报价草稿，核对组成及金额后再进入后续流程。</text>
       <AppButton v-if="!readOnly" block class="quotation-hub__empty-action" data-testid="quotation-hub-empty-create"
         @tap="startEditor">＋ {{ uxStateLanguage.draftAction }}</AppButton>
-      <text class="quotation-hub__empty-provenance">{{ isVisualSample ? '空状态为合成数据，仅用于视觉评审。' : mockJourneyOrder ? '仅代表本机精确 ID 的 Mock 回读；未核验其他订单。' : '仅确认本次读取，未证明完整历史为空。' }}</text>
+      <text class="quotation-hub__empty-provenance">{{ isVisualSample ? '体验数据 · 未提交后台' : mockJourneyOrder ? '仅核对当前本机记录，不代表其他订单状态。' : '仅确认本次读取，未证明完整历史为空。' }}</text>
     </AppRecordCard>
     <view class="quotation-hub__multi-order-tips">
       <text class="quotation-hub__tips-heading">一个工单可对应多笔订单</text>
@@ -87,19 +87,19 @@
       <AppRecordCard v-for="order in records" :key="order.id" class="quotation-hub__order"
         :data-testid="`quotation-hub-order-${order.id}`">
         <view class="quotation-hub__order-heading">
-          <text class="quotation-hub__order-number">{{ order.displayNumber || order.id }}</text>
+          <text class="quotation-hub__order-number">{{ mockJourneyOrder ? '本机报价记录' : (order.displayNumber || order.id) }}</text>
           <view class="quotation-hub__order-pills">
             <AppMetaTag class="quotation-hub__order-badge" tone="info"
-              :label="isVisualSample ? '演示订单' : mockJourneyOrder ? '本机合成 · 未提交' : '正式订单 · 只读'" />
+              :label="isVisualSample ? '体验数据' : mockJourneyOrder ? '体验数据 · 未提交后台' : '正式订单 · 只读'" />
             <AppMetaTag v-if="isVisualSample" class="quotation-hub__order-badge"
               :tone="order.id.endsWith('-1') ? 'warning' : 'success'"
-              :label="order.id.endsWith('-1') ? '演示 · 待签约' : '演示 · 已签约'" />
+              :label="order.id.endsWith('-1') ? '示例 · 待签约' : '示例 · 已签约'" />
           </view>
         </view>
-        <text class="quotation-hub__order-subtitle">{{ isVisualSample ? order.groups[0]?.partDescription || '演示维修方案' : mockJourneyOrder ? '合成数据，仅用于本机流程验收 · 未提交后台' : '当前权限可见 · 状态未核实时不推断签约进度' }}</text>
+        <text class="quotation-hub__order-subtitle">{{ isVisualSample || mockJourneyOrder ? order.groups[0]?.partDescription || '维修报价' : '当前权限可见 · 状态未核实时不推断签约进度' }}</text>
         <view class="quotation-hub__order-summary">
           <view class="quotation-hub__amount-block">
-            <text class="quotation-hub__amount-label">{{ isVisualSample || mockJourneyOrder ? '演示金额' : '订单金额' }}</text>
+            <text class="quotation-hub__amount-label">{{ isVisualSample || mockJourneyOrder ? '金额（示例）' : '订单金额' }}</text>
             <AppAmountValue class="quotation-hub__order-amount" size="prominent" tone="primary" :value="money(order.totalPrice)" />
           </view>
           <text class="quotation-hub__order-group-count">{{ order.contentSupported ? `${order.groups.length} 个维修部位组` : '明细待核验' }}</text>
@@ -123,6 +123,10 @@
         </view>
         <view v-if="expandedId === order.id" class="quotation-hub__details"
           :data-testid="`quotation-hub-details-${order.id}`">
+          <view v-if="devReviewModeEnabled && (isVisualSample || mockJourneyOrder)" class="quotation-hub__order-line"
+            data-testid="quotation-hub-qa-identity">
+            <text>测试记录 ID</text><text class="quotation-hub__order-line-value">{{ order.id }}</text>
+          </view>
           <view class="quotation-hub__order-line">
             <text>产品总额</text><text class="quotation-hub__order-line-value">{{ money(order.originPrice) }}</text>
           </view>
@@ -166,6 +170,8 @@ import AppSectionHeading from '@shared/ui/AppSectionHeading.vue'
 import AppAmountValue from '@shared/ui/AppAmountValue.vue'
 import AppStatus from '@shared/ui/AppStatus.vue'
 import { uxStateLanguage } from '@shared/ui/ux-state-language'
+import { devReviewModeEnabled } from '@shared/ui/dev-review-mode'
+import { workOrderNumberDisplay } from '@shared/ui/work-order-number-display'
 import { useQuotationOrderBrowseStore } from './order-browse-store'
 import type { QuotationOrderBrowseItem } from '@shared/ports'
 import { signingOrderReadRouteFor } from '@features/work-orders/signing/signing-review-read-workspace'
@@ -192,6 +198,8 @@ const emit = defineEmits<{
   (event: 'mock-read-retry'): void
 }>()
 const browse = useQuotationOrderBrowseStore()
+const syntheticFixture = computed(() => import.meta.env.DEV
+  && props.workOrderId.startsWith('mock-work-order-'))
 const isVisualSample = computed(() => import.meta.env.DEV
   && (props.devVisualSample === 'orders' || props.devVisualSample === 'empty'))
 const mockJourneyOrder = computed(() => import.meta.env.DEV && props.devMockOrder === true)
@@ -202,7 +210,7 @@ const displayReadState = computed(() => mockJourneyOrder.value
 const displayReadError = computed(() => mockJourneyOrder.value
   ? props.devMockOrderRead?.state === 'blocked'
     ? '本机角色或订单归属核对失败，未展示订单。'
-    : '本机精确订单回读尚未确认；无法据此判断是否已经写入。'
+    : '暂未确认本机订单是否保存，请稍后再试。'
   : browse.errorMessage)
 const sampleRecords = computed((): readonly QuotationOrderBrowseItem[] => [3500, 1200].map((amount, index) => ({
   id: `DEV-Q00-ORDER-${index + 1}`,

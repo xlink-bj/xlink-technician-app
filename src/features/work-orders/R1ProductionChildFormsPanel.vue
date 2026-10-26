@@ -4,7 +4,7 @@
       <text class="child-forms__heading">子流程节点</text>
       <text class="child-forms__readonly">仅查看</text>
     </view>
-    <text class="child-forms__hint">展示当前工单的子流程节点及已核验的只读引用。节点类型未知时不推断表单动作；不会创建、编辑、删除或提交。</text>
+    <text class="child-forms__hint">查看当前工单的子流程进度。此处仅供查看，暂不支持编辑或提交。</text>
 
     <view v-for="parent in parents" :key="String(parent.id)" class="child-forms__parent">
       <view class="child-forms__parent-main">

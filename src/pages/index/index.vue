@@ -41,7 +41,7 @@
         </navigator>
       </view>
 
-      <view v-if="mockControlVisible" class="home-surface mock-developer-panel">
+      <view v-if="mockControlVisible" class="home-surface mock-developer-panel" data-testid="dev-review-tools">
         <view class="mock-panel-heading">
           <text class="mock-panel-title">业务数据源</text>
           <text class="mock-source-indicator" :class="{ 'mock-source-indicator--real': mockMode === 'off' }">
@@ -146,6 +146,8 @@
         @seed="seedMockDrafts"
         @clear="clearMockDrafts"
       />
+      <text v-if="!mockControlVisible && mockMode !== 'off'" class="home-demo-provenance"
+        data-testid="business-mode-provenance">体验数据 · 不会提交后台</text>
     </view>
 
     <view class="home-footer">
@@ -333,7 +335,7 @@
 
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
-import { onShow } from '@dcloudio/uni-app'
+import { onLoad, onShow } from '@dcloudio/uni-app'
 
 import {
   isBusinessMockDeveloperModeAvailable,
@@ -369,6 +371,7 @@ import {
 import { useSessionStore } from '@shared/state'
 import type { OperationError } from '@shared/types'
 import AppLoadingState from '@shared/ui/AppLoadingState.vue'
+import { devReviewModeEnabled, setDevReviewModeFromRoute } from '@shared/ui/dev-review-mode'
 import { useWorkOrderDetailStore } from '@features/work-orders/detail'
 import { useWorkOrderListStore } from '@features/work-orders/list'
 
@@ -384,7 +387,7 @@ const loginPoliciesReady = computed(() => Boolean(loginPolicies.privacyUrl && lo
 const loginStage = ref<LoginStage>('launch')
 const message = ref('')
 const logoutInFlight = ref(false)
-const mockControlVisible = computed(() => isBusinessMockDeveloperModeAvailable())
+const mockControlVisible = computed(() => isBusinessMockDeveloperModeAvailable() && devReviewModeEnabled.value)
 const mockMode = ref<BusinessMockMode>(isBusinessMockMode())
 const mockSwitchInFlight = ref(false)
 const submissionState = reactive<LoginSubmissionState>({ inFlight: false })
@@ -429,6 +432,10 @@ watch(
 
 onShow(() => {
   if (showHome.value) void draftDiagnostics.refresh()
+})
+
+onLoad((options) => {
+  setDevReviewModeFromRoute(options?.devReview)
 })
 
 function goToMethods(): void {
@@ -849,6 +856,15 @@ function userFacingLoginMessage(error: OperationError | null | undefined): strin
   padding: 0 24rpx;
   position: relative;
   z-index: 3;
+}
+
+.home-demo-provenance {
+  display: block;
+  color: var(--app-color-text-secondary);
+  font-size: var(--app-font-meta);
+  line-height: 1.45;
+  text-align: center;
+  margin: 0 0 6rpx;
 }
 
 .home-surface {

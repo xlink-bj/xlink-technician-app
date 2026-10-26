@@ -36,7 +36,7 @@ for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }
     }
 
     // 1. Synthetic authenticated shell → 2. Normal role-scoped WorkOrder list.
-    await page.goto('/#/pages/index/index', { waitUntil: 'domcontentloaded' })
+    await page.goto('/#/pages/index/index?devReview=1', { waitUntil: 'domcontentloaded' })
     await expect(page.locator('.home-page')).toBeVisible()
     await expect(page.locator('.mock-source-indicator')).toContainText('Mock')
     await page.locator('.work-orders-entry').click()
@@ -59,14 +59,14 @@ for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }
 
     // Re-enter through the REAL main App (never through a detached quotation
     // review page) and select independent WorkOrder MOCK-019.
-    await page.goto('/#/pages/index/index', { waitUntil: 'domcontentloaded' })
+    await page.goto('/#/pages/index/index?devReview=1', { waitUntil: 'domcontentloaded' })
     await expect(page.getByTestId('mock-continuous-journey-entry')).toContainText('MOCK-019')
     await page.getByTestId('mock-continuous-journey-entry').click()
     // 3. Appointment: edit only the local synthetic field, no workflow Complete.
     await expect(page).toHaveURL(/mock-work-order-019-continuous-journey/)
     await expect(page.locator('.uni-page-head__title')).toContainText('预约上门')
     await page.locator('.action-content-field--note textarea').fill('I7阶段隔离：屋面与外墙')
-    await expect(page.getByTestId('mock-journey-progress')).toContainText('数据只保存在本机，不写入真实业务后台')
+    await expect(page.getByTestId('mock-journey-progress')).toContainText('记录仅保存在本机，未提交后台')
     await page.getByTestId('mock-journey-advance').click()
 
     // 4. Survey: WorkOrder identity stays 019; no estimate or job write.
@@ -148,7 +148,7 @@ for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }
 
     // After switching back to another WorkOrder in the SAME authenticated
     // browser, 019's staged Appointment/Survey data must not leak into 018.
-    await page.goto('/#/pages/index/index', { waitUntil: 'domcontentloaded' })
+    await page.goto('/#/pages/index/index?devReview=1', { waitUntil: 'domcontentloaded' })
     await page.locator('.work-orders-entry').click()
     await page.locator('.search-input input').fill('MOCK-018')
     await page.locator('.search-button').click()

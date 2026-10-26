@@ -17,7 +17,7 @@ for (const viewport of [{width:375,height:667},{width:390,height:844}]) {
       await route.abort('blockedbyclient')
     })
 
-    await page.goto('/#/pages/index/index', {waitUntil:'domcontentloaded'})
+    await page.goto('/#/pages/index/index?devReview=1', {waitUntil:'domcontentloaded'})
     await page.getByTestId('mock-continuous-journey-entry').click()
     await expect(page.getByTestId('mock-journey-save-state')).toContainText('请先填写')
     await page.getByTestId('mock-journey-advance').click()

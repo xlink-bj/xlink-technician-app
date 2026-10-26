@@ -49,7 +49,7 @@ test.afterEach(async ({ page }, info) => {
 })
 
 test('real authenticated shell uses local-only Mock quotation with zero external intent', async ({ page }, info) => {
-  await page.goto('/#/pages/index/index', { waitUntil: 'domcontentloaded' })
+  await page.goto('/#/pages/index/index?devReview=1', { waitUntil: 'domcontentloaded' })
   const home = page.locator('.home-page')
   await expect(home, 'DEV-only fixture must bootstrap the REAL App without phone login').toBeVisible()
   await expect(page.locator('.mock-source-indicator')).toContainText('Mock')
@@ -85,7 +85,7 @@ test('real authenticated shell uses local-only Mock quotation with zero external
 for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }]) {
   test('S1 ordinary Material joins real App quote without SKU at ' + viewport.width, async ({ page }, info) => {
     await page.setViewportSize(viewport)
-    await page.goto('/#/pages/index/index', { waitUntil: 'domcontentloaded' })
+    await page.goto('/#/pages/index/index?devReview=1', { waitUntil: 'domcontentloaded' })
     await expect(page.locator('.mock-source-indicator')).toContainText('Mock')
     await page.locator('.mock-action-scenario').filter({ hasText: '报价草稿' }).click()
     await expect(page.getByTestId('quotation-state-ready')).toBeVisible()
@@ -118,7 +118,7 @@ for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }
 for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }]) {
   test('M1 integrated signing Mock: two official Orders, per-Order contract and safe states at ' + viewport.width, async ({ page }, info) => {
     await page.setViewportSize(viewport)
-    await page.goto('/#/pages/index/index', { waitUntil: 'domcontentloaded' })
+    await page.goto('/#/pages/index/index?devReview=1', { waitUntil: 'domcontentloaded' })
     await expect(page.getByTestId('signing-mock-entry')).toBeVisible()
     await page.getByTestId('signing-mock-entry').click()
     await expect(page).toHaveURL(/pages\/work-orders\/signing-mock-review/)
@@ -161,7 +161,7 @@ for (const viewport of [
 ]) {
   test(`two repair groups preserve independent selections and package layers at ${viewport.width}x${viewport.height}`, async ({ page }, info) => {
     await page.setViewportSize(viewport)
-    await page.goto('/#/pages/index/index', { waitUntil: 'domcontentloaded' })
+    await page.goto('/#/pages/index/index?devReview=1', { waitUntil: 'domcontentloaded' })
     await expect(page.locator('.home-page')).toBeVisible()
     await page.locator('.mock-action-scenario').filter({ hasText: '报价草稿' }).click()
     await expect(page.getByTestId('quotation-state-ready')).toBeVisible()
@@ -360,7 +360,7 @@ for (const viewport of [
 }
 
 test('same Mock-018 quotation is reachable from normal work order list and detail', async ({ page }, info) => {
-  await page.goto('/#/pages/index/index', { waitUntil: 'domcontentloaded' })
+  await page.goto('/#/pages/index/index?devReview=1', { waitUntil: 'domcontentloaded' })
   await expect(page.locator('.home-page')).toBeVisible()
   await page.locator('.work-orders-entry').click()
   await expect(page).toHaveURL(/pages\/work-orders\/work-orders/)
@@ -406,7 +406,7 @@ test('legacy standalone Mock appointment and survey routes retain their title bu
     { label: '全新预约', title: '预约上门' },
     { label: '现场勘查', title: '工单表单' },
   ]) {
-    await page.goto('/#/pages/index/index', { waitUntil: 'domcontentloaded' })
+    await page.goto('/#/pages/index/index?devReview=1', { waitUntil: 'domcontentloaded' })
     await expect(page.locator('.home-page')).toBeVisible()
     const entry = page.locator('.mock-action-scenario').filter({ hasText: scenario.label })
     await expect(entry).toBeVisible()
@@ -427,7 +427,7 @@ test('legacy standalone Mock appointment and survey routes retain their title bu
 
 
 test('one MOCK-019 WorkOrder progresses Appointment → Survey → Quotation without business commands', async ({ page }, info) => {
-  await page.goto('/#/pages/index/index', { waitUntil: 'domcontentloaded' })
+  await page.goto('/#/pages/index/index?devReview=1', { waitUntil: 'domcontentloaded' })
   await expect(page.locator('.home-page')).toBeVisible()
   const journey = page.getByTestId('mock-continuous-journey-entry')
   await expect(journey).toContainText('MOCK-019')
@@ -436,7 +436,7 @@ test('one MOCK-019 WorkOrder progresses Appointment → Survey → Quotation wit
   await expect(page).toHaveURL(/mock-work-order-019-continuous-journey/)
   await expect(page.locator('.uni-page-head__title')).toContainText('预约上门')
   await expect(page.getByTestId('app-action-content-heading')).toContainText('预约信息')
-  await expect(page.getByTestId('mock-journey-progress')).toContainText('数据只保存在本机，不写入真实业务后台')
+  await expect(page.getByTestId('mock-journey-progress')).toContainText('记录仅保存在本机，未提交后台')
   await page.locator('.action-content-field--note textarea').fill('P1B预约备注：现场先确认屋面渗漏')
   await info.attach('019-appointment', { body: await page.screenshot({ fullPage: true }), contentType: 'image/png' })
 
@@ -550,7 +550,7 @@ test('one MOCK-019 WorkOrder progresses Appointment → Survey → Quotation wit
 for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }]) {
   test('real main App R1 SKU Mock is read-only and blocks incomplete/ambiguous/cross-SPU at ' + viewport.width, async ({ page }, info) => {
     await page.setViewportSize(viewport)
-    await page.goto('/#/pages/index/index', { waitUntil: 'domcontentloaded' })
+    await page.goto('/#/pages/index/index?devReview=1', { waitUntil: 'domcontentloaded' })
     await expect(page.getByTestId('sku-mock-entry')).toBeVisible()
     await page.getByTestId('sku-mock-entry').click()
     await expect(page).toHaveURL(/material-sku-mock-review/)
@@ -601,7 +601,7 @@ for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }
 for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }]) {
   test('R1 package material layer SKU choices stay isolated by group at ' + viewport.width, async ({ page }, info) => {
     await page.setViewportSize(viewport)
-    await page.goto('/#/pages/index/index', { waitUntil: 'domcontentloaded' })
+    await page.goto('/#/pages/index/index?devReview=1', { waitUntil: 'domcontentloaded' })
     await page.getByTestId('sku-mock-entry').click()
     await expect(page.getByTestId('sku-mock-mode-package')).toHaveAttribute('aria-pressed', 'true')
     await expect(page.getByTestId('sku-mock-source')).toHaveCount(0)
@@ -687,7 +687,7 @@ for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }
 for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }]) {
   test('M1-I2 full SKU local draft on REAL quotation Vue at ' + viewport.width, async ({ page }, info) => {
     await page.setViewportSize(viewport)
-    await page.goto('/#/pages/index/index', { waitUntil: 'domcontentloaded' })
+    await page.goto('/#/pages/index/index?devReview=1', { waitUntil: 'domcontentloaded' })
     await page.locator('.mock-action-scenario').filter({ hasText: '报价草稿' }).click()
     await expect(page.getByTestId('quotation-state-ready')).toBeVisible()
 
@@ -830,7 +830,7 @@ for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }
 for (const width of [320, 375, 390] as const) {
   test(`DS-07.C4.A blocks legacy standalone Appointment and Survey actions at ${width}px`, async ({ page }, info) => {
     await page.setViewportSize({ width, height: 844 })
-    await page.goto('/#/pages/index/index', { waitUntil: 'domcontentloaded' })
+    await page.goto('/#/pages/index/index?devReview=1', { waitUntil: 'domcontentloaded' })
     await expect(page.locator('.mock-source-indicator')).toContainText('Mock')
     await page.locator('.mock-action-scenario').filter({ hasText: '全新预约' }).click()
     await expect(page.locator('.uni-page-head__title')).toContainText('预约上门')
@@ -842,7 +842,7 @@ for (const width of [320, 375, 390] as const) {
       contentType: 'image/png',
     })
 
-    await page.goto('/#/pages/index/index', { waitUntil: 'domcontentloaded' })
+    await page.goto('/#/pages/index/index?devReview=1', { waitUntil: 'domcontentloaded' })
     await expect(page.locator('.mock-source-indicator')).toContainText('Mock')
     await page.locator('.mock-action-scenario').filter({ hasText: '现场勘查' }).click()
     await expect(page.locator('.uni-page-head__title')).toContainText('工单表单')

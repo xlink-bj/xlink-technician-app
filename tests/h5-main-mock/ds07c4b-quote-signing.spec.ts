@@ -25,7 +25,7 @@ for (const width of widths) {
   test(`DS-07.C4.B actual Quote and blocked Signing H5 at ${width}px`, async ({ page }, info) => {
     await page.setViewportSize({ width, height: 844 })
     const assertSafe = await preventExternal(page)
-    await page.goto('/#/pages/index/index', { waitUntil: 'domcontentloaded' })
+    await page.goto('/#/pages/index/index?devReview=1', { waitUntil: 'domcontentloaded' })
     await expect(page.locator('.mock-source-indicator')).toContainText('Mock')
     await page.locator('.work-orders-entry').click()
     await expect(page.locator('.work-order-card').first()).toBeVisible()

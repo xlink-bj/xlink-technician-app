@@ -29,7 +29,7 @@
     <template v-else>
       <view class="signing-read-stage xl-craft__surface" data-testid="signing-review-progress">
         <view class="xl-craft__progress-labels">
-          <text class="xl-craft__caption">当前签约状态 · {{ devFixtureContractRead ? '本机演示' : '订单只读' }}</text>
+          <text class="xl-craft__caption">当前签约状态 · {{ devFixtureContractRead ? '体验数据' : '订单只读' }}</text>
           <text v-if="signingStepIndex > 0" class="signing-read-stage-index">步骤 {{ signingStepIndex }}/3</text>
         </view>
         <view v-if="signingStepIndex > 0" class="xl-craft__progress-track" aria-hidden="true">
@@ -50,12 +50,12 @@
       <AppRecordCard class="signing-read-section signing-read-hero xl-craft__surface" data-testid="signing-order-read-verified">
         <view class="signing-read-hero-top">
           <text class="signing-read-hero-title">当前订单</text>
-          <AppMetaTag class="xl-craft__badge" :label="devFixtureContractRead ? '本机合成 · 未提交后台' : uxStateLanguage.verifiedOrder"
+          <AppMetaTag class="xl-craft__badge" :label="devFixtureContractRead ? '体验数据 · 未提交后台' : uxStateLanguage.verifiedOrder"
             :tone="devFixtureContractRead ? 'info' : 'success'" />
         </view>
         <view class="signing-read-order-identity">
           <text class="xl-craft__caption">订单编号</text>
-          <text class="signing-read-order-number xl-craft__value" data-testid="signing-order-read-display-number">{{ review.snapshot.review?.order.displayNumber || '正式订单' }}</text>
+          <text class="signing-read-order-number xl-craft__value" data-testid="signing-order-read-display-number">{{ devFixtureContractRead ? '本机订单示例' : (review.snapshot.review?.order.displayNumber || '订单编号待核验') }}</text>
         </view>
         <view class="signing-read-hero-money">
           <view v-if="review.snapshot.review?.order.totalPrice !== undefined" class="signing-read-hero-amount" data-testid="signing-read-order-amount">
@@ -80,10 +80,10 @@
         <AppSectionHeading title="合同状态">
           <template #trailing><AppMetaTag label="仅核验" /></template>
         </AppSectionHeading>
-        <text v-if="devFixtureContractRead" class="signing-read-dev-note xl-craft__notice" data-testid="signing-contract-fixture-label">本机合成合同 · 非真实订单或签约</text>
+        <text v-if="devFixtureContractRead" class="signing-read-dev-note xl-craft__notice" data-testid="signing-contract-fixture-label">体验合同 · 非真实订单或签约</text>
         <text class="signing-read-help">只核对当前订单；没有读到合同不代表合同不存在。</text>
         <text v-if="!devFixtureContractRead" data-testid="signing-contract-prod-blocked">
-          真实环境合同读取尚未开放。仅 DEV 隔离合成样本可核验状态，不能代表生产签约。
+          当前仅能查看签约进度。合同详情与签约操作暂未开放。
         </text>
         <text v-else-if="review.contractSnapshot.state === 'idle' || review.contractSnapshot.state === 'failed_retryable'"
           class="signing-read-help">请使用上方主操作核验当前合同记录。</text>
@@ -96,7 +96,7 @@
           </text>
           <view v-for="contract in review.contractSnapshot.items" :key="contract.id" class="signing-read-contract-item"
             data-testid="signing-contract-matched">
-            <text class="signing-read-contract-number">{{ contract.displayNumber || '合同编号未返回' }}</text>
+            <text class="signing-read-contract-number">{{ devFixtureContractRead && !devReviewModeEnabled ? '本机合同示例' : (contract.displayNumber || '合同编号未返回') }}</text>
             <text class="signing-read-contract-state">{{ r1ContractStatusReadNotice(contract.contractStatus) }}</text>
             <text v-if="contract.signedDate" class="signing-read-meta xl-craft__meta">记录中的签约日期：{{ contract.signedDate }}</text>
           </view>
@@ -107,12 +107,12 @@
         <AppSectionHeading title="当前结果" />
         <text class="signing-read-progress-title" data-testid="signing-read-stage-title">{{ signingStage.title }}</text>
         <text class="signing-read-body" data-testid="signing-read-stage-detail">{{ signingStage.detail }}</text>
-        <text class="signing-read-warning xl-craft__caption">本页没有调用签署、取消合同、发送短信、创建 PDF 或工作流提交接口。</text>
+        <text class="signing-read-warning xl-craft__caption">这里只提供进度查看，不支持签约、取消或发送消息。</text>
       </AppRecordCard>
-      <AppRecordCard v-if="devFixtureContractRead" class="signing-read-section signing-read-section--diagnostics xl-craft__surface" data-testid="signing-command-preflight">
+      <AppRecordCard v-if="devFixtureContractRead && devReviewModeEnabled" class="signing-read-section signing-read-section--diagnostics xl-craft__surface" data-testid="signing-command-preflight">
         <view class="signing-read-heading-row">
           <view class="signing-read-diagnostics-copy">
-            <text class="signing-read-section-title">测试环境 · 技术核验</text>
+            <text class="signing-read-section-title">开发核验资料</text>
           <text class="signing-read-help">仅供内部核对，不是签约业务操作。技术提示：{{ signingProgress.nextStep }}</text>
           </view>
           <button class="signing-read-diagnostics-toggle"
@@ -123,6 +123,7 @@
           </button>
         </view>
         <view v-show="devAuditExpanded" class="signing-read-diagnostics-details" data-testid="signing-command-preflight-details">
+        <text data-testid="signing-qa-original-id">测试订单 ID：{{ review.snapshot.review?.order.displayNumber }}</text>
         <AppButton block variant="secondary" data-testid="signing-handler-evidence-check"
           :disabled="review.handlerSnapshot.state === 'loading'" @tap="readNodeHandlerEvidence">
           {{ review.handlerSnapshot.state === 'loading' ? '正在核验当前节点' : '核验当前工作流节点处理人 · 只读' }}
@@ -156,7 +157,7 @@
       <AppRecordCard class="signing-read-section xl-craft__surface xl-craft__surface--flat" data-testid="signing-order-read-no-contract">
         <text class="signing-read-section-title">签约业务操作 · 未开放</text>
         <AppStatus
-          message="即使 DEV 样本显示合同记录，也不授予真实合同查看、签章或重复发送权限。"
+          message="这里只提供进度核对。合同查看、签署和短信操作尚未开放。"
           variant="strip"
           tone="warning"
           quiet
@@ -171,7 +172,7 @@
       </AppRecordCard>
     </template>
     <view class="signing-read-footer xl-craft__caption" data-testid="signing-order-read-no-write">
-      全程只读 · 不创建订单、不推进流程、不发起签约
+      仅供查看 · 业务操作暂未开放
     </view>
   </view>
 </template>
@@ -188,6 +189,7 @@ import AppAmountValue from '@shared/ui/AppAmountValue.vue'
 import AppStatus from '@shared/ui/AppStatus.vue'
 import AppCraftHeading from '@shared/ui/AppCraftHeading.vue'
 import { uxStateLanguage } from '@shared/ui/ux-state-language'
+import { devReviewModeEnabled } from '@shared/ui/dev-review-mode'
 import { useSessionStore } from '@shared/state'
 import { useSigningReviewReadStore } from '@features/work-orders/signing/signing-review-read-store'
 import { r1OrderSigningStageNotice, r1ContractStatusReadNotice } from '@features/work-orders/signing/r1-signing-ui-rules'

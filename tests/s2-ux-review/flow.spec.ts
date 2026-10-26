@@ -55,7 +55,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
 
     try {
       // Already accepted W/A are shown only as visual reference, NOT redesigned.
-      await page.goto('/#/pages/index/index', { waitUntil: 'domcontentloaded' })
+      await page.goto('/#/pages/index/index?devReview=1', { waitUntil: 'domcontentloaded' })
       await expect(page.locator('.home-page')).toBeVisible()
       await expect(page.locator('.mock-source-indicator')).toContainText('Mock')
       await page.locator('.work-orders-entry').click()
@@ -63,7 +63,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       await expect(page.locator('.work-order-card').first()).toBeVisible()
       await capture('01-work-orders', 'W', '工单列表', '既有商业化基线', 'accepted_baseline')
 
-      await page.goto('/#/pages/index/index', { waitUntil: 'domcontentloaded' })
+      await page.goto('/#/pages/index/index?devReview=1', { waitUntil: 'domcontentloaded' })
       await expect(page.getByTestId('mock-continuous-journey-entry')).toContainText('MOCK-019')
       await page.getByTestId('mock-continuous-journey-entry').click()
       await expect(page.locator('.uni-page-head__title')).toContainText('预约上门')
@@ -344,7 +344,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       // Actual commercial signing-read component, NOT the detached developer
       // status harness. This is a separate synthetic official Order fixture;
       // never promote a local quotation draft to a formal Order.
-      await page.goto('/#/pages/index/index', { waitUntil: 'domcontentloaded' })
+      await page.goto('/#/pages/index/index?devReview=1', { waitUntil: 'domcontentloaded' })
       await page.locator('.work-orders-entry').click()
       await page.locator('.search-input input').fill('04009')
       await page.locator('.search-button').click()
@@ -363,7 +363,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       await expect(page.getByTestId('signing-command-preflight-toggle')).toBeVisible()
       await expect(page.getByTestId('signing-command-preflight-details')).toBeHidden()
       await expect(page.getByTestId('signing-order-read-display-number'))
-        .toContainText('DEV-SYNTHETIC-NOT-SUBMITTED')
+        .toContainText('本机订单示例')
       await expect(page.getByTestId('signing-contract-fixture-label')).toContainText('非真实订单')
       await capture('11-signing-actual-order', 'C', '签约只读工作台', '真正的主 App 订单核验页面')
       await page.getByTestId('signing-contract-read-request').click()

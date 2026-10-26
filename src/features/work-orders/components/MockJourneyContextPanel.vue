@@ -21,7 +21,7 @@
       <button v-if="compact" class="journey-context__toggle" data-testid="mock-journey-context-toggle"
         :aria-expanded="expanded" @tap="expanded = !expanded">{{ expanded ? '收起' : '查看详情' }}</button>
     </view>
-    <text v-if="!compact || expanded" class="journey-context__notice">仅供当前演示工单核对；未提交后台，不代表业务节点已完成，也不参与报价金额计算。</text>
+    <text v-if="!compact || expanded" class="journey-context__notice">前序填写内容仅保存在本机，未提交后台。</text>
     <view v-for="section in context.sections" v-show="!compact || expanded" :key="section.stage" class="journey-context__section" :data-testid="`mock-journey-context-${section.stage}`">
       <view class="journey-context__row">
         <text class="journey-context__title">{{ section.title }}</text>
@@ -41,7 +41,7 @@
       <text v-if="taskFocus && !expanded" class="journey-context__focus-suggestion">勘察记录 · {{ context.suggestion.surveyPathLabel }} <text class="journey-context__focus-pending">待确认</text></text>
       <text v-if="!taskFocus || expanded" class="journey-context__value-text">勘察记录：{{ context.suggestion.surveyPathLabel }}</text>
       <text v-if="!taskFocus || expanded" class="journey-context__value-text">建议报价一级部位：{{ context.suggestion.targetRepairPartLabel }}</text>
-      <text v-if="!compact || expanded" class="journey-context__notice">仅匹配演示目录的一级部位。二级部位、工程量、材料、工序及金额均需技术员重新核对填写；不会自动复制勘察面积。</text>
+      <text v-if="!compact || expanded" class="journey-context__notice">请核对二级部位、工程量和报价项目；勘察面积不会自动带入报价。</text>
       <AppButton v-if="canAdoptSuggestion" variant="secondary" block data-testid="mock-survey-quote-adopt" @tap="$emit('adopt-suggestion')">{{ taskFocus && !expanded ? '采用建议' : '确认采用一级维修部位' }}</AppButton>
       <text v-else class="journey-context__empty">已有报价部位或目录尚不可用，请手动核对。</text>
       <text v-if="suggestionFeedback" class="journey-context__value-text" data-testid="mock-survey-quote-feedback">{{ suggestionFeedback }}</text>

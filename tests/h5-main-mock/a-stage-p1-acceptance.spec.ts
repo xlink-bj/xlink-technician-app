@@ -40,7 +40,7 @@ test.describe('A-stage P1 real-H5 operator acceptance', () => {
   }
 
   async function openSpecial(page: Page, number: '020' | '021') {
-    await page.goto('/#/pages/index/index', { waitUntil: 'domcontentloaded' })
+    await page.goto('/#/pages/index/index?devReview=1', { waitUntil: 'domcontentloaded' })
     await expect(page.locator('.mock-source-indicator')).toContainText('Mock')
     await page.locator('.work-orders-entry').click()
     await page.getByTestId('app-search-bar').locator('input').fill(`MOCK-${number}`)
@@ -58,7 +58,7 @@ test.describe('A-stage P1 real-H5 operator acceptance', () => {
   }
 
   async function open019Quotation(page: Page) {
-    await page.goto('/#/pages/index/index', { waitUntil: 'domcontentloaded' })
+    await page.goto('/#/pages/index/index?devReview=1', { waitUntil: 'domcontentloaded' })
     await page.getByTestId('mock-continuous-journey-entry').click()
     await page.locator('.action-content-field--note textarea').fill('阶段 A 移动端：平屋顶预约')
     await page.getByTestId('mock-journey-advance').click()
@@ -164,7 +164,7 @@ test.describe('A-stage P1 real-H5 operator acceptance', () => {
       await page.reload({ waitUntil: 'domcontentloaded' })
       await expect(page.getByTestId('quotation-order-hub')).toBeVisible()
       await expect(page.getByTestId('quotation-hub-order-mock-official-order-019-protocol'))
-        .toContainText(/本机合成.*未提交后台/)
+        .toContainText(/体验数据.*未提交后台/)
       await page.getByTestId('quotation-hub-start-new').click()
       await expect(page.getByTestId('a-stage-order-readback')).toBeVisible()
       await expect(page.getByTestId('a-stage-order-create')).toHaveCount(0)

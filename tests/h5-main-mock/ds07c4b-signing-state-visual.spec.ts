@@ -25,7 +25,7 @@ for (const width of [320, 375, 390] as const) {
   test(`DS-07.C4.B signing signed/pending/error visual proxy at ${width}px`, async ({ page }, info) => {
     await page.setViewportSize({ width, height: 844 })
     const assertIsolated = await enforceLocalOnly(page)
-    await page.goto('/#/pages/index/index', { waitUntil: 'domcontentloaded' })
+    await page.goto('/#/pages/index/index?devReview=1', { waitUntil: 'domcontentloaded' })
     await expect(page.locator('.mock-source-indicator')).toContainText('Mock')
     await page.getByTestId('signing-mock-entry').click()
     await expect(page.getByTestId('signing-mock-workbench')).toContainText('独立正式订单样本')

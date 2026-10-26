@@ -9,7 +9,7 @@
 
   <view v-else-if="routeError || workspace.loadState === 'blocked'" class="workspace-state workspace-state--centered">
     <text class="workspace-state-title">当前操作暂不可用</text>
-    <text class="workspace-state-copy">{{ routeError === 'production-read-only' ? '生产环境仅开放已验证的报价只读入口；其他操作空间不会加载或提交。' : '请返回工单详情，按当前任务继续操作。' }}</text>
+    <text class="workspace-state-copy">{{ routeError === 'production-read-only' ? '当前仅支持查看报价，其他操作尚未开放。' : '请返回工单详情，按当前任务继续操作。' }}</text>
     <AppButton class="workspace-state-action" @tap="exit">返回工单详情</AppButton>
   </view>
 
@@ -30,7 +30,7 @@
     @mock-read-retry="loadMockOrderRead"
   >
     <template #after-content>
-      <MockCommercialFlowLinks v-if="mockJourney?.stage === 'quotation'"
+      <MockCommercialFlowLinks v-if="mockJourney?.stage === 'quotation' && devReviewModeEnabled"
         :work-order-id="String(routeId ?? '')" :user-id="String(session.session?.user.id ?? '')"
         :role-id="String(session.session?.currentRole?.id ?? '')" />
     </template>
@@ -60,7 +60,7 @@
     </template>
     <template #after-content>
       <AStageMockQuoteOrderPanel v-if="aStageMockOrderEnabled" />
-      <MockCommercialFlowLinks v-if="mockJourney?.stage === 'quotation'"
+      <MockCommercialFlowLinks v-if="mockJourney?.stage === 'quotation' && devReviewModeEnabled"
         :work-order-id="String(routeId ?? '')" :user-id="String(session.session?.user.id ?? '')"
         :role-id="String(session.session?.currentRole?.id ?? '')" />
     </template>
@@ -194,11 +194,11 @@
       class="mock-journey-progress app-surface"
       data-testid="mock-journey-progress"
     >
-      <text class="mock-journey-progress__note">仅 Mock 演示：会模拟提交表单并推进流程，数据只保存在本机，不写入真实业务后台。</text>
+      <text class="mock-journey-progress__note">体验流程 · 记录仅保存在本机，未提交后台。</text>
       <text class="mock-journey-progress__note" data-testid="mock-journey-save-state">
         {{ workspace.draftStatus === 'saved_local' || workspace.draftStatus === 'restore_available'
-          ? '本机字段记录已保存，可核对后进入模拟下一节点'
-          : '请先填写至少一项有效信息；进入下一节点前会核对本机保存记录' }}
+          ? '已保存，可继续下一步'
+          : '填写信息并保存后，即可继续下一步' }}
       </text>
       <text v-if="journeyFeedback" class="mock-journey-progress__error" role="alert"
         data-testid="mock-journey-feedback">{{ journeyFeedback }}</text>
@@ -268,6 +268,7 @@ import MockCommercialFlowLinks from '@features/work-orders/quotation/MockCommerc
 import AStageMockQuoteOrderPanel from '@features/work-orders/quotation/AStageMockQuoteOrderPanel.vue'
 import { hasAuthenticatedSession } from '@features/home/access'
 import { isProductionReadOnlyRuntime } from '@shared/config'
+import { devReviewModeEnabled } from '@shared/ui/dev-review-mode'
 import {
   parseActionWorkspaceId,
   parseActionWorkspaceNodeId,

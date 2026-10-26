@@ -48,7 +48,7 @@
               </view>
             </view>
           </view>
-          <text v-if="detail.displayNumber" class="summary-number">#{{ detail.displayNumber }}</text>
+          <text v-if="detail.displayNumber" class="summary-number">{{ workOrderNumberDisplay(detail.displayNumber, syntheticFixture, devReviewModeEnabled) }}</text>
         </view>
 
         <view
@@ -79,10 +79,11 @@
             <text>{{ workOrder.contactInFlight && action.key === 'contact' ? '打开中' : action.label }}</text>
           </button>
         </view>
+        <text v-if="syntheticFixture && !devReviewModeEnabled" class="summary-demo-source">体验数据 · 未提交后台</text>
         <AppStatus
           v-if="productionReadOnly"
           class="production-read-only-notice"
-          message="生产数据只读：当前账号有权限的工单和流程可查看；业务操作及客户联系已关闭。"
+          message="当前工单仅可查看，业务操作暂未开放。"
           tone="warning"
           quiet
           data-testid="production-read-only-notice"
@@ -96,16 +97,16 @@
         v-if="workflowProjection.currentTask"
         :title="workflowProjection.currentTask.title"
         :action-label="productionReadOnly
-          ? (workflowProjection.currentTask.actionIntent === 'place_order' ? '查看报价方案' : '生产只读')
+          ? (workflowProjection.currentTask.actionIntent === 'place_order' ? '查看报价方案' : '暂不可操作')
           : workflowProjection.currentTask.actionLabel"
         :tone="workflowProjection.currentTask.tone"
         :disabled="(workflowProjection.currentTask.execution !== 'enabled' && !allowLocalMockPreview)
           || (productionReadOnly && workflowProjection.currentTask.actionIntent !== 'place_order')"
-        :note="aStageSpecialKind ? '请在下方记录现场情况；仅保存至本机 Mock。' : '当前环境只开放读取，不会提交、接单或推进流程'"
+        :note="aStageSpecialKind ? '请在下方记录现场情况，内容仅保存至本机。' : productionReadOnly ? '当前仅可查看，业务操作暂未开放。' : allowLocalMockPreview ? '体验数据仅保存至本机，不会提交后台。' : undefined"
         @action="handleCurrentTaskAction"
       />
 
-      <view v-if="localMockWorkflowStage" class="mock-workflow-track app-surface"
+      <view v-if="localMockWorkflowStage && devReviewModeEnabled" class="mock-workflow-track app-surface"
         data-testid="mock-journey-workflow-state">
         <view class="mock-workflow-track__top">
           <text class="mock-workflow-track__heading">本机业务流转</text>
@@ -144,7 +145,7 @@
       <R1NodeFormsOverview v-else-if="currentR1FormNode" :node="currentR1FormNode"
         :work-order-id="String(detail.id)" :actor-scope="workOrderReadScopeKey(session.session)" />
       <AppStatus v-if="aStageCompletedSpecialNode" tone="success" quiet
-        message="当前现场表单节点已完成（仅本机 Mock）；完成状态已回读，重新进入也会保留。"
+        message="现场记录已完成并保存至本机，重新进入仍可查看。"
         data-testid="a-special-complete" />
       <R1ProductionChildFormsPanel
         v-if="productionReadOnly && productionChildParents.length"
@@ -157,7 +158,7 @@
         @load-child="loadChildForms"
         @load-repeat="loadRepeatForms"
       />
-      <navigator v-if="showChildSubflowMockPreview" class="child-subflow-mock-entry"
+      <navigator v-if="showChildSubflowMockPreview && devReviewModeEnabled" class="child-subflow-mock-entry"
         :url="childSubflowMockReviewUrl()" data-testid="child-subflow-mock-preview-entry">
         开发验收：查看合成子流程节点（仅 Mock）
       </navigator>
@@ -333,6 +334,8 @@ import { readMockCommercialProgress } from '@app/mock-commercial-journey'
 import { childSubflowMockReviewUrl, childSubflowMockWorkOrderId, isChildSubflowMockPreviewAvailable } from '@app/child-subflow-mock-review'
 import { hasAuthenticatedSession } from '@features/home/access'
 import { isProductionReadOnlyRuntime } from '@shared/config'
+import { devReviewModeEnabled } from '@shared/ui/dev-review-mode'
+import { workOrderNumberDisplay } from '@shared/ui/work-order-number-display'
 import { workOrderCardToneFor } from '@features/work-orders/card'
 import { useWorkOrderDetailStore } from '@features/work-orders/detail'
 import { actionWorkspaceRouteFor } from '@features/work-orders/action-workspace'
@@ -428,6 +431,8 @@ const localMockWorkflowStage = computed(() => !productionReadOnly
   && session.session?.currentRole?.id === 'synthetic-role'
   ? mockJourneyContext(String(detail.value?.id ?? ''))?.stage ?? null : null)
 const mockReviewRevision = ref(0)
+const syntheticFixture = computed(() => import.meta.env.DEV
+  && String(detail.value?.id ?? '').startsWith('mock-work-order-'))
 onShow(() => { mockReviewRevision.value += 1 })
 const mockCommercialProgress = computed(() => {
   void mockReviewRevision.value
@@ -752,6 +757,13 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
   font-size: 12px;
   font-weight: 630;
   padding-top: 4rpx;
+}
+
+.summary-demo-source {
+  display: block;
+  margin-top: 10rpx;
+  color: var(--app-color-text-secondary);
+  font-size: var(--app-font-meta);
 }
 
 .location-row {

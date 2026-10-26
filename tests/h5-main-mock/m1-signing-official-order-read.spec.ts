@@ -13,7 +13,7 @@ for (const width of [375, 390]) {
         await route.abort('blockedbyclient')
       } else await route.continue()
     })
-    await page.goto('/#/pages/index/index', { waitUntil: 'domcontentloaded' })
+    await page.goto('/#/pages/index/index?devReview=1', { waitUntil: 'domcontentloaded' })
     await expect(page.locator('.home-page')).toBeVisible()
     await page.goto('/#/pages/work-orders/signing-order-read?workOrderId=MOCK-018&orderId=forged-order', {
       waitUntil: 'domcontentloaded',

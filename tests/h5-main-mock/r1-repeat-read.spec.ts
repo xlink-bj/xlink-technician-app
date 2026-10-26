@@ -16,7 +16,7 @@ test('main App synthetic repeat list is read only and makes no external request'
     return route.abort('blockedbyclient')
   })
 
-  await page.goto('/#/pages/index/index', { waitUntil: 'domcontentloaded' })
+  await page.goto('/#/pages/index/index?devReview=1', { waitUntil: 'domcontentloaded' })
   await expect(page.locator('.mock-source-indicator')).toContainText('Mock')
   await page.locator('.work-orders-entry').click()
   await expect(page).toHaveURL(/pages\/work-orders\/work-orders/)

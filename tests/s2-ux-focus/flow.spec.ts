@@ -53,7 +53,8 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       // This is a separate DEV synthetic official Order; no order creation,
       // PDF, SMS, signing command or production read is authorized.
       await page.goto('/#/pages/index/index', { waitUntil: 'domcontentloaded' })
-      await expect(page.locator('.mock-source-indicator')).toContainText('Mock')
+      await expect(page.getByTestId('dev-review-tools')).toHaveCount(0)
+      await expect(page.getByTestId('business-mode-provenance')).toBeVisible()
       await page.locator('.work-orders-entry').click()
       await page.locator('.search-input input').fill('04009')
       await page.locator('.search-button').click()
@@ -76,12 +77,13 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
     // No credential, real customer, Production network or business mutation.
     await page.goto('/#/pages/index/index', { waitUntil: 'domcontentloaded' })
     await expect(page.locator('.home-page')).toBeVisible()
-    await expect(page.locator('.mock-source-indicator')).toContainText('Mock')
+    await expect(page.getByTestId('dev-review-tools')).toHaveCount(0)
+    await expect(page.getByTestId('business-mode-provenance')).toBeVisible()
     await page.locator('.work-orders-entry').click()
     await page.locator('.search-input input').fill('MOCK-018')
     await page.locator('.search-button').click()
     await page.locator('.work-order-card').filter({ hasText: '演示报价工单' }).click()
-    await expect(page.locator('.summary-number')).toContainText('MOCK-018')
+    await expect(page.locator('.summary-number')).toContainText('#018')
     if (screen !== 'DETAIL') {
       await page.locator('.primary-task-action').click()
       await expect(page.getByTestId('quotation-order-hub')).toBeVisible()
@@ -168,7 +170,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       await expect(cards).toHaveClass(/app-record-card/)
       await expect(cards.locator('.signing-read-hero-title')).toHaveText('当前订单')
       await expect(page.getByTestId('signing-review-progress')).toBeVisible()
-      await expect(cards).toContainText('本机合成 · 未提交后台')
+      await expect(cards).toContainText('体验数据 · 未提交后台')
       await expect(page.getByTestId('signing-review-progress').getByTestId('signing-contract-read-request')).toBeVisible()
       await expect(page.getByTestId('signing-order-audit-toggle')).toHaveAttribute('aria-expanded', 'false')
       await expect(page.getByTestId('signing-order-read-contract-status')).toBeVisible()

@@ -10,7 +10,7 @@
       当前节点尚未提供完整记录。未知不等于没有表单；仅可查看。
     </text>
     <AppButton v-if="!formList && node.sourceNodeType==='repeat' && syntheticActionsEnabled"
-      size="compact" variant="secondary" @tap="loadRepeat">主动读取 DEV 合成记录</AppButton>
+      size="compact" variant="secondary" @tap="loadRepeat">查看本机记录</AppButton>
     <text v-else-if="formList?.evidence === 'invalid'" class="r1-node-forms__hint"
       data-testid="r1-form-list-invalid">服务端表单列表结构异常；不允许基于不完整列表编辑。</text>
     <template v-else-if="formList">
@@ -53,7 +53,7 @@
       <view v-else-if="node.sourceNodeType === 'forms'" class="r1-node-forms__draft-editor">
         <text class="r1-node-forms__label">多类型表单选项</text>
         <AppButton v-if="canStage && syntheticActionsEnabled && node.addFormCodeId"
-          size="compact" variant="secondary" @tap="loadChoices">读取 DEV 合成选项</AppButton>
+          size="compact" variant="secondary" @tap="loadChoices">查看可选表单</AppButton>
         <view v-for="(choice,index) in draftStore.availableAddOptions" :key="String(choice.formDefinitionId)"
           class="r1-node-forms__draft-row" data-testid="r1-add-form-option">
           <text class="r1-node-forms__item-main">{{ choice.label }}</text>
@@ -87,7 +87,7 @@
           <AppButton size="compact" variant="text" @tap="discard(intent.localId)">撤销</AppButton>
         </view>
       </view>
-      <text v-if="loadingFields" class="r1-node-forms__hint">正在读取 DEV 合成表单定义…</text>
+      <text v-if="loadingFields" class="r1-node-forms__hint">正在准备表单…</text>
       <R1LocalFormFieldEditor v-if="activeDefinition && activeIntent"
         :definition="activeDefinition" :intent="activeIntent"
         :initial-values="activeValues" @close="closeFieldEditor" />

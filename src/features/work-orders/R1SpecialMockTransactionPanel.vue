@@ -3,12 +3,12 @@
     <view class="special-forms__header">
       <view class="special-forms__header-copy">
         <text class="special-forms__title">{{ kind === 'repeat' ? '现场复检' : '现场记录' }}</text>
-        <text class="special-forms__subtitle">{{ kind === 'repeat' ? '每次复检独立保存，再完成模拟节点' : '填写现场情况，保存后可补充多条记录' }}</text>
+        <text class="special-forms__subtitle">{{ kind === 'repeat' ? '每次复检单独保存，确认齐全后完成' : '填写现场情况，保存后可补充多条记录' }}</text>
       </view>
-      <text class="special-forms__scope">本机 Mock</text>
+      <text class="special-forms__scope">体验数据 · 仅本机</text>
     </view>
-    <AppStatus class="special-forms__notice" quiet
-      message="仅保存本机模拟记录 · 未提交后台" />
+    <AppStatus v-if="devReviewModeEnabled" class="special-forms__notice" quiet
+      message="开发核验：本机模拟记录不会提交后台或改变真实工作流。" />
     <view v-if="loading" class="special-forms__message" data-testid="a-special-loading">正在读取表单…</view>
     <view v-else-if="error" class="special-forms__message special-forms__message--error"
       data-testid="a-special-error" role="alert">
@@ -19,7 +19,7 @@
       <AppStatus v-if="operationFeedback" tone="warning" quiet
         :message="operationFeedback" data-testid="a-special-operation-feedback" />
       <view class="special-forms__task-state" data-testid="a-special-task-state">
-        <text class="special-forms__task-marker">{{ viewState.receiptPending ? '结果待核对' : viewState.nodeActive ? '正在填写' : '本机模拟已完成' }}</text>
+        <text class="special-forms__task-marker">{{ viewState.receiptPending ? '结果待核对' : viewState.nodeActive ? '正在填写' : '本机记录已完成' }}</text>
         <text class="special-forms__task-detail">{{ viewState.receiptPending ? '保留原有记录，先核对回执，勿重复提交' : viewState.nodeActive ? '保存每条记录后，确认齐全再完成节点' : '记录已锁定，可查看已保存内容' }}</text>
       </view>
       <view class="special-forms__section-heading">
@@ -67,7 +67,7 @@
             data-testid="a-special-recover" @tap="recoverCompleted">只读核对并恢复</AppButton>
         </template>
         <AppStatus v-else tone="warning" quiet
-          message="写入 ACK 尚未全部确认，暂不能自动解除防重保护；请联系支持人员核查。"
+          message="保存结果尚未完全确认，暂不能再次提交。请联系支持人员核查。"
           data-testid="a-special-unresolved" />
         <AppStatus v-if="recoveryFeedback" tone="warning" quiet
           :message="recoveryFeedback" data-testid="a-special-recovery-feedback" />
@@ -86,10 +86,10 @@
           </view>
         </view>
         <view class="special-forms__finish">
-          <text class="special-forms__finish-copy">{{ canFinish ? '记录齐全后可完成模拟节点；完成后不可再编辑。' : '请先保存至少一条有效记录。' }}</text>
+          <text class="special-forms__finish-copy">{{ canFinish ? '确认记录齐全后可以完成；完成后不可再编辑。' : '请先保存至少一条有效记录。' }}</text>
           <AppButton v-if="!confirmFinish" variant="secondary" block
             :disabled="busy || !canFinish" data-testid="a-special-finish-request"
-            @tap="confirmFinish = true">完成模拟节点</AppButton>
+            @tap="confirmFinish = true">完成现场记录</AppButton>
           <view v-else class="special-forms__confirmation">
             <text>确认记录已齐全并完成当前节点？</text>
             <AppButton :disabled="busy" data-testid="a-special-finish-confirm"
@@ -105,6 +105,7 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { devReviewModeEnabled } from '@shared/ui/dev-review-mode'
 import type { WorkflowNodeRead } from '@shared/ports'
 import { createDefaultStoragePort } from '@app/composition'
 import {
