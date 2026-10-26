@@ -12,11 +12,11 @@ export function createDevMockUxSessionPort(): AuthSessionPort {
     sessionRef: asOpaqueId<'SessionRef'>('local-mock-only-session'),
     user: {
       id: asOpaqueId<'UserId'>('synthetic-user'),
-      displayName: '本地仿真技术员',
+      displayName: '王师傅',
     },
     currentRole: {
       id: asOpaqueId<'RoleId'>('synthetic-role'),
-      name: '本地技术员',
+      name: '现场服务工程师',
     },
     roleVersion: 'local-dev-role-version-1',
     capabilityNames: ['work-order.read'],

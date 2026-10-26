@@ -33,6 +33,8 @@ for (const width of [375, 390]) {
     await expect(page.getByTestId('business-mode-provenance')).toHaveCount(0)
     await expect(page.locator('.local-draft-panel')).toHaveCount(0)
     await expect(page.locator('.home-page')).not.toContainText(/开发验收|测试数据|体验数据|Mock|DEV|未提交后台/)
+    await expect(page.locator('.home-page')).not.toContainText(/本地仿真|模拟账号|演示账号|测试技术员/)
+    await expect(page.locator('.home-page')).toContainText('王师傅')
     await captureEvidence(page, info, `commercial-home-${width}`)
 
     await page.locator('.work-orders-entry').click()

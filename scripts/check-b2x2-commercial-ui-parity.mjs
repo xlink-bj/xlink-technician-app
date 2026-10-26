@@ -47,6 +47,13 @@ const qa = read('src/pages/dev/qa-console.vue')
 const pages = read('src/pages.json')
 const formatter = read('src/shared/ui/work-order-number-display.ts')
 const numberTest = read('tests/g4ux/work-order-number-display.test.ts')
+const mockSession = read('src/adapters/auth/dev-mock-ux-session.ts')
+
+// Fixture-provided identity also renders on commercial surfaces. A clean page
+// template is insufficient if the runtime user/role reveals the QA harness.
+if (/本地仿真技术员|本地技术员|模拟账号|演示账号|测试技术员/.test(mockSession)) {
+  fail('DEV Mock user/role identity must use ordinary commercial presentation')
+}
 
 if (/<navigator[^>]+\/pages\/dev\/qa-console/.test(home)) {
   fail('commercial Home must not offer a visible QA navigation link')
