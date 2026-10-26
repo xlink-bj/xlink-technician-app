@@ -17,7 +17,7 @@ async function forbidExternalRequests(page: Page) {
 }
 
 for (const width of [375, 390]) {
-  test(`B2-X commercial mode hides QA details without hiding provenance (${width})`, async ({ page }) => {
+  test(`B2-X commercial mode hides QA details without hiding provenance (${width})`, async ({ page }, info) => {
     await page.setViewportSize({ width, height: width === 375 ? 667 : 844 })
     const assertSafe = await forbidExternalRequests(page)
     await page.goto('/#/pages/index/index', { waitUntil: 'domcontentloaded' })
@@ -25,6 +25,9 @@ for (const width of [375, 390]) {
     await expect(page.getByTestId('dev-review-tools')).toHaveCount(0)
     await expect(page.getByTestId('business-mode-provenance')).toContainText('体验数据')
     await expect(page.locator('.local-draft-panel')).toHaveCount(0)
+    await info.attach(`commercial-home-${width}`, {
+      body: await page.screenshot({ fullPage: true }), contentType: 'image/png',
+    })
 
     await page.locator('.work-orders-entry').click()
     await page.locator('.search-input input').fill('04009')
@@ -45,16 +48,22 @@ for (const width of [375, 390]) {
     await expect(page.getByTestId('signing-contract-matched')).toContainText('本机合同示例')
     await expect(page.locator('.signing-read-page')).not.toContainText('DEV-SYNTHETIC')
     await expect(page.getByTestId('signing-order-read-sign-disabled')).toBeDisabled()
+    await info.attach(`commercial-c01-${width}`, {
+      body: await page.screenshot({ fullPage: true }), contentType: 'image/png',
+    })
     assertSafe()
   })
 }
 
-test('B2-X developer inspection is explicit, DEV-only and reversible', async ({ page }) => {
+test('B2-X developer inspection is explicit, DEV-only and reversible', async ({ page }, info) => {
   const assertSafe = await forbidExternalRequests(page)
   await page.goto('/#/pages/index/index?devReview=1', { waitUntil: 'domcontentloaded' })
   await expect(page.getByTestId('dev-review-tools')).toBeVisible()
   await expect(page.getByTestId('mock-continuous-journey-entry')).toBeVisible()
   await expect(page.getByTestId('business-mode-provenance')).toHaveCount(0)
+  await info.attach('dev-qa-home', {
+    body: await page.screenshot({ fullPage: true }), contentType: 'image/png',
+  })
   // The opt-in persists across local page reloads, never across browser tabs.
   await page.reload({ waitUntil: 'domcontentloaded' })
   await expect(page.getByTestId('dev-review-tools')).toBeVisible()
