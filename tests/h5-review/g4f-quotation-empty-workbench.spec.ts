@@ -202,6 +202,10 @@ test('first repair-part step validates existing group context and returns from c
   await page.setViewportSize({ width: 390, height: 844 })
   await resetWorkspaceScroll(page)
   await assertNoHorizontalOverflow(page, 390)
+  // Q01 uses a fixed action bar; the in-form selection control can now sit
+  // below the initial viewport. Check it after the user's natural scroll,
+  // rather than assuming every form field is visible above the fixed bar.
+  await page.getByTestId('quotation-first-step-select-products').scrollIntoViewIfNeeded()
   const primaryActionBounds = await page.getByTestId('quotation-first-step-select-products').boundingBox()
   const sharedFooterBounds = await page.locator('.action-workspace-footer').boundingBox()
   expect(primaryActionBounds).not.toBeNull()

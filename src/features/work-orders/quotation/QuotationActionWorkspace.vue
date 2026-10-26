@@ -113,7 +113,7 @@
         data-testid="quotation-submit-unavailable"
       />
     </template>
-    <view v-if="canOpenSubmit && quotationConfirmOpen" class="quotation-confirm-backdrop" role="presentation">
+    <view v-if="quotationConfirmOpen" class="quotation-confirm-backdrop" role="presentation">
       <view class="quotation-confirm-sheet" role="dialog" aria-modal="true" data-testid="quotation-order-confirmation">
         <text class="quotation-confirm-title">确认提交订单/报价方案？</text>
         <text class="workspace-state-copy">提交会创建服务器订单，并触发后端已验证的报价单生成、工单金额更新等副作用；不会完成当前工单工作流。提交后请勿重复操作。</text>
@@ -219,7 +219,10 @@ async function confirmQuotationSubmit(): Promise<void> {
 }
 
 function openQuotationConfirmation(): void {
-  if (!canOpenSubmit.value) return
+  // A previously enabled trigger can lose eligibility during the tap due to
+  // asynchronous draft/price revalidation. Show a disabled confirmation with
+  // the guard explanation; only confirmQuotationSubmit may dispatch, and it
+  // rechecks current eligibility. Never silently swallow the user's action.
   quotationConfirmOpen.value = true
 }
 </script>

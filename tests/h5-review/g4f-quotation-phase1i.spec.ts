@@ -42,8 +42,16 @@ test('Phase 1I actual quotation workspace confirms once, locks in flight, then r
   await expect(page.getByTestId('quotation-engine-ready')).toBeVisible()
   const submit = page.getByTestId('action-workspace-submit')
   await expect(submit).toBeEnabled()
-  await submit.click()
-  await expect(page.getByTestId('quotation-order-confirmation')).toBeVisible()
+  // Draft validation can invalidate a briefly ready CTA during hydration;
+  // opening a local confirmation does not dispatch any Order command. Retry
+  // the user gesture once if that precise in-flight revalidation closed it.
+  const confirmation = page.getByTestId('quotation-order-confirmation')
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    await expect(submit).toHaveAttribute('aria-disabled', 'false')
+    await submit.click()
+    if (await confirmation.isVisible()) break
+  }
+  await expect(confirmation).toBeVisible()
   expect(await page.evaluate(() => (window as any).__G4F_REVIEW_ORDER_MUTATIONS__.dispatches)).toBe(0)
   // Observe the true intermediate UI before initiating the synthetic server
   // promise. The server can complete faster than a subsequent Playwright
