@@ -298,7 +298,10 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
   // The unscoped v4 draft key is not proof of cross-role ownership.
   // At minimum, never serve a cached action or finish a pending read under
   // a different authenticated session/role than the one that began it.
-  let loadedSessionScope: string | null = null
+  // Quotation CTA eligibility is computed reactively. Scope acquisition and
+  // revocation must invalidate that computed permission, even when no other
+  // reactive quotation field changes during asynchronous initialization.
+  const loadedSessionScope = ref<string | null>(null)
 
   function sessionScopeKey(session: SessionSnapshot): string {
     return JSON.stringify([
@@ -311,14 +314,14 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
 
   function mutationScopeFor(action: ActionDescriptor): ActionMutationScope | null {
     const session = dependencies?.getSession()
-    if (!session || !loadedSessionScope || !action.contentIdentity
+    if (!session || !loadedSessionScope.value || !action.contentIdentity
       || String(session.user.id) !== String(action.userId)) return null
     return {
       userId: String(action.userId),
       workOrderId: String(action.workOrderId),
       workflowNodeId: String(action.workflowNodeId),
       formDefinitionId: String(action.contentIdentity),
-      authorizationScope: loadedSessionScope,
+      authorizationScope: loadedSessionScope.value,
     }
   }
 
@@ -373,7 +376,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
    */
   function commandSessionScopeCurrent(): boolean {
     const session = dependencies?.getSession()
-    return Boolean(session && loadedSessionScope && sessionScopeKey(session) === loadedSessionScope)
+    return Boolean(session && loadedSessionScope.value && sessionScopeKey(session) === loadedSessionScope.value)
   }
 
   function actionCommandScopeCurrent(version: number, target: ActionDescriptor): boolean {
@@ -431,7 +434,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     quotationEditState.value = { state: 'none' }
     quotationExistingOrderId.value = null
     loadVersion += 1
-    loadedSessionScope = null
+    loadedSessionScope.value = null
     clearDraftTimer()
     draftRevision += 1
     identity = null
@@ -686,7 +689,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     quotationCatalogBrowser.clear()
     quotationEngine.clear()
     const requestVersion = ++loadVersion
-    loadedSessionScope = null
+    loadedSessionScope.value = null
     loadState.value = 'loading'
     lifecycle.value = 'available'
     businessResult.value = 'not_started'
@@ -833,7 +836,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
           })
         : { state: 'failed_terminal', message: '本地订单防重记录不可用，暂不能安全提交。' }
       if (!scopeUnchanged()) return blockStaleScope()
-      loadedSessionScope = requestedSessionScope
+      loadedSessionScope.value = requestedSessionScope
       quotationContentState.value = 'ready'
       loadState.value = 'succeeded'
       lifecycle.value = 'available'
@@ -968,7 +971,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     await restoreMediaTasks(nextDescriptor, stillLoadingAction)
     if (requestVersion !== loadVersion) return failure('cancelled', 'Action Workspace load was superseded')
     if (!scopeUnchanged()) return blockStaleScope()
-    loadedSessionScope = requestedSessionScope
+    loadedSessionScope.value = requestedSessionScope
     return { state: 'succeeded', data: nextDescriptor }
   }
 
@@ -1230,7 +1233,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     const configured = dependencies
     const session = configured?.getSession()
     const current = descriptor.value
-    if (current && loadedSessionScope && (!session || sessionScopeKey(session) !== loadedSessionScope)) {
+    if (current && loadedSessionScope.value && (!session || sessionScopeKey(session) !== loadedSessionScope.value)) {
       clear()
       return failure('session_invalid', '账号或角色已变化，请重新进入当前工作台。')
     }
