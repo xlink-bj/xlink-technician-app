@@ -217,7 +217,10 @@ test('first repair-part step validates existing group context and returns from c
   await resetWorkspaceScroll(page)
   await assertNoHorizontalOverflow(page, 320)
   await expect(page.getByTestId('quotation-first-step-select-products')).toBeVisible()
-  await expect(page.locator('[data-testid="action-workspace-submit"], [data-testid="quotation-submit-disabled-preview"]')).toHaveAttribute('disabled', 'true')
+  // B1 Q01 presents only Save Draft / Next on the first repair-part step;
+  // the server order submit control must not exist before catalog selection.
+  await expect(page.getByTestId('quotation-first-step-next')).toBeEnabled()
+  await expect(page.getByTestId('action-workspace-submit')).toHaveCount(0)
   await page.screenshot({ path: resolve(repairPartStepOutput, '02-repair-part-step-320.png'), animations: 'disabled' })
 
   await page.setViewportSize({ width: 390, height: 844 })
@@ -237,9 +240,9 @@ test('first repair-part step validates existing group context and returns from c
   await expect(page.getByTestId('quotation-workbench-summary')).toHaveCount(0)
   await expect(page.getByTestId('quotation-workbench-heading')).toHaveCount(0)
   await expect(page.getByTestId('action-workspace-context')).toHaveCount(1)
-  await expect(page.getByTestId('quotation-footer-summary')).toContainText('0 项 · 1 个部位组')
-  await expect(page.getByTestId('quotation-footer-summary')).toContainText(/待核验|暂不可计算/)
-  await expect(page.locator('[data-testid="action-workspace-submit"], [data-testid="quotation-submit-disabled-preview"]')).toHaveAttribute('disabled', 'true')
+  await expect(page.getByTestId('quotation-first-step-footer')).toBeVisible()
+  await expect(page.getByTestId('quotation-footer-summary')).toContainText('本机草稿')
+  await expect(page.getByTestId('action-workspace-submit')).toHaveCount(0)
   await expect(page.getByText(/(?:¥|￥)\s*\d|\d+(?:\.\d{1,2})?\s*元/)).toHaveCount(0)
 
   expect(diagnostics.pageErrors, 'pageerror output').toEqual([])

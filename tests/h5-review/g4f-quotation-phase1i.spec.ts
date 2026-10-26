@@ -41,16 +41,19 @@ test('Phase 1I actual quotation workspace confirms once, locks in flight, then r
   await expect(page.getByTestId('g4f-quotation-workspace')).toBeVisible()
   await expect(page.getByTestId('quotation-engine-ready')).toBeVisible()
   const submit = page.getByTestId('action-workspace-submit')
+  // Wait for the *stable* post-hydration workspace permission, not a brief
+  // enabled paint before the engine's debounced second verification.
+  await expect.poll(async () => page.evaluate(() => {
+    const snapshot = (window as any).__G4F_REVIEW_SUBMIT_DIAGNOSTICS__?.()
+    if (!snapshot) return 'missing isolated review diagnostics'
+    if (snapshot.workspaceCanSubmit && snapshot.engineResultState === 'ready'
+      && snapshot.engineDraftVersion === snapshot.draftVersion) return 'ready'
+    return JSON.stringify(snapshot)
+  }), { timeout: 6_000 }).toBe('ready')
   await expect(submit).toBeEnabled()
-  // Draft validation can invalidate a briefly ready CTA during hydration;
-  // opening a local confirmation does not dispatch any Order command. Retry
-  // the user gesture once if that precise in-flight revalidation closed it.
+  await expect(submit).toHaveAttribute('aria-disabled', 'false')
   const confirmation = page.getByTestId('quotation-order-confirmation')
-  for (let attempt = 0; attempt < 2; attempt += 1) {
-    await expect(submit).toHaveAttribute('aria-disabled', 'false')
-    await submit.click()
-    if (await confirmation.isVisible()) break
-  }
+  await submit.click()
   await expect(confirmation).toBeVisible()
   expect(await page.evaluate(() => (window as any).__G4F_REVIEW_ORDER_MUTATIONS__.dispatches)).toBe(0)
   // Observe the true intermediate UI before initiating the synthetic server

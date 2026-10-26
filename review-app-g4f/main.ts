@@ -12,6 +12,8 @@ import App from './App.vue'
 import { mockQuotationWorkflowNodeId } from '@adapters/api/mock'
 import { createG4fReviewStorage, reviewScenarioFromLocation, seedG4fReviewDraft } from './quotation-scenarios'
 import { createProductReviewDraftStorage } from './product-draft-storage'
+import { useActionWorkspaceStore } from '@features/work-orders/action-workspace'
+import { useQuotationCompositionStore } from '@features/work-orders/quotation/composition-store'
 
 const reviewSession: SessionSnapshot = {
   sessionRef: asOpaqueId<'SessionRef'>('g4f-mock-review-session'),
@@ -176,6 +178,29 @@ export function createApp() {
       }
   if (typeof window !== 'undefined') Object.assign(window, { __G4F_REVIEW_ORDER_MUTATIONS__: counters })
   const application = createApplication({ authSession, apiRead, storage, ...(productCommand ? { apiCommand: productCommand } : {}), quotationCatalogRead: catalog, quotationOrderCommand, quotationOrderRead })
+  // Diagnostic snapshot exists only in the isolated DEV synthetic review app.
+  // It intentionally returns no credentials, customer fields, or API responses.
+  if (import.meta.env.DEV && typeof window !== 'undefined') {
+    const workspace = useActionWorkspaceStore(application.pinia)
+    const composition = useQuotationCompositionStore(application.pinia)
+    Object.assign(window, {
+      __G4F_REVIEW_SUBMIT_DIAGNOSTICS__: () => ({
+        workspaceCanSubmit: workspace.canSubmitQuotation,
+        quotationContentState: workspace.quotationContentState,
+        descriptorKind: workspace.descriptor?.contentKind,
+        descriptorIntent: workspace.descriptor?.actionIntent,
+        descriptorExecution: workspace.descriptor?.execution,
+        engineState: workspace.quotationEngine.state,
+        engineResultState: workspace.quotationEngine.result?.state,
+        engineDraftVersion: workspace.quotationEngine.result?.draftVersion,
+        draftVersion: composition.draft?.draftVersion,
+        selectionCount: composition.selectionCount,
+        quantityErrors: Object.values(composition.quantityErrorBySelection).filter(Boolean).length,
+        orderState: workspace.quotationOrderState.state,
+        editState: workspace.quotationEditState.state,
+      }),
+    })
+  }
   const app = createSSRApp(App)
   app.use(application.pinia)
   return { app }
