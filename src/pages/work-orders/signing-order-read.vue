@@ -58,10 +58,11 @@
           <text class="signing-read-order-number xl-craft__value" data-testid="signing-order-read-display-number">{{ devFixtureContractRead ? '本机订单示例' : (review.snapshot.review?.order.displayNumber || '订单编号待核验') }}</text>
         </view>
         <view class="signing-read-hero-money">
-          <view v-if="review.snapshot.review?.order.totalPrice !== undefined" class="signing-read-hero-amount" data-testid="signing-read-order-amount">
+          <view v-if="review.snapshot.review?.order.totalPrice !== undefined && (!devFixtureContractRead || review.snapshot.review.order.totalPrice > 0)" class="signing-read-hero-amount" data-testid="signing-read-order-amount">
             <text class="signing-read-meta xl-craft__meta">订单金额</text>
             <AppAmountValue class="signing-read-amount-value" size="prominent" :value="`¥${review.snapshot.review.order.totalPrice.toFixed(2)}`" />
           </view>
+          <text v-else-if="devFixtureContractRead" class="signing-read-meta xl-craft__meta" data-testid="signing-read-amount-unverified">订单金额待核验</text>
           <text class="signing-read-meta xl-craft__meta">{{ review.snapshot.review?.order.groups.length || 0 }} 个维修分组</text>
         </view>
         <view class="signing-read-order-details">
@@ -70,7 +71,7 @@
             {{ orderAuditExpanded ? '收起订单状态说明' : '查看订单状态说明' }}
           </button>
           <text v-show="orderAuditExpanded" class="signing-read-order-note"
-            data-testid="signing-order-read-r1-stage">{{ r1OrderSigningStageNotice(review.snapshot.review?.order.processState) }}</text>
+            data-testid="signing-order-read-r1-stage">{{ orderStageDisplay(review.snapshot.review?.order.processState) }}</text>
         </view>
         <text v-if="!review.snapshot.review?.order.contentSupported" class="signing-read-warning xl-craft__caption">
           部分订单明细暂不可识别，未推断缺失字段。
@@ -97,7 +98,7 @@
           <view v-for="contract in review.contractSnapshot.items" :key="contract.id" class="signing-read-contract-item"
             data-testid="signing-contract-matched">
             <text class="signing-read-contract-number">{{ devFixtureContractRead && !devReviewModeEnabled ? '本机合同示例' : (contract.displayNumber || '合同编号未返回') }}</text>
-            <text class="signing-read-contract-state">{{ r1ContractStatusReadNotice(contract.contractStatus) }}</text>
+            <text class="signing-read-contract-state">{{ contractStatusDisplay(contract.contractStatus) }}</text>
             <text v-if="contract.signedDate" class="signing-read-meta xl-craft__meta">记录中的签约日期：{{ contract.signedDate }}</text>
           </view>
           <text class="signing-read-warning xl-craft__caption">仅限本次已核验的有限结果，不代表拥有签约权限或可访问合同文件。</text>
@@ -218,6 +219,19 @@ const signingStepIndex = computed(() => {
   const match = /^步骤\s*([123])\s*\/\s*3/.exec(signingProgress.value.title)
   return match ? Number(match[1]) : 0
 })
+function contractStatusDisplay(status: string | undefined): string {
+  if (devReviewModeEnabled.value) return r1ContractStatusReadNotice(status)
+  if (status === '10') return '记录显示已签署，最终结果仍待后台核实'
+  if (status === '2') return '签署处理中，请勿重复发起'
+  if (status === '-3') return '签署状态异常，请联系支持人员核实'
+  return '合同状态尚未核验，不代表已完成签署'
+}
+function orderStageDisplay(processState: number | undefined): string {
+  if (devReviewModeEnabled.value) return r1OrderSigningStageNotice(processState)
+  if (processState === 0) return '订单当前待签约；请以合同核验结果为准'
+  if (processState === 4) return '订单签约处理中，请勿重复发起'
+  return '订单签约阶段尚待核验，不能据此判断合同已签署'
+}
 const signingPhaseTitle = computed(() => signingProgress.value.title.replace(
   /^步骤\s*[123]\s*\/\s*3\s*[·•:：\s]*/, '',
 ))

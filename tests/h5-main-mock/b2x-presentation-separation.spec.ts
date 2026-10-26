@@ -51,10 +51,16 @@ for (const width of [375, 390]) {
     await expect(page.getByTestId('signing-order-read-verified')).toBeVisible()
     await expect(page.getByTestId('signing-order-read-display-number')).toContainText('本机订单示例')
     await expect(page.getByTestId('signing-order-read-verified')).toContainText('未提交后台')
+    await expect(page.getByTestId('signing-read-amount-unverified')).toContainText('金额待核验')
+    await expect(page.getByTestId('signing-read-order-amount')).toHaveCount(0)
+    await page.getByTestId('signing-order-audit-toggle').click()
+    await expect(page.getByTestId('signing-order-read-r1-stage')).not.toContainText('R1')
     await expect(page.getByTestId('signing-command-preflight')).toHaveCount(0)
     await page.getByTestId('signing-contract-read-request').click()
     await expect(page.getByTestId('signing-contract-matched')).toContainText('本机合同示例')
     await expect(page.locator('.signing-read-page')).not.toContainText('DEV-SYNTHETIC')
+    await expect(page.getByTestId('signing-contract-matched')).not.toContainText('R1')
+    await expect(page.getByTestId('signing-contract-matched')).not.toContainText('状态 2')
     // uni-app renders <uni-button>, not a native HTML <button>.
     // Assert its actual disabled and ARIA-disabled guard attributes.
     await expect(page.getByTestId('signing-order-read-sign-disabled')).toHaveAttribute('disabled', 'true')
