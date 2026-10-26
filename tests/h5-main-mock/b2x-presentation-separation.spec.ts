@@ -1,4 +1,11 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Page, type TestInfo } from '@playwright/test'
+
+/** Keep human-readable PNGs in the downloaded artifact, not only HTML's hashed assets. */
+async function captureEvidence(page: Page, info: TestInfo, name: string): Promise<void> {
+  const path = info.outputPath(`${name}.png`)
+  await page.screenshot({ path, fullPage: true })
+  await info.attach(name, { path, contentType: 'image/png' })
+}
 
 async function forbidExternalRequests(page: Page) {
   const violations: string[] = []
@@ -25,9 +32,7 @@ for (const width of [375, 390]) {
     await expect(page.getByTestId('dev-review-tools')).toHaveCount(0)
     await expect(page.getByTestId('business-mode-provenance')).toContainText('体验数据')
     await expect(page.locator('.local-draft-panel')).toHaveCount(0)
-    await info.attach(`commercial-home-${width}`, {
-      body: await page.screenshot({ fullPage: true }), contentType: 'image/png',
-    })
+    await captureEvidence(page, info, `commercial-home-${width}`)
 
     await page.locator('.work-orders-entry').click()
     await page.locator('.search-input input').fill('04009')
@@ -54,9 +59,7 @@ for (const width of [375, 390]) {
     // Assert its actual disabled and ARIA-disabled guard attributes.
     await expect(page.getByTestId('signing-order-read-sign-disabled')).toHaveAttribute('disabled', 'true')
     await expect(page.getByTestId('signing-order-read-sign-disabled')).toHaveAttribute('aria-disabled', 'true')
-    await info.attach(`commercial-c01-${width}`, {
-      body: await page.screenshot({ fullPage: true }), contentType: 'image/png',
-    })
+    await captureEvidence(page, info, `commercial-c01-${width}`)
     assertSafe()
   })
 }
@@ -67,9 +70,7 @@ test('B2-X developer inspection is explicit, DEV-only and reversible', async ({ 
   await expect(page.getByTestId('dev-review-tools')).toBeVisible()
   await expect(page.getByTestId('mock-continuous-journey-entry')).toBeVisible()
   await expect(page.getByTestId('business-mode-provenance')).toHaveCount(0)
-  await info.attach('dev-qa-home', {
-    body: await page.screenshot({ fullPage: true }), contentType: 'image/png',
-  })
+  await captureEvidence(page, info, 'dev-qa-home')
   // The opt-in persists across local page reloads, never across browser tabs.
   await page.reload({ waitUntil: 'domcontentloaded' })
   await expect(page.getByTestId('dev-review-tools')).toBeVisible()
