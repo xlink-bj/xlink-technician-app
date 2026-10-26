@@ -53,7 +53,9 @@ test.describe('A-stage P1 real-H5 operator acceptance', () => {
     await expect(page.locator('.summary-number')).toContainText(number)
     await expectDetailOverviewWithinViewport(page)
     await expect(page.getByTestId('a-stage-special-panel')).toBeVisible()
-    await expect(page.getByTestId('a-stage-special-panel')).toContainText('未提交后台')
+    // The wording can vary between "未提交" and "不会提交". Both must make
+    // the synthetic-only, no-backend-write boundary explicit to the operator.
+    await expect(page.getByTestId('a-stage-special-panel')).toContainText(/(?:未|不会)提交后台/)
     await expect(page.getByTestId('a-special-task-state')).toContainText('正在填写')
   }
 
