@@ -41,7 +41,7 @@ describe('M1-S1 L01 — R1 source-backed manual login preflight', () => {
       .toBeLessThan(manual?.indexOf('const result = await submitR1ManualLogin(') ?? -1)
     expect(page).toContain('maxlength="11"')
     expect(page).toContain('maxlength="6"')
-    const quick = page.split('async function quickLogin(): Promise<void> {')[1]?.split('\nasync function handleMockToggle')[0]
+    const quick = page.split('async function quickLogin(): Promise<void> {')[1]?.split('\nasync function submit(): Promise<void> {')[0]
     expect(quick).toContain('resolveQuickLoginInput()')
     expect(quick).not.toContain('r1ManualLoginIssue')
     expect(page).toContain('class="code-button" disabled')

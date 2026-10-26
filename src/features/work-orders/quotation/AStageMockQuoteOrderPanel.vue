@@ -2,27 +2,25 @@
   <view class="mock-quote-order app-surface" data-testid="a-stage-mock-order-panel">
     <view class="mock-quote-order__heading">
       <view>
-        <text class="mock-quote-order__title">本机报价预览</text>
-        <text class="mock-quote-order__caption">体验数据 · 未提交后台</text>
+        <text class="mock-quote-order__title">报价确认</text>
       </view>
     </view>
     <view class="mock-quote-order__summary">
       <view>
-        <text class="mock-quote-order__amount-label">金额（示例）</text>
+        <text class="mock-quote-order__amount-label">报价金额</text>
         <text class="mock-quote-order__amount">{{ amount }}</text>
       </view>
       <text class="mock-quote-order__amount-label">{{ composition.selectionCount }} 项 · {{ composition.groups.length }} 个部位</text>
     </view>
-    <AppStatus v-if="devReviewModeEnabled" quiet message="仅用于开发验收：R1 子流程、订单写入与回读均限本机，不生成正式订单、PDF、合同、短信或签名。" />
     <AppStatus v-if="engine?.state === 'blocked' && engine.issues.length" tone="warning" quiet
       :message="engine.issues[0].message" data-testid="a-stage-order-price-blocked" />
     <AppStatus v-else-if="!canSubmit && status !== 'succeeded'" tone="neutral" quiet
       message="请补齐维修部位、商品、数量及价格后继续。未核实的价格不会按零计算。" />
     <AppStatus v-if="status === 'succeeded'" tone="success" quiet
-      message="本机报价记录已保存，可重新进入查看；未生成后台订单。"
+      message="报价草稿已保存，可重新进入查看。"
       data-testid="a-stage-order-readback" />
     <AppStatus v-if="status === 'uncertain'" tone="warning" quiet
-      message="订单结果待核查，已保留本机防重回执，禁止重复提交。" data-testid="a-stage-order-uncertain" />
+      message="保存结果待核查，请勿重复提交。" data-testid="a-stage-order-uncertain" />
     <view v-if="status === 'uncertain'" class="mock-quote-order__readback">
       <AppButton variant="secondary" block :loading="checking" :disabled="checking || busy"
         data-testid="a-stage-order-verify" @tap="verifyPending">只读核对订单记录</AppButton>
@@ -32,9 +30,9 @@
     <text v-if="feedback" class="mock-quote-order__feedback" role="alert">{{ feedback }}</text>
     <view v-if="status !== 'succeeded'" class="mock-quote-order__actions">
       <AppButton v-if="!confirm" block :disabled="!canSubmit || busy || status === 'uncertain'"
-        data-testid="a-stage-order-create" @tap="confirm = true">保存本机报价记录</AppButton>
+        data-testid="a-stage-order-create" @tap="confirm = true">保存报价草稿</AppButton>
       <view v-else class="mock-quote-order__confirm">
-        <text class="mock-quote-order__warning">仅保存至本机，不会提交后台。确认后请勿重复点击。</text>
+        <text class="mock-quote-order__warning">请核对报价内容。确认后请勿重复点击。</text>
         <AppButton :disabled="busy || !canSubmit" :loading="busy"
           data-testid="a-stage-order-confirm" @tap="submit">确认创建</AppButton>
         <AppButton variant="text" :disabled="busy" @tap="confirm = false">返回检查</AppButton>
@@ -45,7 +43,6 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { devReviewModeEnabled } from '@shared/ui/dev-review-mode'
 import { createDefaultStoragePort } from '@app/composition'
 import { createAStageMockQuoteOrderController } from '@app/a-stage-quotation-mock-ui'
 import { useActionWorkspaceStore } from '../action-workspace'
@@ -103,7 +100,7 @@ async function submit(): Promise<void> {
     const saved = await composition.flushDraft()
     if (saved.state !== 'succeeded' || !composition.draft
       || current.draftVersion !== composition.draft.draftVersion) {
-      feedback.value = '本机草稿未能确认保存，请检查后重新核对。'
+      feedback.value = '草稿保存失败，请检查后重新核对。'
       return
     }
     const result = await controller.submit(current)

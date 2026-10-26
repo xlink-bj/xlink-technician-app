@@ -1,15 +1,13 @@
-/** A presentation-only rewrite of DEV synthetic identifiers, never backend IDs. */
+/** Pure display formatting: equal business values render equally in every data source. */
 export function workOrderNumberDisplay(
   displayNumber: string | undefined,
-  syntheticFixture: boolean,
-  developerReview: boolean,
+  _syntheticFixture?: boolean,
+  _developerReview?: boolean,
 ): string {
   if (!displayNumber) return ''
-  if (syntheticFixture && !developerReview) {
-    const match = /^MOCK-(\d+)$/i.exec(displayNumber.trim())
-    if (match) return `#${match[1]}`
-    const fixtureId = /^mock-work-order-(\d+)/i.exec(displayNumber.trim())
-    if (fixtureId) return `#${fixtureId[1]}`
-  }
+  const match = /^MOCK-(\d+)$/i.exec(displayNumber.trim())
+  if (match) return `#${match[1]}`
+  const fixtureId = /^mock-work-order-(\d+)/i.exec(displayNumber.trim())
+  if (fixtureId) return `#${fixtureId[1]}`
   return `#${displayNumber.replace(/^#/, '')}`
 }

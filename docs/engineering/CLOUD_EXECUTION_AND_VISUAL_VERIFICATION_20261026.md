@@ -2,6 +2,8 @@
 
 **状态：基于真实运行记录的工程实践；不构成商业 UI Owner 验收或发布许可。**
 
+> **B2-X2 更新：**商业页面不再有 `体验数据` 等研发出处信息；Mock 与 Real UI 同构，独立 QA 为 `/pages/dev/qa-console`。见 [B2-X2 商业 UI 规范](../ux/B2X2_COMMERCIAL_UI_PARITY_20261026.md)。下方旧 B2-X run/截图均为历史证据，不能代表 B2-X2 最新 HEAD。
+
 适用范围：新 Technician App（uni-app H5 / MP-WEIXIN / APP）、DEV Mock 的商业展示与研发验收分层。上位约束仍为 `AGENTS.md`、[AI Engineering Loop](../architecture/AI_ENGINEERING_LOOP.md)、[DS02A Visual Contract](../design-system/DS02A_H5_VISUAL_CONTRACT.md) 和相应 Program Control / Issue；本文不扩大生产、Beta 写入权限。
 
 ## 1. 按运行时能力分工，而不是按工具偏好分工
@@ -27,10 +29,12 @@ pnpm exec playwright install --with-deps chromium
 
 随后须实跑至少一条真实 App Playwright 测试并检查 PNG，才能将本地 `BROWSER_PASS` 记为通过。安装失败不需要反复无界重试；改在具有稳定依赖、中文字体、固定锁文件的 Actions runner 执行。**“能运行 Playwright CLI”不等于“已安装 Chromium”，也不等于“已验收小程序”。**
 
+**B2-X2 本次容器验证（同日）：** `CI=true ./node_modules/.bin/uni build -p h5` 已通过。先前普通 `uni build` 报 `uv_interface_addresses`，追踪为 CLI 更新检查在沙箱调用 `os.networkInterfaces()`；标准 `CI=true` 跳过了该检查（并避免无关网络遥测）。这不是业务代码问题。`./node_modules/.bin/playwright install chromium` 下载到 0 MiB 的非 ZIP 内容，重试失败，本容器没有可用 Chromium。H5 浏览器截图交由包含固定 Chromium/中文字体的 Actions，在精确 PR HEAD 重新执行。
+
 ## 2. 已验证的三段式反馈回路
 
 1. **L1：容器快速迭代。**先看当前 Issue、确切 commit、脏工作树、`AGENTS.md` 和商业 UX/QA 技能约束；修改源代码/测试；运行不依赖系统浏览器的检查。这里的局部 PASS 不能覆盖没执行的浏览器或平台门禁。
-2. **L2：Draft PR 自动真实 H5。**在受控 `dev + Mock` 中执行 Playwright；锁定 PR 的精确 HEAD，保留两个屏宽（如 375×667、390×844），默认商业展示与 `devReview=1` DEV 研发视图分别取证；仅允许本机服务，外部请求失败关闭。失败即上传截图、trace 和错误上下文用于定位。
+2. **L2：Draft PR 自动真实 H5。**在受控 `dev + Mock` 中执行 Playwright；锁定 PR 的精确 HEAD，保留两个屏宽（如 375×667、390×844），默认商业展示与**独立 QA 控制台**分别取证；仅允许本机服务，外部请求失败关闭。失败即上传截图、trace 和错误上下文用于定位。旧 `devReview=1` URL 会跳转到 QA 路由。
 3. **L3：Mac 原生复核 + Owner 决策。**微信开发者工具以同一 HEAD 复核工作流、持久化及 Console/WXSS；由 Owner 判断真实场景下的字级、信息密度、操作优先级和视觉一致性。视觉审美并不随 CODE/H5/MP 自动变成通过。
 
 其中 `devReview=1/0` 只控制 DEV 验收信息是否渲染，业务适配器、网络和授权边界保持独立。默认商业 UI 仍必须显示真实而低强调的 `体验数据 · 未提交后台` 等必要安全信息；禁止将合成数据伪装成正式订单、有效签约或真实付款。

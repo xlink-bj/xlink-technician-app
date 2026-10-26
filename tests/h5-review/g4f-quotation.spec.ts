@@ -46,7 +46,7 @@ test('true uni-app H5 mounts the synthetic placeOrder quotation workspace with n
   await expect(page.getByText('H5_VISUAL_PROXY')).toBeVisible()
   await expect(page.getByText('MOCK_PRODUCT_REVIEW')).toBeVisible()
   await expect(page.getByTestId('g4f-quotation-workspace')).toBeVisible()
-  await expect(page.getByTestId('action-workspace-context')).toContainText('演示报价工单')
+  await expect(page.getByTestId('action-workspace-context')).toContainText('吴先生')
   await expect(page.getByTestId('action-workspace-context')).toContainText('MOCK-018')
   await expect(page.getByTestId('quotation-initial-empty-workbench')).toContainText('请选择维修部位')
   await expect(page.getByTestId('quotation-draft-notice')).toContainText('本机报价草稿')

@@ -27,9 +27,9 @@ describe('P1 SKU readiness: hard architecture and runtime boundary', () => {
     expect(workspace).toContain('if (!quotationConfirmOpen.value || !canOpenSubmit.value) return')
     expect(workspace).toContain(':synthetic-sku-readiness="props.syntheticSkuReadiness"')
     const content = text('src/features/work-orders/quotation/QuotationActionContent.vue')
-    expect(content).toContain('quotation-p1-sku-server-auth-blocked')
-    expect(content).toContain('仅合成字典')
-    expect(content).toContain('租户/工单级 SKU 授权尚未验证')
+    expect(content).not.toContain('quotation-p1-sku-server-auth-blocked')
+    expect(content).not.toContain('仅合成字典')
+    expect(content).toContain('正式报价提交暂未开放')
   })
 
   it('production composition has no import from the DEV SKU readiness review', () => {

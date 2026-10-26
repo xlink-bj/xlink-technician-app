@@ -20,7 +20,7 @@ test('main App synthetic repeat list is read only and makes no external request'
   await expect(page.locator('.mock-source-indicator')).toContainText('Mock')
   await page.locator('.work-orders-entry').click()
   await expect(page).toHaveURL(/pages\/work-orders\/work-orders/)
-  const repeat = page.locator('.work-order-card').filter({ hasText: '重复表单本机草稿走查' })
+  const repeat = page.locator('.work-order-card').filter({ hasText: '田女士' })
   await expect(repeat).toBeVisible()
   await repeat.click()
   await expect(page).toHaveURL(/pages\/work-orders\/detail/)

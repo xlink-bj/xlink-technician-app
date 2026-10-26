@@ -10,7 +10,7 @@
       当前节点尚未提供完整记录。未知不等于没有表单；仅可查看。
     </text>
     <AppButton v-if="!formList && node.sourceNodeType==='repeat' && syntheticActionsEnabled"
-      size="compact" variant="secondary" @tap="loadRepeat">查看本机记录</AppButton>
+      size="compact" variant="secondary" @tap="loadRepeat">查看记录</AppButton>
     <text v-else-if="formList?.evidence === 'invalid'" class="r1-node-forms__hint"
       data-testid="r1-form-list-invalid">服务端表单列表结构异常；不允许基于不完整列表编辑。</text>
     <template v-else-if="formList">
@@ -22,7 +22,7 @@
         <view class="r1-node-forms__item-main">
           <text class="r1-node-forms__item-title">{{ entry.title || '未命名表单' }}</text>
           <text class="r1-node-forms__state" :data-testid="`r1-form-entry-state-${entry.id}`">
-            {{ stagedFor(String(entry.id)) ? '已有本机待处理修改' : stateName(entry.state) }}
+            {{ stagedFor(String(entry.id)) ? '已有待处理修改' : stateName(entry.state) }}
           </text>
           <view v-if="draftStore.state === 'ready' && entry.state !== 'deleted'" class="r1-node-forms__row-actions">
             <AppButton variant="text" size="compact" :disabled="!canStage || Boolean(stagedFor(String(entry.id)))"
@@ -36,16 +36,16 @@
         仅展示前 50 条已加载记录，不能基于截断列表修改。
       </text>
     </template>
-    <text class="r1-node-forms__hint">此处仅管理本机草稿。不会保存业务数据、删除表单或推进工作流。</text>
-    <view v-if="draftStore.state === 'loading'" class="r1-node-forms__hint">正在恢复本机草稿…</view>
+    <text class="r1-node-forms__hint">当前可先整理草稿；正式保存、删除和流程完成暂未开放。</text>
+    <view v-if="draftStore.state === 'loading'" class="r1-node-forms__hint">正在恢复草稿…</view>
     <view v-else-if="draftStore.state === 'failed'" class="r1-node-forms__hint" data-testid="r1-form-local-error">
       {{ draftStore.message }}
     </view>
     <template v-if="draftStore.state === 'ready'">
       <view v-if="canStage && syntheticActionsEnabled && node.sourceNodeType === 'repeat' && node.formDefinitionId"
         class="r1-node-forms__draft-editor" data-testid="r1-form-new-draft">
-        <text class="r1-node-forms__label">新增本地表单草稿</text>
-        <AppInput :model-value="newTitle" placeholder="输入草稿名称（不创建服务端表单）"
+        <text class="r1-node-forms__label">新增表单草稿</text>
+        <AppInput :model-value="newTitle" placeholder="输入草稿名称"
           :maxlength="80" @update:model-value="newTitle = $event" />
         <AppButton size="compact" variant="secondary" :disabled="!newTitle.trim()"
           @tap="createDraft">新增草稿</AppButton>
@@ -57,28 +57,28 @@
         <view v-for="(choice,index) in draftStore.availableAddOptions" :key="String(choice.formDefinitionId)"
           class="r1-node-forms__draft-row" data-testid="r1-add-form-option">
           <text class="r1-node-forms__item-main">{{ choice.label }}</text>
-          <AppButton size="compact" variant="secondary" @tap="addOption(index)">新增本机草稿</AppButton>
+          <AppButton size="compact" variant="secondary" @tap="addOption(index)">新增草稿</AppButton>
         </view>
         <text v-if="!draftStore.availableAddOptions.length" class="r1-node-forms__hint">
           未读取到已核验的选项时不能新增；不会猜测表单定义。
         </text>
       </view>
       <view v-if="editingRecordId" class="r1-node-forms__draft-editor" data-testid="r1-form-edit-draft">
-        <text class="r1-node-forms__label">仅编辑本机标题草稿（原业务记录不变）</text>
+        <text class="r1-node-forms__label">编辑标题草稿（原记录不变）</text>
         <AppInput :model-value="editTitle" :maxlength="80" @update:model-value="editTitle=$event" />
         <view class="r1-node-forms__buttons">
           <AppButton size="compact" variant="secondary" :disabled="!editTitle.trim()"
-            @tap="applyEdit">保存本地标题</AppButton>
+            @tap="applyEdit">保存标题草稿</AppButton>
           <AppButton size="compact" variant="text" @tap="editingRecordId=null">取消</AppButton>
         </view>
       </view>
       <view v-if="draftStore.snapshot.intents.length" class="r1-node-forms__draft-list" data-testid="r1-form-staged-list">
-        <text class="r1-node-forms__label">本机待处理（{{ draftStore.snapshot.intents.length }}）</text>
+        <text class="r1-node-forms__label">待处理（{{ draftStore.snapshot.intents.length }}）</text>
         <view v-for="intent in draftStore.snapshot.intents" :key="intent.localId" class="r1-node-forms__draft-row"
           data-testid="r1-form-staged-item">
           <view class="r1-node-forms__item-main">
             <text class="r1-node-forms__item-title">{{ intent.title }}</text>
-            <text class="r1-node-forms__state">{{ intentLabel(intent.kind) }} · 已存本机，未同步后台
+            <text class="r1-node-forms__state">{{ intentLabel(intent.kind) }} · 待处理
               <template v-if="intent.values && Object.keys(intent.values).length"> · {{ Object.keys(intent.values).length }} 项字段已保存</template>
             </text>
           </view>

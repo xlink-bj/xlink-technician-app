@@ -4,7 +4,7 @@
       <view class="journey-context__task-info">
         <text v-if="context.suggestion" class="journey-context__focus-suggestion">勘查 · {{ context.suggestion.surveyPathLabel }}</text>
         <text v-else class="journey-context__focus-suggestion">勘查建议未提供</text>
-        <text class="journey-context__task-source">本机记录 · 未提交后台</text>
+        <text class="journey-context__task-source">前序现场记录</text>
       </view>
       <button v-if="context.suggestion && canAdoptSuggestion" type="button"
         class="journey-context__task-adopt" data-testid="mock-survey-quote-adopt"
@@ -15,17 +15,16 @@
     <template v-else>
     <view class="journey-context__head">
       <view class="journey-context__head-copy">
-        <text class="journey-context__heading">{{ compact ? '前序信息已保留' : '前序信息 · 本机草稿' }}</text>
-        <text v-if="compact" class="journey-context__head-hint">仅本机记录 · 未提交后台</text>
+        <text class="journey-context__heading">{{ compact ? '前序信息已保留' : '前序信息' }}</text>
       </view>
       <button v-if="compact" class="journey-context__toggle" data-testid="mock-journey-context-toggle"
         :aria-expanded="expanded" @tap="expanded = !expanded">{{ expanded ? '收起' : '查看详情' }}</button>
     </view>
-    <text v-if="!compact || expanded" class="journey-context__notice">前序填写内容仅保存在本机，未提交后台。</text>
+    <text v-if="!compact || expanded" class="journey-context__notice">请核对前序填写内容，必要时补充现场信息。</text>
     <view v-for="section in context.sections" v-show="!compact || expanded" :key="section.stage" class="journey-context__section" :data-testid="`mock-journey-context-${section.stage}`">
       <view class="journey-context__row">
         <text class="journey-context__title">{{ section.title }}</text>
-        <text class="journey-context__status">{{ section.state === 'saved_local' ? '本机已保存' : section.state === 'read_failed' ? '读取失败' : '尚无本机记录' }}</text>
+        <text class="journey-context__status">{{ section.state === 'saved_local' ? '已保存' : section.state === 'read_failed' ? '读取失败' : '暂无记录' }}</text>
       </view>
       <template v-if="section.state === 'saved_local'">
         <view v-for="line in section.lines" :key="line.label" class="journey-context__row">
@@ -34,7 +33,7 @@
         </view>
         <text v-if="section.lines.length === 0" class="journey-context__empty">草稿已保存，尚未填写可展示的关键字段</text>
       </template>
-      <text v-else class="journey-context__empty">{{ section.state === 'read_failed' ? '无法核对当前阶段的本机记录' : '该阶段尚无已保存的填写内容' }}</text>
+      <text v-else class="journey-context__empty">{{ section.state === 'read_failed' ? '无法核对当前阶段的记录' : '该阶段尚无已保存的填写内容' }}</text>
     </view>
     <view v-if="context.suggestion" class="journey-context__suggestion" data-testid="mock-survey-quote-suggestion">
       <text v-if="!taskFocus || expanded" class="journey-context__title">勘察维修部位建议 · 待确认</text>

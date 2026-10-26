@@ -64,7 +64,7 @@ describe('R1 L02 explicit manual-login consent and legal provenance', () => {
   it('keeps user consent out of persisted authentication payload, and quick login unaffected',()=>{
     const page=readFileSync('src/pages/index/index.vue','utf8')
     const submit=page.split('async function submit(): Promise<void> {')[1]?.split('async function logout():')[0]
-    const quick=page.split('async function quickLogin(): Promise<void> {')[1]?.split('async function handleMockToggle')[0]
+    const quick=page.split('async function quickLogin(): Promise<void> {')[1]?.split('async function submit(): Promise<void> {')[0]
     expect(submit).toContain('const consentIssue = manualLoginConsentIssue(')
     expect(submit).toContain('await submitR1ManualLogin(')
     expect(quick).toContain('await submitLogin(')

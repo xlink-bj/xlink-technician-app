@@ -31,10 +31,10 @@ for (const path of componentFiles) {
 
 const pageCss = readFileSync(resolve(root, 'pages/work-orders/detail.wxss'), 'utf8')
 const pageWxml = readFileSync(resolve(root, 'pages/work-orders/detail.wxml'), 'utf8')
-if (!/\.detail-content--mock-qa \.summary-card\s*\{[^}]*box-sizing:border-box;[^}]*padding:0/.test(pageCss)
-  || !/\.detail-content--mock-qa \.summary-card__content\s*\{[^}]*box-sizing:border-box;[^}]*padding:28rpx 28rpx 24rpx/.test(pageCss)
+if (!/\.summary-card\s*\{[^}]*box-sizing:border-box;[^}]*padding:0/.test(pageCss)
+  || !/\.summary-card__content\s*\{[^}]*box-sizing:border-box;[^}]*padding:28rpx 28rpx 24rpx/.test(pageCss)
   || !pageWxml.includes('class="summary-card__content"')) {
-  throw new Error('MP Mock detail card must keep border-box host with padding on inner slot content')
+  throw new Error('MP WorkOrder cards must share the same border-box host/slot layout for Real and Mock')
 }
 
-process.stdout.write(`Stage A MP emitted WXSS guard PASS: ${componentFiles.length} components, 020/021 card host/slot box model\n`)
+process.stdout.write(`Stage A MP emitted WXSS guard PASS: ${componentFiles.length} components, all WorkOrder card host/slot box model\n`)

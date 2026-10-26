@@ -34,8 +34,7 @@
       description="接单后可查看工单详情。"
     />
 
-    <view v-else-if="workOrder.loadState === 'succeeded' && detail" class="detail-content"
-      :class="{ 'detail-content--mock-qa': Boolean(aStageSpecialKind || aStageCompletedSpecialNode) }">
+    <view v-else-if="workOrder.loadState === 'succeeded' && detail" class="detail-content">
       <AppSectionHeading class="detail-section-heading" title="工单概览" subtitle="服务信息与当前处理进度" data-testid="ds02b-detail-heading" />
       <AppRecordCard class="summary-card" data-testid="ds02b-detail-record-card">
         <view class="summary-card__content">
@@ -48,7 +47,7 @@
               </view>
             </view>
           </view>
-          <text v-if="detail.displayNumber" class="summary-number">{{ workOrderNumberDisplay(detail.displayNumber, syntheticFixture, devReviewModeEnabled) }}</text>
+          <text v-if="detail.displayNumber" class="summary-number">{{ workOrderNumberDisplay(detail.displayNumber) }}</text>
         </view>
 
         <view
@@ -79,7 +78,6 @@
             <text>{{ workOrder.contactInFlight && action.key === 'contact' ? '打开中' : action.label }}</text>
           </button>
         </view>
-        <text v-if="syntheticFixture && !devReviewModeEnabled" class="summary-demo-source">体验数据 · 未提交后台</text>
         <AppStatus
           v-if="productionReadOnly"
           class="production-read-only-notice"
@@ -102,35 +100,10 @@
         :tone="workflowProjection.currentTask.tone"
         :disabled="(workflowProjection.currentTask.execution !== 'enabled' && !allowLocalMockPreview)
           || (productionReadOnly && workflowProjection.currentTask.actionIntent !== 'place_order')"
-        :note="aStageSpecialKind ? '请在下方记录现场情况，内容仅保存至本机。' : productionReadOnly ? '当前仅可查看，业务操作暂未开放。' : allowLocalMockPreview ? '体验数据仅保存至本机，不会提交后台。' : undefined"
+        :note="aStageSpecialKind ? '请在下方填写并保存现场情况。' : productionReadOnly ? '当前仅可查看，业务操作暂未开放。' : undefined"
         @action="handleCurrentTaskAction"
       />
 
-      <view v-if="localMockWorkflowStage && devReviewModeEnabled" class="mock-workflow-track app-surface"
-        data-testid="mock-journey-workflow-state">
-        <view class="mock-workflow-track__top">
-          <text class="mock-workflow-track__heading">本机业务流转</text>
-          <text class="mock-workflow-track__scope">Mock · 未提交后台</text>
-        </view>
-        <view class="mock-workflow-track__steps">
-          <view v-for="(stage,index) in localMockWorkflowSteps" :key="stage.key"
-            class="mock-workflow-track__step"
-            :class="{ 'mock-workflow-track__step--active': stage.key === localMockWorkflowStage }"
-            :data-testid="`mock-stage-${stage.key}`">
-            <text class="mock-workflow-track__number">{{ index + 1 }}</text>
-            <text class="mock-workflow-track__label">{{ stage.label }}</text>
-            <text class="mock-workflow-track__state">{{ stage.state }}</text>
-          </view>
-        </view>
-        <text class="mock-workflow-track__hint">已走过的节点表示本机演示进度，不代表 R1 Workflow 已完成。</text>
-        <view v-if="localMockWorkflowStage === 'quotation'" class="mock-workflow-track__review"
-          data-testid="mock-journey-commercial-summary">
-          <text class="mock-workflow-track__label">报价 / SKU / 订单与合同 · 本机核对</text>
-          <text class="mock-workflow-track__hint">
-            {{ mockCommercialProgress.complete ? '资料核对完成（非业务完成或已签约）' : mockCommercialProgress.paused ? '资料核对已暂停，可从报价入口恢复' : `已核对 ${mockCommercialProgress.confirmed.length}/3 项；未生成正式订单` }}
-          </text>
-        </view>
-      </view>
 
       <!-- Current source-backed forms/repeat node only; Production repeat reads
            a bounded list after an explicit tap and never exposes write actions. -->
@@ -145,7 +118,7 @@
       <R1NodeFormsOverview v-else-if="currentR1FormNode" :node="currentR1FormNode"
         :work-order-id="String(detail.id)" :actor-scope="workOrderReadScopeKey(session.session)" />
       <AppStatus v-if="aStageCompletedSpecialNode" tone="success" quiet
-        message="现场记录已完成并保存至本机，重新进入仍可查看。"
+        message="现场记录已完成，可重新进入查看。"
         data-testid="a-special-complete" />
       <R1ProductionChildFormsPanel
         v-if="productionReadOnly && productionChildParents.length"
@@ -158,10 +131,6 @@
         @load-child="loadChildForms"
         @load-repeat="loadRepeatForms"
       />
-      <navigator v-if="showChildSubflowMockPreview && devReviewModeEnabled" class="child-subflow-mock-entry"
-        :url="childSubflowMockReviewUrl()" data-testid="child-subflow-mock-preview-entry">
-        开发验收：查看合成子流程节点（仅 Mock）
-      </navigator>
 
       <AppRecordCard class="information-card">
         <scroll-view class="detail-tabs" scroll-x="true" show-scrollbar="false">
@@ -218,7 +187,7 @@
           </view>
           <view class="detail-row customer-info-row">
             <text class="row-label">工单编号</text>
-            <text class="row-value customer-info-value">{{ detail.displayNumber || '—' }}</text>
+            <text class="row-value customer-info-value">{{ detail.displayNumber ? workOrderNumberDisplay(detail.displayNumber) : '—' }}</text>
           </view>
           <view class="detail-row customer-info-row">
             <text class="row-label">联系电话</text>
@@ -233,7 +202,7 @@
           <view class="order-info-list">
             <view class="detail-row order-info-row" v-if="detail.displayNumber">
               <text class="row-label">工单编号</text>
-              <text class="row-value order-info-value">#{{ detail.displayNumber }}</text>
+              <text class="row-value order-info-value">{{ workOrderNumberDisplay(detail.displayNumber) }}</text>
             </view>
             <view class="detail-row order-info-row" v-if="detail.taskLabel">
               <text class="row-label">当前状态</text>
@@ -255,7 +224,7 @@
         <view v-else-if="activeTab === 'quotation' && productionReadOnly" class="tab-panel quotation-read-panel" data-testid="production-quotation-read-panel">
           <view class="quotation-read-intro">
             <text class="tab-empty-title">报价记录 · 只读</text>
-            <text class="tab-empty-copy">只读取当前工单最近最多 3 条有效报价。服务器报价保持只读，不会载入本地草稿、打开或下载 PDF，也不会修改报价或流程。</text>
+            <text class="tab-empty-copy">查看当前工单最近的报价记录，历史报价暂不支持编辑。</text>
           </view>
           <view v-if="quotationBrowse.state === 'loading'" class="quotation-read-state" data-testid="quotation-read-loading">
             <AppLoadingState variant="inline" label="正在读取报价记录" />
@@ -268,8 +237,8 @@
             <button class="state-action quotation-retry" @tap="loadQuotationRead">读取该工单报价记录</button>
           </view>
           <view v-else-if="matchingQuotationOrders.length === 0" class="tab-empty" data-testid="quotation-read-empty">
-            <text class="tab-empty-title">本次有限读取中未找到该工单报价</text>
-            <text class="tab-empty-copy">这里只读取了该工单最近最多 3 条有效报价；这不代表该工单没有其他历史报价。</text>
+            <text class="tab-empty-title">暂未找到近期报价记录</text>
+            <text class="tab-empty-copy">可稍后重试，或联系业务人员核实历史报价。</text>
           </view>
           <view v-else class="quotation-read-list">
             <view v-for="order in matchingQuotationOrders" :key="order.id" class="quotation-read-card" data-testid="quotation-read-record">
@@ -277,7 +246,7 @@
                 <text class="quotation-read-number">{{ order.displayNumber ? `报价单 ${order.displayNumber}` : '报价记录' }}</text>
                 <text v-if="order.updateTime" class="quotation-read-date">{{ order.updateTime }}</text>
               </view>
-              <text class="quotation-read-readonly">服务器报价 · 只读；当前版本不支持编辑历史报价</text>
+              <text class="quotation-read-readonly">历史报价 · 仅供查看</text>
               <text v-if="order.totalPrice !== undefined" class="quotation-read-total">报价金额：¥{{ order.totalPrice.toFixed(2) }}</text>
               <view v-if="order.groups.length === 0" class="quotation-read-warning">
                 <text>报价分组内容暂不可识别，已保留只读状态。</text>
@@ -296,14 +265,13 @@
                 </view>
                 <text v-if="!group.contentSupported" class="quotation-read-warning">该分组含未识别字段，以上仅为可确认内容。</text>
               </view>
-              <text class="quotation-read-pdf-note">报价 PDF 未打开或下载。</text>
               <navigator
                 v-if="signingOrderReadRouteFor(String(detail?.id ?? ''), order.id)"
                 class="state-action quotation-retry"
                 :url="signingOrderReadRouteFor(String(detail?.id ?? ''), order.id) || undefined"
                 data-testid="production-signing-order-read-entry"
               >
-                签约前核验 · 只读
+                查看签约信息
               </navigator>
             </view>
           </view>
@@ -327,14 +295,11 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
-import { onLoad, onShow } from '@dcloudio/uni-app'
+import { onLoad } from '@dcloudio/uni-app'
 
 import { mockJourneyContext } from '@app/mock-journey'
-import { readMockCommercialProgress } from '@app/mock-commercial-journey'
-import { childSubflowMockReviewUrl, childSubflowMockWorkOrderId, isChildSubflowMockPreviewAvailable } from '@app/child-subflow-mock-review'
 import { hasAuthenticatedSession } from '@features/home/access'
 import { isProductionReadOnlyRuntime } from '@shared/config'
-import { devReviewModeEnabled } from '@shared/ui/dev-review-mode'
 import { workOrderNumberDisplay } from '@shared/ui/work-order-number-display'
 import { workOrderCardToneFor } from '@features/work-orders/card'
 import { useWorkOrderDetailStore } from '@features/work-orders/detail'
@@ -410,11 +375,6 @@ const productionChildParents = computed(() => (productionReadOnly
   ? detail.value?.workflowNodes?.filter((node) => node.category === 'subworkflow'
     && ['subflows', 'subflow', 'subworkflow'].includes(node.sourceNodeType ?? '')) ?? []
   : []))
-const showChildSubflowMockPreview = computed(() => !productionReadOnly
-  && isChildSubflowMockPreviewAvailable()
-  && String(detail.value?.id ?? '') === childSubflowMockWorkOrderId
-  && session.session?.user.id === 'synthetic-user'
-  && session.session?.currentRole?.id === 'synthetic-role')
 const allowLocalMockPreview = computed(() => {
   const stage = mockJourneyContext(String(detail.value?.id ?? ''))
   const task = workflowProjection.value.currentTask
@@ -424,29 +384,6 @@ const allowLocalMockPreview = computed(() => {
     && task?.actionIntent === 'interact_with_form'
     && task?.sourceNodeType === 'forms'
     && task?.execution === 'disabled_read_only'
-})
-const localMockWorkflowStage = computed(() => !productionReadOnly
-  && session.status === 'authenticated'
-  && session.session?.user.id === 'synthetic-user'
-  && session.session?.currentRole?.id === 'synthetic-role'
-  ? mockJourneyContext(String(detail.value?.id ?? ''))?.stage ?? null : null)
-const mockReviewRevision = ref(0)
-const syntheticFixture = computed(() => import.meta.env.DEV
-  && String(detail.value?.id ?? '').startsWith('mock-work-order-'))
-onShow(() => { mockReviewRevision.value += 1 })
-const mockCommercialProgress = computed(() => {
-  void mockReviewRevision.value
-  return readMockCommercialProgress({ workOrderId: String(detail.value?.id ?? ''),
-    userId: session.session?.user.id, roleId: session.session?.currentRole?.id })
-})
-const localMockWorkflowSteps = computed(() => {
-  const keys = [
-    {key:'appointment',label:'预约'}, {key:'survey',label:'勘查'}, {key:'quotation',label:'报价'},
-  ] as const
-  const stageIndex = keys.findIndex((item) => item.key === localMockWorkflowStage.value)
-  return keys.map((item,index) => ({...item,
-    state: stageIndex === index ? '当前模拟节点' : stageIndex > index ? '本机已走过' : '尚未开始',
-  }))
 })
 const preAcceptBlocked = computed(() => Boolean(
   detail.value?.workflowNodes?.some((node) => node.category === 'accept' && node.lifecycle === 'active'),
@@ -669,9 +606,8 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
   max-width: 960rpx;
 }
 
-/* Only the opt-in 020/021 synthetic QA detail gets the native MP width fix.
-   Keep the frozen ordinary WorkOrder/Detail visual baseline untouched. */
-.detail-content--mock-qa {
+/* Native MP width rules apply to every WorkOrder, regardless of data source. */
+.detail-content {
   box-sizing: border-box;
   min-width: 0;
   width: 100%;
@@ -691,16 +627,12 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
   padding: 28rpx 28rpx 24rpx;
 }
 
-/* MP custom-component host receives .summary-card while the white card is
-   rendered inside AppRecordCard. A 100%-wide content-box host with padding
-   overflows right in WXSS even though H5 global box-sizing masks it. In the
-   opt-in 020/021 QA scope, keep the host border-box and move the padding to
-   slot content, inside the actual white card. Ordinary detail stays frozen. */
-.detail-content--mock-qa .summary-card {
+/* MP custom-component host width and slot padding match Mock and Real. */
+.summary-card {
   box-sizing: border-box;
   padding: 0;
 }
-.detail-content--mock-qa .summary-card__content {
+.summary-card__content {
   box-sizing: border-box;
   min-width: 0;
   padding: 28rpx 28rpx 24rpx;
@@ -759,12 +691,6 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
   padding-top: 4rpx;
 }
 
-.summary-demo-source {
-  display: block;
-  margin-top: 10rpx;
-  color: var(--app-color-text-secondary);
-  font-size: var(--app-font-meta);
-}
 
 .location-row {
   color: var(--app-content-muted-ink);
@@ -835,17 +761,17 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
   white-space: nowrap;
 }
 
-.detail-content--mock-qa .summary-identity,
-.detail-content--mock-qa .summary-copy { flex: 1 1 0; }
-.detail-content--mock-qa .summary-customer { flex: 0 1 auto; }
-.detail-content--mock-qa .part-badge { min-width: 0; }
-.detail-content--mock-qa .summary-number { white-space: nowrap; }
-.detail-content--mock-qa .summary-actions {
+.summary-identity,
+.summary-copy { flex: 1 1 0; }
+.summary-customer { flex: 0 1 auto; }
+.part-badge { min-width: 0; }
+.summary-number { white-space: nowrap; }
+.summary-actions {
   box-sizing: border-box;
   min-width: 0;
   width: 100%;
 }
-.detail-content--mock-qa .summary-action {
+.summary-action {
   flex: 1 1 0;
   min-height: 88rpx;
 }

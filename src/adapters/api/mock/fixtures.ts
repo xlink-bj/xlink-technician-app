@@ -41,19 +41,19 @@ export const mockR1AddFormOptionsResponse = {
 export const mockR1ExistingFormData = {
   [mockR1FormData.formsFirst]: { _id: mockR1FormData.formsFirst,
     extId: mockSyntheticDynamicFormDefinitionId, formDefId: mockSyntheticDynamicFormDefinitionId,
-    formTitle: '合成现场记录', state: 1,
-    exts: { inspectionSummary: '合成内容：已查看屋面', inspectionResult: 'follow_up' } },
+    formTitle: '平屋顶现场检查', state: 1,
+    exts: { inspectionSummary: '已检查屋面排水与防水节点', inspectionResult: 'follow_up' } },
   [mockR1FormData.formsSecond]: { _id: mockR1FormData.formsSecond,
     extId: mockR1NoteFormDefinitionId, formDefId: mockR1NoteFormDefinitionId,
-    formTitle: '合成服务备注', state: 1, exts: { note: '仅供本地草稿走查' } },
+    formTitle: '客户沟通记录', state: 1, exts: { note: '待与客户确认维修计划' } },
   [mockR1FormData.repeatFirst]: { _id: mockR1FormData.repeatFirst,
     extId: mockSyntheticDynamicFormDefinitionId, formDefId: mockSyntheticDynamicFormDefinitionId,
-    formTitle: '合成重复记录一', workflowId: 'mock-workflow-run-021', state: 1,
-    exts: { inspectionSummary: '合成记录一' } },
+    formTitle: '第一次复检', workflowId: 'mock-workflow-run-021', state: 1,
+    exts: { inspectionSummary: '防水层表面无明显积水' } },
   [mockR1FormData.repeatSecond]: { _id: mockR1FormData.repeatSecond,
     extId: mockSyntheticDynamicFormDefinitionId, formDefId: mockSyntheticDynamicFormDefinitionId,
-    formTitle: '合成重复记录二', workflowId: 'mock-workflow-run-021', state: 1,
-    exts: { inspectionSummary: '合成记录二' } },
+    formTitle: '第二次复检', workflowId: 'mock-workflow-run-021', state: 1,
+    exts: { inspectionSummary: '排水口及女儿墙根部复核完成' } },
 } as const
 
 export {
@@ -199,7 +199,7 @@ const mockServiceAppointmentData = {
   [mockWorkOrderIds[0]]: {
     _id: mockWorkOrderIds[0],
     orderNum: '09077',
-    name: '演示客户甲',
+    name: '张先生',
     address: '日坛东一街',
     district: 110105,
     exts: {
@@ -214,7 +214,7 @@ const mockServiceAppointmentData = {
   [mockWorkOrderIds[1]]: {
     _id: mockWorkOrderIds[1],
     orderNum: '04009',
-    name: '演示客户乙（长名称结构样本）',
+    name: '陈女士（东坝国际商贸中心业主）',
     address: '东坝北路17号国际贸易中心A座',
     exts: {
       leakagesite_copy: [['repair-part-code-001']],
@@ -228,7 +228,7 @@ const mockServiceAppointmentData = {
   [mockWorkOrderIds[2]]: {
     _id: mockWorkOrderIds[2],
     orderNum: '11850',
-    name: '演示客户丙',
+    name: '李先生',
     address: '日坛国际贸易中心A座',
     district: 110105,
     exts: {
@@ -243,7 +243,7 @@ const mockServiceAppointmentData = {
   [mockDetailScenarioIds[3]]: {
     _id: mockDetailScenarioIds[3],
     orderNum: '16204',
-    name: '演示客户丁',
+    name: '王女士',
     address: '建国门外大街',
     district: 110105,
     describe: '请确认上门时间',
@@ -260,8 +260,8 @@ const mockServiceAppointmentData = {
   [mockDetailScenarioIds[4]]: {
     _id: mockDetailScenarioIds[4],
     orderNum: '17505',
-    name: '演示客户戊',
-    address: '朝阳路演示地址',
+    name: '刘先生',
+    address: '朝阳路16号',
     exts: {
       leakagesite_copy: [['repair-part-code-001']],
       distance: 3.8,
@@ -275,8 +275,8 @@ const mockServiceAppointmentData = {
   [mockDetailScenarioIds[5]]: {
     _id: mockDetailScenarioIds[5],
     orderNum: '19006',
-    name: '演示客户己',
-    address: '朝阳区演示街',
+    name: '赵女士',
+    address: '朝阳区青年路',
     district: 110105,
     exts: {
       distance: 6.8,
@@ -289,7 +289,7 @@ const mockServiceAppointmentData = {
   [mockStatusSampleIds[0]]: {
     _id: mockStatusSampleIds[0],
     orderNum: '09090',
-    name: '演示客户庚',
+    name: '周先生',
     address: '日坛路',
     district: 110105,
     exts: {
@@ -304,7 +304,7 @@ const mockServiceAppointmentData = {
   [mockStatusSampleIds[1]]: {
     _id: mockStatusSampleIds[1],
     orderNum: '00067',
-    name: '演示客户辛',
+    name: '孙女士',
     address: '朝阳门地铁站',
     district: 110105,
     exts: {
@@ -319,7 +319,7 @@ const mockServiceAppointmentData = {
   [mockStatusSampleIds[2]]: {
     _id: mockStatusSampleIds[2],
     orderNum: '14825',
-    name: '演示客户壬',
+    name: '何先生',
     address: '天福园小区',
     district: 110105,
     exts: {
@@ -334,7 +334,7 @@ const mockServiceAppointmentData = {
   [mockStatusSampleIds[3]]: {
     _id: mockStatusSampleIds[3],
     orderNum: '09224',
-    name: '演示客户癸',
+    name: '郑女士',
     address: '日坛国际贸易中心A座',
     district: 110105,
     exts: {
@@ -455,9 +455,9 @@ export const mockSanodeListResponse = {
       },
       data: {
         _id: mockCommandScenarioIds.quotationFoundation,
-        orderNum: 'MOCK-018',
-        name: '演示报价工单',
-        address: '合成评审地址',
+        orderNum: '26018',
+        name: '吴先生',
+        address: '望京花园西区',
         district: 110105,
         serviceType: mockQuotationCatalogServiceType,
         exts: { sourceType: mockQuotationCatalogSourceType },
@@ -477,9 +477,9 @@ export const mockSanodeListResponse = {
       },
       data: {
         _id: mockJourneyWorkOrderId,
-        orderNum: 'MOCK-019',
-        name: '连续业务流程演示工单',
-        address: '合成连续流程地址',
+        orderNum: '26019',
+        name: '蒋女士',
+        address: '北苑家园望春园',
         district: 110105,
         serviceType: mockQuotationCatalogServiceType,
         exts: { sourceType: mockQuotationCatalogSourceType },
@@ -498,19 +498,19 @@ export const mockSanodeListResponse = {
 export const mockR1MpUxListRows = [
   {
     _id: 'mock-workflow-node-020-forms', state: 0,
-    nodeDef: { nodeType: 'forms', name: '合成多表单',
+    nodeDef: { nodeType: 'forms', name: '现场检查',
       formDefId: mockSyntheticDynamicFormDefinitionId,
       addFormCodeId: mockR1AddFormCodeId, userChoose: ['synthetic-role'] },
-    data: { _id: mockR1FormsWorkOrderId, orderNum: 'MOCK-020',
-      name: '多表单本机草稿走查', address: '合成地址',
+    data: { _id: mockR1FormsWorkOrderId, orderNum: '26020',
+      name: '韩先生', address: '双井富力城',
       status: mockSyntheticStatusCodes.onsite, workflowRunId: 'mock-workflow-run-020' },
   },
   {
     _id: 'mock-workflow-node-021-repeat', state: 0,
-    nodeDef: { nodeType: 'repeat', name: '合成重复表单',
+    nodeDef: { nodeType: 'repeat', name: '现场复检',
       formDefId: mockSyntheticDynamicFormDefinitionId, userChoose: ['synthetic-role'] },
-    data: { _id: mockR1RepeatWorkOrderId, orderNum: 'MOCK-021',
-      name: '重复表单本机草稿走查', address: '合成地址',
+    data: { _id: mockR1RepeatWorkOrderId, orderNum: '26021',
+      name: '田女士', address: '国贸建外SOHO',
       status: mockSyntheticStatusCodes.onsite, workflowRunId: 'mock-workflow-run-021' },
   },
 ] as const
@@ -559,12 +559,12 @@ export const mockRepairPartsCascadeResponse = [
 export const mockWorkOrderDetailResponses = {
   [mockR1FormsWorkOrderId]: {
     data: {
-      serviceAppointment: { _id: mockR1FormsWorkOrderId, orderNum: 'MOCK-020',
-        name: '多表单本机草稿走查', address: '合成地址',
+      serviceAppointment: { _id: mockR1FormsWorkOrderId, orderNum: '26020',
+        name: '韩先生', address: '双井富力城',
         status: mockSyntheticStatusCodes.onsite, workflowRunId: 'mock-workflow-run-020' },
       workflow: { _id: 'mock-workflow-run-020' },
       workflowNode: [{ _id: 'mock-workflow-node-020-forms', workflowId: 'mock-workflow-run-020', state: 0,
-        nodeDef: { nodeType: 'forms', name: '合成多表单',
+        nodeDef: { nodeType: 'forms', name: '现场检查',
           formDefId: mockSyntheticDynamicFormDefinitionId,
           addFormCodeId: mockR1AddFormCodeId, userChoose: ['synthetic-role'] },
         exts: { formList: [mockR1ExistingFormData[mockR1FormData.formsFirst],
@@ -573,12 +573,12 @@ export const mockWorkOrderDetailResponses = {
   },
   [mockR1RepeatWorkOrderId]: {
     data: {
-      serviceAppointment: { _id: mockR1RepeatWorkOrderId, orderNum: 'MOCK-021',
-        name: '重复表单本机草稿走查', address: '合成地址',
+      serviceAppointment: { _id: mockR1RepeatWorkOrderId, orderNum: '26021',
+        name: '田女士', address: '国贸建外SOHO',
         status: mockSyntheticStatusCodes.onsite, workflowRunId: 'mock-workflow-run-021' },
       workflow: { _id: 'mock-workflow-run-021' },
       workflowNode: [{ _id: 'mock-workflow-node-021-repeat', workflowId: 'mock-workflow-run-021', state: 0,
-        nodeDef: { nodeType: 'repeat', name: '合成重复表单',
+        nodeDef: { nodeType: 'repeat', name: '现场复检',
           formDefId: mockSyntheticDynamicFormDefinitionId, userChoose: ['synthetic-role'] } }],
     },
   },
@@ -730,8 +730,8 @@ export const mockWorkOrderDetailResponses = {
       serviceAppointment: {
         _id: mockCommandScenarioIds.acceptDirect,
         orderNum: '19011',
-        name: '演示接单直通样本',
-        address: '演示地址一',
+        name: '许先生',
+        address: '光华路甲8号',
         district: 110105,
         exts: { distance: 1.1, communityOrdersTotal: 0 },
         status: mockSyntheticStatusCodes.appointmentPending,
@@ -752,8 +752,8 @@ export const mockWorkOrderDetailResponses = {
       serviceAppointment: {
         _id: mockCommandScenarioIds.acceptRetryable,
         orderNum: '19012',
-        name: '演示接单重试样本',
-        address: '演示地址二',
+        name: '梁女士',
+        address: '朝阳公园南路',
         district: 110105,
         exts: { distance: 1.2, communityOrdersTotal: 0 },
         status: mockSyntheticStatusCodes.appointmentPending,
@@ -774,8 +774,8 @@ export const mockWorkOrderDetailResponses = {
       serviceAppointment: {
         _id: mockCommandScenarioIds.acceptTerminal,
         orderNum: '19013',
-        name: '演示接单终止样本',
-        address: '演示地址三',
+        name: '袁先生',
+        address: '安贞西里二区',
         district: 110105,
         exts: { distance: 1.3, communityOrdersTotal: 0 },
         status: mockSyntheticStatusCodes.appointmentPending,
@@ -796,8 +796,8 @@ export const mockWorkOrderDetailResponses = {
       serviceAppointment: {
         _id: mockCommandScenarioIds.appointmentRetryable,
         orderNum: '19014',
-        name: '演示预约重试样本',
-        address: '演示地址四',
+        name: '郭女士',
+        address: '太阳宫桥北',
         district: 110105,
         exts: { distance: 1.4, communityOrdersTotal: 0 },
         status: mockSyntheticStatusCodes.appointmentPending,
@@ -822,8 +822,8 @@ export const mockWorkOrderDetailResponses = {
       serviceAppointment: {
         _id: mockCommandScenarioIds.appointmentTerminal,
         orderNum: '19015',
-        name: '演示预约终止样本',
-        address: '演示地址五',
+        name: '秦先生',
+        address: '将台路5号院',
         district: 110105,
         exts: { distance: 1.5, communityOrdersTotal: 0 },
         status: mockSyntheticStatusCodes.appointmentPending,
@@ -848,8 +848,8 @@ export const mockWorkOrderDetailResponses = {
       serviceAppointment: {
         _id: mockCommandScenarioIds.appointmentSuccess,
         orderNum: '19016',
-        name: '演示预约成功样本',
-        address: '演示地址六',
+        name: '彭女士',
+        address: '望京西园四区',
         district: 110105,
         exts: { distance: 1.6, communityOrdersTotal: 0 },
         status: mockSyntheticStatusCodes.appointmentPending,
@@ -874,8 +874,8 @@ export const mockWorkOrderDetailResponses = {
       serviceAppointment: {
         _id: mockCommandScenarioIds.surveySuccess,
         orderNum: '19017',
-        name: '演示现场勘察样本',
-        address: '演示地址七',
+        name: '邓先生',
+        address: '芍药居北里',
         district: 110105,
         exts: { distance: 1.7, communityOrdersTotal: 0 },
         status: mockSyntheticStatusCodes.onsite,
@@ -900,9 +900,9 @@ export const mockWorkOrderDetailResponses = {
     data: {
       serviceAppointment: {
         _id: mockJourneyWorkOrderId,
-        orderNum: 'MOCK-019',
-        name: '连续业务流程演示工单',
-        address: '合成连续流程地址',
+        orderNum: '26019',
+        name: '蒋女士',
+        address: '北苑家园望春园',
         district: 110105,
         serviceType: mockQuotationCatalogServiceType,
         exts: { sourceType: mockQuotationCatalogSourceType },
@@ -927,9 +927,9 @@ export const mockWorkOrderDetailResponses = {
     data: {
       serviceAppointment: {
         _id: mockCommandScenarioIds.quotationFoundation,
-        orderNum: 'MOCK-018',
-        name: '演示报价工单',
-        address: '合成评审地址',
+        orderNum: '26018',
+        name: '吴先生',
+        address: '望京花园西区',
         district: 110105,
         serviceType: mockQuotationCatalogServiceType,
         exts: { sourceType: mockQuotationCatalogSourceType },
@@ -963,21 +963,21 @@ export const mockWorkOrderActivityResponses = {
         typeId: 'mock-activity-001-003',
         name: '已完成现场服务',
         content: '现场服务节点已完成。',
-        createUserName: '演示系统',
+        createUserName: '调度中心',
         createTime: '2026-04-13 15:20:00',
       },
       {
         type: 3,
         typeId: 'mock-activity-001-002',
         content: '已与客户确认上门安排。',
-        createUserName: '演示技师',
+        createUserName: '现场工程师',
         createTime: '2026-04-13 14:32:00',
       },
       {
         type: 1,
         typeId: 'mock-activity-001-001',
         content: '客户确认按预约时间上门。',
-        createUserName: '演示技师',
+        createUserName: '现场工程师',
         createTime: '2026-04-13 14:10:00',
       },
     ],
@@ -990,21 +990,21 @@ export const mockWorkOrderActivityResponses = {
         typeId: 'mock-activity-002-003',
         name: '已完成现场服务',
         content: '现场服务已完成，等待验收。',
-        createUserName: '演示系统',
+        createUserName: '调度中心',
         createTime: '2026-04-13 15:20:00',
       },
       {
         type: 4,
         typeId: 'mock-activity-002-002',
         content: '现场服务记录已提交。',
-        createUserName: '演示技师',
+        createUserName: '现场工程师',
         createTime: '2026-04-13 14:32:00',
       },
       {
         type: 3,
         typeId: 'mock-activity-002-001',
         content: '已与客户确认验收安排。',
-        createUserName: '演示技师',
+        createUserName: '现场工程师',
         createTime: '2026-04-13 14:10:00',
       },
     ],
@@ -1015,8 +1015,8 @@ export const mockWorkOrderActivityResponses = {
       {
         type: 5,
         typeId: 'mock-activity-003-002',
-        content: '工单已分派至演示工队。',
-        createUserName: '演示系统',
+        content: '工单已分派至维修团队。',
+        createUserName: '调度中心',
         createTime: '2026-04-13 11:05:00',
       },
       {
@@ -1024,7 +1024,7 @@ export const mockWorkOrderActivityResponses = {
         typeId: 'mock-activity-003-001',
         name: '已创建工单',
         content: '已创建待接单工单。',
-        createUserName: '演示系统',
+        createUserName: '调度中心',
         createTime: '2026-04-13 10:40:00',
       },
     ],
@@ -1036,7 +1036,7 @@ export const mockWorkOrderActivityResponses = {
         type: 6,
         typeId: 'mock-activity-004-002',
         content: '已向客户说明上门时间和服务安排。',
-        createUserName: '演示技师',
+        createUserName: '现场工程师',
         createTime: '2026-04-14 09:40:00',
       },
       {
@@ -1044,7 +1044,7 @@ export const mockWorkOrderActivityResponses = {
         typeId: 'mock-activity-004-001',
         name: '已创建预约',
         content: '预约时间：2026-04-14 09:30。',
-        createUserName: '演示系统',
+        createUserName: '调度中心',
         createTime: '2026-04-14 09:30:00',
       },
     ],
@@ -1056,7 +1056,7 @@ export const mockWorkOrderActivityResponses = {
         type: 3,
         typeId: 'mock-activity-005-002',
         content: '已与客户沟通方案确认事项。',
-        createUserName: '演示技师',
+        createUserName: '现场工程师',
         createTime: '2026-04-15 16:05:00',
       },
       {
@@ -1064,7 +1064,7 @@ export const mockWorkOrderActivityResponses = {
         typeId: 'mock-activity-005-001',
         name: '待客户确认方案',
         content: '等待客户确认服务方案。',
-        createUserName: '演示系统',
+        createUserName: '调度中心',
         createTime: '2026-04-15 15:40:00',
       },
     ],
@@ -1080,7 +1080,7 @@ export const mockWorkOrderActivityResponses = {
         type: 4,
         typeId: 'mock-activity-007-002',
         content: '现场服务记录已提交。',
-        createUserName: '演示技师',
+        createUserName: '现场工程师',
         createTime: '2026-04-15 15:20:00',
       },
       {
@@ -1088,7 +1088,7 @@ export const mockWorkOrderActivityResponses = {
         typeId: 'mock-activity-007-001',
         name: '现场服务已开始',
         content: '已进入现场服务环节。',
-        createUserName: '演示系统',
+        createUserName: '调度中心',
         createTime: '2026-04-15 14:50:00',
       },
     ],
@@ -1100,14 +1100,14 @@ export const mockWorkOrderActivityResponses = {
         type: 4,
         typeId: 'mock-activity-008-002',
         content: '已完成上门服务记录。',
-        createUserName: '演示技师',
+        createUserName: '现场工程师',
         createTime: '2026-04-15 16:10:00',
       },
       {
         type: 3,
         typeId: 'mock-activity-008-001',
         content: '已与客户确认上门安排。',
-        createUserName: '演示技师',
+        createUserName: '现场工程师',
         createTime: '2026-04-15 15:35:00',
       },
     ],
@@ -1119,7 +1119,7 @@ export const mockWorkOrderActivityResponses = {
         type: 6,
         typeId: 'mock-activity-009-002',
         content: '已向客户发送服务方案。',
-        createUserName: '演示技师',
+        createUserName: '现场工程师',
         createTime: '2026-04-15 17:05:00',
       },
       {
@@ -1127,7 +1127,7 @@ export const mockWorkOrderActivityResponses = {
         typeId: 'mock-activity-009-001',
         name: '已生成服务方案',
         content: '等待客户确认服务方案。',
-        createUserName: '演示系统',
+        createUserName: '调度中心',
         createTime: '2026-04-15 16:40:00',
       },
     ],
@@ -1140,14 +1140,14 @@ export const mockWorkOrderActivityResponses = {
         typeId: 'mock-activity-010-002',
         name: '服务已完成',
         content: '服务已完成，等待客户评价。',
-        createUserName: '演示系统',
+        createUserName: '调度中心',
         createTime: '2026-04-15 18:10:00',
       },
       {
         type: 3,
         typeId: 'mock-activity-010-001',
         content: '已向客户发送评价提醒。',
-        createUserName: '演示技师',
+        createUserName: '现场工程师',
         createTime: '2026-04-15 17:45:00',
       },
     ],

@@ -41,113 +41,6 @@
         </navigator>
       </view>
 
-      <view v-if="mockControlVisible" class="home-surface mock-developer-panel" data-testid="dev-review-tools">
-        <view class="mock-panel-heading">
-          <text class="mock-panel-title">业务数据源</text>
-          <text class="mock-source-indicator" :class="{ 'mock-source-indicator--real': mockMode === 'off' }">
-            {{ businessDataSourceLabel }}
-          </text>
-        </view>
-        <view class="mock-toggle-row">
-          <view class="mock-toggle-copy">
-            <text class="mock-toggle-label">Mock 数据</text>
-            <text class="mock-toggle-hint">仅非生产环境可用</text>
-          </view>
-          <switch
-            class="mock-switch"
-            :checked="mockMode !== 'off'"
-            :disabled="mockSwitchInFlight"
-            @change="handleMockToggle"
-          />
-        </view>
-        <view v-if="mockMode !== 'off'" class="mock-mode-row">
-          <text class="mock-mode-label">Mock 场景</text>
-          <view class="mock-mode-options">
-            <button
-              class="mock-mode-button"
-              :class="{ 'mock-mode-button-active': mockMode === 'data' }"
-              @tap="selectMockMode('data')"
-            >
-              数据
-            </button>
-            <button
-              class="mock-mode-button"
-              :class="{ 'mock-mode-button-active': mockMode === 'empty' }"
-              @tap="selectMockMode('empty')"
-            >
-              空状态
-            </button>
-          </view>
-        </view>
-        <view v-if="mockMode === 'data'" class="mock-action-scenarios">
-          <text class="mock-mode-label">Action Workspace 场景</text>
-          <navigator
-            v-if="isMockJourneyAvailable()"
-            class="mock-action-scenario"
-            :url="mockJourneyRoute()"
-            data-testid="mock-continuous-journey-entry"
-          >
-            <view class="mock-action-scenario-copy">
-              <text class="mock-action-scenario-label">连续业务旅程 · MOCK-019</text>
-              <text class="mock-action-scenario-description">同一工单预约 → 勘察 → 报价；仅本机模拟阶段，无业务提交</text>
-            </view>
-            <text class="mock-action-scenario-arrow" aria-hidden="true">›</text>
-          </navigator>
-          <navigator
-            v-if="isMaterialSkuMockAvailable()"
-            class="mock-action-scenario"
-            :url="materialSkuReviewUrl()"
-            data-testid="sku-mock-entry"
-          >
-            <view class="mock-action-scenario-copy">
-              <text class="mock-action-scenario-label">R1 材料 SPU/SKU · 只读 Mock</text>
-              <text class="mock-action-scenario-description">合成厚度、颜色与 SKU 匹配，含错误/重复/无货号，不关联真实报价</text>
-            </view>
-            <text class="mock-action-scenario-arrow" aria-hidden="true">›</text>
-          </navigator>
-          <navigator
-            v-if="isSigningMockReviewAvailable()"
-            class="mock-action-scenario"
-            :url="signingMockReviewUrl()"
-            data-testid="signing-mock-entry"
-          >
-            <view class="mock-action-scenario-copy">
-              <text class="mock-action-scenario-label">签约 Mock · 独立正式订单样例</text>
-              <text class="mock-action-scenario-description">同一工单 2 个合成正式订单；合同状态只读演示，无签约业务命令</text>
-            </view>
-            <text class="mock-action-scenario-arrow" aria-hidden="true">›</text>
-          </navigator>
-          <navigator
-            v-for="scenario in mockActionWorkspaceScenarios"
-            :key="scenario.key"
-            class="mock-action-scenario"
-            :url="scenario.route"
-          >
-            <view class="mock-action-scenario-copy">
-              <text class="mock-action-scenario-label">{{ scenario.label }}</text>
-              <text class="mock-action-scenario-description">{{ scenario.description }}</text>
-            </view>
-            <text class="mock-action-scenario-arrow" aria-hidden="true">›</text>
-          </navigator>
-        </view>
-      </view>
-
-      <LocalDraftDiagnosticsPanel
-        v-if="mockControlVisible"
-        :mock-mode="mockMode"
-        :loading="draftDiagnostics.loading"
-        :entries="draftDiagnostics.entries"
-        :unfinished-total="draftDiagnostics.unfinishedTotal"
-        :invalid-total="draftDiagnostics.invalidTotal"
-        :error="draftDiagnostics.error"
-        :seed-available="draftDiagnostics.seedAvailable"
-        :cleanup-available="draftDiagnostics.cleanupAvailable"
-        @refresh="refreshDraftDiagnostics"
-        @seed="seedMockDrafts"
-        @clear="clearMockDrafts"
-      />
-      <text v-if="!mockControlVisible && mockMode !== 'off'" class="home-demo-provenance"
-        data-testid="business-mode-provenance">体验数据 · 不会提交后台</text>
     </view>
 
     <view class="home-footer">
@@ -335,26 +228,9 @@
 
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
-import { onLoad, onShow } from '@dcloudio/uni-app'
+import { onLoad } from '@dcloudio/uni-app'
 
-import {
-  isBusinessMockDeveloperModeAvailable,
-  isBusinessMockMode,
-  isProductionAuthBusinessMockIsolation,
-  setBusinessMockMode,
-  type BusinessMockMode,
-} from '@app/business-mock'
-import { mockActionWorkspaceScenarios } from '@app/action-workspace-harness'
-import { isSigningMockReviewAvailable, signingMockReviewUrl } from '@app/signing-mock-review'
-import { isMaterialSkuMockAvailable, materialSkuReviewUrl } from '@app/material-sku-mock-review'
-import { isMockJourneyAvailable, mockJourneyRoute } from '@app/mock-journey'
 import { hasAuthenticatedSession, workOrdersRoute } from '@features/home/access'
-import LocalDraftDiagnosticsPanel from '@features/home/components/LocalDraftDiagnosticsPanel.vue'
-import {
-  reloadBusinessReadStores,
-  switchBusinessDataSource,
-} from '@features/home/business-data-source'
-import { useLocalDraftDiagnosticsStore } from '@features/home/draft-diagnostics'
 import { submitLogin, type LoginSubmissionState } from '@features/session/login'
 import {
   legalLoginPolicies, manualLoginConsentIssue, manualLoginConsentMessage,
@@ -371,14 +247,9 @@ import {
 import { useSessionStore } from '@shared/state'
 import type { OperationError } from '@shared/types'
 import AppLoadingState from '@shared/ui/AppLoadingState.vue'
-import { devReviewModeEnabled, setDevReviewModeFromRoute } from '@shared/ui/dev-review-mode'
-import { useWorkOrderDetailStore } from '@features/work-orders/detail'
-import { useWorkOrderListStore } from '@features/work-orders/list'
+import { redirectToIsolatedQaConsole } from '@app/dev-qa-navigation'
 
 const session = useSessionStore()
-const workOrders = useWorkOrderListStore()
-const workOrderDetail = useWorkOrderDetailStore()
-const draftDiagnostics = useLocalDraftDiagnosticsStore()
 const phoneNumber = ref('')
 const verificationCode = ref('')
 const manualConsent = ref(false)
@@ -387,9 +258,6 @@ const loginPoliciesReady = computed(() => Boolean(loginPolicies.privacyUrl && lo
 const loginStage = ref<LoginStage>('launch')
 const message = ref('')
 const logoutInFlight = ref(false)
-const mockControlVisible = computed(() => isBusinessMockDeveloperModeAvailable() && devReviewModeEnabled.value)
-const mockMode = ref<BusinessMockMode>(isBusinessMockMode())
-const mockSwitchInFlight = ref(false)
 const submissionState = reactive<LoginSubmissionState>({ inFlight: false })
 const homeGreeting = computed(() => {
   const displayName = session.session?.user.displayName?.trim()
@@ -400,43 +268,28 @@ const isBusy = computed(
 )
 const showHome = computed(() => hasAuthenticatedSession(session.status, session.session))
 const quickLoginAvailable = computed(() => resolveQuickLoginInput() !== null)
-const productionTarget = import.meta.env.VITE_XLINK_ENVIRONMENT === 'prod'
 const quickLoginSubtitle = computed(() => {
-  if (quickLoginAvailable.value) {
-    return productionTarget ? '本机生产账号，业务数据只读' : '一键使用测试账号登录'
-  }
-  return productionTarget ? '生产快捷登录仅限本机开发运行' : '仅非生产环境配置后可用'
+  if (quickLoginAvailable.value) return '使用已配置的账号继续'
+  return '当前未配置快捷登录'
 })
-const quickLoginBadge = computed(() => (productionTarget ? '本机' : '测试'))
-const productionAuthOnly = isProductionAuthBusinessMockIsolation()
-const businessDataSourceLabel = computed(() => (
-  mockMode.value !== 'off' ? 'Mock'
-    : productionAuthOnly ? '业务网络已隔离' : 'Real API'
-))
+const quickLoginBadge = computed(() => '快捷')
 const feedback = computed(() => message.value || userFacingLoginMessage(session.error))
+
+// Legacy QA deep links are redirected to a distinct DEV surface. The Home DOM
+// remains identical for the same business session, with or without query flags.
+onLoad((options) => {
+  if (import.meta.env.DEV && options?.devReview === '1') {
+    redirectToIsolatedQaConsole()
+  }
+})
 
 watch(
   () => session.status,
   (status) => {
     if (status === 'unauthenticated') loginStage.value = 'launch'
-    void draftDiagnostics.refresh()
   },
 )
 
-watch(
-  () => session.session?.user.id,
-  () => {
-    void draftDiagnostics.refresh()
-  },
-)
-
-onShow(() => {
-  if (showHome.value) void draftDiagnostics.refresh()
-})
-
-onLoad((options) => {
-  setDevReviewModeFromRoute(options?.devReview)
-})
 
 function goToMethods(): void {
   loginStage.value = advanceLoginStage(loginStage.value)
@@ -458,49 +311,6 @@ async function quickLogin(): Promise<void> {
   message.value = ''
   const result = await submitLogin(input, submissionState, (request) => session.login(request))
   if (result.state !== 'succeeded') message.value = userFacingLoginMessage(result.error)
-}
-
-async function handleMockToggle(event: Event): Promise<void> {
-  if (mockSwitchInFlight.value) return
-  const detail = (event as Event & { detail?: { value?: boolean } }).detail
-  const enabled = detail?.value === true
-  mockSwitchInFlight.value = true
-  try {
-    await switchBusinessDataSource(
-      enabled ? 'mock' : 'real',
-      setBusinessMockMode,
-      { list: workOrders, detail: workOrderDetail },
-    )
-  } finally {
-    mockMode.value = isBusinessMockMode()
-    await draftDiagnostics.refresh()
-    mockSwitchInFlight.value = false
-  }
-}
-
-async function selectMockMode(mode: Exclude<BusinessMockMode, 'off'>): Promise<void> {
-  if (mockMode.value === 'off') return
-  mockSwitchInFlight.value = true
-  setBusinessMockMode(mode)
-  try {
-    await reloadBusinessReadStores({ list: workOrders, detail: workOrderDetail })
-  } finally {
-    mockMode.value = isBusinessMockMode()
-    await draftDiagnostics.refresh()
-    mockSwitchInFlight.value = false
-  }
-}
-
-async function refreshDraftDiagnostics(): Promise<void> {
-  await draftDiagnostics.refresh()
-}
-
-async function seedMockDrafts(): Promise<void> {
-  await draftDiagnostics.seedMockDrafts()
-}
-
-async function clearMockDrafts(): Promise<void> {
-  await draftDiagnostics.clearMockDrafts()
 }
 
 function onLoginConsentChange(event: Event): void {
@@ -667,152 +477,6 @@ function userFacingLoginMessage(error: OperationError | null | undefined): strin
   align-items: baseline;
   display: flex;
   gap: 16rpx;
-}
-
-.mock-developer-panel {
-  border-color: rgba(23, 105, 223, 0.35);
-  box-shadow: 0 12rpx 28rpx rgba(28, 66, 117, 0.06);
-}
-
-.mock-panel-heading {
-  align-items: center;
-  display: flex;
-  justify-content: space-between;
-}
-
-.mock-panel-title {
-  color: #1d3154;
-  font-size: 28rpx;
-  font-weight: 800;
-}
-
-.mock-source-indicator {
-  background: #eaf7ef;
-  border: 1rpx solid #b9e6ca;
-  border-radius: 999rpx;
-  color: #21864b;
-  font-size: 22rpx;
-  font-weight: 800;
-  line-height: 1;
-  padding: 10rpx 16rpx;
-}
-
-.mock-source-indicator--real {
-  background: #eef4ff;
-  border-color: #cbdcff;
-  color: #296bcf;
-}
-
-.mock-toggle-copy {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.mock-toggle-hint {
-  color: #8a98ad;
-  font-size: 24rpx;
-  line-height: 1.5;
-  margin-top: 8rpx;
-}
-
-.mock-toggle-row {
-  align-items: center;
-  border-top: 1rpx solid #edf1f7;
-  display: flex;
-  justify-content: space-between;
-  margin-top: 24rpx;
-  padding-top: 24rpx;
-}
-
-.mock-toggle-label {
-  color: #243858;
-  font-size: 28rpx;
-  font-weight: 700;
-}
-
-.mock-mode-row {
-  align-items: center;
-  border-top: 1rpx solid #edf1f7;
-  display: flex;
-  justify-content: space-between;
-  margin-top: 24rpx;
-  padding-top: 24rpx;
-}
-
-.mock-mode-label {
-  color: #243858;
-  font-size: 26rpx;
-  font-weight: 700;
-}
-
-.mock-mode-options {
-  display: flex;
-  gap: 12rpx;
-}
-
-.mock-mode-button {
-  background: #f4f7fc;
-  border: 1rpx solid #d9e3f2;
-  border-radius: 999rpx;
-  color: #637593;
-  font-size: 24rpx;
-  line-height: 1;
-  margin: 0;
-  min-height: 60rpx;
-  padding: 0 20rpx;
-}
-
-.mock-mode-button::after {
-  border: 0;
-}
-
-.mock-mode-button-active {
-  background: #eaf2ff;
-  border-color: #6d9ff3;
-  color: #1769df;
-  font-weight: 800;
-}
-
-.mock-action-scenarios {
-  border-top: 1rpx solid #edf1f7;
-  margin-top: 24rpx;
-  padding-top: 24rpx;
-}
-
-.mock-action-scenario {
-  align-items: center;
-  border-top: 1rpx solid #f0f3f8;
-  display: flex;
-  justify-content: space-between;
-  margin-top: 14rpx;
-  padding-top: 14rpx;
-}
-
-.mock-action-scenario-copy {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.mock-action-scenario-label {
-  color: #243858;
-  font-size: 24rpx;
-  font-weight: 700;
-}
-
-.mock-action-scenario-description {
-  color: #8a98ad;
-  font-size: 20rpx;
-  margin-top: 4rpx;
-}
-
-.mock-action-scenario-arrow {
-  color: #1769df;
-  font-size: 34rpx;
-  padding-left: 16rpx;
 }
 
 .home-brand-name {

@@ -5,9 +5,7 @@
     <AppStatus
       v-if="showDraftNotice"
       class="q01-screen__provenance xl-craft__notice"
-      :message="productReviewOnly
-        ? '演示数据仅保存在本机；正式报价订单提交已关闭。'
-        : '当前为本机报价草稿；校验并提交后才会创建正式订单。'"
+      message="报价内容为草稿，通过业务校验并确认提交后才会形成正式订单。"
       variant="strip"
       icon="warning"
       quiet
@@ -125,7 +123,7 @@
     </view>
     <view class="q01-screen__disclosure">
       <text class="q01-screen__disclosure-line">订单说明</text>
-      <text class="q01-screen__disclosure-line">完成业务校验并主动提交后才会创建正式订单，本机草稿不会自动提交。</text>
+      <text class="q01-screen__disclosure-line">完成业务校验并主动确认提交后才会创建正式订单，草稿不会自动提交。</text>
     </view>
 
     <view v-if="pickerOpen" class="q01-screen__overlay"

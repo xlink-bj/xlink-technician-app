@@ -48,8 +48,8 @@ describe('G4-UX production Login flow', () => {
       VITE_XLINK_QUICK_LOGIN_PHONE: 'production-phone',
     })).toEqual({ phoneNumber: 'production-phone', verificationCode: '999999' })
     expect(loginPage).toContain('@tap="quickLogin"')
-    expect(loginPage).toContain('一键使用测试账号登录')
-    expect(loginPage).toContain('本机生产账号，业务数据只读')
+    expect(loginPage).toContain('使用已配置的账号继续')
+    expect(loginPage).toContain('当前未配置快捷登录')
     expect(loginPage).not.toContain('18600372156')
   })
 

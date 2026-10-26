@@ -2,7 +2,7 @@
   <view class="quotation-content" :class="{ 'quotation-content--review': props.productReviewOnly, 'quotation-content--q01': isFirstRepairPartStep }" data-testid="quotation-action-content">
     <view v-if="!catalogBrowser.isOpen && !isInitialEmptyWorkbench && !isFirstRepairPartStep" class="quotation-content__heading" data-testid="quotation-workbench-heading">
       <text class="quotation-content__eyebrow">报价草稿 · 按部位组织</text>
-      <text v-if="!props.productReviewOnly || composition.groups.length === 0" class="quotation-content__description">选择维修部位，逐组整理项目；当前内容仅保存在本机。</text>
+      <text v-if="!props.productReviewOnly || composition.groups.length === 0" class="quotation-content__description">选择维修部位，逐组整理报价项目。</text>
     </view>
 
     <view v-if="props.state === 'loading'" class="quotation-content__panel app-surface" data-testid="quotation-state-loading">
@@ -21,7 +21,7 @@
             {{ amountPresentation.value }}
           </text>
         </view>
-        <text v-if="!props.productReviewOnly" class="quotation-content__local-tag">本机草稿</text>
+        <text v-if="!props.productReviewOnly" class="quotation-content__local-tag">编辑中</text>
       </view>
 
       <AppStatus
@@ -34,13 +34,13 @@
       <AppStatus
         v-else-if="composition.localState === 'saving'"
         class="quotation-content__local-status"
-        message="正在保存本地草稿…"
+        message="正在保存草稿…"
         quiet
       />
       <AppStatus
         v-else-if="composition.localState === 'saved_local'"
         class="quotation-content__local-status"
-        message="报价草稿已保存在本机。"
+        message="报价草稿已保存。"
         tone="success"
         quiet
       />
@@ -66,17 +66,17 @@
         <AppLoadingState
           v-if="workspace.quotationEngine.state === 'loading'"
           variant="inline"
-          label="正在核对目录、报价规则与本地金额"
+          label="正在核对目录、报价规则与金额"
         />
         <template v-else-if="workspace.quotationEngine.result">
           <view v-if="workspace.quotationEngine.result.pricing" class="quotation-content__engine-total" data-testid="quotation-local-gross-total">
-            <text class="quotation-content__engine-label">本机金额预览 · 未提交</text>
+            <text class="quotation-content__engine-label">报价金额 · 待确认</text>
             <text class="quotation-content__engine-amount">¥{{ workspace.quotationEngine.result.pricing.calcTotalPrice.totalPrice.toFixed(2) }}</text>
           </view>
           <text v-if="workspace.quotationEngine.result.pricing" class="quotation-content__engine-note" data-testid="quotation-rounding-note">分组明细与整体金额按各自规则计算，舍入后可能存在小额差异。</text>
           <AppStatus
             v-if="workspace.quotationEngine.result.state === 'ready'"
-            message="本机报价校验已通过，订单结构仅作本地预览，尚未提交服务器。"
+            message="报价校验已通过；确认提交前仍为草稿。"
             tone="success"
             quiet
             data-testid="quotation-engine-ready"
@@ -96,7 +96,7 @@
               role="alert"
             >{{ message }}</text>
           </view>
-          <text class="quotation-content__engine-note" data-testid="quotation-engine-local-only">以上为本机核验预览；只有单独确认“提交订单/报价方案”后才会创建服务器订单，不会完成当前工单工作流。</text>
+          <text class="quotation-content__engine-note" data-testid="quotation-engine-local-only">只有确认提交后才会创建正式订单，报价提交不代表工单完成。</text>
         </template>
         <text v-else class="quotation-content__engine-note" data-testid="quotation-engine-local-only">目录与报价依据核验完成前不显示估算金额。</text>
       </view>
@@ -148,7 +148,7 @@
         <view v-if="composition.groups.length === 0 && isInitialEmptyWorkbench" class="quotation-content__initial-empty" data-testid="quotation-initial-empty-workbench">
           <view class="quotation-content__initial-draft-notice" data-testid="quotation-draft-notice" role="status">
             <text class="quotation-content__initial-draft-notice-mark" aria-hidden="true">i</text>
-            <text class="quotation-content__initial-draft-notice-copy">{{ props.productReviewOnly ? '演示模式仅可整理本机草稿，不会创建正式订单。' : '当前为本机报价草稿；通过校验并提交后才会创建正式订单。' }}</text>
+            <text class="quotation-content__initial-draft-notice-copy">当前为报价草稿；通过校验并确认提交后才会创建正式订单。</text>
           </view>
           <view class="quotation-content__initial-card app-surface" data-testid="quotation-initial-main-card">
             <view class="quotation-content__initial-empty-heading quotation-content__section-heading">
@@ -202,14 +202,14 @@
           </view>
           <view class="quotation-content__order-explainer">
             <text class="quotation-content__order-explainer-title">ⓘ 订单说明</text>
-            <text>提交后才会产生正式订单；本机草稿不等于服务器订单。</text>
+            <text>确认提交后才会产生正式订单；草稿不等于正式订单。</text>
             <text>正式下单需满足现有字段、金额及权限校验。</text>
           </view>
         </view>
         <view v-else-if="composition.groups.length === 0" class="quotation-content__empty" data-testid="quotation-draft-empty">
           <view class="quotation-content__empty-mark" aria-hidden="true">＋</view>
           <text class="quotation-content__empty-title">还没有维修部位组</text>
-          <text class="quotation-content__copy">先建立部位上下文，再在每个分组中整理套餐、工序、材料或机措。当前内容仅保存在本机。</text>
+          <text class="quotation-content__copy">先填写维修部位，再在每个分组中整理套餐、工序、材料或机措。</text>
           <AppButton
             class="quotation-content__add-group-button"
             data-testid="quotation-add-group"
@@ -317,7 +317,7 @@
               <view class="quotation-content__composition-heading">
                 <view>
                   <text class="quotation-content__composition-title">本组项目</text>
-                  <text class="quotation-content__composition-meta">{{ groupSelectionCount(group.groupId) }} 项 · 仅保存在本机</text>
+                  <text class="quotation-content__composition-meta">{{ groupSelectionCount(group.groupId) }} 项 · 草稿</text>
                 </view>
                 <AppButton
                   v-if="groupSelectionCount(group.groupId) > 0"
@@ -397,11 +397,11 @@
                           <text v-for="component in selection.configuration.measures" :key="`measure-${component.providerComponentId || ''}-${component.providerReferenceId || ''}`" class="quotation-content__package-summary-row">机措 · {{ component.label }}</text>
                         </view>
                       </template>
-                      <text v-else class="quotation-content__package-summary-row">套餐尚未完成配置；现有本机记录已保留。</text>
+                      <text v-else class="quotation-content__package-summary-row">套餐尚未完成配置；已填写内容仍会保留。</text>
                     </view>
                     <view v-if="selection.kind === 'material' && selection.skuChoices?.length"
                       class="quotation-content__package-summary" :data-testid="`quotation-material-skus-${selection.selectionId}`">
-                      <text class="quotation-content__package-summary-note">本机 SKU 规格明细 · 尚未核验报价金额</text>
+                      <text class="quotation-content__package-summary-note">SKU 规格明细 · 尚未核验报价金额</text>
                       <view v-for="sku in selection.skuChoices" :key="sku.skuId"
                         class="quotation-content__package-summary-row">
                         <text>规格 SKU · {{ Object.values(sku.attributes).join(' / ') }} · {{ sku.quantity }} 件</text>
@@ -499,7 +499,7 @@
           :aria-expanded="p1ReviewExpanded"
           data-testid="quotation-p1-review-toggle"
           @tap="p1ReviewExpanded = !p1ReviewExpanded"
-        >{{ p1ReviewExpanded ? '收起本机报价核对' : '核对本机报价草稿' }}</AppButton>
+        >{{ p1ReviewExpanded ? '收起报价核对' : '核对报价草稿' }}</AppButton>
         <view v-if="p1ReviewExpanded" class="quotation-content__p1-review-body" data-testid="quotation-p1-review-details">
           <text class="quotation-content__p1-review-title">分组草稿核对 · 尚未提交</text>
           <text
@@ -507,35 +507,8 @@
             :key="group.groupId"
             class="quotation-content__p1-review-item"
             :data-testid="`quotation-p1-review-group-${group.groupId}`"
-          >维修部位 {{ group.position }} · {{ group.selectedCount }} 项 · {{ group.state === 'local_complete' ? '本机结构已填写' : (group.firstIssue || '请完善本组') }}</text>
-          <view v-if="props.skuLineageAudit && devReviewModeEnabled" class="quotation-content__p1-sku-audit" data-testid="quotation-p1-sku-identity-audit">
-            <text class="quotation-content__p1-review-title">材料身份对照 · 独立演示样本</text>
-            <text class="quotation-content__p1-review-item" data-testid="quotation-p1-sku-identity-count">{{ props.skuLineageAudit.total }} 条来源关系 · {{ props.skuLineageAudit.mismatched }} 条身份未对应</text>
-            <text
-              v-if="props.sameCatalogLineage?.state === 'ready_synthetic_only'"
-              class="quotation-content__p1-review-item"
-              data-testid="quotation-p1-same-catalog-count"
-            >同目录 ID 仿真：{{ props.sameCatalogLineage.audit.correlatedForDemo }}/{{ props.sameCatalogLineage.audit.total }} 条关联可对应 · 仅合成 SKU</text>
-            <text
-              v-else-if="props.sameCatalogLineage?.state === 'blocked'"
-              class="quotation-content__p1-review-warning"
-              data-testid="quotation-p1-same-catalog-blocked"
-            >同目录 SKU 仿真来源不完整，已阻止关联。</text>
-            <text
-              v-if="props.syntheticSkuReadiness?.state === 'synthetic_structure_only'"
-              class="quotation-content__p1-review-item"
-              data-testid="quotation-p1-sku-sale-options-ready"
-            >材料销售属性仿真：{{ props.syntheticSkuReadiness.materialSpuCount }} 个 SPU · {{ props.syntheticSkuReadiness.saleFieldCount }} 项属性 · {{ props.syntheticSkuReadiness.saleOptionCount }} 个选项 · 仅合成字典</text>
-            <text
-              v-else-if="props.syntheticSkuReadiness?.state === 'blocked_synthetic'"
-              class="quotation-content__p1-review-warning"
-              data-testid="quotation-p1-sku-sale-options-blocked"
-            >材料销售属性仿真：数据来源或工单上下文未对应，已阻止。</text>
-            <text class="quotation-content__p1-review-warning" data-testid="quotation-p1-sku-server-auth-blocked">租户/工单级 SKU 授权尚未验证；合成规格选项不可用于正式报价。</text>
-            <text class="quotation-content__p1-review-warning" data-testid="quotation-p1-sku-identity-warning">报价目录和独立 SKU 演示使用不同商品身份；不按名称或层级自动关联，也不视为 SKU 已配置。</text>
-          </view>
+          >维修部位 {{ group.position }} · {{ group.selectedCount }} 项 · {{ group.state === 'local_complete' ? '已填写' : (group.firstIssue || '请完善本组') }}</text>
           <text class="quotation-content__p1-review-warning" data-testid="quotation-p1-review-unverified">部分材料规格与价格待核实，暂不能提交正式报价。</text>
-          <text class="quotation-content__p1-review-footnote" data-testid="quotation-p1-review-order-blocked">体验数据仅保存在本机，未提交后台。</text>
         </view>
       </view>
 
@@ -801,7 +774,7 @@
         <view class="quotation-content__catalog-footer" data-testid="quotation-catalog-footer">
           <view class="quotation-content__catalog-footer-copy">
             <text class="quotation-content__catalog-footer-title">已选 {{ groupSelectionCount(activeCatalogGroupId || '') }} 项 · 保留在当前维修部位</text>
-            <text class="quotation-content__catalog-footer-note quotation-content__catalog-footer-note--last">本机草稿 · 不会创建服务器报价</text>
+            <text class="quotation-content__catalog-footer-note quotation-content__catalog-footer-note--last">草稿阶段 · 尚未提交报价</text>
           </view>
           <AppButton variant="secondary" data-testid="quotation-catalog-return" @tap="closeCatalog">返回报价</AppButton>
         </view>
@@ -834,7 +807,7 @@
               </view>
             </view>
             <AppStatus v-if="catalogBrowser.materialSkuMatch.state === 'matched'"
-              message="规格与原始 SKU 属性精确匹配，可记录到当前维修组的本机草稿；正式报价未开放。" quiet
+              message="规格与 SKU 属性精确匹配，可加入当前维修组的草稿；正式报价提交暂未开放。" quiet
               data-testid="quotation-sku-match-exact" />
             <AppStatus v-else-if="catalogBrowser.materialSkuMatch.state === 'incomplete'"
               message="请选择全部规格。该界面不会创建报价或订单。" quiet />
@@ -851,7 +824,7 @@
               <AppButton variant="secondary"
                 :disabled="!canEdit || !selectedMaterialAlreadyInGroup || skuLocalSaving"
                 data-testid="quotation-sku-save-local"
-                @tap="saveMatchedSkuToLocalDraft">保存 SKU 数量到本机</AppButton>
+                @tap="saveMatchedSkuToLocalDraft">保存 SKU 数量</AppButton>
             </view>
             <AppStatus v-if="!selectedMaterialAlreadyInGroup"
               message="先返回材料目录，使用“加入本组”添加该材料，再保存规格数量。" tone="warning" quiet />
@@ -861,7 +834,7 @@
           <AppStatus v-else :message="materialSkuPreviewStatusMessage"
             tone="warning" quiet data-testid="quotation-sku-preview-unavailable" />
           <view class="quotation-content__catalog-footer">
-            <text class="quotation-content__catalog-footer-note">本机 SKU 数量仅供编辑与恢复；价格、Order 与业务提交仍禁止。</text>
+            <text class="quotation-content__catalog-footer-note">当前可编辑数量；金额和正式订单提交暂未开放。</text>
             <AppButton variant="secondary" data-testid="quotation-sku-preview-return"
               @tap="catalogBrowser.backToList()">返回材料目录</AppButton>
           </view>
@@ -904,7 +877,7 @@
               <view class="quotation-content__package-hero-copy">
                 <text class="quotation-content__package-detail-title">{{ catalogBrowser.packageDetail.package.name }}</text>
                 <text class="quotation-content__package-meta">{{ catalogMetadata(catalogBrowser.packageDetail.package) }}</text>
-                <text class="quotation-content__package-detail-note">配置仅保存在目标部位组的本机草稿中，尚未提交正式报价。</text>
+                <text class="quotation-content__package-detail-note">配置已加入目标维修部位组草稿，尚未提交正式报价。</text>
               </view>
             </view>
 
@@ -997,7 +970,7 @@
         <view v-if="catalogBrowser.packageDetail" class="quotation-content__catalog-footer" data-testid="quotation-package-config-footer">
           <view class="quotation-content__catalog-footer-copy">
             <text class="quotation-content__catalog-footer-title">{{ selectedPackageLayerCount }}/{{ catalogBrowser.packageMaterialLayers.length }} 个材料层级已选</text>
-            <text class="quotation-content__catalog-footer-note">确认后只更新当前维修部位组的本机草稿</text>
+            <text class="quotation-content__catalog-footer-note">确认后更新当前维修部位组的草稿</text>
           </view>
           <AppButton
             class="quotation-content__package-config-commit"
@@ -1013,7 +986,6 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
-import { devReviewModeEnabled } from '@shared/ui/dev-review-mode'
 import { reviewLocalQuotationForP1 } from './local-review-closure'
 import emptyBoxArtwork from './empty-box-illustration.png'
 import type { SkuLineageAudit } from './sku-identity-review'
@@ -1533,7 +1505,7 @@ async function saveMatchedSkuToLocalDraft(): Promise<void> {
   const result = await composition.flushDraft()
   skuLocalSaving.value = false
   if (result.state !== 'succeeded') {
-    skuLocalSaveError.value = result.error?.message ?? '本机草稿保存失败，请重试。'
+    skuLocalSaveError.value = result.error?.message ?? '草稿保存失败，请重试。'
     return
   }
   catalogBrowser.backToList()

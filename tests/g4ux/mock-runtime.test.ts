@@ -359,7 +359,7 @@ describe('G4-UX business mock runtime', () => {
         displayNumber: '09077',
         taskLabel: '跟进签约',
         servicePartLabel: '屋面',
-        customerName: '演示客户甲',
+        customerName: '张先生',
         serviceDistrict: '朝阳区',
         serviceAddress: '日坛东一街',
         distanceText: '2.6 km',
@@ -371,7 +371,7 @@ describe('G4-UX business mock runtime', () => {
         displayNumber: '04009',
         taskLabel: '验收回款',
         servicePartLabel: '屋面',
-        customerName: '演示客户乙（长名称结构样本）',
+        customerName: '陈女士（东坝国际商贸中心业主）',
         serviceAddress: '东坝北路17号国际贸易中心A座',
         distanceText: '2.6 km',
         communityOrderCount: 2,
@@ -382,7 +382,7 @@ describe('G4-UX business mock runtime', () => {
         displayNumber: '11850',
         taskLabel: '待接单',
         servicePartLabel: '屋面',
-        customerName: '演示客户丙',
+        customerName: '李先生',
         serviceDistrict: '朝阳区',
         serviceAddress: '日坛国际贸易中心A座',
         distanceText: '4.2 km',
@@ -393,7 +393,7 @@ describe('G4-UX business mock runtime', () => {
         displayNumber: '16204',
         taskLabel: '待预约',
         servicePartLabel: '屋面',
-        customerName: '演示客户丁',
+        customerName: '王女士',
         serviceDistrict: '朝阳区',
         serviceAddress: '建国门外大街',
         distanceText: '5.1 km',
@@ -404,8 +404,8 @@ describe('G4-UX business mock runtime', () => {
         displayNumber: '17505',
         taskLabel: '暂不上门',
         servicePartLabel: '屋面',
-        customerName: '演示客户戊',
-        serviceAddress: '朝阳路演示地址',
+        customerName: '刘先生',
+        serviceAddress: '朝阳路16号',
         distanceText: '3.8 km',
         communityOrderCount: 1,
       },
@@ -413,9 +413,9 @@ describe('G4-UX business mock runtime', () => {
         id: mockDetailScenarioIds[5],
         displayNumber: '19006',
         taskLabel: '待下单',
-        customerName: '演示客户己',
+        customerName: '赵女士',
         serviceDistrict: '朝阳区',
-        serviceAddress: '朝阳区演示街',
+        serviceAddress: '朝阳区青年路',
         distanceText: '6.8 km',
         communityOrderCount: 0,
       },
@@ -424,7 +424,7 @@ describe('G4-UX business mock runtime', () => {
         displayNumber: '09090',
         taskLabel: '现场服务',
         servicePartLabel: '屋面',
-        customerName: '演示客户庚',
+        customerName: '周先生',
         serviceDistrict: '朝阳区',
         serviceAddress: '日坛路',
         distanceText: '0.9 km',
@@ -435,7 +435,7 @@ describe('G4-UX business mock runtime', () => {
         displayNumber: '00067',
         taskLabel: '上门服务',
         servicePartLabel: '屋面',
-        customerName: '演示客户辛',
+        customerName: '孙女士',
         serviceDistrict: '朝阳区',
         serviceAddress: '朝阳门地铁站',
         distanceText: '4.9 km',
@@ -446,7 +446,7 @@ describe('G4-UX business mock runtime', () => {
         displayNumber: '14825',
         taskLabel: '跟进方案',
         servicePartLabel: '卫生间',
-        customerName: '演示客户壬',
+        customerName: '何先生',
         serviceDistrict: '朝阳区',
         serviceAddress: '天福园小区',
         distanceText: '0.5 km',
@@ -457,7 +457,7 @@ describe('G4-UX business mock runtime', () => {
         displayNumber: '09224',
         taskLabel: '待评价',
         servicePartLabel: '屋面',
-        customerName: '演示客户癸',
+        customerName: '郑女士',
         serviceDistrict: '朝阳区',
         serviceAddress: '日坛国际贸易中心A座',
         distanceText: '1.6 km',
@@ -465,19 +465,19 @@ describe('G4-UX business mock runtime', () => {
       },
       {
         id: mockCommandScenarioIds.quotationFoundation,
-        displayNumber: 'MOCK-018',
+        displayNumber: '26018',
         taskLabel: '待下单',
-        customerName: '演示报价工单',
+        customerName: '吴先生',
         serviceDistrict: '朝阳区',
-        serviceAddress: '合成评审地址',
+        serviceAddress: '望京花园西区',
       },
       {
         id: mockCommandScenarioIds.continuousJourney,
-        displayNumber: 'MOCK-019',
+        displayNumber: '26019',
         taskLabel: '待预约',
-        customerName: '连续业务流程演示工单',
+        customerName: '蒋女士',
         serviceDistrict: '朝阳区',
-        serviceAddress: '合成连续流程地址',
+        serviceAddress: '北苑家园望春园',
       },
     ])
     expect(list.data?.items[0].id).not.toBe('mock-workflow-node-001')
@@ -503,7 +503,7 @@ describe('G4-UX business mock runtime', () => {
       },
       servicePartLabel: '屋面',
       serviceDistrict: '朝阳区',
-      customerName: '演示客户甲',
+      customerName: '张先生',
       serviceAddress: '日坛东一街',
       distanceText: '2.6 km',
       contact: { normalizedPhone: '13800000000', displayMask: '138****0000' },
@@ -512,7 +512,7 @@ describe('G4-UX business mock runtime', () => {
           id: 'mock-activity-001-003',
           title: '已完成现场服务',
           content: '现场服务节点已完成。',
-          owner: '演示系统',
+          owner: '调度中心',
           time: '2026-04-13 15:20',
           icon: 'location',
           tone: 'green',
@@ -522,7 +522,7 @@ describe('G4-UX business mock runtime', () => {
           id: 'mock-activity-001-002',
           title: '通话记录',
           content: '已与客户确认上门安排。',
-          owner: '演示技师',
+          owner: '现场工程师',
           time: '2026-04-13 14:32',
           icon: 'phone',
           tone: 'blue',
@@ -532,7 +532,7 @@ describe('G4-UX business mock runtime', () => {
           id: 'mock-activity-001-001',
           title: '跟进笔记',
           content: '客户确认按预约时间上门。',
-          owner: '演示技师',
+          owner: '现场工程师',
           time: '2026-04-13 14:10',
           icon: 'location',
           tone: 'orange',
@@ -588,7 +588,7 @@ describe('G4-UX business mock runtime', () => {
         displayNumber: '09077',
         taskLabel: '跟进签约',
         servicePartLabel: '屋面',
-        customerName: '演示客户甲',
+        customerName: '张先生',
         serviceDistrict: '朝阳区',
         serviceAddress: '日坛东一街',
         distanceText: '2.6 km',
@@ -600,7 +600,7 @@ describe('G4-UX business mock runtime', () => {
         displayNumber: '04009',
         taskLabel: '验收回款',
         servicePartLabel: '屋面',
-        customerName: '演示客户乙（长名称结构样本）',
+        customerName: '陈女士（东坝国际商贸中心业主）',
         serviceAddress: '东坝北路17号国际贸易中心A座',
         distanceText: '2.6 km',
         communityOrderCount: 2,
@@ -652,7 +652,7 @@ describe('G4-UX business mock runtime', () => {
         id: 'mock-activity-001-003',
         title: '已完成现场服务',
         content: '现场服务节点已完成。',
-        owner: '演示系统',
+        owner: '调度中心',
         time: '2026-04-13 15:20',
         icon: 'location',
         tone: 'green',
@@ -662,7 +662,7 @@ describe('G4-UX business mock runtime', () => {
         id: 'mock-activity-001-002',
         title: '通话记录',
         content: '已与客户确认上门安排。',
-        owner: '演示技师',
+        owner: '现场工程师',
         time: '2026-04-13 14:32',
         icon: 'phone',
         tone: 'blue',
@@ -672,7 +672,7 @@ describe('G4-UX business mock runtime', () => {
         id: 'mock-activity-001-001',
         title: '跟进笔记',
         content: '客户确认按预约时间上门。',
-        owner: '演示技师',
+        owner: '现场工程师',
         time: '2026-04-13 14:10',
         icon: 'location',
         tone: 'orange',
@@ -801,8 +801,8 @@ describe('G4-UX business mock runtime', () => {
       },
       taskLabel: '待下单',
       serviceDistrict: '朝阳区',
-      customerName: '演示客户己',
-      serviceAddress: '朝阳区演示街',
+      customerName: '赵女士',
+      serviceAddress: '朝阳区青年路',
       distanceText: '6.8 km',
       contact: { normalizedPhone: '13800000005', displayMask: '138****0005' },
       workflowNodes: [
@@ -837,7 +837,7 @@ describe('G4-UX business mock runtime', () => {
       mockAdapterOptions,
     )
 
-    for (const term of ['04009', '演示客户乙', '东坝北路']) {
+    for (const term of ['04009', '陈女士', '东坝北路']) {
       const result = await api.listWorkOrders({ page: 1, pageSize: 20, searchText: `  ${term}  ` })
       expect(result.data?.items).toHaveLength(1)
       expect(result.data?.items[0].id).toBe(mockWorkOrderIds[1])
@@ -1101,21 +1101,24 @@ describe('G4-UX business mock runtime', () => {
     })
 
     expect(serialized).toContain('09077')
-    expect(serialized).toContain('演示客户')
+    expect(serialized).toContain('张先生')
     expect(serialized).not.toMatch(/186\d{8}/)
     expect(serialized).not.toMatch(/18600372156|JSESSIONID|token/i)
   })
 
-  it('exposes the data-source switch only in non-production Home', () => {
+  it('contains no data-source controls in commercial Home, but keeps the controls in DEV QA', () => {
     const homePage = readFileSync(new URL('../../src/pages/index/index.vue', import.meta.url), 'utf8')
     const homeTemplate = homePage.slice(
       homePage.indexOf('<view v-else-if="showHome"'),
       homePage.indexOf('<view v-else class="login-page">'),
     )
-    expect(homeTemplate).toContain('v-if="mockControlVisible"')
-    expect(homeTemplate).toContain('Mock 数据')
-    expect(homeTemplate).toContain('{{ businessDataSourceLabel }}')
+    expect(homeTemplate).not.toContain('mockControlVisible')
+    expect(homeTemplate).not.toContain('Mock 数据')
+    expect(homeTemplate).not.toContain('businessDataSourceLabel')
     expect(homePage).not.toContain('handleHomeBrandTap')
-    expect(homePage).toContain('isBusinessMockDeveloperModeAvailable')
+    const qaPage = readFileSync(new URL('../../src/pages/dev/qa-console.vue', import.meta.url), 'utf8')
+    expect(qaPage).toContain('isBusinessMockDeveloperModeAvailable')
+    expect(qaPage).toContain('{{ businessDataSourceLabel }}')
+    expect(qaPage).toContain('dev-review-tools')
   })
 })

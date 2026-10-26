@@ -38,7 +38,7 @@
     <template #actions>
       <view v-if="firstStepActive" class="q01-footer" data-testid="quotation-first-step-footer">
         <view class="q01-footer-status" data-testid="quotation-footer-summary">
-          <text>本机草稿</text>
+          <text>报价草稿</text>
           <AppAmountValue
             class="q01-footer-status__amount"
             size="compact"
@@ -57,7 +57,7 @@
             @tap="advanceFirstRepairStep">下一步 · 添加报价项目 →</AppButton>
         </view>
         <text v-if="productReviewOnly || syntheticReviewEnabled || productionReadOnly"
-          class="q01-footer-caution">演示 / 只读环境不支持创建正式订单</text>
+          class="q01-footer-caution">当前仅可编辑草稿，正式提交暂未开放</text>
       </view>
       <view v-else class="quotation-workspace-footer-main">
       <view class="quotation-workspace-footer-summary" data-testid="quotation-footer-summary">
@@ -67,8 +67,8 @@
             tone="primary" :value="amountPresentation.value" />
         </view>
         <view class="quotation-workspace-footer-summary__copy">
-          <text class="quotation-workspace-footer-summary__title">本机报价草稿</text>
-          <text class="quotation-workspace-footer-summary__meta" :data-testid="productReviewOnly ? 'quotation-product-demo-read-only' : undefined">{{ composition.selectionCount }} 项 · {{ composition.groups.length }} 个部位组{{ productReviewOnly ? ' · 演示，不提交订单' : '' }}</text>
+          <text class="quotation-workspace-footer-summary__title">报价草稿</text>
+          <text class="quotation-workspace-footer-summary__meta" :data-testid="productReviewOnly ? 'quotation-product-demo-read-only' : undefined">{{ composition.selectionCount }} 项 · {{ composition.groups.length }} 个部位组</text>
         </view>
       </view>
       <AppButton
@@ -88,7 +88,7 @@
       <AppStatus
         v-if="productionReadOnly"
         class="quotation-production-read-only"
-        message="生产服务器报价只读；此处本机草稿不会提交、修改订单或推进流程。"
+        message="当前权限仅支持查看报价，无法提交、修改订单或推进流程。"
         tone="warning"
         quiet
         data-testid="quotation-production-read-only"
@@ -96,7 +96,7 @@
       <AppStatus
         v-else-if="syntheticReviewEnabled"
         class="quotation-production-read-only"
-        message="合成动态字段评审模式：正式订单提交与工作流命令已禁用。"
+        message="当前报价条件未满足，暂不能提交正式订单。"
         tone="warning"
         quiet
         data-testid="quotation-synthetic-submit-disabled"
@@ -107,7 +107,7 @@
       <AppStatus
         v-if="!productionReadOnly && !syntheticReviewEnabled && !productReviewOnly && !canOpenSubmit && !isInitialEmptyWorkbench && !hasQuantityErrors"
         class="quotation-submit-unavailable"
-        message="提交条件尚未满足；完成必需配置并通过本机校验后，此入口才会开放。"
+        message="提交条件尚未满足；完成必需配置并通过校验后，此入口才会开放。"
         tone="neutral"
         quiet
         data-testid="quotation-submit-unavailable"
@@ -116,7 +116,7 @@
     <view v-if="canOpenSubmit && quotationConfirmOpen" class="quotation-confirm-backdrop" role="presentation">
       <view class="quotation-confirm-sheet" role="dialog" aria-modal="true" data-testid="quotation-order-confirmation">
         <text class="quotation-confirm-title">确认提交订单/报价方案？</text>
-        <text class="workspace-state-copy">提交会创建服务器订单，并触发后端已验证的报价单生成、工单金额更新等副作用；不会完成当前工单工作流。提交后请勿重复操作。</text>
+        <text class="workspace-state-copy">提交后将创建正式订单并更新工单金额。请确认报价内容无误，避免重复提交。本操作不会自动完成当前任务。</text>
         <view class="quotation-confirm-actions">
           <AppButton variant="secondary" @tap="quotationConfirmOpen = false">返回检查</AppButton>
           <AppButton data-testid="quotation-order-confirm" :disabled="!canOpenSubmit" @tap="confirmQuotationSubmit">确认提交</AppButton>

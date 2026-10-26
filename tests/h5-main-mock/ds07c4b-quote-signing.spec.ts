@@ -31,7 +31,7 @@ for (const width of widths) {
     await expect(page.locator('.work-order-card').first()).toBeVisible()
     await page.locator('.search-input input').fill('MOCK-018')
     await page.locator('.search-button').click()
-    await page.locator('.work-order-card').filter({ hasText: '演示报价工单' }).click()
+    await page.locator('.work-order-card').filter({ hasText: '吴先生' }).click()
     await expect(page.locator('.summary-number')).toContainText('MOCK-018')
     await page.locator('.primary-task-action').click()
     await expect(page.getByTestId('quotation-order-hub')).toBeVisible()

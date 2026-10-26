@@ -37,13 +37,13 @@ for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }
 
     // 1. Synthetic authenticated shell → 2. Normal role-scoped WorkOrder list.
     await page.goto('/#/pages/index/index?devReview=1', { waitUntil: 'domcontentloaded' })
-    await expect(page.locator('.home-page')).toBeVisible()
+    await expect(page.getByTestId('qa-console')).toBeVisible()
     await expect(page.locator('.mock-source-indicator')).toContainText('Mock')
     await page.locator('.work-orders-entry').click()
     await expect(page).toHaveURL(/pages\/work-orders\/work-orders/)
     await page.locator('.search-input input').fill('MOCK-018')
     await page.locator('.search-button').click()
-    const otherWorkOrder = page.locator('.work-order-card').filter({ hasText: '演示报价工单' })
+    const otherWorkOrder = page.locator('.work-order-card').filter({ hasText: '吴先生' })
     await expect(otherWorkOrder).toBeVisible()
     await otherWorkOrder.click()
     await expect(page).toHaveURL(/pages\/work-orders\/detail/)
@@ -71,7 +71,7 @@ for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }
 
     // 4. Survey: WorkOrder identity stays 019; no estimate or job write.
     await expect(page).toHaveURL(/pages\/work-orders\/detail/)
-    await expect(page.locator('.summary-number')).toContainText('MOCK-019')
+    await expect(page.locator('.summary-number')).toContainText('#26019')
     await expect(page.locator('.current-task-card')).toContainText('现场勘察')
     await page.locator('.primary-task-action').click()
     await expect(page.locator('.uni-page-head__title')).toContainText('现场勘查')
@@ -93,7 +93,7 @@ for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }
     // 5. Quotation re-entry preserves the same WorkOrder and upstream
     // context, but must not manufacture an authoritative Order or price.
     await expect(page).toHaveURL(/pages\/work-orders\/detail/)
-    await expect(page.locator('.summary-number')).toContainText('MOCK-019')
+    await expect(page.locator('.summary-number')).toContainText('#26019')
     await expect(page.locator('.current-task-card')).toContainText('报价')
     await page.locator('.primary-task-action').click()
     await expect(page.getByTestId('quotation-order-hub')).toBeVisible()
@@ -152,7 +152,7 @@ for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }
     await page.locator('.work-orders-entry').click()
     await page.locator('.search-input input').fill('MOCK-018')
     await page.locator('.search-button').click()
-    await page.locator('.work-order-card').filter({ hasText: '演示报价工单' }).click()
+    await page.locator('.work-order-card').filter({ hasText: '吴先生' }).click()
     await expect(page.locator('.summary-number')).toContainText('MOCK-018')
     await page.locator('.primary-task-action').click()
     await expect(page.getByTestId('quotation-order-hub')).toBeVisible()

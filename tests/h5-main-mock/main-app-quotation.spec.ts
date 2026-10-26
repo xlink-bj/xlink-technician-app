@@ -50,7 +50,7 @@ test.afterEach(async ({ page }, info) => {
 
 test('real authenticated shell uses local-only Mock quotation with zero external intent', async ({ page }, info) => {
   await page.goto('/#/pages/index/index?devReview=1', { waitUntil: 'domcontentloaded' })
-  const home = page.locator('.home-page')
+  const home = page.getByTestId('qa-console')
   await expect(home, 'DEV-only fixture must bootstrap the REAL App without phone login').toBeVisible()
   await expect(page.locator('.mock-source-indicator')).toContainText('Mock')
   const quote = page.locator('.mock-action-scenario').filter({ hasText: '报价草稿' })
@@ -162,7 +162,7 @@ for (const viewport of [
   test(`two repair groups preserve independent selections and package layers at ${viewport.width}x${viewport.height}`, async ({ page }, info) => {
     await page.setViewportSize(viewport)
     await page.goto('/#/pages/index/index?devReview=1', { waitUntil: 'domcontentloaded' })
-    await expect(page.locator('.home-page')).toBeVisible()
+    await expect(page.getByTestId('qa-console')).toBeVisible()
     await page.locator('.mock-action-scenario').filter({ hasText: '报价草稿' }).click()
     await expect(page.getByTestId('quotation-state-ready')).toBeVisible()
 
@@ -361,7 +361,7 @@ for (const viewport of [
 
 test('same Mock-018 quotation is reachable from normal work order list and detail', async ({ page }, info) => {
   await page.goto('/#/pages/index/index?devReview=1', { waitUntil: 'domcontentloaded' })
-  await expect(page.locator('.home-page')).toBeVisible()
+  await expect(page.getByTestId('qa-console')).toBeVisible()
   await page.locator('.work-orders-entry').click()
   await expect(page).toHaveURL(/pages\/work-orders\/work-orders/)
   await expect(page.locator('.work-orders-page')).toBeVisible()
@@ -369,9 +369,9 @@ test('same Mock-018 quotation is reachable from normal work order list and detai
   await page.locator('.search-button').click()
   // The list intentionally renders an abbreviated numeric card number;
   // verify full MOCK-018 identity in Detail, not in its summary card.
-  const row = page.locator('.work-order-card').filter({ hasText: '演示报价工单' })
+  const row = page.locator('.work-order-card').filter({ hasText: '吴先生' })
   await expect(row, 'quotation fixture must exist in the normal role-scoped list').toBeVisible()
-  await expect(row).toContainText('演示报价工单')
+  await expect(row).toContainText('吴先生')
   await info.attach('normal-work-order-list-390', {
     body: await page.screenshot({ fullPage: true }),
     contentType: 'image/png',
@@ -407,7 +407,7 @@ test('legacy standalone Mock appointment and survey routes retain their title bu
     { label: '现场勘查', title: '工单表单' },
   ]) {
     await page.goto('/#/pages/index/index?devReview=1', { waitUntil: 'domcontentloaded' })
-    await expect(page.locator('.home-page')).toBeVisible()
+    await expect(page.getByTestId('qa-console')).toBeVisible()
     const entry = page.locator('.mock-action-scenario').filter({ hasText: scenario.label })
     await expect(entry).toBeVisible()
     await entry.click()
@@ -428,7 +428,7 @@ test('legacy standalone Mock appointment and survey routes retain their title bu
 
 test('one MOCK-019 WorkOrder progresses Appointment → Survey → Quotation without business commands', async ({ page }, info) => {
   await page.goto('/#/pages/index/index?devReview=1', { waitUntil: 'domcontentloaded' })
-  await expect(page.locator('.home-page')).toBeVisible()
+  await expect(page.getByTestId('qa-console')).toBeVisible()
   const journey = page.getByTestId('mock-continuous-journey-entry')
   await expect(journey).toContainText('MOCK-019')
   await journey.click()
@@ -442,7 +442,7 @@ test('one MOCK-019 WorkOrder progresses Appointment → Survey → Quotation wit
 
   await page.getByTestId('mock-journey-advance').click()
   await expect(page).toHaveURL(/pages\/work-orders\/detail/)
-  await expect(page.locator('.summary-number')).toContainText('MOCK-019')
+  await expect(page.locator('.summary-number')).toContainText('#26019')
   await expect(page.locator('.current-task-card')).toContainText('现场勘察')
   await page.locator('.primary-task-action').click()
   await expect(page).toHaveURL(/mock-work-order-019-continuous-journey/)
@@ -477,7 +477,7 @@ test('one MOCK-019 WorkOrder progresses Appointment → Survey → Quotation wit
 
   await page.getByTestId('mock-journey-advance').click()
   await expect(page).toHaveURL(/pages\/work-orders\/detail/)
-  await expect(page.locator('.summary-number')).toContainText('MOCK-019')
+  await expect(page.locator('.summary-number')).toContainText('#26019')
   await expect(page.locator('.current-task-card')).toContainText('报价')
   await page.locator('.primary-task-action').click()
   await expect(page.getByTestId('quotation-order-hub')).toBeVisible()
@@ -501,7 +501,7 @@ test('one MOCK-019 WorkOrder progresses Appointment → Survey → Quotation wit
   await expect(page.getByTestId('quotation-first-step-quantity').locator('input')).toHaveValue('')
 
   await expect(page.getByTestId('quotation-first-repair-part-step')).toBeVisible()
-  await expect(page.locator('.q01-screen__disclosure')).toContainText('本机草稿不会自动提交')
+  await expect(page.locator('.q01-screen__disclosure')).toContainText('草稿不会自动提交')
   await expect(page.getByTestId('action-workspace-submit')).toHaveCount(0)
   await info.attach('019-quotation', { body: await page.screenshot({ fullPage: true }), contentType: 'image/png' })
 
@@ -519,7 +519,7 @@ test('one MOCK-019 WorkOrder progresses Appointment → Survey → Quotation wit
   // After reload, R1 Mock may render the original workbench or the Q01 first-step.
   // Both must independently disclose their local-only nature; neither may submit.
   if (await page.getByTestId('quotation-first-repair-part-step').count()) {
-    await expect(page.locator('.q01-screen__disclosure')).toContainText('本机草稿不会自动提交')
+    await expect(page.locator('.q01-screen__disclosure')).toContainText('草稿不会自动提交')
   } else {
     await expect(page.getByTestId('quotation-product-demo-read-only')).toContainText('演示，不提交订单')
     // uni-app renders <uni-button>; Playwright's native :disabled predicate

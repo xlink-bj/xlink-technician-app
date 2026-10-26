@@ -5,7 +5,7 @@
       <view class="survey-complete-check" aria-hidden="true"><AppIcon name="complete" :size="30" /></view>
       <text class="survey-complete-title">确认完成勘查？</text>
       <text class="survey-complete-description">
-        完成前请核对现场记录。确认后将按照当前工单流程处理，与保存本机草稿不同。
+        完成前请核对现场记录。确认后将按照当前工单流程处理，草稿保存不等于节点完成。
       </text>
       <view class="survey-complete-actions">
         <AppButton variant="secondary" block data-testid="survey-complete-cancel"

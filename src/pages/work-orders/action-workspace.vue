@@ -29,11 +29,6 @@
     @mode-change="quotationChoiceVisible = $event"
     @mock-read-retry="loadMockOrderRead"
   >
-    <template #after-content>
-      <MockCommercialFlowLinks v-if="mockJourney?.stage === 'quotation' && devReviewModeEnabled"
-        :work-order-id="String(routeId ?? '')" :user-id="String(session.session?.user.id ?? '')"
-        :role-id="String(session.session?.currentRole?.id ?? '')" />
-    </template>
   </QuotationOrderHub>
 
   <QuotationActionWorkspace
@@ -60,9 +55,6 @@
     </template>
     <template #after-content>
       <AStageMockQuoteOrderPanel v-if="aStageMockOrderEnabled" />
-      <MockCommercialFlowLinks v-if="mockJourney?.stage === 'quotation' && devReviewModeEnabled"
-        :work-order-id="String(routeId ?? '')" :user-id="String(session.session?.user.id ?? '')"
-        :role-id="String(session.session?.currentRole?.id ?? '')" />
     </template>
   </QuotationActionWorkspace>
 
@@ -194,7 +186,7 @@
       class="mock-journey-progress app-surface"
       data-testid="mock-journey-progress"
     >
-      <text class="mock-journey-progress__note">体验流程 · 记录仅保存在本机，未提交后台。</text>
+      <text class="mock-journey-progress__note">完成当前步骤后，可继续处理后续任务。</text>
       <text class="mock-journey-progress__note" data-testid="mock-journey-save-state">
         {{ workspace.draftStatus === 'saved_local' || workspace.draftStatus === 'restore_available'
           ? '已保存，可继续下一步'
@@ -264,11 +256,9 @@ import { readAStageMockOrderForActor, isAStageMockOrderEnabled } from '@app/a-st
 import { advanceMockJourneyWithSavedDraft } from '@app/mock-journey-closure'
 import { readMockJourneyContext, type MockJourneyContextSummary } from '@app/mock-journey-context'
 import { canAdoptMockSurveySuggestion } from '@app/mock-journey-quote-suggestion'
-import MockCommercialFlowLinks from '@features/work-orders/quotation/MockCommercialFlowLinks.vue'
 import AStageMockQuoteOrderPanel from '@features/work-orders/quotation/AStageMockQuoteOrderPanel.vue'
 import { hasAuthenticatedSession } from '@features/home/access'
 import { isProductionReadOnlyRuntime } from '@shared/config'
-import { devReviewModeEnabled } from '@shared/ui/dev-review-mode'
 import {
   parseActionWorkspaceId,
   parseActionWorkspaceNodeId,
@@ -396,7 +386,7 @@ function adoptSurveySuggestion(): void {
   if (!suggested) return
   const result = quotationComposition.createGroup({ repairParts: [suggested.targetRepairPartCode] })
   suggestionFeedback.value = result.state === 'succeeded'
-    ? '已加入本机报价草稿。请补充部位描述、工程量及报价项目。'
+    ? '已加入报价草稿。请补充部位描述、工程量及报价项目。'
     : '未能采用建议，请手动创建报价部位。'
 }
 
@@ -527,7 +517,7 @@ async function advanceJourney(): Promise<void> {
   // FormData → Workflow commands with exact readback; never a real write.
   const saved = await workspace.flushDraft()
   if (saved.state !== 'succeeded') {
-    journeyFeedback.value = '本机记录保存失败，当前节点未改变。请重试。'
+    journeyFeedback.value = '记录保存失败，当前节点未改变。请重试。'
     isNavigating.value = false
     return
   }
@@ -536,12 +526,12 @@ async function advanceJourney(): Promise<void> {
     () => workspace.isCurrentMockJourneyScope(stage))
   if (next.state !== 'advanced') {
     journeyFeedback.value = next.reason === 'missing_draft'
-      ? '尚无可核对的本机表单记录。请填写内容并保存后继续。'
+      ? '尚无已保存的表单记录。请填写内容并保存后继续。'
       : next.reason === 'read_failed'
-        ? '本机记录读取失败，节点未改变。请重试。'
+        ? '记录读取失败，节点未改变。请重试。'
         : next.reason === 'protocol_failed'
-          ? '模拟表单或流程校验未通过。未提交真实后台，请刷新检查当前节点。'
-        : '身份或本机阶段发生变化，无法继续；节点未改变。'
+          ? '表单或流程校验未通过，当前节点未改变。请刷新后重试。'
+        : '当前账号或处理阶段已改变，请返回工单重新进入。'
     isNavigating.value = false
     return
   }

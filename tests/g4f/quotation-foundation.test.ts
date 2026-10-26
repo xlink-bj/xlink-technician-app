@@ -98,7 +98,7 @@ describe('G4-F Phase 1A quotation action foundation', () => {
         if (request.path === `basic/serviceAppointment/queryById/${encodeURIComponent(workOrderId)}`) {
           return {
             data: {
-              serviceAppointment: { _id: workOrderId, orderNum: 'MOCK-018', name: '演示报价工单', workflowRunId: 'mock-run' },
+              serviceAppointment: { _id: workOrderId, orderNum: 'MOCK-018', name: '吴先生', workflowRunId: 'mock-run' },
               workflow: { _id: 'mock-run' },
               workflowNode: [{ _id: workflowNodeId, state: 0, nodeDef: { nodeType: 'placeOrder', name: '报价', viewableRoleIds: ['synthetic-role'] } }],
             },
@@ -232,7 +232,7 @@ describe('G4-F Phase 1A quotation action foundation', () => {
     expect(workspace.addQuotationCatalogSelection(groupId, 'material', 'unlisted-material').state).toBe('failed_terminal')
     expect(JSON.stringify(workspace.quotationComposition.draft)).toBe(beforeRejectedPackage)
 
-    expect(workspace.detail?.customerName).toBe('演示报价工单')
+    expect(workspace.detail?.customerName).toBe('吴先生')
     expect(workspace.canSubmit).toBe(false)
     expect(isMockOwnedRead('__mock/quotation/action-content')).toBe(true)
     expect(realRequest).not.toHaveBeenCalled()
@@ -366,9 +366,9 @@ describe('G4-F Phase 1A quotation action foundation', () => {
       readFile(new URL('../../src/pages/work-orders/action-workspace.vue', import.meta.url), 'utf8'),
       readFile(new URL('../../src/features/work-orders/quotation/QuotationActionWorkspace.vue', import.meta.url), 'utf8'),
     ])
-    expect(component).toContain('本机草稿')
+    expect(component).toContain('报价草稿')
     expect(component).toContain('报价工作台')
-    expect(component).toContain('不会创建服务器报价')
+    expect(component).toContain('提交后才会产生正式订单')
     expect(component).not.toContain('MOCK_PRODUCT_REVIEW')
     expect(component).not.toContain('H5_VISUAL_PROXY')
     expect(commandPort).toContain('interface QuotationOrderCommandPort')

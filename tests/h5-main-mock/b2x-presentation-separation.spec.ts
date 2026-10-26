@@ -24,20 +24,21 @@ async function forbidExternalRequests(page: Page) {
 }
 
 for (const width of [375, 390]) {
-  test(`B2-X commercial mode hides QA details without hiding provenance (${width})`, async ({ page }, info) => {
+  test(`B2-X2 commercial mode contains only business information (${width})`, async ({ page }, info) => {
     await page.setViewportSize({ width, height: width === 375 ? 667 : 844 })
     const assertSafe = await forbidExternalRequests(page)
     await page.goto('/#/pages/index/index', { waitUntil: 'domcontentloaded' })
     await expect(page.locator('.home-page')).toBeVisible()
     await expect(page.getByTestId('dev-review-tools')).toHaveCount(0)
-    await expect(page.getByTestId('business-mode-provenance')).toContainText('体验数据')
+    await expect(page.getByTestId('business-mode-provenance')).toHaveCount(0)
     await expect(page.locator('.local-draft-panel')).toHaveCount(0)
+    await expect(page.locator('.home-page')).not.toContainText(/开发验收|测试数据|体验数据|Mock|DEV|未提交后台/)
     await captureEvidence(page, info, `commercial-home-${width}`)
 
     await page.locator('.work-orders-entry').click()
     await page.locator('.search-input input').fill('04009')
     await page.locator('.search-button').click()
-    await page.locator('.work-order-card').filter({ hasText: '演示客户乙' }).click()
+    await page.locator('.work-order-card').filter({ hasText: '陈女士' }).click()
     // The signing read store checks the currently verified work-order list/detail.
     // Wait for the real detail to load before navigating to its scoped Order.
     await expect(page.locator('.summary-number')).toContainText('04009')
@@ -49,16 +50,17 @@ for (const width of [375, 390]) {
       uni.navigateTo({ url: '/pages/work-orders/signing-order-read?workOrderId=mock-work-order-002&orderId=mock-official-order-001' })
     })
     await expect(page.getByTestId('signing-order-read-verified')).toBeVisible()
-    await expect(page.getByTestId('signing-order-read-display-number')).toContainText('本机订单示例')
-    await expect(page.getByTestId('signing-order-read-verified')).toContainText('未提交后台')
+    await expect(page.getByTestId('signing-order-read-display-number')).toContainText('BJ202610260001')
+    await expect(page.getByTestId('signing-order-read-verified')).not.toContainText(/示例|Mock|DEV|未提交后台/)
     await expect(page.getByTestId('signing-read-amount-unverified')).toContainText('金额待核验')
     await expect(page.getByTestId('signing-read-order-amount')).toHaveCount(0)
     await page.getByTestId('signing-order-audit-toggle').click()
     await expect(page.getByTestId('signing-order-read-r1-stage')).not.toContainText('R1')
     await expect(page.getByTestId('signing-command-preflight')).toHaveCount(0)
     await page.getByTestId('signing-contract-read-request').click()
-    await expect(page.getByTestId('signing-contract-matched')).toContainText('本机合同示例')
+    await expect(page.getByTestId('signing-contract-matched')).toContainText('HT202610260001')
     await expect(page.locator('.signing-read-page')).not.toContainText('DEV-SYNTHETIC')
+    await expect(page.locator('.signing-read-page')).not.toContainText(/开发核验|演示|测试数据|Mock|体验数据/)
     await expect(page.getByTestId('signing-contract-matched')).not.toContainText('R1')
     await expect(page.getByTestId('signing-contract-matched')).not.toContainText('状态 2')
     // uni-app renders <uni-button>, not a native HTML <button>.
@@ -70,20 +72,24 @@ for (const width of [375, 390]) {
   })
 }
 
-test('B2-X developer inspection is explicit, DEV-only and reversible', async ({ page }, info) => {
+test('B2-X2 technical inspection stays in its own DEV-only route', async ({ page }, info) => {
   const assertSafe = await forbidExternalRequests(page)
   await page.goto('/#/pages/index/index?devReview=1', { waitUntil: 'domcontentloaded' })
+  await expect(page.getByTestId('qa-console')).toBeVisible()
+  await expect(page.locator('.home-page')).toHaveCount(0)
   await expect(page.getByTestId('dev-review-tools')).toBeVisible()
   await expect(page.getByTestId('mock-continuous-journey-entry')).toBeVisible()
   await expect(page.getByTestId('business-mode-provenance')).toHaveCount(0)
-  await captureEvidence(page, info, 'dev-qa-home')
-  // The opt-in persists across local page reloads, never across browser tabs.
+  await captureEvidence(page, info, 'isolated-qa-console')
+  // Technical controls are located by route, not injected into Home after opt-in.
   await page.reload({ waitUntil: 'domcontentloaded' })
   await expect(page.getByTestId('dev-review-tools')).toBeVisible()
-  await page.goto('/#/pages/index/index?devReview=0', { waitUntil: 'domcontentloaded' })
+  await page.getByTestId('qa-return-to-app').click()
+  await expect(page.locator('.home-page')).toBeVisible()
   await expect(page.getByTestId('dev-review-tools')).toHaveCount(0)
-  await expect(page.getByTestId('business-mode-provenance')).toBeVisible()
+  await expect(page.getByTestId('business-mode-provenance')).toHaveCount(0)
   await page.reload({ waitUntil: 'domcontentloaded' })
   await expect(page.getByTestId('dev-review-tools')).toHaveCount(0)
+  await expect(page.locator('.home-page')).not.toContainText(/开发验收|测试数据|体验数据|Mock|DEV|未提交后台/)
   assertSafe()
 })

@@ -5,10 +5,7 @@
         <text class="special-forms__title">{{ kind === 'repeat' ? '现场复检' : '现场记录' }}</text>
         <text class="special-forms__subtitle">{{ kind === 'repeat' ? '每次复检单独保存，确认齐全后完成' : '填写现场情况，保存后可补充多条记录' }}</text>
       </view>
-      <text class="special-forms__scope">体验数据 · 仅本机</text>
     </view>
-    <AppStatus v-if="devReviewModeEnabled" class="special-forms__notice" quiet
-      message="开发核验：本机模拟记录不会提交后台或改变真实工作流。" />
     <view v-if="loading" class="special-forms__message" data-testid="a-special-loading">正在读取表单…</view>
     <view v-else-if="error" class="special-forms__message special-forms__message--error"
       data-testid="a-special-error" role="alert">
@@ -19,7 +16,7 @@
       <AppStatus v-if="operationFeedback" tone="warning" quiet
         :message="operationFeedback" data-testid="a-special-operation-feedback" />
       <view class="special-forms__task-state" data-testid="a-special-task-state">
-        <text class="special-forms__task-marker">{{ viewState.receiptPending ? '结果待核对' : viewState.nodeActive ? '正在填写' : '本机记录已完成' }}</text>
+        <text class="special-forms__task-marker">{{ viewState.receiptPending ? '结果待核对' : viewState.nodeActive ? '正在填写' : '记录已完成' }}</text>
         <text class="special-forms__task-detail">{{ viewState.receiptPending ? '保留原有记录，先核对回执，勿重复提交' : viewState.nodeActive ? '保存每条记录后，确认齐全再完成节点' : '记录已锁定，可查看已保存内容' }}</text>
       </view>
       <view class="special-forms__section-heading">
@@ -55,7 +52,7 @@
         data-testid="a-special-receipt-pending" />
       <view v-if="viewState.receiptPending" class="special-forms__recovery" data-testid="a-special-recovery">
         <template v-if="viewState.pendingRecoverable">
-          <text class="special-forms__finish-copy">{{ uxStateLanguage.pendingReceipt }}可只读核对最新记录，确认后仅清理本机防重回执。</text>
+          <text class="special-forms__finish-copy">{{ uxStateLanguage.pendingReceipt }}可只读核对最新记录，确认后解除重复提交保护。</text>
           <template v-if="viewState.pendingNeedsOriginalText">
             <text class="special-forms__label">原保存的现场情况 <text class="special-forms__required">*</text></text>
             <AppTextarea :model-value="summary" :maxlength="4000" :disabled="busy"
@@ -105,7 +102,6 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
-import { devReviewModeEnabled } from '@shared/ui/dev-review-mode'
 import type { WorkflowNodeRead } from '@shared/ports'
 import { createDefaultStoragePort } from '@app/composition'
 import {

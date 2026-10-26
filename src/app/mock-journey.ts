@@ -13,13 +13,16 @@ import { resetMockCommercialReview } from '@app/mock-commercial-journey'
 /** Review-only visual navigation. Never calls Order/Workflow/ExtForm commands. */
 export function isMockJourneyAvailable(): boolean { return isDevMockJourneyEnabled() }
 
+/** Internal route identity exposed to the separate QA console, never to UI copy. */
+export const devQaJourneyWorkOrderId = mockJourneyWorkOrderId
+
 export function mockJourneyContext(workOrderId: string | null | undefined) {
   if (!isDevMockJourneyEnabled() || workOrderId !== mockJourneyWorkOrderId) return null
   const stage = mockJourneyStage()
   return {
     stage,
     workOrderId: mockJourneyWorkOrderId,
-    nextLabel: stage === 'appointment' ? '模拟进入现场勘察' : stage === 'survey' ? '模拟进入报价' : '',
+    nextLabel: stage === 'appointment' ? '继续现场勘察' : stage === 'survey' ? '继续填写报价' : '',
   }
 }
 

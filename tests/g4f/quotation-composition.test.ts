@@ -105,7 +105,7 @@ describe('G4-F quotation composition model and local draft recovery', () => {
     })
     const serialized = JSON.stringify(stored.data)
     expect(serialized).not.toMatch(/price|subtotal|discount|tax|revision|sessionRef|token/i)
-    expect(serialized).not.toContain('演示报价工单')
+    expect(serialized).not.toContain('吴先生')
   })
 
   it('validates quantity deterministically without imposing scale or business precision rules', () => {

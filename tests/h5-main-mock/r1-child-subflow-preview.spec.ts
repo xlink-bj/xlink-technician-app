@@ -13,7 +13,7 @@ test('DEV Mock renders actual child panel for unknown, cancelled, empty and fail
   })
 
   await page.goto('/#/pages/index/index?devReview=1', { waitUntil: 'domcontentloaded' })
-  await expect(page.locator('.home-page')).toBeVisible()
+  await expect(page.getByTestId('qa-console')).toBeVisible()
   await page.goto('/#/pages/work-orders/detail?id=mock-work-order-006', { waitUntil: 'domcontentloaded' })
   await expect(page.getByTestId('child-subflow-mock-preview-entry')).toBeVisible()
   await expect(page.getByTestId('production-child-form-view')).toHaveCount(0)
@@ -54,7 +54,7 @@ test('inaccessible pending-acceptance card has no empty navigator URL or detail 
   page.on('console', msg => { if (msg.type() === 'error') consoleErrors.push(msg.text()) })
   await page.goto('/#/pages/index/index?devReview=1', { waitUntil: 'domcontentloaded' })
   await page.goto('/#/pages/work-orders/work-orders', { waitUntil: 'domcontentloaded' })
-  const pending = page.locator('.work-order-card').filter({ hasText: '演示客户丙' })
+  const pending = page.locator('.work-order-card').filter({ hasText: '李先生' })
   await expect(pending).toBeVisible()
   await pending.locator('.card-customer').click()
   await expect(page).toHaveURL(/pages\/work-orders\/work-orders/)

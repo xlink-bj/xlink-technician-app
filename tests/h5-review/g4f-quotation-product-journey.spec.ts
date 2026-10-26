@@ -104,7 +104,7 @@ for (const viewport of viewports) {
     await page.getByTestId('commercial-review-start-quotation').click()
     await expect(page).toHaveURL(/#\/pages\/product\/quotation/)
     await expect(page.getByTestId('commercial-review-quotation')).toBeVisible()
-    await expect(page.getByTestId('action-workspace-context')).toContainText('演示报价工单')
+    await expect(page.getByTestId('action-workspace-context')).toContainText('吴先生')
     await expect(page.getByTestId('action-workspace-context')).toContainText('MOCK-018')
     await expect(page.getByTestId('quotation-state-ready')).toBeVisible()
     await expect(page.getByTestId('quotation-add-group')).toBeVisible()

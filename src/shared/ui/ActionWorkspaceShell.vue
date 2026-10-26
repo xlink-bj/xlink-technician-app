@@ -20,7 +20,7 @@
                 <text class="action-workspace-context-survey-number">{{ displayNumber || '工单' }}</text>
                 <text class="action-workspace-context-survey-customer">{{ customerName || '报价任务' }}</text>
               </view>
-              <view class="action-workspace-context-quotation-state">本机报价</view>
+              <view class="action-workspace-context-quotation-state">报价中</view>
             </view>
             <view v-if="serviceDistrict || serviceAddress" class="q01-context-address" data-testid="q01-source-address">
               <AppIcon name="location" :size="16" color="var(--app-content-muted-ink)" />
@@ -34,18 +34,13 @@
               <text class="action-workspace-context-survey-number">{{ displayNumber || '工单' }}</text>
               <text class="action-workspace-context-survey-customer">{{ customerName || '报价任务' }}</text>
             </view>
-            <view class="action-workspace-context-quotation-state">本机报价</view>
+            <view class="action-workspace-context-quotation-state">报价中</view>
           </view>
           <text v-if="!commercialSurvey && !commercialQuotation" class="action-workspace-context-label">当前工单</text>
           <view v-if="!commercialSurvey && !commercialQuotation" class="action-workspace-context-row">
             <text class="action-workspace-context-customer">{{ customerName || '工单' }}</text>
             <text v-if="displayNumber" class="action-workspace-context-number">#{{ displayNumber }}</text>
           </view>
-        </view>
-        <view v-if="commercialSurvey && demoSurvey" class="action-workspace-survey-demo-note" data-testid="survey-commercial-draft-provenance">
-          <AppIcon name="warning" :size="15" color="var(--app-color-primary)" />
-          <text class="action-workspace-survey-demo-note-label">本机草稿</text>
-          <text>· 未提交后台</text>
         </view>
 
         <AppStatus
@@ -67,7 +62,7 @@
         <AppStatus
           v-else-if="lifecycle !== 'succeeded' && displayedDraftStatus === 'restore_available'"
           class="action-workspace-draft-status"
-          message="已恢复本地草稿"
+          message="已恢复草稿"
           variant="strip"
           icon="restore"
           quiet
@@ -75,7 +70,7 @@
         <AppStatus
           v-else-if="lifecycle !== 'succeeded' && displayedDraftStatus === 'save_failed'"
           class="action-workspace-draft-status"
-          message="本地草稿保存失败"
+          message="草稿保存失败"
           tone="warning"
           variant="strip"
           icon="warning"

@@ -42,8 +42,8 @@ describe('Action Workspace Shell structural contract', () => {
     expect(shell).toContain('displayedDraftStatus === \'restore_available\'')
     expect(shell).toContain('displayedDraftStatus === \'save_failed\'')
     expect(count(shell, '已自动保存')).toBe(1)
-    expect(count(shell, '已恢复本地草稿')).toBe(1)
-    expect(count(shell, '本地草稿保存失败')).toBe(1)
+    expect(count(shell, '已恢复草稿')).toBe(1)
+    expect(count(shell, '草稿保存失败')).toBe(1)
     expect(shell).not.toContain('displayedDraftStatus === \'dirty\'')
     for (const page of pages) {
       expect(page).not.toContain('draftMessage')

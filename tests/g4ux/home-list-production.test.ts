@@ -41,11 +41,13 @@ describe('G4-UX Phase B2 Home', () => {
   })
 
   it('exposes local draft diagnostics only through the non-production developer surface', () => {
-    expect(homeTemplate).toContain('LocalDraftDiagnosticsPanel')
-    expect(homeTemplate).toContain('v-if="mockControlVisible"')
-    expect(homePage).toContain('useLocalDraftDiagnosticsStore')
-    expect(homePage).toContain('session.session?.user.id')
-    expect(homePage).toContain('isBusinessMockDeveloperModeAvailable')
+    const qaConsole = readFileSync('src/pages/dev/qa-console.vue', 'utf8')
+    expect(homeTemplate).not.toContain('LocalDraftDiagnosticsPanel')
+    expect(homeTemplate).not.toContain('mock-source-indicator')
+    expect(homeTemplate).not.toContain('dev-review-tools')
+    expect(qaConsole).toContain('LocalDraftDiagnosticsPanel')
+    expect(qaConsole).toContain('isBusinessMockDeveloperModeAvailable')
+    expect(qaConsole).toContain('import.meta.env.DEV')
     expect(homePage).not.toContain('uni.getStorage')
     expect(homePage).not.toContain('uni.setStorage')
   })

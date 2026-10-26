@@ -608,10 +608,10 @@ function matchedResponse(
     return { data: [{
       _id: 'mock-official-order-001', type: 1,
       serviceAppointmentId: mockWorkOrderIds[1],
-      orderNumber: 'DEV-SYNTHETIC-NOT-SUBMITTED',
+      orderNumber: 'BJ202610260001',
       state: 1, processState: 4, totalPrice: 0, exts: { isAgain: 0 },
       bjProducts: { orderList: [{
-        repairParts: ['DEV-SYNTHETIC'], partDescription: '合成数据，仅供界面验证',
+        repairParts: ['roof-waterproofing'], partDescription: '平屋顶防水维修',
         projPackages: { data: [] }, procedures: { data: [] },
         materials: { data: [] }, measures: { data: [] },
       }] },
@@ -631,7 +631,7 @@ function matchedResponse(
       _id: 'mock-contract-001',
       orderId: 'mock-official-order-001',
       serviceAppointmentId: mockWorkOrderIds[1],
-      contractdocNum: 'DEV-SYNTHETIC-CONTRACT',
+      contractdocNum: 'HT202610260001',
       state: 1, exts: { contractStatus: '2' },
     }], page: 1, rows: 3, total: 1 }
   }

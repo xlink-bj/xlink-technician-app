@@ -49,6 +49,12 @@
       }
     },
     {
+      "path": "pages/dev/qa-console",
+      "style": {
+        "navigationBarTitleText": "开发 QA 控制台"
+      }
+    },
+    {
       "path": "pages/work-orders/action-time",
       "style": {
         "navigationBarTitleText": "选择时间"

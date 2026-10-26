@@ -30,9 +30,8 @@ for (const viewport of [{width:375,height:667},{width:390,height:844}]) {
     await page.locator('.action-content-field--note textarea').fill('平屋顶渗漏 · 本机编辑')
     await page.getByTestId('mock-journey-advance').click()
     await expect(page).toHaveURL(/work-orders\/detail/)
-    await expect(page.getByTestId('mock-journey-workflow-state')).toContainText('Mock · 未提交后台')
-    await expect(page.getByTestId('mock-stage-appointment')).toContainText('本机已走过')
-    await expect(page.getByTestId('mock-stage-survey')).toContainText('当前模拟节点')
+    await expect(page.getByTestId('mock-journey-workflow-state')).toHaveCount(0)
+    await expect(page.locator('.current-task-card')).toContainText('现场勘察')
     await info.attach(`mock-survey-step-${viewport.width}`, {body: await page.screenshot({fullPage:true}), contentType:'image/png'})
 
     await page.locator('.primary-task-action').click()
@@ -52,10 +51,11 @@ for (const viewport of [{width:375,height:667},{width:390,height:844}]) {
     await page.getByTestId('dynamic-field-squareMeter').locator('input').fill('18.5')
     await page.getByTestId('mock-journey-advance').click()
     await expect(page).toHaveURL(/work-orders\/detail/)
-    await expect(page.getByTestId('mock-stage-survey')).toContainText('本机已走过')
-    await expect(page.getByTestId('mock-stage-quotation')).toContainText('当前模拟节点')
+    await expect(page.locator('.current-task-card')).toContainText('报价')
     await page.locator('.primary-task-action').click()
     await expect(page.getByTestId('quotation-order-hub')).toBeVisible()
+    await expect(page.getByTestId('mock-commerce-handoff')).toHaveCount(0)
+    await page.goto('/#/pages/dev/qa-console', { waitUntil: 'domcontentloaded' })
     await expect(page.getByTestId('mock-commerce-handoff')).toBeVisible()
     await expect(page.getByTestId('mock-commerce-progress')).toContainText('已核对 0/3')
     await page.getByTestId('mock-commerce-confirm-quotation').click()
@@ -75,8 +75,7 @@ for (const viewport of [{width:375,height:667},{width:390,height:844}]) {
     await page.getByTestId('sku-mock-confirm-review').click()
     await expect(page.getByTestId('sku-mock-review-feedback')).toContainText('已暂停')
 
-    const quoteRoute = '/#/pages/work-orders/action-workspace?id=mock-work-order-019-continuous-journey&node=mock-workflow-node-019-place-order&action=place_order&entry=orders'
-    await page.goto(quoteRoute, {waitUntil:'domcontentloaded'})
+    await page.goto('/#/pages/dev/qa-console', {waitUntil:'domcontentloaded'})
     await expect(page.getByTestId('mock-commerce-progress')).toContainText('已暂停')
     await page.getByTestId('mock-commerce-toggle-pause').click()
     await expect(page.getByTestId('mock-commerce-progress')).toContainText('已核对 1/3')
@@ -88,7 +87,7 @@ for (const viewport of [{width:375,height:667},{width:390,height:844}]) {
     await page.getByTestId('sku-mock-confirm-review').click()
     await expect(page.getByTestId('sku-mock-review-feedback')).toContainText('SKU 身份已核对')
 
-    await page.goto(quoteRoute, {waitUntil:'domcontentloaded'})
+    await page.goto('/#/pages/dev/qa-console', {waitUntil:'domcontentloaded'})
     await expect(page.getByTestId('mock-commerce-progress')).toContainText('已核对 2/3')
     await expect(page.getByTestId('mock-journey-signing-review')).toContainText('本机报价未提交')
     await page.getByTestId('mock-journey-signing-review').click()
@@ -115,7 +114,7 @@ for (const viewport of [{width:375,height:667},{width:390,height:844}]) {
       body: await page.getByTestId('signing-mock-contract').screenshot(), contentType:'image/png',
     })
 
-    await page.goto(quoteRoute, {waitUntil:'domcontentloaded'})
+    await page.goto('/#/pages/dev/qa-console', {waitUntil:'domcontentloaded'})
     await expect(page.getByTestId('mock-commerce-progress')).toContainText('三个资料核对点均完成')
     await page.getByTestId('mock-commerce-revoke-last').click()
     await expect(page.getByTestId('mock-commerce-progress')).toContainText('已核对 2/3')
@@ -124,10 +123,11 @@ for (const viewport of [{width:375,height:667},{width:390,height:844}]) {
     await page.getByTestId('signing-mock-order-mock-official-order-019-b').click()
     await page.getByTestId('signing-mock-confirm-relation').click()
     await expect(page.getByTestId('signing-mock-review-feedback')).toContainText('本机演示资料闭环完成')
-    await page.goto(quoteRoute, {waitUntil:'domcontentloaded'})
+    await page.goto('/#/pages/dev/qa-console', {waitUntil:'domcontentloaded'})
     await expect(page.getByTestId('mock-commerce-progress')).toContainText('三个资料核对点均完成')
     await page.goto('/#/pages/work-orders/detail?id=mock-work-order-019-continuous-journey', {waitUntil:'domcontentloaded'})
-    await expect(page.getByTestId('mock-journey-commercial-summary')).toContainText('非业务完成或已签约')
+    await expect(page.getByTestId('mock-commerce-handoff')).toHaveCount(0)
+    await expect(page.locator('.current-task-card')).toBeVisible()
     await info.attach(`mock-local-closure-${viewport.width}`, {body: await page.screenshot({fullPage:true}), contentType:'image/png'})
 
     expect(external).toEqual([])

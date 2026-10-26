@@ -1,7 +1,7 @@
 <template>
   <view class="r1-field-editor" data-testid="r1-local-field-editor">
-    <text class="r1-field-editor__title">本机字段草稿 · {{ intent.title }}</text>
-    <text class="r1-field-editor__hint">体验表单 · 记录仅保存在本机，未提交后台。</text>
+    <text class="r1-field-editor__title">填写现场记录 · {{ intent.title }}</text>
+    <text class="r1-field-editor__hint">填写并保存现场信息，完成前请确认内容准确。</text>
     <template v-for="field in fields" :key="field.fieldId">
       <AppField v-if="field.supported" :label="field.label" :required="field.required">
         <AppMultiChoiceGroup v-if="field.type === 'checkbox'" :options="field.options"
@@ -15,20 +15,20 @@
           :model-value="scalarValue(field.valueKey)"
           @update:model-value="set(field.valueKey,$event)" />
         <AppTextarea v-else-if="field.type === 'textarea'"
-          :model-value="scalarValue(field.valueKey)" placeholder="仅存入本机草稿"
+          :model-value="scalarValue(field.valueKey)" placeholder="请填写现场信息"
           @update:model-value="set(field.valueKey,$event)" />
-        <AppInput v-else :model-value="scalarValue(field.valueKey)" placeholder="填写本机草稿"
+        <AppInput v-else :model-value="scalarValue(field.valueKey)" placeholder="请填写信息"
           @update:model-value="set(field.valueKey,$event)" />
       </AppField>
       <view v-else class="r1-field-editor__unsupported" :data-testid="`r1-field-unsupported-${field.fieldId}`">
         <text>{{ field.label }} · {{ field.reason || '暂不支持' }}</text>
       </view>
     </template>
-    <text class="r1-field-editor__hint" data-testid="r1-local-field-result">当前字段只完成本地编辑；数据校验不代表服务端可接受。</text>
+    <text class="r1-field-editor__hint" data-testid="r1-local-field-result">请确认填写内容准确，完成操作前可继续修改。</text>
     <text v-if="error" class="r1-field-editor__hint" data-testid="r1-field-local-validation">{{ error }}</text>
     <view class="r1-field-editor__buttons">
       <AppButton variant="secondary" size="compact" :disabled="saving" :loading="saving"
-        @tap="save">保存本机字段草稿</AppButton>
+        @tap="save">保存草稿</AppButton>
       <AppButton variant="text" size="compact" :disabled="saving" @tap="emit('close')">取消</AppButton>
     </view>
   </view>
@@ -75,7 +75,7 @@ async function save(){
   try {
     const saved=await draft.saveDraftValues(props.intent.localId,props.definition,values.value)
     if(saved)emit('close')
-    else error.value=draft.message||'本机草稿保存失败，未执行业务操作。'
+    else error.value=draft.message||'草稿保存失败，请稍后重试。'
   }finally{saving.value=false}
 }
 </script>

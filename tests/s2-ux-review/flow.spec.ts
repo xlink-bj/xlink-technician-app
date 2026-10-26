@@ -56,7 +56,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
     try {
       // Already accepted W/A are shown only as visual reference, NOT redesigned.
       await page.goto('/#/pages/index/index?devReview=1', { waitUntil: 'domcontentloaded' })
-      await expect(page.locator('.home-page')).toBeVisible()
+      await expect(page.getByTestId('qa-console')).toBeVisible()
       await expect(page.locator('.mock-source-indicator')).toContainText('Mock')
       await page.locator('.work-orders-entry').click()
       await expect(page).toHaveURL(/pages\/work-orders\/work-orders/)
@@ -73,7 +73,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       await page.getByTestId('mock-journey-advance').click()
 
       await expect(page).toHaveURL(/pages\/work-orders\/detail/)
-      await expect(page.locator('.summary-number')).toContainText('MOCK-019')
+      await expect(page.locator('.summary-number')).toContainText('#26019')
       await expect(page.locator('.current-task-card')).toContainText('现场勘察')
       await page.locator('.primary-task-action').click()
       await expect(page.locator('.uni-page-head__title')).toContainText('现场勘查')
@@ -348,7 +348,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       await page.locator('.work-orders-entry').click()
       await page.locator('.search-input input').fill('04009')
       await page.locator('.search-button').click()
-      await page.locator('.work-order-card').filter({ hasText: '演示客户乙' }).click()
+      await page.locator('.work-order-card').filter({ hasText: '陈女士' }).click()
       await expect(page.locator('.summary-number')).toContainText('04009')
       await page.evaluate(() => {
         const uni = (window as Window & {
@@ -360,14 +360,13 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
         })
       })
       await expect(page.getByTestId('signing-order-read-verified')).toBeVisible()
-      await expect(page.getByTestId('signing-command-preflight-toggle')).toBeVisible()
-      await expect(page.getByTestId('signing-command-preflight-details')).toBeHidden()
+      await expect(page.getByTestId('signing-command-preflight-toggle')).toHaveCount(0)
       await expect(page.getByTestId('signing-order-read-display-number'))
-        .toContainText('本机订单示例')
-      await expect(page.getByTestId('signing-contract-fixture-label')).toContainText('非真实订单')
+        .toContainText('BJ202610260001')
+      await expect(page.getByTestId('signing-contract-fixture-label')).toHaveCount(0)
       await capture('11-signing-actual-order', 'C', '签约只读工作台', '真正的主 App 订单核验页面')
       await page.getByTestId('signing-contract-read-request').click()
-      await expect(page.getByTestId('signing-contract-matched')).toContainText('DEV-SYNTHETIC-CONTRACT')
+      await expect(page.getByTestId('signing-contract-matched')).toContainText('HT202610260001')
       await expect(page.getByTestId('signing-read-stage-title')).toContainText('签约处理中')
       await page.getByTestId('signing-order-read-contract-status').scrollIntoViewIfNeeded()
       await capture('12-signing-actual-contract', 'C', '合同核验反馈', '来源受限且真实签约仍不可执行')
