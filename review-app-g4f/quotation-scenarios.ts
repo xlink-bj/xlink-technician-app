@@ -11,6 +11,26 @@ function succeeded<T>(data: T): OperationSnapshot<T> {
   return { state: 'succeeded', data }
 }
 
+// Mirror the non-credential actor digest used by the Stage A duplicate-write
+// receipt protocol. Synthetic review fixtures must remain valid under the
+// exact actor scope or the real guard correctly rejects their readback.
+function syntheticReceiptActorFingerprint(): string {
+  const identity = JSON.stringify([
+    'g4f-mock-review-session', 'g4f-mock-review-user', 'synthetic-role', null,
+  ])
+  const payload = JSON.stringify(identity)
+  let first = 2166136261
+  let second = 2246822519
+  for (let index = 0; index < payload.length; index += 1) {
+    const code = payload.charCodeAt(index)
+    first ^= code
+    first = Math.imul(first, 16777619)
+    second ^= code + index
+    second = Math.imul(second, 3266489917)
+  }
+  return `${(first >>> 0).toString(16).padStart(8, '0')}${(second >>> 0).toString(16).padStart(8, '0')}`
+}
+
 export function reviewScenarioFromLocation(): G4fReviewScenario {
   if (typeof window === 'undefined') return 'empty'
   const value = new URLSearchParams(window.location.search).get('scenario')
@@ -154,6 +174,7 @@ export function seedG4fReviewDraft(storage: StoragePort, scenario: G4fReviewScen
         workOrderId: String(identity.workOrderId),
         workflowNodeId: String(identity.workflowNodeId),
         fingerprint: 'synthetic-pending-readback-fingerprint',
+        authorizationFingerprint: syntheticReceiptActorFingerprint(),
         draftVersion: draft.draftVersion,
         state: 'write_succeeded_readback_pending',
         orderId: 'order-synthetic-review',

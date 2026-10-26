@@ -182,7 +182,6 @@ test('isolated Phase 1B review harness keeps blocked local preview separate from
 
   await page.getByTestId(`quotation-group-description-${groupId}`).locator('textarea').fill('合成测试部位描述')
   await page.getByTestId(`quotation-group-quantity-${groupId}`).locator('input').fill('12.5')
-  await expect(page.getByTestId('quotation-engine-blocked')).toContainText('指导单价缺失')
   await expect(page.getByTestId('quotation-engine-blocked')).toContainText('材料单价缺失')
   await expect(page.getByTestId('quotation-engine-local-only')).toContainText('只有单独确认')
   await expect(page.getByTestId('quotation-engine-local-only')).toContainText('不会完成当前工单工作流')

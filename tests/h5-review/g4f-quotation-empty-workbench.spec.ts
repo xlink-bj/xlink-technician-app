@@ -183,7 +183,7 @@ test('first repair-part step validates existing group context and returns from c
   await expect(step).toContainText('防水维修部位')
   await expect(step).toContainText('维修部位描述')
   await expect(step).toContainText('工程量')
-  await expect(step).toContainText('选择产品')
+  await expect(step).toContainText('添加报价项目')
   await expect(step.getByTestId('quotation-first-step-description').getByRole('textbox')).toHaveValue('')
   await expect(step.getByTestId('quotation-first-step-quantity').getByRole('spinbutton')).toHaveValue('')
   await expect(page.getByTestId('quotation-first-step-select-products')).toBeEnabled()

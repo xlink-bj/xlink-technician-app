@@ -117,6 +117,7 @@
       <view class="quotation-confirm-sheet" role="dialog" aria-modal="true" data-testid="quotation-order-confirmation">
         <text class="quotation-confirm-title">确认提交订单/报价方案？</text>
         <text class="workspace-state-copy">提交会创建服务器订单，并触发后端已验证的报价单生成、工单金额更新等副作用；不会完成当前工单工作流。提交后请勿重复操作。</text>
+        <text v-if="!canOpenSubmit" class="workspace-state-copy">本机提交条件已变化，请返回核对；当前确认操作已禁用。</text>
         <view class="quotation-confirm-actions">
           <AppButton variant="secondary" @tap="quotationConfirmOpen = false">返回检查</AppButton>
           <AppButton data-testid="quotation-order-confirm" :disabled="!canOpenSubmit" @tap="confirmQuotationSubmit">确认提交</AppButton>
@@ -201,7 +202,9 @@ const submitGate = computed(() => evaluateQuotationSubmitGuard({
 const canOpenSubmit = computed(() => submitGate.value === 'ready')
 // Never reuse an old confirmation for a different draft revision.
 watch(() => composition.draft?.draftVersion, () => { quotationConfirmOpen.value = false })
-watch(canOpenSubmit, allowed => { if (!allowed) quotationConfirmOpen.value = false })
+// Keep an already-open confirmation visible if an asynchronous local check
+// temporarily invalidates submission. The confirm control stays disabled and
+// confirmQuotationSubmit rechecks the guard; no stale action can dispatch.
 
 async function returnToGroup(groupId: string): Promise<void> {
   scrollIntoView.value = ''

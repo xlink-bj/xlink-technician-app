@@ -181,7 +181,10 @@ test('Phase B0 golden path: workbench → catalog → package configuration → 
   await expect(page.getByTestId('quotation-catalog-item-package-mock-catalog-package-basic')).toContainText('屋面防水修缮方案（示例）')
   await expect(page.getByTestId('quotation-catalog-item-package-mock-catalog-package-basic')).toContainText('金额待核验')
   await expect(page.getByTestId('quotation-catalog-search')).toBeVisible()
-  await expect(page.getByTestId('quotation-catalog-footer')).toContainText('2 项已选')
+  // B1 puts the selected count by the active repair part, leaving the footer
+  // focused on returning to the same local draft group.
+  await expect(page.getByTestId('quotation-catalog-target')).toContainText('已选 2 项')
+  await expect(page.getByTestId('quotation-catalog-footer')).toContainText('返回当前维修部位')
   await captureFocusedViewport(page, 'quotation-catalog-item-package-mock-catalog-package-basic', 'b02-visual-catalog-390.png')
 
   await page.getByTestId('quotation-package-detail-mock-catalog-package-basic').click()
