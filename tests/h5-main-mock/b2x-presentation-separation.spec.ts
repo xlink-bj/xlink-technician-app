@@ -50,7 +50,10 @@ for (const width of [375, 390]) {
     await page.getByTestId('signing-contract-read-request').click()
     await expect(page.getByTestId('signing-contract-matched')).toContainText('本机合同示例')
     await expect(page.locator('.signing-read-page')).not.toContainText('DEV-SYNTHETIC')
-    await expect(page.getByTestId('signing-order-read-sign-disabled')).toBeDisabled()
+    // uni-app renders <uni-button>, not a native HTML <button>.
+    // Assert its actual disabled and ARIA-disabled guard attributes.
+    await expect(page.getByTestId('signing-order-read-sign-disabled')).toHaveAttribute('disabled', 'true')
+    await expect(page.getByTestId('signing-order-read-sign-disabled')).toHaveAttribute('aria-disabled', 'true')
     await info.attach(`commercial-c01-${width}`, {
       body: await page.screenshot({ fullPage: true }), contentType: 'image/png',
     })
