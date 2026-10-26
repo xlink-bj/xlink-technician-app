@@ -29,3 +29,14 @@ export function setDevReviewModeFromRoute(value: unknown): void {
     } catch { /* session storage may be blocked; in-memory mode still works */ }
   }
 }
+
+// H5 router may reuse the active Home page on hash-only query navigation,
+// without invoking uni-app's onLoad again. Honor an explicit opt-in/out
+// immediately; normal route changes with no flag retain the session choice.
+if (import.meta.env.DEV && typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+  window.addEventListener('hashchange', () => {
+    const hash = window.location.hash
+    if (!hash.startsWith('#/pages/index/index?')) return
+    setDevReviewModeFromRoute(new URLSearchParams(hash.slice(hash.indexOf('?') + 1)).get('devReview'))
+  })
+}

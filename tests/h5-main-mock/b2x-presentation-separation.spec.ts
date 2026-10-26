@@ -33,6 +33,9 @@ for (const width of [375, 390]) {
     await page.locator('.search-input input').fill('04009')
     await page.locator('.search-button').click()
     await page.locator('.work-order-card').filter({ hasText: '演示客户乙' }).click()
+    // The signing read store checks the currently verified work-order list/detail.
+    // Wait for the real detail to load before navigating to its scoped Order.
+    await expect(page.locator('.summary-number')).toContainText('04009')
     await page.evaluate(() => {
       const uni = (window as Window & {
         uni?: { navigateTo: (options: { url: string }) => void }
