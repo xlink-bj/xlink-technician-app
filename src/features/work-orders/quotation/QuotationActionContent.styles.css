@@ -1170,11 +1170,11 @@
   background:#eef5ff; border:1px solid #cfe2ff; border-radius:12px; box-shadow:none;
 }
 .quotation-content__catalog-target-title {
-  color:#183f76; font-size:14px; font-weight:750; line-height:1.4;
+  color:#183f76; font-size:15px; font-weight:750; line-height:1.4;
 }
 .quotation-content__catalog-target-count {
   color:#1768c5; background:#fff; border:1px solid #d6e8ff; border-radius:8px;
-  font-size:11px; padding:6px 8px;
+  font-size:12px; padding:6px 8px;
 }
 .quotation-content__catalog-intro { display:none; }
 .quotation-content__catalog-main {
@@ -1185,7 +1185,7 @@
   background:#f8fafc; border:1px solid #dce5f0;
   border-radius:10px; min-height:44px; margin-top:10px; padding:0 9px;
 }
-.quotation-content__search-input { color:#263a53; font-size:13px; }
+.quotation-content__search-input { color:#263a53; font-size:14px; }
 .quotation-content__search-action {
   background:#eaf3ff; color:#286fc8; min-height:44px; border-radius:8px;
 }
@@ -1197,21 +1197,21 @@
 .quotation-content__category--active { color:#236fe0; border-bottom-color:#236fe0; }
 .quotation-content__catalog-section-heading { margin:8px 4px 7px; padding:0; min-height:21px; }
 .quotation-content__catalog-section-title { font-size:15px; font-weight:760; }
-.quotation-content__catalog-facets { width:66px; background:#f4f7fb; }
+.quotation-content__catalog-facets { width:70px; background:#f4f7fb; }
 .quotation-content__catalog-facet {
-  min-height:46px; font-size:12px; padding:9px 6px;
-  color:#8090a5; border-left-width:3px;
+  min-height:48px; font-size:13px; padding:10px 5px;
+  color:#6d7e95; border-left-width:3px;
 }
 .quotation-content__catalog-facet--selected {
   color:#236fce; background:#eaf3ff; border-left-color:#236fce;
 }
 .quotation-content__catalog-facet--disabled { color:#a4aebd; opacity:.8; }
 .quotation-content__catalog-browser--faceted .quotation-content__catalog-list {
-  margin-left:68px; width:calc(100% - 68px);
+  margin-left:72px; width:calc(100% - 72px);
 }
-.quotation-content__catalog-browser--faceted .quotation-content__catalog-state { margin-left:68px; }
+.quotation-content__catalog-browser--faceted .quotation-content__catalog-state { margin-left:72px; }
 .quotation-content__catalog-browser--faceted .quotation-content__catalog-item {
-  min-height:141px; padding:11px 9px 52px;
+  min-height:130px; padding:11px 9px 50px;
   margin-bottom:8px; border:1px solid #e1e8f1;
   border-radius:11px; background:#fff;
 }
@@ -1224,7 +1224,7 @@
   font-size:15px; font-weight:750; line-height:1.38; color:#20334f;
 }
 .quotation-content__catalog-browser--faceted .quotation-content__catalog-kind-pill {
-  font-size:10px; border-radius:5px; color:#3878c6;
+  font-size:11px; border-radius:5px; color:#3878c6;
   background:#edf4ff; padding:2px 5px;
 }
 .quotation-content__catalog-browser--faceted .quotation-content__catalog-item-detail {
@@ -1235,10 +1235,10 @@
   bottom:8px; left:9px; right:9px; min-height:38px;
 }
 .quotation-content__catalog-browser--faceted .quotation-content__catalog-item-price-state {
-  font-size:10.5px; color:#8695a8;
+  font-size:12px; color:#657991;
 }
 .quotation-content__catalog-browser--faceted .quotation-content__catalog-item-action {
-  min-width:100px; min-height:44px; font-size:12px;
+  min-width:100px; min-height:44px; font-size:13px;
   border-radius:9px; padding:0 7px;
 }
 

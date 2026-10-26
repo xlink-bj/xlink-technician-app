@@ -153,6 +153,19 @@ page {
   --app-transaction-money-prominent-size: 23px;
   --app-transaction-money-ink: var(--app-text-strong);
 
+  /* B2: task-first commercial experience. Shared semantics across the
+     quotation catalogue, order list and signing read-only journey. These
+     values affect presentation only, never authority or persistence. */
+  --app-journey-emphasis: var(--app-craft-ink);
+  --app-journey-subtle: var(--app-craft-secondary);
+  --app-journey-context: var(--app-craft-action-surface);
+  --app-journey-context-border: var(--app-color-primary-border);
+  --app-journey-context-ink: var(--app-craft-action);
+  --app-journey-body-size: 14px;
+  --app-journey-label-size: 12px;
+  --app-journey-title-size: 20px;
+  --app-journey-tap-height: 48px;
+
 }
 
 /* Surface / card grammar */

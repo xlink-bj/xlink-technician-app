@@ -800,11 +800,10 @@
 
         <view class="quotation-content__catalog-footer" data-testid="quotation-catalog-footer">
           <view class="quotation-content__catalog-footer-copy">
-            <text class="quotation-content__catalog-footer-title">返回当前维修部位</text>
-            <text class="quotation-content__catalog-footer-note">已选项目会保留在当前分组</text>
+            <text class="quotation-content__catalog-footer-title">已选 {{ groupSelectionCount(activeCatalogGroupId || '') }} 项 · 保留在当前维修部位</text>
             <text class="quotation-content__catalog-footer-note quotation-content__catalog-footer-note--last">本机草稿 · 不会创建服务器报价</text>
           </view>
-          <AppButton variant="secondary" data-testid="quotation-catalog-return" @tap="closeCatalog">返回工作台</AppButton>
+          <AppButton variant="secondary" data-testid="quotation-catalog-return" @tap="closeCatalog">返回报价</AppButton>
         </view>
       </template>
 

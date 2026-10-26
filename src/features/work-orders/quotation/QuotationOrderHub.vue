@@ -8,17 +8,17 @@
           <text class="quotation-hub__eyebrow">当前工单</text>
           <text class="quotation-hub__work-order-number">{{ displayNumber || workOrderId }}</text>
         </view>
-        <AppMetaTag class="quotation-hub__work-order-state" label="工单" />
+        <AppMetaTag class="quotation-hub__work-order-state" label="当前" />
       </view>
       <view v-if="customerName" class="quotation-hub__work-order-meta">
         <view class="quotation-hub__work-order-meta-cell">
-          <text class="quotation-hub__meta-label">客户名称</text>
+          <text class="quotation-hub__meta-label">客户</text>
           <text class="quotation-hub__work-order-customer">{{ customerName }}</text>
         </view>
       </view>
     </AppRecordCard>
     <view v-if="isVisualSample" class="quotation-hub__sample-label" role="status" data-testid="quotation-hub-design-sample">
-      DEV 视觉样例 · 模拟数据，非服务器真实订单
+      模拟订单记录 · 未向后台创建订单
     </view>
     <AppStatus
       v-if="!choosingMode && !isVisualSample"
@@ -90,30 +90,19 @@
           <text class="quotation-hub__order-number">{{ order.displayNumber || order.id }}</text>
           <view class="quotation-hub__order-pills">
             <AppMetaTag class="quotation-hub__order-badge" tone="info"
-              :label="isVisualSample ? (order.id.endsWith('-1') ? '订单 1' : '订单 2') : mockJourneyOrder ? '本机 Mock 订单' : '正式订单 · 只读'" />
+              :label="isVisualSample ? '演示订单' : mockJourneyOrder ? '本机合成 · 未提交' : '正式订单 · 只读'" />
             <AppMetaTag v-if="isVisualSample" class="quotation-hub__order-badge"
               :tone="order.id.endsWith('-1') ? 'warning' : 'success'"
               :label="order.id.endsWith('-1') ? '演示 · 待签约' : '演示 · 已签约'" />
           </view>
         </view>
         <text class="quotation-hub__order-subtitle">{{ isVisualSample ? order.groups[0]?.partDescription || '演示维修方案' : mockJourneyOrder ? '合成数据，仅用于本机流程验收 · 未提交后台' : '当前权限可见 · 状态未核实时不推断签约进度' }}</text>
-        <view class="quotation-hub__order-lines">
-          <view class="quotation-hub__order-line">
-            <text>产品总额</text>
-            <text class="quotation-hub__order-line-value">{{ money(order.originPrice) }}</text>
-          </view>
-          <view class="quotation-hub__order-line quotation-hub__order-line--total">
-            <text>实际金额</text>
+        <view class="quotation-hub__order-summary">
+          <view class="quotation-hub__amount-block">
+            <text class="quotation-hub__amount-label">{{ isVisualSample || mockJourneyOrder ? '演示金额' : '订单金额' }}</text>
             <AppAmountValue class="quotation-hub__order-amount" size="prominent" tone="primary" :value="money(order.totalPrice)" />
           </view>
-          <view class="quotation-hub__order-line">
-            <text>维修部位组</text>
-            <text class="quotation-hub__order-line-value">{{ order.contentSupported ? `${order.groups.length} 组` : '明细待核验' }}</text>
-          </view>
-          <view v-if="order.updateTime" class="quotation-hub__order-line">
-            <text>更新时间</text>
-            <text class="quotation-hub__order-line-value">{{ order.updateTime }}</text>
-          </view>
+          <text class="quotation-hub__order-group-count">{{ order.contentSupported ? `${order.groups.length} 个维修部位组` : '明细待核验' }}</text>
         </view>
         <view class="quotation-hub__order-actions">
           <AppButton variant="secondary" :data-testid="`quotation-hub-view-${order.id}`"
@@ -134,6 +123,12 @@
         </view>
         <view v-if="expandedId === order.id" class="quotation-hub__details"
           :data-testid="`quotation-hub-details-${order.id}`">
+          <view class="quotation-hub__order-line">
+            <text>产品总额</text><text class="quotation-hub__order-line-value">{{ money(order.originPrice) }}</text>
+          </view>
+          <view v-if="order.updateTime" class="quotation-hub__order-line">
+            <text>更新时间</text><text class="quotation-hub__order-line-value">{{ order.updateTime }}</text>
+          </view>
           <text v-if="order.groups.length === 0" class="quotation-hub__detail-note">该订单暂无可识别的维修分组。</text>
           <view v-for="(group, index) in order.groups" :key="index" class="quotation-hub__detail-group">
             <text class="quotation-hub__detail-title">{{ group.partDescription || `维修部位 ${index + 1}` }}</text>
@@ -296,13 +291,13 @@ watch(() => props.workOrderId, () => {
   font-family:-apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
 }
 .quotation-hub__work-order {
-  display:flex; flex-direction:column; padding:15px 15px 13px;
+  display:flex; flex-direction:column; padding:12px 15px 11px;
 
 }
-.quotation-hub__work-order-top { display:flex; align-items:center; gap:12px; min-height:57px; }
+.quotation-hub__work-order-top { display:flex; align-items:center; gap:12px; min-height:48px; }
 .quotation-hub__house {
   display:flex; align-items:center; justify-content:center; flex:none;
-  width:43px; height:43px; border-radius:12px; background:#fff1e5;
+  width:40px; height:40px; border-radius:11px; background:#fff1e5;
 }
 .quotation-hub__work-order-copy { display:flex; flex:1; min-width:0; flex-direction:column; gap:5px; }
 .quotation-hub__eyebrow,.quotation-hub__meta-label {
@@ -313,10 +308,10 @@ watch(() => props.workOrderId, () => {
 }
 .quotation-hub__work-order-state { align-self: flex-start; flex: none; }
 .quotation-hub__work-order-meta {
-  border-top:1px solid #eff2f7; margin-top:11px; padding-top:12px;
+  margin-top:7px; padding:0 0 0 52px;
   display:flex; gap:20px;
 }
-.quotation-hub__work-order-meta-cell { display:flex; flex-direction:column; min-width:0; gap:5px; }
+.quotation-hub__work-order-meta-cell { display:flex; flex-direction:row; align-items:baseline; min-width:0; gap:8px; }
 .quotation-hub__work-order-customer { color:var(--app-text-strong); font-size:14px; font-weight:650; line-height:1.35; }
 .quotation-hub__sample-label {
   margin:9px 0 0; padding:4px 9px; background:transparent;
@@ -348,8 +343,15 @@ watch(() => props.workOrderId, () => {
 .quotation-hub__order-badge { flex: 0 0 auto; }
 .quotation-hub__order-subtitle {
   display:block; color:#7e8da6; font-size:12px; line-height:1.45;
-  padding:7px 0 11px;
+  padding:7px 0 6px;
 }
+.quotation-hub__order-summary {
+  display:flex; align-items:flex-end; justify-content:space-between;
+  gap:12px; min-width:0; padding:5px 0 13px;
+}
+.quotation-hub__amount-block { display:flex; flex-direction:column; gap:2px; min-width:0; }
+.quotation-hub__amount-label { color:var(--app-journey-subtle); font-size:var(--app-journey-label-size); }
+.quotation-hub__order-group-count { flex:0 0 auto; color:var(--app-journey-subtle); font-size:12px; padding-bottom:4px; }
 .quotation-hub__order-lines {
   display:flex; flex-direction:column; gap:7px; padding:0 0 11px;
 }
@@ -386,6 +388,7 @@ watch(() => props.workOrderId, () => {
 }
 .quotation-hub__details {
   margin-top:13px; padding-top:12px; border-top:1px solid #eef2f7;
+  display:flex; flex-direction:column; gap:9px;
 }
 .quotation-hub__detail-group {
   display:flex; flex-direction:column; gap:6px; padding:11px 0;

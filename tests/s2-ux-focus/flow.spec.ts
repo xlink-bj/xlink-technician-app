@@ -168,7 +168,9 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       await expect(cards).toHaveClass(/app-record-card/)
       await expect(cards.locator('.signing-read-hero-title')).toHaveText('当前订单')
       await expect(page.getByTestId('signing-review-progress')).toBeVisible()
-      await expect(cards).toContainText('合成订单已核对 · 仅本机演示')
+      await expect(cards).toContainText('本机合成 · 未提交后台')
+      await expect(page.getByTestId('signing-review-progress').getByTestId('signing-contract-read-request')).toBeVisible()
+      await expect(page.getByTestId('signing-order-audit-toggle')).toHaveAttribute('aria-expanded', 'false')
       await expect(page.getByTestId('signing-order-read-contract-status')).toBeVisible()
       const stageRect = await page.getByTestId('signing-review-progress').boundingBox()
       const orderRect = await cards.boundingBox()
@@ -193,6 +195,11 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
     } else if (screen === 'Q00') {
       const cards = page.locator('.quotation-hub__order')
       const first = cards.first()
+      await expect(first.locator('.quotation-hub__order-summary')).toBeVisible()
+      await expect(first.locator('.quotation-hub__details')).toHaveCount(0)
+      await first.getByTestId('quotation-hub-view-DEV-Q00-ORDER-1').click()
+      await expect(first.locator('.quotation-hub__details')).toContainText('产品总额')
+      await first.getByTestId('quotation-hub-view-DEV-Q00-ORDER-1').click()
       const font = await first.locator('.quotation-hub__order-number').evaluate(
         el => parseFloat(getComputedStyle(el).fontSize),
       )
