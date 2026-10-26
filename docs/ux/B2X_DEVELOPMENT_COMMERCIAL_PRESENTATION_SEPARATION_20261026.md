@@ -58,4 +58,12 @@ H5 仅使用 `sessionStorage` 记录显式模式选择，不用持久业务存�
 - Main H5 Playwright：本地页面服务已能启动；测试执行受限于容器缺少 Chromium。尝试下载浏览器得到非 ZIP 响应，故**没有取得浏览器截图 PASS**，不得把 B1 旧截图等同于本次结果。
 - **尚未执行：** Mac 微信开发者工具 DEV Mock 原生复验、Owner 商业视觉确认、Production/Beta 业务写入、PR 合并或部署。
 
+## 6. 后续云端浏览器复核（按精确 SHA 追踪）
+
+上面第 5 节只记录**最初本地工作区**的结果，不应长期理解为“全项目无法运行浏览器”。GitHub commit `b5d9844a6790ee071f84b98c03b8de198098eb5f` 的 [B2X 独立 Actions 验收](https://github.com/xlink-bj/xlink-technician-app/actions/runs/40312964928) 已在安装 Chromium 的 runner 上完成 3/3；已实查其 Artifact 含默认商业首页/C01（375/390）和 DEV 首页 PNG，而非只有 `results.json`。
+
+与此同时，[Main H5](https://github.com/xlink-bj/xlink-technician-app/actions/runs/40312965023) 因测试仍期待“请先填写”旧文案而 FAIL，[DS02A](https://github.com/xlink-bj/xlink-technician-app/actions/runs/40312965029) 因详情页合成编号简化、显式体验数据提示新增而在 320/375/390 三幅截图上 FAIL；这是实际观察，不是“整套 CI 全绿”。两类问题分别通过语义测试复跑、Owner 判断 Golden 处理，不能互相抵消。Mac 的 B2-X 原生复验仍未执行。
+
+容器、Actions、Mac 的能力边界、判定规则、Artifact 和安全门禁统一见 [云端执行分工与商业视觉证据协议](../engineering/CLOUD_EXECUTION_AND_VISUAL_VERIFICATION_20261026.md)。以上 run 均属于该旧 SHA，后续提交必须重新验收。
+
 本次移走的是干扰业务界面的**技术解释和验收控制台**，不是移走工程安全证据。每个重要场景至少保留一条事实准确、足够简短的本机/只读/未提交说明。

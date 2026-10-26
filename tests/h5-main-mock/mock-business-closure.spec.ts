@@ -19,7 +19,10 @@ for (const viewport of [{width:375,height:667},{width:390,height:844}]) {
 
     await page.goto('/#/pages/index/index?devReview=1', {waitUntil:'domcontentloaded'})
     await page.getByTestId('mock-continuous-journey-entry').click()
-    await expect(page.getByTestId('mock-journey-save-state')).toContainText('请先填写')
+    // Verify the initial unsaved state, not the exact commercial help copy.
+    // B2-X may simplify that copy without changing the save/advance contract.
+    await expect(page.getByTestId('mock-journey-save-state')).toContainText('保存后')
+    await expect(page.getByTestId('mock-journey-save-state')).not.toContainText('已保存')
     await page.getByTestId('mock-journey-advance').click()
     await expect(page.getByTestId('mock-journey-feedback')).toContainText('尚无可核对')
     await expect(page).toHaveURL(/action-workspace/)
