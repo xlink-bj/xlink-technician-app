@@ -164,7 +164,7 @@ test.describe('A-stage P1 real-H5 operator acceptance', () => {
       await page.reload({ waitUntil: 'domcontentloaded' })
       await expect(page.getByTestId('quotation-order-hub')).toBeVisible()
       await expect(page.getByTestId('quotation-hub-order-mock-official-order-019-protocol'))
-        .toContainText('本机 Mock 订单')
+        .toContainText('本机合成 · 未提交后台')
       await page.getByTestId('quotation-hub-start-new').click()
       await expect(page.getByTestId('a-stage-order-readback')).toBeVisible()
       await expect(page.getByTestId('a-stage-order-create')).toHaveCount(0)
