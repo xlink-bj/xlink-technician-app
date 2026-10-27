@@ -1251,11 +1251,8 @@ const selectedCatalogFacet = ref('')
 function descendantCodes(node: CodeOptionRead): readonly string[] {
   return [node.value, ...(node.children ?? []).flatMap(descendantCodes)]
 }
-// The left-hand part taxonomy is structural (R1 visual convention), whereas
-// enabled facet actions still require source-backed package classification.
-const catalogNavigationFacets = computed(() =>
-  catalogBrowser.selectedKind === 'package' ? composition.repairPartOptions : [],
-)
+// Only real source-classified package facets can be shown as navigation.
+// Disabled taxonomy rails with no matching products waste the field operator's screen.
 function catalogFacetAvailable(code: string): boolean {
   return catalogFacets.value.some(facet => facet.value === code)
 }
@@ -1271,6 +1268,7 @@ const catalogFacets = computed(() => {
     return packages.some(item => item.r1RepairPartsCodes?.some(code => codes.has(code)))
   })
 })
+const catalogNavigationFacets = computed(() => catalogFacets.value)
 const displayedCatalogItems = computed(() => {
   const facet = catalogFacets.value.find(option => option.value === selectedCatalogFacet.value)
   if (!facet) return filteredCatalogItems.value
