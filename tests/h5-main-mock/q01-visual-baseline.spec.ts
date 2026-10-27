@@ -57,6 +57,22 @@ test('Q01 selected-items visual baseline on real App H5, 375x667', async ({ page
   if (await collapsed.isVisible()) {
     await page.getByTestId('quotation-group-details-toggle-quotation-group-1').click()
   }
+  // Prove the final stylesheet reaches the REAL quotation shell.
+  // A passing component CSS test with an unchanged large work-order card
+  // was the visual false-positive this iteration explicitly eliminates.
+  const shellContext = page.getByTestId('action-workspace-context')
+  const contextPaint = await shellContext.evaluate((el) => {
+    const style = getComputedStyle(el)
+    return {
+      background: style.backgroundColor,
+      radius: parseFloat(style.borderTopLeftRadius),
+      borderBottomStyle: style.borderBottomStyle,
+    }
+  })
+  expect(contextPaint.background, 'Q01 compact operator context must not be a large card')
+    .toBe('rgba(0, 0, 0, 0)')
+  expect(contextPaint.radius, 'Q01 context now flows as one compact row').toBe(0)
+  expect(contextPaint.borderBottomStyle).toBe('solid')
   await expect(page.getByTestId('quotation-commercial-draft-badge')).toBeVisible()
   await expect(page.locator('.quotation-content__panel-title')).toContainText('维修部位报价')
   const content = group.getByTestId('quotation-composition-selection')
@@ -105,13 +121,6 @@ test('Q01 selected-items visual baseline on real App H5, 375x667', async ({ page
   await info.attach('Q01 summary and repair-group viewport', {
     body: headerImage, contentType: 'image/png',
   })
-  // Long-page evidence shows the entire actual business composition, not a
-  // separately coded artboard. The phone viewport remains 375px wide.
-  const groupPortrait = await group.screenshot({ animations: 'disabled', caret: 'hide' })
-  await writeFile(resolve(dir, 'q01-actual-group-long.png'), groupPortrait)
-  await info.attach('Q01 continuous quotation group from real DOM', {
-    body: groupPortrait, contentType: 'image/png',
-  })
   // Each frame is an unaltered viewport screenshot from a real operator
   // scroll state. Do not claim one browser viewport captures a long scrollview.
   const procedure = page.getByTestId('quotation-group-section-quotation-group-1-procedure')
@@ -134,7 +143,7 @@ test('Q01 selected-items visual baseline on real App H5, 375x667', async ({ page
   await info.attach('Q01 measures + actions viewport', { body: measureImage, contentType: 'image/png' })
   await writeFile(resolve(dir, 'evidence.json'), JSON.stringify({
     viewport: '375x667', source: 'real uni-app H5 / DEV Mock', lineCount: 4,
-    materialQuantityX: qtyX, style: geometry, externalRequests, runtimeErrors,
+    materialQuantityX: qtyX, style: geometry, contextPaint, externalRequests, runtimeErrors,
     gitCommit: process.env.GITHUB_SHA ?? 'local',
   }, null, 2))
 })
