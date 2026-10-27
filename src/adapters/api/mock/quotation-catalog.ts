@@ -44,10 +44,22 @@ export const mockQuotationProcedureListResponse = {
       sourceTypeList: [mockQuotationCatalogSourceType],
       order: 1,
     },
+    // Commercial UX fixture: provider-shaped, intentionally synthetic and
+    // never a claim of a current tenant catalogue price.
+    {
+      _id: 'mock-catalog-procedure-roof-node',
+      name: '屋面节点密封加强施工',
+      content: '屋面节点密封加强施工',
+      guideUnitPrice: 68.4,
+      unit: '处',
+      serviceType: [mockQuotationCatalogServiceType],
+      sourceTypeList: [mockQuotationCatalogSourceType],
+      order: 2,
+    },
   ],
   page: 1,
   rows: 20,
-  total: 1,
+  total: 2,
 } as const
 
 export const mockQuotationMaterialListResponse = {
@@ -97,10 +109,36 @@ export const mockQuotationMaterialListResponse = {
       sourceTypeList: [mockQuotationCatalogSourceType],
       order: 3,
     },
+    {
+      _id: 'mock-catalog-material-butyl-tape',
+      name: '丁基防水密封胶带（100mm×10m）',
+      code: 'DEMO-ROOF-MAT-001',
+      price: 38.6,
+      unit: '卷',
+      materialUnit: '卷',
+      spec: '100mm×10m',
+      type: 1,
+      serviceType: [mockQuotationCatalogServiceType],
+      sourceTypeList: [mockQuotationCatalogSourceType],
+      order: 4,
+    },
+    {
+      _id: 'mock-catalog-material-polyester-fabric',
+      name: '聚酯胎增强布（1m×10m）',
+      code: 'DEMO-ROOF-MAT-002',
+      price: 26.8,
+      unit: '卷',
+      materialUnit: '卷',
+      spec: '1m×10m',
+      type: 1,
+      serviceType: [mockQuotationCatalogServiceType],
+      sourceTypeList: [mockQuotationCatalogSourceType],
+      order: 5,
+    },
   ],
   page: 1,
   rows: 20,
-  total: 3,
+  total: 5,
 } as const
 
 export const mockQuotationMeasureListResponse = {
@@ -115,10 +153,20 @@ export const mockQuotationMeasureListResponse = {
       sourceTypeList: [mockQuotationCatalogSourceType],
       order: 1,
     },
+    {
+      _id: 'mock-catalog-measure-site-safety',
+      name: '施工区域安全防护',
+      content: '施工区域安全防护',
+      guideUnitPrice: 54.2,
+      unit: '次',
+      serviceType: [mockQuotationCatalogServiceType],
+      sourceTypeList: [mockQuotationCatalogSourceType],
+      order: 2,
+    },
   ],
   page: 1,
   rows: 20,
-  total: 1,
+  total: 2,
 } as const
 
 export const mockQuotationPackageDetailResponse = {
