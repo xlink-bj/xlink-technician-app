@@ -94,6 +94,14 @@ test('Q01 selected-items visual baseline on real App H5, 375x667', async ({ page
 
   const dir = resolve('.review/q01-visual-baseline')
   await mkdir(dir, { recursive: true })
+  // Capture the top-level quotation identity, status, and repair group first.
+  // This is the visual gap which a middle-of-list screenshot cannot reveal.
+  await page.getByTestId('quotation-workbench-summary').scrollIntoViewIfNeeded()
+  const headerImage = await page.screenshot({ animations: 'disabled', caret: 'hide' })
+  await writeFile(resolve(dir, 'q01-summary-and-repair-375x667.png'), headerImage)
+  await info.attach('Q01 summary and repair-group viewport', {
+    body: headerImage, contentType: 'image/png',
+  })
   // Each frame is an unaltered viewport screenshot from a real operator
   // scroll state. Do not claim one browser viewport captures a long scrollview.
   const procedure = page.getByTestId('quotation-group-section-quotation-group-1-procedure')
