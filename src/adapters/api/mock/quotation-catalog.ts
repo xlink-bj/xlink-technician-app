@@ -6,8 +6,8 @@ export const mockQuotationPackageListResponse = {
   data: [
     {
       _id: 'mock-catalog-package-basic',
-      name: '屋面防水修缮方案（示例）',
-      code: 'DEMO-PKG-001',
+      name: '平屋面节点防水维修套餐',
+      code: 'ROOF-PKG-001',
       type: 'mock-package-type',
       agelimit: 2,
       unit: '项',
@@ -17,8 +17,8 @@ export const mockQuotationPackageListResponse = {
     },
     {
       _id: 'mock-catalog-package-extended',
-      name: '外墙节点防水方案（示例）',
-      code: 'DEMO-PKG-002',
+      name: '外墙窗边密封维修套餐',
+      code: 'WALL-PKG-002',
       type: 'mock-package-type',
       agelimit: 3,
       unit: '项',
@@ -36,8 +36,8 @@ export const mockQuotationProcedureListResponse = {
   data: [
     {
       _id: 'mock-catalog-procedure-seal',
-      name: '檐口密封处理（示例）',
-      content: '檐口密封处理（示例）',
+      name: '檐口与泛水节点密封处理',
+      content: '檐口与泛水节点密封处理',
       guideUnitPrice: 68.4,
       unit: '处',
       serviceType: [mockQuotationCatalogServiceType],
@@ -66,11 +66,11 @@ export const mockQuotationMaterialListResponse = {
   data: [
     {
       _id: 'mock-catalog-material-sealant',
-      name: '弹性密封材料（示例）',
-      code: 'DEMO-MAT-001',
+      name: '聚氨酯建筑密封胶',
+      code: 'SEAL-600-001',
       unit: '支',
       materialUnit: '支',
-      spec: '常用包装规格（示例）',
+      spec: '600ml/支',
       specUnit: '支',
       type: 1,
       // Synthetic SPU option whitelist; raw R1 ExtField/Code and SKU routes
@@ -85,8 +85,8 @@ export const mockQuotationMaterialListResponse = {
     // structural case without copying Production IDs or values (#120).
     {
       _id: 'mock-catalog-material-ordinary-1',
-      name: '普通防水辅材（结构示例）',
-      code: 'DEMO-ORD-001',
+      name: '屋面防水修缮辅材',
+      code: 'MAT-AUX-001',
       // Synthetic only: the field name and R1 calculation come from the
       // source contract, but this is NOT an authorized tenant SKU sale price.
       price: 38.6,
@@ -99,8 +99,8 @@ export const mockQuotationMaterialListResponse = {
     },
     {
       _id: 'mock-catalog-material-ordinary-2',
-      name: '普通施工材料（结构示例）',
-      code: 'DEMO-ORD-002',
+      name: '防水基层处理辅材',
+      code: 'MAT-AUX-002',
       price: 26.8,
       unit: '件',
       materialUnit: '件',
@@ -112,7 +112,7 @@ export const mockQuotationMaterialListResponse = {
     {
       _id: 'mock-catalog-material-butyl-tape',
       name: '丁基防水密封胶带（100mm×10m）',
-      code: 'DEMO-ROOF-MAT-001',
+      code: 'TAPE-10010',
       price: 38.6,
       unit: '卷',
       materialUnit: '卷',
@@ -125,7 +125,7 @@ export const mockQuotationMaterialListResponse = {
     {
       _id: 'mock-catalog-material-polyester-fabric',
       name: '聚酯胎增强布（1m×10m）',
-      code: 'DEMO-ROOF-MAT-002',
+      code: 'FABRIC-1X10',
       price: 26.8,
       unit: '卷',
       materialUnit: '卷',
@@ -145,8 +145,8 @@ export const mockQuotationMeasureListResponse = {
   data: [
     {
       _id: 'mock-catalog-measure-inspection',
-      name: '高处作业防护（示例）',
-      content: '高处作业防护（示例）',
+      name: '高处作业安全防护',
+      content: '高处作业安全防护',
       guideUnitPrice: 54.2,
       unit: '次',
       serviceType: [mockQuotationCatalogServiceType],
@@ -173,8 +173,8 @@ export const mockQuotationPackageDetailResponse = {
   success: true,
   entity: {
     _id: 'mock-catalog-package-basic',
-    name: '屋面防水修缮方案（示例）',
-    code: 'DEMO-PKG-001',
+    name: '平屋面节点防水维修套餐',
+    code: 'ROOF-PKG-001',
     type: 'mock-package-type',
     agelimit: 2,
     unit: '项',
@@ -187,7 +187,7 @@ export const mockQuotationPackageDetailResponse = {
         procedureId: 'mock-catalog-procedure-seal',
         procedure: {
           _id: 'mock-catalog-procedure-seal',
-          name: '檐口密封处理（示例）',
+          name: '檐口与泛水节点密封处理',
           unit: '处',
           order: 1,
         },
@@ -204,11 +204,11 @@ export const mockQuotationPackageDetailResponse = {
         materialId: 'mock-catalog-material-sealant',
         material: {
           _id: 'mock-catalog-material-sealant',
-          name: '弹性密封材料（示例）',
-          code: 'DEMO-MAT-001',
+          name: '聚氨酯建筑密封胶',
+          code: 'SEAL-600-001',
           unit: '支',
           materialUnit: '支',
-          spec: '常用包装规格（示例）',
+          spec: '600ml/支',
           specUnit: '支',
           type: 1,
           order: 1,
@@ -225,7 +225,7 @@ export const mockQuotationPackageDetailResponse = {
         materialId: 'mock-catalog-material-sealant-alternative',
         material: {
           _id: 'mock-catalog-material-sealant-alternative',
-          name: '高延伸密封材料（替代示例）',
+          name: '高延伸率建筑密封胶',
           unit: '支',
           order: 2,
         },
@@ -238,7 +238,7 @@ export const mockQuotationPackageDetailResponse = {
         materialId: 'mock-catalog-material-layer-2',
         material: {
           _id: 'mock-catalog-material-layer-2',
-          name: '基层防护涂料（示例）',
+          name: '基层界面处理涂料',
           unit: '桶',
           order: 3,
         },
@@ -253,7 +253,7 @@ export const mockQuotationPackageDetailResponse = {
         measureId: 'mock-catalog-measure-inspection',
         measure: {
           _id: 'mock-catalog-measure-inspection',
-          name: '高处作业防护（示例）',
+          name: '高处作业安全防护',
           unit: '次',
           order: 1,
         },
@@ -288,10 +288,10 @@ export const mockMaterialSaleCodeOptions = {
 export const mockMaterialSkuVariantsResponse = {
   data: [
     { _id: 'mock-material-sku-black-2', spuid: mockMaterialSkuSpuId,
-      name: '密封材料黑色 2毫米（仿真）', state: 1,
+      name: '聚氨酯密封胶 黑色 2毫米', state: 1,
       exts: { thickness: '2', color: 'black' } },
     { _id: 'mock-material-sku-grey-3', spuid: mockMaterialSkuSpuId,
-      name: '密封材料灰色 3毫米（仿真）', state: 1,
+      name: '聚氨酯密封胶 灰色 3毫米', state: 1,
       exts: { thickness: '3', color: 'grey' } },
   ],
   page: 1, rows: 20, total: 2,
