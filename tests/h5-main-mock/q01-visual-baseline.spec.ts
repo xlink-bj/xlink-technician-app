@@ -43,10 +43,10 @@ test('Q01 selected-items visual baseline on real App H5, 375x667', async ({ page
     await page.getByTestId('quotation-catalog-add-' + kind + '-' + id).click()
     await expect(page.getByTestId('quotation-catalog-page')).toHaveCount(0)
   }
-  await addItem('procedure', 'mock-catalog-procedure-seal', true)
-  await addItem('material', 'mock-catalog-material-sealant')
-  await addItem('material', 'mock-catalog-material-ordinary-1')
-  await addItem('measure', 'mock-catalog-measure-inspection')
+  await addItem('procedure', 'mock-catalog-procedure-roof-node', true)
+  await addItem('material', 'mock-catalog-material-butyl-tape')
+  await addItem('material', 'mock-catalog-material-polyester-fabric')
+  await addItem('measure', 'mock-catalog-measure-site-safety')
 
   const group = page.getByTestId('quotation-repair-group-quotation-group-1')
   await expect(group).toBeVisible()
@@ -59,6 +59,23 @@ test('Q01 selected-items visual baseline on real App H5, 375x667', async ({ page
   }
   const content = group.getByTestId('quotation-composition-selection')
   await expect(content).toHaveCount(4)
+  await page.getByTestId('quotation-group-section-quotation-group-1-procedure')
+    .locator('.quotation-content__quantity').fill('12')
+  const materialQuantities = page.getByTestId('quotation-group-section-quotation-group-1-material')
+    .locator('.quotation-content__quantity')
+  await materialQuantities.nth(0).fill('8')
+  await materialQuantities.nth(1).fill('4')
+  // Measure stays at the catalogue default quantity of one.
+  await expect(page.getByTestId('quotation-group-subtotal-quotation-group-1'))
+    .toContainText('1291.00', { timeout: 20000 })
+  await expect(page.getByTestId('quotation-footer-summary')).toContainText('1291.00')
+  await expect(group.locator('.quotation-content__line-unit-price')).toHaveCount(4)
+  await expect(group.locator('.quotation-content__line-money-value')).toHaveCount(4)
+  const expectedTotals = ['820.80', '308.80', '107.20', '54.20']
+  for (const total of expectedTotals) {
+    await expect(group.locator('.quotation-content__line-money-value').filter({ hasText: total }))
+      .toHaveCount(1)
+  }
   const material = page.getByTestId('quotation-group-section-quotation-group-1-material')
   await expect(material).toBeVisible()
   const geometry = await material.evaluate(el => {
