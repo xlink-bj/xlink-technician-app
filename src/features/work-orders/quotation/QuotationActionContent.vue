@@ -2,7 +2,6 @@
   <view class="quotation-content" :class="{ 'quotation-content--review': props.productReviewOnly, 'quotation-content--q01': isFirstRepairPartStep, 'quotation-content--baseline': !catalogBrowser.isOpen && !isInitialEmptyWorkbench && !isFirstRepairPartStep && composition.groups.length > 0 }" data-testid="quotation-action-content">
     <view v-if="!catalogBrowser.isOpen && !isInitialEmptyWorkbench && !isFirstRepairPartStep" class="quotation-content__heading" data-testid="quotation-workbench-heading">
       <text class="quotation-content__eyebrow">报价草稿 · 按部位组织</text>
-      <text v-if="!props.productReviewOnly || composition.groups.length === 0" class="quotation-content__description">选择维修部位，逐组整理报价项目。</text>
     </view>
 
     <view v-if="props.state === 'loading'" class="quotation-content__panel app-surface" data-testid="quotation-state-loading">
@@ -21,7 +20,7 @@
             {{ amountPresentation.value }}
           </text>
         </view>
-        <text v-if="!props.productReviewOnly" class="quotation-content__local-tag">编辑中</text>
+        <text class="quotation-content__local-tag" data-testid="quotation-commercial-draft-badge">{{ composition.localState === 'saved_local' ? '草稿已保存' : composition.localState === 'saving' ? '保存中' : '报价草稿' }}</text>
       </view>
 
       <AppStatus
@@ -84,7 +83,7 @@
           <view v-else class="quotation-content__engine-blocked" data-testid="quotation-engine-blocked">
             <AppStatus
               :message="workspace.quotationEngine.result.pricing
-                ? '金额可预览，但当前合同不足以安全生成完整载荷。'
+                ? '报价明细已生成，相关订单资料尚未齐备，暂不能提交。'
                 : '当前报价内容尚未通过校验或目录核对。'"
               tone="warning"
               quiet
