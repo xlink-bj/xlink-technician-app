@@ -219,3 +219,13 @@
   color: var(--q01-blue); background: #fff;
   border: 1px solid #b9d3fb; font-size: 14px; font-weight: 700;
 }
+
+/* Approved target: product name -> authoritative catalogue unit price ->
+   editable quantity; amount is aligned in its own price column. */
+.quotation-content--baseline .quotation-content__line-unit-price {
+  color: #8a9ab0; font-size: 12px; line-height: 1.45;
+  margin-top: 6px; font-weight: 480; font-variant-numeric: tabular-nums;
+}
+.quotation-content--baseline .quotation-content__line-controls {
+  margin-top: 12px;
+}
