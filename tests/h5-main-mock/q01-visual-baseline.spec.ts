@@ -75,6 +75,16 @@ test('Q01 selected-items visual baseline on real App H5, 375x667', async ({ page
         return classes
       })(),
       matchesShellRule: Boolean(el.closest('.action-workspace-page--quotation:not(.action-workspace-page--q01-entry)')),
+      matchedQ01Css: Array.from(document.styleSheets).flatMap(sheet => {
+        try {
+          return Array.from(sheet.cssRules).filter(rule =>
+            rule.cssText.includes('action-workspace-page--quotation:not') &&
+            rule.cssText.includes('action-workspace-context.app-surface'))
+            .map(rule => rule.cssText.slice(0, 280))
+        } catch {
+          return []
+        }
+      }).slice(0, 4),
       loadedQ01Style: Array.from(document.styleSheets).some(sheet => {
         try {
           return Array.from(sheet.cssRules).some(rule => rule.cssText.includes('action-workspace-context.app-surface'))
