@@ -86,9 +86,10 @@ describe('G4-UX Work Order List card', () => {
     expect(listTemplate).not.toContain('Default list for the current role')
     expect(listTemplate).not.toContain('class="page-title"')
     expect(listTemplate).not.toContain('class="page-subtitle"')
-    // The loaded-item indicator represents the current returned page only;
+    // The compact item indicator represents the current returned page only;
     // it must never imply a backend total, SLA metric or fabricated counter.
-    expect(listTemplate).toContain('已加载 {{ workOrders.items.length }} 条')
+    expect(listTemplate).toContain('{{ workOrders.items.length }} 条')
+    expect(listTemplate).not.toContain('已加载 {{ workOrders.items.length }} 条')
     expect(listTemplate.replace(/list-loaded-count/g, '')).not.toMatch(/\b(tabs?|counts?|filters?|sort(?:ing)?)\b/i)
     expect(listTemplate).not.toContain('工作范围')
     expect(listTemplate).not.toContain('当前可见工单</text>')
@@ -133,7 +134,9 @@ describe('G4-UX Work Order List card', () => {
     expect(searchBarSource).toContain('class="search-input-shell"')
     expect(searchBarSource).toContain('class="search-button"')
     expect(searchBarSource).toContain('margin: 12rpx 8rpx 0;')
-    expect(listPage).toContain('margin: 18rpx 8rpx 0;')
+    expect(listPage).toContain('margin: 10px 0 0;')
+    expect(listPage).toContain('padding: 12px 15px 22px;')
+    expect(listTemplate).toContain('class="card-customer-row"')
     expect(listTemplate).toContain('<AppRecordCard')
     expect(listTemplate).toContain('<AppMetaTag')
     expect(listTemplate).toContain('<AppSectionHeading')
