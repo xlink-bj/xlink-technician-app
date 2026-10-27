@@ -67,9 +67,24 @@ test('Q01 selected-items visual baseline on real App H5, 375x667', async ({ page
       background: style.backgroundColor,
       radius: parseFloat(style.borderTopLeftRadius),
       borderBottomStyle: style.borderBottomStyle,
+      contextClasses: el.className,
+      ancestorClasses: (() => {
+        const classes: string[] = []
+        let node: Element | null = el
+        for (let i = 0; node && i < 8; i++, node = node.parentElement) classes.push(node.className || node.tagName)
+        return classes
+      })(),
+      matchesShellRule: Boolean(el.closest('.action-workspace-page--quotation:not(.action-workspace-page--q01-entry)')),
+      loadedQ01Style: Array.from(document.styleSheets).some(sheet => {
+        try {
+          return Array.from(sheet.cssRules).some(rule => rule.cssText.includes('action-workspace-context.app-surface'))
+        } catch {
+          return false
+        }
+      }),
     }
   })
-  expect(contextPaint.background, 'Q01 compact operator context must not be a large card')
+  expect(contextPaint.background, 'Q01 context CSS diagnostic: '+JSON.stringify(contextPaint))
     .toBe('rgba(0, 0, 0, 0)')
   expect(contextPaint.radius, 'Q01 context now flows as one compact row').toBe(0)
   expect(contextPaint.borderBottomStyle).toBe('solid')
