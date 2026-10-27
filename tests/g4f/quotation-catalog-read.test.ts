@@ -430,7 +430,14 @@ describe('G4-F Phase 1C quotation catalog read foundation', () => {
     // #120 observed current-role ordinary products (not a live API echo).
     // The default Mock must exercise that actual structural branch: active
     // catalog item WITHOUT SKU spuid or sale-option candidates.
-    expect(materials.data?.items).toHaveLength(3)
+    expect(materials.data?.items).toHaveLength(5)
+    // DEV-only commercial visual fixtures exercise exactly the source fields
+    // required by R1 pricing. Existing SKU/non-SKU evidence is unchanged.
+    const visualMaterials = materials.data?.items.filter(item =>
+      ['mock-catalog-material-butyl-tape', 'mock-catalog-material-polyester-fabric'].includes(item.id))
+    expect(visualMaterials).toHaveLength(2)
+    expect(visualMaterials?.map(item => item.unit)).toEqual(['卷', '卷'])
+    expect(visualMaterials?.map(item => item.price)).toEqual([38.6, 26.8])
     const ordinaryRows = materials.data?.items.filter(item => item.id.startsWith('mock-catalog-material-ordinary-'))
     expect(ordinaryRows).toHaveLength(2)
     for (const row of ordinaryRows ?? []) {
