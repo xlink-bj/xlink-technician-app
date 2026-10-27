@@ -57,6 +57,8 @@ test('Q01 selected-items visual baseline on real App H5, 375x667', async ({ page
   if (await collapsed.isVisible()) {
     await page.getByTestId('quotation-group-details-toggle-quotation-group-1').click()
   }
+  await expect(page.getByTestId('quotation-commercial-draft-badge')).toBeVisible()
+  await expect(page.locator('.quotation-content__panel-title')).toContainText('维修部位报价')
   const content = group.getByTestId('quotation-composition-selection')
   await expect(content).toHaveCount(4)
   await page.getByTestId('quotation-group-section-quotation-group-1-procedure')
@@ -67,8 +69,8 @@ test('Q01 selected-items visual baseline on real App H5, 375x667', async ({ page
   await materialQuantities.nth(1).fill('4')
   // Measure stays at the catalogue default quantity of one.
   await expect(page.getByTestId('quotation-group-subtotal-quotation-group-1'))
-    .toContainText('1291.00', { timeout: 20000 })
-  await expect(page.getByTestId('quotation-footer-summary')).toContainText('1291.00')
+    .toContainText('1,291.00', { timeout: 20000 })
+  await expect(page.getByTestId('quotation-footer-summary')).toContainText('1,291.00')
   await expect(group.locator('.quotation-content__line-unit-price')).toHaveCount(4)
   await expect(group.locator('.quotation-content__line-money-value')).toHaveCount(4)
   const expectedTotals = ['820.80', '308.80', '107.20', '54.20']
@@ -76,6 +78,7 @@ test('Q01 selected-items visual baseline on real App H5, 375x667', async ({ page
     await expect(group.locator('.quotation-content__line-money-value').filter({ hasText: total }))
       .toHaveCount(1)
   }
+  expect(await group.innerText()).not.toMatch(/示例|Mock|DEV|仿真|合成/)
   const material = page.getByTestId('quotation-group-section-quotation-group-1-material')
   await expect(material).toBeVisible()
   const geometry = await material.evaluate(el => {
