@@ -576,10 +576,9 @@
 
         <view class="quotation-content__catalog-intro">
           <view class="quotation-content__catalog-intro-copy">
-            <text class="quotation-content__catalog-intro-title">选择产品</text>
-            <text class="quotation-content__catalog-intro-description">套餐、工序、材料、机措 · 按当前维修部位选品</text>
+            <text class="quotation-content__catalog-intro-title">按类别查找</text>
+            <text class="quotation-content__catalog-intro-description">选好项目后，可返回报价调整数量</text>
           </view>
-          <text class="quotation-content__catalog-step">第 2 步 · 选品</text>
         </view>
 
         <view class="quotation-content__catalog-main" data-testid="quotation-catalog-main">
@@ -735,7 +734,10 @@
                   </view>
                 </view>
                 <view class="quotation-content__catalog-item-footer">
-                  <text class="quotation-content__catalog-item-price-state">金额待核验</text>
+                  <view class="quotation-content__catalog-item-price" :data-testid="`quotation-catalog-price-${item.id}`">
+                    <text class="quotation-content__catalog-item-price-label">{{ catalogUnitPricePresentation(item).label }}</text>
+                    <text v-if="catalogUnitPricePresentation(item).price" class="quotation-content__catalog-item-price-value">{{ catalogUnitPricePresentation(item).price }}</text>
+                  </view>
                   <AppButton
                     v-if="item.kind === 'material' && item.saleOptionCandidates && Object.keys(item.saleOptionCandidates).length"
                     class="quotation-content__catalog-item-action"
@@ -1015,6 +1017,7 @@ import AppStatus from '@shared/ui/AppStatus.vue'
 import { useActionWorkspaceStore } from '../action-workspace'
 import { useQuotationCompositionStore } from './composition-store'
 import { formatQuotationMoney, quotationAmountPresentation } from './amount-presentation'
+import { catalogUnitPricePresentation } from './catalog-price-presentation'
 import { evaluateLocalQuotationPreflight } from './local-preflight'
 import { quotationReviewReadinessCopy } from './review-readiness-copy'
 import { isFirstQuotationRepairPartStep, isInitialQuotationWorkbenchEmpty } from './empty-workbench-state'
@@ -1688,3 +1691,4 @@ function configuredPackageLayerLabel(
 
 <style src="./QuotationActionContent.styles.css"></style>
 <style src="./Q01CommercialBaseline.css"></style>
+<style src="./Q03CommercialBaseline.css"></style>
