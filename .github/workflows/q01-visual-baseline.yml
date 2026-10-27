@@ -22,7 +22,7 @@ jobs:
           version: 10.31.0
       - uses: actions/setup-node@v4
         with:
-          node-version-file: .nvmrc
+          node-version: '22'
           cache: pnpm
       - name: Install locked dependencies
         run: pnpm install --frozen-lockfile
