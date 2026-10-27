@@ -287,3 +287,4 @@ function openQuotationConfirmation(): void {
 
 </style>
 <style src="./Q01Footer.css"></style>
+<style src="./Q01CommercialShell.css"></style>
