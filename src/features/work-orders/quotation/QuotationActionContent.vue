@@ -366,6 +366,10 @@
                       <view class="quotation-content__line-title-wrap">
                         <text class="quotation-content__line-kind">{{ composition.catalogKindLabels[selection.kind] }}</text>
                         <text class="quotation-content__line-title">{{ selection.label }}</text>
+                        <text v-if="catalogUnitPriceFor(group.groupId, selection.selectionId) !== undefined"
+                          class="quotation-content__line-unit-price" :data-testid="`quotation-selection-unit-price-${selection.selectionId}`">
+                          目录单价 ¥{{ catalogUnitPriceFor(group.groupId, selection.selectionId)?.toFixed(2) }}{{ selection.unit ? '/' + selection.unit : '' }}
+                        </text>
                       </view>
                       <text class="quotation-content__selection-unit">{{ selection.unit || '单位待核验' }}</text>
                       <view v-if="lineSubtotalFor(group.groupId, selection.selectionId) !== undefined" class="quotation-content__line-money"
@@ -1107,6 +1111,9 @@ const groupSubtotal = (groupId: string): number | undefined =>
 const lineSubtotalFor = (groupId: string, selectionId: string): number | undefined =>
   verifiedPricing.value?.fillOrder.groups.find((group) => group.groupId === groupId)
     ?.selectionAmounts.find((line) => line.selectionId === selectionId)?.fillOrderTotalAmount
+const catalogUnitPriceFor = (groupId: string, selectionId: string): number | undefined =>
+  verifiedPricing.value?.fillOrder.groups.find((group) => group.groupId === groupId)
+    ?.selectionAmounts.find((line) => line.selectionId === selectionId)?.catalogUnitPrice
 
 // DEV product preview has NO source-verified effective tenant/work-order ExtFields.
 // Expose only a truthful local draft message; never use it to enable submission.
