@@ -337,6 +337,27 @@ describe('G4-F Phase 1H quotation engine', () => {
     expect(outcome).toMatchObject({ state: 'succeeded', data: { fillOrder: { groups: [{ selectionAmounts: [{ fillOrderTotalAmount: 20 }, { fillOrderTotalAmount: 9 }, { fillOrderTotalAmount: 4.5 }] }] } } })
   })
 
+  it('22a. exposes only source-backed direct unit prices for commercial quotation display', async () => {
+    const result = await pricingFor(directDraft(['procedure', 'material', 'measure'], { quantity: 2 }))
+    expect(result.state).toBe('succeeded')
+    if (result.state !== 'succeeded') return
+    const rows = result.data.fillOrder.groups[0].selectionAmounts
+    expect(rows.map(row => row.catalogUnitPrice)).toEqual([10, 4.5, 2.25])
+    // A priced row amount can legitimately differ from catalogue rate ×
+    // quantity due to an R1 minimum. Never back-compute a fake unit price.
+    const minimum = await pricingFor(directDraft(['procedure'], { quantity: 2 }), catalogPort({
+      listProcedures: vi.fn(async () => succeeded({
+        items: [{ ...procedureItem, guideUnitPrice: 10, minimumGuideTotalPrice: 30 }],
+      })),
+    }))
+    expect(minimum.state).toBe('succeeded')
+    if (minimum.state === 'succeeded') {
+      expect(minimum.data.fillOrder.groups[0].selectionAmounts[0]).toMatchObject({
+        fillOrderTotalAmount: 30, catalogUnitPrice: 10,
+      })
+    }
+  })
+
   it('23. aggregates multiple groups deterministically', async () => {
     const first = group({ groupId: 'group-a', procedures: [{ selectionId: 'p1', kind: 'procedure', catalogId: procedureItem.id, label: procedureItem.name, quantity: 1 }], materials: [{ selectionId: 'm1', kind: 'material', catalogId: materialItem.id, label: materialItem.name, quantity: 1 }] })
     const second = group({ groupId: 'group-b', procedures: [{ selectionId: 'p2', kind: 'procedure', catalogId: procedureItem.id, label: procedureItem.name, quantity: 2 }], materials: [{ selectionId: 'm2', kind: 'material', catalogId: materialItem.id, label: materialItem.name, quantity: 2 }] })
