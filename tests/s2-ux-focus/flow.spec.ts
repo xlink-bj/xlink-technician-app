@@ -267,7 +267,8 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       ).boundingBox()
       expect(firstItem).not.toBeNull()
       expect(firstItem!.width).toBeLessThan(viewport.width)
-      await expect(page.getByTestId('quotation-catalog-facets')).toBeVisible()
+      // No disabled taxonomy rail unless package records carry backed R1 classification codes.
+      await expect(page.getByTestId('quotation-catalog-facets')).toHaveCount(0)
     }
 
     assertSafe()
