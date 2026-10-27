@@ -22,20 +22,20 @@ export function quotationReviewReadinessCopy(report: LocalQuotationPreflight): Q
   if (report.selectionEntry.state === 'needs_input' || report.finalRequiredness.state === 'needs_input') {
     return {
       title: '草稿待完善',
-      summary: '仍有必填附加字段未填写；请先补充再核对。正式报价不可提交。',
+      summary: '报价资料仍有必填项未完成，请补充后继续核对；暂不能提交正式订单。',
       officialSubmissionAllowed: false,
     }
   }
   if (report.selectionEntry.state === 'unverified' || report.finalRequiredness.state === 'unverified') {
     return {
       title: '草稿核对',
-      summary: '维修部位与项目组合已填写；当前工单的附加字段尚未核验，正式报价不可提交。',
+      summary: '维修部位、项目和数量已填写，报价资料仍待确认；正式订单暂不能提交。',
       officialSubmissionAllowed: false,
     }
   }
   return {
     title: '草稿核对',
-    summary: '本机项目结构和合成字段规则已检查；正式报价仍需核实数据与金额，不可提交。',
+    summary: '维修部位与项目明细已填写；完成资料和金额确认前不能提交正式订单。',
     officialSubmissionAllowed: false,
   }
 }
