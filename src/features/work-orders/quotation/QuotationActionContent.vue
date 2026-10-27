@@ -1,5 +1,5 @@
 <template>
-  <view class="quotation-content" :class="{ 'quotation-content--review': props.productReviewOnly, 'quotation-content--q01': isFirstRepairPartStep, 'quotation-content--baseline': !catalogBrowser.isOpen && !isInitialEmptyWorkbench && !isFirstRepairPartStep && composition.groups.length > 0 }" data-testid="quotation-action-content">
+  <view class="quotation-content" :class="{ 'quotation-content--review': props.productReviewOnly, 'quotation-content--q01': isFirstRepairPartStep, 'quotation-content--baseline': isCommercialBaseline }" data-testid="quotation-action-content">
     <view v-if="!catalogBrowser.isOpen && !isInitialEmptyWorkbench && !isFirstRepairPartStep" class="quotation-content__heading" data-testid="quotation-workbench-heading">
       <text class="quotation-content__eyebrow">报价草稿 · 按部位组织</text>
     </view>
@@ -24,7 +24,7 @@
       </view>
 
       <AppStatus
-        v-if="composition.localStateMessage"
+        v-if="composition.localStateMessage && !(isCommercialBaseline && composition.localState === 'saved_local')"
         class="quotation-content__local-status"
         :message="composition.localStateMessage"
         :tone="composition.localState === 'save_failed' || composition.localState === 'invalid' || composition.localState === 'unavailable' ? 'warning' : 'neutral'"
@@ -37,7 +37,7 @@
         quiet
       />
       <AppStatus
-        v-else-if="composition.localState === 'saved_local'"
+        v-else-if="composition.localState === 'saved_local' && !isCommercialBaseline"
         class="quotation-content__local-status"
         message="报价草稿已保存。"
         tone="success"
@@ -1094,6 +1094,10 @@ const isInitialEmptyWorkbench = computed(() => isInitialQuotationWorkbenchEmpty(
   catalogOpen: catalogBrowser.isOpen,
 }))
 const firstRepairPartGroup = computed(() => composition.groups.length === 1 ? composition.groups[0] : undefined)
+// A successful local-save confirmation is represented once in the header badge.
+const isCommercialBaseline = computed(() => !catalogBrowser.isOpen
+  && !isInitialEmptyWorkbench.value && !isFirstRepairPartStep.value
+  && composition.groups.length > 0)
 const isFirstRepairPartStep = computed(() => isFirstQuotationRepairPartStep({
   contentState: props.state,
   editState: workspace.quotationEditState.state,
