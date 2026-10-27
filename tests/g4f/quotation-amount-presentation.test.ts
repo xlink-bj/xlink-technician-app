@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { quotationAmountPresentation } from '@features/work-orders/quotation/amount-presentation'
+import { formatQuotationMoney, quotationAmountPresentation } from '@features/work-orders/quotation/amount-presentation'
 import type { QuotationEngineResult } from '@features/work-orders/quotation/engine'
 
 function engineResult(overrides: Partial<QuotationEngineResult> = {}): QuotationEngineResult {
@@ -14,6 +14,11 @@ function engineResult(overrides: Partial<QuotationEngineResult> = {}): Quotation
 }
 
 describe('quotationAmountPresentation', () => {
+  it('formats proven money with native thousands separators without changing value', () => {
+    expect(formatQuotationMoney(1291)).toBe('1,291.00')
+    expect(formatQuotationMoney(308.8)).toBe('308.80')
+    expect(formatQuotationMoney(54.2)).toBe('54.20')
+  })
   it('does not show a stale engine result for a newer draft', () => {
     expect(quotationAmountPresentation({
       result: engineResult(),
