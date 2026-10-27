@@ -1,0 +1,45 @@
+name: Q03 Commercial Catalog Baseline (375)
+
+on:
+  pull_request:
+    paths:
+      - 'src/features/work-orders/quotation/**'
+      - 'tests/h5-main-mock/q03-commercial-baseline.spec.ts'
+      - '.github/workflows/q03-commercial-baseline.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  q03-real-app-catalog:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.31.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Install Chromium and Chinese fonts
+        run: |
+          pnpm exec playwright install --with-deps chromium
+          sudo apt-get update
+          sudo apt-get install -y fonts-noto-cjk
+      - name: Real operator catalog and back-navigation, 375px
+        run: pnpm exec playwright test --config playwright.main-h5-mock.config.ts tests/h5-main-mock/q03-commercial-baseline.spec.ts
+      - name: Preserve real screenshot evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: q03-real-app-375-${{ github.run_id }}
+          path: |
+            .review/q03-commercial-baseline/
+            test-results/main-h5-mock/
+          retention-days: 14
+          if-no-files-found: warn
