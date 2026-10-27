@@ -59,8 +59,8 @@
       />
 
       <view v-else-if="workOrders.loadState === 'succeeded' || isRefreshing" class="list-content">
-        <AppSectionHeading class="list-section-heading" title="当前工单" subtitle="按当前账号权限展示" data-testid="ds02b-list-heading">
-          <template #trailing><text v-if="workOrders.loadState === 'succeeded'" class="list-loaded-count">已加载 {{ workOrders.items.length }} 条</text></template>
+        <AppSectionHeading class="list-section-heading" title="全部工单" data-testid="ds02b-list-heading">
+          <template #trailing><text v-if="workOrders.loadState === 'succeeded'" class="list-loaded-count">{{ workOrders.items.length }} 条</text></template>
         </AppSectionHeading>
         <view v-if="isRefreshing" class="inline-refresh" aria-label="正在刷新工单">
           <view class="inline-refresh-indicator" />
@@ -74,23 +74,26 @@
           :aria-disabled="!listActionFor(item).detailAccessible"
           @tap="openDetailIfAccessible(item)"
         >
-          <AppRecordCard class="work-order-card-surface" layout="horizontal" :tone="workOrderCardToneFor(item.taskLabel)" accent interactive data-testid="ds02b-work-order-card-surface">
+          <AppRecordCard class="work-order-card-surface" layout="horizontal" :tone="workOrderCardToneFor(item.taskLabel)" interactive data-testid="ds02b-work-order-card-surface">
           <view class="card-main">
             <view class="card-top-row">
               <AppRecordMark
                 :icon="workOrderCardIconFor(item.taskLabel)"
-                :size="19"
-                :color="workOrderCardIconColorFor(item.taskLabel)"
+                :size="20"
+                color="#ffffff"
               />
               <view class="card-title-cluster">
                 <view class="card-title-line">
                   <text v-if="item.taskLabel" class="card-task">{{ item.taskLabel }}</text>
-                  <AppMetaTag v-if="item.servicePartLabel" class="card-part-badge" :label="item.servicePartLabel" />
                 </view>
               </view>
               <text v-if="item.displayNumber" class="card-number">{{ cardNumber(item.displayNumber) }}</text>
             </view>
             <view class="card-details">
+              <view v-if="item.customerName || item.servicePartLabel" class="card-customer-row">
+                <text v-if="item.customerName" class="card-customer">{{ item.customerName }}</text>
+                <AppMetaTag v-if="item.servicePartLabel" class="card-part-badge" :label="item.servicePartLabel" />
+              </view>
               <view v-if="item.serviceDistrict || item.serviceAddress || item.distanceText" class="card-location">
                 <AppIcon class="location-icon" name="location" :size="17" color="#7088ae" aria-hidden="true" />
                 <text v-if="item.serviceDistrict" class="location-district">{{ item.serviceDistrict }}</text>
@@ -98,10 +101,8 @@
                 <text v-if="item.serviceAddress" class="location-address">{{ item.serviceAddress }}</text>
                 <view v-if="item.distanceText" class="location-distance">
                   <text>{{ item.distanceText }}</text>
-                  <view class="distance-vehicle-icon" aria-hidden="true" />
                 </view>
               </view>
-              <text v-if="item.customerName" class="card-customer">{{ item.customerName }}</text>
               <view
                 v-if="item.communityOrderCount !== undefined || listActionFor(item).contactAvailable || listActionFor(item).acceptOrder"
                 class="card-footer"
@@ -121,7 +122,7 @@
                   <AppIcon
                     name="phone"
                     :size="19"
-                    :color="workOrderCardIconColorFor(item.taskLabel)"
+                    color="#1677e8"
                     aria-hidden="true"
                   />
                 </view>
@@ -166,7 +167,7 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 
 import { hasAuthenticatedSession } from '@features/home/access'
 import { isProductionReadOnlyRuntime } from '@shared/config'
-import { workOrderCardIconColorFor, workOrderCardIconFor, workOrderCardToneFor } from '@features/work-orders/card'
+import { workOrderCardIconFor, workOrderCardToneFor } from '@features/work-orders/card'
 import { workOrderDetailRouteFor } from '@features/work-orders/detail'
 import { workOrderListActionFor } from '@features/work-orders/list-actions'
 import { useWorkOrderListStore } from '@features/work-orders/list'
@@ -329,11 +330,11 @@ function cancelAccept(): void {
 <style>
 .work-orders-page,
 .guard-page {
-  background: #f3f6fa;
+  background: #f5f7fb;
   box-sizing: border-box;
   min-height: 100vh;
-  padding: 18rpx 24rpx calc(40rpx + constant(safe-area-inset-bottom));
-  padding-bottom: calc(40rpx + env(safe-area-inset-bottom));
+  padding: 12px 15px 22px;
+  padding-bottom: calc(22px + env(safe-area-inset-bottom));
   width: 100%;
 }
 
@@ -347,16 +348,65 @@ function cancelAccept(): void {
 .list-content {
   display: flex;
   flex-direction: column;
-  margin: 18rpx 8rpx 0;
+  margin: 10px 0 0;
 }
-.work-order-card-surface { width: 100%; min-height: 100px; }
-.list-section-heading { margin: 4px 2px 14px; }
-.list-loaded-count { color: var(--app-content-muted-ink); font-size: 12px; white-space: nowrap; }
+.work-order-card-surface { width: 100%; min-height: 158px; }
+.list-section-heading { margin: 5px 2px 13px; }
+.list-loaded-count { color: #8390a3; font-size: 12px; font-weight: 550; white-space: nowrap; }
+
+/* The single-viewport UI lab is isolated to this real list page. Other
+   approved RecordCard/SearchBar consumers retain their established styling. */
+.work-orders-page .search-band { gap: 10px; margin: 0; }
+.work-orders-page .search-band .search-input-shell {
+  height: 46px;
+  border: 1px solid #e5ebf3;
+  border-radius: 13px;
+  background: #fff;
+  box-shadow: 0 2px 9px rgba(21, 47, 85, .035);
+  padding: 0 13px;
+}
+.work-orders-page .search-band .search-input { height: 44px; line-height: 44px; font-size: 14px; }
+.work-orders-page .search-band .search-button {
+  flex: 0 0 73px;
+  height: 46px;
+  line-height: 46px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  background: #2077ed;
+  box-shadow: 0 3px 9px rgba(28, 104, 216, .11);
+}
+.work-orders-page .list-section-heading .app-section-heading__title {
+  font-size: 19px;
+  font-weight: 750;
+  letter-spacing: -.25px;
+}
+.work-orders-page .list-section-heading .app-section-heading__subtitle { font-size: 12px; }
+.work-orders-page .app-record-card.work-order-card-surface {
+  background: #fff;
+  border: 1px solid #e8edf4;
+  border-radius: 17px;
+  box-shadow: 0 3px 15px rgba(27, 48, 80, .052);
+}
+.work-orders-page .work-order-card-surface .app-record-mark {
+  flex: 0 0 38px;
+  height: 38px;
+  width: 38px;
+  border: 0;
+  border-radius: 12px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.16);
+}
+.work-orders-page .app-record-card--tone-blue .app-record-mark { background: #247af0; }
+.work-orders-page .app-record-card--tone-red .app-record-mark { background: #f34b53; }
+.work-orders-page .app-record-card--tone-orange .app-record-mark { background: #f6a02b; }
+.work-orders-page .app-record-card--tone-purple .app-record-mark { background: #8162e8; }
+.work-orders-page .app-record-card--tone-green .app-record-mark { background: #28b995; }
+.work-orders-page .app-record-card--tone-gray .app-record-mark { background: #8897aa; }
 
 .work-order-card {
   display: block;
   box-sizing: border-box;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
   min-width: 0;
   width: 100%;
   overflow: visible;
@@ -373,13 +423,13 @@ function cancelAccept(): void {
   flex: 1;
   flex-direction: column;
   min-width: 0;
-  padding: 17px 15px 17px;
+  padding: 13px 14px 11px;
 }
 
 .card-top-row {
   align-items: center;
   display: flex;
-  gap: 16rpx;
+  gap: 10px;
   min-width: 0;
 }
 
@@ -391,17 +441,17 @@ function cancelAccept(): void {
 .card-title-line {
   align-items: center;
   display: flex;
-  gap: 12rpx;
+  gap: 7px;
   min-width: 0;
 }
 
 .card-task {
-  color: var(--app-text-strong);
+  color: #1a2a40;
   display: -webkit-box;
   flex: 0 1 auto;
-  font-size: var(--app-content-title-size);
-  font-weight: 720;
-  line-height: 1.34;
+  font-size: 16px;
+  font-weight: 760;
+  line-height: 1.35;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -410,16 +460,21 @@ function cancelAccept(): void {
 }
 
 .card-part-badge {
-  flex: 0 1 auto;
+  flex: 0 0 auto;
+  max-width: 110px;
+  padding: 3px 7px;
+  font-size: 11px;
+  white-space: nowrap;
 }
+.card-part-badge .app-meta-tag__label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .card-number {
-  color: var(--app-content-muted-ink);
+  color: #8998ac;
   flex: 0 0 auto;
-  font-size: 11px;
-  font-weight: 600;
+  font-size: 11.5px;
+  font-weight: 570;
   line-height: 1.3;
-  max-width: 30%;
+  max-width: 28%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -429,36 +484,33 @@ function cancelAccept(): void {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  padding-left: 70rpx;
+  padding-left: 0;
 }
 
 .card-location {
-  align-items: flex-start;
+  align-items: center;
   box-sizing: border-box;
-  color: var(--app-content-muted-ink);
+  color: #71819a;
   display: flex;
-  font-size: 12.5px;
-  gap: 8rpx;
+  font-size: 13px;
+  gap: 6px;
   line-height: 1.5;
-  margin-left: -70rpx;
-  margin-top: 18rpx;
+  margin-left: 0;
+  margin-top: 7px;
   min-width: 0;
-  padding-left: 70rpx;
-  position: relative;
-  width: calc(100% + 70rpx);
+  padding-left: 0;
+  width: 100%;
 }
 
 .location-icon {
-  left: 0;
+  flex: 0 0 auto;
   line-height: 1.5;
-  position: absolute;
-  top: -4rpx;
 }
 
 .location-district {
-  color: #667d9f;
+  color: #687992;
   flex: 0 0 auto;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .location-separator {
@@ -467,70 +519,55 @@ function cancelAccept(): void {
 }
 
 .location-address {
-  color: var(--app-content-muted-ink);
-  display: -webkit-box;
+  color: #8290a4;
+  display: block;
   flex: 1;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  white-space: nowrap;
 }
 
 .location-distance {
   align-items: center;
-  color: #627492;
+  color: #77879f;
   display: flex;
   flex: 0 0 auto;
-  font-size: 22rpx;
-  font-weight: 700;
-  gap: 6rpx;
-  margin-left: 6rpx;
+  font-size: 12px;
+  font-weight: 550;
+  gap: 0;
+  margin-left: 5px;
   white-space: nowrap;
 }
 
-.distance-vehicle-icon {
-  border: 2rpx solid #6f86a8;
-  border-radius: 4rpx;
-  box-sizing: border-box;
-  height: 12rpx;
-  position: relative;
-  width: 22rpx;
+.card-customer-row {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  margin-top: 9px;
+  min-width: 0;
 }
-
-.distance-vehicle-icon::before,
-.distance-vehicle-icon::after {
-  background: #6f86a8;
-  border-radius: 50%;
-  bottom: -5rpx;
-  content: '';
-  height: 5rpx;
-  position: absolute;
-  width: 5rpx;
-}
-
-.distance-vehicle-icon::before { left: 2rpx; }
-.distance-vehicle-icon::after { right: 2rpx; }
 
 .card-customer {
-  color: #172239;
-  display: -webkit-box;
-  font-size: 29rpx;
-  font-weight: 800;
-  line-height: 1.4;
-  margin-top: 10rpx;
+  color: #17263e;
+  display: block;
+  flex: 1 1 auto;
+  font-size: 20px;
+  font-weight: 770;
+  line-height: 1.3;
+  letter-spacing: -.3px;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  white-space: nowrap;
 }
 
 .card-footer {
   align-items: center;
   display: flex;
   justify-content: space-between;
-  margin-top: 14rpx;
-  min-height: 32rpx;
+  margin-top: 7px;
+  min-height: 42px;
 }
 
 .nearby-chip {
@@ -539,17 +576,17 @@ function cancelAccept(): void {
 
 .card-phone-button {
   align-items: center;
-  background: var(--app-surface-raised);
-  border: 1px solid var(--app-outline-subtle);
-  border-radius: 14px;
+  background: #f8fbff;
+  border: 1px solid #e0e9f6;
+  border-radius: 50%;
   display: flex;
-  flex: 0 0 44px;
-  height: 44px;
+  flex: 0 0 42px;
+  height: 42px;
   justify-content: center;
   margin-right: 2px;
-  width: 44px;
+  width: 42px;
   box-sizing: border-box;
-  box-shadow: var(--app-elevation-flat);
+  box-shadow: 0 2px 6px rgba(29, 92, 172, .055);
 }
 
 .card-phone-button--loading { opacity: 0.48; }
