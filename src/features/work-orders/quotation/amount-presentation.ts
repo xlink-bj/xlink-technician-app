@@ -9,7 +9,7 @@ export interface QuotationAmountPresentation {
 export function formatQuotationMoney(value: number): string {
   const fixed = value.toFixed(2)
   const [integer, decimals] = fixed.split('.')
-  return `${integer?.replace(/\\B(?=(\\d{3})+(?!\\d))/g, ',')}.${decimals}`
+  return `${integer?.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}.${decimals}`
 }
 
 /** A display-only projection of the current engine state; it never estimates an amount. */
