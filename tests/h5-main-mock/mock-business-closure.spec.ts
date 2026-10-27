@@ -24,7 +24,7 @@ for (const viewport of [{width:375,height:667},{width:390,height:844}]) {
     await expect(page.getByTestId('mock-journey-save-state')).toContainText('保存后')
     await expect(page.getByTestId('mock-journey-save-state')).not.toContainText('已保存')
     await page.getByTestId('mock-journey-advance').click()
-    await expect(page.getByTestId('mock-journey-feedback')).toContainText('尚无可核对')
+    await expect(page.getByTestId('mock-journey-feedback')).toContainText('尚无已保存的表单记录')
     await expect(page).toHaveURL(/action-workspace/)
 
     await page.locator('.action-content-field--note textarea').fill('平屋顶渗漏 · 本机编辑')
