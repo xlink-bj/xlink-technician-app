@@ -102,6 +102,13 @@ test('Q01 selected-items visual baseline on real App H5, 375x667', async ({ page
   await info.attach('Q01 summary and repair-group viewport', {
     body: headerImage, contentType: 'image/png',
   })
+  // Long-page evidence shows the entire actual business composition, not a
+  // separately coded artboard. The phone viewport remains 375px wide.
+  const groupPortrait = await group.screenshot({ animations: 'disabled', caret: 'hide' })
+  await writeFile(resolve(dir, 'q01-actual-group-long.png'), groupPortrait)
+  await info.attach('Q01 continuous quotation group from real DOM', {
+    body: groupPortrait, contentType: 'image/png',
+  })
   // Each frame is an unaltered viewport screenshot from a real operator
   // scroll state. Do not claim one browser viewport captures a long scrollview.
   const procedure = page.getByTestId('quotation-group-section-quotation-group-1-procedure')
