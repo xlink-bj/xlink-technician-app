@@ -15,6 +15,8 @@ export interface QuotationPricedSelection {
   readonly calcTotalPriceContribution: number
   /** Row total emitted by R1 fillOrder(); quantity-derived value is rounded per row except an applied minimum. */
   readonly fillOrderTotalAmount: number
+  /** Source catalogue unit price for commercial display, when trustworthy. A package's composed or minimum price is deliberately excluded. */
+  readonly catalogUnitPrice?: number
 }
 
 export interface QuotationGroupPricing {
@@ -152,11 +154,18 @@ export function calculateQuotationPricing(draft: HydratedQuotationDraft): Quotat
         continue
       }
       calcTotalPriceContribution += priced.calcTotalPriceContribution
+      const sourceUnitPrice = selection.kind === 'material'
+        ? selection.item.price
+        : selection.kind === 'procedure' || selection.kind === 'measure'
+          ? selection.item.guideUnitPrice
+          : undefined
       selectionAmounts.push({
         selectionId: selection.selection.selectionId,
         kind: selection.kind,
         calcTotalPriceContribution: priced.calcTotalPriceContribution,
         fillOrderTotalAmount: priced.fillOrderTotalAmount,
+        ...(typeof sourceUnitPrice === 'number' && Number.isFinite(sourceUnitPrice)
+          ? { catalogUnitPrice: sourceUnitPrice } : {}),
       })
       categoryValues[selection.kind].push(priced.fillOrderTotalAmount)
     }
