@@ -10,16 +10,16 @@
 
 | 执行位置 | 优先承担 | 可以出具的证据 | 不应替代 |
 | --- | --- | --- | --- |
-| ChatGPT 临时 Linux 工作区 | 阅读合同与源码、局部实现、文档、Git diff、静态检查、typecheck、单测及可用的构建 | 精确 diff、测试日志、可复现命令；若实际能启动浏览器，也可提供本地 H5 预检截图 | 缺浏览器时声称 Playwright 已运行；Mac 原生 MP 结果 |
+| ChatGPT 临时 Linux 工作区 | 阅读合同与源码、局部实现、文档、Git diff、静态检查、typecheck、单测、构建及可用的真实 H5 浏览器验收 | 精确 diff、测试日志、可复现命令、实际 Playwright 运行和本地 PNG；浏览器无法启动时回退 Actions | Mac 原生 MP 结果；Owner 视觉验收 |
 | GitHub Actions 固定版本 runner | 完整 CI、依赖与 Chromium 安装、真实 uni-app H5 Playwright、两种屏宽截图、expected/actual/diff、可下载 Artifact | 带 commit SHA、run/job ID、测试结论、PNG/trace 的独立证据 | 微信开发者工具原生 MP 验收；Owner 美学与信息层次判断 |
 | Mac + 微信开发者工具 | MP-WEIXIN 实际编译与模拟器交互、平台差异、页面状态变化、控制台警告 | 精确 HEAD、工具/模式、分辨率、逐场景结果、脱敏截图 | H5 Chromium 视觉回归；未经授权的真实业务写入 |
 | Beta/测试环境（具有独立授权后） | 实际可写业务接口集成与回读、权限和并发/失败恢复 | 可核对的请求/响应、读写结果与业务审计 | 当前只读 Production；纯 Mock 的协议等价证明 |
 
-**决策规则：**同一任务先在当前容器做低成本诊断；需要浏览器却尚无可执行 Chromium，直接复用经过验证的 Actions lane；只在需要平台原生能力时使用 Mac；绝不因 H5 PASS 推断 MP PASS。
+**决策规则：**同一任务先在当前容器做低成本诊断并尝试真实 H5 浏览器验收；本地浏览器不稳定时使用 Actions lane；只在需要平台原生能力时使用 Mac；绝不因 H5 PASS 推断 MP PASS。
 
-### 容器没有 Chromium：是当前环境事实，不是技术不可能
+### Linux 容器 Chromium：已验证可用的 Headless Shell 备用通路
 
-2026-10-26 在本次 Linux 工作区实际检查：Node.js 和仓库 Playwright CLI 可用，但 `chromium` / `google-chrome` / `chromium-browser` 不在 PATH，Playwright 缓存中没有浏览器可执行文件；之前下载尝试得到非 ZIP 内容。该结论**仅针对该工作区的该次检查**，不推断未来容器永久无法安装浏览器。
+2026-10-26 最初在本次 Linux 工作区检查：Node.js 和仓库 Playwright CLI 可用，但系统 PATH 和 Playwright 缓存中没有可用浏览器，Playwright 默认 CDN 下载得到 0 字节/非 ZIP 内容。后续已用官方 Chrome for Testing 下载源补齐 **Chrome Headless Shell 153.0.8010.12**，并按仓库 Playwright 1.63 的浏览器查找路径接入。普通 Chrome 完整版曾 SIGSEGV，不作为本环境的通过证据；Headless Shell 则已真实启动。
 
 当权限、系统依赖和下载网络允许时，可按 [Playwright CI 官方指南](https://playwright.dev/docs/ci) 安装：
 
@@ -27,17 +27,17 @@
 pnpm exec playwright install --with-deps chromium
 ```
 
-随后须实跑至少一条真实 App Playwright 测试并检查 PNG，才能将本地 `BROWSER_PASS` 记为通过。安装失败不需要反复无界重试；改在具有稳定依赖、中文字体、固定锁文件的 Actions runner 执行。**“能运行 Playwright CLI”不等于“已安装 Chromium”，也不等于“已验收小程序”。**
+若默认下载源不可用，可在确认官方版本与仓库 Playwright 匹配后，使用 [Chrome for Testing 官方可用版本清单](https://googlechromelabs.github.io/chrome-for-testing/known-good-versions-with-downloads.json) 找到 `chrome-headless-shell` Linux ZIP；解压到临时目录，设置 `PLAYWRIGHT_BROWSERS_PATH` 指向相应 Playwright 浏览器缓存，并安装/解包 Noto CJK 字体供浏览器渲染。安装后**必须实际启动 Chromium、运行真实 App Playwright 测试并核对 PNG**；版本和平台路径不能随意拼凑。此次临时安装只证明当前工作区，容器重建后可能需要重新准备。
 
-**B2-X2 本次容器验证（同日）：** `CI=true ./node_modules/.bin/uni build -p h5` 已通过。先前普通 `uni build` 报 `uv_interface_addresses`，追踪为 CLI 更新检查在沙箱调用 `os.networkInterfaces()`；标准 `CI=true` 跳过了该检查（并避免无关网络遥测）。这不是业务代码问题。`./node_modules/.bin/playwright install chromium` 下载到 0 MiB 的非 ZIP 内容，重试失败，本容器没有可用 Chromium。H5 浏览器截图交由包含固定 Chromium/中文字体的 Actions，在精确 PR HEAD 重新执行。
+**B2-X2 本次容器验证（同日）：** `CI=true ./node_modules/.bin/uni build -p h5` 已通过；`CI=true` 跳过沙箱内 CLI 更新检查导致的 `uv_interface_addresses`，并避免无关网络遥测。已使用 Headless Shell + Noto CJK 实际通过商业 QA 隔离 3/3、Mock 业务闭环 2/2、S2 Focus 2/2，以及完整 S2 375/390 页面走查；**这些是当前临时工作树的本地预检，不等于远端 CI 对新 HEAD 的通过，也不等于 MP-WEIXIN 原生通过**。DS02A Golden 当前仍旧版，保留差异供 Owner 视觉判断。
 
 ## 2. 已验证的三段式反馈回路
 
-1. **L1：容器快速迭代。**先看当前 Issue、确切 commit、脏工作树、`AGENTS.md` 和商业 UX/QA 技能约束；修改源代码/测试；运行不依赖系统浏览器的检查。这里的局部 PASS 不能覆盖没执行的浏览器或平台门禁。
+1. **L1：容器快速迭代 + H5 浏览器预检。**先看当前 Issue、确切 commit、脏工作树、`AGENTS.md` 和商业 UX/QA 技能约束；修改源代码/测试；执行静态检查、单测、构建，以及实际可启动的 Headless Shell Playwright 截图；局部 PASS 不覆盖没执行的平台门禁。
 2. **L2：Draft PR 自动真实 H5。**在受控 `dev + Mock` 中执行 Playwright；锁定 PR 的精确 HEAD，保留两个屏宽（如 375×667、390×844），默认商业展示与**独立 QA 控制台**分别取证；仅允许本机服务，外部请求失败关闭。失败即上传截图、trace 和错误上下文用于定位。旧 `devReview=1` URL 会跳转到 QA 路由。
 3. **L3：Mac 原生复核 + Owner 决策。**微信开发者工具以同一 HEAD 复核工作流、持久化及 Console/WXSS；由 Owner 判断真实场景下的字级、信息密度、操作优先级和视觉一致性。视觉审美并不随 CODE/H5/MP 自动变成通过。
 
-其中 `devReview=1/0` 只控制 DEV 验收信息是否渲染，业务适配器、网络和授权边界保持独立。默认商业 UI 仍必须显示真实而低强调的 `体验数据 · 未提交后台` 等必要安全信息；禁止将合成数据伪装成正式订单、有效签约或真实付款。
+旧 `devReview=1/0` 已收敛为隔离的 DEV QA 路由，不再控制商业页面上的研发提示。Mock 与 Real 在相同业务状态下使用一致的业务文案与视觉组件；Mock 出处、模拟场景、调试操作均仅在 QA Console 展示。业务事实（如报价尚为草稿、尚未正式提交）仍应准确表达；不得将合成数据伪装成已付款或已签约记录。业务适配器、网络与授权边界独立于 UI QA 隔离规则。
 
 ## 3. 2026-10-26 PR #221 的实测证据（不可跨 HEAD 挪用）
 

@@ -73,9 +73,12 @@ const buttonContents = [...component.matchAll(/<AppButton\b[^>]*>([\s\S]*?)<\/Ap
 if (buttonContents.some((text) => /保存报价|提交报价|确认报价|完成工作流/.test(text)) || component.includes('completeWorkflowNode')) {
   fail('UI must not expose quote business writes or workflow completion')
 }
-if (!component.includes('本机金额预览') || !component.includes('未提交') || !component.includes('quotation-local-gross-total')
+if (!(component.includes('本机金额预览') || component.includes('报价金额 · 待确认'))
+  || !(component.includes('未提交') || component.includes('确认提交前仍为草稿'))
+  || !component.includes('quotation-local-gross-total')
   || !component.includes('quotation-rounding-note') || !component.includes('舍入后可能存在小额差异')
-  || !component.includes('只有单独确认') || !component.includes('不会完成当前工单工作流')) {
+  || !(component.includes('只有单独确认') || component.includes('只有确认提交后才会创建正式订单'))
+  || !(component.includes('不会完成当前工单工作流') || component.includes('报价提交不代表工单完成'))) {
   fail('Phase 1H local price preview must be explicitly non-submitted and Action-owned')
 }
 if (!component.includes('quotation-add-group') || !component.includes('quotation-browse-') || !component.includes('quotation-package-detail-') || !component.includes('quotation-selection-quantity-') || !component.includes('quotation-selection-remove-') || !component.includes('quotation-draft-legacy')) {

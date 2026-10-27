@@ -174,10 +174,10 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       await expect(page.getByTestId('quotation-hub-read-error')).toBeVisible()
       await expect(page.getByTestId('quotation-hub-create-unverified')).toBeEnabled()
       await capture('05-quote-orders', 'Q', 'Q00 订单读取失败', '当前源未返回可核验的服务器订单')
-      // Real uni-app UI with explicitly labelled DEV-only view data.
+      // QA-selected data state, rendered through the ordinary commercial UI.
       // Never assert these records came from the provider read port.
       await page.goto(page.url() + '&q00Preview=empty', { waitUntil: 'domcontentloaded' })
-      await expect(page.getByTestId('quotation-hub-design-sample')).toBeVisible()
+      await expect(page.getByTestId('quotation-hub-design-sample')).toHaveCount(0)
       await expect(page.getByTestId('quotation-hub-no-records')).toBeVisible()
       await expect(page.getByTestId('quotation-hub-empty-create')).toBeEnabled()
       await capture('05-quote-orders-empty', 'Q', 'Q00 无订单空状态', '明确标注合成数据的空状态视觉评审')
@@ -185,12 +185,13 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       // Changing only the hash query can reuse the same uni-app page instance.
       // Reload so onLoad consumes the exact new DEV preview option.
       await page.reload({ waitUntil: 'domcontentloaded' })
-      await expect(page.getByTestId('quotation-hub-design-sample')).toBeVisible()
+      await expect(page.getByTestId('quotation-hub-design-sample')).toHaveCount(0)
       await expect(page.getByTestId('quotation-hub-records')).toBeVisible()
       await expect(page.getByTestId('quotation-hub-records').locator('.quotation-hub__order')).toHaveCount(2)
+      await expect(page.getByTestId('quotation-order-hub')).not.toContainText(/DEV-Q00|Mock|演示数据|设计样本/)
       // Commercial reference: the work-order identity and customer detail
       // occupy separate, visually grouped rows rather than one cramped stack.
-      await expect(page.locator('.quotation-hub__work-order-meta')).toContainText('客户名称')
+      await expect(page.locator('.quotation-hub__work-order-meta')).toContainText('客户')
       const heroTop = await page.locator('.quotation-hub__work-order-top').boundingBox()
       const heroMeta = await page.locator('.quotation-hub__work-order-meta').boundingBox()
       expect(heroTop).not.toBeNull()
@@ -201,9 +202,16 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       const orderTitleSize = await page.locator('.quotation-hub__order-number').first().evaluate(
         element => parseFloat(getComputedStyle(element).fontSize),
       )
-      const orderMetaSize = await page.locator('.quotation-hub__order-line').first().evaluate(
+      // Commercial cards reveal line items on demand. Inspect typography in
+      // the expanded business state, then restore the compact screenshot state.
+      const firstOrder = page.locator('.quotation-hub__order').first()
+      await firstOrder.getByTestId('quotation-hub-view-DEV-Q00-ORDER-1').click()
+      await expect(firstOrder.locator('.quotation-hub__order-line').first()).toBeVisible()
+      const orderMetaSize = await firstOrder.locator('.quotation-hub__order-line').first().evaluate(
         element => parseFloat(getComputedStyle(element).fontSize),
       )
+      await firstOrder.getByTestId('quotation-hub-view-DEV-Q00-ORDER-1').click()
+      await expect(firstOrder.locator('.quotation-hub__details')).toHaveCount(0)
       const orderCard = await page.locator('.quotation-hub__order').first().boundingBox()
       expect(orderTitleSize).toBeGreaterThanOrEqual(viewport.width < 390 ? 13 : 14)
       expect(orderMetaSize).toBeGreaterThanOrEqual(12)
@@ -222,9 +230,9 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       await expect(page.getByTestId('quotation-state-ready')).toBeVisible()
       await expect(page.getByTestId('mock-journey-context-survey')).toHaveCount(0)
       await expect(page.getByTestId('mock-survey-quote-adopt')).toBeVisible()
-      // Q01: compact preceding DEV data without hiding provenance or the adopt control.
+      // Q01: preceding business data stays available without QA provenance.
       await expect(page.locator('.journey-context--task-focus')).toBeVisible()
-      await expect(page.locator('.journey-context--task-focus')).toContainText('未提交后台')
+      await expect(page.locator('.journey-context--task-focus')).not.toContainText('未提交后台')
       await expect(page.locator('.journey-context__focus-suggestion')).toBeVisible()
       await expect(page.locator('.journey-context__focus-suggestion')).toContainText('屋面 / 有保护平屋面')
       // The complete original Survey record is reachable only when the
@@ -247,10 +255,10 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       expect(firstAction!.height, 'quote primary task target must be at least 44px high').toBeGreaterThanOrEqual(44)
       expect(firstAction!.y + firstAction!.height, 'primary task must be above footer').toBeLessThan(taskFooter!.y)
       const quote = await page.getByTestId('quotation-action-content').boundingBox()
-      const nextStage = await page.getByTestId('mock-journey-signing-review').boundingBox()
       expect(quote).not.toBeNull()
-      expect(nextStage).not.toBeNull()
-      expect(nextStage!.y).toBeGreaterThan(quote!.y)
+      // The synthetic signing shortcut belongs to the isolated QA console,
+      // never below a customer-facing quotation editor.
+      await expect(page.getByTestId('mock-journey-signing-review')).toHaveCount(0)
       await capture('05-quote-entry', 'Q', '新增订单', '首次进入与工单上下文')
       await expect(page.getByTestId('quotation-quote-process')).toContainText('费用与优惠')
       const fieldFont = await page.locator('.quotation-content__initial-empty-title').evaluate(
@@ -324,22 +332,26 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       await expect(page.getByTestId('action-workspace-submit')).toHaveCount(0)
       await capture('07-quote-group', 'Q', '报价分组', '已选普通材料、提交仍受限')
 
+      // The next three captures are explicitly QA-only contract-state samples.
+      // Enter the separate console; do not add developer actions back to Q01.
+      await page.goto('/#/pages/dev/qa-console', { waitUntil: 'domcontentloaded' })
+      await expect(page.getByTestId('qa-console')).toBeVisible()
       await expect(page.getByTestId('mock-journey-signing-review')).toBeVisible()
       await page.getByTestId('mock-journey-signing-review').click()
       await expect(page.getByTestId('signing-mock-workbench')).toBeVisible()
       await expect(page.getByTestId('signing-mock-no-contract')).toBeVisible()
-      await capture('08-signing-empty', 'C', '签约合同空态', '独立正式订单样本；无真实合同')
+      await capture('08-signing-empty', 'C', 'QA 合同空态样本', '独立 DEV 工具，不属于商业用户页面')
       await page.getByTestId('signing-mock-order-mock-official-order-019-b').click()
       await expect(page.getByTestId('signing-mock-state')).toContainText('签署中')
       // The contract status card is below the fold on mobile. A screenshot
       // of the top developer-control buttons is NOT useful signing evidence.
       await page.getByTestId('signing-mock-contract').scrollIntoViewIfNeeded()
-      await capture('09-signing-progress', 'C', '签署中', '实际滚动至合同状态区域')
+      await capture('09-signing-progress', 'C', 'QA 签署中样本', '独立 DEV 工具中的合同状态区域')
       await page.getByTestId('signing-mock-scenario-expired').click()
       await expect(page.getByTestId('signing-mock-state')).toContainText('过期')
       await expect(page.getByTestId('signing-mock-apply-disabled')).toHaveAttribute('disabled', 'true')
       await page.getByTestId('signing-mock-contract').scrollIntoViewIfNeeded()
-      await capture('10-signing-expired', 'C', '合同过期', '状态区域、禁用签约操作')
+      await capture('10-signing-expired', 'C', 'QA 合同过期样本', '独立 DEV 工具中的禁用签约操作')
 
       // Actual commercial signing-read component, NOT the detached developer
       // status harness. This is a separate synthetic official Order fixture;

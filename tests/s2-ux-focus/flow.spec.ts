@@ -97,8 +97,11 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       // Explicitly tagged synthetic two-order design state, NOT server data.
       await page.goto(page.url() + '&q00Preview=orders', { waitUntil: 'domcontentloaded' })
       await page.reload({ waitUntil: 'domcontentloaded' })
-      await expect(page.getByTestId('quotation-hub-design-sample')).toBeVisible()
+      // Preview fixtures exercise the same commercial component; their
+      // development provenance must not become a visible business-page banner.
+      await expect(page.getByTestId('quotation-hub-design-sample')).toHaveCount(0)
       await expect(page.getByTestId('quotation-hub-records').locator('.quotation-hub__order')).toHaveCount(2)
+      await expect(page.getByTestId('quotation-order-hub')).not.toContainText(/DEV-Q00|Mock|演示数据|设计样本/)
       await expect(page.getByTestId('quotation-hub-start-new')).toBeVisible()
       await expect(page.getByTestId('quotation-hub-add-inline')).toHaveCount(0)
     } else {

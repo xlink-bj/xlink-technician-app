@@ -52,6 +52,9 @@ async function openScene(page: Page, scene: Scene) {
   // Test the actual Q01 edit surface, not its transient empty-state loader.
   await page.getByTestId('quotation-add-group').click()
   await expect(page.getByTestId('quotation-first-step-repair-parts-trigger')).toBeVisible()
+  // Wait for the local draft write and derived summary to settle before
+  // comparing PNGs, so we do not snapshot a transient save indicator.
+  await expect(page.locator('.quotation-content__local-status')).toContainText('草稿已保存在本机')
 }
 
 for (const width of widths) {
@@ -90,6 +93,23 @@ for (const width of widths) {
         const partTag = page.locator('.summary-card .app-meta-tag')
         if (await partTag.count()) await expect(partTag).toBeVisible()
         await expect(page.locator('.information-card.app-record-card')).toBeVisible()
+      }
+      if (scene === 'quote') {
+        // A smaller viewport must not split the four-character save action.
+        const save = page.getByTestId('quotation-first-step-save-draft')
+        await expect(save).toBeVisible()
+        const saveBox = await save.boundingBox()
+        expect(saveBox).not.toBeNull()
+        expect(saveBox!.height, 'save action remains an accessible touch target').toBeGreaterThanOrEqual(44)
+        const label = await save.locator('.app-button__label').evaluate(element => {
+          const style = getComputedStyle(element)
+          return {
+            lines: element.getBoundingClientRect().height / Number.parseFloat(style.lineHeight),
+            horizontalOverflow: element.scrollWidth - element.clientWidth,
+          }
+        })
+        expect(label.lines, 'save action label must remain a single line').toBeLessThanOrEqual(1.1)
+        expect(label.horizontalOverflow, 'save action label must not clip').toBeLessThanOrEqual(1)
       }
       // Snapshot the viewport after a fixed, source-modelled point in time;
       // no production reads, no order Submit, no financial writes.

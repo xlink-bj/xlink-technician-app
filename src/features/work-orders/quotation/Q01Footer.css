@@ -7,7 +7,8 @@
 }
 .q01-footer-status__amount { text-align: right; min-width: 0; overflow-wrap: anywhere; }
 .q01-footer-actions { display: flex; align-items: stretch; gap: 12px; width: 100%; }
-.q01-footer-actions .q01-footer-save { flex: 0 0 102px; width: 102px; }
+.q01-footer-actions .q01-footer-save { flex: 0 0 102px; width: 102px; padding-inline: 8px; }
+.q01-footer-actions .q01-footer-save .app-button__label { white-space: nowrap; overflow-wrap: normal; }
 .q01-footer-actions .q01-footer-next { flex: 1 1 auto; min-width: 0; }
 .q01-footer-caution {
   display: block; margin-top: 7px; text-align: center;
