@@ -60,9 +60,9 @@ test('Q01 selected-items visual baseline on real App H5, 375x667', async ({ page
   const content = group.getByTestId('quotation-composition-selection')
   await expect(content).toHaveCount(4)
   await page.getByTestId('quotation-group-section-quotation-group-1-procedure')
-    .locator('.quotation-content__quantity').fill('12')
+    .locator('.quotation-content__quantity input').fill('12')
   const materialQuantities = page.getByTestId('quotation-group-section-quotation-group-1-material')
-    .locator('.quotation-content__quantity')
+    .locator('.quotation-content__quantity input')
   await materialQuantities.nth(0).fill('8')
   await materialQuantities.nth(1).fill('4')
   // Measure stays at the catalogue default quantity of one.
