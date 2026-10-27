@@ -11,12 +11,12 @@
 .action-workspace-page--quotation:not(.action-workspace-page--q01-entry) .action-workspace-context.app-surface {
   display: block;
   margin: 0 0 9px;
-  padding: 4px 2px 11px;
-  background: transparent;
-  box-shadow: none;
-  border: 0;
-  border-bottom: 1px solid #e5ebf3;
-  border-radius: 0;
+  padding: 4px 2px 11px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border: 0 !important;
+  border-bottom: 1px solid #e5ebf3 !important;
+  border-radius: 0 !important;
 }
 .action-workspace-page--quotation:not(.action-workspace-page--q01-entry) .action-workspace-context-quotation {
   display: flex;
