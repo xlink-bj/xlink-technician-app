@@ -72,7 +72,7 @@
             <text class="quotation-content__engine-label">报价金额 · 待确认</text>
             <text class="quotation-content__engine-amount">¥{{ workspace.quotationEngine.result.pricing.calcTotalPrice.totalPrice.toFixed(2) }}</text>
           </view>
-          <text v-if="workspace.quotationEngine.result.pricing" class="quotation-content__engine-note" data-testid="quotation-rounding-note">分组明细与整体金额按各自规则计算，舍入后可能存在小额差异。</text>
+          <text v-if="hasMeaningfulRoundingDifference" class="quotation-content__engine-note" data-testid="quotation-rounding-note">分组明细与整体金额按各自规则计算，舍入后可能存在小额差异。</text>
           <AppStatus
             v-if="workspace.quotationEngine.result.state === 'ready'"
             message="报价校验已通过；确认提交前仍为草稿。"
@@ -1080,6 +1080,11 @@ const syntheticReviewEnabled = computed(() => import.meta.env.DEV
 const verifiedPricing = computed(() => {
   const result = workspace.quotationEngine.result
   return result && result.draftVersion === composition.draft?.draftVersion ? result.pricing : undefined
+})
+// An R1 rounding caveat is only relevant when fillOrder and top-level totals actually differ.
+const hasMeaningfulRoundingDifference = computed(() => {
+  const pricing = verifiedPricing.value
+  return Boolean(pricing && Math.abs(pricing.fillOrder.orderListTotalAmount - pricing.calcTotalPrice.totalPrice) >= 0.005)
 })
 const isInitialEmptyWorkbench = computed(() => isInitialQuotationWorkbenchEmpty({
   contentState: props.state,
