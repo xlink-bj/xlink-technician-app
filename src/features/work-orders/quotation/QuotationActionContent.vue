@@ -1,5 +1,5 @@
 <template>
-  <view class="quotation-content" :class="{ 'quotation-content--review': props.productReviewOnly, 'quotation-content--q01': isFirstRepairPartStep }" data-testid="quotation-action-content">
+  <view class="quotation-content" :class="{ 'quotation-content--review': props.productReviewOnly, 'quotation-content--q01': isFirstRepairPartStep, 'quotation-content--baseline': !catalogBrowser.isOpen && !isInitialEmptyWorkbench && !isFirstRepairPartStep && composition.groups.length > 0 }" data-testid="quotation-action-content">
     <view v-if="!catalogBrowser.isOpen && !isInitialEmptyWorkbench && !isFirstRepairPartStep" class="quotation-content__heading" data-testid="quotation-workbench-heading">
       <text class="quotation-content__eyebrow">报价草稿 · 按部位组织</text>
       <text v-if="!props.productReviewOnly || composition.groups.length === 0" class="quotation-content__description">选择维修部位，逐组整理报价项目。</text>
@@ -12,7 +12,7 @@
     <view v-else-if="props.state === 'ready'" v-show="!catalogBrowser.isOpen" class="quotation-content__panel quotation-content__workbench app-surface" :class="{ 'quotation-content__workbench--initial': isInitialEmptyWorkbench || isFirstRepairPartStep }" data-testid="quotation-state-ready">
       <view v-if="!isInitialEmptyWorkbench && !isFirstRepairPartStep" class="quotation-content__workbench-summary" data-testid="quotation-workbench-summary">
         <view class="quotation-content__workbench-summary-copy">
-          <text class="quotation-content__panel-title">{{ props.productReviewOnly ? '维修部位报价' : '项目概览' }}</text>
+          <text class="quotation-content__panel-title">维修部位报价</text>
           <text class="quotation-content__line-count">{{ composition.selectionCount }} 项 · {{ composition.groups.length }} 个维修部位</text>
         </view>
         <view v-if="!props.productReviewOnly" class="quotation-content__amount-summary">
@@ -251,13 +251,13 @@
             :id="`quotation-repair-group-${group.groupId}`"
             :data-testid="`quotation-repair-group-${group.groupId}`"
           >
+            <view class="quotation-content__group-overview">
             <view class="quotation-content__group-heading">
               <view class="quotation-content__group-index" aria-hidden="true">{{ String(groupIndex + 1).padStart(2, '0') }}</view>
               <view class="quotation-content__group-title-copy">
                 <text class="quotation-content__group-eyebrow">维修部位组</text>
                 <text class="quotation-content__group-title">{{ group.partDescription || repairPartPathLabel(group.repairParts) || '待选择维修部位' }}</text>
                 <text class="quotation-content__group-location">{{ repairPartPathLabel(group.repairParts) || '尚未选择部位路径' }}<template v-if="group.maintainAreaNum"> · 工程量 {{ group.maintainAreaNum }}</template></text>
-                <text v-if="groupSubtotal(group.groupId) !== undefined" class="quotation-content__group-subtotal" :data-testid="`quotation-group-subtotal-${group.groupId}`">已核验组金额 ¥{{ groupSubtotal(group.groupId)?.toFixed(2) }}</text>
               </view>
               <view class="quotation-content__group-heading-actions">
                 <text class="quotation-content__group-count">{{ groupSelectionCount(group.groupId) }} 项</text>
@@ -269,6 +269,11 @@
                   @tap="toggleGroupContext(group)"
                 >{{ isGroupContextExpanded(group) ? '收起' : '编辑部位' }}</AppButton>
               </view>
+            </view>
+            <view v-if="groupSubtotal(group.groupId) !== undefined" class="quotation-content__group-total-row">
+              <text class="quotation-content__group-total-label">本组报价</text>
+              <text class="quotation-content__group-subtotal" :data-testid="`quotation-group-subtotal-${group.groupId}`">¥{{ groupSubtotal(group.groupId)?.toFixed(2) }}</text>
+            </view>
             </view>
             <view v-if="isGroupContextExpanded(group)" class="quotation-content__group-context" :data-testid="`quotation-group-context-${group.groupId}`">
               <text class="quotation-content__context-label">维修部位路径</text>
@@ -340,6 +345,7 @@
                   v-show="composition.selectionsFor(group.groupId, kind).length > 0"
                   :key="kind"
                   class="quotation-content__group-section"
+                  :class="`quotation-content__group-section--${kind}`"
                   :data-testid="`quotation-group-section-${group.groupId}-${kind}`"
                 >
                   <view class="quotation-content__group-section-heading">
@@ -362,6 +368,11 @@
                         <text class="quotation-content__line-title">{{ selection.label }}</text>
                       </view>
                       <text class="quotation-content__selection-unit">{{ selection.unit || '单位待核验' }}</text>
+                      <view v-if="lineSubtotalFor(group.groupId, selection.selectionId) !== undefined" class="quotation-content__line-money"
+                        :data-testid="`quotation-selection-subtotal-${selection.selectionId}`">
+                        <text class="quotation-content__line-money-label">小计</text>
+                        <text class="quotation-content__line-money-value">¥{{ lineSubtotalFor(group.groupId, selection.selectionId)?.toFixed(2) }}</text>
+                      </view>
                     </view>
                     <view
                       v-if="selection.kind === 'package'"
@@ -1093,6 +1104,9 @@ const amountPresentation = computed(() => quotationAmountPresentation({
 }))
 const groupSubtotal = (groupId: string): number | undefined =>
   verifiedPricing.value?.fillOrder.groups.find((group) => group.groupId === groupId)?.subtotal
+const lineSubtotalFor = (groupId: string, selectionId: string): number | undefined =>
+  verifiedPricing.value?.fillOrder.groups.find((group) => group.groupId === groupId)
+    ?.selectionAmounts.find((line) => line.selectionId === selectionId)?.fillOrderTotalAmount
 
 // DEV product preview has NO source-verified effective tenant/work-order ExtFields.
 // Expose only a truthful local draft message; never use it to enable submission.
@@ -1658,3 +1672,4 @@ function configuredPackageLayerLabel(
 </script>
 
 <style src="./QuotationActionContent.styles.css"></style>
+<style src="./Q01CommercialBaseline.css"></style>
