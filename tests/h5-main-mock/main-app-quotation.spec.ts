@@ -243,6 +243,26 @@ for (const viewport of [
     await expect(page.getByTestId('quotation-group-section-quotation-group-1-package')).toBeVisible()
     await expect(page.getByTestId('quotation-group-section-quotation-group-1-material')).toBeHidden()
 
+    // Q01 Commercial Visual Baseline V1: screenshot the genuine selected-item
+    // business page, not the initial empty editor or a detached HTML mockup.
+    // Identical markup/styles must serve DEV Mock and source-backed Real.
+    await expect(page.locator('.quotation-content--baseline')).toBeVisible()
+    const section = page.getByTestId('quotation-group-section-quotation-group-2-material')
+    const sectionGeometry = await section.evaluate((el) => {
+      const style = getComputedStyle(el)
+      return { radius: parseFloat(style.borderTopLeftRadius), background: style.backgroundColor }
+    })
+    expect(sectionGeometry.radius, 'Q01 line groups must use baseline commercial cards').toBeGreaterThanOrEqual(15)
+    expect(sectionGeometry.background, 'Q01 category surface is white').toBe('rgb(255, 255, 255)')
+    const qtyBoxes = section.locator('.quotation-content__quantity-wrap')
+    const qtyLefts = await qtyBoxes.evaluateAll((nodes) =>
+      nodes.map((node) => node.getBoundingClientRect().left))
+    expect(qtyLefts).toHaveLength(1)
+    await info.attach('q01-v1-real-app-selected-items-' + viewport.width, {
+      body: await page.screenshot({ fullPage: true, animations: 'disabled', caret: 'hide' }),
+      contentType: 'image/png',
+    })
+
     // P1: review actual grouped quotation in the same Action, not the
     // standalone SKU demo. The result is LOCAL, never official Order approval.
     await expect(page.getByTestId('quotation-p1-local-review')).toBeVisible()
