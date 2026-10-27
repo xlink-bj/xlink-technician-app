@@ -50,6 +50,9 @@ test('Q01 selected-items visual baseline on real App H5, 375x667', async ({ page
 
   const group = page.getByTestId('quotation-repair-group-quotation-group-1')
   await expect(group).toBeVisible()
+  const context = page.getByTestId('quotation-group-context-quotation-group-1')
+  if (await context.isVisible()) await page.getByTestId('quotation-group-context-toggle-quotation-group-1').click()
+  await expect(context).toBeHidden()
   const collapsed = page.getByTestId('quotation-group-collapsed-summary-quotation-group-1')
   if (await collapsed.isVisible()) {
     await page.getByTestId('quotation-group-details-toggle-quotation-group-1').click()
@@ -74,14 +77,26 @@ test('Q01 selected-items visual baseline on real App H5, 375x667', async ({ page
 
   const dir = resolve('.review/q01-visual-baseline')
   await mkdir(dir, { recursive: true })
-  const viewportImage = await page.screenshot({ animations: 'disabled', caret: 'hide' })
-  await writeFile(resolve(dir, 'q01-selected-375x667.png'), viewportImage)
-  await info.attach('Q01 real-App selection, 375x667', { body: viewportImage, contentType: 'image/png' })
-  // Element capture conveys the long business group while the viewport proof
-  // documents fixed navigation and footer. Neither shot changes DOM/CSS.
-  const groupImage = await group.screenshot({ animations: 'disabled', caret: 'hide' })
-  await writeFile(resolve(dir, 'q01-selected-group-full.png'), groupImage)
-  await info.attach('Q01 full business group', { body: groupImage, contentType: 'image/png' })
+  // Each frame is an unaltered viewport screenshot from a real operator
+  // scroll state. Do not claim one browser viewport captures a long scrollview.
+  const procedure = page.getByTestId('quotation-group-section-quotation-group-1-procedure')
+  await procedure.scrollIntoViewIfNeeded()
+  const overviewImage = await page.screenshot({ animations: 'disabled', caret: 'hide' })
+  await writeFile(resolve(dir, 'q01-overview-and-procedure-375x667.png'), overviewImage)
+  await info.attach('Q01 overview + procedure viewport', { body: overviewImage, contentType: 'image/png' })
+
+  await material.scrollIntoViewIfNeeded()
+  const materialImage = await page.screenshot({ animations: 'disabled', caret: 'hide' })
+  await writeFile(resolve(dir, 'q01-materials-375x667.png'), materialImage)
+  await info.attach('Q01 material rows viewport', { body: materialImage, contentType: 'image/png' })
+  const materialCard = await material.screenshot({ animations: 'disabled', caret: 'hide' })
+  await writeFile(resolve(dir, 'q01-materials-card.png'), materialCard)
+
+  const measures = page.getByTestId('quotation-group-section-quotation-group-1-measure')
+  await measures.scrollIntoViewIfNeeded()
+  const measureImage = await page.screenshot({ animations: 'disabled', caret: 'hide' })
+  await writeFile(resolve(dir, 'q01-measures-and-action-375x667.png'), measureImage)
+  await info.attach('Q01 measures + actions viewport', { body: measureImage, contentType: 'image/png' })
   await writeFile(resolve(dir, 'evidence.json'), JSON.stringify({
     viewport: '375x667', source: 'real uni-app H5 / DEV Mock', lineCount: 4,
     materialQuantityX: qtyX, style: geometry, externalRequests, runtimeErrors,
