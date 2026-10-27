@@ -229,3 +229,107 @@
 .quotation-content--baseline .quotation-content__line-controls {
   margin-top: 12px;
 }
+
+/* Q01 long-page hierarchy: compact eyebrow, one meaningful title and a real
+   save state, rather than repeated engineering headings and amount cards. */
+.quotation-content--baseline .quotation-content__heading {
+  margin: 5px 0 7px;
+  padding: 0 1px;
+}
+.quotation-content--baseline .quotation-content__eyebrow {
+  color: #1671e3;
+  font-size: 12px; font-weight: 680; line-height: 1.5;
+}
+.quotation-content--baseline .quotation-content__workbench-summary {
+  display: flex; flex-wrap: nowrap; justify-content: space-between;
+  gap: 10px; align-items: center; padding: 0 0 13px;
+}
+.quotation-content--baseline .quotation-content__workbench-summary-copy {
+  flex: 1; min-width: 0;
+}
+.quotation-content--baseline .quotation-content__panel-title {
+  font-size: 23px; font-weight: 760; line-height: 1.35;
+  letter-spacing: -.5px;
+}
+.quotation-content--baseline .quotation-content__line-count {
+  margin-top: 5px; font-size: 12px; line-height: 1.5;
+  color: #7c8fa8;
+}
+.quotation-content--baseline .quotation-content__amount-summary {
+  display: none; /* same verified total remains in repair card & sticky bar */
+}
+.quotation-content--baseline .quotation-content__local-tag {
+  flex: none; align-self: center; margin: 0;
+  padding: 8px 9px; background: #fff0df; color: #a55b08;
+  border: 1px solid #f9dfc3;
+  border-radius: 9px; font-size: 11px; line-height: 1.3;
+  font-weight: 640; white-space: nowrap;
+}
+.quotation-content--baseline .quotation-content__review-readiness,
+.quotation-content--baseline .quotation-content__engine {
+  box-sizing: border-box;
+  position: relative;
+  background: #eaf3ff; border: 1px solid #dceaff;
+  box-shadow: none; border-radius: 13px;
+  color: #47617f;
+  margin: 6px 0 18px;
+  padding: 13px 13px 13px 47px;
+}
+.quotation-content--baseline .quotation-content__review-readiness::before,
+.quotation-content--baseline .quotation-content__engine::before {
+  box-sizing: border-box; content: 'i';
+  position: absolute; top: 14px; left: 14px;
+  display: flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; border-radius: 50%;
+  background: #1b78ee; color: #fff;
+  font-size: 14px; font-weight: 760; font-style: normal;
+}
+.quotation-content--baseline .quotation-content__review-readiness-title {
+  color: #183653; font-size: 13px; font-weight: 730; line-height: 1.5;
+}
+.quotation-content--baseline .quotation-content__review-readiness-copy {
+  color: #55708c; font-size: 12px; line-height: 1.55; margin-top: 3px;
+}
+.quotation-content--baseline .quotation-content__engine-total {
+  display: none; /* monetary values are never recomputed or concealed elsewhere */
+}
+.quotation-content--baseline .quotation-content__engine-note {
+  color: #536c89; font-size: 12px; line-height: 1.55;
+}
+.quotation-content--baseline .quotation-content__engine .app-status {
+  background: transparent; border: 0; padding: 0;
+  color: #1f4d83; font-size: 12px; line-height: 1.55;
+}
+.quotation-content--baseline .quotation-content__engine .app-status--warning {
+  color: #a45b19; font-weight: 650;
+}
+.quotation-content--baseline .quotation-content__engine-issue {
+  font-size: 11px; line-height: 1.5;
+}
+.quotation-content--baseline .quotation-content__local-status {
+  margin: 1px 0 8px; font-size: 11px; line-height: 1.45;
+}
+.quotation-content--baseline .quotation-content__group-overview {
+  padding: 17px 15px 16px;
+}
+.quotation-content--baseline .quotation-content__composition {
+  margin-top: 21px;
+}
+.quotation-content--baseline .quotation-content__group-section {
+  margin-bottom: 15px;
+}
+.quotation-content--baseline .quotation-content__group-section-heading {
+  padding-top: 15px;
+}
+.quotation-content--baseline .quotation-content__selection {
+  padding-top: 17px; padding-bottom: 17px;
+}
+.quotation-content--baseline .quotation-content__line-title {
+  font-size: 15px; line-height: 1.48; font-weight: 710;
+}
+.quotation-content--baseline .quotation-content__line-money-value {
+  font-size: 17px; font-weight: 760;
+}
+.quotation-content--baseline .quotation-content__group-subtotal {
+  font-size: 22px; font-weight: 780; letter-spacing: -.5px;
+}
