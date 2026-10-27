@@ -5,6 +5,13 @@ export interface QuotationAmountPresentation {
   readonly value: string
 }
 
+/** Currency typography only: R1 amount and rounding remain unchanged. */
+export function formatQuotationMoney(value: number): string {
+  const fixed = value.toFixed(2)
+  const [integer, decimals] = fixed.split('.')
+  return `${integer?.replace(/\\B(?=(\\d{3})+(?!\\d))/g, ',')}.${decimals}`
+}
+
 /** A display-only projection of the current engine state; it never estimates an amount. */
 export function quotationAmountPresentation(input: {
   readonly result: QuotationEngineResult | null
@@ -20,7 +27,7 @@ export function quotationAmountPresentation(input: {
   if (input.result.pricing) {
     return {
       label: '本机金额预览',
-      value: `¥${input.result.pricing.calcTotalPrice.totalPrice.toFixed(2)}`,
+      value: `¥${formatQuotationMoney(input.result.pricing.calcTotalPrice.totalPrice)}`,
     }
   }
   return { label: '金额状态', value: '暂不可计算' }
