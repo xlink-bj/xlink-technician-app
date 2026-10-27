@@ -1,0 +1,45 @@
+name: Q01 Commercial Visual Baseline (375)
+
+on:
+  pull_request:
+    paths:
+      - 'src/features/work-orders/quotation/**'
+      - 'tests/h5-main-mock/q01-visual-baseline.spec.ts'
+      - '.github/workflows/q01-visual-baseline.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  q01-real-app-visual:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.31.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Install real Chromium and Chinese fonts
+        run: |
+          pnpm exec playwright install --with-deps chromium
+          sudo apt-get update
+          sudo apt-get install -y fonts-noto-cjk
+      - name: Capture real selected-item quotation page, 375x667
+        run: pnpm exec playwright test --config playwright.main-h5-mock.config.ts tests/h5-main-mock/q01-visual-baseline.spec.ts
+      - name: Preserve screenshot evidence even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: q01-real-app-375-${{ github.run_id }}
+          path: |
+            .review/q01-visual-baseline/
+            test-results/main-h5-mock/
+          retention-days: 14
+          if-no-files-found: warn
