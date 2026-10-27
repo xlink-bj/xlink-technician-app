@@ -271,7 +271,7 @@
             </view>
             <view v-if="groupSubtotal(group.groupId) !== undefined" class="quotation-content__group-total-row">
               <text class="quotation-content__group-total-label">本组报价</text>
-              <text class="quotation-content__group-subtotal" :data-testid="`quotation-group-subtotal-${group.groupId}`">¥{{ groupSubtotal(group.groupId)?.toFixed(2) }}</text>
+              <text class="quotation-content__group-subtotal" :data-testid="`quotation-group-subtotal-${group.groupId}`">¥{{ formatQuotationMoney(groupSubtotal(group.groupId)!) }}</text>
             </view>
             </view>
             <view v-if="isGroupContextExpanded(group)" class="quotation-content__group-context" :data-testid="`quotation-group-context-${group.groupId}`">
@@ -367,14 +367,14 @@
                         <text class="quotation-content__line-title">{{ selection.label }}</text>
                         <text v-if="catalogUnitPriceFor(group.groupId, selection.selectionId) !== undefined"
                           class="quotation-content__line-unit-price" :data-testid="`quotation-selection-unit-price-${selection.selectionId}`">
-                          目录单价 ¥{{ catalogUnitPriceFor(group.groupId, selection.selectionId)?.toFixed(2) }}{{ selection.unit ? '/' + selection.unit : '' }}
+                          目录单价 ¥{{ formatQuotationMoney(catalogUnitPriceFor(group.groupId, selection.selectionId)!) }}{{ selection.unit ? '/' + selection.unit : '' }}
                         </text>
                       </view>
                       <text class="quotation-content__selection-unit">{{ selection.unit || '单位待核验' }}</text>
                       <view v-if="lineSubtotalFor(group.groupId, selection.selectionId) !== undefined" class="quotation-content__line-money"
                         :data-testid="`quotation-selection-subtotal-${selection.selectionId}`">
                         <text class="quotation-content__line-money-label">小计</text>
-                        <text class="quotation-content__line-money-value">¥{{ lineSubtotalFor(group.groupId, selection.selectionId)?.toFixed(2) }}</text>
+                        <text class="quotation-content__line-money-value">¥{{ formatQuotationMoney(lineSubtotalFor(group.groupId, selection.selectionId)!) }}</text>
                       </view>
                     </view>
                     <view
@@ -1014,7 +1014,7 @@ import AppLoadingState from '@shared/ui/AppLoadingState.vue'
 import AppStatus from '@shared/ui/AppStatus.vue'
 import { useActionWorkspaceStore } from '../action-workspace'
 import { useQuotationCompositionStore } from './composition-store'
-import { quotationAmountPresentation } from './amount-presentation'
+import { formatQuotationMoney, quotationAmountPresentation } from './amount-presentation'
 import { evaluateLocalQuotationPreflight } from './local-preflight'
 import { quotationReviewReadinessCopy } from './review-readiness-copy'
 import { isFirstQuotationRepairPartStep, isInitialQuotationWorkbenchEmpty } from './empty-workbench-state'
