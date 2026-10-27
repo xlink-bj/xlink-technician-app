@@ -53,9 +53,10 @@ test.describe('A-stage P1 real-H5 operator acceptance', () => {
     await expect(page.locator('.summary-number')).toContainText(number)
     await expectDetailOverviewWithinViewport(page)
     await expect(page.getByTestId('a-stage-special-panel')).toBeVisible()
-    // The wording can vary between "未提交" and "不会提交". Both must make
-    // the synthetic-only, no-backend-write boundary explicit to the operator.
-    await expect(page.getByTestId('a-stage-special-panel')).toContainText(/(?:未|不会)提交后台/)
+    // The Mock fixture uses the same commercial task surface as Real data.
+    // Source identity belongs to the separate QA console, not this panel.
+    await expect(page.getByTestId('a-stage-special-panel')).not.toContainText(/(?:未|不会)提交后台|体验数据|Mock|DEV/)
+    await expect(page.getByTestId('a-stage-special-panel')).toContainText('保存记录')
     await expect(page.getByTestId('a-special-task-state')).toContainText('正在填写')
   }
 
