@@ -64,6 +64,8 @@ for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }
     await expect(page.getByTestId('quotation-hub-local-draft')).toContainText('非正式订单')
     await expect(page.getByTestId('quotation-hub-local-draft')).toContainText('本机已保存')
     await expect(page.getByTestId('quotation-hub-order-mock-official-order-001')).toBeVisible()
+    await expect(page.getByTestId('quotation-hub-amount-unverified')).toContainText('金额待核验')
+    await expect(page.getByTestId('quotation-hub-order-mock-official-order-001')).not.toContainText('¥ 0.00')
     await expect(page.getByTestId('quotation-hub-signing-boundary')).toBeVisible()
     await info.attach(`qsign-quote-order-${viewport.width}`, {
       body: await page.screenshot({ animations: 'disabled', fullPage: true }), contentType: 'image/png',
@@ -78,6 +80,14 @@ for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }
     await page.getByTestId('signing-contract-read-request').click()
     await expect(page.getByTestId('signing-contract-matched')).toContainText('HT202610260001')
     await expect(page.getByTestId('signing-read-stage-title')).toContainText('签约处理中')
+    await expect(page.getByTestId('signing-read-reconciled-status')).toBeVisible()
+    await expect(page.getByTestId('signing-review-progress').getByTestId('signing-read-reconciled-status')).toBeVisible()
+    await expect(page.getByTestId('signing-read-operations-toggle')).toHaveAttribute('aria-expanded', 'false')
+    await expect(page.getByTestId('signing-order-read-sign-disabled')).toBeHidden()
+    await page.getByTestId('signing-read-operations-toggle').click()
+    await expect(page.getByTestId('signing-order-read-sign-disabled')).toBeVisible()
+    await expect(page.getByTestId('signing-order-read-sign-disabled')).toBeDisabled()
+    await page.getByTestId('signing-read-operations-toggle').click()
     await info.attach(`qsign-signing-status-${viewport.width}`, {
       body: await page.screenshot({ animations: 'disabled', fullPage: true }), contentType: 'image/png',
     })

@@ -18,18 +18,19 @@
       </view>
     </AppRecordCard>
     <AppStatus
-      v-if="!choosingMode && !isVisualSample"
+      v-if="!choosingMode && !isVisualSample && displayReadState !== 'succeeded'"
       class="quotation-hub__notice"
       variant="strip"
       tone="neutral"
       quiet
-      :message="mockJourneyOrder
-        ? displayReadState === 'succeeded' ? uxStateLanguage.syntheticOrder : uxStateLanguage.syntheticOrderPending
-        : displayReadState === 'succeeded' ? uxStateLanguage.scopedOrders : uxStateLanguage.scopedOrdersPending"
+      :message="mockJourneyOrder ? uxStateLanguage.syntheticOrderPending : uxStateLanguage.scopedOrdersPending"
       data-testid="ds07c4b-quotation-scope-note"
     />
-    <AppSectionHeading v-if="!choosingMode" class="quotation-hub__section-heading"
-      :title="`订单记录${displayReadState === 'succeeded' || isVisualSample ? ` (${records.length})` : ''}`" />
+    <view v-if="!choosingMode" class="quotation-hub__section-row">
+      <AppSectionHeading class="quotation-hub__section-heading"
+        :title="`订单记录${displayReadState === 'succeeded' || isVisualSample ? ` (${records.length})` : ''}`" />
+      <text v-if="displayReadState === 'succeeded' && !isVisualSample" class="quotation-hub__section-scope xl-craft__caption">仅本次可见</text>
+    </view>
     <view v-if="choosingMode" class="quotation-hub__mode" data-testid="quotation-hub-mode">
       <text class="quotation-hub__mode-title">选择操作</text>
       <text class="quotation-hub__mode-caption">为当前工单开始另一份报价草稿</text>
@@ -89,11 +90,12 @@
             <AppMetaTag class="quotation-hub__order-badge" tone="info" label="订单记录" />
           </view>
         </view>
-        <text class="quotation-hub__order-subtitle">{{ isVisualSample || mockJourneyOrder ? order.groups[0]?.partDescription || '维修报价' : '当前权限可见 · 状态未核实时不推断签约进度' }}</text>
+        <text class="quotation-hub__order-subtitle">{{ isVisualSample || mockJourneyOrder ? order.groups[0]?.partDescription || '维修报价' : '签约进度需单独核对' }}</text>
         <view class="quotation-hub__order-summary">
           <view class="quotation-hub__amount-block">
             <text class="quotation-hub__amount-label">订单金额</text>
-            <AppAmountValue class="quotation-hub__order-amount" size="prominent" tone="primary" :value="money(order.totalPrice)" />
+            <AppAmountValue v-if="mockJourneyOrder && order.totalPrice === 0" class="quotation-hub__amount-unverified" size="regular" tone="muted" value="金额待核验" data-testid="quotation-hub-amount-unverified" />
+            <AppAmountValue v-else class="quotation-hub__order-amount" size="prominent" tone="primary" :value="money(order.totalPrice)" />
           </view>
           <text class="quotation-hub__order-group-count">{{ order.contentSupported ? `${order.groups.length} 个维修部位组` : '明细待核验' }}</text>
         </view>
@@ -111,7 +113,7 @@
             class="quotation-hub__order-signing"
             :url="signingOrderReadRouteFor(workOrderId, order.id) || undefined"
             :data-testid="`quotation-hub-signing-${order.id}`">
-            查签约进度
+            查看签约进度 <text aria-hidden="true">›</text>
           </navigator>
         </view>
         <view v-if="expandedId === order.id" class="quotation-hub__details"
@@ -140,11 +142,11 @@
         <AppMetaTag label="非正式订单" tone="neutral" />
       </view>
       <text class="quotation-hub__draft-checkpoint-count quotation-hub__order-group-count">{{ localDraftGroupCount }} 个维修部位组 · {{ draftSaveLabel }}</text>
-      <text class="quotation-hub__draft-checkpoint-copy quotation-hub__detail-note">这份草稿只属于当前工单的本地编辑记录，不计入上方正式订单。请继续核价；只有从已核验的正式订单记录才能查看对应签约状态。</text>
+      <text class="quotation-hub__draft-checkpoint-copy quotation-hub__detail-note">仅在本机保存，尚未生成正式订单。可继续核对报价明细与金额。</text>
     </AppRecordCard>
     <AppStatus v-if="!choosingMode && records.length > 0 && (displayReadState === 'succeeded' || isVisualSample)"
       class="quotation-hub__signing-boundary" variant="strip" tone="neutral" quiet
-      message="签约状态须逐笔核对：订单记录不代表合同已签署；合同文件与签署操作尚未开放。"
+      message="签约状态需逐笔核对；订单记录不代表合同已签署。合同文件及签署操作尚未开放。"
       data-testid="quotation-hub-signing-boundary" />
     <view v-if="choosingMode || records.length > 0 && (displayReadState === 'succeeded' || isVisualSample)" class="quotation-hub__action-area">
       <AppButton v-if="choosingMode" block class="quotation-hub__new" data-testid="quotation-hub-mode-next"
@@ -304,10 +306,10 @@ watch(() => props.workOrderId, () => {
   font-family:-apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
 }
 .quotation-hub__work-order {
-  display:flex; flex-direction:column; padding:12px 15px 11px;
+  display:flex; flex-direction:column; padding:11px 15px 10px;
 
 }
-.quotation-hub__work-order-top { display:flex; align-items:center; gap:12px; min-height:48px; }
+.quotation-hub__work-order-top { display:flex; align-items:center; gap:12px; min-height:43px; }
 .quotation-hub__house {
   display:flex; align-items:center; justify-content:center; flex:none;
   width:40px; height:40px; border-radius:11px; background:#fff1e5;
@@ -321,7 +323,7 @@ watch(() => props.workOrderId, () => {
 }
 .quotation-hub__work-order-state { align-self: flex-start; flex: none; }
 .quotation-hub__work-order-meta {
-  margin-top:7px; padding:0 0 0 52px;
+  margin-top:5px; padding:0 0 0 52px;
   display:flex; gap:20px;
 }
 .quotation-hub__work-order-meta-cell { display:flex; flex-direction:row; align-items:baseline; min-width:0; gap:8px; }
@@ -331,17 +333,24 @@ watch(() => props.workOrderId, () => {
   color:#74879e; font-size:11px; line-height:1.5; border-radius:0;
   border-left:2px solid #b7cbe5;
 }
-.quotation-hub__notice { margin:10px 0 18px; }
+.quotation-hub__notice { margin:10px 0; }
+.quotation-hub__section-row {
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+}
 .quotation-hub__section-heading {
-  display:flex; align-items:center; justify-content:space-between; gap:12px;
-  margin:17px 1px 12px; min-height:44px;
+  display:flex; align-items:center; flex:1; gap:12px;
+  margin:11px 1px 8px; min-height:36px;
+}
+.quotation-hub__section-scope {
+  flex:none; color:var(--app-content-muted-ink);
+  line-height:1.4;
 }
 .quotation-hub__section-title {
   font-size:19px; font-weight:790; line-height:1.3; color:#172a44;
 }
 .quotation-hub__list { display:flex; flex-direction:column; gap:12px; }
 .quotation-hub__order {
-  box-sizing:border-box; padding:15px 15px 15px;
+  box-sizing:border-box; padding:14px 15px 13px;
 
 }
 .quotation-hub__order-heading {
@@ -356,14 +365,18 @@ watch(() => props.workOrderId, () => {
 .quotation-hub__order-badge { flex: 0 0 auto; }
 .quotation-hub__order-subtitle {
   display:block; color:#7e8da6; font-size:12px; line-height:1.45;
-  padding:7px 0 6px;
+  padding:5px 0 3px;
 }
 .quotation-hub__order-summary {
   display:flex; align-items:flex-end; justify-content:space-between;
-  gap:12px; min-width:0; padding:5px 0 13px;
+  gap:12px; min-width:0; padding:4px 0 10px;
 }
 .quotation-hub__amount-block { display:flex; flex-direction:column; gap:2px; min-width:0; }
 .quotation-hub__amount-label { color:var(--app-journey-subtle); font-size:var(--app-journey-label-size); }
+.quotation-hub__amount-unverified {
+  display:block; color:var(--app-craft-secondary);
+  font-weight:700; line-height:27px;
+}
 .quotation-hub__order-group-count { flex:0 0 auto; color:var(--app-journey-subtle); font-size:12px; padding-bottom:4px; }
 .quotation-hub__order-lines {
   display:flex; flex-direction:column; gap:7px; padding:0 0 11px;
@@ -384,7 +397,7 @@ watch(() => props.workOrderId, () => {
   align-items: center;
 }
 .quotation-hub__order-actions {
-  border-top:1px solid #ecf0f5; display:flex; gap:9px; padding-top:12px;
+  border-top:1px solid #ecf0f5; display:flex; gap:9px; padding-top:10px;
 }
 .quotation-hub__order-actions .app-button {
   flex:1; min-width:0; min-height:44px; border-radius:10px;
@@ -395,9 +408,9 @@ watch(() => props.workOrderId, () => {
 }
 .quotation-hub__order-signing {
   flex:1; min-height:44px; min-width:0; box-sizing:border-box;
-  display:flex; justify-content:center; align-items:center;
-  border-radius:10px; border:1px solid var(--app-color-primary-border); color:var(--app-color-primary);
-  background:var(--app-color-primary-soft); font-size:13px; font-weight:700; text-align:center;
+  display:flex; justify-content:center; align-items:center; gap:5px;
+  border-radius:10px; border:1px solid var(--app-color-primary-border); color:var(--app-craft-action);
+  background:var(--app-craft-action-surface); font-size:13px; font-weight:700; text-align:center;
 }
 .quotation-hub__details {
   margin-top:13px; padding-top:12px; border-top:1px solid #eef2f7;
@@ -469,16 +482,16 @@ watch(() => props.workOrderId, () => {
 }
 .quotation-hub__error { background:#fff0e8; color:#b7643d; }
 .quotation-hub__draft-checkpoint {
-  display:flex; flex-direction:column; gap:8px; margin-top:13px;
-  padding:15px; border:1px solid #d9e7f9; background:#f5f9ff;
+  display:flex; flex-direction:column; gap:5px; margin-top:10px;
+  padding:12px 14px; border:1px solid #d9e7f9; background:#f5f9ff;
 }
 .quotation-hub__draft-checkpoint-title {
   display:flex; justify-content:space-between; align-items:center; gap:9px;
   color:var(--app-text-strong); font-weight:750;
 }
 .quotation-hub__draft-checkpoint-count { color:#3275bd; font-weight:700; padding-bottom:0; }
-.quotation-hub__draft-checkpoint-copy { color:#617993; line-height:1.6; }
-.quotation-hub__signing-boundary { margin-top:13px; }
+.quotation-hub__draft-checkpoint-copy { color:#617993; line-height:1.5; }
+.quotation-hub__signing-boundary { margin-top:10px; }
 .quotation-hub__action-area {
   position:fixed; z-index:10; left:0; right:0; bottom:0;
   display:flex; flex-direction:column; gap:6px;
