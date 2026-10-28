@@ -1688,5 +1688,9 @@ function configuredPackageLayerLabel(
 </script>
 
 <style src="./QuotationActionContent.styles.css"></style>
+<style src="./QuotationEditor.styles.css"></style>
+<style src="./QuotationGroups.styles.css"></style>
+<style src="./QuotationPackageConfiguration.styles.css"></style>
+<style src="./QuotationCatalog.styles.css"></style>
 <style src="./Q01CommercialBaseline.css"></style>
 <style src="./Q03CommercialBaseline.css"></style>
