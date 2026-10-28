@@ -87,7 +87,10 @@ for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }
     await expect(page.getByTestId('signing-order-read-sign-disabled')).toBeHidden()
     await page.getByTestId('signing-read-operations-toggle').click()
     await expect(page.getByTestId('signing-order-read-sign-disabled')).toBeVisible()
-    await expect(page.getByTestId('signing-order-read-sign-disabled')).toBeDisabled()
+    // uni-app renders <uni-button>; Playwright's native disabled matcher does
+    // not recognize it, so assert both real guard attributes as in B2-X2.
+    await expect(page.getByTestId('signing-order-read-sign-disabled')).toHaveAttribute('disabled', 'true')
+    await expect(page.getByTestId('signing-order-read-sign-disabled')).toHaveAttribute('aria-disabled', 'true')
     await page.getByTestId('signing-read-operations-toggle').click()
     await info.attach(`qsign-signing-status-${viewport.width}`, {
       body: await page.screenshot({ animations: 'disabled', fullPage: true }), contentType: 'image/png',
