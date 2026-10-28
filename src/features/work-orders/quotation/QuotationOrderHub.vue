@@ -112,7 +112,7 @@
             class="quotation-hub__order-signing"
             :url="signingOrderReadRouteFor(workOrderId, order.id) || undefined"
             :data-testid="`quotation-hub-signing-${order.id}`">
-            <text>签约进度</text><AppIcon name="chevron-right" :size="16" color="#216bd0" />
+            <text>签约进度</text><AppIcon class="quotation-hub__order-signing-icon" name="chevron-right" :size="16" color="#216bd0" />
           </navigator>
         </view>
         <view v-if="expandedId === order.id" class="quotation-hub__details"
@@ -409,7 +409,7 @@ watch(() => props.workOrderId, () => {
   border-radius:10px; border:1px solid var(--app-color-primary-border); color:var(--app-craft-action);
   background:var(--app-craft-action-surface); font-size:13px; font-weight:650; text-align:center;
 }
-.quotation-hub__order-signing uni-icons { display:inline-flex; align-items:center; }
+.quotation-hub__order-signing-icon { display:inline-flex; align-items:center; }
 .quotation-hub__details {
   margin-top:13px; padding-top:12px; border-top:1px solid #eef2f7;
   display:flex; flex-direction:column; gap:9px;

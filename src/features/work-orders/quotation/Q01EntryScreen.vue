@@ -198,13 +198,15 @@ function cancelPicker(): void {
 }
 
 function confirmPicker(): void {
+  if (!pickerOpen.value) return
   if (!props.canEdit) return cancelPicker()
-  const next = pendingRepairParts.value
-  if (next.length !== props.group.repairParts.length
-    || next.some((part, index) => part !== props.group.repairParts[index])) {
-    emit('repair-parts-change', [...next])
-  }
+  const next = [...pendingRepairParts.value]
+  const changed = next.length !== props.group.repairParts.length
+    || next.some((part, index) => part !== props.group.repairParts[index])
+  // Close before notifying the parent: native MP may deliver the same tap twice.
+  // The second delivery must never clear a value committed by the first.
   cancelPicker()
+  if (changed) emit('repair-parts-change', [...next])
 }
 
 // Never commit a selection prepared for a different quotation group.

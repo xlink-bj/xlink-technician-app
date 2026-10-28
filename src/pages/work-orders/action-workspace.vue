@@ -248,7 +248,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
-import { onLoad, onUnload } from '@dcloudio/uni-app'
+import { onLoad, onShow, onUnload } from '@dcloudio/uni-app'
 
 import { isBusinessMockQuotationPreview, isDevSyntheticContractReadPreviewEnabled } from '@app/business-mock'
 import { compareQuoteWithStandaloneSkuDemo, compareQuoteWithSameCatalogSyntheticSku } from '@app/quotation-sku-identity-evidence'
@@ -498,6 +498,12 @@ onLoad((options) => {
   quotationEditorOpened.value = false
   quotationChoiceVisible.value = false
   routeReady.value = true
+})
+
+// Native back from the time/confirmation pages shows this mounted page again.
+// Releasing the navigation lock here preserves the draft without stranding its controls.
+onShow(() => {
+  isNavigating.value = false
 })
 
 onUnload(() => {
