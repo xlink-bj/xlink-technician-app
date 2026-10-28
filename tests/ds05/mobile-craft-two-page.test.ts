@@ -8,6 +8,7 @@ const q01 = source('src/features/work-orders/quotation/Q01EntryScreen.vue')
 const q01Shell = source('src/shared/ui/ActionWorkspaceShell.vue')
 const q01Footer = source('src/features/work-orders/quotation/QuotationActionWorkspace.vue')
 const c01 = source('src/pages/work-orders/signing-order-read.vue')
+const pages = source('src/pages.json')
 const heading = source('src/shared/ui/AppCraftHeading.vue')
 const globals = source('src/shared/ui/design-system.scss')
 
@@ -26,10 +27,11 @@ describe('DS-05: Q01 V2 Mobile Craft reused by C01', () => {
     expect(craft).toContain('.xl-craft__control[aria-invalid="true"]')
     expect(craft).toContain('.xl-craft__action-primary:disabled')
   })
-  it('both business pages reuse shared craft heading and surfaces', () => {
+  it('business pages reuse craft surfaces and only one visible navigation title', () => {
     expect(heading).toContain('defineProps')
     expect(q01).toContain('AppCraftHeading')
-    expect(c01).toContain('AppCraftHeading')
+    expect(c01).not.toContain('AppCraftHeading')
+    expect(pages).toContain('"navigationBarTitleText": "签约进度"')
     expect(q01).toContain('xl-craft__progress-track')
     expect(q01).toContain('xl-craft__control--selector')
     expect(q01).toContain('xl-craft__control--textarea')

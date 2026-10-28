@@ -27,7 +27,7 @@
     {
       "path": "pages/work-orders/signing-order-read",
       "style": {
-        "navigationBarTitleText": "签约前订单核验 · 只读"
+        "navigationBarTitleText": "签约进度"
       }
     },
     {

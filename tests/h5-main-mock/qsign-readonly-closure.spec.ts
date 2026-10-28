@@ -62,6 +62,7 @@ for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }
     await expect(page.getByTestId('quotation-order-hub')).toBeVisible()
     await expect(page.getByTestId('quotation-hub-local-draft')).toContainText('1 个维修部位组')
     await expect(page.getByTestId('quotation-hub-local-draft')).toContainText('非正式订单')
+    await expect(page.getByTestId('quotation-hub-order-mock-official-order-001')).toContainText('正式订单')
     await expect(page.getByTestId('quotation-hub-local-draft')).toContainText('本机已保存')
     await expect(page.getByTestId('quotation-hub-order-mock-official-order-001')).toBeVisible()
     await expect(page.getByTestId('quotation-hub-amount-unverified')).toContainText('金额待核验')
@@ -102,6 +103,10 @@ for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }
     await expect(page.getByTestId('signing-order-read-sign-disabled')).toHaveAttribute('disabled', 'true')
     await expect(page.getByTestId('signing-order-read-sign-disabled')).toHaveAttribute('aria-disabled', 'true')
     await page.getByTestId('signing-read-operations-toggle').click()
+    // The route uses a fixed uni-app navigation bar. Full-page captures must
+    // reset viewport scroll so the bar is not composited mid-document.
+    await page.evaluate(() => window.scrollTo(0, 0))
+    await page.waitForFunction(() => window.scrollY === 0)
     await info.attach(`qsign-signing-status-${viewport.width}`, {
       body: await page.screenshot({ animations: 'disabled', fullPage: true }), contentType: 'image/png',
     })

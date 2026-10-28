@@ -8,7 +8,6 @@
           <text class="quotation-hub__eyebrow">当前工单</text>
           <text class="quotation-hub__work-order-number">{{ workOrderNumberDisplay(displayNumber || workOrderId, syntheticFixture, false) }}</text>
         </view>
-        <AppMetaTag class="quotation-hub__work-order-state" label="当前" />
       </view>
       <view v-if="customerName" class="quotation-hub__work-order-meta">
         <view class="quotation-hub__work-order-meta-cell">
@@ -86,7 +85,7 @@
         <view class="quotation-hub__order-heading">
           <text class="quotation-hub__order-number">{{ order.displayNumber || order.id }}</text>
           <view class="quotation-hub__order-pills">
-            <AppMetaTag class="quotation-hub__order-badge" tone="info" label="订单记录" />
+            <AppMetaTag class="quotation-hub__order-badge" tone="info" label="正式订单" />
           </view>
         </view>
         <text v-if="(isVisualSample || mockJourneyOrder) && order.groups[0]?.partDescription" class="quotation-hub__order-subtitle">{{ order.groups[0].partDescription }}</text>
@@ -322,7 +321,6 @@ watch(() => props.workOrderId, () => {
 .quotation-hub__work-order-number {
   font-size:17px; line-height:1.3; font-weight:780; color:#172a44; overflow-wrap:anywhere;
 }
-.quotation-hub__work-order-state { align-self: flex-start; flex: none; }
 .quotation-hub__work-order-meta {
   margin-top:7px; padding:0 0 0 52px;
   display:flex; gap:20px;

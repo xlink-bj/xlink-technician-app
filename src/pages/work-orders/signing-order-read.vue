@@ -1,9 +1,5 @@
 <template>
   <view class="signing-read-page app-transaction-page xl-craft">
-    <view class="signing-read-header">
-      <AppCraftHeading title="签约进度" />
-    </view>
-
     <AppLoadingState
       v-if="session.status === 'unknown' || review.snapshot.state === 'loading'"
       variant="inline" label="正在核验工单与正式订单"
@@ -48,7 +44,7 @@
         >{{ review.contractSnapshot.state === 'failed_retryable' ? '重新核验合同状态' : '核验当前订单合同' }}</AppButton>
         <button class="signing-read-context-toggle" type="button" :aria-expanded="stageInfoExpanded"
           @tap="stageInfoExpanded = !stageInfoExpanded">
-          <text>状态说明</text><AppIcon name="chevron-right" :size="15" color="#7b8aa0" />
+          <text class="xl-craft__caption">状态说明</text><AppIcon name="chevron-right" :size="15" color="#7b8aa0" />
         </button>
         <text v-show="stageInfoExpanded" class="signing-read-stage-detail signing-read-body"
           data-testid="signing-read-stage-detail">{{ signingStage.detail }}</text>
@@ -56,7 +52,7 @@
       <AppRecordCard class="signing-read-section signing-read-hero xl-craft__surface" data-testid="signing-order-read-verified">
         <view class="signing-read-hero-top">
           <text class="signing-read-hero-title">当前订单</text>
-          <AppMetaTag class="xl-craft__badge" :label="uxStateLanguage.verifiedOrder" tone="success" />
+          <AppMetaTag class="xl-craft__badge" label="已核验" tone="success" />
         </view>
         <view class="signing-read-order-identity">
           <text class="xl-craft__caption">订单编号</text>
@@ -73,7 +69,8 @@
         <view class="signing-read-order-details">
           <button class="signing-read-detail-toggle" type="button" :aria-expanded="orderAuditExpanded"
             data-testid="signing-order-audit-toggle" @tap="orderAuditExpanded = !orderAuditExpanded">
-            {{ orderAuditExpanded ? '收起订单状态说明' : '查看订单状态说明' }}
+            <text class="xl-craft__caption">{{ orderAuditExpanded ? '收起订单状态' : '订单状态' }}</text>
+            <AppIcon name="chevron-right" :size="15" color="#7b8aa0" />
           </button>
           <text v-show="orderAuditExpanded" class="signing-read-order-note"
             data-testid="signing-order-read-r1-stage">{{ orderStageDisplay(review.snapshot.review?.order.processState) }}</text>
@@ -106,7 +103,9 @@
         <view class="signing-read-operations" data-testid="signing-order-read-no-contract">
           <button class="signing-read-operations-toggle" type="button" :aria-expanded="operationLimitsExpanded"
             data-testid="signing-read-operations-toggle" @tap="operationLimitsExpanded = !operationLimitsExpanded">
-            <text>合同操作 <text class="signing-read-operations-state xl-craft__caption">暂未开放</text></text>
+            <view class="signing-read-operations-copy">
+              <text>合同操作</text><text class="signing-read-operations-state xl-craft__caption">暂未开放</text>
+            </view>
             <view class="signing-read-operations-chevron" :class="{ 'is-open': operationLimitsExpanded }" aria-hidden="true">
               <AppIcon name="chevron-right" :size="16" color="#74859a" />
             </view>
@@ -147,9 +146,7 @@ import AppMetaTag from '@shared/ui/AppMetaTag.vue'
 import AppSectionHeading from '@shared/ui/AppSectionHeading.vue'
 import AppAmountValue from '@shared/ui/AppAmountValue.vue'
 import AppStatus from '@shared/ui/AppStatus.vue'
-import AppCraftHeading from '@shared/ui/AppCraftHeading.vue'
 import AppIcon from '@shared/ui/AppIcon.vue'
-import { uxStateLanguage } from '@shared/ui/ux-state-language'
 import { useSessionStore } from '@shared/state'
 import { useSigningReviewReadStore } from '@features/work-orders/signing/signing-review-read-store'
 import { isProductionReadOnlyRuntime } from '@shared/config'
@@ -257,8 +254,6 @@ onUnload(() => {
   min-height: 100vh;
   padding: 14px 16px calc(22px + env(safe-area-inset-bottom));
 }
-.signing-read-header { padding: 0 1px; margin: 0 0 12px; }
-.signing-read-header .xl-craft__title { margin-bottom:0; }
 .signing-read-section {
   display: flex; flex-direction: column; gap: 9px;
   padding: 15px 16px; margin-bottom: 11px;
@@ -304,8 +299,9 @@ onUnload(() => {
 }
 .signing-read-order-details { border-top:1px solid var(--xl-divider); margin-top:11px; padding-top:3px; }
 .signing-read-detail-toggle {
-  margin:0; padding:0; min-height:44px; display:flex; align-items:center;
-  background:transparent; color:var(--app-journey-context-ink);
+  margin:0; padding:0; width:100%; min-height:44px;
+  display:flex; align-items:center; justify-content:space-between;
+  background:transparent; color:var(--xl-secondary);
   border:0; font-weight:600;
 }
 .signing-read-detail-toggle::after { border:0; }
@@ -376,7 +372,8 @@ onUnload(() => {
   font-weight:650; line-height:1.5; text-align:left;
 }
 .signing-read-operations-toggle::after { border:0; }
-.signing-read-operations-state { color:var(--xl-caption); font-weight:400; margin-left:8px; }
+.signing-read-operations-copy { display:flex; align-items:baseline; gap:8px; min-width:0; }
+.signing-read-operations-state { color:var(--xl-caption); font-weight:400; }
 .signing-read-operations-chevron { display:flex; align-items:center; justify-content:center; transition:transform .15s ease; }
 .signing-read-operations-chevron.is-open { transform:rotate(90deg); }
 .signing-read-operations-detail { display:flex; flex-direction:column; gap:11px; padding-top:5px; }
