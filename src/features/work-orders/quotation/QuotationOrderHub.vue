@@ -63,7 +63,7 @@
       <AppButton variant="secondary" @tap="refresh">重新读取</AppButton>
       <text class="quotation-hub__empty-detail">仍可创建报价草稿，但无法据此判断是否已有订单。</text>
       <AppButton v-if="!readOnly" block class="quotation-hub__empty-action" data-testid="quotation-hub-create-unverified"
-        @tap="startEditor">＋ 新建报价草稿</AppButton>
+        @tap="startEditor">{{ hasLocalDraft ? uxStateLanguage.draftResumeAction : `＋ ${uxStateLanguage.draftAction}` }}</AppButton>
     </AppRecordCard>
     <template v-else-if="records.length === 0">
     <AppRecordCard class="quotation-hub__empty" data-testid="quotation-hub-no-records">
@@ -71,7 +71,7 @@
       <text class="quotation-hub__empty-title">{{ isVisualSample ? '当前工单尚无订单' : mockJourneyOrder ? '暂无已确认的订单记录' : uxStateLanguage.scopedOrderReadTitle }}</text>
       <text class="quotation-hub__empty-detail">先按维修部位填写报价草稿，核对组成及金额后再进入后续流程。</text>
       <AppButton v-if="!readOnly" block class="quotation-hub__empty-action" data-testid="quotation-hub-empty-create"
-        @tap="startEditor">＋ {{ uxStateLanguage.draftAction }}</AppButton>
+        @tap="startEditor">{{ hasLocalDraft ? uxStateLanguage.draftResumeAction : `＋ ${uxStateLanguage.draftAction}` }}</AppButton>
       <text class="quotation-hub__empty-provenance">仅展示当前可见的订单记录，不代表全部历史订单。</text>
     </AppRecordCard>
     <view class="quotation-hub__multi-order-tips">

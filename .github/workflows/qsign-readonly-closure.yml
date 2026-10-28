@@ -8,6 +8,7 @@ on:
       - 'src/pages/work-orders/action-workspace.vue'
       - 'src/pages/work-orders/signing-order-read.vue'
       - 'tests/h5-main-mock/qsign-readonly-closure.spec.ts'
+      - 'tests/h5-main-mock/m1-i7-six-stage-integration.spec.ts'
       - '.github/workflows/qsign-readonly-closure.yml'
   workflow_dispatch:
 
@@ -38,8 +39,8 @@ jobs:
           pnpm exec playwright install --with-deps chromium
           sudo apt-get update
           sudo apt-get install -y fonts-noto-cjk
-      - name: Actual App read-only quote to signing H5 at 375 and 390
-        run: pnpm exec playwright test --config playwright.main-h5-mock.config.ts tests/h5-main-mock/qsign-readonly-closure.spec.ts
+      - name: Actual App appointment to quotation and read-only signing H5 at 375 and 390
+        run: pnpm exec playwright test --config playwright.main-h5-mock.config.ts tests/h5-main-mock/qsign-readonly-closure.spec.ts tests/h5-main-mock/m1-i7-six-stage-integration.spec.ts
       - name: Preserve state screenshots and browser failure evidence
         if: always()
         uses: actions/upload-artifact@v4

@@ -64,6 +64,7 @@ for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }
     await expect(page.getByTestId('quotation-hub-local-draft')).toContainText('非正式订单')
     await expect(page.getByTestId('quotation-hub-order-mock-official-order-001')).toContainText('正式订单')
     await expect(page.getByTestId('quotation-hub-local-draft')).toContainText('本机已保存')
+    await expect(page.getByTestId('quotation-hub-start-new')).toHaveText('继续编辑报价草稿')
     await expect(page.getByTestId('quotation-hub-order-mock-official-order-001')).toBeVisible()
     await expect(page.getByTestId('quotation-hub-amount-unverified')).toContainText('金额待核验')
     await expect(page.getByTestId('quotation-hub-order-mock-official-order-001')).not.toContainText('¥ 0.00')
@@ -141,3 +142,47 @@ for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }
     assertLocal()
   })
 }
+
+test('P1: an existing local draft is resumed, never labelled as new, across failed and empty Order reads at 375px', async ({ page }, info) => {
+  await page.setViewportSize({ width: 375, height: 667 })
+  const assertLocal = await localOnly(page)
+  await openListedWorkOrder(page, 'MOCK-018', '吴先生')
+  await page.locator('.primary-task-action').click()
+  await expect(page.getByTestId('quotation-hub-read-error')).toBeVisible()
+  await page.getByTestId('quotation-hub-create-unverified').click()
+  await expect(page.getByTestId('quotation-state-ready')).toBeVisible()
+
+  await page.getByTestId('quotation-add-group').click()
+  await page.getByTestId('quotation-first-step-repair-parts-trigger').click()
+  await page.getByTestId('survey-repair-part-parents').getByText('屋面', { exact: true }).click()
+  await page.getByTestId('quotation-first-step-description').locator('textarea').fill('屋面落水口局部防水修补')
+  await page.getByTestId('quotation-first-step-quantity').locator('input').fill('18.6')
+  await page.getByTestId('quotation-first-step-select-products').click()
+  await page.getByTestId('quotation-catalog-kind-material').click()
+  await page.getByTestId('quotation-catalog-add-material-mock-catalog-material-butyl-tape').click()
+  await expect(page.getByTestId('quotation-repair-group-quotation-group-1')).toContainText('丁基防水密封胶带')
+
+  await page.getByTestId('quotation-review-orders').click()
+  await expect(page.getByTestId('quotation-hub-read-error')).toBeVisible()
+  await expect(page.getByTestId('quotation-hub-local-draft')).toContainText('1 个维修部位组')
+  await expect(page.getByTestId('quotation-hub-create-unverified')).toHaveText('继续编辑报价草稿')
+  await info.attach('q00-read-error-existing-draft-375', {
+    body: await page.screenshot({ animations: 'disabled' }), contentType: 'image/png',
+  })
+  await page.getByTestId('quotation-hub-create-unverified').click()
+  await expect(page.getByTestId('quotation-repair-group-quotation-group-1')).toContainText('丁基防水密封胶带')
+
+  await page.getByTestId('quotation-review-orders').click()
+  await page.goto(page.url() + '&q00Preview=empty', { waitUntil: 'domcontentloaded' })
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  await expect(page.getByTestId('quotation-hub-no-records')).toBeVisible()
+  await expect(page.getByTestId('quotation-hub-local-draft')).toContainText('1 个维修部位组')
+  await expect(page.getByTestId('quotation-hub-empty-create')).toHaveText('继续编辑报价草稿')
+  await info.attach('q00-empty-existing-draft-375', {
+    body: await page.screenshot({ animations: 'disabled' }), contentType: 'image/png',
+  })
+  await page.getByTestId('quotation-hub-empty-create').click()
+  await expect(page.getByTestId('quotation-repair-group-quotation-group-1')).toContainText('丁基防水密封胶带')
+  await expect(page.getByTestId('action-workspace-submit')).toHaveCount(0)
+  assertLocal()
+})

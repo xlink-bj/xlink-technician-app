@@ -41,13 +41,14 @@ for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }
     await expect(page.locator('.mock-source-indicator')).toContainText('Mock')
     await page.locator('.work-orders-entry').click()
     await expect(page).toHaveURL(/pages\/work-orders\/work-orders/)
-    await page.locator('.search-input input').fill('MOCK-018')
+    await page.locator('.search-input input').fill('26018')
     await page.locator('.search-button').click()
     const otherWorkOrder = page.locator('.work-order-card').filter({ hasText: '吴先生' })
     await expect(otherWorkOrder).toBeVisible()
     await otherWorkOrder.click()
     await expect(page).toHaveURL(/pages\/work-orders\/detail/)
-    await expect(page.locator('.summary-number')).toContainText('MOCK-018')
+    // The commercial UI displays the sourced business number, not the fixture search token.
+    await expect(page.locator('.summary-number')).toContainText('#26018')
     await page.locator('.primary-task-action').click()
     await expect(page.getByTestId('quotation-order-hub')).toBeVisible()
     await expect(page.getByTestId('quotation-hub-create-unverified')).toBeEnabled()
@@ -66,7 +67,8 @@ for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }
     await expect(page).toHaveURL(/mock-work-order-019-continuous-journey/)
     await expect(page.locator('.uni-page-head__title')).toContainText('预约上门')
     await page.locator('.action-content-field--note textarea').fill('I7阶段隔离：屋面与外墙')
-    await expect(page.getByTestId('mock-journey-progress')).toContainText('记录仅保存在本机，未提交后台')
+    // Commercial appointment UI reports local save progress without a QA banner.
+    await expect(page.getByTestId('mock-journey-progress')).toContainText('已保存，可继续下一步')
     await page.getByTestId('mock-journey-advance').click()
 
     // 4. Survey: WorkOrder identity stays 019; no estimate or job write.
@@ -106,7 +108,8 @@ for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }
     await expect(page.getByTestId('mock-journey-context-appointment')).toHaveCount(0)
     await expect(page.getByTestId('mock-journey-context-survey')).toHaveCount(0)
     await expect(page.getByTestId('mock-journey-context-toggle')).toBeVisible()
-    await expect(page.getByTestId('mock-journey-context')).toContainText('未提交后台')
+    await expect(page.getByTestId('mock-journey-context')).toContainText('前序现场记录')
+    await expect(page.getByTestId('mock-journey-context')).not.toContainText('未提交后台')
     await page.getByTestId('mock-journey-context-toggle').click()
     await expect(page.getByTestId('mock-journey-context-appointment')).toContainText('I7阶段隔离')
     await expect(page.getByTestId('mock-journey-context-survey')).toContainText('14.5')
@@ -124,36 +127,44 @@ for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }
     await expect(page.getByTestId('mock-journey-context-survey')).toContainText('14.5')
     await page.getByTestId('mock-journey-context-toggle').click()
 
-    // 6. Signing is ONLY an independent synthetic type=1 Order fixture,
-    // never the local draft. Test two exact identities and a forged route.
-    await expect(page.getByTestId('mock-journey-signing-review')).toContainText('本机报价未提交')
-    await page.getByTestId('mock-journey-signing-review').click()
-    await expect(page).toHaveURL(/pages\/work-orders\/signing-mock-review/)
-    await expect(page.getByTestId('signing-mock-orders')).toContainText('模拟正式订单 A')
-    await expect(page.getByTestId('signing-mock-orders')).toContainText('模拟正式订单 B')
-    await expect(page.getByTestId('signing-mock-no-contract')).toBeVisible()
-    await page.getByTestId('signing-mock-order-mock-official-order-019-b').click()
-    await expect(page.getByTestId('signing-mock-state')).toContainText('签署中')
-    for (const id of ['signing-mock-preview-disabled', 'signing-mock-apply-disabled']) {
-      await expect(page.getByTestId(id)).toHaveAttribute('disabled', 'true')
-    }
-    await expect(page.getByTestId('signing-mock-footer')).toContainText('无业务写入')
+    // 6. The 019 local draft is never promoted to an official Order. A
+    // fabricated signing link must fail closed, then an independently verified
+    // official Order in 04009 may open ONLY the commercial read-only C01 page.
+    await expect(page.getByTestId('quotation-hub-signing-mock-official-order-001')).toHaveCount(0)
+    await page.goto('/#/pages/work-orders/signing-order-read?workOrderId=mock-work-order-019-continuous-journey&orderId=forged-order', {
+      waitUntil: 'domcontentloaded',
+    })
+    await expect(page.getByTestId('signing-order-read-blocked')).toBeVisible()
+    await expect(page.getByTestId('signing-order-read-verified')).toHaveCount(0)
+    await expect(page.getByTestId('signing-order-read-no-write')).toBeVisible()
+
+    await page.goto('/#/pages/index/index?devReview=1', { waitUntil: 'domcontentloaded' })
+    await page.locator('.work-orders-entry').click()
+    await page.locator('.search-input input').fill('04009')
+    await page.locator('.search-button').click()
+    await page.locator('.work-order-card').filter({ hasText: '陈女士' }).click()
+    await expect(page.locator('.summary-number')).toContainText('04009')
+    await page.locator('.primary-task-action').click()
+    await expect(page.getByTestId('quotation-hub-order-mock-official-order-001')).toBeVisible()
+    await page.getByTestId('quotation-hub-signing-mock-official-order-001').click()
+    await expect(page.getByTestId('signing-order-read-verified')).toBeVisible()
+    await expect(page.getByTestId('signing-order-read-display-number')).toContainText('BJ202610260001')
+    await expect(page.getByTestId('signing-order-read-no-write')).toBeVisible()
+    await page.getByTestId('signing-read-operations-toggle').click()
+    await expect(page.getByTestId('signing-order-read-sign-disabled')).toHaveAttribute('disabled', 'true')
+    await expect(page.getByTestId('signing-order-read-sign-disabled')).toHaveAttribute('aria-disabled', 'true')
     await info.attach('i7-stage6-safe-' + viewport.width, {
       body: await page.screenshot({ fullPage: true }), contentType: 'image/png',
     })
-
-    await page.goto('/#/pages/work-orders/signing-mock-review?id=foreign-workorder', { waitUntil: 'domcontentloaded' })
-    await expect(page.getByTestId('signing-mock-blocked')).toBeVisible()
-    await expect(page.getByTestId('signing-mock-workbench')).toHaveCount(0)
 
     // After switching back to another WorkOrder in the SAME authenticated
     // browser, 019's staged Appointment/Survey data must not leak into 018.
     await page.goto('/#/pages/index/index?devReview=1', { waitUntil: 'domcontentloaded' })
     await page.locator('.work-orders-entry').click()
-    await page.locator('.search-input input').fill('MOCK-018')
+    await page.locator('.search-input input').fill('26018')
     await page.locator('.search-button').click()
     await page.locator('.work-order-card').filter({ hasText: '吴先生' }).click()
-    await expect(page.locator('.summary-number')).toContainText('MOCK-018')
+    await expect(page.locator('.summary-number')).toContainText('#26018')
     await page.locator('.primary-task-action').click()
     await expect(page.getByTestId('quotation-order-hub')).toBeVisible()
     await expect(page.getByTestId('quotation-hub-create-unverified')).toBeEnabled()
@@ -165,7 +176,7 @@ for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }
     assertNoNetwork()
     await info.attach('i7-six-stage-evidence-' + viewport.width, {
       body: Buffer.from(JSON.stringify({
-        viewport: viewport.width, stages: ['synthetic_login', 'work_order', 'appointment', 'survey', 'quotation', 'synthetic_signing'],
+        viewport: viewport.width, stages: ['synthetic_login', 'work_order', 'appointment', 'survey', 'quotation', 'official_order_signing_readonly'],
         workOrders: ['MOCK-018', 'MOCK-019', 'MOCK-018'], reload: true,
         forgedSigningRouteBlocked: true, externalIntentCount: forbidden.length,
         realOrderCreated: false, realContractCreated: false, writes: 0,
