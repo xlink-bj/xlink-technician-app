@@ -13,6 +13,7 @@
     "capture:s2-ux-sheet": "playwright test --config playwright.s2-ux-review.config.ts",
     "check:s2-ux-sheet": "node scripts/check-s2-ux-review.mjs",
     "dev:mp-weixin": "uni -p mp-weixin",
+    "dev:mp-weixin:mock-ux": "node scripts/dev-mp-isolated-ux.mjs",
     "dev:mp-weixin:prod-readonly": "uni -p mp-weixin --mode prod",
     "dev:h5-review": "vite --config vite.review.config.ts",
     "build:h5-review": "vite build --config vite.review.config.ts --outDir unpackage/h5-review",
