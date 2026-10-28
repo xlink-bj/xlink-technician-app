@@ -85,7 +85,7 @@
       >提交订单</AppButton>
 
       </view>
-      <view v-if="contentState === 'ready'" class="quotation-workspace-handoff"
+      <view v-if="!firstStepActive && contentState === 'ready'" class="quotation-workspace-handoff"
         data-testid="quotation-readonly-handoff">
         <AppButton variant="secondary" block class="quotation-workspace-handoff-button"
           data-testid="quotation-review-orders"
@@ -142,6 +142,7 @@
 import AppAmountValue from '@shared/ui/AppAmountValue.vue'
 import { computed, nextTick, ref, watch } from 'vue'
 import { isProductionReadOnlyRuntime } from '@shared/config'
+import { useSessionStore } from '@shared/state'
 import { useActionWorkspaceStore } from '../action-workspace'
 import { useQuotationCompositionStore } from './composition-store'
 import { quotationAmountPresentation } from './amount-presentation'
@@ -174,6 +175,7 @@ const emit = defineEmits<{
 }>()
 
 const workspace = useActionWorkspaceStore()
+const session = useSessionStore()
 const composition = useQuotationCompositionStore()
 const isInitialEmptyWorkbench = computed(() => isInitialQuotationWorkbenchEmpty({
   contentState: props.contentState,
@@ -198,9 +200,16 @@ const orderHandoffPending = ref(false)
 const orderHandoffError = ref('')
 const canReviewOrders = computed(() => Boolean(composition.draft)
   && ['fresh', 'restored', 'dirty', 'saving', 'saved_local', 'save_failed'].includes(composition.localState))
+function roleScopeKey(): string | null {
+  const current = session.session
+  if (session.status !== 'authenticated' || !current?.currentRole?.id || !current.roleVersion) return null
+  return JSON.stringify([current.sessionRef, current.user.id, current.currentRole.id, current.roleVersion])
+}
 
 async function reviewOrders(): Promise<void> {
   if (orderHandoffPending.value || !canReviewOrders.value || props.contentState !== 'ready') return
+  const scope = roleScopeKey()
+  if (!scope) return
   const workOrderId = composition.draft?.workOrderId
   const nodeId = composition.draft?.workflowNodeId
   orderHandoffPending.value = true
@@ -210,7 +219,8 @@ async function reviewOrders(): Promise<void> {
     // A role change or different quotation may have replaced the draft while
     // its asynchronous local save was in flight. Never hand off that result.
     if (composition.draft?.workOrderId !== workOrderId
-      || composition.draft?.workflowNodeId !== nodeId || !canReviewOrders.value) return
+      || composition.draft?.workflowNodeId !== nodeId
+      || roleScopeKey() !== scope || !canReviewOrders.value) return
     if (saved.state !== 'succeeded' || composition.localState === 'save_failed'
       || composition.localState === 'dirty') {
       orderHandoffError.value = '本地草稿尚未保存成功，请重试。订单与签约信息未发生变化。'

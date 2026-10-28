@@ -124,7 +124,7 @@
           发起签署 · 未开放
         </AppButton>
       </AppRecordCard>
-      <navigator class="signing-read-return" open-type="navigateBack" :delta="1"
+      <navigator class="signing-read-return xl-craft__action-secondary" open-type="navigateBack" :delta="1"
         data-testid="signing-order-read-return">
         返回上一页
       </navigator>
@@ -340,10 +340,7 @@ onUnload(() => {
 .signing-read-contract-state { color: var(--xl-secondary); font-size: 12px; line-height: 1.5; }
 .signing-read-footer { text-align: center; margin: 19px 0 42px; }
 .signing-read-return {
-  box-sizing:border-box; min-height:44px; display:flex; align-items:center;
-  justify-content:center; margin:12px 0 0; border:1px solid var(--app-color-primary-border);
-  background:var(--app-color-primary-soft);
-  color:var(--app-color-primary); font-weight:700;
+  box-sizing:border-box; min-height:44px; margin:12px 0 0;
 }
 .signing-read-section--diagnostics { border-style: dashed; box-shadow: none; }
 .signing-read-diagnostics-copy { display: flex; flex-direction: column; gap: 4px; }

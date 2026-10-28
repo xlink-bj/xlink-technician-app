@@ -25,7 +25,8 @@ async function openListedWorkOrder(page: Page, number: string, customer: string)
   await page.locator('.search-input input').fill(number)
   await page.locator('.search-button').click()
   await page.locator('.work-order-card').filter({ hasText: customer }).click()
-  await expect(page.locator('.summary-number')).toContainText(number)
+  // MOCK-018 is the search token; the business-facing WorkOrder number is 26018.
+  await expect(page.locator('.summary-number')).toContainText(number === 'MOCK-018' ? '26018' : number)
 }
 
 for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }]) {
