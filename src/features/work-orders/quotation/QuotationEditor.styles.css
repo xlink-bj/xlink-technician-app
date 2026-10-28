@@ -1,5 +1,4 @@
-/* CUI-02: editor CSS owner. This file is legacy-preserving until scoped normalization is proven in H5. */
-.quotation-content__first-repair-part-step { display: flex; flex-direction: column; gap: 0; }
+
 .quotation-content__first-step-required { color: #f06445; }
 .quotation-content__first-step-card .app-cascade-selector__parents,
 
@@ -47,65 +46,66 @@
 
 }
 .quotation-content__initial-empty { display: flex; flex-direction: column; gap: var(--app-space-sm); }
-.quotation-content__initial-draft-notice { align-items: center; background: var(--app-color-primary-soft); border: 1rpx solid var(--app-color-border-soft); border-radius: var(--app-radius-control); box-sizing: border-box; color: var(--app-color-text-body); display: flex; font-size: var(--app-font-meta); line-height: 1.45; min-height: 54rpx; padding: 10rpx 16rpx; text-align: left; }
 .quotation-content__initial-draft-notice-mark { align-items: center; background: var(--app-color-primary); border-radius: 999rpx; color: var(--app-color-surface); display: flex; flex: 0 0 28rpx; font-size: 20rpx; font-weight: 700; height: 28rpx; justify-content: center; margin-right: 12rpx; }
 .quotation-content__initial-draft-notice-copy { display: block; min-width: 0; }
 .quotation-content__initial-card, .quotation-content__initial-process { background: var(--app-color-surface); border-color: var(--app-color-border); border-radius: var(--app-radius-card); box-shadow: none; }
-.quotation-content__initial-card { box-sizing: border-box; display: flex; flex-direction: column; padding: 24rpx 20rpx 20rpx; }
-.quotation-content__initial-empty-heading { display:flex; flex-direction:row; align-items:center; justify-content:flex-start; gap:11px; padding:0 0 10px; text-align:left; }
-.quotation-content__initial-empty-title { color: var(--app-color-text-primary); display: block; font-size: var(--app-font-section-title); font-weight: 750; line-height: 1.35; }
-.quotation-content__initial-empty-description { color: var(--app-color-text-body); display: block; font-size: var(--app-font-body); line-height: 1.5; }
-.quotation-content__initial-empty-surface { align-items: stretch; background: var(--app-color-control-surface); border: 1rpx solid var(--app-color-border); border-radius: var(--app-radius-surface); display: flex; flex-direction: column; padding: 20rpx; text-align: left; }
-.quotation-content__initial-empty-artwork { align-items: center; display: flex; height: 70rpx; justify-content: flex-end; margin-top: 4rpx; opacity: .42; overflow: hidden; position: relative; width: 100%; }
 .quotation-content__initial-empty-ground { display: none; }
 .quotation-content__initial-empty-illustration { height: 104rpx; position: relative; width: 104rpx; }
-.quotation-content__initial-empty-surface .quotation-content__empty-title { color: var(--app-color-text-primary); font-size: var(--app-font-body); font-weight: 750; margin-top: 0; }
-.quotation-content__initial-empty-copy { color: var(--app-color-text-body); display: block; font-size: var(--app-font-meta); line-height: 1.5; margin-top: 8rpx; }
-.quotation-content__initial-empty-action { align-self: stretch; border-radius: var(--app-radius-control); box-shadow: none; margin-top: 18rpx; max-width: none; min-height: 48px; width: 100%; }
-/* Q01 task-first visual standard, scoped to the existing Quotation content.
- * Pure presentation: catalog authority, quantities, identity and submit guards unchanged. */
-.quotation-content__initial-card { padding: 18rpx 18rpx 20rpx; }
-.quotation-content__initial-empty-heading { margin-bottom: 12rpx; }
-.quotation-content__initial-empty-description { font-size: 23rpx; line-height: 1.45; color: var(--app-color-text-secondary); }
-.quotation-content__initial-empty-surface {
-  background: var(--app-color-surface); border: 1rpx solid var(--app-color-divider);
-  padding: 15rpx; gap: 8rpx; border-radius: 15rpx;
+.quotation-content__initial-empty-surface .quotation-content__empty-title {
+color: var(--app-color-text-primary); font-size: var(--app-font-body); font-weight: 750; margin-top: 0;
+font-size: 24rpx; font-weight: 750;
 }
-.quotation-content__initial-empty-surface .quotation-content__empty-title { font-size: 24rpx; font-weight: 750; }
-.quotation-content__initial-empty-artwork { height: 36rpx; opacity: .23; }
 /* Q01 commercial design baseline: editable repair fields first; costs follow;
    no decorative multi-step wizard, and no unverified amount values. */
 
-.quotation-content__initial-card { background:var(--app-color-surface); border-radius:22rpx; padding:22rpx; }
-.quotation-content__initial-empty-heading { padding-bottom:12rpx; }
-.quotation-content__initial-empty-description { color:var(--app-color-text-secondary); font-size:22rpx; }
-.quotation-content__initial-empty-surface { gap:0; padding:0; border:0; background:transparent; }
+.quotation-content__initial-card {
+box-sizing: border-box; display: flex; flex-direction: column; padding: 24rpx 20rpx 20rpx;
+padding: 18rpx 18rpx 20rpx;
+background:var(--app-color-surface); border-radius:22rpx; padding:22rpx;
+}
+.quotation-content__initial-empty-heading {
+display:flex; flex-direction:row; align-items:center; justify-content:flex-start; gap:11px; padding:0 0 10px; text-align:left;
+margin-bottom: 12rpx;
+padding-bottom:12rpx;
+}
+.quotation-content__initial-empty-description {
+color: var(--app-color-text-body); display: block; font-size: var(--app-font-body); line-height: 1.5;
+font-size: 23rpx; line-height: 1.45; color: var(--app-color-text-secondary);
+color:var(--app-color-text-secondary); font-size:22rpx;
+}
+.quotation-content__initial-empty-surface {
+align-items: stretch; background: var(--app-color-control-surface); border: 1rpx solid var(--app-color-border); border-radius: var(--app-radius-surface); display: flex; flex-direction: column; padding: 20rpx; text-align: left;
+background: var(--app-color-surface); border: 1rpx solid var(--app-color-divider);
+  padding: 15rpx; gap: 8rpx; border-radius: 15rpx;
+gap:0; padding:0; border:0; background:transparent;
+}
 .quotation-content__initial-field-label { font-size:23rpx; font-weight:730; padding:14rpx 2rpx 6rpx; color:var(--app-color-text-primary); }
-.quotation-content__initial-field-value { min-height:74rpx; background:var(--app-color-control-surface); border:1rpx solid var(--app-color-border);
-  padding:12rpx 18rpx; border-radius:12rpx; box-sizing:border-box; display:flex; justify-content:space-between; align-items:center;
-  font-size:23rpx; color:var(--app-color-text-secondary); }
 .quotation-content__initial-field-placeholder { background:var(--app-color-control-surface); border:1rpx solid var(--app-color-border);
   border-radius:12rpx; padding:15rpx 18rpx; color:var(--app-color-text-muted); font-size:21rpx; }
-.quotation-content__initial-empty-copy { margin-top:13rpx; color:var(--app-color-text-secondary); }
-.quotation-content__initial-empty-artwork { display:none; }
-.quotation-content__initial-empty-action { min-height:88rpx; margin-top:15rpx; }
-.quotation-content__initial-cost-preview, .quotation-content__adjustments {
-  background:var(--app-color-surface); border:1rpx solid var(--app-color-border); border-radius:20rpx;
-  padding:19rpx 22rpx; display:flex; flex-direction:column; margin-top:14rpx; gap:0; }
-.quotation-content__initial-cost-title, .quotation-content__adjustments-title { font-size:26rpx; font-weight:780; color:var(--app-color-text-primary); }
+.quotation-content__initial-empty-artwork {
+align-items: center; display: flex; height: 70rpx; justify-content: flex-end; margin-top: 4rpx; opacity: .42; overflow: hidden; position: relative; width: 100%;
+height: 36rpx; opacity: .23;
+display:none;
+}
+.quotation-content__initial-empty-action {
+align-self: stretch; border-radius: var(--app-radius-control); box-shadow: none; margin-top: 18rpx; max-width: none; min-height: 48px; width: 100%;
+min-height:88rpx; margin-top:15rpx;
+}
 .quotation-content__initial-cost-row, .quotation-content__adjustments-row { display:flex; align-items:center; justify-content:space-between;
   gap:18rpx; min-height:70rpx; font-size:23rpx; border-bottom:1rpx solid var(--app-color-divider); }
 .quotation-content__initial-cost-row--last, .quotation-content__adjustments-row--last { border-bottom:0; }
-.quotation-content__initial-cost-unavailable, .quotation-content__adjustments-unavailable { text-align:right; color:var(--app-color-text-muted); font-size:21rpx; }
-.quotation-content__initial-cost-note, .quotation-content__adjustments-hint { display:block; line-height:1.5; color:var(--app-color-text-secondary); font-size:20rpx; margin-top:8rpx; }
 /* Q01 375px: the first real operation must be above the sticky bottom bar.
    The repair-part field itself is the entry; eliminate a repeated CTA below
    three inactive placeholders. */
-.quotation-content__initial-field-value { width:100%; margin:0; min-height:94rpx; text-align:left;
-  color:var(--app-color-primary); font-weight:750; }
+.quotation-content__initial-field-value {
+min-height:74rpx; background:var(--app-color-control-surface); border:1rpx solid var(--app-color-border);
+  padding:12rpx 18rpx; border-radius:12rpx; box-sizing:border-box; display:flex; justify-content:space-between; align-items:center;
+  font-size:23rpx; color:var(--app-color-text-secondary);
+width:100%; margin:0; min-height:94rpx; text-align:left;
+  color:var(--app-color-primary); font-weight:750;
+}
 .quotation-content__initial-field-value::after { border:0; }
 .quotation-content__initial-field-value--disabled { opacity:.55; }
-.quotation-content__initial-field-chevron { font-size:30rpx; font-weight:400; }
 /* Q01/Q03 actual H5 commercial visual scale correction. The prior
  * ~20rpx typography equalled ~10px at the target 390px viewport, which
  * was dramatically smaller than the signed-off phone design. Explicit
@@ -125,38 +125,57 @@
   font-size: 14px; min-height: 48px; padding: 12px 14px;
   line-height: 1.4; border-radius: 10px;
 }
-.quotation-content__initial-field-chevron { font-size: 20px; }
-.quotation-content__initial-empty-copy { font-size: 12px; line-height: 1.5; margin-top: 10px; }
+.quotation-content__initial-field-chevron {
+font-size:30rpx; font-weight:400;
+font-size: 20px;
+}
+.quotation-content__initial-empty-copy {
+color: var(--app-color-text-body); display: block; font-size: var(--app-font-meta); line-height: 1.5; margin-top: 8rpx;
+margin-top:13rpx; color:var(--app-color-text-secondary);
+font-size: 12px; line-height: 1.5; margin-top: 10px;
+}
 .quotation-content__initial-cost-preview,
 .quotation-content__adjustments {
-  border-radius: 15px; padding: 17px 16px; margin-top: 14px;
+background:var(--app-color-surface); border:1rpx solid var(--app-color-border); border-radius:20rpx;
+  padding:19rpx 22rpx; display:flex; flex-direction:column; margin-top:14rpx; gap:0;
+border-radius: 15px; padding: 17px 16px; margin-top: 14px;
   border-color: #e4eaf4; box-shadow: 0 2px 12px rgba(17,56,103,.04);
 }
 .quotation-content__initial-cost-title,
-.quotation-content__adjustments-title { font-size: 17px; line-height: 1.4; font-weight: 800; }
+.quotation-content__adjustments-title {
+font-size:26rpx; font-weight:780; color:var(--app-color-text-primary);
+font-size: 17px; line-height: 1.4; font-weight: 800;
+}
 .quotation-content__initial-cost-row,.quotation-content__adjustments-row {
   gap: 15px; min-height: 48px; font-size: 14px; line-height: 1.4;
 }
 .quotation-content__initial-cost-unavailable,
-.quotation-content__adjustments-unavailable { font-size: 12px; line-height: 1.5; }
+.quotation-content__adjustments-unavailable {
+text-align:right; color:var(--app-color-text-muted); font-size:21rpx;
+font-size: 12px; line-height: 1.5;
+}
 .quotation-content__initial-cost-note,
-.quotation-content__adjustments-hint { font-size: 11.5px; line-height: 1.55; }
+.quotation-content__adjustments-hint {
+display:block; line-height:1.5; color:var(--app-color-text-secondary); font-size:20rpx; margin-top:8rpx;
+font-size: 11.5px; line-height: 1.55;
+}
 .quotation-content__initial-empty-heading.quotation-content__section-heading { margin-bottom:3px; }
 .quotation-content__initial-cost-preview .quotation-content__section-heading { margin-bottom:9px; }
 .quotation-content__first-step-products-title,
 .quotation-content__initial-cost-title { font-size:17px; color:#182a47; font-weight:800; }
-.quotation-content__initial-empty .quotation-content__commercial-section { gap:0; }
 /* High-fidelity Q01 390/320 reachability: remove redundant page heading,
  * keep readable controls and make the first actionable catalog CTA reachable
  * before the fixed footer in its fully filled state. */
-.quotation-content__first-repair-part-step { padding-top:0; }
+.quotation-content__first-repair-part-step {
+display: flex; flex-direction: column; gap: 0;
+padding-top:0;
+}
 .quotation-content__first-step-selector-hint,
 .quotation-content__first-step-selected-path,
 
 
 
 .quotation-content__first-repair-part-step .quotation-content__commercial-section { margin-top:9px; padding:11px 14px; }
-.quotation-content__first-repair-part-step .quotation-content__section-heading { margin-bottom:9px; padding-bottom:7px; min-height:28px; }
 /* M1-S2 375/390 fidelity finish — presentation only, business gates unchanged.
    Native textarea is border-box to prevent hidden 18px inflation. */
 .quotation-content__first-step-card,
@@ -185,7 +204,8 @@
   margin-top:10px; padding:13px 15px;
 }
 .quotation-content__first-repair-part-step .quotation-content__section-heading {
-  min-height:30px; margin:0 0 10px; padding:0 0 9px; border-bottom:1px solid #e9edf3;
+margin-bottom:9px; padding-bottom:7px; min-height:28px;
+min-height:30px; margin:0 0 10px; padding:0 0 9px; border-bottom:1px solid #e9edf3;
 }
 .quotation-content__first-repair-part-step .quotation-content__select-tile {
   border:1px solid #cfdef2; border-radius:11px;
@@ -209,7 +229,8 @@
   gap:10px; border-bottom:1px solid #e9edf3;
 }
 .quotation-content__initial-empty-title {
-  color:#1a2d48; font-size:17px; font-weight:780; line-height:1.4;
+color: var(--app-color-text-primary); display: block; font-size: var(--app-font-section-title); font-weight: 750; line-height: 1.35;
+color:#1a2d48; font-size:17px; font-weight:780; line-height:1.4;
 }
 .quotation-content__initial-empty .quotation-content__initial-field-label {
   display:block; font-size:14px; line-height:1.35; font-weight:700;
@@ -231,12 +252,14 @@
   margin-top:9px;
 }
 .quotation-content__initial-empty .quotation-content__commercial-section {
-  margin-top:10px; padding:13px 15px; border-radius:14px;
+gap:0;
+margin-top:10px; padding:13px 15px; border-radius:14px;
 }
 .quotation-content__initial-empty .quotation-content__select-tile {
   min-height:65px; padding:10px 12px;
 }
 .quotation-content__initial-draft-notice {
-  border-radius:8px; border-color:#dce8f7;
+align-items: center; background: var(--app-color-primary-soft); border: 1rpx solid var(--app-color-border-soft); border-radius: var(--app-radius-control); box-sizing: border-box; color: var(--app-color-text-body); display: flex; font-size: var(--app-font-meta); line-height: 1.45; min-height: 54rpx; padding: 10rpx 16rpx; text-align: left;
+border-radius:8px; border-color:#dce8f7;
   background:#f0f6fd;
 }
