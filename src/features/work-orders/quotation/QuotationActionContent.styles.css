@@ -2,10 +2,8 @@
 .quotation-content { font-family:-apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif; }
 .quotation-content { margin-top: var(--app-space-md); }
 .quotation-content__heading { display: flex; flex-direction: column; margin: 0 var(--app-space-xs) var(--app-space-md); }
-.quotation-content__eyebrow { color: var(--app-color-primary); font-size: var(--app-font-meta); font-weight: 800; letter-spacing: .6px; }
 .quotation-content__title { color: var(--app-color-text-primary); font-size: var(--app-font-section-title); font-weight: 800; margin-top: var(--app-space-xs); }
 .quotation-content__description { color: var(--app-color-text-secondary); font-size: var(--app-font-body); line-height: 1.5; margin-top: var(--app-space-xs); }
-.quotation-content__panel { padding: var(--app-card-padding); }
 .quotation-content__panel-title { color: var(--app-color-text-primary); display: block; font-size: var(--app-font-field-label); font-weight: 800; }
 .quotation-content__amount-summary { align-items: flex-end; display: flex; flex-direction: column; margin-left: auto; }
 .quotation-content__amount-label { color: var(--app-color-text-secondary); font-size: var(--app-font-meta); }
@@ -38,7 +36,6 @@
 .quotation-content__add-button { margin-top: var(--app-space-md); }
 .quotation-content__add-button--outline { border-style: dashed; }
 .quotation-content__add-group-button { margin-top: var(--app-space-md); }
-.quotation-content__add-group-button--outline { border-style: dashed; }
 .quotation-content__context-toggle { margin-top: var(--app-space-xs); min-height: 44px; padding-left: 0; padding-right: 0; }
 .quotation-content__context-label { color: var(--app-color-text-secondary); display: block; font-size: var(--app-font-meta); font-weight: 700; }
 .quotation-content__context-field { display: flex; flex-direction: column; gap: var(--app-space-xs); min-width: 0; }
@@ -86,11 +83,9 @@
 .quotation-content__engine-amount { font-size: 26rpx; }
 .quotation-content__submission { margin-top: 14rpx; padding-top: 14rpx; }
 .quotation-content__context-toggle { margin-top: 4rpx; min-height: 40px; }
-.quotation-content__context-label { font-size: 21rpx; }
 .quotation-content__context-input { min-height: 48px; }
 .quotation-content__details-toggle { min-height: 44px; }
 .quotation-content__collapsed-summary { font-size: 23rpx; line-height: 1.5; margin-top: 12rpx; }
-.quotation-content__unit { font-size: 20rpx; }
 .quotation-content__add-group-button--outline { border-radius: 16rpx; border-style: solid; margin-top: 2rpx; }
 .quotation-content__detail-section { margin-top: 18rpx; padding-top: 16rpx; }
 .quotation-content__detail-heading { font-size: 25rpx; }
