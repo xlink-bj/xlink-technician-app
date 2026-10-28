@@ -1,0 +1,25 @@
+name: CUI-02 Quotation CSS Owners
+
+on:
+  pull_request:
+    paths:
+      - 'src/features/work-orders/quotation/*.css'
+      - 'src/features/work-orders/quotation/QuotationActionContent.vue'
+      - 'scripts/ci/quotation-css-owners.mjs'
+      - '.github/workflows/cui02-quotation-css-owners.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  quotation-css-owners:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Enforce component CSS ownership, import order, and no duplicate selectors
+        run: node scripts/ci/quotation-css-owners.mjs
