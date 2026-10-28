@@ -1,11 +1,7 @@
 <template>
   <view class="signing-read-page app-transaction-page xl-craft">
     <view class="signing-read-header">
-      <AppCraftHeading
-        title="签约进度"
-        eyebrow="订单签约 · 当前工单"
-        subtitle="核对当前订单的签约结果"
-      />
+      <AppCraftHeading title="签约进度" />
     </view>
 
     <AppLoadingState
@@ -40,7 +36,6 @@
         <view class="signing-read-reconciled-inline" data-testid="signing-read-reconciled-status">
           <text class="signing-read-phase xl-craft__caption">{{ signingPhaseTitle }}</text>
           <text class="signing-read-progress-title xl-craft__section-title" data-testid="signing-read-stage-title">{{ signingStage.title }}</text>
-          <text class="signing-read-stage-detail signing-read-body" data-testid="signing-read-stage-detail">{{ signingStage.detail }}</text>
         </view>
         <view class="signing-read-next">
           <text class="signing-read-next-label">接下来</text>
@@ -51,7 +46,12 @@
           class="signing-read-contract-cta signing-read-stage-cta"
           block data-testid="signing-contract-read-request" @tap="readContracts"
         >{{ review.contractSnapshot.state === 'failed_retryable' ? '重新核验合同状态' : '核验当前订单合同' }}</AppButton>
-        <text class="signing-read-warning xl-craft__caption">{{ uxStateLanguage.signingReadOnly }}</text>
+        <button class="signing-read-context-toggle" type="button" :aria-expanded="stageInfoExpanded"
+          @tap="stageInfoExpanded = !stageInfoExpanded">
+          <text>状态说明</text><AppIcon name="chevron-right" :size="15" color="#7b8aa0" />
+        </button>
+        <text v-show="stageInfoExpanded" class="signing-read-stage-detail signing-read-body"
+          data-testid="signing-read-stage-detail">{{ signingStage.detail }}</text>
       </view>
       <AppRecordCard class="signing-read-section signing-read-hero xl-craft__surface" data-testid="signing-order-read-verified">
         <view class="signing-read-hero-top">
@@ -84,18 +84,17 @@
       </AppRecordCard>
       <AppRecordCard class="signing-read-section xl-craft__surface xl-craft__surface--flat" data-testid="signing-order-read-contract-status">
         <AppSectionHeading title="合同记录" />
-        <text class="signing-read-help">只核对当前订单；没有读到合同不代表合同不存在。</text>
         <text v-if="!devFixtureContractRead" data-testid="signing-contract-prod-blocked">
-          当前仅能查看签约进度。合同详情与签约操作暂未开放。
+          合同详情暂未开放
         </text>
         <text v-else-if="review.contractSnapshot.state === 'idle' || review.contractSnapshot.state === 'failed_retryable'"
-          class="signing-read-help">请使用上方主操作核验当前合同记录。</text>
+          class="signing-read-help">合同状态待核验</text>
         <AppLoadingState v-if="review.contractSnapshot.state === 'loading'"
           variant="inline" label="正在只读核验合同状态" />
-        <text v-if="review.contractSnapshot.state === 'failed_terminal'">合同核验未通过。没有读取签署文件，也没有执行签约。</text>
+        <text v-if="review.contractSnapshot.state === 'failed_terminal'">合同核验失败</text>
         <template v-if="review.contractSnapshot.state === 'succeeded'">
           <text v-if="review.contractSnapshot.items.length === 0" data-testid="signing-contract-inconclusive">
-            当前有限查询尚未核验到此订单合同；可能受分页及可见范围影响，不能认定合同不存在。
+            暂未核验到合同记录
           </text>
           <view v-for="contract in review.contractSnapshot.items" :key="contract.id" class="signing-read-contract-item"
             data-testid="signing-contract-matched">
@@ -103,13 +102,14 @@
             <text class="signing-read-contract-state">{{ contractStatusDisplay(contract.contractStatus) }}</text>
             <text v-if="contract.signedDate" class="signing-read-meta xl-craft__meta">记录中的签约日期：{{ contract.signedDate }}</text>
           </view>
-          <text class="signing-read-warning xl-craft__caption">仅限本次可见记录，不代表可查看合同文件或执行签署。</text>
         </template>
         <view class="signing-read-operations" data-testid="signing-order-read-no-contract">
           <button class="signing-read-operations-toggle" type="button" :aria-expanded="operationLimitsExpanded"
             data-testid="signing-read-operations-toggle" @tap="operationLimitsExpanded = !operationLimitsExpanded">
-            <text>合同查看与签署操作尚未开放</text>
-            <text class="signing-read-operations-chevron" aria-hidden="true">{{ operationLimitsExpanded ? '⌃' : '⌄' }}</text>
+            <text>合同操作 <text class="signing-read-operations-state xl-craft__caption">暂未开放</text></text>
+            <view class="signing-read-operations-chevron" :class="{ 'is-open': operationLimitsExpanded }" aria-hidden="true">
+              <AppIcon name="chevron-right" :size="16" color="#74859a" />
+            </view>
           </button>
           <view v-show="operationLimitsExpanded" class="signing-read-operations-detail">
             <AppStatus
@@ -128,11 +128,11 @@
       </AppRecordCard>
       <navigator class="signing-read-return xl-craft__action-secondary" open-type="navigateBack" :delta="1"
         data-testid="signing-order-read-return">
-        返回上一页
+        返回
       </navigator>
     </template>
     <view class="signing-read-footer xl-craft__caption" data-testid="signing-order-read-no-write">
-      全程只读 · 业务操作暂未开放
+      全程只读
     </view>
   </view>
 </template>
@@ -148,6 +148,7 @@ import AppSectionHeading from '@shared/ui/AppSectionHeading.vue'
 import AppAmountValue from '@shared/ui/AppAmountValue.vue'
 import AppStatus from '@shared/ui/AppStatus.vue'
 import AppCraftHeading from '@shared/ui/AppCraftHeading.vue'
+import AppIcon from '@shared/ui/AppIcon.vue'
 import { uxStateLanguage } from '@shared/ui/ux-state-language'
 import { useSessionStore } from '@shared/state'
 import { useSigningReviewReadStore } from '@features/work-orders/signing/signing-review-read-store'
@@ -176,10 +177,10 @@ const signingStepIndex = computed(() => {
   return match ? Number(match[1]) : 0
 })
 function contractStatusDisplay(status: string | undefined): string {
-  if (status === '10') return '记录显示已签署，最终结果仍待后台核实'
-  if (status === '2') return '签署处理中，请勿重复发起'
-  if (status === '-3') return '签署状态异常，请联系支持人员核实'
-  return '合同状态尚未核验，不代表已完成签署'
+  if (status === '10') return '记录显示已签署 · 待核验'
+  if (status === '2') return '签署处理中'
+  if (status === '-3') return '状态异常 · 请联系支持'
+  return '合同状态待核验'
 }
 function orderStageDisplay(processState: number | undefined): string {
   if (processState === 0) return '订单当前待签约；请以合同核验结果为准'
@@ -193,21 +194,21 @@ const signingPhaseTitle = computed(() => signingProgress.value.title.replace(
 const signingNextActionDisplay = computed(() => {
   switch (review.contractSnapshot.state) {
     case 'idle': return devFixtureContractRead.value
-      ? '核验当前订单的合同状态。' : '合同状态读取暂未开放，请等待授权。'
-    case 'loading': return '正在读取合同状态，请稍候。'
-    case 'failed_retryable': return devFixtureContractRead.value
-      ? '合同读取失败，可在下方重新核验。' : '合同读取失败，暂不可执行签署。'
-    case 'failed_terminal': return '合同状态无法确认，请联系支持人员核对。'
+      ? '核验合同状态' : '合同状态待核验'
+    case 'loading': return '正在核验合同状态'
+    case 'failed_retryable': return '合同核验失败，可重试'
+    case 'failed_terminal': return '请联系支持人员核验'
     case 'succeeded': {
-      if (signingStage.value.stage === 'signing_in_progress') return '等待签约结果更新，请勿重复发起。'
-      if (signingStage.value.stage === 'record_signed') return '已读取签约记录，合同文件及签名真实性仍待核实。'
-      return '请核对下方合同状态；当前没有可执行的签约操作。'
+      if (signingStage.value.stage === 'signing_in_progress') return '等待签约结果更新'
+      if (signingStage.value.stage === 'record_signed') return '已读取签约记录 · 待最终核验'
+      return '请核对合同状态'
     }
   }
-  return '合同状态暂不可确认，请勿发起签约。'
+  return '合同状态待核验'
 })
 const orderAuditExpanded = ref(false)
 const operationLimitsExpanded = ref(false)
+const stageInfoExpanded = ref(false)
 const devFixtureContractRead = computed(() => !productionReadOnly
   && isDevSyntheticContractReadPreviewEnabled(routeWorkOrderId.value))
 function readContracts(): void {
@@ -254,12 +255,13 @@ onUnload(() => {
    .xl-craft; this page owns ONLY spatial composition and a factual progress cue. */
 .signing-read-page {
   min-height: 100vh;
-  padding: 14px 20px calc(30px + env(safe-area-inset-bottom));
+  padding: 14px 16px calc(22px + env(safe-area-inset-bottom));
 }
-.signing-read-header { padding: 0; margin: 0 0 13px; }
+.signing-read-header { padding: 0 1px; margin: 0 0 12px; }
+.signing-read-header .xl-craft__title { margin-bottom:0; }
 .signing-read-section {
-  display: flex; flex-direction: column; gap: 10px;
-  padding: 16px 17px; margin-bottom: 11px;
+  display: flex; flex-direction: column; gap: 9px;
+  padding: 15px 16px; margin-bottom: 11px;
 }
 .signing-read-section .app-section-heading__title {
   color: var(--xl-ink); font-weight: 700;
@@ -268,20 +270,23 @@ onUnload(() => {
   color: var(--xl-caption); font-size: 11px;
 }
 .signing-read-hero {
-  gap: 0; padding: 15px 18px 13px; margin-bottom: 11px;
+  gap: 0; padding: 15px 16px; margin-bottom: 11px;
 }
 .signing-read-hero-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .signing-read-hero-title { color: var(--xl-ink); font-size: 14px; font-weight: 600; line-height: 22px; }
 
-.signing-read-order-identity { display: flex; flex-direction: column; gap: 4px; margin-top: 12px; }
+.signing-read-order-identity {
+  display:flex; align-items:baseline; justify-content:space-between;
+  gap:12px; margin-top:12px;
+}
 .signing-read-order-number {
-  display: block; text-align: left;
+  display: block; text-align: right;
   font-size: 13px; line-height: 20px; font-weight: 600;
-  overflow-wrap: anywhere; font-variant-numeric: tabular-nums;
+  min-width:0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums;
 }
 .signing-read-hero-money {
   display: flex; justify-content: space-between; gap: 12px;
-  align-items: flex-end; margin-top: 13px;
+  align-items: flex-end; margin-top: 11px;
 }
 .signing-read-hero-amount { display: flex; flex-direction: column; gap: 2px; }
 .signing-read-amount-value {
@@ -297,24 +302,24 @@ onUnload(() => {
   font-size: 12px; line-height: 19px;
   margin-top: 4px; padding: 8px 0 0;
 }
-.signing-read-order-details { border-top:1px solid var(--xl-divider); margin-top:12px; padding-top:6px; }
+.signing-read-order-details { border-top:1px solid var(--xl-divider); margin-top:11px; padding-top:3px; }
 .signing-read-detail-toggle {
-  margin:0; padding:0 4px; min-height:44px; display:flex; align-items:center;
+  margin:0; padding:0; min-height:44px; display:flex; align-items:center;
   background:transparent; color:var(--app-journey-context-ink);
-  border:0; font-weight:650;
+  border:0; font-weight:600;
 }
 .signing-read-detail-toggle::after { border:0; }
 .signing-read-stage {
   display: flex; flex-direction: column; gap: 5px; margin: 0 0 11px;
-  padding: 17px 18px; border: 1px solid var(--app-journey-context-border);
+  padding: 16px; border: 1px solid var(--app-journey-context-border);
   background: var(--app-journey-context);
 }
 .signing-read-stage-index {
   color: var(--xl-blue); font-size: 11px; line-height: 18px;
   font-weight: 700; font-variant-numeric: tabular-nums;
 }
-.signing-read-stage .xl-craft__progress-track { margin-bottom: 8px; }
-.signing-read-reconciled-inline { display:flex; flex-direction:column; gap:5px; }
+.signing-read-stage .xl-craft__progress-track { margin-bottom: 7px; }
+.signing-read-reconciled-inline { display:flex; flex-direction:column; gap:4px; }
 .signing-read-phase {
   display:block; color:var(--app-journey-context-ink);
   line-height:19px; font-weight:600;
@@ -325,14 +330,25 @@ onUnload(() => {
 }
 .signing-read-stage-detail { margin-top:2px; }
 .signing-read-next {
-  display:flex; flex-direction:column; gap:4px;
+  display:flex; align-items:baseline; gap:12px;
   border-top:1px solid var(--app-journey-context-border);
-  margin-top:10px; padding-top:12px;
+  margin-top:10px; padding-top:11px;
 }
-.signing-read-next-label { color:var(--app-journey-context-ink); font-size:12px; font-weight:700; }
+.signing-read-next-label {
+  color:var(--app-journey-context-ink); font-size:12px; font-weight:700;
+  flex:none;
+}
 .signing-read-stage .signing-read-body { line-height:1.55; color:var(--xl-secondary); }
-.signing-read-stage .signing-read-warning { margin-top:9px; }
 .signing-read-stage-cta { margin-top:12px; min-height:var(--app-journey-tap-height); }
+.signing-read-context-toggle {
+  width:100%; min-height:36px; margin:5px 0 0; padding:6px 0 0;
+  display:flex; align-items:center; justify-content:space-between;
+  border:0; border-top:1px solid var(--app-journey-context-border);
+  background:transparent; color:var(--app-journey-context-ink);
+  font-weight:600; text-align:left;
+}
+.signing-read-context-toggle::after { border:0; }
+.signing-read-stage-detail { padding:7px 0 4px; }
 .signing-read-body, .signing-read-help {
   display: block; color: var(--xl-secondary);
   font-size: 13px; line-height: 20px;
@@ -345,25 +361,27 @@ onUnload(() => {
 .signing-read-contract-cta { width: 100%; margin-top: 3px; }
 .signing-read-section .xl-craft__notice { margin: 5px 0 0; }
 .signing-read-contract-item {
-  display: flex; flex-direction: column; gap: 8px;
-  padding: 13px 14px; border: 1px solid var(--xl-divider);
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 12px 13px; border: 1px solid var(--xl-divider);
   border-radius: var(--xl-radius-control);
   background: var(--xl-field-bg);
 }
 .signing-read-contract-number { color: var(--xl-ink); font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
-.signing-read-contract-state { color: var(--xl-secondary); font-size: 12px; line-height: 1.5; }
+.signing-read-contract-state { color: var(--app-journey-context-ink); font-size: 12px; line-height: 1.5; font-weight:600; }
 .signing-read-operations { border-top:1px solid var(--xl-divider); margin-top:5px; }
 .signing-read-operations-toggle {
   width:100%; min-height:44px; margin:0; padding:6px 0;
   display:flex; align-items:center; justify-content:space-between; gap:10px;
-  border:0; background:transparent; color:var(--xl-secondary);
-  font-weight:600; line-height:1.5; text-align:left;
+  border:0; background:transparent; color:var(--xl-ink);
+  font-weight:650; line-height:1.5; text-align:left;
 }
 .signing-read-operations-toggle::after { border:0; }
-.signing-read-operations-chevron { color:var(--xl-caption); }
+.signing-read-operations-state { color:var(--xl-caption); font-weight:400; margin-left:8px; }
+.signing-read-operations-chevron { display:flex; align-items:center; justify-content:center; transition:transform .15s ease; }
+.signing-read-operations-chevron.is-open { transform:rotate(90deg); }
 .signing-read-operations-detail { display:flex; flex-direction:column; gap:11px; padding-top:5px; }
 .signing-read-operations-actions { display:flex; flex-direction:column; gap:9px; }
-.signing-read-footer { text-align: center; margin: 15px 0 30px; }
+.signing-read-footer { text-align: center; margin: 12px 0 18px; }
 .signing-read-return {
   box-sizing:border-box; min-height:44px; margin:12px 0 0;
 }

@@ -3,7 +3,7 @@
     
     <AppRecordCard class="quotation-hub__work-order">
       <view class="quotation-hub__work-order-top">
-        <view class="quotation-hub__house" aria-hidden="true"><AppIcon name="home" :size="23" color="#ef8d3d" /></view>
+        <view class="quotation-hub__house" aria-hidden="true"><AppIcon name="order" :size="21" color="#216bd0" /></view>
         <view class="quotation-hub__work-order-copy">
           <text class="quotation-hub__eyebrow">当前工单</text>
           <text class="quotation-hub__work-order-number">{{ workOrderNumberDisplay(displayNumber || workOrderId, syntheticFixture, false) }}</text>
@@ -29,7 +29,6 @@
     <view v-if="!choosingMode" class="quotation-hub__section-row">
       <AppSectionHeading class="quotation-hub__section-heading"
         :title="`订单记录${displayReadState === 'succeeded' || isVisualSample ? ` (${records.length})` : ''}`" />
-      <text v-if="displayReadState === 'succeeded' && !isVisualSample" class="quotation-hub__section-scope xl-craft__caption">仅本次可见</text>
     </view>
     <view v-if="choosingMode" class="quotation-hub__mode" data-testid="quotation-hub-mode">
       <text class="quotation-hub__mode-title">选择操作</text>
@@ -90,7 +89,7 @@
             <AppMetaTag class="quotation-hub__order-badge" tone="info" label="订单记录" />
           </view>
         </view>
-        <text class="quotation-hub__order-subtitle">{{ isVisualSample || mockJourneyOrder ? order.groups[0]?.partDescription || '维修报价' : '签约进度需单独核对' }}</text>
+        <text v-if="(isVisualSample || mockJourneyOrder) && order.groups[0]?.partDescription" class="quotation-hub__order-subtitle">{{ order.groups[0].partDescription }}</text>
         <view class="quotation-hub__order-summary">
           <view class="quotation-hub__amount-block">
             <text class="quotation-hub__amount-label">订单金额</text>
@@ -102,7 +101,8 @@
         <view class="quotation-hub__order-actions">
           <AppButton variant="secondary" :data-testid="`quotation-hub-view-${order.id}`"
             :aria-expanded="expandedId === order.id" @tap="toggleDetails(order.id)">
-            <AppIcon name="task" :size="17" color="#2479eb" />{{ expandedId === order.id ? '收起详情' : '查看详情' }}
+            <template #leading><AppIcon name="order" :size="17" color="#3174c6" /></template>
+            {{ expandedId === order.id ? '收起详情' : '订单详情' }}
           </AppButton>
           <AppButton v-if="!readOnly && !mockJourneyOrder && !isVisualSample && !hasLocalDraft" variant="secondary"
             :disabled="editingId !== null"
@@ -113,7 +113,7 @@
             class="quotation-hub__order-signing"
             :url="signingOrderReadRouteFor(workOrderId, order.id) || undefined"
             :data-testid="`quotation-hub-signing-${order.id}`">
-            查看签约进度 <text aria-hidden="true">›</text>
+            <text>签约进度</text><AppIcon name="chevron-right" :size="16" color="#216bd0" />
           </navigator>
         </view>
         <view v-if="expandedId === order.id" class="quotation-hub__details"
@@ -142,11 +142,10 @@
         <AppMetaTag label="非正式订单" tone="neutral" />
       </view>
       <text class="quotation-hub__draft-checkpoint-count quotation-hub__order-group-count">{{ localDraftGroupCount }} 个维修部位组 · {{ draftSaveLabel }}</text>
-      <text class="quotation-hub__draft-checkpoint-copy quotation-hub__detail-note">仅在本机保存，尚未生成正式订单。可继续核对报价明细与金额。</text>
     </AppRecordCard>
     <AppStatus v-if="!choosingMode && records.length > 0 && (displayReadState === 'succeeded' || isVisualSample)"
       class="quotation-hub__signing-boundary" variant="strip" tone="neutral" quiet
-      message="签约状态需逐笔核对；订单记录不代表合同已签署。合同文件及签署操作尚未开放。"
+      message="签约结果以合同记录为准"
       data-testid="quotation-hub-signing-boundary" />
     <view v-if="choosingMode || records.length > 0 && (displayReadState === 'succeeded' || isVisualSample)" class="quotation-hub__action-area">
       <AppButton v-if="choosingMode" block class="quotation-hub__new" data-testid="quotation-hub-mode-next"
@@ -304,17 +303,17 @@ watch(() => props.workOrderId, () => {
    blocks; all numbers correspond to the owner-reviewed phone content. */
 .quotation-hub {
   box-sizing:border-box; min-height:100%; background:var(--app-surface-page);
-  color:var(--app-text-strong); padding:13px var(--app-transaction-gutter) calc(108px + env(safe-area-inset-bottom));
+  color:var(--app-text-strong); padding:14px var(--app-transaction-gutter) calc(108px + env(safe-area-inset-bottom));
   font-family:-apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
 }
 .quotation-hub__work-order {
-  display:flex; flex-direction:column; padding:11px 15px 10px;
+  display:flex; flex-direction:column; padding:14px 16px;
 
 }
 .quotation-hub__work-order-top { display:flex; align-items:center; gap:12px; min-height:43px; }
 .quotation-hub__house {
   display:flex; align-items:center; justify-content:center; flex:none;
-  width:40px; height:40px; border-radius:11px; background:#fff1e5;
+  width:40px; height:40px; border-radius:12px; background:#edf4ff;
 }
 .quotation-hub__work-order-copy { display:flex; flex:1; min-width:0; flex-direction:column; gap:5px; }
 .quotation-hub__eyebrow,.quotation-hub__meta-label {
@@ -325,7 +324,7 @@ watch(() => props.workOrderId, () => {
 }
 .quotation-hub__work-order-state { align-self: flex-start; flex: none; }
 .quotation-hub__work-order-meta {
-  margin-top:5px; padding:0 0 0 52px;
+  margin-top:7px; padding:0 0 0 52px;
   display:flex; gap:20px;
 }
 .quotation-hub__work-order-meta-cell { display:flex; flex-direction:row; align-items:baseline; min-width:0; gap:8px; }
@@ -341,7 +340,7 @@ watch(() => props.workOrderId, () => {
 }
 .quotation-hub__section-heading {
   display:flex; align-items:center; flex:1; gap:12px;
-  margin:11px 1px 8px; min-height:36px;
+  margin:13px 1px 9px; min-height:32px;
 }
 .quotation-hub__section-scope {
   flex:none; color:var(--app-content-muted-ink);
@@ -352,7 +351,7 @@ watch(() => props.workOrderId, () => {
 }
 .quotation-hub__list { display:flex; flex-direction:column; gap:12px; }
 .quotation-hub__order {
-  box-sizing:border-box; padding:14px 15px 13px;
+  box-sizing:border-box; padding:16px;
 
 }
 .quotation-hub__order-heading {
@@ -399,21 +398,20 @@ watch(() => props.workOrderId, () => {
   align-items: center;
 }
 .quotation-hub__order-actions {
-  border-top:1px solid #ecf0f5; display:flex; gap:9px; padding-top:10px;
+  border-top:1px solid #ecf0f5; display:grid; grid-template-columns:1fr 1fr; gap:10px; padding-top:12px;
 }
 .quotation-hub__order-actions .app-button {
-  flex:1; min-width:0; min-height:44px; border-radius:10px;
-  font-size:13px; font-weight:700; padding:0 5px;
+  width:100%; min-width:0; min-height:44px; border-radius:10px;
+  font-size:13px; font-weight:650; padding:0 7px;
 }
-.quotation-hub__order-actions .app-button__label {
-  display:flex; justify-content:center; align-items:center; gap:6px;
-}
+.quotation-hub__order-actions .app-button__content { gap:7px; }
 .quotation-hub__order-signing {
-  flex:1; min-height:44px; min-width:0; box-sizing:border-box;
+  min-height:44px; min-width:0; box-sizing:border-box;
   display:flex; justify-content:center; align-items:center; gap:5px;
   border-radius:10px; border:1px solid var(--app-color-primary-border); color:var(--app-craft-action);
-  background:var(--app-craft-action-surface); font-size:13px; font-weight:700; text-align:center;
+  background:var(--app-craft-action-surface); font-size:13px; font-weight:650; text-align:center;
 }
+.quotation-hub__order-signing uni-icons { display:inline-flex; align-items:center; }
 .quotation-hub__details {
   margin-top:13px; padding-top:12px; border-top:1px solid #eef2f7;
   display:flex; flex-direction:column; gap:9px;
@@ -484,8 +482,8 @@ watch(() => props.workOrderId, () => {
 }
 .quotation-hub__error { background:#fff0e8; color:#b7643d; }
 .quotation-hub__draft-checkpoint {
-  display:flex; flex-direction:column; gap:5px; margin-top:10px;
-  padding:12px 14px; border:1px solid #d9e7f9; background:#f5f9ff;
+  display:flex; flex-direction:column; gap:6px; margin-top:11px;
+  padding:13px 15px; border:1px solid #d9e7f9; background:#f5f9ff;
 }
 .quotation-hub__draft-checkpoint-title {
   display:flex; justify-content:space-between; align-items:center; gap:9px;

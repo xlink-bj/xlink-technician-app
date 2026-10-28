@@ -68,6 +68,12 @@ for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }
     await expect(page.getByTestId('quotation-hub-order-mock-official-order-001')).not.toContainText('¥ 0.00')
     await expect(page.getByTestId('quotation-hub-edit-mock-official-order-001')).toHaveCount(0)
     await expect(page.getByTestId('quotation-hub-signing-boundary')).toBeVisible()
+    // Commercial-facing order cards use one aligned icon slot, not a glyph
+    // concatenated with the action copy. Keep low-frequency caveats out of view.
+    const orderDetail = page.getByTestId('quotation-hub-view-mock-official-order-001')
+    await expect(orderDetail.locator('.app-button__leading')).toBeVisible()
+    await expect(orderDetail.locator('.app-button__label')).toHaveText('订单详情')
+    await expect(page.getByTestId('quotation-hub-local-draft')).not.toContainText('仅在本机保存，尚未生成正式订单。')
     await info.attach(`qsign-quote-order-${viewport.width}`, {
       body: await page.screenshot({ animations: 'disabled', fullPage: true }), contentType: 'image/png',
     })
@@ -83,6 +89,10 @@ for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }
     await expect(page.getByTestId('signing-read-stage-title')).toContainText('签约处理中')
     await expect(page.getByTestId('signing-read-reconciled-status')).toBeVisible()
     await expect(page.getByTestId('signing-review-progress').getByTestId('signing-read-reconciled-status')).toBeVisible()
+    await expect(page.getByTestId('signing-read-stage-detail')).toBeHidden()
+    await page.locator('.signing-read-context-toggle').click()
+    await expect(page.getByTestId('signing-read-stage-detail')).toBeVisible()
+    await page.locator('.signing-read-context-toggle').click()
     await expect(page.getByTestId('signing-read-operations-toggle')).toHaveAttribute('aria-expanded', 'false')
     await expect(page.getByTestId('signing-order-read-sign-disabled')).toBeHidden()
     await page.getByTestId('signing-read-operations-toggle').click()
