@@ -1,0 +1,24 @@
+name: CUI-01 Commercial CSS Ownership
+
+on:
+  pull_request:
+    paths:
+      - 'src/features/work-orders/quotation/**'
+      - 'scripts/ci/commercial-css-ownership.mjs'
+      - '.github/workflows/cui01-commercial-css-ownership.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  commercial-css-ownership:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify Q01/Q03 final CSS rule ownership and removed dead rules
+        run: node scripts/ci/commercial-css-ownership.mjs
