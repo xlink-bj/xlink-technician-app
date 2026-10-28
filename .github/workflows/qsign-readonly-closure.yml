@@ -1,0 +1,50 @@
+name: QSign Quote to Pre-Signing Read-Only Closure
+
+on:
+  pull_request:
+    paths:
+      - 'src/features/work-orders/quotation/**'
+      - 'src/features/work-orders/signing/**'
+      - 'src/pages/work-orders/action-workspace.vue'
+      - 'src/pages/work-orders/signing-order-read.vue'
+      - 'tests/h5-main-mock/qsign-readonly-closure.spec.ts'
+      - '.github/workflows/qsign-readonly-closure.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qsign-main-h5:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.31.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Type check and scope/authority unit gates
+        run: |
+          pnpm run typecheck
+          pnpm exec vitest run tests/g4f/quotation-order-signing-read-boundary.test.ts tests/g4f/signing-review-workspace.test.ts tests/g4f/signing-review-read-store.test.ts tests/g4f/quotation-order-browse-handoff.test.ts tests/g4f/quotation-local-review-closure.test.ts
+      - name: Install browser and Chinese fonts
+        run: |
+          pnpm exec playwright install --with-deps chromium
+          sudo apt-get update
+          sudo apt-get install -y fonts-noto-cjk
+      - name: Actual App read-only quote to signing H5 at 375 and 390
+        run: pnpm exec playwright test --config playwright.main-h5-mock.config.ts tests/h5-main-mock/qsign-readonly-closure.spec.ts
+      - name: Preserve state screenshots and browser failure evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qsign-readonly-main-h5-${{ github.run_id }}
+          path: test-results/main-h5-mock/
+          retention-days: 14
+          if-no-files-found: warn

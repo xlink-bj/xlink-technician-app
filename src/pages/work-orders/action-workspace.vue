@@ -20,6 +20,7 @@
     :display-number="workspace.detail?.displayNumber"
     :customer-name="workspace.detail?.customerName"
     :local-draft-group-count="quotationComposition.groups.length"
+    :local-draft-state="quotationComposition.localState"
     :read-only="productionReadOnly"
     :dev-mock-order="aStageMockOrderEnabled"
     :dev-mock-order-read="mockOrderRead"
@@ -41,6 +42,7 @@
     :synthetic-sku-readiness="syntheticSkuReadinessPreview"
     @retry="reload"
     @back="exit"
+    @open-order-records="openQuotationOrderRecords"
   >
     <template #journey-context>
       <MockJourneyContextPanel
@@ -320,6 +322,18 @@ const quotationHubVisible = computed(() =>
 function openQuotationEditor(): void {
   if (productionReadOnly || !quotationHubVisible.value) return
   quotationEditorOpened.value = true
+}
+function openQuotationOrderRecords(): void {
+  // This is a local view switch only. A draft is never promoted to an Order;
+  // the hub will make its own currently scoped bounded Order read.
+  if (!canAccess.value || workspace.descriptor?.contentKind !== 'quotation'
+    || workspace.descriptor.actionIntent !== 'place_order'
+    || !workspace.descriptor.workOrderId || !quotationComposition.draft
+    || String(quotationComposition.draft.workOrderId) !== String(workspace.descriptor.workOrderId)) return
+  routeQuotationEntry.value = 'orders'
+  routeQuotationOrderId.value = undefined
+  quotationChoiceVisible.value = false
+  quotationEditorOpened.value = false
 }
 async function openExistingQuotationEditor(orderId: string): Promise<void> {
   if (productionReadOnly || !quotationHubVisible.value || !orderId.trim()) return

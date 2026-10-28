@@ -133,9 +133,19 @@
     </view>
     </template>
     <view v-if="editError" class="quotation-hub__error" data-testid="quotation-hub-edit-error" role="alert">{{ editError }}</view>
-    <view v-if="hasLocalDraft" class="quotation-hub__draft-note" data-testid="quotation-hub-local-draft">
-      当前已有 {{ localDraftGroupCount }} 个维修部位组的草稿；继续编辑不会自动创建另一笔订单。
-    </view>
+    <AppRecordCard v-if="hasLocalDraft" class="quotation-hub__draft-checkpoint"
+      data-testid="quotation-hub-local-draft">
+      <view class="quotation-hub__draft-checkpoint-title">
+        <text class="quotation-hub__detail-title">本地报价草稿</text>
+        <AppMetaTag label="非正式订单" tone="neutral" />
+      </view>
+      <text class="quotation-hub__draft-checkpoint-count quotation-hub__order-group-count">{{ localDraftGroupCount }} 个维修部位组 · {{ draftSaveLabel }}</text>
+      <text class="quotation-hub__draft-checkpoint-copy quotation-hub__detail-note">这份草稿只属于当前工单的本地编辑记录，不计入上方正式订单。请继续核价；只有从已核验的正式订单记录才能查看对应签约状态。</text>
+    </AppRecordCard>
+    <AppStatus v-if="!choosingMode && records.length > 0 && (displayReadState === 'succeeded' || isVisualSample)"
+      class="quotation-hub__signing-boundary" variant="strip" tone="neutral" quiet
+      message="签约状态须逐笔核对：订单记录不代表合同已签署；合同文件与签署操作尚未开放。"
+      data-testid="quotation-hub-signing-boundary" />
     <view v-if="choosingMode || records.length > 0 && (displayReadState === 'succeeded' || isVisualSample)" class="quotation-hub__action-area">
       <AppButton v-if="choosingMode" block class="quotation-hub__new" data-testid="quotation-hub-mode-next"
         :disabled="readOnly" @tap="startEditor">下一步</AppButton>
@@ -169,6 +179,7 @@ const props = defineProps<{
   readonly displayNumber?: string
   readonly customerName?: string
   readonly localDraftGroupCount: number
+  readonly localDraftState?: string
   readonly readOnly: boolean
   /** Projected by the App composition root, never inferred in a feature from adapter fixtures. */
   readonly devMockOrder?: boolean
@@ -230,6 +241,12 @@ const editingId = ref<string | null>(null)
 const editError = ref('')
 const choosingMode = ref(false)
 const hasLocalDraft = computed(() => props.localDraftGroupCount > 0)
+const draftSaveLabel = computed(() => {
+  if (props.localDraftState === 'saved_local' || props.localDraftState === 'restored') return '本机已保存'
+  if (props.localDraftState === 'saving') return '本机保存中'
+  if (props.localDraftState === 'save_failed' || props.localDraftState === 'unavailable') return '本机保存待重试'
+  return '尚未确认保存'
+})
 const money = (amount: number | undefined): string => amount === undefined || !Number.isFinite(amount)
   ? '金额待核验' : `¥ ${amount.toFixed(2)}`
 function refresh(): void {
@@ -446,12 +463,22 @@ watch(() => props.workOrderId, () => {
 .quotation-hub__mode-radio { color:#1677f4; font-size:22px; }
 .quotation-hub__mode-radio--muted { color:#9aaabd; }
 .quotation-hub__mode-safety { font-size:11px; line-height:1.5; color:#7c8da8; }
-.quotation-hub__error,.quotation-hub__draft-note {
+.quotation-hub__error {
   margin-top:13px; border-radius:10px; padding:11px 13px;
   font-size:12px; line-height:1.5;
 }
 .quotation-hub__error { background:#fff0e8; color:#b7643d; }
-.quotation-hub__draft-note { background:#eaf3ff; color:#5d7fa7; }
+.quotation-hub__draft-checkpoint {
+  display:flex; flex-direction:column; gap:8px; margin-top:13px;
+  padding:15px; border:1px solid #d9e7f9; background:#f5f9ff;
+}
+.quotation-hub__draft-checkpoint-title {
+  display:flex; justify-content:space-between; align-items:center; gap:9px;
+  color:var(--app-text-strong); font-weight:750;
+}
+.quotation-hub__draft-checkpoint-count { color:#3275bd; font-weight:700; padding-bottom:0; }
+.quotation-hub__draft-checkpoint-copy { color:#617993; line-height:1.6; }
+.quotation-hub__signing-boundary { margin-top:13px; }
 .quotation-hub__action-area {
   position:fixed; z-index:10; left:0; right:0; bottom:0;
   display:flex; flex-direction:column; gap:6px;

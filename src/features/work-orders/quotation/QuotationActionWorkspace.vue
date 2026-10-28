@@ -85,6 +85,18 @@
       >提交订单</AppButton>
 
       </view>
+      <view v-if="contentState === 'ready'" class="quotation-workspace-handoff"
+        data-testid="quotation-readonly-handoff">
+        <AppButton variant="secondary" block class="quotation-workspace-handoff-button"
+          data-testid="quotation-review-orders"
+          :disabled="orderHandoffPending || !canReviewOrders"
+          @tap="reviewOrders">
+          {{ orderHandoffPending ? '正在保存草稿…' : '查看订单与签约进度' }}
+        </AppButton>
+        <text class="quotation-workspace-handoff__hint">离开前保存本地修改；草稿不等于正式订单，此操作不会提交报价或发起签约。</text>
+        <AppStatus v-if="orderHandoffError" tone="warning" quiet
+          :message="orderHandoffError" data-testid="quotation-review-orders-error" />
+      </view>
       <AppStatus
         v-if="productionReadOnly"
         class="quotation-production-read-only"
@@ -155,7 +167,11 @@ const props = defineProps<{
   readonly syntheticReviewValidateSelection?: () => boolean
   readonly syntheticReviewFocusFirstError?: () => void
 }>()
-defineEmits<{ (event: 'retry'): void; (event: 'back'): void }>()
+const emit = defineEmits<{
+  (event: 'retry'): void
+  (event: 'back'): void
+  (event: 'open-order-records'): void
+}>()
 
 const workspace = useActionWorkspaceStore()
 const composition = useQuotationCompositionStore()
@@ -178,6 +194,35 @@ const syntheticReviewEnabled = computed(() => import.meta.env.DEV
   && Boolean(props.syntheticReviewValidateSelection)
   && Boolean(props.syntheticReviewFocusFirstError))
 const quotationConfirmOpen = ref(false)
+const orderHandoffPending = ref(false)
+const orderHandoffError = ref('')
+const canReviewOrders = computed(() => Boolean(composition.draft)
+  && ['fresh', 'restored', 'dirty', 'saving', 'saved_local', 'save_failed'].includes(composition.localState))
+
+async function reviewOrders(): Promise<void> {
+  if (orderHandoffPending.value || !canReviewOrders.value || props.contentState !== 'ready') return
+  const workOrderId = composition.draft?.workOrderId
+  const nodeId = composition.draft?.workflowNodeId
+  orderHandoffPending.value = true
+  orderHandoffError.value = ''
+  try {
+    const saved = await composition.flushDraft()
+    // A role change or different quotation may have replaced the draft while
+    // its asynchronous local save was in flight. Never hand off that result.
+    if (composition.draft?.workOrderId !== workOrderId
+      || composition.draft?.workflowNodeId !== nodeId || !canReviewOrders.value) return
+    if (saved.state !== 'succeeded' || composition.localState === 'save_failed'
+      || composition.localState === 'dirty') {
+      orderHandoffError.value = '本地草稿尚未保存成功，请重试。订单与签约信息未发生变化。'
+      return
+    }
+    emit('open-order-records')
+  } catch {
+    orderHandoffError.value = '本地草稿保存暂不可用，请重试。当前未提交任何正式订单。'
+  } finally {
+    orderHandoffPending.value = false
+  }
+}
 const firstStepActive = ref(false)
 const firstStepCanEdit = ref(false)
 const quotationContentRef = ref<InstanceType<typeof QuotationActionContent> | null>(null)
@@ -268,6 +313,9 @@ function openQuotationConfirmation(): void {
 .quotation-workspace-shell .quotation-submit-unavailable { grid-column:1 / -1; }
 .quotation-workspace-disabled-submit { background:#e6eaf1; color:#9ca8b9; border:0; }
 .quotation-workspace-shell--review .quotation-workspace-footer-summary { margin-bottom:0; }
+.quotation-workspace-handoff { display:flex; flex-direction:column; gap:7px; margin-top:11px; }
+.quotation-workspace-handoff-button { min-height:44px; }
+.quotation-workspace-handoff__hint { font-size:11px; line-height:1.55; color:var(--app-content-muted-ink); }
 
 /* The footer is a true two-column row, not separate slot fragments whose
    uni-app wrapper may cause grid auto-placement and hiding of the CTA. */
