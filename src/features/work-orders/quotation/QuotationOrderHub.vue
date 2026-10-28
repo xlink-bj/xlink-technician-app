@@ -94,7 +94,7 @@
         <view class="quotation-hub__order-summary">
           <view class="quotation-hub__amount-block">
             <text class="quotation-hub__amount-label">订单金额</text>
-            <AppAmountValue v-if="mockJourneyOrder && order.totalPrice === 0" class="quotation-hub__amount-unverified" size="regular" tone="muted" value="金额待核验" data-testid="quotation-hub-amount-unverified" />
+            <AppAmountValue v-if="devSyntheticUnverifiedAmount && order.totalPrice === 0" class="quotation-hub__amount-unverified" size="regular" tone="muted" value="金额待核验" data-testid="quotation-hub-amount-unverified" />
             <AppAmountValue v-else class="quotation-hub__order-amount" size="prominent" tone="primary" :value="money(order.totalPrice)" />
           </view>
           <text class="quotation-hub__order-group-count">{{ order.contentSupported ? `${order.groups.length} 个维修部位组` : '明细待核验' }}</text>
@@ -104,8 +104,8 @@
             :aria-expanded="expandedId === order.id" @tap="toggleDetails(order.id)">
             <AppIcon name="task" :size="17" color="#2479eb" />{{ expandedId === order.id ? '收起详情' : '查看详情' }}
           </AppButton>
-          <AppButton v-if="!readOnly && !mockJourneyOrder" variant="secondary"
-            :disabled="isVisualSample || editingId !== null || hasLocalDraft"
+          <AppButton v-if="!readOnly && !mockJourneyOrder && !isVisualSample && !hasLocalDraft" variant="secondary"
+            :disabled="editingId !== null"
             :data-testid="`quotation-hub-edit-${order.id}`" @tap="edit(order.id)">
             <AppIcon name="order" :size="17" color="#2479eb" />{{ editingId === order.id ? '核验中…' : '修改订单' }}
           </AppButton>
@@ -189,6 +189,8 @@ const props = defineProps<{
     readonly state: 'loading' | 'confirmed' | 'unavailable' | 'blocked'
     readonly order?: QuotationOrderBrowseItem
   }
+  /** Explicit DEV fixture provenance from the App composition root; never infer it from a price of zero. */
+  readonly devSyntheticUnverifiedAmount?: boolean
   /** Explicit DEV source-modelled preview. Never substituted for an R1 API read. */
   readonly devVisualSample?: 'orders' | 'empty'
 }>()

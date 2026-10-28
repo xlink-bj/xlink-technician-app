@@ -25,6 +25,7 @@
     :dev-mock-order="aStageMockOrderEnabled"
     :dev-mock-order-read="mockOrderRead"
     :dev-visual-sample="devQuotationOrderPreview"
+    :dev-synthetic-unverified-amount="isDevSyntheticContractReadPreviewEnabled(String(workspace.descriptor?.workOrderId ?? ''))"
     @create="openQuotationEditor"
     @edit="openExistingQuotationEditor"
     @mode-change="quotationChoiceVisible = $event"
@@ -249,7 +250,7 @@
 import { computed, nextTick, ref, watch } from 'vue'
 import { onLoad, onUnload } from '@dcloudio/uni-app'
 
-import { isBusinessMockQuotationPreview } from '@app/business-mock'
+import { isBusinessMockQuotationPreview, isDevSyntheticContractReadPreviewEnabled } from '@app/business-mock'
 import { compareQuoteWithStandaloneSkuDemo, compareQuoteWithSameCatalogSyntheticSku } from '@app/quotation-sku-identity-evidence'
 import { reviewP1SyntheticSkuReadiness } from '@app/p1-sku-readiness-review'
 import { setActionWorkspacePageTitle } from '@app/action-page-title'
