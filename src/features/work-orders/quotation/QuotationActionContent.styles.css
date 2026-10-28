@@ -317,65 +317,65 @@
 
 .quotation-content__workbench--initial { background: transparent; border: 0; box-shadow: none; padding: 0; }
 .quotation-content__first-repair-part-step { display: flex; flex-direction: column; gap: 0; }
-.quotation-content__first-step-notice { background: #eaf3ff; border-color: #deebff; border-radius: 20rpx; color: #55719e; font-size: 22rpx; justify-content: flex-start; line-height: 1.4; margin-bottom: 16rpx; min-height: 66rpx; padding: 12rpx 18rpx; text-align: left; }
-.quotation-content__first-step-title-row { align-items: center; display: flex; gap: 12rpx; justify-content: space-between; margin: 0 4rpx 16rpx; min-width: 0; }
-.quotation-content__first-step-page-title { color: #102447; flex: 1; font-size: 38rpx; font-weight: 850; line-height: 1.3; min-width: 0; }
-.quotation-content__first-step-count { background: #e6f1ff; border-radius: 999rpx; color: #1a70e8; flex: 0 0 auto; font-size: 22rpx; font-weight: 750; line-height: 1.3; padding: 10rpx 16rpx; }
-.quotation-content__first-step-card { background: #fff; border-color: #edf1f7; border-radius: 34rpx; box-shadow: 0 16rpx 56rpx rgba(33, 69, 131, .067); box-sizing: border-box; overflow: hidden; padding: 26rpx 28rpx 28rpx; position: relative; }
-.quotation-content__first-step-card::before { background: #297cf8; border-radius: 0 6rpx 6rpx 0; content: ''; height: 68rpx; left: 0; position: absolute; top: 32rpx; width: 8rpx; }
-.quotation-content__first-step-card-heading { align-items: center; display: flex; gap: 18rpx; margin-bottom: 24rpx; min-width: 0; }
-.quotation-content__first-step-index { align-items: center; background: linear-gradient(145deg, #e4f1ff, #d5e7ff); border-radius: 20rpx; color: #1673ec; display: flex; flex: 0 0 64rpx; font-size: 28rpx; font-weight: 850; height: 64rpx; justify-content: center; }
-.quotation-content__first-step-card-copy { flex: 1; min-width: 0; }
-.quotation-content__first-step-card-title { color: #102c52; display: block; font-size: 28rpx; font-weight: 800; line-height: 1.3; }
-.quotation-content__first-step-card-subtitle { color: #8ba0ba; display: block; font-size: 21rpx; line-height: 1.35; margin-top: 4rpx; }
-.quotation-content__first-step-field { display: flex; flex-direction: column; margin-top: 20rpx; min-width: 0; }
-.quotation-content__first-step-card-heading + .quotation-content__first-step-field { margin-top: 0; }
-.quotation-content__first-step-label { color: #304b73; display: block; font-size: 24rpx; font-weight: 750; line-height: 1.4; margin-bottom: 10rpx; }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 .quotation-content__first-step-required { color: #f06445; }
 .quotation-content__first-step-card .app-cascade-selector__parents,
-.quotation-content__first-step-card .app-cascade-selector__children-options { gap: 12rpx; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
 .quotation-content__first-step-card .app-cascade-selector__parent,
-.quotation-content__first-step-card .app-cascade-selector__child { border-radius: 18rpx; box-sizing: border-box; font-size: 23rpx; line-height: 1.35; min-height: 88rpx; padding: 10rpx 12rpx; }
+
 .quotation-content__first-step-card .app-cascade-selector__parent--active,
-.quotation-content__first-step-card .app-choice--selected { background: #edf4ff; border-color: #2878f2; color: #176deb; }
-.quotation-content__first-step-card .app-cascade-selector__children { background: #f7faff; border-color: #e1ebf8; border-radius: 18rpx; margin-top: 14rpx; padding: 16rpx; }
-.quotation-content__first-step-card .app-cascade-selector__children-heading { margin-bottom: 10rpx; }
-.quotation-content__first-step-card .app-cascade-selector__children-title { color: #173961; font-size: 23rpx; font-weight: 750; }
-.quotation-content__first-step-card .app-cascade-selector__children-caption { color: #8196b4; font-size: 20rpx; }
-.quotation-content__first-step-selector-trigger { align-items: center; background: #f9fbfe; border: 1rpx solid #dae6f6; border-radius: 22rpx; box-sizing: border-box; display: flex; justify-content: space-between; min-height: 90rpx; padding: 12rpx 22rpx; text-align: left; width: 100%; }
-.quotation-content__first-step-selector-trigger--disabled { background: var(--app-color-disabled-surface); color: var(--app-color-disabled); }
-.quotation-content__first-step-selector-copy { display: flex; flex: 1; flex-direction: column; gap: 4rpx; min-width: 0; }
-.quotation-content__first-step-selector-value { color: #173961; display: block; font-size: 27rpx; font-weight: 750; line-height: 1.35; overflow-wrap: anywhere; }
-.quotation-content__first-step-selector-hint { color: #8196b4; display: block; font-size: 21rpx; line-height: 1.3; }
-.quotation-content__first-step-selector-options { background: #f7faff; border: 1rpx solid #e1ebf8; border-radius: 20rpx; margin-top: 12rpx; padding: 14rpx; }
-.quotation-content__first-step-selected-path { color: #8196b4; display: block; font-size: 21rpx; line-height: 1.35; margin-top: 8rpx; overflow-wrap: anywhere; }
+
+
+
+
+
+
+
+
+
+
+
+
 .quotation-content__first-step-textarea,
-.quotation-content__first-step-quantity { background: #f9fbfe; border: 1rpx solid #dfe7f2; border-radius: 20rpx; box-sizing: border-box; color: #273b5a; font-size: 28rpx; padding: 14rpx 22rpx; width: 100%; }
-.quotation-content__first-step-textarea { height: 108rpx; line-height: 1.45; min-height: 108rpx; }
-.quotation-content__first-step-quantity { font-size: 36rpx; font-variant-numeric: tabular-nums; font-weight: 800; min-height: 88rpx; }
+
+
+
 .quotation-content__first-step-textarea--invalid,
-.quotation-content__first-step-quantity--invalid { border-color: var(--app-color-danger); }
-.quotation-content__first-step-hint { color: #8498b4; display: block; font-size: 21rpx; line-height: 1.4; margin-top: 8rpx; }
-.quotation-content__first-step-error-slot { color: var(--app-color-danger); display: none; font-size: 21rpx; line-height: 1.35; margin-top: 0; }
-.quotation-content__first-step-error-slot--visible { display: block; margin-top: 4rpx; }
-.quotation-content__first-step-source-state { margin-top: 8rpx; }
-.quotation-content__first-step-products { background: linear-gradient(155deg, #f4f9ff, #e9f3ff); border: 1rpx solid #e0ecff; border-radius: 28rpx; margin-top: 22rpx; padding: 20rpx 24rpx 24rpx; }
-.quotation-content__first-step-products-heading { align-items: center; display: flex; gap: 10rpx; justify-content: space-between; }
-.quotation-content__first-step-products-title { color: #15335e; font-size: 28rpx; font-weight: 800; }
-.quotation-content__first-step-products-status { background: #fff; border-radius: 999rpx; color: #8b9bb4; flex: 0 0 auto; font-size: 21rpx; line-height: 1.3; padding: 8rpx 14rpx; }
-.quotation-content__first-step-products-copy { color: #6481a8; display: block; font-size: 22rpx; line-height: 1.45; margin: 10rpx 0 14rpx; }
-.quotation-content__first-step-products-button { align-items: center; background: linear-gradient(135deg, #2588ff, #0863ed); border-radius: 24rpx; box-shadow: 0 12rpx 22rpx rgba(29, 109, 240, .17); color: #fff; display: flex; font-size: 30rpx; gap: 10rpx; height: 90rpx; justify-content: center; line-height: 1.3; min-height: 90rpx; padding: 0 18rpx; }
-.quotation-content__first-step-products-button .app-button__content { align-items: center; display: flex; gap: 12rpx; justify-content: center; width: 100%; }
-.quotation-content__first-step-products-button .app-button__label { align-items: center; display: flex; gap: 12rpx; }
-.quotation-content__first-step-products-button .app-icon { flex: 0 0 auto; }
-.quotation-content__first-step-products-plus { font-size: 40rpx; font-weight: 400; line-height: 1; }
-.quotation-content__first-step-products-button.app-button--disabled { opacity: .55; }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 @media (max-width: 360px) {
-  .quotation-content__first-step-title-row { align-items: flex-start; }
-  .quotation-content__first-step-count { font-size: 20rpx; padding: 8rpx 10rpx; }
-  .quotation-content__first-step-card { padding-left: 22rpx; padding-right: 22rpx; }
-  .quotation-content__first-step-products { padding-left: 18rpx; padding-right: 18rpx; }
-  .quotation-content__first-step-products-copy { font-size: 21rpx; }
+
+
+
+
+
 }
 .quotation-content__initial-empty { display: flex; flex-direction: column; gap: var(--app-space-sm); }
 .quotation-content__initial-draft-notice { align-items: center; background: var(--app-color-primary-soft); border: 1rpx solid var(--app-color-border-soft); border-radius: var(--app-radius-control); box-sizing: border-box; color: var(--app-color-text-body); display: flex; font-size: var(--app-font-meta); line-height: 1.45; min-height: 54rpx; padding: 10rpx 16rpx; text-align: left; }
@@ -393,17 +393,17 @@
 .quotation-content__initial-empty-surface .quotation-content__empty-title { color: var(--app-color-text-primary); font-size: var(--app-font-body); font-weight: 750; margin-top: 0; }
 .quotation-content__initial-empty-copy { color: var(--app-color-text-body); display: block; font-size: var(--app-font-meta); line-height: 1.5; margin-top: 8rpx; }
 .quotation-content__initial-empty-action { align-self: stretch; border-radius: var(--app-radius-control); box-shadow: none; margin-top: 18rpx; max-width: none; min-height: 48px; width: 100%; }
-.quotation-content__initial-process { box-sizing: border-box; padding: 20rpx 18rpx; }
-.quotation-content__initial-process-heading { align-items: baseline; display: flex; justify-content: space-between; margin: 0 2rpx 12rpx; }
-.quotation-content__initial-process-title { color: var(--app-color-text-primary); font-size: var(--app-font-body); font-weight: 750; }
-.quotation-content__initial-process-subtitle { color: var(--app-color-text-secondary); font-size: var(--app-font-meta); }
-.quotation-content__initial-process-steps { align-items: stretch; display: flex; gap: 2rpx; }
-.quotation-content__initial-process-step { background: transparent; border: 0; border-radius: 0; box-shadow: none; box-sizing: border-box; display: flex; flex: 1; flex-direction: column; min-width: 0; padding: 8rpx 6rpx; }
-.quotation-content__initial-process-arrow { align-self: center; color: var(--app-color-text-muted); flex: 0 0 14rpx; font-size: 26rpx; line-height: 1; text-align: center; }
-.quotation-content__initial-process-symbol { align-items: center; display: flex; gap: 6rpx; min-height: 40rpx; }
-.quotation-content__initial-process-number { align-items: center; background: var(--app-color-primary-soft); border-radius: 999rpx; color: var(--app-color-primary); display: flex; flex: 0 0 32rpx; font-size: var(--app-font-meta); font-weight: 700; height: 32rpx; justify-content: center; }
-.quotation-content__initial-process-step-title { color: var(--app-color-text-primary); display: block; font-size: var(--app-font-meta); font-weight: 750; line-height: 1.4; margin-top: 6rpx; }
-.quotation-content__initial-process-step-copy { color: var(--app-color-text-secondary); display: block; font-size: 19rpx; line-height: 1.4; margin-top: 4rpx; }
+
+
+
+
+
+
+
+
+
+
+
 .quotation-content__catalog-footer { border-radius: 20rpx 20rpx 0 0; gap: 10rpx; margin-top: 10rpx; padding: 14rpx var(--app-page-gutter) 12rpx; }
 .quotation-content__catalog-footer-copy { min-width: 0; }
 .quotation-content__catalog-footer-title { font-size: 22rpx; line-height: 1.35; }
@@ -634,10 +634,10 @@
 .quotation-content__initial-empty-copy { font-size: 22rpx; line-height: 1.4; color: var(--app-color-text-secondary); }
 .quotation-content__initial-empty-action { margin-top: 6rpx; min-height: 88rpx; }
 .quotation-content__initial-empty-artwork { height: 36rpx; opacity: .23; }
-.quotation-content__initial-process { padding: 17rpx 18rpx; }
-.quotation-content__initial-process-heading { margin-bottom: 8rpx; }
-.quotation-content__initial-process-step { padding: 7rpx 3rpx; }
-.quotation-content__initial-process-step-copy { font-size: 19rpx; line-height: 1.38; }
+
+
+
+
 .quotation-content__group { border-radius: 18rpx; padding: 20rpx; }
 .quotation-content__group-title { font-size: 26rpx; line-height: 1.4; }
 .quotation-content__group-location { line-height: 1.45; font-size: 21rpx; }
@@ -656,7 +656,7 @@
 
 /* Q01 commercial design baseline: editable repair fields first; costs follow;
    no decorative multi-step wizard, and no unverified amount values. */
-.quotation-content__initial-process { display:none; }
+
 .quotation-content__initial-card { background:var(--app-color-surface); border-radius:22rpx; padding:22rpx; }
 .quotation-content__initial-empty-heading { padding-bottom:12rpx; }
 .quotation-content__initial-empty-title { font-size:30rpx; }
@@ -682,18 +682,18 @@
 .quotation-content__initial-cost-note, .quotation-content__adjustments-hint { display:block; line-height:1.5; color:var(--app-color-text-secondary); font-size:20rpx; margin-top:8rpx; }
 .quotation-content__adjustments-title-row { display:flex; align-items:center; justify-content:space-between; gap:12rpx; padding-bottom:7rpx; }
 .quotation-content__adjustments-badge { font-size:19rpx; color:var(--app-color-text-secondary); background:var(--app-color-control-surface); padding:6rpx 10rpx; border-radius:999rpx; }
-.quotation-content__first-step-title-row { margin-bottom:13rpx; }
-.quotation-content__first-step-page-title { font-size:30rpx; font-weight:800; }
-.quotation-content__first-step-count { font-size:20rpx; padding:7rpx 12rpx; }
-.quotation-content__first-step-card { border-radius:22rpx; box-shadow:none; padding:21rpx 22rpx; border:1rpx solid var(--app-color-border); }
-.quotation-content__first-step-card::before { display:none; }
-.quotation-content__first-step-card-heading { margin-bottom:12rpx; gap:12rpx; }
-.quotation-content__first-step-index { flex-basis:52rpx; height:52rpx; border-radius:12rpx; font-size:24rpx; background:var(--app-color-primary-soft); }
-.quotation-content__first-step-card-title { font-size:26rpx; }
-.quotation-content__first-step-field { margin-top:13rpx; }
-.quotation-content__first-step-label { font-size:23rpx; color:var(--app-color-text-primary); }
-.quotation-content__first-step-products { margin-top:19rpx; }
-.quotation-content__first-step-products-title { font-size:25rpx; }
+
+
+
+
+
+
+
+
+
+
+
+
 
 /* Q03: R1-like navigation hierarchy without inventing non-existent catalog
    taxonomy. Show left rail only when package data supplies actual part codes. */
@@ -740,17 +740,14 @@
  * was dramatically smaller than the signed-off phone design. Explicit
  * pixel rhythm is intentional; domain/price/permissions stay untouched. */
 .quotation-content__initial-empty-title,
-.quotation-content__first-step-page-title { font-size: 20px; line-height: 1.3; color: #162b49; }
+
 .quotation-content__initial-empty-description { font-size: 12px; line-height: 1.5; color: #7587a1; }
 .quotation-content__initial-card, .quotation-content__first-step-card {
   border-radius: 15px; padding: 17px 16px; border-color: #e4eaf4;
   background: #fff; box-shadow: 0 2px 12px rgba(17,56,103,.04);
 }
 .quotation-content__initial-field-label,
-.quotation-content__first-step-label {
-  font-size: 14px; line-height: 1.5; font-weight: 730;
-  color: #273b59;
-}
+
 .quotation-content__initial-field-label { padding: 14px 1px 8px; }
 .quotation-content__initial-field-value,
 .quotation-content__initial-field-placeholder {
@@ -774,40 +771,26 @@
 .quotation-content__initial-cost-note,
 .quotation-content__adjustments-hint { font-size: 11.5px; line-height: 1.55; }
 .quotation-content__adjustments-badge { font-size: 11px; padding: 4px 8px; }
-.quotation-content__first-step-title-row { margin: 11px 1px 13px; }
-.quotation-content__first-step-count { font-size: 12px; padding: 5px 8px; }
-.quotation-content__first-step-card-heading { margin-bottom: 13px; }
-.quotation-content__first-step-index {
-  flex-basis: 33px; height: 33px; font-size: 13px;
-  border-radius: 9px;
-}
-.quotation-content__first-step-card-title { font-size: 17px; line-height: 1.4; }
-.quotation-content__first-step-card-subtitle { font-size: 12px; line-height: 1.45; }
-.quotation-content__first-step-field { margin-top: 15px; }
-.quotation-content__first-step-selector-trigger { border-radius: 11px; min-height: 56px; padding: 12px 14px; }
-.quotation-content__first-step-selector-value { font-size: 15px; line-height: 1.35; }
+
+
+
+
+
+
+
+
+
 .quotation-content__first-step-selector-hint,
 .quotation-content__first-step-selected-path,
-.quotation-content__first-step-hint { font-size: 11.5px; line-height: 1.5; }
-.quotation-content__first-step-textarea {
-  font-size: 14px; padding: 11px 13px; min-height: 64px; height: 64px;
-  border-radius: 11px;
-}
-.quotation-content__first-step-quantity {
-  font-size: 18px; font-weight: 750; min-height: 54px;
-  padding: 12px 13px; border-radius: 11px;
-}
-.quotation-content__first-step-products {
-  border-radius: 14px; padding: 16px 14px; margin-top: 15px;
-}
-.quotation-content__first-step-products-title { font-size: 16px; }
-.quotation-content__first-step-products-copy { font-size: 12px; line-height: 1.5; }
-.quotation-content__first-step-products-status { font-size: 11px; }
-.quotation-content__first-step-products-button {
-  height: 49px; min-height: 49px; font-size: 15px;
-  border-radius: 11px; box-shadow: 0 5px 12px rgba(29,109,240,.13);
-}
-.quotation-content__first-step-products-plus { font-size: 22px; }
+
+
+
+
+
+
+
+
+
 /* Q03 operator-friendly catalog, not a dense engineering inspection list. */
 .quotation-content__catalog-page { padding: 11px 12px calc(12px + env(safe-area-inset-bottom)); }
 .quotation-content__catalog-topbar {
@@ -939,12 +922,12 @@
 /* Q01 390/320 viewport reachability: recover ~25px of vertical space
  * without shrinking 14px fields, so the first select-product button
  * never disappears behind the fixed amount/submit footer. */
-.quotation-content__first-step-field { margin-top:10px; }
-.quotation-content__first-step-card-heading { margin-bottom:9px; }
-.quotation-content__first-step-textarea { min-height:59px; height:59px; }
-.quotation-content__first-step-quantity { min-height:49px; }
-.quotation-content__first-step-products { margin-top:10px; padding:13px 13px; }
-.quotation-content__first-step-products-copy { margin-top:3px; }
+
+
+
+
+
+
 
 /* Commercial Q01 restructured to match signed-off hierarchy: three distinct
  * task cards, no nested product CTA, and one consistent fee section. */
@@ -966,8 +949,8 @@
 .quotation-content__initial-empty-heading.quotation-content__section-heading { margin-bottom:3px; }
 .quotation-content__initial-cost-preview .quotation-content__section-heading { margin-bottom:9px; }
 .quotation-content__section-heading--fees { margin-top:14px !important; }
-.quotation-content__first-step-index { border-radius:50%; background:#1677f4; color:#fff; }
-.quotation-content__first-step-card-subtitle { display:none; }
+
+
 .quotation-content__first-step-products-title,
 .quotation-content__initial-cost-title { font-size:17px; color:#182a47; font-weight:800; }
 .quotation-content__select-tile {
@@ -1000,19 +983,16 @@
   font-size:12px; line-height:1.5; color:#667f9e;
 }
 .quotation-content__order-explainer-title { color:#207af0; font-size:15px; font-weight:790; margin-bottom:4px; }
-.quotation-content__first-step-card { padding-bottom:15px; }
-.quotation-content__first-step-card-heading {
-  border-bottom:1px solid #e9eef5; padding-bottom:13px; margin-bottom:12px;
-}
+
+
 
 /* Q01 reading rhythm: the empty first-order form shows three independent
  * visual sections, just like the editable form and the approved design. */
 .quotation-content__commercial-section + .quotation-content__commercial-section { margin-top:12px; }
 .quotation-content__initial-empty .quotation-content__commercial-section { gap:0; }
 
-.quotation-content__first-step-title-row { display:flex; align-items:center; justify-content:space-between;
-  min-height:37px; gap:12px; margin:2px 0 10px; }
-.quotation-content__first-step-page-title { font-size:18px; color:#182b49; font-weight:800; }
+
+
 .quotation-content__save-draft { color:#1477f5; font-size:14px; font-weight:700; min-height:36px; }
 
 /* Selected-product return state shares the same phone-readable hierarchy
@@ -1069,30 +1049,27 @@
  * keep readable controls and make the first actionable catalog CTA reachable
  * before the fixed footer in its fully filled state. */
 .quotation-content__first-repair-part-step { padding-top:0; }
-.quotation-content__first-step-card { padding:13px 15px 12px; }
-.quotation-content__first-step-card-heading {
-  display:flex; align-items:center; gap:10px;
-  padding:0 0 9px; margin:0 0 8px;
-}
-.quotation-content__first-step-card-copy { flex:1 1 0; min-width:0; }
-.quotation-content__first-step-card-subtitle { display:none; }
+
+
+
+
 .quotation-content__save-draft { flex:none; margin-left:auto; font-size:13px; min-height:32px; padding:2px 4px; }
-.quotation-content__first-step-field { margin-top:9px; }
-.quotation-content__first-step-label { margin-bottom:5px; line-height:1.3; }
-.quotation-content__first-step-selector-trigger { min-height:48px; padding:8px 11px; }
+
+
+
 .quotation-content__first-step-selector-hint,
 .quotation-content__first-step-selected-path,
-.quotation-content__first-step-hint { display:none; }
-.quotation-content__first-step-textarea { min-height:52px; height:52px; padding:9px 12px; }
-.quotation-content__first-step-quantity { min-height:44px; padding:8px 12px; }
+
+
+
 .quotation-content__first-repair-part-step .quotation-content__commercial-section { margin-top:9px; padding:11px 14px; }
 .quotation-content__first-repair-part-step .quotation-content__section-heading { margin-bottom:9px; padding-bottom:7px; min-height:28px; }
 .quotation-content__first-repair-part-step .quotation-content__select-tile { min-height:67px; padding:9px 12px; }
 .quotation-content__first-repair-part-step .quotation-content__select-icon { width:41px; height:41px; flex-basis:41px; }
 @media (max-width:360px) {
- .quotation-content__first-step-card { padding-left:12px; padding-right:12px; }
- .quotation-content__first-step-card-heading { gap:7px; }
- .quotation-content__first-step-card-title { font-size:16px; }
+
+
+
 }
 
 /* M1-S2 375/390 fidelity finish — presentation only, business gates unchanged.
@@ -1102,10 +1079,8 @@
   border:1px solid #e2e8f1; border-radius:14px;
   background:#fff; box-shadow:0 2px 10px rgba(24,51,85,.04);
 }
-.quotation-content__first-step-card { padding:13px 15px 12px; }
-.quotation-content__first-step-card-heading {
-  margin:0 0 8px; padding:0 0 10px; border-bottom:1px solid #e9edf3;
-}
+
+
 .quotation-content__first-step-index,
 .quotation-content__section-number {
   background:#2477e4; border-radius:9px; width:30px;
@@ -1117,25 +1092,15 @@
   color:#1a2d48; font-size:17px; line-height:1.4; font-weight:780;
 }
 .quotation-content__save-draft { color:#256dc5; font-size:12px; min-height:35px; }
-.quotation-content__first-step-field { margin-top:9px; }
-.quotation-content__first-step-label {
-  display:block; margin-bottom:6px; font-size:14px; line-height:1.35;
-  font-weight:700; color:#283b54;
-}
+
+
 .quotation-content__first-step-selector-trigger,
 .quotation-content__first-step-textarea,
-.quotation-content__first-step-quantity {
-  box-sizing:border-box; width:100%; background:#f8fafc;
-  border:1px solid #dce5ef; border-radius:10px; color:#20334e;
-}
-.quotation-content__first-step-selector-trigger { min-height:47px; padding:9px 12px; }
-.quotation-content__first-step-selector-value { color:#2f70bf; font-size:14px; font-weight:710; }
-.quotation-content__first-step-textarea {
-  min-height:58px; height:58px; padding:11px 12px; font-size:14px; line-height:1.45;
-}
-.quotation-content__first-step-quantity {
-  min-height:45px; height:45px; padding:8px 12px; font-size:15px; font-weight:700;
-}
+
+
+
+
+
 .quotation-content__first-repair-part-step .quotation-content__commercial-section {
   margin-top:10px; padding:13px 15px;
 }
