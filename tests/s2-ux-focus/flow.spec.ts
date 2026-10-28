@@ -117,6 +117,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
         await page.getByTestId('quotation-add-group').click()
         await page.getByTestId('quotation-first-step-repair-parts-trigger').click()
         await page.getByTestId('survey-repair-part-parents').getByText('屋面', { exact: true }).click()
+        await page.getByTestId('quotation-repair-part-picker-done').click()
         await page.getByTestId('quotation-first-step-description').locator('textarea')
           .fill('L2 屋面维修视觉审查')
         await page.getByTestId('quotation-first-step-quantity').locator('input').fill('1')

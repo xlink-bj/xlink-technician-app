@@ -503,12 +503,12 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
     store.setField('need', '1')
     const toTime = await store.openAppointmentTimeSelection()
     expect(toTime.state).toBe('succeeded')
-    expect(navigation.replace).toHaveBeenCalledWith(actionWorkspaceTimeRouteFor(
+    expect(navigation.navigate).toHaveBeenCalledWith(actionWorkspaceTimeRouteFor(
       asOpaqueId<'WorkOrderId'>('workspace-work-order'),
       asOpaqueId<'WorkflowNodeRuntimeId'>('workspace-appointment-node'),
       'set_appointment',
     ))
-    expect(navigation.navigate).not.toHaveBeenCalled()
+    expect(navigation.replace).not.toHaveBeenCalled()
     expect(storage.storage.write).toHaveBeenCalledTimes(1)
   })
 
@@ -691,7 +691,7 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
     expect(navigation.reset).toHaveBeenNthCalledWith(2, '/pages/work-orders/work-orders')
   })
 
-  it('replaces Action sub-pages so edit and confirmation cycles stay bounded', async () => {
+  it('pushes the time picker for native cancel and replaces confirmation to preserve the edit route', async () => {
     const { store, navigation } = configureWorkspace()
     await openWorkspace(store)
     store.setField('need', '1')
@@ -703,30 +703,30 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
     await store.openAppointmentTimeSelection()
     await store.openConfirmation()
 
-    expect(navigation.navigate).not.toHaveBeenCalled()
-    expect(navigation.replace).toHaveBeenCalledTimes(5)
+    expect(navigation.navigate).toHaveBeenCalledTimes(2)
+    expect(navigation.replace).toHaveBeenCalledTimes(3)
     expect(navigation.back).not.toHaveBeenCalled()
-    expect(navigation.replace).toHaveBeenNthCalledWith(1, actionWorkspaceTimeRouteFor(
+    expect(navigation.navigate).toHaveBeenNthCalledWith(1, actionWorkspaceTimeRouteFor(
       asOpaqueId<'WorkOrderId'>('workspace-work-order'),
       asOpaqueId<'WorkflowNodeRuntimeId'>('workspace-appointment-node'),
       'set_appointment',
     ))
-    expect(navigation.replace).toHaveBeenNthCalledWith(2, actionWorkspaceConfirmationRouteFor(
+    expect(navigation.replace).toHaveBeenNthCalledWith(1, actionWorkspaceConfirmationRouteFor(
       asOpaqueId<'WorkOrderId'>('workspace-work-order'),
       asOpaqueId<'WorkflowNodeRuntimeId'>('workspace-appointment-node'),
       'set_appointment',
     ))
-    expect(navigation.replace).toHaveBeenNthCalledWith(3, actionWorkspaceRouteFor(
+    expect(navigation.replace).toHaveBeenNthCalledWith(2, actionWorkspaceRouteFor(
       asOpaqueId<'WorkOrderId'>('workspace-work-order'),
       asOpaqueId<'WorkflowNodeRuntimeId'>('workspace-appointment-node'),
       'set_appointment',
     ))
-    expect(navigation.replace).toHaveBeenNthCalledWith(4, actionWorkspaceTimeRouteFor(
+    expect(navigation.navigate).toHaveBeenNthCalledWith(2, actionWorkspaceTimeRouteFor(
       asOpaqueId<'WorkOrderId'>('workspace-work-order'),
       asOpaqueId<'WorkflowNodeRuntimeId'>('workspace-appointment-node'),
       'set_appointment',
     ))
-    expect(navigation.replace).toHaveBeenNthCalledWith(5, actionWorkspaceConfirmationRouteFor(
+    expect(navigation.replace).toHaveBeenNthCalledWith(3, actionWorkspaceConfirmationRouteFor(
       asOpaqueId<'WorkOrderId'>('workspace-work-order'),
       asOpaqueId<'WorkflowNodeRuntimeId'>('workspace-appointment-node'),
       'set_appointment',

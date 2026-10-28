@@ -125,7 +125,10 @@ describe('Action Workspace context ownership', () => {
     }
     expect(q01Entry).toContain('<AppCascadeSelector')
     expect(q01Entry).toContain(':options="options"')
-    expect(q01Entry).toContain('@update:model-value="emit(\'repair-parts-change\', $event)"')
+    expect(q01Entry).toContain('@update:model-value="pendingRepairParts = [...$event]"')
+    expect(q01Entry).toContain('@tap="confirmPicker"')
+    expect(q01Entry).toContain('@tap="cancelPicker"')
+    expect(q01Entry).toContain("emit('repair-parts-change', [...next])")
     expect(q01Entry).toContain('@input="emit(\'description-input\', $event)"')
     expect(q01Entry).toContain('@input="emit(\'quantity-input\', $event)"')
     expect(q01Entry).toContain('@tap="emit(\'select-products\')"')

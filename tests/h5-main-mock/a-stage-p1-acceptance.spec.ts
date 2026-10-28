@@ -146,6 +146,7 @@ test.describe('A-stage P1 real-H5 operator acceptance', () => {
       await page.getByTestId('quotation-add-group').click()
       await page.getByTestId('quotation-first-step-repair-parts-trigger').click()
       await page.getByTestId('survey-repair-part-parents').locator('.app-cascade-selector__parent').filter({ hasText: '屋面' }).click()
+      await page.getByTestId('quotation-repair-part-picker-done').click()
       await page.getByTestId('quotation-first-step-description').locator('textarea').fill('平屋顶局部修缮')
       await page.getByTestId('quotation-first-step-quantity').locator('input').fill('12')
       await page.getByTestId('quotation-first-step-select-products').click()

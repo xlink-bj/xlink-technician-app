@@ -37,7 +37,7 @@
             :aria-expanded="pickerOpen"
             :aria-invalid="Boolean(errors.repairParts)"
             data-testid="quotation-first-step-repair-parts-trigger"
-            @tap="pickerOpen = true"
+            @tap="openPicker"
           >
             <view class="q01-screen__selector-glyph" aria-hidden="true">
               <AppIcon name="location" :size="20" color="var(--app-color-primary-action)" />
@@ -127,25 +127,25 @@
     </view>
 
     <view v-if="pickerOpen" class="q01-screen__overlay"
-      data-testid="quotation-repair-part-picker" @tap="pickerOpen = false">
+      data-testid="quotation-repair-part-picker" @tap="cancelPicker">
       <view class="q01-screen__sheet xl-craft__sheet" role="dialog" aria-modal="true"
         aria-label="选择维修部位" @tap.stop>
         <view class="q01-screen__handle" aria-hidden="true" />
         <view class="q01-screen__sheet-head">
           <AppButton variant="text" size="regular"
-            data-testid="quotation-repair-part-picker-cancel" @tap="pickerOpen = false">取消</AppButton>
+            data-testid="quotation-repair-part-picker-cancel" @tap="cancelPicker">取消</AppButton>
           <text class="q01-screen__sheet-title xl-craft__sheet-title">选择维修部位</text>
           <AppButton variant="text" size="regular"
-            data-testid="quotation-repair-part-picker-done" @tap="pickerOpen = false">完成</AppButton>
+            data-testid="quotation-repair-part-picker-done" @tap="confirmPicker">完成</AppButton>
         </view>
         <view class="q01-screen__sheet-content">
           <AppCascadeSelector
             :options="options"
-            :model-value="group.repairParts"
+            :model-value="pendingRepairParts"
             :hierarchical="true"
             :test-id="`quotation-repair-part-selector-${group.groupId}`"
             :disabled="!canEdit"
-            @update:model-value="emit('repair-parts-change', $event)"
+            @update:model-value="pendingRepairParts = [...$event]"
           />
         </view>
       </view>
@@ -184,9 +184,31 @@ const emit = defineEmits<{
   (event: 'select-products'): void
 }>()
 const pickerOpen = ref(false)
-watch(() => props.group.repairParts, (path) => {
-  if (path.length) pickerOpen.value = false
-}, { deep: true })
+const pendingRepairParts = ref<readonly string[]>([])
+
+function openPicker(): void {
+  if (!props.canEdit || !props.options.length) return
+  pendingRepairParts.value = [...props.group.repairParts]
+  pickerOpen.value = true
+}
+
+function cancelPicker(): void {
+  pickerOpen.value = false
+  pendingRepairParts.value = []
+}
+
+function confirmPicker(): void {
+  if (!props.canEdit) return cancelPicker()
+  const next = pendingRepairParts.value
+  if (next.length !== props.group.repairParts.length
+    || next.some((part, index) => part !== props.group.repairParts[index])) {
+    emit('repair-parts-change', [...next])
+  }
+  cancelPicker()
+}
+
+// Never commit a selection prepared for a different quotation group.
+watch(() => props.group.groupId, cancelPicker)
 
 </script>
 

@@ -2,6 +2,38 @@ import { mkdir, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { expect, test } from '@playwright/test'
 
+test('Q01 repair-part picker stages selection until Done; Cancel leaves the draft unchanged at 375x667', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 667 })
+  await page.goto('/#/pages/index/index?devReview=1', { waitUntil: 'domcontentloaded' })
+  await expect(page.getByTestId('qa-console')).toBeVisible()
+  await page.locator('.mock-action-scenario').filter({ hasText: '报价草稿' }).click()
+  await expect(page.getByTestId('quotation-state-ready')).toBeVisible()
+  await page.getByTestId('quotation-add-group').click()
+
+  const trigger = page.getByTestId('quotation-first-step-repair-parts-trigger')
+  const picker = page.getByTestId('quotation-repair-part-picker')
+  await trigger.click()
+  await page.getByTestId('survey-repair-part-parents').getByText('屋面', { exact: true }).click()
+  await expect(picker, 'choosing a part must not implicitly dismiss the sheet').toBeVisible()
+  await expect(page.getByTestId('quotation-first-step-selected-path')).toHaveCount(0)
+  await page.getByTestId('quotation-repair-part-picker-cancel').click()
+  await expect(picker).toHaveCount(0)
+  await expect(page.getByTestId('quotation-first-step-selected-path')).toHaveCount(0)
+
+  await trigger.click()
+  await page.getByTestId('survey-repair-part-parents').getByText('屋面', { exact: true }).click()
+  await page.getByTestId('quotation-repair-part-picker-done').click()
+  await expect(picker).toHaveCount(0)
+  await expect(page.getByTestId('quotation-first-step-selected-path')).toContainText('屋面')
+
+  await trigger.click()
+  await page.getByTestId('survey-repair-part-parents').getByText('外墙', { exact: true }).click()
+  await expect(picker).toBeVisible()
+  await expect(page.getByTestId('quotation-first-step-selected-path')).toContainText('屋面')
+  await page.getByTestId('quotation-repair-part-picker-cancel').click()
+  await expect(page.getByTestId('quotation-first-step-selected-path')).toContainText('屋面')
+})
+
 /**
  * Q01 Visual Baseline V1 — the actual uni-app quotation component.
  * Fixed Owner review viewport 375x667; no device matrix or detached mock UI.
@@ -29,6 +61,7 @@ test('Q01 selected-items visual baseline on real App H5, 375x667', async ({ page
   await page.getByTestId('quotation-add-group').click()
   await page.getByTestId('quotation-first-step-repair-parts-trigger').click()
   await page.getByTestId('survey-repair-part-parents').getByText('屋面', { exact: true }).click()
+  await page.getByTestId('quotation-repair-part-picker-done').click()
   await page.getByTestId('quotation-first-step-description').locator('textarea')
     .fill('平屋面落水口及泛水节点局部渗漏维修')
   await page.getByTestId('quotation-first-step-quantity').locator('input').fill('18.6')

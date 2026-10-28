@@ -21,6 +21,7 @@ test('Q03 source-priced roof materials, commercial layout and return-to-Q01 at 3
   await page.getByTestId('quotation-add-group').click()
   await page.getByTestId('quotation-first-step-repair-parts-trigger').click()
   await page.getByTestId('survey-repair-part-parents').getByText('屋面', { exact: true }).click()
+  await page.getByTestId('quotation-repair-part-picker-done').click()
   await page.getByTestId('quotation-first-step-description').locator('textarea')
     .fill('平屋面落水口及泛水节点局部渗漏维修')
   await page.getByTestId('quotation-first-step-quantity').locator('input').fill('18.6')

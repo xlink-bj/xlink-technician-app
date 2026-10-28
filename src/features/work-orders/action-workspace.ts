@@ -1382,7 +1382,9 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     }
     const configured = dependencies
     if (!configured) return failure('server_terminal', 'Action Workspace is not configured')
-    await returnTo(actionWorkspaceTimeRouteFor(
+    // Keep the Appointment form in the native page stack: the WeChat back
+    // affordance must cancel an unconfirmed time selection without leaving A01.
+    await navigateTo(actionWorkspaceTimeRouteFor(
       currentDescriptor.workOrderId,
       currentDescriptor.workflowNodeId,
       currentDescriptor.actionIntent,

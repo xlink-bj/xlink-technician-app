@@ -89,8 +89,6 @@
 }
 .quotation-content--baseline .quotation-content__selection-list { margin-top: 3px; }
 
-.quotation-content--baseline .quotation-content__group-section[style*="display: none"] { display: none !important; }
-
 .quotation-content--baseline .quotation-content__group-section-copy {
   display: flex; align-items: center; gap: 7px;
 }

@@ -45,6 +45,7 @@ async function openCatalog(page: Page, width = 390): Promise<void> {
   await page.getByTestId('quotation-add-group').click()
   await page.getByTestId('quotation-first-step-repair-parts-trigger').click()
   await page.getByTestId('survey-repair-part-parents').getByText('屋面', { exact: true }).click()
+  await page.getByTestId('quotation-repair-part-picker-done').click()
   await page.getByTestId('quotation-first-step-description').getByRole('textbox').fill('屋面檐口修复')
   await page.getByTestId('quotation-first-step-quantity').getByRole('spinbutton').fill('18')
   await page.getByTestId('quotation-first-step-select-products').click()

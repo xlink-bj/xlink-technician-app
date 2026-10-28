@@ -68,6 +68,7 @@ async function openScenario(page: Page, scenario: string): Promise<void> {
 async function completeFirstRepairPartContext(page: Page, description: string, quantity: string): Promise<void> {
   await page.getByTestId('quotation-first-step-repair-parts-trigger').click()
   await page.getByTestId('survey-repair-part-parents').getByText('屋面', { exact: true }).click()
+  await page.getByTestId('quotation-repair-part-picker-done').click()
   await page.getByTestId('quotation-first-step-description').getByRole('textbox').fill(description)
   await page.getByTestId('quotation-first-step-quantity').getByRole('spinbutton').fill(quantity)
   await page.getByTestId('quotation-first-step-select-products').click()
