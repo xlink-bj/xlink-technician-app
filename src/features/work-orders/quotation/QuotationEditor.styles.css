@@ -66,22 +66,18 @@
  * Pure presentation: catalog authority, quantities, identity and submit guards unchanged. */
 .quotation-content__initial-card { padding: 18rpx 18rpx 20rpx; }
 .quotation-content__initial-empty-heading { margin-bottom: 12rpx; }
-.quotation-content__initial-empty-title { font-size: 29rpx; font-weight: 800; color: var(--app-color-text-primary); }
 .quotation-content__initial-empty-description { font-size: 23rpx; line-height: 1.45; color: var(--app-color-text-secondary); }
 .quotation-content__initial-empty-surface {
   background: var(--app-color-surface); border: 1rpx solid var(--app-color-divider);
   padding: 15rpx; gap: 8rpx; border-radius: 15rpx;
 }
 .quotation-content__initial-empty-surface .quotation-content__empty-title { font-size: 24rpx; font-weight: 750; }
-.quotation-content__initial-empty-copy { font-size: 22rpx; line-height: 1.4; color: var(--app-color-text-secondary); }
-.quotation-content__initial-empty-action { margin-top: 6rpx; min-height: 88rpx; }
 .quotation-content__initial-empty-artwork { height: 36rpx; opacity: .23; }
 /* Q01 commercial design baseline: editable repair fields first; costs follow;
    no decorative multi-step wizard, and no unverified amount values. */
 
 .quotation-content__initial-card { background:var(--app-color-surface); border-radius:22rpx; padding:22rpx; }
 .quotation-content__initial-empty-heading { padding-bottom:12rpx; }
-.quotation-content__initial-empty-title { font-size:30rpx; }
 .quotation-content__initial-empty-description { color:var(--app-color-text-secondary); font-size:22rpx; }
 .quotation-content__initial-empty-surface { gap:0; padding:0; border:0; background:transparent; }
 .quotation-content__initial-field-label { font-size:23rpx; font-weight:730; padding:14rpx 2rpx 6rpx; color:var(--app-color-text-primary); }
@@ -161,8 +157,6 @@
 
 .quotation-content__first-repair-part-step .quotation-content__commercial-section { margin-top:9px; padding:11px 14px; }
 .quotation-content__first-repair-part-step .quotation-content__section-heading { margin-bottom:9px; padding-bottom:7px; min-height:28px; }
-.quotation-content__first-repair-part-step .quotation-content__select-tile { min-height:67px; padding:9px 12px; }
-.quotation-content__first-repair-part-step .quotation-content__select-icon { width:41px; height:41px; flex-basis:41px; }
 /* M1-S2 375/390 fidelity finish — presentation only, business gates unchanged.
    Native textarea is border-box to prevent hidden 18px inflation. */
 .quotation-content__first-step-card,
