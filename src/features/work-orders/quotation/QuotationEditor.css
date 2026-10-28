@@ -1,0 +1,17 @@
+.quotation-content__lines { display: flex; flex-direction: column; gap: var(--app-space-sm); padding-top: var(--app-space-md); }
+.quotation-content__line { padding: var(--app-space-md); }
+.quotation-content__line-heading { align-items: flex-start; display: flex; gap: var(--app-space-sm); justify-content: space-between; }
+.quotation-content__line-title-wrap { align-items: flex-start; display: flex; flex: 1; gap: var(--app-space-sm); min-width: 0; }
+.quotation-content__line-index { color: var(--app-color-text-secondary); flex-shrink: 0; font-size: var(--app-font-meta); font-weight: 800; padding-top: 3rpx; }
+.quotation-content__line-title { color: var(--app-color-text-primary); flex: 1; font-size: var(--app-font-body); font-weight: 700; line-height: 1.4; min-width: 0; overflow-wrap: anywhere; }
+.quotation-content__line-controls { align-items: center; display: grid; gap: var(--app-space-xs) var(--app-space-sm); grid-template-columns: auto minmax(100rpx, 1fr) auto; margin-top: var(--app-space-sm); }
+.quotation-content__quantity-label { color: var(--app-color-text-secondary); font-size: var(--app-font-meta); }
+.quotation-content__quantity-wrap { align-items: center; background: var(--app-color-surface); border: 1rpx solid var(--app-color-border-control); border-radius: var(--app-radius-control); box-sizing: border-box; display: flex; min-height: 44px; min-width: 0; padding: 0 var(--app-space-sm); }
+.quotation-content__quantity-wrap--error { border-color: var(--app-color-danger); }
+.quotation-content__quantity { background: transparent; border: 0; box-sizing: border-box; color: var(--app-color-text-primary); flex: 1; font-size: var(--app-font-body); min-width: 0; outline: none; padding: var(--app-space-sm) 0; }
+.quotation-content__quantity-error { color: var(--app-color-danger); font-size: var(--app-font-meta); grid-column: 2 / 4; line-height: 1.4; }
+.quotation-content__unit { color: var(--app-color-text-secondary); flex-shrink: 0; font-size: var(--app-font-meta); padding-left: var(--app-space-xs); }
+.quotation-content__remove-button { grid-column: 3; min-height: 40px; }
+.quotation-content__blocked { padding-top: var(--app-space-md); }
+.quotation-content__blocked-title { margin-top: 0; }
+.quotation-content__secondary-action, .quotation-content__retry { margin-top: var(--app-space-md); }

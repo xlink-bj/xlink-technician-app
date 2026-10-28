@@ -1687,6 +1687,11 @@ function configuredPackageLayerLabel(
 }
 </script>
 
+<style src="./QuotationShared.css"></style>
+<style src="./QuotationGroups.css"></style>
+<style src="./QuotationEditor.css"></style>
+<style src="./QuotationCatalog.css"></style>
+<style src="./QuotationPackageConfiguration.css"></style>
 <style src="./QuotationActionContent.styles.css"></style>
 <style src="./Q01CommercialBaseline.css"></style>
 <style src="./Q03CommercialBaseline.css"></style>
