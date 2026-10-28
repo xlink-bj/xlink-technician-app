@@ -34,10 +34,42 @@ test('Q03 source-priced roof materials, commercial layout and return-to-Q01 at 3
   await expect(packageCard).toContainText('按套餐配置核价')
   await expect(page.getByTestId('quotation-catalog-facets')).toHaveCount(0)
   expect(await packageCard.innerText()).not.toMatch(/示例|Mock|DEV|仿真|DEMO/)
+
+  // Visual-contract gate: text must share the vertical centre of each 44px
+  // hit target. An underline fixed at bottom is NOT evidence of good alignment.
+  const measureTabs = async () => page
+    .locator('.quotation-content__catalog-main > .quotation-content__category-grid > .quotation-content__category')
+    .evaluateAll(nodes => nodes.map(node => {
+      const el = node as HTMLElement
+      const hit = el.getBoundingClientRect()
+      const range = document.createRange()
+      range.selectNodeContents(el)
+      const label = range.getBoundingClientRect()
+      const style = getComputedStyle(el)
+      return {
+        text: el.textContent?.trim(),
+        hitHeight: hit.height,
+        labelCenterOffset: Math.round((((label.top + label.bottom) / 2) - ((hit.top + hit.bottom) / 2)) * 10) / 10,
+        display: style.display, alignItems: style.alignItems, justifyContent: style.justifyContent,
+        lineHeight: style.lineHeight,
+      }
+    }))
+  const packageTabs = await measureTabs()
+  expect(packageTabs).toHaveLength(4)
+  for (const tab of packageTabs) {
+    expect(tab.hitHeight, `${tab.text} target height`).toBeGreaterThanOrEqual(44)
+    expect(Math.abs(tab.labelCenterOffset), `${tab.text} text must be centered, measured ${JSON.stringify(tab)}`)
+      .toBeLessThanOrEqual(3)
+  }
   const entryImage = await page.screenshot({ animations: 'disabled', caret: 'hide' })
   await writeFile(resolve(dir, 'q03-package-entry-375x667.png'), entryImage)
   await info.attach('Q03 source-shaped commercial package entry, 375x667', { body: entryImage, contentType: 'image/png' })
   await page.getByTestId('quotation-catalog-kind-material').click()
+  const materialTabs = await measureTabs()
+  for (const tab of materialTabs) {
+    expect(Math.abs(tab.labelCenterOffset), `material mode: ${JSON.stringify(tab)}`)
+      .toBeLessThanOrEqual(3)
+  }
   await page.getByTestId('quotation-catalog-search').locator('input').fill('10m')
   await expect(page.getByTestId('quotation-catalog-item-material-mock-catalog-material-butyl-tape')).toBeVisible()
   await expect(page.getByTestId('quotation-catalog-item-material-mock-catalog-material-polyester-fabric')).toBeVisible()
@@ -93,7 +125,7 @@ test('Q03 source-priced roof materials, commercial layout and return-to-Q01 at 3
   expect(errors).toEqual([])
   await writeFile(resolve(dir, 'metrics.json'), JSON.stringify({
     viewport: '375x667', source: 'real uni-app, DEV Mock via adapter',
-    materialPrices: [38.6, 26.8], paint, remote, errors,
+    materialPrices: [38.6, 26.8], tabs: { packageTabs, materialTabs }, paint, remote, errors,
     head: process.env.GITHUB_SHA ?? 'local',
   }, null, 2))
 })
