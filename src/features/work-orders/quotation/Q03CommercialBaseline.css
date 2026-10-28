@@ -99,10 +99,28 @@
   gap: 0; grid-template-columns: repeat(4,minmax(0,1fr));
   border-bottom: 1px solid #e8eef6;
 }
-.quotation-content__catalog-page .quotation-content__category {
-  background: transparent; border: 0; min-height: 44px;
-  padding: 0 2px; font-size: 14px; font-weight: 580;
-  color: #7a8ca5; position: relative;
+/* Tab-strip geometry: all four labels are vertically centered within the
+ * same 44px hit target. The active indicator is absolutely anchored to the
+ * strip bottom, never used to position the label. Scope to the actual
+ * navigation grid: SKU option buttons are a different component. */
+.quotation-content__catalog-page .quotation-content__catalog-main > .quotation-content__category-grid > .quotation-content__category {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  min-height: 44px;
+  margin: 0;
+  padding: 0 2px;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  color: #7a8ca5;
+  font-size: 14px;
+  font-weight: 580;
+  line-height: 20px;
+  text-align: center;
+  position: relative;
 }
 .quotation-content__catalog-page .quotation-content__category--active {
   color: var(--q03-action); font-weight: 760;
