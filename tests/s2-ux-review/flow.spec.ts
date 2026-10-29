@@ -292,7 +292,10 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       await page.getByTestId('quotation-first-step-select-products').click()
       await expect(page.getByTestId('quotation-catalog-page')).toBeVisible()
       await expect(page.getByTestId('quotation-catalog-kind-package')).toBeVisible()
-      await expect(page.getByTestId('quotation-catalog-facets')).toBeVisible()
+      // Q03 commercial baseline no longer renders an unverified taxonomy
+      // rail. The dedicated Q03 375px contract requires its absence until R1
+      // catalog classification codes are source-verified.
+      await expect(page.getByTestId('quotation-catalog-facets')).toHaveCount(0)
       await expect(page.getByTestId('quotation-package-detail-mock-catalog-package-basic')).toBeVisible()
       const catalogTitlePx = await page.locator('.quotation-content__catalog-item-title').first().evaluate(
         element => parseFloat(getComputedStyle(element).fontSize),
@@ -324,11 +327,14 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       const addSize = await addMaterial.boundingBox()
       expect(addSize, 'catalog direct material CTA should have a usable tap target').not.toBeNull()
       expect(addSize!.height).toBeGreaterThanOrEqual(44)
+      const materialName = (await page.getByTestId('quotation-catalog-item-material-' + ordinary)
+        .locator('.quotation-content__catalog-item-title').innerText()).trim()
+      expect(materialName, 'Selected material must have a source-backed display name').not.toBe('')
       await capture('06-quote-catalog', 'Q', '报价材料目录', '普通材料无需 SKU 的真实结构')
 
       await page.getByTestId('quotation-catalog-add-material-' + ordinary).click()
       await expect(page.getByTestId('quotation-group-section-quotation-group-1-material'))
-        .toContainText('普通防水辅材（结构示例）')
+        .toContainText(materialName)
       await expect(page.getByTestId('action-workspace-submit')).toHaveCount(0)
       await capture('07-quote-group', 'Q', '报价分组', '已选普通材料、提交仍受限')
 
