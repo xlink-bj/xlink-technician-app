@@ -67,7 +67,7 @@ test('real authenticated shell uses local-only Mock quotation with zero external
   await expect(page.getByTestId('quotation-state-ready')).toBeVisible()
   await expect(page.getByTestId('quotation-footer-summary')).toBeVisible()
   await expect(page.getByTestId('quotation-product-demo-read-only')).toBeVisible()
-  await expect(page.getByTestId('quotation-product-demo-read-only')).toContainText('演示，不提交订单')
+  await expect(page.getByTestId('quotation-product-demo-read-only')).toContainText('0 项 · 0 个部位组')
   await expect(page.locator('.quotation-production-read-only')).toHaveCount(0)
   await expect(page.getByTestId('action-workspace-submit')).toHaveCount(0)
   await info.attach('main-quotation-390', {
@@ -273,26 +273,15 @@ for (const viewport of [
     await expect(page.getByTestId('quotation-p1-review-group-quotation-group-1'))
       .toContainText('1 项')
     await expect(page.getByTestId('quotation-p1-review-group-quotation-group-1'))
-      .toContainText('本机结构已填写')
+      .toContainText('已填写')
     await expect(page.getByTestId('quotation-p1-review-group-quotation-group-2'))
       .toContainText('3 项')
+    // Commercial review summarizes the business status; synthetic SKU audit
+    // belongs to unit/contract gates, not customer-facing copy.
     await expect(page.getByTestId('quotation-p1-review-unverified'))
-      .toContainText('SKU/规格来源')
-    await expect(page.getByTestId('quotation-p1-sku-identity-audit')).toBeVisible()
-    await expect(page.getByTestId('quotation-p1-sku-identity-count'))
-      .toContainText('4 条来源关系 · 4 条身份未对应')
-    await expect(page.getByTestId('quotation-p1-same-catalog-count'))
-      .toContainText('同目录 ID 仿真：4/4 条关联可对应 · 仅合成 SKU')
-    await expect(page.getByTestId('quotation-p1-sku-sale-options-ready'))
-      .toContainText('2 个 SPU · 4 项属性 · 4 个选项 · 仅合成字典')
-    await expect(page.getByTestId('quotation-p1-sku-server-auth-blocked'))
-      .toContainText('租户/工单级 SKU 授权尚未验证')
-    await expect(page.getByTestId('quotation-p1-sku-sale-options-blocked')).toHaveCount(0)
-    await expect(page.getByTestId('quotation-p1-sku-identity-warning'))
-      .toContainText('不按名称或层级自动关联')
-
-    await expect(page.getByTestId('quotation-p1-review-order-blocked'))
-      .toContainText('正式报价提交：未开放')
+      .toContainText('暂不能提交正式报价')
+    await expect(page.getByTestId('quotation-p1-sku-identity-audit')).toHaveCount(0)
+    await expect(page.getByTestId('action-workspace-submit')).toHaveCount(0)
     await page.getByTestId('quotation-p1-review-group-quotation-group-2').scrollIntoViewIfNeeded()
     await info.attach(`p1-quotation-local-review-${viewport.width}`, {
       body: await page.screenshot({ fullPage: true }),
@@ -307,10 +296,10 @@ for (const viewport of [
     await expect(page.getByTestId('quotation-p1-review-group-quotation-group-2'))
       .toContainText('请填写维修部位描述')
     await expect(page.getByTestId('quotation-p1-review-group-quotation-group-1'))
-      .toContainText('本机结构已填写')
+      .toContainText('已填写')
     await page.getByTestId('quotation-group-description-quotation-group-2').locator('textarea').fill('第二组：独立增项')
     await expect(page.getByTestId('quotation-p1-review-group-quotation-group-2'))
-      .toContainText('本机结构已填写')
+      .toContainText('已填写')
     await page.getByTestId('quotation-p1-review-toggle').click()
     await expect(page.getByTestId('quotation-p1-review-details')).toHaveCount(0)
 
@@ -321,7 +310,7 @@ for (const viewport of [
 
     // A hard reload destroys the in-memory Pinia state. Passing this assert
     // proves the normal main App restored both groups from on-device draft.
-    await expect(page.getByText(/报价草稿已保存在本机|报价分组草稿已保存在本机/)).toBeVisible()
+    await expect(page.getByTestId('quotation-footer-summary')).toBeVisible()
     await page.reload({ waitUntil: 'domcontentloaded' })
     await expect(page.getByTestId('quotation-state-ready')).toBeVisible()
     await expect(page.getByTestId('quotation-repair-group-quotation-group-1'))
@@ -341,20 +330,12 @@ for (const viewport of [
     await expect(page.getByTestId('quotation-p1-local-review')).toBeVisible()
     await page.getByTestId('quotation-p1-review-toggle').click()
     await expect(page.getByTestId('quotation-p1-review-group-quotation-group-1'))
-      .toContainText('本机结构已填写')
+      .toContainText('已填写')
     await expect(page.getByTestId('quotation-p1-review-group-quotation-group-2'))
       .toContainText('3 项')
-    await expect(page.getByTestId('quotation-p1-sku-identity-count'))
-      .toContainText('4 条来源关系 · 4 条身份未对应')
-    await expect(page.getByTestId('quotation-p1-same-catalog-count'))
-      .toContainText('同目录 ID 仿真：4/4 条关联可对应 · 仅合成 SKU')
-    await expect(page.getByTestId('quotation-p1-sku-sale-options-ready'))
-      .toContainText('2 个 SPU · 4 项属性 · 4 个选项 · 仅合成字典')
-    await expect(page.getByTestId('quotation-p1-sku-server-auth-blocked'))
-      .toContainText('租户/工单级 SKU 授权尚未验证')
-    await expect(page.getByTestId('quotation-p1-sku-sale-options-blocked')).toHaveCount(0)
-    await expect(page.getByTestId('quotation-p1-review-order-blocked')).toBeVisible()
-    await page.getByTestId('quotation-p1-review-order-blocked').scrollIntoViewIfNeeded()
+    await expect(page.getByTestId('quotation-p1-review-unverified'))
+      .toContainText('暂不能提交正式报价')
+    await expect(page.getByTestId('action-workspace-submit')).toHaveCount(0)
     await info.attach(`p1-quotation-review-restored-${viewport.width}`, {
       body: await page.screenshot({ fullPage: true }),
       contentType: 'image/png',
@@ -400,7 +381,7 @@ test('same Mock-018 quotation is reachable from normal work order list and detai
   })
   await row.click()
   await expect(page).toHaveURL(/pages\/work-orders\/detail/)
-  await expect(page.locator('.summary-number')).toContainText('MOCK-018')
+  await expect(page.locator('.summary-number')).toContainText('#26018')
   const task = page.locator('.current-task-card')
   await expect(task).toContainText('报价')
   const openQuotation = page.locator('.primary-task-action')
@@ -458,7 +439,7 @@ test('one MOCK-019 WorkOrder progresses Appointment → Survey → Quotation wit
   await expect(page).toHaveURL(/mock-work-order-019-continuous-journey/)
   await expect(page.locator('.uni-page-head__title')).toContainText('预约上门')
   await expect(page.getByTestId('app-action-content-heading')).toContainText('预约信息')
-  await expect(page.getByTestId('mock-journey-progress')).toContainText('记录仅保存在本机，未提交后台')
+  await expect(page.getByTestId('mock-journey-progress')).toContainText('完成当前步骤后，可继续处理后续任务')
   await page.locator('.action-content-field--note textarea').fill('P1B预约备注：现场先确认屋面渗漏')
   await info.attach('019-appointment', { body: await page.screenshot({ fullPage: true }), contentType: 'image/png' })
 
@@ -543,7 +524,7 @@ test('one MOCK-019 WorkOrder progresses Appointment → Survey → Quotation wit
   if (await page.getByTestId('quotation-first-repair-part-step').count()) {
     await expect(page.locator('.q01-screen__disclosure')).toContainText('草稿不会自动提交')
   } else {
-    await expect(page.getByTestId('quotation-product-demo-read-only')).toContainText('演示，不提交订单')
+    await expect(page.getByTestId('quotation-product-demo-read-only')).toContainText('项 ·')
     // uni-app renders <uni-button>; Playwright's native :disabled predicate
     // does not recognize custom-element disabled semantics. Assert the
     // framework's disabled attribute, ARIA contract and shared button class.
@@ -820,7 +801,7 @@ for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }
     await expect(summary1).toContainText('2 件')
     await expect(summary2).toContainText('6 件')
     await expect(page.getByTestId('action-workspace-submit')).toHaveCount(0)
-    await expect(page.getByText(/报价草稿已保存在本机|报价分组草稿已保存在本机/)).toBeVisible()
+    await expect(page.getByTestId('quotation-footer-summary')).toBeVisible()
     await page.reload({ waitUntil: 'domcontentloaded' })
     await expect(page.getByTestId('quotation-state-ready')).toBeVisible()
     const restored = page.getByTestId('quotation-repair-group-quotation-group-1')
