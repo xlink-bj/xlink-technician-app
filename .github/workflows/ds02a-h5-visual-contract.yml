@@ -30,7 +30,7 @@ jobs:
     timeout-minutes: 30
     env:
       VITE_XLINK_ENABLE_REAL_WRITES: 'false'
-      H5_VISUAL_OWNER_APPROVAL: 'PENDING'
+      H5_VISUAL_OWNER_APPROVAL: 'DS02A_MAIN_9_APPROVED_2026_10_29'
     steps:
       - uses: actions/checkout@v4
         with:

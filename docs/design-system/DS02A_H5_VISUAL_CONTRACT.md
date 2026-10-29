@@ -1,6 +1,6 @@
 # DS-02.A — H5 Commercial Visual Contract v1.0
 
-**Status:** Engineering candidate. Baselines and business screens require Owner visual signoff before being called GOLDEN/ACCEPTED.  
+**Status:** DS-02.A **main business 9 PNGs Owner-approved on 2026-10-29** (W01/W02/Q01 at 320/375/390 CSS px). Gallery 6 PNGs remain engineering candidates; no MP/iOS/Android visual signoff implied.  
 **Scope:** true uni-app H5 only, **not** Web-only mockups; mobile 320 / 375 / 390 CSS px, device scale factor 1; local credential-free development fixtures. MP/iOS/Android visual calibration explicitly deferred.
 
 ## Why
@@ -31,9 +31,15 @@ The canonical token source remains `src/shared/ui/design-system.scss` — **addi
 
 1. **Bootstrap completed exactly once in PR #141:** 15 PNGs were created by a restricted internal staging workflow and committed to that PR branch as **CANDIDATES**. At this point the workflow has been intentionally replaced with **read-only** PR regression; it can no longer create or rewrite baselines.
 2. Baselines are now regular reviewed source-controlled assets. Normal CI has `contents: read` and never invokes `--update-snapshots`; missing/partial baseline collections fail closed. No bot or developer may rebaseline implicitly.
-3. Any later deliberate visual change requires a dedicated PR change to the relevant PNGs, a screenshot diff/reason and Owner visual approval before labeling it `GOLDEN`. A green comparison means identical to committed candidate, not automatically aesthetically excellent.
+3. Any later deliberate visual change requires a dedicated PR change to the relevant PNGs, a screenshot diff/reason and Owner visual approval before labeling it `GOLDEN`. A green comparison proves consistency with the signed baseline, not necessarily aesthetic excellence.
 4. The fixtures use only local DEV Mock, no production reads/writes, no realistic user credentials or authorized Order mutations. Do not mask prices, business statuses, warnings, labels, loading indicators or controls to hide differences.
-5. Current milestone status is `ENGINEERING CANDIDATE / OWNER VISUAL REVIEW PENDING`; a future signed baseline cannot be inferred from green CI alone.
+5. The original 15 candidates remain in the historical record. As of 2026-10-29 the **nine main business baselines are signed**; the six Gallery candidates are still pending separate Owner signoff. Approval must never be inferred from green CI alone.
+
+## 2026-10-29 Owner decision — DS-02.A business 9/9
+
+- **Owner approval:** User explicitly approved replacing the nine W01 list / W02 detail / Q01 quotation snapshots at 320, 375 and 390 CSS px with the previously accepted commercial UI. Only `tests/ds02a-main/snapshots/ds02a-{list,detail,quote}-{320,375,390}.png` is rebaselined in PR #234.
+- **Evidence:** Real uni-app H5 Playwright actual PNGs from the no-business-write, network-guarded run; individual visual inspection found no cropped primary action or horizontal overflow. Snapshot source is the accepted mainline `d7f08853636ade019040fa19eaa29eefd9357e92`; the later #234 changes before signoff touched tests only, not `src/`. CI reruns compare new baselines without auto-updating them.
+- **Isolation:** Six `tests/ds02a-gallery/snapshots` PNGs unchanged and still candidate. The baseline does not certify native WeChat MP or physical iPhone UI, does not enable Production/Beta business writes, and does not approve deployment.
 
 ## Initial UX audit — examples from real H5 screenshots (390px)
 
