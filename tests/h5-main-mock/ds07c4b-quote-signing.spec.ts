@@ -32,7 +32,8 @@ for (const width of widths) {
     await page.locator('.search-input input').fill('MOCK-018')
     await page.locator('.search-button').click()
     await page.locator('.work-order-card').filter({ hasText: '吴先生' }).click()
-    await expect(page.locator('.summary-number')).toContainText('MOCK-018')
+    // Fixture identity is searchable by MOCK-018, but commercial UI shows its business number.
+    await expect(page.locator('.summary-number')).toContainText('#26018')
     await page.locator('.primary-task-action').click()
     await expect(page.getByTestId('quotation-order-hub')).toBeVisible()
     const scope = page.getByTestId('ds07c4b-quotation-scope-note')
