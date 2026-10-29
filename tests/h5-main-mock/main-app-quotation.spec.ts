@@ -310,6 +310,10 @@ for (const viewport of [
 
     // A hard reload destroys the in-memory Pinia state. Passing this assert
     // proves the normal main App restored both groups from on-device draft.
+    // A visible edit precedes a debounced local write; only reload after it
+    // has reached the saved state, not during the timer window.
+    await expect(page.getByTestId('quotation-commercial-draft-badge'))
+      .toContainText('草稿已保存')
     await expect(page.getByTestId('quotation-footer-summary')).toBeVisible()
     await page.reload({ waitUntil: 'domcontentloaded' })
     await expect(page.getByTestId('quotation-state-ready')).toBeVisible()
@@ -534,11 +538,14 @@ test('one MOCK-019 WorkOrder progresses Appointment → Survey → Quotation wit
     await expect(mockSubmit).toHaveClass(/app-button--disabled/)
   }
   await expect(page.getByTestId('action-workspace-submit')).toHaveCount(0)
-  // The local quotation draft is not an Order.type=1. The next stage is
-  // explicitly isolated synthetic signing review, never a workflow mutation.
+  // The local quotation draft is not an Order.type=1. Synthetic signing
+  // review is accessible only through isolated QA tooling, not this
+  // commercial quotation UI or a workflow transition.
   const signingLink = page.getByTestId('mock-journey-signing-review')
-  await expect(signingLink).toContainText('本机报价未提交')
-  await signingLink.click()
+  await expect(signingLink).toHaveCount(0)
+  await page.goto('/#/pages/index/index?devReview=1', { waitUntil: 'domcontentloaded' })
+  await expect(page.getByTestId('qa-console')).toBeVisible()
+  await page.getByTestId('signing-mock-entry').click()
   await expect(page).toHaveURL(/pages\/work-orders\/signing-mock-review/)
   await expect(page.getByTestId('signing-mock-orders')).toContainText('模拟正式订单 A')
   await expect(page.getByTestId('signing-mock-no-contract')).toBeVisible()
