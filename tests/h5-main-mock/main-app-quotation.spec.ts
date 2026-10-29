@@ -488,7 +488,7 @@ test('one MOCK-019 WorkOrder progresses Appointment → Survey → Quotation wit
   await expect(page).toHaveURL(/mock-work-order-019-continuous-journey/)
   await expect(page.locator('.uni-page-head__title')).toContainText('新增订单')
   await expect(page.getByTestId('quotation-state-ready')).toBeVisible()
-  await expect(page.getByTestId('mock-journey-context')).toContainText('未提交后台')
+  await expect(page.getByTestId('mock-journey-context')).toContainText('前序现场记录')
   await expect(page.getByTestId('mock-journey-context-survey')).toHaveCount(0)
   await page.getByTestId('mock-journey-context-toggle').click()
   await expect(page.getByTestId('mock-journey-context-appointment')).toContainText('P1B预约备注：现场先确认屋面渗漏')
