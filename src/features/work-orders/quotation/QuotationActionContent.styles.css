@@ -122,12 +122,10 @@
   .quotation-content__panel { padding: 16rpx; }
   .quotation-content__group { padding: 16rpx; }
   .quotation-content__catalog-item { align-items: stretch; flex-direction: column; flex-wrap: nowrap; padding: 12rpx; }
-  .quotation-content__catalog-item-main { gap: 10rpx; }
   .quotation-content__catalog-thumbnail { flex: 0 0 60px; height: 72px; }
   .quotation-content__catalog-thumbnail-mark { font-size: 30rpx; }
 
   .quotation-content__catalog-item-title { font-size: 24rpx; }
-  .quotation-content__catalog-item .app-button { margin-left: 0; min-width: 96px; width: auto; }
   .quotation-content__package-selection-target { max-width: 110px; }
   .quotation-content__catalog-footer .quotation-content__package-config-commit { flex-basis: auto; max-width: none; }
 }
@@ -209,7 +207,6 @@
   .quotation-content__category { font-size: 13px; }
   .quotation-content__catalog-item { flex-direction: column; padding: 10px; }
   .quotation-content__catalog-item-main { gap: 9px; }
-  .quotation-content__catalog-thumbnail { flex-basis: 72px; height: 82px; width: 72px; }
   .quotation-content__catalog-item-footer { gap: 6px; }
 
   .quotation-content__catalog-item-action { min-width: 104px; padding-left: 8px; padding-right: 8px; }
@@ -262,7 +259,6 @@
 .quotation-content__browse-catalog { min-height: 48px; }
 @media (max-width: 360px) {
   .quotation-content__catalog-item { align-items: stretch; flex-direction: column; flex-wrap: nowrap; }
-  .quotation-content__catalog-thumbnail { flex-basis: 50px; height: 50px; width: 50px; }
   .quotation-content__catalog-item .app-button { margin-left: 0; min-width: 100px; width: auto; }
   .quotation-content__catalog-item-footer { flex-wrap: wrap; }
 }
