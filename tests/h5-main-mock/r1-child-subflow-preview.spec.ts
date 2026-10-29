@@ -14,9 +14,12 @@ test('DEV Mock renders actual child panel for unknown, cancelled, empty and fail
 
   await page.goto('/#/pages/index/index?devReview=1', { waitUntil: 'domcontentloaded' })
   await expect(page.getByTestId('qa-console')).toBeVisible()
-  await page.goto('/#/pages/work-orders/detail?id=mock-work-order-006', { waitUntil: 'domcontentloaded' })
   await expect(page.getByTestId('child-subflow-mock-preview-entry')).toBeVisible()
+  await page.goto('/#/pages/work-orders/detail?id=mock-work-order-006', { waitUntil: 'domcontentloaded' })
+  // Synthetic-only navigation belongs to QA tooling, never the commercial detail page.
+  await expect(page.getByTestId('child-subflow-mock-preview-entry')).toHaveCount(0)
   await expect(page.getByTestId('production-child-form-view')).toHaveCount(0)
+  await page.goto('/#/pages/index/index?devReview=1', { waitUntil: 'domcontentloaded' })
   await page.getByTestId('child-subflow-mock-preview-entry').click()
   await expect(page).toHaveURL(/child-subflow-mock-review/)
   await expect(page.getByText('子流程节点 · 只读预览')).toBeVisible()
