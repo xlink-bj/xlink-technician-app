@@ -164,8 +164,8 @@ test('Phase B0 golden path: workbench → catalog → package configuration → 
   await createGroup(page, groupId, '屋面', '屋面檐口修复', '18')
   await addDirectItem(page, groupId, 'procedure')
   await addDirectItem(page, groupId, 'material')
-  await expect(page.getByTestId(`quotation-group-section-${groupId}-procedure`)).toContainText('檐口密封处理（示例）')
-  await expect(page.getByTestId(`quotation-group-section-${groupId}-material`)).toContainText('弹性密封材料（示例）')
+  await expect(page.getByTestId(`quotation-group-section-${groupId}-procedure`)).toContainText('檐口与泛水节点密封处理')
+  await expect(page.getByTestId(`quotation-group-section-${groupId}-material`)).toContainText('聚氨酯建筑密封胶')
   await expect(page.getByTestId('quotation-workbench-amount')).toContainText(/待核验|暂不可计算/)
   await expect(page.getByTestId('quotation-footer-summary')).toContainText(/待核验|暂不可计算/)
   await expect(page.getByTestId('action-workspace-submit')).toHaveAttribute('disabled', 'true')
@@ -179,8 +179,8 @@ test('Phase B0 golden path: workbench → catalog → package configuration → 
   await expect(page.getByTestId('quotation-catalog-target')).toContainText('屋面檐口修复')
   await expect(page.getByTestId('quotation-catalog-target')).toContainText('维修位置 · 屋面')
   await expect(page.getByTestId('quotation-catalog-target').locator('.quotation-content__catalog-target-index')).toContainText('01')
-  await expect(page.getByTestId('quotation-catalog-item-package-mock-catalog-package-basic')).toContainText('屋面防水修缮方案（示例）')
-  await expect(page.getByTestId('quotation-catalog-item-package-mock-catalog-package-basic')).toContainText('金额待核验')
+  await expect(page.getByTestId('quotation-catalog-item-package-mock-catalog-package-basic')).toContainText('平屋面节点防水维修套餐')
+  await expect(page.getByTestId('quotation-catalog-item-package-mock-catalog-package-basic')).toContainText('按套餐配置核价')
   await expect(page.getByTestId('quotation-catalog-search')).toBeVisible()
   // B1 puts the selected count by the active repair part, leaving the footer
   // focused on returning to the same local draft group.
@@ -190,9 +190,9 @@ test('Phase B0 golden path: workbench → catalog → package configuration → 
 
   await page.getByTestId('quotation-package-detail-mock-catalog-package-basic').click()
   await expect(page.getByTestId('quotation-package-config-focus')).toBeVisible()
-  await expect(page.getByTestId('quotation-package-procedures')).toContainText('檐口密封处理（示例）')
-  await expect(page.getByTestId('quotation-package-materials')).toContainText('弹性密封材料（示例）')
-  await expect(page.getByTestId('quotation-package-measures')).toContainText('高处作业防护（示例）')
+  await expect(page.getByTestId('quotation-package-procedures')).toContainText('檐口与泛水节点密封处理')
+  await expect(page.getByTestId('quotation-package-materials')).toContainText('聚氨酯建筑密封胶')
+  await expect(page.getByTestId('quotation-package-measures')).toContainText('高处作业安全防护')
   const layerOne = page.getByTestId('quotation-package-material-choice-string:mock-layer-1-0')
   const layerTwo = page.getByTestId('quotation-package-material-choice-number:2-0')
   await layerOne.click()
@@ -225,8 +225,8 @@ test('Phase B0 golden path: workbench → catalog → package configuration → 
   await page.getByTestId('quotation-package-details-toggle-quotation-selection-3').click()
   await expect(configuredPackage).toContainText('材料层级 1')
   await expect(configuredPackage).toContainText('材料层级 2')
-  await expect(configuredPackage).toContainText('基层防护涂料（示例）')
-  await expect(page.getByTestId(`quotation-group-section-${groupId}-material`)).toContainText('弹性密封材料（示例）')
+  await expect(configuredPackage).toContainText('基层界面处理涂料')
+  await expect(page.getByTestId(`quotation-group-section-${groupId}-material`)).toContainText('聚氨酯建筑密封胶')
 
   const packageQuantity = page.getByTestId('quotation-selection-quantity-quotation-selection-3').locator('input')
   await packageQuantity.fill('2')
@@ -234,7 +234,7 @@ test('Phase B0 golden path: workbench → catalog → package configuration → 
   await captureFocusedViewport(page, `quotation-group-composition-${groupId}`, 'b04-workbench-package-and-standalone-material-390.png')
 
   await page.getByTestId(`quotation-group-details-toggle-${groupId}`).click()
-  await expect(page.getByTestId(`quotation-group-collapsed-summary-${groupId}`)).toContainText('屋面防水修缮方案（示例）')
+  await expect(page.getByTestId(`quotation-group-collapsed-summary-${groupId}`)).toContainText('平屋面节点防水维修套餐')
   await expect(page.getByTestId(`quotation-group-section-${groupId}-package`)).toBeHidden()
   await page.getByTestId(`quotation-group-details-toggle-${groupId}`).click()
   await expect(page.getByTestId(`quotation-group-section-${groupId}-package`)).toBeVisible()
@@ -244,14 +244,14 @@ test('Phase B0 golden path: workbench → catalog → package configuration → 
   await procedureRemove.click()
   await expect(page.getByTestId('quotation-group-section-quotation-group-1-procedure')).toBeHidden()
   await addDirectItem(page, groupId, 'procedure')
-  await expect(page.getByTestId('quotation-group-section-quotation-group-1-procedure')).toContainText('檐口密封处理（示例）')
+  await expect(page.getByTestId('quotation-group-section-quotation-group-1-procedure')).toContainText('檐口与泛水节点密封处理')
 
   // A second group can independently use the same provider item identity.
   const secondGroupId = 'quotation-group-2'
   await createGroup(page, secondGroupId, '卫生间', '卫生间墙地交界', '6')
   await addDirectItem(page, secondGroupId, 'material')
-  await expect(page.getByTestId('quotation-group-section-quotation-group-1-material')).toContainText('弹性密封材料（示例）')
-  await expect(page.getByTestId('quotation-group-section-quotation-group-2-material')).toContainText('弹性密封材料（示例）')
+  await expect(page.getByTestId('quotation-group-section-quotation-group-1-material')).toContainText('聚氨酯建筑密封胶')
+  await expect(page.getByTestId('quotation-group-section-quotation-group-2-material')).toContainText('聚氨酯建筑密封胶')
   await expect(page.getByTestId('quotation-draft-groups').locator('[data-testid="quotation-composition-selection"]')).toHaveCount(4)
 
   await page.getByTestId(`quotation-group-details-toggle-${groupId}`).click()
@@ -303,15 +303,15 @@ test('Phase B1 captures the real four-state quotation journey and compact/recove
   await addDirectItem(page, groupId, 'material')
   await returnWorkspaceToTop(page)
   await expect(page.getByTestId('quotation-workbench-amount')).toContainText(/待核验|暂不可计算/)
-  await expect(page.getByTestId('quotation-group-section-quotation-group-1-material')).toContainText('弹性密封材料（示例）')
+  await expect(page.getByTestId('quotation-group-section-quotation-group-1-material')).toContainText('聚氨酯建筑密封胶')
   await expect(page.getByText(/¥0(?:\.00)?/)).toHaveCount(0)
   await page.screenshot({ path: resolve(visualMasterOutput, '01-workbench-390.png'), animations: 'disabled' })
 
   await openGroupCatalog(page, groupId)
   await page.getByTestId('quotation-catalog-kind-package').click()
   const packageCard = page.getByTestId('quotation-catalog-item-package-mock-catalog-package-basic')
-  await expect(packageCard).toContainText('屋面防水修缮方案（示例）')
-  await expect(packageCard).toContainText('金额待核验')
+  await expect(packageCard).toContainText('平屋面节点防水维修套餐')
+  await expect(packageCard).toContainText('按套餐配置核价')
   // S2 commercial catalog uses truthful category marks, not fabricated product imagery.
   // The package detail truthfully discloses that no product image is provided.
   await expect(packageCard.locator('.quotation-content__catalog-thumbnail')).toBeVisible()
@@ -332,7 +332,7 @@ test('Phase B1 captures the real four-state quotation journey and compact/recove
   await page.getByTestId('quotation-package-configure-commit').click()
   await expect(page.getByTestId('quotation-catalog-page')).toHaveCount(0)
   const configured = page.getByTestId('quotation-configured-package-quotation-selection-2')
-  await expect(page.getByText('屋面防水修缮方案（示例）', { exact: true })).toBeVisible()
+  await expect(page.getByText('平屋面节点防水维修套餐', { exact: true })).toBeVisible()
   await expect(configured).toContainText('1 项工序 · 2 项材料 · 1 项机措')
   await expect(configured).toContainText('金额关系待核验')
   await expect(configured).not.toContainText('材料层级 1')

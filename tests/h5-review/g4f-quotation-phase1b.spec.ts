@@ -61,7 +61,7 @@ async function openScenario(page: Page, scenario: string): Promise<void> {
     await expect(page.getByTestId('quotation-workbench-heading')).toContainText('报价草稿 · 按部位组织')
   }
   if (scenario !== 'empty') {
-    await expect(page.getByText('项目概览', { exact: true })).toBeVisible()
+    await expect(page.getByTestId('quotation-workbench-summary')).toContainText('维修部位报价')
   }
 }
 
@@ -134,10 +134,10 @@ test('Phase 1F browses all catalog kinds and explicitly adds only direct selecti
     await openCatalogForGroup(page, groupId)
     await page.getByTestId(`quotation-catalog-kind-${kind}`).click()
     const labels = {
-      package: '屋面防水修缮方案（示例）',
-      procedure: '檐口密封处理（示例）',
-      material: '弹性密封材料（示例）',
-      measure: '高处作业防护（示例）',
+      package: '平屋面节点防水维修套餐',
+      procedure: '檐口与泛水节点密封处理',
+      material: '聚氨酯建筑密封胶',
+      measure: '高处作业安全防护',
     } as const
     await expect(page.getByTestId('quotation-catalog-list')).toContainText(labels[kind])
     await expect(page.getByTestId('quotation-composition-selection')).toHaveCount(selectionCount)
@@ -184,8 +184,8 @@ test('isolated Phase 1B review harness keeps blocked local preview separate from
   await page.getByTestId(`quotation-group-description-${groupId}`).locator('textarea').fill('合成测试部位描述')
   await page.getByTestId(`quotation-group-quantity-${groupId}`).locator('input').fill('12.5')
   await expect(page.getByTestId('quotation-engine-blocked')).toContainText('材料单价缺失')
-  await expect(page.getByTestId('quotation-engine-local-only')).toContainText('只有单独确认')
-  await expect(page.getByTestId('quotation-engine-local-only')).toContainText('不会完成当前工单工作流')
+  await expect(page.getByTestId('quotation-engine-local-only')).toContainText('只有确认提交后')
+  await expect(page.getByTestId('quotation-engine-local-only')).toContainText('报价提交不代表工单完成')
   await expect(page.getByTestId('quotation-local-gross-total')).toHaveCount(0)
   await expect(page.getByTestId('action-workspace-submit')).toHaveAttribute('disabled', 'true')
   await expect(page.getByTestId('quotation-order-confirmation')).toHaveCount(0)
@@ -201,9 +201,9 @@ test('Phase 1E package detail displays only observed child data grouped by suppl
   await openScenario(page, 'catalog')
   await expect(page.getByTestId('quotation-catalog-page')).toBeVisible()
   await expect(page.getByTestId('quotation-catalog-kind-package')).toBeVisible()
-  await expect(page.getByTestId('quotation-catalog-item-package-mock-catalog-package-basic')).toContainText('屋面防水修缮方案（示例）')
+  await expect(page.getByTestId('quotation-catalog-item-package-mock-catalog-package-basic')).toContainText('平屋面节点防水维修套餐')
   await page.getByTestId('quotation-package-detail-mock-catalog-package-basic').click()
-  await expect(page.getByTestId('quotation-package-detail')).toContainText('配置仅保存在目标部位组的本机草稿中')
+  await expect(page.getByTestId('quotation-package-detail')).toContainText('配置已加入目标维修部位组草稿，尚未提交正式报价')
   await expect(page.getByTestId('quotation-material-layer-string:mock-layer-1')).toContainText('材料层级 1')
   await expect(page.getByTestId('quotation-material-layer-string:mock-layer-1')).not.toContainText('mock-layer-1')
   await expect(page.getByTestId('quotation-composition-selection')).toHaveCount(0)
@@ -215,7 +215,7 @@ test('Phase 1E package detail displays only observed child data grouped by suppl
 test('Phase 1G configures a Package locally after exactly one Material is chosen per supplied layer', async ({ page }) => {
   const diagnostics = await installSafetyGuards(page)
   await openPackageConfigurationFromEditableGroup(page)
-  await expect(page.getByTestId('quotation-package-detail')).toContainText('配置仅保存在目标部位组的本机草稿中')
+  await expect(page.getByTestId('quotation-package-detail')).toContainText('配置已加入目标维修部位组草稿，尚未提交正式报价')
   await expect(page.getByTestId('quotation-package-material-choice-string:mock-layer-1-0')).toBeEnabled()
   await expect(page.getByTestId('quotation-package-material-choice-number:2-0')).toBeEnabled()
 
@@ -234,15 +234,15 @@ test('Phase 1G configures a Package locally after exactly one Material is chosen
   await commit.click()
   await expect(page.getByTestId('quotation-catalog-page')).toHaveCount(0)
   const configured = page.getByTestId('quotation-configured-package-quotation-selection-1')
-  await expect(page.getByText('屋面防水修缮方案（示例）', { exact: true })).toBeVisible()
+  await expect(page.getByText('平屋面节点防水维修套餐', { exact: true })).toBeVisible()
   await expect(configured).toContainText('1 项工序 · 2 项材料 · 1 项机措')
   await expect(configured).toContainText('金额关系待核验')
   await expect(configured).not.toContainText('材料层级 1')
   await page.getByTestId('quotation-package-details-toggle-quotation-selection-1').click()
-  await expect(configured).toContainText('檐口密封处理（示例）')
-  await expect(configured).toContainText('弹性密封材料（示例）')
-  await expect(configured).toContainText('基层防护涂料（示例）')
-  await expect(configured).toContainText('高处作业防护（示例）')
+  await expect(configured).toContainText('檐口与泛水节点密封处理')
+  await expect(configured).toContainText('聚氨酯建筑密封胶')
+  await expect(configured).toContainText('基层界面处理涂料')
+  await expect(configured).toContainText('高处作业安全防护')
   await expect(configured).toContainText('金额关系待核验')
   await expect(configured).toContainText('材料层级 1')
   await expect(configured).not.toContainText('mock-layer-1')
