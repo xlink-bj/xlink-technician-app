@@ -38,8 +38,9 @@ describe('commercial mock readiness copy remains bounded to R1 local evidence', 
     expect(report.finalRequiredness.state).toBe('unverified')
     const copy = quotationReviewReadinessCopy(report)
     expect(copy.title).toBe('草稿核对')
-    expect(copy.summary).toContain('附加字段尚未核验')
-    expect(copy.summary).toContain('正式报价不可提交')
+    // Commercial UI keeps the unresolved schema state in the report and
+    // presents concise operator copy rather than developer-only field jargon.
+    expect(copy.summary).toBe('维修部位、项目和数量已填写，报价资料仍待确认；正式订单暂不能提交。')
     expect(copy.officialSubmissionAllowed).toBe(false)
   })
   it('keeps a hidden but required R1 final field in the needs-input state', () => {
@@ -62,8 +63,7 @@ describe('commercial mock readiness copy remains bounded to R1 local evidence', 
     expect(report.finalRequiredness.state).toBe('needs_input')
     const copy = quotationReviewReadinessCopy(report)
     expect(copy.title).toBe('草稿待完善')
-    expect(copy.summary).toContain('必填附加字段未填写')
-    expect(copy.summary).toContain('正式报价不可提交')
+    expect(copy.summary).toBe('报价资料仍有必填项未完成，请补充后继续核对；暂不能提交正式订单。')
     expect(copy.officialSubmissionAllowed).toBe(false)
   })
 
