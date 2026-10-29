@@ -1,0 +1,128 @@
+name: Validate Main H5 UX
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  r1-main-repeat-ui:
+    # Synthetic component contract runs on Draft PRs; real Production reads
+    # and device UX remain separate manual acceptance gates.
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Verify credential-free Production repeat panel interaction
+        run: pnpm run test:r1-main-repeat-ui
+      # Draft PRs intentionally skip the broader L3 H5 UX job below. Exercise
+      # this fully synthetic, deny-external-network closure on the same browser
+      # already installed for the repeat panel, so Draft cannot appear green
+      # without the actual form → Workflow → commercial navigation working.
+      - name: Verify DEV Mock saved-form to commercial handoff at two mobile widths
+        run: pnpm exec playwright test --config playwright.main-h5-mock.config.ts tests/h5-main-mock/mock-business-closure.spec.ts
+      - name: Preserve Draft Mock closure trace and screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: draft-mock-business-closure-${{ github.run_id }}
+          path: test-results/main-h5-mock/
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Verify A-stage P1 forms, repeat and priced Mock Order in real H5 at both mobile widths
+        env:
+          VITE_XLINK_R1_MP_UX_FIXTURES: 'true'
+        run: pnpm exec playwright test --config playwright.main-h5-mock.config.ts tests/h5-main-mock/a-stage-p1-acceptance.spec.ts
+      - name: Preserve A-stage P1 H5 interaction traces and screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: draft-a-stage-p1-h5-${{ github.run_id }}
+          path: test-results/main-h5-mock/
+          if-no-files-found: warn
+          retention-days: 7
+
+  h5-ux:
+    # L3 runs only when PR leaves Draft, or on main/manual execution.
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build main App H5 bundle (prevent runtime entry regressions)
+        run: pnpm run build:h5
+
+      - name: Cache Playwright Chromium
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}
+      - name: Install headless Chromium for real H5 bootstrap smoke
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Verify real main App H5 mounts Login without auth or external API
+        run: pnpm run test:main-h5-boot
+
+      - name: Verify REAL main App quotation using credential-free isolated DEV Mock
+        run: pnpm run test:main-h5-mock
+
+      # Must run even if browser startup, assertions or the network guard fail.
+      # No Production identity, request payload or authentication material is
+      # ever used by this test. The artifact is the durable QA handoff.
+      - name: Preserve main-App Mock QA report and Playwright trace on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: main-h5-mock-qa-${{ github.run_id }}
+          path: test-results/main-h5-mock/
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Verify G4-F legacy H5 review UX remains compatible
+        run: pnpm run test:uni-h5-g4f-review
+
+      - name: Preserve legacy G4-F H5 regression evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: g4f-h5-review-${{ github.run_id }}
+          path: |
+            test-results/
+            .review/g4f-commercial-mock-ux/generated/
+          if-no-files-found: warn
+          retention-days: 7
+

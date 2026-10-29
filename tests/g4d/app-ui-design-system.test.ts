@@ -7,8 +7,12 @@ const sharedUiPath = new URL('../../src/shared/ui/', import.meta.url)
 const uiPath = (name: string) => new URL(`../../src/shared/ui/${name}`, import.meta.url)
 const pagePath = (name: string) => new URL(`../../src/pages/work-orders/${name}`, import.meta.url)
 const harnessPath = new URL('./LongActionContentHarness.vue', import.meta.url)
+const actionWorkspaceFormActionsPath = uiPath('ActionWorkspaceFormActions.vue')
+const genericDynamicFormPath = new URL('../../src/features/work-orders/components/GenericDynamicFormActionContent.vue', import.meta.url)
+const surveyActionPath = new URL('../../src/features/work-orders/components/SurveyActionContent.vue', import.meta.url)
+const formPresentationPath = new URL('../../src/features/work-orders/form-presentation.ts', import.meta.url)
 
-describe('App UI Design System v0.1', () => {
+describe('App UI Design System v0.2', () => {
   it('defines the semantic token contract used by migrated surfaces', async () => {
     const tokens = await readFile(tokenPath, 'utf8')
 
@@ -54,10 +58,11 @@ describe('App UI Design System v0.1', () => {
     ]) {
       expect(tokens).toContain(token)
     }
+    expect(tokens).toContain('--app-textarea-min-height: 160rpx;')
   })
 
   it('provides shared stateful primitives without Appointment business values', async () => {
-    const [button, field, input, textarea, selector, choice, status, informationRow, loading] = await Promise.all([
+    const [button, field, input, textarea, selector, choice, status, informationRow, loading, actions] = await Promise.all([
       readFile(uiPath('AppButton.vue'), 'utf8'),
       readFile(uiPath('AppField.vue'), 'utf8'),
       readFile(uiPath('AppInput.vue'), 'utf8'),
@@ -67,13 +72,16 @@ describe('App UI Design System v0.1', () => {
       readFile(uiPath('AppStatus.vue'), 'utf8'),
       readFile(uiPath('AppInformationRow.vue'), 'utf8'),
       readFile(uiPath('AppLoadingState.vue'), 'utf8'),
+      readFile(actionWorkspaceFormActionsPath, 'utf8'),
     ])
-
-    expect(button).toContain("variant?: 'primary' | 'secondary' | 'text'")
+    expect(button).toContain("variant?: 'primary' | 'secondary' | 'tertiary' | 'ghost' | 'text'")
     expect(button).toContain('loading?: boolean')
     expect(button).toContain("'app-button--loading': loading")
     expect(button).toContain("'app-button--pressed': pressed")
-    expect(button).toContain(':disabled="disabled || loading"')
+    expect(button).toContain(':disabled="disabled && !loading"')
+    expect(button).toContain(':aria-disabled="disabled || loading"')
+    expect(button).toContain('if (props.disabled || props.loading) return')
+    expect(button).toContain("shape?: 'rounded' | 'pill'")
     expect(button).toContain(':aria-busy="loading"')
     expect(button).toContain('app-button__loading-slot--active')
     expect(button).toContain('app-button__label')
@@ -96,6 +104,8 @@ describe('App UI Design System v0.1', () => {
     expect(textarea).toContain('props.disabled || props.readOnly')
     expect(textarea).toContain(':placeholder-class="placeholderClass"')
     expect(textarea).toContain(':placeholder-style="placeholderStyle"')
+    expect(textarea).toContain('autoHeight?: boolean')
+    expect(textarea).toContain(':auto-height="autoHeight"')
     expect(textarea).toContain('@focus="handleFocus"')
     expect(textarea).toContain('@blur="handleBlur"')
     expect(textarea).not.toContain(':readonly=')
@@ -118,6 +128,12 @@ describe('App UI Design System v0.1', () => {
     expect(loading).toContain('app-loading-state--workspace')
     expect(loading).toContain('app-loading-state--inline')
     expect(loading).not.toContain('<text')
+    expect(actions).toContain('data-testid="action-workspace-form-actions"')
+    expect(actions).toContain('保存表单')
+    expect(actions).toContain('保存中…')
+    expect(actions).toContain('已保存')
+    expect(actions).toContain("saveState === 'saved'")
+    expect(actions).toContain('!canSubmit')
 
     for (const source of [button, field, input, textarea, selector, choice, status, informationRow, loading]) {
       expect(source).not.toContain('需要上门')
@@ -140,10 +156,18 @@ describe('App UI Design System v0.1', () => {
     expect(workspace).toContain('AppSelector')
     expect(workspace).toContain('AppInput')
     expect(workspace).toContain('AppTextarea')
+    expect(workspace).toContain('ActionWorkspaceFormActions')
+    expect(workspace).toContain('<template #actions')
+    expect(workspace).toContain('@save="workspace.saveDynamicForm"')
+    expect(workspace).toContain(":submit-label=\"workspace.descriptor.formPurpose === 'survey' ? '完成勘查' : '完成'\"")
     expect(workspace).toContain('variant="workspace"')
     expect(workspace).not.toContain('正在准备操作内容</text>')
     expect(workspace).toContain('appChoiceOptionsFor')
-    expect(workspace).toContain('AppIcon name="appointment"')
+    // C4.A owns the icon in a shared presentation component; caller owns the appointment intent.
+    const headingSource = await readFile(uiPath('AppActionContentHeading.vue'), 'utf8')
+    expect(workspace).toContain('<AppActionContentHeading title="预约信息"')
+    expect(workspace).toContain('icon="appointment"')
+    expect(headingSource).toContain('<AppIcon :name="icon" :size="20" />')
     expect(workspace).not.toContain('action-content-input')
     expect(workspace).not.toContain('action-content-note')
     expect(time).toContain('app-surface')
@@ -187,6 +211,30 @@ describe('App UI Design System v0.1', () => {
     for (const glyph of ['▣', '●', '≡', '✓', '⌄', '›']) {
       expect(allMigrated).not.toContain(glyph)
     }
+  })
+
+  it('keeps business Save in the persistent action bar and shares multiline field presentation', async () => {
+    const [generic, survey, presentation] = await Promise.all([
+      readFile(genericDynamicFormPath, 'utf8'),
+      readFile(surveyActionPath, 'utf8'),
+      readFile(formPresentationPath, 'utf8'),
+    ])
+
+    expect(generic).not.toContain('data-testid="dynamic-form-save"')
+    expect(generic).not.toContain('saveDynamicForm()')
+    expect(generic).toContain('isMultilineField(field)')
+    expect(survey).not.toContain('saved-label')
+    expect(presentation).toContain("'memo'")
+    expect(presentation).toContain("'remarks'")
+    expect(presentation).toContain("'description'")
+  })
+
+  it('keeps Bottom Sheet classification honest until a second consumer exists', async () => {
+    const standard = await readFile(new URL('../../docs/design-system/ACTION_WORKSPACE_UX_STANDARD.md', import.meta.url), 'utf8')
+    expect(standard).toContain('| Bottom Sheet | `SHARED_PATTERN` |')
+    expect(standard).not.toContain('| Bottom Sheet | `SHARED_PRIMITIVE` |')
+    expect(standard).toContain('second verified consumer')
+    expect(standard).toContain('interaction contract is truly common')
   })
 
   it('records current external references and explicit XLink decisions', async () => {

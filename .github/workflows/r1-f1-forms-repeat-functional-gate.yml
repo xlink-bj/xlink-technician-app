@@ -1,0 +1,77 @@
+name: R1 F1 Forms Repeat Functional Read (offline)
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - '.github/workflows/r1-f1-forms-repeat-functional-gate.yml'
+      - 'docs/verification/R1_FOUR_PHASE_FUNCTIONAL_LEDGER.md'
+      - 'src/adapters/api/r1-node-form-list.ts'
+      - 'src/adapters/api/r1-special-workflow-wires.ts'
+      - 'src/adapters/api/technician-api.ts'
+      - 'src/features/work-orders/R1NodeFormsOverview.vue'
+      - 'src/pages/work-orders/detail.vue'
+      - 'src/shared/ports/api.ts'
+      - 'src/shared/ports/index.ts'
+      - 'tests/engineering/r1-f1-existing-form-list.test.ts'
+      - 'tests/engineering/r1-f1-special-workflow-wires.test.ts'
+      - 'tests/g4d/action-workspace.test.ts'
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  functional-source-and-build:
+    if: github.event.pull_request.draft == true && github.event.pull_request.head.ref == 'feature/r1-f1-forms-repeat-read-workspace'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      VITE_XLINK_ENVIRONMENT: test
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Exact inherited A06-B and narrow functional scope
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          git merge-base --is-ancestor 345dbe79bfdbe53af4ce75721ab6ef188c25b1ef HEAD
+          git diff --name-only 345dbe79bfdbe53af4ce75721ab6ef188c25b1ef HEAD | sort > /tmp/actual
+          printf '%s\n' '.github/workflows/r1-f1-forms-repeat-functional-gate.yml' 'docs/verification/R1_FOUR_PHASE_FUNCTIONAL_LEDGER.md' 'src/adapters/api/r1-node-form-list.ts' 'src/adapters/api/r1-special-workflow-wires.ts' 'src/adapters/api/technician-api.ts' 'src/features/work-orders/R1NodeFormsOverview.vue' 'src/pages/work-orders/detail.vue' 'src/shared/ports/api.ts' 'src/shared/ports/index.ts' 'tests/engineering/r1-f1-existing-form-list.test.ts' 'tests/engineering/r1-f1-special-workflow-wires.test.ts' 'tests/g4d/action-workspace.test.ts' | sort > /tmp/expected
+          diff -u /tmp/expected /tmp/actual
+          test "$(git diff --name-only 345dbe79bfdbe53af4ce75721ab6ef188c25b1ef HEAD -- pnpm-lock.yaml src/adapters/api/technician-api-commands.ts src/features/work-orders/action-mutation-receipt.ts | wc -l)" -eq 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22', cache: pnpm}
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec vitest run tests/engineering/r1-f1-existing-form-list.test.ts tests/engineering/r1-f1-special-workflow-wires.test.ts tests/engineering/r1-a06b-node-type-safety.test.ts tests/engineering/r1-a06a-durable-write-fence.test.ts
+      - run: pnpm verify:critical
+      - run: pnpm verify:full
+      - run: pnpm build:h5 && pnpm build:mp-weixin && pnpm build:app
+  original-journey-and-goldens:
+    if: github.event.pull_request.draft == true && github.event.pull_request.head.ref == 'feature/r1-f1-forms-repeat-read-workspace'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    env:
+      VITE_XLINK_ENVIRONMENT: test
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+      H5_VISUAL_OWNER_APPROVAL: 'PENDING'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22', cache: pnpm}
+      - run: pnpm install --frozen-lockfile
+      - run: |
+          pnpm exec playwright install --with-deps chromium
+          sudo apt-get update -qq
+          sudo apt-get install -y fonts-noto-cjk
+      - run: pnpm exec playwright test --config playwright.main-h5-mock.config.ts tests/h5-main-mock/m1-i7-six-stage-integration.spec.ts
+      - run: pnpm test:ds02a:gallery
+      - run: pnpm test:ds02a:business

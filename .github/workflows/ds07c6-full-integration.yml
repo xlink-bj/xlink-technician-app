@@ -1,0 +1,111 @@
+name: DS07 C6 Full Stacked Integration (NO merge)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  engineering-platform:
+    if: github.event.pull_request.head.ref == 'design-system/ds07c6-integration-readiness-gate' && github.event.pull_request.draft == true
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify pinned parent, isolate C6 read-only change and protect source tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          git merge-base --is-ancestor 7bc728d096fc09af800420976dc9e17e0d8af8b2 HEAD
+          git diff --name-only 7bc728d096fc09af800420976dc9e17e0d8af8b2 HEAD | sort > /tmp/ds07c6-actual-files.txt
+          printf '%s\n' '.github/workflows/ds07c6-full-integration.yml' 'docs/design-system/DS07C6_INTEGRATION_READINESS.md' | sort > /tmp/ds07c6-allowed-files.txt
+          diff -u /tmp/ds07c6-allowed-files.txt /tmp/ds07c6-actual-files.txt
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Complete boundaries, catalog/permission/UI checks, TypeScript and all unit tests
+        env:
+          VITE_XLINK_ENVIRONMENT: test
+        run: pnpm verify
+      - name: Build main real uni-app H5 (non-test environment)
+        run: pnpm build:h5
+      - name: Build actual WeChat Mini Program bundle (non-test environment)
+        run: pnpm build:mp-weixin
+      - name: Build actual uni-app APP bundle (non-test environment)
+        run: pnpm build:app
+
+  h5-interaction-visual:
+    if: github.event.pull_request.head.ref == 'design-system/ds07c6-integration-readiness-gate' && github.event.pull_request.draft == true
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+      H5_VISUAL_OWNER_APPROVAL: 'PENDING'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify exact parent and six approved screenshot hashes
+        shell: bash
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor 7bc728d096fc09af800420976dc9e17e0d8af8b2 HEAD
+          test "$(find tests/ds02a-gallery/snapshots tests/ds02a-main/snapshots -name '*.png' -type f | wc -l)" -eq 15
+          cat > /tmp/ds07c6-approved.sha256 <<'SHA256'
+          81463d6bb93a6332f2c150cdfbfa14975f39a16c00a26a9e8bcbc10d2164e742  tests/ds02a-main/snapshots/ds02a-detail-320.png
+          f20792e3993ebff01eff767a0daa07162bf22d93d6fdbc04eb63e3f3aac4e002  tests/ds02a-main/snapshots/ds02a-detail-375.png
+          c2e4227207a1a221f96f5244720aa4bfeb88864906ac776e9a18f6074316dc92  tests/ds02a-main/snapshots/ds02a-detail-390.png
+          667499f14ad1db32432b45d419696844e6aaec1b58637df0e8ac9c1d2f6b210b  tests/ds02a-main/snapshots/ds02a-quote-320.png
+          78594411519870f8f02599f36cf3c811ddb46572d7133513b2a7f3c1cb81d8fb  tests/ds02a-main/snapshots/ds02a-quote-375.png
+          57601f82a36b66743fb87b428ad69638c1482b624f0c4c4d862c31eb9af19446  tests/ds02a-main/snapshots/ds02a-quote-390.png
+          SHA256
+          sha256sum --check /tmp/ds07c6-approved.sha256
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Install deterministic Chromium + Chinese font
+        run: |
+          pnpm exec playwright install --with-deps chromium
+          sudo apt-get update -qq
+          sudo apt-get install -y fonts-noto-cjk
+      - name: DS02A Gallery, all approved Golden comparisons unchanged
+        run: pnpm test:ds02a:gallery
+      - name: DS02A actual main App List, Detail and Q01 at three widths
+        run: pnpm test:ds02a:business
+      - name: M1 actual main App Appointment/Survey/Quote/Signed Mock and fail-closed Signing
+        run: |
+          pnpm exec playwright test --config playwright.main-h5-mock.config.ts \
+            tests/h5-main-mock/main-app-quotation.spec.ts \
+            tests/h5-main-mock/ds07c4b-quote-signing.spec.ts \
+            tests/h5-main-mock/ds07c4b-signing-state-visual.spec.ts \
+            tests/h5-main-mock/m1-signing-official-order-read.spec.ts
+      - name: Keep visual/interaction test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ds07-c6-full-h5-${{ github.run_id }}
+          path: |
+            test-results/ds02a-main/
+            test-results/ds02a-gallery/
+            test-results/main-h5-mock/
+          if-no-files-found: warn
+          retention-days: 30

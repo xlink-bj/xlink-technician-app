@@ -10,6 +10,7 @@ import {
   type AuthWireConfig,
   type AuthBackendDriver,
 } from '@adapters/auth/auth-session-adapter'
+import { surveyMediaValueCodec } from '@adapters/api/survey-form-codec'
 import {
   createPlatformAdapters,
   createUnsupportedPlatformAdapters,
@@ -125,6 +126,7 @@ describe('G3-C API adapter foundation', () => {
         runId: 'workflow-run-001',
         parentNodeId: 'workflow-node-parent',
         category: 'unsupported',
+        nodeTypeEvidence: 'unresolved',
         lifecycle: 'unknown',
         visibility: { evidenceState: 'missing' },
       },
@@ -136,6 +138,64 @@ describe('G3-C API adapter foundation', () => {
     expect(transport.requests.find((request) => request.path === 'code/query')?.body).toEqual({
       parentId: 'parent-option',
     })
+  })
+
+  it('maps the R1 batch dynamic code provider without exposing its wire envelope', async () => {
+    const transport = new FixtureApiTransport({
+      'i/code/selectCode.do': [{
+        eleid: 'qualified',
+        options: { '0': '不合格', '1': '合格' },
+      }],
+    })
+    const api = createTechnicianApiReadAdapter(transport, {
+      codeTenantId: 'sanitized-tenant',
+    })
+
+    const result = await api.getDynamicCodeOptions!({ valueOption: 'qualified' })
+
+    expect(result).toEqual({
+      state: 'succeeded',
+      data: {
+        items: [
+          { value: '0', label: '不合格' },
+          { value: '1', label: '合格' },
+        ],
+      },
+    })
+    expect(transport.requests[0]).toEqual({
+      method: 'POST',
+      path: 'i/code/selectCode.do',
+      body: {
+        jsonPara: JSON.stringify([{ codeId: 'qualified', eleid: 'qualified' }]),
+        tenantId: 'sanitized-tenant',
+      },
+    })
+    expect(JSON.stringify(result)).not.toContain('eleid')
+    expect(JSON.stringify(result)).not.toContain('options')
+  })
+
+  it('retains cascade hierarchy while normalizing R1 code nodes', async () => {
+    const transport = new FixtureApiTransport({
+      'i/code/selectMultistageCode.do': [{
+        type: 'parts',
+        children: [{
+          value: 'roof',
+          name: '屋面',
+          children: [{ value: 'roof-inner', name: '女儿墙' }],
+        }],
+      }],
+    })
+    const api = createTechnicianApiReadAdapter(transport, {
+      cascadeTenantId: 'sanitized-tenant',
+    })
+
+    const result = await api.getCascadeCodeOptions({ codeType: 'parts' })
+
+    expect(result.data?.items).toEqual([{
+      value: 'roof',
+      label: '屋面',
+      children: [{ value: 'roof-inner', label: '女儿墙' }],
+    }])
   })
 
   it('maps a verified district code and omits missing or unmapped district codes', async () => {
@@ -260,6 +320,403 @@ describe('G3-C API adapter foundation', () => {
 
     expect(result.data?.id).toBe(requestedId)
     expect(result.data?.id).not.toBe('field-row-001')
+  })
+
+  it('rejects conflicting form-definition identities from R1 field rows or a legacy entity', async () => {
+    const requestedId = asOpaqueId<'FormDefinitionId'>('appointment-definition')
+    for (const payload of [
+      { data: [{ _id: 'row-1', extId: 'different-definition', name: 'datetime' }] },
+      { data: [
+        { _id: 'row-1', extId: 'appointment-definition', name: 'datetime' },
+        { _id: 'row-2', extId: 'different-definition', name: 'remark' },
+      ] },
+      { entity: { id: 'different-definition', fields: [] } },
+      { entity: { id: 'appointment-definition', extId: 'different-definition', fields: [] } },
+    ]) {
+      const api = createTechnicianApiReadAdapter(new FixtureApiTransport({ 'biz/extField/query': payload }))
+      expect((await api.getFormDefinition(requestedId)).state).toBe('failed_terminal')
+    }
+  })
+
+  it('rejects duplicate R1 field-row identities while permitting legitimate repeated value keys', async () => {
+    const requestedId = asOpaqueId<'FormDefinitionId'>('survey-definition')
+    const api = createTechnicianApiReadAdapter(new FixtureApiTransport({
+      'biz/extField/query': { data: [
+        { _id: 'same-field-row', extId: 'survey-definition', name: 'length' },
+        { _id: 'same-field-row', extId: 'survey-definition', name: 'length' },
+      ] },
+    }))
+    expect((await api.getFormDefinition(requestedId)).state).toBe('failed_terminal')
+  })
+
+  it('normalizes R1 Survey media rows without losing object identity or list shape', async () => {
+    const transport = new FixtureApiTransport({
+      'biz/extForm/query/survey-definition': {
+        data: [{
+          _id: 'survey-data-001',
+          extId: 'survey-definition',
+          exts: {
+            images1: [{ url: 'https://media.invalid/object-001', name: 'survey/object-001', extname: 'jpg' }],
+          },
+        }],
+      },
+    })
+    const api = createTechnicianApiReadAdapter(transport)
+    const result = await api.getFormData({
+      definitionId: asOpaqueId<'FormDefinitionId'>('survey-definition'),
+      dataId: asOpaqueId<'FormDataId'>('survey-data-001'),
+      valueCodec: surveyMediaValueCodec,
+    })
+
+    expect(result).toMatchObject({
+      state: 'succeeded',
+      data: {
+        items: [{
+          values: {
+            images1: [{
+              url: 'https://media.invalid/object-001',
+              objectKey: 'survey/object-001',
+              extension: 'jpg',
+            }],
+          },
+        }],
+      },
+    })
+  })
+
+  it('fails closed when a backend Survey media object is malformed', async () => {
+    const transport = new FixtureApiTransport({
+      'biz/extForm/query/survey-definition': {
+        data: [{
+          _id: 'survey-data-001',
+          extId: 'survey-definition',
+          exts: { images1: [{ name: 'missing-url' }] },
+        }],
+      },
+    })
+    const api = createTechnicianApiReadAdapter(transport)
+    const result = await api.getFormData({
+      definitionId: asOpaqueId<'FormDefinitionId'>('survey-definition'),
+      dataId: asOpaqueId<'FormDataId'>('survey-data-001'),
+      valueCodec: surveyMediaValueCodec,
+    })
+
+    expect(result.state).toBe('failed_terminal')
+    expect(result.error?.category).toBe('server_terminal')
+  })
+
+  it.each([
+    ['scalar', 'fake'],
+    ['primitive list', ['a', 'b']],
+  ])('fails closed when a Survey media field is not a media list on read (%s)', async (_label, value) => {
+    const transport = new FixtureApiTransport({
+      'biz/extForm/query/survey-definition': {
+        data: [{
+          _id: 'survey-data-001',
+          extId: 'survey-definition',
+          exts: { images1: value },
+        }],
+      },
+    })
+    const api = createTechnicianApiReadAdapter(transport)
+    const result = await api.getFormData({
+      definitionId: asOpaqueId<'FormDefinitionId'>('survey-definition'),
+      dataId: asOpaqueId<'FormDataId'>('survey-data-001'),
+      valueCodec: surveyMediaValueCodec,
+    })
+
+    expect(result.state).toBe('failed_terminal')
+    expect(result.error?.category).toBe('server_terminal')
+  })
+
+  it('does not assign Survey media semantics to object-like values in a generic form', async () => {
+    const transport = new FixtureApiTransport({
+      'biz/extForm/query/generic-definition': {
+        data: [{
+          _id: 'generic-data-001',
+          extId: 'generic-definition',
+          exts: {
+            attachments: [{ url: 'https://media.invalid/generic', name: 'generic/object' }],
+            arbitraryRows: [{ url: 'https://media.invalid/row', label: 'not media' }],
+          },
+        }],
+      },
+    })
+    const api = createTechnicianApiReadAdapter(transport)
+    const result = await api.getFormData({
+      definitionId: asOpaqueId<'FormDefinitionId'>('generic-definition'),
+      dataId: asOpaqueId<'FormDataId'>('generic-data-001'),
+    })
+
+    expect(result).toMatchObject({
+      state: 'succeeded',
+      data: { items: [{ id: 'generic-data-001', definitionId: 'generic-definition' }] },
+    })
+    expect(result.data?.items[0]?.values).toBeUndefined()
+  })
+
+  it('routes only an explicit Survey Ext identity and leaves generic forms unclassified', async () => {
+    const surveyId = asOpaqueId<'FormDefinitionId'>('survey-definition')
+    const surveyTransport = new FixtureApiTransport({
+      'biz/extField/query': {
+        data: [{
+          _id: 'survey-row-001',
+          colName: 'survey',
+          purpose: 'not-a-form-purpose',
+          name: 'surveyField',
+          nameDisp: '勘查字段',
+          type: 'text',
+        }],
+      },
+    })
+    const survey = await createTechnicianApiReadAdapter(surveyTransport).getFormDefinition(surveyId)
+    expect(survey.data?.purpose).toBe('survey')
+
+    const genericId = asOpaqueId<'FormDefinitionId'>('generic-definition')
+    const genericTransport = new FixtureApiTransport({
+      'biz/extField/query': {
+        data: [{
+          _id: 'generic-row-001',
+          purpose: 'survey',
+          name: 'genericField',
+          nameDisp: '通用字段',
+          type: 'text',
+        }],
+      },
+    })
+    const generic = await createTechnicianApiReadAdapter(genericTransport).getFormDefinition(genericId)
+    expect(generic.data).not.toHaveProperty('purpose')
+  })
+
+  it('fails closed when any field row has no Ext collection identity', async () => {
+    const requestedId = asOpaqueId<'FormDefinitionId'>('missing-identity-definition')
+    const transport = new FixtureApiTransport({
+      'biz/extField/query': {
+        data: [
+          { _id: 'survey-row', colName: 'survey', name: 'first', nameDisp: '第一行', type: 'text' },
+          { _id: 'missing-row', name: 'second', nameDisp: '第二行', type: 'text' },
+        ],
+      },
+    })
+
+    const result = await createTechnicianApiReadAdapter(transport).getFormDefinition(requestedId)
+
+    expect(result.data).not.toHaveProperty('purpose')
+  })
+
+  it('fails closed when any field row has an unknown Ext collection identity', async () => {
+    const requestedId = asOpaqueId<'FormDefinitionId'>('unknown-identity-definition')
+    const transport = new FixtureApiTransport({
+      'biz/extField/query': {
+        data: [
+          { _id: 'survey-row', colName: 'survey', name: 'first', nameDisp: '第一行', type: 'text' },
+          { _id: 'unknown-row', colName: 'custom-form', name: 'second', nameDisp: '第二行', type: 'text' },
+        ],
+      },
+    })
+
+    const result = await createTechnicianApiReadAdapter(transport).getFormDefinition(requestedId)
+
+    expect(result.data).not.toHaveProperty('purpose')
+  })
+
+  it('keeps an all-Survey ExtField response classified as Survey', async () => {
+    const requestedId = asOpaqueId<'FormDefinitionId'>('all-survey-definition')
+    const transport = new FixtureApiTransport({
+      'biz/extField/query': {
+        data: [
+          { _id: 'survey-row-1', colName: 'survey', name: 'first', nameDisp: '第一行', type: 'text' },
+          { _id: 'survey-row-2', colName: 'survey', name: 'second', nameDisp: '第二行', type: 'text' },
+        ],
+      },
+    })
+
+    const result = await createTechnicianApiReadAdapter(transport).getFormDefinition(requestedId)
+
+    expect(result.data?.purpose).toBe('survey')
+  })
+
+  it('fails closed when field rows carry contradictory form identities', async () => {
+    const requestedId = asOpaqueId<'FormDefinitionId'>('mixed-definition')
+    const transport = new FixtureApiTransport({
+      'biz/extField/query': {
+        data: [
+          { _id: 'survey-row', colName: 'survey', name: 'first', nameDisp: '第一行', type: 'text' },
+          { _id: 'appointment-row', colName: 'appointment', name: 'second', nameDisp: '第二行', type: 'text' },
+        ],
+      },
+    })
+
+    const result = await createTechnicianApiReadAdapter(transport).getFormDefinition(requestedId)
+
+    expect(result.data).not.toHaveProperty('purpose')
+  })
+
+  it('retains inline option hierarchy and fails closed on malformed option rows', async () => {
+    const requestedId = asOpaqueId<'FormDefinitionId'>('generic-definition')
+    const transport = new FixtureApiTransport({
+      'biz/extField/query': {
+        data: [
+          {
+            _id: 'cascade-row',
+            name: 'location',
+            nameDisp: '位置',
+            type: 'cascade',
+            showList: ['3', '4'],
+            options: [{ value: 'roof', name: '屋面', children: [{ value: 'inner', name: '女儿墙' }] }],
+          },
+          {
+            _id: 'malformed-row',
+            name: 'broken',
+            nameDisp: '异常选项',
+            type: 'select',
+            options: [{ value: 'missing-label' }],
+          },
+        ],
+      },
+    })
+    const result = await createTechnicianApiReadAdapter(transport).getFormDefinition(requestedId)
+    expect(result.data?.fields?.[0]?.options).toEqual([{
+      value: 'roof',
+      label: '屋面',
+      children: [{ value: 'inner', label: '女儿墙' }],
+    }])
+    expect(result.data?.fields?.[0]?.showList).toEqual(['3', '4'])
+    expect(result.data?.fields?.[1]).toMatchObject({
+      fieldId: 'malformed-row',
+      unsupportedReason: 'Field option metadata is malformed',
+    })
+  })
+
+  it('preserves distinct field-row identities when Survey value keys repeat', async () => {
+    const requestedId = asOpaqueId<'FormDefinitionId'>('survey-definition')
+    const transport = new FixtureApiTransport({
+      'biz/extField/query': {
+        data: [
+          {
+            _id: 'survey-row-length-001',
+            name: 'length',
+            nameDisp: '长度（结构）',
+            type: 'digit',
+          },
+          {
+            _id: 'survey-row-length-002',
+            name: 'length',
+            nameDisp: '长度（局部）',
+            type: 'digit',
+          },
+        ],
+      },
+    })
+    const api = createTechnicianApiReadAdapter(transport)
+
+    const result = await api.getFormDefinition(requestedId)
+
+    expect(result.data?.id).toBe(requestedId)
+    expect(result.data?.fields?.map((field) => ({ fieldId: field.fieldId, valueKey: field.valueKey }))).toEqual([
+      { fieldId: 'survey-row-length-001', valueKey: 'length' },
+      { fieldId: 'survey-row-length-002', valueKey: 'length' },
+    ])
+  })
+
+  it('normalizes observed conditional metadata from record.exts and preserves multi-value shape', async () => {
+    const requestedId = asOpaqueId<'FormDefinitionId'>('observed-inspection-definition')
+    const transport = new FixtureApiTransport({
+      'biz/extField/query': {
+        data: [
+          {
+            _id: 'field-row-part',
+            extId: requestedId,
+            name: 'part',
+            nameDisp: '部位',
+            type: 'cascade',
+            required: '1',
+            multiple: false,
+            valueOption: 'parts',
+            showType: '1',
+          },
+          {
+            _id: 'field-row-content',
+            extId: requestedId,
+            name: 'inspectionContent',
+            nameDisp: '巡检内容',
+            type: 'select',
+            multiple: true,
+            showType: '1',
+          },
+          {
+            _id: 'field-row-length',
+            extId: requestedId,
+            name: 'length',
+            nameDisp: '长',
+            type: 'digit',
+            required: '1',
+            showType: '3',
+            showField: 'part',
+            showFieldPreset: 1,
+            showValue: '',
+            exts: { showValue: ['1', '2'] },
+          },
+        ],
+      },
+    })
+    const api = createTechnicianApiReadAdapter(transport)
+
+    const result = await api.getFormDefinition(requestedId)
+
+    expect(result.data?.fields).toEqual([
+      {
+        fieldId: 'field-row-part',
+        valueKey: 'part',
+        label: '部位',
+        type: 'cascade',
+        required: true,
+        readOnly: false,
+        valueOption: 'parts',
+      },
+      {
+        fieldId: 'field-row-content',
+        valueKey: 'inspectionContent',
+        label: '巡检内容',
+        type: 'select',
+        required: false,
+        readOnly: false,
+        multiple: true,
+      },
+      {
+        fieldId: 'field-row-length',
+        valueKey: 'length',
+        label: '长',
+        type: 'digit',
+        required: true,
+        readOnly: false,
+        visibility: { kind: 'oneOf', path: 'part', values: ['1', '2'] },
+      },
+    ])
+  })
+
+  it('prefers a frontEndConfig condition over a generic root showType=1 marker', async () => {
+    const requestedId = asOpaqueId<'FormDefinitionId'>('survey-definition')
+    const transport = new FixtureApiTransport({
+      'biz/extField/query': {
+        data: [{
+          _id: 'field-row-mold-photo',
+          extId: requestedId,
+          name: 'beforeMoldRemoval',
+          nameDisp: '除霉前',
+          type: 'file',
+          showType: '1',
+          frontEndConfig: { showField: 'isMoldRemoved', showValue: 'yes' },
+        }],
+      },
+    })
+    const api = createTechnicianApiReadAdapter(transport)
+
+    const result = await api.getFormDefinition(requestedId)
+
+    expect(result.data?.fields?.[0]).toMatchObject({
+      visibility: { kind: 'equals', path: 'isMoldRemoved', value: 'yes' },
+    })
   })
 
   it('uses the exact R1 form-data filter and sort request shape', async () => {

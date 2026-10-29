@@ -1,0 +1,30 @@
+name: M1 Unified Main Integration Candidate Gate
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/check-m1-unified-main-candidate.mjs'
+      - 'docs/verification/M1_UNIFIED_MAIN_INTEGRATION_MANIFEST.json'
+      - 'docs/verification/M1_UNIFIED_MAIN_INTEGRATION_CANDIDATE.md'
+      - '.github/workflows/m1-unified-main-candidate-gate.yml'
+      - 'tests/g4f/m1-unified-main-candidate.test.ts'
+
+permissions:
+  contents: read
+
+jobs:
+  candidate-ancestry:
+    if: github.head_ref == 'lead/m1-unified-main-integration-candidate'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+    steps:
+      - name: Check out full history without Git write credentials
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify required M1 parents, source delta, and explicit no-release gates
+        run: node scripts/check-m1-unified-main-candidate.mjs

@@ -1,0 +1,27 @@
+name: M1 I7 Reconciled Integration Gate
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/check-m1-i7-reconciliation.mjs'
+      - 'docs/verification/M1_I7_RECONCILED_CANDIDATE.md'
+      - '.github/workflows/m1-i7-integration-gate.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  reconciliation:
+    if: github.head_ref == 'lead/m1-i7-reconciled-integration-candidate'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+    steps:
+      - name: Checkout complete read-only Git ancestry
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Run two-parent and content-delta safety gate
+        run: node scripts/check-m1-i7-reconciliation.mjs

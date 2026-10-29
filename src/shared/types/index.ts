@@ -9,6 +9,7 @@ export type {
   FormDataId,
   FormDefinitionId,
   LocalMediaRef,
+  MediaUploadTaskId,
   Opaque,
   OrganizationId,
   RoleId,
@@ -22,7 +23,22 @@ export type {
   WorkflowRunId,
 } from './identifiers'
 export { asOpaqueId } from './identifiers'
-export type { LocalMedia, MediaSource, UploadedMediaRef, UploadState } from './media'
+export {
+  isMediaValueRef,
+  mediaValueRefFromUpload,
+} from './media'
+export type {
+  DurableMediaAsset,
+  LocalMedia,
+  MediaEvidenceContext,
+  MediaSource,
+  MediaTaskScope,
+  MediaUploadTask,
+  MediaUploadTaskState,
+  MediaValueRef,
+  UploadedMediaRef,
+  UploadState,
+} from './media'
 export {
   createOperationError,
   isRetryableCategory,
@@ -40,3 +56,5 @@ export {
   isCapabilityGranted,
 } from './capability'
 export type { CapabilityMetadata, CapabilityResult, CapabilityState } from './capability'
+
+export { requiresR1SpecialWorkflowWire } from './r1-node-contract'

@@ -1,4 +1,5 @@
 import { classifyFieldType, selectOptionProvider } from './capabilities'
+import { isFieldApplicable } from './applicability'
 import { evaluateVisibility } from './visibility'
 import type { EffectiveFieldState, FieldStateContext, FormFieldSchema } from './types'
 
@@ -6,8 +7,30 @@ export function evaluateFieldState(
   field: FormFieldSchema,
   context: FieldStateContext = {},
 ): EffectiveFieldState {
-  const capability = classifyFieldType(field.type)
+  const capability = field.presentationOnly
+    ? { capability: 'PRESENTATION_ONLY' as const }
+    : classifyFieldType(field.type)
   const optionProvider = selectOptionProvider(field)
+  if (!isFieldApplicable(field, context.surface)) {
+    return {
+      capability: capability.capability,
+      visible: false,
+      readOnly: true,
+      required: false,
+      optionProvider,
+      reason: 'Field is not applicable to the current form surface',
+    }
+  }
+  if (field.unsupportedReason) {
+    return {
+      capability: 'UNSUPPORTED',
+      visible: false,
+      readOnly: true,
+      required: false,
+      optionProvider: { state: 'unsupported', reason: field.unsupportedReason },
+      reason: field.unsupportedReason,
+    }
+  }
   if (capability.capability === 'UNSUPPORTED') {
     return {
       capability: capability.capability,
@@ -45,6 +68,15 @@ export function evaluateFieldState(
     context.workflowReadOnly || context.fixedFormReadOnly || field.readOnly || context.runtimeReadOnly,
   )
   const requiredSource = context.fixedRequired ?? context.runtimeRequired ?? field.required ?? false
+  if (capability.capability === 'PRESENTATION_ONLY') {
+    return {
+      capability: capability.capability,
+      visible: visibility.visible,
+      readOnly: true,
+      required: false,
+      optionProvider,
+    }
+  }
   return {
     capability: capability.capability,
     visible: visibility.visible,

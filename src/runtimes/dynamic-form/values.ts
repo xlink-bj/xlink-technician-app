@@ -1,4 +1,6 @@
 import { evaluateFieldState } from './state'
+import { isFieldApplicable } from './applicability'
+import { evaluateVisibility } from './visibility'
 import type {
   FieldStateContext,
   FormFieldSchema,
@@ -8,7 +10,8 @@ import type {
   NormalizedFieldValue,
   SubmissionResult,
 } from './types'
-import type { LocalMediaRef } from '@shared/types'
+import { isMediaValueRef } from '@shared/types'
+import type { LocalMediaRef, MediaValueRef } from '@shared/types'
 
 const trimmedStringTypes = new Set(['text', 'textarea', 'phone', 'IDNumber', 'date', 'time', 'datetime'])
 const optionScalarTypes = new Set(['select', 'bizSelect', 'radio', 'rate'])
@@ -44,14 +47,25 @@ function invalid(message: string): NormalizationResult {
   return { ok: false, reason: 'invalid_value', message }
 }
 
+function optionValues(options: readonly FormOption[]): readonly string[] {
+  const values: string[] = []
+  const visit = (option: FormOption): void => {
+    values.push(option.value)
+    option.children?.forEach(visit)
+  }
+  options.forEach(visit)
+  return values
+}
+
 function supportedOption(options: readonly FormOption[] | undefined, value: unknown): boolean {
   if (!options || options.length === 0) return true
   const values = Array.isArray(value) ? value : [value]
+  const supported = new Set(optionValues(options))
   return values.every(
     (candidate) =>
       candidate !== null &&
       candidate !== undefined &&
-      options.some((option) => option.value === String(candidate)),
+      supported.has(String(candidate)),
   )
 }
 
@@ -59,6 +73,7 @@ export function normalizeFieldValue(
   type: string,
   value: unknown,
   options?: readonly FormOption[],
+  multiple = false,
 ): NormalizationResult {
   if (!supportedOption(options, value)) {
     return invalid(`${type} contains an unsupported option`)
@@ -83,26 +98,38 @@ export function normalizeFieldValue(
     }
   }
   if (type === 'switch') {
+    // R1 <van-switch active-value="1" inactive-value="0"> sends wire strings.
+    // Preserve them; boolean-only normalization silently changes the FormData contract.
+    if (value === '1' || value === '0') return { ok: true, value }
     if (typeof value === 'boolean') return { ok: true, value }
     if (value === 'true') return { ok: true, value: true }
     if (value === 'false') return { ok: true, value: false }
     return invalid('switch requires a boolean value')
+  }
+  if (optionScalarTypes.has(type) && multiple) {
+    if (!Array.isArray(value)) return invalid(`${type} requires an array of choices`)
+    const values = value.map(scalar)
+    if (values.some((item) => item === undefined || item === null)) {
+      return invalid(`${type} contains an unsupported value`)
+    }
+    return { ok: true, value: values as NormalizedFieldValue }
   }
   if (optionScalarTypes.has(type)) {
     const result = scalar(value)
     return result === undefined ? invalid(`${type} requires a scalar choice`) : { ok: true, value: result }
   }
   if (type === 'file' || type === 'image') {
-    const mediaReference = (candidate: unknown): LocalMediaRef | undefined => {
-      if (typeof candidate !== 'string' || candidate.trim().length === 0) return undefined
-      return candidate as LocalMediaRef
+    const mediaReference = (candidate: unknown): LocalMediaRef | MediaValueRef | undefined => {
+      if (typeof candidate === 'string' && candidate.trim().length > 0) return candidate as LocalMediaRef
+      if (isMediaValueRef(candidate)) return candidate
+      return undefined
     }
     if (Array.isArray(value)) {
       const references = value.map(mediaReference)
       if (references.some((reference) => reference === undefined)) {
         return invalid(`${type} requires normalized media references`)
       }
-      return { ok: true, value: references as readonly LocalMediaRef[] }
+      return { ok: true, value: references as readonly (LocalMediaRef | MediaValueRef)[] }
     }
     const reference = mediaReference(value)
     return reference
@@ -112,9 +139,10 @@ export function normalizeFieldValue(
   if (optionArrayTypes.has(type)) {
     if (Array.isArray(value)) {
       const values = value.map(scalar)
-      if (values.some((item) => item === undefined)) return invalid(`${type} contains an unsupported value`)
+      if (values.some((item) => item === undefined || item === null)) return invalid(`${type} contains an unsupported value`)
       return { ok: true, value: values as NormalizedFieldValue }
     }
+    if (type === 'checkbox') return invalid('checkbox requires an array of choices')
     const result = scalar(value)
     return result === undefined ? invalid(`${type} requires a value or value array`) : { ok: true, value: result }
   }
@@ -128,43 +156,61 @@ function isMissing(value: unknown): boolean {
 export function normalizeSubmission(input: {
   readonly fields: readonly FormFieldSchema[]
   readonly values: Readonly<Record<string, unknown>>
+  readonly surface?: import('./types').FormRuntimeSurface
   readonly fieldContexts?: Readonly<Record<string, Omit<FieldStateContext, 'values'>>>
   readonly preserveHiddenValues?: boolean
 }): SubmissionResult {
   const normalized: Record<string, NormalizedFieldValue> = {}
   for (const field of input.fields) {
+    if (!isFieldApplicable(field, input.surface)) continue
     const state = evaluateFieldState(field, {
-      ...(input.fieldContexts?.[field.key] ?? {}),
+      ...(input.fieldContexts?.[field.fieldId] ?? {}),
       values: input.values,
+      surface: input.surface,
     })
+    if (state.capability === 'PRESENTATION_ONLY') continue
+    // Capability is evaluated independently from effective visibility. A
+    // hidden unsupported row is outside the current submission surface and
+    // must not produce a misleading warning or block the visible form. An
+    // unsupported visibility expression remains fail-closed in state above.
     if (state.capability === 'UNSUPPORTED') {
+      const visibility = evaluateVisibility(field.visibility, input.values)
+      if (visibility.state === 'hidden') continue
       return {
         ok: false,
         reason: 'unsupported_capability',
-        fieldKey: field.key,
+        fieldId: field.fieldId,
+        valueKey: field.valueKey,
         message: state.reason ?? 'field capability is unsupported',
       }
     }
 
-    const raw = input.values[field.key]
+    const raw = input.values[field.valueKey]
     if (!state.visible && !input.preserveHiddenValues) continue
     if (isMissing(raw)) {
       if (state.required) {
-        return { ok: false, reason: 'validation', fieldKey: field.key, message: 'required field is missing' }
+        return {
+          ok: false,
+          reason: 'validation',
+          fieldId: field.fieldId,
+          valueKey: field.valueKey,
+          message: 'required field is missing',
+        }
       }
       continue
     }
 
-    const value = normalizeFieldValue(field.type, raw, field.inlineOptions)
+    const value = normalizeFieldValue(field.type, raw, field.inlineOptions, field.multiple)
     if (!value.ok) {
       return {
         ok: false,
         reason: value.reason === 'unsupported_field_type' ? 'unsupported_capability' : 'validation',
-        fieldKey: field.key,
+        fieldId: field.fieldId,
+        valueKey: field.valueKey,
         message: value.message,
       }
     }
-    normalized[field.key] = value.value
+    normalized[field.valueKey] = value.value
   }
   const submission: FormSubmission = { values: normalized }
   return { ok: true, value: submission }

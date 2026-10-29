@@ -30,8 +30,12 @@ import { detailWorkflowProjectionFor } from '@features/work-orders/detail-workfl
 import type {
   FormDataRead,
   FormDefinitionRead,
+  FormMutationCheckpoints,
   ReadPage,
   SessionSnapshot,
+  StorageKey,
+  StoragePort,
+  SubmitAppointmentInput,
   TechnicianApiReadPort,
   WorkOrderDetail,
 } from '@shared/ports'
@@ -47,19 +51,34 @@ const session: SessionSnapshot = {
 function succeeded<T>(data: T): OperationSnapshot<T> {
   return { state: 'succeeded', data }
 }
+const wireCheckpoints: FormMutationCheckpoints = {
+  beforeFormDispatch: async () => ({ state: 'succeeded' }),
+  afterFormSaved: async () => ({ state: 'succeeded' }),
+  beforeWorkflowDispatch: async () => ({ state: 'succeeded' }),
+  afterWorkflowCompleted: async () => ({ state: 'succeeded' }),
+}
+function memoryStorage(): StoragePort {
+  const values = new Map<string, unknown>()
+  return {
+    read: vi.fn(async <T>(key: StorageKey) => ({ state: 'succeeded' as const, data: (values.get(key.key) ?? null) as T | null })),
+    write: vi.fn(async (key: StorageKey, value: unknown) => { values.set(key.key, value); return succeeded(undefined) }),
+    remove: vi.fn(async (key: StorageKey) => { values.delete(key.key); return succeeded(undefined) }),
+    listKeys: vi.fn(async () => succeeded([...values.keys()])),
+  } as unknown as StoragePort
+}
 
 function formDefinition(id = 'appointment-definition'): FormDefinitionRead {
   return {
     id: asOpaqueId<'FormDefinitionId'>(id),
     purpose: 'appointment',
     fields: [
-      { key: 'need', label: '是否需要上门', type: 'radio', required: true, readOnly: false, options: [
+      { fieldId: 'need', valueKey: 'need', label: '是否需要上门', type: 'radio', required: true, readOnly: false, options: [
         { value: '1', label: '需要上门' },
         { value: '0', label: '暂不上门' },
       ] },
-      { key: 'datetime', label: '预约时间', type: 'datetime', required: true, readOnly: false },
-      { key: 'note', label: '备注', type: 'textarea', required: false, readOnly: false },
-      { key: 'source', label: '来源', type: 'text', required: false, readOnly: true },
+      { fieldId: 'datetime', valueKey: 'datetime', label: '预约时间', type: 'datetime', required: true, readOnly: false },
+      { fieldId: 'note', valueKey: 'note', label: '备注', type: 'textarea', required: false, readOnly: false },
+      { fieldId: 'source', valueKey: 'source', label: '来源', type: 'text', required: false, readOnly: true },
     ],
   }
 }
@@ -222,24 +241,27 @@ describe('G4-D final functional and safety corrections', () => {
     } as unknown as TechnicianApiReadPort
     const command = {
       readAppointmentForm: vi.fn(async () => succeeded({
+        definitionId: formDefinition().id,
         fields: formDefinition().fields!,
         values: { source: 'backend value' },
       })),
-      submitAppointment: vi.fn(async () => succeeded(undefined)),
+      submitAppointment: vi.fn(async (input: SubmitAppointmentInput) => {
+        const id = asOpaqueId<'FormDataId'>('final-correction-saved-form')
+        await input.mutation?.afterFormSaved(id)
+        await input.mutation?.beforeWorkflowDispatch(id)
+        await input.mutation?.afterWorkflowCompleted()
+        return succeeded(undefined)
+      }),
       inspectAcceptOrder: vi.fn(),
       acceptOrder: vi.fn(),
     }
-    const storage = {
-      read: vi.fn(async () => succeeded(null)),
-      write: vi.fn(async () => succeeded(undefined)),
-      remove: vi.fn(async () => succeeded(undefined)),
-      listKeys: vi.fn(async () => succeeded([])),
-    }
+    const storage = memoryStorage()
     const store = useActionWorkspaceStore()
     store.configure({
       apiRead: api,
       commandApi: command,
       draftRepository: createActionDraftRepository(storage),
+      storage,
       navigation: { navigate: vi.fn(async () => undefined), back: vi.fn(async () => undefined) },
       getSession: () => session,
       debounceMs: 0,
@@ -288,12 +310,12 @@ describe('G4-D final functional and safety corrections', () => {
       values: { source: 'backend value' },
     }
     const fields = appointmentRuntimeFieldsFor(form)
-    expect(fields.map((field) => field.key)).toEqual(['need', 'datetime', 'note', 'source'])
-    expect(fields.find((field) => field.key === 'need')?.runtime.optionProvider).toEqual({
+    expect(fields.map((field) => field.valueKey)).toEqual(['need', 'datetime', 'note', 'source'])
+    expect(fields.find((field) => field.valueKey === 'need')?.runtime.optionProvider).toEqual({
       state: 'provider',
       provider: { kind: 'inline' },
     })
-    expect(fields.find((field) => field.key === 'source')?.runtime).toMatchObject({
+    expect(fields.find((field) => field.valueKey === 'source')?.runtime).toMatchObject({
       readOnly: true,
       required: false,
     })
@@ -333,6 +355,7 @@ describe('G4-D final functional and safety corrections', () => {
     } as unknown as TechnicianApiReadPort
     const command = {
       readAppointmentForm: vi.fn(async () => succeeded({
+        definitionId: formDefinition().id,
         fields: formDefinition().fields!,
         values: { need: '1', datetime: '2026-04-20 10:00' },
       })),
@@ -343,17 +366,13 @@ describe('G4-D final functional and safety corrections', () => {
       inspectAcceptOrder: vi.fn(),
       acceptOrder: vi.fn(),
     }
-    const storage = {
-      read: vi.fn(async () => succeeded(null)),
-      write: vi.fn(async () => succeeded(undefined)),
-      remove: vi.fn(async () => succeeded(undefined)),
-      listKeys: vi.fn(async () => succeeded([])),
-    }
+    const storage = memoryStorage()
     const store = useActionWorkspaceStore()
     store.configure({
       apiRead: api,
       commandApi: command,
       draftRepository: createActionDraftRepository(storage),
+      storage,
       navigation: { navigate: vi.fn(async () => undefined), back: vi.fn(async () => undefined) },
       getSession: () => session,
       debounceMs: 0,
@@ -405,7 +424,7 @@ describe('G4-D final functional and safety corrections', () => {
     expect(request).not.toHaveBeenCalled()
   })
 
-  it('runs direct, confirmation, validation, success, and failure fixtures through the same Mock command path', async () => {
+  it('preserves accept Mock commands but blocks raw forms Appointment on single-record command path', async () => {
     setBusinessMockMode('data')
     const commandRequests = vi.fn<UniApiCommandRequestExecutor>()
     const commandTransport = createUniApiCommandTransport({
@@ -444,14 +463,18 @@ describe('G4-D final functional and safety corrections', () => {
     for (const id of appointmentFailureIds) {
       const detail = await read.getWorkOrderDetail(id)
       const projection = detailWorkflowProjectionFor(detail.data ?? null, session)
-      expect(projection.currentTask?.execution).toBe('enabled')
+      expect(projection.currentTask?.sourceNodeType).toBe('forms')
+      expect(projection.currentTask?.execution).toBe('disabled_read_only')
       const form = await command.readAppointmentForm({})
       const result = await command.submitAppointment({
         workOrderId: id,
         workflowNodeId: projection.currentTask!.nodeId,
+        sourceNodeType: projection.currentTask!.sourceNodeType,
+        mutation: wireCheckpoints,
         values: { need: '1', datetime: '2026-04-20 10:00' },
       })
-      expect(result.state).toBe(id === appointmentFailureIds[0] ? 'failed_retryable' : 'failed_terminal')
+      expect(result.state).toBe('failed_terminal')
+      expect(result.error?.category).toBe('unsupported_capability')
       expect(form.state).toBe('succeeded')
     }
 

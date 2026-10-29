@@ -1,0 +1,120 @@
+# R1 多表单 Stage 1 — 离线功能候选与验收边界
+
+**Status: OFFLINE WRITE FUNCTIONAL CANDIDATE + SCOPED PRODUCTION READ-ONLY UI CANDIDATE. NOT WRITE-INTEGRATED, NOT ACCEPTED, NOT RELEASED.**
+
+2026-10-24：增加了独立隔离试点网关 `r1-stage1-scoped-gateway.ts`：必须同时满足显式试点许可、非 Production 目标、同一会话角色、已在当前会话列表出现的工单及最新详情/节点可见性；支持子流程父节点再核验，且每笔命令前重新读角色和节点。真实 App 组合根仍未接入，**不存在默认真实写入通道**。修复已知拒绝在收据创建之后才发生的问题：先权限预检，再持久化/按步验证。专项合成测试覆盖跨步骤角色变更、无许可、Production、未知节点、子流程和 repeat 多条 Process。
+
+本变更以 `xlink-app` 固定证据 `6c0a97b26bcbcaee81ac4e1dfd627c6e8e70e29d`
+中 `business/subpackages/serviceAppointment/serviceAppointment.vue` 的
+`saveNodeExts` / `process` / `doProcess` 行为为参照。只在新 App 仓库实现，不修改 R1。
+
+## 闭环范围及证据
+
+| 功能 | R1 规则 | 本候选实现 |
+| --- | --- | --- |
+| forms 已有记录 | `node.exts.formList`，状态/表单定义身份保留 | 受限列表；缺失不伪装为 0 |
+| forms 新增选择 | `code/query`，parentId=`nodeDef.addFormCodeId`，取 `exts.formDefId` | Read Adapter + DEV 合成草稿选项 |
+| forms 保存 | `biz/extForm/upsert/{formDefId}`，再 `workflowNode/updateExts/{runtimeId}` 完整 JSON Exts；活动节点条件性 `workflow/process`，双 ID 为空 | 注入式离线编排与不可自动重放收据 |
+| forms 删除 | 原 FormData 状态 -1，Exts `formList` 相应状态 -1 | 独立两步事务；不隐式推进 |
+| forms 完成 | 至少一条已保存服务端 FormData，Process 传表单定义，FormData ID 留空 | 显式完成意图；仅接收服务端 IDs |
+| repeat 列表 | 按确切 `workflowId` 读取 `biz/extForm/query/{formDefId}`、state != -1 | 显式 DEV Mock 读取；缺失即未知，拒绝不完整分页 |
+| repeat 保存/删除 | 逐条 upsert；remove/{formDefId} + formDataId | 分离的收据保护事务 |
+| repeat 批量完成 | 每条先保存，然后 Process 使用逗号连接服务端 FormData IDs | 按服务端 ACK 收集，拒绝本地 ID/重复 ID |
+| 字段编辑 | 表单定义决定可编辑字段；未知/只读/媒体不猜测 | DEV 合成本机草稿编辑（新增及已保存记录的本机编辑意图） |
+
+## 2026-10-22 源码二次核对：真实联调前 P0
+
+固定 R1 源 `serviceAppointment.vue@6c0a97b` 再确认：
+
+1. **一般 FormData 读取**：`6987–7017` 用 `biz/extForm/query/{formDefId}` 按 `is:_id|string#and` 查询并展平 `exts`；只有特定施工验收表单定义 `3285058246984486156` 例外使用 `findByIdWithWorkflow`。本 PR 已加入精确 ID / 唯一结果校验；不采用 R1 某些施工验收情形的 `notFilterBelongTo` 权限绕行。
+2. **forms 删除时序**：`10347–10375` 原 UI 先发节点 `updateExts` 后发 FormData 状态 -1，且 `saveNodeExts` 在活动状态 `state==0` 可继续调用 `process`。后续源顺序修正已将本候选改为 **Exts → FormData**，每步发送前保留防重放收据，并在任何未知结果处停止。**活动节点删除后是否继续 Process 仍待试点核实**，此候选不隐式推进；离线编排通过不等于真实删除等价或事务原子性。
+3. **repeat 勘察特定副作用**：`7313–7328`、`7409–7419` 指定勘察表单保存可触发 `createSurveyPDFUrl` 和 `surveyToolUpsert`。这些不是纯表单保存；未验证其幂等/权限/副作用前，本候选不自动调用。不能用真实勘察记录试写。
+4. **真实执行身份**：`7213–7236` 区分子流程的 `currentNode._id/workflowId` 和主节点的 `activeTab.detail.name._id/workflowId`；`7645–7659` 重复完成使用 `subNode._id` 及其 `formDataList`。需要 #199 明确运行节点和子节点对应关系，禁止父子身份猜测。
+5. **真实字段行为**：`6879–6969` 的字典、级联、Groovy 求值、媒体/多选，及 `7069–7145` 的“保存/提交”与必填验证，尚未获得试点真实字段矩阵。现有本机字段编辑不是完整 R1 表单编辑能力，复杂字段应明确不支持。
+
+### 既有 FormData 更新的完整性门槛
+
+- 已存在的 FormData 不能仅使用 `FormDataRead.values`（可能是脱敏/筛选后的 UI 投影）重建整行 upsert；需要精确 `_id` 对应、身份一致的原始完整记录，以源 JSON 为底保留所有未知字段，仅覆盖经过字段编辑器验证的本次修改值。缺少原始记录或 `sid`、`nodeId`、定义等身份互相冲突时，**在第一笔事务收据/网络发送前拒绝**。
+- forms `exts.formList` 的已有项修改只覆盖已确认的标题/状态/定义等属性，保留未知服务端元数据；源 `Exts` 仍为全量只读快照。这不替代并发版本检查，正式写入前必须读取权威新鲜快照并经过 Owner 特别授权。
+- 本轮改动仍仅存在于 `executeR1Stage1FunctionalCandidate` 的隔离注入式离线编排中，**没有连接 App 的真实命令组合根**。不能据此认定完成真实表单编辑、删除及 Workflow Process。
+
+### 2026-10-24 第二轮：发送前预检与非 Process 回读闭环
+
+- 对 `forms_save`，**在 FormData upsert 之前**先验证全量节点 Exts 可修改、现有记录尚存在且未删除，以及新增不会超过列表上限。原先可能“先建 FormData，后发现 Exts 非法”的路径改为第一笔收据/请求之前拒绝。预检的占位 ID 只用于内存计算，绝不发送。
+- 对 `repeat_batch`，先逐一构建并验证全部行的 FormData 命令；第二行存在保留字段、非有限数字、嵌套对象等不支持字段时，禁止先提交第一行。`repeat_delete` 和仅 Process 的操作也提前检查命令结构。此处字段限制为有界的简单标量；复杂控件值仍需后续精确 R1 契约，不可擅自序列化。
+- 对**不包含 `workflow_process` 的事务**，新增独立回读闭环：forms 保存/编辑须核对同一 FormData 的服务端身份、修改字段及完整 `exts.formList` 状态；forms 删除须看到记录和 Exts 均为删除态；repeat 保存/删除须核对同一 workflowRun 下完整非截断列表中的存在/不存在。事务收据只持久化安全身份（编辑/删除目标 ID），不保存原始字段或业务详情。证据不充分时，收据继续拦截重复写入。
+- 之前只用于工作流推进的 `closeCompletedR1ReceiptAfterReadback` 现在拒绝结清不含 `workflow_process` 的事务。新回读接口必须由后续授权的业务适配器通过**独立新鲜 R1 查询**提供证据；测试注入的记录、单次 HTTP ACK、UI 投影、未分页完列表都不能称为真实验收。
+- 以上仍为 Mock/离线执行候选。没有赋予现有 Production 会话业务写入权限，没有发起现场表单、工作流或数据记录写入。
+
+## 2026-10-22 Production 只读契约核验与离线修复
+
+Issue [#199 只读取证](https://github.com/xlink-bj/xlink-technician-app/issues/199#issuecomment-6335747195)
+已在既有受限角色范围内核对 R1 源码、只读数据库和 Production API 的工单、节点、流程、表单记录身份关联。
+样本是**已完成的勘察类 repeat**，只证明读取关系；不能充当安全写入试点。
+
+新 App 只读适配器据此修正两个契约差异：
+
+1. `workflow/queryNode/{runId}` 的响应 `data` 为节点数组；
+   `workflow/queryByParentWorkflowNodeId/{parentNodeId}` 的 `data` 为子 Workflow 数组，
+   由其中的 `workflowNodeList` 展开节点。适配器保留既有测试封装的兼容路径，
+   检查运行/父节点身份冲突，缺少必要的子节点集合则明确失败。
+2. `biz/extForm/query/{formDefId}` 返回的普通 FormData 记录可以不含 `formDefId`；
+   其定义身份取自**已限定的请求 URL**，如响应另有定义标识则必须一致。
+   单条详情仍要求准确 FormData ID、唯一命中与受限分页，不扩大读取权限。
+
+以上是**合成契约回归的代码修复**，不是对 Production 的再次请求或现场验收；
+勘察 PDF、副作用、真实保存顺序、复杂字段及真机 UX 均未据此宣告完成。
+
+### 2026-10-22 子流程真实读取复验：历史阻断与修复
+
+后续 [#199 复验](https://github.com/xlink-bj/xlink-technician-app/issues/199#issuecomment-6336995328)
+证实主流程、repeat 列表、FormData 详情均可只读返回，但子流程因父节点语义混淆而 **FAIL / P0**：
+
+- 子 `Workflow.parentFlowNodeId` 是外层 `subflows` 运行节点 ID；须按请求的父节点校验。
+- 子 `WorkflowNode.parentWorkflowNodeId` 是**子流程内部前置节点** ID，不是外层 `subflows` 节点；映射时保留该值，且不再强制等于外层父节点。
+- 对子节点所属 child run ID 仍做身份冲突校验；对子节点同时出现的内部前置节点别名也拒绝冲突。
+
+已增加仅含合成 ID 的“两子节点、第二节点指向内部第一节点”回归测试。
+该段记录的是当时 `7f2713a9` 之前的阻断；后续真实复验结果见下一节。
+
+### 2026-10-22 有界生产只读入口候选
+
+在精确提交 `05d15b01`，[#199 证据](https://github.com/xlink-bj/xlink-technician-app/issues/199#issuecomment-6340074169)
+确认 App 默认只读链路 `ROLE_LIST → WORK_ORDER_DETAIL → CHILD_WORKFLOW` 已通过，
+包括 CASE_B 两个子节点的相同运行 ID 与内部前置节点关系。首轮每页 100 条被现有
+50 条上限本地拒绝，改用 50 后成功；**零业务写入**。
+
+本次后续候选新增一个独立于 Action Workspace 的 Production 子流程表单展示区：
+
+1. 只从当前角色列表中已授权工单详情提供的 `subflows` 父节点出发，主动点击后读取子节点；
+   无匹配父节点、角色变化、响应节点身份异常均失败关闭。
+2. 对 `forms` 仅展示经节点 `exts.formList` 提供的已有表单引用及状态；缺失或异常不伪装成空列表。
+3. 对 `repeat` 只允许已授权主/子流程节点证明的 `(formDefId, workflowRunId)` 组合，
+   主动查询 `biz/extForm/query/{formDefId}` 的第一页、最多 20 条、`state != -1`；
+   传输层与适配器均做角色身份与组合权限的前后校验。任何单条 FormData、字段定义、
+   `_all`、额外 filter、第二页与任意 ID 查询都仍被 Production 门禁拦截。
+4. 此 UI **不渲染服务端 FormData 字段值，不编辑本机草稿，不调用写入、上传、PDF 或 Workflow Process**。
+   未读完的分页会明确标识，不将缺失总数视为已完整获取。
+
+这只是新 App 的**代码与合成回归候选**。当前 Production 实际 CASE_B `repeat` 列表读取、
+微信开发者工具中的真实页面、实体设备字号/触控、完整 FormData 内容与表单编辑写入
+仍未因此完成验收，`STAGE1_END_TO_END=FAIL`；需 #199 同步追加脱敏证据与 Owner UX Gate。
+
+## 关键安全约束
+
+1. **无真实业务写入。** `executeR1Stage1FunctionalCandidate` 需要外部注入网关，未连接真实页面或 API 组合根。它用于合成 Gateway 离线测试。用户点击只能产生本机草稿，不会调用后端。
+2. 真实命令传输在既有 `VITE_XLINK_ENABLE_REAL_WRITES` 之外还需要独立 `VITE_XLINK_ENABLE_R1_SPECIAL_WRITES=true`。Production Read-Only 仍然绝对拦截。R1 特殊 Exts/Remove 路由必须显式标记；Exts 使用 JSON。
+3. 每一步实际尝试之前，持久化 `may_have_dispatched`；网络错误、ACK 异常、授权变化或本机持久化失败会停机。即使已完成，收据在服务端权威读取确认之前也不自动清除。
+4. FormData 字段原值、Exts 全量对象只在单次调用中临时使用，**不会**进入防重放收据、埋点或列表投影。
+5. 原编辑草稿模块对表单定义、表单现值、repeat 记录及新增选项的主动读取，仍限制在 DEV Mock 数据模式和 `mock-` 合成工单内。新建的独立 Production 只读面板仅能执行上一节明确限定的子节点与 repeat **引用列表**读取；不能复用草稿读写能力。注入一个 `TechnicianApiReadPort` 本身不产生读取许可。
+
+## 外部验收门槛（尚未完成）
+
+- #199 的内网 R1 首个试点接口证据：具体请求编码、HTTP 回执、角色/组织可见性、保存后再读、重复提交语义。不能用合成数据代替。
+- 真正接线前须取得 Owner 对测试环境业务写入的**单独、明确授权**；本候选不包含该授权。
+- 微信开发者工具中的对应机型真机交互、失败/重试/离线、六阶段截图与 UI 验收。此执行环境未运行微信开发者工具；不声称设备 PASS。
+- GitHub 远程 CI 及 Lead 审核；Draft PR 绝不自行 merge，也不部署到生产。
+
+## 读者判断
+
+通过本地 TypeScript、单测和 H5/MP/App 构建，只能证明**代码候选的离线质量**；不能证明真实 R1 多表单功能已联调验收。Stage 1 只有在 #199 权威证据、经授权的受控接口联调与小程序实机结果均完备后，才可升级为 LIVE VERIFIED。

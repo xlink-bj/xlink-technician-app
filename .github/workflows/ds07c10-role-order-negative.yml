@@ -1,0 +1,106 @@
+name: DS07 C10 P0 Role/Order Negative Evidence (NO live API)
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'tests/g4f/p0-role-order-tenant-negative.test.ts'
+      - 'docs/verification/DS07C10_ROLE_TENANT_ORDER_NEGATIVE_PROOF.md'
+      - '.github/workflows/ds07c10-role-order-negative.yml'
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  source-contract-and-platform:
+    if: github.event.pull_request.draft == true && github.event.pull_request.head.ref == 'security/ds07c10-tenant-role-order-proof'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Enforce C9 exact ancestor and strict test/doc/CI-only C10 diff
+        shell: bash
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor 61c9b20554c687aa8338fac7bfb72d0b96fb2ca1 HEAD
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          git diff --name-only 61c9b20554c687aa8338fac7bfb72d0b96fb2ca1 HEAD | sort > /tmp/ds07c10-actual.txt
+          printf '%s\n' \
+            '.github/workflows/ds07c10-role-order-negative.yml' \
+            'docs/verification/DS07C10_ROLE_TENANT_ORDER_NEGATIVE_PROOF.md' \
+            'tests/g4f/p0-role-order-tenant-negative.test.ts' | sort > /tmp/ds07c10-allowed.txt
+          diff -u /tmp/ds07c10-allowed.txt /tmp/ds07c10-actual.txt
+          test "$(git diff --name-only 61c9b20554c687aa8338fac7bfb72d0b96fb2ca1 HEAD -- src/ tests/ds02a-main/snapshots tests/ds02a-gallery/snapshots | wc -l)" -eq 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Focused real adapter x fake uni role isolation + R1 financial/SKU tests
+        env:
+          VITE_XLINK_ENVIRONMENT: test
+        run: |
+          pnpm exec vitest run \
+            tests/g4f/p0-role-order-tenant-negative.test.ts \
+            tests/g4f/production-read-only.test.ts \
+            tests/g4f/quotation-order-signing-read-boundary.test.ts \
+            tests/g4f/quotation-engine.test.ts \
+            tests/g4f/quotation-sku-identity-review.test.ts \
+            tests/g4f/quotation-sku-same-catalog.test.ts \
+            tests/g4f/quotation-order-submission.test.ts \
+            tests/g4f/r1-signing-write-fence.test.ts
+      - name: Complete typecheck / unit suite / boundaries and governance
+        env:
+          VITE_XLINK_ENVIRONMENT: test
+        run: pnpm verify
+      - name: Real H5 bundle (mock fixture environment off)
+        run: pnpm build:h5
+      - name: Real MP-Weixin bundle
+        run: pnpm build:mp-weixin
+      - name: Real uni-app native bundle
+        run: pnpm build:app
+
+  approved-visual-golden:
+    if: github.event.pull_request.draft == true && github.event.pull_request.head.ref == 'security/ds07c10-tenant-role-order-proof'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+      H5_VISUAL_OWNER_APPROVAL: 'PENDING'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Deterministic Chromium and CJK
+        run: |
+          pnpm exec playwright install --with-deps chromium
+          sudo apt-get update -qq
+          sudo apt-get install -y fonts-noto-cjk
+      - name: DS02A approved Gallery
+        run: pnpm test:ds02a:gallery
+      - name: DS02A real H5 List/Detail/Quotation Golden
+        run: pnpm test:ds02a:business
+      - name: Keep local visual proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ds07-c10-visual-${{ github.run_id }}
+          path: |
+            test-results/ds02a-gallery/
+            test-results/ds02a-main/
+          if-no-files-found: warn
+          retention-days: 30

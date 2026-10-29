@@ -50,6 +50,11 @@ const detail: WorkOrderDetail = {
   taskLabel: '待联系',
   customerName: 'Sanitized Customer',
   serviceAddress: 'Sanitized service address',
+  quotationCatalogContext: {
+    workOrderId,
+    serviceType: 'sanitized-service-type',
+    sourceType: 'sanitized-source',
+  },
   contact: {
     contactRef: asOpaqueId<'CustomerContactId'>('contact-001'),
     normalizedPhone: '13800000000',
@@ -59,6 +64,8 @@ const detail: WorkOrderDetail = {
     {
       id: asOpaqueId<'WorkflowNodeRuntimeId'>('workflow-node-001'),
       category: 'unsupported',
+      sourceNodeType: 'sanitized',
+      nodeTypeEvidence: 'runtime_node_def',
       lifecycle: 'unknown',
       visibility: { evidenceState: 'missing' },
     },
@@ -88,6 +95,29 @@ function createAuthSession(endSession: AuthSessionPort['endSession']): AuthSessi
 }
 
 describe('G4-C API detail mapping and route identity', () => {
+  it.each([
+    { _id: 'unexpected-work-order' },
+    { id: 'unexpected-work-order' },
+    { _id: 'work-order-001', id: 'unexpected-work-order' },
+  ])('rejects a detail response whose source identity conflicts with the requested ID: %j', async (wireIds) => {
+    const execute = vi.fn(async () => ({ data: { serviceAppointment: wireIds } }))
+    const result = await createTechnicianApiReadAdapter({ execute }).getWorkOrderDetail(workOrderId)
+
+    expect(result.state).toBe('failed_terminal')
+    expect(result.error?.category).toBe('server_terminal')
+    expect(result.data).toBeUndefined()
+    expect(execute).toHaveBeenCalledTimes(1)
+  })
+
+  it('rejects conflicting list item id aliases before exposing the page', async () => {
+    const api = createTechnicianApiReadAdapter({
+      execute: async () => ({ data: [{ id: 'work-order-001', _id: 'different-order' }] }),
+    })
+    const result = await api.listWorkOrders({ page: 1, pageSize: 20 })
+    expect(result.state).toBe('failed_terminal')
+    expect(result.data).toBeUndefined()
+  })
+
   it('maps the detail envelope to semantic fields without leaking backend DTOs', async () => {
     const requests: ApiReadRequest[] = []
     const transport: ApiReadTransport = {
@@ -110,6 +140,7 @@ describe('G4-C API detail mapping and route identity', () => {
               address: 'Sanitized service address',
               phone: '13800000000',
               contactIds: ['contact-001'],
+              serviceType: 'sanitized-service-type',
               workflowRunId: 'workflow-run-001',
               status: '104',
               exts: { sourceType: 'sanitized-source' },
@@ -129,12 +160,38 @@ describe('G4-C API detail mapping and route identity', () => {
     expect(result.data).not.toHaveProperty('status')
     expect(result.data).not.toHaveProperty('exts')
     expect(result.data).not.toHaveProperty('workflowNode')
+    expect(result.data?.quotationCatalogContext).toEqual({
+      workOrderId,
+      serviceType: 'sanitized-service-type',
+      sourceType: 'sanitized-source',
+    })
     expect(requests[0]).toEqual({
       method: 'POST',
       path: 'basic/serviceAppointment/queryById/work-order-001',
       body: { type: 'query' },
     })
     expect(requests[1].path).toBe('code/query')
+  })
+
+  it('does not create catalog context from labels or sourceType alone when serviceType is absent', async () => {
+    const api = createTechnicianApiReadAdapter({
+      execute: vi.fn(async (request) => request.path === 'code/query'
+        ? { data: [] }
+        : {
+            data: {
+              serviceAppointment: {
+                _id: 'work-order-001',
+                status: '104',
+                exts: { sourceType: 'sanitized-source' },
+              },
+            },
+          }),
+    })
+
+    const result = await api.getWorkOrderDetail(workOrderId)
+
+    expect(result.state).toBe('succeeded')
+    expect(result.data).not.toHaveProperty('quotationCatalogContext')
   })
 
   it('passes only a validated semantic WorkOrderId from list navigation to detail', () => {

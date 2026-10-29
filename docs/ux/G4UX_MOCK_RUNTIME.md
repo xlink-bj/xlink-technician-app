@@ -77,3 +77,184 @@ real Login succeeds and the role-visible SANODE list may return the legitimate
 `EMPTY` state. That real Beta `EMPTY` is separate evidence from deterministic
 Mock `EMPTY`. Mock mode is for deterministic UX review only and must not be used
 as evidence of Beta or production business data.
+
+## Quotation Mock in the main App (G4-F)
+
+The same authenticated development Mock panel as Appointment now includes
+**「报价草稿」** under **Action Workspace 场景** when Mock mode is **数据**.
+It opens the existing `place_order` Action Workspace for the bounded
+`mock-work-order-018-quotation-foundation` / `mock-workflow-node-018-place-order`
+identity, using the shared R1-shaped synthetic fixture and the existing
+Package / Procedure / Material / Measure mock catalog. It does not mount the
+isolated `review-app-g4f` or fabricate a session.
+
+**How to review:** use an ordinary authenticated *development* App session,
+enable `Mock 数据` → `数据` on Home, tap `报价草稿`, choose a repair part,
+enter the description and area, explore/package-configure/select catalog items,
+then return, edit and reopen the local quotation draft. The exact synthetic
+quotation ID is routed through normal Work Order detail/workflow identity and
+is scoped to the existing DEV-only `productReviewOnly` UI guard.
+
+The UI allows **local draft composition only**. Official Order confirmation,
+Order creation, workflow starts/completion, authoritative prices, effective
+tenant-specific ExtFields, signing and real readback are **not simulated**.
+The simulated Appointment command success does **not** advance the same
+Work Order into Survey and Quotation automatically. Hence this is not yet a
+continuous Appointment→Survey→Quotation workflow simulator.
+
+**Safety:** synthetic official `basic/order/upsert` payloads are identified
+by embedded `order.serviceAppointmentId` and cannot fall back to a real
+transport; synthetic `basic/order/query` work-order lookups and synthetic
+`queryById` identities are also mock-owned even without a fixture.
+Normal production business Mock stays hard-disabled and the legitimate
+Production read/write capability policies remain unchanged. Unmatched
+**non-synthetic** reads may still use the app's authenticated backend:
+this is not an offline sandbox or a replacement for real Beta E2E.
+
+**Gate:** source/CI verification and local main-App H5 test are distinct.
+A browser proof must start from authenticated main-App Home, not from the
+isolated product-review fixture's fake session. MP/App compilation is not
+native device acceptance.
+
+## Local Production Login + Mock-only Business (G4-F DEV QA)
+
+This is the established local UX-development pattern: **real Production
+`index/phoneLogin.do` authentication only**, followed by **equivalent,
+synthetic Mock business data and local drafts**. It is NOT an invitation
+to test orders, appointment writes, surveys, uploads or other business
+operations against Production. The Production phone-login endpoint may
+update account/session permission metadata as previously authorized;
+no other server-side operation is authorized by this mode.
+
+The App explicitly separates the two API targets. Keep all private
+configuration in ignored `.env.development.local` within the isolated
+worktree. Start from the existing locally authorized Production login
+settings (never copy them into GitHub or logs). Example non-secret keys:
+
+```dotenv
+VITE_XLINK_ENVIRONMENT=dev
+VITE_XLINK_PLATFORM=mp-weixin
+VITE_XLINK_API_BASE_URL=https://example.invalid
+VITE_XLINK_AUTH_API_BASE_URL=https://xlink.fsgo365.cn
+VITE_XLINK_MOCK=true
+# The existing local Production quick-login phone, tenant, method and
+# any local-only code are reused privately; do not commit or print them.
+```
+
+`VITE_XLINK_API_BASE_URL` is deliberately a nonproduction, unusable
+business fallback address. `VITE_XLINK_AUTH_API_BASE_URL` is accepted
+**only in a local Vite DEV server, with a non-production
+`VITE_XLINK_ENVIRONMENT`, an HTTPS URL and the known Production host**;
+it is used **only by the authentication driver**. An ordinary `prod`
+business build still hard-disables Mock; this override is rejected outside
+the local DEV-only profile. A missing/invalid config fails closed.
+
+Run **`pnpm run dev:h5`** for the normal main App (NOT the synthetic-session
+`dev:uni-h5-g4f-review` and not Design System review). After successful
+real authentication: Home → Mock 数据 → 数据 → Action Workspace → 报价草稿.
+The authenticated actor may be used to bind synthetic role visibility,
+but there are NO subsequent business reads from either Production or Beta.
+
+In this **auth-only Mock isolation**, all business transports share a
+hard deny of network fallthrough: unmatched Work Order/Quotation/catalog
+reads, Order/Workflow/appointment commands, media upload and other
+adapter-routed requests return a safe failure without `uni.request`.
+This is true **even if Mock is toggled OFF/EMPTY, a route is not recognized,
+or `VITE_XLINK_ENABLE_REAL_WRITES=true` is mistakenly present**.
+Home displays `业务网络已隔离` rather than `Real API` when Mock is OFF.
+Existing general DEV/test mode without the explicit auth override retains
+its separate historical behavior; this stronger isolation only applies to
+the Production-authentication hybrid.
+
+**QA evidence:** one approved Production login request is expected; count
+**zero** subsequent business HTTP requests to Production, Beta or other
+hosts, zero real Order/Workflow/upload mutations. Screenshots, route
+navigation, Mock part/catalog selection, and local draft recovery come
+from the normal authenticated main App. A failed/unavailable login remains
+`BLOCKED_ENV` and must not be replaced with a fake session. This proves
+Mock UX only, not live-backend parity, native keyboard/device behavior, or
+same-WorkOrder Appointment→Survey→Quotation workflow progression.
+
+## Credential-free H5 diagnosis (no Production login authorization)
+
+When the normal main App's `进入登录` entry is absent locally, do **not**
+attempt quick login or infer an unauthorized external request. First run the
+ordinary **main-App H5** Playwright smoke with **only synthetic CI-provided**
+values:
+
+```sh
+# Use an isolated exact-HEAD worktree, with NO real browser session.
+# Do not manually start another dev:h5 server on 5173.
+pnpm run test:main-h5-boot
+```
+
+The Playwright config starts its **own** DEV server on `localhost:5173` with
+`strictPort`. Port conflict is a test-environment failure, not permission
+to attach to a stale server or choose a different port. The suite always
+intercepts and aborts **every** non-local URL, including its synthetic
+`POST index/phoneLogin.do` request. There are zero external sends. It
+does not use a real account, real auth response or a fake application
+session, and it does not run the detached G4-F Review App.
+
+If the login entry fails to appear, `OFFLINE_BOOT_BLOCKED` reports only:
+safe page route, DOM shape counts, browser error counts, local asset HTTP
+status/path and blocked external **method + origin + pathname**. No
+credentials, queries, payloads, headers, cookies, user-facing DOM text or
+transformed entry source are logged. Do not turn off request interception
+to diagnose. Treat a local bootstrap timeout as **BLOCKED_ENV**, not as
+evidence that Production authentication failed.
+
+Only after the local offline result is examined may Lead separately
+authorize another Production authentication. The prior unrecorded external
+request cannot be retroactively identified by a later successful offline
+run. The entire main-App Mock quotation journey remains a different Gate.
+
+## Repeatable credential-free main App Mock UX Gate
+
+Use the **real ordinary uni-app H5 application**, not `review-app-g4f`,
+for daily Mock UI integration and regression testing without repeated
+Production authentication. This test-only composition is explicitly
+different from actual user identity/permissions acceptance:
+
+```sh
+pnpm run test:main-h5-mock
+```
+
+The Playwright runner owns `localhost:5174` (strict port), supplies a
+non-Production DEV-only `VITE_XLINK_H5_MOCK_E2E=true` test fixture with
+`https://example.invalid` as the **sole inert business destination**,
+and **does not configure any Production auth URL, phone or code**.
+App startup restores a built-in, clearly synthetic technician Session
+and role through the **normal `AuthSessionPort`**, then uses existing
+`Mock DATA` adapters and the ordinary Home/Action Workspace routes.
+This is a *Mock-only test identity*, **not a successful Production login
+or authenticated R1 role permission proof**.
+
+The configuration validator rejects this mode unless all are true:
+local Vite `DEV`, environment `dev`, business API exactly
+`https://example.invalid`, Mock enabled, no Production authentication
+override and real-writes disabled. The resulting `authOnlyMockBusiness`
+switch blocks **all non-Mock business read/command/upload transports**
+from network fallback. The browser additionally aborts **every**
+off-origin request before sending; even a blocked attempt FAILS QA.
+Production builds and normal DEV auth remain unchanged.
+
+`test:main-h5-mock` emits structured JSON and HTML under
+`test-results/main-h5-mock/`; screenshots and traces are included
+where applicable. CI's `actions/upload-artifact` runs **even when tests
+fail**, retaining evidence for seven days. The suite must capture the
+result, stage, sanitized network intents and JS errors; it must never
+record real account data. This eliminates reliance on a manually
+retained Codex execution transcript.
+
+**Separate gates** remain:
+1. *Mock UX Gate*: frequent CI/local browser tests with no real login.
+2. *Authentication isolation Gate*: source-verified login-only
+   integration, scheduled sparingly with a strict external allowlist and
+   durable evidence installed before any request.
+3. *Real business parity Gate*: authorized Beta/R1 contract and safe
+   official Order read/write E2E, not inferred from Mock UI PASS.
+
+When Mock UX breaks, Senior Developer fixes code through GitHub and
+reruns CI; Codex is needed for actual OS/device/internal-system
+observations, **not for each front-end UI regression**.

@@ -13,6 +13,7 @@
     :placeholder-style="placeholderStyle"
     :disabled="nativeDisabled"
     :maxlength="maxlength"
+    :auto-height="autoHeight"
     :aria-invalid="error"
     @input="handleInput"
     @focus="handleFocus"
@@ -33,6 +34,7 @@ const props = withDefaults(
     readonly readOnly?: boolean
     readonly error?: boolean
     readonly maxlength?: number
+    readonly autoHeight?: boolean
   }>(),
   {
     modelValue: '',
@@ -41,6 +43,7 @@ const props = withDefaults(
     disabled: false,
     readOnly: false,
     error: false,
+    autoHeight: true,
   },
 )
 

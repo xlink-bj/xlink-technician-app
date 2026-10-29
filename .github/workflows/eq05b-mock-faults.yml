@@ -1,0 +1,66 @@
+name: EQ05B Synthetic Read Faults (NO release)
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - '.github/workflows/eq05b-mock-faults.yml'
+      - 'docs/engineering/EQ05B_MOCK_FAULT_SCENARIOS.md'
+      - 'src/adapters/api/mock/fault-scenarios.ts'
+      - 'src/adapters/api/mock/router.ts'
+      - 'tests/engineering/eq05b-mock-fault-scenarios.test.ts'
+permissions:
+  contents: read
+jobs:
+  verified-engineering:
+    if: github.event.pull_request.draft == true && github.event.pull_request.head.ref == 'engineering/eq05b-deterministic-mock-faults'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+      VITE_XLINK_ENVIRONMENT: test
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Exact parent and five-file diff
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor 4b00a3ccff29b60c10b11d750168c31b84e80999 HEAD
+          git diff --name-only 4b00a3ccff29b60c10b11d750168c31b84e80999 HEAD | sort > /tmp/actual
+          printf '%s\n' '.github/workflows/eq05b-mock-faults.yml' 'docs/engineering/EQ05B_MOCK_FAULT_SCENARIOS.md' 'src/adapters/api/mock/fault-scenarios.ts' 'src/adapters/api/mock/router.ts' 'tests/engineering/eq05b-mock-fault-scenarios.test.ts' | sort > /tmp/expected
+          diff -u /tmp/expected /tmp/actual
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec vitest run tests/engineering/eq05b-mock-fault-scenarios.test.ts tests/engineering/eq05-mock-command-state.test.ts tests/engineering/eq01-mock-scenarios.test.ts
+      - run: pnpm verify:full
+      - run: pnpm build:h5 && pnpm build:mp-weixin && pnpm build:app
+  unchanged-goldens:
+    if: github.event.pull_request.draft == true && github.event.pull_request.head.ref == 'engineering/eq05b-deterministic-mock-faults'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+      H5_VISUAL_OWNER_APPROVAL: 'PENDING'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: |
+          pnpm exec playwright install --with-deps chromium
+          sudo apt-get update -qq
+          sudo apt-get install -y fonts-noto-cjk
+      - run: pnpm test:ds02a:gallery
+      - run: pnpm test:ds02a:business

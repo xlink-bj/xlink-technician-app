@@ -1,0 +1,244 @@
+/* Q03 Commercial Catalog Visual Baseline — follows owner-approved Q01.
+ * A single real uni-app screen for both DEV Mock and source-backed production.
+ * Paint only: never changes catalogue membership, selection or price authority.
+ */
+.quotation-content__catalog-page {
+  --q03-ink: #172a44;
+  --q03-secondary: #788aa4;
+  --q03-action: #176dde;
+  background: #f5f7fb;
+  padding: 0 16px calc(8px + env(safe-area-inset-bottom));
+}
+.quotation-content__catalog-page .quotation-content__catalog-topbar {
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: 74px minmax(0,1fr) 76px;
+  flex: 0 0 52px;
+  min-height: 52px;
+  margin: 0 -16px;
+  padding: 0 14px;
+  background: #fff;
+  border-bottom: 1px solid #e9eef5;
+}
+.quotation-content__catalog-page .quotation-content__catalog-title {
+  color: #132844; font-size: 18px; line-height: 1.3; font-weight: 750;
+  letter-spacing: -.3px;
+}
+.quotation-content__catalog-page .quotation-content__catalog-back {
+  color: #266fdb; font-size: 13px; min-height: 44px; font-weight: 650;
+}
+.quotation-content__catalog-page .quotation-content__catalog-mode {
+  background: #eaf3ff; color: #226bd1;
+  font-size: 10px; border-radius: 8px; padding: 6px 8px; font-weight: 650;
+}
+.quotation-content__catalog-page .quotation-content__catalog-target {
+  min-height: 0;
+  padding: 13px 13px;
+  border: 1px solid #e5ebf4;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 3px 12px rgba(32, 60, 100, .025);
+  margin: 12px 0 0;
+  gap: 10px;
+}
+.quotation-content__catalog-page .quotation-content__catalog-target-index {
+  flex: 0 0 34px; width: 34px; height: 34px;
+  border: 0; border-radius: 10px; background: #eaf3ff;
+  color: var(--q03-action); font-size: 13px;
+}
+.quotation-content__catalog-page .quotation-content__catalog-target-label {
+  color: #8495ad; font-size: 11px; line-height: 1.45;
+}
+.quotation-content__catalog-page .quotation-content__catalog-target-title {
+  color: var(--q03-ink); font-size: 14px; font-weight: 740;
+  line-height: 1.4; margin-top: 3px;
+}
+.quotation-content__catalog-page .quotation-content__catalog-target-meta {
+  color: #8d9ab0; font-size: 10px; line-height: 1.35; margin-top: 3px;
+}
+.quotation-content__catalog-page .quotation-content__catalog-target-count {
+  color: var(--q03-action); background: #edf5ff; border-radius: 7px;
+  font-size: 11px; font-weight: 680; padding: 6px 7px;
+}
+.quotation-content__catalog-page .quotation-content__catalog-intro {
+  margin: 13px 2px 8px; padding: 0; min-height: 0;
+  flex: 0 0 auto;
+}
+.quotation-content__catalog-page .quotation-content__catalog-intro-title {
+  color: var(--q03-ink); font-size: 17px; font-weight: 750;
+  line-height: 1.4;
+}
+.quotation-content__catalog-page .quotation-content__catalog-intro-description {
+  color: var(--q03-secondary); font-size: 11px; line-height: 1.4;
+  margin-top: 3px;
+}
+.quotation-content__catalog-page .quotation-content__catalog-main {
+  margin: 0; padding: 10px 11px 0;
+  background: #fff;
+  border: 1px solid #e7edf6;
+  border-radius: 15px;
+  box-shadow: 0 2px 10px rgba(35,58,90,.025);
+  min-height: 0;
+}
+.quotation-content__catalog-page .quotation-content__search-wrap {
+  box-sizing: border-box; flex: 0 0 44px; height: 44px; min-height: 44px;
+  margin: 0 0 5px; padding: 0 6px 0 12px;
+  border: 1px solid #e1e8f2; border-radius: 10px;
+  background: #f7f9fc;
+}
+.quotation-content__catalog-page .quotation-content__search-input {
+  min-width: 0; font-size: 13px; color: #213952;
+}
+.quotation-content__catalog-page .quotation-content__search-action {
+  background: #e7f1ff; color: var(--q03-action);
+  border: 0; border-radius: 7px; min-height: 34px;
+  font-size: 12px; font-weight: 680;
+}
+.quotation-content__catalog-page .quotation-content__category-grid {
+  display: grid; flex: 0 0 44px; height: 44px;
+  gap: 0; grid-template-columns: repeat(4,minmax(0,1fr));
+  border-bottom: 1px solid #e8eef6;
+}
+/* Tab-strip geometry: all four labels are vertically centered within the
+ * same 44px hit target. The active indicator is absolutely anchored to the
+ * strip bottom, never used to position the label. Scope to the actual
+ * navigation grid: SKU option buttons are a different component. */
+.quotation-content__catalog-page .quotation-content__catalog-main > .quotation-content__category-grid > .quotation-content__category {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  min-height: 44px;
+  margin: 0;
+  padding: 0 2px;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  color: #7a8ca5;
+  font-size: 14px;
+  font-weight: 580;
+  line-height: 20px;
+  text-align: center;
+  position: relative;
+}
+.quotation-content__catalog-page .quotation-content__category--active {
+  color: var(--q03-action); font-weight: 760;
+  background: transparent; border-bottom: 0;
+}
+.quotation-content__catalog-page .quotation-content__category--active::before {
+  content: ''; position: absolute; height: 3px; bottom: 0;
+  left: 17%; right: 17%; border-radius: 2px; background: var(--q03-action);
+}
+.quotation-content__catalog-page .quotation-content__catalog-section-heading {
+  flex: 0 0 auto; margin: 10px 3px 8px; padding: 0;
+  align-items: center;
+}
+.quotation-content__catalog-page .quotation-content__catalog-section-title {
+  color: #263d59; font-size: 13px; font-weight: 740;
+}
+.quotation-content__catalog-page .quotation-content__catalog-section-note {
+  color: #8d9cb0; font-size: 11px; font-weight: 530;
+}
+.quotation-content__catalog-page .quotation-content__catalog-browser {
+  min-height: 0; flex: 1 1 auto;
+}
+.quotation-content__catalog-page .quotation-content__catalog-list {
+  box-sizing: border-box; flex: 1 1 auto; min-height: 90px;
+  margin: 0; padding: 0 0 9px; width: 100%; height: 0;
+}
+.quotation-content__catalog-page .quotation-content__catalog-item {
+  box-sizing: border-box; display: flex; flex-direction: column;
+  margin: 0 0 9px; padding: 13px 12px 11px;
+  min-height: 0; gap: 8px;
+  background: #fff;
+  border: 1px solid #e4ebf4; border-radius: 12px;
+  box-shadow: none;
+}
+.quotation-content__catalog-page .quotation-content__catalog-item-main {
+  gap: 10px; align-items: flex-start; min-width: 0;
+}
+.quotation-content__catalog-page .quotation-content__catalog-thumbnail {
+  box-sizing: border-box;
+  flex: 0 0 42px; width: 42px; height: 42px;
+  background: #eaf2ff; border: 0; border-radius: 10px;
+}
+.quotation-content__catalog-page .quotation-content__catalog-thumbnail--material {
+  background: #e9f8ef;
+}
+.quotation-content__catalog-page .quotation-content__catalog-thumbnail--measure {
+  background: #edf1ff;
+}
+.quotation-content__catalog-page .quotation-content__catalog-thumbnail-mark {
+  font-size: 19px; font-weight: 740; color: #2873da;
+}
+.quotation-content__catalog-page .quotation-content__catalog-thumbnail--material .quotation-content__catalog-thumbnail-mark {
+  color: #16a268;
+}
+.quotation-content__catalog-page .quotation-content__catalog-item-copy {
+  gap: 2px; padding: 0;
+}
+.quotation-content__catalog-page .quotation-content__catalog-item-heading {
+  gap: 6px; align-items: center;
+}
+.quotation-content__catalog-page .quotation-content__catalog-kind-pill {
+  display: none; /* the category tab already identifies this kind */
+}
+.quotation-content__catalog-page .quotation-content__catalog-selected-tag {
+  padding: 4px 6px; font-size: 10px; border-radius: 6px;
+}
+.quotation-content__catalog-page .quotation-content__catalog-item-title {
+  font-size: 15px; line-height: 1.45; font-weight: 720;
+  color: var(--q03-ink); letter-spacing: -.1px;
+}
+.quotation-content__catalog-page .quotation-content__catalog-item-description {
+  font-size: 11px; line-height: 1.42; color: #7b8ca4; margin: 3px 0 0;
+  -webkit-line-clamp: 2;
+}
+.quotation-content__catalog-page .quotation-content__catalog-item-details {
+  gap: 5px; margin-top: 3px; flex-wrap: wrap;
+}
+.quotation-content__catalog-page .quotation-content__catalog-item-detail {
+  border: 0; background: #f2f5f9;
+  border-radius: 5px; padding: 3px 6px;
+  color: #768aa3; font-size: 10px;
+}
+.quotation-content__catalog-page .quotation-content__catalog-item-footer {
+  display: flex; align-items: center; gap: 10px;
+  border-top: 1px solid #edf1f6; padding: 9px 0 0; margin: 0;
+  justify-content: space-between;
+}
+.quotation-content__catalog-page .quotation-content__catalog-item-price {
+  flex: 1 1 auto; min-width: 0; display: flex;
+  flex-direction: column; gap: 3px;
+}
+.quotation-content__catalog-page .quotation-content__catalog-item-price-label {
+  color: #8b9aaf; font-size: 10px; line-height: 1.25;
+}
+.quotation-content__catalog-page .quotation-content__catalog-item-price-value {
+  color: #176dde; font-size: 16px; font-weight: 760;
+  line-height: 1.3; font-variant-numeric: tabular-nums;
+}
+.quotation-content__catalog-page .quotation-content__catalog-item-action {
+  flex: 0 0 auto; min-width: 100px;
+  min-height: 44px; height: 44px; border-radius: 10px;
+  border: 1px solid #b8d5ff; color: var(--q03-action);
+  background: #f6faff; padding: 0 10px;
+  font-size: 13px; font-weight: 690;
+}
+.quotation-content__catalog-page .quotation-content__catalog-footer {
+  flex: 0 0 auto; min-height: 72px; margin: 9px -16px 0;
+  padding: 10px 16px calc(9px + env(safe-area-inset-bottom));
+  background: #fff; border-radius: 0; border-top: 1px solid #e4ebf4;
+  box-shadow: 0 -4px 13px rgba(30,55,95,.025);
+  gap: 10px;
+}
+.quotation-content__catalog-page .quotation-content__catalog-footer-title {
+  color: #1e3855; font-size: 12px; font-weight: 730;
+}
+.quotation-content__catalog-page .quotation-content__catalog-footer-note {
+  color: #8797ac; font-size: 11px; line-height: 1.4;
+}
+.quotation-content__catalog-page .quotation-content__catalog-footer > .app-button {
+  min-height: 44px; border-radius: 10px; flex: 0 0 116px;
+}

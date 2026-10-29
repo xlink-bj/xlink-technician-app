@@ -1,0 +1,72 @@
+name: R1 F4 Local Dynamic Field Editor (offline)
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - '.github/workflows/r1-f4-local-field-editor.yml'
+      - 'docs/engineering/R1_F4_LOCAL_FIELD_EDITOR.md'
+      - 'src/app/bootstrap.ts'
+      - 'src/features/work-orders/r1-local-form-fields.ts'
+      - 'src/features/work-orders/r1-local-form-drafts.ts'
+      - 'src/features/work-orders/R1LocalFormFieldEditor.vue'
+      - 'src/features/work-orders/R1NodeFormsOverview.vue'
+      - 'tests/engineering/r1-f4-local-field-editor.test.ts'
+permissions: {contents: read}
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  r1-field-schema-and-platform:
+    if: github.event.pull_request.draft == true && github.event.pull_request.head.ref == 'feature/r1-f4-local-field-editor'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      VITE_XLINK_ENVIRONMENT: test
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify exact F3 ancestry and narrow UI schema scope
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          git merge-base --is-ancestor 8e8872e9a165db2523c6b7bb888f64ea24aec84e HEAD
+          git diff --name-only 8e8872e9a165db2523c6b7bb888f64ea24aec84e HEAD | sort > /tmp/actual
+          printf '%s\n' '.github/workflows/r1-f4-local-field-editor.yml' 'docs/engineering/R1_F4_LOCAL_FIELD_EDITOR.md' 'src/app/bootstrap.ts' 'src/features/work-orders/r1-local-form-fields.ts' 'src/features/work-orders/r1-local-form-drafts.ts' 'src/features/work-orders/R1LocalFormFieldEditor.vue' 'src/features/work-orders/R1NodeFormsOverview.vue' 'tests/engineering/r1-f4-local-field-editor.test.ts' | sort > /tmp/expected
+          diff -u /tmp/expected /tmp/actual
+          test "$(git diff --name-only 8e8872e9a165db2523c6b7bb888f64ea24aec84e HEAD -- pnpm-lock.yaml src/adapters/api/technician-api-commands.ts src/adapters/api/uni-api-command-transport.ts src/features/work-orders/r1-multistep-offline-transaction.ts | wc -l)" -eq 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22', cache: pnpm}
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec vitest run tests/engineering/r1-f4-local-field-editor.test.ts tests/engineering/r1-f3-local-form-drafts.test.ts tests/engineering/r1-f2-multiform-transaction.test.ts
+      - run: pnpm verify:critical
+      - run: pnpm verify:full
+      - run: pnpm build:h5 && pnpm build:mp-weixin && pnpm build:app
+  inherited-six-stage-and-goldens:
+    if: github.event.pull_request.draft == true && github.event.pull_request.head.ref == 'feature/r1-f4-local-field-editor'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    env:
+      VITE_XLINK_ENVIRONMENT: test
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+      H5_VISUAL_OWNER_APPROVAL: 'PENDING'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22', cache: pnpm}
+      - run: pnpm install --frozen-lockfile
+      - run: |
+          pnpm exec playwright install --with-deps chromium
+          sudo apt-get update -qq
+          sudo apt-get install -y fonts-noto-cjk
+      - run: pnpm exec playwright test --config playwright.main-h5-mock.config.ts tests/h5-main-mock/m1-i7-six-stage-integration.spec.ts
+      - run: pnpm test:ds02a:gallery
+      - run: pnpm test:ds02a:business

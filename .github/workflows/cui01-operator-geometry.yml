@@ -1,0 +1,46 @@
+name: CUI-01 Operator Geometry 375
+
+on:
+  pull_request:
+    paths:
+      - 'src/shared/ui/**'
+      - 'src/pages/index/index.vue'
+      - 'src/features/work-orders/quotation/**'
+      - 'tests/h5-main-mock/operator-control-geometry.spec.ts'
+      - '.github/workflows/cui01-operator-geometry.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  four-screen-geometry:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.31.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Chromium and Chinese typography
+        run: |
+          pnpm exec playwright install --with-deps chromium
+          sudo apt-get update
+          sudo apt-get install -y fonts-noto-cjk
+      - name: Measure actual operator controls in four page states, 375 only
+        run: pnpm exec playwright test --config playwright.main-h5-mock.config.ts tests/h5-main-mock/operator-control-geometry.spec.ts
+      - name: Keep real screenshot and geometry artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cui01-operator-geometry-${{ github.run_id }}
+          path: |
+            .review/cui01-geometry/
+            test-results/main-h5-mock/
+          retention-days: 14
+          if-no-files-found: warn

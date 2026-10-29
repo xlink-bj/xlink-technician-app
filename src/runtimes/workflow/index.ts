@@ -35,3 +35,4 @@ export type {
   WorkflowNodeMetadata,
   WorkflowNodeVisibilityEvidence,
 } from './types'
+export type { FormPurpose } from '@shared/ports'

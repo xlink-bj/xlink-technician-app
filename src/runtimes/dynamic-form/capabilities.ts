@@ -23,13 +23,15 @@ const supportedTypes = new Set([
   'rate',
   'file',
   'image',
-  'area',
 ])
 
 const optionTypes = new Set(['select', 'bizSelect', 'cascade', 'radio', 'checkbox'])
-const codeBackedTypes = new Set(['select', 'bizSelect', 'radio', 'checkbox'])
+// bizSelect is a business-record provider, not a code table. It must not be
+// sent through the code provider merely because it has a valueOption marker.
+const codeBackedTypes = new Set(['select', 'radio', 'checkbox'])
 
 export function classifyFieldType(type: string): FormCapabilityDecision {
+  if (type === 'gap' || type === 'title') return { capability: 'PRESENTATION_ONLY' }
   if (!supportedTypes.has(type)) {
     return { capability: 'UNSUPPORTED', reason: `unsupported field type: ${type}` }
   }
@@ -37,7 +39,7 @@ export function classifyFieldType(type: string): FormCapabilityDecision {
 }
 
 export function selectOptionProvider(field: FormFieldSchema): OptionProviderDecision {
-  if (field.key === 'workType') {
+  if (field.valueKey === 'workType') {
     return { state: 'provider', provider: { kind: 'workTypes' } }
   }
   if (field.type === 'cascade' && field.valueOption) {

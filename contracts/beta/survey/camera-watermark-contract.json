@@ -1,0 +1,107 @@
+{
+  "schemaVersion": 1,
+  "environment": "beta",
+  "domain": "survey_camera_watermark",
+  "semanticIdentity": "r1_camera_post_upload_remote_watermark",
+  "sanitized": true,
+  "source": {
+    "r1": "xlink-business-jishi-3.0/resources/js/common.js",
+    "backend": "xlink-cloud-backend/ImageController.java,ImageServiceImpl.java",
+    "authority": "R1 flow plus Backend implementation evidence; R2 presentation only",
+    "noLiveWrite": true,
+    "rawProductionPayloadPersisted": false
+  },
+  "pipeline": {
+    "stage": "POST_UPLOAD",
+    "album": [
+      "LocalMedia",
+      "DurableMediaStore",
+      "UploadPort",
+      "final UploadedMediaRef",
+      "Survey FormData"
+    ],
+    "camera": [
+      "LocalMedia",
+      "DurableMediaStore",
+      "location evidence",
+      "UploadPort",
+      "source UploadedMediaRef",
+      "persist source_uploaded checkpoint",
+      "MediaPostUploadProcessorPort",
+      "final UploadedMediaRef",
+      "Survey FormData"
+    ],
+    "sourceAndFinalAreDistinct": true,
+    "sourceRefNeverEntersSurveyFormData": true
+  },
+  "r1Request": {
+    "endpoint": "biz/image/uploadAddLogo.do",
+    "method": "POST",
+    "parameters": ["qiniuImagePath", "address", "latitude", "longitude"],
+    "callerCoordinateSystem": "gcj02",
+    "callerAddressIsAuthority": false,
+    "callerTimeIsAuthority": false
+  },
+  "backendBehavior": {
+    "downloadsSourceQiniuObject": true,
+    "addsYuHongLogo": true,
+    "addressAuthority": "SERVER_REVERSE_GEOCODE",
+    "timestampAuthority": "SERVER_CURRENT_TIME",
+    "createsNewQiniuObject": true,
+    "returns": "{field: new_qiniu_key}",
+    "finalUrlUsesProcessedObject": true,
+    "finalNameAndExtensionUseOriginalUploadKey": true
+  },
+  "coordinateContract": {
+    "status": "CONFLICT_UNRESOLVED",
+    "r1Caller": "GCJ02",
+    "backendReverseGeocoderInput": "WGS84_EXPECTED_BY_IMPLEMENTATION",
+    "automaticConversion": false,
+    "realAdapterEnabled": false
+  },
+  "idempotency": {
+    "status": "NOT_PROVEN",
+    "newUuidPerInvocation": true,
+    "idempotencyKeyEvidence": false,
+    "reconciliationApiFound": false,
+    "ambiguousPostprocessAutoRetry": false
+  },
+  "queue": {
+    "states": [
+      "queued",
+      "preprocessing",
+      "ready_to_upload",
+      "uploading",
+      "source_uploaded",
+      "postprocessing",
+      "uploaded",
+      "failed_retryable",
+      "failed_terminal"
+    ],
+    "sourceUploadedRefCheckpoint": true,
+    "sourceUploadNotRepeatedFromCheckpoint": true,
+    "sourceRefRetainedUntilFinalCleanup": true,
+    "noNetworkStatusAutoRetry": true
+  },
+  "runtime": {
+    "genericPort": "MediaPostUploadProcessorPort",
+    "preflightBeforeSourceUpload": true,
+    "preflightFailure": "retain durable local media; no token, source upload, or sourceUploadedRef",
+    "mockPipeline": "ENABLED_DETERMINISTIC",
+    "realUploadAddLogo": "DISABLED",
+    "realWrites": "NOT_AUTHORIZED"
+  },
+  "surveyPolicy": {
+    "cameraPolicy": "CAMERA_PLUS_LOCATION_EVIDENCE_PLUS_REMOTE_LOCATION_WATERMARK",
+    "albumPolicy": "NO_WATERMARK_NO_REQUIRED_LOCATION",
+    "surveyDrawing": "DEFERRED_NON_BLOCKING",
+    "lbsCheckin": "SEPARATE_BUSINESS_COMMAND_NOT_IMPLEMENTED"
+  },
+  "deferred": [
+    "coordinate contract live verification",
+    "real Qiniu upload and uploadAddLogo execution",
+    "device restart smoke on MP/App",
+    "server idempotency and reconciliation",
+    "LBS check-in business command"
+  ]
+}

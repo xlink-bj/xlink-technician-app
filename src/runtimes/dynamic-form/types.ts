@@ -1,7 +1,12 @@
 import type { CompatibilityEntry } from '@shared/config'
-import type { LocalMediaRef } from '@shared/types'
+import type { FormFieldVisibility, FormFieldVisibilityPath } from '@shared/ports'
+import type { LocalMediaRef, MediaValueRef } from '@shared/types'
 
-export type FormCapability = 'SUPPORTED_GENERIC' | 'CONDITIONAL_CAPABILITY' | 'UNSUPPORTED'
+export type FormCapability =
+  | 'SUPPORTED_GENERIC'
+  | 'CONDITIONAL_CAPABILITY'
+  | 'PRESENTATION_ONLY'
+  | 'UNSUPPORTED'
 
 export type NormalizedFieldType =
   | 'text'
@@ -23,28 +28,42 @@ export type NormalizedFieldType =
   | 'file'
   | 'image'
   | 'area'
+  | 'gap'
 
 export interface FormOption {
   readonly value: string
   readonly label: string
+  readonly children?: readonly FormOption[]
 }
 
-export type VisibilityPath = string | readonly string[]
+export type VisibilityPath = FormFieldVisibilityPath
 
-export type VisibilityExpression =
-  | { readonly kind: 'equals'; readonly path: VisibilityPath; readonly value: unknown }
-  | { readonly kind: 'includes'; readonly path: VisibilityPath; readonly value: unknown }
-  | { readonly kind: 'exists'; readonly path: VisibilityPath; readonly expected: boolean }
-  | { readonly kind: 'all'; readonly conditions: readonly VisibilityExpression[] }
+export type VisibilityExpression = FormFieldVisibility
+
+/** Backend showList projection used by the mobile detail Action surface. */
+export type FormRuntimeSurface = 'mobile_detail'
 
 export interface FormFieldSchema {
-  readonly key: string
+  /** Stable field-row identity used for runtime/UI addressing. */
+  readonly fieldId: string
+  /** FormData business key; duplicate field rows may share this key. */
+  readonly valueKey: string
   readonly type: string
   readonly required?: boolean
   readonly readOnly?: boolean
+  readonly order?: number
+  readonly state?: number | string
+  readonly fixed?: string | number | boolean
+  readonly operationType?: string | number
+  readonly presentation?: Readonly<Record<string, string | number | boolean>>
+  readonly showList?: readonly (string | number)[]
+  readonly mobileDetailHidden?: boolean
+  readonly presentationOnly?: boolean
+  readonly multiple?: boolean
   readonly visibility?: VisibilityExpression
   readonly valueOption?: string
   readonly inlineOptions?: readonly FormOption[]
+  readonly unsupportedReason?: string
 }
 
 export interface FormCapabilityDecision {
@@ -72,6 +91,7 @@ export interface VisibilityEvaluation {
 }
 
 export interface FieldStateContext {
+  readonly surface?: FormRuntimeSurface
   readonly workflowReadOnly?: boolean
   readonly fixedFormReadOnly?: boolean
   readonly runtimeReadOnly?: boolean
@@ -95,7 +115,8 @@ export type NormalizedFieldValue =
   | boolean
   | null
   | LocalMediaRef
-  | readonly (string | number | boolean | LocalMediaRef)[]
+  | MediaValueRef
+  | readonly (string | number | boolean | LocalMediaRef | MediaValueRef)[]
 
 export type NormalizationResult =
   | { readonly ok: true; readonly value: NormalizedFieldValue }
@@ -110,7 +131,8 @@ export type SubmissionResult =
   | {
       readonly ok: false
       readonly reason: 'unsupported_capability' | 'validation'
-      readonly fieldKey?: string
+      readonly fieldId?: string
+      readonly valueKey?: string
       readonly message: string
     }
 

@@ -1,0 +1,78 @@
+name: B2X2 Commercial UI Parity and QA Isolation
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/b2x-presentation-isolation.yml'
+      - 'scripts/check-b2x2-commercial-ui-parity.mjs'
+      - 'src/pages/dev/**'
+      - 'src/features/work-orders/**'
+      - 'src/adapters/api/mock/fixtures.ts'
+      - 'src/adapters/api/mock/router.ts'
+      - 'src/pages.json'
+      - 'docs/ux/B2X2_COMMERCIAL_UI_PARITY_20261026.md'
+      - 'playwright.main-h5-mock.config.ts'
+      - 'tests/h5-main-mock/b2x-presentation-separation.spec.ts'
+      - 'src/shared/ui/dev-review-mode.ts'
+      - 'src/shared/ui/work-order-number-display.ts'
+      - 'src/pages/index/index.vue'
+      - 'src/pages/work-orders/detail.vue'
+      - 'src/pages/work-orders/signing-order-read.vue'
+      - 'src/features/work-orders/quotation/QuotationOrderHub.vue'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  commercial-and-dev-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+    steps:
+      - name: Check out exact PR source
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+
+      - name: Install frozen dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Static commercial/QA boundary and TypeScript gate
+        run: |
+          pnpm run check:b2x2-parity
+          pnpm run typecheck
+
+      - name: Source-neutral presentation regression
+        run: pnpm exec vitest run tests/g4ux/work-order-number-display.test.ts tests/g4ux/mock-runtime.test.ts
+
+      - name: Install Playwright Chromium and Chinese font
+        run: |
+          pnpm exec playwright install --with-deps chromium
+          sudo apt-get update -qq
+          sudo apt-get install -y fonts-noto-cjk
+
+      - name: Verify same commercial UI and isolated DEV QA
+        run: pnpm exec playwright test --config playwright.main-h5-mock.config.ts b2x-presentation-separation.spec.ts
+
+      - name: Preserve exact-HEAD screenshot evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: b2x2-commercial-qa-${{ github.run_id }}
+          path: |
+            test-results/main-h5-mock/
+          if-no-files-found: warn
+          retention-days: 14

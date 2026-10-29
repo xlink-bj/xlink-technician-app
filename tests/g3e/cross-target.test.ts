@@ -46,7 +46,7 @@ function createFoundationComposition() {
       definitionId: asOpaqueId<'WorkflowDefinitionId'>('workflow-definition-001'),
       runId: asOpaqueId<'WorkflowRunId'>('workflow-run-001'),
     }),
-    form: evaluateFieldState({ key: 'notes', type: 'text' }),
+    form: evaluateFieldState({ fieldId: 'notes', valueKey: 'notes', type: 'text' }),
   }
 }
 

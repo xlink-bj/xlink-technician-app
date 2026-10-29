@@ -1,0 +1,135 @@
+name: EQ01 Quality + Mock Ownership Baseline (NO release)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'src/adapters/api/mock/**'
+      - 'src/app/action-workspace-harness.ts'
+      - 'scripts/eq01-quality-census.mjs'
+      - 'tests/engineering/**'
+      - 'docs/engineering/EQ01_QUALITY_BASELINE_AND_MOCK_CONTRACT.md'
+      - '.github/workflows/eq01-quality-mock-baseline.yml'
+
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  full-engineering:
+    if: github.event.pull_request.draft == true && github.event.pull_request.head.ref == 'engineering/eq01-quality-baseline-mock-ownership'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Pin parent and strictly limit EQ01 file scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor 878214e30f101c6e045eef5be4b466484f22e189 HEAD
+          git diff --name-only 878214e30f101c6e045eef5be4b466484f22e189 HEAD | sort > /tmp/eq01-actual.txt
+          cat > /tmp/eq01-allowed.txt <<'EOF'
+          .github/workflows/eq01-quality-mock-baseline.yml
+          docs/engineering/EQ01_QUALITY_BASELINE_AND_MOCK_CONTRACT.md
+          scripts/eq01-quality-census.mjs
+          scripts/check-g4f-phase1a.mjs
+          src/adapters/api/mock/index.ts
+          src/adapters/api/mock/ownership.ts
+          src/adapters/api/mock/router.ts
+          src/adapters/api/mock/scenario-registry.ts
+          src/app/action-workspace-harness.ts
+          tests/engineering/eq01-mock-scenarios.test.ts
+          EOF
+          sort -o /tmp/eq01-allowed.txt /tmp/eq01-allowed.txt
+          diff -u /tmp/eq01-allowed.txt /tmp/eq01-actual.txt
+          test "$(git diff --name-only 878214e30f101c6e045eef5be4b466484f22e189 HEAD -- src/adapters/api/uni-api-read-transport.ts src/adapters/api/uni-api-command-transport.ts src/features tests/ds02a-main/snapshots tests/ds02a-gallery/snapshots | wc -l)" -eq 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Reproducible static LOC and test effectiveness census
+        run: node scripts/eq01-quality-census.mjs --output .review/eq01/quality-census.json
+      - name: Focused no-fallback registry and existing authorization regression
+        env:
+          VITE_XLINK_ENVIRONMENT: test
+        run: |
+          pnpm exec vitest run \
+            tests/engineering/eq01-mock-scenarios.test.ts \
+            tests/g4ux/mock-runtime.test.ts \
+            tests/g4ux/production-auth-mock-isolation.test.ts \
+            tests/g4f/p0-order-raw-transport-fence.test.ts \
+            tests/g4f/p0-role-order-tenant-negative.test.ts
+      - name: Full architecture, typechecks, all unit/contract tests
+        env:
+          VITE_XLINK_ENVIRONMENT: test
+        run: pnpm verify
+      - name: Build real H5 target without test fixture
+        run: pnpm build:h5
+      - name: Build actual MP-Weixin
+        run: pnpm build:mp-weixin
+      - name: Build actual uni-app App
+        run: pnpm build:app
+      - name: Preserve quality metrics for Owner review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eq01-quality-census-${{ github.run_id }}
+          path: .review/eq01/
+          if-no-files-found: warn
+          retention-days: 30
+
+  real-h5-regression:
+    if: github.event.pull_request.draft == true && github.event.pull_request.head.ref == 'engineering/eq01-quality-baseline-mock-ownership'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+      H5_VISUAL_OWNER_APPROVAL: 'PENDING'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Deterministic Chromium/CJK
+        run: |
+          pnpm exec playwright install --with-deps chromium
+          sudo apt-get update -qq
+          sudo apt-get install -y fonts-noto-cjk
+      - name: DS02A Gallery — existing approved 3 scenes
+        run: pnpm test:ds02a:gallery
+      - name: Main H5 List / Detail / Quotation Q01 — existing approved 9 scenes
+        run: pnpm test:ds02a:business
+      - name: Real H5 main-app synthetic journeys — zero external requests
+        run: |
+          pnpm exec playwright test --config playwright.main-h5-mock.config.ts \
+            tests/h5-main-mock/main-app-quotation.spec.ts \
+            tests/h5-main-mock/ds07c4b-quote-signing.spec.ts \
+            tests/h5-main-mock/ds07c4b-signing-state-visual.spec.ts \
+            tests/h5-main-mock/m1-signing-official-order-read.spec.ts
+      - name: Preserve actual/diff/trace
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eq01-h5-${{ github.run_id }}
+          path: |
+            test-results/ds02a-gallery/
+            test-results/ds02a-main/
+            test-results/main-h5-mock/
+          if-no-files-found: warn
+          retention-days: 30

@@ -1,0 +1,356 @@
+/* Q01 Visual Baseline V1 — sole final paint owner for selected quotation rows.
+ * Source: Owner-approved q01_commercial_visual_v2 (2026-10-27).
+ * Applies to the real Mock/Real quotation composition identically.
+ * All colors/geometry are scoped here; legacy generic catalogue CSS stays
+ * responsible for other states and Q03. Never fabricates monetary data. */
+.quotation-content--baseline {
+  --q01-ink: var(--app-craft-ink, #17243a);
+  --q01-subtle: var(--app-craft-secondary, #53657b);
+  --q01-muted: var(--app-craft-caption, #68788d);
+  --q01-blue: var(--app-craft-action, #1769dc);
+  --q01-outline: var(--app-craft-divider, #e6ecf3);
+  --q01-surface: var(--app-craft-surface, #fff);
+  --q01-card-shadow: var(--app-craft-surface-shadow, 0 4px 20px rgba(24,50,95,.04));
+}
+.quotation-content--baseline .quotation-content__workbench {
+  border: 0; background: transparent; box-shadow: none; padding: 0 0 18px;
+}
+
+
+
+
+
+.quotation-content--baseline .quotation-content__groups {
+  display: flex; flex-direction: column; gap: 18px;
+}
+.quotation-content--baseline .quotation-content__group.app-surface {
+  background: transparent; border: 0; box-shadow: none;
+  padding: 0; border-radius: 0; overflow: visible;
+}
+
+.quotation-content--baseline .quotation-content__group-heading {
+  align-items: flex-start; gap: 11px; padding: 0; border: 0;
+}
+.quotation-content--baseline .quotation-content__group-index {
+  box-sizing: border-box; display: flex; align-items: center; justify-content: center;
+  flex: 0 0 38px; width: 38px; height: 38px;
+  color: var(--q01-blue); background: #ebf3ff; border: 0;
+  border-radius: 12px; font-size: 17px; font-weight: 730;
+}
+.quotation-content--baseline .quotation-content__group-title-copy { min-width: 0; flex: 1; }
+.quotation-content--baseline .quotation-content__group-eyebrow {
+  color: #8797ae; font-size: 11.5px; font-weight: 550;
+}
+.quotation-content--baseline .quotation-content__group-title {
+  margin-top: 8px; color: var(--q01-ink);
+  font-size: 16px; font-weight: 750; line-height: 1.48;
+  letter-spacing: -.18px; overflow-wrap: break-word;
+}
+.quotation-content--baseline .quotation-content__group-location {
+  color: #8392a7; font-size: 12px; margin-top: 9px;
+  line-height: 1.5;
+}
+.quotation-content--baseline .quotation-content__group-heading-actions { gap: 8px; align-items: flex-end; }
+.quotation-content--baseline .quotation-content__group-count {
+  background: #edf5ff; color: var(--q01-blue);
+  font-size: 11px; border-radius: 7px; padding: 5px 8px;
+}
+.quotation-content--baseline .quotation-content__context-toggle {
+  padding: 0; min-height: 44px; font-size: 12px; font-weight: 670;
+  color: var(--q01-blue);
+}
+.quotation-content--baseline .quotation-content__group-total-row {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 12px; margin-top: 17px; padding-top: 14px;
+  border-top: 1px solid var(--q01-outline);
+}
+.quotation-content--baseline .quotation-content__group-total-label {
+  color: var(--q01-muted); font-size: 12px;
+}
+
+.quotation-content--baseline .quotation-content__group-context {
+  background: var(--q01-surface); border: 1px solid var(--q01-outline);
+  border-radius: 13px; margin-top: 12px; padding: 16px;
+}
+
+.quotation-content--baseline .quotation-content__composition-heading {
+  display: flex; align-items: center; padding: 0 2px 9px;
+  background: transparent; border: 0; gap: 8px;
+}
+.quotation-content--baseline .quotation-content__composition-title {
+  color: var(--q01-ink); font-size: 17px; font-weight: 750;
+}
+.quotation-content--baseline .quotation-content__composition-meta {
+  margin-top: 6px; color: var(--q01-muted); font-size: 11.5px; font-weight: 500;
+}
+.quotation-content--baseline .quotation-content__details-toggle {
+  color: var(--q01-blue); font-size: 12px; font-weight: 670;
+  min-height: 44px; padding: 0 2px;
+}
+.quotation-content--baseline .quotation-content__selection-list { margin-top: 3px; }
+
+.quotation-content--baseline .quotation-content__group-section-copy {
+  display: flex; align-items: center; gap: 7px;
+}
+.quotation-content--baseline .quotation-content__group-section-copy::before {
+  content: '套'; display: flex; align-items: center; justify-content: center;
+  flex: 0 0 30px; width: 30px; height: 30px;
+  background: #eaf3ff; border-radius: 9px;
+  color: var(--q01-blue); font-size: 15px; font-weight: 750;
+  margin-right: 2px;
+}
+.quotation-content--baseline .quotation-content__group-section--procedure .quotation-content__group-section-copy::before { content: '工'; }
+.quotation-content--baseline .quotation-content__group-section--material .quotation-content__group-section-copy::before {
+  content: '材'; background: #e6f7ed; color: #139667;
+}
+.quotation-content--baseline .quotation-content__group-section--measure .quotation-content__group-section-copy::before {
+  content: '机'; background: #f0edff; color: #6d62d4;
+}
+.quotation-content--baseline .quotation-content__group-section-title {
+  color: var(--q01-ink); font-size: 15px; font-weight: 740;
+}
+.quotation-content--baseline .quotation-content__group-section-count {
+  font-size: 12px; color: var(--q01-muted); font-weight: 500;
+}
+
+.quotation-content--baseline .quotation-content__selection + .quotation-content__selection {
+  border-top: 1px solid var(--q01-outline);
+}
+.quotation-content--baseline .quotation-content__selection--package { background: transparent; }
+.quotation-content--baseline .quotation-content__line-heading {
+  display: grid; grid-template-columns: minmax(0,1fr) auto;
+  gap: 10px; align-items: start; min-width: 0;
+}
+.quotation-content--baseline .quotation-content__line-kind-mark,
+.quotation-content--baseline .quotation-content__line-kind,
+.quotation-content--baseline .quotation-content__selection-unit { display: none; }
+.quotation-content--baseline .quotation-content__line-title-wrap {
+  flex: none; display: flex; flex-direction: column; gap: 0; min-width: 0;
+}
+
+.quotation-content--baseline .quotation-content__line-money {
+  display: flex; flex-direction: column; text-align: right;
+  align-items: flex-end; gap: 3px; padding-top: 1px; min-width: 74px;
+}
+.quotation-content--baseline .quotation-content__line-money-label {
+  color: #91a0b6; font-size: 11px; line-height: 1.4;
+}
+
+
+.quotation-content--baseline .quotation-content__quantity-label {
+  color: var(--q01-muted); font-size: 12px; font-weight: 500;
+}
+.quotation-content--baseline .quotation-content__quantity-wrap {
+  display: flex; align-items: center; box-sizing: border-box;
+  flex: 0 0 128px; width: 128px; min-width: 0;
+  max-width: 128px; height: 44px; min-height: 44px;
+  border: 1px solid #d9e3f0; border-radius: 9px;
+  background: #fff; padding: 0 11px;
+}
+.quotation-content--baseline .quotation-content__quantity {
+  flex: 1; width: 60px; min-width: 0; height: 42px; padding: 0;
+  color: var(--q01-ink); font-size: 16px; font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.quotation-content--baseline .quotation-content__unit {
+  flex: none; color: #8597ae; font-size: 12px;
+}
+.quotation-content--baseline .quotation-content__remove-button {
+  margin-left: auto; min-height: 44px;
+  color: var(--q01-blue); font-size: 12.5px; font-weight: 650;
+  padding: 0 2px;
+}
+.quotation-content--baseline .quotation-content__quantity-error {
+  color: var(--app-color-danger); font-size: 11px;
+}
+.quotation-content--baseline .quotation-content__browse-catalog {
+  min-height: 48px; margin-top: 14px;
+  background: #eaf3ff; color: var(--q01-blue);
+  border: 1px solid #eaf3ff; border-radius: 11px;
+  font-size: 14px; font-weight: 700; box-shadow: none;
+}
+.quotation-content--baseline .quotation-content__add-group-button--outline {
+  min-height: 48px; margin-top: 0; border-radius: 11px;
+  color: var(--q01-blue); background: #fff;
+  border: 1px solid #b9d3fb; font-size: 14px; font-weight: 700;
+}
+
+/* Approved target: product name -> authoritative catalogue unit price ->
+   editable quantity; amount is aligned in its own price column. */
+.quotation-content--baseline .quotation-content__line-unit-price {
+  color: #8a9ab0; font-size: 12px; line-height: 1.45;
+  margin-top: 6px; font-weight: 480; font-variant-numeric: tabular-nums;
+}
+.quotation-content--baseline .quotation-content__line-controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  flex-wrap: nowrap;
+  gap: 10px;
+  padding: 0;
+  min-width: 0;
+  margin-top: 12px;
+}
+
+/* Q01 long-page hierarchy: compact eyebrow, one meaningful title and a real
+   save state, rather than repeated engineering headings and amount cards. */
+.quotation-content--baseline .quotation-content__heading {
+  margin: 5px 0 7px;
+  padding: 0 1px;
+}
+.quotation-content--baseline .quotation-content__eyebrow {
+  color: #1671e3;
+  font-size: 12px; font-weight: 680; line-height: 1.5;
+}
+.quotation-content--baseline .quotation-content__workbench-summary {
+  border: 0;
+  background: transparent;
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+  padding: 0 0 13px;
+}
+.quotation-content--baseline .quotation-content__workbench-summary-copy {
+  flex: 1; min-width: 0;
+}
+.quotation-content--baseline .quotation-content__panel-title {
+  color: var(--q01-ink);
+  font-size: 23px;
+  font-weight: 760;
+  line-height: 1.35;
+  letter-spacing: -.5px;
+}
+.quotation-content--baseline .quotation-content__line-count {
+  margin-top: 5px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #7c8fa8;
+}
+.quotation-content--baseline .quotation-content__amount-summary {
+  display: none; /* same verified total remains in repair card & sticky bar */
+}
+.quotation-content--baseline .quotation-content__local-tag {
+  flex: none;
+  align-self: center;
+  margin: 0;
+  padding: 8px 9px;
+  background: #fff0df;
+  color: #a55b08;
+  border: 1px solid #f9dfc3;
+  border-radius: 9px;
+  font-size: 11px;
+  line-height: 1.3;
+  font-weight: 640;
+  white-space: nowrap;
+}
+.quotation-content--baseline .quotation-content__review-readiness,
+.quotation-content--baseline .quotation-content__engine {
+  box-sizing: border-box;
+  position: relative;
+  background: #eaf3ff; border: 1px solid #dceaff;
+  box-shadow: none; border-radius: 13px;
+  color: #47617f;
+  margin: 6px 0 18px;
+  padding: 13px 13px 13px 47px;
+}
+.quotation-content--baseline .quotation-content__review-readiness::before,
+.quotation-content--baseline .quotation-content__engine::before {
+  box-sizing: border-box; content: 'i';
+  position: absolute; top: 14px; left: 14px;
+  display: flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; border-radius: 50%;
+  background: #1b78ee; color: #fff;
+  font-size: 14px; font-weight: 760; font-style: normal;
+}
+.quotation-content--baseline .quotation-content__review-readiness-title {
+  color: #183653; font-size: 13px; font-weight: 730; line-height: 1.5;
+}
+.quotation-content--baseline .quotation-content__review-readiness-copy {
+  color: #55708c; font-size: 12px; line-height: 1.55; margin-top: 3px;
+}
+.quotation-content--baseline .quotation-content__engine-total {
+  display: none; /* monetary values are never recomputed or concealed elsewhere */
+}
+.quotation-content--baseline .quotation-content__engine-note {
+  color: #536c89; font-size: 12px; line-height: 1.55;
+}
+.quotation-content--baseline .quotation-content__engine .app-status {
+  background: transparent; border: 0; padding: 0;
+  color: #1f4d83; font-size: 12px; line-height: 1.55;
+}
+.quotation-content--baseline .quotation-content__engine .app-status--warning {
+  color: #a45b19; font-weight: 650;
+}
+.quotation-content--baseline .quotation-content__engine-issue {
+  font-size: 11px; line-height: 1.5;
+}
+.quotation-content--baseline .quotation-content__local-status {
+  margin: 1px 0 8px; font-size: 11px; line-height: 1.45;
+}
+.quotation-content--baseline .quotation-content__group-overview {
+  background: var(--q01-surface);
+  border: 1px solid var(--q01-outline);
+  border-radius: 17px;
+  box-shadow: var(--q01-card-shadow);
+  padding: 17px 15px 16px;
+}
+.quotation-content--baseline .quotation-content__composition {
+  padding: 0;
+  border: 0;
+  margin-top: 21px;
+}
+.quotation-content--baseline .quotation-content__group-section {
+  display: block;
+  background: var(--q01-surface);
+  border: 1px solid var(--q01-outline);
+  border-radius: 17px;
+  padding: 0 16px;
+  margin: 0 0 14px;
+  box-shadow: var(--q01-card-shadow);
+  margin-bottom: 15px;
+}
+.quotation-content--baseline .quotation-content__group-section-heading {
+  margin: 0;
+  padding: 16px 0 13px;
+  border-bottom: 1px solid var(--q01-outline);
+  padding-top: 15px;
+}
+.quotation-content--baseline .quotation-content__selection {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  margin: 0;
+  padding: 17px 0 16px;
+  padding-top: 17px;
+  padding-bottom: 17px;
+}
+.quotation-content--baseline .quotation-content__line-title {
+  display: block;
+  color: var(--q01-ink);
+  letter-spacing: -.1px;
+  font-size: 15px;
+  line-height: 1.48;
+  font-weight: 710;
+}
+.quotation-content--baseline .quotation-content__line-money-value {
+  color: var(--q01-ink);
+  letter-spacing: -.4px;
+  line-height: 1.35;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  font-size: 17px;
+  font-weight: 760;
+}
+.quotation-content--baseline .quotation-content__group-subtotal {
+  display: block;
+  margin: 0;
+  text-align: right;
+  color: var(--q01-blue);
+  font-variant-numeric: tabular-nums;
+  font-size: 22px;
+  font-weight: 780;
+  letter-spacing: -.5px;
+}

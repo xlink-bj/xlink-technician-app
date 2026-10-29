@@ -28,6 +28,32 @@ export function optionalString(record: AdapterRecord, keys: readonly string[]): 
   return firstString(record, keys)
 }
 
+/** IDs may arrive under legacy and modern aliases. A present second alias
+ * must corroborate the first; choosing the first one is not provenance. */
+export function consistentWireIdentity(
+  record: AdapterRecord,
+  keys: readonly string[],
+  label: string,
+): string | undefined {
+  const ids = keys
+    .map((key) => optionalString(record, [key]))
+    .filter((id): id is string => Boolean(id))
+  if (new Set(ids).size > 1) throw new AdapterMappingError(`${label} contains contradictory identities`)
+  return ids[0]
+}
+
+export function assertMatchingWireIdentity(
+  record: AdapterRecord,
+  keys: readonly string[],
+  expected: string,
+  label: string,
+): void {
+  const id = consistentWireIdentity(record, keys, label)
+  if (id !== undefined && id !== expected) {
+    throw new AdapterMappingError(`${label} conflicts with the requested identity`)
+  }
+}
+
 export function optionalPositiveInteger(
   record: AdapterRecord,
   keys: readonly string[],
@@ -48,6 +74,21 @@ export function optionalNonNegativeInteger(
     const value = record[key]
     const numberValue = typeof value === 'number' ? value : Number(value)
     if (Number.isInteger(numberValue) && numberValue >= 0) return numberValue
+  }
+  return undefined
+}
+
+/** R1 lifecycle enums may include meaningful negative values (for example,
+ * Order state=-1 and processState=-1/-2). Missing/null/blank is not zero. */
+export function optionalSignedInteger(
+  record: AdapterRecord,
+  keys: readonly string[],
+): number | undefined {
+  for (const key of keys) {
+    const value = record[key]
+    if (typeof value !== 'number' && (typeof value !== 'string' || !value.trim())) continue
+    const parsed = typeof value === 'number' ? value : Number(value)
+    if (Number.isSafeInteger(parsed)) return parsed
   }
   return undefined
 }

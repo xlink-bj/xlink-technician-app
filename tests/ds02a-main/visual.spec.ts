@@ -1,0 +1,123 @@
+import { expect, test, type Page } from '@playwright/test'
+
+const widths = [320, 375, 390] as const
+type Scene = 'list' | 'detail' | 'quote'
+
+async function guardLocal(page: Page) {
+  const external: string[] = []
+  const errors: string[] = []
+  const failedLocal: string[] = []
+  page.on('pageerror', error => errors.push(error.message))
+  page.on('response', response => {
+    const u = new URL(response.url())
+    if (u.hostname === 'localhost' && u.port === '5174' && response.status() >= 400) {
+      failedLocal.push(response.status() + ' ' + u.pathname)
+    }
+  })
+  await page.route('**/*', route => {
+    const resource = route.request().url()
+    if (resource.startsWith('data:') || resource.startsWith('blob:') || resource.startsWith('about:')) {
+      return route.continue()
+    }
+    const u = new URL(resource)
+    if (u.hostname === 'localhost' && u.port === '5174') return route.continue()
+    external.push(route.request().method() + ' ' + u.origin)
+    return route.abort('blockedbyclient')
+  })
+  return () => {
+    expect(external, 'zero external/network/business service requests').toEqual([])
+    expect(failedLocal, 'zero failed local resources').toEqual([])
+    expect(errors, 'zero JS errors').toEqual([])
+  }
+}
+
+async function openScene(page: Page, scene: Scene) {
+  await page.goto('/#/pages/index/index', { waitUntil: 'domcontentloaded' })
+  await expect(page.locator('.home-page')).toBeVisible()
+  await expect(page.getByTestId('dev-review-tools')).toHaveCount(0)
+  await expect(page.getByTestId('business-mode-provenance')).toHaveCount(0)
+  await page.locator('.work-orders-entry').click()
+  await expect(page.locator('.work-order-card').first()).toBeVisible()
+  if (scene === 'list') return
+  await page.locator('.search-input input').fill('26018')
+  await page.locator('.search-button').click()
+  await page.locator('.work-order-card').filter({ hasText: '吴先生' }).click()
+  await expect(page.locator('.summary-number')).toContainText('#26018')
+  if (scene === 'detail') return
+  await page.locator('.primary-task-action').click()
+  await expect(page.getByTestId('quotation-order-hub')).toBeVisible()
+  await page.getByTestId('quotation-hub-create-unverified').click()
+  await expect(page.getByTestId('quotation-state-ready')).toBeVisible()
+  await expect(page.getByTestId('action-workspace-submit')).toHaveCount(0)
+  // Test the actual Q01 edit surface, not its transient empty-state loader.
+  await page.getByTestId('quotation-add-group').click()
+  await expect(page.getByTestId('quotation-first-step-repair-parts-trigger')).toBeVisible()
+  // Wait for the local draft write and derived summary to settle before
+  // comparing PNGs, so we do not snapshot a transient save indicator.
+  await expect(page.locator('.quotation-content__local-status')).toContainText('草稿已保存在本机')
+}
+
+for (const width of widths) {
+  for (const scene of ['list', 'detail', 'quote'] as const) {
+    test(`Real H5 ${scene} ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 844 })
+      const assertSafe = await guardLocal(page)
+      await openScene(page, scene)
+      await page.evaluate(async () => { await document.fonts.ready })
+      // DS-02.B: both REAL consumers must use canonical content components.
+      // A visual diff by itself cannot prove reuse, touch or text resilience.
+      if (scene === 'list') {
+        await expect(page.getByTestId('ds02b-list-heading')).toBeVisible()
+        const records = page.getByTestId('ds02b-work-order-card-surface')
+        expect(await records.count()).toBeGreaterThan(0)
+        await expect(records.first()).toHaveClass(/app-record-card--horizontal/)
+        const tags = records.first().locator('.app-meta-tag')
+        await expect(tags.first()).toBeVisible()
+        const phone = records.first().locator('.card-phone-button')
+        const contactSize = await phone.boundingBox()
+        expect(contactSize).not.toBeNull()
+        expect(contactSize!.height, 'contact target >=44px').toBeGreaterThanOrEqual(43.5)
+        expect(contactSize!.width, 'contact target >=44px').toBeGreaterThanOrEqual(43.5)
+        const accept = page.locator('.card-accept-button').first()
+        await expect(accept).toBeVisible()
+        await expect(accept).toHaveClass(/app-button--size-compact/)
+        const acceptSize = await accept.boundingBox()
+        expect(acceptSize).not.toBeNull()
+        expect(acceptSize!.height, 'shared accept CTA >=44px').toBeGreaterThanOrEqual(43.5)
+      }
+      if (scene === 'detail') {
+        await expect(page.getByTestId('ds02b-detail-heading')).toBeVisible()
+        await expect(page.getByTestId('ds02b-detail-record-card')).toHaveClass(/app-record-card/)
+        // The source-modelled MOCK-018 may omit servicePartLabel; absence is
+        // correct and must never be papered over with an invented tag.
+        const partTag = page.locator('.summary-card .app-meta-tag')
+        if (await partTag.count()) await expect(partTag).toBeVisible()
+        await expect(page.locator('.information-card.app-record-card')).toBeVisible()
+      }
+      if (scene === 'quote') {
+        // A smaller viewport must not split the four-character save action.
+        const save = page.getByTestId('quotation-first-step-save-draft')
+        await expect(save).toBeVisible()
+        const saveBox = await save.boundingBox()
+        expect(saveBox).not.toBeNull()
+        expect(saveBox!.height, 'save action remains an accessible touch target').toBeGreaterThanOrEqual(44)
+        const label = await save.locator('.app-button__label').evaluate(element => {
+          const style = getComputedStyle(element)
+          return {
+            lines: element.getBoundingClientRect().height / Number.parseFloat(style.lineHeight),
+            horizontalOverflow: element.scrollWidth - element.clientWidth,
+          }
+        })
+        expect(label.lines, 'save action label must remain a single line').toBeLessThanOrEqual(1.1)
+        expect(label.horizontalOverflow, 'save action label must not clip').toBeLessThanOrEqual(1)
+      }
+      // Snapshot the viewport after a fixed, source-modelled point in time;
+      // no production reads, no order Submit, no financial writes.
+      await expect(page).toHaveScreenshot(`ds02a-${scene}-${width}.png`)
+      const overflow = await page.evaluate(() =>
+        Math.max(document.documentElement.scrollWidth, document.body.scrollWidth) - innerWidth)
+      expect(overflow, 'business page horizontal overflow').toBeLessThanOrEqual(0)
+      assertSafe()
+    })
+  }
+}

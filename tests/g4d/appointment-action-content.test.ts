@@ -52,18 +52,18 @@ describe('Appointment Action Content presentation boundary', () => {
       definitionId: asOpaqueId<'FormDefinitionId'>('appointment-definition'),
       fields: [
         {
-          key: 'other-choice',
+          fieldId: 'other-choice', valueKey: 'other-choice',
           label: '其他选项',
           type: 'radio',
           required: false,
           readOnly: false,
           options: [{ value: 'yes', label: '是' }],
         },
-        { key: 'other-note', label: '其他说明', type: 'textarea', required: false, readOnly: false },
-        { key: 'datetime', label: '预约时间', type: 'datetime', required: true, readOnly: false },
-        { key: 'note', label: '备注', type: 'textarea', required: true, readOnly: false },
+        { fieldId: 'other-note', valueKey: 'other-note', label: '其他说明', type: 'textarea', required: false, readOnly: false },
+        { fieldId: 'datetime', valueKey: 'datetime', label: '预约时间', type: 'datetime', required: true, readOnly: false },
+        { fieldId: 'note', valueKey: 'note', label: '备注', type: 'textarea', required: true, readOnly: false },
         {
-          key: 'need',
+          fieldId: 'need', valueKey: 'need',
           label: '是否需要上门',
           type: 'radio',
           required: true,
@@ -75,20 +75,20 @@ describe('Appointment Action Content presentation boundary', () => {
     }
 
     const roles = appointmentFieldRolesFor(form)
-    expect(roles.need?.key).toBe('need')
-    expect(roles.datetime?.key).toBe('datetime')
-    expect(roles.note?.key).toBe('note')
-    expect(roles.extras.map((field) => field.key)).toEqual(['other-choice', 'other-note'])
+    expect(roles.need?.valueKey).toBe('need')
+    expect(roles.datetime?.valueKey).toBe('datetime')
+    expect(roles.note?.valueKey).toBe('note')
+    expect(roles.extras.map((field) => field.valueKey)).toEqual(['other-choice', 'other-note'])
 
     const missingKnownRole = appointmentFieldRolesFor({
       ...form,
-      fields: form.fields.filter((field) => field.key !== 'need' && field.key !== 'note'),
+      fields: form.fields.filter((field) => field.valueKey !== 'need' && field.valueKey !== 'note'),
     })
     expect(missingKnownRole.need).toBeUndefined()
     expect(missingKnownRole.note).toBeUndefined()
-    expect(missingKnownRole.extras.map((field) => field.key)).toEqual(['other-choice', 'other-note'])
+    expect(missingKnownRole.extras.map((field) => field.valueKey)).toEqual(['other-choice', 'other-note'])
 
-    const note = form.fields.find((field) => field.key === 'note')!
+    const note = form.fields.find((field) => field.valueKey === 'note')!
     const longValue = '说明'.repeat(250)
     expect(normalizeAppointmentFieldValue(note, longValue, {}).data).toBe(longValue)
   })
@@ -98,7 +98,7 @@ describe('Appointment Action Content presentation boundary', () => {
       definitionId: asOpaqueId<'FormDefinitionId'>('appointment-definition'),
       fields: [
         {
-          key: 'need',
+          fieldId: 'need', valueKey: 'need',
           label: '任意展示文案',
           type: 'radio',
           required: true,
@@ -108,7 +108,7 @@ describe('Appointment Action Content presentation boundary', () => {
             { value: '0', label: '任意文案 B' },
           ],
         },
-        { key: 'datetime', label: '任意时间文案', type: 'datetime', required: true, readOnly: false },
+        { fieldId: 'datetime', valueKey: 'datetime', label: '任意时间文案', type: 'datetime', required: true, readOnly: false },
       ],
       values: { need: '1', datetime: '2026-04-20 10:00' },
     }
@@ -126,15 +126,15 @@ describe('Appointment Action Content presentation boundary', () => {
       definitionId: asOpaqueId<'FormDefinitionId'>('appointment-definition'),
       fields: [
         {
-          key: 'need',
+          fieldId: 'need', valueKey: 'need',
           label: '是否需要上门',
           type: 'radio',
           required: true,
           readOnly: false,
           options: [{ value: '1', label: '需要上门' }, { value: '0', label: '暂不上门' }],
         },
-        { key: 'datetime', label: '预约时间', type: 'datetime', required: true, readOnly: false },
-        { key: 'note', label: '备注', type: 'textarea', required: false, readOnly: false },
+        { fieldId: 'datetime', valueKey: 'datetime', label: '预约时间', type: 'datetime', required: true, readOnly: false },
+        { fieldId: 'note', valueKey: 'note', label: '备注', type: 'textarea', required: false, readOnly: false },
       ],
       values: { need: '0', datetime: '2026-04-20 10:00', note: '保留备注' },
     }

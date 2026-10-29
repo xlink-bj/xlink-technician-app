@@ -9,64 +9,45 @@
   </view>
 
   <view v-else class="detail-page">
-    <view v-if="showLoadingSkeleton" class="detail-state detail-loading-state" aria-label="正在加载工单详情">
-      <view class="detail-skeleton" aria-hidden="true">
-        <view class="skeleton-surface skeleton-summary">
-          <view class="skeleton-summary-top">
-            <view class="skeleton-line skeleton-line--customer" />
-            <view class="skeleton-line skeleton-line--number" />
-          </view>
-          <view class="skeleton-line skeleton-line--location" />
-          <view class="skeleton-actions skeleton-actions--summary">
-            <view /><view /><view /><view />
-          </view>
-        </view>
+    <AppWorkOrderSkeleton v-if="showLoadingSkeleton" variant="detail" />
 
-        <view class="skeleton-surface skeleton-task">
-          <view class="skeleton-line skeleton-line--eyebrow" />
-          <view class="skeleton-line skeleton-line--task-title" />
-          <view class="skeleton-button" />
-        </view>
-
-        <view class="skeleton-surface skeleton-information">
-          <view class="skeleton-tabs"><view /><view /><view /><view /></view>
-          <view class="skeleton-information-row"><view /><view /></view>
-          <view class="skeleton-information-row"><view /><view /></view>
-        </view>
-      </view>
-    </view>
-
-    <view v-else-if="workOrder.loadState === 'failed_retryable'" class="detail-state">
-      <view class="state-icon state-icon--retry" aria-hidden="true">!</view>
-      <text class="state-title">暂时无法加载详情</text>
-      <text class="state-detail">请检查网络后重试。</text>
-      <button class="state-action" @tap="retry">重新加载</button>
-    </view>
-
-    <view v-else-if="workOrder.loadState === 'failed_terminal'" class="detail-state">
-      <view class="state-icon" aria-hidden="true">!</view>
-      <text class="state-title">工单详情暂不可用</text>
-      <text class="state-detail">{{ failureCopy }}</text>
-      <button class="state-action" @tap="retry">再次尝试</button>
-    </view>
-
-    <view v-else-if="workOrder.loadState === 'succeeded' && detail && preAcceptBlocked" class="detail-state">
-      <text class="state-title">工单待接单</text>
-      <text class="state-detail">接单后可查看工单详情。</text>
-    </view>
+    <AppFeedbackState
+      v-else-if="workOrder.loadState === 'failed_retryable'"
+      layout="detail" appearance="retry"
+      title="暂时无法加载详情"
+      description="请检查网络后重试。"
+      action-label="重新加载"
+      @action="retry"
+    />
+    <AppFeedbackState
+      v-else-if="workOrder.loadState === 'failed_terminal'"
+      layout="detail" appearance="error"
+      title="工单详情暂不可用"
+      :description="failureCopy"
+      action-label="再次尝试"
+      @action="retry"
+    />
+    <AppFeedbackState
+      v-else-if="workOrder.loadState === 'succeeded' && detail && preAcceptBlocked"
+      layout="detail" appearance="blocked"
+      title="工单待接单"
+      description="接单后可查看工单详情。"
+    />
 
     <view v-else-if="workOrder.loadState === 'succeeded' && detail" class="detail-content">
-      <view class="summary-card">
+      <AppSectionHeading class="detail-section-heading" title="工单概览" subtitle="服务信息与当前处理进度" data-testid="ds02b-detail-heading" />
+      <AppRecordCard class="summary-card" data-testid="ds02b-detail-record-card">
+        <view class="summary-card__content">
         <view class="summary-top-row">
           <view class="summary-identity">
             <view class="summary-copy">
               <view v-if="detail.customerName || detail.servicePartLabel" class="summary-title-row">
                 <text v-if="detail.customerName" class="summary-customer">{{ detail.customerName }}</text>
-                <text v-if="detail.servicePartLabel" class="part-badge">{{ detail.servicePartLabel }}</text>
+                <AppMetaTag v-if="detail.servicePartLabel" class="part-badge" :label="detail.servicePartLabel" />
               </view>
             </view>
           </view>
-          <text v-if="detail.displayNumber" class="summary-number">#{{ detail.displayNumber }}</text>
+          <text v-if="detail.displayNumber" class="summary-number">{{ workOrderNumberDisplay(detail.displayNumber) }}</text>
         </view>
 
         <view
@@ -81,7 +62,7 @@
 
         <view class="summary-actions" aria-label="快捷操作">
           <button
-            v-for="action in quickActions"
+            v-for="action in visibleQuickActions"
             :key="action.key"
             class="summary-action"
             :class="{ 'summary-action--disabled': action.key === 'contact' && !canDial }"
@@ -97,32 +78,64 @@
             <text>{{ workOrder.contactInFlight && action.key === 'contact' ? '打开中' : action.label }}</text>
           </button>
         </view>
+        <AppStatus
+          v-if="productionReadOnly"
+          class="production-read-only-notice"
+          message="当前工单仅可查看，业务操作暂未开放。"
+          tone="warning"
+          quiet
+          data-testid="production-read-only-notice"
+        />
         <text v-if="!canDial && detail.contact" class="action-hint">暂无可直接拨打的客户电话</text>
         <text v-if="contactFeedback || actionFeedback" class="action-feedback">{{ contactFeedback || actionFeedback }}</text>
-      </view>
+        </view>
+      </AppRecordCard>
 
-      <view
+      <WorkOrderTaskFocus
         v-if="workflowProjection.currentTask"
-        class="current-task-card"
-        :class="`current-task-card--${workflowProjection.currentTask.tone}`"
-      >
-        <text class="task-eyebrow" :class="`task-eyebrow--${workflowProjection.currentTask.tone}`">当前任务</text>
-        <text class="task-title">{{ workflowProjection.currentTask.title }}</text>
-        <button
-          class="primary-task-action"
-          :class="`primary-task-action--${workflowProjection.currentTask.tone}`"
-          :disabled="workflowProjection.currentTask.execution !== 'enabled'"
-          @tap="handleCurrentTaskAction"
-        >
-          {{ workflowProjection.currentTask.actionLabel }}
-        </button>
-        <text v-if="workflowProjection.currentTask.execution !== 'enabled'" class="task-action-note">当前仅支持只读查看，操作能力将在后续核验后开放</text>
-      </view>
+        :title="workflowProjection.currentTask.title"
+        :action-label="productionReadOnly
+          ? (workflowProjection.currentTask.actionIntent === 'place_order' ? '查看报价方案' : '暂不可操作')
+          : workflowProjection.currentTask.actionLabel"
+        :tone="workflowProjection.currentTask.tone"
+        :disabled="(workflowProjection.currentTask.execution !== 'enabled' && !allowLocalMockPreview)
+          || (productionReadOnly && workflowProjection.currentTask.actionIntent !== 'place_order')"
+        :note="aStageSpecialKind ? '请在下方填写并保存现场情况。' : productionReadOnly ? '当前仅可查看，业务操作暂未开放。' : undefined"
+        @action="handleCurrentTaskAction"
+      />
 
-      <view class="information-card">
+
+      <!-- Current source-backed forms/repeat node only; Production repeat reads
+           a bounded list after an explicit tap and never exposes write actions. -->
+      <R1ProductionMainRepeatPanel
+        v-if="productionReadOnly && currentR1FormNode?.sourceNodeType === 'repeat'"
+        :node="currentR1FormNode" :read="workOrder.mainRepeatRead"
+        @read="loadMainRepeatForms" />
+      <R1SpecialMockTransactionPanel v-else-if="aStageSpecialKind && currentR1FormNode"
+        :key="String(currentR1FormNode.id)" :kind="aStageSpecialKind"
+        :node="currentR1FormNode" :work-order-id="String(detail.id)"
+        @changed="retry" />
+      <R1NodeFormsOverview v-else-if="currentR1FormNode" :node="currentR1FormNode"
+        :work-order-id="String(detail.id)" :actor-scope="workOrderReadScopeKey(session.session)" />
+      <AppStatus v-if="aStageCompletedSpecialNode" tone="success" quiet
+        message="现场记录已完成，可重新进入查看。"
+        data-testid="a-special-complete" />
+      <R1ProductionChildFormsPanel
+        v-if="productionReadOnly && productionChildParents.length"
+        :parents="productionChildParents"
+        :selected-parent-id="workOrder.childReadParentId"
+        :nodes="workOrder.childReadNodes"
+        :state="workOrder.childReadState"
+        :error="workOrder.childReadError"
+        :repeat-by-node="workOrder.repeatReadByNode"
+        @load-child="loadChildForms"
+        @load-repeat="loadRepeatForms"
+      />
+
+      <AppRecordCard class="information-card">
         <scroll-view class="detail-tabs" scroll-x="true" show-scrollbar="false">
           <view
-            v-for="tab in detailTabs"
+            v-for="tab in visibleDetailTabs"
             :key="tab.key"
             class="detail-tab"
             :class="{ 'detail-tab--active': activeTab === tab.key }"
@@ -174,7 +187,7 @@
           </view>
           <view class="detail-row customer-info-row">
             <text class="row-label">工单编号</text>
-            <text class="row-value customer-info-value">{{ detail.displayNumber || '—' }}</text>
+            <text class="row-value customer-info-value">{{ detail.displayNumber ? workOrderNumberDisplay(detail.displayNumber) : '—' }}</text>
           </view>
           <view class="detail-row customer-info-row">
             <text class="row-label">联系电话</text>
@@ -189,7 +202,7 @@
           <view class="order-info-list">
             <view class="detail-row order-info-row" v-if="detail.displayNumber">
               <text class="row-label">工单编号</text>
-              <text class="row-value order-info-value">#{{ detail.displayNumber }}</text>
+              <text class="row-value order-info-value">{{ workOrderNumberDisplay(detail.displayNumber) }}</text>
             </view>
             <view class="detail-row order-info-row" v-if="detail.taskLabel">
               <text class="row-label">当前状态</text>
@@ -208,13 +221,69 @@
           </view>
         </view>
 
+        <view v-else-if="activeTab === 'quotation' && productionReadOnly" class="tab-panel quotation-read-panel" data-testid="production-quotation-read-panel">
+          <view class="quotation-read-intro">
+            <text class="tab-empty-title">报价记录 · 只读</text>
+            <text class="tab-empty-copy">查看当前工单最近的报价记录，历史报价暂不支持编辑。</text>
+          </view>
+          <view v-if="quotationBrowse.state === 'loading'" class="quotation-read-state" data-testid="quotation-read-loading">
+            <AppLoadingState variant="inline" label="正在读取报价记录" />
+          </view>
+          <view v-else-if="quotationBrowse.state === 'failed_retryable' || quotationBrowse.state === 'failed_terminal'" class="quotation-read-state" data-testid="quotation-read-error">
+            <text class="tab-empty-copy">{{ quotationBrowse.errorMessage }}</text>
+            <button class="state-action quotation-retry" @tap="retryQuotationRead">重新读取</button>
+          </view>
+          <view v-else-if="quotationBrowse.state === 'idle'" class="quotation-read-state">
+            <button class="state-action quotation-retry" @tap="loadQuotationRead">读取该工单报价记录</button>
+          </view>
+          <view v-else-if="matchingQuotationOrders.length === 0" class="tab-empty" data-testid="quotation-read-empty">
+            <text class="tab-empty-title">暂未找到近期报价记录</text>
+            <text class="tab-empty-copy">可稍后重试，或联系业务人员核实历史报价。</text>
+          </view>
+          <view v-else class="quotation-read-list">
+            <view v-for="order in matchingQuotationOrders" :key="order.id" class="quotation-read-card" data-testid="quotation-read-record">
+              <view class="quotation-read-heading">
+                <text class="quotation-read-number">{{ order.displayNumber ? `报价单 ${order.displayNumber}` : '报价记录' }}</text>
+                <text v-if="order.updateTime" class="quotation-read-date">{{ order.updateTime }}</text>
+              </view>
+              <text class="quotation-read-readonly">历史报价 · 仅供查看</text>
+              <text v-if="order.totalPrice !== undefined" class="quotation-read-total">报价金额：¥{{ order.totalPrice.toFixed(2) }}</text>
+              <view v-if="order.groups.length === 0" class="quotation-read-warning">
+                <text>报价分组内容暂不可识别，已保留只读状态。</text>
+              </view>
+              <view v-for="(group, groupIndex) in order.groups" :key="`${order.id}-group-${groupIndex}`" class="quotation-read-group">
+                <text class="quotation-read-group-title">{{ group.partDescription || `维修部位 ${groupIndex + 1}` }}</text>
+                <text v-if="group.maintainAreaNum" class="quotation-read-meta">工程量：{{ group.maintainAreaNum }}</text>
+                <view v-for="row in quotationLineRows(group)" :key="`${order.id}-${groupIndex}-${row.key}`" class="quotation-read-line" :class="{ 'quotation-read-line--nested': row.depth > 0 }">
+                  <view class="quotation-read-line-main">
+                    <text class="quotation-read-line-kind">{{ quotationKindLabel(row.line.kind) }}</text>
+                    <text class="quotation-read-line-label">{{ row.line.label }}</text>
+                  </view>
+                  <text class="quotation-read-meta">
+                    {{ row.line.quantity === undefined ? '' : `${row.line.quantity}${row.line.unit ? ` ${row.line.unit}` : ''}` }}{{ row.line.amount === undefined ? '' : ` · ¥${row.line.amount.toFixed(2)}` }}
+                  </text>
+                </view>
+                <text v-if="!group.contentSupported" class="quotation-read-warning">该分组含未识别字段，以上仅为可确认内容。</text>
+              </view>
+              <navigator
+                v-if="signingOrderReadRouteFor(String(detail?.id ?? ''), order.id)"
+                class="state-action quotation-retry"
+                :url="signingOrderReadRouteFor(String(detail?.id ?? ''), order.id) || undefined"
+                data-testid="production-signing-order-read-entry"
+              >
+                查看签约信息
+              </navigator>
+            </view>
+          </view>
+        </view>
+
         <view v-else class="tab-panel">
           <view class="tab-empty">
             <text class="tab-empty-title">暂无资料</text>
             <text class="tab-empty-copy">工单相关资料将在对应业务数据接入后展示。</text>
           </view>
         </view>
-      </view>
+      </AppRecordCard>
 
     </view>
 
@@ -228,22 +297,43 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 
+import { mockJourneyContext } from '@app/mock-journey'
 import { hasAuthenticatedSession } from '@features/home/access'
+import { isProductionReadOnlyRuntime } from '@shared/config'
+import { workOrderNumberDisplay } from '@shared/ui/work-order-number-display'
 import { workOrderCardToneFor } from '@features/work-orders/card'
 import { useWorkOrderDetailStore } from '@features/work-orders/detail'
 import { actionWorkspaceRouteFor } from '@features/work-orders/action-workspace'
 import { detailTabs, type DetailTabKey } from '@features/work-orders/detail-tabs'
 import { detailWorkflowUiProjectionFor } from '@features/work-orders/detail-workflow'
+import { quotationBrowseLineRows, useQuotationOrderBrowseStore } from '@features/work-orders/quotation/order-browse-store'
+import { signingOrderReadRouteFor } from '@features/work-orders/signing/signing-review-read-workspace'
+import type { QuotationOrderBrowseGroup, QuotationOrderBrowseKind } from '@shared/ports'
 import { useSessionStore } from '@shared/state'
+import { workOrderReadScopeKey } from '@features/work-orders/read-identity-scope'
 import AppIcon from '@shared/ui/AppIcon.vue'
 import AppLoadingState from '@shared/ui/AppLoadingState.vue'
+import AppStatus from '@shared/ui/AppStatus.vue'
+import AppRecordCard from '@shared/ui/AppRecordCard.vue'
+import AppMetaTag from '@shared/ui/AppMetaTag.vue'
+import AppSectionHeading from '@shared/ui/AppSectionHeading.vue'
+import AppFeedbackState from '@shared/ui/AppFeedbackState.vue'
+import AppWorkOrderSkeleton from '@shared/ui/AppWorkOrderSkeleton.vue'
+import WorkOrderTaskFocus from '@features/work-orders/WorkOrderTaskFocus.vue'
+import R1NodeFormsOverview from '@features/work-orders/R1NodeFormsOverview.vue'
+import R1SpecialMockTransactionPanel from '@features/work-orders/R1SpecialMockTransactionPanel.vue'
+import { isAStageSpecialMockAvailable, type AStageSpecialKind } from '@app/a-stage-special-mock-ui'
+import R1ProductionChildFormsPanel from '@features/work-orders/R1ProductionChildFormsPanel.vue'
+import R1ProductionMainRepeatPanel from '@features/work-orders/R1ProductionMainRepeatPanel.vue'
 import { appLoadingSkeletonDelayMs } from '@shared/ui/loading'
 
 const session = useSessionStore()
 const workOrder = useWorkOrderDetailStore()
+const quotationBrowse = useQuotationOrderBrowseStore()
 const routeReady = ref(false)
 const routeValue = ref<unknown>(undefined)
 const canAccess = computed(() => hasAuthenticatedSession(session.status, session.session))
+const productionReadOnly = isProductionReadOnlyRuntime()
 const detail = computed(() => workOrder.detail)
 const activities = computed(() => detail.value?.activities ?? [])
 const customerServiceAddress = computed(() => {
@@ -252,10 +342,59 @@ const customerServiceAddress = computed(() => {
   return [district, address].filter(Boolean).join(' ') || '—'
 })
 const workflowProjection = computed(() => detailWorkflowUiProjectionFor(detail.value, session.session))
+const currentR1FormNode = computed(() => {
+  const task = workflowProjection.value.currentTask
+  if (!task || (task.sourceNodeType !== 'forms' && task.sourceNodeType !== 'repeat')) return undefined
+  return detail.value?.workflowNodes?.find(node => node.id === task.nodeId)
+})
+const aStageSpecialKind = computed<AStageSpecialKind | null>(() => {
+  const source = currentR1FormNode.value?.sourceNodeType
+  if (source !== 'forms' && source !== 'repeat' || productionReadOnly) return null
+  const current = session.session
+  const actor = current?.user.id && current.currentRole?.id && current.sessionRef
+    ? { userId: String(current.user.id), roleId: String(current.currentRole.id),
+        identity: JSON.stringify([current.sessionRef, current.user.id,
+          current.currentRole.id, current.roleVersion ?? null]) } : null
+  return isAStageSpecialMockAvailable(source, String(detail.value?.id ?? ''), actor)
+    ? source : null
+})
+const aStageCompletedSpecialNode = computed(() => {
+  if (productionReadOnly) return null
+  const current = session.session
+  const actor = current?.user.id && current.currentRole?.id && current.sessionRef
+    ? { userId: String(current.user.id), roleId: String(current.currentRole.id),
+        identity: JSON.stringify([current.sessionRef, current.user.id,
+          current.currentRole.id, current.roleVersion ?? null]) } : null
+  return detail.value?.workflowNodes?.find(node =>
+    (node.sourceNodeType === 'forms' || node.sourceNodeType === 'repeat')
+      && node.lifecycle === 'closed'
+      && isAStageSpecialMockAvailable(node.sourceNodeType,
+        String(detail.value?.id ?? ''), actor)) ?? null
+})
+const productionChildParents = computed(() => (productionReadOnly
+  ? detail.value?.workflowNodes?.filter((node) => node.category === 'subworkflow'
+    && ['subflows', 'subflow', 'subworkflow'].includes(node.sourceNodeType ?? '')) ?? []
+  : []))
+const allowLocalMockPreview = computed(() => {
+  const stage = mockJourneyContext(String(detail.value?.id ?? ''))
+  const task = workflowProjection.value.currentTask
+  // Synthetic-only navigation never changes the R1 command permission. The
+  // store still requires DEV H5-E2E + exact MOCK-019 identity to load drafts.
+  return !productionReadOnly && stage?.stage === 'survey'
+    && task?.actionIntent === 'interact_with_form'
+    && task?.sourceNodeType === 'forms'
+    && task?.execution === 'disabled_read_only'
+})
 const preAcceptBlocked = computed(() => Boolean(
   detail.value?.workflowNodes?.some((node) => node.category === 'accept' && node.lifecycle === 'active'),
 ))
 const activeTab = ref<DetailTabKey>('follow-up')
+const visibleDetailTabs = computed(() => productionReadOnly
+  ? [...detailTabs, { key: 'quotation' as const, label: '报价记录' }]
+  : detailTabs)
+const matchingQuotationOrders = computed(() => quotationBrowse.items.filter(
+  (order) => order.serviceAppointmentId === String(detail.value?.id ?? ''),
+))
 const showLoadingSkeleton = ref(false)
 let loadingSkeletonTimer: ReturnType<typeof setTimeout> | undefined
 
@@ -280,13 +419,21 @@ watch(
 
 onBeforeUnmount(clearLoadingSkeletonTimer)
 
-const canDial = computed(() => Boolean(detail.value?.contact?.normalizedPhone))
+watch(
+  () => detail.value?.id ?? null,
+  () => quotationBrowse.clear(),
+)
+
+const canDial = computed(() => !productionReadOnly && Boolean(detail.value?.contact?.normalizedPhone))
 const quickActions = [
   { key: 'contact', label: '联系', icon: 'phone' as const, color: '#2878f2' },
   { key: 'customer', label: '资料', icon: 'contact' as const, color: '#2878f2' },
   { key: 'records', label: '跟进', icon: 'task' as const, color: '#2878f2' },
   { key: 'navigate', label: '导航', icon: 'location' as const, color: '#2878f2' },
 ] as const
+const visibleQuickActions = computed(() => quickActions.filter(
+  (action) => !(productionReadOnly && (action.key === 'contact' || action.key === 'navigate')),
+))
 type QuickActionKey = (typeof quickActions)[number]['key']
 const actionFeedback = ref('')
 const failureCopy = computed(() => {
@@ -322,24 +469,65 @@ function loadForAuthenticatedSession(): void {
 onLoad((options) => {
   routeValue.value = options?.id
   routeReady.value = true
-  loadForAuthenticatedSession()
 })
 
 watch(
-  [() => session.status, routeReady],
-  ([status, ready]) => {
-    if (ready && status === 'authenticated') loadForAuthenticatedSession()
+  [() => session.status, () => workOrderReadScopeKey(session.session), routeReady],
+  ([status, scope, ready], previous) => {
+    // Role changes during an authenticated session must re-read the detail.
+    if (ready && status === 'authenticated' && scope
+      && (!previous || previous[0] !== status || previous[1] !== scope || !previous[2])) {
+      quotationBrowse.clear()
+      loadForAuthenticatedSession()
+    }
     if (status !== 'authenticated' && status !== 'unknown') workOrder.clear()
   },
-  { immediate: true },
+  { immediate: true, flush: 'sync' },
 )
 
 async function retry(): Promise<void> {
   await workOrder.retry()
 }
 
+async function loadChildForms(parentNodeId: string): Promise<void> {
+  await workOrder.loadChildWorkflowForms(parentNodeId)
+}
+
+async function loadRepeatForms(nodeId: string): Promise<void> {
+  await workOrder.loadChildRepeatRecords(nodeId)
+}
+
+async function loadMainRepeatForms(nodeId: string): Promise<void> {
+  await workOrder.loadMainRepeatRecords(nodeId)
+}
+
 function selectTab(tab: DetailTabKey): void {
   activeTab.value = tab
+  if (tab === 'quotation' && productionReadOnly) void loadQuotationRead()
+}
+
+async function loadQuotationRead(): Promise<void> {
+  const workOrderId = detail.value?.id
+  if (!workOrderId) return
+  await quotationBrowse.load(String(workOrderId))
+}
+
+async function retryQuotationRead(): Promise<void> {
+  quotationBrowse.clear()
+  await loadQuotationRead()
+}
+
+function quotationLineRows(group: QuotationOrderBrowseGroup) {
+  return quotationBrowseLineRows(group)
+}
+
+function quotationKindLabel(kind: QuotationOrderBrowseKind): string {
+  switch (kind) {
+    case 'package': return '套餐'
+    case 'procedure': return '工序'
+    case 'material': return '材料'
+    case 'measure': return '机措'
+  }
 }
 
 async function dialContact(): Promise<void> {
@@ -348,10 +536,15 @@ async function dialContact(): Promise<void> {
 
 async function handleCurrentTaskAction(): Promise<void> {
   const currentTask = workflowProjection.value.currentTask
-  if (!currentTask || currentTask.execution !== 'enabled') return
+  if (!currentTask || (currentTask.execution !== 'enabled' && !allowLocalMockPreview.value)) return
+  if (productionReadOnly && currentTask.actionIntent !== 'place_order') return
   const id = detail.value?.id
   if (!id) return
-  await workOrder.navigateTo(actionWorkspaceRouteFor(id, currentTask.nodeId, currentTask.actionIntent))
+  const target = actionWorkspaceRouteFor(id, currentTask.nodeId, currentTask.actionIntent)
+  // Quotation entry is an Action task, while the archived Order tab remains
+  // independent. Production keeps its established read-only entry.
+  await workOrder.navigateTo(currentTask.actionIntent === 'place_order' && !productionReadOnly
+    ? `${target}&entry=orders` : target)
 }
 
 async function handleQuickAction(action: QuickActionKey): Promise<void> {
@@ -388,6 +581,22 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
   width: 100%;
 }
 
+.production-read-only-notice { display: block; margin-top: 16rpx; }
+.child-subflow-mock-entry { background: var(--app-color-primary-soft); border: 1rpx dashed var(--app-color-primary-border); border-radius: var(--app-radius-control); color: var(--app-color-primary); display: block; font-size: var(--app-font-body); font-weight: 650; line-height: 1.5; margin-top: 20rpx; padding: 20rpx 24rpx; text-align: center; }
+.mock-workflow-track { margin-top: 16rpx; padding: 20rpx 24rpx; }
+.mock-workflow-track__top { display: flex; justify-content: space-between; align-items: baseline; gap: 12rpx; margin-bottom: 16rpx; }
+.mock-workflow-track__heading { color: var(--app-color-text-primary); font-size: var(--app-font-section-title); font-weight: 650; }
+.mock-workflow-track__scope,.mock-workflow-track__hint { color: var(--app-color-text-secondary); font-size: var(--app-font-status); line-height: 1.5; }
+.mock-workflow-track__steps { display: flex; gap: 10rpx; }
+.mock-workflow-track__step { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6rpx;
+  border-top: 3rpx solid var(--app-color-border); padding-top: 10rpx; }
+.mock-workflow-track__step--active { border-color: var(--app-color-primary); }
+.mock-workflow-track__number { color: var(--app-color-text-secondary); font-size: var(--app-font-status); }
+.mock-workflow-track__label { color: var(--app-color-text-primary); font-weight: 600; font-size: var(--app-font-body); }
+.mock-workflow-track__state { color: var(--app-color-text-secondary); font-size: var(--app-font-meta); }
+.mock-workflow-track__hint { display: block; margin-top: 12rpx; }
+.mock-workflow-track__review { border-top: 1rpx solid var(--app-color-divider); margin-top: 16rpx; padding-top: 16rpx; display: flex; flex-direction: column; gap: 6rpx; }
+
 .detail-content,
 .detail-state,
 .guard-page {
@@ -397,6 +606,13 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
   max-width: 960rpx;
 }
 
+/* Native MP width rules apply to every WorkOrder, regardless of data source. */
+.detail-content {
+  box-sizing: border-box;
+  min-width: 0;
+  width: 100%;
+}
+
 .back-link {
   color: #2878f2;
   font-size: 24rpx;
@@ -404,15 +620,23 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
 }
 
 .summary-card,
-.information-card {
-  background: #ffffff;
-  border: 1rpx solid #e4eaf2;
-  border-radius: 24rpx;
-  box-shadow: 0 10rpx 34rpx rgba(32, 55, 90, 0.07);
-}
+.information-card { width: 100%; min-width: 0; }
+.detail-section-heading { width: calc(100% - 6px); margin: 2px 3px 1px; }
 
 .summary-card {
   padding: 28rpx 28rpx 24rpx;
+}
+
+/* MP custom-component host width and slot padding match Mock and Real. */
+.summary-card {
+  box-sizing: border-box;
+  padding: 0;
+}
+.summary-card__content {
+  box-sizing: border-box;
+  min-width: 0;
+  padding: 28rpx 28rpx 24rpx;
+  width: 100%;
 }
 
 .summary-top-row,
@@ -446,9 +670,9 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
 }
 
 .summary-customer {
-  color: #172033;
-  font-size: 34rpx;
-  font-weight: 800;
+  color: var(--app-text-strong);
+  font-size: var(--app-content-section-size);
+  font-weight: 730;
   max-width: 450rpx;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -456,26 +680,21 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
 }
 
 .part-badge {
-  background: #f0f2f5;
-  border-radius: 6rpx;
-  color: #303945;
-  flex: 0 0 auto;
-  font-size: 18rpx;
-  font-weight: 700;
-  padding: 5rpx 10rpx;
+  flex: 0 1 auto;
 }
 
 .summary-number {
-  color: #60718d;
+  color: var(--app-content-muted-ink);
   flex: 0 0 auto;
-  font-size: 26rpx;
-  font-weight: 800;
+  font-size: 12px;
+  font-weight: 630;
   padding-top: 4rpx;
 }
 
+
 .location-row {
-  color: #647895;
-  font-size: 24rpx;
+  color: var(--app-content-muted-ink);
+  font-size: 12.5px;
   gap: 8rpx;
   margin-top: 24rpx;
   min-width: 0;
@@ -542,6 +761,21 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
   white-space: nowrap;
 }
 
+.summary-identity,
+.summary-copy { flex: 1 1 0; }
+.summary-customer { flex: 0 1 auto; }
+.part-badge { min-width: 0; }
+.summary-number { white-space: nowrap; }
+.summary-actions {
+  box-sizing: border-box;
+  min-width: 0;
+  width: 100%;
+}
+.summary-action {
+  flex: 1 1 0;
+  min-height: 88rpx;
+}
+
 .summary-action--disabled {
   border-color: #e1e7ef;
   color: #9aa7b9;
@@ -565,92 +799,9 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
   color: #2878f2;
 }
 
-.current-task-card {
-  border: 2rpx solid;
-  border-radius: 24rpx;
-  box-shadow: 0 10rpx 34rpx rgba(32, 55, 90, 0.07);
-  margin-top: 18rpx;
-  padding: 24rpx 26rpx 22rpx;
-}
-
-.current-task-card--blue { background: #f7fbff; border-color: #cfe3ff; }
-.current-task-card--red { background: #fff8f9; border-color: #ffd1d7; }
-.current-task-card--orange { background: #fffaf4; border-color: #ffd9ad; }
-.current-task-card--purple { background: #fbf8ff; border-color: #dccfff; }
-.current-task-card--green { background: #f7fffa; border-color: #ccefdc; }
-.current-task-card--gray { background: #fbfcfe; border-color: #d8dde6; }
-
-.task-eyebrow {
-  display: block;
-  font-size: 20rpx;
-  font-weight: 700;
-}
-
-.task-eyebrow--blue { color: #2878f2; }
-.task-eyebrow--red { color: #f06445; }
-.task-eyebrow--orange { color: #ff941f; }
-.task-eyebrow--purple { color: #8a69e8; }
-.task-eyebrow--green { color: #35b978; }
-.task-eyebrow--gray { color: #8d99aa; }
-
-.task-title {
-  color: #1d2b40;
-  display: block;
-  font-size: 30rpx;
-  font-weight: 800;
-  margin-top: 12rpx;
-}
-
-.task-description {
-  color: #697386;
-  display: block;
-  font-size: 22rpx;
-  line-height: 1.6;
-  margin-top: 8rpx;
-}
-
-.primary-task-action {
-  border-radius: 14rpx;
-  color: #ffffff;
-  font-size: 24rpx;
-  font-weight: 800;
-  height: 68rpx;
-  line-height: 68rpx;
-  margin: 22rpx 0 0;
-  opacity: 1;
-  padding: 0;
-  width: 100%;
-}
-
-.primary-task-action--blue,
-.primary-task-action--blue[disabled] { background: #2878f2; }
-.primary-task-action--red,
-.primary-task-action--red[disabled] { background: #f06445; }
-.primary-task-action--orange,
-.primary-task-action--orange[disabled] { background: #ff941f; }
-.primary-task-action--purple,
-.primary-task-action--purple[disabled] { background: #8a69e8; }
-.primary-task-action--green,
-.primary-task-action--green[disabled] { background: #35b978; }
-.primary-task-action--gray,
-.primary-task-action--gray[disabled] { background: #8d99aa; }
-
-.primary-task-action[disabled] {
-  color: #ffffff;
-  opacity: 1;
-}
-
-.primary-task-action::after {
-  border: 0;
-}
-
-.task-action-note {
-  color: #a39a91;
-  display: block;
-  font-size: 20rpx;
-  margin-top: 10rpx;
-  text-align: center;
-}
+/* DS-07.C2: former current-task-card / primary-task-action skin removed.
+   Task presentation is owned by WorkOrderTaskFocus.vue (DS-06).
+   Keep this business page free of a competing task palette. */
 
 .detail-tabs {
   border-bottom: 1rpx solid #edf1f6;
@@ -663,9 +814,9 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
 .detail-tab {
   align-items: center;
   box-sizing: border-box;
-  color: #73819a;
+  color: var(--app-content-muted-ink);
   display: inline-flex;
-  font-size: 22rpx;
+  font-size: 13px;
   height: 82rpx;
   justify-content: center;
   margin: 0 20rpx;
@@ -677,8 +828,8 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
 }
 
 .detail-tab--active {
-  color: #2878f2;
-  font-weight: 800;
+  color: var(--app-color-primary-action);
+  font-weight: 720;
 }
 
 .detail-tab--active::after {
@@ -695,6 +846,26 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
 .tab-panel {
   padding: 16rpx 28rpx 18rpx;
 }
+
+.quotation-read-intro { padding: 8rpx 0 20rpx; }
+.quotation-read-state { align-items: center; display: flex; flex-direction: column; padding: 24rpx 0; }
+.quotation-retry { margin-top: 16rpx; }
+.quotation-read-list { display: flex; flex-direction: column; gap: 16rpx; }
+.quotation-read-card { background: #f8fafd; border: 1rpx solid #e6edf6; border-radius: 16rpx; padding: 20rpx; }
+.quotation-read-heading { align-items: baseline; display: flex; flex-wrap: wrap; gap: 8rpx 16rpx; justify-content: space-between; }
+.quotation-read-number { color: #1d2b40; font-size: 24rpx; font-weight: 800; }
+.quotation-read-readonly { color: #71819a; display: block; font-size: 19rpx; margin-top: 8rpx; }
+.quotation-read-date, .quotation-read-meta, .quotation-read-pdf-note { color: #8391a6; font-size: 19rpx; }
+.quotation-read-total { color: #263a58; display: block; font-size: 22rpx; font-weight: 700; margin-top: 12rpx; }
+.quotation-read-group { border-top: 1rpx solid #e8edf4; margin-top: 16rpx; padding-top: 14rpx; }
+.quotation-read-group-title { color: #455875; display: block; font-size: 21rpx; font-weight: 800; }
+.quotation-read-line { align-items: flex-start; display: flex; flex-direction: column; gap: 4rpx; padding: 10rpx 0; }
+.quotation-read-line--nested { border-left: 3rpx solid #dbe7f8; margin-left: 12rpx; padding-left: 14rpx; }
+.quotation-read-line-main { align-items: baseline; display: flex; flex-wrap: wrap; gap: 4rpx 10rpx; }
+.quotation-read-line-kind { color: #2878f2; font-size: 18rpx; font-weight: 700; }
+.quotation-read-line-label { color: #26364e; font-size: 21rpx; }
+.quotation-read-warning { color: #ad6a14; display: block; font-size: 19rpx; line-height: 1.5; margin-top: 12rpx; }
+.quotation-read-pdf-note { display: block; margin-top: 14rpx; }
 
 .tab-empty {
   align-items: center;
@@ -910,131 +1081,8 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
   text-align: center;
 }
 
-.detail-skeleton {
-  display: flex;
-  flex-direction: column;
-  gap: 18rpx;
-  padding: 0;
-  width: 100%;
-}
-
-.detail-loading-state {
-  align-items: stretch;
-  justify-content: flex-start;
-  min-height: 0;
-}
-
-.detail-loading-placeholder {
-  min-height: 184rpx;
-}
-
-.skeleton-surface {
-  background: #ffffff;
-  border: 1rpx solid #e4eaf2;
-  border-radius: 24rpx;
-  box-sizing: border-box;
-  overflow: hidden;
-}
-
-.skeleton-summary {
-  padding: 28rpx 28rpx 24rpx;
-}
-
-.skeleton-summary-top,
-.skeleton-tabs,
-.skeleton-information-row {
-  align-items: center;
-  display: flex;
-}
-
-.skeleton-summary-top {
-  justify-content: space-between;
-}
-
-.skeleton-line {
-  background: #edf2f7;
-  border-radius: 999rpx;
-  height: 22rpx;
-  animation: app-loading-pulse var(--app-motion-loading-duration) var(--app-motion-loading-easing) infinite;
-}
-
-.skeleton-line--customer { height: 32rpx; width: 42%; }
-.skeleton-line--number { height: 24rpx; width: 20%; }
-.skeleton-line--location { margin-top: 24rpx; width: 64%; }
-.skeleton-line--eyebrow { height: 20rpx; width: 18%; }
-.skeleton-line--task-title { height: 30rpx; margin-top: 14rpx; width: 30%; }
-
-.skeleton-actions--summary {
-  margin-top: 24rpx;
-}
-
-.skeleton-actions {
-  display: flex;
-  gap: 18rpx;
-}
-
-.skeleton-actions view {
-  background: #edf2f7;
-  border-radius: 14rpx;
-  flex: 1;
-  height: 64rpx;
-  animation: app-loading-pulse var(--app-motion-loading-duration) var(--app-motion-loading-easing) infinite;
-}
-
-.skeleton-task {
-  background: #ffffff;
-  border-color: #e4eaf2;
-  padding: 24rpx 26rpx 22rpx;
-}
-
-.skeleton-button {
-  background: #edf2f7;
-  border-radius: 14rpx;
-  height: 68rpx;
-  margin-top: 22rpx;
-  animation: app-loading-pulse var(--app-motion-loading-duration) var(--app-motion-loading-easing) infinite;
-}
-
-.skeleton-information {
-  padding-bottom: 12rpx;
-}
-
-.skeleton-tabs {
-  border-bottom: 1rpx solid #edf1f6;
-  gap: 28rpx;
-  height: 82rpx;
-  padding: 0 28rpx;
-}
-
-.skeleton-tabs view {
-  background: #edf2f7;
-  border-radius: 999rpx;
-  height: 20rpx;
-  width: 76rpx;
-  animation: app-loading-pulse var(--app-motion-loading-duration) var(--app-motion-loading-easing) infinite;
-}
-
-.skeleton-information-row {
-  border-bottom: 1rpx solid #edf1f6;
-  justify-content: space-between;
-  margin: 0 28rpx;
-  min-height: 82rpx;
-}
-
-.skeleton-information-row view {
-  background: #edf2f7;
-  border-radius: 999rpx;
-  height: 20rpx;
-  width: 22%;
-  animation: app-loading-pulse var(--app-motion-loading-duration) var(--app-motion-loading-easing) infinite;
-}
-
-.skeleton-information-row view:last-child {
-  width: 34%;
-}
-
-.guard-mark,
-.state-icon {
+/* Authentication visual remains local; feedback loading/error styling is shared. */
+.guard-mark {
   align-items: center;
   border-radius: 50%;
   display: flex;
@@ -1042,33 +1090,14 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
   justify-content: center;
   margin-bottom: 22rpx;
   width: 74rpx;
-}
-
-.guard-mark {
   background: #eaf2ff;
 }
-
-.state-icon {
-  background: #fff0f0;
-  color: #e05252;
-  font-size: 26rpx;
-  font-weight: 800;
-}
-
-.state-icon--retry {
-  background: #fff7e7;
-  color: #e28a19;
-}
-
-.guard-title,
-.state-title {
+.guard-title {
   color: #172033;
   font-size: 30rpx;
   font-weight: 800;
 }
-
-.guard-copy,
-.state-detail {
+.guard-copy {
   color: #8290a4;
   font-size: 24rpx;
   line-height: 1.6;

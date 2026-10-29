@@ -164,28 +164,28 @@ describe('G3-D Dynamic Form Runtime capability and visibility', () => {
   it('uses deterministic option-provider precedence and explicit unsupported results', () => {
     expect(
       selectOptionProvider({
-        key: 'workType',
+        fieldId: 'workType', valueKey: 'workType',
         type: 'select',
         valueOption: 'ignored-by-semantic-special-case',
         inlineOptions: [{ value: 'x', label: 'X' }],
       }),
     ).toEqual({ state: 'provider', provider: { kind: 'workTypes' } })
-    expect(selectOptionProvider({ key: 'region', type: 'cascade', valueOption: 'region', inlineOptions: [] })).toEqual({
+    expect(selectOptionProvider({ fieldId: 'region', valueKey: 'region', type: 'cascade', valueOption: 'region', inlineOptions: [] })).toEqual({
       state: 'provider',
       provider: { kind: 'cascade', valueOption: 'region' },
     })
-    expect(selectOptionProvider({ key: 'status', type: 'select', valueOption: 'status' })).toEqual({
+    expect(selectOptionProvider({ fieldId: 'status', valueKey: 'status', type: 'select', valueOption: 'status' })).toEqual({
       state: 'provider',
       provider: { kind: 'code', valueOption: 'status' },
     })
-    expect(selectOptionProvider({ key: 'local', type: 'radio', inlineOptions: [{ value: 'a', label: 'A' }] })).toEqual({
+    expect(selectOptionProvider({ fieldId: 'local', valueKey: 'local', type: 'radio', inlineOptions: [{ value: 'a', label: 'A' }] })).toEqual({
       state: 'provider',
       provider: { kind: 'inline' },
     })
-    expect(selectOptionProvider({ key: 'missing', type: 'checkbox' }).state).toBe('unsupported')
-    expect(selectOptionProvider({ key: 'description', type: 'text' })).toEqual({ state: 'not_required' })
+    expect(selectOptionProvider({ fieldId: 'missing', valueKey: 'missing', type: 'checkbox' }).state).toBe('unsupported')
+    expect(selectOptionProvider({ fieldId: 'description', valueKey: 'description', type: 'text' })).toEqual({ state: 'not_required' })
     expect(classifyFieldType('scan').capability).toBe('UNSUPPORTED')
-    expect(classifyFieldType('area').capability).toBe('SUPPORTED_GENERIC')
+    expect(classifyFieldType('area').capability).toBe('UNSUPPORTED')
   })
 
   it('evaluates scalar, nested, array, existence, false, and malformed visibility cases', () => {
@@ -202,6 +202,11 @@ describe('G3-D Dynamic Form Runtime capability and visibility', () => {
     expect(evaluateVisibility({ kind: 'equals', path: 'customer.tier', value: 'gold' }, values).visible).toBe(true)
     expect(evaluateVisibility({ kind: 'includes', path: 'choices', value: 'b' }, values).visible).toBe(true)
     expect(evaluateVisibility({ kind: 'includes', path: ['cascade'], value: 'city-001' }, values).visible).toBe(true)
+    expect(evaluateVisibility({
+      kind: 'oneOf',
+      path: 'cascade',
+      values: [['north', 'city-001'], ['south', 'city-002']],
+    }, values).visible).toBe(true)
     expect(evaluateVisibility({ kind: 'exists', path: 'customer.tier', expected: true }, values).visible).toBe(true)
     expect(evaluateVisibility({ kind: 'equals', path: 'status', value: 'closed' }, values).state).toBe('hidden')
     expect(evaluateVisibility({ kind: 'exists', path: 'missing', expected: true }, values).state).toBe('hidden')
@@ -210,13 +215,13 @@ describe('G3-D Dynamic Form Runtime capability and visibility', () => {
 
   it('applies unsupported, visibility, read-only, and required precedence', () => {
     const hiddenRequired: FormFieldSchema = {
-      key: 'hiddenRequired',
+      fieldId: 'hiddenRequired', valueKey: 'hiddenRequired',
       type: 'text',
       required: true,
       visibility: { kind: 'equals', path: 'show', value: true },
     }
-    const readOnly: FormFieldSchema = { key: 'status', type: 'text', required: true, readOnly: false }
-    const unsupported: FormFieldSchema = { key: 'custom', type: 'canvas' }
+    const readOnly: FormFieldSchema = { fieldId: 'status', valueKey: 'status', type: 'text', required: true, readOnly: false }
+    const unsupported: FormFieldSchema = { fieldId: 'custom', valueKey: 'custom', type: 'canvas' }
 
     expect(evaluateFieldState(hiddenRequired, { values: { show: false } })).toMatchObject({
       visible: false,
@@ -232,15 +237,21 @@ describe('G3-D Dynamic Form Runtime capability and visibility', () => {
       required: false,
     })
     expect(evaluateFieldState(unsupported).capability).toBe('UNSUPPORTED')
-    expect(evaluateFieldState({ key: 'code', type: 'select' }).capability).toBe('UNSUPPORTED')
-    expect(evaluateFieldState({ key: 'genericArea', type: 'area' }).capability).toBe('SUPPORTED_GENERIC')
+    expect(evaluateFieldState({ fieldId: 'gap', valueKey: 'gap', type: 'gap' })).toMatchObject({
+      capability: 'PRESENTATION_ONLY',
+      visible: true,
+      readOnly: true,
+      required: false,
+    })
+    expect(evaluateFieldState({ fieldId: 'code', valueKey: 'code', type: 'select' }).capability).toBe('UNSUPPORTED')
+    expect(evaluateFieldState({ fieldId: 'genericArea', valueKey: 'genericArea', type: 'area' }).capability).toBe('UNSUPPORTED')
   })
 
   it('validates declared option values during runtime submission normalization', () => {
     expect(
       normalizeSubmission({
         fields: [{
-          key: 'need',
+          fieldId: 'need', valueKey: 'need',
           type: 'radio',
           required: true,
           inlineOptions: [{ value: '1', label: '需要上门' }],
@@ -250,7 +261,8 @@ describe('G3-D Dynamic Form Runtime capability and visibility', () => {
     ).toEqual({
       ok: false,
       reason: 'validation',
-      fieldKey: 'need',
+      fieldId: 'need',
+      valueKey: 'need',
       message: 'radio contains an unsupported option',
     })
   })
@@ -264,6 +276,23 @@ describe('G3-D Dynamic Form Runtime values and submission', () => {
     expect(normalizeFieldValue('number', '12.5').ok).toBe(false)
     expect(normalizeFieldValue('digit', '12.50')).toEqual({ ok: true, value: 12.5 })
     expect(normalizeFieldValue('checkbox', ['a', 'b'])).toEqual({ ok: true, value: ['a', 'b'] })
+    expect(normalizeFieldValue(
+      'select',
+      ['a', 'b'],
+      [{ value: 'a', label: 'A' }, { value: 'b', label: 'B' }],
+      true,
+    )).toEqual({ ok: true, value: ['a', 'b'] })
+    expect(normalizeFieldValue(
+      'cascade',
+      ['roof', 'inner'],
+      [{ value: 'roof', label: '屋面', children: [{ value: 'inner', label: '女儿墙' }] }],
+    )).toEqual({ ok: true, value: ['roof', 'inner'] })
+    expect(normalizeFieldValue(
+      'select',
+      ['a', 'unknown'],
+      [{ value: 'a', label: 'A' }],
+      true,
+    )).toMatchObject({ ok: false, reason: 'invalid_value' })
     expect(normalizeFieldValue('image', asOpaqueId<'LocalMediaRef'>('media-ref-001'))).toEqual({
       ok: true,
       value: 'media-ref-001',
@@ -282,9 +311,9 @@ describe('G3-D Dynamic Form Runtime values and submission', () => {
   it('omits hidden required fields and returns a semantic submission without backend envelopes', () => {
     const result = normalizeSubmission({
       fields: [
-        { key: 'name', type: 'text', required: true },
+        { fieldId: 'name', valueKey: 'name', type: 'text', required: true },
         {
-          key: 'details',
+          fieldId: 'details', valueKey: 'details',
           type: 'text',
           required: true,
           visibility: { kind: 'equals', path: 'showDetails', value: true },
@@ -297,10 +326,40 @@ describe('G3-D Dynamic Form Runtime values and submission', () => {
     expect(JSON.stringify(result)).not.toContain('endpoint')
 
     const missing = normalizeSubmission({
-      fields: [{ key: 'name', type: 'text', required: true }],
+      fields: [{ fieldId: 'name', valueKey: 'name', type: 'text', required: true }],
       values: {},
     })
-    expect(missing).toMatchObject({ ok: false, reason: 'validation', fieldKey: 'name' })
+    expect(missing).toMatchObject({ ok: false, reason: 'validation', fieldId: 'name', valueKey: 'name' })
+  })
+
+  it('keeps presentation-only fields visible but excludes them from submission', () => {
+    const result = normalizeSubmission({
+      fields: [
+        { fieldId: 'gap', valueKey: 'gap', type: 'gap', required: true },
+        { fieldId: 'memo', valueKey: 'memo', type: 'text', required: true },
+      ],
+      values: { gap: 'must-not-submit', memo: 'recorded' },
+    })
+
+    expect(result).toEqual({ ok: true, value: { values: { memo: 'recorded' } } })
+  })
+
+  it('reports duplicate Survey rows by field identity while reading their shared value key', () => {
+    const result = normalizeSubmission({
+      fields: [
+        { fieldId: 'survey-length-row-001', valueKey: 'length', type: 'text', required: false },
+        { fieldId: 'survey-length-row-002', valueKey: 'length', type: 'digit', required: true },
+      ],
+      values: { length: 'not-a-number' },
+    })
+
+    expect(result).toEqual({
+      ok: false,
+      reason: 'validation',
+      fieldId: 'survey-length-row-002',
+      valueKey: 'length',
+      message: 'digit requires a decimal value',
+    })
   })
 
   it('keeps declarative measurement rules inactive by default and computes sanitized active rules', () => {

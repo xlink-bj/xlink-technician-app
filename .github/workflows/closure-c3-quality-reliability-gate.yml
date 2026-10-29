@@ -1,0 +1,118 @@
+name: Closure C3 — Quality Coverage and Release HOLD (offline only)
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - '.github/workflows/closure-c3-quality-reliability-gate.yml'
+      - 'docs/engineering/CLOSURE_C3_QUALITY_RELIABILITY.md'
+      - 'docs/engineering/closure-c3-readiness.json'
+      - 'scripts/check-closure-c3-release.mjs'
+      - 'scripts/check-closure-c3-coverage.mjs'
+      - 'tests/engineering/closure-c3-release-drills.test.ts'
+      - 'vitest.c3.coverage.config.ts'
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  release-hold-and-full-regression:
+    if: github.event.pull_request.draft == true && github.event.pull_request.head.ref == 'engineering/closure-c3-quality-reliability'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      VITE_XLINK_ENVIRONMENT: test
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Exact C2 parent and seven governance-only paths
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          git merge-base --is-ancestor ffc3fe53d6a275a807ad943c177e15d42391ff70 HEAD
+          git diff --name-only ffc3fe53d6a275a807ad943c177e15d42391ff70 HEAD | sort > /tmp/c3-actual
+          printf '%s\n' '.github/workflows/closure-c3-quality-reliability-gate.yml' 'docs/engineering/CLOSURE_C3_QUALITY_RELIABILITY.md' 'docs/engineering/closure-c3-readiness.json' 'scripts/check-closure-c3-release.mjs' 'scripts/check-closure-c3-coverage.mjs' 'tests/engineering/closure-c3-release-drills.test.ts' 'vitest.c3.coverage.config.ts' | sort > /tmp/c3-expected
+          diff -u /tmp/c3-expected /tmp/c3-actual
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Offline release evidence and 9 negative authorization drills
+        run: node scripts/check-closure-c3-release.mjs --self-test
+      - name: Real command adapter Prod and staging fault drills
+        run: pnpm exec vitest run tests/engineering/closure-c3-release-drills.test.ts
+      - name: Full critical, source boundaries, typecheck and regression
+        run: pnpm verify:critical && pnpm verify:full
+      - name: H5, WeChat MP and native App builds without real writes
+        run: pnpm build:h5 && pnpm build:mp-weixin && pnpm build:app
+  scoped-executed-v8-coverage:
+    if: github.event.pull_request.draft == true && github.event.pull_request.head.ref == 'engineering/closure-c3-quality-reliability'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      VITE_XLINK_ENVIRONMENT: test
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Install exact matching V8 provider in ephemeral CI checkout only
+        run: pnpm add -D --lockfile=false @vitest/coverage-v8@2.1.9
+      - name: Actual executed coverage on three named critical modules
+        run: |
+          pnpm exec vitest run --config vitest.c3.coverage.config.ts \
+            tests/engineering/closure-c2-read-model.test.ts \
+            tests/g4f/quotation-order-submission.test.ts \
+            tests/g4f/production-read-only.test.ts \
+            tests/engineering/closure-c3-release-drills.test.ts
+          node scripts/check-closure-c3-coverage.mjs coverage/coverage-summary.json | tee /tmp/closure-c3-coverage-evidence.json
+      - name: Retain raw executed coverage summary, not inferred quality census
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: closure-c3-v8-coverage-${{ github.run_id }}
+          path: coverage/coverage-summary.json
+          if-no-files-found: warn
+          retention-days: 30
+  original-offline-journey-and-goldens:
+    if: github.event.pull_request.draft == true && github.event.pull_request.head.ref == 'engineering/closure-c3-quality-reliability'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    env:
+      VITE_XLINK_ENVIRONMENT: test
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+      H5_VISUAL_OWNER_APPROVAL: 'PENDING'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: |
+          pnpm exec playwright install --with-deps chromium
+          sudo apt-get update -qq
+          sudo apt-get install -y fonts-noto-cjk
+      - name: Original H5 six-stage Mock
+        run: pnpm exec playwright test --config playwright.main-h5-mock.config.ts tests/h5-main-mock/m1-i7-six-stage-integration.spec.ts
+      - name: Unchanged approved Gallery Golden
+        run: pnpm test:ds02a:gallery
+      - name: Unchanged approved Business Golden
+        run: pnpm test:ds02a:business

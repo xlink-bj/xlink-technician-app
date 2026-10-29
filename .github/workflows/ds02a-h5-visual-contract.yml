@@ -1,0 +1,88 @@
+name: DS02A H5 Visual Contract
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/ds02a-h5-visual-contract.yml'
+      - 'playwright.ds02a-*.config.ts'
+      - 'tests/ds02a-gallery/**'
+      - 'tests/ds02a-main/**'
+      - 'docs/design-system/DS02A_H5_VISUAL_CONTRACT.md'
+      - 'src/shared/ui/design-system.scss'
+      - '__review/design-system-gallery.vue'
+      - 'src/shared/ui/**'
+      - 'src/features/work-orders/**'
+      - 'src/pages/work-orders/**'
+  workflow_dispatch:
+
+# Golden candidates have been staged in PR #141. Ordinary CI is now
+# absolutely read-only: no baseline creation, updates or silent approvals.
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  h5-visual-contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+      H5_VISUAL_OWNER_APPROVAL: 'DS02A_MAIN_9_APPROVED_2026_10_29'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+
+      - name: Install frozen dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Cache Playwright Chromium
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-ds02a-playwright-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - name: Install Chromium and deterministic Chinese fonts
+        run: |
+          pnpm exec playwright install --with-deps chromium
+          sudo apt-get update -qq
+          sudo apt-get install -y fonts-noto-cjk
+          fc-match 'Noto Sans CJK SC' | head -1
+          pnpm exec playwright --version
+
+      - name: Fail closed if committed visual candidates are incomplete
+        shell: bash
+        run: |
+          test -d tests/ds02a-gallery/snapshots || exit 1
+          test -d tests/ds02a-main/snapshots || exit 1
+          count=$(find tests/ds02a-gallery/snapshots tests/ds02a-main/snapshots -type f -name '*.png' | wc -l)
+          echo "Committed H5 baselines: $count (required: 15)"
+          test "$count" -eq 15 || (echo "::error::15 tracked golden candidates required; CI never auto-rebaselines" && exit 1)
+
+      - name: Compare actual uni-app H5 Gallery against tracked PNGs
+        run: pnpm test:ds02a:gallery
+
+      - name: Compare actual main H5 list, detail and Q01
+        run: pnpm test:ds02a:business
+
+      - name: Preserve expected, actual, diff and trace for review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ds02a-h5-visual-${{ github.run_id }}
+          path: |
+            tests/ds02a-gallery/snapshots/
+            tests/ds02a-main/snapshots/
+            test-results/ds02a-gallery/
+            test-results/ds02a-main/
+          if-no-files-found: warn
+          retention-days: 30

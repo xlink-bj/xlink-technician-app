@@ -1,4 +1,5 @@
 import type { SessionRef } from '@shared/types'
+import { isProductionReadOnlyTarget } from '@shared/config'
 
 import {
   ApiCommandTransportError,
@@ -18,6 +19,8 @@ export interface UniApiCommandTransportOptions {
   readonly getSessionRef: () => SessionRef | null
   readonly request?: UniApiCommandRequestExecutor
   readonly timeoutMs?: number
+  /** Auth-only Production login never authorizes a live business command/upload. */
+  readonly blockRealRequests?: boolean
 }
 
 function endpointUrl(baseUrl: string, path: string): string {
@@ -58,7 +61,54 @@ function statusCategory(
 
 function isRealMutationPath(path: string): boolean {
   const route = path.replace(/^\/+/, '').split('?')[0]
-  return route === 'workflow/process' || route.startsWith('biz/extForm/upsert/')
+  return route === 'workflow/process'
+    || route.startsWith('biz/extForm/upsert/')
+    || /^workflowNode\/updateExts\/[^/]+$/.test(route)
+    || /^biz\/extForm\/remove\/[^/]+$/.test(route)
+    || route === 'basic/order/upsert'
+    || /^workflow\/startWorkflow\/order\/null\/[^/]+$/.test(route)
+}
+
+/**
+ * Independent hard stop for all Contract/Signing COMMAND routes.
+ * Generic VITE_XLINK_ENABLE_REAL_WRITES does not approve legally binding
+ * signatures, SMS notifications, cancellation, or external provider calls.
+ * Only a separate, explicitly reviewed implementation can lift this fence.
+ */
+export function isUnapprovedR1SigningCommandPath(path: string): boolean {
+  let route = path.split(/[?#]/)[0] ?? ''
+  try { route = decodeURIComponent(route) } catch { return true }
+  while (route.startsWith('/')) route = route.slice(1)
+  return route.startsWith('signature/')
+    || route === 'basic/contract/remove'
+    || route === 'basic/contract/upsert'
+    || route === 'basic/contract/getSignatureUrl'
+}
+
+/**
+ * This transport does NOT own R1 quotation generation, customer order-confirm,
+ * coupon redemption or message sends. Those APIs are business mutations even
+ * when their legacy UI labels say "quote"/"preview".
+ *
+ * Source: R1 placeOrders.vue:6907-6959 + backend OrderServiceImpl:
+ * handleCreatQuotation:632-648 saves Order and optionally creates a PDF.
+ * Existing generic order write flag must NEVER implicitly authorize them.
+ */
+export function isUnapprovedR1QuotationStageMutationPath(path: string): boolean {
+  let route = path.split(/[?#]/)[0] ?? ''
+  try { route = decodeURIComponent(route) } catch { return true }
+  while (route.startsWith('/')) route = route.slice(1)
+  if (/^basic\/couponPrinting\/useCoupon\/[^/]+(?:\.do)?$/.test(route)) return true
+  return [
+    'basic/order/creatQuotation',
+    'basic/order/creatQuotation.do',
+    'basic/order/quotation',
+    'basic/order/quotation.do',
+    'basic/order/orderConfirm',
+    'basic/order/orderConfirm.do',
+    'basic/order/sendMessage',
+    'basic/order/sendMessage.do',
+  ].includes(route)
 }
 
 export function createUniApiCommandTransport(options: UniApiCommandTransportOptions): ApiCommandTransport {
@@ -66,6 +116,18 @@ export function createUniApiCommandTransport(options: UniApiCommandTransportOpti
 
   return {
     async execute(input: ApiCommandRequest): Promise<unknown> {
+      if (isUnapprovedR1SigningCommandPath(input.path)) {
+        throw new ApiCommandTransportError(
+          'Contract signing, notification and cancellation commands require a separate business authorization gate',
+          'unsupported_capability',
+        )
+      }
+      if (isUnapprovedR1QuotationStageMutationPath(input.path)) {
+        throw new ApiCommandTransportError(
+          'R1 quotation generation, confirmation, coupon use and notifications require a separate business-write gate',
+          'unsupported_capability',
+        )
+      }
       const sessionRef = options.getSessionRef()
       if (!sessionRef) {
         throw new ApiCommandTransportError('Authenticated session is required for API commands', 'session_invalid')
@@ -75,6 +137,18 @@ export function createUniApiCommandTransport(options: UniApiCommandTransportOpti
       if (mockResponse !== null) return normalizeCommandResponse(mockResponse)
       if (isMockOwnedCommand(input.path, input.body ?? {})) {
         throw new ApiCommandTransportError('Synthetic mock command is disabled', 'server_terminal')
+      }
+      if (options.blockRealRequests === true) {
+        throw new ApiCommandTransportError(
+          'Authenticated Mock-only development mode blocks all real business commands and uploads',
+          'unsupported_capability',
+        )
+      }
+      if (isProductionReadOnlyTarget(import.meta.env.VITE_XLINK_ENVIRONMENT, options.apiBaseUrl)) {
+        throw new ApiCommandTransportError(
+          'Production read-only mode blocks all command execution',
+          'unsupported_capability',
+        )
       }
       if (input.safety === 'deferred_appointment_datetime_encoding_unknown') {
         throw new ApiCommandTransportError(
@@ -88,16 +162,30 @@ export function createUniApiCommandTransport(options: UniApiCommandTransportOpti
           'unsupported_capability',
         )
       }
+      // Generic write permission is not authority for R1's multi-command forms/repeat
+      // workflow. Even an accidental direct transport invocation must fail closed.
+      if (input.r1Special && import.meta.env.VITE_XLINK_ENABLE_R1_SPECIAL_WRITES !== 'true') {
+        throw new ApiCommandTransportError('R1 special form writes are not explicitly enabled', 'unsupported_capability')
+      }
+      const normalizedRoute = input.path.replace(/^\/+/, '').split('?')[0]
+      const jsonExts = /^workflowNode\/updateExts\/[^/]+$/.test(normalizedRoute)
+      const repeatRemove = /^biz\/extForm\/remove\/[^/]+$/.test(normalizedRoute)
+      if ((jsonExts || repeatRemove) && !input.r1Special) {
+        throw new ApiCommandTransportError('R1 mutation needs source-specific transaction authorization', 'unsupported_capability')
+      }
+      if (jsonExts !== Boolean(input.jsonBody)) {
+        throw new ApiCommandTransportError('R1 Exts JSON encoding mismatch', 'unsupported_capability')
+      }
 
       let response: UniNamespace.RequestSuccessCallbackResult
       try {
         response = await requestResponse(request, {
           url: endpointUrl(options.apiBaseUrl, input.path),
           method: input.method,
-          data: formEncode(input.body ?? {}),
+          data: jsonExts ? JSON.stringify(input.jsonBody) : formEncode(input.body ?? {}),
           header: {
             Cookie: `JSESSIONID=${sessionRef}`,
-            'Content-Type': 'application/x-www-form-urlencoded',
+            'Content-Type': jsonExts ? 'application/json' : 'application/x-www-form-urlencoded',
           },
           dataType: 'json',
           ...(options.timeoutMs === undefined ? {} : { timeout: options.timeoutMs }),

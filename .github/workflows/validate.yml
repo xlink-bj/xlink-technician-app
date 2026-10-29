@@ -2,8 +2,10 @@ name: Validate
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
   push:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -13,7 +15,66 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  quick:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+    steps:
+      - name: Check out PR source
+        uses: actions/checkout@v4
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Boundary, UI governance, baseline and type checks
+        env:
+          VITE_XLINK_ENVIRONMENT: test
+        run: |
+          pnpm run check:boundaries
+          pnpm run check:engineering-ownership
+          pnpm run check:critical
+          pnpm run check:ui-governance
+          pnpm run check:m1-i8-baseline
+          pnpm run typecheck
+      - name: Targeted R1 read-identity, role-scope and quotation contract tests
+        env:
+          VITE_XLINK_ENVIRONMENT: test
+        run: |
+          pnpm exec vitest run \
+            tests/g3c/adapters.test.ts \
+            tests/g4c/work-order-detail.test.ts \
+            tests/g4f/m1-i7-work-order-read-scope.test.ts \
+            tests/g4f/production-read-only.test.ts \
+            tests/engineering/r1-stage1-live-read-contract.test.ts \
+            tests/engineering/r1-stage1-form-detail-read-contract.test.ts \
+            tests/engineering/r1-model-contract-parity.test.ts \
+            tests/engineering/r1-three-pillar-contract-matrix.test.ts \
+            tests/g4f/quotation-order-browse-handoff.test.ts \
+            tests/g4f/quotation-order-read.test.ts \
+            tests/g4f/quotation-order-signing-read-boundary.test.ts \
+            tests/g4f/quotation-local-review-closure.test.ts \
+            tests/g4f/quotation-empty-workbench.test.ts \
+            tests/ds03/transaction-visual-contract.test.ts \
+            tests/ds05/mobile-craft-two-page.test.ts \
+            tests/engineering/r1-action-workspace-foundation.test.ts \
+            tests/engineering/eq07-command-state-consistency.test.ts \
+            tests/g4d/action-workspace.test.ts \
+            tests/g4d/draft-diagnostics.test.ts \
+            tests/g4e/onsite-inspection.test.ts \
+            tests/g4e/survey-leakage-cause.test.ts
+      - name: Build MP-WEIXIN and validate emitted WXSS on every Draft PR
+        run: pnpm run build:mp-weixin
+
   verify:
+    # L3: no full suite during Draft; run on Ready PR, main push or manual dispatch.
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     timeout-minutes: 40
     env:
@@ -21,6 +82,10 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@v4
+        with:
+          # Several pinned engineering-gate tests inspect ancestry and compare
+          # exact historical commits; the default shallow checkout omits them.
+          fetch-depth: 0
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4

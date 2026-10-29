@@ -1,0 +1,97 @@
+name: EQ10 P1 Quality Integration — exact-head offline gates (NO release)
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - '.github/workflows/eq10-quality-integration-gate.yml'
+      - '.github/workflows/validate.yml'
+      - 'docs/engineering/EQ10_QUALITY_FINAL_REVIEW.md'
+      - 'docs/engineering/eq10-stacked-manifest.json'
+      - 'package.json'
+      - 'scripts/check-eq10-ownership.mjs'
+      - 'scripts/check-eq10-stack.mjs'
+      - 'scripts/verify-critical-behavior.mjs'
+      - 'tests/engineering/eq10-governance.test.ts'
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  canonical-quality-and-platforms:
+    if: github.event.pull_request.draft == true && github.event.pull_request.head.ref == 'engineering/eq10-p1-quality-integration'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      VITE_XLINK_ENVIRONMENT: test
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify verified EQ09 parent + immutable business sources + sibling evidence
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          node scripts/check-eq10-stack.mjs --self-test
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Ownership audit + injected fail-closed violations
+        run: node scripts/check-eq10-ownership.mjs --self-test
+      - name: EQ10 governance tests and critical behavior manifest
+        run: |
+          pnpm exec vitest run tests/engineering/eq10-governance.test.ts
+          pnpm check:critical
+      - name: Canonical quick developer lane
+        run: pnpm verify:quick
+      - name: Expanded critical actual behavior (no Production business I/O)
+        run: pnpm verify:critical
+      - name: Full canonical behavior/type/architecture/quality census
+        run: pnpm verify:full
+      - name: Generate honest static census (not executed coverage)
+        run: node scripts/eq01-quality-census.mjs --check --output .review/eq03/eq10-quality-census.json
+      - name: Non-test H5, WeChat MP and native App bundles
+        run: pnpm build:h5 && pnpm build:mp-weixin && pnpm build:app
+      - name: Retain deterministic local quality evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eq10-quality-${{ github.run_id }}
+          path: .review/eq03/eq10-quality-census.json
+          if-no-files-found: warn
+          retention-days: 30
+  original-mock-journey-and-goldens:
+    if: github.event.pull_request.draft == true && github.event.pull_request.head.ref == 'engineering/eq10-p1-quality-integration'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      VITE_XLINK_ENVIRONMENT: test
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+      H5_VISUAL_OWNER_APPROVAL: 'PENDING'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: |
+          pnpm exec playwright install --with-deps chromium
+          sudo apt-get update -qq
+          sudo apt-get install -y fonts-noto-cjk
+      - name: Offline six-stage main H5 Mock path
+        run: pnpm exec playwright test --config playwright.main-h5-mock.config.ts tests/h5-main-mock/m1-i7-six-stage-integration.spec.ts
+      - name: Unchanged original Gallery Golden
+        run: pnpm test:ds02a:gallery
+      - name: Unchanged original Business Golden
+        run: pnpm test:ds02a:business

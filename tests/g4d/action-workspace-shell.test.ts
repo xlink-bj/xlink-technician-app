@@ -42,8 +42,8 @@ describe('Action Workspace Shell structural contract', () => {
     expect(shell).toContain('displayedDraftStatus === \'restore_available\'')
     expect(shell).toContain('displayedDraftStatus === \'save_failed\'')
     expect(count(shell, '已自动保存')).toBe(1)
-    expect(count(shell, '已恢复本地草稿')).toBe(1)
-    expect(count(shell, '本地草稿保存失败')).toBe(1)
+    expect(count(shell, '已恢复草稿')).toBe(1)
+    expect(count(shell, '草稿保存失败')).toBe(1)
     expect(shell).not.toContain('displayedDraftStatus === \'dirty\'')
     for (const page of pages) {
       expect(page).not.toContain('draftMessage')
@@ -71,6 +71,16 @@ describe('Action Workspace Shell structural contract', () => {
     expect(time).toContain('<template #actions>')
     expect(confirmation).toContain('<template #actions v-if="!isSuccess">')
     expect(confirmation).toContain('<template #success-actions>')
+  })
+
+  it('keeps template comments outside component attribute lists', async () => {
+    const workspace = await readFile(pagePaths[0], 'utf8')
+    const tagStart = workspace.indexOf('<ActionWorkspaceShell')
+    const tagEnd = workspace.indexOf('>', tagStart)
+
+    expect(tagStart).toBeGreaterThanOrEqual(0)
+    expect(tagEnd).toBeGreaterThan(tagStart)
+    expect(workspace.slice(tagStart, tagEnd)).not.toContain('<!--')
   })
 
   it('places the single draft strip before Action Content and suppresses it after success', async () => {

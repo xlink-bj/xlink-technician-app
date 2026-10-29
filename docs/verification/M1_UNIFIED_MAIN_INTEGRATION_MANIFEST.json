@@ -1,0 +1,175 @@
+{
+  "schemaVersion": 1,
+  "observedDate": "2026-10-13",
+  "track": "M1_ENGINEERING_MAIN_DRAFT_NOT_RELEASE",
+  "mainTip": "c57fb3cc876c8ca3fb133d74dcf4833f8f755b32",
+  "candidateBaseline": "f5ed0f640986737e6d7bb14f430d3b3edc078d06",
+  "acceptance": {
+    "formalRoundsAccepted": 1,
+    "totalRounds": 8,
+    "i7DoD": "1/4",
+    "i8DoD": "0/4",
+    "businessParity": "NOT_VERIFIED",
+    "ownerUX": "NOT_APPROVED",
+    "release": "NOT_APPROVED"
+  },
+  "checks": {
+    "coreValidate": {
+      "run": 38365405856,
+      "conclusion": "SUCCESS",
+      "suites": 98,
+      "tests": 991,
+      "mpBuild": "PASS",
+      "appBuild": "PASS"
+    },
+    "mainH5": {
+      "run": 38365405883,
+      "conclusion": "SUCCESS",
+      "loginBoot": 2,
+      "realMainAppDevMock": 23,
+      "legacyG4F": 26
+    }
+  },
+  "requiredAncestors": [
+    {
+      "gate": "main",
+      "sha": "c57fb3cc876c8ca3fb133d74dcf4833f8f755b32"
+    },
+    {
+      "gate": "i2_sku_draft",
+      "sha": "f948d837d0d9e9422df774c1eaec43592a98f5fc"
+    },
+    {
+      "gate": "i3_offline_price",
+      "sha": "683bb63b2a6f44bbb83afa3ea27f58ea01fcdecd"
+    },
+    {
+      "gate": "i7_reconciled_history",
+      "sha": "928efb2706bd9e4cd05e3a6e0f7d9905732b8b39"
+    },
+    {
+      "gate": "i6_source_order_contract",
+      "sha": "df9021cd3f10dbf22fff7fa94b0602c013fb9a33"
+    },
+    {
+      "gate": "i8_six_stage_evidence",
+      "sha": "f00d4c55870805055b5d2b149448bce14d56c110"
+    },
+    {
+      "gate": "i6_current_handler",
+      "sha": "30194c2e2d3539c4849fd4e8b9603f52e75a4f6e"
+    },
+    {
+      "gate": "i7_workorder_role_isolation",
+      "sha": "f5ed0f640986737e6d7bb14f430d3b3edc078d06"
+    }
+  ],
+  "excludedIndependentEvidence": [
+    {
+      "gate": "i2_production_sku_probe_NOT_EXECUTED",
+      "sha": "a950b2205acb1581ac2a17181773f331642ab59a"
+    },
+    {
+      "gate": "i4_owner_visual_review_NOT_APPROVED",
+      "sha": "4b2572b5f6af6b8e5abfa5831de6eeb5912b5796"
+    }
+  ],
+  "allowedChangesAfterBaseline": [
+    ".github/workflows/m1-unified-main-candidate-gate.yml",
+    "docs/verification/M1_UNIFIED_MAIN_INTEGRATION_CANDIDATE.md",
+    "docs/verification/M1_UNIFIED_MAIN_INTEGRATION_MANIFEST.json",
+    "scripts/check-m1-unified-main-candidate.mjs",
+    "tests/g4f/m1-unified-main-candidate.test.ts"
+  ],
+  "stages": [
+    {
+      "key": "login",
+      "state": "MOCK_CODE_ONLY",
+      "source": "src/pages/index/index.vue",
+      "gate": "live_role"
+    },
+    {
+      "key": "work_order",
+      "state": "MOCK_CODE_ONLY",
+      "source": "src/pages/work-orders/detail.vue",
+      "gate": "live_role"
+    },
+    {
+      "key": "appointment",
+      "state": "MOCK_CODE_ONLY",
+      "source": "src/pages/work-orders/action-workspace.vue",
+      "gate": "beta_write"
+    },
+    {
+      "key": "survey",
+      "state": "MOCK_CODE_ONLY",
+      "source": "src/features/work-orders/components/SurveyActionContent.vue",
+      "gate": "physical_media"
+    },
+    {
+      "key": "quotation",
+      "state": "MOCK_CODE_ONLY",
+      "source": "src/features/work-orders/quotation/QuotationActionWorkspace.vue",
+      "gate": "sku_and_order"
+    },
+    {
+      "key": "signing",
+      "state": "MOCK_CODE_ONLY",
+      "source": "src/pages/work-orders/signing-order-read.vue",
+      "gate": "real_signing"
+    }
+  ],
+  "independentGates": [
+    {
+      "id": "live_role",
+      "state": "NOT_RUN",
+      "issue": 29
+    },
+    {
+      "id": "sku_and_order",
+      "state": "BLOCKED_ENV",
+      "issue": 92
+    },
+    {
+      "id": "beta_write",
+      "state": "NOT_APPROVED",
+      "issue": 93
+    },
+    {
+      "id": "real_signing",
+      "state": "NOT_APPROVED",
+      "issue": 96
+    },
+    {
+      "id": "physical_media",
+      "state": "NOT_RUN",
+      "issue": 64
+    },
+    {
+      "id": "owner_ux",
+      "state": "NOT_APPROVED",
+      "issue": 94
+    },
+    {
+      "id": "main_merge",
+      "state": "NOT_APPROVED",
+      "issue": 97
+    },
+    {
+      "id": "production_release",
+      "state": "NOT_APPROVED",
+      "issue": 33
+    }
+  ],
+  "effects": {
+    "backendChanged": false,
+    "productionRead": false,
+    "productionWrite": false,
+    "betaBusinessWrite": false,
+    "realSignature": false,
+    "realPhoneOrSms": false,
+    "pdfCreated": false,
+    "physicalDevicesRun": false,
+    "mainBranchMutated": false
+  }
+}

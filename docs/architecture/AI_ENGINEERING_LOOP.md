@@ -342,3 +342,13 @@ Recommended future sequence:
 
 The goal is progressive automation with durable control, not maximum autonomy
 as an end in itself.
+
+## 14. Current cloud verification practice (2026-10-26 addendum)
+
+The preceding proposed operating model remains valid. For the *observed*
+ChatGPT container / GitHub Actions / Mac WeChat DevTools division, exact-HEAD
+Playwright screenshot evidence, and independent commercial Owner gates, see
+[`docs/engineering/CLOUD_EXECUTION_AND_VISUAL_VERIFICATION_20261026.md`](../engineering/CLOUD_EXECUTION_AND_VISUAL_VERIFICATION_20261026.md).
+The PR #221 browser run is verified; its native Mac B2-X review is pending.
+This addendum **does not** enable unattended merges, production writes, or
+implicit visual Golden updates.

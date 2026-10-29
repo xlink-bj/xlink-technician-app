@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "mode": "offline_preflight",
+  "inheritedCandidate": "ffc3fe53d6a275a807ad943c177e15d42391ff70",
+  "realBusinessWrites": false,
+  "productionAuthorized": false,
+  "mainMergeAuthorized": false,
+  "releaseDecision": "HOLD_EXTERNAL_EVIDENCE",
+  "checks": [
+    {
+      "id": "exact_head_ci",
+      "status": "offline_verified",
+      "evidence": "Validate and dedicated exact-HEAD verification are required; C3 must attach their final Actions links before review."
+    },
+    {
+      "id": "critical_behavior",
+      "status": "offline_verified",
+      "evidence": "Curated 18-file safety regression lane and full Vitest suite are required, not a claim of production parity."
+    },
+    {
+      "id": "three_platform_builds",
+      "status": "offline_verified",
+      "evidence": "Offline H5, MP-Weixin and App bundle builds must succeed on same exact HEAD."
+    },
+    {
+      "id": "mock_journey_and_golden",
+      "status": "offline_verified",
+      "evidence": "Six-stage H5 Mock and unchanged original Gallery/Business Goldens must pass."
+    },
+    {
+      "id": "production_mutation_denial",
+      "status": "offline_verified",
+      "evidence": "Synthetic transport probes must prove real command denials under prod mode or canonical production host."
+    },
+    {
+      "id": "r1_backend_contract_evidence",
+      "status": "blocked_pending_external_evidence",
+      "evidence": "Real R1 effective tenant/SKU price, Workflow Complete, scoped auth, backend order idempotency and deferred appointment need=0 encoding require separate authorization and proof."
+    },
+    {
+      "id": "rollback_plan_and_owner",
+      "status": "blocked_pending_external_evidence",
+      "evidence": "Restore previous deployed artifacts, environment-specific rollback owner, immutable release artifact IDs and rehearsal have not been verified."
+    },
+    {
+      "id": "release_owner_approval",
+      "status": "blocked_pending_external_evidence",
+      "evidence": "Explicit owner/change-window/production release approval absent; Draft never authorizes merge, deployment or writes."
+    }
+  ],
+  "unresolved": [
+    "r1_backend_contract_evidence",
+    "rollback_plan_and_owner",
+    "release_owner_approval"
+  ]
+}

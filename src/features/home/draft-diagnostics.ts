@@ -40,6 +40,17 @@ function failure<T>(message: string): OperationSnapshot<T> {
   }
 }
 
+function sessionScope(session: SessionSnapshot): string {
+  return JSON.stringify([
+    String(session.sessionRef), String(session.user.id),
+    session.currentRole ? String(session.currentRole.id) : null, session.roleVersion ?? null,
+  ])
+}
+
+function invalidSession<T>(): OperationSnapshot<T> {
+  return { state: 'failed_terminal', error: createOperationError('session_invalid', '账号或角色已变化，草稿信息不可继续使用。') }
+}
+
 function openRouteFor(entry: ActionDraftRegistryEntry): string | undefined {
   if (entry.identity.actionIntent !== 'set_appointment' || entry.identity.contentKind !== 'dynamic_form') return undefined
   return actionWorkspaceRouteFor(
@@ -67,12 +78,14 @@ export const useLocalDraftDiagnosticsStore = defineStore('localDraftDiagnostics'
   const seedAvailable = computed(() => {
     dependencyVersion.value
     const configured = dependencies
-    return Boolean(configured?.isDeveloperModeAvailable() && configured.getMockMode() === 'data')
+    return Boolean(configured?.getSession()?.currentRole?.id
+      && configured.isDeveloperModeAvailable() && configured.getMockMode() === 'data')
   })
   const cleanupAvailable = computed(() => {
     dependencyVersion.value
     const configured = dependencies
-    return Boolean(configured?.isDeveloperModeAvailable() && configured.getMockMode() !== 'off')
+    return Boolean(configured?.getSession()?.currentRole?.id
+      && configured.isDeveloperModeAvailable() && configured.getMockMode() !== 'off')
   })
 
   function configure(next: LocalDraftDiagnosticsDependencies): void {
@@ -85,8 +98,10 @@ export const useLocalDraftDiagnosticsStore = defineStore('localDraftDiagnostics'
     const configured = dependencies
     const requestId = ++refreshRequestId
     dependencyVersion.value += 1
-    const userId = configured?.getSession()?.user.id
-    if (!configured || !userId || !configured.isDeveloperModeAvailable()) {
+    const session = configured?.getSession()
+    const userId = session?.user.id
+    const roleId = session?.currentRole?.id
+    if (!configured || !userId || !roleId || !configured.isDeveloperModeAvailable()) {
       entries.value = []
       invalidTotal.value = 0
       error.value = null
@@ -98,7 +113,10 @@ export const useLocalDraftDiagnosticsStore = defineStore('localDraftDiagnostics'
     invalidTotal.value = 0
     error.value = null
     try {
-      const result = await configured.repository.listForUser(userId)
+      const requestedScope = sessionScope(session!)
+      const result = await configured.repository.listForUser(userId, roleId)
+      const active = configured.getSession()
+      if (!active || sessionScope(active) !== requestedScope) return invalidSession()
       if (requestId !== refreshRequestId) return result.state === 'succeeded' && result.data
         ? { state: 'succeeded', data: result.data.entries.map(diagnosticEntryFor) }
         : { state: result.state, ...(result.error ? { error: result.error } : {}) }
@@ -117,10 +135,15 @@ export const useLocalDraftDiagnosticsStore = defineStore('localDraftDiagnostics'
 
   async function seedMockDrafts(): Promise<OperationSnapshot<readonly LocalDraftDiagnosticEntry[]>> {
     const configured = dependencies
-    const userId = configured?.getSession()?.user.id
-    if (!configured || !userId || !seedAvailable.value) return failure('Mock 草稿仅在非生产 Mock 数据模式可生成')
+    const session = configured?.getSession()
+    const userId = session?.user.id
+    const roleId = session?.currentRole?.id
+    if (!configured || !userId || !roleId || !seedAvailable.value) return failure('Mock 草稿仅在非生产 Mock 数据模式可生成')
+    const requestedScope = sessionScope(session!)
 
     for (const seed of configured.mockDraftSeeds) {
+      const active = configured.getSession()
+      if (!active || sessionScope(active) !== requestedScope) return invalidSession()
       const identity = actionDraftIdentityFor({
         userId,
         workOrderId: seed.workOrderId,
@@ -128,7 +151,7 @@ export const useLocalDraftDiagnosticsStore = defineStore('localDraftDiagnostics'
         actionIntent: seed.actionIntent,
         contentKind: seed.contentKind,
         contentIdentity: asOpaqueId<'FormDefinitionId'>(seed.contentIdentity),
-      })
+      }, roleId)
       const result = await configured.repository.write({
         version: 1,
         identity,
@@ -140,16 +163,23 @@ export const useLocalDraftDiagnosticsStore = defineStore('localDraftDiagnostics'
         error.value = result.error ?? createOperationError('server_terminal', 'Mock 草稿生成失败')
         return { state: result.state, ...(result.error ? { error: result.error } : {}) }
       }
+      const afterWrite = configured.getSession()
+      if (!afterWrite || sessionScope(afterWrite) !== requestedScope) return invalidSession()
     }
     return refresh()
   }
 
   async function clearMockDrafts(): Promise<OperationSnapshot<readonly LocalDraftDiagnosticEntry[]>> {
     const configured = dependencies
-    const userId = configured?.getSession()?.user.id
-    if (!configured || !userId || !cleanupAvailable.value) return failure('Mock 草稿仅在非生产 Mock 模式可清除')
+    const session = configured?.getSession()
+    const userId = session?.user.id
+    const roleId = session?.currentRole?.id
+    if (!configured || !userId || !roleId || !cleanupAvailable.value) return failure('Mock 草稿仅在非生产 Mock 模式可清除')
+    const requestedScope = sessionScope(session!)
 
     for (const seed of configured.mockDraftSeeds) {
+      const active = configured.getSession()
+      if (!active || sessionScope(active) !== requestedScope) return invalidSession()
       const identity = actionDraftIdentityFor({
         userId,
         workOrderId: seed.workOrderId,
@@ -157,12 +187,14 @@ export const useLocalDraftDiagnosticsStore = defineStore('localDraftDiagnostics'
         actionIntent: seed.actionIntent,
         contentKind: seed.contentKind,
         contentIdentity: asOpaqueId<'FormDefinitionId'>(seed.contentIdentity),
-      })
+      }, roleId)
       const result = await configured.repository.remove(identity)
       if (result.state !== 'succeeded') {
         error.value = result.error ?? createOperationError('server_terminal', 'Mock 草稿清除失败')
         return { state: result.state, ...(result.error ? { error: result.error } : {}) }
       }
+      const afterRemove = configured.getSession()
+      if (!afterRemove || sessionScope(afterRemove) !== requestedScope) return invalidSession()
     }
     return refresh()
   }
