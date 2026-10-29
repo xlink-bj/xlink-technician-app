@@ -452,7 +452,7 @@ test('one MOCK-019 WorkOrder progresses Appointment → Survey → Quotation wit
   await expect(page.locator('.uni-page-head__title')).toContainText('现场勘查')
   await expect(page.getByTestId('dynamic-form-action-content')).toBeVisible()
   await expect(page.getByTestId('mock-journey-context-appointment')).toContainText('P1B预约备注：现场先确认屋面渗漏')
-  await expect(page.getByTestId('mock-journey-progress')).toContainText('模拟进入报价')
+  await expect(page.getByTestId('mock-journey-progress')).toContainText('继续填写报价')
   // Capture all R1-shaped visible/hidden field identities on failure; do not
   // silently manufacture Survey values when an actual UI control is absent.
   const surveyFieldEvidence = await page.locator('[data-testid^="dynamic-field-"]').evaluateAll(
@@ -801,6 +801,11 @@ for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }
     await expect(summary1).toContainText('2 件')
     await expect(summary2).toContainText('6 件')
     await expect(page.getByTestId('action-workspace-submit')).toHaveCount(0)
+    // UI selection changes synchronously, but local persistence is debounced.
+    // Wait for the persisted-draft acknowledgement before simulating a restart;
+    // otherwise the test reloads during its own pending 360ms save window.
+    await expect(page.getByTestId('quotation-commercial-draft-badge'))
+      .toContainText('草稿已保存')
     await expect(page.getByTestId('quotation-footer-summary')).toBeVisible()
     await page.reload({ waitUntil: 'domcontentloaded' })
     await expect(page.getByTestId('quotation-state-ready')).toBeVisible()
