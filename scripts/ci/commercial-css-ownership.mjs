@@ -24,15 +24,36 @@ const ownershipFiles = [
 const owners = ownershipFiles.map(name => [name, read(`src/features/work-orders/quotation/${name}`)])
 
 // These dedicated files are FINAL paint owners, not open-ended override piles.
-function repeatedSelectors(css) {
+function selectorFrequencies(css) {
   const withoutComments = css.replace(/\/\*[\s\S]*?\*\//g, '')
   const count = new Map()
-  // Both final-owner files deliberately avoid nested @media overrides.
+  // Includes responsive nested rules: legacy repeats are debt, not assumed dead CSS.
   for (const match of withoutComments.matchAll(/^\s*(\.[^{};]+?)\s*\{[^{}]*\}/gm)) {
     const selector = match[1].trim().replace(/\s+/g, ' ')
     count.set(selector, (count.get(selector) ?? 0) + 1)
   }
-  return [...count].filter(([, num]) => num > 1).map(([name, num]) => `${name} ×${num}`)
+  return count
+}
+function repeatedSelectors(css) {
+  return [...selectorFrequencies(css)].filter(([, num]) => num > 1).map(([name, num]) => `${name} ×${num}`)
+}
+
+// CUI-02 mainline reconciliation: #227's older split cannot be layered over
+// the five owners now on main. Protect the remaining legacy CSS debt with an
+// exact accepted-main ceiling; lowering any number is safe. Legitimate growth
+// needs a reviewed budget change and real H5 / MP visual parity evidence.
+const debtCeiling = Object.freeze({
+  legacyBytes: 57799,
+  totalOwnerBytes: 83700,
+  legacyRepeatedRootExcess: 172,
+})
+const legacyBytes = Buffer.byteLength(legacy, 'utf8')
+const totalOwnerBytes = legacyBytes + owners.reduce((total, [, css]) => total + Buffer.byteLength(css, 'utf8'), 0)
+const legacyRepeatedRootExcess = [...selectorFrequencies(legacy).values()].reduce((total, num) => total + Math.max(0, num - 1), 0)
+if (legacyBytes > debtCeiling.legacyBytes) failures.push(`legacy CSS grew to ${legacyBytes} bytes (ceiling ${debtCeiling.legacyBytes})`)
+if (totalOwnerBytes > debtCeiling.totalOwnerBytes) failures.push(`quotation component CSS grew to ${totalOwnerBytes} bytes (ceiling ${debtCeiling.totalOwnerBytes})`)
+if (legacyRepeatedRootExcess > debtCeiling.legacyRepeatedRootExcess) {
+  failures.push(`legacy repeated root-selector excess grew to ${legacyRepeatedRootExcess} (ceiling ${debtCeiling.legacyRepeatedRootExcess})`)
 }
 for (const [name, css] of [['Q01', q01], ['Q03', q03], ...owners]) {
   const duplicates = repeatedSelectors(css)
@@ -61,5 +82,5 @@ if (failures.length) {
   for (const failure of failures) process.stderr.write('CUI-01 FAIL: ' + failure + '\n')
   process.exitCode = 1
 } else {
-  process.stdout.write('CUI-01 CSS ownership PASS: unique Q01/Q03 and component-owner selectors; stable cascade order; no obsolete catalogue artwork\n')
+  process.stdout.write(`CUI-01/CUI-02 CSS ownership PASS: unique component owners; stable cascade; legacy debt ${legacyBytes}B / ${totalOwnerBytes}B total / ${legacyRepeatedRootExcess} repeated definitions (no growth)\n`)
 }
