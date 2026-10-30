@@ -11,7 +11,10 @@ on:
       - 'src/shared/ui/design-system.scss'
       - '__review/design-system-gallery.vue'
       - 'src/shared/ui/**'
-      - 'src/features/work-orders/**'
+      # UI source files; feature-local TypeScript helpers use fast unit CI.
+      - 'src/features/work-orders/**/*.vue'
+      - 'src/features/work-orders/**/*.scss'
+      - 'src/features/work-orders/**/*.css'
       - 'src/pages/work-orders/**'
   workflow_dispatch:
 
