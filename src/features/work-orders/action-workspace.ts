@@ -5,6 +5,27 @@ import { isProductionReadOnlyRuntime } from '@shared/config'
 import { detailWorkflowProjectionFor } from './detail-workflow'
 import { createActionWorkspaceReadModel } from './action-workspace-read-model'
 import {
+  actionWorkspaceRouteFor,
+  actionWorkspaceTimeRouteFor,
+  actionWorkspaceConfirmationRouteFor,
+} from './action-workspace-routes'
+import {
+  taskStateForField,
+  isDynamicMediaPickerAllowed,
+  isDynamicMediaRetryAvailable,
+  dynamicMediaDisplayHint,
+} from './action-workspace-media-projection'
+export {
+  actionWorkspaceRoute,
+  actionWorkspaceTimeRoute,
+  actionWorkspaceConfirmationRoute,
+  actionWorkspaceRouteFor,
+  actionWorkspaceTimeRouteFor,
+  actionWorkspaceConfirmationRouteFor,
+  parseActionWorkspaceId,
+  parseActionWorkspaceNodeId,
+} from './action-workspace-routes'
+import {
   appointmentValue,
   draftRecordFor,
   dynamicDraftRecordFor,
@@ -117,53 +138,6 @@ import {
   surveyLeakageCauseFieldStateFor,
   surveyLeakageCausePersistedIds,
 } from './survey-leakage-cause'
-
-export const actionWorkspaceRoute = '/pages/work-orders/action-workspace' as const
-export const actionWorkspaceTimeRoute = '/pages/work-orders/action-time' as const
-export const actionWorkspaceConfirmationRoute = '/pages/work-orders/action-confirmation' as const
-
-function actionRouteFor(
-  route: string,
-  workOrderId: WorkOrderId,
-  workflowNodeId: WorkflowNodeRuntimeId,
-  actionIntent: string,
-): string {
-  return `${route}?id=${encodeURIComponent(String(workOrderId))}&node=${encodeURIComponent(String(workflowNodeId))}&action=${encodeURIComponent(actionIntent)}`
-}
-
-export function actionWorkspaceRouteFor(
-  workOrderId: WorkOrderId,
-  workflowNodeId: WorkflowNodeRuntimeId,
-  actionIntent: string,
-): string {
-  return actionRouteFor(actionWorkspaceRoute, workOrderId, workflowNodeId, actionIntent)
-}
-
-export function actionWorkspaceTimeRouteFor(
-  workOrderId: WorkOrderId,
-  workflowNodeId: WorkflowNodeRuntimeId,
-  actionIntent: string,
-): string {
-  return actionRouteFor(actionWorkspaceTimeRoute, workOrderId, workflowNodeId, actionIntent)
-}
-
-export function actionWorkspaceConfirmationRouteFor(
-  workOrderId: WorkOrderId,
-  workflowNodeId: WorkflowNodeRuntimeId,
-  actionIntent: string,
-): string {
-  return actionRouteFor(actionWorkspaceConfirmationRoute, workOrderId, workflowNodeId, actionIntent)
-}
-
-export function parseActionWorkspaceId(value: unknown): WorkOrderId | null {
-  if (typeof value !== 'string' || value.trim().length === 0) return null
-  return value.trim() as WorkOrderId
-}
-
-export function parseActionWorkspaceNodeId(value: unknown): WorkflowNodeRuntimeId | null {
-  if (typeof value !== 'string' || value.trim().length === 0) return null
-  return value.trim() as WorkflowNodeRuntimeId
-}
 
 export type ActionWorkspaceLoadState = Extract<
   OperationState,
@@ -496,22 +470,6 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     dynamicFormSaveState.value = 'not_saved'
     draftStatus.value = 'restore_available'
     lifecycle.value = 'draft_local'
-  }
-
-  function taskStateForField(tasks: readonly MediaUploadTask[]): typeof mediaStateByField.value[string] {
-    if (tasks.length === 0) return 'idle'
-    const priority: readonly MediaUploadTask['state'][] = [
-      'failed_terminal',
-      'failed_retryable',
-      'uploading',
-      'preprocessing',
-      'ready_to_upload',
-      'queued',
-      'postprocessing',
-      'source_uploaded',
-      'uploaded',
-    ]
-    return priority.find((state) => tasks.some((task) => task.state === state)) ?? 'idle'
   }
 
   function rememberMediaTask(task: MediaUploadTask): void {
@@ -2067,44 +2025,25 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
   }
 
   function canPickDynamicMedia(fieldId: string): boolean {
-    const field = dynamicFields.value.find((candidate) => candidate.fieldId === fieldId)
-    return Boolean(
-      lifecycle.value !== 'submitting'
-      && businessResult.value !== 'succeeded'
-      && field
-      && (field.type === 'image' || field.type === 'file')
-      && field.runtime.capability !== 'UNSUPPORTED'
-      && field.runtime.visible
-      && !field.runtime.readOnly,
-    )
+    return isDynamicMediaPickerAllowed({
+      field: dynamicFields.value.find(candidate => candidate.fieldId === fieldId),
+      lifecycle: lifecycle.value,
+      businessResult: businessResult.value,
+    })
   }
 
   function mediaCanRetryDynamic(fieldId: string): boolean {
-    return (mediaTasksByField.value[fieldId] ?? []).some((task) =>
-      task.state === 'source_uploaded'
-      || (task.state === 'failed_retryable' && task.lastError?.code !== 'ambiguous_postprocess'),
-    )
+    return isDynamicMediaRetryAvailable(mediaTasksByField.value[fieldId] ?? [])
   }
 
   function dynamicMediaHint(fieldId: string): string | undefined {
-    const field = dynamicFields.value.find((candidate) => candidate.fieldId === fieldId)
-    if (!field) return undefined
-    const descriptor = surveyMediaDescriptorFor(dynamicForm.value?.purpose, field)
-    if (descriptor?.selectionMode === 'special_tool') return descriptor.blocker
-    if (field.runtime.capability === 'UNSUPPORTED') return field.runtime.reason
-    if (!field.runtime.visible) return '当前字段不适用于本页面'
-    if (field.runtime.readOnly) return '当前字段仅可查看'
-    const taskState = mediaStateByField.value[fieldId]
-    if (taskState === 'queued') return '本地已保存，等待上传'
-    if (taskState === 'preprocessing' || taskState === 'ready_to_upload') return '正在准备上传…'
-    if (taskState === 'uploading') return '正在上传…'
-    if (taskState === 'source_uploaded' || taskState === 'postprocessing') return '正在生成水印照片…'
-    const hasAmbiguousPostprocess = (mediaTasksByField.value[fieldId] ?? []).some((task) => task.lastError?.code === 'ambiguous_postprocess')
-    if (taskState === 'failed_retryable' && hasAmbiguousPostprocess) return '处理结果待核查，请勿重复提交'
-    if (taskState === 'failed_retryable') return '上传失败，可点击重试'
-    if (taskState === 'failed_terminal') return '上传失败，请重新选择'
-    if (taskState === 'uploaded' || (mediaByField.value[fieldId] ?? []).length > 0) return '已上传'
-    return undefined
+    return dynamicMediaDisplayHint({
+      field: dynamicFields.value.find(candidate => candidate.fieldId === fieldId),
+      formPurpose: dynamicForm.value?.purpose,
+      taskState: mediaStateByField.value[fieldId],
+      tasks: mediaTasksByField.value[fieldId] ?? [],
+      uploadedCount: (mediaByField.value[fieldId] ?? []).length,
+    })
   }
 
   async function submit(): Promise<OperationSnapshot<void>> {
