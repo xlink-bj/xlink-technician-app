@@ -38,6 +38,7 @@
     </view>
     <MockCommercialFlowLinks
       v-if="mockMode === 'data' && isMockJourneyAvailable()"
+      :review="mockCommercialReview"
       :work-order-id="devQaJourneyWorkOrderId"
       :user-id="session.session?.user.id"
       :role-id="session.session?.currentRole?.id"
@@ -63,7 +64,12 @@ import { mockActionWorkspaceScenarios } from '@app/action-workspace-harness'
 import { isSigningMockReviewAvailable, signingMockReviewUrl } from '@app/signing-mock-review'
 import { isMaterialSkuMockAvailable, materialSkuReviewUrl } from '@app/material-sku-mock-review'
 import { isChildSubflowMockPreviewAvailable, childSubflowMockReviewUrl } from '@app/child-subflow-mock-review'
-import { devQaJourneyWorkOrderId, isMockJourneyAvailable, mockJourneyRoute } from '@app/mock-journey'
+import { devQaJourneyWorkOrderId, isMockJourneyAvailable, mockJourneyContext, mockJourneyRoute } from '@app/mock-journey'
+import { canReadMaterialSkuMock } from '@app/material-sku-mock-review'
+import {
+  confirmMockCommercialCheckpoint, pauseMockCommercialReview, readMockCommercialProgress,
+  resumeMockCommercialReview, revokeLastMockCommercialCheckpoint,
+} from '@app/mock-commercial-journey'
 import { reloadBusinessReadStores, switchBusinessDataSource } from '@features/home/business-data-source'
 import { useLocalDraftDiagnosticsStore } from '@features/home/draft-diagnostics'
 import LocalDraftDiagnosticsPanel from '@features/home/components/LocalDraftDiagnosticsPanel.vue'
@@ -71,6 +77,21 @@ import { useWorkOrderDetailStore } from '@features/work-orders/detail'
 import { useWorkOrderListStore } from '@features/work-orders/list'
 import { useSessionStore } from '@shared/state'
 import MockCommercialFlowLinks from '@features/work-orders/quotation/MockCommercialFlowLinks.vue'
+import type { MockCommercialReviewPort } from '@features/work-orders/quotation/mock-commercial-review-port'
+
+// DEV-only page composition owns the synthetic journey dependencies.
+// The quotation feature consumes only a typed capability and cannot import app internals.
+const mockCommercialReview: MockCommercialReviewPort = {
+  canReview: scope => mockJourneyContext(scope.workOrderId)?.stage === 'quotation'
+    && canReadMaterialSkuMock(scope),
+  materialSkuReviewUrl,
+  signingMockReviewUrl,
+  readProgress: readMockCommercialProgress,
+  confirmCheckpoint: confirmMockCommercialCheckpoint,
+  pause: pauseMockCommercialReview,
+  resume: resumeMockCommercialReview,
+  revokeLast: revokeLastMockCommercialCheckpoint,
+}
 
 // No commercial route links here. An explicit DEV-only URL opens this separate surface.
 // This guard is presentation-only; the adapter independently enforces Mock/write safety.
