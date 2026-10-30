@@ -34,6 +34,18 @@ function memory() {
 }
 describe('F3 persistent LOCAL form intent UI store — no backend commands',()=>{
   beforeEach(()=>setActivePinia(createPinia()))
+  it('fails closed when an App-owned synthetic preview policy is absent or throws',()=>{
+    const {port}=memory()
+    const store=useR1LocalFormDraftStore()
+    store.configure(port)
+    expect(store.isSyntheticMockDataModeEnabled()).toBe(false)
+    store.configure(port,undefined,{
+      isSyntheticMockDataModeEnabled:()=>{throw new Error('policy unavailable')},
+    })
+    expect(store.isSyntheticMockDataModeEnabled()).toBe(false)
+    store.configure(port,undefined,{isSyntheticMockDataModeEnabled:()=>false})
+    expect(store.isSyntheticMockDataModeEnabled()).toBe(false)
+  })
   it('creates, edits, marks delete and discards local intents without assigning server IDs',async()=>{
     const {port,records}=memory()
     const store=useR1LocalFormDraftStore()

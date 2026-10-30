@@ -69,15 +69,25 @@ describe('R1 MP local-only forms and repeat fixtures', () => {
       runId: asOpaqueId<'WorkflowRunId'>('mock-workflow-run-021'),
     }
     const store = useR1LocalFormDraftStore()
-    store.configure(storage, read, { trustedDefaultMockReader: true })
+    let appAllowsSyntheticData = false
+    store.configure(storage, read, {
+      trustedDefaultMockReader: true,
+      isSyntheticMockDataModeEnabled: () => appAllowsSyntheticData,
+    })
     await store.open({ actorScope: 'synthetic-role', workOrderId: mockR1RepeatWorkOrderId,
       runtimeNodeId: String(node.id), sourceNodeType: 'repeat',
       formDefinitionId: mockSyntheticDynamicFormDefinitionId }, node)
     expect(await store.stageDelete(mockR1FormData.repeatSecond)).toBe(false)
+    expect(store.isSyntheticMockDataModeEnabled()).toBe(false)
+    expect(await store.loadRepeatReferences()).toBe(false)
+    appAllowsSyntheticData = true
+    expect(store.isSyntheticMockDataModeEnabled()).toBe(true)
     expect(await store.loadRepeatReferences()).toBe(true)
     expect(await store.stageDelete(mockR1FormData.repeatSecond)).toBe(true)
     expect(store.snapshot.intents).toMatchObject([{ kind: 'delete',
       targetFormDataId: mockR1FormData.repeatSecond }])
     expect(storage.write).toHaveBeenCalledTimes(1)
+    appAllowsSyntheticData = false
+    expect(store.isSyntheticMockDataModeEnabled()).toBe(false)
   })
 })

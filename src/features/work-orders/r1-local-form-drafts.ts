@@ -2,7 +2,6 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { StoragePort, StorageKey, WorkflowNodeRead, FormDefinitionRead, FormFieldValue, TechnicianApiReadPort, R1FormsAddOptionRead, R1NodeFormListRead } from '@shared/ports'
 import { asOpaqueId } from '@shared/types'
-import { isBusinessMockDeveloperModeAvailable, isBusinessMockMode } from '@app/business-mock'
 import { allowsR1LocalDefinitionPreview } from './r1-local-form-fields'
 import { normalizeR1LocalFieldPatch, type R1LocalFieldValue } from './r1-local-form-fields'
 
@@ -82,16 +81,25 @@ export const useR1LocalFormDraftStore=defineStore('r1LocalFormDraft',()=>{
   let storage:StoragePort|null=null
   let apiRead:TechnicianApiReadPort|null=null
   let trustedDefaultMockReader=false
+  let syntheticMockDataModeProbe:(()=>boolean)|null=null
   let current:R1LocalFormScope|null=null
   let currentNode:WorkflowNodeRead|null=null
   let version=0
 
   function configure(port:StoragePort,read?:TechnicianApiReadPort,options?:{
     readonly trustedDefaultMockReader?:boolean
+    /** App-owned DEV Mock policy; no feature-to-app runtime dependency. */
+    readonly isSyntheticMockDataModeEnabled?:()=>boolean
   }){
     storage=port;apiRead=read??null
     // A caller-supplied read adapter is not automatically a Mock transport.
     trustedDefaultMockReader=options?.trustedDefaultMockReader===true
+    syntheticMockDataModeProbe=options?.isSyntheticMockDataModeEnabled??null
+  }
+  function isSyntheticMockDataModeEnabled():boolean {
+    // An unconfigured or failing App policy never authorizes fixture reads.
+    if(import.meta.env.DEV!==true || !syntheticMockDataModeProbe)return false
+    try{return syntheticMockDataModeProbe()===true}catch{return false}
   }
   function clear() {
     version++;current=null;currentNode=null
@@ -127,8 +135,8 @@ export const useR1LocalFormDraftStore=defineStore('r1LocalFormDraft',()=>{
       && currentNode.sourceNodeType===current.sourceNodeType
   }
   function syntheticReaderAllowed():boolean {
-    return Boolean(current && apiRead && trustedDefaultMockReader && import.meta.env.DEV===true
-      && isBusinessMockDeveloperModeAvailable() && isBusinessMockMode()==='data'
+    return Boolean(current && apiRead && trustedDefaultMockReader
+      && isSyntheticMockDataModeEnabled()
       && current.workOrderId.startsWith('mock-'))
   }
   /** Explicit local Mock lookup; a missing embedded repeat list is UNKNOWN. */
@@ -244,7 +252,7 @@ export const useR1LocalFormDraftStore=defineStore('r1LocalFormDraft',()=>{
     if(!scope || !intent || state.value!=='ready' || !permitted() || !apiRead || !trustedDefaultMockReader
       || !allowsR1LocalDefinitionPreview({
         dev:import.meta.env.DEV===true,
-        mockDataMode:isBusinessMockDeveloperModeAvailable() && isBusinessMockMode()==='data',
+        mockDataMode:isSyntheticMockDataModeEnabled(),
         workOrderId:scope.workOrderId,
         definitionId:intent.definitionId,
       })) {
@@ -335,7 +343,8 @@ export const useR1LocalFormDraftStore=defineStore('r1LocalFormDraft',()=>{
   async function discard(localId:string):Promise<boolean> {
     return update(previous=>({...previous,intents:previous.intents.filter(x=>x.localId!==localId)}))
   }
-  return {state,snapshot,message,availableAddOptions,repeatList,configure,clear,open,add,
+  return {state,snapshot,message,availableAddOptions,repeatList,configure,
+    isSyntheticMockDataModeEnabled,clear,open,add,
     addFromOption,loadAddOptions,loadRepeatReferences,loadEditableExisting,
     stageDelete,stageEditTitle,loadDraftDefinition,setDraftField,saveDraftValues,discard}
 })

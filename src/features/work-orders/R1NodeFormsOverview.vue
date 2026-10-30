@@ -101,7 +101,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import type { WorkflowNodeRead, R1NodeFormReference, R1NodeFormListRead, FormDefinitionRead } from '@shared/ports'
-import { isBusinessMockDeveloperModeAvailable, isBusinessMockMode } from '@app/business-mock'
 import type { R1LocalFieldValue } from './r1-local-form-fields'
 import AppButton from '@shared/ui/AppButton.vue'
 import AppInput from '@shared/ui/AppInput.vue'
@@ -126,7 +125,7 @@ const activeIntent=computed(()=>draftStore.snapshot.intents.find(x=>x.localId===
   && (x.kind==='new'||x.kind==='edit_title'))??null)
 const formList=computed<R1NodeFormListRead|null>(()=>draftStore.repeatList??props.node?.formList??null)
 const syntheticActionsEnabled=computed(()=>Boolean(import.meta.env.DEV && props.workOrderId?.startsWith('mock-')
-  && isBusinessMockDeveloperModeAvailable() && isBusinessMockMode()==='data'))
+  && draftStore.isSyntheticMockDataModeEnabled()))
 function closeFieldEditor(){
   fieldLoadSeq++
   activeLocalId.value=null
