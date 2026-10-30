@@ -17,6 +17,8 @@ concurrency:
 jobs:
   quick:
     if: github.event_name == 'pull_request'
+    outputs:
+      ci_workflow_changed: ${{ steps.changed_tests.outputs.ci_workflow_changed }}
     runs-on: ubuntu-latest
     timeout-minutes: 8
     env:
@@ -44,6 +46,7 @@ jobs:
           pnpm run check:m1-i8-baseline
           pnpm run typecheck
       - name: Fast actor, read-only, quotation and changed Vitest tests
+        id: changed_tests
         env:
           VITE_XLINK_ENVIRONMENT: test
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
@@ -51,6 +54,12 @@ jobs:
         run: |
           set -euo pipefail
           git fetch --no-tags --depth=1 origin "$BASE_SHA"
+          ci_changed_files=$(git diff --name-only "$BASE_SHA" HEAD -- .github/workflows)
+          if [[ -n "$ci_changed_files" ]]; then
+            echo "ci_workflow_changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ci_workflow_changed=false" >> "$GITHUB_OUTPUT"
+          fi
           mapfile -t changed_tests < <(git diff --name-only "$BASE_SHA" HEAD -- ':(glob)tests/**/*.test.ts')
           printf 'Changed Vitest test files: %s\n' "${#changed_tests[@]}"
           pnpm exec vitest run \
@@ -65,8 +74,9 @@ jobs:
 
 
   verify:
-    # Run full tests and platform builds only on main push or manual dispatch.
-    if: github.event_name != 'pull_request'
+    # Full gate on main/manual and CI-workflow-changing PRs; other PRs keep the fast lane.
+    needs: quick
+    if: ${{ always() && (github.event_name != 'pull_request' || (needs.quick.result == 'success' && needs.quick.outputs.ci_workflow_changed == 'true')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 40
     env:
