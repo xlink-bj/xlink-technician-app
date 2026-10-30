@@ -117,6 +117,7 @@ import {
 } from './dynamic-form-action'
 import { surveyMediaDescriptorFor, surveyMediaPostUploadPolicyFor } from './survey-media'
 import { loadActionMutationReceipt, mutationReceiptDenial, type ActionMutationScope } from './action-mutation-receipt'
+import { recoverActionFormFromReceipt } from './action-workspace-form-recovery'
 import {
   actionWorkspaceSessionScopeKey as sessionScopeKey,
   actionMutationScopeFor,
@@ -739,54 +740,33 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       ...(currentTask.sourceNodeType ? { sourceNodeType: currentTask.sourceNodeType } : {}),
       ...(form.data.definitionId ? { contentIdentity: form.data.definitionId } : {}),
     }
-    let loadedForm = form.data
-    if (configured.storage && nextDescriptor.contentIdentity) {
-      const receipt = await loadActionMutationReceipt(configured.storage, {
-        userId: String(nextDescriptor.userId),
-        workOrderId: String(nextDescriptor.workOrderId),
-        workflowNodeId: String(nextDescriptor.workflowNodeId),
-        formDefinitionId: String(nextDescriptor.contentIdentity),
-        authorizationScope: requestedSessionScope,
-      })
+    const receiptRecovery = configured.storage && nextDescriptor.contentIdentity
+      ? await recoverActionFormFromReceipt({
+          storage: configured.storage,
+          descriptor: nextDescriptor,
+          initialForm: form.data,
+          commandApi: configured.commandApi,
+          appointment: isAppointmentAction,
+          ...(node.formDataId ? { existingFormDataId: node.formDataId } : {}),
+          ...(node.formDefinitionId ? { formDefinitionId: node.formDefinitionId } : {}),
+          ...(read.data.workflowRunId ? { workflowRunId: read.data.workflowRunId } : {}),
+          ...(currentTask.formFieldIdsReadOnly ? { workflowReadOnlyFieldIds: currentTask.formFieldIdsReadOnly } : {}),
+          authorizationScope: requestedSessionScope,
+          stillCurrent: () => requestVersion === loadVersion && scopeUnchanged(),
+        })
+      : { kind: 'ready' as const, form: form.data }
+    if (receiptRecovery.kind === 'stale') {
       if (requestVersion !== loadVersion) return failure('cancelled', 'Action Workspace load was superseded')
-      if (!scopeUnchanged()) return blockStaleScope()
-      if (receipt.state !== 'succeeded' || (receipt.data && receipt.data.phase !== 'form_saved')) {
-        detail.value = read.data
-        loadState.value = 'blocked'
-        lifecycle.value = 'blocked'
-        error.value = receipt.error ?? mutationReceiptDenial().error ?? null
-        return failure('unsupported_capability', error.value?.message ?? '写入结果待核查，禁止再次提交。')
-      }
-      if (receipt.data?.formDataId) {
-        const savedId = receipt.data.formDataId as FormDataId
-        if (node.formDataId && String(node.formDataId) !== String(savedId)) {
-          loadState.value = 'blocked'
-          lifecycle.value = 'blocked'
-          error.value = createOperationError('unsupported_capability', '服务器表单 ID 与本地防重回执不一致，请人工核对。')
-          return failure('unsupported_capability', error.value.message)
-        }
-        const recovered = isAppointmentAction
-          ? await configured.commandApi.readAppointmentForm({ formDataId: savedId })
-          : configured.commandApi.readDynamicForm
-            ? await configured.commandApi.readDynamicForm({
-                definitionId: node.formDefinitionId!, formDataId: savedId,
-                ...(read.data.workflowRunId ? { expectedWorkflowRunId: read.data.workflowRunId } : {}),
-                ...(currentTask.formFieldIdsReadOnly ? { workflowReadOnlyFieldIds: currentTask.formFieldIdsReadOnly } : {}),
-              })
-            : failure<DynamicFormRead>('unsupported_capability', '表单 ID 回读能力不可用。')
-        if (requestVersion !== loadVersion) return failure('cancelled', 'Action Workspace load was superseded')
-        if (!scopeUnchanged()) return blockStaleScope()
-        if (recovered.state !== 'succeeded' || !recovered.data
-          || String(recovered.data.dataId) !== String(savedId)
-          || String(recovered.data.definitionId) !== String(nextDescriptor.contentIdentity)) {
-          loadState.value = 'blocked'
-          lifecycle.value = 'blocked'
-          error.value = createOperationError('unsupported_capability', '无法按防重回执确认服务器表单，禁止继续工作流。')
-          return failure('unsupported_capability', error.value.message)
-        }
-        loadedForm = recovered.data
-      }
+      return blockStaleScope()
     }
+    if (receiptRecovery.kind === 'blocked') {
+      if (receiptRecovery.keepDetail) detail.value = read.data
+      loadState.value = 'blocked'
+      lifecycle.value = 'blocked'
+      error.value = receiptRecovery.error
+      return failure('unsupported_capability', receiptRecovery.message)
+    }
+    const loadedForm = receiptRecovery.form
     const nextIdentity = actionDraftIdentityFor(nextDescriptor, target.roleId)
     detail.value = read.data
     descriptor.value = nextDescriptor

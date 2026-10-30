@@ -29,6 +29,7 @@
 - [No Writable Beta Path](engineering/NO_BETA_ENGINEERING_PARITY_PATH.md)：A/Mock、B/Production 只读、C/授权 Beta 写入的证据分层。
 - [Codex Local Fast Loop](engineering/CODEX_LOCAL_FAST_LOOP.md)：仅在本地 Mac、微信开发者工具、内网等特有能力下的协作。
 - [AI Engineering Loop](architecture/AI_ENGINEERING_LOOP.md)：拟议协作模式；不表示已开启无人值守自动执行。
+- [C3/C4/G3 Architecture Closure](engineering/C3_C4_G3_ARCHITECTURE_CLOSURE_20261030.md)：Action Workspace 最终有界回读、R1 Adapter 纯映射拆分和 CI 分层运行的职责/验证矩阵；以实施 PR 的精确提交门禁为验收依据。
 
 ## 大量历史文档如何理解
 
