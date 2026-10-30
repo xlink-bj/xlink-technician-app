@@ -1,11 +1,14 @@
 # Documentation Governance — XLink Technician App
 
-> **Status: ACTIVE / Normative** · 2026-10-30 · 目的：压缩权威文档数量，保留业务与工程证据链，而不是追求删除文件个数。
+> **Status: DRAFT / proposed ACTIVE standard** · 2026-10-30 · 目的：压缩权威文档数量，保留业务与工程证据链，而不是追求删除文件个数。
+> **Owner:** ChatGPT Lead (maintainer); Product Owner approval required before treating this Draft as current policy.
+> **Scope:** Architecture/documentation only. No business, backend, production, CI or release authorization changes.
 
 ## 1. 文档身份
 
 | Status | 含义 | 维护方式 |
 | --- | --- | --- |
+| **DRAFT** | 候选规范/快照，尚未由 Owner 审批合入 main | 不能覆盖当前 ACTIVE 文档 | 
 | **ACTIVE** | 当前长期规范/权威索引 | 与行为、目录、工具改动同 PR 更新 |
 | **SNAPSHOT** | 绑定 exact commit、时间和范围的事实快照 | 不覆盖旧快照；新基线产生新版本或显式修订 |
 | **REFERENCE** | 设计依据、R1 调查或尚有可借鉴的历史方案 | 必须保留原提交、限制和决策状态 |

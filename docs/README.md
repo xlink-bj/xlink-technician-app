@@ -1,8 +1,10 @@
 # XLink 工匠 App — 文档导航
 
-> **Status: ACTIVE / Living index** · 2026-10-30 · 基线 main@17ba7211040df887be28665564414cb037b6acef
+> **Status: DRAFT / proposed ACTIVE index** · 2026-10-30 · 基线 main@17ba7211040df887be28665564414cb037b6acef
+> **Owner:** ChatGPT Lead (maintainer); Product Owner approval required before treating this Draft as current policy.
+> **Scope:** Architecture/documentation only. No business, backend, production, CI or release authorization changes.
 >
-> 本页是文档入口，不是另一套架构决策。**当前实施事实看代码和 CI，架构决策看现有权威规范，历史验收看对应 exact-HEAD 证据。**
+> **本 PR 在 Draft 阶段时，下列新建规范均为候选，只有经 Owner 审核并合入 main 后才能成为 ACTIVE。** 本页是文档入口，不是另一套架构决策。**当前实施事实看代码和 CI，架构决策看现有权威规范，历史验收看对应 exact-HEAD 证据。**
 
 ## 先读这六份
 

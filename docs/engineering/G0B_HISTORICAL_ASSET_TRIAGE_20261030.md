@@ -1,6 +1,8 @@
 # G0-B Historical Asset Triage — Inventory Candidate
 
-> **Status: SNAPSHOT / Proposal only** · 2026-10-30 · main@17ba7211040df887be28665564414cb037b6acef
+> **Status: DRAFT SNAPSHOT / Proposal only** · 2026-10-30 · main@17ba7211040df887be28665564414cb037b6acef
+> **Owner:** ChatGPT Lead (maintainer); Product Owner approval required before treating this Draft as current policy.
+> **Scope:** Architecture/documentation only. No business, backend, production, CI or release authorization changes.
 >
 > **本文件不授权删除、移动、停用 CI、重设 Golden 或关闭 PR。** G0-B 必须逐项验证消费者、唯一信息和精确历史 SHA，再单独审阅。
 

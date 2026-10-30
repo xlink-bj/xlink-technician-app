@@ -1,6 +1,8 @@
 # Implementation Baseline — main@17ba7211
 
-> **Status: SNAPSHOT / Code-grounded** · 2026-10-30
+> **Status: DRAFT SNAPSHOT / Code-grounded** · 2026-10-30
+> **Owner:** ChatGPT Lead (maintainer); Product Owner approval required before treating this Draft as current policy.
+> **Scope:** Architecture/documentation only. No business, backend, production, CI or release authorization changes.
 >
 > 仓库 xlink-bj/xlink-technician-app，审查主干 17ba7211040df887be28665564414cb037b6acef。本文件描述**已经在代码中出现的结构**，不是功能已验收或可写 Beta 的声明。长期边界以 [Target Architecture](TARGET_ARCHITECTURE.md) 为准；运行/协作约束以 [AGENTS.md](../../AGENTS.md) 为准。
 

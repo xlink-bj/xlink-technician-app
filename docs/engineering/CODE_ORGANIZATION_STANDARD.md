@@ -1,6 +1,8 @@
 # Code Organization Standard — XLink Technician App
 
-> **Status: ACTIVE / Normative** · 2026-10-30
+> **Status: DRAFT / proposed ACTIVE standard** · 2026-10-30
+> **Owner:** ChatGPT Lead (maintainer); Product Owner approval required before treating this Draft as current policy.
+> **Scope:** Architecture/documentation only. No business, backend, production, CI or release authorization changes.
 >
 > 依据 [Target Architecture](../architecture/TARGET_ARCHITECTURE.md)、[Action Workspace Architecture](../architecture/ACTION_WORKSPACE_ARCHITECTURE.md)、[当前实现快照](../architecture/IMPLEMENTATION_BASELINE_20261030.md)。这是后续**增量修改**的组织准则，不要求立即重排所有现有文件。
 
