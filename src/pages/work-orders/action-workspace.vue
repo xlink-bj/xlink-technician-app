@@ -57,7 +57,8 @@
       />
     </template>
     <template #after-content>
-      <AStageMockQuoteOrderPanel v-if="aStageMockOrderEnabled" />
+      <AStageMockQuoteOrderPanel v-if="aStageMockOrderEnabled"
+        :create-controller="createAStageMockQuoteOrderControllerForUi" />
     </template>
   </QuotationActionWorkspace>
 
@@ -255,7 +256,10 @@ import { compareQuoteWithStandaloneSkuDemo, compareQuoteWithSameCatalogSynthetic
 import { reviewP1SyntheticSkuReadiness } from '@app/p1-sku-readiness-review'
 import { setActionWorkspacePageTitle } from '@app/action-page-title'
 import { mockJourneyContext } from '@app/mock-journey'
-import { readAStageMockOrderForActor, isAStageMockOrderEnabled } from '@app/a-stage-quotation-mock-ui'
+import { readAStageMockOrderForActor, isAStageMockOrderEnabled,
+  createAStageMockQuoteOrderController } from '@app/a-stage-quotation-mock-ui'
+import { createDefaultStoragePort } from '@app/composition'
+import type { AStageMockQuoteOrderControllerFactory } from '@features/work-orders/quotation/a-stage-mock-quote-port'
 import { advanceMockJourneyWithSavedDraft } from '@app/mock-journey-closure'
 import { readMockJourneyContext, type MockJourneyContextSummary } from '@app/mock-journey-context'
 import { canAdoptMockSurveySuggestion } from '@app/mock-journey-quote-suggestion'
@@ -292,6 +296,8 @@ import type { AppChoiceOption } from '@shared/ui/types'
 import type { OperationError } from '@shared/types'
 import type { QuotationOrderBrowseItem } from '@shared/ports'
 
+const createAStageMockQuoteOrderControllerForUi: AStageMockQuoteOrderControllerFactory = getActor =>
+  createAStageMockQuoteOrderController({ getActor, storage: createDefaultStoragePort() })
 const session = useSessionStore()
 const workspace = useActionWorkspaceStore()
 const quotationComposition = useQuotationCompositionStore()

@@ -114,7 +114,7 @@
       <R1SpecialMockTransactionPanel v-else-if="aStageSpecialKind && currentR1FormNode"
         :key="String(currentR1FormNode.id)" :kind="aStageSpecialKind"
         :node="currentR1FormNode" :work-order-id="String(detail.id)"
-        @changed="retry" />
+        :create-controller="createAStageSpecialControllerForUi" @changed="retry" />
       <R1NodeFormsOverview v-else-if="currentR1FormNode" :node="currentR1FormNode"
         :work-order-id="String(detail.id)" :actor-scope="workOrderReadScopeKey(session.session)" />
       <AppStatus v-if="aStageCompletedSpecialNode" tone="success" quiet
@@ -322,11 +322,15 @@ import AppWorkOrderSkeleton from '@shared/ui/AppWorkOrderSkeleton.vue'
 import WorkOrderTaskFocus from '@features/work-orders/WorkOrderTaskFocus.vue'
 import R1NodeFormsOverview from '@features/work-orders/R1NodeFormsOverview.vue'
 import R1SpecialMockTransactionPanel from '@features/work-orders/R1SpecialMockTransactionPanel.vue'
-import { isAStageSpecialMockAvailable, type AStageSpecialKind } from '@app/a-stage-special-mock-ui'
+import { isAStageSpecialMockAvailable, createAStageSpecialMockController, type AStageSpecialKind } from '@app/a-stage-special-mock-ui'
+import { createDefaultStoragePort } from '@app/composition'
+import type { AStageSpecialMockControllerFactory } from '@features/work-orders/a-stage-special-mock-port'
 import R1ProductionChildFormsPanel from '@features/work-orders/R1ProductionChildFormsPanel.vue'
 import R1ProductionMainRepeatPanel from '@features/work-orders/R1ProductionMainRepeatPanel.vue'
 import { appLoadingSkeletonDelayMs } from '@shared/ui/loading'
 
+const createAStageSpecialControllerForUi: AStageSpecialMockControllerFactory = options =>
+  createAStageSpecialMockController({ ...options, storage: createDefaultStoragePort() })
 const session = useSessionStore()
 const workOrder = useWorkOrderDetailStore()
 const quotationBrowse = useQuotationOrderBrowseStore()
