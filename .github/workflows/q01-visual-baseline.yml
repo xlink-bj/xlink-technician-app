@@ -3,7 +3,9 @@ name: Q01 Commercial Visual Baseline (375)
 on:
   pull_request:
     paths:
-      - 'src/features/work-orders/quotation/**'
+      - 'src/features/work-orders/quotation/**/*.vue'
+      - 'src/features/work-orders/quotation/**/*.scss'
+      - 'src/features/work-orders/quotation/composition-store.ts'
       - 'tests/h5-main-mock/q01-visual-baseline.spec.ts'
       - '.github/workflows/q01-visual-baseline.yml'
   workflow_dispatch:
