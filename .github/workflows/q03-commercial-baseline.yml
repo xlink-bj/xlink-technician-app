@@ -3,7 +3,10 @@ name: Q03 Commercial Catalog Baseline (375)
 on:
   pull_request:
     paths:
-      - 'src/features/work-orders/quotation/**'
+      - 'src/features/work-orders/quotation/**/*.vue'
+      - 'src/features/work-orders/quotation/**/*.scss'
+      - 'src/features/work-orders/quotation/catalog-browser-store.ts'
+      - 'src/features/work-orders/quotation/catalog-selection-bridge.ts'
       - 'tests/h5-main-mock/q03-commercial-baseline.spec.ts'
       - '.github/workflows/q03-commercial-baseline.yml'
   workflow_dispatch:

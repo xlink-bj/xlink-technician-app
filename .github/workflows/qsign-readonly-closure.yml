@@ -3,7 +3,11 @@ name: QSign Quote to Pre-Signing Read-Only Closure
 on:
   pull_request:
     paths:
-      - 'src/features/work-orders/quotation/**'
+      - 'src/features/work-orders/quotation/**/*.vue'
+      - 'src/features/work-orders/quotation/**/*.scss'
+      - 'src/features/work-orders/quotation/order-submission.ts'
+      - 'src/features/work-orders/quotation/order-reconstruction.ts'
+      - 'src/features/work-orders/quotation/composition-store.ts'
       - 'src/features/work-orders/signing/**'
       - 'src/pages/work-orders/action-workspace.vue'
       - 'src/pages/work-orders/signing-order-read.vue'
