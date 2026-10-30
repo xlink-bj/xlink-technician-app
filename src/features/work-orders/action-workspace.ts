@@ -90,14 +90,12 @@ import {
   type DynamicActionField,
 } from './dynamic-form-action'
 import { surveyMediaDescriptorFor, surveyMediaPostUploadPolicyFor } from './survey-media'
+import { loadActionMutationReceipt, mutationReceiptDenial, type ActionMutationScope } from './action-mutation-receipt'
 import {
-  beginActionMutation,
-  loadActionMutationReceipt,
-  mutationReceiptDenial,
-  recordActionFormSaved,
-  recordActionWorkflowCompleted,
-  type ActionMutationScope,
-} from './action-mutation-receipt'
+  actionWorkspaceSessionScopeKey as sessionScopeKey,
+  actionMutationScopeFor,
+  createActionMutationCheckpoints,
+} from './action-workspace-command-boundary'
 import { useQuotationCompositionStore } from './quotation/composition-store'
 import { useQuotationCatalogBrowserStore } from './quotation/catalog-browser-store'
 import { useQuotationEngineStore } from './quotation/engine-store'
@@ -303,72 +301,19 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
   // reactive quotation field changes during asynchronous initialization.
   const loadedSessionScope = ref<string | null>(null)
 
-  function sessionScopeKey(session: SessionSnapshot): string {
-    return JSON.stringify([
-      String(session.sessionRef),
-      String(session.user.id),
-      session.currentRole ? String(session.currentRole.id) : null,
-      session.roleVersion ?? null,
-    ])
-  }
-
   function mutationScopeFor(action: ActionDescriptor): ActionMutationScope | null {
-    const session = dependencies?.getSession()
-    if (!session || !loadedSessionScope.value || !action.contentIdentity
-      || String(session.user.id) !== String(action.userId)) return null
-    return {
-      userId: String(action.userId),
-      workOrderId: String(action.workOrderId),
-      workflowNodeId: String(action.workflowNodeId),
-      formDefinitionId: String(action.contentIdentity),
-      authorizationScope: loadedSessionScope.value,
-    }
+    return actionMutationScopeFor(action, dependencies?.getSession() ?? null, loadedSessionScope.value)
   }
 
   function mutationCheckpointsFor(action: ActionDescriptor): FormMutationCheckpoints | null {
     const storage = dependencies?.storage
     const scope = mutationScopeFor(action)
     if (!storage || !scope) return null
-    let formReserved = false
-    let workflowReserved = false
-    let savedId: FormDataId | null = null
-    let completed = false
-    const current = () => commandSessionScopeCurrent() && descriptor.value === action
-    return {
-      async beforeFormDispatch() {
-        if (!current()) return failure('session_invalid', '账号或角色已变化，禁止保存旧表单。')
-        if (formReserved) return { state: 'succeeded' }
-        const knownId = dynamicForm.value?.dataId ?? appointmentForm.value?.dataId
-        const result = await beginActionMutation(storage, scope, 'form_dispatched', knownId)
-        if (result.state !== 'succeeded') return failureFrom(result)
-        if (!current()) return failure('session_invalid', '保存前账号或角色已变化，结果待核查。')
-        formReserved = true
-        return { state: 'succeeded' }
-      },
-      async afterFormSaved(formDataId) {
-        if (savedId === formDataId) return { state: 'succeeded' }
-        const result = await recordActionFormSaved(storage, scope, formDataId)
-        if (result.state !== 'succeeded') return failureFrom(result)
-        savedId = formDataId
-        return { state: 'succeeded' }
-      },
-      async beforeWorkflowDispatch(formDataId) {
-        if (!current()) return failure('session_invalid', '账号或角色已变化，禁止完成旧工作流。')
-        if (workflowReserved) return { state: 'succeeded' }
-        const result = await beginActionMutation(storage, scope, 'workflow_dispatched', formDataId)
-        if (result.state !== 'succeeded') return failureFrom(result)
-        if (!current()) return failure('session_invalid', '完成前账号或角色已变化，结果待核查。')
-        workflowReserved = true
-        return { state: 'succeeded' }
-      },
-      async afterWorkflowCompleted() {
-        if (completed) return { state: 'succeeded' }
-        const result = await recordActionWorkflowCompleted(storage, scope)
-        if (result.state !== 'succeeded') return failureFrom(result)
-        completed = true
-        return { state: 'succeeded' }
-      },
-    }
+    return createActionMutationCheckpoints({
+      storage, scope,
+      isCurrent: () => commandSessionScopeCurrent() && descriptor.value === action,
+      currentFormDataId: () => dynamicForm.value?.dataId ?? appointmentForm.value?.dataId,
+    })
   }
 
   /** Mandatory at command dispatch, not just on route re-entry: an existing
