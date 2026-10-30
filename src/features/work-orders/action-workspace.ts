@@ -3,6 +3,7 @@ import { defineStore } from 'pinia'
 import { isProductionReadOnlyRuntime } from '@shared/config'
 
 import { detailWorkflowProjectionFor } from './detail-workflow'
+import { selectActionWorkspaceLoadTarget } from './action-workspace-load-target'
 import { createActionWorkspaceReadModel } from './action-workspace-read-model'
 import {
   actionWorkspaceRouteFor,
@@ -39,7 +40,6 @@ import {
   mediaTaskMatchesDynamicForm,
 } from './action-workspace-draft-utils'
 import {
-  actionContentKindForIntent,
   actionDraftIdentityFor,
   actionDraftIdentityMatches,
   actionExecutionForWorkflowDecision,
@@ -613,69 +613,23 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       error.value = read.error ?? null
       return failureFrom<WorkOrderDetail, ActionDescriptor>(read)
     }
-    if (String(read.data.id) !== String(input.workOrderId)) {
-      loadState.value = 'blocked'
-      lifecycle.value = 'blocked'
-      error.value = createOperationError('unsupported_capability', 'Work Order response identity does not match the requested order')
-      return failure('unsupported_capability', error.value.message)
-    }
-    if (!session.currentRole?.id) {
-      loadState.value = 'blocked'
-      lifecycle.value = 'blocked'
-      error.value = createOperationError('session_invalid', '当前角色不可用，禁止恢复无角色归属的工作台草稿。')
-      return failure('session_invalid', error.value.message)
-    }
-
     const projection = detailWorkflowProjectionFor(read.data, session)
-    const currentTask = projection.currentTask
-    const node = read.data.workflowNodes?.find((candidate) => candidate.id === input.workflowNodeId)
-    // A synthetic six-stage tour may inspect/edit LOCAL drafts on otherwise
-    // ineligible R1 'forms' nodes. Keep descriptor.execution disabled so
-    // no FormData/Workflow command can become executable via this preview.
-    // Never accept an arbitrary caller-supplied preview flag in real builds.
-    const syntheticReadOnlyPreview = input.localPreviewOnly === true
-      && import.meta.env.DEV === true
-      && import.meta.env.VITE_XLINK_H5_MOCK_E2E === 'true'
-      && String(input.workOrderId) === 'mock-work-order-019-continuous-journey'
-      && String(input.workflowNodeId) === (input.actionIntent === 'set_appointment'
-        ? 'mock-workflow-node-019-appointment'
-        : input.actionIntent === 'interact_with_form'
-          ? 'mock-workflow-node-019-survey' : '')
-      && (currentTask?.sourceNodeType === 'forms' || currentTask?.sourceNodeType === 'repeat')
-      && currentTask?.execution === 'disabled_read_only'
-    if (
-      !currentTask ||
-      !node ||
-      String(currentTask.nodeId) !== String(input.workflowNodeId) ||
-      (input.actionIntent && currentTask.actionIntent !== input.actionIntent) ||
-      (currentTask.execution !== 'enabled' && !syntheticReadOnlyPreview)
-    ) {
-      detail.value = read.data
+    const target = selectActionWorkspaceLoadTarget({
+      detail: read.data,
+      session,
+      currentTask: projection.currentTask,
+      request: input,
+      devMockE2EBuildEnabled: import.meta.env.DEV === true
+        && import.meta.env.VITE_XLINK_H5_MOCK_E2E === 'true',
+    })
+    if (target.kind === 'blocked') {
+      if (target.keepDetail) detail.value = read.data
       loadState.value = 'blocked'
       lifecycle.value = 'blocked'
-      error.value = createOperationError('unsupported_capability', 'This Action is not executable')
-      return failure('unsupported_capability', 'This Action is not executable')
+      error.value = createOperationError(target.category, target.message)
+      return failure(target.category, error.value.message)
     }
-
-    const contentKind = actionContentKindForIntent(currentTask.actionIntent)
-    const isAppointmentAction = currentTask.actionIntent === 'set_appointment'
-    const isDynamicAction = currentTask.actionIntent === 'interact_with_form'
-    const isQuotationAction = currentTask.actionIntent === 'place_order' && contentKind === 'quotation'
-    if (!isAppointmentAction && !isDynamicAction && !isQuotationAction) {
-      detail.value = read.data
-      loadState.value = 'blocked'
-      lifecycle.value = 'blocked'
-      error.value = createOperationError('unsupported_capability', 'This Action content is not supported')
-      return failure('unsupported_capability', 'This Action content is not supported')
-    }
-
-    if (isDynamicAction && !node.formDefinitionId) {
-      detail.value = read.data
-      loadState.value = 'blocked'
-      lifecycle.value = 'blocked'
-      error.value = createOperationError('unsupported_capability', 'Dynamic form definition is unavailable')
-      return failure('unsupported_capability', 'Dynamic form definition is unavailable')
-    }
+    const { currentTask, node, contentKind, isAppointmentAction, isDynamicAction, isQuotationAction } = target
 
     if (isQuotationAction) {
       // A quotation draft must have an authenticated role provenance. Without
@@ -833,7 +787,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
         loadedForm = recovered.data
       }
     }
-    const nextIdentity = actionDraftIdentityFor(nextDescriptor, session.currentRole.id)
+    const nextIdentity = actionDraftIdentityFor(nextDescriptor, target.roleId)
     detail.value = read.data
     descriptor.value = nextDescriptor
     appointmentForm.value = isAppointmentAction ? loadedForm as AppointmentFormRead : null
