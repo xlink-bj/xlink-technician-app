@@ -28,6 +28,8 @@ Static import reachability is **not** code coverage: Vue pages are normally inst
 
 ### P1 — Main route table contains four DEV QA / Mock pages
 
+> **C1 follow-up completed:** [Production-profile Release Artifact Verification](../verification/C1_RELEASE_ARTIFACT_AUDIT_20261030.md) proves these pages **are present** in emitted H5 and MP bundles, while the inspected compiled DEV-only authorization paths are constant-false/blocked. Interactive browser/device tests remain SKIP. The source-only uncertainty below is preserved as its original G0-C audit context.
+
 `src/pages.json` unconditionally registers:
 
 - `pages/dev/qa-console`

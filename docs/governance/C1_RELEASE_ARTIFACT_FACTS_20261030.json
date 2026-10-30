@@ -1,0 +1,113 @@
+{
+  "sourceCommit": "17ba7211040df887be28665564414cb037b6acef",
+  "profile": {
+    "viteBuild": true,
+    "ci": true,
+    "appEnvironment": "prod",
+    "apiHost": "https://example.invalid",
+    "authTenant": "c1-synthetic",
+    "realWrites": false
+  },
+  "h5Routes": [
+    {
+      "path": "dist/build/h5/assets/pages-dev-qa-console.Coc8CmRi.js",
+      "sizeBytes": 13386,
+      "sha256": "6431a259ab6570dbcf30bb99be031fdcea9feb323de86189d0ca46a7d72e8f08"
+    },
+    {
+      "path": "dist/build/h5/assets/pages-work-orders-signing-mock-review.DFHyFcvX.js",
+      "sizeBytes": 8978,
+      "sha256": "8c2e30fb06069492fb0af2b6bf2e607b21a95952d4fa5ae9cf3b44544092b0d2"
+    },
+    {
+      "path": "dist/build/h5/assets/pages-work-orders-material-sku-mock-review.BALDIl6p.js",
+      "sizeBytes": 27133,
+      "sha256": "7ddb9c60c74d8a94922e0a9e99bd9dfac577b91fecbb215315a380fb829fc914"
+    },
+    {
+      "path": "dist/build/h5/assets/pages-work-orders-child-subflow-mock-review.kNRpimTW.js",
+      "sizeBytes": 3224,
+      "sha256": "d3c710294b53020103f1f2e28880636b4e1d00c6ee0cb38e844d8523affa0be5"
+    }
+  ],
+  "mpRoutes": [
+    {
+      "js": {
+        "path": "dist/build/mp-weixin/pages/dev/qa-console.js",
+        "sizeBytes": 3585,
+        "sha256": "95db3820f1b37b64409d1c7b654fbafc081b8ad73e11e166c6e51f1ba9edead2"
+      },
+      "wxml": {
+        "path": "dist/build/mp-weixin/pages/dev/qa-console.wxml",
+        "sizeBytes": 3335,
+        "sha256": "f717c80c53377d7c5593603557200a214a039ec7fb3fb006a45e5e4bc161de1f"
+      }
+    },
+    {
+      "js": {
+        "path": "dist/build/mp-weixin/pages/work-orders/signing-mock-review.js",
+        "sizeBytes": 3034,
+        "sha256": "2ba754d8679fa8255db2bbacdb609aef39fe0b36fd5f6824e9af64799bf54da7"
+      },
+      "wxml": {
+        "path": "dist/build/mp-weixin/pages/work-orders/signing-mock-review.wxml",
+        "sizeBytes": 5656,
+        "sha256": "141e2b8cf59a9bb676cd8a9f0d1dc29687272d6e1f8e57543f7305cc809a936a"
+      }
+    },
+    {
+      "js": {
+        "path": "dist/build/mp-weixin/pages/work-orders/material-sku-mock-review.js",
+        "sizeBytes": 8644,
+        "sha256": "9624b1d16e0921f496aecf3e750f8fc7b9bbb79e5a6ba1e88b713b39d6fea9cf"
+      },
+      "wxml": {
+        "path": "dist/build/mp-weixin/pages/work-orders/material-sku-mock-review.wxml",
+        "sizeBytes": 10803,
+        "sha256": "323a8df226a62cccd0ea4e0fe0a6588285030402c85c655ba3444751adfc18b3"
+      }
+    },
+    {
+      "js": {
+        "path": "dist/build/mp-weixin/pages/work-orders/child-subflow-mock-review.js",
+        "sizeBytes": 1664,
+        "sha256": "51d0c6defc0f8cc804e3b427d83db6da90455879344aa52f2818977033fb841a"
+      },
+      "wxml": {
+        "path": "dist/build/mp-weixin/pages/work-orders/child-subflow-mock-review.wxml",
+        "sizeBytes": 1622,
+        "sha256": "79d80f902f291ceab007f557891bf80b7a62e891f4ef6e1db8e34d903b5114a4"
+      }
+    }
+  ],
+  "mpManifest": {
+    "path": "dist/build/mp-weixin/app.json",
+    "sizeBytes": 683,
+    "sha256": "ad62b9af0c2a845456ae32adba674418372a7a1dce285de3efad70270e2077bb"
+  },
+  "validation": {
+    "h5Build": "PASS",
+    "mpWeixinBuild": "PASS",
+    "mpBootstrap": "PASS",
+    "mpWxss": "PASS",
+    "staticArtifactAssertions": {
+      "mpAllFourRegistered": true,
+      "mpAllFourBuilt": true,
+      "h5AllFourBuilt": true,
+      "mpQaCompiledDisabled": true,
+      "mpJourneyCompiledDisabled": true,
+      "h5QaCompiledDisabled": true,
+      "mpSigningReadBlocked": true,
+      "mpChildReadBlocked": true
+    },
+    "browserRouteInteraction": "SKIP_BROWSER_INSTALL_ENVIRONMENT_BLOCKED",
+    "nativeAppArtifact": "NOT_RUN"
+  },
+  "toolchain": {
+    "node": "24.22.1",
+    "pnpm": "10.31.0",
+    "uniCompiler": "5.15 (Vue 3)",
+    "note": "CI workflows use Node 22; this diagnostic container used Node 24.22.1."
+  },
+  "disposition": "QA_ROUTES_PRESENT_IN_RELEASE_BUNDLES;COMPILE_TIME_DEV_GUARDS_FAIL_CLOSED;INTERACTIVE_DENIED_ROUTE_UNVERIFIED"
+}

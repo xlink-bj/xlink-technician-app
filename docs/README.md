@@ -45,6 +45,11 @@
 - [G0-C Source Architecture & Release Surface Audit](engineering/G0C_CODE_AND_RELEASE_SURFACE_AUDIT_20261030.md)：基于 main 的 289 个源码文件、224 个测试文件、依赖图、QA 页面发行边界以及具体的下一步实施队列。
 - [逐模块依赖和测试引用快照](governance/G0C_SOURCE_DEPENDENCY_SNAPSHOT_20261030.json)：270 个 TS/Vue 模块、912 条本地导入边及测试直接引用；**静态图不是构建结果或真实覆盖率**。
 
+## C1：发行产物验证（Draft）
+
+- [H5 / 微信小程序发行边界实测报告](verification/C1_RELEASE_ARTIFACT_AUDIT_20261030.md)：两端构建通过；四个 QA/Mock 页面仍被打包，但已检查的 DEV 能力在编译产物中被禁用。浏览器交互验收仍未完成。
+- [C1 产物哈希与路径清单](governance/C1_RELEASE_ARTIFACT_FACTS_20261030.json)：构建文件大小、SHA-256 和机器校验结果。
+
 ## 更新顺序
 
 1. 核对最新 main 的 exact SHA、受影响的文件及当前测试。
