@@ -9,7 +9,10 @@ on:
       - 'scripts/check-s2-ux-review.mjs'
       - '.github/workflows/s2-ux-review-sheet.yml'
       - 'src/pages/**'
-      - 'src/features/work-orders/**'
+      # UI source files; feature-local TypeScript helpers use fast unit CI.
+      - 'src/features/work-orders/**/*.vue'
+      - 'src/features/work-orders/**/*.scss'
+      - 'src/features/work-orders/**/*.css'
       # Shared visual anatomy is rendered throughout Q00–Q03 and S01.
       - 'src/shared/ui/**'
       - 'src/components/**'
