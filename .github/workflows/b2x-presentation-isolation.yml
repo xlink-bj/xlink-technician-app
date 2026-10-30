@@ -6,7 +6,10 @@ on:
       - '.github/workflows/b2x-presentation-isolation.yml'
       - 'scripts/check-b2x2-commercial-ui-parity.mjs'
       - 'src/pages/dev/**'
-      - 'src/features/work-orders/**'
+      # UI source files; feature-local TypeScript helpers use fast unit CI.
+      - 'src/features/work-orders/**/*.vue'
+      - 'src/features/work-orders/**/*.scss'
+      - 'src/features/work-orders/**/*.css'
       - 'src/adapters/api/mock/fixtures.ts'
       - 'src/adapters/api/mock/router.ts'
       - 'src/pages.json'
