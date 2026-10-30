@@ -15,6 +15,11 @@ import {
   isDynamicMediaRetryAvailable,
   dynamicMediaDisplayHint,
 } from './action-workspace-media-projection'
+import {
+  restoreActionMediaQueue,
+  resumableActionMediaTasks,
+  retryActionMediaQueue,
+} from './action-workspace-media-queue'
 export {
   actionWorkspaceRoute,
   actionWorkspaceTimeRoute,
@@ -513,42 +518,23 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
   }
 
   async function restoreMediaTasks(nextDescriptor: ActionDescriptor, stillCurrent: () => boolean): Promise<void> {
-    const configured = dependencies
-    if (!configured?.mediaUploadQueue || !dynamicForm.value) return
-    const listed = await configured.mediaUploadQueue.listForAction({
-      userId: nextDescriptor.userId,
-      workOrderId: nextDescriptor.workOrderId,
-      workflowNodeId: nextDescriptor.workflowNodeId,
-      ...(nextDescriptor.contentIdentity ? { formDefinitionId: String(nextDescriptor.contentIdentity) as FormDefinitionId } : {}),
-      ...(dynamicForm.value.dataId ? { formDataId: dynamicForm.value.dataId } : {}),
-    })
-    if (!stillCurrent()) return
-    if (listed.state !== 'succeeded' || !listed.data) {
-      // Queue metadata is auxiliary to the business read. Keep the form usable
-      // while retaining the error for diagnostics instead of inventing values.
-      error.value = listed.error ?? null
-      return
-    }
-
-    let restoredBusinessValue = false
-    for (const listedTask of listed.data.filter((candidate) => mediaTaskMatchesDynamicForm(candidate, nextDescriptor, dynamicForm.value!))) {
-      if (!stillCurrent()) return
-      const task = listedTask.state === 'postprocessing'
-        ? (await configured.mediaUploadQueue.process(listedTask.taskId)).data ?? listedTask
-        : listedTask
-      if (!stillCurrent()) return
-      rememberMediaTask(task)
-      if (task.state === 'uploaded' && task.uploadedRef) {
-        const fieldUploaded = mediaByField.value[task.scope.fieldId] ?? []
-        if (!fieldUploaded.some((item) => item.url === task.uploadedRef?.url)) {
+    const queue = dependencies?.mediaUploadQueue
+    if (!queue || !dynamicForm.value) return
+    const restoredBusinessValue = await restoreActionMediaQueue({
+      queue, descriptor: nextDescriptor,
+      getForm: () => dynamicForm.value, stillCurrent,
+      onReadFailure: (readError) => { error.value = readError },
+      onTask: rememberMediaTask,
+      onUploaded: (fieldId, uploaded) => {
+        const existing = mediaByField.value[fieldId] ?? []
+        if (!existing.some(item => item.url === uploaded.url)) {
           mediaByField.value = {
-            ...mediaByField.value,
-            [task.scope.fieldId]: [...fieldUploaded, task.uploadedRef],
+            ...mediaByField.value, [fieldId]: [...existing, uploaded],
           }
         }
-        restoredBusinessValue = applyUploadedMedia(task.scope.fieldId, [task.uploadedRef]) || restoredBusinessValue
-      }
-    }
+        return applyUploadedMedia(fieldId, [uploaded])
+      },
+    })
     if (restoredBusinessValue) {
       draftRevision += 1
       draftStatus.value = 'dirty'
@@ -1978,32 +1964,22 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     const queue = configured?.mediaUploadQueue
     const tasks = mediaTasksByField.value[fieldId] ?? []
     if (!queue || tasks.length === 0) return failure('unsupported_capability', '没有可重试的媒体上传')
-    const resumableTasks = tasks.filter((candidate) =>
-      candidate.state === 'source_uploaded'
-      || (candidate.state === 'failed_retryable' && candidate.lastError?.code !== 'ambiguous_postprocess'),
-    )
+    const resumableTasks = resumableActionMediaTasks(tasks)
     if (resumableTasks.length === 0) return failure('validation', '水印处理结果待核查，不能重复提交')
     if (mediaInFlightField.value) return failure('validation', 'Media upload is already in progress')
     mediaInFlightField.value = fieldId
     error.value = null
     try {
-      const uploaded: UploadedMediaRef[] = []
-      for (const task of resumableTasks) {
-        if (!current()) return stale()
-        const result = task.state === 'source_uploaded'
-          ? await queue.process(task.taskId)
-          : await queue.retry(task.taskId)
-        if (!current()) return stale()
-        if (result.data) rememberMediaTask(result.data)
-        if (result.state !== 'succeeded' || !result.data?.uploadedRef) {
-          error.value = result.error ?? createOperationError('network_retryable', 'Media upload failed')
-          return result.state === 'succeeded'
-            ? { state: 'failed_terminal', error: error.value }
-            : result as OperationSnapshot<void>
-        }
-        uploaded.push(result.data.uploadedRef)
+      const retried = await retryActionMediaQueue({
+        queue, tasks: resumableTasks, stillCurrent: current, onTask: rememberMediaTask,
+      })
+      if (retried.state === 'stale') return stale()
+      if (retried.state === 'failed') {
+        error.value = retried.error
+        return retried.result
       }
       if (!current()) return stale()
+      const uploaded = retried.uploaded
       const previous = mediaByField.value[fieldId] ?? []
       mediaByField.value = {
         ...mediaByField.value,
