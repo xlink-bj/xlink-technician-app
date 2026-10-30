@@ -2,7 +2,7 @@ name: Validate Main H5 UX
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft, edited]
   push:
     branches: [main]
   schedule:
@@ -18,8 +18,8 @@ concurrency:
 
 jobs:
   r1-main-repeat-ui:
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-    # Nightly/manual Mock regression; real Production reads
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && startsWith(github.event.pull_request.title, '[L3-H5]'))
+    # Nightly/manual or explicitly marked high-risk PR Mock regression; real Production reads
     # and device UX remain separate manual acceptance gates.
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -64,8 +64,8 @@ jobs:
           retention-days: 7
 
   h5-ux:
-    # L3 nightly/manual only; PR and main events keep a skipped check context.
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    # L3 nightly/manual or explicitly marked high-risk PR; ordinary PR/main events keep a skipped check context.
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && startsWith(github.event.pull_request.title, '[L3-H5]'))
     runs-on: ubuntu-latest
     timeout-minutes: 40
     env:
