@@ -30,6 +30,7 @@
         "navigationBarTitleText": "签约进度"
       }
     },
+    // #ifdef XLINK_DEV_QA
     {
       "path": "pages/work-orders/signing-mock-review",
       "style": {
@@ -54,6 +55,7 @@
         "navigationBarTitleText": "开发 QA 控制台"
       }
     },
+    // #endif
     {
       "path": "pages/work-orders/action-time",
       "style": {
