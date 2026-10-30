@@ -9,6 +9,8 @@
 
 **Current architecture has recognizable module boundaries and useful automated guards, but feature-to-app back references, large multi-responsibility files and release-only QA packaging remain the highest-value next治理对象。** Retain the single-main development model. The safe approach is narrow, reversible refactoring behind stable facades, not moving directories or deleting Mock/QA code by name.
 
+**2026-10-30 事后状态（不改写审计当日的 `17ba721` 事实）：**C1 的发布 QA 打包缺口已经由 [PR #238](https://github.com/xlink-bj/xlink-technician-app/pull/238) 在 `main@57cde73` 修复，H5/MP 正式构建的四个路由及其页面资源均通过缺席校验；APP 原生安装包仍由 [#240](https://github.com/xlink-bj/xlink-technician-app/issues/240) 独立验收。C2 feature→app 依赖治理在 [#241](https://github.com/xlink-bj/xlink-technician-app/issues/241) 分阶段推进，C2-A [PR #242](https://github.com/xlink-bj/xlink-technician-app/pull/242) 不属于本次旧主干快照。下文 C1 发现与 12 路由数字仅表示修复前审计证据。
+
 ## 1. Source and test census
 
 | Static object | Count | Interpretation |

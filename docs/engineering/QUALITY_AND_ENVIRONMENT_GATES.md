@@ -25,10 +25,13 @@ C 当前仍 **HOLD**，没有获准的可写隔离 R1-backed fixture。Productio
 | 共享 UI 与商业 CSS | pnpm run check:ui-governance | 包含可静态约束的样式所有权 |
 | 主 App H5 Mock | pnpm run test:main-h5-mock | 网络隔离的真实主 App 操作 |
 | H5 基础启动 | pnpm run test:main-h5-boot | 检查生产级入口启动，不代表登录成功 |
+| H5 正式构建 | pnpm run build:h5 | C1-FIX 后包含 QA 路由与 JS 产物缺席校验 |
 | 微信构建 | pnpm run build:mp-weixin | 包含 WXSS 检查；不代表真机 |
 | App 构建 | pnpm run build:app | 不代表双平台实体运行 |
 
 检查命令以本 PR 对应的 package.json 为准；若有版本/参数变更，更新此表和实际 CI。关键 CI：[Validate](../../.github/workflows/validate.yml)、[Validate Main H5 UX](../../.github/workflows/validate-main-h5.yml)。
+
+**2026-10-30 实测补记：**C1-FIX [#238](https://github.com/xlink-bj/xlink-technician-app/pull/238) 合并后，H5/MP/APP 发布脚本会拒绝继承 `XLINK_DEV_QA` 编译标记；H5/MP 还检查最终发布产物中四个 QA 页面缺席。仅运行裸 `uni build` 不等于通过这些发布边界检查。全量本机验证应使用与 `.github/workflows/validate.yml` 相同的测试前提：`VITE_XLINK_ENVIRONMENT=test` 和完整 Git 历史（`fetch-depth: 0`）；否则可能出现 Mock reader 被关闭或祖先提交不可见的假失败。[#239](https://github.com/xlink-bj/xlink-technician-app/issues/239) 已通过原始主干 1470/1470 和 C2-A 1472/1472 的对照验证收口。
 
 ## 3. CI 层次与真实含义
 

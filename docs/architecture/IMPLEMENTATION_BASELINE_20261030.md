@@ -6,6 +6,8 @@
 >
 > 仓库 xlink-bj/xlink-technician-app，审查主干 17ba7211040df887be28665564414cb037b6acef。本文件描述**已经在代码中出现的结构**，不是功能已验收或可写 Beta 的声明。长期边界以 [Target Architecture](TARGET_ARCHITECTURE.md) 为准；运行/协作约束以 [AGENTS.md](../../AGENTS.md) 为准。
 
+**后续变更索引（不回写旧快照）：**[C1-FIX #238](https://github.com/xlink-bj/xlink-technician-app/pull/238) 已于 2026-10-30 合入 `main@57cde73`，发布产物不再注册四个 DEV QA 页面；第 5 节关于 QA 路由的描述仅对应本文件固定的 `17ba721`。后续 C2 架构改动按 [#241](https://github.com/xlink-bj/xlink-technician-app/issues/241) 独立审查，不能把尚未合并的实现写成当前事实。
+
 ## 1. 一套业务代码，多端编译
 
 - Vue 3、TypeScript、uni-app、Pinia；pnpm + Vite、Vitest、Playwright。

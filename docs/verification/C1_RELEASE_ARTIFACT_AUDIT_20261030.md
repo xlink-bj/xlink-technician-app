@@ -6,6 +6,8 @@
 > **Scope:** Real local production-mode H5 and MP-WEIXIN compilation with **synthetic, inert environment**. No Production/Beta network, credentials, API writes, code changes, CI modifications, upload, deploy, or native App binaries.
 > **Machine evidence:** [C1 Output Files and SHA-256](../governance/C1_RELEASE_ARTIFACT_FACTS_20261030.json)
 
+> **Post-fix status (2026-10-30):** The FAIL below is an immutable diagnosis of **pre-fix `main@17ba721`**, not the current release policy. [C1-FIX PR #238](https://github.com/xlink-bj/xlink-technician-app/pull/238) was squash-merged as `main@57cde73a25bcd964715804745f355bc1dbb0ee56` and introduced DEV-only page registration plus release H5/MP artifact absence gates; both passed exact-HEAD CI. The native APP installation/package check remains NOT_RUN in [#240](https://github.com/xlink-bj/xlink-technician-app/issues/240). Preserve this original diagnosis and file hashes for comparison; do not reinterpret its test table as the new build result.
+
 ## Executive verdict
 
 | Gate | Result | What the evidence proves |

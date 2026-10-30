@@ -5,6 +5,8 @@
 > **Scope:** Architecture/documentation only. No business, backend, production, CI or release authorization changes.
 >
 > **本 PR 在 Draft 阶段时，下列新建规范均为候选，只有经 Owner 审核并合入 main 后才能成为 ACTIVE。** 本页是文档入口，不是另一套架构决策。**当前实施事实看代码和 CI，架构决策看现有权威规范，历史验收看对应 exact-HEAD 证据。**
+>
+> **主干更新提示（2026-10-30）：**本索引中的 G0-A/B/C 和 C1 审计数字均固定在旧 `main@17ba721`，不是最新主干状态。C1-FIX 已通过 [PR #238](https://github.com/xlink-bj/xlink-technician-app/pull/238) 合入 `main@57cde73`；四个内部 QA 页面已从 H5/MP 发布包排除。原生 APP 最终打包/真机验证仍在 [#240](https://github.com/xlink-bj/xlink-technician-app/issues/240)。C2-A 的 [PR #242](https://github.com/xlink-bj/xlink-technician-app/pull/242) 仍独立待审批，不属于本历史快照。
 
 ## 先读这六份
 
@@ -12,10 +14,10 @@
 | --- | --- | --- |
 | 协作、安全与主干规则 | [AGENTS.md](../AGENTS.md) | **ACTIVE — 操作约束** |
 | 长期架构与依赖原则 | [Target Architecture](architecture/TARGET_ARCHITECTURE.md) | **ACTIVE — 目标决策**（原有阶段标识可能过时） |
-| 今天的真实代码与能力边界 | [Implementation Baseline](architecture/IMPLEMENTATION_BASELINE_20261030.md) | **SNAPSHOT — 本次主干事实** |
-| 新增或拆分模块 | [Code Organization Standard](engineering/CODE_ORGANIZATION_STANDARD.md) | **ACTIVE — 开发约定** |
-| 测试、环境和发布证据 | [Quality & Environment Gates](engineering/QUALITY_AND_ENVIRONMENT_GATES.md) | **ACTIVE — 证据规范** |
-| 文档状态、归档与更新 | [Documentation Governance](engineering/DOCUMENTATION_GOVERNANCE.md) | **ACTIVE — 文档约定** |
+| 2026-10-30 旧主干的实现快照 | [Implementation Baseline](architecture/IMPLEMENTATION_BASELINE_20261030.md) | **SNAPSHOT — 固定于 `17ba721`** |
+| 新增或拆分模块 | [Code Organization Standard](engineering/CODE_ORGANIZATION_STANDARD.md) | **DRAFT → 拟议 ACTIVE 开发约定** |
+| 测试、环境和发布证据 | [Quality & Environment Gates](engineering/QUALITY_AND_ENVIRONMENT_GATES.md) | **DRAFT → 拟议 ACTIVE 证据规范** |
+| 文档状态、归档与更新 | [Documentation Governance](engineering/DOCUMENTATION_GOVERNANCE.md) | **DRAFT → 拟议 ACTIVE 文档约定** |
 
 ## 专题权威文件（保留，按需阅读）
 
@@ -45,10 +47,11 @@
 - [G0-C Source Architecture & Release Surface Audit](engineering/G0C_CODE_AND_RELEASE_SURFACE_AUDIT_20261030.md)：基于 main 的 289 个源码文件、224 个测试文件、依赖图、QA 页面发行边界以及具体的下一步实施队列。
 - [逐模块依赖和测试引用快照](governance/G0C_SOURCE_DEPENDENCY_SNAPSHOT_20261030.json)：270 个 TS/Vue 模块、912 条本地导入边及测试直接引用；**静态图不是构建结果或真实覆盖率**。
 
-## C1：发行产物验证（Draft）
+## C1：发行产物历史诊断与后续修复
 
-- [H5 / 微信小程序发行边界实测报告](verification/C1_RELEASE_ARTIFACT_AUDIT_20261030.md)：两端构建通过；四个 QA/Mock 页面仍被打包，但已检查的 DEV 能力在编译产物中被禁用。浏览器交互验收仍未完成。
-- [C1 产物哈希与路径清单](governance/C1_RELEASE_ARTIFACT_FACTS_20261030.json)：构建文件大小、SHA-256 和机器校验结果。
+- [C1 H5 / 微信小程序发行边界历史诊断](verification/C1_RELEASE_ARTIFACT_AUDIT_20261030.md)：在 `17ba721` 上发现 QA 路由仍被打包；**这是修复前的证据，不是现在的发布状态**。
+- [C1 修复 PR #238](https://github.com/xlink-bj/xlink-technician-app/pull/238)：以 DEV 专用编译条件排除 H5/MP QA 路由并加入产物断言；CI 与商用/DEV 隔离回归已通过。APP 原生包仍待 #240。
+- [C1 诊断时的产物哈希与路径清单](governance/C1_RELEASE_ARTIFACT_FACTS_20261030.json)：保留原始文件大小、SHA-256 和机器校验结果，**不覆盖**修复前快照。
 
 ## 更新顺序
 
