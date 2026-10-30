@@ -179,3 +179,8 @@ export function readAStageMockOrderForActor(getActor: () => AStageQuoteActor | n
   return createAStageMockQuoteOrderController({ getActor,
     storage: createDefaultStoragePort() }).readMockOrder()
 }
+
+/** DEV-only controller factory; storage remains behind App composition. */
+export function createAStageMockQuoteOrderControllerForActor(getActor: () => AStageQuoteActor | null) {
+  return createAStageMockQuoteOrderController({ getActor, storage: createDefaultStoragePort() })
+}

@@ -13,32 +13,16 @@ import {
   closeCompletedR1MutationReceiptAfterReadback, type R1MultiStepScope,
 } from '@features/work-orders/r1-multistep-offline-transaction'
 import type { StoragePort } from '@shared/ports'
+import { createDefaultStoragePort } from './composition'
 
-export type AStageSpecialKind = 'forms' | 'repeat'
-export interface AStageMockActor { readonly userId: string; readonly roleId: string; readonly identity: string }
-export type AStageSpecialAction =
-  | { readonly kind: 'save'; readonly summary: string; readonly title?: string }
-  | { readonly kind: 'edit'; readonly id: string; readonly summary: string; readonly title?: string }
-  | { readonly kind: 'delete'; readonly id: string }
-  | { readonly kind: 'finish' }
-export interface AStageSpecialRecord {
-  readonly id: string
-  readonly title: string
-  readonly summary: string
-  readonly state: 'active' | 'deleted'
-  readonly editable: boolean
-}
-export interface AStageSpecialView {
-  readonly kind: AStageSpecialKind
-  readonly nodeActive: boolean
-  readonly entries: readonly AStageSpecialRecord[]
-  readonly receiptPending: boolean
-  readonly pendingRecoverable: boolean
-  readonly pendingNeedsOriginalText: boolean
-}
-export type AStageSpecialOutcome =
-  | { readonly state: 'succeeded'; readonly view: AStageSpecialView }
-  | { readonly state: 'blocked' | 'uncertain'; readonly message: string }
+import type {
+  AStageSpecialKind, AStageMockActor, AStageSpecialAction, AStageSpecialRecord,
+  AStageSpecialView, AStageSpecialOutcome,
+} from '@features/work-orders/a-stage-special-mock-port'
+export type {
+  AStageSpecialKind, AStageMockActor, AStageSpecialAction, AStageSpecialRecord,
+  AStageSpecialView, AStageSpecialOutcome,
+} from '@features/work-orders/a-stage-special-mock-port'
 
 const targets = {
   forms: { sid: mockR1FormsWorkOrderId, node: 'mock-workflow-node-020-forms', run: 'mock-workflow-run-020' },
@@ -287,4 +271,11 @@ export function createAStageSpecialMockController(options: {
     } finally { inFlight = false }
   }
   return { load, execute, recoverCompleted }
+}
+
+/** Page-composed DEV capability. No page or feature creates a storage adapter. */
+export function createAStageSpecialMockControllerForActor(
+  options: Omit<Parameters<typeof createAStageSpecialMockController>[0], 'storage'>,
+) {
+  return createAStageSpecialMockController({ ...options, storage: createDefaultStoragePort() })
 }

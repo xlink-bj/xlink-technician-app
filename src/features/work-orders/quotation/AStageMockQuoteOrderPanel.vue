@@ -43,14 +43,14 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { createDefaultStoragePort } from '@app/composition'
-import { createAStageMockQuoteOrderController } from '@app/a-stage-quotation-mock-ui'
+import type { AStageMockQuoteOrderControllerFactory } from './a-stage-mock-quote-port'
 import { useActionWorkspaceStore } from '../action-workspace'
 import { useQuotationCompositionStore } from './composition-store'
 import { useSessionStore } from '@shared/state'
 import AppButton from '@shared/ui/AppButton.vue'
 import AppStatus from '@shared/ui/AppStatus.vue'
 
+const props = defineProps<{ readonly createController: AStageMockQuoteOrderControllerFactory }>()
 const workspace = useActionWorkspaceStore()
 const composition = useQuotationCompositionStore()
 const session = useSessionStore()
@@ -74,8 +74,7 @@ function actor() {
         identity: JSON.stringify([current.sessionRef, current.user.id,
           current.currentRole.id, current.roleVersion ?? null]) } : null
 }
-const controller = createAStageMockQuoteOrderController({ getActor: actor,
-  storage: createDefaultStoragePort() })
+const controller = props.createController(actor)
 let generation = 0
 watch(() => [engine.value?.draftVersion, engine.value?.state, session.session?.sessionRef,
   session.session?.currentRole?.id, session.session?.roleVersion] as const,

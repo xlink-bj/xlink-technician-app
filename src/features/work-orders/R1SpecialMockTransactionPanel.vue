@@ -103,11 +103,10 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import type { WorkflowNodeRead } from '@shared/ports'
-import { createDefaultStoragePort } from '@app/composition'
-import {
-  createAStageSpecialMockController, type AStageSpecialView,
-  type AStageSpecialAction, type AStageSpecialKind,
-} from '@app/a-stage-special-mock-ui'
+import type {
+  AStageSpecialView, AStageSpecialAction, AStageSpecialKind,
+  AStageSpecialMockController, AStageSpecialMockControllerFactory,
+} from './a-stage-special-mock-port'
 import { useSessionStore } from '@shared/state'
 import AppButton from '@shared/ui/AppButton.vue'
 import AppTextarea from '@shared/ui/AppTextarea.vue'
@@ -115,7 +114,7 @@ import AppStatus from '@shared/ui/AppStatus.vue'
 import { uxStateLanguage } from '@shared/ui/ux-state-language'
 
 const props = defineProps<{ readonly kind: AStageSpecialKind; readonly workOrderId: string;
-  readonly node: WorkflowNodeRead }>()
+  readonly node: WorkflowNodeRead; readonly createController: AStageSpecialMockControllerFactory }>()
 const emit = defineEmits<{ (event: 'changed'): void }>()
 const session = useSessionStore()
 const viewState = ref<AStageSpecialView | null>(null)
@@ -130,9 +129,8 @@ const confirmDeleteId = ref<string | null>(null)
 const confirmFinish = ref(false)
 const canFinish = computed(() => Boolean(viewState.value?.entries.some(row =>
   row.state === 'active' && (props.kind === 'forms' || row.editable))))
-const storage = createDefaultStoragePort()
 let revision = 0
-let controller: ReturnType<typeof createAStageSpecialMockController> | null = null
+let controller: AStageSpecialMockController | null = null
 function actor() {
   const current = session.session
   return current?.user.id && current.currentRole?.id && current.sessionRef
@@ -168,8 +166,8 @@ watch(() => [props.kind, props.workOrderId, props.node.id,
   editingId.value = null
   confirmDeleteId.value = null
   confirmFinish.value = false
-  controller = createAStageSpecialMockController({ kind: props.kind,
-    workOrderId: props.workOrderId, storage, getActor: actor })
+  controller = props.createController({ kind: props.kind,
+    workOrderId: props.workOrderId, getActor: actor })
   void refresh()
 }, { immediate: true })
 onBeforeUnmount(() => { revision++; controller = null })
