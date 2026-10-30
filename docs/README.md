@@ -38,7 +38,7 @@
 | docs/design-system/ / docs/ux/ | 已签收标准、阶段方案及视觉证据混合 | 按 Owner 接受状态和当前 Golden 判断 |
 | docs/quotation/ | 报价专项视觉证据 | **REFERENCE**；不得绕过真实业务/视觉 gate |
 
-**状态含义与归档方法**见 [Documentation Governance](engineering/DOCUMENTATION_GOVERNANCE.md)。[G0-B 待分类资产盘点](engineering/G0B_HISTORICAL_ASSET_TRIAGE_20261030.md)列出下一步候选；该清单尚未授权任何删除或 CI 变更。
+**状态含义与归档方法**见 [Documentation Governance](engineering/DOCUMENTATION_GOVERNANCE.md)。[G0-B 全量静态盘点与治理队列](engineering/G0B_HISTORICAL_ASSET_TRIAGE_20261030.md)汇总 203 份文档、47 条 Workflow、57 个 scripts 文件、18 份根级工具配置。逐文件证据见 [文档清单](governance/G0B_DOCUMENT_INVENTORY_20261030.json)、[CI 清单](governance/G0B_CI_WORKFLOW_INVENTORY_20261030.json)、[工具配置清单](governance/G0B_TOOLING_INVENTORY_20261030.json)。**这些都是 DRAFT 分类建议，不是 ACTIVE 授权，更不代表可以删除。**
 
 ## 更新顺序
 

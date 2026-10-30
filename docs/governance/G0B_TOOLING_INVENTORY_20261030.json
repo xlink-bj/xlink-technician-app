@@ -1,0 +1,944 @@
+{
+  "schemaVersion": 1,
+  "repository": "xlink-bj/xlink-technician-app",
+  "sourceCommit": "17ba7211040df887be28665564414cb037b6acef",
+  "reviewDate": "2026-10-30",
+  "status": "DRAFT / HEURISTIC_ONLY",
+  "method": "Full-text static path references in package.json, 47 workflows and 57 scripts; absence of a literal path does NOT imply unused, imports may be relative and default config discovery is implicit.",
+  "summary": {
+    "packageCommands": 62,
+    "scriptDirectoryFiles": 57,
+    "rootToolConfigs": 18,
+    "scriptsWithoutExplicitPathReference": 17,
+    "configsPossibleImplicitEntryPoints": 3
+  },
+  "packageScripts": [
+    {
+      "name": "dev:h5",
+      "command": "uni -p h5"
+    },
+    {
+      "name": "build:h5",
+      "command": "uni build -p h5"
+    },
+    {
+      "name": "test:main-h5-boot",
+      "command": "playwright test --config playwright.main-h5-bootstrap.config.ts"
+    },
+    {
+      "name": "test:main-h5-mock",
+      "command": "playwright test --config playwright.main-h5-mock.config.ts"
+    },
+    {
+      "name": "test:r1-main-repeat-ui",
+      "command": "playwright test --config playwright.r1-main-repeat-ui.config.ts"
+    },
+    {
+      "name": "capture:s2-ux-sheet",
+      "command": "playwright test --config playwright.s2-ux-review.config.ts"
+    },
+    {
+      "name": "check:s2-ux-sheet",
+      "command": "node scripts/check-s2-ux-review.mjs"
+    },
+    {
+      "name": "dev:mp-weixin",
+      "command": "uni -p mp-weixin"
+    },
+    {
+      "name": "dev:mp-weixin:mock-ux",
+      "command": "node scripts/dev-mp-isolated-ux.mjs"
+    },
+    {
+      "name": "dev:mp-weixin:prod-readonly",
+      "command": "uni -p mp-weixin --mode prod"
+    },
+    {
+      "name": "dev:h5-review",
+      "command": "vite --config vite.review.config.ts"
+    },
+    {
+      "name": "build:h5-review",
+      "command": "vite build --config vite.review.config.ts --outDir unpackage/h5-review"
+    },
+    {
+      "name": "dev:uni-h5-review",
+      "command": "vite --config vite.uni-h5-review.config.ts"
+    },
+    {
+      "name": "dev:uni-h5-g4f-review",
+      "command": "vite --config vite.uni-h5-g4f-review.config.ts"
+    },
+    {
+      "name": "build:uni-h5-review",
+      "command": "vite build --config vite.uni-h5-review.config.ts"
+    },
+    {
+      "name": "build:uni-h5-g4f-review",
+      "command": "vite build --config vite.uni-h5-g4f-review.config.ts"
+    },
+    {
+      "name": "build:mp-weixin-review",
+      "command": "uni build -p mp-weixin -c vite.mp-weixin-review.config.ts --outDir ../unpackage/design-system-mp-weixin"
+    },
+    {
+      "name": "test:design-system-review",
+      "command": "playwright test tests/h5-review/design-system.spec.ts"
+    },
+    {
+      "name": "test:uni-h5-review",
+      "command": "playwright test --config playwright.uni-h5-review.config.ts"
+    },
+    {
+      "name": "test:uni-h5-g4f-review",
+      "command": "playwright test --config playwright.uni-h5-g4f-review.config.ts"
+    },
+    {
+      "name": "test:uni-h5-g4f-phase1b-review",
+      "command": "playwright test --config playwright.uni-h5-g4f-review.config.ts tests/h5-review/g4f-quotation-phase1b.spec.ts"
+    },
+    {
+      "name": "check:g4f-phase1a",
+      "command": "node scripts/check-g4f-phase1a.mjs"
+    },
+    {
+      "name": "check:g4f-phase1b",
+      "command": "node scripts/check-g4f-phase1b.mjs"
+    },
+    {
+      "name": "check:g4f-synthetic-extfield-review",
+      "command": "node scripts/check-g4f-synthetic-extfield-review.mjs"
+    },
+    {
+      "name": "check:g4e-review-harness",
+      "command": "node scripts/check-g4e-review-harness.mjs"
+    },
+    {
+      "name": "test:h5-review",
+      "command": "playwright test"
+    },
+    {
+      "name": "capture:g4e-review",
+      "command": "playwright test tests/h5-review/g4e-survey.spec.ts"
+    },
+    {
+      "name": "build:mp-weixin",
+      "command": "uni build -p mp-weixin && node scripts/verify-mp-app-bootstrap.mjs && node scripts/check-mp-wxss-stage-a.mjs"
+    },
+    {
+      "name": "build:app",
+      "command": "uni build -p app"
+    },
+    {
+      "name": "inspect:form-schema",
+      "command": "node scripts/inspect-inspection-contract.mjs"
+    },
+    {
+      "name": "verify:g4f-prod-read",
+      "command": "node scripts/verify-g4f-prod-read.mjs"
+    },
+    {
+      "name": "inspect:g4f-active-order-extfield",
+      "command": "node scripts/inspect-g4f-active-order-extfield.mjs"
+    },
+    {
+      "name": "inspect:inspection-contract",
+      "command": "node scripts/inspect-inspection-contract.mjs"
+    },
+    {
+      "name": "inspect:inspection-contract:beta",
+      "command": "node scripts/inspect-inspection-contract-beta.mjs"
+    },
+    {
+      "name": "capture:survey-contract:beta",
+      "command": "node scripts/capture-survey-contract-beta.mjs"
+    },
+    {
+      "name": "generate:survey-media",
+      "command": "node scripts/generate-survey-media-contract.mjs"
+    },
+    {
+      "name": "check:survey-media",
+      "command": "node scripts/check-survey-media.mjs"
+    },
+    {
+      "name": "check:survey-media-p0",
+      "command": "node scripts/check-survey-media-p0.mjs"
+    },
+    {
+      "name": "check:survey-camera-watermark",
+      "command": "node scripts/check-survey-camera-watermark.mjs"
+    },
+    {
+      "name": "check:inspection-contract",
+      "command": "node scripts/check-inspection-contract.mjs"
+    },
+    {
+      "name": "check:survey-contract",
+      "command": "node scripts/check-survey-contract.mjs"
+    },
+    {
+      "name": "check:survey-capabilities",
+      "command": "node scripts/check-survey-capabilities.mjs"
+    },
+    {
+      "name": "check:survey-leakage-cause",
+      "command": "node scripts/check-survey-leakage-cause.mjs"
+    },
+    {
+      "name": "check:survey-onsite-checkin",
+      "command": "node scripts/check-survey-onsite-checkin.mjs"
+    },
+    {
+      "name": "check:g4e-closure-readiness",
+      "command": "node scripts/check-g4e-closure-readiness.mjs"
+    },
+    {
+      "name": "typecheck",
+      "command": "vue-tsc --noEmit"
+    },
+    {
+      "name": "test",
+      "command": "vitest run"
+    },
+    {
+      "name": "test:watch",
+      "command": "vitest"
+    },
+    {
+      "name": "check:boundaries",
+      "command": "node scripts/check-boundaries.mjs"
+    },
+    {
+      "name": "check:engineering-ownership",
+      "command": "node scripts/check-eq10-ownership.mjs"
+    },
+    {
+      "name": "check:stacked-provenance",
+      "command": "node scripts/check-eq10-stack.mjs"
+    },
+    {
+      "name": "verify",
+      "command": "pnpm run check:boundaries && pnpm run check:engineering-ownership && pnpm run check:critical && pnpm run check:ui-governance && pnpm run check:b2x2-parity && pnpm run check:m1-i8-baseline && pnpm run check:g4f-phase1a && pnpm run check:g4f-phase1b && pnpm run check:g4f-synthetic-extfield-review && pnpm run typecheck && pnpm run test"
+    },
+    {
+      "name": "check:ui-governance",
+      "command": "node scripts/check-ui-governance.mjs"
+    },
+    {
+      "name": "check:b2x2-parity",
+      "command": "node scripts/check-b2x2-commercial-ui-parity.mjs"
+    },
+    {
+      "name": "check:m1-i8-baseline",
+      "command": "node scripts/check-m1-i8-baseline.mjs"
+    },
+    {
+      "name": "test:ds02a:gallery",
+      "command": "playwright test --config playwright.ds02a-gallery.config.ts"
+    },
+    {
+      "name": "test:ds02a:business",
+      "command": "playwright test --config playwright.ds02a-main.config.ts"
+    },
+    {
+      "name": "check:quality",
+      "command": "node scripts/eq01-quality-census.mjs --check"
+    },
+    {
+      "name": "verify:quick",
+      "command": "pnpm run check:boundaries && pnpm run check:engineering-ownership && pnpm run check:critical && pnpm run check:ui-governance && pnpm run check:m1-i8-baseline && pnpm run typecheck && pnpm exec vitest run tests/g3c/adapters.test.ts tests/g4c/work-order-detail.test.ts tests/g4f/m1-i7-work-order-read-scope.test.ts tests/g4f/production-read-only.test.ts tests/engineering/r1-stage1-live-read-contract.test.ts tests/engineering/r1-stage1-form-detail-read-contract.test.ts tests/engineering/r1-model-contract-parity.test.ts tests/engineering/r1-three-pillar-contract-matrix.test.ts tests/g4f/quotation-order-browse-handoff.test.ts tests/g4f/quotation-order-read.test.ts tests/g4f/quotation-order-signing-read-boundary.test.ts tests/g4f/quotation-local-review-closure.test.ts tests/ds03/transaction-visual-contract.test.ts tests/ds05/mobile-craft-two-page.test.ts tests/engineering/eq01-mock-scenarios.test.ts tests/engineering/eq02-action-draft-helpers.test.ts tests/engineering/r1-action-workspace-foundation.test.ts tests/engineering/eq07-command-state-consistency.test.ts tests/g4d/action-workspace.test.ts tests/g4d/draft-diagnostics.test.ts tests/g4e/onsite-inspection.test.ts tests/g4e/survey-leakage-cause.test.ts"
+    },
+    {
+      "name": "verify:full",
+      "command": "pnpm run verify && pnpm run check:quality"
+    },
+    {
+      "name": "verify:critical",
+      "command": "node scripts/verify-critical-behavior.mjs --run"
+    },
+    {
+      "name": "check:critical",
+      "command": "node scripts/verify-critical-behavior.mjs"
+    }
+  ],
+  "scriptFiles": [
+    {
+      "path": "scripts/audit-g4f-r1-prod-shape.mjs",
+      "explicitPathReferences": [],
+      "pathReferencedInPackageScript": false,
+      "pathReferencedInWorkflow": false,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "scripts/beta-api-client.mjs",
+      "explicitPathReferences": [],
+      "pathReferencedInPackageScript": false,
+      "pathReferencedInWorkflow": false,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "scripts/beta-api-client.mjs.d.ts",
+      "explicitPathReferences": [],
+      "pathReferencedInPackageScript": false,
+      "pathReferencedInWorkflow": false,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "scripts/capture-survey-contract-beta.mjs",
+      "explicitPathReferences": [
+        "package.json"
+      ],
+      "pathReferencedInPackageScript": true,
+      "pathReferencedInWorkflow": false,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "scripts/capture-survey-contract-beta.mjs.d.ts",
+      "explicitPathReferences": [],
+      "pathReferencedInPackageScript": false,
+      "pathReferencedInWorkflow": false,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "scripts/check-b2x2-commercial-ui-parity.mjs",
+      "explicitPathReferences": [
+        ".github/workflows/b2x-presentation-isolation.yml",
+        "package.json"
+      ],
+      "pathReferencedInPackageScript": true,
+      "pathReferencedInWorkflow": true,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "scripts/check-boundaries.mjs",
+      "explicitPathReferences": [
+        "package.json"
+      ],
+      "pathReferencedInPackageScript": true,
+      "pathReferencedInWorkflow": false,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "scripts/check-closure-c1-integration.mjs",
+      "explicitPathReferences": [
+        ".github/workflows/closure-c1-integration-gate.yml",
+        ".github/workflows/closure-c2-read-model-gate.yml"
+      ],
+      "pathReferencedInPackageScript": false,
+      "pathReferencedInWorkflow": true,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "scripts/check-closure-c3-coverage.mjs",
+      "explicitPathReferences": [
+        ".github/workflows/closure-c3-quality-reliability-gate.yml"
+      ],
+      "pathReferencedInPackageScript": false,
+      "pathReferencedInWorkflow": true,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "scripts/check-closure-c3-release.mjs",
+      "explicitPathReferences": [
+        ".github/workflows/closure-c3-quality-reliability-gate.yml"
+      ],
+      "pathReferencedInPackageScript": false,
+      "pathReferencedInWorkflow": true,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "scripts/check-ds07c5-legacy-visual.mjs",
+      "explicitPathReferences": [
+        ".github/workflows/ds07c5-visual-candidate.yml"
+      ],
+      "pathReferencedInPackageScript": false,
+      "pathReferencedInWorkflow": true,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "scripts/check-ds07c8-main-preflight.mjs",
+      "explicitPathReferences": [
+        ".github/workflows/ds07c8-main-preflight.yml"
+      ],
+      "pathReferencedInPackageScript": false,
+      "pathReferencedInWorkflow": true,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "scripts/check-eq10-ownership.mjs",
+      "explicitPathReferences": [
+        ".github/workflows/eq10-quality-integration-gate.yml",
+        "package.json"
+      ],
+      "pathReferencedInPackageScript": true,
+      "pathReferencedInWorkflow": true,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "scripts/check-eq10-stack.mjs",
+      "explicitPathReferences": [
+        ".github/workflows/eq10-quality-integration-gate.yml",
+        "package.json"
+      ],
+      "pathReferencedInPackageScript": true,
+      "pathReferencedInWorkflow": true,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "scripts/check-g4e-closure-readiness.mjs",
+      "explicitPathReferences": [
+        "package.json"
+      ],
+      "pathReferencedInPackageScript": true,
+      "pathReferencedInWorkflow": false,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "scripts/check-g4e-review-harness.mjs",
+      "explicitPathReferences": [
+        "package.json"
+      ],
+      "pathReferencedInPackageScript": true,
+      "pathReferencedInWorkflow": false,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "scripts/check-g4f-phase1a.mjs",
+      "explicitPathReferences": [
+        ".github/workflows/eq01-quality-mock-baseline.yml",
+        "package.json"
+      ],
+      "pathReferencedInPackageScript": true,
+      "pathReferencedInWorkflow": true,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "scripts/check-g4f-phase1b.mjs",
+      "explicitPathReferences": [
+        ".github/workflows/eq04-quotation-catalog-bridge.yml",
+        "package.json"
+      ],
+      "pathReferencedInPackageScript": true,
+      "pathReferencedInWorkflow": true,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "scripts/check-g4f-synthetic-extfield-review.mjs",
+      "explicitPathReferences": [
+        "package.json"
+      ],
+      "pathReferencedInPackageScript": true,
+      "pathReferencedInWorkflow": false,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "scripts/check-inspection-contract.mjs",
+      "explicitPathReferences": [
+        "package.json"
+      ],
+      "pathReferencedInPackageScript": true,
+      "pathReferencedInWorkflow": false,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "scripts/check-m1-i7-reconciliation.mjs",
+      "explicitPathReferences": [
+        ".github/workflows/m1-i7-integration-gate.yml"
+      ],
+      "pathReferencedInPackageScript": false,
+      "pathReferencedInWorkflow": true,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "scripts/check-m1-i8-baseline.mjs",
+      "explicitPathReferences": [
+        "package.json"
+      ],
+      "pathReferencedInPackageScript": true,
+      "pathReferencedInWorkflow": false,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "scripts/check-m1-unified-main-candidate.mjs",
+      "explicitPathReferences": [
+        ".github/workflows/m1-unified-main-candidate-gate.yml"
+      ],
+      "pathReferencedInPackageScript": false,
+      "pathReferencedInWorkflow": true,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "scripts/check-mp-wxss-stage-a.mjs",
+      "explicitPathReferences": [
+        "package.json"
+      ],
+      "pathReferencedInPackageScript": true,
+      "pathReferencedInWorkflow": false,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "scripts/check-r1-six-stage-parity.mjs",
+      "explicitPathReferences": [
+        ".github/workflows/r1-login-appointment-integration.yml",
+        ".github/workflows/r1-source-parity-simulator.yml"
+      ],
+      "pathReferencedInPackageScript": false,
+      "pathReferencedInWorkflow": true,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "scripts/check-s2-ux-review.mjs",
+      "explicitPathReferences": [
+        ".github/workflows/s2-ux-review-sheet.yml",
+        "package.json"
+      ],
+      "pathReferencedInPackageScript": true,
+      "pathReferencedInWorkflow": true,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "scripts/check-survey-camera-watermark.mjs",
+      "explicitPathReferences": [
+        "package.json"
+      ],
+      "pathReferencedInPackageScript": true,
+      "pathReferencedInWorkflow": false,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "scripts/check-survey-capabilities.mjs",
+      "explicitPathReferences": [
+        "package.json"
+      ],
+      "pathReferencedInPackageScript": true,
+      "pathReferencedInWorkflow": false,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "scripts/check-survey-contract.mjs",
+      "explicitPathReferences": [
+        "package.json"
+      ],
+      "pathReferencedInPackageScript": true,
+      "pathReferencedInWorkflow": false,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "scripts/check-survey-leakage-cause.mjs",
+      "explicitPathReferences": [
+        "package.json"
+      ],
+      "pathReferencedInPackageScript": true,
+      "pathReferencedInWorkflow": false,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "scripts/check-survey-media-p0.mjs",
+      "explicitPathReferences": [
+        "package.json"
+      ],
+      "pathReferencedInPackageScript": true,
+      "pathReferencedInWorkflow": false,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "scripts/check-survey-media.mjs",
+      "explicitPathReferences": [
+        "package.json"
+      ],
+      "pathReferencedInPackageScript": true,
+      "pathReferencedInWorkflow": false,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "scripts/check-survey-onsite-checkin.mjs",
+      "explicitPathReferences": [
+        "package.json"
+      ],
+      "pathReferencedInPackageScript": true,
+      "pathReferencedInWorkflow": false,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "scripts/check-ui-governance.mjs",
+      "explicitPathReferences": [
+        ".github/workflows/ds01-commercial-foundation.yml",
+        "package.json"
+      ],
+      "pathReferencedInPackageScript": true,
+      "pathReferencedInWorkflow": true,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "scripts/check-ui-style-ownership.mjs",
+      "explicitPathReferences": [],
+      "pathReferencedInPackageScript": false,
+      "pathReferencedInWorkflow": false,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "scripts/ci/commercial-css-ownership.mjs",
+      "explicitPathReferences": [
+        ".github/workflows/cui01-commercial-css-ownership.yml"
+      ],
+      "pathReferencedInPackageScript": false,
+      "pathReferencedInWorkflow": true,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "scripts/dev-mp-isolated-ux.d.mts",
+      "explicitPathReferences": [],
+      "pathReferencedInPackageScript": false,
+      "pathReferencedInWorkflow": false,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "scripts/dev-mp-isolated-ux.mjs",
+      "explicitPathReferences": [
+        "package.json"
+      ],
+      "pathReferencedInPackageScript": true,
+      "pathReferencedInWorkflow": false,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "scripts/eq01-quality-census.mjs",
+      "explicitPathReferences": [
+        ".github/workflows/eq01-quality-mock-baseline.yml",
+        ".github/workflows/eq02-workspace-refactor.yml",
+        ".github/workflows/eq03-quality-gate.yml",
+        ".github/workflows/eq10-quality-integration-gate.yml",
+        "package.json"
+      ],
+      "pathReferencedInPackageScript": true,
+      "pathReferencedInWorkflow": true,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "scripts/generate-survey-capabilities.mjs",
+      "explicitPathReferences": [],
+      "pathReferencedInPackageScript": false,
+      "pathReferencedInWorkflow": false,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "scripts/generate-survey-media-contract.mjs",
+      "explicitPathReferences": [
+        "package.json"
+      ],
+      "pathReferencedInPackageScript": true,
+      "pathReferencedInWorkflow": false,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "scripts/inspect-g4f-active-order-extfield.mjs",
+      "explicitPathReferences": [
+        "package.json"
+      ],
+      "pathReferencedInPackageScript": true,
+      "pathReferencedInWorkflow": false,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "scripts/inspect-inspection-contract-beta.mjs",
+      "explicitPathReferences": [
+        "package.json"
+      ],
+      "pathReferencedInPackageScript": true,
+      "pathReferencedInWorkflow": false,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "scripts/inspect-inspection-contract-beta.mjs.d.ts",
+      "explicitPathReferences": [],
+      "pathReferencedInPackageScript": false,
+      "pathReferencedInWorkflow": false,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "scripts/inspect-inspection-contract.mjs",
+      "explicitPathReferences": [
+        "package.json"
+      ],
+      "pathReferencedInPackageScript": true,
+      "pathReferencedInWorkflow": false,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "scripts/inspection-contract.mjs",
+      "explicitPathReferences": [],
+      "pathReferencedInPackageScript": false,
+      "pathReferencedInWorkflow": false,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "scripts/inspection-contract.mjs.d.ts",
+      "explicitPathReferences": [],
+      "pathReferencedInPackageScript": false,
+      "pathReferencedInWorkflow": false,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "scripts/lib/g4f-audit-execution-mode.mjs",
+      "explicitPathReferences": [],
+      "pathReferencedInPackageScript": false,
+      "pathReferencedInWorkflow": false,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "scripts/lib/g4f-order-extfield-shape.d.mts",
+      "explicitPathReferences": [],
+      "pathReferencedInPackageScript": false,
+      "pathReferencedInWorkflow": false,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "scripts/lib/g4f-order-extfield-shape.mjs",
+      "explicitPathReferences": [],
+      "pathReferencedInPackageScript": false,
+      "pathReferencedInWorkflow": false,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "scripts/survey-capabilities.mjs",
+      "explicitPathReferences": [],
+      "pathReferencedInPackageScript": false,
+      "pathReferencedInWorkflow": false,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "scripts/survey-capabilities.mjs.d.ts",
+      "explicitPathReferences": [],
+      "pathReferencedInPackageScript": false,
+      "pathReferencedInWorkflow": false,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "scripts/survey-media-contract.mjs",
+      "explicitPathReferences": [],
+      "pathReferencedInPackageScript": false,
+      "pathReferencedInWorkflow": false,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "scripts/survey-media-contract.mjs.d.ts",
+      "explicitPathReferences": [],
+      "pathReferencedInPackageScript": false,
+      "pathReferencedInWorkflow": false,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "scripts/verify-critical-behavior.mjs",
+      "explicitPathReferences": [
+        ".github/workflows/eq06-critical-behavior.yml",
+        ".github/workflows/eq10-quality-integration-gate.yml",
+        "package.json"
+      ],
+      "pathReferencedInPackageScript": true,
+      "pathReferencedInWorkflow": true,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "scripts/verify-g4f-prod-read.mjs",
+      "explicitPathReferences": [
+        "package.json"
+      ],
+      "pathReferencedInPackageScript": true,
+      "pathReferencedInWorkflow": false,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "scripts/verify-mp-app-bootstrap.mjs",
+      "explicitPathReferences": [
+        "package.json"
+      ],
+      "pathReferencedInPackageScript": true,
+      "pathReferencedInWorkflow": false,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    }
+  ],
+  "rootToolConfigs": [
+    {
+      "path": "playwright.config.ts",
+      "explicitPathReferences": [],
+      "autoDiscoveryPossible": true,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "playwright.ds02a-gallery.config.ts",
+      "explicitPathReferences": [
+        "package.json"
+      ],
+      "autoDiscoveryPossible": false,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "playwright.ds02a-main.config.ts",
+      "explicitPathReferences": [
+        ".github/workflows/ds07c5-visual-candidate.yml",
+        "package.json"
+      ],
+      "autoDiscoveryPossible": false,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "playwright.main-h5-bootstrap.config.ts",
+      "explicitPathReferences": [
+        ".github/workflows/r1-login-appointment-integration.yml",
+        ".github/workflows/r1-login-consent.yml",
+        "package.json"
+      ],
+      "autoDiscoveryPossible": false,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "playwright.main-h5-mock.config.ts",
+      "explicitPathReferences": [
+        ".github/workflows/b2x-presentation-isolation.yml",
+        ".github/workflows/closure-c1-integration-gate.yml",
+        ".github/workflows/closure-c2-read-model-gate.yml",
+        ".github/workflows/closure-c3-quality-reliability-gate.yml",
+        ".github/workflows/cui01-operator-geometry.yml",
+        ".github/workflows/ds07c4a-h5-evidence.yml",
+        ".github/workflows/ds07c4b-h5-evidence.yml",
+        ".github/workflows/ds07c6-full-integration.yml",
+        ".github/workflows/ds07c7-verify.yml",
+        ".github/workflows/eq01-quality-mock-baseline.yml",
+        ".github/workflows/eq02-workspace-refactor.yml",
+        ".github/workflows/eq04-quotation-catalog-bridge.yml",
+        ".github/workflows/eq05-mock-command-state.yml",
+        ".github/workflows/eq07-command-state-gate.yml",
+        ".github/workflows/eq08-architecture-boundary-gate.yml",
+        ".github/workflows/eq09-order-scope-gate.yml",
+        ".github/workflows/eq10-quality-integration-gate.yml",
+        ".github/workflows/q01-visual-baseline.yml",
+        ".github/workflows/q03-commercial-baseline.yml",
+        ".github/workflows/qsign-readonly-closure.yml",
+        ".github/workflows/r1-a06a-durable-write-fence.yml",
+        ".github/workflows/r1-a06b-node-type-safety.yml",
+        ".github/workflows/r1-appointment-wire.yml",
+        ".github/workflows/r1-f1-forms-repeat-functional-gate.yml",
+        ".github/workflows/r1-f2-multistep-transaction-gate.yml",
+        ".github/workflows/r1-f3-multiform-local-workspace.yml",
+        ".github/workflows/r1-f4-local-field-editor.yml",
+        ".github/workflows/r1-login-appointment-integration.yml",
+        ".github/workflows/r1-login-consent.yml",
+        ".github/workflows/r1-source-parity-simulator.yml",
+        ".github/workflows/validate-main-h5.yml",
+        "package.json"
+      ],
+      "autoDiscoveryPossible": false,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "playwright.r1-main-repeat-ui.config.ts",
+      "explicitPathReferences": [
+        "package.json"
+      ],
+      "autoDiscoveryPossible": false,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "playwright.s2-ux-focus.config.ts",
+      "explicitPathReferences": [
+        ".github/workflows/s2-ux-focus.yml"
+      ],
+      "autoDiscoveryPossible": false,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "playwright.s2-ux-review.config.ts",
+      "explicitPathReferences": [
+        ".github/workflows/s2-ux-review-sheet.yml",
+        "package.json"
+      ],
+      "autoDiscoveryPossible": false,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "playwright.uni-h5-g4f-review.config.ts",
+      "explicitPathReferences": [
+        "package.json",
+        "scripts/check-g4f-phase1b.mjs"
+      ],
+      "autoDiscoveryPossible": false,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "playwright.uni-h5-review.config.ts",
+      "explicitPathReferences": [
+        "package.json"
+      ],
+      "autoDiscoveryPossible": false,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "vite.config.ts",
+      "explicitPathReferences": [
+        "scripts/check-g4e-review-harness.mjs"
+      ],
+      "autoDiscoveryPossible": true,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "vite.mp-weixin-review.config.ts",
+      "explicitPathReferences": [
+        "package.json",
+        "scripts/check-g4e-review-harness.mjs"
+      ],
+      "autoDiscoveryPossible": false,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "vite.r1-main-repeat-ui.config.ts",
+      "explicitPathReferences": [
+        "playwright.r1-main-repeat-ui.config.ts"
+      ],
+      "autoDiscoveryPossible": false,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "vite.review.config.ts",
+      "explicitPathReferences": [
+        "package.json",
+        "scripts/check-g4e-review-harness.mjs"
+      ],
+      "autoDiscoveryPossible": false,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "vite.uni-h5-g4f-review.config.ts",
+      "explicitPathReferences": [
+        "package.json",
+        "scripts/check-g4f-phase1a.mjs",
+        "scripts/check-g4f-phase1b.mjs"
+      ],
+      "autoDiscoveryPossible": false,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "vite.uni-h5-review.config.ts",
+      "explicitPathReferences": [
+        "package.json",
+        "scripts/check-g4e-review-harness.mjs"
+      ],
+      "autoDiscoveryPossible": false,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "vitest.c3.coverage.config.ts",
+      "explicitPathReferences": [
+        ".github/workflows/closure-c3-quality-reliability-gate.yml"
+      ],
+      "autoDiscoveryPossible": false,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    },
+    {
+      "path": "vitest.config.ts",
+      "explicitPathReferences": [],
+      "autoDiscoveryPossible": true,
+      "reviewStatus": "KEEP_PENDING_CONSUMER_REVIEW"
+    }
+  ]
+}

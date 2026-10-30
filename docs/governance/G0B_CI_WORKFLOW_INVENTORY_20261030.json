@@ -1,0 +1,1427 @@
+{
+  "schemaVersion": 1,
+  "repository": "xlink-bj/xlink-technician-app",
+  "sourceCommit": "17ba7211040df887be28665564414cb037b6acef",
+  "reviewDate": "2026-10-30",
+  "status": "DRAFT / NON_DESTRUCTIVE_AUDIT",
+  "method": "Static source review of all GitHub workflow YAML; branch-guard literals and path filters do not establish which checks are required or safe to delete.",
+  "summary": {
+    "totalWorkflows": 47,
+    "pullRequestPathScoped": 43,
+    "mainlineCoreWithoutPathFilter": 2,
+    "unscopedBranchGuardedReview": 2,
+    "manualDispatchWorkflows": 12,
+    "pathFilterPatterns": 284,
+    "exactPathFilterMissingTargets": 0
+  },
+  "workflows": [
+    {
+      "path": ".github/workflows/b2x-presentation-isolation.yml",
+      "proposedCategory": "PATH_SCOPED_REVIEW",
+      "triggers": {
+        "pullRequest": true,
+        "pushMain": false,
+        "manualDispatch": true,
+        "pullRequestPathFilters": [
+          ".github/workflows/b2x-presentation-isolation.yml",
+          "scripts/check-b2x2-commercial-ui-parity.mjs",
+          "src/pages/dev/**",
+          "src/features/work-orders/**",
+          "src/adapters/api/mock/fixtures.ts",
+          "src/adapters/api/mock/router.ts",
+          "src/pages.json",
+          "docs/ux/B2X2_COMMERCIAL_UI_PARITY_20261026.md",
+          "playwright.main-h5-mock.config.ts",
+          "tests/h5-main-mock/b2x-presentation-separation.spec.ts",
+          "src/shared/ui/dev-review-mode.ts",
+          "src/shared/ui/work-order-number-display.ts",
+          "src/pages/index/index.vue",
+          "src/pages/work-orders/detail.vue",
+          "src/pages/work-orders/signing-order-read.vue",
+          "src/features/work-orders/quotation/QuotationOrderHub.vue"
+        ]
+      },
+      "jobIds": [
+        "commercial-and-dev-qa"
+      ],
+      "branchGuardLiterals": [],
+      "staticScriptReferences": [
+        "scripts/check-b2x2-commercial-ui-parity.mjs"
+      ],
+      "missingExactPathTargets": [],
+      "requiredCheckStatus": "NOT_VERIFIED",
+      "lastSuccessfulRun": "NOT_VERIFIED",
+      "consumerReview": "PENDING",
+      "disposition": "KEEP_PENDING_REVIEW"
+    },
+    {
+      "path": ".github/workflows/closure-c1-integration-gate.yml",
+      "proposedCategory": "PATH_SCOPED_REVIEW",
+      "triggers": {
+        "pullRequest": true,
+        "pushMain": false,
+        "manualDispatch": false,
+        "pullRequestPathFilters": [
+          ".github/workflows/closure-c1-integration-gate.yml",
+          "docs/engineering/CLOSURE_C1_INTEGRATION_DECISION.md",
+          "scripts/check-closure-c1-integration.mjs",
+          "tests/engineering/closure-c1-integration.test.ts"
+        ]
+      },
+      "jobIds": [
+        "integrated-contract-and-cross-platform",
+        "integrated-mock-and-approved-goldens"
+      ],
+      "branchGuardLiterals": [
+        "engineering/closure-c1-integrated-candidate"
+      ],
+      "staticScriptReferences": [
+        "scripts/check-closure-c1-integration.mjs"
+      ],
+      "missingExactPathTargets": [],
+      "requiredCheckStatus": "NOT_VERIFIED",
+      "lastSuccessfulRun": "NOT_VERIFIED",
+      "consumerReview": "PENDING",
+      "disposition": "KEEP_PENDING_REVIEW"
+    },
+    {
+      "path": ".github/workflows/closure-c2-read-model-gate.yml",
+      "proposedCategory": "PATH_SCOPED_REVIEW",
+      "triggers": {
+        "pullRequest": true,
+        "pushMain": false,
+        "manualDispatch": false,
+        "pullRequestPathFilters": [
+          ".github/workflows/closure-c2-read-model-gate.yml",
+          "docs/engineering/CLOSURE_C2_READ_MODEL_REFACTOR.md",
+          "scripts/check-closure-c1-integration.mjs",
+          "src/features/work-orders/action-workspace.ts",
+          "src/features/work-orders/action-workspace-read-model.ts",
+          "tests/engineering/closure-c2-read-model.test.ts"
+        ]
+      },
+      "jobIds": [
+        "read-model-and-cross-platform",
+        "mock-and-original-visual-goldens"
+      ],
+      "branchGuardLiterals": [
+        "engineering/closure-c2-action-read-model"
+      ],
+      "staticScriptReferences": [
+        "scripts/check-closure-c1-integration.mjs"
+      ],
+      "missingExactPathTargets": [],
+      "requiredCheckStatus": "NOT_VERIFIED",
+      "lastSuccessfulRun": "NOT_VERIFIED",
+      "consumerReview": "PENDING",
+      "disposition": "KEEP_PENDING_REVIEW"
+    },
+    {
+      "path": ".github/workflows/closure-c3-quality-reliability-gate.yml",
+      "proposedCategory": "PATH_SCOPED_REVIEW",
+      "triggers": {
+        "pullRequest": true,
+        "pushMain": false,
+        "manualDispatch": false,
+        "pullRequestPathFilters": [
+          ".github/workflows/closure-c3-quality-reliability-gate.yml",
+          "docs/engineering/CLOSURE_C3_QUALITY_RELIABILITY.md",
+          "docs/engineering/closure-c3-readiness.json",
+          "scripts/check-closure-c3-release.mjs",
+          "scripts/check-closure-c3-coverage.mjs",
+          "tests/engineering/closure-c3-release-drills.test.ts",
+          "vitest.c3.coverage.config.ts"
+        ]
+      },
+      "jobIds": [
+        "release-hold-and-full-regression",
+        "scoped-executed-v8-coverage",
+        "original-offline-journey-and-goldens"
+      ],
+      "branchGuardLiterals": [
+        "engineering/closure-c3-quality-reliability"
+      ],
+      "staticScriptReferences": [
+        "scripts/check-closure-c3-coverage.mjs",
+        "scripts/check-closure-c3-release.mjs"
+      ],
+      "missingExactPathTargets": [],
+      "requiredCheckStatus": "NOT_VERIFIED",
+      "lastSuccessfulRun": "NOT_VERIFIED",
+      "consumerReview": "PENDING",
+      "disposition": "KEEP_PENDING_REVIEW"
+    },
+    {
+      "path": ".github/workflows/cui01-commercial-css-ownership.yml",
+      "proposedCategory": "PATH_SCOPED_REVIEW",
+      "triggers": {
+        "pullRequest": true,
+        "pushMain": false,
+        "manualDispatch": true,
+        "pullRequestPathFilters": [
+          "src/features/work-orders/quotation/**",
+          "scripts/ci/commercial-css-ownership.mjs",
+          ".github/workflows/cui01-commercial-css-ownership.yml"
+        ]
+      },
+      "jobIds": [
+        "commercial-css-ownership"
+      ],
+      "branchGuardLiterals": [],
+      "staticScriptReferences": [
+        "scripts/ci/commercial-css-ownership.mjs"
+      ],
+      "missingExactPathTargets": [],
+      "requiredCheckStatus": "NOT_VERIFIED",
+      "lastSuccessfulRun": "NOT_VERIFIED",
+      "consumerReview": "PENDING",
+      "disposition": "KEEP_PENDING_REVIEW"
+    },
+    {
+      "path": ".github/workflows/cui01-operator-geometry.yml",
+      "proposedCategory": "PATH_SCOPED_REVIEW",
+      "triggers": {
+        "pullRequest": true,
+        "pushMain": false,
+        "manualDispatch": true,
+        "pullRequestPathFilters": [
+          "src/shared/ui/**",
+          "src/pages/index/index.vue",
+          "src/features/work-orders/quotation/**",
+          "tests/h5-main-mock/operator-control-geometry.spec.ts",
+          ".github/workflows/cui01-operator-geometry.yml"
+        ]
+      },
+      "jobIds": [
+        "four-screen-geometry"
+      ],
+      "branchGuardLiterals": [],
+      "staticScriptReferences": [],
+      "missingExactPathTargets": [],
+      "requiredCheckStatus": "NOT_VERIFIED",
+      "lastSuccessfulRun": "NOT_VERIFIED",
+      "consumerReview": "PENDING",
+      "disposition": "KEEP_PENDING_REVIEW"
+    },
+    {
+      "path": ".github/workflows/ds01-commercial-foundation.yml",
+      "proposedCategory": "PATH_SCOPED_REVIEW",
+      "triggers": {
+        "pullRequest": true,
+        "pushMain": false,
+        "manualDispatch": true,
+        "pullRequestPathFilters": [
+          "src/shared/ui/**",
+          "__review/design-system-gallery.vue",
+          "__review/design-system-gallery-fixtures.ts",
+          "tests/h5-review/design-system-uni-h5.spec.ts",
+          "scripts/check-ui-governance.mjs",
+          "docs/design-system/DS01_COMMERCIAL_FOUNDATION_V1.md",
+          ".github/workflows/ds01-commercial-foundation.yml"
+        ]
+      },
+      "jobIds": [
+        "ds01-real-uni-gallery"
+      ],
+      "branchGuardLiterals": [],
+      "staticScriptReferences": [
+        "scripts/check-ui-governance.mjs"
+      ],
+      "missingExactPathTargets": [],
+      "requiredCheckStatus": "NOT_VERIFIED",
+      "lastSuccessfulRun": "NOT_VERIFIED",
+      "consumerReview": "PENDING",
+      "disposition": "KEEP_PENDING_REVIEW"
+    },
+    {
+      "path": ".github/workflows/ds02a-h5-visual-contract.yml",
+      "proposedCategory": "PATH_SCOPED_REVIEW",
+      "triggers": {
+        "pullRequest": true,
+        "pushMain": false,
+        "manualDispatch": true,
+        "pullRequestPathFilters": [
+          ".github/workflows/ds02a-h5-visual-contract.yml",
+          "playwright.ds02a-*.config.ts",
+          "tests/ds02a-gallery/**",
+          "tests/ds02a-main/**",
+          "docs/design-system/DS02A_H5_VISUAL_CONTRACT.md",
+          "src/shared/ui/design-system.scss",
+          "__review/design-system-gallery.vue",
+          "src/shared/ui/**",
+          "src/features/work-orders/**",
+          "src/pages/work-orders/**"
+        ]
+      },
+      "jobIds": [
+        "h5-visual-contract"
+      ],
+      "branchGuardLiterals": [],
+      "staticScriptReferences": [],
+      "missingExactPathTargets": [],
+      "requiredCheckStatus": "NOT_VERIFIED",
+      "lastSuccessfulRun": "NOT_VERIFIED",
+      "consumerReview": "PENDING",
+      "disposition": "KEEP_PENDING_REVIEW"
+    },
+    {
+      "path": ".github/workflows/ds07c10-role-order-negative.yml",
+      "proposedCategory": "PATH_SCOPED_REVIEW",
+      "triggers": {
+        "pullRequest": true,
+        "pushMain": false,
+        "manualDispatch": false,
+        "pullRequestPathFilters": [
+          "tests/g4f/p0-role-order-tenant-negative.test.ts",
+          "docs/verification/DS07C10_ROLE_TENANT_ORDER_NEGATIVE_PROOF.md",
+          ".github/workflows/ds07c10-role-order-negative.yml"
+        ]
+      },
+      "jobIds": [
+        "source-contract-and-platform",
+        "approved-visual-golden"
+      ],
+      "branchGuardLiterals": [
+        "security/ds07c10-tenant-role-order-proof"
+      ],
+      "staticScriptReferences": [],
+      "missingExactPathTargets": [],
+      "requiredCheckStatus": "NOT_VERIFIED",
+      "lastSuccessfulRun": "NOT_VERIFIED",
+      "consumerReview": "PENDING",
+      "disposition": "KEEP_PENDING_REVIEW"
+    },
+    {
+      "path": ".github/workflows/ds07c11-raw-order-auth.yml",
+      "proposedCategory": "PATH_SCOPED_REVIEW",
+      "triggers": {
+        "pullRequest": true,
+        "pushMain": false,
+        "manualDispatch": false,
+        "pullRequestPathFilters": [
+          ".github/workflows/ds07c11-raw-order-auth.yml",
+          "docs/verification/DS07C11_RAW_ORDER_AUTH_FENCE.md",
+          "src/adapters/api/uni-api-read-transport.ts",
+          "src/app/composition.ts",
+          "tests/g4f/p0-order-raw-transport-fence.test.ts",
+          "tests/g4f/p0-role-order-tenant-negative.test.ts",
+          "tests/g4f/production-read-only.test.ts"
+        ]
+      },
+      "jobIds": [
+        "p0-transports-full",
+        "visual-existing-golden"
+      ],
+      "branchGuardLiterals": [
+        "security/ds07c11-raw-order-read-scope-fence"
+      ],
+      "staticScriptReferences": [],
+      "missingExactPathTargets": [],
+      "requiredCheckStatus": "NOT_VERIFIED",
+      "lastSuccessfulRun": "NOT_VERIFIED",
+      "consumerReview": "PENDING",
+      "disposition": "KEEP_PENDING_REVIEW"
+    },
+    {
+      "path": ".github/workflows/ds07c4a-h5-evidence.yml",
+      "proposedCategory": "PATH_SCOPED_REVIEW",
+      "triggers": {
+        "pullRequest": true,
+        "pushMain": false,
+        "manualDispatch": false,
+        "pullRequestPathFilters": [
+          "src/shared/ui/AppActionContentHeading.vue",
+          "src/features/work-orders/components/GenericDynamicFormActionContent.vue",
+          "src/features/work-orders/components/SurveyLeakageCauseExperience.vue",
+          "src/features/work-orders/components/SurveyTaskSectionHeading.vue",
+          "src/pages/work-orders/action-workspace.vue",
+          "tests/h5-main-mock/main-app-quotation.spec.ts",
+          ".github/workflows/ds07c4a-h5-evidence.yml"
+        ]
+      },
+      "jobIds": [
+        "actual-appointment-survey"
+      ],
+      "branchGuardLiterals": [
+        "design-system/ds07c4a-appointment-survey-migration"
+      ],
+      "staticScriptReferences": [],
+      "missingExactPathTargets": [],
+      "requiredCheckStatus": "NOT_VERIFIED",
+      "lastSuccessfulRun": "NOT_VERIFIED",
+      "consumerReview": "PENDING",
+      "disposition": "KEEP_PENDING_REVIEW"
+    },
+    {
+      "path": ".github/workflows/ds07c4b-h5-evidence.yml",
+      "proposedCategory": "PATH_SCOPED_REVIEW",
+      "triggers": {
+        "pullRequest": true,
+        "pushMain": false,
+        "manualDispatch": false,
+        "pullRequestPathFilters": [
+          "src/features/work-orders/quotation/QuotationOrderHub.vue",
+          "src/features/work-orders/quotation/QuotationActionWorkspace.vue",
+          "src/pages/work-orders/signing-order-read.vue",
+          "tests/h5-main-mock/ds07c4b-quote-signing.spec.ts",
+          "tests/h5-main-mock/ds07c4b-signing-state-visual.spec.ts",
+          ".github/workflows/ds07c4b-h5-evidence.yml"
+        ]
+      },
+      "jobIds": [
+        "quote-signing-h5"
+      ],
+      "branchGuardLiterals": [
+        "design-system/ds07c4b-quote-signing-notice"
+      ],
+      "staticScriptReferences": [],
+      "missingExactPathTargets": [],
+      "requiredCheckStatus": "NOT_VERIFIED",
+      "lastSuccessfulRun": "NOT_VERIFIED",
+      "consumerReview": "PENDING",
+      "disposition": "KEEP_PENDING_REVIEW"
+    },
+    {
+      "path": ".github/workflows/ds07c5-visual-candidate.yml",
+      "proposedCategory": "PATH_SCOPED_REVIEW",
+      "triggers": {
+        "pullRequest": true,
+        "pushMain": false,
+        "manualDispatch": false,
+        "pullRequestPathFilters": [
+          "scripts/check-ds07c5-legacy-visual.mjs",
+          ".github/workflows/ds07c5-visual-candidate.yml",
+          "docs/design-system/DS07C5_VISUAL_CANDIDATE.md"
+        ]
+      },
+      "jobIds": [
+        "prepare-owner-candidate"
+      ],
+      "branchGuardLiterals": [
+        "design-system/ds07c5-visual-baseline-candidate"
+      ],
+      "staticScriptReferences": [
+        "scripts/check-ds07c5-legacy-visual.mjs"
+      ],
+      "missingExactPathTargets": [],
+      "requiredCheckStatus": "NOT_VERIFIED",
+      "lastSuccessfulRun": "NOT_VERIFIED",
+      "consumerReview": "PENDING",
+      "disposition": "KEEP_PENDING_REVIEW"
+    },
+    {
+      "path": ".github/workflows/ds07c6-full-integration.yml",
+      "proposedCategory": "UNSCOPED_BRANCH_GUARDED_REVIEW",
+      "triggers": {
+        "pullRequest": true,
+        "pushMain": false,
+        "manualDispatch": false,
+        "pullRequestPathFilters": []
+      },
+      "jobIds": [
+        "engineering-platform",
+        "h5-interaction-visual"
+      ],
+      "branchGuardLiterals": [
+        "design-system/ds07c6-integration-readiness-gate"
+      ],
+      "staticScriptReferences": [],
+      "missingExactPathTargets": [],
+      "requiredCheckStatus": "NOT_VERIFIED",
+      "lastSuccessfulRun": "NOT_VERIFIED",
+      "consumerReview": "PENDING",
+      "disposition": "KEEP_PENDING_REVIEW"
+    },
+    {
+      "path": ".github/workflows/ds07c7-verify.yml",
+      "proposedCategory": "UNSCOPED_BRANCH_GUARDED_REVIEW",
+      "triggers": {
+        "pullRequest": true,
+        "pushMain": false,
+        "manualDispatch": false,
+        "pullRequestPathFilters": []
+      },
+      "jobIds": [
+        "legacy-guard-full-regression",
+        "actual-h5-source-identical"
+      ],
+      "branchGuardLiterals": [
+        "design-system/ds07c7-legacy-source-test-reconciliation"
+      ],
+      "staticScriptReferences": [],
+      "missingExactPathTargets": [],
+      "requiredCheckStatus": "NOT_VERIFIED",
+      "lastSuccessfulRun": "NOT_VERIFIED",
+      "consumerReview": "PENDING",
+      "disposition": "KEEP_PENDING_REVIEW"
+    },
+    {
+      "path": ".github/workflows/ds07c8-main-preflight.yml",
+      "proposedCategory": "PATH_SCOPED_REVIEW",
+      "triggers": {
+        "pullRequest": true,
+        "pushMain": false,
+        "manualDispatch": false,
+        "pullRequestPathFilters": [
+          ".github/workflows/ds07c8-main-preflight.yml",
+          "docs/verification/DS07C8_MAIN_INTEGRATION_PREFLIGHT.md",
+          "docs/verification/DS07C8_MAIN_INTEGRATION_MANIFEST.json",
+          "scripts/check-ds07c8-main-preflight.mjs"
+        ]
+      },
+      "jobIds": [
+        "ancestry-inventory"
+      ],
+      "branchGuardLiterals": [
+        "lead/m1-ds07-main-integration-preflight"
+      ],
+      "staticScriptReferences": [
+        "scripts/check-ds07c8-main-preflight.mjs"
+      ],
+      "missingExactPathTargets": [],
+      "requiredCheckStatus": "NOT_VERIFIED",
+      "lastSuccessfulRun": "NOT_VERIFIED",
+      "consumerReview": "PENDING",
+      "disposition": "KEEP_PENDING_REVIEW"
+    },
+    {
+      "path": ".github/workflows/ds07c9-order-read-contract.yml",
+      "proposedCategory": "PATH_SCOPED_REVIEW",
+      "triggers": {
+        "pullRequest": true,
+        "pushMain": false,
+        "manualDispatch": false,
+        "pullRequestPathFilters": [
+          "src/shared/config/production-read-only.ts",
+          "tests/g4f/production-read-only.test.ts",
+          "docs/verification/DS07C9_P0_ORDER_READ_CONTRACT.md",
+          ".github/workflows/ds07c9-order-read-contract.yml"
+        ]
+      },
+      "jobIds": [
+        "p0-source-and-unit",
+        "approved-golden-regression"
+      ],
+      "branchGuardLiterals": [
+        "security/ds07c9-production-order-read-boundary"
+      ],
+      "staticScriptReferences": [],
+      "missingExactPathTargets": [],
+      "requiredCheckStatus": "NOT_VERIFIED",
+      "lastSuccessfulRun": "NOT_VERIFIED",
+      "consumerReview": "PENDING",
+      "disposition": "KEEP_PENDING_REVIEW"
+    },
+    {
+      "path": ".github/workflows/eq01-quality-mock-baseline.yml",
+      "proposedCategory": "PATH_SCOPED_REVIEW",
+      "triggers": {
+        "pullRequest": true,
+        "pushMain": false,
+        "manualDispatch": false,
+        "pullRequestPathFilters": [
+          "src/adapters/api/mock/**",
+          "src/app/action-workspace-harness.ts",
+          "scripts/eq01-quality-census.mjs",
+          "tests/engineering/**",
+          "docs/engineering/EQ01_QUALITY_BASELINE_AND_MOCK_CONTRACT.md",
+          ".github/workflows/eq01-quality-mock-baseline.yml"
+        ]
+      },
+      "jobIds": [
+        "full-engineering",
+        "real-h5-regression"
+      ],
+      "branchGuardLiterals": [
+        "engineering/eq01-quality-baseline-mock-ownership"
+      ],
+      "staticScriptReferences": [
+        "scripts/check-g4f-phase1a.mjs",
+        "scripts/eq01-quality-census.mjs"
+      ],
+      "missingExactPathTargets": [],
+      "requiredCheckStatus": "NOT_VERIFIED",
+      "lastSuccessfulRun": "NOT_VERIFIED",
+      "consumerReview": "PENDING",
+      "disposition": "KEEP_PENDING_REVIEW"
+    },
+    {
+      "path": ".github/workflows/eq02-workspace-refactor.yml",
+      "proposedCategory": "PATH_SCOPED_REVIEW",
+      "triggers": {
+        "pullRequest": true,
+        "pushMain": false,
+        "manualDispatch": false,
+        "pullRequestPathFilters": [
+          "src/features/work-orders/action-workspace.ts",
+          "src/features/work-orders/action-workspace-draft-utils.ts",
+          "src/features/work-orders/quotation/QuotationActionContent.vue",
+          "src/features/work-orders/quotation/QuotationActionContent.styles.css",
+          "tests/engineering/eq02-action-draft-helpers.test.ts",
+          "docs/engineering/EQ02_ACTION_WORKSPACE_AND_QUOTATION_SPLIT.md",
+          ".github/workflows/eq02-workspace-refactor.yml"
+        ]
+      },
+      "jobIds": [
+        "full-engineering",
+        "exact-visual-and-ux"
+      ],
+      "branchGuardLiterals": [
+        "engineering/eq02-action-workspace-quotation-modules"
+      ],
+      "staticScriptReferences": [
+        "scripts/eq01-quality-census.mjs"
+      ],
+      "missingExactPathTargets": [],
+      "requiredCheckStatus": "NOT_VERIFIED",
+      "lastSuccessfulRun": "NOT_VERIFIED",
+      "consumerReview": "PENDING",
+      "disposition": "KEEP_PENDING_REVIEW"
+    },
+    {
+      "path": ".github/workflows/eq03-quality-gate.yml",
+      "proposedCategory": "PATH_SCOPED_REVIEW",
+      "triggers": {
+        "pullRequest": true,
+        "pushMain": false,
+        "manualDispatch": false,
+        "pullRequestPathFilters": [
+          ".github/workflows/eq03-quality-gate.yml",
+          "package.json",
+          "scripts/eq01-quality-census.mjs",
+          "tests/engineering/eq03-quality-census.test.ts",
+          "docs/engineering/EQ03_TEST_LANES_AND_METRICS.md"
+        ]
+      },
+      "jobIds": [
+        "unified-quick-and-full",
+        "approved-visual"
+      ],
+      "branchGuardLiterals": [
+        "engineering/eq03-unified-verification-quality-gate"
+      ],
+      "staticScriptReferences": [
+        "scripts/eq01-quality-census.mjs"
+      ],
+      "missingExactPathTargets": [],
+      "requiredCheckStatus": "NOT_VERIFIED",
+      "lastSuccessfulRun": "NOT_VERIFIED",
+      "consumerReview": "PENDING",
+      "disposition": "KEEP_PENDING_REVIEW"
+    },
+    {
+      "path": ".github/workflows/eq04-quotation-catalog-bridge.yml",
+      "proposedCategory": "PATH_SCOPED_REVIEW",
+      "triggers": {
+        "pullRequest": true,
+        "pushMain": false,
+        "manualDispatch": false,
+        "pullRequestPathFilters": [
+          ".github/workflows/eq04-quotation-catalog-bridge.yml",
+          "docs/engineering/EQ04_QUOTATION_SELECTION_BRIDGE.md",
+          "scripts/check-g4f-phase1b.mjs",
+          "src/features/work-orders/action-workspace.ts",
+          "src/features/work-orders/quotation/catalog-selection-bridge.ts",
+          "tests/engineering/eq04-quotation-catalog-bridge.test.ts"
+        ]
+      },
+      "jobIds": [
+        "engineering",
+        "existing-golden-and-real-h5"
+      ],
+      "branchGuardLiterals": [
+        "engineering/eq04-quotation-catalog-bridge"
+      ],
+      "staticScriptReferences": [
+        "scripts/check-g4f-phase1b.mjs"
+      ],
+      "missingExactPathTargets": [],
+      "requiredCheckStatus": "NOT_VERIFIED",
+      "lastSuccessfulRun": "NOT_VERIFIED",
+      "consumerReview": "PENDING",
+      "disposition": "KEEP_PENDING_REVIEW"
+    },
+    {
+      "path": ".github/workflows/eq05-mock-command-state.yml",
+      "proposedCategory": "PATH_SCOPED_REVIEW",
+      "triggers": {
+        "pullRequest": true,
+        "pushMain": false,
+        "manualDispatch": false,
+        "pullRequestPathFilters": [
+          ".github/workflows/eq05-mock-command-state.yml",
+          "docs/engineering/EQ05_MOCK_COMMAND_STATE_FACTORY.md",
+          "src/adapters/api/mock/command-state.ts",
+          "src/adapters/api/mock/router.ts",
+          "tests/engineering/eq05-mock-command-state.test.ts"
+        ]
+      },
+      "jobIds": [
+        "safety-state-and-complete",
+        "unchanged-golden-and-h5"
+      ],
+      "branchGuardLiterals": [
+        "engineering/eq05-isolated-mock-command-state"
+      ],
+      "staticScriptReferences": [],
+      "missingExactPathTargets": [],
+      "requiredCheckStatus": "NOT_VERIFIED",
+      "lastSuccessfulRun": "NOT_VERIFIED",
+      "consumerReview": "PENDING",
+      "disposition": "KEEP_PENDING_REVIEW"
+    },
+    {
+      "path": ".github/workflows/eq05b-mock-faults.yml",
+      "proposedCategory": "PATH_SCOPED_REVIEW",
+      "triggers": {
+        "pullRequest": true,
+        "pushMain": false,
+        "manualDispatch": false,
+        "pullRequestPathFilters": [
+          ".github/workflows/eq05b-mock-faults.yml",
+          "docs/engineering/EQ05B_MOCK_FAULT_SCENARIOS.md",
+          "src/adapters/api/mock/fault-scenarios.ts",
+          "src/adapters/api/mock/router.ts",
+          "tests/engineering/eq05b-mock-fault-scenarios.test.ts"
+        ]
+      },
+      "jobIds": [
+        "verified-engineering",
+        "unchanged-goldens"
+      ],
+      "branchGuardLiterals": [
+        "engineering/eq05b-deterministic-mock-faults"
+      ],
+      "staticScriptReferences": [],
+      "missingExactPathTargets": [],
+      "requiredCheckStatus": "NOT_VERIFIED",
+      "lastSuccessfulRun": "NOT_VERIFIED",
+      "consumerReview": "PENDING",
+      "disposition": "KEEP_PENDING_REVIEW"
+    },
+    {
+      "path": ".github/workflows/eq06-critical-behavior.yml",
+      "proposedCategory": "PATH_SCOPED_REVIEW",
+      "triggers": {
+        "pullRequest": true,
+        "pushMain": false,
+        "manualDispatch": false,
+        "pullRequestPathFilters": [
+          ".github/workflows/eq06-critical-behavior.yml",
+          "docs/engineering/EQ06_CRITICAL_BEHAVIOR_GATE.md",
+          "scripts/verify-critical-behavior.mjs",
+          "package.json"
+        ]
+      },
+      "jobIds": [
+        "critical-and-full",
+        "original-golden"
+      ],
+      "branchGuardLiterals": [
+        "engineering/eq06-critical-path-behavior-gate"
+      ],
+      "staticScriptReferences": [
+        "scripts/verify-critical-behavior.mjs"
+      ],
+      "missingExactPathTargets": [],
+      "requiredCheckStatus": "NOT_VERIFIED",
+      "lastSuccessfulRun": "NOT_VERIFIED",
+      "consumerReview": "PENDING",
+      "disposition": "KEEP_PENDING_REVIEW"
+    },
+    {
+      "path": ".github/workflows/eq07-command-state-gate.yml",
+      "proposedCategory": "PATH_SCOPED_REVIEW",
+      "triggers": {
+        "pullRequest": true,
+        "pushMain": false,
+        "manualDispatch": false,
+        "pullRequestPathFilters": [
+          "src/features/work-orders/action-workspace.ts",
+          "tests/engineering/eq07-command-state-consistency.test.ts",
+          ".github/workflows/eq07-command-state-gate.yml"
+        ]
+      },
+      "jobIds": [
+        "deterministic-regression-and-platforms",
+        "no-regression-h5-and-goldens"
+      ],
+      "branchGuardLiterals": [
+        "engineering/eq07-p0-command-state-consistency"
+      ],
+      "staticScriptReferences": [],
+      "missingExactPathTargets": [],
+      "requiredCheckStatus": "NOT_VERIFIED",
+      "lastSuccessfulRun": "NOT_VERIFIED",
+      "consumerReview": "PENDING",
+      "disposition": "KEEP_PENDING_REVIEW"
+    },
+    {
+      "path": ".github/workflows/eq08-architecture-boundary-gate.yml",
+      "proposedCategory": "PATH_SCOPED_REVIEW",
+      "triggers": {
+        "pullRequest": true,
+        "pushMain": false,
+        "manualDispatch": false,
+        "pullRequestPathFilters": [
+          "src/features/work-orders/action-form-schema.ts",
+          "src/features/work-orders/appointment-form-runtime.ts",
+          "src/features/work-orders/dynamic-form-action.ts",
+          "src/adapters/api/action-command-wires.ts",
+          "src/adapters/api/technician-api-commands.ts",
+          "tests/engineering/eq08-action-architecture.test.ts",
+          "tests/engineering/r1-appointment-conditional-runtime.test.ts",
+          "docs/engineering/EQ08_P1_ARCHITECTURE_BOUNDARIES.md",
+          ".github/workflows/eq08-architecture-boundary-gate.yml"
+        ]
+      },
+      "jobIds": [
+        "source-contract-and-builds",
+        "main-mock-journey-and-original-goldens"
+      ],
+      "branchGuardLiterals": [
+        "engineering/eq08-p1-form-command-boundaries"
+      ],
+      "staticScriptReferences": [],
+      "missingExactPathTargets": [],
+      "requiredCheckStatus": "NOT_VERIFIED",
+      "lastSuccessfulRun": "NOT_VERIFIED",
+      "consumerReview": "PENDING",
+      "disposition": "KEEP_PENDING_REVIEW"
+    },
+    {
+      "path": ".github/workflows/eq09-order-scope-gate.yml",
+      "proposedCategory": "PATH_SCOPED_REVIEW",
+      "triggers": {
+        "pullRequest": true,
+        "pushMain": false,
+        "manualDispatch": false,
+        "pullRequestPathFilters": [
+          "src/features/work-orders/action-workspace.ts",
+          "src/features/work-orders/quotation/order-submission.ts",
+          "src/adapters/api/quotation-catalog-api.ts",
+          "tests/g4f/quotation-order-submission.test.ts",
+          "tests/engineering/r1-catalog-price-identity-fence.test.ts",
+          "docs/engineering/EQ09_P1_ORDER_SCOPE_RELIABILITY.md",
+          ".github/workflows/eq09-order-scope-gate.yml"
+        ]
+      },
+      "jobIds": [
+        "actor-scope-and-cross-platform",
+        "original-mock-and-visual-baseline"
+      ],
+      "branchGuardLiterals": [
+        "engineering/eq09-p1-order-scope-idempotency"
+      ],
+      "staticScriptReferences": [],
+      "missingExactPathTargets": [],
+      "requiredCheckStatus": "NOT_VERIFIED",
+      "lastSuccessfulRun": "NOT_VERIFIED",
+      "consumerReview": "PENDING",
+      "disposition": "KEEP_PENDING_REVIEW"
+    },
+    {
+      "path": ".github/workflows/eq10-quality-integration-gate.yml",
+      "proposedCategory": "PATH_SCOPED_REVIEW",
+      "triggers": {
+        "pullRequest": true,
+        "pushMain": false,
+        "manualDispatch": false,
+        "pullRequestPathFilters": [
+          ".github/workflows/eq10-quality-integration-gate.yml",
+          ".github/workflows/validate.yml",
+          "docs/engineering/EQ10_QUALITY_FINAL_REVIEW.md",
+          "docs/engineering/eq10-stacked-manifest.json",
+          "package.json",
+          "scripts/check-eq10-ownership.mjs",
+          "scripts/check-eq10-stack.mjs",
+          "scripts/verify-critical-behavior.mjs",
+          "tests/engineering/eq10-governance.test.ts"
+        ]
+      },
+      "jobIds": [
+        "canonical-quality-and-platforms",
+        "original-mock-journey-and-goldens"
+      ],
+      "branchGuardLiterals": [
+        "engineering/eq10-p1-quality-integration"
+      ],
+      "staticScriptReferences": [
+        "scripts/check-eq10-ownership.mjs",
+        "scripts/check-eq10-stack.mjs",
+        "scripts/eq01-quality-census.mjs",
+        "scripts/verify-critical-behavior.mjs"
+      ],
+      "missingExactPathTargets": [],
+      "requiredCheckStatus": "NOT_VERIFIED",
+      "lastSuccessfulRun": "NOT_VERIFIED",
+      "consumerReview": "PENDING",
+      "disposition": "KEEP_PENDING_REVIEW"
+    },
+    {
+      "path": ".github/workflows/m1-i7-integration-gate.yml",
+      "proposedCategory": "PATH_SCOPED_REVIEW",
+      "triggers": {
+        "pullRequest": true,
+        "pushMain": false,
+        "manualDispatch": false,
+        "pullRequestPathFilters": [
+          "scripts/check-m1-i7-reconciliation.mjs",
+          "docs/verification/M1_I7_RECONCILED_CANDIDATE.md",
+          ".github/workflows/m1-i7-integration-gate.yml"
+        ]
+      },
+      "jobIds": [
+        "reconciliation"
+      ],
+      "branchGuardLiterals": [],
+      "staticScriptReferences": [
+        "scripts/check-m1-i7-reconciliation.mjs"
+      ],
+      "missingExactPathTargets": [],
+      "requiredCheckStatus": "NOT_VERIFIED",
+      "lastSuccessfulRun": "NOT_VERIFIED",
+      "consumerReview": "PENDING",
+      "disposition": "KEEP_PENDING_REVIEW"
+    },
+    {
+      "path": ".github/workflows/m1-unified-main-candidate-gate.yml",
+      "proposedCategory": "PATH_SCOPED_REVIEW",
+      "triggers": {
+        "pullRequest": true,
+        "pushMain": false,
+        "manualDispatch": false,
+        "pullRequestPathFilters": [
+          "scripts/check-m1-unified-main-candidate.mjs",
+          "docs/verification/M1_UNIFIED_MAIN_INTEGRATION_MANIFEST.json",
+          "docs/verification/M1_UNIFIED_MAIN_INTEGRATION_CANDIDATE.md",
+          ".github/workflows/m1-unified-main-candidate-gate.yml",
+          "tests/g4f/m1-unified-main-candidate.test.ts"
+        ]
+      },
+      "jobIds": [
+        "candidate-ancestry"
+      ],
+      "branchGuardLiterals": [],
+      "staticScriptReferences": [
+        "scripts/check-m1-unified-main-candidate.mjs"
+      ],
+      "missingExactPathTargets": [],
+      "requiredCheckStatus": "NOT_VERIFIED",
+      "lastSuccessfulRun": "NOT_VERIFIED",
+      "consumerReview": "PENDING",
+      "disposition": "KEEP_PENDING_REVIEW"
+    },
+    {
+      "path": ".github/workflows/q01-visual-baseline.yml",
+      "proposedCategory": "PATH_SCOPED_REVIEW",
+      "triggers": {
+        "pullRequest": true,
+        "pushMain": false,
+        "manualDispatch": true,
+        "pullRequestPathFilters": [
+          "src/features/work-orders/quotation/**",
+          "tests/h5-main-mock/q01-visual-baseline.spec.ts",
+          ".github/workflows/q01-visual-baseline.yml"
+        ]
+      },
+      "jobIds": [
+        "q01-real-app-visual"
+      ],
+      "branchGuardLiterals": [],
+      "staticScriptReferences": [],
+      "missingExactPathTargets": [],
+      "requiredCheckStatus": "NOT_VERIFIED",
+      "lastSuccessfulRun": "NOT_VERIFIED",
+      "consumerReview": "PENDING",
+      "disposition": "KEEP_PENDING_REVIEW"
+    },
+    {
+      "path": ".github/workflows/q03-commercial-baseline.yml",
+      "proposedCategory": "PATH_SCOPED_REVIEW",
+      "triggers": {
+        "pullRequest": true,
+        "pushMain": false,
+        "manualDispatch": true,
+        "pullRequestPathFilters": [
+          "src/features/work-orders/quotation/**",
+          "tests/h5-main-mock/q03-commercial-baseline.spec.ts",
+          ".github/workflows/q03-commercial-baseline.yml"
+        ]
+      },
+      "jobIds": [
+        "q03-real-app-catalog"
+      ],
+      "branchGuardLiterals": [],
+      "staticScriptReferences": [],
+      "missingExactPathTargets": [],
+      "requiredCheckStatus": "NOT_VERIFIED",
+      "lastSuccessfulRun": "NOT_VERIFIED",
+      "consumerReview": "PENDING",
+      "disposition": "KEEP_PENDING_REVIEW"
+    },
+    {
+      "path": ".github/workflows/qsign-readonly-closure.yml",
+      "proposedCategory": "PATH_SCOPED_REVIEW",
+      "triggers": {
+        "pullRequest": true,
+        "pushMain": false,
+        "manualDispatch": true,
+        "pullRequestPathFilters": [
+          "src/features/work-orders/quotation/**",
+          "src/features/work-orders/signing/**",
+          "src/pages/work-orders/action-workspace.vue",
+          "src/pages/work-orders/signing-order-read.vue",
+          "tests/h5-main-mock/qsign-readonly-closure.spec.ts",
+          "tests/h5-main-mock/m1-i7-six-stage-integration.spec.ts",
+          ".github/workflows/qsign-readonly-closure.yml"
+        ]
+      },
+      "jobIds": [
+        "qsign-main-h5"
+      ],
+      "branchGuardLiterals": [],
+      "staticScriptReferences": [],
+      "missingExactPathTargets": [],
+      "requiredCheckStatus": "NOT_VERIFIED",
+      "lastSuccessfulRun": "NOT_VERIFIED",
+      "consumerReview": "PENDING",
+      "disposition": "KEEP_PENDING_REVIEW"
+    },
+    {
+      "path": ".github/workflows/r1-a06a-durable-write-fence.yml",
+      "proposedCategory": "PATH_SCOPED_REVIEW",
+      "triggers": {
+        "pullRequest": true,
+        "pushMain": false,
+        "manualDispatch": false,
+        "pullRequestPathFilters": [
+          ".github/workflows/r1-a06a-durable-write-fence.yml",
+          "src/adapters/api/technician-api-commands.ts",
+          "src/features/work-orders/action-mutation-receipt.ts",
+          "src/features/work-orders/action-workspace.ts",
+          "src/shared/ports/commands.ts",
+          "src/shared/ports/index.ts",
+          "tests/engineering/r1-a06a-durable-write-fence.test.ts",
+          "tests/engineering/eq07-command-state-consistency.test.ts",
+          "tests/engineering/r1-appointment-wire-unification.test.ts",
+          "tests/g4d/accept-appointment.test.ts",
+          "tests/g4d/action-workspace.test.ts",
+          "tests/g4d/final-correction.test.ts",
+          "tests/g4e/onsite-inspection.test.ts"
+        ]
+      },
+      "jobIds": [
+        "source-and-platform-regression",
+        "original-mock-journey-and-goldens"
+      ],
+      "branchGuardLiterals": [
+        "codex/r1-a06a-durable-write-fence"
+      ],
+      "staticScriptReferences": [],
+      "missingExactPathTargets": [],
+      "requiredCheckStatus": "NOT_VERIFIED",
+      "lastSuccessfulRun": "NOT_VERIFIED",
+      "consumerReview": "PENDING",
+      "disposition": "KEEP_PENDING_REVIEW"
+    },
+    {
+      "path": ".github/workflows/r1-a06b-node-type-safety.yml",
+      "proposedCategory": "PATH_SCOPED_REVIEW",
+      "triggers": {
+        "pullRequest": true,
+        "pushMain": false,
+        "manualDispatch": false,
+        "pullRequestPathFilters": [
+          ".github/workflows/r1-a06b-node-type-safety.yml",
+          "docs/engineering/R1_A06B_NODE_TYPE_SAFETY.md",
+          "src/adapters/api/technician-api-commands.ts",
+          "src/adapters/api/technician-api.ts",
+          "src/features/work-orders/action-workspace.ts",
+          "src/pages/work-orders/action-workspace.vue",
+          "src/pages/work-orders/detail.vue",
+          "src/runtimes/action/types.ts",
+          "src/runtimes/workflow/detail-projection.ts",
+          "src/shared/ports/api.ts",
+          "src/shared/ports/commands.ts",
+          "src/shared/types/index.ts",
+          "src/shared/types/r1-node-contract.ts",
+          "tests/engineering/r1-a06b-node-type-safety.test.ts",
+          "tests/g4d/action-workspace.test.ts",
+          "tests/g4c/work-order-detail.test.ts",
+          "tests/g4d/final-correction.test.ts",
+          "tests/g4ux/mock-runtime.test.ts"
+        ]
+      },
+      "jobIds": [
+        "source-node-routing-and-platform",
+        "original-mock-journey-and-goldens"
+      ],
+      "branchGuardLiterals": [
+        "engineering/r1-a06b-node-type-safety"
+      ],
+      "staticScriptReferences": [],
+      "missingExactPathTargets": [],
+      "requiredCheckStatus": "NOT_VERIFIED",
+      "lastSuccessfulRun": "NOT_VERIFIED",
+      "consumerReview": "PENDING",
+      "disposition": "KEEP_PENDING_REVIEW"
+    },
+    {
+      "path": ".github/workflows/r1-appointment-wire.yml",
+      "proposedCategory": "PATH_SCOPED_REVIEW",
+      "triggers": {
+        "pullRequest": true,
+        "pushMain": false,
+        "manualDispatch": false,
+        "pullRequestPathFilters": [
+          ".github/workflows/r1-appointment-wire.yml",
+          "docs/engineering/R1_APPOINTMENT_SAVE_WIRE_UNIFICATION.md",
+          "src/adapters/api/technician-api-commands.ts",
+          "tests/engineering/r1-appointment-wire-unification.test.ts"
+        ]
+      },
+      "jobIds": [
+        "full-source-contract",
+        "unchanged-real-h5"
+      ],
+      "branchGuardLiterals": [
+        "engineering/r1-a03-appointment-command-unification"
+      ],
+      "staticScriptReferences": [],
+      "missingExactPathTargets": [],
+      "requiredCheckStatus": "NOT_VERIFIED",
+      "lastSuccessfulRun": "NOT_VERIFIED",
+      "consumerReview": "PENDING",
+      "disposition": "KEEP_PENDING_REVIEW"
+    },
+    {
+      "path": ".github/workflows/r1-f1-forms-repeat-functional-gate.yml",
+      "proposedCategory": "PATH_SCOPED_REVIEW",
+      "triggers": {
+        "pullRequest": true,
+        "pushMain": false,
+        "manualDispatch": false,
+        "pullRequestPathFilters": [
+          ".github/workflows/r1-f1-forms-repeat-functional-gate.yml",
+          "docs/verification/R1_FOUR_PHASE_FUNCTIONAL_LEDGER.md",
+          "src/adapters/api/r1-node-form-list.ts",
+          "src/adapters/api/r1-special-workflow-wires.ts",
+          "src/adapters/api/technician-api.ts",
+          "src/features/work-orders/R1NodeFormsOverview.vue",
+          "src/pages/work-orders/detail.vue",
+          "src/shared/ports/api.ts",
+          "src/shared/ports/index.ts",
+          "tests/engineering/r1-f1-existing-form-list.test.ts",
+          "tests/engineering/r1-f1-special-workflow-wires.test.ts",
+          "tests/g4d/action-workspace.test.ts"
+        ]
+      },
+      "jobIds": [
+        "functional-source-and-build",
+        "original-journey-and-goldens"
+      ],
+      "branchGuardLiterals": [
+        "feature/r1-f1-forms-repeat-read-workspace"
+      ],
+      "staticScriptReferences": [],
+      "missingExactPathTargets": [],
+      "requiredCheckStatus": "NOT_VERIFIED",
+      "lastSuccessfulRun": "NOT_VERIFIED",
+      "consumerReview": "PENDING",
+      "disposition": "KEEP_PENDING_REVIEW"
+    },
+    {
+      "path": ".github/workflows/r1-f2-multistep-transaction-gate.yml",
+      "proposedCategory": "PATH_SCOPED_REVIEW",
+      "triggers": {
+        "pullRequest": true,
+        "pushMain": false,
+        "manualDispatch": false,
+        "pullRequestPathFilters": [
+          ".github/workflows/r1-f2-multistep-transaction-gate.yml",
+          "docs/engineering/R1_F2_MULTISTEP_TRANSACTION_FOUNDATION.md",
+          "src/features/work-orders/r1-forms-exts-plan.ts",
+          "src/features/work-orders/r1-multistep-offline-transaction.ts",
+          "tests/engineering/r1-f2-multiform-transaction.test.ts"
+        ]
+      },
+      "jobIds": [
+        "transaction-contract-and-platform",
+        "unchanged-mock-and-goldens"
+      ],
+      "branchGuardLiterals": [
+        "feature/r1-f2-multiform-draft-transaction"
+      ],
+      "staticScriptReferences": [],
+      "missingExactPathTargets": [],
+      "requiredCheckStatus": "NOT_VERIFIED",
+      "lastSuccessfulRun": "NOT_VERIFIED",
+      "consumerReview": "PENDING",
+      "disposition": "KEEP_PENDING_REVIEW"
+    },
+    {
+      "path": ".github/workflows/r1-f3-multiform-local-workspace.yml",
+      "proposedCategory": "PATH_SCOPED_REVIEW",
+      "triggers": {
+        "pullRequest": true,
+        "pushMain": false,
+        "manualDispatch": false,
+        "pullRequestPathFilters": [
+          ".github/workflows/r1-f3-multiform-local-workspace.yml",
+          "docs/engineering/R1_F3_LOCAL_MULTIFORM_WORKSPACE.md",
+          "src/app/bootstrap.ts",
+          "src/features/work-orders/r1-local-form-drafts.ts",
+          "src/features/work-orders/R1NodeFormsOverview.vue",
+          "src/pages/work-orders/detail.vue",
+          "tests/engineering/r1-f3-local-form-drafts.test.ts"
+        ]
+      },
+      "jobIds": [
+        "ui-drafts-contract",
+        "original-six-stage-and-goldens"
+      ],
+      "branchGuardLiterals": [
+        "feature/r1-f3-multiform-local-workspace"
+      ],
+      "staticScriptReferences": [],
+      "missingExactPathTargets": [],
+      "requiredCheckStatus": "NOT_VERIFIED",
+      "lastSuccessfulRun": "NOT_VERIFIED",
+      "consumerReview": "PENDING",
+      "disposition": "KEEP_PENDING_REVIEW"
+    },
+    {
+      "path": ".github/workflows/r1-f4-local-field-editor.yml",
+      "proposedCategory": "PATH_SCOPED_REVIEW",
+      "triggers": {
+        "pullRequest": true,
+        "pushMain": false,
+        "manualDispatch": false,
+        "pullRequestPathFilters": [
+          ".github/workflows/r1-f4-local-field-editor.yml",
+          "docs/engineering/R1_F4_LOCAL_FIELD_EDITOR.md",
+          "src/app/bootstrap.ts",
+          "src/features/work-orders/r1-local-form-fields.ts",
+          "src/features/work-orders/r1-local-form-drafts.ts",
+          "src/features/work-orders/R1LocalFormFieldEditor.vue",
+          "src/features/work-orders/R1NodeFormsOverview.vue",
+          "tests/engineering/r1-f4-local-field-editor.test.ts"
+        ]
+      },
+      "jobIds": [
+        "r1-field-schema-and-platform",
+        "inherited-six-stage-and-goldens"
+      ],
+      "branchGuardLiterals": [
+        "feature/r1-f4-local-field-editor"
+      ],
+      "staticScriptReferences": [],
+      "missingExactPathTargets": [],
+      "requiredCheckStatus": "NOT_VERIFIED",
+      "lastSuccessfulRun": "NOT_VERIFIED",
+      "consumerReview": "PENDING",
+      "disposition": "KEEP_PENDING_REVIEW"
+    },
+    {
+      "path": ".github/workflows/r1-login-appointment-integration.yml",
+      "proposedCategory": "PATH_SCOPED_REVIEW",
+      "triggers": {
+        "pullRequest": true,
+        "pushMain": false,
+        "manualDispatch": false,
+        "pullRequestPathFilters": [
+          ".github/workflows/r1-login-appointment-integration.yml",
+          "docs/engineering/R1_LOGIN_APPOINTMENT_RECONCILIATION.md",
+          "src/adapters/api/technician-api-commands.ts",
+          "tests/engineering/r1-appointment-wire-unification.test.ts",
+          "docs/engineering/R1_APPOINTMENT_SAVE_WIRE_UNIFICATION.md",
+          ".github/workflows/r1-appointment-wire.yml"
+        ]
+      },
+      "jobIds": [
+        "exact-ancestry-and-combined-contract",
+        "actual-h5-and-original-golden"
+      ],
+      "branchGuardLiterals": [
+        "engineering/r1-login-appointment-integrated-candidate"
+      ],
+      "staticScriptReferences": [
+        "scripts/check-r1-six-stage-parity.mjs"
+      ],
+      "missingExactPathTargets": [],
+      "requiredCheckStatus": "NOT_VERIFIED",
+      "lastSuccessfulRun": "NOT_VERIFIED",
+      "consumerReview": "PENDING",
+      "disposition": "KEEP_PENDING_REVIEW"
+    },
+    {
+      "path": ".github/workflows/r1-login-consent.yml",
+      "proposedCategory": "PATH_SCOPED_REVIEW",
+      "triggers": {
+        "pullRequest": true,
+        "pushMain": false,
+        "manualDispatch": false,
+        "pullRequestPathFilters": [
+          ".github/workflows/r1-login-consent.yml",
+          "docs/engineering/R1_LOGIN_CONSENT_GATE.md",
+          "src/features/session/login-consent.ts",
+          "src/pages/index/index.vue",
+          "src/pages/legal/legal.vue",
+          "src/pages.json",
+          "tests/engineering/r1-manual-login-consent.test.ts",
+          "tests/g4a/r1-manual-login-preflight.test.ts",
+          "tests/h5-main-app/r1-manual-consent.spec.ts"
+        ]
+      },
+      "jobIds": [
+        "feature-and-full",
+        "offline-ux-and-original-golden"
+      ],
+      "branchGuardLiterals": [
+        "engineering/r1-l01-consent-gate"
+      ],
+      "staticScriptReferences": [],
+      "missingExactPathTargets": [],
+      "requiredCheckStatus": "NOT_VERIFIED",
+      "lastSuccessfulRun": "NOT_VERIFIED",
+      "consumerReview": "PENDING",
+      "disposition": "KEEP_PENDING_REVIEW"
+    },
+    {
+      "path": ".github/workflows/r1-source-parity-simulator.yml",
+      "proposedCategory": "PATH_SCOPED_REVIEW",
+      "triggers": {
+        "pullRequest": true,
+        "pushMain": false,
+        "manualDispatch": false,
+        "pullRequestPathFilters": [
+          ".github/workflows/r1-source-parity-simulator.yml",
+          ".github/ISSUE_TEMPLATE/r1-simulator-parity.md",
+          "docs/verification/R1_SIX_STAGE_SOURCE_PARITY_MANIFEST.json",
+          "docs/verification/R1_SIX_STAGE_SIMULATOR_HANDOFF.md",
+          "scripts/check-r1-six-stage-parity.mjs",
+          "tests/engineering/r1-six-stage-business-review.test.ts"
+        ]
+      },
+      "jobIds": [
+        "source-and-engineering",
+        "credential-free-simulator-h5"
+      ],
+      "branchGuardLiterals": [
+        "engineering/r1-source-parity-simulator-readiness"
+      ],
+      "staticScriptReferences": [
+        "scripts/check-r1-six-stage-parity.mjs"
+      ],
+      "missingExactPathTargets": [],
+      "requiredCheckStatus": "NOT_VERIFIED",
+      "lastSuccessfulRun": "NOT_VERIFIED",
+      "consumerReview": "PENDING",
+      "disposition": "KEEP_PENDING_REVIEW"
+    },
+    {
+      "path": ".github/workflows/s2-ux-focus.yml",
+      "proposedCategory": "PATH_SCOPED_REVIEW",
+      "triggers": {
+        "pullRequest": true,
+        "pushMain": false,
+        "manualDispatch": true,
+        "pullRequestPathFilters": [
+          ".github/workflows/s2-ux-focus.yml",
+          "playwright.s2-ux-focus.config.ts",
+          "tests/s2-ux-focus/**",
+          "src/features/work-orders/quotation/QuotationOrderHub.vue",
+          "src/features/work-orders/quotation/QuotationActionContent.vue",
+          "src/features/work-orders/quotation/QuotationActionWorkspace.vue",
+          "src/pages/work-orders/detail.vue",
+          "src/features/work-orders/WorkOrderTaskFocus.vue"
+        ]
+      },
+      "jobIds": [
+        "focused-visual"
+      ],
+      "branchGuardLiterals": [],
+      "staticScriptReferences": [],
+      "missingExactPathTargets": [],
+      "requiredCheckStatus": "NOT_VERIFIED",
+      "lastSuccessfulRun": "NOT_VERIFIED",
+      "consumerReview": "PENDING",
+      "disposition": "KEEP_PENDING_REVIEW"
+    },
+    {
+      "path": ".github/workflows/s2-ux-review-sheet.yml",
+      "proposedCategory": "PATH_SCOPED_REVIEW",
+      "triggers": {
+        "pullRequest": true,
+        "pushMain": false,
+        "manualDispatch": true,
+        "pullRequestPathFilters": [
+          "tests/s2-ux-review/**",
+          "playwright.s2-ux-review.config.ts",
+          "scripts/check-s2-ux-review.mjs",
+          ".github/workflows/s2-ux-review-sheet.yml",
+          "src/pages/**",
+          "src/features/work-orders/**",
+          "src/shared/ui/**",
+          "src/components/**",
+          "src/styles/**"
+        ]
+      },
+      "jobIds": [
+        "capture-main-app"
+      ],
+      "branchGuardLiterals": [],
+      "staticScriptReferences": [
+        "scripts/check-s2-ux-review.mjs"
+      ],
+      "missingExactPathTargets": [],
+      "requiredCheckStatus": "NOT_VERIFIED",
+      "lastSuccessfulRun": "NOT_VERIFIED",
+      "consumerReview": "PENDING",
+      "disposition": "KEEP_PENDING_REVIEW"
+    },
+    {
+      "path": ".github/workflows/validate-main-h5.yml",
+      "proposedCategory": "CORE_MAINLINE",
+      "triggers": {
+        "pullRequest": true,
+        "pushMain": true,
+        "manualDispatch": true,
+        "pullRequestPathFilters": []
+      },
+      "jobIds": [
+        "r1-main-repeat-ui",
+        "h5-ux"
+      ],
+      "branchGuardLiterals": [],
+      "staticScriptReferences": [],
+      "missingExactPathTargets": [],
+      "requiredCheckStatus": "NOT_VERIFIED",
+      "lastSuccessfulRun": "NOT_VERIFIED",
+      "consumerReview": "PENDING",
+      "disposition": "KEEP_PENDING_REVIEW"
+    },
+    {
+      "path": ".github/workflows/validate.yml",
+      "proposedCategory": "CORE_MAINLINE",
+      "triggers": {
+        "pullRequest": true,
+        "pushMain": true,
+        "manualDispatch": true,
+        "pullRequestPathFilters": []
+      },
+      "jobIds": [
+        "quick",
+        "verify"
+      ],
+      "branchGuardLiterals": [],
+      "staticScriptReferences": [],
+      "missingExactPathTargets": [],
+      "requiredCheckStatus": "NOT_VERIFIED",
+      "lastSuccessfulRun": "NOT_VERIFIED",
+      "consumerReview": "PENDING",
+      "disposition": "KEEP_PENDING_REVIEW"
+    }
+  ]
+}

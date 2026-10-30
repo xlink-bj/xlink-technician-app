@@ -61,5 +61,5 @@ Supersedes / Related (when applicable)
 4. 对候选 OBSOLETE 单独 PR，列出所有引用和 CI trigger/consumer 验证；获批后才删除。
 5. CI workflow 与 snapshot/fixture 的删除独立于普通 Markdown；必须保证相同主干 gate 和验收证据未丢失。
 
-第一轮候选与非破坏性分类见 [G0-B Inventory](G0B_HISTORICAL_ASSET_TRIAGE_20261030.md)。本 G0-A PR 只创建索引/规范与快照，不做历史资产移动或删除。
+已完成第一轮非破坏性静态分类，见 [G0-B 结果与后续队列](G0B_HISTORICAL_ASSET_TRIAGE_20261030.md)及 [逐文件机器清单](../governance/G0B_DOCUMENT_INVENTORY_20261030.json)。**这仍是 Draft PR 内的提案**；未变更历史资产、工作流或运行准入。真正归档或删除前必须按上面的消费者核查程序另行审批。
 

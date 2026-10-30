@@ -1,0 +1,1646 @@
+{
+  "schemaVersion": 1,
+  "scope": "preliminary non-destructive Git tree audit",
+  "repository": "xlink-bj/xlink-technician-app",
+  "sourceCommit": "17ba7211040df887be28665564414cb037b6acef",
+  "reviewDate": "2026-10-30",
+  "policy": "proposedStatus is triage, not deletion authority; no OBSOLETE classification without consumer proof",
+  "summary": {
+    "documents": 203,
+    "proposedStatusCounts": {
+      "ACTIVE_CANDIDATE": 15,
+      "REFERENCE": 11,
+      "SNAPSHOT": 64,
+      "REVIEW_REQUIRED": 11,
+      "EVIDENCE": 102
+    },
+    "internalBrokenMarkdownLinks": 0,
+    "documentsWithZeroInternalInbound": 171
+  },
+  "files": [
+    {
+      "path": "docs/LEGACY_REFERENCE.md",
+      "proposedStatus": "ACTIVE_CANDIDATE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 839,
+      "sourceTitle": "Legacy Reference",
+      "reviewNote": "Explicit living/mandatory/accepted authority or current operating boundary; verify Owner scope before canonizing"
+    },
+    {
+      "path": "docs/architecture/ACTION_WORKSPACE_ARCHITECTURE.md",
+      "proposedStatus": "ACTIVE_CANDIDATE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 24027,
+      "sourceTitle": "Action Workspace Architecture",
+      "reviewNote": "Explicit living/mandatory/accepted authority or current operating boundary; verify Owner scope before canonizing"
+    },
+    {
+      "path": "docs/architecture/AI_ENGINEERING_LOOP.md",
+      "proposedStatus": "REFERENCE",
+      "internalInboundLinks": 1,
+      "sourceSizeBytes": 12906,
+      "sourceTitle": "AI Engineering Loop",
+      "reviewNote": "Proposed operating model, not enabled unattended execution"
+    },
+    {
+      "path": "docs/architecture/LOCAL_DRAFT_AND_WEAK_NETWORK_ARCHITECTURE.md",
+      "proposedStatus": "ACTIVE_CANDIDATE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 16539,
+      "sourceTitle": "Local Draft & Weak-Network Architecture",
+      "reviewNote": "Explicit living/mandatory/accepted authority or current operating boundary; verify Owner scope before canonizing"
+    },
+    {
+      "path": "docs/architecture/M1_I8_FRONTEND_ARCHITECTURE_BASELINE.md",
+      "proposedStatus": "SNAPSHOT",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 3630,
+      "sourceTitle": "M1-I8｜前端架构基线（工程候选，非 Owner 冻结）",
+      "reviewNote": "Explicit I8 engineering candidate, not Owner-frozen mainline"
+    },
+    {
+      "path": "docs/architecture/TARGET_ARCHITECTURE.md",
+      "proposedStatus": "ACTIVE_CANDIDATE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 29804,
+      "sourceTitle": "Target Architecture — Living Architecture Record",
+      "reviewNote": "Explicit living/mandatory/accepted authority or current operating boundary; verify Owner scope before canonizing"
+    },
+    {
+      "path": "docs/design-system/ACTION_WORKSPACE_UX_STANDARD.md",
+      "proposedStatus": "ACTIVE_CANDIDATE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 9456,
+      "sourceTitle": "Action Workspace UX Standard v0.2",
+      "reviewNote": "Explicit living/mandatory/accepted authority or current operating boundary; verify Owner scope before canonizing"
+    },
+    {
+      "path": "docs/design-system/CROSS_PLATFORM_VISUAL_CALIBRATION.md",
+      "proposedStatus": "REVIEW_REQUIRED",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 2396,
+      "sourceTitle": "Cross-Platform Visual Calibration",
+      "reviewNote": "May still influence current rules, but stage or acceptance authority requires exact-main reconciliation"
+    },
+    {
+      "path": "docs/design-system/DS011_COMMERCIAL_VISUAL_EXCELLENCE.md",
+      "proposedStatus": "SNAPSHOT",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 5326,
+      "sourceTitle": "DS-01.1 — XLink Commercial Visual Excellence",
+      "reviewNote": "Stage/design-system candidate or implementation evidence; current Owner-approved Golden has separate authority"
+    },
+    {
+      "path": "docs/design-system/DS01_COMMERCIAL_FOUNDATION_V1.md",
+      "proposedStatus": "SNAPSHOT",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 7714,
+      "sourceTitle": "DS-01 — XLink Commercial UI Foundation v1.0",
+      "reviewNote": "Stage/design-system candidate or implementation evidence; current Owner-approved Golden has separate authority"
+    },
+    {
+      "path": "docs/design-system/DS02A_H5_VISUAL_CONTRACT.md",
+      "proposedStatus": "ACTIVE_CANDIDATE",
+      "internalInboundLinks": 2,
+      "sourceSizeBytes": 6567,
+      "sourceTitle": "DS-02.A — H5 Commercial Visual Contract v1.0",
+      "reviewNote": "Explicit living/mandatory/accepted authority or current operating boundary; verify Owner scope before canonizing"
+    },
+    {
+      "path": "docs/design-system/DS02B_COMMERCIAL_CONTENT_VISUAL.md",
+      "proposedStatus": "SNAPSHOT",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 4202,
+      "sourceTitle": "DS-02.B — Commercial Content UI / Visual Convergence",
+      "reviewNote": "Stage/design-system candidate or implementation evidence; current Owner-approved Golden has separate authority"
+    },
+    {
+      "path": "docs/design-system/DS03_TRANSACTION_VISUAL_FOUNDATION.md",
+      "proposedStatus": "SNAPSHOT",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 2443,
+      "sourceTitle": "DS-03 — Transaction Visual Foundation (Q00 / Q01 / Signing)",
+      "reviewNote": "Stage/design-system candidate or implementation evidence; current Owner-approved Golden has separate authority"
+    },
+    {
+      "path": "docs/design-system/DS04_Q01_DESIGN_FIRST_SPEC.md",
+      "proposedStatus": "SNAPSHOT",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 3321,
+      "sourceTitle": "DS-04 · Q01 Design-first implementation contract",
+      "reviewNote": "Stage/design-system candidate or implementation evidence; current Owner-approved Golden has separate authority"
+    },
+    {
+      "path": "docs/design-system/DS05B_C01_VISUAL_MASTER.md",
+      "proposedStatus": "SNAPSHOT",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 2750,
+      "sourceTitle": "C01 Visual Master V2 — Sign-off Read-only (2026-10-17)",
+      "reviewNote": "Stage/design-system candidate or implementation evidence; current Owner-approved Golden has separate authority"
+    },
+    {
+      "path": "docs/design-system/DS05_CRAFT_V1_TWO_PAGE_GATE.md",
+      "proposedStatus": "SNAPSHOT",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 3008,
+      "sourceTitle": "DS-05 · Mobile Craft V1 / Two-Page Transfer Test",
+      "reviewNote": "Stage/design-system candidate or implementation evidence; current Owner-approved Golden has separate authority"
+    },
+    {
+      "path": "docs/design-system/DS06_TASK_FOCUS_SINGLE_PROOF.md",
+      "proposedStatus": "SNAPSHOT",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 3593,
+      "sourceTitle": "DS-06 — One-point Design-to-Code Proof / Work Order Task Focus",
+      "reviewNote": "Stage/design-system candidate or implementation evidence; current Owner-approved Golden has separate authority"
+    },
+    {
+      "path": "docs/design-system/DS07B_SHARED_COMPONENT_STATE_STANDARD.md",
+      "proposedStatus": "REVIEW_REQUIRED",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 4811,
+      "sourceTitle": "DS-07.B — Standard UI Components: State and Ownership Contract",
+      "reviewNote": "May still influence current rules, but stage or acceptance authority requires exact-main reconciliation"
+    },
+    {
+      "path": "docs/design-system/DS07C1_WORK_ORDER_LIST_RECORD_MIGRATION.md",
+      "proposedStatus": "SNAPSHOT",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 2812,
+      "sourceTitle": "DS-07.C1 · Work Order List / Record Tone Migration",
+      "reviewNote": "Stage/design-system candidate or implementation evidence; current Owner-approved Golden has separate authority"
+    },
+    {
+      "path": "docs/design-system/DS07C2_DETAIL_TASK_STYLE_CLEANUP.md",
+      "proposedStatus": "SNAPSHOT",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 2155,
+      "sourceTitle": "DS-07.C2 — Work Order Detail / Remove Shadow Task Style Authority",
+      "reviewNote": "Stage/design-system candidate or implementation evidence; current Owner-approved Golden has separate authority"
+    },
+    {
+      "path": "docs/design-system/DS07C3_WORK_ORDER_STATES_SEARCH.md",
+      "proposedStatus": "SNAPSHOT",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 4497,
+      "sourceTitle": "DS-07.C3 — Major Batch: Work-Order Search & UX State Ownership",
+      "reviewNote": "Stage/design-system candidate or implementation evidence; current Owner-approved Golden has separate authority"
+    },
+    {
+      "path": "docs/design-system/DS07C4A_APPOINTMENT_SURVEY_UI_MIGRATION.md",
+      "proposedStatus": "SNAPSHOT",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 4237,
+      "sourceTitle": "DS-07.C4.A — Appointment + Survey UI Ownership Migration",
+      "reviewNote": "Stage/design-system candidate or implementation evidence; current Owner-approved Golden has separate authority"
+    },
+    {
+      "path": "docs/design-system/DS07C5_VISUAL_CANDIDATE.md",
+      "proposedStatus": "SNAPSHOT",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 3508,
+      "sourceTitle": "DS-07.C5 — Proposed Golden Candidates / Engineering Gate",
+      "reviewNote": "Stage/design-system candidate or implementation evidence; current Owner-approved Golden has separate authority"
+    },
+    {
+      "path": "docs/design-system/DS07C6_INTEGRATION_READINESS.md",
+      "proposedStatus": "SNAPSHOT",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 4751,
+      "sourceTitle": "DS-07.C6 — Full Stacked-Chain Integration Readiness Gate",
+      "reviewNote": "Stage/design-system candidate or implementation evidence; current Owner-approved Golden has separate authority"
+    },
+    {
+      "path": "docs/design-system/DS07C7_LEGACY_SOURCE_TEST_RECONCILIATION.md",
+      "proposedStatus": "SNAPSHOT",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 2730,
+      "sourceTitle": "DS-07.C7 — Legacy Source-Guard Reconciliation",
+      "reviewNote": "Stage/design-system candidate or implementation evidence; current Owner-approved Golden has separate authority"
+    },
+    {
+      "path": "docs/design-system/DS07_DS02A_VISUAL_ADJUDICATION.md",
+      "proposedStatus": "SNAPSHOT",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 4435,
+      "sourceTitle": "DS-07 Commercial UI — DS02A Visual Baseline Adjudication",
+      "reviewNote": "Stage/design-system candidate or implementation evidence; current Owner-approved Golden has separate authority"
+    },
+    {
+      "path": "docs/design-system/DS07_GLOBAL_UI_ENGINEERING.md",
+      "proposedStatus": "SNAPSHOT",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 6485,
+      "sourceTitle": "DS-07｜全局 UI 工程治理与现有 M1 功能闭环（2026-10-17）",
+      "reviewNote": "Stage/design-system candidate or implementation evidence; current Owner-approved Golden has separate authority"
+    },
+    {
+      "path": "docs/design-system/UI_DELIVERY_WORKFLOW.md",
+      "proposedStatus": "ACTIVE_CANDIDATE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 8707,
+      "sourceTitle": "UI Delivery Workflow v1",
+      "reviewNote": "Explicit living/mandatory/accepted authority or current operating boundary; verify Owner scope before canonizing"
+    },
+    {
+      "path": "docs/design-system/UI_STYLE_DEBT_BASELINE.json",
+      "proposedStatus": "ACTIVE_CANDIDATE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 2286,
+      "sourceTitle": "",
+      "reviewNote": "Explicit living/mandatory/accepted authority or current operating boundary; verify Owner scope before canonizing"
+    },
+    {
+      "path": "docs/discovery/API_CONTRACT_BASELINE.md",
+      "proposedStatus": "REVIEW_REQUIRED",
+      "internalInboundLinks": 1,
+      "sourceSizeBytes": 26049,
+      "sourceTitle": "Technician API Contract Baseline",
+      "reviewNote": "May still influence current rules, but stage or acceptance authority requires exact-main reconciliation"
+    },
+    {
+      "path": "docs/discovery/API_EVIDENCE_TRACEABILITY.md",
+      "proposedStatus": "REVIEW_REQUIRED",
+      "internalInboundLinks": 1,
+      "sourceSizeBytes": 22658,
+      "sourceTitle": "API Evidence Traceability",
+      "reviewNote": "May still influence current rules, but stage or acceptance authority requires exact-main reconciliation"
+    },
+    {
+      "path": "docs/discovery/API_P0_READ_VERIFICATION.md",
+      "proposedStatus": "REFERENCE",
+      "internalInboundLinks": 2,
+      "sourceSizeBytes": 13429,
+      "sourceTitle": "G1-A2 P0 API Read Contract Verification",
+      "reviewNote": "R1/backend/platform discovery baseline; source-backed but not current implementation status"
+    },
+    {
+      "path": "docs/discovery/DYNAMIC_FORM_CAPABILITY_MATRIX.md",
+      "proposedStatus": "REFERENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 17478,
+      "sourceTitle": "Technician Dynamic Form Capability Matrix",
+      "reviewNote": "R1/backend/platform discovery baseline; source-backed but not current implementation status"
+    },
+    {
+      "path": "docs/discovery/DYNAMIC_FORM_WORKFLOW_MATRIX.md",
+      "proposedStatus": "REFERENCE",
+      "internalInboundLinks": 1,
+      "sourceSizeBytes": 1368,
+      "sourceTitle": "Workflow & Dynamic Form Capability Matrix",
+      "reviewNote": "R1/backend/platform discovery baseline; source-backed but not current implementation status"
+    },
+    {
+      "path": "docs/discovery/EXISTING_ASSET_INVENTORY.md",
+      "proposedStatus": "REFERENCE",
+      "internalInboundLinks": 2,
+      "sourceSizeBytes": 11905,
+      "sourceTitle": "Existing Asset Inventory",
+      "reviewNote": "R1/backend/platform discovery baseline; source-backed but not current implementation status"
+    },
+    {
+      "path": "docs/discovery/LEGACY_EXCEPTION_INVENTORY.md",
+      "proposedStatus": "REFERENCE",
+      "internalInboundLinks": 1,
+      "sourceSizeBytes": 30570,
+      "sourceTitle": "Technician Legacy Hardcode & Exception Inventory",
+      "reviewNote": "R1/backend/platform discovery baseline; source-backed but not current implementation status"
+    },
+    {
+      "path": "docs/discovery/NATIVE_PLATFORM_CAPABILITY_MATRIX.md",
+      "proposedStatus": "REFERENCE",
+      "internalInboundLinks": 1,
+      "sourceSizeBytes": 1257,
+      "sourceTitle": "Native / Platform Capability Matrix",
+      "reviewNote": "R1/backend/platform discovery baseline; source-backed but not current implementation status"
+    },
+    {
+      "path": "docs/discovery/PLATFORM_CAPABILITY_MATRIX.md",
+      "proposedStatus": "REFERENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 25807,
+      "sourceTitle": "Technician Native / Platform Capability Matrix",
+      "reviewNote": "R1/backend/platform discovery baseline; source-backed but not current implementation status"
+    },
+    {
+      "path": "docs/discovery/README.md",
+      "proposedStatus": "REFERENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 1864,
+      "sourceTitle": "G1 Discovery",
+      "reviewNote": "R1/backend/platform discovery baseline; source-backed but not current implementation status"
+    },
+    {
+      "path": "docs/discovery/WORKFLOW_CAPABILITY_MATRIX.md",
+      "proposedStatus": "REFERENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 15237,
+      "sourceTitle": "Technician Workflow Capability Matrix",
+      "reviewNote": "R1/backend/platform discovery baseline; source-backed but not current implementation status"
+    },
+    {
+      "path": "docs/engineering/APP_FOUNDATION_CONTRACT_GATE.md",
+      "proposedStatus": "SNAPSHOT",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 14828,
+      "sourceTitle": "App Foundation Contract Gate — R1 Technician integration",
+      "reviewNote": "Named work-package/Draft/closeout artifact; retain for evidence, reconcile any durable rule to active standards"
+    },
+    {
+      "path": "docs/engineering/A_STAGE_ENGINEERING_EXIT.md",
+      "proposedStatus": "SNAPSHOT",
+      "internalInboundLinks": 2,
+      "sourceSizeBytes": 5696,
+      "sourceTitle": "阶段 A｜Mock 功能与协议基础工程收口",
+      "reviewNote": "Named work-package/Draft/closeout artifact; retain for evidence, reconcile any durable rule to active standards"
+    },
+    {
+      "path": "docs/engineering/A_STAGE_P1_ACCEPTANCE_EVIDENCE.md",
+      "proposedStatus": "SNAPSHOT",
+      "internalInboundLinks": 1,
+      "sourceSizeBytes": 11445,
+      "sourceTitle": "Stage A — P1 functional recovery, mobile UX and evidence matrix",
+      "reviewNote": "Named work-package/Draft/closeout artifact; retain for evidence, reconcile any durable rule to active standards"
+    },
+    {
+      "path": "docs/engineering/CLOSURE_C1_INTEGRATION_DECISION.md",
+      "proposedStatus": "SNAPSHOT",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 2705,
+      "sourceTitle": "Engineering Closure C1 — 唯一集成候选 / 分支与代码收敛决策",
+      "reviewNote": "Named work-package/Draft/closeout artifact; retain for evidence, reconcile any durable rule to active standards"
+    },
+    {
+      "path": "docs/engineering/CLOSURE_C2_READ_MODEL_REFACTOR.md",
+      "proposedStatus": "SNAPSHOT",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 3657,
+      "sourceTitle": "Engineering Closure C2 — Action Workspace Reactive Read Model Extraction",
+      "reviewNote": "Named work-package/Draft/closeout artifact; retain for evidence, reconcile any durable rule to active standards"
+    },
+    {
+      "path": "docs/engineering/CLOSURE_C3_QUALITY_RELIABILITY.md",
+      "proposedStatus": "SNAPSHOT",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 6062,
+      "sourceTitle": "Engineering Closure C3 — 测试质量、故障诊断与发布保护",
+      "reviewNote": "Named work-package/Draft/closeout artifact; retain for evidence, reconcile any durable rule to active standards"
+    },
+    {
+      "path": "docs/engineering/CLOUD_EXECUTION_AND_VISUAL_VERIFICATION_20261026.md",
+      "proposedStatus": "ACTIVE_CANDIDATE",
+      "internalInboundLinks": 3,
+      "sourceSizeBytes": 6400,
+      "sourceTitle": "XLink 云端执行分工与商业视觉证据协议（2026-10-26）",
+      "reviewNote": "Explicit living/mandatory/accepted authority or current operating boundary; verify Owner scope before canonizing"
+    },
+    {
+      "path": "docs/engineering/CODEX_LOCAL_FAST_LOOP.md",
+      "proposedStatus": "ACTIVE_CANDIDATE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 6487,
+      "sourceTitle": "Codex / ChatGPT Local Fast Loop — XLink Technician App",
+      "reviewNote": "Explicit living/mandatory/accepted authority or current operating boundary; verify Owner scope before canonizing"
+    },
+    {
+      "path": "docs/engineering/CUI02_MAINLINE_RECONCILIATION_20261029.md",
+      "proposedStatus": "REVIEW_REQUIRED",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 2715,
+      "sourceTitle": "CUI-02 Mainline Reconciliation — 2026-10-29",
+      "reviewNote": "May still influence current rules, but stage or acceptance authority requires exact-main reconciliation"
+    },
+    {
+      "path": "docs/engineering/EQ01_QUALITY_BASELINE_AND_MOCK_CONTRACT.md",
+      "proposedStatus": "SNAPSHOT",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 5299,
+      "sourceTitle": "EQ-01 — Quality Baseline and Mock Scenario Contract",
+      "reviewNote": "Named work-package/Draft/closeout artifact; retain for evidence, reconcile any durable rule to active standards"
+    },
+    {
+      "path": "docs/engineering/EQ02_ACTION_WORKSPACE_AND_QUOTATION_SPLIT.md",
+      "proposedStatus": "SNAPSHOT",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 3064,
+      "sourceTitle": "EQ-02 — Action Workspace Pure Draft Utilities + Quotation Presentation Ownership",
+      "reviewNote": "Named work-package/Draft/closeout artifact; retain for evidence, reconcile any durable rule to active standards"
+    },
+    {
+      "path": "docs/engineering/EQ03_TEST_LANES_AND_METRICS.md",
+      "proposedStatus": "REVIEW_REQUIRED",
+      "internalInboundLinks": 1,
+      "sourceSizeBytes": 3506,
+      "sourceTitle": "EQ-03 — Unified Developer Verification Entry Points & Honest Quality Metrics",
+      "reviewNote": "May still influence current rules, but stage or acceptance authority requires exact-main reconciliation"
+    },
+    {
+      "path": "docs/engineering/EQ04_QUOTATION_SELECTION_BRIDGE.md",
+      "proposedStatus": "SNAPSHOT",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 2532,
+      "sourceTitle": "EQ-04 — Bounded Quotation Catalog/Package Admission Bridge",
+      "reviewNote": "Named work-package/Draft/closeout artifact; retain for evidence, reconcile any durable rule to active standards"
+    },
+    {
+      "path": "docs/engineering/EQ05B_MOCK_FAULT_SCENARIOS.md",
+      "proposedStatus": "SNAPSHOT",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 1876,
+      "sourceTitle": "EQ-05B — Bounded per-request Mock fault/latency contract",
+      "reviewNote": "Named work-package/Draft/closeout artifact; retain for evidence, reconcile any durable rule to active standards"
+    },
+    {
+      "path": "docs/engineering/EQ05_MOCK_COMMAND_STATE_FACTORY.md",
+      "proposedStatus": "SNAPSHOT",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 2892,
+      "sourceTitle": "EQ-05A — Isolated, resettable Mock Command State Factory",
+      "reviewNote": "Named work-package/Draft/closeout artifact; retain for evidence, reconcile any durable rule to active standards"
+    },
+    {
+      "path": "docs/engineering/EQ06_CRITICAL_BEHAVIOR_GATE.md",
+      "proposedStatus": "SNAPSHOT",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 1788,
+      "sourceTitle": "EQ-06A — Verified Critical-Path Behavioral Suite",
+      "reviewNote": "Named work-package/Draft/closeout artifact; retain for evidence, reconcile any durable rule to active standards"
+    },
+    {
+      "path": "docs/engineering/EQ08_P1_ARCHITECTURE_BOUNDARIES.md",
+      "proposedStatus": "SNAPSHOT",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 4044,
+      "sourceTitle": "EQ08 — P1 Form and Command Architecture Boundaries",
+      "reviewNote": "Named work-package/Draft/closeout artifact; retain for evidence, reconcile any durable rule to active standards"
+    },
+    {
+      "path": "docs/engineering/EQ09_P1_ORDER_SCOPE_RELIABILITY.md",
+      "proposedStatus": "SNAPSHOT",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 3322,
+      "sourceTitle": "EQ09 — P1 Actor-scoped Order reliability and read boundaries",
+      "reviewNote": "Named work-package/Draft/closeout artifact; retain for evidence, reconcile any durable rule to active standards"
+    },
+    {
+      "path": "docs/engineering/EQ10_QUALITY_FINAL_REVIEW.md",
+      "proposedStatus": "SNAPSHOT",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 5254,
+      "sourceTitle": "EQ10 — Engineering Quality, Governance & Draft-Stack Integration",
+      "reviewNote": "Named work-package/Draft/closeout artifact; retain for evidence, reconcile any durable rule to active standards"
+    },
+    {
+      "path": "docs/engineering/M1_ENGINEERING_FIRST_SIGNING_READ_VERTICAL.md",
+      "proposedStatus": "SNAPSHOT",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 2043,
+      "sourceTitle": "M1 Engineering-first — official Order → Signing read-side vertical slice",
+      "reviewNote": "Named work-package/Draft/closeout artifact; retain for evidence, reconcile any durable rule to active standards"
+    },
+    {
+      "path": "docs/engineering/M1_PARALLEL_OPERATING_MODE.md",
+      "proposedStatus": "SNAPSHOT",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 4053,
+      "sourceTitle": "M1 — Two-lane engineering operating mode",
+      "reviewNote": "Named work-package/Draft/closeout artifact; retain for evidence, reconcile any durable rule to active standards"
+    },
+    {
+      "path": "docs/engineering/NEW_APP_ENGINEERING_EXIT_CRITERIA.md",
+      "proposedStatus": "REVIEW_REQUIRED",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 7865,
+      "sourceTitle": "New App engineering completion — functional exit criteria",
+      "reviewNote": "May still influence current rules, but stage or acceptance authority requires exact-main reconciliation"
+    },
+    {
+      "path": "docs/engineering/NO_BETA_ENGINEERING_PARITY_PATH.md",
+      "proposedStatus": "ACTIVE_CANDIDATE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 12626,
+      "sourceTitle": "New App: engineering path when no writable Beta exists",
+      "reviewNote": "Explicit living/mandatory/accepted authority or current operating boundary; verify Owner scope before canonizing"
+    },
+    {
+      "path": "docs/engineering/R1_A06B_NODE_TYPE_SAFETY.md",
+      "proposedStatus": "SNAPSHOT",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 5268,
+      "sourceTitle": "A06-B — R1 Source NodeType Identity & Fail-Closed Command Routing",
+      "reviewNote": "Named work-package/Draft/closeout artifact; retain for evidence, reconcile any durable rule to active standards"
+    },
+    {
+      "path": "docs/engineering/R1_APPOINTMENT_SAVE_WIRE_UNIFICATION.md",
+      "proposedStatus": "SNAPSHOT",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 2762,
+      "sourceTitle": "R1 A03 — Single FormData upsert encoder and Workflow separation",
+      "reviewNote": "Named work-package/Draft/closeout artifact; retain for evidence, reconcile any durable rule to active standards"
+    },
+    {
+      "path": "docs/engineering/R1_F2_MULTISTEP_TRANSACTION_FOUNDATION.md",
+      "proposedStatus": "SNAPSHOT",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 3019,
+      "sourceTitle": "Stage 1B — R1 forms/repeat multi-step transaction foundation",
+      "reviewNote": "Named work-package/Draft/closeout artifact; retain for evidence, reconcile any durable rule to active standards"
+    },
+    {
+      "path": "docs/engineering/R1_F3_LOCAL_MULTIFORM_WORKSPACE.md",
+      "proposedStatus": "SNAPSHOT",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 2238,
+      "sourceTitle": "F3 — Multi-form local draft interaction on the WorkOrder Detail",
+      "reviewNote": "Named work-package/Draft/closeout artifact; retain for evidence, reconcile any durable rule to active standards"
+    },
+    {
+      "path": "docs/engineering/R1_F4_LOCAL_FIELD_EDITOR.md",
+      "proposedStatus": "SNAPSHOT",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 3516,
+      "sourceTitle": "F4 — R1 Multi-Form Dynamic Field Draft Editor (Offline)",
+      "reviewNote": "Named work-package/Draft/closeout artifact; retain for evidence, reconcile any durable rule to active standards"
+    },
+    {
+      "path": "docs/engineering/R1_FRONTEND_MODEL_CONTRACT_ALIGNMENT.md",
+      "proposedStatus": "SNAPSHOT",
+      "internalInboundLinks": 1,
+      "sourceSizeBytes": 9375,
+      "sourceTitle": "R1 Frontend Model ↔ API Contract Alignment — code gate",
+      "reviewNote": "Named work-package/Draft/closeout artifact; retain for evidence, reconcile any durable rule to active standards"
+    },
+    {
+      "path": "docs/engineering/R1_LOGIN_APPOINTMENT_RECONCILIATION.md",
+      "proposedStatus": "SNAPSHOT",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 3088,
+      "sourceTitle": "R1 Two-Stream Engineering Reconciliation — Interim Candidate (NO release)",
+      "reviewNote": "Named work-package/Draft/closeout artifact; retain for evidence, reconcile any durable rule to active standards"
+    },
+    {
+      "path": "docs/engineering/R1_LOGIN_CONSENT_GATE.md",
+      "proposedStatus": "SNAPSHOT",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 3191,
+      "sourceTitle": "R1 L02 — Manual authentication consent boundary",
+      "reviewNote": "Named work-package/Draft/closeout artifact; retain for evidence, reconcile any durable rule to active standards"
+    },
+    {
+      "path": "docs/engineering/R1_STAGE1_FUNCTIONAL_CANDIDATE.md",
+      "proposedStatus": "SNAPSHOT",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 7097,
+      "sourceTitle": "R1 多表单 Stage 1 — 离线功能候选与验收边界",
+      "reviewNote": "Named work-package/Draft/closeout artifact; retain for evidence, reconcile any durable rule to active standards"
+    },
+    {
+      "path": "docs/engineering/R1_STAGE1_ISOLATED_PILOT_INTEGRATION.md",
+      "proposedStatus": "SNAPSHOT",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 5265,
+      "sourceTitle": "R1 Stage 1 — isolated Pilot wiring and authoritative readback",
+      "reviewNote": "Named work-package/Draft/closeout artifact; retain for evidence, reconcile any durable rule to active standards"
+    },
+    {
+      "path": "docs/engineering/R1_THREE_PILLAR_CONTRACT_MATRIX.md",
+      "proposedStatus": "SNAPSHOT",
+      "internalInboundLinks": 1,
+      "sourceSizeBytes": 9526,
+      "sourceTitle": "R1 三大契约对齐：Workflow / 动态表单 / Order–SKU–Contract",
+      "reviewNote": "Named work-package/Draft/closeout artifact; retain for evidence, reconcile any durable rule to active standards"
+    },
+    {
+      "path": "docs/engineering/closure-c3-readiness.json",
+      "proposedStatus": "SNAPSHOT",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 2230,
+      "sourceTitle": "",
+      "reviewNote": "Named work-package/Draft/closeout artifact; retain for evidence, reconcile any durable rule to active standards"
+    },
+    {
+      "path": "docs/engineering/eq10-stacked-manifest.json",
+      "proposedStatus": "SNAPSHOT",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 1961,
+      "sourceTitle": "",
+      "reviewNote": "Named work-package/Draft/closeout artifact; retain for evidence, reconcile any durable rule to active standards"
+    },
+    {
+      "path": "docs/quotation/COMMERCIAL_VISUAL_FIDELITY.md",
+      "proposedStatus": "REFERENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 5555,
+      "sourceTitle": "Quotation UI — Commercial Visual Fidelity Contract",
+      "reviewNote": "Specialized visual/reference asset, not general release authority"
+    },
+    {
+      "path": "docs/ux/ACTION_WORKSPACE_PATTERN.md",
+      "proposedStatus": "REVIEW_REQUIRED",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 10496,
+      "sourceTitle": "Action Workspace Pattern",
+      "reviewNote": "May still influence current rules, but stage or acceptance authority requires exact-main reconciliation"
+    },
+    {
+      "path": "docs/ux/APP_UI_DESIGN_SYSTEM.md",
+      "proposedStatus": "ACTIVE_CANDIDATE",
+      "internalInboundLinks": 1,
+      "sourceSizeBytes": 20678,
+      "sourceTitle": "App UI Design System",
+      "reviewNote": "Explicit living/mandatory/accepted authority or current operating boundary; verify Owner scope before canonizing"
+    },
+    {
+      "path": "docs/ux/B0_HOLISTIC_EXPERIENCE_AUDIT_20261025.md",
+      "proposedStatus": "SNAPSHOT",
+      "internalInboundLinks": 1,
+      "sourceSizeBytes": 11976,
+      "sourceTitle": "阶段 B / B0｜工匠 App 全景体验审计与统一改造蓝图",
+      "reviewNote": "UX proposal, phase evidence or page-specific Owner decision; retained with exact stage scope"
+    },
+    {
+      "path": "docs/ux/B1_COMMERCIAL_UX_DELIVERY_20261025.md",
+      "proposedStatus": "SNAPSHOT",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 3213,
+      "sourceTitle": "阶段 B / B1｜四包统一改造与集中验收",
+      "reviewNote": "UX proposal, phase evidence or page-specific Owner decision; retained with exact stage scope"
+    },
+    {
+      "path": "docs/ux/B2X2_COMMERCIAL_UI_PARITY_20261026.md",
+      "proposedStatus": "ACTIVE_CANDIDATE",
+      "internalInboundLinks": 2,
+      "sourceSizeBytes": 2210,
+      "sourceTitle": "B2-X2｜Mock/Real 商业 UI 同构与独立 QA（2026-10-26）",
+      "reviewNote": "Explicit living/mandatory/accepted authority or current operating boundary; verify Owner scope before canonizing"
+    },
+    {
+      "path": "docs/ux/B2X_DEVELOPMENT_COMMERCIAL_PRESENTATION_SEPARATION_20261026.md",
+      "proposedStatus": "SNAPSHOT",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 3948,
+      "sourceTitle": "B2-X｜开发验收与商业信息分层（2026-10-26）",
+      "reviewNote": "UX proposal, phase evidence or page-specific Owner decision; retained with exact stage scope"
+    },
+    {
+      "path": "docs/ux/B2_COMMERCIAL_EXPERIENCE_SYSTEM_20261026.md",
+      "proposedStatus": "SNAPSHOT",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 4031,
+      "sourceTitle": "阶段 B / B2｜XLink 技术员小程序商业化体验系统 V1",
+      "reviewNote": "UX proposal, phase evidence or page-specific Owner decision; retained with exact stage scope"
+    },
+    {
+      "path": "docs/ux/CUI01_COMPONENT_GEOMETRY_CASCADE_AUDIT_20261028.md",
+      "proposedStatus": "SNAPSHOT",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 3039,
+      "sourceTitle": "CUI-01: 商业页面几何与 CSS 级联治理 | 2026-10-28",
+      "reviewNote": "UX proposal, phase evidence or page-specific Owner decision; retained with exact stage scope"
+    },
+    {
+      "path": "docs/ux/DYNAMIC_FORM_COMMERCIAL_UI_UX_STANDARD_V1.md",
+      "proposedStatus": "REVIEW_REQUIRED",
+      "internalInboundLinks": 2,
+      "sourceSizeBytes": 4833,
+      "sourceTitle": "动态表单商业化 UI/UX 标准 v1 — S01–S05",
+      "reviewNote": "May still influence current rules, but stage or acceptance authority requires exact-main reconciliation"
+    },
+    {
+      "path": "docs/ux/G4F_CATALOG_UI_SPEC_V1.md",
+      "proposedStatus": "SNAPSHOT",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 3767,
+      "sourceTitle": "G4-F 第三页 · 商品目录 UI Design Spec v1.0 + R1 功能复用合同",
+      "reviewNote": "UX proposal, phase evidence or page-specific Owner decision; retained with exact stage scope"
+    },
+    {
+      "path": "docs/ux/G4F_REPAIR_PART_STEP_UI_SPEC_V1.md",
+      "proposedStatus": "SNAPSHOT",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 4412,
+      "sourceTitle": "G4-F UI Spec v1.0 — 首个维修部位信息 → 选择产品",
+      "reviewNote": "UX proposal, phase evidence or page-specific Owner decision; retained with exact stage scope"
+    },
+    {
+      "path": "docs/ux/G4UX_CURRENT_AUDIT.md",
+      "proposedStatus": "SNAPSHOT",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 13202,
+      "sourceTitle": "G4-UX Current Audit",
+      "reviewNote": "UX proposal, phase evidence or page-specific Owner decision; retained with exact stage scope"
+    },
+    {
+      "path": "docs/ux/G4UX_LIST_PARITY_GAP.md",
+      "proposedStatus": "SNAPSHOT",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 21552,
+      "sourceTitle": "G4-UX R2 Work Order List Parity Gap",
+      "reviewNote": "UX proposal, phase evidence or page-specific Owner decision; retained with exact stage scope"
+    },
+    {
+      "path": "docs/ux/G4UX_LIST_SEMANTIC_UNLOCK.md",
+      "proposedStatus": "SNAPSHOT",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 16702,
+      "sourceTitle": "G4-UX Work Order List Semantic Unlock Proposal",
+      "reviewNote": "UX proposal, phase evidence or page-specific Owner decision; retained with exact stage scope"
+    },
+    {
+      "path": "docs/ux/G4UX_LIST_VOCABULARY_FINAL.md",
+      "proposedStatus": "SNAPSHOT",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 12979,
+      "sourceTitle": "G4-UX Work Order List Final Semantic Vocabulary",
+      "reviewNote": "UX proposal, phase evidence or page-specific Owner decision; retained with exact stage scope"
+    },
+    {
+      "path": "docs/ux/G4UX_MOCK_RUNTIME.md",
+      "proposedStatus": "SNAPSHOT",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 13992,
+      "sourceTitle": "G4-UX Business Mock Runtime",
+      "reviewNote": "UX proposal, phase evidence or page-specific Owner decision; retained with exact stage scope"
+    },
+    {
+      "path": "docs/ux/G4UX_PRODUCTION_BASELINE.md",
+      "proposedStatus": "ACTIVE_CANDIDATE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 13540,
+      "sourceTitle": "G4-UX Production Baseline",
+      "reviewNote": "Explicit living/mandatory/accepted authority or current operating boundary; verify Owner scope before canonizing"
+    },
+    {
+      "path": "docs/ux/G4UX_REFERENCE_DECISIONS.md",
+      "proposedStatus": "ACTIVE_CANDIDATE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 11210,
+      "sourceTitle": "G4-UX Reference Decisions",
+      "reviewNote": "Explicit living/mandatory/accepted authority or current operating boundary; verify Owner scope before canonizing"
+    },
+    {
+      "path": "docs/ux/M1_QUOTATION_FOUR_SURFACE_OWNER_PROPOSAL.md",
+      "proposedStatus": "SNAPSHOT",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 7400,
+      "sourceTitle": "M1 · G4-F 报价四屏高保真方案 — Owner Visual Gate V2",
+      "reviewNote": "UX proposal, phase evidence or page-specific Owner decision; retained with exact stage scope"
+    },
+    {
+      "path": "docs/ux/M1_S2_SURVEY_AND_DYNAMIC_FORM_DESIGN_PLAN_V01.md",
+      "proposedStatus": "SNAPSHOT",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 7762,
+      "sourceTitle": "M1 S2 — Survey 勘查商用 UI 设计计划 & 通用表单 UX 规范 v0.1",
+      "reviewNote": "UX proposal, phase evidence or page-specific Owner decision; retained with exact stage scope"
+    },
+    {
+      "path": "docs/ux/M1_S2_TASTE_COMMERCIAL_AUDIT.md",
+      "proposedStatus": "SNAPSHOT",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 5022,
+      "sourceTitle": "M1 S2 · Taste-driven Commercial UI Audit (Owner)",
+      "reviewNote": "UX proposal, phase evidence or page-specific Owner decision; retained with exact stage scope"
+    },
+    {
+      "path": "docs/ux/M1_SIGNING_SAFE_UX_DECISION.md",
+      "proposedStatus": "REVIEW_REQUIRED",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 5957,
+      "sourceTitle": "M1 Contract Signing — Safety Boundary and UX Phase A Decision",
+      "reviewNote": "May still influence current rules, but stage or acceptance authority requires exact-main reconciliation"
+    },
+    {
+      "path": "docs/ux/MP_NATIVE_S01_C01_READONLY_RETEST_20261028.md",
+      "proposedStatus": "SNAPSHOT",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 2686,
+      "sourceTitle": "MP 375px 原生补验：S01 → Q00/Q01/Q02 → C01（隔离合成数据）",
+      "reviewNote": "UX proposal, phase evidence or page-specific Owner decision; retained with exact stage scope"
+    },
+    {
+      "path": "docs/ux/UI_REFERENCE_MATRIX.md",
+      "proposedStatus": "REVIEW_REQUIRED",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 8328,
+      "sourceTitle": "UI Reference Matrix",
+      "reviewNote": "May still influence current rules, but stage or acceptance authority requires exact-main reconciliation"
+    },
+    {
+      "path": "docs/verification/CI_THREE_LEVEL_M1_S2.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 3120,
+      "sourceTitle": "M1-S2 CI three-level verification (PR #132)",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/DS07C10_ROLE_TENANT_ORDER_NEGATIVE_PROOF.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 4086,
+      "sourceTitle": "DS-07.C10 — P0 Role / Tenant / Official Order / SKU Evidence Boundary",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/DS07C11_RAW_ORDER_AUTH_FENCE.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 4509,
+      "sourceTitle": "DS-07.C11 — Production official Order raw-read authorization fence",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/DS07C8_MAIN_INTEGRATION_MANIFEST.json",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 3619,
+      "sourceTitle": "",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/DS07C8_MAIN_INTEGRATION_PREFLIGHT.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 5566,
+      "sourceTitle": "M1 / DS-07.C8 — Main Integration Preflight (Review Only)",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/DS07C9_P0_ORDER_READ_CONTRACT.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 3954,
+      "sourceTitle": "DS-07.C9 — P0 Production Official-Order Read Boundary",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/G3E_CROSS_TARGET_FOUNDATION.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 3471,
+      "sourceTitle": "G3-E Cross-target Foundation Verification",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/G4B_AU02_WORK_ORDER_LIST.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 6736,
+      "sourceTitle": "G4-B AU-02 Work Order List Review",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/G4B_LIST_DATA_HARDENING.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 1,
+      "sourceSizeBytes": 4388,
+      "sourceTitle": "G4-B Work Order List Semantic Hardening",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/G4B_WORK_ORDER_DATA_FIDELITY.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 1,
+      "sourceSizeBytes": 10663,
+      "sourceTitle": "G4-B Work Order Data Fidelity",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/G4C_DETAIL_CONTACT.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 7815,
+      "sourceTitle": "G4-C Work Order Detail and Customer Contact",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/G4C_DETAIL_D2_SEMANTIC_HARDENING.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 6410,
+      "sourceTitle": "G4-UX Detail D2 Semantic Hardening",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/G4D3_DETAIL_WORKFLOW_SCENARIOS.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 5235,
+      "sourceTitle": "G4-UX Detail D3 Workflow Scenario Matrix",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/G4D_ACCEPT_APPOINTMENT_IMPLEMENTATION.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 9083,
+      "sourceTitle": "G4-D Accept Order → Contact → Appointment",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/G4D_ACCEPT_CONTACT_APPOINTMENT_EVIDENCE.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 13225,
+      "sourceTitle": "G4-D0 Accept → Contact → Appointment Evidence",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/G4E_CLOSURE_READINESS.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 9759,
+      "sourceTitle": "G4-E Closure Readiness",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/G4E_FORM_SCHEMA_DEV_READ.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 12366,
+      "sourceTitle": "G4-E Dynamic Form / Survey Contract — Sanitized Beta Observation",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/G4E_INTEGRATION_DEVICE_VALIDATION.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 3890,
+      "sourceTitle": "G4-E Integration + Device Validation — Phase A",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/G4E_ONSITE_INSPECTION_EVIDENCE.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 79655,
+      "sourceTitle": "G4-E Survey / On-site Action Evidence",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/G4E_R1_MOBILE_UX_BASELINE.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 14749,
+      "sourceTitle": "G4-E R1 Mobile UX Baseline Audit",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/G4E_SURVEY_CAMERA_WATERMARK_CONTRACT.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 2623,
+      "sourceTitle": "G4-E Survey Camera Photo Location + Remote Watermark Contract",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/G4E_SURVEY_CAPABILITY_MATRIX.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 27596,
+      "sourceTitle": "G4-E Survey Capability Matrix",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/G4E_SURVEY_DOMAIN_TRUTH.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 21569,
+      "sourceTitle": "G4-E Survey Domain Truth Deep Dive",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/G4E_SURVEY_LEAKAGE_CAUSE_CONTRACT.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 2594,
+      "sourceTitle": "G4-E Survey Leakage Cause Contract",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/G4E_SURVEY_MEDIA_CONTRACT.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 2273,
+      "sourceTitle": "G4-E Survey Media Contract",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/G4E_SURVEY_MEDIA_P0.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 2529,
+      "sourceTitle": "G4-E Survey Media P0 — Shared Durable Media Queue",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/G4E_SURVEY_ONSITE_CHECKIN_CONTRACT.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 10747,
+      "sourceTitle": "G4-E Survey Onsite Check-in Contract",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/G4F_ACTIVE_CONTRACT_VERIFICATION.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 1,
+      "sourceSizeBytes": 18639,
+      "sourceTitle": "G4-F Targeted Active Contract Verification",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/G4F_ACTIVE_ORDER_EXTFIELD_SCHEMA_SHAPE.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 6,
+      "sourceSizeBytes": 15553,
+      "sourceTitle": "G4-F Active Order ExtField Schema Shape",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/G4F_CATALOG_R1_PARITY.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 6168,
+      "sourceTitle": "G4-F Catalog Runtime — R1 Parity Audit",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/G4F_COMMERCIAL_MOCK_UX.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 5633,
+      "sourceTitle": "G4-F commercial mock product journey — Lead implementation, phase A",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/G4F_EMPTY_WORKBENCH_DESIGN_FIDELITY.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 4791,
+      "sourceTitle": "G4-F first-use quotation workbench — visual contract",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/G4F_ORDER_EXTFIELD_MAPPING_CONTRACT.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 1,
+      "sourceSizeBytes": 13731,
+      "sourceTitle": "G4-F Order ExtField Effective Mapping Contract",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/G4F_P0_CATALOG_FILTER_READ_CONTRACT.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 2175,
+      "sourceTitle": "G4-F P0 R1 catalog filter read-contract",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/G4F_P0_CONTRACT_RESOLUTION.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 23282,
+      "sourceTitle": "G4-F P0 Contract Resolution — Source Audit Only",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/G4F_P0_MATERIAL_SKU_MOCK_UI.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 1333,
+      "sourceTitle": "G4-F P0 Material SKU DEV Mock UI",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/G4F_P0_MATERIAL_SKU_READ_CONTRACT.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 2475,
+      "sourceTitle": "G4-F P0 — R1 Material SPU / Sales Attribute / SKU Read Contract",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/G4F_P0_SAFETY_IMPLEMENTATION.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 5557,
+      "sourceTitle": "G4-F P0 Catalog Safety — Implementation Evidence",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/G4F_PACKAGE_DETAIL_DIAGNOSTIC.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 1,
+      "sourceSizeBytes": 7338,
+      "sourceTitle": "G4-F Package Detail Diagnostic — Read Only",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/G4F_PHASE_1C_CATALOG_READ_FOUNDATION.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 5707,
+      "sourceTitle": "G4-F Phase 1C — Quotation Catalog Read Foundation",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/G4F_PHASE_1D_GROUPED_COMPOSITION.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 3042,
+      "sourceTitle": "G4-F Phase 1D — Grouped Quotation Composition Foundation",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/G4F_PHASE_1E_CATALOG_BROWSER.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 3051,
+      "sourceTitle": "G4-F Phase 1E — Catalog Browser and Package Detail Read UX",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/G4F_PHASE_1F_DIRECT_CATALOG_SELECTION.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 4119,
+      "sourceTitle": "G4-F Phase 1F — Direct Catalog Selection Bridge",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/G4F_PHASE_1G_PACKAGE_CONFIGURATION.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 4732,
+      "sourceTitle": "G4-F Phase 1G — Real Package Configuration Bridge",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/G4F_PHASE_1H_QUOTATION_ENGINE_COMPLETION.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 14155,
+      "sourceTitle": "G4-F Phase 1H — Quotation Engine Completion",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/G4F_PHASE_1I_REAL_SUBMIT_READBACK_EDIT.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 11744,
+      "sourceTitle": "G4-F Phase 1I — Real Submit + Readback + Edit",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/G4F_PHASE_1J_BETA_CLOSURE_HARDENING.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 1,
+      "sourceSizeBytes": 19910,
+      "sourceTitle": "G4-F Phase 1J — Beta Chain Verification + Workflow Closure + Production Hardening",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/G4F_PHASE_1K_PROD_READ_INTEGRATION.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 1,
+      "sourceSizeBytes": 12967,
+      "sourceTitle": "G4-F Phase 1K — Production Read-Only Integration",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/G4F_QUOTATION_DOMAIN_TRUTH.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 2,
+      "sourceSizeBytes": 41778,
+      "sourceTitle": "G4-F Quotation Domain Truth — Phase 0 Evidence",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/G4F_R1_DOMAIN_REVERSE_ENGINEERING.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 47049,
+      "sourceTitle": "G4-F — R1 Quotation Domain Reverse Engineering",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/G4F_R1_LOCAL_PREFLIGHT.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 3331,
+      "sourceTitle": "G4-F — R1 Local Quotation Preflight Evidence",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/G4F_R1_PACKAGE_MATERIAL_SKU_SECURITY_AND_UX.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 6991,
+      "sourceTitle": "R1 Package-Material SKU: domain, read authorization and Mock UX",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/G4F_R1_RUNTIME_FOLLOWUP.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 3,
+      "sourceSizeBytes": 18101,
+      "sourceTitle": "G4-F R1 Quotation / Place-Order Truth — Active Beta Read-Only Follow-up",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/G4F_REVIEW_READINESS_UX.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 1194,
+      "sourceTitle": "G4-F product preview: local quotation review readiness",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/G4F_SKU_MOCK_ADMISSION_INTEGRATION.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 2474,
+      "sourceTitle": "P0 SKU Mock integration — source-verified scope in real main App",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/G4F_SKU_READ_ADMISSION.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 2145,
+      "sourceTitle": "#75 Synthetic SKU read admission — source-based security boundary",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/G4F_SYNTHETIC_DYNAMIC_FORM_UX.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 3658,
+      "sourceTitle": "G4-F Synthetic Order ExtField UX Review",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/G4UX_BETA_READ_PLAN.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 6691,
+      "sourceTitle": "G4-UX Beta Read Plan",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/G4UX_REAL_READ_INTEGRATION.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 8156,
+      "sourceTitle": "G4-UX Real Read-Path Integration Verification",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/G4_INTEGRATION_READINESS.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 15670,
+      "sourceTitle": "G4 Integrated Candidate — CI / Integration Readiness",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/M1_I1_R1_SIX_STAGE_PARITY_LEDGER.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 11896,
+      "sourceTitle": "M1-I1｜R1 六阶段功能/接口等价性账本 v1.0",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/M1_I2_R1_MATERIAL_SALES_FIELD_CODE_READ.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 3269,
+      "sourceTitle": "M1 I2 / 8 — R1 Material sales ExtField → Code option read slice",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/M1_I2_R1_MATERIAL_SKU_PREVIEW_BRIDGE.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 4487,
+      "sourceTitle": "M1 I2 /8 — R1 material SKU three-source preview in REAL Quotation Catalog",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/M1_I2_R1_SKU_LOCAL_QUANTITY_DRAFT_V4.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 4331,
+      "sourceTitle": "M1-I2 — R1 per-SKU quantity / scoped local draft v4 (non-commercial)",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/M1_I2_R1_SPU_SKU_READ_PARITY.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 6042,
+      "sourceTitle": "M1 I2 / 8 — R1 Material SPU→SKU read compatibility, slice 1",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/M1_I2_SKU_REMOVAL_R1_PARITY_DELTA.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 6548,
+      "sourceTitle": "M1-I2 — SKU local edit/remove: verified source and parity delta (2026-10-12)",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/M1_I3_R1_PRICE_ORDER_CONTRACT_PREFLIGHT.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 8659,
+      "sourceTitle": "M1-I3 — R1 pricing / grouped Order contract: read-only preflight",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/M1_I3_R1_QUOTE_ORDER_STAGE_CONTRACT.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 4785,
+      "sourceTitle": "M1 I3 — R1 quotation (type=0) vs official Order (type=1) source resolution",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/M1_I5_I6_I7_ENGINEERING_CLOSEOUT.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 3197,
+      "sourceTitle": "M1 I5/I6/I7 — Engineering closeout candidate (DRAFT, not accepted)",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/M1_I6_CANONICAL_TECHNICIAN_CONTRACT_QUERY.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 4,
+      "sourceSizeBytes": 6566,
+      "sourceTitle": "M1 I6 — Canonical Technician R1 Contract read contract (SOURCE-VERIFIED)",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/M1_I6_R1_ACTIVE_NODE_HANDLER_EVIDENCE.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 2356,
+      "sourceTitle": "M1 I6 — R1 active-node handler evidence (DEV-only read preflight)",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/M1_I6_R1_CONTRACT_STATUS_READ_VERTICAL.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 3521,
+      "sourceTitle": "M1 I6 — R1 Contract status read-side vertical slice",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/M1_I6_R1_SIGNING_CALLCHAIN_PARITY.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 7298,
+      "sourceTitle": "M1 I6 — R1 签约调用链 / 安全分界（源码固定版本）",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/M1_I6_R1_SIGNING_READ_BOUNDARY.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 5549,
+      "sourceTitle": "M1 I6 — R1 Order / Contract / Signing read boundary preflight",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/M1_I6_SIGNING_COMMAND_INTENT_READBACK_FENCE.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 2978,
+      "sourceTitle": "M1-I6 — R1 signing command review and readback",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/M1_I6_SIGNING_STATE_RECONCILIATION.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 3430,
+      "sourceTitle": "M1 I6 — Signing state reconciliation and DEV-only Contract fixture",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/M1_I7_INTEGRATION_CANDIDATE.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 8593,
+      "sourceTitle": "M1 I7 — Reproducible six-stage integration candidate (NO MERGE)",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/M1_I7_RECONCILED_CANDIDATE.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 5906,
+      "sourceTitle": "M1 I7 — Reconciled integration Draft gate (no release)",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/M1_I7_WORK_ORDER_IDENTITY_SCOPE.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 2758,
+      "sourceTitle": "M1-I7 — Cross-stage WorkOrder identity scope & stale-result safety",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/M1_I8_ACCEPTANCE_MANIFEST.json",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 5850,
+      "sourceTitle": "",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/M1_I8_ENGINEERING_ACCEPTANCE.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 4234,
+      "sourceTitle": "M1-I8｜六阶段验收证据与遗留 Gate 包（工程审查稿）",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/M1_I8_SPECIAL_ENV_EVIDENCE_PROTOCOL.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 1442,
+      "sourceTitle": "M1-I8｜Codex 特殊环境取证清单（仅需要本机/真机时执行）",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/M1_INTEGRATED_QUOTE_SIGN_DEV_REVIEW.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 6757,
+      "sourceTitle": "M1 Integrated DEV Review Candidate — Quotation + Signing + UX Phase A",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/M1_OFFICIAL_ORDER_READ_HANDOFF_HARDENING.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 4347,
+      "sourceTitle": "M1 P1.7 — Official type=1 Order read-only handoff hardening",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/M1_R1_PACKAGE_MATERIAL_LAYER_PARITY.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 2069,
+      "sourceTitle": "M1 — R1 套餐材料层级等价性：真实前端修复",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/M1_S1_L01_R1_LOGIN_CONTRACT.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 1906,
+      "sourceTitle": "M1-S1 / L01 — R1 manual login source contract",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/M1_S1_OWNER_ONE_PASS_ENGINEERING_AUDIT.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 6593,
+      "sourceTitle": "M1-S1 — One-pass Owner engineering audit and Mock foundation closeout",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/M1_S1_SOURCE_FREEZE_STAGE2_HANDOFF.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 7873,
+      "sourceTitle": "M1-S1｜工程基础与 Mock 冻结验收（Owner Stage 2 handoff）",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/M1_S2_UX_REVIEW_SHEET_PIPELINE.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 2370,
+      "sourceTitle": "M1-S2 UX Review Sheet — 工程化截图审查",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/M1_SIGNING_MOCK_READ_ONLY_V1.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 4491,
+      "sourceTitle": "M1 Signing — R1 domain-first DEV Mock read-only Workbench (P1D)",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/M1_SIGNING_SCOPED_ORDER_DETAIL_BOUNDARY.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 5138,
+      "sourceTitle": "M1 P1.8 — WorkOrder-scoped type=1 Order review read boundary",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/M1_UNIFIED_MAIN_INTEGRATION_CANDIDATE.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 6612,
+      "sourceTitle": "M1｜统一主干工程候选（DRAFT / 不代表发布就绪）",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/M1_UNIFIED_MAIN_INTEGRATION_MANIFEST.json",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 4303,
+      "sourceTitle": "",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/P1_M16_SKU_QUOTE_VERTICAL_DIAGNOSTIC.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 6444,
+      "sourceTitle": "P1 M1.6 — Quote → WorkOrder source → ExtField/valueOption vertical DEV diagnostic",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/P1_M1_QUOTATION_LOCAL_REVIEW.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 1980,
+      "sourceTitle": "P1 M1 — quotation local grouped closeout (DEV Mock only)",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/P1_SAME_CATALOG_SYNTHETIC_SKU.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 2155,
+      "sourceTitle": "P1 same-Quote-Catalog SKU ID proof — DEV synthetic overlay, never a live SKU read",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/P1_SKU_IDENTITY_AUDIT.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 1453,
+      "sourceTitle": "P1: Exact identity, NOT demo source conflation",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/P1_SKU_REAL_READ_AUTHORITY_AUDIT.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 1,
+      "sourceSizeBytes": 5577,
+      "sourceTitle": "P1 M1.4 / #75 — actual backend SKU read authority audit and source-only preflight",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/P1_SKU_SALES_OPTION_PROVENANCE.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 4360,
+      "sourceTitle": "P1 M1.5 / #75 — Material sales-attribute and code-option provenance",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/R1_FOUR_PHASE_FUNCTIONAL_LEDGER.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 5662,
+      "sourceTitle": "F1 — Forms / Repeat Existing Records: functional delivery, not write parity",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/R1_SIX_STAGE_SIMULATOR_HANDOFF.md",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 0,
+      "sourceSizeBytes": 5548,
+      "sourceTitle": "R1 六阶段源码核对与模拟器交接基线",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    },
+    {
+      "path": "docs/verification/R1_SIX_STAGE_SOURCE_PARITY_MANIFEST.json",
+      "proposedStatus": "EVIDENCE",
+      "internalInboundLinks": 1,
+      "sourceSizeBytes": 13185,
+      "sourceTitle": "",
+      "reviewNote": "Commit/PR/role/simulator-specific verification; retained with original scope"
+    }
+  ]
+}
