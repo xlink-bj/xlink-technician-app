@@ -36,6 +36,7 @@ describe('C3-D1 Action Workspace load eligibility', () => {
     expect(result.kind).toBe('ready')
     if (result.kind === 'ready') {
       expect(result.contentKind).toBe('dynamic_form')
+      expect(result.roleId).toBe(session.currentRole?.id)
       expect(result.node.formDefinitionId).toBe(formDefinitionId)
     }
   })

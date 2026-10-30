@@ -787,7 +787,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
         loadedForm = recovered.data
       }
     }
-    const nextIdentity = actionDraftIdentityFor(nextDescriptor, session.currentRole.id)
+    const nextIdentity = actionDraftIdentityFor(nextDescriptor, target.roleId)
     detail.value = read.data
     descriptor.value = nextDescriptor
     appointmentForm.value = isAppointmentAction ? loadedForm as AppointmentFormRead : null

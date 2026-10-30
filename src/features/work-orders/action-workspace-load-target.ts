@@ -1,7 +1,7 @@
 import { actionContentKindForIntent, type ActionContentKind } from '@runtimes/action'
 import type { CurrentTaskProjection } from '@runtimes/workflow'
 import type { SessionSnapshot, WorkOrderDetail, WorkflowNodeRead } from '@shared/ports'
-import type { ErrorCategory, WorkOrderId, WorkflowNodeRuntimeId } from '@shared/types'
+import type { ErrorCategory, RoleId, WorkOrderId, WorkflowNodeRuntimeId } from '@shared/types'
 
 export interface ActionWorkspaceLoadTargetRequest {
   readonly workOrderId: WorkOrderId
@@ -17,6 +17,8 @@ type Blocked = {
 }
 type Ready = {
   readonly kind: 'ready'
+  /** Verified role provenance for downstream draft identity; never nullable. */
+  readonly roleId: RoleId
   readonly currentTask: CurrentTaskProjection
   readonly node: WorkflowNodeRead
   readonly contentKind: ActionContentKind
@@ -73,6 +75,6 @@ export function selectActionWorkspaceLoadTarget(input: {
   if (isDynamicAction && !node.formDefinitionId) {
     return denied('unsupported_capability', 'Dynamic form definition is unavailable', true)
   }
-  return { kind: 'ready', currentTask, node, contentKind,
+  return { kind: 'ready', roleId: session.currentRole.id, currentTask, node, contentKind,
     isAppointmentAction, isDynamicAction, isQuotationAction }
 }
