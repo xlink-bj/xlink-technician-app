@@ -13,6 +13,7 @@ import {
   closeCompletedR1MutationReceiptAfterReadback, type R1MultiStepScope,
 } from '@features/work-orders/r1-multistep-offline-transaction'
 import type { StoragePort } from '@shared/ports'
+import { createDefaultStoragePort } from './composition'
 
 import type {
   AStageSpecialKind, AStageMockActor, AStageSpecialAction, AStageSpecialRecord,
@@ -270,4 +271,11 @@ export function createAStageSpecialMockController(options: {
     } finally { inFlight = false }
   }
   return { load, execute, recoverCompleted }
+}
+
+/** Page-composed DEV capability. No page or feature creates a storage adapter. */
+export function createAStageSpecialMockControllerForActor(
+  options: Omit<Parameters<typeof createAStageSpecialMockController>[0], 'storage'>,
+) {
+  return createAStageSpecialMockController({ ...options, storage: createDefaultStoragePort() })
 }

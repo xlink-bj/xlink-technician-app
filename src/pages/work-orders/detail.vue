@@ -322,15 +322,14 @@ import AppWorkOrderSkeleton from '@shared/ui/AppWorkOrderSkeleton.vue'
 import WorkOrderTaskFocus from '@features/work-orders/WorkOrderTaskFocus.vue'
 import R1NodeFormsOverview from '@features/work-orders/R1NodeFormsOverview.vue'
 import R1SpecialMockTransactionPanel from '@features/work-orders/R1SpecialMockTransactionPanel.vue'
-import { isAStageSpecialMockAvailable, createAStageSpecialMockController, type AStageSpecialKind } from '@app/a-stage-special-mock-ui'
-import { createDefaultStoragePort } from '@app/composition'
+import { isAStageSpecialMockAvailable, createAStageSpecialMockControllerForActor, type AStageSpecialKind } from '@app/a-stage-special-mock-ui'
 import type { AStageSpecialMockControllerFactory } from '@features/work-orders/a-stage-special-mock-port'
 import R1ProductionChildFormsPanel from '@features/work-orders/R1ProductionChildFormsPanel.vue'
 import R1ProductionMainRepeatPanel from '@features/work-orders/R1ProductionMainRepeatPanel.vue'
 import { appLoadingSkeletonDelayMs } from '@shared/ui/loading'
 
-const createAStageSpecialControllerForUi: AStageSpecialMockControllerFactory = options =>
-  createAStageSpecialMockController({ ...options, storage: createDefaultStoragePort() })
+const createAStageSpecialControllerForUi: AStageSpecialMockControllerFactory =
+  createAStageSpecialMockControllerForActor
 const session = useSessionStore()
 const workOrder = useWorkOrderDetailStore()
 const quotationBrowse = useQuotationOrderBrowseStore()

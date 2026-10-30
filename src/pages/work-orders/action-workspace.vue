@@ -257,8 +257,7 @@ import { reviewP1SyntheticSkuReadiness } from '@app/p1-sku-readiness-review'
 import { setActionWorkspacePageTitle } from '@app/action-page-title'
 import { mockJourneyContext } from '@app/mock-journey'
 import { readAStageMockOrderForActor, isAStageMockOrderEnabled,
-  createAStageMockQuoteOrderController } from '@app/a-stage-quotation-mock-ui'
-import { createDefaultStoragePort } from '@app/composition'
+  createAStageMockQuoteOrderControllerForActor } from '@app/a-stage-quotation-mock-ui'
 import type { AStageMockQuoteOrderControllerFactory } from '@features/work-orders/quotation/a-stage-mock-quote-port'
 import { advanceMockJourneyWithSavedDraft } from '@app/mock-journey-closure'
 import { readMockJourneyContext, type MockJourneyContextSummary } from '@app/mock-journey-context'
@@ -296,8 +295,8 @@ import type { AppChoiceOption } from '@shared/ui/types'
 import type { OperationError } from '@shared/types'
 import type { QuotationOrderBrowseItem } from '@shared/ports'
 
-const createAStageMockQuoteOrderControllerForUi: AStageMockQuoteOrderControllerFactory = getActor =>
-  createAStageMockQuoteOrderController({ getActor, storage: createDefaultStoragePort() })
+const createAStageMockQuoteOrderControllerForUi: AStageMockQuoteOrderControllerFactory =
+  createAStageMockQuoteOrderControllerForActor
 const session = useSessionStore()
 const workspace = useActionWorkspaceStore()
 const quotationComposition = useQuotationCompositionStore()
