@@ -95,14 +95,22 @@ function checkH5(expectDev) {
   const files = readdirSync(assetDir)
   for (const route of qaRoutes) {
     const prefix = route.replaceAll('/', '-') + '.'
-    const exists = files.some(file => file.startsWith(prefix) && file.endsWith('.js'))
-    if (exists !== expectDev) fail(`H5 route chunk ${route} expected ${expectDev ? 'present' : 'absent'}`)
+    const exists = files.some(file => file.startsWith(prefix))
+    if (exists !== expectDev) fail(`H5 route asset ${route} expected ${expectDev ? 'present' : 'absent'}`)
   }
   const entrypoints = files.filter(file => /^index-.*\.js$/.test(file))
   if (!entrypoints.length) fail('H5 application entrypoint missing')
-  const containsQaRoute = entrypoints.some(file =>
-    readFileSync(join(assetDir, file), 'utf8').includes('pages/dev/qa-console'))
-  if (containsQaRoute !== expectDev) fail('H5 main route table does not match build profile')
+  const jsSources = files.filter(file => file.endsWith('.js'))
+    .map(file => readFileSync(join(assetDir, file), 'utf8'))
+  const entrySources = entrypoints.map(file => readFileSync(join(assetDir, file), 'utf8'))
+  for (const route of qaRoutes) {
+    if (entrySources.some(source => source.includes(route)) !== expectDev) {
+      fail(`H5 route table ${route} does not match build profile`)
+    }
+    if (!expectDev && jsSources.some(source => source.includes(route))) {
+      fail(`H5 release JS still references QA route ${route}`)
+    }
+  }
   console.log(`C1 H5 QA boundary: PASS (four routes ${expectDev ? 'present in DEV' : 'absent in release'})`)
 }
 
@@ -112,9 +120,10 @@ function checkMp(expectDev) {
   const pages = JSON.parse(readFileSync(join(dir, 'app.json'), 'utf8')).pages
   for (const route of qaRoutes) {
     const declared = pages.includes(route)
-    const compiled = ['js', 'json', 'wxml', 'wxss']
-      .every(ext => existsSync(join(dir, `${route}.${ext}`)))
-    if (declared !== expectDev || compiled !== expectDev) {
+    const assets = ['js', 'json', 'wxml', 'wxss']
+      .map(ext => existsSync(join(dir, `${route}.${ext}`)))
+    const assetsMatchProfile = expectDev ? assets.every(Boolean) : assets.every(exists => !exists)
+    if (declared !== expectDev || !assetsMatchProfile) {
       fail(`MP-WEIXIN route ${route} expected ${expectDev ? 'present' : 'absent'}`)
     }
   }

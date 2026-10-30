@@ -19,6 +19,7 @@ They are grouped in one `XLINK_DEV_QA` conditional block in `src/pages.json`. Al
 | --- | --- | --- |
 | `pnpm dev:h5` | Present | Explicit `UNI_CUSTOM_CONTEXT={"XLINK_DEV_QA":true}` |
 | `pnpm dev:mp-weixin` | Present | Same explicit DEV flag; the Mock UX wrapper inherits it |
+| `playwright.main-h5-mock.config.ts` | Present | Isolated browser E2E starts `uni` directly and explicitly sets the DEV compiler flag |
 | `pnpm build:h5` | Absent | Release-context preflight; emitted JS chunk and entrypoint audit |
 | `pnpm build:mp-weixin` | Absent | Release-context preflight; emitted `app.json` and page asset audit |
 | `pnpm build:app` | Excluded by compiler condition | Source and release-context checks; native package audit requires HBuilderX |
@@ -36,6 +37,7 @@ Direct invocations of `uni build` outside the approved package scripts do **not*
 - Release APP frontend compiler: passes. The native APK/IPA packaging step and installation are **not verified** in this container; HBuilderX/device acceptance remains open.
 - Negative checks: running release H5/MP assertions against DEV builds correctly fails. Inherited DEV compiler flag causes the release-context check to fail before compilation.
 - Typecheck, architectural and UI governance gates: pass.
+- B2X2 browser CI uses its own direct Uni dev-server command rather than `pnpm dev:h5`; its WebServer environment must explicitly enable the same DEV flag so the commercial/QA isolation test can still reach the QA console. This is independent of the release build profile.
 
 ### Unrelated pre-existing full-test failures
 

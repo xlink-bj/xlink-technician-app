@@ -31,6 +31,8 @@ export default defineConfig({
     stdout: 'pipe',
     stderr: 'pipe',
     env: {
+      // This isolated E2E server bypasses `pnpm dev:h5`; opt into QA pages explicitly.
+      UNI_CUSTOM_CONTEXT: '{"XLINK_DEV_QA":true}',
       VITE_XLINK_H5_MOCK_E2E: 'true',
       VITE_XLINK_H5_OFFLINE_SMOKE: 'false',
       VITE_XLINK_ENVIRONMENT: 'dev',
