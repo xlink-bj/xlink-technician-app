@@ -149,7 +149,7 @@ describe('C3-C media queue recovery and user-directed retry', () => {
 
   it('does not manufacture an uploaded ref when queue reports success without data', async () => {
     const q = queue()
-    q.process = vi.fn(async () => succeeded(undefined)) as MediaUploadQueuePort['process']
+    q.process = vi.fn(async () => succeeded(undefined)) as unknown as MediaUploadQueuePort['process']
     const result = await retryActionMediaQueue({
       queue: q, tasks: [mediaTask('source_uploaded','unknown')], stillCurrent: () => true, onTask: vi.fn(),
     })

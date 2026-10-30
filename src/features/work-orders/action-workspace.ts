@@ -35,6 +35,7 @@ import {
   draftRecordFor,
   dynamicDraftRecordFor,
   formValueContainsUploadedRef,
+  mediaTaskMatchesDynamicForm,
 } from './action-workspace-draft-utils'
 import {
   actionContentKindForIntent,
