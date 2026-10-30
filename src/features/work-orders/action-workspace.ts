@@ -20,6 +20,7 @@ import {
   resumableActionMediaTasks,
   retryActionMediaQueue,
 } from './action-workspace-media-queue'
+import { dispatchSelectedActionMedia } from './action-workspace-media-dispatch'
 export {
   actionWorkspaceRoute,
   actionWorkspaceTimeRoute,
@@ -91,7 +92,6 @@ import {
   type WorkflowNodeRuntimeId,
   isMediaValueRef,
   mediaValueRefFromUpload,
-  type MediaEvidenceContext,
   type MediaUploadTask,
   type MediaValueRef,
   type UploadedMediaRef,
@@ -1854,65 +1854,38 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       }
 
       const uploaded: UploadedMediaRef[] = []
-      const processFailure = (result: OperationSnapshot<MediaUploadTask>): OperationSnapshot<void> => {
-        if (result.data) rememberMediaTask(result.data)
-        error.value = result.error ?? createOperationError('network_retryable', 'Media upload failed')
-        return result.state === 'succeeded'
-          ? { state: 'failed_terminal', error: error.value }
-          : result as OperationSnapshot<void>
-      }
       for (const media of selected) {
-        if (!current()) return stale()
-        const policy = surveyMediaPostUploadPolicyFor(form.purpose, field, media.source)
-        let location: MediaEvidenceContext['location'] | undefined
-        if (policy === 'remote_location_watermark' && configured.location) {
-          const capturedLocation = await configured.location.captureCurrentLocation()
-          if (!current()) return stale()
-          if (capturedLocation.state === 'granted' && capturedLocation.value) location = capturedLocation.value
-        }
-        const evidence: MediaEvidenceContext = {
-          ...(media.capturedAt ? { capturedAt: media.capturedAt } : {}),
-          postUploadPolicy: policy,
-          ...(location ? { location } : {}),
-        }
-
-        if (configured.mediaUploadQueue) {
-          const queued = await configured.mediaUploadQueue.enqueue({
-            scope: {
-              userId: currentDescriptor.userId,
-              workOrderId: currentDescriptor.workOrderId,
-              workflowNodeId: currentDescriptor.workflowNodeId,
-              ...(currentDescriptor.contentIdentity ? { formDefinitionId: currentDescriptor.contentIdentity as FormDefinitionId } : {}),
-              ...(form.dataId ? { formDataId: form.dataId as FormDataId } : {}),
-              fieldId,
-              valueKey: field.valueKey,
-            },
-            media,
-            evidence,
-          })
-          if (!current()) return stale()
-          if (queued.state !== 'succeeded' || !queued.data) return processFailure(queued)
-          rememberMediaTask(queued.data)
-          const processed = await configured.mediaUploadQueue.process(queued.data.taskId)
-          if (!current()) return stale()
-          if (processed.data) rememberMediaTask(processed.data)
-          if (processed.state !== 'succeeded' || !processed.data?.uploadedRef) return processFailure(processed)
-          uploaded.push(processed.data.uploadedRef)
-        } else {
-          const result = await configured.upload!.upload(media)
-          if (!current()) return stale()
-          if (result.state !== 'succeeded' || !result.data) {
-            error.value = result.error ?? createOperationError('network_retryable', 'Media upload failed')
+        const dispatched = await dispatchSelectedActionMedia({
+          media,
+          policy: surveyMediaPostUploadPolicyFor(form.purpose, field, media.source),
+          scope: {
+            userId: currentDescriptor.userId,
+            workOrderId: currentDescriptor.workOrderId,
+            workflowNodeId: currentDescriptor.workflowNodeId,
+            ...(currentDescriptor.contentIdentity
+              ? { formDefinitionId: currentDescriptor.contentIdentity as FormDefinitionId } : {}),
+            ...(form.dataId ? { formDataId: form.dataId as FormDataId } : {}),
+            fieldId,
+            valueKey: field.valueKey,
+          },
+          queue: configured.mediaUploadQueue,
+          upload: configured.upload,
+          location: configured.location,
+          stillCurrent: current,
+          onTask: rememberMediaTask,
+        })
+        if (dispatched.state === 'stale') return stale()
+        if (dispatched.state === 'failed') {
+          error.value = dispatched.error
+          if (dispatched.source === 'direct') {
             mediaStateByField.value = {
               ...mediaStateByField.value,
-              [fieldId]: result.error?.retryable ? 'failed_retryable' : 'failed_terminal',
+              [fieldId]: dispatched.retryable ? 'failed_retryable' : 'failed_terminal',
             }
-            return result.state === 'succeeded'
-              ? { state: 'failed_terminal', error: error.value }
-              : result as OperationSnapshot<void>
           }
-          uploaded.push(result.data)
+          return dispatched.result
         }
+        uploaded.push(dispatched.uploaded)
       }
 
       if (!current()) return stale()
