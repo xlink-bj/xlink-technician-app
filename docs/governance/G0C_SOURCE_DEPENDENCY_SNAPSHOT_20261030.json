@@ -1,0 +1,5587 @@
+{
+  "schemaVersion": 1,
+  "repository": "xlink-bj/xlink-technician-app",
+  "sourceCommit": "17ba7211040df887be28665564414cb037b6acef",
+  "auditDate": "2026-10-30",
+  "status": "DRAFT_STATIC_GRAPH_NOT_RUNTIME_COVERAGE",
+  "method": "Read 288 source text files and 209 text test/fixture files; parse local TS/Vue import and export paths with alias resolution. Vue route roots, auto component registration, dynamic unresolved expressions and build tree shaking are NOT represented in the static import graph.",
+  "summary": {
+    "sourceFiles": 289,
+    "sourceTextFiles": 288,
+    "sourceTsVueModules": 270,
+    "staticSourceImportEdges": 912,
+    "allTestFiles": 224,
+    "testImageSnapshots": 15,
+    "testTextFiles": 209,
+    "testTsFiles": 202,
+    "testTsFilesWithDirectSourceImports": 144,
+    "verifyQuickExplicitVitestFiles": 22,
+    "registeredUniPages": 12,
+    "registeredQaMockPages": 4,
+    "featureToAppImportEdges": 11,
+    "mutualTypeOnlyReferences": 3,
+    "verifiedBrokenLocalSourceReferences": 0
+  },
+  "uniPages": [
+    {
+      "path": "pages/index/index",
+      "classification": "COMMERCIAL_OR_LEGAL_ROUTE",
+      "listedInMainPagesJson": true,
+      "releaseBundleExclusion": "NOT_VERIFIED"
+    },
+    {
+      "path": "pages/work-orders/work-orders",
+      "classification": "COMMERCIAL_OR_LEGAL_ROUTE",
+      "listedInMainPagesJson": true,
+      "releaseBundleExclusion": "NOT_VERIFIED"
+    },
+    {
+      "path": "pages/work-orders/detail",
+      "classification": "COMMERCIAL_OR_LEGAL_ROUTE",
+      "listedInMainPagesJson": true,
+      "releaseBundleExclusion": "NOT_VERIFIED"
+    },
+    {
+      "path": "pages/work-orders/action-workspace",
+      "classification": "COMMERCIAL_OR_LEGAL_ROUTE",
+      "listedInMainPagesJson": true,
+      "releaseBundleExclusion": "NOT_VERIFIED"
+    },
+    {
+      "path": "pages/work-orders/signing-order-read",
+      "classification": "COMMERCIAL_OR_LEGAL_ROUTE",
+      "listedInMainPagesJson": true,
+      "releaseBundleExclusion": "NOT_VERIFIED"
+    },
+    {
+      "path": "pages/work-orders/signing-mock-review",
+      "classification": "DEV_QA_MOCK_REVIEW_ROUTE",
+      "listedInMainPagesJson": true,
+      "releaseBundleExclusion": "NOT_VERIFIED"
+    },
+    {
+      "path": "pages/work-orders/material-sku-mock-review",
+      "classification": "DEV_QA_MOCK_REVIEW_ROUTE",
+      "listedInMainPagesJson": true,
+      "releaseBundleExclusion": "NOT_VERIFIED"
+    },
+    {
+      "path": "pages/work-orders/child-subflow-mock-review",
+      "classification": "DEV_QA_MOCK_REVIEW_ROUTE",
+      "listedInMainPagesJson": true,
+      "releaseBundleExclusion": "NOT_VERIFIED"
+    },
+    {
+      "path": "pages/dev/qa-console",
+      "classification": "DEV_QA_MOCK_REVIEW_ROUTE",
+      "listedInMainPagesJson": true,
+      "releaseBundleExclusion": "NOT_VERIFIED"
+    },
+    {
+      "path": "pages/work-orders/action-time",
+      "classification": "COMMERCIAL_OR_LEGAL_ROUTE",
+      "listedInMainPagesJson": true,
+      "releaseBundleExclusion": "NOT_VERIFIED"
+    },
+    {
+      "path": "pages/work-orders/action-confirmation",
+      "classification": "COMMERCIAL_OR_LEGAL_ROUTE",
+      "listedInMainPagesJson": true,
+      "releaseBundleExclusion": "NOT_VERIFIED"
+    },
+    {
+      "path": "pages/legal/legal",
+      "classification": "COMMERCIAL_OR_LEGAL_ROUTE",
+      "listedInMainPagesJson": true,
+      "releaseBundleExclusion": "NOT_VERIFIED"
+    }
+  ],
+  "standaloneReviewRoots": [
+    "review-app/",
+    "review-app-g4f/",
+    "__review/"
+  ],
+  "featureToAppEdges": [
+    {
+      "from": "src/features/work-orders/R1NodeFormsOverview.vue",
+      "to": "src/app/business-mock.ts"
+    },
+    {
+      "from": "src/features/work-orders/R1SpecialMockTransactionPanel.vue",
+      "to": "src/app/composition.ts"
+    },
+    {
+      "from": "src/features/work-orders/R1SpecialMockTransactionPanel.vue",
+      "to": "src/app/a-stage-special-mock-ui.ts"
+    },
+    {
+      "from": "src/features/work-orders/components/MockJourneyContextPanel.vue",
+      "to": "src/app/mock-journey-context.ts"
+    },
+    {
+      "from": "src/features/work-orders/quotation/AStageMockQuoteOrderPanel.vue",
+      "to": "src/app/composition.ts"
+    },
+    {
+      "from": "src/features/work-orders/quotation/AStageMockQuoteOrderPanel.vue",
+      "to": "src/app/a-stage-quotation-mock-ui.ts"
+    },
+    {
+      "from": "src/features/work-orders/quotation/MockCommercialFlowLinks.vue",
+      "to": "src/app/mock-journey.ts"
+    },
+    {
+      "from": "src/features/work-orders/quotation/MockCommercialFlowLinks.vue",
+      "to": "src/app/material-sku-mock-review.ts"
+    },
+    {
+      "from": "src/features/work-orders/quotation/MockCommercialFlowLinks.vue",
+      "to": "src/app/signing-mock-review.ts"
+    },
+    {
+      "from": "src/features/work-orders/quotation/MockCommercialFlowLinks.vue",
+      "to": "src/app/mock-commercial-journey.ts"
+    },
+    {
+      "from": "src/features/work-orders/r1-local-form-drafts.ts",
+      "to": "src/app/business-mock.ts"
+    }
+  ],
+  "mutualTypeOnlyReferencePairs": [
+    [
+      "src/adapters/api/r1-node-form-list.ts",
+      "src/adapters/api/technician-api.ts"
+    ],
+    [
+      "src/adapters/api/technician-api-commands.ts",
+      "src/adapters/api/action-command-wires.ts"
+    ],
+    [
+      "src/features/work-orders/action-workspace-read-model.ts",
+      "src/features/work-orders/action-workspace.ts"
+    ]
+  ],
+  "largestCodeModules": [
+    {
+      "path": "src/features/work-orders/action-workspace.ts",
+      "lines": 2356,
+      "sourceImporters": 15,
+      "directStaticTestFiles": 10
+    },
+    {
+      "path": "src/adapters/api/technician-api.ts",
+      "lines": 2096,
+      "sourceImporters": 9,
+      "directStaticTestFiles": 31
+    },
+    {
+      "path": "src/features/work-orders/quotation/QuotationActionContent.vue",
+      "lines": 1698,
+      "sourceImporters": 1,
+      "directStaticTestFiles": 0
+    },
+    {
+      "path": "src/pages/index/index.vue",
+      "lines": 1236,
+      "sourceImporters": 0,
+      "directStaticTestFiles": 0
+    },
+    {
+      "path": "src/adapters/api/mock/fixtures.ts",
+      "lines": 1174,
+      "sourceImporters": 7,
+      "directStaticTestFiles": 5
+    },
+    {
+      "path": "src/pages/work-orders/detail.vue",
+      "lines": 1117,
+      "sourceImporters": 0,
+      "directStaticTestFiles": 0
+    },
+    {
+      "path": "src/adapters/api/mock/router.ts",
+      "lines": 968,
+      "sourceImporters": 4,
+      "directStaticTestFiles": 7
+    },
+    {
+      "path": "src/adapters/api/quotation-catalog-api.ts",
+      "lines": 768,
+      "sourceImporters": 1,
+      "directStaticTestFiles": 8
+    },
+    {
+      "path": "src/pages/work-orders/action-workspace.vue",
+      "lines": 691,
+      "sourceImporters": 0,
+      "directStaticTestFiles": 0
+    },
+    {
+      "path": "src/pages/work-orders/work-orders.vue",
+      "lines": 688,
+      "sourceImporters": 0,
+      "directStaticTestFiles": 0
+    },
+    {
+      "path": "src/features/work-orders/quotation/order-extfield-effective-plan.ts",
+      "lines": 617,
+      "sourceImporters": 2,
+      "directStaticTestFiles": 3
+    },
+    {
+      "path": "src/features/work-orders/components/GenericDynamicFormActionContent.vue",
+      "lines": 575,
+      "sourceImporters": 2,
+      "directStaticTestFiles": 0
+    },
+    {
+      "path": "src/adapters/api/quotation-order-api.ts",
+      "lines": 573,
+      "sourceImporters": 2,
+      "directStaticTestFiles": 8
+    },
+    {
+      "path": "src/features/work-orders/quotation/composition-store.ts",
+      "lines": 573,
+      "sourceImporters": 7,
+      "directStaticTestFiles": 4
+    },
+    {
+      "path": "src/shared/ports/api.ts",
+      "lines": 530,
+      "sourceImporters": 3,
+      "directStaticTestFiles": 0
+    },
+    {
+      "path": "src/features/work-orders/quotation/QuotationOrderHub.vue",
+      "lines": 509,
+      "sourceImporters": 1,
+      "directStaticTestFiles": 0
+    },
+    {
+      "path": "src/features/work-orders/detail.ts",
+      "lines": 491,
+      "sourceImporters": 7,
+      "directStaticTestFiles": 4
+    },
+    {
+      "path": "src/features/work-orders/quotation/catalog-browser-store.ts",
+      "lines": 470,
+      "sourceImporters": 3,
+      "directStaticTestFiles": 4
+    }
+  ],
+  "sourceModules": [
+    {
+      "path": "src/App.vue",
+      "loc": 8,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/shared/ui/design-system.scss"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/adapters/api/action-command-wires.ts",
+      "loc": 88,
+      "sourceImporters": 2,
+      "localImports": [
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts",
+        "src/adapters/common/operations.ts",
+        "src/adapters/api/survey-form-codec.ts",
+        "src/adapters/api/technician-api-commands.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/engineering/eq08-action-architecture.test.ts"
+      ]
+    },
+    {
+      "path": "src/adapters/api/appointment-contract.ts",
+      "loc": 3,
+      "sourceImporters": 9,
+      "localImports": [],
+      "staticDirectTestRefs": [
+        "tests/engineering/abc-mock-formdata-workflow-parity.test.ts",
+        "tests/engineering/r1-a06a-durable-write-fence.test.ts",
+        "tests/g4ux/mock-continuous-journey.test.ts",
+        "tests/g4ux/mock-journey-closure.test.ts",
+        "tests/g4ux/mock-journey-test-fixture.ts"
+      ]
+    },
+    {
+      "path": "src/adapters/api/mock/command-state.ts",
+      "loc": 73,
+      "sourceImporters": 3,
+      "localImports": [
+        "src/adapters/api/mock/fixtures.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/engineering/a-mock-special-forms-repeat-protocol.test.ts",
+        "tests/engineering/a-stage-main-app-quote-order.test.ts",
+        "tests/engineering/a-stage-main-app-special-controller.test.ts",
+        "tests/engineering/abc-mock-formdata-workflow-parity.test.ts",
+        "tests/engineering/eq05-mock-command-state.test.ts",
+        "tests/g4f/mock-journey-order-protocol.test.ts",
+        "tests/g4ux/mock-continuous-journey.test.ts",
+        "tests/g4ux/mock-journey-closure.test.ts"
+      ]
+    },
+    {
+      "path": "src/adapters/api/mock/commercial-review-storage.ts",
+      "loc": 21,
+      "sourceImporters": 1,
+      "localImports": [],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/adapters/api/mock/config.ts",
+      "loc": 131,
+      "sourceImporters": 3,
+      "localImports": [
+        "src/shared/config/index.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/engineering/a-mock-special-forms-repeat-protocol.test.ts",
+        "tests/engineering/a-stage-main-app-quote-order.test.ts",
+        "tests/engineering/a-stage-main-app-special-controller.test.ts",
+        "tests/g4c/r1-child-subflow-mock-review.test.ts",
+        "tests/g4f/material-sku-mock-coordinator.test.ts",
+        "tests/g4f/material-sku-mock-review.test.ts",
+        "tests/g4f/mock-journey-order-protocol.test.ts",
+        "tests/g4ux/mock-commercial-journey.test.ts",
+        "tests/g4ux/mock-continuous-journey.test.ts",
+        "tests/g4ux/mock-journey-closure.test.ts",
+        "tests/g4ux/mock-journey-context.test.ts",
+        "tests/g4ux/mock-journey-quote-suggestion.test.ts",
+        "tests/g4ux/signing-mock-review.test.ts"
+      ]
+    },
+    {
+      "path": "src/adapters/api/mock/fault-scenarios.ts",
+      "loc": 33,
+      "sourceImporters": 1,
+      "localImports": [],
+      "staticDirectTestRefs": [
+        "tests/engineering/eq05b-mock-fault-scenarios.test.ts"
+      ]
+    },
+    {
+      "path": "src/adapters/api/mock/fixtures.ts",
+      "loc": 1174,
+      "sourceImporters": 7,
+      "localImports": [
+        "src/adapters/api/appointment-contract.ts",
+        "src/adapters/api/mock/journey.ts",
+        "src/adapters/api/mock/quotation-catalog.ts",
+        "src/adapters/api/mock/survey-contract.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/engineering/a-mock-special-forms-repeat-protocol.test.ts",
+        "tests/engineering/a-stage-main-app-special-controller.test.ts",
+        "tests/engineering/abc-mock-formdata-workflow-parity.test.ts",
+        "tests/engineering/r1-stage1-mp-mock-fixtures.test.ts",
+        "tests/g4ux/mock-journey-closure.test.ts"
+      ]
+    },
+    {
+      "path": "src/adapters/api/mock/index.ts",
+      "loc": 56,
+      "sourceImporters": 5,
+      "localImports": [
+        "src/adapters/api/mock/config.ts",
+        "src/adapters/api/mock/router.ts",
+        "src/adapters/api/mock/fixtures.ts",
+        "src/adapters/api/mock/quotation-catalog.ts",
+        "src/adapters/api/mock/scenario-registry.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/engineering/abc-mock-formdata-workflow-parity.test.ts",
+        "tests/engineering/closure-c3-release-drills.test.ts",
+        "tests/engineering/eq01-mock-scenarios.test.ts",
+        "tests/engineering/eq05-mock-command-state.test.ts",
+        "tests/engineering/eq05b-mock-fault-scenarios.test.ts",
+        "tests/engineering/r1-f1-existing-form-list.test.ts",
+        "tests/engineering/r1-stage1-mp-mock-fixtures.test.ts",
+        "tests/g4b/work-orders.test.ts",
+        "tests/g4d/accept-appointment.test.ts",
+        "tests/g4d/action-workspace.test.ts",
+        "tests/g4d/final-correction.test.ts",
+        "tests/g4e/onsite-inspection.test.ts",
+        "tests/g4e/survey-leakage-cause.test.ts",
+        "tests/g4f/p0-order-raw-transport-fence.test.ts",
+        "tests/g4f/p0-role-order-tenant-negative.test.ts",
+        "tests/g4f/product-review-read-transport.test.ts",
+        "tests/g4f/production-read-only.test.ts",
+        "tests/g4f/quotation-catalog-read.test.ts",
+        "tests/g4f/r1-signing-offline-fixture.test.ts",
+        "tests/g4f/r1-signing-write-fence.test.ts",
+        "tests/g4ux/production-auth-mock-isolation.test.ts",
+        "tests/g4ux/workflow-projection.test.ts"
+      ]
+    },
+    {
+      "path": "src/adapters/api/mock/inspection-contract.ts",
+      "loc": 62,
+      "sourceImporters": 0,
+      "localImports": [],
+      "staticDirectTestRefs": [
+        "tests/g4e/inspection-contract.test.ts"
+      ]
+    },
+    {
+      "path": "src/adapters/api/mock/journey.ts",
+      "loc": 146,
+      "sourceImporters": 17,
+      "localImports": [
+        "src/adapters/api/mock/config.ts",
+        "src/adapters/api/appointment-contract.ts",
+        "src/adapters/api/mock/survey-contract.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/engineering/a-mock-special-forms-repeat-protocol.test.ts",
+        "tests/engineering/a-stage-main-app-quote-order.test.ts",
+        "tests/engineering/a-stage-main-app-special-controller.test.ts",
+        "tests/engineering/abc-mock-formdata-workflow-parity.test.ts",
+        "tests/g4f/material-sku-mock-coordinator.test.ts",
+        "tests/g4f/material-sku-mock-review.test.ts",
+        "tests/g4f/mock-journey-order-protocol.test.ts",
+        "tests/g4ux/mock-commercial-journey.test.ts",
+        "tests/g4ux/mock-continuous-journey.test.ts",
+        "tests/g4ux/mock-journey-closure.test.ts",
+        "tests/g4ux/mock-journey-context.test.ts",
+        "tests/g4ux/mock-journey-quote-suggestion.test.ts",
+        "tests/g4ux/mock-journey-test-fixture.ts",
+        "tests/g4ux/signing-mock-review.test.ts"
+      ]
+    },
+    {
+      "path": "src/adapters/api/mock/material-sku.ts",
+      "loc": 16,
+      "sourceImporters": 6,
+      "localImports": [],
+      "staticDirectTestRefs": [
+        "tests/g4f/material-sku-contract.test.ts",
+        "tests/g4f/quotation-sku-identity-review.test.ts"
+      ]
+    },
+    {
+      "path": "src/adapters/api/mock/ownership.ts",
+      "loc": 162,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/adapters/api/mock/fixtures.ts",
+        "src/adapters/api/mock/quotation-catalog.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/engineering/a-mock-special-forms-repeat-protocol.test.ts",
+        "tests/g4f/mock-journey-order-protocol.test.ts"
+      ]
+    },
+    {
+      "path": "src/adapters/api/mock/package-material-sku.ts",
+      "loc": 34,
+      "sourceImporters": 3,
+      "localImports": [
+        "src/adapters/api/mock/material-sku.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4f/package-material-sku-contract.test.ts",
+        "tests/g4f/quotation-sku-identity-review.test.ts",
+        "tests/g4f/quotation-sku-same-catalog.test.ts",
+        "tests/g4f/sku-synthetic-read-gate.test.ts"
+      ]
+    },
+    {
+      "path": "src/adapters/api/mock/quotation-catalog.ts",
+      "loc": 299,
+      "sourceImporters": 5,
+      "localImports": [],
+      "staticDirectTestRefs": [
+        "tests/engineering/a-stage-main-app-quote-order.test.ts",
+        "tests/g4f/mock-journey-order-protocol.test.ts",
+        "tests/g4f/p1-sku-readiness-review.test.ts",
+        "tests/g4f/quotation-sku-identity-review.test.ts",
+        "tests/g4f/quotation-sku-same-catalog.test.ts"
+      ]
+    },
+    {
+      "path": "src/adapters/api/mock/quotation-sku-same-catalog.ts",
+      "loc": 130,
+      "sourceImporters": 2,
+      "localImports": [
+        "src/shared/material-sku-contract.ts",
+        "src/shared/package-material-sku-contract.ts",
+        "src/adapters/api/mock/material-sku.ts",
+        "src/adapters/api/mock/quotation-catalog.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4f/p1-sku-readiness-review.test.ts",
+        "tests/g4f/quotation-sku-same-catalog.test.ts"
+      ]
+    },
+    {
+      "path": "src/adapters/api/mock/r1-special-protocol.ts",
+      "loc": 239,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/adapters/api/technician-api-commands.ts",
+        "src/adapters/api/mock/command-state.ts",
+        "src/adapters/api/mock/journey.ts",
+        "src/adapters/api/mock/r1-special-state.ts",
+        "src/adapters/api/mock/fixtures.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/engineering/a-mock-special-forms-repeat-protocol.test.ts",
+        "tests/engineering/a-stage-main-app-special-controller.test.ts"
+      ]
+    },
+    {
+      "path": "src/adapters/api/mock/r1-special-state.ts",
+      "loc": 145,
+      "sourceImporters": 2,
+      "localImports": [
+        "src/adapters/api/mock/command-state.ts",
+        "src/adapters/api/mock/journey.ts",
+        "src/adapters/api/mock/fixtures.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/adapters/api/mock/router.ts",
+      "loc": 968,
+      "sourceImporters": 4,
+      "localImports": [
+        "src/adapters/api/mock/config.ts",
+        "src/adapters/api/appointment-contract.ts",
+        "src/adapters/api/technician-api-commands.ts",
+        "src/adapters/api/mock/ownership.ts",
+        "src/adapters/api/mock/command-state.ts",
+        "src/adapters/api/mock/r1-special-state.ts",
+        "src/adapters/api/mock/fault-scenarios.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/engineering/a-mock-special-forms-repeat-protocol.test.ts",
+        "tests/engineering/a-stage-main-app-quote-order.test.ts",
+        "tests/g4f/mock-journey-order-protocol.test.ts",
+        "tests/g4f/r1-contract-read-boundary.test.ts",
+        "tests/g4ux/mock-continuous-journey.test.ts",
+        "tests/g4ux/mock-journey-closure.test.ts",
+        "tests/g4ux/mock-journey-test-fixture.ts"
+      ]
+    },
+    {
+      "path": "src/adapters/api/mock/scenario-registry.ts",
+      "loc": 43,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/adapters/api/mock/fixtures.ts",
+        "src/adapters/api/mock/journey.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/adapters/api/mock/survey-contract.ts",
+      "loc": 163,
+      "sourceImporters": 6,
+      "localImports": [],
+      "staticDirectTestRefs": [
+        "tests/g4ux/mock-continuous-journey.test.ts",
+        "tests/g4ux/mock-journey-test-fixture.ts"
+      ]
+    },
+    {
+      "path": "src/adapters/api/quotation-catalog-api.ts",
+      "loc": 768,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/shared/types/index.ts",
+        "src/shared/config/index.ts",
+        "src/shared/quotation-catalog-eligibility.ts",
+        "src/adapters/common/operations.ts",
+        "src/adapters/common/records.ts",
+        "src/adapters/api/technician-api.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/engineering/a-stage-main-app-quote-order.test.ts",
+        "tests/engineering/r1-catalog-price-identity-fence.test.ts",
+        "tests/engineering/r1-three-pillar-contract-matrix.test.ts",
+        "tests/g4f/p0-contract-fixtures.test.ts",
+        "tests/g4f/quotation-catalog-read.test.ts",
+        "tests/g4f/quotation-foundation.test.ts",
+        "tests/g4f/r1-material-sales-extfield-code-read.test.ts",
+        "tests/g4f/r1-material-sku-read-compatibility.test.ts"
+      ]
+    },
+    {
+      "path": "src/adapters/api/quotation-order-api.ts",
+      "loc": 573,
+      "sourceImporters": 2,
+      "localImports": [
+        "src/shared/types/index.ts",
+        "src/adapters/common/operations.ts",
+        "src/adapters/common/records.ts",
+        "src/adapters/api/technician-api.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/engineering/r1-model-contract-parity.test.ts",
+        "tests/engineering/r1-three-pillar-contract-matrix.test.ts",
+        "tests/g4f/mock-journey-order-protocol.test.ts",
+        "tests/g4f/p0-role-order-tenant-negative.test.ts",
+        "tests/g4f/production-read-only.test.ts",
+        "tests/g4f/quotation-order-read.test.ts",
+        "tests/g4f/quotation-order-signing-read-boundary.test.ts",
+        "tests/g4f/r1-contract-read-boundary.test.ts"
+      ]
+    },
+    {
+      "path": "src/adapters/api/quotation-order-commands.ts",
+      "loc": 67,
+      "sourceImporters": 2,
+      "localImports": [
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts",
+        "src/adapters/common/operations.ts",
+        "src/adapters/common/records.ts",
+        "src/adapters/api/technician-api-commands.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/engineering/r1-six-stage-business-review.test.ts",
+        "tests/g4f/m1-i3-quotation-stage-command-fence.test.ts",
+        "tests/g4f/mock-journey-order-protocol.test.ts",
+        "tests/g4f/quotation-order-command-adapter.test.ts"
+      ]
+    },
+    {
+      "path": "src/adapters/api/r1-node-form-list.ts",
+      "loc": 89,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts",
+        "src/adapters/api/technician-api.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/engineering/r1-f1-existing-form-list.test.ts",
+        "tests/engineering/r1-model-contract-parity.test.ts"
+      ]
+    },
+    {
+      "path": "src/adapters/api/r1-pilot-authoritative-readback.ts",
+      "loc": 181,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/adapters/api/technician-api.ts",
+        "src/shared/config/index.ts",
+        "src/shared/ports/r1-pilot-readback.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/engineering/r1-pilot-authoritative-readback.test.ts",
+        "tests/engineering/r1-stage1-no-beta-shadow.test.ts"
+      ]
+    },
+    {
+      "path": "src/adapters/api/r1-special-workflow-wires.ts",
+      "loc": 155,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/adapters/api/technician-api-commands.ts",
+        "src/shared/types/index.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/engineering/a-mock-special-forms-repeat-protocol.test.ts",
+        "tests/engineering/r1-f1-special-workflow-wires.test.ts"
+      ]
+    },
+    {
+      "path": "src/adapters/api/reference/area-county-dictionary.ts",
+      "loc": 3395,
+      "sourceImporters": 1,
+      "localImports": [],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/adapters/api/survey-form-codec.ts",
+      "loc": 100,
+      "sourceImporters": 2,
+      "localImports": [
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts",
+        "src/adapters/common/operations.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g3c/adapters.test.ts"
+      ]
+    },
+    {
+      "path": "src/adapters/api/survey-leakage-cause.ts",
+      "loc": 61,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts",
+        "src/adapters/common/operations.ts",
+        "src/adapters/common/records.ts",
+        "src/adapters/api/technician-api.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4e/survey-leakage-cause.test.ts",
+        "tests/g4f/production-read-only.test.ts"
+      ]
+    },
+    {
+      "path": "src/adapters/api/technician-api-commands.ts",
+      "loc": 406,
+      "sourceImporters": 11,
+      "localImports": [
+        "src/shared/types/index.ts",
+        "src/adapters/api/appointment-contract.ts",
+        "src/adapters/api/technician-api.ts",
+        "src/adapters/common/operations.ts",
+        "src/adapters/common/records.ts",
+        "src/adapters/api/survey-form-codec.ts",
+        "src/adapters/api/action-command-wires.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/engineering/r1-a06a-durable-write-fence.test.ts",
+        "tests/engineering/r1-a06b-node-type-safety.test.ts",
+        "tests/engineering/r1-appointment-wire-unification.test.ts",
+        "tests/engineering/r1-six-stage-business-review.test.ts",
+        "tests/engineering/r1-stage1-functional-flow.test.ts",
+        "tests/engineering/r1-stage1-no-beta-shadow.test.ts",
+        "tests/engineering/r1-stage1-pilot-composition.test.ts",
+        "tests/engineering/r1-stage1-pilot-reconciliation.test.ts",
+        "tests/engineering/r1-stage1-scoped-gateway.test.ts",
+        "tests/g4d/accept-appointment.test.ts",
+        "tests/g4d/action-workspace.test.ts",
+        "tests/g4d/final-correction.test.ts",
+        "tests/g4e/onsite-inspection.test.ts",
+        "tests/g4f/mock-journey-order-protocol.test.ts",
+        "tests/g4f/quotation-order-command-adapter.test.ts"
+      ]
+    },
+    {
+      "path": "src/adapters/api/technician-api.ts",
+      "loc": 2096,
+      "sourceImporters": 9,
+      "localImports": [
+        "src/shared/types/index.ts",
+        "src/adapters/common/operations.ts",
+        "src/adapters/api/reference/area-county-dictionary.ts",
+        "src/adapters/api/appointment-contract.ts",
+        "src/adapters/api/r1-node-form-list.ts",
+        "src/shared/config/index.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/engineering/r1-a06b-node-type-safety.test.ts",
+        "tests/engineering/r1-f1-existing-form-list.test.ts",
+        "tests/engineering/r1-model-contract-parity.test.ts",
+        "tests/engineering/r1-pilot-authoritative-readback.test.ts",
+        "tests/engineering/r1-stage1-form-detail-read-contract.test.ts",
+        "tests/engineering/r1-stage1-forms-options.test.ts",
+        "tests/engineering/r1-stage1-live-read-contract.test.ts",
+        "tests/engineering/r1-stage1-mp-mock-fixtures.test.ts",
+        "tests/engineering/r1-stage1-no-beta-shadow.test.ts",
+        "tests/engineering/r1-stage1-pilot-composition.test.ts",
+        "tests/engineering/r1-three-pillar-contract-matrix.test.ts",
+        "tests/g3c/adapters.test.ts",
+        "tests/g3e/cross-target.test.ts",
+        "tests/g4b/work-orders.test.ts",
+        "tests/g4c/work-order-detail.test.ts",
+        "tests/g4d/accept-appointment.test.ts",
+        "tests/g4d/action-workspace.test.ts",
+        "tests/g4d/final-correction.test.ts",
+        "tests/g4e/onsite-inspection.test.ts",
+        "tests/g4f/p0-contract-fixtures.test.ts",
+        "tests/g4f/p0-role-order-tenant-negative.test.ts",
+        "tests/g4f/production-read-only.test.ts",
+        "tests/g4f/quotation-catalog-read.test.ts",
+        "tests/g4f/quotation-foundation.test.ts",
+        "tests/g4f/quotation-order-read.test.ts",
+        "tests/g4f/quotation-order-signing-read-boundary.test.ts",
+        "tests/g4f/r1-contract-read-boundary.test.ts",
+        "tests/g4f/r1-material-sales-extfield-code-read.test.ts",
+        "tests/g4f/r1-material-sku-read-compatibility.test.ts",
+        "tests/g4ux/mock-runtime.test.ts",
+        "tests/g4ux/workflow-projection.test.ts"
+      ]
+    },
+    {
+      "path": "src/adapters/api/uni-api-command-transport.ts",
+      "loc": 211,
+      "sourceImporters": 2,
+      "localImports": [
+        "src/shared/types/index.ts",
+        "src/shared/config/index.ts",
+        "src/adapters/api/technician-api-commands.ts",
+        "src/adapters/api/mock/index.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/engineering/abc-mock-formdata-workflow-parity.test.ts",
+        "tests/engineering/closure-c3-release-drills.test.ts",
+        "tests/engineering/r1-six-stage-business-review.test.ts",
+        "tests/engineering/r1-stage1-functional-flow.test.ts",
+        "tests/g4d/accept-appointment.test.ts",
+        "tests/g4d/action-workspace.test.ts",
+        "tests/g4d/final-correction.test.ts",
+        "tests/g4e/onsite-inspection.test.ts",
+        "tests/g4f/m1-i3-quotation-stage-command-fence.test.ts",
+        "tests/g4f/production-read-only.test.ts",
+        "tests/g4f/quotation-write-safety.test.ts",
+        "tests/g4f/r1-signing-write-fence.test.ts",
+        "tests/g4ux/production-auth-mock-isolation.test.ts"
+      ]
+    },
+    {
+      "path": "src/adapters/api/uni-api-read-transport.ts",
+      "loc": 325,
+      "sourceImporters": 2,
+      "localImports": [
+        "src/shared/types/index.ts",
+        "src/shared/config/index.ts",
+        "src/adapters/api/technician-api.ts",
+        "src/adapters/api/mock/index.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/engineering/eq01-mock-scenarios.test.ts",
+        "tests/g4b/work-orders.test.ts",
+        "tests/g4d/accept-appointment.test.ts",
+        "tests/g4d/action-workspace.test.ts",
+        "tests/g4d/final-correction.test.ts",
+        "tests/g4e/onsite-inspection.test.ts",
+        "tests/g4e/survey-leakage-cause.test.ts",
+        "tests/g4f/p0-order-raw-transport-fence.test.ts",
+        "tests/g4f/p0-role-order-tenant-negative.test.ts",
+        "tests/g4f/production-read-only.test.ts",
+        "tests/g4f/quotation-catalog-read.test.ts",
+        "tests/g4f/quotation-foundation.test.ts",
+        "tests/g4ux/mock-runtime.test.ts",
+        "tests/g4ux/production-auth-mock-isolation.test.ts"
+      ]
+    },
+    {
+      "path": "src/adapters/auth/auth-session-adapter.ts",
+      "loc": 181,
+      "sourceImporters": 3,
+      "localImports": [
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts",
+        "src/adapters/common/operations.ts",
+        "src/adapters/common/records.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g3c/adapters.test.ts",
+        "tests/g3e/cross-target.test.ts",
+        "tests/g4a/infrastructure.test.ts"
+      ]
+    },
+    {
+      "path": "src/adapters/auth/dev-mock-ux-session.ts",
+      "loc": 41,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4ux/dev-mock-ux-session.test.ts"
+      ]
+    },
+    {
+      "path": "src/adapters/auth/uni-auth-backend.ts",
+      "loc": 96,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/adapters/auth/auth-session-adapter.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4a/infrastructure.test.ts",
+        "tests/g4f/production-read-only.test.ts",
+        "tests/g4ux/production-auth-mock-isolation.test.ts"
+      ]
+    },
+    {
+      "path": "src/adapters/common/operations.ts",
+      "loc": 37,
+      "sourceImporters": 13,
+      "localImports": [
+        "src/shared/types/index.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/adapters/common/records.ts",
+      "loc": 116,
+      "sourceImporters": 8,
+      "localImports": [
+        "src/adapters/common/operations.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/adapters/platform/developer-qa-navigation.ts",
+      "loc": 5,
+      "sourceImporters": 1,
+      "localImports": [],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/adapters/platform/platform-adapters.ts",
+      "loc": 246,
+      "sourceImporters": 5,
+      "localImports": [
+        "src/shared/types/index.ts",
+        "src/adapters/common/operations.ts",
+        "src/adapters/common/records.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g3c/adapters.test.ts",
+        "tests/g3e/cross-target.test.ts",
+        "tests/g4a/infrastructure.test.ts",
+        "tests/g4c/work-order-detail.test.ts"
+      ]
+    },
+    {
+      "path": "src/adapters/platform/uni-location-driver.ts",
+      "loc": 63,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/adapters/platform/platform-adapters.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/adapters/platform/uni-media-drivers.ts",
+      "loc": 74,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/adapters/platform/platform-adapters.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/adapters/platform/uni-navigation-driver.ts",
+      "loc": 113,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/adapters/platform/platform-adapters.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4a/infrastructure.test.ts"
+      ]
+    },
+    {
+      "path": "src/adapters/platform/uni-network-status.ts",
+      "loc": 38,
+      "sourceImporters": 0,
+      "localImports": [
+        "src/shared/ports/index.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/adapters/platform/uni-page-title.ts",
+      "loc": 6,
+      "sourceImporters": 1,
+      "localImports": [],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/adapters/platform/uni-phone-driver.ts",
+      "loc": 52,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/adapters/platform/platform-adapters.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4c/work-order-detail.test.ts"
+      ]
+    },
+    {
+      "path": "src/adapters/storage/storage-adapter.ts",
+      "loc": 72,
+      "sourceImporters": 2,
+      "localImports": [
+        "src/shared/types/index.ts",
+        "src/shared/ports/index.ts",
+        "src/adapters/common/operations.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g3c/adapters.test.ts",
+        "tests/g3e/cross-target.test.ts",
+        "tests/g4a/infrastructure.test.ts"
+      ]
+    },
+    {
+      "path": "src/adapters/storage/uni-durable-media-store.ts",
+      "loc": 128,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/adapters/storage/uni-storage-driver.ts",
+      "loc": 46,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/adapters/storage/storage-adapter.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4a/infrastructure.test.ts"
+      ]
+    },
+    {
+      "path": "src/adapters/upload/uni-media-post-upload-processor.ts",
+      "loc": 42,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4e/media-queue.test.ts"
+      ]
+    },
+    {
+      "path": "src/adapters/upload/uni-upload-port.ts",
+      "loc": 145,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/adapters/api/technician-api-commands.ts",
+        "src/adapters/api/mock/index.ts",
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts",
+        "src/shared/config/index.ts",
+        "src/adapters/upload/upload-adapter.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4e/onsite-inspection.test.ts",
+        "tests/g4f/production-read-only.test.ts"
+      ]
+    },
+    {
+      "path": "src/adapters/upload/upload-adapter.ts",
+      "loc": 88,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts",
+        "src/adapters/common/operations.ts",
+        "src/adapters/common/records.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g3c/adapters.test.ts",
+        "tests/g3e/cross-target.test.ts"
+      ]
+    },
+    {
+      "path": "src/app/a-stage-quotation-mock-ui.ts",
+      "loc": 182,
+      "sourceImporters": 2,
+      "localImports": [
+        "src/adapters/api/mock/journey.ts",
+        "src/adapters/api/mock/router.ts",
+        "src/adapters/api/quotation-order-commands.ts",
+        "src/adapters/api/quotation-order-api.ts",
+        "src/features/work-orders/quotation/order-submission.ts",
+        "src/features/work-orders/quotation/engine.ts",
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts",
+        "src/app/composition.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/engineering/a-stage-main-app-quote-order.test.ts"
+      ]
+    },
+    {
+      "path": "src/app/a-stage-special-mock-ui.ts",
+      "loc": 291,
+      "sourceImporters": 2,
+      "localImports": [
+        "src/adapters/api/mock/journey.ts",
+        "src/adapters/api/mock/router.ts",
+        "src/adapters/api/mock/r1-special-protocol.ts",
+        "src/adapters/api/mock/fixtures.ts",
+        "src/app/r1-stage1-functional-flow.ts",
+        "src/features/work-orders/r1-multistep-offline-transaction.ts",
+        "src/shared/ports/index.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/engineering/a-stage-main-app-special-controller.test.ts"
+      ]
+    },
+    {
+      "path": "src/app/action-page-title.ts",
+      "loc": 7,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/adapters/platform/uni-page-title.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4ux/action-workspace-page-title.test.ts"
+      ]
+    },
+    {
+      "path": "src/app/action-workspace-harness.ts",
+      "loc": 114,
+      "sourceImporters": 2,
+      "localImports": [
+        "src/adapters/api/appointment-contract.ts",
+        "src/adapters/api/mock/index.ts",
+        "src/features/work-orders/action-workspace.ts",
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4d/draft-diagnostics.test.ts",
+        "tests/g4ux/mock-runtime.test.ts"
+      ]
+    },
+    {
+      "path": "src/app/bootstrap.ts",
+      "loc": 168,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/runtimes/action/index.ts",
+        "src/App.vue",
+        "src/app/action-workspace-harness.ts",
+        "src/features/work-orders/detail.ts",
+        "src/features/work-orders/quotation/order-browse-store.ts",
+        "src/features/work-orders/signing/signing-review-read-store.ts",
+        "src/features/work-orders/action-workspace.ts",
+        "src/features/work-orders/r1-local-form-drafts.ts",
+        "src/features/work-orders/list.ts",
+        "src/features/home/draft-diagnostics.ts",
+        "src/shared/state/index.ts",
+        "src/app/business-mock.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/app/business-mock.ts",
+      "loc": 52,
+      "sourceImporters": 7,
+      "localImports": [
+        "src/adapters/api/mock/journey.ts",
+        "src/app/runtime-config.ts",
+        "src/adapters/api/mock/index.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4f/r1-signing-offline-fixture.test.ts",
+        "tests/g4ux/mock-runtime.test.ts"
+      ]
+    },
+    {
+      "path": "src/app/child-subflow-mock-review.ts",
+      "loc": 99,
+      "sourceImporters": 2,
+      "localImports": [
+        "src/adapters/api/mock/journey.ts",
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4c/r1-child-subflow-mock-review.test.ts"
+      ]
+    },
+    {
+      "path": "src/app/composition.ts",
+      "loc": 360,
+      "sourceImporters": 3,
+      "localImports": [
+        "src/shared/types/index.ts",
+        "src/adapters/api/quotation-catalog-api.ts",
+        "src/adapters/api/technician-api.ts",
+        "src/adapters/api/technician-api-commands.ts",
+        "src/adapters/api/quotation-order-commands.ts",
+        "src/adapters/api/quotation-order-api.ts",
+        "src/adapters/api/uni-api-read-transport.ts",
+        "src/adapters/api/uni-api-command-transport.ts",
+        "src/adapters/auth/auth-session-adapter.ts",
+        "src/adapters/auth/uni-auth-backend.ts",
+        "src/adapters/auth/dev-mock-ux-session.ts",
+        "src/adapters/storage/storage-adapter.ts",
+        "src/adapters/storage/uni-storage-driver.ts",
+        "src/adapters/platform/platform-adapters.ts",
+        "src/adapters/platform/uni-phone-driver.ts",
+        "src/adapters/platform/uni-navigation-driver.ts",
+        "src/adapters/platform/uni-media-drivers.ts",
+        "src/adapters/platform/uni-location-driver.ts",
+        "src/adapters/upload/uni-upload-port.ts",
+        "src/adapters/storage/uni-durable-media-store.ts",
+        "src/runtimes/media/index.ts",
+        "src/adapters/upload/uni-media-post-upload-processor.ts",
+        "src/adapters/api/survey-leakage-cause.ts",
+        "src/app/runtime-config.ts",
+        "src/app/business-mock.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4ux/dev-mock-ux-session.test.ts"
+      ]
+    },
+    {
+      "path": "src/app/dev-qa-navigation.ts",
+      "loc": 7,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/adapters/platform/developer-qa-navigation.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/app/material-sku-mock-coordinator.ts",
+      "loc": 175,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/shared/ports/index.ts",
+        "src/adapters/api/mock/journey.ts",
+        "src/adapters/api/mock/material-sku.ts",
+        "src/adapters/api/mock/package-material-sku.ts",
+        "src/shared/sku-synthetic-read-gate.ts",
+        "src/shared/material-sku-contract.ts",
+        "src/shared/package-material-sku-contract.ts",
+        "src/app/material-sku-mock-review.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4f/material-sku-mock-coordinator.test.ts"
+      ]
+    },
+    {
+      "path": "src/app/material-sku-mock-review.ts",
+      "loc": 93,
+      "sourceImporters": 4,
+      "localImports": [
+        "src/adapters/api/mock/journey.ts",
+        "src/adapters/api/mock/material-sku.ts",
+        "src/shared/material-sku-contract.ts",
+        "src/shared/package-material-sku-contract.ts",
+        "src/adapters/api/mock/package-material-sku.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4f/material-sku-mock-review.test.ts"
+      ]
+    },
+    {
+      "path": "src/app/mock-commercial-journey.ts",
+      "loc": 116,
+      "sourceImporters": 4,
+      "localImports": [
+        "src/adapters/api/mock/journey.ts",
+        "src/adapters/api/mock/commercial-review-storage.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/app/mock-journey-closure.ts",
+      "loc": 82,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/adapters/api/appointment-contract.ts",
+        "src/adapters/api/mock/journey.ts",
+        "src/adapters/api/mock/survey-contract.ts",
+        "src/app/mock-journey-context.ts",
+        "src/app/mock-journey-protocol.ts",
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4ux/mock-journey-closure.test.ts"
+      ]
+    },
+    {
+      "path": "src/app/mock-journey-context.ts",
+      "loc": 126,
+      "sourceImporters": 3,
+      "localImports": [
+        "src/adapters/api/appointment-contract.ts",
+        "src/app/mock-journey-quote-suggestion.ts",
+        "src/adapters/api/mock/survey-contract.ts",
+        "src/adapters/api/mock/journey.ts",
+        "src/runtimes/action/index.ts",
+        "src/shared/types/index.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4ux/mock-journey-closure.test.ts",
+        "tests/g4ux/mock-journey-context.test.ts"
+      ]
+    },
+    {
+      "path": "src/app/mock-journey-protocol.ts",
+      "loc": 115,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/adapters/api/appointment-contract.ts",
+        "src/adapters/api/action-command-wires.ts",
+        "src/adapters/api/mock/journey.ts",
+        "src/adapters/api/mock/router.ts",
+        "src/adapters/api/mock/survey-contract.ts",
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/app/mock-journey-quote-suggestion.ts",
+      "loc": 74,
+      "sourceImporters": 2,
+      "localImports": [
+        "src/adapters/api/mock/journey.ts",
+        "src/adapters/api/mock/survey-contract.ts",
+        "src/shared/ports/index.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4ux/mock-journey-quote-suggestion.test.ts"
+      ]
+    },
+    {
+      "path": "src/app/mock-journey.ts",
+      "loc": 45,
+      "sourceImporters": 4,
+      "localImports": [
+        "src/adapters/api/mock/journey.ts",
+        "src/features/work-orders/action-workspace.ts",
+        "src/shared/types/index.ts",
+        "src/app/mock-commercial-journey.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/app/p1-sku-readiness-review.ts",
+      "loc": 155,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/adapters/api/mock/quotation-sku-same-catalog.ts",
+        "src/adapters/api/mock/quotation-catalog.ts",
+        "src/adapters/api/mock/material-sku.ts",
+        "src/features/work-orders/quotation/model.ts",
+        "src/features/work-orders/quotation/sku-readiness-view.ts",
+        "src/features/work-orders/quotation/sku-identity-review.ts",
+        "src/shared/sku-live-read-preflight.ts",
+        "src/shared/sku-synthetic-sale-options.ts",
+        "src/shared/types/index.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4f/p1-sku-readiness-review.test.ts"
+      ]
+    },
+    {
+      "path": "src/app/quotation-sku-identity-evidence.ts",
+      "loc": 37,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/adapters/api/mock/quotation-sku-same-catalog.ts",
+        "src/shared/material-sku-contract.ts",
+        "src/shared/package-material-sku-contract.ts",
+        "src/features/work-orders/quotation/sku-identity-review.ts",
+        "src/features/work-orders/quotation/model.ts",
+        "src/adapters/api/mock/material-sku.ts",
+        "src/adapters/api/mock/package-material-sku.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/app/r1-stage1-functional-flow.ts",
+      "loc": 257,
+      "sourceImporters": 3,
+      "localImports": [
+        "src/adapters/api/technician-api-commands.ts",
+        "src/adapters/api/r1-special-workflow-wires.ts",
+        "src/features/work-orders/r1-forms-exts-plan.ts",
+        "src/features/work-orders/r1-multistep-offline-transaction.ts",
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/engineering/a-mock-special-forms-repeat-protocol.test.ts",
+        "tests/engineering/r1-stage1-functional-flow.test.ts",
+        "tests/engineering/r1-stage1-no-beta-shadow.test.ts",
+        "tests/engineering/r1-stage1-scoped-gateway.test.ts"
+      ]
+    },
+    {
+      "path": "src/app/r1-stage1-pilot-composition.ts",
+      "loc": 81,
+      "sourceImporters": 0,
+      "localImports": [
+        "src/adapters/api/technician-api-commands.ts",
+        "src/adapters/api/technician-api.ts",
+        "src/adapters/api/uni-api-command-transport.ts",
+        "src/adapters/api/uni-api-read-transport.ts",
+        "src/adapters/api/r1-pilot-authoritative-readback.ts",
+        "src/shared/ports/index.ts",
+        "src/shared/config/index.ts",
+        "src/features/work-orders/r1-multistep-offline-transaction.ts",
+        "src/app/runtime-config.ts",
+        "src/app/r1-stage1-pilot-reconciliation.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/engineering/r1-stage1-pilot-composition.test.ts"
+      ]
+    },
+    {
+      "path": "src/app/r1-stage1-pilot-reconciliation.ts",
+      "loc": 230,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/shared/ports/index.ts",
+        "src/shared/ports/r1-pilot-readback.ts",
+        "src/shared/config/index.ts",
+        "src/shared/types/index.ts",
+        "src/runtimes/workflow/policy.ts",
+        "src/features/work-orders/r1-multistep-offline-transaction.ts",
+        "src/app/r1-stage1-scoped-gateway.ts",
+        "src/app/r1-stage1-functional-flow.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/engineering/r1-stage1-no-beta-shadow.test.ts",
+        "tests/engineering/r1-stage1-pilot-reconciliation.test.ts"
+      ]
+    },
+    {
+      "path": "src/app/r1-stage1-scoped-gateway.ts",
+      "loc": 160,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/adapters/api/technician-api-commands.ts",
+        "src/shared/config/index.ts",
+        "src/shared/ports/index.ts",
+        "src/runtimes/workflow/policy.ts",
+        "src/features/work-orders/r1-multistep-offline-transaction.ts",
+        "src/app/r1-stage1-functional-flow.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/engineering/r1-stage1-scoped-gateway.test.ts"
+      ]
+    },
+    {
+      "path": "src/app/runtime-config.ts",
+      "loc": 85,
+      "sourceImporters": 3,
+      "localImports": [
+        "src/adapters/auth/auth-session-adapter.ts",
+        "src/shared/config/index.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4a/login-session.test.ts",
+        "tests/g4f/production-read-only.test.ts",
+        "tests/g4ux/dev-mock-ux-session.test.ts",
+        "tests/g4ux/mp-isolated-ux-environment.test.ts",
+        "tests/g4ux/production-auth-mock-isolation.test.ts"
+      ]
+    },
+    {
+      "path": "src/app/signing-mock-review.ts",
+      "loc": 119,
+      "sourceImporters": 3,
+      "localImports": [
+        "src/adapters/api/mock/journey.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4ux/signing-mock-review.test.ts"
+      ]
+    },
+    {
+      "path": "src/env.d.ts",
+      "loc": 17,
+      "sourceImporters": 0,
+      "localImports": [],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/features/home/access.ts",
+      "loc": 12,
+      "sourceImporters": 6,
+      "localImports": [
+        "src/shared/ports/index.ts",
+        "src/shared/state/index.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4b/work-orders.test.ts",
+        "tests/g4c/work-order-detail.test.ts"
+      ]
+    },
+    {
+      "path": "src/features/home/business-data-source.ts",
+      "loc": 35,
+      "sourceImporters": 1,
+      "localImports": [],
+      "staticDirectTestRefs": [
+        "tests/g4ux/business-data-source.test.ts"
+      ]
+    },
+    {
+      "path": "src/features/home/components/LocalDraftDiagnosticsPanel.vue",
+      "loc": 264,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/features/home/draft-diagnostics.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/features/home/draft-diagnostics.ts",
+      "loc": 216,
+      "sourceImporters": 3,
+      "localImports": [
+        "src/features/work-orders/action-workspace.ts",
+        "src/runtimes/action/index.ts",
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4d/draft-diagnostics.test.ts"
+      ]
+    },
+    {
+      "path": "src/features/session/login-consent.ts",
+      "loc": 67,
+      "sourceImporters": 2,
+      "localImports": [
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts",
+        "src/features/session/login.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/engineering/r1-manual-login-consent.test.ts"
+      ]
+    },
+    {
+      "path": "src/features/session/login-flow.ts",
+      "loc": 16,
+      "sourceImporters": 1,
+      "localImports": [],
+      "staticDirectTestRefs": [
+        "tests/g4ux/login-production.test.ts"
+      ]
+    },
+    {
+      "path": "src/features/session/login.ts",
+      "loc": 45,
+      "sourceImporters": 3,
+      "localImports": [
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4a/login-session.test.ts"
+      ]
+    },
+    {
+      "path": "src/features/session/quick-login.ts",
+      "loc": 44,
+      "sourceImporters": 1,
+      "localImports": [],
+      "staticDirectTestRefs": [
+        "tests/g4ux/login-production.test.ts"
+      ]
+    },
+    {
+      "path": "src/features/session/r1-manual-login-preflight.ts",
+      "loc": 31,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/features/session/login.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4a/r1-manual-login-preflight.test.ts"
+      ]
+    },
+    {
+      "path": "src/features/work-orders/R1LocalFormFieldEditor.vue",
+      "loc": 90,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/shared/ports/index.ts",
+        "src/shared/ui/AppField.vue",
+        "src/shared/ui/AppInput.vue",
+        "src/shared/ui/AppTextarea.vue",
+        "src/shared/ui/AppChoiceGroup.vue",
+        "src/shared/ui/AppMultiChoiceGroup.vue",
+        "src/shared/ui/AppButton.vue",
+        "src/features/work-orders/r1-local-form-drafts.ts",
+        "src/features/work-orders/r1-local-form-fields.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/features/work-orders/R1NodeFormsOverview.vue",
+      "loc": 213,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/shared/ports/index.ts",
+        "src/app/business-mock.ts",
+        "src/features/work-orders/r1-local-form-fields.ts",
+        "src/shared/ui/AppButton.vue",
+        "src/shared/ui/AppInput.vue",
+        "src/features/work-orders/R1LocalFormFieldEditor.vue",
+        "src/features/work-orders/r1-local-form-drafts.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/features/work-orders/R1ProductionChildFormsPanel.vue",
+      "loc": 136,
+      "sourceImporters": 2,
+      "localImports": [
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts",
+        "src/features/work-orders/detail.ts",
+        "src/shared/ui/AppButton.vue"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/features/work-orders/R1ProductionMainRepeatPanel.vue",
+      "loc": 76,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/shared/ports/index.ts",
+        "src/features/work-orders/detail.ts",
+        "src/shared/ui/AppButton.vue"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/features/work-orders/R1SpecialMockTransactionPanel.vue",
+      "loc": 260,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/shared/ports/index.ts",
+        "src/app/composition.ts",
+        "src/app/a-stage-special-mock-ui.ts",
+        "src/shared/state/index.ts",
+        "src/shared/ui/AppButton.vue",
+        "src/shared/ui/AppTextarea.vue",
+        "src/shared/ui/AppStatus.vue",
+        "src/shared/ui/ux-state-language.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/features/work-orders/WorkOrderTaskFocus.vue",
+      "loc": 161,
+      "sourceImporters": 1,
+      "localImports": [],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/features/work-orders/action-form-schema.ts",
+      "loc": 40,
+      "sourceImporters": 2,
+      "localImports": [
+        "src/runtimes/dynamic-form/index.ts",
+        "src/shared/ports/index.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/engineering/eq08-action-architecture.test.ts",
+        "tests/engineering/r1-three-pillar-contract-matrix.test.ts"
+      ]
+    },
+    {
+      "path": "src/features/work-orders/action-mutation-receipt.ts",
+      "loc": 172,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/engineering/r1-a06a-durable-write-fence.test.ts",
+        "tests/g4d/action-workspace.test.ts"
+      ]
+    },
+    {
+      "path": "src/features/work-orders/action-workspace-draft-utils.ts",
+      "loc": 194,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/runtimes/action/index.ts",
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts",
+        "src/features/work-orders/appointment-form-runtime.ts",
+        "src/features/work-orders/dynamic-form-action.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/engineering/eq02-action-draft-helpers.test.ts",
+        "tests/engineering/r1-action-workspace-foundation.test.ts"
+      ]
+    },
+    {
+      "path": "src/features/work-orders/action-workspace-read-model.ts",
+      "loc": 205,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/runtimes/action/index.ts",
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts",
+        "src/features/work-orders/appointment-form-runtime.ts",
+        "src/features/work-orders/dynamic-form-action.ts",
+        "src/features/work-orders/action-workspace.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/engineering/closure-c2-read-model.test.ts"
+      ]
+    },
+    {
+      "path": "src/features/work-orders/action-workspace.ts",
+      "loc": 2356,
+      "sourceImporters": 15,
+      "localImports": [
+        "src/shared/config/index.ts",
+        "src/features/work-orders/detail-workflow.ts",
+        "src/features/work-orders/action-workspace-read-model.ts",
+        "src/features/work-orders/action-workspace-draft-utils.ts",
+        "src/features/work-orders/dynamic-form-action.ts",
+        "src/features/work-orders/survey-media.ts",
+        "src/features/work-orders/action-mutation-receipt.ts",
+        "src/features/work-orders/quotation/composition-store.ts",
+        "src/features/work-orders/quotation/catalog-browser-store.ts",
+        "src/features/work-orders/quotation/engine-store.ts",
+        "src/features/work-orders/quotation/catalog-selection-bridge.ts",
+        "src/features/work-orders/quotation/order-submission.ts",
+        "src/features/work-orders/quotation/hydration.ts",
+        "src/features/work-orders/quotation/order-reconstruction.ts",
+        "src/features/work-orders/quotation/model.ts",
+        "src/features/work-orders/quotation/package-configuration.ts",
+        "src/runtimes/action/index.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/engineering/closure-c2-read-model.test.ts",
+        "tests/engineering/eq07-command-state-consistency.test.ts",
+        "tests/engineering/r1-action-workspace-foundation.test.ts",
+        "tests/g4d/accept-appointment.test.ts",
+        "tests/g4d/action-workspace.test.ts",
+        "tests/g4d/final-correction.test.ts",
+        "tests/g4e/onsite-inspection.test.ts",
+        "tests/g4e/survey-leakage-cause.test.ts",
+        "tests/g4f/production-read-only-workspace.test.ts",
+        "tests/g4f/quotation-foundation.test.ts"
+      ]
+    },
+    {
+      "path": "src/features/work-orders/appointment-form-runtime.ts",
+      "loc": 297,
+      "sourceImporters": 3,
+      "localImports": [
+        "src/runtimes/dynamic-form/index.ts",
+        "src/shared/ports/index.ts",
+        "src/features/work-orders/action-form-schema.ts",
+        "src/shared/types/index.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/engineering/eq08-action-architecture.test.ts",
+        "tests/engineering/r1-appointment-conditional-runtime.test.ts",
+        "tests/g4d/appointment-action-content.test.ts",
+        "tests/g4d/final-correction.test.ts"
+      ]
+    },
+    {
+      "path": "src/features/work-orders/appointment-time.ts",
+      "loc": 89,
+      "sourceImporters": 3,
+      "localImports": [],
+      "staticDirectTestRefs": [
+        "tests/g4d/appointment-action-content.test.ts"
+      ]
+    },
+    {
+      "path": "src/features/work-orders/appointment-validation.ts",
+      "loc": 24,
+      "sourceImporters": 0,
+      "localImports": [
+        "src/features/work-orders/appointment-form-runtime.ts",
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/features/work-orders/card.ts",
+      "loc": 64,
+      "sourceImporters": 3,
+      "localImports": [
+        "src/shared/ui/icons.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4ux/home-list-production.test.ts"
+      ]
+    },
+    {
+      "path": "src/features/work-orders/components/GenericDynamicFormActionContent.vue",
+      "loc": 575,
+      "sourceImporters": 2,
+      "localImports": [
+        "src/features/work-orders/action-workspace.ts",
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts",
+        "src/shared/ui/types.ts",
+        "src/features/work-orders/form-presentation.ts",
+        "src/features/work-orders/media-presentation.ts",
+        "src/shared/ui/AppActionContentHeading.vue",
+        "src/shared/ui/AppButton.vue",
+        "src/shared/ui/AppCascadeSelector.vue",
+        "src/shared/ui/AppChoiceGroup.vue",
+        "src/shared/ui/AppField.vue",
+        "src/shared/ui/AppIcon.vue",
+        "src/shared/ui/AppInput.vue",
+        "src/shared/ui/AppMultiChoiceGroup.vue",
+        "src/shared/ui/AppStatus.vue",
+        "src/shared/ui/AppTextarea.vue",
+        "src/features/work-orders/components/SurveyPartPicker.vue",
+        "src/features/work-orders/components/SurveyTaskSectionHeading.vue"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/features/work-orders/components/MockJourneyContextPanel.vue",
+      "loc": 140,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/app/mock-journey-context.ts",
+        "src/shared/ui/AppButton.vue"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/features/work-orders/components/SurveyActionContent.vue",
+      "loc": 20,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/features/work-orders/components/GenericDynamicFormActionContent.vue",
+        "src/features/work-orders/components/SurveyLeakageCauseExperience.vue",
+        "src/features/work-orders/action-workspace.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/features/work-orders/components/SurveyCompleteConfirmation.vue",
+      "loc": 40,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/shared/ui/AppIcon.vue",
+        "src/shared/ui/AppButton.vue"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/features/work-orders/components/SurveyLeakageCauseExperience.vue",
+      "loc": 297,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/features/work-orders/action-workspace.ts",
+        "src/shared/ui/AppButton.vue",
+        "src/shared/ui/AppField.vue",
+        "src/features/work-orders/components/SurveyTaskSectionHeading.vue",
+        "src/shared/ui/AppStatus.vue"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/features/work-orders/components/SurveyPartPicker.vue",
+      "loc": 132,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/shared/ui/AppCascadeSelector.vue"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/features/work-orders/components/SurveyTaskSectionHeading.vue",
+      "loc": 80,
+      "sourceImporters": 2,
+      "localImports": [
+        "src/shared/ui/AppIcon.vue",
+        "src/shared/ui/icons.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/features/work-orders/detail-tabs.ts",
+      "loc": 15,
+      "sourceImporters": 1,
+      "localImports": [],
+      "staticDirectTestRefs": [
+        "tests/g4ux/detail-production.test.ts"
+      ]
+    },
+    {
+      "path": "src/features/work-orders/detail-workflow.ts",
+      "loc": 72,
+      "sourceImporters": 3,
+      "localImports": [
+        "src/shared/ports/index.ts",
+        "src/runtimes/workflow/index.ts",
+        "src/features/work-orders/card.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4d/accept-appointment.test.ts",
+        "tests/g4d/final-correction.test.ts",
+        "tests/g4e/onsite-inspection.test.ts",
+        "tests/g4ux/mock-runtime.test.ts",
+        "tests/g4ux/workflow-projection.test.ts"
+      ]
+    },
+    {
+      "path": "src/features/work-orders/detail.ts",
+      "loc": 491,
+      "sourceImporters": 7,
+      "localImports": [
+        "src/features/work-orders/read-identity-scope.ts",
+        "src/features/work-orders/detail-workflow.ts",
+        "src/shared/config/index.ts",
+        "src/shared/ports/index.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4c/r1-production-child-forms.test.ts",
+        "tests/g4c/r1-production-main-repeat.test.ts",
+        "tests/g4c/work-order-detail.test.ts",
+        "tests/g4f/m1-i7-work-order-read-scope.test.ts"
+      ]
+    },
+    {
+      "path": "src/features/work-orders/dynamic-form-action.ts",
+      "loc": 255,
+      "sourceImporters": 3,
+      "localImports": [
+        "src/runtimes/dynamic-form/index.ts",
+        "src/shared/ports/index.ts",
+        "src/shared/ports/api.ts",
+        "src/features/work-orders/action-form-schema.ts",
+        "src/shared/types/index.ts",
+        "src/features/work-orders/survey-media.ts",
+        "src/features/work-orders/survey-leakage-cause.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/engineering/eq08-action-architecture.test.ts",
+        "tests/g4e/onsite-inspection.test.ts",
+        "tests/g4e/survey-leakage-cause.test.ts"
+      ]
+    },
+    {
+      "path": "src/features/work-orders/form-presentation.ts",
+      "loc": 21,
+      "sourceImporters": 2,
+      "localImports": [
+        "src/shared/ports/index.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/features/work-orders/list-actions.ts",
+      "loc": 54,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts",
+        "src/runtimes/workflow/index.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4d/accept-appointment.test.ts"
+      ]
+    },
+    {
+      "path": "src/features/work-orders/list.ts",
+      "loc": 345,
+      "sourceImporters": 3,
+      "localImports": [
+        "src/features/work-orders/read-identity-scope.ts",
+        "src/shared/config/index.ts",
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4b/work-orders.test.ts",
+        "tests/g4d/accept-appointment.test.ts",
+        "tests/g4d/final-correction.test.ts",
+        "tests/g4f/m1-i7-work-order-read-scope.test.ts"
+      ]
+    },
+    {
+      "path": "src/features/work-orders/media-presentation.ts",
+      "loc": 35,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/shared/ports/index.ts",
+        "src/features/work-orders/survey-media.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4e/media-presentation.test.ts"
+      ]
+    },
+    {
+      "path": "src/features/work-orders/quotation/AStageMockQuoteOrderPanel.vue",
+      "loc": 135,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/app/composition.ts",
+        "src/app/a-stage-quotation-mock-ui.ts",
+        "src/features/work-orders/action-workspace.ts",
+        "src/features/work-orders/quotation/composition-store.ts",
+        "src/shared/state/index.ts",
+        "src/shared/ui/AppButton.vue",
+        "src/shared/ui/AppStatus.vue"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/features/work-orders/quotation/MockCommercialFlowLinks.vue",
+      "loc": 100,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/app/mock-journey.ts",
+        "src/app/material-sku-mock-review.ts",
+        "src/app/signing-mock-review.ts",
+        "src/shared/ui/AppButton.vue",
+        "src/app/mock-commercial-journey.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/features/work-orders/quotation/Q01EntryScreen.vue",
+      "loc": 265,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/shared/ui/AppStatus.vue",
+        "src/shared/ui/AppButton.vue",
+        "src/shared/ui/AppIcon.vue",
+        "src/shared/ui/AppCascadeSelector.vue",
+        "src/shared/ui/AppCraftHeading.vue",
+        "src/shared/ports/index.ts",
+        "src/features/work-orders/quotation/model.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/features/work-orders/quotation/QuotationActionContent.vue",
+      "loc": 1698,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/features/work-orders/quotation/local-review-closure.ts",
+        "src/features/work-orders/quotation/sku-identity-review.ts",
+        "src/features/work-orders/quotation/sku-readiness-view.ts",
+        "src/features/work-orders/quotation/Q01EntryScreen.vue",
+        "src/shared/ui/AppButton.vue",
+        "src/shared/ui/AppCascadeSelector.vue",
+        "src/shared/ui/AppIcon.vue",
+        "src/shared/ui/AppLoadingState.vue",
+        "src/shared/ui/AppStatus.vue",
+        "src/features/work-orders/action-workspace.ts",
+        "src/features/work-orders/quotation/composition-store.ts",
+        "src/features/work-orders/quotation/amount-presentation.ts",
+        "src/features/work-orders/quotation/catalog-price-presentation.ts",
+        "src/features/work-orders/quotation/local-preflight.ts",
+        "src/features/work-orders/quotation/review-readiness-copy.ts",
+        "src/features/work-orders/quotation/empty-workbench-state.ts",
+        "src/features/work-orders/quotation/catalog-search.ts",
+        "src/features/work-orders/quotation/model.ts",
+        "src/features/work-orders/quotation/catalog.ts",
+        "src/features/work-orders/quotation/catalog-browser-store.ts",
+        "src/features/work-orders/quotation/submission-display-copy.ts",
+        "src/features/work-orders/quotation/validation.ts",
+        "src/shared/ports/index.ts",
+        "src/features/work-orders/quotation/package-configuration.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/features/work-orders/quotation/QuotationActionWorkspace.vue",
+      "loc": 348,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/shared/ui/AppAmountValue.vue",
+        "src/shared/config/index.ts",
+        "src/shared/state/index.ts",
+        "src/features/work-orders/action-workspace.ts",
+        "src/features/work-orders/quotation/composition-store.ts",
+        "src/features/work-orders/quotation/amount-presentation.ts",
+        "src/features/work-orders/quotation/quotation-submit-guard.ts",
+        "src/features/work-orders/quotation/empty-workbench-state.ts",
+        "src/shared/ui/ActionWorkspaceShell.vue",
+        "src/shared/ui/AppButton.vue",
+        "src/shared/ui/AppStatus.vue",
+        "src/features/work-orders/quotation/QuotationActionContent.vue",
+        "src/features/work-orders/quotation/sku-identity-review.ts",
+        "src/features/work-orders/quotation/sku-readiness-view.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/features/work-orders/quotation/QuotationOrderHub.vue",
+      "loc": 509,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/shared/ui/AppButton.vue",
+        "src/shared/ui/AppIcon.vue",
+        "src/shared/ui/AppRecordCard.vue",
+        "src/shared/ui/AppMetaTag.vue",
+        "src/shared/ui/AppSectionHeading.vue",
+        "src/shared/ui/AppAmountValue.vue",
+        "src/shared/ui/AppStatus.vue",
+        "src/shared/ui/ux-state-language.ts",
+        "src/shared/ui/work-order-number-display.ts",
+        "src/features/work-orders/quotation/order-browse-store.ts",
+        "src/shared/ports/index.ts",
+        "src/features/work-orders/signing/signing-review-read-workspace.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/features/work-orders/quotation/SyntheticOrderExtFieldReviewPanel.vue",
+      "loc": 402,
+      "sourceImporters": 0,
+      "localImports": [
+        "src/shared/ports/index.ts",
+        "src/shared/ui/AppButton.vue",
+        "src/shared/ui/AppField.vue",
+        "src/shared/ui/AppInput.vue",
+        "src/shared/ui/AppStatus.vue",
+        "src/shared/ui/AppTextarea.vue",
+        "src/features/work-orders/quotation/synthetic-extfield-review.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/features/work-orders/quotation/amount-presentation.ts",
+      "loc": 35,
+      "sourceImporters": 3,
+      "localImports": [
+        "src/features/work-orders/quotation/engine.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4f/quotation-amount-presentation.test.ts"
+      ]
+    },
+    {
+      "path": "src/features/work-orders/quotation/catalog-browser-store.ts",
+      "loc": 470,
+      "sourceImporters": 3,
+      "localImports": [
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts",
+        "src/features/work-orders/quotation/model.ts",
+        "src/features/work-orders/quotation/package-configuration.ts",
+        "src/features/work-orders/quotation/material-sku-selection-preview.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/engineering/eq04-quotation-catalog-bridge.test.ts",
+        "tests/g4f/quotation-catalog-browser.test.ts",
+        "tests/g4f/r1-material-sku-preview-bridge.test.ts",
+        "tests/g4f/r1-package-layer-equivalence.test.ts"
+      ]
+    },
+    {
+      "path": "src/features/work-orders/quotation/catalog-price-presentation.ts",
+      "loc": 30,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/shared/ports/index.ts",
+        "src/features/work-orders/quotation/amount-presentation.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4f/catalog-price-presentation.test.ts"
+      ]
+    },
+    {
+      "path": "src/features/work-orders/quotation/catalog-search.ts",
+      "loc": 32,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/shared/ports/index.ts",
+        "src/features/work-orders/quotation/model.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4f/quotation-catalog-search.test.ts"
+      ]
+    },
+    {
+      "path": "src/features/work-orders/quotation/catalog-selection-bridge.ts",
+      "loc": 119,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/shared/types/index.ts",
+        "src/runtimes/action/index.ts",
+        "src/shared/ports/index.ts",
+        "src/features/work-orders/quotation/model.ts",
+        "src/features/work-orders/quotation/package-configuration.ts",
+        "src/features/work-orders/quotation/catalog-browser-store.ts",
+        "src/features/work-orders/quotation/composition-store.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/engineering/eq04-quotation-catalog-bridge.test.ts"
+      ]
+    },
+    {
+      "path": "src/features/work-orders/quotation/catalog.ts",
+      "loc": 25,
+      "sourceImporters": 2,
+      "localImports": [
+        "src/features/work-orders/quotation/model.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4f/quotation-composition.test.ts"
+      ]
+    },
+    {
+      "path": "src/features/work-orders/quotation/composition-store.ts",
+      "loc": 573,
+      "sourceImporters": 7,
+      "localImports": [
+        "src/runtimes/action/index.ts",
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts",
+        "src/features/work-orders/quotation/catalog.ts",
+        "src/features/work-orders/quotation/draft-codec.ts",
+        "src/features/work-orders/quotation/package-configuration.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/engineering/eq04-quotation-catalog-bridge.test.ts",
+        "tests/g4f/package-configuration.test.ts",
+        "tests/g4f/quotation-composition.test.ts",
+        "tests/g4f/r1-material-sku-local-draft.test.ts"
+      ]
+    },
+    {
+      "path": "src/features/work-orders/quotation/draft-codec.ts",
+      "loc": 294,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/runtimes/action/index.ts",
+        "src/features/work-orders/quotation/package-configuration.ts",
+        "src/features/work-orders/quotation/model.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4f/quotation-composition.test.ts",
+        "tests/g4f/quotation-engine.test.ts",
+        "tests/g4f/r1-material-sku-local-draft.test.ts"
+      ]
+    },
+    {
+      "path": "src/features/work-orders/quotation/empty-workbench-state.ts",
+      "loc": 45,
+      "sourceImporters": 2,
+      "localImports": [
+        "src/features/work-orders/quotation/composition-store.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4f/quotation-empty-workbench.test.ts"
+      ]
+    },
+    {
+      "path": "src/features/work-orders/quotation/engine-store.ts",
+      "loc": 55,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/shared/ports/index.ts",
+        "src/features/work-orders/quotation/model.ts",
+        "src/features/work-orders/quotation/engine.ts",
+        "src/features/work-orders/quotation/validation.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/features/work-orders/quotation/engine.ts",
+      "loc": 94,
+      "sourceImporters": 4,
+      "localImports": [
+        "src/shared/ports/index.ts",
+        "src/features/work-orders/quotation/model.ts",
+        "src/features/work-orders/quotation/hydration.ts",
+        "src/features/work-orders/quotation/pricing.ts",
+        "src/features/work-orders/quotation/order-encoder.ts",
+        "src/features/work-orders/quotation/validation.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/engineering/a-stage-main-app-quote-order.test.ts",
+        "tests/g4f/quotation-amount-presentation.test.ts",
+        "tests/g4f/quotation-engine.test.ts",
+        "tests/g4f/r1-local-quotation-preflight.test.ts"
+      ]
+    },
+    {
+      "path": "src/features/work-orders/quotation/hydration.ts",
+      "loc": 250,
+      "sourceImporters": 4,
+      "localImports": [
+        "src/shared/types/index.ts",
+        "src/features/work-orders/quotation/model.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4f/quotation-engine.test.ts",
+        "tests/g4f/quotation-order-reconstruction.test.ts"
+      ]
+    },
+    {
+      "path": "src/features/work-orders/quotation/local-preflight.ts",
+      "loc": 156,
+      "sourceImporters": 2,
+      "localImports": [
+        "src/features/work-orders/quotation/engine.ts",
+        "src/features/work-orders/quotation/model.ts",
+        "src/features/work-orders/quotation/order-extfield-effective-plan.ts",
+        "src/features/work-orders/quotation/validation.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4f/quotation-review-readiness.test.ts",
+        "tests/g4f/r1-local-quotation-preflight.test.ts"
+      ]
+    },
+    {
+      "path": "src/features/work-orders/quotation/local-review-closure.ts",
+      "loc": 65,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/features/work-orders/quotation/validation.ts",
+        "src/features/work-orders/quotation/model.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4f/quotation-local-review-closure.test.ts"
+      ]
+    },
+    {
+      "path": "src/features/work-orders/quotation/material-sku-selection-preview.ts",
+      "loc": 90,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/shared/ports/index.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4f/r1-material-sku-preview-bridge.test.ts"
+      ]
+    },
+    {
+      "path": "src/features/work-orders/quotation/model.ts",
+      "loc": 354,
+      "sourceImporters": 20,
+      "localImports": [],
+      "staticDirectTestRefs": [
+        "tests/engineering/a-stage-main-app-quote-order.test.ts",
+        "tests/g4f/p0-contract-fixtures.test.ts",
+        "tests/g4f/p1-sku-readiness-review.test.ts",
+        "tests/g4f/package-configuration.test.ts",
+        "tests/g4f/quotation-composition.test.ts",
+        "tests/g4f/quotation-engine.test.ts",
+        "tests/g4f/quotation-local-review-closure.test.ts",
+        "tests/g4f/quotation-review-readiness.test.ts",
+        "tests/g4f/quotation-sku-identity-review.test.ts",
+        "tests/g4f/quotation-sku-same-catalog.test.ts",
+        "tests/g4f/r1-local-quotation-preflight.test.ts",
+        "tests/g4f/r1-material-sku-local-draft.test.ts",
+        "tests/g4f/r1-package-layer-equivalence.test.ts"
+      ]
+    },
+    {
+      "path": "src/features/work-orders/quotation/order-browse-store.ts",
+      "loc": 204,
+      "sourceImporters": 3,
+      "localImports": [
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4f/production-quotation-browse.test.ts",
+        "tests/g4f/quotation-order-browse-handoff.test.ts"
+      ]
+    },
+    {
+      "path": "src/features/work-orders/quotation/order-encoder.ts",
+      "loc": 366,
+      "sourceImporters": 2,
+      "localImports": [
+        "src/shared/ports/index.ts",
+        "src/features/work-orders/quotation/hydration.ts",
+        "src/features/work-orders/quotation/pricing.ts",
+        "src/features/work-orders/quotation/validation.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4f/mock-journey-order-protocol.test.ts",
+        "tests/g4f/quotation-engine.test.ts",
+        "tests/g4f/quotation-order-submission.test.ts"
+      ]
+    },
+    {
+      "path": "src/features/work-orders/quotation/order-extfield-effective-plan.ts",
+      "loc": 617,
+      "sourceImporters": 2,
+      "localImports": [
+        "src/runtimes/dynamic-form/index.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/engineering/r1-three-pillar-contract-matrix.test.ts",
+        "tests/g4f/quotation-review-readiness.test.ts",
+        "tests/g4f/r1-local-quotation-preflight.test.ts"
+      ]
+    },
+    {
+      "path": "src/features/work-orders/quotation/order-reconstruction.ts",
+      "loc": 202,
+      "sourceImporters": 2,
+      "localImports": [
+        "src/shared/ports/index.ts",
+        "src/features/work-orders/quotation/model.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4f/quotation-order-reconstruction.test.ts"
+      ]
+    },
+    {
+      "path": "src/features/work-orders/quotation/order-submission.ts",
+      "loc": 349,
+      "sourceImporters": 3,
+      "localImports": [
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts",
+        "src/features/work-orders/quotation/order-encoder.ts",
+        "src/features/work-orders/quotation/order-reconstruction.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4f/mock-journey-order-protocol.test.ts",
+        "tests/g4f/quotation-order-submission.test.ts"
+      ]
+    },
+    {
+      "path": "src/features/work-orders/quotation/package-configuration.ts",
+      "loc": 199,
+      "sourceImporters": 7,
+      "localImports": [
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts",
+        "src/features/work-orders/quotation/model.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4f/package-configuration.test.ts",
+        "tests/g4f/r1-package-layer-equivalence.test.ts"
+      ]
+    },
+    {
+      "path": "src/features/work-orders/quotation/pricing.ts",
+      "loc": 200,
+      "sourceImporters": 2,
+      "localImports": [
+        "src/features/work-orders/quotation/model.ts",
+        "src/features/work-orders/quotation/hydration.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4f/quotation-engine.test.ts"
+      ]
+    },
+    {
+      "path": "src/features/work-orders/quotation/quotation-submit-guard.ts",
+      "loc": 22,
+      "sourceImporters": 1,
+      "localImports": [],
+      "staticDirectTestRefs": [
+        "tests/g4f/m1-i5-quotation-submit-guard.test.ts"
+      ]
+    },
+    {
+      "path": "src/features/work-orders/quotation/review-readiness-copy.ts",
+      "loc": 42,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/features/work-orders/quotation/local-preflight.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4f/quotation-review-readiness.test.ts"
+      ]
+    },
+    {
+      "path": "src/features/work-orders/quotation/sku-identity-review.ts",
+      "loc": 105,
+      "sourceImporters": 4,
+      "localImports": [
+        "src/shared/material-sku-contract.ts",
+        "src/shared/package-material-sku-contract.ts",
+        "src/features/work-orders/quotation/model.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4f/quotation-sku-identity-review.test.ts",
+        "tests/g4f/quotation-sku-same-catalog.test.ts"
+      ]
+    },
+    {
+      "path": "src/features/work-orders/quotation/sku-readiness-view.ts",
+      "loc": 28,
+      "sourceImporters": 3,
+      "localImports": [],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/features/work-orders/quotation/submission-display-copy.ts",
+      "loc": 16,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/features/work-orders/quotation/order-submission.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/engineering/a-stage-mp-submission-copy.test.ts"
+      ]
+    },
+    {
+      "path": "src/features/work-orders/quotation/synthetic-extfield-review.ts",
+      "loc": 427,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/runtimes/dynamic-form/index.ts",
+        "src/shared/types/index.ts",
+        "src/shared/ports/index.ts",
+        "src/features/work-orders/quotation/order-extfield-effective-plan.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4f/synthetic-order-extfield-review.test.ts"
+      ]
+    },
+    {
+      "path": "src/features/work-orders/quotation/validation.ts",
+      "loc": 145,
+      "sourceImporters": 6,
+      "localImports": [
+        "src/features/work-orders/quotation/package-configuration.ts",
+        "src/features/work-orders/quotation/model.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4f/p0-contract-fixtures.test.ts",
+        "tests/g4f/quotation-engine.test.ts",
+        "tests/g4f/r1-material-sku-local-draft.test.ts"
+      ]
+    },
+    {
+      "path": "src/features/work-orders/r1-forms-exts-plan.ts",
+      "loc": 93,
+      "sourceImporters": 1,
+      "localImports": [],
+      "staticDirectTestRefs": [
+        "tests/engineering/a-mock-special-forms-repeat-protocol.test.ts",
+        "tests/engineering/r1-f2-multiform-transaction.test.ts"
+      ]
+    },
+    {
+      "path": "src/features/work-orders/r1-local-form-drafts.ts",
+      "loc": 342,
+      "sourceImporters": 3,
+      "localImports": [
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts",
+        "src/app/business-mock.ts",
+        "src/features/work-orders/r1-local-form-fields.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/engineering/r1-f3-local-form-drafts.test.ts",
+        "tests/engineering/r1-f4-local-field-editor.test.ts",
+        "tests/engineering/r1-stage1-forms-options.test.ts",
+        "tests/engineering/r1-stage1-mp-mock-fixtures.test.ts"
+      ]
+    },
+    {
+      "path": "src/features/work-orders/r1-local-form-fields.ts",
+      "loc": 104,
+      "sourceImporters": 3,
+      "localImports": [
+        "src/runtimes/dynamic-form/index.ts",
+        "src/shared/ports/index.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/engineering/r1-f4-local-field-editor.test.ts"
+      ]
+    },
+    {
+      "path": "src/features/work-orders/r1-multistep-offline-transaction.ts",
+      "loc": 298,
+      "sourceImporters": 5,
+      "localImports": [
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/engineering/a-mock-special-forms-repeat-protocol.test.ts",
+        "tests/engineering/r1-f2-multiform-transaction.test.ts",
+        "tests/engineering/r1-pilot-authoritative-readback.test.ts",
+        "tests/engineering/r1-stage1-functional-flow.test.ts",
+        "tests/engineering/r1-stage1-no-beta-shadow.test.ts",
+        "tests/engineering/r1-stage1-pilot-composition.test.ts",
+        "tests/engineering/r1-stage1-pilot-reconciliation.test.ts",
+        "tests/engineering/r1-stage1-scoped-gateway.test.ts"
+      ]
+    },
+    {
+      "path": "src/features/work-orders/read-identity-scope.ts",
+      "loc": 11,
+      "sourceImporters": 4,
+      "localImports": [
+        "src/shared/ports/index.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4f/m1-i7-work-order-read-scope.test.ts"
+      ]
+    },
+    {
+      "path": "src/features/work-orders/signing/r1-signing-command-intents.ts",
+      "loc": 186,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/shared/ports/index.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4f/r1-signing-command-intents.test.ts"
+      ]
+    },
+    {
+      "path": "src/features/work-orders/signing/r1-signing-command-readback.ts",
+      "loc": 72,
+      "sourceImporters": 0,
+      "localImports": [
+        "src/features/work-orders/signing/r1-signing-read-reconciliation.ts",
+        "src/features/work-orders/signing/r1-signing-command-intents.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4f/r1-signing-command-readback.test.ts"
+      ]
+    },
+    {
+      "path": "src/features/work-orders/signing/r1-signing-node-handler-evidence.ts",
+      "loc": 46,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/shared/ports/index.ts",
+        "src/runtimes/workflow/index.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4f/r1-signing-node-handler-evidence.test.ts"
+      ]
+    },
+    {
+      "path": "src/features/work-orders/signing/r1-signing-read-reconciliation.ts",
+      "loc": 84,
+      "sourceImporters": 3,
+      "localImports": [
+        "src/shared/ports/index.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4f/m1-i6-signing-review-progress.test.ts",
+        "tests/g4f/r1-signing-read-reconciliation.test.ts"
+      ]
+    },
+    {
+      "path": "src/features/work-orders/signing/r1-signing-ui-rules.ts",
+      "loc": 73,
+      "sourceImporters": 0,
+      "localImports": [],
+      "staticDirectTestRefs": [
+        "tests/g4f/r1-signing-action-parity.test.ts"
+      ]
+    },
+    {
+      "path": "src/features/work-orders/signing/signing-review-progress.ts",
+      "loc": 43,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/features/work-orders/signing/r1-signing-read-reconciliation.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4f/m1-i6-signing-review-progress.test.ts"
+      ]
+    },
+    {
+      "path": "src/features/work-orders/signing/signing-review-read-store.ts",
+      "loc": 221,
+      "sourceImporters": 2,
+      "localImports": [
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts",
+        "src/features/work-orders/signing/r1-signing-node-handler-evidence.ts",
+        "src/features/work-orders/signing/signing-review-read-workspace.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4f/r1-signing-node-handler-evidence.test.ts",
+        "tests/g4f/signing-review-read-store.test.ts"
+      ]
+    },
+    {
+      "path": "src/features/work-orders/signing/signing-review-read-workspace.ts",
+      "loc": 138,
+      "sourceImporters": 3,
+      "localImports": [
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4f/signing-review-read-store.test.ts",
+        "tests/g4f/signing-review-workspace.test.ts"
+      ]
+    },
+    {
+      "path": "src/features/work-orders/survey-leakage-cause.ts",
+      "loc": 209,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/runtimes/dynamic-form/index.ts",
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/features/work-orders/survey-media.ts",
+      "loc": 83,
+      "sourceImporters": 3,
+      "localImports": [
+        "src/shared/ports/index.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/main.ts",
+      "loc": 43,
+      "sourceImporters": 0,
+      "localImports": [
+        "src/app/bootstrap.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/pages/dev/qa-console.vue",
+      "loc": 137,
+      "sourceImporters": 0,
+      "localImports": [
+        "src/app/business-mock.ts",
+        "src/app/action-workspace-harness.ts",
+        "src/app/signing-mock-review.ts",
+        "src/app/material-sku-mock-review.ts",
+        "src/app/child-subflow-mock-review.ts",
+        "src/app/mock-journey.ts",
+        "src/features/home/business-data-source.ts",
+        "src/features/home/draft-diagnostics.ts",
+        "src/features/home/components/LocalDraftDiagnosticsPanel.vue",
+        "src/features/work-orders/detail.ts",
+        "src/features/work-orders/list.ts",
+        "src/shared/state/index.ts",
+        "src/features/work-orders/quotation/MockCommercialFlowLinks.vue"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/pages/index/index.vue",
+      "loc": 1236,
+      "sourceImporters": 0,
+      "localImports": [
+        "src/features/home/access.ts",
+        "src/features/session/login.ts",
+        "src/features/session/login-consent.ts",
+        "src/features/session/r1-manual-login-preflight.ts",
+        "src/features/session/quick-login.ts",
+        "src/features/session/login-flow.ts",
+        "src/shared/state/index.ts",
+        "src/shared/types/index.ts",
+        "src/shared/ui/AppLoadingState.vue",
+        "src/app/dev-qa-navigation.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/pages/legal/legal.vue",
+      "loc": 24,
+      "sourceImporters": 0,
+      "localImports": [
+        "src/features/session/login-consent.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/pages/work-orders/action-confirmation.vue",
+      "loc": 312,
+      "sourceImporters": 0,
+      "localImports": [
+        "src/features/home/access.ts",
+        "src/features/work-orders/action-workspace.ts",
+        "src/features/work-orders/appointment-time.ts",
+        "src/shared/state/index.ts",
+        "src/shared/ui/ActionWorkspaceShell.vue",
+        "src/shared/ui/AppButton.vue",
+        "src/shared/ui/AppIcon.vue",
+        "src/shared/ui/AppInformationRow.vue",
+        "src/shared/ui/AppLoadingState.vue",
+        "src/shared/types/index.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/pages/work-orders/action-time.vue",
+      "loc": 339,
+      "sourceImporters": 0,
+      "localImports": [
+        "src/features/home/access.ts",
+        "src/features/work-orders/action-workspace.ts",
+        "src/features/work-orders/appointment-time.ts",
+        "src/shared/state/index.ts",
+        "src/shared/ui/ActionWorkspaceShell.vue",
+        "src/shared/ui/AppButton.vue",
+        "src/shared/ui/AppIcon.vue",
+        "src/shared/ui/AppLoadingState.vue",
+        "src/shared/types/index.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/pages/work-orders/action-workspace.vue",
+      "loc": 691,
+      "sourceImporters": 0,
+      "localImports": [
+        "src/app/business-mock.ts",
+        "src/app/quotation-sku-identity-evidence.ts",
+        "src/app/p1-sku-readiness-review.ts",
+        "src/app/action-page-title.ts",
+        "src/app/mock-journey.ts",
+        "src/app/a-stage-quotation-mock-ui.ts",
+        "src/app/mock-journey-closure.ts",
+        "src/app/mock-journey-context.ts",
+        "src/app/mock-journey-quote-suggestion.ts",
+        "src/features/work-orders/quotation/AStageMockQuoteOrderPanel.vue",
+        "src/features/home/access.ts",
+        "src/shared/config/index.ts",
+        "src/features/work-orders/action-workspace.ts",
+        "src/features/work-orders/quotation/QuotationActionWorkspace.vue",
+        "src/features/work-orders/quotation/QuotationOrderHub.vue",
+        "src/features/work-orders/quotation/composition-store.ts",
+        "src/features/work-orders/appointment-time.ts",
+        "src/features/work-orders/form-presentation.ts",
+        "src/shared/state/index.ts",
+        "src/shared/ui/ActionWorkspaceFormActions.vue",
+        "src/shared/ui/ActionWorkspaceShell.vue",
+        "src/features/work-orders/components/GenericDynamicFormActionContent.vue",
+        "src/features/work-orders/components/SurveyActionContent.vue",
+        "src/features/work-orders/components/SurveyCompleteConfirmation.vue",
+        "src/features/work-orders/components/MockJourneyContextPanel.vue",
+        "src/shared/ui/AppActionContentHeading.vue",
+        "src/shared/ui/AppButton.vue",
+        "src/shared/ui/AppChoiceGroup.vue",
+        "src/shared/ui/AppField.vue",
+        "src/shared/ui/AppIcon.vue",
+        "src/shared/ui/AppInput.vue",
+        "src/shared/ui/AppLoadingState.vue",
+        "src/shared/ui/AppSelector.vue",
+        "src/shared/ui/AppTextarea.vue",
+        "src/shared/ui/types.ts",
+        "src/shared/types/index.ts",
+        "src/shared/ports/index.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/pages/work-orders/child-subflow-mock-review.vue",
+      "loc": 100,
+      "sourceImporters": 0,
+      "localImports": [
+        "src/app/child-subflow-mock-review.ts",
+        "src/features/work-orders/R1ProductionChildFormsPanel.vue",
+        "src/features/work-orders/detail.ts",
+        "src/shared/ports/index.ts",
+        "src/shared/state/index.ts",
+        "src/shared/ui/AppButton.vue"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/pages/work-orders/detail.vue",
+      "loc": 1117,
+      "sourceImporters": 0,
+      "localImports": [
+        "src/app/mock-journey.ts",
+        "src/features/home/access.ts",
+        "src/shared/config/index.ts",
+        "src/shared/ui/work-order-number-display.ts",
+        "src/features/work-orders/card.ts",
+        "src/features/work-orders/detail.ts",
+        "src/features/work-orders/action-workspace.ts",
+        "src/features/work-orders/detail-tabs.ts",
+        "src/features/work-orders/detail-workflow.ts",
+        "src/features/work-orders/quotation/order-browse-store.ts",
+        "src/features/work-orders/signing/signing-review-read-workspace.ts",
+        "src/shared/ports/index.ts",
+        "src/shared/state/index.ts",
+        "src/features/work-orders/read-identity-scope.ts",
+        "src/shared/ui/AppIcon.vue",
+        "src/shared/ui/AppLoadingState.vue",
+        "src/shared/ui/AppStatus.vue",
+        "src/shared/ui/AppRecordCard.vue",
+        "src/shared/ui/AppMetaTag.vue",
+        "src/shared/ui/AppSectionHeading.vue",
+        "src/shared/ui/AppFeedbackState.vue",
+        "src/shared/ui/AppWorkOrderSkeleton.vue",
+        "src/features/work-orders/WorkOrderTaskFocus.vue",
+        "src/features/work-orders/R1NodeFormsOverview.vue",
+        "src/features/work-orders/R1SpecialMockTransactionPanel.vue",
+        "src/app/a-stage-special-mock-ui.ts",
+        "src/features/work-orders/R1ProductionChildFormsPanel.vue",
+        "src/features/work-orders/R1ProductionMainRepeatPanel.vue",
+        "src/shared/ui/loading.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/pages/work-orders/material-sku-mock-review.vue",
+      "loc": 361,
+      "sourceImporters": 0,
+      "localImports": [
+        "src/shared/state/index.ts",
+        "src/shared/ui/ActionWorkspaceShell.vue",
+        "src/shared/ui/AppButton.vue",
+        "src/shared/material-sku-contract.ts",
+        "src/shared/package-material-sku-contract.ts",
+        "src/app/material-sku-mock-coordinator.ts",
+        "src/app/material-sku-mock-review.ts",
+        "src/app/mock-commercial-journey.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/pages/work-orders/signing-mock-review.vue",
+      "loc": 180,
+      "sourceImporters": 0,
+      "localImports": [
+        "src/shared/state/index.ts",
+        "src/shared/ui/ActionWorkspaceShell.vue",
+        "src/shared/ui/AppButton.vue",
+        "src/app/signing-mock-review.ts",
+        "src/app/mock-commercial-journey.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/pages/work-orders/signing-order-read.vue",
+      "loc": 403,
+      "sourceImporters": 0,
+      "localImports": [
+        "src/shared/ui/AppButton.vue",
+        "src/shared/ui/AppLoadingState.vue",
+        "src/shared/ui/AppRecordCard.vue",
+        "src/shared/ui/AppMetaTag.vue",
+        "src/shared/ui/AppSectionHeading.vue",
+        "src/shared/ui/AppAmountValue.vue",
+        "src/shared/ui/AppStatus.vue",
+        "src/shared/ui/AppIcon.vue",
+        "src/shared/state/index.ts",
+        "src/features/work-orders/signing/signing-review-read-store.ts",
+        "src/shared/config/index.ts",
+        "src/app/business-mock.ts",
+        "src/features/work-orders/signing/r1-signing-read-reconciliation.ts",
+        "src/features/work-orders/signing/signing-review-progress.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/pages/work-orders/work-orders.vue",
+      "loc": 688,
+      "sourceImporters": 0,
+      "localImports": [
+        "src/features/home/access.ts",
+        "src/shared/config/index.ts",
+        "src/features/work-orders/card.ts",
+        "src/features/work-orders/detail.ts",
+        "src/features/work-orders/list-actions.ts",
+        "src/features/work-orders/list.ts",
+        "src/shared/ports/index.ts",
+        "src/shared/state/index.ts",
+        "src/features/work-orders/read-identity-scope.ts",
+        "src/shared/ui/AppIcon.vue",
+        "src/shared/ui/AppButton.vue",
+        "src/shared/ui/AppLoadingState.vue",
+        "src/shared/ui/AppStatus.vue",
+        "src/shared/ui/AppRecordCard.vue",
+        "src/shared/ui/AppRecordMark.vue",
+        "src/shared/ui/AppMetaTag.vue",
+        "src/shared/ui/AppSectionHeading.vue",
+        "src/shared/ui/AppSearchBar.vue",
+        "src/shared/ui/AppFeedbackState.vue",
+        "src/shared/ui/AppWorkOrderSkeleton.vue",
+        "src/shared/ui/AppWorkOrderEmptyState.vue",
+        "src/shared/ui/loading.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/runtimes/action/draft-repository.ts",
+      "loc": 286,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts",
+        "src/runtimes/workflow/index.ts",
+        "src/runtimes/action/types.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/runtimes/action/index.ts",
+      "loc": 28,
+      "sourceImporters": 10,
+      "localImports": [
+        "src/runtimes/action/draft-repository.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/engineering/closure-c2-read-model.test.ts",
+        "tests/engineering/eq02-action-draft-helpers.test.ts",
+        "tests/engineering/eq07-command-state-consistency.test.ts",
+        "tests/engineering/r1-action-workspace-foundation.test.ts",
+        "tests/g4d/accept-appointment.test.ts",
+        "tests/g4d/action-workspace.test.ts",
+        "tests/g4d/draft-diagnostics.test.ts",
+        "tests/g4d/draft-repository.test.ts",
+        "tests/g4d/final-correction.test.ts",
+        "tests/g4e/onsite-inspection.test.ts",
+        "tests/g4e/survey-leakage-cause.test.ts",
+        "tests/g4f/package-configuration.test.ts",
+        "tests/g4f/quotation-composition.test.ts",
+        "tests/g4f/quotation-engine.test.ts",
+        "tests/g4f/quotation-foundation.test.ts",
+        "tests/g4f/r1-material-sku-local-draft.test.ts",
+        "tests/g4ux/mock-journey-context.test.ts"
+      ]
+    },
+    {
+      "path": "src/runtimes/action/types.ts",
+      "loc": 202,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/shared/types/index.ts",
+        "src/shared/ports/index.ts",
+        "src/runtimes/workflow/index.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/runtimes/dynamic-form/applicability.ts",
+      "loc": 14,
+      "sourceImporters": 3,
+      "localImports": [
+        "src/runtimes/dynamic-form/types.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/runtimes/dynamic-form/capabilities.ts",
+      "loc": 65,
+      "sourceImporters": 2,
+      "localImports": [
+        "src/runtimes/dynamic-form/types.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/runtimes/dynamic-form/index.ts",
+      "loc": 29,
+      "sourceImporters": 8,
+      "localImports": [
+        "src/runtimes/dynamic-form/capabilities.ts",
+        "src/runtimes/dynamic-form/rules.ts",
+        "src/runtimes/dynamic-form/state.ts",
+        "src/runtimes/dynamic-form/applicability.ts",
+        "src/runtimes/dynamic-form/visibility.ts",
+        "src/runtimes/dynamic-form/values.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/engineering/r1-three-pillar-contract-matrix.test.ts",
+        "tests/g3d/runtime.test.ts",
+        "tests/g4f/order-extfield-effective-plan.test.ts",
+        "tests/g4f/p0-contract-fixtures.test.ts"
+      ]
+    },
+    {
+      "path": "src/runtimes/dynamic-form/rules.ts",
+      "loc": 22,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/shared/config/index.ts",
+        "src/runtimes/dynamic-form/types.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/runtimes/dynamic-form/state.ts",
+      "loc": 88,
+      "sourceImporters": 2,
+      "localImports": [
+        "src/runtimes/dynamic-form/capabilities.ts",
+        "src/runtimes/dynamic-form/applicability.ts",
+        "src/runtimes/dynamic-form/visibility.ts",
+        "src/runtimes/dynamic-form/types.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/runtimes/dynamic-form/types.ts",
+      "loc": 149,
+      "sourceImporters": 6,
+      "localImports": [
+        "src/shared/config/index.ts",
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/runtimes/dynamic-form/values.ts",
+      "loc": 218,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/runtimes/dynamic-form/state.ts",
+        "src/runtimes/dynamic-form/applicability.ts",
+        "src/runtimes/dynamic-form/visibility.ts",
+        "src/runtimes/dynamic-form/types.ts",
+        "src/shared/types/index.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/runtimes/dynamic-form/visibility.ts",
+      "loc": 95,
+      "sourceImporters": 3,
+      "localImports": [
+        "src/runtimes/dynamic-form/types.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/runtimes/index.ts",
+      "loc": 5,
+      "sourceImporters": 0,
+      "localImports": [
+        "src/runtimes/action/index.ts",
+        "src/runtimes/dynamic-form/index.ts",
+        "src/runtimes/workflow/index.ts",
+        "src/runtimes/media/index.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g3e/cross-target.test.ts"
+      ]
+    },
+    {
+      "path": "src/runtimes/media/in-memory-durable-media-store.ts",
+      "loc": 36,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/runtimes/media/index.ts",
+      "loc": 6,
+      "sourceImporters": 2,
+      "localImports": [
+        "src/runtimes/media/media-queue-repository.ts",
+        "src/runtimes/media/media-upload-queue.ts",
+        "src/runtimes/media/in-memory-durable-media-store.ts",
+        "src/runtimes/media/mock-media-post-upload-processor.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4e/media-queue.test.ts",
+        "tests/g4e/onsite-inspection.test.ts"
+      ]
+    },
+    {
+      "path": "src/runtimes/media/media-queue-repository.ts",
+      "loc": 104,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/runtimes/media/media-upload-queue.ts",
+      "loc": 300,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/runtimes/media/mock-media-post-upload-processor.ts",
+      "loc": 43,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/runtimes/workflow/detail-projection.ts",
+      "loc": 140,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts",
+        "src/runtimes/workflow/policy.ts",
+        "src/runtimes/workflow/types.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/runtimes/workflow/identity.ts",
+      "loc": 60,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/runtimes/workflow/types.ts",
+        "src/shared/types/index.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/runtimes/workflow/index.ts",
+      "loc": 39,
+      "sourceImporters": 6,
+      "localImports": [
+        "src/runtimes/workflow/identity.ts",
+        "src/runtimes/workflow/policy.ts",
+        "src/runtimes/workflow/detail-projection.ts",
+        "src/shared/ports/index.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/engineering/eq08-action-architecture.test.ts",
+        "tests/engineering/r1-a06b-node-type-safety.test.ts",
+        "tests/g3d/runtime.test.ts",
+        "tests/g3d/runtime.typecheck.ts",
+        "tests/g4f/quotation-foundation.test.ts",
+        "tests/g4ux/workflow-projection.test.ts"
+      ]
+    },
+    {
+      "path": "src/runtimes/workflow/policy.ts",
+      "loc": 147,
+      "sourceImporters": 4,
+      "localImports": [
+        "src/runtimes/workflow/types.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/runtimes/workflow/types.ts",
+      "loc": 118,
+      "sourceImporters": 3,
+      "localImports": [
+        "src/shared/types/index.ts",
+        "src/shared/ports/index.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/shared/config/compatibility.ts",
+      "loc": 95,
+      "sourceImporters": 1,
+      "localImports": [],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/shared/config/environment.ts",
+      "loc": 84,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/shared/config/production-read-only.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/shared/config/index.ts",
+      "loc": 40,
+      "sourceImporters": 21,
+      "localImports": [
+        "src/shared/config/environment.ts",
+        "src/shared/config/compatibility.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/engineering/closure-c3-release-drills.test.ts",
+        "tests/engineering/r1-three-pillar-contract-matrix.test.ts",
+        "tests/g3b/contracts.test.ts",
+        "tests/g3d/runtime.test.ts",
+        "tests/g3e/cross-target.test.ts",
+        "tests/g4f/r1-contract-read-boundary.test.ts"
+      ]
+    },
+    {
+      "path": "src/shared/config/production-read-only.ts",
+      "loc": 229,
+      "sourceImporters": 1,
+      "localImports": [],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/shared/material-sku-contract.ts",
+      "loc": 86,
+      "sourceImporters": 7,
+      "localImports": [],
+      "staticDirectTestRefs": [
+        "tests/engineering/r1-three-pillar-contract-matrix.test.ts",
+        "tests/g4f/material-sku-contract.test.ts",
+        "tests/g4f/material-sku-mock-coordinator.test.ts",
+        "tests/g4f/quotation-sku-identity-review.test.ts"
+      ]
+    },
+    {
+      "path": "src/shared/package-material-sku-contract.ts",
+      "loc": 183,
+      "sourceImporters": 6,
+      "localImports": [
+        "src/shared/material-sku-contract.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4f/material-sku-mock-coordinator.test.ts",
+        "tests/g4f/package-material-sku-contract.test.ts",
+        "tests/g4f/quotation-sku-identity-review.test.ts",
+        "tests/g4f/quotation-sku-same-catalog.test.ts"
+      ]
+    },
+    {
+      "path": "src/shared/ports/api.ts",
+      "loc": 530,
+      "sourceImporters": 3,
+      "localImports": [
+        "src/shared/types/index.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/shared/ports/auth.ts",
+      "loc": 24,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/shared/types/index.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/shared/ports/commands.ts",
+      "loc": 154,
+      "sourceImporters": 0,
+      "localImports": [
+        "src/shared/ports/api.ts",
+        "src/shared/types/index.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/shared/ports/index.ts",
+      "loc": 107,
+      "sourceImporters": 94,
+      "localImports": [
+        "src/shared/ports/auth.ts",
+        "src/shared/ports/storage.ts",
+        "src/shared/ports/upload.ts",
+        "src/shared/ports/survey-leakage-cause.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/engineering/a-mock-special-forms-repeat-protocol.test.ts",
+        "tests/engineering/a-stage-main-app-quote-order.test.ts",
+        "tests/engineering/a-stage-main-app-special-controller.test.ts",
+        "tests/engineering/closure-c2-read-model.test.ts",
+        "tests/engineering/eq02-action-draft-helpers.test.ts",
+        "tests/engineering/eq08-action-architecture.test.ts",
+        "tests/engineering/r1-a06a-durable-write-fence.test.ts",
+        "tests/engineering/r1-a06b-node-type-safety.test.ts",
+        "tests/engineering/r1-action-workspace-foundation.test.ts",
+        "tests/engineering/r1-appointment-conditional-runtime.test.ts",
+        "tests/engineering/r1-appointment-wire-unification.test.ts",
+        "tests/engineering/r1-f2-multiform-transaction.test.ts",
+        "tests/engineering/r1-f3-local-form-drafts.test.ts",
+        "tests/engineering/r1-f4-local-field-editor.test.ts",
+        "tests/engineering/r1-manual-login-consent.test.ts",
+        "tests/engineering/r1-stage1-forms-options.test.ts",
+        "tests/engineering/r1-stage1-functional-flow.test.ts",
+        "tests/engineering/r1-stage1-mp-mock-fixtures.test.ts",
+        "tests/engineering/r1-stage1-no-beta-shadow.test.ts",
+        "tests/engineering/r1-stage1-pilot-composition.test.ts",
+        "tests/engineering/r1-stage1-pilot-reconciliation.test.ts",
+        "tests/engineering/r1-stage1-scoped-gateway.test.ts",
+        "tests/g3b/ports.typecheck.ts",
+        "tests/g3c/adapters.test.ts",
+        "tests/g4a/infrastructure.test.ts",
+        "tests/g4a/login-session.test.ts",
+        "tests/g4b/work-orders.test.ts",
+        "tests/g4c/r1-production-child-forms.test.ts",
+        "tests/g4c/r1-production-main-repeat.test.ts",
+        "tests/g4c/work-order-detail.test.ts",
+        "tests/g4d/accept-appointment.test.ts",
+        "tests/g4d/action-workspace.test.ts",
+        "tests/g4d/appointment-action-content.test.ts",
+        "tests/g4d/draft-diagnostics.test.ts",
+        "tests/g4d/draft-repository.test.ts",
+        "tests/g4d/final-correction.test.ts",
+        "tests/g4e/media-queue.test.ts",
+        "tests/g4e/survey-leakage-cause.test.ts",
+        "tests/g4f/catalog-price-presentation.test.ts",
+        "tests/g4f/m1-i7-work-order-read-scope.test.ts",
+        "tests/g4f/material-sku-mock-coordinator.test.ts",
+        "tests/g4f/mock-journey-order-protocol.test.ts",
+        "tests/g4f/package-configuration.test.ts",
+        "tests/g4f/production-quotation-browse.test.ts",
+        "tests/g4f/quotation-catalog-eligibility.test.ts",
+        "tests/g4f/quotation-catalog-search.test.ts",
+        "tests/g4f/quotation-composition.test.ts",
+        "tests/g4f/quotation-foundation.test.ts",
+        "tests/g4f/quotation-order-browse-handoff.test.ts",
+        "tests/g4f/quotation-order-reconstruction.test.ts",
+        "tests/g4f/quotation-order-submission.test.ts",
+        "tests/g4f/r1-material-sku-local-draft.test.ts",
+        "tests/g4f/r1-material-sku-preview-bridge.test.ts",
+        "tests/g4f/r1-package-layer-equivalence.test.ts",
+        "tests/g4f/r1-signing-node-handler-evidence.test.ts",
+        "tests/g4f/r1-signing-read-reconciliation.test.ts",
+        "tests/g4f/signing-review-read-store.test.ts",
+        "tests/g4f/signing-review-workspace.test.ts",
+        "tests/g4f/synthetic-order-extfield-review.test.ts",
+        "tests/g4ux/workflow-projection.test.ts"
+      ]
+    },
+    {
+      "path": "src/shared/ports/platform.ts",
+      "loc": 145,
+      "sourceImporters": 0,
+      "localImports": [
+        "src/shared/types/index.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/shared/ports/quotation-order.ts",
+      "loc": 122,
+      "sourceImporters": 0,
+      "localImports": [
+        "src/shared/types/index.ts",
+        "src/shared/ports/api.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/shared/ports/r1-pilot-readback.ts",
+      "loc": 48,
+      "sourceImporters": 2,
+      "localImports": [],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/shared/ports/storage.ts",
+      "loc": 21,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/shared/types/index.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/shared/ports/survey-leakage-cause.ts",
+      "loc": 16,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/shared/types/index.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/shared/ports/upload.ts",
+      "loc": 6,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/shared/types/index.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/shared/quotation-catalog-eligibility.ts",
+      "loc": 53,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/shared/ports/index.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4f/quotation-catalog-eligibility.test.ts"
+      ]
+    },
+    {
+      "path": "src/shared/sku-live-read-preflight.ts",
+      "loc": 105,
+      "sourceImporters": 2,
+      "localImports": [
+        "src/shared/ports/index.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4f/sku-live-read-preflight.test.ts",
+        "tests/g4f/sku-synthetic-sale-options.test.ts"
+      ]
+    },
+    {
+      "path": "src/shared/sku-synthetic-read-gate.ts",
+      "loc": 104,
+      "sourceImporters": 1,
+      "localImports": [],
+      "staticDirectTestRefs": [
+        "tests/g4f/sku-synthetic-read-gate.test.ts"
+      ]
+    },
+    {
+      "path": "src/shared/sku-synthetic-sale-options.ts",
+      "loc": 201,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/shared/sku-live-read-preflight.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4f/sku-synthetic-sale-options.test.ts"
+      ]
+    },
+    {
+      "path": "src/shared/state/index.ts",
+      "loc": 11,
+      "sourceImporters": 16,
+      "localImports": [
+        "src/shared/state/session.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/foundation.test.ts",
+        "tests/g4a/login-session.test.ts",
+        "tests/g4b/work-orders.test.ts",
+        "tests/g4c/work-order-detail.test.ts"
+      ]
+    },
+    {
+      "path": "src/shared/state/session.ts",
+      "loc": 132,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/shared/types/capability.ts",
+      "loc": 56,
+      "sourceImporters": 1,
+      "localImports": [],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/shared/types/identifiers.ts",
+      "loc": 38,
+      "sourceImporters": 2,
+      "localImports": [],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/shared/types/index.ts",
+      "loc": 61,
+      "sourceImporters": 82,
+      "localImports": [
+        "src/shared/types/identifiers.ts",
+        "src/shared/types/media.ts",
+        "src/shared/types/operation.ts",
+        "src/shared/types/capability.ts",
+        "src/shared/types/r1-node-contract.ts"
+      ],
+      "staticDirectTestRefs": [
+        "tests/engineering/a-mock-special-forms-repeat-protocol.test.ts",
+        "tests/engineering/abc-mock-formdata-workflow-parity.test.ts",
+        "tests/engineering/closure-c2-read-model.test.ts",
+        "tests/engineering/eq02-action-draft-helpers.test.ts",
+        "tests/engineering/eq07-command-state-consistency.test.ts",
+        "tests/engineering/eq08-action-architecture.test.ts",
+        "tests/engineering/r1-a06a-durable-write-fence.test.ts",
+        "tests/engineering/r1-a06b-node-type-safety.test.ts",
+        "tests/engineering/r1-action-workspace-foundation.test.ts",
+        "tests/engineering/r1-appointment-conditional-runtime.test.ts",
+        "tests/engineering/r1-appointment-wire-unification.test.ts",
+        "tests/engineering/r1-catalog-price-identity-fence.test.ts",
+        "tests/engineering/r1-f1-existing-form-list.test.ts",
+        "tests/engineering/r1-f1-special-workflow-wires.test.ts",
+        "tests/engineering/r1-f3-local-form-drafts.test.ts",
+        "tests/engineering/r1-f4-local-field-editor.test.ts",
+        "tests/engineering/r1-manual-login-consent.test.ts",
+        "tests/engineering/r1-model-contract-parity.test.ts",
+        "tests/engineering/r1-stage1-form-detail-read-contract.test.ts",
+        "tests/engineering/r1-stage1-forms-options.test.ts",
+        "tests/engineering/r1-stage1-live-read-contract.test.ts",
+        "tests/engineering/r1-stage1-mp-mock-fixtures.test.ts",
+        "tests/engineering/r1-stage1-no-beta-shadow.test.ts",
+        "tests/engineering/r1-stage1-pilot-composition.test.ts",
+        "tests/engineering/r1-stage1-pilot-reconciliation.test.ts",
+        "tests/engineering/r1-stage1-scoped-gateway.test.ts",
+        "tests/engineering/r1-three-pillar-contract-matrix.test.ts",
+        "tests/g3b/contracts.test.ts",
+        "tests/g3b/ports.typecheck.ts",
+        "tests/g3c/adapters.test.ts",
+        "tests/g3d/runtime.test.ts",
+        "tests/g3d/runtime.typecheck.ts",
+        "tests/g3e/cross-target.test.ts",
+        "tests/g4a/infrastructure.test.ts",
+        "tests/g4a/login-session.test.ts",
+        "tests/g4b/work-orders.test.ts",
+        "tests/g4c/r1-production-child-forms.test.ts",
+        "tests/g4c/r1-production-main-repeat.test.ts",
+        "tests/g4c/work-order-detail.test.ts",
+        "tests/g4d/accept-appointment.test.ts",
+        "tests/g4d/action-workspace.test.ts",
+        "tests/g4d/appointment-action-content.test.ts",
+        "tests/g4d/draft-diagnostics.test.ts",
+        "tests/g4d/draft-repository.test.ts",
+        "tests/g4d/final-correction.test.ts",
+        "tests/g4e/media-queue.test.ts",
+        "tests/g4e/onsite-inspection.test.ts",
+        "tests/g4e/survey-leakage-cause.test.ts",
+        "tests/g4f/m1-i7-work-order-read-scope.test.ts",
+        "tests/g4f/material-sku-mock-coordinator.test.ts",
+        "tests/g4f/mock-journey-order-protocol.test.ts",
+        "tests/g4f/p0-role-order-tenant-negative.test.ts",
+        "tests/g4f/package-configuration.test.ts",
+        "tests/g4f/production-quotation-browse.test.ts",
+        "tests/g4f/production-read-only.test.ts",
+        "tests/g4f/quotation-catalog-browser.test.ts",
+        "tests/g4f/quotation-catalog-read.test.ts",
+        "tests/g4f/quotation-composition.test.ts",
+        "tests/g4f/quotation-engine.test.ts",
+        "tests/g4f/quotation-foundation.test.ts",
+        "tests/g4f/quotation-order-browse-handoff.test.ts",
+        "tests/g4f/quotation-order-submission.test.ts",
+        "tests/g4f/r1-material-sales-extfield-code-read.test.ts",
+        "tests/g4f/r1-material-sku-local-draft.test.ts",
+        "tests/g4f/r1-material-sku-preview-bridge.test.ts",
+        "tests/g4f/r1-material-sku-read-compatibility.test.ts",
+        "tests/g4f/r1-signing-node-handler-evidence.test.ts",
+        "tests/g4f/signing-review-read-store.test.ts",
+        "tests/g4f/signing-review-workspace.test.ts",
+        "tests/g4f/sku-live-read-preflight.test.ts",
+        "tests/g4f/sku-synthetic-sale-options.test.ts",
+        "tests/g4f/synthetic-order-extfield-review.test.ts",
+        "tests/g4ux/mock-journey-closure.test.ts",
+        "tests/g4ux/mock-journey-context.test.ts",
+        "tests/g4ux/mock-runtime.test.ts",
+        "tests/g4ux/production-auth-mock-isolation.test.ts",
+        "tests/g4ux/workflow-projection.test.ts"
+      ]
+    },
+    {
+      "path": "src/shared/types/media.ts",
+      "loc": 117,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/shared/types/identifiers.ts",
+        "src/shared/types/operation.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/shared/types/operation.ts",
+      "loc": 54,
+      "sourceImporters": 2,
+      "localImports": [],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/shared/types/r1-node-contract.ts",
+      "loc": 17,
+      "sourceImporters": 1,
+      "localImports": [],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/shared/ui/ActionWorkspaceFormActions.vue",
+      "loc": 74,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/shared/ui/AppButton.vue",
+        "src/shared/ui/AppIcon.vue",
+        "src/shared/ui/types.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/shared/ui/ActionWorkspaceShell.vue",
+      "loc": 409,
+      "sourceImporters": 6,
+      "localImports": [
+        "src/shared/ui/types.ts",
+        "src/shared/ui/AppButton.vue",
+        "src/shared/ui/AppActionBar.vue",
+        "src/shared/ui/AppIcon.vue",
+        "src/shared/ui/AppStatus.vue"
+      ],
+      "staticDirectTestRefs": [
+        "tests/g4f/quotation-empty-workbench.test.ts"
+      ]
+    },
+    {
+      "path": "src/shared/ui/AppActionBar.vue",
+      "loc": 28,
+      "sourceImporters": 2,
+      "localImports": [],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/shared/ui/AppActionContentHeading.vue",
+      "loc": 43,
+      "sourceImporters": 3,
+      "localImports": [
+        "src/shared/ui/AppIcon.vue",
+        "src/shared/ui/icons.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/shared/ui/AppActionFeedback.vue",
+      "loc": 31,
+      "sourceImporters": 1,
+      "localImports": [
+        "src/shared/ui/AppIcon.vue"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/shared/ui/AppAmountValue.vue",
+      "loc": 17,
+      "sourceImporters": 4,
+      "localImports": [],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/shared/ui/AppButton.vue",
+      "loc": 75,
+      "sourceImporters": 27,
+      "localImports": [],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/shared/ui/AppCascadeSelector.vue",
+      "loc": 299,
+      "sourceImporters": 5,
+      "localImports": [],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/shared/ui/AppChoiceGroup.vue",
+      "loc": 33,
+      "sourceImporters": 4,
+      "localImports": [
+        "src/shared/ui/types.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/shared/ui/AppCraftHeading.vue",
+      "loc": 20,
+      "sourceImporters": 1,
+      "localImports": [],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/shared/ui/AppFeedbackState.vue",
+      "loc": 121,
+      "sourceImporters": 3,
+      "localImports": [],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/shared/ui/AppField.vue",
+      "loc": 26,
+      "sourceImporters": 6,
+      "localImports": [],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/shared/ui/AppIcon.vue",
+      "loc": 22,
+      "sourceImporters": 22,
+      "localImports": [
+        "src/shared/ui/icons.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/shared/ui/AppInformationRow.vue",
+      "loc": 8,
+      "sourceImporters": 2,
+      "localImports": [],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/shared/ui/AppInput.vue",
+      "loc": 70,
+      "sourceImporters": 6,
+      "localImports": [],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/shared/ui/AppLoadingState.vue",
+      "loc": 186,
+      "sourceImporters": 8,
+      "localImports": [],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/shared/ui/AppMetaTag.vue",
+      "loc": 15,
+      "sourceImporters": 5,
+      "localImports": [],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/shared/ui/AppMultiChoiceGroup.vue",
+      "loc": 48,
+      "sourceImporters": 3,
+      "localImports": [
+        "src/shared/ui/types.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/shared/ui/AppRecordCard.vue",
+      "loc": 26,
+      "sourceImporters": 5,
+      "localImports": [],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/shared/ui/AppRecordMark.vue",
+      "loc": 17,
+      "sourceImporters": 2,
+      "localImports": [
+        "src/shared/ui/AppIcon.vue",
+        "src/shared/ui/icons.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/shared/ui/AppSearchBar.vue",
+      "loc": 104,
+      "sourceImporters": 2,
+      "localImports": [
+        "src/shared/ui/AppIcon.vue"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/shared/ui/AppSectionHeading.vue",
+      "loc": 19,
+      "sourceImporters": 5,
+      "localImports": [],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/shared/ui/AppSelector.vue",
+      "loc": 46,
+      "sourceImporters": 2,
+      "localImports": [
+        "src/shared/ui/AppIcon.vue"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/shared/ui/AppStatus.vue",
+      "loc": 53,
+      "sourceImporters": 14,
+      "localImports": [
+        "src/shared/ui/AppIcon.vue",
+        "src/shared/ui/icons.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/shared/ui/AppSurface.vue",
+      "loc": 15,
+      "sourceImporters": 1,
+      "localImports": [],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/shared/ui/AppTextarea.vue",
+      "loc": 73,
+      "sourceImporters": 6,
+      "localImports": [],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/shared/ui/AppTreeMultiChoiceGroup.vue",
+      "loc": 60,
+      "sourceImporters": 1,
+      "localImports": [],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/shared/ui/AppVisualScope.vue",
+      "loc": 13,
+      "sourceImporters": 1,
+      "localImports": [],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/shared/ui/AppWorkOrderEmptyState.vue",
+      "loc": 260,
+      "sourceImporters": 2,
+      "localImports": [
+        "src/shared/ui/AppIcon.vue"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/shared/ui/AppWorkOrderSkeleton.vue",
+      "loc": 252,
+      "sourceImporters": 3,
+      "localImports": [],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/shared/ui/dev-review-mode.ts",
+      "loc": 43,
+      "sourceImporters": 0,
+      "localImports": [],
+      "staticDirectTestRefs": [
+        "tests/g4ux/dev-review-mode.test.ts"
+      ]
+    },
+    {
+      "path": "src/shared/ui/icons.ts",
+      "loc": 39,
+      "sourceImporters": 7,
+      "localImports": [],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/shared/ui/index.ts",
+      "loc": 32,
+      "sourceImporters": 0,
+      "localImports": [
+        "src/shared/ui/AppVisualScope.vue",
+        "src/shared/ui/AppIcon.vue",
+        "src/shared/ui/AppInformationRow.vue",
+        "src/shared/ui/AppButton.vue",
+        "src/shared/ui/AppActionBar.vue",
+        "src/shared/ui/AppActionFeedback.vue",
+        "src/shared/ui/AppActionContentHeading.vue",
+        "src/shared/ui/AppChoiceGroup.vue",
+        "src/shared/ui/AppMultiChoiceGroup.vue",
+        "src/shared/ui/AppTreeMultiChoiceGroup.vue",
+        "src/shared/ui/AppCascadeSelector.vue",
+        "src/shared/ui/AppField.vue",
+        "src/shared/ui/AppInput.vue",
+        "src/shared/ui/AppTextarea.vue",
+        "src/shared/ui/AppSelector.vue",
+        "src/shared/ui/AppStatus.vue",
+        "src/shared/ui/AppSurface.vue",
+        "src/shared/ui/AppRecordCard.vue",
+        "src/shared/ui/AppRecordMark.vue",
+        "src/shared/ui/AppSearchBar.vue",
+        "src/shared/ui/AppFeedbackState.vue",
+        "src/shared/ui/AppWorkOrderSkeleton.vue",
+        "src/shared/ui/AppWorkOrderEmptyState.vue",
+        "src/shared/ui/AppMetaTag.vue",
+        "src/shared/ui/AppAmountValue.vue",
+        "src/shared/ui/AppSectionHeading.vue",
+        "src/shared/ui/icons.ts",
+        "src/shared/ui/types.ts"
+      ],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/shared/ui/loading.ts",
+      "loc": 6,
+      "sourceImporters": 2,
+      "localImports": [],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/shared/ui/types.ts",
+      "loc": 26,
+      "sourceImporters": 7,
+      "localImports": [],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/shared/ui/ux-state-language.ts",
+      "loc": 18,
+      "sourceImporters": 2,
+      "localImports": [],
+      "staticDirectTestRefs": []
+    },
+    {
+      "path": "src/shared/ui/work-order-number-display.ts",
+      "loc": 14,
+      "sourceImporters": 2,
+      "localImports": [],
+      "staticDirectTestRefs": [
+        "tests/g4ux/work-order-number-display.test.ts"
+      ]
+    }
+  ],
+  "testImports": [
+    {
+      "path": "tests/ds02a-gallery/visual.spec.ts",
+      "localSourceImports": []
+    },
+    {
+      "path": "tests/ds02a-main/visual.spec.ts",
+      "localSourceImports": []
+    },
+    {
+      "path": "tests/ds03/transaction-visual-contract.test.ts",
+      "localSourceImports": []
+    },
+    {
+      "path": "tests/ds05/mobile-craft-two-page.test.ts",
+      "localSourceImports": []
+    },
+    {
+      "path": "tests/engineering/a-mock-special-forms-repeat-protocol.test.ts",
+      "localSourceImports": [
+        "src/adapters/api/mock/config.ts",
+        "src/adapters/api/mock/command-state.ts",
+        "src/adapters/api/mock/journey.ts",
+        "src/adapters/api/mock/router.ts",
+        "src/adapters/api/mock/r1-special-protocol.ts",
+        "src/adapters/api/mock/ownership.ts",
+        "src/adapters/api/mock/fixtures.ts",
+        "src/adapters/api/r1-special-workflow-wires.ts",
+        "src/features/work-orders/r1-forms-exts-plan.ts",
+        "src/app/r1-stage1-functional-flow.ts",
+        "src/features/work-orders/r1-multistep-offline-transaction.ts",
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts"
+      ]
+    },
+    {
+      "path": "tests/engineering/a-stage-main-app-quote-order.test.ts",
+      "localSourceImports": [
+        "src/adapters/api/mock/config.ts",
+        "src/adapters/api/mock/command-state.ts",
+        "src/adapters/api/mock/journey.ts",
+        "src/adapters/api/mock/quotation-catalog.ts",
+        "src/adapters/api/mock/router.ts",
+        "src/adapters/api/quotation-catalog-api.ts",
+        "src/app/a-stage-quotation-mock-ui.ts",
+        "src/features/work-orders/quotation/engine.ts",
+        "src/features/work-orders/quotation/model.ts",
+        "src/shared/ports/index.ts"
+      ]
+    },
+    {
+      "path": "tests/engineering/a-stage-main-app-special-controller.test.ts",
+      "localSourceImports": [
+        "src/adapters/api/mock/config.ts",
+        "src/adapters/api/mock/command-state.ts",
+        "src/adapters/api/mock/journey.ts",
+        "src/adapters/api/mock/r1-special-protocol.ts",
+        "src/app/a-stage-special-mock-ui.ts",
+        "src/adapters/api/mock/fixtures.ts",
+        "src/shared/ports/index.ts"
+      ]
+    },
+    {
+      "path": "tests/engineering/a-stage-mp-submission-copy.test.ts",
+      "localSourceImports": [
+        "src/features/work-orders/quotation/submission-display-copy.ts"
+      ]
+    },
+    {
+      "path": "tests/engineering/abc-mock-formdata-workflow-parity.test.ts",
+      "localSourceImports": [
+        "src/adapters/api/mock/index.ts",
+        "src/adapters/api/mock/command-state.ts",
+        "src/adapters/api/appointment-contract.ts",
+        "src/adapters/api/mock/fixtures.ts",
+        "src/adapters/api/mock/journey.ts",
+        "src/adapters/api/uni-api-command-transport.ts",
+        "src/shared/types/index.ts"
+      ]
+    },
+    {
+      "path": "tests/engineering/closure-c1-integration.test.ts",
+      "localSourceImports": []
+    },
+    {
+      "path": "tests/engineering/closure-c2-read-model.test.ts",
+      "localSourceImports": [
+        "src/shared/types/index.ts",
+        "src/runtimes/action/index.ts",
+        "src/shared/ports/index.ts",
+        "src/features/work-orders/action-workspace-read-model.ts",
+        "src/features/work-orders/action-workspace.ts"
+      ]
+    },
+    {
+      "path": "tests/engineering/closure-c3-release-drills.test.ts",
+      "localSourceImports": [
+        "src/adapters/api/uni-api-command-transport.ts",
+        "src/adapters/api/mock/index.ts",
+        "src/shared/config/index.ts"
+      ]
+    },
+    {
+      "path": "tests/engineering/eq01-mock-scenarios.test.ts",
+      "localSourceImports": [
+        "src/adapters/api/mock/index.ts",
+        "src/adapters/api/uni-api-read-transport.ts"
+      ]
+    },
+    {
+      "path": "tests/engineering/eq02-action-draft-helpers.test.ts",
+      "localSourceImports": [
+        "src/runtimes/action/index.ts",
+        "src/shared/types/index.ts",
+        "src/shared/ports/index.ts",
+        "src/features/work-orders/action-workspace-draft-utils.ts"
+      ]
+    },
+    {
+      "path": "tests/engineering/eq03-quality-census.test.ts",
+      "localSourceImports": []
+    },
+    {
+      "path": "tests/engineering/eq04-quotation-catalog-bridge.test.ts",
+      "localSourceImports": [
+        "src/features/work-orders/quotation/catalog-selection-bridge.ts",
+        "src/features/work-orders/quotation/catalog-browser-store.ts",
+        "src/features/work-orders/quotation/composition-store.ts"
+      ]
+    },
+    {
+      "path": "tests/engineering/eq05-mock-command-state.test.ts",
+      "localSourceImports": [
+        "src/adapters/api/mock/command-state.ts",
+        "src/adapters/api/mock/index.ts"
+      ]
+    },
+    {
+      "path": "tests/engineering/eq05b-mock-fault-scenarios.test.ts",
+      "localSourceImports": [
+        "src/adapters/api/mock/fault-scenarios.ts",
+        "src/adapters/api/mock/index.ts"
+      ]
+    },
+    {
+      "path": "tests/engineering/eq07-command-state-consistency.test.ts",
+      "localSourceImports": [
+        "src/runtimes/action/index.ts",
+        "src/features/work-orders/action-workspace.ts",
+        "src/shared/types/index.ts"
+      ]
+    },
+    {
+      "path": "tests/engineering/eq08-action-architecture.test.ts",
+      "localSourceImports": [
+        "src/features/work-orders/action-form-schema.ts",
+        "src/features/work-orders/appointment-form-runtime.ts",
+        "src/features/work-orders/dynamic-form-action.ts",
+        "src/adapters/api/action-command-wires.ts",
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts",
+        "src/runtimes/workflow/index.ts"
+      ]
+    },
+    {
+      "path": "tests/engineering/eq10-governance.test.ts",
+      "localSourceImports": []
+    },
+    {
+      "path": "tests/engineering/r1-a06a-durable-write-fence.test.ts",
+      "localSourceImports": [
+        "src/features/work-orders/action-mutation-receipt.ts",
+        "src/adapters/api/appointment-contract.ts",
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts",
+        "src/adapters/api/technician-api-commands.ts"
+      ]
+    },
+    {
+      "path": "tests/engineering/r1-a06b-node-type-safety.test.ts",
+      "localSourceImports": [
+        "src/adapters/api/technician-api.ts",
+        "src/adapters/api/technician-api-commands.ts",
+        "src/runtimes/workflow/index.ts",
+        "src/shared/types/index.ts",
+        "src/shared/ports/index.ts"
+      ]
+    },
+    {
+      "path": "tests/engineering/r1-action-workspace-foundation.test.ts",
+      "localSourceImports": [
+        "src/runtimes/action/index.ts",
+        "src/features/work-orders/action-workspace.ts",
+        "src/features/work-orders/action-workspace-draft-utils.ts",
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts"
+      ]
+    },
+    {
+      "path": "tests/engineering/r1-appointment-conditional-runtime.test.ts",
+      "localSourceImports": [
+        "src/features/work-orders/appointment-form-runtime.ts",
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts"
+      ]
+    },
+    {
+      "path": "tests/engineering/r1-appointment-wire-unification.test.ts",
+      "localSourceImports": [
+        "src/adapters/api/technician-api-commands.ts",
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts"
+      ]
+    },
+    {
+      "path": "tests/engineering/r1-catalog-price-identity-fence.test.ts",
+      "localSourceImports": [
+        "src/adapters/api/quotation-catalog-api.ts",
+        "src/shared/types/index.ts"
+      ]
+    },
+    {
+      "path": "tests/engineering/r1-f1-existing-form-list.test.ts",
+      "localSourceImports": [
+        "src/adapters/api/r1-node-form-list.ts",
+        "src/adapters/api/technician-api.ts",
+        "src/adapters/api/mock/index.ts",
+        "src/shared/types/index.ts"
+      ]
+    },
+    {
+      "path": "tests/engineering/r1-f1-special-workflow-wires.test.ts",
+      "localSourceImports": [
+        "src/adapters/api/r1-special-workflow-wires.ts",
+        "src/shared/types/index.ts"
+      ]
+    },
+    {
+      "path": "tests/engineering/r1-f2-multiform-transaction.test.ts",
+      "localSourceImports": [
+        "src/features/work-orders/r1-forms-exts-plan.ts",
+        "src/features/work-orders/r1-multistep-offline-transaction.ts",
+        "src/shared/ports/index.ts"
+      ]
+    },
+    {
+      "path": "tests/engineering/r1-f3-local-form-drafts.test.ts",
+      "localSourceImports": [
+        "src/features/work-orders/r1-local-form-drafts.ts",
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts"
+      ]
+    },
+    {
+      "path": "tests/engineering/r1-f4-local-field-editor.test.ts",
+      "localSourceImports": [
+        "src/features/work-orders/r1-local-form-fields.ts",
+        "src/features/work-orders/r1-local-form-drafts.ts",
+        "src/shared/types/index.ts",
+        "src/shared/ports/index.ts"
+      ]
+    },
+    {
+      "path": "tests/engineering/r1-manual-login-consent.test.ts",
+      "localSourceImports": [
+        "src/features/session/login-consent.ts",
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts"
+      ]
+    },
+    {
+      "path": "tests/engineering/r1-model-contract-parity.test.ts",
+      "localSourceImports": [
+        "src/adapters/api/technician-api.ts",
+        "src/adapters/api/quotation-order-api.ts",
+        "src/adapters/api/r1-node-form-list.ts",
+        "src/shared/types/index.ts"
+      ]
+    },
+    {
+      "path": "tests/engineering/r1-pilot-authoritative-readback.test.ts",
+      "localSourceImports": [
+        "src/adapters/api/r1-pilot-authoritative-readback.ts",
+        "src/adapters/api/technician-api.ts",
+        "src/features/work-orders/r1-multistep-offline-transaction.ts"
+      ]
+    },
+    {
+      "path": "tests/engineering/r1-six-stage-business-review.test.ts",
+      "localSourceImports": [
+        "src/adapters/api/uni-api-command-transport.ts",
+        "src/adapters/api/quotation-order-commands.ts",
+        "src/adapters/api/technician-api-commands.ts"
+      ]
+    },
+    {
+      "path": "tests/engineering/r1-stage1-form-detail-read-contract.test.ts",
+      "localSourceImports": [
+        "src/adapters/api/technician-api.ts",
+        "src/shared/types/index.ts"
+      ]
+    },
+    {
+      "path": "tests/engineering/r1-stage1-forms-options.test.ts",
+      "localSourceImports": [
+        "src/adapters/api/technician-api.ts",
+        "src/shared/types/index.ts",
+        "src/features/work-orders/r1-local-form-drafts.ts",
+        "src/shared/ports/index.ts"
+      ]
+    },
+    {
+      "path": "tests/engineering/r1-stage1-functional-flow.test.ts",
+      "localSourceImports": [
+        "src/app/r1-stage1-functional-flow.ts",
+        "src/features/work-orders/r1-multistep-offline-transaction.ts",
+        "src/shared/ports/index.ts",
+        "src/adapters/api/technician-api-commands.ts",
+        "src/adapters/api/uni-api-command-transport.ts"
+      ]
+    },
+    {
+      "path": "tests/engineering/r1-stage1-live-read-contract.test.ts",
+      "localSourceImports": [
+        "src/adapters/api/technician-api.ts",
+        "src/shared/types/index.ts"
+      ]
+    },
+    {
+      "path": "tests/engineering/r1-stage1-mp-mock-fixtures.test.ts",
+      "localSourceImports": [
+        "src/adapters/api/mock/index.ts",
+        "src/adapters/api/mock/fixtures.ts",
+        "src/adapters/api/technician-api.ts",
+        "src/features/work-orders/r1-local-form-drafts.ts",
+        "src/shared/types/index.ts",
+        "src/shared/ports/index.ts"
+      ]
+    },
+    {
+      "path": "tests/engineering/r1-stage1-no-beta-shadow.test.ts",
+      "localSourceImports": [
+        "src/app/r1-stage1-pilot-reconciliation.ts",
+        "src/adapters/api/r1-pilot-authoritative-readback.ts",
+        "src/adapters/api/technician-api.ts",
+        "src/adapters/api/technician-api-commands.ts",
+        "src/app/r1-stage1-functional-flow.ts",
+        "src/features/work-orders/r1-multistep-offline-transaction.ts",
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts"
+      ]
+    },
+    {
+      "path": "tests/engineering/r1-stage1-pilot-composition.test.ts",
+      "localSourceImports": [
+        "src/app/r1-stage1-pilot-composition.ts",
+        "src/adapters/api/technician-api.ts",
+        "src/adapters/api/technician-api-commands.ts",
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts",
+        "src/features/work-orders/r1-multistep-offline-transaction.ts"
+      ]
+    },
+    {
+      "path": "tests/engineering/r1-stage1-pilot-reconciliation.test.ts",
+      "localSourceImports": [
+        "src/app/r1-stage1-pilot-reconciliation.ts",
+        "src/features/work-orders/r1-multistep-offline-transaction.ts",
+        "src/adapters/api/technician-api-commands.ts",
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts"
+      ]
+    },
+    {
+      "path": "tests/engineering/r1-stage1-scoped-gateway.test.ts",
+      "localSourceImports": [
+        "src/app/r1-stage1-scoped-gateway.ts",
+        "src/app/r1-stage1-functional-flow.ts",
+        "src/features/work-orders/r1-multistep-offline-transaction.ts",
+        "src/adapters/api/technician-api-commands.ts",
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts"
+      ]
+    },
+    {
+      "path": "tests/engineering/r1-three-pillar-contract-matrix.test.ts",
+      "localSourceImports": [
+        "src/adapters/api/technician-api.ts",
+        "src/adapters/api/quotation-catalog-api.ts",
+        "src/adapters/api/quotation-order-api.ts",
+        "src/features/work-orders/action-form-schema.ts",
+        "src/runtimes/dynamic-form/index.ts",
+        "src/shared/material-sku-contract.ts",
+        "src/features/work-orders/quotation/order-extfield-effective-plan.ts",
+        "src/shared/config/index.ts",
+        "src/shared/types/index.ts"
+      ]
+    },
+    {
+      "path": "tests/fixtures/r1-main-repeat-ui/main.ts",
+      "localSourceImports": []
+    },
+    {
+      "path": "tests/foundation.test.ts",
+      "localSourceImports": [
+        "src/shared/state/index.ts"
+      ]
+    },
+    {
+      "path": "tests/g3b/contracts.test.ts",
+      "localSourceImports": [
+        "src/shared/types/index.ts",
+        "src/shared/config/index.ts"
+      ]
+    },
+    {
+      "path": "tests/g3b/ports.typecheck.ts",
+      "localSourceImports": [
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts"
+      ]
+    },
+    {
+      "path": "tests/g3c/adapters.test.ts",
+      "localSourceImports": [
+        "src/adapters/api/technician-api.ts",
+        "src/adapters/auth/auth-session-adapter.ts",
+        "src/adapters/api/survey-form-codec.ts",
+        "src/adapters/platform/platform-adapters.ts",
+        "src/adapters/storage/storage-adapter.ts",
+        "src/adapters/upload/upload-adapter.ts",
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts"
+      ]
+    },
+    {
+      "path": "tests/g3c/fixtures.ts",
+      "localSourceImports": []
+    },
+    {
+      "path": "tests/g3d/runtime.test.ts",
+      "localSourceImports": [
+        "src/runtimes/dynamic-form/index.ts",
+        "src/runtimes/workflow/index.ts",
+        "src/shared/config/index.ts",
+        "src/shared/types/index.ts"
+      ]
+    },
+    {
+      "path": "tests/g3d/runtime.typecheck.ts",
+      "localSourceImports": [
+        "src/runtimes/workflow/index.ts",
+        "src/shared/types/index.ts"
+      ]
+    },
+    {
+      "path": "tests/g3e/cross-target.test.ts",
+      "localSourceImports": [
+        "src/adapters/api/technician-api.ts",
+        "src/adapters/auth/auth-session-adapter.ts",
+        "src/adapters/storage/storage-adapter.ts",
+        "src/adapters/upload/upload-adapter.ts",
+        "src/adapters/platform/platform-adapters.ts",
+        "src/shared/config/index.ts",
+        "src/shared/types/index.ts",
+        "src/runtimes/index.ts"
+      ]
+    },
+    {
+      "path": "tests/g4a/infrastructure.test.ts",
+      "localSourceImports": [
+        "src/adapters/auth/auth-session-adapter.ts",
+        "src/adapters/auth/uni-auth-backend.ts",
+        "src/adapters/storage/storage-adapter.ts",
+        "src/adapters/storage/uni-storage-driver.ts",
+        "src/adapters/platform/uni-navigation-driver.ts",
+        "src/adapters/platform/platform-adapters.ts",
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts"
+      ]
+    },
+    {
+      "path": "tests/g4a/login-session.test.ts",
+      "localSourceImports": [
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts",
+        "src/app/runtime-config.ts",
+        "src/shared/state/index.ts",
+        "src/features/session/login.ts"
+      ]
+    },
+    {
+      "path": "tests/g4a/r1-manual-login-preflight.test.ts",
+      "localSourceImports": [
+        "src/features/session/r1-manual-login-preflight.ts"
+      ]
+    },
+    {
+      "path": "tests/g4b/work-orders.test.ts",
+      "localSourceImports": [
+        "src/adapters/api/technician-api.ts",
+        "src/adapters/api/uni-api-read-transport.ts",
+        "src/adapters/api/mock/index.ts",
+        "src/features/home/access.ts",
+        "src/features/work-orders/list.ts",
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts",
+        "src/shared/state/index.ts"
+      ]
+    },
+    {
+      "path": "tests/g4c/r1-child-subflow-mock-review.test.ts",
+      "localSourceImports": [
+        "src/adapters/api/mock/config.ts",
+        "src/app/child-subflow-mock-review.ts"
+      ]
+    },
+    {
+      "path": "tests/g4c/r1-production-child-forms.test.ts",
+      "localSourceImports": [
+        "src/features/work-orders/detail.ts",
+        "src/shared/types/index.ts",
+        "src/shared/ports/index.ts"
+      ]
+    },
+    {
+      "path": "tests/g4c/r1-production-main-repeat.test.ts",
+      "localSourceImports": [
+        "src/features/work-orders/detail.ts",
+        "src/shared/types/index.ts",
+        "src/shared/ports/index.ts"
+      ]
+    },
+    {
+      "path": "tests/g4c/work-order-detail.test.ts",
+      "localSourceImports": [
+        "src/adapters/api/technician-api.ts",
+        "src/adapters/platform/uni-phone-driver.ts",
+        "src/adapters/platform/platform-adapters.ts",
+        "src/features/work-orders/detail.ts",
+        "src/features/home/access.ts",
+        "src/shared/ports/index.ts",
+        "src/shared/state/index.ts",
+        "src/shared/types/index.ts"
+      ]
+    },
+    {
+      "path": "tests/g4d/accept-appointment.test.ts",
+      "localSourceImports": [
+        "src/runtimes/action/index.ts",
+        "src/adapters/api/technician-api-commands.ts",
+        "src/adapters/api/technician-api.ts",
+        "src/adapters/api/uni-api-command-transport.ts",
+        "src/adapters/api/uni-api-read-transport.ts",
+        "src/adapters/api/mock/index.ts",
+        "src/features/work-orders/list-actions.ts",
+        "src/features/work-orders/detail-workflow.ts",
+        "src/features/work-orders/action-workspace.ts",
+        "src/features/work-orders/list.ts",
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts"
+      ]
+    },
+    {
+      "path": "tests/g4d/action-workspace-shell.test.ts",
+      "localSourceImports": []
+    },
+    {
+      "path": "tests/g4d/action-workspace.test.ts",
+      "localSourceImports": [
+        "src/runtimes/action/index.ts",
+        "src/adapters/api/technician-api-commands.ts",
+        "src/adapters/api/technician-api.ts",
+        "src/adapters/api/uni-api-command-transport.ts",
+        "src/adapters/api/uni-api-read-transport.ts",
+        "src/adapters/api/mock/index.ts",
+        "src/features/work-orders/action-workspace.ts",
+        "src/features/work-orders/action-mutation-receipt.ts",
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts"
+      ]
+    },
+    {
+      "path": "tests/g4d/app-ui-design-system.test.ts",
+      "localSourceImports": []
+    },
+    {
+      "path": "tests/g4d/appointment-action-content.test.ts",
+      "localSourceImports": [
+        "src/features/work-orders/appointment-time.ts",
+        "src/features/work-orders/appointment-form-runtime.ts",
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts"
+      ]
+    },
+    {
+      "path": "tests/g4d/draft-diagnostics.test.ts",
+      "localSourceImports": [
+        "src/app/action-workspace-harness.ts",
+        "src/runtimes/action/index.ts",
+        "src/features/home/draft-diagnostics.ts",
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts"
+      ]
+    },
+    {
+      "path": "tests/g4d/draft-repository.test.ts",
+      "localSourceImports": [
+        "src/runtimes/action/index.ts",
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts"
+      ]
+    },
+    {
+      "path": "tests/g4d/final-correction.test.ts",
+      "localSourceImports": [
+        "src/runtimes/action/index.ts",
+        "src/adapters/api/technician-api-commands.ts",
+        "src/adapters/api/uni-api-command-transport.ts",
+        "src/adapters/api/uni-api-read-transport.ts",
+        "src/adapters/api/mock/index.ts",
+        "src/adapters/api/technician-api.ts",
+        "src/features/work-orders/action-workspace.ts",
+        "src/features/work-orders/list.ts",
+        "src/features/work-orders/appointment-form-runtime.ts",
+        "src/features/work-orders/detail-workflow.ts",
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts"
+      ]
+    },
+    {
+      "path": "tests/g4d/long-action-content.fixture.ts",
+      "localSourceImports": []
+    },
+    {
+      "path": "tests/g4e/beta-api-client.test.ts",
+      "localSourceImports": []
+    },
+    {
+      "path": "tests/g4e/closure-readiness.test.ts",
+      "localSourceImports": []
+    },
+    {
+      "path": "tests/g4e/inspection-contract.test.ts",
+      "localSourceImports": [
+        "src/adapters/api/mock/inspection-contract.ts"
+      ]
+    },
+    {
+      "path": "tests/g4e/media-presentation.test.ts",
+      "localSourceImports": [
+        "src/features/work-orders/media-presentation.ts"
+      ]
+    },
+    {
+      "path": "tests/g4e/media-queue.test.ts",
+      "localSourceImports": [
+        "src/adapters/upload/uni-media-post-upload-processor.ts",
+        "src/runtimes/media/index.ts",
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts"
+      ]
+    },
+    {
+      "path": "tests/g4e/onsite-inspection.test.ts",
+      "localSourceImports": [
+        "src/adapters/api/technician-api-commands.ts",
+        "src/adapters/api/technician-api.ts",
+        "src/adapters/api/uni-api-command-transport.ts",
+        "src/adapters/api/uni-api-read-transport.ts",
+        "src/adapters/upload/uni-upload-port.ts",
+        "src/adapters/api/mock/index.ts",
+        "src/runtimes/action/index.ts",
+        "src/runtimes/media/index.ts",
+        "src/features/work-orders/detail-workflow.ts",
+        "src/features/work-orders/action-workspace.ts",
+        "src/features/work-orders/dynamic-form-action.ts",
+        "src/shared/types/index.ts"
+      ]
+    },
+    {
+      "path": "tests/g4e/survey-capabilities.test.ts",
+      "localSourceImports": []
+    },
+    {
+      "path": "tests/g4e/survey-leakage-cause.test.ts",
+      "localSourceImports": [
+        "src/adapters/api/survey-leakage-cause.ts",
+        "src/adapters/api/uni-api-read-transport.ts",
+        "src/adapters/api/mock/index.ts",
+        "src/features/work-orders/dynamic-form-action.ts",
+        "src/features/work-orders/action-workspace.ts",
+        "src/runtimes/action/index.ts",
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts"
+      ]
+    },
+    {
+      "path": "tests/g4e/survey-media-contract.test.ts",
+      "localSourceImports": []
+    },
+    {
+      "path": "tests/g4e/survey-onsite-checkin-contract.test.ts",
+      "localSourceImports": []
+    },
+    {
+      "path": "tests/g4f/active-order-extfield-inspection.test.ts",
+      "localSourceImports": []
+    },
+    {
+      "path": "tests/g4f/catalog-price-presentation.test.ts",
+      "localSourceImports": [
+        "src/shared/ports/index.ts",
+        "src/features/work-orders/quotation/catalog-price-presentation.ts"
+      ]
+    },
+    {
+      "path": "tests/g4f/m1-i3-quotation-stage-command-fence.test.ts",
+      "localSourceImports": [
+        "src/adapters/api/uni-api-command-transport.ts",
+        "src/adapters/api/quotation-order-commands.ts"
+      ]
+    },
+    {
+      "path": "tests/g4f/m1-i5-quotation-submit-guard.test.ts",
+      "localSourceImports": [
+        "src/features/work-orders/quotation/quotation-submit-guard.ts"
+      ]
+    },
+    {
+      "path": "tests/g4f/m1-i6-signing-review-progress.test.ts",
+      "localSourceImports": [
+        "src/features/work-orders/signing/signing-review-progress.ts",
+        "src/features/work-orders/signing/r1-signing-read-reconciliation.ts"
+      ]
+    },
+    {
+      "path": "tests/g4f/m1-i7-work-order-read-scope.test.ts",
+      "localSourceImports": [
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts",
+        "src/features/work-orders/read-identity-scope.ts",
+        "src/features/work-orders/list.ts",
+        "src/features/work-orders/detail.ts"
+      ]
+    },
+    {
+      "path": "tests/g4f/m1-i8-engineering-acceptance.test.ts",
+      "localSourceImports": []
+    },
+    {
+      "path": "tests/g4f/m1-unified-main-candidate.test.ts",
+      "localSourceImports": []
+    },
+    {
+      "path": "tests/g4f/material-sku-contract.test.ts",
+      "localSourceImports": [
+        "src/shared/material-sku-contract.ts",
+        "src/adapters/api/mock/material-sku.ts"
+      ]
+    },
+    {
+      "path": "tests/g4f/material-sku-mock-coordinator.test.ts",
+      "localSourceImports": [
+        "src/shared/types/index.ts",
+        "src/shared/ports/index.ts",
+        "src/adapters/api/mock/config.ts",
+        "src/adapters/api/mock/journey.ts",
+        "src/app/material-sku-mock-coordinator.ts",
+        "src/shared/material-sku-contract.ts",
+        "src/shared/package-material-sku-contract.ts"
+      ]
+    },
+    {
+      "path": "tests/g4f/material-sku-mock-review.test.ts",
+      "localSourceImports": [
+        "src/adapters/api/mock/config.ts",
+        "src/adapters/api/mock/journey.ts",
+        "src/app/material-sku-mock-review.ts"
+      ]
+    },
+    {
+      "path": "tests/g4f/mock-journey-order-protocol.test.ts",
+      "localSourceImports": [
+        "src/adapters/api/mock/config.ts",
+        "src/adapters/api/mock/command-state.ts",
+        "src/adapters/api/mock/journey.ts",
+        "src/adapters/api/mock/quotation-catalog.ts",
+        "src/adapters/api/mock/router.ts",
+        "src/adapters/api/mock/ownership.ts",
+        "src/adapters/api/technician-api-commands.ts",
+        "src/adapters/api/quotation-order-commands.ts",
+        "src/adapters/api/quotation-order-api.ts",
+        "src/features/work-orders/quotation/order-submission.ts",
+        "src/features/work-orders/quotation/order-encoder.ts",
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts"
+      ]
+    },
+    {
+      "path": "tests/g4f/order-extfield-effective-plan.test.ts",
+      "localSourceImports": [
+        "src/runtimes/dynamic-form/index.ts"
+      ]
+    },
+    {
+      "path": "tests/g4f/p0-contract-fixtures.test.ts",
+      "localSourceImports": [
+        "src/adapters/api/quotation-catalog-api.ts",
+        "src/adapters/api/technician-api.ts",
+        "src/runtimes/dynamic-form/index.ts",
+        "src/features/work-orders/quotation/model.ts",
+        "src/features/work-orders/quotation/validation.ts"
+      ]
+    },
+    {
+      "path": "tests/g4f/p0-order-raw-transport-fence.test.ts",
+      "localSourceImports": [
+        "src/adapters/api/uni-api-read-transport.ts",
+        "src/adapters/api/mock/index.ts"
+      ]
+    },
+    {
+      "path": "tests/g4f/p0-role-order-tenant-negative.test.ts",
+      "localSourceImports": [
+        "src/adapters/api/uni-api-read-transport.ts",
+        "src/adapters/api/quotation-order-api.ts",
+        "src/adapters/api/technician-api.ts",
+        "src/adapters/api/mock/index.ts",
+        "src/shared/types/index.ts"
+      ]
+    },
+    {
+      "path": "tests/g4f/p1-sku-readiness-boundary.test.ts",
+      "localSourceImports": []
+    },
+    {
+      "path": "tests/g4f/p1-sku-readiness-review.test.ts",
+      "localSourceImports": [
+        "src/adapters/api/mock/quotation-sku-same-catalog.ts",
+        "src/adapters/api/mock/quotation-catalog.ts",
+        "src/features/work-orders/quotation/model.ts",
+        "src/app/p1-sku-readiness-review.ts"
+      ]
+    },
+    {
+      "path": "tests/g4f/package-configuration.test.ts",
+      "localSourceImports": [
+        "src/runtimes/action/index.ts",
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts",
+        "src/features/work-orders/quotation/composition-store.ts",
+        "src/features/work-orders/quotation/package-configuration.ts",
+        "src/features/work-orders/quotation/model.ts"
+      ]
+    },
+    {
+      "path": "tests/g4f/package-material-sku-contract.test.ts",
+      "localSourceImports": [
+        "src/shared/package-material-sku-contract.ts",
+        "src/adapters/api/mock/package-material-sku.ts"
+      ]
+    },
+    {
+      "path": "tests/g4f/product-review-draft-storage.test.ts",
+      "localSourceImports": []
+    },
+    {
+      "path": "tests/g4f/product-review-entry.test.ts",
+      "localSourceImports": []
+    },
+    {
+      "path": "tests/g4f/product-review-read-transport.test.ts",
+      "localSourceImports": [
+        "src/adapters/api/mock/index.ts"
+      ]
+    },
+    {
+      "path": "tests/g4f/production-quotation-browse.test.ts",
+      "localSourceImports": [
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts",
+        "src/features/work-orders/quotation/order-browse-store.ts"
+      ]
+    },
+    {
+      "path": "tests/g4f/production-read-only-workspace.test.ts",
+      "localSourceImports": [
+        "src/features/work-orders/action-workspace.ts"
+      ]
+    },
+    {
+      "path": "tests/g4f/production-read-only.test.ts",
+      "localSourceImports": [
+        "src/adapters/api/uni-api-command-transport.ts",
+        "src/adapters/api/uni-api-read-transport.ts",
+        "src/adapters/api/quotation-order-api.ts",
+        "src/adapters/api/technician-api.ts",
+        "src/adapters/api/survey-leakage-cause.ts",
+        "src/adapters/api/mock/index.ts",
+        "src/adapters/auth/uni-auth-backend.ts",
+        "src/app/runtime-config.ts",
+        "src/adapters/upload/uni-upload-port.ts",
+        "src/shared/types/index.ts"
+      ]
+    },
+    {
+      "path": "tests/g4f/quotation-amount-presentation.test.ts",
+      "localSourceImports": [
+        "src/features/work-orders/quotation/amount-presentation.ts",
+        "src/features/work-orders/quotation/engine.ts"
+      ]
+    },
+    {
+      "path": "tests/g4f/quotation-catalog-browser.test.ts",
+      "localSourceImports": [
+        "src/shared/types/index.ts",
+        "src/features/work-orders/quotation/catalog-browser-store.ts"
+      ]
+    },
+    {
+      "path": "tests/g4f/quotation-catalog-eligibility.test.ts",
+      "localSourceImports": [
+        "src/shared/ports/index.ts",
+        "src/shared/quotation-catalog-eligibility.ts"
+      ]
+    },
+    {
+      "path": "tests/g4f/quotation-catalog-read.test.ts",
+      "localSourceImports": [
+        "src/adapters/api/technician-api.ts",
+        "src/adapters/api/quotation-catalog-api.ts",
+        "src/adapters/api/uni-api-read-transport.ts",
+        "src/adapters/api/mock/index.ts",
+        "src/shared/types/index.ts"
+      ]
+    },
+    {
+      "path": "tests/g4f/quotation-catalog-search.test.ts",
+      "localSourceImports": [
+        "src/shared/ports/index.ts",
+        "src/features/work-orders/quotation/catalog-search.ts"
+      ]
+    },
+    {
+      "path": "tests/g4f/quotation-composition.test.ts",
+      "localSourceImports": [
+        "src/runtimes/action/index.ts",
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts",
+        "src/features/work-orders/quotation/composition-store.ts",
+        "src/features/work-orders/quotation/catalog.ts",
+        "src/features/work-orders/quotation/draft-codec.ts",
+        "src/features/work-orders/quotation/model.ts"
+      ]
+    },
+    {
+      "path": "tests/g4f/quotation-empty-workbench.test.ts",
+      "localSourceImports": [
+        "src/features/work-orders/quotation/empty-workbench-state.ts",
+        "src/shared/ui/ActionWorkspaceShell.vue"
+      ]
+    },
+    {
+      "path": "tests/g4f/quotation-engine.test.ts",
+      "localSourceImports": [
+        "src/shared/types/index.ts",
+        "src/runtimes/action/index.ts",
+        "src/features/work-orders/quotation/draft-codec.ts",
+        "src/features/work-orders/quotation/engine.ts",
+        "src/features/work-orders/quotation/hydration.ts",
+        "src/features/work-orders/quotation/model.ts",
+        "src/features/work-orders/quotation/order-encoder.ts",
+        "src/features/work-orders/quotation/pricing.ts",
+        "src/features/work-orders/quotation/validation.ts"
+      ]
+    },
+    {
+      "path": "tests/g4f/quotation-foundation.test.ts",
+      "localSourceImports": [
+        "src/adapters/api/technician-api.ts",
+        "src/adapters/api/quotation-catalog-api.ts",
+        "src/adapters/api/uni-api-read-transport.ts",
+        "src/runtimes/action/index.ts",
+        "src/runtimes/workflow/index.ts",
+        "src/features/work-orders/action-workspace.ts",
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts"
+      ]
+    },
+    {
+      "path": "tests/g4f/quotation-local-review-closure.test.ts",
+      "localSourceImports": [
+        "src/features/work-orders/quotation/local-review-closure.ts",
+        "src/features/work-orders/quotation/model.ts"
+      ]
+    },
+    {
+      "path": "tests/g4f/quotation-order-browse-handoff.test.ts",
+      "localSourceImports": [
+        "src/features/work-orders/quotation/order-browse-store.ts",
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts"
+      ]
+    },
+    {
+      "path": "tests/g4f/quotation-order-command-adapter.test.ts",
+      "localSourceImports": [
+        "src/adapters/api/quotation-order-commands.ts",
+        "src/adapters/api/technician-api-commands.ts"
+      ]
+    },
+    {
+      "path": "tests/g4f/quotation-order-read.test.ts",
+      "localSourceImports": [
+        "src/adapters/api/quotation-order-api.ts",
+        "src/adapters/api/technician-api.ts"
+      ]
+    },
+    {
+      "path": "tests/g4f/quotation-order-reconstruction.test.ts",
+      "localSourceImports": [
+        "src/shared/ports/index.ts",
+        "src/features/work-orders/quotation/order-reconstruction.ts",
+        "src/features/work-orders/quotation/hydration.ts"
+      ]
+    },
+    {
+      "path": "tests/g4f/quotation-order-signing-read-boundary.test.ts",
+      "localSourceImports": [
+        "src/adapters/api/quotation-order-api.ts",
+        "src/adapters/api/technician-api.ts"
+      ]
+    },
+    {
+      "path": "tests/g4f/quotation-order-submission.test.ts",
+      "localSourceImports": [
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts",
+        "src/features/work-orders/quotation/order-encoder.ts",
+        "src/features/work-orders/quotation/order-submission.ts"
+      ]
+    },
+    {
+      "path": "tests/g4f/quotation-review-readiness.test.ts",
+      "localSourceImports": [
+        "src/features/work-orders/quotation/model.ts",
+        "src/features/work-orders/quotation/local-preflight.ts",
+        "src/features/work-orders/quotation/order-extfield-effective-plan.ts",
+        "src/features/work-orders/quotation/review-readiness-copy.ts"
+      ]
+    },
+    {
+      "path": "tests/g4f/quotation-sku-identity-review.test.ts",
+      "localSourceImports": [
+        "src/shared/material-sku-contract.ts",
+        "src/shared/package-material-sku-contract.ts",
+        "src/features/work-orders/quotation/sku-identity-review.ts",
+        "src/features/work-orders/quotation/model.ts",
+        "src/adapters/api/mock/quotation-catalog.ts",
+        "src/adapters/api/mock/material-sku.ts",
+        "src/adapters/api/mock/package-material-sku.ts"
+      ]
+    },
+    {
+      "path": "tests/g4f/quotation-sku-same-catalog.test.ts",
+      "localSourceImports": [
+        "src/adapters/api/mock/quotation-sku-same-catalog.ts",
+        "src/adapters/api/mock/quotation-catalog.ts",
+        "src/shared/package-material-sku-contract.ts",
+        "src/adapters/api/mock/package-material-sku.ts",
+        "src/features/work-orders/quotation/sku-identity-review.ts",
+        "src/features/work-orders/quotation/model.ts"
+      ]
+    },
+    {
+      "path": "tests/g4f/quotation-write-safety.test.ts",
+      "localSourceImports": [
+        "src/adapters/api/uni-api-command-transport.ts"
+      ]
+    },
+    {
+      "path": "tests/g4f/r1-contract-read-boundary.test.ts",
+      "localSourceImports": [
+        "src/adapters/api/quotation-order-api.ts",
+        "src/adapters/api/technician-api.ts",
+        "src/shared/config/index.ts",
+        "src/adapters/api/mock/router.ts"
+      ]
+    },
+    {
+      "path": "tests/g4f/r1-local-quotation-preflight.test.ts",
+      "localSourceImports": [
+        "src/features/work-orders/quotation/model.ts",
+        "src/features/work-orders/quotation/order-extfield-effective-plan.ts",
+        "src/features/work-orders/quotation/local-preflight.ts",
+        "src/features/work-orders/quotation/engine.ts"
+      ]
+    },
+    {
+      "path": "tests/g4f/r1-material-sales-extfield-code-read.test.ts",
+      "localSourceImports": [
+        "src/adapters/api/quotation-catalog-api.ts",
+        "src/adapters/api/technician-api.ts",
+        "src/shared/types/index.ts"
+      ]
+    },
+    {
+      "path": "tests/g4f/r1-material-sku-local-draft.test.ts",
+      "localSourceImports": [
+        "src/runtimes/action/index.ts",
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts",
+        "src/features/work-orders/quotation/composition-store.ts",
+        "src/features/work-orders/quotation/model.ts",
+        "src/features/work-orders/quotation/draft-codec.ts",
+        "src/features/work-orders/quotation/validation.ts"
+      ]
+    },
+    {
+      "path": "tests/g4f/r1-material-sku-preview-bridge.test.ts",
+      "localSourceImports": [
+        "src/shared/ports/index.ts",
+        "src/features/work-orders/quotation/catalog-browser-store.ts",
+        "src/shared/types/index.ts",
+        "src/features/work-orders/quotation/material-sku-selection-preview.ts"
+      ]
+    },
+    {
+      "path": "tests/g4f/r1-material-sku-read-compatibility.test.ts",
+      "localSourceImports": [
+        "src/adapters/api/quotation-catalog-api.ts",
+        "src/adapters/api/technician-api.ts",
+        "src/shared/types/index.ts"
+      ]
+    },
+    {
+      "path": "tests/g4f/r1-package-layer-equivalence.test.ts",
+      "localSourceImports": [
+        "src/shared/ports/index.ts",
+        "src/features/work-orders/quotation/package-configuration.ts",
+        "src/features/work-orders/quotation/catalog-browser-store.ts",
+        "src/features/work-orders/quotation/model.ts"
+      ]
+    },
+    {
+      "path": "tests/g4f/r1-signing-action-parity.test.ts",
+      "localSourceImports": [
+        "src/features/work-orders/signing/r1-signing-ui-rules.ts"
+      ]
+    },
+    {
+      "path": "tests/g4f/r1-signing-command-intents.test.ts",
+      "localSourceImports": [
+        "src/features/work-orders/signing/r1-signing-command-intents.ts"
+      ]
+    },
+    {
+      "path": "tests/g4f/r1-signing-command-readback.test.ts",
+      "localSourceImports": [
+        "src/features/work-orders/signing/r1-signing-command-readback.ts"
+      ]
+    },
+    {
+      "path": "tests/g4f/r1-signing-node-handler-evidence.test.ts",
+      "localSourceImports": [
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts",
+        "src/features/work-orders/signing/r1-signing-node-handler-evidence.ts",
+        "src/features/work-orders/signing/signing-review-read-store.ts"
+      ]
+    },
+    {
+      "path": "tests/g4f/r1-signing-offline-fixture.test.ts",
+      "localSourceImports": [
+        "src/adapters/api/mock/index.ts",
+        "src/app/business-mock.ts"
+      ]
+    },
+    {
+      "path": "tests/g4f/r1-signing-read-reconciliation.test.ts",
+      "localSourceImports": [
+        "src/features/work-orders/signing/r1-signing-read-reconciliation.ts",
+        "src/shared/ports/index.ts"
+      ]
+    },
+    {
+      "path": "tests/g4f/r1-signing-write-fence.test.ts",
+      "localSourceImports": [
+        "src/adapters/api/uni-api-command-transport.ts",
+        "src/adapters/api/mock/index.ts"
+      ]
+    },
+    {
+      "path": "tests/g4f/signing-review-read-store.test.ts",
+      "localSourceImports": [
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts",
+        "src/features/work-orders/signing/signing-review-read-store.ts",
+        "src/features/work-orders/signing/signing-review-read-workspace.ts"
+      ]
+    },
+    {
+      "path": "tests/g4f/signing-review-workspace.test.ts",
+      "localSourceImports": [
+        "src/shared/types/index.ts",
+        "src/shared/ports/index.ts",
+        "src/features/work-orders/signing/signing-review-read-workspace.ts"
+      ]
+    },
+    {
+      "path": "tests/g4f/sku-live-read-preflight.test.ts",
+      "localSourceImports": [
+        "src/shared/sku-live-read-preflight.ts",
+        "src/shared/types/index.ts"
+      ]
+    },
+    {
+      "path": "tests/g4f/sku-synthetic-read-gate.test.ts",
+      "localSourceImports": [
+        "src/shared/sku-synthetic-read-gate.ts",
+        "src/adapters/api/mock/package-material-sku.ts"
+      ]
+    },
+    {
+      "path": "tests/g4f/sku-synthetic-sale-options.test.ts",
+      "localSourceImports": [
+        "src/shared/types/index.ts",
+        "src/shared/sku-live-read-preflight.ts",
+        "src/shared/sku-synthetic-sale-options.ts"
+      ]
+    },
+    {
+      "path": "tests/g4f/synthetic-order-extfield-review.test.ts",
+      "localSourceImports": [
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts",
+        "src/features/work-orders/quotation/synthetic-extfield-review.ts"
+      ]
+    },
+    {
+      "path": "tests/g4ux/action-workspace-page-title.test.ts",
+      "localSourceImports": [
+        "src/app/action-page-title.ts"
+      ]
+    },
+    {
+      "path": "tests/g4ux/business-data-source.test.ts",
+      "localSourceImports": [
+        "src/features/home/business-data-source.ts"
+      ]
+    },
+    {
+      "path": "tests/g4ux/detail-production.test.ts",
+      "localSourceImports": [
+        "src/features/work-orders/detail-tabs.ts"
+      ]
+    },
+    {
+      "path": "tests/g4ux/dev-mock-ux-session.test.ts",
+      "localSourceImports": [
+        "src/app/runtime-config.ts",
+        "src/adapters/auth/dev-mock-ux-session.ts",
+        "src/app/composition.ts"
+      ]
+    },
+    {
+      "path": "tests/g4ux/dev-review-mode.test.ts",
+      "localSourceImports": [
+        "src/shared/ui/dev-review-mode.ts"
+      ]
+    },
+    {
+      "path": "tests/g4ux/home-list-production.test.ts",
+      "localSourceImports": [
+        "src/features/work-orders/card.ts"
+      ]
+    },
+    {
+      "path": "tests/g4ux/login-production.test.ts",
+      "localSourceImports": [
+        "src/features/session/login-flow.ts",
+        "src/features/session/quick-login.ts"
+      ]
+    },
+    {
+      "path": "tests/g4ux/mock-commercial-journey.test.ts",
+      "localSourceImports": [
+        "src/adapters/api/mock/config.ts",
+        "src/adapters/api/mock/journey.ts"
+      ]
+    },
+    {
+      "path": "tests/g4ux/mock-continuous-journey.test.ts",
+      "localSourceImports": [
+        "src/adapters/api/mock/config.ts",
+        "src/adapters/api/mock/router.ts",
+        "src/adapters/api/mock/command-state.ts",
+        "src/adapters/api/appointment-contract.ts",
+        "src/adapters/api/mock/survey-contract.ts",
+        "src/adapters/api/mock/journey.ts"
+      ]
+    },
+    {
+      "path": "tests/g4ux/mock-journey-closure.test.ts",
+      "localSourceImports": [
+        "src/adapters/api/mock/config.ts",
+        "src/adapters/api/mock/journey.ts",
+        "src/adapters/api/mock/command-state.ts",
+        "src/adapters/api/mock/router.ts",
+        "src/adapters/api/appointment-contract.ts",
+        "src/adapters/api/mock/fixtures.ts",
+        "src/app/mock-journey-closure.ts",
+        "src/app/mock-journey-context.ts",
+        "src/shared/types/index.ts"
+      ]
+    },
+    {
+      "path": "tests/g4ux/mock-journey-context.test.ts",
+      "localSourceImports": [
+        "src/adapters/api/mock/config.ts",
+        "src/adapters/api/mock/journey.ts",
+        "src/app/mock-journey-context.ts",
+        "src/runtimes/action/index.ts",
+        "src/shared/types/index.ts"
+      ]
+    },
+    {
+      "path": "tests/g4ux/mock-journey-quote-suggestion.test.ts",
+      "localSourceImports": [
+        "src/adapters/api/mock/config.ts",
+        "src/adapters/api/mock/journey.ts",
+        "src/app/mock-journey-quote-suggestion.ts"
+      ]
+    },
+    {
+      "path": "tests/g4ux/mock-journey-test-fixture.ts",
+      "localSourceImports": [
+        "src/adapters/api/appointment-contract.ts",
+        "src/adapters/api/mock/router.ts",
+        "src/adapters/api/mock/journey.ts",
+        "src/adapters/api/mock/survey-contract.ts"
+      ]
+    },
+    {
+      "path": "tests/g4ux/mock-runtime.test.ts",
+      "localSourceImports": [
+        "src/adapters/api/technician-api.ts",
+        "src/adapters/api/uni-api-read-transport.ts",
+        "src/features/work-orders/detail-workflow.ts",
+        "src/shared/types/index.ts",
+        "src/app/business-mock.ts",
+        "src/app/action-workspace-harness.ts"
+      ]
+    },
+    {
+      "path": "tests/g4ux/mp-isolated-ux-environment.test.ts",
+      "localSourceImports": [
+        "src/app/runtime-config.ts"
+      ]
+    },
+    {
+      "path": "tests/g4ux/production-auth-mock-isolation.test.ts",
+      "localSourceImports": [
+        "src/app/runtime-config.ts",
+        "src/adapters/auth/uni-auth-backend.ts",
+        "src/adapters/api/uni-api-read-transport.ts",
+        "src/adapters/api/uni-api-command-transport.ts",
+        "src/adapters/api/mock/index.ts",
+        "src/shared/types/index.ts"
+      ]
+    },
+    {
+      "path": "tests/g4ux/signing-mock-review.test.ts",
+      "localSourceImports": [
+        "src/adapters/api/mock/config.ts",
+        "src/adapters/api/mock/journey.ts",
+        "src/app/signing-mock-review.ts"
+      ]
+    },
+    {
+      "path": "tests/g4ux/work-order-number-display.test.ts",
+      "localSourceImports": [
+        "src/shared/ui/work-order-number-display.ts"
+      ]
+    },
+    {
+      "path": "tests/g4ux/workflow-projection.test.ts",
+      "localSourceImports": [
+        "src/adapters/api/technician-api.ts",
+        "src/adapters/api/mock/index.ts",
+        "src/runtimes/workflow/index.ts",
+        "src/features/work-orders/detail-workflow.ts",
+        "src/shared/ports/index.ts",
+        "src/shared/types/index.ts"
+      ]
+    },
+    {
+      "path": "tests/h5-main-app/bootstrap.spec.ts",
+      "localSourceImports": []
+    },
+    {
+      "path": "tests/h5-main-app/offline-boot-diagnostics.ts",
+      "localSourceImports": []
+    },
+    {
+      "path": "tests/h5-main-app/offline-login-intent.spec.ts",
+      "localSourceImports": []
+    },
+    {
+      "path": "tests/h5-main-app/r1-manual-consent.spec.ts",
+      "localSourceImports": []
+    },
+    {
+      "path": "tests/h5-main-mock/a-stage-p1-acceptance.spec.ts",
+      "localSourceImports": []
+    },
+    {
+      "path": "tests/h5-main-mock/b2x-presentation-separation.spec.ts",
+      "localSourceImports": []
+    },
+    {
+      "path": "tests/h5-main-mock/ds07c4b-quote-signing.spec.ts",
+      "localSourceImports": []
+    },
+    {
+      "path": "tests/h5-main-mock/ds07c4b-signing-state-visual.spec.ts",
+      "localSourceImports": []
+    },
+    {
+      "path": "tests/h5-main-mock/m1-i7-six-stage-integration.spec.ts",
+      "localSourceImports": []
+    },
+    {
+      "path": "tests/h5-main-mock/m1-quotation-ux-prototype.spec.ts",
+      "localSourceImports": []
+    },
+    {
+      "path": "tests/h5-main-mock/m1-r1-contract-preview.spec.ts",
+      "localSourceImports": []
+    },
+    {
+      "path": "tests/h5-main-mock/m1-signing-official-order-read.spec.ts",
+      "localSourceImports": []
+    },
+    {
+      "path": "tests/h5-main-mock/main-app-quotation.spec.ts",
+      "localSourceImports": []
+    },
+    {
+      "path": "tests/h5-main-mock/mock-business-closure.spec.ts",
+      "localSourceImports": []
+    },
+    {
+      "path": "tests/h5-main-mock/operator-control-geometry.spec.ts",
+      "localSourceImports": []
+    },
+    {
+      "path": "tests/h5-main-mock/q01-visual-baseline.spec.ts",
+      "localSourceImports": []
+    },
+    {
+      "path": "tests/h5-main-mock/q03-commercial-baseline.spec.ts",
+      "localSourceImports": []
+    },
+    {
+      "path": "tests/h5-main-mock/qsign-readonly-closure.spec.ts",
+      "localSourceImports": []
+    },
+    {
+      "path": "tests/h5-main-mock/r1-child-subflow-preview.spec.ts",
+      "localSourceImports": []
+    },
+    {
+      "path": "tests/h5-main-mock/r1-repeat-read.spec.ts",
+      "localSourceImports": []
+    },
+    {
+      "path": "tests/h5-review/design-system-uni-h5.spec.ts",
+      "localSourceImports": []
+    },
+    {
+      "path": "tests/h5-review/design-system.spec.ts",
+      "localSourceImports": []
+    },
+    {
+      "path": "tests/h5-review/g4e-survey.spec.ts",
+      "localSourceImports": []
+    },
+    {
+      "path": "tests/h5-review/g4f-quotation-catalog-hifi-v1.spec.ts",
+      "localSourceImports": []
+    },
+    {
+      "path": "tests/h5-review/g4f-quotation-empty-workbench.spec.ts",
+      "localSourceImports": []
+    },
+    {
+      "path": "tests/h5-review/g4f-quotation-phase1b.spec.ts",
+      "localSourceImports": []
+    },
+    {
+      "path": "tests/h5-review/g4f-quotation-phase1i.spec.ts",
+      "localSourceImports": []
+    },
+    {
+      "path": "tests/h5-review/g4f-quotation-product-journey.spec.ts",
+      "localSourceImports": []
+    },
+    {
+      "path": "tests/h5-review/g4f-quotation-synthetic-fields.spec.ts",
+      "localSourceImports": []
+    },
+    {
+      "path": "tests/h5-review/g4f-quotation-ux-b0.spec.ts",
+      "localSourceImports": []
+    },
+    {
+      "path": "tests/h5-review/g4f-quotation.spec.ts",
+      "localSourceImports": []
+    },
+    {
+      "path": "tests/r1-main-repeat-ui/panel.spec.ts",
+      "localSourceImports": []
+    },
+    {
+      "path": "tests/s2-ux-focus/flow.spec.ts",
+      "localSourceImports": []
+    },
+    {
+      "path": "tests/s2-ux-review/flow.spec.ts",
+      "localSourceImports": []
+    },
+    {
+      "path": "tests/s2-ux-review/review-sheet.ts",
+      "localSourceImports": []
+    }
+  ],
+  "quickTestFiles": [
+    "tests/g3c/adapters.test.ts",
+    "tests/g4c/work-order-detail.test.ts",
+    "tests/g4f/m1-i7-work-order-read-scope.test.ts",
+    "tests/g4f/production-read-only.test.ts",
+    "tests/engineering/r1-stage1-live-read-contract.test.ts",
+    "tests/engineering/r1-stage1-form-detail-read-contract.test.ts",
+    "tests/engineering/r1-model-contract-parity.test.ts",
+    "tests/engineering/r1-three-pillar-contract-matrix.test.ts",
+    "tests/g4f/quotation-order-browse-handoff.test.ts",
+    "tests/g4f/quotation-order-read.test.ts",
+    "tests/g4f/quotation-order-signing-read-boundary.test.ts",
+    "tests/g4f/quotation-local-review-closure.test.ts",
+    "tests/ds03/transaction-visual-contract.test.ts",
+    "tests/ds05/mobile-craft-two-page.test.ts",
+    "tests/engineering/eq01-mock-scenarios.test.ts",
+    "tests/engineering/eq02-action-draft-helpers.test.ts",
+    "tests/engineering/r1-action-workspace-foundation.test.ts",
+    "tests/engineering/eq07-command-state-consistency.test.ts",
+    "tests/g4d/action-workspace.test.ts",
+    "tests/g4d/draft-diagnostics.test.ts",
+    "tests/g4e/onsite-inspection.test.ts",
+    "tests/g4e/survey-leakage-cause.test.ts"
+  ],
+  "caveats": [
+    "No local pnpm/Playwright/MP production build was executed in this static audit.",
+    "A test without direct TS import may still exercise a page through browser routing and runtime.",
+    "Unresolved graph paths to 2 contract JSON and 1 image were independently verified to exist in the Git tree.",
+    "A reciprocal edge containing an import type is not necessarily a runtime import cycle.",
+    "Security of DEV-only routes must be verified in release artifacts, not inferred from guards alone."
+  ]
+}

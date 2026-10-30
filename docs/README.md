@@ -40,6 +40,11 @@
 
 **状态含义与归档方法**见 [Documentation Governance](engineering/DOCUMENTATION_GOVERNANCE.md)。[G0-B 全量静态盘点与治理队列](engineering/G0B_HISTORICAL_ASSET_TRIAGE_20261030.md)汇总 203 份文档、47 条 Workflow、57 个 scripts 文件、18 份根级工具配置。逐文件证据见 [文档清单](governance/G0B_DOCUMENT_INVENTORY_20261030.json)、[CI 清单](governance/G0B_CI_WORKFLOW_INVENTORY_20261030.json)、[工具配置清单](governance/G0B_TOOLING_INVENTORY_20261030.json)。**这些都是 DRAFT 分类建议，不是 ACTIVE 授权，更不代表可以删除。**
 
+## G0-C：代码组织与发行边界审计（Draft）
+
+- [G0-C Source Architecture & Release Surface Audit](engineering/G0C_CODE_AND_RELEASE_SURFACE_AUDIT_20261030.md)：基于 main 的 289 个源码文件、224 个测试文件、依赖图、QA 页面发行边界以及具体的下一步实施队列。
+- [逐模块依赖和测试引用快照](governance/G0C_SOURCE_DEPENDENCY_SNAPSHOT_20261030.json)：270 个 TS/Vue 模块、912 条本地导入边及测试直接引用；**静态图不是构建结果或真实覆盖率**。
+
 ## 更新顺序
 
 1. 核对最新 main 的 exact SHA、受影响的文件及当前测试。
