@@ -121,6 +121,7 @@ describe('C3-D2 quotation Order edit read preflight', () => {
         procedures: { data: [] }, materials: { data: [] }, measures: { data: [] },
       }],
     } })
-    expect((await readQuotationOrderEditCandidate(request(readPort(succeeded(invalid)))).state).toBe('blocked')
+    const result = await readQuotationOrderEditCandidate(request(readPort(succeeded(invalid))))
+    expect(result.state).toBe('blocked')
   })
 })
