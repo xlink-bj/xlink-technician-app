@@ -1,7 +1,7 @@
 # Quality & Environment Gates — Current Mainline
 
-> **Status: DRAFT / proposed ACTIVE standard** · 2026-10-30 · 以 [AGENTS.md](../../AGENTS.md)、package.json 与当前 workflow 为执行依据。本文件不授予任何新的 Production/Beta 业务权限。
-> **Owner:** ChatGPT Lead (maintainer); Product Owner approval required before treating this Draft as current policy.
+> **Status: ACTIVE (effective on main merge)** · 2026-10-30 · 以 [AGENTS.md](../../AGENTS.md)、package.json 与当前 workflow 为执行依据。本文件不授予任何新的 Production/Beta 业务权限。
+> **Owner:** ChatGPT Lead (maintainer); Product Owner approved 2026-10-30.
 > **Scope:** Architecture/documentation only. No business, backend, production, CI or release authorization changes.
 
 ## 1. 证据不能跨级替代

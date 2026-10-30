@@ -1,12 +1,12 @@
 # XLink 工匠 App — 文档导航
 
-> **Status: DRAFT / proposed ACTIVE index** · 2026-10-30 · 基线 main@17ba7211040df887be28665564414cb037b6acef
-> **Owner:** ChatGPT Lead (maintainer); Product Owner approval required before treating this Draft as current policy.
+> **Status: ACTIVE documentation index (effective on main merge)** · Owner approved 2026-10-30 · 历史盘点基线 main@17ba7211040df887be28665564414cb037b6acef
+> **Owner:** ChatGPT Lead (maintainer); Product Owner approved the documentation authority model and three standards on 2026-10-30.
 > **Scope:** Architecture/documentation only. No business, backend, production, CI or release authorization changes.
 >
-> **本 PR 在 Draft 阶段时，下列新建规范均为候选，只有经 Owner 审核并合入 main 后才能成为 ACTIVE。** 本页是文档入口，不是另一套架构决策。**当前实施事实看代码和 CI，架构决策看现有权威规范，历史验收看对应 exact-HEAD 证据。**
+> **本索引及三份新规范经 Owner 审核批准，在合入 main 时正式生效。** 本页是文档入口，不是另一套架构决策。**当前实施事实看代码和 CI，架构决策看现有权威规范，历史验收看对应 exact-HEAD 证据。**
 >
-> **主干更新提示（2026-10-30）：**本索引中的 G0-A/B/C 和 C1 审计数字均固定在旧 `main@17ba721`，不是最新主干状态。C1-FIX 已通过 [PR #238](https://github.com/xlink-bj/xlink-technician-app/pull/238) 合入 `main@57cde73`；四个内部 QA 页面已从 H5/MP 发布包排除。原生 APP 最终打包/真机验证仍在 [#240](https://github.com/xlink-bj/xlink-technician-app/issues/240)。C2-A 的 [PR #242](https://github.com/xlink-bj/xlink-technician-app/pull/242) 仍独立待审批，不属于本历史快照。
+> **主干更新提示（2026-10-30）：**本索引中的 G0-A/B/C 和 C1 审计数字均固定在旧 `main@17ba721`，不是最新主干状态。C1-FIX 已通过 [PR #238](https://github.com/xlink-bj/xlink-technician-app/pull/238) 合入 `57cde73`；四个内部 QA 页面已从 H5/MP 发布包排除。C2-A [PR #242](https://github.com/xlink-bj/xlink-technician-app/pull/242) 随后合入 `main@ded94abc`，减少四条 DEV Mock 反向依赖，但同样不属于本历史快照。原生 APP 最终打包/真机验证仍在 [#240](https://github.com/xlink-bj/xlink-technician-app/issues/240)。
 
 ## 先读这六份
 
@@ -15,9 +15,9 @@
 | 协作、安全与主干规则 | [AGENTS.md](../AGENTS.md) | **ACTIVE — 操作约束** |
 | 长期架构与依赖原则 | [Target Architecture](architecture/TARGET_ARCHITECTURE.md) | **ACTIVE — 目标决策**（原有阶段标识可能过时） |
 | 2026-10-30 旧主干的实现快照 | [Implementation Baseline](architecture/IMPLEMENTATION_BASELINE_20261030.md) | **SNAPSHOT — 固定于 `17ba721`** |
-| 新增或拆分模块 | [Code Organization Standard](engineering/CODE_ORGANIZATION_STANDARD.md) | **DRAFT → 拟议 ACTIVE 开发约定** |
-| 测试、环境和发布证据 | [Quality & Environment Gates](engineering/QUALITY_AND_ENVIRONMENT_GATES.md) | **DRAFT → 拟议 ACTIVE 证据规范** |
-| 文档状态、归档与更新 | [Documentation Governance](engineering/DOCUMENTATION_GOVERNANCE.md) | **DRAFT → 拟议 ACTIVE 文档约定** |
+| 新增或拆分模块 | [Code Organization Standard](engineering/CODE_ORGANIZATION_STANDARD.md) | **ACTIVE — 开发约定** |
+| 测试、环境和发布证据 | [Quality & Environment Gates](engineering/QUALITY_AND_ENVIRONMENT_GATES.md) | **ACTIVE — 证据规范** |
+| 文档状态、归档与更新 | [Documentation Governance](engineering/DOCUMENTATION_GOVERNANCE.md) | **ACTIVE — 文档约定** |
 
 ## 专题权威文件（保留，按需阅读）
 
@@ -40,9 +40,9 @@
 | docs/design-system/ / docs/ux/ | 已签收标准、阶段方案及视觉证据混合 | 按 Owner 接受状态和当前 Golden 判断 |
 | docs/quotation/ | 报价专项视觉证据 | **REFERENCE**；不得绕过真实业务/视觉 gate |
 
-**状态含义与归档方法**见 [Documentation Governance](engineering/DOCUMENTATION_GOVERNANCE.md)。[G0-B 全量静态盘点与治理队列](engineering/G0B_HISTORICAL_ASSET_TRIAGE_20261030.md)汇总 203 份文档、47 条 Workflow、57 个 scripts 文件、18 份根级工具配置。逐文件证据见 [文档清单](governance/G0B_DOCUMENT_INVENTORY_20261030.json)、[CI 清单](governance/G0B_CI_WORKFLOW_INVENTORY_20261030.json)、[工具配置清单](governance/G0B_TOOLING_INVENTORY_20261030.json)。**这些都是 DRAFT 分类建议，不是 ACTIVE 授权，更不代表可以删除。**
+**状态含义与归档方法**见 [Documentation Governance](engineering/DOCUMENTATION_GOVERNANCE.md)。[G0-B 全量静态盘点与治理队列](engineering/G0B_HISTORICAL_ASSET_TRIAGE_20261030.md)汇总 203 份文档、47 条 Workflow、57 个 scripts 文件、18 份根级工具配置。逐文件证据见 [文档清单](governance/G0B_DOCUMENT_INVENTORY_20261030.json)、[CI 清单](governance/G0B_CI_WORKFLOW_INVENTORY_20261030.json)、[工具配置清单](governance/G0B_TOOLING_INVENTORY_20261030.json)。**其中的逐文件状态仍只是分类建议，不是逐份批准的 ACTIVE/OBSOLETE 裁决，更不代表可以删除。**
 
-## G0-C：代码组织与发行边界审计（Draft）
+## G0-C：代码组织与发行边界历史审计（Snapshot）
 
 - [G0-C Source Architecture & Release Surface Audit](engineering/G0C_CODE_AND_RELEASE_SURFACE_AUDIT_20261030.md)：基于 main 的 289 个源码文件、224 个测试文件、依赖图、QA 页面发行边界以及具体的下一步实施队列。
 - [逐模块依赖和测试引用快照](governance/G0C_SOURCE_DEPENDENCY_SNAPSHOT_20261030.json)：270 个 TS/Vue 模块、912 条本地导入边及测试直接引用；**静态图不是构建结果或真实覆盖率**。

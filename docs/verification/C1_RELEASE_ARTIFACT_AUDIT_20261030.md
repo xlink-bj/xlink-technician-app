@@ -1,6 +1,6 @@
 # C1 — Production-profile Release Artifact Boundary Verification
 
-> **Status: DRAFT SNAPSHOT / Evidence-based review** · 2026-10-30
+> **Status: EVIDENCE / pinned pre-fix release artifact diagnosis** · 2026-10-30
 > **Source:** `main@17ba7211040df887be28665564414cb037b6acef`
 > **Authority:** ChatGPT Lead (diagnostic); Owner decision required before changing release packaging policy or merging.
 > **Scope:** Real local production-mode H5 and MP-WEIXIN compilation with **synthetic, inert environment**. No Production/Beta network, credentials, API writes, code changes, CI modifications, upload, deploy, or native App binaries.

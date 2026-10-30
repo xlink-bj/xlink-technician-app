@@ -1,7 +1,7 @@
 # Documentation Governance — XLink Technician App
 
-> **Status: DRAFT / proposed ACTIVE standard** · 2026-10-30 · 目的：压缩权威文档数量，保留业务与工程证据链，而不是追求删除文件个数。
-> **Owner:** ChatGPT Lead (maintainer); Product Owner approval required before treating this Draft as current policy.
+> **Status: ACTIVE (effective on main merge)** · 2026-10-30 · 目的：压缩权威文档数量，保留业务与工程证据链，而不是追求删除文件个数。
+> **Owner:** ChatGPT Lead (maintainer); Product Owner approved 2026-10-30.
 > **Scope:** Architecture/documentation only. No business, backend, production, CI or release authorization changes.
 
 ## 1. 文档身份
@@ -61,5 +61,5 @@ Supersedes / Related (when applicable)
 4. 对候选 OBSOLETE 单独 PR，列出所有引用和 CI trigger/consumer 验证；获批后才删除。
 5. CI workflow 与 snapshot/fixture 的删除独立于普通 Markdown；必须保证相同主干 gate 和验收证据未丢失。
 
-已完成第一轮非破坏性静态分类，见 [G0-B 结果与后续队列](G0B_HISTORICAL_ASSET_TRIAGE_20261030.md)及 [逐文件机器清单](../governance/G0B_DOCUMENT_INVENTORY_20261030.json)。**这仍是 Draft PR 内的提案**；未变更历史资产、工作流或运行准入。真正归档或删除前必须按上面的消费者核查程序另行审批。
+已完成第一轮非破坏性静态分类，见 [G0-B 结果与后续队列](G0B_HISTORICAL_ASSET_TRIAGE_20261030.md)及 [逐文件机器清单](../governance/G0B_DOCUMENT_INVENTORY_20261030.json)。**本治理规范已获批，但逐文件分类仍是待审提案**；未变更历史资产、工作流或运行准入。真正归档或删除前必须按上面的消费者核查程序另行审批。
 

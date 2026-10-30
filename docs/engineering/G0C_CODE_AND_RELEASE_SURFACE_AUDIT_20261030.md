@@ -1,6 +1,6 @@
 # G0-C Source Architecture & Release Surface Audit — 2026-10-30
 
-> **Status: DRAFT SNAPSHOT / action proposals only**
+> **Status: SNAPSHOT / action proposals only (not current-main authority)**
 > **Source:** `main@17ba7211040df887be28665564414cb037b6acef` · Owner: ChatGPT Lead / Product Owner approval for code and CI changes
 > **Scope:** Full static textual review of the current main source and tests; no business code, test, CI, route, Golden, Production/Beta or release modifications.
 > **Machine evidence:** [G0-C Source Dependency Snapshot](../governance/G0C_SOURCE_DEPENDENCY_SNAPSHOT_20261030.json)
@@ -9,7 +9,7 @@
 
 **Current architecture has recognizable module boundaries and useful automated guards, but feature-to-app back references, large multi-responsibility files and release-only QA packaging remain the highest-value next治理对象。** Retain the single-main development model. The safe approach is narrow, reversible refactoring behind stable facades, not moving directories or deleting Mock/QA code by name.
 
-**2026-10-30 事后状态（不改写审计当日的 `17ba721` 事实）：**C1 的发布 QA 打包缺口已经由 [PR #238](https://github.com/xlink-bj/xlink-technician-app/pull/238) 在 `main@57cde73` 修复，H5/MP 正式构建的四个路由及其页面资源均通过缺席校验；APP 原生安装包仍由 [#240](https://github.com/xlink-bj/xlink-technician-app/issues/240) 独立验收。C2 feature→app 依赖治理在 [#241](https://github.com/xlink-bj/xlink-technician-app/issues/241) 分阶段推进，C2-A [PR #242](https://github.com/xlink-bj/xlink-technician-app/pull/242) 不属于本次旧主干快照。下文 C1 发现与 12 路由数字仅表示修复前审计证据。
+**2026-10-30 事后状态（不改写审计当日的 `17ba721` 事实）：**C1 的发布 QA 打包缺口已经由 [PR #238](https://github.com/xlink-bj/xlink-technician-app/pull/238) 在 `main@57cde73` 修复，H5/MP 正式构建的四个路由及其页面资源均通过缺席校验；APP 原生安装包仍由 [#240](https://github.com/xlink-bj/xlink-technician-app/issues/240) 独立验收。C2 feature→app 依赖治理在 [#241](https://github.com/xlink-bj/xlink-technician-app/issues/241) 分阶段推进，C2-A [PR #242](https://github.com/xlink-bj/xlink-technician-app/pull/242) 已合入 `main@ded94abc`，减少四条反向导入，但不属于本次旧主干快照。下文 C1 发现与 12 路由数字仅表示修复前审计证据。
 
 ## 1. Source and test census
 
@@ -98,4 +98,4 @@ In each pair, one direction is an `import type`; thus **do not describe these as
 | **C5 Quotation and heavy page composition** | Commercial UI refactor | Approved Golden, iPhone 14 Pro matched viewport, H5/MP screenshot Owner gate |
 | **C6 CI & historical cleanup** | Separate governed PR | Required checks / consumers / rollback proof from G0-B; never inferred from filenames |
 
-**Gate:** C1 diagnostic may begin without business changes. Any C2–C6 implementation or deletion should be independently reviewable against latest `main`, with exact behavior and visual evidence. PR #237 stays docs-only and Draft; merging or deploying requires separate Owner approval.
+**Historical gate at the pinned audit HEAD:** C1 diagnostic could begin without business changes. Any C2–C6 implementation or deletion still requires independent review against latest `main`, with exact behavior and visual evidence. This report was contributed through docs-only PR #237; the Owner subsequently approved the three governance standards on 2026-10-30. That approval does **not** authorize deleting assets, altering CI triggers, Production/Beta writes or deployment.

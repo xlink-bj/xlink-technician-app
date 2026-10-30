@@ -1,7 +1,7 @@
 # G0-B Historical Asset Triage — Full Static Inventory
 
-> **Status: DRAFT SNAPSHOT / Proposal only** · reviewed 2026-10-30 · source: `main@17ba7211040df887be28665564414cb037b6acef`
-> **Owner:** ChatGPT Lead (maintainer); Product Owner approval required before treating any proposed ACTIVE status as policy.
+> **Status: SNAPSHOT / proposed classifications only** · reviewed 2026-10-30 · source: `main@17ba7211040df887be28665564414cb037b6acef`
+> **Owner:** ChatGPT Lead (maintainer); individual proposed ACTIVE/OBSOLETE classifications still require separate Owner review.
 > **Scope:** Read-only static inventory of documents, GitHub Actions and tooling. No code, CI, test, Golden, release, production or Beta modifications.
 
 **结论：先固化事实与分类，随后按消费者证据分批治理。** 本 G0-B 不授权删除、移动、停用 CI、重设 Golden、关闭 PR 或合并部署。文件名带 FINAL、PASS、BASELINE 不构成现在仍 ACTIVE 的证据。
