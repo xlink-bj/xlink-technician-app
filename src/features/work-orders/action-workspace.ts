@@ -128,7 +128,7 @@ import { useQuotationEngineStore } from './quotation/engine-store'
 import { createQuotationCatalogSelectionBridge } from './quotation/catalog-selection-bridge'
 import { submitQuotationOrder, retryQuotationOrderReadback, restoreQuotationOrderSubmissionState, type QuotationOrderSubmissionSnapshot } from './quotation/order-submission'
 import { hydrateQuotationDraft } from './quotation/hydration'
-import { reconstructQuotationOrder, quotationOrderEditBlockers } from './quotation/order-reconstruction'
+import { readQuotationOrderEditCandidate } from './quotation/order-edit-preflight'
 import { isDirectQuotationCatalogKind, type QuotationLineKind } from './quotation/model'
 import type { QuotationPackageMaterialChoice } from './quotation/package-configuration'
 import {
@@ -947,26 +947,20 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       return failure('unsupported_capability', '当前无法安全读取待编辑订单。')
     }
     quotationEditState.value = { state: 'loading' }
-    const orderRead = await configured.quotationOrderRead.getQuotationOrderById(orderId)
-    if (!current()) return failure('cancelled', '订单读取期间角色或工单已切换。')
-    if (orderRead.state !== 'succeeded' || !orderRead.data
-      || orderRead.data.id !== orderId
-      || orderRead.data.type !== 1
-      || orderRead.data.serviceAppointmentId !== currentDescriptor.workOrderId) {
-      const message = '待编辑订单无法权威读取或不属于当前工单。'
-      quotationEditState.value = { state: 'blocked', message }
-      return failure('unsupported_capability', message)
+    const preflight = await readQuotationOrderEditCandidate({
+      orderId,
+      workOrderId: currentDescriptor.workOrderId,
+      workflowNodeId: currentDescriptor.workflowNodeId,
+      orderRead: configured.quotationOrderRead,
+      stillCurrent: current,
+    })
+    if (preflight.state === 'stale') return failure('cancelled', '订单读取期间角色或工单已切换。')
+    if (preflight.state === 'blocked') {
+      quotationEditState.value = { state: 'blocked', message: preflight.message }
+      return failure('unsupported_capability', preflight.message)
     }
-    const blockers = quotationOrderEditBlockers(orderRead.data)
-    if (blockers.length > 0) {
-      quotationEditState.value = { state: 'blocked', message: blockers[0] }
-      return failure('unsupported_capability', blockers[0])
-    }
-    const reconstructed = reconstructQuotationOrder(orderRead.data, String(currentDescriptor.workflowNodeId))
-    if (reconstructed.state !== 'ready') {
-      quotationEditState.value = { state: 'blocked', message: reconstructed.reason }
-      return failure('unsupported_capability', reconstructed.reason)
-    }
+    const reconstructed = preflight
+
     const userSession = configured.getSession()
     const stored = currentIdentity
       ? await configured.draftRepository.read<Readonly<Record<string, unknown>>>(currentIdentity)
