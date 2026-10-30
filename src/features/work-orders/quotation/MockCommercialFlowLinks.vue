@@ -17,7 +17,7 @@
         data-testid="mock-commerce-revoke-last" @tap="revokeLast">撤销最近一次本机核对</AppButton>
     </view>
     <text v-if="feedback" class="mock-commerce-links__help" data-testid="mock-commerce-feedback">{{ feedback }}</text>
-    <navigator :url="materialSkuReviewUrl()" class="mock-commerce-links__item"
+    <navigator :url="review.materialSkuReviewUrl()" class="mock-commerce-links__item"
       data-testid="mock-journey-sku-review">
       <view class="mock-commerce-links__copy">
         <text class="mock-commerce-links__item-title">材料规格与 SKU</text>
@@ -26,7 +26,7 @@
       </view>
       <text class="mock-commerce-links__arrow" aria-hidden="true">›</text>
     </navigator>
-    <navigator :url="signingMockReviewUrl()" class="mock-commerce-links__item"
+    <navigator :url="review.signingMockReviewUrl()" class="mock-commerce-links__item"
       data-testid="mock-journey-signing-review">
       <view class="mock-commerce-links__copy">
         <text class="mock-commerce-links__item-title">订单与合同关系 · 签约 Mock</text>
@@ -41,42 +41,35 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
-import { mockJourneyContext } from '@app/mock-journey'
-import { canReadMaterialSkuMock, materialSkuReviewUrl } from '@app/material-sku-mock-review'
-import { signingMockReviewUrl } from '@app/signing-mock-review'
 import AppButton from '@shared/ui/AppButton.vue'
-import {
-  confirmMockCommercialCheckpoint, pauseMockCommercialReview,
-  readMockCommercialProgress, resumeMockCommercialReview, revokeLastMockCommercialCheckpoint,
-} from '@app/mock-commercial-journey'
+import type { MockCommercialReviewPort } from './mock-commercial-review-port'
 
 const props = defineProps<{ readonly workOrderId: string;
-  readonly userId?: string; readonly roleId?: string }>()
-const authorized = computed(() => mockJourneyContext(props.workOrderId)?.stage === 'quotation'
-  && canReadMaterialSkuMock({workOrderId:props.workOrderId,
-    userId:props.userId,roleId:props.roleId}))
+  readonly userId?: string; readonly roleId?: string;
+  readonly review: MockCommercialReviewPort }>()
+const authorized = computed(() => props.review.canReview(scope.value))
 const revision = ref(0)
 const feedback = ref('')
 const scope = computed(() => ({ workOrderId: props.workOrderId, userId: props.userId, roleId: props.roleId }))
 const progress = computed(() => {
   void revision.value
-  return readMockCommercialProgress(scope.value)
+  return props.review.readProgress(scope.value)
 })
 onShow(() => { revision.value += 1 })
 function confirmQuotation(): void {
-  feedback.value = confirmMockCommercialCheckpoint(scope.value, 'quotation_preview')
+  feedback.value = props.review.confirmCheckpoint(scope.value, 'quotation_preview')
     ? '报价工作台入口已核对；仅记录本机浏览进度，未提交报价。'
     : '尚不能记录核对结果，请确认本机流程未暂停。'
   revision.value += 1
 }
 function togglePause(): void {
   const wasPaused = progress.value.paused
-  const ok = wasPaused ? resumeMockCommercialReview(scope.value) : pauseMockCommercialReview(scope.value)
+  const ok = wasPaused ? props.review.resume(scope.value) : props.review.pause(scope.value)
   feedback.value = ok ? (wasPaused ? '已恢复本机核对；之前的结果仍保留。' : '本机核对已暂停；可稍后恢复。') : '本机状态保存失败。'
   revision.value += 1
 }
 function revokeLast(): void {
-  feedback.value = revokeLastMockCommercialCheckpoint(scope.value)
+  feedback.value = props.review.revokeLast(scope.value)
     ? '已撤销最近一项本机核对，之前的资料仍保留；后台业务未发生变化。'
     : '本机核对撤销失败。'
   revision.value += 1
