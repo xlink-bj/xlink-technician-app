@@ -43,7 +43,8 @@ describe('C3-D2 quotation Order edit read preflight', () => {
   it('returns the reconstructed authoritative type=1 Order with exact workOrder and workflow identity', async () => {
     const port = readPort()
     const result = await readQuotationOrderEditCandidate(request(port))
-    expect(port.getQuotationOrderById).toHaveBeenCalledExactlyOnceWith('order-d2')
+    expect(port.getQuotationOrderById).toHaveBeenCalledTimes(1)
+    expect(port.getQuotationOrderById).toHaveBeenCalledWith('order-d2')
     expect(result.state).toBe('ready')
     if (result.state === 'ready') {
       expect(result.draft.workOrderId).toBe(workOrderId)
