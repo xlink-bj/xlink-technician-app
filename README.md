@@ -39,6 +39,14 @@ Important:
 This repository is a NEW implementation.
 The legacy application is a behavioral/reference implementation, not a source-code dependency.
 
+## Current documentation and engineering baseline
+
+The present mainline implementation and current rules are indexed in [docs/README.md](docs/README.md).
+The G3-A foundation narrative below is historical foundation context, **not the
+current completeness or release status**. See [current implementation baseline](docs/architecture/IMPLEMENTATION_BASELINE_20261030.md)
+and [quality/environment gates](docs/engineering/QUALITY_AND_ENVIRONMENT_GATES.md)
+before making a development or release decision.
+
 ## G3-A foundation
 
 G3-A establishes the Vue 3 / uni-app / TypeScript skeleton and the ownership
@@ -107,3 +115,4 @@ entries satisfy the uni/Vite/Rolldown and Pinia runtime resolution boundary;
 the TypeScript/compiler toolchain; and `vitest` provides the unit-test
 harness. No native plugin, analytics, offline-sync, or generic form
 dependency is installed.
+

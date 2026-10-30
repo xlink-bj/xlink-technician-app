@@ -1,5 +1,7 @@
 # Target Architecture — Living Architecture Record
 
+> **Mainline context update (2026-10-30):** The G2/G4-D architecture invariants below remain the long-term decision authority. The original `Working branch`, `Implementation baseline reviewed`, and older descriptions of Quotation/Contract as `future` are **historical stage metadata**, not the implementation status of today's main. Read the [main implementation snapshot](IMPLEMENTATION_BASELINE_20261030.md), [documentation index](../README.md), and [mainline policy](../../AGENTS.md) before using those passages for work planning. This notice changes no approved business or API semantics.
+
 Status: Living target architecture  
 Program: New Technician / Field Service App  
 Original architecture decision: G2  
@@ -916,3 +918,4 @@ That implementation should establish only the reusable execution foundation need
 Detailed Appointment visual/interaction design is a separate Product Owner UX/UI step after the execution foundation exists.
 
 Do not use the Action Workspace architecture as permission to start G4-E, Quotation, Contract, Construction, or other later business slices prematurely.
+
