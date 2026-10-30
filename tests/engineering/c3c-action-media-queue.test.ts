@@ -131,6 +131,20 @@ describe('C3-C media queue recovery and user-directed retry', () => {
     if (result.state === 'succeeded') expect(result.uploaded).toHaveLength(2)
   })
 
+  it('fails closed even if a caller bypasses the Store filter with an ambiguous task', async () => {
+    const q = queue()
+    const ambiguous = mediaTask('failed_retryable', 'ambiguous-direct', {
+      lastError: { ...createOperationError('network_retryable', 'outcome unknown'),
+        code: 'ambiguous_postprocess' },
+    })
+    const result = await retryActionMediaQueue({
+      queue: q, tasks: [ambiguous], stillCurrent: () => true, onTask: vi.fn(),
+    })
+    expect(result.state).toBe('failed')
+    expect(q.process).not.toHaveBeenCalled()
+    expect(q.retry).not.toHaveBeenCalled()
+  })
+
   it('blocks a late retry result after scope revocation without updating task state', async () => {
     const q = queue()
     let current = true

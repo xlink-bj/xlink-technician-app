@@ -70,6 +70,12 @@ export async function retryActionMediaQueue(input: {
   readonly stillCurrent: () => boolean
   readonly onTask: (task: MediaUploadTask) => void
 }): Promise<RetryActionMediaQueueResult> {
+  // Re-check the allowlist at the queue boundary: a future caller must not
+  // bypass the Store's explicit retry filter for ambiguous postprocessing.
+  if (resumableActionMediaTasks(input.tasks).length !== input.tasks.length) {
+    const error = createOperationError('validation', '水印处理结果待核查，不能重复提交')
+    return { state: 'failed', error, result: { state: 'failed_terminal', error } }
+  }
   const uploaded: UploadedMediaRef[] = []
   for (const task of input.tasks) {
     if (!input.stillCurrent()) return { state: 'stale' }
