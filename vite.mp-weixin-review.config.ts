@@ -6,8 +6,8 @@ import { defineConfig } from 'vite'
 const require = createRequire(import.meta.url)
 const repositoryRoot = fileURLToPath(new URL('.', import.meta.url))
 const defaultProductionInputDir = fileURLToPath(new URL('./src', import.meta.url))
-const reviewInputDir = fileURLToPath(new URL('./review-app', import.meta.url))
-const reviewSourceDir = fileURLToPath(new URL('./review-app/src', import.meta.url))
+const reviewInputDir = fileURLToPath(new URL('./.review-input', import.meta.url))
+const reviewSourceDir = fileURLToPath(new URL('./.review-input/src', import.meta.url))
 const reviewOutputDir = fileURLToPath(new URL('./unpackage/design-system-mp-weixin', import.meta.url))
 
 // Keep the MP calibration build on the same review-only input root as H5.
@@ -48,8 +48,8 @@ export default defineConfig({
     rollupOptions: {
       output: {
         // The MP compiler otherwise derives a relative chunk name from the
-        // canonical Gallery file outside review-app (for example
-        // ../__review/design-system-gallery.js), which Rollup rejects.
+        // canonical Gallery file outside the isolated Review App input (for
+        // example ../harness/design-system-gallery.js), which Rollup rejects.
         entryFileNames: 'app.js',
         chunkFileNames: 'assets/[name]-[hash].js',
         assetFileNames: 'assets/[name][extname]',

@@ -174,7 +174,7 @@ function seedRequiredMediaForValidation(): void {
     if (!field.runtime.visible || field.runtime.readOnly || field.runtime.capability === 'UNSUPPORTED' || field.runtime.capability === 'PRESENTATION_ONLY') continue
     if (!field.runtime.required || (field.type !== 'image' && field.type !== 'file')) continue
     workspace.setField(field.fieldId, [{
-      url: '/__review/review-uploaded-thumbnail.svg',
+      url: '/tools/review/harness/review-uploaded-thumbnail.svg',
       objectKey: 'review/validation/required-media.svg',
       fileName: 'required-media.svg',
       extension: 'svg',
@@ -244,8 +244,8 @@ text { display: inline; }
 /* Review-only H5 shim: the real uni `image` element is retained in the
  * production component; this only makes the deterministic local review asset
  * visible in the browser renderer. */
-.review-root image.dynamic-action-media-thumbnail[src="/__review/review-uploaded-thumbnail.svg"] {
-  background-image: url('/__review/review-uploaded-thumbnail.svg');
+.review-root image.dynamic-action-media-thumbnail[src="/tools/review/harness/review-uploaded-thumbnail.svg"] {
+  background-image: url('/tools/review/harness/review-uploaded-thumbnail.svg');
   background-position: center;
   background-repeat: no-repeat;
   background-size: cover;

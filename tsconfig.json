@@ -34,10 +34,10 @@
     "playwright.config.ts",
     "playwright.uni-h5-g4f-review.config.ts",
     "vite.uni-h5-g4f-review.config.ts",
-    "review-app-g4f/**/*.ts",
-    "review-app-g4f/**/*.vue",
-    "__review/**/*.ts",
-    "__review/**/*.vue",
+    "tools/review/quotation-demo/**/*.ts",
+    "tools/review/quotation-demo/**/*.vue",
+    "tools/review/harness/**/*.ts",
+    "tools/review/harness/**/*.vue",
     "vite.review.config.ts"
   ],
   "exclude": ["node_modules", "dist", "unpackage"]

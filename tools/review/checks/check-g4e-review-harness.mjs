@@ -4,7 +4,7 @@ import { readFile, readdir } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { resolve } from 'node:path'
 
-const root = resolve(fileURLToPath(new URL('..', import.meta.url)))
+const root = resolve(fileURLToPath(new URL('../../../', import.meta.url)))
 
 async function read(relativePath) {
   return readFile(resolve(root, relativePath), 'utf8')
@@ -26,23 +26,23 @@ function fail(message) {
   throw new Error(`G4-E review harness check failed: ${message}`)
 }
 
-const entry = await read('__review/g4e-survey-main.ts')
-const html = await read('__review/g4e-survey.html')
-const galleryEntry = await read('__review/design-system-main.ts')
-const galleryHtml = await read('__review/design-system.html')
+const entry = await read('tools/review/harness/g4e-survey-main.ts')
+const html = await read('tools/review/harness/g4e-survey.html')
+const galleryEntry = await read('tools/review/harness/design-system-main.ts')
+const galleryHtml = await read('tools/review/harness/design-system.html')
 const gallerySource = [
   galleryEntry,
   galleryHtml,
-  await read('__review/design-system-gallery.vue'),
-  await read('__review/design-system-gallery-fixtures.ts'),
+  await read('tools/review/harness/design-system-gallery.vue'),
+  await read('tools/review/harness/design-system-gallery-fixtures.ts'),
 ].join('\n')
-const galleryPage = await read('__review/design-system-gallery.vue')
+const galleryPage = await read('tools/review/harness/design-system-gallery.vue')
 const galleryStyle = galleryPage.match(/<style[^>]*>([\s\S]*?)<\/style>/)?.[1] ?? ''
 const universalSelectorPattern = /(?:^|[,{>+~])\s*\*(?=\s*(?:[>+~.#:[,{\s]|$))/m
 const reviewConfig = await read('vite.review.config.ts')
 const uniReviewConfig = await read('vite.uni-h5-review.config.ts')
 const mpReviewConfig = await read('vite.mp-weixin-review.config.ts')
-const uniReviewAppSource = await readTree('review-app')
+const uniReviewAppSource = await readTree('tools/review/uni-gallery')
 const packageJson = JSON.parse(await read('package.json'))
 const pages = await read('src/pages.json')
 const appConfig = await read('vite.config.ts')
@@ -54,7 +54,7 @@ if (!entry.includes("if (import.meta.env.PROD)")) {
 if (!entry.includes("G4-E H5 review harness is development-only")) {
   fail('review entry must expose an explicit development-only guard')
 }
-if (!html.includes('/__review/g4e-survey-main.ts')) {
+if (!html.includes('/tools/review/harness/g4e-survey-main.ts')) {
   fail('review HTML must use the isolated review entry')
 }
 if (!galleryEntry.includes("if (import.meta.env.PROD)")) {
@@ -63,7 +63,7 @@ if (!galleryEntry.includes("if (import.meta.env.PROD)")) {
 if (!galleryEntry.includes('Design System Gallery is development-only')) {
   fail('Design System Gallery entry must expose an explicit development-only guard')
 }
-if (!galleryHtml.includes('/__review/design-system-main.ts')) {
+if (!galleryHtml.includes('/tools/review/harness/design-system-main.ts')) {
   fail('Design System Gallery HTML must use the isolated review entry')
 }
 if (!galleryStyle) {
@@ -93,7 +93,7 @@ if (!uniReviewConfig.includes("process.env.UNI_INPUT_DIR = reviewInputDir")) {
 if (!uniReviewConfig.includes("port: 5174")) {
   fail('uni H5 review must use its isolated development port')
 }
-if (!uniReviewConfig.includes("'./review-app'")) {
+if (!uniReviewConfig.includes("'./tools/review/uni-gallery'")) {
   fail('uni H5 review config must point at the review-only input root')
 }
 if (!mpReviewConfig.includes('process.env.UNI_INPUT_DIR = reviewInputDir')) {
@@ -102,7 +102,7 @@ if (!mpReviewConfig.includes('process.env.UNI_INPUT_DIR = reviewInputDir')) {
 if (!mpReviewConfig.includes('design-system-mp-weixin')) {
   fail('MP review must use an isolated output directory')
 }
-if (packageJson.scripts?.['build:mp-weixin-review'] !== 'uni build -p mp-weixin -c vite.mp-weixin-review.config.ts --outDir ../unpackage/design-system-mp-weixin') {
+if (packageJson.scripts?.['build:mp-weixin-review'] !== 'node tools/review/prepare-mp-input.mjs && uni build -p mp-weixin -c vite.mp-weixin-review.config.ts --outDir ../unpackage/design-system-mp-weixin') {
   fail('MP review build script must use the installed uni CLI and review config')
 }
 if (!uniReviewAppSource.includes('pages/design-system/index')) {
@@ -114,7 +114,7 @@ if (!uniReviewAppSource.includes('createSSRApp') || uniReviewAppSource.includes(
 if (!uniReviewAppSource.includes('DesignSystemGallery')) {
   fail('uni H5 review page must mount the real Design System Gallery content')
 }
-if (productionSource.includes('__review/design-system') || productionSource.includes('design-system-gallery')) {
+if (productionSource.includes('tools/review/harness/design-system') || productionSource.includes('design-system-gallery')) {
   fail('production source must not import the Design System Gallery')
 }
 for (const forbidden of ['@app/bootstrap', '@features/', '@adapters/', 'apiRead', 'commandApi', 'VITE_XLINK_', 'saveDynamicForm', 'completeDynamicForm']) {

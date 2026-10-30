@@ -3,7 +3,7 @@ import { join, resolve } from 'node:path'
 
 import { expect, test, type Page } from '@playwright/test'
 
-const reviewPath = '/__review/g4e-survey.html'
+const reviewPath = '/tools/review/harness/g4e-survey.html'
 const screenshotDirectory = resolve(process.cwd(), '.review/g4e-product-gate/generated')
 
 type VisualScenarioContract = {
@@ -241,7 +241,7 @@ test('uploaded media shows confirmed state and a real preview', async ({ page })
   await expect(page.getByTestId('dynamic-media-status-images1')).toHaveText('已上传')
   const preview = page.getByTestId('dynamic-media-preview-images1').locator('image, img')
   await expect(preview).toHaveCount(1)
-  await expect(preview).toHaveAttribute('src', /__review\/review-uploaded-thumbnail\.svg/)
+  await expect(preview).toHaveAttribute('src', /tools\/review\/harness\/review-uploaded-thumbnail\.svg/)
   await expect(page.getByTestId('dynamic-media-preview-images1').locator('.dynamic-action-media-tile').first()).not.toHaveAttribute('style', /background-image/)
   await expect(page.getByTestId('dynamic-media-add-images1')).toContainText('继续添加')
   await assertHealthy(page, evidence)

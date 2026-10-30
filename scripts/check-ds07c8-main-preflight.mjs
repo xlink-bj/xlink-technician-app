@@ -30,7 +30,7 @@ function category(path) {
   if (path.startsWith('.github/workflows/')) return 'ci_workflows'
   if (path.startsWith('scripts/')) return 'scripts'
   if (path.startsWith('docs/')) return 'documentation'
-  if (path.startsWith('__review/') || path.startsWith('.review/')) return 'review_artifacts'
+  if (path.startsWith('__review/') || path.startsWith('.review/') || path.startsWith('tools/review/')) return 'review_artifacts'
   if (/\.(png|jpg|jpeg|svg|webp|gif)$/i.test(path)) return 'media'
   return 'other'
 }

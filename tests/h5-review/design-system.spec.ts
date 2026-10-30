@@ -3,9 +3,9 @@ import { join, resolve } from 'node:path'
 
 import { expect, test, type Locator, type Page } from '@playwright/test'
 
-import { designSystemScreenshotContracts } from '../../__review/design-system-gallery-fixtures'
+import { designSystemScreenshotContracts } from '../../tools/review/harness/design-system-gallery-fixtures'
 
-const galleryPath = '/__review/design-system.html'
+const galleryPath = '/tools/review/harness/design-system.html'
 const screenshotDirectory = resolve(process.cwd(), '.review/design-system/generated')
 const sectionIds = [
   '01-foundations',

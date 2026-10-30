@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createProductReviewDraftStorage, type BrowserReviewStorage } from '../../review-app-g4f/product-draft-storage'
+import { createProductReviewDraftStorage, type BrowserReviewStorage } from '../../tools/review/quotation-demo/product-draft-storage'
 
 function memoryBrowser() {
   const map = new Map<string, string>()

@@ -4,8 +4,8 @@ on:
   pull_request:
     paths:
       - 'src/shared/ui/**'
-      - '__review/design-system-gallery.vue'
-      - '__review/design-system-gallery-fixtures.ts'
+      - 'tools/review/harness/design-system-gallery.vue'
+      - 'tools/review/harness/design-system-gallery-fixtures.ts'
       - 'tests/h5-review/design-system-uni-h5.spec.ts'
       - 'scripts/check-ui-governance.mjs'
       - 'docs/design-system/DS01_COMMERCIAL_FOUNDATION_V1.md'

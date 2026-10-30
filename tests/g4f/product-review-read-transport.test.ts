@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { productReviewReadAllowed, createProductMockReadTransport } from '../../review-app-g4f/product-read-transport'
+import { productReviewReadAllowed, createProductMockReadTransport } from '../../tools/review/quotation-demo/product-read-transport'
 import { mockCommandScenarioIds, mockQuotationCatalogServiceType } from '@adapters/api/mock'
 
 const actor = { userId: 'synthetic-review-user', roleId: 'synthetic-role' }

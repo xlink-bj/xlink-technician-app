@@ -30,6 +30,7 @@
 - [Codex Local Fast Loop](engineering/CODEX_LOCAL_FAST_LOOP.md)：仅在本地 Mac、微信开发者工具、内网等特有能力下的协作。
 - [AI Engineering Loop](architecture/AI_ENGINEERING_LOOP.md)：拟议协作模式；不表示已开启无人值守自动执行。
 - [C3/C4/G3 Architecture Closure](engineering/C3_C4_G3_ARCHITECTURE_CLOSURE_20261030.md)：Action Workspace 最终有界回读、R1 Adapter 纯映射拆分和 CI 分层运行的职责/验证矩阵；以实施 PR 的精确提交门禁为验收依据。
+- [C6 Root Review & Tooling Hygiene](engineering/C6_ROOT_REVIEW_TOOLING_HYGIENE_20261030.md)：根目录 Review-only 资产归并、已清理的旧路径、保留的脚本消费者和验证结果；Review 环境使用说明见 [tools/review/README.md](../tools/review/README.md)。
 
 ## 大量历史文档如何理解
 

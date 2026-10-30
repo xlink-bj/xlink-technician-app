@@ -4,7 +4,7 @@ import { defineConfig } from 'vite'
 
 const require = createRequire(import.meta.url)
 const repositoryRoot = fileURLToPath(new URL('.', import.meta.url))
-const reviewInputDir = fileURLToPath(new URL('./review-app-g4f', import.meta.url))
+const reviewInputDir = fileURLToPath(new URL('./tools/review/quotation-demo', import.meta.url))
 const reviewOutputDir = fileURLToPath(new URL('./unpackage/g4f-phase1a-uni-h5', import.meta.url))
 
 if (process.env.UNI_INPUT_DIR && process.env.UNI_INPUT_DIR !== reviewInputDir) {
@@ -19,6 +19,7 @@ const uni = require('@dcloudio/vite-plugin-uni').default
 
 export default defineConfig({
   root: reviewInputDir,
+  cacheDir: fileURLToPath(new URL('./.cache/vite-g4f-quotation-review', import.meta.url)),
   plugins: [uni()],
   resolve: {
     alias: {

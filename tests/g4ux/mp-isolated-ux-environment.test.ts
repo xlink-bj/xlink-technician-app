@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isolatedMpUxEnvironment } from '../../scripts/dev-mp-isolated-ux.mjs'
+import { isolatedMpUxEnvironment } from '../../tools/review/dev/dev-mp-isolated-ux.mjs'
 import { loadApplicationRuntimeConfig } from '@app/runtime-config'
 
 describe('WeChat native commercial QA environment', () => {

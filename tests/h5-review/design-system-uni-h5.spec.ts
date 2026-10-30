@@ -3,7 +3,7 @@ import { join, resolve } from 'node:path'
 
 import { expect, test, type Locator, type Page } from '@playwright/test'
 
-import { designSystemScreenshotContracts, designSystemSections } from '../../__review/design-system-gallery-fixtures'
+import { designSystemScreenshotContracts, designSystemSections } from '../../tools/review/harness/design-system-gallery-fixtures'
 
 const reviewPath = '/#/pages/design-system/index'
 const screenshotDirectory = resolve(process.cwd(), '.review/design-system-uni-h5/generated')

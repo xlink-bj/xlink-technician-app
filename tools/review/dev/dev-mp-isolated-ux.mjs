@@ -27,7 +27,7 @@ export function isolatedMpUxEnvironment(parent = process.env) {
 }
 
 export function launchIsolatedMpUx() {
-  const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
+  const root = resolve(dirname(fileURLToPath(import.meta.url)), '../../..')
   const executable = resolve(root, 'node_modules/.bin/uni')
   const child = spawn(executable, ['-p', 'mp-weixin'], {
     cwd: root,

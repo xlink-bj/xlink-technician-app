@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { resolve } from 'node:path'
 
-const root = resolve(fileURLToPath(new URL('..', import.meta.url)))
+const root = resolve(fileURLToPath(new URL('../../../', import.meta.url)))
 const read = (path) => readFile(resolve(root, path), 'utf8')
 const fail = (message) => { throw new Error(`G4-F Phase 1A check failed: ${message}`) }
 
@@ -17,10 +17,10 @@ const [pages, actionTypes, projection, workspace, adapter, mockRouter, commandPo
   read('src/adapters/api/mock/router.ts'),
   read('src/shared/ports/commands.ts'),
   read('src/features/work-orders/quotation/QuotationActionContent.vue'),
-  read('review-app-g4f/pages.json'),
-  read('review-app-g4f/main.ts'),
+  read('tools/review/quotation-demo/pages.json'),
+  read('tools/review/quotation-demo/main.ts'),
   read('vite.uni-h5-g4f-review.config.ts'),
-  read('review-app-g4f/pages/quotation/index.vue'),
+  read('tools/review/quotation-demo/pages/quotation/index.vue'),
   read('src/features/work-orders/quotation/QuotationActionWorkspace.vue'),
   read('package.json'),
 ])

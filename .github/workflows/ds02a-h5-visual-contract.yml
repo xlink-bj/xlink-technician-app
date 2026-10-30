@@ -9,7 +9,7 @@ on:
       - 'tests/ds02a-main/**'
       - 'docs/design-system/DS02A_H5_VISUAL_CONTRACT.md'
       - 'src/shared/ui/design-system.scss'
-      - '__review/design-system-gallery.vue'
+      - 'tools/review/harness/design-system-gallery.vue'
       - 'src/shared/ui/**'
       # UI source files; feature-local TypeScript helpers use fast unit CI.
       - 'src/features/work-orders/**/*.vue'

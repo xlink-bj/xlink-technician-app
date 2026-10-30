@@ -41,7 +41,7 @@ export function installReviewPlatformShim(): void {
     removeStorageSync: (key) => { reviewStorage.delete(key) },
     getSystemInfoSync: () => ({ platform: 'h5', deviceType: 'browser', windowWidth: window.innerWidth }),
     request: (options) => options.fail?.({ errMsg: 'H5 review shim does not call real network' }),
-    chooseImage: (options) => options.success({ tempFilePaths: ['/__review/synthetic-photo.jpg'] }),
+    chooseImage: (options) => options.success({ tempFilePaths: ['/tools/review/harness/synthetic-photo.jpg'] }),
     getLocation: (options) => options.success({ latitude: 39.9042, longitude: 116.4074, accuracy: 12 }),
     showToast: () => undefined,
     showModal: () => undefined,
@@ -139,7 +139,7 @@ export function createReviewNavigation(): NavigationPort {
 function syntheticMedia(source: 'camera' | 'library'): LocalMedia {
   return {
     ref: asOpaqueId<'LocalMediaRef'>(`review-picked-${source}`),
-    localPath: '/__review/synthetic-photo.jpg',
+    localPath: '/tools/review/harness/synthetic-photo.jpg',
     name: 'synthetic-photo.jpg',
     mimeType: 'image/jpeg',
     source,

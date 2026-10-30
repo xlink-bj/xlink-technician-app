@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { resolve } from 'node:path'
 
-const root = resolve(fileURLToPath(new URL('..', import.meta.url)))
+const root = resolve(fileURLToPath(new URL('../../../', import.meta.url)))
 const read = (path) => readFile(resolve(root, path), 'utf8')
 const fail = (message) => { throw new Error(`G4-F quotation composition boundary check failed: ${message}`) }
 
@@ -20,9 +20,9 @@ const [pages, workspace, component, model, codec, catalog, catalogBrowser, compo
   read('src/features/work-orders/quotation/package-configuration.ts'),
   read('src/features/work-orders/dynamic-form-action.ts'),
   read('src/shared/ports/commands.ts'),
-  read('review-app-g4f/main.ts'),
-  read('review-app-g4f/quotation-scenarios.ts'),
-  read('review-app-g4f/pages/quotation/index.vue'),
+  read('tools/review/quotation-demo/main.ts'),
+  read('tools/review/quotation-demo/quotation-scenarios.ts'),
+  read('tools/review/quotation-demo/pages/quotation/index.vue'),
   read('playwright.uni-h5-g4f-review.config.ts'),
   read('vite.uni-h5-g4f-review.config.ts'),
   read('tests/h5-review/g4f-quotation-phase1b.spec.ts'),

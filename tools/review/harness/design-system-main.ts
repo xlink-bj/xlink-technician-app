@@ -1,7 +1,7 @@
 import { createApp } from 'vue'
 
 import './review-platform-shim'
-import '../src/shared/ui/design-system.scss'
+import '../../../src/shared/ui/design-system.scss'
 import { installReviewRpxCompatibility } from './review-platform-shim'
 
 if (import.meta.env.PROD) {
