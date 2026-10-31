@@ -92,6 +92,10 @@ export function auditOwnership(sourceFiles) {
       && /\b(?:path|url)\s*:\s*['"`](?:biz\/extForm\/upsert\/|workflow\/process\b)/.test(content)) {
       issues.push(name + ': Workflow/FormData transport path may not live in UI/feature')
     }
+    if (name.startsWith('src/features/work-orders/') && name !== canon.schema
+      && /\bworkflowReadOnlyFieldIds\s*\?\.\s*some\s*\(/.test(content)) {
+      issues.push(name + ': duplicated workflow field readonly decision outside Form Schema owner')
+    }
   }
   for (const [label, file] of Object.entries(canon)) {
     if (!all.has(file)) issues.push('missing required canonical owner: ' + label + ' (' + file + ')')
@@ -114,6 +118,8 @@ export function auditOwnership(sourceFiles) {
 
   if (!/export\s+function\s+actionFormSchemaFor\s*\(/.test(has('schema')))
     issues.push(canon.schema + ': shared Form metadata owner is missing')
+  if (!/export\s+function\s+isWorkflowFieldReadOnly\s*\(/.test(has('schema')))
+    issues.push(canon.schema + ': canonical Workflow field readonly projection is missing')
   if (!/\bformDataUpsertCommand\s*\(/.test(has('command'))
     || !/\bworkflowCompleteCommand\s*\(/.test(has('command')))
     issues.push(canon.command + ': dispatch must route through pure R1 codecs')
@@ -156,6 +162,7 @@ if (process.argv.includes('--self-test')) {
     ['adapter raw wire bypass', canon.command, actual('command') + "\nconst eq10Unsafe = { path: 'workflow/process' }"],
     ['Action Workspace pricing bypass', canon.workspace, actual('workspace') + '\ncalculateQuotationPricing(hydration)'],
     ['removed actor receipt scope', canon.order, actual('order').replaceAll('authorizationFingerprint', 'legacyFingerprint').replaceAll('authorizationCurrent', 'legacyCurrent')],
+    ['duplicate Workflow readonly decision', canon.dynamic, actual('dynamic') + '\nconst unsafeReadOnly = form.workflowReadOnlyFieldIds?.some((id) => String(id) === String(field.fieldId))'],
   ]
   for (const [label, filename, source] of failures) {
     const modified = new Map(all)

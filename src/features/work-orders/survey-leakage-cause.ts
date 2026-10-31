@@ -11,6 +11,7 @@ import type {
 } from '@shared/ports'
 import { createOperationError } from '@shared/types'
 import type { OperationSnapshot } from '@shared/types'
+import { isWorkflowFieldReadOnly } from './action-form-schema'
 
 export const surveyLeakageCauseTriggerKey = 'leakageCauseSelect' as const
 export const surveyLeakageCauseValueKey = 'leakageCause' as const
@@ -97,7 +98,7 @@ export function surveyLeakageCauseFieldStateFor(
     }
   }
 
-  const workflowReadOnly = form.workflowReadOnlyFieldIds?.some((id) => String(id) === String(field.fieldId))
+  const workflowReadOnly = isWorkflowFieldReadOnly(form, field)
   const readOnly = Boolean(workflowReadOnly || field.readOnly)
   return {
     capability: 'CONDITIONAL_CAPABILITY',

@@ -33,7 +33,7 @@
 - [C6 Root Review & Tooling Hygiene](engineering/C6_ROOT_REVIEW_TOOLING_HYGIENE_20261030.md)：根目录 Review-only 资产归并、已清理的旧路径、保留的脚本消费者和验证结果；Review 环境使用说明见 [tools/review/README.md](../tools/review/README.md)。
 - [C7 Config Layout & Script Audit](engineering/C7_CONFIG_LAYOUT_AND_TOOL_AUDIT_20261031.md)：Playwright/Vite/Vitest 统一配置目录、保留的 3 个标准入口、脚本逐项消费者审计；当前配置约定见 [config/README.md](../config/README.md)。
 - [M1 Module Dependency & Ownership Audit](engineering/M1_MODULE_DEPENDENCY_AUDIT_20261031.md)：C6/C7 后最新主干的 286 模块 / 1005 条静态依赖图、现存类型循环与边界例外、重复业务规则审计，以及 CI 不增长守卫；不授权业务重构。
-- [M2 Module Boundary & Business Rule Ownership](engineering/M2_MODULE_BOUNDARY_CLOSURE_20261031.md)：收敛 Home→WorkOrder 越界和 DEV Mock 展示类型倒置，复核 Workflow/报价计算的唯一权威与有意复算边界；保持 UI/API 行为不变。
+- [M2 Module Boundary & Business Rule Ownership](engineering/M2_MODULE_BOUNDARY_CLOSURE_20261031.md)：M2-A 已合入 main，消除 Home→WorkOrder 越界和 DEV Mock 展示类型倒置；M2-B 将 4 处 Workflow 只读判定合为单一规则权威，并强化静态防回退与语义测试；保留报价必要的防篡改复算，保持 UI/API 行为不变。
 
 ## 大量历史文档如何理解
 
