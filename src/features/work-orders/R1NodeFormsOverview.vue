@@ -2,20 +2,20 @@
   <view v-if="node && (node.sourceNodeType === 'forms' || node.sourceNodeType === 'repeat')"
     class="r1-node-forms" data-testid="r1-form-list">
     <view class="r1-node-forms__heading">
-      <text class="r1-node-forms__title">{{ node.sourceNodeType === 'repeat' ? '重复提交记录' : '节点表单记录' }}</text>
+      <text class="r1-node-forms__title">{{ node.sourceNodeType === 'repeat' ? '重复提交记录' : '表单记录' }}</text>
       <text v-if="formList?.evidence === 'available'" data-testid="r1-form-list-count"
         class="r1-node-forms__count">{{ countText }}</text>
     </view>
     <text v-if="!formList" class="r1-node-forms__hint" data-testid="r1-form-list-unknown">
-      当前节点尚未提供完整记录。未知不等于没有表单；仅可查看。
+      表单记录暂不可用，当前仅支持查看。
     </text>
     <AppButton v-if="!formList && node.sourceNodeType==='repeat' && syntheticActionsEnabled"
       size="compact" variant="secondary" @tap="loadRepeat">查看记录</AppButton>
     <text v-else-if="formList?.evidence === 'invalid'" class="r1-node-forms__hint"
-      data-testid="r1-form-list-invalid">服务端表单列表结构异常；不允许基于不完整列表编辑。</text>
+      data-testid="r1-form-list-invalid">表单记录暂时无法加载，请稍后重试。</text>
     <template v-else-if="formList">
       <text v-if="formList.entries.length === 0" class="r1-node-forms__hint"
-        data-testid="r1-form-list-empty">该节点返回了空表单列表。</text>
+        data-testid="r1-form-list-empty">暂无表单记录。</text>
       <view v-for="(entry,index) in formList.entries" :key="String(entry.id)"
         class="r1-node-forms__item" data-testid="r1-form-list-entry">
         <text class="r1-node-forms__index">{{ index + 1 }}</text>
@@ -33,10 +33,10 @@
         </view>
       </view>
       <text v-if="formList.truncated" class="r1-node-forms__hint" data-testid="r1-form-list-truncated">
-        仅展示前 50 条已加载记录，不能基于截断列表修改。
+        记录较多，当前仅显示部分内容，暂不能编辑。
       </text>
     </template>
-    <text class="r1-node-forms__hint">当前可先整理草稿；正式保存、删除和流程完成暂未开放。</text>
+    <text class="r1-node-forms__hint">可先整理草稿，暂不支持正式提交、删除或完成流程。</text>
     <view v-if="draftStore.state === 'loading'" class="r1-node-forms__hint">正在恢复草稿…</view>
     <view v-else-if="draftStore.state === 'failed'" class="r1-node-forms__hint" data-testid="r1-form-local-error">
       {{ draftStore.message }}
@@ -51,7 +51,7 @@
           @tap="createDraft">新增草稿</AppButton>
       </view>
       <view v-else-if="node.sourceNodeType === 'forms'" class="r1-node-forms__draft-editor">
-        <text class="r1-node-forms__label">多类型表单选项</text>
+        <text class="r1-node-forms__label">新增表单</text>
         <AppButton v-if="canStage && syntheticActionsEnabled && node.addFormCodeId"
           size="compact" variant="secondary" @tap="loadChoices">查看可选表单</AppButton>
         <view v-for="(choice,index) in draftStore.availableAddOptions" :key="String(choice.formDefinitionId)"
@@ -60,7 +60,7 @@
           <AppButton size="compact" variant="secondary" @tap="addOption(index)">新增草稿</AppButton>
         </view>
         <text v-if="!draftStore.availableAddOptions.length" class="r1-node-forms__hint">
-          未读取到已核验的选项时不能新增；不会猜测表单定义。
+          暂时无法获取可新增的表单类型，请稍后重试。
         </text>
       </view>
       <view v-if="editingRecordId" class="r1-node-forms__draft-editor" data-testid="r1-form-edit-draft">
@@ -161,7 +161,7 @@ function stateName(state:R1NodeFormReference['state']){
   return state==='active'?'已保存':state==='deleted'?'已删除':'状态待核验'
 }
 function intentLabel(kind:R1LocalFormIntent['kind']){
-  return kind==='new'?'新增草稿':kind==='edit_title'?'编辑标题草稿':'删除意图'
+  return kind==='new'?'新增草稿':kind==='edit_title'?'编辑标题草稿':'待删除'
 }
 function stagedFor(id:string){return draftStore.snapshot.intents.find(x=>x.targetFormDataId===id)}
 watch(()=>[props.node,props.workOrderId,props.actorScope] as const,([node,workOrderId,actorScope])=>{
