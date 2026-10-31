@@ -214,6 +214,47 @@ describe('G4-F Phase 1E quotation catalog browser', () => {
     expect(store.catalogItemsByKind.package).toEqual([])
   })
 
+  it('does not resurrect a package detail after returning to the quotation workbench', async () => {
+    let resolveDetail: ((result: OperationSnapshot<QuotationPackageDetailRead>) => void) | undefined
+    const pending = new Promise<OperationSnapshot<QuotationPackageDetailRead>>((resolve) => { resolveDetail = resolve })
+    const port = catalogPort({ getPackageDetail: vi.fn(() => pending) })
+    const store = useQuotationCatalogBrowserStore()
+    store.configure({ readPort: port, catalogContext: context })
+    store.open('package')
+    await store.loadList('package')
+    const request = store.openPackageDetail(packageRow.id)
+    expect(store.packageDetailState).toBe('loading')
+
+    store.close()
+    resolveDetail?.(succeeded({ package: packageRow, procedures: [], materials: [], measures: [] }))
+    await request
+    expect(store.isOpen).toBe(false)
+    expect(store.selectedPackageId).toBeNull()
+    expect(store.packageDetail).toBeNull()
+    expect(store.packageDetailState).toBe('idle')
+
+    store.open('material')
+    expect(store.selectedKind).toBe('material')
+    expect(store.packageDetail).toBeNull()
+  })
+
+  it('does not deliver a previous package detail after changing catalog category', async () => {
+    let resolveDetail: ((result: OperationSnapshot<QuotationPackageDetailRead>) => void) | undefined
+    const pending = new Promise<OperationSnapshot<QuotationPackageDetailRead>>((resolve) => { resolveDetail = resolve })
+    const store = useQuotationCatalogBrowserStore()
+    store.configure({ readPort: catalogPort({ getPackageDetail: vi.fn(() => pending) }), catalogContext: context })
+    store.open('package')
+    await store.loadList('package')
+    const request = store.openPackageDetail(packageRow.id)
+    store.selectKind('procedure')
+    resolveDetail?.(succeeded({ package: packageRow, procedures: [], materials: [], measures: [] }))
+    await request
+    expect(store.selectedKind).toBe('procedure')
+    expect(store.selectedPackageId).toBeNull()
+    expect(store.packageDetail).toBeNull()
+    expect(store.packageDetailState).toBe('idle')
+  })
+
   it('follows R1 Number(layer) grouping and ascending layer order for package alternatives', () => {
     const groups = quotationPackageMaterialLayersFor([
       { kind: 'material', item: null, layer: 1 },

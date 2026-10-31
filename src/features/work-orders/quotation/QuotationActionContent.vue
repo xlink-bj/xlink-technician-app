@@ -622,6 +622,7 @@
             :message="catalogSelectionError"
             tone="warning"
             quiet
+            data-testid="quotation-catalog-selection-error"
           />
           <AppStatus
             v-else-if="catalogBrowser.selectedKind !== 'package' && (!activeCatalogGroup || activeCatalogGroup.repairParts.length === 0)"
@@ -893,7 +894,9 @@
               <view class="quotation-content__package-hero-copy">
                 <text class="quotation-content__package-detail-title">{{ catalogBrowser.packageDetail.package.name }}</text>
                 <text class="quotation-content__package-meta">{{ catalogMetadata(catalogBrowser.packageDetail.package) }}</text>
-                <text class="quotation-content__package-detail-note">配置已加入目标维修部位组草稿，尚未提交正式报价。</text>
+                <text class="quotation-content__package-detail-note">{{ existingPackageSelection?.configuration
+                  ? '本次修改需确认保存到当前维修部位组，尚未提交正式报价。'
+                  : '选择材料后确认加入当前维修部位组，尚未提交正式报价。' }}</text>
               </view>
             </view>
 
@@ -1168,6 +1171,7 @@ watch([isFirstRepairPartStep, canEdit], ([active, permitted]) => {
   emit('first-step-presentation', { active, canEdit: permitted })
 }, { immediate: true })
 const activeCatalogGroupId = ref<string | null>(null)
+let catalogNavigationGeneration = 0
 const catalogSelectionError = ref('')
 const firstStepValidationRequestedFor = ref<string | null>(null)
 const packageMaterialChoicesByLayer = ref<Readonly<Record<string, QuotationPackageMaterialChoice>>>({})
@@ -1290,6 +1294,7 @@ const packageConfigurationValidation = computed(() => {
 const kindLabels = quotationCatalogKindLabels
 
 function openCatalog(groupId: string, kind: QuotationLineKind): void {
+  catalogNavigationGeneration += 1
   selectedCatalogFacet.value = ''
   activeCatalogGroupId.value = groupId
   catalogSelectionError.value = ''
@@ -1332,6 +1337,7 @@ async function selectProductsForFirstGroup(groupId: string): Promise<void> {
 }
 
 function closeCatalog(): void {
+  catalogNavigationGeneration += 1
   const returnGroupId = activeCatalogGroupId.value
   catalogBrowser.close()
   if (returnGroupId) emit('return-to-group', returnGroupId)
@@ -1342,6 +1348,7 @@ function closeCatalog(): void {
 
 
 function selectCatalogKind(kind: QuotationLineKind): void {
+  catalogNavigationGeneration += 1
   selectedCatalogFacet.value = ''
   catalogSelectionError.value = ''
   catalogBrowser.selectKind(kind)
@@ -1388,10 +1395,23 @@ function packageTargetKey(groupId: string, packageId: string): string {
 }
 
 async function openExistingPackageConfiguration(groupId: string, packageId: string): Promise<void> {
+  if (!canEdit.value || !composition.groups.some(group => group.groupId === groupId
+    && group.projPackages.some(selection => selection.catalogId === packageId))) return
+  const navigationGeneration = ++catalogNavigationGeneration
   activeCatalogGroupId.value = groupId
   catalogSelectionError.value = ''
   packageMaterialChoicesByLayer.value = {}
   catalogBrowser.open('package')
+  // A restored draft can contain a package before any catalog read in this
+  // session. Wait for the current scoped list before asking for its detail.
+  await catalogBrowser.loadList('package')
+  if (navigationGeneration !== catalogNavigationGeneration || !catalogBrowser.isOpen
+    || catalogBrowser.selectedKind !== 'package' || activeCatalogGroupId.value !== groupId) return
+  if (catalogBrowser.catalogStatesByKind.package !== 'succeeded') return
+  if (!catalogBrowser.packageCandidateFor(packageId)) {
+    catalogSelectionError.value = '该套餐尚未出现在当前已加载目录，请继续加载目录查找后再编辑；原草稿不受影响。'
+    return
+  }
   await openPackageConfiguration(packageId)
 }
 
@@ -1420,6 +1440,7 @@ async function openPackageConfiguration(packageId: string): Promise<void> {
 }
 
 function backFromPackageConfiguration(): void {
+  catalogNavigationGeneration += 1
   catalogBrowser.backToList()
   catalogSelectionError.value = ''
 }

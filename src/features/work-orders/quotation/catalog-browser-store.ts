@@ -153,33 +153,34 @@ export const useQuotationCatalogBrowserStore = defineStore('quotationCatalogBrow
     context = input.catalogContext ?? null
   }
 
-  function open(kind: QuotationLineKind): void {
-    resetMaterialPreview()
-    isOpen.value = true
-    selectedKind.value = kind
+  function resetPackageDetail(): void {
+    // A read that finishes after leaving detail must never resurrect the old
+    // package or appear in another repair group's catalog session.
+    packageRequestGeneration += 1
     selectedPackageId.value = null
     packageDetail.value = null
     packageDetailState.value = 'idle'
     packageDetailErrorCopy.value = ''
+  }
+
+  function open(kind: QuotationLineKind): void {
+    resetMaterialPreview()
+    resetPackageDetail()
+    isOpen.value = true
+    selectedKind.value = kind
     void loadList(kind)
   }
 
   function close(): void {
     resetMaterialPreview()
+    resetPackageDetail()
     isOpen.value = false
-    selectedPackageId.value = null
-    packageDetail.value = null
-    packageDetailState.value = 'idle'
-    packageDetailErrorCopy.value = ''
   }
 
   function selectKind(kind: QuotationLineKind): void {
     resetMaterialPreview()
+    resetPackageDetail()
     selectedKind.value = kind
-    selectedPackageId.value = null
-    packageDetail.value = null
-    packageDetailState.value = 'idle'
-    packageDetailErrorCopy.value = ''
     void loadList(kind)
   }
 
@@ -420,11 +421,7 @@ export const useQuotationCatalogBrowserStore = defineStore('quotationCatalogBrow
 
   function backToList(): void {
     resetMaterialPreview()
-    packageRequestGeneration += 1
-    selectedPackageId.value = null
-    packageDetail.value = null
-    packageDetailState.value = 'idle'
-    packageDetailErrorCopy.value = ''
+    resetPackageDetail()
   }
 
   return {
