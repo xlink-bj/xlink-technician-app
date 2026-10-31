@@ -27,6 +27,7 @@
 
   <ActionWorkspaceShell
     v-else-if="workspace.descriptor && workspace.appointmentForm"
+    h5-navigation-fit
     :customer-name="workspace.detail?.customerName"
     :display-number="workspace.detail?.displayNumber"
     :lifecycle="workspace.lifecycle"
