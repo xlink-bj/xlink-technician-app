@@ -5,7 +5,7 @@ on:
     paths:
       - '.github/workflows/eq04-quotation-catalog-bridge.yml'
       - 'docs/engineering/EQ04_QUOTATION_SELECTION_BRIDGE.md'
-      - 'scripts/check-g4f-phase1b.mjs'
+      - 'tools/review/checks/check-g4f-phase1b.mjs'
       - 'src/features/work-orders/action-workspace.ts'
       - 'src/features/work-orders/quotation/catalog-selection-bridge.ts'
       - 'tests/engineering/eq04-quotation-catalog-bridge.test.ts'
@@ -36,7 +36,7 @@ jobs:
           cat > /tmp/eq04-expected.txt <<'EOF'
           .github/workflows/eq04-quotation-catalog-bridge.yml
           docs/engineering/EQ04_QUOTATION_SELECTION_BRIDGE.md
-          scripts/check-g4f-phase1b.mjs
+          tools/review/checks/check-g4f-phase1b.mjs
           src/features/work-orders/action-workspace.ts
           src/features/work-orders/quotation/catalog-selection-bridge.ts
           tests/engineering/eq04-quotation-catalog-bridge.test.ts

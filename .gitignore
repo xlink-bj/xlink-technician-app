@@ -13,3 +13,8 @@ scripts/__pycache__/
 coverage/
 .tmp/
 .cache/
+/.review/
+/.review-input
+/test-results/
+/playwright-report/
+/*.config.ts.timestamp-*.mjs

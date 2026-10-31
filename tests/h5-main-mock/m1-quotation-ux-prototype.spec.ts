@@ -3,7 +3,7 @@ import { resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { readFileSync } from 'node:fs'
 
-const prototypePath = resolve(process.cwd(), '__review/concepts/m1-quotation-four-surface.html')
+const prototypePath = resolve(process.cwd(), 'tools/review/harness/concepts/m1-quotation-four-surface.html')
 const prototypeUrl = pathToFileURL(prototypePath).href
 
 for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }]) {

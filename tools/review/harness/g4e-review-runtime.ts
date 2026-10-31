@@ -102,7 +102,7 @@ function taskScope(fieldId: string, valueKey: string, formDataId?: FormDataId): 
 
 function uploadedRef(valueKey: string): UploadedMediaRef {
   return {
-    url: '/__review/review-uploaded-thumbnail.svg',
+    url: '/tools/review/harness/review-uploaded-thumbnail.svg',
     key: `review/${valueKey}.jpg`,
     fileName: `${valueKey}.jpg`,
     extension: 'jpg',
@@ -170,7 +170,7 @@ function localMediaFor(input: LocalMedia): LocalMedia {
   return {
     ...input,
     ref: input.ref ?? asOpaqueId<'LocalMediaRef'>('review-picked-media'),
-    localPath: input.localPath ?? '/__review/synthetic-photo.jpg',
+    localPath: input.localPath ?? '/tools/review/harness/synthetic-photo.jpg',
     name: input.name ?? 'synthetic-photo.jpg',
   }
 }

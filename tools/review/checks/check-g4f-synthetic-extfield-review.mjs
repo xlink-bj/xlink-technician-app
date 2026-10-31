@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { resolve } from 'node:path'
 
-const root = resolve(fileURLToPath(new URL('..', import.meta.url)))
+const root = resolve(fileURLToPath(new URL('../../../', import.meta.url)))
 const read = (path) => readFile(resolve(root, path), 'utf8')
 const fail = (message) => { throw new Error(`G4-F synthetic ExtField review boundary failed: ${message}`) }
 
@@ -14,9 +14,9 @@ const [pages, workspace, content, panel, feature, reviewMain, reviewScenarios, r
   read('src/features/work-orders/quotation/QuotationActionContent.vue'),
   read('src/features/work-orders/quotation/SyntheticOrderExtFieldReviewPanel.vue'),
   read('src/features/work-orders/quotation/synthetic-extfield-review.ts'),
-  read('review-app-g4f/main.ts'),
-  read('review-app-g4f/quotation-scenarios.ts'),
-  read('review-app-g4f/pages/quotation/index.vue'),
+  read('tools/review/quotation-demo/main.ts'),
+  read('tools/review/quotation-demo/quotation-scenarios.ts'),
+  read('tools/review/quotation-demo/pages/quotation/index.vue'),
   read('src/features/work-orders/quotation/draft-codec.ts'),
   read('package.json'),
   read('tests/g4f/synthetic-order-extfield-review.test.ts'),

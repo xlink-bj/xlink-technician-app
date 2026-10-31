@@ -5,7 +5,7 @@ import { defineConfig } from 'vite'
 
 const require = createRequire(import.meta.url)
 const repositoryRoot = fileURLToPath(new URL('.', import.meta.url))
-const reviewInputDir = fileURLToPath(new URL('./review-app', import.meta.url))
+const reviewInputDir = fileURLToPath(new URL('./tools/review/uni-gallery', import.meta.url))
 const reviewOutputDir = fileURLToPath(new URL('./unpackage/design-system-uni-h5', import.meta.url))
 
 // UNI_INPUT_DIR is the installed uni-app toolchain's supported alternate
@@ -23,6 +23,7 @@ const uni = require('@dcloudio/vite-plugin-uni').default
 
 export default defineConfig({
   root: reviewInputDir,
+  cacheDir: fileURLToPath(new URL('./.cache/vite-uni-gallery-review', import.meta.url)),
   plugins: [uni()],
   resolve: {
     alias: {

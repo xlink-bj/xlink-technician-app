@@ -35,7 +35,7 @@ const [
   read('src/features/work-orders/components/GenericDynamicFormActionContent.vue'),
   read('src/shared/ui/AppTextarea.vue'),
   read('src/shared/ui/ActionWorkspaceFormActions.vue'),
-  read('__review/design-system-gallery.vue'),
+  read('tools/review/harness/design-system-gallery.vue'),
   read('src/shared/ui/AppButton.vue'),
   read('src/shared/ui/AppActionBar.vue'),
   read('src/shared/ui/ActionWorkspaceShell.vue'),
@@ -271,8 +271,8 @@ await import('./check-ui-style-ownership.mjs')
 const [craftScope, craftStyles, craftGallery, craftFixture, craftStateSpec] = await Promise.all([
   read('src/shared/ui/AppVisualScope.vue'),
   read('src/shared/ui/component-craft.scss'),
-  read('__review/design-system-craft-matrix.vue'),
-  read('__review/design-system-gallery-fixtures.ts'),
+  read('tools/review/harness/design-system-craft-matrix.vue'),
+  read('tools/review/harness/design-system-gallery-fixtures.ts'),
   read('docs/design-system/DS07B_SHARED_COMPONENT_STATE_STANDARD.md'),
 ])
 if (!craftScope.includes("mode === 'craft'") || !craftScope.includes("mode: 'standard'")
@@ -323,7 +323,7 @@ const workOrderStateUI = await Promise.all([
   read('src/shared/ui/AppWorkOrderSkeleton.vue'),
   read('src/shared/ui/AppWorkOrderEmptyState.vue'),
 ])
-const feedbackGallery = await read('__review/work-order-state-matrix.vue')
+const feedbackGallery = await read('tools/review/harness/work-order-state-matrix.vue')
 for (const [component, source] of [
   ['AppSearchBar', workOrderStateUI[0]],
   ['AppFeedbackState', workOrderStateUI[1]],

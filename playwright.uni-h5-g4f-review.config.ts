@@ -5,6 +5,7 @@ const baseURL = 'http://127.0.0.1:5175'
 export default defineConfig({
   testDir: './tests/h5-review',
   testMatch: '**/g4f-quotation*.spec.ts',
+  outputDir: 'test-results/uni-h5-g4f-review/attachments',
   fullyParallel: false,
   workers: 1,
   timeout: 120_000,

@@ -3,5 +3,5 @@
 </script>
 
 <style lang="scss">
-@import '../src/shared/ui/design-system.scss';
+@import '@shared/ui/design-system.scss';
 </style>

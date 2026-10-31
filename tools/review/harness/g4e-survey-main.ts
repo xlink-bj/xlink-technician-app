@@ -2,7 +2,7 @@ import { createApp } from 'vue'
 
 import './g4e-review-runtime'
 import './review-platform-shim'
-import '../src/shared/ui/design-system.scss'
+import '../../../src/shared/ui/design-system.scss'
 
 if (import.meta.env.PROD) {
   document.body.textContent = 'G4-E H5 review harness is development-only.'
