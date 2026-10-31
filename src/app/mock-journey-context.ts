@@ -1,28 +1,12 @@
 import { appointmentFormDefinitionWireId } from '@adapters/api/appointment-contract'
-import { mockSurveyQuoteSuggestionFor, verifiedSurveyPartLabel, type MockSurveyQuoteSuggestion } from './mock-journey-quote-suggestion'
+import { mockSurveyQuoteSuggestionFor, verifiedSurveyPartLabel } from './mock-journey-quote-suggestion'
 import { mockSurveyFormDefinitionId } from '@adapters/api/mock/survey-contract'
 import { isDevMockJourneyEnabled, mockJourneyNodes, mockJourneyStage, mockJourneyWorkOrderId, type MockJourneyStage } from '@adapters/api/mock/journey'
 import type { ActionDraftIdentity, ActionDraftRecord } from '@runtimes/action'
 import type { OperationSnapshot } from '@shared/types'
 import { asOpaqueId } from '@shared/types'
-
-export interface MockJourneyContextLine {
-  readonly label: string
-  readonly value: string
-}
-export interface MockJourneyContextSection {
-  readonly stage: 'appointment' | 'survey'
-  readonly title: string
-  readonly updatedAt: string | null
-  readonly lines: readonly MockJourneyContextLine[]
-  readonly state: 'saved_local' | 'not_recorded' | 'read_failed'
-  readonly suggestion?: MockSurveyQuoteSuggestion
-}
-export interface MockJourneyContextSummary {
-  readonly workOrderId: string
-  readonly sections: readonly MockJourneyContextSection[]
-  readonly suggestion?: MockSurveyQuoteSuggestion
-}
+import type { MockJourneyContextLine, MockJourneyContextSection, MockJourneyContextSummary } from '@shared/types/mock-journey'
+export type { MockJourneyContextLine, MockJourneyContextSection, MockJourneyContextSummary } from '@shared/types/mock-journey'
 /** Identity-matched read supplied by the active Workspace, not a raw storage bypass. */
 export type ReadPriorDraft = (
   identity: Omit<ActionDraftIdentity, 'version' | 'userId'>,

@@ -42,6 +42,8 @@
 ## 4. 拆解大模块时的变更准则
 
 - 保留稳定公共导入路径和 facade，先抽取内部纯逻辑/控制器，避免一轮同时更改页面、业务协议、存储和视觉。
+- 跨 Feature 只依赖被调用 Feature 明确审核的 `index.ts` 公共契约；不要将内部 Pinia store、Workspace 协调器或 Adapter 实现通过 barrel 暴露。业务模块和组件的共用展示 DTO 放中立类型目录，不反向依赖 `app/` Composition。
+- 当前模块例外准入规则以 `docs/governance/ACTIVE_MODULE_DEPENDENCY_POLICY.json` 为准；历史 M1 证据只用于差异溯源，不能让已经修好的跨层引用重新进入主干。
 - 一次 PR 优先覆盖一个 coherent capability slice；提供旧/新行为一致的证据，不以 LOC 降低或重复 CSS 数量作为成功证明。
 - 对报价优先沿用 QuotationShared/Groups/Editor/Catalog/PackageConfiguration 五个 owner 和既有导入/级联顺序；Golden 仅由单独视觉审批更新。
 - 后续施工、验收、售后能力可在 features/work-orders 内形成独立子能力；是否移动既有路径，应等测试和依赖映射完整后决定。

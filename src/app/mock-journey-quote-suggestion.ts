@@ -1,13 +1,8 @@
 import { isDevMockJourneyEnabled, mockJourneyStage } from '@adapters/api/mock/journey'
 import { surveyContract } from '@adapters/api/mock/survey-contract'
 import type { CodeOptionRead } from '@shared/ports'
-
-export interface MockSurveyQuoteSuggestion {
-  readonly surveyPathLabel: string
-  readonly targetRepairPartCode: string
-  readonly targetRepairPartLabel: string
-  readonly sourceDepth: number
-}
+import type { MockSurveyQuoteSuggestion } from '@shared/types/mock-journey'
+export type { MockSurveyQuoteSuggestion } from '@shared/types/mock-journey'
 
 /**
  * These are TWO deliberately verified SYNTHETIC fixtures, not a production

@@ -1,7 +1,7 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 
-import { actionWorkspaceRouteFor } from '@features/work-orders/action-workspace'
+import { actionWorkspaceRouteFor } from '@features/work-orders'
 import {
   actionDraftIdentityFor,
   type ActionDraftRegistryEntry,
