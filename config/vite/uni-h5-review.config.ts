@@ -1,12 +1,11 @@
-import { fileURLToPath, URL } from 'node:url'
 import { createRequire } from 'node:module'
 
 import { defineConfig } from 'vite'
+import { repositoryRoot, rootPath, sourceAliases } from '../paths'
 
 const require = createRequire(import.meta.url)
-const repositoryRoot = fileURLToPath(new URL('.', import.meta.url))
-const reviewInputDir = fileURLToPath(new URL('./tools/review/uni-gallery', import.meta.url))
-const reviewOutputDir = fileURLToPath(new URL('./unpackage/design-system-uni-h5', import.meta.url))
+const reviewInputDir = rootPath('tools/review/uni-gallery')
+const reviewOutputDir = rootPath('unpackage/design-system-uni-h5')
 
 // UNI_INPUT_DIR is the installed uni-app toolchain's supported alternate
 // input-root mechanism. Keep it explicit and review-only; production builds
@@ -23,18 +22,9 @@ const uni = require('@dcloudio/vite-plugin-uni').default
 
 export default defineConfig({
   root: reviewInputDir,
-  cacheDir: fileURLToPath(new URL('./.cache/vite-uni-gallery-review', import.meta.url)),
+  cacheDir: rootPath('.cache/vite-uni-gallery-review'),
   plugins: [uni()],
-  resolve: {
-    alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url)),
-      '@app': fileURLToPath(new URL('./src/app', import.meta.url)),
-      '@shared': fileURLToPath(new URL('./src/shared', import.meta.url)),
-      '@adapters': fileURLToPath(new URL('./src/adapters', import.meta.url)),
-      '@runtimes': fileURLToPath(new URL('./src/runtimes', import.meta.url)),
-      '@features': fileURLToPath(new URL('./src/features', import.meta.url)),
-    },
-  },
+  resolve: { alias: sourceAliases },
   server: {
     host: '127.0.0.1',
     port: 5174,

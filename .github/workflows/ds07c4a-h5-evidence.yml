@@ -47,7 +47,7 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y fonts-noto-cjk
       - name: Verify real Appointment and Survey and continuous Mock workflow
-        run: pnpm exec playwright test --config playwright.main-h5-mock.config.ts --grep 'DS-07.C4.A|shared Action Workspace displays|one MOCK-019 WorkOrder progresses'
+        run: pnpm exec playwright test --config config/playwright/main-h5-mock.config.ts --grep 'DS-07.C4.A|shared Action Workspace displays|one MOCK-019 WorkOrder progresses'
       - name: Preserve actual screenshots, traces, and full test report
         if: always()
         uses: actions/upload-artifact@v4

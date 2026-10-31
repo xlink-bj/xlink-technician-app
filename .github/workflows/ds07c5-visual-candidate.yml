@@ -48,14 +48,14 @@ jobs:
         run: |
           mkdir -p .review/ds07c5
           set +e
-          pnpm exec playwright test --config playwright.ds02a-main.config.ts --reporter=json > .review/ds07c5/legacy-visual-run.json
+          pnpm exec playwright test --config config/playwright/ds02a-main.config.ts --reporter=json > .review/ds07c5/legacy-visual-run.json
           result=$?
           set -e
           echo "Expected legacy comparison exit: $result"
           test "$result" -eq 1 || (echo "::error::Unexpected DS02A legacy visual exit" && exit 1)
           node scripts/check-ds07c5-legacy-visual.mjs .review/ds07c5/legacy-visual-run.json
       - name: Generate updated visual candidates in ephemeral runner ONLY
-        run: pnpm exec playwright test --config playwright.ds02a-main.config.ts --update-snapshots=changed --reporter=line
+        run: pnpm exec playwright test --config config/playwright/ds02a-main.config.ts --update-snapshots=changed --reporter=line
       - name: Fail closed unless exactly six expected PNGs changed
         shell: bash
         run: |

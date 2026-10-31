@@ -1,14 +1,13 @@
-import { fileURLToPath, URL } from 'node:url'
 import { createRequire } from 'node:module'
 
 import { defineConfig } from 'vite'
+import { repositoryRoot, rootPath } from '../paths'
 
 const require = createRequire(import.meta.url)
-const repositoryRoot = fileURLToPath(new URL('.', import.meta.url))
-const defaultProductionInputDir = fileURLToPath(new URL('./src', import.meta.url))
-const reviewInputDir = fileURLToPath(new URL('./.review-input', import.meta.url))
-const reviewSourceDir = fileURLToPath(new URL('./.review-input/src', import.meta.url))
-const reviewOutputDir = fileURLToPath(new URL('./unpackage/design-system-mp-weixin', import.meta.url))
+const defaultProductionInputDir = rootPath('src')
+const reviewInputDir = rootPath('.review-input')
+const reviewSourceDir = rootPath('.review-input/src')
+const reviewOutputDir = rootPath('unpackage/design-system-mp-weixin')
 
 // Keep the MP calibration build on the same review-only input root as H5.
 // The uni CLI selects the target platform with -p mp-weixin; this config only

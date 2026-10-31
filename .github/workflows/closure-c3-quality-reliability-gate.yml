@@ -9,7 +9,7 @@ on:
       - 'scripts/check-closure-c3-release.mjs'
       - 'scripts/check-closure-c3-coverage.mjs'
       - 'tests/engineering/closure-c3-release-drills.test.ts'
-      - 'vitest.c3.coverage.config.ts'
+      - 'config/vitest/c3-coverage.config.ts'
 permissions:
   contents: read
 concurrency:
@@ -35,7 +35,7 @@ jobs:
           test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
           git merge-base --is-ancestor ffc3fe53d6a275a807ad943c177e15d42391ff70 HEAD
           git diff --name-only ffc3fe53d6a275a807ad943c177e15d42391ff70 HEAD | sort > /tmp/c3-actual
-          printf '%s\n' '.github/workflows/closure-c3-quality-reliability-gate.yml' 'docs/engineering/CLOSURE_C3_QUALITY_RELIABILITY.md' 'docs/engineering/closure-c3-readiness.json' 'scripts/check-closure-c3-release.mjs' 'scripts/check-closure-c3-coverage.mjs' 'tests/engineering/closure-c3-release-drills.test.ts' 'vitest.c3.coverage.config.ts' | sort > /tmp/c3-expected
+          printf '%s\n' '.github/workflows/closure-c3-quality-reliability-gate.yml' 'docs/engineering/CLOSURE_C3_QUALITY_RELIABILITY.md' 'docs/engineering/closure-c3-readiness.json' 'scripts/check-closure-c3-release.mjs' 'scripts/check-closure-c3-coverage.mjs' 'tests/engineering/closure-c3-release-drills.test.ts' 'config/vitest/c3-coverage.config.ts' | sort > /tmp/c3-expected
           diff -u /tmp/c3-expected /tmp/c3-actual
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
@@ -73,7 +73,7 @@ jobs:
         run: pnpm add -D --lockfile=false @vitest/coverage-v8@2.1.9
       - name: Actual executed coverage on three named critical modules
         run: |
-          pnpm exec vitest run --config vitest.c3.coverage.config.ts \
+          pnpm exec vitest run --config config/vitest/c3-coverage.config.ts \
             tests/engineering/closure-c2-read-model.test.ts \
             tests/g4f/quotation-order-submission.test.ts \
             tests/g4f/production-read-only.test.ts \
@@ -111,7 +111,7 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y fonts-noto-cjk
       - name: Original H5 six-stage Mock
-        run: pnpm exec playwright test --config playwright.main-h5-mock.config.ts tests/h5-main-mock/m1-i7-six-stage-integration.spec.ts
+        run: pnpm exec playwright test --config config/playwright/main-h5-mock.config.ts tests/h5-main-mock/m1-i7-six-stage-integration.spec.ts
       - name: Unchanged approved Gallery Golden
         run: pnpm test:ds02a:gallery
       - name: Unchanged approved Business Golden

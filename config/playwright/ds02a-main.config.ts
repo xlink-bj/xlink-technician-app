@@ -1,12 +1,13 @@
 import { defineConfig } from '@playwright/test'
-import original from './playwright.main-h5-mock.config'
+import original from './main-h5-mock.config'
+import { rootPath } from '../paths'
 
 export default defineConfig({
   ...original,
-  testDir: './tests/ds02a-main',
+  testDir: rootPath('tests/ds02a-main'),
   testMatch: '**/*.spec.ts',
   snapshotPathTemplate: '{testDir}/snapshots/{arg}{ext}',
-  outputDir: 'test-results/ds02a-main',
+  outputDir: rootPath('test-results/ds02a-main'),
   workers: 1,
   fullyParallel: false,
   retries: 0,

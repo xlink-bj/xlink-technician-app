@@ -5,7 +5,7 @@ on:
     types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
     paths:
       - 'tests/s2-ux-review/**'
-      - 'playwright.s2-ux-review.config.ts'
+      - 'config/playwright/s2-ux-review.config.ts'
       - 'tools/review/checks/check-s2-ux-review.mjs'
       - '.github/workflows/s2-ux-review-sheet.yml'
       - 'src/pages/**'

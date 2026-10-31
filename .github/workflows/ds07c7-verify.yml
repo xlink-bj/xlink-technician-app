@@ -102,7 +102,7 @@ jobs:
         run: pnpm test:ds02a:business
       - name: All actual M1 Appointment/Survey/Quotation/Signing Mock, blocked signing (27)
         run: |
-          pnpm exec playwright test --config playwright.main-h5-mock.config.ts \
+          pnpm exec playwright test --config config/playwright/main-h5-mock.config.ts \
             tests/h5-main-mock/main-app-quotation.spec.ts \
             tests/h5-main-mock/ds07c4b-quote-signing.spec.ts \
             tests/h5-main-mock/ds07c4b-signing-state-visual.spec.ts \

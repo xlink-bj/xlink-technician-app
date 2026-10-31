@@ -21,8 +21,8 @@ describe('G4-F Phase 1I no-live-write review safety', () => {
 
   it('pins every browser review build to real writes disabled', async () => {
     const files = [
-      '../../vite.uni-h5-g4f-review.config.ts',
-      '../../vite.review.config.ts',
+      '../../config/vite/uni-h5-g4f-review.config.ts',
+      '../../config/vite/review.config.ts',
     ]
     const contents = await Promise.all(files.map((file) => readFile(new URL(file, import.meta.url), 'utf8')))
     for (const content of contents) expect(content).toContain("import.meta.env.VITE_XLINK_ENABLE_REAL_WRITES': JSON.stringify('false')")

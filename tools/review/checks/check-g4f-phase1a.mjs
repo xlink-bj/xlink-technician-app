@@ -19,7 +19,7 @@ const [pages, actionTypes, projection, workspace, adapter, mockRouter, commandPo
   read('src/features/work-orders/quotation/QuotationActionContent.vue'),
   read('tools/review/quotation-demo/pages.json'),
   read('tools/review/quotation-demo/main.ts'),
-  read('vite.uni-h5-g4f-review.config.ts'),
+  read('config/vite/uni-h5-g4f-review.config.ts'),
   read('tools/review/quotation-demo/pages/quotation/index.vue'),
   read('src/features/work-orders/quotation/QuotationActionWorkspace.vue'),
   read('package.json'),

@@ -1,11 +1,10 @@
-import { fileURLToPath, URL } from 'node:url'
 import { createRequire } from 'node:module'
 import { defineConfig } from 'vite'
+import { repositoryRoot, rootPath, sourceAliases } from '../paths'
 
 const require = createRequire(import.meta.url)
-const repositoryRoot = fileURLToPath(new URL('.', import.meta.url))
-const reviewInputDir = fileURLToPath(new URL('./tools/review/quotation-demo', import.meta.url))
-const reviewOutputDir = fileURLToPath(new URL('./unpackage/g4f-phase1a-uni-h5', import.meta.url))
+const reviewInputDir = rootPath('tools/review/quotation-demo')
+const reviewOutputDir = rootPath('unpackage/g4f-phase1a-uni-h5')
 
 if (process.env.UNI_INPUT_DIR && process.env.UNI_INPUT_DIR !== reviewInputDir) {
   throw new Error(`UNI_INPUT_DIR must point to the isolated G4-F review app: ${reviewInputDir}`)
@@ -19,18 +18,9 @@ const uni = require('@dcloudio/vite-plugin-uni').default
 
 export default defineConfig({
   root: reviewInputDir,
-  cacheDir: fileURLToPath(new URL('./.cache/vite-g4f-quotation-review', import.meta.url)),
+  cacheDir: rootPath('.cache/vite-g4f-quotation-review'),
   plugins: [uni()],
-  resolve: {
-    alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url)),
-      '@app': fileURLToPath(new URL('./src/app', import.meta.url)),
-      '@shared': fileURLToPath(new URL('./src/shared', import.meta.url)),
-      '@adapters': fileURLToPath(new URL('./src/adapters', import.meta.url)),
-      '@runtimes': fileURLToPath(new URL('./src/runtimes', import.meta.url)),
-      '@features': fileURLToPath(new URL('./src/features', import.meta.url)),
-    },
-  },
+  resolve: { alias: sourceAliases },
   define: {
     'import.meta.env.VITE_XLINK_ENVIRONMENT': JSON.stringify('dev'),
     'import.meta.env.VITE_XLINK_PLATFORM': JSON.stringify('mp-weixin'),
