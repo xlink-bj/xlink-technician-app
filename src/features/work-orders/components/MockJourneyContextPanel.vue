@@ -51,7 +51,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import type { MockJourneyContextSummary } from '@app/mock-journey-context'
+import type { MockJourneyContextSummary } from '@shared/types/mock-journey'
 import AppButton from '@shared/ui/AppButton.vue'
 defineProps<{ readonly context: MockJourneyContextSummary; readonly compact?: boolean; readonly taskFocus?: boolean; readonly canAdoptSuggestion?: boolean; readonly suggestionFeedback?: string }>()
 const expanded = ref(false)

@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 1,
+  "effectiveSince": "2026-10-31 M2-A",
+  "historicalBaseline": "M1_SOURCE_DEPENDENCY_BASELINE_20261031.json",
+  "approvedViolations": [],
+  "note": "All M1 ownership exceptions were removed in M2-A. New or reintroduced policy-violating edges require explicit architecture review; do not relax this file just to pass CI."
+}

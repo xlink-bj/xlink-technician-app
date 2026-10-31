@@ -16,6 +16,7 @@ import ts from 'typescript'
 const repo = fileURLToPath(new URL('../', import.meta.url))
 const sourceRoot = resolve(repo, 'src')
 const baselineFile = resolve(repo, 'docs/governance/M1_SOURCE_DEPENDENCY_BASELINE_20261031.json')
+const activePolicyFile = resolve(repo, 'docs/governance/ACTIVE_MODULE_DEPENDENCY_POLICY.json')
 const graphFile = resolve(repo, 'docs/governance/M1_SOURCE_DEPENDENCY_GRAPH_20261031.json')
 const slash = value => value.replaceAll('\\', '/')
 const supportedSource = /\.(?:ts|tsx|vue)$/
@@ -310,6 +311,11 @@ async function selfTest() {
     || regressionsSince(checkedExceptions(safeAudit), checkedExceptions(result)).length) {
     throw new Error('M1 no-growth ratchet failed to reject new dependencies or allow removals')
   }
+  const noCurrentViolations = { ...checkedExceptions(result), violations: [] }
+  if (!regressionsSince(checkedExceptions(result), noCurrentViolations)
+    .some(item => item.startsWith('violations:'))) {
+    throw new Error('M2 active policy failed to reject reintroduced historical exceptions')
+  }
   const typeCycle = auditModules(new Map([
     ['src/shared/a.ts', "import type { B } from './b'; export type A = B"],
     ['src/shared/b.ts', "import type { A } from './a'; export type B = A"],
@@ -327,7 +333,7 @@ async function selfTest() {
     item.startsWith('unresolved:'))) {
     throw new Error('M1 no-growth ratchet failed to detect an unresolved local import')
   }
-  console.log('M1 negative self-test PASS: runtime/type cycles, three boundary failures and missing import detected')
+  console.log('M1/M2 negative self-test PASS: runtime/type cycles, current-policy boundary failures and missing import detected')
 }
 
 const files = await collect(sourceRoot)
@@ -364,7 +370,13 @@ if (flags.has('--write-graph')) {
 if (flags.has('--check')) {
   const baseline = JSON.parse(await readFile(baselineFile, 'utf8'))
   if (baseline.schemaVersion !== 1) throw new Error('M1 unknown baseline schema version')
-  const previous = baseline.approvedExceptions
+  // Preserve the M1 historical evidence, but never silently allow an M2-fixed
+  // policy violation to return merely because it was in that old snapshot.
+  const policy = JSON.parse(await readFile(activePolicyFile, 'utf8'))
+  if (policy.schemaVersion !== 1 || !Array.isArray(policy.approvedViolations)) {
+    throw new Error('M2 active dependency policy schema is missing or invalid')
+  }
+  const previous = { ...baseline.approvedExceptions, violations: policy.approvedViolations }
   const current = checkedExceptions(audit)
   const regressions = regressionsSince(current, previous)
   if (regressions.length) {
@@ -372,9 +384,10 @@ if (flags.has('--check')) {
     regressions.forEach(item => console.error('- ' + item))
     process.exitCode = 1
   } else {
-    console.log('M1 dependency no-growth PASS: ' + audit.summary.modules
+    console.log('M1/M2 dependency no-growth PASS: ' + audit.summary.modules
       + ' modules, ' + audit.summary.edges + ' edges, '
-      + audit.summary.runtimeCycles + ' existing runtime SCCs')
+      + audit.summary.runtimeCycles + ' runtime SCCs, '
+      + audit.summary.ownershipViolations + ' current policy violations')
   }
 }
 if (flags.has('--report') || (!flags.has('--check') && !flags.has('--refresh-baseline'))) {
