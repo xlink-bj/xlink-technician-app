@@ -5,6 +5,7 @@ import type {
 } from '@shared/ports'
 import type { OperationSnapshot } from '@shared/types'
 import { createOperationError } from '@shared/types'
+import { isSigningReadOrderCandidate } from '@shared/signing-order-read-policy'
 
 /**
  * I6 PREPARATORY: the ONLY input to a future Signing preview is a currently
@@ -107,9 +108,10 @@ export function createSigningReviewReadWorkspace(scope: RuntimeScope): SigningRe
         ids.add(row.id)
         return true
       })
-      if (!valid || !ids.has(orderId)) {
+      if (!valid || !ids.has(orderId)
+        || !isSigningReadOrderCandidate(rows.find(row => row.id === orderId))) {
         current = { state: 'failed_terminal' }
-        return denied('当前已授权列表不能证明目标正式订单归属，已停止签约预览。')
+        return denied('当前订单归属或签约候选状态未获核验，已停止签约预览。')
       }
       const read = await scope.port.readScopedTypeOneOrderForSigningReview(workOrderId, orderId)
       if (!currentScope(version, key, workOrderId)) return staleResult(version)
@@ -120,7 +122,7 @@ export function createSigningReviewReadWorkspace(scope: RuntimeScope): SigningRe
       const review = read.data
       if (review.contractReadAuthorized !== false || review.signingAuthorized !== false
         || review.order.id !== orderId || review.order.serviceAppointmentId !== workOrderId
-        || review.order.type !== 1) {
+        || !isSigningReadOrderCandidate(review.order)) {
         current = { state: 'failed_terminal' }
         return denied('签约预览的订单身份或权限投影不一致，已停止。')
       }

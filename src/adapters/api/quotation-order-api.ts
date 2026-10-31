@@ -12,6 +12,7 @@ import type {
   ReadPage,
 } from '@shared/ports'
 import type { OperationSnapshot } from '@shared/types'
+import { isSigningReadOrderCandidate } from '@shared/signing-order-read-policy'
 
 import { AdapterMappingError, adapterFailure, succeeded, unknownErrorMessage } from '../common/operations'
 import { asRecord, assertMatchingWireIdentity, consistentWireIdentity, optionalNonNegativeInteger, optionalSignedInteger, optionalRecord, optionalString, requiredString, type AdapterRecord } from '../common/records'
@@ -389,7 +390,8 @@ export class QuotationOrderReadAdapter implements QuotationOrderReadPort {
       // listTypeOneOrdersForWorkOrder verifies every row's type, ownership,
       // size and unique identity; independently bound the chosen Order.
       const matching = orders.filter(item =>
-        item.id === orderId && item.serviceAppointmentId === workOrderId && item.type === 1,
+        item.id === orderId && item.serviceAppointmentId === workOrderId
+          && isSigningReadOrderCandidate(item),
       )
       if (matching.length !== 1) {
         return adapterFailure('authorization_denied', '本次有限订单列表无法确认目标订单归属。')

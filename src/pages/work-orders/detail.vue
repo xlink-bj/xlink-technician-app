@@ -266,13 +266,16 @@
                 <text v-if="!group.contentSupported" class="quotation-read-warning">该分组含未识别字段，以上仅为可确认内容。</text>
               </view>
               <navigator
-                v-if="signingOrderReadRouteFor(String(detail?.id ?? ''), order.id)"
+                v-if="isSigningReadOrderCandidate(order) && signingOrderReadRouteFor(String(detail?.id ?? ''), order.id)"
                 class="state-action quotation-retry"
                 :url="signingOrderReadRouteFor(String(detail?.id ?? ''), order.id) || undefined"
                 data-testid="production-signing-order-read-entry"
               >
                 查看签约信息
               </navigator>
+              <text v-else class="quotation-read-warning" data-testid="production-signing-order-read-unavailable">
+                {{ unavailableSigningReadReason(order.state) }}
+              </text>
             </view>
           </view>
         </view>
@@ -308,6 +311,7 @@ import { detailTabs, type DetailTabKey } from '@features/work-orders/detail-tabs
 import { detailWorkflowUiProjectionFor } from '@features/work-orders/detail-workflow'
 import { quotationBrowseLineRows, useQuotationOrderBrowseStore } from '@features/work-orders/quotation/order-browse-store'
 import { signingOrderReadRouteFor } from '@features/work-orders/signing/signing-review-read-workspace'
+import { isSigningReadOrderCandidate, unavailableSigningReadReason } from '@shared/signing-order-read-policy'
 import type { QuotationOrderBrowseGroup, QuotationOrderBrowseKind } from '@shared/ports'
 import { useSessionStore } from '@shared/state'
 import { workOrderReadScopeKey } from '@features/work-orders/read-identity-scope'
