@@ -1,5 +1,6 @@
 import { defineConfig } from '@playwright/test'
-import mainAppMock from './playwright.main-h5-mock.config'
+import mainAppMock from './main-h5-mock.config'
+import { rootPath } from '../paths'
 
 /**
  * S2 review always captures the real uni-app main H5 shell, never a detached
@@ -8,16 +9,16 @@ import mainAppMock from './playwright.main-h5-mock.config'
  */
 export default defineConfig({
   ...mainAppMock,
-  testDir: './tests/s2-ux-review',
+  testDir: rootPath('tests/s2-ux-review'),
   workers: 1,
   fullyParallel: false,
   retries: 0,
   timeout: 180_000,
   expect: { timeout: 20_000 },
-  outputDir: 'test-results/s2-ux-review/attachments',
+  outputDir: rootPath('test-results/s2-ux-review/attachments'),
   reporter: [
     ['list'],
-    ['json', { outputFile: 'test-results/s2-ux-review/results.json' }],
-    ['html', { outputFolder: 'test-results/s2-ux-review/html', open: 'never' }],
+    ['json', { outputFile: rootPath('test-results/s2-ux-review/results.json') }],
+    ['html', { outputFolder: rootPath('test-results/s2-ux-review/html'), open: 'never' }],
   ],
 })

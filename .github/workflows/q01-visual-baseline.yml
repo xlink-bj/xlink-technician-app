@@ -34,7 +34,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y fonts-noto-cjk
       - name: Capture real selected-item quotation page, 375x667
-        run: pnpm exec playwright test --config playwright.main-h5-mock.config.ts tests/h5-main-mock/q01-visual-baseline.spec.ts
+        run: pnpm exec playwright test --config config/playwright/main-h5-mock.config.ts tests/h5-main-mock/q01-visual-baseline.spec.ts
       - name: Preserve screenshot evidence even on failure
         if: always()
         uses: actions/upload-artifact@v4

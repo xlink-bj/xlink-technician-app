@@ -95,7 +95,7 @@ jobs:
       - run: pnpm test:ds02a:business
       - name: Real H5 functional Mock and signing fail-closed
         run: |
-          pnpm exec playwright test --config playwright.main-h5-mock.config.ts \
+          pnpm exec playwright test --config config/playwright/main-h5-mock.config.ts \
             tests/h5-main-mock/main-app-quotation.spec.ts \
             tests/h5-main-mock/ds07c4b-quote-signing.spec.ts \
             tests/h5-main-mock/ds07c4b-signing-state-visual.spec.ts \

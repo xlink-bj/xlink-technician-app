@@ -349,7 +349,7 @@
   "simulator": {
     "kind": "CREDENTIAL_FREE_SYNTHETIC_PREVIEW_ONLY",
     "mainH5Test": "tests/h5-main-mock/m1-i7-six-stage-integration.spec.ts",
-    "playwrightConfig": "playwright.main-h5-mock.config.ts",
+    "playwrightConfig": "config/playwright/main-h5-mock.config.ts",
     "unitCriticalCommand": "pnpm verify:critical",
     "fullCommand": "pnpm verify:full",
     "bundleCommands": [

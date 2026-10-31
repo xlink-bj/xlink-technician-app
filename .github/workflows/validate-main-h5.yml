@@ -41,7 +41,7 @@ jobs:
       # already installed for the repeat panel, so Draft cannot appear green
       # without the actual form → Workflow → commercial navigation working.
       - name: Verify DEV Mock saved-form to commercial handoff at two mobile widths
-        run: pnpm exec playwright test --config playwright.main-h5-mock.config.ts tests/h5-main-mock/mock-business-closure.spec.ts
+        run: pnpm exec playwright test --config config/playwright/main-h5-mock.config.ts tests/h5-main-mock/mock-business-closure.spec.ts
       - name: Preserve Draft Mock closure trace and screenshots
         if: always()
         uses: actions/upload-artifact@v4
@@ -53,7 +53,7 @@ jobs:
       - name: Verify A-stage P1 forms, repeat and priced Mock Order in real H5 at both mobile widths
         env:
           VITE_XLINK_R1_MP_UX_FIXTURES: 'true'
-        run: pnpm exec playwright test --config playwright.main-h5-mock.config.ts tests/h5-main-mock/a-stage-p1-acceptance.spec.ts
+        run: pnpm exec playwright test --config config/playwright/main-h5-mock.config.ts tests/h5-main-mock/a-stage-p1-acceptance.spec.ts
       - name: Preserve A-stage P1 H5 interaction traces and screenshots
         if: always()
         uses: actions/upload-artifact@v4

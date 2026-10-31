@@ -1,10 +1,10 @@
-import { fileURLToPath, URL } from 'node:url'
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
+import { rootPath, sourceAliases } from '../paths'
 
 export default defineConfig({
   // Do not share Vite's optimizer cache with the two independent Uni Review servers.
-  cacheDir: fileURLToPath(new URL('./.cache/vite-raw-review', import.meta.url)),
+  cacheDir: rootPath('.cache/vite-raw-review'),
   // This is the retained raw semantic/state harness, not the canonical
   // uni-app H5 visual path. Keep it on plain Vue so its DOM remains stable
   // and the manual review shim remains explicitly scoped to this entry.
@@ -14,14 +14,9 @@ export default defineConfig({
   // The review entry receives only the explicit Mock values below via define.
   envPrefix: ['VITE_REVIEW_'],
   resolve: {
-    alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url)),
-      '@app': fileURLToPath(new URL('./src/app', import.meta.url)),
-      '@shared': fileURLToPath(new URL('./src/shared', import.meta.url)),
-      '@adapters': fileURLToPath(new URL('./src/adapters', import.meta.url)),
-      '@runtimes': fileURLToPath(new URL('./src/runtimes', import.meta.url)),
-      '@features': fileURLToPath(new URL('./src/features', import.meta.url)),
-      '@dcloudio/uni-ui/lib/uni-icons/uni-icons.vue': fileURLToPath(new URL('./tools/review/harness/review-uni-icons.vue', import.meta.url)),
+      alias: {
+        ...sourceAliases,
+        '@dcloudio/uni-ui/lib/uni-icons/uni-icons.vue': rootPath('tools/review/harness/review-uni-icons.vue'),
     },
   },
   define: {

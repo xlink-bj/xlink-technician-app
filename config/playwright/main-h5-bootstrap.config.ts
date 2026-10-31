@@ -1,4 +1,5 @@
 import { defineConfig, devices } from '@playwright/test'
+import { repositoryRoot, rootPath } from '../paths'
 
 const baseURL = 'http://localhost:5173'
 
@@ -6,7 +7,7 @@ const baseURL = 'http://localhost:5173'
 // The H5 startup test must prove the REAL uni-app page renders; the isolated
 // synthetic-session review app would hide precisely this startup regression.
 export default defineConfig({
-  testDir: './tests/h5-main-app',
+  testDir: rootPath('tests/h5-main-app'),
   fullyParallel: false,
   workers: 1,
   retries: 0,
@@ -16,6 +17,7 @@ export default defineConfig({
   webServer: {
     command: 'pnpm run dev:h5',
     url: baseURL,
+    cwd: repositoryRoot,
     timeout: 120_000,
     reuseExistingServer: false,
     stdout: 'pipe',

@@ -1,4 +1,5 @@
 import { defineConfig, devices } from '@playwright/test'
+import { repositoryRoot, rootPath } from '../paths'
 
 const baseURL = 'http://localhost:5174'
 
@@ -9,23 +10,24 @@ const baseURL = 'http://localhost:5174'
  * no-network browser guard in every test.
  */
 export default defineConfig({
-  testDir: './tests/h5-main-mock',
+  testDir: rootPath('tests/h5-main-mock'),
   workers: 1,
   fullyParallel: false,
   retries: 0,
   timeout: 90_000,
   expect: { timeout: 20_000 },
-  outputDir: 'test-results/main-h5-mock/attachments',
+  outputDir: rootPath('test-results/main-h5-mock/attachments'),
   reporter: [
     ['list'],
-    ['json', { outputFile: 'test-results/main-h5-mock/results.json' }],
-    ['html', { outputFolder: 'test-results/main-h5-mock/html', open: 'never' }],
+    ['json', { outputFile: rootPath('test-results/main-h5-mock/results.json') }],
+    ['html', { outputFolder: rootPath('test-results/main-h5-mock/html'), open: 'never' }],
   ],
   webServer: {
     // Use the already installed workspace executable. Invoking pnpm can
     // unexpectedly reinstall dependencies during a browser verification run.
     command: './node_modules/.bin/uni -p h5',
     url: baseURL,
+    cwd: repositoryRoot,
     timeout: 120_000,
     reuseExistingServer: false,
     stdout: 'pipe',

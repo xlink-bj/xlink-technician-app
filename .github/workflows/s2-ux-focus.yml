@@ -4,7 +4,7 @@ on:
   pull_request:
     paths:
       - '.github/workflows/s2-ux-focus.yml'
-      - 'playwright.s2-ux-focus.config.ts'
+      - 'config/playwright/s2-ux-focus.config.ts'
       - 'tests/s2-ux-focus/**'
       - 'src/features/work-orders/quotation/QuotationOrderHub.vue'
       - 'src/features/work-orders/quotation/QuotationActionContent.vue'
@@ -69,7 +69,7 @@ jobs:
           sudo apt-get install -y fonts-noto-cjk
 
       - name: Capture chosen real main-App H5 scene only
-        run: pnpm exec playwright test --config playwright.s2-ux-focus.config.ts
+        run: pnpm exec playwright test --config config/playwright/s2-ux-focus.config.ts
 
       - name: Preserve focused screenshots and test evidence
         if: always()

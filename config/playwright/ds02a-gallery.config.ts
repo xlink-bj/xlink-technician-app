@@ -1,12 +1,13 @@
 import { defineConfig } from '@playwright/test'
-import original from './playwright.uni-h5-review.config'
+import original from './uni-h5-review.config'
+import { rootPath } from '../paths'
 
 export default defineConfig({
   ...original,
-  testDir: './tests/ds02a-gallery',
+  testDir: rootPath('tests/ds02a-gallery'),
   testMatch: '**/*.spec.ts',
   snapshotPathTemplate: '{testDir}/snapshots/{arg}{ext}',
-  outputDir: 'test-results/ds02a-gallery',
+  outputDir: rootPath('test-results/ds02a-gallery'),
   workers: 1,
   fullyParallel: false,
   retries: 0,

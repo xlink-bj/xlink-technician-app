@@ -1,5 +1,5 @@
 import { defineConfig, mergeConfig } from 'vitest/config'
-import baseline from './vitest.config'
+import baseline from './unit.config'
 
 /**
  * C3 dedicated executed-V8 coverage pilot.

@@ -42,6 +42,10 @@ The legacy application is a behavioral/reference implementation, not a source-co
 ## Current documentation and engineering baseline
 
 The present mainline implementation and current rules are indexed in [docs/README.md](docs/README.md).
+Tool configurations live in [config/](config/README.md), with only the three
+conventional Playwright/Vite/Vitest discovery shims at the repository root.
+Engineering checks and manual generators are described in
+[scripts/README.md](scripts/README.md).
 The G3-A foundation narrative below is historical foundation context, **not the
 current completeness or release status**. See [current implementation baseline](docs/architecture/IMPLEMENTATION_BASELINE_20261030.md)
 and [quality/environment gates](docs/engineering/QUALITY_AND_ENVIRONMENT_GATES.md)

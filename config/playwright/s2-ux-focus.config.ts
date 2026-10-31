@@ -1,5 +1,6 @@
 import { defineConfig } from '@playwright/test'
-import mainAppMock from './playwright.main-h5-mock.config'
+import mainAppMock from './main-h5-mock.config'
+import { rootPath } from '../paths'
 
 /**
  * Focused L2 screenshot runner: actual main uni-app H5, credential-free DEV
@@ -8,15 +9,15 @@ import mainAppMock from './playwright.main-h5-mock.config'
  */
 export default defineConfig({
   ...mainAppMock,
-  testDir: './tests/s2-ux-focus',
+  testDir: rootPath('tests/s2-ux-focus'),
   workers: 1,
   fullyParallel: false,
   retries: 0,
   timeout: 90_000,
   expect: { timeout: 20_000 },
-  outputDir: 'test-results/s2-ux-focus/attachments',
+  outputDir: rootPath('test-results/s2-ux-focus/attachments'),
   reporter: [
     ['list'],
-    ['json', { outputFile: 'test-results/s2-ux-focus/results.json' }],
+    ['json', { outputFile: rootPath('test-results/s2-ux-focus/results.json') }],
   ],
 })

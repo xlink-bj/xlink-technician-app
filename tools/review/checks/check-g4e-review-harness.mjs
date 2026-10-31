@@ -39,13 +39,13 @@ const gallerySource = [
 const galleryPage = await read('tools/review/harness/design-system-gallery.vue')
 const galleryStyle = galleryPage.match(/<style[^>]*>([\s\S]*?)<\/style>/)?.[1] ?? ''
 const universalSelectorPattern = /(?:^|[,{>+~])\s*\*(?=\s*(?:[>+~.#:[,{\s]|$))/m
-const reviewConfig = await read('vite.review.config.ts')
-const uniReviewConfig = await read('vite.uni-h5-review.config.ts')
-const mpReviewConfig = await read('vite.mp-weixin-review.config.ts')
+const reviewConfig = await read('config/vite/review.config.ts')
+const uniReviewConfig = await read('config/vite/uni-h5-review.config.ts')
+const mpReviewConfig = await read('config/vite/mp-weixin-review.config.ts')
 const uniReviewAppSource = await readTree('tools/review/uni-gallery')
 const packageJson = JSON.parse(await read('package.json'))
 const pages = await read('src/pages.json')
-const appConfig = await read('vite.config.ts')
+const appConfig = await read('config/vite/app.config.ts')
 const productionSource = await readTree('src')
 
 if (!entry.includes("if (import.meta.env.PROD)")) {
@@ -93,7 +93,7 @@ if (!uniReviewConfig.includes("process.env.UNI_INPUT_DIR = reviewInputDir")) {
 if (!uniReviewConfig.includes("port: 5174")) {
   fail('uni H5 review must use its isolated development port')
 }
-if (!uniReviewConfig.includes("'./tools/review/uni-gallery'")) {
+if (!uniReviewConfig.includes("rootPath('tools/review/uni-gallery')")) {
   fail('uni H5 review config must point at the review-only input root')
 }
 if (!mpReviewConfig.includes('process.env.UNI_INPUT_DIR = reviewInputDir')) {
@@ -102,7 +102,7 @@ if (!mpReviewConfig.includes('process.env.UNI_INPUT_DIR = reviewInputDir')) {
 if (!mpReviewConfig.includes('design-system-mp-weixin')) {
   fail('MP review must use an isolated output directory')
 }
-if (packageJson.scripts?.['build:mp-weixin-review'] !== 'node tools/review/prepare-mp-input.mjs && uni build -p mp-weixin -c vite.mp-weixin-review.config.ts --outDir ../unpackage/design-system-mp-weixin') {
+if (packageJson.scripts?.['build:mp-weixin-review'] !== 'node tools/review/prepare-mp-input.mjs && uni build -p mp-weixin -c config/vite/mp-weixin-review.config.ts --outDir ../unpackage/design-system-mp-weixin') {
   fail('MP review build script must use the installed uni CLI and review config')
 }
 if (!uniReviewAppSource.includes('pages/design-system/index')) {

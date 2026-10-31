@@ -1,16 +1,18 @@
 import { defineConfig, devices } from '@playwright/test'
+import { repositoryRoot, rootPath } from '../paths'
 
 export default defineConfig({
-  testDir: './tests/r1-main-repeat-ui',
+  testDir: rootPath('tests/r1-main-repeat-ui'),
   workers: 1,
   retries: 0,
   timeout: 30_000,
   expect: { timeout: 5_000 },
-  outputDir: 'test-results/r1-main-repeat-ui/attachments',
-  reporter: [['list'], ['html', { outputFolder: 'test-results/r1-main-repeat-ui/html', open: 'never' }]],
+  outputDir: rootPath('test-results/r1-main-repeat-ui/attachments'),
+  reporter: [['list'], ['html', { outputFolder: rootPath('test-results/r1-main-repeat-ui/html'), open: 'never' }]],
   webServer: {
-    command: 'pnpm exec vite --config vite.r1-main-repeat-ui.config.ts',
+    command: 'pnpm exec vite --config config/vite/r1-main-repeat-ui.config.ts',
     url: 'http://127.0.0.1:5176',
+    cwd: repositoryRoot,
     timeout: 60_000,
     reuseExistingServer: false,
   },
