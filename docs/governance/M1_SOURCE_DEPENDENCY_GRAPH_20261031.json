@@ -1,0 +1,6191 @@
+{
+  "schemaVersion": 1,
+  "sourceCommit": "a8f0ee7d728d3d8273486baa7fb00a5586f7b51b",
+  "date": "2026-10-31",
+  "method": "Static TS/Vue import and export edges; type-only edges are marked",
+  "summary": {
+    "modules": 286,
+    "edges": 1005,
+    "runtimeEdges": 724,
+    "typeOnlyEdges": 281,
+    "runtimeCycles": 0,
+    "allStaticCycles": 3,
+    "ownershipViolations": 2,
+    "unresolvedImports": 0,
+    "crossOwnerEdges": 676,
+    "duplicateExportCandidates": 0
+  },
+  "nodes": [
+    {
+      "path": "src/App.vue",
+      "owner": "App.vue"
+    },
+    {
+      "path": "src/adapters/api/action-command-wires.ts",
+      "owner": "adapters/api"
+    },
+    {
+      "path": "src/adapters/api/appointment-contract.ts",
+      "owner": "adapters/api"
+    },
+    {
+      "path": "src/adapters/api/mock/command-state.ts",
+      "owner": "adapters/api/mock"
+    },
+    {
+      "path": "src/adapters/api/mock/commercial-review-storage.ts",
+      "owner": "adapters/api/mock"
+    },
+    {
+      "path": "src/adapters/api/mock/config.ts",
+      "owner": "adapters/api/mock"
+    },
+    {
+      "path": "src/adapters/api/mock/fault-scenarios.ts",
+      "owner": "adapters/api/mock"
+    },
+    {
+      "path": "src/adapters/api/mock/fixtures.ts",
+      "owner": "adapters/api/mock"
+    },
+    {
+      "path": "src/adapters/api/mock/index.ts",
+      "owner": "adapters/api/mock"
+    },
+    {
+      "path": "src/adapters/api/mock/inspection-contract.ts",
+      "owner": "adapters/api/mock"
+    },
+    {
+      "path": "src/adapters/api/mock/journey.ts",
+      "owner": "adapters/api/mock"
+    },
+    {
+      "path": "src/adapters/api/mock/material-sku.ts",
+      "owner": "adapters/api/mock"
+    },
+    {
+      "path": "src/adapters/api/mock/ownership.ts",
+      "owner": "adapters/api/mock"
+    },
+    {
+      "path": "src/adapters/api/mock/package-material-sku.ts",
+      "owner": "adapters/api/mock"
+    },
+    {
+      "path": "src/adapters/api/mock/quotation-catalog.ts",
+      "owner": "adapters/api/mock"
+    },
+    {
+      "path": "src/adapters/api/mock/quotation-sku-same-catalog.ts",
+      "owner": "adapters/api/mock"
+    },
+    {
+      "path": "src/adapters/api/mock/r1-special-protocol.ts",
+      "owner": "adapters/api/mock"
+    },
+    {
+      "path": "src/adapters/api/mock/r1-special-state.ts",
+      "owner": "adapters/api/mock"
+    },
+    {
+      "path": "src/adapters/api/mock/router.ts",
+      "owner": "adapters/api/mock"
+    },
+    {
+      "path": "src/adapters/api/mock/scenario-registry.ts",
+      "owner": "adapters/api/mock"
+    },
+    {
+      "path": "src/adapters/api/mock/survey-contract.ts",
+      "owner": "adapters/api/mock"
+    },
+    {
+      "path": "src/adapters/api/quotation-catalog-api.ts",
+      "owner": "adapters/api"
+    },
+    {
+      "path": "src/adapters/api/quotation-order-api.ts",
+      "owner": "adapters/api"
+    },
+    {
+      "path": "src/adapters/api/quotation-order-commands.ts",
+      "owner": "adapters/api"
+    },
+    {
+      "path": "src/adapters/api/r1-node-form-list.ts",
+      "owner": "adapters/api"
+    },
+    {
+      "path": "src/adapters/api/r1-pilot-authoritative-readback.ts",
+      "owner": "adapters/api"
+    },
+    {
+      "path": "src/adapters/api/r1-special-workflow-wires.ts",
+      "owner": "adapters/api"
+    },
+    {
+      "path": "src/adapters/api/read-models/code-options.ts",
+      "owner": "adapters/api/read-models"
+    },
+    {
+      "path": "src/adapters/api/read-models/form.ts",
+      "owner": "adapters/api/read-models"
+    },
+    {
+      "path": "src/adapters/api/read-models/ids.ts",
+      "owner": "adapters/api/read-models"
+    },
+    {
+      "path": "src/adapters/api/read-models/work-order-activity.ts",
+      "owner": "adapters/api/read-models"
+    },
+    {
+      "path": "src/adapters/api/read-models/work-order.ts",
+      "owner": "adapters/api/read-models"
+    },
+    {
+      "path": "src/adapters/api/read-models/workflow.ts",
+      "owner": "adapters/api/read-models"
+    },
+    {
+      "path": "src/adapters/api/reference/area-county-dictionary.ts",
+      "owner": "adapters/api"
+    },
+    {
+      "path": "src/adapters/api/survey-form-codec.ts",
+      "owner": "adapters/api"
+    },
+    {
+      "path": "src/adapters/api/survey-leakage-cause.ts",
+      "owner": "adapters/api"
+    },
+    {
+      "path": "src/adapters/api/technician-api-commands.ts",
+      "owner": "adapters/api"
+    },
+    {
+      "path": "src/adapters/api/technician-api.ts",
+      "owner": "adapters/api"
+    },
+    {
+      "path": "src/adapters/api/uni-api-command-transport.ts",
+      "owner": "adapters/api"
+    },
+    {
+      "path": "src/adapters/api/uni-api-read-transport.ts",
+      "owner": "adapters/api"
+    },
+    {
+      "path": "src/adapters/auth/auth-session-adapter.ts",
+      "owner": "adapters/auth"
+    },
+    {
+      "path": "src/adapters/auth/dev-mock-ux-session.ts",
+      "owner": "adapters/auth"
+    },
+    {
+      "path": "src/adapters/auth/uni-auth-backend.ts",
+      "owner": "adapters/auth"
+    },
+    {
+      "path": "src/adapters/common/operations.ts",
+      "owner": "adapters/common"
+    },
+    {
+      "path": "src/adapters/common/records.ts",
+      "owner": "adapters/common"
+    },
+    {
+      "path": "src/adapters/platform/developer-qa-navigation.ts",
+      "owner": "adapters/platform"
+    },
+    {
+      "path": "src/adapters/platform/platform-adapters.ts",
+      "owner": "adapters/platform"
+    },
+    {
+      "path": "src/adapters/platform/uni-location-driver.ts",
+      "owner": "adapters/platform"
+    },
+    {
+      "path": "src/adapters/platform/uni-media-drivers.ts",
+      "owner": "adapters/platform"
+    },
+    {
+      "path": "src/adapters/platform/uni-navigation-driver.ts",
+      "owner": "adapters/platform"
+    },
+    {
+      "path": "src/adapters/platform/uni-network-status.ts",
+      "owner": "adapters/platform"
+    },
+    {
+      "path": "src/adapters/platform/uni-page-title.ts",
+      "owner": "adapters/platform"
+    },
+    {
+      "path": "src/adapters/platform/uni-phone-driver.ts",
+      "owner": "adapters/platform"
+    },
+    {
+      "path": "src/adapters/storage/storage-adapter.ts",
+      "owner": "adapters/storage"
+    },
+    {
+      "path": "src/adapters/storage/uni-durable-media-store.ts",
+      "owner": "adapters/storage"
+    },
+    {
+      "path": "src/adapters/storage/uni-storage-driver.ts",
+      "owner": "adapters/storage"
+    },
+    {
+      "path": "src/adapters/upload/uni-media-post-upload-processor.ts",
+      "owner": "adapters/upload"
+    },
+    {
+      "path": "src/adapters/upload/uni-upload-port.ts",
+      "owner": "adapters/upload"
+    },
+    {
+      "path": "src/adapters/upload/upload-adapter.ts",
+      "owner": "adapters/upload"
+    },
+    {
+      "path": "src/app/a-stage-quotation-mock-ui.ts",
+      "owner": "app"
+    },
+    {
+      "path": "src/app/a-stage-special-mock-ui.ts",
+      "owner": "app"
+    },
+    {
+      "path": "src/app/action-page-title.ts",
+      "owner": "app"
+    },
+    {
+      "path": "src/app/action-workspace-harness.ts",
+      "owner": "app"
+    },
+    {
+      "path": "src/app/bootstrap.ts",
+      "owner": "app"
+    },
+    {
+      "path": "src/app/business-mock.ts",
+      "owner": "app"
+    },
+    {
+      "path": "src/app/child-subflow-mock-review.ts",
+      "owner": "app"
+    },
+    {
+      "path": "src/app/composition.ts",
+      "owner": "app"
+    },
+    {
+      "path": "src/app/dev-qa-navigation.ts",
+      "owner": "app"
+    },
+    {
+      "path": "src/app/material-sku-mock-coordinator.ts",
+      "owner": "app"
+    },
+    {
+      "path": "src/app/material-sku-mock-review.ts",
+      "owner": "app"
+    },
+    {
+      "path": "src/app/mock-commercial-journey.ts",
+      "owner": "app"
+    },
+    {
+      "path": "src/app/mock-journey-closure.ts",
+      "owner": "app"
+    },
+    {
+      "path": "src/app/mock-journey-context.ts",
+      "owner": "app"
+    },
+    {
+      "path": "src/app/mock-journey-protocol.ts",
+      "owner": "app"
+    },
+    {
+      "path": "src/app/mock-journey-quote-suggestion.ts",
+      "owner": "app"
+    },
+    {
+      "path": "src/app/mock-journey.ts",
+      "owner": "app"
+    },
+    {
+      "path": "src/app/p1-sku-readiness-review.ts",
+      "owner": "app"
+    },
+    {
+      "path": "src/app/quotation-sku-identity-evidence.ts",
+      "owner": "app"
+    },
+    {
+      "path": "src/app/r1-stage1-functional-flow.ts",
+      "owner": "app"
+    },
+    {
+      "path": "src/app/r1-stage1-pilot-composition.ts",
+      "owner": "app"
+    },
+    {
+      "path": "src/app/r1-stage1-pilot-reconciliation.ts",
+      "owner": "app"
+    },
+    {
+      "path": "src/app/r1-stage1-scoped-gateway.ts",
+      "owner": "app"
+    },
+    {
+      "path": "src/app/runtime-config.ts",
+      "owner": "app"
+    },
+    {
+      "path": "src/app/signing-mock-review.ts",
+      "owner": "app"
+    },
+    {
+      "path": "src/features/home/access.ts",
+      "owner": "features/home"
+    },
+    {
+      "path": "src/features/home/business-data-source.ts",
+      "owner": "features/home"
+    },
+    {
+      "path": "src/features/home/components/LocalDraftDiagnosticsPanel.vue",
+      "owner": "features/home"
+    },
+    {
+      "path": "src/features/home/draft-diagnostics.ts",
+      "owner": "features/home"
+    },
+    {
+      "path": "src/features/session/login-consent.ts",
+      "owner": "features/session"
+    },
+    {
+      "path": "src/features/session/login-flow.ts",
+      "owner": "features/session"
+    },
+    {
+      "path": "src/features/session/login.ts",
+      "owner": "features/session"
+    },
+    {
+      "path": "src/features/session/quick-login.ts",
+      "owner": "features/session"
+    },
+    {
+      "path": "src/features/session/r1-manual-login-preflight.ts",
+      "owner": "features/session"
+    },
+    {
+      "path": "src/features/work-orders/R1LocalFormFieldEditor.vue",
+      "owner": "features/work-orders/core"
+    },
+    {
+      "path": "src/features/work-orders/R1NodeFormsOverview.vue",
+      "owner": "features/work-orders/core"
+    },
+    {
+      "path": "src/features/work-orders/R1ProductionChildFormsPanel.vue",
+      "owner": "features/work-orders/core"
+    },
+    {
+      "path": "src/features/work-orders/R1ProductionMainRepeatPanel.vue",
+      "owner": "features/work-orders/core"
+    },
+    {
+      "path": "src/features/work-orders/R1SpecialMockTransactionPanel.vue",
+      "owner": "features/work-orders/core"
+    },
+    {
+      "path": "src/features/work-orders/WorkOrderTaskFocus.vue",
+      "owner": "features/work-orders/core"
+    },
+    {
+      "path": "src/features/work-orders/a-stage-special-mock-port.ts",
+      "owner": "features/work-orders/core"
+    },
+    {
+      "path": "src/features/work-orders/action-form-schema.ts",
+      "owner": "features/work-orders/core"
+    },
+    {
+      "path": "src/features/work-orders/action-mutation-receipt.ts",
+      "owner": "features/work-orders/core"
+    },
+    {
+      "path": "src/features/work-orders/action-workspace-command-boundary.ts",
+      "owner": "features/work-orders/core"
+    },
+    {
+      "path": "src/features/work-orders/action-workspace-draft-utils.ts",
+      "owner": "features/work-orders/core"
+    },
+    {
+      "path": "src/features/work-orders/action-workspace-form-recovery.ts",
+      "owner": "features/work-orders/core"
+    },
+    {
+      "path": "src/features/work-orders/action-workspace-load-target.ts",
+      "owner": "features/work-orders/core"
+    },
+    {
+      "path": "src/features/work-orders/action-workspace-media-dispatch.ts",
+      "owner": "features/work-orders/core"
+    },
+    {
+      "path": "src/features/work-orders/action-workspace-media-projection.ts",
+      "owner": "features/work-orders/core"
+    },
+    {
+      "path": "src/features/work-orders/action-workspace-media-queue.ts",
+      "owner": "features/work-orders/core"
+    },
+    {
+      "path": "src/features/work-orders/action-workspace-read-model.ts",
+      "owner": "features/work-orders/core"
+    },
+    {
+      "path": "src/features/work-orders/action-workspace-routes.ts",
+      "owner": "features/work-orders/core"
+    },
+    {
+      "path": "src/features/work-orders/action-workspace.ts",
+      "owner": "features/work-orders/core"
+    },
+    {
+      "path": "src/features/work-orders/appointment-form-runtime.ts",
+      "owner": "features/work-orders/core"
+    },
+    {
+      "path": "src/features/work-orders/appointment-time.ts",
+      "owner": "features/work-orders/core"
+    },
+    {
+      "path": "src/features/work-orders/appointment-validation.ts",
+      "owner": "features/work-orders/core"
+    },
+    {
+      "path": "src/features/work-orders/card.ts",
+      "owner": "features/work-orders/core"
+    },
+    {
+      "path": "src/features/work-orders/components/GenericDynamicFormActionContent.vue",
+      "owner": "features/work-orders/core"
+    },
+    {
+      "path": "src/features/work-orders/components/MockJourneyContextPanel.vue",
+      "owner": "features/work-orders/core"
+    },
+    {
+      "path": "src/features/work-orders/components/SurveyActionContent.vue",
+      "owner": "features/work-orders/core"
+    },
+    {
+      "path": "src/features/work-orders/components/SurveyCompleteConfirmation.vue",
+      "owner": "features/work-orders/core"
+    },
+    {
+      "path": "src/features/work-orders/components/SurveyLeakageCauseExperience.vue",
+      "owner": "features/work-orders/core"
+    },
+    {
+      "path": "src/features/work-orders/components/SurveyPartPicker.vue",
+      "owner": "features/work-orders/core"
+    },
+    {
+      "path": "src/features/work-orders/components/SurveyTaskSectionHeading.vue",
+      "owner": "features/work-orders/core"
+    },
+    {
+      "path": "src/features/work-orders/detail-tabs.ts",
+      "owner": "features/work-orders/core"
+    },
+    {
+      "path": "src/features/work-orders/detail-workflow.ts",
+      "owner": "features/work-orders/core"
+    },
+    {
+      "path": "src/features/work-orders/detail.ts",
+      "owner": "features/work-orders/core"
+    },
+    {
+      "path": "src/features/work-orders/dynamic-form-action.ts",
+      "owner": "features/work-orders/core"
+    },
+    {
+      "path": "src/features/work-orders/form-presentation.ts",
+      "owner": "features/work-orders/core"
+    },
+    {
+      "path": "src/features/work-orders/list-actions.ts",
+      "owner": "features/work-orders/core"
+    },
+    {
+      "path": "src/features/work-orders/list.ts",
+      "owner": "features/work-orders/core"
+    },
+    {
+      "path": "src/features/work-orders/media-presentation.ts",
+      "owner": "features/work-orders/core"
+    },
+    {
+      "path": "src/features/work-orders/quotation/AStageMockQuoteOrderPanel.vue",
+      "owner": "features/work-orders/quotation"
+    },
+    {
+      "path": "src/features/work-orders/quotation/MockCommercialFlowLinks.vue",
+      "owner": "features/work-orders/quotation"
+    },
+    {
+      "path": "src/features/work-orders/quotation/Q01EntryScreen.vue",
+      "owner": "features/work-orders/quotation"
+    },
+    {
+      "path": "src/features/work-orders/quotation/QuotationActionContent.vue",
+      "owner": "features/work-orders/quotation"
+    },
+    {
+      "path": "src/features/work-orders/quotation/QuotationActionWorkspace.vue",
+      "owner": "features/work-orders/quotation"
+    },
+    {
+      "path": "src/features/work-orders/quotation/QuotationOrderHub.vue",
+      "owner": "features/work-orders/quotation"
+    },
+    {
+      "path": "src/features/work-orders/quotation/SyntheticOrderExtFieldReviewPanel.vue",
+      "owner": "features/work-orders/quotation"
+    },
+    {
+      "path": "src/features/work-orders/quotation/a-stage-mock-quote-port.ts",
+      "owner": "features/work-orders/quotation"
+    },
+    {
+      "path": "src/features/work-orders/quotation/amount-presentation.ts",
+      "owner": "features/work-orders/quotation"
+    },
+    {
+      "path": "src/features/work-orders/quotation/catalog-browser-store.ts",
+      "owner": "features/work-orders/quotation"
+    },
+    {
+      "path": "src/features/work-orders/quotation/catalog-price-presentation.ts",
+      "owner": "features/work-orders/quotation"
+    },
+    {
+      "path": "src/features/work-orders/quotation/catalog-search.ts",
+      "owner": "features/work-orders/quotation"
+    },
+    {
+      "path": "src/features/work-orders/quotation/catalog-selection-bridge.ts",
+      "owner": "features/work-orders/quotation"
+    },
+    {
+      "path": "src/features/work-orders/quotation/catalog.ts",
+      "owner": "features/work-orders/quotation"
+    },
+    {
+      "path": "src/features/work-orders/quotation/composition-store.ts",
+      "owner": "features/work-orders/quotation"
+    },
+    {
+      "path": "src/features/work-orders/quotation/draft-codec.ts",
+      "owner": "features/work-orders/quotation"
+    },
+    {
+      "path": "src/features/work-orders/quotation/empty-workbench-state.ts",
+      "owner": "features/work-orders/quotation"
+    },
+    {
+      "path": "src/features/work-orders/quotation/engine-store.ts",
+      "owner": "features/work-orders/quotation"
+    },
+    {
+      "path": "src/features/work-orders/quotation/engine.ts",
+      "owner": "features/work-orders/quotation"
+    },
+    {
+      "path": "src/features/work-orders/quotation/hydration.ts",
+      "owner": "features/work-orders/quotation"
+    },
+    {
+      "path": "src/features/work-orders/quotation/local-preflight.ts",
+      "owner": "features/work-orders/quotation"
+    },
+    {
+      "path": "src/features/work-orders/quotation/local-review-closure.ts",
+      "owner": "features/work-orders/quotation"
+    },
+    {
+      "path": "src/features/work-orders/quotation/material-sku-selection-preview.ts",
+      "owner": "features/work-orders/quotation"
+    },
+    {
+      "path": "src/features/work-orders/quotation/mock-commercial-review-port.ts",
+      "owner": "features/work-orders/quotation"
+    },
+    {
+      "path": "src/features/work-orders/quotation/model.ts",
+      "owner": "features/work-orders/quotation"
+    },
+    {
+      "path": "src/features/work-orders/quotation/order-browse-store.ts",
+      "owner": "features/work-orders/quotation"
+    },
+    {
+      "path": "src/features/work-orders/quotation/order-edit-preflight.ts",
+      "owner": "features/work-orders/quotation"
+    },
+    {
+      "path": "src/features/work-orders/quotation/order-encoder.ts",
+      "owner": "features/work-orders/quotation"
+    },
+    {
+      "path": "src/features/work-orders/quotation/order-extfield-effective-plan.ts",
+      "owner": "features/work-orders/quotation"
+    },
+    {
+      "path": "src/features/work-orders/quotation/order-reconstruction.ts",
+      "owner": "features/work-orders/quotation"
+    },
+    {
+      "path": "src/features/work-orders/quotation/order-submission.ts",
+      "owner": "features/work-orders/quotation"
+    },
+    {
+      "path": "src/features/work-orders/quotation/package-configuration.ts",
+      "owner": "features/work-orders/quotation"
+    },
+    {
+      "path": "src/features/work-orders/quotation/pricing.ts",
+      "owner": "features/work-orders/quotation"
+    },
+    {
+      "path": "src/features/work-orders/quotation/quotation-submit-guard.ts",
+      "owner": "features/work-orders/quotation"
+    },
+    {
+      "path": "src/features/work-orders/quotation/review-readiness-copy.ts",
+      "owner": "features/work-orders/quotation"
+    },
+    {
+      "path": "src/features/work-orders/quotation/sku-identity-review.ts",
+      "owner": "features/work-orders/quotation"
+    },
+    {
+      "path": "src/features/work-orders/quotation/sku-readiness-view.ts",
+      "owner": "features/work-orders/quotation"
+    },
+    {
+      "path": "src/features/work-orders/quotation/submission-display-copy.ts",
+      "owner": "features/work-orders/quotation"
+    },
+    {
+      "path": "src/features/work-orders/quotation/synthetic-extfield-review.ts",
+      "owner": "features/work-orders/quotation"
+    },
+    {
+      "path": "src/features/work-orders/quotation/validation.ts",
+      "owner": "features/work-orders/quotation"
+    },
+    {
+      "path": "src/features/work-orders/r1-forms-exts-plan.ts",
+      "owner": "features/work-orders/core"
+    },
+    {
+      "path": "src/features/work-orders/r1-local-form-drafts.ts",
+      "owner": "features/work-orders/core"
+    },
+    {
+      "path": "src/features/work-orders/r1-local-form-fields.ts",
+      "owner": "features/work-orders/core"
+    },
+    {
+      "path": "src/features/work-orders/r1-multistep-offline-transaction.ts",
+      "owner": "features/work-orders/core"
+    },
+    {
+      "path": "src/features/work-orders/read-identity-scope.ts",
+      "owner": "features/work-orders/core"
+    },
+    {
+      "path": "src/features/work-orders/signing/r1-signing-command-intents.ts",
+      "owner": "features/work-orders/signing"
+    },
+    {
+      "path": "src/features/work-orders/signing/r1-signing-command-readback.ts",
+      "owner": "features/work-orders/signing"
+    },
+    {
+      "path": "src/features/work-orders/signing/r1-signing-node-handler-evidence.ts",
+      "owner": "features/work-orders/signing"
+    },
+    {
+      "path": "src/features/work-orders/signing/r1-signing-read-reconciliation.ts",
+      "owner": "features/work-orders/signing"
+    },
+    {
+      "path": "src/features/work-orders/signing/r1-signing-ui-rules.ts",
+      "owner": "features/work-orders/signing"
+    },
+    {
+      "path": "src/features/work-orders/signing/signing-review-progress.ts",
+      "owner": "features/work-orders/signing"
+    },
+    {
+      "path": "src/features/work-orders/signing/signing-review-read-store.ts",
+      "owner": "features/work-orders/signing"
+    },
+    {
+      "path": "src/features/work-orders/signing/signing-review-read-workspace.ts",
+      "owner": "features/work-orders/signing"
+    },
+    {
+      "path": "src/features/work-orders/survey-leakage-cause.ts",
+      "owner": "features/work-orders/core"
+    },
+    {
+      "path": "src/features/work-orders/survey-media.ts",
+      "owner": "features/work-orders/core"
+    },
+    {
+      "path": "src/main.ts",
+      "owner": "main.ts"
+    },
+    {
+      "path": "src/pages/dev/qa-console.vue",
+      "owner": "pages"
+    },
+    {
+      "path": "src/pages/index/index.vue",
+      "owner": "pages"
+    },
+    {
+      "path": "src/pages/legal/legal.vue",
+      "owner": "pages"
+    },
+    {
+      "path": "src/pages/work-orders/action-confirmation.vue",
+      "owner": "pages"
+    },
+    {
+      "path": "src/pages/work-orders/action-time.vue",
+      "owner": "pages"
+    },
+    {
+      "path": "src/pages/work-orders/action-workspace.vue",
+      "owner": "pages"
+    },
+    {
+      "path": "src/pages/work-orders/child-subflow-mock-review.vue",
+      "owner": "pages"
+    },
+    {
+      "path": "src/pages/work-orders/detail.vue",
+      "owner": "pages"
+    },
+    {
+      "path": "src/pages/work-orders/material-sku-mock-review.vue",
+      "owner": "pages"
+    },
+    {
+      "path": "src/pages/work-orders/signing-mock-review.vue",
+      "owner": "pages"
+    },
+    {
+      "path": "src/pages/work-orders/signing-order-read.vue",
+      "owner": "pages"
+    },
+    {
+      "path": "src/pages/work-orders/work-orders.vue",
+      "owner": "pages"
+    },
+    {
+      "path": "src/runtimes/action/draft-repository.ts",
+      "owner": "runtimes/action"
+    },
+    {
+      "path": "src/runtimes/action/index.ts",
+      "owner": "runtimes/action"
+    },
+    {
+      "path": "src/runtimes/action/types.ts",
+      "owner": "runtimes/action"
+    },
+    {
+      "path": "src/runtimes/dynamic-form/applicability.ts",
+      "owner": "runtimes/dynamic-form"
+    },
+    {
+      "path": "src/runtimes/dynamic-form/capabilities.ts",
+      "owner": "runtimes/dynamic-form"
+    },
+    {
+      "path": "src/runtimes/dynamic-form/index.ts",
+      "owner": "runtimes/dynamic-form"
+    },
+    {
+      "path": "src/runtimes/dynamic-form/rules.ts",
+      "owner": "runtimes/dynamic-form"
+    },
+    {
+      "path": "src/runtimes/dynamic-form/state.ts",
+      "owner": "runtimes/dynamic-form"
+    },
+    {
+      "path": "src/runtimes/dynamic-form/types.ts",
+      "owner": "runtimes/dynamic-form"
+    },
+    {
+      "path": "src/runtimes/dynamic-form/values.ts",
+      "owner": "runtimes/dynamic-form"
+    },
+    {
+      "path": "src/runtimes/dynamic-form/visibility.ts",
+      "owner": "runtimes/dynamic-form"
+    },
+    {
+      "path": "src/runtimes/index.ts",
+      "owner": "runtimes/index.ts"
+    },
+    {
+      "path": "src/runtimes/media/in-memory-durable-media-store.ts",
+      "owner": "runtimes/media"
+    },
+    {
+      "path": "src/runtimes/media/index.ts",
+      "owner": "runtimes/media"
+    },
+    {
+      "path": "src/runtimes/media/media-queue-repository.ts",
+      "owner": "runtimes/media"
+    },
+    {
+      "path": "src/runtimes/media/media-upload-queue.ts",
+      "owner": "runtimes/media"
+    },
+    {
+      "path": "src/runtimes/media/mock-media-post-upload-processor.ts",
+      "owner": "runtimes/media"
+    },
+    {
+      "path": "src/runtimes/workflow/detail-projection.ts",
+      "owner": "runtimes/workflow"
+    },
+    {
+      "path": "src/runtimes/workflow/identity.ts",
+      "owner": "runtimes/workflow"
+    },
+    {
+      "path": "src/runtimes/workflow/index.ts",
+      "owner": "runtimes/workflow"
+    },
+    {
+      "path": "src/runtimes/workflow/policy.ts",
+      "owner": "runtimes/workflow"
+    },
+    {
+      "path": "src/runtimes/workflow/types.ts",
+      "owner": "runtimes/workflow"
+    },
+    {
+      "path": "src/shared/config/compatibility.ts",
+      "owner": "shared/config"
+    },
+    {
+      "path": "src/shared/config/environment.ts",
+      "owner": "shared/config"
+    },
+    {
+      "path": "src/shared/config/index.ts",
+      "owner": "shared/config"
+    },
+    {
+      "path": "src/shared/config/production-read-only.ts",
+      "owner": "shared/config"
+    },
+    {
+      "path": "src/shared/material-sku-contract.ts",
+      "owner": "shared/material-sku-contract.ts"
+    },
+    {
+      "path": "src/shared/package-material-sku-contract.ts",
+      "owner": "shared/package-material-sku-contract.ts"
+    },
+    {
+      "path": "src/shared/ports/api.ts",
+      "owner": "shared/ports"
+    },
+    {
+      "path": "src/shared/ports/auth.ts",
+      "owner": "shared/ports"
+    },
+    {
+      "path": "src/shared/ports/commands.ts",
+      "owner": "shared/ports"
+    },
+    {
+      "path": "src/shared/ports/index.ts",
+      "owner": "shared/ports"
+    },
+    {
+      "path": "src/shared/ports/platform.ts",
+      "owner": "shared/ports"
+    },
+    {
+      "path": "src/shared/ports/quotation-order.ts",
+      "owner": "shared/ports"
+    },
+    {
+      "path": "src/shared/ports/r1-pilot-readback.ts",
+      "owner": "shared/ports"
+    },
+    {
+      "path": "src/shared/ports/storage.ts",
+      "owner": "shared/ports"
+    },
+    {
+      "path": "src/shared/ports/survey-leakage-cause.ts",
+      "owner": "shared/ports"
+    },
+    {
+      "path": "src/shared/ports/upload.ts",
+      "owner": "shared/ports"
+    },
+    {
+      "path": "src/shared/quotation-catalog-eligibility.ts",
+      "owner": "shared/quotation-catalog-eligibility.ts"
+    },
+    {
+      "path": "src/shared/sku-live-read-preflight.ts",
+      "owner": "shared/sku-live-read-preflight.ts"
+    },
+    {
+      "path": "src/shared/sku-synthetic-read-gate.ts",
+      "owner": "shared/sku-synthetic-read-gate.ts"
+    },
+    {
+      "path": "src/shared/sku-synthetic-sale-options.ts",
+      "owner": "shared/sku-synthetic-sale-options.ts"
+    },
+    {
+      "path": "src/shared/state/index.ts",
+      "owner": "shared/state"
+    },
+    {
+      "path": "src/shared/state/session.ts",
+      "owner": "shared/state"
+    },
+    {
+      "path": "src/shared/types/capability.ts",
+      "owner": "shared/types"
+    },
+    {
+      "path": "src/shared/types/identifiers.ts",
+      "owner": "shared/types"
+    },
+    {
+      "path": "src/shared/types/index.ts",
+      "owner": "shared/types"
+    },
+    {
+      "path": "src/shared/types/media.ts",
+      "owner": "shared/types"
+    },
+    {
+      "path": "src/shared/types/operation.ts",
+      "owner": "shared/types"
+    },
+    {
+      "path": "src/shared/types/r1-node-contract.ts",
+      "owner": "shared/types"
+    },
+    {
+      "path": "src/shared/ui/ActionWorkspaceFormActions.vue",
+      "owner": "shared/ui"
+    },
+    {
+      "path": "src/shared/ui/ActionWorkspaceShell.vue",
+      "owner": "shared/ui"
+    },
+    {
+      "path": "src/shared/ui/AppActionBar.vue",
+      "owner": "shared/ui"
+    },
+    {
+      "path": "src/shared/ui/AppActionContentHeading.vue",
+      "owner": "shared/ui"
+    },
+    {
+      "path": "src/shared/ui/AppActionFeedback.vue",
+      "owner": "shared/ui"
+    },
+    {
+      "path": "src/shared/ui/AppAmountValue.vue",
+      "owner": "shared/ui"
+    },
+    {
+      "path": "src/shared/ui/AppButton.vue",
+      "owner": "shared/ui"
+    },
+    {
+      "path": "src/shared/ui/AppCascadeSelector.vue",
+      "owner": "shared/ui"
+    },
+    {
+      "path": "src/shared/ui/AppChoiceGroup.vue",
+      "owner": "shared/ui"
+    },
+    {
+      "path": "src/shared/ui/AppCraftHeading.vue",
+      "owner": "shared/ui"
+    },
+    {
+      "path": "src/shared/ui/AppFeedbackState.vue",
+      "owner": "shared/ui"
+    },
+    {
+      "path": "src/shared/ui/AppField.vue",
+      "owner": "shared/ui"
+    },
+    {
+      "path": "src/shared/ui/AppIcon.vue",
+      "owner": "shared/ui"
+    },
+    {
+      "path": "src/shared/ui/AppInformationRow.vue",
+      "owner": "shared/ui"
+    },
+    {
+      "path": "src/shared/ui/AppInput.vue",
+      "owner": "shared/ui"
+    },
+    {
+      "path": "src/shared/ui/AppLoadingState.vue",
+      "owner": "shared/ui"
+    },
+    {
+      "path": "src/shared/ui/AppMetaTag.vue",
+      "owner": "shared/ui"
+    },
+    {
+      "path": "src/shared/ui/AppMultiChoiceGroup.vue",
+      "owner": "shared/ui"
+    },
+    {
+      "path": "src/shared/ui/AppRecordCard.vue",
+      "owner": "shared/ui"
+    },
+    {
+      "path": "src/shared/ui/AppRecordMark.vue",
+      "owner": "shared/ui"
+    },
+    {
+      "path": "src/shared/ui/AppSearchBar.vue",
+      "owner": "shared/ui"
+    },
+    {
+      "path": "src/shared/ui/AppSectionHeading.vue",
+      "owner": "shared/ui"
+    },
+    {
+      "path": "src/shared/ui/AppSelector.vue",
+      "owner": "shared/ui"
+    },
+    {
+      "path": "src/shared/ui/AppStatus.vue",
+      "owner": "shared/ui"
+    },
+    {
+      "path": "src/shared/ui/AppSurface.vue",
+      "owner": "shared/ui"
+    },
+    {
+      "path": "src/shared/ui/AppTextarea.vue",
+      "owner": "shared/ui"
+    },
+    {
+      "path": "src/shared/ui/AppTreeMultiChoiceGroup.vue",
+      "owner": "shared/ui"
+    },
+    {
+      "path": "src/shared/ui/AppVisualScope.vue",
+      "owner": "shared/ui"
+    },
+    {
+      "path": "src/shared/ui/AppWorkOrderEmptyState.vue",
+      "owner": "shared/ui"
+    },
+    {
+      "path": "src/shared/ui/AppWorkOrderSkeleton.vue",
+      "owner": "shared/ui"
+    },
+    {
+      "path": "src/shared/ui/dev-review-mode.ts",
+      "owner": "shared/ui"
+    },
+    {
+      "path": "src/shared/ui/icons.ts",
+      "owner": "shared/ui"
+    },
+    {
+      "path": "src/shared/ui/index.ts",
+      "owner": "shared/ui"
+    },
+    {
+      "path": "src/shared/ui/loading.ts",
+      "owner": "shared/ui"
+    },
+    {
+      "path": "src/shared/ui/types.ts",
+      "owner": "shared/ui"
+    },
+    {
+      "path": "src/shared/ui/ux-state-language.ts",
+      "owner": "shared/ui"
+    },
+    {
+      "path": "src/shared/ui/work-order-number-display.ts",
+      "owner": "shared/ui"
+    }
+  ],
+  "edges": [
+    {
+      "from": "src/adapters/api/action-command-wires.ts",
+      "to": "src/adapters/api/survey-form-codec.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/action-command-wires.ts",
+      "to": "src/adapters/api/technician-api-commands.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/adapters/api/action-command-wires.ts",
+      "to": "src/adapters/common/operations.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/action-command-wires.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/adapters/api/action-command-wires.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/mock/command-state.ts",
+      "to": "src/adapters/api/mock/fixtures.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/mock/config.ts",
+      "to": "src/shared/config/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/adapters/api/mock/fixtures.ts",
+      "to": "src/adapters/api/appointment-contract.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/mock/fixtures.ts",
+      "to": "src/adapters/api/mock/journey.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/mock/fixtures.ts",
+      "to": "src/adapters/api/mock/quotation-catalog.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/mock/fixtures.ts",
+      "to": "src/adapters/api/mock/survey-contract.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/mock/index.ts",
+      "to": "src/adapters/api/mock/config.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/mock/index.ts",
+      "to": "src/adapters/api/mock/fixtures.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/mock/index.ts",
+      "to": "src/adapters/api/mock/quotation-catalog.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/mock/index.ts",
+      "to": "src/adapters/api/mock/router.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/mock/index.ts",
+      "to": "src/adapters/api/mock/scenario-registry.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/mock/journey.ts",
+      "to": "src/adapters/api/appointment-contract.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/mock/journey.ts",
+      "to": "src/adapters/api/mock/config.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/mock/journey.ts",
+      "to": "src/adapters/api/mock/survey-contract.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/mock/ownership.ts",
+      "to": "src/adapters/api/mock/fixtures.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/mock/ownership.ts",
+      "to": "src/adapters/api/mock/quotation-catalog.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/mock/package-material-sku.ts",
+      "to": "src/adapters/api/mock/material-sku.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/mock/quotation-sku-same-catalog.ts",
+      "to": "src/adapters/api/mock/material-sku.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/mock/quotation-sku-same-catalog.ts",
+      "to": "src/adapters/api/mock/quotation-catalog.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/mock/quotation-sku-same-catalog.ts",
+      "to": "src/shared/material-sku-contract.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/mock/quotation-sku-same-catalog.ts",
+      "to": "src/shared/package-material-sku-contract.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/mock/r1-special-protocol.ts",
+      "to": "src/adapters/api/mock/command-state.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/mock/r1-special-protocol.ts",
+      "to": "src/adapters/api/mock/fixtures.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/mock/r1-special-protocol.ts",
+      "to": "src/adapters/api/mock/journey.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/mock/r1-special-protocol.ts",
+      "to": "src/adapters/api/mock/r1-special-state.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/mock/r1-special-protocol.ts",
+      "to": "src/adapters/api/technician-api-commands.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/adapters/api/mock/r1-special-state.ts",
+      "to": "src/adapters/api/mock/command-state.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/mock/r1-special-state.ts",
+      "to": "src/adapters/api/mock/fixtures.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/mock/r1-special-state.ts",
+      "to": "src/adapters/api/mock/journey.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/mock/router.ts",
+      "to": "src/adapters/api/appointment-contract.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/mock/router.ts",
+      "to": "src/adapters/api/mock/command-state.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/mock/router.ts",
+      "to": "src/adapters/api/mock/config.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/mock/router.ts",
+      "to": "src/adapters/api/mock/fault-scenarios.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/mock/router.ts",
+      "to": "src/adapters/api/mock/fixtures.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/mock/router.ts",
+      "to": "src/adapters/api/mock/journey.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/mock/router.ts",
+      "to": "src/adapters/api/mock/ownership.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/mock/router.ts",
+      "to": "src/adapters/api/mock/quotation-catalog.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/mock/router.ts",
+      "to": "src/adapters/api/mock/r1-special-state.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/mock/router.ts",
+      "to": "src/adapters/api/technician-api-commands.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/adapters/api/mock/scenario-registry.ts",
+      "to": "src/adapters/api/mock/fixtures.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/mock/scenario-registry.ts",
+      "to": "src/adapters/api/mock/journey.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/quotation-catalog-api.ts",
+      "to": "src/adapters/api/technician-api.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/quotation-catalog-api.ts",
+      "to": "src/adapters/common/operations.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/quotation-catalog-api.ts",
+      "to": "src/adapters/common/records.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/quotation-catalog-api.ts",
+      "to": "src/shared/config/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/quotation-catalog-api.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/adapters/api/quotation-catalog-api.ts",
+      "to": "src/shared/quotation-catalog-eligibility.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/quotation-catalog-api.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/adapters/api/quotation-order-api.ts",
+      "to": "src/adapters/api/technician-api.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/quotation-order-api.ts",
+      "to": "src/adapters/common/operations.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/quotation-order-api.ts",
+      "to": "src/adapters/common/records.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/quotation-order-api.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/adapters/api/quotation-order-api.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/adapters/api/quotation-order-commands.ts",
+      "to": "src/adapters/api/technician-api-commands.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/quotation-order-commands.ts",
+      "to": "src/adapters/common/operations.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/quotation-order-commands.ts",
+      "to": "src/adapters/common/records.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/quotation-order-commands.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/adapters/api/quotation-order-commands.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/adapters/api/r1-node-form-list.ts",
+      "to": "src/adapters/api/technician-api.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/adapters/api/r1-node-form-list.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/adapters/api/r1-node-form-list.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/r1-pilot-authoritative-readback.ts",
+      "to": "src/adapters/api/technician-api.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/adapters/api/r1-pilot-authoritative-readback.ts",
+      "to": "src/shared/config/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/r1-pilot-authoritative-readback.ts",
+      "to": "src/shared/ports/r1-pilot-readback.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/adapters/api/r1-special-workflow-wires.ts",
+      "to": "src/adapters/api/technician-api-commands.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/adapters/api/r1-special-workflow-wires.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/adapters/api/read-models/code-options.ts",
+      "to": "src/adapters/common/operations.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/read-models/code-options.ts",
+      "to": "src/adapters/common/records.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/read-models/code-options.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/adapters/api/read-models/form.ts",
+      "to": "src/adapters/api/appointment-contract.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/read-models/form.ts",
+      "to": "src/adapters/api/read-models/ids.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/read-models/form.ts",
+      "to": "src/adapters/common/operations.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/read-models/form.ts",
+      "to": "src/adapters/common/records.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/read-models/form.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/adapters/api/read-models/form.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/read-models/ids.ts",
+      "to": "src/adapters/common/records.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/read-models/ids.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/read-models/work-order-activity.ts",
+      "to": "src/adapters/common/records.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/read-models/work-order-activity.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/adapters/api/read-models/work-order.ts",
+      "to": "src/adapters/api/read-models/ids.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/read-models/work-order.ts",
+      "to": "src/adapters/api/read-models/workflow.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/read-models/work-order.ts",
+      "to": "src/adapters/api/reference/area-county-dictionary.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/read-models/work-order.ts",
+      "to": "src/adapters/common/operations.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/read-models/work-order.ts",
+      "to": "src/adapters/common/records.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/read-models/work-order.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/adapters/api/read-models/work-order.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/read-models/workflow.ts",
+      "to": "src/adapters/api/appointment-contract.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/read-models/workflow.ts",
+      "to": "src/adapters/api/r1-node-form-list.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/read-models/workflow.ts",
+      "to": "src/adapters/api/read-models/form.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/read-models/workflow.ts",
+      "to": "src/adapters/api/read-models/ids.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/read-models/workflow.ts",
+      "to": "src/adapters/common/operations.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/read-models/workflow.ts",
+      "to": "src/adapters/common/records.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/read-models/workflow.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/adapters/api/read-models/workflow.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/survey-form-codec.ts",
+      "to": "src/adapters/common/operations.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/survey-form-codec.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/adapters/api/survey-form-codec.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/survey-leakage-cause.ts",
+      "to": "src/adapters/api/technician-api.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/survey-leakage-cause.ts",
+      "to": "src/adapters/common/operations.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/survey-leakage-cause.ts",
+      "to": "src/adapters/common/records.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/survey-leakage-cause.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/adapters/api/survey-leakage-cause.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/adapters/api/technician-api-commands.ts",
+      "to": "src/adapters/api/action-command-wires.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/technician-api-commands.ts",
+      "to": "src/adapters/api/appointment-contract.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/technician-api-commands.ts",
+      "to": "src/adapters/api/survey-form-codec.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/technician-api-commands.ts",
+      "to": "src/adapters/api/technician-api.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/adapters/api/technician-api-commands.ts",
+      "to": "src/adapters/common/operations.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/technician-api-commands.ts",
+      "to": "src/adapters/common/records.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/technician-api-commands.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/adapters/api/technician-api-commands.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/technician-api.ts",
+      "to": "src/adapters/api/r1-node-form-list.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/technician-api.ts",
+      "to": "src/adapters/api/read-models/code-options.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/technician-api.ts",
+      "to": "src/adapters/api/read-models/form.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/technician-api.ts",
+      "to": "src/adapters/api/read-models/ids.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/technician-api.ts",
+      "to": "src/adapters/api/read-models/work-order-activity.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/technician-api.ts",
+      "to": "src/adapters/api/read-models/work-order.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/technician-api.ts",
+      "to": "src/adapters/api/read-models/workflow.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/technician-api.ts",
+      "to": "src/adapters/common/operations.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/technician-api.ts",
+      "to": "src/adapters/common/records.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/technician-api.ts",
+      "to": "src/shared/config/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/technician-api.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/adapters/api/technician-api.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/adapters/api/uni-api-command-transport.ts",
+      "to": "src/adapters/api/mock/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/uni-api-command-transport.ts",
+      "to": "src/adapters/api/technician-api-commands.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/uni-api-command-transport.ts",
+      "to": "src/shared/config/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/uni-api-command-transport.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/adapters/api/uni-api-read-transport.ts",
+      "to": "src/adapters/api/mock/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/uni-api-read-transport.ts",
+      "to": "src/adapters/api/technician-api.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/uni-api-read-transport.ts",
+      "to": "src/shared/config/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/api/uni-api-read-transport.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/adapters/auth/auth-session-adapter.ts",
+      "to": "src/adapters/common/operations.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/auth/auth-session-adapter.ts",
+      "to": "src/adapters/common/records.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/auth/auth-session-adapter.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/adapters/auth/auth-session-adapter.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/auth/dev-mock-ux-session.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/adapters/auth/dev-mock-ux-session.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/auth/uni-auth-backend.ts",
+      "to": "src/adapters/auth/auth-session-adapter.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/common/operations.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/common/records.ts",
+      "to": "src/adapters/common/operations.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/platform/platform-adapters.ts",
+      "to": "src/adapters/common/operations.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/platform/platform-adapters.ts",
+      "to": "src/adapters/common/records.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/platform/platform-adapters.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/adapters/platform/platform-adapters.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/platform/uni-location-driver.ts",
+      "to": "src/adapters/platform/platform-adapters.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/adapters/platform/uni-media-drivers.ts",
+      "to": "src/adapters/platform/platform-adapters.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/adapters/platform/uni-navigation-driver.ts",
+      "to": "src/adapters/platform/platform-adapters.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/adapters/platform/uni-network-status.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/adapters/platform/uni-phone-driver.ts",
+      "to": "src/adapters/platform/platform-adapters.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/adapters/storage/storage-adapter.ts",
+      "to": "src/adapters/common/operations.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/storage/storage-adapter.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/adapters/storage/storage-adapter.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/storage/uni-durable-media-store.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/adapters/storage/uni-durable-media-store.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/storage/uni-storage-driver.ts",
+      "to": "src/adapters/storage/storage-adapter.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/adapters/upload/uni-media-post-upload-processor.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/adapters/upload/uni-media-post-upload-processor.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/upload/uni-upload-port.ts",
+      "to": "src/adapters/api/mock/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/upload/uni-upload-port.ts",
+      "to": "src/adapters/api/technician-api-commands.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/adapters/upload/uni-upload-port.ts",
+      "to": "src/adapters/upload/upload-adapter.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/upload/uni-upload-port.ts",
+      "to": "src/shared/config/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/upload/uni-upload-port.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/adapters/upload/uni-upload-port.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/upload/upload-adapter.ts",
+      "to": "src/adapters/common/operations.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/upload/upload-adapter.ts",
+      "to": "src/adapters/common/records.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/adapters/upload/upload-adapter.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/adapters/upload/upload-adapter.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/app/a-stage-quotation-mock-ui.ts",
+      "to": "src/adapters/api/mock/journey.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/a-stage-quotation-mock-ui.ts",
+      "to": "src/adapters/api/mock/router.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/a-stage-quotation-mock-ui.ts",
+      "to": "src/adapters/api/quotation-order-api.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/a-stage-quotation-mock-ui.ts",
+      "to": "src/adapters/api/quotation-order-commands.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/a-stage-quotation-mock-ui.ts",
+      "to": "src/app/composition.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/a-stage-quotation-mock-ui.ts",
+      "to": "src/features/work-orders/quotation/engine.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/app/a-stage-quotation-mock-ui.ts",
+      "to": "src/features/work-orders/quotation/order-submission.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/a-stage-quotation-mock-ui.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/app/a-stage-quotation-mock-ui.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/a-stage-special-mock-ui.ts",
+      "to": "src/adapters/api/mock/fixtures.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/a-stage-special-mock-ui.ts",
+      "to": "src/adapters/api/mock/journey.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/a-stage-special-mock-ui.ts",
+      "to": "src/adapters/api/mock/r1-special-protocol.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/a-stage-special-mock-ui.ts",
+      "to": "src/adapters/api/mock/router.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/a-stage-special-mock-ui.ts",
+      "to": "src/app/composition.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/a-stage-special-mock-ui.ts",
+      "to": "src/app/r1-stage1-functional-flow.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/a-stage-special-mock-ui.ts",
+      "to": "src/features/work-orders/a-stage-special-mock-port.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/app/a-stage-special-mock-ui.ts",
+      "to": "src/features/work-orders/r1-multistep-offline-transaction.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/a-stage-special-mock-ui.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/app/action-page-title.ts",
+      "to": "src/adapters/platform/uni-page-title.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/action-workspace-harness.ts",
+      "to": "src/adapters/api/appointment-contract.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/action-workspace-harness.ts",
+      "to": "src/adapters/api/mock/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/action-workspace-harness.ts",
+      "to": "src/features/work-orders/action-workspace.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/action-workspace-harness.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/app/action-workspace-harness.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/bootstrap.ts",
+      "to": "src/App.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/bootstrap.ts",
+      "to": "src/app/action-workspace-harness.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/bootstrap.ts",
+      "to": "src/app/business-mock.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/bootstrap.ts",
+      "to": "src/app/composition.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/bootstrap.ts",
+      "to": "src/features/home/draft-diagnostics.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/bootstrap.ts",
+      "to": "src/features/work-orders/action-workspace.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/bootstrap.ts",
+      "to": "src/features/work-orders/detail.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/bootstrap.ts",
+      "to": "src/features/work-orders/list.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/bootstrap.ts",
+      "to": "src/features/work-orders/quotation/order-browse-store.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/bootstrap.ts",
+      "to": "src/features/work-orders/r1-local-form-drafts.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/bootstrap.ts",
+      "to": "src/features/work-orders/signing/signing-review-read-store.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/bootstrap.ts",
+      "to": "src/runtimes/action/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/bootstrap.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/app/bootstrap.ts",
+      "to": "src/shared/state/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/business-mock.ts",
+      "to": "src/adapters/api/mock/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/business-mock.ts",
+      "to": "src/adapters/api/mock/journey.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/business-mock.ts",
+      "to": "src/app/runtime-config.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/child-subflow-mock-review.ts",
+      "to": "src/adapters/api/mock/journey.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/child-subflow-mock-review.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/app/child-subflow-mock-review.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/composition.ts",
+      "to": "src/adapters/api/quotation-catalog-api.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/composition.ts",
+      "to": "src/adapters/api/quotation-order-api.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/composition.ts",
+      "to": "src/adapters/api/quotation-order-commands.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/composition.ts",
+      "to": "src/adapters/api/survey-leakage-cause.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/composition.ts",
+      "to": "src/adapters/api/technician-api-commands.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/composition.ts",
+      "to": "src/adapters/api/technician-api.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/composition.ts",
+      "to": "src/adapters/api/uni-api-command-transport.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/composition.ts",
+      "to": "src/adapters/api/uni-api-read-transport.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/composition.ts",
+      "to": "src/adapters/auth/auth-session-adapter.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/composition.ts",
+      "to": "src/adapters/auth/dev-mock-ux-session.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/composition.ts",
+      "to": "src/adapters/auth/uni-auth-backend.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/composition.ts",
+      "to": "src/adapters/platform/platform-adapters.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/composition.ts",
+      "to": "src/adapters/platform/uni-location-driver.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/composition.ts",
+      "to": "src/adapters/platform/uni-media-drivers.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/composition.ts",
+      "to": "src/adapters/platform/uni-navigation-driver.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/composition.ts",
+      "to": "src/adapters/platform/uni-phone-driver.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/composition.ts",
+      "to": "src/adapters/storage/storage-adapter.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/composition.ts",
+      "to": "src/adapters/storage/uni-durable-media-store.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/composition.ts",
+      "to": "src/adapters/storage/uni-storage-driver.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/composition.ts",
+      "to": "src/adapters/upload/uni-media-post-upload-processor.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/composition.ts",
+      "to": "src/adapters/upload/uni-upload-port.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/composition.ts",
+      "to": "src/app/business-mock.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/composition.ts",
+      "to": "src/app/runtime-config.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/composition.ts",
+      "to": "src/runtimes/media/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/composition.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/app/composition.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/dev-qa-navigation.ts",
+      "to": "src/adapters/platform/developer-qa-navigation.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/material-sku-mock-coordinator.ts",
+      "to": "src/adapters/api/mock/journey.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/material-sku-mock-coordinator.ts",
+      "to": "src/adapters/api/mock/material-sku.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/material-sku-mock-coordinator.ts",
+      "to": "src/adapters/api/mock/package-material-sku.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/material-sku-mock-coordinator.ts",
+      "to": "src/app/material-sku-mock-review.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/material-sku-mock-coordinator.ts",
+      "to": "src/shared/material-sku-contract.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/material-sku-mock-coordinator.ts",
+      "to": "src/shared/package-material-sku-contract.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/material-sku-mock-coordinator.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/app/material-sku-mock-coordinator.ts",
+      "to": "src/shared/sku-synthetic-read-gate.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/material-sku-mock-review.ts",
+      "to": "src/adapters/api/mock/journey.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/material-sku-mock-review.ts",
+      "to": "src/adapters/api/mock/material-sku.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/material-sku-mock-review.ts",
+      "to": "src/adapters/api/mock/package-material-sku.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/material-sku-mock-review.ts",
+      "to": "src/shared/material-sku-contract.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/material-sku-mock-review.ts",
+      "to": "src/shared/package-material-sku-contract.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/mock-commercial-journey.ts",
+      "to": "src/adapters/api/mock/commercial-review-storage.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/mock-commercial-journey.ts",
+      "to": "src/adapters/api/mock/journey.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/mock-journey-closure.ts",
+      "to": "src/adapters/api/appointment-contract.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/mock-journey-closure.ts",
+      "to": "src/adapters/api/mock/journey.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/mock-journey-closure.ts",
+      "to": "src/adapters/api/mock/survey-contract.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/mock-journey-closure.ts",
+      "to": "src/app/mock-journey-context.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/app/mock-journey-closure.ts",
+      "to": "src/app/mock-journey-protocol.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/mock-journey-closure.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/app/mock-journey-closure.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/mock-journey-context.ts",
+      "to": "src/adapters/api/appointment-contract.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/mock-journey-context.ts",
+      "to": "src/adapters/api/mock/journey.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/mock-journey-context.ts",
+      "to": "src/adapters/api/mock/survey-contract.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/mock-journey-context.ts",
+      "to": "src/app/mock-journey-quote-suggestion.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/mock-journey-context.ts",
+      "to": "src/runtimes/action/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/app/mock-journey-context.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/mock-journey-protocol.ts",
+      "to": "src/adapters/api/action-command-wires.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/mock-journey-protocol.ts",
+      "to": "src/adapters/api/appointment-contract.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/mock-journey-protocol.ts",
+      "to": "src/adapters/api/mock/journey.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/mock-journey-protocol.ts",
+      "to": "src/adapters/api/mock/router.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/mock-journey-protocol.ts",
+      "to": "src/adapters/api/mock/survey-contract.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/mock-journey-protocol.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/app/mock-journey-protocol.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/mock-journey-quote-suggestion.ts",
+      "to": "src/adapters/api/mock/journey.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/mock-journey-quote-suggestion.ts",
+      "to": "src/adapters/api/mock/survey-contract.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/mock-journey-quote-suggestion.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/app/mock-journey.ts",
+      "to": "src/adapters/api/mock/journey.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/mock-journey.ts",
+      "to": "src/app/mock-commercial-journey.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/mock-journey.ts",
+      "to": "src/features/work-orders/action-workspace.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/mock-journey.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/p1-sku-readiness-review.ts",
+      "to": "src/adapters/api/mock/material-sku.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/p1-sku-readiness-review.ts",
+      "to": "src/adapters/api/mock/quotation-catalog.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/p1-sku-readiness-review.ts",
+      "to": "src/adapters/api/mock/quotation-sku-same-catalog.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/p1-sku-readiness-review.ts",
+      "to": "src/features/work-orders/quotation/model.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/app/p1-sku-readiness-review.ts",
+      "to": "src/features/work-orders/quotation/sku-identity-review.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/p1-sku-readiness-review.ts",
+      "to": "src/features/work-orders/quotation/sku-readiness-view.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/app/p1-sku-readiness-review.ts",
+      "to": "src/shared/sku-live-read-preflight.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/p1-sku-readiness-review.ts",
+      "to": "src/shared/sku-synthetic-sale-options.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/p1-sku-readiness-review.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/quotation-sku-identity-evidence.ts",
+      "to": "src/adapters/api/mock/material-sku.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/quotation-sku-identity-evidence.ts",
+      "to": "src/adapters/api/mock/package-material-sku.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/quotation-sku-identity-evidence.ts",
+      "to": "src/adapters/api/mock/quotation-sku-same-catalog.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/quotation-sku-identity-evidence.ts",
+      "to": "src/features/work-orders/quotation/model.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/app/quotation-sku-identity-evidence.ts",
+      "to": "src/features/work-orders/quotation/sku-identity-review.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/quotation-sku-identity-evidence.ts",
+      "to": "src/shared/material-sku-contract.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/quotation-sku-identity-evidence.ts",
+      "to": "src/shared/package-material-sku-contract.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/r1-stage1-functional-flow.ts",
+      "to": "src/adapters/api/r1-special-workflow-wires.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/r1-stage1-functional-flow.ts",
+      "to": "src/adapters/api/technician-api-commands.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/r1-stage1-functional-flow.ts",
+      "to": "src/features/work-orders/r1-forms-exts-plan.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/r1-stage1-functional-flow.ts",
+      "to": "src/features/work-orders/r1-multistep-offline-transaction.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/r1-stage1-functional-flow.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/app/r1-stage1-functional-flow.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/r1-stage1-pilot-composition.ts",
+      "to": "src/adapters/api/r1-pilot-authoritative-readback.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/r1-stage1-pilot-composition.ts",
+      "to": "src/adapters/api/technician-api-commands.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/app/r1-stage1-pilot-composition.ts",
+      "to": "src/adapters/api/technician-api.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/app/r1-stage1-pilot-composition.ts",
+      "to": "src/adapters/api/uni-api-command-transport.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/r1-stage1-pilot-composition.ts",
+      "to": "src/adapters/api/uni-api-read-transport.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/r1-stage1-pilot-composition.ts",
+      "to": "src/app/r1-stage1-pilot-reconciliation.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/r1-stage1-pilot-composition.ts",
+      "to": "src/app/runtime-config.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/r1-stage1-pilot-composition.ts",
+      "to": "src/features/work-orders/r1-multistep-offline-transaction.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/app/r1-stage1-pilot-composition.ts",
+      "to": "src/shared/config/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/r1-stage1-pilot-composition.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/app/r1-stage1-pilot-reconciliation.ts",
+      "to": "src/app/r1-stage1-functional-flow.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/r1-stage1-pilot-reconciliation.ts",
+      "to": "src/app/r1-stage1-scoped-gateway.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/r1-stage1-pilot-reconciliation.ts",
+      "to": "src/features/work-orders/r1-multistep-offline-transaction.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/r1-stage1-pilot-reconciliation.ts",
+      "to": "src/runtimes/workflow/policy.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/r1-stage1-pilot-reconciliation.ts",
+      "to": "src/shared/config/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/r1-stage1-pilot-reconciliation.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/app/r1-stage1-pilot-reconciliation.ts",
+      "to": "src/shared/ports/r1-pilot-readback.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/app/r1-stage1-pilot-reconciliation.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/r1-stage1-scoped-gateway.ts",
+      "to": "src/adapters/api/technician-api-commands.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/app/r1-stage1-scoped-gateway.ts",
+      "to": "src/app/r1-stage1-functional-flow.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/app/r1-stage1-scoped-gateway.ts",
+      "to": "src/features/work-orders/r1-multistep-offline-transaction.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/app/r1-stage1-scoped-gateway.ts",
+      "to": "src/runtimes/workflow/policy.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/r1-stage1-scoped-gateway.ts",
+      "to": "src/shared/config/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/r1-stage1-scoped-gateway.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/app/runtime-config.ts",
+      "to": "src/adapters/auth/auth-session-adapter.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/app/runtime-config.ts",
+      "to": "src/shared/config/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/app/signing-mock-review.ts",
+      "to": "src/adapters/api/mock/journey.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/home/access.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/home/access.ts",
+      "to": "src/shared/state/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/home/components/LocalDraftDiagnosticsPanel.vue",
+      "to": "src/features/home/draft-diagnostics.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/home/draft-diagnostics.ts",
+      "to": "src/features/work-orders/action-workspace.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/home/draft-diagnostics.ts",
+      "to": "src/runtimes/action/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/home/draft-diagnostics.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/home/draft-diagnostics.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/session/login-consent.ts",
+      "to": "src/features/session/login.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/session/login-consent.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/session/login-consent.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/session/login.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/session/login.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/session/r1-manual-login-preflight.ts",
+      "to": "src/features/session/login.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/action-form-schema.ts",
+      "to": "src/runtimes/dynamic-form/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/action-form-schema.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/action-mutation-receipt.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/action-mutation-receipt.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/action-workspace-command-boundary.ts",
+      "to": "src/features/work-orders/action-mutation-receipt.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/action-workspace-command-boundary.ts",
+      "to": "src/runtimes/action/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/action-workspace-command-boundary.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/action-workspace-command-boundary.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/action-workspace-draft-utils.ts",
+      "to": "src/features/work-orders/appointment-form-runtime.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/action-workspace-draft-utils.ts",
+      "to": "src/features/work-orders/dynamic-form-action.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/action-workspace-draft-utils.ts",
+      "to": "src/runtimes/action/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/action-workspace-draft-utils.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/action-workspace-draft-utils.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/action-workspace-form-recovery.ts",
+      "to": "src/features/work-orders/action-mutation-receipt.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/action-workspace-form-recovery.ts",
+      "to": "src/runtimes/action/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/action-workspace-form-recovery.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/action-workspace-form-recovery.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/action-workspace-load-target.ts",
+      "to": "src/runtimes/action/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/action-workspace-load-target.ts",
+      "to": "src/runtimes/workflow/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/action-workspace-load-target.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/action-workspace-load-target.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/action-workspace-media-dispatch.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/action-workspace-media-dispatch.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/action-workspace-media-projection.ts",
+      "to": "src/features/work-orders/dynamic-form-action.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/action-workspace-media-projection.ts",
+      "to": "src/features/work-orders/survey-media.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/action-workspace-media-projection.ts",
+      "to": "src/runtimes/action/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/action-workspace-media-projection.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/action-workspace-media-projection.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/action-workspace-media-queue.ts",
+      "to": "src/features/work-orders/action-workspace-draft-utils.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/action-workspace-media-queue.ts",
+      "to": "src/runtimes/action/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/action-workspace-media-queue.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/action-workspace-media-queue.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/action-workspace-read-model.ts",
+      "to": "src/features/work-orders/action-workspace.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/action-workspace-read-model.ts",
+      "to": "src/features/work-orders/appointment-form-runtime.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/action-workspace-read-model.ts",
+      "to": "src/features/work-orders/dynamic-form-action.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/action-workspace-read-model.ts",
+      "to": "src/features/work-orders/survey-leakage-cause.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/action-workspace-read-model.ts",
+      "to": "src/runtimes/action/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/action-workspace-read-model.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/action-workspace-read-model.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/action-workspace-routes.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/action-workspace.ts",
+      "to": "src/features/work-orders/action-mutation-receipt.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/action-workspace.ts",
+      "to": "src/features/work-orders/action-workspace-command-boundary.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/action-workspace.ts",
+      "to": "src/features/work-orders/action-workspace-draft-utils.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/action-workspace.ts",
+      "to": "src/features/work-orders/action-workspace-form-recovery.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/action-workspace.ts",
+      "to": "src/features/work-orders/action-workspace-load-target.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/action-workspace.ts",
+      "to": "src/features/work-orders/action-workspace-media-dispatch.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/action-workspace.ts",
+      "to": "src/features/work-orders/action-workspace-media-projection.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/action-workspace.ts",
+      "to": "src/features/work-orders/action-workspace-media-queue.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/action-workspace.ts",
+      "to": "src/features/work-orders/action-workspace-read-model.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/action-workspace.ts",
+      "to": "src/features/work-orders/action-workspace-routes.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/action-workspace.ts",
+      "to": "src/features/work-orders/appointment-form-runtime.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/action-workspace.ts",
+      "to": "src/features/work-orders/detail-workflow.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/action-workspace.ts",
+      "to": "src/features/work-orders/dynamic-form-action.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/action-workspace.ts",
+      "to": "src/features/work-orders/quotation/catalog-browser-store.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/action-workspace.ts",
+      "to": "src/features/work-orders/quotation/catalog-selection-bridge.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/action-workspace.ts",
+      "to": "src/features/work-orders/quotation/composition-store.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/action-workspace.ts",
+      "to": "src/features/work-orders/quotation/engine-store.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/action-workspace.ts",
+      "to": "src/features/work-orders/quotation/hydration.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/action-workspace.ts",
+      "to": "src/features/work-orders/quotation/model.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/action-workspace.ts",
+      "to": "src/features/work-orders/quotation/order-edit-preflight.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/action-workspace.ts",
+      "to": "src/features/work-orders/quotation/order-submission.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/action-workspace.ts",
+      "to": "src/features/work-orders/quotation/package-configuration.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/action-workspace.ts",
+      "to": "src/features/work-orders/survey-leakage-cause.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/action-workspace.ts",
+      "to": "src/features/work-orders/survey-media.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/action-workspace.ts",
+      "to": "src/runtimes/action/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/action-workspace.ts",
+      "to": "src/shared/config/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/action-workspace.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/action-workspace.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/appointment-form-runtime.ts",
+      "to": "src/features/work-orders/action-form-schema.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/appointment-form-runtime.ts",
+      "to": "src/runtimes/dynamic-form/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/appointment-form-runtime.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/appointment-form-runtime.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/appointment-validation.ts",
+      "to": "src/features/work-orders/appointment-form-runtime.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/appointment-validation.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/appointment-validation.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/card.ts",
+      "to": "src/shared/ui/icons.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/components/GenericDynamicFormActionContent.vue",
+      "to": "src/features/work-orders/action-workspace.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/components/GenericDynamicFormActionContent.vue",
+      "to": "src/features/work-orders/components/SurveyPartPicker.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/components/GenericDynamicFormActionContent.vue",
+      "to": "src/features/work-orders/components/SurveyTaskSectionHeading.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/components/GenericDynamicFormActionContent.vue",
+      "to": "src/features/work-orders/form-presentation.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/components/GenericDynamicFormActionContent.vue",
+      "to": "src/features/work-orders/media-presentation.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/components/GenericDynamicFormActionContent.vue",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/components/GenericDynamicFormActionContent.vue",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/components/GenericDynamicFormActionContent.vue",
+      "to": "src/shared/ui/AppActionContentHeading.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/components/GenericDynamicFormActionContent.vue",
+      "to": "src/shared/ui/AppButton.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/components/GenericDynamicFormActionContent.vue",
+      "to": "src/shared/ui/AppCascadeSelector.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/components/GenericDynamicFormActionContent.vue",
+      "to": "src/shared/ui/AppChoiceGroup.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/components/GenericDynamicFormActionContent.vue",
+      "to": "src/shared/ui/AppField.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/components/GenericDynamicFormActionContent.vue",
+      "to": "src/shared/ui/AppIcon.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/components/GenericDynamicFormActionContent.vue",
+      "to": "src/shared/ui/AppInput.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/components/GenericDynamicFormActionContent.vue",
+      "to": "src/shared/ui/AppMultiChoiceGroup.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/components/GenericDynamicFormActionContent.vue",
+      "to": "src/shared/ui/AppStatus.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/components/GenericDynamicFormActionContent.vue",
+      "to": "src/shared/ui/AppTextarea.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/components/GenericDynamicFormActionContent.vue",
+      "to": "src/shared/ui/types.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/components/MockJourneyContextPanel.vue",
+      "to": "src/app/mock-journey-context.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/components/MockJourneyContextPanel.vue",
+      "to": "src/shared/ui/AppButton.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/components/SurveyActionContent.vue",
+      "to": "src/features/work-orders/action-workspace.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/components/SurveyActionContent.vue",
+      "to": "src/features/work-orders/components/GenericDynamicFormActionContent.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/components/SurveyActionContent.vue",
+      "to": "src/features/work-orders/components/SurveyLeakageCauseExperience.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/components/SurveyCompleteConfirmation.vue",
+      "to": "src/shared/ui/AppButton.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/components/SurveyCompleteConfirmation.vue",
+      "to": "src/shared/ui/AppIcon.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/components/SurveyLeakageCauseExperience.vue",
+      "to": "src/features/work-orders/action-workspace.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/components/SurveyLeakageCauseExperience.vue",
+      "to": "src/features/work-orders/components/SurveyTaskSectionHeading.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/components/SurveyLeakageCauseExperience.vue",
+      "to": "src/shared/ui/AppButton.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/components/SurveyLeakageCauseExperience.vue",
+      "to": "src/shared/ui/AppField.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/components/SurveyLeakageCauseExperience.vue",
+      "to": "src/shared/ui/AppStatus.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/components/SurveyPartPicker.vue",
+      "to": "src/shared/ui/AppCascadeSelector.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/components/SurveyTaskSectionHeading.vue",
+      "to": "src/shared/ui/AppIcon.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/components/SurveyTaskSectionHeading.vue",
+      "to": "src/shared/ui/icons.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/detail-workflow.ts",
+      "to": "src/features/work-orders/card.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/detail-workflow.ts",
+      "to": "src/runtimes/workflow/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/detail-workflow.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/detail.ts",
+      "to": "src/features/work-orders/detail-workflow.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/detail.ts",
+      "to": "src/features/work-orders/read-identity-scope.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/detail.ts",
+      "to": "src/shared/config/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/detail.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/detail.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/dynamic-form-action.ts",
+      "to": "src/features/work-orders/action-form-schema.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/dynamic-form-action.ts",
+      "to": "src/features/work-orders/survey-leakage-cause.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/dynamic-form-action.ts",
+      "to": "src/features/work-orders/survey-media.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/dynamic-form-action.ts",
+      "to": "src/runtimes/dynamic-form/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/dynamic-form-action.ts",
+      "to": "src/shared/ports/api.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/dynamic-form-action.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/dynamic-form-action.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/form-presentation.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/list-actions.ts",
+      "to": "src/runtimes/workflow/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/list-actions.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/list-actions.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/list.ts",
+      "to": "src/features/work-orders/read-identity-scope.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/list.ts",
+      "to": "src/shared/config/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/list.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/list.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/media-presentation.ts",
+      "to": "src/features/work-orders/survey-media.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/media-presentation.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/quotation/a-stage-mock-quote-port.ts",
+      "to": "src/features/work-orders/quotation/engine.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/quotation/amount-presentation.ts",
+      "to": "src/features/work-orders/quotation/engine.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/quotation/AStageMockQuoteOrderPanel.vue",
+      "to": "src/features/work-orders/action-workspace.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/AStageMockQuoteOrderPanel.vue",
+      "to": "src/features/work-orders/quotation/a-stage-mock-quote-port.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/quotation/AStageMockQuoteOrderPanel.vue",
+      "to": "src/features/work-orders/quotation/composition-store.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/AStageMockQuoteOrderPanel.vue",
+      "to": "src/shared/state/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/AStageMockQuoteOrderPanel.vue",
+      "to": "src/shared/ui/AppButton.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/AStageMockQuoteOrderPanel.vue",
+      "to": "src/shared/ui/AppStatus.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/catalog-browser-store.ts",
+      "to": "src/features/work-orders/quotation/material-sku-selection-preview.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/catalog-browser-store.ts",
+      "to": "src/features/work-orders/quotation/model.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/quotation/catalog-browser-store.ts",
+      "to": "src/features/work-orders/quotation/package-configuration.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/catalog-browser-store.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/quotation/catalog-browser-store.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/quotation/catalog-price-presentation.ts",
+      "to": "src/features/work-orders/quotation/amount-presentation.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/catalog-price-presentation.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/quotation/catalog-search.ts",
+      "to": "src/features/work-orders/quotation/model.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/quotation/catalog-search.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/quotation/catalog-selection-bridge.ts",
+      "to": "src/features/work-orders/quotation/catalog-browser-store.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/quotation/catalog-selection-bridge.ts",
+      "to": "src/features/work-orders/quotation/composition-store.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/quotation/catalog-selection-bridge.ts",
+      "to": "src/features/work-orders/quotation/model.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/catalog-selection-bridge.ts",
+      "to": "src/features/work-orders/quotation/package-configuration.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/quotation/catalog-selection-bridge.ts",
+      "to": "src/runtimes/action/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/quotation/catalog-selection-bridge.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/quotation/catalog-selection-bridge.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/catalog.ts",
+      "to": "src/features/work-orders/quotation/model.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/quotation/composition-store.ts",
+      "to": "src/features/work-orders/quotation/catalog.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/composition-store.ts",
+      "to": "src/features/work-orders/quotation/draft-codec.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/composition-store.ts",
+      "to": "src/features/work-orders/quotation/model.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/composition-store.ts",
+      "to": "src/features/work-orders/quotation/package-configuration.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/composition-store.ts",
+      "to": "src/runtimes/action/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/quotation/composition-store.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/quotation/composition-store.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/draft-codec.ts",
+      "to": "src/features/work-orders/quotation/model.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/quotation/draft-codec.ts",
+      "to": "src/features/work-orders/quotation/package-configuration.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/draft-codec.ts",
+      "to": "src/runtimes/action/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/empty-workbench-state.ts",
+      "to": "src/features/work-orders/quotation/composition-store.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/quotation/engine-store.ts",
+      "to": "src/features/work-orders/quotation/engine.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/engine-store.ts",
+      "to": "src/features/work-orders/quotation/model.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/quotation/engine-store.ts",
+      "to": "src/features/work-orders/quotation/validation.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/engine-store.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/quotation/engine.ts",
+      "to": "src/features/work-orders/quotation/hydration.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/engine.ts",
+      "to": "src/features/work-orders/quotation/model.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/quotation/engine.ts",
+      "to": "src/features/work-orders/quotation/order-encoder.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/engine.ts",
+      "to": "src/features/work-orders/quotation/pricing.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/engine.ts",
+      "to": "src/features/work-orders/quotation/validation.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/engine.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/quotation/hydration.ts",
+      "to": "src/features/work-orders/quotation/model.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/hydration.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/quotation/hydration.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/quotation/local-preflight.ts",
+      "to": "src/features/work-orders/quotation/engine.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/quotation/local-preflight.ts",
+      "to": "src/features/work-orders/quotation/model.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/quotation/local-preflight.ts",
+      "to": "src/features/work-orders/quotation/order-extfield-effective-plan.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/quotation/local-preflight.ts",
+      "to": "src/features/work-orders/quotation/validation.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/local-review-closure.ts",
+      "to": "src/features/work-orders/quotation/model.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/quotation/local-review-closure.ts",
+      "to": "src/features/work-orders/quotation/validation.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/material-sku-selection-preview.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/quotation/MockCommercialFlowLinks.vue",
+      "to": "src/features/work-orders/quotation/mock-commercial-review-port.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/quotation/MockCommercialFlowLinks.vue",
+      "to": "src/shared/ui/AppButton.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/order-browse-store.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/quotation/order-browse-store.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/order-edit-preflight.ts",
+      "to": "src/features/work-orders/quotation/model.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/quotation/order-edit-preflight.ts",
+      "to": "src/features/work-orders/quotation/order-reconstruction.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/order-edit-preflight.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/quotation/order-edit-preflight.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/quotation/order-encoder.ts",
+      "to": "src/features/work-orders/quotation/hydration.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/quotation/order-encoder.ts",
+      "to": "src/features/work-orders/quotation/pricing.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/order-encoder.ts",
+      "to": "src/features/work-orders/quotation/validation.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/order-encoder.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/quotation/order-extfield-effective-plan.ts",
+      "to": "src/runtimes/dynamic-form/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/order-reconstruction.ts",
+      "to": "src/features/work-orders/quotation/model.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/quotation/order-reconstruction.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/quotation/order-submission.ts",
+      "to": "src/features/work-orders/quotation/order-encoder.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/quotation/order-submission.ts",
+      "to": "src/features/work-orders/quotation/order-reconstruction.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/order-submission.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/quotation/order-submission.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/quotation/package-configuration.ts",
+      "to": "src/features/work-orders/quotation/model.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/package-configuration.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/quotation/package-configuration.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/pricing.ts",
+      "to": "src/features/work-orders/quotation/hydration.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/quotation/pricing.ts",
+      "to": "src/features/work-orders/quotation/model.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/quotation/Q01EntryScreen.vue",
+      "to": "src/features/work-orders/quotation/model.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/quotation/Q01EntryScreen.vue",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/quotation/Q01EntryScreen.vue",
+      "to": "src/shared/ui/AppButton.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/Q01EntryScreen.vue",
+      "to": "src/shared/ui/AppCascadeSelector.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/Q01EntryScreen.vue",
+      "to": "src/shared/ui/AppCraftHeading.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/Q01EntryScreen.vue",
+      "to": "src/shared/ui/AppIcon.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/Q01EntryScreen.vue",
+      "to": "src/shared/ui/AppStatus.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/QuotationActionContent.vue",
+      "to": "src/features/work-orders/action-workspace.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/QuotationActionContent.vue",
+      "to": "src/features/work-orders/quotation/amount-presentation.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/QuotationActionContent.vue",
+      "to": "src/features/work-orders/quotation/catalog-browser-store.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/QuotationActionContent.vue",
+      "to": "src/features/work-orders/quotation/catalog-price-presentation.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/QuotationActionContent.vue",
+      "to": "src/features/work-orders/quotation/catalog-search.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/QuotationActionContent.vue",
+      "to": "src/features/work-orders/quotation/catalog.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/QuotationActionContent.vue",
+      "to": "src/features/work-orders/quotation/composition-store.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/QuotationActionContent.vue",
+      "to": "src/features/work-orders/quotation/empty-workbench-state.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/QuotationActionContent.vue",
+      "to": "src/features/work-orders/quotation/local-preflight.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/QuotationActionContent.vue",
+      "to": "src/features/work-orders/quotation/local-review-closure.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/QuotationActionContent.vue",
+      "to": "src/features/work-orders/quotation/model.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/QuotationActionContent.vue",
+      "to": "src/features/work-orders/quotation/package-configuration.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/QuotationActionContent.vue",
+      "to": "src/features/work-orders/quotation/Q01EntryScreen.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/QuotationActionContent.vue",
+      "to": "src/features/work-orders/quotation/review-readiness-copy.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/QuotationActionContent.vue",
+      "to": "src/features/work-orders/quotation/sku-identity-review.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/quotation/QuotationActionContent.vue",
+      "to": "src/features/work-orders/quotation/sku-readiness-view.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/quotation/QuotationActionContent.vue",
+      "to": "src/features/work-orders/quotation/submission-display-copy.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/QuotationActionContent.vue",
+      "to": "src/features/work-orders/quotation/validation.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/QuotationActionContent.vue",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/quotation/QuotationActionContent.vue",
+      "to": "src/shared/ui/AppButton.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/QuotationActionContent.vue",
+      "to": "src/shared/ui/AppCascadeSelector.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/QuotationActionContent.vue",
+      "to": "src/shared/ui/AppIcon.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/QuotationActionContent.vue",
+      "to": "src/shared/ui/AppLoadingState.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/QuotationActionContent.vue",
+      "to": "src/shared/ui/AppStatus.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/QuotationActionWorkspace.vue",
+      "to": "src/features/work-orders/action-workspace.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/QuotationActionWorkspace.vue",
+      "to": "src/features/work-orders/quotation/amount-presentation.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/QuotationActionWorkspace.vue",
+      "to": "src/features/work-orders/quotation/composition-store.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/QuotationActionWorkspace.vue",
+      "to": "src/features/work-orders/quotation/empty-workbench-state.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/QuotationActionWorkspace.vue",
+      "to": "src/features/work-orders/quotation/quotation-submit-guard.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/QuotationActionWorkspace.vue",
+      "to": "src/features/work-orders/quotation/QuotationActionContent.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/QuotationActionWorkspace.vue",
+      "to": "src/features/work-orders/quotation/sku-identity-review.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/quotation/QuotationActionWorkspace.vue",
+      "to": "src/features/work-orders/quotation/sku-readiness-view.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/quotation/QuotationActionWorkspace.vue",
+      "to": "src/shared/config/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/QuotationActionWorkspace.vue",
+      "to": "src/shared/state/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/QuotationActionWorkspace.vue",
+      "to": "src/shared/ui/ActionWorkspaceShell.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/QuotationActionWorkspace.vue",
+      "to": "src/shared/ui/AppAmountValue.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/QuotationActionWorkspace.vue",
+      "to": "src/shared/ui/AppButton.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/QuotationActionWorkspace.vue",
+      "to": "src/shared/ui/AppStatus.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/QuotationOrderHub.vue",
+      "to": "src/features/work-orders/quotation/order-browse-store.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/QuotationOrderHub.vue",
+      "to": "src/features/work-orders/signing/signing-review-read-workspace.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/QuotationOrderHub.vue",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/quotation/QuotationOrderHub.vue",
+      "to": "src/shared/ui/AppAmountValue.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/QuotationOrderHub.vue",
+      "to": "src/shared/ui/AppButton.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/QuotationOrderHub.vue",
+      "to": "src/shared/ui/AppIcon.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/QuotationOrderHub.vue",
+      "to": "src/shared/ui/AppMetaTag.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/QuotationOrderHub.vue",
+      "to": "src/shared/ui/AppRecordCard.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/QuotationOrderHub.vue",
+      "to": "src/shared/ui/AppSectionHeading.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/QuotationOrderHub.vue",
+      "to": "src/shared/ui/AppStatus.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/QuotationOrderHub.vue",
+      "to": "src/shared/ui/ux-state-language.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/QuotationOrderHub.vue",
+      "to": "src/shared/ui/work-order-number-display.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/review-readiness-copy.ts",
+      "to": "src/features/work-orders/quotation/local-preflight.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/quotation/sku-identity-review.ts",
+      "to": "src/features/work-orders/quotation/model.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/quotation/sku-identity-review.ts",
+      "to": "src/shared/material-sku-contract.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/quotation/sku-identity-review.ts",
+      "to": "src/shared/package-material-sku-contract.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/quotation/submission-display-copy.ts",
+      "to": "src/features/work-orders/quotation/order-submission.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/quotation/synthetic-extfield-review.ts",
+      "to": "src/features/work-orders/quotation/order-extfield-effective-plan.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/synthetic-extfield-review.ts",
+      "to": "src/runtimes/dynamic-form/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/synthetic-extfield-review.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/quotation/synthetic-extfield-review.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/quotation/SyntheticOrderExtFieldReviewPanel.vue",
+      "to": "src/features/work-orders/quotation/synthetic-extfield-review.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/SyntheticOrderExtFieldReviewPanel.vue",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/quotation/SyntheticOrderExtFieldReviewPanel.vue",
+      "to": "src/shared/ui/AppButton.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/SyntheticOrderExtFieldReviewPanel.vue",
+      "to": "src/shared/ui/AppField.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/SyntheticOrderExtFieldReviewPanel.vue",
+      "to": "src/shared/ui/AppInput.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/SyntheticOrderExtFieldReviewPanel.vue",
+      "to": "src/shared/ui/AppStatus.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/SyntheticOrderExtFieldReviewPanel.vue",
+      "to": "src/shared/ui/AppTextarea.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/validation.ts",
+      "to": "src/features/work-orders/quotation/model.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/quotation/validation.ts",
+      "to": "src/features/work-orders/quotation/package-configuration.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/r1-local-form-drafts.ts",
+      "to": "src/features/work-orders/r1-local-form-fields.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/r1-local-form-drafts.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/r1-local-form-drafts.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/r1-local-form-fields.ts",
+      "to": "src/runtimes/dynamic-form/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/r1-local-form-fields.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/r1-multistep-offline-transaction.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/r1-multistep-offline-transaction.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/R1LocalFormFieldEditor.vue",
+      "to": "src/features/work-orders/r1-local-form-drafts.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/R1LocalFormFieldEditor.vue",
+      "to": "src/features/work-orders/r1-local-form-fields.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/R1LocalFormFieldEditor.vue",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/R1LocalFormFieldEditor.vue",
+      "to": "src/shared/ui/AppButton.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/R1LocalFormFieldEditor.vue",
+      "to": "src/shared/ui/AppChoiceGroup.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/R1LocalFormFieldEditor.vue",
+      "to": "src/shared/ui/AppField.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/R1LocalFormFieldEditor.vue",
+      "to": "src/shared/ui/AppInput.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/R1LocalFormFieldEditor.vue",
+      "to": "src/shared/ui/AppMultiChoiceGroup.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/R1LocalFormFieldEditor.vue",
+      "to": "src/shared/ui/AppTextarea.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/R1NodeFormsOverview.vue",
+      "to": "src/features/work-orders/r1-local-form-drafts.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/R1NodeFormsOverview.vue",
+      "to": "src/features/work-orders/r1-local-form-fields.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/R1NodeFormsOverview.vue",
+      "to": "src/features/work-orders/R1LocalFormFieldEditor.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/R1NodeFormsOverview.vue",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/R1NodeFormsOverview.vue",
+      "to": "src/shared/ui/AppButton.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/R1NodeFormsOverview.vue",
+      "to": "src/shared/ui/AppInput.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/R1ProductionChildFormsPanel.vue",
+      "to": "src/features/work-orders/detail.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/R1ProductionChildFormsPanel.vue",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/R1ProductionChildFormsPanel.vue",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/R1ProductionChildFormsPanel.vue",
+      "to": "src/shared/ui/AppButton.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/R1ProductionMainRepeatPanel.vue",
+      "to": "src/features/work-orders/detail.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/R1ProductionMainRepeatPanel.vue",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/R1ProductionMainRepeatPanel.vue",
+      "to": "src/shared/ui/AppButton.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/R1SpecialMockTransactionPanel.vue",
+      "to": "src/features/work-orders/a-stage-special-mock-port.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/R1SpecialMockTransactionPanel.vue",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/R1SpecialMockTransactionPanel.vue",
+      "to": "src/shared/state/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/R1SpecialMockTransactionPanel.vue",
+      "to": "src/shared/ui/AppButton.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/R1SpecialMockTransactionPanel.vue",
+      "to": "src/shared/ui/AppStatus.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/R1SpecialMockTransactionPanel.vue",
+      "to": "src/shared/ui/AppTextarea.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/R1SpecialMockTransactionPanel.vue",
+      "to": "src/shared/ui/ux-state-language.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/read-identity-scope.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/signing/r1-signing-command-intents.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/signing/r1-signing-command-readback.ts",
+      "to": "src/features/work-orders/signing/r1-signing-command-intents.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/signing/r1-signing-command-readback.ts",
+      "to": "src/features/work-orders/signing/r1-signing-read-reconciliation.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/signing/r1-signing-node-handler-evidence.ts",
+      "to": "src/runtimes/workflow/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/signing/r1-signing-node-handler-evidence.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/signing/r1-signing-read-reconciliation.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/signing/signing-review-progress.ts",
+      "to": "src/features/work-orders/signing/r1-signing-read-reconciliation.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/signing/signing-review-read-store.ts",
+      "to": "src/features/work-orders/signing/r1-signing-node-handler-evidence.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/signing/signing-review-read-store.ts",
+      "to": "src/features/work-orders/signing/signing-review-read-workspace.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/signing/signing-review-read-store.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/signing/signing-review-read-store.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/signing/signing-review-read-workspace.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/signing/signing-review-read-workspace.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/survey-leakage-cause.ts",
+      "to": "src/runtimes/dynamic-form/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/survey-leakage-cause.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/features/work-orders/survey-leakage-cause.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/features/work-orders/survey-media.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/main.ts",
+      "to": "src/app/bootstrap.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/dev/qa-console.vue",
+      "to": "src/app/action-workspace-harness.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/dev/qa-console.vue",
+      "to": "src/app/business-mock.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/dev/qa-console.vue",
+      "to": "src/app/child-subflow-mock-review.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/dev/qa-console.vue",
+      "to": "src/app/material-sku-mock-review.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/dev/qa-console.vue",
+      "to": "src/app/mock-commercial-journey.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/dev/qa-console.vue",
+      "to": "src/app/mock-journey.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/dev/qa-console.vue",
+      "to": "src/app/signing-mock-review.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/dev/qa-console.vue",
+      "to": "src/features/home/business-data-source.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/dev/qa-console.vue",
+      "to": "src/features/home/components/LocalDraftDiagnosticsPanel.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/dev/qa-console.vue",
+      "to": "src/features/home/draft-diagnostics.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/dev/qa-console.vue",
+      "to": "src/features/work-orders/detail.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/dev/qa-console.vue",
+      "to": "src/features/work-orders/list.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/dev/qa-console.vue",
+      "to": "src/features/work-orders/quotation/mock-commercial-review-port.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/pages/dev/qa-console.vue",
+      "to": "src/features/work-orders/quotation/MockCommercialFlowLinks.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/dev/qa-console.vue",
+      "to": "src/shared/state/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/index/index.vue",
+      "to": "src/app/dev-qa-navigation.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/index/index.vue",
+      "to": "src/features/home/access.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/index/index.vue",
+      "to": "src/features/session/login-consent.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/index/index.vue",
+      "to": "src/features/session/login-flow.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/index/index.vue",
+      "to": "src/features/session/login.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/index/index.vue",
+      "to": "src/features/session/quick-login.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/index/index.vue",
+      "to": "src/features/session/r1-manual-login-preflight.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/index/index.vue",
+      "to": "src/shared/state/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/index/index.vue",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/pages/index/index.vue",
+      "to": "src/shared/ui/AppLoadingState.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/legal/legal.vue",
+      "to": "src/features/session/login-consent.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/action-confirmation.vue",
+      "to": "src/features/home/access.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/action-confirmation.vue",
+      "to": "src/features/work-orders/action-workspace.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/action-confirmation.vue",
+      "to": "src/features/work-orders/appointment-time.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/action-confirmation.vue",
+      "to": "src/shared/state/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/action-confirmation.vue",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/pages/work-orders/action-confirmation.vue",
+      "to": "src/shared/ui/ActionWorkspaceShell.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/action-confirmation.vue",
+      "to": "src/shared/ui/AppButton.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/action-confirmation.vue",
+      "to": "src/shared/ui/AppIcon.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/action-confirmation.vue",
+      "to": "src/shared/ui/AppInformationRow.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/action-confirmation.vue",
+      "to": "src/shared/ui/AppLoadingState.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/action-time.vue",
+      "to": "src/features/home/access.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/action-time.vue",
+      "to": "src/features/work-orders/action-workspace.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/action-time.vue",
+      "to": "src/features/work-orders/appointment-time.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/action-time.vue",
+      "to": "src/shared/state/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/action-time.vue",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/pages/work-orders/action-time.vue",
+      "to": "src/shared/ui/ActionWorkspaceShell.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/action-time.vue",
+      "to": "src/shared/ui/AppButton.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/action-time.vue",
+      "to": "src/shared/ui/AppIcon.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/action-time.vue",
+      "to": "src/shared/ui/AppLoadingState.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/action-workspace.vue",
+      "to": "src/app/a-stage-quotation-mock-ui.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/action-workspace.vue",
+      "to": "src/app/action-page-title.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/action-workspace.vue",
+      "to": "src/app/business-mock.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/action-workspace.vue",
+      "to": "src/app/mock-journey-closure.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/action-workspace.vue",
+      "to": "src/app/mock-journey-context.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/action-workspace.vue",
+      "to": "src/app/mock-journey-quote-suggestion.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/action-workspace.vue",
+      "to": "src/app/mock-journey.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/action-workspace.vue",
+      "to": "src/app/p1-sku-readiness-review.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/action-workspace.vue",
+      "to": "src/app/quotation-sku-identity-evidence.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/action-workspace.vue",
+      "to": "src/features/home/access.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/action-workspace.vue",
+      "to": "src/features/work-orders/action-workspace.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/action-workspace.vue",
+      "to": "src/features/work-orders/appointment-time.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/action-workspace.vue",
+      "to": "src/features/work-orders/components/GenericDynamicFormActionContent.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/action-workspace.vue",
+      "to": "src/features/work-orders/components/MockJourneyContextPanel.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/action-workspace.vue",
+      "to": "src/features/work-orders/components/SurveyActionContent.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/action-workspace.vue",
+      "to": "src/features/work-orders/components/SurveyCompleteConfirmation.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/action-workspace.vue",
+      "to": "src/features/work-orders/form-presentation.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/action-workspace.vue",
+      "to": "src/features/work-orders/quotation/a-stage-mock-quote-port.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/pages/work-orders/action-workspace.vue",
+      "to": "src/features/work-orders/quotation/AStageMockQuoteOrderPanel.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/action-workspace.vue",
+      "to": "src/features/work-orders/quotation/composition-store.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/action-workspace.vue",
+      "to": "src/features/work-orders/quotation/QuotationActionWorkspace.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/action-workspace.vue",
+      "to": "src/features/work-orders/quotation/QuotationOrderHub.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/action-workspace.vue",
+      "to": "src/shared/config/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/action-workspace.vue",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/pages/work-orders/action-workspace.vue",
+      "to": "src/shared/state/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/action-workspace.vue",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/pages/work-orders/action-workspace.vue",
+      "to": "src/shared/ui/ActionWorkspaceFormActions.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/action-workspace.vue",
+      "to": "src/shared/ui/ActionWorkspaceShell.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/action-workspace.vue",
+      "to": "src/shared/ui/AppActionContentHeading.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/action-workspace.vue",
+      "to": "src/shared/ui/AppButton.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/action-workspace.vue",
+      "to": "src/shared/ui/AppChoiceGroup.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/action-workspace.vue",
+      "to": "src/shared/ui/AppField.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/action-workspace.vue",
+      "to": "src/shared/ui/AppIcon.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/action-workspace.vue",
+      "to": "src/shared/ui/AppInput.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/action-workspace.vue",
+      "to": "src/shared/ui/AppLoadingState.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/action-workspace.vue",
+      "to": "src/shared/ui/AppSelector.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/action-workspace.vue",
+      "to": "src/shared/ui/AppTextarea.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/action-workspace.vue",
+      "to": "src/shared/ui/types.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/pages/work-orders/child-subflow-mock-review.vue",
+      "to": "src/app/child-subflow-mock-review.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/child-subflow-mock-review.vue",
+      "to": "src/features/work-orders/detail.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/pages/work-orders/child-subflow-mock-review.vue",
+      "to": "src/features/work-orders/R1ProductionChildFormsPanel.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/child-subflow-mock-review.vue",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/pages/work-orders/child-subflow-mock-review.vue",
+      "to": "src/shared/state/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/child-subflow-mock-review.vue",
+      "to": "src/shared/ui/AppButton.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/detail.vue",
+      "to": "src/app/a-stage-special-mock-ui.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/detail.vue",
+      "to": "src/app/mock-journey.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/detail.vue",
+      "to": "src/features/home/access.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/detail.vue",
+      "to": "src/features/work-orders/a-stage-special-mock-port.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/pages/work-orders/detail.vue",
+      "to": "src/features/work-orders/action-workspace.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/detail.vue",
+      "to": "src/features/work-orders/card.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/detail.vue",
+      "to": "src/features/work-orders/detail-tabs.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/detail.vue",
+      "to": "src/features/work-orders/detail-workflow.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/detail.vue",
+      "to": "src/features/work-orders/detail.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/detail.vue",
+      "to": "src/features/work-orders/quotation/order-browse-store.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/detail.vue",
+      "to": "src/features/work-orders/R1NodeFormsOverview.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/detail.vue",
+      "to": "src/features/work-orders/R1ProductionChildFormsPanel.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/detail.vue",
+      "to": "src/features/work-orders/R1ProductionMainRepeatPanel.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/detail.vue",
+      "to": "src/features/work-orders/R1SpecialMockTransactionPanel.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/detail.vue",
+      "to": "src/features/work-orders/read-identity-scope.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/detail.vue",
+      "to": "src/features/work-orders/signing/signing-review-read-workspace.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/detail.vue",
+      "to": "src/features/work-orders/WorkOrderTaskFocus.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/detail.vue",
+      "to": "src/shared/config/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/detail.vue",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/pages/work-orders/detail.vue",
+      "to": "src/shared/state/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/detail.vue",
+      "to": "src/shared/ui/AppFeedbackState.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/detail.vue",
+      "to": "src/shared/ui/AppIcon.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/detail.vue",
+      "to": "src/shared/ui/AppLoadingState.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/detail.vue",
+      "to": "src/shared/ui/AppMetaTag.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/detail.vue",
+      "to": "src/shared/ui/AppRecordCard.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/detail.vue",
+      "to": "src/shared/ui/AppSectionHeading.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/detail.vue",
+      "to": "src/shared/ui/AppStatus.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/detail.vue",
+      "to": "src/shared/ui/AppWorkOrderSkeleton.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/detail.vue",
+      "to": "src/shared/ui/loading.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/detail.vue",
+      "to": "src/shared/ui/work-order-number-display.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/material-sku-mock-review.vue",
+      "to": "src/app/material-sku-mock-coordinator.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/material-sku-mock-review.vue",
+      "to": "src/app/material-sku-mock-review.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/material-sku-mock-review.vue",
+      "to": "src/app/mock-commercial-journey.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/material-sku-mock-review.vue",
+      "to": "src/shared/material-sku-contract.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/material-sku-mock-review.vue",
+      "to": "src/shared/package-material-sku-contract.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/material-sku-mock-review.vue",
+      "to": "src/shared/state/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/material-sku-mock-review.vue",
+      "to": "src/shared/ui/ActionWorkspaceShell.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/material-sku-mock-review.vue",
+      "to": "src/shared/ui/AppButton.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/signing-mock-review.vue",
+      "to": "src/app/mock-commercial-journey.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/signing-mock-review.vue",
+      "to": "src/app/signing-mock-review.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/signing-mock-review.vue",
+      "to": "src/shared/state/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/signing-mock-review.vue",
+      "to": "src/shared/ui/ActionWorkspaceShell.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/signing-mock-review.vue",
+      "to": "src/shared/ui/AppButton.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/signing-order-read.vue",
+      "to": "src/app/business-mock.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/signing-order-read.vue",
+      "to": "src/features/work-orders/signing/r1-signing-read-reconciliation.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/signing-order-read.vue",
+      "to": "src/features/work-orders/signing/signing-review-progress.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/signing-order-read.vue",
+      "to": "src/features/work-orders/signing/signing-review-read-store.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/signing-order-read.vue",
+      "to": "src/shared/config/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/signing-order-read.vue",
+      "to": "src/shared/state/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/signing-order-read.vue",
+      "to": "src/shared/ui/AppAmountValue.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/signing-order-read.vue",
+      "to": "src/shared/ui/AppButton.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/signing-order-read.vue",
+      "to": "src/shared/ui/AppIcon.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/signing-order-read.vue",
+      "to": "src/shared/ui/AppLoadingState.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/signing-order-read.vue",
+      "to": "src/shared/ui/AppMetaTag.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/signing-order-read.vue",
+      "to": "src/shared/ui/AppRecordCard.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/signing-order-read.vue",
+      "to": "src/shared/ui/AppSectionHeading.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/signing-order-read.vue",
+      "to": "src/shared/ui/AppStatus.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/work-orders.vue",
+      "to": "src/features/home/access.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/work-orders.vue",
+      "to": "src/features/work-orders/card.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/work-orders.vue",
+      "to": "src/features/work-orders/detail.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/work-orders.vue",
+      "to": "src/features/work-orders/list-actions.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/work-orders.vue",
+      "to": "src/features/work-orders/list.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/work-orders.vue",
+      "to": "src/features/work-orders/read-identity-scope.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/work-orders.vue",
+      "to": "src/shared/config/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/work-orders.vue",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/pages/work-orders/work-orders.vue",
+      "to": "src/shared/state/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/work-orders.vue",
+      "to": "src/shared/ui/AppButton.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/work-orders.vue",
+      "to": "src/shared/ui/AppFeedbackState.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/work-orders.vue",
+      "to": "src/shared/ui/AppIcon.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/work-orders.vue",
+      "to": "src/shared/ui/AppLoadingState.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/work-orders.vue",
+      "to": "src/shared/ui/AppMetaTag.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/work-orders.vue",
+      "to": "src/shared/ui/AppRecordCard.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/work-orders.vue",
+      "to": "src/shared/ui/AppRecordMark.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/work-orders.vue",
+      "to": "src/shared/ui/AppSearchBar.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/work-orders.vue",
+      "to": "src/shared/ui/AppSectionHeading.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/work-orders.vue",
+      "to": "src/shared/ui/AppStatus.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/work-orders.vue",
+      "to": "src/shared/ui/AppWorkOrderEmptyState.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/work-orders.vue",
+      "to": "src/shared/ui/AppWorkOrderSkeleton.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/pages/work-orders/work-orders.vue",
+      "to": "src/shared/ui/loading.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/runtimes/action/draft-repository.ts",
+      "to": "src/runtimes/action/types.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/runtimes/action/draft-repository.ts",
+      "to": "src/runtimes/workflow/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/runtimes/action/draft-repository.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/runtimes/action/draft-repository.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/runtimes/action/index.ts",
+      "to": "src/runtimes/action/draft-repository.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/runtimes/action/index.ts",
+      "to": "src/runtimes/action/types.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/runtimes/action/types.ts",
+      "to": "src/runtimes/workflow/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/runtimes/action/types.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/runtimes/action/types.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/runtimes/dynamic-form/applicability.ts",
+      "to": "src/runtimes/dynamic-form/types.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/runtimes/dynamic-form/capabilities.ts",
+      "to": "src/runtimes/dynamic-form/types.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/runtimes/dynamic-form/index.ts",
+      "to": "src/runtimes/dynamic-form/applicability.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/runtimes/dynamic-form/index.ts",
+      "to": "src/runtimes/dynamic-form/capabilities.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/runtimes/dynamic-form/index.ts",
+      "to": "src/runtimes/dynamic-form/rules.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/runtimes/dynamic-form/index.ts",
+      "to": "src/runtimes/dynamic-form/state.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/runtimes/dynamic-form/index.ts",
+      "to": "src/runtimes/dynamic-form/types.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/runtimes/dynamic-form/index.ts",
+      "to": "src/runtimes/dynamic-form/values.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/runtimes/dynamic-form/index.ts",
+      "to": "src/runtimes/dynamic-form/visibility.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/runtimes/dynamic-form/rules.ts",
+      "to": "src/runtimes/dynamic-form/types.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/runtimes/dynamic-form/rules.ts",
+      "to": "src/shared/config/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/runtimes/dynamic-form/state.ts",
+      "to": "src/runtimes/dynamic-form/applicability.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/runtimes/dynamic-form/state.ts",
+      "to": "src/runtimes/dynamic-form/capabilities.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/runtimes/dynamic-form/state.ts",
+      "to": "src/runtimes/dynamic-form/types.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/runtimes/dynamic-form/state.ts",
+      "to": "src/runtimes/dynamic-form/visibility.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/runtimes/dynamic-form/types.ts",
+      "to": "src/shared/config/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/runtimes/dynamic-form/types.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/runtimes/dynamic-form/types.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/runtimes/dynamic-form/values.ts",
+      "to": "src/runtimes/dynamic-form/applicability.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/runtimes/dynamic-form/values.ts",
+      "to": "src/runtimes/dynamic-form/state.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/runtimes/dynamic-form/values.ts",
+      "to": "src/runtimes/dynamic-form/types.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/runtimes/dynamic-form/values.ts",
+      "to": "src/runtimes/dynamic-form/visibility.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/runtimes/dynamic-form/values.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/runtimes/dynamic-form/visibility.ts",
+      "to": "src/runtimes/dynamic-form/types.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/runtimes/index.ts",
+      "to": "src/runtimes/action/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/runtimes/index.ts",
+      "to": "src/runtimes/dynamic-form/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/runtimes/index.ts",
+      "to": "src/runtimes/media/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/runtimes/index.ts",
+      "to": "src/runtimes/workflow/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/runtimes/media/in-memory-durable-media-store.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/runtimes/media/in-memory-durable-media-store.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/runtimes/media/index.ts",
+      "to": "src/runtimes/media/in-memory-durable-media-store.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/runtimes/media/index.ts",
+      "to": "src/runtimes/media/media-queue-repository.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/runtimes/media/index.ts",
+      "to": "src/runtimes/media/media-upload-queue.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/runtimes/media/index.ts",
+      "to": "src/runtimes/media/mock-media-post-upload-processor.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/runtimes/media/media-queue-repository.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/runtimes/media/media-queue-repository.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/runtimes/media/media-upload-queue.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/runtimes/media/media-upload-queue.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/runtimes/media/mock-media-post-upload-processor.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/runtimes/media/mock-media-post-upload-processor.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/runtimes/workflow/detail-projection.ts",
+      "to": "src/runtimes/workflow/policy.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/runtimes/workflow/detail-projection.ts",
+      "to": "src/runtimes/workflow/types.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/runtimes/workflow/detail-projection.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/runtimes/workflow/detail-projection.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/runtimes/workflow/identity.ts",
+      "to": "src/runtimes/workflow/types.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/runtimes/workflow/identity.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/runtimes/workflow/index.ts",
+      "to": "src/runtimes/workflow/detail-projection.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/runtimes/workflow/index.ts",
+      "to": "src/runtimes/workflow/identity.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/runtimes/workflow/index.ts",
+      "to": "src/runtimes/workflow/policy.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/runtimes/workflow/index.ts",
+      "to": "src/runtimes/workflow/types.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/runtimes/workflow/index.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/runtimes/workflow/policy.ts",
+      "to": "src/runtimes/workflow/types.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/runtimes/workflow/types.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/runtimes/workflow/types.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/shared/config/environment.ts",
+      "to": "src/shared/config/production-read-only.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/shared/config/index.ts",
+      "to": "src/shared/config/compatibility.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/shared/config/index.ts",
+      "to": "src/shared/config/environment.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/shared/config/index.ts",
+      "to": "src/shared/config/production-read-only.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/shared/package-material-sku-contract.ts",
+      "to": "src/shared/material-sku-contract.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/shared/ports/api.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/shared/ports/auth.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/shared/ports/commands.ts",
+      "to": "src/shared/ports/api.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/shared/ports/commands.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/shared/ports/index.ts",
+      "to": "src/shared/ports/api.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/shared/ports/index.ts",
+      "to": "src/shared/ports/auth.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/shared/ports/index.ts",
+      "to": "src/shared/ports/commands.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/shared/ports/index.ts",
+      "to": "src/shared/ports/platform.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/shared/ports/index.ts",
+      "to": "src/shared/ports/quotation-order.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/shared/ports/index.ts",
+      "to": "src/shared/ports/storage.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/shared/ports/index.ts",
+      "to": "src/shared/ports/survey-leakage-cause.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/shared/ports/index.ts",
+      "to": "src/shared/ports/upload.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/shared/ports/platform.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/shared/ports/quotation-order.ts",
+      "to": "src/shared/ports/api.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/shared/ports/quotation-order.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/shared/ports/storage.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/shared/ports/survey-leakage-cause.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/shared/ports/upload.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/shared/quotation-catalog-eligibility.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/shared/sku-live-read-preflight.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/shared/sku-synthetic-sale-options.ts",
+      "to": "src/shared/sku-live-read-preflight.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/shared/state/index.ts",
+      "to": "src/shared/state/session.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/shared/state/session.ts",
+      "to": "src/shared/ports/index.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/shared/state/session.ts",
+      "to": "src/shared/types/index.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/shared/types/index.ts",
+      "to": "src/shared/types/capability.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/shared/types/index.ts",
+      "to": "src/shared/types/identifiers.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/shared/types/index.ts",
+      "to": "src/shared/types/media.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/shared/types/index.ts",
+      "to": "src/shared/types/operation.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/shared/types/index.ts",
+      "to": "src/shared/types/r1-node-contract.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/shared/types/media.ts",
+      "to": "src/shared/types/identifiers.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/shared/ui/ActionWorkspaceFormActions.vue",
+      "to": "src/shared/ui/AppButton.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/shared/ui/ActionWorkspaceFormActions.vue",
+      "to": "src/shared/ui/AppIcon.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/shared/ui/ActionWorkspaceFormActions.vue",
+      "to": "src/shared/ui/types.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/shared/ui/ActionWorkspaceShell.vue",
+      "to": "src/shared/ui/AppActionBar.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/shared/ui/ActionWorkspaceShell.vue",
+      "to": "src/shared/ui/AppButton.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/shared/ui/ActionWorkspaceShell.vue",
+      "to": "src/shared/ui/AppIcon.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/shared/ui/ActionWorkspaceShell.vue",
+      "to": "src/shared/ui/AppStatus.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/shared/ui/ActionWorkspaceShell.vue",
+      "to": "src/shared/ui/types.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/shared/ui/AppActionContentHeading.vue",
+      "to": "src/shared/ui/AppIcon.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/shared/ui/AppActionContentHeading.vue",
+      "to": "src/shared/ui/icons.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/shared/ui/AppActionFeedback.vue",
+      "to": "src/shared/ui/AppIcon.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/shared/ui/AppChoiceGroup.vue",
+      "to": "src/shared/ui/types.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/shared/ui/AppIcon.vue",
+      "to": "src/shared/ui/icons.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/shared/ui/AppMultiChoiceGroup.vue",
+      "to": "src/shared/ui/types.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/shared/ui/AppRecordMark.vue",
+      "to": "src/shared/ui/AppIcon.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/shared/ui/AppRecordMark.vue",
+      "to": "src/shared/ui/icons.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/shared/ui/AppSearchBar.vue",
+      "to": "src/shared/ui/AppIcon.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/shared/ui/AppSelector.vue",
+      "to": "src/shared/ui/AppIcon.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/shared/ui/AppStatus.vue",
+      "to": "src/shared/ui/AppIcon.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/shared/ui/AppStatus.vue",
+      "to": "src/shared/ui/icons.ts",
+      "typeOnly": true
+    },
+    {
+      "from": "src/shared/ui/AppWorkOrderEmptyState.vue",
+      "to": "src/shared/ui/AppIcon.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/shared/ui/index.ts",
+      "to": "src/shared/ui/AppActionBar.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/shared/ui/index.ts",
+      "to": "src/shared/ui/AppActionContentHeading.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/shared/ui/index.ts",
+      "to": "src/shared/ui/AppActionFeedback.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/shared/ui/index.ts",
+      "to": "src/shared/ui/AppAmountValue.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/shared/ui/index.ts",
+      "to": "src/shared/ui/AppButton.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/shared/ui/index.ts",
+      "to": "src/shared/ui/AppCascadeSelector.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/shared/ui/index.ts",
+      "to": "src/shared/ui/AppChoiceGroup.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/shared/ui/index.ts",
+      "to": "src/shared/ui/AppFeedbackState.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/shared/ui/index.ts",
+      "to": "src/shared/ui/AppField.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/shared/ui/index.ts",
+      "to": "src/shared/ui/AppIcon.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/shared/ui/index.ts",
+      "to": "src/shared/ui/AppInformationRow.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/shared/ui/index.ts",
+      "to": "src/shared/ui/AppInput.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/shared/ui/index.ts",
+      "to": "src/shared/ui/AppMetaTag.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/shared/ui/index.ts",
+      "to": "src/shared/ui/AppMultiChoiceGroup.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/shared/ui/index.ts",
+      "to": "src/shared/ui/AppRecordCard.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/shared/ui/index.ts",
+      "to": "src/shared/ui/AppRecordMark.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/shared/ui/index.ts",
+      "to": "src/shared/ui/AppSearchBar.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/shared/ui/index.ts",
+      "to": "src/shared/ui/AppSectionHeading.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/shared/ui/index.ts",
+      "to": "src/shared/ui/AppSelector.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/shared/ui/index.ts",
+      "to": "src/shared/ui/AppStatus.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/shared/ui/index.ts",
+      "to": "src/shared/ui/AppSurface.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/shared/ui/index.ts",
+      "to": "src/shared/ui/AppTextarea.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/shared/ui/index.ts",
+      "to": "src/shared/ui/AppTreeMultiChoiceGroup.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/shared/ui/index.ts",
+      "to": "src/shared/ui/AppVisualScope.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/shared/ui/index.ts",
+      "to": "src/shared/ui/AppWorkOrderEmptyState.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/shared/ui/index.ts",
+      "to": "src/shared/ui/AppWorkOrderSkeleton.vue",
+      "typeOnly": false
+    },
+    {
+      "from": "src/shared/ui/index.ts",
+      "to": "src/shared/ui/icons.ts",
+      "typeOnly": false
+    },
+    {
+      "from": "src/shared/ui/index.ts",
+      "to": "src/shared/ui/types.ts",
+      "typeOnly": true
+    }
+  ]
+}

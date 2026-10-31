@@ -15,6 +15,15 @@ intentional when each protects an existing contract or CI gate.
 - `ci/`: shared CI-only checks.
 - Review-specific checks and dev launchers are in `tools/review/`, not here.
 
+M1 architecture inventory: `check-module-dependencies.mjs` scans TypeScript
+and Vue script imports without contacting R1/Production. Run
+`pnpm audit:modules` to read the current summary, and
+`pnpm check:module-dependencies` for the fast/complete CI no-growth guard.
+Explicit `--refresh-baseline` and `--write-graph` regenerate reviewed
+historical snapshots; they must never be used to silence a new violation
+without a documented architecture decision. See
+`docs/engineering/M1_MODULE_DEPENDENCY_AUDIT_20261031.md`.
+
 The 2026-10-31 C7 audit checked all 51 tracked scripts: every executable
 apart from `generate-survey-capabilities.mjs` had a direct non-document
 reference; the generator is retained because it regenerates the canonical
