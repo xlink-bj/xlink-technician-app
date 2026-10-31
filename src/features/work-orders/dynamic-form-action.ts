@@ -8,7 +8,7 @@ import {
 import type { EffectiveFieldState, FormFieldSchema, NormalizedFieldValue } from '@runtimes/dynamic-form'
 import type { DynamicFormRead, AppointmentFormFieldRead } from '@shared/ports'
 import type { FormFieldValue } from '@shared/ports/api'
-import { actionFormSchemaFor, ACTION_FORM_SURFACE } from './action-form-schema'
+import { actionFormSchemaFor, ACTION_FORM_SURFACE, isWorkflowFieldReadOnly } from './action-form-schema'
 import { createOperationError } from '@shared/types'
 import type { OperationSnapshot } from '@shared/types'
 import { surveyMediaDescriptorFor } from './survey-media'
@@ -82,7 +82,7 @@ export function dynamicActionFieldsFor(form: DynamicFormRead): readonly DynamicA
     ...field,
     runtime: surveyLeakageCauseFieldStateFor(form, field) ?? evaluateFieldState(schemaFor(field, form.values, form.purpose), {
       values: form.values,
-      workflowReadOnly: form.workflowReadOnlyFieldIds?.some((id) => String(id) === String(field.fieldId)),
+      workflowReadOnly: isWorkflowFieldReadOnly(form, field),
       surface: ACTION_FORM_SURFACE,
     }),
   }))
@@ -116,7 +116,7 @@ export function normalizeDynamicForm(
     .filter((field) => !isDeferredSurveyField(form.purpose, field))
     .map((field) => {
     const schema = schemaFor(field, form.values, form.purpose)
-    return form.workflowReadOnlyFieldIds?.some((id) => String(id) === String(field.fieldId))
+    return isWorkflowFieldReadOnly(form, field)
       ? { ...schema, readOnly: true }
       : schema
   })
@@ -212,7 +212,7 @@ export function normalizeDynamicFieldValue(
   const state = fieldState(
     field,
     values,
-    form.workflowReadOnlyFieldIds?.some((id) => String(id) === String(field.fieldId)),
+    isWorkflowFieldReadOnly(form, field),
     form.purpose,
   )
   if (state.capability === 'PRESENTATION_ONLY') {

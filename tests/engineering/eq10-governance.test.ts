@@ -12,10 +12,10 @@ function node(script: string, ...args: string[]): string {
 }
 
 describe('EQ10 permanent engineering governance (synthetic / no backend)', () => {
-  it('audits real source import boundaries and fails on seven injected violations', () => {
+  it('audits real source import boundaries and fails on eight injected violations', () => {
     const result = node('scripts/check-eq10-ownership.mjs', '--self-test')
     expect(result).toContain('EQ10 ownership audit PASS')
-    expect(result).toContain('7 injected boundary regressions detected')
+    expect(result).toContain('8 injected boundary regressions detected')
   })
 
   it('requires actual test suites in all six critical behavioral lanes', () => {

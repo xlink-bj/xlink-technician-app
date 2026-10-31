@@ -3,13 +3,25 @@
  *
  * Shared by the specialized Appointment UX and generic Action Content.
  * Business semantics (visit branch, Survey special tools, controlled leakage
- * cause) remain with their respective feature; this module only transfers
- * verified field metadata. Never infer an unsupported field as editable.
+ * cause) remain with their respective feature. This module projects verified
+ * field metadata and the shared Workflow instance field readonly decision.
+ * Never infer an unsupported field as editable.
  */
 import type { FormFieldSchema, FormRuntimeSurface } from '@runtimes/dynamic-form'
-import type { AppointmentFormFieldRead } from '@shared/ports'
+import type { AppointmentFormFieldRead, DynamicFormRead } from '@shared/ports'
 
 export const ACTION_FORM_SURFACE: FormRuntimeSurface = 'mobile_detail'
+
+/** Workflow instance readonly wins over a field's editable metadata.
+ * Keep identity comparison compatible with R1's string-coercing field IDs.
+ * Generic Dynamic Action and controlled Survey rows must use the same rule.
+ */
+export function isWorkflowFieldReadOnly(
+  form: Pick<DynamicFormRead, 'workflowReadOnlyFieldIds'>,
+  field: Pick<AppointmentFormFieldRead, 'fieldId'>,
+): boolean {
+  return form.workflowReadOnlyFieldIds?.some((id) => String(id) === String(field.fieldId)) ?? false
+}
 
 export function actionFormSchemaFor(
   field: AppointmentFormFieldRead,
