@@ -369,4 +369,25 @@ describe('EQ07 P0 command and form revision consistency / synthetic, no business
     expect((await pending).state).toBe('succeeded')
   })
 
+  it('keeps Survey media actions closed when Workflow makes an editable FormDef field readonly', async () => {
+    const x = fixture('survey')
+    await x.load()
+    expect(x.store.dynamicFields.find(field => field.fieldId === 'photo')).toMatchObject({
+      readOnly: false, runtime: { visible: true, readOnly: false },
+    })
+    x.store.dynamicForm = {
+      ...x.store.dynamicForm!,
+      workflowReadOnlyFieldIds: ['photo'],
+    }
+    expect(x.store.dynamicFields.find(field => field.fieldId === 'photo')).toMatchObject({
+      readOnly: false, runtime: { visible: true, readOnly: true },
+    })
+    expect(x.store.canPickDynamicMedia('photo')).toBe(false)
+    expect(x.store.dynamicMediaHint('photo')).toBe('当前字段仅可查看')
+    expect((await x.store.pickDynamicMedia('photo')).error?.category).toBe('validation')
+    expect((await x.store.retryDynamicMedia('photo')).error?.category).toBe('validation')
+    expect(x.picker.pick).not.toHaveBeenCalled()
+    expect(x.upload.upload).not.toHaveBeenCalled()
+  })
+
 })

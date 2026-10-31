@@ -160,7 +160,6 @@
             :data-testid="`dynamic-media-actions-${field.valueKey}`"
           >
             <AppButton
-              v-if="!field.runtime.readOnly"
               variant="secondary"
               block
               :disabled="!workspace.canPickDynamicMedia(field.fieldId) || workspace.lifecycle === 'submitting' || workspace.mediaInFlightField === field.fieldId"
@@ -169,7 +168,6 @@
             >
               {{ mediaRecoveryLabel(field) }}
             </AppButton>
-            <text v-else class="dynamic-action-media-readonly">仅查看</text>
           </view>
         </view>
         <AppInput
@@ -351,15 +349,20 @@ function hasTerminalMediaTask(fieldId: string): boolean {
   return (workspace.mediaTasksByField[fieldId] ?? []).some((task) => task.state === 'failed_terminal')
 }
 
-function mediaAddTileLabel(field: { readonly fieldId: string; readonly valueKey: string; readonly type: string; readonly readOnly: boolean }): string | undefined {
-  if (field.readOnly || hasAmbiguousMedia(field.fieldId) || hasPendingMediaTask(field.fieldId) || workspace.mediaCanRetryDynamic(field.fieldId)) return undefined
+function mediaAddTileLabel(field: { readonly fieldId: string; readonly valueKey: string; readonly type: string }): string | undefined {
+  // The Runtime's effective state includes Workflow instance readonly fields.
+  // Raw FormDef metadata can still say editable, so never expose a dead picker.
+  if (!workspace.canPickDynamicMedia(field.fieldId) || workspace.mediaInFlightField
+    || hasAmbiguousMedia(field.fieldId) || hasPendingMediaTask(field.fieldId)
+    || workspace.mediaCanRetryDynamic(field.fieldId)) return undefined
   if (hasTerminalMediaTask(field.fieldId)) return '重新选择'
   if (mediaCountFor(field.fieldId) === 0) return mediaPickerLabelFor(workspace.dynamicForm?.purpose, field)
   return '继续添加'
 }
 
-function mediaRecoveryLabel(field: { readonly fieldId: string; readonly readOnly: boolean }): string | undefined {
-  if (field.readOnly || hasAmbiguousMedia(field.fieldId)) return undefined
+function mediaRecoveryLabel(field: { readonly fieldId: string }): string | undefined {
+  if (!workspace.canPickDynamicMedia(field.fieldId) || workspace.mediaInFlightField
+    || hasAmbiguousMedia(field.fieldId)) return undefined
   return workspace.mediaCanRetryDynamic(field.fieldId) ? '继续处理' : undefined
 }
 
@@ -378,6 +381,7 @@ function previewMedia(fieldId: string, url: string): void {
 }
 
 async function pickMedia(fieldId: string): Promise<void> {
+  if (!workspace.canPickDynamicMedia(fieldId) || workspace.mediaInFlightField) return
   if (workspace.mediaCanRetryDynamic(fieldId)) {
     await workspace.retryDynamicMedia(fieldId)
     return
@@ -427,7 +431,6 @@ async function pickMedia(fieldId: string): Promise<void> {
 .dynamic-action-media-thumbnail { display: block; height: 100%; object-fit: cover; width: 100%; }
 .dynamic-action-media-hint { border-top: 1rpx solid var(--app-color-divider); color: var(--app-color-text-secondary); display: block; font-size: var(--app-font-meta); line-height: 1.5; margin-top: 16rpx; padding-top: 12rpx; }
 .dynamic-action-media-actions { margin-top: 16rpx; }
-.dynamic-action-media-readonly { color: var(--app-color-text-secondary); font-size: var(--app-font-meta); }
 .dynamic-action-presentation-divider { align-items: center; display: flex; gap: var(--app-space-sm); margin-top: var(--app-space-lg); }
 .dynamic-action-presentation-divider--gap { background: var(--app-color-page); border-radius: var(--app-radius-control); height: var(--app-space-lg); margin-left: calc(var(--app-card-padding) * -1); margin-right: calc(var(--app-card-padding) * -1); }
 .dynamic-action-presentation-line { background: var(--app-color-divider); flex: 1; height: 1rpx; }

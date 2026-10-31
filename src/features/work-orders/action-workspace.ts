@@ -1859,6 +1859,11 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     if (lifecycle.value === 'submitting' || businessResult.value === 'succeeded') {
       return failure('validation', '提交期间或业务完成后不可重试媒体。')
     }
+    // A resumable queue record does not grant permission to mutate a field.
+    // Workflow instance readonly and current field capability still win.
+    if (!canPickDynamicMedia(fieldId)) {
+      return failure('validation', '当前媒体字段不可编辑或不可重试。')
+    }
     const current = () => actionCommandScopeCurrent(commandVersion, currentDescriptor)
       && lifecycle.value !== 'submitting' && businessResult.value !== 'succeeded'
     const stale = () => failure<void>('cancelled', '旧媒体处理结果已失效，不得更新当前工单。')
