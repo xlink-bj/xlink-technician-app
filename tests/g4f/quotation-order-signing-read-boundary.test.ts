@@ -5,7 +5,7 @@ import type { ApiReadRequest, ApiReadTransport } from '@adapters/api/technician-
 const owner = 'synthetic-workorder-019'
 const id = 'synthetic-official-order-a'
 const validOrder = (overrides: Record<string, unknown> = {}) => ({
-  _id: id, type: 1, serviceAppointmentId: owner,
+  _id: id, type: 1, state: 1, serviceAppointmentId: owner,
   orderNumber: 'SYN-019', totalPrice: 220,
   ownerPhone: 'SECRET-PHONE-NOT-LEAK',
   customerIdentity: 'SECRET-CUSTOMER-NOT-LEAK',
@@ -91,6 +91,21 @@ describe('M1 signing Order precheck: bounded WorkOrder list-only sanitized READ-
     const result = await adapter(read).readScopedTypeOneOrderForSigningReview!(owner, id)
     expect(result?.state).toBe('failed_terminal')
     expect(JSON.stringify(result)).not.toContain('other-official-order')
+  })
+
+  it('rejects cancelled and lifecycle-unknown orders at the adapter boundary', async () => {
+    for (const state of [-1, 2, null]) {
+      const port = adapter(async () => ({ data: [validOrder({ state })] }))
+      const result = await port.readScopedTypeOneOrderForSigningReview!(owner, id)
+      expect(result.state).toBe('failed_terminal')
+      expect(result.data).toBeUndefined()
+    }
+    const missing = validOrder()
+    delete (missing as Record<string, unknown>).state
+    expect((await adapter(async () => ({ data: [missing] }))
+      .readScopedTypeOneOrderForSigningReview!(owner, id)).state).toBe('failed_terminal')
+    expect((await adapter(async () => ({ data: [validOrder({ state: 0 })] }))
+      .readScopedTypeOneOrderForSigningReview!(owner, id)).state).toBe('succeeded')
   })
 
   it('rejects foreign WorkOrder ownership and non-type1 Order without any row disclosure', async () => {

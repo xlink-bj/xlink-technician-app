@@ -12,7 +12,7 @@ import { signingOrderReadRouteFor } from '@features/work-orders/signing/signing-
 const wo = 'workorder-001'
 const orderId = 'official-order-001'
 const order = (id = orderId): QuotationOrderBrowseItem => ({
-  id, serviceAppointmentId: wo, type: 1, displayNumber: 'SYNTHETIC-ORDER',
+  id, serviceAppointmentId: wo, type: 1, state: 1, displayNumber: 'SYNTHETIC-ORDER',
   groups: [], contentSupported: false, pdfState: 'present_no_access',
 })
 const doc = (id = orderId): ScopedSigningOrderReviewRead => ({

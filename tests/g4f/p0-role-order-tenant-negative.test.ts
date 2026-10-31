@@ -23,6 +23,7 @@ const workOrderB = 'work-order-b-synthetic'
 const officialOrder = (workOrderId = workOrderA, id = 'order-a-synthetic') => ({
   _id: id,
   type: 1,
+  state: 1,
   serviceAppointmentId: workOrderId,
   orderNumber: 'SYN-ORDER',
   totalPrice: 99.95,

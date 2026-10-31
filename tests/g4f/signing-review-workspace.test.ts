@@ -6,7 +6,7 @@ import { createSigningReviewReadWorkspace } from '@features/work-orders/signing/
 const wo = 'workorder-allowed'
 const order = 'order-allowed'
 const row = (id = order, workOrder = wo): QuotationOrderBrowseItem => ({
-  id, serviceAppointmentId: workOrder, type: 1, displayNumber: 'SYN-ONLY',
+  id, serviceAppointmentId: workOrder, type: 1, state: 1, displayNumber: 'SYN-ONLY',
   groups: [], contentSupported: false, pdfState: 'present_no_access',
 })
 const data = (id = order, workOrder = wo): ScopedSigningOrderReviewRead => ({
@@ -75,6 +75,32 @@ describe('M1-I6 scoped signing-read handoff — no Contract or signature authori
     expect((await s.workspace.load(wo, 'guessed-other-order')).state).toBe('failed_terminal')
     expect(s.readScopedTypeOneOrderForSigningReview).not.toHaveBeenCalled()
     expect(s.workspace.snapshot().review).toBeUndefined()
+  })
+
+  it('never opens signing review for cancelled, unknown or unrecognized Order lifecycle', async () => {
+    for (const state of [-1, undefined, 2]) {
+      const s = setup({ listed: async () => ({
+        state: 'succeeded',
+        data: { items: [{ ...row(), state }], page: 1, pageSize: 3, totalCount: 1 },
+      }) })
+      expect((await s.workspace.load(wo, order)).state).toBe('failed_terminal')
+      expect(s.readScopedTypeOneOrderForSigningReview).not.toHaveBeenCalled()
+      expect(s.workspace.snapshot().review).toBeUndefined()
+    }
+    const current = setup({ listed: async () => ({
+      state: 'succeeded', data: { items: [{ ...row(), state: 0 }], page: 1, pageSize: 3, totalCount: 1 },
+    }), detail: async () => ({ state: 'succeeded', data: { ...data(), order: { ...row(), state: 0 } } }) })
+    expect((await current.workspace.load(wo, order)).state).toBe('succeeded')
+  })
+
+  it('rejects a cancelled or unknown Order returned by the second scoped read', async () => {
+    for (const state of [-1, undefined]) {
+      const s = setup({ detail: async () => ({
+        state: 'succeeded', data: { ...data(), order: { ...row(), state } },
+      }) })
+      expect((await s.workspace.load(wo, order)).state).toBe('failed_terminal')
+      expect(s.workspace.snapshot().review).toBeUndefined()
+    }
   })
 
   it('denies a missing role/version, invisible WorkOrder, invalid IDs, and no scoped signing capability', async () => {

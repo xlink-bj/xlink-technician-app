@@ -86,6 +86,8 @@
           <text class="quotation-hub__order-number">{{ order.displayNumber || order.id }}</text>
           <view class="quotation-hub__order-pills">
             <AppMetaTag class="quotation-hub__order-badge" tone="info" label="正式订单" />
+            <AppMetaTag v-if="!isVisualSample && !mockJourneyOrder && !isSigningReadOrderCandidate(order)" class="quotation-hub__order-badge"
+              tone="neutral" :label="order.state === -1 ? '已取消' : '状态待核验'" />
           </view>
         </view>
         <text v-if="(isVisualSample || mockJourneyOrder) && order.groups[0]?.partDescription" class="quotation-hub__order-subtitle">{{ order.groups[0].partDescription }}</text>
@@ -108,13 +110,17 @@
             :data-testid="`quotation-hub-edit-${order.id}`" @tap="edit(order.id)">
             <AppIcon name="order" :size="17" color="#2479eb" />{{ editingId === order.id ? '核验中…' : '修改订单' }}
           </AppButton>
-          <navigator v-if="!isVisualSample && !mockJourneyOrder && signingOrderReadRouteFor(workOrderId, order.id)"
+          <navigator v-if="!isVisualSample && !mockJourneyOrder && isSigningReadOrderCandidate(order) && signingOrderReadRouteFor(workOrderId, order.id)"
             class="quotation-hub__order-signing"
             :url="signingOrderReadRouteFor(workOrderId, order.id) || undefined"
             :data-testid="`quotation-hub-signing-${order.id}`">
             <text>签约进度</text><AppIcon class="quotation-hub__order-signing-icon" name="chevron-right" :size="16" color="#216bd0" />
           </navigator>
         </view>
+        <text v-if="!isVisualSample && !mockJourneyOrder && !isSigningReadOrderCandidate(order)"
+          class="quotation-hub__detail-note" :data-testid="`quotation-hub-signing-unavailable-${order.id}`">
+          {{ unavailableSigningReadReason(order.state) }}
+        </text>
         <view v-if="expandedId === order.id" class="quotation-hub__details"
           :data-testid="`quotation-hub-details-${order.id}`">
           <view class="quotation-hub__order-line">
@@ -173,6 +179,7 @@ import { workOrderNumberDisplay } from '@shared/ui/work-order-number-display'
 import { useQuotationOrderBrowseStore } from './order-browse-store'
 import type { QuotationOrderBrowseItem } from '@shared/ports'
 import { signingOrderReadRouteFor } from '@features/work-orders/signing/signing-review-read-workspace'
+import { isSigningReadOrderCandidate, unavailableSigningReadReason } from '@shared/signing-order-read-policy'
 
 const props = defineProps<{
   readonly workOrderId: string

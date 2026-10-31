@@ -1,4 +1,5 @@
 import type { QuotationOrderBrowseItem, R1ScopedContractSummary } from '@shared/ports'
+import { isSigningReadOrderCandidate } from '@shared/signing-order-read-policy'
 
 /** Fixed R1 business action names. THIS IS A PREPARATION CONTRACT, not an executable client. */
 export type R1SigningIntentKind = 'electronic' | 'offline' | 'resign' | 'resend_sms' | 'cancel'
@@ -111,7 +112,7 @@ export function reviewR1SigningIntent(
   // Live R1 evidence disproved equivalence: basic/order/query may include
   // state=-1 whereas R1 clearOrderFieldQuery filters state IN (0,1).
   // Unknown state also cannot prove that this source-filter requirement holds.
-  if (order && order.state !== 0 && order.state !== 1) {
+  if (order && !isSigningReadOrderCandidate(order)) {
     reasons.push('订单生命周期不符合 R1 原列表允许的 state=0/1；不能将取消或未知订单作为签约候选')
   }
   const active = context.contractState === 'succeeded'

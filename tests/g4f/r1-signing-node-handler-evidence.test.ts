@@ -98,12 +98,12 @@ describe('M1 I6 R1 active WorkflowNode handler read evidence, never signing righ
       getQuotationOrderById:vi.fn(async()=>({state:'failed_terminal' as const})),
       listTypeOneOrdersForWorkOrder:vi.fn(async()=>({
         state:'succeeded' as const,
-        data:{items:[{id:orderId,serviceAppointmentId:wo,type:1 as const,
+        data:{items:[{id:orderId,serviceAppointmentId:wo,type:1 as const,state:1,
           groups:[],contentSupported:false,pdfState:'present_no_access' as const}]},
       })),
       readScopedTypeOneOrderForSigningReview:vi.fn(async()=>({
         state:'succeeded' as const,
-        data:{order:{id:orderId,serviceAppointmentId:wo,type:1 as const,
+        data:{order:{id:orderId,serviceAppointmentId:wo,type:1 as const,state:1,
           groups:[],contentSupported:false,pdfState:'present_no_access' as const},
           contractReadAuthorized:false as const,signingAuthorized:false as const},
       })),
