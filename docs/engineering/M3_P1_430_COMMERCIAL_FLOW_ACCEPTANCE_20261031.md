@@ -60,3 +60,28 @@ CI=true VITE_XLINK_ENVIRONMENT=test corepack pnpm run verify:full
 1. On the Mac, set the WeChat DevTools simulator to **iPhone 14 Pro, 430×932** and compare the same Appointment, confirmation, Survey, Q02/Q03 and C01 screens against accepted R2 commercial screenshots. Explicitly check fixed footer, scrolling, touch targets, safe area, Tab alignment, no developer controls, and no visual difference between business Mock and real read-only rendering.
 2. In the already authorized Production read-only environment, verify login/session and scoped Work Order → source-backed Order → matching contract read; confirm zero mutating business commands/uploads. Do not create or sign orders, appointments or Survey media on Production.
 3. Record Product Owner visual approval separately from CI and compile gates. Only after these checks may M3-P1 be marked fully accepted; a Draft PR or passing local H5 suite is not an Owner sign-off.
+
+## 2026-10-31 commercial copy follow-up (Lead review)
+
+The Work Order form overview now uses customer-facing copy for unavailable,
+invalid, empty, and truncated records and unavailable add-form options, without
+relaxing any existing permission, identity, or evidence checks. The 430×932
+Appointment browser fixture now uses an ordinary synthetic **平屋顶** inspection
+note instead of a test-stage marker. No backend contracts, network actions,
+or production data were changed.
+
+- `verify:full`: **PASS**, 173 Vitest files / 1,546 tests, UI and architecture
+  guards, typecheck and quality census.
+- Release H5 / MP-WEIXIN / App builds: **PASS**; MP bootstrap, emitted WXSS,
+  and release QA-route guards **PASS**.
+- 430×932 browser rerun: **BLOCKED BY ENVIRONMENT** in the current container.
+  Playwright Chromium Headless Shell is not installed; the official download
+  repeatedly yielded invalid, zero-byte archives. The prior H5 screenshots
+  above predate the copy/fixture follow-up and **must not be represented as
+  post-change visual evidence**.
+- Native WeChat iPhone 14 Pro, authenticated Production read-only integration,
+  and Product Owner commercial visual sign-off remain **NOT RUN / PENDING**.
+
+Keep PR Draft and unmerged until the latest commit is visually rerun and the
+three independent acceptance gates above are recorded. Business writes remain
+prohibited.
