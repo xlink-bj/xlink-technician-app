@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "sourceCommit": "a8f0ee7d728d3d8273486baa7fb00a5586f7b51b",
+  "date": "2026-10-31",
+  "scope": "TS/Vue static imports and exports; not runtime coverage",
+  "summary": {
+    "modules": 286,
+    "edges": 1005,
+    "runtimeEdges": 724,
+    "typeOnlyEdges": 281,
+    "runtimeCycles": 0,
+    "allStaticCycles": 3,
+    "ownershipViolations": 2,
+    "unresolvedImports": 0,
+    "crossOwnerEdges": 676,
+    "duplicateExportCandidates": 0
+  },
+  "approvedExceptions": {
+    "runtimeCycles": [],
+    "allStaticCycles": [
+      "src/adapters/api/action-command-wires.ts | src/adapters/api/technician-api-commands.ts",
+      "src/adapters/api/r1-node-form-list.ts | src/adapters/api/read-models/work-order.ts | src/adapters/api/read-models/workflow.ts | src/adapters/api/technician-api.ts",
+      "src/features/work-orders/action-workspace-read-model.ts | src/features/work-orders/action-workspace.ts"
+    ],
+    "violations": [
+      "cross-feature-private: src/features/home/draft-diagnostics.ts -> src/features/work-orders/action-workspace.ts",
+      "feature-outward: src/features/work-orders/components/MockJourneyContextPanel.vue -> src/app/mock-journey-context.ts"
+    ],
+    "unresolved": []
+  }
+}
