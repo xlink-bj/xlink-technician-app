@@ -69,6 +69,28 @@ function isRealMutationPath(path: string): boolean {
     || /^workflow\/startWorkflow\/order\/null\/[^/]+$/.test(route)
 }
 
+/** The upload-token endpoint returns a token payload, not a business-command
+ * success envelope. Validate only that exact route and normalize a nested
+ * token envelope for the UploadAdapter; all other commands keep the strict
+ * common response contract. */
+function normalizeCommandResponseForPath(path: string, raw: unknown): unknown {
+  const route = path.replace(/^\/+/, '').split('?')[0]
+  if (route !== 'back/super/file/upToken.do') return normalizeCommandResponse(raw)
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
+    throw new ApiCommandTransportError('Upload token response is malformed', 'server_terminal')
+  }
+
+  const envelope = raw as Record<string, unknown>
+  const nestedData = typeof envelope.data === 'object' && envelope.data !== null && !Array.isArray(envelope.data)
+    ? envelope.data as Record<string, unknown>
+    : undefined
+  const token = envelope.token ?? envelope.uploadToken ?? nestedData?.token ?? nestedData?.uploadToken
+  if (typeof token !== 'string' || token.trim().length === 0) {
+    throw new ApiCommandTransportError('Upload token response is malformed', 'server_terminal')
+  }
+  return { ...envelope, token }
+}
+
 /**
  * Independent hard stop for all Contract/Signing COMMAND routes.
  * Generic VITE_XLINK_ENABLE_REAL_WRITES does not approve legally binding
@@ -134,7 +156,7 @@ export function createUniApiCommandTransport(options: UniApiCommandTransportOpti
       }
 
       const mockResponse = await tryMockCommand(input.path, input.body ?? {})
-      if (mockResponse !== null) return normalizeCommandResponse(mockResponse)
+      if (mockResponse !== null) return normalizeCommandResponseForPath(input.path, mockResponse)
       if (isMockOwnedCommand(input.path, input.body ?? {})) {
         throw new ApiCommandTransportError('Synthetic mock command is disabled', 'server_terminal')
       }
@@ -204,7 +226,7 @@ export function createUniApiCommandTransport(options: UniApiCommandTransportOpti
         )
       }
 
-      return normalizeCommandResponse(response.data)
+      return normalizeCommandResponseForPath(input.path, response.data)
     },
   }
 }
