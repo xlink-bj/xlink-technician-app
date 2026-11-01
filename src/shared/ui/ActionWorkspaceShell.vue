@@ -100,7 +100,7 @@
     <AppActionBar class="action-workspace-footer" :class="{ 'xl-craft__action-bar': compactQuoteEntry }" :label="`当前工单操作`">
       <view class="action-workspace-footer-inner">
         <template v-if="lifecycle !== 'succeeded'">
-          <slot name="actions">
+          <template v-if="preferDefaultActions || !$slots.actions">
             <AppButton
               data-testid="action-workspace-submit"
               class="action-workspace-submit"
@@ -111,7 +111,8 @@
             >
               {{ lifecycle === 'submitting' ? '提交中' : submitLabel }}
             </AppButton>
-          </slot>
+          </template>
+          <slot v-else name="actions" />
         </template>
         <template v-else>
           <slot name="success-actions" />
@@ -137,6 +138,8 @@ const props = defineProps<{
   /** Presentation only: the first quotation repair-part stage, not Workflow state. */
   readonly compactQuoteEntry?: boolean
   readonly demoSurvey?: boolean
+  /** Render the shell-owned submit action even when a conditional named slot exists. */
+  readonly preferDefaultActions?: boolean
   /** H5 uni-page-head occupies 44px outside the workspace's own viewport. */
   readonly h5NavigationFit?: boolean
   readonly customerName?: string

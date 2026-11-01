@@ -68,6 +68,8 @@ describe('Action Workspace Shell structural contract', () => {
     expect(time).toContain(':business-feedback="feedback"')
     expect(confirmation).toContain(':business-feedback="isSuccess ? \'\' : feedback"')
     expect(workspace).toContain('@submit="continueToConfirmation"')
+    expect(workspace).toContain(':prefer-default-actions="Boolean(workspace.appointmentForm)"')
+    expect(shell).toContain('preferDefaultActions || !$slots.actions')
     expect(time).toContain('<template #actions>')
     expect(confirmation).toContain('<template #actions v-if="!isSuccess">')
     expect(confirmation).toContain('<template #success-actions>')
