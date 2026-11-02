@@ -83,6 +83,8 @@ jobs:
       - run: pnpm exec playwright install --with-deps chromium
       - name: Verify Stage 1B exact Save→EXTS→Process at 430×932 with zero external requests
         run: pnpm exec playwright test --config config/playwright/main-h5-mock.config.ts tests/h5-main-mock/stage1b-r1-forms-after-save.spec.ts
+      - name: Verify Stage 2A FormDef multi-field validation, edit and reload at 430×932
+        run: pnpm exec playwright test --config config/playwright/main-h5-mock.config.ts tests/h5-main-mock/stage2a-r1-multifield.spec.ts
       - name: Verify forms/repeat CRUD→Process readback at two additional mobile widths
         run: pnpm exec playwright test --config config/playwright/main-h5-mock.config.ts tests/h5-main-mock/a-stage-p1-acceptance.spec.ts --grep '020 forms|021 repeat'
       - name: Preserve Stage 1B offline H5 evidence

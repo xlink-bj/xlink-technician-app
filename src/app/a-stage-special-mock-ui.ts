@@ -3,6 +3,7 @@
 import { isDevMockJourneyEnabled } from '@adapters/api/mock/journey'
 import { tryMockRead } from '@adapters/api/mock/router'
 import { tryMockR1SpecialCommand } from '@adapters/api/mock/r1-special-protocol'
+import { formDefinition } from '@adapters/api/read-models/form'
 import {
   mockR1FormsWorkOrderId, mockR1RepeatWorkOrderId,
   mockSyntheticDynamicFormDefinitionId,
@@ -13,8 +14,10 @@ import {
   closeCompletedR1MutationReceiptAfterReadback, type R1MultiStepScope,
   type R1MultiStepReceipt,
 } from '@features/work-orders/r1-multistep-offline-transaction'
-import type { StoragePort } from '@shared/ports'
+import type { StoragePort, FormDefinitionRead } from '@shared/ports'
+import { asOpaqueId } from '@shared/types'
 import { createDefaultStoragePort } from './composition'
+import { validateR1SpecialMockFields, type R1SpecialMockFields } from '@features/work-orders/r1-special-mock-form-fields'
 
 import type {
   AStageSpecialKind, AStageMockActor, AStageSpecialAction, AStageSpecialRecord,
@@ -30,6 +33,15 @@ const targets = {
   repeat: { sid: mockR1RepeatWorkOrderId, node: 'mock-workflow-node-021-repeat', run: 'mock-workflow-run-021' },
 } as const
 const definition = mockSyntheticDynamicFormDefinitionId
+
+async function scopedDefinition(): Promise<FormDefinitionRead> {
+  const result = await tryMockRead('biz/extField/query', { extId: definition }, { latencyMs: 0 })
+  const mapped = formDefinition(result, asOpaqueId<'FormDefinitionId'>(definition))
+  if (String(mapped.id) !== definition || !mapped.fields?.length) {
+    throw new Error('当前表单定义未能从 Mock 源核验。')
+  }
+  return mapped
+}
 
 function object(input: unknown): Record<string, unknown> | null {
   return input !== null && typeof input === 'object' && !Array.isArray(input)
@@ -90,7 +102,7 @@ export function createAStageSpecialMockController(options: {
 
   async function load(): Promise<AStageSpecialView> {
     if (!authorized()) throw new Error('身份或环境已变化，不能操作当前表单。')
-    const node = await rawDetail(kind)
+    const [node, formDef] = await Promise.all([rawDetail(kind), scopedDefinition()])
     if (!authorized()) throw new Error('角色已变化，请重新进入工单。')
     const originals = kind === 'forms' ? object(node.exts)?.formList : await scopedForms('repeat')
     if (!Array.isArray(originals) || originals.length > 100) throw new Error('表单列表尚未完整读取。')
@@ -107,15 +119,20 @@ export function createAStageSpecialMockController(options: {
       entries.push({ id: raw._id,
         title: typeof raw.formTitle === 'string' ? raw.formTitle : '现场记录',
         summary: typeof fields?.inspectionSummary === 'string' ? fields.inspectionSummary : '',
+        values: Object.fromEntries(formDef.fields!.filter(field => !field.presentationOnly
+          && (typeof fields?.[field.valueKey] === 'string'
+            || typeof fields?.[field.valueKey] === 'number'
+            || typeof fields?.[field.valueKey] === 'boolean'))
+          .map(field => [field.valueKey, fields![field.valueKey] as string | number | boolean])),
         state: raw.state === -1 ? 'deleted' : 'active', editable: own && raw.state !== -1,
       })
     }
     const receipt = await inspectR1MultiStepReceipt(options.storage, scope(kind, expected!))
     if (receipt.state !== 'succeeded') throw new Error('防重回执不可读取，操作已停止。')
-    return { kind, nodeActive: node.state === 0, entries,
+    return { kind, definition: formDef, nodeActive: node.state === 0, entries,
       receiptPending: receipt.data !== null,
       pendingRecoverable: receipt.data?.state === 'completed',
-      pendingNeedsOriginalText: receipt.data?.state === 'completed'
+      pendingNeedsOriginalFields: receipt.data?.state === 'completed'
         && ['form_upsert', 'repeat_form_upsert'].includes(receipt.data.steps[0] ?? ''),
     }
   }
@@ -124,7 +141,7 @@ export function createAStageSpecialMockController(options: {
    * record list; for Save→Process also compare the saved FormData payload.
    * No optimistic UI or receipt release before all independent reads agree. */
   async function confirmProcessed(
-    s: R1MultiStepScope, receipt: R1MultiStepReceipt, savedSummary?: string,
+    s: R1MultiStepScope, receipt: R1MultiStepReceipt, savedFields?: R1SpecialMockFields,
   ): Promise<boolean> {
     const node = await rawDetail(kind)
     if (node.state !== 10 || !authorized()) return false
@@ -133,13 +150,14 @@ export function createAStageSpecialMockController(options: {
     const activeIds = records.filter(row => object(row)?.state === 1)
       .map(row => object(row)?._id)
     if (!receipt.savedFormDataIds.length || receipt.savedFormDataIds.some(id => !activeIds.includes(id))) return false
-    if (savedSummary !== undefined) {
+    if (savedFields !== undefined) {
       const id = receipt.savedFormDataIds[0]
-      if (receipt.savedFormDataIds.length !== 1 || !id || !savedSummary.trim()) return false
+      if (receipt.savedFormDataIds.length !== 1 || !id) return false
       const [record] = await scopedForms(kind, id)
       if (!record || record._id !== id || record.sid !== s.workOrderId
         || record.nodeId !== s.runtimeNodeId || record.workflowId !== s.workflowRunId
-        || record.state !== 1 || record.inspectionSummary !== savedSummary) return false
+        || record.state !== 1
+        || Object.entries(savedFields).some(([key, value]) => record[key] !== value)) return false
     }
     if (!authorized()) return false
     return closeCompletedR1ReceiptAfterReadback(options.storage, s, {
@@ -152,7 +170,7 @@ export function createAStageSpecialMockController(options: {
   /** Resume only LOCAL receipt reconciliation. This performs fresh Mock reads
    * but never dispatches a FormData, EXTS, remove or Process command. A
    * may-have-dispatched ACK can NEVER be converted into safe-to-retry here. */
-  async function recoverCompleted(originalSummary: string): Promise<AStageSpecialOutcome> {
+  async function recoverCompleted(originalFields: R1SpecialMockFields): Promise<AStageSpecialOutcome> {
     if (inFlight) return { state: 'blocked', message: '已有操作正在处理，请稍后再核对。' }
     inFlight = true
     try {
@@ -167,19 +185,15 @@ export function createAStageSpecialMockController(options: {
       if (!authorized()) return { state: 'blocked', message: '读取期间角色发生变化。' }
       const saving = ['form_upsert', 'repeat_form_upsert'].includes(receipt.steps[0] ?? '')
       const deleting = ['forms_soft_delete', 'repeat_remove'].some(step => receipt.steps.includes(step as typeof receipt.steps[number]))
+      const checked = saving ? validateR1SpecialMockFields(await scopedDefinition(), originalFields) : null
+      if (checked && !checked.ok) return { state: 'blocked', message: `请重新填写原保存的完整表单：${checked.message}` }
+      const expectedFields = checked?.ok ? checked.fields : undefined
       let closed = false
       if (receipt.steps.includes('workflow_process')) {
-        if (saving && (!originalSummary.trim() || originalSummary.length > 4000)) return {
-          state: 'blocked', message: '请填写原保存的现场情况，核对后才能解除保护。',
-        }
-        closed = await confirmProcessed(s, receipt, saving ? originalSummary.trim() : undefined)
+        closed = await confirmProcessed(s, receipt, expectedFields)
       } else if (saving || deleting) {
         const id = saving ? receipt.savedFormDataIds[0] : receipt.targetFormDataId
         if (!id) return { state: 'uncertain', message: '回执缺少可核验记录 ID，不能清理。' }
-        const confirmedText = originalSummary.trim()
-        if (saving && (!confirmedText || confirmedText.length > 4000)) return {
-          state: 'blocked', message: '请重新填写原保存的现场情况，以便与最新记录逐字核对。',
-        }
         const record = (await scopedForms(kind, id))[0]
         const rows = kind === 'repeat' ? await scopedForms('repeat') : []
         const node = await rawDetail(kind)
@@ -189,7 +203,7 @@ export function createAStageSpecialMockController(options: {
           formDefinitionId: definition, workflowRunId: s.workflowRunId,
           sourceNodeType: kind,
           ...(record ? { formData: record } : {}),
-          ...(saving ? { expectedFields: { inspectionSummary: confirmedText } } : {}),
+          ...(expectedFields ? { expectedFields } : {}),
           ...(kind === 'forms' ? { formsExts: object(node.exts) ?? {} }
             : { repeatList: { complete: true as const, workflowRunId: s.workflowRunId!,
                 savedIds: rows.map(row => String(row._id)) } }),
@@ -213,22 +227,27 @@ export function createAStageSpecialMockController(options: {
       const s = scope(kind, expected!)
       const node = await rawDetail(kind)
       let intent: R1Stage1Intent
-      const summary = 'summary' in action ? action.summary.trim() : ''
-      if ('summary' in action && (!summary || summary.length > 4000)) return { state: 'blocked',
-        message: '请填写现场情况（最多 4000 字）。' }
+      const checked = 'fields' in action
+        ? validateR1SpecialMockFields(before.definition, action.fields) : null
+      if (checked && !checked.ok) return { state: 'blocked', message: checked.message }
+      const fields = checked?.ok ? checked.fields : undefined
       if (action.kind === 'save' || action.kind === 'save_finish') {
         if (action.kind === 'save_finish' && kind !== 'forms') return { state: 'blocked',
           message: '只有 forms 节点支持保存后立即完成。' }
         if (kind === 'forms') intent = { kind: 'forms_save', sourceNodeType: 'forms', scope: s,
-          fields: { inspectionSummary: summary }, title: (action.title || '现场记录').trim(),
+          fields: fields!, title: (action.title || '现场记录').trim(),
           authoritativeExts: object(node.exts) ?? {}, processActive: action.kind === 'save_finish' }
         else intent = { kind: 'repeat_save', sourceNodeType: 'repeat', scope: s,
-          fields: { inspectionSummary: summary } }
+          fields: fields! }
       } else if (action.kind === 'edit' || action.kind === 'delete') {
         const selected = before.entries.find(row => row.id === action.id && row.editable)
         if (!selected) return { state: 'blocked', message: '只有当前 Mock 新建且有效的表单可以修改。' }
         const original = (await scopedForms(kind, action.id))[0]
         if (!original || original.state !== 1) return { state: 'blocked', message: '原始表单记录已不可用。' }
+        if (action.kind === 'edit' && before.definition.fields?.some(field =>
+          !field.presentationOnly && object(original.exts)?.[field.valueKey] !== undefined
+          && fields?.[field.valueKey] === undefined)) return { state: 'blocked',
+          message: '当前 FormData 协议尚未验证清空已有字段；请保留原值后提交。' }
         if (action.kind === 'delete') {
           intent = kind === 'forms'
             ? { kind: 'forms_delete', sourceNodeType: 'forms', scope: s,
@@ -238,11 +257,11 @@ export function createAStageSpecialMockController(options: {
         } else {
           intent = kind === 'forms'
             ? { kind: 'forms_save', sourceNodeType: 'forms', scope: s,
-              fields: { inspectionSummary: summary }, title: (action.title || selected.title).trim(),
+              fields: fields!, title: (action.title || selected.title).trim(),
               authoritativeOriginal: original, authoritativeExts: object(node.exts) ?? {},
               existingFormDataId: action.id, processActive: false }
             : { kind: 'repeat_save', sourceNodeType: 'repeat', scope: s,
-              fields: { inspectionSummary: summary }, authoritativeOriginal: original,
+              fields: fields!, authoritativeOriginal: original,
               existingFormDataId: action.id }
         }
       } else {
@@ -274,7 +293,7 @@ export function createAStageSpecialMockController(options: {
       let reconciled = false
       if (action.kind === 'finish' || action.kind === 'save_finish') {
         reconciled = await confirmProcessed(s, receipt,
-          action.kind === 'save_finish' ? summary : undefined)
+          action.kind === 'save_finish' ? fields : undefined)
       } else {
         const after = await rawDetail(kind)
         const id = action.kind === 'save' || action.kind === 'edit'
@@ -287,7 +306,7 @@ export function createAStageSpecialMockController(options: {
           sourceNodeType: kind,
           ...(record ? { formData: record } : {}),
           ...(action.kind === 'save' || action.kind === 'edit'
-            ? { expectedFields: { inspectionSummary: summary } } : {}),
+            ? { expectedFields: fields! } : {}),
           ...(kind === 'forms' ? { formsExts: object(after.exts) ?? {} }
             : { repeatList: { complete: true as const, workflowRunId: s.workflowRunId!,
                 savedIds: rows.map(row => String(row._id)) } }),

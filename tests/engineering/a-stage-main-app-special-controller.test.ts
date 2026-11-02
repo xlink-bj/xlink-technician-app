@@ -15,6 +15,10 @@ const receipts = new Map<string, unknown>()
 const actor: AStageMockActor = {
   userId: 'synthetic-user', roleId: 'synthetic-role', identity: 'synthetic-user:synthetic-role:local',
 }
+const fields = (summary: string, result = 'follow_up', note?: string) => ({
+  inspectionSummary: summary, inspectionResult: result,
+  ...(note ? { inspectionNote: note } : {}),
+})
 function storage(): StoragePort {
   return {
     read: async (key: StorageKey) => ({ state: 'succeeded', data: receipts.get(key.key) ?? null }),
@@ -59,6 +63,64 @@ function controller(kind: 'forms' | 'repeat', getActor = () => actor,
 }
 
 describe('A main-App source-only multi-form/repeat controller', () => {
+  it('Stage 2A reads FormDef, requires a valid conclusion, ignores reference image and round-trips optional notes', async () => {
+    const ui = controller('forms')
+    const initial = await ui.load()
+    expect(initial.definition.fields?.map(field => [field.valueKey, field.type, field.presentationOnly]))
+      .toEqual([
+        ['inspectionSummary', 'textarea', undefined],
+        ['inspectionResult', 'radio', undefined],
+        ['inspectionPhoto', 'image', true],
+        ['inspectionNote', 'textarea', undefined],
+      ])
+    expect(await ui.execute({ kind: 'save', fields: { inspectionSummary: '遗漏结论' } }))
+      .toMatchObject({ state: 'blocked', message: expect.stringContaining('勘察结论') })
+    expect(await ui.execute({ kind: 'save', fields: fields('非法结论', 'forged-option') }))
+      .toMatchObject({ state: 'blocked' })
+    expect(await ui.execute({ kind: 'save', fields: {
+      ...fields('带伪造图片'), inspectionPhoto: 'https://unverified.example/upload.jpg',
+    } })).toMatchObject({ state: 'blocked' })
+    expect(await ui.execute({ kind: 'save', fields: {
+      ...fields('非法额外字段'), unknown: 'not-from-FormDef',
+    } })).toMatchObject({ state: 'blocked' })
+    expect((await ui.load()).entries.every(row => !row.editable)).toBe(true)
+
+    const saved = await ui.execute({ kind: 'save', fields: fields('多字段原始现场', 'safe', '需客户补签') })
+    expect(saved.state).toBe('succeeded')
+    if (saved.state !== 'succeeded') return
+    const created = saved.view.entries.find(row => row.editable)!
+    expect(created.values).toEqual(fields('多字段原始现场', 'safe', '需客户补签'))
+    expect((await ui.execute({ kind: 'edit', id: created.id,
+      fields: fields('尝试清空原备注', 'follow_up') })).state).toBe('blocked')
+    const updated = await ui.execute({ kind: 'edit', id: created.id,
+      fields: fields('多字段更新现场', 'follow_up', '需客户补签') })
+    expect(updated.state).toBe('succeeded')
+    expect((await ui.load()).entries.find(row => row.id === created.id)?.values)
+      .toEqual(fields('多字段更新现场', 'follow_up', '需客户补签'))
+  })
+
+  it('Stage 2A retains the receipt when a non-summary FormData field disagrees on readback', async () => {
+    const transport = await import('@adapters/api/mock/router')
+    const actual = transport.tryMockRead
+    vi.spyOn(transport, 'tryMockRead').mockImplementation(async (...args) => {
+      const result = await actual(...args)
+      if (args[0].startsWith('biz/extForm/query/')
+        && typeof args[1]?.['is:_id|string#and'] === 'string') {
+        const raw = result as { data?: Record<string, unknown>[] }
+        if (raw.data?.[0]?.inspectionNote === '必须完整核对') return {
+          ...raw, data: [{ ...raw.data[0], inspectionNote: '回读备注不一致' }],
+        }
+      }
+      return result
+    })
+    const ui = controller('repeat')
+    expect((await ui.execute({ kind: 'save', fields: fields('现场完成', 'safe', '必须完整核对') })).state)
+      .toBe('uncertain')
+    expect(await ui.load()).toMatchObject({ receiptPending: true, pendingRecoverable: true })
+    expect((await ui.execute({ kind: 'save', fields: fields('禁止二次提交') })).state).toBe('blocked')
+    expect((await ui.recoverCompleted(fields('现场完成', 'safe', '错误的备注'))).state).toBe('uncertain')
+  })
+
   it('Stage 1B forms Save→full EXTS→Process re-reads FormData and workflow before clearing the receipt', async () => {
     const dispatched: string[] = []
     const original = r1SpecialTransport.tryMockR1SpecialCommand
@@ -67,7 +129,7 @@ describe('A main-App source-only multi-form/repeat controller', () => {
       return original(...args)
     })
     const ui = controller('forms')
-    expect(await ui.execute({ kind: 'save_finish', summary: 'Stage1B 屋面完成记录' }))
+    expect(await ui.execute({ kind: 'save_finish', fields: fields('Stage1B 屋面完成记录') }))
       .toMatchObject({ state: 'succeeded', view: { nodeActive: false, receiptPending: false } })
     expect(dispatched).toEqual([
       `biz/extForm/upsert/${mockSyntheticDynamicFormDefinitionId}`,
@@ -79,7 +141,7 @@ describe('A main-App source-only multi-form/repeat controller', () => {
     expect(state.nodeActive).toBe(false)
     expect(state.receiptPending).toBe(false)
     expect(state.entries.some(row => row.summary === 'Stage1B 屋面完成记录')).toBe(true)
-    expect((await ui.execute({ kind: 'save_finish', summary: '不得重复发送' })).state).toBe('blocked')
+    expect((await ui.execute({ kind: 'save_finish', fields: fields('不得重复发送') })).state).toBe('blocked')
     expect(dispatched).toHaveLength(3)
   })
 
@@ -99,19 +161,19 @@ describe('A main-App source-only multi-form/repeat controller', () => {
       return result
     })
     const ui = controller('forms')
-    expect((await ui.execute({ kind: 'save_finish', summary: 'Stage1B 原始文本' })).state).toBe('uncertain')
+    expect((await ui.execute({ kind: 'save_finish', fields: fields('Stage1B 原始文本') })).state).toBe('uncertain')
     expect(await ui.load()).toMatchObject({ receiptPending: true,
       pendingRecoverable: true, nodeActive: false })
-    expect((await ui.execute({ kind: 'save', summary: '不得重发' })).state).toBe('blocked')
-    expect((await ui.recoverCompleted('错误的现场情况')).state).toBe('uncertain')
+    expect((await ui.execute({ kind: 'save', fields: fields('不得重发') })).state).toBe('blocked')
+    expect((await ui.recoverCompleted(fields('错误的现场情况'))).state).toBe('uncertain')
     corrupt = false
     resetMockCommandState()
-    expect(await controller('forms').recoverCompleted('Stage1B 原始文本'))
+    expect(await controller('forms').recoverCompleted(fields('Stage1B 原始文本')))
       .toMatchObject({ state: 'succeeded', view: { receiptPending: false } })
   })
 
   it('Stage 1B rejects a Save→Process shortcut on repeat (repeat uses CSV doProcess)', async () => {
-    expect(await controller('repeat').execute({ kind: 'save_finish', summary: '不能走 forms 分支' }))
+    expect(await controller('repeat').execute({ kind: 'save_finish', fields: fields('不能走 forms 分支') }))
       .toMatchObject({ state: 'blocked' })
     expect((await controller('repeat').load()).entries.every(row => !row.editable)).toBe(true)
   })
@@ -119,7 +181,7 @@ describe('A main-App source-only multi-form/repeat controller', () => {
   it('forms: page saves, edits, soft-deletes and finalizes through real source transaction receipts', async () => {
     const ui = controller('forms')
     expect((await ui.load()).entries).toHaveLength(2)
-    const saved = await ui.execute({ kind: 'save', summary: '平屋顶局部渗水', title: '屋面勘察记录' })
+    const saved = await ui.execute({ kind: 'save', fields: fields('平屋顶局部渗水'), title: '屋面勘察记录' })
     expect(saved.state).toBe('succeeded')
     if (saved.state !== 'succeeded') return
     const newRow = saved.view.entries.find(row => row.editable)!
@@ -127,7 +189,7 @@ describe('A main-App source-only multi-form/repeat controller', () => {
     expect(saved.view.receiptPending).toBe(false)
     // The actual panel edits the field value without changing the row title.
     expect(await ui.execute({ kind: 'edit', id: newRow.id,
-      summary: '平屋顶女儿墙根部裂缝' }))
+      fields: fields('平屋顶女儿墙根部裂缝') }))
       .toMatchObject({ state: 'succeeded' })
     resetMockCommandState()
     expect((await ui.load()).entries.find(row => row.id === newRow.id))
@@ -142,13 +204,13 @@ describe('A main-App source-only multi-form/repeat controller', () => {
 
   it('repeat: saves two records, edits/removes one, completes scoped live row only', async () => {
     const ui = controller('repeat')
-    const first = await ui.execute({ kind: 'save', summary: '屋面初检' })
+    const first = await ui.execute({ kind: 'save', fields: fields('屋面初检') })
     expect(first.state).toBe('succeeded')
     if (first.state !== 'succeeded') return
     const firstId = first.view.entries.find(row => row.editable)!.id
-    const second = await ui.execute({ kind: 'save', summary: '屋面复检' })
+    const second = await ui.execute({ kind: 'save', fields: fields('屋面复检') })
     expect(second.state).toBe('succeeded')
-    expect(await ui.execute({ kind: 'edit', id: firstId, summary: '初检修订' }))
+    expect(await ui.execute({ kind: 'edit', id: firstId, fields: fields('初检修订') }))
       .toMatchObject({ state: 'succeeded' })
     expect(await ui.execute({ kind: 'delete', id: firstId })).toMatchObject({ state: 'succeeded' })
     resetMockCommandState()
@@ -162,16 +224,16 @@ describe('A main-App source-only multi-form/repeat controller', () => {
     let current = actor
     const ui = controller('forms', () => current)
     current = { ...actor, roleId: 'different-role' }
-    expect((await ui.execute({ kind: 'save', summary: '越权' })).state).toBe('blocked')
+    expect((await ui.execute({ kind: 'save', fields: fields('越权') })).state).toBe('blocked')
     current = actor
-    expect(await ui.execute({ kind: 'save', summary: '合法创建' })).toMatchObject({ state: 'succeeded' })
+    expect(await ui.execute({ kind: 'save', fields: fields('合法创建') })).toMatchObject({ state: 'succeeded' })
     // Corrupt local transaction record is not a permission to reset/replay it.
     const [key] = [...receipts.keys()]
     expect(key).toBeUndefined()
     receipts.set('fake', { arbitrary: 'untrusted' })
     expect((await ui.load()).receiptPending).toBe(false)
     vi.stubEnv('VITE_XLINK_H5_MOCK_E2E', 'false')
-    expect((await ui.execute({ kind: 'save', summary: '环境已关闭' })).state).toBe('blocked')
+    expect((await ui.execute({ kind: 'save', fields: fields('环境已关闭') })).state).toBe('blocked')
   })
 
   it('recovers a completed save receipt after restart using only fresh FormData/EXTS reads and exact original text', async () => {
@@ -183,15 +245,15 @@ describe('A main-App source-only multi-form/repeat controller', () => {
         ? { state: 'failed_terminal' } : source.remove(key),
     } as StoragePort
     const first = controller('forms', () => actor, port)
-    expect((await first.execute({ kind: 'save', summary: '平屋顶节点原始记录' })).state).toBe('uncertain')
+    expect((await first.execute({ kind: 'save', fields: fields('平屋顶节点原始记录') })).state).toBe('uncertain')
     expect(await first.load()).toMatchObject({ receiptPending: true,
-      pendingRecoverable: true, pendingNeedsOriginalText: true })
+      pendingRecoverable: true, pendingNeedsOriginalFields: true })
     resetMockCommandState() // new page / same durable server+receipt data
     const reopened = controller('forms', () => actor, port)
-    expect((await reopened.recoverCompleted('错误的原始内容')).state).toBe('uncertain')
+    expect((await reopened.recoverCompleted(fields('错误的原始内容'))).state).toBe('uncertain')
     expect((await reopened.load()).receiptPending).toBe(true)
     failRemoval = false
-    expect(await reopened.recoverCompleted('平屋顶节点原始记录'))
+    expect(await reopened.recoverCompleted(fields('平屋顶节点原始记录')))
       .toMatchObject({ state: 'succeeded', view: { receiptPending: false } })
     expect((await reopened.load()).entries.some(item => item.summary === '平屋顶节点原始记录')).toBe(true)
   })
@@ -204,10 +266,10 @@ describe('A main-App source-only multi-form/repeat controller', () => {
       return result
     })
     const ui = controller('forms')
-    expect((await ui.execute({ kind: 'save', summary: '提交回执丢失' })).state).toBe('uncertain')
+    expect((await ui.execute({ kind: 'save', fields: fields('提交回执丢失') })).state).toBe('uncertain')
     expect(await ui.load()).toMatchObject({ receiptPending: true, pendingRecoverable: false })
-    expect((await ui.recoverCompleted('提交回执丢失')).state).toBe('uncertain')
-    expect((await ui.execute({ kind: 'save', summary: '不得重发' })).state).toBe('blocked')
+    expect((await ui.recoverCompleted(fields('提交回执丢失'))).state).toBe('uncertain')
+    expect((await ui.execute({ kind: 'save', fields: fields('不得重发') })).state).toBe('blocked')
     expect((await controller('forms').load()).receiptPending).toBe(true)
   })
 
@@ -224,8 +286,8 @@ describe('A main-App source-only multi-form/repeat controller', () => {
       },
     } as StoragePort
     const ui = controller('repeat', () => actor, port)
-    const first = ui.execute({ kind: 'save', summary: '同一按钮首次点击' })
-    expect((await ui.execute({ kind: 'save', summary: '重复点击' })).state).toBe('blocked')
+    const first = ui.execute({ kind: 'save', fields: fields('同一按钮首次点击') })
+    expect((await ui.execute({ kind: 'save', fields: fields('重复点击') })).state).toBe('blocked')
     resume()
     expect((await first).state).toBe('succeeded')
     expect((await ui.load()).entries.filter(row => row.editable)).toHaveLength(1)

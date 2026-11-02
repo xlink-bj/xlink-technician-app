@@ -1,26 +1,31 @@
+import type { FormDefinitionRead } from '@shared/ports'
+import type { R1SpecialMockFields } from './r1-special-mock-form-fields'
+
 export type AStageSpecialKind = 'forms' | 'repeat'
 export interface AStageMockActor { readonly userId: string; readonly roleId: string; readonly identity: string }
 export type AStageSpecialAction =
-  | { readonly kind: 'save'; readonly summary: string; readonly title?: string }
+  | { readonly kind: 'save'; readonly fields: R1SpecialMockFields; readonly title?: string }
   /** R1 forms process(formDataId): Save → full EXTS → Process, as one fenced transaction. */
-  | { readonly kind: 'save_finish'; readonly summary: string; readonly title?: string }
-  | { readonly kind: 'edit'; readonly id: string; readonly summary: string; readonly title?: string }
+  | { readonly kind: 'save_finish'; readonly fields: R1SpecialMockFields; readonly title?: string }
+  | { readonly kind: 'edit'; readonly id: string; readonly fields: R1SpecialMockFields; readonly title?: string }
   | { readonly kind: 'delete'; readonly id: string }
   | { readonly kind: 'finish' }
 export interface AStageSpecialRecord {
   readonly id: string
   readonly title: string
   readonly summary: string
+  readonly values: R1SpecialMockFields
   readonly state: 'active' | 'deleted'
   readonly editable: boolean
 }
 export interface AStageSpecialView {
   readonly kind: AStageSpecialKind
+  readonly definition: FormDefinitionRead
   readonly nodeActive: boolean
   readonly entries: readonly AStageSpecialRecord[]
   readonly receiptPending: boolean
   readonly pendingRecoverable: boolean
-  readonly pendingNeedsOriginalText: boolean
+  readonly pendingNeedsOriginalFields: boolean
 }
 export type AStageSpecialOutcome =
   | { readonly state: 'succeeded'; readonly view: AStageSpecialView }
@@ -30,7 +35,7 @@ export type AStageSpecialOutcome =
 export interface AStageSpecialMockController {
   load(): Promise<AStageSpecialView>
   execute(action: AStageSpecialAction): Promise<AStageSpecialOutcome>
-  recoverCompleted(originalSummary: string): Promise<AStageSpecialOutcome>
+  recoverCompleted(originalFields: R1SpecialMockFields): Promise<AStageSpecialOutcome>
 }
 export type AStageSpecialMockControllerFactory = (options: {
   readonly kind: AStageSpecialKind

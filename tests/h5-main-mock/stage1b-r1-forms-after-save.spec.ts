@@ -28,7 +28,8 @@ test.describe('Stage 1B forms Save→EXTS→Process / durable readback', () => {
 
     const panel = page.getByTestId('a-stage-special-panel')
     await expect(panel).toBeVisible()
-    await panel.locator('textarea').fill('Stage1B 430 宽度下现场情况和节点完成')
+    await page.getByTestId('a-special-field-inspectionSummary').locator('textarea').fill('Stage1B 430 宽度下现场情况和节点完成')
+    await page.getByTestId('a-special-field-inspectionResult').locator('.app-choice').filter({ hasText: '需要跟进' }).click()
     await page.getByTestId('a-special-save-finish-request').click()
     await expect(page.getByTestId('a-special-save-finish-confirm')).toBeVisible()
     await page.getByTestId('a-special-save-finish-confirm').click()

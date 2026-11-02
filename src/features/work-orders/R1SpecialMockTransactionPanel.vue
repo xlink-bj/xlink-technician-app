@@ -3,7 +3,7 @@
     <view class="special-forms__header">
       <view class="special-forms__header-copy">
         <text class="special-forms__title">{{ kind === 'repeat' ? '现场复检' : '现场记录' }}</text>
-        <text class="special-forms__subtitle">{{ kind === 'repeat' ? '每次复检单独保存，确认齐全后完成' : '填写现场情况，保存后可补充多条记录' }}</text>
+        <text class="special-forms__subtitle">{{ kind === 'repeat' ? '每次复检单独保存，确认齐全后完成' : '按当前表单填写检查结论，保存后可补充记录' }}</text>
       </view>
     </view>
     <view v-if="loading" class="special-forms__message" data-testid="a-special-loading">正在读取表单…</view>
@@ -53,14 +53,24 @@
       <view v-if="viewState.receiptPending" class="special-forms__recovery" data-testid="a-special-recovery">
         <template v-if="viewState.pendingRecoverable">
           <text class="special-forms__finish-copy">{{ uxStateLanguage.pendingReceipt }}可只读核对最新记录，确认后解除重复提交保护。</text>
-          <template v-if="viewState.pendingNeedsOriginalText">
-            <text class="special-forms__label">原保存的现场情况 <text class="special-forms__required">*</text></text>
-            <AppTextarea :model-value="summary" :maxlength="4000" :disabled="busy"
-              placeholder="请填写原保存的文字；必须与权威记录一致"
-              @update:model-value="summary = $event" />
+          <template v-if="viewState.pendingNeedsOriginalFields">
+            <text class="special-forms__finish-copy">请逐项还原原保存的表单；所有字段必须与权威记录一致，核对期间不会重新发送业务命令。</text>
+            <template v-for="field in editableFields" :key="field.fieldId">
+              <view class="special-forms__field" :data-testid="`a-special-recover-field-${field.valueKey}`">
+                <text class="special-forms__label">{{ field.label }} <text v-if="field.required" class="special-forms__required">*</text></text>
+                <AppChoiceGroup v-if="field.type === 'radio'" :options="field.options"
+                  :model-value="fieldValue(field.valueKey)" :disabled="busy"
+                  @update:model-value="setField(field.valueKey, $event)" />
+                <AppTextarea v-else-if="field.type === 'textarea'" :model-value="fieldValue(field.valueKey)"
+                  :maxlength="4000" :disabled="busy" placeholder="填写原保存的内容"
+                  @update:model-value="setField(field.valueKey, $event)" />
+                <AppInput v-else :model-value="fieldValue(field.valueKey)" :disabled="busy"
+                  @update:model-value="setField(field.valueKey, $event)" />
+              </view>
+            </template>
           </template>
           <AppButton block variant="secondary" :loading="busy"
-            :disabled="busy || (viewState.pendingNeedsOriginalText && !summary.trim())"
+            :disabled="busy || (viewState.pendingNeedsOriginalFields && !formValid)"
             data-testid="a-special-recover" @tap="recoverCompleted">只读核对并恢复</AppButton>
         </template>
         <AppStatus v-else tone="warning" quiet
@@ -72,24 +82,38 @@
       <template v-else-if="viewState.nodeActive">
         <view class="special-forms__editor">
           <text class="special-forms__section-title">{{ editingId ? '编辑已保存记录' : '新增一条记录' }}</text>
-          <text class="special-forms__label">现场情况 <text class="special-forms__required">*</text></text>
-          <AppTextarea :model-value="summary" :maxlength="4000" :disabled="busy"
-            placeholder="例如：平屋顶防水层老化，女儿墙根部出现裂缝"
-            @update:model-value="summary = $event" />
+          <template v-for="field in viewFields" :key="field.fieldId">
+            <view v-if="field.supported && editableFieldTypes.has(field.type)"
+              class="special-forms__field" :data-testid="`a-special-field-${field.valueKey}`">
+              <text class="special-forms__label">{{ field.label }} <text v-if="field.required" class="special-forms__required">*</text></text>
+              <AppChoiceGroup v-if="field.type === 'radio'" :options="field.options"
+                :model-value="fieldValue(field.valueKey)" :disabled="busy"
+                @update:model-value="setField(field.valueKey, $event)" />
+              <AppTextarea v-else-if="field.type === 'textarea'"
+                :model-value="fieldValue(field.valueKey)" :maxlength="4000" :disabled="busy"
+                placeholder="请填写现场信息" @update:model-value="setField(field.valueKey, $event)" />
+              <AppInput v-else :model-value="fieldValue(field.valueKey)" :disabled="busy"
+                placeholder="请填写信息" @update:model-value="setField(field.valueKey, $event)" />
+            </view>
+            <view v-else class="special-forms__reference" :data-testid="`a-special-reference-${field.valueKey}`">
+              <text>{{ field.label }} · {{ field.type === 'image' ? '参考图片（只读，非上传项）' : field.reason || '当前不可编辑' }}</text>
+            </view>
+          </template>
+          <text v-if="!formValid" class="special-forms__validation" data-testid="a-special-form-validation">{{ validationMessage }}</text>
           <view class="special-forms__buttons">
-            <AppButton block :disabled="busy || !summary.trim()" :loading="busy"
+            <AppButton block :disabled="busy || !formValid" :loading="busy"
               data-testid="a-special-save" @tap="save">{{ editingId ? '保存修改' : '保存记录' }}</AppButton>
             <AppButton v-if="editingId" variant="text" :disabled="busy" @tap="cancelEdit">取消</AppButton>
           </view>
           <view v-if="kind === 'forms' && !editingId" class="special-forms__finish">
             <text class="special-forms__finish-copy">也可将本条记录保存后立即完成节点；确认后不可继续编辑。</text>
             <AppButton v-if="!confirmSaveFinish" variant="secondary" block
-              :disabled="busy || !summary.trim()" data-testid="a-special-save-finish-request"
+              :disabled="busy || !formValid" data-testid="a-special-save-finish-request"
               @tap="confirmSaveFinish = true">保存并完成节点</AppButton>
             <view v-else class="special-forms__confirmation">
               <text>确认保存本条记录，并立即完成当前节点？</text>
-              <AppButton :disabled="busy || !summary.trim()" data-testid="a-special-save-finish-confirm"
-                @tap="run({ kind: 'save_finish', summary })">确认保存并完成</AppButton>
+              <AppButton :disabled="busy || !formValid" data-testid="a-special-save-finish-confirm"
+                @tap="run({ kind: 'save_finish', fields: draftValues })">确认保存并完成</AppButton>
               <AppButton variant="text" :disabled="busy" @tap="confirmSaveFinish = false">返回检查</AppButton>
             </view>
           </view>
@@ -122,8 +146,12 @@ import type {
 import { useSessionStore } from '@shared/state'
 import AppButton from '@shared/ui/AppButton.vue'
 import AppTextarea from '@shared/ui/AppTextarea.vue'
+import AppInput from '@shared/ui/AppInput.vue'
+import AppChoiceGroup from '@shared/ui/AppChoiceGroup.vue'
 import AppStatus from '@shared/ui/AppStatus.vue'
 import { uxStateLanguage } from '@shared/ui/ux-state-language'
+import { normalizeR1LocalFieldPatch, projectR1LocalFields } from './r1-local-form-fields'
+import { validateR1SpecialMockFields, type R1SpecialMockFields } from './r1-special-mock-form-fields'
 
 const props = defineProps<{ readonly kind: AStageSpecialKind; readonly workOrderId: string;
   readonly node: WorkflowNodeRead; readonly createController: AStageSpecialMockControllerFactory }>()
@@ -135,7 +163,28 @@ const busy = ref(false)
 const error = ref('')
 const operationFeedback = ref('')
 const recoveryFeedback = ref('')
-const summary = ref('')
+const draftValues = ref<R1SpecialMockFields>({})
+const editableFieldTypes = new Set(['textarea', 'text', 'radio'])
+const viewFields = computed(() => viewState.value
+  ? projectR1LocalFields(viewState.value.definition, draftValues.value) : [])
+const editableFields = computed(() => viewFields.value.filter(field => field.supported
+  && editableFieldTypes.has(field.type)))
+const validation = computed(() => viewState.value
+  ? validateR1SpecialMockFields(viewState.value.definition, draftValues.value)
+  : { ok: false as const, message: '表单尚未载入。' })
+const formValid = computed(() => validation.value.ok)
+const validationMessage = computed(() => validation.value.ok ? '' : validation.value.message)
+function fieldValue(key: string): string {
+  const value = draftValues.value[key]
+  return value === undefined ? '' : String(value)
+}
+function setField(key: string, value: string): void {
+  if (busy.value || !viewState.value) return
+  const next = normalizeR1LocalFieldPatch(viewState.value.definition, draftValues.value, key, value)
+  if (next && Object.values(next).every(value => ['string', 'number', 'boolean'].includes(typeof value))) {
+    draftValues.value = next as R1SpecialMockFields
+  }
+}
 const editingId = ref<string | null>(null)
 const confirmDeleteId = ref<string | null>(null)
 const confirmFinish = ref(false)
@@ -175,7 +224,7 @@ watch(() => [props.kind, props.workOrderId, props.node.id,
   error.value = ''
   operationFeedback.value = ''
   recoveryFeedback.value = ''
-  summary.value = ''
+  draftValues.value = {}
   editingId.value = null
   confirmDeleteId.value = null
   confirmFinish.value = false
@@ -189,16 +238,16 @@ function edit(id: string): void {
   const row = viewState.value?.entries.find(entry => entry.id === id && entry.editable)
   if (!row) return
   editingId.value = id
-  summary.value = row.summary
+  draftValues.value = { ...row.values }
   confirmDeleteId.value = null
   confirmFinish.value = false
   confirmSaveFinish.value = false
 }
-function cancelEdit(): void { editingId.value = null; summary.value = '' }
+function cancelEdit(): void { editingId.value = null; draftValues.value = {} }
 async function save(): Promise<void> {
   const action: AStageSpecialAction = editingId.value
-    ? { kind: 'edit', id: editingId.value, summary: summary.value }
-    : { kind: 'save', summary: summary.value }
+    ? { kind: 'edit', id: editingId.value, fields: draftValues.value }
+    : { kind: 'save', fields: draftValues.value }
   await run(action)
 }
 async function run(action: AStageSpecialAction): Promise<void> {
@@ -232,7 +281,7 @@ async function recoverCompleted(): Promise<void> {
   recoveryFeedback.value = ''
   const ticket = revision
   try {
-    const result = await current.recoverCompleted(summary.value)
+    const result = await current.recoverCompleted(draftValues.value)
     if (ticket !== revision) return
     if (result.state !== 'succeeded') { recoveryFeedback.value = result.message; return }
     viewState.value = result.view
@@ -264,6 +313,9 @@ async function recoverCompleted(): Promise<void> {
 .special-forms__recovery { border-top:1rpx solid var(--app-color-border); margin-top:18rpx; padding-top:18rpx; }
 .special-forms__section-title { display:block; font-size:29rpx; font-weight:700; color:var(--app-color-text-primary); margin-bottom:20rpx; }
 .special-forms__label { display:block; font-size:26rpx; font-weight:600; margin-bottom:12rpx; }
+.special-forms__field { margin-top:20rpx; }
+.special-forms__reference { margin-top:16rpx; padding:16rpx 18rpx; border-radius:12rpx; background:var(--app-color-surface, #f5f7fa); color:var(--app-color-text-secondary); font-size:23rpx; }
+.special-forms__validation { display:block; margin-top:16rpx; font-size:23rpx; color:#985919; }
 .special-forms__required { color:#b55343; }
 .special-forms__buttons { margin-top:22rpx; }
 .special-forms__finish-copy { margin-bottom:16rpx; }
