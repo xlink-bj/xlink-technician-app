@@ -58,7 +58,8 @@
             <template v-for="field in editableFields" :key="field.fieldId">
               <view class="special-forms__field" :data-testid="`a-special-recover-field-${field.valueKey}`">
                 <text class="special-forms__label">{{ field.label }} <text v-if="field.required" class="special-forms__required">*</text></text>
-                <AppChoiceGroup v-if="field.type === 'radio'" :options="field.options"
+                <AppChoiceGroup v-if="field.type === 'radio' || field.type === 'select' || field.type === 'switch'"
+                  :options="field.type === 'switch' ? switchOptions : field.options"
                   :model-value="fieldValue(field.valueKey)" :disabled="busy"
                   @update:model-value="setField(field.valueKey, $event)" />
                 <AppTextarea v-else-if="field.type === 'textarea'" :model-value="fieldValue(field.valueKey)"
@@ -86,7 +87,8 @@
             <view v-if="field.supported && editableFieldTypes.has(field.type)"
               class="special-forms__field" :data-testid="`a-special-field-${field.valueKey}`">
               <text class="special-forms__label">{{ field.label }} <text v-if="field.required" class="special-forms__required">*</text></text>
-              <AppChoiceGroup v-if="field.type === 'radio'" :options="field.options"
+              <AppChoiceGroup v-if="field.type === 'radio' || field.type === 'select' || field.type === 'switch'"
+                :options="field.type === 'switch' ? switchOptions : field.options"
                 :model-value="fieldValue(field.valueKey)" :disabled="busy"
                 @update:model-value="setField(field.valueKey, $event)" />
               <AppTextarea v-else-if="field.type === 'textarea'"
@@ -101,9 +103,13 @@
           </template>
           <text v-if="!formValid" class="special-forms__validation" data-testid="a-special-form-validation">{{ validationMessage }}</text>
           <view class="special-forms__buttons">
-            <AppButton block :disabled="busy || !formValid" :loading="busy"
-              data-testid="a-special-save" @tap="save">{{ editingId ? '保存修改' : '保存记录' }}</AppButton>
-            <AppButton v-if="editingId" variant="text" :disabled="busy" @tap="cancelEdit">取消</AppButton>
+            <view class="special-forms__save-button">
+              <AppButton block :disabled="busy || !formValid" :loading="busy"
+                data-testid="a-special-save" @tap="save">{{ editingId ? '保存修改' : '保存记录' }}</AppButton>
+            </view>
+            <view v-if="editingId" class="special-forms__cancel-button">
+              <AppButton variant="text" :disabled="busy" @tap="cancelEdit">取消</AppButton>
+            </view>
           </view>
           <view v-if="kind === 'forms' && !editingId" class="special-forms__finish">
             <text class="special-forms__finish-copy">也可将本条记录保存后立即完成节点；确认后不可继续编辑。</text>
@@ -150,8 +156,8 @@ import AppInput from '@shared/ui/AppInput.vue'
 import AppChoiceGroup from '@shared/ui/AppChoiceGroup.vue'
 import AppStatus from '@shared/ui/AppStatus.vue'
 import { uxStateLanguage } from '@shared/ui/ux-state-language'
-import { normalizeR1LocalFieldPatch, projectR1LocalFields } from './r1-local-form-fields'
-import { validateR1SpecialMockFields, type R1SpecialMockFields } from './r1-special-mock-form-fields'
+import { projectR1LocalFields } from './r1-local-form-fields'
+import { r1SpecialMockWritableTypes, validateR1SpecialMockFields, type R1SpecialMockFields } from './r1-special-mock-form-fields'
 
 const props = defineProps<{ readonly kind: AStageSpecialKind; readonly workOrderId: string;
   readonly node: WorkflowNodeRead; readonly createController: AStageSpecialMockControllerFactory }>()
@@ -164,7 +170,8 @@ const error = ref('')
 const operationFeedback = ref('')
 const recoveryFeedback = ref('')
 const draftValues = ref<R1SpecialMockFields>({})
-const editableFieldTypes = new Set(['textarea', 'text', 'radio'])
+const editableFieldTypes = r1SpecialMockWritableTypes
+const switchOptions = [{ value: '1', label: '是' }, { value: '0', label: '否' }] as const
 const viewFields = computed(() => viewState.value
   ? projectR1LocalFields(viewState.value.definition, draftValues.value) : [])
 const editableFields = computed(() => viewFields.value.filter(field => field.supported
@@ -180,10 +187,14 @@ function fieldValue(key: string): string {
 }
 function setField(key: string, value: string): void {
   if (busy.value || !viewState.value) return
-  const next = normalizeR1LocalFieldPatch(viewState.value.definition, draftValues.value, key, value)
-  if (next && Object.values(next).every(value => ['string', 'number', 'boolean'].includes(typeof value))) {
-    draftValues.value = next as R1SpecialMockFields
-  }
+  const field = viewFields.value.find(item => item.valueKey === key)
+  if (!field?.supported || !editableFieldTypes.has(field.type) || value.length > 4000) return
+  // Keep partially typed decimals ("1.", "-", etc.) visible until Submit.
+  // The shared FormDef validator normalizes once at the transaction boundary.
+  const next = { ...draftValues.value }
+  if (value === '') delete next[key]
+  else next[key] = value
+  draftValues.value = next
 }
 const editingId = ref<string | null>(null)
 const confirmDeleteId = ref<string | null>(null)
@@ -318,6 +329,8 @@ async function recoverCompleted(): Promise<void> {
 .special-forms__validation { display:block; margin-top:16rpx; font-size:23rpx; color:#985919; }
 .special-forms__required { color:#b55343; }
 .special-forms__buttons { margin-top:22rpx; }
+.special-forms__save-button { flex:1 1 0; min-width:0; }
+.special-forms__cancel-button { flex:0 0 auto; min-width:96rpx; }
 .special-forms__finish-copy { margin-bottom:16rpx; }
 .special-forms__message,.special-forms__empty { display:block; padding:24rpx 0; font-size:25rpx; line-height:1.5; color:var(--app-color-text-secondary); }
 .special-forms__message--error { color:#985919; }

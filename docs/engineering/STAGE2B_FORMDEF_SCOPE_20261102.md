@@ -1,7 +1,13 @@
-# Stage 2B — R1 FormDef primitive field parity (planned)
+# Stage 2B — R1 FormDef primitive field parity
 
 **Decision baseline:** `main@5b0c37373e46268e98ec651c9807575395f2235c` (Stage 2A). 2026-11-02.
-**State:** `SCOPE_DEFINED / NOT_IMPLEMENTED`. This document does not authorize real business writes or native device acceptance.
+**State at first-slice implementation:** `SCALAR_SLICE_CODE_PASS / EXACT_MAIN_CI_PENDING` (2026-11-02). The remaining conditional/array/provider work is not implemented. This document does not authorize real business writes or native device acceptance.
+
+## First implementation slice
+
+- The 020/021 source-shaped DEV Mock can opt into a ten-field FormDef with `VITE_XLINK_R1_STAGE2B_FIELDS=true`, including `phone`, `IDNumber`, `number`, `digit`, `switch` and inline-only `select`. The **default commercial Mock FormDef remains four fields**, so operator pages do not acquire extra synthetic fields without the explicit QA flag. No new backend route or real write path was introduced.
+- The existing Stage 2A FormDef validator now allows the six primitive types, preserves leading-zero text and the R1 `"1"/"0"` switch wire values, verifies inline option keys, rejects unsafe integers and high-precision decimals, and compares typed values in fresh FormData/receipt recovery reads. A partially typed numeric input stays editable; normalization occurs at the transaction boundary.
+- Source-only unit tests exercise malformed types, missing required values, hidden/read-only fields, unknown providers/options, precision, mutation and durable receipts. The real H5 430×932 test verifies create/edit/reload without external traffic. `verify:full` passed locally (175 files, 1,559 tests); H5/MP/App builds and exact-HEAD CI are independent gates recorded on completion.
 
 ## Closed engineering evidence to carry forward
 
@@ -27,7 +33,7 @@ Expand the **same** DEV Mock FormDef-controlled editor and existing transaction/
 | `select` (inline verified options only) | Render/display source labels; persist source option values | Unverified `valueOption`/CodeService providers remain unsupported |
 | Conditional visibility/read-only | Derive from the existing dynamic-form evaluator for the active mobile surface | No hidden value in new upserts; malformed dependencies block the affected submission |
 
-The first slice may deliver the scalar families and inline `select` together; conditional dependencies are a separate slice if the source-shape fixtures prove they cannot be safely combined. Prefer one coherent vertical test fixture over artificial breadth.
+The first slice delivered the scalar families and inline `select` together. **Conditional dependencies remain a separate slice**: the existing source-state evaluator blocks unsupported/hidden submissions, but complete multi-field conditional UX and persistence have not yet been accepted. Prefer one coherent vertical test fixture over artificial breadth.
 
 **Explicitly deferred:** `checkbox`/`cascade` arrays and their wire codec; `bizSelect`, `area` and source option providers without verified scope; `file` upload permissions/media references; `image` reference URL rendering without an approved image-host/auth policy; dynamic AddFormCode/multiple-definition selection; optional-field **deletion semantics** (the current Mock upsert merges prior values, so attempting to clear an existing value remains blocked); arbitrary real-node `forms/repeat` writes; contract/signing/Production/Beta mutations.
 

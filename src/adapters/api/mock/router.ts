@@ -14,6 +14,7 @@ import {
   mockQuotationWorkflowNodeId,
   mockSyntheticDynamicFormDefinitionId,
   mockSyntheticInspectionFormDefinitionResponse,
+  mockSyntheticStage2BFormDefinitionResponse,
   mockSurveyFormDefinitionId,
   mockSurveyFormDefinitionResponse,
   mockSurveyLeakageCauseResponse,
@@ -760,7 +761,8 @@ function matchedResponse(
     return mockAppointmentFormDefinitionResponse
   }
   if (route === 'biz/extField/query' && requestData.extId === mockSyntheticDynamicFormDefinitionId) {
-    return mockSyntheticInspectionFormDefinitionResponse
+    return isDevMockJourneyEnabled() && import.meta.env.VITE_XLINK_R1_STAGE2B_FIELDS === 'true'
+      ? mockSyntheticStage2BFormDefinitionResponse : mockSyntheticInspectionFormDefinitionResponse
   }
   if (route === 'biz/extField/query' && requestData.extId === mockR1NoteFormDefinitionId) {
     return mockR1NoteFormDefinitionResponse

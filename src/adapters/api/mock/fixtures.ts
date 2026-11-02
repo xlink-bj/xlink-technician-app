@@ -144,6 +144,29 @@ export const mockSyntheticInspectionFormDefinitionResponse = {
   total: 4,
 } as const
 
+/** Opt-in DEV-only FormDef shape used to verify R1 primitive codecs without
+ * expanding the default 020/021 operator screen or asserting live tenant fields. */
+export const mockSyntheticStage2BFormDefinitionResponse = {
+  ...mockSyntheticInspectionFormDefinitionResponse,
+  data: [
+    ...mockSyntheticInspectionFormDefinitionResponse.data,
+    { _id: 'mock-inspection-field-phone', name: 'inspectionContactPhone',
+      nameDisp: '现场联系电话', type: 'phone', required: '0', state: 1 },
+    { _id: 'mock-inspection-field-idnumber', name: 'inspectionIdentityNumber',
+      nameDisp: '证件号码', type: 'IDNumber', required: '0', state: 1 },
+    { _id: 'mock-inspection-field-count', name: 'inspectionPointCount',
+      nameDisp: '检查点数量', type: 'number', required: '0', state: 1 },
+    { _id: 'mock-inspection-field-area', name: 'inspectionMeasuredArea',
+      nameDisp: '实测面积', type: 'digit', required: '0', state: 1 },
+    { _id: 'mock-inspection-field-confirmed', name: 'inspectionConfirmed',
+      nameDisp: '是否已复核', type: 'switch', required: '0', state: 1 },
+    { _id: 'mock-inspection-field-category', name: 'inspectionCategory',
+      nameDisp: '勘察部位', type: 'select', required: '0', state: 1,
+      options: [{ value: 'roof', name: '屋面' }, { value: 'wall', name: '外墙' }] },
+  ],
+  total: 10,
+} as const
+
 export const mockWorkOrderIds = [
   'mock-work-order-001',
   'mock-work-order-002',

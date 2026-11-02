@@ -19,6 +19,12 @@ const fields = (summary: string, result = 'follow_up', note?: string) => ({
   inspectionSummary: summary, inspectionResult: result,
   ...(note ? { inspectionNote: note } : {}),
 })
+const stage2bFields = (summary: string) => ({ ...fields(summary, 'safe'),
+  inspectionContactPhone: '0013800100200',
+  inspectionIdentityNumber: '000100200300400500',
+  inspectionPointCount: '12', inspectionMeasuredArea: '12.50',
+  inspectionConfirmed: '0', inspectionCategory: 'roof',
+})
 function storage(): StoragePort {
   return {
     read: async (key: StorageKey) => ({ state: 'succeeded', data: receipts.get(key.key) ?? null }),
@@ -63,6 +69,60 @@ function controller(kind: 'forms' | 'repeat', getActor = () => actor,
 }
 
 describe('A main-App source-only multi-form/repeat controller', () => {
+  it('Stage 2B 020/021 source-field variant saves, edits and independently reads numeric/string/switch/select values', async () => {
+    vi.stubEnv('VITE_XLINK_R1_STAGE2B_FIELDS', 'true')
+    const forms = controller('forms')
+    expect((await forms.load()).definition.fields).toHaveLength(10)
+    const saved = await forms.execute({ kind: 'save', fields: stage2bFields('020 完整表单') })
+    expect(saved.state).toBe('succeeded')
+    if (saved.state !== 'succeeded') return
+    const created = saved.view.entries.find(row => row.editable)!
+    expect(created.values).toMatchObject({ inspectionContactPhone: '0013800100200',
+      inspectionIdentityNumber: '000100200300400500',
+      inspectionPointCount: 12, inspectionMeasuredArea: 12.5,
+      inspectionConfirmed: '0', inspectionCategory: 'roof' })
+    expect(await forms.execute({ kind: 'edit', id: created.id, fields: {
+      ...stage2bFields('020 二次复核'), inspectionPointCount: '14',
+      inspectionMeasuredArea: '14.25', inspectionConfirmed: '1', inspectionCategory: 'wall',
+    } })).toMatchObject({ state: 'succeeded' })
+    expect((await forms.load()).entries.find(row => row.id === created.id)?.values)
+      .toMatchObject({ inspectionPointCount: 14, inspectionMeasuredArea: 14.25,
+        inspectionConfirmed: '1', inspectionCategory: 'wall' })
+
+    const repeat = controller('repeat')
+    expect(await repeat.execute({ kind: 'save', fields: stage2bFields('021 完整表单') }))
+      .toMatchObject({ state: 'succeeded' })
+    expect((await repeat.load()).entries.find(row => row.editable)?.values)
+      .toMatchObject({ inspectionContactPhone: '0013800100200',
+        inspectionPointCount: 12, inspectionMeasuredArea: 12.5, inspectionConfirmed: '0' })
+    expect(await repeat.execute({ kind: 'finish' }))
+      .toMatchObject({ state: 'succeeded', view: { nodeActive: false, receiptPending: false } })
+  })
+
+  it('Stage 2B completed receipt recovery requires the original full typed payload', async () => {
+    vi.stubEnv('VITE_XLINK_R1_STAGE2B_FIELDS', 'true')
+    const underlying = storage()
+    let failRemoval = true
+    const port: StoragePort = { ...underlying,
+      remove: async (key: StorageKey) => failRemoval
+        ? { state: 'failed_terminal' } : underlying.remove(key),
+    } as StoragePort
+    const original = stage2bFields('现场回执原文')
+    expect((await controller('forms', () => actor, port).execute({ kind: 'save', fields: original })).state)
+      .toBe('uncertain')
+    resetMockCommandState()
+    const reopened = controller('forms', () => actor, port)
+    expect(await reopened.load()).toMatchObject({ receiptPending: true, pendingRecoverable: true })
+    expect((await reopened.recoverCompleted({ ...original, inspectionMeasuredArea: '12.51' })).state)
+      .toBe('uncertain')
+    expect((await reopened.recoverCompleted({ ...original, inspectionConfirmed: '1' })).state)
+      .toBe('uncertain')
+    expect((await reopened.load()).receiptPending).toBe(true)
+    failRemoval = false
+    expect(await reopened.recoverCompleted(original))
+      .toMatchObject({ state: 'succeeded', view: { receiptPending: false } })
+  })
+
   it('Stage 2A reads FormDef, requires a valid conclusion, ignores reference image and round-trips optional notes', async () => {
     const ui = controller('forms')
     const initial = await ui.load()
