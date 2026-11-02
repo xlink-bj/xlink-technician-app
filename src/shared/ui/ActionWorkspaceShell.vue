@@ -1,5 +1,5 @@
 <template>
-  <view class="action-workspace-page" :class="{ 'action-workspace-page--survey': commercialSurvey, 'action-workspace-page--quotation': commercialQuotation, 'action-workspace-page--q01-entry': compactQuoteEntry, 'xl-craft': compactQuoteEntry }" data-testid="action-workspace-shell">
+  <view class="action-workspace-page" :class="{ 'action-workspace-page--survey': commercialSurvey, 'action-workspace-page--quotation': commercialQuotation, 'action-workspace-page--q01-entry': compactQuoteEntry, 'action-workspace-page--h5-navigation-fit': h5NavigationFit, 'xl-craft': compactQuoteEntry }" data-testid="action-workspace-shell">
     <scroll-view class="action-workspace-scroll" scroll-y enable-flex :scroll-into-view="scrollIntoView">
       <view class="action-workspace-body">
         <view class="action-workspace-context app-surface app-surface--compact" :class="{ 'xl-craft__surface': compactQuoteEntry }" data-testid="action-workspace-context">
@@ -100,7 +100,7 @@
     <AppActionBar class="action-workspace-footer" :class="{ 'xl-craft__action-bar': compactQuoteEntry }" :label="`当前工单操作`">
       <view class="action-workspace-footer-inner">
         <template v-if="lifecycle !== 'succeeded'">
-          <slot name="actions">
+          <template v-if="preferDefaultActions || !$slots.actions">
             <AppButton
               data-testid="action-workspace-submit"
               class="action-workspace-submit"
@@ -111,7 +111,8 @@
             >
               {{ lifecycle === 'submitting' ? '提交中' : submitLabel }}
             </AppButton>
-          </slot>
+          </template>
+          <slot v-else name="actions" />
         </template>
         <template v-else>
           <slot name="success-actions" />
@@ -137,6 +138,10 @@ const props = defineProps<{
   /** Presentation only: the first quotation repair-part stage, not Workflow state. */
   readonly compactQuoteEntry?: boolean
   readonly demoSurvey?: boolean
+  /** Render the shell-owned submit action even when a conditional named slot exists. */
+  readonly preferDefaultActions?: boolean
+  /** H5 uni-page-head occupies 44px outside the workspace's own viewport. */
+  readonly h5NavigationFit?: boolean
   readonly customerName?: string
   readonly serviceAddress?: string
   readonly serviceDistrict?: string
@@ -258,9 +263,10 @@ defineEmits<{
 
 /* Survey-only S01 commercial work-order context; do not change accepted Appointment. */
 /* #ifdef H5 */
-/* uni-page-head uses a 44px H5 navigation bar above the page body.
-   Survey-only subtraction keeps the approved S01 bottom actions inside
-   the visible viewport. Native MP/App preserve the original page height. */
+/* uni-page-head occupies 44px above the H5 business page. Appointment,
+   confirmation and Survey must fit their bottom actions below that header.
+   Native MP/App preserve their independently managed viewport height. */
+.action-workspace-page--h5-navigation-fit { height: calc(100vh - 44px); }
 .action-workspace-page--survey { height:calc(100vh - 44px); }
 /* #endif */
 .action-workspace-page--survey .action-workspace-body { padding-top:16rpx; }

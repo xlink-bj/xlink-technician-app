@@ -37,6 +37,13 @@
         <text v-if="selectedCount > 0" class="survey-leakage-cause__selected-text">{{ selectedLabels }}</text>
         <text v-else class="survey-leakage-cause__empty">未选择渗漏原因</text>
       </view>
+      <AppStatus
+        v-if="selectionError && !isOpen"
+        :message="selectionError"
+        tone="warning"
+        icon="warning"
+        quiet
+      />
 
       <view v-if="isOpen" class="survey-leakage-cause__backdrop">
         <view class="survey-leakage-cause__sheet" data-testid="survey-leakage-cause-panel">
@@ -124,6 +131,13 @@
               </view>
               <text v-else class="survey-leakage-cause__selected-empty">尚未选择渗漏原因</text>
             </view>
+            <AppStatus
+              v-if="selectionError"
+              :message="selectionError"
+              tone="warning"
+              icon="warning"
+              quiet
+            />
             <AppButton class="survey-leakage-cause__done" variant="primary" block
               :disabled="workspace.lifecycle === 'submitting'" @tap="confirm">
               确认选择
@@ -147,6 +161,7 @@ import AppStatus from '@shared/ui/AppStatus.vue'
 const workspace = useActionWorkspaceStore()
 const isOpen = ref(false)
 const draftIds = ref<readonly string[]>([])
+const selectionError = ref<string | null>(null)
 const draftChoices = computed(() => {
   const chosen = new Set(draftIds.value)
   return workspace.surveyLeakageCauseOptions
@@ -170,6 +185,7 @@ watch(
 )
 
 async function open(): Promise<void> {
+  selectionError.value = null
   draftIds.value = [...workspace.surveyLeakageCauseSelectedIds]
   isOpen.value = true
   const result = await workspace.loadSurveyLeakageCauseOptions()
@@ -179,6 +195,7 @@ async function open(): Promise<void> {
 function close(): void {
   isOpen.value = false
   draftIds.value = []
+  selectionError.value = null
 }
 
 function clearDraft(): void {
@@ -186,8 +203,19 @@ function clearDraft(): void {
 }
 
 function confirm(): void {
-  if (workspace.lifecycle === 'submitting' || workspace.surveyLeakageCauseReadOnly) return
-  workspace.setSurveyLeakageCauseSelection(draftIds.value)
+  // A native tap can arrive again after the first confirm closes this sheet.
+  // Ignore that stale duplicate instead of applying the now-cleared draft.
+  if (!isOpen.value || workspace.lifecycle === 'submitting' || workspace.surveyLeakageCauseReadOnly) return
+  const result = workspace.setSurveyLeakageCauseSelection(draftIds.value)
+  if (result.state !== 'succeeded') {
+    if (result.error?.category === 'session_invalid') {
+      close()
+      selectionError.value = '账号或角色已变化，请重新进入工单后继续。'
+    } else {
+      selectionError.value = '渗漏原因未能应用。所选内容仍保留在当前面板，请检查后重试。'
+    }
+    return
+  }
   close()
 }
 
@@ -208,6 +236,7 @@ function isSelected(value: string): boolean {
 }
 
 function toggleOption(value: string): void {
+  selectionError.value = null
   const next = new Set(draftIds.value)
   if (next.has(value)) next.delete(value)
   else next.add(value)

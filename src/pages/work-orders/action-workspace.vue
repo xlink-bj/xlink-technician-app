@@ -82,6 +82,8 @@
     :customer-name="workspace.detail?.customerName"
     :display-number="workspace.detail?.displayNumber"
     :commercial-survey="workspace.descriptor.formPurpose === 'survey'"
+    :h5-navigation-fit="Boolean(workspace.appointmentForm)"
+    :prefer-default-actions="Boolean(workspace.appointmentForm)"
     :demo-survey="Boolean(localJourneyContext)"
     :lifecycle="workspace.lifecycle"
     :draft-status="workspace.draftStatus"

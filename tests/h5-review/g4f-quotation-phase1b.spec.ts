@@ -203,7 +203,8 @@ test('Phase 1E package detail displays only observed child data grouped by suppl
   await expect(page.getByTestId('quotation-catalog-kind-package')).toBeVisible()
   await expect(page.getByTestId('quotation-catalog-item-package-mock-catalog-package-basic')).toContainText('平屋面节点防水维修套餐')
   await page.getByTestId('quotation-package-detail-mock-catalog-package-basic').click()
-  await expect(page.getByTestId('quotation-package-detail')).toContainText('配置已加入目标维修部位组草稿，尚未提交正式报价')
+  await expect(page.getByTestId('quotation-package-detail')).toContainText('选择材料后确认加入当前维修部位组，尚未提交正式报价')
+  await expect(page.getByTestId('quotation-package-detail')).toContainText('0/2 个材料层级已选')
   await expect(page.getByTestId('quotation-material-layer-string:mock-layer-1')).toContainText('材料层级 1')
   await expect(page.getByTestId('quotation-material-layer-string:mock-layer-1')).not.toContainText('mock-layer-1')
   await expect(page.getByTestId('quotation-composition-selection')).toHaveCount(0)
@@ -215,7 +216,8 @@ test('Phase 1E package detail displays only observed child data grouped by suppl
 test('Phase 1G configures a Package locally after exactly one Material is chosen per supplied layer', async ({ page }) => {
   const diagnostics = await installSafetyGuards(page)
   await openPackageConfigurationFromEditableGroup(page)
-  await expect(page.getByTestId('quotation-package-detail')).toContainText('配置已加入目标维修部位组草稿，尚未提交正式报价')
+  await expect(page.getByTestId('quotation-package-detail')).toContainText('选择材料后确认加入当前维修部位组，尚未提交正式报价')
+  await expect(page.getByTestId('quotation-package-detail')).toContainText('0/2 个材料层级已选')
   await expect(page.getByTestId('quotation-package-material-choice-string:mock-layer-1-0')).toBeEnabled()
   await expect(page.getByTestId('quotation-package-material-choice-number:2-0')).toBeEnabled()
 
