@@ -37,7 +37,7 @@ import { createUniMediaCaptureDriver, createUniMediaFilePickerDriver } from '@ad
 import { createUniLocationDriver } from '@adapters/platform/uni-location-driver'
 import { createUniUploadPort } from '@adapters/upload/uni-upload-port'
 import { createUniDurableMediaStore } from '@adapters/storage/uni-durable-media-store'
-import { createMediaQueueRepository, createMediaUploadQueue } from '@runtimes/media'
+import { createMediaQueueRepository, createMediaUploadQueue, InMemoryDurableMediaStore } from '@runtimes/media'
 import { createMockMediaPostUploadProcessor } from '@runtimes/media'
 import { createDisabledRealMediaPostUploadProcessor } from '@adapters/upload/uni-media-post-upload-processor'
 import { createSurveyLeakageCauseProvider } from '@adapters/api/survey-leakage-cause'
@@ -47,6 +47,12 @@ import { isBusinessMockMode, isDevSyntheticContractReadPreviewEnabled } from './
 
 function configurationFailure<T>(message: string): OperationSnapshot<T> {
   return { state: 'failed_terminal', error: createOperationError('server_terminal', message) }
+}
+
+function isDevSyntheticH5MediaQa(): boolean {
+  return import.meta.env.DEV === true
+    && import.meta.env.VITE_XLINK_H5_MOCK_E2E === 'true'
+    && isBusinessMockMode() === 'data'
 }
 
 export function createConfigurationBlockedAuthSession(issues: readonly string[]): AuthSessionPort {
@@ -328,11 +334,28 @@ export function createDefaultUploadPort(authSession: AuthSessionPort): UploadPor
       upload: async () => configurationFailure('Upload configuration is unavailable'),
     }
   }
-  return createUniUploadPort(createUniApiCommandTransport({
+  const upload = createUniUploadPort(createUniApiCommandTransport({
     apiBaseUrl: config.value.environment.apiBaseUrl,
     blockRealRequests: config.value.authOnlyMockBusiness,
     getSessionRef: () => authSession.getCurrentSession()?.sessionRef ?? null,
   }))
+  if (!isDevSyntheticH5MediaQa()) return upload
+  // One-shot failure injection lives only in the synthetic H5 test runner.
+  // It exercises the real queue retry path without a server, UI debug toggle,
+  // or any behavior change in a non-QA build.
+  return {
+    upload: (media) => {
+      const faultKey = 'xlink:e2e:fail-next-media-upload'
+      if (window.sessionStorage.getItem(faultKey) === 'retryable') {
+        window.sessionStorage.removeItem(faultKey)
+        return Promise.resolve({
+          state: 'failed_retryable',
+          error: createOperationError('network_retryable', 'Synthetic H5 QA: upload failed once'),
+        })
+      }
+      return upload.upload(media)
+    },
+  }
 }
 
 export function createDefaultMediaPostUploadProcessor(): MediaPostUploadProcessorPort {
@@ -346,8 +369,12 @@ export function createDefaultMediaUploadQueue(
   upload: UploadPort,
   postUploadProcessor: MediaPostUploadProcessorPort = createDefaultMediaPostUploadProcessor(),
 ): MediaUploadQueuePort {
+  // DCloud H5 currently leaves native durable-file APIs unsupported.
+  // Exercise the REAL UI, picker, queue, upload and draft behavior in the
+  // explicitly isolated DEV synthetic H5 E2E runner; keep the native durable
+  // media adapter unchanged for MP and every non-QA build.
   return createMediaUploadQueue(
-    createUniDurableMediaStore(storage),
+    isDevSyntheticH5MediaQa() ? new InMemoryDurableMediaStore() : createUniDurableMediaStore(storage),
     createMediaQueueRepository(storage),
     upload,
     { postUploadProcessor },
