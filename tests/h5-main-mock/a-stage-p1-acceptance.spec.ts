@@ -175,9 +175,22 @@ test.describe('A-stage P1 real-H5 operator acceptance', () => {
       await expect(page.getByTestId('quotation-hub-order-mock-official-order-019-protocol'))
         .not.toContainText(/体验数据|Mock|未提交后台/)
       await page.getByTestId('quotation-hub-start-new').click()
-      await expect(page.getByTestId('a-stage-order-readback')).toBeVisible()
-      await expect(page.getByTestId('a-stage-order-create')).toHaveCount(0)
-      await expect(page.getByText('订单已提交并完成服务器核对。')).toHaveCount(0)
+      // Source choice is intentional: a hydrated local draft resumes the
+      // editor, while a clean state opens the explicit new-draft chooser.
+      // Neither is an automatic second Order write or another readback card.
+      const chooser = page.getByTestId('quotation-hub-mode')
+      const editor = page.getByTestId('a-stage-mock-order-panel')
+      await expect(chooser.or(editor)).toBeVisible()
+      if (await chooser.isVisible()) {
+        await expect(page.getByTestId('quotation-hub-mode-new')).toBeVisible()
+        await page.getByTestId('quotation-hub-mode-cancel').click()
+      } else {
+        await expect(editor).toBeVisible()
+        await page.reload({ waitUntil: 'domcontentloaded' })
+      }
+      const officialOrder = page.getByTestId('quotation-hub-order-mock-official-order-019-protocol')
+      await expect(officialOrder).toBeVisible()
+      await expect(officialOrder).toHaveCount(1)
       await info.attach(`a-p1-order-readback-${viewport.width}`, {
         body: await page.screenshot({ fullPage: true }), contentType: 'image/png',
       })
