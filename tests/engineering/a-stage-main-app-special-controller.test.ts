@@ -6,7 +6,8 @@ import * as r1SpecialTransport from '@adapters/api/mock/r1-special-protocol'
 import {
   createAStageSpecialMockController, type AStageMockActor,
 } from '@app/a-stage-special-mock-ui'
-import { mockR1FormsWorkOrderId, mockR1RepeatWorkOrderId } from '@adapters/api/mock/fixtures'
+import { mockR1FormsWorkOrderId, mockR1RepeatWorkOrderId,
+  mockSyntheticDynamicFormDefinitionId } from '@adapters/api/mock/fixtures'
 import type { StoragePort, StorageKey } from '@shared/ports'
 
 const memory = new Map<string, unknown>()
@@ -58,6 +59,63 @@ function controller(kind: 'forms' | 'repeat', getActor = () => actor,
 }
 
 describe('A main-App source-only multi-form/repeat controller', () => {
+  it('Stage 1B forms Save→full EXTS→Process re-reads FormData and workflow before clearing the receipt', async () => {
+    const dispatched: string[] = []
+    const original = r1SpecialTransport.tryMockR1SpecialCommand
+    vi.spyOn(r1SpecialTransport, 'tryMockR1SpecialCommand').mockImplementation(async (...args) => {
+      dispatched.push(args[0].path)
+      return original(...args)
+    })
+    const ui = controller('forms')
+    expect(await ui.execute({ kind: 'save_finish', summary: 'Stage1B 屋面完成记录' }))
+      .toMatchObject({ state: 'succeeded', view: { nodeActive: false, receiptPending: false } })
+    expect(dispatched).toEqual([
+      `biz/extForm/upsert/${mockSyntheticDynamicFormDefinitionId}`,
+      'workflowNode/updateExts/mock-workflow-node-020-forms',
+      'workflow/process',
+    ])
+    resetMockCommandState()
+    const state = await controller('forms').load()
+    expect(state.nodeActive).toBe(false)
+    expect(state.receiptPending).toBe(false)
+    expect(state.entries.some(row => row.summary === 'Stage1B 屋面完成记录')).toBe(true)
+    expect((await ui.execute({ kind: 'save_finish', summary: '不得重复发送' })).state).toBe('blocked')
+    expect(dispatched).toHaveLength(3)
+  })
+
+  it('Stage 1B completion retains a durable fence when final FormData readback disagrees', async () => {
+    const transport = await import('@adapters/api/mock/router')
+    const actual = transport.tryMockRead
+    let corrupt = true
+    vi.spyOn(transport, 'tryMockRead').mockImplementation(async (...args) => {
+      const result = await actual(...args)
+      if (corrupt && args[0].startsWith('biz/extForm/query/')
+        && typeof args[1]?.['is:_id|string#and'] === 'string') {
+        const raw = result as { data?: Record<string, unknown>[] }
+        if (raw.data?.[0]?.inspectionSummary === 'Stage1B 原始文本') return {
+          ...raw, data: [{ ...raw.data[0], inspectionSummary: '读到不一致的值' }],
+        }
+      }
+      return result
+    })
+    const ui = controller('forms')
+    expect((await ui.execute({ kind: 'save_finish', summary: 'Stage1B 原始文本' })).state).toBe('uncertain')
+    expect(await ui.load()).toMatchObject({ receiptPending: true,
+      pendingRecoverable: true, nodeActive: false })
+    expect((await ui.execute({ kind: 'save', summary: '不得重发' })).state).toBe('blocked')
+    expect((await ui.recoverCompleted('错误的现场情况')).state).toBe('uncertain')
+    corrupt = false
+    resetMockCommandState()
+    expect(await controller('forms').recoverCompleted('Stage1B 原始文本'))
+      .toMatchObject({ state: 'succeeded', view: { receiptPending: false } })
+  })
+
+  it('Stage 1B rejects a Save→Process shortcut on repeat (repeat uses CSV doProcess)', async () => {
+    expect(await controller('repeat').execute({ kind: 'save_finish', summary: '不能走 forms 分支' }))
+      .toMatchObject({ state: 'blocked' })
+    expect((await controller('repeat').load()).entries.every(row => !row.editable)).toBe(true)
+  })
+
   it('forms: page saves, edits, soft-deletes and finalizes through real source transaction receipts', async () => {
     const ui = controller('forms')
     expect((await ui.load()).entries).toHaveLength(2)

@@ -11,6 +11,7 @@ import { executeR1Stage1FunctionalCandidate, type R1Stage1Intent } from './r1-st
 import {
   inspectR1MultiStepReceipt, closeCompletedR1ReceiptAfterReadback,
   closeCompletedR1MutationReceiptAfterReadback, type R1MultiStepScope,
+  type R1MultiStepReceipt,
 } from '@features/work-orders/r1-multistep-offline-transaction'
 import type { StoragePort } from '@shared/ports'
 import { createDefaultStoragePort } from './composition'
@@ -119,6 +120,35 @@ export function createAStageSpecialMockController(options: {
     }
   }
 
+  /** A Process ACK is not completion. Re-fetch workflow and the bounded
+   * record list; for Save→Process also compare the saved FormData payload.
+   * No optimistic UI or receipt release before all independent reads agree. */
+  async function confirmProcessed(
+    s: R1MultiStepScope, receipt: R1MultiStepReceipt, savedSummary?: string,
+  ): Promise<boolean> {
+    const node = await rawDetail(kind)
+    if (node.state !== 10 || !authorized()) return false
+    const records = kind === 'forms' ? object(node.exts)?.formList : await scopedForms('repeat')
+    if (!Array.isArray(records) || records.length > 100) return false
+    const activeIds = records.filter(row => object(row)?.state === 1)
+      .map(row => object(row)?._id)
+    if (!receipt.savedFormDataIds.length || receipt.savedFormDataIds.some(id => !activeIds.includes(id))) return false
+    if (savedSummary !== undefined) {
+      const id = receipt.savedFormDataIds[0]
+      if (receipt.savedFormDataIds.length !== 1 || !id || !savedSummary.trim()) return false
+      const [record] = await scopedForms(kind, id)
+      if (!record || record._id !== id || record.sid !== s.workOrderId
+        || record.nodeId !== s.runtimeNodeId || record.workflowId !== s.workflowRunId
+        || record.state !== 1 || record.inspectionSummary !== savedSummary) return false
+    }
+    if (!authorized()) return false
+    return closeCompletedR1ReceiptAfterReadback(options.storage, s, {
+      workOrderId: s.workOrderId, runtimeNodeId: s.runtimeNodeId,
+      sourceNodeType: kind, savedFormDataIds: receipt.savedFormDataIds,
+      workflowCompleted: true,
+    })
+  }
+
   /** Resume only LOCAL receipt reconciliation. This performs fresh Mock reads
    * but never dispatches a FormData, EXTS, remove or Process command. A
    * may-have-dispatched ACK can NEVER be converted into safe-to-retry here. */
@@ -134,16 +164,15 @@ export function createAStageSpecialMockController(options: {
       const receipt = found.data
       if (receipt.state !== 'completed') return { state: 'uncertain',
         message: '已有步骤可能执行，但未获得完整 ACK；无法自动消除防重复提交保护。' }
-      const node = await rawDetail(kind)
       if (!authorized()) return { state: 'blocked', message: '读取期间角色发生变化。' }
       const saving = ['form_upsert', 'repeat_form_upsert'].includes(receipt.steps[0] ?? '')
       const deleting = ['forms_soft_delete', 'repeat_remove'].some(step => receipt.steps.includes(step as typeof receipt.steps[number]))
       let closed = false
       if (receipt.steps.includes('workflow_process')) {
-        closed = node.state === 10 && await closeCompletedR1ReceiptAfterReadback(options.storage, s,
-          { workOrderId: s.workOrderId, runtimeNodeId: s.runtimeNodeId,
-            sourceNodeType: kind, savedFormDataIds: receipt.savedFormDataIds,
-            workflowCompleted: true })
+        if (saving && (!originalSummary.trim() || originalSummary.length > 4000)) return {
+          state: 'blocked', message: '请填写原保存的现场情况，核对后才能解除保护。',
+        }
+        closed = await confirmProcessed(s, receipt, saving ? originalSummary.trim() : undefined)
       } else if (saving || deleting) {
         const id = saving ? receipt.savedFormDataIds[0] : receipt.targetFormDataId
         if (!id) return { state: 'uncertain', message: '回执缺少可核验记录 ID，不能清理。' }
@@ -153,6 +182,7 @@ export function createAStageSpecialMockController(options: {
         }
         const record = (await scopedForms(kind, id))[0]
         const rows = kind === 'repeat' ? await scopedForms('repeat') : []
+        const node = await rawDetail(kind)
         if (!authorized()) return { state: 'blocked', message: '回查期间身份已变化。' }
         closed = await closeCompletedR1MutationReceiptAfterReadback(options.storage, s, {
           workOrderId: s.workOrderId, runtimeNodeId: s.runtimeNodeId,
@@ -186,10 +216,12 @@ export function createAStageSpecialMockController(options: {
       const summary = 'summary' in action ? action.summary.trim() : ''
       if ('summary' in action && (!summary || summary.length > 4000)) return { state: 'blocked',
         message: '请填写现场情况（最多 4000 字）。' }
-      if (action.kind === 'save') {
+      if (action.kind === 'save' || action.kind === 'save_finish') {
+        if (action.kind === 'save_finish' && kind !== 'forms') return { state: 'blocked',
+          message: '只有 forms 节点支持保存后立即完成。' }
         if (kind === 'forms') intent = { kind: 'forms_save', sourceNodeType: 'forms', scope: s,
           fields: { inspectionSummary: summary }, title: (action.title || '现场记录').trim(),
-          authoritativeExts: object(node.exts) ?? {}, processActive: false }
+          authoritativeExts: object(node.exts) ?? {}, processActive: action.kind === 'save_finish' }
         else intent = { kind: 'repeat_save', sourceNodeType: 'repeat', scope: s,
           fields: { inspectionSummary: summary } }
       } else if (action.kind === 'edit' || action.kind === 'delete') {
@@ -239,18 +271,16 @@ export function createAStageSpecialMockController(options: {
         message: '请求未完成或回执丢失。请核对当前 Mock 记录，不要重复提交。' }
       if (!authorized()) return { state: 'uncertain', message: '角色已变化，已保留回执，禁止重试。' }
       const receipt = result.data
-      const after = await rawDetail(kind)
       let reconciled = false
-      if (action.kind === 'finish') {
-        reconciled = after.state === 10 && await closeCompletedR1ReceiptAfterReadback(options.storage, s,
-          { workOrderId: s.workOrderId, runtimeNodeId: s.runtimeNodeId,
-            sourceNodeType: kind, savedFormDataIds: receipt.savedFormDataIds,
-            workflowCompleted: true })
+      if (action.kind === 'finish' || action.kind === 'save_finish') {
+        reconciled = await confirmProcessed(s, receipt,
+          action.kind === 'save_finish' ? summary : undefined)
       } else {
+        const after = await rawDetail(kind)
         const id = action.kind === 'save' || action.kind === 'edit'
           ? receipt.savedFormDataIds[0] : action.id
         const record = id ? (await scopedForms(kind, id))[0] : undefined
-        const rows = await scopedForms('repeat')
+        const rows = kind === 'repeat' ? await scopedForms('repeat') : []
         reconciled = await closeCompletedR1MutationReceiptAfterReadback(options.storage, s, {
           workOrderId: s.workOrderId, runtimeNodeId: s.runtimeNodeId,
           formDefinitionId: definition, workflowRunId: s.workflowRunId,

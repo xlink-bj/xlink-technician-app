@@ -2,6 +2,8 @@ export type AStageSpecialKind = 'forms' | 'repeat'
 export interface AStageMockActor { readonly userId: string; readonly roleId: string; readonly identity: string }
 export type AStageSpecialAction =
   | { readonly kind: 'save'; readonly summary: string; readonly title?: string }
+  /** R1 forms process(formDataId): Save → full EXTS → Process, as one fenced transaction. */
+  | { readonly kind: 'save_finish'; readonly summary: string; readonly title?: string }
   | { readonly kind: 'edit'; readonly id: string; readonly summary: string; readonly title?: string }
   | { readonly kind: 'delete'; readonly id: string }
   | { readonly kind: 'finish' }

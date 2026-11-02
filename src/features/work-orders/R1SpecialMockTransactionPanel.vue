@@ -81,6 +81,18 @@
               data-testid="a-special-save" @tap="save">{{ editingId ? '保存修改' : '保存记录' }}</AppButton>
             <AppButton v-if="editingId" variant="text" :disabled="busy" @tap="cancelEdit">取消</AppButton>
           </view>
+          <view v-if="kind === 'forms' && !editingId" class="special-forms__finish">
+            <text class="special-forms__finish-copy">也可将本条记录保存后立即完成节点；确认后不可继续编辑。</text>
+            <AppButton v-if="!confirmSaveFinish" variant="secondary" block
+              :disabled="busy || !summary.trim()" data-testid="a-special-save-finish-request"
+              @tap="confirmSaveFinish = true">保存并完成节点</AppButton>
+            <view v-else class="special-forms__confirmation">
+              <text>确认保存本条记录，并立即完成当前节点？</text>
+              <AppButton :disabled="busy || !summary.trim()" data-testid="a-special-save-finish-confirm"
+                @tap="run({ kind: 'save_finish', summary })">确认保存并完成</AppButton>
+              <AppButton variant="text" :disabled="busy" @tap="confirmSaveFinish = false">返回检查</AppButton>
+            </view>
+          </view>
         </view>
         <view class="special-forms__finish">
           <text class="special-forms__finish-copy">{{ canFinish ? '确认记录齐全后可以完成；完成后不可再编辑。' : '请先保存至少一条有效记录。' }}</text>
@@ -127,6 +139,7 @@ const summary = ref('')
 const editingId = ref<string | null>(null)
 const confirmDeleteId = ref<string | null>(null)
 const confirmFinish = ref(false)
+const confirmSaveFinish = ref(false)
 const canFinish = computed(() => Boolean(viewState.value?.entries.some(row =>
   row.state === 'active' && (props.kind === 'forms' || row.editable))))
 let revision = 0
@@ -166,6 +179,7 @@ watch(() => [props.kind, props.workOrderId, props.node.id,
   editingId.value = null
   confirmDeleteId.value = null
   confirmFinish.value = false
+  confirmSaveFinish.value = false
   controller = props.createController({ kind: props.kind,
     workOrderId: props.workOrderId, getActor: actor })
   void refresh()
@@ -178,6 +192,7 @@ function edit(id: string): void {
   summary.value = row.summary
   confirmDeleteId.value = null
   confirmFinish.value = false
+  confirmSaveFinish.value = false
 }
 function cancelEdit(): void { editingId.value = null; summary.value = '' }
 async function save(): Promise<void> {
@@ -205,6 +220,7 @@ async function run(action: AStageSpecialAction): Promise<void> {
     cancelEdit()
     confirmDeleteId.value = null
     confirmFinish.value = false
+    confirmSaveFinish.value = false
     emit('changed')
   } finally { if (ticket === revision) busy.value = false }
 }

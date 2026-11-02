@@ -63,6 +63,37 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
+  stage1b-mock-h5:
+    # Stage 1B source-specific Process is an automatic main-HEAD browser gate,
+    # while the broader L3/Owner/device visual acceptance remains separate.
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      VITE_XLINK_R1_MP_UX_FIXTURES: 'true'
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Verify Stage 1B exact Save→EXTS→Process at 430×932 with zero external requests
+        run: pnpm exec playwright test --config config/playwright/main-h5-mock.config.ts tests/h5-main-mock/stage1b-r1-forms-after-save.spec.ts
+      - name: Verify forms/repeat CRUD→Process readback at two additional mobile widths
+        run: pnpm exec playwright test --config config/playwright/main-h5-mock.config.ts tests/h5-main-mock/a-stage-p1-acceptance.spec.ts --grep '020 forms|021 repeat'
+      - name: Preserve Stage 1B offline H5 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stage1b-main-h5-${{ github.run_id }}
+          path: test-results/main-h5-mock/
+          if-no-files-found: warn
+          retention-days: 7
+
   h5-ux:
     # L3 nightly/manual or explicitly marked high-risk PR; ordinary PR/main events keep a skipped check context.
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && startsWith(github.event.pull_request.title, '[L3-H5]'))
