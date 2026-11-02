@@ -46,10 +46,19 @@ Focused H5 regression uses the **existing** `playwright.main-h5-mock.config.ts` 
 
 The opt-in MOCK-021 repeat main-App case needs `VITE_XLINK_R1_MP_UX_FIXTURES=true`; when not enabled, report SKIP separately. A targeted PASS does not prove the full `test:main-h5-mock` suite, an MP build does not prove device UX, and old PR screenshots do not rebaseline current visuals.
 
+
+## 3A. Local Mac single-root / stable WeChat DevTools (2026-11-02)
+
+- Operational repo: `/Users/yesun/Code/xlink-technician-app` (the only local App checkout). Every task first verifies `pwd -P`, `git rev-parse --show-toplevel`, `git branch --show-current`, `git rev-parse HEAD`, and `git status --short`. Do not create a task worktree or source copy under `/private/tmp` or Codex worktrees.
+- Run `pnpm run dev:mp-weixin:mock-ux` **inside this root**, with DEV synthetic network/write fences. Reuse the resulting root-local output (normally `dist/dev/mp-weixin`, subject to the UniApp CLI output log). Open that exact absolute directory in WeChat DevTools; if the existing imported project path points elsewhere, close and re-import it. Do not point DevTools at review-only or old temporary builds.
+- Maintain one active watcher and one canonical DevTools project. Confirm current source/build timestamp and simulator at the approved 430×932 viewport; record root/path, branch, HEAD, mode and screenshot evidence together. H5/mock/release compilers are different gates and do not substitute for native MP.
+- A short-lived review branch, if necessary, is checked out in this **same stable directory** after preserving/committing work safely; no separate worktree. Once reviewed/approved, integrate into `main` and return the same checkout to `main`. Never merge or deploy merely because the local build passes.
+- Do not delete existing worktrees or evidence as part of migration; list them and request a separate precise cleanup decision. Tests may write ignored artifacts under this root without turning them into new App projects.
+
 ## 4. Verification, ownership and handoff
 
 - ChatGPT / Codex may do local/static tests, real H5 browser verification and GitHub CI where available. Use Mac + WeChat DevTools when the platform itself is the subject; use physical device evidence for field-worker ergonomics.
-- On a dirty or occupied checkout, stop before reset/clean/checkout. Use an approved isolated worktree if available. Do not overwrite any local development edits.
+- On a dirty or occupied canonical checkout, **stop and coordinate** before reset/clean/checkout. The 2026-11-02 Owner decision forbids using an isolated local worktree or temporary clone as the workaround for current App development. Never overwrite another person's or Codex session's edits.
 - For browser QA, capture actual App screen, viewport, scenario/state and failure diagnostics; exclude user PII, session tokens, phones and credentials. Network error count and unintended business intents are acceptance criteria.
 - For CSS debt, modify the **current main** component owners, preserve import order and accepted Q01/Q03 final baselines, and obey `scripts/ci/commercial-css-ownership.mjs` no-growth caps. The current legacy repeated-selector budget includes responsive overrides: it is **not** a list of dead rules to delete.
 - For any integration, record exact main/head SHA, all required GitHub CI checks, test coverage and skips, visual approval status, and a rollback path. No auto-merge or deploy is implied by a green unit test.
