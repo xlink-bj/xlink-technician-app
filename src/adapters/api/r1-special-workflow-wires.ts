@@ -70,6 +70,9 @@ export function r1SpecialFormUpsert(input: {
   readonly sourceNodeType: 'forms' | 'repeat'
   readonly definitionId: FormDefinitionId
   readonly formData: Readonly<Record<string, string | number | boolean | readonly string[]>>
+  /** Optional fields explicitly cleared from a full existing R1 FormData.
+   * JSON omission in a full upsert; never encode a null magic value. */
+  readonly clearedFieldKeys?: readonly string[]
   /** Full, same-record R1 source snapshot is mandatory for an existing row.
    * A projected FormDataRead.values map is NOT a full update payload. */
   readonly authoritativeOriginal?: Readonly<Record<string, unknown>>
@@ -95,6 +98,14 @@ export function r1SpecialFormUpsert(input: {
       || (Array.isArray(value)&&value.length>0&&value.length<=30
         && value.every(part=>typeof part==='string'&&part.length>0&&part.length<=256))))
       throw new Error('R1 form field value requires a supported bounded scalar or path array')
+  }
+  const cleared = input.clearedFieldKeys ?? []
+  if (cleared.length > 50 || new Set(cleared).size !== cleared.length
+    || (cleared.length > 0 && !input.existingFormDataId)
+    || cleared.some(key => !key.trim() || key.length > 120
+      || forbidden.has(key) || ['__proto__', 'prototype', 'constructor'].includes(key)
+      || Object.hasOwn(input.formData, key))) {
+    throw new Error('Invalid R1 optional-field clearing intent')
   }
   let original: Record<string, unknown> = {}
   if (input.existingFormDataId) {
@@ -127,6 +138,21 @@ export function r1SpecialFormUpsert(input: {
       throw new Error('Authoritative saved FormData workflowId mismatch')
   } else if (input.authoritativeOriginal !== undefined) {
     throw new Error('New R1 FormData must not reuse an existing source record')
+  }
+  if (cleared.length > 0) {
+    const exts=original.exts
+    if (!exts || typeof exts !== 'object' || Array.isArray(exts)) {
+      throw new Error('Clearing requires the authoritative original field object')
+    }
+    const nextExts = { ...exts as Record<string, unknown> }
+    for (const key of cleared) {
+      if (!Object.hasOwn(original, key) || !Object.hasOwn(nextExts, key)) {
+        throw new Error('Clearing requires an existing exact source field')
+      }
+      delete original[key]
+      delete nextExts[key]
+    }
+    original.exts = nextExts
   }
   const data={...original,...input.formData,sid:input.workOrderId,smodule:'serviceAppointment',
     nodeId:input.workflowNodeId,...(input.workflowRunId?{workflowId:input.workflowRunId}:{}),
