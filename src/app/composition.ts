@@ -52,7 +52,8 @@ function configurationFailure<T>(message: string): OperationSnapshot<T> {
 }
 
 function isDevSyntheticH5MediaQa(): boolean {
-  return import.meta.env.DEV === true
+  return typeof window !== 'undefined'
+    && import.meta.env.DEV === true
     && import.meta.env.VITE_XLINK_H5_MOCK_E2E === 'true'
     && isBusinessMockMode() === 'data'
 }
