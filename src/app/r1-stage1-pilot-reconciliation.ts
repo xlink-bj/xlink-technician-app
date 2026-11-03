@@ -145,6 +145,7 @@ export function createR1Stage1PilotExecution(options: R1PilotExecutionOptions) {
     scope: R1MultiStepScope,
     location: R1PilotNodeLocation,
     expectedFields?: Readonly<Record<string, string | number | boolean | readonly string[]>>,
+    expectedAbsentKeys?: readonly string[],
   ): Promise<R1PilotReadbackResult> {
     if (!authorized(scope)) return result('not_authorized', '当前角色或隔离 Pilot 授权已失效。')
     const receipt = await inspectR1MultiStepReceipt(options.storage, scope)
@@ -198,11 +199,11 @@ export function createR1Stage1PilotExecution(options: R1PilotExecutionOptions) {
       }
       const saved = recorded.steps[0] === 'form_upsert'
         || recorded.steps[0] === 'repeat_form_upsert'
-      if (saved && (!expectedFields || Object.keys(expectedFields).length === 0)) {
+      if (saved && (!expectedFields || (Object.keys(expectedFields).length === 0 && !expectedAbsentKeys?.length))) {
         return result('awaiting_readback', '保存核验缺少本次瞬态字段，禁止仅凭 ACK 解除防重放锁。')
       }
       const closed = await closeCompletedR1MutationReceiptAfterReadback(options.storage, scope, {
-        ...evidence, ...(saved ? { expectedFields } : {}),
+        ...evidence, ...(saved ? { expectedFields, expectedAbsentKeys } : {}),
       })
       return closed ? result('verified', 'R1 保存/删除已完成服务端双重核验。')
         : result('awaiting_readback', '回读字段或身份未通过校验。')
@@ -222,7 +223,8 @@ export function createR1Stage1PilotExecution(options: R1PilotExecutionOptions) {
       return result('manual_reconciliation', '事务未完成或结果不明，不得自动重复提交。')
     }
     return reconcile(intent.scope, location,
-      intent.kind === 'forms_save' || intent.kind === 'repeat_save' ? intent.fields : undefined)
+      intent.kind === 'forms_save' || intent.kind === 'repeat_save' ? intent.fields : undefined,
+      intent.kind === 'forms_save' || intent.kind === 'repeat_save' ? intent.clearedFieldKeys : undefined)
   }
 
   return { execute, reconcile }
