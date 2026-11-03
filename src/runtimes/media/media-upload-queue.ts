@@ -165,6 +165,11 @@ export class MediaUploadQueue implements MediaUploadQueuePort {
     const task = current.data
     if (task.state === 'uploaded') return { state: 'succeeded', data: task }
     if (task.state === 'failed_terminal') return operationFailure(task, task.lastError ?? createOperationError('server_terminal', 'Media upload task is terminal'))
+    // Failed tasks require the explicit retry() transition. Recovery/process
+    // must not re-dispatch an ambiguous upload or watermark operation.
+    if (task.state === 'failed_retryable') {
+      return operationFailure(task, task.lastError ?? createOperationError('network_retryable', 'Media upload requires explicit retry'))
+    }
     if (task.state === 'postprocessing') {
       const ambiguous = ambiguousPostprocessError()
       const marked = await this.update(task, { state: 'failed_retryable', lastError: ambiguous })
