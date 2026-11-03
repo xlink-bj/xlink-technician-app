@@ -4,7 +4,7 @@ import { isDevMockJourneyEnabled } from './journey'
 import { restoreMockR1SpecialState, updateMockR1SpecialState } from './r1-special-state'
 import {
   mockR1FormsWorkOrderId, mockR1RepeatWorkOrderId,
-  mockSyntheticDynamicFormDefinitionId,
+  mockSyntheticDynamicFormDefinitionId, mockR1NoteFormDefinitionId,
 } from './fixtures'
 
 type Kind = 'forms' | 'repeat'
@@ -32,9 +32,11 @@ function activeNode(kind: Kind): Record<string, unknown> | null {
 function same(a: unknown, b: unknown): boolean { return JSON.stringify(a) === JSON.stringify(b) }
 function denied(): unknown { return { success: false, code: 'TERMINAL', message: 'Synthetic special R1 command rejected' } }
 
-function saveSpecialForm(kind: Kind, serialized: unknown): unknown {
+function saveSpecialForm(kind: Kind, serialized: unknown, formDefId = mockSyntheticDynamicFormDefinitionId): unknown {
   const target = targets[kind]
-  if (!activeNode(kind) || typeof serialized !== 'string' || serialized.length > 200000) return denied()
+  if (!activeNode(kind) || typeof serialized !== 'string' || serialized.length > 200000
+    || (formDefId !== mockSyntheticDynamicFormDefinitionId
+      && !(kind === 'forms' && formDefId === mockR1NoteFormDefinitionId))) return denied()
   let data: Record<string, unknown> | null = null
   try { data = object(JSON.parse(serialized)) } catch { return denied() }
   if (!data || data.sid !== target.sid || data.smodule !== 'serviceAppointment'
@@ -46,8 +48,8 @@ function saveSpecialForm(kind: Kind, serialized: unknown): unknown {
     ? object(mockCommandState().formData.get(previousId)) : null
   if (previousId !== undefined && (!previous || previous.state !== 1
     || previous.sid !== target.sid || previous.nodeId !== target.node
-    || previous.workflowId !== target.run || data.extId !== mockSyntheticDynamicFormDefinitionId
-    || data.formDefId !== mockSyntheticDynamicFormDefinitionId
+    || previous.workflowId !== target.run || data.extId !== formDefId
+    || data.formDefId !== formDefId
     || !same(data.exts, previous.exts))) return denied()
   if (!previous && data.state !== 1) return denied()
   const fields = Object.entries(data).filter(([key]) =>
@@ -66,8 +68,8 @@ function saveSpecialForm(kind: Kind, serialized: unknown): unknown {
   const id = previous ? previousId as string : `${idPrefix}${sequence}`
   const saved = {
     ...(previous ?? {}),
-    _id: id, extId: mockSyntheticDynamicFormDefinitionId,
-    formDefId: mockSyntheticDynamicFormDefinitionId,
+    _id: id, extId: formDefId,
+    formDefId,
     sid: target.sid, smodule: 'serviceAppointment', nodeId: target.node,
     workflowId: target.run, state: data.state,
     ...Object.fromEntries(fields),
@@ -105,7 +107,7 @@ function updateFormsExts(request: ApiCommandRequest): unknown {
     if (!same(newRows.slice(0, -1), oldRows) || !appended || !saved
       || saved.sid !== targets.forms.sid || saved.nodeId !== targets.forms.node
       || saved.state !== 1 || appended.state !== 1
-      || appended.formDefId !== mockSyntheticDynamicFormDefinitionId) return denied()
+      || ![mockSyntheticDynamicFormDefinitionId, mockR1NoteFormDefinitionId].includes(String(appended.formDefId))) return denied()
   } else {
     const changed = oldRows.map((item, index) => same(item, newRows[index]) ? -1 : index)
       .filter((index) => index !== -1)
@@ -216,12 +218,14 @@ export async function tryMockR1SpecialCommand(
   if (actor.userId !== 'synthetic-user' || actor.roleId !== 'synthetic-role'
     || !authorizationCurrent()) return denied()
   if (!restoreMockR1SpecialState()) return denied()
-  if (request.path === `biz/extForm/upsert/${mockSyntheticDynamicFormDefinitionId}`) {
+  if (request.path === `biz/extForm/upsert/${mockSyntheticDynamicFormDefinitionId}`
+    || request.path === `biz/extForm/upsert/${mockR1NoteFormDefinitionId}`) {
+    const formDefId = request.path.slice('biz/extForm/upsert/'.length)
     const data = object(request.body)
     let scope: string | null = null
     try { scope = String(object(JSON.parse(String(data?.dataStr)))?.sid ?? '') } catch { return denied() }
-    return scope === targets.forms.sid ? saveSpecialForm('forms', data?.dataStr)
-      : scope === targets.repeat.sid ? saveSpecialForm('repeat', data?.dataStr) : denied()
+    return scope === targets.forms.sid ? saveSpecialForm('forms', data?.dataStr, formDefId)
+      : scope === targets.repeat.sid ? saveSpecialForm('repeat', data?.dataStr, formDefId) : denied()
   }
   if (request.path === `workflowNode/updateExts/${targets.forms.node}`) {
     if (request.body !== undefined || !request.jsonBody) return denied()
