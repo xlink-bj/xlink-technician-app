@@ -15,6 +15,7 @@ import {
   type R1MultiStepReceipt,
 } from '@features/work-orders/r1-multistep-offline-transaction'
 import type { StoragePort, FormDefinitionRead } from '@shared/ports'
+import { projectR1LocalFields } from '@features/work-orders/r1-local-form-fields'
 import { asOpaqueId } from '@shared/types'
 import { createDefaultStoragePort } from './composition'
 import { validateR1SpecialMockFields, type R1SpecialMockFields } from '@features/work-orders/r1-special-mock-form-fields'
@@ -248,6 +249,7 @@ export function createAStageSpecialMockController(options: {
           sourceNodeType: kind,
           ...(record ? { formData: record } : {}),
           ...(expectedFields ? { expectedFields } : {}),
+          ...(receipt.clearedFieldKeys?.length ? { expectedAbsentKeys: receipt.clearedFieldKeys } : {}),
           ...(kind === 'forms' ? { formsExts: object(node.exts) ?? {} }
             : { repeatList: { complete: true as const, workflowRunId: s.workflowRunId!,
                 savedIds: rows.map(row => String(row._id)) } }),
@@ -296,10 +298,19 @@ export function createAStageSpecialMockController(options: {
         if (!selected) return { state: 'blocked', message: '只有当前 Mock 新建且有效的表单可以修改。' }
         const original = (await scopedForms(kind, action.id, chosen.id))[0]
         if (!original || original.state !== 1) return { state: 'blocked', message: '原始表单记录已不可用。' }
-        if (action.kind === 'edit' && chosen.definition.fields?.some(field =>
-          !field.presentationOnly && object(original.exts)?.[field.valueKey] !== undefined
-          && fields?.[field.valueKey] === undefined)) return { state: 'blocked',
-          message: '当前 FormData 协议尚未验证清空已有字段；请保留原值后提交。' }
+        const missing = action.kind === 'edit'
+          ? chosen.definition.fields?.filter(field => !field.presentationOnly
+            && Object.hasOwn(object(original.exts) ?? {}, field.valueKey)
+            && fields?.[field.valueKey] === undefined) ?? [] : []
+        const projected = action.kind === 'edit'
+          ? projectR1LocalFields(chosen.definition, fields) : []
+        // Only an explicitly omitted, previously present, source optional
+        // field may be removed. Hidden/read-only/unknown fields cannot vanish.
+        if (missing.some(field => {
+          const state = projected.find(item => item.fieldId === field.fieldId)
+          return !state?.supported || state.required || state.readOnly
+        })) return { state: 'blocked', message: '现有字段不可清空，保留原始记录。' }
+        const clearedFieldKeys = missing.map(field => field.valueKey)
         if (action.kind === 'delete') {
           intent = kind === 'forms'
             ? { kind: 'forms_delete', sourceNodeType: 'forms', scope: s,
@@ -311,10 +322,10 @@ export function createAStageSpecialMockController(options: {
             ? { kind: 'forms_save', sourceNodeType: 'forms', scope: s,
               fields: fields!, title: (action.title || selected.title).trim(),
               authoritativeOriginal: original, authoritativeExts: object(node.exts) ?? {},
-              existingFormDataId: action.id, processActive: false }
+              existingFormDataId: action.id, clearedFieldKeys, processActive: false }
             : { kind: 'repeat_save', sourceNodeType: 'repeat', scope: s,
               fields: fields!, authoritativeOriginal: original,
-              existingFormDataId: action.id }
+              existingFormDataId: action.id, clearedFieldKeys }
         }
       } else {
         const ids = kind === 'forms' ? before.entries.filter(row => row.state === 'active').map(row => row.id)
@@ -358,7 +369,8 @@ export function createAStageSpecialMockController(options: {
           sourceNodeType: kind,
           ...(record ? { formData: record } : {}),
           ...(action.kind === 'save' || action.kind === 'edit'
-            ? { expectedFields: fields! } : {}),
+            ? { expectedFields: fields!, ...(receipt.clearedFieldKeys?.length
+                ? { expectedAbsentKeys: receipt.clearedFieldKeys } : {}) } : {}),
           ...(kind === 'forms' ? { formsExts: object(after.exts) ?? {} }
             : { repeatList: { complete: true as const, workflowRunId: s.workflowRunId!,
                 savedIds: rows.map(row => String(row._id)) } }),
