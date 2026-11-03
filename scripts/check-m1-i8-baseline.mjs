@@ -100,7 +100,7 @@ for (const path of manifest.architectureAuthorities) file(path)
 
 const anchors = [
   ['src/pages/work-orders/action-workspace.vue',
-   ['<QuotationActionWorkspace','<SurveyActionContent','<GenericDynamicFormActionContent',
+   ['<QuotationActionWorkspace','<GenericDynamicFormActionContent','<SurveyLeakageCauseExperience',
      'setActionWorkspacePageTitle']],
   ['src/pages/work-orders/signing-order-read.vue',
    ['signing-order-read-verified','signing-read-reconciled-status',

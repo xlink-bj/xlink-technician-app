@@ -95,8 +95,20 @@
   >
     <MockJourneyContextPanel v-if="localJourneyContext && workspace.descriptor.formPurpose !== 'survey'"
       :context="localJourneyContext" />
-    <SurveyActionContent v-if="workspace.descriptor.actionIntent === 'interact_with_form' && workspace.descriptor.formPurpose === 'survey'" />
-    <GenericDynamicFormActionContent v-else-if="workspace.descriptor.actionIntent === 'interact_with_form'" />
+    <!-- One Dynamic Form Action for every verified FormDef. The host may pick
+         an approved visual preset; field controls, values and Workflow never
+         dispatch by business purpose. R1 dual-field binding stays Adapter-owned. -->
+    <GenericDynamicFormActionContent
+      v-if="workspace.descriptor.actionIntent === 'interact_with_form'"
+      :presentation-mode="workspace.descriptor.formPurpose === 'survey' ? 'task' : 'standard'"
+      :title="workspace.descriptor.formPurpose === 'survey' ? '勘查记录' : '表单信息'"
+      :caption="workspace.descriptor.formPurpose === 'survey' ? '依据现场情况填写' : '请填写表单信息，保存后完成当前操作。'"
+      :excluded-field-ids="workspace.surveyLeakageCauseFieldIds"
+    >
+      <template #experience>
+        <SurveyLeakageCauseExperience v-if="workspace.surveyLeakageCauseExperience" />
+      </template>
+    </GenericDynamicFormActionContent>
     <view v-else class="action-workspace-content app-surface" :data-field-count="workspace.appointmentFields.length">
       <AppActionContentHeading title="预约信息" caption="请与客户确认上门时间安排" icon="appointment" />
 
@@ -281,7 +293,7 @@ import { useSessionStore } from '@shared/state'
 import ActionWorkspaceFormActions from '@shared/ui/ActionWorkspaceFormActions.vue'
 import ActionWorkspaceShell from '@shared/ui/ActionWorkspaceShell.vue'
 import GenericDynamicFormActionContent from '@features/work-orders/components/GenericDynamicFormActionContent.vue'
-import SurveyActionContent from '@features/work-orders/components/SurveyActionContent.vue'
+import SurveyLeakageCauseExperience from '@features/work-orders/components/SurveyLeakageCauseExperience.vue'
 import SurveyCompleteConfirmation from '@features/work-orders/components/SurveyCompleteConfirmation.vue'
 import MockJourneyContextPanel from '@features/work-orders/components/MockJourneyContextPanel.vue'
 import AppActionContentHeading from '@shared/ui/AppActionContentHeading.vue'

@@ -40,7 +40,16 @@
       submit-label="完成勘查"
       @submit="complete"
     >
-      <SurveyActionContent />
+      <GenericDynamicFormActionContent
+        presentation-mode="task"
+        title="勘查记录"
+        caption="依据现场情况填写"
+        :excluded-field-ids="workspace.surveyLeakageCauseFieldIds"
+      >
+        <template #experience>
+          <SurveyLeakageCauseExperience v-if="workspace.surveyLeakageCauseExperience" />
+        </template>
+      </GenericDynamicFormActionContent>
 
       <template #actions>
         <ActionWorkspaceFormActions
@@ -75,7 +84,8 @@ import ActionWorkspaceFormActions from '@shared/ui/ActionWorkspaceFormActions.vu
 import ActionWorkspaceShell from '@shared/ui/ActionWorkspaceShell.vue'
 import AppButton from '@shared/ui/AppButton.vue'
 import AppStatus from '@shared/ui/AppStatus.vue'
-import SurveyActionContent from '@features/work-orders/components/SurveyActionContent.vue'
+import GenericDynamicFormActionContent from '@features/work-orders/components/GenericDynamicFormActionContent.vue'
+import SurveyLeakageCauseExperience from '@features/work-orders/components/SurveyLeakageCauseExperience.vue'
 import {
   reviewScenario,
   reviewScenarioCatalog,

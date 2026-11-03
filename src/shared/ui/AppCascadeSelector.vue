@@ -5,7 +5,7 @@
     :data-testid="testId ?? (hierarchical ? 'survey-repair-part-selector' : undefined)"
   >
     <template v-if="hierarchical">
-      <view class="app-cascade-selector__parents" data-testid="survey-repair-part-parents">
+      <view class="app-cascade-selector__parents" :data-testid="parentsTestId ?? 'cascade-options-parents'">
         <button
           v-for="option in options"
           :key="option.value"
@@ -21,7 +21,7 @@
         </button>
       </view>
 
-      <view v-if="activeParent?.children?.length" class="app-cascade-selector__children" data-testid="survey-repair-part-children">
+      <view v-if="activeParent?.children?.length" class="app-cascade-selector__children" :data-testid="childrenTestId ?? 'cascade-options-children'">
         <view class="app-cascade-selector__children-heading">
           <text class="app-cascade-selector__children-title">{{ activeParent.label }}</text>
           <text class="app-cascade-selector__children-caption">选择具体部位</text>
@@ -79,11 +79,14 @@ const props = withDefaults(
     readonly options: readonly CascadeOption[]
     readonly modelValue: readonly string[]
     readonly disabled?: boolean
-    /** Survey uses a readable parent -> child presentation; value paths stay unchanged. */
+    /** Any hierarchical cascade may use parent → child presentation; value paths stay unchanged. */
     readonly hierarchical?: boolean
-    /** Opt-in S02 parent/child side-by-side layout, without changing other cascade usages. */
+    /** Opt-in parent/child side-by-side layout; no effect on submitted value paths. */
     readonly splitLayout?: boolean
     readonly testId?: string
+    /** Explicitly injectable QA hooks; never encode a business field key. */
+    readonly parentsTestId?: string
+    readonly childrenTestId?: string
   }>(),
   { disabled: false, hierarchical: false, splitLayout: false },
 )

@@ -12,7 +12,7 @@ const componentFiles = [
   'shared/ui/AppSearchBar.wxss',
   'features/work-orders/WorkOrderTaskFocus.wxss',
   'shared/ui/AppGroupedMultiSelectField.wxss',
-  'features/work-orders/components/SurveyPartPicker.wxss',
+  'shared/ui/AppCascadeSheetField.wxss',
   'features/work-orders/quotation/QuotationOrderHub.wxss',
   'features/work-orders/quotation/Q01EntryScreen.wxss',
   'features/work-orders/quotation/QuotationActionContent.wxss',

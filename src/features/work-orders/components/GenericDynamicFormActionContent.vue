@@ -1,37 +1,37 @@
 <template>
-  <view class="dynamic-action-content" :class="{ 'app-surface': !isSurvey, 'dynamic-action-content--survey': isSurvey }"
+  <view class="dynamic-action-content" :class="{ 'app-surface': !isTaskLayout, 'dynamic-action-content--survey': isTaskLayout }"
     data-action-content="dynamic-form" data-testid="dynamic-form-action-content">
     <AppActionContentHeading
-      :title="isSurvey ? '勘查记录' : title"
+      :title="title"
       :caption="caption"
       icon="task"
-      :variant="isSurvey ? 'survey' : 'default'"
-      :required-note="isSurvey && surveyRequiredVisible"
+      :variant="isTaskLayout ? 'survey' : 'default'"
+      :required-note="isTaskLayout && surveyRequiredVisible"
     />
 
     <template v-for="block in presentationBlocks" :key="block.key">
       <view class="dynamic-action-block"
         :class="{
-          'dynamic-action-block--survey': isSurvey,
-          'dynamic-action-block--part': isSurvey && block.kind === 'part',
-          'dynamic-action-block--measure': isSurvey && block.kind === 'measure',
-          'dynamic-action-block--media': isSurvey && block.kind === 'media',
+          'dynamic-action-block--survey': isTaskLayout,
+          'dynamic-action-block--part': isTaskLayout && block.kind === 'part',
+          'dynamic-action-block--measure': isTaskLayout && block.kind === 'measure',
+          'dynamic-action-block--media': isTaskLayout && block.kind === 'media',
           'dynamic-action-block--field': block.kind === 'field',
         }"
-        :data-testid="isSurvey && block.kind !== 'field' ? `survey-${block.kind}-section` : undefined"
+        :data-testid="isTaskLayout && block.kind !== 'field' ? `survey-${block.kind}-section` : undefined"
       >
         <SurveyTaskSectionHeading
-          v-if="isSurvey && block.kind !== 'field'"
+          v-if="isTaskLayout && block.kind !== 'field'"
           :icon="block.kind === 'media' ? 'image' : block.kind === 'measure' ? 'appointment' : 'location'"
           :tone="block.kind === 'part' ? 'part' : block.kind === 'measure' ? 'measure' : 'media'"
-          :title="block.kind === 'part' ? '维修部位' : block.kind === 'measure' ? '现场测量' : block.fields.length === 1 ? block.fields[0].label : surveyMediaTitle(block.fields)"
+          :title="block.kind === 'part' ? block.fields[0].label : block.kind === 'measure' ? '现场测量' : block.fields.length === 1 ? block.fields[0].label : surveyMediaTitle(block.fields)"
           :required="(block.kind === 'part' || block.kind === 'media' && block.fields.length === 1) && block.fields.some(field => field.runtime.required)"
           :selected="block.kind === 'part' && arrayValue(workspace.dynamicForm?.values[block.fields[0].valueKey]).length > 0"
           :status="block.kind === 'part' ? (arrayValue(workspace.dynamicForm?.values[block.fields[0].valueKey]).length ? '已选择' : '待选择') : block.kind === 'measure' ? '适用字段' : '按字段上传'"
         />
         <view class="dynamic-action-block__fields"
-          :class="{ 'dynamic-action-block__fields--media': isSurvey && block.kind === 'media',
-            'dynamic-action-block__fields--single': isSurvey && block.kind === 'media' && block.fields.length === 1 }">
+          :class="{ 'dynamic-action-block__fields--media': isTaskLayout && block.kind === 'media',
+            'dynamic-action-block__fields--single': isTaskLayout && block.kind === 'media' && block.fields.length === 1 }">
     <template v-for="field in block.fields" :key="field.fieldId">
       <view
         v-if="!props.excludedFieldIds.includes(field.fieldId) && field.runtime.visible && field.runtime.capability === 'PRESENTATION_ONLY'"
@@ -50,28 +50,35 @@
         v-if="!props.excludedFieldIds.includes(field.fieldId) && field.runtime.visible && field.runtime.capability !== 'UNSUPPORTED' && field.runtime.capability !== 'PRESENTATION_ONLY'"
         class="dynamic-action-field"
         :class="{
-          'dynamic-action-field--survey': isSurvey,
-          'dynamic-action-field--survey-media': isSurvey && (field.type === 'image' || field.type === 'file'),
-          'dynamic-action-field--survey-cascade': isSurvey && field.type === 'cascade',
-          'dynamic-action-field--survey-measure': isSurvey && (field.type === 'digit' || field.type === 'number'),
+          'dynamic-action-field--survey': isTaskLayout,
+          'dynamic-action-field--survey-media': isTaskLayout && (field.type === 'image' || field.type === 'file'),
+          'dynamic-action-field--survey-cascade': isTaskLayout && field.type === 'cascade',
+          'dynamic-action-field--survey-measure': isTaskLayout && (field.type === 'digit' || field.type === 'number'),
         }"
         :data-testid="`dynamic-field-${field.valueKey}`"
         :label="field.label"
-        :hide-label="isSurvey && (block.kind === 'part' || (block.kind === 'media' && block.fields.length === 1))"
+        :hide-label="isTaskLayout && (block.kind === 'part' || (block.kind === 'media' && block.fields.length === 1))"
         :required="field.runtime.required"
       >
-        <SurveyPartPicker
-          v-if="isSurvey && field.type === 'cascade' && field.valueKey === 'part' && field.options?.length"
-          :options="field.options"
+        <!-- S02 visual/test aliases remain stable, but choice is now based solely on
+             verified hierarchical cascade options, not Survey or a valueKey. -->
+        <AppCascadeSheetField
+          v-if="usesCascadeSheet(field, props.presentationMode)"
+          :options="field.options ?? []"
           :model-value="arrayValue(workspace.dynamicForm?.values[field.valueKey])"
           :disabled="field.runtime.readOnly || workspace.lifecycle === 'submitting'"
+          :title="`选择${field.label}`"
+          :placeholder="`请选择${field.label}`"
+          :close-label="`关闭${field.label}选择`"
+          test-id-prefix="survey-part-picker"
+          option-test-id-prefix="survey-repair-part"
           @update:model-value="setField(field.fieldId, $event)"
         />
         <AppCascadeSelector
           v-else-if="field.type === 'cascade' && field.options?.length"
           :options="field.options"
           :model-value="arrayValue(workspace.dynamicForm?.values[field.valueKey])"
-          :hierarchical="workspace.dynamicForm?.purpose === 'survey' && field.valueKey === 'part'"
+          :hierarchical="Boolean(field.options?.some(option => option.children?.length))"
           :disabled="field.runtime.readOnly || workspace.lifecycle === 'submitting'"
           @update:model-value="setField(field.fieldId, $event)"
         />
@@ -104,8 +111,8 @@
         >
           <view class="dynamic-action-media-header">
             <view class="dynamic-action-media-header-copy">
-              <text class="dynamic-action-media-title">{{ isSurvey ? '拍摄或上传' : field.type === 'image' ? '现场照片' : '现场附件' }}</text>
-              <text class="dynamic-action-media-subtitle">{{ isSurvey ? '按此字段单独记录现场资料' : '按当前勘察要求补充记录' }}</text>
+              <text class="dynamic-action-media-title">{{ isTaskLayout ? '拍摄或上传' : field.type === 'image' ? '现场照片' : '现场附件' }}</text>
+              <text class="dynamic-action-media-subtitle">{{ isTaskLayout ? '按此字段单独记录现场资料' : '按当前勘察要求补充记录' }}</text>
             </view>
             <text class="dynamic-action-media-count" :data-testid="`dynamic-media-count-${field.valueKey}`">
               {{ mediaCountFor(field.fieldId) }}<text v-if="mediaMaxFor(field) !== undefined"> / {{ mediaMaxFor(field) }}</text>
@@ -180,7 +187,7 @@
       </AppField>
     </template>
         </view>
-        <text v-if="isSurvey && block.kind === 'media'" class="dynamic-action-block__helper">
+        <text v-if="isTaskLayout && block.kind === 'media'" class="dynamic-action-block__helper">
           照片状态由上传结果决定，未上传不计入已完成。
         </text>
       </view>
@@ -217,11 +224,12 @@ import { useActionWorkspaceStore } from '@features/work-orders/action-workspace'
 import type { FormFieldValue } from '@shared/ports'
 import { isMediaValueRef } from '@shared/types'
 import type { AppChoiceOption } from '@shared/ui/types'
-import { isMultilineField } from '../form-presentation'
+import { fieldPresentationKind, usesCascadeSheet, isMultilineField, type FormPresentationMode } from '../form-presentation'
 import { mediaPickerLabelFor, verifiedMediaMaxFor } from '../media-presentation'
 import AppActionContentHeading from '@shared/ui/AppActionContentHeading.vue'
 import AppButton from '@shared/ui/AppButton.vue'
 import AppCascadeSelector from '@shared/ui/AppCascadeSelector.vue'
+import AppCascadeSheetField from '@shared/ui/AppCascadeSheetField.vue'
 import AppChoiceGroup from '@shared/ui/AppChoiceGroup.vue'
 import AppField from '@shared/ui/AppField.vue'
 import AppIcon from '@shared/ui/AppIcon.vue'
@@ -229,24 +237,25 @@ import AppInput from '@shared/ui/AppInput.vue'
 import AppMultiChoiceGroup from '@shared/ui/AppMultiChoiceGroup.vue'
 import AppStatus from '@shared/ui/AppStatus.vue'
 import AppTextarea from '@shared/ui/AppTextarea.vue'
-import SurveyPartPicker from './SurveyPartPicker.vue'
 import SurveyTaskSectionHeading from './SurveyTaskSectionHeading.vue'
 
 const props = withDefaults(defineProps<{
   readonly title?: string
   readonly caption?: string
   readonly excludedFieldIds?: readonly string[]
+  readonly presentationMode?: FormPresentationMode
 }>(), {
   title: '表单信息',
   caption: '请填写表单信息，保存后完成当前操作。',
   excludedFieldIds: () => [],
+  presentationMode: 'standard',
 })
 
 const workspace = useActionWorkspaceStore()
-// Legacy S01 *presentation* layout only. Do not attach field semantics,
-// validation, provider dispatch or Workflow changes to isSurvey. Once the
-// field presentation registry is source-proven, replace these styling branches.
-const isSurvey = computed(() => workspace.dynamicForm?.purpose === 'survey')
+// A visual preset is selected by the host, never inferred from formPurpose.
+// The legacy "survey" CSS aliases preserve approved S01–S05 geometry only;
+// permissions, field controls and submission stay on the shared Runtime.
+const isTaskLayout = computed(() => props.presentationMode === 'task')
 type RenderField = (typeof workspace.dynamicFields)[number]
 type RenderKind = 'field' | 'part' | 'measure' | 'media'
 interface RenderBlock {
@@ -261,12 +270,10 @@ const presentationBlocks = computed<RenderBlock[]>(() => {
   for (const field of workspace.dynamicFields) {
     if (!field.runtime.visible || props.excludedFieldIds.includes(field.fieldId)
       || field.runtime.capability === 'UNSUPPORTED') continue
-    let kind: RenderKind = 'field'
-    if (isSurvey.value && field.runtime.capability !== 'PRESENTATION_ONLY') {
-      if (field.type === 'cascade' && field.valueKey === 'part') kind = 'part'
-      else if (field.type === 'digit' || field.type === 'number') kind = 'measure'
-      else if (field.type === 'image' || field.type === 'file') kind = 'media'
-    }
+    // Presentation is type/option driven. It does not determine FormData
+    // identity, provider routing, requiredness or workflow transitions.
+    const kind: RenderKind = field.runtime.capability === 'PRESENTATION_ONLY'
+      ? 'field' : fieldPresentationKind(field, props.presentationMode)
     const previous = blocks[blocks.length - 1]
     if ((kind === 'measure' || kind === 'media') && previous?.kind === kind) {
       previous.fields.push(field)
