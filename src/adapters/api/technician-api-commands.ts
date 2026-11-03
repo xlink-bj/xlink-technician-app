@@ -186,7 +186,7 @@ export class TechnicianApiCommandAdapter implements TechnicianApiCommandPort {
         (field.type === 'select' || field.type === 'radio' || field.type === 'checkbox')
         && this.readPort.getDynamicCodeOptions
       ) return { kind: 'code', valueOption: field.valueOption }
-      if (field.type === 'cascade' && this.readPort.getCascadeCodeOptions) {
+      if (field.type === 'cascade') {
         return { kind: 'cascade', valueOption: field.valueOption }
       }
       return undefined
@@ -219,8 +219,11 @@ export class TechnicianApiCommandAdapter implements TechnicianApiCommandPort {
             : await this.readPort.getCascadeCodeOptions!.call(this.readPort, { codeType: source.valueOption })
           resolved.set(key, result)
         } catch (error) {
+          // A mapped/invalid R1 option tree cannot be repaired by a blind
+          // retry. Only unknown transport failures remain retryable.
           resolved.set(key, adapterFailure(
-            'network_retryable', unknownErrorMessage(error, 'Dynamic option provider failed'),
+            error instanceof AdapterMappingError ? 'server_terminal' : 'network_retryable',
+            unknownErrorMessage(error, 'Dynamic option provider failed'),
           ))
         }
       }
