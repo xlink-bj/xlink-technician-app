@@ -149,3 +149,30 @@ test('430×932 storage quota denial never acknowledges an unsaved draft; explici
   await page.reload()
   await expect(input).toHaveValue('清理容量后主动重新填写并保存')
 })
+
+test('430×932 competing saved revision is not silently overwritten by a stale editor', async ({ page }) => {
+  await page.setViewportSize({ width: 430, height: 932 })
+  await page.goto('/#/pages/index/index?devReview=1')
+  await page.goto('/#/pages/work-orders/detail?id=mock-work-order-020-local-forms')
+  const input = page.getByTestId('a-special-field-inspectionSummary').locator('textarea')
+  await input.fill('当前会话最初保存的草稿')
+  await expect(page.getByTestId('a-special-local-draft')).toContainText('已保存到本机')
+
+  // Simulate a second editor updating the same identity between the first
+  // editor's saves. The repository must preserve the newer stored revision.
+  await page.evaluate(() => {
+    const matches = Object.keys(localStorage).filter(key => key.startsWith('draft:action-workspace:3:'))
+    if (matches.length !== 1) throw new Error('Expected one role-scoped form draft')
+    const key = matches[0]!
+    const original = localStorage.getItem(key)
+    if (!original) throw new Error('Saved draft not found')
+    const newer = JSON.parse(original)
+    newer.updatedAt = '2099-01-01T00:00:00.000Z'
+    newer.values.inspectionSummary = '并行会话已保存的新草稿'
+    localStorage.setItem(key, JSON.stringify(newer))
+  })
+  await input.fill('旧会话晚到的修改不能覆盖')
+  await expect(page.getByTestId('a-special-local-draft')).toContainText('本机保存失败')
+  await page.reload()
+  await expect(input).toHaveValue('并行会话已保存的新草稿')
+})

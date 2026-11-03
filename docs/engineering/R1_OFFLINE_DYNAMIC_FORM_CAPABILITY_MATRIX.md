@@ -42,9 +42,11 @@ from offline installation/bootstrap.
 Special writable media remains unsupported until a verified R1 writable ExtField
 and codec can be identified; reference-only images must not be relabeled. The
 DEV-only special bizSelect Mock transaction is implemented, but real Provider
-semantics remain LIVE_BIZSELECT_HOLD. Expand interrupted submit/reconciliation,
-storage-quota H5 and cross-editor record-conflict acceptance; storage read/write
-fault and damaged-draft guards have unit regressions. No live API work is required
+semantics remain LIVE_BIZSELECT_HOLD. Interrupted submit/ACK, quota-denial retry and stale-revision preservation
+have main-App H5 coverage. Damaged drafts, storage faults and completed-tombstone
+rejection have unit regressions. Atomic cross-tab compare-and-swap is not
+provided by the current StoragePort; a future multi-editor editing protocol
+must not treat this timestamp guard as an atomic transaction. No live API work is required
 or proposed here. A is not declared complete while remaining acceptance gates are open.
 
 ## Independent HOLD ledger (not A tasks or completion gates)

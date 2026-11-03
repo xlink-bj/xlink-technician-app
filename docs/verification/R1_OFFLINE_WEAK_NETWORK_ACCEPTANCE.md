@@ -80,9 +80,13 @@ fences. These supplement rather than replace the H5 acceptance paths.
   storage, OS eviction or native file behavior. No service worker/cache shell
   or browser-specific new backend is introduced.
 - File persistence can fail (storage unavailable/quota); failures are explicit,
-  with no fabricated durable task or successful upload. Quota/eviction and
-  interrupted business ACK/conflict UI matrices still need further Cloud
-  fault-injection coverage.
+  with no fabricated durable task or successful upload. Main-App H5 injects
+  quota-denied draft writes: no false save acknowledgement, retained prior
+  values on restart, and explicit retry. Repository regressions reject older
+  timestamped writes and completed tombstone resurrection; the main-App H5
+  conflict case injects a competing newer stored revision and verifies that
+  stale editor input cannot overwrite it. These guards are not atomic cross-tab
+  compare-and-swap or OS-eviction certification.
 - The shared media infrastructure is form-agnostic. A writable media field in
   the special forms/repeat transaction path remains Missing until an approved
   source-backed field/codec is composed into it; the R1 reference image remains
@@ -99,11 +103,11 @@ fences. These supplement rather than replace the H5 acceptance paths.
   reconnect without replay, explicit save, lost commit ACK and preserved draft.
 - `MEDIA_RECOVERY_PASS`: picker → injected failure → full App reload → explicit
   queue retry using IndexedDB bytes without selecting the file again.
-- 186 Vitest files / 1,633 tests; type, architecture, UI governance and quality
-  checks PASS. H5 / MP-Weixin / App release builds PASS.
-- Local H5 evidence is **14 regression cases plus 2 final weak-network cases in
-  separate successful runs**, not a claimed single 16-test green invocation.
-  Exact-head CI results are recorded in the PR #265 handoff comment.
+- Unit-test counts and exact-head CI results belong to the current PR #265
+  handoff; do not reuse the historical 1,633-test baseline as current evidence.
+  Main-App H5 includes weak-network drafts, lost acknowledgement, quota-denied
+  storage writes and the competing saved revision scenario. Each result must
+  be checked on the final exact HEAD, not inferred from source changes alone.
 
 These bounded PASS results do not close the Missing items in the capability
 inventory and do not declare the entire A phase complete.
