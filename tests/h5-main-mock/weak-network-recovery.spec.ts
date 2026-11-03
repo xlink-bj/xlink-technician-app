@@ -118,3 +118,34 @@ test('430×932 failed submit / lost Mock commit ACK preserves draft and never re
     'xlink.dev.mock.r1-special.020-021.v1')!).rows).filter(id => id.startsWith('mock-special-form-data-forms-')).length)).toBe(1)
   expect(external).toEqual([])
 })
+
+test('430×932 storage quota denial never acknowledges an unsaved draft; explicit retry recovers', async ({ page }) => {
+  await page.setViewportSize({ width: 430, height: 932 })
+  await page.goto('/#/pages/index/index?devReview=1')
+  await page.goto('/#/pages/work-orders/detail?id=mock-work-order-020-local-forms')
+  const input = page.getByTestId('a-special-field-inspectionSummary').locator('textarea')
+  await input.fill('容量故障前已经安全保存的内容')
+  await expect(page.getByTestId('a-special-local-draft')).toContainText('已保存到本机')
+
+  await page.evaluate(() => {
+    const original = Storage.prototype.setItem
+    let rejected = false
+    Storage.prototype.setItem = function (key, value) {
+      if (!rejected && key.includes('draft:') && key.includes('action-workspace')) {
+        rejected = true
+        // Quota pressure must not be disguised as a successful local autosave.
+        throw new DOMException('QuotaExceededError', 'QuotaExceededError')
+      }
+      return original.call(this, key, value)
+    }
+  })
+  await input.fill('容量不足时尚未保存的修改')
+  await expect(page.getByTestId('a-special-local-draft')).toContainText('本机保存失败')
+  await page.reload()
+  await expect(input).toHaveValue('容量故障前已经安全保存的内容')
+
+  await input.fill('清理容量后主动重新填写并保存')
+  await expect(page.getByTestId('a-special-local-draft')).toContainText('已保存到本机')
+  await page.reload()
+  await expect(input).toHaveValue('清理容量后主动重新填写并保存')
+})

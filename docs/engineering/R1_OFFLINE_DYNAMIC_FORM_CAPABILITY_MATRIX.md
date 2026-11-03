@@ -13,7 +13,7 @@ FormData transaction. Unknown schemas remain Unsupported rather than invented.
 | select / radio / checkbox | Implemented with resolved source options; array bounds/membership enforced | Runtime + local/special validators; Stage 2B/2C H5 |
 | cascade | Implemented: ordered paths; two-level layout retained, deeper trees use recursive leaves; forged sibling paths rejected | Runtime values; Stage 2C H5 and deep-cascade-record H5 (three-level selection/edit/save/reload with exact persisted path) |
 | multiple cascade / arbitrary nested objects | Unsupported: no verified generic R1 write representation | explicit local/special validation fence |
-| bizSelect | Implemented in generic Runtime/provider scope boundary; resolved scalar/string-array special submission validation implemented; Missing special Provider loading and main-App transaction acceptance | provider-visibility suite proves authorization change causes reread, no CodeService fallback. A resolved preview is not a transaction; no fabricated business provider or schema |
+| bizSelect | Implemented in generic Runtime/provider scope boundary and DEV-only special forms/repeat; offline `projPackage` synthetic Provider resolves IDs, validates membership, saves/edits/clears with main-App readback; real endpoint remains HOLD | provider-visibility and a-stage-main-app-special-controller; special-business-record main-App H5 (forms/repeat); no CodeService fallback or live Provider mapping inferred |
 | area / button / unknown controls | Unsupported: generic region/action protocol is not established; area is NOT decimal area measurement | classifyFieldType/normalizeFieldValue fail closed; existing named area measurement compatibility rule remains isolated |
 | title / gap / reference image | Implemented presentation only, excluded from writes | Runtime presentation capability; R1 reference image never an uploader |
 | visibility / required / readonly | Implemented in shared Runtime; complete special submissions now independent of field order | full input used for submit-time normalization; regression reverses dependent/controller row order, missing/hidden values remain rejected |
@@ -22,10 +22,10 @@ FormData transaction. Unknown schemas remain Unsupported rather than invented.
 | special forms/repeat writable media | Missing, independently from real-upload HOLD: current R1 special transaction value type is primitive/string-array and the known inspection image is a read-only reference | do not relabel reference image or accept arbitrary media objects into that protocol. Needs source-backed writable ExtField + its existing codec composed through shared queue, not a new uploader |
 | multiple FormDefs / repeat | Implemented: independently saved records, edit/delete, authoritative readback, explicit finish, no replay after uncertain ACK | a-stage-special-mock-ui + r1-multistep-offline-transaction; controller/protocol tests; Stage 1B/2A/2C and a-stage-p1-acceptance H5 |
 | optional clear | Implemented in offline protocol including arrays and temporal/rating values; required/read-only values stay fenced | special validator + Mock protocol clear allowlist; Stage 2C/2D and controller tests |
-| Action Draft Repository | Implemented identity-keyed records + metadata registry, role/node/work-order/content isolation, no command payloads | shared Action Runtime repository and existing lifecycle; dedicated weak-network H5 adds special editor coverage |
+| Action Draft Repository | Implemented identity-keyed records + metadata registry, role/node/work-order/content isolation, no command payloads; damaged canonical drafts fail closed and cannot be overwritten | shared Action Runtime repository, draft-repository corruption regressions, dedicated weak-network H5 editor coverage |
 | incomplete special editor drafts | Implemented on existing Action Draft Repository; form-definition AND saved-record identity, local autosave, restart recovery, completed tombstone before cleanup | controller draft methods + actual special panel; weak-network-recovery H5 |
 | network recovery | Explicit user resubmit only; offline edits/autosave continue; no automatic command replay | existing NetworkStatusPort + platform adapter, special controller pre-dispatch guard |
-| browser media bytes | Implemented IndexedDB DurableMediaStorePort; task metadata alone is insufficient; fresh Blob URL after restart | browser-durable-media-store; main-App media failure → full reload → manual retry H5 |
+| browser media bytes | Implemented IndexedDB DurableMediaStorePort; task metadata alone is insufficient; fresh Blob URL after restart; failed database open can be retried | browser-durable-media-store, failure-injection unit tests; main-App media failure → full reload → manual retry H5 |
 | MP/App media files | Existing native saveFile DurableMediaStorePort retained | build checks + existing unit contracts; native operation is outside A completion criteria |
 
 ## Weak network acceptance boundaries
@@ -39,12 +39,13 @@ from offline installation/bootstrap.
 
 ## Remaining Cloud-only work
 
-Compose source-backed special writable media into the existing shared queue and
-transaction codec; finish special bizSelect transaction coverage only for a
-verified offline provider contract. Expand interrupted submit/reconciliation,
-storage quota and record-conflict user-path tests. No live API work is required
-or proposed by this inventory. A is not declared complete while these Missing
-items remain.
+Special writable media remains unsupported until a verified R1 writable ExtField
+and codec can be identified; reference-only images must not be relabeled. The
+DEV-only special bizSelect Mock transaction is implemented, but real Provider
+semantics remain LIVE_BIZSELECT_HOLD. Expand interrupted submit/reconciliation,
+storage-quota H5 and cross-editor record-conflict acceptance; storage read/write
+fault and damaged-draft guards have unit regressions. No live API work is required
+or proposed here. A is not declared complete while remaining acceptance gates are open.
 
 ## Independent HOLD ledger (not A tasks or completion gates)
 
