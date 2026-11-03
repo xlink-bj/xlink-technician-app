@@ -1,6 +1,7 @@
 /**
  * R1 fixed source: inspectionAppointment.vue datetimeConfirm/formattTime.
- * The wire is local wall time "YYYY-MM-DD HH:mm:ss", with no Z/offset.
+ * Survey wire is local wall time "YYYY-MM-DD HH:mm:ss"; Appointment
+ * is "YYYY-MM-DD HH:mm". Both are source-verified, without Z/offset.
  * Never construct a Date or convert through UTC: doing so can shift a
  * technician's appointment or field record when the device zone changes.
  * Partial picker selections stay UI-local until both parts are present.
@@ -9,7 +10,7 @@ import { validLocalDate, validLocalTime, validLocalDateTime } from '@shared/form
 
 export function dateTimeParts(value: string): { readonly date: string; readonly time: string } {
   const m = validLocalDateTime(value)
-    ? /^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}):\d{2}$/.exec(value) : null
+    ? /^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2})(?::\d{2})?$/.exec(value) : null
   return { date: m?.[1] ?? '', time: m?.[2] ?? '' }
 }
 export function dateTimeWire(date: string, time: string, previous = ''): string | undefined {
@@ -17,7 +18,10 @@ export function dateTimeWire(date: string, time: string, previous = ''): string 
   // A date-only edit must preserve seconds on an authoritative readback.
   // A changed minute comes from a minute-precision native picker => :00.
   const last = validLocalDateTime(previous)
-    ? /^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}):(\d{2})$/.exec(previous) : null
-  const seconds = last?.[2] === time ? last[3] : '00'
+    ? /^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2})(?::(\d{2}))?$/.exec(previous) : null
+  // Do not upgrade a source minute-precision value merely because a user
+  // reopened its picker. Survey's second precision stays second precision.
+  if (last && last[3] === undefined) return date + ' ' + time
+  const seconds = last?.[2] === time ? last[3] ?? '00' : '00'
   return date + ' ' + time + ':' + seconds
 }

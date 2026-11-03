@@ -29,8 +29,14 @@ describe('R1 calendar correctness across UI and Dynamic Form Runtime', () => {
     expect(normalizeFieldValue('datetime', '2024-02-29 23:59:59')).toEqual({
       ok: true, value: '2024-02-29 23:59:59',
     })
+    // R1 Appointment data is minute-precision. Do not break its previously
+    // verified FormData/draft contract while supporting Survey seconds.
+    expect(normalizeFieldValue('datetime', '2026-04-20 11:00')).toEqual({
+      ok: true, value: '2026-04-20 11:00',
+    })
+    expect(dateTimeParts('2026-04-20 11:00')).toEqual({ date: '2026-04-20', time: '11:00' })
     for (const value of ['2026-02-30 14:30:00', '2026-11-03 24:00:00',
-      '2026-11-03 14:30:60', '2026-11-03T14:30:00Z', '2026-11-03 14:30']) {
+      '2026-11-03 14:30:60', '2026-11-03T14:30:00Z', '2026-11-03 14:30Z']) {
       expect(validLocalDateTime(value)).toBe(false)
       expect(normalizeFieldValue('datetime', value))
         .toMatchObject({ ok: false, reason: 'invalid_value' })
@@ -42,6 +48,7 @@ describe('R1 calendar correctness across UI and Dynamic Form Runtime', () => {
 
   it('UI and Runtime use one canonical validation rule while retaining readback seconds', () => {
     expect(dateTimeWire('2024-02-29', '23:59')).toBe('2024-02-29 23:59:00')
+    expect(dateTimeWire('2026-04-21', '11:00', '2026-04-20 11:00')).toBe('2026-04-21 11:00')
     expect(dateTimeWire('2026-02-29', '14:30')).toBeUndefined()
     expect(dateTimeWire('2026-11-03', '24:00')).toBeUndefined()
     expect(dateTimeWire('2026-11-04', '14:30', '2026-11-03 14:30:24')).toBe('2026-11-04 14:30:24')

@@ -2,8 +2,10 @@
  * Local wall-clock value validation for R1 ExtField date/time/datetime.
  * Neither UI nor the Dynamic Form Runtime may round-trip through Date.UTC,
  * Date.parse, ISO conversion or the device's timezone. R1 datetimeConfirm
- * stores literal YYYY-MM-DD HH:mm:ss. Reject impossible dates, not just
- * malformed strings (e.g. February 30th).
+ * stores literal YYYY-MM-DD HH:mm:ss, while the verified Appointment
+ * contract stores YYYY-MM-DD HH:mm. BOTH precise shapes are valid for the
+ * shared Runtime, and neither may pass through UTC/date parsing. Reject
+ * impossible dates, not just malformed strings (e.g. February 30th).
  */
 export function validLocalDate(value: string): boolean {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
@@ -23,7 +25,7 @@ export function validLocalTime(value: string): boolean {
 }
 
 export function validLocalDateTime(value: string): boolean {
-  const match = /^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}):(\d{2})$/.exec(value)
+  const match = /^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2})(?::(\d{2}))?$/.exec(value)
   return match !== null && validLocalDate(match[1]!) && validLocalTime(match[2]!)
-    && Number(match[3]) <= 59
+    && (match[3] === undefined || Number(match[3]) <= 59)
 }
