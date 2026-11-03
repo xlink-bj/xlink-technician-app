@@ -9,12 +9,31 @@ function errorMessage(error: unknown, fallback: string): Error {
 export function createUniStorageDriver(api: UniStorageApi = uni): KeyValueStorageDriver {
   return {
     get: (key) =>
-      new Promise((resolve) => {
+      new Promise((resolve, reject) => {
         api.getStorage({
           key,
           success: (result) => resolve(typeof result.data === 'string' ? result.data : JSON.stringify(result.data)),
-          // A missing key is the normal empty-storage result for this semantic driver.
-          fail: () => resolve(null),
+          // A failed get is NOT always a missing key (quota, corruption, denied access).
+          // Confirm absence through the platform's key listing; otherwise fail closed
+          // so a recoverable draft is never silently treated as empty.
+          fail: (error) => {
+            try {
+              api.getStorageInfo({
+                success: (info) => {
+                  if (!Array.isArray(info.keys)) {
+                    reject(errorMessage(error, 'uni storage key verification failed'))
+                  } else if (info.keys.includes(key)) {
+                    reject(errorMessage(error, 'uni storage read failed'))
+                  } else {
+                    resolve(null)
+                  }
+                },
+                fail: () => reject(errorMessage(error, 'uni storage read failed; key verification unavailable')),
+              })
+            } catch {
+              reject(errorMessage(error, 'uni storage key verification unavailable'))
+            }
+          },
         })
       }),
     set: (key, value) =>

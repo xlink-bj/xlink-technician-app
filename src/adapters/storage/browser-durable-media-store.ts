@@ -13,11 +13,15 @@ export class BrowserDurableMediaStore implements DurableMediaStorePort {
   private readonly urls = new Map<string, string>()
 
   private db(): Promise<IDBDatabase> {
-    if (!this.database) this.database = new Promise((resolve, reject) => {
+    if (!this.database) this.database = new Promise<IDBDatabase>((resolve, reject) => {
       const request = indexedDB.open('xlink-local-media-v1', 1)
       request.onupgradeneeded = () => request.result.createObjectStore('assets')
       request.onsuccess = () => resolve(request.result)
       request.onerror = () => reject(request.error)
+    }).catch((error: unknown) => {
+      // A failed open must not poison future manual retries after storage recovers.
+      this.database = undefined
+      throw error
     })
     return this.database
   }
