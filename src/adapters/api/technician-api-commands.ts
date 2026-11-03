@@ -6,6 +6,8 @@ import type {
   DynamicFormRead,
   FormDefinitionRead,
   FormFieldRead,
+  CodeOptionRead,
+  ReadPage,
   ReadDynamicFormInput,
   SaveDynamicFormInput,
   SubmitAppointmentInput,
@@ -176,44 +178,79 @@ export class TechnicianApiCommandAdapter implements TechnicianApiCommandPort {
   private async resolveDynamicDefinition(
     definition: FormDefinitionRead,
   ): Promise<OperationSnapshot<FormDefinitionRead>> {
-    const fields: FormFieldRead[] = []
-    for (const field of definition.fields ?? []) {
-      const codeLookup =
-        field.valueOption && (field.type === 'select' || field.type === 'radio' || field.type === 'checkbox')
-          ? this.readPort.getDynamicCodeOptions
-          : undefined
-      const cascadeLookup = field.valueOption && field.type === 'cascade'
-        ? this.readPort.getCascadeCodeOptions
-        : undefined
+    type ProviderSource = { readonly kind: 'code' | 'cascade'; readonly valueOption: string }
+    type ProviderResult = OperationSnapshot<ReadPage<CodeOptionRead>>
+    const sourceFor = (field: FormFieldRead): ProviderSource | undefined => {
+      if (!field.valueOption) return undefined
+      if (
+        (field.type === 'select' || field.type === 'radio' || field.type === 'checkbox')
+        && this.readPort.getDynamicCodeOptions
+      ) return { kind: 'code', valueOption: field.valueOption }
+      if (field.type === 'cascade' && this.readPort.getCascadeCodeOptions) {
+        return { kind: 'cascade', valueOption: field.valueOption }
+      }
+      return undefined
+    }
 
-      if (!codeLookup && !cascadeLookup) {
-        fields.push(field)
+    const fields = definition.fields ?? []
+    const sourceKey = (source: ProviderSource): string => JSON.stringify([source.kind, source.valueOption])
+    const uniqueSources = new Map<string, ProviderSource>()
+    for (const field of fields) {
+      const source = sourceFor(field)
+      if (source) uniqueSources.set(sourceKey(source), source)
+    }
+
+    // A provider response belongs to THIS FormDef read, not to a global cache.
+    // Deduplicate repeated valueOption identities within the read, but never
+    // reuse tenant/role-scoped choices across a later action or session.
+    // At most three concurrent R1 code reads prevents a many-field FormDef
+    // from multiplying latency or bursting unbounded requests.
+    const pending = [...uniqueSources.entries()]
+    const resolved = new Map<string, ProviderResult>()
+    let cursor = 0
+    const worker = async (): Promise<void> => {
+      while (cursor < pending.length) {
+        const entry = pending[cursor++]
+        if (!entry) break
+        const [key, source] = entry
+        try {
+          const result = source.kind === 'code'
+            ? await this.readPort.getDynamicCodeOptions!.call(this.readPort, { valueOption: source.valueOption })
+            : await this.readPort.getCascadeCodeOptions!.call(this.readPort, { codeType: source.valueOption })
+          resolved.set(key, result)
+        } catch (error) {
+          resolved.set(key, adapterFailure(
+            'network_retryable', unknownErrorMessage(error, 'Dynamic option provider failed'),
+          ))
+        }
+      }
+    }
+    await Promise.all(Array.from({ length: Math.min(3, pending.length) }, () => worker()))
+
+    const hydrated: FormFieldRead[] = []
+    for (const field of fields) {
+      const source = sourceFor(field)
+      if (!source) {
+        // Absent providers remain subject to the shared Runtime's
+        // unsupported-capability gate; no inferred or synthetic options.
+        hydrated.push(field)
         continue
       }
-
-      // A test/application composition that does not provide the optional
-      // dynamic provider remains conservative; Runtime will mark the field
-      // unsupported instead of inventing an option set.
-      if (!field.valueOption) {
-        fields.push(field)
-        continue
+      const options = resolved.get(sourceKey(source))
+      if (!options || options.state !== 'succeeded' || !options.data) {
+        return options ? failureFrom(options) : adapterFailure('server_terminal', 'Option source was not resolved')
       }
-
-      const options = codeLookup
-        ? await codeLookup.call(this.readPort, { valueOption: field.valueOption })
-        : await cascadeLookup!.call(this.readPort, { codeType: field.valueOption })
-      if (options.state !== 'succeeded' || !options.data) {
-        return failureFrom(options)
+      if (!Array.isArray(options.data.items)) {
+        return adapterFailure('server_terminal', 'Option provider response is malformed')
       }
-      fields.push({
+      hydrated.push({
         ...field,
         ...(options.data.items.length > 0
           ? { options: options.data.items }
           : { unsupportedReason: `${field.type} option provider returned no options` }),
       })
     }
-
-    return succeeded({ ...definition, fields })
+    return succeeded({ ...definition, fields: hydrated })
   }
 
   inspectAcceptOrder(input: AcceptOrderInput) {

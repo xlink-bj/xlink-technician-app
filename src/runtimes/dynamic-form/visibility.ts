@@ -50,13 +50,20 @@ function evaluateExpression(expression: unknown, values: Readonly<Record<string,
   }
   const candidate = expression as Partial<VisibilityExpression> & { readonly kind?: unknown }
   if (candidate.kind === 'all') {
-    if (!Array.isArray(candidate.conditions)) return unsupported('visibility all requires conditions')
+    if (!Array.isArray(candidate.conditions) || candidate.conditions.length === 0) {
+      return unsupported('visibility all requires nonempty conditions')
+    }
+    // Fail closed even if an earlier condition is false. A short-circuiting
+    // "hidden" result could conceal a malformed later rule, letting an
+    // unsupported R1 expression silently bypass required-field/Save gates.
+    // Check every child for validity before deciding whether all are visible.
+    let allVisible = true
     for (const condition of candidate.conditions) {
       const result = evaluateExpression(condition, values)
       if (result.state === 'unsupported') return result
-      if (!result.visible) return result
+      if (!result.visible) allVisible = false
     }
-    return { state: 'visible', visible: true }
+    return { state: allVisible ? 'visible' : 'hidden', visible: allVisible }
   }
   if (candidate.kind !== 'equals' && candidate.kind !== 'oneOf' && candidate.kind !== 'includes' && candidate.kind !== 'exists') {
     return unsupported('visibility operator is unsupported')

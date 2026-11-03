@@ -30,16 +30,18 @@ export function dynamicCodeOptions(raw: unknown, valueOption: string): ReadPage<
   }
 }
 
-function cascadeOption(raw: unknown): CodeOptionRead | null {
-  const record = optionalRecord(raw)
-  const value = optionalString(record ?? {}, ['value'])
-  const label = optionalString(record ?? {}, ['name', 'label'])
-  if (!value || !label) return null
-  const children = record && Array.isArray(record.children)
-    ? record.children
-      .map(cascadeOption)
-      .filter((item): item is CodeOptionRead => Boolean(item))
-    : []
+function cascadeOption(raw: unknown): CodeOptionRead {
+  const record = asRecord(raw, 'cascade code option')
+  const value = optionalString(record, ['value'])
+  const label = optionalString(record, ['name', 'label'])
+  if (!value || !label) throw new AdapterMappingError('cascade option identity or label is missing')
+  if (record.children !== undefined && !Array.isArray(record.children)) {
+    throw new AdapterMappingError('cascade option children are malformed')
+  }
+  // A partially parsed hierarchy is dangerous: an omitted child changes the
+  // available parent/child paths. Reject malformed provider responses rather
+  // than silently filtering rows and presenting a different R1 FormDef.
+  const children = Array.isArray(record.children) ? record.children.map(cascadeOption) : []
   return {
     value,
     label,
@@ -61,11 +63,10 @@ export function cascadeCodeOptions(raw: unknown, codeType: string): ReadPage<Cod
 
   if (!group) return { items: [] }
 
-  const items = Array.isArray(group.children)
-    ? group.children
-      .map(cascadeOption)
-      .filter((item): item is CodeOptionRead => Boolean(item))
-    : []
+  if (group.children !== undefined && !Array.isArray(group.children)) {
+    throw new AdapterMappingError('cascade code group children are malformed')
+  }
+  const items = Array.isArray(group.children) ? group.children.map(cascadeOption) : []
   return { items }
 }
 
