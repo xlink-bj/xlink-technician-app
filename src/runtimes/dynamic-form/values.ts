@@ -69,12 +69,39 @@ function supportedOption(options: readonly FormOption[] | undefined, value: unkn
   )
 }
 
+/**
+ * R1 cascade controls emit an ordered parent → child value path, NOT an
+ * unordered set of independently valid option IDs. Flattening the option
+ * tree proves membership but misses a forged combination of sibling branches.
+ *
+ * Only enforce path topology when the verified option tree has children and
+ * the field is single-path (multiple=false). Other wire representations,
+ * particularly multi-value cascades, remain under their existing contract
+ * until R1 evidence establishes their semantics. This validation belongs to
+ * the shared Runtime: every business FormDef must obey the same rule.
+ */
+function supportedCascadePath(options: readonly FormOption[], path: readonly unknown[]): boolean {
+  let level = options
+  for (const segment of path) {
+    if (typeof segment !== 'string' && typeof segment !== 'number') return false
+    const node: FormOption | undefined = level.find(option => option.value === String(segment))
+    if (!node) return false
+    level = node.children ?? []
+  }
+  return true
+}
+
 export function normalizeFieldValue(
   type: string,
   value: unknown,
   options?: readonly FormOption[],
   multiple = false,
 ): NormalizationResult {
+  if (type === 'cascade' && Array.isArray(value) && !multiple
+    && options?.some(option => Boolean(option.children?.length))
+    && !supportedCascadePath(options, value)) {
+    return invalid('cascade requires a valid hierarchical option path')
+  }
   if (!supportedOption(options, value)) {
     return invalid(`${type} contains an unsupported option`)
   }
