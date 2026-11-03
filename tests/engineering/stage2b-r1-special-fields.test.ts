@@ -72,4 +72,18 @@ describe('Stage 2B R1 source-shaped primitive FormDef write contract', () => {
     expect(validateR1SpecialMockFields(conditional, withoutPhone).ok).toBe(true)
     expect(validateR1SpecialMockFields(definition, { ...valid, injectedField: 'untrusted' }).ok).toBe(false)
   })
+  it('validates visible dependencies against the entire submission regardless of field row order', () => {
+    const conditional = { ...definition, fields: definition.fields?.map(field =>
+      field.valueKey === 'inspectionContactPhone'
+        ? { ...field, required: true, visibility: { kind: 'equals' as const,
+          path: 'inspectionResult', value: 'safe' } } : field) }
+    const reordered = { ...conditional, fields: [...conditional.fields!].reverse() }
+    expect(validateR1SpecialMockFields(conditional, valid).ok).toBe(true)
+    expect(validateR1SpecialMockFields(reordered, valid)).toEqual(
+      validateR1SpecialMockFields(conditional, valid))
+    const { inspectionContactPhone: _phone, ...missing } = valid
+    expect(validateR1SpecialMockFields(reordered, missing).ok).toBe(false)
+    expect(validateR1SpecialMockFields(reordered, { ...valid, inspectionResult: 'follow_up' }).ok).toBe(false)
+  })
+
 })

@@ -1,4 +1,4 @@
-import type { FormDefinitionRead } from '@shared/ports'
+import type { NetworkStatusPort, FormDefinitionRead } from '@shared/ports'
 import type { R1SpecialMockFields } from './r1-special-mock-form-fields'
 
 export type AStageSpecialKind = 'forms' | 'repeat'
@@ -36,6 +36,10 @@ export type AStageSpecialOutcome =
 
 /** Page-composed, synthetic-only controller contract. No App/transport imports. */
 export interface AStageSpecialMockController {
+  readonly network: NetworkStatusPort
+  readDraft(formDefinitionId: string, recordId?: string): Promise<R1SpecialMockFields | null>
+  writeDraft(formDefinitionId: string, values: R1SpecialMockFields, recordId?: string): Promise<boolean>
+  removeDraft(formDefinitionId: string, recordId?: string): Promise<boolean>
   load(): Promise<AStageSpecialView>
   execute(action: AStageSpecialAction): Promise<AStageSpecialOutcome>
   recoverCompleted(originalFields: R1SpecialMockFields): Promise<AStageSpecialOutcome>

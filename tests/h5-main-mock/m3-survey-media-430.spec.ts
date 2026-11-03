@@ -138,6 +138,11 @@ test('430×932 Survey: retryable upload fails once, then resumes the same queued
   await expect(page.getByTestId('dynamic-media-count-images2')).toContainText('0')
   expect(await page.evaluate(() => window.sessionStorage.getItem('xlink:e2e:fail-next-media-upload'))).toBeNull()
 
+  // Destroy every in-memory asset and blob URL. Only persisted file bytes
+  // may make the retry succeed after this full application restart.
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  await expect(page.getByTestId('dynamic-media-actions-images1')).toContainText('继续处理')
+  await expect(page.getByTestId('dynamic-media-count-images1')).toContainText('0')
   // No second file chooser: retry must reuse the durable queued media task.
   await page.getByTestId('dynamic-media-actions-images1').locator('.app-button').click({ timeout: 5_000 })
   await expect(page.getByTestId('dynamic-media-status-images1')).toContainText('已上传')

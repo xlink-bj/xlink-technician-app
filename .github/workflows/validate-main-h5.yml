@@ -101,6 +101,14 @@ jobs:
         env:
           VITE_XLINK_DYNAMIC_SCALAR_QA: 'true'
         run: pnpm exec playwright test --config config/playwright/main-h5-mock.config.ts tests/h5-main-mock/dynamic-form-scalar-closure.spec.ts
+      - name: Verify offline drafts, persistent media recovery and temporal records at 430
+        env:
+          VITE_XLINK_R1_STAGE2D_FIELDS: 'true'
+        run: >-
+          pnpm exec playwright test --config config/playwright/main-h5-mock.config.ts
+          tests/h5-main-mock/stage2d-r1-temporal-fields.spec.ts
+          tests/h5-main-mock/weak-network-recovery.spec.ts
+          tests/h5-main-mock/m3-survey-media-430.spec.ts
       - name: Preserve Stage 1B/2A/2B/2C offline H5 evidence
         if: always()
         uses: actions/upload-artifact@v4

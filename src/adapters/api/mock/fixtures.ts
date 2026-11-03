@@ -194,6 +194,24 @@ export const mockSyntheticStage2CFormDefinitionResponse = {
   total: 12,
 } as const
 
+/** Same verified local temporal/rating codecs as the generic Form Runtime.
+ * Synthetic row names are test data, not a claim about a live tenant schema. */
+export const mockSyntheticStage2DFormDefinitionResponse = {
+  ...mockSyntheticStage2CFormDefinitionResponse,
+  data: [
+    ...mockSyntheticStage2CFormDefinitionResponse.data,
+    { _id: 'mock-inspection-date', name: 'inspectionDate', nameDisp: '检查日期',
+      type: 'date', required: '0', state: 1 },
+    { _id: 'mock-inspection-time', name: 'inspectionTime', nameDisp: '检查时间',
+      type: 'time', required: '0', state: 1 },
+    { _id: 'mock-inspection-datetime', name: 'inspectionDateTime', nameDisp: '复核时间',
+      type: 'datetime', required: '0', state: 1 },
+    { _id: 'mock-inspection-rating', name: 'inspectionRating', nameDisp: '现场评分',
+      type: 'rate', required: '0', state: 1 },
+  ],
+  total: 16,
+} as const
+
 export const mockWorkOrderIds = [
   'mock-work-order-001',
   'mock-work-order-002',

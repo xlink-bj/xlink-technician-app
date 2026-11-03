@@ -1,3 +1,5 @@
+import { createUniNetworkStatusPort } from '@adapters/platform/uni-network-status'
+import { createActionDraftRepository, type ActionDraftIdentity } from '@runtimes/action'
 /** A-only, synthetic main-App bridge for the existing R1 special transaction
  * coordinator. This module cannot dispatch to any real HTTP transport. */
 import { isDevMockJourneyEnabled } from '@adapters/api/mock/journey'
@@ -119,6 +121,7 @@ export function createAStageSpecialMockController(options: {
   readonly workOrderId: string
   readonly getActor: () => AStageMockActor | null
   readonly storage: StoragePort
+  readonly network?: import('@shared/ports').NetworkStatusPort
 }) {
   const { kind } = options
   let inFlight = false
@@ -127,6 +130,50 @@ export function createAStageSpecialMockController(options: {
     && isAStageSpecialMockAvailable(kind, options.workOrderId, expected)
     && options.getActor()?.identity === expected.identity
     && options.getActor()?.roleId === expected.roleId
+
+  const network = options.network ?? createUniNetworkStatusPort()
+  const drafts = createActionDraftRepository(options.storage)
+  function draftIdentity(formId: string, recordId?: string): ActionDraftIdentity {
+    if (!authorized() || ![definition, mockR1NoteFormDefinitionId].includes(formId)
+      || (kind === 'repeat' && formId !== definition)) throw new Error('草稿身份不可用')
+    return { version: 1, userId: asOpaqueId<'UserId'>(expected!.userId),
+      roleId: asOpaqueId<'RoleId'>(expected!.roleId),
+      workOrderId: asOpaqueId<'WorkOrderId'>(options.workOrderId),
+      workflowNodeId: asOpaqueId<'WorkflowNodeRuntimeId'>(targets[kind].node),
+      actionIntent: 'interact_with_form', contentKind: 'dynamic_form',
+      contentIdentity: JSON.stringify([formId, recordId ?? null]) }
+  }
+  // Drafts retain incomplete editing state, never command payloads or receipts.
+  async function readDraft(formId: string, recordId?: string): Promise<R1SpecialMockFields | null> {
+    const result = await drafts.read(draftIdentity(formId, recordId))
+    if (!authorized() || result.state !== 'succeeded') throw new Error('草稿读取失败')
+    if (!result.data || result.data.status !== 'unfinished') return null
+    const fields = (await scopedDefinition(formId)).fields ?? []
+    const values = result.data.values
+    if (Object.keys(values).length > 50 || Object.entries(values).some(([key, value]) =>
+      !fields.some(field => field.valueKey === key && !field.readOnly && !field.presentationOnly)
+      || !(typeof value === 'string' && value.length <= 4000
+        || typeof value === 'number' && Number.isFinite(value) || typeof value === 'boolean'
+        || Array.isArray(value) && value.length <= 30 && value.every(item => typeof item === 'string' && item.length <= 256)))) {
+      throw new Error('草稿内容无法安全恢复')
+    }
+    if (!authorized()) throw new Error('草稿身份已变化')
+    return values as R1SpecialMockFields
+  }
+  async function writeDraft(formId: string, values: R1SpecialMockFields, recordId?: string): Promise<boolean> {
+    const identity = draftIdentity(formId, recordId)
+    const result = await drafts.write({ version: 1, identity, values: { ...values },
+      status: 'unfinished', updatedAt: new Date().toISOString() })
+    return authorized() && result.state === 'succeeded'
+  }
+  async function removeDraft(formId: string, recordId?: string): Promise<boolean> {
+    const identity = draftIdentity(formId, recordId)
+    const marked = await drafts.write({ version: 1, identity, values: {},
+      status: 'completed', updatedAt: new Date().toISOString() })
+    if (marked.state !== 'succeeded' || !authorized()) return false
+    await drafts.remove(identity) // completed tombstone remains safe if cleanup fails
+    return authorized()
+  }
 
   async function load(): Promise<AStageSpecialView> {
     if (!authorized()) throw new Error('身份或环境已变化，不能操作当前表单。')
@@ -267,6 +314,8 @@ export function createAStageSpecialMockController(options: {
     inFlight = true
     try {
       if (!authorized()) return { state: 'blocked', message: '当前角色或 Mock 环境不可用。' }
+      if (await network.current() === 'offline') return { state: 'blocked',
+        message: '网络不可用，填写内容保留在本机。连接恢复后请主动保存。' }
       const before = await load()
       if (!before.nodeActive || before.receiptPending) return { state: 'blocked',
         message: before.receiptPending ? '上一笔操作回执仍需核对，不能重复提交。' : '当前节点已完成。' }
@@ -383,7 +432,7 @@ export function createAStageSpecialMockController(options: {
       return { state: 'uncertain', message: '表单操作结果未能完整确认，禁止盲目重试。' }
     } finally { inFlight = false }
   }
-  return { load, execute, recoverCompleted }
+  return { load, execute, recoverCompleted, network, readDraft, writeDraft, removeDraft }
 }
 
 /** Page-composed DEV capability. No page or feature creates a storage adapter. */

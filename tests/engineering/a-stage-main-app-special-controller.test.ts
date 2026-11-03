@@ -69,6 +69,56 @@ function controller(kind: 'forms' | 'repeat', getActor = () => actor,
 }
 
 describe('A main-App source-only multi-form/repeat controller', () => {
+  it('persists incomplete drafts per role/node/FormDef/record and never auto-submits on reconnect', async () => {
+    vi.stubEnv('VITE_XLINK_R1_STAGE2B_FIELDS', 'true')
+    let online = false
+    const network = { current: async () => online ? 'online' as const : 'offline' as const,
+      subscribe: () => () => undefined }
+    const ui = createAStageSpecialMockController({ kind: 'forms', workOrderId: mockR1FormsWorkOrderId,
+      getActor: () => actor, storage: storage(), network })
+    await ui.writeDraft(mockSyntheticDynamicFormDefinitionId, { inspectionSummary: '离线草稿', inspectionPointCount: '-' })
+    await ui.writeDraft(mockR1NoteFormDefinitionId, { note: '独立备注' })
+    await ui.writeDraft(mockSyntheticDynamicFormDefinitionId, fields('独立记录编辑'), 'saved-record')
+    expect(await controller('forms').readDraft(mockSyntheticDynamicFormDefinitionId)).toMatchObject({ inspectionPointCount: '-' })
+    expect(await controller('forms').readDraft(mockR1NoteFormDefinitionId)).toEqual({ note: '独立备注' })
+    expect(await controller('forms').readDraft(mockSyntheticDynamicFormDefinitionId, 'saved-record')).toEqual(fields('独立记录编辑'))
+    expect(await controller('repeat').readDraft(mockSyntheticDynamicFormDefinitionId)).toBeNull()
+    expect(await ui.execute({ kind: 'save', fields: fields('只允许主动提交') })).toMatchObject({ state: 'blocked' })
+    expect((await ui.load()).receiptPending).toBe(false)
+    online = true
+    expect((await ui.load()).entries.filter(row => row.editable)).toHaveLength(0)
+    expect(await ui.readDraft(mockSyntheticDynamicFormDefinitionId)).not.toBeNull()
+    expect(await ui.execute({ kind: 'save', fields: fields('只允许主动提交') })).toMatchObject({ state: 'succeeded' })
+    await ui.removeDraft(mockSyntheticDynamicFormDefinitionId)
+    expect(await ui.readDraft(mockSyntheticDynamicFormDefinitionId)).toBeNull()
+    expect(await ui.readDraft(mockR1NoteFormDefinitionId)).toEqual({ note: '独立备注' })
+    let current = actor
+    const revoked = controller('forms', () => current)
+    current = { ...actor, identity: 'revoked' }
+    await expect(revoked.readDraft(mockR1NoteFormDefinitionId)).rejects.toThrow()
+  })
+
+  it.each(['forms', 'repeat'] as const)('%s saves, reloads and clears temporal/rating fields through the real Mock protocol', async kind => {
+    vi.stubEnv('VITE_XLINK_R1_STAGE2D_FIELDS', 'true')
+    const ui = controller(kind)
+    const input = { ...fields('时间与评分'), inspectionDate: '2026-11-03',
+      inspectionTime: '09:30', inspectionDateTime: '2026-11-03 09:30:15', inspectionRating: 4 }
+    for (const invalid of [{ inspectionDate: '2026-02-30' }, { inspectionTime: '25:00' },
+      { inspectionDateTime: '2026-11-03T09:30:15Z' }, { inspectionRating: 6 }]) {
+      expect(await ui.execute({ kind: 'save', fields: { ...input, ...invalid } })).toMatchObject({ state: 'blocked' })
+    }
+    expect((await ui.load()).entries.filter(row => row.editable)).toHaveLength(0)
+    const saved = await ui.execute({ kind: 'save', fields: input })
+    expect(saved.state).toBe('succeeded')
+    if (saved.state !== 'succeeded') return
+    const id = saved.view.entries.find(row => row.editable)!.id
+    resetMockCommandState()
+    expect((await controller(kind).load()).entries.find(row => row.id === id)?.values).toEqual(input)
+    expect(await ui.execute({ kind: 'edit', id, fields: fields('已清空可选值') })).toMatchObject({ state: 'succeeded' })
+    resetMockCommandState()
+    expect((await controller(kind).load()).entries.find(row => row.id === id)?.values).toEqual(fields('已清空可选值'))
+  })
+
   it('020 resolves AddFormCode and independently saves, edits, deletes and finalizes a second FormDef', async () => {
     const ui = controller('forms')
     const first = await ui.load()

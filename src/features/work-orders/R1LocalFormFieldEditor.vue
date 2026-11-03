@@ -4,25 +4,8 @@
     <text class="r1-field-editor__hint">填写并保存现场信息，完成前请确认内容准确。</text>
     <template v-for="field in fields" :key="field.fieldId">
       <AppField v-if="field.supported" :label="field.label" :required="field.required">
-        <AppMultiChoiceGroup v-if="field.type === 'checkbox' || (field.type === 'bizSelect' && field.multiple)" :options="field.options"
-          :model-value="listValue(field.valueKey)"
-          @update:model-value="set(field.valueKey,$event)" />
-        <AppCascadeSelector v-else-if="field.type === 'cascade'" :options="field.options"
-          :model-value="listValue(field.valueKey)"
-          :hierarchical="field.options.some(option => Boolean(option.children?.length))"
-          @update:model-value="set(field.valueKey,$event)" />
-        <AppChoiceGroup v-else-if="field.type === 'radio' || field.type === 'select' || field.type === 'bizSelect'"
-          :options="field.options" :model-value="scalarValue(field.valueKey)"
-          @update:model-value="set(field.valueKey,$event)" />
-        <AppChoiceGroup v-else-if="field.type === 'switch'"
-          :options="[{value:'1',label:'是'},{value:'0',label:'否'}]"
-          :model-value="scalarValue(field.valueKey)"
-          @update:model-value="set(field.valueKey,$event)" />
-        <AppTextarea v-else-if="field.type === 'textarea'"
-          :model-value="scalarValue(field.valueKey)" placeholder="请填写现场信息"
-          @update:model-value="set(field.valueKey,$event)" />
-        <AppInput v-else :model-value="scalarValue(field.valueKey)" placeholder="请填写信息"
-          @update:model-value="set(field.valueKey,$event)" />
+        <R1FormFieldControl :field="field" :model-value="values[field.valueKey]"
+          :disabled="saving" @update:model-value="set(field.valueKey, $event)" />
       </AppField>
       <view v-else class="r1-field-editor__unsupported" :data-testid="`r1-field-unsupported-${field.fieldId}`">
         <text>{{ field.label }} · {{ field.reason || '暂不支持' }}</text>
@@ -42,11 +25,7 @@
 import { computed, ref } from 'vue'
 import type { FormDefinitionRead, FormFieldValue } from '@shared/ports'
 import AppField from '@shared/ui/AppField.vue'
-import AppInput from '@shared/ui/AppInput.vue'
-import AppTextarea from '@shared/ui/AppTextarea.vue'
-import AppChoiceGroup from '@shared/ui/AppChoiceGroup.vue'
-import AppMultiChoiceGroup from '@shared/ui/AppMultiChoiceGroup.vue'
-import AppCascadeSelector from '@shared/ui/AppCascadeSelector.vue'
+import R1FormFieldControl from './R1FormFieldControl.vue'
 import AppButton from '@shared/ui/AppButton.vue'
 import { useR1LocalFormDraftStore, type R1LocalFormIntent } from './r1-local-form-drafts'
 import { normalizeR1LocalFieldPatch, projectR1LocalFields, type R1LocalFieldValue } from './r1-local-form-fields'
@@ -59,14 +38,6 @@ const values=ref<Readonly<Record<string,R1LocalFieldValue>>>({...props.initialVa
 const error=ref('')
 const saving=ref(false)
 const fields=computed(()=>projectR1LocalFields(props.definition,values.value))
-function scalarValue(key:string):string {
-  const v=values.value[key]
-  return typeof v==='string'||typeof v==='number'||typeof v==='boolean'?String(v):''
-}
-function listValue(key:string):readonly string[]{
-  const v=values.value[key]
-  return Array.isArray(v)?v as readonly string[]:[]
-}
 function set(key:string,value:FormFieldValue){
   if(saving.value)return
   const next=normalizeR1LocalFieldPatch(props.definition,values.value,key,value)

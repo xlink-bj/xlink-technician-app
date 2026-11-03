@@ -12,7 +12,7 @@ export type R1SpecialMockValidation =
  * cascade path. External providers, unknown arrays and media stay fenced. */
 export const r1SpecialMockWritableTypes: ReadonlySet<string> = new Set([
   'textarea', 'text', 'radio', 'phone', 'IDNumber', 'number', 'digit', 'switch', 'select',
-  'checkbox', 'cascade',
+  'checkbox', 'cascade', 'date', 'time', 'datetime', 'rate',
 ])
 
 function finiteDecimalWithoutRounding(raw: string | number | boolean | readonly string[]): boolean {
@@ -85,7 +85,9 @@ export function validateR1SpecialMockFields(
     if (field.type === 'digit' && !finiteDecimalWithoutRounding(raw)) {
       return { ok: false, message: `${field.label}的小数精度无法安全写回。` }
     }
-    const next = normalizeR1LocalFieldPatch(definition, fields, field.valueKey, raw)
+    // A FormData submission is a complete candidate, unlike an interactive
+    // patch. Visibility must not depend on ExtField row iteration order.
+    const next = normalizeR1LocalFieldPatch(definition, input, field.valueKey, raw)
     if (!next || next[field.valueKey] === undefined) {
       return { ok: false, message: `${field.label}不符合当前表单定义。` }
     }
