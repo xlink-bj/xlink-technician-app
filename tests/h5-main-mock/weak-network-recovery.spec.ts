@@ -16,20 +16,33 @@ test('430×932 offline editing, multi-FormDef isolation, restart recovery and ex
   await page.locator('.search-button').click()
   await page.locator('.work-order-card').filter({ hasText: '韩先生' }).click()
   const field = (key: string) => page.getByTestId(`a-special-field-${key}`)
+  const savedDraftField = (formDefinitionId: string, fieldId: string) => page.evaluate(({ formDefinitionId, fieldId }) => {
+    const record = Object.keys(localStorage).flatMap(key => {
+      try { return [JSON.parse(localStorage.getItem(key) ?? 'null') as { identity?: { workOrderId?: string; workflowNodeId?: string; contentIdentity?: string }; values?: Record<string, unknown> } | null] }
+      catch { return [] }
+    }).find(item => item?.identity?.workOrderId === 'mock-work-order-020-local-forms'
+      && item.identity.workflowNodeId === 'mock-workflow-node-020-forms'
+      && item.identity.contentIdentity === JSON.stringify([formDefinitionId, null]))
+    return record?.values?.[fieldId] ?? null
+  }, { formDefinitionId, fieldId })
+  const expectSavedDraftField = async (formDefinitionId: string, fieldId: string, value: string) => {
+    await expect.poll(() => savedDraftField(formDefinitionId, fieldId)).toBe(value)
+  }
   await field('inspectionSummary').locator('textarea').fill('断网前的现场记录')
   await field('inspectionResult').locator('.app-choice').filter({ hasText: '需要跟进' }).click()
   await expect(page.getByTestId('a-special-local-draft')).toContainText('已保存到本机')
   await context.setOffline(true)
   await expect(page.getByTestId('a-special-offline')).toBeVisible()
   await field('inspectionSummary').locator('textarea').fill('断网期间继续填写，重启不能丢失')
-  await expect(page.getByTestId('a-special-local-draft')).toContainText('已保存到本机')
+  await expectSavedDraftField('mock-form-definition-inspection', 'inspectionSummary', '断网期间继续填写，重启不能丢失')
   await page.getByTestId('a-special-save').click()
   await expect(page.getByTestId('a-special-operation-feedback')).toContainText('连接恢复后请主动保存')
   await expect(page.getByTestId('a-special-row-mock-special-form-data-forms-1')).toHaveCount(0)
   await page.getByTestId('a-special-definition-choice').locator('.app-choice').filter({ hasText: '服务备注' }).click()
   await field('note').locator('textarea').fill('另一表单的独立离线草稿')
-  await expect(page.getByTestId('a-special-local-draft')).toContainText('已保存到本机')
+  await expectSavedDraftField('mock-form-definition-local-note', 'note', '另一表单的独立离线草稿')
   await page.getByTestId('a-special-definition-choice').locator('.app-choice').filter({ hasText: '现场记录' }).click()
+  await expect(page.getByTestId('a-special-local-draft')).toContainText('已恢复本机草稿')
   await expect(field('inspectionSummary').locator('textarea')).toHaveValue('断网期间继续填写，重启不能丢失')
   await context.setOffline(false)
   await expect(page.getByTestId('a-special-offline')).toHaveCount(0)

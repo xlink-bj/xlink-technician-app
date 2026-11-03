@@ -126,7 +126,8 @@ function commitPicker(): void {
   border-radius:30rpx 30rpx 0 0; padding:24rpx var(--app-page-gutter) calc(18rpx + env(safe-area-inset-bottom)); }
 .survey-part-picker__header { display:flex; align-items:center; justify-content:center; position:relative; min-height:54rpx; }
 .survey-part-picker__title { color:var(--app-color-text-primary); font-size:var(--app-font-section-title); font-weight:800; }
-.survey-part-picker__close { position:absolute; right:0; top:0; padding:0; width:52rpx; height:52rpx;
+.survey-part-picker__close { position:absolute; right:-18rpx; top:-17rpx; padding:0; width:88rpx; height:88rpx;
+  display:flex; align-items:center; justify-content:center;
   background:transparent; color:var(--app-color-text-secondary); border:0; font-size:36rpx; line-height:48rpx; }
 .survey-part-picker__current { display:flex; align-items:center; gap:18rpx; padding:16rpx 18rpx; margin-top:18rpx;
   background:var(--app-color-primary-soft); border-radius:12rpx; }

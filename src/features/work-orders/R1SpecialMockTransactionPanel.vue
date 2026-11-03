@@ -3,7 +3,6 @@
     <view class="special-forms__header">
       <view class="special-forms__header-copy">
         <text class="special-forms__title">{{ kind === 'repeat' ? '现场复检' : '现场记录' }}</text>
-        <text class="special-forms__subtitle">{{ kind === 'repeat' ? '每次复检单独保存，确认齐全后完成' : '按当前表单填写检查结论，保存后可补充记录' }}</text>
       </view>
     </view>
     <view v-if="loading" class="special-forms__message" data-testid="a-special-loading">正在读取表单…</view>
@@ -20,7 +19,6 @@
         :message="operationFeedback" data-testid="a-special-operation-feedback" />
       <view class="special-forms__task-state" data-testid="a-special-task-state">
         <text class="special-forms__task-marker">{{ viewState.receiptPending ? '结果待核对' : viewState.nodeActive ? '正在填写' : '记录已完成' }}</text>
-        <text class="special-forms__task-detail">{{ viewState.receiptPending ? '保留原有记录，先核对回执，勿重复提交' : viewState.nodeActive ? '保存每条记录后，确认齐全再完成节点' : '记录已锁定，可查看已保存内容' }}</text>
       </view>
       <view class="special-forms__section-heading">
         <text>记录列表</text>
@@ -51,8 +49,7 @@
         </view>
       </view>
       <AppStatus v-if="viewState.receiptPending" tone="warning" quiet
-        message="上一笔操作仍有防重复提交记录。系统不会自动重发保存或完成命令。"
-        data-testid="a-special-receipt-pending" />
+        message="上次操作结果待核对，核对前请勿重复提交。" data-testid="a-special-receipt-pending" />
       <view v-if="viewState.receiptPending" class="special-forms__recovery" data-testid="a-special-recovery">
         <template v-if="viewState.pendingRecoverable">
           <text class="special-forms__finish-copy">{{ uxStateLanguage.pendingReceipt }}可只读核对最新记录，确认后解除重复提交保护。</text>
@@ -103,7 +100,7 @@
                   </view>
                   <view v-for="task in tasksFor(field.fieldId).filter(task => task.state !== 'uploaded')"
                     :key="task.taskId" class="special-forms__media-item">
-                    <text class="special-forms__media-name">{{ task.state === 'failed_retryable' ? '上传未完成，可重试' : '文件正在处理' }}</text>
+                    <text class="special-forms__media-name">{{ mediaStatus(task) }}</text>
                     <AppButton v-if="task.state === 'failed_retryable'" variant="text" size="compact"
                       :disabled="busy || task.lastError?.code === 'ambiguous_postprocess'"
                       :data-testid="`a-special-media-retry-${field.valueKey}`"
@@ -134,7 +131,6 @@
             </view>
           </view>
           <view v-if="kind === 'forms' && !editingId" class="special-forms__finish">
-            <text class="special-forms__finish-copy">也可将本条记录保存后立即完成节点；确认后不可继续编辑。</text>
             <AppButton v-if="!confirmSaveFinish" variant="secondary" block
               :disabled="busy || !formValid || hasPendingMedia" data-testid="a-special-save-finish-request"
               @tap="confirmSaveFinish = true">保存并完成节点</AppButton>
@@ -209,6 +205,17 @@ const mediaValues = (key: string): readonly R1FileWireValue[] => {
 }
 const tasksFor = (fieldId: string): readonly MediaUploadTask[] =>
   mediaTasks.value.filter(task => task.scope.fieldId === fieldId)
+function mediaStatus(task: MediaUploadTask): string {
+  switch (task.state) {
+    case 'failed_retryable':
+      return task.lastError?.code === 'ambiguous_postprocess' ? '上传结果待核对' : '上传失败，可重试'
+    case 'failed_terminal': return '上传失败，请移除后重新添加'
+    case 'queued':
+    case 'ready_to_upload': return '等待上传'
+    case 'uploading': return '正在上传'
+    default: return '正在处理附件'
+  }
+}
 const selectedFormDefinitionId = ref('')
 const formChoices = computed(() => viewState.value?.definitions.map(item => ({ value: item.id, label: item.label })) ?? [])
 const selectedDefinition = computed(() => viewState.value?.definitions.find(
@@ -490,12 +497,9 @@ async function recoverCompleted(): Promise<void> {
 .special-forms__header,.special-forms__section-heading { justify-content:space-between; }
 .special-forms__header-copy,.special-forms__record-main { flex:1; min-width:0; }
 .special-forms__title { display:block; font-size:var(--app-font-section-title); font-weight:700; color:var(--app-color-text-primary); }
-.special-forms__subtitle,.special-forms__scope,.special-forms__notice,.special-forms__count,.special-forms__record-summary,.special-forms__muted,.special-forms__finish-copy { display:block; font-size:23rpx; line-height:1.5; color:var(--app-color-text-secondary); }
-.special-forms__scope { flex-shrink:0; align-self:flex-start; background:#edf5ff; color:#2465ae; border-radius:12rpx; padding:7rpx 12rpx; font-weight:650; }
-.special-forms__notice { margin-top:18rpx; }
-.special-forms__task-state { margin-top:22rpx; border:1rpx solid #d7e7fc; background:#f1f7ff; border-radius:16rpx; padding:20rpx; display:flex; flex-direction:column; gap:6rpx; }
-.special-forms__task-marker { font-weight:750; font-size:29rpx; color:#1d5796; }
-.special-forms__task-detail { color:#4b6484; font-size:23rpx; line-height:1.5; }
+.special-forms__count,.special-forms__record-summary,.special-forms__muted,.special-forms__finish-copy { display:block; font-size:26rpx; line-height:1.5; color:var(--app-color-text-secondary); }
+.special-forms__task-state { margin-top: 12rpx; }
+.special-forms__task-marker { font-weight: 600; font-size: 26rpx; color: var(--app-color-text-secondary); }
 .special-forms__section-heading { margin-top:28rpx; margin-bottom:8rpx; font-weight:700; font-size:29rpx; color:var(--app-color-text-primary); }
 .special-forms__record { align-items:flex-start; border-top:1rpx solid var(--app-color-border); min-height:100rpx; padding:22rpx 0; }
 .special-forms__record-index { color:var(--app-color-text-secondary); font-size:25rpx; min-width:30rpx; }
@@ -507,8 +511,8 @@ async function recoverCompleted(): Promise<void> {
 .special-forms__section-title { display:block; font-size:29rpx; font-weight:700; color:var(--app-color-text-primary); margin-bottom:20rpx; }
 .special-forms__label { display:block; font-size:26rpx; font-weight:600; margin-bottom:12rpx; }
 .special-forms__field { margin-top:20rpx; }
-.special-forms__reference { margin-top:16rpx; padding:16rpx 18rpx; border-radius:12rpx; background:var(--app-color-surface, #f5f7fa); color:var(--app-color-text-secondary); font-size:23rpx; }
-.special-forms__validation { display:block; margin-top:16rpx; font-size:23rpx; color:#985919; }
+.special-forms__reference { margin-top:16rpx; padding:16rpx 18rpx; border-radius:12rpx; background:var(--app-color-surface, #f5f7fa); color:var(--app-color-text-secondary); font-size:26rpx; }
+.special-forms__validation { display:block; margin-top:16rpx; font-size:26rpx; color:#985919; }
 .special-forms__required { color:#b55343; }
 .special-forms__buttons { margin-top:22rpx; }
 .special-forms__save-button { flex:1 1 0; min-width:0; }
@@ -518,6 +522,6 @@ async function recoverCompleted(): Promise<void> {
 .special-forms__message--error { color:#985919; }
 .special-forms__confirmation { flex-wrap:wrap; padding:16rpx 0; font-size:24rpx; }
 .special-forms__media { display:flex; flex-direction:column; align-items:flex-start; gap:12rpx; }
-.special-forms__media-item { display:flex; align-items:center; gap:12rpx; width:100%; padding:12rpx 16rpx; border:1rpx solid var(--app-color-border); border-radius:12rpx; }
+.special-forms__media-item { display:flex; align-items:center; gap:12rpx; width:100%; box-sizing:border-box; padding:12rpx 16rpx; border:1rpx solid var(--app-color-border); border-radius:12rpx; }
 .special-forms__media-name { flex:1; min-width:0; overflow-wrap:anywhere; font-size:25rpx; }
 </style>

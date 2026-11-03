@@ -1,10 +1,15 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 
 // Synthetic file only; no customer media, network upload or Production write.
 const sampleImage = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9WS+QX8AAAAASUVORK5CYII=',
   'base64',
 )
+async function capture(page: Page, scene: string) {
+  const directory = process.env.XLINK_STAGE_B_SCREENSHOTS
+  if (directory) await page.screenshot({ path: `${directory}/${scene}.png` })
+}
+
 async function openForms(page: import('@playwright/test').Page) {
   await page.setViewportSize({ width: 430, height: 932 })
   await page.goto('/#/pages/index/index?devReview=1')
@@ -32,23 +37,33 @@ test.describe('source-only special file and conflict', () => {
     await openForms(page)
     const pick = page.getByTestId('a-special-media-pick-inspectionFiles')
     await expect(pick).toBeVisible()
+    await page.getByTestId('a-special-field-inspectionSummary').scrollIntoViewIfNeeded()
+    await capture(page, 'special-empty')
     await populate(page, '源字段附件事务')
     await page.evaluate(() => sessionStorage.setItem('xlink:e2e:fail-next-media-upload', 'retryable'))
     const [chooser] = await Promise.all([page.waitForEvent('filechooser'), pick.click()])
     await chooser.setFiles({ name: 'xlink-synthetic-file.png', mimeType: 'image/png', buffer: sampleImage })
     await expect(page.getByTestId('a-special-media-retry-inspectionFiles')).toBeVisible()
+    await page.getByTestId('a-special-media-retry-inspectionFiles').scrollIntoViewIfNeeded()
+    await capture(page, 'special-attachment-failed')
     await expect(page.getByTestId('a-special-save')).toHaveAttribute('aria-disabled', 'true')
     await page.reload()
     await expect(page.getByTestId('a-special-media-retry-inspectionFiles')).toBeVisible()
     await page.getByTestId('a-special-media-retry-inspectionFiles').click()
     await expect(page.getByTestId('a-special-media-inspectionFiles')).toContainText('mock-upload')
+    await page.getByTestId('a-special-media-inspectionFiles').scrollIntoViewIfNeeded()
+    await capture(page, 'special-media-uploaded')
     await expect(page.getByTestId('a-special-save')).toBeEnabled()
     await page.getByTestId('a-special-save').click()
     const row = page.getByTestId('a-special-row-mock-special-form-data-forms-1')
+    await row.scrollIntoViewIfNeeded()
+    await capture(page, 'special-record-saved')
     await expect(row).toContainText('源字段附件事务')
     await page.reload()
     await page.getByTestId('a-special-edit-mock-special-form-data-forms-1').click()
     await expect(page.getByTestId('a-special-media-inspectionFiles')).toContainText('mock-upload')
+    await page.getByTestId('a-special-media-inspectionFiles').scrollIntoViewIfNeeded()
+    await capture(page, 'special-record-restored')
     expect(external).toEqual([])
   })
 
@@ -68,6 +83,8 @@ test.describe('source-only special file and conflict', () => {
     await other.getByTestId('a-special-field-inspectionSummary').locator('textarea').fill('B 旧版本修改')
     await other.getByTestId('a-special-save').click()
     await expect(other.getByTestId('a-special-operation-feedback')).toContainText('记录已被其他编辑器更新')
+    await other.getByTestId('a-special-operation-feedback').scrollIntoViewIfNeeded()
+    await capture(other, 'special-version-conflict')
     await other.reload()
     await expect(other.getByTestId('a-special-row-mock-special-form-data-forms-1')).toContainText('A 编辑器提交')
   })

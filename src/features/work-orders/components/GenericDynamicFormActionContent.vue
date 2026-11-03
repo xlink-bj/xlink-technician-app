@@ -60,6 +60,8 @@
         :label="field.label"
         :hide-label="isTaskLayout && (block.kind === 'part' || (block.kind === 'media' && block.fields.length === 1))"
         :required="field.runtime.required"
+        :optional="!field.runtime.required"
+        :read-only="field.runtime.readOnly"
       >
         <!-- S02 visual/test aliases remain stable, but choice is now based solely on
              verified hierarchical cascade options, not Survey or a valueKey. -->
@@ -139,8 +141,8 @@
         >
           <view class="dynamic-action-media-header">
             <view class="dynamic-action-media-header-copy">
-              <text class="dynamic-action-media-title">{{ isTaskLayout ? '拍摄或上传' : field.type === 'image' ? '现场照片' : '现场附件' }}</text>
-              <text class="dynamic-action-media-subtitle">{{ isTaskLayout ? '按此字段单独记录现场资料' : '按当前勘察要求补充记录' }}</text>
+              <text class="dynamic-action-media-title">{{ isTaskLayout ? '拍摄或上传' : field.type === 'image' ? '添加现场照片' : '添加现场附件' }}</text>
+              <text class="dynamic-action-media-subtitle">{{ isTaskLayout ? '选择照片或附件' : '选择照片或文件' }}</text>
             </view>
             <text class="dynamic-action-media-count" :data-testid="`dynamic-media-count-${field.valueKey}`">
               {{ mediaCountFor(field.fieldId) }}<text v-if="mediaMaxFor(field) !== undefined"> / {{ mediaMaxFor(field) }}</text>
@@ -150,15 +152,26 @@
 
           <view class="dynamic-action-media-grid" :data-testid="`dynamic-media-preview-${field.valueKey}`">
             <view
-              v-for="media in mediaPreviewsFor(field)"
+              v-for="(media, index) in mediaPreviewsFor(field)"
               :key="media.url"
               class="dynamic-action-media-tile dynamic-action-media-tile--preview"
-              role="button"
-              tabindex="0"
-              aria-label="查看已上传的媒体"
-              @tap="previewMedia(field.fieldId, media.url)"
+              :data-testid="`dynamic-media-item-${field.valueKey}-${index}`"
             >
-              <image class="dynamic-action-media-thumbnail" :src="media.url" mode="aspectFill" />
+              <view v-if="media.isImage" class="dynamic-action-media-preview-image"
+                role="button" tabindex="0" aria-label="预览现场照片"
+                @tap="previewMedia(field.fieldId, media.url)">
+                <image class="dynamic-action-media-thumbnail" :src="media.url" mode="aspectFill" />
+              </view>
+              <view v-else class="dynamic-action-media-file" :aria-label="mediaNameFor(field, media)">
+                <AppIcon name="order" :size="24" color="var(--app-color-primary)" />
+                <text class="dynamic-action-media-file-name">{{ mediaNameFor(field, media) }}</text>
+              </view>
+              <AppButton v-if="workspace.canPickDynamicMedia(field.fieldId)"
+                class="dynamic-action-media-remove" variant="secondary" size="compact"
+                :aria-label="media.isImage ? '从表单移除这张照片' : '从表单移除这个附件'"
+                :data-testid="`dynamic-media-remove-${field.valueKey}-${index}`"
+                :disabled="Boolean(workspace.mediaInFlightField) || workspace.lifecycle === 'submitting'"
+                @tap="requestMediaRemoval(field.fieldId, media.url, media.isImage)">移除</AppButton>
             </view>
             <view
               v-if="mediaPreviewsFor(field).length === 0 && mediaTaskCountFor(field.fieldId) > 0"
@@ -178,6 +191,20 @@
             >
               <AppIcon name="image" :size="22" color="var(--app-color-primary)" />
               <text>{{ mediaAddTileLabel(field) }}</text>
+            </view>
+          </view>
+
+          <view v-if="pendingMediaRemoval?.fieldId === field.fieldId"
+            class="dynamic-action-media-removal" role="group" aria-label="确认移除媒体"
+            :data-testid="`dynamic-media-remove-confirm-${field.valueKey}`">
+            <text class="dynamic-action-media-removal__copy">
+              确定从本次表单移除{{ pendingMediaRemoval.isImage ? '这张照片' : '这个附件' }}？
+            </text>
+            <view class="dynamic-action-media-removal__actions">
+              <AppButton block variant="secondary" :data-testid="`dynamic-media-remove-accept-${field.valueKey}`"
+                @tap="confirmMediaRemoval">确认移除</AppButton>
+              <AppButton block variant="text" :data-testid="`dynamic-media-remove-cancel-${field.valueKey}`"
+                @tap="pendingMediaRemoval = null">取消</AppButton>
             </view>
           </view>
 
@@ -378,12 +405,49 @@ function mediaTaskCountFor(fieldId: string): number {
   return workspace.mediaTasksByField[fieldId]?.length ?? 0
 }
 
-function mediaPreviewsFor(field: { readonly fieldId: string; readonly valueKey: string }): readonly { readonly url: string }[] {
+function mediaPreviewsFor(field: RenderField): readonly {
+  readonly url: string
+  readonly fileName?: string
+  readonly extension?: string
+  readonly mimeType?: string
+  readonly isImage: boolean
+}[] {
   const uploaded = workspace.mediaByField[field.fieldId] ?? []
-  if (uploaded.length > 0) return uploaded
   const value = workspace.dynamicForm?.values[field.valueKey]
   const values = Array.isArray(value) ? value : value === undefined || value === null || value === '' ? [] : [value]
-  return values.filter(isMediaValueRef).map(({ url }) => ({ url }))
+  const saved = values.flatMap(item => {
+    if (isMediaValueRef(item)) return [{
+      url: item.url,
+      ...(item.fileName ? { fileName: item.fileName } : {}),
+      ...(item.extension ? { extension: item.extension } : {}),
+    }]
+    if (typeof item === 'string' && /^(?:https?:\/\/|\/)/.test(item)) return [{ url: item }]
+    return []
+  })
+  const byUrl = new Map<string, { url: string; fileName?: string; extension?: string; mimeType?: string }>()
+  for (const item of saved) byUrl.set(item.url, item)
+  for (const item of uploaded) byUrl.set(item.url, {
+    ...byUrl.get(item.url),
+    url: item.url,
+    ...(item.fileName ? { fileName: item.fileName } : {}),
+    ...(item.extension ? { extension: item.extension } : {}),
+    ...(item.mimeType ? { mimeType: item.mimeType } : {}),
+  })
+  return [...byUrl.values()].map(item => ({
+    ...item,
+    isImage: field.type === 'image'
+      || item.mimeType?.startsWith('image/') === true
+      || ['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic'].includes(item.extension?.replace(/^\./, '').toLowerCase() ?? '')
+      || /\.(?:jpe?g|png|gif|webp|heic)(?:[?#]|$)/i.test(item.fileName ?? item.url),
+  }))
+}
+
+function mediaNameFor(field: RenderField, media: { readonly fileName?: string }): string {
+  const name = media.fileName?.trim()
+  if (!name || /^[a-f\d]{8}(?:-[a-f\d]{4}){3}-[a-f\d]{12}$/i.test(name)) {
+    return field.type === 'image' ? '现场照片' : '已上传附件'
+  }
+  return name
 }
 
 function mediaCountFor(fieldId: string): number {
@@ -440,13 +504,24 @@ function setField(fieldId: string, value: FormFieldValue): void {
 }
 
 const previewUrl = ref<string | null>(null)
+const pendingMediaRemoval = ref<{ readonly fieldId: string; readonly url: string; readonly isImage: boolean } | null>(null)
 function previewMedia(fieldId: string, url: string): void {
-  const urls = workspace.mediaByField[fieldId]?.map((item) => item.url) ?? []
-  const knownUrls = urls.length ? urls : workspace.dynamicFields
-    .filter((field) => field.fieldId === fieldId)
-    .flatMap((field) => mediaPreviewsFor(field).map((item) => item.url))
+  const field = workspace.dynamicFields.find(candidate => candidate.fieldId === fieldId)
+  const knownUrls = field ? mediaPreviewsFor(field).map(item => item.url) : []
   if (!knownUrls.includes(url)) return
   previewUrl.value = url
+}
+
+function requestMediaRemoval(fieldId: string, url: string, isImage: boolean): void {
+  if (!workspace.canPickDynamicMedia(fieldId) || workspace.mediaInFlightField) return
+  pendingMediaRemoval.value = { fieldId, url, isImage }
+}
+
+async function confirmMediaRemoval(): Promise<void> {
+  const target = pendingMediaRemoval.value
+  if (!target) return
+  const result = await workspace.removeDynamicMedia(target.fieldId, target.url)
+  if (result.state === 'succeeded') pendingMediaRemoval.value = null
 }
 
 async function pickMedia(fieldId: string): Promise<void> {
@@ -461,6 +536,58 @@ async function pickMedia(fieldId: string): Promise<void> {
 </script>
 
 <style>
+/* Standard FormDef pages and task-layout forms share the same readable
+   field rhythm. Runtime order, visibility and validation remain authoritative. */
+.dynamic-action-content:not(.dynamic-action-content--survey) {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  margin-top: 20rpx;
+  padding: 0;
+}
+.dynamic-action-content:not(.dynamic-action-content--survey) .dynamic-action-field {
+  background: var(--app-color-surface);
+  border: 1rpx solid var(--app-color-border);
+  border-radius: var(--app-radius-card);
+  box-sizing: border-box;
+  display: block;
+  margin: 0 0 16rpx;
+  padding: 22rpx;
+}
+.dynamic-action-content:not(.dynamic-action-content--survey) .app-field__label {
+  color: var(--app-color-text-primary);
+  font-size: var(--app-font-body);
+  font-weight: 650;
+  line-height: 1.45;
+  margin-bottom: 12rpx;
+}
+.dynamic-action-content:not(.dynamic-action-content--survey) .dynamic-action-presentation-label {
+  color: var(--app-color-text-primary);
+  font-size: var(--app-font-body);
+  font-weight: 700;
+}
+.dynamic-action-content:not(.dynamic-action-content--survey) .dynamic-action-media {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+}
+.dynamic-action-content:not(.dynamic-action-content--survey) .dynamic-action-media-subtitle {
+  display: none;
+}
+.dynamic-action-content:not(.dynamic-action-content--survey) .dynamic-action-media-tile {
+  flex-basis: 168rpx;
+  height: 168rpx;
+  width: 168rpx;
+}
+.dynamic-action-content:not(.dynamic-action-content--survey) .dynamic-action-media-tile--add {
+  min-height: 96rpx;
+  cursor: pointer;
+}
+.dynamic-action-content:not(.dynamic-action-content--survey) .dynamic-action-media-hint {
+  font-size: var(--app-font-body);
+  line-height: 1.5;
+}
 .dynamic-action-content { margin-top: var(--app-space-md); padding: var(--app-card-padding); }
 .dynamic-action-field { margin-top: var(--app-space-lg); }
 /* A field-service media section, not a generic engineering upload grid.
@@ -497,7 +624,20 @@ async function pickMedia(fieldId: string): Promise<void> {
 .dynamic-action-media-tile--pending { border-style: dashed; color: var(--app-color-text-secondary); font-size: var(--app-font-meta); padding: 12rpx; text-align: center; }
 .dynamic-action-media-tile--add { background: var(--app-color-primary-soft); border-color: var(--app-color-primary-border); border-style: dashed; color: var(--app-color-primary); cursor: pointer; font-size: var(--app-font-meta); font-weight: 650; padding: 8rpx; text-align: center; }
 .dynamic-action-media-tile--add:active { opacity: 0.78; }
-.dynamic-action-media-thumbnail { display: block; height: 100%; object-fit: cover; width: 100%; }
+.dynamic-action-media-tile--preview { position: relative; }
+.dynamic-action-media-preview-image { height:calc(100% - 88rpx); left:0; position:absolute; top:0; width:100%; }
+.dynamic-action-media-thumbnail { display: block; height:100%; object-fit: cover; width:100%; }
+.dynamic-action-media-file { align-items:center; display:flex; flex-direction:column; gap:8rpx; max-width:100%; padding:12rpx; }
+.dynamic-action-media-file-name { color:var(--app-color-text-primary); font-size:var(--app-font-meta); line-height:1.35; max-width:100%; overflow-wrap:anywhere; text-align:center; }
+.dynamic-action-media-remove { background:var(--app-color-primary); border:0; border-radius:0; bottom:0; color:#fff; height:88rpx; left:0; min-height:88rpx; position:absolute; width:100%; z-index:1; }
+.dynamic-action-media-removal {
+  background:var(--app-color-surface); border:1rpx solid var(--app-color-border);
+  border-radius:var(--app-radius-card); bottom:calc(160rpx + env(safe-area-inset-bottom));
+  box-sizing:border-box; left:var(--app-page-gutter); padding:18rpx;
+  position:fixed; right:var(--app-page-gutter); z-index:150;
+}
+.dynamic-action-media-removal__copy { color:var(--app-color-text-primary); display:block; font-size:var(--app-font-body); line-height:1.45; }
+.dynamic-action-media-removal__actions { display:flex; flex-direction:column; gap:8rpx; margin-top:10rpx; }
 .dynamic-action-media-hint { border-top: 1rpx solid var(--app-color-divider); color: var(--app-color-text-secondary); display: block; font-size: var(--app-font-meta); line-height: 1.5; margin-top: 16rpx; padding-top: 12rpx; }
 .dynamic-action-media-actions { margin-top: 16rpx; }
 .dynamic-action-presentation-divider { align-items: center; display: flex; gap: var(--app-space-sm); margin-top: var(--app-space-lg); }

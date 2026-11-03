@@ -274,7 +274,7 @@ page {
 .app-field { margin-top: var(--app-field-gap); }
 .app-field__label { color: var(--app-color-text-secondary); display: block; font-size: var(--app-font-field-label); font-weight: 600; line-height: 1.5; margin-bottom: var(--app-space-sm); }
 .app-field__required { color: var(--app-color-danger); }
-.app-field__optional { color: var(--app-color-text-secondary); }
+.app-field__optional,.app-field__readonly { color: var(--app-color-text-secondary); font-size: var(--app-font-meta); font-weight: 400; }
 .app-field__supporting { color: var(--app-color-text-secondary); display: block; font-size: var(--app-font-meta); line-height: 1.5; margin-top: var(--app-space-xs); }
 .app-field__error { color: var(--app-color-danger); display: block; font-size: var(--app-font-status); line-height: 1.5; margin-top: var(--app-space-sm); }
 .app-field--error .app-field__label { color: var(--app-color-danger); }
