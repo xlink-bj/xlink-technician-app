@@ -4,14 +4,14 @@
     <text class="r1-field-editor__hint">填写并保存现场信息，完成前请确认内容准确。</text>
     <template v-for="field in fields" :key="field.fieldId">
       <AppField v-if="field.supported" :label="field.label" :required="field.required">
-        <AppMultiChoiceGroup v-if="field.type === 'checkbox'" :options="field.options"
+        <AppMultiChoiceGroup v-if="field.type === 'checkbox' || (field.type === 'bizSelect' && field.multiple)" :options="field.options"
           :model-value="listValue(field.valueKey)"
           @update:model-value="set(field.valueKey,$event)" />
         <AppCascadeSelector v-else-if="field.type === 'cascade'" :options="field.options"
           :model-value="listValue(field.valueKey)"
           :hierarchical="field.options.some(option => Boolean(option.children?.length))"
           @update:model-value="set(field.valueKey,$event)" />
-        <AppChoiceGroup v-else-if="field.type === 'radio' || field.type === 'select'"
+        <AppChoiceGroup v-else-if="field.type === 'radio' || field.type === 'select' || field.type === 'bizSelect'"
           :options="field.options" :model-value="scalarValue(field.valueKey)"
           @update:model-value="set(field.valueKey,$event)" />
         <AppChoiceGroup v-else-if="field.type === 'switch'"
