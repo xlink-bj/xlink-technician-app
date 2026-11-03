@@ -1,8 +1,6 @@
 import { expect, test } from '@playwright/test'
 
 test('430×932 offline editing, multi-FormDef isolation, restart recovery and explicit submission', async ({ page, context }) => {
-  test.skip(process.env.VITE_XLINK_R1_MP_UX_FIXTURES !== 'true',
-    'The listed 020 synthetic Work Order is opt-in; run this spec with VITE_XLINK_R1_MP_UX_FIXTURES=true')
   await page.setViewportSize({ width: 430, height: 932 })
   const external: string[] = [], errors: string[] = []
   await context.route('**/*', route => {
@@ -13,10 +11,8 @@ test('430×932 offline editing, multi-FormDef isolation, restart recovery and ex
   })
   page.on('pageerror', error => errors.push(error.message))
   await page.goto('/#/pages/index/index?devReview=1')
-  await page.locator('.work-orders-entry').click()
-  await page.getByTestId('app-search-bar').locator('input').fill('MOCK-020')
-  await page.locator('.search-button').click()
-  await page.locator('.work-order-card').filter({ hasText: '韩先生' }).click()
+  await page.goto('/#/pages/work-orders/detail?id=mock-work-order-020-local-forms')
+  await expect(page.getByTestId('a-stage-special-panel')).toBeVisible()
   const field = (key: string) => page.getByTestId(`a-special-field-${key}`)
   const savedDraftField = (formDefinitionId: string, fieldId: string) => page.evaluate(({ formDefinitionId, fieldId }) => {
     const record = Object.keys(localStorage).flatMap(key => {
