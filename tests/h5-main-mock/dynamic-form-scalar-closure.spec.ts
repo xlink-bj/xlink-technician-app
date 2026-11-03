@@ -89,9 +89,12 @@ test.describe('Dynamic scalar QA: real H5 FormDef → local draft preview (R1 fo
     // Runtime MUST retain disabled execution until the multi-FormData
     // Workflow contract is verified. Test input components in the real App,
     // but never mislabel its local-only preview as a persisted FormData save.
+    // uni-app renders <uni-button>, not native <button>. Playwright's
+    // generic toBeDisabled() ignores its custom-element disabled semantics;
+    // assert the actual accessibility gate used by the runtime.
     const save = page.getByTestId('dynamic-form-save')
-    await expect(save).toBeDisabled()
-    await expect(page.getByTestId('action-workspace-submit')).toBeDisabled()
+    await expect(save).toHaveAttribute('aria-disabled', 'true')
+    await expect(page.getByTestId('action-workspace-submit')).toHaveAttribute('aria-disabled', 'true')
     await expect(field('qaConfirmed').locator('.app-choice').filter({ hasText: '是' }))
       .toHaveClass(/app-choice--selected/)
     await expect(field('qaScore').locator('.app-rating-field__star').nth(3))

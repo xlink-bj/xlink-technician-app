@@ -22,7 +22,7 @@ describe('R1 form-node write authorization is independent of visible input contr
 
   it('keeps a synthetic local-preview QA test honest about FormData authority', () => {
     const test = readFileSync(new URL('../h5-main-mock/dynamic-form-scalar-closure.spec.ts', import.meta.url), 'utf8')
-    expect(test).toContain('await expect(save).toBeDisabled()')
+    expect(test).toContain("await expect(save).toHaveAttribute('aria-disabled', 'true')")
     expect(test).not.toContain("toContainText('已保存')")
     expect(test).not.toContain('await save.click()')
   })
