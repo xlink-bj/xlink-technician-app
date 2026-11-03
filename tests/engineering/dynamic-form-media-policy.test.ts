@@ -80,5 +80,10 @@ describe('generic Dynamic Form media policy', () => {
     expect(shared).not.toContain('formPurpose')
     expect(workspace).toContain('dynamicMediaPolicyFor(form.purpose, field)')
     expect(workspace).not.toContain('surveyMediaCapacityError(')
+    const renderer = readFileSync(new URL('../../src/features/work-orders/components/GenericDynamicFormActionContent.vue', import.meta.url), 'utf8')
+    // Failed/pending upload tasks are displayed separately and never counted
+    // as persisted media or as consumed quota.
+    expect(renderer).not.toContain('mediaTaskCountFor(fieldId), values')
+    expect(renderer).toContain('return Math.max(workspace.mediaByField[fieldId]?.length ?? 0, values)')
   })
 })

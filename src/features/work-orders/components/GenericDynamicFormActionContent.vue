@@ -350,7 +350,10 @@ function mediaCountFor(fieldId: string): number {
   const field = workspace.dynamicFields.find((candidate) => candidate.fieldId === fieldId)
   const value = field ? workspace.dynamicForm?.values[field.valueKey] : undefined
   const values = Array.isArray(value) ? value.length : value === undefined || value === null || value === '' ? 0 : 1
-  return Math.max(workspace.mediaByField[fieldId]?.length ?? 0, mediaTaskCountFor(fieldId), values)
+  // A queued/failed transfer is NOT a saved media value. Pending tasks have
+  // their own visual indicator; never consume a source-backed maxCount or
+  // display a completed item merely because a queue record exists.
+  return Math.max(workspace.mediaByField[fieldId]?.length ?? 0, values)
 }
 
 function mediaMaxFor(field: RenderField): number | undefined {
