@@ -20,7 +20,7 @@ export interface R1LocalField {
   readonly reason?: string
 }
 const scalar = new Set(['text','textarea','phone','IDNumber','number','digit','date','time','datetime','switch'])
-const choices = new Set(['select','radio','checkbox','cascade'])
+const choices = new Set(['select','radio','checkbox','cascade','bizSelect'])
 const MAX = 50
 
 export function projectR1LocalFields(
@@ -40,7 +40,8 @@ export function projectR1LocalFields(
       ...(field.options ? { inlineOptions: field.options } : {}),
     }, {surface:'mobile_detail',values})
     const available = scalar.has(field.type)
-      || (choices.has(field.type) && !!field.options?.length && !field.valueOption)
+      || (choices.has(field.type) && !!field.options?.length
+        && (!field.valueOption || (field.type==='bizSelect' && field.valueOption==='projPackage')))
     const unique = !seen.has(field.valueKey)
     seen.add(field.valueKey)
     const supported = unique && available && state.capability==='SUPPORTED_GENERIC'
@@ -80,8 +81,10 @@ export function normalizeR1LocalFieldPatch(
   }
   if((field.type==='checkbox'||field.type==='cascade')
     && (!Array.isArray(raw)||!raw.every(x=>typeof x==='string'))) return null
-  if(field.type==='checkbox' && Array.isArray(raw)
-    && new Set(raw).size!==raw.length) return null
+  if((field.type==='checkbox'||(field.type==='bizSelect'&&field.multiple))
+    && Array.isArray(raw) && new Set(raw).size!==raw.length) return null
+  if(field.type==='bizSelect' && field.multiple
+    && (!Array.isArray(raw)||!raw.every(x=>typeof x==='string'))) return null
   const normalized=normalizeFieldValue(field.type,raw,field.options,field.multiple)
   if(!normalized.ok) return null
   const value=normalized.value
