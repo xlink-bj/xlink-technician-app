@@ -36,6 +36,10 @@ function storage(): StoragePort {
       receipts.delete(key.key)
       return { state: 'succeeded' }
     },
+    listKeys: async (scope: { readonly prefix?: string }) => ({
+      state: 'succeeded', data: [...receipts.keys()].filter(key =>
+        !scope.prefix || key.startsWith(scope.prefix)),
+    }),
   } as StoragePort
 }
 beforeEach(() => {
