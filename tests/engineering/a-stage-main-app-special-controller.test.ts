@@ -69,6 +69,19 @@ function controller(kind: 'forms' | 'repeat', getActor = () => actor,
 }
 
 describe('A main-App source-only multi-form/repeat controller', () => {
+  it.each(['forms', 'repeat'] as const)('%s resolves business IDs, rejects forged IDs and revokes stale identity', async kind => {
+    vi.stubEnv('VITE_XLINK_R1_BUSINESS_FIELDS', 'true')
+    let current = actor
+    const ui = controller(kind, () => current)
+    expect((await ui.load()).definition.fields?.find(field => field.valueKey === 'serviceGoods')?.options)
+      .toEqual([{ value: 'mock-service-package-roof', label: '屋面防水维修' }, { value: 'mock-service-package-wall', label: '外墙防水维修' }])
+    expect(await ui.execute({ kind: 'save', fields: { ...fields('业务值'), serviceGoods: ['forged-id'] } })).toMatchObject({ state: 'blocked' })
+    expect(await ui.execute({ kind: 'save', fields: { ...fields('业务值'), serviceGoods: ['mock-service-package-roof'] } })).toMatchObject({ state: 'succeeded' })
+    current = { ...actor, identity: 'changed-role-version' }
+    await expect(ui.load()).rejects.toThrow()
+    expect(await ui.execute({ kind: 'save', fields: fields('旧身份') })).toMatchObject({ state: 'blocked' })
+  })
+
   it('persists incomplete drafts per role/node/FormDef/record and never auto-submits on reconnect', async () => {
     vi.stubEnv('VITE_XLINK_R1_STAGE2B_FIELDS', 'true')
     let online = false

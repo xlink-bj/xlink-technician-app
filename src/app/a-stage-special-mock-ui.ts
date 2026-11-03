@@ -1,3 +1,4 @@
+import { createMockR1BusinessOptions } from '@adapters/api/mock/r1-business-options'
 import { createUniNetworkStatusPort } from '@adapters/platform/uni-network-status'
 import { createActionDraftRepository, type ActionDraftIdentity } from '@runtimes/action'
 /** A-only, synthetic main-App bridge for the existing R1 special transaction
@@ -37,21 +38,28 @@ const targets = {
 } as const
 const definition = mockSyntheticDynamicFormDefinitionId
 
-async function scopedDefinition(id = definition): Promise<FormDefinitionRead> {
+async function scopedDefinition(id = definition, isCurrent: () => boolean = () => false): Promise<FormDefinitionRead> {
   if (![definition, mockR1NoteFormDefinitionId].includes(id)) throw new Error('未知表单类型。')
   const result = await tryMockRead('biz/extField/query', { extId: id }, { latencyMs: 0 })
   const mapped = formDefinition(result, asOpaqueId<'FormDefinitionId'>(id))
   if (String(mapped.id) !== id || !mapped.fields?.length) {
     throw new Error('当前表单定义未能从 Mock 源核验。')
   }
-  return mapped
+  const provider = createMockR1BusinessOptions(isCurrent)
+  const fields = await Promise.all(mapped.fields.map(async field => {
+    if (field.type !== 'bizSelect') return field
+    const result = await provider.getBusinessRecordOptions!({ valueOption: field.valueOption ?? '' })
+    if (!isCurrent() || result.state !== 'succeeded' || !result.data) throw new Error('业务选项读取失败，请重新进入当前工单。')
+    return { ...field, options: result.data.items }
+  }))
+  return { ...mapped, fields }
 }
 
 /** Source-backed AddFormCode lookup. Unknown definitions never reach a write. */
-async function scopedDefinitions(kind: AStageSpecialKind, node: Record<string, unknown>) {
+async function scopedDefinitions(kind: AStageSpecialKind, node: Record<string, unknown>, isCurrent: () => boolean) {
   const nodeDef = object(node.nodeDef)
   if (nodeDef?.formDefId !== definition) throw new Error('节点 FormDef 身份不一致。')
-  if (kind === 'repeat') return [{ id: definition, label: '现场复检', definition: await scopedDefinition() }]
+  if (kind === 'repeat') return [{ id: definition, label: '现场复检', definition: await scopedDefinition(definition, isCurrent) }]
   if (nodeDef.addFormCodeId !== mockR1AddFormCodeId) throw new Error('AddFormCode 来源未核验。')
   const source = object(await tryMockRead('code/query',
     { parentId: nodeDef.addFormCodeId }, { latencyMs: 0 }))?.data
@@ -65,7 +73,7 @@ async function scopedDefinitions(kind: AStageSpecialKind, node: Record<string, u
       throw new Error('来源表单包含重复或未授权定义。')
     }
     ids.add(id)
-    choices.push({ id, label: row.name.trim(), definition: await scopedDefinition(id) })
+    choices.push({ id, label: row.name.trim(), definition: await scopedDefinition(id, isCurrent) })
   }
   if (!ids.has(definition)) throw new Error('默认表单不存在于来源清单。')
   return choices
@@ -148,7 +156,7 @@ export function createAStageSpecialMockController(options: {
     const result = await drafts.read(draftIdentity(formId, recordId))
     if (!authorized() || result.state !== 'succeeded') throw new Error('草稿读取失败')
     if (!result.data || result.data.status !== 'unfinished') return null
-    const fields = (await scopedDefinition(formId)).fields ?? []
+    const fields = (await scopedDefinition(formId, authorized)).fields ?? []
     const values = result.data.values
     if (Object.keys(values).length > 50 || Object.entries(values).some(([key, value]) =>
       !fields.some(field => field.valueKey === key && !field.readOnly && !field.presentationOnly)
@@ -178,7 +186,7 @@ export function createAStageSpecialMockController(options: {
   async function load(): Promise<AStageSpecialView> {
     if (!authorized()) throw new Error('身份或环境已变化，不能操作当前表单。')
     const node = await rawDetail(kind)
-    const definitions = await scopedDefinitions(kind, node)
+    const definitions = await scopedDefinitions(kind, node, authorized)
     const formDef = definitions.find(item => item.id === definition)!.definition
     if (!authorized()) throw new Error('角色已变化，请重新进入工单。')
     const originals = kind === 'forms' ? object(node.exts)?.formList : await scopedForms('repeat')

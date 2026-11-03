@@ -225,6 +225,16 @@ export const mockSyntheticDeepCascadeDefinitionResponse = {
     ] } : field),
 } as const
 
+/** Isolated special-form business selector, using the R1 serviceGoods
+ * List<String>/projPackage contract. Not an active Survey recommendation. */
+export const mockSyntheticBusinessFormDefinitionResponse = {
+  ...mockSyntheticStage2DFormDefinitionResponse,
+  data: [...mockSyntheticStage2DFormDefinitionResponse.data,
+    { _id: 'mock-service-goods-row', name: 'serviceGoods', nameDisp: '服务项目',
+      type: 'bizSelect', multiple: '1', valueOption: 'projPackage', required: '0', state: 1 },
+  ], total: 17,
+} as const
+
 export const mockWorkOrderIds = [
   'mock-work-order-001',
   'mock-work-order-002',

@@ -113,6 +113,10 @@ jobs:
         env:
           VITE_XLINK_R1_DEEP_CASCADE: 'true'
         run: pnpm exec playwright test --config config/playwright/main-h5-mock.config.ts tests/h5-main-mock/deep-cascade-record.spec.ts
+      - name: Verify special business-record Provider transactions
+        env:
+          VITE_XLINK_R1_BUSINESS_FIELDS: 'true'
+        run: pnpm exec playwright test --config config/playwright/main-h5-mock.config.ts tests/h5-main-mock/special-business-record.spec.ts
       - name: Preserve Stage 1B/2A/2B/2C offline H5 evidence
         if: always()
         uses: actions/upload-artifact@v4

@@ -34,7 +34,7 @@ function same(a: unknown, b: unknown): boolean { return JSON.stringify(a) === JS
 const removableOptionalFieldKeys = new Set([
   'inspectionNote', 'inspectionContactPhone', 'inspectionIdentityNumber',
   'inspectionPointCount', 'inspectionMeasuredArea', 'inspectionConfirmed',
-  'inspectionDate', 'inspectionTime', 'inspectionDateTime', 'inspectionRating',
+  'serviceGoods', 'inspectionDate', 'inspectionTime', 'inspectionDateTime', 'inspectionRating',
   'inspectionCategory', 'inspectionChecks', 'inspectionLocation', 'note',
 ])
 function optionalClears(previous: Record<string, unknown>, incoming: Record<string, unknown>): readonly string[] | null {
