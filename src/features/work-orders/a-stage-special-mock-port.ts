@@ -1,4 +1,5 @@
 import type { NetworkStatusPort, FormDefinitionRead } from '@shared/ports'
+import type { MediaUploadTask, MediaUploadTaskId } from '@shared/types'
 import type { R1SpecialMockFields } from './r1-special-mock-form-fields'
 
 export type AStageSpecialKind = 'forms' | 'repeat'
@@ -45,6 +46,11 @@ export interface AStageSpecialMockController {
   load(): Promise<AStageSpecialView>
   execute(action: AStageSpecialAction): Promise<AStageSpecialOutcome>
   recoverCompleted(originalFields: R1SpecialMockFields): Promise<AStageSpecialOutcome>
+  listMediaTasks(formDefinitionId: string, recordId?: string): Promise<readonly MediaUploadTask[]>
+  pickMedia(formDefinitionId: string, fieldId: string, recordId?: string): Promise<{ readonly state: 'succeeded' | 'cancelled' | 'failed'; readonly message?: string }>
+  retryMedia(formDefinitionId: string, taskId: MediaUploadTaskId, recordId?: string): Promise<boolean>
+  discardMedia(formDefinitionId: string, taskId: MediaUploadTaskId, recordId?: string): Promise<boolean>
+  finalizeMedia(formDefinitionId: string, recordId?: string): Promise<boolean>
 }
 export type AStageSpecialMockControllerFactory = (options: {
   readonly kind: AStageSpecialKind

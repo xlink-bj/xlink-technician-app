@@ -18,10 +18,19 @@ import {
   closeCompletedR1MutationReceiptAfterReadback, type R1MultiStepScope,
   type R1MultiStepReceipt,
 } from '@features/work-orders/r1-multistep-offline-transaction'
-import type { StoragePort, FormDefinitionRead } from '@shared/ports'
+import type {
+  StoragePort, FormDefinitionRead, MediaUploadQueuePort, MediaFilePickerPort,
+} from '@shared/ports'
+import {
+  isR1FileWireArray, r1FileWireFromUpload, type MediaUploadTask, type MediaUploadTaskId,
+} from '@shared/types'
 import { projectR1LocalFields } from '@features/work-orders/r1-local-form-fields'
 import { asOpaqueId } from '@shared/types'
-import { createDefaultStoragePort } from './composition'
+import {
+  createDefaultStoragePort, createDefaultMediaFilePickerPort,
+  createDefaultMediaUploadQueue, createDefaultUploadPort,
+  createDefaultAuthSessionPort,
+} from './composition'
 import { validateR1SpecialMockFields, type R1SpecialMockFields } from '@features/work-orders/r1-special-mock-form-fields'
 
 import type {
@@ -131,6 +140,8 @@ export function createAStageSpecialMockController(options: {
   readonly getActor: () => AStageMockActor | null
   readonly storage: StoragePort
   readonly network?: import('@shared/ports').NetworkStatusPort
+  readonly mediaQueue?: MediaUploadQueuePort
+  readonly mediaPicker?: MediaFilePickerPort
 }) {
   const { kind } = options
   let inFlight = false
@@ -142,6 +153,95 @@ export function createAStageSpecialMockController(options: {
 
   const network = options.network ?? createUniNetworkStatusPort()
   const drafts = createActionDraftRepository(options.storage)
+
+  // Same common queue used by any dynamic FormDef; only a source type=file
+  // field is writable. The image reference from 020 cannot enter this path.
+  async function listMediaTasks(formId: string, recordId?: string): Promise<readonly MediaUploadTask[]> {
+    if (!authorized()) throw new Error('媒体队列身份已改变。')
+    if (!options.mediaQueue) return []
+    const form = await scopedDefinition(formId, authorized)
+    const known = new Map((form.fields ?? []).filter(field => field.type === 'file'
+      && !field.presentationOnly && !field.readOnly).map(field => [field.fieldId, field.valueKey]))
+    if (!known.size) return []
+    const listed = await options.mediaQueue.listForAction({
+      userId: asOpaqueId<'UserId'>(expected!.userId),
+      workOrderId: asOpaqueId<'WorkOrderId'>(options.workOrderId),
+      workflowNodeId: asOpaqueId<'WorkflowNodeRuntimeId'>(targets[kind].node),
+      formDefinitionId: asOpaqueId<'FormDefinitionId'>(formId),
+      ...(recordId ? { formDataId: asOpaqueId<'FormDataId'>(recordId) } : {}),
+    })
+    if (!authorized() || listed.state !== 'succeeded' || !listed.data) throw new Error('媒体队列未能安全读取。')
+    return listed.data.filter(task => task.scope.formDefinitionId === formId
+      && String(task.scope.formDataId ?? '') === (recordId ?? '')
+      && known.get(task.scope.fieldId) === task.scope.valueKey)
+  }
+  async function pickMedia(formId: string, fieldId: string, recordId?: string) {
+    if (!authorized() || !options.mediaQueue || !options.mediaPicker) {
+      return { state: 'failed' as const, message: '当前环境未提供安全媒体队列。' }
+    }
+    try {
+      const form = await scopedDefinition(formId, authorized)
+      const field = form.fields?.find(field => field.fieldId === fieldId && field.type === 'file'
+        && !field.presentationOnly && !field.readOnly)
+      if (!field) return { state: 'failed' as const, message: '字段不是可写的原始媒体字段。' }
+      const previous = await listMediaTasks(formId, recordId)
+      if (previous.length >= 10) return { state: 'failed' as const, message: '现场附件数量已达上限。' }
+      const picked = await options.mediaPicker.pick()
+      if (!authorized()) return { state: 'failed' as const, message: '操作身份已变化。' }
+      if (picked.state === 'cancelled') return { state: 'cancelled' as const }
+      if (picked.state !== 'granted' || !picked.value?.length) {
+        return { state: 'failed' as const, message: '未能读取选中的现场附件。' }
+      }
+      if (picked.value.length + previous.length > 10) {
+        return { state: 'failed' as const, message: '本次选择超过附件数量上限。' }
+      }
+      for (const media of picked.value) {
+        if (!authorized()) return { state: 'failed' as const, message: '操作身份已变化。' }
+        const enqueued = await options.mediaQueue.enqueue({
+          scope: {
+            userId: asOpaqueId<'UserId'>(expected!.userId),
+            workOrderId: asOpaqueId<'WorkOrderId'>(options.workOrderId),
+            workflowNodeId: asOpaqueId<'WorkflowNodeRuntimeId'>(targets[kind].node),
+            formDefinitionId: asOpaqueId<'FormDefinitionId'>(formId),
+            ...(recordId ? { formDataId: asOpaqueId<'FormDataId'>(recordId) } : {}),
+            fieldId, valueKey: field.valueKey,
+          },
+          media,
+          evidence: { postUploadPolicy: 'none' },
+        })
+        if (enqueued.state !== 'succeeded' || !enqueued.data) {
+          return { state: 'failed' as const, message: '附件未能安全保存到上传队列。' }
+        }
+        const processed = await options.mediaQueue.process(enqueued.data.taskId)
+        if (processed.state !== 'succeeded') {
+          return { state: 'failed' as const, message: '附件尚未上传完成，请检查后手动重试。' }
+        }
+      }
+      return { state: 'succeeded' as const }
+    } catch { return { state: 'failed' as const, message: '附件处理失败，原记录未改变。' } }
+  }
+  async function existingMediaTask(formId: string, taskId: MediaUploadTaskId, recordId?: string) {
+    return (await listMediaTasks(formId, recordId)).find(item => item.taskId === taskId)
+  }
+  async function retryMedia(formId: string, taskId: MediaUploadTaskId, recordId?: string): Promise<boolean> {
+    if (!options.mediaQueue) return false
+    const task = await existingMediaTask(formId, taskId, recordId)
+    if (!task || task.state !== 'failed_retryable' || task.lastError?.code === 'ambiguous_postprocess') return false
+    const result = await options.mediaQueue.retry(taskId)
+    return authorized() && result.state === 'succeeded'
+  }
+  async function discardMedia(formId: string, taskId: MediaUploadTaskId, recordId?: string): Promise<boolean> {
+    if (!options.mediaQueue || !await existingMediaTask(formId, taskId, recordId)) return false
+    const result = await options.mediaQueue.discard(taskId)
+    return authorized() && result.state === 'succeeded'
+  }
+  async function finalizeMedia(formId: string, recordId?: string): Promise<boolean> {
+    if (!options.mediaQueue) return true
+    const tasks = await listMediaTasks(formId, recordId)
+    if (tasks.some(task => task.state !== 'uploaded')) return false
+    const finalized = await Promise.all(tasks.map(task => options.mediaQueue!.finalizeAfterSave(task.taskId)))
+    return authorized() && finalized.every(result => result.state === 'succeeded')
+  }
   function draftIdentity(formId: string, recordId?: string): ActionDraftIdentity {
     if (!authorized() || ![definition, mockR1NoteFormDefinitionId].includes(formId)
       || (kind === 'repeat' && formId !== definition)) throw new Error('草稿身份不可用')
@@ -163,7 +263,8 @@ export function createAStageSpecialMockController(options: {
       !fields.some(field => field.valueKey === key && !field.readOnly && !field.presentationOnly)
       || !(typeof value === 'string' && value.length <= 4000
         || typeof value === 'number' && Number.isFinite(value) || typeof value === 'boolean'
-        || Array.isArray(value) && value.length <= 30 && value.every(item => typeof item === 'string' && item.length <= 256)))) {
+        || Array.isArray(value) && (value.length <= 30 && value.every(item => typeof item === 'string' && item.length <= 256)
+          || isR1FileWireArray(value))))) {
       throw new Error('草稿内容无法安全恢复')
     }
     if (!authorized()) throw new Error('草稿身份已变化')
@@ -215,8 +316,9 @@ export function createAStageSpecialMockController(options: {
             || typeof fields?.[field.valueKey] === 'number'
             || typeof fields?.[field.valueKey] === 'boolean'
             || (Array.isArray(fields?.[field.valueKey])
-              && (fields?.[field.valueKey] as unknown[]).every(item => typeof item === 'string'))))
-          .map(field => [field.valueKey, fields![field.valueKey] as string | number | boolean | readonly string[]])),
+              && ((fields?.[field.valueKey] as unknown[]).every(item => typeof item === 'string')
+                  || isR1FileWireArray(fields?.[field.valueKey])))))
+          .map(field => [field.valueKey, fields![field.valueKey] as R1SpecialMockFields[string]])),
         state: raw.state === -1 ? 'deleted' : 'active', editable: own && raw.state !== -1,
       })
     }
@@ -347,6 +449,31 @@ export function createAStageSpecialMockController(options: {
         ? validateR1SpecialMockFields(chosen.definition, action.fields) : null
       if (checked && !checked.ok) return { state: 'blocked', message: checked.message }
       const fields = checked?.ok ? checked.fields : undefined
+      if (fields) {
+        // A saved media value is either a verified prior record value or was
+        // uploaded by the exact current common queue scope. No forged URL may
+        // enter a new FormData merely by resembling the R1 wire shape.
+        const tasks = await listMediaTasks(chosen.id,
+          action.kind === 'edit' ? action.id : undefined)
+        if (tasks.some(task => task.state !== 'uploaded')) return { state: 'blocked',
+          message: '附件队列仍有未完成项目，请重试或删除后保存。' }
+        for (const sourceField of chosen.definition.fields ?? []) {
+          if (sourceField.type !== 'file') continue
+          const submitted = fields[sourceField.valueKey]
+          if (submitted === undefined) continue
+          if (!isR1FileWireArray(submitted)) return { state: 'blocked', message: '附件列表格式异常。' }
+          const fromQueue = tasks.filter(task => task.scope.fieldId === sourceField.fieldId)
+            .flatMap(task => task.uploadedRef ? [r1FileWireFromUpload(task.uploadedRef)] : [])
+            .filter((value): value is NonNullable<typeof value> => value !== null)
+          const fromSaved = action.kind === 'edit' && selected
+            && isR1FileWireArray(selected.values[sourceField.valueKey])
+            ? selected.values[sourceField.valueKey] as readonly import('@shared/types').R1FileWireValue[] : []
+          if (submitted.some(ref => ![...fromQueue, ...fromSaved]
+            .some(allowed => JSON.stringify(allowed) === JSON.stringify(ref)))) {
+            return { state: 'blocked', message: '附件没有来自当前表单的已完成上传。' }
+          }
+        }
+      }
       if ('expectedRevision' in action && action.expectedRevision !== undefined
         && (!selected || selected.revision !== action.expectedRevision)) {
         return { state: 'blocked', message: '记录已被其他编辑器更新，请重新读取后再修改。' }
@@ -449,12 +576,17 @@ export function createAStageSpecialMockController(options: {
       return { state: 'uncertain', message: '表单操作被本机事务锁或回读异常阻止，禁止盲目重试。' }
     } finally { inFlight = false }
   }
-  return { load, execute, recoverCompleted, network, readDraft, writeDraft, removeDraft }
+  return { load, execute, recoverCompleted, network, readDraft, writeDraft, removeDraft,
+    listMediaTasks, pickMedia, retryMedia, discardMedia, finalizeMedia }
 }
 
 /** Page-composed DEV capability. No page or feature creates a storage adapter. */
 export function createAStageSpecialMockControllerForActor(
   options: Omit<Parameters<typeof createAStageSpecialMockController>[0], 'storage'>,
 ) {
-  return createAStageSpecialMockController({ ...options, storage: createDefaultStoragePort() })
+  const storage = createDefaultStoragePort()
+  return createAStageSpecialMockController({ ...options, storage,
+    mediaPicker: createDefaultMediaFilePickerPort(),
+    mediaQueue: createDefaultMediaUploadQueue(storage, createDefaultUploadPort(createDefaultAuthSessionPort())),
+  })
 }

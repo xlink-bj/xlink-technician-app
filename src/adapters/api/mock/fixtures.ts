@@ -235,6 +235,20 @@ export const mockSyntheticBusinessFormDefinitionResponse = {
   ], total: 17,
 } as const
 
+/** DEV opt-in R1 generic ExtField type=file. The existing 020 image field
+ * stays a read-only photo reference; this separate synthetic row proves the
+ * common extForm media queue and List<Map> wire across forms and repeat. */
+export const mockSyntheticSpecialMediaDefinitionResponse = {
+  ...mockSyntheticInspectionFormDefinitionResponse,
+  data: [
+    ...mockSyntheticInspectionFormDefinitionResponse.data,
+    { _id: 'mock-inspection-files', name: 'inspectionFiles',
+      nameDisp: '现场附件', type: 'file', required: '0', state: 1,
+      frontEndConfig: { max: 10 } },
+  ],
+  total: 5,
+} as const
+
 export const mockWorkOrderIds = [
   'mock-work-order-001',
   'mock-work-order-002',

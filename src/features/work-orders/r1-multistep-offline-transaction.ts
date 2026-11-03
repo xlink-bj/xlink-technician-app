@@ -1,3 +1,4 @@
+import type { R1FileWireValue } from '@shared/types'
 import type { StoragePort } from '@shared/ports'
 import { createOperationError } from '@shared/types'
 import type { OperationSnapshot } from '@shared/types'
@@ -70,7 +71,7 @@ export interface R1AuthoritativeMutationReadback {
   /** Full R1 record returned by a separate read; absent after repeat/remove. */
   readonly formData?: Readonly<Record<string, unknown>>
   /** The exact fields submitted, compared to fresh FormData (transient). */
-  readonly expectedFields?: Readonly<Record<string, string | number | boolean | readonly string[]>>
+  readonly expectedFields?: Readonly<Record<string, string | number | boolean | readonly string[] | readonly R1FileWireValue[]>>
   readonly expectedAbsentKeys?: readonly string[]
   /** Full, non-truncated workflow-node EXTS readback for forms. */
   readonly formsExts?: Readonly<Record<string, unknown>>

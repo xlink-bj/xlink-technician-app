@@ -61,7 +61,10 @@
             <template v-for="field in editableFields" :key="field.fieldId">
               <view class="special-forms__field" :data-testid="`a-special-recover-field-${field.valueKey}`">
                 <text class="special-forms__label">{{ field.label }} <text v-if="field.required" class="special-forms__required">*</text></text>
-              <R1FormFieldControl :field="field" :model-value="draftValues[field.valueKey]"
+              <text v-if="field.type === 'file'" class="special-forms__finish-copy">
+                原保存附件须与权威记录一致；可从已恢复的附件队列核对，不重新上传。
+              </text>
+              <R1FormFieldControl v-else :field="field" :model-value="draftValues[field.valueKey]"
                 :disabled="busy" @update:model-value="setField(field.valueKey, $event)" />
               </view>
             </template>
@@ -89,7 +92,31 @@
             <view v-if="field.supported && editableFieldTypes.has(field.type)"
               class="special-forms__field" :data-testid="`a-special-field-${field.valueKey}`">
               <text class="special-forms__label">{{ field.label }} <text v-if="field.required" class="special-forms__required">*</text></text>
-              <R1FormFieldControl :field="field" :model-value="draftValues[field.valueKey]"
+              <template v-if="field.type === 'file'">
+                <view class="special-forms__media" :data-testid="`a-special-media-${field.valueKey}`">
+                  <view v-for="(item,index) in mediaValues(field.valueKey)" :key="item.url"
+                    class="special-forms__media-item">
+                    <text class="special-forms__media-name">{{ item.name }}</text>
+                    <AppButton variant="text" size="compact" :disabled="busy"
+                      :data-testid="`a-special-media-remove-${field.valueKey}-${index}`"
+                      @tap="removeMediaValue(field.valueKey, index)">移除</AppButton>
+                  </view>
+                  <view v-for="task in tasksFor(field.fieldId).filter(task => task.state !== 'uploaded')"
+                    :key="task.taskId" class="special-forms__media-item">
+                    <text class="special-forms__media-name">{{ task.state === 'failed_retryable' ? '上传未完成，可重试' : '文件正在处理' }}</text>
+                    <AppButton v-if="task.state === 'failed_retryable'" variant="text" size="compact"
+                      :disabled="busy || task.lastError?.code === 'ambiguous_postprocess'"
+                      :data-testid="`a-special-media-retry-${field.valueKey}`"
+                      @tap="retryMediaTask(task.taskId)">重试</AppButton>
+                    <AppButton variant="text" size="compact" :disabled="busy"
+                      @tap="discardMediaTask(task.taskId)">删除</AppButton>
+                  </view>
+                  <AppButton variant="secondary" size="compact" :disabled="busy || mediaValues(field.valueKey).length + tasksFor(field.fieldId).filter(task => task.state !== 'uploaded').length >= 10"
+                    :data-testid="`a-special-media-pick-${field.valueKey}`"
+                    @tap="pickMediaField(field.fieldId)">添加附件</AppButton>
+                </view>
+              </template>
+              <R1FormFieldControl v-else :field="field" :model-value="draftValues[field.valueKey]"
                 :disabled="busy" @update:model-value="setField(field.valueKey, $event)" />
             </view>
             <view v-else class="special-forms__reference" :data-testid="`a-special-reference-${field.valueKey}`">
@@ -99,7 +126,7 @@
           <text v-if="!formValid" class="special-forms__validation" data-testid="a-special-form-validation">{{ validationMessage }}</text>
           <view class="special-forms__buttons">
             <view class="special-forms__save-button">
-              <AppButton block :disabled="busy || !formValid" :loading="busy"
+              <AppButton block :disabled="busy || !formValid || hasPendingMedia" :loading="busy"
                 data-testid="a-special-save" @tap="save">{{ editingId ? '保存修改' : '保存记录' }}</AppButton>
             </view>
             <view v-if="editingId" class="special-forms__cancel-button">
@@ -109,11 +136,11 @@
           <view v-if="kind === 'forms' && !editingId" class="special-forms__finish">
             <text class="special-forms__finish-copy">也可将本条记录保存后立即完成节点；确认后不可继续编辑。</text>
             <AppButton v-if="!confirmSaveFinish" variant="secondary" block
-              :disabled="busy || !formValid" data-testid="a-special-save-finish-request"
+              :disabled="busy || !formValid || hasPendingMedia" data-testid="a-special-save-finish-request"
               @tap="confirmSaveFinish = true">保存并完成节点</AppButton>
             <view v-else class="special-forms__confirmation">
               <text>确认保存本条记录，并立即完成当前节点？</text>
-              <AppButton :disabled="busy || !formValid" data-testid="a-special-save-finish-confirm"
+              <AppButton :disabled="busy || !formValid || hasPendingMedia" data-testid="a-special-save-finish-confirm"
                 @tap="run({ kind: 'save_finish', fields: draftValues, formDefinitionId: selectedFormDefinitionId })">确认保存并完成</AppButton>
               <AppButton variant="text" :disabled="busy" @tap="confirmSaveFinish = false">返回检查</AppButton>
             </view>
@@ -152,6 +179,10 @@ import AppStatus from '@shared/ui/AppStatus.vue'
 import { uxStateLanguage } from '@shared/ui/ux-state-language'
 import { projectR1LocalFields } from './r1-local-form-fields'
 import { r1SpecialMockWritableTypes, validateR1SpecialMockFields, type R1SpecialMockFields } from './r1-special-mock-form-fields'
+import {
+  isR1FileWireArray, r1FileWireFromUpload,
+  type R1FileWireValue, type MediaUploadTask, type MediaUploadTaskId,
+} from '@shared/types'
 
 const props = defineProps<{ readonly kind: AStageSpecialKind; readonly workOrderId: string;
   readonly node: WorkflowNodeRead; readonly createController: AStageSpecialMockControllerFactory }>()
@@ -165,6 +196,14 @@ const operationFeedback = ref('')
 const recoveryFeedback = ref('')
 const draftValues = ref<R1SpecialMockFields>({})
 const editableFieldTypes = r1SpecialMockWritableTypes
+const mediaTasks = ref<readonly MediaUploadTask[]>([])
+const hasPendingMedia = computed(() => mediaTasks.value.some(task => task.state !== 'uploaded'))
+const mediaValues = (key: string): readonly R1FileWireValue[] => {
+  const value = draftValues.value[key]
+  return isR1FileWireArray(value) ? value : []
+}
+const tasksFor = (fieldId: string): readonly MediaUploadTask[] =>
+  mediaTasks.value.filter(task => task.scope.fieldId === fieldId)
 const selectedFormDefinitionId = ref('')
 const formChoices = computed(() => viewState.value?.definitions.map(item => ({ value: item.id, label: item.label })) ?? [])
 const selectedDefinition = computed(() => viewState.value?.definitions.find(
@@ -173,9 +212,10 @@ function selectDefinition(id: string): void {
   if (busy.value || editingId.value || !viewState.value?.definitions.some(item => item.id === id)) return
   selectedFormDefinitionId.value = id
   draftValues.value = {}
+  mediaTasks.value = []
   confirmFinish.value = false
   confirmSaveFinish.value = false
-  void restoreLocalDraft()
+  void restoreLocalDraft().then(() => restoreMediaTasks())
 }
 const viewFields = computed(() => viewState.value
   ? projectR1LocalFields(selectedDefinition.value!, draftValues.value) : [])
@@ -186,12 +226,83 @@ const validation = computed(() => viewState.value
   : { ok: false as const, message: '表单尚未载入。' })
 const formValid = computed(() => validation.value.ok)
 const validationMessage = computed(() => validation.value.ok ? '' : validation.value.message)
-function setField(key: string, value: string | number | boolean | readonly string[]): void {
+
+async function restoreMediaTasks(): Promise<void> {
+  const current = controller, formId = selectedFormDefinitionId.value
+  const recordId = editingId.value ?? undefined, ticket = revision, changes = editRevision
+  if (!current || !formId) return
+  try {
+    const tasks = await current.listMediaTasks(formId, recordId)
+    if (ticket !== revision || changes !== editRevision || editingId.value !== (recordId ?? null)
+      || formId !== selectedFormDefinitionId.value) return
+    mediaTasks.value = tasks
+    const next = { ...draftValues.value }
+    let changed = false
+    for (const field of viewFields.value.filter(item => item.type === 'file' && item.supported)) {
+      const currentValues = mediaValues(field.valueKey)
+      const uploaded = tasks.filter(task => task.scope.fieldId === field.fieldId
+        && task.state === 'uploaded' && task.uploadedRef)
+        .flatMap(task => task.uploadedRef ? [r1FileWireFromUpload(task.uploadedRef)] : [])
+        .filter((ref): ref is R1FileWireValue => ref !== null)
+      const merged = [...currentValues]
+      for (const ref of uploaded) if (!merged.some(value => value.url === ref.url)) merged.push(ref)
+      if (merged.length !== currentValues.length && isR1FileWireArray(merged)) {
+        next[field.valueKey] = merged
+        changed = true
+      }
+    }
+    if (changed) { draftValues.value = next; editRevision++; persistLocalDraft() }
+  } catch { if (ticket === revision) operationFeedback.value = '附件队列暂时无法恢复，请重新打开后核对。' }
+}
+async function pickMediaField(fieldId: string): Promise<void> {
+  if (busy.value || !controller) return
+  busy.value = true
+  operationFeedback.value = ''
+  const ticket = revision
+  try {
+    const result = await controller.pickMedia(selectedFormDefinitionId.value, fieldId, editingId.value ?? undefined)
+    if (ticket !== revision) return
+    if (result.state === 'failed') operationFeedback.value = result.message ?? '附件未完成上传。'
+  } finally {
+    if (ticket === revision) { busy.value = false; await restoreMediaTasks() }
+  }
+}
+async function retryMediaTask(taskId: MediaUploadTaskId): Promise<void> {
+  if (busy.value || !controller) return
+  busy.value = true
+  const ticket = revision
+  try {
+    const ok = await controller.retryMedia(selectedFormDefinitionId.value, taskId, editingId.value ?? undefined)
+    if (ticket === revision && !ok) operationFeedback.value = '附件重试未完成，已保留原队列。'
+  } finally { if (ticket === revision) { busy.value = false; await restoreMediaTasks() } }
+}
+async function discardMediaTask(taskId: MediaUploadTaskId): Promise<void> {
+  if (busy.value || !controller) return
+  busy.value = true
+  const ticket = revision
+  try {
+    if (!await controller.discardMedia(selectedFormDefinitionId.value, taskId, editingId.value ?? undefined)
+      && ticket === revision) operationFeedback.value = '删除本机附件失败，原队列已保留。'
+  } finally { if (ticket === revision) { busy.value = false; await restoreMediaTasks() } }
+}
+async function removeMediaValue(key: string, index: number): Promise<void> {
+  const values = mediaValues(key), file = values[index]
+  if (busy.value || !file) return
+  const task = mediaTasks.value.find(item => item.uploadedRef?.url === file.url)
+  if (task && controller) {
+    const ok = await controller.discardMedia(selectedFormDefinitionId.value, task.taskId, editingId.value ?? undefined)
+    if (!ok) { operationFeedback.value = '附件尚未安全移除，请重试。'; return }
+    mediaTasks.value = mediaTasks.value.filter(item => item.taskId !== task.taskId)
+  }
+  setField(key, values.filter((_, i) => i !== index))
+}
+function setField(key: string, value: R1SpecialMockFields[string]): void {
   if (busy.value || !viewState.value) return
   const field = viewFields.value.find(item => item.valueKey === key)
   if (!field?.supported || !editableFieldTypes.has(field.type)
     || (typeof value === 'string' && value.length > 4000)
-    || (Array.isArray(value) && (value.length > 30 || value.some(item => item.length > 256)))) return
+    || (Array.isArray(value) && !(isR1FileWireArray(value)
+      || value.length <= 30 && value.every(item => typeof item === 'string' && item.length <= 256)))) return
   // Keep partially typed decimals ("1.", "-", etc.) visible until Submit.
   // The shared FormDef validator normalizes once at the transaction boundary.
   const next = { ...draftValues.value }
@@ -278,6 +389,7 @@ watch(() => [props.kind, props.workOrderId, props.node.id,
   operationFeedback.value = ''
   recoveryFeedback.value = ''
   draftValues.value = {}
+  mediaTasks.value = []
   selectedFormDefinitionId.value = ''
   editingId.value = null
   editingRevision.value = null
@@ -292,13 +404,14 @@ watch(() => [props.kind, props.workOrderId, props.node.id,
     if (ticket === revision) networkState.value = status
   })
   void current.network.current().then(status => { if (ticket === revision) networkState.value = status })
-  void refresh().then(() => restoreLocalDraft())
+  void refresh().then(async () => { await restoreLocalDraft(); await restoreMediaTasks() })
 }, { immediate: true })
 onBeforeUnmount(() => { revision++; unsubscribeNetwork?.(); controller = null })
 function edit(id: string): void {
   const row = viewState.value?.entries.find(entry => entry.id === id && entry.editable)
   if (!row) return
   editingId.value = id
+  mediaTasks.value = []
   editingRevision.value = row.revision ?? null
   selectedFormDefinitionId.value = row.formDefinitionId
   draftValues.value = { ...row.values }
@@ -306,9 +419,9 @@ function edit(id: string): void {
   confirmFinish.value = false
   confirmSaveFinish.value = false
   editRevision++
-  void restoreLocalDraft()
+  void restoreLocalDraft().then(() => restoreMediaTasks())
 }
-function cancelEdit(): void { editingId.value = null; editingRevision.value = null; draftValues.value = {}; editRevision++; void restoreLocalDraft() }
+function cancelEdit(): void { editingId.value = null; editingRevision.value = null; mediaTasks.value = []; draftValues.value = {}; editRevision++; void restoreLocalDraft().then(() => restoreMediaTasks()) }
 async function save(): Promise<void> {
   const action: AStageSpecialAction = editingId.value
     ? { kind: 'edit', id: editingId.value, fields: draftValues.value, formDefinitionId: selectedFormDefinitionId.value,
@@ -318,7 +431,7 @@ async function save(): Promise<void> {
 }
 async function run(action: AStageSpecialAction): Promise<void> {
   const current = controller
-  if (!current || busy.value) return
+  if (!current || busy.value || hasPendingMedia.value) return
   busy.value = true
   error.value = ''
   operationFeedback.value = ''
@@ -334,6 +447,8 @@ async function run(action: AStageSpecialAction): Promise<void> {
       return
     }
     if (action.kind === 'save' || action.kind === 'edit' || action.kind === 'save_finish') {
+      const cleaned = await current.finalizeMedia(savedDefinition, savedRecord)
+      if (!cleaned && ticket === revision) operationFeedback.value = '记录已保存，部分本机附件待清理。'
       await current.removeDraft(savedDefinition, savedRecord)
       if (ticket !== revision) return
     }
@@ -397,4 +512,7 @@ async function recoverCompleted(): Promise<void> {
 .special-forms__message,.special-forms__empty { display:block; padding:24rpx 0; font-size:25rpx; line-height:1.5; color:var(--app-color-text-secondary); }
 .special-forms__message--error { color:#985919; }
 .special-forms__confirmation { flex-wrap:wrap; padding:16rpx 0; font-size:24rpx; }
+.special-forms__media { display:flex; flex-direction:column; align-items:flex-start; gap:12rpx; }
+.special-forms__media-item { display:flex; align-items:center; gap:12rpx; width:100%; padding:12rpx 16rpx; border:1rpx solid var(--app-color-border); border-radius:12rpx; }
+.special-forms__media-name { flex:1; min-width:0; overflow-wrap:anywhere; font-size:25rpx; }
 </style>

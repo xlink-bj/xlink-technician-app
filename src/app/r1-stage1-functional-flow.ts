@@ -19,7 +19,8 @@ import type { StoragePort } from '@shared/ports'
 import type { FormDataId, FormDefinitionId, WorkOrderId, WorkflowNodeRuntimeId, WorkflowRunId, OperationSnapshot } from '@shared/types'
 import { createOperationError } from '@shared/types'
 
-type Fields = Readonly<Record<string,string|number|boolean|readonly string[]>>
+import type { R1FileWireValue } from '@shared/types'
+type Fields = Readonly<Record<string,string|number|boolean|readonly string[]|readonly R1FileWireValue[]>>
 interface Base { readonly scope:R1MultiStepScope }
 export type R1Stage1Intent =
   | (Base & {readonly kind:'forms_save';readonly sourceNodeType:'forms';
