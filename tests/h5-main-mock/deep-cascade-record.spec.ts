@@ -1,0 +1,33 @@
+import { expect, test } from '@playwright/test'
+
+test('430×932 three-level cascade reaches leaves and retains the entire saved path', async ({ page }) => {
+  test.skip(process.env.VITE_XLINK_R1_DEEP_CASCADE !== 'true', 'Explicit deep-tree fixture required')
+  await page.setViewportSize({ width: 430, height: 932 })
+  const external: string[] = []
+  await page.route('**/*', route => {
+    const url = new URL(route.request().url())
+    if (url.origin === 'http://localhost:5174') return route.continue()
+    external.push(url.origin + url.pathname)
+    return route.abort('blockedbyclient')
+  })
+  await page.goto('/#/pages/index/index?devReview=1')
+  await page.goto('/#/pages/work-orders/detail?id=mock-work-order-020-local-forms')
+  const field = page.getByTestId('a-special-field-inspectionLocation')
+  await page.getByTestId('a-special-field-inspectionSummary').locator('textarea').fill('三级级联完整路径')
+  await page.getByTestId('a-special-field-inspectionResult').locator('.app-choice').filter({ hasText: '可继续施工' }).click()
+  await expect(field.locator('.app-cascade-selector__parent')).toHaveCount(0)
+  await field.locator('.app-choice').filter({ hasText: '屋顶 / 排水口 / 内侧' }).click()
+  await page.getByTestId('a-special-save').click()
+  await expect(page.getByTestId('a-special-row-mock-special-form-data-forms-1')).toContainText('三级级联完整路径')
+  await page.reload()
+  await page.getByTestId('a-special-edit-mock-special-form-data-forms-1').click()
+  await expect(field.locator('.app-choice').filter({ hasText: '屋顶 / 排水口 / 内侧' })).toHaveAttribute('aria-pressed', 'true')
+  await field.locator('.app-choice').filter({ hasText: '屋顶 / 排水口 / 外侧' }).click()
+  await page.getByTestId('a-special-save').click()
+  await page.reload()
+  await page.getByTestId('a-special-edit-mock-special-form-data-forms-1').click()
+  await expect(field.locator('.app-choice').filter({ hasText: '屋顶 / 排水口 / 外侧' })).toHaveAttribute('aria-pressed', 'true')
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('xlink.dev.mock.r1-special.020-021.v1')!).rows['mock-special-form-data-forms-1'].inspectionLocation))
+    .toEqual(['roof', 'drain', 'outer'])
+  expect(external).toEqual([])
+})

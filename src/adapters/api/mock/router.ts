@@ -17,6 +17,7 @@ import {
   mockSyntheticStage2BFormDefinitionResponse,
   mockSyntheticStage2CFormDefinitionResponse,
   mockSyntheticStage2DFormDefinitionResponse,
+  mockSyntheticDeepCascadeDefinitionResponse,
   mockSurveyFormDefinitionId,
   mockSurveyFormDefinitionResponse,
   mockDynamicScalarQaFormDefinitionResponse,
@@ -764,6 +765,9 @@ function matchedResponse(
     return mockAppointmentFormDefinitionResponse
   }
   if (route === 'biz/extField/query' && requestData.extId === mockSyntheticDynamicFormDefinitionId) {
+    if (isDevMockJourneyEnabled() && import.meta.env.VITE_XLINK_R1_DEEP_CASCADE === 'true') {
+      return mockSyntheticDeepCascadeDefinitionResponse
+    }
     if (isDevMockJourneyEnabled() && import.meta.env.VITE_XLINK_R1_STAGE2D_FIELDS === 'true') {
       return mockSyntheticStage2DFormDefinitionResponse
     }

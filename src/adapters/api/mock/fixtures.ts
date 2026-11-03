@@ -212,6 +212,19 @@ export const mockSyntheticStage2DFormDefinitionResponse = {
   total: 16,
 } as const
 
+/** Opt-in deep-tree shape; values remain the existing ordered R1 path. */
+export const mockSyntheticDeepCascadeDefinitionResponse = {
+  ...mockSyntheticStage2CFormDefinitionResponse,
+  data: mockSyntheticStage2CFormDefinitionResponse.data.map(field =>
+    field.name === 'inspectionLocation' ? { ...field, options: [
+      { value: 'roof', name: '屋顶', children: [
+        { value: 'drain', name: '排水口', children: [
+          { value: 'inner', name: '内侧' }, { value: 'outer', name: '外侧' },
+        ] },
+      ] },
+    ] } : field),
+} as const
+
 export const mockWorkOrderIds = [
   'mock-work-order-001',
   'mock-work-order-002',

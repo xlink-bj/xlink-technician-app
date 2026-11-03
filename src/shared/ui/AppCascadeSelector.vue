@@ -1,10 +1,10 @@
 <template>
   <view
     class="app-choice-group app-choice-group--multi app-cascade-selector"
-    :class="{ 'app-cascade-selector--hierarchical': hierarchical, 'app-cascade-selector--split': hierarchical && splitLayout }"
-    :data-testid="testId ?? (hierarchical ? 'survey-repair-part-selector' : undefined)"
+    :class="{ 'app-cascade-selector--hierarchical': twoLevelLayout, 'app-cascade-selector--split': twoLevelLayout && splitLayout }"
+    :data-testid="testId ?? (twoLevelLayout ? 'survey-repair-part-selector' : undefined)"
   >
-    <template v-if="hierarchical">
+    <template v-if="twoLevelLayout">
       <view class="app-cascade-selector__parents" :data-testid="parentsTestId ?? 'cascade-options-parents'">
         <button
           v-for="option in options"
@@ -94,6 +94,11 @@ const props = withDefaults(
 const emit = defineEmits<{
   (event: 'update:modelValue', value: readonly string[]): void
 }>()
+
+// The split view addresses exactly parent + child. Deeper trees reuse the
+// existing recursive leaf layout so selecting a child never truncates a path.
+const twoLevelLayout = computed(() => props.hierarchical
+  && !props.options.some(parent => parent.children?.some(child => Boolean(child.children?.length))))
 
 const leafOptions = computed<readonly LeafOption[]>(() => {
   const output: LeafOption[] = []
