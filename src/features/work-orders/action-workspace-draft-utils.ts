@@ -15,7 +15,9 @@ import {
   type MediaUploadTask,
 } from '@shared/types'
 import { normalizeAppointmentFieldValue } from './appointment-form-runtime'
-import { normalizeDynamicFieldValue } from './dynamic-form-action'
+import { dynamicActionFieldsFor, normalizeDynamicFieldValue } from './dynamic-form-action'
+import { ACTION_FORM_SURFACE } from './action-form-schema'
+import { isFieldApplicable, evaluateVisibility } from '@runtimes/dynamic-form'
 
 export function appointmentValue(value: unknown): AppointmentFieldValue | undefined {
   return value === null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean'
@@ -138,6 +140,25 @@ export function draftRecordFor(
   }
 }
 
+/**
+ * Drafts are JSON snapshots; server and restored media refs have different
+ * object identities. Compare normalized values structurally, without turning
+ * read-only data into a draft write. The codec accepts primitives and bounded
+ * media references only; arbitrary objects have already been rejected.
+ */
+function samePersistedFormValue(a: FormFieldValue | undefined, b: FormFieldValue): boolean {
+  if (Array.isArray(a) || Array.isArray(b)) {
+    return Array.isArray(a) && Array.isArray(b)
+      && a.length === b.length && a.every((item, i) => samePersistedFormValue(item, b[i]!))
+  }
+  if (isMediaValueRef(a) || isMediaValueRef(b)) {
+    return isMediaValueRef(a) && isMediaValueRef(b)
+      && a.url === b.url && a.objectKey === b.objectKey
+      && a.fileName === b.fileName && a.extension === b.extension
+  }
+  return a === b
+}
+
 export function dynamicDraftRecordFor(
   value: unknown,
   identity: ActionDraftIdentity,
@@ -166,20 +187,48 @@ export function dynamicDraftRecordFor(
   }
   if (!actionDraftIdentityMatches(storedIdentity, identity)) return null
 
-  const values: Record<string, FormFieldValue> = {}
+  const sourceValues: Record<string, FormFieldValue> = {}
   for (const [key, rawValue] of Object.entries(rawValues)) {
-    const fields = form.fields.filter((candidate) => candidate.valueKey === key)
-    const normalizedRaw = formFieldValue(rawValue)
-    if (fields.length === 0 || normalizedRaw === undefined) return null
-    for (const field of fields) {
-      if (field.readOnly) {
-        if (form.values[key] !== normalizedRaw) return null
+    if (!form.fields.some(field => field.valueKey === key)) return null
+    const parsed = formFieldValue(rawValue)
+    if (parsed === undefined) return null
+    sourceValues[key] = parsed
+  }
+
+  // Evaluate conditional fields against the ENTIRE proposed draft, not one
+  // field at a time against the older server values. Otherwise a controlling
+  // choice restored later in object iteration changes the visibility/required
+  // policy retroactively. Hidden source-backed values may remain on disk but
+  // must not be replayed into an editable field or the next FormData write.
+  const proposed: DynamicFormRead = { ...form, values: { ...form.values, ...sourceValues } }
+  const states = dynamicActionFieldsFor(proposed)
+  const values: Record<string, FormFieldValue> = {}
+  for (const [key, parsed] of Object.entries(sourceValues)) {
+    const matching = states.filter(field => field.valueKey === key)
+    let accepted: FormFieldValue | undefined
+    for (const field of matching) {
+      if (!isFieldApplicable(field, ACTION_FORM_SURFACE)) continue
+      if (field.runtime.capability === 'PRESENTATION_ONLY') continue
+      if (!field.runtime.visible) {
+        // Unknown visibility/provider is not the same as verified hidden.
+        if (field.runtime.capability === 'UNSUPPORTED'
+          && evaluateVisibility(field.visibility, proposed.values).state !== 'hidden') return null
         continue
       }
-      const normalized = normalizeDynamicFieldValue(form, field, normalizedRaw)
-      if (normalized.state !== 'succeeded' || normalized.data === undefined) return null
-      values[key] = normalized.data
+      if (field.runtime.capability === 'UNSUPPORTED') return null
+      if (field.runtime.readOnly) {
+        // Field-row and Workflow readonly are monotonic. Local drafts are not
+        // an authority to replace persisted values, including media arrays.
+        if (!samePersistedFormValue(form.values[key], parsed)) return null
+        continue
+      }
+      const checked = normalizeDynamicFieldValue(proposed, field, parsed)
+      if (checked.state !== 'succeeded' || checked.data === undefined) return null
+      if (accepted !== undefined
+        && JSON.stringify(accepted) !== JSON.stringify(checked.data)) return null
+      accepted = checked.data
     }
+    if (accepted !== undefined) values[key] = accepted
   }
 
   return {

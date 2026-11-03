@@ -237,6 +237,19 @@ export function normalizeSubmission(input: {
         message: value.message,
       }
     }
+    // R1 may contain multiple ExtField rows sharing one business valueKey.
+    // A duplicate visible row may validate the SAME value, but a different
+    // type/codec must never silently overwrite an earlier normalized value.
+    if (Object.prototype.hasOwnProperty.call(normalized, field.valueKey)
+      && JSON.stringify(normalized[field.valueKey]) !== JSON.stringify(value.value)) {
+      return {
+        ok: false,
+        reason: 'validation',
+        fieldId: field.fieldId,
+        valueKey: field.valueKey,
+        message: 'duplicate field rows disagree on normalized FormData value',
+      }
+    }
     normalized[field.valueKey] = value.value
   }
   const submission: FormSubmission = { values: normalized }

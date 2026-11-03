@@ -188,7 +188,10 @@ export function normalizeDynamicFieldValue(
   field: AppointmentFormFieldRead,
   value: FormFieldValue,
 ): OperationSnapshot<FormFieldValue> {
-  const values = { ...form.values, [field.valueKey]: value }
+  // Decide editability from the PRE-EDIT state. A conditional field must not
+  // make itself visible by submitting its proposed new value; the committed
+  // controlling field must first satisfy the source-backed visibility rule.
+  const values = form.values
   const leakageExperience = surveyLeakageCauseExperienceFor(form)
   const leakageState = leakageExperience
     ? surveyLeakageCauseFieldStateFor({ ...form, values }, field)

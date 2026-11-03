@@ -80,3 +80,28 @@ export function surveyMediaPostUploadPolicyFor(
     ? 'remote_location_watermark'
     : 'none'
 }
+
+/**
+ * Verified R1 media selection limits apply to the ENTIRE field, not just
+ * the number of files chosen in one picker invocation. R1 file fields
+ * persist object lists even when ExtField.multiple=false.
+ *
+ * No inferred limit is applied to ordinary Survey photos: the historical
+ * source reports UNKNOWN limits there. Only explicit field descriptors
+ * (e.g. infraredImageList) participate in this safety check.
+ */
+export function surveyMediaCapacityError(
+  descriptor: SurveyMediaFieldDescriptor | undefined,
+  persisted: unknown,
+  selectedCount: number,
+): string | undefined {
+  if (!descriptor?.maxCount) return undefined
+  const existing = Array.isArray(persisted)
+    ? persisted.length
+    : persisted === undefined || persisted === null || persisted === '' ? 0 : 1
+  if (!Number.isSafeInteger(selectedCount) || selectedCount < 0
+    || existing + selectedCount > descriptor.maxCount) {
+    return `该媒体字段最多选择 ${descriptor.maxCount} 项（当前已有 ${existing} 项）`
+  }
+  return undefined
+}

@@ -115,7 +115,7 @@ import {
   normalizeDynamicForm,
   type DynamicActionField,
 } from './dynamic-form-action'
-import { surveyMediaDescriptorFor, surveyMediaPostUploadPolicyFor } from './survey-media'
+import { surveyMediaCapacityError, surveyMediaDescriptorFor, surveyMediaPostUploadPolicyFor } from './survey-media'
 import { loadActionMutationReceipt, mutationReceiptDenial, type ActionMutationScope } from './action-mutation-receipt'
 import { recoverActionFormFromReceipt } from './action-workspace-form-recovery'
 import {
@@ -505,6 +505,11 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       .map((item) => descriptor ? mediaValueRefFromUpload(item) : item.url)
     if (additions.length === 0) return false
     const mergedItems = [...existingItems, ...additions]
+    const countError = surveyMediaCapacityError(descriptor, existingItems, additions.length)
+    if (countError) {
+      error.value = createOperationError('validation', countError)
+      return false
+    }
     const nextValue: FormFieldValue = descriptor || Array.isArray(existing) || mergedItems.length !== 1
       ? mergedItems as FormFieldValue
       : mergedItems[0] as FormFieldValue
@@ -1742,6 +1747,9 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     if (mediaDescriptor?.selectionMode === 'special_tool') {
       return failure('unsupported_capability', mediaDescriptor.blocker ?? 'Survey media tool is unavailable')
     }
+    if (mediaDescriptor?.selectionMode === 'album_only' && source !== 'library') {
+      return failure('unsupported_capability', '此字段依据 R1 仅支持从相册选择')
+    }
     if (source === 'library' && !configured.mediaFilePicker) {
       return failure('unsupported_capability', 'Media upload is unavailable')
     }
@@ -1774,8 +1782,11 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
         return cancelled ? { state: 'failed_terminal', error: cancelled } : { state: 'succeeded', data: undefined }
       }
 
-      if (mediaDescriptor?.maxCount !== undefined && selected.length > mediaDescriptor.maxCount) {
-        const tooMany = createOperationError('validation', `该媒体字段最多选择 ${mediaDescriptor.maxCount} 项`)
+      const countError = surveyMediaCapacityError(
+        mediaDescriptor, dynamicForm.value?.values[field.valueKey], selected.length,
+      )
+      if (countError) {
+        const tooMany = createOperationError('validation', countError)
         mediaStateByField.value = { ...mediaStateByField.value, [fieldId]: 'failed_terminal' }
         error.value = tooMany
         return { state: 'failed_terminal', error: tooMany }
@@ -1823,6 +1834,10 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
         [fieldId]: [...previous, ...uploaded.filter((item) => !previous.some((candidate) => candidate.url === item.url))],
       }
       const applied = applyUploadedMedia(fieldId, uploaded)
+      if (!applied && error.value) {
+        mediaStateByField.value = { ...mediaStateByField.value, [fieldId]: 'failed_terminal' }
+        return { state: 'failed_terminal', error: error.value }
+      }
       mediaStateByField.value = {
         ...mediaStateByField.value,
         [fieldId]: 'uploaded',
