@@ -26,7 +26,7 @@
           <text class="survey-part-picker__current-label">{{ draftLabels.join(' / ') || '尚未选择' }}</text>
         </view>
         <scroll-view scroll-y class="survey-part-picker__options">
-          <AppCascadeSelector
+          <AppCascadeSelector leaf-layout-for-deep-trees
             :options="options"
             :model-value="draft"
             :disabled="disabled"

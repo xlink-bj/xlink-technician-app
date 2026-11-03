@@ -1,7 +1,7 @@
 <template>
   <AppMultiChoiceGroup v-if="control === 'multi-choice'" :options="field.options"
     :model-value="listValue" :disabled="disabled" @update:model-value="emit('update:modelValue', $event)" />
-  <AppCascadeSelector v-else-if="control === 'cascade-inline'" :options="field.options"
+  <AppCascadeSelector leaf-layout-for-deep-trees v-else-if="control === 'cascade-inline'" :options="field.options"
     :model-value="listValue" :disabled="disabled"
     :hierarchical="field.options.some(option => Boolean(option.children?.length))"
     @update:model-value="emit('update:modelValue', $event)" />

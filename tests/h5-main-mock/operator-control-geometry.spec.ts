@@ -57,7 +57,7 @@ test('cross-page controls and category labels obey one visual grid at 375px', as
   await expect(page.getByTestId('quotation-state-ready')).toBeVisible()
   await page.getByTestId('quotation-add-group').click()
   await page.getByTestId('quotation-first-step-repair-parts-trigger').click()
-  await page.getByTestId('survey-repair-part-parents').getByText('屋面', { exact: true }).click()
+  await page.getByTestId('quotation-repair-part-picker').locator('.app-cascade-selector__parent').filter({ hasText: '屋面' }).click()
   await page.getByTestId('quotation-repair-part-picker-done').click()
   await page.getByTestId('quotation-first-step-description').locator('textarea')
     .fill('平屋面落水口及泛水节点局部渗漏维修')

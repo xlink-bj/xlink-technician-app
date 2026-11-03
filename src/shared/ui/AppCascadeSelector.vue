@@ -81,6 +81,8 @@ const props = withDefaults(
     readonly disabled?: boolean
     /** Any hierarchical cascade may use parent → child presentation; value paths stay unchanged. */
     readonly hierarchical?: boolean
+    /** Dynamic forms opt into recursive leaves for deeper source trees. */
+    readonly leafLayoutForDeepTrees?: boolean
     /** Opt-in parent/child side-by-side layout; no effect on submitted value paths. */
     readonly splitLayout?: boolean
     readonly testId?: string
@@ -88,7 +90,7 @@ const props = withDefaults(
     readonly parentsTestId?: string
     readonly childrenTestId?: string
   }>(),
-  { disabled: false, hierarchical: false, splitLayout: false },
+  { disabled: false, hierarchical: false, leafLayoutForDeepTrees: false, splitLayout: false },
 )
 
 const emit = defineEmits<{
@@ -98,7 +100,8 @@ const emit = defineEmits<{
 // The split view addresses exactly parent + child. Deeper trees reuse the
 // existing recursive leaf layout so selecting a child never truncates a path.
 const twoLevelLayout = computed(() => props.hierarchical
-  && !props.options.some(parent => parent.children?.some(child => Boolean(child.children?.length))))
+  && (!props.leafLayoutForDeepTrees
+    || !props.options.some(parent => parent.children?.some(child => Boolean(child.children?.length)))))
 
 const leafOptions = computed<readonly LeafOption[]>(() => {
   const output: LeafOption[] = []
