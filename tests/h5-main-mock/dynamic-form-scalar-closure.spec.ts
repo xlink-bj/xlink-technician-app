@@ -82,7 +82,16 @@ test.describe('Dynamic scalar QA: real H5 FormDef → FormData → readback', ()
     await field('qaMeasure').locator('input').fill('12.50')
     await field('qaPhone').locator('input').fill('0013800100200')
     await page.getByTestId('dynamic-form-save').click()
-    await expect(page.getByTestId('dynamic-form-save')).toContainText('已保存')
+    // Always report the real Workspace validation/command error on failure.
+    // A generic "button still says 保存表单" timeout hides the failing
+    // FormDef field and can lead to incorrectly weakening Runtime guards.
+    await expect.poll(async () => {
+      const label = await page.getByTestId('dynamic-form-save').innerText()
+      if (label.includes('已保存')) return '已保存'
+      const feedback = await page.getByTestId('action-workspace-feedback').allInnerTexts()
+      if (feedback.length) return '保存失败: ' + feedback.join(' | ')
+      return label
+    }, { timeout: 8_000 }).toBe('已保存')
 
     await page.reload({ waitUntil: 'domcontentloaded' })
     await expect(page.getByTestId('dynamic-form-action-content')).toBeVisible()
