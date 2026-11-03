@@ -123,6 +123,56 @@ describe('R1 FormDef option Provider resolution', () => {
   })
 })
 
+describe('R1 bizSelect business-record provider boundary', () => {
+  const businessField: FormFieldRead = {
+    ...field('biz-1', 'serviceGoods', 'bizSelect', 'projPackage'), multiple: true,
+  }
+  it('uses a distinct read-only record provider, preserves record IDs and validates choices', async () => {
+    const recordRead = vi.fn(async () => ({ state: 'succeeded' as const,
+      data: { items: [{ value: 'package-a', label: '屋面维修套餐' },
+        { value: 'package-b', label: '墙面维修套餐' }] },
+    }))
+    const x = source([businessField], {
+      getBusinessRecordOptions: recordRead,
+    } as unknown as Partial<TechnicianApiReadPort>)
+    const result = await x.adapter.readDynamicForm({ definitionId: id })
+    expect(result.state).toBe('succeeded')
+    expect(recordRead).toHaveBeenCalledWith({ valueOption: 'projPackage' })
+    expect(x.api.getDynamicCodeOptions).not.toHaveBeenCalled()
+    const selected = result.data?.fields[0]
+    expect(selected?.options?.map(item => item.value)).toEqual(['package-a', 'package-b'])
+    expect(evaluateFieldState({ fieldId: selected!.fieldId, valueKey: selected!.valueKey,
+      type: selected!.type, multiple: selected!.multiple,
+      valueOption: selected!.valueOption, inlineOptions: selected!.options }).capability).toBe('SUPPORTED_GENERIC')
+    expect(normalizeSubmission({ fields: [{
+      fieldId: selected!.fieldId, valueKey: selected!.valueKey, type: 'bizSelect',
+      multiple: true, valueOption: 'projPackage', inlineOptions: selected!.options,
+    }], values: { serviceGoods: ['package-b', 'package-a'] } }))
+      .toMatchObject({ ok: true, value: { values: { serviceGoods: ['package-b', 'package-a'] } } })
+    expect(normalizeSubmission({ fields: [{
+      fieldId: selected!.fieldId, valueKey: selected!.valueKey, type: 'bizSelect',
+      multiple: true, valueOption: 'projPackage', inlineOptions: selected!.options,
+    }], values: { serviceGoods: ['forged-package'] } })).toMatchObject({ ok: false })
+  })
+
+  it('keeps unknown live provider disabled; rejects duplicate and malformed records', async () => {
+    const absent = source([businessField])
+    const unavailable = await absent.adapter.readDynamicForm({ definitionId: id })
+    const row = unavailable.data?.fields[0]
+    expect(row?.options).toBeUndefined()
+    expect(evaluateFieldState({ fieldId: row!.fieldId, valueKey: row!.valueKey,
+      type: row!.type, valueOption: row!.valueOption }).capability).toBe('UNSUPPORTED')
+    expect(absent.api.getDynamicCodeOptions).not.toHaveBeenCalled()
+    const duplicate = source([businessField], {
+      getBusinessRecordOptions: vi.fn(async () => ({ state: 'succeeded' as const,
+        data: { items: [{ value: 'same', label: '套餐一' }, { value: 'same', label: '套餐二' }] },
+      })),
+    } as unknown as Partial<TechnicianApiReadPort>)
+    expect(await duplicate.adapter.readDynamicForm({ definitionId: id }))
+      .toMatchObject({ state: 'failed_terminal' })
+  })
+})
+
 describe('R1 conditional rules and read-only Save safety', () => {
   const hidden = { kind: 'equals' as const, path: 'switch', value: '1' }
   const malformed = { kind: 'unknown' } as unknown as VisibilityExpression
