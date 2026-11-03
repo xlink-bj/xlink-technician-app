@@ -4,7 +4,7 @@ import { isDevMockJourneyEnabled } from './journey'
 import { restoreMockR1SpecialState, updateMockR1SpecialState } from './r1-special-state'
 import {
   mockR1FormsWorkOrderId, mockR1RepeatWorkOrderId,
-  mockSyntheticDynamicFormDefinitionId,
+  mockSyntheticDynamicFormDefinitionId, mockR1NoteFormDefinitionId,
 } from './fixtures'
 
 type Kind = 'forms' | 'repeat'
@@ -30,11 +30,30 @@ function activeNode(kind: Kind): Record<string, unknown> | null {
 }
 
 function same(a: unknown, b: unknown): boolean { return JSON.stringify(a) === JSON.stringify(b) }
+/** Synthetic optional fields from source-shaped 020/021 FormDefs only. */
+const removableOptionalFieldKeys = new Set([
+  'inspectionNote', 'inspectionContactPhone', 'inspectionIdentityNumber',
+  'inspectionPointCount', 'inspectionMeasuredArea', 'inspectionConfirmed',
+  'serviceGoods', 'inspectionDate', 'inspectionTime', 'inspectionDateTime', 'inspectionRating',
+  'inspectionCategory', 'inspectionChecks', 'inspectionLocation', 'note',
+])
+function optionalClears(previous: Record<string, unknown>, incoming: Record<string, unknown>): readonly string[] | null {
+  const before = object(previous.exts)
+  const after = object(incoming.exts)
+  if (!before || !after) return null
+  const removed = Object.keys(before).filter(key => !Object.hasOwn(after, key))
+  if (removed.some(key => !removableOptionalFieldKeys.has(key)
+    || Object.hasOwn(incoming, key))) return null
+  const expected = Object.fromEntries(Object.entries(before).filter(([key]) => !removed.includes(key)))
+  return same(expected, after) ? removed : null
+}
 function denied(): unknown { return { success: false, code: 'TERMINAL', message: 'Synthetic special R1 command rejected' } }
 
-function saveSpecialForm(kind: Kind, serialized: unknown): unknown {
+function saveSpecialForm(kind: Kind, serialized: unknown, formDefId = mockSyntheticDynamicFormDefinitionId): unknown {
   const target = targets[kind]
-  if (!activeNode(kind) || typeof serialized !== 'string' || serialized.length > 200000) return denied()
+  if (!activeNode(kind) || typeof serialized !== 'string' || serialized.length > 200000
+    || (formDefId !== mockSyntheticDynamicFormDefinitionId
+      && !(kind === 'forms' && formDefId === mockR1NoteFormDefinitionId))) return denied()
   let data: Record<string, unknown> | null = null
   try { data = object(JSON.parse(serialized)) } catch { return denied() }
   if (!data || data.sid !== target.sid || data.smodule !== 'serviceAppointment'
@@ -44,11 +63,15 @@ function saveSpecialForm(kind: Kind, serialized: unknown): unknown {
   const previousId = data._id
   const previous = typeof previousId === 'string' && previousId.startsWith(idPrefix)
     ? object(mockCommandState().formData.get(previousId)) : null
+  const cleared = previous ? optionalClears(previous, data) : []
   if (previousId !== undefined && (!previous || previous.state !== 1
     || previous.sid !== target.sid || previous.nodeId !== target.node
-    || previous.workflowId !== target.run || data.extId !== mockSyntheticDynamicFormDefinitionId
-    || data.formDefId !== mockSyntheticDynamicFormDefinitionId
-    || !same(data.exts, previous.exts))) return denied()
+    // The endpoint and incoming IDs cannot relabel a sibling FormDef record.
+    // Validate the persisted identity as well, before touching durable state.
+    || previous.extId !== formDefId || previous.formDefId !== formDefId
+    || previous.workflowId !== target.run || data.extId !== formDefId
+    || data.formDefId !== formDefId
+    || cleared === null)) return denied()
   if (!previous && data.state !== 1) return denied()
   const fields = Object.entries(data).filter(([key]) =>
     !['_id', 'sid', 'smodule', 'nodeId', 'workflowId', 'state',
@@ -58,19 +81,22 @@ function saveSpecialForm(kind: Kind, serialized: unknown): unknown {
   if ((!previous && !fields.length) || fields.length > 50 || fields.some(([key, value]) =>
     !key.trim() || key.length > 120 || !(
       (typeof value === 'string' && value.length <= 4000)
-      || (typeof value === 'number' && Number.isFinite(value)) || typeof value === 'boolean'))) return denied()
+      || (typeof value === 'number' && Number.isFinite(value)) || typeof value === 'boolean'
+      || (Array.isArray(value) && value.length > 0 && value.length <= 30
+        && value.every(part => typeof part === 'string' && part.length > 0 && part.length <= 256))))) return denied()
   let sequence = 1
   while (mockCommandState().formData.has(`${idPrefix}${sequence}`)) sequence += 1
   const id = previous ? previousId as string : `${idPrefix}${sequence}`
   const saved = {
     ...(previous ?? {}),
-    _id: id, extId: mockSyntheticDynamicFormDefinitionId,
-    formDefId: mockSyntheticDynamicFormDefinitionId,
+    _id: id, extId: formDefId,
+    formDefId,
     sid: target.sid, smodule: 'serviceAppointment', nodeId: target.node,
     workflowId: target.run, state: data.state,
     ...Object.fromEntries(fields),
-    exts: { ...(object(previous?.exts) ?? {}), ...Object.fromEntries(fields) },
+    exts: { ...(object(data.exts) ?? {}), ...Object.fromEntries(fields) },
   }
+  for (const key of cleared ?? []) delete (saved as Record<string, unknown>)[key]
   if (!updateMockR1SpecialState((draft) => {
     if (draft[kind].state !== 0 || (previous
       ? !same(draft.rows[id], previous) : draft.rows[id] !== undefined)) return false
@@ -103,7 +129,7 @@ function updateFormsExts(request: ApiCommandRequest): unknown {
     if (!same(newRows.slice(0, -1), oldRows) || !appended || !saved
       || saved.sid !== targets.forms.sid || saved.nodeId !== targets.forms.node
       || saved.state !== 1 || appended.state !== 1
-      || appended.formDefId !== mockSyntheticDynamicFormDefinitionId) return denied()
+      || ![mockSyntheticDynamicFormDefinitionId, mockR1NoteFormDefinitionId].includes(String(appended.formDefId))) return denied()
   } else {
     const changed = oldRows.map((item, index) => same(item, newRows[index]) ? -1 : index)
       .filter((index) => index !== -1)
@@ -214,12 +240,14 @@ export async function tryMockR1SpecialCommand(
   if (actor.userId !== 'synthetic-user' || actor.roleId !== 'synthetic-role'
     || !authorizationCurrent()) return denied()
   if (!restoreMockR1SpecialState()) return denied()
-  if (request.path === `biz/extForm/upsert/${mockSyntheticDynamicFormDefinitionId}`) {
+  if (request.path === `biz/extForm/upsert/${mockSyntheticDynamicFormDefinitionId}`
+    || request.path === `biz/extForm/upsert/${mockR1NoteFormDefinitionId}`) {
+    const formDefId = request.path.slice('biz/extForm/upsert/'.length)
     const data = object(request.body)
     let scope: string | null = null
     try { scope = String(object(JSON.parse(String(data?.dataStr)))?.sid ?? '') } catch { return denied() }
-    return scope === targets.forms.sid ? saveSpecialForm('forms', data?.dataStr)
-      : scope === targets.repeat.sid ? saveSpecialForm('repeat', data?.dataStr) : denied()
+    return scope === targets.forms.sid ? saveSpecialForm('forms', data?.dataStr, formDefId)
+      : scope === targets.repeat.sid ? saveSpecialForm('repeat', data?.dataStr, formDefId) : denied()
   }
   if (request.path === `workflowNode/updateExts/${targets.forms.node}`) {
     if (request.body !== undefined || !request.jsonBody) return denied()

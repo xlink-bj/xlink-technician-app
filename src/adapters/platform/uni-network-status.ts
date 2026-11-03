@@ -8,6 +8,23 @@ interface UniNetworkApi {
 }
 
 function defaultApi(): UniNetworkApi {
+  if (typeof window !== 'undefined' && typeof navigator !== 'undefined') {
+    const listeners = new Map<unknown, () => void>()
+    return {
+      getNetworkType: ({ success }) => success({ networkType: navigator.onLine ? 'unknown' : 'none' }),
+      onNetworkStatusChange: listener => {
+        const changed = () => listener({ isConnected: navigator.onLine })
+        listeners.set(listener, changed)
+        window.addEventListener('online', changed)
+        window.addEventListener('offline', changed)
+      },
+      offNetworkStatusChange: listener => {
+        const changed = listeners.get(listener)
+        if (changed) { window.removeEventListener('online', changed); window.removeEventListener('offline', changed) }
+        listeners.delete(listener)
+      },
+    }
+  }
   return (typeof uni === 'undefined' ? {} : uni) as unknown as UniNetworkApi
 }
 

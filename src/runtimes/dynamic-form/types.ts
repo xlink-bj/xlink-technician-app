@@ -71,7 +71,7 @@ export interface FormCapabilityDecision {
   readonly reason?: string
 }
 
-export type OptionProviderKind = 'workTypes' | 'cascade' | 'code' | 'inline'
+export type OptionProviderKind = 'workTypes' | 'cascade' | 'code' | 'businessRecord' | 'inline'
 
 export interface OptionProviderDescriptor {
   readonly kind: OptionProviderKind

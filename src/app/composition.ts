@@ -1,3 +1,4 @@
+import { BrowserDurableMediaStore } from '@adapters/storage/browser-durable-media-store'
 import type {
   AuthSessionPort,
   NavigationPort,
@@ -37,7 +38,7 @@ import { createUniMediaCaptureDriver, createUniMediaFilePickerDriver } from '@ad
 import { createUniLocationDriver } from '@adapters/platform/uni-location-driver'
 import { createUniUploadPort } from '@adapters/upload/uni-upload-port'
 import { createUniDurableMediaStore } from '@adapters/storage/uni-durable-media-store'
-import { createMediaQueueRepository, createMediaUploadQueue, InMemoryDurableMediaStore } from '@runtimes/media'
+import { createMediaQueueRepository, createMediaUploadQueue } from '@runtimes/media'
 import { createMockMediaPostUploadProcessor } from '@runtimes/media'
 import { createDisabledRealMediaPostUploadProcessor } from '@adapters/upload/uni-media-post-upload-processor'
 import { createSurveyLeakageCauseProvider } from '@adapters/api/survey-leakage-cause'
@@ -369,12 +370,11 @@ export function createDefaultMediaUploadQueue(
   upload: UploadPort,
   postUploadProcessor: MediaPostUploadProcessorPort = createDefaultMediaPostUploadProcessor(),
 ): MediaUploadQueuePort {
-  // DCloud H5 currently leaves native durable-file APIs unsupported.
-  // Exercise the REAL UI, picker, queue, upload and draft behavior in the
-  // explicitly isolated DEV synthetic H5 E2E runner; keep the native durable
-  // media adapter unchanged for MP and every non-QA build.
+  // Native files use saveFile; browsers persist Blob bytes in IndexedDB.
+  // Both adapters implement the same queue-owned durable asset lifecycle.
   return createMediaUploadQueue(
-    isDevSyntheticH5MediaQa() ? new InMemoryDurableMediaStore() : createUniDurableMediaStore(storage),
+    typeof window !== 'undefined' && typeof indexedDB !== 'undefined'
+      ? new BrowserDurableMediaStore() : createUniDurableMediaStore(storage),
     createMediaQueueRepository(storage),
     upload,
     { postUploadProcessor },

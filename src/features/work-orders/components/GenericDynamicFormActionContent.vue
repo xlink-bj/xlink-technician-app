@@ -78,7 +78,7 @@
         <!-- The registry guarantees nonempty options for choice controls;
              Vue template types cannot infer this across controlFor(), so
              the [] fallback is type-only and never enables unsupported data. -->
-        <AppCascadeSelector
+        <AppCascadeSelector leaf-layout-for-deep-trees
           v-else-if="controlFor(field) === 'cascade-inline'"
           :options="field.options ?? []"
           :model-value="arrayValue(workspace.dynamicForm?.values[field.valueKey])"

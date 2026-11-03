@@ -178,7 +178,7 @@ export class TechnicianApiCommandAdapter implements TechnicianApiCommandPort {
   private async resolveDynamicDefinition(
     definition: FormDefinitionRead,
   ): Promise<OperationSnapshot<FormDefinitionRead>> {
-    type ProviderSource = { readonly kind: 'code' | 'cascade'; readonly valueOption: string }
+    type ProviderSource = { readonly kind: 'code' | 'cascade' | 'businessRecord'; readonly valueOption: string }
     type ProviderResult = OperationSnapshot<ReadPage<CodeOptionRead>>
     const sourceFor = (field: FormFieldRead): ProviderSource | undefined => {
       if (!field.valueOption) return undefined
@@ -188,6 +188,12 @@ export class TechnicianApiCommandAdapter implements TechnicianApiCommandPort {
       ) return { kind: 'code', valueOption: field.valueOption }
       if (field.type === 'cascade') {
         return { kind: 'cascade', valueOption: field.valueOption }
+      }
+      // R1 has a distinct business-record provider; no CodeService fallback.
+      // projPackage remains disabled on live adapters until its response is verified.
+      if (field.type === 'bizSelect' && field.valueOption === 'projPackage'
+        && this.readPort.getBusinessRecordOptions) {
+        return { kind: 'businessRecord', valueOption: field.valueOption }
       }
       return undefined
     }
@@ -216,7 +222,9 @@ export class TechnicianApiCommandAdapter implements TechnicianApiCommandPort {
         try {
           const result = source.kind === 'code'
             ? await this.readPort.getDynamicCodeOptions!.call(this.readPort, { valueOption: source.valueOption })
-            : await this.readPort.getCascadeCodeOptions!.call(this.readPort, { codeType: source.valueOption })
+            : source.kind === 'businessRecord'
+              ? await this.readPort.getBusinessRecordOptions!.call(this.readPort, { valueOption: source.valueOption })
+              : await this.readPort.getCascadeCodeOptions!.call(this.readPort, { codeType: source.valueOption })
           resolved.set(key, result)
         } catch (error) {
           // A mapped/invalid R1 option tree cannot be repaired by a blind
@@ -245,6 +253,14 @@ export class TechnicianApiCommandAdapter implements TechnicianApiCommandPort {
       }
       if (!Array.isArray(options.data.items)) {
         return adapterFailure('server_terminal', 'Option provider response is malformed')
+      }
+      // A business-record set is tenant/role scoped and must be complete.
+      // Reject duplicate identities and malformed labels before rendering.
+      if (source.kind === 'businessRecord' && (options.data.items.length > 100
+        || options.data.items.some(item => typeof item.value !== 'string'
+          || !item.value.trim() || typeof item.label !== 'string' || !item.label.trim())
+        || new Set(options.data.items.map(item => item.value)).size !== options.data.items.length)) {
+        return adapterFailure('server_terminal', 'Business record options are malformed or ambiguous')
       }
       hydrated.push({
         ...field,

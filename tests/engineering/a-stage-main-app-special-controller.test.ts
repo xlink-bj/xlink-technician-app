@@ -7,7 +7,7 @@ import {
   createAStageSpecialMockController, type AStageMockActor,
 } from '@app/a-stage-special-mock-ui'
 import { mockR1FormsWorkOrderId, mockR1RepeatWorkOrderId,
-  mockSyntheticDynamicFormDefinitionId } from '@adapters/api/mock/fixtures'
+  mockSyntheticDynamicFormDefinitionId, mockR1NoteFormDefinitionId } from '@adapters/api/mock/fixtures'
 import type { StoragePort, StorageKey } from '@shared/ports'
 
 const memory = new Map<string, unknown>()
@@ -69,6 +69,120 @@ function controller(kind: 'forms' | 'repeat', getActor = () => actor,
 }
 
 describe('A main-App source-only multi-form/repeat controller', () => {
+  it.each(['forms', 'repeat'] as const)('%s resolves business IDs, rejects forged IDs and revokes stale identity', async kind => {
+    vi.stubEnv('VITE_XLINK_R1_BUSINESS_FIELDS', 'true')
+    let current = actor
+    const ui = controller(kind, () => current)
+    expect((await ui.load()).definition.fields?.find(field => field.valueKey === 'serviceGoods')?.options)
+      .toEqual([{ value: 'mock-service-package-roof', label: '屋面防水维修' }, { value: 'mock-service-package-wall', label: '外墙防水维修' }])
+    expect(await ui.execute({ kind: 'save', fields: { ...fields('业务值'), serviceGoods: ['forged-id'] } })).toMatchObject({ state: 'blocked' })
+    expect(await ui.execute({ kind: 'save', fields: { ...fields('业务值'), serviceGoods: ['mock-service-package-roof'] } })).toMatchObject({ state: 'succeeded' })
+    current = { ...actor, identity: 'changed-role-version' }
+    await expect(ui.load()).rejects.toThrow()
+    expect(await ui.execute({ kind: 'save', fields: fields('旧身份') })).toMatchObject({ state: 'blocked' })
+  })
+
+  it('persists incomplete drafts per role/node/FormDef/record and never auto-submits on reconnect', async () => {
+    vi.stubEnv('VITE_XLINK_R1_STAGE2B_FIELDS', 'true')
+    let online = false
+    const network = { current: async () => online ? 'online' as const : 'offline' as const,
+      subscribe: () => () => undefined }
+    const ui = createAStageSpecialMockController({ kind: 'forms', workOrderId: mockR1FormsWorkOrderId,
+      getActor: () => actor, storage: storage(), network })
+    await ui.writeDraft(mockSyntheticDynamicFormDefinitionId, { inspectionSummary: '离线草稿', inspectionPointCount: '-' })
+    await ui.writeDraft(mockR1NoteFormDefinitionId, { note: '独立备注' })
+    await ui.writeDraft(mockSyntheticDynamicFormDefinitionId, fields('独立记录编辑'), 'saved-record')
+    expect(await controller('forms').readDraft(mockSyntheticDynamicFormDefinitionId)).toMatchObject({ inspectionPointCount: '-' })
+    expect(await controller('forms').readDraft(mockR1NoteFormDefinitionId)).toEqual({ note: '独立备注' })
+    expect(await controller('forms').readDraft(mockSyntheticDynamicFormDefinitionId, 'saved-record')).toEqual(fields('独立记录编辑'))
+    expect(await controller('repeat').readDraft(mockSyntheticDynamicFormDefinitionId)).toBeNull()
+    expect(await ui.execute({ kind: 'save', fields: fields('只允许主动提交') })).toMatchObject({ state: 'blocked' })
+    expect((await ui.load()).receiptPending).toBe(false)
+    online = true
+    expect((await ui.load()).entries.filter(row => row.editable)).toHaveLength(0)
+    expect(await ui.readDraft(mockSyntheticDynamicFormDefinitionId)).not.toBeNull()
+    expect(await ui.execute({ kind: 'save', fields: fields('只允许主动提交') })).toMatchObject({ state: 'succeeded' })
+    await ui.removeDraft(mockSyntheticDynamicFormDefinitionId)
+    expect(await ui.readDraft(mockSyntheticDynamicFormDefinitionId)).toBeNull()
+    expect(await ui.readDraft(mockR1NoteFormDefinitionId)).toEqual({ note: '独立备注' })
+    let current = actor
+    const revoked = controller('forms', () => current)
+    current = { ...actor, identity: 'revoked' }
+    await expect(revoked.readDraft(mockR1NoteFormDefinitionId)).rejects.toThrow()
+  })
+
+  it.each(['forms', 'repeat'] as const)('%s saves, reloads and clears temporal/rating fields through the real Mock protocol', async kind => {
+    vi.stubEnv('VITE_XLINK_R1_STAGE2D_FIELDS', 'true')
+    const ui = controller(kind)
+    const input = { ...fields('时间与评分'), inspectionDate: '2026-11-03',
+      inspectionTime: '09:30', inspectionDateTime: '2026-11-03 09:30:15', inspectionRating: 4 }
+    for (const invalid of [{ inspectionDate: '2026-02-30' }, { inspectionTime: '25:00' },
+      { inspectionDateTime: '2026-11-03T09:30:15Z' }, { inspectionRating: 6 }]) {
+      expect(await ui.execute({ kind: 'save', fields: { ...input, ...invalid } })).toMatchObject({ state: 'blocked' })
+    }
+    expect((await ui.load()).entries.filter(row => row.editable)).toHaveLength(0)
+    const saved = await ui.execute({ kind: 'save', fields: input })
+    expect(saved.state).toBe('succeeded')
+    if (saved.state !== 'succeeded') return
+    const id = saved.view.entries.find(row => row.editable)!.id
+    resetMockCommandState()
+    expect((await controller(kind).load()).entries.find(row => row.id === id)?.values).toEqual(input)
+    expect(await ui.execute({ kind: 'edit', id, fields: fields('已清空可选值') })).toMatchObject({ state: 'succeeded' })
+    resetMockCommandState()
+    expect((await controller(kind).load()).entries.find(row => row.id === id)?.values).toEqual(fields('已清空可选值'))
+  })
+
+  it('020 resolves AddFormCode and independently saves, edits, deletes and finalizes a second FormDef', async () => {
+    const ui = controller('forms')
+    const first = await ui.load()
+    expect(first.definitions.map(item => [item.id, item.label])).toEqual([
+      [mockSyntheticDynamicFormDefinitionId, '现场记录'],
+      [mockR1NoteFormDefinitionId, '服务备注'],
+    ])
+    expect(first.entries.find(item => item.formDefinitionId === mockR1NoteFormDefinitionId))
+      .toMatchObject({ editable: false, title: '客户沟通记录' })
+    expect(await ui.execute({ kind: 'save', formDefinitionId: mockR1NoteFormDefinitionId,
+      fields: { inspectionSummary: 'cross-def injection' } })).toMatchObject({ state: 'blocked' })
+    const saved = await ui.execute({ kind: 'save', formDefinitionId: mockR1NoteFormDefinitionId,
+      fields: { note: '预约后已与业主确认进场' }, title: '电话沟通记录' })
+    expect(saved.state).toBe('succeeded')
+    if (saved.state !== 'succeeded') return
+    const newRow = saved.view.entries.find(row => row.editable)!
+    expect(newRow).toMatchObject({ formDefinitionId: mockR1NoteFormDefinitionId,
+      title: '电话沟通记录', values: { note: '预约后已与业主确认进场' } })
+    expect(await ui.execute({ kind: 'edit', id: newRow.id,
+      formDefinitionId: mockSyntheticDynamicFormDefinitionId,
+      fields: { note: 'attempt to switch definition' } })).toMatchObject({ state: 'blocked' })
+    expect(await ui.execute({ kind: 'edit', id: newRow.id,
+      formDefinitionId: mockR1NoteFormDefinitionId,
+      fields: { note: '维修方案已电话解释' } })).toMatchObject({ state: 'succeeded' })
+    resetMockCommandState()
+    expect((await controller('forms').load()).entries.find(row => row.id === newRow.id))
+      .toMatchObject({ formDefinitionId: mockR1NoteFormDefinitionId,
+        values: { note: '维修方案已电话解释' } })
+    expect(await ui.execute({ kind: 'delete', id: newRow.id }))
+      .toMatchObject({ state: 'succeeded' })
+    expect((await ui.load()).entries.find(row => row.id === newRow.id)?.state).toBe('deleted')
+    expect(await ui.execute({ kind: 'finish' })).toMatchObject({
+      state: 'succeeded', view: { nodeActive: false, receiptPending: false },
+    })
+  })
+
+  it('020 sibling FormDef remains blocked while another definition has a pending receipt', async () => {
+    const underlying = storage()
+    const port: StoragePort = { ...underlying,
+      remove: async () => ({ state: 'failed_terminal' }),
+    } as StoragePort
+    const ui = controller('forms', () => actor, port)
+    const incomplete = await ui.execute({ kind: 'save', formDefinitionId: mockR1NoteFormDefinitionId,
+      fields: { note: '待核对的电话记录' } })
+    expect(incomplete.state).toBe('uncertain')
+    expect(await ui.load()).toMatchObject({ receiptPending: true,
+      pendingFormDefinitionId: mockR1NoteFormDefinitionId })
+    expect(await ui.execute({ kind: 'save', formDefinitionId: mockSyntheticDynamicFormDefinitionId,
+      fields: fields('不得绕过不同 FormDef 的回执锁') })).toMatchObject({ state: 'blocked' })
+  })
+
   it('Stage 2B 020/021 source-field variant saves, edits and independently reads numeric/string/switch/select values', async () => {
     vi.stubEnv('VITE_XLINK_R1_STAGE2B_FIELDS', 'true')
     const forms = controller('forms')
@@ -151,12 +265,53 @@ describe('A main-App source-only multi-form/repeat controller', () => {
     const created = saved.view.entries.find(row => row.editable)!
     expect(created.values).toEqual(fields('多字段原始现场', 'safe', '需客户补签'))
     expect((await ui.execute({ kind: 'edit', id: created.id,
-      fields: fields('尝试清空原备注', 'follow_up') })).state).toBe('blocked')
+      fields: fields('已清空可选备注', 'follow_up') })).state).toBe('succeeded')
+    expect((await ui.load()).entries.find(row => row.id === created.id)?.values)
+      .toEqual(fields('已清空可选备注', 'follow_up'))
     const updated = await ui.execute({ kind: 'edit', id: created.id,
       fields: fields('多字段更新现场', 'follow_up', '需客户补签') })
     expect(updated.state).toBe('succeeded')
     expect((await ui.load()).entries.find(row => row.id === created.id)?.values)
       .toEqual(fields('多字段更新现场', 'follow_up', '需客户补签'))
+  })
+
+  it('optional clear requires an authoritative missing-key readback and records only field names in receipt', async () => {
+    const transport = await import('@adapters/api/mock/router')
+    const actual = transport.tryMockRead
+    const ui = controller('forms')
+    const saved = await ui.execute({ kind: 'save', fields: fields('准备清空现场备注', 'safe', '原备注') })
+    expect(saved.state).toBe('succeeded')
+    if (saved.state !== 'succeeded') return
+    const id = saved.view.entries.find(row => row.editable)!.id
+    let injectStale = true
+    vi.spyOn(transport, 'tryMockRead').mockImplementation(async (...args) => {
+      const response = await actual(...args)
+      if (injectStale && args[0].startsWith('biz/extForm/query/')
+        && args[1]?.['is:_id|string#and'] === id) {
+        const raw = response as { data?: Record<string, unknown>[] }
+        if (raw.data?.[0] && !Object.hasOwn(raw.data[0], 'inspectionNote')) {
+          return { ...raw, data: [{ ...raw.data[0], inspectionNote: '过期回读值' }] }
+        }
+      }
+      return response
+    })
+    expect((await ui.execute({ kind: 'edit', id,
+      fields: fields('修改并清空现场备注', 'safe') })).state).toBe('uncertain')
+    const pending = await ui.load()
+    expect(pending).toMatchObject({ receiptPending: true, pendingRecoverable: true })
+    // The UI projects source exts, but receipt verification still catches a
+    // stale top-level FormData key and refuses to release the replay fence.
+    expect((pending.entries.find(row => row.id === id)?.values as Record<string, unknown>).inspectionNote)
+      .toBeUndefined()
+    const stored = [...receipts.values()].find(value => (value as { clearedFieldKeys?: unknown })?.clearedFieldKeys)
+    expect(stored).toMatchObject({ clearedFieldKeys: ['inspectionNote'] })
+    expect(JSON.stringify(stored)).not.toContain('原备注')
+    expect((await ui.execute({ kind: 'save', fields: fields('绝不重复提交') })).state).toBe('blocked')
+    injectStale = false
+    expect(await ui.recoverCompleted(fields('修改并清空现场备注', 'safe')))
+      .toMatchObject({ state: 'succeeded', view: { receiptPending: false } })
+    expect((await ui.load()).entries.find(row => row.id === id)?.values)
+      .toEqual(fields('修改并清空现场备注', 'safe'))
   })
 
   it('Stage 2A retains the receipt when a non-summary FormData field disagrees on readback', async () => {

@@ -523,6 +523,11 @@ export interface TechnicianApiReadPort {
   getDynamicCodeOptions?(
     query: { readonly valueOption: string },
   ): Promise<OperationSnapshot<ReadPage<CodeOptionRead>>>
+  /** Dedicated role-scoped R1 business-record options; no CodeService fallback.
+   * Optional until the real projPackage endpoint/response is verified. */
+  getBusinessRecordOptions?(
+    query: { readonly valueOption: string },
+  ): Promise<OperationSnapshot<ReadPage<CodeOptionRead>>>
   getCascadeCodeOptions(
     query: CascadeCodeOptionsQuery,
   ): Promise<OperationSnapshot<ReadPage<CodeOptionRead>>>

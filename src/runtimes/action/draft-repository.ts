@@ -1,6 +1,7 @@
 import type { StoragePort } from '@shared/ports'
 import {
   asOpaqueId,
+  createOperationError,
   type OperationSnapshot,
   type RoleId,
   type UserId,
@@ -160,6 +161,7 @@ export class SemanticActionDraftRepository implements ActionDraftRepository {
     if (canonical.data !== null && validDraftRecord<TState>(canonical.data, identity)) {
       return { state: 'succeeded', data: canonical.data }
     }
+    const invalidCanonical = canonical.data !== null
 
     for (const key of actionDraftLegacyStorageKeys(identity)) {
       const legacy = await this.storage.read<unknown>({ namespace: 'draft', key })
@@ -168,16 +170,35 @@ export class SemanticActionDraftRepository implements ActionDraftRepository {
         return { state: 'succeeded', data: legacy.data }
       }
     }
+    if (invalidCanonical) {
+      // Never reinterpret a damaged, already-present draft as a blank editor:
+      // a later save could overwrite the only recoverable copy.
+      return { state: 'failed_terminal', error: createOperationError('server_terminal', 'Stored draft is invalid; recovery required') }
+    }
     return { state: 'succeeded', data: null }
   }
 
-  write<TState extends Readonly<Record<string, unknown>>>(
+  async write<TState extends Readonly<Record<string, unknown>>>(
     record: ActionDraftRecord<TState>,
   ): Promise<OperationSnapshot<void>> {
-    return this.storage.write(
-      { namespace: 'draft', key: actionDraftStorageKey(record.identity) },
-      record,
-    )
+    const key = { namespace: 'draft' as const, key: actionDraftStorageKey(record.identity) }
+    const existing = await this.storage.read<unknown>(key)
+    if (existing.state !== 'succeeded') return existing as OperationSnapshot<void>
+    const current = existing.data
+    if (current !== null && !validDraftRecord(current, record.identity)) {
+      // Never overwrite a damaged or differently-owned canonical record.
+      return { state: 'failed_terminal', error: createOperationError('server_terminal', 'Stored draft cannot be safely overwritten') }
+    }
+    if (current !== null) {
+      // A later-completed draft is a tombstone, not an invitation to restore an
+      // older editor session. Reject clearly stale revisions in the same key.
+      // This is a monotonic guard, not an atomic cross-tab compare-and-swap.
+      if ((current.status === 'completed' && record.status === 'unfinished')
+        || record.updatedAt < current.updatedAt) {
+        return { state: 'failed_terminal', error: createOperationError('server_terminal', 'A newer draft revision already exists') }
+      }
+    }
+    return this.storage.write(key, record)
   }
 
   private async removeLegacyIfOwned(

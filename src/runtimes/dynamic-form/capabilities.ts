@@ -48,6 +48,11 @@ export function selectOptionProvider(field: FormFieldSchema): OptionProviderDeci
       provider: { kind: 'cascade', valueOption: field.valueOption },
     }
   }
+  if (field.type === 'bizSelect' && field.valueOption) {
+    return field.inlineOptions?.length
+      ? { state: 'provider', provider: { kind: 'businessRecord', valueOption: field.valueOption } }
+      : { state: 'unsupported', reason: 'business record provider has not resolved verified options' }
+  }
   if (codeBackedTypes.has(field.type) && field.valueOption) {
     return {
       state: 'provider',

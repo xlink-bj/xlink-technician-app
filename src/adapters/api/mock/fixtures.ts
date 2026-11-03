@@ -169,6 +169,72 @@ export const mockSyntheticStage2BFormDefinitionResponse = {
   total: 10,
 } as const
 
+/** Opt-in array fields mirror legacy R1 extForm: checkbox is a list of
+ * selected code IDs and cascade is one ordered parent/child path. Default
+ * commercial Mock and Stage 2B primitive fixtures remain unchanged. */
+export const mockSyntheticStage2CFormDefinitionResponse = {
+  ...mockSyntheticStage2BFormDefinitionResponse,
+  data: [
+    ...mockSyntheticStage2BFormDefinitionResponse.data,
+    { _id: 'mock-inspection-field-checks', name: 'inspectionChecks',
+      nameDisp: '检查项目', type: 'checkbox', multiple: '1', required: '0', state: 1,
+      options: [{ value: 'drain', name: '排水口' }, { value: 'parapet', name: '女儿墙' },
+        { value: 'joint', name: '接缝' }] },
+    { _id: 'mock-inspection-field-cascade', name: 'inspectionLocation',
+      nameDisp: '检查部位', type: 'cascade', required: '0', state: 1,
+      options: [
+        { value: 'roof', name: '屋顶', children: [
+          { value: 'drain', name: '排水口' }, { value: 'parapet', name: '女儿墙' },
+        ] },
+        { value: 'bath', name: '卫生间', children: [
+          { value: 'pipe', name: '管道' },
+        ] },
+      ] },
+  ],
+  total: 12,
+} as const
+
+/** Same verified local temporal/rating codecs as the generic Form Runtime.
+ * Synthetic row names are test data, not a claim about a live tenant schema. */
+export const mockSyntheticStage2DFormDefinitionResponse = {
+  ...mockSyntheticStage2CFormDefinitionResponse,
+  data: [
+    ...mockSyntheticStage2CFormDefinitionResponse.data,
+    { _id: 'mock-inspection-date', name: 'inspectionDate', nameDisp: '检查日期',
+      type: 'date', required: '0', state: 1 },
+    { _id: 'mock-inspection-time', name: 'inspectionTime', nameDisp: '检查时间',
+      type: 'time', required: '0', state: 1 },
+    { _id: 'mock-inspection-datetime', name: 'inspectionDateTime', nameDisp: '复核时间',
+      type: 'datetime', required: '0', state: 1 },
+    { _id: 'mock-inspection-rating', name: 'inspectionRating', nameDisp: '现场评分',
+      type: 'rate', required: '0', state: 1 },
+  ],
+  total: 16,
+} as const
+
+/** Opt-in deep-tree shape; values remain the existing ordered R1 path. */
+export const mockSyntheticDeepCascadeDefinitionResponse = {
+  ...mockSyntheticStage2CFormDefinitionResponse,
+  data: mockSyntheticStage2CFormDefinitionResponse.data.map(field =>
+    field.name === 'inspectionLocation' ? { ...field, options: [
+      { value: 'roof', name: '屋顶', children: [
+        { value: 'drain', name: '排水口', children: [
+          { value: 'inner', name: '内侧' }, { value: 'outer', name: '外侧' },
+        ] },
+      ] },
+    ] } : field),
+} as const
+
+/** Isolated special-form business selector, using the R1 serviceGoods
+ * List<String>/projPackage contract. Not an active Survey recommendation. */
+export const mockSyntheticBusinessFormDefinitionResponse = {
+  ...mockSyntheticStage2DFormDefinitionResponse,
+  data: [...mockSyntheticStage2DFormDefinitionResponse.data,
+    { _id: 'mock-service-goods-row', name: 'serviceGoods', nameDisp: '服务项目',
+      type: 'bizSelect', multiple: '1', valueOption: 'projPackage', required: '0', state: 1 },
+  ], total: 17,
+} as const
+
 export const mockWorkOrderIds = [
   'mock-work-order-001',
   'mock-work-order-002',

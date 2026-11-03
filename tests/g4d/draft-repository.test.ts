@@ -229,4 +229,60 @@ describe('Action Draft Repository', () => {
     expect(result.data?.entries).toHaveLength(1)
     expect(result.data?.entries[0].identity).toEqual(valid)
   })
+
+  it('does not silently discard an invalid canonical draft on recovery', async () => {
+    const { storage, values } = storageFor()
+    const repository = createActionDraftRepository(storage)
+    const current = identity()
+    const key = `draft:${actionDraftStorageKey(current)}`
+    const broken = { ...recordFor(current, { note: 'keep for diagnosis' }, '2026-09-17T09:00:00.000Z'),
+      identity: { ...current, userId: '' } }
+    values.set(key, broken)
+
+    const read = await repository.read(current)
+    expect(read.state).toBe('failed_terminal')
+    const attempted = await repository.write(recordFor(current, { note: 'must not replace corruption' }, '2026-09-17T10:00:00.000Z'))
+    expect(attempted.state).toBe('failed_terminal')
+    expect(values.get(key)).toEqual(broken)
+    expect((await repository.listForUser(userA)).data?.invalidRecordCount).toBe(1)
+  })
+
+  it('rejects delayed stale autosaves for the same Action and preserves newer work', async () => {
+    const { storage } = storageFor()
+    const repository = createActionDraftRepository(storage)
+    const current = identity()
+    await repository.write(recordFor(current, { note: 'newer local work' }, '2026-09-17T10:00:00.000Z'))
+
+    const delayed = await repository.write(recordFor(current, { note: 'stale tab snapshot' }, '2026-09-17T09:00:00.000Z'))
+
+    expect(delayed.state).toBe('failed_terminal')
+    expect((await repository.read(current)).data?.values).toEqual({ note: 'newer local work' })
+  })
+
+  it('does not let an unfinished autosave resurrect a completed draft tombstone', async () => {
+    const { storage } = storageFor()
+    const repository = createActionDraftRepository(storage)
+    const current = identity()
+    await repository.write(recordFor(current, { note: 'saved on device' }, '2026-09-17T09:00:00.000Z'))
+    const completed = {
+      ...recordFor(current, {}, '2026-09-17T10:00:00.000Z'),
+      status: 'completed' as const,
+    }
+    expect((await repository.write(completed)).state).toBe('succeeded')
+
+    const delayed = await repository.write(recordFor(current, { note: 'old editor resurrected' }, '2026-09-17T11:00:00.000Z'))
+    expect(delayed.state).toBe('failed_terminal')
+    expect((await repository.read(current)).data).toEqual(completed)
+  })
+
+  it('recovers a valid legacy draft even if the canonical copy is damaged', async () => {
+    const { storage, values } = storageFor()
+    const repository = createActionDraftRepository(storage)
+    const current = identity()
+    values.set(`draft:${actionDraftStorageKey(current)}`, { damaged: true })
+    values.set(`draft:${actionDraftLegacyStorageKey(current)}`,
+      recordFor(current, { note: 'legacy recovery' }, '2026-09-17T09:00:00.000Z'))
+
+    expect((await repository.read(current)).data?.values).toEqual({ note: 'legacy recovery' })
+  })
 })

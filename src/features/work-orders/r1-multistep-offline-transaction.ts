@@ -39,6 +39,8 @@ export interface R1MultiStepReceipt {
   readonly savedFormDataIds: readonly string[]
   /** Server identity for an edit/delete, never local draft ID or raw payload. */
   readonly targetFormDataId?: string
+  /** Field names only, never raw FormData values. */
+  readonly clearedFieldKeys?: readonly string[]
 }
 export interface R1StepExecutionContext {
   readonly step: R1MultiStepKind
@@ -68,7 +70,8 @@ export interface R1AuthoritativeMutationReadback {
   /** Full R1 record returned by a separate read; absent after repeat/remove. */
   readonly formData?: Readonly<Record<string, unknown>>
   /** The exact fields submitted, compared to fresh FormData (transient). */
-  readonly expectedFields?: Readonly<Record<string, string | number | boolean>>
+  readonly expectedFields?: Readonly<Record<string, string | number | boolean | readonly string[]>>
+  readonly expectedAbsentKeys?: readonly string[]
   /** Full, non-truncated workflow-node EXTS readback for forms. */
   readonly formsExts?: Readonly<Record<string, unknown>>
   /** A separately fetched, complete workflow-scoped repeat query result. */
@@ -109,6 +112,10 @@ function valid(r: unknown,s:R1MultiStepScope): r is R1MultiStepReceipt {
     && saved.every(y=>typeof y==='string' && y.trim().length>0)
     && (x.targetFormDataId===undefined || (typeof x.targetFormDataId==='string'
       && x.targetFormDataId.trim().length>0 && !x.targetFormDataId.startsWith('local-')))
+    && (x.clearedFieldKeys===undefined || (Array.isArray(x.clearedFieldKeys)
+      && x.clearedFieldKeys.length<=50
+      && new Set(x.clearedFieldKeys).size===x.clearedFieldKeys.length
+      && x.clearedFieldKeys.every(k=>typeof k==='string' && /^[A-Za-z][A-Za-z0-9_]{0,119}$/.test(k))))
 }
 async function read(storage:StoragePort,s:R1MultiStepScope):Promise<OperationSnapshot<R1MultiStepReceipt|null>> {
   let result:OperationSnapshot<unknown|null>
@@ -205,8 +212,19 @@ export async function closeCompletedR1MutationReceiptAfterReadback(
       || record.nodeId!==r.runtimeNodeId || record.smodule!=='serviceAppointment'
       || record.state!==1 || (r.sourceNodeType==='repeat'&&record.workflowId!==r.workflowRunId)
       || (record.formDefId!==undefined&&record.formDefId!==r.formDefinitionId))return false
+    if(r.clearedFieldKeys?.length){
+      const absent=readback.expectedAbsentKeys
+      if(!absent || absent.length!==r.clearedFieldKeys.length
+        || absent.some(k=>!r.clearedFieldKeys?.includes(k)))return false
+      const exts=record.exts
+      if(!exts || typeof exts!=='object' || Array.isArray(exts))return false
+      for(const key of absent){if(Object.hasOwn(record,key)||Object.hasOwn(exts,key))return false}
+    }
     for(const [key,value] of Object.entries(readback.expectedFields)){
-      if(record[key]!==value)return false
+      // JSON arrays are detached on a fresh authoritative R1 read.
+      // Compare the canonical ordered path/selection contents, not JS identity.
+      if(Array.isArray(value) ? !Array.isArray(record[key])
+        || JSON.stringify(record[key])!==JSON.stringify(value) : record[key]!==value)return false
     }
   } else if(r.sourceNodeType==='forms'){
     if(!record || record._id!==target || record.sid!==r.workOrderId
@@ -230,7 +248,14 @@ export async function executeR1MultiStepOffline(
   authoritativeSavedIds:readonly string[] = [],
   /** Mandatory delete identity; optional exact existing-edit identity. */
   targetFormDataId?:string,
+  clearedFieldKeys:readonly string[] = [],
 ):Promise<OperationSnapshot<R1MultiStepReceipt>> {
+  if(clearedFieldKeys.length>50 || new Set(clearedFieldKeys).size!==clearedFieldKeys.length
+    || clearedFieldKeys.some(k=>! /^[A-Za-z][A-Za-z0-9_]{0,119}$/.test(k))
+    || (clearedFieldKeys.length>0 && (!targetFormDataId
+      || !['form_upsert','repeat_form_upsert'].includes(steps[0] ?? '')))) {
+    return fail('R1 可选字段清空元数据无效。')
+  }
   if(!validatePlan(scope,steps))return fail('R1 特殊节点事务计划无效。')
   const deletes=steps.includes('forms_soft_delete')||steps.includes('repeat_remove')
   if((deletes && !targetFormDataId)|| (targetFormDataId!==undefined
@@ -260,6 +285,7 @@ export async function executeR1MultiStepOffline(
           sourceNodeType:scope.sourceNodeType,actorHash:hash(scope.authorizationScope),
           steps:[...steps],stepIndex,savedFormDataIds:[...ids],
           ...(targetFormDataId?{targetFormDataId}:{}),
+          ...(clearedFieldKeys.length?{clearedFieldKeys:[...clearedFieldKeys]}:{}),
         }
         // If persistence fails, absolutely no next command may be called.
         if(!await persist(storage,scope,{...base,state:'may_have_dispatched'}))

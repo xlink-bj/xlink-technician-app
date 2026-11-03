@@ -15,6 +15,10 @@ import {
   mockSyntheticDynamicFormDefinitionId,
   mockSyntheticInspectionFormDefinitionResponse,
   mockSyntheticStage2BFormDefinitionResponse,
+  mockSyntheticStage2CFormDefinitionResponse,
+  mockSyntheticStage2DFormDefinitionResponse,
+  mockSyntheticBusinessFormDefinitionResponse,
+  mockSyntheticDeepCascadeDefinitionResponse,
   mockSurveyFormDefinitionId,
   mockSurveyFormDefinitionResponse,
   mockDynamicScalarQaFormDefinitionResponse,
@@ -762,6 +766,18 @@ function matchedResponse(
     return mockAppointmentFormDefinitionResponse
   }
   if (route === 'biz/extField/query' && requestData.extId === mockSyntheticDynamicFormDefinitionId) {
+    if (isDevMockJourneyEnabled() && import.meta.env.VITE_XLINK_R1_BUSINESS_FIELDS === 'true') {
+      return mockSyntheticBusinessFormDefinitionResponse
+    }
+    if (isDevMockJourneyEnabled() && import.meta.env.VITE_XLINK_R1_DEEP_CASCADE === 'true') {
+      return mockSyntheticDeepCascadeDefinitionResponse
+    }
+    if (isDevMockJourneyEnabled() && import.meta.env.VITE_XLINK_R1_STAGE2D_FIELDS === 'true') {
+      return mockSyntheticStage2DFormDefinitionResponse
+    }
+    if (isDevMockJourneyEnabled() && import.meta.env.VITE_XLINK_R1_STAGE2C_ARRAYS === 'true') {
+      return mockSyntheticStage2CFormDefinitionResponse
+    }
     return isDevMockJourneyEnabled() && import.meta.env.VITE_XLINK_R1_STAGE2B_FIELDS === 'true'
       ? mockSyntheticStage2BFormDefinitionResponse : mockSyntheticInspectionFormDefinitionResponse
   }
@@ -809,8 +825,16 @@ function matchedResponse(
   }
   if (route.startsWith('biz/extForm/query/') && route.slice('biz/extForm/query/'.length) === mockR1NoteFormDefinitionId) {
     const dataId = requestData['is:_id|string#and']
-    const formData = dataId === mockR1FormData.formsSecond
-      ? mockR1ExistingFormData[mockR1FormData.formsSecond] : undefined
+    const candidate = dataId === mockR1FormData.formsSecond
+      ? mockR1ExistingFormData[mockR1FormData.formsSecond]
+      : typeof dataId === 'string' ? mockCommandState().formData.get(dataId) : undefined
+    const row = mutableRecord(candidate)
+    // Historical source rows may omit sid; every new row must prove the same
+    // forms node/work-order and FormDef identity before independent readback.
+    const owned = typeof dataId === 'string' && dataId.startsWith('mock-special-form-data-forms-')
+    const formData = row?.extId === mockR1NoteFormDefinitionId
+      && (!owned || (row.sid === mockR1FormsWorkOrderId && row.nodeId === 'mock-workflow-node-020-forms'))
+      ? candidate : undefined
     return { data: formData ? [formData] : [], page: 1, rows: 20, total: formData ? 1 : 0 }
   }
   if (route.startsWith('biz/extForm/query/') && route.slice('biz/extForm/query/'.length) === mockSurveyFormDefinitionId) {
@@ -949,6 +973,7 @@ export async function tryMockRead(
     route === `basic/serviceAppointment/queryById/${mockR1FormsWorkOrderId}`
     || route === `basic/serviceAppointment/queryById/${mockR1RepeatWorkOrderId}`
     || route === `biz/extForm/query/${mockSyntheticDynamicFormDefinitionId}`
+    || route === `biz/extForm/query/${mockR1NoteFormDefinitionId}`
   ) && !restoreMockR1SpecialState()) {
     return { success: false, code: 'TERMINAL', message: 'Synthetic special state unavailable' }
   }

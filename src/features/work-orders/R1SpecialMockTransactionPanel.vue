@@ -13,6 +13,9 @@
       <AppButton variant="secondary" size="compact" :disabled="busy" @tap="refresh">重新读取</AppButton>
     </view>
     <template v-else-if="viewState">
+      <AppStatus v-if="networkState === 'offline'" tone="warning" quiet
+        message="网络不可用，可继续填写；连接恢复后请主动保存。" data-testid="a-special-offline" />
+      <text v-if="draftFeedback" class="special-forms__finish-copy" data-testid="a-special-local-draft">{{ draftFeedback }}</text>
       <AppStatus v-if="operationFeedback" tone="warning" quiet
         :message="operationFeedback" data-testid="a-special-operation-feedback" />
       <view class="special-forms__task-state" data-testid="a-special-task-state">
@@ -58,15 +61,8 @@
             <template v-for="field in editableFields" :key="field.fieldId">
               <view class="special-forms__field" :data-testid="`a-special-recover-field-${field.valueKey}`">
                 <text class="special-forms__label">{{ field.label }} <text v-if="field.required" class="special-forms__required">*</text></text>
-                <AppChoiceGroup v-if="field.type === 'radio' || field.type === 'select' || field.type === 'switch'"
-                  :options="field.type === 'switch' ? switchOptions : field.options"
-                  :model-value="fieldValue(field.valueKey)" :disabled="busy"
-                  @update:model-value="setField(field.valueKey, $event)" />
-                <AppTextarea v-else-if="field.type === 'textarea'" :model-value="fieldValue(field.valueKey)"
-                  :maxlength="4000" :disabled="busy" placeholder="填写原保存的内容"
-                  @update:model-value="setField(field.valueKey, $event)" />
-                <AppInput v-else :model-value="fieldValue(field.valueKey)" :disabled="busy"
-                  @update:model-value="setField(field.valueKey, $event)" />
+              <R1FormFieldControl :field="field" :model-value="draftValues[field.valueKey]"
+                :disabled="busy" @update:model-value="setField(field.valueKey, $event)" />
               </view>
             </template>
           </template>
@@ -83,19 +79,18 @@
       <template v-else-if="viewState.nodeActive">
         <view class="special-forms__editor">
           <text class="special-forms__section-title">{{ editingId ? '编辑已保存记录' : '新增一条记录' }}</text>
+          <view v-if="kind === 'forms' && !editingId && viewState.definitions.length > 1"
+            class="special-forms__field" data-testid="a-special-definition-choice">
+            <text class="special-forms__label">记录类型</text>
+            <AppChoiceGroup :options="formChoices" :model-value="selectedFormDefinitionId"
+              :disabled="busy" @update:model-value="selectDefinition" />
+          </view>
           <template v-for="field in viewFields" :key="field.fieldId">
             <view v-if="field.supported && editableFieldTypes.has(field.type)"
               class="special-forms__field" :data-testid="`a-special-field-${field.valueKey}`">
               <text class="special-forms__label">{{ field.label }} <text v-if="field.required" class="special-forms__required">*</text></text>
-              <AppChoiceGroup v-if="field.type === 'radio' || field.type === 'select' || field.type === 'switch'"
-                :options="field.type === 'switch' ? switchOptions : field.options"
-                :model-value="fieldValue(field.valueKey)" :disabled="busy"
-                @update:model-value="setField(field.valueKey, $event)" />
-              <AppTextarea v-else-if="field.type === 'textarea'"
-                :model-value="fieldValue(field.valueKey)" :maxlength="4000" :disabled="busy"
-                placeholder="请填写现场信息" @update:model-value="setField(field.valueKey, $event)" />
-              <AppInput v-else :model-value="fieldValue(field.valueKey)" :disabled="busy"
-                placeholder="请填写信息" @update:model-value="setField(field.valueKey, $event)" />
+              <R1FormFieldControl :field="field" :model-value="draftValues[field.valueKey]"
+                :disabled="busy" @update:model-value="setField(field.valueKey, $event)" />
             </view>
             <view v-else class="special-forms__reference" :data-testid="`a-special-reference-${field.valueKey}`">
               <text>{{ field.label }} · {{ field.type === 'image' ? '参考图片（只读，非上传项）' : field.reason || '当前不可编辑' }}</text>
@@ -119,7 +114,7 @@
             <view v-else class="special-forms__confirmation">
               <text>确认保存本条记录，并立即完成当前节点？</text>
               <AppButton :disabled="busy || !formValid" data-testid="a-special-save-finish-confirm"
-                @tap="run({ kind: 'save_finish', fields: draftValues })">确认保存并完成</AppButton>
+                @tap="run({ kind: 'save_finish', fields: draftValues, formDefinitionId: selectedFormDefinitionId })">确认保存并完成</AppButton>
               <AppButton variant="text" :disabled="busy" @tap="confirmSaveFinish = false">返回检查</AppButton>
             </view>
           </view>
@@ -151,9 +146,8 @@ import type {
 } from './a-stage-special-mock-port'
 import { useSessionStore } from '@shared/state'
 import AppButton from '@shared/ui/AppButton.vue'
-import AppTextarea from '@shared/ui/AppTextarea.vue'
-import AppInput from '@shared/ui/AppInput.vue'
 import AppChoiceGroup from '@shared/ui/AppChoiceGroup.vue'
+import R1FormFieldControl from './R1FormFieldControl.vue'
 import AppStatus from '@shared/ui/AppStatus.vue'
 import { uxStateLanguage } from '@shared/ui/ux-state-language'
 import { projectR1LocalFields } from './r1-local-form-fields'
@@ -171,30 +165,41 @@ const operationFeedback = ref('')
 const recoveryFeedback = ref('')
 const draftValues = ref<R1SpecialMockFields>({})
 const editableFieldTypes = r1SpecialMockWritableTypes
-const switchOptions = [{ value: '1', label: '是' }, { value: '0', label: '否' }] as const
+const selectedFormDefinitionId = ref('')
+const formChoices = computed(() => viewState.value?.definitions.map(item => ({ value: item.id, label: item.label })) ?? [])
+const selectedDefinition = computed(() => viewState.value?.definitions.find(
+  item => item.id === selectedFormDefinitionId.value)?.definition ?? viewState.value?.definition)
+function selectDefinition(id: string): void {
+  if (busy.value || editingId.value || !viewState.value?.definitions.some(item => item.id === id)) return
+  selectedFormDefinitionId.value = id
+  draftValues.value = {}
+  confirmFinish.value = false
+  confirmSaveFinish.value = false
+  void restoreLocalDraft()
+}
 const viewFields = computed(() => viewState.value
-  ? projectR1LocalFields(viewState.value.definition, draftValues.value) : [])
+  ? projectR1LocalFields(selectedDefinition.value!, draftValues.value) : [])
 const editableFields = computed(() => viewFields.value.filter(field => field.supported
   && editableFieldTypes.has(field.type)))
 const validation = computed(() => viewState.value
-  ? validateR1SpecialMockFields(viewState.value.definition, draftValues.value)
+  ? validateR1SpecialMockFields(selectedDefinition.value!, draftValues.value)
   : { ok: false as const, message: '表单尚未载入。' })
 const formValid = computed(() => validation.value.ok)
 const validationMessage = computed(() => validation.value.ok ? '' : validation.value.message)
-function fieldValue(key: string): string {
-  const value = draftValues.value[key]
-  return value === undefined ? '' : String(value)
-}
-function setField(key: string, value: string): void {
+function setField(key: string, value: string | number | boolean | readonly string[]): void {
   if (busy.value || !viewState.value) return
   const field = viewFields.value.find(item => item.valueKey === key)
-  if (!field?.supported || !editableFieldTypes.has(field.type) || value.length > 4000) return
+  if (!field?.supported || !editableFieldTypes.has(field.type)
+    || (typeof value === 'string' && value.length > 4000)
+    || (Array.isArray(value) && (value.length > 30 || value.some(item => item.length > 256)))) return
   // Keep partially typed decimals ("1.", "-", etc.) visible until Submit.
   // The shared FormDef validator normalizes once at the transaction boundary.
   const next = { ...draftValues.value }
-  if (value === '') delete next[key]
+  if (value === '' || (Array.isArray(value) && value.length === 0)) delete next[key]
   else next[key] = value
   draftValues.value = next
+  editRevision++
+  persistLocalDraft()
 }
 const editingId = ref<string | null>(null)
 const confirmDeleteId = ref<string | null>(null)
@@ -203,7 +208,36 @@ const confirmSaveFinish = ref(false)
 const canFinish = computed(() => Boolean(viewState.value?.entries.some(row =>
   row.state === 'active' && (props.kind === 'forms' || row.editable))))
 let revision = 0
+let loadRevision = 0
 let controller: AStageSpecialMockController | null = null
+const draftFeedback = ref('')
+const networkState = ref<import('@shared/ports').NetworkStatus>('unknown')
+let unsubscribeNetwork: (() => void) | undefined
+let draftWrites: Promise<unknown> = Promise.resolve()
+let editRevision = 0
+function persistLocalDraft(): void {
+  const current = controller, formId = selectedFormDefinitionId.value, recordId = editingId.value ?? undefined
+  if (!current || !formId) return
+  const values = { ...draftValues.value }, ticket = revision
+  draftFeedback.value = '正在保存到本机…'
+  draftWrites = draftWrites.catch(() => undefined).then(async () => {
+    const saved = await current.writeDraft(formId, values, recordId)
+    if (ticket === revision) draftFeedback.value = saved ? '已保存到本机，尚未提交' : '本机保存失败，请保留当前页面后重试'
+  }).catch(() => { if (ticket === revision) draftFeedback.value = '本机保存失败，请保留当前页面后重试' })
+}
+async function restoreLocalDraft(): Promise<void> {
+  const current = controller, formId = selectedFormDefinitionId.value, recordId = editingId.value ?? undefined
+  const ticket = revision, changes = editRevision
+  if (!current || !formId) return
+  try {
+    await draftWrites
+    const values = await current.readDraft(formId, recordId)
+    if (ticket !== revision || changes !== editRevision || formId !== selectedFormDefinitionId.value
+      || recordId !== (editingId.value ?? undefined)) return
+    if (values) { draftValues.value = values; draftFeedback.value = '已恢复本机草稿，尚未提交' }
+    else draftFeedback.value = ''
+  } catch { if (ticket === revision) draftFeedback.value = '本机草稿读取失败，原草稿已保留' }
+}
 function actor() {
   const current = session.session
   return current?.user.id && current.currentRole?.id && current.sessionRef
@@ -213,7 +247,7 @@ function actor() {
     : null
 }
 async function refresh(): Promise<void> {
-  const ticket = ++revision
+  const ticket = revision, loadTicket = ++loadRevision
   const current = controller
   if (!current) return
   loading.value = true
@@ -221,44 +255,61 @@ async function refresh(): Promise<void> {
   recoveryFeedback.value = ''
   try {
     const next = await current.load()
-    if (revision !== ticket) return
+    if (revision !== ticket || loadTicket !== loadRevision) return
     viewState.value = next
+    if (next.pendingFormDefinitionId) selectedFormDefinitionId.value = next.pendingFormDefinitionId
+    else if (!next.definitions.some(item => item.id === selectedFormDefinitionId.value)) {
+      selectedFormDefinitionId.value = String(next.definition.id)
+    }
   } catch {
-    if (revision === ticket) error.value = '当前记录未能安全读取，请重新进入工单后再试。'
-  } finally { if (revision === ticket) loading.value = false }
+    if (revision === ticket && loadTicket === loadRevision) error.value = '当前记录未能安全读取，请重新进入工单后再试。'
+  } finally { if (revision === ticket && loadTicket === loadRevision) loading.value = false }
 }
 watch(() => [props.kind, props.workOrderId, props.node.id,
   session.session?.sessionRef, session.session?.currentRole?.id, session.session?.roleVersion] as const,
 () => {
   revision++
+  busy.value = false
+  editRevision++
+  unsubscribeNetwork?.()
   viewState.value = null
   error.value = ''
   operationFeedback.value = ''
   recoveryFeedback.value = ''
   draftValues.value = {}
+  selectedFormDefinitionId.value = ''
   editingId.value = null
   confirmDeleteId.value = null
   confirmFinish.value = false
   confirmSaveFinish.value = false
   controller = props.createController({ kind: props.kind,
     workOrderId: props.workOrderId, getActor: actor })
-  void refresh()
+  const current = controller
+  const ticket = revision
+  unsubscribeNetwork = current.network.subscribe(status => {
+    if (ticket === revision) networkState.value = status
+  })
+  void current.network.current().then(status => { if (ticket === revision) networkState.value = status })
+  void refresh().then(() => restoreLocalDraft())
 }, { immediate: true })
-onBeforeUnmount(() => { revision++; controller = null })
+onBeforeUnmount(() => { revision++; unsubscribeNetwork?.(); controller = null })
 function edit(id: string): void {
   const row = viewState.value?.entries.find(entry => entry.id === id && entry.editable)
   if (!row) return
   editingId.value = id
+  selectedFormDefinitionId.value = row.formDefinitionId
   draftValues.value = { ...row.values }
   confirmDeleteId.value = null
   confirmFinish.value = false
   confirmSaveFinish.value = false
+  editRevision++
+  void restoreLocalDraft()
 }
-function cancelEdit(): void { editingId.value = null; draftValues.value = {} }
+function cancelEdit(): void { editingId.value = null; draftValues.value = {}; editRevision++; void restoreLocalDraft() }
 async function save(): Promise<void> {
   const action: AStageSpecialAction = editingId.value
-    ? { kind: 'edit', id: editingId.value, fields: draftValues.value }
-    : { kind: 'save', fields: draftValues.value }
+    ? { kind: 'edit', id: editingId.value, fields: draftValues.value, formDefinitionId: selectedFormDefinitionId.value }
+    : { kind: 'save', fields: draftValues.value, formDefinitionId: selectedFormDefinitionId.value }
   await run(action)
 }
 async function run(action: AStageSpecialAction): Promise<void> {
@@ -269,6 +320,8 @@ async function run(action: AStageSpecialAction): Promise<void> {
   operationFeedback.value = ''
   const ticket = revision
   try {
+    await draftWrites
+    const savedDefinition = selectedFormDefinitionId.value, savedRecord = editingId.value ?? undefined
     const result = await current.execute(action)
     if (ticket !== revision) return
     if (result.state !== 'succeeded') {
@@ -276,7 +329,12 @@ async function run(action: AStageSpecialAction): Promise<void> {
       if (ticket === revision) operationFeedback.value = result.message
       return
     }
+    if (action.kind === 'save' || action.kind === 'edit' || action.kind === 'save_finish') {
+      await current.removeDraft(savedDefinition, savedRecord)
+      if (ticket !== revision) return
+    }
     viewState.value = result.view
+    draftFeedback.value = ''
     cancelEdit()
     confirmDeleteId.value = null
     confirmFinish.value = false

@@ -2,7 +2,7 @@ import { mockCommandState, type MockCommandState } from './command-state'
 import { isDevMockJourneyEnabled } from './journey'
 import {
   mockR1FormData, mockR1FormsWorkOrderId, mockR1RepeatWorkOrderId,
-  mockSyntheticDynamicFormDefinitionId,
+  mockSyntheticDynamicFormDefinitionId, mockR1NoteFormDefinitionId,
 } from './fixtures'
 
 /** DEV-only synthetic server snapshot. No Production/Beta transport consumes it. */
@@ -67,8 +67,9 @@ function validSnapshot(raw: unknown): raw is R1SpecialSnapshot {
     if (!kind || !/^mock-special-form-data-(forms|repeat)-[1-9][0-9]*$/.test(id)
       || !row || row._id !== id || row.sid !== orders[kind]
       || row.nodeId !== nodes[kind] || row.workflowId !== runs[kind]
-      || row.extId !== mockSyntheticDynamicFormDefinitionId
-      || row.formDefId !== mockSyntheticDynamicFormDefinitionId
+      || ![mockSyntheticDynamicFormDefinitionId,
+        ...(kind === 'forms' ? [mockR1NoteFormDefinitionId] : [])].includes(String(row.extId))
+      || row.formDefId !== row.extId
       || ![1, -1].includes(row.state as number) || !record(row.exts)) return false
   }
   return ids.slice(2).every((id) => {

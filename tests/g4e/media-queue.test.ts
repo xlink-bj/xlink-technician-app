@@ -409,6 +409,33 @@ describe('G4-E shared durable media queue', () => {
     expect(upload.upload).not.toHaveBeenCalled()
   })
 
+  it.each(['ambiguous_postprocess', 'ambiguous_upload', 'upload_not_dispatched'])(
+    'does not bypass explicit retry authorization through process for %s', async (code) => {
+      const upload = { upload: vi.fn(async (item: LocalMedia) => succeeded(uploaded(item))) }
+      const storage = storageFor()
+      const { queue } = createQueue(upload, storage)
+      const repository = createMediaQueueRepository(storage.storage)
+      const enqueued = await queue.enqueue({ scope, media: media('retry-fence') })
+      const failed: MediaUploadTask = {
+        ...enqueued.data!, state: 'failed_retryable',
+        lastError: createOperationError('network_retryable', 'Requires explicit retry', { code }),
+      }
+      await repository.write(failed)
+
+      const result = await queue.process(failed.taskId)
+      expect(result.state).toBe('failed_retryable')
+      expect(result.error?.code).toBe(code)
+      expect(upload.upload).not.toHaveBeenCalled()
+      expect((await repository.read(failed.taskId)).data).toEqual(failed)
+      // Other FormDefs remain independently processable.
+      const sibling = await queue.enqueue({
+        scope: { ...scope, formDefinitionId: asOpaqueId<'FormDefinitionId'>('sibling') },
+        media: media('sibling-photo'),
+      })
+      expect((await queue.process(sibling.data!.taskId)).state).toBe('succeeded')
+    },
+  )
+
   it('cleans durable local media only after explicit finalize or discard', async () => {
     const upload = { upload: vi.fn(async (item: LocalMedia) => succeeded(uploaded(item))) }
     const durable = new InMemoryDurableMediaStore()
