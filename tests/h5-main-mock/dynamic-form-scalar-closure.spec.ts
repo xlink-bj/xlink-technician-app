@@ -54,7 +54,12 @@ test.describe('Dynamic scalar QA: real H5 FormDef → FormData → readback', ()
     // synthetic DOM CustomEvents do not exercise that runtime protocol.
     const finishPicker = async (root: ReturnType<typeof page.locator>) => {
       await root.click()
-      await root.getByText('Done', { exact: true }).click()
+      // uni-picker's H5 action sheet is teleported outside the field root.
+      // Select the currently visible confirmation control, not a hidden
+      // sibling picker. A short timeout makes selector regressions explicit.
+      const confirm = page.getByText('Done', { exact: true }).filter({ visible: true }).last()
+      await expect(confirm).toBeVisible({ timeout: 5_000 })
+      await confirm.click()
     }
     await finishPicker(picker('qa-date-row'))
     await finishPicker(picker('qa-time-row'))
