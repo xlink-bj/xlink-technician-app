@@ -63,11 +63,11 @@ test.describe('Stage 2C source-backed array FormDef round-trip', () => {
     await expect(field('inspectionChecks').locator('.app-choice--selected')).toHaveCount(0)
     await expect(field('inspectionLocation').locator('.app-cascade-selector__child')
       .filter({ hasText: '管道' })).toHaveAttribute('aria-pressed', 'true')
-    await page.getByText('取消', { exact: true }).click()
+    await page.locator('.special-forms__cancel-button .app-button').click()
 
     // The same commercial editor switches to another source FormDef; its
     // payload must neither inherit nor overwrite the first record's fields.
-    await page.getByTestId('a-special-definition-choice').getByText('服务备注', { exact: true }).click()
+    await page.getByTestId('a-special-definition-choice').locator('.app-choice').filter({ hasText: '服务备注' }).click()
     await expect(field('inspectionSummary')).toHaveCount(0)
     await field('note').locator('textarea').fill('第二表单独立备注')
     await page.getByTestId('a-special-save').click()
@@ -77,7 +77,7 @@ test.describe('Stage 2C source-backed array FormDef round-trip', () => {
     await page.getByTestId('a-special-edit-mock-special-form-data-forms-2').click()
     await expect(field('note').locator('textarea')).toHaveValue('第二表单独立备注')
     await expect(field('inspectionSummary')).toHaveCount(0)
-    await page.getByText('取消', { exact: true }).click()
+    await page.locator('.special-forms__cancel-button .app-button').click()
     await page.getByTestId('a-special-delete-mock-special-form-data-forms-2').click()
     await page.getByTestId('a-special-confirm-delete-mock-special-form-data-forms-2').click()
     await expect(second).toContainText('已删除')
