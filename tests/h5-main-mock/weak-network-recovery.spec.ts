@@ -1,6 +1,8 @@
 import { expect, test } from '@playwright/test'
 
 test('430×932 offline editing, multi-FormDef isolation, restart recovery and explicit submission', async ({ page, context }) => {
+  test.skip(process.env.VITE_XLINK_R1_MP_UX_FIXTURES !== 'true',
+    'The listed 020 synthetic Work Order is opt-in; run this spec with VITE_XLINK_R1_MP_UX_FIXTURES=true')
   await page.setViewportSize({ width: 430, height: 932 })
   const external: string[] = [], errors: string[] = []
   await context.route('**/*', route => {
