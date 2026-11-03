@@ -100,6 +100,30 @@
           :disabled="field.runtime.readOnly || workspace.lifecycle === 'submitting'"
           @update:model-value="setField(field.fieldId, $event)"
         />
+        <!-- R1 switch fields persist "1"/"0" strings, never JS booleans.
+             Neither renderer nor control supplies an initial saved value. -->
+        <AppChoiceGroup
+          v-else-if="controlFor(field) === 'binary'"
+          :options="binaryOptions"
+          :model-value="stringValue(workspace.dynamicForm?.values[field.valueKey])"
+          :disabled="field.runtime.readOnly || workspace.lifecycle === 'submitting'"
+          @update:model-value="setField(field.fieldId, $event)"
+        />
+        <AppRatingField
+          v-else-if="controlFor(field) === 'rating'"
+          :model-value="ratingValue(workspace.dynamicForm?.values[field.valueKey])"
+          :disabled="field.runtime.readOnly || workspace.lifecycle === 'submitting'"
+          :label="field.label"
+          @update:model-value="setField(field.fieldId, $event)"
+        />
+        <AppDateTimeField
+          v-else-if="controlFor(field) === 'date' || controlFor(field) === 'time' || controlFor(field) === 'datetime'"
+          :mode="controlFor(field) === 'date' ? 'date' : controlFor(field) === 'time' ? 'time' : 'datetime'"
+          :model-value="stringValue(workspace.dynamicForm?.values[field.valueKey])"
+          :disabled="field.runtime.readOnly || workspace.lifecycle === 'submitting'"
+          :test-id="`dynamic-date-time-${field.fieldId}`"
+          @update:model-value="setField(field.fieldId, $event)"
+        />
         <AppTextarea
           v-else-if="controlFor(field) === 'textarea'"
           :model-value="stringValue(workspace.dynamicForm?.values[field.valueKey])"
@@ -184,6 +208,8 @@
         <AppInput
           v-else
           :model-value="stringValue(workspace.dynamicForm?.values[field.valueKey])"
+          :input-type="field.type === 'number' ? 'number' : field.type === 'digit' ? 'digit' : 'text'"
+          :maxlength="field.presentation?.maxlength"
           :disabled="field.runtime.readOnly || workspace.lifecycle === 'submitting'"
           :read-only="field.runtime.readOnly"
           @update:model-value="setField(field.fieldId, $event)"
@@ -240,6 +266,8 @@ import AppChoiceGroup from '@shared/ui/AppChoiceGroup.vue'
 import AppField from '@shared/ui/AppField.vue'
 import AppIcon from '@shared/ui/AppIcon.vue'
 import AppInput from '@shared/ui/AppInput.vue'
+import AppDateTimeField from '@shared/ui/AppDateTimeField.vue'
+import AppRatingField from '@shared/ui/AppRatingField.vue'
 import AppMultiChoiceGroup from '@shared/ui/AppMultiChoiceGroup.vue'
 import AppStatus from '@shared/ui/AppStatus.vue'
 import AppTextarea from '@shared/ui/AppTextarea.vue'
@@ -258,6 +286,12 @@ const props = withDefaults(defineProps<{
 })
 
 const workspace = useActionWorkspaceStore()
+/** Source-backed binary code, reusable across all FormDefs. No selected
+ * option means "not answered"; requiredness remains Runtime-owned. */
+const binaryOptions: readonly AppChoiceOption[] = [
+  { value: '1', label: '是' },
+  { value: '0', label: '否' },
+]
 // A visual preset is selected by the host, never inferred from formPurpose.
 // The legacy "survey" CSS aliases preserve approved S01–S05 geometry only;
 // permissions, field controls and submission stay on the shared Runtime.
@@ -319,6 +353,12 @@ const unsupportedMessage = computed(() => {
     ? `暂不支持：${labels}。补齐这些字段后才能提交。`
     : '当前表单包含暂不支持的字段，无法提交。'
 })
+
+/** The R1 rating widget accepts a scalar; never coerce media or array data
+ * into a synthetic rating. State/validation remains Runtime-owned. */
+function ratingValue(value: FormFieldValue | undefined): string | number | null {
+  return typeof value === 'number' || typeof value === 'string' ? value : null
+}
 
 function stringValue(value: FormFieldValue | undefined): string {
   if (Array.isArray(value)) return value.map(String).join(', ')

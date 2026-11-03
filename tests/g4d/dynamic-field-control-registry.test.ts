@@ -24,6 +24,15 @@ describe('source-shaped dynamic field control registry', () => {
     expect(fieldControlFor({ type: 'image', valueKey: 'image' }, 'standard')).toBe('media')
     expect(fieldControlFor({ type: 'file', valueKey: 'remarks' }, 'task')).toBe('textarea')
     expect(fieldControlFor({ type: 'number', valueKey: 'length' }, 'task')).toBe('input')
+    // These are wire-driven generic controls, not business-specific UX.
+    expect(fieldControlFor({ type: 'switch', valueKey: 'inspectionConfirmed' }, 'standard')).toBe('binary')
+    expect(fieldControlFor({ type: 'switch', valueKey: 'accepted' }, 'task')).toBe('binary')
+    expect(fieldControlFor({ type: 'date', valueKey: 'inspectionDate' }, 'task')).toBe('date')
+    expect(fieldControlFor({ type: 'time', valueKey: 'visitTime' }, 'standard')).toBe('time')
+    // R1 datetimeConfirm/formattTime and van-rate provide verified wire shapes.
+    expect(fieldControlFor({ type: 'datetime', valueKey: 'createTime' }, 'task')).toBe('datetime')
+    expect(fieldControlFor({ type: 'rate', valueKey: 'qualityScore' }, 'task')).toBe('rating')
+    expect(fieldControlFor({ type: 'date', valueKey: 'remarks' }, 'task')).toBe('date')
     expect(fieldControlFor({ type: 'unknown', valueKey: 'unknown' }, 'task')).toBe('input')
   })
   it('does not move Runtime or provider authority into the renderer', () => {
@@ -37,6 +46,12 @@ describe('source-shaped dynamic field control registry', () => {
     expect(generic).not.toContain('SurveyTaskSectionHeading')
     expect(generic).not.toContain('SurveyPartPicker')
     expect(generic).toContain("controlFor(field) === 'media'")
+    expect(generic).toContain("controlFor(field) === 'binary'")
+    expect(generic).toContain("controlFor(field) === 'date'")
+    expect(generic).toContain("controlFor(field) === 'time'")
+    expect(generic).toContain("field.type === 'number' ? 'number'")
+    expect(generic).toContain("field.type === 'digit' ? 'digit'")
+    expect(generic).not.toContain("field.valueKey === 'inspectionConfirmed'")
     expect(leakage).toContain('AppTaskSectionHeading')
     expect(heading).not.toContain('useActionWorkspaceStore')
     expect(heading).not.toContain('WorkflowNode')

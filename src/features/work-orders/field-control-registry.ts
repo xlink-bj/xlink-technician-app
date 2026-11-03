@@ -7,6 +7,11 @@ export type DynamicFieldControl =
   | 'multi-choice'
   | 'single-choice'
   | 'textarea'
+  | 'binary'
+  | 'rating'
+  | 'datetime'
+  | 'date'
+  | 'time'
   | 'media'
   | 'input'
 
@@ -33,6 +38,16 @@ export function fieldControlFor(
   if (field.type === 'cascade' && field.options?.length) return 'cascade-inline'
   if (field.options?.length && (field.multiple || field.type === 'checkbox')) return 'multi-choice'
   if (field.options?.length) return 'single-choice'
+  // Explicit source types outrank field-name heuristics. A date field whose
+  // business key happens to contain "notes" must remain a date selector.
+  // R1 van-switch is a literal 1/0 FormData code, NOT a boolean. A choice
+  // control makes both states explicit without writing a default until user
+  // interaction. Numeric/date widgets must retain source wire values too.
+  if (field.type === 'switch') return 'binary'
+  if (field.type === 'rate') return 'rating'
+  if (field.type === 'datetime') return 'datetime'
+  if (field.type === 'date') return 'date'
+  if (field.type === 'time') return 'time'
   if (isMultilineField(field)) return 'textarea'
   if (field.type === 'image' || field.type === 'file') return 'media'
   return 'input'

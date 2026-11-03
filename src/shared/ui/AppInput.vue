@@ -8,6 +8,7 @@
       'app-input--error': error,
     }"
     :value="modelValue"
+    :type="inputType"
     :placeholder="placeholder"
     :placeholder-class="placeholderClass"
     :placeholder-style="placeholderStyle"
@@ -33,6 +34,10 @@ const props = withDefaults(
     readonly readOnly?: boolean
     readonly error?: boolean
     readonly maxlength?: number
+    /** Native uni-input keyboard hint only. Never coerce its string value:
+     * phone/IDNumber must preserve leading zeros; number/digit normalization
+     * and safe precision checks belong to the Form Runtime. */
+    readonly inputType?: 'text' | 'number' | 'digit'
   }>(),
   {
     modelValue: '',
@@ -41,6 +46,7 @@ const props = withDefaults(
     disabled: false,
     readOnly: false,
     error: false,
+    inputType: 'text',
   },
 )
 

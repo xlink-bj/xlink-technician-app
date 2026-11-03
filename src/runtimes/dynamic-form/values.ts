@@ -14,7 +14,7 @@ import { isMediaValueRef } from '@shared/types'
 import type { LocalMediaRef, MediaValueRef } from '@shared/types'
 
 const trimmedStringTypes = new Set(['text', 'textarea', 'phone', 'IDNumber', 'date', 'time', 'datetime'])
-const optionScalarTypes = new Set(['select', 'bizSelect', 'radio', 'rate'])
+const optionScalarTypes = new Set(['select', 'bizSelect', 'radio'])
 const optionArrayTypes = new Set(['checkbox', 'cascade'])
 
 function trimmed(value: unknown): string | undefined {
@@ -116,6 +116,15 @@ export function normalizeFieldValue(
   if (type === 'digit') {
     const result = decimal(value)
     return result === undefined ? invalid(`${type} requires a decimal value`) : { ok: true, value: result }
+  }
+  if (type === 'rate') {
+    // R1 van-rate is 5-point scalar input. Never silently accept arbitrary
+    // strings, booleans, multi-selects, zero or scores outside 1..5.
+    if (multiple) return invalid('rate cannot be a multiselect')
+    const result = integer(value)
+    return result !== undefined && result >= 1 && result <= 5
+      ? { ok: true, value: result }
+      : invalid('rate requires an integer score from 1 to 5')
   }
   if (type === 'area') {
     return {
