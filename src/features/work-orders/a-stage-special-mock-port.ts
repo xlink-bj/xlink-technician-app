@@ -4,14 +4,15 @@ import type { R1SpecialMockFields } from './r1-special-mock-form-fields'
 export type AStageSpecialKind = 'forms' | 'repeat'
 export interface AStageMockActor { readonly userId: string; readonly roleId: string; readonly identity: string }
 export type AStageSpecialAction =
-  | { readonly kind: 'save'; readonly fields: R1SpecialMockFields; readonly title?: string }
+  | { readonly kind: 'save'; readonly fields: R1SpecialMockFields; readonly title?: string; readonly formDefinitionId?: string }
   /** R1 forms process(formDataId): Save → full EXTS → Process, as one fenced transaction. */
-  | { readonly kind: 'save_finish'; readonly fields: R1SpecialMockFields; readonly title?: string }
-  | { readonly kind: 'edit'; readonly id: string; readonly fields: R1SpecialMockFields; readonly title?: string }
+  | { readonly kind: 'save_finish'; readonly fields: R1SpecialMockFields; readonly title?: string; readonly formDefinitionId?: string }
+  | { readonly kind: 'edit'; readonly id: string; readonly fields: R1SpecialMockFields; readonly title?: string; readonly formDefinitionId?: string }
   | { readonly kind: 'delete'; readonly id: string }
   | { readonly kind: 'finish' }
 export interface AStageSpecialRecord {
   readonly id: string
+  readonly formDefinitionId: string
   readonly title: string
   readonly summary: string
   readonly values: R1SpecialMockFields
@@ -21,6 +22,8 @@ export interface AStageSpecialRecord {
 export interface AStageSpecialView {
   readonly kind: AStageSpecialKind
   readonly definition: FormDefinitionRead
+  readonly definitions: readonly { readonly id: string; readonly label: string; readonly definition: FormDefinitionRead }[]
+  readonly pendingFormDefinitionId?: string
   readonly nodeActive: boolean
   readonly entries: readonly AStageSpecialRecord[]
   readonly receiptPending: boolean
