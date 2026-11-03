@@ -17,6 +17,7 @@ import {
   mockSyntheticStage2BFormDefinitionResponse,
   mockSurveyFormDefinitionId,
   mockSurveyFormDefinitionResponse,
+  mockDynamicScalarQaFormDefinitionResponse,
   mockSurveyLeakageCauseResponse,
   mockR1AddFormCodeId,
   mockR1AddFormOptionsResponse,
@@ -768,7 +769,10 @@ function matchedResponse(
     return mockR1NoteFormDefinitionResponse
   }
   if (route === 'biz/extField/query' && requestData.extId === mockSurveyFormDefinitionId) {
-    return mockSurveyFormDefinitionResponse
+    // Explicit DEV-only schema replacement, never active Production or
+    // the default 61-row Survey Mock. No business write authorization added.
+    return isDevMockJourneyEnabled() && import.meta.env.VITE_XLINK_DYNAMIC_SCALAR_QA === 'true'
+      ? mockDynamicScalarQaFormDefinitionResponse : mockSurveyFormDefinitionResponse
   }
   if (route.startsWith('biz/extForm/query/') && route.slice('biz/extForm/query/'.length) === appointmentFormDefinitionWireId) {
     const exactDataId = requestData['is:_id|string#and']

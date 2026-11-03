@@ -93,6 +93,10 @@ jobs:
         env:
           VITE_XLINK_R1_STAGE2B_FIELDS: 'true'
         run: pnpm exec playwright test --config config/playwright/main-h5-mock.config.ts tests/h5-main-mock/stage2b-r1-primitive-fields.spec.ts
+      - name: Verify real GenericDynamicFormActionContent scalar save/readback at 430
+        env:
+          VITE_XLINK_DYNAMIC_SCALAR_QA: 'true'
+        run: pnpm exec playwright test --config config/playwright/main-h5-mock.config.ts tests/h5-main-mock/dynamic-form-scalar-closure.spec.ts
       - name: Preserve Stage 1B/2A/2B offline H5 evidence
         if: always()
         uses: actions/upload-artifact@v4

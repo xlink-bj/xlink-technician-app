@@ -122,6 +122,41 @@ export const mockSurveyFormDefinitionResponse = {
   total: surveyContract.fieldRows.length,
 } as const
 
+/**
+ * Explicit DEV-Mock-only FormDef for real GenericDynamicFormActionContent
+ * end-to-end verification. These are synthetic R1 SOURCE-SHAPED ExtField
+ * rows, never active Beta/Production Survey schema assertions. This fixture
+ * replaces, rather than mutates, the 61-row historical commercial Mock only
+ * when the dedicated QA flag is explicitly set.
+ *
+ * This harness deliberately includes a dependent field: Form Runtime, not
+ * the Survey name, must guard visibility, edits and requiredness.
+ */
+export const mockDynamicScalarQaFormDefinitionResponse = {
+  data: [
+    { _id: 'qa-confirmed-row', colName: 'survey', name: 'qaConfirmed', nameDisp: '检查确认',
+      type: 'switch', required: '1', readOnly: '0', multiple: false, order: 1, state: 1, showList: ['4'] },
+    { _id: 'qa-score-row', colName: 'survey', name: 'qaScore', nameDisp: '检查评分',
+      type: 'rate', required: '1', readOnly: '0', multiple: false, order: 2, state: 1, showList: ['4'] },
+    { _id: 'qa-date-row', colName: 'survey', name: 'qaDate', nameDisp: '检查日期',
+      type: 'date', required: '1', readOnly: '0', multiple: false, order: 3, state: 1, showList: ['4'] },
+    { _id: 'qa-time-row', colName: 'survey', name: 'qaTime', nameDisp: '检查时间',
+      type: 'time', required: '1', readOnly: '0', multiple: false, order: 4, state: 1, showList: ['4'] },
+    { _id: 'qa-datetime-row', colName: 'survey', name: 'qaDatetime', nameDisp: '完整时间',
+      type: 'datetime', required: '1', readOnly: '0', multiple: false, order: 5, state: 1, showList: ['4'] },
+    { _id: 'qa-count-row', colName: 'survey', name: 'qaCount', nameDisp: '检查数量',
+      type: 'number', required: '0', readOnly: '0', multiple: false, order: 6, state: 1, showList: ['4'] },
+    { _id: 'qa-measure-row', colName: 'survey', name: 'qaMeasure', nameDisp: '检查测量',
+      type: 'digit', required: '0', readOnly: '0', multiple: false, order: 7, state: 1, showList: ['4'] },
+    { _id: 'qa-phone-row', colName: 'survey', name: 'qaPhone', nameDisp: '联系号码',
+      type: 'phone', required: '0', readOnly: '0', multiple: false, order: 8, state: 1, showList: ['4'] },
+    { _id: 'qa-dependent-row', colName: 'survey', name: 'qaDependent', nameDisp: '确认后说明',
+      type: 'text', required: '1', readOnly: '0', multiple: false, order: 9, state: 1,
+      showList: ['4'], showType: '3', showField: 'qaConfirmed', showValue: '1' },
+  ],
+  page: 1, rows: 9, total: 9,
+} as const
+
 /** R1's multistage provider, mechanically derived from the captured contract. */
 export const mockSurveyPartsCascadeResponse = [
   {

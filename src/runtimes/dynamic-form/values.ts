@@ -11,9 +11,10 @@ import type {
   SubmissionResult,
 } from './types'
 import { isMediaValueRef } from '@shared/types'
+import { validLocalDate, validLocalTime, validLocalDateTime } from '@shared/form/local-temporal'
 import type { LocalMediaRef, MediaValueRef } from '@shared/types'
 
-const trimmedStringTypes = new Set(['text', 'textarea', 'phone', 'IDNumber', 'date', 'time', 'datetime'])
+const trimmedStringTypes = new Set(['text', 'textarea', 'phone', 'IDNumber'])
 const optionScalarTypes = new Set(['select', 'bizSelect', 'radio'])
 const optionArrayTypes = new Set(['checkbox', 'cascade'])
 
@@ -104,6 +105,16 @@ export function normalizeFieldValue(
   }
   if (!supportedOption(options, value)) {
     return invalid(`${type} contains an unsupported option`)
+  }
+  if (type === 'date' || type === 'time' || type === 'datetime') {
+    // R1 wire values are LOCAL clock strings, not timestamps. A format-only
+    // check permits impossible dates; generic forms must never save those.
+    // No timezone normalization is permitted at the Form Runtime boundary.
+    if (typeof value !== 'string') return invalid(`${type} requires a literal local string`)
+    const text = value.trim()
+    const valid = type === 'date' ? validLocalDate(text)
+      : type === 'time' ? validLocalTime(text) : validLocalDateTime(text)
+    return valid ? { ok: true, value: text } : invalid(`${type} is not a valid local calendar value`)
   }
   if (trimmedStringTypes.has(type)) {
     const result = trimmed(value)
