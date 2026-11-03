@@ -7,7 +7,7 @@ import {
   createAStageSpecialMockController, type AStageMockActor,
 } from '@app/a-stage-special-mock-ui'
 import { mockR1FormsWorkOrderId, mockR1RepeatWorkOrderId,
-  mockSyntheticDynamicFormDefinitionId } from '@adapters/api/mock/fixtures'
+  mockSyntheticDynamicFormDefinitionId, mockR1NoteFormDefinitionId } from '@adapters/api/mock/fixtures'
 import type { StoragePort, StorageKey } from '@shared/ports'
 
 const memory = new Map<string, unknown>()
@@ -69,6 +69,57 @@ function controller(kind: 'forms' | 'repeat', getActor = () => actor,
 }
 
 describe('A main-App source-only multi-form/repeat controller', () => {
+  it('020 resolves AddFormCode and independently saves, edits, deletes and finalizes a second FormDef', async () => {
+    const ui = controller('forms')
+    const first = await ui.load()
+    expect(first.definitions.map(item => [item.id, item.label])).toEqual([
+      [mockSyntheticDynamicFormDefinitionId, '现场记录'],
+      [mockR1NoteFormDefinitionId, '服务备注'],
+    ])
+    expect(first.entries.find(item => item.formDefinitionId === mockR1NoteFormDefinitionId))
+      .toMatchObject({ editable: false, title: '客户沟通记录' })
+    expect(await ui.execute({ kind: 'save', formDefinitionId: mockR1NoteFormDefinitionId,
+      fields: { inspectionSummary: 'cross-def injection' } })).toMatchObject({ state: 'blocked' })
+    const saved = await ui.execute({ kind: 'save', formDefinitionId: mockR1NoteFormDefinitionId,
+      fields: { note: '预约后已与业主确认进场' }, title: '电话沟通记录' })
+    expect(saved.state).toBe('succeeded')
+    if (saved.state !== 'succeeded') return
+    const newRow = saved.view.entries.find(row => row.editable)!
+    expect(newRow).toMatchObject({ formDefinitionId: mockR1NoteFormDefinitionId,
+      title: '电话沟通记录', values: { note: '预约后已与业主确认进场' } })
+    expect(await ui.execute({ kind: 'edit', id: newRow.id,
+      formDefinitionId: mockSyntheticDynamicFormDefinitionId,
+      fields: { note: 'attempt to switch definition' } })).toMatchObject({ state: 'blocked' })
+    expect(await ui.execute({ kind: 'edit', id: newRow.id,
+      formDefinitionId: mockR1NoteFormDefinitionId,
+      fields: { note: '维修方案已电话解释' } })).toMatchObject({ state: 'succeeded' })
+    resetMockCommandState()
+    expect((await controller('forms').load()).entries.find(row => row.id === newRow.id))
+      .toMatchObject({ formDefinitionId: mockR1NoteFormDefinitionId,
+        values: { note: '维修方案已电话解释' } })
+    expect(await ui.execute({ kind: 'delete', id: newRow.id }))
+      .toMatchObject({ state: 'succeeded' })
+    expect((await ui.load()).entries.find(row => row.id === newRow.id)?.state).toBe('deleted')
+    expect(await ui.execute({ kind: 'finish' })).toMatchObject({
+      state: 'succeeded', view: { nodeActive: false, receiptPending: false },
+    })
+  })
+
+  it('020 sibling FormDef remains blocked while another definition has a pending receipt', async () => {
+    const underlying = storage()
+    const port: StoragePort = { ...underlying,
+      remove: async () => ({ state: 'failed_terminal' }),
+    } as StoragePort
+    const ui = controller('forms', () => actor, port)
+    const incomplete = await ui.execute({ kind: 'save', formDefinitionId: mockR1NoteFormDefinitionId,
+      fields: { note: '待核对的电话记录' } })
+    expect(incomplete.state).toBe('uncertain')
+    expect(await ui.load()).toMatchObject({ receiptPending: true,
+      pendingFormDefinitionId: mockR1NoteFormDefinitionId })
+    expect(await ui.execute({ kind: 'save', formDefinitionId: mockSyntheticDynamicFormDefinitionId,
+      fields: fields('不得绕过不同 FormDef 的回执锁') })).toMatchObject({ state: 'blocked' })
+  })
+
   it('Stage 2B 020/021 source-field variant saves, edits and independently reads numeric/string/switch/select values', async () => {
     vi.stubEnv('VITE_XLINK_R1_STAGE2B_FIELDS', 'true')
     const forms = controller('forms')
