@@ -202,12 +202,51 @@ describe('A main-App source-only multi-form/repeat controller', () => {
     const created = saved.view.entries.find(row => row.editable)!
     expect(created.values).toEqual(fields('多字段原始现场', 'safe', '需客户补签'))
     expect((await ui.execute({ kind: 'edit', id: created.id,
-      fields: fields('尝试清空原备注', 'follow_up') })).state).toBe('blocked')
+      fields: fields('已清空可选备注', 'follow_up') })).state).toBe('succeeded')
+    expect((await ui.load()).entries.find(row => row.id === created.id)?.values)
+      .toEqual(fields('已清空可选备注', 'follow_up'))
     const updated = await ui.execute({ kind: 'edit', id: created.id,
       fields: fields('多字段更新现场', 'follow_up', '需客户补签') })
     expect(updated.state).toBe('succeeded')
     expect((await ui.load()).entries.find(row => row.id === created.id)?.values)
       .toEqual(fields('多字段更新现场', 'follow_up', '需客户补签'))
+  })
+
+  it('optional clear requires an authoritative missing-key readback and records only field names in receipt', async () => {
+    const transport = await import('@adapters/api/mock/router')
+    const actual = transport.tryMockRead
+    const ui = controller('forms')
+    const saved = await ui.execute({ kind: 'save', fields: fields('准备清空现场备注', 'safe', '原备注') })
+    expect(saved.state).toBe('succeeded')
+    if (saved.state !== 'succeeded') return
+    const id = saved.view.entries.find(row => row.editable)!.id
+    let injectStale = true
+    vi.spyOn(transport, 'tryMockRead').mockImplementation(async (...args) => {
+      const response = await actual(...args)
+      if (injectStale && args[0].startsWith('biz/extForm/query/')
+        && args[1]?.['is:_id|string#and'] === id) {
+        const raw = response as { data?: Record<string, unknown>[] }
+        if (raw.data?.[0] && !Object.hasOwn(raw.data[0], 'inspectionNote')) {
+          return { ...raw, data: [{ ...raw.data[0], inspectionNote: '过期回读值' }] }
+        }
+      }
+      return response
+    })
+    expect((await ui.execute({ kind: 'edit', id,
+      fields: fields('修改并清空现场备注', 'safe') })).state).toBe('uncertain')
+    const pending = await ui.load()
+    expect(pending).toMatchObject({ receiptPending: true, pendingRecoverable: true })
+    expect((pending.entries.find(row => row.id === id)?.values as Record<string, unknown>).inspectionNote)
+      .toBe('过期回读值')
+    const stored = [...receipts.values()].find(value => (value as { clearedFieldKeys?: unknown })?.clearedFieldKeys)
+    expect(stored).toMatchObject({ clearedFieldKeys: ['inspectionNote'] })
+    expect(JSON.stringify(stored)).not.toContain('原备注')
+    expect((await ui.execute({ kind: 'save', fields: fields('绝不重复提交') })).state).toBe('blocked')
+    injectStale = false
+    expect(await ui.recoverCompleted(fields('修改并清空现场备注', 'safe')))
+      .toMatchObject({ state: 'succeeded', view: { receiptPending: false } })
+    expect((await ui.load()).entries.find(row => row.id === id)?.values)
+      .toEqual(fields('修改并清空现场备注', 'safe'))
   })
 
   it('Stage 2A retains the receipt when a non-summary FormData field disagrees on readback', async () => {
