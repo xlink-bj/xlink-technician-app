@@ -87,7 +87,7 @@ function saveSpecialForm(kind: Kind, serialized: unknown, formDefId = mockSynthe
       || (typeof value === 'number' && Number.isFinite(value)) || typeof value === 'boolean'
       || (Array.isArray(value) && value.length > 0 && value.length <= 30
         && value.every(part => typeof part === 'string' && part.length > 0 && part.length <= 256))
-       || (Array.isArray(value) && value.length > 0 && isR1FileWireArray(value)))))) return denied()
+       || (Array.isArray(value) && value.length > 0 && isR1FileWireArray(value))))) return denied()
   let sequence = 1
   while (mockCommandState().formData.has(`${idPrefix}${sequence}`)) sequence += 1
   const id = previous ? previousId as string : `${idPrefix}${sequence}`
