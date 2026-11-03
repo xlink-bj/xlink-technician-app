@@ -68,7 +68,7 @@ export interface R1AuthoritativeMutationReadback {
   /** Full R1 record returned by a separate read; absent after repeat/remove. */
   readonly formData?: Readonly<Record<string, unknown>>
   /** The exact fields submitted, compared to fresh FormData (transient). */
-  readonly expectedFields?: Readonly<Record<string, string | number | boolean>>
+  readonly expectedFields?: Readonly<Record<string, string | number | boolean | readonly string[]>>
   /** Full, non-truncated workflow-node EXTS readback for forms. */
   readonly formsExts?: Readonly<Record<string, unknown>>
   /** A separately fetched, complete workflow-scoped repeat query result. */
@@ -206,7 +206,10 @@ export async function closeCompletedR1MutationReceiptAfterReadback(
       || record.state!==1 || (r.sourceNodeType==='repeat'&&record.workflowId!==r.workflowRunId)
       || (record.formDefId!==undefined&&record.formDefId!==r.formDefinitionId))return false
     for(const [key,value] of Object.entries(readback.expectedFields)){
-      if(record[key]!==value)return false
+      // JSON arrays are detached on a fresh authoritative R1 read.
+      // Compare the canonical ordered path/selection contents, not JS identity.
+      if(Array.isArray(value) ? !Array.isArray(record[key])
+        || JSON.stringify(record[key])!==JSON.stringify(value) : record[key]!==value)return false
     }
   } else if(r.sourceNodeType==='forms'){
     if(!record || record._id!==target || record.sid!==r.workOrderId
