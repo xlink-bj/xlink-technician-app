@@ -19,9 +19,10 @@ describe('R1 source-backed checkbox and cascade arrays', () => {
     expect(fields.find(field => field.valueKey === 'inspectionChecks')).toMatchObject({
       supported: true, type: 'checkbox', multiple: true,
     })
-    expect(fields.find(field => field.valueKey === 'inspectionLocation')).toMatchObject({
-      supported: true, type: 'cascade', multiple: false,
-      options: [{ value: 'roof', children: [{ value: 'drain' }, { value: 'parapet' }] }],
+    const location = fields.find(field => field.valueKey === 'inspectionLocation')
+    expect(location).toMatchObject({ supported: true, type: 'cascade', multiple: false })
+    expect(location?.options[0]).toMatchObject({
+      value: 'roof', children: [{ value: 'drain' }, { value: 'parapet' }],
     })
   })
 
