@@ -178,13 +178,17 @@ export class SemanticActionDraftRepository implements ActionDraftRepository {
     return { state: 'succeeded', data: null }
   }
 
-  write<TState extends Readonly<Record<string, unknown>>>(
+  async write<TState extends Readonly<Record<string, unknown>>>(
     record: ActionDraftRecord<TState>,
   ): Promise<OperationSnapshot<void>> {
-    return this.storage.write(
-      { namespace: 'draft', key: actionDraftStorageKey(record.identity) },
-      record,
-    )
+    const key = { namespace: 'draft' as const, key: actionDraftStorageKey(record.identity) }
+    const existing = await this.storage.read<unknown>(key)
+    if (existing.state !== 'succeeded') return existing as OperationSnapshot<void>
+    if (existing.data !== null && !validDraftRecord(existing.data, record.identity)) {
+      // Never overwrite a damaged or differently-owned canonical record.
+      return { state: 'failed_terminal', error: createOperationError('server_terminal', 'Stored draft cannot be safely overwritten') }
+    }
+    return this.storage.write(key, record)
   }
 
   private async removeLegacyIfOwned(

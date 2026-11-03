@@ -241,6 +241,8 @@ describe('Action Draft Repository', () => {
 
     const read = await repository.read(current)
     expect(read.state).toBe('failed_terminal')
+    const attempted = await repository.write(recordFor(current, { note: 'must not replace corruption' }, '2026-09-17T10:00:00.000Z'))
+    expect(attempted.state).toBe('failed_terminal')
     expect(values.get(key)).toEqual(broken)
     expect((await repository.listForUser(userA)).data?.invalidRecordCount).toBe(1)
   })
