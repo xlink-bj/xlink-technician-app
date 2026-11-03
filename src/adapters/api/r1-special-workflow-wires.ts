@@ -69,7 +69,7 @@ export function r1RepeatBatchProcess(input: R1Base & {
 export function r1SpecialFormUpsert(input: {
   readonly sourceNodeType: 'forms' | 'repeat'
   readonly definitionId: FormDefinitionId
-  readonly formData: Readonly<Record<string, string | number | boolean>>
+  readonly formData: Readonly<Record<string, string | number | boolean | readonly string[]>>
   /** Full, same-record R1 source snapshot is mandatory for an existing row.
    * A projected FormDataRead.values map is NOT a full update payload. */
   readonly authoritativeOriginal?: Readonly<Record<string, unknown>>
@@ -90,8 +90,11 @@ export function r1SpecialFormUpsert(input: {
       throw new Error('R1 form field collides with server-owned identity')
     if(!((typeof value==='string'&&value.length<=4000)
       || (typeof value==='number'&&Number.isFinite(value))
-      || typeof value==='boolean'))
-      throw new Error('R1 form field value requires a supported bounded primitive')
+      || typeof value==='boolean'
+      // Legacy extForm sends checkbox IDs and cascade paths as JSON arrays.
+      || (Array.isArray(value)&&value.length>0&&value.length<=30
+        && value.every(part=>typeof part==='string'&&part.length>0&&part.length<=256))))
+      throw new Error('R1 form field value requires a supported bounded scalar or path array')
   }
   let original: Record<string, unknown> = {}
   if (input.existingFormDataId) {
