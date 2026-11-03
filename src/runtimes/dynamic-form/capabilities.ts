@@ -48,6 +48,9 @@ export function selectOptionProvider(field: FormFieldSchema): OptionProviderDeci
       provider: { kind: 'cascade', valueOption: field.valueOption },
     }
   }
+  if (field.type === 'bizSelect' && field.valueOption) {
+    return { state: 'provider', provider: { kind: 'businessRecord', valueOption: field.valueOption } }
+  }
   if (codeBackedTypes.has(field.type) && field.valueOption) {
     return {
       state: 'provider',
