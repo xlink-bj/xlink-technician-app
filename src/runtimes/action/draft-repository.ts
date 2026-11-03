@@ -1,6 +1,7 @@
 import type { StoragePort } from '@shared/ports'
 import {
   asOpaqueId,
+  createOperationError,
   type OperationSnapshot,
   type RoleId,
   type UserId,
@@ -160,6 +161,7 @@ export class SemanticActionDraftRepository implements ActionDraftRepository {
     if (canonical.data !== null && validDraftRecord<TState>(canonical.data, identity)) {
       return { state: 'succeeded', data: canonical.data }
     }
+    const invalidCanonical = canonical.data !== null
 
     for (const key of actionDraftLegacyStorageKeys(identity)) {
       const legacy = await this.storage.read<unknown>({ namespace: 'draft', key })
@@ -167,6 +169,11 @@ export class SemanticActionDraftRepository implements ActionDraftRepository {
       if (legacy.data !== null && validDraftRecord<TState>(legacy.data, identity)) {
         return { state: 'succeeded', data: legacy.data }
       }
+    }
+    if (invalidCanonical) {
+      // Never reinterpret a damaged, already-present draft as a blank editor:
+      // a later save could overwrite the only recoverable copy.
+      return { state: 'failed_terminal', error: createOperationError('server_terminal', 'Stored draft is invalid; recovery required') }
     }
     return { state: 'succeeded', data: null }
   }
