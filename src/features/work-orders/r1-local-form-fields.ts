@@ -1,10 +1,11 @@
 import { evaluateFieldState, normalizeFieldValue } from '@runtimes/dynamic-form'
 import type { FormFieldRead, FormDefinitionRead, FormFieldValue, FormFieldOptionRead } from '@shared/ports'
+import type { R1FileWireValue } from '@shared/types'
 
 /**
- * Only primitive, no-media fields are supported in this LOCAL draft editor.
- * Canonical R1 field identities are taken exclusively from the read FormDef.
- * This is not a FormData upsert codec and does not authorize persistence.
+ * Canonical field identities come from the R1 FormDef. Projection may expose
+ * generic 'file' fields, but only the special transaction's R1 media codec
+ * authorizes their wire values; this module never issues an upsert.
  */
 export type R1LocalFieldValue = string | number | boolean | readonly string[]
 export interface R1LocalField {
@@ -25,7 +26,7 @@ const MAX = 50
 
 export function projectR1LocalFields(
   definition: FormDefinitionRead,
-  values: Readonly<Record<string, R1LocalFieldValue>> = {},
+  values: Readonly<Record<string, R1LocalFieldValue | readonly R1FileWireValue[]>> = {},
 ): readonly R1LocalField[] {
   const fields = definition.fields
   if (!fields || fields.length > MAX) return []
@@ -39,7 +40,7 @@ export function projectR1LocalFields(
       valueOption: field.valueOption, unsupportedReason: field.unsupportedReason,
       ...(field.options ? { inlineOptions: field.options } : {}),
     }, {surface:'mobile_detail',values})
-    const available = scalar.has(field.type)
+    const available = field.type === 'file' || scalar.has(field.type)
       || (choices.has(field.type) && !!field.options?.length
         && (!field.valueOption || (field.type==='bizSelect' && field.valueOption==='projPackage')))
     const unique = !seen.has(field.valueKey)

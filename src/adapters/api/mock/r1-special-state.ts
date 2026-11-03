@@ -90,20 +90,58 @@ function apply(state: MockCommandState, value: R1SpecialSnapshot): void {
 }
 
 let restored = new WeakMap<MockCommandState, boolean>()
+let observedWire = new WeakMap<MockCommandState, string | null>()
+
+/** One in-process mutation at a time; H5 also uses the browser's shared
+ * exclusive Web Lock across tabs. A browser without Web Locks fails closed. */
+const pendingTransactions = new Map<string, Promise<void>>()
+export async function withR1SpecialMockTransaction<T>(
+  nodeKey: string, task: () => Promise<T>,
+): Promise<T> {
+  const prior = pendingTransactions.get(nodeKey) ?? Promise.resolve()
+  let release!: () => void
+  const turn = new Promise<void>(resolve => { release = resolve })
+  pendingTransactions.set(nodeKey, turn)
+  await prior
+  try {
+    if (typeof window !== 'undefined') {
+      if (!navigator.locks?.request) {
+        throw new Error('跨窗口安全锁不可用，已阻止本机表单修改。')
+      }
+      return await navigator.locks.request(
+        `xlink:dev:r1-special:${nodeKey}`, { mode: 'exclusive' }, task,
+      )
+    }
+    return await task()
+  } finally {
+    release()
+    if (pendingTransactions.get(nodeKey) === turn) pendingTransactions.delete(nodeKey)
+  }
+}
 
 /** Called by BOTH read and command routers, including after H5 process reload. */
 export function restoreMockR1SpecialState(): boolean {
   if (!isDevMockJourneyEnabled()) return false
   const state = mockCommandState()
-  const known = restored.get(state)
-  if (known !== undefined) return known
+  if (restored.get(state) === false) return false // ambiguous ACK poisons this runtime
   let ok = false
   try {
     const stored: unknown = uni.getStorageSync(storageKey)
-    if (stored === undefined || stored === null || stored === '') ok = true
-    else if (typeof stored === 'string' && stored.length <= 200000) {
-      const candidate: unknown = JSON.parse(stored)
-      if (validSnapshot(candidate)) { apply(state, candidate); ok = true }
+    const previous = observedWire.get(state)
+    if (stored === undefined || stored === null || stored === '') {
+      // A previously committed snapshot cannot silently vanish in another tab.
+      ok = restored.get(state) !== true || previous === null
+      if (ok) observedWire.set(state, null)
+    } else if (typeof stored === 'string' && stored.length <= 200000) {
+      if (stored === previous && restored.get(state) === true) ok = true
+      else {
+        const candidate: unknown = JSON.parse(stored)
+        if (validSnapshot(candidate)) {
+          apply(state, candidate)
+          observedWire.set(state, stored)
+          ok = true
+        }
+      }
     }
   } catch { /* Corrupt or inaccessible storage must not permit a new write. */ }
   restored.set(state, ok)
@@ -122,6 +160,13 @@ export function updateMockR1SpecialState(
   const serialized = JSON.stringify(draft)
   if (serialized.length > 200000) return false
   try {
+    // Lease check is complementary to the H5 exclusive transaction lock.
+    // No stale tab may overwrite a snapshot it never read.
+    const current = uni.getStorageSync(storageKey)
+    // uni.getStorageSync returns '' for absent keys on H5; treat that
+    // identically to the empty value recognized by restore above.
+    const committed = typeof current === 'string' && current !== '' ? current : null
+    if (committed !== (observedWire.get(state) ?? null)) return false
     uni.setStorageSync(storageKey, serialized)
     if (uni.getStorageSync(storageKey) !== serialized) {
       restored.set(state, false)
@@ -135,6 +180,7 @@ export function updateMockR1SpecialState(
     return false
   }
   apply(state, draft)
+  observedWire.set(state, serialized)
   return true
 }
 
@@ -142,4 +188,5 @@ export function updateMockR1SpecialState(
 export function resetMockR1SpecialState(): void {
   try { uni.removeStorageSync(storageKey) } catch { /* No storage in test-only imports. */ }
   restored = new WeakMap()
+  observedWire = new WeakMap()
 }

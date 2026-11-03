@@ -17,7 +17,9 @@ describe('C2-C1 synthetic transaction controller dependency direction', () => {
   it('composes exact same synthetic controller at both existing page boundaries', () => {
     expect(detail).toContain(':create-controller="createAStageSpecialControllerForUi"')
     expect(detail).toContain('createAStageSpecialMockControllerForActor')
-    expect(specialAdapter).toContain('createAStageSpecialMockController({ ...options, storage: createDefaultStoragePort() })')
+    expect(specialAdapter).toContain('const storage = createDefaultStoragePort()')
+    expect(specialAdapter).toContain('return createAStageSpecialMockController({ ...options, storage,')
+    expect(specialAdapter).toContain('mediaQueue: createDefaultMediaUploadQueue(storage, createSpecialDevMockUploadPort())')
     expect(page).toContain(':create-controller="createAStageMockQuoteOrderControllerForUi"')
     expect(page).toContain('createAStageMockQuoteOrderControllerForActor')
     expect(quotationAdapter).toContain('createAStageMockQuoteOrderController({ getActor, storage: createDefaultStoragePort() })')

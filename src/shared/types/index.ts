@@ -26,6 +26,8 @@ export { asOpaqueId } from './identifiers'
 export {
   isMediaValueRef,
   mediaValueRefFromUpload,
+  isR1FileWireArray,
+  r1FileWireFromUpload,
 } from './media'
 export type {
   DurableMediaAsset,
@@ -36,6 +38,7 @@ export type {
   MediaUploadTask,
   MediaUploadTaskState,
   MediaValueRef,
+  R1FileWireValue,
   UploadedMediaRef,
   UploadState,
 } from './media'

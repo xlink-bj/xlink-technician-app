@@ -117,6 +117,10 @@ jobs:
         env:
           VITE_XLINK_R1_BUSINESS_FIELDS: 'true'
         run: pnpm exec playwright test --config config/playwright/main-h5-mock.config.ts tests/h5-main-mock/special-business-record.spec.ts
+      - name: Verify Stage A generic R1 file queue and stale-editor H5 acceptance
+        env:
+          VITE_XLINK_R1_SPECIAL_MEDIA: 'true'
+        run: pnpm exec playwright test --config config/playwright/main-h5-mock.config.ts tests/h5-main-mock/a-stage-last-two.spec.ts
       - name: Preserve Stage 1B/2A/2B/2C offline H5 evidence
         if: always()
         uses: actions/upload-artifact@v4

@@ -37,6 +37,7 @@ import { createUniNavigationDriver } from '@adapters/platform/uni-navigation-dri
 import { createUniMediaCaptureDriver, createUniMediaFilePickerDriver } from '@adapters/platform/uni-media-drivers'
 import { createUniLocationDriver } from '@adapters/platform/uni-location-driver'
 import { createUniUploadPort } from '@adapters/upload/uni-upload-port'
+import { isDevMockJourneyEnabled } from '@adapters/api/mock/journey'
 import { createUniDurableMediaStore } from '@adapters/storage/uni-durable-media-store'
 import { createMediaQueueRepository, createMediaUploadQueue } from '@runtimes/media'
 import { createMockMediaPostUploadProcessor } from '@runtimes/media'
@@ -51,7 +52,8 @@ function configurationFailure<T>(message: string): OperationSnapshot<T> {
 }
 
 function isDevSyntheticH5MediaQa(): boolean {
-  return import.meta.env.DEV === true
+  return typeof window !== 'undefined'
+    && import.meta.env.DEV === true
     && import.meta.env.VITE_XLINK_H5_MOCK_E2E === 'true'
     && isBusinessMockMode() === 'data'
 }
@@ -355,6 +357,45 @@ export function createDefaultUploadPort(authSession: AuthSessionPort): UploadPor
         })
       }
       return upload.upload(media)
+    },
+  }
+}
+
+/** DEV Mock-only upload for the R1 special editor. It reuses the ordinary
+ * upload adapter and generic queue but never constructs a live API transport
+ * or borrows a real session. Even if configuration changes, this port has no
+ * path to real token issuance or remote uploads. */
+export function createSpecialDevMockUploadPort(): UploadPort {
+  const sourceOnly = createUniUploadPort({
+    execute: async (request) => {
+      if (!isDevMockJourneyEnabled() || isBusinessMockMode() !== 'data'
+        || request.path !== 'back/super/file/upToken.do') throw new Error('Not a DEV Mock media token')
+      return { token: 'synthetic-upload-token' }
+    },
+  })
+  return {
+    upload: (media) => {
+      if (!isDevMockJourneyEnabled() || isBusinessMockMode() !== 'data') {
+        return Promise.resolve(configurationFailure('Special Mock upload is disabled'))
+      }
+      if (isDevSyntheticH5MediaQa()) {
+        const faultKey = 'xlink:e2e:fail-next-media-upload'
+        if (window.sessionStorage.getItem(faultKey) === 'retryable') {
+          window.sessionStorage.removeItem(faultKey)
+          return Promise.resolve({
+            state: 'failed_retryable' as const,
+            error: createOperationError('network_retryable', 'Synthetic H5 QA: upload failed once'),
+          })
+        }
+      }
+      // H5 chooseImage can return a blob/opaque path with no file extension.
+      // R1 file FormData requires extname; derive it from the picker MIME in
+      // this isolated DEV upload bridge without mutating the queued source.
+      const extension = media.mimeType === 'image/png' ? 'png'
+        : media.mimeType === 'image/webp' ? 'webp' : 'jpg'
+      const namedMedia = /\.[a-z0-9]{1,12}$/i.test(media.name ?? '')
+        ? media : { ...media, name: `source-image.${extension}` }
+      return sourceOnly.upload(namedMedia)
     },
   }
 }

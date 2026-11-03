@@ -1,4 +1,5 @@
 import type { NetworkStatusPort, FormDefinitionRead } from '@shared/ports'
+import type { MediaUploadTask, MediaUploadTaskId } from '@shared/types'
 import type { R1SpecialMockFields } from './r1-special-mock-form-fields'
 
 export type AStageSpecialKind = 'forms' | 'repeat'
@@ -7,11 +8,13 @@ export type AStageSpecialAction =
   | { readonly kind: 'save'; readonly fields: R1SpecialMockFields; readonly title?: string; readonly formDefinitionId?: string }
   /** R1 forms process(formDataId): Save → full EXTS → Process, as one fenced transaction. */
   | { readonly kind: 'save_finish'; readonly fields: R1SpecialMockFields; readonly title?: string; readonly formDefinitionId?: string }
-  | { readonly kind: 'edit'; readonly id: string; readonly fields: R1SpecialMockFields; readonly title?: string; readonly formDefinitionId?: string }
-  | { readonly kind: 'delete'; readonly id: string }
+  | { readonly kind: 'edit'; readonly id: string; readonly fields: R1SpecialMockFields; readonly title?: string; readonly formDefinitionId?: string; readonly expectedRevision?: string }
+  | { readonly kind: 'delete'; readonly id: string; readonly expectedRevision?: string }
   | { readonly kind: 'finish' }
 export interface AStageSpecialRecord {
   readonly id: string
+  /** Exact, source-owned FormData revision for optimistic cross-editor checks. */
+  readonly revision?: string
   readonly formDefinitionId: string
   readonly title: string
   readonly summary: string
@@ -43,6 +46,11 @@ export interface AStageSpecialMockController {
   load(): Promise<AStageSpecialView>
   execute(action: AStageSpecialAction): Promise<AStageSpecialOutcome>
   recoverCompleted(originalFields: R1SpecialMockFields): Promise<AStageSpecialOutcome>
+  listMediaTasks(formDefinitionId: string, recordId?: string): Promise<readonly MediaUploadTask[]>
+  pickMedia(formDefinitionId: string, fieldId: string, recordId?: string): Promise<{ readonly state: 'succeeded' | 'cancelled' | 'failed'; readonly message?: string }>
+  retryMedia(formDefinitionId: string, taskId: MediaUploadTaskId, recordId?: string): Promise<boolean>
+  discardMedia(formDefinitionId: string, taskId: MediaUploadTaskId, recordId?: string): Promise<boolean>
+  finalizeMedia(formDefinitionId: string, recordId?: string): Promise<boolean>
 }
 export type AStageSpecialMockControllerFactory = (options: {
   readonly kind: AStageSpecialKind

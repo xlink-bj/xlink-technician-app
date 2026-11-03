@@ -1,21 +1,22 @@
 import type { FormDefinitionRead } from '@shared/ports'
+import { isR1FileWireArray, type R1FileWireValue } from '@shared/types'
 import { normalizeR1LocalFieldPatch, projectR1LocalFields } from './r1-local-form-fields'
 
-/** FormDef-governed primitive fields for synthetic 020/021 FormData writes.
- * No media codec, implicit choice, or custom field key is invented here. */
-export type R1SpecialMockFields = Readonly<Record<string, string | number | boolean | readonly string[]>>
+/** FormDef-governed fields for synthetic 020/021 FormData writes.
+ * File lists follow the R1 generic extForm type=file wire; type=image is reference-only. */
+export type R1SpecialMockFields = Readonly<Record<string, string | number | boolean | readonly string[] | readonly R1FileWireValue[]>>
 export type R1SpecialMockValidation =
   | { readonly ok: true; readonly fields: R1SpecialMockFields }
   | { readonly ok: false; readonly message: string }
 
-/** R1 legacy extForm persists checkbox value arrays and a single ordered
- * cascade path. External providers, unknown arrays and media stay fenced. */
+/** R1 legacy extForm persists checkbox IDs, a cascade path and generic file lists.
+ * Unknown fields, unverified providers and image references stay fenced. */
 export const r1SpecialMockWritableTypes: ReadonlySet<string> = new Set([
   'textarea', 'text', 'radio', 'phone', 'IDNumber', 'number', 'digit', 'switch', 'select',
-  'checkbox', 'cascade', 'bizSelect', 'date', 'time', 'datetime', 'rate',
+  'checkbox', 'cascade', 'bizSelect', 'date', 'time', 'datetime', 'rate', 'file',
 ])
 
-function finiteDecimalWithoutRounding(raw: string | number | boolean | readonly string[]): boolean {
+function finiteDecimalWithoutRounding(raw: R1SpecialMockFields[string]): boolean {
   if (Array.isArray(raw)) return false
   if (typeof raw === 'boolean') return false
   const input = String(raw).trim()
@@ -46,7 +47,7 @@ export function validateR1SpecialMockFields(
     return { ok: false, message: '提交内容包含不属于当前表单定义的字段。' }
   }
   const projected = projectR1LocalFields(definition, input)
-  const fields: Record<string, string | number | boolean | readonly string[]> = Object.create(null)
+  const fields: Record<string, R1SpecialMockFields[string]> = Object.create(null)
   for (const field of source) {
     const current = projected.find(item => item.fieldId === field.fieldId)!
     const raw = input[field.valueKey]
@@ -65,6 +66,13 @@ export function validateR1SpecialMockFields(
     }
     if (raw === undefined || raw === '' || (Array.isArray(raw) && raw.length === 0)) {
       if (current.required) return { ok: false, message: `请填写${field.label}。` }
+      continue
+    }
+    if (field.type === 'file') {
+      if (!isR1FileWireArray(raw) || raw.length === 0) {
+        return { ok: false, message: `${field.label}的媒体列表不符合原始表单契约。` }
+      }
+      fields[field.valueKey] = raw
       continue
     }
     const arrayField = field.type === 'checkbox' || field.type === 'cascade'
@@ -88,7 +96,9 @@ export function validateR1SpecialMockFields(
     }
     // A FormData submission is a complete candidate, unlike an interactive
     // patch. Visibility must not depend on ExtField row iteration order.
-    const next = normalizeR1LocalFieldPatch(definition, input, field.valueKey, raw)
+    const next = normalizeR1LocalFieldPatch(definition,
+      input as unknown as Readonly<Record<string, string | number | boolean | readonly string[]>>,
+      field.valueKey, raw as import('@shared/ports').FormFieldValue)
     if (!next || next[field.valueKey] === undefined) {
       return { ok: false, message: `${field.label}不符合当前表单定义。` }
     }

@@ -7,7 +7,7 @@
  * branches; the original one-FormData workflowCompleteCommand is ineligible.
  */
 import type { ApiCommandRequest } from './technician-api-commands'
-import type { FormDataId, FormDefinitionId, WorkOrderId, WorkflowNodeRuntimeId, WorkflowRunId } from '@shared/types'
+import { isR1FileWireArray, type R1FileWireValue, type FormDataId, type FormDefinitionId, type WorkOrderId, type WorkflowNodeRuntimeId, type WorkflowRunId } from '@shared/types'
 
 interface R1Base {
   readonly workOrderId: WorkOrderId
@@ -69,7 +69,7 @@ export function r1RepeatBatchProcess(input: R1Base & {
 export function r1SpecialFormUpsert(input: {
   readonly sourceNodeType: 'forms' | 'repeat'
   readonly definitionId: FormDefinitionId
-  readonly formData: Readonly<Record<string, string | number | boolean | readonly string[]>>
+  readonly formData: Readonly<Record<string, string | number | boolean | readonly string[] | readonly R1FileWireValue[]>>
   /** Optional fields explicitly cleared from a full existing R1 FormData.
    * JSON omission in a full upsert; never encode a null magic value. */
   readonly clearedFieldKeys?: readonly string[]
@@ -96,7 +96,8 @@ export function r1SpecialFormUpsert(input: {
       || typeof value==='boolean'
       // Legacy extForm sends checkbox IDs and cascade paths as JSON arrays.
       || (Array.isArray(value)&&value.length>0&&value.length<=30
-        && value.every(part=>typeof part==='string'&&part.length>0&&part.length<=256))))
+        && value.every(part=>typeof part==='string'&&part.length>0&&part.length<=256))
+      || (Array.isArray(value)&&value.length>0&&isR1FileWireArray(value))))
       throw new Error('R1 form field value requires a supported bounded scalar or path array')
   }
   const cleared = input.clearedFieldKeys ?? []

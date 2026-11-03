@@ -1,4 +1,5 @@
 import type { ApiCommandRequest } from '../technician-api-commands'
+import { isR1FileWireArray } from '@shared/types'
 import { mockCommandState } from './command-state'
 import { isDevMockJourneyEnabled } from './journey'
 import { restoreMockR1SpecialState, updateMockR1SpecialState } from './r1-special-state'
@@ -35,7 +36,7 @@ const removableOptionalFieldKeys = new Set([
   'inspectionNote', 'inspectionContactPhone', 'inspectionIdentityNumber',
   'inspectionPointCount', 'inspectionMeasuredArea', 'inspectionConfirmed',
   'serviceGoods', 'inspectionDate', 'inspectionTime', 'inspectionDateTime', 'inspectionRating',
-  'inspectionCategory', 'inspectionChecks', 'inspectionLocation', 'note',
+  'inspectionCategory', 'inspectionChecks', 'inspectionLocation', 'inspectionFiles', 'note',
 ])
 function optionalClears(previous: Record<string, unknown>, incoming: Record<string, unknown>): readonly string[] | null {
   const before = object(previous.exts)
@@ -79,11 +80,14 @@ function saveSpecialForm(kind: Kind, serialized: unknown, formDefId = mockSynthe
   if (!previous && (data.extId !== undefined || data.exts !== undefined
     || data.formDefId !== undefined)) return denied()
   if ((!previous && !fields.length) || fields.length > 50 || fields.some(([key, value]) =>
-    !key.trim() || key.length > 120 || !(
+    (Array.isArray(value) && isR1FileWireArray(value) && !(key === 'inspectionFiles'
+      && formDefId === mockSyntheticDynamicFormDefinitionId
+      && import.meta.env.VITE_XLINK_R1_SPECIAL_MEDIA === 'true')) || !key.trim() || key.length > 120 || !(
       (typeof value === 'string' && value.length <= 4000)
       || (typeof value === 'number' && Number.isFinite(value)) || typeof value === 'boolean'
       || (Array.isArray(value) && value.length > 0 && value.length <= 30
-        && value.every(part => typeof part === 'string' && part.length > 0 && part.length <= 256))))) return denied()
+        && value.every(part => typeof part === 'string' && part.length > 0 && part.length <= 256))
+       || (Array.isArray(value) && value.length > 0 && isR1FileWireArray(value))))) return denied()
   let sequence = 1
   while (mockCommandState().formData.has(`${idPrefix}${sequence}`)) sequence += 1
   const id = previous ? previousId as string : `${idPrefix}${sequence}`

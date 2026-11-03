@@ -36,6 +36,10 @@ function storage(): StoragePort {
       receipts.delete(key.key)
       return { state: 'succeeded' }
     },
+    listKeys: async (scope: { readonly prefix?: string }) => ({
+      state: 'succeeded', data: [...receipts.keys()].filter(key =>
+        !scope.prefix || key.startsWith(scope.prefix)),
+    }),
   } as StoragePort
 }
 beforeEach(() => {
@@ -69,6 +73,20 @@ function controller(kind: 'forms' | 'repeat', getActor = () => actor,
 }
 
 describe('A main-App source-only multi-form/repeat controller', () => {
+  it.each(['forms', 'repeat'] as const)('%s handles uni absent-key empty-string storage on first save', async kind => {
+    // Browser uni storage returns an empty string for a missing key. This is
+    // not a stale snapshot and must not block the first atomic FormData write.
+    vi.stubGlobal('uni', {
+      getStorageSync: (key: string) => memory.has(key) ? memory.get(key) : '',
+      setStorageSync: (key: string, value: unknown) => { memory.set(key, value) },
+      removeStorageSync: (key: string) => { memory.delete(key) },
+    })
+    const result = await controller(kind).execute({ kind: 'save', fields: fields('首次写入') })
+    expect(result.state).toBe('succeeded')
+    const readback = await controller(kind).load()
+    expect(readback.entries.some(item => item.summary === '首次写入')).toBe(true)
+  })
+
   it.each(['forms', 'repeat'] as const)('%s resolves business IDs, rejects forged IDs and revokes stale identity', async kind => {
     vi.stubEnv('VITE_XLINK_R1_BUSINESS_FIELDS', 'true')
     let current = actor
@@ -506,5 +524,166 @@ describe('A main-App source-only multi-form/repeat controller', () => {
     resume()
     expect((await first).state).toBe('succeeded')
     expect((await ui.load()).entries.filter(row => row.editable)).toHaveLength(1)
+  })
+})
+
+
+describe('A special Mock cross-editor revision and transaction boundary', () => {
+  it.each(['forms', 'repeat'] as const)('%s rejects a stale edit from another editor, including a cold read', async kind => {
+    const editorA = controller(kind)
+    const editorB = controller(kind)
+    const created = await editorA.execute({ kind: 'save', fields: fields('初始记录') })
+    expect(created.state).toBe('succeeded')
+    if (created.state !== 'succeeded') return
+    const saved = created.view.entries.find(row => row.editable)!
+    expect(typeof saved.revision).toBe('string')
+    const oldVersion = (await editorB.load()).entries.find(row => row.id === saved.id)!.revision!
+    const first = await editorA.execute({
+      kind: 'edit', id: saved.id, expectedRevision: saved.revision, fields: fields('编辑器 A 修改'),
+    })
+    expect(first.state).toBe('succeeded')
+    const stale = await editorB.execute({
+      kind: 'edit', id: saved.id, expectedRevision: oldVersion, fields: fields('编辑器 B 旧版本'),
+    })
+    expect(stale).toMatchObject({ state: 'blocked' })
+    resetMockCommandState()
+    const persisted = (await controller(kind).load()).entries.find(row => row.id === saved.id)!
+    expect(persisted.values.inspectionSummary).toBe('编辑器 A 修改')
+    expect(persisted.revision).not.toBe(oldVersion)
+  })
+
+  it('serializes concurrent same-record writes and blocks one stale submission', async () => {
+    const created = await controller('forms').execute({ kind: 'save', fields: fields('创建') })
+    expect(created.state).toBe('succeeded')
+    if (created.state !== 'succeeded') return
+    const row = created.view.entries.find(item => item.editable)!
+    const results = await Promise.all([
+      controller('forms').execute({ kind: 'edit', id: row.id,
+        expectedRevision: row.revision, fields: fields('第一版') }),
+      controller('forms').execute({ kind: 'edit', id: row.id,
+        expectedRevision: row.revision, fields: fields('第二版') }),
+    ])
+    expect(results.map(item => item.state).sort()).toEqual(['blocked', 'succeeded'])
+  })
+
+  it('fails closed on media-sized storage quota rejection without exposing a successful record', async () => {
+    const original = (globalThis as unknown as { uni: { getStorageSync: (key: string) => unknown } }).uni
+    vi.stubGlobal('uni', {
+      ...original,
+      setStorageSync: (key: string, value: unknown) => {
+        if (key === 'xlink.dev.mock.r1-special.020-021.v1') throw new Error('QuotaExceededError')
+        memory.set(key, value)
+      },
+    })
+    const result = await controller('repeat').execute({ kind: 'save', fields: fields('写入容量不足') })
+    expect(result.state).not.toBe('succeeded')
+    expect(memory.has('xlink.dev.mock.r1-special.020-021.v1')).toBe(false)
+  })
+})
+
+
+describe('source-backed R1 generic file field in special forms and repeat', () => {
+  it('normalizes opaque H5 image URLs to R1 file extname in isolated Mock upload', async () => {
+    const { createSpecialDevMockUploadPort } = await import('@app/composition')
+    const { asOpaqueId, r1FileWireFromUpload } = await import('@shared/types')
+    const result = await createSpecialDevMockUploadPort().upload({
+      ref: asOpaqueId<'LocalMediaRef'>('local-media-opaque-browser-123'),
+      localPath: 'blob:http://localhost:5174/no-extension',
+      name: 'opaque-browser-123',
+      mimeType: 'image/jpeg',
+      source: 'library',
+    })
+    expect(result.state).toBe('succeeded')
+    if (result.state !== 'succeeded' || !result.data) return
+    expect(result.data.extension).toBe('jpg')
+    expect(r1FileWireFromUpload(result.data)?.extname).toBe('jpg')
+  })
+
+  it.each(['forms', 'repeat'] as const)('%s queues, uploads, commits, rereads and finalizes generic file values', async kind => {
+    vi.stubEnv('VITE_XLINK_R1_SPECIAL_MEDIA', 'true')
+    const { createMediaUploadQueue, createMediaQueueRepository, InMemoryDurableMediaStore } =
+      await import('@runtimes/media')
+    const { asOpaqueId, createCapabilityResult } = await import('@shared/types')
+    const refs = { count: 0 }
+    const picker = { pick: async () => createCapabilityResult('media_file_picker', 'granted', [{
+      ref: asOpaqueId<'LocalMediaRef'>(`source-r1-file-${++refs.count}`),
+      mimeType: 'image/jpeg', name: '现场记录.jpg', source: 'library' as const,
+      localPath: '/synthetic/media/source-r1.jpg',
+    }]) }
+    const queue = createMediaUploadQueue(new InMemoryDurableMediaStore(),
+      createMediaQueueRepository(storage()), {
+        upload: async () => ({ state: 'succeeded' as const,
+          data: { url: 'https://mock-upload.invalid/special/file.jpg',
+            key: 'special/file.jpg', extension: 'jpg', fileName: '现场记录.jpg',
+            source: 'library' as const, uploadState: 'uploaded' as const } }),
+      })
+    const ui = createAStageSpecialMockController({
+      kind, workOrderId: kind === 'forms' ? mockR1FormsWorkOrderId : mockR1RepeatWorkOrderId,
+      getActor: () => actor, storage: storage(), mediaQueue: queue, mediaPicker: picker,
+    })
+    const def = (await ui.load()).definition
+    const field = def.fields?.find(field => field.valueKey === 'inspectionFiles')!
+    expect(field.type).toBe('file')
+    expect(def.fields?.find(field => field.valueKey === 'inspectionPhoto')?.presentationOnly).toBe(true)
+    expect(await ui.execute({ kind: 'save', fields: {
+      ...fields('伪造上传'), inspectionFiles: [{
+        url: 'https://example.invalid/forged.jpg', name: 'forged.jpg', extname: 'jpg',
+      }],
+    } })).toMatchObject({ state: 'blocked' })
+    expect(await ui.pickMedia(mockSyntheticDynamicFormDefinitionId, field.fieldId)).toMatchObject({ state: 'succeeded' })
+    const uploaded = (await ui.listMediaTasks(mockSyntheticDynamicFormDefinitionId))[0]!
+    expect(uploaded.state).toBe('uploaded')
+    const { r1FileWireFromUpload } = await import('@shared/types')
+    const file = r1FileWireFromUpload(uploaded.uploadedRef!)!
+    expect(file).toEqual({ url: 'https://mock-upload.invalid/special/file.jpg',
+      name: 'special/file.jpg', extname: 'jpg' })
+    const input = { ...fields('含附件'), inspectionFiles: [file] }
+    const saved = await ui.execute({ kind: 'save', fields: input })
+    expect(saved.state).toBe('succeeded')
+    if (saved.state !== 'succeeded') return
+    const id = saved.view.entries.find(row => row.editable)!.id
+    resetMockCommandState()
+    const roundtrip = await ui.load()
+    expect(roundtrip.entries.find(row => row.id === id)?.values.inspectionFiles).toEqual([file])
+    expect(await ui.finalizeMedia(mockSyntheticDynamicFormDefinitionId)).toBe(true)
+    expect(await ui.listMediaTasks(mockSyntheticDynamicFormDefinitionId)).toHaveLength(0)
+    expect(await ui.execute({ kind: 'edit', id, fields: fields('清除附件') })).toMatchObject({ state: 'succeeded' })
+    expect((await ui.load()).entries.find(row => row.id === id)?.values.inspectionFiles).toBeUndefined()
+  })
+
+  it('keeps upload failure out of submitted FormData and retries only explicitly', async () => {
+    vi.stubEnv('VITE_XLINK_R1_SPECIAL_MEDIA', 'true')
+    const { createMediaUploadQueue, createMediaQueueRepository, InMemoryDurableMediaStore } =
+      await import('@runtimes/media')
+    const { asOpaqueId, createOperationError, createCapabilityResult } = await import('@shared/types')
+    let attempts = 0
+    const queue = createMediaUploadQueue(new InMemoryDurableMediaStore(),
+      createMediaQueueRepository(storage()), {
+        upload: async () => ++attempts === 1
+          ? { state: 'failed_retryable' as const,
+              error: createOperationError('network_retryable', 'synthetic upload unavailable') }
+          : { state: 'succeeded' as const,
+              data: { url: 'https://mock-upload.invalid/retry.jpg', key: 'retry.jpg',
+                extension: 'jpg', source: 'library' as const, uploadState: 'uploaded' as const } },
+      })
+    const ui = createAStageSpecialMockController({
+      kind: 'forms', workOrderId: mockR1FormsWorkOrderId,
+      getActor: () => actor, storage: storage(), mediaQueue: queue,
+      mediaPicker: { pick: async () => createCapabilityResult('media_file_picker', 'granted',
+        [{ ref: asOpaqueId<'LocalMediaRef'>('synthetic-retry-asset'),
+          mimeType: 'image/jpeg', source: 'library' as const, name: 'retry.jpg',
+          localPath: '/synthetic/media/retry.jpg' }]) },
+    })
+    const id = (await ui.load()).definition.fields!.find(field => field.valueKey === 'inspectionFiles')!.fieldId
+    expect((await ui.pickMedia(mockSyntheticDynamicFormDefinitionId, id)).state).toBe('failed')
+    const task = (await ui.listMediaTasks(mockSyntheticDynamicFormDefinitionId))[0]!
+    expect(task.state).toBe('failed_retryable')
+    expect(await ui.execute({ kind: 'save', fields: fields('没有附件随附') })).toMatchObject({ state: 'blocked' })
+    expect(await ui.retryMedia(mockSyntheticDynamicFormDefinitionId, task.taskId)).toBe(true)
+    const completed = (await ui.listMediaTasks(mockSyntheticDynamicFormDefinitionId))[0]!
+    const { r1FileWireFromUpload } = await import('@shared/types')
+    expect(await ui.execute({ kind: 'save',
+      fields: { ...fields('重试完成'), inspectionFiles: [r1FileWireFromUpload(completed.uploadedRef!)!] } }))
+      .toMatchObject({ state: 'succeeded' })
   })
 })
