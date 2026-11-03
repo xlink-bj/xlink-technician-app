@@ -144,7 +144,7 @@ export function createR1Stage1PilotExecution(options: R1PilotExecutionOptions) {
   async function reconcile(
     scope: R1MultiStepScope,
     location: R1PilotNodeLocation,
-    expectedFields?: Readonly<Record<string, string | number | boolean>>,
+    expectedFields?: Readonly<Record<string, string | number | boolean | readonly string[]>>,
   ): Promise<R1PilotReadbackResult> {
     if (!authorized(scope)) return result('not_authorized', '当前角色或隔离 Pilot 授权已失效。')
     const receipt = await inspectR1MultiStepReceipt(options.storage, scope)
