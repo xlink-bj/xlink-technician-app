@@ -122,8 +122,10 @@ export function createAStageSpecialMockController(options: {
         values: Object.fromEntries(formDef.fields!.filter(field => !field.presentationOnly
           && (typeof fields?.[field.valueKey] === 'string'
             || typeof fields?.[field.valueKey] === 'number'
-            || typeof fields?.[field.valueKey] === 'boolean'))
-          .map(field => [field.valueKey, fields![field.valueKey] as string | number | boolean])),
+            || typeof fields?.[field.valueKey] === 'boolean'
+            || (Array.isArray(fields?.[field.valueKey])
+              && (fields?.[field.valueKey] as unknown[]).every(item => typeof item === 'string'))))
+          .map(field => [field.valueKey, fields![field.valueKey] as string | number | boolean | readonly string[]])),
         state: raw.state === -1 ? 'deleted' : 'active', editable: own && raw.state !== -1,
       })
     }
@@ -157,7 +159,8 @@ export function createAStageSpecialMockController(options: {
       if (!record || record._id !== id || record.sid !== s.workOrderId
         || record.nodeId !== s.runtimeNodeId || record.workflowId !== s.workflowRunId
         || record.state !== 1
-        || Object.entries(savedFields).some(([key, value]) => record[key] !== value)) return false
+        || Object.entries(savedFields).some(([key, value]) => Array.isArray(value)
+          ? JSON.stringify(record[key]) !== JSON.stringify(value) : record[key] !== value)) return false
     }
     if (!authorized()) return false
     return closeCompletedR1ReceiptAfterReadback(options.storage, s, {
