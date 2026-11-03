@@ -583,6 +583,22 @@ describe('A special Mock cross-editor revision and transaction boundary', () => 
 
 
 describe('source-backed R1 generic file field in special forms and repeat', () => {
+  it('normalizes opaque H5 image URLs to R1 file extname in isolated Mock upload', async () => {
+    const { createSpecialDevMockUploadPort } = await import('@app/composition')
+    const { asOpaqueId, r1FileWireFromUpload } = await import('@shared/types')
+    const result = await createSpecialDevMockUploadPort().upload({
+      ref: asOpaqueId<'LocalMediaRef'>('local-media-opaque-browser-123'),
+      localPath: 'blob:http://localhost:5174/no-extension',
+      name: 'opaque-browser-123',
+      mimeType: 'image/jpeg',
+      source: 'library',
+    })
+    expect(result.state).toBe('succeeded')
+    if (result.state !== 'succeeded' || !result.data) return
+    expect(result.data.extension).toBe('jpg')
+    expect(r1FileWireFromUpload(result.data)?.extname).toBe('jpg')
+  })
+
   it.each(['forms', 'repeat'] as const)('%s queues, uploads, commits, rereads and finalizes generic file values', async kind => {
     vi.stubEnv('VITE_XLINK_R1_SPECIAL_MEDIA', 'true')
     const { createMediaUploadQueue, createMediaQueueRepository, InMemoryDurableMediaStore } =

@@ -387,7 +387,14 @@ export function createSpecialDevMockUploadPort(): UploadPort {
           })
         }
       }
-      return sourceOnly.upload(media)
+      // H5 chooseImage can return a blob/opaque path with no file extension.
+      // R1 file FormData requires extname; derive it from the picker MIME in
+      // this isolated DEV upload bridge without mutating the queued source.
+      const extension = media.mimeType === 'image/png' ? 'png'
+        : media.mimeType === 'image/webp' ? 'webp' : 'jpg'
+      const namedMedia = /\.[a-z0-9]{1,12}$/i.test(media.name ?? '')
+        ? media : { ...media, name: `source-image.${extension}` }
+      return sourceOnly.upload(namedMedia)
     },
   }
 }
