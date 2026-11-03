@@ -1,8 +1,9 @@
 # Agent Working Rules
 
-Primary writable repository:
+Primary application repository: `xlink-bj/xlink-technician-app`, canonical branch `main`.
 
-/Users/yesun/Code/xlink-technician-app
+Local Mac checkout: `/Users/yesun/Code/xlink-technician-app`.
+Codex Cloud uses its provisioned environment/checkout. **Codex Local and Codex Cloud have equal, full end-to-end development responsibility**, including design, implementation, tests, commits, CI verification, and handoff. The Mac path is not a Cloud prerequisite.
 
 Legacy reference repository:
 
@@ -22,7 +23,7 @@ Rules:
 - MP-WEIXIN and APP must remain first-class targets.
 - Platform/native differences must be isolated behind explicit platform adapters where practical.
 - Do not commit secrets, local credentials, generated build output or environment files.
-- No main merge or destructive git action without explicit human authorization.
+- During the current Owner-approved main-only development stage, ordinary scoped code/doc commits and pushes go **directly to `main`** after local verification; no feature PR/merge is required. Destructive git actions, releases/deployments, real business writes and high-risk scope expansions still require explicit authorization.
 - Prefer coherent capability slices over micro-refactors.
 - Each meaningful implementation slice must be independently reviewable and rollbackable.
 
@@ -39,18 +40,20 @@ Rules:
 - Screenshots remain local review artifacts unless explicitly requested.
 
 
-## Temporary Mainline-First Development Policy (Owner decision, 2026-10-29)
+## Current Main-Only Development Policy (Owner decision, 2026-11-03)
 
-- **`main` is the single canonical active integration baseline** during the current development stage. Do not establish new long-lived feature trains, chained/stacked PR base branches or competing integration trunks. The previous stacked PR lineage is historical evidence, not an active parallel release line.
-- Implement safe, reviewable slices against the **latest `main`** in the **single canonical local checkout**. For Mac/local Codex development, do **not** create task-specific git worktrees, temporary repository clones or independent mini-program build directories. A short-lived branch and PR within the same checkout may still be used when a review/CI gate requires it; integrate only after approval and promptly return to `main`. Do not remove branch protection, skip checks, force-push `main`, or assume prior authorization covers future high-risk changes.
-- Before any merge or direct main change: verify exact HEAD/base, preserve local dirty worktrees, run appropriate `verify:full`, H5/MP and commercial visual gates, and record PASS/FAIL/SKIP honestly. A documentation-only change still requires applicable CI on the final main HEAD.
-- Preserve accepted DS02A visual Golden and the current quotation CSS owner hierarchy. No wholesale CSS selector deletion based on duplicate counts; the CUI-02 mainline no-growth limits are guardrails, not proof that remaining selectors are dead.
-- Keep Production/Beta business write actions prohibited unless separately and specifically authorized. DEV Mock must remain protocol-aligned, with DEV QA isolated from the commercial surface.
-- Legacy branches/PRs may be closed after exact ancestry or divergence review. Before deleting a remote branch, verify that no open PR, dependency, active worktree or unreviewed unique commit needs it; preserve immutable commit evidence and use exact-ref SHA lease deletion where possible. A closed PR does **not** mean its remote branch was removed.
-- The permanent branching model may be reconsidered only through a later explicit Owner governance decision. This policy does not imply automatic deployment of `main`.
+- **Both Codex Local and Codex Cloud develop directly on `main`** at this stage. `main` is the only active development/integration branch, not merely the PR base. Do **not** create feature branches, stacked PRs, alternate integration branches, new task worktrees or disposable copies to perform ordinary current development. This replaces earlier short-lived PR/branch guidance until the Owner changes it.
+- **End-to-end responsibility is identical**: either environment may independently inspect R1/architecture, implement a complete capability slice, run tests and Playwright, commit/push to `main`, watch CI, correct failures and report evidence. Use whichever environment is available. Local Mac retains its single canonical checkout; Cloud may use its managed provisioned checkout. No “Cloud codes, Local only collects native evidence” division.
+- **Transition safely from any existing non-main work**. Before switching a current in-progress branch (e.g. `codex/stage-b-dynamic-form-ux`), inspect root, exact SHA, `git status`, diff and any untracked work. Preserve all modifications and move/reapply them onto up-to-date `main` without force/reset, overwrite, silent cherry-pick or lost changes. If preservation is uncertain, STOP and ask. This main-only policy does not authorize deleting historical branches/worktrees.
+- **Fast layered verification**: focused local type/lint/tests -> real App DEV Mock H5 Playwright at 430x932 (for UI/flow changes) -> direct `main` commit/push -> exact-SHA main GitHub CI full verify -> separate Owner commercial visual gate. Fix failures promptly on `main` with another verified scoped commit. Full CI need not block every tiny edit; SKIPPED/NOT_RUN never counts as PASS. Do not bypass branch protections or status checks.
+- **Stage B explicitly excludes native WeChat**: do not launch WeChat DevTools, a native simulator or device in either environment. Native and release checks stay deferred independent gates; MP/App remain first-class build targets for later appropriate work.
+- Preserve accepted DS02A visual Golden and current quotation CSS owner hierarchy; do not delete CSS solely due to duplicate counts. DEV Mock must be protocol-equivalent to R1 and commercial UI must not show DEV debug information.
+- Keep Production/Beta business writes, uploads and signing side effects prohibited unless separately approved; Production read-only and role-scope fail-closed restrictions remain. The main-only policy is **not** permission to deploy/release or change backend/API contracts.
+- Historical PRs/branches remain auditable; any future cleanup still requires exact SHA/unique-commit/worktree/PR checks and recoverability. The permanent branching model can only change by new Owner decision.
 
-## Single Local Checkout & Stable WeChat Project (Owner decision, 2026-11-02)
+## Mac Local Checkout & Stable WeChat Project (native execution deferred during Stage B)
 
+- **Scope of this section:** Mac/local checkout and any later approved native tests only. Codex Cloud has equal end-to-end development scope in its managed checkout and is not required to use the Mac path. Stage B verification is H5 Playwright, not native.
 - **Local Mac App workspace:** `/Users/yesun/Code/xlink-technician-app` is the single operational checkout for source edits, DEV Mock builds, screenshots and WeChat DevTools. Start each Codex task there and verify `pwd -P`, `git rev-parse --show-toplevel`, branch, exact HEAD and `git status --short`. A mismatched root is a STOP, not permission to create a temporary clone.
 - **No new local git worktrees or per-task application copies.** Do not use `/private/tmp/...`, `/tmp/...`, `~/.codex/worktrees/...` or `.review/...` as an alternate **source/build project** for the current commercial app. Existing worktrees and evidence must be inventoried and preserved until explicitly reviewed; never delete or reset them merely to adopt this policy.
 - **One stable development build:** from the canonical repository root, run `pnpm run dev:mp-weixin:mock-ux` for DEV synthetic Mock. Open the resulting **same-repository** output in WeChat DevTools (normally `/Users/yesun/Code/xlink-technician-app/dist/dev/mp-weixin`; verify the actual UniApp output log before importing). Keep the DevTools project rooted at this exact location across Codex and human sessions; close/re-import any project whose path points to a temporary worktree or old output. Do not treat `build:mp-weixin` release output or review-only `.review-input` as the live DEV Mock project.
