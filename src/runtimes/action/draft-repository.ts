@@ -184,9 +184,19 @@ export class SemanticActionDraftRepository implements ActionDraftRepository {
     const key = { namespace: 'draft' as const, key: actionDraftStorageKey(record.identity) }
     const existing = await this.storage.read<unknown>(key)
     if (existing.state !== 'succeeded') return existing as OperationSnapshot<void>
-    if (existing.data !== null && !validDraftRecord(existing.data, record.identity)) {
+    const current = existing.data
+    if (current !== null && !validDraftRecord(current, record.identity)) {
       // Never overwrite a damaged or differently-owned canonical record.
       return { state: 'failed_terminal', error: createOperationError('server_terminal', 'Stored draft cannot be safely overwritten') }
+    }
+    if (current !== null) {
+      // A later-completed draft is a tombstone, not an invitation to restore an
+      // older editor session. Reject clearly stale revisions in the same key.
+      // This is a monotonic guard, not an atomic cross-tab compare-and-swap.
+      if ((current.status === 'completed' && record.status === 'unfinished')
+        || record.updatedAt < current.updatedAt) {
+        return { state: 'failed_terminal', error: createOperationError('server_terminal', 'A newer draft revision already exists') }
+      }
     }
     return this.storage.write(key, record)
   }
