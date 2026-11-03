@@ -9,7 +9,7 @@
       data-testid="dynamic-form-save"
       class="action-workspace-form-actions__save"
       variant="secondary"
-      :disabled="saveState === 'saved' || lifecycle === 'submitting' || transitioning || saveState === 'saving'"
+      :disabled="!canSave || saveState === 'saved' || lifecycle === 'submitting' || transitioning || saveState === 'saving'"
       :loading="saveState === 'saving'"
       block
       @tap="$emit('save')"
@@ -40,12 +40,17 @@ withDefaults(
     readonly lifecycle: AppActionLifecycle
     readonly saveState: 'not_saved' | 'saving' | 'saved' | 'failed'
     readonly canSubmit: boolean
+    /** Runtime Action execution gate, NOT form field readOnly. A DEV Mock
+     * localPreviewOnly route is editable for local UI feedback but must NEVER
+     * dispatch a single-FormData command for a real R1 forms/repeat node. */
+    readonly canSave?: boolean
     readonly transitioning?: boolean
     readonly submitLabel?: string
     readonly hint?: string
   }>(),
   {
     transitioning: false,
+    canSave: true,
     submitLabel: '完成',
   },
 )

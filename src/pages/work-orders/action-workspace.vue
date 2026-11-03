@@ -225,6 +225,7 @@
       <ActionWorkspaceFormActions
         :lifecycle="workspace.lifecycle"
         :save-state="workspace.dynamicFormSaveState"
+        :can-save="workspace.descriptor.execution === 'enabled'"
         :can-submit="workspace.canSubmit"
         :transitioning="isNavigating"
         :submit-label="workspace.descriptor.formPurpose === 'survey' ? '完成勘查' : '完成'"

@@ -1469,6 +1469,12 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     if (!configured || !currentDescriptor || !currentIdentity || !form || !isDynamicFormAction.value) {
       return failure('validation', 'Dynamic form content is not ready')
     }
+    // A DEV localPreviewOnly action is for UI/local drafts ONLY. Real R1
+    // forms/repeat nodes require their own multi-record wire protocol;
+    // fail BEFORE normalization, local flush, durable receipt or transport.
+    if (currentDescriptor.execution !== 'enabled') {
+      return failure('unsupported_capability', 'This form action is read-only; no FormData write was dispatched')
+    }
     if (!configured.commandApi.saveDynamicForm || !currentDescriptor.contentIdentity) {
       return failure('unsupported_capability', 'Dynamic form saving is unavailable')
     }

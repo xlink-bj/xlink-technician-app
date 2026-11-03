@@ -8,13 +8,17 @@ import { expect, test } from '@playwright/test'
  * These events drive the same H5 picker change handlers as a user selection;
  * browser-native picker chrome is device-specific and remains a separate
  * WeChat/MP native gate. Save/readback runs through the normal Action
- * Workspace, Mock Adapter and FormData lifecycle, never external APIs.
+ * Workspace and its LOCAL draft lifecycle, never external APIs. The
+ * journey node has a genuine R1 sourceNodeType=forms and therefore uses a
+ * strictly read-only Action preview. Multi-form Save/Process has a separate
+ * dedicated R1 contract gate; this test must not bypass it merely to prove
+ * picker rendering or falsely claim a server FormData record.
  */
-test.describe('Dynamic scalar QA: real H5 FormDef → FormData → readback', () => {
+test.describe('Dynamic scalar QA: real H5 FormDef → local draft preview (R1 forms write fenced)', () => {
   test.skip(process.env.VITE_XLINK_DYNAMIC_SCALAR_QA !== 'true',
     'Only run with the dedicated, opt-in synthetic FormDef.')
 
-  test('430×932: dependent switch, rating, native picker events, save and reload', async ({ page }, info) => {
+  test('430×932: dependent switch, rating, native picker events, read-only save fence and local state', async ({ page }, info) => {
     await page.setViewportSize({ width: 430, height: 932 })
     const external: string[] = []
     const errors: string[] = []
@@ -81,20 +85,13 @@ test.describe('Dynamic scalar QA: real H5 FormDef → FormData → readback', ()
     await field('qaCount').locator('input').fill('12')
     await field('qaMeasure').locator('input').fill('12.50')
     await field('qaPhone').locator('input').fill('0013800100200')
-    await page.getByTestId('dynamic-form-save').click()
-    // Always report the real Workspace validation/command error on failure.
-    // A generic "button still says 保存表单" timeout hides the failing
-    // FormDef field and can lead to incorrectly weakening Runtime guards.
-    await expect.poll(async () => {
-      const label = await page.getByTestId('dynamic-form-save').innerText()
-      if (label.includes('已保存')) return '已保存'
-      const feedback = await page.getByTestId('action-workspace-feedback').allInnerTexts()
-      if (feedback.length) return '保存失败: ' + feedback.join(' | ')
-      return label
-    }, { timeout: 8_000 }).toBe('已保存')
-
-    await page.reload({ waitUntil: 'domcontentloaded' })
-    await expect(page.getByTestId('dynamic-form-action-content')).toBeVisible()
+    // This journey stage comes from raw R1 nodeType=forms; the Action
+    // Runtime MUST retain disabled execution until the multi-FormData
+    // Workflow contract is verified. Test input components in the real App,
+    // but never mislabel its local-only preview as a persisted FormData save.
+    const save = page.getByTestId('dynamic-form-save')
+    await expect(save).toBeDisabled()
+    await expect(page.getByTestId('action-workspace-submit')).toBeDisabled()
     await expect(field('qaConfirmed').locator('.app-choice').filter({ hasText: '是' }))
       .toHaveClass(/app-choice--selected/)
     await expect(field('qaScore').locator('.app-rating-field__star').nth(3))
