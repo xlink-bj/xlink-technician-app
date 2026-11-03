@@ -37,7 +37,7 @@ test.describe('source-only special file and conflict', () => {
     const [chooser] = await Promise.all([page.waitForEvent('filechooser'), pick.click()])
     await chooser.setFiles({ name: 'xlink-synthetic-file.png', mimeType: 'image/png', buffer: sampleImage })
     await expect(page.getByTestId('a-special-media-retry-inspectionFiles')).toBeVisible()
-    await expect(page.getByTestId('a-special-save')).toBeDisabled()
+    await expect(page.getByTestId('a-special-save')).toHaveAttribute('aria-disabled', 'true')
     await page.reload()
     await expect(page.getByTestId('a-special-media-retry-inspectionFiles')).toBeVisible()
     await page.getByTestId('a-special-media-retry-inspectionFiles').click()
