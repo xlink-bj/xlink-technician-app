@@ -58,7 +58,9 @@ function saveSpecialForm(kind: Kind, serialized: unknown): unknown {
   if ((!previous && !fields.length) || fields.length > 50 || fields.some(([key, value]) =>
     !key.trim() || key.length > 120 || !(
       (typeof value === 'string' && value.length <= 4000)
-      || (typeof value === 'number' && Number.isFinite(value)) || typeof value === 'boolean'))) return denied()
+      || (typeof value === 'number' && Number.isFinite(value)) || typeof value === 'boolean'
+      || (Array.isArray(value) && value.length > 0 && value.length <= 30
+        && value.every(part => typeof part === 'string' && part.length > 0 && part.length <= 256))))) return denied()
   let sequence = 1
   while (mockCommandState().formData.has(`${idPrefix}${sequence}`)) sequence += 1
   const id = previous ? previousId as string : `${idPrefix}${sequence}`
