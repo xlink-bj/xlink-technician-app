@@ -170,4 +170,35 @@ describe('C3-C media queue recovery and user-directed retry', () => {
     expect(result.state).toBe('failed')
     if (result.state === 'failed') expect(result.result.state).toBe('failed_terminal')
   })
+
+  it('isolates persisted upload readback across Survey, Acceptance and independent FormDefs', async () => {
+    const secondDefinitionId = asOpaqueId<'FormDefinitionId'>('acceptance-form-definition')
+    const independentForm: DynamicFormRead = {
+      definitionId: secondDefinitionId,
+      fields: [{ fieldId: 'acceptance-photo-row', valueKey: 'acceptanceEvidence',
+        label: '验收照片', type: 'image', required: false, readOnly: false }],
+      values: {},
+    }
+    const acceptanceTask = mediaTask('uploaded', 'acceptance-uploaded', {
+      scope: { ...mediaTask('uploaded', 'source').scope,
+        formDefinitionId: secondDefinitionId, fieldId: 'acceptance-photo-row',
+        valueKey: 'acceptanceEvidence' },
+      uploadedRef: { ...uploaded, url: 'https://upload.invalid/acceptance.jpg' },
+    })
+    const surveyTask = mediaTask('uploaded', 'survey-uploaded', { uploadedRef: uploaded })
+    const q = queue([surveyTask, acceptanceTask])
+    const onTask = vi.fn(), onUploaded = vi.fn(() => true)
+    const nextDescriptor = { ...descriptor, contentIdentity: secondDefinitionId }
+    const changed = await restoreActionMediaQueue({
+      queue: q, descriptor: nextDescriptor, getForm: () => independentForm,
+      stillCurrent: () => true, onTask, onUploaded, onReadFailure: vi.fn(),
+    })
+    expect(changed).toBe(true)
+    expect(onTask).toHaveBeenCalledTimes(1)
+    expect(onTask).toHaveBeenCalledWith(acceptanceTask)
+    expect(onUploaded).toHaveBeenCalledWith('acceptance-photo-row', acceptanceTask.uploadedRef)
+    expect(q.process).not.toHaveBeenCalled()
+    expect(q.retry).not.toHaveBeenCalled()
+  })
+
 })
