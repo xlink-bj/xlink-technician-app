@@ -1,4 +1,5 @@
 import type { FormFieldRead, FormPurpose } from '@shared/ports'
+import { mediaCapacityError } from '@runtimes/media/field-policy'
 
 export type SurveyMediaKind = 'survey_drawing' | 'survey_photo' | 'infrared_photo' | 'mold_photo'
 export type SurveyMediaSelectionMode = 'special_tool' | 'camera_or_album' | 'album_only'
@@ -90,18 +91,13 @@ export function surveyMediaPostUploadPolicyFor(
  * source reports UNKNOWN limits there. Only explicit field descriptors
  * (e.g. infraredImageList) participate in this safety check.
  */
+/** Compatibility for existing R1 tests/callers. The logic is shared;
+ * Survey only contributes the verified descriptor. Do not add queue,
+ * persistence or form-field normalization logic at this boundary. */
 export function surveyMediaCapacityError(
   descriptor: SurveyMediaFieldDescriptor | undefined,
   persisted: unknown,
   selectedCount: number,
 ): string | undefined {
-  if (!descriptor?.maxCount) return undefined
-  const existing = Array.isArray(persisted)
-    ? persisted.length
-    : persisted === undefined || persisted === null || persisted === '' ? 0 : 1
-  if (!Number.isSafeInteger(selectedCount) || selectedCount < 0
-    || existing + selectedCount > descriptor.maxCount) {
-    return `该媒体字段最多选择 ${descriptor.maxCount} 项（当前已有 ${existing} 项）`
-  }
-  return undefined
+  return mediaCapacityError(descriptor, persisted, selectedCount)
 }

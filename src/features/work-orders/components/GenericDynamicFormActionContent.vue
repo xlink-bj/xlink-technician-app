@@ -230,7 +230,8 @@ import { isMediaValueRef } from '@shared/types'
 import type { AppChoiceOption } from '@shared/ui/types'
 import { fieldPresentationKind, type FormPresentationMode } from '../form-presentation'
 import { fieldControlFor, type DynamicFieldControl } from '../field-control-registry'
-import { mediaPickerLabelFor, verifiedMediaMaxFor } from '../media-presentation'
+import { mediaPickerLabelFor } from '../media-presentation'
+import { dynamicMediaPolicyFor } from '../dynamic-media-policy'
 import AppActionContentHeading from '@shared/ui/AppActionContentHeading.vue'
 import AppButton from '@shared/ui/AppButton.vue'
 import AppCascadeSelector from '@shared/ui/AppCascadeSelector.vue'
@@ -352,8 +353,8 @@ function mediaCountFor(fieldId: string): number {
   return Math.max(workspace.mediaByField[fieldId]?.length ?? 0, mediaTaskCountFor(fieldId), values)
 }
 
-function mediaMaxFor(field: { readonly presentation?: { readonly max?: number } }): number | undefined {
-  return verifiedMediaMaxFor(field)
+function mediaMaxFor(field: RenderField): number | undefined {
+  return dynamicMediaPolicyFor(workspace.dynamicForm?.purpose, field).maxCount
 }
 
 function hasAmbiguousMedia(fieldId: string): boolean {
@@ -376,6 +377,10 @@ function mediaAddTileLabel(field: { readonly fieldId: string; readonly valueKey:
   if (!workspace.canPickDynamicMedia(field.fieldId) || workspace.mediaInFlightField
     || hasAmbiguousMedia(field.fieldId) || hasPendingMediaTask(field.fieldId)
     || workspace.mediaCanRetryDynamic(field.fieldId)) return undefined
+  // Do not show an actionable-looking add tile when the verified aggregate
+  // field limit has already been reached. Queue retries remain separate.
+  const cap = dynamicMediaPolicyFor(workspace.dynamicForm?.purpose, field).maxCount
+  if (cap !== undefined && mediaCountFor(field.fieldId) >= cap) return undefined
   if (hasTerminalMediaTask(field.fieldId)) return '重新选择'
   if (mediaCountFor(field.fieldId) === 0) return mediaPickerLabelFor(workspace.dynamicForm?.purpose, field)
   return '继续添加'

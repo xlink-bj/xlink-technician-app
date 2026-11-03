@@ -115,7 +115,9 @@ import {
   normalizeDynamicForm,
   type DynamicActionField,
 } from './dynamic-form-action'
-import { surveyMediaCapacityError, surveyMediaDescriptorFor, surveyMediaPostUploadPolicyFor } from './survey-media'
+import { surveyMediaPostUploadPolicyFor } from './survey-media'
+import { dynamicMediaPolicyFor } from './dynamic-media-policy'
+import { mediaCapacityError, mediaSelectionError } from '@runtimes/media/field-policy'
 import { loadActionMutationReceipt, mutationReceiptDenial, type ActionMutationScope } from './action-mutation-receipt'
 import { recoverActionFormFromReceipt } from './action-workspace-form-recovery'
 import {
@@ -493,7 +495,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     const form = dynamicForm.value
     const field = form?.fields.find((candidate) => candidate.fieldId === fieldId)
     if (!form || !field || uploaded.length === 0) return false
-    const descriptor = surveyMediaDescriptorFor(form.purpose, field)
+    const policy = dynamicMediaPolicyFor(form.purpose, field)
     const existing = form.values[field.valueKey]
     const existingItems = Array.isArray(existing) ? [...existing] : existing === undefined || existing === null || existing === '' ? [] : [existing]
     const existingUrls = new Set(existingItems.flatMap((item) => {
@@ -502,15 +504,15 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     }))
     const additions = uploaded
       .filter((item) => !existingUrls.has(item.url))
-      .map((item) => descriptor ? mediaValueRefFromUpload(item) : item.url)
+      .map((item) => policy.persistedShape === 'media_object_list' ? mediaValueRefFromUpload(item) : item.url)
     if (additions.length === 0) return false
     const mergedItems = [...existingItems, ...additions]
-    const countError = surveyMediaCapacityError(descriptor, existingItems, additions.length)
+    const countError = mediaCapacityError(policy, existingItems, additions.length)
     if (countError) {
       error.value = createOperationError('validation', countError)
       return false
     }
-    const nextValue: FormFieldValue = descriptor || Array.isArray(existing) || mergedItems.length !== 1
+    const nextValue: FormFieldValue = policy.persistedShape === 'media_object_list' || Array.isArray(existing) || mergedItems.length !== 1
       ? mergedItems as FormFieldValue
       : mergedItems[0] as FormFieldValue
     const normalized = normalizeDynamicFieldValue(form, field, nextValue)
@@ -1743,13 +1745,9 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     }
     if (!effective.runtime.visible) return failure('validation', 'This media field is hidden')
     if (effective.runtime.readOnly) return failure('validation', 'This media field is read-only')
-    const mediaDescriptor = surveyMediaDescriptorFor(form.purpose, field)
-    if (mediaDescriptor?.selectionMode === 'special_tool') {
-      return failure('unsupported_capability', mediaDescriptor.blocker ?? 'Survey media tool is unavailable')
-    }
-    if (mediaDescriptor?.selectionMode === 'album_only' && source !== 'library') {
-      return failure('unsupported_capability', '此字段依据 R1 仅支持从相册选择')
-    }
+    const policy = dynamicMediaPolicyFor(form.purpose, field)
+    const sourceError = mediaSelectionError(policy, source)
+    if (sourceError) return failure('unsupported_capability', sourceError)
     if (source === 'library' && !configured.mediaFilePicker) {
       return failure('unsupported_capability', 'Media upload is unavailable')
     }
@@ -1782,8 +1780,8 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
         return cancelled ? { state: 'failed_terminal', error: cancelled } : { state: 'succeeded', data: undefined }
       }
 
-      const countError = surveyMediaCapacityError(
-        mediaDescriptor, dynamicForm.value?.values[field.valueKey], selected.length,
+      const countError = mediaCapacityError(
+        policy, dynamicForm.value?.values[field.valueKey], selected.length,
       )
       if (countError) {
         const tooMany = createOperationError('validation', countError)
