@@ -9,6 +9,7 @@ import {
 import {
   mockSurveyFormDefinitionId,
   mockSurveyFormDefinitionResponse,
+  mockDynamicScalarQaFormDefinitionResponse,
   mockSurveyPartsCascadeResponse,
   mockSurveyLeakageCauseResponse,
   mockSurveyCodeOptionsResponse,
@@ -59,6 +60,7 @@ export const mockR1ExistingFormData = {
 export {
   mockSurveyFormDefinitionId,
   mockSurveyFormDefinitionResponse,
+  mockDynamicScalarQaFormDefinitionResponse,
   mockSurveyPartsCascadeResponse,
   mockSurveyLeakageCauseResponse,
   mockSurveyCodeOptionsResponse,
