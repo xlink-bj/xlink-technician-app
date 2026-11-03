@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /** Validate emitted WXSS, not just source CSS: WeChat DevTools rejects tag
  * and attribute selectors inside components even when H5 renders correctly.
- * Keep this bounded to the nine files proven by Mac native QA on PR #217. */
+ * The grouped selector moved to a shared UI control; this check preserves the
+ * bounded selector safety gate, not native UI acceptance. */
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
@@ -10,7 +11,7 @@ const componentFiles = [
   'shared/ui/AppWorkOrderSkeleton.wxss',
   'shared/ui/AppSearchBar.wxss',
   'features/work-orders/WorkOrderTaskFocus.wxss',
-  'features/work-orders/components/SurveyLeakageCauseExperience.wxss',
+  'shared/ui/AppGroupedMultiSelectField.wxss',
   'features/work-orders/components/SurveyPartPicker.wxss',
   'features/work-orders/quotation/QuotationOrderHub.wxss',
   'features/work-orders/quotation/Q01EntryScreen.wxss',

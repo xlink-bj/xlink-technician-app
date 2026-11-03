@@ -243,6 +243,9 @@ const props = withDefaults(defineProps<{
 })
 
 const workspace = useActionWorkspaceStore()
+// Legacy S01 *presentation* layout only. Do not attach field semantics,
+// validation, provider dispatch or Workflow changes to isSurvey. Once the
+// field presentation registry is source-proven, replace these styling branches.
 const isSurvey = computed(() => workspace.dynamicForm?.purpose === 'survey')
 type RenderField = (typeof workspace.dynamicFields)[number]
 type RenderKind = 'field' | 'part' | 'measure' | 'media'

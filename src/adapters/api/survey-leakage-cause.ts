@@ -16,6 +16,9 @@ import {
   type ApiReadTransport,
 } from './technician-api'
 
+// Adapter-only R1 provider contract. Dynamic Form controls receive normalized
+// groups and never know this collection name. A selected part is NOT a query
+// filter: R1 returns all groups and only prioritizes the active part in UI.
 const leakageCauseQuery = {
   method: 'POST' as const,
   path: 'biz/extForm/queryByColName/leakageCause',

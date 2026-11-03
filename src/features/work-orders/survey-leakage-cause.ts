@@ -41,6 +41,12 @@ function fieldByValueKey(
 }
 
 /**
+ * R1 contract exception: the "select" row opens a selector, while the "data"
+ * row stores List<String>. This matcher is a *domain-to-field binding* only;
+ * it must never own picker UI or duplicate Dynamic Form normalization.
+ * Both fieldId identities must be unambiguous; valueKey may repeat elsewhere
+ * in the same FormDef, so no global valueKey-keyed field registry is safe.
+ *
  * Returns a controlled Survey experience only for the verified two-row shape.
  * A generic form with similarly named fields does not receive this override.
  */

@@ -11,6 +11,9 @@
 </template>
 
 <script setup lang="ts">
+/** Presentation-only compatibility wrapper for the approved S01 heading.
+ * All editable fields remain owned by GenericDynamicFormActionContent;
+ * R1's dual-field binding is never a second form engine. */
 import GenericDynamicFormActionContent from './GenericDynamicFormActionContent.vue'
 import SurveyLeakageCauseExperience from './SurveyLeakageCauseExperience.vue'
 import { useActionWorkspaceStore } from '../action-workspace'

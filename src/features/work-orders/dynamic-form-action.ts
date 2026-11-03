@@ -77,6 +77,10 @@ function fieldState(
   })
 }
 
+/** fieldId is the unique ExtField row identity; valueKey is the shared
+ * FormData business key and may repeat in R1 (e.g. length/width). Never
+ * collapse field rows into a Map keyed by valueKey. The shared Runtime owns
+ * visibility, required/read-only and normalization, including Survey. */
 export function dynamicActionFieldsFor(form: DynamicFormRead): readonly DynamicActionField[] {
   return form.fields.map((field) => ({
     ...field,
