@@ -75,9 +75,12 @@
           option-test-id-prefix="survey-repair-part"
           @update:model-value="setField(field.fieldId, $event)"
         />
+        <!-- The registry guarantees nonempty options for choice controls;
+             Vue template types cannot infer this across controlFor(), so
+             the [] fallback is type-only and never enables unsupported data. -->
         <AppCascadeSelector
           v-else-if="controlFor(field) === 'cascade-inline'"
-          :options="field.options"
+          :options="field.options ?? []"
           :model-value="arrayValue(workspace.dynamicForm?.values[field.valueKey])"
           :hierarchical="Boolean(field.options?.some(option => option.children?.length))"
           :disabled="field.runtime.readOnly || workspace.lifecycle === 'submitting'"
@@ -85,14 +88,14 @@
         />
         <AppMultiChoiceGroup
           v-else-if="controlFor(field) === 'multi-choice'"
-          :options="choiceOptionsFor(field.options)"
+          :options="choiceOptionsFor(field.options ?? [])"
           :model-value="arrayValue(workspace.dynamicForm?.values[field.valueKey])"
           :disabled="field.runtime.readOnly || workspace.lifecycle === 'submitting'"
           @update:model-value="setField(field.fieldId, $event)"
         />
         <AppChoiceGroup
           v-else-if="controlFor(field) === 'single-choice'"
-          :options="choiceOptionsFor(field.options)"
+          :options="choiceOptionsFor(field.options ?? [])"
           :model-value="stringValue(workspace.dynamicForm?.values[field.valueKey])"
           :disabled="field.runtime.readOnly || workspace.lifecycle === 'submitting'"
           @update:model-value="setField(field.fieldId, $event)"
