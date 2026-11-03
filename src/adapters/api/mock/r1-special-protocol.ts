@@ -30,6 +30,22 @@ function activeNode(kind: Kind): Record<string, unknown> | null {
 }
 
 function same(a: unknown, b: unknown): boolean { return JSON.stringify(a) === JSON.stringify(b) }
+/** Synthetic optional fields from source-shaped 020/021 FormDefs only. */
+const removableOptionalFieldKeys = new Set([
+  'inspectionNote', 'inspectionContactPhone', 'inspectionIdentityNumber',
+  'inspectionPointCount', 'inspectionMeasuredArea', 'inspectionConfirmed',
+  'inspectionCategory', 'inspectionChecks', 'inspectionLocation', 'note',
+])
+function optionalClears(previous: Record<string, unknown>, incoming: Record<string, unknown>): readonly string[] | null {
+  const before = object(previous.exts)
+  const after = object(incoming.exts)
+  if (!before || !after) return null
+  const removed = Object.keys(before).filter(key => !Object.hasOwn(after, key))
+  if (removed.some(key => !removableOptionalFieldKeys.has(key)
+    || Object.hasOwn(incoming, key))) return null
+  const expected = Object.fromEntries(Object.entries(before).filter(([key]) => !removed.includes(key)))
+  return same(expected, after) ? removed : null
+}
 function denied(): unknown { return { success: false, code: 'TERMINAL', message: 'Synthetic special R1 command rejected' } }
 
 function saveSpecialForm(kind: Kind, serialized: unknown, formDefId = mockSyntheticDynamicFormDefinitionId): unknown {
@@ -46,11 +62,12 @@ function saveSpecialForm(kind: Kind, serialized: unknown, formDefId = mockSynthe
   const previousId = data._id
   const previous = typeof previousId === 'string' && previousId.startsWith(idPrefix)
     ? object(mockCommandState().formData.get(previousId)) : null
+  const cleared = previous ? optionalClears(previous, data) : []
   if (previousId !== undefined && (!previous || previous.state !== 1
     || previous.sid !== target.sid || previous.nodeId !== target.node
     || previous.workflowId !== target.run || data.extId !== formDefId
     || data.formDefId !== formDefId
-    || !same(data.exts, previous.exts))) return denied()
+    || cleared === null)) return denied()
   if (!previous && data.state !== 1) return denied()
   const fields = Object.entries(data).filter(([key]) =>
     !['_id', 'sid', 'smodule', 'nodeId', 'workflowId', 'state',
@@ -73,8 +90,9 @@ function saveSpecialForm(kind: Kind, serialized: unknown, formDefId = mockSynthe
     sid: target.sid, smodule: 'serviceAppointment', nodeId: target.node,
     workflowId: target.run, state: data.state,
     ...Object.fromEntries(fields),
-    exts: { ...(object(previous?.exts) ?? {}), ...Object.fromEntries(fields) },
+    exts: { ...(object(data.exts) ?? {}), ...Object.fromEntries(fields) },
   }
+  for (const key of cleared ?? []) delete (saved as Record<string, unknown>)[key]
   if (!updateMockR1SpecialState((draft) => {
     if (draft[kind].state !== 0 || (previous
       ? !same(draft.rows[id], previous) : draft.rows[id] !== undefined)) return false
