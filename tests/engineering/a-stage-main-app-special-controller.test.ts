@@ -236,8 +236,10 @@ describe('A main-App source-only multi-form/repeat controller', () => {
       fields: fields('修改并清空现场备注', 'safe') })).state).toBe('uncertain')
     const pending = await ui.load()
     expect(pending).toMatchObject({ receiptPending: true, pendingRecoverable: true })
+    // The UI projects source exts, but receipt verification still catches a
+    // stale top-level FormData key and refuses to release the replay fence.
     expect((pending.entries.find(row => row.id === id)?.values as Record<string, unknown>).inspectionNote)
-      .toBe('过期回读值')
+      .toBeUndefined()
     const stored = [...receipts.values()].find(value => (value as { clearedFieldKeys?: unknown })?.clearedFieldKeys)
     expect(stored).toMatchObject({ clearedFieldKeys: ['inspectionNote'] })
     expect(JSON.stringify(stored)).not.toContain('原备注')
