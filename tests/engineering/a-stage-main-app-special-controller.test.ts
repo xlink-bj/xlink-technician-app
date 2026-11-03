@@ -578,6 +578,7 @@ describe('source-backed R1 generic file field in special forms and repeat', () =
     const picker = { pick: async () => createCapabilityResult('media_file_picker', 'granted', [{
       ref: asOpaqueId<'LocalMediaRef'>(`source-r1-file-${++refs.count}`),
       mimeType: 'image/jpeg', name: '现场记录.jpg', source: 'library' as const,
+      localPath: '/synthetic/media/source-r1.jpg',
     }]) }
     const queue = createMediaUploadQueue(new InMemoryDurableMediaStore(),
       createMediaQueueRepository(storage()), {
@@ -640,7 +641,8 @@ describe('source-backed R1 generic file field in special forms and repeat', () =
       getActor: () => actor, storage: storage(), mediaQueue: queue,
       mediaPicker: { pick: async () => createCapabilityResult('media_file_picker', 'granted',
         [{ ref: asOpaqueId<'LocalMediaRef'>('synthetic-retry-asset'),
-          mimeType: 'image/jpeg', source: 'library' as const, name: 'retry.jpg' }]) },
+          mimeType: 'image/jpeg', source: 'library' as const, name: 'retry.jpg',
+          localPath: '/synthetic/media/retry.jpg' }]) },
     })
     const id = (await ui.load()).definition.fields!.find(field => field.valueKey === 'inspectionFiles')!.fieldId
     expect((await ui.pickMedia(mockSyntheticDynamicFormDefinitionId, id)).state).toBe('failed')
