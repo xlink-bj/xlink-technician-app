@@ -73,6 +73,20 @@ function controller(kind: 'forms' | 'repeat', getActor = () => actor,
 }
 
 describe('A main-App source-only multi-form/repeat controller', () => {
+  it.each(['forms', 'repeat'] as const)('%s handles uni absent-key empty-string storage on first save', async kind => {
+    // Browser uni storage returns an empty string for a missing key. This is
+    // not a stale snapshot and must not block the first atomic FormData write.
+    vi.stubGlobal('uni', {
+      getStorageSync: (key: string) => memory.has(key) ? memory.get(key) : '',
+      setStorageSync: (key: string, value: unknown) => { memory.set(key, value) },
+      removeStorageSync: (key: string) => { memory.delete(key) },
+    })
+    const result = await controller(kind).execute({ kind: 'save', fields: fields('首次写入') })
+    expect(result.state).toBe('succeeded')
+    const readback = await controller(kind).load()
+    expect(readback.entries.some(item => item.summary === '首次写入')).toBe(true)
+  })
+
   it.each(['forms', 'repeat'] as const)('%s resolves business IDs, rejects forged IDs and revokes stale identity', async kind => {
     vi.stubEnv('VITE_XLINK_R1_BUSINESS_FIELDS', 'true')
     let current = actor

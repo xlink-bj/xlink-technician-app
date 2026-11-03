@@ -163,7 +163,10 @@ export function updateMockR1SpecialState(
     // Lease check is complementary to the H5 exclusive transaction lock.
     // No stale tab may overwrite a snapshot it never read.
     const current = uni.getStorageSync(storageKey)
-    if ((typeof current === 'string' ? current : null) !== (observedWire.get(state) ?? null)) return false
+    // uni.getStorageSync returns '' for absent keys on H5; treat that
+    // identically to the empty value recognized by restore above.
+    const committed = typeof current === 'string' && current !== '' ? current : null
+    if (committed !== (observedWire.get(state) ?? null)) return false
     uni.setStorageSync(storageKey, serialized)
     if (uni.getStorageSync(storageKey) !== serialized) {
       restored.set(state, false)
