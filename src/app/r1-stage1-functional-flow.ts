@@ -26,6 +26,7 @@ export type R1Stage1Intent =
       readonly fields:Fields;readonly authoritativeExts:R1JsonObject;
       readonly title:string;readonly processActive:boolean;
       readonly authoritativeOriginal?:R1JsonObject;
+      readonly clearedFieldKeys?:readonly string[];
       readonly existingFormDataId?:string})
   | (Base & {readonly kind:'forms_delete';readonly sourceNodeType:'forms';
       readonly existingFormDataId:string;readonly authoritativeExts:R1JsonObject;
@@ -34,6 +35,7 @@ export type R1Stage1Intent =
       readonly authoritativeSavedIds:readonly string[]})
   | (Base & {readonly kind:'repeat_save';readonly sourceNodeType:'repeat';
       readonly fields:Fields;readonly existingFormDataId?:string;
+      readonly clearedFieldKeys?:readonly string[];
       readonly authoritativeOriginal?:R1JsonObject})
   | (Base & {readonly kind:'repeat_delete';readonly sourceNodeType:'repeat';
       readonly existingFormDataId:string})
@@ -139,7 +141,8 @@ export async function executeR1Stage1FunctionalCandidate(
     if(intent.kind==='forms_save'||intent.kind==='repeat_save'){
       r1SpecialFormUpsert({sourceNodeType:intent.sourceNodeType,
         definitionId:opaque<FormDefinitionId>(scope.formDefinitionId),
-        formData:intent.fields,workOrderId:opaque<WorkOrderId>(scope.workOrderId),
+        formData:intent.fields,clearedFieldKeys:intent.clearedFieldKeys,
+         workOrderId:opaque<WorkOrderId>(scope.workOrderId),
         workflowNodeId:opaque<WorkflowNodeRuntimeId>(scope.runtimeNodeId),
         ...(scope.workflowRunId?{workflowRunId:opaque<WorkflowRunId>(scope.workflowRunId)}:{}),
         ...(intent.existingFormDataId?{existingFormDataId:opaque<FormDataId>(intent.existingFormDataId)}:{}),
@@ -198,7 +201,10 @@ export async function executeR1Stage1FunctionalCandidate(
           ? intent.existingFormDataId : undefined
         request=r1SpecialFormUpsert({sourceNodeType:intent.sourceNodeType,
           definitionId:opaque<FormDefinitionId>(scope.formDefinitionId),
-          formData:fields,workOrderId:opaque<WorkOrderId>(scope.workOrderId),
+          formData:fields,
+          ...(intent.kind==='forms_save'||intent.kind==='repeat_save'
+            ? {clearedFieldKeys:intent.clearedFieldKeys}:{}),
+          workOrderId:opaque<WorkOrderId>(scope.workOrderId),
           workflowNodeId:opaque<WorkflowNodeRuntimeId>(scope.runtimeNodeId),
           ...(scope.workflowRunId?{workflowRunId:opaque<WorkflowRunId>(scope.workflowRunId)}:{}),
           ...(intent.kind==='forms_save'||intent.kind==='repeat_save'
@@ -252,5 +258,7 @@ export async function executeR1Stage1FunctionalCandidate(
   },authoritativeIds,
   intent.kind==='forms_save'||intent.kind==='repeat_save'
     || intent.kind==='forms_delete'||intent.kind==='repeat_delete'
-    ? intent.existingFormDataId : undefined)
+    ? intent.existingFormDataId : undefined,
+  intent.kind==='forms_save'||intent.kind==='repeat_save'
+    ? intent.clearedFieldKeys ?? [] : [])
 }
