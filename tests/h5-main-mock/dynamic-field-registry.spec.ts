@@ -28,6 +28,9 @@ test('Field registry: 430×932 task cascade and cross-group choices preserve R1 
   await expect(page.locator('.current-task-card')).toContainText('现场勘察')
   await page.locator('.primary-task-action').click()
   await expect(page.getByTestId('dynamic-form-action-content')).toBeVisible()
+  // Shared AppTaskSectionHeading preserves the already approved S01/S02
+  // visual/test contract while all field semantics remain in the Form Runtime.
+  await expect(page.getByTestId('survey-task-section-heading').first()).toBeVisible()
   await expect(page.getByTestId('survey-part-picker-trigger')).toBeVisible()
 
   await page.getByTestId('survey-part-picker-trigger').click()

@@ -222,7 +222,8 @@ describe('App UI Design System v0.2', () => {
 
     expect(generic).not.toContain('data-testid="dynamic-form-save"')
     expect(generic).not.toContain('saveDynamicForm()')
-    expect(generic).toContain('isMultilineField(field)')
+    expect(generic).toContain("controlFor(field) === 'textarea'")
+    expect(generic).toContain('AppTaskSectionHeading')
     expect(survey).not.toContain('saved-label')
     expect(presentation).toContain("'memo'")
     expect(presentation).toContain("'remarks'")

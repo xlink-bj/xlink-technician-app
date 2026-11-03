@@ -26,10 +26,11 @@
     sheet-title="选择渗漏原因"
   >
     <template #heading>
-      <SurveyTaskSectionHeading
+      <AppTaskSectionHeading
         title="渗漏原因"
         icon="location"
-        tone="cause"
+        tone="choice"
+        test-id="survey-task-section-heading"
         :required="Boolean(workspace.surveyLeakageCauseExperience?.valueField.required)"
         :status="workspace.surveyLeakageCauseSelectedIds.length > 0 ? '已选择 ' + workspace.surveyLeakageCauseSelectedIds.length + ' 项' : '待选择'"
       />
@@ -39,7 +40,7 @@
 
 <script setup lang="ts">
 import AppGroupedMultiSelectField from '@shared/ui/AppGroupedMultiSelectField.vue'
-import SurveyTaskSectionHeading from './SurveyTaskSectionHeading.vue'
+import AppTaskSectionHeading from '@shared/ui/AppTaskSectionHeading.vue'
 import { useActionWorkspaceStore } from '../action-workspace'
 
 /** R1 *source binding* only: verified select-trigger + multi-value data field.

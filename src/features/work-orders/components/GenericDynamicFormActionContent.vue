@@ -20,10 +20,11 @@
         }"
         :data-testid="isTaskLayout && block.kind !== 'field' ? `survey-${block.kind}-section` : undefined"
       >
-        <SurveyTaskSectionHeading
+        <AppTaskSectionHeading
           v-if="isTaskLayout && block.kind !== 'field'"
           :icon="block.kind === 'media' ? 'image' : block.kind === 'measure' ? 'appointment' : 'location'"
-          :tone="block.kind === 'part' ? 'part' : block.kind === 'measure' ? 'measure' : 'media'"
+          :tone="block.kind === 'part' ? 'cascade' : block.kind === 'measure' ? 'measure' : 'media'"
+          test-id="survey-task-section-heading"
           :title="block.kind === 'part' ? block.fields[0].label : block.kind === 'measure' ? '现场测量' : block.fields.length === 1 ? block.fields[0].label : surveyMediaTitle(block.fields)"
           :required="(block.kind === 'part' || block.kind === 'media' && block.fields.length === 1) && block.fields.some(field => field.runtime.required)"
           :selected="block.kind === 'part' && arrayValue(workspace.dynamicForm?.values[block.fields[0].valueKey]).length > 0"
@@ -63,7 +64,7 @@
         <!-- S02 visual/test aliases remain stable, but choice is now based solely on
              verified hierarchical cascade options, not Survey or a valueKey. -->
         <AppCascadeSheetField
-          v-if="usesCascadeSheet(field, props.presentationMode)"
+          v-if="controlFor(field) === 'cascade-sheet'"
           :options="field.options ?? []"
           :model-value="arrayValue(workspace.dynamicForm?.values[field.valueKey])"
           :disabled="field.runtime.readOnly || workspace.lifecycle === 'submitting'"
@@ -75,7 +76,7 @@
           @update:model-value="setField(field.fieldId, $event)"
         />
         <AppCascadeSelector
-          v-else-if="field.type === 'cascade' && field.options?.length"
+          v-else-if="controlFor(field) === 'cascade-inline'"
           :options="field.options"
           :model-value="arrayValue(workspace.dynamicForm?.values[field.valueKey])"
           :hierarchical="Boolean(field.options?.some(option => option.children?.length))"
@@ -83,21 +84,21 @@
           @update:model-value="setField(field.fieldId, $event)"
         />
         <AppMultiChoiceGroup
-          v-else-if="field.options?.length && isMultiChoiceField(field.type, field.multiple)"
+          v-else-if="controlFor(field) === 'multi-choice'"
           :options="choiceOptionsFor(field.options)"
           :model-value="arrayValue(workspace.dynamicForm?.values[field.valueKey])"
           :disabled="field.runtime.readOnly || workspace.lifecycle === 'submitting'"
           @update:model-value="setField(field.fieldId, $event)"
         />
         <AppChoiceGroup
-          v-else-if="field.options?.length"
+          v-else-if="controlFor(field) === 'single-choice'"
           :options="choiceOptionsFor(field.options)"
           :model-value="stringValue(workspace.dynamicForm?.values[field.valueKey])"
           :disabled="field.runtime.readOnly || workspace.lifecycle === 'submitting'"
           @update:model-value="setField(field.fieldId, $event)"
         />
         <AppTextarea
-          v-else-if="isMultilineField(field)"
+          v-else-if="controlFor(field) === 'textarea'"
           :model-value="stringValue(workspace.dynamicForm?.values[field.valueKey])"
           :disabled="field.runtime.readOnly || workspace.lifecycle === 'submitting'"
           :read-only="field.runtime.readOnly"
@@ -105,7 +106,7 @@
           @update:model-value="setField(field.fieldId, $event)"
         />
         <view
-          v-else-if="field.type === 'image' || field.type === 'file'"
+          v-else-if="controlFor(field) === 'media'"
           class="dynamic-action-media"
           :data-testid="`dynamic-media-${field.valueKey}`"
         >
@@ -224,7 +225,8 @@ import { useActionWorkspaceStore } from '@features/work-orders/action-workspace'
 import type { FormFieldValue } from '@shared/ports'
 import { isMediaValueRef } from '@shared/types'
 import type { AppChoiceOption } from '@shared/ui/types'
-import { fieldPresentationKind, usesCascadeSheet, isMultilineField, type FormPresentationMode } from '../form-presentation'
+import { fieldPresentationKind, type FormPresentationMode } from '../form-presentation'
+import { fieldControlFor, type DynamicFieldControl } from '../field-control-registry'
 import { mediaPickerLabelFor, verifiedMediaMaxFor } from '../media-presentation'
 import AppActionContentHeading from '@shared/ui/AppActionContentHeading.vue'
 import AppButton from '@shared/ui/AppButton.vue'
@@ -237,7 +239,7 @@ import AppInput from '@shared/ui/AppInput.vue'
 import AppMultiChoiceGroup from '@shared/ui/AppMultiChoiceGroup.vue'
 import AppStatus from '@shared/ui/AppStatus.vue'
 import AppTextarea from '@shared/ui/AppTextarea.vue'
-import SurveyTaskSectionHeading from './SurveyTaskSectionHeading.vue'
+import AppTaskSectionHeading from '@shared/ui/AppTaskSectionHeading.vue'
 
 const props = withDefaults(defineProps<{
   readonly title?: string
@@ -257,6 +259,16 @@ const workspace = useActionWorkspaceStore()
 // permissions, field controls and submission stay on the shared Runtime.
 const isTaskLayout = computed(() => props.presentationMode === 'task')
 type RenderField = (typeof workspace.dynamicFields)[number]
+
+/** One reactive control identity per verified ExtField row; NEVER keyed by
+ * valueKey, because R1 FormDef may contain repeated business field keys.
+ * Existence/permission checks still come from Runtime before rendering. */
+const fieldControls = computed<ReadonlyMap<string, DynamicFieldControl>>(() =>
+  new Map(workspace.dynamicFields.map(field => [field.fieldId, fieldControlFor(field, props.presentationMode)])),
+)
+function controlFor(field: RenderField): DynamicFieldControl {
+  return fieldControls.value.get(field.fieldId) ?? 'input'
+}
 type RenderKind = 'field' | 'part' | 'measure' | 'media'
 interface RenderBlock {
   key: string
@@ -312,10 +324,6 @@ function stringValue(value: FormFieldValue | undefined): string {
 function arrayValue(value: FormFieldValue | undefined): readonly string[] {
   if (Array.isArray(value)) return value.map(String)
   return value === undefined || value === null || value === '' ? [] : [String(value)]
-}
-
-function isMultiChoiceField(type: string, multiple: boolean | undefined): boolean {
-  return Boolean(multiple) || type === 'checkbox'
 }
 
 function choiceOptionsFor(options: readonly { readonly value: string; readonly label: string }[]): readonly AppChoiceOption[] {
