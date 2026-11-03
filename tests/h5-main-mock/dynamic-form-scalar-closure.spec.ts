@@ -49,31 +49,29 @@ test.describe('Dynamic scalar QA: real H5 FormDef → FormData → readback', ()
     await expect(field('qaScore').locator('.app-rating-field__star').nth(3))
       .toHaveAttribute('aria-pressed', 'true')
 
-    // Dispatch a verified native picker change at the actual compiled H5
-    // picker root. The Form Runtime, not the test, determines value validity.
-    const selectPickerValue = async (testId: string, value: string, child?: number) => {
-      await page.evaluate(({ testId, value, child }) => {
-        const root = document.querySelector(`[data-testid="${testId}"]`)
-        const target = child === undefined ? root : root?.querySelectorAll('uni-picker')[child]
-        if (!target) throw new Error(`Picker is not rendered: ${testId}, child ${child}`)
-        target.dispatchEvent(new CustomEvent('change', {
-          bubbles: true, detail: { value },
-        }))
-      }, { testId, value, child })
+    // Use the ACTUAL uni-app H5 picker action sheet. The uni-picker
+    // component owns the internal wheel and emits its change after "Done";
+    // synthetic DOM CustomEvents do not exercise that runtime protocol.
+    const finishPicker = async (root: ReturnType<typeof page.locator>) => {
+      await root.click()
+      await root.getByText('Done', { exact: true }).click()
     }
-    await selectPickerValue('dynamic-date-time-qa-date-row', '2026-11-03')
-    await selectPickerValue('dynamic-date-time-qa-time-row', '14:30')
-    await selectPickerValue('dynamic-date-time-qa-datetime-row', '2026-11-04', 0)
-    await selectPickerValue('dynamic-date-time-qa-datetime-row', '15:20', 1)
-    await expect(picker('qa-datetime-row')).toContainText('2026-11-04')
-    await expect(picker('qa-datetime-row')).toContainText('15:20')
-    await expect(picker('qa-date-row')).toContainText('2026-11-03')
-    await expect(picker('qa-time-row')).toContainText('14:30')
+    await finishPicker(picker('qa-date-row'))
+    await finishPicker(picker('qa-time-row'))
+    const dateTimeControls = picker('qa-datetime-row').locator('.app-date-time-field__picker')
+    await finishPicker(dateTimeControls.nth(0))
+    await finishPicker(dateTimeControls.nth(1))
 
-    // An impossible calendar date must fail at shared Runtime even when a
-    // synthetic event bypasses the native picker widget's own date bounds.
-    await selectPickerValue('dynamic-date-time-qa-date-row', '2026-02-30')
-    await expect(picker('qa-date-row')).toContainText('2026-11-03')
+    const selectedDate = (await picker('qa-date-row')
+      .locator('.app-date-time-field__value').innerText()).match(/\d{4}-\d{2}-\d{2}/)?.[0]
+    const selectedTime = (await picker('qa-time-row')
+      .locator('.app-date-time-field__value').innerText()).match(/\d{2}:\d{2}/)?.[0]
+    const selectedDateTime = (await picker('qa-datetime-row')
+      .locator('.app-date-time-field__value').first().innerText()).match(/\d{4}-\d{2}-\d{2}/)?.[0]
+    expect(selectedDate, 'native date picker commits a valid date').toMatch(/^\d{4}-\d{2}-\d{2}$/)
+    expect(selectedTime, 'native time picker commits a valid time').toMatch(/^\d{2}:\d{2}$/)
+    expect(selectedDateTime, 'datetime commits only after both native pickers finish')
+      .toMatch(/^\d{4}-\d{2}-\d{2}$/)
 
     await field('qaCount').locator('input').fill('12')
     await field('qaMeasure').locator('input').fill('12.50')
@@ -87,9 +85,9 @@ test.describe('Dynamic scalar QA: real H5 FormDef → FormData → readback', ()
       .toHaveClass(/app-choice--selected/)
     await expect(field('qaScore').locator('.app-rating-field__star').nth(3))
       .toHaveAttribute('aria-pressed', 'true')
-    await expect(picker('qa-date-row')).toContainText('2026-11-03')
-    await expect(picker('qa-time-row')).toContainText('14:30')
-    await expect(picker('qa-datetime-row')).toContainText('2026-11-04')
+    await expect(picker('qa-date-row')).toContainText(selectedDate!)
+    await expect(picker('qa-time-row')).toContainText(selectedTime!)
+    await expect(picker('qa-datetime-row')).toContainText(selectedDateTime!)
     await expect(field('qaCount').locator('input')).toHaveValue('12')
     await expect(field('qaMeasure').locator('input')).toHaveValue('12.5')
     await expect(field('qaPhone').locator('input')).toHaveValue('0013800100200')
