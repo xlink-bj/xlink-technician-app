@@ -1,3 +1,4 @@
+import type { R1FileWireValue } from '@shared/types'
 /**
  * Owner-scoped, isolated R1 Beta pilot executor + authoritative readback.
  *
@@ -144,7 +145,7 @@ export function createR1Stage1PilotExecution(options: R1PilotExecutionOptions) {
   async function reconcile(
     scope: R1MultiStepScope,
     location: R1PilotNodeLocation,
-    expectedFields?: Readonly<Record<string, string | number | boolean | readonly string[]>>,
+    expectedFields?: Readonly<Record<string, string | number | boolean | readonly string[] | readonly R1FileWireValue[]>>,
     expectedAbsentKeys?: readonly string[],
   ): Promise<R1PilotReadbackResult> {
     if (!authorized(scope)) return result('not_authorized', '当前角色或隔离 Pilot 授权已失效。')

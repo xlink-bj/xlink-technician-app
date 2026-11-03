@@ -569,15 +569,12 @@ describe('source-backed R1 generic file field in special forms and repeat', () =
     vi.stubEnv('VITE_XLINK_R1_SPECIAL_MEDIA', 'true')
     const { createMediaUploadQueue, createMediaQueueRepository, InMemoryDurableMediaStore } =
       await import('@runtimes/media')
-    const { asOpaqueId } = await import('@shared/types')
+    const { asOpaqueId, createCapabilityResult } = await import('@shared/types')
     const refs = { count: 0 }
-    const picker = { pick: async () => ({
-      state: 'granted' as const,
-      value: [{
-        ref: asOpaqueId<'LocalMediaRef'>(`source-r1-file-${++refs.count}`),
-        mimeType: 'image/jpeg', name: '现场记录.jpg', source: 'library' as const,
-      }],
-    }) }
+    const picker = { pick: async () => createCapabilityResult('media_file_picker', 'granted', [{
+      ref: asOpaqueId<'LocalMediaRef'>(`source-r1-file-${++refs.count}`),
+      mimeType: 'image/jpeg', name: '现场记录.jpg', source: 'library' as const,
+    }]) }
     const queue = createMediaUploadQueue(new InMemoryDurableMediaStore(),
       createMediaQueueRepository(storage()), {
         upload: async () => ({ state: 'succeeded' as const,
@@ -623,7 +620,7 @@ describe('source-backed R1 generic file field in special forms and repeat', () =
     vi.stubEnv('VITE_XLINK_R1_SPECIAL_MEDIA', 'true')
     const { createMediaUploadQueue, createMediaQueueRepository, InMemoryDurableMediaStore } =
       await import('@runtimes/media')
-    const { asOpaqueId, createOperationError } = await import('@shared/types')
+    const { asOpaqueId, createOperationError, createCapabilityResult } = await import('@shared/types')
     let attempts = 0
     const queue = createMediaUploadQueue(new InMemoryDurableMediaStore(),
       createMediaQueueRepository(storage()), {
@@ -637,9 +634,9 @@ describe('source-backed R1 generic file field in special forms and repeat', () =
     const ui = createAStageSpecialMockController({
       kind: 'forms', workOrderId: mockR1FormsWorkOrderId,
       getActor: () => actor, storage: storage(), mediaQueue: queue,
-      mediaPicker: { pick: async () => ({ state: 'granted' as const,
-        value: [{ ref: asOpaqueId<'LocalMediaRef'>('synthetic-retry-asset'),
-          mimeType: 'image/jpeg', source: 'library' as const, name: 'retry.jpg' }] }) },
+      mediaPicker: { pick: async () => createCapabilityResult('media_file_picker', 'granted',
+        [{ ref: asOpaqueId<'LocalMediaRef'>('synthetic-retry-asset'),
+          mimeType: 'image/jpeg', source: 'library' as const, name: 'retry.jpg' }]) },
     })
     const id = (await ui.load()).definition.fields!.find(field => field.valueKey === 'inspectionFiles')!.fieldId
     expect((await ui.pickMedia(mockSyntheticDynamicFormDefinitionId, id)).state).toBe('failed')

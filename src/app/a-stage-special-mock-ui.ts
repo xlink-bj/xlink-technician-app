@@ -28,8 +28,7 @@ import { projectR1LocalFields } from '@features/work-orders/r1-local-form-fields
 import { asOpaqueId } from '@shared/types'
 import {
   createDefaultStoragePort, createDefaultMediaFilePickerPort,
-  createDefaultMediaUploadQueue, createDefaultUploadPort,
-  createDefaultAuthSessionPort,
+  createDefaultMediaUploadQueue, createSpecialDevMockUploadPort,
 } from './composition'
 import { validateR1SpecialMockFields, type R1SpecialMockFields } from '@features/work-orders/r1-special-mock-form-fields'
 
@@ -587,6 +586,6 @@ export function createAStageSpecialMockControllerForActor(
   const storage = createDefaultStoragePort()
   return createAStageSpecialMockController({ ...options, storage,
     mediaPicker: createDefaultMediaFilePickerPort(),
-    mediaQueue: createDefaultMediaUploadQueue(storage, createDefaultUploadPort(createDefaultAuthSessionPort())),
+    mediaQueue: createDefaultMediaUploadQueue(storage, createSpecialDevMockUploadPort()),
   })
 }

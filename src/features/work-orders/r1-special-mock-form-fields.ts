@@ -96,7 +96,9 @@ export function validateR1SpecialMockFields(
     }
     // A FormData submission is a complete candidate, unlike an interactive
     // patch. Visibility must not depend on ExtField row iteration order.
-    const next = normalizeR1LocalFieldPatch(definition, input, field.valueKey, raw)
+    const next = normalizeR1LocalFieldPatch(definition,
+      input as unknown as Readonly<Record<string, string | number | boolean | readonly string[]>>,
+      field.valueKey, raw as import('@shared/ports').FormFieldValue)
     if (!next || next[field.valueKey] === undefined) {
       return { ok: false, message: `${field.label}不符合当前表单定义。` }
     }

@@ -64,7 +64,7 @@
               <text v-if="field.type === 'file'" class="special-forms__finish-copy">
                 原保存附件须与权威记录一致；可从已恢复的附件队列核对，不重新上传。
               </text>
-              <R1FormFieldControl v-else :field="field" :model-value="draftValues[field.valueKey]"
+              <R1FormFieldControl v-else :field="field" :model-value="scalarValueFor(field.valueKey)"
                 :disabled="busy" @update:model-value="setField(field.valueKey, $event)" />
               </view>
             </template>
@@ -116,7 +116,7 @@
                     @tap="pickMediaField(field.fieldId)">添加附件</AppButton>
                 </view>
               </template>
-              <R1FormFieldControl v-else :field="field" :model-value="draftValues[field.valueKey]"
+              <R1FormFieldControl v-else :field="field" :model-value="scalarValueFor(field.valueKey)"
                 :disabled="busy" @update:model-value="setField(field.valueKey, $event)" />
             </view>
             <view v-else class="special-forms__reference" :data-testid="`a-special-reference-${field.valueKey}`">
@@ -198,6 +198,11 @@ const draftValues = ref<R1SpecialMockFields>({})
 const editableFieldTypes = r1SpecialMockWritableTypes
 const mediaTasks = ref<readonly MediaUploadTask[]>([])
 const hasPendingMedia = computed(() => mediaTasks.value.some(task => task.state !== 'uploaded'))
+const scalarValueFor = (key: string): import('./r1-local-form-fields').R1LocalFieldValue | undefined => {
+  const value = draftValues.value[key]
+  return isR1FileWireArray(value) ? undefined
+    : value as import('./r1-local-form-fields').R1LocalFieldValue | undefined
+}
 const mediaValues = (key: string): readonly R1FileWireValue[] => {
   const value = draftValues.value[key]
   return isR1FileWireArray(value) ? value : []

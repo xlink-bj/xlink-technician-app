@@ -67,10 +67,10 @@ export function projectR1LocalFields(
 
 export function normalizeR1LocalFieldPatch(
   definition: FormDefinitionRead,
-  existing: Readonly<Record<string, R1LocalFieldValue | readonly R1FileWireValue[]>>,
+  existing: Readonly<Record<string, R1LocalFieldValue>>,
   key: string,
   raw: FormFieldValue | undefined,
-): Readonly<Record<string,R1LocalFieldValue | readonly R1FileWireValue[]>> | null {
+): Readonly<Record<string,R1LocalFieldValue>> | null {
   const projected=projectR1LocalFields(definition, existing)
   if (projected.length===0 || projected.filter(x=>x.valueKey===key).length!==1) return null
   const field=projected.find(x=>x.valueKey===key)!
