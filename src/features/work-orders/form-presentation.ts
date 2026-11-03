@@ -25,7 +25,7 @@ export type FormPresentationMode = 'standard' | 'task'
 export type FieldPresentationKind = 'field' | 'part' | 'measure' | 'media'
 export interface PresentableField {
   readonly type: string
-  readonly options?: readonly { readonly children?: readonly unknown[] }[]
+  readonly options?: readonly { readonly value: string; readonly label: string; readonly children?: readonly unknown[] }[]
 }
 
 /** Only field type + VERIFIED option structure choose a control. Do not
