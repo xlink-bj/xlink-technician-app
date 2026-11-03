@@ -58,7 +58,14 @@
             <template v-for="field in editableFields" :key="field.fieldId">
               <view class="special-forms__field" :data-testid="`a-special-recover-field-${field.valueKey}`">
                 <text class="special-forms__label">{{ field.label }} <text v-if="field.required" class="special-forms__required">*</text></text>
-                <AppChoiceGroup v-if="field.type === 'radio' || field.type === 'select' || field.type === 'switch'"
+                <AppMultiChoiceGroup v-if="field.type === 'checkbox'" :options="field.options"
+                  :model-value="fieldListValue(field.valueKey)" :disabled="busy"
+                  @update:model-value="setField(field.valueKey, $event)" />
+                <AppCascadeSelector v-else-if="field.type === 'cascade'" :options="field.options"
+                  :model-value="fieldListValue(field.valueKey)" :disabled="busy"
+                  :hierarchical="field.options.some(option => Boolean(option.children?.length))"
+                  @update:model-value="setField(field.valueKey, $event)" />
+                <AppChoiceGroup v-else-if="field.type === 'radio' || field.type === 'select' || field.type === 'switch'"
                   :options="field.type === 'switch' ? switchOptions : field.options"
                   :model-value="fieldValue(field.valueKey)" :disabled="busy"
                   @update:model-value="setField(field.valueKey, $event)" />
@@ -87,7 +94,14 @@
             <view v-if="field.supported && editableFieldTypes.has(field.type)"
               class="special-forms__field" :data-testid="`a-special-field-${field.valueKey}`">
               <text class="special-forms__label">{{ field.label }} <text v-if="field.required" class="special-forms__required">*</text></text>
-              <AppChoiceGroup v-if="field.type === 'radio' || field.type === 'select' || field.type === 'switch'"
+              <AppMultiChoiceGroup v-if="field.type === 'checkbox'" :options="field.options"
+                :model-value="fieldListValue(field.valueKey)" :disabled="busy"
+                @update:model-value="setField(field.valueKey, $event)" />
+              <AppCascadeSelector v-else-if="field.type === 'cascade'" :options="field.options"
+                :model-value="fieldListValue(field.valueKey)" :disabled="busy"
+                :hierarchical="field.options.some(option => Boolean(option.children?.length))"
+                @update:model-value="setField(field.valueKey, $event)" />
+              <AppChoiceGroup v-else-if="field.type === 'radio' || field.type === 'select' || field.type === 'switch'"
                 :options="field.type === 'switch' ? switchOptions : field.options"
                 :model-value="fieldValue(field.valueKey)" :disabled="busy"
                 @update:model-value="setField(field.valueKey, $event)" />
@@ -154,6 +168,8 @@ import AppButton from '@shared/ui/AppButton.vue'
 import AppTextarea from '@shared/ui/AppTextarea.vue'
 import AppInput from '@shared/ui/AppInput.vue'
 import AppChoiceGroup from '@shared/ui/AppChoiceGroup.vue'
+import AppMultiChoiceGroup from '@shared/ui/AppMultiChoiceGroup.vue'
+import AppCascadeSelector from '@shared/ui/AppCascadeSelector.vue'
 import AppStatus from '@shared/ui/AppStatus.vue'
 import { uxStateLanguage } from '@shared/ui/ux-state-language'
 import { projectR1LocalFields } from './r1-local-form-fields'
@@ -185,14 +201,20 @@ function fieldValue(key: string): string {
   const value = draftValues.value[key]
   return value === undefined ? '' : String(value)
 }
-function setField(key: string, value: string): void {
+function fieldListValue(key: string): readonly string[] {
+  const value = draftValues.value[key]
+  return Array.isArray(value) ? value : []
+}
+function setField(key: string, value: string | readonly string[]): void {
   if (busy.value || !viewState.value) return
   const field = viewFields.value.find(item => item.valueKey === key)
-  if (!field?.supported || !editableFieldTypes.has(field.type) || value.length > 4000) return
+  if (!field?.supported || !editableFieldTypes.has(field.type)
+    || (typeof value === 'string' && value.length > 4000)
+    || (Array.isArray(value) && (value.length > 30 || value.some(item => item.length > 256)))) return
   // Keep partially typed decimals ("1.", "-", etc.) visible until Submit.
   // The shared FormDef validator normalizes once at the transaction boundary.
   const next = { ...draftValues.value }
-  if (value === '') delete next[key]
+  if (value === '' || (Array.isArray(value) && value.length === 0)) delete next[key]
   else next[key] = value
   draftValues.value = next
 }
