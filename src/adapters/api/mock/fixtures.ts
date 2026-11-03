@@ -169,6 +169,31 @@ export const mockSyntheticStage2BFormDefinitionResponse = {
   total: 10,
 } as const
 
+/** Opt-in array fields mirror legacy R1 extForm: checkbox is a list of
+ * selected code IDs and cascade is one ordered parent/child path. Default
+ * commercial Mock and Stage 2B primitive fixtures remain unchanged. */
+export const mockSyntheticStage2CFormDefinitionResponse = {
+  ...mockSyntheticStage2BFormDefinitionResponse,
+  data: [
+    ...mockSyntheticStage2BFormDefinitionResponse.data,
+    { _id: 'mock-inspection-field-checks', name: 'inspectionChecks',
+      nameDisp: '检查项目', type: 'checkbox', multiple: '1', required: '0', state: 1,
+      options: [{ value: 'drain', name: '排水口' }, { value: 'parapet', name: '女儿墙' },
+        { value: 'joint', name: '接缝' }] },
+    { _id: 'mock-inspection-field-cascade', name: 'inspectionLocation',
+      nameDisp: '检查部位', type: 'cascade', required: '0', state: 1,
+      options: [
+        { value: 'roof', name: '屋顶', children: [
+          { value: 'drain', name: '排水口' }, { value: 'parapet', name: '女儿墙' },
+        ] },
+        { value: 'bath', name: '卫生间', children: [
+          { value: 'pipe', name: '管道' },
+        ] },
+      ] },
+  ],
+  total: 12,
+} as const
+
 export const mockWorkOrderIds = [
   'mock-work-order-001',
   'mock-work-order-002',
