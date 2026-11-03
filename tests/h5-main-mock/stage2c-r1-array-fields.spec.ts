@@ -27,6 +27,7 @@ test.describe('Stage 2C source-backed array FormDef round-trip', () => {
     await expect(page.getByTestId('a-stage-special-panel')).toBeVisible()
     const field = (key: string) => page.getByTestId('a-special-field-' + key)
     await field('inspectionSummary').locator('textarea').fill('Stage2C 数组字段验证')
+    await field('inspectionNote').locator('textarea').fill('清空前备注')
     await field('inspectionResult').locator('.app-choice').filter({ hasText: '可继续施工' }).click()
     await field('inspectionChecks').locator('.app-choice').filter({ hasText: '排水口' }).click()
     await field('inspectionChecks').locator('.app-choice').filter({ hasText: '女儿墙' }).click()
@@ -50,6 +51,37 @@ test.describe('Stage 2C source-backed array FormDef round-trip', () => {
     await expect(field('inspectionChecks').locator('.app-choice--selected')).toHaveCount(1)
     await expect(field('inspectionLocation').locator('.app-cascade-selector__child')
       .filter({ hasText: '管道' })).toHaveAttribute('aria-pressed', 'true')
+    // Explicitly clear existing optional scalar/array values, then prove
+    // absence survives a new page instance rather than only the draft UI.
+    await field('inspectionNote').locator('textarea').fill('')
+    await field('inspectionChecks').locator('.app-choice--selected').click()
+    await page.getByTestId('a-special-save').click()
+    await expect(row).toContainText('Stage2C 数组字段验证')
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await page.getByTestId('a-special-edit-mock-special-form-data-forms-1').click()
+    await expect(field('inspectionNote').locator('textarea')).toHaveValue('')
+    await expect(field('inspectionChecks').locator('.app-choice--selected')).toHaveCount(0)
+    await expect(field('inspectionLocation').locator('.app-cascade-selector__child')
+      .filter({ hasText: '管道' })).toHaveAttribute('aria-pressed', 'true')
+    await page.getByText('取消', { exact: true }).click()
+
+    // The same commercial editor switches to another source FormDef; its
+    // payload must neither inherit nor overwrite the first record's fields.
+    await page.getByTestId('a-special-definition-choice').getByText('服务备注', { exact: true }).click()
+    await expect(field('inspectionSummary')).toHaveCount(0)
+    await field('note').locator('textarea').fill('第二表单独立备注')
+    await page.getByTestId('a-special-save').click()
+    const second = page.getByTestId('a-special-row-mock-special-form-data-forms-2')
+    await expect(second).toBeVisible()
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await page.getByTestId('a-special-edit-mock-special-form-data-forms-2').click()
+    await expect(field('note').locator('textarea')).toHaveValue('第二表单独立备注')
+    await expect(field('inspectionSummary')).toHaveCount(0)
+    await page.getByText('取消', { exact: true }).click()
+    await page.getByTestId('a-special-delete-mock-special-form-data-forms-2').click()
+    await page.getByTestId('a-special-confirm-delete-mock-special-form-data-forms-2').click()
+    await expect(second).toContainText('已删除')
+    await expect(row).toContainText('Stage2C 数组字段验证')
     await info.attach('stage2c-arrays-430', {
       body: await page.screenshot({ fullPage: true }), contentType: 'image/png',
     })

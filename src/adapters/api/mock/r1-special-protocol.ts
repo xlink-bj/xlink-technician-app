@@ -65,6 +65,9 @@ function saveSpecialForm(kind: Kind, serialized: unknown, formDefId = mockSynthe
   const cleared = previous ? optionalClears(previous, data) : []
   if (previousId !== undefined && (!previous || previous.state !== 1
     || previous.sid !== target.sid || previous.nodeId !== target.node
+    // The endpoint and incoming IDs cannot relabel a sibling FormDef record.
+    // Validate the persisted identity as well, before touching durable state.
+    || previous.extId !== formDefId || previous.formDefId !== formDefId
     || previous.workflowId !== target.run || data.extId !== formDefId
     || data.formDefId !== formDefId
     || cleared === null)) return denied()

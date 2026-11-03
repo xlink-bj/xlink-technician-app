@@ -155,6 +155,30 @@ describe('R1 bizSelect business-record provider boundary', () => {
     }], values: { serviceGoods: ['forged-package'] } })).toMatchObject({ ok: false })
   })
 
+  it('re-reads business records for the current authorization scope and propagates denial', async () => {
+    let tenant = 'tenant-a'
+    const recordRead = vi.fn(async () => tenant === 'denied'
+      ? { state: 'failed_terminal' as const,
+          error: { category: 'authorization_denied' as const, message: 'tenant access revoked' } }
+      : { state: 'succeeded' as const,
+          data: { items: [{ value: tenant + '-package', label: tenant }] } })
+    const x = source([businessField], {
+      getBusinessRecordOptions: recordRead,
+    } as unknown as Partial<TechnicianApiReadPort>)
+    expect((await x.adapter.readDynamicForm({ definitionId: id })).data?.fields[0]?.options)
+      .toEqual([{ value: 'tenant-a-package', label: 'tenant-a' }])
+    tenant = 'tenant-b'
+    expect((await x.adapter.readDynamicForm({ definitionId: id })).data?.fields[0]?.options)
+      .toEqual([{ value: 'tenant-b-package', label: 'tenant-b' }])
+    tenant = 'denied'
+    expect(await x.adapter.readDynamicForm({ definitionId: id })).toMatchObject({
+      state: 'failed_terminal', error: { category: 'authorization_denied' },
+    })
+    expect(recordRead).toHaveBeenCalledTimes(3)
+    expect(x.api.getDynamicCodeOptions).not.toHaveBeenCalled()
+    expect(x.getFormData).not.toHaveBeenCalled()
+  })
+
   it('keeps unknown live provider disabled; rejects duplicate and malformed records', async () => {
     const absent = source([businessField])
     const unavailable = await absent.adapter.readDynamicForm({ definitionId: id })

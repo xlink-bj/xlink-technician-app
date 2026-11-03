@@ -6,7 +6,7 @@ import { tryMockRead } from '@adapters/api/mock/router'
 import { tryMockR1SpecialCommand as specialGateway } from '@adapters/api/mock/r1-special-protocol'
 import { isMockOwnedCommand } from '@adapters/api/mock/ownership'
 import {
-  mockR1FormsWorkOrderId, mockR1RepeatWorkOrderId, mockSyntheticDynamicFormDefinitionId,
+  mockR1FormsWorkOrderId, mockR1RepeatWorkOrderId, mockSyntheticDynamicFormDefinitionId, mockR1NoteFormDefinitionId,
 } from '@adapters/api/mock/fixtures'
 import {
   r1SpecialFormUpsert, r1FormsUpdateExtsCommand, r1FormsAfterSaveProcess,
@@ -364,5 +364,23 @@ describe('A synthetic source-specific forms / repeat writes', () => {
     vi.stubEnv('VITE_XLINK_H5_MOCK_E2E', 'false')
     expect(await tryMockR1SpecialCommand(request)).toBeNull()
     expect(await nodeDetail('repeat')).toMatchObject({ state: 0 })
+  })
+})
+
+
+describe('FormDef identity at the special command boundary', () => {
+  it('rejects an existing record replayed through a sibling FormDef endpoint', async () => {
+    const savedId = await save('forms', 'original inspection')
+    const path = `biz/extForm/query/${definitionId}`
+    const read = await tryMockRead(path, { 'is:_id|string#and': savedId }, { latencyMs: 0 }) as { data: Record<string, unknown>[] }
+    const original = read.data[0]!
+    const forged = { ...original, extId: mockR1NoteFormDefinitionId, formDefId: mockR1NoteFormDefinitionId }
+    expect(await tryMockR1SpecialCommand({ method: 'POST', r1Special: true,
+      path: `biz/extForm/upsert/${mockR1NoteFormDefinitionId}`,
+      body: { dataStr: JSON.stringify(forged) },
+    })).toMatchObject({ success: false })
+    resetMockCommandState()
+    const after = await tryMockRead(path, { 'is:_id|string#and': savedId }, { latencyMs: 0 }) as { data: Record<string, unknown>[] }
+    expect(after.data[0]).toEqual(original)
   })
 })
