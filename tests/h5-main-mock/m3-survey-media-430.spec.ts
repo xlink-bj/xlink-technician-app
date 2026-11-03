@@ -1,10 +1,18 @@
 import { expect, test } from '@playwright/test'
+import { mkdirSync } from 'node:fs'
 
 // A tiny, synthetic PNG: no customer image, device camera, or external fixture.
 const sampleImage = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9WS+QX8AAAAASUVORK5CYII=',
   'base64',
 )
+
+async function capture(page: import('@playwright/test').Page, scene: string) {
+  const directory = process.env.XLINK_STAGE_B_SCREENSHOTS
+  if (!directory) return
+  mkdirSync(directory, { recursive: true })
+  await page.screenshot({ path: `${directory}/${scene}.png` })
+}
 
 test('430×932 Survey: browser image selection → mock upload → preview → restored draft', async ({ page }) => {
   await page.setViewportSize({ width: 430, height: 932 })
@@ -40,10 +48,28 @@ test('430×932 Survey: browser image selection → mock upload → preview → r
   await page.locator('.primary-task-action').click()
   await expect(page.locator('.uni-page-head__title')).toContainText('现场勘查')
 
-  await page.getByTestId('survey-part-picker-trigger').click()
+  const partPicker = page.getByTestId('survey-part-picker-trigger')
+  await partPicker.click()
   await page.getByTestId('survey-repair-part-parents').locator('.app-cascade-selector__parent').first().click()
   await page.getByTestId('survey-repair-part-children').locator('.app-cascade-selector__child').first().click()
-  await page.getByTestId('survey-part-picker-confirm').click()
+  await capture(page, 'survey-cascade-open')
+  const closePicker = page.getByLabel('关闭维修部位选择')
+  const closeBox = await closePicker.boundingBox()
+  expect(closeBox?.width).toBeGreaterThanOrEqual(44)
+  expect(closeBox?.height).toBeGreaterThanOrEqual(44)
+  await closePicker.click()
+  await expect(partPicker).toContainText('请选择维修部位')
+
+  await partPicker.click()
+  await page.getByTestId('survey-repair-part-parents').locator('.app-cascade-selector__parent').first().click()
+  await page.getByTestId('survey-repair-part-children').locator('.app-cascade-selector__child').first().click()
+  const confirmPicker = page.getByTestId('survey-part-picker-confirm')
+  const confirmBox = await confirmPicker.boundingBox()
+  expect(confirmBox?.width).toBeGreaterThanOrEqual(44)
+  expect(confirmBox?.height).toBeGreaterThanOrEqual(44)
+  await confirmPicker.click()
+  await expect(partPicker.locator('.survey-part-picker__selection')).not.toBeEmpty()
+  await capture(page, 'survey-cascade-selected')
 
   const first = page.getByTestId('dynamic-media-add-images1')
   const second = page.getByTestId('dynamic-media-add-images2')
@@ -51,6 +77,8 @@ test('430×932 Survey: browser image selection → mock upload → preview → r
   await expect(second).toBeVisible()
   await expect(page.getByTestId('dynamic-media-count-images1')).toContainText('0')
   await expect(page.getByTestId('dynamic-media-count-images2')).toContainText('0')
+  await first.scrollIntoViewIfNeeded()
+  await capture(page, 'generic-media-empty')
 
   const [chooser] = await Promise.all([
     page.waitForEvent('filechooser'),
@@ -66,8 +94,10 @@ test('430×932 Survey: browser image selection → mock upload → preview → r
   await expect(page.getByTestId('dynamic-media-count-images2')).toContainText('0')
   await expect(page.getByTestId('dynamic-media-preview-images1').locator('.dynamic-action-media-tile--preview')).toHaveCount(1)
   await expect(page.getByTestId('dynamic-media-status-images1')).toContainText('上传')
+  await page.getByTestId('dynamic-media-preview-images1').scrollIntoViewIfNeeded()
+  await capture(page, 'generic-media-uploaded')
 
-  await page.getByTestId('dynamic-media-preview-images1').locator('.dynamic-action-media-tile--preview').click()
+  await page.getByTestId('dynamic-media-preview-images1').locator('.dynamic-action-media-preview-image').click()
   await expect(page.getByTestId('survey-media-lightbox')).toBeVisible()
   await page.getByTestId('survey-media-lightbox').getByText('返回表单').click()
   await expect(page.getByTestId('survey-media-lightbox')).toHaveCount(0)
@@ -79,6 +109,24 @@ test('430×932 Survey: browser image selection → mock upload → preview → r
   await expect(page.getByTestId('dynamic-media-count-images1')).toContainText('1')
   await expect(page.getByTestId('dynamic-media-count-images2')).toContainText('0')
   await expect(page.getByTestId('dynamic-media-preview-images1').locator('.dynamic-action-media-tile--preview')).toHaveCount(1)
+
+  const remove = page.getByTestId('dynamic-media-remove-images1-0')
+  await remove.scrollIntoViewIfNeeded()
+  await remove.click()
+  const removeConfirmation = page.getByTestId('dynamic-media-remove-confirm-images1')
+  await expect(removeConfirmation).toContainText('确定从本次表单移除这张照片')
+  await capture(page, 'generic-media-removal-confirm')
+  await page.getByTestId('dynamic-media-remove-cancel-images1').click()
+  await expect(page.getByTestId('dynamic-media-count-images1')).toContainText('1')
+
+  await remove.click()
+  await page.getByTestId('dynamic-media-remove-accept-images1').click()
+  await expect(page.getByTestId('dynamic-media-count-images1')).toContainText('0')
+  await expect(page.getByTestId('dynamic-media-preview-images1').locator('.dynamic-action-media-tile--preview')).toHaveCount(0)
+  await expect(page.getByTestId('mock-journey-progress')).toContainText('已保存，可继续下一步')
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  await expect(page.getByTestId('dynamic-media-count-images1')).toContainText('0')
+  await expect(page.getByTestId('dynamic-media-add-images1')).toBeVisible()
 
   expect(externalRequests, 'no business endpoint or remote image is contacted').toEqual([])
   expect(pageErrors, 'the real H5 page must have no browser runtime errors').toEqual([])
@@ -135,6 +183,8 @@ test('430×932 Survey: retryable upload fails once, then resumes the same queued
   await expect(page.getByTestId('dynamic-media-status-images1')).toContainText('上传失败，可点击重试')
   await expect(page.getByTestId('dynamic-media-preview-images1').locator('.dynamic-action-media-tile--preview')).toHaveCount(0)
   await expect(page.getByTestId('dynamic-media-actions-images1')).toContainText('继续处理')
+  await page.getByTestId('dynamic-media-status-images1').scrollIntoViewIfNeeded()
+  await capture(page, 'generic-media-upload-failed')
   await expect(page.getByTestId('dynamic-media-count-images2')).toContainText('0')
   expect(await page.evaluate(() => window.sessionStorage.getItem('xlink:e2e:fail-next-media-upload'))).toBeNull()
 
@@ -149,6 +199,8 @@ test('430×932 Survey: retryable upload fails once, then resumes the same queued
   await expect(page.getByTestId('dynamic-media-preview-images1').locator('.dynamic-action-media-tile--preview')).toHaveCount(1)
   await expect(page.getByTestId('dynamic-media-count-images1')).toContainText('1')
   await expect(page.getByTestId('dynamic-media-count-images2')).toContainText('0')
+  await page.getByTestId('dynamic-media-preview-images1').scrollIntoViewIfNeeded()
+  await capture(page, 'generic-media-retry-succeeded')
 
   await expect(page.getByTestId('mock-journey-progress')).toContainText('已保存，可继续下一步')
   await page.reload({ waitUntil: 'domcontentloaded' })

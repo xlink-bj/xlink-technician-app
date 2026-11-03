@@ -1925,6 +1925,72 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     }
   }
 
+  async function removeDynamicMedia(fieldId: string, url: string): Promise<OperationSnapshot<void>> {
+    const configured = dependencies
+    const commandVersion = loadVersion
+    const currentDescriptor = descriptor.value
+    const form = dynamicForm.value
+    if (!configured || !currentDescriptor || !form
+      || !actionCommandScopeCurrent(commandVersion, currentDescriptor)) {
+      return failure('session_invalid', '照片操作对应的工单或角色已失效。')
+    }
+    if (lifecycle.value === 'submitting' || businessResult.value === 'succeeded') {
+      return failure('validation', '提交期间或业务完成后不可移除媒体。')
+    }
+    if (mediaInFlightField.value) return failure('validation', '媒体正在处理中，请稍后再移除。')
+    const field = form.fields.find(candidate => candidate.fieldId === fieldId)
+    const effective = dynamicFields.value.find(candidate => candidate.fieldId === fieldId)
+    if (!field || (field.type !== 'image' && field.type !== 'file') || !effective) {
+      return failure('unsupported_capability', '当前字段不支持移除媒体。')
+    }
+    if (!effective.runtime.visible || effective.runtime.readOnly || !canPickDynamicMedia(fieldId)) {
+      return failure('validation', '当前媒体字段不可编辑。')
+    }
+    const value = form.values[field.valueKey]
+    const items = Array.isArray(value) ? [...value] : value === undefined || value === null ? [] : [value]
+    const hasValue = items.some(item => isMediaValueRef(item) ? item.url === url : item === url)
+    if (!hasValue) return failure('validation', '这项媒体已从表单中移除。')
+    const nextValue = items.filter(item => isMediaValueRef(item) ? item.url !== url : item !== url)
+    const normalized = normalizeDynamicFieldValue(form, field, nextValue)
+    if (normalized.state !== 'succeeded') {
+      error.value = normalized.error ?? null
+      return { state: normalized.state, ...(normalized.error ? { error: normalized.error } : {}) }
+    }
+
+    const task = (mediaTasksByField.value[fieldId] ?? []).find(candidate => candidate.uploadedRef?.url === url)
+    if (task && configured.mediaUploadQueue) {
+      const discarded = await configured.mediaUploadQueue.discard(task.taskId)
+      if (!actionCommandScopeCurrent(commandVersion, currentDescriptor) || dynamicForm.value !== form) {
+        return failure('cancelled', '工单或表单已切换，移除结果未应用到当前表单。')
+      }
+      if (discarded.state !== 'succeeded') {
+        const discardError = discarded.error ?? createOperationError('server_terminal', '暂时无法移除这项媒体，请重试。')
+        error.value = discardError
+        return { state: discarded.state, error: discardError }
+      }
+      const remaining = (mediaTasksByField.value[fieldId] ?? [])
+        .filter(candidate => String(candidate.taskId) !== String(task.taskId))
+      mediaTasksByField.value = { ...mediaTasksByField.value, [fieldId]: remaining }
+      mediaStateByField.value = { ...mediaStateByField.value, [fieldId]: taskStateForField(remaining) }
+    }
+
+    if (!actionCommandScopeCurrent(commandVersion, currentDescriptor) || dynamicForm.value !== form) {
+      return failure('cancelled', '工单或表单已切换，移除结果未应用到当前表单。')
+    }
+    dynamicForm.value = { ...form, values: { ...form.values, [field.valueKey]: normalized.data! } }
+    mediaByField.value = {
+      ...mediaByField.value,
+      [fieldId]: (mediaByField.value[fieldId] ?? []).filter(media => media.url !== url),
+    }
+    dynamicFormSaveState.value = 'not_saved'
+    draftRevision += 1
+    error.value = null
+    lifecycle.value = 'in_progress'
+    draftStatus.value = 'dirty'
+    scheduleDraftSave()
+    return { state: 'succeeded', data: undefined }
+  }
+
   function canPickDynamicMedia(fieldId: string): boolean {
     return isDynamicMediaPickerAllowed({
       field: dynamicFields.value.find(candidate => candidate.fieldId === fieldId),
@@ -2134,6 +2200,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     pickDynamicMedia,
     captureDynamicMedia,
     retryDynamicMedia,
+    removeDynamicMedia,
     submit,
     exit,
   }

@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { mkdirSync } from 'node:fs'
 
 /**
  * The REAL main App + GenericDynamicFormActionContent; not a component
@@ -40,6 +41,13 @@ test.describe('Dynamic scalar QA: real H5 FormDef → local draft preview (R1 fo
     await page.getByTestId('mock-journey-advance').click()
     await page.locator('.primary-task-action').click()
     await expect(page.getByTestId('dynamic-form-action-content')).toBeVisible()
+    const screenshotDirectory = process.env.XLINK_STAGE_B_SCREENSHOTS
+    const capture = async (name: string, fullPage = false) => {
+      if (!screenshotDirectory) return
+      mkdirSync(screenshotDirectory, { recursive: true })
+      await page.screenshot({ path: `${screenshotDirectory}/${name}.png`, fullPage })
+    }
+    await capture('dynamic-form-initial')
     const field = (key: string) => page.getByTestId(`dynamic-field-${key}`)
     const picker = (fieldId: string) => page.getByTestId(`dynamic-date-time-${fieldId}`)
 
@@ -47,6 +55,7 @@ test.describe('Dynamic scalar QA: real H5 FormDef → local draft preview (R1 fo
     // satisfies R1 showField/showValue; never inject it by field name.
     await expect(field('qaDependent')).toHaveCount(0)
     await field('qaConfirmed').locator('.app-choice').filter({ hasText: '是' }).click()
+    await capture('dynamic-form-condition-visible')
     await expect(field('qaDependent')).toBeVisible()
     await field('qaDependent').locator('input').fill('屋顶已复核')
     await field('qaScore').locator('.app-rating-field__star').nth(3).click()
@@ -58,12 +67,14 @@ test.describe('Dynamic scalar QA: real H5 FormDef → local draft preview (R1 fo
     // synthetic DOM CustomEvents do not exercise that runtime protocol.
     const finishPicker = async (root: ReturnType<typeof page.locator>) => {
       await root.click()
+      await capture('dynamic-form-picker-open')
       // uni-picker's H5 action sheet is teleported outside the field root.
       // Select the currently visible confirmation control, not a hidden
       // sibling picker. A short timeout makes selector regressions explicit.
       const confirm = page.getByText('Done', { exact: true }).filter({ visible: true }).last()
       await expect(confirm).toBeVisible({ timeout: 5_000 })
       await confirm.click()
+      await expect(confirm).toBeHidden()
     }
     await finishPicker(picker('qa-date-row'))
     await finishPicker(picker('qa-time-row'))
@@ -85,6 +96,7 @@ test.describe('Dynamic scalar QA: real H5 FormDef → local draft preview (R1 fo
     await field('qaCount').locator('input').fill('12')
     await field('qaMeasure').locator('input').fill('12.50')
     await field('qaPhone').locator('input').fill('0013800100200')
+    await capture('dynamic-form-filled')
     // This journey stage comes from raw R1 nodeType=forms; the Action
     // Runtime MUST retain disabled execution until the multi-FormData
     // Workflow contract is verified. Test input components in the real App,
@@ -94,6 +106,7 @@ test.describe('Dynamic scalar QA: real H5 FormDef → local draft preview (R1 fo
     // assert the actual accessibility gate used by the runtime.
     const save = page.getByTestId('dynamic-form-save')
     await expect(save).toHaveAttribute('aria-disabled', 'true')
+    await capture('dynamic-form-blocked-save')
     await expect(page.getByTestId('action-workspace-submit')).toHaveAttribute('aria-disabled', 'true')
     await expect(field('qaConfirmed').locator('.app-choice').filter({ hasText: '是' }))
       .toHaveClass(/app-choice--selected/)
@@ -107,7 +120,7 @@ test.describe('Dynamic scalar QA: real H5 FormDef → local draft preview (R1 fo
     await expect(field('qaPhone').locator('input')).toHaveValue('0013800100200')
     await expect(field('qaDependent').locator('input')).toHaveValue('屋顶已复核')
     await info.attach('dynamic-scalar-real-app-430', {
-      body: await page.screenshot({ fullPage: true }), contentType: 'image/png',
+      body: await page.screenshot(), contentType: 'image/png',
     })
 
     expect(external, 'no external requests, including Production API or uploads').toEqual([])

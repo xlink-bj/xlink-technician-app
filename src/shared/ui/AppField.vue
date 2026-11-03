@@ -1,7 +1,7 @@
 <template>
   <view class="app-field" :class="{ 'app-field--error': Boolean(error) }">
     <text v-if="!hideLabel" class="app-field__label">
-      {{ label }}<text v-if="required" class="app-field__required"> *</text><text v-else-if="showOptional" class="app-field__optional">（选填）</text>
+      {{ label }}<text v-if="required" class="app-field__required"> *</text><text v-else-if="showOptional" class="app-field__optional">（选填）</text><text v-if="readOnly" class="app-field__readonly">（只读）</text>
     </text>
     <slot />
     <text v-if="supporting" class="app-field__supporting">{{ supporting }}</text>
@@ -17,6 +17,7 @@ const props = defineProps<{
   readonly hideLabel?: boolean
   readonly required?: boolean
   readonly optional?: boolean
+  readonly readOnly?: boolean
   readonly supporting?: string
   readonly error?: string
 }>()
