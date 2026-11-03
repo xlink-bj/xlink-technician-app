@@ -7,6 +7,10 @@
         <AppMultiChoiceGroup v-if="field.type === 'checkbox'" :options="field.options"
           :model-value="listValue(field.valueKey)"
           @update:model-value="set(field.valueKey,$event)" />
+        <AppCascadeSelector v-else-if="field.type === 'cascade'" :options="field.options"
+          :model-value="listValue(field.valueKey)"
+          :hierarchical="field.options.some(option => Boolean(option.children?.length))"
+          @update:model-value="set(field.valueKey,$event)" />
         <AppChoiceGroup v-else-if="field.type === 'radio' || field.type === 'select'"
           :options="field.options" :model-value="scalarValue(field.valueKey)"
           @update:model-value="set(field.valueKey,$event)" />
@@ -42,6 +46,7 @@ import AppInput from '@shared/ui/AppInput.vue'
 import AppTextarea from '@shared/ui/AppTextarea.vue'
 import AppChoiceGroup from '@shared/ui/AppChoiceGroup.vue'
 import AppMultiChoiceGroup from '@shared/ui/AppMultiChoiceGroup.vue'
+import AppCascadeSelector from '@shared/ui/AppCascadeSelector.vue'
 import AppButton from '@shared/ui/AppButton.vue'
 import { useR1LocalFormDraftStore, type R1LocalFormIntent } from './r1-local-form-drafts'
 import { normalizeR1LocalFieldPatch, projectR1LocalFields, type R1LocalFieldValue } from './r1-local-form-fields'
