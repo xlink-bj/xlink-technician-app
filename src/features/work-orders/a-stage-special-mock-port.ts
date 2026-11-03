@@ -7,11 +7,13 @@ export type AStageSpecialAction =
   | { readonly kind: 'save'; readonly fields: R1SpecialMockFields; readonly title?: string; readonly formDefinitionId?: string }
   /** R1 forms process(formDataId): Save → full EXTS → Process, as one fenced transaction. */
   | { readonly kind: 'save_finish'; readonly fields: R1SpecialMockFields; readonly title?: string; readonly formDefinitionId?: string }
-  | { readonly kind: 'edit'; readonly id: string; readonly fields: R1SpecialMockFields; readonly title?: string; readonly formDefinitionId?: string }
-  | { readonly kind: 'delete'; readonly id: string }
+  | { readonly kind: 'edit'; readonly id: string; readonly fields: R1SpecialMockFields; readonly title?: string; readonly formDefinitionId?: string; readonly expectedRevision?: string }
+  | { readonly kind: 'delete'; readonly id: string; readonly expectedRevision?: string }
   | { readonly kind: 'finish' }
 export interface AStageSpecialRecord {
   readonly id: string
+  /** Exact, source-owned FormData revision for optimistic cross-editor checks. */
+  readonly revision?: string
   readonly formDefinitionId: string
   readonly title: string
   readonly summary: string

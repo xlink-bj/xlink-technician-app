@@ -45,7 +45,7 @@
             <text>确定删除这条记录？</text>
             <AppButton size="compact" :disabled="busy"
               :data-testid="`a-special-confirm-delete-${entry.id}`"
-              @tap="run({ kind: 'delete', id: entry.id })">确认删除</AppButton>
+              @tap="run({ kind: 'delete', id: entry.id, expectedRevision: entry.revision })">确认删除</AppButton>
             <AppButton variant="text" size="compact" @tap="confirmDeleteId = null">取消</AppButton>
           </view>
         </view>
@@ -202,6 +202,7 @@ function setField(key: string, value: string | number | boolean | readonly strin
   persistLocalDraft()
 }
 const editingId = ref<string | null>(null)
+const editingRevision = ref<string | null>(null)
 const confirmDeleteId = ref<string | null>(null)
 const confirmFinish = ref(false)
 const confirmSaveFinish = ref(false)
@@ -279,6 +280,7 @@ watch(() => [props.kind, props.workOrderId, props.node.id,
   draftValues.value = {}
   selectedFormDefinitionId.value = ''
   editingId.value = null
+  editingRevision.value = null
   confirmDeleteId.value = null
   confirmFinish.value = false
   confirmSaveFinish.value = false
@@ -297,6 +299,7 @@ function edit(id: string): void {
   const row = viewState.value?.entries.find(entry => entry.id === id && entry.editable)
   if (!row) return
   editingId.value = id
+  editingRevision.value = row.revision ?? null
   selectedFormDefinitionId.value = row.formDefinitionId
   draftValues.value = { ...row.values }
   confirmDeleteId.value = null
@@ -305,10 +308,11 @@ function edit(id: string): void {
   editRevision++
   void restoreLocalDraft()
 }
-function cancelEdit(): void { editingId.value = null; draftValues.value = {}; editRevision++; void restoreLocalDraft() }
+function cancelEdit(): void { editingId.value = null; editingRevision.value = null; draftValues.value = {}; editRevision++; void restoreLocalDraft() }
 async function save(): Promise<void> {
   const action: AStageSpecialAction = editingId.value
-    ? { kind: 'edit', id: editingId.value, fields: draftValues.value, formDefinitionId: selectedFormDefinitionId.value }
+    ? { kind: 'edit', id: editingId.value, fields: draftValues.value, formDefinitionId: selectedFormDefinitionId.value,
+      ...(editingRevision.value ? { expectedRevision: editingRevision.value } : {}) }
     : { kind: 'save', fields: draftValues.value, formDefinitionId: selectedFormDefinitionId.value }
   await run(action)
 }

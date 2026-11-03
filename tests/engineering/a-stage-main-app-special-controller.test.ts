@@ -508,3 +508,58 @@ describe('A main-App source-only multi-form/repeat controller', () => {
     expect((await ui.load()).entries.filter(row => row.editable)).toHaveLength(1)
   })
 })
+
+
+describe('A special Mock cross-editor revision and transaction boundary', () => {
+  it.each(['forms', 'repeat'] as const)('%s rejects a stale edit from another editor, including a cold read', async kind => {
+    const editorA = controller(kind)
+    const editorB = controller(kind)
+    const created = await editorA.execute({ kind: 'save', fields: fields('初始记录') })
+    expect(created.state).toBe('succeeded')
+    if (created.state !== 'succeeded') return
+    const saved = created.view.entries.find(row => row.editable)!
+    expect(typeof saved.revision).toBe('string')
+    const oldVersion = (await editorB.load()).entries.find(row => row.id === saved.id)!.revision!
+    const first = await editorA.execute({
+      kind: 'edit', id: saved.id, expectedRevision: saved.revision, fields: fields('编辑器 A 修改'),
+    })
+    expect(first.state).toBe('succeeded')
+    const stale = await editorB.execute({
+      kind: 'edit', id: saved.id, expectedRevision: oldVersion, fields: fields('编辑器 B 旧版本'),
+    })
+    expect(stale).toMatchObject({ state: 'blocked' })
+    resetMockCommandState()
+    const persisted = (await controller(kind).load()).entries.find(row => row.id === saved.id)!
+    expect(persisted.values.inspectionSummary).toBe('编辑器 A 修改')
+    expect(persisted.revision).not.toBe(oldVersion)
+  })
+
+  it('serializes concurrent same-record writes and blocks one stale submission', async () => {
+    const created = await controller('forms').execute({ kind: 'save', fields: fields('创建') })
+    expect(created.state).toBe('succeeded')
+    if (created.state !== 'succeeded') return
+    const row = created.view.entries.find(item => item.editable)!
+    const results = await Promise.all([
+      controller('forms').execute({ kind: 'edit', id: row.id,
+        expectedRevision: row.revision, fields: fields('第一版') }),
+      controller('forms').execute({ kind: 'edit', id: row.id,
+        expectedRevision: row.revision, fields: fields('第二版') }),
+    ])
+    expect(results.map(item => item.state).sort()).toEqual(['blocked', 'succeeded'])
+  })
+
+  it('fails closed on media-sized storage quota rejection without exposing a successful record', async () => {
+    const original = (globalThis as unknown as { uni: { getStorageSync: (key: string) => unknown } }).uni
+    vi.stubGlobal('uni', {
+      ...original,
+      setStorageSync: (key: string, value: unknown) => {
+        if (key === 'xlink.dev.mock.r1-special.020-021.v1') throw new Error('QuotaExceededError')
+        memory.set(key, value)
+      },
+    })
+    const result = await controller('repeat').execute({ kind: 'save', fields: fields('写入容量不足') })
+    expect(result.state).not.toBe('succeeded')
+    expect(memory.has('xlink.dev.mock.r1-special.020-021.v1')).toBe(false)
+    await expect(controller('repeat').load()).rejects.toThrow()
+  })
+})

@@ -6,6 +6,7 @@ import { createActionDraftRepository, type ActionDraftIdentity } from '@runtimes
 import { isDevMockJourneyEnabled } from '@adapters/api/mock/journey'
 import { tryMockRead } from '@adapters/api/mock/router'
 import { tryMockR1SpecialCommand } from '@adapters/api/mock/r1-special-protocol'
+import { withR1SpecialMockTransaction } from '@adapters/api/mock/r1-special-state'
 import { formDefinition } from '@adapters/api/read-models/form'
 import {
   mockR1FormsWorkOrderId, mockR1RepeatWorkOrderId,
@@ -204,7 +205,9 @@ export function createAStageSpecialMockController(options: {
         throw new Error('表单身份与当前节点不一致。')
       }
       const fields = object(row?.exts)
-      entries.push({ id: raw._id, formDefinitionId: formDefId,
+      entries.push({ id: raw._id,
+        ...(own ? { revision: JSON.stringify(row) } : {}),
+        formDefinitionId: formDefId,
         title: typeof raw.formTitle === 'string' ? raw.formTitle : '现场记录',
         summary: typeof fields?.inspectionSummary === 'string' ? fields.inspectionSummary : '',
         values: Object.fromEntries(sourceDefinition.fields!.filter(field => !field.presentationOnly
@@ -321,6 +324,7 @@ export function createAStageSpecialMockController(options: {
     if (inFlight) return { state: 'blocked', message: '正在处理上一笔表单操作。' }
     inFlight = true
     try {
+      return await withR1SpecialMockTransaction<AStageSpecialOutcome>('snapshot-020-021', async () => {
       if (!authorized()) return { state: 'blocked', message: '当前角色或 Mock 环境不可用。' }
       if (await network.current() === 'offline') return { state: 'blocked',
         message: '网络不可用，填写内容保留在本机。连接恢复后请主动保存。' }
@@ -343,6 +347,10 @@ export function createAStageSpecialMockController(options: {
         ? validateR1SpecialMockFields(chosen.definition, action.fields) : null
       if (checked && !checked.ok) return { state: 'blocked', message: checked.message }
       const fields = checked?.ok ? checked.fields : undefined
+      if ('expectedRevision' in action && action.expectedRevision !== undefined
+        && (!selected || selected.revision !== action.expectedRevision)) {
+        return { state: 'blocked', message: '记录已被其他编辑器更新，请重新读取后再修改。' }
+      }
       if (action.kind === 'save' || action.kind === 'save_finish') {
         if (action.kind === 'save_finish' && kind !== 'forms') return { state: 'blocked',
           message: '只有 forms 节点支持保存后立即完成。' }
@@ -436,8 +444,9 @@ export function createAStageSpecialMockController(options: {
       if (!reconciled || !authorized()) return { state: 'uncertain',
         message: 'Mock 已收到操作，但权威回读尚未闭环；已保留防重回执。' }
       return { state: 'succeeded', view: await load() }
+      })
     } catch {
-      return { state: 'uncertain', message: '表单操作结果未能完整确认，禁止盲目重试。' }
+      return { state: 'uncertain', message: '表单操作被本机事务锁或回读异常阻止，禁止盲目重试。' }
     } finally { inFlight = false }
   }
   return { load, execute, recoverCompleted, network, readDraft, writeDraft, removeDraft }
