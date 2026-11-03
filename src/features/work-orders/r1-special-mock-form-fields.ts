@@ -12,7 +12,7 @@ export type R1SpecialMockValidation =
  * cascade path. External providers, unknown arrays and media stay fenced. */
 export const r1SpecialMockWritableTypes: ReadonlySet<string> = new Set([
   'textarea', 'text', 'radio', 'phone', 'IDNumber', 'number', 'digit', 'switch', 'select',
-  'checkbox', 'cascade', 'date', 'time', 'datetime', 'rate',
+  'checkbox', 'cascade', 'bizSelect', 'date', 'time', 'datetime', 'rate',
 ])
 
 function finiteDecimalWithoutRounding(raw: string | number | boolean | readonly string[]): boolean {
@@ -68,9 +68,10 @@ export function validateR1SpecialMockFields(
       continue
     }
     const arrayField = field.type === 'checkbox' || field.type === 'cascade'
+      || (field.type === 'bizSelect' && field.multiple === true)
     if (Array.isArray(raw)) {
       if (!arrayField || raw.length > 30 || raw.some(value => typeof value !== 'string' || value.length > 256)
-        || (field.type === 'checkbox' && new Set(raw).size !== raw.length)) {
+        || ((field.type === 'checkbox' || field.type === 'bizSelect') && new Set(raw).size !== raw.length)) {
         return { ok: false, message: `${field.label}的数组值无效。` }
       }
     } else if (arrayField || (typeof raw !== 'string' && typeof raw !== 'number' && typeof raw !== 'boolean')) {

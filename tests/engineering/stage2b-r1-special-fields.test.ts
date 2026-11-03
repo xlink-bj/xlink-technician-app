@@ -86,4 +86,21 @@ describe('Stage 2B R1 source-shaped primitive FormDef write contract', () => {
     expect(validateR1SpecialMockFields(reordered, { ...valid, inspectionResult: 'follow_up' }).ok).toBe(false)
   })
 
+  it('uses resolved business-record choices in special submissions without a code-provider fallback', () => {
+    const resolved = { ...definition, fields: definition.fields!.map(field =>
+      field.valueKey === 'inspectionCategory' ? { ...field, type: 'bizSelect',
+        valueOption: 'projPackage', multiple: true,
+        options: [{ value: 'package-a', label: '套餐一' }, { value: 'package-b', label: '套餐二' }] } : field) }
+    expect(validateR1SpecialMockFields(resolved, { ...valid, inspectionCategory: ['package-b', 'package-a'] }))
+      .toMatchObject({ ok: true, fields: { inspectionCategory: ['package-b', 'package-a'] } })
+    for (const value of [['forged'], ['package-a', 'package-a'], 'package-a']) {
+      expect(validateR1SpecialMockFields(resolved, { ...valid, inspectionCategory: value }).ok).toBe(false)
+    }
+    for (const change of [{ options: undefined }, { valueOption: 'unverified' }]) {
+      const denied = { ...resolved, fields: resolved.fields.map(field =>
+        field.type === 'bizSelect' ? { ...field, ...change } : field) }
+      expect(validateR1SpecialMockFields(denied, { ...valid, inspectionCategory: ['package-a'] }).ok).toBe(false)
+    }
+  })
+
 })
