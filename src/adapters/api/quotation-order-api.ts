@@ -103,8 +103,62 @@ function browseAmount(record: AdapterRecord, keys: readonly string[]): number | 
   return undefined
 }
 
+function r1AmountToFixed(value: number): number {
+  if (!value) return 0
+  const rounded = Number(value.toFixed(2))
+  return rounded || 0
+}
+
+function r1LinePriceRelationshipMatches(
+  row: AdapterRecord,
+  display: AdapterRecord,
+  kind: QuotationOrderBrowseKind,
+  unitPrice: number | undefined,
+  quantity: number | undefined,
+  lineTotal: number | undefined,
+): boolean {
+  if (unitPrice === undefined || quantity === undefined || lineTotal === undefined) return false
+  const calculated = unitPrice * quantity
+  if (!Number.isFinite(calculated)) return false
+  const rounded = r1AmountToFixed(calculated)
+  if (lineTotal === rounded) return true
+
+  // R1 lets package and procedure minimums raise a line subtotal above its
+  // captured unit price × quantity; materials and measures have no such floor.
+  const minimumKey = kind === 'package' ? 'minimumPrice'
+    : kind === 'procedure' ? 'minimumGuideTotalPrice' : undefined
+  if (!minimumKey) return false
+  const minimum = browseAmount(row, [minimumKey])
+    ?? (display !== row ? browseAmount(display, [minimumKey]) : undefined)
+  return minimum !== undefined && calculated < minimum && lineTotal === minimum
+}
+
 function stringIdentity(record: AdapterRecord, keys: readonly string[]): string | undefined {
   return optionalString(record, keys)
+}
+
+function consistentProductCode(
+  records: readonly (AdapterRecord | undefined)[],
+  key: 'spuCode' | 'skuCode',
+  label: string,
+): string | undefined {
+  const codes = records.map(record => record ? optionalString(record, [key]) : undefined)
+    .filter((code): code is string => code !== undefined)
+  if (new Set(codes).size > 1) throw new AdapterMappingError(`${label} contains contradictory codes`)
+  return codes[0]
+}
+
+function materialSkuIdentityClaim(row: AdapterRecord, embedded?: AdapterRecord): boolean {
+  return Boolean(
+    consistentWireIdentity(row, ['spuid', 'spuId'], 'Order line SPU')
+    || consistentWireIdentity(embedded ?? {}, ['spuid', 'spuId'], 'Order product SPU')
+    || optionalString(row, ['skuId'])
+    || optionalString(embedded ?? {}, ['skuId'])
+    || optionalString(row, ['skuCode'])
+    || optionalString(embedded ?? {}, ['skuCode'])
+    || optionalString(optionalRecord(row.exts) ?? {}, ['skuCode'])
+    || optionalString(optionalRecord(embedded?.exts) ?? {}, ['skuCode']),
+  )
 }
 
 function browseIdentity(
@@ -117,6 +171,8 @@ function browseIdentity(
       : kind === 'material' ? 'materialId' : 'measureId'
   const nestedExts = optionalRecord(embedded?.exts)
   const exts = optionalRecord(row.exts)
+  const spuCode = consistentProductCode([row, embedded, nestedExts, exts], 'spuCode', 'Order line SPU code')
+  const skuCode = consistentProductCode([row, embedded, nestedExts, exts], 'skuCode', 'Order line SKU code')
   // Distinguish SPU catalog identity from SKU variant identity. Conflicting
   // aliases or nested-vs-row parent claims must not be silently preferred.
   const rowSpu = consistentWireIdentity(row, ['spuid', 'spuId'], 'Order line SPU')
@@ -129,21 +185,33 @@ function browseIdentity(
   if (rowSku && nestedSku && rowSku !== nestedSku) {
     throw new AdapterMappingError('Order line and nested product SKU disagree')
   }
+  const rowId = consistentWireIdentity(row, ['_id', 'id'], 'Order line row')
+  const skuIdFromR1Row = kind === 'material' && rowSpu ? rowId : undefined
+  if (rowSku && skuIdFromR1Row && rowSku !== skuIdFromR1Row) {
+    throw new AdapterMappingError('Order line SKU identity disagrees with its R1 SKU row')
+  }
+  const hasSkuIdentityClaim = kind === 'material' && Boolean(
+    rowSku || nestedSku || rowSpu || nestedSpu
+      || stringIdentity(row, ['skuCode']) || stringIdentity(embedded ?? {}, ['skuCode'])
+      || stringIdentity(exts ?? {}, ['skuCode']) || stringIdentity(nestedExts ?? {}, ['skuCode']),
+  )
+  const materialSpuId = kind === 'material'
+    ? rowSpu ?? nestedSpu
+      ?? consistentWireIdentity(embedded ?? {}, ['_id', 'id'], 'Order material SPU')
+      ?? consistentWireIdentity(row, ['materialId'], 'Order material reference')
+      ?? (hasSkuIdentityClaim ? undefined : rowId)
+    : undefined
   return {
-    ...(stringIdentity(row, ['_id']) ? { providerRowId: stringIdentity(row, ['_id']) } : {}),
+    ...(rowId ? { providerRowId: rowId } : {}),
     ...(referenceKey && stringIdentity(row, [referenceKey]) ? { providerReferenceId: stringIdentity(row, [referenceKey]) } : {}),
-    ...(nestedSpu || rowSpu
-      ? { spuId: nestedSpu || rowSpu }
+    ...(materialSpuId || nestedSpu || rowSpu
+      ? { spuId: materialSpuId || nestedSpu || rowSpu }
       : {}),
-    ...(nestedSku || rowSku
-      ? { skuId: nestedSku || rowSku }
+    ...(nestedSku || rowSku || skuIdFromR1Row
+      ? { skuId: nestedSku || rowSku || skuIdFromR1Row }
       : {}),
-    ...(stringIdentity(embedded ?? {}, ['spuCode']) || stringIdentity(nestedExts ?? {}, ['spuCode']) || stringIdentity(exts ?? {}, ['spuCode'])
-      ? { spuCode: stringIdentity(embedded ?? {}, ['spuCode']) || stringIdentity(nestedExts ?? {}, ['spuCode']) || stringIdentity(exts ?? {}, ['spuCode']) }
-      : {}),
-    ...(stringIdentity(embedded ?? {}, ['skuCode']) || stringIdentity(nestedExts ?? {}, ['skuCode']) || stringIdentity(exts ?? {}, ['skuCode'])
-      ? { skuCode: stringIdentity(embedded ?? {}, ['skuCode']) || stringIdentity(nestedExts ?? {}, ['skuCode']) || stringIdentity(exts ?? {}, ['skuCode']) }
-      : {}),
+    ...(spuCode ? { spuCode } : {}),
+    ...(skuCode ? { skuCode } : {}),
   }
 }
 
@@ -168,9 +236,29 @@ function browseLine(
   const label = optionalString(display, ['name', 'content', 'label'])
     ?? optionalString(row, ['name', 'content', 'label'])
   const quantity = browseAmount(row, ['number', 'quantity'])
-  const amount = browseAmount(row, ['totalAmount', 'amount', 'price'])
+  // In the pinned R1 quotation flow, `amount` is the captured order-line unit
+  // price and `totalAmount` is the persisted line result. `price` may be the
+  // current catalog value, so it must never be presented as the Order amount.
+  const unitPrice = browseAmount(row, ['amount'])
+    ?? (display !== row ? browseAmount(display, ['amount']) : undefined)
+  const lineTotal = browseAmount(row, ['totalAmount'])
+    ?? (display !== row ? browseAmount(display, ['totalAmount']) : undefined)
   let children: QuotationOrderBrowseLine[] = []
   let contentSupported = Boolean(label)
+  const identity = browseIdentity(row, kind, nested)
+  const hasSkuIdentityClaim = kind === 'material' && materialSkuIdentityClaim(row, nested)
+  const identitySupported = kind === 'package'
+    ? Boolean(identity.providerRowId)
+    : kind === 'material'
+      ? Boolean(identity.spuId && (!hasSkuIdentityClaim || identity.skuId))
+      : Boolean(identity.providerReferenceId || identity.providerRowId)
+  // An incomplete or contradictory saved amount projection is visible as
+  // partial data, never silently completed by a live catalog price. R1's
+  // package/procedure minimum floors are accounted for explicitly.
+  const priceProjectionSupported = r1LinePriceRelationshipMatches(
+    row, display, kind, unitPrice, quantity, lineTotal,
+  )
+  contentSupported = contentSupported && identitySupported && priceProjectionSupported
 
   if (kind === 'package') {
     const childKinds: readonly QuotationOrderBrowseKind[] = ['procedure', 'material', 'measure']
@@ -189,6 +277,17 @@ function browseLine(
         contentSupported = false
         continue
       }
+      if (childKind === 'material' && (childRows as AdapterRecord[]).some((child) =>
+        Array.isArray(child.skus) && child.skus.some(skuValue => {
+          const sku = optionalRecord(skuValue)
+          return sku !== undefined && browseAmount(sku, ['number', 'quantity']) !== undefined
+            && (browseAmount(sku, ['number', 'quantity']) ?? 0) > 0
+        }))) {
+        // R1's package-SKU transform drops the parent SPU ID before grouping.
+        // Keep the package visible but mark its embedded SKU identity/price
+        // relationship unverified instead of presenting a partial variant set.
+        contentSupported = false
+      }
       children.push(...(childRows as AdapterRecord[]).map((child) => browseLine(child, childKind, childKind)))
     }
   }
@@ -200,8 +299,9 @@ function browseLine(
     ...(optionalString(display, ['unit']) || optionalString(row, ['unit'])
       ? { unit: optionalString(display, ['unit']) || optionalString(row, ['unit']) }
       : {}),
-    ...(amount === undefined ? {} : { amount }),
-    identity: browseIdentity(row, kind, nested),
+    ...(contentSupported && unitPrice !== undefined ? { unitPrice } : {}),
+    ...(contentSupported && lineTotal !== undefined ? { lineTotal } : {}),
+    identity,
     children,
     contentSupported,
   }
@@ -260,10 +360,12 @@ function quotationOrderBrowseItem(raw: unknown): QuotationOrderBrowseItem {
   const groups = Array.isArray(rawGroups) ? rawGroups.map(browseGroup) : []
   const exts = optionalRecord(record.exts)
   const pdfValue = typeof exts?.bjdPDFurl === 'string' ? exts.bjdPDFurl.trim() : ''
+  const contractId = consistentWireIdentity(record, ['contractId'], 'Quotation Order Contract reference')
   return {
     id,
     type: 1,
     serviceAppointmentId,
+    ...(contractId ? { contractId } : {}),
     ...(optionalString(record, ['orderNumber']) ? { displayNumber: optionalString(record, ['orderNumber']) } : {}),
     ...(optionalSignedInteger(record, ['state']) !== undefined ? { state: optionalSignedInteger(record, ['state']) } : {}),
     ...(optionalSignedInteger(record, ['processState']) !== undefined ? { processState: optionalSignedInteger(record, ['processState']) } : {}),
@@ -417,7 +519,8 @@ export class QuotationOrderReadAdapter implements QuotationOrderReadPort {
    * Technician workflow. Preserve source filters/sort, omit R1's _all=1:
    * existing FlipPageInfo + EMongoTemplate expand page size to total when
    * _all=1, making rows=3 NOT a real backend limit. Do not expand the
-   * Production transport allowlist. Zero rows remain INCONCLUSIVE.
+   * Production transport allowlist. Zero rows remain INCONCLUSIVE and never
+   * prove no Contract.
    */
   async listR1ContractsForSigningReview(
     workOrderId: string, orderId: string,
@@ -450,6 +553,7 @@ export class QuotationOrderReadAdapter implements QuotationOrderReadPort {
       ).length !== 1) {
         return adapterFailure('authorization_denied', '目标正式订单不属于已验证列表。')
       }
+      const selectedOrder = orders.data.items.find(item => item.id === orderId)!
       // Primary technician R1 query fields and OR semantics; pagination is
       // deliberately bounded rather than copying the unbounded R1 _all flag.
       const raw = await this.transport.execute({
@@ -487,8 +591,10 @@ export class QuotationOrderReadAdapter implements QuotationOrderReadPort {
         }
         seen.add(id)
         // R1 lists Contracts for the WorkOrder, which may belong to other
-        // Orders. Only project metadata attached to the exact selected Order.
+        // Orders. Only project metadata attached to the exact selected Order;
+        // when Order.contractId exists, it is an additional exact association.
         if (owningOrder !== orderId) continue
+        if (selectedOrder.contractId && selectedOrder.contractId !== id) continue
         const exts = optionalRecord(row.exts)
         const rawStatus = optionalString(exts ?? {}, ['contractStatus'])
         const status = rawStatus && /^-?\d{1,3}$/.test(rawStatus) ? rawStatus : undefined

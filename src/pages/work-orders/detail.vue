@@ -234,31 +234,31 @@
 
         <view v-else-if="activeTab === 'quotation' && productionReadOnly" class="tab-panel quotation-read-panel" data-testid="production-quotation-read-panel">
           <view class="quotation-read-intro">
-            <text class="tab-empty-title">报价记录 · 只读</text>
-            <text class="tab-empty-copy">查看当前工单最近的报价记录，历史报价暂不支持编辑。</text>
+            <text class="tab-empty-title">正式订单 · 只读</text>
+            <text class="tab-empty-copy">查看当前工单最近的正式订单。此处为有限只读核验，未显示不代表后台不存在。</text>
           </view>
           <view v-if="quotationBrowse.state === 'loading'" class="quotation-read-state" data-testid="quotation-read-loading">
-            <AppLoadingState variant="inline" label="正在读取报价记录" />
+            <AppLoadingState variant="inline" label="正在读取正式订单" />
           </view>
           <view v-else-if="quotationBrowse.state === 'failed_retryable' || quotationBrowse.state === 'failed_terminal'" class="quotation-read-state" data-testid="quotation-read-error">
             <text class="tab-empty-copy">{{ quotationBrowse.errorMessage }}</text>
             <button class="state-action quotation-retry" @tap="retryQuotationRead">重新读取</button>
           </view>
           <view v-else-if="quotationBrowse.state === 'idle'" class="quotation-read-state">
-            <button class="state-action quotation-retry" @tap="loadQuotationRead">读取该工单报价记录</button>
+            <button class="state-action quotation-retry" @tap="loadQuotationRead">读取该工单正式订单</button>
           </view>
           <view v-else-if="matchingQuotationOrders.length === 0" class="tab-empty" data-testid="quotation-read-empty">
-            <text class="tab-empty-title">暂未找到近期报价记录</text>
-            <text class="tab-empty-copy">可稍后重试，或联系业务人员核实历史报价。</text>
+            <text class="tab-empty-title">本次有限读取未核验到正式订单</text>
+            <text class="tab-empty-copy">当前结果不能证明订单不存在，可联系业务人员进一步核实。</text>
           </view>
           <view v-else class="quotation-read-list">
             <view v-for="order in matchingQuotationOrders" :key="order.id" class="quotation-read-card" data-testid="quotation-read-record">
               <view class="quotation-read-heading">
-                <text class="quotation-read-number">{{ order.displayNumber ? `报价单 ${order.displayNumber}` : '报价记录' }}</text>
+                <text class="quotation-read-number">{{ order.displayNumber ? `订单 ${order.displayNumber}` : '正式订单' }}</text>
                 <text v-if="order.updateTime" class="quotation-read-date">{{ order.updateTime }}</text>
               </view>
-              <text class="quotation-read-readonly">历史报价 · 仅供查看</text>
-              <text v-if="order.totalPrice !== undefined" class="quotation-read-total">报价金额：¥{{ order.totalPrice.toFixed(2) }}</text>
+              <text class="quotation-read-readonly">后台订单记录 · 仅供查看</text>
+              <text v-if="order.totalPrice !== undefined" class="quotation-read-total">订单金额：¥{{ order.totalPrice.toFixed(2) }}</text>
               <view v-if="order.groups.length === 0" class="quotation-read-warning">
                 <text>报价分组内容暂不可识别，已保留只读状态。</text>
               </view>
@@ -271,7 +271,7 @@
                     <text class="quotation-read-line-label">{{ row.line.label }}</text>
                   </view>
                   <text class="quotation-read-meta">
-                    {{ row.line.quantity === undefined ? '' : `${row.line.quantity}${row.line.unit ? ` ${row.line.unit}` : ''}` }}{{ row.line.amount === undefined ? '' : ` · ¥${row.line.amount.toFixed(2)}` }}
+                    {{ row.line.quantity === undefined ? '' : `数量：${row.line.quantity}${row.line.unit ? ` ${row.line.unit}` : ''}` }}{{ row.line.unitPrice === undefined ? '' : ` · 单价：¥${row.line.unitPrice.toFixed(2)}` }}{{ row.line.lineTotal === undefined ? '' : ` · 小计：¥${row.line.lineTotal.toFixed(2)}` }}
                   </text>
                 </view>
                 <text v-if="!group.contentSupported" class="quotation-read-warning">该分组含未识别字段，以上仅为可确认内容。</text>
@@ -460,7 +460,7 @@ const preAcceptBlocked = computed(() => Boolean(
 ))
 const activeTab = ref<DetailTabKey>('follow-up')
 const visibleDetailTabs = computed(() => productionReadOnly
-  ? [...detailTabs, { key: 'quotation' as const, label: '报价记录' }]
+  ? [...detailTabs, { key: 'quotation' as const, label: '正式订单' }]
   : detailTabs)
 const matchingQuotationOrders = computed(() => quotationBrowse.items.filter(
   (order) => order.serviceAppointmentId === String(detail.value?.id ?? ''),

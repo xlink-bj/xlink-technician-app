@@ -1,5 +1,6 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createQuotationOrderReadAdapter } from '@adapters/api/quotation-order-api'
+import { createUniApiReadTransport } from '@adapters/api/uni-api-read-transport'
 import type { ApiReadRequest } from '@adapters/api/technician-api'
 import { isProductionReadOnlyReadAllowed } from '@shared/config'
 import { isMockOwnedRead } from '@adapters/api/mock/router'
@@ -18,6 +19,12 @@ const contract = (extra: Record<string, unknown> = {}) => ({
   qiniuUrls: ['https://synthetic.invalid/legal.pdf'],
   signedDate: '2026-10-12 10:00:00', ...extra,
 })
+const contractQuery = {
+  page: 1, rows: 3, 'is:serviceAppointmentId|string#and': workOrderId,
+  'is:state|integer#or': '1', 'is:exts.contractStatus|string#or': '-2',
+  sortField: 'createTime', sortOrder: 'desc',
+}
+afterEach(() => vi.unstubAllEnvs())
 function fakePort(options: {
   read: (request: ApiReadRequest) => Promise<unknown>
   listed?: () => boolean
@@ -31,7 +38,7 @@ function fakePort(options: {
   )
   return { port, execute }
 }
-describe('M1 I6 actual R1 Contract metadata read — source-accurate, NOT production enabled', () => {
+describe('M1 I6 R1 Contract metadata read — source-accurate, Production remains blocked', () => {
   it('matches the PRIMARY R1 ServiceAppointment Contract query with DB-bounded pagination and verified type1 Order', async () => {
     const reqs: ApiReadRequest[] = []
     const f = fakePort({ read: async req => {
@@ -105,6 +112,23 @@ describe('M1 I6 actual R1 Contract metadata read — source-accurate, NOT produc
     expect(JSON.stringify(result)).not.toContain('foreign-order-contract')
   })
 
+  it('uses Order.contractId as the additional exact Contract identity when R1 provides it', async () => {
+    const orderWithContract = { ...baseOrder, contractId: 'contract-current' }
+    const f = fakePort({ read: async req => req.path === 'basic/order/query'
+      ? { data: [orderWithContract] } : { data: [
+        contract({ _id: 'contract-history' }),
+        contract({ _id: 'contract-current' }),
+      ] } })
+    const result = await f.port.listR1ContractsForSigningReview!(workOrderId, orderId)
+    expect(result).toMatchObject({ state: 'succeeded', data: { items: [{ id: 'contract-current' }] } })
+    expect(JSON.stringify(result)).not.toContain('contract-history')
+
+    const noExactMatch = fakePort({ read: async req => req.path === 'basic/order/query'
+      ? { data: [orderWithContract] } : { data: [contract({ _id: 'contract-history' })] } })
+    expect(await noExactMatch.port.listR1ContractsForSigningReview!(workOrderId, orderId))
+      .toMatchObject({ state: 'succeeded', data: { items: [], completeness: 'bounded_unverified' } })
+  })
+
   it.each([
     ['wrong WorkOrder', [contract({ serviceAppointmentId: 'other-workorder' })]],
     ['missing WorkOrder', [contract({ serviceAppointmentId: null })]],
@@ -169,17 +193,38 @@ describe('M1 I6 actual R1 Contract metadata read — source-accurate, NOT produc
     ])
   })
 
-  it('Production transport explicitly rejects R1 Contract route until separately approved', () => {
-    const body = {
-      page: 1, rows: 3, 'is:serviceAppointmentId|string#and': workOrderId,
-      'is:state|integer#or': '1',
-      'is:exts.contractStatus|string#or': '-2', sortField: 'createTime', sortOrder: 'desc',
+  it('keeps R1 Contract requests outside the Production route matrix until live scope is reviewed', () => {
+    expect(isProductionReadOnlyReadAllowed({ method: 'POST', path: 'basic/contract/query.do', body: contractQuery })).toBe(false)
+    for (const body of [
+      { ...contractQuery, _all: '1' },
+      { ...contractQuery, rows: 4 },
+      { ...contractQuery, page: 2 },
+      { ...contractQuery, 'is:state|integer#or': '0' },
+      { ...contractQuery, 'is:exts.contractStatus|string#or': '1' },
+      { ...contractQuery, 'is:orderId|string#and': orderId },
+      { ...contractQuery, 'is:serviceAppointmentId|string#and': '../other' },
+    ]) {
+      expect(isProductionReadOnlyReadAllowed({ method: 'POST', path: 'basic/contract/query.do', body })).toBe(false)
     }
-    expect(isProductionReadOnlyReadAllowed({ method: 'POST', path: 'basic/contract/query.do', body })).toBe(false)
+    expect(isProductionReadOnlyReadAllowed({ method: 'GET', path: 'basic/contract/query.do', body: contractQuery })).toBe(false)
     expect(isProductionReadOnlyReadAllowed({ method: 'POST', path: 'signature/applyForElectronicSignature',
       body: { orderId_thread: orderId } })).toBe(false)
     expect(isProductionReadOnlyReadAllowed({ method: 'POST', path: 'signature/handleReminderContract',
       body: { contractId: 'contract-1' } })).toBe(false)
+  })
+
+  it('Production transport rejects the bounded Contract query before network dispatch', async () => {
+    vi.stubEnv('VITE_XLINK_ENVIRONMENT', 'prod')
+    const request = vi.fn()
+    const transport = createUniApiReadTransport({
+      apiBaseUrl: 'https://production.invalid',
+      getSessionRef: () => 'session' as never,
+      request,
+    })
+
+    await expect(transport.execute({ method: 'POST', path: 'basic/contract/query.do', body: contractQuery }))
+      .rejects.toMatchObject({ category: 'unsupported_capability' })
+    expect(request).not.toHaveBeenCalled()
   })
 
   it('mock-owned synthetic WorkOrders cannot fall through to a real Contract endpoint', () => {

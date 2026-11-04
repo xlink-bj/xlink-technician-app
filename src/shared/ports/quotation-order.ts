@@ -17,7 +17,10 @@ export interface QuotationOrderBrowseLine {
   readonly label: string
   readonly quantity?: number
   readonly unit?: string
-  readonly amount?: number
+  /** R1 persisted Order `amount`; never fall back to the current catalog `price`. */
+  readonly unitPrice?: number
+  /** R1 persisted Order `totalAmount`; never inferred from catalog price × quantity. */
+  readonly lineTotal?: number
   readonly identity: QuotationOrderBrowseIdentity
   readonly children: readonly QuotationOrderBrowseLine[]
   readonly contentSupported: boolean
@@ -37,6 +40,8 @@ export interface QuotationOrderBrowseItem {
   readonly id: string
   readonly type: 1
   readonly serviceAppointmentId: string
+  /** Optional R1 Order.contractId; when present it narrows Contract status to the exact record. */
+  readonly contractId?: string
   readonly displayNumber?: string
   readonly state?: number
   readonly processState?: number
@@ -97,7 +102,7 @@ export interface QuotationOrderReadPort {
   readScopedTypeOneOrderForSigningReview?(
     workOrderId: string, orderId: string,
   ): Promise<OperationSnapshot<ScopedSigningOrderReviewRead>>
-  /** R1 legacy Contract query, NOT production-approved until the query-field mismatch is reconciled. */
+  /** Explicit, role-scoped R1 Contract status metadata read; never grants document or signing access. */
   listR1ContractsForSigningReview?(
     workOrderId: string, orderId: string,
   ): Promise<OperationSnapshot<R1ScopedContractRead>>

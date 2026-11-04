@@ -10,7 +10,7 @@
       class="signing-read-section xl-craft__surface xl-craft__surface--flat"
       data-testid="signing-order-read-blocked"
     >
-      <text>当前订单暂无法完成签约前只读核验。请从当前账号可见的工单报价记录重新进入。</text>
+      <text>当前订单暂无法完成签约前只读核验。请从当前账号可见工单中的正式订单重新进入。</text>
       <AppButton
         v-if="session.status === 'authenticated' && review.snapshot.state === 'failed_retryable'"
         block variant="secondary" data-testid="signing-order-read-retry"
@@ -82,16 +82,19 @@
       <AppRecordCard class="signing-read-section xl-craft__surface xl-craft__surface--flat" data-testid="signing-order-read-contract-status">
         <AppSectionHeading title="合同记录" />
         <text v-if="!devFixtureContractRead" data-testid="signing-contract-prod-blocked">
-          合同详情暂未开放
+          合同状态核验暂未开放
         </text>
-        <text v-else-if="review.contractSnapshot.state === 'idle' || review.contractSnapshot.state === 'failed_retryable'"
+        <text v-else class="signing-read-help" data-testid="signing-contract-read-scope">
+          仅核验当前工单已确认订单的合同状态，不读取合同文件或签署信息。
+        </text>
+        <text v-if="devFixtureContractRead && (review.contractSnapshot.state === 'idle' || review.contractSnapshot.state === 'failed_retryable')"
           class="signing-read-help">合同状态待核验</text>
         <AppLoadingState v-if="review.contractSnapshot.state === 'loading'"
           variant="inline" label="正在只读核验合同状态" />
         <text v-if="review.contractSnapshot.state === 'failed_terminal'">合同核验失败</text>
         <template v-if="review.contractSnapshot.state === 'succeeded'">
           <text v-if="review.contractSnapshot.items.length === 0" data-testid="signing-contract-inconclusive">
-            暂未核验到合同记录
+            本次有界读取未核验到合同记录
           </text>
           <view v-for="contract in review.contractSnapshot.items" :key="contract.id" class="signing-read-contract-item"
             data-testid="signing-contract-matched">
@@ -191,7 +194,7 @@ const signingPhaseTitle = computed(() => signingProgress.value.title.replace(
 const signingNextActionDisplay = computed(() => {
   switch (review.contractSnapshot.state) {
     case 'idle': return devFixtureContractRead.value
-      ? '核验合同状态' : '合同状态待核验'
+      ? '核验合同状态' : '合同状态核验暂未开放'
     case 'loading': return '正在核验合同状态'
     case 'failed_retryable': return '合同核验失败，可重试'
     case 'failed_terminal': return '请联系支持人员核验'
@@ -209,7 +212,7 @@ const stageInfoExpanded = ref(false)
 const devFixtureContractRead = computed(() => !productionReadOnly
   && isDevSyntheticContractReadPreviewEnabled(routeWorkOrderId.value))
 function readContracts(): void {
-  // This is user-triggered and never bypasses Production's transport gate.
+  // Only the fixed isolated DEV fixture may issue this source-accurate read.
   if (!devFixtureContractRead.value || review.snapshot.state !== 'ready') return
   void review.loadContracts()
 }

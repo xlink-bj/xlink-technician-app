@@ -232,6 +232,20 @@ export function createUniApiReadTransport(options: UniApiReadTransportOptions): 
         }
       }
 
+      const verifyOrderReadScope = (): void => {
+        if (!orderReadGuard) return
+        let stillListed = false
+        let identity: string | null = null
+        try {
+          stillListed = options.isOrderWorkOrderListedForCurrentSession?.(orderReadGuard.workOrderId) === true
+          identity = options.getOrderReadAuthorizationIdentity?.() ?? null
+        } catch { stillListed = false }
+        if (!stillListed || identity !== orderReadGuard.identity
+          || options.getSessionRef() !== orderReadGuard.sessionRef) {
+          throw new ApiReadTransportError('Production Order authorization changed during read', 'authorization_denied')
+        }
+      }
+
       const sessionRef = options.getSessionRef()
       if (!sessionRef) {
         throw new ApiReadTransportError('Authenticated session is required for API reads', 'session_invalid')
@@ -248,18 +262,7 @@ export function createUniApiReadTransport(options: UniApiReadTransportOptions): 
       if (mockResponse !== null) {
         verifyChildWorkflowReadScope()
         verifyRepeatReadScope()
-        if (orderReadGuard) {
-          let stillListed = false
-          let identity: string | null = null
-          try {
-            stillListed = options.isOrderWorkOrderListedForCurrentSession?.(orderReadGuard.workOrderId) === true
-            identity = options.getOrderReadAuthorizationIdentity?.() ?? null
-          } catch { stillListed = false }
-          if (!stillListed || identity !== orderReadGuard.identity
-            || options.getSessionRef() !== orderReadGuard.sessionRef) {
-            throw new ApiReadTransportError('Production Order authorization changed during read', 'authorization_denied')
-          }
-        }
+        verifyOrderReadScope()
         return mockResponse
       }
       if (isMockOwnedRead(input.path, input.body ?? input.query ?? {})) {
@@ -295,18 +298,7 @@ export function createUniApiReadTransport(options: UniApiReadTransportOptions): 
         )
       }
 
-      if (orderReadGuard) {
-        let stillListed = false
-        let identity: string | null = null
-        try {
-          stillListed = options.isOrderWorkOrderListedForCurrentSession?.(orderReadGuard.workOrderId) === true
-          identity = options.getOrderReadAuthorizationIdentity?.() ?? null
-        } catch { stillListed = false }
-        if (!stillListed || identity !== orderReadGuard.identity
-          || options.getSessionRef() !== orderReadGuard.sessionRef) {
-          throw new ApiReadTransportError('Production Order authorization changed during read', 'authorization_denied')
-        }
-      }
+      verifyOrderReadScope()
 
       verifyChildWorkflowReadScope()
       verifyRepeatReadScope()

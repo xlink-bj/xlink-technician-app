@@ -120,6 +120,180 @@ describe('G4-F Production quotation Order read adapter', () => {
     expect(JSON.stringify(result)).not.toContain('private.pdf')
   })
 
+  it('keeps captured Order unit price and line total distinct from the current catalog price', async () => {
+    const result = await createQuotationOrderReadAdapter({
+      execute: async () => ({ data: [{
+        _id: 'official-order-price-read',
+        type: 1,
+        serviceAppointmentId: 'work-order-price-read',
+        originPrice: 51.5,
+        totalPrice: 42.25,
+        discount: 0.9,
+        bjProducts: { orderList: [{
+          repairParts: ['roof'], partDescription: '屋面', totalAmount: 51.5,
+          projPackages: { data: [] }, procedures: { data: [] }, measures: { data: [] },
+          materials: { data: [{
+            _id: 'sku-read-1', spuid: 'spu-read-1', name: '防水材料',
+            number: 2, unit: '桶', price: 99, amount: 10.25, totalAmount: 20.5,
+          }] },
+        }] },
+      }] }),
+    }, () => true).listTypeOneOrdersForWorkOrder('work-order-price-read')
+
+    expect(result).toMatchObject({ state: 'succeeded', data: { items: [{
+      originPrice: 51.5,
+      totalPrice: 42.25,
+      groups: [{ contentSupported: true, lines: [{
+        kind: 'material', quantity: 2, unit: '桶', unitPrice: 10.25, lineTotal: 20.5,
+        identity: { spuId: 'spu-read-1', skuId: 'sku-read-1' },
+      }] }],
+    }] } })
+    expect(JSON.stringify(result)).not.toContain('99')
+    expect(JSON.stringify(result)).not.toContain('discount')
+  })
+
+  it('does not display a catalog `price` as an Order price when captured `amount` fields are absent', async () => {
+    const result = await createQuotationOrderReadAdapter({
+      execute: async () => ({ data: [{
+        _id: 'official-order-incomplete-price', type: 1,
+        serviceAppointmentId: 'work-order-price-read',
+        bjProducts: { orderList: [{
+          repairParts: ['roof'], partDescription: '屋面',
+          projPackages: { data: [] }, procedures: { data: [] }, measures: { data: [] },
+          materials: { data: [{ _id: 'spu-current-catalog', name: '材料', number: 2, price: 199 }] },
+        }] },
+      }] }),
+    }, () => true).listTypeOneOrdersForWorkOrder('work-order-price-read')
+    expect(result).toMatchObject({ state: 'succeeded', data: { items: [{ groups: [{
+      contentSupported: false,
+      lines: [{ identity: { spuId: 'spu-current-catalog' }, contentSupported: false }],
+    }] }] } })
+    const line = result.state === 'succeeded' ? result.data?.items[0]?.groups[0]?.lines[0] : undefined
+    expect(line).not.toHaveProperty('unitPrice')
+    expect(line).not.toHaveProperty('lineTotal')
+    expect(JSON.stringify(result)).not.toContain('199')
+  })
+
+  it('keeps an incomplete or inconsistent persisted amount relationship unverified', async () => {
+    const result = await createQuotationOrderReadAdapter({
+      execute: async () => ({ data: [{
+        _id: 'official-order-inconsistent-price', type: 1,
+        serviceAppointmentId: 'work-order-price-read',
+        bjProducts: { orderList: [{
+          repairParts: ['roof'], partDescription: '屋面',
+          projPackages: { data: [] }, procedures: { data: [] }, measures: { data: [] },
+          materials: { data: [
+            { _id: 'sku-missing-total', spuid: 'spu-price-read', name: '材料 A', number: 2, amount: 10 },
+            { _id: 'sku-inconsistent-total', spuid: 'spu-price-read', name: '材料 B', number: 2, amount: 10, totalAmount: 19.99 },
+          ] },
+        }] },
+      }] }),
+    }, () => true).listTypeOneOrdersForWorkOrder('work-order-price-read')
+
+    expect(result).toMatchObject({ state: 'succeeded', data: { items: [{ groups: [{
+      contentSupported: false,
+      lines: [
+        { contentSupported: false },
+        { contentSupported: false },
+      ],
+    }] }] } })
+    const lines = result.state === 'succeeded' ? result.data?.items[0]?.groups[0]?.lines : undefined
+    expect(lines?.[0]).not.toHaveProperty('unitPrice')
+    expect(lines?.[0]).not.toHaveProperty('lineTotal')
+    expect(lines?.[1]).not.toHaveProperty('unitPrice')
+    expect(lines?.[1]).not.toHaveProperty('lineTotal')
+  })
+
+  it('does not surface a captured SKU price when its parent SPU identity is missing', async () => {
+    const result = await createQuotationOrderReadAdapter({
+      execute: async () => ({ data: [{
+        _id: 'official-order-sku-parent-missing', type: 1,
+        serviceAppointmentId: 'work-order-price-read',
+        bjProducts: { orderList: [{
+          repairParts: ['roof'], projPackages: { data: [] }, procedures: { data: [] },
+          materials: { data: [{
+            _id: 'sku-without-parent', skuId: 'sku-without-parent',
+            name: '材料变体', number: 2, amount: 10, totalAmount: 20,
+          }, {
+            _id: 'sku-code-without-parent', skuCode: 'SKU-ONLY-CODE',
+            name: '仅有 SKU 编码的材料', number: 1, amount: 12, totalAmount: 12,
+          }] }, measures: { data: [] },
+        }] },
+      }] }),
+    }, () => true).listTypeOneOrdersForWorkOrder('work-order-price-read')
+
+    const lines = result.state === 'succeeded' ? result.data?.items[0]?.groups[0]?.lines : undefined
+    expect(lines?.[0]).toMatchObject({ contentSupported: false, identity: { skuId: 'sku-without-parent' } })
+    expect(lines?.[1]).toMatchObject({ contentSupported: false, identity: { skuCode: 'SKU-ONLY-CODE' } })
+    for (const line of lines ?? []) {
+      expect(line).not.toHaveProperty('unitPrice')
+      expect(line).not.toHaveProperty('lineTotal')
+    }
+  })
+
+  it('rejects a material row when nested and Order-line SKU codes disagree', async () => {
+    const result = await createQuotationOrderReadAdapter({
+      execute: async () => ({ data: [{
+        _id: 'official-order-conflicting-sku-code', type: 1,
+        serviceAppointmentId: 'work-order-price-read',
+        bjProducts: { orderList: [{
+          repairParts: ['roof'], projPackages: { data: [] }, procedures: { data: [] },
+          materials: { data: [{
+            _id: 'sku-code-match', spuid: 'spu-code-match', skuId: 'sku-code-match',
+            skuCode: 'SKU-A', name: '材料', number: 1, amount: 10, totalAmount: 10,
+            material: { _id: 'spu-code-match', skuId: 'sku-code-match', skuCode: 'SKU-B', name: '材料' },
+          }] }, measures: { data: [] },
+        }] },
+      }] }),
+    }, () => true).listTypeOneOrdersForWorkOrder('work-order-price-read')
+    expect(result.state).toBe('failed_terminal')
+  })
+
+  it('recognizes only R1 package and procedure minimum-price floors', async () => {
+    const result = await createQuotationOrderReadAdapter({
+      execute: async () => ({ data: [
+        {
+          _id: 'official-order-minimum-valid', type: 1, serviceAppointmentId: 'work-order-price-read',
+          bjProducts: { orderList: [{
+            repairParts: ['roof'],
+            projPackages: { data: [{
+              _id: 'package-valid', name: '套餐', number: 1, amount: 12,
+              minimumPrice: 20, totalAmount: 20,
+              procedureList: [], materialList: [], measureList: [],
+            }] },
+            procedures: { data: [{
+              _id: 'procedure-valid', procedure: { _id: 'procedure-ref', name: '工序' },
+              number: 1, amount: 12, minimumGuideTotalPrice: 20, totalAmount: 20,
+            }] },
+            materials: { data: [] }, measures: { data: [] },
+          }] },
+        },
+        {
+          _id: 'official-order-minimum-invalid', type: 1, serviceAppointmentId: 'work-order-price-read',
+          bjProducts: { orderList: [{
+            repairParts: ['roof'],
+            projPackages: { data: [{
+              _id: 'package-invalid', name: '套餐', number: 1, amount: 12,
+              minimumPrice: 20, totalAmount: 19.99,
+              procedureList: [], materialList: [], measureList: [],
+            }] },
+            procedures: { data: [] }, materials: { data: [] }, measures: { data: [] },
+          }] },
+        },
+      ] }),
+    }, () => true).listTypeOneOrdersForWorkOrder('work-order-price-read')
+
+    expect(result).toMatchObject({ state: 'succeeded', data: { items: [
+      { groups: [{ contentSupported: true, lines: [
+        { kind: 'package', lineTotal: 20, contentSupported: true },
+        { kind: 'procedure', lineTotal: 20, contentSupported: true },
+      ] }] },
+      { groups: [{ contentSupported: false, lines: [
+        { kind: 'package', contentSupported: false },
+      ] }] },
+    ] } })
+  })
+
   it('rejects a Work-Order-scoped quote response that exceeds the three-row bounded page', async () => {
     const row = {
       _id: 'order-synthetic', type: 1, serviceAppointmentId: 'work-order-synthetic',

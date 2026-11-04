@@ -71,12 +71,12 @@ export const useQuotationOrderBrowseStore = defineStore('quotationOrderBrowse', 
 
   async function load(workOrderId: string, pageSize: 1 | 3 = 3): Promise<OperationSnapshot<ReadPage<QuotationOrderBrowseItem>>> {
     const sessionAtStart = getSession()
-    if (!sessionAtStart) return failure<ReadPage<QuotationOrderBrowseItem>>('session_invalid', '请先登录后查看当前账号可见的报价。')
+    if (!sessionAtStart) return failure<ReadPage<QuotationOrderBrowseItem>>('session_invalid', '请先登录后查看当前账号可见的正式订单。')
     const authorizationIdentityAtStart = authorizationIdentityKey(sessionAtStart)
-    if (!authorizationIdentityAtStart) return failure<ReadPage<QuotationOrderBrowseItem>>('session_invalid', '登录身份信息不完整，请重新加载报价记录。')
-    if (!port) return failure<ReadPage<QuotationOrderBrowseItem>>('server_terminal', '报价只读服务尚未配置。')
+    if (!authorizationIdentityAtStart) return failure<ReadPage<QuotationOrderBrowseItem>>('session_invalid', '登录身份信息不完整，请重新加载正式订单。')
+    if (!port) return failure<ReadPage<QuotationOrderBrowseItem>>('server_terminal', '正式订单只读服务尚未配置。')
     if (!/^[A-Za-z0-9_-]{1,100}$/.test(workOrderId)) {
-      return failure<ReadPage<QuotationOrderBrowseItem>>('server_terminal', '请从当前账号可见的工单详情进入报价记录。')
+      return failure<ReadPage<QuotationOrderBrowseItem>>('server_terminal', '请从当前账号可见的工单详情进入正式订单。')
     }
     if (pageSize !== 1 && pageSize !== 3) {
       return failure<ReadPage<QuotationOrderBrowseItem>>('server_terminal', '仅允许限定长度的正式订单读取。')
@@ -105,7 +105,7 @@ export const useQuotationOrderBrowseStore = defineStore('quotationOrderBrowse', 
         const currentSession = getSession()
         if (!currentSession || authorizationIdentityKey(currentSession) !== authorizationIdentityAtStart) {
           if (currentRequest === requestVersion) clear()
-          return failure('session_invalid', '登录状态已变化，请重新加载报价记录。')
+          return failure('session_invalid', '登录状态已变化，请重新加载正式订单。')
         }
         if (currentRequest !== requestVersion) {
           return failure('server_terminal', '报价读取已被新的请求替代，请重新加载。')
@@ -123,7 +123,7 @@ export const useQuotationOrderBrowseStore = defineStore('quotationOrderBrowse', 
             })
           if (!valid) {
             state.value = 'failed_terminal'
-            errorMessage.value = '报价记录的工单归属或数量异常，已停止展示。'
+            errorMessage.value = '正式订单的工单归属或数量异常，已停止展示。'
             return failure('server_terminal', '正式订单只读响应未通过工单归属、唯一性及分页校验。')
           }
           // Preserve the server's optional paging metadata; do NOT infer that
@@ -141,10 +141,10 @@ export const useQuotationOrderBrowseStore = defineStore('quotationOrderBrowse', 
         }
         state.value = result.state === 'failed_retryable' ? 'failed_retryable' : 'failed_terminal'
         errorMessage.value = result.error?.category === 'authorization_denied'
-          ? '当前账号没有读取报价记录的权限。'
+          ? '当前账号没有读取正式订单的权限。'
           : result.error?.category === 'session_invalid'
             ? '登录状态已失效，请重新登录。'
-            : '暂时无法读取报价记录，请稍后重试。'
+            : '暂时无法读取正式订单，请稍后重试。'
         return result.state === 'succeeded'
           ? failure('server_terminal', '正式订单读取缺少完整响应。')
           : result
@@ -155,10 +155,10 @@ export const useQuotationOrderBrowseStore = defineStore('quotationOrderBrowse', 
         }
         if (authorizationIdentityKey(getSession()) !== authorizationIdentityAtStart) {
           clear()
-          return failure('session_invalid', '登录状态已变化，请重新加载报价记录。')
+          return failure('session_invalid', '登录状态已变化，请重新加载正式订单。')
         }
         state.value = 'failed_retryable'
-        errorMessage.value = '暂时无法读取报价记录，请稍后重试。'
+        errorMessage.value = '暂时无法读取正式订单，请稍后重试。'
         return {
           state: 'failed_retryable',
           error: createOperationError('network_retryable', '正式订单只读服务暂不可用。'),

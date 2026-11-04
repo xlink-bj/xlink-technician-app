@@ -26,7 +26,7 @@ describe('G4-UX detail D3 semantic boundary', () => {
     expect(detailPage).toContain("label: '跟进'")
     expect(detailPage).toContain('导航')
     expect(detailPage).toContain("action.key === 'contact' || action.key === 'navigate'")
-    expect(detailPage).toContain("{ key: 'quotation' as const, label: '报价记录' }")
+    expect(detailPage).toContain("{ key: 'quotation' as const, label: '正式订单' }")
     expect(detailPage).toContain('detailTabs')
     expect(detailTabs).toEqual([
       { key: 'follow-up', label: '跟进记录' },
@@ -117,8 +117,10 @@ describe('G4-UX detail D3 semantic boundary', () => {
   })
 
   it('keeps Production server quotations read-only and scoped to the current Work Order', () => {
-    expect(detailPage).toContain('查看当前工单最近的报价记录')
-    expect(detailPage).toContain('历史报价暂不支持编辑')
+    expect(detailPage).toContain('查看当前工单最近的正式订单')
+    expect(detailPage).toContain('有限只读核验，未显示不代表后台不存在')
+    expect(detailPage).toContain('row.line.unitPrice')
+    expect(detailPage).toContain('row.line.lineTotal')
     expect(detailPage).not.toContain('服务器报价保持只读')
     expect(detailPage).not.toContain('报价 PDF 未打开或下载')
     expect(detailPage).toContain('quotationBrowse.items.filter')
