@@ -559,7 +559,7 @@ test('one MOCK-019 WorkOrder progresses Appointment → Survey → Quotation wit
 })
 
 
-for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }]) {
+for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }, { width: 430, height: 932 }]) {
   test('real main App R1 SKU Mock is read-only and blocks incomplete/ambiguous/cross-SPU at ' + viewport.width, async ({ page }, info) => {
     await page.setViewportSize(viewport)
     await page.goto('/#/pages/index/index?devReview=1', { waitUntil: 'domcontentloaded' })
@@ -610,7 +610,7 @@ for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }
 
 // R1 package material SKU is NOT the standalone Material SKU read contract.
 // Actual uni-app main App, isolated DEV Mock, two mobile viewports and no network.
-for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }]) {
+for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }, { width: 430, height: 932 }]) {
   test('R1 package material layer SKU choices stay isolated by group at ' + viewport.width, async ({ page }, info) => {
     await page.setViewportSize(viewport)
     await page.goto('/#/pages/index/index?devReview=1', { waitUntil: 'domcontentloaded' })
@@ -696,7 +696,7 @@ for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }
 
 // M1-I2 actual main App SKU workflow: synthetic R1-shaped ExtField/Code/SKU
 // reads go through the ordinary adapter, never through the standalone SKU demo.
-for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }]) {
+for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }, { width: 430, height: 932 }]) {
   test('M1-I2 full SKU local draft on REAL quotation Vue at ' + viewport.width, async ({ page }, info) => {
     await page.setViewportSize(viewport)
     await page.goto('/#/pages/index/index?devReview=1', { waitUntil: 'domcontentloaded' })
