@@ -4,9 +4,8 @@ import { isAllowedWorkOrderListRequest } from './r1-order-contract-read-guard.mj
 import {
   isAllowedR1SelectableCatalogPageRequest,
   isAllowedR1SelectableCatalogSkuPageRequest,
-  r1BoundedSelectableSkuRequestBody,
+  isAllowedR1SelectablePackageSkuPageRequest,
 } from './r1-selectable-catalog-read-guard.mjs'
-import { inspectActiveSkuCatalogPage, rowsFromEnvelope, totalFromEnvelope } from './r1-sku-read-evidence.mjs'
 
 const MAX_WORK_ORDER_PAGES = 1000
 const MAX_CATALOG_PAGES = 50
@@ -14,7 +13,7 @@ const MAX_PACKAGE_DETAIL_READS = 200
 const MAX_SELECTABLE_SKU_SPUS = 500
 const MAX_SELECTABLE_SKU_REQUESTS = 1000
 const CATALOG_PAGE_ROWS = 20
-const SKU_PAGE_ROWS = 30
+const MATERIAL_SALES_PAGE_ROWS = 50
 
 const routeCounts = {
   roleTree: 0,
@@ -26,17 +25,25 @@ const routeCounts = {
   materialList: 0,
   measureList: 0,
   packageDetail: 0,
+  materialSalesFields: 0,
+  materialCodeOptions: 0,
   materialSkuList: 0,
 }
 let loginRequests = 0
 let blockedUnexpectedNetworkRequests = 0
+const blockedUnexpectedRoutes = Object.create(null)
+const blockedUnexpectedStages = Object.create(null)
 let stage = 'vite_start'
 const listedWorkOrderIds = new Set()
 const listedPackageIds = new Set()
 const packageDetailLookupIds = new Set()
 const listedCatalogSpuIds = new Set()
+const directMaterialSpuIds = new Set()
+const packageMaterialSpuIdsByPackage = new Map()
 const catalogSkuNextPageBySpu = new Map()
 const catalogPageByPath = new Map()
+const listedMaterialSalesCodeIds = new Set()
+let materialSalesNextPage = 1
 let selectedCatalogContext = null
 let selectedCatalogWorkOrderId = null
 let selectedWorkOrderIsCurrent = () => false
@@ -60,6 +67,7 @@ const responseCounts = {
     components: { procedure: 0, material: 0, measure: 0 },
     referencedMaterialSpus: 0,
   },
+  materialSalesAttributes: { state: 'NOT_RUN', fields: 0 },
   selectableSkuCatalog: {
     uniqueSpus: 0, attemptedSpus: 0, succeededSpus: 0, failedSpus: 0,
     activeSkuRows: 0, emptySpus: 0, pagesRead: 0, complete: false,
@@ -160,6 +168,41 @@ function recordSafeRequest(url, request, apiBaseUrl) {
     routeCounts[catalogRoute[0]] += 1
     return 'read'
   }
+  if (relativePath === 'biz/extField/query') {
+    const body = typeof request.data === 'string' ? new URLSearchParams(request.data) : new URLSearchParams()
+    const expectedKeys = ['page', 'rows', 'sortField', 'sortOrder', 'colName', 'is:state|integer#and'].sort()
+    const keys = [...body.keys()].sort()
+    const page = Number(body.get('page'))
+    if (!selectedCatalogContext || !selectedWorkOrderIsCurrent()
+      || routeCounts.materialSalesFields >= 4
+      || keys.length !== expectedKeys.length || keys.some((key, index) => key !== expectedKeys[index])
+      || page !== materialSalesNextPage || !Number.isInteger(page) || page < 1 || page > 4
+      || body.get('rows') !== String(MATERIAL_SALES_PAGE_ROWS)
+      || body.get('sortField') !== 'order' || body.get('sortOrder') !== 'asc'
+      || body.get('colName') !== 'material' || body.get('is:state|integer#and') !== '1') return null
+    materialSalesNextPage += 1
+    routeCounts.materialSalesFields += 1
+    return 'read'
+  }
+  if (relativePath === 'i/code/selectCode.do') {
+    const body = typeof request.data === 'string' ? new URLSearchParams(request.data) : new URLSearchParams()
+    if (!selectedCatalogContext || !selectedWorkOrderIsCurrent()
+      || routeCounts.materialCodeOptions >= 1 || [...body.keys()].sort().join(',') !== 'jsonPara,tenantId'
+      || body.get('tenantId') !== '1340835581184723420') return null
+    let providers
+    try { providers = JSON.parse(body.get('jsonPara') ?? '') } catch { return null }
+    if (!Array.isArray(providers) || providers.length < 1 || providers.length > 30) return null
+    const ids = []
+    for (const provider of providers) {
+      if (!provider || typeof provider !== 'object' || Array.isArray(provider)
+        || Object.keys(provider).sort().join(',') !== 'codeId,eleid'
+        || typeof provider.codeId !== 'string' || provider.codeId !== provider.eleid
+        || !listedMaterialSalesCodeIds.has(provider.codeId) || ids.includes(provider.codeId)) return null
+      ids.push(provider.codeId)
+    }
+    routeCounts.materialCodeOptions += 1
+    return 'read'
+  }
   const packageDetailPrefix = 'biz/projPackage/findById/'
   if (relativePath.startsWith(packageDetailPrefix)) {
     const id = decodeURIComponent(relativePath.slice(packageDetailPrefix.length))
@@ -172,25 +215,51 @@ function recordSafeRequest(url, request, apiBaseUrl) {
   }
   if (relativePath === 'basic/material/query') {
     const body = typeof request.data === 'string' ? new URLSearchParams(request.data) : new URLSearchParams()
-    const selectedSpuId = body.get('spuid')
-    const expectedPage = selectedSpuId ? (catalogSkuNextPageBySpu.get(selectedSpuId) ?? 1) : 0
-    if (!selectedSpuId || !isAllowedR1SelectableCatalogSkuPageRequest({
-      path: relativePath,
-      method: request.method,
-      search: url.searchParams,
-      body: request.data,
-      selectedSpuId,
-      listedSpuIds: listedCatalogSpuIds,
-      expectedPage,
-      requestCount: catalogSkuRequestCount,
-      maxRequestCount: MAX_SELECTABLE_SKU_REQUESTS,
-    })) return null
-    catalogSkuNextPageBySpu.set(selectedSpuId, expectedPage + 1)
+    const directSpuId = body.get('spuid')
+    const packageSpuIds = body.get('in:spuid|array#and')?.split(',')
+    const selectedSpuIds = directSpuId ? [directSpuId] : packageSpuIds
+    const routeKey = `${directSpuId ? 'direct' : 'package'}:${selectedSpuIds?.join(',') ?? ''}`
+    const currentPage = Number(body.get('page'))
+    const expectedPage = directSpuId
+      ? catalogSkuNextPageBySpu.get(routeKey) ?? 1
+      : currentPage === 1 ? 1 : catalogSkuNextPageBySpu.get(routeKey) ?? 0
+    const requestShape = directSpuId
+      ? isAllowedR1SelectableCatalogSkuPageRequest({
+          path: relativePath, method: request.method, search: url.searchParams, body: request.data,
+          selectedSpuId: directSpuId, listedSpuIds: listedCatalogSpuIds, expectedPage,
+          requestCount: catalogSkuRequestCount, maxRequestCount: MAX_SELECTABLE_SKU_REQUESTS,
+        })
+      : isAllowedR1SelectablePackageSkuPageRequest({
+          path: relativePath, method: request.method, search: url.searchParams, body: request.data,
+          selectedSpuIds, listedSpuIds: listedCatalogSpuIds, expectedPage,
+          requestCount: catalogSkuRequestCount, maxRequestCount: MAX_SELECTABLE_SKU_REQUESTS,
+        })
+    if (!selectedSpuIds?.length || !selectedWorkOrderIsCurrent() || !requestShape) return null
+    catalogSkuNextPageBySpu.set(routeKey, expectedPage + 1)
     catalogSkuRequestCount += 1
     routeCounts.materialSkuList += 1
     return 'read'
   }
   return null
+}
+
+function rememberVerifiedMaterialSalesCodeIds(raw) {
+  const payload = raw && typeof raw === 'object' ? raw.data : undefined
+  const rows = Array.isArray(payload) ? payload
+    : Array.isArray(payload?.items?.records) ? payload.items.records
+      : Array.isArray(payload?.records) ? payload.records : []
+  for (const row of rows) {
+    if (!row || typeof row !== 'object' || Array.isArray(row)
+      || row.colName !== 'material' || (row.state !== 1 && row.state !== '1')) continue
+    let config = row.frontEndConfig
+    if (typeof config === 'string') {
+      try { config = JSON.parse(config) } catch { continue }
+    }
+    if (config?.salesAttribute === true && typeof row.valueOption === 'string'
+      && /^[A-Za-z0-9_-]{1,100}$/.test(row.valueOption)) {
+      listedMaterialSalesCodeIds.add(row.valueOption)
+    }
+  }
 }
 
 function createRequest(apiBaseUrl) {
@@ -199,6 +268,14 @@ function createRequest(apiBaseUrl) {
     const safeKind = recordSafeRequest(url, options, apiBaseUrl)
     if (!safeKind) {
       blockedUnexpectedNetworkRequests += 1
+      const basePath = new URL(apiBaseUrl).pathname.replace(/\/$/, '')
+      const relativePath = url.pathname.slice(basePath.length).replace(/^\/+/, '')
+      const safePath = relativePath.startsWith('basic/serviceAppointment/queryById/')
+        ? 'basic/serviceAppointment/queryById/:id'
+        : relativePath.startsWith('biz/projPackage/findById/')
+          ? 'biz/projPackage/findById/:id' : relativePath
+      blockedUnexpectedRoutes[safePath] = (blockedUnexpectedRoutes[safePath] ?? 0) + 1
+      blockedUnexpectedStages[stage] = (blockedUnexpectedStages[stage] ?? 0) + 1
       options.fail?.(new Error('Read-only smoke blocked an unapproved network request'))
       return { abort() {} }
     }
@@ -222,6 +299,7 @@ function createRequest(apiBaseUrl) {
       if (Buffer.byteLength(text, 'utf8') > 1_000_000) throw new Error('response_too_large')
       let data
       try { data = JSON.parse(text) } catch { data = text }
+      if (url.pathname.endsWith('/biz/extField/query')) rememberVerifiedMaterialSalesCodeIds(data)
       options.success?.({ statusCode: response.status, data })
     }).catch(() => {
       options.fail?.(new Error('Read-only smoke network request failed'))
@@ -325,124 +403,75 @@ function addCatalogSpuIdentity(value) {
   }
 }
 
-function inspectBoundedSelectableSkuPage(raw, selectedSpuId) {
-  const inspected = inspectActiveSkuCatalogPage(raw, selectedSpuId, SKU_PAGE_ROWS)
-  if (!inspected.verified) return { verified: false, reason: inspected.reason }
-  return {
-    verified: true,
-    count: inspected.summary.activeSkuRowsReturned,
-    totalCount: inspected.summary.totalSkuRows,
-  }
-}
-
-async function readSelectableSkuCatalog(request, apiBaseUrl, sessionRef) {
+async function readSelectableSkuCatalog(catalogApi, context, directMaterialSpuIds, packageSpuIdsByPackage, saleFieldNames) {
   const summary = responseCounts.selectableSkuCatalog
-  const spuIds = [...listedCatalogSpuIds]
+  const spuIds = [...new Set([
+    ...directMaterialSpuIds,
+    ...[...packageSpuIdsByPackage.values()].flat(),
+  ])]
   summary.uniqueSpus = spuIds.length
-  const boundedSpus = spuIds.slice(0, MAX_SELECTABLE_SKU_SPUS)
-  const seenSkuIds = new Set()
-
-  for (const spuId of boundedSpus) {
-    summary.attemptedSpus += 1
-    let totalCount
-    let rowsForSpu = 0
-    let pagesCompleted = false
-    for (let page = 1; page <= MAX_CATALOG_PAGES; page += 1) {
-      stage = `selectable_material_sku_page_${page}`
-      if (authIdentityChanged() || !selectedCatalogContext || !selectedCatalogWorkOrderId
-        || !selectedWorkOrderIsCurrent()) {
-        summary.reason = 'WORK_ORDER_OR_SESSION_CONTEXT_CHANGED'
-        summary.failedSpus += 1
-        return
-      }
-      if (catalogSkuRequestCount >= MAX_SELECTABLE_SKU_REQUESTS) {
-        summary.reason = 'SKU_REQUEST_LIMIT_REACHED'
-        summary.failedSpus += 1
-        return
-      }
-      const body = r1BoundedSelectableSkuRequestBody(spuId, page)
-      const response = await requestPromise(request, {
-        url: `${apiBaseUrl.replace(/\/+$/, '')}/basic/material/query`,
-        method: 'POST',
-        data: new URLSearchParams(Object.entries(body).map(([key, value]) => [key, String(value)])).toString(),
-        header: {
-          Cookie: `JSESSIONID=${sessionRef}`,
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        dataType: 'json',
-        timeout: 20000,
-      })
-      if (response.statusCode < 200 || response.statusCode >= 300 || authIdentityChanged()) {
-        summary.reason = 'SKU_READ_FAILED_OR_SESSION_CHANGED'
-        summary.failedSpus += 1
-        return
-      }
-      summary.pagesRead += 1
-      const result = inspectBoundedSelectableSkuPage(response.data, spuId)
-      if (!result.verified) {
-        summary.reason = 'SKU_PAGE_IDENTITY_OR_SHAPE_INVALID'
-        summary.failedSpus += 1
-        return
-      }
-      if (result.totalCount !== undefined) {
-        if (totalCount !== undefined && totalCount !== result.totalCount) {
-          summary.reason = 'SKU_TOTAL_COUNT_CHANGED'
-          summary.failedSpus += 1
-          return
-        }
-        totalCount = result.totalCount
-      }
-      const rows = rowsFromEnvelope(response.data)
-      if (!rows) {
-        summary.reason = 'SKU_PAGE_SHAPE_INVALID'
-        summary.failedSpus += 1
-        return
-      }
-      for (const row of rows) {
-        if (seenSkuIds.has(row._id)) {
-          summary.reason = 'DUPLICATE_SKU_ID'
-          summary.failedSpus += 1
-          return
-        }
-        seenSkuIds.add(row._id)
-      }
-      rowsForSpu += result.count
-      summary.activeSkuRows += result.count
-      const rawTotal = totalFromEnvelope(response.data)
-      if (rawTotal !== undefined && rowsForSpu === rawTotal) {
-        pagesCompleted = true
-        break
-      }
-      if (rawTotal !== undefined && rowsForSpu > rawTotal) {
-        summary.reason = 'SKU_ITEMS_EXCEED_TOTAL'
-        summary.failedSpus += 1
-        return
-      }
-      if (rawTotal === undefined && result.count < SKU_PAGE_ROWS) {
-        pagesCompleted = true
-        break
-      }
-      if (page === MAX_CATALOG_PAGES) {
-        summary.reason = 'SKU_PAGE_LIMIT_REACHED'
-        summary.failedSpus += 1
-        return
-      }
-    }
-    if (!pagesCompleted) {
-      summary.reason = 'SKU_PAGE_SET_INCOMPLETE'
-      summary.failedSpus += 1
-      return
-    }
-    summary.succeededSpus += 1
-    if (rowsForSpu === 0) summary.emptySpus += 1
-  }
-
-  if (spuIds.length > boundedSpus.length) {
+  if (spuIds.length > MAX_SELECTABLE_SKU_SPUS) {
     summary.reason = 'SPU_READ_LIMIT_REACHED'
     return
   }
+  const requests = [
+    ...directMaterialSpuIds.map(id => ({ route: 'direct_material', ids: [id] })),
+    ...[...packageSpuIdsByPackage.values()]
+      .map(ids => [...new Set(ids)])
+      .filter(ids => ids.length > 0)
+      .map(ids => ({ route: 'package_materials', ids })),
+  ]
+  const seenSkuIds = new Map()
+  const attemptedSpuIds = new Set()
+  const succeededSpuIds = new Set()
+  const failedSpuIds = new Set()
+  const foundSpuIds = new Set()
+  for (const [index, query] of requests.entries()) {
+    stage = `selectable_material_sku_query_${index + 1}`
+    if (authIdentityChanged() || !selectedCatalogWorkOrderId || !selectedWorkOrderIsCurrent()) {
+      summary.reason = 'WORK_ORDER_OR_SESSION_CONTEXT_CHANGED'
+      query.ids.forEach(id => failedSpuIds.add(id))
+      return
+    }
+    if (catalogSkuRequestCount >= MAX_SELECTABLE_SKU_REQUESTS) {
+      summary.reason = 'SKU_REQUEST_LIMIT_REACHED'
+      query.ids.forEach(id => failedSpuIds.add(id))
+      return
+    }
+    query.ids.forEach(id => attemptedSpuIds.add(id))
+    summary.attemptedSpus = attemptedSpuIds.size
+    const pagesBefore = routeCounts.materialSkuList
+    const result = await catalogApi.listMaterialSkuVariants(context, query.route, query.ids, saleFieldNames)
+    summary.pagesRead += routeCounts.materialSkuList - pagesBefore
+    if (result.state !== 'succeeded' || !result.data || authIdentityChanged()) {
+      summary.lastFailureCategory = result.error?.category ?? (authIdentityChanged() ? 'authorization_denied' : 'unknown')
+      summary.reason = result.error?.category === 'authorization_denied'
+        ? 'AUTHORIZATION_DENIED' : 'SKU_READ_FAILED_OR_INCOMPLETE'
+      query.ids.forEach(id => failedSpuIds.add(id))
+      summary.failedSpus = failedSpuIds.size
+      return
+    }
+    for (const row of result.data.items) {
+      foundSpuIds.add(row.spuId)
+      const previousSpuId = seenSkuIds.get(row.id)
+      if (previousSpuId && previousSpuId !== row.spuId) {
+        summary.reason = 'SKU_IDENTITY_ASSOCIATION_CONFLICT'
+        query.ids.forEach(id => failedSpuIds.add(id))
+        summary.failedSpus = failedSpuIds.size
+        return
+      }
+      if (!previousSpuId) {
+        seenSkuIds.set(row.id, row.spuId)
+        summary.activeSkuRows += 1
+      }
+    }
+    query.ids.forEach(id => succeededSpuIds.add(id))
+    summary.succeededSpus = succeededSpuIds.size
+  }
+  summary.failedSpus = failedSpuIds.size
+  summary.emptySpus = [...succeededSpuIds].filter(id => !foundSpuIds.has(id)).length
   summary.complete = true
-  summary.reason = 'ALL_LISTED_SPUS_READ'
+  summary.reason = 'ALL_ROLE_LISTED_MATERIAL_AND_PACKAGE_SPUS_READ'
 }
 
 let getCurrentAuthIdentity = () => null
@@ -451,13 +480,6 @@ function authIdentityChanged() {
   return !identity || identity !== expectedAuthIdentity
 }
 let expectedAuthIdentity = null
-
-function requestPromise(request, options) {
-  return new Promise((resolvePromise, reject) => {
-    try { request({ ...options, success: resolvePromise, fail: reject }) }
-    catch { reject(new Error('request_failed')) }
-  })
-}
 
 async function run() {
   const root = process.cwd()
@@ -561,9 +583,12 @@ async function run() {
     if (!expectedAuthIdentity) throw new Error('authenticated_role_identity_missing')
     stage = 'create_read_adapters'
     let technicianApi
+    let catalogApi
     const apiTransport = createUniApiReadTransport({
       apiBaseUrl: runtime.value.environment.apiBaseUrl,
       getSessionRef: () => auth.getCurrentSession()?.sessionRef ?? null,
+      isProductionQuotationCatalogReadAuthorized: readRequest =>
+        catalogApi?.isProductionReadRequestAuthorized(readRequest) === true,
       getMockActor: () => ({ userId: session.user.id, ...(session.currentRole ? { roleId: session.currentRole.id } : {}) }),
       isOrderWorkOrderListedForCurrentSession: (workOrderId) =>
         listedWorkOrderIds.has(workOrderId)
@@ -589,7 +614,7 @@ async function run() {
         },
       },
     )
-    const catalogApi = createQuotationCatalogReadAdapter(
+    catalogApi = createQuotationCatalogReadAdapter(
       apiTransport,
       () => {
         const current = auth.getCurrentSession()
@@ -790,7 +815,10 @@ async function run() {
       const catalogs = [
         ['package', catalogApi.listPackages.bind(catalogApi), (item) => listedPackageIds.add(item.id)],
         ['procedure', catalogApi.listProcedures.bind(catalogApi), () => {}],
-        ['material', catalogApi.listMaterials.bind(catalogApi), (item) => addCatalogSpuIdentity(item.spuId ?? item.id)],
+        ['material', catalogApi.listMaterials.bind(catalogApi), (item) => {
+          directMaterialSpuIds.add(item.id)
+          addCatalogSpuIdentity(item.id)
+        }],
         ['measure', catalogApi.listMeasures.bind(catalogApi), () => {}],
       ]
       const catalogResults = {}
@@ -815,8 +843,12 @@ async function run() {
         responseCounts.packageDetails.components.procedure += packageDetail.data.procedures.length
         responseCounts.packageDetails.components.material += packageDetail.data.materials.length
         responseCounts.packageDetails.components.measure += packageDetail.data.measures.length
+        const packageMaterialSpuIds = packageDetail.data.materials
+          .map(material => material.referenceId)
+          .filter(id => typeof id === 'string' && /^[A-Za-z0-9_-]{1,100}$/.test(id))
+        packageMaterialSpuIdsByPackage.set(packageId, packageMaterialSpuIds)
         for (const material of packageDetail.data.materials) {
-          addCatalogSpuIdentity(material.referenceId ?? material.item?.id)
+          addCatalogSpuIdentity(material.referenceId)
         }
       }
       responseCounts.packageDetails.referencedMaterialSpus = listedCatalogSpuIds.size
@@ -825,11 +857,36 @@ async function run() {
       }
       if (catalogResults.package.items > MAX_PACKAGE_DETAIL_READS) responseCounts.packageDetails.complete = false
 
-      stage = 'bounded_selectable_material_sku_pages'
-      await readSelectableSkuCatalog(request, runtime.value.environment.apiBaseUrl, session.sessionRef)
+      stage = 'material_sales_attribute_and_code_read'
+      const saleFields = await catalogApi.listMaterialSalesFields(selectedCatalogContext)
+      responseCounts.materialSalesAttributes = {
+        state: operationState(saleFields),
+        fields: saleFields.state === 'succeeded' && saleFields.data ? saleFields.data.items.length : 0,
+        options: saleFields.state === 'succeeded' && saleFields.data
+          ? saleFields.data.items.reduce((count, field) => count + field.options.length, 0) : 0,
+      }
+      if (saleFields.state === 'succeeded' && saleFields.data) {
+        stage = 'bounded_selectable_material_sku_pages'
+        await readSelectableSkuCatalog(
+          catalogApi,
+          selectedCatalogContext,
+          [...directMaterialSpuIds],
+          packageMaterialSpuIdsByPackage,
+          saleFields.data.items.map(field => field.name),
+        )
+      } else {
+        responseCounts.selectableSkuCatalog.reason = 'MATERIAL_SALES_FIELDS_READ_FAILED'
+      }
     }
 
+    const auditComplete = responseCounts.catalogContextVerified
+      && Object.values(responseCounts.catalogItemsByKind).every(result => result.complete)
+      && responseCounts.packageDetails.complete
+      && responseCounts.materialSalesAttributes.state === 'SUCCEEDED'
+      && responseCounts.selectableSkuCatalog.complete
+      && blockedUnexpectedNetworkRequests === 0
     console.log(JSON.stringify({
+      status: auditComplete ? 'PROD_READ_ONLY_CHAIN_COMPLETE' : 'PROD_READ_ONLY_CHAIN_INCOMPLETE',
       login: 'SUCCEEDED',
       loginRequests,
       sessionStorage: 'MEMORY_ONLY',
@@ -847,9 +904,12 @@ async function run() {
       routeCounts,
       responseCounts,
       blockedUnexpectedNetworkRequests,
+      blockedUnexpectedRoutes,
+      blockedUnexpectedStages,
       productionBusinessMutationNetworkRequests: 0,
       quoteWriteWorkflowUploadCustomerInteractionRequests: 0,
     }))
+    if (!auditComplete) process.exitCode = 1
   } finally {
     void vite.close()
   }
@@ -864,6 +924,8 @@ run().catch((error) => {
     routeCounts,
     responseCounts,
     blockedUnexpectedNetworkRequests,
+    blockedUnexpectedRoutes,
+    blockedUnexpectedStages,
     productionBusinessMutationNetworkRequests: 0,
   }))
   process.exitCode = 1

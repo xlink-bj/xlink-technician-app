@@ -616,6 +616,89 @@ describe('Production read-only profile', () => {
     }
   })
 
+  it('requires a live adapter permit for Production material selector layers', async () => {
+    vi.stubEnv('VITE_XLINK_ENVIRONMENT', 'prod')
+    const request = vi.fn((options: UniNamespace.RequestOptions) => {
+      options.success?.({ statusCode: 200, data: { data: [] } } as never)
+    })
+    const extFieldRead = {
+      method: 'POST' as const,
+      path: 'biz/extField/query',
+      body: {
+        page: 1, rows: 50, sortField: 'order', sortOrder: 'asc', colName: 'material',
+        'is:state|integer#and': 1,
+      },
+    }
+    const catalogTransport = createUniApiReadTransport({
+      apiBaseUrl: 'https://production.invalid',
+      getSessionRef: () => 'production-session' as never,
+      request,
+    })
+    await expect(catalogTransport.execute(extFieldRead)).rejects.toMatchObject({ category: 'authorization_denied' })
+    expect(request).not.toHaveBeenCalled()
+
+    const authorizedTransport = createUniApiReadTransport({
+      apiBaseUrl: 'https://production.invalid',
+      getSessionRef: () => 'production-session' as never,
+      isProductionQuotationCatalogReadAuthorized: candidate => candidate.path === extFieldRead.path
+        && JSON.stringify(candidate.body) === JSON.stringify(extFieldRead.body),
+      request,
+    })
+    await expect(authorizedTransport.execute(extFieldRead)).resolves.toMatchObject({ data: [] })
+    expect(request).toHaveBeenCalledTimes(1)
+  })
+
+  it('runs the Production Material → R1 ExtField → Code → SKU chain through one scoped adapter', async () => {
+    vi.stubEnv('VITE_XLINK_ENVIRONMENT', 'prod')
+    const context = {
+      workOrderId: asOpaqueId<'WorkOrderId'>('synthetic-listed-work-order'),
+      serviceType: 'synthetic-service',
+      sourceType: 'synthetic-source',
+    }
+    const identity = { sessionRef: 'production-session', userId: 'synthetic-tech', roleId: 'synthetic-role', roleVersion: null }
+    let catalog: ReturnType<typeof createQuotationCatalogReadAdapter> | null = null
+    const request = vi.fn((options: UniNamespace.RequestOptions) => {
+      const path = new URL(String(options.url)).pathname
+      const data = path.endsWith('/basic/material/queryWithRank')
+        ? { data: [{ _id: 'synthetic-spu', name: '现场材料', state: 1, exts: { color: ['black'] } }], page: 1, rows: 20, total: 1 }
+        : path.endsWith('/biz/extField/query')
+          ? { data: [{ _id: 'field-color', colName: 'material', state: 1, name: 'color', nameDisp: '颜色', valueOption: 'synthetic-color-codes', frontEndConfig: '{"salesAttribute":true}' }], page: 1, rows: 50, total: 1 }
+          : path.endsWith('/i/code/selectCode.do')
+            ? [{ eleid: 'synthetic-color-codes', options: { black: '黑色' } }]
+            : { data: [{ _id: 'synthetic-sku', name: '黑色规格', spuid: 'synthetic-spu', state: 1, price: 125, exts: { color: 'black' } }], page: 1, rows: 30, total: 1 }
+      options.success?.({ statusCode: 200, data } as never)
+    })
+    const transport = createUniApiReadTransport({
+      apiBaseUrl: 'https://production.invalid',
+      getSessionRef: () => 'production-session' as never,
+      isProductionQuotationCatalogReadAuthorized: candidate =>
+        catalog?.isProductionReadRequestAuthorized(candidate) === true,
+      request,
+    })
+    catalog = createQuotationCatalogReadAdapter(
+      transport,
+      () => identity,
+      '1340835581184723420',
+      workOrderId => workOrderId === String(context.workOrderId),
+    )
+
+    await expect(transport.execute({
+      method: 'POST', path: 'biz/extField/query', body: {
+        page: 1, rows: 50, sortField: 'order', sortOrder: 'asc', colName: 'material',
+        'is:state|integer#and': 1,
+      },
+    })).rejects.toMatchObject({ category: 'authorization_denied' })
+    expect(request).not.toHaveBeenCalled()
+    expect((await catalog.listMaterials(context)).state).toBe('succeeded')
+    const sales = await catalog.listMaterialSalesFields!(context)
+    expect(sales.state).toBe('succeeded')
+    const skus = await catalog.listMaterialSkuVariants!(context, 'direct_material', ['synthetic-spu'], ['color'])
+    expect(skus).toMatchObject({ state: 'succeeded', data: { items: [{ id: 'synthetic-sku', spuId: 'synthetic-spu', saleAttributeValues: { color: 'black' } }] } })
+    expect(request.mock.calls.map(([options]) => new URL(String(options.url)).pathname)).toEqual([
+      '/basic/material/queryWithRank', '/biz/extField/query', '/i/code/selectCode.do', '/basic/material/query',
+    ])
+  })
+
   it('does not treat a node-owned run ID as proof of the Work Order workflow when the detail omits its run', async () => {
     vi.stubEnv('VITE_XLINK_ENVIRONMENT', 'prod')
     const execute = vi.fn(async (input: { path: string }) => {

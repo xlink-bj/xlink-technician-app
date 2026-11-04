@@ -19,7 +19,10 @@ import type {
 } from '@shared/ports'
 import { createOperationError, type OperationSnapshot } from '@shared/types'
 
-import { createQuotationCatalogReadAdapter } from '@adapters/api/quotation-catalog-api'
+import {
+  createQuotationCatalogReadAdapter,
+  type AuthorizedQuotationCatalogReadPort,
+} from '@adapters/api/quotation-catalog-api'
 import { createRoleScopedTechnicianApiReadAdapter } from '@adapters/api/technician-api'
 import { createTechnicianApiCommandAdapter } from '@adapters/api/technician-api-commands'
 import { createQuotationOrderCommandAdapter } from '@adapters/api/quotation-order-commands'
@@ -170,7 +173,7 @@ export function createDefaultTechnicianApiReadPort(authSession: AuthSessionPort)
 export function createDefaultQuotationCatalogReadPort(
   authSession: AuthSessionPort,
   isWorkOrderListedForCurrentSession: (id: string) => boolean,
-): QuotationCatalogReadPort {
+): AuthorizedQuotationCatalogReadPort {
   const config = loadApplicationRuntimeConfig()
   if (!config.ok) {
     const blocked = async <T>(): Promise<OperationSnapshot<T>> =>
@@ -181,13 +184,17 @@ export function createDefaultQuotationCatalogReadPort(
       listProcedures: async () => blocked(),
       listMaterials: async () => blocked(),
       listMeasures: async () => blocked(),
+      isProductionReadRequestAuthorized: () => false,
     }
   }
 
+  let catalogReadPort: AuthorizedQuotationCatalogReadPort | null = null
   const transport = createUniApiReadTransport({
     apiBaseUrl: config.value.environment.apiBaseUrl,
     blockRealRequests: config.value.authOnlyMockBusiness,
     getSessionRef: () => authSession.getCurrentSession()?.sessionRef ?? null,
+    isProductionQuotationCatalogReadAuthorized: request =>
+      catalogReadPort?.isProductionReadRequestAuthorized(request) === true,
     getMockActor: () => {
       const session = authSession.getCurrentSession()
       return session
@@ -198,7 +205,7 @@ export function createDefaultQuotationCatalogReadPort(
         : null
     },
   })
-  return createQuotationCatalogReadAdapter(
+  catalogReadPort = createQuotationCatalogReadAdapter(
     transport,
     () => {
       const session = authSession.getCurrentSession()
@@ -217,6 +224,7 @@ export function createDefaultQuotationCatalogReadPort(
       : config.value.authWireConfig.tenant,
     isWorkOrderListedForCurrentSession,
   )
+  return catalogReadPort
 }
 
 export function createDefaultSurveyLeakageCauseProvider(authSession: AuthSessionPort): SurveyLeakageCauseProviderPort {

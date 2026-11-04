@@ -24,7 +24,7 @@ const canon = {
   pricing: 'src/features/work-orders/quotation/engine.ts',
   command: 'src/adapters/api/technician-api-commands.ts',
   wire: 'src/adapters/api/action-command-wires.ts',
-  catalog: 'src/adapters/api/quotation-catalog-api.ts',
+  catalog: 'src/adapters/api/quotation-catalog-read-adapter.ts',
   order: 'src/features/work-orders/quotation/order-submission.ts',
 }
 

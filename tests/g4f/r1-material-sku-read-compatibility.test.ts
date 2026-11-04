@@ -124,6 +124,63 @@ describe('M1 I2 R1 material SKU single/batch read compatibility', () => {
     expect(execute).not.toHaveBeenCalled()
   })
 
+  it('reads an exact direct Material SPU only after it is returned by the current WorkOrder catalog', async () => {
+    vi.stubEnv('VITE_XLINK_ENVIRONMENT', 'prod')
+    vi.stubEnv('VITE_XLINK_API_BASE_URL', 'https://production.invalid')
+    const scope = { sessionRef: 'session-1', userId: 'tech-1', roleId: 'role-1', roleVersion: null }
+    const execute = vi.fn(async (request: ApiReadRequest) => request.path === 'basic/material/queryWithRank'
+      ? { data: [{ _id: 'spu-a', name: '现场材料', state: 1 }], page: 1, rows: 20, total: 1 }
+      : { data: [sku('sku-a')], page: 1, rows: 30, total: 1 })
+    const catalog = createQuotationCatalogReadAdapter(
+      { execute }, () => scope, undefined,
+      id => id === String(context.workOrderId),
+    )
+    const materials = await catalog.listMaterials(context)
+    expect(materials.state).toBe('succeeded')
+    const result = await catalog.listMaterialSkuVariants!(context, 'direct_material', ['spu-a'])
+    expect(result).toMatchObject({ state: 'succeeded', data: { items: [{ id: 'sku-a', spuId: 'spu-a' }] } })
+    expect(execute.mock.calls.map(([request]) => request)).toEqual([
+      expect.objectContaining({ path: 'basic/material/queryWithRank' }),
+      { method: 'POST', path: 'basic/material/query', body: {
+        page: 1, rows: 30, 'is:state|integer#and': 1, spuid: 'spu-a',
+      } },
+    ])
+  })
+
+  it('uses R1 package batch SKU query only for material references from one loaded package detail', async () => {
+    vi.stubEnv('VITE_XLINK_ENVIRONMENT', 'prod')
+    vi.stubEnv('VITE_XLINK_API_BASE_URL', 'https://production.invalid')
+    const scope = { sessionRef: 'session-1', userId: 'tech-1', roleId: 'role-1', roleVersion: null }
+    const execute = vi.fn(async (request: ApiReadRequest) => {
+      if (request.path === 'biz/projPackage/queryWithRank') {
+        return { data: [{ _id: 'package-a', name: 'Service package', state: 1 }], page: 1, rows: 20, total: 1 }
+      }
+      if (request.path === 'biz/projPackage/findById/package-a') {
+        return { data: {
+          _id: 'package-a', name: 'Service package', state: 1,
+          procedureList: [], materialList: [{ materialId: 'spu-a', material: { _id: 'spu-a', name: '材料 A' } }],
+          measureList: [],
+        } }
+      }
+      return { data: [sku('sku-a')], page: 1, rows: 30, total: 1 }
+    })
+    const catalog = createQuotationCatalogReadAdapter(
+      { execute }, () => scope, undefined,
+      id => id === String(context.workOrderId),
+    )
+    expect((await catalog.listPackages(context)).state).toBe('succeeded')
+    expect((await catalog.getPackageDetail('package-a')).state).toBe('succeeded')
+    expect((await catalog.listMaterialSkuVariants!(context, 'package_materials', ['spu-a'])).state).toBe('succeeded')
+    expect(execute.mock.calls.at(-1)?.[0]).toEqual({
+      method: 'POST', path: 'basic/material/query', body: {
+        page: 1, rows: 30, 'is:state|integer#and': 1, 'in:spuid|array#and': 'spu-a',
+      },
+    })
+    const denied = await catalog.listMaterialSkuVariants!(context, 'package_materials', ['spu-a', 'foreign-spu'])
+    expect(denied.error?.category).toBe('authorization_denied')
+    expect(execute).toHaveBeenCalledTimes(3)
+  })
+
   it('retains a ServiceAppointment explicitly-present empty sourceType in nonproduction ranked catalog reads', async () => {
     const technician = createTechnicianApiReadAdapter({
       execute: vi.fn(async (request: ApiReadRequest) => request.path === 'biz/action/query.do'

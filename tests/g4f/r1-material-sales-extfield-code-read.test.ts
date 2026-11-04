@@ -22,8 +22,9 @@ const codeResults = [
 ]
 
 function port(execute: (r: ApiReadRequest) => Promise<unknown>, tenant = R1_CODE_TENANT,
-  identity: () => QuotationCatalogReadAuthorizationScope | null = () => principal) {
-  return createQuotationCatalogReadAdapter({ execute }, identity, tenant)
+  identity: () => QuotationCatalogReadAuthorizationScope | null = () => principal,
+  isWorkOrderListed: (id: string) => boolean = id => id === String(ctx.workOrderId)) {
+  return createQuotationCatalogReadAdapter({ execute }, identity, tenant, isWorkOrderListed)
 }
 
 describe('M1 I2 source-pinned R1 ExtField salesAttribute → tenant Code dictionaries', () => {
@@ -122,11 +123,40 @@ describe('M1 I2 source-pinned R1 ExtField salesAttribute → tenant Code diction
     }
   })
 
-  it('blocks Production before any ExtField or Code request', async () => {
+  it('reads bounded Production ExtFields and exact Code dictionaries for the current listed WorkOrder', async () => {
     vi.stubEnv('VITE_XLINK_ENVIRONMENT', 'prod')
     vi.stubEnv('VITE_XLINK_API_BASE_URL', 'https://production.invalid')
-    const execute = vi.fn(async (_r: ApiReadRequest) => ({ data: rawFields }))
+    const execute = vi.fn(async (r: ApiReadRequest) => r.path === 'biz/extField/query'
+      ? { data: rawFields, page: 1, rows: 50, total: rawFields.length }
+      : codeResults)
     const result = await port(execute).listMaterialSalesFields!(ctx)
+    expect(result).toMatchObject({ state: 'succeeded', data: { items: [
+      { name: 'thickness', options: [
+        { value: '2', label: '2毫米' }, { value: '3', label: '3毫米' },
+      ] },
+      { name: 'color', options: [
+        { value: 'black', label: '黑色' }, { value: 'grey', label: '灰色' },
+      ] },
+    ] } })
+    expect(execute.mock.calls.map(([r]) => r)).toEqual([
+      { method: 'POST', path: 'biz/extField/query', body: {
+        page: 1, rows: 50, sortField: 'order', sortOrder: 'asc', colName: 'material',
+        'is:state|integer#and': 1,
+      } },
+      { method: 'POST', path: 'i/code/selectCode.do', body: {
+        jsonPara: JSON.stringify([
+          { codeId: 'r1-thickness', eleid: 'r1-thickness' },
+          { codeId: 'r1-color', eleid: 'r1-color' },
+        ]), tenantId: R1_CODE_TENANT,
+      } },
+    ])
+  })
+
+  it('blocks Production field reads when the WorkOrder is not in the current role list', async () => {
+    vi.stubEnv('VITE_XLINK_ENVIRONMENT', 'prod')
+    const execute = vi.fn(async (_r: ApiReadRequest) => ({ data: rawFields }))
+    const result = await port(execute, R1_CODE_TENANT, () => principal, () => false)
+      .listMaterialSalesFields!(ctx)
     expect(result.error?.category).toBe('authorization_denied')
     expect(execute).not.toHaveBeenCalled()
   })

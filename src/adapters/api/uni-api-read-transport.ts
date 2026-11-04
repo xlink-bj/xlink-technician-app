@@ -38,7 +38,16 @@ export interface UniApiReadTransportOptions {
   /** Exact repeat FormDefinition + child/main Workflow run proven by the current role-scoped detail. */
   readonly isRepeatFormContextAuthorizedForCurrentSession?: (definitionId: string, runId: string) => boolean
   readonly getRepeatFormReadAuthorizationIdentity?: () => string | null
+  /** Production material selector layers are allowed only while the quotation
+   * adapter holds an exact-request permit derived from a role-listed WorkOrder. */
+  readonly isProductionQuotationCatalogReadAuthorized?: (request: ApiReadRequest) => boolean
 }
+
+const productionQuotationCatalogRoutes = new Set([
+  'biz/extField/query',
+  'i/code/selectCode.do',
+  'basic/material/query',
+])
 
 function endpointUrl(baseUrl: string, path: string): string {
   return `${baseUrl.replace(/\/+$/, '')}/${path.replace(/^\/+/, '')}`
@@ -117,6 +126,22 @@ export function createUniApiReadTransport(options: UniApiReadTransportOptions): 
           'unsupported_capability',
         )
       }
+
+      const productionQuotationCatalogRead = productionReadOnly
+        && productionQuotationCatalogRoutes.has(input.path)
+      const verifyQuotationCatalogReadScope = (): void => {
+        if (!productionQuotationCatalogRead) return
+        let authorized = false
+        try { authorized = options.isProductionQuotationCatalogReadAuthorized?.(input) === true }
+        catch { authorized = false }
+        if (!authorized) {
+          throw new ApiReadTransportError(
+            'Production material selector read requires the active exact-request permit from the role-scoped quotation adapter',
+            'authorization_denied',
+          )
+        }
+      }
+      verifyQuotationCatalogReadScope()
 
       let orderReadGuard:
         | { readonly workOrderId: string; readonly sessionRef: SessionRef; readonly identity: string }
@@ -260,6 +285,7 @@ export function createUniApiReadTransport(options: UniApiReadTransportOptions): 
         },
       )
       if (mockResponse !== null) {
+        verifyQuotationCatalogReadScope()
         verifyChildWorkflowReadScope()
         verifyRepeatReadScope()
         verifyOrderReadScope()
@@ -299,6 +325,7 @@ export function createUniApiReadTransport(options: UniApiReadTransportOptions): 
       }
 
       verifyOrderReadScope()
+      verifyQuotationCatalogReadScope()
 
       verifyChildWorkflowReadScope()
       verifyRepeatReadScope()

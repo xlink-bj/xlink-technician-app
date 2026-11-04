@@ -101,6 +101,19 @@ export function isProductionReadOnlyReadAllowed(input: {
     return queryKeys.length === 0 && isBoundedQuotationCatalogListBody(input.body)
   }
 
+  // R1 material quotation selector reads. These request shapes are only the
+  // transport allowlist; the quotation adapter separately proves current
+  // role-listed WorkOrder and Material/Package provenance before dispatch.
+  if (path === 'basic/material/query') {
+    return queryKeys.length === 0 && isBoundedMaterialSkuListBody(input.body)
+  }
+  if (path === 'biz/extField/query') {
+    return queryKeys.length === 0 && isBoundedMaterialSalesFieldsBody(input.body)
+  }
+  if (path === 'i/code/selectCode.do') {
+    return queryKeys.length === 0 && isBoundedMaterialCodeOptionsBody(input.body)
+  }
+
   const packageDetailPrefix = 'biz/projPackage/findById/'
   if (path.startsWith(packageDetailPrefix)) {
     const id = decodePathIdentity(path.slice(packageDetailPrefix.length))
@@ -170,6 +183,55 @@ function isBoundedQuotationCatalogListBody(body: Readonly<Record<string, unknown
   if (typeof serviceType !== 'string' || !/^[A-Za-z0-9,._-]{1,200}$/.test(serviceType)) return false
   return typeof body.sourceType === 'string'
     && /^[A-Za-z0-9,._-]{1,100}$/.test(body.sourceType)
+}
+
+function isBoundedMaterialSalesFieldsBody(body: Readonly<Record<string, unknown>> | undefined): boolean {
+  if (!body) return false
+  const required = ['page', 'rows', 'sortField', 'sortOrder', 'colName', 'is:state|integer#and']
+  const keys = Object.keys(body)
+  return keys.length === required.length && required.every(key => hasOwn(body, key))
+    && Number.isInteger(body.page) && Number(body.page) >= 1 && Number(body.page) <= 4
+    && body.rows === 50 && body.sortField === 'order' && body.sortOrder === 'asc'
+    && body.colName === 'material' && body['is:state|integer#and'] === 1
+}
+
+function isBoundedMaterialSkuListBody(body: Readonly<Record<string, unknown>> | undefined): boolean {
+  if (!body) return false
+  const common = ['page', 'rows', 'is:state|integer#and']
+  if (!common.every(key => hasOwn(body, key))
+    || !Number.isInteger(body.page) || Number(body.page) < 1 || Number(body.page) > 50
+    || body.rows !== 30 || body['is:state|integer#and'] !== 1) return false
+  const keys = Object.keys(body)
+  if (keys.length !== 4) return false
+  const spuId = body.spuid
+  if (typeof spuId === 'string') return keys.includes('spuid') && /^[A-Za-z0-9_-]{1,100}$/.test(spuId)
+  const plural = body['in:spuid|array#and']
+  if (!keys.includes('in:spuid|array#and') || typeof plural !== 'string') return false
+  const ids = plural.split(',')
+  return ids.length >= 1 && ids.length <= 30
+    && ids.every(id => /^[A-Za-z0-9_-]{1,100}$/.test(id))
+    && new Set(ids).size === ids.length
+}
+
+function isBoundedMaterialCodeOptionsBody(body: Readonly<Record<string, unknown>> | undefined): boolean {
+  if (!body) return false
+  const keys = Object.keys(body)
+  if (keys.length !== 2 || !hasOwn(body, 'jsonPara') || !hasOwn(body, 'tenantId')
+    || body.tenantId !== '1340835581184723420' || typeof body.jsonPara !== 'string') return false
+  let providers: unknown
+  try { providers = JSON.parse(body.jsonPara) as unknown } catch { return false }
+  if (!Array.isArray(providers) || providers.length < 1 || providers.length > 30) return false
+  const ids: string[] = []
+  for (const provider of providers) {
+    if (!provider || typeof provider !== 'object' || Array.isArray(provider)) return false
+    const option = provider as Record<string, unknown>
+    const optionKeys = Object.keys(option)
+    if (optionKeys.length !== 2 || !hasOwn(option, 'codeId') || !hasOwn(option, 'eleid')
+      || typeof option.codeId !== 'string' || !/^[A-Za-z0-9_-]{1,100}$/.test(option.codeId)
+      || option.eleid !== option.codeId) return false
+    ids.push(option.codeId)
+  }
+  return new Set(ids).size === ids.length
 }
 
 function isBoundedWorkOrderQuotationListBody(body: Readonly<Record<string, unknown>> | undefined): boolean {

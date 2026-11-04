@@ -74,7 +74,8 @@ describe('R1 catalog price reads: current identity and WorkOrder scope fence', (
     }))
     const sku = await catalog.listMaterialSkuVariants?.(ctx, 'direct_material', ['material-a'])
     expect(sku?.state).toBe('failed_terminal')
-    expect(execute).toHaveBeenCalledTimes(1)
+    expect(execute).toHaveBeenCalledTimes(2)
+    expect(execute).toHaveBeenLastCalledWith(expect.objectContaining({ path: 'basic/material/query' }))
   })
 
   it('discards returned monetary rows when the current identity changes in flight', async () => {

@@ -465,13 +465,14 @@ export interface QuotationCatalogReadPort {
   listMaterials(context: QuotationCatalogContext, page?: number): Promise<OperationSnapshot<ReadPage<QuotationMaterialRead>>>
   listMeasures(context: QuotationCatalogContext, page?: number): Promise<OperationSnapshot<ReadPage<QuotationMeasureRead>>>
   /**
-   * R1 placeOrders.vue:6191–6198 / 6306–6315. Optional until the verified
-   * SKU option UI consumes this source; never enabled for Production reads
-   * by the current adapter. Does not create Order, authorize SKU or price.
+   * R1 placeOrders.vue:6191–6198 / 6306–6315. Production reads require the
+   * current role-listed WorkOrder plus a Material list identity or a material
+   * reference from one successful Package detail. This read never creates an
+   * Order or makes SKU unit price an effective quotation price.
    */
   listMaterialSkuVariants?(context: QuotationCatalogContext, route: 'direct_material' | 'package_materials', spuIds: readonly string[], saleFieldNames?: readonly string[]): Promise<OperationSnapshot<ReadPage<QuotationMaterialSkuVariantRead>>>
-  /** R1 biz/extField/query + i/code/selectCode.do. Read-only option metadata,
-   * not yet a live SKU/SPU picker. Production remains blocked. */
+  /** R1 biz/extField/query + i/code/selectCode.do. Production requests are
+   * bounded and require the current role-listed WorkOrder catalog context. */
   listMaterialSalesFields?(context: QuotationCatalogContext): Promise<OperationSnapshot<ReadPage<QuotationMaterialSaleFieldRead>>>
 }
 

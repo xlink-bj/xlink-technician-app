@@ -29,12 +29,31 @@ export function r1BoundedSelectableSkuRequestBody(spuId: string, page?: number):
   spuid: string
 }
 
+export function r1BoundedSelectablePackageSkuRequestBody(spuIds: readonly string[], page?: number): {
+  page: number
+  rows: 30
+  'is:state|integer#and': 1
+  'in:spuid|array#and': string
+}
+
 export function isAllowedR1SelectableCatalogSkuPageRequest(input: {
   path: string
   method: string
   search: URLSearchParams
   body: unknown
   selectedSpuId: string | null
+  listedSpuIds: ReadonlySet<string>
+  expectedPage: number
+  requestCount: number
+  maxRequestCount?: number
+}): boolean
+
+export function isAllowedR1SelectablePackageSkuPageRequest(input: {
+  path: string
+  method: string
+  search: URLSearchParams
+  body: unknown
+  selectedSpuIds: readonly string[]
   listedSpuIds: ReadonlySet<string>
   expectedPage: number
   requestCount: number

@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
   isAllowedR1SelectableCatalogPageRequest,
+  isAllowedR1SelectablePackageSkuPageRequest,
   isAllowedR1SelectableCatalogSkuPageRequest,
+  r1BoundedSelectablePackageSkuRequestBody,
   r1BoundedSelectableSkuRequestBody,
 } from '../../scripts/r1-selectable-catalog-read-guard.mjs'
 
@@ -60,5 +62,28 @@ describe('R1 selectable catalog Production read guard — synthetic scope only',
       { ...request, expectedPage: 51 },
       { ...request, requestCount: 1000 },
     ]) expect(isAllowedR1SelectableCatalogSkuPageRequest(candidate)).toBe(false)
+  })
+
+  it('preserves R1 package batch route and restricts every SPU to one verified package detail', () => {
+    const selectedSpuIds = ['synthetic-package-spu-a', 'synthetic-package-spu-b']
+    const listedSpuIds = new Set(selectedSpuIds)
+    const request = {
+      path: 'basic/material/query', method: 'POST', search,
+      body: r1BoundedSelectablePackageSkuRequestBody(selectedSpuIds),
+      selectedSpuIds, listedSpuIds, expectedPage: 1, requestCount: 0,
+    }
+    expect(request.body).toEqual({
+      page: 1, rows: 30, 'is:state|integer#and': 1,
+      'in:spuid|array#and': selectedSpuIds.join(','),
+    })
+    expect(isAllowedR1SelectablePackageSkuPageRequest(request)).toBe(true)
+    for (const candidate of [
+      { ...request, selectedSpuIds: [...selectedSpuIds, 'foreign-spu'] },
+      { ...request, listedSpuIds: new Set([selectedSpuIds[0]]) },
+      { ...request, body: { ...request.body, spuid: selectedSpuIds[0] } },
+      { ...request, body: { ...request.body, _all: '1' } },
+      { ...request, body: r1BoundedSelectablePackageSkuRequestBody(selectedSpuIds, 2) },
+      { ...request, requestCount: 1000 },
+    ]) expect(isAllowedR1SelectablePackageSkuPageRequest(candidate)).toBe(false)
   })
 })
