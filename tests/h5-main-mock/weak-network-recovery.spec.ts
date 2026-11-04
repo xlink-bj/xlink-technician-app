@@ -114,7 +114,8 @@ test('430×932 failed submit / lost Mock commit ACK preserves draft and never re
   await page.reload()
   await expect(page.getByTestId('a-special-receipt-pending')).toBeVisible()
   await expect(page.getByTestId('a-special-unresolved')).toBeVisible()
-  await expect(page.getByTestId('a-special-local-draft')).toContainText('已恢复本机草稿')
+  await expect(page.getByTestId('a-special-local-draft'))
+    .toContainText('本机草稿已保留，提交结果待核对')
   // FormData may exist while EXTS never acknowledged it: do not fabricate a saved UI row.
   await expect(page.getByTestId('a-special-row-mock-special-form-data-forms-1')).toHaveCount(0)
   await expect(page.getByTestId('a-special-row-mock-special-form-data-forms-2')).toHaveCount(0)
@@ -123,7 +124,8 @@ test('430×932 failed submit / lost Mock commit ACK preserves draft and never re
   await expect(page.getByTestId('a-special-save')).toHaveCount(0)
   await page.reload()
   await expect(page.getByTestId('a-special-receipt-pending')).toBeVisible()
-  await expect(page.getByTestId('a-special-local-draft')).toContainText('已恢复本机草稿')
+  await expect(page.getByTestId('a-special-local-draft'))
+    .toContainText('本机草稿已保留，提交结果待核对')
   await expect(page.getByTestId('a-special-row-mock-special-form-data-forms-2')).toHaveCount(0)
   expect(await page.evaluate(() => Object.keys(JSON.parse(localStorage.getItem(
     'xlink.dev.mock.r1-special.020-021.v1')!).rows).filter(id => id.startsWith('mock-special-form-data-forms-')).length)).toBe(1)

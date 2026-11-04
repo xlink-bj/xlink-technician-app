@@ -115,11 +115,22 @@
         :key="String(currentR1FormNode.id)" :kind="aStageSpecialKind"
         :node="currentR1FormNode" :work-order-id="String(detail.id)"
         :create-controller="createAStageSpecialControllerForUi" @changed="retry" />
+      <R1SpecialMockTransactionPanel
+        v-else-if="aStageCompletedSpecialNode && completedSpecialReceiptGate?.status === 'pending'"
+        :key="`pending-${String(aStageCompletedSpecialNode.id)}`"
+        :kind="completedSpecialReceiptGate.kind" :node="aStageCompletedSpecialNode"
+        :work-order-id="String(detail.id)"
+        :create-controller="createAStageSpecialControllerForUi" @changed="retry" />
       <R1NodeFormsOverview v-else-if="currentR1FormNode" :node="currentR1FormNode"
         :work-order-id="String(detail.id)" :actor-scope="workOrderReadScopeKey(session.session)" />
-      <AppStatus v-if="aStageCompletedSpecialNode" tone="success" quiet
+      <AppStatus v-if="aStageCompletedSpecialNode && completedSpecialReceiptGate?.status === 'clear'" tone="success" quiet
         message="现场记录已完成，可重新进入查看。"
         data-testid="a-special-complete" />
+      <AppStatus v-else-if="aStageCompletedSpecialNode && completedSpecialReceiptGate?.status === 'checking'"
+        tone="warning" quiet message="正在核对现场记录状态…" data-testid="a-special-completion-checking" />
+      <AppStatus v-else-if="aStageCompletedSpecialNode && completedSpecialReceiptGate?.status === 'unavailable'"
+        tone="warning" quiet message="现场记录状态暂无法核对，请重新读取工单后再试。"
+        data-testid="a-special-completion-unverified" />
       <R1ProductionChildFormsPanel
         v-if="productionReadOnly && productionChildParents.length"
         :parents="productionChildParents"
@@ -378,6 +389,58 @@ const aStageCompletedSpecialNode = computed(() => {
       && isAStageSpecialMockAvailable(node.sourceNodeType,
         String(detail.value?.id ?? ''), actor)) ?? null
 })
+type CompletedSpecialReceiptGate = {
+  readonly nodeId: string
+  readonly kind: AStageSpecialKind
+  readonly status: 'checking' | 'pending' | 'clear' | 'unavailable'
+}
+const completedSpecialReceiptGate = ref<CompletedSpecialReceiptGate | null>(null)
+let completedSpecialReceiptCheck = 0
+watch(
+  () => [aStageCompletedSpecialNode.value?.id ?? null, detail.value?.id ?? null,
+    session.session?.sessionRef ?? null, session.session?.user.id ?? null,
+    session.session?.currentRole?.id ?? null, session.session?.roleVersion ?? null] as const,
+  async ([nodeId, workOrderId]) => {
+    const check = ++completedSpecialReceiptCheck
+    const node = aStageCompletedSpecialNode.value
+    const kind = node?.sourceNodeType
+    if (!nodeId || !workOrderId || !node || (kind !== 'forms' && kind !== 'repeat')) {
+      completedSpecialReceiptGate.value = null
+      return
+    }
+    const id = String(nodeId)
+    completedSpecialReceiptGate.value = { nodeId: id, kind, status: 'checking' }
+    const getActor = () => {
+      const current = session.session
+      return current?.user.id && current.currentRole?.id && current.sessionRef
+        ? { userId: String(current.user.id), roleId: String(current.currentRole.id),
+            identity: JSON.stringify([current.sessionRef, current.user.id,
+              current.currentRole.id, current.roleVersion ?? null]) }
+        : null
+    }
+    if (!isAStageSpecialMockAvailable(kind, String(workOrderId), getActor())) {
+      if (check === completedSpecialReceiptCheck) {
+        completedSpecialReceiptGate.value = { nodeId: id, kind, status: 'unavailable' }
+      }
+      return
+    }
+    try {
+      const view = await createAStageSpecialControllerForUi({
+        kind, workOrderId: String(workOrderId), getActor,
+      }).load()
+      if (check === completedSpecialReceiptCheck) {
+        completedSpecialReceiptGate.value = {
+          nodeId: id, kind, status: view.receiptPending ? 'pending' : 'clear',
+        }
+      }
+    } catch {
+      if (check === completedSpecialReceiptCheck) {
+        completedSpecialReceiptGate.value = { nodeId: id, kind, status: 'unavailable' }
+      }
+    }
+  },
+  { immediate: true },
+)
 const productionChildParents = computed(() => (productionReadOnly
   ? detail.value?.workflowNodes?.filter((node) => node.category === 'subworkflow'
     && ['subflows', 'subflow', 'subworkflow'].includes(node.sourceNodeType ?? '')) ?? []

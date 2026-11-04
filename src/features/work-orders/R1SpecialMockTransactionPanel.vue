@@ -339,8 +339,12 @@ const networkState = ref<import('@shared/ports').NetworkStatus>('unknown')
 let unsubscribeNetwork: (() => void) | undefined
 let draftWrites: Promise<unknown> = Promise.resolve()
 let editRevision = 0
+function draftRecordId(): string | undefined {
+  return editingId.value
+    ?? (viewState.value?.receiptPending ? viewState.value.pendingDraftRecordId : undefined)
+}
 function persistLocalDraft(): void {
-  const current = controller, formId = selectedFormDefinitionId.value, recordId = editingId.value ?? undefined
+  const current = controller, formId = selectedFormDefinitionId.value, recordId = draftRecordId()
   if (!current || !formId) return
   const values = { ...draftValues.value }, ticket = revision
   draftFeedback.value = '正在保存到本机…'
@@ -350,15 +354,20 @@ function persistLocalDraft(): void {
   }).catch(() => { if (ticket === revision) draftFeedback.value = '本机保存失败，请保留当前页面后重试' })
 }
 async function restoreLocalDraft(): Promise<void> {
-  const current = controller, formId = selectedFormDefinitionId.value, recordId = editingId.value ?? undefined
+  const current = controller, formId = selectedFormDefinitionId.value, recordId = draftRecordId()
   const ticket = revision, changes = editRevision
   if (!current || !formId) return
   try {
     await draftWrites
     const values = await current.readDraft(formId, recordId)
     if (ticket !== revision || changes !== editRevision || formId !== selectedFormDefinitionId.value
-      || recordId !== (editingId.value ?? undefined)) return
-    if (values) { draftValues.value = values; draftFeedback.value = '已恢复本机草稿，尚未提交' }
+      || recordId !== draftRecordId()) return
+    if (values) {
+      draftValues.value = values
+      draftFeedback.value = viewState.value?.receiptPending
+        ? '本机草稿已保留，提交结果待核对'
+        : '已恢复本机草稿，尚未提交'
+    }
     else draftFeedback.value = ''
   } catch { if (ticket === revision) draftFeedback.value = '本机草稿读取失败，原草稿已保留' }
 }
@@ -433,7 +442,14 @@ function edit(id: string): void {
   editRevision++
   void restoreLocalDraft().then(() => restoreMediaTasks())
 }
-function cancelEdit(): void { editingId.value = null; editingRevision.value = null; mediaTasks.value = []; draftValues.value = {}; editRevision++; void restoreLocalDraft().then(() => restoreMediaTasks()) }
+function cancelEdit(restoreDraft = true): void {
+  editingId.value = null
+  editingRevision.value = null
+  mediaTasks.value = []
+  draftValues.value = {}
+  editRevision++
+  if (restoreDraft) void restoreLocalDraft().then(() => restoreMediaTasks())
+}
 async function save(): Promise<void> {
   const action: AStageSpecialAction = editingId.value
     ? { kind: 'edit', id: editingId.value, fields: draftValues.value, formDefinitionId: selectedFormDefinitionId.value,
@@ -455,7 +471,12 @@ async function run(action: AStageSpecialAction): Promise<void> {
     if (ticket !== revision) return
     if (result.state !== 'succeeded') {
       await refresh()
-      if (ticket === revision) operationFeedback.value = result.message
+      if (ticket === revision) {
+        operationFeedback.value = result.message
+        if (viewState.value?.receiptPending && !draftFeedback.value.includes('失败')) {
+          draftFeedback.value = '本机草稿已保留，提交结果待核对'
+        }
+      }
       return
     }
     if (action.kind === 'save' || action.kind === 'edit' || action.kind === 'save_finish') {
@@ -481,11 +502,26 @@ async function recoverCompleted(): Promise<void> {
   recoveryFeedback.value = ''
   const ticket = revision
   try {
+    const before = viewState.value
+    const formId = before?.pendingFormDefinitionId ?? selectedFormDefinitionId.value
+    const recordId = before?.pendingDraftRecordId
     const result = await current.recoverCompleted(draftValues.value)
     if (ticket !== revision) return
     if (result.state !== 'succeeded') { recoveryFeedback.value = result.message; return }
+    let mediaFinalized = true
+    let draftRemoved = true
+    if (before?.pendingNeedsOriginalFields && formId) {
+      try { mediaFinalized = await current.finalizeMedia(formId, recordId) }
+      catch { mediaFinalized = false }
+      try { draftRemoved = await current.removeDraft(formId, recordId) }
+      catch { draftRemoved = false }
+    }
+    if (ticket !== revision) return
     viewState.value = result.view
-    cancelEdit()
+    cancelEdit(false)
+    if (!mediaFinalized) operationFeedback.value = '记录已核对，部分本机附件待清理。'
+    if (!draftRemoved) draftFeedback.value = '记录已核对，本机草稿清理失败，请保留当前页面并重试。'
+    else draftFeedback.value = ''
     emit('changed')
   } finally { if (ticket === revision) busy.value = false }
 }

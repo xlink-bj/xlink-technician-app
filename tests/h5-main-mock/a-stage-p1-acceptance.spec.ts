@@ -84,7 +84,11 @@ test.describe('A-stage P1 real-H5 operator acceptance', () => {
     await expect(page.getByTestId('a-stage-mock-order-panel')).toBeVisible()
   }
 
-  for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }]) {
+  for (const viewport of [
+    { width: 375, height: 667 },
+    { width: 390, height: 844 },
+    { width: 430, height: 932 },
+  ]) {
     test(`020 forms: save/edit/remove/finalize/reload @${viewport.width}`, async ({ page }, info) => {
       await page.setViewportSize(viewport)
       await openSpecial(page, '020')

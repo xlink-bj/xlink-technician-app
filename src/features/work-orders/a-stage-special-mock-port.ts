@@ -27,6 +27,8 @@ export interface AStageSpecialView {
   readonly definition: FormDefinitionRead
   readonly definitions: readonly { readonly id: string; readonly label: string; readonly definition: FormDefinitionRead }[]
   readonly pendingFormDefinitionId?: string
+  /** Existing FormData identity used to scope the incomplete local edit draft. */
+  readonly pendingDraftRecordId?: string
   readonly nodeActive: boolean
   readonly entries: readonly AStageSpecialRecord[]
   readonly receiptPending: boolean

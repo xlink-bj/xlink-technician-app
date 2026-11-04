@@ -52,7 +52,7 @@ async function scopedDefinition(id = definition, isCurrent: () => boolean = () =
   const result = await tryMockRead('biz/extField/query', { extId: id }, { latencyMs: 0 })
   const mapped = formDefinition(result, asOpaqueId<'FormDefinitionId'>(id))
   if (String(mapped.id) !== id || !mapped.fields?.length) {
-    throw new Error('当前表单定义未能从 Mock 源核验。')
+    throw new Error('当前表单定义暂不可用，请重新读取。')
   }
   const provider = createMockR1BusinessOptions(isCurrent)
   const fields = await Promise.all(mapped.fields.map(async field => {
@@ -327,13 +327,15 @@ export function createAStageSpecialMockController(options: {
       return { id: item.id, data: receipt.data }
     }))
     const pending = receipts.filter(item => item.data !== null)
+    const pendingReceipt = pending.length === 1 ? pending[0]!.data : null
     // Any sibling FormDef receipt fences the whole node, not only its editor.
     return { kind, definition: formDef, definitions, nodeActive: node.state === 0, entries,
       ...(pending.length === 1 ? { pendingFormDefinitionId: pending[0]!.id } : {}),
+      ...(pendingReceipt?.targetFormDataId ? { pendingDraftRecordId: pendingReceipt.targetFormDataId } : {}),
       receiptPending: pending.length > 0,
-      pendingRecoverable: pending.length === 1 && pending[0]!.data?.state === 'completed',
-      pendingNeedsOriginalFields: pending.length === 1 && pending[0]!.data?.state === 'completed'
-        && ['form_upsert', 'repeat_form_upsert'].includes(pending[0]!.data?.steps[0] ?? ''),
+      pendingRecoverable: pending.length === 1 && pendingReceipt?.state === 'completed',
+      pendingNeedsOriginalFields: pending.length === 1 && pendingReceipt?.state === 'completed'
+        && ['form_upsert', 'repeat_form_upsert'].includes(pendingReceipt?.steps[0] ?? ''),
     }
   }
 
@@ -415,7 +417,7 @@ export function createAStageSpecialMockController(options: {
         })
       }
       if (!closed || !authorized()) return { state: 'uncertain',
-        message: '权威 Mock 回读仍不能证明完整执行；原防重回执已保留。' }
+        message: '最新记录仍无法确认完整执行，原防重复保护已保留。' }
       return { state: 'succeeded', view: await load() }
     } catch { return { state: 'uncertain', message: '只读核对未能完成；未重新发送任何业务命令。' } }
     finally { inFlight = false }
@@ -426,7 +428,7 @@ export function createAStageSpecialMockController(options: {
     inFlight = true
     try {
       return await withR1SpecialMockTransaction<AStageSpecialOutcome>('snapshot-020-021', async () => {
-      if (!authorized()) return { state: 'blocked', message: '当前角色或 Mock 环境不可用。' }
+      if (!authorized()) return { state: 'blocked', message: '当前账号或操作权限不可用。' }
       if (await network.current() === 'offline') return { state: 'blocked',
         message: '网络不可用，填写内容保留在本机。连接恢复后请主动保存。' }
       const before = await load()
@@ -486,7 +488,7 @@ export function createAStageSpecialMockController(options: {
         else intent = { kind: 'repeat_save', sourceNodeType: 'repeat', scope: s,
           fields: fields! }
       } else if (action.kind === 'edit' || action.kind === 'delete') {
-        if (!selected) return { state: 'blocked', message: '只有当前 Mock 新建且有效的表单可以修改。' }
+        if (!selected) return { state: 'blocked', message: '仅当前工单中可编辑的有效记录支持修改。' }
         const original = (await scopedForms(kind, action.id, chosen.id))[0]
         if (!original || original.state !== 1) return { state: 'blocked', message: '原始表单记录已不可用。' }
         const missing = action.kind === 'edit'
@@ -541,7 +543,7 @@ export function createAStageSpecialMockController(options: {
       }
       const result = await executeR1Stage1FunctionalCandidate(options.storage, intent, gateway)
       if (result.state !== 'succeeded' || !result.data) return { state: 'uncertain',
-        message: '请求未完成或回执丢失。请核对当前 Mock 记录，不要重复提交。' }
+        message: '操作结果尚未核实，请先核对当前记录，暂勿重复提交。' }
       if (!authorized()) return { state: 'uncertain', message: '角色已变化，已保留回执，禁止重试。' }
       const receipt = result.data
       let reconciled = false
@@ -568,7 +570,7 @@ export function createAStageSpecialMockController(options: {
         })
       }
       if (!reconciled || !authorized()) return { state: 'uncertain',
-        message: 'Mock 已收到操作，但权威回读尚未闭环；已保留防重回执。' }
+        message: '操作结果尚未核实，已保留防重复提交保护。' }
       return { state: 'succeeded', view: await load() }
       })
     } catch {
