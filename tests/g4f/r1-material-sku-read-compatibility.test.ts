@@ -20,7 +20,7 @@ const sku = (id: string, spuId = 'spu-a') => ({
 describe('M1 I2 R1 material SKU single/batch read compatibility', () => {
   afterEach(() => vi.unstubAllEnvs())
 
-  it('requests a single SPU on R1 basic/material/query using spuid, never sourceType or serviceType', async () => {
+  it('reads a single SPU on R1 basic/material/query and exposes price only as a SKU unit input', async () => {
     const execute = vi.fn(async (_request: ApiReadRequest) => ({ data: [sku('sku-a')], page: 1, rows: 20, total: 1 }))
     const catalog = createQuotationCatalogReadAdapter({ execute })
     const result = await catalog.listMaterialSkuVariants!(context, 'direct_material', ['spu-a'])
@@ -30,10 +30,10 @@ describe('M1 I2 R1 material SKU single/batch read compatibility', () => {
       body: { _all: '1', 'is:state|integer#and': 1, spuid: 'spu-a' },
     })
     expect(result).toMatchObject({ state: 'succeeded', data: {
-      items: [{ id: 'sku-a', spuId: 'spu-a', name: '规格材料（仅身份测试）', specification: '规格 2', unit: '桶' }],
+      items: [{ id: 'sku-a', spuId: 'spu-a', name: '规格材料（仅身份测试）',
+        price: 9987, specification: '规格 2', unit: '桶' }],
     } })
     const line = result.data!.items[0]!
-    expect(line).not.toHaveProperty('price')
     expect(line).not.toHaveProperty('inventory')
     expect(line).not.toHaveProperty('exts')
     expect(line).not.toHaveProperty('attributes')
@@ -181,7 +181,7 @@ describe('M1 I2 R1 material SKU single/batch read compatibility', () => {
     expect(result.data?.items[0]?.saleOptionCandidates).not.toHaveProperty('privateMetadata')
   })
 
-  it('projects only explicitly requested R1 sales-field names from SKU exts; not price or other attributes', async () => {
+  it('projects allowlisted sales fields and SKU unit price, but not inventory or unrelated fields', async () => {
     const execute = vi.fn(async (_request: ApiReadRequest) => ({ data: [{
       ...sku('sku-a'), exts: { thickness: '2', color: 'black', privateCost: 'do not expose' },
     }] }))
@@ -189,9 +189,10 @@ describe('M1 I2 R1 material SKU single/batch read compatibility', () => {
       .listMaterialSkuVariants!(context, 'direct_material', ['spu-a'], ['thickness', 'color'])
     expect(result).toMatchObject({ state: 'succeeded', data: { items: [{
       id: 'sku-a', spuId: 'spu-a',
+      price: 9987,
       saleAttributeValues: { thickness: '2', color: 'black' },
     }] } })
-    expect(result.data?.items[0]).not.toHaveProperty('price')
+    expect(result.data?.items[0]).not.toHaveProperty('inventory')
     expect(result.data?.items[0]).not.toHaveProperty('exts')
     expect(result.data?.items[0]?.saleAttributeValues).not.toHaveProperty('privateCost')
     expect(execute).toHaveBeenCalledWith({

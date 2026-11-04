@@ -1,7 +1,7 @@
 import type { CodeOptionRead, QuotationCatalogContext } from '@shared/ports'
 
 import type { HydratedQuotationDraft, HydratedQuotationSelection } from './hydration'
-import { calculateQuotationPricing, type QuotationPricingResult } from './pricing'
+import { calculateQuotationPricing, r1AmountToFixed, type QuotationPricingResult } from './pricing'
 import { validateQuotationDraft } from './validation'
 
 export interface R1OfficialOrderType1Payload {
@@ -164,6 +164,46 @@ function directSelectionFor(
   }
 }
 
+function directMaterialSkuLines(
+  selection: Extract<HydratedQuotationSelection, { kind: 'material' }>,
+): readonly Record<string, unknown>[] | null {
+  const choices = selection.selection.skuChoices
+  if (!choices?.length) return null
+  const ids = new Set<string>()
+  const rows: Record<string, unknown>[] = []
+  let quantity = 0
+  for (const choice of choices) {
+    if (!choice.skuId || ids.has(choice.skuId) || !Number.isSafeInteger(choice.quantity) || choice.quantity <= 0) return null
+    ids.add(choice.skuId)
+    quantity += choice.quantity
+    const matches = (selection.skuVariants ?? []).filter(variant => variant.id === choice.skuId
+      && variant.spuId === selection.item.id)
+    const variant = matches[0]
+    if (matches.length !== 1 || !variant || typeof variant.price !== 'number'
+      || !Number.isFinite(variant.price) || variant.price <= 0) return null
+    const attributes = variant.saleAttributeValues ?? {}
+    if (Object.keys(attributes).length !== Object.keys(choice.attributes).length
+      || Object.entries(choice.attributes).some(([name, value]) => attributes[name] !== value)) return null
+    rows.push({
+      // R1 order.materials.data contains the selected SKU rows themselves;
+      // it does not serialize an SPU-priced aggregate row.
+      _id: variant.id,
+      spuid: selection.item.id,
+      name: variant.name,
+      number: choice.quantity,
+      amount: variant.price,
+      price: variant.price,
+      totalAmount: r1AmountToFixed(variant.price * choice.quantity),
+      unit: selection.item.materialUnit ?? selection.item.unit ?? variant.unit,
+      materialUnit: selection.item.materialUnit ?? selection.item.unit ?? variant.unit,
+      ...(variant.specification ?? selection.item.specification
+        ? { spec: variant.specification ?? selection.item.specification } : {}),
+      exts: { ...attributes },
+    })
+  }
+  return quantity === selection.selection.quantity ? rows : null
+}
+
 function validateHydratedDraft(draft: HydratedQuotationDraft) {
   return validateQuotationDraft({
     workOrderId: draft.workOrderId,
@@ -233,14 +273,19 @@ export function encodeR1OfficialOrderType1(input: {
       if (selection.kind === 'package') {
         const blocker = packageMaterialQuantityIssue(selection, group.groupId)
         if (blocker) issues.push(blocker)
-      } else if (selection.kind === 'material' &&
-        (selection.item.spuId || selection.selection.skuChoices?.length)) {
-        issues.push({
-          code: 'encoding.material_sku_path_not_authorized',
-          message: '此材料使用 SPU/SKU 规格路径；该选择语义未纳入本阶段。',
-          groupId: group.groupId,
-          selectionId: selection.selection.selectionId,
-        })
+      } else if (selection.kind === 'material') {
+        const hasSkuPath = Boolean(selection.item.spuId
+          || Object.keys(selection.item.saleOptionCandidates ?? {}).length
+          || selection.selection.skuChoices?.length)
+        if (hasSkuPath && !selection.selection.skuChoices?.length) {
+          issues.push({ code: 'encoding.material_sku_selection_required',
+            message: '此材料需要先完成 SKU 规格与数量选择。', groupId: group.groupId,
+            selectionId: selection.selection.selectionId })
+        } else if (selection.selection.skuChoices?.length && !selection.skuVariants?.length) {
+          issues.push({ code: 'encoding.material_sku_price_unverified',
+            message: 'SKU 身份或单价未完成核验，不能生成报价明细。', groupId: group.groupId,
+            selectionId: selection.selection.selectionId })
+        }
       }
     }
     const categoryData = {
@@ -307,6 +352,15 @@ export function encodeR1OfficialOrderType1(input: {
             ...(selection.item.pricingMethod ? { pricingMethod: selection.item.pricingMethod } : {}),
           },
         })
+      } else if (selection.kind === 'material' && selection.selection.skuChoices?.length) {
+        const skuRows = directMaterialSkuLines(selection)
+        if (!skuRows) {
+          issues.push({ code: 'encoding.material_sku_lineage_invalid',
+            message: 'SKU 明细身份、属性或数量与当前材料不一致。', groupId: group.groupId,
+            selectionId: selection.selection.selectionId })
+          continue
+        }
+        categoryData.material.push(...skuRows)
       } else {
         categoryData[selection.kind].push(directSelectionFor(selection, amount))
       }

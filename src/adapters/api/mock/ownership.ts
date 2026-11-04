@@ -13,6 +13,7 @@ import {
   mockR1NoteFormDefinitionId,
 } from './fixtures'
 import { mockMaterialSkuSpuId } from './quotation-catalog'
+import { mockJourneyOrderWorkflowDefinitionId, mockJourneyQuotationId } from './journey'
 
 /** Unknown mock-work-order IDs must fail locally. An absent fixture never
  * grants fall-through to an enabled real-write transport. */
@@ -125,7 +126,8 @@ export function isMockOwnedCommand(
   // node or definition to escape into a configured real-write transport.
   if (/^workflowNode\/updateExts\/mock-workflow-node-/.test(route)
     || /^biz\/extForm\/remove\/mock-form-definition-/.test(route)
-    || /^workflow\/startWorkflow\/order\/null\/mock-workflow-definition-/.test(route)) return true
+    || /^workflow\/startWorkflow\/order\/null\/mock-workflow-definition-/.test(route)
+    || route === `workflow/startWorkflow/order/${mockJourneyQuotationId}/${mockJourneyOrderWorkflowDefinitionId}`) return true
   if (route === 'workflow/process'
     && typeof requestData.workflowNodeId === 'string'
     && requestData.workflowNodeId.startsWith('mock-workflow-node-')) return true
@@ -142,6 +144,14 @@ export function isMockOwnedCommand(
     } catch {
       // Non-synthetic malformed payload handling remains with the adapter.
     }
+  }
+  if (route === 'basic/order/creatQuotation' && typeof requestData.data === 'string') {
+    try {
+      const quote: unknown = JSON.parse(requestData.data)
+      if (quote && typeof quote === 'object' && !Array.isArray(quote)) {
+        return syntheticWorkOrderNamespace((quote as Record<string, unknown>).serviceAppointmentId)
+      }
+    } catch { /* malformed synthetic quote remains locally owned by its route only when decoded */ }
   }
   const syntheticFormMutation =
     route === `biz/extForm/upsert/${mockSyntheticDynamicFormDefinitionId}`

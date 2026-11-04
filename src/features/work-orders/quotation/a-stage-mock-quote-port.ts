@@ -5,9 +5,13 @@ export interface AStageMockQuoteActor {
   readonly identity: string
 }
 export interface AStageMockQuoteOrderController {
-  readStatus(engine: QuotationEngineResult): Promise<'ready' | 'blocked' | 'uncertain' | 'succeeded'>
-  submit(engine: QuotationEngineResult): Promise<{
-    readonly state: 'succeeded' | 'blocked' | 'uncertain'
+  readStatus(engine: QuotationEngineResult): Promise<'ready' | 'quote_created' | 'blocked' | 'uncertain' | 'succeeded'>
+  createQuote(engine: QuotationEngineResult): Promise<{
+    readonly state: 'quote_created' | 'succeeded' | 'blocked' | 'uncertain'
+    readonly message: string
+  }>
+  convertQuoteToOrder(engine: QuotationEngineResult): Promise<{
+    readonly state: 'quote_created' | 'succeeded' | 'blocked' | 'uncertain'
     readonly message: string
   }>
   verifyPending(engine: QuotationEngineResult): Promise<{

@@ -110,14 +110,14 @@
             :data-testid="`quotation-hub-edit-${order.id}`" @tap="edit(order.id)">
             <AppIcon name="order" :size="17" color="#2479eb" />{{ editingId === order.id ? '核验中…' : '修改订单' }}
           </AppButton>
-          <navigator v-if="!isVisualSample && !mockJourneyOrder && isSigningReadOrderCandidate(order) && signingOrderReadRouteFor(workOrderId, order.id)"
+          <navigator v-if="!isVisualSample && isSigningReadOrderCandidate(order) && signingOrderReadRouteFor(workOrderId, order.id)"
             class="quotation-hub__order-signing"
             :url="signingOrderReadRouteFor(workOrderId, order.id) || undefined"
             :data-testid="`quotation-hub-signing-${order.id}`">
             <text>签约进度</text><AppIcon class="quotation-hub__order-signing-icon" name="chevron-right" :size="16" color="#216bd0" />
           </navigator>
         </view>
-        <text v-if="!isVisualSample && !mockJourneyOrder && !isSigningReadOrderCandidate(order)"
+        <text v-if="!isVisualSample && !isSigningReadOrderCandidate(order)"
           class="quotation-hub__detail-note" :data-testid="`quotation-hub-signing-unavailable-${order.id}`">
           {{ unavailableSigningReadReason(order.state) }}
         </text>

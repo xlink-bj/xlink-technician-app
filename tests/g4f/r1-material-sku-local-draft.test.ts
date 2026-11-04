@@ -52,7 +52,7 @@ function setupDraft(workOrderId: string, nodeId: string): QuotationDraft {
   }
 }
 
-describe('M1 I2 R1 local SKU quantity choices / schema v4: NO official Order', () => {
+describe('M1 I2 R1 local SKU quantity choices / schema v4: local draft persistence only', () => {
   beforeEach(() => setActivePinia(createPinia()))
 
   it('saves new quotation drafts with role provenance and never auto-restores legacy drafts in another role', async () => {
@@ -220,9 +220,8 @@ describe('M1 I2 R1 local SKU quantity choices / schema v4: NO official Order', (
     const reopened = useQuotationCompositionStore()
     expect(await reopened.initialize({ identity: id, repository })).toBe('restored')
     expect(reopened.groups[0]!.materials[0]).toMatchObject({ quantity: 2, skuChoices: [matchB] })
-    expect(validateQuotationDraft(reopened.draft!).issues).toEqual(expect.arrayContaining([
-      expect.objectContaining({ code: 'material.sku_local_only' }),
-    ]))
+    expect(validateQuotationDraft(reopened.draft!).issues.map(issue => issue.code))
+      .not.toContain('material.sku_local_only')
     expect(reopened.removeLocalMaterialSkuChoice(group, 'spu-A', matchB.skuId).state).toBe('succeeded')
     expect(reopened.groups[0]!.materials).toEqual([])
     expect((await reopened.flushDraft()).state).toBe('succeeded')
@@ -265,9 +264,8 @@ describe('M1 I2 R1 local SKU quantity choices / schema v4: NO official Order', (
     expect(reopened.groups[1]!.materials[0]!.skuChoices).toEqual([{ ...matchA, quantity: 5 }])
     expect(reopened.groups[0]!.materials[0]!.quantity).toBe(3)
     expect(reopened.groups[1]!.materials[0]!.quantity).toBe(5)
-    expect(validateQuotationDraft(reopened.draft!).issues).toEqual(expect.arrayContaining([
-      expect.objectContaining({ code: 'material.sku_local_only' }),
-    ]))
+    expect(validateQuotationDraft(reopened.draft!).issues.map(issue => issue.code))
+      .not.toContain('material.sku_local_only')
 
     setActivePinia(createPinia())
     const wrongUser = useQuotationCompositionStore()

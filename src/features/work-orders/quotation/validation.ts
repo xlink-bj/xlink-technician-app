@@ -101,15 +101,26 @@ function validateGroup(group: QuotationGroup, issues: QuotationValidationIssue[]
     }
   }
 
-  // Existing Order price/encoder cannot yet map a verified SKU choice
-  // to an official material line. Local proof must not become submit-ready.
   for (const material of group.materials) {
     if (material.skuChoices?.length) {
-      addIssue(issues, {
-        code: 'material.sku_local_only', field: 'composition', groupId: group.groupId,
-        selectionId: material.selectionId,
-        message: '材料 SKU 数量仅保存在本机，尚未核验订单价格与提交字段，不能提交正式报价。',
+      const ids = new Set<string>()
+      const validChoices = material.skuChoices.every(choice => {
+        if (!choice.skuId.trim() || ids.has(choice.skuId)
+          || !Number.isSafeInteger(choice.quantity) || choice.quantity <= 0
+          || !choice.attributes || Object.values(choice.attributes).some(value => typeof value !== 'string' || !value.trim())) {
+          return false
+        }
+        ids.add(choice.skuId)
+        return true
       })
+      const selectedQuantity = material.skuChoices.reduce((sum, choice) => sum + choice.quantity, 0)
+      if (!validChoices || selectedQuantity !== material.quantity) {
+        addIssue(issues, {
+          code: 'material.sku_quantity_or_identity_invalid', field: 'composition', groupId: group.groupId,
+          selectionId: material.selectionId,
+          message: '各 SKU 的规格、身份及数量必须完整，且数量合计须与材料数量一致。',
+        })
+      }
     }
   }
 

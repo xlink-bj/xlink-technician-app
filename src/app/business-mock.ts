@@ -47,5 +47,7 @@ export function isDevSyntheticContractReadPreviewEnabled(workOrderId: string | n
     && import.meta.env.VITE_XLINK_H5_MOCK_E2E === 'true'
     && isBusinessMockDeveloperModeAvailable()
     && isBusinessMockMode() === 'data'
-    && workOrderId === mockWorkOrderIds[1]
+    && (workOrderId === mockWorkOrderIds[1]
+      || (workOrderId === mockJourneyWorkOrderId && isDevMockJourneyEnabled()
+        && mockJourneyStage() === 'quotation'))
 }

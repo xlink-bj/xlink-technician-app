@@ -745,7 +745,7 @@
                     variant="secondary"
                     :data-testid="`quotation-material-options-${item.id}`"
                     @tap="catalogBrowser.openMaterialSkuPreview(item.id)"
-                  >查看规格（只读）</AppButton>
+                  >选择规格</AppButton>
                   <AppButton
                     v-if="item.kind === 'package'"
                     class="quotation-content__catalog-item-action"
@@ -823,9 +823,12 @@
                   @tap="catalogBrowser.chooseMaterialSkuOption(field.name, option.value)">{{ option.label }}</button>
               </view>
             </view>
-            <AppStatus v-if="catalogBrowser.materialSkuMatch.state === 'matched'"
-              message="规格与 SKU 属性精确匹配，可加入当前维修组的草稿；正式报价提交暂未开放。" quiet
+            <AppStatus v-if="catalogBrowser.materialSkuMatch.state === 'matched' && matchedSkuPrice !== null"
+              :message="`已匹配 SKU，单价 ¥${matchedSkuPrice.toFixed(2)}；报价金额还会按数量及报价规则汇总。`" quiet
               data-testid="quotation-sku-match-exact" />
+            <AppStatus v-else-if="catalogBrowser.materialSkuMatch.state === 'matched'"
+              message="规格已匹配，但 SKU 单价暂不可核验；不能加入报价。" tone="warning" quiet
+              data-testid="quotation-sku-price-unavailable" />
             <AppStatus v-else-if="catalogBrowser.materialSkuMatch.state === 'incomplete'"
               message="请选择全部规格。该界面不会创建报价或订单。" quiet />
             <AppStatus v-else
@@ -839,9 +842,9 @@
                 data-testid="quotation-sku-quantity-input"
                 @input="onSkuQuantityInput($event)" />
               <AppButton variant="secondary"
-                :disabled="!canEdit || !selectedMaterialAlreadyInGroup || skuLocalSaving"
+                :disabled="!canEdit || !selectedMaterialAlreadyInGroup || skuLocalSaving || matchedSkuPrice === null"
                 data-testid="quotation-sku-save-local"
-                @tap="saveMatchedSkuToLocalDraft">保存 SKU 数量</AppButton>
+                @tap="saveMatchedSkuToLocalDraft">保存到报价草稿</AppButton>
             </view>
             <AppStatus v-if="!selectedMaterialAlreadyInGroup"
               message="先返回材料目录，使用“加入本组”添加该材料，再保存规格数量。" tone="warning" quiet />
@@ -851,7 +854,7 @@
           <AppStatus v-else :message="materialSkuPreviewStatusMessage"
             tone="warning" quiet data-testid="quotation-sku-preview-unavailable" />
           <view class="quotation-content__catalog-footer">
-            <text class="quotation-content__catalog-footer-note">当前可编辑数量；金额和正式订单提交暂未开放。</text>
+            <text class="quotation-content__catalog-footer-note">SKU 单价按实际数量计入报价；总金额按报价规则计算。</text>
             <AppButton variant="secondary" data-testid="quotation-sku-preview-return"
               @tap="catalogBrowser.backToList()">返回材料目录</AppButton>
           </view>
@@ -1215,6 +1218,14 @@ const matchedMaterialSkuChoice = computed(() => {
   return activeCatalogGroup.value?.materials
     .find(material => material.catalogId === catalogBrowser.selectedMaterialId)
     ?.skuChoices?.find(sku => sku.skuId === match.skuId)
+})
+const matchedSkuPrice = computed(() => {
+  const match = catalogBrowser.materialSkuMatch
+  const preview = catalogBrowser.materialSkuPreview
+  if (match.state !== 'matched' || preview?.state !== 'ready') return null
+  const variant = preview.variants.find(row => row.id === match.skuId)
+  return typeof variant?.price === 'number' && Number.isFinite(variant.price) && variant.price > 0
+    ? variant.price : null
 })
 watch(() => [catalogBrowser.selectedMaterialId, catalogBrowser.materialSkuMatch.state,
   catalogBrowser.materialSkuMatch.state === 'matched' ? catalogBrowser.materialSkuMatch.skuId : '',

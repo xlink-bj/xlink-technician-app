@@ -520,12 +520,12 @@ describe('G4-F Phase 1H quotation engine', () => {
     expect(port).not.toHaveProperty('completeWorkflow')
   })
 
-  it('blocks SPU/SKU-based direct material prices', async () => {
+  it('blocks SPU/SKU material until exact SKU and price inputs are verified', async () => {
     const skuMaterial = { ...materialItem, spuId: 'synthetic-spu' }
     const materialPort = catalogPort({ listMaterials: vi.fn(async () => succeeded({ items: [skuMaterial] })) })
     const materialDraft = directDraft(['procedure', 'material'])
     const materialResult = await pricingFor(materialDraft, materialPort)
-    expect(materialResult).toMatchObject({ state: 'blocked', issues: [expect.objectContaining({ code: 'pricing.material_sku_deferred' })] })
+    expect(materialResult).toMatchObject({ state: 'blocked', issues: [expect.objectContaining({ code: 'pricing.material_sku_selection_required' })] })
   })
 
   it('prices a Package without pricingMethod and emits R1 standard material quantity', async () => {
@@ -728,7 +728,7 @@ describe('G4-F Phase 1H quotation engine', () => {
       expect(result.payload?.type).toBe(1)
     })
 
-    it('G6: local SPU/SKU has no price authority; the engine may not fabricate type-1 rows or a price', async () => {
+    it('G6: local SPU/SKU without an exact selected SKU and source price remains blocked', async () => {
       const port = catalogPort({ listMaterials: vi.fn(async () => succeeded({
         items: [{ ...materialItem, spuId: 'spu-real-shape' }],
       })) })
@@ -736,7 +736,7 @@ describe('G4-F Phase 1H quotation engine', () => {
         draft: directDraft(['procedure', 'material']), catalogContext: context, catalogRead: port,
       })
       expect(result).toMatchObject({ state: 'blocked', issues: expect.arrayContaining([
-        expect.objectContaining({ phase: 'pricing', code: 'pricing.material_sku_deferred' }),
+        expect.objectContaining({ phase: 'pricing', code: 'pricing.material_sku_selection_required' }),
       ]) })
       expect(result.payload).toBeUndefined()
       expect(JSON.stringify(result)).not.toMatch(/"skuCode":|"skus":/)

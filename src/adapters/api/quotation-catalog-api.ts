@@ -173,9 +173,9 @@ function materialItem(raw: unknown): QuotationMaterialRead {
   }
 }
 
-/** R1 SKU rows are read only as provider-owned identities here. Their
- * commercial fields and untyped exts are deliberately not exposed until
- * real ExtField/valueOption resolution is source-matched in the quotation UI.
+/** R1 SKU rows expose only provider identity, allowlisted sales codes and
+ * `price` as a per-unit input for the quote calculation. The price is not the
+ * quote total or server authority; cost, inventory and unrelated exts stay private.
  */
 function materialSkuVariantItem(raw: unknown, expectedSpuIds: ReadonlySet<string>, saleFieldNames: readonly string[]): QuotationMaterialSkuVariantRead {
   const record = asRecord(raw, 'R1 material SKU')
@@ -190,6 +190,7 @@ function materialSkuVariantItem(raw: unknown, expectedSpuIds: ReadonlySet<string
   }
   const specification = optionalString(record, ['spec'])
   const unit = optionalString(record, ['unit'])
+  const price = optionalFiniteNumber(record, 'price')
   const attrs = optionalRecord(record.exts)
   const projected: Record<string, string> = Object.create(null) as Record<string, string>
   for (const name of saleFieldNames) {
@@ -201,6 +202,7 @@ function materialSkuVariantItem(raw: unknown, expectedSpuIds: ReadonlySet<string
   }
   return {
     id, spuId, name: requiredString(record, ['name'], 'material SKU name'),
+    ...(price === undefined ? {} : { price }),
     ...(specification ? { specification } : {}),
     ...(unit ? { unit } : {}),
     ...(saleFieldNames.length ? { saleAttributeValues: projected } : {}),
@@ -696,8 +698,8 @@ class QuotationCatalogReadAdapter implements QuotationCatalogReadPort {
     }
   }
 
-  /** R1 read-only SKU identity, intentionally not called from any UI yet.
-   * The current Production allowlist does not permit basic/material/query.
+  /** R1 SKU identity and unit-price inputs for an exact selected quotation SKU.
+   * Production remains blocked because basic/material/query is not allowlisted.
    */
   async listMaterialSkuVariants(context: QuotationCatalogContext, route: 'direct_material' | 'package_materials', spuIds: readonly string[], saleFieldNames: readonly string[] = []) {
     // The live app supplies an authenticated actor. Discard a result from any

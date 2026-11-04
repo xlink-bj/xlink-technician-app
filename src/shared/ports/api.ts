@@ -442,11 +442,15 @@ export interface QuotationMaterialSaleFieldRead {
   readonly options: readonly CodeOptionRead[]
 }
 
-/** R1 basic/material/query SKU identity only. No inferred stock, price authority or selectable sale attributes. */
+/** R1 basic/material/query SKU identity and unit-price input. R1 still calculates
+ * quote totals from the selected rows, their quantities and later adjustments;
+ * this unit price is never itself the final quote amount. */
 export interface QuotationMaterialSkuVariantRead {
   readonly id: string
   readonly spuId: string
   readonly name: string
+  /** R1 `sku.price`, used as a unit-price input when an exact SKU is selected. */
+  readonly price?: number
   readonly specification?: string
   readonly unit?: string
   /** Only explicitly requested, sales-field-named SKU ext values; no pricing. */

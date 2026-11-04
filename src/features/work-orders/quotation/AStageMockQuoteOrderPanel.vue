@@ -16,8 +16,11 @@
       :message="engine.issues[0].message" data-testid="a-stage-order-price-blocked" />
     <AppStatus v-else-if="!canSubmit && status !== 'succeeded'" tone="neutral" quiet
       message="请补齐维修部位、商品、数量及价格后继续。未核实的价格不会按零计算。" />
+    <AppStatus v-if="status === 'quote_created'" tone="success" quiet
+      message="报价单已按报价编号回读。转为订单前仍可返回检查明细。"
+      data-testid="a-stage-quote-readback" />
     <AppStatus v-if="status === 'succeeded'" tone="success" quiet
-      message="报价草稿已保存，可重新进入查看。"
+      message="订单已按返回的订单编号和金额回读；合同状态仍需单独核验。"
       data-testid="a-stage-order-readback" />
     <AppStatus v-if="status === 'uncertain'" tone="warning" quiet
       message="保存结果待核查，请勿重复提交。" data-testid="a-stage-order-uncertain" />
@@ -28,16 +31,26 @@
         quiet :message="verificationMessage" data-testid="a-stage-order-verify-result" />
     </view>
     <text v-if="feedback" class="mock-quote-order__feedback" role="alert">{{ feedback }}</text>
-    <view v-if="status !== 'succeeded'" class="mock-quote-order__actions">
-      <AppButton v-if="!confirm" block :disabled="!canSubmit || busy || status === 'uncertain'"
-        data-testid="a-stage-order-create" @tap="confirm = true">保存报价草稿</AppButton>
+    <view v-if="status === 'ready' || status === 'quote_created'" class="mock-quote-order__actions">
+      <AppButton v-if="!confirm" block :disabled="!canSubmit || busy"
+        :data-testid="status === 'quote_created' ? 'a-stage-order-convert' : 'a-stage-order-create'"
+        @tap="confirm = status === 'quote_created' ? 'order' : 'quote'">
+        {{ status === 'quote_created' ? '转为正式订单' : '保存报价单' }}
+      </AppButton>
       <view v-else class="mock-quote-order__confirm">
-        <text class="mock-quote-order__warning">请核对报价内容。确认后请勿重复点击。</text>
+        <text class="mock-quote-order__warning">
+          {{ confirm === 'quote' ? '报价单保存后将使用单独的报价编号。' : '将按当前报价启动订单流程，正式订单会使用服务端返回的新编号。' }}
+        </text>
         <AppButton :disabled="busy || !canSubmit" :loading="busy"
-          data-testid="a-stage-order-confirm" @tap="submit">确认创建</AppButton>
-        <AppButton variant="text" :disabled="busy" @tap="confirm = false">返回检查</AppButton>
+          :data-testid="confirm === 'quote' ? 'a-stage-order-confirm' : 'a-stage-order-convert-confirm'"
+          @tap="confirm === 'quote' ? createQuote() : convertQuote()">
+          {{ confirm === 'quote' ? '确认保存报价单' : '确认转为订单' }}
+        </AppButton>
+        <AppButton variant="text" :disabled="busy" @tap="confirm = null">返回检查</AppButton>
       </view>
     </view>
+    <AppButton v-if="status === 'succeeded'" block variant="secondary"
+      data-testid="a-stage-order-open-records" @tap="$emit('open-order-records')">查看订单与签约状态</AppButton>
   </view>
 </template>
 
@@ -51,22 +64,24 @@ import AppButton from '@shared/ui/AppButton.vue'
 import AppStatus from '@shared/ui/AppStatus.vue'
 
 const props = defineProps<{ readonly createController: AStageMockQuoteOrderControllerFactory }>()
+defineEmits<{ (event: 'open-order-records'): void }>()
 const workspace = useActionWorkspaceStore()
 const composition = useQuotationCompositionStore()
 const session = useSessionStore()
 const engine = computed(() => workspace.quotationEngine.result)
 const amount = computed(() => engine.value?.pricing
   ? `¥ ${engine.value.pricing.calcTotalPrice.totalPrice.toFixed(2)}` : '待核验')
-const status = ref<'ready' | 'blocked' | 'uncertain' | 'succeeded'>('blocked')
+const status = ref<'ready' | 'quote_created' | 'blocked' | 'uncertain' | 'succeeded'>('blocked')
 const feedback = ref('')
 const busy = ref(false)
 const checking = ref(false)
-const confirm = ref(false)
+const confirm = ref<'quote' | 'order' | null>(null)
 const verification = ref<'confirmed' | 'not_found' | 'blocked' | 'unknown' | null>(null)
 const verificationMessage = ref('')
 const canSubmit = computed(() => Boolean(engine.value?.state === 'ready' && engine.value.payload
   && engine.value.payload.totalPrice > 0 && composition.draft
-  && engine.value.draftVersion === composition.draft.draftVersion && status.value === 'ready'))
+  && engine.value.draftVersion === composition.draft.draftVersion
+  && (status.value === 'ready' || status.value === 'quote_created')))
 function actor() {
   const current = session.session
   return current?.user.id && current.currentRole?.id && current.sessionRef
@@ -80,7 +95,7 @@ watch(() => [engine.value?.draftVersion, engine.value?.state, session.session?.s
   session.session?.currentRole?.id, session.session?.roleVersion] as const,
   async () => {
     const ticket = ++generation
-    confirm.value = false
+    confirm.value = null
     feedback.value = ''
     verification.value = null
     verificationMessage.value = ''
@@ -89,20 +104,38 @@ watch(() => [engine.value?.draftVersion, engine.value?.state, session.session?.s
     if (ticket === generation) status.value = state
   }, { immediate: true })
 
-async function submit(): Promise<void> {
-  if (!canSubmit.value || busy.value || !engine.value) return
+async function createQuote(): Promise<void> {
+  if (!canSubmit.value || busy.value || !engine.value || confirm.value !== 'quote') return
   const current = engine.value
   busy.value = true
-  confirm.value = false
+  confirm.value = null
   feedback.value = ''
   try {
     const saved = await composition.flushDraft()
     if (saved.state !== 'succeeded' || !composition.draft
       || current.draftVersion !== composition.draft.draftVersion) {
-      feedback.value = '草稿保存失败，请检查后重新核对。'
+      feedback.value = '本地报价草稿保存失败，请检查后重试。'
       return
     }
-    const result = await controller.submit(current)
+    const result = await controller.createQuote(current)
+    status.value = result.state
+    feedback.value = result.message
+  } finally { busy.value = false }
+}
+async function convertQuote(): Promise<void> {
+  if (!canSubmit.value || busy.value || !engine.value || confirm.value !== 'order') return
+  const current = engine.value
+  busy.value = true
+  confirm.value = null
+  feedback.value = ''
+  try {
+    const saved = await composition.flushDraft()
+    if (saved.state !== 'succeeded' || !composition.draft
+      || current.draftVersion !== composition.draft.draftVersion) {
+      feedback.value = '本地报价草稿保存失败，请检查后重试。'
+      return
+    }
+    const result = await controller.convertQuoteToOrder(current)
     status.value = result.state
     feedback.value = result.message
   } finally { busy.value = false }
@@ -117,6 +150,7 @@ async function verifyPending(): Promise<void> {
     if (engine.value !== current) return
     verification.value = result.state
     verificationMessage.value = result.message
+    status.value = await controller.readStatus(current)
   } finally { checking.value = false }
 }
 </script>

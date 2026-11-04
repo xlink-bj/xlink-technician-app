@@ -288,10 +288,12 @@ export const mockMaterialSaleCodeOptions = {
 export const mockMaterialSkuVariantsResponse = {
   data: [
     { _id: 'mock-material-sku-black-2', spuid: mockMaterialSkuSpuId,
-      name: '聚氨酯密封胶 黑色 2毫米', state: 1,
+      name: '聚氨酯密封胶 黑色 2毫米', state: 1, price: 4.25,
+      unit: '支', spec: '600ml/支',
       exts: { thickness: '2', color: 'black' } },
     { _id: 'mock-material-sku-grey-3', spuid: mockMaterialSkuSpuId,
-      name: '聚氨酯密封胶 灰色 3毫米', state: 1,
+      name: '聚氨酯密封胶 灰色 3毫米', state: 1, price: 6.75,
+      unit: '支', spec: '600ml/支',
       exts: { thickness: '3', color: 'grey' } },
   ],
   page: 1, rows: 20, total: 2,

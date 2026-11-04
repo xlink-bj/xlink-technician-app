@@ -159,24 +159,48 @@ test.describe('A-stage P1 real-H5 operator acceptance', () => {
       await page.getByTestId('quotation-first-step-quantity').locator('input').fill('12')
       await page.getByTestId('quotation-first-step-select-products').click()
       await page.getByTestId('quotation-catalog-kind-material').click()
-      await page.getByTestId('quotation-catalog-add-material-mock-catalog-material-ordinary-1').click()
+      const materialId = 'mock-catalog-material-sealant'
+      await page.getByTestId(`quotation-catalog-add-material-${materialId}`).click()
+      await page.getByTestId('quotation-browse-quotation-group-1').click()
+      await page.getByTestId('quotation-catalog-kind-material').click()
+      await page.getByTestId(`quotation-material-options-${materialId}`).click()
+      await page.getByTestId('quotation-sku-option-thickness-2').click()
+      await page.getByTestId('quotation-sku-option-color-black').click()
+      await expect(page.getByTestId('quotation-sku-match-exact'))
+        .toContainText('单价 ¥4.25')
+      const skuQuantity = page.locator('[data-testid="quotation-sku-quantity-input"] input')
+        .or(page.locator('input[data-testid="quotation-sku-quantity-input"]')).first()
+      await skuQuantity.fill('2')
+      await page.getByTestId('quotation-sku-save-local').click()
+      await page.getByTestId('quotation-catalog-close').click()
       await page.getByTestId('quotation-browse-quotation-group-1').click()
       await page.getByTestId('quotation-catalog-kind-procedure').click()
       await page.getByTestId('quotation-catalog-add-procedure-mock-catalog-procedure-seal').click()
       const panel = page.getByTestId('a-stage-mock-order-panel')
-      await expect(panel).toContainText('¥ 107.00')
+      await expect(panel).toContainText('¥ 76.90')
+      const skuSummary = page.locator('[data-testid^="quotation-material-skus-"]')
+      await expect(skuSummary).toHaveCount(1)
+      await expect(skuSummary).toContainText('2 件')
       await expect(page.getByTestId('a-stage-order-create')).toBeEnabled()
       await expect(page.getByTestId('action-workspace-submit')).toHaveCount(0)
+      const quoteScreenshot = await page.screenshot({
+        path: `test-results/main-h5-mock/evidence/a-p1-quotation-ready-${viewport.width}.png`,
+        fullPage: true,
+      })
       await info.attach(`a-p1-quotation-ready-${viewport.width}`, {
-        body: await page.screenshot({ fullPage: true }), contentType: 'image/png',
+        body: quoteScreenshot, contentType: 'image/png',
       })
       await page.getByTestId('a-stage-order-create').click()
       await page.getByTestId('a-stage-order-confirm').click()
+      await expect(page.getByTestId('a-stage-quote-readback')).toBeVisible()
+      await expect(page.getByTestId('a-stage-order-convert')).toBeEnabled()
+      await page.getByTestId('a-stage-order-convert').click()
+      await page.getByTestId('a-stage-order-convert-confirm').click()
       await expect(page.getByTestId('a-stage-order-readback')).toBeVisible()
       await page.reload({ waitUntil: 'domcontentloaded' })
       await expect(page.getByTestId('quotation-order-hub')).toBeVisible()
       await expect(page.getByTestId('quotation-hub-order-mock-official-order-019-protocol'))
-        .toContainText('¥ 107.00')
+        .toContainText('¥ 76.90')
       await expect(page.getByTestId('quotation-hub-order-mock-official-order-019-protocol'))
         .not.toContainText(/体验数据|Mock|未提交后台/)
       await page.getByTestId('quotation-hub-start-new').click()
@@ -196,8 +220,18 @@ test.describe('A-stage P1 real-H5 operator acceptance', () => {
       const officialOrder = page.getByTestId('quotation-hub-order-mock-official-order-019-protocol')
       await expect(officialOrder).toBeVisible()
       await expect(officialOrder).toHaveCount(1)
+      await page.getByTestId('quotation-hub-signing-mock-official-order-019-protocol').click()
+      await expect(page.getByTestId('signing-order-read-verified')).toBeVisible()
+      await expect(page.getByTestId('signing-order-read-display-number')).toContainText('MOCK-019-NOT-A-REAL-ORDER')
+      await page.getByTestId('signing-contract-read-request').click()
+      await expect(page.getByTestId('signing-contract-inconclusive')).toBeVisible()
+      await expect(page.getByTestId('signing-order-read-no-write')).toContainText('全程只读')
+      const orderReadbackScreenshot = await page.screenshot({
+        path: `test-results/main-h5-mock/evidence/a-p1-order-readback-${viewport.width}.png`,
+        fullPage: true,
+      })
       await info.attach(`a-p1-order-readback-${viewport.width}`, {
-        body: await page.screenshot({ fullPage: true }), contentType: 'image/png',
+        body: orderReadbackScreenshot, contentType: 'image/png',
       })
     })
   }

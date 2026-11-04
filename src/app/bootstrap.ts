@@ -78,9 +78,12 @@ export function createApplication(dependencies: ApplicationDependencies = {}) {
   const quotationCatalogRead = dependencies.quotationCatalogRead ?? createDefaultQuotationCatalogReadPort(authSession)
   const apiCommand = dependencies.apiCommand ?? createDefaultTechnicianApiCommandPort(authSession, apiRead)
   const quotationOrderCommand = dependencies.quotationOrderCommand ?? createDefaultQuotationOrderCommandPort(authSession)
+  const isQuotationOrderReadScopeValid = (workOrderId: string) =>
+    apiRead.isWorkOrderListedForCurrentSession?.(workOrderId) === true
+    || isDevSyntheticContractReadPreviewEnabled(workOrderId)
   const quotationOrderRead = dependencies.quotationOrderRead ?? createDefaultQuotationOrderReadPort(
     authSession,
-    (workOrderId) => apiRead.isWorkOrderListedForCurrentSession?.(workOrderId) === true,
+    isQuotationOrderReadScopeValid,
   )
   const phone = dependencies.phone ?? createDefaultPhonePort()
   const navigation = dependencies.navigation ?? createDefaultNavigationPort()
@@ -121,9 +124,10 @@ export function createApplication(dependencies: ApplicationDependencies = {}) {
   signingReviewReadStore.configure(
     quotationOrderRead,
     () => sessionStore.session,
-    (id) => workOrderDetailStore.loadState === 'succeeded'
-      && String(workOrderDetailStore.detail?.id ?? '') === id
-      && workOrderListStore.items.some((item) => String(item.id) === id),
+    (id) => isDevSyntheticContractReadPreviewEnabled(id)
+      || (workOrderDetailStore.loadState === 'succeeded'
+        && String(workOrderDetailStore.detail?.id ?? '') === id
+        && workOrderListStore.items.some((item) => String(item.id) === id)),
     apiRead,
     isDevSyntheticContractReadPreviewEnabled,
   )

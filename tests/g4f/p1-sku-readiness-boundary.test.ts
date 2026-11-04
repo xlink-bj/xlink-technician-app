@@ -29,7 +29,9 @@ describe('P1 SKU readiness: hard architecture and runtime boundary', () => {
     const content = text('src/features/work-orders/quotation/QuotationActionContent.vue')
     expect(content).not.toContain('quotation-p1-sku-server-auth-blocked')
     expect(content).not.toContain('仅合成字典')
-    expect(content).toContain('正式报价提交暂未开放')
+    const workspaceContent = text('src/features/work-orders/quotation/QuotationActionWorkspace.vue')
+    expect(workspaceContent).toContain('正式提交暂未开放')
+    expect(workspaceContent).toContain('quotation-submit-disabled-preview')
   })
 
   it('production composition has no import from the DEV SKU readiness review', () => {

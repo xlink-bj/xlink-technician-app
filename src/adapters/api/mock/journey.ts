@@ -8,6 +8,7 @@ export const mockJourneyWorkOrderId = 'mock-work-order-019-continuous-journey'
 export const mockJourneyWorkflowRunId = 'mock-workflow-run-019'
 export const mockJourneyOrderWorkflowDefinitionId = 'mock-workflow-definition-019-order'
 export const mockJourneyOrderWorkflowRunId = 'mock-workflow-run-019-order'
+export const mockJourneyQuotationId = 'mock-quotation-019-protocol'
 export const mockJourneyOfficialOrderId = 'mock-official-order-019-protocol'
 export const mockJourneyNodes = {
   appointment: 'mock-workflow-node-019-appointment',
@@ -18,6 +19,8 @@ export type MockJourneyStage = keyof typeof mockJourneyNodes
 const storageKey = 'xlink.dev.mock.journey.019.stage.v1'
 const formDataKey = 'xlink.dev.mock.journey.019.form-data.v1.'
 const orderWorkflowKey = 'xlink.dev.mock.journey.019.order-workflow.v1'
+const quoteWorkflowKey = 'xlink.dev.mock.journey.019.quote-workflow.v1'
+const quotationKey = 'xlink.dev.mock.journey.019.quotation.v1'
 const officialOrderKey = 'xlink.dev.mock.journey.019.official-order.v1'
 const allowed: readonly MockJourneyStage[] = ['appointment', 'survey', 'quotation']
 let fallbackStage: MockJourneyStage = 'appointment'
@@ -110,8 +113,53 @@ export function readMockJourneyOrderWorkflow(): string | null {
   }
 }
 
+/** A converted quote starts its R1 child workflow with the real type=0
+ * FormData ID. This record stays separate from the direct type=1 path. */
+export function startMockJourneyQuoteWorkflow(quoteId: string): boolean {
+  if (!isDevMockJourneyEnabled() || mockJourneyStage() !== 'quotation'
+    || quoteId !== mockJourneyQuotationId || readMockJourneyQuotation() === null
+    || readMockJourneyQuoteWorkflow() !== null) return false
+  try {
+    const value = JSON.stringify({ formDataId: quoteId, workflowId: mockJourneyOrderWorkflowRunId })
+    uni.setStorageSync(quoteWorkflowKey, value)
+    return uni.getStorageSync(quoteWorkflowKey) === value
+  } catch { return false }
+}
+
+export function readMockJourneyQuoteWorkflow(): { readonly formDataId: string; readonly workflowId: string } | null {
+  if (!isDevMockJourneyEnabled() || mockJourneyStage() !== 'quotation') return null
+  try {
+    const raw = uni.getStorageSync(quoteWorkflowKey)
+    const value = typeof raw === 'string' ? JSON.parse(raw) as unknown : null
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) return null
+    const row = value as Record<string, unknown>
+    return row.formDataId === mockJourneyQuotationId && row.workflowId === mockJourneyOrderWorkflowRunId
+      ? { formDataId: mockJourneyQuotationId, workflowId: mockJourneyOrderWorkflowRunId } : null
+  } catch { return null }
+}
+
+export function persistMockJourneyQuotation(quotation: unknown): boolean {
+  if (!isDevMockJourneyEnabled() || mockJourneyStage() !== 'quotation') return false
+  try {
+    const existing: unknown = uni.getStorageSync(quotationKey)
+    if (existing !== null && existing !== undefined && existing !== '') return false
+    const serialized = JSON.stringify(quotation)
+    if (serialized.length > 200000) return false
+    uni.setStorageSync(quotationKey, serialized)
+    return uni.getStorageSync(quotationKey) === serialized
+  } catch { return false }
+}
+
+export function readMockJourneyQuotation(): unknown | null {
+  if (!isDevMockJourneyEnabled() || mockJourneyStage() !== 'quotation') return null
+  try {
+    const raw: unknown = uni.getStorageSync(quotationKey)
+    return typeof raw === 'string' ? JSON.parse(raw) as unknown : null
+  } catch { return null }
+}
+
 export function persistMockJourneyOfficialOrder(order: unknown): boolean {
-  if (readMockJourneyOrderWorkflow() === null) return false
+  if (readMockJourneyOrderWorkflow() === null && readMockJourneyQuoteWorkflow() === null) return false
   try {
     const existing: unknown = uni.getStorageSync(officialOrderKey)
     if (existing !== null && existing !== undefined && existing !== '') return false
@@ -125,7 +173,7 @@ export function persistMockJourneyOfficialOrder(order: unknown): boolean {
 }
 
 export function readMockJourneyOfficialOrder(): unknown | null {
-  if (readMockJourneyOrderWorkflow() === null) return null
+  if (readMockJourneyOrderWorkflow() === null && readMockJourneyQuoteWorkflow() === null) return null
   try {
     const raw: unknown = uni.getStorageSync(officialOrderKey)
     return typeof raw === 'string' ? JSON.parse(raw) as unknown : null
@@ -140,6 +188,8 @@ export function resetMockJourney(): void {
   uni.removeStorageSync(`${formDataKey}appointment`)
   uni.removeStorageSync(`${formDataKey}survey`)
   uni.removeStorageSync(orderWorkflowKey)
+  uni.removeStorageSync(quoteWorkflowKey)
+  uni.removeStorageSync(quotationKey)
   uni.removeStorageSync(officialOrderKey)
   fallbackStage = 'appointment'
 }

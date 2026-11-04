@@ -58,7 +58,8 @@
     </template>
     <template #after-content>
       <AStageMockQuoteOrderPanel v-if="aStageMockOrderEnabled"
-        :create-controller="createAStageMockQuoteOrderControllerForUi" />
+        :create-controller="createAStageMockQuoteOrderControllerForUi"
+        @open-order-records="openQuotationOrderRecords" />
     </template>
   </QuotationActionWorkspace>
 

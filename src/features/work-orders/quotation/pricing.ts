@@ -115,8 +115,37 @@ function selectionAmount(selection: HydratedQuotationSelection, groupId: string)
       }
     }
     case 'material': {
-      if (selection.item.spuId) {
-        return { state: 'blocked', issue: issue('pricing.material_sku_deferred', '此材料引用 SKU/SPU；SKU/SPU 能力尚未纳入本阶段。', groupId, selection.selection.selectionId) }
+      if (selection.selection.skuChoices?.length) {
+        const variants = selection.skuVariants ?? []
+        let contribution = 0
+        let fillOrderTotalAmount = 0
+        for (const choice of selection.selection.skuChoices) {
+          const matches = variants.filter(variant => variant.id === choice.skuId
+            && variant.spuId === selection.item.id)
+          const price = matches[0]?.price
+          if (matches.length !== 1 || typeof price !== 'number' || !safeMoney(price) || price <= 0
+            || !Number.isSafeInteger(choice.quantity) || choice.quantity <= 0) {
+            return { state: 'blocked', issue: issue('pricing.material_sku_price_unverified',
+              '已选 SKU 身份、单价或数量未能从当前 R1 目录唯一核验。', groupId, selection.selection.selectionId) }
+          }
+          const rowTotal = price * choice.quantity
+          if (!Number.isFinite(rowTotal)) {
+            return { state: 'blocked', issue: issue('pricing.material_sku_total_invalid',
+              'SKU 金额超出可计算范围。', groupId, selection.selection.selectionId) }
+          }
+          // R1 calcTotalPrice sums unrounded SKU price × quantity then rounds
+          // the top-level origin; fillOrder rounds each SKU row independently.
+          contribution += rowTotal
+          fillOrderTotalAmount += r1AmountToFixed(rowTotal)
+        }
+        return Number.isFinite(contribution) && Number.isFinite(fillOrderTotalAmount)
+          ? { state: 'succeeded', calcTotalPriceContribution: contribution, fillOrderTotalAmount }
+          : { state: 'blocked', issue: issue('pricing.material_sku_total_invalid',
+            'SKU 汇总金额超出可计算范围。', groupId, selection.selection.selectionId) }
+      }
+      if (selection.item.spuId || Object.keys(selection.item.saleOptionCandidates ?? {}).length > 0) {
+        return { state: 'blocked', issue: issue('pricing.material_sku_selection_required',
+          '此材料使用 SKU 规格计价；请先完成精确规格与数量选择。', groupId, selection.selection.selectionId) }
       }
       if (!safeMoney(selection.item.price)) {
         return { state: 'blocked', issue: issue('pricing.material_price_missing', '材料单价缺失或无效，不能按零价处理。', groupId, selection.selection.selectionId) }

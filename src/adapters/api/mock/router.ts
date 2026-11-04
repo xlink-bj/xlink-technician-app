@@ -1,5 +1,5 @@
 import { isBusinessMockMode, type BusinessMockMode } from './config'
-import { advanceMockJourneyAfterProcess, isDevMockJourneyEnabled, mockJourneyNodes, mockJourneyStage, mockJourneyWorkOrderId, mockJourneyOrderWorkflowDefinitionId, mockJourneyOrderWorkflowRunId, mockJourneyOfficialOrderId, persistMockJourneyFormData, persistMockJourneyOfficialOrder, readMockJourneyFormData, readMockJourneyOrderWorkflow, readMockJourneyOfficialOrder, startMockJourneyOrderWorkflow, type MockJourneyStage } from './journey'
+import { advanceMockJourneyAfterProcess, isDevMockJourneyEnabled, mockJourneyNodes, mockJourneyStage, mockJourneyWorkOrderId, mockJourneyOrderWorkflowDefinitionId, mockJourneyOrderWorkflowRunId, mockJourneyQuotationId, mockJourneyOfficialOrderId, persistMockJourneyFormData, persistMockJourneyQuotation, persistMockJourneyOfficialOrder, readMockJourneyFormData, readMockJourneyQuotation, readMockJourneyOrderWorkflow, readMockJourneyQuoteWorkflow, readMockJourneyOfficialOrder, startMockJourneyOrderWorkflow, startMockJourneyQuoteWorkflow, type MockJourneyStage } from './journey'
 import { appointmentFormDefinitionWireId } from '../appointment-contract'
 import {
   isSyntheticWorkOrderId,
@@ -468,6 +468,95 @@ function saveMockJourneyOfficialOrder(serialized: unknown): string {
   return mockJourneyOfficialOrderId
 }
 
+function roundedR1(value: number): number {
+  return Number.isFinite(value) && Math.abs(value) < 1e21 ? Number(value.toFixed(2)) : 0
+}
+
+function quotePayloadMatchesBase(order: Record<string, unknown>): boolean {
+  const exts = mutableRecord(order.exts)
+  const bjProducts = typeof order.bjProducts === 'string' ? mutableRecord(JSON.parse(order.bjProducts)) : null
+  const groups = bjProducts?.orderList
+  if (!exts || !Array.isArray(groups) || groups.length === 0 || groups.length > 50) return false
+  if (order.productIds !== '[]' || order.discount !== 1 || order.otherAmount !== 0
+    || order.preferentialAmount !== 0 || !Number.isFinite(order.originPrice)
+    || !Number.isFinite(order.totalPrice) || order.originPrice !== order.totalPrice
+    || Number(order.totalPrice) <= 0 || exts.serviceType !== mockQuotationCatalogServiceType
+    || exts.sourceType !== mockQuotationCatalogSourceType || exts.coupons !== ''
+    || exts.couponsVal !== 0 || exts.couponsName !== '' || exts.isCreateBjdPDF !== '1') return false
+  for (const rawGroup of groups) {
+    const group = mutableRecord(rawGroup)
+    if (!group || !Array.isArray(group.repairParts) || group.repairParts.length === 0) return false
+    const materials = mutableRecord(group.materials)?.data
+    if (!Array.isArray(materials)) return false
+    for (const rawLine of materials) {
+      const line = mutableRecord(rawLine)
+      if (!line) return false
+      if (line.spuid !== undefined) {
+        const quantity = line.number
+        const price = line.price
+        if (typeof line._id !== 'string' || !line._id.startsWith('mock-material-sku-')
+          || line.spuid !== mockMaterialSkuSpuId
+          || !Number.isSafeInteger(quantity) || Number(quantity) <= 0
+          || typeof price !== 'number' || !Number.isFinite(price) || price <= 0
+          || line.amount !== price || line.totalAmount !== roundedR1(price * Number(quantity))) return false
+      }
+    }
+  }
+  return true
+}
+
+/** R1 `creatQuotation` creates a persistent type=0 record. The Mock stores the
+ * exact submitted detail and returns a separate quote identity; no PDF,
+ * notification, customer or contract side effect is simulated here. */
+function saveMockJourneyQuotation(serialized: unknown): string {
+  if (!isDevMockJourneyEnabled() || mockJourneyStage() !== 'quotation'
+    || typeof serialized !== 'string' || serialized.length > 200000
+    || readMockJourneyQuotation() !== null || readMockJourneyOfficialOrder() !== null) {
+    throw new Error('Mock quotation scope is not writable')
+  }
+  const order = mutableRecord(JSON.parse(serialized))
+  if (!order || order._id !== undefined || order.type !== 0
+    || order.serviceAppointmentId !== mockJourneyWorkOrderId
+    || !quotePayloadMatchesBase(order)) throw new Error('Mock type=0 quotation payload failed R1 checks')
+  const persisted = { ...order, _id: mockJourneyQuotationId, state: 1,
+    processState: 0, orderNumber: 'MOCK-019-QUOTE-NOT-A-REAL-QUOTE' }
+  if (!persistMockJourneyQuotation(persisted)) throw new Error('Mock quotation persistence failed')
+  return mockJourneyQuotationId
+}
+
+/** R1 upsert receives the selected quote's actual `_id`, while the backend
+ * clones type 0 → type 1 under a new ID. Never rewrite the quote ID in place. */
+function saveMockJourneyConvertedOrder(serialized: unknown): string {
+  if (!isDevMockJourneyEnabled() || mockJourneyStage() !== 'quotation'
+    || typeof serialized !== 'string' || serialized.length > 200000
+    || readMockJourneyOfficialOrder() !== null) throw new Error('Mock quote conversion scope is not writable')
+  const quote = mutableRecord(readMockJourneyQuotation())
+  const workflow = readMockJourneyQuoteWorkflow()
+  const order = mutableRecord(JSON.parse(serialized))
+  const quoteExts = mutableRecord(quote?.exts)
+  const orderExts = mutableRecord(order?.exts)
+  if (!quote || !order || !quoteExts || !orderExts || !workflow
+    || quote._id !== mockJourneyQuotationId || quote.type !== 0
+    || quote.serviceAppointmentId !== mockJourneyWorkOrderId
+    || order._id !== mockJourneyQuotationId || order.type !== 1
+    || order.serviceAppointmentId !== mockJourneyWorkOrderId
+    || order.workflowId !== workflow.workflowId || workflow.formDataId !== quote._id
+    || orderExts.orphanId !== mockJourneyNodes.quotation
+    || !quotePayloadMatchesBase(quote)
+    || !quotePayloadMatchesBase({ ...order, type: 0 })
+    || ['productIds', 'bjProducts', 'originPrice', 'totalPrice', 'discount', 'otherAmount', 'preferentialAmount']
+      .some(key => JSON.stringify(order[key]) !== JSON.stringify(quote[key]))
+    || orderExts.serviceType !== quoteExts.serviceType
+    || orderExts.sourceType !== quoteExts.sourceType
+    || orderExts.isCreateBjdPDF !== quoteExts.isCreateBjdPDF) {
+    throw new Error('Mock type=0 quote identity or converted Order payload mismatch')
+  }
+  const persisted = { ...order, _id: mockJourneyOfficialOrderId, state: 1,
+    processState: 0, orderNumber: 'MOCK-019-NOT-A-REAL-ORDER' }
+  if (!persistMockJourneyOfficialOrder(persisted)) throw new Error('Mock Order persistence failed')
+  return mockJourneyOfficialOrderId
+}
+
 /**
  * Positive Detail fixtures use explicit synthetic identity markers so their
  * raw workflow shapes stay deterministic. In the running app, bind those
@@ -575,12 +664,25 @@ function matchedResponse(
     return order ? { data: order } : { success: false, code: 'TERMINAL' }
   }
   if (isDevMockJourneyEnabled() && mode === 'data'
+    && route === 'basic/order/queryById' && requestData.id === mockJourneyQuotationId) {
+    const quotation = readMockJourneyQuotation()
+    return quotation ? { data: quotation } : { success: false, code: 'TERMINAL' }
+  }
+  if (isDevMockJourneyEnabled() && mode === 'data'
     && route === 'basic/order/query'
     && requestData['is:serviceAppointmentId|string#and'] === mockJourneyWorkOrderId
     && requestData['is:type|integer#and'] === 1
     && requestData._all === undefined && requestData.page === 1 && requestData.rows === 3) {
     const order = readMockJourneyOfficialOrder()
     return { data: order ? [order] : [], page: 1, rows: 3, total: order ? 1 : 0 }
+  }
+  if (isDevMockJourneyEnabled() && mode === 'data'
+    && route === 'basic/order/query'
+    && requestData['is:serviceAppointmentId|string#and'] === mockJourneyWorkOrderId
+    && requestData['is:type|integer#and'] === 0
+    && requestData._all === undefined && requestData.page === 1 && requestData.rows === 3) {
+    const quotation = readMockJourneyQuotation()
+    return { data: quotation ? [quotation] : [], page: 1, rows: 3, total: quotation ? 1 : 0 }
   }
   if (route === '__mock/quotation/action-content') {
     const workOrderId = typeof requestData.workOrderId === 'string' ? requestData.workOrderId : ''
@@ -641,6 +743,19 @@ function matchedResponse(
       contractdocNum: 'HT202610260001',
       state: 1, exts: { contractStatus: '2' },
     }], page: 1, rows: 3, total: 1 }
+  }
+  if (mode === 'data' && isDevMockJourneyEnabled()
+    && route === 'basic/contract/query.do'
+    && requestData['is:serviceAppointmentId|string#and'] === mockJourneyWorkOrderId
+    && requestData['is:state|integer#or'] === '1'
+    && requestData['is:exts.contractStatus|string#or'] === '-2'
+    && requestData['is:workOrderId|string#and'] === undefined
+    && requestData._all === undefined
+    && requestData.sortField === 'createTime' && requestData.sortOrder === 'desc'
+    && requestData.page === 1 && requestData.rows === 3) {
+    // This Order has no Contract record in the synthetic store. Empty remains
+    // an inconclusive read state in the signing reconciliation.
+    return { data: [], page: 1, rows: 3, total: 0 }
   }
   // This route shape follows pinned R1 source, but the values are exclusively
   // DEV Mock fixtures; no price, inventory or real customer data is included.
@@ -855,18 +970,39 @@ function matchedResponse(
 function matchedCommandResponse(request: ApiCommandRequest): unknown | null {
   const route = normalizedPath(request.path)
   const data = request.body ?? {}
+  if (route === `workflow/startWorkflow/order/${mockJourneyQuotationId}/${mockJourneyOrderWorkflowDefinitionId}`
+    && data.saId === mockJourneyWorkOrderId) {
+    if (!startMockJourneyQuoteWorkflow(mockJourneyQuotationId)) return mockFailureResponse('terminal')
+    return { status: 1, entity: { _id: mockJourneyOrderWorkflowRunId } }
+  }
   if (route.startsWith('workflow/startWorkflow/order/null/')
     && data.saId === mockJourneyWorkOrderId) {
     if (route !== `workflow/startWorkflow/order/null/${mockJourneyOrderWorkflowDefinitionId}`
       || !startMockJourneyOrderWorkflow()) return mockFailureResponse('terminal')
     return { status: 1, entity: { _id: mockJourneyOrderWorkflowRunId } }
   }
+  if (route === 'basic/order/creatQuotation' && typeof data.data === 'string') {
+    try {
+      const id = saveMockJourneyQuotation(data.data)
+      return { status: 1, data: { _id: id } }
+    } catch { return mockFailureResponse('terminal') }
+  }
   if (route === 'basic/order/upsert' && typeof data.order === 'string') {
     // The 'order' payload uses serviceAppointmentId, not sid.
     let owner = ''
-    try { owner = String(mutableRecord(JSON.parse(data.order))?.serviceAppointmentId ?? '') } catch { /* malformed */ }
+    let orderId: unknown
+    try {
+      const order = mutableRecord(JSON.parse(data.order))
+      owner = String(order?.serviceAppointmentId ?? '')
+      orderId = order?._id
+    } catch { /* malformed */ }
     if (owner === mockJourneyWorkOrderId) {
-      try { return { status: 1, data: { _id: saveMockJourneyOfficialOrder(data.order) } } }
+      try {
+        const id = orderId === mockJourneyQuotationId
+          ? saveMockJourneyConvertedOrder(data.order)
+          : saveMockJourneyOfficialOrder(data.order)
+        return { status: 1, data: { _id: id } }
+      }
       catch { return mockFailureResponse('terminal') }
     }
   }

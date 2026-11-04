@@ -1,6 +1,7 @@
 import type {
   QuotationCatalogContext,
   QuotationCatalogReadPort,
+  QuotationMaterialSkuVariantRead,
   QuotationPackageDetailRead,
   QuotationPackageMaterialRead,
   QuotationPackageProcedureRead,
@@ -12,6 +13,10 @@ import type {
   ReadPage,
 } from '@shared/ports'
 import type { OperationSnapshot } from '@shared/types'
+import {
+  matchMaterialSkuSelectionPreview,
+  projectMaterialSkuSelectionPreview,
+} from './material-sku-selection-preview'
 
 import {
   quotationSelectionsFor,
@@ -48,6 +53,8 @@ export type HydratedQuotationSelection =
       readonly kind: 'material'
       readonly selection: QuotationSelection<'material'>
       readonly item: QuotationMaterialRead
+      /** Exact R1 SKU rows re-read for this selected SPU, including unit price inputs. */
+      readonly skuVariants?: readonly QuotationMaterialSkuVariantRead[]
     }
   | {
       readonly kind: 'measure'
@@ -133,6 +140,71 @@ function selectPackageRows<T extends { readonly item: { readonly id: string } | 
 
 function issue(code: string, message: string, groupId: string, selectionId: string): QuotationHydrationIssue {
   return { code, message, groupId, selectionId }
+}
+
+async function readSelectedMaterialSkus(input: {
+  readonly context: QuotationCatalogContext
+  readonly port: QuotationCatalogReadPort
+  readonly item: QuotationMaterialRead
+  readonly selection: QuotationSelection<'material'>
+}): Promise<{ readonly variants?: readonly QuotationMaterialSkuVariantRead[]; readonly error?: string }> {
+  const choices = input.selection.skuChoices ?? []
+  const hasSaleAttributes = Object.keys(input.item.saleOptionCandidates ?? {}).length > 0
+  if (choices.length === 0) {
+    return hasSaleAttributes ? { error: '该材料需要先选择已核对的 SKU 规格。' } : {}
+  }
+  if (!input.port.listMaterialSalesFields || !input.port.listMaterialSkuVariants) {
+    return { error: '当前环境没有可用的 SKU 价格与规格核验能力。' }
+  }
+
+  let salesFields
+  try { salesFields = await input.port.listMaterialSalesFields(input.context) }
+  catch { return { error: '材料销售规格暂时无法核验。' } }
+  if (salesFields.state !== 'succeeded' || !salesFields.data) {
+    return { error: '材料销售规格暂时无法核验。' }
+  }
+  const fieldNames = salesFields.data.items
+    .filter(field => Boolean(input.item.saleOptionCandidates?.[field.name]?.length))
+    .map(field => field.name)
+  if (!fieldNames.length) return { error: '材料没有完整的销售规格定义。' }
+
+  let skuRows
+  try {
+    skuRows = await input.port.listMaterialSkuVariants(input.context, 'direct_material',
+      [input.item.id], fieldNames)
+  } catch { return { error: '材料 SKU 暂时无法核验。' } }
+  if (skuRows.state !== 'succeeded' || !skuRows.data) {
+    return { error: '材料 SKU 暂时无法核验。' }
+  }
+
+  const preview = projectMaterialSkuSelectionPreview(input.item, salesFields.data.items, skuRows.data.items)
+  if (preview.state !== 'ready'
+    || preview.fields.length !== fieldNames.length
+    || preview.fields.some(field => !fieldNames.includes(field.name))) {
+    return { error: preview.state === 'blocked' ? preview.message : '材料销售规格定义不完整。' }
+  }
+  const ids = new Set<string>()
+  let totalQuantity = 0
+  for (const choice of choices) {
+    if (!choice.skuId || ids.has(choice.skuId) || !Number.isSafeInteger(choice.quantity) || choice.quantity <= 0) {
+      return { error: 'SKU 身份或数量无效。' }
+    }
+    ids.add(choice.skuId)
+    totalQuantity += choice.quantity
+    const matched = matchMaterialSkuSelectionPreview(preview, choice.attributes)
+    if (matched.state !== 'matched' || matched.skuId !== choice.skuId) {
+      return { error: 'SKU 与当前材料规格不匹配或匹配不唯一。' }
+    }
+    const variant = preview.variants.find(row => row.id === choice.skuId)
+    if (!variant || typeof variant.price !== 'number' || !Number.isFinite(variant.price)
+      || variant.price <= 0) {
+      return { error: '已选 SKU 的 R1 单价缺失或无效，不能生成报价。' }
+    }
+  }
+  if (totalQuantity !== input.selection.quantity) {
+    return { error: '材料数量与各 SKU 数量合计不一致。' }
+  }
+  return { variants: preview.variants }
 }
 
 export async function hydrateQuotationDraft(input: {
@@ -223,7 +295,18 @@ export async function hydrateQuotationDraft(input: {
         } else if (kind === 'procedure') {
           selections.push({ kind, selection: selection as QuotationSelection<'procedure'>, item: item as QuotationProcedureRead })
         } else if (kind === 'material') {
-          selections.push({ kind, selection: selection as QuotationSelection<'material'>, item: item as QuotationMaterialRead })
+          const materialSelection = selection as QuotationSelection<'material'>
+          const materialItem = item as QuotationMaterialRead
+          const selectedSkus = await readSelectedMaterialSkus({
+            context, port, item: materialItem, selection: materialSelection,
+          })
+          if (selectedSkus.error) {
+            issues.push(issue('material.sku_identity_or_price_unverified', selectedSkus.error,
+              group.groupId, selection.selectionId))
+            continue
+          }
+          selections.push({ kind, selection: materialSelection, item: materialItem,
+            ...(selectedSkus.variants ? { skuVariants: selectedSkus.variants } : {}) })
         } else {
           selections.push({ kind, selection: selection as QuotationSelection<'measure'>, item: item as QuotationMeasureRead })
         }
