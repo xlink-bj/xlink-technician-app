@@ -35,6 +35,99 @@ export function firstOrderMaterialSkuIdentity(orders) {
   return undefined
 }
 
+/** Select a scoped material line by its exact SPU ID, even when Order has no SKU ID. */
+export function firstOrderMaterialSpuIdentity(orders) {
+  return orderMaterialSpuIdentities(orders)[0]
+}
+
+/** Return Order-derived material SPU identities for in-memory bounded sample selection. */
+export function orderMaterialSpuIdentities(orders) {
+  if (!Array.isArray(orders)) return []
+  const results = []
+  for (const order of orders) {
+    if (!validId(order?.id)) continue
+    const visit = lines => {
+      for (const line of lines ?? []) {
+        const identity = line?.identity
+        if (line.kind === 'material' && validId(identity?.spuId)) {
+          results.push({
+            orderId: order.id,
+            spuId: identity.spuId,
+            ...(validId(identity.skuId) ? { skuId: identity.skuId } : {}),
+            ...(typeof identity.skuCode === 'string' && identity.skuCode.trim()
+              ? { skuCode: identity.skuCode.trim() }
+              : {}),
+            unitPrice: typeof line.unitPrice === 'number' && Number.isFinite(line.unitPrice)
+              ? line.unitPrice : undefined,
+          })
+        }
+        visit(line?.children)
+      }
+    }
+    for (const group of order.groups ?? []) visit(group.lines)
+  }
+  return results
+}
+
+/** Count independent projected material identities without returning business IDs. */
+export function summarizeOrderMaterialIdentities(orders) {
+  if (!Array.isArray(orders)) return { verified: false, reason: 'order_rows_invalid' }
+  const summary = {
+    verified: true,
+    typeOneOrderRowsReturned: orders.length,
+    orderRowsWithMaterialLines: 0,
+    materialLines: 0,
+    materialLinesWithSkuId: 0,
+    materialLinesWithSpuId: 0,
+    materialLinesWithBothSkuAndSpuId: 0,
+    materialLinesWithSkuIdOnly: 0,
+    materialLinesWithSpuIdOnly: 0,
+    materialLinesWithNeitherSkuNorSpuId: 0,
+    materialLinesWithSkuCode: 0,
+    materialLinesWithSpuCode: 0,
+  }
+  for (const order of orders) {
+    if (!order || typeof order !== 'object' || !Array.isArray(order.groups)) {
+      return { verified: false, reason: 'order_projection_invalid' }
+    }
+    let orderHasMaterial = false
+    const visit = lines => {
+      if (!Array.isArray(lines)) return true
+      for (const line of lines) {
+        if (!line || typeof line !== 'object' || typeof line.kind !== 'string') return false
+        if (line.kind === 'material') {
+          orderHasMaterial = true
+          summary.materialLines += 1
+          const identity = line.identity
+          const hasSkuId = Boolean(identity && validId(identity.skuId))
+          const hasSpuId = Boolean(identity && validId(identity.spuId))
+          if (hasSkuId) summary.materialLinesWithSkuId += 1
+          if (hasSpuId) summary.materialLinesWithSpuId += 1
+          if (hasSkuId && hasSpuId) summary.materialLinesWithBothSkuAndSpuId += 1
+          else if (hasSkuId) summary.materialLinesWithSkuIdOnly += 1
+          else if (hasSpuId) summary.materialLinesWithSpuIdOnly += 1
+          else summary.materialLinesWithNeitherSkuNorSpuId += 1
+          if (identity && typeof identity.skuCode === 'string' && identity.skuCode.trim()) {
+            summary.materialLinesWithSkuCode += 1
+          }
+          if (identity && typeof identity.spuCode === 'string' && identity.spuCode.trim()) {
+            summary.materialLinesWithSpuCode += 1
+          }
+        }
+        if (!visit(line.children)) return false
+      }
+      return true
+    }
+    for (const group of order.groups) {
+      if (!group || typeof group !== 'object' || !Array.isArray(group.lines) || !visit(group.lines)) {
+        return { verified: false, reason: 'order_line_projection_invalid' }
+      }
+    }
+    if (orderHasMaterial) summary.orderRowsWithMaterialLines += 1
+  }
+  return summary
+}
+
 export function rowsFromEnvelope(raw) {
   const envelope = safeParse(raw)
   if (Array.isArray(envelope)) return envelope

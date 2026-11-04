@@ -9,8 +9,11 @@ import {
 } from '../../scripts/r1-sku-read-guard.mjs'
 import {
   firstOrderMaterialSkuIdentity,
+  firstOrderMaterialSpuIdentity,
+  orderMaterialSpuIdentities,
   parseCodeDictionaries,
   parseSalesFieldDefinitions,
+  summarizeOrderMaterialIdentities,
   summarizeSkuRead,
 } from '../../scripts/r1-sku-read-evidence.mjs'
 
@@ -111,6 +114,63 @@ describe('R1 SKU and sales attribute redacted evidence projection', () => {
     }])).toBeUndefined()
   })
 
+  it('can select the exact Order SPU for a bounded catalog read without requiring a SKU ID', () => {
+    const order = {
+      id: 'synthetic-order',
+      groups: [{ lines: [
+        { kind: 'package', identity: { spuId: 'synthetic-package-spu' }, children: [] },
+        { kind: 'material', identity: { spuId: syntheticSpuId, skuCode: 'SYNTHETIC-SKU-CODE' }, children: [] },
+        { kind: 'material', identity: { spuId: 'synthetic-second-spu' }, children: [] },
+      ] }],
+    }
+    expect(firstOrderMaterialSpuIdentity([order])).toEqual({
+      orderId: 'synthetic-order', spuId: syntheticSpuId, skuCode: 'SYNTHETIC-SKU-CODE', unitPrice: undefined,
+    })
+    expect(orderMaterialSpuIdentities([order]).map(({ spuId, skuId, skuCode }) => ({ spuId, skuId, skuCode })))
+      .toEqual([
+        { spuId: syntheticSpuId, skuId: undefined, skuCode: 'SYNTHETIC-SKU-CODE' },
+        { spuId: 'synthetic-second-spu', skuId: undefined, skuCode: undefined },
+      ])
+    expect(firstOrderMaterialSpuIdentity([{
+      id: 'synthetic-order-without-spu', groups: [{ lines: [
+        { kind: 'material', identity: { skuId: syntheticSkuId }, children: [] },
+      ] }],
+    }])).toBeUndefined()
+  })
+
+  it('counts Order, SKU and SPU availability independently without retaining business identities', () => {
+    const summary = summarizeOrderMaterialIdentities([{
+      id: 'synthetic-order', type: 1, groups: [{ lines: [
+        { kind: 'material', identity: { skuId: 'synthetic-sku-only' }, children: [] },
+        { kind: 'material', identity: { spuId: 'synthetic-spu-only', skuCode: 'SKU-CODE' }, children: [] },
+        { kind: 'material', identity: { skuId: syntheticSkuId, spuId: syntheticSpuId, spuCode: 'SPU-CODE' }, children: [] },
+        { kind: 'material', identity: {}, children: [] },
+        { kind: 'package', identity: {}, children: [
+          { kind: 'material', identity: { spuId: 'synthetic-nested-spu' }, children: [] },
+        ] },
+      ] }],
+    }])
+    expect(summary).toEqual({
+      verified: true,
+      typeOneOrderRowsReturned: 1,
+      orderRowsWithMaterialLines: 1,
+      materialLines: 5,
+      materialLinesWithSkuId: 2,
+      materialLinesWithSpuId: 3,
+      materialLinesWithBothSkuAndSpuId: 1,
+      materialLinesWithSkuIdOnly: 1,
+      materialLinesWithSpuIdOnly: 2,
+      materialLinesWithNeitherSkuNorSpuId: 1,
+      materialLinesWithSkuCode: 1,
+      materialLinesWithSpuCode: 1,
+    })
+    const redacted = JSON.stringify(summary)
+    for (const privateValue of [
+      'synthetic-order', 'synthetic-sku-only', 'synthetic-spu-only', syntheticSkuId, syntheticSpuId,
+      'synthetic-nested-spu', 'SKU-CODE', 'SPU-CODE',
+    ]) expect(redacted).not.toContain(privateValue)
+  })
+
   it('requires a complete sales-field page and exact Code options before SKU attribute matching', () => {
     expect(parseSalesFieldDefinitions({ data: extFieldRows, totalCount: 2 })).toEqual({
       complete: true,
@@ -174,6 +234,17 @@ describe('R1 SKU and sales attribute redacted evidence projection', () => {
     expect(missing).toMatchObject({
       selectedSkuHasEverySalesAttribute: false,
       selectedSkuAttributesMatchCodeOptions: false,
+      rawR1AttributeCombinationStatus: 'UNKNOWN_INCOMPLETE_EVIDENCE',
+    })
+    const noSkuId = summarizeSkuRead(
+      { data: [{ ...rawSku, _id: 'catalog-row-with-spu-only-target', exts: { finish: 'matte' } }], totalCount: 1 },
+      fields, dictionaries, { spuId: syntheticSpuId },
+    )
+    expect(noSkuId).toMatchObject({
+      verified: true,
+      pageComplete: true,
+      selectedOrderSkuIdentityReturned: false,
+      selectedSkuHasEverySalesAttribute: false,
       rawR1AttributeCombinationStatus: 'UNKNOWN_INCOMPLETE_EVIDENCE',
     })
   })

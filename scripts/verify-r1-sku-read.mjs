@@ -15,14 +15,16 @@ import {
   r1MaterialSkuRequestBody,
 } from './r1-sku-read-guard.mjs'
 import {
-  firstOrderMaterialSkuIdentity,
+  orderMaterialSpuIdentities,
   parseCodeDictionaries,
   parseSalesFieldDefinitions,
   rowsFromEnvelope,
+  summarizeOrderMaterialIdentities,
   summarizeSkuRead,
 } from './r1-sku-read-evidence.mjs'
 
 const MAX_WORK_ORDER_PAGES = 1000
+const MAX_SKU_CANDIDATE_SKIP = 10
 const counters = {
   login: 0,
   roleTree: 0,
@@ -36,11 +38,26 @@ const counters = {
 }
 const listedWorkOrderIds = new Set()
 const typeOneOrderLookupIds = new Set()
+const seenOrderSpuIds = new Set()
+const orderIdentitySummary = {
+  typeOneOrderRowsReturned: 0,
+  workOrdersWithFormalOrderRows: 0,
+  orderRowsWithMaterialLines: 0,
+  materialLines: 0,
+  materialLinesWithSkuId: 0,
+  materialLinesWithSpuId: 0,
+  materialLinesWithBothSkuAndSpuId: 0,
+  materialLinesWithSkuIdOnly: 0,
+  materialLinesWithSpuIdOnly: 0,
+  materialLinesWithNeitherSkuNorSpuId: 0,
+  materialLinesWithSkuCode: 0,
+  materialLinesWithSpuCode: 0,
+}
 let currentPageWorkOrderIds = new Set()
 let currentRoleId = null
 let selectedWorkOrderId = null
-let selectedSkuId = null
 let selectedSpuId = null
+let selectedSpuCandidateOrdinal = null
 let expectedCodeValueOptionIds = null
 let cachedRoleTree
 let hasCachedRoleTree = false
@@ -236,8 +253,23 @@ async function run() {
       console.log(JSON.stringify({ status: 'READY_NO_NETWORK', preflight, networkRequests: 0 }))
       return
     }
-    const executeAuthorizedRead = process.argv.includes('--authorize-bounded-prod-read')
-    if (!executeAuthorizedRead) {
+    const skuReadAuthorized = process.argv.includes('--authorize-bounded-prod-read')
+    const orderSummaryAuthorized = process.argv.includes('--authorize-bounded-order-summary-read')
+    const skipSpuCandidateArgs = process.argv.filter(argument => argument.startsWith('--skip-spu-candidates='))
+    const skipSpuCandidateValue = skipSpuCandidateArgs[0]?.slice('--skip-spu-candidates='.length)
+    const skipSpuCandidates = skipSpuCandidateValue !== undefined && /^\d+$/.test(skipSpuCandidateValue)
+      ? Number(skipSpuCandidateValue) : skipSpuCandidateArgs.length === 0 ? 0 : Number.NaN
+    if (skipSpuCandidateArgs.length > 1 || !Number.isSafeInteger(skipSpuCandidates)
+      || skipSpuCandidates < 0 || skipSpuCandidates > MAX_SKU_CANDIDATE_SKIP
+      || (skipSpuCandidates > 0 && !skuReadAuthorized)) {
+      console.log(JSON.stringify({ status: 'INVALID_SPU_SAMPLE_OFFSET_NO_NETWORK', preflight, networkRequests: 0 }))
+      return
+    }
+    if (skuReadAuthorized && orderSummaryAuthorized) {
+      console.log(JSON.stringify({ status: 'CONFLICTING_AUTHORIZATION_FLAGS_NO_NETWORK', preflight, networkRequests: 0 }))
+      return
+    }
+    if (!skuReadAuthorized && !orderSummaryAuthorized) {
       console.log(JSON.stringify({
         status: process.argv.includes('--execute') ? 'AUTHORIZATION_FLAG_REQUIRED_NO_NETWORK' : 'READY_NO_NETWORK',
         preflight, networkRequests: 0,
@@ -378,10 +410,34 @@ async function run() {
           stage = 'type_one_order_read_not_verified'
           break
         }
-        const line = firstOrderMaterialSkuIdentity(ordersResult.data.items)
-        if (line) {
+        const orderSummary = summarizeOrderMaterialIdentities(ordersResult.data.items)
+        if (!orderSummary.verified) {
+          stage = 'type_one_order_projection_not_verified'
+          break
+        }
+        orderIdentitySummary.typeOneOrderRowsReturned += orderSummary.typeOneOrderRowsReturned
+        if (ordersResult.data.items.length > 0) orderIdentitySummary.workOrdersWithFormalOrderRows += 1
+        orderIdentitySummary.orderRowsWithMaterialLines += orderSummary.orderRowsWithMaterialLines
+        for (const key of Object.keys(orderIdentitySummary)) {
+          if (key === 'typeOneOrderRowsReturned' || key === 'orderRowsWithMaterialLines') continue
+          if (key in orderSummary && key !== 'workOrdersWithFormalOrderRows') {
+            orderIdentitySummary[key] += orderSummary[key]
+          }
+        }
+        let line
+        if (skuReadAuthorized) {
+          for (const candidate of orderMaterialSpuIdentities(ordersResult.data.items)) {
+            if (seenOrderSpuIds.has(candidate.spuId)) continue
+            seenOrderSpuIds.add(candidate.spuId)
+            const candidateOrdinal = seenOrderSpuIds.size
+            if (candidateOrdinal <= skipSpuCandidates) continue
+            line = candidate
+            selectedSpuCandidateOrdinal = candidateOrdinal
+            break
+          }
+        }
+        if (line && skuReadAuthorized) {
           selectedWorkOrderId = workOrderId
-          selectedSkuId = line.skuId
           selectedSpuId = line.spuId
           selectedIdentity = line
           break
@@ -402,7 +458,29 @@ async function run() {
     if (!selectedIdentity) {
       const scanFailed = stage === 'work_order_list_not_verified'
         || stage === 'type_one_order_read_not_verified'
+        || stage === 'type_one_order_projection_not_verified'
         || stage === 'unstable_or_invalid_work_order_pagination'
+      if (orderSummaryAuthorized) {
+        const status = scanFailed ? 'BLOCKED_READ_SCOPE_OR_IDENTITY'
+          : reachedEnd ? 'R1_BOUNDED_ORDER_IDENTITY_SUMMARY_COMPLETED' : 'R1_ORDER_IDENTITY_SUMMARY_SCAN_LIMIT_REACHED'
+        console.log(JSON.stringify({
+          status,
+          technicianRolePresent: true,
+          roleVersionPresent: Boolean(roleVersion?.trim()),
+          workOrderPagesRead: counters.workOrderPages,
+          roleVisibleWorkOrdersChecked: counters.typeOneOrderQueries,
+          orderRowsPerWorkOrderLimit: 3,
+          orderRowCompleteness: 'BOUNDED_UNVERIFIED',
+          orderIdentitySummary,
+          skuCatalogRequests: 0,
+          blockedUnexpectedAttempts: counters.blockedUnexpectedAttempts,
+          businessMutationRequests: 0,
+          persistentLocalStorage: 'NOT_USED',
+          rawPayloadsOrIdentitiesPersisted: false,
+        }))
+        if (scanFailed || !reachedEnd) process.exitCode = 1
+        return
+      }
       const status = scanFailed ? 'BLOCKED_READ_SCOPE_OR_IDENTITY'
         : reachedEnd ? 'BLOCKED_NO_ROLE_VISIBLE_SKU_ORDER_LINE' : 'BLOCKED_SCAN_LIMIT_REACHED'
       console.log(JSON.stringify({
@@ -411,6 +489,9 @@ async function run() {
         roleVersionPresent: Boolean(roleVersion?.trim()),
         workOrderPagesRead: counters.workOrderPages,
         currentRoleWorkOrdersChecked: counters.typeOneOrderQueries,
+        orderRowsPerWorkOrderLimit: 3,
+        orderRowCompleteness: 'BOUNDED_UNVERIFIED',
+        orderIdentitySummary,
         requestCounts: { ...counters },
         blockedUnexpectedAttempts: counters.blockedUnexpectedAttempts,
         skuCatalogRequests: 0,
@@ -493,13 +574,29 @@ async function run() {
       && counters.materialSalesFields === 1
       && counters.materialCodeOptions === (salesFieldDefinitions.fields.length > 0 ? 1 : 0)
       && counters.singleSpuSkuList === 1 && counters.blockedUnexpectedAttempts === 0
+    const exactOrderSkuIdPresent = Boolean(selectedIdentity.skuId)
     console.log(JSON.stringify({
-      status: completeRun ? 'R1_BOUNDED_SKU_READ_COMPLETED' : 'R1_SKU_READ_PARTIAL',
+      status: completeRun
+        ? exactOrderSkuIdPresent ? 'R1_BOUNDED_SKU_READ_COMPLETED' : 'R1_BOUNDED_SPU_SKU_CATALOG_READ_COMPLETED'
+        : 'R1_SKU_READ_PARTIAL',
       technicianRolePresent: true,
       roleVersionPresent: Boolean(roleVersion?.trim()),
       workOrderProvenance: 'CURRENT_ROLE_VISIBLE_WORK_ORDER_AND_TYPE_ONE_ORDER',
       workOrderPagesRead: counters.workOrderPages,
       roleVisibleWorkOrdersChecked: counters.typeOneOrderQueries,
+      orderRowsPerWorkOrderLimit: 3,
+      orderRowCompleteness: 'BOUNDED_UNVERIFIED',
+      orderIdentitySummaryCompleteness: `SCAN_STOPPED_AT_ORDER_DERIVED_SPU_CANDIDATE_${selectedSpuCandidateOrdinal}`,
+      orderDerivedSpuCandidateOrdinal: selectedSpuCandidateOrdinal,
+      orderIdentitySummary,
+      selectedOrderMaterialIdentity: {
+        spuIdPresent: true,
+        skuIdPresent: exactOrderSkuIdPresent,
+        skuCodePresent: Boolean(selectedIdentity.skuCode),
+        catalogCorrelation: exactOrderSkuIdPresent
+          ? skuSummary.selectedOrderSkuIdentityReturned ? 'EXACT_SKU_ID_RETURNED' : 'SKU_ID_NOT_FOUND_IN_BOUNDED_PAGE'
+          : selectedIdentity.skuCode ? 'SKU_CODE_NOT_CORRELATED_TO_CATALOG' : 'ORDER_SKU_ID_AND_CODE_ABSENT',
+      },
       sourceReads: {
         materialSalesFields: { page: 1, limit: 50, complete: true, salesAttributeCount: salesFieldDefinitions.fields.length },
         materialCodeOptions: {
