@@ -75,7 +75,10 @@ export function createApplication(dependencies: ApplicationDependencies = {}) {
   const sessionStore = useSessionStore(pinia)
   const authSession = dependencies.authSession ?? createDefaultAuthSessionPort()
   const apiRead = dependencies.apiRead ?? createDefaultTechnicianApiReadPort(authSession)
-  const quotationCatalogRead = dependencies.quotationCatalogRead ?? createDefaultQuotationCatalogReadPort(authSession)
+  const quotationCatalogRead = dependencies.quotationCatalogRead ?? createDefaultQuotationCatalogReadPort(
+    authSession,
+    id => apiRead.isWorkOrderListedForCurrentSession?.(id) === true,
+  )
   const apiCommand = dependencies.apiCommand ?? createDefaultTechnicianApiCommandPort(authSession, apiRead)
   const quotationOrderCommand = dependencies.quotationOrderCommand ?? createDefaultQuotationOrderCommandPort(authSession)
   const isQuotationOrderReadScopeValid = (workOrderId: string) =>

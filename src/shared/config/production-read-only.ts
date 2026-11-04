@@ -157,16 +157,19 @@ function isBoundedRepeatFormListBody(body: Readonly<Record<string, unknown>> | u
 
 function isBoundedQuotationCatalogListBody(body: Readonly<Record<string, unknown>> | undefined): boolean {
   if (!body) return false
-  const required = ['_all', 'is:state|integer#and', 'in:serviceType|array#and', 'sortField', 'sortOrder']
+  const required = [
+    'page', 'rows', 'is:state|integer#and', 'in:serviceType|array#and',
+    'sourceType', 'sortField', 'sortOrder',
+  ]
   const keys = Object.keys(body)
-  if (required.some((key) => !hasOwn(body, key))) return false
-  if (keys.some((key) => !required.includes(key) && key !== 'sourceType')) return false
-  if (body._all !== '1' || body['is:state|integer#and'] !== 1) return false
+  if (required.length !== keys.length || required.some((key) => !hasOwn(body, key))) return false
+  if (!Number.isInteger(body.page) || Number(body.page) < 1 || Number(body.page) > 50
+    || body.rows !== 20 || body['is:state|integer#and'] !== 1) return false
   if (body.sortField !== 'order,_id' || body.sortOrder !== 'asc') return false
   const serviceType = body['in:serviceType|array#and']
   if (typeof serviceType !== 'string' || !/^[A-Za-z0-9,._-]{1,200}$/.test(serviceType)) return false
-  return !hasOwn(body, 'sourceType')
-    || typeof body.sourceType === 'string' && /^[A-Za-z0-9,._-]{1,100}$/.test(body.sourceType)
+  return typeof body.sourceType === 'string'
+    && /^[A-Za-z0-9,._-]{1,100}$/.test(body.sourceType)
 }
 
 function isBoundedWorkOrderQuotationListBody(body: Readonly<Record<string, unknown>> | undefined): boolean {

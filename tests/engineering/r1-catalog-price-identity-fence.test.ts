@@ -41,28 +41,30 @@ describe('R1 catalog price reads: current identity and WorkOrder scope fence', (
     expect(execute).not.toHaveBeenCalled()
   })
 
-  it('requires a versioned current identity and WorkOrder context before exposing catalog prices', async () => {
+  it('requires a current identity and role-listed WorkOrder context before exposing catalog prices', async () => {
     vi.stubEnv('VITE_XLINK_ENVIRONMENT', 'prod')
     const execute = vi.fn(async () => ({ data: [row] }))
     for (const incompleteScope of [
       { ...current, sessionRef: '' },
       { ...current, userId: '' },
       { ...current, roleId: null },
-      { ...current, roleVersion: null },
     ]) {
-      const incomplete = createQuotationCatalogReadAdapter({ execute }, () => incompleteScope)
+      const incomplete = createQuotationCatalogReadAdapter({ execute }, () => incompleteScope, undefined, () => true)
       expect((await incomplete.listMaterials(ctx)).state).toBe('failed_terminal')
     }
-    const complete = createQuotationCatalogReadAdapter({ execute }, () => current)
+    const complete = createQuotationCatalogReadAdapter({ execute }, () => ({ ...current, roleVersion: null }), undefined, () => true)
+    expect((await complete.listMaterials(ctx)).state).toBe('succeeded')
     expect((await complete.listMaterials({ serviceType: ctx.serviceType, sourceType: ctx.sourceType })).state).toBe('failed_terminal')
     expect((await complete.listMaterials({ ...ctx, sourceType: '' })).state).toBe('failed_terminal')
-    expect(execute).not.toHaveBeenCalled()
+    const unlisted = createQuotationCatalogReadAdapter({ execute }, () => current, undefined, () => false)
+    expect((await unlisted.listMaterials(ctx)).state).toBe('failed_terminal')
+    expect(execute).toHaveBeenCalledTimes(1)
   })
 
   it('allows an authorized scoped adapter projection without inventing effective SKU pricing', async () => {
     vi.stubEnv('VITE_XLINK_ENVIRONMENT', 'prod')
     const execute = vi.fn(async () => ({ data: [row], page: 1, rows: 20, total: 1 }))
-    const catalog = createQuotationCatalogReadAdapter({ execute }, () => current)
+    const catalog = createQuotationCatalogReadAdapter({ execute }, () => current, undefined, id => id === String(ctx.workOrderId))
     const read = await catalog.listMaterials(ctx)
     expect(read.state).toBe('succeeded')
     expect(read.data?.items[0]).toMatchObject({ id: 'material-a', price: 123.5 })
@@ -80,7 +82,7 @@ describe('R1 catalog price reads: current identity and WorkOrder scope fence', (
     let finish!: (body: unknown) => void
     const execute = vi.fn(() => new Promise<unknown>(resolve => { finish = resolve }))
     let scope = current
-    const catalog = createQuotationCatalogReadAdapter({ execute }, () => scope)
+    const catalog = createQuotationCatalogReadAdapter({ execute }, () => scope, undefined, () => true)
     const pending = catalog.listMaterials(ctx)
     scope = { ...current, roleId: 'rotated-role' }
     finish({ data: [row] })

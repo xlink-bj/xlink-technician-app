@@ -88,8 +88,11 @@ export function createApp() {
         userId: reviewSession.user.id,
         roleId: reviewSession.currentRole?.id ?? null,
         roleVersion: reviewSession.roleVersion ?? 'synthetic-v1',
-      }))
-    : createDefaultQuotationCatalogReadPort(authSession)
+      }), undefined, id => baseApiRead.isWorkOrderListedForCurrentSession?.(id) === true)
+    : createDefaultQuotationCatalogReadPort(
+        authSession,
+        id => baseApiRead.isWorkOrderListedForCurrentSession?.(id) === true,
+      )
   const catalogBase: QuotationCatalogReadPort = needsOrderReview ? {
     listPackages: async (context) => baseCatalog.listPackages(context),
     getPackageDetail: async (packageId) => baseCatalog.getPackageDetail(packageId),

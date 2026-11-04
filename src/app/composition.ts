@@ -167,7 +167,10 @@ export function createDefaultTechnicianApiReadPort(authSession: AuthSessionPort)
   return technicianReadPort
 }
 
-export function createDefaultQuotationCatalogReadPort(authSession: AuthSessionPort): QuotationCatalogReadPort {
+export function createDefaultQuotationCatalogReadPort(
+  authSession: AuthSessionPort,
+  isWorkOrderListedForCurrentSession: (id: string) => boolean,
+): QuotationCatalogReadPort {
   const config = loadApplicationRuntimeConfig()
   if (!config.ok) {
     const blocked = async <T>(): Promise<OperationSnapshot<T>> =>
@@ -212,6 +215,7 @@ export function createDefaultQuotationCatalogReadPort(authSession: AuthSessionPo
     config.value.authOnlyMockBusiness && import.meta.env.VITE_XLINK_H5_MOCK_E2E === 'true'
       ? '1340835581184723420'
       : config.value.authWireConfig.tenant,
+    isWorkOrderListedForCurrentSession,
   )
 }
 

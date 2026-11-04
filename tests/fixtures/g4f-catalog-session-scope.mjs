@@ -57,7 +57,16 @@ function snapshotFailure(result, category = 'authorization_denied') {
 }
 
 try {
-  const { createQuotationCatalogReadAdapter } = await vite.ssrLoadModule('/src/adapters/api/quotation-catalog-api.ts')
+  const { createQuotationCatalogReadAdapter: createRawQuotationCatalogReadAdapter } = await vite.ssrLoadModule('/src/adapters/api/quotation-catalog-api.ts')
+  // The Production adapter now requires independent proof that the WorkOrder
+  // is visible in the current technician role. This fixture uses synthetic
+  // listed WorkOrders only; the live application supplies its real scoped read.
+  const createQuotationCatalogReadAdapter = (transport, getScope) => createRawQuotationCatalogReadAdapter(
+    transport,
+    getScope,
+    undefined,
+    (workOrderId) => /^synthetic-work-order-[a-z]$/.test(workOrderId),
+  )
   const routeMethods = [
     ['package', (catalog, context) => catalog.listPackages(context), 'biz/projPackage/queryWithRank'],
     ['procedure', (catalog, context) => catalog.listProcedures(context), 'biz/procedure/queryWithRank'],

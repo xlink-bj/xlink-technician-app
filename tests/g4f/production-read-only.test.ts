@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { createUniApiCommandTransport, type UniApiCommandRequestExecutor } from '@adapters/api/uni-api-command-transport'
 import { createUniApiReadTransport } from '@adapters/api/uni-api-read-transport'
+import { createQuotationCatalogReadAdapter } from '@adapters/api/quotation-catalog-api'
 import { createQuotationOrderReadAdapter } from '@adapters/api/quotation-order-api'
 import {
   createRoleScopedTechnicianApiReadAdapter,
@@ -74,6 +75,63 @@ describe('Production read-only profile', () => {
     }
 
     expect(request).toHaveBeenCalledTimes(3)
+  })
+
+  it('allows only bounded, WorkOrder-context catalog pages in Production', async () => {
+    vi.stubEnv('VITE_XLINK_ENVIRONMENT', 'prod')
+    const request = vi.fn((options: UniNamespace.RequestOptions) => {
+      options.success?.({ statusCode: 200, data: { data: [], page: 1, rows: 20, total: 0 } } as never)
+    })
+    const transport = createUniApiReadTransport({
+      apiBaseUrl: 'https://production.invalid',
+      getSessionRef: () => 'production-session' as never,
+      request,
+    })
+    const catalog = createQuotationCatalogReadAdapter(transport, () => ({
+      sessionRef: 'production-session', userId: 'synthetic-user',
+      roleId: 'synthetic-role', roleVersion: 'v1',
+    }), undefined, id => id === 'synthetic-listed-work-order')
+    const context = {
+      workOrderId: 'synthetic-listed-work-order' as never,
+      serviceType: 'synthetic-service-type',
+      sourceType: 'synthetic-source-type',
+    }
+
+    await expect(catalog.listPackages(context, 1)).resolves.toMatchObject({ state: 'succeeded', data: { totalCount: 0 } })
+    await expect(catalog.listPackages(context, 2)).resolves.toMatchObject({ state: 'succeeded', data: { totalCount: 0 } })
+    const firstBody = new URLSearchParams(String(request.mock.calls[0]?.[0].data))
+    const secondBody = new URLSearchParams(String(request.mock.calls[1]?.[0].data))
+    expect(firstBody.get('page')).toBe('1')
+    expect(secondBody.get('page')).toBe('2')
+    for (const body of [firstBody, secondBody]) {
+      expect(body.get('rows')).toBe('20')
+      expect(body.get('_all')).toBeNull()
+      expect(body.get('is:state|integer#and')).toBe('1')
+      expect(body.get('in:serviceType|array#and')).toBe(context.serviceType)
+      expect(body.get('sourceType')).toBe(context.sourceType)
+    }
+
+    for (const invalidBody of [
+      { ...context, page: 1, rows: 20, 'is:state|integer#and': 1,
+        'in:serviceType|array#and': context.serviceType, sortField: 'order,_id', sortOrder: 'asc', _all: '1' },
+      { page: 51, rows: 20, 'is:state|integer#and': 1,
+        'in:serviceType|array#and': context.serviceType, sourceType: context.sourceType,
+        sortField: 'order,_id', sortOrder: 'asc' },
+      { page: 1, rows: 200, 'is:state|integer#and': 1,
+        'in:serviceType|array#and': context.serviceType, sourceType: context.sourceType,
+        sortField: 'order,_id', sortOrder: 'asc' },
+    ]) {
+      await expect(transport.execute({ method: 'POST', path: 'biz/projPackage/queryWithRank', body: invalidBody }))
+        .rejects.toMatchObject({ category: 'unsupported_capability' })
+    }
+    expect(request).toHaveBeenCalledTimes(2)
+
+    const unlistedCatalog = createQuotationCatalogReadAdapter(transport, () => ({
+      sessionRef: 'production-session', userId: 'synthetic-user',
+      roleId: 'synthetic-role', roleVersion: null,
+    }), undefined, () => false)
+    await expect(unlistedCatalog.listMaterials(context)).resolves.toMatchObject({ state: 'failed_terminal' })
+    expect(request).toHaveBeenCalledTimes(2)
   })
 
   it('allows only bounded type=1 quotation queries scoped to a role-listed Work Order', async () => {

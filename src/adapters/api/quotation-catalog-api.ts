@@ -16,7 +16,7 @@ import type {
 import type { OperationSnapshot } from '@shared/types'
 import { isProductionReadOnlyTarget } from '@shared/config'
 import { parseR1CatalogFilterCodes } from '@shared/quotation-catalog-eligibility'
-import { versionedSessionAuthorizationFingerprint } from '@shared/session-authorization'
+import { sessionAuthorizationFingerprint } from '@shared/session-authorization'
 import { adapterFailure, succeeded, unknownErrorMessage, AdapterMappingError } from '../common/operations'
 import {
   asRecord,
@@ -491,12 +491,20 @@ class QuotationCatalogReadAdapter implements QuotationCatalogReadPort {
   private currentCatalogContextKey: string | null = null
   private authorizationContextGeneration = 0
   private readonly listedPackageIds = new Set<string>()
+  private currentCatalogWorkOrderId: string | null = null
 
   constructor(
     private readonly transport: ApiReadTransport,
     private readonly getReadAuthorizationScope?: () => QuotationCatalogReadAuthorizationScope | null,
     private readonly codeTenantId?: string,
+    private readonly isWorkOrderListedForCurrentSession?: (workOrderId: string) => boolean,
   ) {}
+
+  private isCurrentWorkOrderListed(workOrderId: string | null): boolean {
+    if (!workOrderId) return false
+    try { return this.isWorkOrderListedForCurrentSession?.(workOrderId) === true }
+    catch { return false }
+  }
 
   private isProductionReadOnly(): boolean {
     return isProductionReadOnlyTarget(import.meta.env.VITE_XLINK_ENVIRONMENT, import.meta.env.VITE_XLINK_API_BASE_URL)
@@ -515,6 +523,7 @@ class QuotationCatalogReadAdapter implements QuotationCatalogReadPort {
       this.authorizationContextGeneration += 1
       this.listedPackageIds.clear()
       this.currentCatalogContextKey = null
+      this.currentCatalogWorkOrderId = null
     }
     return nextScope
   }
@@ -530,6 +539,7 @@ class QuotationCatalogReadAdapter implements QuotationCatalogReadPort {
       : null
     if (key !== this.currentCatalogContextKey) {
       this.currentCatalogContextKey = key
+      this.currentCatalogWorkOrderId = key ? String(context.workOrderId) : null
       this.authorizationContextGeneration += 1
       this.listedPackageIds.clear()
     }
@@ -562,17 +572,19 @@ class QuotationCatalogReadAdapter implements QuotationCatalogReadPort {
     // without a WorkOrder-derived serviceType/sourceType context. The raw
     // transport may deny Production catalog routes as well; keep this fence
     // independent so enabling an authorized route cannot bypass it.
-    if (productionReadOnly && (!scopeAtStart || !catalogContextAtStart)) {
+    if (productionReadOnly && (!scopeAtStart || !catalogContextAtStart
+      || !this.isCurrentWorkOrderListed(context.workOrderId ?? null))) {
       return adapterFailure<T>(
         'authorization_denied',
-        'Production catalog reads require the current authenticated user/role and a Work Order-scoped catalog context.',
+        'Production catalog reads require the current authenticated identity and a role-listed Work Order catalog context.',
       )
     }
     const result = await this.read(request, map)
     if (!productionReadOnly) return result
 
     this.synchronizeProductionReadScope()
-    if (this.authorizationContextGeneration !== generationAtStart) {
+    if (this.authorizationContextGeneration !== generationAtStart
+      || !this.isCurrentWorkOrderListed(context.workOrderId ?? null)) {
       return adapterFailure('authorization_denied', 'Catalog results were discarded because the authenticated identity or Work Order catalog context changed during the read. Reload the current catalog.')
     }
     if (listedPackages && scopeAtStart && catalogContextAtStart && result.state === 'succeeded' && result.data) {
@@ -612,7 +624,8 @@ class QuotationCatalogReadAdapter implements QuotationCatalogReadPort {
     const catalogContextAtStart = productionReadOnly ? this.currentCatalogContextKey : null
     const generationAtStart = productionReadOnly ? this.authorizationContextGeneration : null
     if (productionReadOnly) {
-      if (!scopeAtStart || !catalogContextAtStart || !this.listedPackageIds.has(packageId)) {
+      if (!scopeAtStart || !catalogContextAtStart || !this.listedPackageIds.has(packageId)
+        || !this.isCurrentWorkOrderListed(this.currentCatalogWorkOrderId)) {
         return adapterFailure<QuotationPackageDetailRead>(
           'authorization_denied',
           'Production package detail requires a complete current user/role identity and an ID from its successful package list.',
@@ -627,7 +640,8 @@ class QuotationCatalogReadAdapter implements QuotationCatalogReadPort {
       (raw) => packageDetail(raw, packageId),
     )
     if (productionReadOnly) this.synchronizeProductionReadScope()
-    if (productionReadOnly && this.authorizationContextGeneration !== generationAtStart) {
+    if (productionReadOnly && (this.authorizationContextGeneration !== generationAtStart
+      || !this.isCurrentWorkOrderListed(this.currentCatalogWorkOrderId))) {
       return adapterFailure<QuotationPackageDetailRead>(
         'authorization_denied',
         'Package detail was discarded because the authenticated identity or Work Order catalog context changed during the read. Reload it under the current context.',
@@ -746,7 +760,7 @@ class QuotationCatalogReadAdapter implements QuotationCatalogReadPort {
 }
 
 function authorizationIdentityKey(scope: QuotationCatalogReadAuthorizationScope | null): string | null {
-  return versionedSessionAuthorizationFingerprint(scope)
+  return sessionAuthorizationFingerprint(scope)
 }
 
 export interface QuotationCatalogReadAuthorizationScope {
@@ -760,6 +774,7 @@ export function createQuotationCatalogReadAdapter(
   transport: ApiReadTransport,
   getReadAuthorizationScope?: () => QuotationCatalogReadAuthorizationScope | null,
   codeTenantId?: string,
+  isWorkOrderListedForCurrentSession?: (workOrderId: string) => boolean,
 ): QuotationCatalogReadPort {
-  return new QuotationCatalogReadAdapter(transport, getReadAuthorizationScope, codeTenantId)
+  return new QuotationCatalogReadAdapter(transport, getReadAuthorizationScope, codeTenantId, isWorkOrderListedForCurrentSession)
 }
