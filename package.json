@@ -38,6 +38,7 @@
     "build:app": "node scripts/check-c1-release-qa-pages.mjs source && node scripts/check-c1-release-qa-pages.mjs release-context && uni build -p app",
     "inspect:form-schema": "node scripts/inspect-inspection-contract.mjs",
     "verify:g4f-prod-read": "node scripts/verify-g4f-prod-read.mjs",
+    "verify:r1-order-contract-read": "node scripts/verify-r1-order-contract-read.mjs",
     "inspect:g4f-active-order-extfield": "node scripts/inspect-g4f-active-order-extfield.mjs",
     "inspect:inspection-contract": "node scripts/inspect-inspection-contract.mjs",
     "inspect:inspection-contract:beta": "node scripts/inspect-inspection-contract-beta.mjs",

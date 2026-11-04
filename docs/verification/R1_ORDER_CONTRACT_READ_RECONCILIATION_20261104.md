@@ -1,6 +1,6 @@
 # R1 Order / Contract read reconciliation — 2026-11-04
 
-**Status:** source-audited and locally code-tested; live Production data verification **NOT RUN**. The Production Contract route remains blocked by the frozen M1-I8 safety baseline. This is not an Owner business or commercial acceptance.
+**Status:** source-audited and locally code-tested; live Order/Contract data read **BLOCKED_BEFORE_BUSINESS_READ**. One Owner-authorized local technician login succeeded, but its session omitted `roleVersion`, so the reader stopped before role-tree, WorkOrder, Order or Contract requests. The Production Contract route remains blocked in the App transport. This is not an Owner business or commercial acceptance.
 
 ## Pinned sources
 
@@ -24,20 +24,22 @@
 - Duplicate or malformed IDs and contradictory ownership fail closed. A bounded empty result stays `bounded_unverified`; it does not say that no Contract exists.
 - When the DEV synthetic gate is active, only sanitized status metadata is projected. PDF/QR URLs, contact and signer data, raw workflow nodes, and Contract/signature commands are not returned or invoked. Production/Beta business writes remain disabled.
 - Order browse now distinguishes captured `amount` and `totalAmount`, checks the R1 package/procedure minimum rules, and marks incomplete or inconsistent line pricing as unsupported. It never presents live catalog `price` as an Order amount.
+- A separate local audit runner and request guard were added for the Owner-approved read method. It defaults to zero network. With a complete authenticated identity, it reads the current role tree once, scans role-visible WorkOrder pages sequentially (`rows=3`), and checks at most three type=1 Orders for each WorkOrder in page order, stopping at the first WorkOrder with a formal Order. If the role-visible list ends first, it stops without a Contract read. It then allows one exact R1 Contract status query (`page=1, rows=3`) for the selected WorkOrder. Repeated role-tree resolution uses an in-memory response from the same run; raw responses and IDs are not persisted. The pagination query is fail-closed on duplicate rows, page errors, unexpected routes and invalid identity. It does not change the App Production route allowlist. Unknown/missing `roleVersion` stops the run before role-tree or business reads.
 
 ## Verification performed
 
 - Focused Vitest: **6 files, 94 tests passed** (`quotation-order-read`, Contract boundary, Production read-only, offline fixture, WorkOrder detail semantics, and mobile craft boundaries).
 - TypeScript: `pnpm run typecheck` **PASS**.
 - `git diff --check` **PASS**.
-- `pnpm run verify:full`: **PASS**, 188 files / 1,671 tests plus all repository source, boundary and quality checks.
+- `pnpm run verify:full`: **PASS**, 189 files / 1,675 tests plus all repository source, boundary and quality checks.
+- Fixed-scope reader guard tests: **4 tests passed**; `pnpm run verify:r1-order-contract-read -- --preflight-only` **READY_NO_NETWORK** (configuration flags only; zero requests). The guard also tests strictly sequential WorkOrder pagination with three rows per page.
 - Real main-App H5 Playwright: **61 passed, 25 skipped, 0 failed** from the 86-case configured run. It included Contract preview at 375/390 and the 430×932 verified Order → C01 → Order hub return flow. A final targeted rerun after the last adapter changes also passed **4/4**. The browser blocked every external origin; fixture data stayed local.
 - Screenshot reviewed at 430×932: `test-results/main-h5-mock/evidence/r1-order-contract/m3-signing-read-430x932.png`. A 375px Contract preview is at `test-results/main-h5-mock/evidence/r1-order-contract/m1-contract-read-375.png`.
-- No Production request or business write was issued.
+- Authorized Production login: **1**; role-tree reads: **0**; WorkOrder, Order, Contract and other business reads: **0**; WorkOrder/Order/Contract mutations: **0**. The R1 login handler can persist account permission context as part of authentication; no other request was issued. Login established a technician role ID but omitted `roleVersion`; this is a fail-closed identity result, not a reason to synthesize or bypass the version guard. No session token or raw response was persisted.
 
 ## Outstanding evidence
 
-- Current local browser has no authenticated R1 Technician session, and no current approved WorkOrder/Order/SPU sample IDs were supplied for this check. No live Production read was attempted; the prior bounded SPU approval does not supply a current sample ID or authorize catalog discovery.
-- Therefore current tenant payload parity, actual Contract visibility for a technician role, real SKU → Order → Contract linkage, and Quote → Order lineage remain **NOT VERIFIED**. Synthetic fixtures and pinned source do not substitute for that evidence. The Production route gate must not be loosened until the exact sample and live scope are reviewed.
-- Before interpreting a live response, provide a current role-visible sample (or use an already-authorized session and exact record IDs) and retain only redacted identity-match outcomes. Never broaden the query to discover a sample.
+- The in-memory login session is closed and not recoverable from local storage. The current login response omitted `roleVersion`; the existing Order guard requires session/user/role/version identity, so no role-tree, WorkOrder page, Order or Contract read was attempted. The Owner has since authorized sequential paging within the current role-visible WorkOrder list until the first WorkOrder with a formal type=1 Order is found. That permission is encoded in the local reader, but no page scan could begin because the role-version identity prerequisite is still missing. R1's phone-login source returns `user`, `token` and `currentRole`; the R1 role-tree query returns function/menu data, with no documented `roleVersion` field to populate the guard. No data sample was discovered. The prior bounded SPU authorization does not supply an Order/Contract sample or authorize catalog discovery.
+- Therefore current tenant payload parity, actual Contract visibility for a technician role, real SKU → Order → Contract linkage, and Quote → Order lineage remain **NOT VERIFIED**. Synthetic fixtures and pinned source do not substitute for that evidence. The App Production Contract route remains closed; the audit runner will stop when identity evidence is incomplete.
+- The remaining prerequisite is a source-backed current role-version identity available through the supported R1 session flow. Once that prerequisite exists, use the Owner-approved sequential role-visible scan and retain only redacted identity-match outcomes; do not synthesize identity or broaden to other roles, tenants, or endpoints.
 - No signing, document access, Order/Contract/Workflow mutation, deployment, or main merge is part of this verification.
