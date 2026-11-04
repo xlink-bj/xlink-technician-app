@@ -4,6 +4,7 @@ import { ref, watch } from 'vue'
 import type { QuotationOrderBrowseGroup, QuotationOrderBrowseItem, QuotationOrderBrowseLine, QuotationOrderReadPort, SessionSnapshot } from '@shared/ports'
 import type { OperationSnapshot, OperationState } from '@shared/types'
 import { createOperationError } from '@shared/types'
+import { sessionAuthorizationFingerprint } from '@shared/session-authorization'
 import type { ReadPage } from '@shared/ports'
 
 type BrowseState = Extract<OperationState, 'idle' | 'loading' | 'succeeded' | 'failed_retryable' | 'failed_terminal'>
@@ -13,13 +14,12 @@ function failure<T>(category: 'session_invalid' | 'server_terminal', message: st
 }
 
 function authorizationIdentityKey(session: SessionSnapshot | null): string | null {
-  if (!session) return null
-  return JSON.stringify([
-    session.sessionRef,
-    session.user.id,
-    session.currentRole?.id ?? null,
-    session.roleVersion ?? null,
-  ])
+  return sessionAuthorizationFingerprint(session ? {
+    sessionRef: session.sessionRef,
+    userId: session.user.id,
+    roleId: session.currentRole?.id,
+    roleVersion: session.roleVersion,
+  } : null)
 }
 
 export const useQuotationOrderBrowseStore = defineStore('quotationOrderBrowse', () => {

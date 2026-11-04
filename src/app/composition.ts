@@ -46,6 +46,10 @@ import { createSurveyLeakageCauseProvider } from '@adapters/api/survey-leakage-c
 
 import { loadApplicationRuntimeConfig } from './runtime-config'
 import { isBusinessMockMode, isDevSyntheticContractReadPreviewEnabled } from './business-mock'
+import {
+  sessionAuthorizationFingerprint,
+  versionedSessionAuthorizationFingerprint,
+} from '@shared/session-authorization'
 
 function configurationFailure<T>(message: string): OperationSnapshot<T> {
   return { state: 'failed_terminal', error: createOperationError('server_terminal', message) }
@@ -113,22 +117,23 @@ export function createDefaultTechnicianApiReadPort(authSession: AuthSessionPort)
       technicianReadPort?.isChildWorkflowParentListedForCurrentSession?.(nodeId) === true,
     getChildWorkflowReadAuthorizationIdentity: () => {
       const session = authSession.getCurrentSession()
-      if (!session || !session.currentRole?.id) return null
-      return JSON.stringify([
-        session.sessionRef,
-        session.user.id,
-        session.currentRole.id,
-        session.roleVersion ?? null,
-      ])
+      return sessionAuthorizationFingerprint(session ? {
+        sessionRef: session.sessionRef,
+        userId: session.user.id,
+        roleId: session.currentRole?.id,
+        roleVersion: session.roleVersion,
+      } : null)
     },
     isRepeatFormContextAuthorizedForCurrentSession: (definitionId, runId) =>
       technicianReadPort?.isRepeatFormContextAuthorizedForCurrentSession?.(definitionId, runId) === true,
     getRepeatFormReadAuthorizationIdentity: () => {
       const session = authSession.getCurrentSession()
-      if (!session || !session.currentRole?.id) return null
-      return JSON.stringify([
-        session.sessionRef, session.user.id, session.currentRole.id, session.roleVersion ?? null,
-      ])
+      return sessionAuthorizationFingerprint(session ? {
+        sessionRef: session.sessionRef,
+        userId: session.user.id,
+        roleId: session.currentRole?.id,
+        roleVersion: session.roleVersion,
+      } : null)
     },
     getMockActor: () => {
       const session = authSession.getCurrentSession()
@@ -288,10 +293,21 @@ export function createDefaultQuotationOrderReadPort(
   }
   const authorizationIdentity = (): string | null => {
     const session = authSession.getCurrentSession()
-    if (!session?.currentRole?.id || !session.roleVersion) return null
-    return JSON.stringify([
-      session.sessionRef, session.user.id, session.currentRole.id, session.roleVersion,
-    ])
+    return sessionAuthorizationFingerprint(session ? {
+      sessionRef: session.sessionRef,
+      userId: session.user.id,
+      roleId: session.currentRole?.id,
+      roleVersion: session.roleVersion,
+    } : null)
+  }
+  const signingAuthorizationIdentity = (): string | null => {
+    const session = authSession.getCurrentSession()
+    return versionedSessionAuthorizationFingerprint(session ? {
+      sessionRef: session.sessionRef,
+      userId: session.user.id,
+      roleId: session.currentRole?.id,
+      roleVersion: session.roleVersion,
+    } : null)
   }
   const transport = createUniApiReadTransport({
     apiBaseUrl: config.value.environment.apiBaseUrl,
@@ -304,12 +320,12 @@ export function createDefaultQuotationOrderReadPort(
       return session ? { userId: session.user.id, ...(session.currentRole ? { roleId: session.currentRole.id } : {}) } : null
     },
   })
-  // A live, strictly scoped identity fingerprint. Missing role/version
-  // keeps Signing precheck DENIED even when ordinary quotation browse works.
+  // Ordinary role-scoped browsing uses the real session/user/role identity;
+  // R1 may omit roleVersion. Signing review keeps the stricter versioned gate.
   return createQuotationOrderReadAdapter(
     transport,
     isWorkOrderListedForCurrentSession,
-    authorizationIdentity,
+    signingAuthorizationIdentity,
     isDevSyntheticContractReadPreviewEnabled,
   )
 }

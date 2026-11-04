@@ -37,13 +37,18 @@ const detailResponse = () => ({ state: 'succeeded' as const, data: detail })
 describe('M1 I7 WorkOrder read scope invalidation at the feature boundary', () => {
   beforeEach(() => setActivePinia(createPinia()))
 
-  it('scope key covers user, role and role version, not just sessionRef', () => {
+  it('scope key covers session, user and role and includes roleVersion only when R1 provides it', () => {
     const initial = session()
     expect(workOrderReadScopeKey(initial)).not.toBe(workOrderReadScopeKey(session('role-2')))
     expect(workOrderReadScopeKey(initial)).not.toBe(workOrderReadScopeKey(session('role-1','v2')))
     expect(workOrderReadScopeKey(initial)).not.toBe(workOrderReadScopeKey({
       ...initial, user: { id: asOpaqueId<'UserId'>('other-user') },
     }))
+    const withoutVersion = { ...initial, roleVersion: undefined }
+    expect(workOrderReadScopeKey(withoutVersion)).toBe(JSON.stringify([
+      'session-1', 'user-1', 'role-1', null,
+    ]))
+    expect(workOrderReadScopeKey({ ...withoutVersion, currentRole: undefined })).toBeNull()
     expect(workOrderReadScopeKey(null)).toBeNull()
   })
 

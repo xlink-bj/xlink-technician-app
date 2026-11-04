@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { createPinia, setActivePinia } from 'pinia'
 
 import { useQuotationOrderBrowseStore } from '@features/work-orders/quotation/order-browse-store'
@@ -49,6 +51,15 @@ beforeEach(() => {
 })
 
 describe('M1 #39 official Order read-only list: exact paging + signing identity handoff safety', () => {
+  it('lets the regular order handoff use R1 session/user/role when roleVersion is omitted', () => {
+    const workspace = readFileSync(resolve(
+      process.cwd(), 'src/features/work-orders/quotation/QuotationActionWorkspace.vue',
+    ), 'utf8')
+    expect(workspace).toContain('sessionAuthorizationFingerprint(current ?')
+    expect(workspace).not.toContain('!current.roleVersion')
+    expect(workspace).toContain("if (session.status !== 'authenticated') return null")
+  })
+
   it('never reuses a 1-row cache for a 3-row request, or the reverse', async () => {
     const read = vi.fn(async (_id: string, size: 1 | 3) =>
       size === 1 ? page([row('official-a')], 7) : page([

@@ -13,13 +13,13 @@ function session(
   ref: string,
   userId = 'synthetic-user',
   roleId = 'synthetic-role',
-  roleVersion = 'synthetic-role-version',
+  roleVersion: string | null = 'synthetic-role-version',
 ): SessionSnapshot {
   return {
     sessionRef: asOpaqueId<'SessionRef'>(ref),
     user: { id: asOpaqueId<'UserId'>(userId) },
     currentRole: { id: asOpaqueId<'RoleId'>(roleId) },
-    roleVersion,
+    ...(roleVersion === null ? {} : { roleVersion }),
     capabilityNames: [],
   }
 }
@@ -66,6 +66,21 @@ describe('Production Work-Order-scoped quotation browse store', () => {
     expect(store.fetchedSessionRef).toBeNull()
     await store.load('synthetic-work-order-id')
     expect(list).toHaveBeenCalledTimes(3)
+  })
+
+  it('allows an authenticated current-role browse when R1 omits roleVersion', async () => {
+    const currentSession: SessionSnapshot = session('synthetic-session-without-version', 'synthetic-user', 'synthetic-role', null)
+    const list = vi.fn(async (workOrderId: string) => succeeded<ReadPage<QuotationOrderBrowseItem>>({
+      items: [{ ...quote, serviceAppointmentId: workOrderId }], page: 1, pageSize: 3, totalCount: 1,
+    }))
+    const store = useQuotationOrderBrowseStore()
+    store.configure({
+      getQuotationOrderById: async () => ({ state: 'failed_terminal' }),
+      listTypeOneOrdersForWorkOrder: list,
+    }, () => currentSession)
+
+    expect((await store.load('synthetic-work-order-id')).state).toBe('succeeded')
+    expect(list).toHaveBeenCalledWith('synthetic-work-order-id', 3)
   })
 
   it('does not retain a response that resolves after the authenticated session changes', async () => {

@@ -8,7 +8,7 @@ Before this change, `useWorkOrderListStore.load` could commit a late response wi
 
 ## Engineering fix
 
-- Shared `workOrderReadScopeKey` ties **sessionRef + userId + currentRoleId + roleVersion**, where missing role/version are represented distinctly rather than invented. It is ephemeral, not persisted/logged, and is strictly a **cache/read invalidation identity**, not server ACL proof.
+- Shared `workOrderReadScopeKey` uses the canonical **sessionRef + userId + currentRoleId + optional roleVersion** fingerprint. Missing roleVersion is represented explicitly as `null`, never invented; missing session/user/role denies the scope. It is ephemeral, not persisted/logged, and is strictly a **cache/read invalidation identity**, not server ACL proof.
 - Pinia List and Detail stores watch current session identity with `flush:'sync'`, clear old role data immediately, and reject late HTTP results when the request version or identity changes, without returning the raw stale response to callers.
 - Detail also rejects backend detail IDs that differ from the requested WorkOrder and denies phone contact on a mismatched identity. List phone contact requires the identical still-current row reference so an external old card object cannot trigger a call.
 - Real List and Detail uni-app pages subscribe to both authentication status and scoped identity, reload exactly once on a new role, and clear stale accepted-order confirmation/quotation data. The initial page load remains driven by its reactive route-ready lifecycle, avoiding duplicate manual load.

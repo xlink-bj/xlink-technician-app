@@ -29,11 +29,11 @@ export interface UniApiReadTransportOptions {
    * is not proof of role authorization; absent callbacks must DENY, not skip.
    */
   readonly isOrderWorkOrderListedForCurrentSession?: (workOrderId: string) => boolean
-  /** Current session, user, role and roleVersion fingerprint, never persisted. */
+  /** Current session/user/role fingerprint; includes a real roleVersion when present, never persisted. */
   readonly getOrderReadAuthorizationIdentity?: () => string | null
   /** Verified from a role-listed Work Order detail, never from a caller's node ID. */
   readonly isChildWorkflowParentListedForCurrentSession?: (nodeId: string) => boolean
-  /** Identity must change on session, user, role or roleVersion changes. */
+  /** Identity must change on session, user, role or supplied roleVersion changes. */
   readonly getChildWorkflowReadAuthorizationIdentity?: () => string | null
   /** Exact repeat FormDefinition + child/main Workflow run proven by the current role-scoped detail. */
   readonly isRepeatFormContextAuthorizedForCurrentSession?: (definitionId: string, runId: string) => boolean

@@ -31,6 +31,7 @@ type WorkOrderPage = {
 const authenticatedSession: SessionSnapshot = {
   sessionRef: asOpaqueId<'SessionRef'>('sanitized-session-token'),
   user: { id: asOpaqueId<'UserId'>('sanitized-user-id'), displayName: 'Sanitized Technician' },
+  currentRole: { id: asOpaqueId<'RoleId'>('sanitized-technician-role'), name: 'Technician' },
   capabilityNames: ['work-order.read'],
 }
 

@@ -143,6 +143,7 @@ import AppAmountValue from '@shared/ui/AppAmountValue.vue'
 import { computed, nextTick, ref, watch } from 'vue'
 import { isProductionReadOnlyRuntime } from '@shared/config'
 import { useSessionStore } from '@shared/state'
+import { sessionAuthorizationFingerprint } from '@shared/session-authorization'
 import { useActionWorkspaceStore } from '../action-workspace'
 import { useQuotationCompositionStore } from './composition-store'
 import { quotationAmountPresentation } from './amount-presentation'
@@ -202,8 +203,13 @@ const canReviewOrders = computed(() => Boolean(composition.draft)
   && ['fresh', 'restored', 'dirty', 'saving', 'saved_local', 'save_failed'].includes(composition.localState))
 function roleScopeKey(): string | null {
   const current = session.session
-  if (session.status !== 'authenticated' || !current?.currentRole?.id || !current.roleVersion) return null
-  return JSON.stringify([current.sessionRef, current.user.id, current.currentRole.id, current.roleVersion])
+  if (session.status !== 'authenticated') return null
+  return sessionAuthorizationFingerprint(current ? {
+    sessionRef: current.sessionRef,
+    userId: current.user.id,
+    roleId: current.currentRole?.id,
+    roleVersion: current.roleVersion,
+  } : null)
 }
 
 async function reviewOrders(): Promise<void> {

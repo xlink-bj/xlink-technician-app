@@ -274,6 +274,7 @@ async function run() {
       { createSemanticStorageAdapter }, { createUniApiReadTransport },
       { createRoleScopedTechnicianApiReadAdapter }, { createQuotationOrderReadAdapter },
       { isProductionReadOnlyTarget }, { isBusinessMockMode },
+      { sessionAuthorizationFingerprint },
     ] = await Promise.all([
       vite.ssrLoadModule('/src/app/runtime-config.ts'),
       vite.ssrLoadModule('/src/features/session/quick-login.ts'),
@@ -285,6 +286,7 @@ async function run() {
       vite.ssrLoadModule('/src/adapters/api/quotation-order-api.ts'),
       vite.ssrLoadModule('/src/shared/config/production-read-only.ts'),
       vite.ssrLoadModule('/src/adapters/api/mock/config.ts'),
+      vite.ssrLoadModule('/src/shared/session-authorization.ts'),
     ])
     const runtime = loadApplicationRuntimeConfig()
     const quickLogin = resolveQuickLoginInput()
@@ -332,21 +334,26 @@ async function run() {
     const session = login.data
     currentRoleId = session.currentRole?.id ?? null
     const roleVersion = session.roleVersion
-    if (!currentRoleId || !roleVersion || !roleVersion.trim()) {
+    const identityForCurrentSession = () => {
+      const current = auth.getCurrentSession()
+      return sessionAuthorizationFingerprint(current ? {
+        sessionRef: current.sessionRef,
+        userId: current.user.id,
+        roleId: current.currentRole?.id,
+        roleVersion: current.roleVersion,
+      } : null)
+    }
+    const identityAtStart = identityForCurrentSession()
+    if (!currentRoleId || !identityAtStart) {
       console.log(JSON.stringify({
         status: 'BLOCKED_INCOMPLETE_TECHNICIAN_IDENTITY', login: 'SUCCEEDED',
-        roleAvailable: Boolean(currentRoleId), roleVersionAvailable: Boolean(roleVersion?.trim()),
+        roleAvailable: Boolean(currentRoleId), sessionUserRoleIdentityAvailable: Boolean(identityAtStart),
+        roleVersionPresent: Boolean(roleVersion?.trim()),
         requestCounts: { ...counters }, businessMutationRequests: 0,
       }))
       process.exitCode = 1
       return
     }
-    const identityForCurrentSession = () => {
-      const current = auth.getCurrentSession()
-      if (!current?.currentRole?.id || !current.roleVersion?.trim()) return null
-      return JSON.stringify([current.sessionRef, current.user.id, current.currentRole.id, current.roleVersion])
-    }
-    const identityAtStart = identityForCurrentSession()
     let technicianApi
     const apiTransport = createUniApiReadTransport({
       apiBaseUrl: runtime.value.environment.apiBaseUrl,
@@ -555,7 +562,7 @@ async function run() {
     console.log(JSON.stringify({
       status: 'R1_BOUNDED_READ_COMPLETED',
       technicianRolePresent: true,
-      roleVersionPresent: true,
+      roleVersionPresent: Boolean(roleVersion?.trim()),
       loginRequests: counters.login,
       roleTreeReads: counters.roleTree,
       cachedRoleTreeReuses: counters.roleTreeCacheHits,

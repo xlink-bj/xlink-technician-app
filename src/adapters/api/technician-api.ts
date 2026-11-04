@@ -49,6 +49,7 @@ import {
 } from '../common/records'
 import { buildR1RepeatFormListQuery, readR1NodeFormList } from './r1-node-form-list'
 import { isProductionReadOnlyTarget } from '@shared/config'
+import { sessionAuthorizationFingerprint } from '@shared/session-authorization'
 import { requiredOpaqueId } from './read-models/ids'
 import { formData, formDefinition } from './read-models/form'
 import { codeOption, dynamicCodeOptions, cascadeCodeOptions, flattenCodeOptions } from './read-models/code-options'
@@ -311,14 +312,7 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
     } catch {
       identityScope = null
     }
-    const nextScope = identityScope?.sessionRef && identityScope.userId && identityScope.roleId
-      ? JSON.stringify([
-          identityScope.sessionRef,
-          identityScope.userId,
-          identityScope.roleId,
-          identityScope.roleVersion,
-        ])
-      : null
+    const nextScope = sessionAuthorizationFingerprint(identityScope)
     if (nextScope !== this.currentReadScope) {
       this.currentReadScope = nextScope
       this.listedWorkOrderIds.clear()

@@ -41,11 +41,18 @@ describe('R1 catalog price reads: current identity and WorkOrder scope fence', (
     expect(execute).not.toHaveBeenCalled()
   })
 
-  it('rejects incomplete identity or catalog context before exposing catalog prices', async () => {
+  it('requires a versioned current identity and WorkOrder context before exposing catalog prices', async () => {
     vi.stubEnv('VITE_XLINK_ENVIRONMENT', 'prod')
     const execute = vi.fn(async () => ({ data: [row] }))
-    const incomplete = createQuotationCatalogReadAdapter({ execute }, () => ({ ...current, roleVersion: null }))
-    expect((await incomplete.listMaterials(ctx)).state).toBe('failed_terminal')
+    for (const incompleteScope of [
+      { ...current, sessionRef: '' },
+      { ...current, userId: '' },
+      { ...current, roleId: null },
+      { ...current, roleVersion: null },
+    ]) {
+      const incomplete = createQuotationCatalogReadAdapter({ execute }, () => incompleteScope)
+      expect((await incomplete.listMaterials(ctx)).state).toBe('failed_terminal')
+    }
     const complete = createQuotationCatalogReadAdapter({ execute }, () => current)
     expect((await complete.listMaterials({ serviceType: ctx.serviceType, sourceType: ctx.sourceType })).state).toBe('failed_terminal')
     expect((await complete.listMaterials({ ...ctx, sourceType: '' })).state).toBe('failed_terminal')

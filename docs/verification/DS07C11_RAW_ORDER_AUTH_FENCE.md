@@ -13,12 +13,12 @@ R1 [xlink-app@6c0a97b](https://github.com/xlink-bj/xlink-app/blob/6c0a97b26bcbca
 
 ## Minimal P0 code change
 
-1. `src/adapters/api/uni-api-read-transport.ts` adds optional-but-**required-in-Production-Order-mode** callbacks: live role-list WorkOrder membership and a current `sessionRef/userId/roleId/roleVersion` fingerprint. On `basic/order/query`, **missing/false/throwing callbacks always return `authorization_denied` before request**, even when request shape passes the C9 whitelist.
+1. `src/adapters/api/uni-api-read-transport.ts` adds optional-but-**required-in-Production-Order-mode** callbacks: live role-list WorkOrder membership and a current `sessionRef/userId/roleId` fingerprint, including `roleVersion` only when R1 supplies it. On `basic/order/query`, **missing/false/throwing callbacks always return `authorization_denied` before request**, even when request shape passes the C9 whitelist.
 2. A snapshot of session reference and identity is compared **again after async response**, before exposing any Order body. Role revocation or identity/session rotation discards the response; no private data returned.
 3. `src/app/composition.ts` wires BOTH callbacks from the **same live role-scoped WorkOrder membership source and authenticated session** as `QuotationOrderReadAdapter`. Identity fingerprint is a shared callback (no independently drifting provider).
 4. Existing C9 and C10 tests are updated to use the real same-role callback. A dedicated suite exercises missing callback, foreign-but-well-formed WorkOrder ID, false/throw/blank guards, approved bounded read, unauthorized `queryById`, revoked in-flight role, rotated roleVersion and changed session.
 
-**No mutation transport or backend changes.** Does not enable a new endpoint, increase a page-size limit, change the R1 SKU/price/order encoder, alter visual Golden, authorize Contract PDF or sign anything. On a Production session lacking a trustworthy current roleVersion, Order reads remain **fail-closed**; this is intentional until an authorized role snapshot exists.
+**No mutation transport or backend changes.** Does not enable a new endpoint, increase a page-size limit, change the R1 SKU/price/order encoder, alter visual Golden, authorize Contract PDF or sign anything. A follow-up found that supported R1 technician login omits `roleVersion`; ordinary Order browsing therefore uses the real session/user/current-role identity with explicit `null` version, while role-listed WorkOrder membership and the existing transport fence remain required. Signing review and staged writes retain their stricter real-version requirements. See [the shared session identity method](R1_SESSION_AUTHORIZATION_IDENTITY.md) and [the 2026-11-04 bounded Order/Contract reconciliation](R1_ORDER_CONTRACT_READ_RECONCILIATION_20261104.md).
 
 ## Remaining independent release HOLD
 

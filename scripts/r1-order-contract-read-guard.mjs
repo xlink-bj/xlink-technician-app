@@ -37,7 +37,9 @@ export function isAllowedLoginRequest(method, search, body) {
 
 export function isAllowedRoleTreeRequest(method, search, body, roleId) {
   const params = [...search.entries()]
-  return method === 'POST' && body === undefined
+  // The app's shared POST transport encodes an absent body as an empty string.
+  // Accept that wire representation, but never permit any role-tree body fields.
+  return method === 'POST' && (body === undefined || body === '')
     && params.length === 1 && params[0]?.[0] === 'roleId'
     && typeof roleId === 'string' && params[0]?.[1] === roleId
     && /^[A-Za-z0-9_-]{1,100}$/.test(roleId)

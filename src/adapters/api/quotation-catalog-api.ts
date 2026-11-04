@@ -16,6 +16,7 @@ import type {
 import type { OperationSnapshot } from '@shared/types'
 import { isProductionReadOnlyTarget } from '@shared/config'
 import { parseR1CatalogFilterCodes } from '@shared/quotation-catalog-eligibility'
+import { versionedSessionAuthorizationFingerprint } from '@shared/session-authorization'
 import { adapterFailure, succeeded, unknownErrorMessage, AdapterMappingError } from '../common/operations'
 import {
   asRecord,
@@ -745,12 +746,7 @@ class QuotationCatalogReadAdapter implements QuotationCatalogReadPort {
 }
 
 function authorizationIdentityKey(scope: QuotationCatalogReadAuthorizationScope | null): string | null {
-  if (!scope
-    || typeof scope.sessionRef !== 'string' || !scope.sessionRef.trim()
-    || typeof scope.userId !== 'string' || !scope.userId.trim()
-    || typeof scope.roleId !== 'string' || !scope.roleId.trim()
-    || typeof scope.roleVersion !== 'string' || !scope.roleVersion.trim()) return null
-  return JSON.stringify([scope.sessionRef, scope.userId, scope.roleId, scope.roleVersion])
+  return versionedSessionAuthorizationFingerprint(scope)
 }
 
 export interface QuotationCatalogReadAuthorizationScope {

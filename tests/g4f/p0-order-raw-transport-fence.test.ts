@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createUniApiReadTransport } from '@adapters/api/uni-api-read-transport'
 import { resetBusinessMockCache } from '@adapters/api/mock'
+import { sessionAuthorizationFingerprint } from '@shared/session-authorization'
 
 const workOrderId = 'listed-wo-synthetic'
 const orderRequest = {
@@ -88,6 +89,22 @@ describe('C11 P0 raw Production official Order transport role fence', () => {
     await expect(adapter.execute({
       method: 'POST', path: 'basic/order/queryById', body: { id: 'another-order' },
     })).rejects.toMatchObject({ category: 'unsupported_capability' })
+    expect(request).toHaveBeenCalledTimes(1)
+  })
+
+  it('accepts the real R1 session/user/role identity when roleVersion is absent', async () => {
+    vi.stubEnv('VITE_XLINK_ENVIRONMENT', 'prod')
+    const identity = sessionAuthorizationFingerprint({
+      sessionRef: 'r1-session', userId: 'r1-user', roleId: 'r1-technician-role', roleVersion: null,
+    })
+    const { adapter, request } = transport({
+      listed: id => id === workOrderId,
+      identity: () => identity,
+    })
+
+    await expect(adapter.execute(orderRequest)).resolves.toEqual({
+      data: [{ ownerPhone: 'PRIVATE-SYNTHETIC-VALUE' }],
+    })
     expect(request).toHaveBeenCalledTimes(1)
   })
 

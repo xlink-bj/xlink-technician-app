@@ -28,6 +28,7 @@ describe('fixed-scope R1 Order / Contract read runner guard', () => {
     })).toBe(false)
 
     expect(isAllowedRoleTreeRequest('POST', new URLSearchParams('roleId=technician-role'), undefined, 'technician-role')).toBe(true)
+    expect(isAllowedRoleTreeRequest('POST', new URLSearchParams('roleId=technician-role'), '', 'technician-role')).toBe(true)
     expect(isAllowedRoleTreeRequest('POST', new URLSearchParams('roleId=other&extra=1'), undefined, 'technician-role')).toBe(false)
     expect(isAllowedRoleTreeRequest('POST', new URLSearchParams('roleId=technician-role'), {}, 'technician-role')).toBe(false)
   })
