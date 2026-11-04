@@ -110,15 +110,17 @@ describe('EQ08 one Form Runtime schema projection and one Adapter command-wire o
     expect(command.path).not.toBe('workflow/process')
   })
 
-  it('keeps deferred appointment transport marker internal and never reinterprets it as authorization', () => {
+  it('encodes the owner-confirmed deferred datetime while keeping Workflow separate', () => {
     const command = formDataUpsertCommand({
       workOrderId: asOpaqueId<'WorkOrderId'>('eq08-synthetic-order'),
       workflowNodeId: asOpaqueId<'WorkflowNodeRuntimeId'>('eq08-node'),
       definitionId: asOpaqueId<'FormDefinitionId'>('eq08-form'),
-      values: { need: '0' },
-    }, 'deferred_appointment_datetime_encoding_unknown')
-    expect(command.safety).toBe('deferred_appointment_datetime_encoding_unknown')
-    expect((command.body as { dataStr: string }).dataStr).not.toContain('safety')
+      values: { need: '0', datetime: '2026-04-20 10:00' },
+    })
+    expect(JSON.parse(String(command.body?.dataStr))).toMatchObject({
+      need: '0', datetime: '2026-04-20 10:00',
+    })
+    expect(command.path).toMatch(/^biz\/extForm\/upsert\//)
   })
 
   it('centralizes both R1 Workflow Process variants, never treating FormData upsert as completion', () => {
@@ -148,7 +150,7 @@ describe('EQ08 one Form Runtime schema projection and one Adapter command-wire o
     const workspace = readFileSync(new URL('../../src/features/work-orders/action-workspace.ts', import.meta.url), 'utf8')
     const appointmentRuntime = readFileSync(new URL('../../src/features/work-orders/appointment-form-runtime.ts', import.meta.url), 'utf8')
     const dynamicRuntime = readFileSync(new URL('../../src/features/work-orders/dynamic-form-action.ts', import.meta.url), 'utf8')
-    expect(command).toContain('formDataUpsertCommand(input, safety)')
+    expect(command).toContain('formDataUpsertCommand(input)')
     expect(command).toContain('workflowCompleteCommand(input)')
     expect(command).not.toContain("path: 'workflow/process'")
     expect(command).not.toContain('path: `biz/extForm/upsert/')

@@ -19,7 +19,7 @@ New `closure-c3-release-drills.test.ts` makes *real command adapter code* proces
 - Production flag override attempts (`VITE_XLINK_ENABLE_REAL_WRITES=true`) against Workflow, FormData, Order, quotation generation, confirmation and signing;
 - canonical Production host, even when the build is mislabeled as staging;
 - non-Production writes when the real-write flag is false;
-- deferred Appointment `need=0` with source-unverified datetime encoding.
+- deferred Appointment `need=0` when the real-write flag is disabled (the payload choice is now Owner-decided; live backend acceptance/readback remains unverified).
 
 This is deeper than static string matching and checks actual transport exceptions. It is still **offline synthetic evidence**, not back-end tenant authorization or server-side idempotency.
 
@@ -37,7 +37,7 @@ Machine-readable `closure-c3-readiness.json` and `scripts/check-closure-c3-relea
 
 ### External blockers (release HOLD)
 
-- Verify actual R1 Workflow/FormData command and authorization semantics, tenant/SKU effective price authority, backend-enforced idempotency, deferred Appointment `need=0` datetime encoding. Client guards are defense in depth.
+- Verify actual R1 Workflow/FormData command and authorization semantics, tenant/SKU effective price authority, backend-enforced idempotency, and live Appointment save/Workflow/readback. The 2026-11-04 Owner decision resolves the client payload choice for deferred `need=0`; it does not prove live backend acceptance. Client guards are defense in depth.
 - Confirm release mechanism/production build artifact IDs, environment isolation, rollout/kill-switch scope, named on-call owner, rollback command, reverse compatibility and **actual rehearsal**. Current repo CI tests cannot certify these.
 - Owner signs live release/merge permission only after above and device testing. Until then all Drafts remain unmerged, Production business mutations remain disabled.
 

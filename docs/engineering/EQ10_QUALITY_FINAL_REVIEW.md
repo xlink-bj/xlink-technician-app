@@ -30,7 +30,7 @@ The base root `Validate` Draft quick lane now runs the permanent owner and criti
 ### User/business safety policy
 
 1. **No Production/Beta mutation and no SDK/backend privilege escalation.** Runs have `VITE_XLINK_ENABLE_REAL_WRITES=false`; Live pricing/writes cannot be enabled by tests.
-2. Real R1 effective SKU pricing, backend authorization and tenant isolation, Workflow Complete authority, deferred appointment `need=0` datetime encoding, and type=1 backend idempotency remain evidence-gated. A local command lock or catalog list scope is defense-in-depth, not proof of backend permission.
+2. Real R1 effective SKU pricing, backend authorization and tenant isolation, Workflow Complete authority, live deferred appointment save/readback, and type=1 backend idempotency remain evidence-gated. The 2026-11-04 Owner decision resolves the client `need=0` payload choice (preserve an existing datetime, omit an absent value), but does not authorize or prove live backend acceptance. A local command lock or catalog list scope is defense-in-depth, not proof of backend permission.
 3. No auto-merge. #184–#189 remain Draft. No release/go-live claims. No guessed Live acceptance.
 4. Do not amend other PR heads while running EQ10; if any ancestor changes, update the manifest and re-run the entire exact-head integrated suite after engineering review.
 

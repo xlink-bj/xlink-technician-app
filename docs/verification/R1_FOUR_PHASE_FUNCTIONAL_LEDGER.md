@@ -24,7 +24,7 @@ Parent A06-B Draft #197 exact `345dbe79bfdbe53af4ce75721ab6ef188c25b1ef`. R1 ref
 |---|---|---|---|
 | L Login/role | SMS/login/session, role context and dev quick login | R1 password/consent/legal ownership; real device/login acceptance | PARTIAL / source-only |
 | W WorkOrder | ServiceAppointment list/detail/current workflow, role display | real role-node eligibility & CRUD parity; forms/repeat cross-node state | PARTIAL / offline |
-| A Appointment | time-picker UX and dynamic form, durable save/Process fence | `need=0` authentic encoding; R1 forms/repeat node variants, live writes | PARTIAL / offline |
+| A Appointment | time-picker UX and dynamic form, durable save/Process fence, source-backed `need=0` datetime preservation | R1 forms/repeat node variants, live writes and authoritative readback | PARTIAL / offline |
 | S Survey | dynamic fields, conditional display, local drafts/media workflows | multi-form/repeat source parity, actual media writes, real readback | PARTIAL / offline |
 | Q Quotation/Order | catalog read, grouping, Quote Editor/Order hub, client safety fences | effective tenant SKU and price, R1 type=1 writes/idempotency; true Order readback | PARTIAL / offline |
 | C Contract/sign | contract/Order read, offline signing preview | real signer scope, legal signing/SMS/PDF and write/readback parity | PARTIAL / offline |

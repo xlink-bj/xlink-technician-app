@@ -121,7 +121,7 @@ describe('Appointment Action Content presentation boundary', () => {
     expect(appointmentVisitIntentFor({ ...form, values: { ...form.values, need: 'unexpected' } })).toBe('unknown')
   })
 
-  it('keeps deferred datetime in editing state but excludes it from effective submission', () => {
+  it('keeps deferred datetime in the payload while making the hidden field optional', () => {
     const form: AppointmentFormRead = {
       definitionId: asOpaqueId<'FormDefinitionId'>('appointment-definition'),
       fields: [
@@ -140,6 +140,15 @@ describe('Appointment Action Content presentation boundary', () => {
     }
 
     expect(normalizeAppointmentForm(form)).toEqual({
+      state: 'succeeded',
+      data: { need: '0', datetime: '2026-04-20 10:00', note: '保留备注' },
+    })
+
+    const withoutPriorDatetime = normalizeAppointmentForm({
+      ...form,
+      values: { need: '0', note: '保留备注' },
+    })
+    expect(withoutPriorDatetime).toEqual({
       state: 'succeeded',
       data: { need: '0', note: '保留备注' },
     })

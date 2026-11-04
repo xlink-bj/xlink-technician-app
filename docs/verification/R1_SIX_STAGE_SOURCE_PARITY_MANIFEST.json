@@ -175,7 +175,7 @@
       "codeEvidence": "SOURCE_LINKED_ENGINEERING_TESTED",
       "liveParity": "NOT_VERIFIED",
       "confirmedOpenGaps": [
-        "R1 saveForm(type) 以整个 formData 加 sid/smodule/nodeId 发送 dataStr；need=0 时 datetime 未见显式剔除，新 App 则从有效命令值排除。保存 wire 的空值/省略/哨兵语义必须按后端确认，不能宣称完全等价",
+        "R1 saveForm(type) 以整个 formData 加 sid/smodule/nodeId 发送 dataStr；Owner 决定新 App 在 need=0 时保留已有 datetime，无值时省略。真实后端是否接受及保存后的权威回读仍未验证",
         "真实预约 FormData 保存、Workflow Complete 与权威回读未执行",
         "不同角色预约可见性和跨设备草稿恢复缺实账号与设备样本",
         "R1 saveOnly 跳过必填并不处理 Workflow，普通提交的 showType/只读/必填与日历 need==1 副作用应单独对照"

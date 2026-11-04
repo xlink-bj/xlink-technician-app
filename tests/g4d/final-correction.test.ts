@@ -405,8 +405,8 @@ describe('G4-D final functional and safety corrections', () => {
     expect(request).toHaveBeenCalledTimes(1)
   })
 
-  it('blocks deferred appointment writes when the real encoding is still unverified', async () => {
-    vi.stubEnv('VITE_XLINK_ENABLE_REAL_WRITES', 'true')
+  it('blocks deferred appointment writes outside Mock when real writes are disabled', async () => {
+    vi.stubEnv('VITE_XLINK_ENABLE_REAL_WRITES', 'false')
     setBusinessMockMode('off')
     const request = vi.fn<UniApiCommandRequestExecutor>()
     const transport = createUniApiCommandTransport({
@@ -418,8 +418,7 @@ describe('G4-D final functional and safety corrections', () => {
     await expect(transport.execute({
       method: 'POST',
       path: 'biz/extForm/upsert/appointment-definition',
-      body: { dataStr: JSON.stringify({ sid: 'real-work-order', need: '0' }) },
-      safety: 'deferred_appointment_datetime_encoding_unknown',
+      body: { dataStr: JSON.stringify({ sid: 'real-work-order', need: '0', datetime: '2026-04-20 10:00' }) },
     })).rejects.toMatchObject({ category: 'unsupported_capability' })
     expect(request).not.toHaveBeenCalled()
   })

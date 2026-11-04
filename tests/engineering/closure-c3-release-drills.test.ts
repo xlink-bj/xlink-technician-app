@@ -63,14 +63,13 @@ describe('Closure C3 — offline production deny & release recovery drills', () 
     expect(realRequest).not.toHaveBeenCalled()
   })
 
-  it('rejects deferred appointment wire whose authoritative R1 encoding remains unknown', async () => {
+  it('blocks deferred Appointment outside Mock when the real-write flag is disabled', async () => {
     vi.stubEnv('VITE_XLINK_ENVIRONMENT','staging')
-    vi.stubEnv('VITE_XLINK_ENABLE_REAL_WRITES','true')
+    vi.stubEnv('VITE_XLINK_ENABLE_REAL_WRITES','false')
     const {transport,realRequest}=instrumentedTransport()
     await expect(transport.execute({
       path:'biz/extForm/upsert/synthetic',method:'POST',
-      safety:'deferred_appointment_datetime_encoding_unknown',
-      body:{need:'0'},
+      body:{dataStr:JSON.stringify({sid:'real-work-order',need:'0',datetime:'2026-04-20 10:00'})},
     })).rejects.toMatchObject({category:'unsupported_capability'})
     expect(realRequest).not.toHaveBeenCalled()
   })

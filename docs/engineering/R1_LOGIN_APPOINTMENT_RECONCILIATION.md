@@ -13,7 +13,7 @@
 
 One reproducible checkout contains both R1 improvements:
 1. Real manual login now demands **affirmative legally approved** Privacy/Agreement URLs and checked consent before Auth Port request. With no legal URLs, there is **zero manual auth call**; DEV Quick remains isolated; no OTP/password provider invented.
-2. Appointment's required/deferred/saveOnly branches share **one FormData envelope**, but Workflow Complete only runs on successfully saved form record. Unknown R1 `need=0` datetime encoding remains **blocked by transport safety**.
+2. Appointment's required/deferred/saveOnly branches share **one FormData envelope**, but Workflow Complete only runs on successfully saved form record. Owner decision on 2026-11-04: preserve a previously selected `datetime` when `need=0`, omit it when absent, and keep it out of hidden-field validation. Live backend acceptance/readback remains **unverified**.
 
 The combined candidate must independently PASS: pinned R1 six-stage source gate, focused 2 feature + old regression tests, critical 12-file behavior lane, full `verify:full`, H5/WeChat MP/App builds, real Uni H5 offline manual consent 2 viewports, six-stage Main-App H5 Mock 2 viewports, existing Gallery 3 plus business List/Detail/Q01 Goldens 9. No re-recording snapshots. Every external browser route is denied in the offline tests.
 

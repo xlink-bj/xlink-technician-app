@@ -33,8 +33,6 @@ export interface ApiCommandRequest {
   readonly jsonBody?: Readonly<Record<string, unknown>>
   /** All R1 special mutations additionally require a dedicated opt-in fence. */
   readonly r1Special?: true
-  /** Internal safety metadata; never serialized into the backend request. */
-  readonly safety?: 'deferred_appointment_datetime_encoding_unknown'
 }
 
 export interface ApiCommandTransport {
@@ -358,24 +356,16 @@ export class TechnicianApiCommandAdapter implements TechnicianApiCommandPort {
     })
   }
 
-  /** Purely persists FormData; NEVER completes a workflow node. The only
-   * deferred-time variation is a transport-owned fail-closed safety marker.
+  /** Purely persists FormData; NEVER completes a workflow node.
    * All appointment branches share one payload serializer. */
-  private async saveDynamicFormWithSafety(
+  private async saveDynamicFormRecord(
     input: SaveDynamicFormInput,
-    safety?: ApiCommandRequest['safety'],
   ): Promise<OperationSnapshot<FormDataId>> {
     try {
       if (requiresR1SpecialWorkflowWire(input.sourceNodeType))
         return adapterFailure('unsupported_capability', 'R1 multi-form/repeat/subflow requires its own source-backed write contract')
-      // Also cover the public saveDynamicForm Port when used directly for the
-      // R1 Appointment definition, not only submitAppointment's UI path.
-      if (String(input.definitionId) === appointmentFormDefinitionWireId
-        && String(input.values.need ?? '') === '0') {
-        return adapterFailure('unsupported_capability', 'Deferred Appointment wire is unverified; no FormData was dispatched')
-      }
       if (!input.mutation) return adapterFailure('unsupported_capability', 'Durable FormData checkpoint is required')
-      const request = formDataUpsertCommand(input, safety)
+      const request = formDataUpsertCommand(input)
       const reserved = await input.mutation.beforeFormDispatch()
       if (reserved.state !== 'succeeded') return failureFrom(reserved)
       const saved = await this.command<FormDataId>(
@@ -392,7 +382,7 @@ export class TechnicianApiCommandAdapter implements TechnicianApiCommandPort {
 
   /** saveOnly semantics: saving a draft never runs workflow/process. */
   saveDynamicForm(input: SaveDynamicFormInput): Promise<OperationSnapshot<FormDataId>> {
-    return this.saveDynamicFormWithSafety(input)
+    return this.saveDynamicFormRecord(input)
   }
 
   async completeWorkflowNode(input: CompleteWorkflowNodeInput): Promise<OperationSnapshot<void>> {
@@ -415,20 +405,15 @@ export class TechnicianApiCommandAdapter implements TechnicianApiCommandPort {
   async submitAppointment(input: SubmitAppointmentInput): Promise<OperationSnapshot<void>> {
     if (requiresR1SpecialWorkflowWire(input.sourceNodeType))
       return adapterFailure('unsupported_capability', 'R1 special Appointment node requires a verified multi-form/child workflow contract')
-    // R1 separates form upsert from workflow/process. Both branches write
-    // the exact same shape; deferred visit remains read-only until the
-    // original need=0 datetime wire contract is verified.
-    // A deferred appointment is source-unverified and is denied before any
-    // durable receipt is reserved. A transport-only rejection would leave an
-    // incorrect unknown-after-dispatch marker even though no request was sent.
-    const deferredSafety: ApiCommandRequest['safety'] = input.visitIntent === 'visit_deferred'
-      ? 'deferred_appointment_datetime_encoding_unknown' : undefined
-    if (deferredSafety || String(input.values.need ?? '') === '0') {
-      return adapterFailure('unsupported_capability', 'R1 deferred appointment encoding is not verified; no command was dispatched')
+    const need = String(input.values.need ?? '')
+    if ((input.visitIntent === 'visit_required' && need !== '1')
+      || (input.visitIntent === 'visit_deferred' && need !== '0')
+      || input.visitIntent === 'unknown') {
+      return adapterFailure('unsupported_capability', 'Appointment intent does not match the selected R1 need value')
     }
     if (!input.mutation) return adapterFailure('unsupported_capability', 'Durable Appointment checkpoints are required')
     const mutation: FormMutationCheckpoints = input.mutation
-    const saved = await this.saveDynamicFormWithSafety({
+    const saved = await this.saveDynamicFormRecord({
       workOrderId: input.workOrderId,
       workflowNodeId: input.workflowNodeId,
       ...(input.sourceNodeType ? { sourceNodeType: input.sourceNodeType } : {}),
@@ -437,7 +422,7 @@ export class TechnicianApiCommandAdapter implements TechnicianApiCommandPort {
       ...(input.formDataId ? { formDataId: input.formDataId } : {}),
       values: input.values,
       mutation,
-    }, deferredSafety)
+    })
     if (saved.state !== 'succeeded') return failureFrom<FormDataId, void>(saved)
     if (!saved.data) return adapterFailure('server_terminal', 'Saved appointment form data id is missing')
 

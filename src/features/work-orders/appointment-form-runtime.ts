@@ -225,7 +225,7 @@ export function normalizeAppointmentForm(
     if (value !== undefined) values[field.valueKey] = value
   }
 
-  return resultFromSubmission(
+  const normalized = resultFromSubmission(
     normalizeSubmission({
       fields: form.fields.map(schemaFor),
       values,
@@ -233,6 +233,16 @@ export function normalizeAppointmentForm(
       ...(Object.keys(fieldContexts).length > 0 ? { fieldContexts } : {}),
     }),
   )
+
+  // R1 serializes the whole Appointment formData object. Hiding datetime
+  // when `need=0` removes it from validation and the UI, but a previously
+  // selected value remains in the stored object and in the outgoing payload.
+  const deferredDatetime = form.values.datetime
+  if (normalized.state === 'succeeded' && appointmentVisitIntentFor(form) === 'visit_deferred'
+    && typeof deferredDatetime === 'string') {
+    return { ...normalized, data: { ...normalized.data, datetime: deferredDatetime } }
+  }
+  return normalized
 }
 
 export function normalizeAppointmentFieldValueForForm(

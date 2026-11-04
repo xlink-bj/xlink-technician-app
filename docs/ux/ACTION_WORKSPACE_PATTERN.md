@@ -90,21 +90,20 @@ controlling semantic value
   → draft preservation
 ```
 
-For Appointment, `need = '1'` is the verified required-visit option and
-`need = '0'` is the verified deferred-visit option. In the deferred branch,
-`datetime` is hidden, excluded from effective validation and confirmation, and
-is not included in the effective values passed to the command boundary. The
-previous datetime may remain in the local draft so switching back can restore
-the user's editing work. Stored draft values and effective submitted values
-are intentionally different concepts.
+For Appointment, `need = '1'` is the required-visit option and `need = '0'` is
+the deferred-visit option. In the deferred branch, `datetime` is hidden and
+excluded from required-field validation and confirmation. If the technician
+previously selected a datetime, keep that value in the R1 FormData payload:
+R1 serializes the full `formData` object, and the Owner confirmed that the new
+App must preserve the existing datetime. If no datetime was selected, omit it.
+The value remains available in the local draft when the technician switches
+back to required visit.
 
-The current backend contract does not define whether a deferred appointment
-must omit `datetime`, send `null`, or use another sentinel on a real write.
-The feature therefore keeps the effective value separate and does not claim a
-verified deferred write encoding. Mock can exercise the semantic branch; the
-real-write safety boundary remains authoritative until that encoding is
-verified. This pattern is documented here rather than promoted into a generic
-form framework before a second real consumer exists.
+This source-backed payload behavior does not authorize real writes. Production
+remains read-only; the non-Production real-write flag and special-node guards
+remain in force. Actual backend response, Workflow completion and readback are
+still unverified. This Appointment-specific rule stays in the Action Runtime
+until another consumer needs it.
 
 ## Workspace structure
 

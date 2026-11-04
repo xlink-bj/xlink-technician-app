@@ -89,6 +89,8 @@ jobs:
           tests/h5-main-mock/a-stage-p1-acceptance.spec.ts
           tests/h5-main-mock/dynamic-field-registry.spec.ts
           --grep 'Stage 1B|Stage 2A|020 forms|021 repeat|Field registry'
+      - name: Verify deferred appointment retains its existing datetime in the real App
+        run: pnpm exec playwright test --config config/playwright/main-h5-mock.config.ts tests/h5-main-mock/deferred-appointment-r1.spec.ts
       - name: Verify Stage 2B optional typed primitives on source-shaped Mock FormDef
         env:
           VITE_XLINK_R1_STAGE2B_FIELDS: 'true'

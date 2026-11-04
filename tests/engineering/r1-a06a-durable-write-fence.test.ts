@@ -183,21 +183,27 @@ describe('A06-A durable FormData / Workflow dispatch fence', () => {
     expect(execute).toHaveBeenCalledTimes(1)
   })
 
-  it('direct Appointment FormData save cannot bypass need=0 denial or reserve a receipt', async () => {
+  it('direct Appointment saveOnly preserves deferred need=0 without completing Workflow', async () => {
     const { storage, records } = memoryStore()
-    const beforeFormDispatch = vi.fn(async()=>({state:'succeeded' as const}))
-    const execute = vi.fn(async()=>({success:true,data:{_id:id}}))
+    const mutation = checkpoints(storage, scope)
+    const beforeFormDispatch = vi.spyOn(mutation, 'beforeFormDispatch')
+    const execute = vi.fn(async(_request: ApiCommandRequest)=>({success:true,data:{_id:id}}))
     const adapter = createTechnicianApiCommandAdapter({ execute }, {} as TechnicianApiReadPort)
     const result = await adapter.saveDynamicForm!({
       ...commandInput,
       definitionId: asOpaqueId<'FormDefinitionId'>(appointmentFormDefinitionWireId),
-      values: { need: '0' },
-      mutation: { ...checkpoints(storage, scope), beforeFormDispatch },
+      values: { need: '0', datetime: '2026-04-20 10:00' },
+      mutation,
     })
-    expect(result.error?.category).toBe('unsupported_capability')
-    expect(beforeFormDispatch).not.toHaveBeenCalled()
-    expect(execute).not.toHaveBeenCalled()
-    expect(records.size).toBe(0)
+    expect(result).toMatchObject({state:'succeeded',data:id})
+    expect(beforeFormDispatch).toHaveBeenCalledTimes(1)
+    expect(execute).toHaveBeenCalledTimes(1)
+    const [request] = execute.mock.calls[0]!
+    const body = JSON.parse(String((request as ApiCommandRequest).body?.dataStr))
+    expect(body).toMatchObject({need:'0',datetime:'2026-04-20 10:00'})
+    expect((request as ApiCommandRequest).path).toMatch(/^biz\/extForm\/upsert\//)
+    expect(execute.mock.calls.some(([candidate]) => (candidate as ApiCommandRequest).path === 'workflow/process')).toBe(false)
+    expect(records.size).toBeGreaterThan(0)
   })
 
   it('persists a save ACK before Process and blocks Process retry after a failure', async () => {

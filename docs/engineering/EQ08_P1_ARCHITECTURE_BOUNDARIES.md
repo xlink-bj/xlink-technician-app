@@ -21,7 +21,7 @@ Status: **Draft candidate**, not production/R1 runtime parity. Base: EQ07 P0 exa
 
 1. `saveDynamicForm` persists FormData only. **Never** treats `biz/extForm/upsert` success as Workflow Complete.
 2. `workflow/process` requires its own explicit command and verified FormData ID for form-based completion. Accept Order uses a different, identity-preserving Process body.
-3. `need=0` deferred Appointment remains guarded by `deferred_appointment_datetime_encoding_unknown` until actual R1 transport contract is authorized and confirmed.
+3. Owner decision on 2026-11-04: when `need=0`, keep a previously selected `datetime` in the whole R1 FormData payload, omit it when no value exists, and exclude the hidden field from validation. This resolves the client payload choice; actual backend acceptance/readback remains unverified.
 4. User/role revision, Action identity, in-flight write leases, valid saved FormData and explicit retry/reconciliation gates from EQ07 remain untouched.
 5. Unsupported visible conditional fields fail closed. Inapplicable/hidden draft values remain local and are excluded from effective submission.
 6. The generic Form Runtime never infers effective tenant/SKU catalog prices or authorizes Formal Order type=1 mutations.
@@ -33,4 +33,4 @@ This stacked PR includes the **source-backed conditional Appointment runtime** a
 
 The EQ08 read-only CI lane additionally ratchets the **already-correct** Workflow Runtime and Quotation Engine/Order boundary without introducing speculative behavior. It requires isolated schema/wire parity + existing R1 Appointment, Survey, Order regression tests, critical and full checks, H5/MP/App builds, original H5 main Mock journey and unchanged approved Gallery/Business Goldens. Tests are synthetic/offline only.
 
-Real R1 workflows, tenant/SKU effective prices, deferred visit datetime encoding, and device parity remain separate blocked runtime evidence gates.
+Real R1 workflow acceptance/readback, tenant/SKU effective prices, and device parity remain separate blocked runtime evidence gates. Deferred `need=0` payload behavior is source-aligned and Owner-decided, but has not been tested against a live backend.

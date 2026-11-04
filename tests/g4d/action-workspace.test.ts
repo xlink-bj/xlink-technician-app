@@ -578,25 +578,19 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
     expect(second.store.appointmentForm?.values.datetime).toBe('2026-04-20 11:00')
   })
 
-  it('blocks a deferred visit without a durable receipt, then allows valid visit-required submit', async () => {
-    const { store, command, storage } = configureWorkspace()
+  it('submits a deferred visit with a durable receipt and preserves the previously selected datetime', async () => {
+    const { store, command } = configureWorkspace()
     await openWorkspace(store)
     store.setField('need', '1')
     store.setAppointmentTime('2026-04-20 11:00')
     store.setField('need', '0')
 
     expect(store.appointmentVisitIntent).toBe('visit_deferred')
-    expect((await store.submit()).error?.category).toBe('unsupported_capability')
-    expect(command.submitAppointment).not.toHaveBeenCalled()
-    expect([...storage.values.keys()].some(key => key.startsWith('action-mutation'))).toBe(false)
-
-    store.setField('need', '1')
-    expect(store.appointmentVisitIntent).toBe('visit_required')
     expect((await store.submit()).state).toBe('succeeded')
     expect(command.submitAppointment).toHaveBeenCalledTimes(1)
     expect(command.submitAppointment).toHaveBeenCalledWith(expect.objectContaining({
-      visitIntent: 'visit_required',
-      values: { need: '1', datetime: '2026-04-20 11:00' },
+      visitIntent: 'visit_deferred',
+      values: { need: '0', datetime: '2026-04-20 11:00' },
     }))
   })
   it('flushes the current deferred editing state before fast confirmation navigation', async () => {
@@ -629,32 +623,18 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
     })
   })
 
-  it('rejects unsupported deferred intent before debounce flush or remote submission', async () => {
-    const shared = storageFor()
-    const { store, command } = configureWorkspace(
-      appointmentDetail(),
-      appointmentForm(),
-      shared,
-      () => session,
-      360,
-    )
+  it('submits deferred without a datetime when no appointment time was selected', async () => {
+    const { store, command } = configureWorkspace()
     await openWorkspace(store)
-    store.setField('need', '1')
-    store.setAppointmentTime('2026-04-20 11:00')
-    await store.flushDraft()
-
     store.setField('need', '0')
     const result = await store.submit()
 
-    expect(result.error?.category).toBe('unsupported_capability')
+    expect(result.state).toBe('succeeded')
     expect(store.appointmentVisitIntent).toBe('visit_deferred')
-    expect(command.submitAppointment).not.toHaveBeenCalled()
-    expect([...shared.values.keys()].some(key => key.startsWith('action-mutation'))).toBe(false)
-    store.setField('need', '1')
-    expect((await store.submit()).state).toBe('succeeded')
+    expect(command.submitAppointment).toHaveBeenCalledTimes(1)
     expect(command.submitAppointment).toHaveBeenCalledWith(expect.objectContaining({
-      visitIntent: 'visit_required',
-      values: { need: '1', datetime: '2026-04-20 11:00' },
+      visitIntent: 'visit_deferred',
+      values: { need: '0' },
     }))
   })
   it('keeps the selected datetime in the dynamic form and routes to confirmation', async () => {

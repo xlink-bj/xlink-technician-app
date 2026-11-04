@@ -6,7 +6,7 @@
  * owns form state, saved FormData eligibility and Workflow Complete timing.
  *
  * Distinct stages must remain distinct: FormData upsert/saveOnly != workflow/process.
- * Never silently grant deferred visit write authorization.
+ * Availability and permission decisions remain in the Workspace and transport.
  */
 import type {
   AcceptOrderInput,
@@ -41,7 +41,6 @@ function mapDynamicValues(
 
 export function formDataUpsertCommand(
   input: SaveDynamicFormInput,
-  safety?: ApiCommandRequest['safety'],
 ): ApiCommandRequest {
   const data = {
     ...mapDynamicValues(input.values, input.purpose),
@@ -56,7 +55,6 @@ export function formDataUpsertCommand(
     method: 'POST',
     path: `biz/extForm/upsert/${encodeURIComponent(String(input.definitionId))}`,
     body: { dataStr: JSON.stringify(data) },
-    ...(safety ? { safety } : {}),
   }
 }
 

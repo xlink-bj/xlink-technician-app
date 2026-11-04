@@ -35,7 +35,7 @@
     {
       "id": "r1_backend_contract_evidence",
       "status": "blocked_pending_external_evidence",
-      "evidence": "Real R1 effective tenant/SKU price, Workflow Complete, scoped auth, backend order idempotency and deferred appointment need=0 encoding require separate authorization and proof."
+      "evidence": "Real R1 effective tenant/SKU price, Workflow Complete, scoped auth, backend order idempotency, and live appointment write/readback require separate authorization and proof. Deferred need=0 payload now preserves a previously selected datetime per the R1 source and Owner decision."
     },
     {
       "id": "rollback_plan_and_owner",
