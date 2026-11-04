@@ -45,6 +45,24 @@ export function r1MaterialSkuRequestBody(spuId) {
   }
 }
 
+/** Audit-only exact Order detail read; IDs must come from the current role-scoped type=1 list. */
+export function isAllowedR1ListedOrderDetailRead({
+  path, method, search, body, requestCount, maxRequestCount = 100,
+  selectedOrderId, selectedWorkOrderId, orderWorkOrderById,
+  lookedUpOrderIds, workOrderDetailReadCount = 0, maxPerWorkOrder = 3,
+}) {
+  if (path !== 'basic/order/queryById' || method !== 'POST' || !noSearchParams(search)
+    || !Number.isSafeInteger(requestCount) || requestCount < 0
+    || !Number.isSafeInteger(maxRequestCount) || maxRequestCount < 1 || requestCount >= maxRequestCount
+    || !Number.isSafeInteger(workOrderDetailReadCount) || workOrderDetailReadCount < 0
+    || !Number.isSafeInteger(maxPerWorkOrder) || maxPerWorkOrder < 1 || workOrderDetailReadCount >= maxPerWorkOrder
+    || !ID_PATTERN.test(selectedOrderId ?? '') || !ID_PATTERN.test(selectedWorkOrderId ?? '')
+    || !(orderWorkOrderById instanceof Map) || orderWorkOrderById.get(selectedOrderId) !== selectedWorkOrderId
+    || !(lookedUpOrderIds instanceof Set) || lookedUpOrderIds.has(selectedOrderId)) return false
+  const actual = recordOf(body)
+  return Boolean(actual && hasExactKeys(actual, ['id']) && actual.id === selectedOrderId)
+}
+
 export function r1MaterialCodeOptionsRequestBody(valueOptionIds) {
   return {
     jsonPara: JSON.stringify(valueOptionIds.map(id => ({ codeId: id, eleid: id }))),
@@ -85,6 +103,23 @@ export function isAllowedR1MaterialCodeOptionsRequest({ path, method, search, bo
 export function isAllowedR1SingleSpuMaterialSkuRequest({ path, method, search, body, requestCount, selectedSpuId }) {
   if (path !== 'basic/material/query' || method !== 'POST' || !noSearchParams(search) || requestCount !== 0
     || typeof selectedSpuId !== 'string' || !ID_PATTERN.test(selectedSpuId)) return false
+  const actual = recordOf(body)
+  const expected = recordOf(r1MaterialSkuRequestBody(selectedSpuId))
+  return Boolean(actual && expected && hasExactKeys(actual, Object.keys(expected))
+    && Object.entries(expected).every(([key, value]) => actual[key] === value))
+}
+
+/** Read one active SKU page only for a SPU extracted from a scoped Order and not yet queried. */
+export function isAllowedR1OrderDerivedSpuMaterialSkuRequest({
+  path, method, search, body, requestCount, maxRequestCount = 100,
+  selectedSpuId, orderDerivedSpuIds, lookedUpSpuIds,
+}) {
+  if (path !== 'basic/material/query' || method !== 'POST' || !noSearchParams(search)
+    || !Number.isSafeInteger(requestCount) || requestCount < 0
+    || !Number.isSafeInteger(maxRequestCount) || maxRequestCount < 1 || requestCount >= maxRequestCount
+    || typeof selectedSpuId !== 'string' || !ID_PATTERN.test(selectedSpuId)
+    || !(orderDerivedSpuIds instanceof Set) || !orderDerivedSpuIds.has(selectedSpuId)
+    || !(lookedUpSpuIds instanceof Set) || lookedUpSpuIds.has(selectedSpuId)) return false
   const actual = recordOf(body)
   const expected = recordOf(r1MaterialSkuRequestBody(selectedSpuId))
   return Boolean(actual && expected && hasExactKeys(actual, Object.keys(expected))

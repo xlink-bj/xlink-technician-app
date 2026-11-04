@@ -128,6 +128,236 @@ export function summarizeOrderMaterialIdentities(orders) {
   return summary
 }
 
+function identityAlias(record, keys) {
+  const values = keys.map(key => record?.[key]).filter(value => value !== undefined && value !== null && value !== '')
+  if (values.some(value => !validId(value))) return { ok: false }
+  const unique = [...new Set(values)]
+  return { ok: unique.length <= 1, value: unique[0] }
+}
+
+/**
+ * Project the R1 `queryById` material shape. Direct saved SKU rows use `_id` +
+ * `spuid`; package materialList rows carry an embedded `material` SPU, while
+ * selected package SKU variants, when present, live in `materialList[].skus`.
+ * The package relation row `_id` and embedded material `_id` are different
+ * identities and must not be conflated.
+ */
+export function orderDetailMaterialSkuIdentities(raw, expectedOrderId, expectedWorkOrderId) {
+  const envelope = safeParse(raw)
+  let record = envelope
+  if (record && typeof record === 'object' && !Array.isArray(record)) {
+    const candidate = safeParse(record.data)
+    if (candidate && typeof candidate === 'object' && !Array.isArray(candidate)) record = candidate
+  }
+  if (!record || typeof record !== 'object' || Array.isArray(record)
+    || !validId(expectedOrderId) || !validId(expectedWorkOrderId)) {
+    return { verified: false, reason: 'order_detail_envelope_invalid' }
+  }
+  const orderIdentity = identityAlias(record, ['_id', 'id'])
+  const workOrderIdentity = identityAlias(record, ['serviceAppointmentId'])
+  const type = record.type === 1 || record.type === '1' ? 1 : undefined
+  if (!orderIdentity.ok || orderIdentity.value !== expectedOrderId
+    || !workOrderIdentity.ok || workOrderIdentity.value !== expectedWorkOrderId || type !== 1) {
+    return { verified: false, reason: 'order_detail_identity_or_ownership_mismatch' }
+  }
+  const products = safeParse(record.bjProducts)
+  if (!products || typeof products !== 'object' || Array.isArray(products) || !Array.isArray(products.orderList)
+    || products.orderList.length > 100) {
+    return { verified: false, reason: 'order_detail_products_invalid' }
+  }
+
+  const identities = []
+  const identityKeys = new Set()
+  const summary = {
+    verifiedOrderDetails: 1,
+    materialLines: 0,
+    materialLinesWithSkuId: 0,
+    materialLinesWithSpuId: 0,
+    materialLinesWithBothSkuAndSpuIds: 0,
+    materialLinesWithSkuIdOnly: 0,
+    materialLinesWithSpuIdOnly: 0,
+    materialLinesWithNeitherId: 0,
+    packageMaterialLines: 0,
+    packageSavedSkuRows: 0,
+    packageSavedSkuRowsWithBothIds: 0,
+    packageMaterialLinesWithSpuId: 0,
+    directMaterialRowsWithTopLevelId: 0,
+    directMaterialRowsWithSkuIdField: 0,
+    directMaterialRowsWithSpuField: 0,
+    directMaterialRowsWithMaterialIdField: 0,
+    directMaterialRowsWithNestedMaterial: 0,
+    directMaterialRowsWithNestedMaterialId: 0,
+    directMaterialRowsWithNestedMaterialSpu: 0,
+    directMaterialRowsWithSkuCode: 0,
+    directMaterialRowsWithNestedSkuCode: 0,
+    packageMaterialRowsWithTopLevelId: 0,
+    packageMaterialRowsWithMaterialId: 0,
+    packageMaterialRowsWithNestedMaterialId: 0,
+    packageMaterialRowsWithNestedMaterialSpu: 0,
+    packageMaterialRowsWithSkuArray: 0,
+    packageMaterialRowsWithNestedSkuArray: 0,
+    packageMaterialRowsWithSkuCode: 0,
+    packageMaterialRowsWithNestedSkuCode: 0,
+  }
+  const rowsOf = value => Array.isArray(value) ? value
+    : value && typeof value === 'object' && !Array.isArray(value) && Array.isArray(value.data) ? value.data : null
+  const hasSkuCode = value => typeof value === 'string' && value.trim().length > 0
+  const addIdentity = (skuId, spuId, source) => {
+    if (!skuId && !spuId) return
+    const key = JSON.stringify([skuId ?? null, spuId ?? null])
+    if (identityKeys.has(key)) return
+    identityKeys.add(key)
+    identities.push({
+      orderId: expectedOrderId,
+      ...(skuId ? { skuId } : {}),
+      ...(spuId ? { spuId } : {}),
+      source,
+    })
+  }
+  for (const group of products.orderList) {
+    if (!group || typeof group !== 'object' || Array.isArray(group)) {
+      return { verified: false, reason: 'order_detail_group_invalid' }
+    }
+    const rows = rowsOf(group.materials)
+    if (!rows || rows.length > 1000) return { verified: false, reason: 'order_detail_material_rows_invalid' }
+    for (const row of rows) {
+      if (!row || typeof row !== 'object' || Array.isArray(row)) {
+        return { verified: false, reason: 'order_detail_material_row_invalid' }
+      }
+      summary.materialLines += 1
+      const explicitSkuIdentity = identityAlias(row, ['skuId'])
+      const rowIdentity = identityAlias(row, ['_id', 'id'])
+      const spuIdentity = identityAlias(row, ['spuid', 'spuId'])
+      const nestedMaterial = safeParse(row.material)
+      const nestedRecord = nestedMaterial && typeof nestedMaterial === 'object' && !Array.isArray(nestedMaterial)
+        ? nestedMaterial : undefined
+      const nestedExts = safeParse(nestedRecord?.exts)
+      const nestedMaterialIdentity = identityAlias(nestedRecord, ['_id', 'id'])
+      const nestedSpuIdentity = identityAlias(nestedRecord, ['spuid', 'spuId'])
+      const materialReference = identityAlias(row, ['materialId'])
+      const rowSkuCode = hasSkuCode(row.skuCode)
+        || hasSkuCode(safeParse(row.exts)?.skuCode)
+      const nestedSkuCode = hasSkuCode(nestedRecord?.skuCode)
+        || hasSkuCode(nestedExts?.skuCode)
+      if (rowIdentity.value) summary.directMaterialRowsWithTopLevelId += 1
+      if (explicitSkuIdentity.value) summary.directMaterialRowsWithSkuIdField += 1
+      if (spuIdentity.value) summary.directMaterialRowsWithSpuField += 1
+      if (materialReference.value) summary.directMaterialRowsWithMaterialIdField += 1
+      if (nestedRecord) summary.directMaterialRowsWithNestedMaterial += 1
+      if (nestedMaterialIdentity.value) summary.directMaterialRowsWithNestedMaterialId += 1
+      if (nestedSpuIdentity.value) summary.directMaterialRowsWithNestedMaterialSpu += 1
+      if (rowSkuCode) summary.directMaterialRowsWithSkuCode += 1
+      if (nestedSkuCode) summary.directMaterialRowsWithNestedSkuCode += 1
+      if (!explicitSkuIdentity.ok || !rowIdentity.ok || !spuIdentity.ok || !nestedMaterialIdentity.ok
+        || !nestedSpuIdentity.ok || !materialReference.ok) {
+        return { verified: false, reason: 'order_detail_material_identity_conflict' }
+      }
+      if (spuIdentity.value && nestedSpuIdentity.value && spuIdentity.value !== nestedSpuIdentity.value) {
+        return { verified: false, reason: 'order_detail_material_spu_conflict' }
+      }
+      const skuCodeClaim = rowSkuCode || nestedSkuCode
+      const spuId = spuIdentity.value ?? nestedSpuIdentity.value ?? nestedMaterialIdentity.value
+        ?? materialReference.value ?? (!explicitSkuIdentity.value && !skuCodeClaim ? rowIdentity.value : undefined)
+      if (materialReference.value && spuId && materialReference.value !== spuId) {
+        return { verified: false, reason: 'order_detail_material_reference_conflict' }
+      }
+      // R1 direct material rows with `spuid` are selected SKU variants. A row
+      // without `spuid` falls back to an SPU/material identity only when its
+      // shape has no SKU-ID claim; a code alone never becomes a catalog ID.
+      const skuId = explicitSkuIdentity.value ?? (spuIdentity.value ? rowIdentity.value : undefined)
+      if (skuId) summary.materialLinesWithSkuId += 1
+      if (spuId) summary.materialLinesWithSpuId += 1
+      if (skuId && spuId) summary.materialLinesWithBothSkuAndSpuIds += 1
+      else if (skuId) summary.materialLinesWithSkuIdOnly += 1
+      else if (spuId) summary.materialLinesWithSpuIdOnly += 1
+      else summary.materialLinesWithNeitherId += 1
+      addIdentity(skuId, spuId, 'direct_order_material_row')
+    }
+
+    if (group.projPackages === undefined || group.projPackages === null) continue
+    const packages = rowsOf(group.projPackages)
+    if (!packages || packages.length > 1000) return { verified: false, reason: 'order_detail_package_rows_invalid' }
+    for (const packageRow of packages) {
+      if (!packageRow || typeof packageRow !== 'object' || Array.isArray(packageRow)) {
+        return { verified: false, reason: 'order_detail_package_row_invalid' }
+      }
+      if (packageRow.materialList === undefined || packageRow.materialList === null) continue
+      const packageMaterials = rowsOf(packageRow.materialList)
+      if (!packageMaterials || packageMaterials.length > 1000) {
+        return { verified: false, reason: 'order_detail_package_material_rows_invalid' }
+      }
+      for (const materialLine of packageMaterials) {
+        if (!materialLine || typeof materialLine !== 'object' || Array.isArray(materialLine)) {
+          return { verified: false, reason: 'order_detail_package_material_row_invalid' }
+        }
+        summary.packageMaterialLines += 1
+        const parentSpu = identityAlias(materialLine, ['materialId'])
+        const packageRowIdentity = identityAlias(materialLine, ['_id', 'id'])
+        const nestedMaterial = safeParse(materialLine.material)
+        const nestedRecord = nestedMaterial && typeof nestedMaterial === 'object' && !Array.isArray(nestedMaterial)
+          ? nestedMaterial : undefined
+        const nestedSpu = identityAlias(nestedRecord, ['spuid', 'spuId'])
+        const nestedMaterialId = identityAlias(nestedRecord, ['_id', 'id'])
+        const packageRowSkuCode = hasSkuCode(materialLine.skuCode)
+          || hasSkuCode(safeParse(materialLine.exts)?.skuCode)
+        const nestedMaterialExts = safeParse(nestedRecord?.exts)
+        const packageNestedSkuCode = hasSkuCode(nestedRecord?.skuCode)
+          || hasSkuCode(nestedMaterialExts?.skuCode)
+        if (packageRowIdentity.value) summary.packageMaterialRowsWithTopLevelId += 1
+        if (parentSpu.value) summary.packageMaterialRowsWithMaterialId += 1
+        if (nestedMaterialId.value) summary.packageMaterialRowsWithNestedMaterialId += 1
+        if (nestedSpu.value) summary.packageMaterialRowsWithNestedMaterialSpu += 1
+        if (Array.isArray(materialLine.skus)) summary.packageMaterialRowsWithSkuArray += 1
+        if (Array.isArray(nestedRecord?.skus)) summary.packageMaterialRowsWithNestedSkuArray += 1
+        if (packageRowSkuCode) summary.packageMaterialRowsWithSkuCode += 1
+        if (packageNestedSkuCode) summary.packageMaterialRowsWithNestedSkuCode += 1
+        if (!parentSpu.ok || !nestedSpu.ok || !nestedMaterialId.ok
+          || (parentSpu.value && nestedSpu.value && parentSpu.value !== nestedSpu.value)
+          || (parentSpu.value && nestedMaterialId.value && parentSpu.value !== nestedMaterialId.value)
+          || (nestedSpu.value && nestedMaterialId.value && nestedSpu.value !== nestedMaterialId.value)) {
+          return { verified: false, reason: 'order_detail_package_material_spu_conflict' }
+        }
+        // In R1's package editor `material._id` is the nested material/SPU;
+        // the enclosing materialList `_id` is a package relation row.
+        const spuId = parentSpu.value ?? nestedSpu.value ?? nestedMaterialId.value
+        const skuRows = [materialLine.skus, nestedRecord?.skus].filter(value => value !== undefined && value !== null)
+        for (const skuValue of skuRows) {
+          if (!Array.isArray(skuValue) || skuValue.length > 1000) {
+            return { verified: false, reason: 'order_detail_package_sku_rows_invalid' }
+          }
+          for (const skuRow of skuValue) {
+            if (!skuRow || typeof skuRow !== 'object' || Array.isArray(skuRow)) {
+              return { verified: false, reason: 'order_detail_package_sku_row_invalid' }
+            }
+            const quantityValue = skuRow.number ?? skuRow.quantity
+            if (quantityValue !== undefined) {
+              const quantity = typeof quantityValue === 'number' ? quantityValue
+                : typeof quantityValue === 'string' && quantityValue.trim() ? Number(quantityValue) : Number.NaN
+              if (!Number.isFinite(quantity)) return { verified: false, reason: 'order_detail_package_sku_quantity_invalid' }
+              if (quantity <= 0) continue
+            }
+            summary.packageSavedSkuRows += 1
+            const skuIdIdentity = identityAlias(skuRow, ['_id', 'id', 'skuId'])
+            const skuSpuIdentity = identityAlias(skuRow, ['spuid', 'spuId'])
+            if (!skuIdIdentity.ok || !skuSpuIdentity.ok
+              || (spuId && skuSpuIdentity.value && spuId !== skuSpuIdentity.value)) {
+              return { verified: false, reason: 'order_detail_package_sku_identity_conflict' }
+            }
+            const skuSpuId = skuSpuIdentity.value ?? spuId
+            if (skuIdIdentity.value && skuSpuId) summary.packageSavedSkuRowsWithBothIds += 1
+            addIdentity(skuIdIdentity.value, skuSpuId, 'package_saved_sku_row')
+          }
+        }
+        if (spuId) summary.packageMaterialLinesWithSpuId += 1
+        // Package material code (material.exts.skuCode) participates in R1's
+        // composite package SKU code; it is not the selected SKU variant ID.
+        if (spuId) addIdentity(undefined, spuId, 'package_material_spu')
+      }
+    }
+  }
+  return { verified: true, identities, summary }
+}
+
 export function rowsFromEnvelope(raw) {
   const envelope = safeParse(raw)
   if (Array.isArray(envelope)) return envelope
@@ -215,6 +445,37 @@ export function parseCodeDictionaries(raw, fields) {
   return { complete: fields.every(field => seen.has(field.valueOption)), dictionaries }
 }
 
+/** Validate an active SKU page scoped to one Order-derived SPU without exposing catalog IDs. */
+export function inspectActiveSkuCatalogPage(raw, selectedSpuId, pageLimit = 30) {
+  const rows = rowsFromEnvelope(raw)
+  const total = totalFromEnvelope(raw)
+  if (!validId(selectedSpuId) || !Number.isSafeInteger(pageLimit) || pageLimit < 1
+    || !rows || rows.length > pageLimit) {
+    return { verified: false, reason: 'sku_page_shape_invalid' }
+  }
+  const skuIds = []
+  const seen = new Set()
+  for (const row of rows) {
+    if (!row || typeof row !== 'object' || Array.isArray(row)
+      || !validId(row._id) || !validId(row.spuid) || row.spuid !== selectedSpuId
+      || (row.state !== undefined && row.state !== 1 && row.state !== '1')
+      || seen.has(row._id)) {
+      return { verified: false, reason: 'sku_identity_or_state_invalid' }
+    }
+    seen.add(row._id)
+    skuIds.push(row._id)
+  }
+  return {
+    verified: true,
+    skuIds,
+    summary: {
+      activeSkuRowsReturned: rows.length,
+      totalSkuRows: total,
+      pageComplete: total !== undefined && total === rows.length,
+    },
+  }
+}
+
 function skuAttributeValue(value) {
   if (typeof value === 'string' && value.trim()) return value.trim()
   if (typeof value === 'number' && Number.isFinite(value)) return String(value)
@@ -288,7 +549,7 @@ export function summarizeSkuRead(raw, fields, dictionaries, selectedIdentity, pa
     rowsReturned: rows.length,
     reportedTotal: total ?? null,
     pageComplete,
-    selectedOrderSkuIdentityReturned: selectedRows.length === 1,
+    selectedSkuIdentityReturned: selectedRows.length === 1,
     selectedOrderSkuIdentityDuplicates: selectedRows.length > 1,
     selectedSkuHasPrice: skuPrice !== undefined,
     selectedSkuHasEverySalesAttribute: selectedAttributesComplete,

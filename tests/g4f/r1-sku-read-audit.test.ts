@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
+  isAllowedR1ListedOrderDetailRead,
   isAllowedR1MaterialCodeOptionsRequest,
   isAllowedR1MaterialSalesFieldsRequest,
+  isAllowedR1OrderDerivedSpuMaterialSkuRequest,
   isAllowedR1SingleSpuMaterialSkuRequest,
   r1MaterialCodeOptionsRequestBody,
   r1MaterialSalesFieldsRequestBody,
@@ -10,6 +12,8 @@ import {
 import {
   firstOrderMaterialSkuIdentity,
   firstOrderMaterialSpuIdentity,
+  inspectActiveSkuCatalogPage,
+  orderDetailMaterialSkuIdentities,
   orderMaterialSpuIdentities,
   parseCodeDictionaries,
   parseSalesFieldDefinitions,
@@ -26,6 +30,52 @@ const extFieldRows = [
 ]
 
 describe('bounded R1 SKU read route guard', () => {
+  it('allows bounded SKU catalog reads only for unique SPUs derived from scoped Order lines', () => {
+    const orderDerivedSpuIds = new Set([syntheticSpuId])
+    const lookedUpSpuIds = new Set<string>()
+    const request = {
+      path: 'basic/material/query', method: 'POST', search,
+      body: r1MaterialSkuRequestBody(syntheticSpuId), requestCount: 0,
+      maxRequestCount: 100, selectedSpuId: syntheticSpuId,
+      orderDerivedSpuIds, lookedUpSpuIds,
+    }
+    expect(isAllowedR1OrderDerivedSpuMaterialSkuRequest(request)).toBe(true)
+    for (const candidate of [
+      { ...request, body: r1MaterialSkuRequestBody('synthetic-foreign-spu') },
+      { ...request, selectedSpuId: 'synthetic-foreign-spu' },
+      { ...request, requestCount: 100 },
+      { ...request, lookedUpSpuIds: new Set([syntheticSpuId]) },
+      { ...request, search: new URLSearchParams('include=all') },
+      { ...request, body: { ...r1MaterialSkuRequestBody(syntheticSpuId), _all: '1' } },
+    ]) expect(isAllowedR1OrderDerivedSpuMaterialSkuRequest(candidate)).toBe(false)
+  })
+
+  it('allows exact detail reads only for a type=1 Order ID proven by the current listed WorkOrder query', () => {
+    const orderWorkOrderById = new Map([['synthetic-order', 'synthetic-work-order']])
+    const lookedUpOrderIds = new Set<string>()
+    const request = {
+      path: 'basic/order/queryById', method: 'POST', search,
+      body: { id: 'synthetic-order' }, requestCount: 0,
+      selectedOrderId: 'synthetic-order', selectedWorkOrderId: 'synthetic-work-order',
+      orderWorkOrderById, lookedUpOrderIds,
+      workOrderDetailReadCount: 0, maxPerWorkOrder: 3,
+    }
+    expect(isAllowedR1ListedOrderDetailRead(request)).toBe(true)
+    for (const candidate of [
+      { ...request, path: 'basic/order/query' },
+      { ...request, body: { id: 'synthetic-foreign-order' } },
+      { ...request, selectedWorkOrderId: 'synthetic-other-work-order' },
+      { ...request, search: new URLSearchParams('include=all') },
+      { ...request, body: { id: 'synthetic-order', _all: '1' } },
+      { ...request, workOrderDetailReadCount: 3 },
+      { ...request, requestCount: 100 },
+      { ...request, orderWorkOrderById: new Map() },
+    ]) expect(isAllowedR1ListedOrderDetailRead(candidate)).toBe(false)
+    expect(isAllowedR1ListedOrderDetailRead({
+      ...request, lookedUpOrderIds: new Set(['synthetic-order']),
+    })).toBe(false)
+  })
+
   it('accepts only one bounded material sales ExtField page with the exact R1 filters', () => {
     const body = r1MaterialSalesFieldsRequestBody()
     expect(body).toEqual({
@@ -96,6 +146,95 @@ describe('bounded R1 SKU read route guard', () => {
 })
 
 describe('R1 SKU and sales attribute redacted evidence projection', () => {
+  it('extracts exact direct SKU rows and R1 package SKU identities from a verified Order detail', () => {
+    const detail = orderDetailMaterialSkuIdentities({ data: {
+      _id: 'synthetic-order', id: 'synthetic-order', type: 1,
+      serviceAppointmentId: 'synthetic-work-order',
+      bjProducts: JSON.stringify({ orderList: [{
+        materials: { data: [
+          { _id: syntheticSkuId, spuid: syntheticSpuId, number: 2, price: 9876 },
+          { _id: 'synthetic-ambiguous-row-id' },
+          { skuId: 'synthetic-explicit-sku-only' },
+          { spuid: 'synthetic-spu-only' },
+          {},
+        ] },
+        projPackages: { data: [{ materialList: [
+          { materialId: 'synthetic-package-spu', material: { _id: 'synthetic-package-spu', exts: { skuCode: 'SYNTHETIC-CODE' } }, skus: [
+            { _id: 'synthetic-package-saved-sku', spuid: 'synthetic-package-spu', number: 2 },
+            { _id: 'synthetic-zero-sku', spuid: 'synthetic-package-spu', number: 0 },
+          ] },
+          { materialId: 'synthetic-package-spu-without-sku', material: { _id: 'synthetic-package-spu-without-sku' } },
+        ] }] },
+      }] }),
+    } }, 'synthetic-order', 'synthetic-work-order')
+    expect(detail.verified).toBe(true)
+    if (!detail.verified) throw new Error('expected verified synthetic R1 Order detail')
+    expect(detail.identities).toEqual([
+      { orderId: 'synthetic-order', skuId: syntheticSkuId, spuId: syntheticSpuId, source: 'direct_order_material_row' },
+      { orderId: 'synthetic-order', spuId: 'synthetic-ambiguous-row-id', source: 'direct_order_material_row' },
+      { orderId: 'synthetic-order', skuId: 'synthetic-explicit-sku-only', source: 'direct_order_material_row' },
+      { orderId: 'synthetic-order', spuId: 'synthetic-spu-only', source: 'direct_order_material_row' },
+      { orderId: 'synthetic-order', skuId: 'synthetic-package-saved-sku', spuId: 'synthetic-package-spu', source: 'package_saved_sku_row' },
+      { orderId: 'synthetic-order', spuId: 'synthetic-package-spu', source: 'package_material_spu' },
+      { orderId: 'synthetic-order', spuId: 'synthetic-package-spu-without-sku', source: 'package_material_spu' },
+    ])
+    expect(detail.summary).toMatchObject({
+      verifiedOrderDetails: 1,
+      materialLines: 5,
+      materialLinesWithSkuId: 2,
+      materialLinesWithSpuId: 3,
+      materialLinesWithBothSkuAndSpuIds: 1,
+      materialLinesWithSkuIdOnly: 1,
+      materialLinesWithSpuIdOnly: 2,
+      materialLinesWithNeitherId: 1,
+      packageMaterialLines: 2,
+      packageSavedSkuRows: 1,
+      packageSavedSkuRowsWithBothIds: 1,
+      packageMaterialLinesWithSpuId: 2,
+      directMaterialRowsWithTopLevelId: 2,
+      directMaterialRowsWithSkuIdField: 1,
+      directMaterialRowsWithSpuField: 2,
+      directMaterialRowsWithMaterialIdField: 0,
+      directMaterialRowsWithNestedMaterial: 0,
+      directMaterialRowsWithNestedMaterialId: 0,
+      directMaterialRowsWithNestedMaterialSpu: 0,
+      directMaterialRowsWithSkuCode: 0,
+      directMaterialRowsWithNestedSkuCode: 0,
+      packageMaterialRowsWithTopLevelId: 0,
+      packageMaterialRowsWithMaterialId: 2,
+      packageMaterialRowsWithNestedMaterialId: 2,
+      packageMaterialRowsWithNestedMaterialSpu: 0,
+      packageMaterialRowsWithSkuArray: 1,
+      packageMaterialRowsWithNestedSkuArray: 0,
+      packageMaterialRowsWithSkuCode: 0,
+      packageMaterialRowsWithNestedSkuCode: 1,
+    })
+    for (const privateValue of [
+      'synthetic-order', 'synthetic-work-order', syntheticSkuId, syntheticSpuId,
+      'synthetic-ambiguous-row-id', 'synthetic-explicit-sku-only', 'synthetic-spu-only', '9876',
+      'synthetic-package-spu', 'synthetic-package-saved-sku', 'synthetic-package-spu-without-sku',
+      'synthetic-zero-sku', 'SYNTHETIC-CODE',
+    ]) expect(JSON.stringify(detail.summary)).not.toContain(privateValue)
+  })
+
+  it('rejects Order detail identity, WorkOrder ownership, type, and alias conflicts', () => {
+    const base = {
+      _id: 'synthetic-order', id: 'synthetic-order', type: 1,
+      serviceAppointmentId: 'synthetic-work-order',
+      bjProducts: { orderList: [{ materials: { data: [{ _id: syntheticSkuId, spuid: syntheticSpuId }] } }] },
+    }
+    expect(orderDetailMaterialSkuIdentities(base, 'synthetic-foreign-order', 'synthetic-work-order'))
+      .toMatchObject({ verified: false, reason: 'order_detail_identity_or_ownership_mismatch' })
+    expect(orderDetailMaterialSkuIdentities(base, 'synthetic-order', 'synthetic-foreign-work-order'))
+      .toMatchObject({ verified: false, reason: 'order_detail_identity_or_ownership_mismatch' })
+    expect(orderDetailMaterialSkuIdentities({ ...base, type: 0 }, 'synthetic-order', 'synthetic-work-order'))
+      .toMatchObject({ verified: false, reason: 'order_detail_identity_or_ownership_mismatch' })
+    expect(orderDetailMaterialSkuIdentities({ ...base, id: 'synthetic-other-order' }, 'synthetic-order', 'synthetic-work-order'))
+      .toMatchObject({ verified: false, reason: 'order_detail_identity_or_ownership_mismatch' })
+    expect(orderDetailMaterialSkuIdentities({ ...base, bjProducts: { orderList: [{ materials: null }] } }, 'synthetic-order', 'synthetic-work-order'))
+      .toMatchObject({ verified: false, reason: 'order_detail_material_rows_invalid' })
+  })
+
   it('selects only material SKU/SPU identity from an already validated scoped type=1 Order projection', () => {
     const candidate = firstOrderMaterialSkuIdentity([{
       id: 'synthetic-order',
@@ -202,7 +341,7 @@ describe('R1 SKU and sales attribute redacted evidence projection', () => {
     expect(result).toMatchObject({
       verified: true,
       pageComplete: true,
-      selectedOrderSkuIdentityReturned: true,
+      selectedSkuIdentityReturned: true,
       selectedSkuHasPrice: true,
       selectedSkuHasEverySalesAttribute: true,
       selectedSkuAttributesMatchCodeOptions: true,
@@ -243,10 +382,28 @@ describe('R1 SKU and sales attribute redacted evidence projection', () => {
     expect(noSkuId).toMatchObject({
       verified: true,
       pageComplete: true,
-      selectedOrderSkuIdentityReturned: false,
+      selectedSkuIdentityReturned: false,
       selectedSkuHasEverySalesAttribute: false,
       rawR1AttributeCombinationStatus: 'UNKNOWN_INCOMPLETE_EVIDENCE',
     })
+  })
+
+  it('validates SKU rows against only the exact order-derived SPU and hides IDs from summaries', () => {
+    const page = inspectActiveSkuCatalogPage({
+      data: [{ _id: syntheticSkuId, spuid: syntheticSpuId, state: 1 }], totalCount: 1,
+    }, syntheticSpuId)
+    expect(page).toMatchObject({
+      verified: true,
+      skuIds: [syntheticSkuId],
+      summary: { activeSkuRowsReturned: 1, totalSkuRows: 1, pageComplete: true },
+    })
+    if (!page.verified) throw new Error('expected a verified synthetic SKU page')
+    for (const privateValue of [syntheticSkuId, syntheticSpuId]) {
+      expect(JSON.stringify(page.summary)).not.toContain(privateValue)
+    }
+    expect(inspectActiveSkuCatalogPage({
+      data: [{ _id: syntheticSkuId, spuid: 'synthetic-foreign-spu', state: 1 }], totalCount: 1,
+    }, syntheticSpuId)).toMatchObject({ verified: false, reason: 'sku_identity_or_state_invalid' })
   })
 
   it('fails closed on foreign parents, inactive rows, duplicate SKU IDs and attribute collisions', () => {

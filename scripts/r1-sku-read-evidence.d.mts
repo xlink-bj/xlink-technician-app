@@ -48,6 +48,50 @@ export function summarizeOrderMaterialIdentities(orders: readonly unknown[]): Re
   readonly materialLinesWithSkuCode: number
   readonly materialLinesWithSpuCode: number
 }> | Readonly<{ readonly verified: false; readonly reason: string }>
+export function orderDetailMaterialSkuIdentities(
+  raw: unknown,
+  expectedOrderId: string,
+  expectedWorkOrderId: string,
+): Readonly<{
+  readonly verified: true
+  readonly identities: readonly Readonly<{
+    orderId: string
+    skuId?: string
+    spuId?: string
+    source: 'direct_order_material_row' | 'package_saved_sku_row' | 'package_material_spu'
+  }>[]
+  readonly summary: Readonly<{
+    readonly verifiedOrderDetails: 1
+    readonly materialLines: number
+    readonly materialLinesWithSkuId: number
+    readonly materialLinesWithSpuId: number
+    readonly materialLinesWithBothSkuAndSpuIds: number
+    readonly materialLinesWithSkuIdOnly: number
+    readonly materialLinesWithSpuIdOnly: number
+    readonly materialLinesWithNeitherId: number
+    readonly packageMaterialLines: number
+    readonly packageSavedSkuRows: number
+    readonly packageSavedSkuRowsWithBothIds: number
+    readonly packageMaterialLinesWithSpuId: number
+    readonly directMaterialRowsWithTopLevelId: number
+    readonly directMaterialRowsWithSkuIdField: number
+    readonly directMaterialRowsWithSpuField: number
+    readonly directMaterialRowsWithMaterialIdField: number
+    readonly directMaterialRowsWithNestedMaterial: number
+    readonly directMaterialRowsWithNestedMaterialId: number
+    readonly directMaterialRowsWithNestedMaterialSpu: number
+    readonly directMaterialRowsWithSkuCode: number
+    readonly directMaterialRowsWithNestedSkuCode: number
+    readonly packageMaterialRowsWithTopLevelId: number
+    readonly packageMaterialRowsWithMaterialId: number
+    readonly packageMaterialRowsWithNestedMaterialId: number
+    readonly packageMaterialRowsWithNestedMaterialSpu: number
+    readonly packageMaterialRowsWithSkuArray: number
+    readonly packageMaterialRowsWithNestedSkuArray: number
+    readonly packageMaterialRowsWithSkuCode: number
+    readonly packageMaterialRowsWithNestedSkuCode: number
+  }>
+}> | Readonly<{ readonly verified: false; readonly reason: string }>
 export function rowsFromEnvelope(raw: unknown): readonly unknown[] | null
 export function totalFromEnvelope(raw: unknown): number | undefined
 export function parseSalesFieldDefinitions(raw: unknown, pageLimit?: number): R1SalesFieldDefinitions | R1IncompleteEvidence
@@ -56,6 +100,15 @@ export function parseCodeDictionaries(
   fields: readonly R1SalesFieldIdentity[],
 ): { readonly complete: true; readonly dictionaries: ReadonlyMap<string, ReadonlyMap<string, boolean>> }
   | R1IncompleteEvidence
+export function inspectActiveSkuCatalogPage(
+  raw: unknown,
+  selectedSpuId: string,
+  pageLimit?: number,
+): Readonly<{
+  readonly verified: true
+  readonly skuIds: readonly string[]
+  readonly summary: Readonly<{ readonly activeSkuRowsReturned: number; readonly totalSkuRows?: number; readonly pageComplete: boolean }>
+}> | Readonly<{ readonly verified: false; readonly reason: string }>
 export function summarizeSkuRead(
   raw: unknown,
   fields: readonly R1SalesFieldIdentity[],
