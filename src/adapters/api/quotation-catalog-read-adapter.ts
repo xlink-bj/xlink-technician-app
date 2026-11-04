@@ -1,5 +1,6 @@
 import type {
   QuotationCatalogContext,
+  QuotationCatalogFilterOptionsRead,
   QuotationCatalogReadPort,
   QuotationMaterialRead,
   QuotationMaterialSaleFieldRead,
@@ -31,6 +32,8 @@ import {
   packageItem,
   pageEnvelope,
   procedureItem,
+  r1CatalogFilterCodeRequest,
+  r1CatalogFilterOptions,
   readFailure,
   type R1SaleFieldIdentity,
 } from './quotation-catalog-mappers'
@@ -433,10 +436,65 @@ class QuotationCatalogReadAdapter implements AuthorizedQuotationCatalogReadPort 
     }
   }
 
+  /** R1 placeOrders.vue codeoption(): static selector dictionaries are loaded
+   * from the exact serviceType branch before catalog browsing. This is option
+   * metadata only; unknown dictionaries never imply a product match. */
+  async listCatalogFilterOptions(
+    context: QuotationCatalogContext,
+  ): Promise<OperationSnapshot<QuotationCatalogFilterOptionsRead>> {
+    const productionReadOnly = this.isProductionReadOnly()
+    let firstIdentity = productionReadOnly ? this.synchronizeProductionReadScope() : null
+    let generationAtStart: number | null = null
+    if (productionReadOnly) {
+      const catalogKey = this.synchronizeCatalogContext(context)
+      generationAtStart = this.authorizationContextGeneration
+      if (!firstIdentity || !catalogKey || !this.productionCatalogContextIsCurrent(context)) {
+        return adapterFailure('authorization_denied', 'Production catalog filter options require a current role-listed WorkOrder context.')
+      }
+    }
+    try {
+      if (!context?.workOrderId || !String(context.workOrderId).trim()
+        || typeof context.serviceType !== 'string' || !context.serviceType.trim()
+        || productionReadOnly && (typeof context.sourceType !== 'string' || !context.sourceType.trim())) {
+        throw new AdapterMappingError('current WorkOrder catalog filter scope is missing')
+      }
+      if (this.codeTenantId !== R1_MATERIAL_CODE_TENANT) {
+        throw new ApiReadTransportError('R1 catalog Code tenant does not match the current configured tenant.', 'authorization_denied')
+      }
+      if (!firstIdentity) {
+        try { firstIdentity = authorizationIdentityKey(this.getReadAuthorizationScope?.() ?? null) }
+        catch { firstIdentity = null }
+      }
+      if (!firstIdentity) {
+        throw new ApiReadTransportError('Current authenticated user and role are required for catalog filter options.', 'authorization_denied')
+      }
+      const sameIdentityAndContext = (): boolean => {
+        let identity: string | null = null
+        try { identity = authorizationIdentityKey(this.getReadAuthorizationScope?.() ?? null) }
+        catch { identity = null }
+        if (identity !== firstIdentity) return false
+        if (!productionReadOnly) return true
+        this.synchronizeProductionReadScope()
+        return this.authorizationContextGeneration === generationAtStart
+          && this.productionCatalogContextIsCurrent(context)
+      }
+      const request = r1CatalogFilterCodeRequest(context)
+      const result = productionReadOnly
+        ? await this.readProduction(request, raw => r1CatalogFilterOptions(raw, context))
+        : await this.read(request, raw => r1CatalogFilterOptions(raw, context))
+      if (result.state !== 'succeeded' || !result.data) return result
+      if (!sameIdentityAndContext()) {
+        return adapterFailure('authorization_denied', 'Catalog filter options discarded because the authenticated role or WorkOrder context changed during the read.')
+      }
+      return result
+    } catch (error) {
+      return readFailure<QuotationCatalogFilterOptionsRead>(error)
+    }
+  }
+
   /** R1 SKU identity and unit-price inputs for an exact selected quotation SKU.
    * Production calls remain limited to exact Material/Package SPUs already
-   * obtained under the current role-listed WorkOrder catalog context.
-   */
+   * obtained under the current role-listed WorkOrder catalog context. */
   async listMaterialSkuVariants(
     context: QuotationCatalogContext,
     route: 'direct_material' | 'package_materials',

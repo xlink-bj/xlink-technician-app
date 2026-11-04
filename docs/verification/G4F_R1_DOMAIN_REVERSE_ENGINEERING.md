@@ -1,8 +1,8 @@
 # G4-F — R1 Quotation Domain Reverse Engineering
 
-**Status: READY_FOR_LEAD_DOMAIN_REVIEW**
+**Status: R1_SOURCE_AUDITED / ONE_CONTEXT_PRODUCTION_CATALOG_CHAIN_READ_COMPLETE / QUOTE_PARITY_PARTIAL**
 
-**Scope: source audit + bounded Production API structural reads; no product implementation, no quote/workflow/business mutation, no merge.**
+**Scope: R1 source audit, bounded Production read-only catalog adapter implementation and verification; no quote/workflow/business mutation, no merge or deployment.**
 
 ## 1. Evidence boundary and provenance
 
@@ -11,7 +11,7 @@
 | R1 frontend | `xlink-app` `6c0a97b26bcbcaee81ac4e1dfd627c6e8e70e29d` | `SOURCE_VERIFIED` |
 | Backend | `xlink-cloud-backend` `5fc008d32e771205260f120621c1c4fc62d0824e` | `SOURCE_VERIFIED` |
 | New App review snapshot | `xlink-technician-app` PR #42 request-time HEAD `599945780d7c7724ec864b25845832954a148554` | `SOURCE_VERIFIED` for that snapshot only |
-| Production API | Approved local Production profile; only the scoped routes listed below | `PROD_API_SHAPE_VERIFIED` |
+| Production API | Approved local technician profile; one verified role-listed WorkOrder context and only the scoped routes listed below | `PROD_READ_ONLY_CHAIN_VERIFIED_FOR_ONE_CONTEXT` |
 | Production MongoDB | No query performed; no dedicated, pre-proven read-only DB role was established for this audit | `BLOCKED_SCOPE` |
 
 The canonical Production business dictionary was read before interpreting Production data: `xlink/docs/z.其它/业务字典-生产统计口径.md`. The checked-in Production application DB configuration is not treated as proof of a read-only Mongo principal and was not used to connect.
@@ -35,7 +35,7 @@ The Lead’s model-level findings are supported by pinned source. Two important 
 1. **Price override path is source-verified.** R1’s four `queryWithRank` controller methods inject `form=mini`; the client need not send that parameter explicitly. Backend `GoodsServiceImpl.queryWithRank()` uses it to project service/package/procedure/measure pricing. This corrects the earlier source-only concern that the R1 call might omit the flag.
 2. **`sourceType` presence is security/data-scope significant.** R1 constructs catalog requests with a `sourceType` property. Backend `GoodsServiceImpl` branches on `params.containsKey("sourceType")`, changing organization/belong-to filtering. The new App maps `ServiceAppointment.exts.sourceType`, but omits the request property when its value is absent. R1’s actual wire behavior for missing/empty values was not proven; do not assume omission and empty string are equivalent.
 
-The current App’s grouped model and package-layer bridge preserve important architecture, but the reviewed snapshot is not full R1 behavior parity: dynamic `order` ExtField validation is not represented by the fixed App validator; Material SKU/attribute hydration is not in the current approved Production read boundary; several R1 category filters are absent/deferred; and R1’s create path has workflow, coupon, PDF/message, and ServiceAppointment side effects that remain unverified by live writes.
+The current App’s grouped model and package-layer bridge preserve important architecture, but a Production read pass is not full R1 behavior parity. Dynamic `order` ExtField validation is not represented by the fixed App validator; all current Material SKU reads returned empty; the newly read service-specific selector dictionaries are not yet applied as complete per-category UI filters; and R1’s create path has workflow, coupon, PDF/message, and ServiceAppointment side effects that remain unverified by live writes.
 
 ## 3. R1 process and state model
 
@@ -136,14 +136,14 @@ This is a field/relationship dictionary, not a dump of Production values.
 | --- | --- | --- | --- |
 | Work Order (`ServiceAppointment`) | `_id` identity; `serviceType` string; `exts.sourceType` string-like; workflow/node runtime data | Supplies catalog context and action/workflow ownership. R1 entry routes pass service/source values into the order page. New App detail maps `serviceType` and `exts.sourceType` into `quotationCatalogContext`. | Source verified; one Production list-derived detail supplied a usable catalog context, values kept in memory. |
 | Dynamic order fields | ExtField `name`, `nameDisp`, `type`, `required`, `valueOption`, `frontEndConfig`; values in form data / Order `exts` | `colName=order`; `showList=4`; runtime `showType=placeOrder`/`submitOrder`; service/person type and `showField/showValue` affect display/validation. File values are flattened during encoding. | R1 source verified; sanitized tenant-wide active Production shape captured (32 rows). Work-order-specific effective `placeOrder` set and provider values remain unknown; see [capture](G4F_ACTIVE_ORDER_EXTFIELD_SCHEMA_SHAPE.md). |
-| Repair-part group | `repairParts` path; `partDescription`; `constructionSite`; `maintainAreaNum`; `agelimit`/`agelimitMax`; category collections | One `orderList` row is a business grouping context. Area is text in R1; package/procedure quantity may initialize from it. | Source verified; Production sample’s one type-1 Order normalized to one group. |
+| Repair-part group | `repairParts` path; `partDescription`; `constructionSite`; `maintainAreaNum`; `agelimit`/`agelimitMax`; category collections | One `orderList` row is a business grouping context. Area is text in R1; package/procedure quantity may initialize from it. | Source verified; three bounded type-1 Orders normalized to four groups total. |
 | Package | `_id`, `name`, `type`, `agelimit`, `price`, `minimumPrice`, `unit`, descriptions/images; applicability in `exts.repairParts` or `exts.constructionParts`; construction method; `spuCode`; pricing method branch | Filtered by service-specific repair/construction parts and optional age. Package detail components configure a bundle; package base/markup/floor are separate from direct material pricing. | Source verified. Production normalized list: 27 rows; `price` and `minimumPrice` numeric on 27/27; normalized `pricingMethod` absent in this projection. |
-| Package component rows | component reference; `number`; `coefficient`; `coefficientUnit`; `order`; `layer`; component price; embedded item | `findById` resolves package procedure/material/measure references. R1 orders materials by layer and requires one selection per populated layer. | Source verified. Production detail: 2 procedure, 5 material, 0 measure rows; all five material rows exposed string `layer`, numeric coefficient, string coefficient unit, numeric component price, and embedded item. |
+| Package component rows | component reference; `number`; `coefficient`; `coefficientUnit`; `order`; `layer`; component price; embedded item | `findById` resolves package procedure/material/measure references. R1 orders materials by layer and requires one selection per populated layer. | Source verified. All 27 Production details mapped 64 procedure, 87 material, and 0 measure references. |
 | Procedure | identity/name/content; unit; `guideUnitPrice`; `minimumGuideTotalPrice`; `exts.repairProcedure`; images/description | Filtered by `repairProcedure` dictionary (not repair-part taxonomy); selected quantity may initialize from group area. | Source verified. Production normalized list: 66 rows; both price fields numeric on 66/66. |
 | Direct Material / SPU | SPU identity, `code`, `type`, `materialUnit`, `spec`, `specUnit`, image and service-price fields; sales attributes come from material ExtFields/code options | R1 opens a distinct specification flow; selects attribute values, loads SKU rows by `spuid`, then updates per-SKU quantity and derived SPU total. | Source verified. Production normalized list: 89 rows; code string on 80/89, type numeric on 89/89, materialUnit string on 89/89, specUnit string on 88/89; no normalized `spuId` field in this adapter projection. One role-listed `place_order` context returned one active material sales field and one complete Code dictionary. 93 SPUs were then read through direct Material and R1 Package batch routes; all returned zero active SKU rows. |
 | SKU | SKU identity; parent `spuid`; attribute values in `exts`; `price`, spec/unit, quantity | R1 matches selected attribute values against each SKU and persists separate SKU rows under a material SPU before flattening/rehydration. | Source verified. The Production read route is now bounded and adapter-authorized; all 93 direct/package SPUs in the observed context returned zero active SKU rows. This does not establish SKU availability in another service/source context. |
 | Measure (机措) | identity/name; unit; `guideUnitPrice`; `cost`; possibly minimum-guide field | Its own category and price semantics; not a generic procedure/material. | Source verified. Production normalized list: 4 rows; guide price numeric 4/4; `minimumGuideTotalPrice` and `cost` absent in this normalized sample. |
-| Order / payload | `type=1`; `serviceAppointmentId`; `originPrice`, `totalPrice`, `otherAmount`, `preferentialAmount`, `discount`, description; `exts`; `bjProducts` | `bjProducts` is serialized JSON in the source model; it contains `orderList`, add/delete item arrays and amount components. R1 reads by queryById for edit; new App uses bounded list-scoped reads and projects rows into a read-only model. | Source verified. Production API sample: one type-1 row; adapter normalized one group with one package line and no procedure/material/measure lines. Raw `bjProducts` was not persisted or directly represented by the normalized shape. |
+| Order / payload | `type=1`; `serviceAppointmentId`; `originPrice`, `totalPrice`, `otherAmount`, `preferentialAmount`, `discount`, description; `exts`; `bjProducts` | `bjProducts` is serialized JSON in the source model; it contains `orderList`, add/delete item arrays and amount components. R1 reads by queryById for edit; new App uses bounded list-scoped reads and projects rows into a read-only model. | Source verified. Three bounded WorkOrder-linked Production rows carried recognized SKU/SPU identities; the adapter recognized 4 groups and 15 lines with no unsupported groups. Raw `bjProducts` was not persisted or directly represented by the normalized shape. |
 
 ### Field flow: source → read adapter → draft → encoder
 
@@ -172,7 +172,7 @@ All four R1 list calls use `_all=1`, active state, `serviceType`, `sourceType`, 
 | Material | R1 `type1` taxonomy, or `type2` for refresh service; search name/code; item displays spec and material unit. | If spec selection is required, open SPU→attribute→SKU flow; selected SKU rows carry their own quantities. |
 | Measure | Separate category list; search and quantity selection. | Guide price × quantity in R1 display calculation. |
 
-The current App has a category browser, package detail/layer configuration, and grouped selection model. It does not establish full R1 filter parity for package part/warranty, procedure type and material type in the reviewed snapshot; direct Material SPU/SKU selection is not enabled in the approved Production read boundary. These are compatibility gaps, not reasons to collapse the four domains into one generic “item” filter.
+The current App has a category browser, package detail/layer configuration, grouped selection model and now bounded Production reads for service-specific R1 filter dictionaries. The current browser has not yet applied the package part/warranty, procedure type and material type dictionaries as a complete filter set. The direct Material SPU/SKU route is adapter-authorized read-only, but this context returned no active SKU rows, so a selectable priced SKU cannot be claimed. These are compatibility gaps, not reasons to collapse the four domains into one generic “item” filter.
 
 ## 5. Money, price, quantity, warranty provenance
 
@@ -207,16 +207,16 @@ When leaving selection, R1 derives warranty from selected package warranty, usin
 
 | Read | Sanitized result |
 | --- | --- |
-| Work Order list/detail | One bounded role-scoped page; one list-derived detail used to derive catalog context. IDs and values stayed in memory. No workflow-stage conclusion is made from this audit output. |
-| Existing Order | One bounded `type=1` query for the list-derived Work Order; one row returned and accepted by the adapter. Normalized shape: one group, one package line, zero direct Procedure/Material/Measure lines. This cannot validate direct SKU/SPU edit/hydration. |
-| Package list/detail | 27 normalized list rows; list-derived detail succeeded; two procedure components, five material components, zero measure components. Layer/coefficient/unit/component-price/embedded-item shapes were present as described above. |
+| Work Order list/detail | 9 bounded role-scoped pages (27 rows); 27 list-derived details read. IDs and values stayed in memory. No workflow-stage conclusion is made beyond the selected current `place_order` context. |
+| Existing Order | Three bounded `type=1` queries, one per sampled list-derived WorkOrder; all three rows matched their WorkOrder and contained recognized SKU/SPU identity. The adapter recognized 4 groups and 15 lines with no unsupported groups. This cannot validate editable direct SKU/SPU hydration. |
+| Package list/detail | 27 normalized list rows; all 27 list-derived details mapped 64 procedure references, 87 material references, and 0 measure references. Layer/coefficient/unit/component-price/embedded-item structure is preserved where returned. |
 | Procedure list | 66 normalized rows; guide and minimum-guide price fields numeric in all sampled rows. |
 | Material list | 89 normalized rows; structural presence counts as in the dictionary. Adapter-normalized `spuId` absent in all rows; raw response was not retained, so absence may be projection-related. |
 | Measure list | 4 normalized rows; guide price numeric in all; no normalized minimum-guide or cost field in the sample. |
 
 Structural samples do not prove record-wide completeness, price correctness, package availability for every service/source type, complete SKU data, or active `placeOrder` workflow behavior.
 
-## 7. R1 vs new App parity matrix (reviewed PR #42 snapshot)
+## 7. R1 vs new App parity matrix (PR #42 snapshot plus bounded follow-up reads through 2026-11-04)
 
 | Behavior | R1 evidence | New App snapshot | Status / impact |
 | --- | --- | --- | --- |
@@ -225,8 +225,8 @@ Structural samples do not prove record-wide completeness, price correctness, pac
 | Repair-part grouping | `orderList[]` contains independent groups and four category lists | `QuotationDraft.groups[]` with repair path, description, area and typed selections | `PARITY` at composition-model level; broader field and warranty parity incomplete. |
 | Package applicability/warranty | Service-type-dependent repair/construction part filter; age filter; min selected warranty | Package browser/detail and layer configuration; filter/warranty coverage is not full R1 parity | `PARTIAL`: wrong package eligibility or warranty can mislead selection. |
 | Procedure taxonomy | Filtered through `repairProcedure` code dictionary and `exts.repairProcedure` | Direct provider selection exists; reviewed catalog UX does not reproduce this taxonomy | `DIFFERENCE`: user may not find the expected subset; taxonomy must not be replaced with repair parts. |
-| Direct Material | `type1/type2` filter; SPU→attribute options→SKU; per-SKU quantities | Read catalog model and direct selection bridge exist, but SKU/SPU route and attribute hydration remain deferred/blocked | `UNSUPPORTED/PARTIAL`: SKU-bearing material choice cannot be claimed equivalent. |
-| Package composition | Package detail + each populated layer selected; component coefficients, spec and bundle code | Package detail/layer configuration and typed component model exist | `PARTIAL`: key layer contract exists; SKU-specific bundle path and exact production SKU path are not live-verified. |
+| Direct Material | `type1/type2` filter; SPU→attribute options→SKU; per-SKU quantities | Material sales ExtField/Code and bounded direct SKU read are implemented; static type dictionaries are now read for one context | `UNSUPPORTED/PARTIAL`: all 93 observed SPUs returned zero active SKU rows; no real selectable variant or final price is established. |
+| Package composition | Package detail + each populated layer selected; component coefficients, spec and bundle code | 27 Package details and 26 nonempty package SKU batches were live-read; package layer configuration and typed component model exist | `PARTIAL`: source identities/read routes are verified, but no active SKU rows were returned and bundle calculation/encoding remains separate. |
 | Price | R1 mini list projection and two separate total projections | Kind-specific catalog pricing model and Phase 1H price projections; unknown inputs blocked | `PARTIAL`: source mapping is credible; no row-value cross-check or price freshness proof. |
 | Save/workflow | New type-1 path may start child workflow then upsert; edit can use same Order | Real business submit remains gated; Phase 1I safeguards exist | `NOT_LIVE_VERIFIED`: production writes forbidden; Beta flow remains separate gate. |
 | Order read/edit | R1 uses `basic/order/queryById` for edit | App limits reads to current-session list-authorized Work Order and checks Order ownership; read-only view currently does not establish full edit hydration | `PARTIAL`: safer ownership boundary, but same-ID real edit not validated. |
@@ -241,13 +241,13 @@ Structural samples do not prove record-wide completeness, price correctness, pac
 | `index/phoneLogin.do` | Auth/session setup; may persist permission context | Used only under explicit login-context authorization. No business object write is counted as authorized. |
 | `function/queryTreeByRoleId` | Role-tree read | Bounded read used. |
 | `function/changeRole` | Writes account permission role | Forbidden; not called. |
-| `basic/serviceAppointment/query` or workflow-list variant | Role-scoped list read | One bounded page; route chosen by existing adapter evidence. |
+| `basic/serviceAppointment/query` or workflow-list variant | Role-scoped list read | Nine bounded pages read to locate a currently visible action; route chosen by existing adapter evidence. |
 | `basic/serviceAppointment/queryById/{id}` | Work Order detail read | One list-derived detail only. Do not use arbitrary IDs or the legacy permission bypass. |
 | `biz/extField/query` | ExtField controller injects current account tenant and calls `extFieldService.query`; read path | R1 uses it for order and material field definitions. One bounded active material-sales-field query completed; the effective `placeOrder` order schema remains separately unknown. |
-| `i/code/selectCode.do`, `i/code/selectMultistageCode` | Code-config controller delegates to code-service selection methods; source path reads dictionary/options | R1 uses option and cascade providers. The exact returned material sales-field Code dictionary was read under the R1 tenant. Other catalog filter dictionaries and cascade providers remain unverified. |
+| `i/code/selectCode.do`, `i/code/selectMultistageCode` | Code-config controller delegates to code-service selection methods; source path reads dictionary/options | The material sales-field dictionary and serviceType-selected `packageType`, package-part, `repairProcedure`, `type1/type2`, `agelimitFilter`, and `maintenanceLayer` dictionaries were read under the R1 tenant. Dynamic cascade providers remain unverified. |
 | `basic/order/query` | Controller injects current tenant unless caller supplies the bypass flag; accepts `notFilterBelongTo`, `notFilterOrgId`, `notFilterTenantId` which disable corresponding scope filters | Used only with exact list-derived Work Order ID, `type=1`, page 1 and row limit 1. None of the bypass flags was sent. |
 | `basic/order/queryById` | Controller delegates to `OrderServiceImpl.queryById`, which performs `findById`; no explicit tenant/ownership check is visible in this path | Not called in Production; current App blocks it for Production browsing. |
-| Four catalog `queryWithRank` routes | List/read, but sourceType changes data scope; mini form changes price projection | One bounded call per kind using detail-derived context and exact allowlisted body. |
+| Four catalog `queryWithRank` routes | List/read, but sourceType changes data scope; mini form changes price projection | Bounded paginated reads for all four kinds using detail-derived context and exact allowlisted bodies; complete only for the observed context. |
 | `biz/projPackage/findById/{id}` | Resolves package child lists; no explicit per-record tenant guard is visible in the examined method | Called only for an ID returned by the just-read allowed package list. Arbitrary ID use remains prohibited. |
 | `basic/material/query` (SKU) | Material controller delegates to `GoodsService.queryWithRank`; R1 filters active rows by `spuid`. This is distinct from `queryWithRank`’s R1 list endpoint and does not receive the controller-injected `form=mini` projection. | Bounded Production reads completed only after the current role-listed WorkOrder plus direct Material or exact Package-detail SPU provenance. R1 single `spuid` and package `in:spuid|array#and` shapes were exercised. All 93 SPUs returned zero active rows; no effective price was inferred. |
 | `workflow/startWorkflow/...`, `basic/order/upsert`, coupon use, PDF/message paths | Mutation/business side effects | Not called; no Production write authorization. |
@@ -269,11 +269,11 @@ Backend source shows `OrderServiceImpl.upsert()` is not a simple record write: i
 
 1. **Dynamic ExtField contract:** obtain the current active `placeOrder` `colName=order` schema safely when available; map required/conditional fields and their option providers into a validated action contract. The current App’s fixed group validator is not evidence of equivalence. Acceptance: every visible required field is present, provider-backed, conditionally validated, encoded, and round-tripped by synthetic contract tests; hidden conditional fields do not block.
 2. **Catalog scope parity for sourceType:** prove R1’s actual wire behavior for missing, empty, and populated sourceType, then make App request semantics match without broadening visibility. Acceptance: tests distinguish property-absent from property-present-empty and assert the intended backend branch; missing required context fails closed if business scope cannot be proven.
-3. **Order/model decode truth:** Production API sample covers one package-only row, not direct SKU materials or all group variants. Preserve unknown fields as unsupported/read-only; do not infer SKU identity or hydrate editable draft from a partial Order.
+3. **Order/model decode truth:** Three bounded Production rows exposed recognized SKU/SPU identities, but they do not prove complete coverage of direct SKU materials or all group variants. Preserve unknown fields as unsupported/read-only; do not infer SKU identity or hydrate an editable draft from a partial Order.
 
 ### P1 — functional parity and field usability
 
-4. Restore/explicitly defer R1 filters: package part applicability and warranty age, Procedure `repairProcedure`, Material type1/type2. Use separate per-kind taxonomies.
+4. The six static selector dictionaries are now read and mapped for one context; connect them to package applicability/warranty, Procedure `repairProcedure`, and Material type1/type2 using separate per-kind taxonomies. Keep filters unverified for contexts without a complete dictionary and source context.
 5. The direct Material SPU→attribute→SKU read/config chain is now source-scoped and verified as a Production read for one context. The observed active SKU catalog is empty (93/93 SPUs), so the selectable priced Material path remains unavailable for this context until another source-proven current context returns actual rows.
 6. Package SKU route and source identity are covered by tests and were live-read in 26 nonempty package batches. Continue verifying coefficient/spec quantity, composite identity and bundle round-trip using synthetic fixtures derived only from source-verified shapes. Do not turn layer choice into a simple one-line selection.
 7. Preserve two distinct money projections and source each amount field. Keep unknown price/freshness/discount state visibly blocked rather than turning missing values into zero.
@@ -287,11 +287,11 @@ Backend source shows `OrderServiceImpl.upsert()` is not a simple record write: i
 | Unknown | Status | Why it remains unknown / safe next evidence |
 | --- | --- | --- |
 | Current Production tenant-wide active `order` ExtField shape | `CAPTURED` | One authorized, bounded query returned 32 rows; sanitized details are in [G4F_ACTIVE_ORDER_EXTFIELD_SCHEMA_SHAPE.md](G4F_ACTIVE_ORDER_EXTFIELD_SCHEMA_SHAPE.md). |
-| Effective `placeOrder` ExtField set for a concrete work order and provider option values | `UNKNOWN` | The capture is tenant-wide and redacts service/person values and option contents; no customer/work-order read or provider query was authorized. Resolve only under a later approved scope. |
+| Effective `placeOrder` ExtField set for a concrete work order and provider option values | `UNKNOWN` | The capture is tenant-wide and redacts service/person values and option contents; the bounded catalog chain did not resolve the effective WorkOrder-specific order fields or their dynamic providers. Resolve within a specifically scoped read path; do not infer from the tenant-wide shape. |
 | R1 wire behavior when `sourceType` is absent vs empty | `UNKNOWN` | Vue constructs the property; framework serialization of `undefined` and backend parameter presence were not proven. Resolve with local transport/source or a safe deterministic mock; do not add a Production request solely to guess. |
 | Exact price-body provenance/freshness and per-row R1-vs-Production displayed amount | `UNKNOWN` | Source proves conditional override; audit retained no price values or approval records, and no version token was exposed in normalized model. |
 | Material SKU rows/attribute options in Production | `OBSERVED_EMPTY_FOR_ONE_CONTEXT` | One current role-listed WorkOrder context returned one material sales field and its dictionary; all 93 direct/package SPUs returned zero active SKU rows. Other service/source contexts remain unqueried. |
-| Full existing type-1 Order distribution and multiple Orders under one Work Order | `UNKNOWN` | One bounded Order row was intentionally requested; no broad pagination or enumeration. |
+| Full existing type-1 Order distribution and multiple Orders under one Work Order | `UNKNOWN` | Three bounded rows were read, one per sampled WorkOrder; no broad Order pagination or enumeration was performed. |
 | Active workflow node and Survey→placeOrder transition in current Production | `UNKNOWN` | The audit script did not capture a workflow transition; no workflow mutation was performed. Historical Phase 1K sample not finding a node is bounded evidence only. |
 | PDF availability/validity and signing/contract lifecycle | `UNKNOWN` | No PDF was opened/downloaded; source shows PDF creation in mutation path; no customer action or write. |
 | Production Mongo schema / DB collection shape | `BLOCKED_SCOPE` | No dedicated proven read-only DB role was supplied/verified for this audit; no DB connection or query. |
@@ -299,19 +299,19 @@ Backend source shows `OrderServiceImpl.upsert()` is not a simple record write: i
 
 ## 12. Recommended smallest next slice
 
-**Do not expand the catalog UI yet.** First close the two model/scope P0s using non-Production artifacts where possible:
+The static R1 Code dictionaries have been read for one verified WorkOrder, but the category browser does not yet consume them. The next catalog slice is to wire the existing per-kind eligibility classifier to these options and preserve an explicit unverified state whenever the source context or dictionaries are incomplete. In parallel, close the remaining model/scope P0s using non-Production artifacts where possible:
 
 1. Add a sanitized, machine-checkable active `placeOrder` ExtField fixture derived from authorized source/evidence (or clearly mark it unavailable); define the normalized field/option-provider boundary and validate conditional required semantics with synthetic tests.
 2. Determine and test R1 `sourceType` missing/empty serialization versus backend `containsKey` behavior. If the behavior cannot be proven, require a non-empty, detail-derived source context before catalog access rather than silently omitting scope.
-3. Then prepare a kind-specific parity plan for filters and Material SKU, keeping Production routes read-only and gated.
+3. Keep Material SKU selection blocked for the observed empty result; continue only when a separately source-proven context returns active rows. Keep Production reads bounded and gated.
 
-This is an evidence recommendation, not implementation authorization. PR #42 remains Draft; no source/UI behavior is changed by this audit.
+This is an evidence status and next-slice recommendation. No Production write or UI filter behavior is authorized by the read evidence itself.
 
 ## 13. Verification and safety result
 
 - R1 source trace: pinned checkout verified.
 - Backend source trace: pinned checkout verified.
-- Production API structural read: `PROD_READ_ONLY_SCOPED`; 10 reads across authorized evidence runs; IDs and values remained in memory.
+- Production API structural read: `PROD_READ_ONLY_CHAIN_COMPLETE` for one role-listed `place_order` context. The completed chain covered 9 role-tree/list pages, 27 list-derived WorkOrder details, 3 bounded WorkOrder-linked type-1 Order queries, all four catalog kinds, 27 list-derived Package details, the material sales ExtField and its Code dictionary, six serviceType-selected static Code dictionaries, and 115 direct/Package-batch SKU reads for 93 unique SPUs. IDs, labels, option values and prices remained in memory; only aggregate counts were retained.
 - Production Mongo: `BLOCKED_SCOPE`, not attempted.
 - Production business mutations: **0**.
 - Workflow, quote, coupon, upload, PDF/customer interaction mutations: **0**.

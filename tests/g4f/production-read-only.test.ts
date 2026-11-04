@@ -699,6 +699,51 @@ describe('Production read-only profile', () => {
     ])
   })
 
+  it('reads serviceType-selected R1 filter dictionaries only through the current catalog adapter permit', async () => {
+    vi.stubEnv('VITE_XLINK_ENVIRONMENT', 'prod')
+    const context = {
+      workOrderId: asOpaqueId<'WorkOrderId'>('synthetic-listed-work-order'),
+      serviceType: '40', sourceType: 'synthetic-source',
+    }
+    const identity = { sessionRef: 'production-session', userId: 'synthetic-tech', roleId: 'synthetic-role', roleVersion: null }
+    let catalog: ReturnType<typeof createQuotationCatalogReadAdapter> | null = null
+    const request = vi.fn((options: UniNamespace.RequestOptions) => {
+      const body = new URLSearchParams(String(options.data))
+      const ids = JSON.parse(body.get('jsonPara') ?? '[]') as { codeId: string; eleid: string }[]
+      options.success?.({ statusCode: 200, data: ids.map(({ codeId, eleid }) => ({
+        eleid, options: { [`${codeId}-value`]: `${codeId}-label` },
+      })) } as never)
+    })
+    const transport = createUniApiReadTransport({
+      apiBaseUrl: 'https://production.invalid',
+      getSessionRef: () => 'production-session' as never,
+      isProductionQuotationCatalogReadAuthorized: candidate =>
+        catalog?.isProductionReadRequestAuthorized(candidate) === true,
+      request,
+    })
+    catalog = createQuotationCatalogReadAdapter(
+      transport,
+      () => identity,
+      '1340835581184723420',
+      workOrderId => workOrderId === String(context.workOrderId),
+    )
+
+    await expect(transport.execute({
+      method: 'POST', path: 'i/code/selectCode.do',
+      body: {
+        jsonPara: JSON.stringify([{ codeId: 'packageType', eleid: 'packageType' }]),
+        tenantId: '1340835581184723420',
+      },
+    })).rejects.toMatchObject({ category: 'authorization_denied' })
+    expect(request).not.toHaveBeenCalled()
+    const result = await catalog.listCatalogFilterOptions!(context)
+    expect(result).toMatchObject({ state: 'succeeded', data: {
+      packageParts: { codeId: 'refreshParts' },
+      materials: { codeId: 'type2' },
+    } })
+    expect(request).toHaveBeenCalledTimes(1)
+  })
+
   it('does not treat a node-owned run ID as proof of the Work Order workflow when the detail omits its run', async () => {
     vi.stubEnv('VITE_XLINK_ENVIRONMENT', 'prod')
     const execute = vi.fn(async (input: { path: string }) => {

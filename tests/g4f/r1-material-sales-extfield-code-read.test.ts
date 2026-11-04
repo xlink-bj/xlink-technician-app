@@ -161,3 +161,67 @@ describe('M1 I2 source-pinned R1 ExtField salesAttribute → tenant Code diction
     expect(execute).not.toHaveBeenCalled()
   })
 })
+
+describe('R1 placeOrders catalog filter Code dictionaries', () => {
+  const dictionaryIds = (serviceType: string) => {
+    const packageParts = serviceType === '11' || serviceType === '12'
+      ? 'partsOne' : serviceType === '40' ? 'refreshParts' : 'constructionParts'
+    const materialType = serviceType === '40' ? 'type2' : 'type1'
+    return ['packageType', materialType, packageParts, 'repairProcedure', 'agelimitFilter', 'maintenanceLayer']
+  }
+
+  it.each([
+    ['11', 'partsOne', 'type1'],
+    ['12', 'partsOne', 'type1'],
+    ['40', 'refreshParts', 'type2'],
+    ['other-r1-service', 'constructionParts', 'type1'],
+  ])('uses R1 serviceType %s selectors and decodes exact dictionaries', async (serviceType, packageParts, materialType) => {
+    const context = { ...ctx, serviceType }
+    const execute = vi.fn(async (request: ApiReadRequest) => {
+      const body = request.body as { jsonPara: string; tenantId: string }
+      const ids = JSON.parse(body.jsonPara) as { codeId: string; eleid: string }[]
+      return ids.map(({ codeId, eleid }) => ({ eleid, options: { [`${codeId}-value`]: `${codeId}-label` } }))
+    })
+    const result = await port(execute).listCatalogFilterOptions!(context)
+    expect(result).toMatchObject({ state: 'succeeded', data: {
+      serviceType,
+      packageParts: { codeId: packageParts, options: [{ value: `${packageParts}-value`, label: `${packageParts}-label` }] },
+      materials: { codeId: materialType },
+      procedures: { codeId: 'repairProcedure' },
+      packageAgeLimits: { codeId: 'agelimitFilter' },
+      packageTypes: { codeId: 'packageType' },
+      packageMaterialLayers: { codeId: 'maintenanceLayer' },
+    } })
+    expect(execute).toHaveBeenCalledTimes(1)
+    expect(execute.mock.calls[0]?.[0]).toEqual({
+      method: 'POST', path: 'i/code/selectCode.do',
+      body: { jsonPara: JSON.stringify(dictionaryIds(serviceType).map(codeId => ({ codeId, eleid: codeId }))), tenantId: R1_CODE_TENANT },
+    })
+  })
+
+  it('rejects an incomplete/foreign Code response, wrong tenant, or missing WorkOrder context', async () => {
+    const ids = dictionaryIds(ctx.serviceType)
+    const incomplete = port(async () => ids.slice(1).map(codeId => ({ eleid: codeId, options: {} })))
+    expect((await incomplete.listCatalogFilterOptions!(ctx)).state).toBe('failed_terminal')
+
+    const foreign = port(async () => [...ids.map(codeId => ({ eleid: codeId, options: {} })), { eleid: 'foreign', options: {} }])
+    expect((await foreign.listCatalogFilterOptions!(ctx)).state).toBe('failed_terminal')
+
+    const wrongTenant = port(vi.fn(async () => []), 'unverified-tenant')
+    expect((await wrongTenant.listCatalogFilterOptions!(ctx)).error?.category).toBe('authorization_denied')
+    const missingContext = port(vi.fn(async () => []))
+    expect((await missingContext.listCatalogFilterOptions!({ serviceType: ctx.serviceType })).state).toBe('failed_terminal')
+  })
+
+  it('discards static dictionary results if the authenticated role changes during the read', async () => {
+    let identity: QuotationCatalogReadAuthorizationScope = principal
+    const execute = vi.fn(async (request: ApiReadRequest) => {
+      identity = { ...principal, roleVersion: '2' }
+      const ids = JSON.parse(String((request.body as { jsonPara: string }).jsonPara)) as { codeId: string; eleid: string }[]
+      return ids.map(({ codeId, eleid }) => ({ eleid, options: { value: 'label' } }))
+    })
+    const result = await port(execute, R1_CODE_TENANT, () => identity).listCatalogFilterOptions!(ctx)
+    expect(result.error?.category).toBe('authorization_denied')
+    expect(execute).toHaveBeenCalledTimes(1)
+  })
+})

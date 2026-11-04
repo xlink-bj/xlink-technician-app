@@ -442,6 +442,33 @@ export interface QuotationMaterialSaleFieldRead {
   readonly options: readonly CodeOptionRead[]
 }
 
+export type R1QuotationCatalogDictionaryCodeId =
+  | 'packageType'
+  | 'type1'
+  | 'type2'
+  | 'partsOne'
+  | 'refreshParts'
+  | 'constructionParts'
+  | 'repairProcedure'
+  | 'agelimitFilter'
+  | 'maintenanceLayer'
+
+export interface QuotationCatalogDictionaryOptionSetRead {
+  readonly codeId: R1QuotationCatalogDictionaryCodeId
+  readonly options: readonly CodeOptionRead[]
+}
+
+/** R1 placeOrders selector dictionaries chosen from the current serviceType. */
+export interface QuotationCatalogFilterOptionsRead {
+  readonly serviceType: string
+  readonly packageParts: QuotationCatalogDictionaryOptionSetRead
+  readonly packageTypes: QuotationCatalogDictionaryOptionSetRead
+  readonly packageAgeLimits: QuotationCatalogDictionaryOptionSetRead
+  readonly procedures: QuotationCatalogDictionaryOptionSetRead
+  readonly materials: QuotationCatalogDictionaryOptionSetRead
+  readonly packageMaterialLayers: QuotationCatalogDictionaryOptionSetRead
+}
+
 /** R1 basic/material/query SKU identity and unit-price input. R1 still calculates
  * quote totals from the selected rows, their quantities and later adjustments;
  * this unit price is never itself the final quote amount. */
@@ -474,6 +501,9 @@ export interface QuotationCatalogReadPort {
   /** R1 biz/extField/query + i/code/selectCode.do. Production requests are
    * bounded and require the current role-listed WorkOrder catalog context. */
   listMaterialSalesFields?(context: QuotationCatalogContext): Promise<OperationSnapshot<ReadPage<QuotationMaterialSaleFieldRead>>>
+  /** R1 placeOrders static Code dictionaries, selected for this WorkOrder's
+   * serviceType (repair/construction/refresh, procedure, material, age, layers). */
+  listCatalogFilterOptions?(context: QuotationCatalogContext): Promise<OperationSnapshot<QuotationCatalogFilterOptionsRead>>
 }
 
 export interface TechnicianApiReadPort {

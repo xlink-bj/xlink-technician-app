@@ -26,6 +26,7 @@ const routeCounts = {
   measureList: 0,
   packageDetail: 0,
   materialSalesFields: 0,
+  catalogFilterCodeOptions: 0,
   materialCodeOptions: 0,
   materialSkuList: 0,
 }
@@ -68,6 +69,11 @@ const responseCounts = {
     referencedMaterialSpus: 0,
   },
   materialSalesAttributes: { state: 'NOT_RUN', fields: 0 },
+  catalogFilterOptions: {
+    state: 'NOT_RUN',
+    packageParts: 0, packageTypes: 0, packageAgeLimits: 0,
+    procedures: 0, materials: 0, packageMaterialLayers: 0,
+  },
   selectableSkuCatalog: {
     uniqueSpus: 0, attemptedSpus: 0, succeededSpus: 0, failedSpus: 0,
     activeSkuRows: 0, emptySpus: 0, pagesRead: 0, complete: false,
@@ -106,6 +112,13 @@ function isApprovedWorkOrderQuoteQuery(request) {
     && body.get('is:type|integer#and') === '1'
     && workOrderId !== null
     && listedWorkOrderIds.has(workOrderId)
+}
+
+function r1CatalogFilterCodeIds(serviceType) {
+  const packageParts = serviceType === '11' || serviceType === '12'
+    ? 'partsOne' : serviceType === '40' ? 'refreshParts' : 'constructionParts'
+  const materials = serviceType === '40' ? 'type2' : 'type1'
+  return ['packageType', materials, packageParts, 'repairProcedure', 'agelimitFilter', 'maintenanceLayer']
 }
 
 function recordSafeRequest(url, request, apiBaseUrl) {
@@ -187,7 +200,7 @@ function recordSafeRequest(url, request, apiBaseUrl) {
   if (relativePath === 'i/code/selectCode.do') {
     const body = typeof request.data === 'string' ? new URLSearchParams(request.data) : new URLSearchParams()
     if (!selectedCatalogContext || !selectedWorkOrderIsCurrent()
-      || routeCounts.materialCodeOptions >= 1 || [...body.keys()].sort().join(',') !== 'jsonPara,tenantId'
+      || [...body.keys()].sort().join(',') !== 'jsonPara,tenantId'
       || body.get('tenantId') !== '1340835581184723420') return null
     let providers
     try { providers = JSON.parse(body.get('jsonPara') ?? '') } catch { return null }
@@ -197,11 +210,22 @@ function recordSafeRequest(url, request, apiBaseUrl) {
       if (!provider || typeof provider !== 'object' || Array.isArray(provider)
         || Object.keys(provider).sort().join(',') !== 'codeId,eleid'
         || typeof provider.codeId !== 'string' || provider.codeId !== provider.eleid
-        || !listedMaterialSalesCodeIds.has(provider.codeId) || ids.includes(provider.codeId)) return null
+        || ids.includes(provider.codeId)) return null
       ids.push(provider.codeId)
     }
-    routeCounts.materialCodeOptions += 1
-    return 'read'
+    const expectedCatalogIds = r1CatalogFilterCodeIds(selectedCatalogContext.serviceType)
+    const isR1CatalogFilterRead = ids.length === expectedCatalogIds.length
+      && ids.every((id, index) => id === expectedCatalogIds[index])
+    if (isR1CatalogFilterRead && routeCounts.catalogFilterCodeOptions === 0) {
+      routeCounts.catalogFilterCodeOptions += 1
+      return 'read'
+    }
+    const isVerifiedMaterialSalesRead = ids.every(id => listedMaterialSalesCodeIds.has(id))
+    if (isVerifiedMaterialSalesRead && routeCounts.materialCodeOptions === 0) {
+      routeCounts.materialCodeOptions += 1
+      return 'read'
+    }
+    return null
   }
   const packageDetailPrefix = 'biz/projPackage/findById/'
   if (relativePath.startsWith(packageDetailPrefix)) {
@@ -811,6 +835,17 @@ async function run() {
           && selectedWorkOrderIsCurrent() && authIdentityChanged() === false,
       )
       discoveryState = 'PLACE_ORDER_CONTEXT_FOUND'
+      stage = 'r1_catalog_filter_code_options'
+      const filterOptions = await catalogApi.listCatalogFilterOptions(selectedCatalogContext)
+      responseCounts.catalogFilterOptions = {
+        state: operationState(filterOptions),
+        packageParts: filterOptions.state === 'succeeded' && filterOptions.data ? filterOptions.data.packageParts.options.length : 0,
+        packageTypes: filterOptions.state === 'succeeded' && filterOptions.data ? filterOptions.data.packageTypes.options.length : 0,
+        packageAgeLimits: filterOptions.state === 'succeeded' && filterOptions.data ? filterOptions.data.packageAgeLimits.options.length : 0,
+        procedures: filterOptions.state === 'succeeded' && filterOptions.data ? filterOptions.data.procedures.options.length : 0,
+        materials: filterOptions.state === 'succeeded' && filterOptions.data ? filterOptions.data.materials.options.length : 0,
+        packageMaterialLayers: filterOptions.state === 'succeeded' && filterOptions.data ? filterOptions.data.packageMaterialLayers.options.length : 0,
+      }
       stage = 'all_selectable_catalog_pages'
       const catalogs = [
         ['package', catalogApi.listPackages.bind(catalogApi), (item) => listedPackageIds.add(item.id)],
@@ -882,6 +917,7 @@ async function run() {
     const auditComplete = responseCounts.catalogContextVerified
       && Object.values(responseCounts.catalogItemsByKind).every(result => result.complete)
       && responseCounts.packageDetails.complete
+      && responseCounts.catalogFilterOptions.state === 'SUCCEEDED'
       && responseCounts.materialSalesAttributes.state === 'SUCCEEDED'
       && responseCounts.selectableSkuCatalog.complete
       && blockedUnexpectedNetworkRequests === 0

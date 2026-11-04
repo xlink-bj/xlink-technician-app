@@ -1,5 +1,7 @@
 import type {
+  CodeOptionRead,
   QuotationCatalogContext,
+  QuotationCatalogFilterOptionsRead,
   QuotationCatalogItemBaseRead,
   QuotationMaterialRead,
   QuotationMaterialSkuVariantRead,
@@ -10,6 +12,7 @@ import type {
   QuotationPackageProcedureRead,
   QuotationPackageRead,
   QuotationProcedureRead,
+  R1QuotationCatalogDictionaryCodeId,
   ReadPage,
 } from '@shared/ports'
 import type { OperationSnapshot } from '@shared/types'
@@ -345,6 +348,91 @@ export function materialSalesCodeOptions(raw: unknown, fields: readonly R1SaleFi
     throw new AdapterMappingError('material code dictionary result is incomplete')
   }
   return { items: fields.map(field => ({ ...field, options: dictionaries.get(field.valueOption)! })) }
+}
+
+export function r1CatalogFilterCodeIds(serviceType: string): {
+  readonly packageParts: R1QuotationCatalogDictionaryCodeId
+  readonly materials: 'type1' | 'type2'
+} {
+  if (typeof serviceType !== 'string' || !serviceType.trim()) {
+    throw new AdapterMappingError('quotation catalog service type is required for R1 filters')
+  }
+  return {
+    packageParts: serviceType === '11' || serviceType === '12'
+      ? 'partsOne'
+      : serviceType === '40' ? 'refreshParts' : 'constructionParts',
+    materials: serviceType === '40' ? 'type2' : 'type1',
+  }
+}
+
+export function r1CatalogFilterCodeRequest(context: QuotationCatalogContext): ApiReadRequest {
+  const selected = r1CatalogFilterCodeIds(context?.serviceType ?? '')
+  const ids = [
+    'packageType', selected.materials, selected.packageParts,
+    'repairProcedure', 'agelimitFilter', 'maintenanceLayer',
+  ] as const
+  return {
+    method: 'POST',
+    path: 'i/code/selectCode.do',
+    body: {
+      jsonPara: JSON.stringify(ids.map(id => ({ codeId: id, eleid: id }))),
+      tenantId: R1_MATERIAL_CODE_TENANT,
+    },
+  }
+}
+
+function r1CatalogCodeDictionaries(
+  raw: unknown,
+  ids: readonly R1QuotationCatalogDictionaryCodeId[],
+): ReadonlyMap<R1QuotationCatalogDictionaryCodeId, readonly CodeOptionRead[]> {
+  if (!Array.isArray(raw) || raw.length !== ids.length) {
+    throw new AdapterMappingError('R1 catalog filter Code dictionary response is incomplete')
+  }
+  const expected = new Set(ids)
+  const dictionaries = new Map<R1QuotationCatalogDictionaryCodeId, readonly CodeOptionRead[]>()
+  for (const item of raw) {
+    const row = asRecord(item, 'R1 catalog filter Code dictionary')
+    const codeId = requiredString(row, ['eleid'], 'R1 catalog filter Code identity') as R1QuotationCatalogDictionaryCodeId
+    if (!expected.has(codeId) || dictionaries.has(codeId)) {
+      throw new AdapterMappingError('foreign or duplicate R1 catalog filter Code dictionary')
+    }
+    const optionsRecord = asRecord(row.options, 'R1 catalog filter Code options')
+    const values = Object.entries(optionsRecord)
+    if (values.length > 500) throw new AdapterMappingError('R1 catalog filter Code options are unbounded')
+    const options = values.map(([value, rawLabel]) => {
+      if (!value.trim() || typeof rawLabel !== 'string' || !rawLabel.trim()) {
+        throw new AdapterMappingError('malformed R1 catalog filter Code option')
+      }
+      return { value, label: rawLabel.trim() }
+    })
+    dictionaries.set(codeId, options)
+  }
+  if (dictionaries.size !== expected.size) {
+    throw new AdapterMappingError('R1 catalog filter Code dictionary result is incomplete')
+  }
+  return dictionaries
+}
+
+export function r1CatalogFilterOptions(raw: unknown, context: QuotationCatalogContext): QuotationCatalogFilterOptionsRead {
+  const selected = r1CatalogFilterCodeIds(context?.serviceType ?? '')
+  const ids = [
+    'packageType', selected.materials, selected.packageParts,
+    'repairProcedure', 'agelimitFilter', 'maintenanceLayer',
+  ] as const
+  const dictionaries = r1CatalogCodeDictionaries(raw, ids)
+  const set = (codeId: R1QuotationCatalogDictionaryCodeId) => ({
+    codeId,
+    options: dictionaries.get(codeId)!,
+  })
+  return {
+    serviceType: context.serviceType,
+    packageParts: set(selected.packageParts),
+    packageTypes: set('packageType'),
+    packageAgeLimits: set('agelimitFilter'),
+    procedures: set('repairProcedure'),
+    materials: set(selected.materials),
+    packageMaterialLayers: set('maintenanceLayer'),
+  }
 }
 
 export function measureItem(raw: unknown): QuotationMeasureRead {
