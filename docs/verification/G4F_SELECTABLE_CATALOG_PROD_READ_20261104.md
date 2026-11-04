@@ -1,6 +1,6 @@
 # G4-F Current-Role Selectable Catalog Read — 2026-11-04
 
-**Status: COMPLETE for one verified Production `place_order` Work Order context.** This is a bounded, read-only catalog observation; it is not a quote-creation or final-price validation.
+**Catalog status: COMPLETE for one verified Production `place_order` Work Order context. Order identity discovery: INCOMPLETE because one WorkOrder's first Order page reported more than three rows.** This is a bounded, read-only observation; it is not a quote-creation or final-price validation.
 
 ## Scope and safety
 
@@ -11,6 +11,7 @@
 - R1's material attribute chain was exercised in order: one bounded active `colName=material` ExtField read, then the exact returned Code dictionary IDs under the R1 tenant, then SKU pages. The read returned one sales field with 66 Code options; field names, option labels/values, product IDs, and prices were not written to this report.
 - R1's static selector dictionaries were also read through the same role/WorkOrder-scoped adapter. Its serviceType branch chooses `partsOne` for 11/12, `refreshParts` for 40, otherwise `constructionParts`; Material uses `type2` for 40 and `type1` otherwise. The response also covered `packageType`, `repairProcedure`, `agelimitFilter`, and `maintenanceLayer`.
 - No Production business mutation, quote write, Workflow completion, upload, or customer interaction request was sent.
+- The follow-up Order scan remained within the same authenticated technician role: WorkOrder pages used 3 rows, each WorkOrder's `type=1` Order query used page 1 / 3 rows, and the scan stopped at 121 WorkOrders. Session/user/role identity remained unchanged. No exact IDs, codes, customer data, or prices were retained.
 
 ## Current selectable catalog
 
@@ -27,11 +28,16 @@ All 27 listed package details passed identity and structure mapping. Their compo
 
 ## Existing WorkOrder-linked Order evidence
 
-For the first 3 WorkOrders from the same role-scoped list, one type=1 Order row per WorkOrder was queried. All 3 rows matched the requested WorkOrder and contained recognized SKU/SPU identity; 4 quotation groups and 15 nested lines were recognized, with no unsupported group in this bound. This confirms that current Order snapshots can contain SKU/SPU identities; it does not prove that each historical product remains active in today's selector catalog.
+The initial 3 WorkOrders from the role-scoped list returned matching type=1 Order rows with recognized product identity fields; 4 groups and 15 nested lines were recognized. That earlier phrase “SKU/SPU identity” meant that the adapter recognized identity fields; it did not mean that a material line contained both a database SKU ID and SPU ID.
+
+The expanded scan read the first type=1 Order page for 121 role-visible WorkOrders. It returned 89 Order rows across 79 WorkOrders, with 94 groups and 573 normalized lines recognized. Across those rows the normalized material lines contained 40 distinct SPU IDs, 0 SKU IDs, 28 distinct material SKU codes, 0 SPU codes, and no same-line pair of SKU ID + SPU ID or SKU code + SPU code. Thirty-three of the 40 SPU IDs overlapped the selected current catalog and all 33 SKU reads completed with zero active SKU rows. The currently enabled `place_order` WorkOrder had one Order row with two SPU IDs and two material SKU codes, but no SKU IDs or active SKU rows for those SPUs.
+
+One WorkOrder's Order page reported more than three rows. Since this read stayed at the approved first page / three-row bound, the scan is **incomplete**: it cannot establish that no paired SKU/SPU identity exists elsewhere in that Order list. No candidate with a same-line SKU ID and SPU ID was found in the 121 first pages. The 28 SKU codes are business codes, not SKU database IDs, and were not used to infer a current selectable SKU.
 
 ## Application changes
 
 - The Production read gate now accepts only exact R1 catalog pages from 1 through 50, with 20 rows, active state, service type, source type, and stable R1 sorting. It rejects `_all`, oversized pages, and extra filters.
+- The Production Order browse gate remains page 1 with at most 3 rows, exact role-listed WorkOrder ID and `type=1`; a regression test confirms page 2 is rejected before network dispatch.
 - Catalog reads use the shared current session/user/role fingerprint. R1 may omit `roleVersion`; when it does, the catalog adapter still requires the WorkOrder to be listed under the current role before and after each read. Package detail remains restricted to a package ID returned by that scoped list, and role/context changes discard results.
 - The Production SKU application route is enabled only through the quotation adapter's exact-request permit. Direct generic transport calls remain denied; route shape alone cannot authorize an arbitrary SPU, sales field, or Code lookup.
 - Static selector Code reads use the R1 serviceType mapping and the exact R1 tenant. Reading options does not itself filter or enable catalog products; missing or unverified dictionaries are not treated as an eligibility match.
@@ -39,4 +45,4 @@ For the first 3 WorkOrders from the same role-scoped list, one type=1 Order row 
 
 ## Limits
 
-The catalogs, six static selector dictionaries, and one material sales-field dictionary are complete for the verified WorkOrder service/source context only. Other service types, source types, roles, tenants, inactive rows, UI filter parity, and final quotation pricing were not established. Catalog/SKU unit prices remain inputs to R1 quotation rules, not final quote totals.
+The catalogs, six static selector dictionaries, and one material sales-field dictionary are complete for the verified WorkOrder service/source context only. The Order identity scan remains incomplete at one three-row page boundary. Other service types, source types, roles, tenants, inactive rows, UI filter parity, and final quotation pricing were not established. Catalog/SKU unit prices remain inputs to R1 quotation rules, not final quote totals.

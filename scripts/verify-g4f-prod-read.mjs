@@ -12,6 +12,9 @@ const MAX_CATALOG_PAGES = 50
 const MAX_PACKAGE_DETAIL_READS = 200
 const MAX_SELECTABLE_SKU_SPUS = 500
 const MAX_SELECTABLE_SKU_REQUESTS = 1000
+const MAX_ORDER_SEARCH_WORK_ORDERS = 121
+const MAX_ORDER_SEARCH_PAGES = Math.ceil(MAX_ORDER_SEARCH_WORK_ORDERS / 3)
+const MAX_QUOTATION_LIST_READS = MAX_ORDER_SEARCH_WORK_ORDERS
 const CATALOG_PAGE_ROWS = 20
 const MATERIAL_SALES_PAGE_ROWS = 50
 
@@ -36,6 +39,7 @@ const blockedUnexpectedRoutes = Object.create(null)
 const blockedUnexpectedStages = Object.create(null)
 let stage = 'vite_start'
 const listedWorkOrderIds = new Set()
+const workOrderAuthorityById = new Map()
 const listedPackageIds = new Set()
 const packageDetailLookupIds = new Set()
 const listedCatalogSpuIds = new Set()
@@ -44,9 +48,16 @@ const packageMaterialSpuIdsByPackage = new Map()
 const catalogSkuNextPageBySpu = new Map()
 const catalogPageByPath = new Map()
 const listedMaterialSalesCodeIds = new Set()
+const attemptedSkuSpuIds = new Set()
+const completedSkuSpuIds = new Set()
+const activeSkuRows = []
+const orderLineageByWorkOrder = new Map()
+const orderReadStatesByWorkOrder = new Map()
 let materialSalesNextPage = 1
 let selectedCatalogContext = null
 let selectedCatalogWorkOrderId = null
+let orderIdentitySearchState = 'NOT_RUN'
+let orderIdentityCandidateWorkOrderId = null
 let selectedWorkOrderIsCurrent = () => false
 let catalogSkuRequestCount = 0
 const responseCounts = {
@@ -88,6 +99,70 @@ const responseCounts = {
   recognizedQuotationLines: 0,
   unsupportedQuotationGroups: 0,
   quotesWithPdfField: 0,
+  sampledWorkOrderOrderLineage: {
+    state: 'NOT_RUN',
+    workOrdersRead: 0,
+    workOrdersWithOrders: 0,
+    workOrdersWithSkuAndSpuLine: 0,
+    orderRows: 0,
+    distinctMaterialSpus: 0,
+    distinctSkuIds: 0,
+    distinctMaterialSpuCodes: 0,
+    distinctMaterialSkuCodes: 0,
+    materialLinesWithBothIds: 0,
+    materialLinesWithBothCodes: 0,
+    materialLinesWithSpuIdAndSkuCode: 0,
+    sameLineSpuIdSkuCodePairs: 0,
+    selectedCatalogSpuMatches: 0,
+    selectedCatalogCompletedSkuSpuReads: 0,
+    currentSkuRowsForOrderSpus: 0,
+    persistedSkuIdsFoundInCurrentRows: 0,
+  },
+  sampledOrderMaterialLineage: {
+    state: 'NOT_RUN',
+    orderRows: 0,
+    distinctMaterialSpus: 0,
+    distinctSkuIds: 0,
+    distinctMaterialSpuCodes: 0,
+    distinctMaterialSkuCodes: 0,
+    materialLinesWithBothIds: 0,
+    materialLinesWithBothCodes: 0,
+    materialLinesWithSpuIdAndSkuCode: 0,
+    sameLineSpuIdSkuCodePairs: 0,
+    catalogSpuMatches: 0,
+    attemptedSkuSpuReads: 0,
+    completedSkuSpuReads: 0,
+    currentSkuRowsForOrderSpus: 0,
+    persistedSkuIdsFoundInCurrentRows: 0,
+  },
+  orderIdentityDiscovery: {
+    state: 'NOT_RUN',
+    workOrdersSearched: 0,
+    orderListPagesRead: 0,
+    orderRowsRead: 0,
+    workOrdersWithOrders: 0,
+    workOrdersWithSkuAndSpuLine: 0,
+    pairedMaterialSpus: 0,
+    pairedSkuIds: 0,
+    pairedMaterialSpuCodes: 0,
+    pairedMaterialSkuCodes: 0,
+    materialLinesWithBothCodes: 0,
+    materialLinesWithSpuIdAndSkuCode: 0,
+    uniqueSpuIdsWithSkuCodes: 0,
+    uniqueSkuCodesWithSpuIds: 0,
+    sameLineSpuIdSkuCodePairs: 0,
+    spuIdsWithSkuCodesInSelectedCatalog: 0,
+    spuIdsWithSkuCodesWithCompletedSkuRead: 0,
+    currentSkuRowsForSpuIdSkuCodePairs: 0,
+    materialSkuCodesFoundInCurrentRows: 0,
+    pairedSpusInSelectedCatalog: 0,
+    pairedSpusWithCompletedSkuRead: 0,
+    currentSkuRowsForPairedSpus: 0,
+    pairedSkuIdsFoundInCurrentRows: 0,
+    workOrderPagesReadForSearch: 0,
+    orderListsTruncatedAtThree: 0,
+    matchedOrderIsCurrentPlaceOrder: false,
+  },
 }
 
 function isApprovedWorkOrderQuoteQuery(request) {
@@ -106,7 +181,7 @@ function isApprovedWorkOrderQuoteQuery(request) {
   return keys.length === expectedKeys.length
     && keys.every((key, index) => key === expectedKeys[index])
     && body.get('page') === '1'
-    && body.get('rows') === '1'
+    && body.get('rows') === '3'
     && body.get('sortField') === 'createTime'
     && body.get('sortOrder') === 'desc'
     && body.get('is:type|integer#and') === '1'
@@ -152,7 +227,7 @@ function recordSafeRequest(url, request, apiBaseUrl) {
     return 'read'
   }
   if (relativePath === 'basic/order/query') {
-    if (!isApprovedWorkOrderQuoteQuery(request)) return null
+    if (routeCounts.quotationList >= MAX_QUOTATION_LIST_READS || !isApprovedWorkOrderQuoteQuery(request)) return null
     routeCounts.quotationList += 1
     return 'read'
   }
@@ -462,7 +537,10 @@ async function readSelectableSkuCatalog(catalogApi, context, directMaterialSpuId
       query.ids.forEach(id => failedSpuIds.add(id))
       return
     }
-    query.ids.forEach(id => attemptedSpuIds.add(id))
+    query.ids.forEach(id => {
+      attemptedSpuIds.add(id)
+      attemptedSkuSpuIds.add(id)
+    })
     summary.attemptedSpus = attemptedSpuIds.size
     const pagesBefore = routeCounts.materialSkuList
     const result = await catalogApi.listMaterialSkuVariants(context, query.route, query.ids, saleFieldNames)
@@ -487,15 +565,250 @@ async function readSelectableSkuCatalog(catalogApi, context, directMaterialSpuId
       if (!previousSpuId) {
         seenSkuIds.set(row.id, row.spuId)
         summary.activeSkuRows += 1
+        activeSkuRows.push({ skuId: row.id, spuId: row.spuId, ...(row.code ? { code: row.code } : {}) })
       }
     }
     query.ids.forEach(id => succeededSpuIds.add(id))
+    query.ids.forEach(id => completedSkuSpuIds.add(id))
     summary.succeededSpus = succeededSpuIds.size
   }
   summary.failedSpus = failedSpuIds.size
   summary.emptySpus = [...succeededSpuIds].filter(id => !foundSpuIds.has(id)).length
   summary.complete = true
   summary.reason = 'ALL_ROLE_LISTED_MATERIAL_AND_PACKAGE_SPUS_READ'
+}
+
+function orderMaterialLineage(lines, target) {
+  for (const line of lines) {
+    if (line.kind === 'material') {
+      if (line.identity.spuId) target.spuIds.add(line.identity.spuId)
+      if (line.identity.skuId) target.skuIds.add(line.identity.skuId)
+      if (line.identity.spuId && line.identity.skuId) {
+        target.linesWithBothIds += 1
+        target.pairedSpuIds.add(line.identity.spuId)
+        target.pairedSkuIds.add(line.identity.skuId)
+      }
+      if (line.identity.spuCode) target.spuCodes.add(line.identity.spuCode)
+      if (line.identity.skuCode) target.skuCodes.add(line.identity.skuCode)
+      if (line.identity.spuCode && line.identity.skuCode) {
+        target.linesWithBothCodes += 1
+        target.pairedSpuCodes.add(line.identity.spuCode)
+        target.pairedSkuCodes.add(line.identity.skuCode)
+      }
+      if (line.identity.spuId && line.identity.skuCode) {
+        target.linesWithSpuIdAndSkuCode += 1
+        target.spuIdsWithSkuCodes.add(line.identity.spuId)
+        target.skuCodesWithSpuIds.add(line.identity.skuCode)
+        target.spuIdSkuCodePairs.add(JSON.stringify([line.identity.spuId, line.identity.skuCode]))
+      }
+    }
+    orderMaterialLineage(line.children, target)
+  }
+}
+
+function recordWorkOrderOrderLineage(workOrderId, page) {
+  const existing = orderLineageByWorkOrder.get(workOrderId) ?? {
+    orderRows: 0,
+    orderIds: new Set(),
+    totalCount: undefined,
+    duplicateOrderIds: false,
+    inconsistentTotalCount: false,
+    spuIds: new Set(),
+    skuIds: new Set(),
+    pairedSpuIds: new Set(),
+    pairedSkuIds: new Set(),
+    spuCodes: new Set(),
+    skuCodes: new Set(),
+    pairedSpuCodes: new Set(),
+    pairedSkuCodes: new Set(),
+    linesWithBothIds: 0,
+    linesWithBothCodes: 0,
+    spuIdsWithSkuCodes: new Set(),
+    skuCodesWithSpuIds: new Set(),
+    spuIdSkuCodePairs: new Set(),
+    linesWithSpuIdAndSkuCode: 0,
+    truncated: false,
+  }
+  if (page.totalCount !== undefined) {
+    if (existing.totalCount !== undefined && existing.totalCount !== page.totalCount) {
+      existing.inconsistentTotalCount = true
+    }
+    existing.totalCount = page.totalCount
+  }
+  for (const quote of page.items) {
+    if (quote.serviceAppointmentId !== workOrderId) continue
+    if (existing.orderIds.has(quote.id)) {
+      existing.duplicateOrderIds = true
+      continue
+    }
+    existing.orderIds.add(quote.id)
+    existing.orderRows += 1
+    for (const group of quote.groups) orderMaterialLineage(group.lines, existing)
+  }
+  existing.truncated = existing.totalCount !== undefined
+    ? existing.totalCount > existing.orderIds.size
+    : page.items.length >= 3
+  orderLineageByWorkOrder.set(workOrderId, existing)
+  return existing
+}
+
+function recordWorkOrderOrderRead(workOrderId, result) {
+  if (result.state === 'succeeded' && result.data) {
+    const lineage = recordWorkOrderOrderLineage(workOrderId, result.data)
+    orderReadStatesByWorkOrder.set(workOrderId,
+      lineage.duplicateOrderIds || lineage.inconsistentTotalCount ? 'FAILED_TERMINAL' : operationState(result))
+  } else {
+    orderReadStatesByWorkOrder.set(workOrderId, operationState(result))
+  }
+}
+
+function projectOrderIdentityDiscovery() {
+  const identityDiscovery = responseCounts.orderIdentityDiscovery
+  const pairedSpuIds = new Set()
+  const pairedSkuIds = new Set()
+  const pairedSpuCodes = new Set()
+  const pairedSkuCodes = new Set()
+  const spuIdsWithSkuCodes = new Set()
+  const skuCodesWithSpuIds = new Set()
+  const spuIdSkuCodePairs = new Set()
+  let orderRows = 0
+  let workOrdersWithOrders = 0
+  let workOrdersWithSkuAndSpuLine = 0
+  let materialLinesWithBothCodes = 0
+  let materialLinesWithSpuIdAndSkuCode = 0
+  let truncatedOrderLists = 0
+  let orderListPagesRead = 0
+  for (const lineageItem of orderLineageByWorkOrder.values()) {
+    orderListPagesRead += 1
+    orderRows += lineageItem.orderRows
+    if (lineageItem.orderRows > 0) workOrdersWithOrders += 1
+    if (lineageItem.linesWithBothIds > 0) workOrdersWithSkuAndSpuLine += 1
+    materialLinesWithBothCodes += lineageItem.linesWithBothCodes
+    materialLinesWithSpuIdAndSkuCode += lineageItem.linesWithSpuIdAndSkuCode
+    if (lineageItem.truncated) truncatedOrderLists += 1
+    lineageItem.pairedSpuIds.forEach(id => pairedSpuIds.add(id))
+    lineageItem.pairedSkuIds.forEach(id => pairedSkuIds.add(id))
+    lineageItem.pairedSpuCodes.forEach(code => pairedSpuCodes.add(code))
+    lineageItem.pairedSkuCodes.forEach(code => pairedSkuCodes.add(code))
+    lineageItem.spuIdsWithSkuCodes.forEach(id => spuIdsWithSkuCodes.add(id))
+    lineageItem.skuCodesWithSpuIds.forEach(code => skuCodesWithSpuIds.add(code))
+    lineageItem.spuIdSkuCodePairs.forEach(pair => spuIdSkuCodePairs.add(pair))
+  }
+  identityDiscovery.state = orderIdentitySearchState
+  identityDiscovery.workOrdersSearched = orderReadStatesByWorkOrder.size
+  identityDiscovery.orderListPagesRead = orderListPagesRead
+  identityDiscovery.orderRowsRead = orderRows
+  identityDiscovery.workOrdersWithOrders = workOrdersWithOrders
+  identityDiscovery.workOrdersWithSkuAndSpuLine = workOrdersWithSkuAndSpuLine
+  identityDiscovery.pairedMaterialSpus = pairedSpuIds.size
+  identityDiscovery.pairedSkuIds = pairedSkuIds.size
+  identityDiscovery.pairedMaterialSpuCodes = pairedSpuCodes.size
+  identityDiscovery.pairedMaterialSkuCodes = pairedSkuCodes.size
+  identityDiscovery.materialLinesWithBothCodes = materialLinesWithBothCodes
+  identityDiscovery.materialLinesWithSpuIdAndSkuCode = materialLinesWithSpuIdAndSkuCode
+  identityDiscovery.uniqueSpuIdsWithSkuCodes = spuIdsWithSkuCodes.size
+  identityDiscovery.uniqueSkuCodesWithSpuIds = skuCodesWithSpuIds.size
+  identityDiscovery.sameLineSpuIdSkuCodePairs = spuIdSkuCodePairs.size
+  identityDiscovery.orderListsTruncatedAtThree = truncatedOrderLists
+  identityDiscovery.matchedOrderIsCurrentPlaceOrder = Boolean(orderIdentityCandidateWorkOrderId
+    && orderIdentityCandidateWorkOrderId === selectedCatalogWorkOrderId)
+  const candidate = orderIdentityCandidateWorkOrderId
+    ? orderLineageByWorkOrder.get(orderIdentityCandidateWorkOrderId)
+    : undefined
+  if (candidate) {
+    identityDiscovery.pairedSpusInSelectedCatalog = [...candidate.pairedSpuIds].filter(id => listedCatalogSpuIds.has(id)).length
+    identityDiscovery.pairedSpusWithCompletedSkuRead = [...candidate.pairedSpuIds].filter(id => completedSkuSpuIds.has(id)).length
+    identityDiscovery.currentSkuRowsForPairedSpus = activeSkuRows.filter(row => candidate.pairedSpuIds.has(row.spuId)).length
+    identityDiscovery.pairedSkuIdsFoundInCurrentRows = activeSkuRows.filter(row => candidate.pairedSkuIds.has(row.skuId)).length
+  }
+  identityDiscovery.spuIdsWithSkuCodesInSelectedCatalog = [...spuIdsWithSkuCodes].filter(id => listedCatalogSpuIds.has(id)).length
+  identityDiscovery.spuIdsWithSkuCodesWithCompletedSkuRead = [...spuIdsWithSkuCodes].filter(id => completedSkuSpuIds.has(id)).length
+  identityDiscovery.currentSkuRowsForSpuIdSkuCodePairs = activeSkuRows.filter(row => spuIdsWithSkuCodes.has(row.spuId)).length
+  identityDiscovery.materialSkuCodesFoundInCurrentRows = [...pairedSkuCodes].filter(code =>
+    activeSkuRows.some(row => row.code === code)).length
+}
+
+function projectSelectedWorkOrderOrderLineage() {
+  projectOrderIdentityDiscovery()
+  const sampled = responseCounts.sampledWorkOrderOrderLineage
+  const sampledSpuIds = new Set()
+  const sampledSkuIds = new Set()
+  let sampledOrderRows = 0
+  let workOrdersWithOrders = 0
+  let workOrdersWithSkuAndSpuLine = 0
+  let materialLinesWithBothIds = 0
+  const sampledSpuCodes = new Set()
+  const sampledSkuCodes = new Set()
+  let materialLinesWithBothCodes = 0
+  const sampledSpuIdsWithSkuCodes = new Set()
+  const sampledSkuCodesWithSpuIds = new Set()
+  const sampledSpuIdSkuCodePairs = new Set()
+  let materialLinesWithSpuIdAndSkuCode = 0
+  for (const [workOrderId, readState] of orderReadStatesByWorkOrder) {
+    if (readState !== 'SUCCEEDED') continue
+    const lineage = orderLineageByWorkOrder.get(workOrderId)
+    if (!lineage) continue
+    sampledOrderRows += lineage.orderRows
+    if (lineage.orderRows > 0) workOrdersWithOrders += 1
+    if (lineage.linesWithBothIds > 0) workOrdersWithSkuAndSpuLine += 1
+    materialLinesWithBothIds += lineage.linesWithBothIds
+    lineage.spuIds.forEach(id => sampledSpuIds.add(id))
+    lineage.skuIds.forEach(id => sampledSkuIds.add(id))
+    lineage.spuCodes.forEach(code => sampledSpuCodes.add(code))
+    lineage.skuCodes.forEach(code => sampledSkuCodes.add(code))
+    materialLinesWithBothCodes += lineage.linesWithBothCodes
+    materialLinesWithSpuIdAndSkuCode += lineage.linesWithSpuIdAndSkuCode
+    lineage.spuIdsWithSkuCodes.forEach(id => sampledSpuIdsWithSkuCodes.add(id))
+    lineage.skuCodesWithSpuIds.forEach(code => sampledSkuCodesWithSpuIds.add(code))
+    lineage.spuIdSkuCodePairs.forEach(pair => sampledSpuIdSkuCodePairs.add(pair))
+  }
+  sampled.state = [...orderReadStatesByWorkOrder.values()].every(state => state === 'SUCCEEDED')
+    ? 'SUCCEEDED' : orderReadStatesByWorkOrder.size > 0 ? 'PARTIAL' : 'NOT_RUN'
+  sampled.workOrdersRead = orderReadStatesByWorkOrder.size
+  sampled.workOrdersWithOrders = workOrdersWithOrders
+  sampled.workOrdersWithSkuAndSpuLine = workOrdersWithSkuAndSpuLine
+  sampled.orderRows = sampledOrderRows
+  sampled.distinctMaterialSpus = sampledSpuIds.size
+  sampled.distinctSkuIds = sampledSkuIds.size
+  sampled.distinctMaterialSpuCodes = sampledSpuCodes.size
+  sampled.distinctMaterialSkuCodes = sampledSkuCodes.size
+  sampled.materialLinesWithBothIds = materialLinesWithBothIds
+  sampled.materialLinesWithBothCodes = materialLinesWithBothCodes
+  sampled.materialLinesWithSpuIdAndSkuCode = materialLinesWithSpuIdAndSkuCode
+  sampled.sameLineSpuIdSkuCodePairs = sampledSpuIdSkuCodePairs.size
+  sampled.selectedCatalogSpuMatches = [...sampledSpuIds].filter(id => listedCatalogSpuIds.has(id)).length
+  sampled.selectedCatalogCompletedSkuSpuReads = [...sampledSpuIds].filter(id => completedSkuSpuIds.has(id)).length
+  sampled.currentSkuRowsForOrderSpus = activeSkuRows.filter(row => sampledSpuIds.has(row.spuId)).length
+  sampled.persistedSkuIdsFoundInCurrentRows = activeSkuRows.filter(row => sampledSkuIds.has(row.skuId)).length
+
+  const report = responseCounts.sampledOrderMaterialLineage
+  if (!selectedCatalogWorkOrderId) return
+  const readState = orderReadStatesByWorkOrder.get(selectedCatalogWorkOrderId)
+  if (readState !== 'SUCCEEDED') {
+    if (readState) report.state = readState
+    return
+  }
+  const lineage = orderLineageByWorkOrder.get(selectedCatalogWorkOrderId)
+  if (!lineage) {
+    report.state = 'SUCCEEDED_EMPTY'
+    return
+  }
+  report.state = lineage.orderRows > 0 ? 'SUCCEEDED_WITH_ORDER' : 'SUCCEEDED_EMPTY'
+  report.orderRows = lineage.orderRows
+  report.distinctMaterialSpus = lineage.spuIds.size
+  report.distinctSkuIds = lineage.skuIds.size
+  report.distinctMaterialSpuCodes = lineage.spuCodes.size
+  report.distinctMaterialSkuCodes = lineage.skuCodes.size
+  report.materialLinesWithBothIds = lineage.linesWithBothIds
+  report.materialLinesWithBothCodes = lineage.linesWithBothCodes
+  report.materialLinesWithSpuIdAndSkuCode = lineage.linesWithSpuIdAndSkuCode
+  report.sameLineSpuIdSkuCodePairs = lineage.spuIdSkuCodePairs.size
+  report.catalogSpuMatches = [...lineage.spuIds].filter(id => listedCatalogSpuIds.has(id)).length
+  report.attemptedSkuSpuReads = [...lineage.spuIds].filter(id => attemptedSkuSpuIds.has(id)).length
+  report.completedSkuSpuReads = [...lineage.spuIds].filter(id => completedSkuSpuIds.has(id)).length
+  report.currentSkuRowsForOrderSpus = activeSkuRows.filter(row => lineage.spuIds.has(row.spuId)).length
+  report.persistedSkuIdsFoundInCurrentRows = activeSkuRows.filter(row => lineage.skuIds.has(row.skuId)).length
+  if (lineage.orderRows === 0) report.state = 'SUCCEEDED_EMPTY'
 }
 
 let getCurrentAuthIdentity = () => null
@@ -616,12 +929,12 @@ async function run() {
       getMockActor: () => ({ userId: session.user.id, ...(session.currentRole ? { roleId: session.currentRole.id } : {}) }),
       isOrderWorkOrderListedForCurrentSession: (workOrderId) =>
         listedWorkOrderIds.has(workOrderId)
-          && technicianApi?.isWorkOrderListedForCurrentSession?.(workOrderId) === true,
+          && workOrderAuthorityById.get(workOrderId)?.isWorkOrderListedForCurrentSession?.(workOrderId) === true,
       getOrderReadAuthorizationIdentity: () => getCurrentAuthIdentity(),
       request,
       timeoutMs: 20000,
     })
-    technicianApi = createRoleScopedTechnicianApiReadAdapter(
+    const createTechnicianApi = () => createRoleScopedTechnicianApiReadAdapter(
       apiTransport,
       () => auth.getCurrentSession()?.currentRole?.id ?? null,
       {
@@ -638,6 +951,7 @@ async function run() {
         },
       },
     )
+    technicianApi = createTechnicianApi()
     catalogApi = createQuotationCatalogReadAdapter(
       apiTransport,
       () => {
@@ -656,16 +970,22 @@ async function run() {
     const orderApi = createQuotationOrderReadAdapter(
       apiTransport,
       (workOrderId) => listedWorkOrderIds.has(workOrderId)
-        && technicianApi.isWorkOrderListedForCurrentSession?.(workOrderId) === true,
+        && workOrderAuthorityById.get(workOrderId)?.isWorkOrderListedForCurrentSession?.(workOrderId) === true
+        && !authIdentityChanged(),
     )
 
     stage = 'work_order_list_read'
     const workOrders = await technicianApi.listWorkOrders({ page: 1, pageSize: 3 })
     responseCounts.workOrderListRows = workOrders.state === 'succeeded' && workOrders.data ? workOrders.data.items.length : 0
     responseCounts.workOrderPagesRead = workOrders.state === 'succeeded' && workOrders.data ? 1 : 0
+    let lastWorkOrderPageRead = workOrders.state === 'succeeded' && workOrders.data ? 1 : 0
     const firstPageBounded = Boolean(workOrders.data && workOrders.data.items.length <= 3)
     if (firstPageBounded) {
-      for (const workOrder of workOrders.data?.items ?? []) listedWorkOrderIds.add(String(workOrder.id))
+      for (const workOrder of workOrders.data?.items ?? []) {
+        const id = String(workOrder.id)
+        listedWorkOrderIds.add(id)
+        workOrderAuthorityById.set(id, technicianApi)
+      }
     }
 
     const details = []
@@ -722,19 +1042,27 @@ async function run() {
 
     const hasCatalogIdentity = (lines) => lines.some((line) => Boolean(line.identity.skuId || line.identity.spuId) || hasCatalogIdentity(line.children))
     const countLines = (lines) => lines.reduce((count, line) => count + 1 + countLines(line.children), 0)
+    const recordQuotationRead = (workOrderId, quotes) => {
+      recordWorkOrderOrderRead(workOrderId, quotes)
+      if (quotes.state !== 'succeeded' || !quotes.data) return
+      responseCounts.workOrderScopedTypeOneQuoteRows += quotes.data.items.length
+      responseCounts.quotesMatchingSampledWorkOrders += quotes.data.items.filter((quote) => quote.serviceAppointmentId === workOrderId).length
+      responseCounts.quotesWithSkuOrSpuIdentity += quotes.data.items.filter((quote) => quote.groups.some((group) => hasCatalogIdentity(group.lines))).length
+      responseCounts.quotesWithGroupedContent += quotes.data.items.filter((quote) => quote.groups.length > 0).length
+      responseCounts.recognizedQuotationGroups += quotes.data.items.reduce((count, quote) => count + quote.groups.filter((group) => group.contentSupported).length, 0)
+      responseCounts.unsupportedQuotationGroups += quotes.data.items.reduce((count, quote) => count + quote.groups.filter((group) => !group.contentSupported).length, 0)
+      responseCounts.recognizedQuotationLines += quotes.data.items.reduce((count, quote) => count + quote.groups.reduce((groupCount, group) => groupCount + countLines(group.lines), 0), 0)
+      responseCounts.quotesWithPdfField += quotes.data.items.filter((quote) => quote.pdfState === 'present_no_access').length
+    }
+    const pairedSkuAndSpuLine = (workOrderId) => {
+      const lineage = orderLineageByWorkOrder.get(workOrderId)
+      return Boolean(lineage && lineage.linesWithBothIds > 0)
+    }
     for (const [index, workOrder] of pageOneWorkOrders.entries()) {
       stage = `work_order_scoped_quotation_read_${index + 1}`
-      const quotes = await orderApi.listTypeOneOrdersForWorkOrder(String(workOrder.id), 1)
-      if (quotes.state === 'succeeded' && quotes.data) {
-        responseCounts.workOrderScopedTypeOneQuoteRows += quotes.data.items.length
-        responseCounts.quotesMatchingSampledWorkOrders += quotes.data.items.filter((quote) => quote.serviceAppointmentId === String(workOrder.id)).length
-        responseCounts.quotesWithSkuOrSpuIdentity += quotes.data.items.filter((quote) => quote.groups.some((group) => hasCatalogIdentity(group.lines))).length
-        responseCounts.quotesWithGroupedContent += quotes.data.items.filter((quote) => quote.groups.length > 0).length
-        responseCounts.recognizedQuotationGroups += quotes.data.items.reduce((count, quote) => count + quote.groups.filter((group) => group.contentSupported).length, 0)
-        responseCounts.unsupportedQuotationGroups += quotes.data.items.reduce((count, quote) => count + quote.groups.filter((group) => !group.contentSupported).length, 0)
-        responseCounts.recognizedQuotationLines += quotes.data.items.reduce((count, quote) => count + quote.groups.reduce((groupCount, group) => groupCount + countLines(group.lines), 0), 0)
-        responseCounts.quotesWithPdfField += quotes.data.items.filter((quote) => quote.pdfState === 'present_no_access').length
-      }
+      const workOrderId = String(workOrder.id)
+      const quotes = await orderApi.listTypeOneOrdersForWorkOrder(workOrderId, 3)
+      recordQuotationRead(workOrderId, quotes)
     }
 
     const firstPageExhausted = Boolean(workOrders.data && (
@@ -742,6 +1070,7 @@ async function run() {
         || workOrders.data.items.length > 0 && workOrders.data.items.length < 3 && workOrders.data.totalCount === undefined
         || workOrders.data.totalCount !== undefined && workOrders.data.totalCount <= 3
     ))
+    let roleVisibleWorkOrdersExhausted = firstPageExhausted
     if (workOrders.state === 'succeeded' && workOrders.data?.items.length > 3) {
       discoveryState = 'WORK_ORDER_PAGE_EXCEEDED_BOUND'
     } else if (workOrders.state === 'succeeded' && firstPageExhausted) {
@@ -751,23 +1080,7 @@ async function run() {
       && workOrders.data && !firstPageExhausted && workOrders.data.items.length <= 3
       && page <= MAX_WORK_ORDER_PAGES; page += 1) {
       stage = `role_scoped_work_order_page_${page}`
-      technicianApi = createRoleScopedTechnicianApiReadAdapter(
-        apiTransport,
-        () => auth.getCurrentSession()?.currentRole?.id ?? null,
-        {
-          cascadeTenantId: runtime.value.authWireConfig.tenant,
-          codeTenantId: runtime.value.authWireConfig.tenant,
-          getReadAuthorizationScope: () => {
-            const current = auth.getCurrentSession()
-            return current ? {
-              sessionRef: current.sessionRef,
-              userId: current.user.id,
-              roleId: current.currentRole?.id ?? null,
-              roleVersion: current.roleVersion ?? null,
-            } : null
-          },
-        },
-      )
+      technicianApi = createTechnicianApi()
       const pageResult = await technicianApi.listWorkOrders({ page, pageSize: 3 })
       if (pageResult.state !== 'succeeded' || !pageResult.data || authIdentityChanged()) {
         discoveryState = pageResult.state === 'failed_terminal' ? 'WORK_ORDER_READ_FAILED' : 'WORK_ORDER_READ_UNVERIFIED'
@@ -775,6 +1088,7 @@ async function run() {
       }
       responseCounts.workOrderPagesRead += 1
       responseCounts.workOrderListRows += pageResult.data.items.length
+      lastWorkOrderPageRead = page
       if (pageResult.data.items.length > 3) {
         discoveryState = 'WORK_ORDER_PAGE_EXCEEDED_BOUND'
         break
@@ -787,9 +1101,11 @@ async function run() {
       for (const id of pageIds) {
         listedWorkOrderIds.add(id)
         selectedWorkOrderIds.add(id)
+        workOrderAuthorityById.set(id, technicianApi)
       }
       if (pageResult.data.items.length === 0) {
         discoveryState = 'ROLE_VISIBLE_WORK_ORDERS_EXHAUSTED'
+        roleVisibleWorkOrdersExhausted = true
         break
       }
       let detailReadFailed = false
@@ -823,9 +1139,20 @@ async function run() {
       if ((totalCount !== undefined && page * 3 >= totalCount)
         || (totalCount === undefined && pageResult.data.items.length < 3)) {
         discoveryState = 'ROLE_VISIBLE_WORK_ORDERS_EXHAUSTED'
+        roleVisibleWorkOrdersExhausted = true
         break
       }
       if (page === MAX_WORK_ORDER_PAGES) discoveryState = 'WORK_ORDER_PAGE_LIMIT_REACHED'
+    }
+
+    if (selectedCatalogWorkOrderId && !orderReadStatesByWorkOrder.has(selectedCatalogWorkOrderId)) {
+      stage = 'current_place_order_workorder_quotation_read'
+      if (authIdentityChanged() || !selectedWorkOrderIsCurrent()) {
+        orderReadStatesByWorkOrder.set(selectedCatalogWorkOrderId, 'FAILED_TERMINAL')
+      } else {
+        const quotes = await orderApi.listTypeOneOrdersForWorkOrder(selectedCatalogWorkOrderId, 3)
+        recordQuotationRead(selectedCatalogWorkOrderId, quotes)
+      }
     }
 
     if (selectedCatalogContext) {
@@ -914,12 +1241,137 @@ async function run() {
       }
     }
 
+    if (!selectedCatalogContext) {
+      orderIdentitySearchState = 'NO_SELECTED_PLACE_ORDER_CONTEXT'
+    } else {
+      orderIdentitySearchState = 'SEARCHING_ROLE_VISIBLE_WORK_ORDERS'
+      for (const [workOrderId, readState] of orderReadStatesByWorkOrder) {
+        if (readState === 'SUCCEEDED' && pairedSkuAndSpuLine(workOrderId)) {
+          orderIdentityCandidateWorkOrderId = workOrderId
+          orderIdentitySearchState = 'MATCH_FOUND'
+          break
+        }
+      }
+
+      let searchStopState = null
+      const readWorkOrderOrders = async (workOrderId) => {
+        if (authIdentityChanged()) {
+          searchStopState = 'AUTHORIZATION_IDENTITY_CHANGED'
+          return
+        }
+        if (!listedWorkOrderIds.has(workOrderId)
+          || workOrderAuthorityById.get(workOrderId)?.isWorkOrderListedForCurrentSession?.(workOrderId) !== true) {
+          searchStopState = 'ROLE_LIST_AUTHORIZATION_UNAVAILABLE'
+          return
+        }
+        if (orderReadStatesByWorkOrder.size >= MAX_ORDER_SEARCH_WORK_ORDERS) {
+          searchStopState = 'WORK_ORDER_CAP_REACHED'
+          return
+        }
+        stage = `role_scoped_type_one_order_search_${orderReadStatesByWorkOrder.size + 1}`
+        const result = await orderApi.listTypeOneOrdersForWorkOrder(workOrderId, 3)
+        recordQuotationRead(workOrderId, result)
+        if (authIdentityChanged()) {
+          searchStopState = 'AUTHORIZATION_IDENTITY_CHANGED'
+          return
+        }
+        if (result.state === 'succeeded' && result.data && pairedSkuAndSpuLine(workOrderId)) {
+          orderIdentityCandidateWorkOrderId = workOrderId
+          orderIdentitySearchState = 'MATCH_FOUND'
+        }
+      }
+
+      if (!orderIdentityCandidateWorkOrderId) {
+        for (const workOrderId of selectedWorkOrderIds) {
+          if (orderIdentityCandidateWorkOrderId || searchStopState) break
+          if (orderReadStatesByWorkOrder.has(workOrderId)) continue
+          await readWorkOrderOrders(workOrderId)
+        }
+      }
+
+      let searchTechnicianApi = null
+      for (let page = lastWorkOrderPageRead + 1; !orderIdentityCandidateWorkOrderId
+        && !searchStopState && !roleVisibleWorkOrdersExhausted
+        && orderReadStatesByWorkOrder.size < MAX_ORDER_SEARCH_WORK_ORDERS
+        && page <= MAX_ORDER_SEARCH_PAGES; page += 1) {
+        if (authIdentityChanged()) {
+          searchStopState = 'AUTHORIZATION_IDENTITY_CHANGED'
+          break
+        }
+        if (!searchTechnicianApi) searchTechnicianApi = createTechnicianApi()
+        stage = `role_scoped_work_order_identity_page_${page}`
+        const pageResult = await searchTechnicianApi.listWorkOrders({ page, pageSize: 3 })
+        if (pageResult.state !== 'succeeded' || !pageResult.data || authIdentityChanged()) {
+          searchStopState = pageResult.state === 'failed_terminal'
+            ? 'WORK_ORDER_LIST_READ_FAILED' : 'WORK_ORDER_LIST_READ_UNVERIFIED'
+          break
+        }
+        responseCounts.workOrderPagesRead += 1
+        responseCounts.workOrderListRows += pageResult.data.items.length
+        responseCounts.orderIdentityDiscovery.workOrderPagesReadForSearch += 1
+        lastWorkOrderPageRead = page
+        if ((pageResult.data.page !== undefined && pageResult.data.page !== page)
+          || (pageResult.data.pageSize !== undefined && pageResult.data.pageSize > 3)
+          || pageResult.data.items.length > 3) {
+          searchStopState = 'WORK_ORDER_PAGE_RESPONSE_MISMATCH'
+          break
+        }
+        const pageIds = pageResult.data.items.map(item => String(item.id))
+        if (pageIds.some((id, index) => pageIds.indexOf(id) !== index
+          || selectedWorkOrderIds.has(id) || workOrderPageIds.has(id))) {
+          searchStopState = 'WORK_ORDER_PAGINATION_DUPLICATE'
+          break
+        }
+        for (const id of pageIds) {
+          listedWorkOrderIds.add(id)
+          selectedWorkOrderIds.add(id)
+          workOrderAuthorityById.set(id, searchTechnicianApi)
+        }
+        if (pageIds.length === 0) {
+          roleVisibleWorkOrdersExhausted = true
+          break
+        }
+        for (const workOrderId of pageIds) {
+          if (orderIdentityCandidateWorkOrderId || searchStopState
+            || orderReadStatesByWorkOrder.size >= MAX_ORDER_SEARCH_WORK_ORDERS) break
+          await readWorkOrderOrders(workOrderId)
+        }
+        if (orderIdentityCandidateWorkOrderId || searchStopState) break
+        const totalCount = pageResult.data.totalCount
+        if ((totalCount !== undefined && page * 3 >= totalCount)
+          || (totalCount === undefined && pageResult.data.items.length < 3)) {
+          roleVisibleWorkOrdersExhausted = true
+          break
+        }
+      }
+
+      if (orderIdentityCandidateWorkOrderId) {
+        orderIdentitySearchState = 'MATCH_FOUND'
+      } else if (searchStopState) {
+        orderIdentitySearchState = searchStopState
+      } else if ([...orderReadStatesByWorkOrder.values()].some(state => state !== 'SUCCEEDED')) {
+        orderIdentitySearchState = 'ORDER_READ_INCOMPLETE'
+      } else if ([...orderLineageByWorkOrder.values()].some(lineage => lineage.truncated)) {
+        orderIdentitySearchState = 'ORDER_LIST_PAGE_LIMIT_REACHED'
+      } else if (roleVisibleWorkOrdersExhausted) {
+        orderIdentitySearchState = 'NO_SKU_AND_SPU_ORDER_IN_ROLE_VISIBLE_SCOPE'
+      } else if (orderReadStatesByWorkOrder.size >= MAX_ORDER_SEARCH_WORK_ORDERS) {
+        orderIdentitySearchState = 'WORK_ORDER_CAP_REACHED'
+      } else {
+        orderIdentitySearchState = 'WORK_ORDER_PAGE_CAP_REACHED'
+      }
+    }
+
+    projectSelectedWorkOrderOrderLineage()
+
     const auditComplete = responseCounts.catalogContextVerified
       && Object.values(responseCounts.catalogItemsByKind).every(result => result.complete)
       && responseCounts.packageDetails.complete
       && responseCounts.catalogFilterOptions.state === 'SUCCEEDED'
       && responseCounts.materialSalesAttributes.state === 'SUCCEEDED'
       && responseCounts.selectableSkuCatalog.complete
+      && ['SUCCEEDED_WITH_ORDER', 'SUCCEEDED_EMPTY'].includes(responseCounts.sampledOrderMaterialLineage.state)
+      && ['MATCH_FOUND', 'NO_SKU_AND_SPU_ORDER_IN_ROLE_VISIBLE_SCOPE'].includes(orderIdentitySearchState)
       && blockedUnexpectedNetworkRequests === 0
     console.log(JSON.stringify({
       status: auditComplete ? 'PROD_READ_ONLY_CHAIN_COMPLETE' : 'PROD_READ_ONLY_CHAIN_INCOMPLETE',

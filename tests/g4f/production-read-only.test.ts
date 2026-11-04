@@ -160,6 +160,15 @@ describe('Production read-only profile', () => {
       method: 'POST',
       path: 'basic/order/query',
       body: {
+        page: 2, rows: 3, sortField: 'createTime', sortOrder: 'desc',
+        'is:serviceAppointmentId|string#and': 'synthetic-listed-work-order',
+        'is:type|integer#and': 1,
+      },
+    })).rejects.toMatchObject({ category: 'unsupported_capability' })
+    await expect(transport.execute({
+      method: 'POST',
+      path: 'basic/order/query',
+      body: {
         page: 1, rows: 4, sortField: 'createTime', sortOrder: 'desc',
         'is:serviceAppointmentId|string#and': 'synthetic-listed-work-order',
         'is:type|integer#and': 1,
