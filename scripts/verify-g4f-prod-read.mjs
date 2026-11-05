@@ -6,6 +6,11 @@ import {
   isAllowedR1SelectableCatalogSkuPageRequest,
   isAllowedR1SelectablePackageSkuPageRequest,
 } from './r1-selectable-catalog-read-guard.mjs'
+import {
+  createPlaceOrderCatalogContextSelector,
+  parseCatalogContextAuditArgs,
+} from './g4f-prod-read-context-scope.mjs'
+import { workOrderOrderLineageReadState } from './g4f-prod-read-summary.mjs'
 
 const MAX_WORK_ORDER_PAGES = 1000
 const MAX_CATALOG_PAGES = 50
@@ -56,6 +61,7 @@ const orderReadStatesByWorkOrder = new Map()
 let materialSalesNextPage = 1
 let selectedCatalogContext = null
 let selectedCatalogWorkOrderId = null
+let selectedCatalogContextOrdinal = null
 let orderIdentitySearchState = 'NOT_RUN'
 let orderIdentityCandidateWorkOrderId = null
 let selectedWorkOrderIsCurrent = () => false
@@ -91,6 +97,11 @@ const responseCounts = {
     reason: 'NOT_RUN',
   },
   catalogContextVerified: false,
+  catalogContextDiscovery: {
+    requestedOrdinal: 1,
+    distinctPlaceOrderContextsSeen: 0,
+    selectedOrdinal: null,
+  },
   workOrderScopedTypeOneQuoteRows: 0,
   quotesMatchingSampledWorkOrders: 0,
   quotesWithSkuOrSpuIdentity: 0,
@@ -762,8 +773,7 @@ function projectSelectedWorkOrderOrderLineage() {
     lineage.skuCodesWithSpuIds.forEach(code => sampledSkuCodesWithSpuIds.add(code))
     lineage.spuIdSkuCodePairs.forEach(pair => sampledSpuIdSkuCodePairs.add(pair))
   }
-  sampled.state = [...orderReadStatesByWorkOrder.values()].every(state => state === 'SUCCEEDED')
-    ? 'SUCCEEDED' : orderReadStatesByWorkOrder.size > 0 ? 'PARTIAL' : 'NOT_RUN'
+  sampled.state = workOrderOrderLineageReadState(orderReadStatesByWorkOrder.values())
   sampled.workOrdersRead = orderReadStatesByWorkOrder.size
   sampled.workOrdersWithOrders = workOrdersWithOrders
   sampled.workOrdersWithSkuAndSpuLine = workOrdersWithSkuAndSpuLine
@@ -819,6 +829,9 @@ function authIdentityChanged() {
 let expectedAuthIdentity = null
 
 async function run() {
+  const catalogAuditOptions = parseCatalogContextAuditArgs(process.argv.slice(2))
+  const contextSelector = createPlaceOrderCatalogContextSelector(catalogAuditOptions.catalogContextOrdinal)
+  responseCounts.catalogContextDiscovery.requestedOrdinal = catalogAuditOptions.catalogContextOrdinal
   const root = process.cwd()
   const vite = await createServer({
     configFile: false,
@@ -993,6 +1006,7 @@ async function run() {
     const selectedWorkOrderIds = new Set()
     const workOrderPageIds = new Set()
     let discoveryState = workOrders.state === 'succeeded' && workOrders.data ? 'SEARCHING' : operationState(workOrders)
+    let catalogContextDiscoveryIncomplete = false
     const considerCatalogContext = (workOrder, detail) => {
       if (detail.state !== 'succeeded' || !detail.data) return false
       const projection = detailWorkflowProjectionFor(detail.data, session)
@@ -1003,8 +1017,13 @@ async function run() {
         && typeof context.serviceType === 'string' && Boolean(context.serviceType.trim())
         && typeof context.sourceType === 'string' && Boolean(context.sourceType.trim())
       if (!canPlaceOrder || !completeContext) return false
+      const selection = contextSelector.consider(context, String(workOrder.id))
+      responseCounts.catalogContextDiscovery.distinctPlaceOrderContextsSeen = contextSelector.distinctCount
+      if (!selection.selected) return false
       selectedCatalogContext = context
       selectedCatalogWorkOrderId = String(workOrder.id)
+      selectedCatalogContextOrdinal = selection.ordinal
+      responseCounts.catalogContextDiscovery.selectedOrdinal = selection.ordinal
       selectedWorkOrderIsCurrent = () => technicianApi.isWorkOrderListedForCurrentSession?.(selectedCatalogWorkOrderId) === true
       return true
     }
@@ -1020,7 +1039,9 @@ async function run() {
       if (detail.state !== 'succeeded' || !detail.data) {
         responseCounts.workOrderDetailsFailed += 1
         details.push({ state: operationState(detail), activePlaceOrder: false, catalogContext: false })
-        continue
+        catalogContextDiscoveryIncomplete = true
+        discoveryState = 'WORK_ORDER_DETAIL_READ_INCOMPLETE'
+        break
       }
       responseCounts.workOrderDetailsSucceeded += 1
       const activePlaceOrderNodes = (detail.data.workflowNodes ?? []).filter((node) => node.category === 'placeOrder' && node.lifecycle === 'active')
@@ -1058,7 +1079,7 @@ async function run() {
       const lineage = orderLineageByWorkOrder.get(workOrderId)
       return Boolean(lineage && lineage.linesWithBothIds > 0)
     }
-    for (const [index, workOrder] of pageOneWorkOrders.entries()) {
+    if (!catalogAuditOptions.catalogContextOnly) for (const [index, workOrder] of pageOneWorkOrders.entries()) {
       stage = `work_order_scoped_quotation_read_${index + 1}`
       const workOrderId = String(workOrder.id)
       const quotes = await orderApi.listTypeOneOrdersForWorkOrder(workOrderId, 3)
@@ -1074,9 +1095,9 @@ async function run() {
     if (workOrders.state === 'succeeded' && workOrders.data?.items.length > 3) {
       discoveryState = 'WORK_ORDER_PAGE_EXCEEDED_BOUND'
     } else if (workOrders.state === 'succeeded' && firstPageExhausted) {
-      discoveryState = 'ROLE_VISIBLE_WORK_ORDERS_EXHAUSTED'
+      if (!catalogContextDiscoveryIncomplete) discoveryState = 'ROLE_VISIBLE_WORK_ORDERS_EXHAUSTED'
     }
-    for (let page = 2; !selectedCatalogContext && workOrders.state === 'succeeded'
+    for (let page = 2; !selectedCatalogContext && !catalogContextDiscoveryIncomplete && workOrders.state === 'succeeded'
       && workOrders.data && !firstPageExhausted && workOrders.data.items.length <= 3
       && page <= MAX_WORK_ORDER_PAGES; page += 1) {
       stage = `role_scoped_work_order_page_${page}`
@@ -1084,18 +1105,30 @@ async function run() {
       const pageResult = await technicianApi.listWorkOrders({ page, pageSize: 3 })
       if (pageResult.state !== 'succeeded' || !pageResult.data || authIdentityChanged()) {
         discoveryState = pageResult.state === 'failed_terminal' ? 'WORK_ORDER_READ_FAILED' : 'WORK_ORDER_READ_UNVERIFIED'
+        catalogContextDiscoveryIncomplete = true
         break
       }
       responseCounts.workOrderPagesRead += 1
       responseCounts.workOrderListRows += pageResult.data.items.length
       lastWorkOrderPageRead = page
+      if (catalogAuditOptions.catalogContextOnly && page % 10 === 0) {
+        console.error(JSON.stringify({
+          progress: 'ROLE_VISIBLE_PLACE_ORDER_CONTEXT_SCAN',
+          workOrderPagesRead: responseCounts.workOrderPagesRead,
+          workOrderDetailsRead: responseCounts.workOrderDetailsSucceeded,
+          distinctContextsSeen: contextSelector.distinctCount,
+          requestedOrdinal: catalogAuditOptions.catalogContextOrdinal,
+        }))
+      }
       if (pageResult.data.items.length > 3) {
         discoveryState = 'WORK_ORDER_PAGE_EXCEEDED_BOUND'
+        catalogContextDiscoveryIncomplete = true
         break
       }
       const pageIds = pageResult.data.items.map((item) => String(item.id))
       if (pageIds.some((id) => workOrderPageIds.has(id) || selectedWorkOrderIds.has(id))) {
         discoveryState = 'WORK_ORDER_PAGINATION_DUPLICATE'
+        catalogContextDiscoveryIncomplete = true
         break
       }
       for (const id of pageIds) {
@@ -1115,7 +1148,9 @@ async function run() {
         if (detail.state !== 'succeeded' || !detail.data) {
           responseCounts.workOrderDetailsFailed += 1
           detailReadFailed = true
-          continue
+          catalogContextDiscoveryIncomplete = true
+          discoveryState = 'WORK_ORDER_DETAIL_READ_INCOMPLETE'
+          break
         }
         responseCounts.workOrderDetailsSucceeded += 1
         const activePlaceOrderNodes = (detail.data.workflowNodes ?? []).filter((node) => node.category === 'placeOrder' && node.lifecycle === 'active')
@@ -1132,7 +1167,6 @@ async function run() {
       }
       if (selectedCatalogContext) break
       if (detailReadFailed) {
-        discoveryState = 'WORK_ORDER_DETAIL_READ_INCOMPLETE'
         break
       }
       const totalCount = pageResult.data.totalCount
@@ -1145,7 +1179,13 @@ async function run() {
       if (page === MAX_WORK_ORDER_PAGES) discoveryState = 'WORK_ORDER_PAGE_LIMIT_REACHED'
     }
 
-    if (selectedCatalogWorkOrderId && !orderReadStatesByWorkOrder.has(selectedCatalogWorkOrderId)) {
+    if (!selectedCatalogContext && catalogAuditOptions.catalogContextOnly
+      && discoveryState === 'ROLE_VISIBLE_WORK_ORDERS_EXHAUSTED') {
+      responseCounts.catalogContextDiscovery.distinctPlaceOrderContextsSeen = contextSelector.distinctCount
+    }
+
+    if (!catalogAuditOptions.catalogContextOnly
+      && selectedCatalogWorkOrderId && !orderReadStatesByWorkOrder.has(selectedCatalogWorkOrderId)) {
       stage = 'current_place_order_workorder_quotation_read'
       if (authIdentityChanged() || !selectedWorkOrderIsCurrent()) {
         orderReadStatesByWorkOrder.set(selectedCatalogWorkOrderId, 'FAILED_TERMINAL')
@@ -1241,7 +1281,9 @@ async function run() {
       }
     }
 
-    if (!selectedCatalogContext) {
+    if (catalogAuditOptions.catalogContextOnly) {
+      orderIdentitySearchState = 'SKIPPED_CONTEXT_ONLY_MODE'
+    } else if (!selectedCatalogContext) {
       orderIdentitySearchState = 'NO_SELECTED_PLACE_ORDER_CONTEXT'
     } else {
       orderIdentitySearchState = 'SEARCHING_ROLE_VISIBLE_WORK_ORDERS'
@@ -1364,17 +1406,34 @@ async function run() {
 
     projectSelectedWorkOrderOrderLineage()
 
-    const auditComplete = responseCounts.catalogContextVerified
+    const catalogReadComplete = responseCounts.catalogContextVerified
       && Object.values(responseCounts.catalogItemsByKind).every(result => result.complete)
       && responseCounts.packageDetails.complete
       && responseCounts.catalogFilterOptions.state === 'SUCCEEDED'
       && responseCounts.materialSalesAttributes.state === 'SUCCEEDED'
       && responseCounts.selectableSkuCatalog.complete
+      && blockedUnexpectedNetworkRequests === 0
+    const contextSearchExhaustedWithoutMatch = !selectedCatalogContext
+      && catalogAuditOptions.catalogContextOnly
+      && discoveryState === 'ROLE_VISIBLE_WORK_ORDERS_EXHAUSTED'
+      && !catalogContextDiscoveryIncomplete
+      && roleVisibleWorkOrdersExhausted
+      && !authIdentityChanged()
+      && blockedUnexpectedNetworkRequests === 0
+    const auditComplete = catalogAuditOptions.catalogContextOnly
+      ? Boolean(catalogReadComplete || contextSearchExhaustedWithoutMatch)
+      : catalogReadComplete
       && ['SUCCEEDED_WITH_ORDER', 'SUCCEEDED_EMPTY'].includes(responseCounts.sampledOrderMaterialLineage.state)
       && ['MATCH_FOUND', 'NO_SKU_AND_SPU_ORDER_IN_ROLE_VISIBLE_SCOPE'].includes(orderIdentitySearchState)
-      && blockedUnexpectedNetworkRequests === 0
+    const status = catalogAuditOptions.catalogContextOnly
+      ? catalogReadComplete
+        ? 'PROD_READ_ONLY_CATALOG_CONTEXT_COMPLETE'
+        : contextSearchExhaustedWithoutMatch
+          ? 'NO_ADDITIONAL_PLACE_ORDER_CONTEXT'
+          : 'PROD_READ_ONLY_CATALOG_CONTEXT_SEARCH_INCOMPLETE'
+      : auditComplete ? 'PROD_READ_ONLY_CHAIN_COMPLETE' : 'PROD_READ_ONLY_CHAIN_INCOMPLETE'
     console.log(JSON.stringify({
-      status: auditComplete ? 'PROD_READ_ONLY_CHAIN_COMPLETE' : 'PROD_READ_ONLY_CHAIN_INCOMPLETE',
+      status,
       login: 'SUCCEEDED',
       loginRequests,
       sessionStorage: 'MEMORY_ONLY',
@@ -1383,6 +1442,7 @@ async function run() {
       workOrderContextDiscovery: discoveryState,
       selectedWorkOrderContext: responseCounts.catalogContextVerified ? {
         verified: true,
+        distinctContextOrdinal: selectedCatalogContextOrdinal,
         currentAction: 'place_order',
         serviceTypePresent: true,
         sourceTypePresent: true,
