@@ -46,7 +46,7 @@ export type OrderExtFieldSpecialControl =
   | { readonly kind: 'presentation'; readonly state: 'display_only' }
 
 export interface OrderExtFieldProviderDiagnostic {
-  readonly state: 'not_required' | 'configured_not_fetched' | 'missing' | 'unsupported'
+  readonly state: 'not_required' | 'configured_not_fetched' | 'resolved' | 'missing' | 'unsupported'
   readonly provider?: OptionProviderDescriptor
   readonly blocksRuntimeUse: boolean
   readonly reason?: string
@@ -330,11 +330,12 @@ function personTypeResult(config: Readonly<Record<string, unknown>>, context: Or
 
 function providerDiagnostic(schema: FormFieldSchema): OrderExtFieldProviderDiagnostic {
   const decision = selectOptionProvider(schema)
+  if (decision.state === 'provider' && (decision.provider?.kind === 'code' || decision.provider?.kind === 'cascade') && schema.inlineOptions?.length) return { state: 'resolved', provider: decision.provider, blocksRuntimeUse: false }
   if (decision.state === 'not_required') return { state: 'not_required', blocksRuntimeUse: false }
   if (decision.state === 'unsupported') {
     return { state: 'missing', blocksRuntimeUse: true, reason: decision.reason ?? 'provider_unavailable' }
   }
-  if (decision.provider?.kind === 'workTypes') {
+  if (decision.provider?.kind === 'workTypes' || decision.provider?.kind === 'businessRecord') {
     return { state: 'unsupported', blocksRuntimeUse: true, reason: 'business_provider_not_verified_for_order_extfield' }
   }
   return {
@@ -361,7 +362,7 @@ function blockedEffectiveRow(
   })
 }
 
-function mapCandidateRow(row: OrderExtFieldRawRow, context: OrderExtFieldEffectiveContext): OrderExtFieldPlanRow {
+function mapCandidateRow(row: OrderExtFieldRawRow, context: OrderExtFieldEffectiveContext, options?: FormFieldSchema['inlineOptions']): OrderExtFieldPlanRow {
   const candidate = candidateDisposition(row)
   if (candidate.result !== 'candidate') return rowResult(row, candidate.result, candidate.reason)
 
@@ -465,6 +466,7 @@ function mapCandidateRow(row: OrderExtFieldRawRow, context: OrderExtFieldEffecti
     required: requiredness === 'required',
     ...(typeof row.multiple === 'boolean' || type === 'checkbox' ? { multiple: Boolean(multiple) } : {}),
     ...(nonEmptyString(row.valueOption) ? { valueOption: row.valueOption } : {}),
+    ...(options?.length && nonEmptyString(row.valueOption) && ['radio', 'select', 'checkbox', 'cascade'].includes(type) ? { inlineOptions: options } : {}),
     ...(visibilityResult.state === 'mapped' ? { visibility: visibilityResult.expression } : {}),
     ...(Array.isArray(row.showList) ? { showList: row.showList as readonly (string | number)[] } : {}),
   }
@@ -524,8 +526,9 @@ function blockConflictingValueKeyTypes(rows: readonly OrderExtFieldPlanRow[]): r
 export function createOrderExtFieldEffectivePlan(
   rows: readonly OrderExtFieldRawRow[],
   context: OrderExtFieldEffectiveContext,
+  resolvedOptions: Readonly<Record<string, NonNullable<FormFieldSchema['inlineOptions']>>> = {},
 ): OrderExtFieldEffectivePlan {
-  const mappedRows = rows.map((row) => mapCandidateRow(row, context))
+  const mappedRows = rows.map((row) => mapCandidateRow(row, context, typeof row.rowId === 'string' ? resolvedOptions[row.rowId] : undefined))
   const phaseAwareRows = mappedRows.map((mapped, index) => ({
     ...mapped,
     finalSubmit: finalSubmitRuleForRow(rows[index], context),

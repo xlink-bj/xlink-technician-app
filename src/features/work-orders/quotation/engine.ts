@@ -1,3 +1,4 @@
+import type { OrderFieldRuntimeInput } from './order-extfield-runtime'
 import type {
   CodeOptionRead,
   QuotationCatalogContext,
@@ -26,6 +27,7 @@ export interface QuotationEngineResult {
 }
 
 export async function evaluateQuotationDraft(input: {
+  readonly orderFields?: OrderFieldRuntimeInput
   readonly draft: QuotationDraft
   readonly catalogContext: QuotationCatalogContext | null | undefined
   readonly catalogRead: QuotationCatalogReadPort | null | undefined
@@ -67,6 +69,7 @@ export async function evaluateQuotationDraft(input: {
   }
 
   const encoding = encodeR1OfficialOrderType1({
+    orderFields: input.orderFields,
     draft: hydration.data,
     pricing: pricing.data,
     catalogContext: input.catalogContext!,

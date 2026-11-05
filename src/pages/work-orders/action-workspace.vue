@@ -38,6 +38,8 @@
     :content-state="quotationContentViewState"
     :product-review-only="isMockQuotationPreview"
     :a-stage-mock-order="aStageMockOrderEnabled"
+    :order-fields-validate-selection="aStageMockOrderEnabled ? validateQuoteFields : undefined"
+    :order-fields-draft-status="aStageMockOrderEnabled ? orderFieldsDraftStatus : undefined"
     :sku-lineage-audit="skuLineagePreview"
     :same-catalog-lineage="sameCatalogLineagePreview"
     :synthetic-sku-readiness="syntheticSkuReadinessPreview"
@@ -57,8 +59,9 @@
       />
     </template>
     <template #after-content>
-      <AStageMockQuoteOrderPanel v-if="aStageMockOrderEnabled"
+      <AStageMockQuoteOrderPanel ref="aStageOrderPanel" v-if="aStageMockOrderEnabled"
         :create-controller="createAStageMockQuoteOrderControllerForUi"
+        @draft-status="orderFieldsDraftStatus = $event"
         @open-order-records="openQuotationOrderRecords" />
     </template>
   </QuotationActionWorkspace>
@@ -265,6 +268,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
+import type { AppActionDraftStatus } from '@shared/ui/types'
 import { onLoad, onShow, onUnload } from '@dcloudio/uni-app'
 
 import { isBusinessMockQuotationPreview, isDevSyntheticContractReadPreviewEnabled } from '@app/business-mock'
@@ -334,6 +338,9 @@ const devQuotationOrderPreview = computed(() =>
     ? routeQuotationVisualSample.value : undefined,
 )
 const quotationEditorOpened = ref(false)
+const orderFieldsDraftStatus = ref<AppActionDraftStatus | undefined>()
+const aStageOrderPanel = ref<{ validateSelectionEntry(): boolean } | null>(null)
+function validateQuoteFields(): boolean { return aStageOrderPanel.value?.validateSelectionEntry() === true }
 const quotationHubRef = ref<{ finishEdit: (message?: string) => void } | null>(null)
 const quotationChoiceVisible = ref(false)
 const quotationHubVisible = computed(() =>

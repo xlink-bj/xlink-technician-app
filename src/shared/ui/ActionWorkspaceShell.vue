@@ -70,7 +70,7 @@
         <AppStatus
           v-else-if="lifecycle !== 'succeeded' && displayedDraftStatus === 'save_failed'"
           class="action-workspace-draft-status"
-          message="草稿保存失败"
+          :message="draftFailureMessage || '草稿保存失败'"
           tone="warning"
           variant="strip"
           icon="warning"
@@ -148,6 +148,7 @@ const props = defineProps<{
   readonly displayNumber?: string
   readonly lifecycle: AppActionLifecycle
   readonly draftStatus: AppActionDraftStatus
+  readonly draftFailureMessage?: string
   readonly transitioning?: boolean
   readonly canSubmit: boolean
   readonly submitLabel: string

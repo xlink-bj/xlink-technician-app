@@ -1,3 +1,5 @@
+import { createMockOrderFieldSession } from './mock-order-field-session'
+import { evaluateOrderExtFields, hasReservedOrderFieldKeys } from '@features/work-orders/quotation/order-extfield-runtime'
 /** DEV-only R1 quote → Order protocol. Every mutation is owned by the exact
  * local Mock router; Production/Beta transports are never called or enabled. */
 import {
@@ -137,7 +139,8 @@ function quoteMatches(value: unknown, quoteId: string, expected: Record<string, 
     && actualExts.coupons === expectedExts.coupons
     && actualExts.couponsVal === expectedExts.couponsVal
     && actualExts.couponsName === expectedExts.couponsName
-    && actualExts.isCreateBjdPDF === expectedExts.isCreateBjdPDF)
+    && actualExts.isCreateBjdPDF === expectedExts.isCreateBjdPDF
+    && Object.keys(expectedExts).every(key => sameValue(actualExts[key], expectedExts[key])))
 }
 
 function orderMatches(value: unknown, expected: Record<string, unknown>, workflowId: string): boolean {
@@ -163,6 +166,7 @@ function orderMatches(value: unknown, expected: Record<string, unknown>, workflo
     && exts.couponsName === expectedExts?.couponsName
     && exts.isCreateBjdPDF === expectedExts?.isCreateBjdPDF
     && exts.orphanId === mockJourneyNodes.quotation
+    && Object.keys(expectedExts ?? {}).every(key => key === 'orphanId' || sameValue(exts[key], expectedExts?.[key]))
 }
 
 async function readRawOrder(id: string, authorized: () => boolean): Promise<unknown | null> {
@@ -187,6 +191,13 @@ export function createAStageMockQuoteOrderController(options: {
     && options.getActor()?.userId === expectedActor.userId
     && options.getActor()?.roleId === expectedActor.roleId)
 
+  const fields = import.meta.env.VITE_XLINK_ORDER_FIELDS_QA === 'true'
+    ? createMockOrderFieldSession(options.storage, authorized, `${expectedActor?.userId}:${expectedActor?.roleId}:${mockJourneyWorkOrderId}`, async () => {
+      const quote = record(await readRawOrder(mockJourneyQuotationId, authorized))
+      return quote?._id === mockJourneyQuotationId && quote.type === 0 && quote.serviceAppointmentId === mockJourneyWorkOrderId
+        ? record(quote.exts) : null
+    }) : undefined
+
   const readApi = new QuotationOrderReadAdapter({
     async execute(request) {
       if (!authorized() || request.path !== 'basic/order/queryById'
@@ -200,7 +211,15 @@ export function createAStageMockQuoteOrderController(options: {
   })
 
   function input(engine: QuotationEngineResult) {
-    const quote = baseQuotePayload(engine)
+    let evaluated = engine
+    if (fields) {
+      const draft = fields.current()
+      if (!draft || draft.input.context.serviceType !== engine.payload?.exts.serviceType) return null
+      const result = evaluateOrderExtFields(draft.input, 'submit')
+      if (result.state !== 'ready' || !engine.payload || hasReservedOrderFieldKeys(result.exts ?? {})) return null
+      evaluated = { ...engine, payload: { ...engine.payload, exts: { ...engine.payload.exts, ...result.exts } } }
+    }
+    const quote = baseQuotePayload(evaluated)
     return expectedActor && quote ? {
       quote,
       fingerprint: digest(quote),
@@ -238,7 +257,7 @@ export function createAStageMockQuoteOrderController(options: {
   }
 
   async function readStatus(engine: QuotationEngineResult): Promise<AStageQuoteFlowState> {
-    if (!authorized()) return 'blocked'
+    if (!authorized() || (fields && !await fields.verifyCurrent())) return 'blocked'
     const current = input(engine)
     if (!current) return 'blocked'
     const receipt = await readReceipt()
@@ -322,6 +341,11 @@ export function createAStageMockQuoteOrderController(options: {
   }> {
     if (!authorized()) return { state: 'blocked', message: '账号、角色或流程范围已变化，不能转换订单。' }
     if (inFlight) return { state: 'blocked', message: '上一项报价操作仍在处理。' }
+    if (fields && !await fields.verifyCurrent()) return { state: 'blocked', message: '报价资料已在其他页面修改，请重新读取后核对。' }
+    const fieldDraft = fields?.current()
+    if (fieldDraft && evaluateOrderExtFields({ ...fieldDraft.input, context: { ...fieldDraft.input.context, stage: 'submitOrder' } }, 'submit').state !== 'ready') {
+      return { state: 'blocked', message: '正式下单资料尚未通过校验，请核对字段配置与必填项。' }
+    }
     const current = input(engine)
     if (!current) return { state: 'blocked', message: '报价价格或明细未通过 R1 规则核验。' }
     inFlight = true
@@ -483,7 +507,7 @@ export function createAStageMockQuoteOrderController(options: {
     } catch { return { state: 'unavailable' } }
   }
 
-  return { readStatus, createQuote, convertQuoteToOrder, verifyPending, readMockOrder }
+  return { readStatus, createQuote, convertQuoteToOrder, verifyPending, readMockOrder, fields }
 }
 
 export function readAStageMockOrderForActor(getActor: () => AStageQuoteActor | null) {

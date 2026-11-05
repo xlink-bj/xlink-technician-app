@@ -12,6 +12,9 @@
       </view>
       <text class="mock-quote-order__amount-label">{{ composition.selectionCount }} 项 · {{ composition.groups.length }} 个部位</text>
     </view>
+    <OrderExtFieldEditor ref="fieldEditor" v-if="controller.fields && fieldServiceType" :session="controller.fields"
+      :service-type="fieldServiceType" :locked="busy || status === 'quote_created' || status === 'succeeded' || status === 'uncertain'"
+      @change="onFieldsChange" @draft-status="$emit('draft-status', $event)" />
     <AppStatus v-if="engine?.state === 'blocked' && engine.issues.length" tone="warning" quiet
       :message="engine.issues[0].message" data-testid="a-stage-order-price-blocked" />
     <AppStatus v-else-if="!canSubmit && status !== 'succeeded'" tone="neutral" quiet
@@ -55,7 +58,9 @@
 </template>
 
 <script setup lang="ts">
+import type { AppActionDraftStatus } from '@shared/ui/types'
 import { computed, ref, watch } from 'vue'
+import OrderExtFieldEditor from './OrderExtFieldEditor.vue'
 import type { AStageMockQuoteOrderControllerFactory } from './a-stage-mock-quote-port'
 import { useActionWorkspaceStore } from '../action-workspace'
 import { useQuotationCompositionStore } from './composition-store'
@@ -64,11 +69,13 @@ import AppButton from '@shared/ui/AppButton.vue'
 import AppStatus from '@shared/ui/AppStatus.vue'
 
 const props = defineProps<{ readonly createController: AStageMockQuoteOrderControllerFactory }>()
-defineEmits<{ (event: 'open-order-records'): void }>()
+defineEmits<{ (event: 'open-order-records'): void; (event: 'draft-status', status: AppActionDraftStatus): void }>()
 const workspace = useActionWorkspaceStore()
 const composition = useQuotationCompositionStore()
 const session = useSessionStore()
 const engine = computed(() => workspace.quotationEngine.result)
+const fieldEditor = ref<{ validateSelectionEntry(): boolean } | null>(null)
+const fieldServiceType = computed(() => workspace.detail?.quotationCatalogContext?.serviceType ?? engine.value?.payload?.exts.serviceType ?? '')
 const amount = computed(() => engine.value?.pricing
   ? `¥ ${engine.value.pricing.calcTotalPrice.totalPrice.toFixed(2)}` : '待核验')
 const status = ref<'ready' | 'quote_created' | 'blocked' | 'uncertain' | 'succeeded'>('blocked')
@@ -78,7 +85,10 @@ const checking = ref(false)
 const confirm = ref<'quote' | 'order' | null>(null)
 const verification = ref<'confirmed' | 'not_found' | 'blocked' | 'unknown' | null>(null)
 const verificationMessage = ref('')
-const canSubmit = computed(() => Boolean(engine.value?.state === 'ready' && engine.value.payload
+const fieldReady = ref(true)
+const fieldVersion = ref(0)
+function onFieldsChange(ready: boolean): void { fieldReady.value = ready; fieldVersion.value += 1 }
+const canSubmit = computed(() => Boolean(fieldReady.value && engine.value?.state === 'ready' && engine.value.payload
   && engine.value.payload.totalPrice > 0 && composition.draft
   && engine.value.draftVersion === composition.draft.draftVersion
   && (status.value === 'ready' || status.value === 'quote_created')))
@@ -90,9 +100,10 @@ function actor() {
           current.currentRole.id, current.roleVersion ?? null]) } : null
 }
 const controller = props.createController(actor)
+defineExpose({ validateSelectionEntry: () => !controller.fields || fieldEditor.value?.validateSelectionEntry() === true })
 let generation = 0
 watch(() => [engine.value?.draftVersion, engine.value?.state, session.session?.sessionRef,
-  session.session?.currentRole?.id, session.session?.roleVersion] as const,
+  session.session?.currentRole?.id, session.session?.roleVersion, fieldVersion.value] as const,
   async () => {
     const ticket = ++generation
     confirm.value = null

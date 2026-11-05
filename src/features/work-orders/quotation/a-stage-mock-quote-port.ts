@@ -1,3 +1,4 @@
+import type { OrderFieldSession } from './order-field-session'
 import type { QuotationEngineResult } from './engine'
 export interface AStageMockQuoteActor {
   readonly userId: string
@@ -5,6 +6,7 @@ export interface AStageMockQuoteActor {
   readonly identity: string
 }
 export interface AStageMockQuoteOrderController {
+  readonly fields?: OrderFieldSession
   readStatus(engine: QuotationEngineResult): Promise<'ready' | 'quote_created' | 'blocked' | 'uncertain' | 'succeeded'>
   createQuote(engine: QuotationEngineResult): Promise<{
     readonly state: 'quote_created' | 'succeeded' | 'blocked' | 'uncertain'

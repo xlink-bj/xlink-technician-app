@@ -10,7 +10,8 @@
     :service-address="workspace.detail?.serviceAddress"
     :service-district="workspace.detail?.serviceDistrict"
     :lifecycle="workspace.lifecycle"
-    :draft-status="workspace.draftStatus"
+    :draft-status="quotationDraftStatus(workspace.draftStatus, props.orderFieldsDraftStatus)"
+    :draft-failure-message="props.orderFieldsDraftStatus === 'save_failed' ? '报价资料保存失败或已在其他页面修改，输入已保留，请返回后重新读取。' : undefined"
     :can-submit="canOpenSubmit"
     :transitioning="workspace.quotationOrderState.state === 'submitting'"
     :submit-label="workspace.quotationOrderState.state === 'submitting' ? '提交中…' : '提交订单/报价方案'"
@@ -20,6 +21,7 @@
     <QuotationActionContent
       ref="quotationContentRef"
       :state="contentState"
+      :order-fields-validate-selection="props.orderFieldsValidateSelection"
       :synthetic-fields-review="syntheticReviewEnabled"
       :product-review-only="productReviewOnly"
       :a-stage-mock-order="props.aStageMockOrder"
@@ -139,6 +141,8 @@
 </template>
 
 <script setup lang="ts">
+import { quotationDraftStatus } from './quotation-draft-status'
+import type { AppActionDraftStatus } from '@shared/ui/types'
 import AppAmountValue from '@shared/ui/AppAmountValue.vue'
 import { computed, nextTick, ref, watch } from 'vue'
 import { isProductionReadOnlyRuntime } from '@shared/config'
@@ -166,6 +170,8 @@ const props = defineProps<{
   readonly sameCatalogLineage?: SameCatalogComparison | null
   readonly syntheticSkuReadiness?: QuoteSkuReadiness | null
   readonly syntheticFieldsReview?: boolean
+  readonly orderFieldsDraftStatus?: AppActionDraftStatus
+  readonly orderFieldsValidateSelection?: () => boolean
   readonly syntheticReviewValidateSelection?: () => boolean
   readonly syntheticReviewFocusFirstError?: () => void
 }>()

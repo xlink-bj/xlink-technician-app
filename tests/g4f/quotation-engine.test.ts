@@ -813,3 +813,26 @@ describe('G4-F Phase 1H quotation engine', () => {
   })
 
 })
+
+
+describe('dynamic Order fields in the quotation engine', () => {
+  const rows = [{ rowId: 'field-note', valueKey: 'note', type: 'text', required: '1', colName: 'order', state: 1, showList: [4], frontEndConfig: { showType: 'placeOrder' } }]
+  it('blocks missing required fields and carries verified fields into Order.exts', async () => {
+    const input = { draft: directDraft(), catalogContext: context, catalogRead: catalogPort(), orderFields: {
+      rows, context: { stage: 'placeOrder' as const, serviceType: context.serviceType }, values: {}, optionsByRowId: {},
+    } }
+    expect((await evaluateQuotationDraft(input)).state).toBe('blocked')
+    const ready = await evaluateQuotationDraft({ ...input, orderFields: { ...input.orderFields, values: { note: '已核实现场范围' } } })
+    expect(ready.state).toBe('ready')
+    expect(ready.payload?.exts.note).toBe('已核实现场范围')
+  })
+  it('rejects foreign context and reserved-key collisions', async () => {
+    for (const [serviceType, valueKey] of [['foreign', 'note'], [context.serviceType, 'coupons']]) {
+      const result = await evaluateQuotationDraft({ draft: directDraft(), catalogContext: context, catalogRead: catalogPort(), orderFields: {
+        rows: [{ ...rows[0], valueKey }], context: { stage: 'placeOrder', serviceType }, values: { [valueKey]: 'unsafe' }, optionsByRowId: {},
+      } })
+      expect(result.state).toBe('blocked')
+      expect(result.payload).toBeUndefined()
+    }
+  })
+})

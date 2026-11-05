@@ -123,6 +123,10 @@ jobs:
         env:
           VITE_XLINK_R1_SPECIAL_MEDIA: 'true'
         run: pnpm exec playwright test --config config/playwright/main-h5-mock.config.ts tests/h5-main-mock/a-stage-last-two.spec.ts
+      - name: Verify dynamic quotation fields, cross-tab drafts and Quote to Order readback at 430
+        env:
+          VITE_XLINK_ORDER_FIELDS_QA: 'true'
+        run: pnpm exec playwright test --config config/playwright/main-h5-mock.config.ts tests/h5-main-mock/order-fields-flow.spec.ts
       - name: Preserve Stage 1B/2A/2B/2C offline H5 evidence
         if: always()
         uses: actions/upload-artifact@v4

@@ -1,3 +1,4 @@
+import { evaluateOrderExtFields, hasReservedOrderFieldKeys, type OrderFieldRuntimeInput } from './order-extfield-runtime'
 import type { CodeOptionRead, QuotationCatalogContext } from '@shared/ports'
 
 import type { HydratedQuotationDraft, HydratedQuotationSelection } from './hydration'
@@ -15,6 +16,7 @@ export interface R1OfficialOrderType1Payload {
   readonly otherAmount: 0
   readonly preferentialAmount: 0
   readonly exts: {
+    readonly [key: string]: unknown
     readonly serviceAppointmentNum?: string
     readonly serviceType: string
     readonly sourceType?: string
@@ -235,6 +237,7 @@ function validatePricingCompleteness(draft: HydratedQuotationDraft, pricing: Quo
 }
 
 export function encodeR1OfficialOrderType1(input: {
+  readonly orderFields?: OrderFieldRuntimeInput
   readonly draft: HydratedQuotationDraft
   readonly pricing: QuotationPricingResult
   readonly catalogContext: QuotationCatalogContext
@@ -242,6 +245,12 @@ export function encodeR1OfficialOrderType1(input: {
   readonly repairPartOptions?: readonly CodeOptionRead[]
 }): QuotationEncodingResult {
   const issues: QuotationEncodingIssue[] = []
+  const fields = input.orderFields ? evaluateOrderExtFields(input.orderFields, 'submit') : undefined
+  if (input.orderFields && (fields?.state !== 'ready'
+    || input.orderFields.context.serviceType !== input.catalogContext.serviceType
+    || hasReservedOrderFieldKeys(fields.exts ?? {}))) {
+    issues.push({ code: 'encoding.order_fields_unverified', message: '报价字段或适用范围尚未通过核验。' })
+  }
   if (!input.catalogContext.serviceType.trim()) {
     issues.push({ code: 'encoding.catalog_context_missing', message: '缺少当前工单目录适用范围，不能生成订单结构。' })
   }
@@ -406,6 +415,7 @@ export function encodeR1OfficialOrderType1(input: {
       otherAmount: 0,
       preferentialAmount: 0,
       exts: {
+        ...fields?.exts,
         ...(input.serviceAppointmentNum?.trim() ? { serviceAppointmentNum: input.serviceAppointmentNum.trim() } : {}),
         serviceType: input.catalogContext.serviceType,
         ...(input.catalogContext.sourceType ? { sourceType: input.catalogContext.sourceType } : {}),

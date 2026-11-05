@@ -1,8 +1,8 @@
 # G4-F Order ExtField Effective Mapping Contract
 
-**Status:** `PURE_MAPPING_ONLY / R1_VALIDATION_PHASES_SOURCE_MAPPED / TENANT_SHAPE_CAPTURED / TWO_CONTEXT_EFFECTIVE_SHAPE_AND_PROVIDER_COUNTS_CAPTURED / NOT_CONNECTED`
+**Status:** `PURE_SOURCE_PLAN / R1_VALIDATION_PHASES_SOURCE_MAPPED / TWO_CONTEXT_SHAPE_CAPTURED / SUPPORTED_CONTROLS_DEV_MOCK_CONNECTED / LIVE_NOT_CONNECTED`
 
-This document specifies the source-backed, fail-closed plan mapper implemented for Issue #51. The mapper consumes synthetic ExtField-shaped rows and explicit stage/service/person/value context. It is not a Production adapter, a live quotation schema, a UI, or an Order serializer.
+This document specifies the source-backed, fail-closed plan mapper implemented for Issue #51. The mapper consumes synthetic ExtField-shaped rows and explicit stage/service/person/value context. The mapper remains transport-independent. Supported controls now feed the DEV Mock quotation editor and Order.exts encoding; the live tenant schema is not connected. See [the Mock flow evidence](G4F_ORDER_EXTFIELD_MOCK_FLOW_20261105.md).
 
 ## Evidence and scope
 
@@ -44,7 +44,7 @@ The source establishes two different gates, so the mapper exposes both rather th
 
 `OrderExtFieldPlanRow.disposition`, its `FormFieldSchema.required`, and `requiredBlockerRowIds` describe visible fields / catalog-entry requirements. The schema's required flag comes from the declared ExtField `required` value; `dispensable` is not evaluated in this phase. Each row additionally has a `finalSubmit` rule (`required`, `optional`, `blocked`, or `not_applicable`), with `finalSubmitRequiredRowIds` and `finalSubmitBlockedRowIds` diagnostics. The separate final rule rechecks active collection/surface, stage, service type, submit-stage person type, declared requiredness, and the explicit dispensable exception; it deliberately does **not** consult `showField`. Unknown requiredness or unresolved/coercive dispensability blocks the final rule only. A `required` schema flag or final rule records an obligation only; it does not claim the current value is present, validate its control-specific shape, or prove that an Order can be submitted.
 
-This is source-derived and synthetic-test-covered phase parity only. It is not connected to UI, a submit command, or a serializer, and does not resolve the concrete effective field set for any work order.
+These phase rules now drive the supported-control DEV Mock editor and encoding boundary. They do not establish the concrete effective live schema or authorize a Production command.
 
 Caller context must be authoritative and explicitly supplied. This mapper itself does not look up or infer work-order stage, service type, person type, or field values.
 
@@ -66,7 +66,7 @@ No persistence, network, workflow, or UI side effect exists in this module.
 | Control family | Plan behavior | Why it is not live-ready |
 | --- | --- | --- |
 | Ordinary recognized Dynamic Form types | Candidate `FormFieldSchema` only after applicability, requiredness, config, and capability checks; marked `RUNTIME_INFERRED` | No quotation UI or `Order.exts` writer is connected. Numeric normalization/value-shape parity remains unverified. |
-| `select` / `radio` / `checkbox` / `cascade` | A missing provider blocks. One effective context now has bounded Code/Cascade provider reads, summarized without values; those summaries do not activate Runtime mapping. Checkbox candidate semantics retain `multiple: true`; without a reviewed value/label and serialization mapping, no scalar fallback occurs. | Provider counts/tree depth are known for one context only. Option values, labels, row identities, full cross-context scope, UI mapping, and Order serialization remain unverified. |
+| `select` / `radio` / `checkbox` / `cascade` | A missing provider blocks. Two effective contexts now have bounded Code/Cascade provider reads, summarized without values; those summaries do not activate Runtime mapping. Checkbox candidate semantics retain `multiple: true`; without a reviewed value/label and serialization mapping, no scalar fallback occurs. | Provider counts/tree depth are known for two contexts only. Option values, labels, row identities, full cross-context scope, UI mapping, and Order serialization remain unverified. |
 | `bizSelect`, arbitrary `requestUrl`, `evaluate`, or unknown config keys | Blocked | No arbitrary endpoint, script, expression, or dynamic command is executed. |
 | `area` | Separate blocked `area` capability with a three-code path contract; one current `submitOrder` context includes an `area` row | R1 is a Province/City/County selector and stores a selected code path. Exact current field identity/value and its platform interaction remain unpersisted; it is not promoted to generic `FormFieldSchema` support. |
 | `button` | Separate `button` special action, `BLOCKED`; never a value schema. The one current `placeOrder` context includes a `button` row. | R1 can navigate to a mini program or dispatch a configured action. The active action config was discarded; it cannot execute until its intent is identified and allowlisted. Its association with requiredness is also not retained. |
@@ -92,7 +92,7 @@ The tests do not import or parse captured Production rows. The bounded live endp
 6. Actual prior Order `exts` values and edit/round-trip behavior; preserving unknown keys here is only a pure in-memory invariant.
 7. Numeric and remaining generic control value parity at a real UI/serializer boundary.
 
-Therefore: tenant schema shape is captured; one context has a sanitized effective stage/type/provider summary; the two R1 validation phases are represented in a source-backed pure plan with synthetic regressions; no live quotation Runtime, UI mapping, or serializer is ready or connected. Any broader production read needs an explicit bounded scope; any Order write remains a separate authorization gate.
+Therefore: tenant schema shape is captured; two contexts have sanitized effective stage/type/provider summaries; the two R1 validation phases are represented in a source-backed pure plan with synthetic regressions; no live quotation Runtime, UI mapping, or serializer is ready or connected. Any broader production read needs an explicit bounded scope; any Order write remains a separate authorization gate.
 
 ## Verification and safety
 

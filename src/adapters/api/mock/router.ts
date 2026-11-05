@@ -1,3 +1,4 @@
+import { mockOrderFieldsRead } from './order-fields'
 import { isBusinessMockMode, type BusinessMockMode } from './config'
 import { advanceMockJourneyAfterProcess, isDevMockJourneyEnabled, mockJourneyNodes, mockJourneyStage, mockJourneyWorkOrderId, mockJourneyOrderWorkflowDefinitionId, mockJourneyOrderWorkflowRunId, mockJourneyQuotationId, mockJourneyOfficialOrderId, persistMockJourneyFormData, persistMockJourneyQuotation, persistMockJourneyOfficialOrder, readMockJourneyFormData, readMockJourneyQuotation, readMockJourneyOrderWorkflow, readMockJourneyQuoteWorkflow, readMockJourneyOfficialOrder, startMockJourneyOrderWorkflow, startMockJourneyQuoteWorkflow, type MockJourneyStage } from './journey'
 import { appointmentFormDefinitionWireId } from '../appointment-contract'
@@ -760,6 +761,10 @@ function matchedResponse(
   }
   // This route shape follows pinned R1 source, but the values are exclusively
   // DEV Mock fixtures; no price, inventory or real customer data is included.
+  if (mode === 'data' && isDevMockJourneyEnabled()) {
+    const orderFields = mockOrderFieldsRead(route, requestData)
+    if (orderFields !== undefined) return orderFields
+  }
   if (mode === 'data' && route === 'biz/extField/query'
     && requestData.colName === 'material' && requestData.sortField === 'order'
     && requestData._all === '1' && requestData['is:state|integer#and'] === 1) {

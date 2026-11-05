@@ -4,6 +4,7 @@
       <text class="quotation-content__eyebrow">报价草稿 · 按部位组织</text>
     </view>
 
+    <AppStatus v-if="orderFieldsEntryBlocked" message="请先补齐下方报价资料，再选择产品。" tone="warning" quiet data-testid="order-fields-selection-blocked" />
     <view v-if="props.state === 'loading'" class="quotation-content__panel app-surface" data-testid="quotation-state-loading">
       <AppLoadingState variant="inline" label="正在准备报价内容" />
     </view>
@@ -1082,6 +1083,7 @@ const props = defineProps<{
   readonly skuLineageAudit?: SkuLineageAudit | null
   readonly sameCatalogLineage?: SameCatalogComparison | null
   readonly syntheticSkuReadiness?: QuoteSkuReadiness | null
+  readonly orderFieldsValidateSelection?: () => boolean
   readonly syntheticReviewValidateSelection?: () => boolean
   readonly syntheticReviewFocusFirstError?: () => void
 }>()
@@ -1339,7 +1341,10 @@ const packageConfigurationValidation = computed(() => {
 })
 const kindLabels = quotationCatalogKindLabels
 
+const orderFieldsEntryBlocked = ref(false)
 function openCatalog(groupId: string, kind: QuotationLineKind): void {
+  try { orderFieldsEntryBlocked.value = props.orderFieldsValidateSelection?.() === false } catch { orderFieldsEntryBlocked.value = true }
+  if (orderFieldsEntryBlocked.value) return
   catalogNavigationGeneration += 1
   selectedCatalogFacet.value = ''
   selectedPackageAgeLimit.value = ''
