@@ -280,6 +280,22 @@ describe('G4-F Production quotation Order read adapter', () => {
             procedures: { data: [] }, materials: { data: [] }, measures: { data: [] },
           }] },
         },
+        {
+          _id: 'official-order-minimum-bypassed', type: 1, serviceAppointmentId: 'work-order-price-read',
+          bjProducts: { orderList: [{
+            repairParts: ['roof'],
+            projPackages: { data: [{
+              _id: 'package-below-floor', name: '套餐', number: 1, amount: 12,
+              minimumPrice: 20, totalAmount: 12,
+              procedureList: [], materialList: [], measureList: [],
+            }] },
+            procedures: { data: [{
+              _id: 'procedure-below-floor', procedure: { _id: 'procedure-ref', name: '工序' },
+              number: 1, amount: 12, minimumGuideTotalPrice: 20, totalAmount: 12,
+            }] },
+            materials: { data: [] }, measures: { data: [] },
+          }] },
+        },
       ] }),
     }, () => true).listTypeOneOrdersForWorkOrder('work-order-price-read')
 
@@ -291,7 +307,17 @@ describe('G4-F Production quotation Order read adapter', () => {
       { groups: [{ contentSupported: false, lines: [
         { kind: 'package', contentSupported: false },
       ] }] },
+      { groups: [{ contentSupported: false, lines: [
+        { kind: 'package', contentSupported: false },
+        { kind: 'procedure', contentSupported: false },
+      ] }] },
     ] } })
+    if (result.state === 'succeeded' && result.data) {
+      for (const line of result.data.items[2]?.groups[0]?.lines ?? []) {
+        expect(line).not.toHaveProperty('unitPrice')
+        expect(line).not.toHaveProperty('lineTotal')
+      }
+    }
   })
 
   it('rejects a Work-Order-scoped quote response that exceeds the three-row bounded page', async () => {

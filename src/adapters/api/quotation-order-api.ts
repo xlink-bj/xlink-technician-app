@@ -121,16 +121,17 @@ function r1LinePriceRelationshipMatches(
   const calculated = unitPrice * quantity
   if (!Number.isFinite(calculated)) return false
   const rounded = r1AmountToFixed(calculated)
-  if (lineTotal === rounded) return true
-
-  // R1 lets package and procedure minimums raise a line subtotal above its
-  // captured unit price × quantity; materials and measures have no such floor.
+  // R1 applies package/procedure minimums before accepting the ordinary
+  // rounded unit-price × quantity result. Checking the product first would
+  // incorrectly approve a self-consistent line that is still below its floor.
   const minimumKey = kind === 'package' ? 'minimumPrice'
     : kind === 'procedure' ? 'minimumGuideTotalPrice' : undefined
-  if (!minimumKey) return false
-  const minimum = browseAmount(row, [minimumKey])
-    ?? (display !== row ? browseAmount(display, [minimumKey]) : undefined)
-  return minimum !== undefined && calculated < minimum && lineTotal === minimum
+  if (minimumKey) {
+    const minimum = browseAmount(row, [minimumKey])
+      ?? (display !== row ? browseAmount(display, [minimumKey]) : undefined)
+    if (minimum !== undefined && calculated < minimum) return lineTotal === minimum
+  }
+  return lineTotal === rounded
 }
 
 function stringIdentity(record: AdapterRecord, keys: readonly string[]): string | undefined {
