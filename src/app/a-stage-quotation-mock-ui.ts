@@ -181,6 +181,7 @@ async function readRawOrder(id: string, authorized: () => boolean): Promise<unkn
 export function createAStageMockQuoteOrderController(options: {
   readonly getActor: () => AStageQuoteActor | null
   readonly storage: StoragePort
+  readonly enableOrderFields?: boolean
 }) {
   const expectedActor = options.getActor()
   let inFlight = false
@@ -191,7 +192,7 @@ export function createAStageMockQuoteOrderController(options: {
     && options.getActor()?.userId === expectedActor.userId
     && options.getActor()?.roleId === expectedActor.roleId)
 
-  const fields = import.meta.env.VITE_XLINK_ORDER_FIELDS_QA === 'true'
+  const fields = options.enableOrderFields === true
     ? createMockOrderFieldSession(options.storage, authorized, `${expectedActor?.userId}:${expectedActor?.roleId}:${mockJourneyWorkOrderId}`, async () => {
       const quote = record(await readRawOrder(mockJourneyQuotationId, authorized))
       return quote?._id === mockJourneyQuotationId && quote.type === 0 && quote.serviceAppointmentId === mockJourneyWorkOrderId
@@ -516,5 +517,5 @@ export function readAStageMockOrderForActor(getActor: () => AStageQuoteActor | n
 }
 
 export function createAStageMockQuoteOrderControllerForActor(getActor: () => AStageQuoteActor | null) {
-  return createAStageMockQuoteOrderController({ getActor, storage: createDefaultStoragePort() })
+  return createAStageMockQuoteOrderController({ getActor, storage: createDefaultStoragePort(), enableOrderFields: true })
 }

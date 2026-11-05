@@ -40,6 +40,7 @@ export interface OrderExtFieldEffectiveContext {
 }
 
 export type OrderExtFieldSpecialControl =
+  | { readonly kind: 'area'; readonly state: 'resolved' }
   | { readonly kind: 'area'; readonly state: 'blocked'; readonly reason: 'province_city_county_provider_unverified' }
   | { readonly kind: 'button'; readonly state: 'blocked'; readonly reason: 'special_action_not_allowlisted' }
   | { readonly kind: 'media'; readonly state: 'blocked'; readonly reason: 'order_media_persistence_unverified' }
@@ -73,7 +74,7 @@ export interface OrderExtFieldEffectivePlan {
   readonly execution: 'PURE_SOURCE_PLAN_ONLY'
   readonly stage: OrderExtFieldStage
   readonly rows: readonly OrderExtFieldPlanRow[]
-  /** Only finite, ordinary editable controls. Never includes area, button, or media. */
+  /** Finite editable controls, including verified three-level area paths. No executable buttons or media. */
   readonly fields: readonly FormFieldSchema[]
   readonly diagnostics: {
     /** Required mapping/runtime blockers for the visible field / catalog-entry phase. */
@@ -362,6 +363,15 @@ function blockedEffectiveRow(
   })
 }
 
+function completeAreaTree(options: NonNullable<FormFieldSchema['inlineOptions']>, depth = 1): boolean {
+  const seen = new Set<string>()
+  return options.length > 0 && options.every(option => {
+    if (!/^\d{6}$/.test(option.value) || !option.label.trim() || seen.has(option.value)) return false
+    seen.add(option.value)
+    return depth === 3 ? !option.children?.length : depth < 3 && !!option.children && completeAreaTree(option.children, depth + 1)
+  })
+}
+
 function mapCandidateRow(row: OrderExtFieldRawRow, context: OrderExtFieldEffectiveContext, options?: FormFieldSchema['inlineOptions']): OrderExtFieldPlanRow {
   const candidate = candidateDisposition(row)
   if (candidate.result !== 'candidate') return rowResult(row, candidate.result, candidate.reason)
@@ -406,6 +416,17 @@ function mapCandidateRow(row: OrderExtFieldRawRow, context: OrderExtFieldEffecti
     )
   }
   if (type === 'area') {
+    if (options?.length && completeAreaTree(options) && requiredness !== 'unknown'
+      && !row.operationType && row.multiple !== true
+      && Object.keys(config).every(key => safeFrontEndConfigKeys.has(key) && !forbiddenFrontEndConfigKeys.has(key))) {
+      return rowResult(row, 'eligible', 'source_mappable_area_path', {
+        stage, requiredness, specialControl: { kind: 'area', state: 'resolved' },
+        provider: { state: 'resolved', provider: { kind: 'inline' }, blocksRuntimeUse: false },
+        schema: { fieldId: row.rowId, valueKey: row.valueKey, type: 'cascade', required: requiredness === 'required',
+          inlineOptions: options, ...(visibilityResult.state === 'mapped' ? { visibility: visibilityResult.expression } : {}) },
+      })
+    }
+
     return blockedEffectiveRow(
       row,
       stage,

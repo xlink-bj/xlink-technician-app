@@ -1,3 +1,4 @@
+import { mockOrderAreaOptions } from '@adapters/api/mock/order-fields'
 import { withScopedDraftLock } from '@adapters/storage/scoped-draft-lock'
 import { dynamicCodeOptions, cascadeCodeOptions } from '@adapters/api/read-models/code-options'
 import { tryMockRead } from '@adapters/api/mock/router'
@@ -44,6 +45,7 @@ export function createMockOrderFieldSession(storage: StoragePort, authorized: ()
           seen.add(row._id)
           rows.push({ ...row, rowId: row._id, valueKey: row.name })
           labels[row._id] = row.nameDisp
+          if (row.type === 'area') optionsByRowId[row._id] = mockOrderAreaOptions
           if (typeof row.valueOption === 'string' && row.valueOption) {
             const cascade = row.type === 'cascade'
             const response = await tryMockRead(cascade ? 'i/code/selectMultistageCode.do' : 'i/code/selectCode.do', cascade
@@ -63,6 +65,15 @@ export function createMockOrderFieldSession(storage: StoragePort, authorized: ()
         if (!authorized()) return null
         const values: Record<string, unknown> = {}
         for (const row of rows) if (typeof row.valueKey === 'string' && restored && Object.prototype.hasOwnProperty.call(restored, row.valueKey)) values[row.valueKey] = restored[row.valueKey]
+        // R1 areaConfirm also updates these local form aliases. Preserve only
+        // aliases actually saved by this scoped draft; never infer another
+        // area's last interaction from its path or copy arbitrary Quote keys.
+        if (draft && rows.some(row => row.type === 'area') && restored) {
+          for (const alias of ['province', 'city', 'district']) {
+            const code = restored[alias]
+            if (typeof code === 'string' && /^\d{6}$/.test(code)) values[alias] = code
+          }
+        }
         current = { input: { rows, context: { stage: 'placeOrder', serviceType }, values, optionsByRowId },
           labels, revision: draft ? Number(draft.revision) : 0 }
         return current

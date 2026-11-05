@@ -22,7 +22,7 @@ describe('C2-C1 synthetic transaction controller dependency direction', () => {
     expect(specialAdapter).toContain('mediaQueue: createDefaultMediaUploadQueue(storage, createSpecialDevMockUploadPort())')
     expect(page).toContain(':create-controller="createAStageMockQuoteOrderControllerForUi"')
     expect(page).toContain('createAStageMockQuoteOrderControllerForActor')
-    expect(quotationAdapter).toContain('createAStageMockQuoteOrderController({ getActor, storage: createDefaultStoragePort() })')
+    expect(quotationAdapter).toContain('createAStageMockQuoteOrderController({ getActor, storage: createDefaultStoragePort(), enableOrderFields: true })')
     expect(detail).not.toMatch(/storage\.|StoragePort|uni\.setStorage|uni\.removeStorage/)
     expect(page).not.toMatch(/storage\.|StoragePort|uni\.setStorage|uni\.removeStorage/)
   })

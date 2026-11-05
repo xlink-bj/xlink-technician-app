@@ -4,9 +4,9 @@ import { expect, test } from '@playwright/test'
  * Real main uni-app shell with an isolated DEV-only synthetic Order/Contract.
  * No live Order creation, signer entitlement, external API or customer action.
  */
-for (const width of [375, 390]) {
+for (const width of [375, 390, 430]) {
   test('I6 real main App guarded Contract status read with synthetic evidence at ' + width, async ({ page }, info) => {
-    await page.setViewportSize({ width, height: 844 })
+    await page.setViewportSize({ width, height: width === 430 ? 932 : 844 })
     const external: string[] = []
     let exceptions = 0
     page.on('pageerror', () => { exceptions += 1 })
@@ -51,8 +51,13 @@ for (const width of [375, 390]) {
     await expect(page.getByTestId('signing-order-read-sign-disabled')).toHaveAttribute('disabled', 'true')
     await expect(page.getByTestId('signing-order-read-contract-disabled')).toHaveAttribute('disabled', 'true')
     await expect(page.getByTestId('signing-order-read-no-write')).toBeVisible()
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await expect(page.getByTestId('signing-order-read-verified')).toBeVisible()
+    await page.getByTestId('signing-contract-read-request').click()
+    await expect(page.getByTestId('signing-contract-matched')).toContainText('HT202610260001')
     expect(external).toEqual([])
     expect(exceptions).toBe(0)
+    if (width === 430) await page.screenshot({ path: 'test-results/main-h5-mock/evidence/contract-read-restored-430x932.png', fullPage: true })
     await info.attach('i6-main-contract-fixture-' + width, {
       body: await page.screenshot({ fullPage: true }),
       contentType: 'image/png',

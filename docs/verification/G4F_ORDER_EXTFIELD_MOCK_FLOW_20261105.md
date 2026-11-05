@@ -2,6 +2,8 @@
 
 Status: `SUPPORTED_CONTROLS_DEV_MOCK_CONNECTED / PRODUCTION_SCHEMA_NOT_CONNECTED / LIVE_WRITES_NOT_RUN`.
 
+> 后续更新：本记录保留 `69831472` 时点的独立字段 fixture 验证。常规 Mock 入口现已移除额外 Order 字段开关，增加有界三级区域及共享媒体回归，见[本轮功能收口](G4F_NORMAL_QUOTATION_FUNCTIONAL_CLOSURE_20261105.md)。本记录的原始测试数量不代表后续 HEAD。
+
 ## Capability delivered
 
 The actual main App quotation flow can read synthetic R1-shaped Order ExtFields and their exact Code/Cascade providers, render configured fields through shared controls, retain local values, project Order.exts, save a type-0 quote, and reconcile its fields after conversion to a distinct type-1 Order. This is enabled only by the explicit DEV fixture `VITE_XLINK_ORDER_FIELDS_QA=true` in the existing continuous Mock journey. It does not replace current tenant configuration with a fixed commercial schema.

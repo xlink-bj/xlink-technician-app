@@ -1,6 +1,6 @@
 import { normalizeFieldValue } from '@runtimes/dynamic-form'
 import type { FormFieldOptionRead } from '@shared/ports'
-import { createOrderExtFieldEffectivePlan, type OrderExtFieldRawRow, type OrderExtFieldEffectiveContext } from './order-extfield-effective-plan'
+import { classifyOrderAreaPath, createOrderExtFieldEffectivePlan, type OrderExtFieldRawRow, type OrderExtFieldEffectiveContext } from './order-extfield-effective-plan'
 import { projectR1OrderExtFieldWire } from './order-extfield-wire'
 
 const reservedKeys = ['serviceAppointmentNum', 'serviceType', 'sourceType', 'coupons', 'couponsVal', 'couponsName', 'isCreateBjdPDF', 'orphanId']
@@ -35,6 +35,10 @@ export function evaluateOrderExtFields(input: OrderFieldRuntimeInput, phase: 'se
       continue
     }
     if (!present || row.specialControl?.kind === 'presentation') continue
+    if (row.specialControl?.kind === 'area' && classifyOrderAreaPath(value).state !== 'complete') {
+      errors[row.rowId!] = '请选择完整的省、市、区。'
+      continue
+    }
     const schema = row.schema
     // Hidden final obligations still require their original type/provider;
     // never treat a hidden value as automatically valid.

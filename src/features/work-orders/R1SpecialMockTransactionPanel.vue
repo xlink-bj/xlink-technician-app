@@ -93,10 +93,18 @@
                 <view class="special-forms__media" :data-testid="`a-special-media-${field.valueKey}`">
                   <view v-for="(item,index) in mediaValues(field.valueKey)" :key="item.url"
                     class="special-forms__media-item">
-                    <text class="special-forms__media-name">{{ item.name }}</text>
+                    <text class="special-forms__media-name">{{ mediaDisplayName(item, index) }}</text>
                     <AppButton variant="text" size="compact" :disabled="busy"
                       :data-testid="`a-special-media-remove-${field.valueKey}-${index}`"
-                      @tap="removeMediaValue(field.valueKey, index)">移除</AppButton>
+                      @tap="pendingMediaRemoval = { key: field.valueKey, url: item.url }">移除</AppButton>
+                  </view>
+                  <view v-if="pendingMediaRemoval?.key === field.valueKey" class="special-forms__confirmation"
+                    :data-testid="`a-special-media-remove-confirm-${field.valueKey}`">
+                    <text>确认移除这份附件？保存修改后生效。</text>
+                    <AppButton variant="text" size="compact" :disabled="busy"
+                      :data-testid="`a-special-media-remove-accept-${field.valueKey}`" @tap="confirmMediaRemoval">确认移除</AppButton>
+                    <AppButton variant="text" size="compact" :disabled="busy"
+                      :data-testid="`a-special-media-remove-cancel-${field.valueKey}`" @tap="pendingMediaRemoval = null">取消</AppButton>
                   </view>
                   <view v-for="task in tasksFor(field.fieldId).filter(task => task.state !== 'uploaded')"
                     :key="task.taskId" class="special-forms__media-item">
@@ -193,7 +201,14 @@ const recoveryFeedback = ref('')
 const draftValues = ref<R1SpecialMockFields>({})
 const editableFieldTypes = r1SpecialMockWritableTypes
 const mediaTasks = ref<readonly MediaUploadTask[]>([])
+const pendingMediaRemoval = ref<{ key: string; url: string } | null>(null)
+watch([draftValues, () => props.workOrderId], () => { pendingMediaRemoval.value = null })
 const hasPendingMedia = computed(() => mediaTasks.value.some(task => task.state !== 'uploaded'))
+function mediaDisplayName(file: R1FileWireValue, index: number): string {
+  const pickedName = mediaTasks.value.find(task => task.uploadedRef?.url === file.url)?.uploadedRef?.fileName
+  const name = pickedName || file.name
+  return name && !/[/:\\]/.test(name) ? name : `附件 ${index + 1} · ${file.extname.toUpperCase()}`
+}
 const scalarValueFor = (key: string): import('./r1-local-form-fields').R1LocalFieldValue | undefined => {
   const value = draftValues.value[key]
   return isR1FileWireArray(value) ? undefined
@@ -297,16 +312,31 @@ async function discardMediaTask(taskId: MediaUploadTaskId): Promise<void> {
       && ticket === revision) operationFeedback.value = '删除本机附件失败，原队列已保留。'
   } finally { if (ticket === revision) { busy.value = false; await restoreMediaTasks() } }
 }
+async function confirmMediaRemoval(): Promise<void> {
+  const pending = pendingMediaRemoval.value
+  if (!pending || busy.value) return
+  const index = mediaValues(pending.key).findIndex(file => file.url === pending.url)
+  pendingMediaRemoval.value = null
+  if (index >= 0) await removeMediaValue(pending.key, index)
+}
 async function removeMediaValue(key: string, index: number): Promise<void> {
   const values = mediaValues(key), file = values[index]
   if (busy.value || !file) return
+  const ticket = revision
   const task = mediaTasks.value.find(item => item.uploadedRef?.url === file.url)
   if (task && controller) {
-    const ok = await controller.discardMedia(selectedFormDefinitionId.value, task.taskId, editingId.value ?? undefined)
-    if (!ok) { operationFeedback.value = '附件尚未安全移除，请重试。'; return }
-    mediaTasks.value = mediaTasks.value.filter(item => item.taskId !== task.taskId)
+    busy.value = true
+    try {
+      const ok = await controller.discardMedia(selectedFormDefinitionId.value, task.taskId, editingId.value ?? undefined)
+      if (ticket !== revision) return
+      if (!ok) { operationFeedback.value = '附件尚未安全移除，请重试。'; return }
+      mediaTasks.value = mediaTasks.value.filter(item => item.taskId !== task.taskId)
+    } catch {
+      if (ticket === revision) operationFeedback.value = '附件尚未安全移除，请重试。'
+      return
+    } finally { if (ticket === revision) busy.value = false }
   }
-  setField(key, values.filter((_, i) => i !== index))
+  if (ticket === revision) setField(key, values.filter((_, i) => i !== index))
 }
 function setField(key: string, value: R1SpecialMockFields[string]): void {
   if (busy.value || !viewState.value) return

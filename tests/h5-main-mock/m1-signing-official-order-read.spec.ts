@@ -2,9 +2,9 @@ import { expect, test } from '@playwright/test'
 
 // Production-only route in the real main App. DEV synthetic data cannot
 // claim an official Order identity or signer authority.
-for (const width of [375, 390]) {
+for (const width of [375, 390, 430]) {
   test('M1 real App signing-read route denies fabricated Order at ' + width, async ({ page }) => {
-    await page.setViewportSize({ width, height: 844 })
+    await page.setViewportSize({ width, height: width === 430 ? 932 : 844 })
     const external: string[] = []
     await page.route('**/*', async route => {
       const url = new URL(route.request().url())

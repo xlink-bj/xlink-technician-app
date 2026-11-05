@@ -31,6 +31,15 @@ describe('Order fields runtime validation and wire boundary', () => {
     expect(evaluateOrderExtFields(input, 'submit').state).toBe('ready')
     expect(evaluateOrderExtFields({ ...input, context: { ...input.context, stage: 'submitOrder' } }, 'submit').state).toBe('blocked')
   })
+  it('requires a complete area path belonging to the verified three-level provider', () => {
+    const options = [{ value: '110000', label: '北京', children: [{ value: '110100', label: '城区', children: [{ value: '110101', label: '东城' }] }] }]
+    const input = { ...base, rows: [{ ...base.rows[0], type: 'area' }], optionsByRowId: { note: options } }
+    expect(evaluateOrderExtFields({ ...input, values: { note: ['110000', '110100', '110101'] } }, 'submit')).toMatchObject({ state: 'ready', exts: { note: ['110000', '110100', '110101'] } })
+    for (const path of [['110000'], ['110000', '110100'], ['110000', '110100', '999999']]) {
+      expect(evaluateOrderExtFields({ ...input, values: { note: path } }, 'submit').state).toBe('blocked')
+    }
+    expect(evaluateOrderExtFields({ ...input, optionsByRowId: { note: [{ value: '110000', label: '北京' }] } }, 'submit').state).toBe('blocked')
+  })
   it('keeps optional unsupported controls blocked', () => {
     expect(evaluateOrderExtFields({ ...base, rows: [{ ...base.rows[0], type: 'area', required: '0' }] }, 'submit').state).toBe('blocked')
   })

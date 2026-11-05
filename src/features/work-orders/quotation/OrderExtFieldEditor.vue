@@ -62,7 +62,13 @@ function valueFor(key: string): R1LocalFieldValue | undefined { return values.va
 function pathValue(key: string): readonly string[] { const value = values.value[key]; return Array.isArray(value) ? value as string[] : [] }
 function setValue(key: string, value: R1LocalFieldValue): void {
   if (props.locked || saveFailed.value || !draft.value) return
-  values.value = { ...values.value, [key]: value }
+  const next = { ...values.value, [key]: value }
+  if (draft.value.input.rows.some(row => row.valueKey === key && row.type === 'area') && Array.isArray(value)) {
+    if (value[0] !== undefined) next.province = value[0]
+    if (value[1] !== undefined) next.city = value[1]
+    if (value[2] !== undefined) next.district = value[2]
+  }
+  values.value = next
   const snapshot = { ...values.value }
   const ticket = generation
   pending.value += 1

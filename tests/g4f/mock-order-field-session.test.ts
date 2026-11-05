@@ -44,6 +44,16 @@ describe('scoped Mock Order field draft session', () => {
     const session = createMockOrderFieldSession(storage(), () => true, 'actor:work', async () => ({ note: '报价原值', foreign: 'excluded' }))
     expect((await session.load('service'))?.input.values).toEqual({ note: '报价原值' })
   })
+  it('restores area aliases from the scoped local draft without importing foreign keys', async () => {
+    mock.read.mockResolvedValue({ total: 1, data: [{ _id: 'area', name: 'site', nameDisp: '省市区', colName: 'order', state: 1,
+      showList: [4], type: 'area', required: '0', frontEndConfig: { showType: 'placeOrder' } }] })
+    const port = storage()
+    const first = createMockOrderFieldSession(port, () => true, 'actor:area')
+    await first.load('service')
+    await first.save({ site: ['110000', '110100', '110101'], province: '110000', city: '110100', district: '110101', foreign: 'excluded' }, 0)
+    const restored = await createMockOrderFieldSession(port, () => true, 'actor:area').load('service')
+    expect(restored?.input.values).toEqual({ site: ['110000', '110100', '110101'], province: '110000', city: '110100', district: '110101' })
+  })
   it('invalidates reads and saves when authorization changes', async () => {
     schema()
     let current = true

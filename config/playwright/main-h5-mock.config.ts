@@ -6,7 +6,6 @@ const baseURL = 'http://localhost:5174'
 // Forward only the explicit, synthetic QA switches used by opt-in H5 suites.
 // Do not inherit the caller's full environment into the local App server.
 const optInFixtureFlags = [
-  'VITE_XLINK_ORDER_FIELDS_QA',
   'VITE_XLINK_R1_MP_UX_FIXTURES',
   'VITE_XLINK_R1_SPECIAL_MEDIA',
   'VITE_XLINK_R1_BUSINESS_FIELDS',

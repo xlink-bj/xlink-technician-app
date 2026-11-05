@@ -91,7 +91,7 @@
 | 优先级 | 必须解决的问题 | 当前证据/退出门槛 |
 | --- | --- | --- |
 | P0 | 当前工单的 `serviceType/sourceType`（包括值为空/缺省时的请求属性存在性），正确目录过滤与价源 | Source 证明 backend 依赖 `sourceType` 参数是否存在；未证实不能默默省略。Mock 跑参数契约负例 |
-| P0 | 有效 Order `ExtField`/Code/provider（尤其 `showType`、`serviceType`、`personType`、条件必填） | 两个当前上下文均读到相同的 4/5 个分阶段字段、1 个 Code + 1 个 Cascade provider（[有效字段只读记录](G4F_EFFECTIVE_ORDER_EXTFIELD_PROD_READ_20261105.md)）；支持控件的 DEV Mock UI/serializer/回读已连接（[记录](G4F_ORDER_EXTFIELD_MOCK_FLOW_20261105.md)）；其余上下文及真实字段身份/值仍未闭合；area/button/媒体继续 BLOCKED |
+| P0 | 有效 Order `ExtField`/Code/provider（尤其 `showType`、`serviceType`、`personType`、条件必填） | 两个当前上下文均读到相同的 4/5 个分阶段字段、1 个 Code + 1 个 Cascade provider（[有效字段只读记录](G4F_EFFECTIVE_ORDER_EXTFIELD_PROD_READ_20261105.md)）；支持控件的 DEV Mock UI/serializer/回读已连接（[记录](G4F_ORDER_EXTFIELD_MOCK_FLOW_20261105.md)）；其余上下文及真实字段身份/值仍未闭合；有界完整三级 area 代码路径已接入普通 Mock，真实全国/街道 provider 未验收；button/Order 媒体继续 BLOCKED |
 | P0 | SPU 无 SKU 的正常选择、四类价格与历史 Order 快照的差异 | 当前角色四个服务上下文的已读活动 SKU 筛选均未返回活动行；受限历史样本已比较 Material 1 行、Package 1 行及 Procedure/Measure 4 行，均等于对应当前目录价，但 Package 另有一条历史记录在当前目录缺失而保持 unknown（[Material/Package](G4F_ORDER_MATERIAL_PRICE_SNAPSHOT_PROD_READ_20261105.md)、[Procedure/Measure](G4F_ORDER_PROVIDER_PRICE_SNAPSHOT_PROD_READ_20261105.md)）；这些不是全量或价格新鲜度结论，禁止“无 SKU → 报价失败”及猜价 |
 | P0 | 订单的类型、维修组、包内材料/层/系数、Order↔工单↔合同身份 | One Order/Contract 精确生产只读样本已通过；其他状态只在 DEV Mock；不得靠 `skuCode` 建 SKU 外键 |
 | P1 | FormData/Workflow 的真实服务端保存回读与失败补偿；媒体上传 | DEV Mock 成功不等于 Beta/Production 写入；依 #201 单独批准后才可实测 |
@@ -104,3 +104,19 @@
 
 - [功能台账](R1_FOUR_PHASE_FUNCTIONAL_LEDGER.md)；[六阶段源码矩阵](M1_I1_R1_SIX_STAGE_PARITY_LEDGER.md)；[机器可读的历史源码索引](R1_SIX_STAGE_SOURCE_PARITY_MANIFEST.json)。这些保留其各自时间点的证据状态；本清单是**当前执行入口**，不批量重写过去的验收结论。
 - [报价领域与字段流](G4F_R1_DOMAIN_REVERSE_ENGINEERING.md)、[价格/Order 类型](M1_I3_R1_QUOTE_ORDER_STAGE_CONTRACT.md)、[Order 动态字段](G4F_ORDER_EXTFIELD_MAPPING_CONTRACT.md)、[合同主路线](M1_I6_CANONICAL_TECHNICIAN_CONTRACT_QUERY.md)、[正式 Order/合同真实只读回读](R1_ORDER_CONTRACT_READ_RECONCILIATION_20261104.md)。
+
+## 8. 本轮功能收口执行计划（2026-11-05）
+
+负责人：**本原会话 / Codex Local 唯一应用开发线 / canonical main**。起点 `69831472`，工作树干净，两项 exact-SHA CI PASS。禁止为本轮另建会话、分支或 worktree。
+
+| 工作项 | 来源与 Mock 模型 | 成功验证 | 异常与恢复验证 | 剩余未知 / 退出门槛 |
+| --- | --- | --- | --- | --- |
+| C01 报价控件边界审计（进行中） | 固定 R1 placeOrders.vue、F10、有效字段证据；区分 area code path、button action、Order file URL wire | 每类明确源字段、输入/输出及可执行范围 | 无 provider、未知 action、未上传媒体必须阻断 | 活动 button 的 action 配置未取得；区域全国 provider 与街道副作用未验收；不据此执行外部程序 |
+| C02 常规 Mock 报价入口（本会话负责） | 已有 ExtField→Code/Cascade→字段草稿→type=0→type=1 实现 | 从常规 Mock 工单入口完成动态字段、普通无 SKU SPU、报价及 Order 逐字段回读 | 必填、失效选项、冲突、刷新、结果不明无盲重发 | 不再以额外字段 fixture 开关作为支持控件主路径的前提；真实 tenant schema 不因此通过 |
+| C03 通用表单/Repeat/媒体回归（本会话负责） | F04–F09、M02/M03/M07，复用共享队列及事务 | 普通/特殊/Repeat 保存与完成分离，媒体列表保存回读 | 上传失败重试、删除、断网、重启与旧草稿冲突 | Production 上传及 Workflow 副作用 HOLD；不得退化为 Survey 专属 |
+| C04 正式订单至签约前只读（本会话负责） | F18–F21、M05/M06，精确 Order/Contract 关联 | 已核验 Order 和匹配合同只读状态 | 空/缺页/多版本/归属或权限错误保持待确认 | 真实 Quote→Order 写入、其他合同状态的生产样本未验收；不扩合同只读范围 |
+| C05 集中交付门禁（本会话负责） | F01–F21 / M01–M08 逐项实际证据 | 本地 verify:full、真实 H5 430×932、三端构建、精确 SHA CI | 失败逐项复现并修正；SKIP 单列 | 商业全面视觉为第二阶段；原生微信、部署及真实写入不在本轮 |
+
+本轮退出按业务旅程标记 COMPLETE/PARTIAL/BLOCKED，并附成功、异常、恢复的实际结果。源规则未知或权限不足是明确阻断；技术实现难度、真实写入未开放，不替代可完成的 Mock 工作。
+
+本轮实际改动、R1 边界及旅程状态见[常规报价与共享表单收口](G4F_NORMAL_QUOTATION_FUNCTIONAL_CLOSURE_20261105.md)。C01 为 PARTIAL（button/Order 媒体/街道仍阻断）；C02 已实现常规入口与有界区域；C03 已补双节点媒体移除确认与回归；C04 增补 430×932 刷新核验；C05 本地完整检查、三端构建、默认 H5（67 PASS / 26 SKIP）与全部独立配置回归已通过；精确提交 CI 及剩余范围以报告与 #207 交付评论为准。

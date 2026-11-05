@@ -157,6 +157,8 @@ test.describe('A-stage P1 real-H5 operator acceptance', () => {
       await page.getByTestId('quotation-repair-part-picker-done').click()
       await page.getByTestId('quotation-first-step-description').locator('textarea').fill('平屋顶局部修缮')
       await page.getByTestId('quotation-first-step-quantity').locator('input').fill('12')
+      await page.getByTestId('order-field-mock-order-mode').getByText('否', { exact: true }).click()
+      await expect(page.getByTestId('order-extfield-editor')).toHaveAttribute('data-draft-status', 'saved_local')
       await page.getByTestId('quotation-first-step-select-products').click()
       await page.getByTestId('quotation-catalog-kind-material').click()
       const materialId = 'mock-catalog-material-sealant'
