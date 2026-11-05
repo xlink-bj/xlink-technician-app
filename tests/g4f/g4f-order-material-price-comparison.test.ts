@@ -60,6 +60,7 @@ describe('bounded direct Material SPU price snapshot comparison', () => {
         embeddedProduct: 0,
         embeddedMaterial: 0,
         materialReference: 0,
+        r1DirectMaterialRow: 0,
         rowIdFallback: 0,
         missing: 0,
         other: 0,
@@ -158,5 +159,26 @@ describe('bounded direct Material SPU price snapshot comparison', () => {
       rowIdFallbackCatalogIdMatches: 1,
       spuIdentitySources: { rowIdFallback: 1 },
     })
+  })
+
+  it('accepts only the source-backed R1 direct Material row identity for a no-SKU price comparison', () => {
+    const result = summarizeDirectMaterialPriceSnapshots({
+      expectedWorkOrderId: 'work-order-1',
+      orders: [order(line('spu-r1-row', 8, { identity: { spuIdSource: 'r1_direct_material_row_id' } }))],
+      catalogMaterials: [{ id: 'spu-r1-row', kind: 'material', price: 8 }],
+      activeSkuRows: [],
+    })
+
+    expect(result).toMatchObject({
+      state: 'COMPARED',
+      directMaterialLines: 1,
+      catalogSpuMatches: 1,
+      comparableLines: 1,
+      equalToCurrent: 1,
+      differentFromCurrent: 0,
+      unknownLines: 0,
+      spuIdentitySources: { r1DirectMaterialRow: 1 },
+    })
+    expect(JSON.stringify(result)).not.toContain('spu-r1-row')
   })
 })

@@ -212,12 +212,66 @@ describe('G4-F Production quotation Order read adapter', () => {
     }, () => true).listTypeOneOrdersForWorkOrder('work-order-price-read')
     expect(result).toMatchObject({ state: 'succeeded', data: { items: [{ groups: [{
       contentSupported: false,
-      lines: [{ identity: { spuId: 'spu-current-catalog', spuIdSource: 'row_id_fallback' }, contentSupported: false }],
+      lines: [{ identity: { spuId: 'spu-current-catalog', spuIdSource: 'r1_direct_material_row_id' }, contentSupported: false }],
     }] }] } })
     const line = result.state === 'succeeded' ? result.data?.items[0]?.groups[0]?.lines[0] : undefined
     expect(line).not.toHaveProperty('unitPrice')
     expect(line).not.toHaveProperty('lineTotal')
     expect(JSON.stringify(result)).not.toContain('199')
+  })
+
+  it('uses R1 direct Material category row identity while keeping selected SKU compositions unknown', async () => {
+    const result = await createQuotationOrderReadAdapter({
+      execute: async () => ({ data: [{
+        _id: 'r1-material-order', type: 1,
+        serviceAppointmentId: 'work-order-price-read',
+        bjProducts: { orderList: [{
+          repairParts: ['roof'], partDescription: '屋面',
+          projPackages: { data: [] }, procedures: { data: [] }, measures: { data: [] },
+          materials: { data: [
+            { _id: 'direct-spu-row', name: '直接材料', number: 2, unit: '桶', amount: 8, totalAmount: 16, skus: [] },
+            { _id: 'selected-spu-row', name: '规格材料', number: 2, unit: '桶', amount: 10, totalAmount: 20,
+              skus: [{ _id: 'selected-sku-row', spuid: 'selected-spu-row', number: 2 }] },
+          ] },
+        }] },
+      }] }),
+    }, () => true).listTypeOneOrdersForWorkOrder('work-order-price-read')
+
+    expect(result).toMatchObject({ state: 'succeeded', data: { items: [{ groups: [{
+      lines: [
+        { identity: { spuId: 'direct-spu-row', spuIdSource: 'r1_direct_material_row_id' }, contentSupported: true, unitPrice: 8, lineTotal: 16 },
+        { identity: {}, contentSupported: false },
+      ],
+    }] }] } })
+    const lines = result.state === 'succeeded' ? result.data?.items[0]?.groups[0]?.lines : undefined
+    expect(lines?.[1]).not.toHaveProperty('unitPrice')
+    expect(lines?.[1]).not.toHaveProperty('lineTotal')
+    expect(JSON.stringify(result)).not.toContain('selected-sku-row')
+  })
+
+  it('does not apply the R1 direct Material row identity to Package children', async () => {
+    const result = await createQuotationOrderReadAdapter({
+      execute: async () => ({ data: [{
+        _id: 'package-child-order', type: 1,
+        serviceAppointmentId: 'work-order-price-read',
+        bjProducts: { orderList: [{
+          repairParts: ['roof'], partDescription: '屋面',
+          projPackages: { data: [{
+            _id: 'package-row', name: '套餐', number: 1, amount: 20, totalAmount: 20,
+            procedureList: [], measuresList: [], measureList: [],
+            materialList: [{ _id: 'generic-package-child-row', name: '组件材料', number: 1, amount: 5, totalAmount: 5 }],
+          }] },
+          procedures: { data: [] }, materials: { data: [] }, measures: { data: [] },
+        }] },
+      }] }),
+    }, () => true).listTypeOneOrdersForWorkOrder('work-order-price-read')
+
+    expect(result).toMatchObject({ state: 'succeeded', data: { items: [{ groups: [{
+      lines: [{ children: [{
+        kind: 'material',
+        identity: { spuId: 'generic-package-child-row', spuIdSource: 'row_id_fallback' },
+      }] }],
+    }] }] } })
   })
 
   it('keeps an incomplete or inconsistent persisted amount relationship unverified', async () => {

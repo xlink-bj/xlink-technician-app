@@ -17,7 +17,7 @@ export function summarizeDirectMaterialPriceSnapshots({
       unknownLines: 0, skuOrAmbiguousIdentity: 0, currentSkuVariantAmbiguity: 0,
       duplicateCatalogIdentities: 0, rowIdFallbackCatalogIdMatches: 0,
       spuIdentitySources: { orderLine: 0, embeddedProduct: 0, embeddedMaterial: 0,
-        materialReference: 0, rowIdFallback: 0, missing: 0, other: 0 },
+        materialReference: 0, r1DirectMaterialRow: 0, rowIdFallback: 0, missing: 0, other: 0 },
       identityConflicts: 0, orderListTruncated: false })
   }
 
@@ -48,7 +48,7 @@ export function summarizeDirectMaterialPriceSnapshots({
   let rowIdFallbackCatalogIdMatches = 0
   const spuIdentitySources = {
     orderLine: 0, embeddedProduct: 0, embeddedMaterial: 0,
-    materialReference: 0, rowIdFallback: 0, missing: 0, other: 0,
+    materialReference: 0, r1DirectMaterialRow: 0, rowIdFallback: 0, missing: 0, other: 0,
   }
 
   for (const order of orders) {
@@ -68,6 +68,7 @@ export function summarizeDirectMaterialPriceSnapshots({
         else if (source === 'embedded_product_spu') spuIdentitySources.embeddedProduct += 1
         else if (source === 'embedded_material_id') spuIdentitySources.embeddedMaterial += 1
         else if (source === 'material_reference') spuIdentitySources.materialReference += 1
+        else if (source === 'r1_direct_material_row_id') spuIdentitySources.r1DirectMaterialRow += 1
         else if (source === 'row_id_fallback') spuIdentitySources.rowIdFallback += 1
         else if (source === undefined) spuIdentitySources.missing += 1
         else spuIdentitySources.other += 1
@@ -75,10 +76,11 @@ export function summarizeDirectMaterialPriceSnapshots({
           unknownLines += 1
           continue
         }
-        if (!['order_line_spu', 'embedded_product_spu', 'embedded_material_id', 'material_reference']
+        if (!['order_line_spu', 'embedded_product_spu', 'embedded_material_id', 'material_reference', 'r1_direct_material_row_id']
           .includes(source)) {
-          // A projected row `_id` fallback can be a variant row ID. Only an
-          // explicit SPU/reference field may establish catalog identity.
+          // A generic projected row `_id` fallback can be a variant row ID.
+          // Only explicit fields or the source-verified R1 direct category
+          // row identity may establish catalog identity.
           if (source === 'row_id_fallback' && (catalogById.get(spuId) ?? []).length === 1) {
             // Record an ID coincidence for diagnostics without promoting it
             // to an SPU identity or a comparable price snapshot.

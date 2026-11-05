@@ -5,7 +5,7 @@ export interface DirectMaterialPriceLine {
   readonly unitPrice?: number
   readonly identity?: {
     readonly spuId?: string
-    readonly spuIdSource?: 'order_line_spu' | 'embedded_product_spu' | 'embedded_material_id' | 'material_reference' | 'row_id_fallback'
+    readonly spuIdSource?: 'order_line_spu' | 'embedded_product_spu' | 'embedded_material_id' | 'material_reference' | 'r1_direct_material_row_id' | 'row_id_fallback'
     readonly skuId?: string
     readonly skuCode?: string
   }

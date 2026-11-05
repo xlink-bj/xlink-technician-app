@@ -7,8 +7,8 @@ export interface QuotationOrderBrowseIdentity {
   readonly providerRowId?: string
   readonly providerReferenceId?: string
   readonly spuId?: string
-  /** Provenance for audit-grade SPU association; `row_id_fallback` is not sufficient for price comparison. */
-  readonly spuIdSource?: 'order_line_spu' | 'embedded_product_spu' | 'embedded_material_id' | 'material_reference' | 'row_id_fallback'
+  /** Provenance for audit-grade SPU association. Generic row-ID fallback is insufficient for price comparison. */
+  readonly spuIdSource?: 'order_line_spu' | 'embedded_product_spu' | 'embedded_material_id' | 'material_reference' | 'r1_direct_material_row_id' | 'row_id_fallback'
   readonly skuId?: string
   readonly spuCode?: string
   readonly skuCode?: string
