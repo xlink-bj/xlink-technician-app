@@ -21,3 +21,17 @@ export function verifyCurrentFormDefPage(payload, extId) {
   }
   return { ok: true, fields: page.rows.length }
 }
+
+/** Structural diagnostics only: no keys, IDs, labels or business values. */
+export function currentFormDefPageDiagnostics(payload, httpStatus) {
+  const page = parseOrderExtFieldPage(payload)
+  return {
+    httpStatus: Number.isInteger(httpStatus) ? httpStatus : null,
+    envelopeType: Array.isArray(payload) ? 'array' : payload === null ? 'null' : typeof payload,
+    hasDataArray: Array.isArray(payload?.data),
+    returnedRows: Array.isArray(payload?.data) ? payload.data.length : null,
+    reportedTotal: Number.isSafeInteger(payload?.total) && payload.total >= 0 ? payload.total : null,
+    parser: page.ok ? 'VALID_PAGE_SHAPE' : page.reason,
+    complete: page.ok && page.total === page.rows.length,
+  }
+}

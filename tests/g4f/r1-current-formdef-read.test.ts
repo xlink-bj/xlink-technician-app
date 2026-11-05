@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { currentFormDefRequestBody, isAllowedCurrentFormDefRead, verifyCurrentFormDefPage } from '../../scripts/lib/r1-current-formdef-read.mjs'
+import { currentFormDefPageDiagnostics, currentFormDefRequestBody, isAllowedCurrentFormDefRead, verifyCurrentFormDefPage } from '../../scripts/lib/r1-current-formdef-read.mjs'
 describe('Owner-authorized current node FormDef field-only capture', () => {
   const id = 'synthetic-current-definition'
   const encode = (body: Record<string, unknown>) => new URLSearchParams(Object.entries(body).map(([k,v]) => [k,String(v)])).toString()
@@ -8,6 +8,11 @@ describe('Owner-authorized current node FormDef field-only capture', () => {
     expect(isAllowedCurrentFormDefRead(encode(body), id)).toBe(true)
     for (const change of [{ _all: 1 }, { extId: 'other' }, { page: 2 }, { rows: 51 }, { 'is:state|integer#and': 0 }]) expect(isAllowedCurrentFormDefRead(encode({ ...body, ...change }), id)).toBe(false)
     expect(isAllowedCurrentFormDefRead(`${encode(body)}&rows=50`, id)).toBe(false)
+  })
+  it('retains only structural diagnostics when a page is incomplete', () => {
+    const diagnostics = currentFormDefPageDiagnostics({ data: [{ _id: 'secret-id', privateValue: 'secret-customer' }], total: 51 }, 200)
+    expect(diagnostics).toMatchObject({ httpStatus: 200, returnedRows: 1, reportedTotal: 51, complete: false })
+    expect(JSON.stringify(diagnostics)).not.toContain('secret')
   })
   it('requires complete page and exact unique field/FormDef identity', () => {
     const row = { _id: 'synthetic-field', extId: id, state: 1, name: 'answer' }

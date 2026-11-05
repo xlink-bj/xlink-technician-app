@@ -1,4 +1,4 @@
-import { currentFormDefRequestBody, isAllowedCurrentFormDefRead, verifyCurrentFormDefPage } from './lib/r1-current-formdef-read.mjs'
+import { currentFormDefPageDiagnostics, currentFormDefRequestBody, isAllowedCurrentFormDefRead, verifyCurrentFormDefPage } from './lib/r1-current-formdef-read.mjs'
 import { createR1BoundedConfigEvidence } from './lib/r1-bounded-config-evidence.mjs'
 import { createServer, loadEnv } from 'vite'
 import { resolve } from 'node:path'
@@ -1233,7 +1233,7 @@ async function run() {
     }
 
     if (currentFormDefOnlyRequested) {
-      let inspected = 0, state = 'NO_CURRENT_FORMDEF_FOUND', pageNumber = 0, result = null
+      let inspected = 0, state = 'NO_CURRENT_FORMDEF_FOUND', pageNumber = 0, result = null, diagnostics = null
       const seen = new Set()
       discovery: for (let page = 1; page <= MAX_WORK_ORDER_PAGES; page++) {
         pageNumber = page
@@ -1255,6 +1255,7 @@ async function run() {
             authorizedCurrentFormDefId = String(matches[0].formDefinitionId)
             const response = await requestReadOnce(request, runtime.value.environment.apiBaseUrl, session.sessionRef,
               'biz/extField/query', currentFormDefRequestBody(authorizedCurrentFormDefId))
+            diagnostics = currentFormDefPageDiagnostics(response?.data, response?.statusCode)
             if (authIdentityChanged() || !response || response.statusCode < 200 || response.statusCode >= 300) { state = 'FIELD_READ_STOPPED'; break discovery }
             const verified = verifyCurrentFormDefPage(response.data, authorizedCurrentFormDefId)
             if (!verified.ok) { state = verified.reason; break discovery }
@@ -1268,7 +1269,7 @@ async function run() {
         }
         if (list.data.items.length < 3 || page * 3 >= list.data.totalCount) break
       }
-      console.log(JSON.stringify({ status: state, loginRequests, routeCounts, inspected, pageNumber, currentFormDefReads,
+      console.log(JSON.stringify({ status: state, loginRequests, routeCounts, inspected, pageNumber, currentFormDefReads, diagnostics,
         blockedUnexpectedNetworkRequests, productionBusinessMutationNetworkRequests: 0, evidence: result }))
       if (state !== 'CURRENT_FORMDEF_BOUNDED_FIELDS_COMPLETE') process.exitCode = 1
       return
