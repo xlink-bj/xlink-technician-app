@@ -142,3 +142,7 @@
 - 活动 button 有未保留配置，允许动作仍未证明；area 全国 provider/街道未读。两特殊控件继续阻断，7 普通控件的合成 wire 类型/provider 分类可供 Cloud 测试，但其中 3 个仍有额外未留存配置键，完整规则等价不可直接宣称。
 - Order/Contract 原授权样本重新精确匹配；type=0/扩页/通用 queryById 未执行。**本次 Order 3/3 行 unsupported，未确认价格**，不能沿用旧样本金额结论。真实提交/写权限/失败补偿实测仍为 0。
 - 无新 App 行为、权限或部署变更。#201 HOLD、Production/Beta 禁写、无 Cloud/第二开发线和无原生验收保持。
+
+## 11. 全域映射与可执行收口入口
+
+[R1 / Mock 映射台账](R1_MOCK_MAPPING_CLOSURE_20261105.md)和[机器可读映射](../../contracts/r1-mock-mapping.json)连接 F01–F21 / M01–M08 的实际测试与缺口。`pnpm verify:r1-mock-mapping` 执行关联单元测试并输出逐域实际结果；不将索引合法、跳过或源码映射算作业务等价通过。新增两组目录量级的真实读取适配器分页测试；M08 的默认 App 大规模 fixture/套餐组合仍 PARTIAL。当前完整生产 schema/额外配置/未知 Order 行等缺口不因全域索引建立而消失，整体全量等价仍 PARTIAL，#201 HOLD 不变。
