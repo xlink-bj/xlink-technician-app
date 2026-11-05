@@ -25,6 +25,15 @@ export interface QuotationOrderBrowseLine {
   readonly lineTotal?: number
   readonly identity: QuotationOrderBrowseIdentity
   readonly children: readonly QuotationOrderBrowseLine[]
+  /** Ephemeral, sanitized R1 fields used only to verify Package price lineage. */
+  readonly r1PackagePriceSnapshot?: {
+    readonly unitAmount: number
+    readonly totalAmount: number
+  }
+  readonly packagePricingMethod?: string
+  readonly packageSkuCompositionUnsupported?: boolean
+  readonly packageMaterialLayer?: string | number
+  readonly packageComponentMarkup?: number
   readonly contentSupported: boolean
 }
 

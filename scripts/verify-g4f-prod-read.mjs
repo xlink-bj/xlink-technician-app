@@ -12,6 +12,7 @@ import {
 } from './g4f-prod-read-context-scope.mjs'
 import { workOrderOrderLineageReadState } from './g4f-prod-read-summary.mjs'
 import { summarizeDirectMaterialPriceSnapshots } from './g4f-order-material-price-comparison.mjs'
+import { summarizePackagePriceSnapshots } from './g4f-order-package-price-comparison.mjs'
 import {
   buildOrderExtFieldRequestBody,
   effectiveOrderExtFieldProviderPlan,
@@ -78,6 +79,7 @@ let selectedCatalogWorkOrderId = null
 let selectedCatalogContextOrdinal = null
 let activeOrderFieldsOnlyRequested = false
 let selectedOrderMaterialPriceComparisonRequested = false
+let selectedOrderPackagePriceComparisonRequested = false
 let activeOrderCodeProviderIds = []
 let activeOrderCascadeProviderIds = []
 let expectedOrderCascadeTenantId = null
@@ -88,6 +90,9 @@ let selectedWorkOrderOrderPage = null
 let selectedWorkOrderOrderReadState = 'NOT_RUN'
 const selectedContextDirectMaterialRows = []
 const selectedOrderDirectMaterialSpuIds = new Set()
+const selectedOrderPackageIds = new Set()
+const selectedOrderCatalogPackageRows = []
+const selectedOrderPackageDetails = []
 let selectedOrderDirectMaterialSpusInCatalog = 0
 let catalogSkuRequestCount = 0
 const responseCounts = {
@@ -268,7 +273,7 @@ function recordSafeRequest(url, request, apiBaseUrl) {
   }
   if (relativePath === 'basic/order/query') {
     if (routeCounts.quotationList >= MAX_QUOTATION_LIST_READS || !isApprovedWorkOrderQuoteQuery(request)) return null
-    if (selectedOrderMaterialPriceComparisonRequested
+    if ((selectedOrderMaterialPriceComparisonRequested || selectedOrderPackagePriceComparisonRequested)
       && (routeCounts.quotationList !== 0
         || new URLSearchParams(request.data).get('is:serviceAppointmentId|string#and') !== selectedCatalogWorkOrderId)) return null
     routeCounts.quotationList += 1
@@ -949,6 +954,7 @@ async function run() {
   const catalogAuditOptions = parseCatalogContextAuditArgs(argumentsWithoutSeparator)
   activeOrderFieldsOnlyRequested = catalogAuditOptions.activeOrderFieldsOnly
   selectedOrderMaterialPriceComparisonRequested = catalogAuditOptions.compareSelectedOrderMaterialPrices
+  selectedOrderPackagePriceComparisonRequested = catalogAuditOptions.compareSelectedOrderPackagePrices
   const authorizedRead = argumentsWithoutSeparator.includes('--authorize-bounded-prod-read')
   const preflightOnly = argumentsWithoutSeparator.includes('--preflight-only')
   if (!authorizedRead && !preflightOnly) {
@@ -1200,7 +1206,8 @@ async function run() {
     const countLines = (lines) => lines.reduce((count, line) => count + 1 + countLines(line.children), 0)
     const recordQuotationRead = (workOrderId, quotes) => {
       recordWorkOrderOrderRead(workOrderId, quotes)
-      if (selectedOrderMaterialPriceComparisonRequested && workOrderId === selectedCatalogWorkOrderId) {
+      if ((selectedOrderMaterialPriceComparisonRequested || selectedOrderPackagePriceComparisonRequested)
+        && workOrderId === selectedCatalogWorkOrderId) {
         selectedWorkOrderOrderReadState = operationState(quotes)
         selectedWorkOrderOrderPage = quotes.state === 'succeeded' && quotes.data ? quotes.data : null
         for (const order of selectedWorkOrderOrderPage?.items ?? []) {
@@ -1209,6 +1216,10 @@ async function run() {
               const spuId = line.kind === 'material' ? line.identity.spuId : undefined
               if (typeof spuId === 'string' && /^[A-Za-z0-9_-]{1,100}$/.test(spuId)) {
                 selectedOrderDirectMaterialSpuIds.add(spuId)
+              }
+              const packageId = line.kind === 'package' ? line.identity.providerRowId : undefined
+              if (typeof packageId === 'string' && /^[A-Za-z0-9_-]{1,100}$/.test(packageId)) {
+                selectedOrderPackageIds.add(packageId)
               }
             }
           }
@@ -1334,7 +1345,7 @@ async function run() {
     }
 
     if ((!catalogAuditOptions.catalogContextOnly && !catalogAuditOptions.activeOrderFieldsOnly)
-      || selectedOrderMaterialPriceComparisonRequested) {
+      || selectedOrderMaterialPriceComparisonRequested || selectedOrderPackagePriceComparisonRequested) {
       if (!selectedCatalogWorkOrderId || orderReadStatesByWorkOrder.has(selectedCatalogWorkOrderId)) {
         // The selected current WorkOrder was already read during the initial page pass,
         // or no eligible current place_order WorkOrder was found.
@@ -1342,7 +1353,9 @@ async function run() {
         stage = 'current_place_order_workorder_quotation_read'
         if (authIdentityChanged() || !selectedWorkOrderIsCurrent()) {
           orderReadStatesByWorkOrder.set(selectedCatalogWorkOrderId, 'FAILED_TERMINAL')
-          if (selectedOrderMaterialPriceComparisonRequested) selectedWorkOrderOrderReadState = 'FAILED_TERMINAL'
+          if (selectedOrderMaterialPriceComparisonRequested || selectedOrderPackagePriceComparisonRequested) {
+            selectedWorkOrderOrderReadState = 'FAILED_TERMINAL'
+          }
         } else {
           const quotes = await orderApi.listTypeOneOrdersForWorkOrder(selectedCatalogWorkOrderId, 3)
           recordQuotationRead(selectedCatalogWorkOrderId, quotes)
@@ -1488,6 +1501,50 @@ async function run() {
           responseCounts.selectableSkuCatalog.reason = materialCatalog.complete
             ? 'NO_ORDER_DIRECT_MATERIAL_SPUS_IN_CURRENT_CATALOG'
             : 'DIRECT_MATERIAL_CATALOG_INCOMPLETE'
+        }
+      } else if (selectedOrderPackagePriceComparisonRequested) {
+        if (selectedOrderPackageIds.size === 0) {
+          responseCounts.catalogItemsByKind.package = {
+            items: 0, pages: 0, totalCount: null, complete: true, reason: 'NO_PACKAGE_LINES_IN_ORDER_PAGE',
+          }
+          responseCounts.packageDetails.complete = true
+        } else {
+          stage = 'selected_order_package_catalog_pages'
+          const packageCatalog = await readEntireCatalog(
+            'package', selectedCatalogContext, catalogApi.listPackages.bind(catalogApi), (item) => {
+              listedPackageIds.add(item.id)
+              selectedOrderCatalogPackageRows.push(item)
+            },
+          )
+          responseCounts.packageDetails.attempted = [...selectedOrderPackageIds]
+            .filter(id => listedPackageIds.has(id)).length
+          responseCounts.packageDetails.complete = packageCatalog.complete
+          const matchedPackageIds = [...selectedOrderPackageIds].filter(id => listedPackageIds.has(id))
+          for (const [index, packageId] of matchedPackageIds.entries()) {
+            if (authIdentityChanged() || !selectedWorkOrderIsCurrent()) {
+              responseCounts.packageDetails.complete = false
+              responseCounts.packageDetails.failed += matchedPackageIds.length - index
+              break
+            }
+            stage = `selected_order_package_detail_${index + 1}`
+            const packageDetail = await catalogApi.getPackageDetail(packageId)
+            if (packageDetail.state !== 'succeeded' || !packageDetail.data
+              || authIdentityChanged() || !selectedWorkOrderIsCurrent()) {
+              responseCounts.packageDetails.failed += 1
+              responseCounts.packageDetails.complete = false
+              continue
+            }
+            responseCounts.packageDetails.succeeded += 1
+            responseCounts.packageDetails.components.procedure += packageDetail.data.procedures.length
+            responseCounts.packageDetails.components.material += packageDetail.data.materials.length
+            responseCounts.packageDetails.components.measure += packageDetail.data.measures.length
+            selectedOrderPackageDetails.push(packageDetail.data)
+          }
+          if (responseCounts.packageDetails.failed > 0) responseCounts.packageDetails.complete = false
+          if (!packageCatalog.complete || authIdentityChanged() || !selectedWorkOrderIsCurrent()) {
+            responseCounts.packageDetails.complete = false
+          }
+          responseCounts.packageDetails.referencedMaterialSpus = packageCatalog.items
         }
       } else {
       stage = 'r1_catalog_filter_code_options'
@@ -1703,6 +1760,13 @@ async function run() {
       && !authIdentityChanged()
       && selectedWorkOrderIsCurrent()
 
+    const selectedPackagePriceComparisonCatalogReadComplete = responseCounts.catalogContextVerified
+      && (selectedOrderPackageIds.size === 0
+        || responseCounts.catalogItemsByKind.package.complete && responseCounts.packageDetails.complete)
+      && blockedUnexpectedNetworkRequests === 0
+      && !authIdentityChanged()
+      && selectedWorkOrderIsCurrent()
+
     let selectedWorkOrderOrderPriceComparison = { state: 'NOT_REQUESTED' }
     if (selectedOrderMaterialPriceComparisonRequested) {
       if (!selectedCatalogWorkOrderId) {
@@ -1729,6 +1793,35 @@ async function run() {
       }
     }
 
+    let selectedWorkOrderOrderPackagePriceComparison = { state: 'NOT_REQUESTED' }
+    if (selectedOrderPackagePriceComparisonRequested) {
+      if (!selectedCatalogWorkOrderId) {
+        selectedWorkOrderOrderPackagePriceComparison = { state: 'NO_SELECTED_PLACE_ORDER_WORK_ORDER' }
+      } else if (selectedWorkOrderOrderReadState !== 'SUCCEEDED' || !selectedWorkOrderOrderPage
+        || !selectedPackagePriceComparisonCatalogReadComplete
+        || authIdentityChanged() || !selectedWorkOrderIsCurrent()) {
+        selectedWorkOrderOrderPackagePriceComparison = {
+          state: 'INCOMPLETE_INPUTS',
+          orderReadState: selectedWorkOrderOrderReadState,
+          packageCatalogComplete: responseCounts.catalogItemsByKind.package.complete,
+          packageDetailsComplete: responseCounts.packageDetails.complete,
+        }
+      } else {
+        const orderListTruncated = selectedWorkOrderOrderPage.totalCount !== undefined
+          ? selectedWorkOrderOrderPage.totalCount > selectedWorkOrderOrderPage.items.length
+          : selectedWorkOrderOrderPage.items.length >= 3
+        selectedWorkOrderOrderPackagePriceComparison = summarizePackagePriceSnapshots({
+          expectedWorkOrderId: selectedCatalogWorkOrderId,
+          orders: selectedWorkOrderOrderPage.items,
+          catalogPackages: selectedOrderCatalogPackageRows,
+          packageDetails: selectedOrderPackageDetails,
+          packageCatalogComplete: responseCounts.catalogItemsByKind.package.complete,
+          packageDetailsComplete: responseCounts.packageDetails.complete,
+          orderListTruncated,
+        })
+      }
+    }
+
     projectSelectedWorkOrderOrderLineage()
 
     const fullCatalogReadComplete = responseCounts.catalogContextVerified
@@ -1740,7 +1833,9 @@ async function run() {
       && blockedUnexpectedNetworkRequests === 0
     const catalogReadComplete = selectedOrderMaterialPriceComparisonRequested
       ? selectedPriceComparisonCatalogReadComplete
-      : fullCatalogReadComplete
+      : selectedOrderPackagePriceComparisonRequested
+        ? selectedPackagePriceComparisonCatalogReadComplete
+        : fullCatalogReadComplete
     const contextSearchExhaustedWithoutMatch = !selectedCatalogContext
       && catalogAuditOptions.catalogContextOnly
       && discoveryState === 'ROLE_VISIBLE_WORK_ORDERS_EXHAUSTED'
@@ -1764,7 +1859,7 @@ async function run() {
       ? activeOrderFieldsComplete
       : catalogAuditOptions.catalogContextOnly
       ? Boolean((catalogReadComplete || contextSearchExhaustedWithoutMatch)
-        && (!selectedOrderMaterialPriceComparisonRequested
+        && (!(selectedOrderMaterialPriceComparisonRequested || selectedOrderPackagePriceComparisonRequested)
           || selectedWorkOrderOrderReadState === 'SUCCEEDED' && selectedWorkOrderOrderPage !== null))
       : catalogReadComplete
       && ['SUCCEEDED_WITH_ORDER', 'SUCCEEDED_EMPTY'].includes(responseCounts.sampledOrderMaterialLineage.state)
@@ -1800,6 +1895,7 @@ async function run() {
       routeCounts,
       responseCounts,
       selectedWorkOrderOrderPriceComparison,
+      selectedWorkOrderOrderPackagePriceComparison,
       blockedUnexpectedNetworkRequests,
       blockedUnexpectedRoutes,
       blockedUnexpectedStages,

@@ -8,15 +8,17 @@ import { workOrderOrderLineageReadState } from '../../scripts/g4f-prod-read-summ
 
 describe('bounded Production catalog context audit selection', () => {
   it('defaults to the first context and accepts an explicit bounded ordinal', () => {
-    expect(parseCatalogContextAuditArgs([])).toEqual({ catalogContextOrdinal: 1, catalogContextOnly: false, activeOrderFieldsOnly: false, compareSelectedOrderMaterialPrices: false })
+    expect(parseCatalogContextAuditArgs([])).toEqual({ catalogContextOrdinal: 1, catalogContextOnly: false, activeOrderFieldsOnly: false, compareSelectedOrderMaterialPrices: false, compareSelectedOrderPackagePrices: false })
     expect(parseCatalogContextAuditArgs(['--catalog-context-only', '--catalog-context-ordinal=2']))
-      .toEqual({ catalogContextOrdinal: 2, catalogContextOnly: true, activeOrderFieldsOnly: false, compareSelectedOrderMaterialPrices: false })
+      .toEqual({ catalogContextOrdinal: 2, catalogContextOnly: true, activeOrderFieldsOnly: false, compareSelectedOrderMaterialPrices: false, compareSelectedOrderPackagePrices: false })
     expect(parseCatalogContextAuditArgs(['--catalog-context-only', '--compare-selected-order-material-prices']))
-      .toEqual({ catalogContextOrdinal: 1, catalogContextOnly: true, activeOrderFieldsOnly: false, compareSelectedOrderMaterialPrices: true })
+      .toEqual({ catalogContextOrdinal: 1, catalogContextOnly: true, activeOrderFieldsOnly: false, compareSelectedOrderMaterialPrices: true, compareSelectedOrderPackagePrices: false })
+    expect(parseCatalogContextAuditArgs(['--catalog-context-only', '--compare-selected-order-package-prices']))
+      .toEqual({ catalogContextOrdinal: 1, catalogContextOnly: true, activeOrderFieldsOnly: false, compareSelectedOrderMaterialPrices: false, compareSelectedOrderPackagePrices: true })
     expect(parseCatalogContextAuditArgs(['--', '--catalog-context-ordinal', '20']))
-      .toEqual({ catalogContextOrdinal: 20, catalogContextOnly: false, activeOrderFieldsOnly: false, compareSelectedOrderMaterialPrices: false })
+      .toEqual({ catalogContextOrdinal: 20, catalogContextOnly: false, activeOrderFieldsOnly: false, compareSelectedOrderMaterialPrices: false, compareSelectedOrderPackagePrices: false })
     expect(parseCatalogContextAuditArgs(['--active-order-fields-only', '--catalog-context-ordinal=3']))
-      .toEqual({ catalogContextOrdinal: 3, catalogContextOnly: false, activeOrderFieldsOnly: true, compareSelectedOrderMaterialPrices: false })
+      .toEqual({ catalogContextOrdinal: 3, catalogContextOnly: false, activeOrderFieldsOnly: true, compareSelectedOrderMaterialPrices: false, compareSelectedOrderPackagePrices: false })
   })
 
   it('rejects unsupported, duplicate, malformed, and unbounded command arguments', () => {
@@ -31,6 +33,8 @@ describe('bounded Production catalog context audit selection', () => {
       ['--compare-selected-order-material-prices'],
       ['--active-order-fields-only', '--compare-selected-order-material-prices'],
       ['--catalog-context-only', '--compare-selected-order-material-prices', '--compare-selected-order-material-prices'],
+      ['--compare-selected-order-package-prices'],
+      ['--catalog-context-only', '--compare-selected-order-material-prices', '--compare-selected-order-package-prices'],
       ['--active-order-fields-only', '--active-order-fields-only'],
       ['--active-order-fields-only', '--catalog-context-only'],
       ['--authorize-bounded-prod-read', '--authorize-bounded-prod-read'],
@@ -74,6 +78,21 @@ describe('bounded Production catalog context audit selection', () => {
       'scripts/verify-g4f-prod-read.mjs',
       '--catalog-context-only',
       '--compare-selected-order-material-prices',
+    ], { encoding: 'utf8' })
+    expect(run.status).toBe(0)
+    expect(JSON.parse(run.stdout)).toMatchObject({
+      status: 'NO_NETWORK_DEFAULT',
+      loginRequests: 0,
+      blockedUnexpectedNetworkRequests: 0,
+      productionBusinessMutationNetworkRequests: 0,
+    })
+  })
+
+  it('keeps the selected Package price comparison at zero network without explicit authorization', () => {
+    const run = spawnSync(process.execPath, [
+      'scripts/verify-g4f-prod-read.mjs',
+      '--catalog-context-only',
+      '--compare-selected-order-package-prices',
     ], { encoding: 'utf8' })
     expect(run.status).toBe(0)
     expect(JSON.parse(run.stdout)).toMatchObject({

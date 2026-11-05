@@ -34,4 +34,4 @@ The bounded audit runner can compare an exact selected type-1 Order page against
 
 ## Next evidence step
 
-The selected Orders contain Package-contained Material rows, so the next price-evidence slice should first map an exact Order Package ID to the current context's listed Package and its listed Package detail, then verify the R1 `pricingMethod`, minimum-price and component snapshot relationship. A separate eligible WorkOrder sample is still required to validate a standalone direct Material SPU line. Neither step authorizes Production/Beta writes; #201 remains HOLD.
+The Package-contained rows were followed in a separate [bounded Package price comparison](G4F_ORDER_PACKAGE_PRICE_SNAPSHOT_PROD_READ_20261105.md). One exact current Package/Order snapshot matched; a second historical Package was absent from its current filtered catalog and remains unknown. A separate eligible WorkOrder sample is still required to validate a standalone direct Material SPU line. Neither step authorizes Production/Beta writes; #201 remains HOLD.

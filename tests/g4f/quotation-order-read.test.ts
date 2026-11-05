@@ -153,6 +153,51 @@ describe('G4-F Production quotation Order read adapter', () => {
     expect(JSON.stringify(result)).not.toContain('discount')
   })
 
+  it('retains a validated Package price snapshot and only sanitized selected-material price inputs for audit', async () => {
+    const result = await createQuotationOrderReadAdapter({
+      execute: async () => ({ data: [{
+        _id: 'package-snapshot-order', type: 1,
+        serviceAppointmentId: 'work-order-price-read',
+        bjProducts: { orderList: [{
+          repairParts: ['roof'], partDescription: '屋面',
+          projPackages: { data: [{
+            _id: 'package-snapshot-id', name: '套餐', price: 75, amount: 80,
+            minimumPrice: 100, number: 2, totalAmount: 160,
+            exts: { pricingMethod: '0' },
+            procedureList: [],
+            materialList: [{
+              _id: 'package-component-id', materialId: 'package-material-id', number: 1,
+              material: { _id: 'package-material-id', name: '套餐材料' },
+              exts: { price: 5, layer: 1 },
+            }],
+            measureList: [],
+          }] },
+          procedures: { data: [] }, materials: { data: [] }, measures: { data: [] },
+        }] },
+      }] }),
+    }, () => true).listTypeOneOrdersForWorkOrder('work-order-price-read')
+
+    expect(result).toMatchObject({ state: 'succeeded', data: { items: [{ groups: [{
+      contentSupported: false,
+      lines: [{
+        kind: 'package', contentSupported: false,
+        r1PackagePriceSnapshot: { unitAmount: 80, totalAmount: 160 }, packagePricingMethod: '0',
+        identity: { providerRowId: 'package-snapshot-id' },
+        children: [{
+          kind: 'material', packageMaterialLayer: 1, packageComponentMarkup: 5,
+          identity: {
+            providerRowId: 'package-component-id', providerReferenceId: 'package-material-id',
+            spuId: 'package-material-id', spuIdSource: 'embedded_material_id',
+          },
+        }],
+      }],
+    }] }] } })
+    const packageRow = result.state === 'succeeded' ? result.data?.items[0]?.groups[0]?.lines[0] : undefined
+    expect(packageRow).not.toHaveProperty('unitPrice')
+    expect(packageRow).not.toHaveProperty('lineTotal')
+    expect(JSON.stringify(result)).not.toContain('75')
+  })
+
   it('does not display a catalog `price` as an Order price when captured `amount` fields are absent', async () => {
     const result = await createQuotationOrderReadAdapter({
       execute: async () => ({ data: [{

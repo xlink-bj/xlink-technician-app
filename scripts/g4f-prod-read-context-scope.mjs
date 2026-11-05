@@ -7,6 +7,7 @@ export function parseCatalogContextAuditArgs(args = []) {
   let catalogContextOnly = false
   let activeOrderFieldsOnly = false
   let compareSelectedOrderMaterialPrices = false
+  let compareSelectedOrderPackagePrices = false
   let authorizeRead = false
   let preflightOnly = false
 
@@ -38,6 +39,11 @@ export function parseCatalogContextAuditArgs(args = []) {
       compareSelectedOrderMaterialPrices = true
       continue
     }
+    if (argument === '--compare-selected-order-package-prices') {
+      if (compareSelectedOrderPackagePrices) throw new Error('duplicate_order_package_price_comparison_argument')
+      compareSelectedOrderPackagePrices = true
+      continue
+    }
     if (argument === '--catalog-context-ordinal' || argument.startsWith('--catalog-context-ordinal=')) {
       if (hasOrdinal) throw new Error('duplicate_catalog_context_ordinal_argument')
       hasOrdinal = true
@@ -58,12 +64,19 @@ export function parseCatalogContextAuditArgs(args = []) {
   }
 
   if (catalogContextOnly && activeOrderFieldsOnly) throw new Error('incompatible_g4f_prod_read_modes')
-  if (compareSelectedOrderMaterialPrices && (!catalogContextOnly || activeOrderFieldsOnly)) {
-    throw new Error('order_material_price_comparison_requires_catalog_context_only_mode')
+  if ((compareSelectedOrderMaterialPrices || compareSelectedOrderPackagePrices)
+    && (!catalogContextOnly || activeOrderFieldsOnly)) {
+    throw new Error('order_price_comparison_requires_catalog_context_only_mode')
+  }
+  if (compareSelectedOrderMaterialPrices && compareSelectedOrderPackagePrices) {
+    throw new Error('incompatible_order_price_comparison_modes')
   }
   if (authorizeRead && preflightOnly) throw new Error('incompatible_g4f_prod_read_authorization')
 
-  return Object.freeze({ catalogContextOrdinal, catalogContextOnly, activeOrderFieldsOnly, compareSelectedOrderMaterialPrices })
+  return Object.freeze({
+    catalogContextOrdinal, catalogContextOnly, activeOrderFieldsOnly,
+    compareSelectedOrderMaterialPrices, compareSelectedOrderPackagePrices,
+  })
 }
 
 /** Select a requested distinct service/source pair from verified current Place Order WorkOrders. */

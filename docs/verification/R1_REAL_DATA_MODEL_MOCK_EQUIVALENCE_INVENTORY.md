@@ -33,8 +33,8 @@
 | F08 通用媒体值 | 动态字段的文件/图片 provider、队列及最终 FormData | 本地任务 ID 与远端引用分离；FormData 中的列表对象 `url/name/extname`（适配后的 R1 wire），缺图/排队/失败/上传成功 | `SOURCE` + `DEV_MOCK`；上传队列属于**所有动态表单**，Survey 只是其中一种；真实上传未获准 |
 | F09 勘查 `Survey`（区别于巡检） | `Survey` 对应有效 repeat/typed FormData、ExtField；旧活动性不能按“勘察”名称猜测 | `sid`、Survey ID、部位/测量/漏水原因/图像、`serviceGoods`、状态、可能的 `orderId/contractId`；FormData 与 typed Survey 要一致 | 历史 61 字段合成种子在 `contracts/beta/survey/historical.json`；**非当前活动生产定义**，详见 [领域说明](G4E_SURVEY_DOMAIN_TRUTH.md) |
 | F10 Order 动态字段 | `biz/extField/query`：`colName=order`、激活、`showList=4`；按 `frontEndConfig.showType=placeOrder/submitOrder`、服务/客户类型计算 | 字段 `name/type/required/valueOption/frontEndConfig`，条件 `showField/showValue`、`dispensableField/dispensableValue`，输出 `Order.exts` | `SOURCE` + `PROD_READ`：租户 32 字段；另有一个当前工单上下文有效字段摘要（4 `placeOrder`、5 `submitOrder`）及其 Code/Cascade 选项结构计数。其他上下文、原始字段身份/值与写入映射仍 UNKNOWN；见[有效字段只读证据](G4F_EFFECTIVE_ORDER_EXTFIELD_PROD_READ_20261105.md)和[映射规则](G4F_ORDER_EXTFIELD_MAPPING_CONTRACT.md) |
-| F11 套餐 Package 列表 | `biz/projPackage/queryWithRank`，激活 + `serviceType/sourceType` + `order,_id`；后端注入 `form=mini` | `_id/name/type/agelimit/price/minimumPrice/unit/exts`、部位适用性；必须保存 R1 mini 最终显示价、非基础数据库价 | `SOURCE` + 四上下文目录 `PROD_READ`；价格数值未落库/未逐项 R1 屏幕对照 |
-| F12 套餐详情与组件 | `biz/projPackage/findById/{已列出套餐_id}` | 套餐与子 `procedure/material/measure` 的精确 ID、`layer/order/number/coefficient/coefficientUnit`、材料 `spec`、组件 `exts.price`；**一个有效材料层选一个** | `SOURCE` + 全部已列套餐详情 `PROD_READ`；包内材料不等同独立直购 SKU |
+| F11 套餐 Package 列表 | `biz/projPackage/queryWithRank`，激活 + `serviceType/sourceType` + `order,_id`；后端注入 `form=mini` | `_id/name/type/agelimit/price/minimumPrice/unit/exts`、部位适用性；必须保存 R1 mini 最终显示价、非基础数据库价 | `SOURCE` + 四上下文目录 `PROD_READ`；另有一个精确当前套餐与正式 Order 价格快照一致（1/1），无价格版本/新鲜度证明；见[套餐价格对照](G4F_ORDER_PACKAGE_PRICE_SNAPSHOT_PROD_READ_20261105.md) |
+| F12 套餐详情与组件 | `biz/projPackage/findById/{已列出套餐_id}` | 套餐与子 `procedure/material/measure` 的精确 ID、`layer/order/number/coefficient/coefficientUnit`、材料 `spec`、组件 `exts.price`；**一个有效材料层选一个** | `SOURCE` + 全部已列套餐详情 `PROD_READ`；包内材料不等同独立直购 SKU；一条历史套餐已逐层匹配当前详情，另一条套餐 ID 不在其当前筛选目录，保留未知 |
 | F13 工序 Procedure | `biz/procedure/queryWithRank`，与当前工单相同 scope | `_id/name/content/unit/guideUnitPrice/minimumGuideTotalPrice/exts.repairProcedure`、数量 | `SOURCE` + `PROD_READ`；子类字典 `repairProcedure` 不等于维修部位 |
 | F14 材料 Material SPU | `basic/material/queryWithRank`，相同 scope；材料类目 `type1/type2` 取决于 serviceType | `_id/code/name/type/spec/specUnit/materialUnit/price/servicePrice/exts`、数量；区分 mini 返回 `price` 与原始服务价 | `SOURCE` + `PROD_READ`；**正常无 SKU 材料选择可继续**，缺价格仍不可提交 |
 | F15 机措 Measure | `biz/measure/queryWithRank`，相同 scope | `_id/name/content/unit/guideUnitPrice` 与有效数量/金额；不可当作 Procedure | `SOURCE` + `PROD_READ` |
@@ -92,7 +92,7 @@
 | --- | --- | --- |
 | P0 | 当前工单的 `serviceType/sourceType`（包括值为空/缺省时的请求属性存在性），正确目录过滤与价源 | Source 证明 backend 依赖 `sourceType` 参数是否存在；未证实不能默默省略。Mock 跑参数契约负例 |
 | P0 | 有效 Order `ExtField`/Code/provider（尤其 `showType`、`serviceType`、`personType`、条件必填） | 一个当前上下文已读到 4/5 个分阶段字段及 1 个 Code + 1 个 Cascade provider 的结构计数；其他上下文、字段值/身份与 UI/serializer 映射未闭合；未支持控件标记 BLOCKED |
-| P0 | SPU 无 SKU 的正常选择、四类价格与历史 Order 快照的差异 | 当前角色四上下文 SKU 空；价格数值/真实 UI 逐项一致性 `NOT_RUN`；禁止“无 SKU → 报价失败”及猜价 |
+| P0 | SPU 无 SKU 的正常选择、四类价格与历史 Order 快照的差异 | 当前角色四上下文已读 SPU 的有效 SKU 行均为空；一个当前套餐价格/Order 快照对照通过，直接 Material SPU 尚无可比订单行，其他价格与真实 UI 逐项一致性仍 `NOT_RUN`；禁止“无 SKU → 报价失败”及猜价 |
 | P0 | 订单的类型、维修组、包内材料/层/系数、Order↔工单↔合同身份 | One Order/Contract 精确生产只读样本已通过；其他状态只在 DEV Mock；不得靠 `skuCode` 建 SKU 外键 |
 | P1 | FormData/Workflow 的真实服务端保存回读与失败补偿；媒体上传 | DEV Mock 成功不等于 Beta/Production 写入；依 #201 单独批准后才可实测 |
 | P1 | 报价优惠券、折扣、加减项、PDF、客户确认、正式下单副作用 | 源码有条件支路；若当前实务未用，应明确 `NOT_IN_CURRENT_SCOPE`，不能假装已等价 |

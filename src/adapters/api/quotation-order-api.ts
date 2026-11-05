@@ -103,6 +103,15 @@ function browseAmount(record: AdapterRecord, keys: readonly string[]): number | 
   return undefined
 }
 
+function browseFiniteSnapshot(record: AdapterRecord, key: string): number | undefined {
+  const value = record[key]
+  if (value === undefined || value === null || value === '') return undefined
+  const parsed = typeof value === 'number' ? value
+    : typeof value === 'string' && value.trim() ? Number(value) : Number.NaN
+  if (!Number.isFinite(parsed)) throw new AdapterMappingError(`Order ${key} snapshot is malformed`)
+  return parsed
+}
+
 function r1AmountToFixed(value: number): number {
   if (!value) return 0
   const rounded = Number(value.toFixed(2))
@@ -256,6 +265,28 @@ function browseLine(
     ?? (display !== row ? browseAmount(display, ['amount']) : undefined)
   const lineTotal = browseAmount(row, ['totalAmount'])
     ?? (display !== row ? browseAmount(display, ['totalAmount']) : undefined)
+  const packageExts = optionalRecord(row.exts)
+  const packagePricingMethod = kind === 'package'
+    ? optionalString(packageExts ?? {}, ['pricingMethod']) : undefined
+  const packageMaterialRows = kind === 'package' && Array.isArray(row.materialList)
+    ? row.materialList.map(optionalRecord).filter((value): value is AdapterRecord => value !== undefined)
+    : []
+  const packageSkuCompositionUnsupported = kind === 'package' && packageMaterialRows.some((material) =>
+    Array.isArray(material.skus) && material.skus.some((skuValue) => {
+      const sku = optionalRecord(skuValue)
+      return sku !== undefined && browseAmount(sku, ['number', 'quantity']) !== undefined
+        && (browseAmount(sku, ['number', 'quantity']) ?? 0) > 0
+    }))
+  const packageMaterialExts = kind === 'material' && nestedKind === 'material'
+    ? packageExts : undefined
+  const packageMaterialLayer = packageMaterialExts?.layer
+  if (packageMaterialLayer !== undefined && packageMaterialLayer !== null
+    && typeof packageMaterialLayer !== 'string'
+    && (typeof packageMaterialLayer !== 'number' || !Number.isFinite(packageMaterialLayer))) {
+    throw new AdapterMappingError('Order Package material layer snapshot is malformed')
+  }
+  const packageComponentMarkup = packageMaterialExts
+    ? browseFiniteSnapshot(packageMaterialExts, 'price') : undefined
   let children: QuotationOrderBrowseLine[] = []
   let contentSupported = Boolean(label)
   const identity = browseIdentity(row, kind, nested)
@@ -301,7 +332,9 @@ function browseLine(
         // relationship unverified instead of presenting a partial variant set.
         contentSupported = false
       }
-      children.push(...(childRows as AdapterRecord[]).map((child) => browseLine(child, childKind, childKind)))
+      const mappedChildren = (childRows as AdapterRecord[]).map((child) => browseLine(child, childKind, childKind))
+      children.push(...mappedChildren)
+      if (mappedChildren.some((child) => !child.contentSupported)) contentSupported = false
     }
   }
 
@@ -312,10 +345,20 @@ function browseLine(
     ...(optionalString(display, ['unit']) || optionalString(row, ['unit'])
       ? { unit: optionalString(display, ['unit']) || optionalString(row, ['unit']) }
       : {}),
+    // Preserve a private audit projection for Package price comparison. The
+    // commercial browse surface still exposes amounts only for fully supported lines.
+    ...(kind === 'package' && identitySupported && priceProjectionSupported
+      && unitPrice !== undefined && lineTotal !== undefined
+      ? { r1PackagePriceSnapshot: { unitAmount: unitPrice, totalAmount: lineTotal } } : {}),
     ...(contentSupported && unitPrice !== undefined ? { unitPrice } : {}),
     ...(contentSupported && lineTotal !== undefined ? { lineTotal } : {}),
     identity,
     children,
+    ...(packagePricingMethod === undefined ? {} : { packagePricingMethod }),
+    ...(kind === 'package' ? { packageSkuCompositionUnsupported } : {}),
+    ...(typeof packageMaterialLayer === 'string' || typeof packageMaterialLayer === 'number'
+      ? { packageMaterialLayer } : {}),
+    ...(packageComponentMarkup === undefined ? {} : { packageComponentMarkup }),
     contentSupported,
   }
 }
