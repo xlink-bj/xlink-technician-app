@@ -91,7 +91,7 @@
 | 优先级 | 必须解决的问题 | 当前证据/退出门槛 |
 | --- | --- | --- |
 | P0 | 当前工单的 `serviceType/sourceType`（包括值为空/缺省时的请求属性存在性），正确目录过滤与价源 | Source 证明 backend 依赖 `sourceType` 参数是否存在；未证实不能默默省略。Mock 跑参数契约负例 |
-| P0 | 有效 Order `ExtField`/Code/provider（尤其 `showType`、`serviceType`、`personType`、条件必填） | 两个当前上下文均读到相同的 4/5 个分阶段字段、1 个 Code + 1 个 Cascade provider（[有效字段只读记录](G4F_EFFECTIVE_ORDER_EXTFIELD_PROD_READ_20261105.md)）；支持控件的 DEV Mock UI/serializer/回读已连接（[记录](G4F_ORDER_EXTFIELD_MOCK_FLOW_20261105.md)）；其余上下文及真实字段身份/值仍未闭合；有界完整三级 area 代码路径已接入普通 Mock，真实全国/街道 provider 未验收；button/Order 媒体继续 BLOCKED |
+| P0 | 有效 Order `ExtField`/Code/provider（尤其 `showType`、`serviceType`、`personType`、条件必填） | 两个当前上下文均读到相同的 4/5 个分阶段字段、1 个 Code + 1 个 Cascade provider（[有效字段只读记录](G4F_EFFECTIVE_ORDER_EXTFIELD_PROD_READ_20261105.md)）；支持控件的 DEV Mock UI/serializer/回读已连接（[记录](G4F_ORDER_EXTFIELD_MOCK_FLOW_20261105.md)）；其余上下文及真实字段身份/值仍未闭合；有界完整三级 area 代码路径已接入普通 Mock，真实全国/街道 provider 未验收；button/未知媒体工具继续 BLOCKED；Order file 与独立 submitOrder 编辑的有限 Mock 后续进展见第 9 节 |
 | P0 | SPU 无 SKU 的正常选择、四类价格与历史 Order 快照的差异 | 当前角色四个服务上下文的已读活动 SKU 筛选均未返回活动行；受限历史样本已比较 Material 1 行、Package 1 行及 Procedure/Measure 4 行，均等于对应当前目录价，但 Package 另有一条历史记录在当前目录缺失而保持 unknown（[Material/Package](G4F_ORDER_MATERIAL_PRICE_SNAPSHOT_PROD_READ_20261105.md)、[Procedure/Measure](G4F_ORDER_PROVIDER_PRICE_SNAPSHOT_PROD_READ_20261105.md)）；这些不是全量或价格新鲜度结论，禁止“无 SKU → 报价失败”及猜价 |
 | P0 | 订单的类型、维修组、包内材料/层/系数、Order↔工单↔合同身份 | One Order/Contract 精确生产只读样本已通过；其他状态只在 DEV Mock；不得靠 `skuCode` 建 SKU 外键 |
 | P1 | FormData/Workflow 的真实服务端保存回读与失败补偿；媒体上传 | DEV Mock 成功不等于 Beta/Production 写入；依 #201 单独批准后才可实测 |
@@ -120,3 +120,14 @@
 本轮退出按业务旅程标记 COMPLETE/PARTIAL/BLOCKED，并附成功、异常、恢复的实际结果。源规则未知或权限不足是明确阻断；技术实现难度、真实写入未开放，不替代可完成的 Mock 工作。
 
 本轮实际改动、R1 边界及旅程状态见[常规报价与共享表单收口](G4F_NORMAL_QUOTATION_FUNCTIONAL_CLOSURE_20261105.md)。C01 为 PARTIAL（button/Order 媒体/街道仍阻断）；C02 已实现常规入口与有界区域；C03 已补双节点媒体移除确认与回归；C04 增补 430×932 刷新核验；C05 本地完整检查、三端构建、默认 H5（67 PASS / 26 SKIP）与全部独立配置回归已通过；精确提交 CI 及剩余范围以报告与 #207 交付评论为准。
+
+
+## 9. 下一有限包：Order 媒体与正式下单资料（2026-11-05）
+
+负责人仍为本原会话 / Codex Local / 唯一 main；基线 `29e27873`，不新建开发线。
+
+- D01：Order file 复用共享队列，隔离 URL-list codec / scope / 回填解码；有限 Mock 已实现并经本地针对性及默认全量回归通过。
+- D02：保存报价后编辑 submitOrder 字段，独立 personType / 必填 / 草稿；正式请求前冻结 Order.exts，结果不明只读核对；有限 Mock 已实现并经本地针对性及默认全量回归通过。
+- D03：完整本地工程检查、430×932 成功/失败/删除/重启/冲突/ACK 丢失、三端构建、main 提交和精确 SHA CI。本地 1803 测试、三端构建、默认 H5 67 PASS / 26 SKIP，及恢复路径重复测试已通过；精确提交 CI 结果在 #207 交付评论记录。执行结果见[本包证据报告](G4F_ORDER_MEDIA_SUBMIT_FIELDS_MOCK_20261105.md)。
+
+前文“Order 媒体/submitOrder 独立编辑未闭合”保留其历史验证时点；本包只更新上述有限 Mock 能力，真实 schema 全量、真实写入和未证实特殊动作仍不因此通过。

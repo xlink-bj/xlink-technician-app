@@ -1,3 +1,4 @@
+import type { OrderFieldDraft, OrderFieldSession } from '@features/work-orders/quotation/order-field-session'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { resetBusinessMockCache, setBusinessMockMode } from '@adapters/api/mock/config'
 import { resetMockCommandState } from '@adapters/api/mock/command-state'
@@ -264,6 +265,35 @@ describe('R1 type=0 quotation → type=1 Order DEV Mock flow', () => {
     expect(await ui.readStatus(engine)).toBe('succeeded')
     expect((await ui.convertQuoteToOrder(engine)).state).toBe('succeeded')
     expect(calls.filter(path => path === 'basic/order/upsert')).toHaveLength(1)
+  })
+
+  it('keeps Quote immutable while editing submitOrder fields and reconciles a frozen Order after lost ACK', async () => {
+    await reachMockQuotationForTest()
+    const engine = await evaluateMockQuote()
+    let draft: OrderFieldDraft = { revision: 1, labels: {}, input: { context: { stage: 'placeOrder', serviceType: mockQuotationCatalogServiceType },
+      rows: [{ rowId: 'final', valueKey: 'finalNote', colName: 'order', state: 1, showList: [4], type: 'text', required: '1', frontEndConfig: { showType: 'submitOrder', personType: '0' } }], values: {}, optionsByRowId: {} } }
+    const fields: OrderFieldSession = { current: () => draft, load: async () => draft, save: async () => null, verifyCurrent: async () => true,
+      freeze: () => { draft = { ...draft, readOnly: true } } }
+    const ui = createAStageMockQuoteOrderController({ getActor: () => actor, storage: storage(), orderFields: fields })
+    expect((await ui.createQuote(engine)).state).toBe('quote_created')
+    expect((await ui.convertQuoteToOrder(engine)).state).toBe('blocked')
+    draft = { ...draft, input: { ...draft.input, values: { personType: '0', finalNote: '独立下单说明' }, context: { ...draft.input.context, personType: '0', stage: 'submitOrder' } } }
+    expect(await ui.readStatus(engine)).toBe('quote_created')
+    const actual = mockRouter.tryMockCommand
+    const upserts = vi.spyOn(mockRouter, 'tryMockCommand').mockImplementation(async (path, body) => {
+      const response = await actual(path, body)
+      if (path === 'basic/order/upsert') throw new Error('ACK lost')
+      return response
+    })
+    expect((await ui.convertQuoteToOrder(engine)).state).toBe('uncertain')
+    expect(draft.readOnly).toBe(true)
+    expect((await ui.verifyPending(engine)).state).toBe('confirmed')
+    expect(await ui.readStatus(engine)).toBe('succeeded')
+    expect(upserts.mock.calls.filter(([path]) => path === 'basic/order/upsert')).toHaveLength(1)
+    const quote = JSON.parse(String(local.get('xlink.dev.mock.journey.019.quotation.v1')))
+    const order = JSON.parse(String(local.get('xlink.dev.mock.journey.019.official-order.v1')))
+    expect(quote.exts.finalNote).toBeUndefined()
+    expect(order.exts.finalNote).toBe('独立下单说明')
   })
 
   it('blocks a changed draft and a corrupt receipt instead of attaching them to an existing quote', async () => {

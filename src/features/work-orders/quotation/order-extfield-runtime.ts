@@ -1,7 +1,7 @@
 import { normalizeFieldValue } from '@runtimes/dynamic-form'
 import type { FormFieldOptionRead } from '@shared/ports'
 import { classifyOrderAreaPath, createOrderExtFieldEffectivePlan, type OrderExtFieldRawRow, type OrderExtFieldEffectiveContext } from './order-extfield-effective-plan'
-import { projectR1OrderExtFieldWire } from './order-extfield-wire'
+import { encodeOrderMedia, projectR1OrderExtFieldWire } from './order-extfield-wire'
 
 const reservedKeys = ['serviceAppointmentNum', 'serviceType', 'sourceType', 'coupons', 'couponsVal', 'couponsName', 'isCreateBjdPDF', 'orphanId']
 export function hasReservedOrderFieldKeys(values: Readonly<Record<string, unknown>>): boolean {
@@ -9,6 +9,7 @@ export function hasReservedOrderFieldKeys(values: Readonly<Record<string, unknow
 }
 
 export interface OrderFieldRuntimeInput {
+  readonly mediaRowIds?: readonly string[]
   readonly rows: readonly OrderExtFieldRawRow[]
   readonly context: Omit<OrderExtFieldEffectiveContext, 'values'>
   readonly values: Readonly<Record<string, unknown>>
@@ -16,7 +17,7 @@ export interface OrderFieldRuntimeInput {
   readonly optionsByRowId: Readonly<Record<string, readonly FormFieldOptionRead[]>>
 }
 export function evaluateOrderExtFields(input: OrderFieldRuntimeInput, phase: 'selection' | 'submit') {
-  const plan = createOrderExtFieldEffectivePlan(input.rows, { ...input.context, values: input.values }, input.optionsByRowId)
+  const plan = createOrderExtFieldEffectivePlan(input.rows, { ...input.context, values: input.values }, input.optionsByRowId, input.mediaRowIds)
   const errors: Record<string, string> = Object.create(null) as Record<string, string>
   const fields = plan.rows.flatMap(row => row.disposition === 'eligible' && row.schema ? [{
     ...row.schema, options: input.optionsByRowId[row.rowId!] ?? [],
@@ -24,7 +25,7 @@ export function evaluateOrderExtFields(input: OrderFieldRuntimeInput, phase: 'se
   for (const row of plan.rows) {
     if (row.finalSubmit.state === 'not_applicable') continue
     if (row.disposition === 'blocked' || (phase === 'submit' && row.finalSubmit.state === 'blocked')) {
-      errors[row.rowId ?? 'schema'] = '字段配置尚未核实，请稍后重试。'
+      errors[row.rowId ?? 'schema'] = row.reason === 'person_type_context_required' ? '请先选择客户类型。' : '字段配置尚未核实，请稍后重试。'
       continue
     }
     const required = phase === 'submit' ? row.finalSubmit.state === 'required' : row.disposition === 'eligible' && row.requiredness === 'required'
@@ -37,6 +38,10 @@ export function evaluateOrderExtFields(input: OrderFieldRuntimeInput, phase: 'se
     if (!present || row.specialControl?.kind === 'presentation') continue
     if (row.specialControl?.kind === 'area' && classifyOrderAreaPath(value).state !== 'complete') {
       errors[row.rowId!] = '请选择完整的省、市、区。'
+      continue
+    }
+    if (row.specialControl?.kind === 'media' && row.specialControl.state === 'resolved') {
+      if (encodeOrderMedia(value) === null || (required && Array.isArray(value) && !value.length)) errors[row.rowId!] = '请上传有效的附件。'
       continue
     }
     const schema = row.schema
@@ -53,7 +58,7 @@ export function evaluateOrderExtFields(input: OrderFieldRuntimeInput, phase: 'se
   }
   const definitions = input.rows.flatMap(row => typeof row.valueKey === 'string' && typeof row.type === 'string'
     ? [{ name: row.valueKey, type: row.type }] : [])
-  const wire = projectR1OrderExtFieldWire(definitions, input.values)
+  const wire = projectR1OrderExtFieldWire(definitions, input.values, input.rows.filter(row => input.mediaRowIds?.includes(String(row.rowId))).map(row => String(row.valueKey)))
   if (wire.state === 'blocked') errors.schema = '字段内容暂不能安全保存。'
   return { plan, fields, errors, state: Object.keys(errors).length ? 'blocked' as const : 'ready' as const,
     exts: wire.state === 'projected' ? wire.exts : undefined }

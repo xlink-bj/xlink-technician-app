@@ -195,6 +195,8 @@ test.describe('A-stage P1 real-H5 operator acceptance', () => {
       await page.getByTestId('a-stage-order-create').click()
       await page.getByTestId('a-stage-order-confirm').click()
       await expect(page.getByTestId('a-stage-quote-readback')).toBeVisible()
+      await page.getByTestId('order-field-mock-order-person').getByText('客户', { exact: true }).click()
+      await page.getByTestId('order-field-mock-order-submit-note').locator('textarea').fill('下单确认资料')
       await expect(page.getByTestId('a-stage-order-convert')).toBeEnabled()
       await page.getByTestId('a-stage-order-convert').click()
       await page.getByTestId('a-stage-order-convert-confirm').click()

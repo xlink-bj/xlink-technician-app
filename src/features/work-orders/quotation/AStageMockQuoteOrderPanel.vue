@@ -13,12 +13,12 @@
       <text class="mock-quote-order__amount-label">{{ composition.selectionCount }} 项 · {{ composition.groups.length }} 个部位</text>
     </view>
     <OrderExtFieldEditor ref="fieldEditor" v-if="controller.fields && fieldServiceType" :session="controller.fields"
-      :service-type="fieldServiceType" :locked="busy || status === 'quote_created' || status === 'succeeded' || status === 'uncertain'"
+      :service-type="fieldServiceType" :stage="fieldStage" :locked="busy || status === 'succeeded' || status === 'uncertain'"
       @change="onFieldsChange" @draft-status="$emit('draft-status', $event)" />
     <AppStatus v-if="engine?.state === 'blocked' && engine.issues.length" tone="warning" quiet
       :message="engine.issues[0].message" data-testid="a-stage-order-price-blocked" />
     <AppStatus v-else-if="!canSubmit && status !== 'succeeded'" tone="neutral" quiet
-      message="请补齐维修部位、商品、数量及价格后继续。未核实的价格不会按零计算。" />
+      :message="!fieldReady ? '请补齐当前资料，并处理未完成的附件。' : '请补齐维修部位、商品、数量及价格后继续。未核实的价格不会按零计算。'" />
     <AppStatus v-if="status === 'quote_created'" tone="success" quiet
       message="报价单已按报价编号回读。转为订单前仍可返回检查明细。"
       data-testid="a-stage-quote-readback" />
@@ -85,6 +85,7 @@ const checking = ref(false)
 const confirm = ref<'quote' | 'order' | null>(null)
 const verification = ref<'confirmed' | 'not_found' | 'blocked' | 'unknown' | null>(null)
 const verificationMessage = ref('')
+const fieldStage = ref<'placeOrder' | 'submitOrder'>('placeOrder')
 const fieldReady = ref(true)
 const fieldVersion = ref(0)
 function onFieldsChange(ready: boolean): void { fieldReady.value = ready; fieldVersion.value += 1 }
@@ -112,7 +113,10 @@ watch(() => [engine.value?.draftVersion, engine.value?.state, session.session?.s
     verificationMessage.value = ''
     if (!engine.value || engine.value.state !== 'ready') { status.value = 'blocked'; return }
     const state = await controller.readStatus(engine.value)
-    if (ticket === generation) status.value = state
+    if (ticket === generation) {
+      status.value = state
+      if (state === 'quote_created' || state === 'succeeded') fieldStage.value = 'submitOrder'
+    }
   }, { immediate: true })
 
 async function createQuote(): Promise<void> {
@@ -130,6 +134,7 @@ async function createQuote(): Promise<void> {
     }
     const result = await controller.createQuote(current)
     status.value = result.state
+    if (result.state === 'quote_created' || result.state === 'succeeded') fieldStage.value = 'submitOrder'
     feedback.value = result.message
   } finally { busy.value = false }
 }
@@ -148,6 +153,7 @@ async function convertQuote(): Promise<void> {
     }
     const result = await controller.convertQuoteToOrder(current)
     status.value = result.state
+    if (result.state === 'quote_created' || result.state === 'succeeded') fieldStage.value = 'submitOrder'
     feedback.value = result.message
   } finally { busy.value = false }
 }

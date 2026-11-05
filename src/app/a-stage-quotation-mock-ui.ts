@@ -1,3 +1,6 @@
+import { withScopedDraftLock } from '@adapters/storage/scoped-draft-lock'
+import { createMockOrderMediaSession } from './mock-order-media-session'
+import type { OrderFieldSession } from '@features/work-orders/quotation/order-field-session'
 import { createMockOrderFieldSession } from './mock-order-field-session'
 import { evaluateOrderExtFields, hasReservedOrderFieldKeys } from '@features/work-orders/quotation/order-extfield-runtime'
 /** DEV-only R1 quote → Order protocol. Every mutation is owned by the exact
@@ -13,7 +16,7 @@ import { QuotationOrderReadAdapter, projectExactQuotationOrderReadForBrowse } fr
 import type { QuotationEngineResult } from '@features/work-orders/quotation/engine'
 import type { StoragePort } from '@shared/ports'
 import type { QuotationOrderBrowseItem } from '@shared/ports'
-import { createDefaultStoragePort } from './composition'
+import { createDefaultMediaUploadQueue, createDefaultMediaFilePickerPort, createSpecialDevMockUploadPort, createDefaultStoragePort } from './composition'
 
 export interface AStageQuoteActor { readonly userId: string; readonly roleId: string; readonly identity: string }
 export type AStageQuoteFlowState = 'ready' | 'quote_created' | 'blocked' | 'uncertain' | 'succeeded'
@@ -30,6 +33,7 @@ interface FlowReceipt {
   readonly quoteId?: string
   readonly workflowId?: string
   readonly orderId?: string
+  readonly orderExts?: Readonly<Record<string, unknown>>
   readonly uncertainPhase?: UncertainPhase
 }
 
@@ -50,6 +54,9 @@ function record(value: unknown): Record<string, unknown> | null {
     ? value as Record<string, unknown> : null
 }
 
+function configuredStage(config: unknown): unknown {
+  try { return record(typeof config === 'string' ? JSON.parse(config) : config)?.showType } catch { return undefined }
+}
 function canonical(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(canonical)
   const row = record(value)
@@ -81,6 +88,7 @@ function validReceipt(value: unknown): value is FlowReceipt {
     && typeof row.fingerprint === 'string' && /^[0-9a-f]{16}$/.test(row.fingerprint)
     && typeof row.authorizationFingerprint === 'string' && /^[0-9a-f]{16}$/.test(row.authorizationFingerprint)
     && Number.isSafeInteger(row.draftVersion)
+    && (row.orderExts === undefined || record(row.orderExts) !== null)
     && (row.quoteId === undefined || typeof row.quoteId === 'string')
     && (row.workflowId === undefined || typeof row.workflowId === 'string')
     && (row.orderId === undefined || typeof row.orderId === 'string')
@@ -182,6 +190,7 @@ export function createAStageMockQuoteOrderController(options: {
   readonly getActor: () => AStageQuoteActor | null
   readonly storage: StoragePort
   readonly enableOrderFields?: boolean
+  readonly orderFields?: OrderFieldSession
 }) {
   const expectedActor = options.getActor()
   let inFlight = false
@@ -192,12 +201,30 @@ export function createAStageMockQuoteOrderController(options: {
     && options.getActor()?.userId === expectedActor.userId
     && options.getActor()?.roleId === expectedActor.roleId)
 
-  const fields = options.enableOrderFields === true
-    ? createMockOrderFieldSession(options.storage, authorized, `${expectedActor?.userId}:${expectedActor?.roleId}:${mockJourneyWorkOrderId}`, async () => {
-      const quote = record(await readRawOrder(mockJourneyQuotationId, authorized))
-      return quote?._id === mockJourneyQuotationId && quote.type === 0 && quote.serviceAppointmentId === mockJourneyWorkOrderId
-        ? record(quote.exts) : null
-    }) : undefined
+  let fields: OrderFieldSession | undefined = options.orderFields
+  async function savedExts() {
+    const receipt = await readReceipt()
+    if (receipt !== 'invalid' && receipt?.state === 'succeeded') {
+      const order = record(await readRawOrder(mockJourneyOfficialOrderId, authorized))
+      return order?._id === mockJourneyOfficialOrderId && order.type === 1 && order.serviceAppointmentId === mockJourneyWorkOrderId
+        && order.workflowId === mockJourneyOrderWorkflowRunId ? record(order.exts) : null
+    }
+    const quote = record(await readRawOrder(mockJourneyQuotationId, authorized))
+    return quote?._id === mockJourneyQuotationId && quote.type === 0 && quote.serviceAppointmentId === mockJourneyWorkOrderId ? record(quote.exts) : null
+  }
+
+  async function canSaveFields() {
+    const receipt = await readReceipt()
+    return authorized() && (receipt === null || (receipt !== 'invalid' && !receipt.orderExts && receipt.state === 'quote_created'))
+  }
+  if (!fields && options.enableOrderFields === true) {
+    const media = createMockOrderMediaSession({ lockKey: receiptKey,
+      queue: createDefaultMediaUploadQueue(options.storage, createSpecialDevMockUploadPort()), picker: createDefaultMediaFilePickerPort(),
+      userId: expectedActor?.userId ?? '', workOrderId: mockJourneyWorkOrderId, nodeId: mockJourneyNodes.quotation,
+      authorized, canSave: canSaveFields, draft: () => fields?.current() ?? null, savedExts,
+    })
+    fields = createMockOrderFieldSession(options.storage, authorized, `${expectedActor?.userId}:${expectedActor?.roleId}:${mockJourneyWorkOrderId}`, savedExts, canSaveFields, media)
+  }
 
   const readApi = new QuotationOrderReadAdapter({
     async execute(request) {
@@ -216,7 +243,12 @@ export function createAStageMockQuoteOrderController(options: {
     if (fields) {
       const draft = fields.current()
       if (!draft || draft.input.context.serviceType !== engine.payload?.exts.serviceType) return null
-      const result = evaluateOrderExtFields(draft.input, 'submit')
+      // Saved Quote and submitOrder input have independent immutable snapshots.
+      // Do not let a later submit-only edit invalidate the type=0 receipt.
+      const placeKeys = new Set(draft.input.rows.filter(row => configuredStage(row.frontEndConfig) === 'placeOrder').map(row => row.valueKey))
+      const submitOnly = new Set(draft.input.rows.filter(row => configuredStage(row.frontEndConfig) === 'submitOrder' && !placeKeys.has(row.valueKey)).map(row => row.valueKey))
+      const values = Object.fromEntries(Object.entries(draft.input.values).filter(([key]) => !submitOnly.has(key)))
+      const result = evaluateOrderExtFields({ ...draft.input, context: { ...draft.input.context, stage: 'placeOrder' }, values }, 'submit')
       if (result.state !== 'ready' || !engine.payload || hasReservedOrderFieldKeys(result.exts ?? {})) return null
       evaluated = { ...engine, payload: { ...engine.payload, exts: { ...engine.payload.exts, ...result.exts } } }
     }
@@ -227,6 +259,10 @@ export function createAStageMockQuoteOrderController(options: {
       authFingerprint: digest(expectedActor.identity),
       draftVersion: engine.draftVersion,
     } : null
+  }
+
+  function expectedOrder(quote: Record<string, unknown>, receipt: FlowReceipt): Record<string, unknown> {
+    return { ...quote, exts: { ...record(quote.exts), ...receipt.orderExts } }
   }
 
   async function readReceipt(): Promise<FlowReceipt | null | 'invalid'> {
@@ -242,6 +278,7 @@ export function createAStageMockQuoteOrderController(options: {
 
   async function writeReceipt(receipt: FlowReceipt): Promise<boolean> {
     try {
+      if (receipt.orderExts) fields?.freeze?.()
       return (await options.storage.write({ namespace: 'draft', key: receiptKey }, receipt)).state === 'succeeded'
     } catch { return false }
   }
@@ -275,7 +312,7 @@ export function createAStageMockQuoteOrderController(options: {
       return receipt.orderId === mockJourneyOfficialOrderId
         && receipt.quoteId === mockJourneyQuotationId
         && receipt.workflowId === mockJourneyOrderWorkflowRunId
-        && await readOfficialOrder(current.quote, receipt.workflowId)
+        && await readOfficialOrder(expectedOrder(current.quote, receipt), receipt.workflowId)
         ? 'succeeded' : 'uncertain'
     }
     if (receipt.state === 'quote_created' || receipt.state === 'workflow_started') {
@@ -284,7 +321,7 @@ export function createAStageMockQuoteOrderController(options: {
     return 'ready'
   }
 
-  async function createQuote(engine: QuotationEngineResult): Promise<{
+  async function createQuoteUnlocked(engine: QuotationEngineResult): Promise<{
     readonly state: 'quote_created' | 'succeeded' | 'blocked' | 'uncertain'; readonly message: string
   }> {
     if (!authorized()) return { state: 'blocked', message: '账号、角色或流程范围已变化，不能保存报价。' }
@@ -337,14 +374,16 @@ export function createAStageMockQuoteOrderController(options: {
     } finally { inFlight = false }
   }
 
-  async function convertQuoteToOrder(engine: QuotationEngineResult): Promise<{
+  async function convertQuoteToOrderUnlocked(engine: QuotationEngineResult): Promise<{
     readonly state: 'quote_created' | 'succeeded' | 'blocked' | 'uncertain'; readonly message: string
   }> {
     if (!authorized()) return { state: 'blocked', message: '账号、角色或流程范围已变化，不能转换订单。' }
     if (inFlight) return { state: 'blocked', message: '上一项报价操作仍在处理。' }
     if (fields && !await fields.verifyCurrent()) return { state: 'blocked', message: '报价资料已在其他页面修改，请重新读取后核对。' }
     const fieldDraft = fields?.current()
-    if (fieldDraft && evaluateOrderExtFields({ ...fieldDraft.input, context: { ...fieldDraft.input.context, stage: 'submitOrder' } }, 'submit').state !== 'ready') {
+    const finalFields = fieldDraft ? evaluateOrderExtFields({ ...fieldDraft.input,
+      context: { ...fieldDraft.input.context, stage: 'submitOrder', personType: typeof fieldDraft.input.values.personType === 'string' ? fieldDraft.input.values.personType : undefined } }, 'submit') : null
+    if (finalFields && (finalFields.state !== 'ready' || hasReservedOrderFieldKeys(finalFields.exts ?? {}))) {
       return { state: 'blocked', message: '正式下单资料尚未通过校验，请核对字段配置与必填项。' }
     }
     const current = input(engine)
@@ -360,7 +399,7 @@ export function createAStageMockQuoteOrderController(options: {
         return receipt.orderId === mockJourneyOfficialOrderId
           && receipt.quoteId === mockJourneyQuotationId
           && receipt.workflowId === mockJourneyOrderWorkflowRunId
-          && await readOfficialOrder(current.quote, receipt.workflowId)
+          && await readOfficialOrder(expectedOrder(current.quote, receipt), receipt.workflowId)
           ? { state: 'succeeded', message: '订单记录已保存并按返回的订单编号完成回读。合同状态仍需单独核验。' }
           : { state: 'uncertain', message: '订单回读身份或金额无法再次核验；系统已保留防重复保护。' }
       }
@@ -373,6 +412,10 @@ export function createAStageMockQuoteOrderController(options: {
       if (!quote || receipt.quoteId !== mockJourneyQuotationId) {
         return { state: 'blocked', message: '报价单编号或明细无法确认，未启动订单流程。' }
       }
+      if (receipt.orderExts && !sameValue(receipt.orderExts, finalFields?.exts ?? {})) {
+        return { state: 'blocked', message: '下单资料已随流程冻结，请只读核对原请求。' }
+      }
+      receipt = { ...receipt, orderExts: receipt.orderExts ?? finalFields?.exts ?? {} }
       let workflowId = receipt.workflowId
       if (receipt.state !== 'workflow_started' || !workflowId) {
         receipt = { ...receipt, state: 'workflow_start_dispatched', quoteId: mockJourneyQuotationId,
@@ -408,7 +451,7 @@ export function createAStageMockQuoteOrderController(options: {
         type: 1,
         workflowId,
         processState: 0,
-        exts: { ...record(quote.exts), ...record(current.quote.exts), orphanId: mockJourneyNodes.quotation },
+        exts: { ...record(quote.exts), ...record(current.quote.exts), ...receipt.orderExts, orphanId: mockJourneyNodes.quotation },
       }
       receipt = { ...receipt, state: 'order_upsert_dispatched', quoteId: mockJourneyQuotationId,
         workflowId, uncertainPhase: 'order' }
@@ -421,7 +464,7 @@ export function createAStageMockQuoteOrderController(options: {
           await writeReceipt({ ...receipt, state: 'ambiguous', uncertainPhase: 'order' })
           return { state: 'uncertain', message: '订单保存结果尚未确认；请只读核对，不能重复提交。' }
         }
-        const readback = await readOfficialOrder(current.quote, workflowId)
+        const readback = await readOfficialOrder(expectedOrder(current.quote, receipt), workflowId)
         if (!authorized()) return { state: 'uncertain', message: '订单回读期间身份发生变化；结果待核对。' }
         if (!readback) {
           await writeReceipt({ ...receipt, state: 'ambiguous', uncertainPhase: 'order', orderId })
@@ -430,6 +473,7 @@ export function createAStageMockQuoteOrderController(options: {
         const completed: FlowReceipt = { ...receipt, state: 'succeeded', quoteId: mockJourneyQuotationId,
           orderId, workflowId, uncertainPhase: undefined }
         const saved = await writeReceipt(completed)
+        if (saved) await fields?.media?.finalize()
         return saved
           ? { state: 'succeeded', message: '订单记录已保存并按返回的订单编号完成回读。合同状态仍需单独核验。' }
           : { state: 'uncertain', message: '订单已回读，但本地防重状态未能保存；请只读核对。' }
@@ -440,7 +484,7 @@ export function createAStageMockQuoteOrderController(options: {
     } finally { inFlight = false }
   }
 
-  async function verifyPending(engine: QuotationEngineResult): Promise<{
+  async function verifyPendingUnlocked(engine: QuotationEngineResult): Promise<{
     readonly state: 'confirmed' | 'not_found' | 'blocked' | 'unknown'
     readonly message: string
   }> {
@@ -476,13 +520,14 @@ export function createAStageMockQuoteOrderController(options: {
     if (workflowId !== mockJourneyOrderWorkflowRunId) {
       return { state: 'unknown', message: '订单流程编号缺失或不匹配，无法确认订单归属。' }
     }
-    const orderRead = await readOfficialOrder(current.quote, workflowId)
+    const orderRead = await readOfficialOrder(expectedOrder(current.quote, receipt), workflowId)
     if (!authorized()) return { state: 'blocked', message: '核对期间身份已变化。' }
     if (!orderRead) return { state: 'not_found', message: '暂未确认匹配订单；请求是否执行仍未知，不能再次提交。' }
     if (!await writeReceipt({ ...receipt, state: 'succeeded', quoteId: mockJourneyQuotationId,
       orderId: mockJourneyOfficialOrderId, workflowId, uncertainPhase: undefined })) {
       return { state: 'unknown', message: '订单已回读，但防重状态无法更新。' }
     }
+    await fields?.media?.finalize()
     return { state: 'confirmed', message: '已按返回的订单编号核对订单及金额；签约仍需单独核验。' }
   }
 
@@ -508,6 +553,15 @@ export function createAStageMockQuoteOrderController(options: {
     } catch { return { state: 'unavailable' } }
   }
 
+  async function createQuote(engine: QuotationEngineResult) {
+    return await withScopedDraftLock(receiptKey, () => createQuoteUnlocked(engine)) ?? { state: 'blocked' as const, message: '当前浏览器无法安全锁定报价操作。' }
+  }
+  async function convertQuoteToOrder(engine: QuotationEngineResult) {
+    return await withScopedDraftLock(receiptKey, () => convertQuoteToOrderUnlocked(engine)) ?? { state: 'blocked' as const, message: '当前浏览器无法安全锁定订单操作。' }
+  }
+  async function verifyPending(engine: QuotationEngineResult) {
+    return await withScopedDraftLock(receiptKey, () => verifyPendingUnlocked(engine)) ?? { state: 'blocked' as const, message: '当前浏览器无法安全锁定结果核对。' }
+  }
   return { readStatus, createQuote, convertQuoteToOrder, verifyPending, readMockOrder, fields }
 }
 

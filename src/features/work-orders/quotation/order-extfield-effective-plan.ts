@@ -43,6 +43,7 @@ export type OrderExtFieldSpecialControl =
   | { readonly kind: 'area'; readonly state: 'resolved' }
   | { readonly kind: 'area'; readonly state: 'blocked'; readonly reason: 'province_city_county_provider_unverified' }
   | { readonly kind: 'button'; readonly state: 'blocked'; readonly reason: 'special_action_not_allowlisted' }
+  | { readonly kind: 'media'; readonly state: 'resolved' }
   | { readonly kind: 'media'; readonly state: 'blocked'; readonly reason: 'order_media_persistence_unverified' }
   | { readonly kind: 'presentation'; readonly state: 'display_only' }
 
@@ -74,7 +75,7 @@ export interface OrderExtFieldEffectivePlan {
   readonly execution: 'PURE_SOURCE_PLAN_ONLY'
   readonly stage: OrderExtFieldStage
   readonly rows: readonly OrderExtFieldPlanRow[]
-  /** Finite editable controls, including verified three-level area paths. No executable buttons or media. */
+  /** Finite editable controls, including verified three-level area paths. Queue-backed file fields are explicit; executable buttons remain blocked. */
   readonly fields: readonly FormFieldSchema[]
   readonly diagnostics: {
     /** Required mapping/runtime blockers for the visible field / catalog-entry phase. */
@@ -372,7 +373,7 @@ function completeAreaTree(options: NonNullable<FormFieldSchema['inlineOptions']>
   })
 }
 
-function mapCandidateRow(row: OrderExtFieldRawRow, context: OrderExtFieldEffectiveContext, options?: FormFieldSchema['inlineOptions']): OrderExtFieldPlanRow {
+function mapCandidateRow(row: OrderExtFieldRawRow, context: OrderExtFieldEffectiveContext, options?: FormFieldSchema['inlineOptions'], mediaRowIds: readonly string[] = []): OrderExtFieldPlanRow {
   const candidate = candidateDisposition(row)
   if (candidate.result !== 'candidate') return rowResult(row, candidate.result, candidate.reason)
 
@@ -434,6 +435,12 @@ function mapCandidateRow(row: OrderExtFieldRawRow, context: OrderExtFieldEffecti
       requiredness,
       { kind: 'area', state: 'blocked', reason: 'province_city_county_provider_unverified' },
     )
+  }
+  if (type === 'file' && mediaRowIds.includes(String(row.rowId)) && requiredness !== 'unknown'
+    && !row.operationType && Object.keys(config).every(key => safeFrontEndConfigKeys.has(key) && !forbiddenFrontEndConfigKeys.has(key))) {
+    return rowResult(row, 'eligible', 'source_mappable_order_media', { stage, requiredness,
+      specialControl: { kind: 'media', state: 'resolved' },
+      schema: { fieldId: String(row.rowId), valueKey: String(row.valueKey), type: 'file', required: requiredness === 'required' } })
   }
   if (mediaTypes.has(type)) {
     return blockedEffectiveRow(
@@ -548,8 +555,9 @@ export function createOrderExtFieldEffectivePlan(
   rows: readonly OrderExtFieldRawRow[],
   context: OrderExtFieldEffectiveContext,
   resolvedOptions: Readonly<Record<string, NonNullable<FormFieldSchema['inlineOptions']>>> = {},
+  mediaRowIds: readonly string[] = [],
 ): OrderExtFieldEffectivePlan {
-  const mappedRows = rows.map((row) => mapCandidateRow(row, context, typeof row.rowId === 'string' ? resolvedOptions[row.rowId] : undefined))
+  const mappedRows = rows.map((row) => mapCandidateRow(row, context, typeof row.rowId === 'string' ? resolvedOptions[row.rowId] : undefined, mediaRowIds))
   const phaseAwareRows = mappedRows.map((mapped, index) => ({
     ...mapped,
     finalSubmit: finalSubmitRuleForRow(rows[index], context),

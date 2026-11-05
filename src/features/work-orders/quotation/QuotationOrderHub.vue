@@ -16,6 +16,7 @@
         </view>
       </view>
     </AppRecordCard>
+    <AppLoadingState v-if="draftLoading" variant="inline" label="正在读取报价草稿" data-testid="quotation-hub-draft-loading" />
     <AppStatus
       v-if="!choosingMode && !isVisualSample && displayReadState !== 'succeeded'"
       class="quotation-hub__notice"
@@ -62,7 +63,7 @@
       <text class="quotation-hub__empty-detail">{{ displayReadError || '订单读取暂不可用，请稍后重试。' }}</text>
       <AppButton variant="secondary" @tap="refresh">重新读取</AppButton>
       <text class="quotation-hub__empty-detail">仍可创建报价草稿，但无法据此判断是否已有订单。</text>
-      <AppButton v-if="!readOnly" block class="quotation-hub__empty-action" data-testid="quotation-hub-create-unverified"
+      <AppButton v-if="!readOnly && !draftLoading" block class="quotation-hub__empty-action" data-testid="quotation-hub-create-unverified" :disabled="draftLoading"
         @tap="startEditor">{{ hasLocalDraft ? uxStateLanguage.draftResumeAction : `＋ ${uxStateLanguage.draftAction}` }}</AppButton>
     </AppRecordCard>
     <template v-else-if="records.length === 0">
@@ -70,7 +71,7 @@
       <view class="quotation-hub__empty-icon" aria-hidden="true"><AppIcon name="order" :size="56" color="#1677f9" /><text class="quotation-hub__empty-icon-plus">＋</text></view>
       <text class="quotation-hub__empty-title">{{ isVisualSample ? '当前工单尚无订单' : mockJourneyOrder ? '暂无已确认的订单记录' : uxStateLanguage.scopedOrderReadTitle }}</text>
       <text class="quotation-hub__empty-detail">先按维修部位填写报价草稿，核对组成及金额后再进入后续流程。</text>
-      <AppButton v-if="!readOnly" block class="quotation-hub__empty-action" data-testid="quotation-hub-empty-create"
+      <AppButton v-if="!readOnly && !draftLoading" block class="quotation-hub__empty-action" data-testid="quotation-hub-empty-create" :disabled="draftLoading"
         @tap="startEditor">{{ hasLocalDraft ? uxStateLanguage.draftResumeAction : `＋ ${uxStateLanguage.draftAction}` }}</AppButton>
       <text class="quotation-hub__empty-provenance">仅展示当前可见的订单记录，不代表全部历史订单。</text>
     </AppRecordCard>
@@ -154,9 +155,9 @@
       data-testid="quotation-hub-signing-boundary" />
     <view v-if="choosingMode || records.length > 0 && (displayReadState === 'succeeded' || isVisualSample)" class="quotation-hub__action-area">
       <AppButton v-if="choosingMode" block class="quotation-hub__new" data-testid="quotation-hub-mode-next"
-        :disabled="readOnly" @tap="startEditor">下一步</AppButton>
-      <AppButton v-else block class="quotation-hub__new" data-testid="quotation-hub-start-new"
-        :disabled="readOnly || editingId !== null" @tap="chooseNewOrder">
+        :disabled="readOnly || draftLoading" @tap="startEditor">下一步</AppButton>
+      <AppButton v-else-if="!draftLoading" block class="quotation-hub__new" data-testid="quotation-hub-start-new"
+        :disabled="readOnly || draftLoading || editingId !== null" :loading="draftLoading" @tap="chooseNewOrder">
         {{ hasLocalDraft ? uxStateLanguage.draftResumeAction : `＋ ${uxStateLanguage.draftAction}` }}
       </AppButton>
       <AppButton v-if="choosingMode" variant="text" block data-testid="quotation-hub-mode-cancel" @tap="cancelMode">取消</AppButton>
@@ -167,6 +168,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
+import AppLoadingState from '@shared/ui/AppLoadingState.vue'
 import AppButton from '@shared/ui/AppButton.vue'
 import AppIcon from '@shared/ui/AppIcon.vue'
 import AppRecordCard from '@shared/ui/AppRecordCard.vue'
@@ -249,6 +251,7 @@ const expandedId = ref<string | null>(null)
 const editingId = ref<string | null>(null)
 const editError = ref('')
 const choosingMode = ref(false)
+const draftLoading = computed(() => props.localDraftState === 'idle' || props.localDraftState === 'loading')
 const hasLocalDraft = computed(() => props.localDraftGroupCount > 0)
 const draftSaveLabel = computed(() => {
   if (props.localDraftState === 'saved_local' || props.localDraftState === 'restored') return '本机已保存'
@@ -267,11 +270,11 @@ function toggleDetails(id: string): void {
   expandedId.value = expandedId.value === id ? null : id
 }
 function startEditor(): void {
-  if (props.readOnly || editingId.value) return
+  if (props.readOnly || draftLoading.value || editingId.value) return
   emit('create')
 }
 function chooseNewOrder(): void {
-  if (props.readOnly || editingId.value) return
+  if (props.readOnly || draftLoading.value || editingId.value) return
   if (hasLocalDraft.value || records.value.length === 0) {
     startEditor()
     return
@@ -284,7 +287,7 @@ function cancelMode(): void {
   emit('mode-change', false)
 }
 function edit(id: string): void {
-  if (props.readOnly || hasLocalDraft.value || editingId.value) return
+  if (props.readOnly || draftLoading.value || hasLocalDraft.value || editingId.value) return
   editingId.value = id
   editError.value = ''
   emit('edit', id)

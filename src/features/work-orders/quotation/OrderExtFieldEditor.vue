@@ -1,20 +1,23 @@
 <template>
   <view id="order-extfield-editor" data-testid="order-extfield-editor" :data-revision="draft?.revision" :data-draft-status="localDraftStatus">
-    <text class="order-fields-title">报价资料</text>
+    <text class="order-fields-title">{{ stage === 'submitOrder' ? '下单资料' : '报价资料' }}</text>
     <AppLoadingState v-if="loading" variant="inline" label="正在读取报价资料" />
     <AppStatus v-else-if="unavailable" message="报价资料暂不可用，原草稿已保留。请返回后重试。" tone="warning" quiet />
     <template v-else-if="draft && evaluated">
       <AppField v-for="field in evaluated.fields" :key="field.fieldId" :label="draft.labels[field.fieldId]"
         :required="field.required" :error="evaluated.errors[field.fieldId] ?? ''"
         :data-testid="'order-field-' + field.fieldId">
-        <AppCascadeSheetField v-if="field.type === 'cascade'" :options="field.options"
-          :model-value="pathValue(field.valueKey)" :disabled="locked || saveFailed"
+        <OrderMediaField v-if="field.type === 'file' && session.media" :key="stage + field.fieldId" :field-id="field.fieldId" :value-key="field.valueKey"
+          :media="session.media" :model-value="mediaValue(field.valueKey)" :disabled="fieldLocked"
+          @update:model-value="setValue(field.valueKey, $event)" @pending="setMediaPending(field.fieldId, $event)" />
+        <AppCascadeSheetField v-else-if="field.type === 'cascade'" :options="field.options"
+          :model-value="pathValue(field.valueKey)" :disabled="fieldLocked"
           :title="draft.labels[field.fieldId]" :test-id-prefix="'order-cascade-' + field.fieldId"
           @update:model-value="setValue(field.valueKey, $event)" />
         <R1FormFieldControl v-else :field="{ fieldId: field.fieldId, valueKey: field.valueKey,
           label: draft.labels[field.fieldId], type: field.type, required: !!field.required,
           readOnly: false, options: field.options, multiple: !!field.multiple, supported: true }"
-          :model-value="valueFor(field.valueKey)" :disabled="locked || saveFailed"
+          :model-value="valueFor(field.valueKey)" :disabled="fieldLocked"
           @update:model-value="setValue(field.valueKey, $event)" />
       </AppField>
 
@@ -22,6 +25,8 @@
   </view>
 </template>
 <script setup lang="ts">
+import OrderMediaField from './OrderMediaField.vue'
+import type { OrderMediaValue } from './order-extfield-wire'
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import type { AppActionDraftStatus } from '@shared/ui/types'
 import type { OrderFieldDraft, OrderFieldSession } from './order-field-session'
@@ -32,25 +37,33 @@ import AppField from '@shared/ui/AppField.vue'
 import AppStatus from '@shared/ui/AppStatus.vue'
 import AppLoadingState from '@shared/ui/AppLoadingState.vue'
 import AppCascadeSheetField from '@shared/ui/AppCascadeSheetField.vue'
-const props = defineProps<{ session: OrderFieldSession; serviceType: string; locked: boolean }>()
+const props = defineProps<{ session: OrderFieldSession; serviceType: string; stage: 'placeOrder' | 'submitOrder'; locked: boolean }>()
 const emit = defineEmits<{ (event: 'change', ready: boolean): void; (event: 'draft-status', status: AppActionDraftStatus): void }>()
 const draft = ref<OrderFieldDraft | null>(null)
 const values = ref<Readonly<Record<string, unknown>>>({})
 const loading = ref(true)
 const unavailable = ref(false)
 const saveFailed = ref(false)
+const fieldLocked = computed(() => props.locked || saveFailed.value || props.session.current()?.readOnly === true)
 const pending = ref(0)
+const mediaPending = ref<Record<string, boolean>>({})
+const hasPendingMedia = computed(() => Object.values(mediaPending.value).some(Boolean))
+function pendingSavesReady() { return !saveFailed.value && pending.value === 0 }
+function setMediaPending(id: string, pending: boolean) { mediaPending.value = { ...mediaPending.value, [id]: pending }; emit('change', !pending && pendingSavesReady() && !hasPendingMedia.value && evaluated.value?.state === 'ready') }
+function mediaValue(key: string): readonly OrderMediaValue[] { const value = values.value[key]; return Array.isArray(value) ? value as OrderMediaValue[] : [] }
 const localDraftStatus = computed<AppActionDraftStatus>(() => saveFailed.value ? 'save_failed' : pending.value > 0 ? 'saving' : draft.value && draft.value.revision > 0 ? 'saved_local' : 'clean')
 watch(localDraftStatus, status => { if (!disposed) emit('draft-status', status) })
 let generation = 0
 let disposed = false
 let queue = Promise.resolve()
-const evaluated = computed(() => draft.value ? evaluateOrderExtFields({ ...draft.value.input, values: values.value }, 'submit') : null)
-watch(() => props.serviceType, async serviceType => {
+const evaluated = computed(() => draft.value ? evaluateOrderExtFields({ ...draft.value.input, values: values.value, context: { ...draft.value.input.context, personType: typeof values.value.personType === 'string' ? values.value.personType : undefined } }, 'submit') : null)
+watch(() => [props.serviceType, props.stage] as const, async ([serviceType, stage]) => {
   const ticket = ++generation
   loading.value = true
+  mediaPending.value = {}
+  saveFailed.value = false
   emit('change', false)
-  const loaded = await props.session.load(serviceType)
+  const loaded = await props.session.load(serviceType, stage)
   if (disposed || ticket !== generation) return
   draft.value = loaded
   values.value = loaded?.input.values ?? {}
@@ -60,8 +73,8 @@ watch(() => props.serviceType, async serviceType => {
 }, { immediate: true })
 function valueFor(key: string): R1LocalFieldValue | undefined { return values.value[key] as R1LocalFieldValue | undefined }
 function pathValue(key: string): readonly string[] { const value = values.value[key]; return Array.isArray(value) ? value as string[] : [] }
-function setValue(key: string, value: R1LocalFieldValue): void {
-  if (props.locked || saveFailed.value || !draft.value) return
+function setValue(key: string, value: R1LocalFieldValue | readonly OrderMediaValue[]): void {
+  if (fieldLocked.value || !draft.value) return
   const next = { ...values.value, [key]: value }
   if (draft.value.input.rows.some(row => row.valueKey === key && row.type === 'area') && Array.isArray(value)) {
     if (value[0] !== undefined) next.province = value[0]
@@ -82,10 +95,10 @@ function setValue(key: string, value: R1LocalFieldValue): void {
   }).catch(() => { if (ticket === generation) saveFailed.value = true }).finally(() => {
     if (ticket !== generation) return
     pending.value -= 1
-    if (!disposed) emit('change', !saveFailed.value && pending.value === 0 && evaluated.value?.state === 'ready')
+    if (!disposed) emit('change', !saveFailed.value && pending.value === 0 && !hasPendingMedia.value && evaluated.value?.state === 'ready')
   })
 }
-defineExpose({ validateSelectionEntry: () => Boolean(draft.value && !loading.value && !saveFailed.value && pending.value === 0 && props.session.current() && evaluateOrderExtFields({ ...draft.value.input, values: values.value }, 'selection').state === 'ready') })
+defineExpose({ validateSelectionEntry: () => Boolean(draft.value && !loading.value && !saveFailed.value && !hasPendingMedia.value && pending.value === 0 && props.session.current() && evaluateOrderExtFields({ ...draft.value.input, values: values.value, context: { ...draft.value.input.context, personType: typeof values.value.personType === 'string' ? values.value.personType : undefined } }, 'selection').state === 'ready') })
 // Let already queued, authorized saves drain when leaving the page.
 onBeforeUnmount(() => { disposed = true })
 </script>

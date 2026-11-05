@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { projectR1OrderExtFieldWire } from '../../src/features/work-orders/quotation/order-extfield-wire'
+import { decodeOrderMedia, encodeOrderMedia, projectR1OrderExtFieldWire } from '../../src/features/work-orders/quotation/order-extfield-wire'
 
 const definitions = ['zero', 'blank', 'off', 'hidden', 'choices'].map(name => ({ name, type: 'text' }))
 describe('R1 Order.exts wire projection', () => {
@@ -25,6 +25,18 @@ describe('R1 Order.exts wire projection', () => {
       expect(projectR1OrderExtFieldWire(definitions, { hidden: 'valid', choices: value }))
         .toEqual({ state: 'blocked', reason: 'unsupported_value' })
     }
+  })
+  it('encodes acknowledged Order URLs and strips transform queries without changing FormData codecs', () => {
+    const files = [{ url: 'https://upload.invalid/a.jpg?imageView2/0/w/600' }, { url: 'https://upload.invalid/b.png' }]
+    expect(encodeOrderMedia(files)).toBe('https://upload.invalid/a.jpg,https://upload.invalid/b.png')
+    expect(files[0].url).toContain('?imageView2')
+    expect(decodeOrderMedia('https://upload.invalid/a.jpg,https://upload.invalid/b.png')).toEqual([{ url: 'https://upload.invalid/a.jpg' }, { url: 'https://upload.invalid/b.png' }])
+    expect(projectR1OrderExtFieldWire([{ name: 'files', type: 'file' }], { files }, ['files'])).toMatchObject({ state: 'projected', exts: { files: 'https://upload.invalid/a.jpg,https://upload.invalid/b.png' } })
+  })
+  it('rejects local, duplicate, credentials, comma-delimited and structured media values', () => {
+    for (const value of [[{ url: 'blob:local' }], [{ url: 'https://user:secret@host.invalid/a' }], [{ url: 'https://host.invalid/a,b' }], [{ url: 'https://host.invalid/a', name: 'extra' }], [{ url: 'https://host.invalid/a' }, { url: 'https://host.invalid/a' }]]) expect(encodeOrderMedia(value)).toBeNull()
+    expect(decodeOrderMedia('https://host.invalid/a,')).toBeNull()
+    expect(encodeOrderMedia([])).toBe('')
   })
   it('blocks unsafe keys and contradictory duplicate definitions', () => {
     for (const fields of [[{ name: '__proto__', type: 'text' }], [

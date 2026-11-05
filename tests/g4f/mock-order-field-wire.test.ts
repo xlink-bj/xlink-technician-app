@@ -12,6 +12,6 @@ describe('R1-shaped Mock quotation field providers', () => {
   it('does not reinterpret expanded schema requests', () => {
     const body = { colName: 'order', 'is:state|integer#and': '1', 'in:showList|string#and': '4', page: 1, size: 50, sortField: 'order', sortOrder: 'asc' }
     expect(mockOrderFieldsRead('biz/extField/query', { ...body, _all: 1 })).toBeUndefined()
-    expect(mockOrderFieldsRead('biz/extField/query', body)).toMatchObject({ total: 5 })
+    expect(mockOrderFieldsRead('biz/extField/query', body)).toMatchObject({ total: 9 })
   })
 })
