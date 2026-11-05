@@ -1,3 +1,4 @@
+import { currentFormDefRequestBody, isAllowedCurrentFormDefRead, verifyCurrentFormDefPage } from './lib/r1-current-formdef-read.mjs'
 import { createR1BoundedConfigEvidence } from './lib/r1-bounded-config-evidence.mjs'
 import { createServer, loadEnv } from 'vite'
 import { resolve } from 'node:path'
@@ -85,6 +86,9 @@ let materialSalesNextPage = 1
 let selectedCatalogContext = null
 let selectedCatalogWorkOrderId = null
 let selectedCatalogContextOrdinal = null
+let currentFormDefOnlyRequested = false
+let authorizedCurrentFormDefId = null
+let currentFormDefReads = 0
 let activeOrderFieldsOnlyRequested = false
 let selectedOrderMaterialPriceComparisonRequested = false
 let selectedOrderPackagePriceComparisonRequested = false
@@ -347,6 +351,11 @@ function recordSafeRequest(url, request, apiBaseUrl) {
     return 'read'
   }
   if (relativePath === 'biz/extField/query') {
+    if (currentFormDefOnlyRequested) {
+      if (!authorizedCurrentFormDefId || authIdentityChanged() || currentFormDefReads !== 0 || !isAllowedCurrentFormDefRead(request.data, authorizedCurrentFormDefId)) return null
+      currentFormDefReads += 1
+      return 'read'
+    }
     const body = typeof request.data === 'string' ? new URLSearchParams(request.data) : new URLSearchParams()
     if (body.get('colName') === 'order') {
       if (!activeOrderFieldsOnlyRequested
@@ -996,7 +1005,9 @@ let expectedAuthIdentity = null
 
 async function run() {
   const argumentsWithoutSeparator = process.argv.slice(2).filter(argument => argument !== '--')
-  const catalogAuditOptions = parseCatalogContextAuditArgs(argumentsWithoutSeparator)
+  currentFormDefOnlyRequested = argumentsWithoutSeparator.includes('--current-node-formdef-only')
+  const catalogAuditOptions = parseCatalogContextAuditArgs(argumentsWithoutSeparator.filter(arg => arg !== '--current-node-formdef-only'))
+  if (currentFormDefOnlyRequested && argumentsWithoutSeparator.some(arg => !['--current-node-formdef-only','--preflight-only','--authorize-bounded-prod-read'].includes(arg))) throw new Error('INCOMPATIBLE_FORMDEF_AUDIT_FLAGS')
   activeOrderFieldsOnlyRequested = catalogAuditOptions.activeOrderFieldsOnly
   selectedOrderMaterialPriceComparisonRequested = catalogAuditOptions.compareSelectedOrderMaterialPrices
   selectedOrderPackagePriceComparisonRequested = catalogAuditOptions.compareSelectedOrderPackagePrices
@@ -1219,6 +1230,48 @@ async function run() {
       responseCounts.unsupportedQuotationGroups += quotes.data.items.reduce((count, quote) => count + quote.groups.filter((group) => !group.contentSupported).length, 0)
       responseCounts.recognizedQuotationLines += quotes.data.items.reduce((count, quote) => count + quote.groups.reduce((groupCount, group) => groupCount + countLines(group.lines), 0), 0)
       responseCounts.quotesWithPdfField += quotes.data.items.filter((quote) => quote.pdfState === 'present_no_access').length
+    }
+
+    if (currentFormDefOnlyRequested) {
+      let inspected = 0, state = 'NO_CURRENT_FORMDEF_FOUND', pageNumber = 0, result = null
+      const seen = new Set()
+      discovery: for (let page = 1; page <= MAX_WORK_ORDER_PAGES; page++) {
+        pageNumber = page
+        const list = await technicianApi.listWorkOrders({ page, pageSize: 3 })
+        if (authIdentityChanged() || list.state !== 'succeeded' || !list.data || list.data.items.length > 3) { state = 'LIST_READ_STOPPED'; break }
+        for (const workOrder of list.data.items) {
+          const id = String(workOrder.id)
+          if (seen.has(id)) { state = 'DUPLICATE_WORK_ORDER_STOPPED'; break discovery }
+          seen.add(id); listedWorkOrderIds.add(id); workOrderAuthorityById.set(id, technicianApi)
+          const detail = await technicianApi.getWorkOrderDetail(workOrder.id)
+          inspected++
+          if (authIdentityChanged() || detail.state !== 'succeeded' || !detail.data || String(detail.data.id) !== id) { state = 'DETAIL_READ_STOPPED'; break discovery }
+          const projection = detailWorkflowProjectionFor(detail.data, session)
+          boundedEvidence.observeWorkflow(detail.data, projection)
+          const matches = (detail.data.workflowNodes ?? []).filter(node => String(node.id) === String(projection.currentTask?.nodeId)
+            && node.lifecycle === 'active' && node.formDefinitionId && node.runId && String(node.runId) === String(detail.data.workflowRunId))
+          if (matches.length > 1) { state = 'AMBIGUOUS_NODE_STOPPED'; break discovery }
+          if (matches.length === 1) {
+            authorizedCurrentFormDefId = String(matches[0].formDefinitionId)
+            const response = await requestReadOnce(request, runtime.value.environment.apiBaseUrl, session.sessionRef,
+              'biz/extField/query', currentFormDefRequestBody(authorizedCurrentFormDefId))
+            if (authIdentityChanged() || !response || response.statusCode < 200 || response.statusCode >= 300) { state = 'FIELD_READ_STOPPED'; break discovery }
+            const verified = verifyCurrentFormDefPage(response.data, authorizedCurrentFormDefId)
+            if (!verified.ok) { state = verified.reason; break discovery }
+            boundedEvidence.fieldPage(response.data, { serviceType: '' })
+            const snapshot = boundedEvidence.snapshot()
+            result = { nodeType: ['forms','repeat','form'].includes(matches[0].sourceNodeType) ? matches[0].sourceNodeType : 'UNKNOWN', formPurpose: ['survey','inspection','appointment'].includes(matches[0].formPurpose) ? matches[0].formPurpose : 'UNKNOWN',
+              fields: snapshot.fields, workflows: snapshot.workflows,
+              providerReads: 'NOT_AUTHORIZED_BY_THIS_FIELD_ONLY_CAPTURE', customerValuesRead: false }
+            state = 'CURRENT_FORMDEF_BOUNDED_FIELDS_COMPLETE'; break discovery
+          }
+        }
+        if (list.data.items.length < 3 || page * 3 >= list.data.totalCount) break
+      }
+      console.log(JSON.stringify({ status: state, loginRequests, routeCounts, inspected, pageNumber, currentFormDefReads,
+        blockedUnexpectedNetworkRequests, productionBusinessMutationNetworkRequests: 0, evidence: result }))
+      if (state !== 'CURRENT_FORMDEF_BOUNDED_FIELDS_COMPLETE') process.exitCode = 1
+      return
     }
 
     stage = 'work_order_list_read'

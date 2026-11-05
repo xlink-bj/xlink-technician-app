@@ -43,3 +43,13 @@
 真实业务写入、上传、Workflow、签约、PDF/消息继续 #201 HOLD。生产/Beta 的保存回读和服务端权限实测属于独立门禁，不是可用 Mock 去替代的缺口。本轮没有 UI 变更、原生工具、部署或新开发线。
 
 精确测试数量、H5 实际运行/跳过、提交 SHA 与 CI 结果在 #207 交付记录中记载，不把尚未执行的项目预写成 PASS。
+
+## 当前 FormDef 读取的新增授权及实际停止结果
+
+Owner 随后明确批准：当前技师角色可见工单、已核对当前节点派生 extId，`biz/extField/query` 激活条件、排序、page=1/rows=50，无 `_all`；身份不符/缺页/失败立即停止。该授权只落实到审计工具的 `--current-node-formdef-only` 路径；不改变 App 的 Production API 白名单，不读取 FormData 或字典选项，不允许任意 extId、扩页、重试或写入。
+
+已完成零网络预检、边界负例及一次实际采集：[停止回执](../../contracts/production/technician-role-readonly-20261105/current-formdef-attempt.json)。共 62 请求（1 登录、12 role tree、12 工单页、36 详情、1 字段页），越界/业务变更 0。在第 36 个详情找到同运行实例、active 且精确匹配当前任务的 FormDef 引用，字段页未通过完整合法页校验，以 `INCOMPLETE_OR_INVALID_PAGE` 停止，未扩页或重试。
+
+本次没有保留原始响应及失败细分元数据，不能分辨总数/字段 envelope/行形状的具体原因，也不能断言权限、后端缺陷或实际字段数量。没有取得可提交的完整 schema，F04/F09 不升级为完整模型通过。第 1 条的“需要批准”已由本次授权解决，新的退出条件是查清返回页形状并取得完整、安全的有界定义；仍不得绕过页限填造数据。
+
+本地全量 210 测试文件 / 1817 测试通过；默认 H5 67 PASS / 26 SKIP。`78290cb9` 的两项 main CI 均 SUCCESS；当前读取工具后续提交精确 CI 另见 #207，不移用前一提交结果。

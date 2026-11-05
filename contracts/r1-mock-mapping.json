@@ -42,7 +42,8 @@
       "sourceEvidence": "docs/verification/G4E_SURVEY_DOMAIN_TRUTH.md",
       "unitTests": [
         "tests/engineering/r1-stage1-forms-options.test.ts",
-        "tests/engineering/r1-model-contract-parity.test.ts"
+        "tests/engineering/r1-model-contract-parity.test.ts",
+        "tests/g4f/r1-current-formdef-read.test.ts"
       ],
       "unresolved": "节点 FormDef 引用可证；Production extId 字段请求不在现有白名单，未执行",
       "liveParity": "NOT_VERIFIED"

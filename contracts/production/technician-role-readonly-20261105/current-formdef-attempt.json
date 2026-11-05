@@ -1,0 +1,38 @@
+{
+  "status": "INCOMPLETE_OR_INVALID_PAGE",
+  "loginRequests": 1,
+  "routeCounts": {
+    "roleTree": 12,
+    "workOrderList": 12,
+    "workOrderDetail": 36,
+    "quotationList": 0,
+    "packageList": 0,
+    "procedureList": 0,
+    "materialList": 0,
+    "measureList": 0,
+    "packageDetail": 0,
+    "materialSalesFields": 0,
+    "orderExtFields": 0,
+    "orderCodeOptions": 0,
+    "orderCascadeOptions": 0,
+    "catalogFilterCodeOptions": 0,
+    "materialCodeOptions": 0,
+    "materialSkuList": 0
+  },
+  "inspected": 36,
+  "pageNumber": 12,
+  "currentFormDefReads": 1,
+  "blockedUnexpectedNetworkRequests": 0,
+  "productionBusinessMutationNetworkRequests": 0,
+  "evidence": null,
+  "provenance": {
+    "applicationBase": "78290cb97ab3fb455cecc13afac5dd2c0d32049c",
+    "ownerAuthorization": "CURRENT_NODE_EXTID_PAGE1_ROWS50_NO_ALL_20261105",
+    "auditCodeSha256": {
+      "scripts/verify-g4f-prod-read.mjs": "67d1dd5f13144f8171ce634466a19c446d7712e6d5f6e859556deafc9415ae5b",
+      "scripts/lib/r1-current-formdef-read.mjs": "f42c49c9126bc42131ecb47299b1e992c72fe6dd21c12ff10db0756a6b5e8193"
+    },
+    "rawResponseRetained": false,
+    "serverBuildSha": "UNKNOWN"
+  }
+}
