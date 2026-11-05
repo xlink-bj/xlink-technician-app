@@ -1,6 +1,7 @@
 export interface CatalogContextAuditOptions {
   readonly catalogContextOrdinal: number
   readonly catalogContextOnly: boolean
+  readonly activeOrderFieldsOnly: boolean
 }
 
 export interface CatalogContextSelection {

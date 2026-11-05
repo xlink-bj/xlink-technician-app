@@ -5,13 +5,31 @@ export function parseCatalogContextAuditArgs(args = []) {
   let catalogContextOrdinal = 1
   let hasOrdinal = false
   let catalogContextOnly = false
+  let activeOrderFieldsOnly = false
+  let authorizeRead = false
+  let preflightOnly = false
 
   for (let index = 0; index < args.length; index += 1) {
     const argument = args[index]
-    if (argument === '--' || argument === '--preflight-only') continue
+    if (argument === '--') continue
+    if (argument === '--preflight-only') {
+      if (preflightOnly) throw new Error('duplicate_preflight_only_argument')
+      preflightOnly = true
+      continue
+    }
+    if (argument === '--authorize-bounded-prod-read') {
+      if (authorizeRead) throw new Error('duplicate_authorization_argument')
+      authorizeRead = true
+      continue
+    }
     if (argument === '--catalog-context-only') {
       if (catalogContextOnly) throw new Error('duplicate_catalog_context_only_argument')
       catalogContextOnly = true
+      continue
+    }
+    if (argument === '--active-order-fields-only') {
+      if (activeOrderFieldsOnly) throw new Error('duplicate_active_order_fields_only_argument')
+      activeOrderFieldsOnly = true
       continue
     }
     if (argument === '--catalog-context-ordinal' || argument.startsWith('--catalog-context-ordinal=')) {
@@ -33,7 +51,10 @@ export function parseCatalogContextAuditArgs(args = []) {
     throw new Error('unsupported_g4f_prod_read_argument')
   }
 
-  return Object.freeze({ catalogContextOrdinal, catalogContextOnly })
+  if (catalogContextOnly && activeOrderFieldsOnly) throw new Error('incompatible_g4f_prod_read_modes')
+  if (authorizeRead && preflightOnly) throw new Error('incompatible_g4f_prod_read_authorization')
+
+  return Object.freeze({ catalogContextOrdinal, catalogContextOnly, activeOrderFieldsOnly })
 }
 
 /** Select a requested distinct service/source pair from verified current Place Order WorkOrders. */

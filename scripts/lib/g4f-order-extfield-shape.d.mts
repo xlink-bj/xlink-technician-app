@@ -52,4 +52,65 @@ export function sanitizeOrderExtFieldPage(payload: unknown):
       readonly fields: readonly SanitizedOrderExtField[]
     }
   | { readonly ok: false; readonly reason: string }
+export function summarizeEffectiveOrderExtFieldPage(
+  payload: unknown,
+  context: { readonly serviceType: string; readonly personType?: string | number },
+):
+  | {
+      readonly ok: true
+      readonly total: number
+      readonly returned: number
+      readonly truncated: boolean
+      readonly pageLimit: 50
+      readonly r1Projection: string
+      readonly context: {
+        readonly serviceTypePresent: true
+        readonly submitOrderPersonTypeSource: 'R1_DEFAULT_0' | 'EXPLICIT_CONTEXT'
+      }
+      readonly effective: {
+        readonly placeOrder: Readonly<Record<string, unknown>>
+        readonly submitOrder: Readonly<Record<string, unknown>>
+        readonly blockedServiceRules: number
+        readonly blockedPersonRules: number
+        readonly unknownStageRows: number
+      }
+      readonly providers: 'OMITTED_FROM_FIELD_SUMMARY'
+    }
+  | { readonly ok: false; readonly reason: string }
+export function effectiveOrderExtFieldProviderPlan(
+  payload: unknown,
+  context: { readonly serviceType: string; readonly personType?: string | number },
+):
+  | { readonly ok: true; readonly codeIds: readonly string[]; readonly cascadeIds: readonly string[] }
+  | { readonly ok: false; readonly reason: string }
+export function sanitizeOrderCodeProviderResponse(payload: unknown, expectedIds: readonly string[]):
+  | { readonly ok: true; readonly providers: number; readonly missingProviders?: number; readonly options: number; readonly emptyProviders: number }
+  | { readonly ok: false; readonly reason: string }
+export function sanitizeOrderCascadeProviderResponse(payload: unknown, expectedTypes: readonly string[]):
+  | { readonly ok: true; readonly providers: number; readonly missingProviders?: number; readonly nodes: number; readonly leaves: number; readonly maxDepth: number; readonly terminalNodesWithEmptyChildren: number }
+  | { readonly ok: false; readonly reason: string }
+export function isAllowedEffectiveOrderExtFieldRequest(input: {
+  readonly path: string
+  readonly method: string
+  readonly search?: string
+  readonly body: URLSearchParams | string | Readonly<Record<string, string | number | boolean>>
+  readonly currentWorkOrder: boolean
+}): boolean
+export function isAllowedEffectiveOrderCodeProviderRequest(input: {
+  readonly path: string
+  readonly method: string
+  readonly search?: string
+  readonly body: URLSearchParams | string | Readonly<Record<string, string | number | boolean>>
+  readonly currentWorkOrder: boolean
+  readonly expectedIds: readonly string[]
+}): boolean
+export function isAllowedEffectiveOrderCascadeProviderRequest(input: {
+  readonly path: string
+  readonly method: string
+  readonly search?: string
+  readonly body: URLSearchParams | string | Readonly<Record<string, string | number | boolean>>
+  readonly currentWorkOrder: boolean
+  readonly expectedTypes: readonly string[]
+  readonly tenantId: string
+}): boolean
 export function isAllowedOrderExtFieldTarget(value: unknown): boolean

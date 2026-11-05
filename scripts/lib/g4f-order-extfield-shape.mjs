@@ -206,6 +206,313 @@ export function sanitizeOrderExtFieldPage(payload) {
   }
 }
 
+function r1ServiceTypeApplies(config, serviceType) {
+  const configured = config.serviceType
+  // This intentionally follows placeOrders.vue's source expression:
+  // configured && current ? configured.indexOf(current) !== -1 : true.
+  if (!configured || !serviceType) return { state: 'applies' }
+  if (Array.isArray(configured) || typeof configured === 'string') {
+    return { state: configured.indexOf(serviceType) !== -1 ? 'applies' : 'filtered' }
+  }
+  return { state: 'blocked' }
+}
+
+function r1PersonTypeApplies(config, personType) {
+  const configured = config.personType
+  if (!configured) return { state: 'applies' }
+  if (configured === null || typeof configured === 'object') return { state: 'blocked' }
+  // R1 uses loose equality for this field. Restrict the projection to the
+  // primitive values supported by that comparison; no coercion of objects.
+  const left = typeof configured === 'boolean' ? Number(configured) : configured
+  const right = typeof personType === 'boolean' ? Number(personType) : personType
+  if (typeof left !== 'string' && typeof left !== 'number') return { state: 'blocked' }
+  if (typeof right !== 'string' && typeof right !== 'number') return { state: 'blocked' }
+  const matches = typeof left === 'string' && typeof right === 'string'
+    ? left === right
+    : Number.isNaN(Number(left)) || Number.isNaN(Number(right))
+      ? false
+      : Number(left) === Number(right)
+  return { state: matches ? 'applies' : 'filtered' }
+}
+
+function summarizeEffectiveRows(rows) {
+  const byType = Object.create(null)
+  let required = 0
+  let configuredProviders = 0
+  let conditional = 0
+  let unsupported = 0
+  let presentationOnly = 0
+  for (const row of rows) {
+    byType[row.type] = (byType[row.type] ?? 0) + 1
+    if (row.required === true) required += 1
+    if (row.provider.configured) configuredProviders += 1
+    if (row.condition.present) conditional += 1
+    if (row.runtimeCapability === 'UNSUPPORTED') unsupported += 1
+    if (row.runtimeCapability === 'PRESENTATION_ONLY') presentationOnly += 1
+  }
+  return {
+    rows: rows.length,
+    required,
+    byType,
+    configuredProviders,
+    conditional,
+    unsupported,
+    presentationOnly,
+  }
+}
+
+/**
+ * Sanitized per-context projection of the bounded active Order ExtField page.
+ * It mirrors R1's client-side `getFields()` stage/service/person filtering;
+ * it intentionally emits no raw key, label, option ID/value, or field value.
+ */
+export function summarizeEffectiveOrderExtFieldPage(payload, context) {
+  const sanitized = sanitizeOrderExtFieldPage(payload)
+  if (!sanitized.ok) return sanitized
+  if (typeof context?.serviceType !== 'string' || !context.serviceType.trim()) {
+    return { ok: false, reason: 'SERVICE_TYPE_REQUIRED' }
+  }
+  const parsed = parseOrderExtFieldPage(payload)
+  if (!parsed.ok) return parsed
+  const placeOrder = []
+  const submitOrder = []
+  let blockedServiceRules = 0
+  let blockedPersonRules = 0
+  let unknownStageRows = 0
+  for (const field of parsed.rows) {
+    const config = parsedConfig(field.frontEndConfig)
+    const stage = config.showType
+    if (stage !== 'placeOrder' && stage !== 'submitOrder') {
+      unknownStageRows += 1
+      continue
+    }
+    const service = r1ServiceTypeApplies(config, context.serviceType)
+    if (service.state === 'blocked') {
+      blockedServiceRules += 1
+      continue
+    }
+    if (service.state === 'filtered') continue
+    if (stage === 'placeOrder') {
+      placeOrder.push(field)
+      continue
+    }
+    const person = r1PersonTypeApplies(config, context.personType ?? '0')
+    if (person.state === 'blocked') {
+      blockedPersonRules += 1
+      continue
+    }
+    if (person.state === 'applies') submitOrder.push(field)
+  }
+  const rowIndexByIdentity = new Map(parsed.rows.map((_, index) => [parsed.rows[index], index]))
+  const sanitizedByIndex = new Map(sanitized.fields.map(field => [Number(field.row.slice('Field-'.length)) - 1, field]))
+  const project = (rows) => summarizeEffectiveRows(rows.map(row => sanitizedByIndex.get(rowIndexByIdentity.get(row))))
+  return {
+    ok: true,
+    total: sanitized.total,
+    returned: sanitized.returned,
+    truncated: sanitized.truncated,
+    pageLimit: sanitized.pageLimit,
+    r1Projection: 'SOURCE_GET_FIELDS_SHOW_TYPE_SERVICE_TYPE_PERSON_TYPE',
+    context: {
+      serviceTypePresent: true,
+      submitOrderPersonTypeSource: context.personType === undefined ? 'R1_DEFAULT_0' : 'EXPLICIT_CONTEXT',
+    },
+    effective: {
+      placeOrder: project(placeOrder),
+      submitOrder: project(submitOrder),
+      blockedServiceRules,
+      blockedPersonRules,
+      unknownStageRows,
+    },
+    providers: 'OMITTED_FROM_FIELD_SUMMARY',
+  }
+}
+
+/** Returns only ephemeral provider IDs for the exact effective fields. Do not persist this value. */
+export function effectiveOrderExtFieldProviderPlan(payload, context) {
+  const parsed = parseOrderExtFieldPage(payload)
+  if (!parsed.ok) return parsed
+  if (typeof context?.serviceType !== 'string' || !context.serviceType.trim()) {
+    return { ok: false, reason: 'SERVICE_TYPE_REQUIRED' }
+  }
+  const codeIds = []
+  const cascadeIds = []
+  const codeSet = new Set()
+  const cascadeSet = new Set()
+  for (const field of parsed.rows) {
+    const config = parsedConfig(field.frontEndConfig)
+    if (config.showType !== 'placeOrder' && config.showType !== 'submitOrder') continue
+    if (r1ServiceTypeApplies(config, context.serviceType).state !== 'applies') continue
+    if (config.showType === 'submitOrder'
+      && r1PersonTypeApplies(config, context.personType ?? '0').state !== 'applies') continue
+    if (typeof field.valueOption !== 'string' || field.valueOption.length === 0) continue
+    if (!['code', 'select', 'radio', 'checkbox', 'cascade'].includes(field.type)) continue
+    if (!/^[A-Za-z0-9_-]{1,100}$/.test(field.valueOption)) return { ok: false, reason: 'INVALID_PROVIDER_ID' }
+    const isCascade = field.type === 'cascade'
+    const target = isCascade ? cascadeIds : codeIds
+    const seen = isCascade ? cascadeSet : codeSet
+    if (!seen.has(field.valueOption)) {
+      seen.add(field.valueOption)
+      target.push(field.valueOption)
+    }
+  }
+  if (codeIds.length > 30 || cascadeIds.length > 10) return { ok: false, reason: 'PROVIDER_LIMIT_EXCEEDED' }
+  return { ok: true, codeIds, cascadeIds }
+}
+
+function providerRows(payload) {
+  let value = payload
+  if (typeof value === 'string' && value.length <= 1_000_000) {
+    try { value = JSON.parse(value) } catch { return null }
+  }
+  if (Array.isArray(value)) return value
+  const outer = record(value)
+  let nested = outer?.data
+  if (typeof nested === 'string' && nested.length <= 1_000_000) {
+    try { nested = JSON.parse(nested) } catch { return null }
+  }
+  if (Array.isArray(nested)) return nested
+  if (Array.isArray(record(nested)?.items)) return record(nested).items
+  return null
+}
+
+/** Counts Code options and identity completeness without retaining labels or option values. */
+export function sanitizeOrderCodeProviderResponse(payload, expectedIds) {
+  if (!Array.isArray(expectedIds) || expectedIds.some(id => typeof id !== 'string' || !/^[A-Za-z0-9_-]{1,100}$/.test(id))) {
+    return { ok: false, reason: 'INVALID_EXPECTED_PROVIDER_IDS' }
+  }
+  if (expectedIds.length === 0) return { ok: true, providers: 0, options: 0, emptyProviders: 0 }
+  const rows = providerRows(payload)
+  if (!rows || rows.length > expectedIds.length) return { ok: false, reason: 'INVALID_PROVIDER_RESPONSE' }
+  const expected = new Set(expectedIds)
+  const seen = new Set()
+  let options = 0
+  let emptyProviders = 0
+  for (const raw of rows) {
+    const row = record(raw)
+    if (!row || typeof row.eleid !== 'string' || !expected.has(row.eleid) || seen.has(row.eleid)) {
+      return { ok: false, reason: 'PROVIDER_IDENTITY_MISMATCH' }
+    }
+    let values = row.options
+    if (typeof values === 'string' && values.length <= 1_000_000) {
+      try { values = JSON.parse(values) } catch { return { ok: false, reason: 'PROVIDER_OPTIONS_INVALID' } }
+    }
+    values = record(values)
+    if (!values) return { ok: false, reason: 'PROVIDER_OPTIONS_MISSING' }
+    const count = Object.keys(values).length
+    options += count
+    if (count === 0) emptyProviders += 1
+    seen.add(row.eleid)
+  }
+  return {
+    ok: true,
+    providers: rows.length,
+    missingProviders: expectedIds.length - seen.size,
+    options,
+    emptyProviders,
+  }
+}
+
+/** Counts a multistage Code tree without retaining any labels or option values. */
+export function sanitizeOrderCascadeProviderResponse(payload, expectedTypes) {
+  if (!Array.isArray(expectedTypes) || expectedTypes.some(id => typeof id !== 'string' || !/^[A-Za-z0-9_-]{1,100}$/.test(id))) {
+    return { ok: false, reason: 'INVALID_EXPECTED_PROVIDER_IDS' }
+  }
+  if (expectedTypes.length === 0) return { ok: true, providers: 0, nodes: 0, leaves: 0, maxDepth: 0, terminalNodesWithEmptyChildren: 0 }
+  const rows = providerRows(payload)
+  if (!rows || rows.length > expectedTypes.length) return { ok: false, reason: 'INVALID_PROVIDER_RESPONSE' }
+  const expected = new Set(expectedTypes)
+  const seen = new Set()
+  let nodes = 0
+  let leaves = 0
+  let maxDepth = 0
+  let terminalNodesWithEmptyChildren = 0
+  const visit = (node, depth) => {
+    const value = record(node)
+    if (!value || (value.children !== undefined && !Array.isArray(value.children))) return false
+    nodes += 1
+    maxDepth = Math.max(maxDepth, depth)
+    const children = Array.isArray(value.children) ? value.children : []
+    if (children.length === 0) {
+      leaves += 1
+      if (Array.isArray(value.children)) terminalNodesWithEmptyChildren += 1
+      return true
+    }
+    return children.every(child => visit(child, depth + 1))
+  }
+  for (const raw of rows) {
+    const row = record(raw)
+    if (!row || typeof row.type !== 'string' || !expected.has(row.type) || seen.has(row.type)
+      || !Array.isArray(row.children)) return { ok: false, reason: 'PROVIDER_IDENTITY_MISMATCH' }
+    if (!row.children.every(child => visit(child, 1))) return { ok: false, reason: 'INVALID_CASCADE_TREE' }
+    seen.add(row.type)
+  }
+  return {
+    ok: true,
+    providers: rows.length,
+    missingProviders: expectedTypes.length - seen.size,
+    nodes,
+    leaves,
+    maxDepth,
+    terminalNodesWithEmptyChildren,
+  }
+}
+
+export function isAllowedEffectiveOrderExtFieldRequest({ path, method, search, body, currentWorkOrder }) {
+  if (path !== ORDER_EXTFIELD_ROUTE || method !== 'POST' || !currentWorkOrder || search) return false
+  const params = body instanceof URLSearchParams
+    ? body
+    : typeof body === 'string'
+      ? new URLSearchParams(body)
+      : body && typeof body === 'object' && !Array.isArray(body)
+        ? new URLSearchParams(Object.entries(body).map(([key, value]) => [key, String(value)]))
+        : new URLSearchParams()
+  const expected = { ...buildOrderExtFieldRequestBody() }
+  const expectedEntries = Object.entries(expected).sort(([left], [right]) => left.localeCompare(right))
+  const actualEntries = [...params.entries()].sort(([left], [right]) => left.localeCompare(right))
+  return actualEntries.length === expectedEntries.length
+    && actualEntries.every(([key, value], index) => key === expectedEntries[index][0] && value === expectedEntries[index][1])
+}
+
+export function isAllowedEffectiveOrderCodeProviderRequest({ path, method, search, body, currentWorkOrder, expectedIds }) {
+  if (path !== 'i/code/selectCode.do' || method !== 'POST' || search || !currentWorkOrder
+    || !Array.isArray(expectedIds) || expectedIds.length < 1 || expectedIds.length > 30
+    || expectedIds.some(id => typeof id !== 'string' || !/^[A-Za-z0-9_-]{1,100}$/.test(id))) return false
+  const params = body instanceof URLSearchParams
+    ? body
+    : typeof body === 'string'
+      ? new URLSearchParams(body)
+      : body && typeof body === 'object' && !Array.isArray(body)
+        ? new URLSearchParams(Object.entries(body).map(([key, value]) => [key, String(value)]))
+        : new URLSearchParams()
+  if ([...params.keys()].sort().join(',') !== 'jsonPara,tenantId'
+    || params.get('tenantId') !== '1340835581184723420') return false
+  let providers
+  try { providers = JSON.parse(params.get('jsonPara') ?? '') } catch { return false }
+  return Array.isArray(providers) && providers.length === expectedIds.length
+    && providers.every((provider, index) => provider && typeof provider === 'object' && !Array.isArray(provider)
+      && Object.keys(provider).sort().join(',') === 'codeId,eleid'
+      && provider.codeId === expectedIds[index] && provider.eleid === expectedIds[index])
+}
+
+export function isAllowedEffectiveOrderCascadeProviderRequest({ path, method, search, body, currentWorkOrder, expectedTypes, tenantId }) {
+  if (path !== 'i/code/selectMultistageCode.do' || method !== 'POST' || search || !currentWorkOrder
+    || !Array.isArray(expectedTypes) || expectedTypes.length < 1 || expectedTypes.length > 10
+    || expectedTypes.some(id => typeof id !== 'string' || !/^[A-Za-z0-9_-]{1,100}$/.test(id))
+    || new Set(expectedTypes).size !== expectedTypes.length
+    || typeof tenantId !== 'string' || !/^[A-Za-z0-9_-]{1,100}$/.test(tenantId)) return false
+  const params = body instanceof URLSearchParams
+    ? body
+    : typeof body === 'string'
+      ? new URLSearchParams(body)
+      : body && typeof body === 'object' && !Array.isArray(body)
+        ? new URLSearchParams(Object.entries(body).map(([key, value]) => [key, String(value)]))
+        : new URLSearchParams()
+  return [...params.keys()].sort().join(',') === 'tenantId,types'
+    && params.get('tenantId') === tenantId
+    && params.get('types') === expectedTypes.join(',')
+}
+
 export function isAllowedOrderExtFieldTarget(value) {
   if (typeof value !== 'string' || !value) return false
   try {

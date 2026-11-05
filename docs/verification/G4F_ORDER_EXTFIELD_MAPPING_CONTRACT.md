@@ -1,12 +1,12 @@
 # G4-F Order ExtField Effective Mapping Contract
 
-**Status:** `PURE_MAPPING_ONLY / R1_VALIDATION_PHASES_SOURCE_MAPPED / TENANT_SHAPE_CAPTURED / EFFECTIVE_FORM_UNKNOWN / NOT_CONNECTED`
+**Status:** `PURE_MAPPING_ONLY / R1_VALIDATION_PHASES_SOURCE_MAPPED / TENANT_SHAPE_CAPTURED / ONE_CONTEXT_EFFECTIVE_SHAPE_AND_PROVIDER_COUNTS_CAPTURED / NOT_CONNECTED`
 
 This document specifies the source-backed, fail-closed plan mapper implemented for Issue #51. The mapper consumes synthetic ExtField-shaped rows and explicit stage/service/person/value context. It is not a Production adapter, a live quotation schema, a UI, or an Order serializer.
 
 ## Evidence and scope
 
-The sanitized, one-page Production shape capture is recorded in [G4F_ACTIVE_ORDER_EXTFIELD_SCHEMA_SHAPE.md](./G4F_ACTIVE_ORDER_EXTFIELD_SCHEMA_SHAPE.md): 32/32 tenant-scoped enabled `order` mobile-detail rows were returned by the previously authorized single query. The current stage counts are 9 `placeOrder`, 10 `submitOrder`, and 13 unknown; the shape projection classified 26 generic type-level controls, 3 presentation gaps, and 3 unsupported special controls. This is tenant-wide field-definition evidence only—not the effective schema for a ServiceAppointment, workflow node, service type, or person type. No further Production/Beta request was made for Issue #51.
+The sanitized tenant-wide Production shape capture is recorded in [G4F_ACTIVE_ORDER_EXTFIELD_SCHEMA_SHAPE.md](./G4F_ACTIVE_ORDER_EXTFIELD_SCHEMA_SHAPE.md): 32/32 enabled `order` mobile-detail rows were returned by one bounded query. The effective stage shape for one verified current work-order context and its referenced Code/Cascade provider counts are recorded in [G4F_EFFECTIVE_ORDER_EXTFIELD_PROD_READ_20261105.md](./G4F_EFFECTIVE_ORDER_EXTFIELD_PROD_READ_20261105.md). That read found 4 `placeOrder` rows and 5 `submitOrder` rows after source-matched context filtering; raw field/provider identities and option contents were discarded. This is one context only, not a global schema or an Order write/runtime validation.
 
 R1 source is pinned to `xlink-bj/xlink-app@6c0a97b26bcbcaee81ac4e1dfd627c6e8e70e29d`; backend source is pinned to `xlink-bj/xlink-cloud-backend@5fc008d32e771205260f120621c1c4fc62d0824e`. Relevant R1 locations in `business/subpackages/order/placeOrders.vue`:
 
@@ -66,10 +66,10 @@ No persistence, network, workflow, or UI side effect exists in this module.
 | Control family | Plan behavior | Why it is not live-ready |
 | --- | --- | --- |
 | Ordinary recognized Dynamic Form types | Candidate `FormFieldSchema` only after applicability, requiredness, config, and capability checks; marked `RUNTIME_INFERRED` | No quotation UI or `Order.exts` writer is connected. Numeric normalization/value-shape parity remains unverified. |
-| `select` / `radio` / `checkbox` / `cascade` | A missing provider blocks. A configured finite code/cascade provider is diagnosed as `configured_not_fetched` and the row remains blocked in this slice. Checkbox candidate semantics retain `multiple: true`; with no verified provider, no schema is emitted and no scalar fallback occurs. | The capture proves provider metadata is configured, not option values, provider scope, or the correct source. No provider request is made. |
+| `select` / `radio` / `checkbox` / `cascade` | A missing provider blocks. One effective context now has bounded Code/Cascade provider reads, summarized without values; those summaries do not activate Runtime mapping. Checkbox candidate semantics retain `multiple: true`; without a reviewed value/label and serialization mapping, no scalar fallback occurs. | Provider counts/tree depth are known for one context only. Option values, labels, row identities, full cross-context scope, UI mapping, and Order serialization remain unverified. |
 | `bizSelect`, arbitrary `requestUrl`, `evaluate`, or unknown config keys | Blocked | No arbitrary endpoint, script, expression, or dynamic command is executed. |
-| `area` | Separate blocked `area` capability with a three-code path contract | R1 is a Province/City/County selector. Dictionary source, current applicability, and platform interaction are not verified; it is not promoted to generic `FormFieldSchema` support. |
-| `button` | Separate `button` special action, `BLOCKED`; `requiredness=not_applicable`; never a field schema | R1 can navigate or invoke `commonEvent`. Configuration cannot execute an action or become a value. |
+| `area` | Separate blocked `area` capability with a three-code path contract; one current `submitOrder` context includes an `area` row | R1 is a Province/City/County selector and stores a selected code path. Exact current field identity/value and its platform interaction remain unpersisted; it is not promoted to generic `FormFieldSchema` support. |
+| `button` | Separate `button` special action, `BLOCKED`; never a value schema. The one current `placeOrder` context includes a `button` row. | R1 can navigate to a mini program or dispatch a configured action. The active action config was discarded; it cannot execute until its intent is identified and allowlisted. Its association with requiredness is also not retained. |
 | `file` / `image` | Separate blocked media capability; required rows are required blockers | Generic type recognition does not prove Order upload, restore, or `Order.exts` URI semantics. R1 converts file arrays to comma-separated URLs on write. |
 | `gap` | Presentation-only row; never submitted as a field | R1 gap markup is not generalized to arbitrary HTML in this plan. |
 | `switch` | Blocked pending value/default parity | R1 uses active/inactive values `'1'`/`'0'` and applies a submit-time default; current Runtime uses booleans. No silent conversion is inferred. |
@@ -80,20 +80,20 @@ No persistence, network, workflow, or UI side effect exists in this module.
 
 `tests/g4f/order-extfield-effective-plan.test.ts` uses synthetic rows and values only. It covers exact stage isolation, service/person applicability and missing context, unknown stages, row identity versus shared value keys, duplicate/conflicting identities, hidden required rows filtered from selection entry but retained as final-submit obligations, visible required rows, `submitOrder` partitioning, matching dispensable remaining required at selection entry while waiving final requiredness, unresolved/coercive dispensable remaining required at entry while blocking the final rule, equality/coercion behavior, typed area path handling, button non-execution/non-projection, required media blocking, unsupported/missing/unfetched providers, and opaque legacy `Order.exts` preservation with projection exclusion.
 
-The tests do not import or parse the captured Production rows and do not exercise a live endpoint. The tenant shape document remains the only persisted Production schema evidence.
+The tests do not import or parse captured Production rows. The bounded live endpoint evidence is separately summarized in [G4F_EFFECTIVE_ORDER_EXTFIELD_PROD_READ_20261105.md](./G4F_EFFECTIVE_ORDER_EXTFIELD_PROD_READ_20261105.md); no raw Production row or provider payload is persisted.
 
 ## Remaining UNKNOWNs and gate
 
-1. Exact effective rows for any concrete active work order and `placeOrder`/`submitOrder` context, including service/person values.
-2. Provider option contents, identity, and source scoping for all code/cascade definitions.
-3. `area` dictionary source, code-path completeness rules, and actual stage applicability.
-4. Whether the observed `button` row is applicable and which explicitly allowlisted business action, if any, it should represent.
+1. Field identities/configuration and effective form details for other active work-order contexts; the current persisted evidence is aggregate-only and omits actual service/person values.
+2. Provider option values/labels, field-to-option mapping, and source scoping across other contexts; the current read retained counts/tree depth only.
+3. `area` code-path completeness rules and live UI/API round-trip parity.
+4. The observed `button` row's exact intent/configuration and which explicitly allowlisted business action, if any, it should represent.
 5. Order-specific media upload, restore, and persisted `Order.exts` value shape.
 6. Actual prior Order `exts` values and edit/round-trip behavior; preserving unknown keys here is only a pure in-memory invariant.
 7. Numeric and remaining generic control value parity at a real UI/serializer boundary.
 
-Therefore: tenant schema shape is captured; the two R1 validation phases are represented in a source-backed pure plan with synthetic regressions; the effective form is still `UNKNOWN`; no live quotation Runtime, UI, provider, or serializer is ready or connected. Any later live/schema/provider read and any Order write requires its own explicit authorization and gate.
+Therefore: tenant schema shape is captured; one context has a sanitized effective stage/type/provider summary; the two R1 validation phases are represented in a source-backed pure plan with synthetic regressions; no live quotation Runtime, UI mapping, or serializer is ready or connected. Any broader production read needs an explicit bounded scope; any Order write remains a separate authorization gate.
 
 ## Verification and safety
 
-Issue #51 verification is synthetic/local only. Production/Beta login, API calls, Mongo access, role changes, customer Order reads, option-provider requests, uploads, quotation mutations, and workflow commands are outside scope and were not performed. Existing quotation composition, price, workflow, and write boundaries are unchanged.
+Issue #51 remains disconnected from the live quotation Runtime. The single bounded Production context/option read is summarized in [G4F_EFFECTIVE_ORDER_EXTFIELD_PROD_READ_20261105.md](./G4F_EFFECTIVE_ORDER_EXTFIELD_PROD_READ_20261105.md). No role changes, Order/customer/Mongo reads, uploads, quotation mutations, or Workflow commands were performed in that run. Production/Beta writes remain prohibited; existing quotation composition, price, workflow, and write boundaries are unchanged.

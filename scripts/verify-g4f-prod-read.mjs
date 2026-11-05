@@ -11,6 +11,16 @@ import {
   parseCatalogContextAuditArgs,
 } from './g4f-prod-read-context-scope.mjs'
 import { workOrderOrderLineageReadState } from './g4f-prod-read-summary.mjs'
+import {
+  buildOrderExtFieldRequestBody,
+  effectiveOrderExtFieldProviderPlan,
+  isAllowedEffectiveOrderCascadeProviderRequest,
+  isAllowedEffectiveOrderCodeProviderRequest,
+  isAllowedEffectiveOrderExtFieldRequest,
+  sanitizeOrderCascadeProviderResponse,
+  sanitizeOrderCodeProviderResponse,
+  summarizeEffectiveOrderExtFieldPage,
+} from './lib/g4f-order-extfield-shape.mjs'
 
 const MAX_WORK_ORDER_PAGES = 1000
 const MAX_CATALOG_PAGES = 50
@@ -34,6 +44,9 @@ const routeCounts = {
   measureList: 0,
   packageDetail: 0,
   materialSalesFields: 0,
+  orderExtFields: 0,
+  orderCodeOptions: 0,
+  orderCascadeOptions: 0,
   catalogFilterCodeOptions: 0,
   materialCodeOptions: 0,
   materialSkuList: 0,
@@ -62,6 +75,10 @@ let materialSalesNextPage = 1
 let selectedCatalogContext = null
 let selectedCatalogWorkOrderId = null
 let selectedCatalogContextOrdinal = null
+let activeOrderFieldsOnlyRequested = false
+let activeOrderCodeProviderIds = []
+let activeOrderCascadeProviderIds = []
+let expectedOrderCascadeTenantId = null
 let orderIdentitySearchState = 'NOT_RUN'
 let orderIdentityCandidateWorkOrderId = null
 let selectedWorkOrderIsCurrent = () => false
@@ -86,6 +103,11 @@ const responseCounts = {
     referencedMaterialSpus: 0,
   },
   materialSalesAttributes: { state: 'NOT_RUN', fields: 0 },
+  effectiveOrderExtFields: { state: 'NOT_RUN', summary: null },
+  effectiveOrderOptionProviders: {
+    code: { state: 'NOT_RUN', providers: 0, missingProviders: 0, options: 0, emptyProviders: 0 },
+    cascade: { state: 'NOT_RUN', providers: 0, missingProviders: 0, nodes: 0, leaves: 0, maxDepth: 0, terminalNodesWithEmptyChildren: 0 },
+  },
   catalogFilterOptions: {
     state: 'NOT_RUN',
     packageParts: 0, packageTypes: 0, packageAgeLimits: 0,
@@ -269,6 +291,20 @@ function recordSafeRequest(url, request, apiBaseUrl) {
   }
   if (relativePath === 'biz/extField/query') {
     const body = typeof request.data === 'string' ? new URLSearchParams(request.data) : new URLSearchParams()
+    if (body.get('colName') === 'order') {
+      if (!activeOrderFieldsOnlyRequested
+        || !selectedCatalogContext || !selectedWorkOrderIsCurrent() || authIdentityChanged()
+        || routeCounts.orderExtFields !== 0
+        || !isAllowedEffectiveOrderExtFieldRequest({
+          path: relativePath,
+          method: request.method,
+          search: url.search,
+          body,
+          currentWorkOrder: true,
+        })) return null
+      routeCounts.orderExtFields += 1
+      return 'read'
+    }
     const expectedKeys = ['page', 'rows', 'sortField', 'sortOrder', 'colName', 'is:state|integer#and'].sort()
     const keys = [...body.keys()].sort()
     const page = Number(body.get('page'))
@@ -285,6 +321,16 @@ function recordSafeRequest(url, request, apiBaseUrl) {
   }
   if (relativePath === 'i/code/selectCode.do') {
     const body = typeof request.data === 'string' ? new URLSearchParams(request.data) : new URLSearchParams()
+    if (activeOrderFieldsOnlyRequested && activeOrderCodeProviderIds.length > 0) {
+      if (!selectedCatalogContext || !selectedWorkOrderIsCurrent() || authIdentityChanged()
+        || routeCounts.orderCodeOptions !== 0
+        || !isAllowedEffectiveOrderCodeProviderRequest({
+          path: relativePath, method: request.method, search: url.search,
+          body, currentWorkOrder: true, expectedIds: activeOrderCodeProviderIds,
+        })) return null
+      routeCounts.orderCodeOptions += 1
+      return 'read'
+    }
     if (!selectedCatalogContext || !selectedWorkOrderIsCurrent()
       || [...body.keys()].sort().join(',') !== 'jsonPara,tenantId'
       || body.get('tenantId') !== '1340835581184723420') return null
@@ -312,6 +358,20 @@ function recordSafeRequest(url, request, apiBaseUrl) {
       return 'read'
     }
     return null
+  }
+  if (relativePath === 'i/code/selectMultistageCode.do') {
+    const body = typeof request.data === 'string' ? new URLSearchParams(request.data) : new URLSearchParams()
+    if (!activeOrderFieldsOnlyRequested || activeOrderCascadeProviderIds.length === 0
+      || !selectedCatalogContext || !selectedWorkOrderIsCurrent() || authIdentityChanged()
+      || routeCounts.orderCascadeOptions !== 0
+      || !expectedOrderCascadeTenantId
+      || !isAllowedEffectiveOrderCascadeProviderRequest({
+        path: relativePath, method: request.method, search: url.search,
+        body, currentWorkOrder: true, expectedTypes: activeOrderCascadeProviderIds,
+        tenantId: expectedOrderCascadeTenantId,
+      })) return null
+    routeCounts.orderCascadeOptions += 1
+    return 'read'
   }
   const packageDetailPrefix = 'biz/projPackage/findById/'
   if (relativePath.startsWith(packageDetailPrefix)) {
@@ -409,13 +469,59 @@ function createRequest(apiBaseUrl) {
       if (Buffer.byteLength(text, 'utf8') > 1_000_000) throw new Error('response_too_large')
       let data
       try { data = JSON.parse(text) } catch { data = text }
-      if (url.pathname.endsWith('/biz/extField/query')) rememberVerifiedMaterialSalesCodeIds(data)
+      if (url.pathname.endsWith('/biz/extField/query')) {
+        const requestBody = typeof options.data === 'string' ? new URLSearchParams(options.data) : new URLSearchParams()
+        if (requestBody.get('colName') === 'order') {
+          const summary = summarizeEffectiveOrderExtFieldPage(data, {
+            serviceType: selectedCatalogContext?.serviceType ?? '',
+          })
+          responseCounts.effectiveOrderExtFields = {
+            state: summary.ok ? summary.truncated ? 'TRUNCATED' : 'SUCCEEDED' : 'INVALID_RESPONSE',
+            summary: summary.ok ? summary : { reason: summary.reason },
+          }
+          const providers = effectiveOrderExtFieldProviderPlan(data, {
+            serviceType: selectedCatalogContext?.serviceType ?? '',
+          })
+          if (providers.ok) {
+            activeOrderCodeProviderIds = [...providers.codeIds]
+            activeOrderCascadeProviderIds = [...providers.cascadeIds]
+          } else {
+            responseCounts.effectiveOrderOptionProviders.code = {
+              state: 'BLOCKED_PROVIDER_PLAN', providers: 0, missingProviders: 0, options: 0, emptyProviders: 0,
+            }
+            responseCounts.effectiveOrderOptionProviders.cascade = {
+              state: 'BLOCKED_PROVIDER_PLAN', providers: 0, missingProviders: 0, nodes: 0, leaves: 0, maxDepth: 0, terminalNodesWithEmptyChildren: 0,
+            }
+          }
+        } else {
+          rememberVerifiedMaterialSalesCodeIds(data)
+        }
+      }
       options.success?.({ statusCode: response.status, data })
     }).catch(() => {
       options.fail?.(new Error('Read-only smoke network request failed'))
     }).finally(() => clearTimeout(timer))
     return { abort: () => controller.abort() }
   }
+}
+
+function requestReadOnce(request, apiBaseUrl, sessionRef, path, body) {
+  const endpoint = new URL(path, `${apiBaseUrl.replace(/\/+$/, '')}/`)
+  const encoded = new URLSearchParams(Object.entries(body)).toString()
+  return new Promise((resolveResponse) => {
+    request({
+      url: endpoint.href,
+      method: 'POST',
+      data: encoded,
+      header: {
+        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+        Cookie: `JSESSIONID=${sessionRef}`,
+        Accept: 'application/json',
+      },
+      success: resolveResponse,
+      fail: () => resolveResponse(null),
+    })
+  })
 }
 
 function operationState(result) {
@@ -829,7 +935,21 @@ function authIdentityChanged() {
 let expectedAuthIdentity = null
 
 async function run() {
-  const catalogAuditOptions = parseCatalogContextAuditArgs(process.argv.slice(2))
+  const argumentsWithoutSeparator = process.argv.slice(2).filter(argument => argument !== '--')
+  const catalogAuditOptions = parseCatalogContextAuditArgs(argumentsWithoutSeparator)
+  activeOrderFieldsOnlyRequested = catalogAuditOptions.activeOrderFieldsOnly
+  const authorizedRead = argumentsWithoutSeparator.includes('--authorize-bounded-prod-read')
+  const preflightOnly = argumentsWithoutSeparator.includes('--preflight-only')
+  if (!authorizedRead && !preflightOnly) {
+    console.log(JSON.stringify({
+      status: 'NO_NETWORK_DEFAULT',
+      hint: 'Use --preflight-only for zero-network checks; explicit --authorize-bounded-prod-read is required for authenticated Production reads.',
+      loginRequests: 0,
+      blockedUnexpectedNetworkRequests: 0,
+      productionBusinessMutationNetworkRequests: 0,
+    }))
+    return
+  }
   const contextSelector = createPlaceOrderCatalogContextSelector(catalogAuditOptions.catalogContextOrdinal)
   responseCounts.catalogContextDiscovery.requestedOrdinal = catalogAuditOptions.catalogContextOrdinal
   const root = process.cwd()
@@ -873,6 +993,10 @@ async function run() {
     const runtime = loadApplicationRuntimeConfig()
     const quickLogin = resolveQuickLoginInput()
     const localEnvironment = loadEnv('prod', process.cwd(), 'VITE_')
+    expectedOrderCascadeTenantId = runtime.ok
+      && typeof runtime.value.authWireConfig.tenant === 'string'
+      && /^[A-Za-z0-9_-]{1,100}$/.test(runtime.value.authWireConfig.tenant)
+      ? runtime.value.authWireConfig.tenant : null
     const preflight = {
       runtimeConfig: runtime.ok,
       productionEnvironment: localEnvironment.VITE_XLINK_ENVIRONMENT === 'prod',
@@ -1079,7 +1203,7 @@ async function run() {
       const lineage = orderLineageByWorkOrder.get(workOrderId)
       return Boolean(lineage && lineage.linesWithBothIds > 0)
     }
-    if (!catalogAuditOptions.catalogContextOnly) for (const [index, workOrder] of pageOneWorkOrders.entries()) {
+    if (!catalogAuditOptions.catalogContextOnly && !catalogAuditOptions.activeOrderFieldsOnly) for (const [index, workOrder] of pageOneWorkOrders.entries()) {
       stage = `work_order_scoped_quotation_read_${index + 1}`
       const workOrderId = String(workOrder.id)
       const quotes = await orderApi.listTypeOneOrdersForWorkOrder(workOrderId, 3)
@@ -1111,7 +1235,7 @@ async function run() {
       responseCounts.workOrderPagesRead += 1
       responseCounts.workOrderListRows += pageResult.data.items.length
       lastWorkOrderPageRead = page
-      if (catalogAuditOptions.catalogContextOnly && page % 10 === 0) {
+      if ((catalogAuditOptions.catalogContextOnly || catalogAuditOptions.activeOrderFieldsOnly) && page % 10 === 0) {
         console.error(JSON.stringify({
           progress: 'ROLE_VISIBLE_PLACE_ORDER_CONTEXT_SCAN',
           workOrderPagesRead: responseCounts.workOrderPagesRead,
@@ -1184,7 +1308,7 @@ async function run() {
       responseCounts.catalogContextDiscovery.distinctPlaceOrderContextsSeen = contextSelector.distinctCount
     }
 
-    if (!catalogAuditOptions.catalogContextOnly
+    if (!catalogAuditOptions.catalogContextOnly && !catalogAuditOptions.activeOrderFieldsOnly
       && selectedCatalogWorkOrderId && !orderReadStatesByWorkOrder.has(selectedCatalogWorkOrderId)) {
       stage = 'current_place_order_workorder_quotation_read'
       if (authIdentityChanged() || !selectedWorkOrderIsCurrent()) {
@@ -1202,6 +1326,97 @@ async function run() {
           && selectedWorkOrderIsCurrent() && authIdentityChanged() === false,
       )
       discoveryState = 'PLACE_ORDER_CONTEXT_FOUND'
+      if (catalogAuditOptions.activeOrderFieldsOnly) {
+        stage = 'effective_order_extfield_read'
+        let response = null
+        if (responseCounts.catalogContextVerified && !authIdentityChanged() && selectedWorkOrderIsCurrent()) {
+          response = await requestReadOnce(
+            request, runtime.value.environment.apiBaseUrl, session.sessionRef,
+            'biz/extField/query', buildOrderExtFieldRequestBody(),
+          )
+        }
+        if (!response || response.statusCode < 200 || response.statusCode >= 300) {
+          responseCounts.effectiveOrderExtFields = { state: 'FAILED_NO_RETRY', summary: null }
+        } else if (authIdentityChanged() || !selectedWorkOrderIsCurrent()) {
+          responseCounts.effectiveOrderExtFields = { state: 'AUTHORIZATION_SCOPE_CHANGED', summary: null }
+        }
+        if (responseCounts.effectiveOrderExtFields.state === 'SUCCEEDED') {
+          const providerScopeCurrent = () => !authIdentityChanged() && selectedWorkOrderIsCurrent()
+          if (responseCounts.effectiveOrderOptionProviders.code.state === 'BLOCKED_PROVIDER_PLAN') {
+            // Keep the provider plan failure explicit; do not broaden the query.
+          } else if (activeOrderCodeProviderIds.length === 0) {
+            responseCounts.effectiveOrderOptionProviders.code = {
+              state: 'NOT_REQUIRED', providers: 0, missingProviders: 0, options: 0, emptyProviders: 0,
+            }
+          } else if (runtime.value.authWireConfig.tenant !== '1340835581184723420') {
+            responseCounts.effectiveOrderOptionProviders.code = {
+              state: 'BLOCKED_R1_CODE_TENANT_MISMATCH', providers: 0, missingProviders: activeOrderCodeProviderIds.length, options: 0, emptyProviders: 0,
+            }
+          } else if (!providerScopeCurrent()) {
+            responseCounts.effectiveOrderOptionProviders.code = {
+              state: 'AUTHORIZATION_SCOPE_CHANGED', providers: 0, missingProviders: activeOrderCodeProviderIds.length, options: 0, emptyProviders: 0,
+            }
+          } else {
+            stage = 'effective_order_code_options_read'
+            const codeOptions = await requestReadOnce(request, runtime.value.environment.apiBaseUrl,
+              session.sessionRef, 'i/code/selectCode.do', {
+                jsonPara: JSON.stringify(activeOrderCodeProviderIds.map(id => ({ codeId: id, eleid: id }))),
+                tenantId: '1340835581184723420',
+              })
+            if (!codeOptions || codeOptions.statusCode < 200 || codeOptions.statusCode >= 300) {
+              responseCounts.effectiveOrderOptionProviders.code = {
+                state: 'FAILED_NO_RETRY', providers: 0, missingProviders: activeOrderCodeProviderIds.length, options: 0, emptyProviders: 0,
+              }
+            } else if (!providerScopeCurrent()) {
+              responseCounts.effectiveOrderOptionProviders.code = {
+                state: 'AUTHORIZATION_SCOPE_CHANGED', providers: 0, missingProviders: activeOrderCodeProviderIds.length, options: 0, emptyProviders: 0,
+              }
+            } else {
+              const summary = sanitizeOrderCodeProviderResponse(codeOptions.data, activeOrderCodeProviderIds)
+              responseCounts.effectiveOrderOptionProviders.code = summary.ok
+                ? { state: summary.missingProviders === 0 ? 'SUCCEEDED' : 'INCOMPLETE', ...summary }
+                : { state: 'INVALID_RESPONSE', reason: summary.reason, providers: 0, missingProviders: activeOrderCodeProviderIds.length, options: 0, emptyProviders: 0 }
+            }
+          }
+
+          if (responseCounts.effectiveOrderOptionProviders.cascade.state === 'BLOCKED_PROVIDER_PLAN') {
+            // Keep the provider plan failure explicit; do not broaden the query.
+          } else if (activeOrderCascadeProviderIds.length === 0) {
+            responseCounts.effectiveOrderOptionProviders.cascade = {
+              state: 'NOT_REQUIRED', providers: 0, missingProviders: 0, nodes: 0, leaves: 0, maxDepth: 0, terminalNodesWithEmptyChildren: 0,
+            }
+          } else if (!expectedOrderCascadeTenantId) {
+            responseCounts.effectiveOrderOptionProviders.cascade = {
+              state: 'BLOCKED_TENANT_CONTEXT', providers: 0, missingProviders: activeOrderCascadeProviderIds.length, nodes: 0, leaves: 0, maxDepth: 0, terminalNodesWithEmptyChildren: 0,
+            }
+          } else if (!providerScopeCurrent()) {
+            responseCounts.effectiveOrderOptionProviders.cascade = {
+              state: 'AUTHORIZATION_SCOPE_CHANGED', providers: 0, missingProviders: activeOrderCascadeProviderIds.length, nodes: 0, leaves: 0, maxDepth: 0, terminalNodesWithEmptyChildren: 0,
+            }
+          } else {
+            stage = 'effective_order_cascade_options_read'
+            const cascadeOptions = await requestReadOnce(request, runtime.value.environment.apiBaseUrl,
+              session.sessionRef, 'i/code/selectMultistageCode.do', {
+                types: activeOrderCascadeProviderIds.join(','),
+                tenantId: expectedOrderCascadeTenantId,
+              })
+            if (!cascadeOptions || cascadeOptions.statusCode < 200 || cascadeOptions.statusCode >= 300) {
+              responseCounts.effectiveOrderOptionProviders.cascade = {
+                state: 'FAILED_NO_RETRY', providers: 0, missingProviders: activeOrderCascadeProviderIds.length, nodes: 0, leaves: 0, maxDepth: 0, terminalNodesWithEmptyChildren: 0,
+              }
+            } else if (!providerScopeCurrent()) {
+              responseCounts.effectiveOrderOptionProviders.cascade = {
+                state: 'AUTHORIZATION_SCOPE_CHANGED', providers: 0, missingProviders: activeOrderCascadeProviderIds.length, nodes: 0, leaves: 0, maxDepth: 0, terminalNodesWithEmptyChildren: 0,
+              }
+            } else {
+              const summary = sanitizeOrderCascadeProviderResponse(cascadeOptions.data, activeOrderCascadeProviderIds)
+              responseCounts.effectiveOrderOptionProviders.cascade = summary.ok
+                ? { state: summary.missingProviders === 0 ? 'SUCCEEDED' : 'INCOMPLETE', ...summary }
+                : { state: 'INVALID_RESPONSE', reason: summary.reason, providers: 0, missingProviders: activeOrderCascadeProviderIds.length, nodes: 0, leaves: 0, maxDepth: 0, terminalNodesWithEmptyChildren: 0 }
+            }
+          }
+        }
+      } else {
       stage = 'r1_catalog_filter_code_options'
       const filterOptions = await catalogApi.listCatalogFilterOptions(selectedCatalogContext)
       responseCounts.catalogFilterOptions = {
@@ -1279,9 +1494,10 @@ async function run() {
       } else {
         responseCounts.selectableSkuCatalog.reason = 'MATERIAL_SALES_FIELDS_READ_FAILED'
       }
+      }
     }
 
-    if (catalogAuditOptions.catalogContextOnly) {
+    if (catalogAuditOptions.catalogContextOnly || catalogAuditOptions.activeOrderFieldsOnly) {
       orderIdentitySearchState = 'SKIPPED_CONTEXT_ONLY_MODE'
     } else if (!selectedCatalogContext) {
       orderIdentitySearchState = 'NO_SELECTED_PLACE_ORDER_CONTEXT'
@@ -1420,12 +1636,30 @@ async function run() {
       && roleVisibleWorkOrdersExhausted
       && !authIdentityChanged()
       && blockedUnexpectedNetworkRequests === 0
-    const auditComplete = catalogAuditOptions.catalogContextOnly
+    const effectiveOrderProvidersComplete = ['SUCCEEDED', 'NOT_REQUIRED'].includes(responseCounts.effectiveOrderOptionProviders.code.state)
+      && ['SUCCEEDED', 'NOT_REQUIRED'].includes(responseCounts.effectiveOrderOptionProviders.cascade.state)
+      && routeCounts.orderCodeOptions === (activeOrderCodeProviderIds.length > 0 ? 1 : 0)
+      && routeCounts.orderCascadeOptions === (activeOrderCascadeProviderIds.length > 0 ? 1 : 0)
+    const activeOrderFieldsComplete = catalogAuditOptions.activeOrderFieldsOnly
+      && responseCounts.catalogContextVerified
+      && routeCounts.orderExtFields === 1
+      && responseCounts.effectiveOrderExtFields.state === 'SUCCEEDED'
+      && responseCounts.effectiveOrderExtFields.summary?.truncated === false
+      && effectiveOrderProvidersComplete
+      && blockedUnexpectedNetworkRequests === 0
+      && !authIdentityChanged()
+    const auditComplete = catalogAuditOptions.activeOrderFieldsOnly
+      ? activeOrderFieldsComplete
+      : catalogAuditOptions.catalogContextOnly
       ? Boolean(catalogReadComplete || contextSearchExhaustedWithoutMatch)
       : catalogReadComplete
       && ['SUCCEEDED_WITH_ORDER', 'SUCCEEDED_EMPTY'].includes(responseCounts.sampledOrderMaterialLineage.state)
       && ['MATCH_FOUND', 'NO_SKU_AND_SPU_ORDER_IN_ROLE_VISIBLE_SCOPE'].includes(orderIdentitySearchState)
-    const status = catalogAuditOptions.catalogContextOnly
+    const status = catalogAuditOptions.activeOrderFieldsOnly
+      ? activeOrderFieldsComplete
+        ? 'PROD_READ_ONLY_EFFECTIVE_ORDER_EXTFIELDS_COMPLETE'
+        : 'PROD_READ_ONLY_EFFECTIVE_ORDER_EXTFIELDS_INCOMPLETE'
+      : catalogAuditOptions.catalogContextOnly
       ? catalogReadComplete
         ? 'PROD_READ_ONLY_CATALOG_CONTEXT_COMPLETE'
         : contextSearchExhaustedWithoutMatch

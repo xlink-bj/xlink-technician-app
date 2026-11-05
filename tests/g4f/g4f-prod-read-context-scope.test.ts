@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { spawnSync } from 'node:child_process'
 import {
   createPlaceOrderCatalogContextSelector,
   parseCatalogContextAuditArgs,
@@ -7,11 +8,13 @@ import { workOrderOrderLineageReadState } from '../../scripts/g4f-prod-read-summ
 
 describe('bounded Production catalog context audit selection', () => {
   it('defaults to the first context and accepts an explicit bounded ordinal', () => {
-    expect(parseCatalogContextAuditArgs([])).toEqual({ catalogContextOrdinal: 1, catalogContextOnly: false })
+    expect(parseCatalogContextAuditArgs([])).toEqual({ catalogContextOrdinal: 1, catalogContextOnly: false, activeOrderFieldsOnly: false })
     expect(parseCatalogContextAuditArgs(['--catalog-context-only', '--catalog-context-ordinal=2']))
-      .toEqual({ catalogContextOrdinal: 2, catalogContextOnly: true })
+      .toEqual({ catalogContextOrdinal: 2, catalogContextOnly: true, activeOrderFieldsOnly: false })
     expect(parseCatalogContextAuditArgs(['--', '--catalog-context-ordinal', '20']))
-      .toEqual({ catalogContextOrdinal: 20, catalogContextOnly: false })
+      .toEqual({ catalogContextOrdinal: 20, catalogContextOnly: false, activeOrderFieldsOnly: false })
+    expect(parseCatalogContextAuditArgs(['--active-order-fields-only', '--catalog-context-ordinal=3']))
+      .toEqual({ catalogContextOrdinal: 3, catalogContextOnly: false, activeOrderFieldsOnly: true })
   })
 
   it('rejects unsupported, duplicate, malformed, and unbounded command arguments', () => {
@@ -23,6 +26,10 @@ describe('bounded Production catalog context audit selection', () => {
       ['--catalog-context-ordinal=2x'],
       ['--catalog-context-ordinal=2', '--catalog-context-ordinal=3'],
       ['--catalog-context-only', '--catalog-context-only'],
+      ['--active-order-fields-only', '--active-order-fields-only'],
+      ['--active-order-fields-only', '--catalog-context-only'],
+      ['--authorize-bounded-prod-read', '--authorize-bounded-prod-read'],
+      ['--preflight-only', '--authorize-bounded-prod-read'],
     ]) expect(() => parseCatalogContextAuditArgs(args)).toThrow()
   })
 
@@ -44,5 +51,16 @@ describe('bounded Production catalog context audit selection', () => {
     expect(workOrderOrderLineageReadState([])).toBe('NOT_RUN')
     expect(workOrderOrderLineageReadState(['SUCCEEDED', 'SUCCEEDED'])).toBe('SUCCEEDED')
     expect(workOrderOrderLineageReadState(['SUCCEEDED', 'FAILED_TERMINAL'])).toBe('PARTIAL')
+  })
+
+  it('keeps the Production audit runner at zero network by default', () => {
+    const run = spawnSync(process.execPath, ['scripts/verify-g4f-prod-read.mjs'], { encoding: 'utf8' })
+    expect(run.status).toBe(0)
+    expect(JSON.parse(run.stdout)).toMatchObject({
+      status: 'NO_NETWORK_DEFAULT',
+      loginRequests: 0,
+      blockedUnexpectedNetworkRequests: 0,
+      productionBusinessMutationNetworkRequests: 0,
+    })
   })
 })
