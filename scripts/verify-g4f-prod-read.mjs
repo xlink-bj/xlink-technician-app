@@ -1,3 +1,4 @@
+import { createR1BoundedConfigEvidence } from './lib/r1-bounded-config-evidence.mjs'
 import { createServer, loadEnv } from 'vite'
 import { resolve } from 'node:path'
 import { isAllowedWorkOrderListRequest } from './r1-order-contract-read-guard.mjs'
@@ -59,6 +60,7 @@ const routeCounts = {
   materialCodeOptions: 0,
   materialSkuList: 0,
 }
+const boundedEvidence = createR1BoundedConfigEvidence()
 let loginRequests = 0
 let blockedUnexpectedNetworkRequests = 0
 const blockedUnexpectedRoutes = Object.create(null)
@@ -527,6 +529,7 @@ function createRequest(apiBaseUrl) {
       if (url.pathname.endsWith('/biz/extField/query')) {
         const requestBody = typeof options.data === 'string' ? new URLSearchParams(options.data) : new URLSearchParams()
         if (requestBody.get('colName') === 'order') {
+          if (activeOrderFieldsOnlyRequested) boundedEvidence.fieldPage(data, { serviceType: selectedCatalogContext?.serviceType ?? '' })
           const summary = summarizeEffectiveOrderExtFieldPage(data, {
             serviceType: selectedCatalogContext?.serviceType ?? '',
           })
@@ -552,6 +555,8 @@ function createRequest(apiBaseUrl) {
           rememberVerifiedMaterialSalesCodeIds(data)
         }
       }
+      if (activeOrderFieldsOnlyRequested && url.pathname.endsWith('/i/code/selectCode.do')) boundedEvidence.code(data, activeOrderCodeProviderIds)
+      if (activeOrderFieldsOnlyRequested && url.pathname.endsWith('/i/code/selectMultistageCode.do')) boundedEvidence.cascade(data, activeOrderCascadeProviderIds)
       options.success?.({ statusCode: response.status, data })
     }).catch(() => {
       options.fail?.(new Error('Read-only smoke network request failed'))
@@ -1249,11 +1254,13 @@ async function run() {
     const placeOrderContextFor = (workOrder, detail) => {
       if (detail.state !== 'succeeded' || !detail.data) return null
       const projection = detailWorkflowProjectionFor(detail.data, session)
+      if (activeOrderFieldsOnlyRequested) boundedEvidence.observeWorkflow(detail.data, projection)
       const canPlaceOrder = projection.currentTask?.actionIntent === 'place_order'
         && projection.currentTask.execution === 'enabled'
       return canPlaceOrder ? quotationCatalogContextFor(workOrder, detail) : null
     }
     const selectCatalogContext = (workOrder, context, selection, authorizationApi) => {
+      if (activeOrderFieldsOnlyRequested) boundedEvidence.selected(context)
       selectedCatalogContext = context
       selectedCatalogWorkOrderId = String(workOrder.id)
       selectedCatalogContextOrdinal = selection.ordinal
@@ -1423,6 +1430,7 @@ async function run() {
       responseCounts.activePlaceOrderNodes += activePlaceOrderNodes.length
       stage = `workflow_projection_${index + 1}`
       const projection = detailWorkflowProjectionFor(detail.data, session)
+      if (activeOrderFieldsOnlyRequested) boundedEvidence.observeWorkflow(detail.data, projection)
       const currentActionIsPlaceOrder = projection.currentTask?.actionIntent === 'place_order' && projection.currentTask.execution === 'enabled'
       if (currentActionIsPlaceOrder) responseCounts.currentActionPlaceOrder += 1
       const hasCatalogContext = Boolean(detail.data.quotationCatalogContext?.serviceType)
@@ -1568,6 +1576,7 @@ async function run() {
         const activePlaceOrderNodes = (detail.data.workflowNodes ?? []).filter((node) => node.category === 'placeOrder' && node.lifecycle === 'active')
         responseCounts.activePlaceOrderNodes += activePlaceOrderNodes.length
         const projection = detailWorkflowProjectionFor(detail.data, session)
+      if (activeOrderFieldsOnlyRequested) boundedEvidence.observeWorkflow(detail.data, projection)
         const canPlaceOrder = projection.currentTask?.actionIntent === 'place_order'
           && projection.currentTask.execution === 'enabled'
         if (canPlaceOrder) responseCounts.currentActionPlaceOrder += 1
@@ -2309,6 +2318,7 @@ async function run() {
         sourceTypePresent: true,
         roleVersionPresent: Boolean(session.roleVersion),
       } : { verified: false },
+      ...(activeOrderFieldsOnlyRequested ? { boundedConfigEvidence: boundedEvidence.snapshot() } : {}),
       workOrderDetails: details,
       routeCounts,
       responseCounts,

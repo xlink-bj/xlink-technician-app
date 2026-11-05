@@ -131,3 +131,14 @@
 - D03：完整本地工程检查、430×932 成功/失败/删除/重启/冲突/ACK 丢失、三端构建、main 提交和精确 SHA CI。本地 1803 测试、三端构建、默认 H5 67 PASS / 26 SKIP，及恢复路径重复测试已通过；精确提交 CI 结果在 #207 交付评论记录。执行结果见[本包证据报告](G4F_ORDER_MEDIA_SUBMIT_FIELDS_MOCK_20261105.md)。
 
 前文“Order 媒体/submitOrder 独立编辑未闭合”保留其历史验证时点；本包只更新上述有限 Mock 能力，真实 schema 全量、真实写入和未证实特殊动作仍不因此通过。
+
+## 10. 有界生产只读补证（2026-11-05）
+
+最新有限补证见 [R1_BOUNDED_PROD_EVIDENCE_SUPPLEMENT_20261105.md](R1_BOUNDED_PROD_EVIDENCE_SUPPLEMENT_20261105.md)；脱敏契约见 [contracts/production/technician-role-readonly-20261105](../../contracts/production/technician-role-readonly-20261105/README.md)。
+
+- F01–F21：21 有固定源码入口；15 有既有/本轮生产有界响应观察（含 F17 空页），另 6（F04/F06/F07/F08/F09/F21）没有当前完整字段/记录/资格证明。**这不是完整生产模型完成率**；[逐项覆盖表](../../contracts/production/technician-role-readonly-20261105/coverage-f01-f21.json)分别标记 SOURCE / PROD / MOCK / 限制。
+- 本轮 160 次 API 请求（3 登录 + 157 业务只读）；90 次详情请求中 89 成功投影、1 失败，捕获可能重叠。目标第 4 报价上下文发现于失败即停止、未重试；独立首个上下文补采 32 字段页、9 有效字段、精确 1 Code / 1 Cascade。安全机器键、类型、required、条件及关联已脱敏保留，不能由别名恢复原始 ID/业务值。
+- 发现一个带 FormDef 的当前 repeat 引用，Survey 语义 UNKNOWN。生产 `extId` 字段读取未获现行允许形状，未执行；历史非活动 61 字段不作为当前定义。
+- 活动 button 有未保留配置，允许动作仍未证明；area 全国 provider/街道未读。两特殊控件继续阻断，7 普通控件的合成 wire 类型/provider 分类可供 Cloud 测试，但其中 3 个仍有额外未留存配置键，完整规则等价不可直接宣称。
+- Order/Contract 原授权样本重新精确匹配；type=0/扩页/通用 queryById 未执行。**本次 Order 3/3 行 unsupported，未确认价格**，不能沿用旧样本金额结论。真实提交/写权限/失败补偿实测仍为 0。
+- 无新 App 行为、权限或部署变更。#201 HOLD、Production/Beta 禁写、无 Cloud/第二开发线和无原生验收保持。

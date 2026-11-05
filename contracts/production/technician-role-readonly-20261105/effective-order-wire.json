@@ -1,0 +1,318 @@
+{
+  "captureId": "fields-context1",
+  "provenance": {
+    "baseCommit": "e914d97e815514cfc4858d7a22dbc80f5d997839",
+    "r1Source": "xlink-bj/xlink-app@6c0a97b26bcbcaee81ac4e1dfd627c6e8e70e29d",
+    "backendSource": "xlink-bj/xlink-cloud-backend@5fc008d32e771205260f120621c1c4fc62d0824e",
+    "deployedServerBuild": "NOT_VERIFIED",
+    "auditCodeSha256": {
+      "scripts/verify-g4f-prod-read.mjs": "f174bf017ce8dcdadcb7dca5c9a47d2f80dd11ddc29e0753df901e6cf14de5d3",
+      "scripts/lib/r1-bounded-config-evidence.mjs": "714c2e7c5082bf3581c25a1da055a121f448026c9690fd56acf3ad4c6cb696f5",
+      "scripts/lib/g4f-order-extfield-shape.mjs": "289339e7e6e4ee9a87e25d66631ab0af2cf8898dbd75f3258014b2e560e77db4",
+      "scripts/verify-r1-order-contract-read.mjs": "29c962d310d1d44384b89eddf7d98d811fb9d634a25040a7a39fc60da2b53cd6"
+    }
+  },
+  "state": "projected",
+  "syntheticOnly": true,
+  "notForProductionRequests": true,
+  "fieldPageProjection": "EFFECTIVE_SUBSET_NOT_ORIGINAL_TENANT_RESPONSE",
+  "observedTenantTotal": 32,
+  "context": {
+    "serviceType": "value-001",
+    "personType": "value-003"
+  },
+  "fieldResponse": {
+    "total": 9,
+    "data": [
+      {
+        "_id": "field-001",
+        "name": "repairParts",
+        "nameDisp": "配置字段 01",
+        "type": "cascade",
+        "colName": "order",
+        "state": 1,
+        "showList": [
+          "4"
+        ],
+        "required": "1",
+        "multiple": false,
+        "valueOption": "cascade-provider-001",
+        "frontEndConfig": {
+          "showType": "placeOrder",
+          "serviceType": [
+            "value-001",
+            "value-004"
+          ]
+        }
+      },
+      {
+        "_id": "field-003",
+        "name": "partDescription",
+        "nameDisp": "配置字段 03",
+        "type": "text",
+        "colName": "order",
+        "state": 1,
+        "showList": [
+          "4"
+        ],
+        "required": "1",
+        "multiple": false,
+        "frontEndConfig": {
+          "showType": "placeOrder",
+          "serviceType": [
+            "value-001",
+            "value-004"
+          ]
+        }
+      },
+      {
+        "_id": "field-008",
+        "name": "personType",
+        "nameDisp": "客户类型",
+        "type": "radio",
+        "colName": "order",
+        "state": 1,
+        "showList": [
+          "1",
+          "4"
+        ],
+        "required": "1",
+        "multiple": false,
+        "valueOption": "code-provider-002",
+        "frontEndConfig": {
+          "showType": "submitOrder"
+        }
+      },
+      {
+        "_id": "field-011",
+        "name": "clientname",
+        "nameDisp": "业主姓名",
+        "type": "text",
+        "colName": "order",
+        "state": 1,
+        "showList": [
+          "5",
+          "4",
+          "1"
+        ],
+        "required": "1",
+        "multiple": false,
+        "frontEndConfig": {
+          "showType": "submitOrder",
+          "personType": "value-003"
+        }
+      },
+      {
+        "_id": "field-013",
+        "name": "telphone",
+        "nameDisp": "配置字段 13",
+        "type": "phone",
+        "colName": "order",
+        "state": 1,
+        "showList": [
+          "5",
+          "1",
+          "4"
+        ],
+        "required": "1",
+        "multiple": false,
+        "frontEndConfig": {
+          "showType": "submitOrder",
+          "personType": "value-003"
+        }
+      },
+      {
+        "_id": "field-017",
+        "name": "maintainAreaNum",
+        "nameDisp": "工程量",
+        "type": "digit",
+        "colName": "order",
+        "state": 1,
+        "showList": [
+          "4"
+        ],
+        "required": "1",
+        "multiple": false,
+        "frontEndConfig": {
+          "showType": "placeOrder"
+        }
+      },
+      {
+        "_id": "field-018",
+        "name": "button",
+        "nameDisp": "配置字段 18",
+        "type": "button",
+        "colName": "order",
+        "state": 1,
+        "showList": [
+          "4"
+        ],
+        "multiple": false,
+        "frontEndConfig": {
+          "showType": "placeOrder"
+        }
+      },
+      {
+        "_id": "field-024",
+        "name": "projectArea",
+        "nameDisp": "配置字段 24",
+        "type": "area",
+        "colName": "order",
+        "state": 1,
+        "showList": [
+          "2",
+          "4",
+          "5"
+        ],
+        "required": "1",
+        "multiple": false,
+        "frontEndConfig": {
+          "showType": "submitOrder"
+        }
+      },
+      {
+        "_id": "field-025",
+        "name": "projectAddress",
+        "nameDisp": "施工地址",
+        "type": "text",
+        "colName": "order",
+        "state": 1,
+        "showList": [
+          "1",
+          "4"
+        ],
+        "required": "1",
+        "multiple": false,
+        "frontEndConfig": {
+          "showType": "submitOrder"
+        }
+      }
+    ]
+  },
+  "codeResponse": [
+    {
+      "eleid": "code-provider-002",
+      "options": {
+        "value-003": "选项 1",
+        "value-008": "选项 2"
+      }
+    }
+  ],
+  "cascadeResponse": [
+    {
+      "type": "cascade-provider-001",
+      "children": [
+        {
+          "value": "value-008",
+          "name": "节点 1",
+          "children": [
+            {
+              "value": "value-011",
+              "name": "节点 1.1",
+              "children": []
+            },
+            {
+              "value": "value-012",
+              "name": "节点 1.2",
+              "children": []
+            },
+            {
+              "value": "value-013",
+              "name": "节点 1.3",
+              "children": []
+            },
+            {
+              "value": "value-014",
+              "name": "节点 1.4",
+              "children": []
+            }
+          ]
+        },
+        {
+          "value": "value-015",
+          "name": "节点 2",
+          "children": [
+            {
+              "value": "value-016",
+              "name": "节点 2.1",
+              "children": []
+            },
+            {
+              "value": "value-017",
+              "name": "节点 2.2",
+              "children": []
+            }
+          ]
+        },
+        {
+          "value": "value-018",
+          "name": "节点 3",
+          "children": [
+            {
+              "value": "value-019",
+              "name": "节点 3.1",
+              "children": []
+            },
+            {
+              "value": "value-020",
+              "name": "节点 3.2",
+              "children": []
+            }
+          ]
+        },
+        {
+          "value": "value-021",
+          "name": "节点 4",
+          "children": []
+        },
+        {
+          "value": "value-022",
+          "name": "节点 5",
+          "children": []
+        },
+        {
+          "value": "value-010",
+          "name": "节点 6",
+          "children": []
+        },
+        {
+          "value": "value-002",
+          "name": "节点 7",
+          "children": []
+        }
+      ]
+    }
+  ],
+  "configurationReviewRequired": [
+    {
+      "fieldId": "field-003",
+      "valueKey": "partDescription",
+      "type": "text",
+      "unretainedConfigKeyCount": 1
+    },
+    {
+      "fieldId": "field-011",
+      "valueKey": "clientname",
+      "type": "text",
+      "unretainedConfigKeyCount": 1
+    },
+    {
+      "fieldId": "field-017",
+      "valueKey": "maintainAreaNum",
+      "type": "digit",
+      "unretainedConfigKeyCount": 1
+    },
+    {
+      "fieldId": "field-018",
+      "valueKey": "button",
+      "type": "button",
+      "unretainedConfigKeyCount": 4
+    }
+  ],
+  "sourceRuleEquivalence": "NOT_PROVEN_FOR_UNRETAINED_CONFIGURATION",
+  "blockedControlTypes": [
+    "button",
+    "area"
+  ],
+  "originalLabelsOrBusinessValuesRestored": false
+}

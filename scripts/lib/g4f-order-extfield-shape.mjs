@@ -206,7 +206,7 @@ export function sanitizeOrderExtFieldPage(payload) {
   }
 }
 
-function r1ServiceTypeApplies(config, serviceType) {
+export function r1ServiceTypeApplies(config, serviceType) {
   const configured = config.serviceType
   // This intentionally follows placeOrders.vue's source expression:
   // configured && current ? configured.indexOf(current) !== -1 : true.
@@ -217,7 +217,7 @@ function r1ServiceTypeApplies(config, serviceType) {
   return { state: 'blocked' }
 }
 
-function r1PersonTypeApplies(config, personType) {
+export function r1PersonTypeApplies(config, personType) {
   const configured = config.personType
   if (!configured) return { state: 'applies' }
   if (configured === null || typeof configured === 'object') return { state: 'blocked' }
@@ -360,7 +360,7 @@ export function effectiveOrderExtFieldProviderPlan(payload, context) {
   return { ok: true, codeIds, cascadeIds }
 }
 
-function providerRows(payload) {
+export function providerRows(payload) {
   let value = payload
   if (typeof value === 'string' && value.length <= 1_000_000) {
     try { value = JSON.parse(value) } catch { return null }

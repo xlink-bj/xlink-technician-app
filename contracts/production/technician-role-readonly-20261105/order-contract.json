@@ -1,0 +1,120 @@
+{
+  "captureId": "contract-first-role-visible-sample",
+  "completedAt": "2026-11-05T11:31:17.180Z",
+  "provenance": {
+    "baseCommit": "e914d97e815514cfc4858d7a22dbc80f5d997839",
+    "r1Source": "xlink-bj/xlink-app@6c0a97b26bcbcaee81ac4e1dfd627c6e8e70e29d",
+    "backendSource": "xlink-bj/xlink-cloud-backend@5fc008d32e771205260f120621c1c4fc62d0824e",
+    "deployedServerBuild": "NOT_VERIFIED",
+    "auditCodeSha256": {
+      "scripts/verify-g4f-prod-read.mjs": "f174bf017ce8dcdadcb7dca5c9a47d2f80dd11ddc29e0753df901e6cf14de5d3",
+      "scripts/lib/r1-bounded-config-evidence.mjs": "714c2e7c5082bf3581c25a1da055a121f448026c9690fd56acf3ad4c6cb696f5",
+      "scripts/lib/g4f-order-extfield-shape.mjs": "289339e7e6e4ee9a87e25d66631ab0af2cf8898dbd75f3258014b2e560e77db4",
+      "scripts/verify-r1-order-contract-read.mjs": "29c962d310d1d44384b89eddf7d98d811fb9d634a25040a7a39fc60da2b53cd6"
+    }
+  },
+  "audit": {
+    "status": "R1_BOUNDED_READ_COMPLETED",
+    "technicianRolePresent": true,
+    "roleVersionPresent": false,
+    "loginRequests": 1,
+    "roleTreeReads": 1,
+    "cachedRoleTreeReuses": 0,
+    "workOrderScan": {
+      "pagesRead": 1,
+      "candidatesChecked": 1,
+      "selectedPage": 1,
+      "selectedOrdinal": 1,
+      "pageSize": 3
+    },
+    "typeOneOrders": {
+      "page": 1,
+      "limit": 3,
+      "returned": 1,
+      "workOrderIdentityMatches": 1,
+      "reportedTotal": 1,
+      "completeness": "FIRST_PAGE_ONLY_NOT_INVENTORY_COMPLETE"
+    },
+    "priceProjection": {
+      "total": 3,
+      "supported": 0,
+      "unsupported": 3,
+      "withCapturedPrice": 0,
+      "withSkuSpuIdentity": 1
+    },
+    "contractQuery": {
+      "page": 1,
+      "limit": 3,
+      "sourceFilter": "R1_SERVICE_APPOINTMENT_STATE_OR_STATUS",
+      "boundedRowsReturned": 1,
+      "pageCompleteness": "BOUNDED_UNVERIFIED",
+      "workOrderIdentityMatches": 1,
+      "orderAssociations": [
+        {
+          "orderPosition": 1,
+          "orderContractIdPresent": true,
+          "contractRowsMatchedByOrderId": 1,
+          "exactOrderContractIdMatches": 1,
+          "contradictoryOrderContractIds": 0,
+          "association": "EXACT_ORDERID_AND_CONTRACTID_MATCH"
+        }
+      ],
+      "statuses": [
+        {
+          "contractPosition": 1,
+          "linkedOrderPosition": 1,
+          "state": 1,
+          "contractStatus": "10",
+          "signedDatePresent": true
+        }
+      ]
+    },
+    "quoteTypeZero": "NOT_READ",
+    "requestCounts": {
+      "login": 1,
+      "roleTree": 1,
+      "roleTreeCacheHits": 0,
+      "workOrderList": 1,
+      "typeOneOrderList": 1,
+      "contractList": 1,
+      "blockedAttempts": 0
+    },
+    "blockedUnexpectedAttempts": 0,
+    "businessMutationRequests": 0,
+    "persistentLocalStorage": "NOT_USED",
+    "rawPayloadsOrIdentitiesPersisted": false
+  },
+  "syntheticAssociationGraph": {
+    "workOrder": {
+      "_id": "contract-sample-work-order-001"
+    },
+    "orders": [
+      {
+        "_id": "contract-sample-order-1",
+        "type": 1,
+        "serviceAppointmentId": "contract-sample-work-order-001",
+        "contractId": "contract-sample-contract-1"
+      }
+    ],
+    "contracts": [
+      {
+        "_id": "contract-sample-contract-1",
+        "serviceAppointmentId": "contract-sample-work-order-001",
+        "orderId": "contract-sample-order-1",
+        "state": 1,
+        "exts": {
+          "contractStatus": "10"
+        },
+        "signedDatePresent": true
+      }
+    ]
+  },
+  "interpretation": {
+    "graph": "Synthetic identity projection of verified association, not a full raw response",
+    "quoteTypeZero": "NOT_READ_NOT_IN_CURRENT_GUARD",
+    "orderPagination": "page=1 rows=3 only; reported total is sample-specific",
+    "contractPagination": "page=1 rows=3 only; overall inventory completeness unverified",
+    "permissions": "Positive read visibility only; no negative ACL probe or write entitlement test",
+    "prices": "No monetary values retained"
+  }
+}

@@ -114,3 +114,6 @@ export function isAllowedEffectiveOrderCascadeProviderRequest(input: {
   readonly tenantId: string
 }): boolean
 export function isAllowedOrderExtFieldTarget(value: unknown): boolean
+export function r1ServiceTypeApplies(config: Readonly<Record<string, unknown>>, serviceType: string): { state: string }
+export function r1PersonTypeApplies(config: Readonly<Record<string, unknown>>, personType: string): { state: string }
+export function providerRows(payload: unknown): readonly Record<string, unknown>[] | null

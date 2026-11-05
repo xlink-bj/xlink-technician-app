@@ -390,6 +390,7 @@ async function run() {
     let workOrderPagesRead = 0
     let workOrdersChecked = 0
     let orders = null
+    let selectedOrderReportedTotal = null
     let scanFailure = null
     let reachedEnd = false
     const seenWorkOrderIds = new Set()
@@ -463,6 +464,7 @@ async function run() {
           break
         }
         if (candidateOrders.length > 0) {
+          selectedOrderReportedTotal = ordersResult.data.totalCount ?? null
           orders = candidateOrders
           selectedWorkOrderPage = page
           selectedWorkOrderOrdinal = ordinal + 1
@@ -573,7 +575,7 @@ async function run() {
         selectedOrdinal: selectedWorkOrderOrdinal,
         pageSize: 3,
       },
-      typeOneOrders: { page: 1, limit: 3, returned: orders.length, workOrderIdentityMatches: orders.length },
+      typeOneOrders: { page: 1, limit: 3, returned: orders.length, workOrderIdentityMatches: orders.length, reportedTotal: selectedOrderReportedTotal, completeness: 'FIRST_PAGE_ONLY_NOT_INVENTORY_COMPLETE' },
       priceProjection: pricedLines,
       contractQuery: { page: 1, limit: 3, sourceFilter: 'R1_SERVICE_APPOINTMENT_STATE_OR_STATUS', ...contractSummary.value },
       quoteTypeZero: 'NOT_READ',
