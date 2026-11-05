@@ -8,7 +8,10 @@ export function parseCatalogContextAuditArgs(args = []) {
   let activeOrderFieldsOnly = false
   let compareSelectedOrderMaterialPrices = false
   let compareSelectedOrderPackagePrices = false
+  let compareSelectedOrderProcedureMeasurePrices = false
   let discoverDirectMaterialOrder = false
+  let discoverDirectProviderOrder = false
+  let discoverDirectMeasureOrder = false
   let authorizeRead = false
   let preflightOnly = false
 
@@ -45,9 +48,24 @@ export function parseCatalogContextAuditArgs(args = []) {
       compareSelectedOrderPackagePrices = true
       continue
     }
+    if (argument === '--compare-selected-order-procedure-measure-prices') {
+      if (compareSelectedOrderProcedureMeasurePrices) throw new Error('duplicate_order_provider_price_comparison_argument')
+      compareSelectedOrderProcedureMeasurePrices = true
+      continue
+    }
     if (argument === '--discover-direct-material-order') {
       if (discoverDirectMaterialOrder) throw new Error('duplicate_direct_material_order_discovery_argument')
       discoverDirectMaterialOrder = true
+      continue
+    }
+    if (argument === '--discover-direct-provider-order') {
+      if (discoverDirectProviderOrder) throw new Error('duplicate_direct_provider_order_discovery_argument')
+      discoverDirectProviderOrder = true
+      continue
+    }
+    if (argument === '--discover-direct-measure-order') {
+      if (discoverDirectMeasureOrder) throw new Error('duplicate_direct_measure_order_discovery_argument')
+      discoverDirectMeasureOrder = true
       continue
     }
     if (argument === '--catalog-context-ordinal' || argument.startsWith('--catalog-context-ordinal=')) {
@@ -70,22 +88,36 @@ export function parseCatalogContextAuditArgs(args = []) {
   }
 
   if (catalogContextOnly && activeOrderFieldsOnly) throw new Error('incompatible_g4f_prod_read_modes')
-  if ((compareSelectedOrderMaterialPrices || compareSelectedOrderPackagePrices)
+  if ((compareSelectedOrderMaterialPrices || compareSelectedOrderPackagePrices || compareSelectedOrderProcedureMeasurePrices)
     && (!catalogContextOnly || activeOrderFieldsOnly)) {
     throw new Error('order_price_comparison_requires_catalog_context_only_mode')
   }
-  if (compareSelectedOrderMaterialPrices && compareSelectedOrderPackagePrices) {
+  if ([compareSelectedOrderMaterialPrices, compareSelectedOrderPackagePrices, compareSelectedOrderProcedureMeasurePrices]
+    .filter(Boolean).length > 1) {
     throw new Error('incompatible_order_price_comparison_modes')
   }
   if (discoverDirectMaterialOrder && (!catalogContextOnly || !compareSelectedOrderMaterialPrices
-    || hasOrdinal || compareSelectedOrderPackagePrices || activeOrderFieldsOnly)) {
+    || hasOrdinal || compareSelectedOrderPackagePrices || compareSelectedOrderProcedureMeasurePrices
+    || discoverDirectProviderOrder || activeOrderFieldsOnly)) {
     throw new Error('direct_material_order_discovery_requires_unselected_context_material_comparison')
+  }
+  if (discoverDirectProviderOrder && (!catalogContextOnly || !compareSelectedOrderProcedureMeasurePrices
+    || hasOrdinal || compareSelectedOrderMaterialPrices || compareSelectedOrderPackagePrices
+    || discoverDirectMaterialOrder || discoverDirectMeasureOrder || activeOrderFieldsOnly)) {
+    throw new Error('direct_provider_order_discovery_requires_unselected_context_provider_comparison')
+  }
+  if (discoverDirectMeasureOrder && (!catalogContextOnly || !compareSelectedOrderProcedureMeasurePrices
+    || hasOrdinal || compareSelectedOrderMaterialPrices || compareSelectedOrderPackagePrices
+    || discoverDirectMaterialOrder || discoverDirectProviderOrder || activeOrderFieldsOnly)) {
+    throw new Error('direct_measure_order_discovery_requires_unselected_context_provider_comparison')
   }
   if (authorizeRead && preflightOnly) throw new Error('incompatible_g4f_prod_read_authorization')
 
   return Object.freeze({
     catalogContextOrdinal, catalogContextOnly, activeOrderFieldsOnly,
-    compareSelectedOrderMaterialPrices, compareSelectedOrderPackagePrices, discoverDirectMaterialOrder,
+    compareSelectedOrderMaterialPrices, compareSelectedOrderPackagePrices,
+    compareSelectedOrderProcedureMeasurePrices, discoverDirectMaterialOrder,
+    discoverDirectProviderOrder, discoverDirectMeasureOrder,
   })
 }
 

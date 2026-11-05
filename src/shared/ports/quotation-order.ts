@@ -5,6 +5,8 @@ export type QuotationOrderBrowseKind = 'package' | 'procedure' | 'material' | 'm
 
 export interface QuotationOrderBrowseIdentity {
   readonly providerRowId?: string
+  /** Provenance for audit-grade Procedure/Measure provider identity; generic row IDs are insufficient for price comparison. */
+  readonly providerRowIdSource?: 'r1_direct_provider_row_id'
   readonly providerReferenceId?: string
   readonly spuId?: string
   /** Provenance for audit-grade SPU association. Generic row-ID fallback is insufficient for price comparison. */

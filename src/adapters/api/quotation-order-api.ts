@@ -181,7 +181,7 @@ function browseIdentity(
   row: AdapterRecord,
   kind: QuotationOrderBrowseKind,
   embedded?: AdapterRecord,
-  r1DirectMaterialRow = false,
+  r1DirectCategoryRow = false,
 ): QuotationOrderBrowseIdentity {
   const referenceKey = kind === 'package' ? undefined
     : kind === 'procedure' ? 'procedureId'
@@ -219,7 +219,9 @@ function browseIdentity(
   // replaces the category list with those SPU rows. Only that exact category
   // can use its row _id as SPU provenance; package children and generic rows
   // retain the conservative fallback.
-  const r1DirectMaterialSpuId = kind === 'material' && r1DirectMaterialRow && !hasSkuIdentityClaim
+  const r1DirectMaterialSpuId = kind === 'material' && r1DirectCategoryRow && !hasSkuIdentityClaim
+    ? rowId : undefined
+  const r1DirectProviderRowId = (kind === 'procedure' || kind === 'measure') && r1DirectCategoryRow
     ? rowId : undefined
   const materialSpuId = kind === 'material'
     ? rowSpu ?? nestedSpu ?? embeddedMaterialId ?? materialReferenceId
@@ -234,7 +236,10 @@ function browseIdentity(
               : materialSpuId ? 'row_id_fallback' : undefined
     : undefined
   return {
-    ...(rowId ? { providerRowId: rowId } : {}),
+    ...(rowId ? {
+      providerRowId: rowId,
+      ...(r1DirectProviderRowId ? { providerRowIdSource: 'r1_direct_provider_row_id' as const } : {}),
+    } : {}),
     ...(referenceKey && stringIdentity(row, [referenceKey]) ? { providerReferenceId: stringIdentity(row, [referenceKey]) } : {}),
     ...(materialSpuId || nestedSpu || rowSpu
       ? { spuId: materialSpuId || nestedSpu || rowSpu }
@@ -263,7 +268,7 @@ function browseLine(
   row: AdapterRecord,
   kind: QuotationOrderBrowseKind,
   nestedKind?: QuotationOrderBrowseKind,
-  r1DirectMaterialRow = false,
+  r1DirectCategoryRow = false,
 ): QuotationOrderBrowseLine {
   const nested = nestedKind ? optionalRecord(row[nestedKind]) : undefined
   const display = nested ?? row
@@ -301,7 +306,7 @@ function browseLine(
     ? browseFiniteSnapshot(packageMaterialExts, 'price') : undefined
   let children: QuotationOrderBrowseLine[] = []
   let contentSupported = Boolean(label)
-  const identity = browseIdentity(row, kind, nested, r1DirectMaterialRow)
+  const identity = browseIdentity(row, kind, nested, r1DirectCategoryRow)
   const hasSkuIdentityClaim = kind === 'material' && materialSkuIdentityClaim(row, nested)
   const identitySupported = kind === 'package'
     ? Boolean(identity.providerRowId)
@@ -395,7 +400,8 @@ function browseGroup(raw: unknown): QuotationOrderBrowseGroup {
       continue
     }
     const embeddedKind = kind === 'package' ? undefined : kind
-    const mapped = rows.map((row) => browseLine(row, kind, embeddedKind, kind === 'material'))
+    const mapped = rows.map((row) => browseLine(row, kind, embeddedKind,
+      kind === 'material' || kind === 'procedure' || kind === 'measure'))
     lines.push(...mapped)
     if (mapped.some((line) => !line.contentSupported)) contentSupported = false
   }

@@ -12,8 +12,13 @@ import {
 } from './g4f-prod-read-context-scope.mjs'
 import { workOrderOrderLineageReadState } from './g4f-prod-read-summary.mjs'
 import { inspectDirectMaterialOrderPage } from './g4f-direct-material-order-discovery.mjs'
+import {
+  hasRequestedDirectProviderLines,
+  inspectDirectProviderOrderPage,
+} from './g4f-direct-provider-order-discovery.mjs'
 import { summarizeDirectMaterialPriceSnapshots } from './g4f-order-material-price-comparison.mjs'
 import { summarizePackagePriceSnapshots } from './g4f-order-package-price-comparison.mjs'
+import { summarizeDirectProviderPriceSnapshots } from './g4f-order-provider-price-comparison.mjs'
 import {
   buildOrderExtFieldRequestBody,
   effectiveOrderExtFieldProviderPlan,
@@ -81,7 +86,10 @@ let selectedCatalogContextOrdinal = null
 let activeOrderFieldsOnlyRequested = false
 let selectedOrderMaterialPriceComparisonRequested = false
 let selectedOrderPackagePriceComparisonRequested = false
+let selectedOrderProcedureMeasurePriceComparisonRequested = false
 let directMaterialOrderDiscoveryRequested = false
+let directProviderOrderDiscoveryRequested = false
+let directMeasureOrderDiscoveryRequested = false
 let activeOrderCodeProviderIds = []
 let activeOrderCascadeProviderIds = []
 let expectedOrderCascadeTenantId = null
@@ -94,6 +102,8 @@ const selectedContextDirectMaterialRows = []
 const selectedOrderDirectMaterialSpuIds = new Set()
 const selectedOrderPackageIds = new Set()
 const selectedOrderCatalogPackageRows = []
+const selectedOrderCatalogProcedureRows = []
+const selectedOrderCatalogMeasureRows = []
 const selectedOrderPackageDetails = []
 let selectedOrderDirectMaterialSpusInCatalog = 0
 let catalogSkuRequestCount = 0
@@ -222,6 +232,20 @@ const responseCounts = {
     directMaterialCandidates: 0,
     workOrderLimit: MAX_ORDER_SEARCH_WORK_ORDERS,
   },
+  directProviderOrderDiscovery: {
+    state: 'NOT_RUN',
+    requestedKind: 'NOT_REQUESTED',
+    roleVisibleWorkOrdersInspected: 0,
+    roleVisibleCatalogContextsQueried: 0,
+    distinctRoleVisibleCatalogContextsSeen: 0,
+    workOrdersWithoutCatalogContext: 0,
+    orderListsRead: 0,
+    orderRowsRead: 0,
+    orderListsTruncatedAtThree: 0,
+    directProcedureCandidates: 0,
+    directMeasureCandidates: 0,
+    workOrderLimit: MAX_ORDER_SEARCH_WORK_ORDERS,
+  },
 }
 
 function isApprovedWorkOrderQuoteQuery(request) {
@@ -287,8 +311,9 @@ function recordSafeRequest(url, request, apiBaseUrl) {
   }
   if (relativePath === 'basic/order/query') {
     if (routeCounts.quotationList >= MAX_QUOTATION_LIST_READS || !isApprovedWorkOrderQuoteQuery(request)) return null
-    if (!directMaterialOrderDiscoveryRequested
-      && (selectedOrderMaterialPriceComparisonRequested || selectedOrderPackagePriceComparisonRequested)
+    if (!(directMaterialOrderDiscoveryRequested || directProviderOrderDiscoveryRequested)
+      && (selectedOrderMaterialPriceComparisonRequested || selectedOrderPackagePriceComparisonRequested
+        || selectedOrderProcedureMeasurePriceComparisonRequested)
       && (routeCounts.quotationList !== 0
         || new URLSearchParams(request.data).get('is:serviceAppointmentId|string#and') !== selectedCatalogWorkOrderId)) return null
     routeCounts.quotationList += 1
@@ -970,10 +995,18 @@ async function run() {
   activeOrderFieldsOnlyRequested = catalogAuditOptions.activeOrderFieldsOnly
   selectedOrderMaterialPriceComparisonRequested = catalogAuditOptions.compareSelectedOrderMaterialPrices
   selectedOrderPackagePriceComparisonRequested = catalogAuditOptions.compareSelectedOrderPackagePrices
+  selectedOrderProcedureMeasurePriceComparisonRequested = catalogAuditOptions.compareSelectedOrderProcedureMeasurePrices
   directMaterialOrderDiscoveryRequested = catalogAuditOptions.discoverDirectMaterialOrder
-  if (directMaterialOrderDiscoveryRequested) {
+  directMeasureOrderDiscoveryRequested = catalogAuditOptions.discoverDirectMeasureOrder
+  directProviderOrderDiscoveryRequested = catalogAuditOptions.discoverDirectProviderOrder
+    || directMeasureOrderDiscoveryRequested
+  if (directMaterialOrderDiscoveryRequested || directProviderOrderDiscoveryRequested) {
     responseCounts.catalogContextDiscovery.requestedOrdinal = null
-    responseCounts.directMaterialOrderDiscovery.state = 'SEARCHING_ROLE_VISIBLE_ORDER_SCOPE'
+    if (directMaterialOrderDiscoveryRequested) responseCounts.directMaterialOrderDiscovery.state = 'SEARCHING_ROLE_VISIBLE_ORDER_SCOPE'
+    if (directProviderOrderDiscoveryRequested) responseCounts.directProviderOrderDiscovery.state = directMeasureOrderDiscoveryRequested
+      ? 'SEARCHING_ROLE_VISIBLE_MEASURE_ORDER_SCOPE' : 'SEARCHING_ROLE_VISIBLE_PROVIDER_ORDER_SCOPE'
+  if (directProviderOrderDiscoveryRequested) responseCounts.directProviderOrderDiscovery.requestedKind = directMeasureOrderDiscoveryRequested
+    ? 'measure' : 'procedure_or_measure'
   }
   const authorizedRead = argumentsWithoutSeparator.includes('--authorize-bounded-prod-read')
   const preflightOnly = argumentsWithoutSeparator.includes('--preflight-only')
@@ -988,7 +1021,7 @@ async function run() {
     return
   }
   const contextSelector = createRoleVisibleCatalogContextSelector(catalogAuditOptions.catalogContextOrdinal)
-  responseCounts.catalogContextDiscovery.requestedOrdinal = directMaterialOrderDiscoveryRequested
+  responseCounts.catalogContextDiscovery.requestedOrdinal = directMaterialOrderDiscoveryRequested || directProviderOrderDiscoveryRequested
     ? null : catalogAuditOptions.catalogContextOrdinal
   const root = process.cwd()
   const vite = await createServer({
@@ -1152,7 +1185,8 @@ async function run() {
     const countLines = (lines) => lines.reduce((count, line) => count + 1 + countLines(line.children), 0)
     const recordQuotationRead = (workOrderId, quotes) => {
       recordWorkOrderOrderRead(workOrderId, quotes)
-      if ((selectedOrderMaterialPriceComparisonRequested || selectedOrderPackagePriceComparisonRequested)
+      if ((selectedOrderMaterialPriceComparisonRequested || selectedOrderPackagePriceComparisonRequested
+        || selectedOrderProcedureMeasurePriceComparisonRequested)
         && workOrderId === selectedCatalogWorkOrderId) {
         selectedWorkOrderOrderReadState = operationState(quotes)
         selectedWorkOrderOrderPage = quotes.state === 'succeeded' && quotes.data ? quotes.data : null
@@ -1297,6 +1331,69 @@ async function run() {
       recordQuotationRead(workOrderId, quotes)
       return 'found'
     }
+    const inspectDirectProviderContextOrder = async (workOrder, detail, authorizationApi) => {
+      const context = quotationCatalogContextFor(workOrder, detail)
+      const workOrderId = String(workOrder.id)
+      const selection = context ? contextSelector.consider(context, workOrderId) : null
+      if (context) {
+        responseCounts.directProviderOrderDiscovery.distinctRoleVisibleCatalogContextsSeen = contextSelector.distinctCount
+        responseCounts.directProviderOrderDiscovery.roleVisibleCatalogContextsQueried += 1
+      } else {
+        responseCounts.directProviderOrderDiscovery.workOrdersWithoutCatalogContext += 1
+      }
+      if (authIdentityChanged() || !listedWorkOrderIds.has(workOrderId)
+        || authorizationApi.isWorkOrderListedForCurrentSession?.(workOrderId) !== true) {
+        responseCounts.directProviderOrderDiscovery.state = 'AUTHORIZATION_SCOPE_UNAVAILABLE'
+        catalogContextDiscoveryIncomplete = true
+        discoveryState = 'ROLE_LIST_AUTHORIZATION_UNAVAILABLE'
+        return 'stop'
+      }
+      stage = `role_visible_direct_provider_discovery_${responseCounts.directProviderOrderDiscovery.orderListsRead + 1}`
+      const quotes = await orderApi.listTypeOneOrdersForWorkOrder(workOrderId, 3)
+      responseCounts.directProviderOrderDiscovery.orderListsRead += 1
+      if (quotes.state !== 'succeeded' || !quotes.data) {
+        responseCounts.directProviderOrderDiscovery.state = 'ORDER_READ_INCOMPLETE'
+        catalogContextDiscoveryIncomplete = true
+        discoveryState = 'ORDER_READ_INCOMPLETE'
+        return 'stop'
+      }
+      const inspection = inspectDirectProviderOrderPage(workOrderId, quotes.data)
+      responseCounts.directProviderOrderDiscovery.orderRowsRead += inspection.orders
+      const orderListTruncated = quotes.data.totalCount !== undefined
+        ? quotes.data.totalCount > quotes.data.items.length
+        : quotes.data.items.length >= 3
+      if (orderListTruncated) responseCounts.directProviderOrderDiscovery.orderListsTruncatedAtThree += 1
+      if (inspection.state === 'ORDER_ASSOCIATION_CONFLICT') {
+        responseCounts.directProviderOrderDiscovery.state = 'ORDER_ASSOCIATION_CONFLICT'
+        catalogContextDiscoveryIncomplete = true
+        discoveryState = 'ORDER_ASSOCIATION_CONFLICT'
+        return 'stop'
+      }
+      if (inspection.state === 'UNKNOWN_INVALID_INPUT') {
+        responseCounts.directProviderOrderDiscovery.state = 'INVALID_ORDER_PAGE'
+        catalogContextDiscoveryIncomplete = true
+        discoveryState = 'ORDER_PAGE_INVALID'
+        return 'stop'
+      }
+      responseCounts.directProviderOrderDiscovery.directProcedureCandidates += inspection.directProcedureLines
+      responseCounts.directProviderOrderDiscovery.directMeasureCandidates += inspection.directMeasureLines
+      if (!hasRequestedDirectProviderLines(inspection,
+        directMeasureOrderDiscoveryRequested ? 'measure' : 'procedure_or_measure')) {
+        recordQuotationRead(workOrderId, quotes)
+        return 'continue'
+      }
+      if (!context || !selection) {
+        responseCounts.directProviderOrderDiscovery.state = 'DIRECT_PROVIDER_FOUND_CONTEXT_UNKNOWN'
+        catalogContextDiscoveryIncomplete = true
+        discoveryState = 'DIRECT_PROVIDER_FOUND_CONTEXT_UNKNOWN'
+        return 'stop'
+      }
+      responseCounts.directProviderOrderDiscovery.state = 'DIRECT_PROVIDER_ORDER_FOUND'
+      selectCatalogContext(workOrder, context, selection, authorizationApi)
+      discoveryState = 'DIRECT_PROVIDER_ORDER_FOUND'
+      recordQuotationRead(workOrderId, quotes)
+      return 'found'
+    }
 
     for (const workOrder of pageOneWorkOrders) {
       const id = String(workOrder.id)
@@ -1307,12 +1404,16 @@ async function run() {
       roleVisibleWorkOrdersInspected += 1
       if (directMaterialOrderDiscoveryRequested) {
         responseCounts.directMaterialOrderDiscovery.roleVisibleWorkOrdersInspected = roleVisibleWorkOrdersInspected
+      } else if (directProviderOrderDiscoveryRequested) {
+        responseCounts.directProviderOrderDiscovery.roleVisibleWorkOrdersInspected = roleVisibleWorkOrdersInspected
       }
       stage = `work_order_detail_read_${index + 1}`
       const detail = await technicianApi.getWorkOrderDetail(workOrder.id)
       if (detail.state !== 'succeeded' || !detail.data) {
         responseCounts.workOrderDetailsFailed += 1
-        if (!directMaterialOrderDiscoveryRequested) details.push({ state: operationState(detail), activePlaceOrder: false, catalogContext: false })
+        if (!directMaterialOrderDiscoveryRequested && !directProviderOrderDiscoveryRequested) {
+          details.push({ state: operationState(detail), activePlaceOrder: false, catalogContext: false })
+        }
         catalogContextDiscoveryIncomplete = true
         discoveryState = 'WORK_ORDER_DETAIL_READ_INCOMPLETE'
         break
@@ -1326,7 +1427,7 @@ async function run() {
       if (currentActionIsPlaceOrder) responseCounts.currentActionPlaceOrder += 1
       const hasCatalogContext = Boolean(detail.data.quotationCatalogContext?.serviceType)
       if (hasCatalogContext) responseCounts.detailsWithCatalogContext += 1
-      if (!directMaterialOrderDiscoveryRequested) {
+      if (!directMaterialOrderDiscoveryRequested && !directProviderOrderDiscoveryRequested) {
         details.push({
           state: 'SUCCEEDED',
           activePlaceOrder: activePlaceOrderNodes.length > 0,
@@ -1336,6 +1437,9 @@ async function run() {
       }
       if (!selectedCatalogContext && directMaterialOrderDiscoveryRequested) {
         const discovery = await inspectDirectMaterialContextOrder(workOrder, detail, technicianApi)
+        if (discovery === 'found' || discovery === 'stop') break
+      } else if (!selectedCatalogContext && directProviderOrderDiscoveryRequested) {
+        const discovery = await inspectDirectProviderContextOrder(workOrder, detail, technicianApi)
         if (discovery === 'found' || discovery === 'stop') break
       } else if (!selectedCatalogContext && considerCatalogContext(workOrder, detail)) break
     }
@@ -1362,7 +1466,8 @@ async function run() {
     } else if (workOrders.state === 'succeeded' && firstPageExhausted) {
       if (!catalogContextDiscoveryIncomplete) discoveryState = 'ROLE_VISIBLE_WORK_ORDERS_EXHAUSTED'
     }
-    const maxWorkOrderPages = directMaterialOrderDiscoveryRequested
+    const directOrderDiscoveryRequested = directMaterialOrderDiscoveryRequested || directProviderOrderDiscoveryRequested
+    const maxWorkOrderPages = directOrderDiscoveryRequested
       ? MAX_ORDER_SEARCH_PAGES
       : MAX_WORK_ORDER_PAGES
     for (let page = 2; !selectedCatalogContext && !catalogContextDiscoveryIncomplete && workOrders.state === 'succeeded'
@@ -1370,6 +1475,8 @@ async function run() {
       && page <= maxWorkOrderPages; page += 1) {
       stage = directMaterialOrderDiscoveryRequested
         ? `role_scoped_direct_material_work_order_page_${page}`
+        : directProviderOrderDiscoveryRequested
+          ? `role_scoped_direct_provider_work_order_page_${page}`
         : `role_scoped_work_order_page_${page}`
       technicianApi = createTechnicianApi()
       const pageResult = await technicianApi.listWorkOrders({ page, pageSize: 3 })
@@ -1385,11 +1492,15 @@ async function run() {
         console.error(JSON.stringify({
           progress: directMaterialOrderDiscoveryRequested
             ? 'ROLE_VISIBLE_DIRECT_MATERIAL_ORDER_SCAN'
-            : 'ROLE_VISIBLE_PLACE_ORDER_CONTEXT_SCAN',
+            : directProviderOrderDiscoveryRequested
+              ? directMeasureOrderDiscoveryRequested
+                ? 'ROLE_VISIBLE_DIRECT_MEASURE_ORDER_SCAN'
+                : 'ROLE_VISIBLE_DIRECT_PROVIDER_ORDER_SCAN'
+              : 'ROLE_VISIBLE_PLACE_ORDER_CONTEXT_SCAN',
           workOrderPagesRead: responseCounts.workOrderPagesRead,
           workOrderDetailsRead: responseCounts.workOrderDetailsSucceeded,
           distinctContextsSeen: contextSelector.distinctCount,
-          requestedOrdinal: directMaterialOrderDiscoveryRequested
+          requestedOrdinal: directOrderDiscoveryRequested
             ? null : catalogAuditOptions.catalogContextOrdinal,
         }))
       }
@@ -1416,7 +1527,7 @@ async function run() {
       }
       let detailReadFailed = false
       for (const [index, workOrder] of pageResult.data.items.entries()) {
-        if (directMaterialOrderDiscoveryRequested
+        if (directOrderDiscoveryRequested
           && roleVisibleWorkOrdersInspected >= MAX_ORDER_SEARCH_WORK_ORDERS) {
           const knownTotalWithinBound = pageResult.data.totalCount !== undefined
             && pageResult.data.totalCount <= roleVisibleWorkOrdersInspected
@@ -1426,8 +1537,13 @@ async function run() {
             discoveryState = 'ROLE_VISIBLE_WORK_ORDERS_EXHAUSTED'
             roleVisibleWorkOrdersExhausted = true
           } else {
-            discoveryState = 'DIRECT_MATERIAL_SEARCH_WORK_ORDER_LIMIT_REACHED'
-            responseCounts.directMaterialOrderDiscovery.state = 'WORK_ORDER_LIMIT_REACHED'
+            discoveryState = directMaterialOrderDiscoveryRequested
+              ? 'DIRECT_MATERIAL_SEARCH_WORK_ORDER_LIMIT_REACHED'
+              : directMeasureOrderDiscoveryRequested
+                ? 'DIRECT_MEASURE_SEARCH_WORK_ORDER_LIMIT_REACHED'
+                : 'DIRECT_PROVIDER_SEARCH_WORK_ORDER_LIMIT_REACHED'
+            if (directMaterialOrderDiscoveryRequested) responseCounts.directMaterialOrderDiscovery.state = 'WORK_ORDER_LIMIT_REACHED'
+            if (directProviderOrderDiscoveryRequested) responseCounts.directProviderOrderDiscovery.state = 'WORK_ORDER_LIMIT_REACHED'
             catalogContextDiscoveryIncomplete = true
           }
           detailReadFailed = true
@@ -1436,6 +1552,8 @@ async function run() {
         roleVisibleWorkOrdersInspected += 1
         if (directMaterialOrderDiscoveryRequested) {
           responseCounts.directMaterialOrderDiscovery.roleVisibleWorkOrdersInspected = roleVisibleWorkOrdersInspected
+        } else if (directProviderOrderDiscoveryRequested) {
+          responseCounts.directProviderOrderDiscovery.roleVisibleWorkOrdersInspected = roleVisibleWorkOrdersInspected
         }
         stage = `role_scoped_work_order_detail_${page}_${index + 1}`
         const detail = await technicianApi.getWorkOrderDetail(workOrder.id)
@@ -1457,6 +1575,9 @@ async function run() {
         if (directMaterialOrderDiscoveryRequested) {
           const result = await inspectDirectMaterialContextOrder(workOrder, detail, technicianApi)
           if (result === 'found' || result === 'stop') break
+        } else if (directProviderOrderDiscoveryRequested) {
+          const result = await inspectDirectProviderContextOrder(workOrder, detail, technicianApi)
+          if (result === 'found' || result === 'stop') break
         } else if (considerCatalogContext(workOrder, detail, details.length + page * 3 + index)) {
           discoveryState = 'PLACE_ORDER_CONTEXT_FOUND'
           break
@@ -1477,9 +1598,16 @@ async function run() {
       if (page === maxWorkOrderPages && !selectedCatalogContext && !roleVisibleWorkOrdersExhausted) {
         discoveryState = directMaterialOrderDiscoveryRequested
           ? 'DIRECT_MATERIAL_SEARCH_WORK_ORDER_LIMIT_REACHED'
-          : 'WORK_ORDER_PAGE_LIMIT_REACHED'
+          : directProviderOrderDiscoveryRequested
+            ? directMeasureOrderDiscoveryRequested
+              ? 'DIRECT_MEASURE_SEARCH_WORK_ORDER_LIMIT_REACHED'
+              : 'DIRECT_PROVIDER_SEARCH_WORK_ORDER_LIMIT_REACHED'
+            : 'WORK_ORDER_PAGE_LIMIT_REACHED'
         if (directMaterialOrderDiscoveryRequested) {
           responseCounts.directMaterialOrderDiscovery.state = 'WORK_ORDER_LIMIT_REACHED'
+          catalogContextDiscoveryIncomplete = true
+        } else if (directProviderOrderDiscoveryRequested) {
+          responseCounts.directProviderOrderDiscovery.state = 'WORK_ORDER_LIMIT_REACHED'
           catalogContextDiscoveryIncomplete = true
         }
       }
@@ -1496,6 +1624,20 @@ async function run() {
         responseCounts.directMaterialOrderDiscovery.state = 'NO_MATCH_WITH_TRUNCATED_ORDER_PAGES'
       }
     }
+    if (directProviderOrderDiscoveryRequested && !selectedCatalogContext
+      && roleVisibleWorkOrdersExhausted && !catalogContextDiscoveryIncomplete
+      && !authIdentityChanged() && blockedUnexpectedNetworkRequests === 0) {
+      if (responseCounts.directProviderOrderDiscovery.orderListsTruncatedAtThree === 0) {
+        discoveryState = directMeasureOrderDiscoveryRequested
+          ? 'NO_DIRECT_MEASURE_ORDER_IN_ROLE_VISIBLE_SCOPE' : 'NO_DIRECT_PROVIDER_ORDER_IN_ROLE_VISIBLE_SCOPE'
+        responseCounts.directProviderOrderDiscovery.state = directMeasureOrderDiscoveryRequested
+          ? 'NO_DIRECT_MEASURE_IN_COMPLETE_ROLE_VISIBLE_SCOPE' : 'NO_MATCH_IN_COMPLETE_ROLE_VISIBLE_SCOPE'
+      } else {
+        discoveryState = 'DIRECT_PROVIDER_SEARCH_ORDER_LIST_TRUNCATED'
+        responseCounts.directProviderOrderDiscovery.state = 'ORDER_LISTS_TRUNCATED_AT_THREE'
+        catalogContextDiscoveryIncomplete = true
+      }
+    }
     if (directMaterialOrderDiscoveryRequested && !selectedCatalogContext
       && responseCounts.directMaterialOrderDiscovery.state === 'SEARCHING_ROLE_VISIBLE_ORDER_SCOPE') {
       responseCounts.directMaterialOrderDiscovery.state = 'SEARCH_INCOMPLETE'
@@ -1507,7 +1649,8 @@ async function run() {
     }
 
     if ((!catalogAuditOptions.catalogContextOnly && !catalogAuditOptions.activeOrderFieldsOnly)
-      || selectedOrderMaterialPriceComparisonRequested || selectedOrderPackagePriceComparisonRequested) {
+      || selectedOrderMaterialPriceComparisonRequested || selectedOrderPackagePriceComparisonRequested
+      || selectedOrderProcedureMeasurePriceComparisonRequested) {
       if (!selectedCatalogWorkOrderId || orderReadStatesByWorkOrder.has(selectedCatalogWorkOrderId)) {
         // The selected current WorkOrder was already read during the initial page pass,
         // or no eligible current place_order WorkOrder was found.
@@ -1515,7 +1658,8 @@ async function run() {
         stage = 'current_place_order_workorder_quotation_read'
         if (authIdentityChanged() || !selectedWorkOrderIsCurrent()) {
           orderReadStatesByWorkOrder.set(selectedCatalogWorkOrderId, 'FAILED_TERMINAL')
-          if (selectedOrderMaterialPriceComparisonRequested || selectedOrderPackagePriceComparisonRequested) {
+          if (selectedOrderMaterialPriceComparisonRequested || selectedOrderPackagePriceComparisonRequested
+            || selectedOrderProcedureMeasurePriceComparisonRequested) {
             selectedWorkOrderOrderReadState = 'FAILED_TERMINAL'
           }
         } else {
@@ -1709,6 +1853,29 @@ async function run() {
             responseCounts.packageDetails.complete = false
           }
           responseCounts.packageDetails.referencedMaterialSpus = packageCatalog.items
+        }
+      } else if (selectedOrderProcedureMeasurePriceComparisonRequested) {
+        const directRows = kind => (selectedWorkOrderOrderPage?.items ?? []).flatMap(order =>
+          (order.groups ?? []).flatMap(group => (group.lines ?? []).filter(line => line.kind === kind)))
+        const procedureRows = directRows('procedure')
+        const measureRows = directRows('measure')
+        if (procedureRows.length > 0) {
+          stage = 'selected_order_direct_procedure_catalog_pages'
+          await readEntireCatalog('procedure', selectedCatalogContext,
+            catalogApi.listProcedures.bind(catalogApi), item => selectedOrderCatalogProcedureRows.push(item))
+        } else {
+          responseCounts.catalogItemsByKind.procedure = {
+            items: 0, pages: 0, totalCount: null, complete: true, reason: 'NO_DIRECT_PROCEDURE_LINES_IN_ORDER_PAGE',
+          }
+        }
+        if (measureRows.length > 0) {
+          stage = 'selected_order_direct_measure_catalog_pages'
+          await readEntireCatalog('measure', selectedCatalogContext,
+            catalogApi.listMeasures.bind(catalogApi), item => selectedOrderCatalogMeasureRows.push(item))
+        } else {
+          responseCounts.catalogItemsByKind.measure = {
+            items: 0, pages: 0, totalCount: null, complete: true, reason: 'NO_DIRECT_MEASURE_LINES_IN_ORDER_PAGE',
+          }
         }
       } else {
       stage = 'r1_catalog_filter_code_options'
@@ -1931,6 +2098,13 @@ async function run() {
       && !authIdentityChanged()
       && selectedWorkOrderIsCurrent()
 
+    const selectedProviderPriceComparisonCatalogReadComplete = responseCounts.catalogContextVerified
+      && responseCounts.catalogItemsByKind.procedure.complete
+      && responseCounts.catalogItemsByKind.measure.complete
+      && blockedUnexpectedNetworkRequests === 0
+      && !authIdentityChanged()
+      && selectedWorkOrderIsCurrent()
+
     let selectedWorkOrderOrderPriceComparison = { state: 'NOT_REQUESTED' }
     if (selectedOrderMaterialPriceComparisonRequested) {
       if (!selectedCatalogWorkOrderId) {
@@ -1986,6 +2160,35 @@ async function run() {
       }
     }
 
+    let selectedWorkOrderOrderProviderPriceComparison = { state: 'NOT_REQUESTED' }
+    if (selectedOrderProcedureMeasurePriceComparisonRequested) {
+      if (!selectedCatalogWorkOrderId) {
+        selectedWorkOrderOrderProviderPriceComparison = { state: 'NO_SELECTED_PLACE_ORDER_WORK_ORDER' }
+      } else if (selectedWorkOrderOrderReadState !== 'SUCCEEDED' || !selectedWorkOrderOrderPage
+        || !selectedProviderPriceComparisonCatalogReadComplete
+        || authIdentityChanged() || !selectedWorkOrderIsCurrent()) {
+        selectedWorkOrderOrderProviderPriceComparison = {
+          state: 'INCOMPLETE_INPUTS',
+          orderReadState: selectedWorkOrderOrderReadState,
+          procedureCatalogComplete: responseCounts.catalogItemsByKind.procedure.complete,
+          measureCatalogComplete: responseCounts.catalogItemsByKind.measure.complete,
+        }
+      } else {
+        const orderListTruncated = selectedWorkOrderOrderPage.totalCount !== undefined
+          ? selectedWorkOrderOrderPage.totalCount > selectedWorkOrderOrderPage.items.length
+          : selectedWorkOrderOrderPage.items.length >= 3
+        selectedWorkOrderOrderProviderPriceComparison = summarizeDirectProviderPriceSnapshots({
+          expectedWorkOrderId: selectedCatalogWorkOrderId,
+          orders: selectedWorkOrderOrderPage.items,
+          catalogProcedures: selectedOrderCatalogProcedureRows,
+          catalogMeasures: selectedOrderCatalogMeasureRows,
+          procedureCatalogComplete: responseCounts.catalogItemsByKind.procedure.complete,
+          measureCatalogComplete: responseCounts.catalogItemsByKind.measure.complete,
+          orderListTruncated,
+        })
+      }
+    }
+
     projectSelectedWorkOrderOrderLineage()
 
     const fullCatalogReadComplete = responseCounts.catalogContextVerified
@@ -1999,6 +2202,8 @@ async function run() {
       ? selectedPriceComparisonCatalogReadComplete
       : selectedOrderPackagePriceComparisonRequested
         ? selectedPackagePriceComparisonCatalogReadComplete
+        : selectedOrderProcedureMeasurePriceComparisonRequested
+          ? selectedProviderPriceComparisonCatalogReadComplete
         : fullCatalogReadComplete
     const contextSearchExhaustedWithoutMatch = !selectedCatalogContext
       && catalogAuditOptions.catalogContextOnly
@@ -2013,6 +2218,15 @@ async function run() {
       && roleVisibleWorkOrdersExhausted
       && !catalogContextDiscoveryIncomplete
       && responseCounts.directMaterialOrderDiscovery.orderListsTruncatedAtThree === 0
+      && !authIdentityChanged()
+      && blockedUnexpectedNetworkRequests === 0
+    const directProviderSearchExhaustedWithoutMatch = directProviderOrderDiscoveryRequested
+      && !selectedCatalogContext
+      && discoveryState === (directMeasureOrderDiscoveryRequested
+        ? 'NO_DIRECT_MEASURE_ORDER_IN_ROLE_VISIBLE_SCOPE' : 'NO_DIRECT_PROVIDER_ORDER_IN_ROLE_VISIBLE_SCOPE')
+      && roleVisibleWorkOrdersExhausted
+      && !catalogContextDiscoveryIncomplete
+      && responseCounts.directProviderOrderDiscovery.orderListsTruncatedAtThree === 0
       && !authIdentityChanged()
       && blockedUnexpectedNetworkRequests === 0
     const effectiveOrderProvidersComplete = ['SUCCEEDED', 'NOT_REQUIRED'].includes(responseCounts.effectiveOrderOptionProviders.code.state)
@@ -2030,9 +2244,12 @@ async function run() {
     const auditComplete = catalogAuditOptions.activeOrderFieldsOnly
       ? activeOrderFieldsComplete
       : catalogAuditOptions.catalogContextOnly
-      ? Boolean((catalogReadComplete || contextSearchExhaustedWithoutMatch || directMaterialSearchExhaustedWithoutMatch)
+      ? Boolean((catalogReadComplete || contextSearchExhaustedWithoutMatch || directMaterialSearchExhaustedWithoutMatch
+        || directProviderSearchExhaustedWithoutMatch)
         && (directMaterialOrderDiscoveryRequested && directMaterialSearchExhaustedWithoutMatch
-          || !(selectedOrderMaterialPriceComparisonRequested || selectedOrderPackagePriceComparisonRequested)
+          || directProviderOrderDiscoveryRequested && directProviderSearchExhaustedWithoutMatch
+          || !(selectedOrderMaterialPriceComparisonRequested || selectedOrderPackagePriceComparisonRequested
+            || selectedOrderProcedureMeasurePriceComparisonRequested)
           || selectedWorkOrderOrderReadState === 'SUCCEEDED' && selectedWorkOrderOrderPage !== null))
       : catalogReadComplete
       && ['SUCCEEDED_WITH_ORDER', 'SUCCEEDED_EMPTY'].includes(responseCounts.sampledOrderMaterialLineage.state)
@@ -2042,7 +2259,17 @@ async function run() {
         ? 'PROD_READ_ONLY_EFFECTIVE_ORDER_EXTFIELDS_COMPLETE'
         : 'PROD_READ_ONLY_EFFECTIVE_ORDER_EXTFIELDS_INCOMPLETE'
       : catalogAuditOptions.catalogContextOnly
-      ? directMaterialOrderDiscoveryRequested
+      ? directProviderOrderDiscoveryRequested
+        ? directProviderSearchExhaustedWithoutMatch
+          ? directMeasureOrderDiscoveryRequested
+            ? 'PROD_READ_ONLY_DIRECT_MEASURE_SEARCH_COMPLETE_NO_MATCH'
+            : 'PROD_READ_ONLY_DIRECT_PROVIDER_SEARCH_COMPLETE_NO_MATCH'
+          : selectedCatalogContext && catalogReadComplete
+            ? selectedWorkOrderOrderProviderPriceComparison.state === 'COMPARED'
+              ? 'PROD_READ_ONLY_DIRECT_PROVIDER_ORDER_PRICE_COMPARED'
+              : 'PROD_READ_ONLY_DIRECT_PROVIDER_ORDER_PRICE_UNKNOWN'
+            : 'PROD_READ_ONLY_DIRECT_PROVIDER_SEARCH_INCOMPLETE'
+        : directMaterialOrderDiscoveryRequested
         ? directMaterialSearchExhaustedWithoutMatch
           ? 'PROD_READ_ONLY_DIRECT_MATERIAL_SEARCH_COMPLETE_NO_MATCH'
           : selectedCatalogContext && catalogReadComplete
@@ -2050,6 +2277,12 @@ async function run() {
               ? 'PROD_READ_ONLY_DIRECT_MATERIAL_ORDER_PRICE_COMPARED'
               : 'PROD_READ_ONLY_DIRECT_MATERIAL_ORDER_FOUND_PRICE_UNKNOWN'
             : 'PROD_READ_ONLY_DIRECT_MATERIAL_SEARCH_INCOMPLETE'
+        : selectedOrderProcedureMeasurePriceComparisonRequested
+          ? selectedCatalogContext && catalogReadComplete
+            ? selectedWorkOrderOrderProviderPriceComparison.state === 'COMPARED'
+              ? 'PROD_READ_ONLY_DIRECT_PROVIDER_ORDER_PRICE_COMPARED'
+              : 'PROD_READ_ONLY_DIRECT_PROVIDER_ORDER_PRICE_UNKNOWN'
+            : 'PROD_READ_ONLY_DIRECT_PROVIDER_ORDER_PRICE_INCOMPLETE'
         : catalogReadComplete
           ? 'PROD_READ_ONLY_CATALOG_CONTEXT_COMPLETE'
           : contextSearchExhaustedWithoutMatch
@@ -2069,6 +2302,8 @@ async function run() {
         distinctContextOrdinal: selectedCatalogContextOrdinal,
         ...(directMaterialOrderDiscoveryRequested
           ? { scope: 'role_visible_work_order' }
+          : directProviderOrderDiscoveryRequested
+            ? { scope: 'role_visible_work_order' }
           : { currentAction: 'place_order' }),
         serviceTypePresent: true,
         sourceTypePresent: true,
@@ -2079,6 +2314,8 @@ async function run() {
       responseCounts,
       selectedWorkOrderOrderPriceComparison,
       selectedWorkOrderOrderPackagePriceComparison,
+      selectedWorkOrderOrderProviderPriceComparison,
+      directProviderOrderDiscovery: responseCounts.directProviderOrderDiscovery,
       blockedUnexpectedNetworkRequests,
       blockedUnexpectedRoutes,
       blockedUnexpectedStages,

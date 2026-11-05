@@ -258,8 +258,9 @@ describe('G4-F Production quotation Order read adapter', () => {
           repairParts: ['roof'], partDescription: '屋面',
           projPackages: { data: [{
             _id: 'package-row', name: '套餐', number: 1, amount: 20, totalAmount: 20,
-            procedureList: [], measuresList: [], measureList: [],
+            procedureList: [{ _id: 'generic-package-procedure-row', name: '组件工序', number: 1, amount: 4, totalAmount: 4 }],
             materialList: [{ _id: 'generic-package-child-row', name: '组件材料', number: 1, amount: 5, totalAmount: 5 }],
+            measureList: [{ _id: 'generic-package-measure-row', name: '组件机措', number: 1, amount: 6, totalAmount: 6 }],
           }] },
           procedures: { data: [] }, materials: { data: [] }, measures: { data: [] },
         }] },
@@ -268,9 +269,42 @@ describe('G4-F Production quotation Order read adapter', () => {
 
     expect(result).toMatchObject({ state: 'succeeded', data: { items: [{ groups: [{
       lines: [{ children: [{
+        kind: 'procedure', identity: { providerRowId: 'generic-package-procedure-row' },
+      }, {
         kind: 'material',
         identity: { spuId: 'generic-package-child-row', spuIdSource: 'row_id_fallback' },
+      }, {
+        kind: 'measure', identity: { providerRowId: 'generic-package-measure-row' },
       }] }],
+    }] }] } })
+    const children = result.state === 'succeeded' ? result.data?.items[0]?.groups[0]?.lines[0]?.children : undefined
+    expect(children?.[0]?.identity).not.toHaveProperty('providerRowIdSource')
+    expect(children?.[2]?.identity).not.toHaveProperty('providerRowIdSource')
+  })
+
+  it('tags direct R1 Procedure and Measure catalog row identities and applies the Procedure minimum floor', async () => {
+    const result = await createQuotationOrderReadAdapter({
+      execute: async () => ({ data: [{
+        _id: 'procedure-measure-order', type: 1,
+        serviceAppointmentId: 'work-order-price-read',
+        bjProducts: { orderList: [{
+          repairParts: ['roof'], partDescription: '屋面',
+          projPackages: { data: [] },
+          procedures: { data: [{
+            _id: 'direct-procedure-id', name: '工序', number: 1, amount: 12,
+            minimumGuideTotalPrice: 20, totalAmount: 20,
+          }] },
+          materials: { data: [] },
+          measures: { data: [{ _id: 'direct-measure-id', name: '机措', number: 2, amount: 5, totalAmount: 10 }] },
+        }] },
+      }] }),
+    }, () => true).listTypeOneOrdersForWorkOrder('work-order-price-read')
+
+    expect(result).toMatchObject({ state: 'succeeded', data: { items: [{ groups: [{
+      lines: [
+        { kind: 'procedure', identity: { providerRowId: 'direct-procedure-id', providerRowIdSource: 'r1_direct_provider_row_id' }, contentSupported: true, unitPrice: 12, lineTotal: 20 },
+        { kind: 'measure', identity: { providerRowId: 'direct-measure-id', providerRowIdSource: 'r1_direct_provider_row_id' }, contentSupported: true, unitPrice: 5, lineTotal: 10 },
+      ],
     }] }] } })
   })
 
