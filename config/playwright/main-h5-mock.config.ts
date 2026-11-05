@@ -3,6 +3,25 @@ import { repositoryRoot, rootPath } from '../paths'
 
 const baseURL = 'http://localhost:5174'
 
+// Forward only the explicit, synthetic QA switches used by opt-in H5 suites.
+// Do not inherit the caller's full environment into the local App server.
+const optInFixtureFlags = [
+  'VITE_XLINK_R1_MP_UX_FIXTURES',
+  'VITE_XLINK_R1_SPECIAL_MEDIA',
+  'VITE_XLINK_R1_BUSINESS_FIELDS',
+  'VITE_XLINK_R1_DEEP_CASCADE',
+  'VITE_XLINK_R1_STAGE2D_FIELDS',
+  'VITE_XLINK_R1_STAGE2C_ARRAYS',
+  'VITE_XLINK_R1_STAGE2B_FIELDS',
+  'VITE_XLINK_DYNAMIC_SCALAR_QA',
+] as const
+
+const enabledOptInFixtureEnv = Object.fromEntries(
+  optInFixtureFlags
+    .filter((name) => process.env[name] === 'true')
+    .map((name) => [name, 'true']),
+)
+
 /**
  * REAL uni-app main pages + normal application composition, but a DEV-only,
  * entirely local session fixture. Never read local real-user credentials.
@@ -47,6 +66,7 @@ export default defineConfig({
       VITE_XLINK_ENABLE_REAL_WRITES: 'false',
       VITE_XLINK_QUICK_LOGIN_PHONE: '',
       VITE_XLINK_QUICK_LOGIN_CODE: '',
+      ...enabledOptInFixtureEnv,
     },
   },
   use: {

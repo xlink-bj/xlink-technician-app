@@ -116,7 +116,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       } else {
         await page.getByTestId('quotation-add-group').click()
         await page.getByTestId('quotation-first-step-repair-parts-trigger').click()
-        await page.getByTestId('survey-repair-part-parents').getByText('屋面', { exact: true }).click()
+        await page.getByTestId('quotation-repair-part-picker').getByText('屋面', { exact: true }).click()
         await page.getByTestId('quotation-repair-part-picker-done').click()
         await page.getByTestId('quotation-first-step-description').locator('textarea')
           .fill('L2 屋面维修视觉审查')
@@ -268,8 +268,10 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       ).boundingBox()
       expect(firstItem).not.toBeNull()
       expect(firstItem!.width).toBeLessThan(viewport.width)
-      // No disabled taxonomy rail unless package records carry backed R1 classification codes.
-      await expect(page.getByTestId('quotation-catalog-facets')).toHaveCount(0)
+      // The current DEV scenario has provider-backed R1 catalog classification.
+      await expect(page.getByTestId('quotation-catalog-facets')).toBeVisible()
+      await expect(page.getByTestId('quotation-catalog-facet-all')).toBeVisible()
+      await expect(page.getByTestId('quotation-catalog-facet-mock-site')).toBeVisible()
     }
 
     assertSafe()

@@ -292,10 +292,10 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       await page.getByTestId('quotation-first-step-select-products').click()
       await expect(page.getByTestId('quotation-catalog-page')).toBeVisible()
       await expect(page.getByTestId('quotation-catalog-kind-package')).toBeVisible()
-      // Q03 commercial baseline no longer renders an unverified taxonomy
-      // rail. The dedicated Q03 375px contract requires its absence until R1
-      // catalog classification codes are source-verified.
-      await expect(page.getByTestId('quotation-catalog-facets')).toHaveCount(0)
+      // The active DEV scenario now uses provider-backed R1 classifications.
+      await expect(page.getByTestId('quotation-catalog-facets')).toBeVisible()
+      await expect(page.getByTestId('quotation-catalog-facet-all')).toBeVisible()
+      await expect(page.getByTestId('quotation-catalog-facet-mock-site')).toBeVisible()
       await expect(page.getByTestId('quotation-package-detail-mock-catalog-package-basic')).toBeVisible()
       const catalogTitlePx = await page.locator('.quotation-content__catalog-item-title').first().evaluate(
         element => parseFloat(getComputedStyle(element).fontSize),

@@ -34,13 +34,23 @@ test('Q03 source-priced roof materials, commercial layout and return-to-Q01 at 3
   await expect(packageCard).toBeVisible()
   await expect(packageCard).toContainText('平屋面节点防水维修套餐')
   await expect(packageCard).toContainText('按套餐配置核价')
-  await expect(page.getByTestId('quotation-catalog-facets')).toHaveCount(0)
+  // The catalogue now has verified R1 classification providers. Keep the
+  // navigation rail only when backed filters exist, and verify it filters the
+  // package list instead of preserving the old no-taxonomy baseline.
+  await expect(page.getByTestId('quotation-catalog-facets')).toBeVisible()
+  await expect(page.getByTestId('quotation-catalog-facet-mock-site')).toBeVisible()
+  await expect(page.getByTestId('quotation-catalog-facet-mock-exterior')).toBeVisible()
+  await page.getByTestId('quotation-catalog-facet-mock-exterior').click()
+  await expect(page.getByTestId('quotation-catalog-item-package-mock-catalog-package-extended')).toBeVisible()
+  await expect(packageCard).toHaveCount(0)
+  await page.getByTestId('quotation-catalog-facet-all').click()
+  await expect(packageCard).toBeVisible()
   expect(await packageCard.innerText()).not.toMatch(/示例|Mock|DEV|仿真|DEMO/)
 
   // Visual-contract gate: text must share the vertical centre of each 44px
   // hit target. An underline fixed at bottom is NOT evidence of good alignment.
   const measureTabs = async () => page
-    .locator('.quotation-content__catalog-main > .quotation-content__category-grid > .quotation-content__category')
+    .locator('[data-testid="quotation-catalog-categories"] > .quotation-content__category')
     .evaluateAll(nodes => nodes.map(node => {
       const el = node as HTMLElement
       const hit = el.getBoundingClientRect()
