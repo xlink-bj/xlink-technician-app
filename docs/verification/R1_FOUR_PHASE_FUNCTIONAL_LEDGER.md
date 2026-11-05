@@ -1,5 +1,8 @@
 # F1 — Forms / Repeat Existing Records: functional delivery, not write parity
 
+> **2026-11-05 Owner 数据模型决策：** 后续按 [R1 真实数据模型与 DEV Mock 等价清单](R1_REAL_DATA_MODEL_MOCK_EQUIVALENCE_INVENTORY.md) 建立可追溯的 F01–F21 后台对象与 M01–M08 Mock 场景。当前可报价的技术工程师 Production 上下文没有活动 SKU，普通材料 SPU 无 SKU **不得作为报价阻断**；SKU 静态分支标 `DORMANT_OR_UNVERIFIED`，暂不普查其他角色/历史。四类目录和已有 Order/合同的有界只读样本已经取得，但动态订单字段的实际适用规则、有效价逐项对照、Order 状态/合同全面投影以及所有业务写入仍未通过，不可写 `LIVE_PASS`。Issue #201 保持 HOLD。
+
+
 Parent A06-B Draft #197 exact `345dbe79bfdbe53af4ce75721ab6ef188c25b1ef`. R1 reference `xlink-app@6c0a97b`, backend remains unchanged.
 
 ## Shipped behavior (offline; read-only records)

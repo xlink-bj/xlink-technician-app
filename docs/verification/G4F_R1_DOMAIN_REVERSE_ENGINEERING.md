@@ -1,5 +1,10 @@
 # G4-F — R1 Quotation Domain Reverse Engineering
 
+> **Owner 决策补记（2026-11-05，取代把 SKU 当作当前报价硬前提的研发假设）：** 当前配置的正常技术工程师角色可执行 R1 报价；其角色可见的全部四类可报价服务/来源上下文均已完成四目录与 SKU 有界读取，相关活动 SKU 全为空。R1 后端 `Material.spuid` 和静态 SKU 前端分支只证明曾设计 SKU，静态映射可疑点只标 `DORMANT_OR_UNVERIFIED`，**不推断现网显示 Bug**。对当前复刻业务应以套餐/工序/材料 SPU/机措及真实 `mini` 有效价格为主，普通无 SKU 材料不得因 SKU 空而阻断；也不得生成虚构 SKU、猜价格或将旧 Order 的 `skuCode` 误当 SKU 数据库 ID。保留未来有真实活动 SKU 时的独立验证门槛。详细数据/Mock 契约与缺口统一见 [R1 真实数据模型与 DEV Mock 等价清单](R1_REAL_DATA_MODEL_MOCK_EQUIVALENCE_INVENTORY.md)。
+
+此补记是**当前技术工程师角色范围内的产品复刻决策**，不推翻下文的历史源码审计，也不批准真实 Order/Workflow/合同写入。
+
+
 **Status: R1_SOURCE_AUDITED / FOUR_CONTEXT_PRODUCTION_CATALOG_CHAIN_READ_COMPLETE / QUOTE_PARITY_PARTIAL**
 
 **Scope: R1 source audit, bounded Production read-only catalog adapter implementation and verification; no quote/workflow/business mutation, no merge or deployment.**

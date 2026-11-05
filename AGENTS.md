@@ -1,5 +1,12 @@
 # Agent Working Rules
 
+## Canonical R1 data / Mock fidelity entry (Owner decision, 2026-11-05)
+
+- Before adding R1-backed Mock business data, quotation/Order/Contract assumptions or API adapters, read [`docs/verification/R1_REAL_DATA_MODEL_MOCK_EQUIVALENCE_INVENTORY.md`](docs/verification/R1_REAL_DATA_MODEL_MOCK_EQUIVALENCE_INVENTORY.md) and its pinned evidence links. It is the current F01–F21 backend-data inventory and M01–M08 protocol-equivalent Mock acceptance checklist.
+- For this existing technician role's four verified Production quotation contexts, no active SKU rows were returned. Treat SKU as a modeled but presently unverified/dormant option, **not** a mandatory prerequisite for an ordinary Material SPU quote; do not invent SKU IDs or prices. Keep context-specific filters, mini price projection and Order snapshot prices distinct. Historical static R1 SKU helper anomalies are not proven Production defects.
+- Mock PASS does not imply live R1 persistence/authorization. Production/Beta business writes, uploads, signing, messages, PDF and Workflow commands remain closed under Issue #201; contract read permission remains separately limited.
+
+
 Primary application repository: `xlink-bj/xlink-technician-app`, canonical branch `main`.
 
 Local Mac checkout: `/Users/yesun/Code/xlink-technician-app`.
