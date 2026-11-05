@@ -25,7 +25,10 @@ export default defineConfig({
     'import.meta.env.VITE_XLINK_ENVIRONMENT': JSON.stringify('dev'),
     'import.meta.env.VITE_XLINK_PLATFORM': JSON.stringify('mp-weixin'),
     'import.meta.env.VITE_XLINK_API_BASE_URL': JSON.stringify('https://mock-review.invalid'),
-    'import.meta.env.VITE_XLINK_AUTH_TENANT': JSON.stringify('mock-review-tenant'),
+    // R1 i/code/selectCode.do uses this fixed Code dictionary tenant. The
+    // review server keeps the business API host inert, so matching the wire
+    // tenant exercises the real adapter contract without live network access.
+    'import.meta.env.VITE_XLINK_AUTH_TENANT': JSON.stringify('1340835581184723420'),
     'import.meta.env.VITE_XLINK_AUTH_METHOD': JSON.stringify('mock-review-phone'),
     'import.meta.env.VITE_XLINK_MOCK': JSON.stringify('true'),
     'import.meta.env.VITE_XLINK_ENABLE_REAL_WRITES': JSON.stringify('false'),

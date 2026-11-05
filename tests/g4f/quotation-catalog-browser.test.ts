@@ -3,6 +3,7 @@ import { createPinia, setActivePinia } from 'pinia'
 
 import type {
   QuotationCatalogContext,
+  QuotationCatalogFilterOptionsRead,
   QuotationCatalogReadPort,
   QuotationPackageDetailRead,
   QuotationPackageRead,
@@ -59,6 +60,36 @@ describe('G4-F Phase 1E quotation catalog browser', () => {
     expect(port.listProcedures).toHaveBeenCalledWith(context)
     expect(port.listMaterials).toHaveBeenCalledWith(context)
     expect(port.listMeasures).toHaveBeenCalledWith(context)
+  })
+
+  it('loads R1 filter dictionaries once per configured context and retries only on request', async () => {
+    const options: QuotationCatalogFilterOptionsRead = {
+      serviceType: context.serviceType,
+      packageParts: { codeId: 'constructionParts', options: [{ value: 'site', label: '施工面' }] },
+      packageTypes: { codeId: 'packageType', options: [] },
+      packageAgeLimits: { codeId: 'agelimitFilter', options: [{ value: '5', label: '5 年' }] },
+      procedures: { codeId: 'repairProcedure', options: [] },
+      materials: { codeId: 'type1', options: [] },
+      packageMaterialLayers: { codeId: 'maintenanceLayer', options: [] },
+    }
+    const listCatalogFilterOptions = vi.fn()
+      .mockResolvedValueOnce({ state: 'failed_retryable', error: { category: 'network_retryable', retryable: true, message: 'private filter detail' } })
+      .mockResolvedValueOnce(succeeded(options))
+    const store = useQuotationCatalogBrowserStore()
+    store.configure({ readPort: catalogPort({ listCatalogFilterOptions }), catalogContext: context })
+
+    store.open('package')
+    await store.loadCatalogFilterOptions()
+    expect(listCatalogFilterOptions).toHaveBeenCalledTimes(1)
+    expect(store.catalogFilterOptionsState).toBe('failed_retryable')
+    expect(store.catalogFilterOptionsErrorCopy).not.toContain('private filter detail')
+
+    await store.loadCatalogFilterOptions()
+    expect(listCatalogFilterOptions).toHaveBeenCalledTimes(1)
+    await store.loadCatalogFilterOptions(true)
+    expect(listCatalogFilterOptions).toHaveBeenCalledTimes(2)
+    expect(store.catalogFilterOptionsState).toBe('succeeded')
+    expect(store.catalogFilterOptions).toEqual(options)
   })
 
   it('shows loading, empty, retryable failure, and retry success as distinct read states', async () => {

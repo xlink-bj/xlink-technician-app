@@ -48,6 +48,7 @@ import {
   mockMaterialSkuSpuId,
   mockMaterialSalesExtFieldsResponse,
   mockMaterialSaleCodeOptions,
+  mockQuotationCatalogFilterCodeOptions,
   mockMaterialSkuVariantsResponse,
 } from './quotation-catalog'
 import type { ApiCommandRequest } from '../technician-api-commands'
@@ -815,6 +816,26 @@ function matchedResponse(
     && typeof requestData.jsonPara === 'string') {
     try {
       const entries: unknown = JSON.parse(requestData.jsonPara)
+      if (Array.isArray(entries) && entries.length === 6
+        && entries.every(row => row && typeof row === 'object'
+          && typeof (row as { eleid?: unknown }).eleid === 'string'
+          && (row as { eleid: string }).eleid === (row as { codeId?: unknown }).codeId)) {
+        const names = entries.map(row => (row as { eleid: string }).eleid)
+        const fixed = ['packageType', 'repairProcedure', 'agelimitFilter', 'maintenanceLayer']
+        const partCodes = ['partsOne', 'refreshParts', 'constructionParts']
+        const materialCodes = ['type1', 'type2']
+        const validCatalogFilterRequest = new Set(names).size === names.length
+          && fixed.every(name => names.includes(name))
+          && names.filter(name => partCodes.includes(name)).length === 1
+          && names.filter(name => materialCodes.includes(name)).length === 1
+          && names.every(name => [...fixed, ...partCodes, ...materialCodes].includes(name))
+        if (validCatalogFilterRequest) {
+          return names.map(name => ({
+            eleid: name,
+            options: mockQuotationCatalogFilterCodeOptions[name as keyof typeof mockQuotationCatalogFilterCodeOptions],
+          }))
+        }
+      }
       if (Array.isArray(entries) && entries.length === 2
         && entries.every(row => row && typeof row === 'object'
           && typeof (row as { eleid?: unknown }).eleid === 'string'

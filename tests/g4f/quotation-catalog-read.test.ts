@@ -12,6 +12,7 @@ import {
   resetMockCommandState,
   setBusinessMockMode,
 } from '@adapters/api/mock'
+import { R1_MATERIAL_CODE_TENANT } from '@adapters/api/quotation-catalog-mappers'
 import { asOpaqueId } from '@shared/types'
 
 const query = { serviceType: 'service-type-1', sourceType: 'source-type-2' }
@@ -80,13 +81,23 @@ function detailEntity(id = 'package-1') {
   }
 }
 
-function mockAdapter(request: ReturnType<typeof vi.fn>) {
+function mockAdapter(
+  request: ReturnType<typeof vi.fn>,
+  codeTenantId?: string,
+  withAuthorizationScope = false,
+) {
+  const authorizationScope = withAuthorizationScope ? () => ({
+    sessionRef,
+    userId: asOpaqueId<'UserId'>('synthetic-catalog-user'),
+    roleId: asOpaqueId<'RoleId'>('synthetic-catalog-role'),
+    roleVersion: null,
+  }) : undefined
   return createQuotationCatalogReadAdapter(createUniApiReadTransport({
     apiBaseUrl: 'https://mock-review.invalid',
     getSessionRef: () => sessionRef,
     request: request as never,
     mockLatencyMs: 0,
-  }))
+  }), authorizationScope, codeTenantId)
 }
 
 describe('G4-F Phase 1C quotation catalog read foundation', () => {
@@ -454,6 +465,33 @@ describe('G4-F Phase 1C quotation catalog read foundation', () => {
     expect(detail.data?.materials[0].item?.id).toBe('mock-catalog-material-sealant')
     expect(detail.data?.materials[0]).toMatchObject({ kind: 'material', layer: 'mock-layer-1' })
     expect([packages, procedures, materials, measures, detail].every((result) => result.state === 'succeeded')).toBe(true)
+    expect(realRequest).not.toHaveBeenCalled()
+  })
+
+  it('loads R1 catalog filter dictionaries through the local Mock route without network access', async () => {
+    setBusinessMockMode('data')
+    const realRequest = vi.fn()
+    const catalog = mockAdapter(realRequest, R1_MATERIAL_CODE_TENANT, true)
+    expect(catalog.listCatalogFilterOptions).toBeTypeOf('function')
+    const result = await catalog.listCatalogFilterOptions!({
+      workOrderId: asOpaqueId<'WorkOrderId'>('mock-work-order-001'),
+      serviceType: mockQuotationCatalogServiceType,
+      sourceType: mockQuotationCatalogSourceType,
+    })
+
+    if (result.state !== 'succeeded' || !result.data) {
+      throw new Error(`R1 catalog filter Mock route failed: ${JSON.stringify(result)}`)
+    }
+    expect(result.data).toMatchObject({
+      serviceType: mockQuotationCatalogServiceType,
+      packageParts: { codeId: 'constructionParts' },
+      materials: { codeId: 'type1' },
+      packageTypes: { codeId: 'packageType' },
+      packageAgeLimits: { codeId: 'agelimitFilter' },
+      procedures: { codeId: 'repairProcedure' },
+      packageMaterialLayers: { codeId: 'maintenanceLayer' },
+    })
+    expect(result.data.packageParts.options).toContainEqual({ value: 'mock-site', label: '施工面' })
     expect(realRequest).not.toHaveBeenCalled()
   })
 

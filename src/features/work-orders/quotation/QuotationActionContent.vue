@@ -616,6 +616,24 @@
             <text class="quotation-content__catalog-section-note">当前工单适用</text>
           </view>
 
+          <view v-if="catalogBrowser.selectedKind === 'package' && catalogAgeLimitOptions.length"
+            class="quotation-content__category-grid" data-testid="quotation-catalog-age-filters">
+            <button class="quotation-content__category"
+              :class="{ 'quotation-content__category--active': !selectedPackageAgeLimit }"
+              type="button" :aria-pressed="!selectedPackageAgeLimit"
+              data-testid="quotation-catalog-age-all" @tap="selectedPackageAgeLimit = ''">不限年限</button>
+            <button v-for="option in catalogAgeLimitOptions" :key="option.value"
+              class="quotation-content__category"
+              :class="{
+                'quotation-content__category--active': selectedPackageAgeLimit === option.value,
+                'quotation-content__category--disabled': !packageAgeLimitAvailable(option.value),
+              }"
+              type="button" :disabled="!packageAgeLimitAvailable(option.value)"
+              :aria-pressed="selectedPackageAgeLimit === option.value"
+              :data-testid="`quotation-catalog-age-${option.value}`"
+              @tap="selectedPackageAgeLimit = option.value">{{ option.label }}</button>
+          </view>
+
           <AppStatus
             v-if="catalogSelectionError"
             class="quotation-content__catalog-state"
@@ -624,6 +642,13 @@
             quiet
             data-testid="quotation-catalog-selection-error"
           />
+          <view v-if="catalogBrowser.catalogFilterOptionsErrorCopy" class="quotation-content__catalog-state"
+            data-testid="quotation-catalog-filter-options-error">
+            <AppStatus :message="catalogBrowser.catalogFilterOptionsErrorCopy" tone="neutral" quiet />
+            <AppButton v-if="catalogBrowser.catalogFilterOptionsState === 'failed_retryable'"
+              variant="text" data-testid="quotation-catalog-filter-options-retry"
+              @tap="catalogBrowser.loadCatalogFilterOptions(true)">重试分类</AppButton>
+          </view>
           <AppStatus
             v-else-if="catalogBrowser.selectedKind !== 'package' && (!activeCatalogGroup || activeCatalogGroup.repairParts.length === 0)"
             class="quotation-content__catalog-state"
@@ -639,6 +664,7 @@
               data-testid="quotation-catalog-facets">
               <button class="quotation-content__catalog-facet"
                 :class="{ 'quotation-content__catalog-facet--selected': !selectedCatalogFacet }"
+                type="button" data-testid="quotation-catalog-facet-all"
                 :aria-pressed="!selectedCatalogFacet" @tap="selectedCatalogFacet = ''">全部</button>
               <button v-for="facet in catalogNavigationFacets" :key="facet.value"
                 class="quotation-content__catalog-facet"
@@ -1033,6 +1059,7 @@ import {
   quotationCatalogSearchScopeKey,
 } from './catalog-search'
 import { isDirectQuotationCatalogKind } from './model'
+import { filterQuotationCatalogItemsForR1, quotationCatalogOptionsForKind } from './catalog-filtering'
 import { quotationCatalogKindLabels } from './catalog'
 import { useQuotationCatalogBrowserStore } from './catalog-browser-store'
 import type { QuotationLineKind } from './model'
@@ -1259,38 +1286,46 @@ const filteredCatalogItems = computed(() => {
   if (!query) return catalogBrowser.visibleCatalogItems
   return catalogBrowser.visibleCatalogItems.filter((item) => quotationCatalogSearchMatches(item, query))
 })
-// R1 repair-part facets appear ONLY when the current package records expose
-// compatible authoritative classification codes. Never assign a category
-// by product name or hide unclassified packages on the default "全部".
 const selectedCatalogFacet = ref('')
-function descendantCodes(node: CodeOptionRead): readonly string[] {
-  return [node.value, ...(node.children ?? []).flatMap(descendantCodes)]
-}
-// Only real source-classified package facets can be shown as navigation.
-// Disabled taxonomy rails with no matching products waste the field operator's screen.
+const selectedPackageAgeLimit = ref('')
+const verifiedCatalogFilterOptions = computed(() => catalogBrowser.catalogFilterOptionsState === 'succeeded'
+  ? catalogBrowser.catalogFilterOptions : null)
+const catalogAgeLimitOptions = computed(() => catalogBrowser.selectedKind === 'package'
+  ? verifiedCatalogFilterOptions.value?.packageAgeLimits.options ?? []
+  : [])
+const catalogFilterOptionsForKind = computed(() => quotationCatalogOptionsForKind(
+  verifiedCatalogFilterOptions.value,
+  catalogBrowser.selectedKind,
+))
 function catalogFacetAvailable(code: string): boolean {
-  return catalogFacets.value.some(facet => facet.value === code)
+  return filterQuotationCatalogItemsForR1({
+    items: filteredCatalogItems.value,
+    kind: catalogBrowser.selectedKind,
+    serviceType: verifiedCatalogFilterOptions.value?.serviceType ?? '',
+    options: verifiedCatalogFilterOptions.value,
+    selectedCode: code,
+  }).length > 0
 }
-const catalogFacets = computed(() => {
-  if (catalogBrowser.selectedKind !== 'package') return []
-  const packages = filteredCatalogItems.value.filter(
-    (item): item is Extract<QuotationCatalogItemRead, { kind: 'package' }> =>
-      item.kind === 'package' && Boolean(item.r1RepairPartsCodes?.length),
-  )
-  if (!packages.length) return []
-  return composition.repairPartOptions.filter(facet => {
-    const codes = new Set(descendantCodes(facet))
-    return packages.some(item => item.r1RepairPartsCodes?.some(code => codes.has(code)))
-  })
-})
-const catalogNavigationFacets = computed(() => catalogFacets.value)
-const displayedCatalogItems = computed(() => {
-  const facet = catalogFacets.value.find(option => option.value === selectedCatalogFacet.value)
-  if (!facet) return filteredCatalogItems.value
-  const codes = new Set(descendantCodes(facet))
-  return filteredCatalogItems.value.filter(item => item.kind !== 'package'
-    || item.r1RepairPartsCodes?.some(code => codes.has(code)))
-})
+const catalogNavigationFacets = computed(() => catalogFilterOptionsForKind.value
+  .filter(option => catalogFacetAvailable(option.value)))
+function packageAgeLimitAvailable(value: string): boolean {
+  return filterQuotationCatalogItemsForR1({
+    items: filteredCatalogItems.value,
+    kind: 'package',
+    serviceType: verifiedCatalogFilterOptions.value?.serviceType ?? '',
+    options: verifiedCatalogFilterOptions.value,
+    selectedCode: selectedCatalogFacet.value,
+    selectedPackageAgeLimit: value,
+  }).length > 0
+}
+const displayedCatalogItems = computed(() => filterQuotationCatalogItemsForR1({
+  items: filteredCatalogItems.value,
+  kind: catalogBrowser.selectedKind,
+  serviceType: verifiedCatalogFilterOptions.value?.serviceType ?? '',
+  options: verifiedCatalogFilterOptions.value,
+  selectedCode: selectedCatalogFacet.value,
+  selectedPackageAgeLimit: catalogBrowser.selectedKind === 'package' ? selectedPackageAgeLimit.value : '',
+}))
 const packageConfigurationValidation = computed(() => {
   const packageId = currentPackageId.value
   if (!packageId || catalogBrowser.packageDetailState !== 'succeeded') {
@@ -1307,6 +1342,7 @@ const kindLabels = quotationCatalogKindLabels
 function openCatalog(groupId: string, kind: QuotationLineKind): void {
   catalogNavigationGeneration += 1
   selectedCatalogFacet.value = ''
+  selectedPackageAgeLimit.value = ''
   activeCatalogGroupId.value = groupId
   catalogSelectionError.value = ''
   packageMaterialChoicesByLayer.value = {}
@@ -1361,6 +1397,7 @@ function closeCatalog(): void {
 function selectCatalogKind(kind: QuotationLineKind): void {
   catalogNavigationGeneration += 1
   selectedCatalogFacet.value = ''
+  selectedPackageAgeLimit.value = ''
   catalogSelectionError.value = ''
   catalogBrowser.selectKind(kind)
 }

@@ -13,6 +13,7 @@ export const mockQuotationPackageListResponse = {
       unit: '项',
       serviceType: [mockQuotationCatalogServiceType],
       sourceTypeList: [mockQuotationCatalogSourceType],
+      exts: { repairParts: ['mock-roof'], constructionParts: ['mock-site'] },
       order: 1,
     },
     {
@@ -24,6 +25,7 @@ export const mockQuotationPackageListResponse = {
       unit: '项',
       serviceType: [mockQuotationCatalogServiceType],
       sourceTypeList: [mockQuotationCatalogSourceType],
+      exts: { repairParts: ['mock-wall'], constructionParts: ['mock-exterior'] },
       order: 2,
     },
   ],
@@ -42,6 +44,7 @@ export const mockQuotationProcedureListResponse = {
       unit: '处',
       serviceType: [mockQuotationCatalogServiceType],
       sourceTypeList: [mockQuotationCatalogSourceType],
+      exts: { repairProcedure: ['mock-procedure-waterproof'] },
       order: 1,
     },
     // Commercial UX fixture: provider-shaped, intentionally synthetic and
@@ -54,6 +57,7 @@ export const mockQuotationProcedureListResponse = {
       unit: '处',
       serviceType: [mockQuotationCatalogServiceType],
       sourceTypeList: [mockQuotationCatalogSourceType],
+      exts: { repairProcedure: ['mock-procedure-surface'] },
       order: 2,
     },
   ],
@@ -117,7 +121,7 @@ export const mockQuotationMaterialListResponse = {
       unit: '卷',
       materialUnit: '卷',
       spec: '100mm×10m',
-      type: 1,
+      type: 2,
       serviceType: [mockQuotationCatalogServiceType],
       sourceTypeList: [mockQuotationCatalogSourceType],
       order: 4,
@@ -283,6 +287,22 @@ export const mockMaterialSalesExtFieldsResponse = {
 export const mockMaterialSaleCodeOptions = {
   MOCK_MATERIAL_THICKNESS: { '2': '2毫米', '3': '3毫米' },
   MOCK_MATERIAL_COLOR: { black: '黑色', grey: '灰色' },
+} as const
+
+/** Synthetic R1 selector dictionaries for the DEV quotation catalog surface. */
+export const mockQuotationCatalogFilterCodeOptions = {
+  packageType: { 'mock-package-type': '维修套餐' },
+  type1: { '1': '施工辅材', '2': '密封材料' },
+  type2: { '1': '刷新辅材', '2': '刷新材料' },
+  partsOne: { 'mock-roof': '屋面' },
+  refreshParts: { 'mock-refresh': '防水翻新' },
+  constructionParts: { 'mock-site': '施工面', 'mock-exterior': '外墙' },
+  repairProcedure: {
+    'mock-procedure-waterproof': '防水施工',
+    'mock-procedure-surface': '基层处理',
+  },
+  agelimitFilter: { '2': '2 年', '3': '3 年' },
+  maintenanceLayer: { '1': '面层', '2': '基层' },
 } as const
 
 export const mockMaterialSkuVariantsResponse = {

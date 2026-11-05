@@ -689,7 +689,7 @@
 }
 .quotation-content__catalog-browser--faceted .quotation-content__catalog-state { margin-left:72px; }
 .quotation-content__catalog-browser--faceted .quotation-content__catalog-item {
-  min-height:130px; padding:11px 9px 50px;
+  min-height:130px; padding:11px 9px;
   margin-bottom:8px; border:1px solid #e1e8f1;
   border-radius:11px; background:#fff;
 }
@@ -710,7 +710,7 @@
   border:1px solid #e5ebf3; border-radius:5px;
 }
 .quotation-content__catalog-browser--faceted .quotation-content__catalog-item-footer {
-  bottom:8px; left:9px; right:9px; min-height:38px;
+  position:static; min-height:38px; margin:0; padding:0; border:0;
 }
 
 .quotation-content__catalog-browser--faceted .quotation-content__catalog-item-action {

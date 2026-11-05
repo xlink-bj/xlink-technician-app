@@ -3,6 +3,7 @@ import { defineStore } from 'pinia'
 
 import type {
   QuotationCatalogContext,
+  QuotationCatalogFilterOptionsRead,
   QuotationCatalogItemRead,
   QuotationCatalogReadPort,
   QuotationPackageDetailRead,
@@ -83,6 +84,9 @@ export const useQuotationCatalogBrowserStore = defineStore('quotationCatalogBrow
   const catalogMoreByKind = ref(falses())
   const catalogPageLoadingByKind = ref(falses())
   const catalogPageErrorByKind = ref<Partial<Record<QuotationLineKind, string>>>({})
+  const catalogFilterOptions = ref<QuotationCatalogFilterOptionsRead | null>(null)
+  const catalogFilterOptionsState = ref<QuotationCatalogBrowserState>('idle')
+  const catalogFilterOptionsErrorCopy = ref('')
   const selectedPackageId = ref<string | null>(null)
   const packageDetail = ref<QuotationPackageDetailRead | null>(null)
   const packageDetailState = ref<QuotationCatalogBrowserState>('idle')
@@ -104,6 +108,8 @@ export const useQuotationCatalogBrowserStore = defineStore('quotationCatalogBrow
   let generation = 0
   let packageRequestGeneration = 0
   let materialRequestGeneration = 0
+  let catalogFilterOptionsRequest: Promise<void> | null = null
+  let catalogFilterOptionsVersion = 0
   const listRequests: ListRequestsByKind = {}
   const pageRequests: ListRequestsByKind = {}
   const listVersions = zeros()
@@ -128,6 +134,11 @@ export const useQuotationCatalogBrowserStore = defineStore('quotationCatalogBrow
     catalogMoreByKind.value = falses()
     catalogPageLoadingByKind.value = falses()
     catalogPageErrorByKind.value = {}
+    catalogFilterOptionsVersion += 1
+    catalogFilterOptionsRequest = null
+    catalogFilterOptions.value = null
+    catalogFilterOptionsState.value = 'idle'
+    catalogFilterOptionsErrorCopy.value = ''
     selectedPackageId.value = null
     packageDetail.value = null
     packageDetailState.value = 'idle'
@@ -168,6 +179,7 @@ export const useQuotationCatalogBrowserStore = defineStore('quotationCatalogBrow
     resetPackageDetail()
     isOpen.value = true
     selectedKind.value = kind
+    void loadCatalogFilterOptions()
     void loadList(kind)
   }
 
@@ -182,6 +194,45 @@ export const useQuotationCatalogBrowserStore = defineStore('quotationCatalogBrow
     resetPackageDetail()
     selectedKind.value = kind
     void loadList(kind)
+  }
+
+  /** R1 loads the serviceType-specific selector dictionaries before browsing.
+   * A failed dictionary read never fabricates a match; the full catalog stays
+   * visible under "全部" and the operator can retry the filter read.
+   */
+  async function loadCatalogFilterOptions(retry = false): Promise<void> {
+    if (catalogFilterOptionsRequest) return catalogFilterOptionsRequest
+    if (!retry && catalogFilterOptionsState.value !== 'idle') return
+    if (!port || !context || !context.serviceType.trim() || !port.listCatalogFilterOptions) {
+      catalogFilterOptionsState.value = 'blocked'
+      catalogFilterOptionsErrorCopy.value = '分类筛选暂不可用，仍可浏览完整目录。'
+      return
+    }
+
+    const requestGeneration = generation
+    const requestVersion = ++catalogFilterOptionsVersion
+    const requestContext = context
+    catalogFilterOptionsState.value = 'loading'
+    catalogFilterOptionsErrorCopy.value = ''
+    const request = port.listCatalogFilterOptions(requestContext).then((result) => {
+      if (requestGeneration !== generation || requestVersion !== catalogFilterOptionsVersion) return
+      if (result.state === 'succeeded' && result.data
+        && result.data.serviceType === requestContext.serviceType) {
+        catalogFilterOptions.value = result.data
+        catalogFilterOptionsState.value = 'succeeded'
+        return
+      }
+      catalogFilterOptionsState.value = result.state === 'failed_retryable' ? 'failed_retryable' : 'failed_terminal'
+      catalogFilterOptionsErrorCopy.value = '分类筛选暂不可用，仍可浏览完整目录。'
+    }).catch(() => {
+      if (requestGeneration !== generation || requestVersion !== catalogFilterOptionsVersion) return
+      catalogFilterOptionsState.value = 'failed_retryable'
+      catalogFilterOptionsErrorCopy.value = '分类筛选暂不可用，仍可浏览完整目录。'
+    }).finally(() => {
+      if (catalogFilterOptionsRequest === request) catalogFilterOptionsRequest = null
+    })
+    catalogFilterOptionsRequest = request
+    return request
   }
 
   /** Returns only an item from the currently open, successfully-read category. */
@@ -434,6 +485,9 @@ export const useQuotationCatalogBrowserStore = defineStore('quotationCatalogBrow
     catalogMoreByKind,
     catalogPageLoadingByKind,
     catalogPageErrorByKind,
+    catalogFilterOptions,
+    catalogFilterOptionsState,
+    catalogFilterOptionsErrorCopy,
     selectedPackageId,
     packageDetail,
     packageDetailState,
@@ -455,6 +509,7 @@ export const useQuotationCatalogBrowserStore = defineStore('quotationCatalogBrow
     packageCandidateFor,
     successfulPackageDetailFor,
     loadList,
+    loadCatalogFilterOptions,
     loadNextPage,
     retryList,
     openPackageDetail,

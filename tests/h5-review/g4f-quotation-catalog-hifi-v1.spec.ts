@@ -37,24 +37,41 @@ async function installSafetyGuards(page: Page) {
   return { pageErrors, consoleErrors, unexpectedRequests }
 }
 
-async function openCatalog(page: Page, width = 390): Promise<void> {
-  await page.setViewportSize({ width, height: 844 })
+async function openCatalog(page: Page, width = 430): Promise<void> {
+  await page.setViewportSize({ width, height: 932 })
   await page.goto('/?scenario=empty', { waitUntil: 'domcontentloaded' })
   await expect(page.getByTestId('g4f-quotation-workspace')).toBeVisible()
   await page.addStyleTag({ content: '.g4f-review-banner{display:none!important}.g4f-review-page{padding:0!important}' })
   await page.getByTestId('quotation-add-group').click()
   await page.getByTestId('quotation-first-step-repair-parts-trigger').click()
-  await page.getByTestId('survey-repair-part-parents').getByText('屋面', { exact: true }).click()
+  await page.getByTestId('quotation-repair-part-picker').getByText('屋面', { exact: true }).click()
   await page.getByTestId('quotation-repair-part-picker-done').click()
   await page.getByTestId('quotation-first-step-description').getByRole('textbox').fill('屋面檐口修复')
   await page.getByTestId('quotation-first-step-quantity').getByRole('spinbutton').fill('18')
   await page.getByTestId('quotation-first-step-select-products').click()
   await expect(page.getByTestId('quotation-catalog-page')).toBeVisible()
   await expect(page.getByTestId('quotation-catalog-browser')).toBeVisible()
+  await expect(page.getByTestId('quotation-catalog-facet-mock-site')).toBeVisible()
 }
 
 async function capture(page: Page, filename: string): Promise<void> {
   await page.screenshot({ path: resolve(output, filename), animations: 'disabled' })
+}
+
+async function expectCatalogCardFlow(page: Page, testId: string): Promise<void> {
+  const card = page.getByTestId(testId)
+  const cardBox = await card.boundingBox()
+  const mainBox = await card.locator('.quotation-content__catalog-item-main').boundingBox()
+  const footerBox = await card.locator('.quotation-content__catalog-item-footer').boundingBox()
+  expect(cardBox, `${testId} card bounds`).not.toBeNull()
+  expect(mainBox, `${testId} main bounds`).not.toBeNull()
+  expect(footerBox, `${testId} action bounds`).not.toBeNull()
+  expect(footerBox!.y, `${testId} action starts after card content`)
+    .toBeGreaterThanOrEqual(mainBox!.y + mainBox!.height - 1)
+  expect(footerBox!.y + footerBox!.height, `${testId} action stays inside its card`)
+    .toBeLessThanOrEqual(cardBox!.y + cardBox!.height + 1)
+  expect(footerBox!.x + footerBox!.width, `${testId} action stays inside its card`)
+    .toBeLessThanOrEqual(cardBox!.x + cardBox!.width + 1)
 }
 
 async function expectSafe(page: Page, diagnostics: Awaited<ReturnType<typeof installSafetyGuards>>): Promise<void> {
@@ -83,7 +100,17 @@ test('approved catalog page renders all four categories and matches R1 search sc
   await expect(page.getByTestId('quotation-catalog-item-package-mock-catalog-package-basic').locator('.quotation-content__catalog-thumbnail')).toBeVisible()
   await expect(page.getByTestId('quotation-catalog-item-package-mock-catalog-package-basic').locator('.quotation-content__catalog-art')).toHaveCount(0)
   await expect(page.getByText(/(?:¥|￥)\s*\d|\d+(?:\.\d{1,2})?\s*元/)).toHaveCount(0)
-  await capture(page, '01-catalog-package-390.png')
+  await expectCatalogCardFlow(page, 'quotation-catalog-item-package-mock-catalog-package-basic')
+  await capture(page, '01-catalog-package-430.png')
+
+  await page.getByTestId('quotation-catalog-facet-mock-exterior').click()
+  await expect(page.getByTestId('quotation-catalog-item-package-mock-catalog-package-extended')).toBeVisible()
+  await expect(page.getByTestId('quotation-catalog-item-package-mock-catalog-package-basic')).toHaveCount(0)
+  await page.getByTestId('quotation-catalog-facet-all').click()
+  await page.getByTestId('quotation-catalog-age-2').click()
+  await expect(page.getByTestId('quotation-catalog-item-package-mock-catalog-package-basic')).toBeVisible()
+  await expect(page.getByTestId('quotation-catalog-item-package-mock-catalog-package-extended')).toHaveCount(0)
+  await page.getByTestId('quotation-catalog-age-all').click()
 
   const search = page.getByTestId('quotation-catalog-search')
   const searchInput = search.locator('input')
@@ -97,23 +124,34 @@ test('approved catalog page renders all four categories and matches R1 search sc
   await page.getByTestId('quotation-catalog-kind-procedure').click()
   await expect(searchInput).toHaveValue('')
   await expect(search).toHaveAttribute('aria-label', '请输入工序名称')
+  await page.getByTestId('quotation-catalog-facet-mock-procedure-waterproof').click()
+  await expect(page.getByTestId('quotation-catalog-item-procedure-mock-catalog-procedure-seal')).toBeVisible()
+  await expect(page.getByTestId('quotation-catalog-item-procedure-mock-catalog-procedure-roof-node')).toHaveCount(0)
+  await page.getByTestId('quotation-catalog-facet-all').click()
   await searchInput.fill('檐口')
   await expect(page.getByTestId('quotation-catalog-item-procedure-mock-catalog-procedure-seal')).toBeVisible()
-  await capture(page, '02-catalog-procedure-390.png')
+  await expectCatalogCardFlow(page, 'quotation-catalog-item-procedure-mock-catalog-procedure-seal')
+  await capture(page, '02-catalog-procedure-430.png')
 
   await page.getByTestId('quotation-catalog-kind-material').click()
   await expect(searchInput).toHaveValue('')
   await expect(search).toHaveAttribute('aria-label', '请输入材料名称或编号')
+  await page.getByTestId('quotation-catalog-facet-2').click()
+  await expect(page.getByTestId('quotation-catalog-item-material-mock-catalog-material-butyl-tape')).toBeVisible()
+  await expect(page.getByTestId('quotation-catalog-item-material-mock-catalog-material-sealant')).toHaveCount(0)
+  await expect(page.getByTestId('quotation-catalog-item-material-mock-catalog-material-ordinary-1')).toHaveCount(0)
+  await page.getByTestId('quotation-catalog-facet-all').click()
   await searchInput.fill('SEAL-600-001')
   await expect(page.getByTestId('quotation-catalog-item-material-mock-catalog-material-sealant')).toBeVisible()
-  await capture(page, '03-catalog-material-390.png')
+  await expectCatalogCardFlow(page, 'quotation-catalog-item-material-mock-catalog-material-sealant')
+  await capture(page, '03-catalog-material-430.png')
 
   await page.getByTestId('quotation-catalog-kind-measure').click()
   await expect(searchInput).toHaveValue('')
   await expect(search).toHaveAttribute('aria-label', '请输入机措名称')
   await searchInput.fill('高处作业')
   await expect(page.getByTestId('quotation-catalog-item-measure-mock-catalog-measure-inspection')).toBeVisible()
-  await capture(page, '04-catalog-measure-390.png')
+  await capture(page, '04-catalog-measure-430.png')
   await page.getByTestId('quotation-catalog-kind-procedure').click()
   await expect(searchInput).toHaveValue('檐口')
 
@@ -132,7 +170,7 @@ test('catalog preserves the target group through Package configuration and direc
   await expect(page.getByTestId('quotation-package-material-choice-number:2-0')).toBeEnabled()
   await page.getByTestId('quotation-package-material-choice-string:mock-layer-1-0').click()
   await page.getByTestId('quotation-package-material-choice-number:2-0').click()
-  await capture(page, '05-package-configuration-390.png')
+  await capture(page, '05-package-configuration-430.png')
   await page.getByTestId('quotation-package-configure-commit').click()
   await expect(page.getByTestId('quotation-catalog-page')).toHaveCount(0)
   await expect(page.getByTestId('quotation-repair-group-quotation-group-1')).toContainText('屋面檐口修复')
@@ -156,11 +194,12 @@ test('catalog preserves the target group through Package configuration and direc
   await page.getByTestId('quotation-catalog-adjust-procedure-mock-catalog-procedure-seal').click()
   await expect(page.getByTestId('quotation-catalog-page')).toHaveCount(0)
   await expect(page.getByTestId('quotation-repair-group-quotation-group-1')).toContainText('屋面檐口修复')
-  await capture(page, '06-selected-item-return-390.png')
+  await capture(page, '06-selected-item-return-430.png')
 
   await page.setViewportSize({ width: 320, height: 844 })
   await page.getByTestId('quotation-browse-quotation-group-1').click()
   await expect(page.getByTestId('quotation-catalog-page')).toBeVisible()
+  await expectCatalogCardFlow(page, 'quotation-catalog-item-package-mock-catalog-package-basic')
   await expectSafe(page, diagnostics)
   await capture(page, '07-catalog-320.png')
 })
