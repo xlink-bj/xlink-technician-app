@@ -108,6 +108,7 @@ describe('G4-F Production quotation Order read adapter', () => {
                 providerReferenceId: 'material-reference-synthetic',
                 skuId: 'sku-synthetic',
                 spuId: 'spu-synthetic',
+                spuIdSource: 'embedded_product_spu',
                 skuCode: 'SKU-SYN',
               },
             }],
@@ -145,7 +146,7 @@ describe('G4-F Production quotation Order read adapter', () => {
       totalPrice: 42.25,
       groups: [{ contentSupported: true, lines: [{
         kind: 'material', quantity: 2, unit: '桶', unitPrice: 10.25, lineTotal: 20.5,
-        identity: { spuId: 'spu-read-1', skuId: 'sku-read-1' },
+        identity: { spuId: 'spu-read-1', spuIdSource: 'order_line_spu', skuId: 'sku-read-1' },
       }] }],
     }] } })
     expect(JSON.stringify(result)).not.toContain('99')
@@ -166,7 +167,7 @@ describe('G4-F Production quotation Order read adapter', () => {
     }, () => true).listTypeOneOrdersForWorkOrder('work-order-price-read')
     expect(result).toMatchObject({ state: 'succeeded', data: { items: [{ groups: [{
       contentSupported: false,
-      lines: [{ identity: { spuId: 'spu-current-catalog' }, contentSupported: false }],
+      lines: [{ identity: { spuId: 'spu-current-catalog', spuIdSource: 'row_id_fallback' }, contentSupported: false }],
     }] }] } })
     const line = result.state === 'succeeded' ? result.data?.items[0]?.groups[0]?.lines[0] : undefined
     expect(line).not.toHaveProperty('unitPrice')

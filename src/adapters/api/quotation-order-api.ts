@@ -196,11 +196,22 @@ function browseIdentity(
       || stringIdentity(row, ['skuCode']) || stringIdentity(embedded ?? {}, ['skuCode'])
       || stringIdentity(exts ?? {}, ['skuCode']) || stringIdentity(nestedExts ?? {}, ['skuCode']),
   )
+  const embeddedMaterialId = kind === 'material'
+    ? consistentWireIdentity(embedded ?? {}, ['_id', 'id'], 'Order material SPU')
+    : undefined
+  const materialReferenceId = kind === 'material'
+    ? consistentWireIdentity(row, ['materialId'], 'Order material reference')
+    : undefined
   const materialSpuId = kind === 'material'
-    ? rowSpu ?? nestedSpu
-      ?? consistentWireIdentity(embedded ?? {}, ['_id', 'id'], 'Order material SPU')
-      ?? consistentWireIdentity(row, ['materialId'], 'Order material reference')
+    ? rowSpu ?? nestedSpu ?? embeddedMaterialId ?? materialReferenceId
       ?? (hasSkuIdentityClaim ? undefined : rowId)
+    : undefined
+  const materialSpuIdSource = kind === 'material'
+    ? rowSpu ? 'order_line_spu'
+      : nestedSpu ? 'embedded_product_spu'
+        : embeddedMaterialId ? 'embedded_material_id'
+          : materialReferenceId ? 'material_reference'
+            : materialSpuId ? 'row_id_fallback' : undefined
     : undefined
   return {
     ...(rowId ? { providerRowId: rowId } : {}),
@@ -208,6 +219,7 @@ function browseIdentity(
     ...(materialSpuId || nestedSpu || rowSpu
       ? { spuId: materialSpuId || nestedSpu || rowSpu }
       : {}),
+    ...(materialSpuIdSource ? { spuIdSource: materialSpuIdSource } : {}),
     ...(nestedSku || rowSku || skuIdFromR1Row
       ? { skuId: nestedSku || rowSku || skuIdFromR1Row }
       : {}),

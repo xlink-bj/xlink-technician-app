@@ -11,6 +11,7 @@ import {
   parseCatalogContextAuditArgs,
 } from './g4f-prod-read-context-scope.mjs'
 import { workOrderOrderLineageReadState } from './g4f-prod-read-summary.mjs'
+import { summarizeDirectMaterialPriceSnapshots } from './g4f-order-material-price-comparison.mjs'
 import {
   buildOrderExtFieldRequestBody,
   effectiveOrderExtFieldProviderPlan,
@@ -76,12 +77,18 @@ let selectedCatalogContext = null
 let selectedCatalogWorkOrderId = null
 let selectedCatalogContextOrdinal = null
 let activeOrderFieldsOnlyRequested = false
+let selectedOrderMaterialPriceComparisonRequested = false
 let activeOrderCodeProviderIds = []
 let activeOrderCascadeProviderIds = []
 let expectedOrderCascadeTenantId = null
 let orderIdentitySearchState = 'NOT_RUN'
 let orderIdentityCandidateWorkOrderId = null
 let selectedWorkOrderIsCurrent = () => false
+let selectedWorkOrderOrderPage = null
+let selectedWorkOrderOrderReadState = 'NOT_RUN'
+const selectedContextDirectMaterialRows = []
+const selectedOrderDirectMaterialSpuIds = new Set()
+let selectedOrderDirectMaterialSpusInCatalog = 0
 let catalogSkuRequestCount = 0
 const responseCounts = {
   workOrderListRows: 0,
@@ -261,6 +268,9 @@ function recordSafeRequest(url, request, apiBaseUrl) {
   }
   if (relativePath === 'basic/order/query') {
     if (routeCounts.quotationList >= MAX_QUOTATION_LIST_READS || !isApprovedWorkOrderQuoteQuery(request)) return null
+    if (selectedOrderMaterialPriceComparisonRequested
+      && (routeCounts.quotationList !== 0
+        || new URLSearchParams(request.data).get('is:serviceAppointmentId|string#and') !== selectedCatalogWorkOrderId)) return null
     routeCounts.quotationList += 1
     return 'read'
   }
@@ -938,6 +948,7 @@ async function run() {
   const argumentsWithoutSeparator = process.argv.slice(2).filter(argument => argument !== '--')
   const catalogAuditOptions = parseCatalogContextAuditArgs(argumentsWithoutSeparator)
   activeOrderFieldsOnlyRequested = catalogAuditOptions.activeOrderFieldsOnly
+  selectedOrderMaterialPriceComparisonRequested = catalogAuditOptions.compareSelectedOrderMaterialPrices
   const authorizedRead = argumentsWithoutSeparator.includes('--authorize-bounded-prod-read')
   const preflightOnly = argumentsWithoutSeparator.includes('--preflight-only')
   if (!authorizedRead && !preflightOnly) {
@@ -1189,6 +1200,20 @@ async function run() {
     const countLines = (lines) => lines.reduce((count, line) => count + 1 + countLines(line.children), 0)
     const recordQuotationRead = (workOrderId, quotes) => {
       recordWorkOrderOrderRead(workOrderId, quotes)
+      if (selectedOrderMaterialPriceComparisonRequested && workOrderId === selectedCatalogWorkOrderId) {
+        selectedWorkOrderOrderReadState = operationState(quotes)
+        selectedWorkOrderOrderPage = quotes.state === 'succeeded' && quotes.data ? quotes.data : null
+        for (const order of selectedWorkOrderOrderPage?.items ?? []) {
+          for (const group of order.groups) {
+            for (const line of group.lines) {
+              const spuId = line.kind === 'material' ? line.identity.spuId : undefined
+              if (typeof spuId === 'string' && /^[A-Za-z0-9_-]{1,100}$/.test(spuId)) {
+                selectedOrderDirectMaterialSpuIds.add(spuId)
+              }
+            }
+          }
+        }
+      }
       if (quotes.state !== 'succeeded' || !quotes.data) return
       responseCounts.workOrderScopedTypeOneQuoteRows += quotes.data.items.length
       responseCounts.quotesMatchingSampledWorkOrders += quotes.data.items.filter((quote) => quote.serviceAppointmentId === workOrderId).length
@@ -1308,14 +1333,20 @@ async function run() {
       responseCounts.catalogContextDiscovery.distinctPlaceOrderContextsSeen = contextSelector.distinctCount
     }
 
-    if (!catalogAuditOptions.catalogContextOnly && !catalogAuditOptions.activeOrderFieldsOnly
-      && selectedCatalogWorkOrderId && !orderReadStatesByWorkOrder.has(selectedCatalogWorkOrderId)) {
-      stage = 'current_place_order_workorder_quotation_read'
-      if (authIdentityChanged() || !selectedWorkOrderIsCurrent()) {
-        orderReadStatesByWorkOrder.set(selectedCatalogWorkOrderId, 'FAILED_TERMINAL')
+    if ((!catalogAuditOptions.catalogContextOnly && !catalogAuditOptions.activeOrderFieldsOnly)
+      || selectedOrderMaterialPriceComparisonRequested) {
+      if (!selectedCatalogWorkOrderId || orderReadStatesByWorkOrder.has(selectedCatalogWorkOrderId)) {
+        // The selected current WorkOrder was already read during the initial page pass,
+        // or no eligible current place_order WorkOrder was found.
       } else {
-        const quotes = await orderApi.listTypeOneOrdersForWorkOrder(selectedCatalogWorkOrderId, 3)
-        recordQuotationRead(selectedCatalogWorkOrderId, quotes)
+        stage = 'current_place_order_workorder_quotation_read'
+        if (authIdentityChanged() || !selectedWorkOrderIsCurrent()) {
+          orderReadStatesByWorkOrder.set(selectedCatalogWorkOrderId, 'FAILED_TERMINAL')
+          if (selectedOrderMaterialPriceComparisonRequested) selectedWorkOrderOrderReadState = 'FAILED_TERMINAL'
+        } else {
+          const quotes = await orderApi.listTypeOneOrdersForWorkOrder(selectedCatalogWorkOrderId, 3)
+          recordQuotationRead(selectedCatalogWorkOrderId, quotes)
+        }
       }
     }
 
@@ -1416,6 +1447,48 @@ async function run() {
             }
           }
         }
+      } else if (selectedOrderMaterialPriceComparisonRequested) {
+        // Read only the current direct-Material selector and exact SPUs found
+        // in this WorkOrder's bounded type-1 Order page.
+        stage = 'selected_order_direct_material_catalog_pages'
+        const materialCatalog = await readEntireCatalog(
+          'material', selectedCatalogContext, catalogApi.listMaterials.bind(catalogApi), (item) => {
+            directMaterialSpuIds.add(item.id)
+            addCatalogSpuIdentity(item.id)
+            selectedContextDirectMaterialRows.push(item)
+          },
+        )
+        const selectedDirectMaterialSpus = [...selectedOrderDirectMaterialSpuIds]
+          .filter((id) => directMaterialSpuIds.has(id))
+        selectedOrderDirectMaterialSpusInCatalog = selectedDirectMaterialSpus.length
+        if (materialCatalog.complete && selectedDirectMaterialSpus.length > 0) {
+          stage = 'selected_order_direct_material_sales_field_read'
+          const saleFields = await catalogApi.listMaterialSalesFields(selectedCatalogContext)
+          responseCounts.materialSalesAttributes = {
+            state: operationState(saleFields),
+            fields: saleFields.state === 'succeeded' && saleFields.data ? saleFields.data.items.length : 0,
+            options: saleFields.state === 'succeeded' && saleFields.data
+              ? saleFields.data.items.reduce((count, field) => count + field.options.length, 0) : 0,
+          }
+          if (saleFields.state === 'succeeded' && saleFields.data) {
+            stage = 'selected_order_direct_material_sku_pages'
+            await readSelectableSkuCatalog(
+              catalogApi,
+              selectedCatalogContext,
+              selectedDirectMaterialSpus,
+              new Map(),
+              saleFields.data.items.map(field => field.name),
+            )
+          } else {
+            responseCounts.selectableSkuCatalog.reason = 'MATERIAL_SALES_FIELDS_READ_FAILED'
+          }
+        } else {
+          responseCounts.materialSalesAttributes.state = materialCatalog.complete ? 'NOT_REQUIRED' : 'NOT_RUN'
+          responseCounts.selectableSkuCatalog.complete = materialCatalog.complete
+          responseCounts.selectableSkuCatalog.reason = materialCatalog.complete
+            ? 'NO_ORDER_DIRECT_MATERIAL_SPUS_IN_CURRENT_CATALOG'
+            : 'DIRECT_MATERIAL_CATALOG_INCOMPLETE'
+        }
       } else {
       stage = 'r1_catalog_filter_code_options'
       const filterOptions = await catalogApi.listCatalogFilterOptions(selectedCatalogContext)
@@ -1435,6 +1508,7 @@ async function run() {
         ['material', catalogApi.listMaterials.bind(catalogApi), (item) => {
           directMaterialSpuIds.add(item.id)
           addCatalogSpuIdentity(item.id)
+          selectedContextDirectMaterialRows.push(item)
         }],
         ['measure', catalogApi.listMeasures.bind(catalogApi), () => {}],
       ]
@@ -1620,15 +1694,53 @@ async function run() {
       }
     }
 
+    const selectedPriceComparisonCatalogReadComplete = responseCounts.catalogContextVerified
+      && responseCounts.catalogItemsByKind.material.complete
+      && (selectedOrderDirectMaterialSpusInCatalog === 0
+        || responseCounts.materialSalesAttributes.state === 'SUCCEEDED'
+          && responseCounts.selectableSkuCatalog.complete)
+      && blockedUnexpectedNetworkRequests === 0
+      && !authIdentityChanged()
+      && selectedWorkOrderIsCurrent()
+
+    let selectedWorkOrderOrderPriceComparison = { state: 'NOT_REQUESTED' }
+    if (selectedOrderMaterialPriceComparisonRequested) {
+      if (!selectedCatalogWorkOrderId) {
+        selectedWorkOrderOrderPriceComparison = { state: 'NO_SELECTED_PLACE_ORDER_WORK_ORDER' }
+      } else if (selectedWorkOrderOrderReadState !== 'SUCCEEDED' || !selectedWorkOrderOrderPage
+        || !selectedPriceComparisonCatalogReadComplete
+        || authIdentityChanged() || !selectedWorkOrderIsCurrent()) {
+        selectedWorkOrderOrderPriceComparison = {
+          state: 'INCOMPLETE_INPUTS',
+          orderReadState: selectedWorkOrderOrderReadState,
+          materialCatalogComplete: responseCounts.catalogItemsByKind.material.complete,
+        }
+      } else {
+        const orderListTruncated = selectedWorkOrderOrderPage.totalCount !== undefined
+          ? selectedWorkOrderOrderPage.totalCount > selectedWorkOrderOrderPage.items.length
+          : selectedWorkOrderOrderPage.items.length >= 3
+        selectedWorkOrderOrderPriceComparison = summarizeDirectMaterialPriceSnapshots({
+          expectedWorkOrderId: selectedCatalogWorkOrderId,
+          orders: selectedWorkOrderOrderPage.items,
+          catalogMaterials: selectedContextDirectMaterialRows,
+          activeSkuRows,
+          orderListTruncated,
+        })
+      }
+    }
+
     projectSelectedWorkOrderOrderLineage()
 
-    const catalogReadComplete = responseCounts.catalogContextVerified
+    const fullCatalogReadComplete = responseCounts.catalogContextVerified
       && Object.values(responseCounts.catalogItemsByKind).every(result => result.complete)
       && responseCounts.packageDetails.complete
       && responseCounts.catalogFilterOptions.state === 'SUCCEEDED'
       && responseCounts.materialSalesAttributes.state === 'SUCCEEDED'
       && responseCounts.selectableSkuCatalog.complete
       && blockedUnexpectedNetworkRequests === 0
+    const catalogReadComplete = selectedOrderMaterialPriceComparisonRequested
+      ? selectedPriceComparisonCatalogReadComplete
+      : fullCatalogReadComplete
     const contextSearchExhaustedWithoutMatch = !selectedCatalogContext
       && catalogAuditOptions.catalogContextOnly
       && discoveryState === 'ROLE_VISIBLE_WORK_ORDERS_EXHAUSTED'
@@ -1651,7 +1763,9 @@ async function run() {
     const auditComplete = catalogAuditOptions.activeOrderFieldsOnly
       ? activeOrderFieldsComplete
       : catalogAuditOptions.catalogContextOnly
-      ? Boolean(catalogReadComplete || contextSearchExhaustedWithoutMatch)
+      ? Boolean((catalogReadComplete || contextSearchExhaustedWithoutMatch)
+        && (!selectedOrderMaterialPriceComparisonRequested
+          || selectedWorkOrderOrderReadState === 'SUCCEEDED' && selectedWorkOrderOrderPage !== null))
       : catalogReadComplete
       && ['SUCCEEDED_WITH_ORDER', 'SUCCEEDED_EMPTY'].includes(responseCounts.sampledOrderMaterialLineage.state)
       && ['MATCH_FOUND', 'NO_SKU_AND_SPU_ORDER_IN_ROLE_VISIBLE_SCOPE'].includes(orderIdentitySearchState)
@@ -1685,6 +1799,7 @@ async function run() {
       workOrderDetails: details,
       routeCounts,
       responseCounts,
+      selectedWorkOrderOrderPriceComparison,
       blockedUnexpectedNetworkRequests,
       blockedUnexpectedRoutes,
       blockedUnexpectedStages,

@@ -2,6 +2,7 @@ export interface CatalogContextAuditOptions {
   readonly catalogContextOrdinal: number
   readonly catalogContextOnly: boolean
   readonly activeOrderFieldsOnly: boolean
+  readonly compareSelectedOrderMaterialPrices: boolean
 }
 
 export interface CatalogContextSelection {
