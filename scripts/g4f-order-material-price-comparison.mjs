@@ -15,7 +15,10 @@ export function summarizeDirectMaterialPriceSnapshots({
     return Object.freeze({ state: 'UNKNOWN_INVALID_INPUT', orders: 0, directMaterialLines: 0,
       catalogSpuMatches: 0, comparableLines: 0, equalToCurrent: 0, differentFromCurrent: 0,
       unknownLines: 0, skuOrAmbiguousIdentity: 0, currentSkuVariantAmbiguity: 0,
-      duplicateCatalogIdentities: 0, identityConflicts: 0, orderListTruncated: false })
+      duplicateCatalogIdentities: 0, rowIdFallbackCatalogIdMatches: 0,
+      spuIdentitySources: { orderLine: 0, embeddedProduct: 0, embeddedMaterial: 0,
+        materialReference: 0, rowIdFallback: 0, missing: 0, other: 0 },
+      identityConflicts: 0, orderListTruncated: false })
   }
 
   const catalogById = new Map()
@@ -42,6 +45,11 @@ export function summarizeDirectMaterialPriceSnapshots({
   let skuOrAmbiguousIdentity = 0
   let currentSkuVariantAmbiguity = 0
   let duplicateCatalogIdentities = 0
+  let rowIdFallbackCatalogIdMatches = 0
+  const spuIdentitySources = {
+    orderLine: 0, embeddedProduct: 0, embeddedMaterial: 0,
+    materialReference: 0, rowIdFallback: 0, missing: 0, other: 0,
+  }
 
   for (const order of orders) {
     if (!order || order.type !== 1 || order.serviceAppointmentId !== expectedWorkOrderId) {
@@ -55,14 +63,27 @@ export function summarizeDirectMaterialPriceSnapshots({
         if (line?.kind !== 'material') continue
         directMaterialLines += 1
         const spuId = line.identity?.spuId
+        const source = line.identity?.spuIdSource
+        if (source === 'order_line_spu') spuIdentitySources.orderLine += 1
+        else if (source === 'embedded_product_spu') spuIdentitySources.embeddedProduct += 1
+        else if (source === 'embedded_material_id') spuIdentitySources.embeddedMaterial += 1
+        else if (source === 'material_reference') spuIdentitySources.materialReference += 1
+        else if (source === 'row_id_fallback') spuIdentitySources.rowIdFallback += 1
+        else if (source === undefined) spuIdentitySources.missing += 1
+        else spuIdentitySources.other += 1
         if (typeof spuId !== 'string' || !spuId.trim()) {
           unknownLines += 1
           continue
         }
         if (!['order_line_spu', 'embedded_product_spu', 'embedded_material_id', 'material_reference']
-          .includes(line.identity?.spuIdSource)) {
+          .includes(source)) {
           // A projected row `_id` fallback can be a variant row ID. Only an
           // explicit SPU/reference field may establish catalog identity.
+          if (source === 'row_id_fallback' && (catalogById.get(spuId) ?? []).length === 1) {
+            // Record an ID coincidence for diagnostics without promoting it
+            // to an SPU identity or a comparable price snapshot.
+            rowIdFallbackCatalogIdMatches += 1
+          }
           unknownLines += 1
           continue
         }
@@ -120,6 +141,8 @@ export function summarizeDirectMaterialPriceSnapshots({
     skuOrAmbiguousIdentity,
     currentSkuVariantAmbiguity,
     duplicateCatalogIdentities,
+    rowIdFallbackCatalogIdMatches,
+    spuIdentitySources,
     identityConflicts,
     orderListTruncated: orderListTruncated === true,
   })

@@ -7,10 +7,11 @@ import {
   isAllowedR1SelectablePackageSkuPageRequest,
 } from './r1-selectable-catalog-read-guard.mjs'
 import {
-  createPlaceOrderCatalogContextSelector,
+  createRoleVisibleCatalogContextSelector,
   parseCatalogContextAuditArgs,
 } from './g4f-prod-read-context-scope.mjs'
 import { workOrderOrderLineageReadState } from './g4f-prod-read-summary.mjs'
+import { inspectDirectMaterialOrderPage } from './g4f-direct-material-order-discovery.mjs'
 import { summarizeDirectMaterialPriceSnapshots } from './g4f-order-material-price-comparison.mjs'
 import { summarizePackagePriceSnapshots } from './g4f-order-package-price-comparison.mjs'
 import {
@@ -80,6 +81,7 @@ let selectedCatalogContextOrdinal = null
 let activeOrderFieldsOnlyRequested = false
 let selectedOrderMaterialPriceComparisonRequested = false
 let selectedOrderPackagePriceComparisonRequested = false
+let directMaterialOrderDiscoveryRequested = false
 let activeOrderCodeProviderIds = []
 let activeOrderCascadeProviderIds = []
 let expectedOrderCascadeTenantId = null
@@ -208,6 +210,18 @@ const responseCounts = {
     orderListsTruncatedAtThree: 0,
     matchedOrderIsCurrentPlaceOrder: false,
   },
+  directMaterialOrderDiscovery: {
+    state: 'NOT_RUN',
+    roleVisibleWorkOrdersInspected: 0,
+    roleVisibleCatalogContextsQueried: 0,
+    distinctRoleVisibleCatalogContextsSeen: 0,
+    workOrdersWithoutCatalogContext: 0,
+    orderListsRead: 0,
+    orderRowsRead: 0,
+    orderListsTruncatedAtThree: 0,
+    directMaterialCandidates: 0,
+    workOrderLimit: MAX_ORDER_SEARCH_WORK_ORDERS,
+  },
 }
 
 function isApprovedWorkOrderQuoteQuery(request) {
@@ -273,7 +287,8 @@ function recordSafeRequest(url, request, apiBaseUrl) {
   }
   if (relativePath === 'basic/order/query') {
     if (routeCounts.quotationList >= MAX_QUOTATION_LIST_READS || !isApprovedWorkOrderQuoteQuery(request)) return null
-    if ((selectedOrderMaterialPriceComparisonRequested || selectedOrderPackagePriceComparisonRequested)
+    if (!directMaterialOrderDiscoveryRequested
+      && (selectedOrderMaterialPriceComparisonRequested || selectedOrderPackagePriceComparisonRequested)
       && (routeCounts.quotationList !== 0
         || new URLSearchParams(request.data).get('is:serviceAppointmentId|string#and') !== selectedCatalogWorkOrderId)) return null
     routeCounts.quotationList += 1
@@ -955,6 +970,11 @@ async function run() {
   activeOrderFieldsOnlyRequested = catalogAuditOptions.activeOrderFieldsOnly
   selectedOrderMaterialPriceComparisonRequested = catalogAuditOptions.compareSelectedOrderMaterialPrices
   selectedOrderPackagePriceComparisonRequested = catalogAuditOptions.compareSelectedOrderPackagePrices
+  directMaterialOrderDiscoveryRequested = catalogAuditOptions.discoverDirectMaterialOrder
+  if (directMaterialOrderDiscoveryRequested) {
+    responseCounts.catalogContextDiscovery.requestedOrdinal = null
+    responseCounts.directMaterialOrderDiscovery.state = 'SEARCHING_ROLE_VISIBLE_ORDER_SCOPE'
+  }
   const authorizedRead = argumentsWithoutSeparator.includes('--authorize-bounded-prod-read')
   const preflightOnly = argumentsWithoutSeparator.includes('--preflight-only')
   if (!authorizedRead && !preflightOnly) {
@@ -967,8 +987,9 @@ async function run() {
     }))
     return
   }
-  const contextSelector = createPlaceOrderCatalogContextSelector(catalogAuditOptions.catalogContextOrdinal)
-  responseCounts.catalogContextDiscovery.requestedOrdinal = catalogAuditOptions.catalogContextOrdinal
+  const contextSelector = createRoleVisibleCatalogContextSelector(catalogAuditOptions.catalogContextOrdinal)
+  responseCounts.catalogContextDiscovery.requestedOrdinal = directMaterialOrderDiscoveryRequested
+    ? null : catalogAuditOptions.catalogContextOrdinal
   const root = process.cwd()
   const vite = await createServer({
     configFile: false,
@@ -1127,81 +1148,6 @@ async function run() {
         && workOrderAuthorityById.get(workOrderId)?.isWorkOrderListedForCurrentSession?.(workOrderId) === true
         && !authIdentityChanged(),
     )
-
-    stage = 'work_order_list_read'
-    const workOrders = await technicianApi.listWorkOrders({ page: 1, pageSize: 3 })
-    responseCounts.workOrderListRows = workOrders.state === 'succeeded' && workOrders.data ? workOrders.data.items.length : 0
-    responseCounts.workOrderPagesRead = workOrders.state === 'succeeded' && workOrders.data ? 1 : 0
-    let lastWorkOrderPageRead = workOrders.state === 'succeeded' && workOrders.data ? 1 : 0
-    const firstPageBounded = Boolean(workOrders.data && workOrders.data.items.length <= 3)
-    if (firstPageBounded) {
-      for (const workOrder of workOrders.data?.items ?? []) {
-        const id = String(workOrder.id)
-        listedWorkOrderIds.add(id)
-        workOrderAuthorityById.set(id, technicianApi)
-      }
-    }
-
-    const details = []
-    const pageOneWorkOrders = firstPageBounded ? workOrders.data?.items ?? [] : []
-    const selectedWorkOrderIds = new Set()
-    const workOrderPageIds = new Set()
-    let discoveryState = workOrders.state === 'succeeded' && workOrders.data ? 'SEARCHING' : operationState(workOrders)
-    let catalogContextDiscoveryIncomplete = false
-    const considerCatalogContext = (workOrder, detail) => {
-      if (detail.state !== 'succeeded' || !detail.data) return false
-      const projection = detailWorkflowProjectionFor(detail.data, session)
-      const canPlaceOrder = projection.currentTask?.actionIntent === 'place_order'
-        && projection.currentTask.execution === 'enabled'
-      const context = detail.data.quotationCatalogContext
-      const completeContext = context?.workOrderId === String(workOrder.id)
-        && typeof context.serviceType === 'string' && Boolean(context.serviceType.trim())
-        && typeof context.sourceType === 'string' && Boolean(context.sourceType.trim())
-      if (!canPlaceOrder || !completeContext) return false
-      const selection = contextSelector.consider(context, String(workOrder.id))
-      responseCounts.catalogContextDiscovery.distinctPlaceOrderContextsSeen = contextSelector.distinctCount
-      if (!selection.selected) return false
-      selectedCatalogContext = context
-      selectedCatalogWorkOrderId = String(workOrder.id)
-      selectedCatalogContextOrdinal = selection.ordinal
-      responseCounts.catalogContextDiscovery.selectedOrdinal = selection.ordinal
-      selectedWorkOrderIsCurrent = () => technicianApi.isWorkOrderListedForCurrentSession?.(selectedCatalogWorkOrderId) === true
-      return true
-    }
-
-    for (const workOrder of pageOneWorkOrders) {
-      const id = String(workOrder.id)
-      selectedWorkOrderIds.add(id)
-      workOrderPageIds.add(id)
-    }
-    for (const [index, workOrder] of pageOneWorkOrders.entries()) {
-      stage = `work_order_detail_read_${index + 1}`
-      const detail = await technicianApi.getWorkOrderDetail(workOrder.id)
-      if (detail.state !== 'succeeded' || !detail.data) {
-        responseCounts.workOrderDetailsFailed += 1
-        details.push({ state: operationState(detail), activePlaceOrder: false, catalogContext: false })
-        catalogContextDiscoveryIncomplete = true
-        discoveryState = 'WORK_ORDER_DETAIL_READ_INCOMPLETE'
-        break
-      }
-      responseCounts.workOrderDetailsSucceeded += 1
-      const activePlaceOrderNodes = (detail.data.workflowNodes ?? []).filter((node) => node.category === 'placeOrder' && node.lifecycle === 'active')
-      responseCounts.activePlaceOrderNodes += activePlaceOrderNodes.length
-      stage = `workflow_projection_${index + 1}`
-      const projection = detailWorkflowProjectionFor(detail.data, session)
-      const currentActionIsPlaceOrder = projection.currentTask?.actionIntent === 'place_order' && projection.currentTask.execution === 'enabled'
-      if (currentActionIsPlaceOrder) responseCounts.currentActionPlaceOrder += 1
-      const hasCatalogContext = Boolean(detail.data.quotationCatalogContext?.serviceType)
-      if (hasCatalogContext) responseCounts.detailsWithCatalogContext += 1
-      details.push({
-        state: 'SUCCEEDED',
-        activePlaceOrder: activePlaceOrderNodes.length > 0,
-        currentActionPlaceOrder: currentActionIsPlaceOrder,
-        catalogContext: hasCatalogContext,
-      })
-      if (!selectedCatalogContext && considerCatalogContext(workOrder, detail)) break
-    }
-
     const hasCatalogIdentity = (lines) => lines.some((line) => Boolean(line.identity.skuId || line.identity.spuId) || hasCatalogIdentity(line.children))
     const countLines = (lines) => lines.reduce((count, line) => count + 1 + countLines(line.children), 0)
     const recordQuotationRead = (workOrderId, quotes) => {
@@ -1235,6 +1181,165 @@ async function run() {
       responseCounts.recognizedQuotationLines += quotes.data.items.reduce((count, quote) => count + quote.groups.reduce((groupCount, group) => groupCount + countLines(group.lines), 0), 0)
       responseCounts.quotesWithPdfField += quotes.data.items.filter((quote) => quote.pdfState === 'present_no_access').length
     }
+
+    stage = 'work_order_list_read'
+    const workOrders = await technicianApi.listWorkOrders({ page: 1, pageSize: 3 })
+    responseCounts.workOrderListRows = workOrders.state === 'succeeded' && workOrders.data ? workOrders.data.items.length : 0
+    responseCounts.workOrderPagesRead = workOrders.state === 'succeeded' && workOrders.data ? 1 : 0
+    let lastWorkOrderPageRead = workOrders.state === 'succeeded' && workOrders.data ? 1 : 0
+    const firstPageBounded = Boolean(workOrders.data && workOrders.data.items.length <= 3)
+    if (firstPageBounded) {
+      for (const workOrder of workOrders.data?.items ?? []) {
+        const id = String(workOrder.id)
+        listedWorkOrderIds.add(id)
+        workOrderAuthorityById.set(id, technicianApi)
+      }
+    }
+
+    const details = []
+    const pageOneWorkOrders = firstPageBounded ? workOrders.data?.items ?? [] : []
+    const selectedWorkOrderIds = new Set()
+    const workOrderPageIds = new Set()
+    let discoveryState = workOrders.state === 'succeeded' && workOrders.data ? 'SEARCHING' : operationState(workOrders)
+    let catalogContextDiscoveryIncomplete = false
+    let roleVisibleWorkOrdersInspected = 0
+    const quotationCatalogContextFor = (workOrder, detail) => {
+      if (detail.state !== 'succeeded' || !detail.data) return null
+      const context = detail.data.quotationCatalogContext
+      const completeContext = context?.workOrderId === String(workOrder.id)
+        && typeof context.serviceType === 'string' && Boolean(context.serviceType.trim())
+        && typeof context.sourceType === 'string' && Boolean(context.sourceType.trim())
+      if (!completeContext) return null
+      return context
+    }
+    const placeOrderContextFor = (workOrder, detail) => {
+      if (detail.state !== 'succeeded' || !detail.data) return null
+      const projection = detailWorkflowProjectionFor(detail.data, session)
+      const canPlaceOrder = projection.currentTask?.actionIntent === 'place_order'
+        && projection.currentTask.execution === 'enabled'
+      return canPlaceOrder ? quotationCatalogContextFor(workOrder, detail) : null
+    }
+    const selectCatalogContext = (workOrder, context, selection, authorizationApi) => {
+      selectedCatalogContext = context
+      selectedCatalogWorkOrderId = String(workOrder.id)
+      selectedCatalogContextOrdinal = selection.ordinal
+      responseCounts.catalogContextDiscovery.selectedOrdinal = selection.ordinal
+      selectedWorkOrderIsCurrent = () => authorizationApi.isWorkOrderListedForCurrentSession?.(selectedCatalogWorkOrderId) === true
+    }
+    const considerCatalogContext = (workOrder, detail) => {
+      const context = placeOrderContextFor(workOrder, detail)
+      if (!context) return false
+      const selection = contextSelector.consider(context, String(workOrder.id))
+      responseCounts.catalogContextDiscovery.distinctPlaceOrderContextsSeen = contextSelector.distinctCount
+      if (!selection.selected) return false
+      selectCatalogContext(workOrder, context, selection, technicianApi)
+      return true
+    }
+    const inspectDirectMaterialContextOrder = async (workOrder, detail, authorizationApi) => {
+      const context = quotationCatalogContextFor(workOrder, detail)
+      const workOrderId = String(workOrder.id)
+      const selection = context ? contextSelector.consider(context, workOrderId) : null
+      if (context) {
+        responseCounts.directMaterialOrderDiscovery.distinctRoleVisibleCatalogContextsSeen = contextSelector.distinctCount
+        responseCounts.directMaterialOrderDiscovery.roleVisibleCatalogContextsQueried += 1
+      } else {
+        responseCounts.directMaterialOrderDiscovery.workOrdersWithoutCatalogContext += 1
+      }
+      if (authIdentityChanged() || !listedWorkOrderIds.has(workOrderId)
+        || authorizationApi.isWorkOrderListedForCurrentSession?.(workOrderId) !== true) {
+        responseCounts.directMaterialOrderDiscovery.state = 'AUTHORIZATION_SCOPE_UNAVAILABLE'
+        catalogContextDiscoveryIncomplete = true
+        discoveryState = 'ROLE_LIST_AUTHORIZATION_UNAVAILABLE'
+        return 'stop'
+      }
+      stage = `role_visible_direct_material_discovery_${responseCounts.directMaterialOrderDiscovery.orderListsRead + 1}`
+      const quotes = await orderApi.listTypeOneOrdersForWorkOrder(workOrderId, 3)
+      responseCounts.directMaterialOrderDiscovery.orderListsRead += 1
+      if (quotes.state !== 'succeeded' || !quotes.data) {
+        responseCounts.directMaterialOrderDiscovery.state = 'ORDER_READ_INCOMPLETE'
+        catalogContextDiscoveryIncomplete = true
+        discoveryState = 'ORDER_READ_INCOMPLETE'
+        return 'stop'
+      }
+      const inspection = inspectDirectMaterialOrderPage(workOrderId, quotes.data)
+      responseCounts.directMaterialOrderDiscovery.orderRowsRead += inspection.orders
+      const orderListTruncated = quotes.data.totalCount !== undefined
+        ? quotes.data.totalCount > quotes.data.items.length
+        : quotes.data.items.length >= 3
+      if (orderListTruncated) responseCounts.directMaterialOrderDiscovery.orderListsTruncatedAtThree += 1
+      if (inspection.state === 'ORDER_ASSOCIATION_CONFLICT') {
+        responseCounts.directMaterialOrderDiscovery.state = 'ORDER_ASSOCIATION_CONFLICT'
+        catalogContextDiscoveryIncomplete = true
+        discoveryState = 'ORDER_ASSOCIATION_CONFLICT'
+        return 'stop'
+      }
+      if (inspection.state === 'UNKNOWN_INVALID_INPUT') {
+        responseCounts.directMaterialOrderDiscovery.state = 'INVALID_ORDER_PAGE'
+        catalogContextDiscoveryIncomplete = true
+        discoveryState = 'ORDER_PAGE_INVALID'
+        return 'stop'
+      }
+      if (inspection.directMaterialLines === 0) {
+        recordQuotationRead(workOrderId, quotes)
+        return 'continue'
+      }
+
+      responseCounts.directMaterialOrderDiscovery.directMaterialCandidates += 1
+      if (!context || !selection) {
+        responseCounts.directMaterialOrderDiscovery.state = 'DIRECT_MATERIAL_FOUND_CONTEXT_UNKNOWN'
+        catalogContextDiscoveryIncomplete = true
+        discoveryState = 'DIRECT_MATERIAL_FOUND_CONTEXT_UNKNOWN'
+        return 'stop'
+      }
+      responseCounts.directMaterialOrderDiscovery.state = 'DIRECT_MATERIAL_ORDER_FOUND'
+      selectCatalogContext(workOrder, context, selection, authorizationApi)
+      discoveryState = 'DIRECT_MATERIAL_ORDER_FOUND'
+      recordQuotationRead(workOrderId, quotes)
+      return 'found'
+    }
+
+    for (const workOrder of pageOneWorkOrders) {
+      const id = String(workOrder.id)
+      selectedWorkOrderIds.add(id)
+      workOrderPageIds.add(id)
+    }
+    for (const [index, workOrder] of pageOneWorkOrders.entries()) {
+      roleVisibleWorkOrdersInspected += 1
+      if (directMaterialOrderDiscoveryRequested) {
+        responseCounts.directMaterialOrderDiscovery.roleVisibleWorkOrdersInspected = roleVisibleWorkOrdersInspected
+      }
+      stage = `work_order_detail_read_${index + 1}`
+      const detail = await technicianApi.getWorkOrderDetail(workOrder.id)
+      if (detail.state !== 'succeeded' || !detail.data) {
+        responseCounts.workOrderDetailsFailed += 1
+        if (!directMaterialOrderDiscoveryRequested) details.push({ state: operationState(detail), activePlaceOrder: false, catalogContext: false })
+        catalogContextDiscoveryIncomplete = true
+        discoveryState = 'WORK_ORDER_DETAIL_READ_INCOMPLETE'
+        break
+      }
+      responseCounts.workOrderDetailsSucceeded += 1
+      const activePlaceOrderNodes = (detail.data.workflowNodes ?? []).filter((node) => node.category === 'placeOrder' && node.lifecycle === 'active')
+      responseCounts.activePlaceOrderNodes += activePlaceOrderNodes.length
+      stage = `workflow_projection_${index + 1}`
+      const projection = detailWorkflowProjectionFor(detail.data, session)
+      const currentActionIsPlaceOrder = projection.currentTask?.actionIntent === 'place_order' && projection.currentTask.execution === 'enabled'
+      if (currentActionIsPlaceOrder) responseCounts.currentActionPlaceOrder += 1
+      const hasCatalogContext = Boolean(detail.data.quotationCatalogContext?.serviceType)
+      if (hasCatalogContext) responseCounts.detailsWithCatalogContext += 1
+      if (!directMaterialOrderDiscoveryRequested) {
+        details.push({
+          state: 'SUCCEEDED',
+          activePlaceOrder: activePlaceOrderNodes.length > 0,
+          currentActionPlaceOrder: currentActionIsPlaceOrder,
+          catalogContext: hasCatalogContext,
+        })
+      }
+      if (!selectedCatalogContext && directMaterialOrderDiscoveryRequested) {
+        const discovery = await inspectDirectMaterialContextOrder(workOrder, detail, technicianApi)
+        if (discovery === 'found' || discovery === 'stop') break
+      } else if (!selectedCatalogContext && considerCatalogContext(workOrder, detail)) break
+    }
+
     const pairedSkuAndSpuLine = (workOrderId) => {
       const lineage = orderLineageByWorkOrder.get(workOrderId)
       return Boolean(lineage && lineage.linesWithBothIds > 0)
@@ -1257,10 +1362,15 @@ async function run() {
     } else if (workOrders.state === 'succeeded' && firstPageExhausted) {
       if (!catalogContextDiscoveryIncomplete) discoveryState = 'ROLE_VISIBLE_WORK_ORDERS_EXHAUSTED'
     }
+    const maxWorkOrderPages = directMaterialOrderDiscoveryRequested
+      ? MAX_ORDER_SEARCH_PAGES
+      : MAX_WORK_ORDER_PAGES
     for (let page = 2; !selectedCatalogContext && !catalogContextDiscoveryIncomplete && workOrders.state === 'succeeded'
       && workOrders.data && !firstPageExhausted && workOrders.data.items.length <= 3
-      && page <= MAX_WORK_ORDER_PAGES; page += 1) {
-      stage = `role_scoped_work_order_page_${page}`
+      && page <= maxWorkOrderPages; page += 1) {
+      stage = directMaterialOrderDiscoveryRequested
+        ? `role_scoped_direct_material_work_order_page_${page}`
+        : `role_scoped_work_order_page_${page}`
       technicianApi = createTechnicianApi()
       const pageResult = await technicianApi.listWorkOrders({ page, pageSize: 3 })
       if (pageResult.state !== 'succeeded' || !pageResult.data || authIdentityChanged()) {
@@ -1273,11 +1383,14 @@ async function run() {
       lastWorkOrderPageRead = page
       if ((catalogAuditOptions.catalogContextOnly || catalogAuditOptions.activeOrderFieldsOnly) && page % 10 === 0) {
         console.error(JSON.stringify({
-          progress: 'ROLE_VISIBLE_PLACE_ORDER_CONTEXT_SCAN',
+          progress: directMaterialOrderDiscoveryRequested
+            ? 'ROLE_VISIBLE_DIRECT_MATERIAL_ORDER_SCAN'
+            : 'ROLE_VISIBLE_PLACE_ORDER_CONTEXT_SCAN',
           workOrderPagesRead: responseCounts.workOrderPagesRead,
           workOrderDetailsRead: responseCounts.workOrderDetailsSucceeded,
           distinctContextsSeen: contextSelector.distinctCount,
-          requestedOrdinal: catalogAuditOptions.catalogContextOrdinal,
+          requestedOrdinal: directMaterialOrderDiscoveryRequested
+            ? null : catalogAuditOptions.catalogContextOrdinal,
         }))
       }
       if (pageResult.data.items.length > 3) {
@@ -1303,6 +1416,27 @@ async function run() {
       }
       let detailReadFailed = false
       for (const [index, workOrder] of pageResult.data.items.entries()) {
+        if (directMaterialOrderDiscoveryRequested
+          && roleVisibleWorkOrdersInspected >= MAX_ORDER_SEARCH_WORK_ORDERS) {
+          const knownTotalWithinBound = pageResult.data.totalCount !== undefined
+            && pageResult.data.totalCount <= roleVisibleWorkOrdersInspected
+          const shortFinalPage = pageResult.data.totalCount === undefined
+            && pageResult.data.items.length < 3 && index >= pageResult.data.items.length
+          if (knownTotalWithinBound || shortFinalPage) {
+            discoveryState = 'ROLE_VISIBLE_WORK_ORDERS_EXHAUSTED'
+            roleVisibleWorkOrdersExhausted = true
+          } else {
+            discoveryState = 'DIRECT_MATERIAL_SEARCH_WORK_ORDER_LIMIT_REACHED'
+            responseCounts.directMaterialOrderDiscovery.state = 'WORK_ORDER_LIMIT_REACHED'
+            catalogContextDiscoveryIncomplete = true
+          }
+          detailReadFailed = true
+          break
+        }
+        roleVisibleWorkOrdersInspected += 1
+        if (directMaterialOrderDiscoveryRequested) {
+          responseCounts.directMaterialOrderDiscovery.roleVisibleWorkOrdersInspected = roleVisibleWorkOrdersInspected
+        }
         stage = `role_scoped_work_order_detail_${page}_${index + 1}`
         const detail = await technicianApi.getWorkOrderDetail(workOrder.id)
         if (detail.state !== 'succeeded' || !detail.data) {
@@ -1320,12 +1454,16 @@ async function run() {
           && projection.currentTask.execution === 'enabled'
         if (canPlaceOrder) responseCounts.currentActionPlaceOrder += 1
         if (detail.data.quotationCatalogContext?.serviceType) responseCounts.detailsWithCatalogContext += 1
-        if (considerCatalogContext(workOrder, detail, details.length + page * 3 + index)) {
+        if (directMaterialOrderDiscoveryRequested) {
+          const result = await inspectDirectMaterialContextOrder(workOrder, detail, technicianApi)
+          if (result === 'found' || result === 'stop') break
+        } else if (considerCatalogContext(workOrder, detail, details.length + page * 3 + index)) {
           discoveryState = 'PLACE_ORDER_CONTEXT_FOUND'
           break
         }
       }
       if (selectedCatalogContext) break
+      if (catalogContextDiscoveryIncomplete) break
       if (detailReadFailed) {
         break
       }
@@ -1336,7 +1474,31 @@ async function run() {
         roleVisibleWorkOrdersExhausted = true
         break
       }
-      if (page === MAX_WORK_ORDER_PAGES) discoveryState = 'WORK_ORDER_PAGE_LIMIT_REACHED'
+      if (page === maxWorkOrderPages && !selectedCatalogContext && !roleVisibleWorkOrdersExhausted) {
+        discoveryState = directMaterialOrderDiscoveryRequested
+          ? 'DIRECT_MATERIAL_SEARCH_WORK_ORDER_LIMIT_REACHED'
+          : 'WORK_ORDER_PAGE_LIMIT_REACHED'
+        if (directMaterialOrderDiscoveryRequested) {
+          responseCounts.directMaterialOrderDiscovery.state = 'WORK_ORDER_LIMIT_REACHED'
+          catalogContextDiscoveryIncomplete = true
+        }
+      }
+    }
+
+    if (directMaterialOrderDiscoveryRequested && !selectedCatalogContext
+      && roleVisibleWorkOrdersExhausted && !catalogContextDiscoveryIncomplete
+      && !authIdentityChanged() && blockedUnexpectedNetworkRequests === 0) {
+      if (responseCounts.directMaterialOrderDiscovery.orderListsTruncatedAtThree === 0) {
+        discoveryState = 'NO_DIRECT_MATERIAL_ORDER_IN_ROLE_VISIBLE_SCOPE'
+        responseCounts.directMaterialOrderDiscovery.state = 'NO_MATCH_IN_COMPLETE_ROLE_VISIBLE_SCOPE'
+      } else {
+        discoveryState = 'DIRECT_MATERIAL_SEARCH_ORDER_LISTS_TRUNCATED'
+        responseCounts.directMaterialOrderDiscovery.state = 'NO_MATCH_WITH_TRUNCATED_ORDER_PAGES'
+      }
+    }
+    if (directMaterialOrderDiscoveryRequested && !selectedCatalogContext
+      && responseCounts.directMaterialOrderDiscovery.state === 'SEARCHING_ROLE_VISIBLE_ORDER_SCOPE') {
+      responseCounts.directMaterialOrderDiscovery.state = 'SEARCH_INCOMPLETE'
     }
 
     if (!selectedCatalogContext && catalogAuditOptions.catalogContextOnly
@@ -1369,7 +1531,9 @@ async function run() {
           && selectedCatalogContext.serviceType && selectedCatalogContext.sourceType
           && selectedWorkOrderIsCurrent() && authIdentityChanged() === false,
       )
-      discoveryState = 'PLACE_ORDER_CONTEXT_FOUND'
+      discoveryState = directMaterialOrderDiscoveryRequested
+        ? 'DIRECT_MATERIAL_ORDER_FOUND'
+        : 'PLACE_ORDER_CONTEXT_FOUND'
       if (catalogAuditOptions.activeOrderFieldsOnly) {
         stage = 'effective_order_extfield_read'
         let response = null
@@ -1843,6 +2007,14 @@ async function run() {
       && roleVisibleWorkOrdersExhausted
       && !authIdentityChanged()
       && blockedUnexpectedNetworkRequests === 0
+    const directMaterialSearchExhaustedWithoutMatch = directMaterialOrderDiscoveryRequested
+      && !selectedCatalogContext
+      && discoveryState === 'NO_DIRECT_MATERIAL_ORDER_IN_ROLE_VISIBLE_SCOPE'
+      && roleVisibleWorkOrdersExhausted
+      && !catalogContextDiscoveryIncomplete
+      && responseCounts.directMaterialOrderDiscovery.orderListsTruncatedAtThree === 0
+      && !authIdentityChanged()
+      && blockedUnexpectedNetworkRequests === 0
     const effectiveOrderProvidersComplete = ['SUCCEEDED', 'NOT_REQUIRED'].includes(responseCounts.effectiveOrderOptionProviders.code.state)
       && ['SUCCEEDED', 'NOT_REQUIRED'].includes(responseCounts.effectiveOrderOptionProviders.cascade.state)
       && routeCounts.orderCodeOptions === (activeOrderCodeProviderIds.length > 0 ? 1 : 0)
@@ -1858,8 +2030,9 @@ async function run() {
     const auditComplete = catalogAuditOptions.activeOrderFieldsOnly
       ? activeOrderFieldsComplete
       : catalogAuditOptions.catalogContextOnly
-      ? Boolean((catalogReadComplete || contextSearchExhaustedWithoutMatch)
-        && (!(selectedOrderMaterialPriceComparisonRequested || selectedOrderPackagePriceComparisonRequested)
+      ? Boolean((catalogReadComplete || contextSearchExhaustedWithoutMatch || directMaterialSearchExhaustedWithoutMatch)
+        && (directMaterialOrderDiscoveryRequested && directMaterialSearchExhaustedWithoutMatch
+          || !(selectedOrderMaterialPriceComparisonRequested || selectedOrderPackagePriceComparisonRequested)
           || selectedWorkOrderOrderReadState === 'SUCCEEDED' && selectedWorkOrderOrderPage !== null))
       : catalogReadComplete
       && ['SUCCEEDED_WITH_ORDER', 'SUCCEEDED_EMPTY'].includes(responseCounts.sampledOrderMaterialLineage.state)
@@ -1869,11 +2042,19 @@ async function run() {
         ? 'PROD_READ_ONLY_EFFECTIVE_ORDER_EXTFIELDS_COMPLETE'
         : 'PROD_READ_ONLY_EFFECTIVE_ORDER_EXTFIELDS_INCOMPLETE'
       : catalogAuditOptions.catalogContextOnly
-      ? catalogReadComplete
-        ? 'PROD_READ_ONLY_CATALOG_CONTEXT_COMPLETE'
-        : contextSearchExhaustedWithoutMatch
-          ? 'NO_ADDITIONAL_PLACE_ORDER_CONTEXT'
-          : 'PROD_READ_ONLY_CATALOG_CONTEXT_SEARCH_INCOMPLETE'
+      ? directMaterialOrderDiscoveryRequested
+        ? directMaterialSearchExhaustedWithoutMatch
+          ? 'PROD_READ_ONLY_DIRECT_MATERIAL_SEARCH_COMPLETE_NO_MATCH'
+          : selectedCatalogContext && catalogReadComplete
+            ? selectedWorkOrderOrderPriceComparison.state === 'COMPARED'
+              ? 'PROD_READ_ONLY_DIRECT_MATERIAL_ORDER_PRICE_COMPARED'
+              : 'PROD_READ_ONLY_DIRECT_MATERIAL_ORDER_FOUND_PRICE_UNKNOWN'
+            : 'PROD_READ_ONLY_DIRECT_MATERIAL_SEARCH_INCOMPLETE'
+        : catalogReadComplete
+          ? 'PROD_READ_ONLY_CATALOG_CONTEXT_COMPLETE'
+          : contextSearchExhaustedWithoutMatch
+            ? 'NO_ADDITIONAL_PLACE_ORDER_CONTEXT'
+            : 'PROD_READ_ONLY_CATALOG_CONTEXT_SEARCH_INCOMPLETE'
       : auditComplete ? 'PROD_READ_ONLY_CHAIN_COMPLETE' : 'PROD_READ_ONLY_CHAIN_INCOMPLETE'
     console.log(JSON.stringify({
       status,
@@ -1886,7 +2067,9 @@ async function run() {
       selectedWorkOrderContext: responseCounts.catalogContextVerified ? {
         verified: true,
         distinctContextOrdinal: selectedCatalogContextOrdinal,
-        currentAction: 'place_order',
+        ...(directMaterialOrderDiscoveryRequested
+          ? { scope: 'role_visible_work_order' }
+          : { currentAction: 'place_order' }),
         serviceTypePresent: true,
         sourceTypePresent: true,
         roleVersionPresent: Boolean(session.roleVersion),

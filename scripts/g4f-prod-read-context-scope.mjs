@@ -8,6 +8,7 @@ export function parseCatalogContextAuditArgs(args = []) {
   let activeOrderFieldsOnly = false
   let compareSelectedOrderMaterialPrices = false
   let compareSelectedOrderPackagePrices = false
+  let discoverDirectMaterialOrder = false
   let authorizeRead = false
   let preflightOnly = false
 
@@ -44,6 +45,11 @@ export function parseCatalogContextAuditArgs(args = []) {
       compareSelectedOrderPackagePrices = true
       continue
     }
+    if (argument === '--discover-direct-material-order') {
+      if (discoverDirectMaterialOrder) throw new Error('duplicate_direct_material_order_discovery_argument')
+      discoverDirectMaterialOrder = true
+      continue
+    }
     if (argument === '--catalog-context-ordinal' || argument.startsWith('--catalog-context-ordinal=')) {
       if (hasOrdinal) throw new Error('duplicate_catalog_context_ordinal_argument')
       hasOrdinal = true
@@ -71,16 +77,20 @@ export function parseCatalogContextAuditArgs(args = []) {
   if (compareSelectedOrderMaterialPrices && compareSelectedOrderPackagePrices) {
     throw new Error('incompatible_order_price_comparison_modes')
   }
+  if (discoverDirectMaterialOrder && (!catalogContextOnly || !compareSelectedOrderMaterialPrices
+    || hasOrdinal || compareSelectedOrderPackagePrices || activeOrderFieldsOnly)) {
+    throw new Error('direct_material_order_discovery_requires_unselected_context_material_comparison')
+  }
   if (authorizeRead && preflightOnly) throw new Error('incompatible_g4f_prod_read_authorization')
 
   return Object.freeze({
     catalogContextOrdinal, catalogContextOnly, activeOrderFieldsOnly,
-    compareSelectedOrderMaterialPrices, compareSelectedOrderPackagePrices,
+    compareSelectedOrderMaterialPrices, compareSelectedOrderPackagePrices, discoverDirectMaterialOrder,
   })
 }
 
-/** Select a requested distinct service/source pair from verified current Place Order WorkOrders. */
-export function createPlaceOrderCatalogContextSelector(targetOrdinal = 1) {
+/** Select a requested distinct service/source pair from verified role-listed WorkOrders. */
+export function createRoleVisibleCatalogContextSelector(targetOrdinal = 1) {
   if (!Number.isSafeInteger(targetOrdinal) || targetOrdinal < 1 || targetOrdinal > MAX_CONTEXT_ORDINAL) {
     throw new Error('catalog_context_ordinal_out_of_bounds')
   }
@@ -115,3 +125,5 @@ export function createPlaceOrderCatalogContextSelector(targetOrdinal = 1) {
     },
   })
 }
+
+export const createPlaceOrderCatalogContextSelector = createRoleVisibleCatalogContextSelector

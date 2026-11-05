@@ -4,21 +4,27 @@ import {
   createPlaceOrderCatalogContextSelector,
   parseCatalogContextAuditArgs,
 } from '../../scripts/g4f-prod-read-context-scope.mjs'
+import { inspectDirectMaterialOrderPage } from '../../scripts/g4f-direct-material-order-discovery.mjs'
 import { workOrderOrderLineageReadState } from '../../scripts/g4f-prod-read-summary.mjs'
 
 describe('bounded Production catalog context audit selection', () => {
   it('defaults to the first context and accepts an explicit bounded ordinal', () => {
-    expect(parseCatalogContextAuditArgs([])).toEqual({ catalogContextOrdinal: 1, catalogContextOnly: false, activeOrderFieldsOnly: false, compareSelectedOrderMaterialPrices: false, compareSelectedOrderPackagePrices: false })
+    expect(parseCatalogContextAuditArgs([])).toEqual({ catalogContextOrdinal: 1, catalogContextOnly: false, activeOrderFieldsOnly: false, compareSelectedOrderMaterialPrices: false, compareSelectedOrderPackagePrices: false, discoverDirectMaterialOrder: false })
     expect(parseCatalogContextAuditArgs(['--catalog-context-only', '--catalog-context-ordinal=2']))
-      .toEqual({ catalogContextOrdinal: 2, catalogContextOnly: true, activeOrderFieldsOnly: false, compareSelectedOrderMaterialPrices: false, compareSelectedOrderPackagePrices: false })
+      .toEqual({ catalogContextOrdinal: 2, catalogContextOnly: true, activeOrderFieldsOnly: false, compareSelectedOrderMaterialPrices: false, compareSelectedOrderPackagePrices: false, discoverDirectMaterialOrder: false })
     expect(parseCatalogContextAuditArgs(['--catalog-context-only', '--compare-selected-order-material-prices']))
-      .toEqual({ catalogContextOrdinal: 1, catalogContextOnly: true, activeOrderFieldsOnly: false, compareSelectedOrderMaterialPrices: true, compareSelectedOrderPackagePrices: false })
+      .toEqual({ catalogContextOrdinal: 1, catalogContextOnly: true, activeOrderFieldsOnly: false, compareSelectedOrderMaterialPrices: true, compareSelectedOrderPackagePrices: false, discoverDirectMaterialOrder: false })
     expect(parseCatalogContextAuditArgs(['--catalog-context-only', '--compare-selected-order-package-prices']))
-      .toEqual({ catalogContextOrdinal: 1, catalogContextOnly: true, activeOrderFieldsOnly: false, compareSelectedOrderMaterialPrices: false, compareSelectedOrderPackagePrices: true })
+      .toEqual({ catalogContextOrdinal: 1, catalogContextOnly: true, activeOrderFieldsOnly: false, compareSelectedOrderMaterialPrices: false, compareSelectedOrderPackagePrices: true, discoverDirectMaterialOrder: false })
     expect(parseCatalogContextAuditArgs(['--', '--catalog-context-ordinal', '20']))
-      .toEqual({ catalogContextOrdinal: 20, catalogContextOnly: false, activeOrderFieldsOnly: false, compareSelectedOrderMaterialPrices: false, compareSelectedOrderPackagePrices: false })
+      .toEqual({ catalogContextOrdinal: 20, catalogContextOnly: false, activeOrderFieldsOnly: false, compareSelectedOrderMaterialPrices: false, compareSelectedOrderPackagePrices: false, discoverDirectMaterialOrder: false })
     expect(parseCatalogContextAuditArgs(['--active-order-fields-only', '--catalog-context-ordinal=3']))
-      .toEqual({ catalogContextOrdinal: 3, catalogContextOnly: false, activeOrderFieldsOnly: true, compareSelectedOrderMaterialPrices: false, compareSelectedOrderPackagePrices: false })
+      .toEqual({ catalogContextOrdinal: 3, catalogContextOnly: false, activeOrderFieldsOnly: true, compareSelectedOrderMaterialPrices: false, compareSelectedOrderPackagePrices: false, discoverDirectMaterialOrder: false })
+    expect(parseCatalogContextAuditArgs([
+      '--catalog-context-only', '--compare-selected-order-material-prices', '--discover-direct-material-order',
+    ])).toMatchObject({
+      catalogContextOnly: true, compareSelectedOrderMaterialPrices: true, discoverDirectMaterialOrder: true,
+    })
   })
 
   it('rejects unsupported, duplicate, malformed, and unbounded command arguments', () => {
@@ -33,6 +39,10 @@ describe('bounded Production catalog context audit selection', () => {
       ['--compare-selected-order-material-prices'],
       ['--active-order-fields-only', '--compare-selected-order-material-prices'],
       ['--catalog-context-only', '--compare-selected-order-material-prices', '--compare-selected-order-material-prices'],
+      ['--catalog-context-only', '--compare-selected-order-material-prices', '--discover-direct-material-order', '--catalog-context-ordinal=1'],
+      ['--catalog-context-only', '--discover-direct-material-order'],
+      ['--catalog-context-only', '--compare-selected-order-package-prices', '--discover-direct-material-order'],
+      ['--catalog-context-only', '--compare-selected-order-material-prices', '--discover-direct-material-order', '--discover-direct-material-order'],
       ['--compare-selected-order-package-prices'],
       ['--catalog-context-only', '--compare-selected-order-material-prices', '--compare-selected-order-package-prices'],
       ['--active-order-fields-only', '--active-order-fields-only'],
@@ -54,6 +64,21 @@ describe('bounded Production catalog context audit selection', () => {
     expect(selector.consider({ ...first, workOrderId: 'wo-3', sourceType: 'source-b' }, 'wo-3'))
       .toMatchObject({ eligible: true, distinct: true, ordinal: 2, selected: true })
     expect(selector.distinctCount).toBe(2)
+  })
+
+  it('discovers only direct top-level Material lines and fails closed on Order ownership conflicts', () => {
+    const line = { kind: 'material', identity: { spuId: 'spu-1' } }
+    expect(inspectDirectMaterialOrderPage('wo-1', {
+      items: [{ type: 1, serviceAppointmentId: 'wo-1', groups: [{ lines: [line] }] }],
+    })).toMatchObject({ state: 'FOUND', orders: 1, directMaterialLines: 1 })
+    expect(inspectDirectMaterialOrderPage('wo-1', {
+      items: [{ type: 1, serviceAppointmentId: 'wo-1', groups: [{
+        lines: [{ kind: 'package', children: [line] }],
+      }] }],
+    })).toMatchObject({ state: 'NO_DIRECT_MATERIAL_LINES', directMaterialLines: 0 })
+    expect(inspectDirectMaterialOrderPage('wo-1', {
+      items: [{ type: 1, serviceAppointmentId: 'other-wo', groups: [{ lines: [line] }] }],
+    })).toMatchObject({ state: 'ORDER_ASSOCIATION_CONFLICT', directMaterialLines: 0 })
   })
 
   it('keeps an unqueried Order lineage separate from successful reads', () => {
@@ -93,6 +118,22 @@ describe('bounded Production catalog context audit selection', () => {
       'scripts/verify-g4f-prod-read.mjs',
       '--catalog-context-only',
       '--compare-selected-order-package-prices',
+    ], { encoding: 'utf8' })
+    expect(run.status).toBe(0)
+    expect(JSON.parse(run.stdout)).toMatchObject({
+      status: 'NO_NETWORK_DEFAULT',
+      loginRequests: 0,
+      blockedUnexpectedNetworkRequests: 0,
+      productionBusinessMutationNetworkRequests: 0,
+    })
+  })
+
+  it('keeps direct Material discovery at zero network without explicit authorization', () => {
+    const run = spawnSync(process.execPath, [
+      'scripts/verify-g4f-prod-read.mjs',
+      '--catalog-context-only',
+      '--compare-selected-order-material-prices',
+      '--discover-direct-material-order',
     ], { encoding: 'utf8' })
     expect(run.status).toBe(0)
     expect(JSON.parse(run.stdout)).toMatchObject({

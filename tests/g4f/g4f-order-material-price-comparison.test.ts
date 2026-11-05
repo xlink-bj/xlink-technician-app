@@ -54,6 +54,16 @@ describe('bounded direct Material SPU price snapshot comparison', () => {
       skuOrAmbiguousIdentity: 0,
       currentSkuVariantAmbiguity: 0,
       duplicateCatalogIdentities: 0,
+      rowIdFallbackCatalogIdMatches: 0,
+      spuIdentitySources: {
+        orderLine: 2,
+        embeddedProduct: 0,
+        embeddedMaterial: 0,
+        materialReference: 0,
+        rowIdFallback: 0,
+        missing: 0,
+        other: 0,
+      },
       identityConflicts: 0,
       orderListTruncated: false,
     })
@@ -145,6 +155,8 @@ describe('bounded direct Material SPU price snapshot comparison', () => {
       catalogSpuMatches: 0,
       comparableLines: 0,
       unknownLines: 1,
+      rowIdFallbackCatalogIdMatches: 1,
+      spuIdentitySources: { rowIdFallback: 1 },
     })
   })
 })

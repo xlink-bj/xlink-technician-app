@@ -37,6 +37,16 @@ export function summarizeDirectMaterialPriceSnapshots(input: {
   skuOrAmbiguousIdentity: number
   currentSkuVariantAmbiguity: number
   duplicateCatalogIdentities: number
+  rowIdFallbackCatalogIdMatches: number
+  spuIdentitySources: Readonly<{
+    orderLine: number
+    embeddedProduct: number
+    embeddedMaterial: number
+    materialReference: number
+    rowIdFallback: number
+    missing: number
+    other: number
+  }>
   identityConflicts: number
   orderListTruncated: boolean
 }>
