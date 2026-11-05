@@ -1,12 +1,12 @@
 # G4-F Order ExtField Effective Mapping Contract
 
-**Status:** `PURE_MAPPING_ONLY / R1_VALIDATION_PHASES_SOURCE_MAPPED / TENANT_SHAPE_CAPTURED / ONE_CONTEXT_EFFECTIVE_SHAPE_AND_PROVIDER_COUNTS_CAPTURED / NOT_CONNECTED`
+**Status:** `PURE_MAPPING_ONLY / R1_VALIDATION_PHASES_SOURCE_MAPPED / TENANT_SHAPE_CAPTURED / TWO_CONTEXT_EFFECTIVE_SHAPE_AND_PROVIDER_COUNTS_CAPTURED / NOT_CONNECTED`
 
 This document specifies the source-backed, fail-closed plan mapper implemented for Issue #51. The mapper consumes synthetic ExtField-shaped rows and explicit stage/service/person/value context. It is not a Production adapter, a live quotation schema, a UI, or an Order serializer.
 
 ## Evidence and scope
 
-The sanitized tenant-wide Production shape capture is recorded in [G4F_ACTIVE_ORDER_EXTFIELD_SCHEMA_SHAPE.md](./G4F_ACTIVE_ORDER_EXTFIELD_SCHEMA_SHAPE.md): 32/32 enabled `order` mobile-detail rows were returned by one bounded query. The effective stage shape for one verified current work-order context and its referenced Code/Cascade provider counts are recorded in [G4F_EFFECTIVE_ORDER_EXTFIELD_PROD_READ_20261105.md](./G4F_EFFECTIVE_ORDER_EXTFIELD_PROD_READ_20261105.md). That read found 4 `placeOrder` rows and 5 `submitOrder` rows after source-matched context filtering; raw field/provider identities and option contents were discarded. This is one context only, not a global schema or an Order write/runtime validation.
+The sanitized tenant-wide Production shape capture is recorded in [G4F_ACTIVE_ORDER_EXTFIELD_SCHEMA_SHAPE.md](./G4F_ACTIVE_ORDER_EXTFIELD_SCHEMA_SHAPE.md): 32/32 enabled `order` mobile-detail rows were returned by one bounded query. The effective stage shape for two verified current work-order contexts and their referenced Code/Cascade provider counts are recorded in [G4F_EFFECTIVE_ORDER_EXTFIELD_PROD_READ_20261105.md](./G4F_EFFECTIVE_ORDER_EXTFIELD_PROD_READ_20261105.md). Both reads found the same aggregate shape: 4 `placeOrder` rows and 5 `submitOrder` rows after source-matched context filtering; raw field/provider identities and option contents were discarded. This remains two contexts only, not a global schema or an Order write/runtime validation.
 
 R1 source is pinned to `xlink-bj/xlink-app@6c0a97b26bcbcaee81ac4e1dfd627c6e8e70e29d`; backend source is pinned to `xlink-bj/xlink-cloud-backend@5fc008d32e771205260f120621c1c4fc62d0824e`. Relevant R1 locations in `business/subpackages/order/placeOrders.vue`:
 

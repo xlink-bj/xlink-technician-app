@@ -91,8 +91,8 @@
 | 优先级 | 必须解决的问题 | 当前证据/退出门槛 |
 | --- | --- | --- |
 | P0 | 当前工单的 `serviceType/sourceType`（包括值为空/缺省时的请求属性存在性），正确目录过滤与价源 | Source 证明 backend 依赖 `sourceType` 参数是否存在；未证实不能默默省略。Mock 跑参数契约负例 |
-| P0 | 有效 Order `ExtField`/Code/provider（尤其 `showType`、`serviceType`、`personType`、条件必填） | 一个当前上下文已读到 4/5 个分阶段字段及 1 个 Code + 1 个 Cascade provider 的结构计数；其他上下文、字段值/身份与 UI/serializer 映射未闭合；未支持控件标记 BLOCKED |
-| P0 | SPU 无 SKU 的正常选择、四类价格与历史 Order 快照的差异 | 当前角色四上下文已读 SPU 的有效 SKU 行均为空；一个当前套餐价格/Order 快照对照通过，直接 Material SPU 尚无可比订单行，其他价格与真实 UI 逐项一致性仍 `NOT_RUN`；禁止“无 SKU → 报价失败”及猜价 |
+| P0 | 有效 Order `ExtField`/Code/provider（尤其 `showType`、`serviceType`、`personType`、条件必填） | 两个当前上下文均读到相同的 4/5 个分阶段字段、1 个 Code + 1 个 Cascade provider（[有效字段只读记录](G4F_EFFECTIVE_ORDER_EXTFIELD_PROD_READ_20261105.md)）；其余上下文、字段值/身份与 UI/serializer 映射未闭合；未支持控件标记 BLOCKED |
+| P0 | SPU 无 SKU 的正常选择、四类价格与历史 Order 快照的差异 | 当前角色四个服务上下文的已读活动 SKU 筛选均未返回活动行；受限历史样本已比较 Material 1 行、Package 1 行及 Procedure/Measure 4 行，均等于对应当前目录价，但 Package 另有一条历史记录在当前目录缺失而保持 unknown（[Material/Package](G4F_ORDER_MATERIAL_PRICE_SNAPSHOT_PROD_READ_20261105.md)、[Procedure/Measure](G4F_ORDER_PROVIDER_PRICE_SNAPSHOT_PROD_READ_20261105.md)）；这些不是全量或价格新鲜度结论，禁止“无 SKU → 报价失败”及猜价 |
 | P0 | 订单的类型、维修组、包内材料/层/系数、Order↔工单↔合同身份 | One Order/Contract 精确生产只读样本已通过；其他状态只在 DEV Mock；不得靠 `skuCode` 建 SKU 外键 |
 | P1 | FormData/Workflow 的真实服务端保存回读与失败补偿；媒体上传 | DEV Mock 成功不等于 Beta/Production 写入；依 #201 单独批准后才可实测 |
 | P1 | 报价优惠券、折扣、加减项、PDF、客户确认、正式下单副作用 | 源码有条件支路；若当前实务未用，应明确 `NOT_IN_CURRENT_SCOPE`，不能假装已等价 |
