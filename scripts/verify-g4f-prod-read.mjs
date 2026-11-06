@@ -1,4 +1,4 @@
-import { currentFormDefPageDiagnostics, currentFormDefRequestBody, isAllowedCurrentFormDefRead, verifyCurrentFormDefPage } from './lib/r1-current-formdef-read.mjs'
+import { currentFormDefPageDiagnostics, currentFormDefRequestBody, isAllowedCurrentFormDefRead, verifyCurrentFormDefPages } from './lib/r1-current-formdef-read.mjs'
 import { createR1BoundedConfigEvidence } from './lib/r1-bounded-config-evidence.mjs'
 import { createServer, loadEnv } from 'vite'
 import { resolve } from 'node:path'
@@ -89,6 +89,8 @@ let selectedCatalogContextOrdinal = null
 let currentFormDefOnlyRequested = false
 let authorizedCurrentFormDefId = null
 let currentFormDefReads = 0
+let currentFormDefTwoPagesRequested = false
+let authorizedCurrentFormDefPage = 1
 let activeOrderFieldsOnlyRequested = false
 let selectedOrderMaterialPriceComparisonRequested = false
 let selectedOrderPackagePriceComparisonRequested = false
@@ -352,7 +354,7 @@ function recordSafeRequest(url, request, apiBaseUrl) {
   }
   if (relativePath === 'biz/extField/query') {
     if (currentFormDefOnlyRequested) {
-      if (!authorizedCurrentFormDefId || authIdentityChanged() || currentFormDefReads !== 0 || !isAllowedCurrentFormDefRead(request.data, authorizedCurrentFormDefId)) return null
+      if (!authorizedCurrentFormDefId || authIdentityChanged() || currentFormDefReads !== authorizedCurrentFormDefPage - 1 || !isAllowedCurrentFormDefRead(request.data, authorizedCurrentFormDefId, authorizedCurrentFormDefPage, currentFormDefTwoPagesRequested)) return null
       currentFormDefReads += 1
       return 'read'
     }
@@ -1006,8 +1008,9 @@ let expectedAuthIdentity = null
 async function run() {
   const argumentsWithoutSeparator = process.argv.slice(2).filter(argument => argument !== '--')
   currentFormDefOnlyRequested = argumentsWithoutSeparator.includes('--current-node-formdef-only')
-  const catalogAuditOptions = parseCatalogContextAuditArgs(argumentsWithoutSeparator.filter(arg => arg !== '--current-node-formdef-only'))
-  if (currentFormDefOnlyRequested && argumentsWithoutSeparator.some(arg => !['--current-node-formdef-only','--preflight-only','--authorize-bounded-prod-read'].includes(arg))) throw new Error('INCOMPATIBLE_FORMDEF_AUDIT_FLAGS')
+  currentFormDefTwoPagesRequested = currentFormDefOnlyRequested && argumentsWithoutSeparator.includes('--formdef-two-pages')
+  const catalogAuditOptions = parseCatalogContextAuditArgs(argumentsWithoutSeparator.filter(arg => arg !== '--current-node-formdef-only' && !(currentFormDefTwoPagesRequested && arg === '--formdef-two-pages')))
+  if (currentFormDefOnlyRequested && argumentsWithoutSeparator.some(arg => !['--current-node-formdef-only','--formdef-two-pages','--preflight-only','--authorize-bounded-prod-read'].includes(arg))) throw new Error('INCOMPATIBLE_FORMDEF_AUDIT_FLAGS')
   activeOrderFieldsOnlyRequested = catalogAuditOptions.activeOrderFieldsOnly
   selectedOrderMaterialPriceComparisonRequested = catalogAuditOptions.compareSelectedOrderMaterialPrices
   selectedOrderPackagePriceComparisonRequested = catalogAuditOptions.compareSelectedOrderPackagePrices
@@ -1253,16 +1256,31 @@ async function run() {
           if (matches.length > 1) { state = 'AMBIGUOUS_NODE_STOPPED'; break discovery }
           if (matches.length === 1) {
             authorizedCurrentFormDefId = String(matches[0].formDefinitionId)
-            const response = await requestReadOnce(request, runtime.value.environment.apiBaseUrl, session.sessionRef,
-              'biz/extField/query', currentFormDefRequestBody(authorizedCurrentFormDefId))
-            diagnostics = currentFormDefPageDiagnostics(response?.data, response?.statusCode)
-            if (authIdentityChanged() || !response || response.statusCode < 200 || response.statusCode >= 300) { state = 'FIELD_READ_STOPPED'; break discovery }
-            const verified = verifyCurrentFormDefPage(response.data, authorizedCurrentFormDefId)
-            if (!verified.ok) { state = verified.reason; break discovery }
-            boundedEvidence.fieldPage(response.data, { serviceType: '' })
+            const pages = [], pageDiagnostics = [], fieldRows = []
+            const pageLimit = currentFormDefTwoPagesRequested ? 2 : 1
+            for (let fieldPage = 1; fieldPage <= pageLimit; fieldPage++) {
+              authorizedCurrentFormDefPage = fieldPage
+              const response = await requestReadOnce(request, runtime.value.environment.apiBaseUrl, session.sessionRef,
+                'biz/extField/query', currentFormDefRequestBody(authorizedCurrentFormDefId, fieldPage, currentFormDefTwoPagesRequested))
+              pageDiagnostics.push(currentFormDefPageDiagnostics(response?.data, response?.statusCode))
+              diagnostics = currentFormDefTwoPagesRequested ? pageDiagnostics : pageDiagnostics[0]
+              if (authIdentityChanged() || !response || response.statusCode < 200 || response.statusCode >= 300) { state = 'FIELD_READ_STOPPED'; break discovery }
+              pages.push(response.data)
+              const verified = verifyCurrentFormDefPages(pages, authorizedCurrentFormDefId)
+              if (!verified.ok) { state = verified.reason; break discovery }
+              if (!verified.complete) {
+                if (fieldPage === pageLimit) { state = 'INCOMPLETE_OR_INVALID_PAGE'; break discovery }
+                continue
+              }
+              for (const payload of pages) {
+                boundedEvidence.fieldPage(payload, { serviceType: '' })
+                fieldRows.push(...boundedEvidence.snapshot().fields.rows)
+              }
+              break
+            }
             const snapshot = boundedEvidence.snapshot()
             result = { nodeType: ['forms','repeat','form'].includes(matches[0].sourceNodeType) ? matches[0].sourceNodeType : 'UNKNOWN', formPurpose: ['survey','inspection','appointment'].includes(matches[0].formPurpose) ? matches[0].formPurpose : 'UNKNOWN',
-              fields: snapshot.fields, workflows: snapshot.workflows,
+              fields: { state: 'COMPLETE_BOUNDED_PAGES', total: fieldRows.length, returned: fieldRows.length, rows: fieldRows }, workflows: snapshot.workflows,
               providerReads: 'NOT_AUTHORIZED_BY_THIS_FIELD_ONLY_CAPTURE', customerValuesRead: false }
             state = 'CURRENT_FORMDEF_BOUNDED_FIELDS_COMPLETE'; break discovery
           }

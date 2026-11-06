@@ -1,0 +1,1906 @@
+{
+  "status": "CURRENT_FORMDEF_BOUNDED_FIELDS_COMPLETE",
+  "loginRequests": 1,
+  "routeCounts": {
+    "roleTree": 13,
+    "workOrderList": 13,
+    "workOrderDetail": 38,
+    "quotationList": 0,
+    "packageList": 0,
+    "procedureList": 0,
+    "materialList": 0,
+    "measureList": 0,
+    "packageDetail": 0,
+    "materialSalesFields": 0,
+    "orderExtFields": 0,
+    "orderCodeOptions": 0,
+    "orderCascadeOptions": 0,
+    "catalogFilterCodeOptions": 0,
+    "materialCodeOptions": 0,
+    "materialSkuList": 0
+  },
+  "inspected": 38,
+  "pageNumber": 13,
+  "currentFormDefReads": 2,
+  "diagnostics": [
+    {
+      "httpStatus": 200,
+      "envelopeType": "object",
+      "hasDataArray": true,
+      "returnedRows": 50,
+      "reportedTotal": 59,
+      "parser": "VALID_PAGE_SHAPE",
+      "complete": false
+    },
+    {
+      "httpStatus": 200,
+      "envelopeType": "object",
+      "hasDataArray": true,
+      "returnedRows": 9,
+      "reportedTotal": 59,
+      "parser": "VALID_PAGE_SHAPE",
+      "complete": false
+    }
+  ],
+  "blockedUnexpectedNetworkRequests": 0,
+  "productionBusinessMutationNetworkRequests": 0,
+  "evidence": {
+    "nodeType": "repeat",
+    "formPurpose": "UNKNOWN",
+    "fields": {
+      "state": "COMPLETE_BOUNDED_PAGES",
+      "total": 59,
+      "returned": 59,
+      "rows": [
+        {
+          "fieldId": "field-001",
+          "valueKey": "surveyNum",
+          "machineKeyRetained": true,
+          "label": "配置字段 01",
+          "originalLabelRetained": false,
+          "labelConfigured": true,
+          "enabled": 1,
+          "type": "text",
+          "required": "0",
+          "requiredKind": "string",
+          "multiple": false,
+          "operationType": {
+            "kind": "string",
+            "recognized": false
+          },
+          "showList": [
+            "1",
+            "2",
+            "5"
+          ],
+          "providerId": null,
+          "stage": "UNKNOWN",
+          "effectiveInSelectedContext": false,
+          "serviceApplicability": "applies",
+          "personApplicability": "NOT_APPLICABLE",
+          "rules": {},
+          "configShape": {},
+          "unretainedConfigKeyCount": 0
+        },
+        {
+          "fieldId": "field-002",
+          "valueKey": "serviceAppointmentNum",
+          "machineKeyRetained": true,
+          "label": "配置字段 02",
+          "originalLabelRetained": false,
+          "labelConfigured": true,
+          "enabled": 1,
+          "type": "text",
+          "required": "0",
+          "requiredKind": "string",
+          "multiple": false,
+          "operationType": {
+            "kind": "string",
+            "recognized": false
+          },
+          "showList": [
+            "1",
+            "2",
+            "5"
+          ],
+          "providerId": null,
+          "stage": "UNKNOWN",
+          "effectiveInSelectedContext": false,
+          "serviceApplicability": "applies",
+          "personApplicability": "NOT_APPLICABLE",
+          "rules": {},
+          "configShape": {},
+          "unretainedConfigKeyCount": 0
+        },
+        {
+          "fieldId": "field-003",
+          "valueKey": "name",
+          "machineKeyRetained": true,
+          "label": "客户姓名",
+          "originalLabelRetained": true,
+          "labelConfigured": true,
+          "enabled": 1,
+          "type": "text",
+          "required": "0",
+          "requiredKind": "string",
+          "multiple": false,
+          "operationType": {
+            "kind": "string",
+            "recognized": false
+          },
+          "showList": [
+            "1",
+            "2",
+            "5"
+          ],
+          "providerId": null,
+          "stage": "UNKNOWN",
+          "effectiveInSelectedContext": false,
+          "serviceApplicability": "applies",
+          "personApplicability": "NOT_APPLICABLE",
+          "rules": {},
+          "configShape": {},
+          "unretainedConfigKeyCount": 0
+        },
+        {
+          "fieldId": "field-004",
+          "valueKey": "surveyPDFUrl",
+          "machineKeyRetained": true,
+          "label": "配置字段 04",
+          "originalLabelRetained": false,
+          "labelConfigured": true,
+          "enabled": 1,
+          "type": "UNKNOWN",
+          "required": "0",
+          "requiredKind": "string",
+          "multiple": false,
+          "operationType": {
+            "kind": "string",
+            "recognized": false
+          },
+          "showList": [
+            "1",
+            "2"
+          ],
+          "providerId": null,
+          "stage": "UNKNOWN",
+          "effectiveInSelectedContext": false,
+          "serviceApplicability": "applies",
+          "personApplicability": "NOT_APPLICABLE",
+          "rules": {},
+          "configShape": {},
+          "unretainedConfigKeyCount": 0
+        },
+        {
+          "fieldId": "field-005",
+          "valueKey": "phone",
+          "machineKeyRetained": true,
+          "label": "配置字段 05",
+          "originalLabelRetained": false,
+          "labelConfigured": true,
+          "enabled": 1,
+          "type": "phone",
+          "required": "0",
+          "requiredKind": "string",
+          "multiple": false,
+          "operationType": {
+            "kind": "string",
+            "recognized": false
+          },
+          "showList": [
+            "1",
+            "2",
+            "5"
+          ],
+          "providerId": null,
+          "stage": "UNKNOWN",
+          "effectiveInSelectedContext": false,
+          "serviceApplicability": "applies",
+          "personApplicability": "NOT_APPLICABLE",
+          "rules": {},
+          "configShape": {},
+          "unretainedConfigKeyCount": 0
+        },
+        {
+          "fieldId": "field-006",
+          "valueKey": "area",
+          "machineKeyRetained": true,
+          "label": "配置字段 06",
+          "originalLabelRetained": false,
+          "labelConfigured": true,
+          "enabled": 1,
+          "type": "area",
+          "required": "0",
+          "requiredKind": "string",
+          "multiple": false,
+          "operationType": {
+            "kind": "string",
+            "recognized": false
+          },
+          "showList": [
+            "2"
+          ],
+          "providerId": null,
+          "stage": "UNKNOWN",
+          "effectiveInSelectedContext": false,
+          "serviceApplicability": "applies",
+          "personApplicability": "NOT_APPLICABLE",
+          "rules": {},
+          "configShape": {},
+          "unretainedConfigKeyCount": 0
+        },
+        {
+          "fieldId": "field-007",
+          "valueKey": "province",
+          "machineKeyRetained": true,
+          "label": "配置字段 07",
+          "originalLabelRetained": false,
+          "labelConfigured": true,
+          "enabled": 1,
+          "type": "select",
+          "required": "0",
+          "requiredKind": "string",
+          "multiple": false,
+          "operationType": {
+            "kind": "string",
+            "recognized": false
+          },
+          "showList": [
+            "5"
+          ],
+          "providerId": "code-provider-001",
+          "stage": "UNKNOWN",
+          "effectiveInSelectedContext": false,
+          "serviceApplicability": "applies",
+          "personApplicability": "NOT_APPLICABLE",
+          "rules": {},
+          "configShape": {},
+          "unretainedConfigKeyCount": 0
+        },
+        {
+          "fieldId": "field-008",
+          "valueKey": "province",
+          "machineKeyRetained": true,
+          "label": "配置字段 08",
+          "originalLabelRetained": false,
+          "labelConfigured": true,
+          "enabled": 1,
+          "type": "text",
+          "required": "0",
+          "requiredKind": "string",
+          "multiple": false,
+          "operationType": {
+            "kind": "string",
+            "recognized": false
+          },
+          "showList": [
+            "1"
+          ],
+          "providerId": null,
+          "stage": "UNKNOWN",
+          "effectiveInSelectedContext": false,
+          "serviceApplicability": "applies",
+          "personApplicability": "NOT_APPLICABLE",
+          "rules": {},
+          "configShape": {},
+          "unretainedConfigKeyCount": 0
+        },
+        {
+          "fieldId": "field-009",
+          "valueKey": "city",
+          "machineKeyRetained": true,
+          "label": "配置字段 09",
+          "originalLabelRetained": false,
+          "labelConfigured": true,
+          "enabled": 1,
+          "type": "text",
+          "required": "0",
+          "requiredKind": "string",
+          "multiple": false,
+          "operationType": {
+            "kind": "string",
+            "recognized": false
+          },
+          "showList": [
+            "1"
+          ],
+          "providerId": null,
+          "stage": "UNKNOWN",
+          "effectiveInSelectedContext": false,
+          "serviceApplicability": "applies",
+          "personApplicability": "NOT_APPLICABLE",
+          "rules": {},
+          "configShape": {},
+          "unretainedConfigKeyCount": 0
+        },
+        {
+          "fieldId": "field-010",
+          "valueKey": "district",
+          "machineKeyRetained": true,
+          "label": "配置字段 10",
+          "originalLabelRetained": false,
+          "labelConfigured": true,
+          "enabled": 1,
+          "type": "text",
+          "required": "0",
+          "requiredKind": "string",
+          "multiple": false,
+          "operationType": {
+            "kind": "string",
+            "recognized": false
+          },
+          "showList": [
+            "1"
+          ],
+          "providerId": null,
+          "stage": "UNKNOWN",
+          "effectiveInSelectedContext": false,
+          "serviceApplicability": "applies",
+          "personApplicability": "NOT_APPLICABLE",
+          "rules": {},
+          "configShape": {},
+          "unretainedConfigKeyCount": 0
+        },
+        {
+          "fieldId": "field-011",
+          "valueKey": "address",
+          "machineKeyRetained": true,
+          "label": "项目地址",
+          "originalLabelRetained": true,
+          "labelConfigured": true,
+          "enabled": 1,
+          "type": "text",
+          "required": "0",
+          "requiredKind": "string",
+          "multiple": false,
+          "operationType": {
+            "kind": "string",
+            "recognized": false
+          },
+          "showList": [
+            "1",
+            "2",
+            "5"
+          ],
+          "providerId": null,
+          "stage": "UNKNOWN",
+          "effectiveInSelectedContext": false,
+          "serviceApplicability": "applies",
+          "personApplicability": "NOT_APPLICABLE",
+          "rules": {},
+          "configShape": {},
+          "unretainedConfigKeyCount": 0
+        },
+        {
+          "fieldId": "field-012",
+          "valueKey": "orgId",
+          "machineKeyRetained": true,
+          "label": "配置字段 12",
+          "originalLabelRetained": false,
+          "labelConfigured": true,
+          "enabled": 1,
+          "type": "text",
+          "required": "0",
+          "requiredKind": "string",
+          "multiple": false,
+          "operationType": {
+            "kind": "string",
+            "recognized": false
+          },
+          "showList": [
+            "5"
+          ],
+          "providerId": null,
+          "stage": "UNKNOWN",
+          "effectiveInSelectedContext": false,
+          "serviceApplicability": "applies",
+          "personApplicability": "NOT_APPLICABLE",
+          "rules": {},
+          "configShape": {},
+          "unretainedConfigKeyCount": 0
+        },
+        {
+          "fieldId": "field-013",
+          "valueKey": "orgName",
+          "machineKeyRetained": true,
+          "label": "配置字段 13",
+          "originalLabelRetained": false,
+          "labelConfigured": true,
+          "enabled": 1,
+          "type": "text",
+          "required": "0",
+          "requiredKind": "string",
+          "multiple": false,
+          "operationType": {
+            "kind": "string",
+            "recognized": false
+          },
+          "showList": [
+            "1"
+          ],
+          "providerId": null,
+          "stage": "UNKNOWN",
+          "effectiveInSelectedContext": false,
+          "serviceApplicability": "applies",
+          "personApplicability": "NOT_APPLICABLE",
+          "rules": {},
+          "configShape": {},
+          "unretainedConfigKeyCount": 0
+        },
+        {
+          "fieldId": "field-014",
+          "valueKey": "supervisorName",
+          "machineKeyRetained": true,
+          "label": "配置字段 14",
+          "originalLabelRetained": false,
+          "labelConfigured": true,
+          "enabled": 1,
+          "type": "text",
+          "required": "0",
+          "requiredKind": "string",
+          "multiple": false,
+          "operationType": {
+            "kind": "string",
+            "recognized": false
+          },
+          "showList": [
+            "1",
+            "2",
+            "5"
+          ],
+          "providerId": null,
+          "stage": "UNKNOWN",
+          "effectiveInSelectedContext": false,
+          "serviceApplicability": "applies",
+          "personApplicability": "NOT_APPLICABLE",
+          "rules": {},
+          "configShape": {},
+          "unretainedConfigKeyCount": 0
+        },
+        {
+          "fieldId": "field-015",
+          "valueKey": "supervisorPhone",
+          "machineKeyRetained": true,
+          "label": "配置字段 15",
+          "originalLabelRetained": false,
+          "labelConfigured": true,
+          "enabled": 1,
+          "type": "phone",
+          "required": "0",
+          "requiredKind": "string",
+          "multiple": false,
+          "operationType": {
+            "kind": "string",
+            "recognized": false
+          },
+          "showList": [
+            "1",
+            "2",
+            "5"
+          ],
+          "providerId": null,
+          "stage": "UNKNOWN",
+          "effectiveInSelectedContext": false,
+          "serviceApplicability": "applies",
+          "personApplicability": "NOT_APPLICABLE",
+          "rules": {},
+          "configShape": {},
+          "unretainedConfigKeyCount": 0
+        },
+        {
+          "fieldId": "field-016",
+          "valueKey": "createTime",
+          "machineKeyRetained": true,
+          "label": "配置字段 16",
+          "originalLabelRetained": false,
+          "labelConfigured": true,
+          "enabled": 1,
+          "type": "datetime",
+          "required": "0",
+          "requiredKind": "string",
+          "multiple": false,
+          "operationType": {
+            "kind": "string",
+            "recognized": false
+          },
+          "showList": [
+            "1",
+            "2",
+            "5",
+            "3"
+          ],
+          "providerId": null,
+          "stage": "UNKNOWN",
+          "effectiveInSelectedContext": false,
+          "serviceApplicability": "applies",
+          "personApplicability": "NOT_APPLICABLE",
+          "rules": {},
+          "configShape": {},
+          "unretainedConfigKeyCount": 0
+        },
+        {
+          "fieldId": "field-017",
+          "valueKey": "part",
+          "machineKeyRetained": true,
+          "label": "配置字段 17",
+          "originalLabelRetained": false,
+          "labelConfigured": true,
+          "enabled": 1,
+          "type": "cascade",
+          "required": "1",
+          "requiredKind": "string",
+          "multiple": false,
+          "operationType": {
+            "kind": "string",
+            "recognized": false
+          },
+          "showList": [
+            "1",
+            "2",
+            "4",
+            "5"
+          ],
+          "providerId": "cascade-provider-001",
+          "stage": "UNKNOWN",
+          "effectiveInSelectedContext": false,
+          "serviceApplicability": "applies",
+          "personApplicability": "NOT_APPLICABLE",
+          "rules": {},
+          "configShape": {},
+          "unretainedConfigKeyCount": 0
+        },
+        {
+          "fieldId": "field-018",
+          "valueKey": "field-key-001",
+          "machineKeyRetained": false,
+          "label": "配置字段 18",
+          "originalLabelRetained": false,
+          "labelConfigured": true,
+          "enabled": 1,
+          "type": "gap",
+          "required": "0",
+          "requiredKind": "string",
+          "multiple": false,
+          "operationType": {
+            "kind": "string",
+            "recognized": false
+          },
+          "showList": [
+            "2",
+            "4"
+          ],
+          "providerId": null,
+          "stage": "UNKNOWN",
+          "effectiveInSelectedContext": false,
+          "serviceApplicability": "applies",
+          "personApplicability": "NOT_APPLICABLE",
+          "rules": {},
+          "configShape": {},
+          "unretainedConfigKeyCount": 1
+        },
+        {
+          "fieldId": "field-019",
+          "valueKey": "squareMeter",
+          "machineKeyRetained": true,
+          "label": "配置字段 19",
+          "originalLabelRetained": false,
+          "labelConfigured": true,
+          "enabled": 1,
+          "type": "digit",
+          "required": "1",
+          "requiredKind": "string",
+          "multiple": false,
+          "operationType": {
+            "kind": "string",
+            "recognized": false
+          },
+          "showList": [
+            "1",
+            "2",
+            "4"
+          ],
+          "providerId": null,
+          "stage": "UNKNOWN",
+          "effectiveInSelectedContext": false,
+          "serviceApplicability": "applies",
+          "personApplicability": "NOT_APPLICABLE",
+          "rules": {},
+          "configShape": {},
+          "unretainedConfigKeyCount": 0
+        },
+        {
+          "fieldId": "field-020",
+          "valueKey": "gapLength",
+          "machineKeyRetained": true,
+          "label": "配置字段 20",
+          "originalLabelRetained": false,
+          "labelConfigured": true,
+          "enabled": 1,
+          "type": "digit",
+          "required": "1",
+          "requiredKind": "string",
+          "multiple": false,
+          "operationType": {
+            "kind": "string",
+            "recognized": false
+          },
+          "showList": [
+            "1",
+            "2",
+            "4"
+          ],
+          "providerId": null,
+          "stage": "UNKNOWN",
+          "effectiveInSelectedContext": false,
+          "serviceApplicability": "applies",
+          "personApplicability": "NOT_APPLICABLE",
+          "rules": {},
+          "configShape": {},
+          "unretainedConfigKeyCount": 0
+        },
+        {
+          "fieldId": "field-021",
+          "valueKey": "length",
+          "machineKeyRetained": true,
+          "label": "配置字段 21",
+          "originalLabelRetained": false,
+          "labelConfigured": true,
+          "enabled": 1,
+          "type": "digit",
+          "required": "1",
+          "requiredKind": "string",
+          "multiple": false,
+          "operationType": {
+            "kind": "string",
+            "recognized": false
+          },
+          "showList": [
+            "1",
+            "2",
+            "4"
+          ],
+          "providerId": null,
+          "stage": "UNKNOWN",
+          "effectiveInSelectedContext": false,
+          "serviceApplicability": "applies",
+          "personApplicability": "NOT_APPLICABLE",
+          "rules": {},
+          "configShape": {},
+          "unretainedConfigKeyCount": 0
+        },
+        {
+          "fieldId": "field-022",
+          "valueKey": "length",
+          "machineKeyRetained": true,
+          "label": "配置字段 22",
+          "originalLabelRetained": false,
+          "labelConfigured": true,
+          "enabled": 1,
+          "type": "digit",
+          "required": "0",
+          "requiredKind": "string",
+          "multiple": false,
+          "operationType": {
+            "kind": "string",
+            "recognized": false
+          },
+          "showList": [
+            "2",
+            "4"
+          ],
+          "providerId": null,
+          "stage": "UNKNOWN",
+          "effectiveInSelectedContext": false,
+          "serviceApplicability": "applies",
+          "personApplicability": "NOT_APPLICABLE",
+          "rules": {},
+          "configShape": {},
+          "unretainedConfigKeyCount": 0
+        },
+        {
+          "fieldId": "field-023",
+          "valueKey": "width",
+          "machineKeyRetained": true,
+          "label": "配置字段 23",
+          "originalLabelRetained": false,
+          "labelConfigured": true,
+          "enabled": 1,
+          "type": "digit",
+          "required": "1",
+          "requiredKind": "string",
+          "multiple": false,
+          "operationType": {
+            "kind": "string",
+            "recognized": false
+          },
+          "showList": [
+            "1",
+            "2",
+            "4"
+          ],
+          "providerId": null,
+          "stage": "UNKNOWN",
+          "effectiveInSelectedContext": false,
+          "serviceApplicability": "applies",
+          "personApplicability": "NOT_APPLICABLE",
+          "rules": {},
+          "configShape": {},
+          "unretainedConfigKeyCount": 0
+        },
+        {
+          "fieldId": "field-024",
+          "valueKey": "width",
+          "machineKeyRetained": true,
+          "label": "配置字段 24",
+          "originalLabelRetained": false,
+          "labelConfigured": true,
+          "enabled": 1,
+          "type": "digit",
+          "required": "0",
+          "requiredKind": "string",
+          "multiple": false,
+          "operationType": {
+            "kind": "string",
+            "recognized": false
+          },
+          "showList": [
+            "2",
+            "4"
+          ],
+          "providerId": null,
+          "stage": "UNKNOWN",
+          "effectiveInSelectedContext": false,
+          "serviceApplicability": "applies",
+          "personApplicability": "NOT_APPLICABLE",
+          "rules": {},
+          "configShape": {},
+          "unretainedConfigKeyCount": 0
+        },
+        {
+          "fieldId": "field-025",
+          "valueKey": "perimeter",
+          "machineKeyRetained": true,
+          "label": "配置字段 25",
+          "originalLabelRetained": false,
+          "labelConfigured": true,
+          "enabled": 1,
+          "type": "digit",
+          "required": "1",
+          "requiredKind": "string",
+          "multiple": false,
+          "operationType": {
+            "kind": "string",
+            "recognized": false
+          },
+          "showList": [
+            "1",
+            "2",
+            "4"
+          ],
+          "providerId": null,
+          "stage": "UNKNOWN",
+          "effectiveInSelectedContext": false,
+          "serviceApplicability": "applies",
+          "personApplicability": "NOT_APPLICABLE",
+          "rules": {},
+          "configShape": {},
+          "unretainedConfigKeyCount": 0
+        },
+        {
+          "fieldId": "field-026",
+          "valueKey": "planeArea",
+          "machineKeyRetained": true,
+          "label": "配置字段 26",
+          "originalLabelRetained": false,
+          "labelConfigured": true,
+          "enabled": 1,
+          "type": "digit",
+          "required": "1",
+          "requiredKind": "string",
+          "multiple": false,
+          "operationType": {
+            "kind": "string",
+            "recognized": false
+          },
+          "showList": [
+            "1",
+            "2",
+            "4"
+          ],
+          "providerId": null,
+          "stage": "UNKNOWN",
+          "effectiveInSelectedContext": false,
+          "serviceApplicability": "applies",
+          "personApplicability": "NOT_APPLICABLE",
+          "rules": {},
+          "configShape": {},
+          "unretainedConfigKeyCount": 0
+        },
+        {
+          "fieldId": "field-027",
+          "valueKey": "height",
+          "machineKeyRetained": true,
+          "label": "配置字段 27",
+          "originalLabelRetained": false,
+          "labelConfigured": true,
+          "enabled": 1,
+          "type": "digit",
+          "required": "1",
+          "requiredKind": "string",
+          "multiple": false,
+          "operationType": {
+            "kind": "string",
+            "recognized": false
+          },
+          "showList": [
+            "1",
+            "2",
+            "4"
+          ],
+          "providerId": null,
+          "stage": "UNKNOWN",
+          "effectiveInSelectedContext": false,
+          "serviceApplicability": "applies",
+          "personApplicability": "NOT_APPLICABLE",
+          "rules": {},
+          "configShape": {},
+          "unretainedConfigKeyCount": 0
+        },
+        {
+          "fieldId": "field-028",
+          "valueKey": "field-key-002",
+          "machineKeyRetained": false,
+          "label": "配置字段 28",
+          "originalLabelRetained": false,
+          "labelConfigured": true,
+          "enabled": 1,
+          "type": "gap",
+          "required": "0",
+          "requiredKind": "string",
+          "multiple": false,
+          "operationType": {
+            "kind": "string",
+            "recognized": false
+          },
+          "showList": [
+            "2",
+            "4"
+          ],
+          "providerId": null,
+          "stage": "UNKNOWN",
+          "effectiveInSelectedContext": false,
+          "serviceApplicability": "applies",
+          "personApplicability": "NOT_APPLICABLE",
+          "rules": {},
+          "configShape": {},
+          "unretainedConfigKeyCount": 1
+        },
+        {
+          "fieldId": "field-029",
+          "valueKey": "surveyDrawing",
+          "machineKeyRetained": true,
+          "label": "配置字段 29",
+          "originalLabelRetained": false,
+          "labelConfigured": true,
+          "enabled": 1,
+          "type": "file",
+          "required": "1",
+          "requiredKind": "string",
+          "multiple": false,
+          "operationType": {
+            "kind": "string",
+            "recognized": false
+          },
+          "showList": [
+            "1",
+            "2",
+            "4"
+          ],
+          "providerId": null,
+          "stage": "UNKNOWN",
+          "effectiveInSelectedContext": false,
+          "serviceApplicability": "applies",
+          "personApplicability": "NOT_APPLICABLE",
+          "rules": {},
+          "configShape": {},
+          "unretainedConfigKeyCount": 2
+        },
+        {
+          "fieldId": "field-030",
+          "valueKey": "field-key-003",
+          "machineKeyRetained": false,
+          "label": "配置字段 30",
+          "originalLabelRetained": false,
+          "labelConfigured": true,
+          "enabled": 1,
+          "type": "file",
+          "required": "1",
+          "requiredKind": "string",
+          "multiple": false,
+          "operationType": {
+            "kind": "string",
+            "recognized": false
+          },
+          "showList": [
+            "1",
+            "2",
+            "4"
+          ],
+          "providerId": null,
+          "stage": "UNKNOWN",
+          "effectiveInSelectedContext": false,
+          "serviceApplicability": "applies",
+          "personApplicability": "NOT_APPLICABLE",
+          "rules": {},
+          "configShape": {},
+          "unretainedConfigKeyCount": 0
+        },
+        {
+          "fieldId": "field-031",
+          "valueKey": "field-key-004",
+          "machineKeyRetained": false,
+          "label": "配置字段 31",
+          "originalLabelRetained": false,
+          "labelConfigured": true,
+          "enabled": 1,
+          "type": "file",
+          "required": "1",
+          "requiredKind": "string",
+          "multiple": false,
+          "operationType": {
+            "kind": "string",
+            "recognized": false
+          },
+          "showList": [
+            "1",
+            "2",
+            "4"
+          ],
+          "providerId": null,
+          "stage": "UNKNOWN",
+          "effectiveInSelectedContext": false,
+          "serviceApplicability": "applies",
+          "personApplicability": "NOT_APPLICABLE",
+          "rules": {},
+          "configShape": {},
+          "unretainedConfigKeyCount": 0
+        },
+        {
+          "fieldId": "field-032",
+          "valueKey": "field-key-005",
+          "machineKeyRetained": false,
+          "label": "配置字段 32",
+          "originalLabelRetained": false,
+          "labelConfigured": true,
+          "enabled": 1,
+          "type": "file",
+          "required": "0",
+          "requiredKind": "string",
+          "multiple": false,
+          "operationType": {
+            "kind": "string",
+            "recognized": false
+          },
+          "showList": [
+            "1",
+            "2",
+            "4"
+          ],
+          "providerId": null,
+          "stage": "UNKNOWN",
+          "effectiveInSelectedContext": false,
+          "serviceApplicability": "applies",
+          "personApplicability": "NOT_APPLICABLE",
+          "rules": {},
+          "configShape": {},
+          "unretainedConfigKeyCount": 0
+        },
+        {
+          "fieldId": "field-033",
+          "valueKey": "field-key-006",
+          "machineKeyRetained": false,
+          "label": "配置字段 33",
+          "originalLabelRetained": false,
+          "labelConfigured": true,
+          "enabled": 1,
+          "type": "file",
+          "required": "0",
+          "requiredKind": "string",
+          "multiple": false,
+          "operationType": {
+            "kind": "string",
+            "recognized": false
+          },
+          "showList": [
+            "1",
+            "2",
+            "4"
+          ],
+          "providerId": null,
+          "stage": "UNKNOWN",
+          "effectiveInSelectedContext": false,
+          "serviceApplicability": "applies",
+          "personApplicability": "NOT_APPLICABLE",
+          "rules": {},
+          "configShape": {},
+          "unretainedConfigKeyCount": 0
+        },
+        {
+          "fieldId": "field-034",
+          "valueKey": "field-key-007",
+          "machineKeyRetained": false,
+          "label": "配置字段 34",
+          "originalLabelRetained": false,
+          "labelConfigured": true,
+          "enabled": 1,
+          "type": "file",
+          "required": "0",
+          "requiredKind": "string",
+          "multiple": false,
+          "operationType": {
+            "kind": "string",
+            "recognized": false
+          },
+          "showList": [
+            "1",
+            "2",
+            "4"
+          ],
+          "providerId": null,
+          "stage": "UNKNOWN",
+          "effectiveInSelectedContext": false,
+          "serviceApplicability": "applies",
+          "personApplicability": "NOT_APPLICABLE",
+          "rules": {},
+          "configShape": {},
+          "unretainedConfigKeyCount": 0
+        },
+        {
+          "fieldId": "field-035",
+          "valueKey": "field-key-008",
+          "machineKeyRetained": false,
+          "label": "配置字段 35",
+          "originalLabelRetained": false,
+          "labelConfigured": true,
+          "enabled": 1,
+          "type": "file",
+          "required": "0",
+          "requiredKind": "string",
+          "multiple": false,
+          "operationType": {
+            "kind": "string",
+            "recognized": false
+          },
+          "showList": [
+            "1",
+            "2",
+            "4"
+          ],
+          "providerId": null,
+          "stage": "UNKNOWN",
+          "effectiveInSelectedContext": false,
+          "serviceApplicability": "applies",
+          "personApplicability": "NOT_APPLICABLE",
+          "rules": {},
+          "configShape": {},
+          "unretainedConfigKeyCount": 0
+        },
+        {
+          "fieldId": "field-036",
+          "valueKey": "field-key-009",
+          "machineKeyRetained": false,
+          "label": "配置字段 36",
+          "originalLabelRetained": false,
+          "labelConfigured": true,
+          "enabled": 1,
+          "type": "file",
+          "required": "0",
+          "requiredKind": "string",
+          "multiple": false,
+          "operationType": {
+            "kind": "string",
+            "recognized": false
+          },
+          "showList": [
+            "1",
+            "2",
+            "4"
+          ],
+          "providerId": null,
+          "stage": "UNKNOWN",
+          "effectiveInSelectedContext": false,
+          "serviceApplicability": "applies",
+          "personApplicability": "NOT_APPLICABLE",
+          "rules": {},
+          "configShape": {},
+          "unretainedConfigKeyCount": 0
+        },
+        {
+          "fieldId": "field-037",
+          "valueKey": "field-key-010",
+          "machineKeyRetained": false,
+          "label": "配置字段 37",
+          "originalLabelRetained": false,
+          "labelConfigured": true,
+          "enabled": 1,
+          "type": "file",
+          "required": "0",
+          "requiredKind": "string",
+          "multiple": false,
+          "operationType": {
+            "kind": "string",
+            "recognized": false
+          },
+          "showList": [
+            "1",
+            "2",
+            "4"
+          ],
+          "providerId": null,
+          "stage": "UNKNOWN",
+          "effectiveInSelectedContext": false,
+          "serviceApplicability": "applies",
+          "personApplicability": "NOT_APPLICABLE",
+          "rules": {},
+          "configShape": {},
+          "unretainedConfigKeyCount": 0
+        },
+        {
+          "fieldId": "field-038",
+          "valueKey": "field-key-011",
+          "machineKeyRetained": false,
+          "label": "配置字段 38",
+          "originalLabelRetained": false,
+          "labelConfigured": true,
+          "enabled": 1,
+          "type": "file",
+          "required": "0",
+          "requiredKind": "string",
+          "multiple": false,
+          "operationType": {
+            "kind": "string",
+            "recognized": false
+          },
+          "showList": [
+            "1",
+            "2",
+            "4"
+          ],
+          "providerId": null,
+          "stage": "UNKNOWN",
+          "effectiveInSelectedContext": false,
+          "serviceApplicability": "applies",
+          "personApplicability": "NOT_APPLICABLE",
+          "rules": {},
+          "configShape": {},
+          "unretainedConfigKeyCount": 0
+        },
+        {
+          "fieldId": "field-039",
+          "valueKey": "field-key-012",
+          "machineKeyRetained": false,
+          "label": "配置字段 39",
+          "originalLabelRetained": false,
+          "labelConfigured": true,
+          "enabled": 1,
+          "type": "file",
+          "required": "0",
+          "requiredKind": "string",
+          "multiple": false,
+          "operationType": {
+            "kind": "string",
+            "recognized": false
+          },
+          "showList": [
+            "1",
+            "2",
+            "4"
+          ],
+          "providerId": null,
+          "stage": "UNKNOWN",
+          "effectiveInSelectedContext": false,
+          "serviceApplicability": "applies",
+          "personApplicability": "NOT_APPLICABLE",
+          "rules": {},
+          "configShape": {},
+          "unretainedConfigKeyCount": 0
+        },
+        {
+          "fieldId": "field-040",
+          "valueKey": "field-key-013",
+          "machineKeyRetained": false,
+          "label": "配置字段 40",
+          "originalLabelRetained": false,
+          "labelConfigured": true,
+          "enabled": 1,
+          "type": "file",
+          "required": "0",
+          "requiredKind": "string",
+          "multiple": false,
+          "operationType": {
+            "kind": "string",
+            "recognized": false
+          },
+          "showList": [
+            "1",
+            "2",
+            "4"
+          ],
+          "providerId": null,
+          "stage": "UNKNOWN",
+          "effectiveInSelectedContext": false,
+          "serviceApplicability": "applies",
+          "personApplicability": "NOT_APPLICABLE",
+          "rules": {},
+          "configShape": {},
+          "unretainedConfigKeyCount": 0
+        },
+        {
+          "fieldId": "field-041",
+          "valueKey": "field-key-014",
+          "machineKeyRetained": false,
+          "label": "配置字段 41",
+          "originalLabelRetained": false,
+          "labelConfigured": true,
+          "enabled": 1,
+          "type": "file",
+          "required": "0",
+          "requiredKind": "string",
+          "multiple": false,
+          "operationType": {
+            "kind": "string",
+            "recognized": false
+          },
+          "showList": [
+            "1",
+            "2",
+            "4"
+          ],
+          "providerId": null,
+          "stage": "UNKNOWN",
+          "effectiveInSelectedContext": false,
+          "serviceApplicability": "applies",
+          "personApplicability": "NOT_APPLICABLE",
+          "rules": {},
+          "configShape": {},
+          "unretainedConfigKeyCount": 0
+        },
+        {
+          "fieldId": "field-042",
+          "valueKey": "field-key-015",
+          "machineKeyRetained": false,
+          "label": "配置字段 42",
+          "originalLabelRetained": false,
+          "labelConfigured": true,
+          "enabled": 1,
+          "type": "file",
+          "required": "0",
+          "requiredKind": "string",
+          "multiple": false,
+          "operationType": {
+            "kind": "string",
+            "recognized": false
+          },
+          "showList": [
+            "1",
+            "2",
+            "4"
+          ],
+          "providerId": null,
+          "stage": "UNKNOWN",
+          "effectiveInSelectedContext": false,
+          "serviceApplicability": "applies",
+          "personApplicability": "NOT_APPLICABLE",
+          "rules": {},
+          "configShape": {},
+          "unretainedConfigKeyCount": 0
+        },
+        {
+          "fieldId": "field-043",
+          "valueKey": "field-key-016",
+          "machineKeyRetained": false,
+          "label": "配置字段 43",
+          "originalLabelRetained": false,
+          "labelConfigured": true,
+          "enabled": 1,
+          "type": "file",
+          "required": "0",
+          "requiredKind": "string",
+          "multiple": false,
+          "operationType": {
+            "kind": "string",
+            "recognized": false
+          },
+          "showList": [
+            "1",
+            "2",
+            "4"
+          ],
+          "providerId": null,
+          "stage": "UNKNOWN",
+          "effectiveInSelectedContext": false,
+          "serviceApplicability": "applies",
+          "personApplicability": "NOT_APPLICABLE",
+          "rules": {},
+          "configShape": {},
+          "unretainedConfigKeyCount": 0
+        },
+        {
+          "fieldId": "field-044",
+          "valueKey": "field-key-017",
+          "machineKeyRetained": false,
+          "label": "配置字段 44",
+          "originalLabelRetained": false,
+          "labelConfigured": true,
+          "enabled": 1,
+          "type": "file",
+          "required": "0",
+          "requiredKind": "string",
+          "multiple": false,
+          "operationType": {
+            "kind": "string",
+            "recognized": false
+          },
+          "showList": [
+            "1",
+            "2",
+            "4"
+          ],
+          "providerId": null,
+          "stage": "UNKNOWN",
+          "effectiveInSelectedContext": false,
+          "serviceApplicability": "applies",
+          "personApplicability": "NOT_APPLICABLE",
+          "rules": {},
+          "configShape": {},
+          "unretainedConfigKeyCount": 0
+        },
+        {
+          "fieldId": "field-045",
+          "valueKey": "field-key-018",
+          "machineKeyRetained": false,
+          "label": "配置字段 45",
+          "originalLabelRetained": false,
+          "labelConfigured": true,
+          "enabled": 1,
+          "type": "file",
+          "required": "0",
+          "requiredKind": "string",
+          "multiple": false,
+          "operationType": {
+            "kind": "string",
+            "recognized": false
+          },
+          "showList": [
+            "1",
+            "2",
+            "4"
+          ],
+          "providerId": null,
+          "stage": "UNKNOWN",
+          "effectiveInSelectedContext": false,
+          "serviceApplicability": "applies",
+          "personApplicability": "NOT_APPLICABLE",
+          "rules": {},
+          "configShape": {},
+          "unretainedConfigKeyCount": 0
+        },
+        {
+          "fieldId": "field-046",
+          "valueKey": "field-key-019",
+          "machineKeyRetained": false,
+          "label": "配置字段 46",
+          "originalLabelRetained": false,
+          "labelConfigured": true,
+          "enabled": 1,
+          "type": "file",
+          "required": "0",
+          "requiredKind": "string",
+          "multiple": false,
+          "operationType": {
+            "kind": "string",
+            "recognized": false
+          },
+          "showList": [
+            "1",
+            "2",
+            "4"
+          ],
+          "providerId": null,
+          "stage": "UNKNOWN",
+          "effectiveInSelectedContext": false,
+          "serviceApplicability": "applies",
+          "personApplicability": "NOT_APPLICABLE",
+          "rules": {},
+          "configShape": {},
+          "unretainedConfigKeyCount": 0
+        },
+        {
+          "fieldId": "field-047",
+          "valueKey": "field-key-020",
+          "machineKeyRetained": false,
+          "label": "配置字段 47",
+          "originalLabelRetained": false,
+          "labelConfigured": true,
+          "enabled": 1,
+          "type": "file",
+          "required": "0",
+          "requiredKind": "string",
+          "multiple": false,
+          "operationType": {
+            "kind": "string",
+            "recognized": false
+          },
+          "showList": [
+            "1",
+            "2",
+            "4"
+          ],
+          "providerId": null,
+          "stage": "UNKNOWN",
+          "effectiveInSelectedContext": false,
+          "serviceApplicability": "applies",
+          "personApplicability": "NOT_APPLICABLE",
+          "rules": {},
+          "configShape": {},
+          "unretainedConfigKeyCount": 0
+        },
+        {
+          "fieldId": "field-048",
+          "valueKey": "field-key-021",
+          "machineKeyRetained": false,
+          "label": "配置字段 48",
+          "originalLabelRetained": false,
+          "labelConfigured": true,
+          "enabled": 1,
+          "type": "file",
+          "required": "0",
+          "requiredKind": "string",
+          "multiple": false,
+          "operationType": {
+            "kind": "string",
+            "recognized": false
+          },
+          "showList": [
+            "1",
+            "2",
+            "4"
+          ],
+          "providerId": null,
+          "stage": "UNKNOWN",
+          "effectiveInSelectedContext": false,
+          "serviceApplicability": "applies",
+          "personApplicability": "NOT_APPLICABLE",
+          "rules": {},
+          "configShape": {},
+          "unretainedConfigKeyCount": 0
+        },
+        {
+          "fieldId": "field-049",
+          "valueKey": "field-key-022",
+          "machineKeyRetained": false,
+          "label": "配置字段 49",
+          "originalLabelRetained": false,
+          "labelConfigured": true,
+          "enabled": 1,
+          "type": "file",
+          "required": "0",
+          "requiredKind": "string",
+          "multiple": false,
+          "operationType": {
+            "kind": "string",
+            "recognized": false
+          },
+          "showList": [
+            "1",
+            "2",
+            "4"
+          ],
+          "providerId": null,
+          "stage": "UNKNOWN",
+          "effectiveInSelectedContext": false,
+          "serviceApplicability": "applies",
+          "personApplicability": "NOT_APPLICABLE",
+          "rules": {},
+          "configShape": {},
+          "unretainedConfigKeyCount": 0
+        },
+        {
+          "fieldId": "field-050",
+          "valueKey": "field-key-023",
+          "machineKeyRetained": false,
+          "label": "配置字段 50",
+          "originalLabelRetained": false,
+          "labelConfigured": true,
+          "enabled": 1,
+          "type": "gap",
+          "required": "0",
+          "requiredKind": "string",
+          "multiple": false,
+          "operationType": {
+            "kind": "string",
+            "recognized": false
+          },
+          "showList": [
+            "2",
+            "4"
+          ],
+          "providerId": null,
+          "stage": "UNKNOWN",
+          "effectiveInSelectedContext": false,
+          "serviceApplicability": "applies",
+          "personApplicability": "NOT_APPLICABLE",
+          "rules": {},
+          "configShape": {},
+          "unretainedConfigKeyCount": 0
+        },
+        {
+          "fieldId": "field-051",
+          "valueKey": "infraredImageList",
+          "machineKeyRetained": true,
+          "label": "配置字段 01",
+          "originalLabelRetained": false,
+          "labelConfigured": true,
+          "enabled": 1,
+          "type": "file",
+          "required": "0",
+          "requiredKind": "string",
+          "multiple": false,
+          "operationType": {
+            "kind": "string",
+            "recognized": false
+          },
+          "showList": [
+            "1",
+            "2",
+            "4"
+          ],
+          "providerId": null,
+          "stage": "UNKNOWN",
+          "effectiveInSelectedContext": false,
+          "serviceApplicability": "applies",
+          "personApplicability": "NOT_APPLICABLE",
+          "rules": {},
+          "configShape": {},
+          "unretainedConfigKeyCount": 1
+        },
+        {
+          "fieldId": "field-052",
+          "valueKey": "field-key-024",
+          "machineKeyRetained": false,
+          "label": "配置字段 02",
+          "originalLabelRetained": false,
+          "labelConfigured": true,
+          "enabled": 1,
+          "type": "gap",
+          "required": "0",
+          "requiredKind": "string",
+          "multiple": false,
+          "operationType": {
+            "kind": "string",
+            "recognized": false
+          },
+          "showList": [
+            "2",
+            "4"
+          ],
+          "providerId": null,
+          "stage": "UNKNOWN",
+          "effectiveInSelectedContext": false,
+          "serviceApplicability": "applies",
+          "personApplicability": "NOT_APPLICABLE",
+          "rules": {},
+          "configShape": {},
+          "unretainedConfigKeyCount": 0
+        },
+        {
+          "fieldId": "field-053",
+          "valueKey": "isMoldRemoved",
+          "machineKeyRetained": true,
+          "label": "配置字段 03",
+          "originalLabelRetained": false,
+          "labelConfigured": true,
+          "enabled": 1,
+          "type": "radio",
+          "required": "0",
+          "requiredKind": "string",
+          "multiple": false,
+          "operationType": {
+            "kind": "string",
+            "recognized": false
+          },
+          "showList": [],
+          "providerId": "code-provider-002",
+          "stage": "UNKNOWN",
+          "effectiveInSelectedContext": false,
+          "serviceApplicability": "applies",
+          "personApplicability": "NOT_APPLICABLE",
+          "rules": {},
+          "configShape": {},
+          "unretainedConfigKeyCount": 1
+        },
+        {
+          "fieldId": "field-054",
+          "valueKey": "beforeMoldRemoval",
+          "machineKeyRetained": true,
+          "label": "配置字段 04",
+          "originalLabelRetained": false,
+          "labelConfigured": true,
+          "enabled": 1,
+          "type": "file",
+          "required": "0",
+          "requiredKind": "string",
+          "multiple": false,
+          "operationType": {
+            "kind": "string",
+            "recognized": false
+          },
+          "showList": [],
+          "providerId": null,
+          "stage": "UNKNOWN",
+          "effectiveInSelectedContext": false,
+          "serviceApplicability": "applies",
+          "personApplicability": "NOT_APPLICABLE",
+          "rules": {
+            "showField": "isMoldRemoved",
+            "showValue": {
+              "kind": "string",
+              "token": "value-001"
+            }
+          },
+          "configShape": {
+            "showField": "string",
+            "showValue": "string"
+          },
+          "unretainedConfigKeyCount": 0
+        },
+        {
+          "fieldId": "field-055",
+          "valueKey": "afterMoldRemoval",
+          "machineKeyRetained": true,
+          "label": "配置字段 05",
+          "originalLabelRetained": false,
+          "labelConfigured": true,
+          "enabled": 1,
+          "type": "file",
+          "required": "0",
+          "requiredKind": "string",
+          "multiple": false,
+          "operationType": {
+            "kind": "string",
+            "recognized": false
+          },
+          "showList": [],
+          "providerId": null,
+          "stage": "UNKNOWN",
+          "effectiveInSelectedContext": false,
+          "serviceApplicability": "applies",
+          "personApplicability": "NOT_APPLICABLE",
+          "rules": {
+            "showField": "isMoldRemoved",
+            "showValue": {
+              "kind": "string",
+              "token": "value-001"
+            }
+          },
+          "configShape": {
+            "showField": "string",
+            "showValue": "string"
+          },
+          "unretainedConfigKeyCount": 0
+        },
+        {
+          "fieldId": "field-056",
+          "valueKey": "field-key-025",
+          "machineKeyRetained": false,
+          "label": "配置字段 06",
+          "originalLabelRetained": false,
+          "labelConfigured": true,
+          "enabled": 1,
+          "type": "gap",
+          "required": "0",
+          "requiredKind": "string",
+          "multiple": false,
+          "operationType": {
+            "kind": "string",
+            "recognized": false
+          },
+          "showList": [
+            "2",
+            "4"
+          ],
+          "providerId": null,
+          "stage": "UNKNOWN",
+          "effectiveInSelectedContext": false,
+          "serviceApplicability": "applies",
+          "personApplicability": "NOT_APPLICABLE",
+          "rules": {},
+          "configShape": {},
+          "unretainedConfigKeyCount": 0
+        },
+        {
+          "fieldId": "field-057",
+          "valueKey": "leakageCauseSelect",
+          "machineKeyRetained": true,
+          "label": "配置字段 07",
+          "originalLabelRetained": false,
+          "labelConfigured": true,
+          "enabled": 1,
+          "type": "select",
+          "required": "0",
+          "requiredKind": "string",
+          "multiple": false,
+          "operationType": {
+            "kind": "string",
+            "recognized": false
+          },
+          "showList": [
+            "4"
+          ],
+          "providerId": null,
+          "stage": "UNKNOWN",
+          "effectiveInSelectedContext": false,
+          "serviceApplicability": "applies",
+          "personApplicability": "NOT_APPLICABLE",
+          "rules": {},
+          "configShape": {},
+          "unretainedConfigKeyCount": 0
+        },
+        {
+          "fieldId": "field-058",
+          "valueKey": "leakageCause",
+          "machineKeyRetained": true,
+          "label": "配置字段 08",
+          "originalLabelRetained": false,
+          "labelConfigured": true,
+          "enabled": 1,
+          "type": "UNKNOWN",
+          "required": "1",
+          "requiredKind": "string",
+          "multiple": true,
+          "operationType": {
+            "kind": "string",
+            "recognized": false
+          },
+          "showList": [
+            "1",
+            "2",
+            "4"
+          ],
+          "providerId": null,
+          "stage": "UNKNOWN",
+          "effectiveInSelectedContext": false,
+          "serviceApplicability": "applies",
+          "personApplicability": "NOT_APPLICABLE",
+          "rules": {},
+          "configShape": {},
+          "unretainedConfigKeyCount": 1
+        },
+        {
+          "fieldId": "field-059",
+          "valueKey": "memo",
+          "machineKeyRetained": true,
+          "label": "备注",
+          "originalLabelRetained": true,
+          "labelConfigured": true,
+          "enabled": 1,
+          "type": "textarea",
+          "required": "0",
+          "requiredKind": "string",
+          "multiple": false,
+          "operationType": {
+            "kind": "string",
+            "recognized": false
+          },
+          "showList": [
+            "1",
+            "2",
+            "4"
+          ],
+          "providerId": null,
+          "stage": "UNKNOWN",
+          "effectiveInSelectedContext": false,
+          "serviceApplicability": "applies",
+          "personApplicability": "NOT_APPLICABLE",
+          "rules": {},
+          "configShape": {},
+          "unretainedConfigKeyCount": 0
+        }
+      ]
+    },
+    "workflows": [
+      {
+        "workOrderId": "work-order-038",
+        "currentNodeId": "node-297",
+        "clientAction": "OTHER_OR_UNRESOLVED",
+        "clientEligibility": "NOT_ENABLED_OR_UNKNOWN",
+        "nodes": [
+          {
+            "nodeId": "node-298",
+            "workflowId": "workflow-038",
+            "formDefinitionId": null,
+            "formDataId": null,
+            "sourceNodeType": "OTHER_OR_UNRESOLVED",
+            "lifecycle": "UNKNOWN",
+            "formPurpose": "UNKNOWN",
+            "formDefinitionEvidence": "UNKNOWN",
+            "handlersCount": null,
+            "rawNodeNamesRetained": false
+          },
+          {
+            "nodeId": "node-299",
+            "workflowId": "workflow-038",
+            "formDefinitionId": "form-definition-001",
+            "formDataId": "form-data-075",
+            "sourceNodeType": "OTHER_OR_UNRESOLVED",
+            "lifecycle": "UNKNOWN",
+            "formPurpose": "UNKNOWN",
+            "formDefinitionEvidence": "runtime_node_def",
+            "handlersCount": 1,
+            "rawNodeNamesRetained": false
+          },
+          {
+            "nodeId": "node-300",
+            "workflowId": "workflow-038",
+            "formDefinitionId": null,
+            "formDataId": null,
+            "sourceNodeType": "OTHER_OR_UNRESOLVED",
+            "lifecycle": "UNKNOWN",
+            "formPurpose": "UNKNOWN",
+            "formDefinitionEvidence": "UNKNOWN",
+            "handlersCount": 1,
+            "rawNodeNamesRetained": false
+          },
+          {
+            "nodeId": "node-301",
+            "workflowId": "workflow-038",
+            "formDefinitionId": null,
+            "formDataId": null,
+            "sourceNodeType": "OTHER_OR_UNRESOLVED",
+            "lifecycle": "UNKNOWN",
+            "formPurpose": "UNKNOWN",
+            "formDefinitionEvidence": "UNKNOWN",
+            "handlersCount": 1,
+            "rawNodeNamesRetained": false
+          },
+          {
+            "nodeId": "node-302",
+            "workflowId": "workflow-038",
+            "formDefinitionId": "form-definition-002",
+            "formDataId": "form-data-076",
+            "sourceNodeType": "OTHER_OR_UNRESOLVED",
+            "lifecycle": "UNKNOWN",
+            "formPurpose": "appointment",
+            "formDefinitionEvidence": "runtime_node_def",
+            "handlersCount": 1,
+            "rawNodeNamesRetained": false
+          },
+          {
+            "nodeId": "node-297",
+            "workflowId": "workflow-038",
+            "formDefinitionId": "form-definition-003",
+            "formDataId": null,
+            "sourceNodeType": "repeat",
+            "lifecycle": "active",
+            "formPurpose": "UNKNOWN",
+            "formDefinitionEvidence": "runtime_node_def",
+            "handlersCount": 1,
+            "rawNodeNamesRetained": false
+          }
+        ]
+      }
+    ],
+    "providerReads": "NOT_AUTHORIZED_BY_THIS_FIELD_ONLY_CAPTURE",
+    "customerValuesRead": false
+  },
+  "provenance": {
+    "applicationBase": "88acf4aae4c1746580114434d4b0d14e7822fdf1",
+    "rawResponseRetained": false,
+    "retainedWorkflowScope": "SELECTED_WORK_ORDER_ONLY",
+    "crossCaptureIdentity": "NOT_PROVEN",
+    "auditCodeSha256": {
+      "scripts/verify-g4f-prod-read.mjs": "58909b9211e0a63c1fdab8311f24a14ae715cb1be6817510c4ec39900c1425d4",
+      "scripts/lib/r1-current-formdef-read.mjs": "31f30812fff68fcfb542b12a7d23787555266589543d2d4f6dbb5afe55e1cfb3"
+    }
+  }
+}

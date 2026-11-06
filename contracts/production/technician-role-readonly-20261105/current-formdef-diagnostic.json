@@ -1,0 +1,43 @@
+{
+  "status": "INCOMPLETE_OR_INVALID_PAGE",
+  "loginRequests": 1,
+  "routeCounts": {
+    "roleTree": 12,
+    "workOrderList": 12,
+    "workOrderDetail": 36,
+    "quotationList": 0,
+    "packageList": 0,
+    "procedureList": 0,
+    "materialList": 0,
+    "measureList": 0,
+    "packageDetail": 0,
+    "materialSalesFields": 0,
+    "orderExtFields": 0,
+    "orderCodeOptions": 0,
+    "orderCascadeOptions": 0,
+    "catalogFilterCodeOptions": 0,
+    "materialCodeOptions": 0,
+    "materialSkuList": 0
+  },
+  "inspected": 36,
+  "pageNumber": 12,
+  "currentFormDefReads": 1,
+  "diagnostics": {
+    "httpStatus": 200,
+    "envelopeType": "object",
+    "hasDataArray": true,
+    "returnedRows": 50,
+    "reportedTotal": 59,
+    "parser": "VALID_PAGE_SHAPE",
+    "complete": false
+  },
+  "blockedUnexpectedNetworkRequests": 0,
+  "productionBusinessMutationNetworkRequests": 0,
+  "evidence": null,
+  "provenance": {
+    "applicationBase": "88acf4aae4c1746580114434d4b0d14e7822fdf1",
+    "rawResponseRetained": false,
+    "fieldPage": 1,
+    "rowsPerPage": 50
+  }
+}
