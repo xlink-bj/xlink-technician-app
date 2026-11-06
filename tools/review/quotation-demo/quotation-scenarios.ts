@@ -148,6 +148,9 @@ export function seedG4fReviewDraft(storage: StoragePort, scenario: G4fReviewScen
     )
     return
   }
+  // Submit/readback fixtures use the catalog's ordinary SPU material. The
+  // sealant fixture has sales attributes and requires an explicit SKU choice.
+  // Keep this identity/name/unit in sync with syntheticOrder in main.ts.
   if (scenario === 'submit-ready' || scenario === 'readback-pending') {
     const identity = actionDraftIdentityFor({
       userId: asOpaqueId<'UserId'>('g4f-mock-review-user'),
@@ -162,7 +165,7 @@ export function seedG4fReviewDraft(storage: StoragePort, scenario: G4fReviewScen
         groupId: 'quotation-group-review-submit', repairParts: ['repair-part-code-001'],
         partDescription: '合成屋面区域', maintainAreaNum: '12', projPackages: [],
         procedures: [{ selectionId: 'review-procedure', kind: 'procedure', catalogId: 'mock-catalog-procedure-seal', label: '檐口密封处理（示例）', unit: '处', quantity: 1 }],
-        materials: [{ selectionId: 'review-material', kind: 'material', catalogId: 'mock-catalog-material-sealant', label: '弹性密封材料（示例）', unit: '支', quantity: 2 }],
+        materials: [{ selectionId: 'review-material', kind: 'material', catalogId: 'mock-catalog-material-ordinary-1', label: '屋面防水修缮辅材', unit: '件', quantity: 2 }],
         measures: [{ selectionId: 'review-measure', kind: 'measure', catalogId: 'mock-catalog-measure-inspection', label: '高处作业防护（示例）', unit: '次', quantity: 1 }],
       }],
     }

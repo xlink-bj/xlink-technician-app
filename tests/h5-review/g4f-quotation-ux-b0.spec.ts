@@ -58,7 +58,7 @@ async function createGroup(page: Page, groupId: string, part: '屋面' | '卫生
   const firstStep = page.getByTestId('quotation-first-step-repair-parts-trigger')
   if (await firstStep.isVisible()) {
     await firstStep.click()
-    await page.getByTestId('survey-repair-part-parents').getByText(part, { exact: true }).click()
+    await page.getByTestId('cascade-options-parents').getByText(part, { exact: true }).click()
     await page.getByTestId('quotation-repair-part-picker-done').click()
     await page.getByTestId('quotation-first-step-description').getByRole('textbox').fill(description)
     await page.getByTestId('quotation-first-step-quantity').getByRole('spinbutton').fill(area)

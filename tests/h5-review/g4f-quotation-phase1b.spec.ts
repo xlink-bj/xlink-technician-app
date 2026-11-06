@@ -67,7 +67,7 @@ async function openScenario(page: Page, scenario: string): Promise<void> {
 
 async function completeFirstRepairPartContext(page: Page, description: string, quantity: string): Promise<void> {
   await page.getByTestId('quotation-first-step-repair-parts-trigger').click()
-  await page.getByTestId('survey-repair-part-parents').getByText('屋面', { exact: true }).click()
+  await page.getByTestId('cascade-options-parents').getByText('屋面', { exact: true }).click()
   await page.getByTestId('quotation-repair-part-picker-done').click()
   await page.getByTestId('quotation-first-step-description').getByRole('textbox').fill(description)
   await page.getByTestId('quotation-first-step-quantity').getByRole('spinbutton').fill(quantity)
@@ -183,7 +183,9 @@ test('isolated Phase 1B review harness keeps blocked local preview separate from
 
   await page.getByTestId(`quotation-group-description-${groupId}`).locator('textarea').fill('合成测试部位描述')
   await page.getByTestId(`quotation-group-quantity-${groupId}`).locator('input').fill('12.5')
-  await expect(page.getByTestId('quotation-engine-blocked')).toContainText('材料单价缺失')
+  // This material declares sales attributes. Missing verified SKU selection
+  // blocks it before price calculation; preserve that real validation guard.
+  await expect(page.getByTestId('quotation-engine-blocked')).toContainText('该材料需要先选择已核对的 SKU 规格。')
   await expect(page.getByTestId('quotation-engine-local-only')).toContainText('只有确认提交后')
   await expect(page.getByTestId('quotation-engine-local-only')).toContainText('报价提交不代表工单完成')
   await expect(page.getByTestId('quotation-local-gross-total')).toHaveCount(0)

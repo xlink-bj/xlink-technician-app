@@ -132,7 +132,7 @@ test('approved first-use workbench uses the shared shell and fits 390px and 320p
   await expect(page.getByTestId('quotation-quote-process')).toHaveCount(0)
   await page.getByTestId('quotation-first-step-repair-parts-trigger').click()
   await expect(page.getByTestId('quotation-repair-part-selector-quotation-group-1')).toBeVisible()
-  await page.getByTestId('survey-repair-part-parents').getByText('屋面', { exact: true }).click()
+  await page.getByTestId('cascade-options-parents').getByText('屋面', { exact: true }).click()
   await page.getByTestId('quotation-repair-part-picker-done').click()
   const firstGroup = page.getByTestId('quotation-repair-group-quotation-group-1')
   await expect(firstGroup).toContainText('屋面')
@@ -196,7 +196,7 @@ test('first repair-part step validates existing group context and returns from c
   await expect(page.getByTestId('quotation-catalog-page')).toHaveCount(0)
 
   await page.getByTestId('quotation-first-step-repair-parts-trigger').click()
-  await page.getByTestId('survey-repair-part-parents').getByText('屋面', { exact: true }).click()
+  await page.getByTestId('cascade-options-parents').getByText('屋面', { exact: true }).click()
   await page.getByTestId('quotation-repair-part-picker-done').click()
   await step.getByTestId('quotation-first-step-description').getByRole('textbox').fill('屋面局部修复')
   await step.getByTestId('quotation-first-step-quantity').getByRole('spinbutton').fill('12')

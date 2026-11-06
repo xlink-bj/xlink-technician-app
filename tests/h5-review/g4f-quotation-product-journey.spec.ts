@@ -116,7 +116,7 @@ for (const viewport of viewports) {
     await page.getByTestId('quotation-add-group').click()
     await expect(page.getByTestId('quotation-first-repair-part-step')).toBeVisible()
     await page.getByTestId('quotation-first-step-repair-parts-trigger').click()
-    await page.getByTestId('survey-repair-part-parents').getByText('屋面', { exact: true }).click()
+    await page.getByTestId('cascade-options-parents').getByText('屋面', { exact: true }).click()
     await page.getByTestId('quotation-repair-part-picker-done').click()
     await page.getByTestId('quotation-first-step-description').locator('textarea').fill('屋面檐口局部维修')
     await page.getByTestId('quotation-first-step-quantity').locator('input').fill('12')
