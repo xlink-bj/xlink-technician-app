@@ -14,22 +14,26 @@ function harness(envOverride: Record<string, unknown> = {}) {
   const record = { _id: 'record', tenantId: 'tenant', sid: 'work', nodeId: 'node', workflowId: 'workflow', state: 1, exts: { answer: 'yes' } }
   const list = { items: [{ id: 'work' }], totalCount: 1, page: 1, pageSize: 20 }
   const calls: string[] = []
-  let hook: (() => void) | undefined
+  let provider: unknown = [{ codeId: 'OPTIONS', eleid: 'OPTIONS', options: { yes: 'Yes' } }]
+  let cascade: unknown = [{ type: 'OPTIONS', children: [{ value: 'yes', name: 'Cascade yes', children: [] }] }]
+  let hook: ((path: string) => void | Promise<void>) | undefined
   const execute = vi.fn(async (request: { path: string; body?: Readonly<Record<string, unknown>> }) => {
-    calls.push(request.path); hook?.()
+    calls.push(request.path); await hook?.(request.path)
     if (request.path.startsWith('basic/serviceAppointment/')) { expect(request.body).toEqual({}); return structuredClone(detail) }
     if (request.path === 'biz/ext/queryById.do') return structuredClone(ext)
     if (request.path === 'biz/extField/query') return structuredClone(fieldPage)
+    if (request.path === 'i/code/selectCode.do') return structuredClone(provider)
+    if (request.path === 'i/code/selectMultistageCode.do') return structuredClone(cascade)
     if (request.path === 'biz/extForm/query/ext') return { data: [structuredClone(record)], total: 1, page: 1, size: request.body?.rows, dataCount: 1 }
     throw Error('Unexpected request')
   })
   const read = {
     listWorkOrders: vi.fn(async () => { calls.push('role-list'); listed = list.items.some(x => x.id === 'work'); return { state: 'succeeded', data: list } as never }),
     isWorkOrderListedForCurrentSession: () => listed,
-    getDynamicCodeOptions: vi.fn(async () => { calls.push('provider'); return { state: 'succeeded', data: { items: [{ value: 'yes', label: 'Yes' }] } } as never }),
+    getDynamicCodeOptions: vi.fn(async () => { throw Error('Lossy provider port must not be used') }),
   }
   const reader = createNormalNodeFormsReader({ auth: { getCurrentSession: () => session }, read, tenantId: 'tenant', env: { ...env, ...envOverride }, origin, transport: { execute } })
-  return { reader, execute, read, calls, detail, node, ext, field, fieldPage, list, record, hook: (fn: () => void) => { hook = fn }, changeSession: () => { session = { ...session, sessionRef: 'changed' as never } }, changeRole: () => { session = { ...session, currentRole: { ...session.currentRole!, id: 'other' as never } } } }
+  return { reader, execute, read, calls, detail, node, ext, field, fieldPage, list, record, provider: (raw: unknown) => { provider = raw }, cascade: (raw: unknown) => { cascade = raw }, unlist: () => { listed = false }, hook: (fn: (path: string) => void | Promise<void>) => { hook = fn }, changeSession: () => { session = { ...session, sessionRef: 'changed' as never } }, changeRole: () => { session = { ...session, currentRole: { ...session.currentRole!, id: 'other' as never } } } }
 }
 describe('normal form read gate', () => {
   it('requires explicit local read enablement', () => { expect(normalNodeFormsReadEnabled({}, origin)).toBe(false); expect(normalNodeFormsReadEnabled(env, origin)).toBe(true) })
@@ -39,20 +43,90 @@ describe('normal form read gate', () => {
 it('cold page traverses role list, raw detail, schema/provider, discovery, exact read and second detail', async () => {
   const h = harness(); const snapshot = await h.reader.load('work', 'node')
   expect(snapshot.records[0]?.values?.answer).toBe('yes'); expect(h.reader.isCurrent(snapshot)).toBe(true)
-  expect(h.calls).toEqual(['role-list', 'basic/serviceAppointment/queryById/work', 'biz/ext/queryById.do', 'biz/extField/query', 'provider', 'biz/extForm/query/ext', 'biz/extForm/query/ext', 'basic/serviceAppointment/queryById/work'])
-  expect(h.execute.mock.calls[4]?.[0].body?.['is:_id|string#and']).toBe('record')
+  expect(snapshot.definition.fields?.[0]?.options).toEqual([{ value: 'yes', label: 'Yes' }])
+  expect(h.read.getDynamicCodeOptions).not.toHaveBeenCalled()
+  expect(h.calls).toEqual(['role-list', 'basic/serviceAppointment/queryById/work', 'biz/ext/queryById.do', 'biz/extField/query', 'i/code/selectCode.do', 'biz/extForm/query/ext', 'biz/extForm/query/ext', 'basic/serviceAppointment/queryById/work'])
+  expect(h.execute.mock.calls[5]?.[0].body?.['is:_id|string#and']).toBe('record')
+})
+
+it.each(['session', 'role', 'clear', 'unlist'])('rejects %s changes specifically while a provider response is pending', async kind => {
+  const h = harness()
+  h.hook(async path => {
+    if (path !== 'i/code/selectCode.do') return
+    await Promise.resolve()
+    if (kind === 'session') h.changeSession()
+    else if (kind === 'role') h.changeRole()
+    else if (kind === 'clear') h.reader.clear()
+    else h.unlist()
+  })
+  await expect(h.reader.load('work', 'node')).rejects.toThrow()
+  expect(h.calls.at(-1)).toBe('i/code/selectCode.do')
+  expect(h.calls.some(path => path.startsWith('biz/extForm/'))).toBe(false)
+})
+
+it('hydrates Code and Cascade independently even with identical provider IDs, and reloads without a cache', async () => {
+  const h = harness()
+  h.fieldPage.data.push({ ...h.field, _id: 'field-tree', name: 'tree', type: 'cascade' })
+  h.fieldPage.total = 2
+  const first = await h.reader.load('work', 'node')
+  expect(first.definition.fields?.[0]?.options).toEqual([{ value: 'yes', label: 'Yes' }])
+  expect(first.definition.fields?.[1]?.options).toEqual([{ value: 'yes', label: 'Cascade yes', children: [] }])
+  expect(h.execute).toHaveBeenCalledWith({ method: 'POST', path: 'i/code/selectCode.do', body: {
+    jsonPara: '[{"codeId":"OPTIONS","eleid":"OPTIONS"}]', tenantId: 'tenant',
+  } })
+  expect(h.execute).toHaveBeenCalledWith({ method: 'POST', path: 'i/code/selectMultistageCode.do', body: { types: 'OPTIONS', tenantId: 'tenant' } })
+  h.provider([{ codeId: 'OPTIONS', eleid: 'OPTIONS', options: {} }])
+  h.cascade([{ type: 'OPTIONS', children: [] }])
+  const second = await h.reader.load('work', 'node')
+  expect(second.definition.fields?.map(f => f.options)).toEqual([[], []])
+  expect(first.definition.fields?.[0]?.options).toEqual([{ value: 'yes', label: 'Yes' }])
+  expect(h.calls.filter(path => path.startsWith('i/code/'))).toHaveLength(4)
+})
+
+it.each([
+  { valueOption: 42 }, { valueOption: 'java:example.Codes' }, { valueOption: 'one,two' },
+  { name: ' answer' }, { type: 'select ' }, { type: 'bizSelect' }, { tenantId: 'foreign' },
+  { id: 'foreign' }, { fieldType: 'cascade' }, { key: 'other' },
+])('rejects invalid second field %j before requesting either provider', async metadata => {
+  const h = harness()
+  h.fieldPage.data.push({ ...h.field, _id: 'second-field', name: 'second', ...metadata } as typeof h.field)
+  h.fieldPage.total = 2
+  await expect(h.reader.load('work', 'node')).rejects.toThrow()
+  expect(h.calls.some(path => path.startsWith('i/code/'))).toBe(false)
+})
+
+it('hydrates conditionally hidden Cascade fields and retains unknown record values unchanged', async () => {
+  const h = harness()
+  Object.assign(h.field, { type: 'cascade', showList: ['4'], frontEndConfig: '{"showField":"other","showValue":"missing"}' })
+  h.record.exts.answer = 'not-in-provider'
+  const snapshot = await h.reader.load('work', 'node')
+  expect(snapshot.definition.fields?.[0]?.options).toEqual([{ value: 'yes', label: 'Cascade yes', children: [] }])
+  expect(snapshot.records[0]?.values?.answer).toBe('not-in-provider')
+  expect(h.calls.filter(path => path === 'i/code/selectMultistageCode.do')).toHaveLength(1)
+})
+
+it('keeps missing runtime permission evidence missing and performs only the bounded read routes', async () => {
+  const h = harness()
+  const snapshot = await h.reader.load('work', 'node')
+  expect(snapshot.fillableFieldIds).toBeUndefined()
+  expect(snapshot.node.formFieldIdsReadOnly).toBeUndefined()
+  const allowed = new Set(['basic/serviceAppointment/queryById/work', 'biz/ext/queryById.do',
+    'biz/extField/query', 'i/code/selectCode.do', 'biz/extForm/query/ext'])
+  expect(h.execute.mock.calls.every(([request]) => allowed.has(request.path))).toBe(true)
 })
 it.each([{ showList: ['1', '2', '5'] }, { showList: [] }, { frontEndConfig: '{"mpDetailHide":true}' }])('does not request statically excluded provider %j', async metadata => {
   const h = harness(); Object.assign(h.field, metadata)
-  h.read.getDynamicCodeOptions.mockImplementation(async () => { throw Error('Unknown excluded provider') })
+  h.provider(null)
   expect((await h.reader.load('work', 'node')).records).toHaveLength(1)
   expect(h.read.getDynamicCodeOptions).not.toHaveBeenCalled()
+  expect(h.calls.some(path => path.startsWith('i/code/'))).toBe(false)
 })
 it('does not skip a conditional provider or treat failure as verified empty options', async () => {
   const h = harness(); Object.assign(h.field, { showList: ['4'], frontEndConfig: '{"showField":"other","showValue":"missing"}' })
-  h.read.getDynamicCodeOptions.mockImplementation(async () => ({ state: 'failed' } as never))
+  h.provider(null)
   await expect(h.reader.load('work', 'node')).rejects.toThrow()
-  expect(h.read.getDynamicCodeOptions).toHaveBeenCalledOnce()
+  expect(h.calls.filter(path => path === 'i/code/selectCode.do')).toHaveLength(1)
+  expect(h.read.getDynamicCodeOptions).not.toHaveBeenCalled()
   expect(h.calls.some(path => path.startsWith('biz/extForm/'))).toBe(false)
 })
 it.each(['session', 'role', 'clear'])('rejects %s change during await', async kind => {

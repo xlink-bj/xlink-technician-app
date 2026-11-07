@@ -2,6 +2,7 @@ import type { AuthSessionPort, TechnicianApiReadPort, FormDefinitionRead, Workfl
 import type { ApiReadRequest, ApiReadTransport } from '@adapters/api/technician-api'
 import { createUniApiReadTransport } from '@adapters/api/uni-api-read-transport'
 import { createR1ScopedFormReader } from '@adapters/api/r1-scoped-form-read'
+import { bindR1ScopedFieldOptions, readR1ScopedFieldOptions } from '@adapters/api/r1-scoped-field-options'
 import { formDefinition } from '@adapters/api/read-models/form'
 import { workflowNode } from '@adapters/api/read-models/workflow'
 import { evaluateNodeVisibility } from '@runtimes/workflow/policy'
@@ -139,21 +140,18 @@ export function createNormalNodeFormsReader(input: {
       }
       if (fields.length !== fieldTotal) deny()
       const definition = formDefinition({ data: fields }, asOpaqueId<'FormDefinitionId'>(definitionId))
+      // Validate every applicable binding before the first provider request.
+      // Static mobile exclusions alone can skip a provider; conditional fields
+      // still hydrate, regardless of the currently selected record's values.
+      const bindings = (definition.fields ?? []).map(field =>
+        isFieldApplicable(actionFormSchemaFor(field), ACTION_FORM_SURFACE)
+          ? bindR1ScopedFieldOptions({ rawField: fields.find(raw => raw._id === field.fieldId),
+            field, tenantId: input.tenantId, definitionId })
+          : null)
       const hydrated = []
-      for (const f of definition.fields ?? []) {
-        // A statically excluded mobile field does not need a provider request.
-        // Do not skip conditional fields: their options may be needed for a
-        // different record, and provider failure must remain explicit.
-        if (isFieldApplicable(actionFormSchemaFor(f), ACTION_FORM_SURFACE)
-          && f.valueOption && ['radio', 'select', 'checkbox'].includes(f.type)) {
-          check()
-          const options = await input.read.getDynamicCodeOptions?.({ valueOption: f.valueOption })
-          check()
-          if (!options || options.state !== 'succeeded' || !options.data) return deny()
-          if (!Array.isArray(options.data.items)
-            || options.data.items.length > 100 || new Set(options.data.items.map(x => x.value)).size !== options.data.items.length) deny()
-          hydrated.push({ ...f, options: options.data.items })
-        } else hydrated.push(f)
+      for (const [index, field] of (definition.fields ?? []).entries()) {
+        const binding = bindings[index]
+        hydrated.push(binding ? { ...field, options: await readR1ScopedFieldOptions(binding, { execute }) } : field)
       }
       const reader = createR1ScopedFormReader({ transport: { execute }, scope: {
         tenantId: input.tenantId, workOrderId, runtimeNodeId, workflowRunId: id(node.runId),
