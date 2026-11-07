@@ -5,6 +5,7 @@ import { asOpaqueId } from '@shared/types'
 import { adapterFailure, succeeded, unknownErrorMessage } from '../common/operations'
 import {
   asRecord,
+  consistentWireIdentity,
   nestedRecord,
   nestedValue,
   optionalString,
@@ -91,15 +92,66 @@ function sessionFromBackend(raw: unknown): SessionSnapshot {
   }
 }
 
-function isSessionInvalid(raw: unknown): boolean {
-  const record = asRecord(raw, 'session response')
-  if (record.valid === false || record.success === false) return true
-  const data = nestedRecord(record, ['data'])
-  return data?.valid === false || data?.success === false
+function restoredSession(raw: unknown, stored: SessionSnapshot): SessionSnapshot {
+  const envelope = asRecord(decodeAuthResponse(raw), 'session response')
+  const data = nestedRecord(envelope, ['data'])
+  // A bare valid flag, absent error, or a locally cached identity is not proof.
+  if (envelope.valid !== true || envelope.success === false || !data || !nestedRecord(data, ['user'])
+    || data.success === false || data.valid === false) throw new Error('Session was not authoritatively verified')
+  const user = nestedRecord(data, ['user'])!
+  const roles = ['currentRole', 'role'].filter(key => Object.hasOwn(data, key))
+    .map(key => data[key] === null ? null : asRecord(data[key], 'restored role'))
+  const checks: Array<readonly [AdapterRecord, readonly string[], string]> = [
+    [data, ['token', 'sessionRef', 'sessionId'], 'session reference'],
+    [user, ['id', '_id', 'userId'], 'user identity'],
+  ]
+  for (const role of roles) if (role) checks.push([role, ['id', '_id', 'roleId'], 'role identity'])
+  for (const [record, keys, label] of checks) {
+    for (const key of keys) if (Object.hasOwn(record, key)
+      && (typeof record[key] !== 'string' || !record[key] || record[key] !== (record[key] as string).trim())) throw new Error(`Invalid ${label}`)
+    if (!consistentWireIdentity(record, keys, label)) throw new Error(`Missing ${label}`)
+  }
+  if (new Set(roles.map(role => role ? consistentWireIdentity(role, ['id', '_id', 'roleId'], 'role identity') : null)).size > 1) throw new Error('Contradictory current role')
+  const fresh = sessionFromBackend(envelope)
+  if (fresh.sessionRef !== stored.sessionRef || fresh.user.id !== stored.user.id) {
+    throw new Error('Restored session identity does not match the stored reference')
+  }
+  return fresh
+}
+
+function validStoredSession(value: unknown): value is SessionSnapshot {
+  if (!value || typeof value !== 'object') return false
+  const record = value as Partial<SessionSnapshot>
+  return typeof record.sessionRef === 'string' && record.sessionRef.trim().length > 0
+    && typeof record.user?.id === 'string' && record.user.id.trim().length > 0
 }
 
 export class AuthSessionAdapter implements AuthSessionPort {
   private current: SessionSnapshot | null = null
+  private generation = 0
+  private persistence: Promise<void> = Promise.resolve()
+
+  private cancelled<T>(): OperationSnapshot<T> {
+    return adapterFailure('cancelled', 'Authentication operation was superseded')
+  }
+
+  private enqueue<T>(operation: () => Promise<T>): Promise<T> {
+    const next = this.persistence.then(operation, operation)
+    this.persistence = next.then(() => undefined, () => undefined)
+    return next
+  }
+
+  private async commit(session: SessionSnapshot, generation: number): Promise<OperationSnapshot<SessionSnapshot>> {
+    const stored = await this.enqueue(() => generation === this.generation
+      ? this.storage.write(sessionStorageKey, session)
+      : Promise.resolve(this.cancelled<void>()))
+    if (generation !== this.generation) return this.cancelled()
+    if (stored.state !== 'succeeded') return stored.error
+      ? { state: stored.state, error: stored.error }
+      : adapterFailure('server_terminal', 'Session storage failed')
+    this.current = session
+    return succeeded(session)
+  }
 
   constructor(
     private readonly backend: AuthBackendDriver,
@@ -108,6 +160,8 @@ export class AuthSessionAdapter implements AuthSessionPort {
   ) {}
 
   async startSession(request: AuthStartRequest): Promise<OperationSnapshot<SessionSnapshot>> {
+    const generation = ++this.generation
+    this.current = null
     try {
       const raw = await this.backend.login({
         path: 'index/phoneLogin.do',
@@ -118,38 +172,41 @@ export class AuthSessionAdapter implements AuthSessionPort {
           tenant: this.wireConfig.tenant,
         },
       })
-      const session = sessionFromBackend(raw)
-      const stored = await this.storage.write(sessionStorageKey, session)
-      if (stored.state !== 'succeeded') {
-        return stored.error
-          ? { state: stored.state, error: stored.error }
-          : adapterFailure('server_terminal', 'Session storage failed')
-      }
-      this.current = session
-      return succeeded(session)
+      if (generation !== this.generation) return this.cancelled()
+      return await this.commit(sessionFromBackend(raw), generation)
     } catch (error) {
+      if (generation !== this.generation) return this.cancelled()
       return authFailure(error, 'Authentication failed')
     }
   }
 
   async restoreSession(): Promise<OperationSnapshot<SessionSnapshot | null>> {
-    const stored = await this.storage.read<SessionSnapshot>(sessionStorageKey)
+    const generation = ++this.generation
+    this.current = null
+    const stored = await this.enqueue(() => this.storage.read<SessionSnapshot>(sessionStorageKey))
+    if (generation !== this.generation) return this.cancelled()
     if (stored.state !== 'succeeded') return stored
-    const storedSession = stored.data
-    if (!storedSession) {
-      this.current = null
-      return succeeded(null)
+    if (!stored.data) return succeeded(null)
+    const invalidate = async (): Promise<OperationSnapshot<SessionSnapshot | null>> => {
+      const removed = await this.enqueue(() => generation === this.generation
+        ? this.storage.remove(sessionStorageKey)
+        : Promise.resolve(this.cancelled<void>()))
+      if (generation !== this.generation) return this.cancelled()
+      if (removed.state !== 'succeeded') return { state: removed.state, error: removed.error }
+      return adapterFailure('session_invalid', 'Stored session is no longer valid')
     }
-
+    if (!validStoredSession(stored.data)) return invalidate()
     try {
-      if (isSessionInvalid(await this.backend.restore(storedSession.sessionRef))) {
-        await this.storage.remove(sessionStorageKey)
-        this.current = null
-        return adapterFailure('session_invalid', 'Stored session is no longer valid')
-      }
-      this.current = storedSession
-      return succeeded(storedSession)
+      const raw = await this.backend.restore(stored.data.sessionRef)
+      if (generation !== this.generation) return this.cancelled()
+      const envelope = asRecord(decodeAuthResponse(raw), 'session response')
+      const data = nestedRecord(envelope, ['data'])
+      if (envelope.valid === false && data?.valid !== true) return invalidate()
+      // Unknown/malformed responses stay unauthenticated, but are not evidence
+      // that the server revoked the credential. Preserve it for explicit retry.
+      return await this.commit(restoredSession(envelope, stored.data), generation)
     } catch (error) {
+      if (generation !== this.generation) return this.cancelled()
       return authFailure(error, 'Session restore failed')
     }
   }
@@ -160,12 +217,18 @@ export class AuthSessionAdapter implements AuthSessionPort {
 
   async endSession(): Promise<OperationSnapshot<void>> {
     const session = this.current
+    const generation = ++this.generation
+    this.current = null
+    // Reserve logout's clear immediately, before any remote await. Do not skip
+    // this queued clear for a later generation: newer writes follow it in FIFO.
+    const clearing = this.enqueue(() => this.storage.remove(sessionStorageKey))
     try {
+      const removed = await clearing
       if (session) await this.backend.logout(session.sessionRef)
-      const removed = await this.storage.remove(sessionStorageKey)
-      this.current = null
+      if (generation !== this.generation) return this.cancelled()
       return removed
     } catch (error) {
+      if (generation !== this.generation) return this.cancelled()
       return authFailure(error, 'Session end failed')
     }
   }

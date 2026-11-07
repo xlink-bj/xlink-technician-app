@@ -21,8 +21,16 @@ export const useSessionStore = defineStore('session', () => {
   const error = ref<OperationError | null>(null)
   const bootstrapInProgress = ref(false)
   let authSession: AuthSessionPort | null = null
+  let operation = 0
 
   function configureAuth(port: AuthSessionPort): void {
+    ++operation
+    if (bootstrapInProgress.value || status.value === 'authenticating' || status.value === 'authenticated') {
+      session.value = null
+      status.value = 'unauthenticated'
+      error.value = null
+    }
+    bootstrapInProgress.value = false
     authSession = port
   }
 
@@ -31,6 +39,7 @@ export const useSessionStore = defineStore('session', () => {
       return failure('validation', 'Session initialization is already in progress')
     }
 
+    const owner = ++operation
     bootstrapInProgress.value = true
     error.value = null
     status.value = 'unknown'
@@ -45,6 +54,7 @@ export const useSessionStore = defineStore('session', () => {
       }
 
       const result = await authSession.restoreSession()
+      if (owner !== operation) return failure('cancelled', 'Session initialization was superseded')
       if (result.state === 'succeeded') {
         session.value = result.data ?? null
         status.value = result.data ? 'authenticated' : 'unauthenticated'
@@ -60,8 +70,15 @@ export const useSessionStore = defineStore('session', () => {
         error.value = result.error ?? null
       }
       return result
+    } catch {
+      if (owner !== operation) return failure('cancelled', 'Session initialization was superseded')
+      const result = failure<SessionSnapshot | null>('server_terminal', 'Session initialization failed')
+      session.value = null
+      status.value = 'error'
+      error.value = result.error ?? null
+      return result
     } finally {
-      bootstrapInProgress.value = false
+      if (owner === operation) bootstrapInProgress.value = false
     }
   }
 
@@ -76,13 +93,18 @@ export const useSessionStore = defineStore('session', () => {
       return failure('validation', 'Verification code is required')
     }
 
+    const owner = ++operation
     status.value = 'authenticating'
     session.value = null
     error.value = null
-    const result = await authSession.startSession({
-      phoneNumber: request.phoneNumber.trim(),
-      verificationCode: request.verificationCode.trim(),
-    })
+    let result: OperationSnapshot<SessionSnapshot>
+    try {
+      result = await authSession.startSession({
+        phoneNumber: request.phoneNumber.trim(),
+        verificationCode: request.verificationCode.trim(),
+      })
+    } catch { result = failure('server_terminal', 'Login failed') }
+    if (owner !== operation) return failure('cancelled', 'Login was superseded')
     if (result.state === 'succeeded' && result.data) {
       session.value = result.data
       status.value = 'authenticated'
@@ -95,13 +117,20 @@ export const useSessionStore = defineStore('session', () => {
   }
 
   async function endSession(): Promise<OperationSnapshot<void>> {
+    const owner = ++operation
+    session.value = null
+    status.value = 'unauthenticated'
+    bootstrapInProgress.value = false
     if (!authSession) {
       status.value = 'unauthenticated'
       session.value = null
       return failure('server_terminal', 'Authentication service is not configured')
     }
 
-    const result = await authSession.endSession()
+    let result: OperationSnapshot<void>
+    try { result = await authSession.endSession() }
+    catch { result = failure('server_terminal', 'Logout failed') }
+    if (owner !== operation) return failure('cancelled', 'Logout was superseded')
     if (result.state === 'succeeded') {
       status.value = 'unauthenticated'
       session.value = null
