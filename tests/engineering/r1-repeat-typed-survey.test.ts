@@ -21,6 +21,7 @@ function harness() {
     { _id: 'memo', tenantId: 'tenant', extId: ext._id, state: 1, name: 'memo', title: '备注', type: 'textarea', required: false },
   ]
   let records: Record<string, unknown>[] = []
+  let concurrentCreate = false
   let mutateRow = (_row: Record<string, unknown>) => {}
   let createAck: unknown = { status: 1, success: true, data: { _id: 'saved-survey' } }
   const events: string[] = []
@@ -50,11 +51,13 @@ function harness() {
     // required Survey property. Server supplies inherited identity/audit fields.
     const row: Record<string, unknown> = { _id: 'saved-survey', tenantId: 'tenant', sid: data.sid, nodeId: data.nodeId, workflowId: data.workflowId, state: 1, squareMeter: data.squareMeter, memo: data.memo, sourceType: 1, createTime: '2026-11-08 02:00:00', createDateTime: '2026-11-08 02:00:00' }
     mutateRow(row)
-    records = [row]
+    // A second client may create after the initial empty read. This stub only
+    // diagnoses the existing exact-reread fence; the local lock is not CAS.
+    records = concurrentCreate ? [{ ...row, _id: 'concurrent-survey' }, row] : [row]
     return createAck
   }) }
   const make = () => createR1RepeatActions({ env, origin, getSession: () => session, hasExactGrant: candidate => JSON.stringify(candidate) === JSON.stringify(scope), readLatest: s => reader.load(s.workOrderId, s.runtimeNodeId), transport: commands })
-  return { make, reader, commands, readTransport, fields, node, events, mutate: (fn: typeof mutateRow) => { mutateRow = fn }, ack: (value: unknown) => { createAck = value } }
+  return { make, reader, commands, readTransport, fields, node, events, mutate: (fn: typeof mutateRow) => { mutateRow = fn }, ack: (value: unknown) => { createAck = value }, concurrent: () => { concurrentCreate = true } }
 }
 beforeEach(() => installLocalFixtureBrowser())
 afterEach(() => vi.unstubAllGlobals())
@@ -125,6 +128,22 @@ describe('generic repeat typed Survey transport contract', () => {
     await actions.saveOnly(scope, draft)
     await expect(h.make().saveOnly(scope, { ...draft, memo: 'replacement' })).rejects.toThrow()
     expect(h.commands.execute).toHaveBeenCalledTimes(1)
+  })
+  it('locks an ACK followed by two same-scope records rather than claiming cross-client CAS or retrying', async () => {
+    const h = harness(), actions = h.make()
+    h.concurrent()
+    await expect(actions.saveOnly(scope, draft)).rejects.toThrow()
+    expect(actions.locked(scope)).toBe(true)
+    expect(h.events.filter(event => event.includes('extForm/query'))).toEqual([
+      'biz/extForm/query/ext-survey',
+      'biz/extForm/query/ext-survey',
+      'biz/extForm/query/ext-survey:exact',
+      'biz/extForm/query/ext-survey:exact',
+    ])
+    await expect(h.make().saveOnly(scope, draft)).rejects.toThrow()
+    await expect(h.make().complete(scope)).rejects.toThrow()
+    expect(h.commands.execute).toHaveBeenCalledTimes(1)
+    expect(h.commands.execute.mock.calls[0]![0].path).toBe('biz/extForm/upsert/ext-survey')
   })
   it('preserves zero decimal and the supported text normalization of false', async () => {
     const h = harness()

@@ -20,7 +20,54 @@ import type {
 import { isMediaValueRef } from '@shared/types'
 import { AdapterMappingError } from '../common/operations'
 import { surveyMediaValueCodec } from './survey-form-codec'
+import { isMockOwnedCommand } from './mock/ownership'
 import type { ApiCommandRequest } from './technician-api-commands'
+
+const surveyReservedValueKeys = new Set([
+  '_id', 'id', 'dataId', 'formDataId', 'extId', 'formDefId', 'definitionId',
+  'sid', 'smodule', 'nodeId', 'workflowId', 'workflowNodeId', 'workflowRunId', 'runId',
+  'tenantId', 'userId', 'roleId', 'state', 'externalSid',
+  'createTime', 'createDateTime', 'createUser', 'createUserName',
+  'updateTime', 'updateDateTime', 'updateUser', 'updateUserName',
+  'orgId', 'orgName', 'optId', 'optName', 'belongTo', 'etags', 'isSettle',
+  '_version', 'version', 'revision', '_class',
+  'exts', 'dataStr', 'raw', 'rawData', 'rawBody', 'body', 'jsonBody',
+  '__proto__', 'prototype', 'constructor', 'toJSON',
+])
+
+interface SurveyCreateIntent {
+  readonly hasFormDataId: boolean
+  readonly reservedKey?: string
+  readonly hasValueAccessors: boolean
+}
+
+function assertSurveyCreateOnly(
+  intent: SurveyCreateIntent | undefined,
+  scope: Readonly<Record<string, unknown>>,
+  request: ApiCommandRequest,
+): void {
+  if (!intent) return
+  // The existing synthetic route policy never permits real-network fall-through,
+  // even with Mock disabled. Its Map-backed edit regression is not typed R1 proof.
+  if (isMockOwnedCommand(request.path, request.body)) return
+  // R1 reconstructs and saves a fresh typed Survey, without a preservation/CAS
+  // contract. Even a full API snapshot loses BSON Date precision. Never strip an
+  // existing ID to turn a rejected replacement into a duplicate create.
+  if (intent.hasFormDataId) {
+    throw new AdapterMappingError('Typed Survey replacement is unsupported; only a new record without formDataId can be saved')
+  }
+  if (intent.reservedKey) throw new AdapterMappingError(`Survey create values cannot include reserved metadata: ${intent.reservedKey}`)
+  if (intent.hasValueAccessors) throw new AdapterMappingError('Survey create values cannot use runtime accessors')
+  // Check the immutable serialized body too: runtime getters/toJSON may change
+  // the caller object after the original identity/key presence was captured.
+  const serialized = request.body?.dataStr
+  const data = typeof serialized === 'string' ? JSON.parse(serialized) : undefined
+  if (!data || typeof data !== 'object' || Array.isArray(data)
+    || Object.keys(data).some(key => surveyReservedValueKeys.has(key) && !Object.hasOwn(scope, key))
+    || Object.entries(scope).some(([key, value]) => data[key] !== value)) {
+    throw new AdapterMappingError('Serialized Survey create identity or metadata does not match its command scope')
+  }
+}
 
 function mapDynamicValue(value: unknown, valueKey: string, purpose?: FormPurpose): unknown {
   if (purpose === 'survey') {
@@ -44,28 +91,46 @@ function mapDynamicValues(
 export function formDataUpsertCommand(
   input: SaveDynamicFormInput,
 ): ApiCommandRequest {
-  if (input.purpose === 'appointment') {
+  // Snapshot intent before field getters or toJSON can delete an ID/key or
+  // change purpose. No late check may reinterpret a Survey edit as a create.
+  const hasFormDataId = 'formDataId' in input
+  const purpose = input.purpose
+  const values = input.values
+  const descriptors = purpose === 'survey' ? Object.getOwnPropertyDescriptors(values) : undefined
+  const surveyIntent: SurveyCreateIntent | undefined = descriptors ? {
+    hasFormDataId,
+    reservedKey: Object.keys(descriptors).find(key => surveyReservedValueKeys.has(key)),
+    hasValueAccessors: Object.values(descriptors).some(descriptor => descriptor.get || descriptor.set),
+  } : undefined
+  const path = `biz/extForm/upsert/${encodeURIComponent(String(input.definitionId))}`
+  if (purpose === 'appointment') {
     if (hasNonStringAppointmentNeed(input.values.need)) throw new AdapterMappingError(appointmentNeedReselectionMessage)
     const problem = appointmentReplacementProblem({ ...input, dataId: input.formDataId }, true)
       ?? (appointmentNullBusinessKey(input.values) ? 'Null appointment business values are unsupported' : undefined)
     if (problem) throw new AdapterMappingError(problem)
     if (Object.keys(input.values).some(key => !appointmentBusinessKeys.some(allowed => allowed === key))) throw new AdapterMappingError('Unknown appointment business value cannot enter replacement')
   }
-  const data = {
-    ...mapDynamicValues(input.values, input.purpose),
-    ...(input.purpose === 'appointment' ? input.appointmentReplacement?.metadata : {}),
+  const workflowRunId = input.workflowRunId
+  const scope = {
     sid: input.workOrderId,
     smodule: 'serviceAppointment',
     nodeId: input.workflowNodeId,
-    ...(input.workflowRunId ? { workflowId: input.workflowRunId } : {}),
-    ...(input.formDataId ? { _id: input.formDataId } : {}),
+    ...(workflowRunId ? { workflowId: workflowRunId } : {}),
     state: 1,
   }
-  return {
+  const data = {
+    ...mapDynamicValues(values, purpose),
+    ...(purpose === 'appointment' ? input.appointmentReplacement?.metadata : {}),
+    ...scope,
+    ...(input.formDataId ? { _id: input.formDataId } : {}),
+  }
+  const request: ApiCommandRequest = {
     method: 'POST',
-    path: `biz/extForm/upsert/${encodeURIComponent(String(input.definitionId))}`,
+    path,
     body: { dataStr: JSON.stringify(data) },
   }
+  assertSurveyCreateOnly(surveyIntent, scope, request)
+  return request
 }
 
 export function workflowCompleteCommand(input: CompleteWorkflowNodeInput): ApiCommandRequest {
