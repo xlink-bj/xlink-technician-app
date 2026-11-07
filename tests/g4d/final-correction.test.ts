@@ -230,7 +230,7 @@ describe('G4-D final functional and safety corrections', () => {
     expect(contaminated.error?.category).toBe('server_terminal')
   })
 
-  it('applies dynamic appointment validation before any submit command', async () => {
+  for (const unknownSource of [false, true]) it(`applies dynamic appointment validation before any submit command; unknownSource=${unknownSource}`, async () => {
     const id = asOpaqueId<'WorkOrderId'>('validation-work-order')
     const nodeId = asOpaqueId<'WorkflowNodeRuntimeId'>('appointment-node')
     const api = {
@@ -243,7 +243,7 @@ describe('G4-D final functional and safety corrections', () => {
       readAppointmentForm: vi.fn(async () => succeeded({
         definitionId: formDefinition().id,
         fields: formDefinition().fields!,
-        values: { source: 'backend value' },
+        values: (unknownSource ? { source: 'backend value' } : {}) as Record<string, string>,
       })),
       submitAppointment: vi.fn(async (input: SubmitAppointmentInput) => {
         const id = asOpaqueId<'FormDataId'>('final-correction-saved-form')
@@ -270,7 +270,7 @@ describe('G4-D final functional and safety corrections', () => {
 
     const readonlyResult = store.setField('source', 'changed')
     expect(readonlyResult.error?.category).toBe('validation')
-    expect(store.appointmentForm?.values.source).toBe('backend value')
+    expect(store.appointmentForm?.values.source).toBe(unknownSource ? 'backend value' : undefined)
     const optionResult = store.setField('need', 'unsupported')
     expect(optionResult.error?.category).toBe('validation')
     expect(store.appointmentForm?.values.need).toBeUndefined()
@@ -282,8 +282,8 @@ describe('G4-D final functional and safety corrections', () => {
 
     store.setField('need', '1')
     store.setField('datetime', '2026-04-20 10:00')
-    expect((await store.submit()).state).toBe('succeeded')
-    expect(command.submitAppointment).toHaveBeenCalledTimes(1)
+    expect((await store.submit()).state).toBe(unknownSource ? 'failed_terminal' : 'succeeded')
+    expect(command.submitAppointment).toHaveBeenCalledTimes(unknownSource ? 0 : 1)
   })
 
   it('keeps Runtime execution authorization separate from action intent', () => {
@@ -327,14 +327,7 @@ describe('G4-D final functional and safety corrections', () => {
         datetime: ' 2026-04-20 10:00 ',
         source: 'backend value',
       },
-    })).toEqual({
-      state: 'succeeded',
-      data: {
-        need: '1',
-        datetime: '2026-04-20 10:00',
-        source: 'backend value',
-      },
-    })
+    }).state).toBe('failed_terminal') // unknown source field needs its own preservation contract
   })
 
   it('does not reread Detail after an appointment command failure', async () => {

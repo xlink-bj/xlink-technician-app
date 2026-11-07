@@ -1,3 +1,5 @@
+import { hasNonStringAppointmentNeed, appointmentNeedReselectionMessage } from '@shared/form/appointment-need'
+import { appointmentBusinessKeys, appointmentReplacementProblem, appointmentNullBusinessKey } from '@shared/form/appointment-replacement-context'
 /**
  * Pure, source-backed R1 business command wire encoders.
  *
@@ -42,8 +44,16 @@ function mapDynamicValues(
 export function formDataUpsertCommand(
   input: SaveDynamicFormInput,
 ): ApiCommandRequest {
+  if (input.purpose === 'appointment') {
+    if (hasNonStringAppointmentNeed(input.values.need)) throw new AdapterMappingError(appointmentNeedReselectionMessage)
+    const problem = appointmentReplacementProblem({ ...input, dataId: input.formDataId }, true)
+      ?? (appointmentNullBusinessKey(input.values) ? 'Null appointment business values are unsupported' : undefined)
+    if (problem) throw new AdapterMappingError(problem)
+    if (Object.keys(input.values).some(key => !appointmentBusinessKeys.some(allowed => allowed === key))) throw new AdapterMappingError('Unknown appointment business value cannot enter replacement')
+  }
   const data = {
     ...mapDynamicValues(input.values, input.purpose),
+    ...(input.purpose === 'appointment' ? input.appointmentReplacement?.metadata : {}),
     sid: input.workOrderId,
     smodule: 'serviceAppointment',
     nodeId: input.workflowNodeId,

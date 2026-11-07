@@ -1,3 +1,5 @@
+import { appointmentReplacementValues } from './appointment-replacement-values'
+import { hasNonStringAppointmentNeed, appointmentNeedReselectionMessage } from '@shared/form/appointment-need'
 import {
   evaluateFieldState,
   evaluateVisibility,
@@ -8,6 +10,7 @@ import {
 import type { EffectiveFieldState, FormFieldSchema, NormalizedFieldValue } from '@runtimes/dynamic-form'
 import type { DynamicFormRead, AppointmentFormFieldRead } from '@shared/ports'
 import type { FormFieldValue } from '@shared/ports/api'
+import { actionFormConditionValues, actionFormEditableValues } from './action-form-condition-context'
 import { actionFormSchemaFor, ACTION_FORM_SURFACE, isWorkflowFieldReadOnly } from './action-form-schema'
 import { createOperationError } from '@shared/types'
 import type { OperationSnapshot } from '@shared/types'
@@ -85,7 +88,7 @@ export function dynamicActionFieldsFor(form: DynamicFormRead): readonly DynamicA
   return form.fields.map((field) => ({
     ...field,
     runtime: surveyLeakageCauseFieldStateFor(form, field) ?? evaluateFieldState(schemaFor(field, form.values, form.purpose), {
-      values: form.values,
+      values: actionFormConditionValues(form),
       workflowReadOnly: isWorkflowFieldReadOnly(form, field),
       surface: ACTION_FORM_SURFACE,
     }),
@@ -101,7 +104,7 @@ export function dynamicActionUnsupportedFieldsFor(form: DynamicFormRead): readon
     // so its `visible` bit is false by construction. Re-evaluate the verified
     // visibility contract: only an explicitly hidden field is non-blocking;
     // an unresolvable expression remains fail-closed and blocks.
-    const visibility = evaluateVisibility(field.visibility, form.values)
+    const visibility = evaluateVisibility(field.visibility, actionFormConditionValues(form))
     return visibility.state !== 'hidden'
   })
 }
@@ -109,6 +112,10 @@ export function dynamicActionUnsupportedFieldsFor(form: DynamicFormRead): readon
 export function normalizeDynamicForm(
   form: DynamicFormRead,
 ): OperationSnapshot<Readonly<Record<string, FormFieldValue>>> {
+  if (form.purpose === 'appointment' && form.fields.some(field => field.valueKey === 'need')
+    && hasNonStringAppointmentNeed(form.values.need)) {
+    return { state: 'failed_terminal', error: createOperationError('validation', appointmentNeedReselectionMessage, { reason: 'need' }) }
+  }
   const leakageExperience = surveyLeakageCauseExperienceFor(form)
   const controlledFieldIds = new Set(
     leakageExperience
@@ -126,7 +133,8 @@ export function normalizeDynamicForm(
   })
   const result = normalizeSubmission({
     fields,
-    values: form.values,
+    values: actionFormEditableValues(form.values),
+    conditionValues: actionFormConditionValues(form),
     surface: ACTION_FORM_SURFACE,
   })
   if (!result.ok) {
@@ -180,7 +188,7 @@ export function normalizeDynamicForm(
       if (ids.length > 0) values[leakageExperience.valueField.valueKey] = ids
     }
   }
-  return { state: 'succeeded', data: values }
+  return form.purpose === 'appointment' ? appointmentReplacementValues(form, values) : { state: 'succeeded', data: values }
 }
 
 export function normalizeDynamicFieldValue(
@@ -188,6 +196,9 @@ export function normalizeDynamicFieldValue(
   field: AppointmentFormFieldRead,
   value: FormFieldValue,
 ): OperationSnapshot<FormFieldValue> {
+  if (field.valueKey === '_id') {
+    return { state: 'failed_terminal', error: createOperationError('validation', 'Record identity cannot be edited') }
+  }
   // Decide editability from the PRE-EDIT state. A conditional field must not
   // make itself visible by submitting its proposed new value; the committed
   // controlling field must first satisfy the source-backed visibility rule.
@@ -218,7 +229,7 @@ export function normalizeDynamicFieldValue(
 
   const state = fieldState(
     field,
-    values,
+    actionFormConditionValues(form),
     isWorkflowFieldReadOnly(form, field),
     form.purpose,
   )
@@ -247,6 +258,9 @@ export function normalizeDynamicFieldValue(
     }
   }
 
+  if (form.purpose === 'appointment' && field.valueKey === 'need' && hasNonStringAppointmentNeed(value)) {
+    return { state: 'failed_terminal', error: createOperationError('validation', appointmentNeedReselectionMessage, { reason: 'need' }) }
+  }
   const normalized = normalizeFieldValue(field.type, value, field.options, field.multiple)
   if (!normalized.ok) {
     return {

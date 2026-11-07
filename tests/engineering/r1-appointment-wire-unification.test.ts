@@ -51,7 +51,7 @@ describe('R1 A03 single authoritative appointment FormData serializer',()=>{
     const command=adapter(execute)
     const result=await command.submitAppointment({
       workOrderId,workflowNodeId,visitIntent:'visit_required',mutation:wireCheckpoints,
-      values:{need:'1',datetime:'2026-04-21 10:00',note:null},
+      values:{need:'1',datetime:'2026-04-21 10:00',note:''},
     })
     expect(result.state).toBe('succeeded')
     expect(execute).toHaveBeenCalledTimes(2)
@@ -75,14 +75,14 @@ describe('R1 A03 single authoritative appointment FormData serializer',()=>{
     const command=adapter(execute)
     const result=await command.submitAppointment({
       workOrderId,workflowNodeId,visitIntent:'visit_deferred',mutation,
-      values:{need:'0',datetime:'2026-04-21 10:00',note:null},
+      values:{need:'0',datetime:'2026-04-21 10:00',note:''},
     })
     expect(result.state).toBe('succeeded')
     expect(beforeFormDispatch).toHaveBeenCalledTimes(1)
     expect(execute).toHaveBeenCalledTimes(2)
     const [save,process]=execute.mock.calls.map(([request])=>request)
     expect(exactWire(save)).toMatchObject({need:'0',datetime:'2026-04-21 10:00'})
-    expect(exactWire(save)).not.toHaveProperty('note')
+    expect(exactWire(save).note).toBe('')
     expect(process).toMatchObject({
       method:'POST',path:'workflow/process',
       body:{workflowNodeId,nodeFormDataId:'synthetic-upserted-form',
@@ -102,6 +102,33 @@ describe('R1 A03 single authoritative appointment FormData serializer',()=>{
     expect(exactWire(save)).toMatchObject({need:'0'})
     expect(exactWire(save)).not.toHaveProperty('datetime')
     expect(execute).toHaveBeenCalledTimes(2)
+  })
+  it('persists verified no-visit 2 unchanged through the same checkpoints and serializer',async()=>{
+    const execute=vi.fn(async(request:ApiCommandRequest)=>
+      request.path.startsWith('biz/extForm/upsert')?savedEnvelope():{success:true})
+    const result=await adapter(execute).submitAppointment({
+      workOrderId,workflowNodeId,visitIntent:'visit_deferred',mutation:wireCheckpoints,
+      values:{need:'2',reasons1:'synthetic-reason'},
+    })
+    expect(result.state).toBe('succeeded')
+    expect(execute).toHaveBeenCalledTimes(2)
+    expect(exactWire(execute.mock.calls[0]![0])).toMatchObject({need:'2',reasons1:'synthetic-reason'})
+    expect(execute.mock.calls[1]![0].path).toBe('workflow/process')
+  })
+  it('keeps no-visit 2 behind intent, special-node and durable checkpoint guards',async()=>{
+    const execute=vi.fn(async(_request:ApiCommandRequest)=>savedEnvelope())
+    const beforeFormDispatch=vi.fn(async()=>({state:'succeeded' as const}))
+    const command=adapter(execute)
+    const base={workOrderId,workflowNodeId,values:{need:'2'},mutation:{...wireCheckpoints,beforeFormDispatch}}
+    for (const input of [
+      {...base,visitIntent:'visit_required' as const},
+      {...base,visitIntent:'unknown' as const},
+      {...base,visitIntent:'visit_deferred' as const,mutation:undefined},
+      {...base,visitIntent:'visit_deferred' as const,sourceNodeType:'forms' as const},
+      {...base,visitIntent:'visit_deferred' as const,values:{need:'unknown'}},
+    ]) expect((await command.submitAppointment(input)).state).toBe('failed_terminal')
+    expect(beforeFormDispatch).not.toHaveBeenCalled()
+    expect(execute).not.toHaveBeenCalled()
   })
   it('rejects an intent that does not match the R1 need value before checkpoint or transport',async()=>{
     const execute=vi.fn(async (_request:ApiCommandRequest)=>savedEnvelope())

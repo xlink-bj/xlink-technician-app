@@ -35,10 +35,10 @@ function form(fields: readonly FormFieldRead[], values: AppointmentFormRead['val
 }
 
 describe('R1 Appointment conditional field admission and save-only normalization', () => {
-  it('excludes a hidden required value from the effective wire but retains its editing draft', () => {
+  it('blocks unknown hidden business state instead of deleting it in replacement', () => {
     const current = form([need, conditional], { need: '0', followup: 'old private draft' })
     expect(appointmentRuntimeFieldsFor(current).map(field => field.valueKey)).toEqual(['need'])
-    expect(normalizeAppointmentForm(current)).toEqual({ state: 'succeeded', data: { need: '0' } })
+    expect(normalizeAppointmentForm(current).state).toBe('failed_terminal')
     expect(current.values.followup).toBe('old private draft')
     expect(normalizeAppointmentFieldValueForForm(current, conditional, 'new text').state).toBe('failed_terminal')
   })
@@ -49,17 +49,14 @@ describe('R1 Appointment conditional field admission and save-only normalization
     const missing = normalizeAppointmentForm(current)
     expect(missing.state).toBe('failed_terminal')
     expect(missing.error?.category).toBe('validation')
-    expect(normalizeAppointmentForm(form([need, conditional], { need: '1', followup: '到场' }))).toEqual({
-      state: 'succeeded',
-      data: { need: '1', followup: '到场' },
-    })
+    expect(normalizeAppointmentForm(form([need, conditional], { need: '1', followup: '到场' })).state).toBe('failed_terminal') // outside verified six-field preservation scope
   })
 
   it('does not leak stored fields from a non-mobile showList surface', () => {
     const webOnly: FormFieldRead = { ...conditional, fieldId: 'web-only', valueKey: 'webOnly', showList: [1], required: true }
     const current = form([need, webOnly], { need: '1', webOnly: 'should stay local' })
     expect(appointmentRuntimeFieldsFor(current).map(field => field.valueKey)).toEqual(['need'])
-    expect(normalizeAppointmentForm(current)).toEqual({ state: 'succeeded', data: { need: '1' } })
+    expect(normalizeAppointmentForm(current).state).toBe('failed_terminal')
   })
 
   it('fails closed for visible unsupported metadata but ignores an explicitly hidden unsupported row', () => {

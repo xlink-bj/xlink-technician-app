@@ -1,3 +1,5 @@
+import { appointmentReplacementValues } from './appointment-replacement-values'
+import { hasNonStringAppointmentNeed, appointmentNeedReselectionMessage } from '@shared/form/appointment-need'
 import {
   evaluateFieldState,
   evaluateVisibility,
@@ -16,6 +18,7 @@ import type {
   AppointmentFormRead,
   AppointmentVisitIntent,
 } from '@shared/ports'
+import { actionFormConditionValues } from './action-form-condition-context'
 import { actionFormSchemaFor, ACTION_FORM_SURFACE } from './action-form-schema'
 import { createOperationError, type OperationSnapshot } from '@shared/types'
 
@@ -36,13 +39,14 @@ export type { AppointmentVisitIntent } from '@shared/ports'
 
 /**
  * R1 verifies the appointment form's semantic option values: `1` is the
- * branch that can create an on-site appointment. `0` is the complementary
- * deferred branch exposed by the same normalized option set. Labels remain
+ * branch that can create an on-site appointment. `2` is the verified no-visit
+ * branch; legacy `0` is supported only when present in the option set. Labels remain
  * presentation metadata and are intentionally not consulted here.
  */
 const appointmentVisitOptionValues = {
   required: '1',
-  deferred: '0',
+  deferred: '2',
+  legacyDeferred: '0',
 } as const
 
 function schemaFor(field: AppointmentFormFieldRead): FormFieldSchema {
@@ -51,9 +55,10 @@ function schemaFor(field: AppointmentFormFieldRead): FormFieldSchema {
 
 function runtimeFieldState(
   field: AppointmentFormFieldRead,
-  values: Readonly<Record<string, AppointmentFieldValue>>,
+  form: AppointmentFormRead,
+  conditionValues = actionFormConditionValues(form),
 ): EffectiveFieldState {
-  return evaluateFieldState(schemaFor(field), { values, surface: ACTION_FORM_SURFACE })
+  return evaluateFieldState(schemaFor(field), { values: conditionValues, surface: ACTION_FORM_SURFACE })
 }
 
 export function appointmentVisitIntentFor(form: AppointmentFormRead): AppointmentVisitIntent {
@@ -62,10 +67,11 @@ export function appointmentVisitIntentFor(form: AppointmentFormRead): Appointmen
 
   const rawValue = form.values[needField.valueKey]
   if (rawValue === undefined || rawValue === null || rawValue === '') return 'unknown'
-  const value = String(rawValue).trim()
+  if (typeof rawValue !== 'string') return 'unknown'
+  const value = rawValue
   if (!needField.options?.some((option) => option.value === value)) return 'unknown'
   if (value === appointmentVisitOptionValues.required) return 'visit_required'
-  if (value === appointmentVisitOptionValues.deferred) return 'visit_deferred'
+  if (value === appointmentVisitOptionValues.deferred || value === appointmentVisitOptionValues.legacyDeferred) return 'visit_deferred'
   return 'unknown'
 }
 
@@ -88,7 +94,7 @@ export function appointmentFieldApplicabilityFor(
   form: AppointmentFormRead,
   field: AppointmentFormFieldRead,
 ): AppointmentFieldApplicability {
-  return appointmentFieldApplicabilityFromRuntime(field, form, runtimeFieldState(field, form.values))
+  return appointmentFieldApplicabilityFromRuntime(field, form, runtimeFieldState(field, form))
 }
 
 export function appointmentDatetimeApplicableFor(form: AppointmentFormRead): boolean {
@@ -100,7 +106,7 @@ function effectiveRuntimeFieldFor(
   field: AppointmentFormFieldRead,
   form: AppointmentFormRead,
 ): AppointmentRuntimeField {
-  const runtime = runtimeFieldState(field, form.values)
+  const runtime = runtimeFieldState(field, form)
   const applicability = appointmentFieldApplicabilityFromRuntime(field, form, runtime)
 
   return {
@@ -184,6 +190,12 @@ function resultFromSubmission(
 export function normalizeAppointmentForm(
   form: AppointmentFormRead,
 ): OperationSnapshot<Readonly<Record<string, AppointmentFieldValue>>> {
+  if (form.fields.some(field => field.valueKey === 'need') && hasNonStringAppointmentNeed(form.values.need)) {
+    return { state: 'failed_terminal', error: createOperationError('validation', appointmentNeedReselectionMessage, { reason: 'need' }) }
+  }
+  // Visibility depends on the full trusted form state, not on which values
+  // survive payload projection (a hidden controller can reveal another field).
+  const conditionValues = actionFormConditionValues(form)
   const values: Record<string, AppointmentFieldValue> = {}
   const fieldContexts: Record<string, { readonly fixedRequired: boolean }> = {}
   for (const field of form.fields) {
@@ -194,7 +206,7 @@ export function normalizeAppointmentForm(
       fieldContexts[field.fieldId] = { fixedRequired: false }
       continue
     }
-    const visibility = evaluateVisibility(field.visibility, form.values)
+    const visibility = evaluateVisibility(field.visibility, conditionValues)
     if (visibility.state === 'unsupported') {
       return {
         state: 'failed_terminal',
@@ -203,7 +215,7 @@ export function normalizeAppointmentForm(
         }),
       }
     }
-    const runtime = runtimeFieldState(field, form.values)
+    const runtime = runtimeFieldState(field, form, conditionValues)
     // A visible unsupported backend field must fail closed. Merely hiding it
     // in the specialized Appointment UI must never make submission possible.
     if (runtime.capability === 'UNSUPPORTED' && visibility.state !== 'hidden') {
@@ -214,35 +226,30 @@ export function normalizeAppointmentForm(
         }),
       }
     }
-    const applicability = appointmentFieldApplicabilityFor(form, field)
+    const applicability = appointmentFieldApplicabilityFromRuntime(field, form, runtime)
     if (applicability === 'not_applicable') {
-      // The stored draft value remains in `form.values`, but it is not an
-      // effective value and must not reach validation or submission.
+      // Hidden values do not participate in visible required validation.
+      // The separate replacement projection validates retention afterward.
       fieldContexts[field.fieldId] = { fixedRequired: false }
       continue
     }
     const value = form.values[field.valueKey]
-    if (value !== undefined) values[field.valueKey] = value
+    if (value !== undefined && field.valueKey !== '_id') values[field.valueKey] = value
   }
 
   const normalized = resultFromSubmission(
     normalizeSubmission({
       fields: form.fields.map(schemaFor),
       values,
+      conditionValues,
       surface: ACTION_FORM_SURFACE,
       ...(Object.keys(fieldContexts).length > 0 ? { fieldContexts } : {}),
     }),
   )
 
-  // R1 serializes the whole Appointment formData object. Hiding datetime
-  // when `need=0` removes it from validation and the UI, but a previously
-  // selected value remains in the stored object and in the outgoing payload.
-  const deferredDatetime = form.values.datetime
-  if (normalized.state === 'succeeded' && appointmentVisitIntentFor(form) === 'visit_deferred'
-    && typeof deferredDatetime === 'string') {
-    return { ...normalized, data: { ...normalized.data, datetime: deferredDatetime } }
-  }
-  return normalized
+  return normalized.state === 'succeeded'
+    ? appointmentReplacementValues(form, normalized.data!) as OperationSnapshot<Readonly<Record<string, AppointmentFieldValue>>>
+    : normalized
 }
 
 export function normalizeAppointmentFieldValueForForm(
@@ -256,16 +263,20 @@ export function normalizeAppointmentFieldValueForForm(
       error: createOperationError('validation', 'Appointment field is not applicable to the current visit branch'),
     }
   }
-  return normalizeAppointmentFieldValue(field, value, form.values)
+  return normalizeAppointmentFieldValue(field, value, form.values, form)
 }
 
 export function normalizeAppointmentFieldValue(
   field: AppointmentFormFieldRead,
   value: AppointmentFieldValue,
   values: Readonly<Record<string, AppointmentFieldValue>>,
+  identity: Pick<AppointmentFormRead, 'definitionId' | 'dataId'> = {},
 ): OperationSnapshot<AppointmentFieldValue> {
+  if (field.valueKey === '_id') {
+    return { state: 'failed_terminal', error: createOperationError('validation', 'Record identity cannot be edited') }
+  }
   const schema = schemaFor(field)
-  const state = evaluateFieldState(schema, { values: { ...values, [field.valueKey]: value }, surface: ACTION_FORM_SURFACE })
+  const state = evaluateFieldState(schema, { values: actionFormConditionValues({ ...identity, values: { ...values, [field.valueKey]: value } }), surface: ACTION_FORM_SURFACE })
   if (state.capability === 'UNSUPPORTED') {
     return {
       state: 'failed_terminal',
@@ -285,6 +296,9 @@ export function normalizeAppointmentFieldValue(
     }
   }
 
+  if (field.valueKey === 'need' && hasNonStringAppointmentNeed(value)) {
+    return { state: 'failed_terminal', error: createOperationError('validation', appointmentNeedReselectionMessage, { reason: 'need' }) }
+  }
   const normalized = normalizeFieldValue(schema.type, value, schema.inlineOptions, schema.multiple)
   if (!normalized.ok) {
     return {

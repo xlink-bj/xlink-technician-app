@@ -205,6 +205,8 @@ export function normalizeSubmission(input: {
   readonly values: Readonly<Record<string, unknown>>
   readonly surface?: import('./types').FormRuntimeSurface
   readonly fieldContexts?: Readonly<Record<string, Omit<FieldStateContext, 'values'>>>
+  /** Separate condition context; never copied to normalized submission values. */
+  readonly conditionValues?: Readonly<Record<string, unknown>>
   readonly preserveHiddenValues?: boolean
 }): SubmissionResult {
   const normalized: Record<string, NormalizedFieldValue> = {}
@@ -212,7 +214,7 @@ export function normalizeSubmission(input: {
     if (!isFieldApplicable(field, input.surface)) continue
     const state = evaluateFieldState(field, {
       ...(input.fieldContexts?.[field.fieldId] ?? {}),
-      values: input.values,
+      values: input.conditionValues ?? input.values,
       surface: input.surface,
     })
     if (state.capability === 'PRESENTATION_ONLY') continue
@@ -221,7 +223,7 @@ export function normalizeSubmission(input: {
     // must not produce a misleading warning or block the visible form. An
     // unsupported visibility expression remains fail-closed in state above.
     if (state.capability === 'UNSUPPORTED') {
-      const visibility = evaluateVisibility(field.visibility, input.values)
+      const visibility = evaluateVisibility(field.visibility, input.conditionValues ?? input.values)
       if (visibility.state === 'hidden') continue
       return {
         ok: false,

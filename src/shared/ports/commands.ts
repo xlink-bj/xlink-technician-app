@@ -1,3 +1,4 @@
+import type { AppointmentReplacementContext } from '@shared/form/appointment-replacement-context'
 import type { FormFieldPresentation, FormFieldValue, FormFieldVisibility, FormPurpose } from '@shared/ports/api'
 import type {
   FormDataId,
@@ -54,6 +55,7 @@ export interface AppointmentFormFieldRead {
 }
 
 export interface AppointmentFormRead {
+  readonly appointmentReplacement?: AppointmentReplacementContext
   readonly fields: readonly AppointmentFormFieldRead[]
   readonly values: Readonly<Record<string, AppointmentFieldValue>>
   /** Adapter-normalized definition identity used to scope local Action drafts. */
@@ -64,6 +66,7 @@ export interface AppointmentFormRead {
 
 /** Generic dynamic-form read model shared by future Action Content. */
 export interface DynamicFormRead {
+  readonly appointmentReplacement?: AppointmentReplacementContext
   readonly fields: readonly AppointmentFormFieldRead[]
   readonly values: Readonly<Record<string, FormFieldValue>>
   readonly definitionId?: FormDefinitionId
@@ -82,6 +85,7 @@ export interface ReadDynamicFormInput {
 }
 
 export interface SaveDynamicFormInput {
+  readonly appointmentReplacement?: AppointmentReplacementContext
   readonly workOrderId: WorkOrderId
   readonly workflowNodeId: WorkflowNodeRuntimeId
   /** Exact R1 nodeDef.nodeType when available; special nodes cannot use one-ID wire. */
@@ -116,6 +120,7 @@ export interface FormMutationCheckpoints {
 export type AppointmentVisitIntent = 'visit_required' | 'visit_deferred' | 'unknown'
 
 export interface SubmitAppointmentInput {
+  readonly appointmentReplacement?: AppointmentReplacementContext
   readonly workOrderId: WorkOrderId
   readonly workflowNodeId: WorkflowNodeRuntimeId
   /** Exact R1 nodeDef.nodeType when available; special nodes cannot use one-ID wire. */

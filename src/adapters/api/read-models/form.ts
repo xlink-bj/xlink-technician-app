@@ -1,3 +1,4 @@
+import { appointmentReplacementContextFromRead } from '@shared/form/appointment-replacement-context'
 import type {
   FormDataRead,
   FormDefinitionRead,
@@ -433,6 +434,7 @@ export function formData(raw: unknown, codec?: FormValueCodec, expectedDefinitio
   return {
     id: dataId,
     definitionId,
+    appointmentReplacement: appointmentReplacementContextFromRead(record, { definitionId, dataId, ...(workflowRunIds[0] || nestedWorkflowRun ? { workflowRunId: workflowRunIds[0] ?? nestedWorkflowRun } : {}) }),
     ...(workflowRunIds[0] || nestedWorkflowRun
       ? { workflowRunId: asOpaqueId<'WorkflowRunId'>((workflowRunIds[0] ?? nestedWorkflowRun)!) }
       : {}),

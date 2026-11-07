@@ -1,3 +1,5 @@
+import { formData } from '@adapters/api/read-models/form'
+import { appointmentFormDefinitionWireId } from '@adapters/api/appointment-contract'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 
@@ -133,15 +135,11 @@ describe('G4-D accept and appointment semantics', () => {
     }
     const readPort = {
       getFormDefinition: async (): Promise<OperationSnapshot<FormDefinitionRead>> => succeeded({
-        id: asOpaqueId<'FormDefinitionId'>('appointment-definition'),
+        id: asOpaqueId<'FormDefinitionId'>(appointmentFormDefinitionWireId),
         fields: [{ fieldId: 'datetime', valueKey: 'datetime', label: '预约时间', type: 'datetime', required: true, readOnly: false }],
       }),
       getFormData: async (): Promise<OperationSnapshot<ReadPage<FormDataRead>>> => succeeded({
-        items: [{
-          id: asOpaqueId<'FormDataId'>('existing-form-data'),
-          definitionId: asOpaqueId<'FormDefinitionId'>('appointment-definition'),
-          values: { datetime: '2026-04-20 10:00' },
-        }],
+        items: [formData({ _id: 'existing-form-data', sid: 'real-shaped-work-order', nodeId: 'appointment-node', workflowId: 'appointment-run', datetime: '2026-04-20 10:00' }, undefined, asOpaqueId<'FormDefinitionId'>(appointmentFormDefinitionWireId))],
       }),
     } as unknown as TechnicianApiReadPort
     const command = createTechnicianApiCommandAdapter(transport, readPort)
@@ -158,7 +156,9 @@ describe('G4-D accept and appointment semantics', () => {
       workflowNodeId: nodeId,
       formDataId: asOpaqueId<'FormDataId'>('existing-form-data'),
       mutation: wireCheckpoints,
-      values: { datetime: '2026-04-21 10:00', note: null },
+      workflowRunId: asOpaqueId<'WorkflowRunId'>('appointment-run'),
+      appointmentReplacement: form.data?.appointmentReplacement,
+      values: { datetime: '2026-04-21 10:00' },
     })).state).toBe('succeeded')
 
     expect(requests[0]).toMatchObject({ path: 'basic/serviceAppointment/selfExamination', body: { saId: workOrderId } })

@@ -14,6 +14,7 @@ import {
   type UploadedMediaRef,
   type MediaUploadTask,
 } from '@shared/types'
+import { actionFormConditionValues } from './action-form-condition-context'
 import { normalizeAppointmentFieldValue } from './appointment-form-runtime'
 import { dynamicActionFieldsFor, normalizeDynamicFieldValue } from './dynamic-form-action'
 import { ACTION_FORM_SURFACE } from './action-form-schema'
@@ -117,6 +118,7 @@ export function draftRecordFor(
 
   const values: Record<string, AppointmentFieldValue> = {}
   for (const [key, rawValue] of Object.entries(rawValues)) {
+    if (key === '_id') return null
     const fields = form.fields.filter((candidate) => candidate.valueKey === key)
     const normalized = appointmentValue(rawValue)
     if (fields.length === 0 || normalized === undefined) return null
@@ -125,7 +127,7 @@ export function draftRecordFor(
         if (form.values[key] !== normalized) return null
         continue
       }
-      const result = normalizeAppointmentFieldValue(field, normalized, { ...form.values, ...values })
+      const result = normalizeAppointmentFieldValue(field, normalized, { ...form.values, ...values }, form)
       if (result.state !== 'succeeded' || result.data === undefined) return null
       values[key] = result.data
     }
@@ -189,6 +191,7 @@ export function dynamicDraftRecordFor(
 
   const sourceValues: Record<string, FormFieldValue> = {}
   for (const [key, rawValue] of Object.entries(rawValues)) {
+    if (key === '_id') return null
     if (!form.fields.some(field => field.valueKey === key)) return null
     const parsed = formFieldValue(rawValue)
     if (parsed === undefined) return null
@@ -212,7 +215,7 @@ export function dynamicDraftRecordFor(
       if (!field.runtime.visible) {
         // Unknown visibility/provider is not the same as verified hidden.
         if (field.runtime.capability === 'UNSUPPORTED'
-          && evaluateVisibility(field.visibility, proposed.values).state !== 'hidden') return null
+          && evaluateVisibility(field.visibility, actionFormConditionValues(proposed)).state !== 'hidden') return null
         continue
       }
       if (field.runtime.capability === 'UNSUPPORTED') return null

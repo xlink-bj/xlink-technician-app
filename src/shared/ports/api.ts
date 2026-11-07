@@ -1,3 +1,4 @@
+import type { AppointmentReplacementContext } from '@shared/form/appointment-replacement-context'
 import type {
   CustomerContactId,
   FormDataId,
@@ -295,6 +296,7 @@ export type FormFieldVisibility =
   | { readonly kind: 'all'; readonly conditions: readonly FormFieldVisibility[] }
 
 export interface FormDataRead {
+  readonly appointmentReplacement?: AppointmentReplacementContext
   readonly id: FormDataId
   readonly definitionId: FormDefinitionId
   readonly workflowRunId?: WorkflowRunId

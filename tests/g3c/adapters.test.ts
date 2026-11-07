@@ -283,7 +283,7 @@ describe('G3-C API adapter foundation', () => {
     const data = await api.getFormData({
       definitionId: asOpaqueId<'FormDefinitionId'>('form-definition-001'),
     })
-    expect(data.data?.items).toEqual([
+    expect(data.data?.items).toMatchObject([
       {
         id: 'form-data-001',
         definitionId: 'form-definition-001',

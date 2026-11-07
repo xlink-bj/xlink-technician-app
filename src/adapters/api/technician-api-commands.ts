@@ -1,3 +1,5 @@
+import { appointmentBusinessKeys, appointmentNullBusinessKey } from '@shared/form/appointment-replacement-context'
+import { hasNonStringAppointmentNeed, appointmentNeedReselectionMessage } from '@shared/form/appointment-need'
 import type {
   AcceptOrderInput,
   AcceptOrderInspection,
@@ -298,6 +300,7 @@ export class TechnicianApiCommandAdapter implements TechnicianApiCommandPort {
       }
     }
     return succeeded({
+      ...(generic.data.appointmentReplacement ? { appointmentReplacement: generic.data.appointmentReplacement } : {}),
       fields: generic.data.fields,
       values,
       ...(generic.data.definitionId ? { definitionId: generic.data.definitionId } : {}),
@@ -349,7 +352,10 @@ export class TechnicianApiCommandAdapter implements TechnicianApiCommandPort {
       definitionId: resolvedDefinition.data.id,
       ...(resolvedDefinition.data.purpose ? { purpose: resolvedDefinition.data.purpose } : {}),
       fields: resolvedDefinition.data.fields ?? [],
-      values: first?.values ?? {},
+      ...(first.appointmentReplacement ? { appointmentReplacement: first.appointmentReplacement } : {}),
+      values: resolvedDefinition.data.purpose === 'appointment'
+        ? Object.fromEntries(Object.entries(first.values ?? {}).filter(([key]) => appointmentBusinessKeys.some(candidate => candidate === key)))
+        : first.values ?? {},
       ...(first?.id ? { dataId: first.id } : {}),
       ...(first?.workflowRunId ? { workflowRunId: first.workflowRunId } : {}),
       ...(input.workflowReadOnlyFieldIds ? { workflowReadOnlyFieldIds: input.workflowReadOnlyFieldIds } : {}),
@@ -405,9 +411,11 @@ export class TechnicianApiCommandAdapter implements TechnicianApiCommandPort {
   async submitAppointment(input: SubmitAppointmentInput): Promise<OperationSnapshot<void>> {
     if (requiresR1SpecialWorkflowWire(input.sourceNodeType))
       return adapterFailure('unsupported_capability', 'R1 special Appointment node requires a verified multi-form/child workflow contract')
-    const need = String(input.values.need ?? '')
+    if (appointmentNullBusinessKey(input.values)) return adapterFailure('validation', 'Null appointment business values are not a supported clear operation')
+    if (hasNonStringAppointmentNeed(input.values.need)) return adapterFailure('validation', appointmentNeedReselectionMessage)
+    const need = input.values.need
     if ((input.visitIntent === 'visit_required' && need !== '1')
-      || (input.visitIntent === 'visit_deferred' && need !== '0')
+      || (input.visitIntent === 'visit_deferred' && need !== '2' && need !== '0')
       || input.visitIntent === 'unknown') {
       return adapterFailure('unsupported_capability', 'Appointment intent does not match the selected R1 need value')
     }
@@ -419,6 +427,8 @@ export class TechnicianApiCommandAdapter implements TechnicianApiCommandPort {
       ...(input.sourceNodeType ? { sourceNodeType: input.sourceNodeType } : {}),
       ...(input.workflowRunId ? { workflowRunId: input.workflowRunId } : {}),
       definitionId: appointmentFormDefinitionWireId as FormDefinitionId,
+      purpose: 'appointment',
+      ...(input.appointmentReplacement ? { appointmentReplacement: input.appointmentReplacement } : {}),
       ...(input.formDataId ? { formDataId: input.formDataId } : {}),
       values: input.values,
       mutation,

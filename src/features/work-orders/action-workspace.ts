@@ -1,3 +1,4 @@
+import { appointmentReplacementProblem } from '@shared/form/appointment-replacement-context'
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { isProductionReadOnlyRuntime } from '@shared/config'
@@ -272,6 +273,56 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
   let draftWriteInFlight: Promise<OperationSnapshot<void>> | null = null
   let draftRevision = 0
   let loadVersion = 0
+  let appointmentPageLease: object | undefined
+  let appointmentPageLeft = false
+  let pendingAppointmentReentry: {
+    version: number
+    action: ActionDescriptor
+    input: Parameters<typeof ensureLoaded>[0]
+  } | null = null
+  // Keep the departing page's descriptor while load temporarily clears it.
+  let automaticAppointmentReentry: {
+    version: number; action: ActionDescriptor; cancelled: boolean; loading: boolean; key: string; pageLease?: object
+  } | null = null
+  let appointmentReentryTransfer: {
+    key: string
+    pageLease?: object
+    cancelled: boolean
+    loading: boolean
+    promise: Promise<OperationSnapshot<ActionDescriptor>>
+  } | null = null
+  let appointmentReentry: {
+    key: string
+    scope: string
+    promise: Promise<OperationSnapshot<ActionDescriptor>>
+  } | null = null
+
+  /** Page lifecycle signal only; never creates replacement provenance from an ACK. */
+  function leavePage(expectedAction: ActionDescriptor | null, pageLease?: object): void {
+    if (appointmentPageLease && pageLease !== appointmentPageLease) return
+    if (appointmentReentryTransfer) {
+      appointmentReentryTransfer.cancelled = true
+      if (appointmentReentryTransfer.loading) clear()
+    }
+    const automatic = automaticAppointmentReentry
+    if (expectedAction && automatic
+      && (automatic.action === expectedAction || descriptor.value === expectedAction)
+      && (loadVersion === automatic.version || loadVersion === automatic.version + 1)) {
+      if (!automatic.loading && loadVersion === automatic.version) {
+        // Preserve edits while the pre-read flush is pending; its guard cancels load.
+        automatic.cancelled = true
+        appointmentPageLeft = true
+      } else {
+        clear() // The durable draft survives; the departed page receives no context.
+      }
+      return
+    }
+    if (expectedAction && descriptor.value === expectedAction && commandSessionScopeCurrent()
+      && dynamicForm.value?.purpose === 'appointment') {
+      appointmentPageLeft = true
+      pendingAppointmentReentry = null
+    }
+  }
   // A save may continue after a local edit changes its presentation state.
   // Keep a separate per-generation in-flight lease to reject duplicate writes.
   let dynamicSaveInFlightVersion: number | null = null
@@ -361,6 +412,12 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     quotationEditState.value = { state: 'none' }
     quotationExistingOrderId.value = null
     loadVersion += 1
+    appointmentPageLeft = false
+    appointmentPageLease = undefined
+    pendingAppointmentReentry = null
+    automaticAppointmentReentry = null
+    appointmentReentryTransfer = null
+    appointmentReentry = null
     loadedSessionScope.value = null
     clearDraftTimer()
     draftRevision += 1
@@ -543,6 +600,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
         return applyUploadedMedia(fieldId, [uploaded])
       },
     })
+    if (!stillCurrent()) return
     if (restoredBusinessValue) {
       draftRevision += 1
       draftStatus.value = 'dirty'
@@ -557,7 +615,8 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     readonly actionIntent?: string
     /** Exact synthetic H5 E2E-only read/edit preview; never grants command permission. */
     readonly localPreviewOnly?: boolean
-  }): Promise<OperationSnapshot<ActionDescriptor>> {
+  }, ownedStillCurrent: () => boolean = () => true): Promise<OperationSnapshot<ActionDescriptor>> {
+    if (!ownedStillCurrent()) return failure('cancelled', 'Owned appointment load was superseded')
     const configured = dependencies
     if (!configured) return failure('server_terminal', 'Action Workspace is not configured')
     if (loadState.value === 'loading') return failure('validation', 'Action Workspace is already loading')
@@ -576,15 +635,19 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     clearDraftTimer()
     if (descriptor.value?.contentKind === 'quotation') {
       const flushed = await quotationComposition.flushDraft()
+      if (!ownedStillCurrent()) return failure('cancelled', 'Owned appointment load was superseded')
       if (flushed.state !== 'succeeded') {
         return { state: flushed.state, ...(flushed.error ? { error: flushed.error } : {}) }
       }
     }
     if (draftWriteInFlight) await draftWriteInFlight
+    if (!ownedStillCurrent()) return failure('cancelled', 'Owned appointment load was superseded')
     if (!scopeUnchanged()) return blockStaleScope()
     quotationComposition.clear()
     quotationCatalogBrowser.clear()
     quotationEngine.clear()
+    appointmentPageLeft = false
+    pendingAppointmentReentry = null
     const requestVersion = ++loadVersion
     loadedSessionScope.value = null
     loadState.value = 'loading'
@@ -613,7 +676,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     error.value = null
 
     const read = await configured.apiRead.getWorkOrderDetail(input.workOrderId)
-    if (requestVersion !== loadVersion) return failure('cancelled', 'Action Workspace load was superseded')
+    if (requestVersion !== loadVersion || !ownedStillCurrent()) return failure('cancelled', 'Action Workspace load was superseded')
     if (!scopeUnchanged()) return blockStaleScope()
     if (read.state !== 'succeeded' || !read.data) {
       loadState.value = read.state
@@ -666,7 +729,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       })
       identity = actionDraftIdentityFor(nextDescriptor, session.currentRole.id)
       const repairPartsRead = await configured.apiRead.getCascadeCodeOptions({ codeType: 'repairParts' })
-      if (requestVersion !== loadVersion) return failure('cancelled', 'Action Workspace load was superseded')
+      if (requestVersion !== loadVersion || !ownedStillCurrent()) return failure('cancelled', 'Action Workspace load was superseded')
       if (!scopeUnchanged()) return blockStaleScope()
       await quotationComposition.initialize({
         identity,
@@ -675,9 +738,9 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
         ...(configured.now ? { now: configured.now } : {}),
         ...(configured.debounceMs !== undefined ? { debounceMs: configured.debounceMs } : {}),
       })
-      if (requestVersion !== loadVersion) return failure('cancelled', 'Action Workspace load was superseded')
+      if (requestVersion !== loadVersion || !ownedStillCurrent()) return failure('cancelled', 'Action Workspace load was superseded')
       if (!scopeUnchanged()) return blockStaleScope()
-      quotationOrderState.value = configured.storage
+      const restoredQuotationOrderState: QuotationOrderSubmissionSnapshot = configured.storage
         ? await restoreQuotationOrderSubmissionState({
             userId: session.user.id,
             authorizationIdentityKey: requestedSessionScope,
@@ -686,7 +749,9 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
             storage: configured.storage,
           })
         : { state: 'failed_terminal', message: '本地订单防重记录不可用，暂不能安全提交。' }
+      if (requestVersion !== loadVersion || !ownedStillCurrent()) return failure('cancelled', 'Action Workspace load was superseded')
       if (!scopeUnchanged()) return blockStaleScope()
+      quotationOrderState.value = restoredQuotationOrderState
       loadedSessionScope.value = requestedSessionScope
       quotationContentState.value = 'ready'
       loadState.value = 'succeeded'
@@ -707,7 +772,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
             ...(currentTask.formFieldIdsReadOnly ? { workflowReadOnlyFieldIds: currentTask.formFieldIdsReadOnly } : {}),
           })
         : failure<DynamicFormRead>('unsupported_capability', 'Dynamic form content is unavailable')
-    if (requestVersion !== loadVersion) return failure('cancelled', 'Action Workspace load was superseded')
+    if (requestVersion !== loadVersion || !ownedStillCurrent()) return failure('cancelled', 'Action Workspace load was superseded')
     if (!scopeUnchanged()) return blockStaleScope()
     if (form.state !== 'succeeded' || !form.data) {
       detail.value = read.data
@@ -759,13 +824,14 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
           ...(read.data.workflowRunId ? { workflowRunId: read.data.workflowRunId } : {}),
           ...(currentTask.formFieldIdsReadOnly ? { workflowReadOnlyFieldIds: currentTask.formFieldIdsReadOnly } : {}),
           authorizationScope: requestedSessionScope,
-          stillCurrent: () => requestVersion === loadVersion && scopeUnchanged(),
+          stillCurrent: () => requestVersion === loadVersion && ownedStillCurrent() && scopeUnchanged(),
         })
       : { kind: 'ready' as const, form: form.data }
-    if (receiptRecovery.kind === 'stale') {
-      if (requestVersion !== loadVersion) return failure('cancelled', 'Action Workspace load was superseded')
-      return blockStaleScope()
-    }
+    // Check the caller's lease before handling even a blocked helper result.
+    // The helper may settle just before another page invalidates this load.
+    if (requestVersion !== loadVersion || !ownedStillCurrent()) return failure('cancelled', 'Action Workspace load was superseded')
+    if (!scopeUnchanged()) return blockStaleScope()
+    if (receiptRecovery.kind === 'stale') return blockStaleScope()
     if (receiptRecovery.kind === 'blocked') {
       if (receiptRecovery.keepDetail) detail.value = read.data
       loadState.value = 'blocked'
@@ -790,7 +856,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     // Vue proxies values stored in refs; compare the mounted descriptor,
     // not the raw object assigned above, when checking asynchronous leases.
     const loadingDescriptor = descriptor.value
-    const stillLoadingAction = () => requestVersion === loadVersion
+    const stillLoadingAction = () => requestVersion === loadVersion && ownedStillCurrent()
       && descriptor.value === loadingDescriptor && scopeUnchanged()
     if (isAppointmentAction) await restoreDraft(nextIdentity, loadedForm as AppointmentFormRead, stillLoadingAction)
     else await restoreDynamicDraft(nextIdentity, loadedForm as DynamicFormRead, stillLoadingAction)
@@ -799,7 +865,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       return failure('cancelled', 'Action Workspace load was superseded')
     }
     await restoreMediaTasks(nextDescriptor, stillLoadingAction)
-    if (requestVersion !== loadVersion) return failure('cancelled', 'Action Workspace load was superseded')
+    if (requestVersion !== loadVersion || !ownedStillCurrent()) return failure('cancelled', 'Action Workspace load was superseded')
     if (!scopeUnchanged()) return blockStaleScope()
     loadedSessionScope.value = requestedSessionScope
     return { state: 'succeeded', data: nextDescriptor }
@@ -1053,7 +1119,83 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     readonly actionIntent?: string
     /** Exact synthetic H5 E2E-only read/edit preview; never grants command permission. */
     readonly localPreviewOnly?: boolean
+    /** Unique mounted page instance; never part of API/draft identity. */
+    readonly pageLease?: object
   }): Promise<OperationSnapshot<ActionDescriptor>> {
+    const reentryKey = JSON.stringify([input.workOrderId, input.workflowNodeId, input.actionIntent ?? ''])
+    const automaticOwner = automaticAppointmentReentry
+    const previousTransfer = appointmentReentryTransfer
+    const sameTransfer = previousTransfer && !previousTransfer.cancelled
+      && previousTransfer.key === reentryKey && previousTransfer.pageLease === input.pageLease
+    if (sameTransfer) return previousTransfer.promise
+    if (previousTransfer || (automaticOwner && (automaticOwner.cancelled
+      || automaticOwner.key !== reentryKey || automaticOwner.pageLease !== input.pageLease))) {
+      // A new route must not join an old read merely because the cached action
+      // still matches. Cancel its owner before changing the mounted page lease.
+      if (automaticOwner) automaticOwner.cancelled = true
+      if (previousTransfer) previousTransfer.cancelled = true
+      if (automaticOwner?.loading || previousTransfer?.loading) clear() // Invalidate the whole owned load, including restoration.
+      const scope = dependencies?.getSession()
+      const expectedScope = scope ? sessionScopeKey(scope) : null
+      appointmentPageLease = input.pageLease
+      pendingAppointmentReentry = null
+      const version = loadVersion
+      const flight = {
+        key: reentryKey, pageLease: input.pageLease, cancelled: false, loading: false,
+        promise: Promise.resolve({ state: 'idle' } as OperationSnapshot<ActionDescriptor>),
+      }
+      appointmentReentryTransfer = flight
+      flight.promise = (async (): Promise<OperationSnapshot<ActionDescriptor>> => {
+        const isCurrent = () => appointmentReentryTransfer === flight && !flight.cancelled
+          && version === loadVersion
+        const cancelled = () => failure<ActionDescriptor>('cancelled', 'Appointment route was superseded')
+        // Let the old flush finish without clearing mounted newer values. Then
+        // flush any edits made during it, bounded by the revision check below.
+        const first = await flushDraft()
+        if (!isCurrent()) return cancelled()
+        if (first.state !== 'succeeded') return failureFrom(first)
+        const revision = draftRevision
+        const flushed = await flushDraft()
+        if (!isCurrent()) return cancelled()
+        const activeSession = dependencies?.getSession()
+        if (!activeSession || sessionScopeKey(activeSession) !== expectedScope) {
+          clear()
+          return failure('session_invalid', '账号或角色已变化，请重新进入当前工作台。')
+        }
+        if (flushed.state !== 'succeeded') return failureFrom(flushed)
+        if (revision !== draftRevision) return failure('cancelled', 'Appointment changed while transferring pages')
+        if (automaticAppointmentReentry === automaticOwner) automaticAppointmentReentry = null
+        flight.loading = true
+        try {
+          return await load(input, () => appointmentReentryTransfer === flight && !flight.cancelled)
+        } finally { flight.loading = false }
+      })()
+      try {
+        const result = await flight.promise
+        if (appointmentReentryTransfer !== flight || flight.cancelled) {
+          return failure('cancelled', 'Appointment route was superseded')
+        }
+        const settledSession = dependencies?.getSession()
+        if (result.state === 'succeeded'
+          && (!settledSession || sessionScopeKey(settledSession) !== expectedScope)) {
+          clear()
+          return failure('session_invalid', '账号或角色已变化，请重新进入当前工作台。')
+        }
+        if (result.state !== 'succeeded') flight.cancelled = true
+        return result
+      } catch (reason) {
+        flight.cancelled = true
+        throw reason
+      } finally {
+        // A failed transfer retains a cancelled fence: an explicit retry must
+        // flush the preserved draft again, not fall through to destructive load.
+        if (appointmentReentryTransfer === flight && !flight.cancelled) appointmentReentryTransfer = null
+      }
+    }
+    if (input.pageLease && input.pageLease !== appointmentPageLease) {
+      pendingAppointmentReentry = null
+      appointmentPageLease = input.pageLease
+    }
     const configured = dependencies
     const session = configured?.getSession()
     const current = descriptor.value
@@ -1061,6 +1203,8 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       clear()
       return failure('session_invalid', '账号或角色已变化，请重新进入当前工作台。')
     }
+    if (appointmentReentry?.key === reentryKey && session
+      && appointmentReentry.scope === sessionScopeKey(session)) return appointmentReentry.promise
     const sameAction = Boolean(
       current
       && session
@@ -1070,6 +1214,55 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       && (!input.actionIntent || current.actionIntent === input.actionIntent),
     )
     if (sameAction && loadState.value === 'succeeded') {
+      const form = dynamicForm.value
+      if (appointmentPageLeft && form?.purpose === 'appointment' && !form.dataId
+        && dynamicSaveInFlightVersion === loadVersion) {
+        pendingAppointmentReentry = { version: loadVersion, action: current!, input: { ...input } }
+      }
+      if (appointmentPageLeft && form?.purpose === 'appointment' && form.dataId
+        && !form.appointmentReplacement) {
+        if (dynamicSaveInFlightVersion === loadVersion) {
+          return failure('validation', 'Appointment save is still in progress')
+        }
+        const version = loadVersion
+        const revision = draftRevision
+        const automatic = automaticAppointmentReentry
+        const scope = sessionScopeKey(session!)
+        const promise = (async (): Promise<OperationSnapshot<ActionDescriptor>> => {
+          const flushed = await flushDraft()
+          if (version !== loadVersion || descriptor.value !== current) {
+            return failure('cancelled', 'Appointment reentry was superseded')
+          }
+          if (!commandSessionScopeCurrent()) {
+            clear()
+            return failure('session_invalid', '账号或角色已变化，请重新进入当前工作台。')
+          }
+          if (automatic?.cancelled) return failure('cancelled', 'Appointment page left during reentry')
+          if (flushed.state !== 'succeeded') return failureFrom(flushed)
+          if (revision !== draftRevision) return failure('cancelled', 'Appointment changed while preparing reentry')
+          if (automatic) automatic.loading = true
+          let result: OperationSnapshot<ActionDescriptor>
+          try {
+            result = await load(input, automatic
+              ? () => automaticAppointmentReentry === automatic && !automatic.cancelled
+              : undefined)
+          } finally { if (automatic) automatic.loading = false }
+          if (result.state === 'succeeded') {
+            if (loadVersion !== version + 1 || !commandSessionScopeCurrent()
+              || (automatic && (automaticAppointmentReentry !== automatic || automatic.cancelled))) {
+              return failure('cancelled', 'Appointment reentry was superseded')
+            }
+            appointmentPageLeft = false
+          }
+          return result
+        })()
+        const flight = { key: reentryKey, scope, promise }
+        appointmentReentry = flight
+        try { return await promise } finally {
+          if (appointmentReentry === flight) appointmentReentry = null
+        }
+      }
+      appointmentPageLeft = false
       return { state: 'succeeded', data: current! }
     }
     return load(input)
@@ -1500,6 +1693,11 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       return { state: validation.state, ...(validation.error ? { error: validation.error } : {}) }
     }
 
+    if (form.purpose === 'appointment') {
+      const replacementProblem = appointmentReplacementProblem({ ...form, workOrderId: currentDescriptor.workOrderId, workflowNodeId: currentDescriptor.workflowNodeId, workflowRunId: detail.value?.workflowRunId }, true)
+      if (replacementProblem) return failure('unsupported_capability', replacementProblem)
+    }
+
     const savedRevision = draftRevision
     const stillThisAction = () => commandVersion === loadVersion
       && descriptor.value === currentDescriptor
@@ -1507,6 +1705,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     const staleDraft = () => failure<void>('cancelled', '表单在保存过程中已被修改，请重新保存最新内容。')
     // Reserve before the first await: a second tap cannot dispatch a duplicate
     // FormData mutation while local draft persistence is still pending.
+    let acknowledgedCreate = false
     dynamicSaveInFlightVersion = commandVersion
     dynamicFormSaveState.value = 'saving'
     error.value = null
@@ -1546,6 +1745,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
         definitionId: currentDescriptor.contentIdentity as FormDefinitionId,
         ...(form.purpose ? { purpose: form.purpose } : {}),
         ...(form.dataId ? { formDataId: form.dataId } : {}),
+        ...(form.appointmentReplacement ? { appointmentReplacement: form.appointmentReplacement } : {}),
         values: validation.data,
         mutation,
       })
@@ -1568,6 +1768,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
           : result as OperationSnapshot<void>
       }
 
+      acknowledgedCreate = form.purpose === 'appointment' && !form.dataId
       // The server ID is authoritative even if the user edited while awaiting
       // the response: reuse it for a subsequent upsert, but NEVER overwrite
       // newer local values or declare the latest revision saved.
@@ -1607,6 +1808,24 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       return { state: 'succeeded', data: undefined }
     } finally {
       if (dynamicSaveInFlightVersion === commandVersion) dynamicSaveInFlightVersion = null
+      const reentry = pendingAppointmentReentry
+      if (reentry?.version === commandVersion && reentry.action === currentDescriptor) {
+        pendingAppointmentReentry = null // One bounded read, never an automatic command retry.
+        if (acknowledgedCreate && stillThisAction() && commandSessionScopeCurrent()) {
+          appointmentPageLeft = true
+          const owner = {
+            version: commandVersion, action: currentDescriptor, cancelled: false, loading: false,
+            key: JSON.stringify([reentry.input.workOrderId, reentry.input.workflowNodeId, reentry.input.actionIntent ?? '']),
+            pageLease: reentry.input.pageLease,
+          }
+          automaticAppointmentReentry = owner
+          try {
+            await ensureLoaded(reentry.input)
+          } finally {
+            if (automaticAppointmentReentry === owner) automaticAppointmentReentry = null
+          }
+        }
+      }
     }
   }
 
@@ -2035,6 +2254,9 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       return { state: validation.state, ...(validation.error ? { error: validation.error } : {}) }
     }
 
+    const replacementProblem = appointmentReplacementProblem({ ...form, workOrderId: currentDescriptor.workOrderId, workflowNodeId: currentDescriptor.workflowNodeId, workflowRunId: detail.value?.workflowRunId }, true)
+    if (replacementProblem) return failure('unsupported_capability', replacementProblem)
+
     const commandVersion = loadVersion
     const submitRevision = draftRevision
     // Claim the submit lease BEFORE local flush, preventing two quick taps
@@ -2072,6 +2294,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       workflowNodeId: currentDescriptor.workflowNodeId,
       ...(detail.value?.workflowRunId ? { workflowRunId: detail.value.workflowRunId } : {}),
       ...(form.dataId ? { formDataId: form.dataId } : {}),
+      ...(form.appointmentReplacement ? { appointmentReplacement: form.appointmentReplacement } : {}),
       visitIntent: appointmentVisitIntent.value,
       values: validation.data ?? {},
       mutation,
@@ -2097,12 +2320,28 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
   }
 
   async function exit(): Promise<OperationSnapshot<void>> {
+    const exitingAction = descriptor.value
+    const exitingPageLease = appointmentPageLease
+    const exitingVersion = loadVersion
     const flushed = await flushDraft()
     if (flushed.state !== 'succeeded') return flushed
+    if (exitingVersion !== loadVersion || descriptor.value !== exitingAction) {
+      return failure('cancelled', 'Action Workspace exit was superseded')
+    }
+    if (exitingAction && !commandSessionScopeCurrent()) {
+      return failure('session_invalid', '账号或角色已变化，请重新进入当前工作台。')
+    }
     const configured = dependencies
     if (!configured) return failure('server_terminal', 'Action Workspace is not configured')
     if (detail.value) {
       await resetTo(`/pages/work-orders/detail?id=${encodeURIComponent(String(detail.value.id))}`)
+      if (exitingVersion !== loadVersion || descriptor.value !== exitingAction) {
+        return failure('cancelled', 'Action Workspace exit was superseded')
+      }
+      if (exitingAction && !commandSessionScopeCurrent()) {
+        return failure('session_invalid', '账号或角色已变化，请重新进入当前工作台。')
+      }
+      leavePage(exitingAction, exitingPageLease)
       return { state: 'succeeded', data: undefined }
     }
     if (configured.navigation.back) {
@@ -2113,6 +2352,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
   }
 
   return {
+    leavePage,
     loadState,
     lifecycle,
     businessResult,

@@ -319,6 +319,8 @@ const createAStageMockQuoteOrderControllerForUi: AStageMockQuoteOrderControllerF
   createAStageMockQuoteOrderControllerForActor
 const session = useSessionStore()
 const workspace = useActionWorkspaceStore()
+let mountedWorkspaceAction: typeof workspace.descriptor = null
+const workspacePageLease = {}
 const quotationComposition = useQuotationCompositionStore()
 const sameCatalogLineagePreview = computed(() => import.meta.env.DEV && isMockQuotationPreview.value && quotationComposition.draft
   ? compareQuoteWithSameCatalogSyntheticSku(quotationComposition.draft) : null)
@@ -477,6 +479,7 @@ async function loadWorkspace(): Promise<void> {
   }
   routeError.value = ''
   const loaded = await workspace.ensureLoaded({
+    pageLease: workspacePageLease,
     workOrderId: routeId.value,
     workflowNodeId: routeNodeId.value,
     ...(routeAction.value ? { actionIntent: routeAction.value } : {}),
@@ -490,6 +493,7 @@ async function loadWorkspace(): Promise<void> {
   // resolved AND the navigation DOM has committed. A late response for an
   // already-unloaded page or another workflow node may not change its title.
   if (loaded.state === 'succeeded' && contextVersion === journeyContextRequest) {
+    mountedWorkspaceAction = workspace.descriptor
     await nextTick()
     if (contextVersion === journeyContextRequest && routeReady.value
       && session.status === 'authenticated'
@@ -513,6 +517,17 @@ async function loadWorkspace(): Promise<void> {
   }
 }
 
+// A pending create may finish with an authoritative reentry load after the
+// original ensureLoaded returned. Keep unload bound to that mounted generation.
+watch(() => workspace.descriptor, (action) => {
+  if (routeReady.value && action
+    && String(action.workOrderId) === String(routeId.value)
+    && String(action.workflowNodeId) === String(routeNodeId.value)
+    && (!routeAction.value || action.actionIntent === routeAction.value)) {
+    mountedWorkspaceAction = action
+  }
+}, { flush: 'sync' })
+
 onLoad((options) => {
   routeId.value = parseActionWorkspaceId(options?.id)
   routeNodeId.value = parseActionWorkspaceNodeId(options?.node)
@@ -535,6 +550,7 @@ onShow(() => {
 })
 
 onUnload(() => {
+  workspace.leavePage(mountedWorkspaceAction, workspacePageLease)
   routeReady.value = false
   mockOrderReadRevision += 1
   journeyContextRequest += 1

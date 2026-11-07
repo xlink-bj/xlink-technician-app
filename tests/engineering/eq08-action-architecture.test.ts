@@ -65,13 +65,13 @@ describe('EQ08 one Form Runtime schema projection and one Adapter command-wire o
     const values = { need: '1', comment: '请提前联系' }
     expect(appointmentRuntimeFieldsFor(appointment(values)).map(x => x.valueKey)).toEqual(['need', 'comment'])
     expect(dynamicActionFieldsFor(dynamic(values)).filter(x => x.runtime.visible).map(x => x.valueKey)).toEqual(['need', 'comment'])
-    expect(normalizeAppointmentForm(appointment(values))).toMatchObject({ state: 'succeeded', data: values })
+    expect(normalizeAppointmentForm(appointment(values)).state).toBe('failed_terminal') // unknown appointment business key; generic behavior unchanged
     expect(normalizeDynamicForm(dynamic(values))).toMatchObject({ state: 'succeeded', data: values })
   })
 
-  it('keeps conditionally hidden values locally but excludes them from BOTH submissions', () => {
+  it('keeps generic hidden projection but refuses unknown appointment replacement', () => {
     const values = { need: '0', comment: '旧草稿私有值' }
-    expect(normalizeAppointmentForm(appointment(values))).toEqual({ state: 'succeeded', data: { need: '0' } })
+    expect(normalizeAppointmentForm(appointment(values)).state).toBe('failed_terminal') // cannot omit unknown state under replace
     expect(normalizeDynamicForm(dynamic(values))).toEqual({ state: 'succeeded', data: { need: '0' } })
     expect(appointment(values).values.comment).toBe('旧草稿私有值')
   })
