@@ -1,12 +1,15 @@
+import { createLocalSessionAuthorityRestorer, type LocalSessionAuthorityPolicy } from './local-session-authority'
 import type { AuthBackendDriver, AuthBackendLoginRequest } from './auth-session-adapter'
 import { AuthTransportError } from './auth-session-adapter'
+import type { UniRequestExecutor } from '../common/uni-request-executor'
 
-export type UniRequestExecutor = (options: UniNamespace.RequestOptions) => unknown
+export type { UniRequestExecutor } from '../common/uni-request-executor'
 
 export interface UniAuthBackendOptions {
   readonly apiBaseUrl: string
   readonly request?: UniRequestExecutor
   readonly timeoutMs?: number
+  readonly localSessionAuthority?: LocalSessionAuthorityPolicy
 }
 
 function endpointUrl(baseUrl: string, path: string): string {
@@ -88,7 +91,9 @@ export function createUniAuthBackendDriver(options: UniAuthBackendOptions): Auth
   return {
     login,
     // Remote session revalidation is not established by accepted evidence.
-    restore: async () => ({ valid: false, reason: 'remote session revalidation not configured' }),
+    restore: options.localSessionAuthority
+      ? createLocalSessionAuthorityRestorer({ apiBaseUrl: options.apiBaseUrl, policy: options.localSessionAuthority, request, timeoutMs: options.timeoutMs })
+      : async () => ({ valid: false, reason: 'remote session revalidation not configured' }),
     // Local session clearing is supported; no remote logout endpoint is invented here.
     logout: async () => ({ remoteLogout: 'not_configured' }),
   }

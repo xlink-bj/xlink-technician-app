@@ -30,6 +30,8 @@ export interface SigningReviewReadWorkspace {
 type RuntimeScope = {
   readonly port: QuotationOrderReadPort
   readonly getSession: () => SessionSnapshot | null
+  /** Explicit read-only authority identity; never a roleVersion or signing grant. */
+  readonly getReadAuthorizationIdentity?: () => string | null
   /** Must resolve against the live, current-role visible WorkOrder list. */
   readonly isCurrentWorkOrderListed: (workOrderId: string) => boolean
 }
@@ -57,6 +59,8 @@ function denied(message: string, retryable = false): OperationSnapshot<ScopedSig
 }
 
 export function createSigningReviewReadWorkspace(scope: RuntimeScope): SigningReviewReadWorkspace {
+  const readKey = () => scope.getReadAuthorizationIdentity
+    ? scope.getReadAuthorizationIdentity() : authKey(scope.getSession())
   let epoch = 0
   let current: SigningReviewSnapshot = { state: 'idle' }
   const snapshot = () => current
@@ -66,7 +70,7 @@ export function createSigningReviewReadWorkspace(scope: RuntimeScope): SigningRe
   }
   function currentScope(epochAtStart: number, key: string, workOrderId: string): boolean {
     try {
-      return epoch === epochAtStart && authKey(scope.getSession()) === key
+      return epoch === epochAtStart && readKey() === key
         && scope.isCurrentWorkOrderListed(workOrderId)
     } catch {
       return false
@@ -84,7 +88,7 @@ export function createSigningReviewReadWorkspace(scope: RuntimeScope): SigningRe
     current = { state: 'idle' }
     let key: string | null = null
     try {
-      key = authKey(scope.getSession())
+      key = readKey()
       if (!key || !validId(workOrderId) || !validId(orderId)
         || !scope.isCurrentWorkOrderListed(workOrderId)
         || !scope.port.readScopedTypeOneOrderForSigningReview) {

@@ -1,3 +1,4 @@
+import { createLocalSigningReadAuthority } from './local-signing-read-authority'
 import { createSSRApp } from 'vue'
 import { createPinia } from 'pinia'
 
@@ -123,16 +124,20 @@ export function createApplication(dependencies: ApplicationDependencies = {}) {
   workOrderDetailStore.configureNavigation(navigation)
   const quotationOrderBrowseStore = useQuotationOrderBrowseStore(pinia)
   quotationOrderBrowseStore.configure(quotationOrderRead, () => sessionStore.session)
+  const localSigningRead = createLocalSigningReadAuthority({ auth: authSession, read: apiRead })
   const signingReviewReadStore = useSigningReviewReadStore(pinia)
   signingReviewReadStore.configure(
-    quotationOrderRead,
+    localSigningRead.enabled() ? localSigningRead.port : quotationOrderRead,
     () => sessionStore.session,
-    (id) => isDevSyntheticContractReadPreviewEnabled(id)
+    (id) => localSigningRead.enabled()
+      ? apiRead.isWorkOrderListedForCurrentSession?.(id) === true
+      : isDevSyntheticContractReadPreviewEnabled(id)
       || (workOrderDetailStore.loadState === 'succeeded'
         && String(workOrderDetailStore.detail?.id ?? '') === id
         && workOrderListStore.items.some((item) => String(item.id) === id)),
     apiRead,
     isDevSyntheticContractReadPreviewEnabled,
+    localSigningRead.enabled() ? localSigningRead : undefined,
   )
   const actionWorkspaceStore = useActionWorkspaceStore(pinia)
   actionWorkspaceStore.configure({

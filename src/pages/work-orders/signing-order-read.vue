@@ -38,7 +38,7 @@
           <text class="signing-read-body" data-testid="signing-review-next">{{ signingNextActionDisplay }}</text>
         </view>
         <AppButton
-          v-if="devFixtureContractRead && (review.contractSnapshot.state === 'idle' || review.contractSnapshot.state === 'failed_retryable')"
+          v-if="scopedContractReadEnabled && (review.contractSnapshot.state === 'idle' || review.contractSnapshot.state === 'failed_retryable')"
           class="signing-read-contract-cta signing-read-stage-cta"
           block data-testid="signing-contract-read-request" @tap="readContracts"
         >{{ review.contractSnapshot.state === 'failed_retryable' ? '重新核验合同状态' : '核验当前订单合同' }}</AppButton>
@@ -81,13 +81,13 @@
       </AppRecordCard>
       <AppRecordCard class="signing-read-section xl-craft__surface xl-craft__surface--flat" data-testid="signing-order-read-contract-status">
         <AppSectionHeading title="合同记录" />
-        <text v-if="!devFixtureContractRead" data-testid="signing-contract-prod-blocked">
+        <text v-if="!scopedContractReadEnabled" data-testid="signing-contract-prod-blocked">
           合同状态核验暂未开放
         </text>
         <text v-else class="signing-read-help" data-testid="signing-contract-read-scope">
-          仅核验当前工单已确认订单的合同状态，不读取合同文件或签署信息。
+          仅核验当前工单已核验订单的合同状态，不读取合同文件或签署信息。
         </text>
-        <text v-if="devFixtureContractRead && (review.contractSnapshot.state === 'idle' || review.contractSnapshot.state === 'failed_retryable')"
+        <text v-if="scopedContractReadEnabled && (review.contractSnapshot.state === 'idle' || review.contractSnapshot.state === 'failed_retryable')"
           class="signing-read-help">合同状态待核验</text>
         <AppLoadingState v-if="review.contractSnapshot.state === 'loading'"
           variant="inline" label="正在只读核验合同状态" />
@@ -193,7 +193,7 @@ const signingPhaseTitle = computed(() => signingProgress.value.title.replace(
 /** Task-facing language derived only from the authoritative read state. */
 const signingNextActionDisplay = computed(() => {
   switch (review.contractSnapshot.state) {
-    case 'idle': return devFixtureContractRead.value
+    case 'idle': return scopedContractReadEnabled.value
       ? '核验合同状态' : '合同状态核验暂未开放'
     case 'loading': return '正在核验合同状态'
     case 'failed_retryable': return '合同核验失败，可重试'
@@ -211,9 +211,11 @@ const operationLimitsExpanded = ref(false)
 const stageInfoExpanded = ref(false)
 const devFixtureContractRead = computed(() => !productionReadOnly
   && isDevSyntheticContractReadPreviewEnabled(routeWorkOrderId.value))
+const scopedContractReadEnabled = computed(() => devFixtureContractRead.value
+  || review.canReadContracts(routeWorkOrderId.value, routeOrderId.value))
 function readContracts(): void {
-  // Only the fixed isolated DEV fixture may issue this source-accurate read.
-  if (!devFixtureContractRead.value || review.snapshot.state !== 'ready') return
+  // Only an explicitly configured scoped read authority may query Contracts.
+  if (!scopedContractReadEnabled.value || review.snapshot.state !== 'ready') return
   void review.loadContracts()
 }
 const routeReady = ref(false)

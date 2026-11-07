@@ -10,6 +10,12 @@ import {
   type SigningReviewSnapshot,
 } from './signing-review-read-workspace'
 
+export interface SigningReadAuthority {
+  readonly currentKey: () => string | null
+  readonly prepare: (workOrderId: string, orderId: string) => Promise<void>
+  readonly isContractReadAllowed: (workOrderId: string) => boolean
+}
+
 /**
  * Phase 1 engineering — the actual main App signing read-side state.
  * Nothing in this store grants Contract visibility, Signing commands,
@@ -36,8 +42,12 @@ export const useSigningReviewReadStore = defineStore('signingReviewRead', () => 
   // role-visible list/detail can revoke an ALREADY-rendered Order review.
   const activeWorkOrderId = ref<string | null>(null)
   let generation = 0
+  let readAuthority: SigningReadAuthority | undefined
 
   function scopeKey(): string {
+    if (readAuthority) {
+      try { return readAuthority.currentKey() ?? '' } catch { return '' }
+    }
     const session = getSession()
     if (!session?.currentRole?.id || !session.roleVersion) return ''
     return JSON.stringify([
@@ -66,10 +76,12 @@ export const useSigningReviewReadStore = defineStore('signingReviewRead', () => 
     isCurrentWorkOrderListedForSession: (id: string) => boolean,
     nodeReadApi?: TechnicianApiReadPort,
     allowSyntheticCurrentNodeRead: (id: string) => boolean = () => false,
+    scopedReadAuthority?: SigningReadAuthority,
   ): void {
     stopWatch?.()
     stopMembershipWatch?.()
     clear()
+    readAuthority = scopedReadAuthority
     getSession = sessionProvider
     contractPort = port
     handlerApi = nodeReadApi ?? null
@@ -79,6 +91,7 @@ export const useSigningReviewReadStore = defineStore('signingReviewRead', () => 
       port,
       getSession: sessionProvider,
       isCurrentWorkOrderListed: safeListed,
+      getReadAuthorizationIdentity: scopedReadAuthority ? scopeKey : undefined,
     })
     stopWatch = watch(scopeKey, (next, old) => {
       if (next !== old) clear()
@@ -109,6 +122,22 @@ export const useSigningReviewReadStore = defineStore('signingReviewRead', () => 
       return {
         state: 'failed_terminal',
         error: createOperationError('authorization_denied', '签约只读权限尚未准备完成。'),
+      }
+    }
+    // The default versioned path remains unchanged. The explicitly injected
+    // read authority must freshly verify before rebuilding cold list evidence.
+    const key = scopeKey()
+    if (readAuthority) {
+      snapshot.value = { state: 'loading' }
+      try { await readAuthority.prepare(workOrderId, orderId) } catch {
+        if (attempt === generation && workspace === active) {
+          active.clear()
+          snapshot.value = { state: 'failed_terminal' }
+        }
+        return { state: 'failed_terminal', error: createOperationError('authorization_denied', '服务端身份或订单归属未能完成核验。') }
+      }
+      if (attempt !== generation || workspace !== active || key !== scopeKey()) {
+        return { state: 'failed_terminal', error: createOperationError('authorization_denied', '读取身份或页面范围已变化。') }
       }
     }
     if (!safeListed(workOrderId)) {
@@ -145,6 +174,12 @@ export const useSigningReviewReadStore = defineStore('signingReviewRead', () => 
     }
     contractSnapshot.value = { state: 'loading', items: [] }
     try {
+      if (readAuthority) {
+        await readAuthority.prepare(selected.workOrderId, selected.orderId)
+        if (attempt !== contractAttempt || key !== scopeKey() || !safeListed(selected.workOrderId)
+          || snapshot.value.state !== 'ready' || snapshot.value.orderId !== selected.orderId
+          || snapshot.value.workOrderId !== selected.workOrderId) return
+      }
       const result = await contractPort.listR1ContractsForSigningReview(selected.workOrderId, selected.orderId)
       if (attempt !== contractAttempt || key !== scopeKey()
         || !safeListed(selected.workOrderId) || snapshot.value.state !== 'ready'
@@ -161,6 +196,7 @@ export const useSigningReviewReadStore = defineStore('signingReviewRead', () => 
           item.orderId === selected.orderId && item.serviceAppointmentId === selected.workOrderId)) {
         contractSnapshot.value = { state: 'succeeded', items: [...result.data.items] }
       } else {
+        if (readAuthority) { workspace?.clear(); snapshot.value = { state: 'failed_terminal' } }
         contractSnapshot.value = {
           state: result.state === 'failed_retryable' ? 'failed_retryable' : 'failed_terminal',
           items: [],
@@ -168,6 +204,7 @@ export const useSigningReviewReadStore = defineStore('signingReviewRead', () => 
       }
     } catch {
       if (attempt === contractAttempt) {
+        if (readAuthority) { workspace?.clear(); snapshot.value = { state: 'failed_terminal' } }
         contractSnapshot.value = { state: 'failed_retryable', items: [] }
       }
     }
@@ -216,5 +253,14 @@ export const useSigningReviewReadStore = defineStore('signingReviewRead', () => 
     }
   }
 
-  return { snapshot, contractSnapshot, handlerSnapshot, configure, load, loadContracts, loadNodeHandlerEvidence, clear }
+  function canReadContracts(workOrderId: string, orderId: string): boolean {
+    const selected = snapshot.value
+    try {
+      return Boolean(readAuthority && selected.state === 'ready' && selected.workOrderId === workOrderId
+        && selected.orderId === orderId && scopeKey() && safeListed(workOrderId)
+        && readAuthority.isContractReadAllowed(workOrderId))
+    } catch { return false }
+  }
+
+  return { canReadContracts, snapshot, contractSnapshot, handlerSnapshot, configure, load, loadContracts, loadNodeHandlerEvidence, clear }
 })

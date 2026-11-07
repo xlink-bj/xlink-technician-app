@@ -1,3 +1,4 @@
+import { localSessionAuthorityPolicy } from './local-session-authority'
 import { BrowserDurableMediaStore } from '@adapters/storage/browser-durable-media-store'
 import type {
   AuthSessionPort,
@@ -83,6 +84,7 @@ export function createDefaultAuthSessionPort(): AuthSessionPort {
   const storage = createSemanticStorageAdapter(createUniStorageDriver())
   const backend = createUniAuthBackendDriver({
     apiBaseUrl: config.value.authApiBaseUrl,
+    localSessionAuthority: localSessionAuthorityPolicy(),
   })
   return createAuthSessionAdapter(backend, storage, config.value.authWireConfig)
 }
