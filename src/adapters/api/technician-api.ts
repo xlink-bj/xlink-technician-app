@@ -52,7 +52,8 @@ import { isProductionReadOnlyTarget } from '@shared/config'
 import { sessionAuthorizationFingerprint } from '@shared/session-authorization'
 import { requiredOpaqueId } from './read-models/ids'
 import { formData, formDefinition } from './read-models/form'
-import { codeOption, dynamicCodeOptions, cascadeCodeOptions, flattenCodeOptions } from './read-models/code-options'
+import { dynamicCodeOptions, cascadeCodeOptions, flattenCodeOptions } from './read-models/code-options'
+import { readCompleteCodeOptions } from './code-query-options'
 import { workOrderActivities } from './read-models/work-order-activity'
 import { workflowDefinition, workflowNode, workflowResponseRows, assertUniqueRuntimeNodeIds } from './read-models/workflow'
 import {
@@ -823,14 +824,22 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
     )
   }
 
-  getCodeOptions(query: CodeOptionsQuery) {
-    const body: Record<string, ApiRequestValue> = {}
-    if (query.valueOption) body.valueOption = query.valueOption
-    if (query.parentValue) body.parentId = query.parentValue
-    return this.read<ReadPage<CodeOptionRead>>(
-      { method: 'POST', path: 'code/query', ...(Object.keys(body).length > 0 ? { body } : {}) },
-      (raw) => pageEnvelope(raw, codeOption),
-    )
+  async getCodeOptions(query: CodeOptionsQuery): Promise<OperationSnapshot<ReadPage<CodeOptionRead>>> {
+    const scopeAtStart = this.synchronizeReadScope()
+    const assertCurrent = (): void => {
+      if (this.options.getReadAuthorizationScope
+        && (!scopeAtStart || this.synchronizeReadScope() !== scopeAtStart)) {
+        throw new ApiReadTransportError('Code query session or role changed', 'authorization_denied')
+      }
+    }
+    try {
+      const data = await readCompleteCodeOptions(query,
+        (request) => this.transport.execute(request), assertCurrent)
+      assertCurrent()
+      return succeeded(data)
+    } catch (error) {
+      return readFailure(error)
+    }
   }
 
   listR1FormsAddOptions(addFormCodeId:string) {
@@ -899,7 +908,7 @@ export interface TechnicianApiReadAdapterOptions {
   readonly cascadeTenantId?: string
   /** Current authenticated tenant used by R1's batch dynamic code endpoint. */
   readonly codeTenantId?: string
-  /** Current principal/role identity, used only to scope ephemeral authorized Work Order IDs in memory. */
+  /** Current principal/role identity for ephemeral Work Order scope and in-flight Code page invalidation. */
   readonly getReadAuthorizationScope?: () => {
     readonly sessionRef: string | null
     readonly userId: string | null

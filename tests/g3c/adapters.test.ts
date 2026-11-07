@@ -136,7 +136,7 @@ describe('G3-C API adapter foundation', () => {
     const options = await api.getCodeOptions({ parentValue: 'parent-option' })
     expect(options.data?.items).toEqual([{ value: 'option-a', label: 'Sanitized option' }])
     expect(transport.requests.find((request) => request.path === 'code/query')?.body).toEqual({
-      parentId: 'parent-option',
+      parentId: 'parent-option', page: 1, rows: 50, sidx: 'order,_id', sord: 'asc',
     })
   })
 

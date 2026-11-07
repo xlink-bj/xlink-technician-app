@@ -810,8 +810,22 @@ function matchedResponse(
     return null
   }
   if (route === 'function/changeRole') return mockRoleFunctionResponse
-  if (route === 'code/query' && requestData.valueOption === 'STATUS') {
-    return mockStatusOptionsResponse
+  if (route === 'code/query' && requestData.valueOption !== undefined) return null
+  if (route === 'code/query' && requestData['is:type|string#and'] === 'STATUS') {
+    // Code.valueOption is not a Java field. Only the evidenced type predicate
+    // matches; unknown filters / unbounded requests must not receive fixtures.
+    const allowed = ['is:type|string#and', 'parentId', 'page', 'rows', 'sidx', 'sord']
+    const page = requestData.page
+    const rows = requestData.rows
+    if (Object.keys(requestData).some(key => !allowed.includes(key))
+      || typeof page !== 'number' || !Number.isInteger(page) || page < 1 || page > 10
+      || rows !== 50 || requestData.sidx !== 'order,_id' || requestData.sord !== 'asc'
+      || (requestData.parentId !== undefined && (typeof requestData.parentId !== 'string'
+        || !requestData.parentId.trim() || requestData.parentId.trim() !== requestData.parentId))) return null
+    const matching = mockStatusOptionsResponse.data.filter(row =>
+      requestData.parentId === undefined || row.parentId === requestData.parentId)
+    const data = matching.slice((page - 1) * rows, page * rows)
+    return { data, page, rows, size: rows, total: matching.length, dataCount: data.length }
   }
   if (mode === 'data' && route === 'code/query' && requestData.parentId === mockR1AddFormCodeId) {
     return mockR1AddFormOptionsResponse

@@ -633,20 +633,25 @@ export const mockOrdinaryListResponse = {
 /** Sanitized raw status code-table response used to exercise adapter lookup. */
 export const mockStatusOptionsResponse = {
   data: [
-    { value: '206', codelabel: '跟进签约' },
-    { value: '401', codelabel: '验收回款' },
-    { value: '101', codelabel: '待接单' },
-    { value: mockSyntheticStatusCodes.appointmentPending, codelabel: '待预约' },
-    { value: mockSyntheticStatusCodes.onsite, codelabel: '现场服务' },
-    { value: mockSyntheticStatusCodes.visit, codelabel: '上门服务' },
-    { value: mockSyntheticStatusCodes.deferred, codelabel: '暂不上门' },
-    { value: mockSyntheticStatusCodes.order, codelabel: '待下单' },
-    { value: mockSyntheticStatusCodes.proposal, codelabel: '跟进方案' },
-    { value: mockSyntheticStatusCodes.rating, codelabel: '待评价' },
-  ],
+    { value: '206', name: '跟进签约' },
+    { value: '401', name: '验收回款' },
+    { value: '101', name: '待接单' },
+    { value: mockSyntheticStatusCodes.appointmentPending, name: '待预约' },
+    { value: mockSyntheticStatusCodes.onsite, name: '现场服务' },
+    { value: mockSyntheticStatusCodes.visit, name: '上门服务' },
+    { value: mockSyntheticStatusCodes.deferred, name: '暂不上门' },
+    { value: mockSyntheticStatusCodes.order, name: '待下单' },
+    { value: mockSyntheticStatusCodes.proposal, name: '跟进方案' },
+    { value: mockSyntheticStatusCodes.rating, name: '待评价' },
+  ].map((option, order) => ({
+    ...option, _id: `mock-status-code-${option.value}`, type: 'STATUS',
+    parentId: 'mock-status-type', order,
+  })),
   page: 1,
-  rows: 20,
+  rows: 50,
+  size: 50,
   total: 10,
+  dataCount: 10,
 } as const
 
 /** Sanitized raw repair-part cascade response used by the R1-backed adapter lookup. */

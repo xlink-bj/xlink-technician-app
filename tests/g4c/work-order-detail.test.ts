@@ -125,9 +125,9 @@ describe('G4-C API detail mapping and route identity', () => {
         requests.push(request)
         if (request.path === 'code/query') {
           return {
-            data: [{ value: '104', codelabel: '待联系' }],
+            data: [{ _id: 'code-status-104', type: 'STATUS', value: '104', name: '待联系' }],
             page: 1,
-            rows: 20,
+            rows: 50,
             total: 1,
           }
         }

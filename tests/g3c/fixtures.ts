@@ -51,9 +51,9 @@ export const rawFormDataPage = {
 }
 
 export const rawCodeOptionsPage = {
-  data: [{ value: 'option-a', codelabel: 'Sanitized option' }],
+  data: [{ _id: 'code-option-a', value: 'option-a', name: 'Sanitized option', parentId: 'parent-option' }],
   page: 1,
-  rows: 20,
+  rows: 50,
   total: 1,
 }
 

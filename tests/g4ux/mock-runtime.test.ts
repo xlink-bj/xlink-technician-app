@@ -966,12 +966,12 @@ describe('G4-UX business mock runtime', () => {
     const api = createTechnicianApiReadAdapter(transport, mockAdapterOptions)
     const result = await api.listWorkOrders({ page: 1, pageSize: 20 })
 
-    expect(result.data?.items[0].taskLabel).toBe(mockStatusOptionsResponse.data[0].codelabel)
+    expect(result.data?.items[0].taskLabel).toBe(mockStatusOptionsResponse.data[0].name)
     expect(result.data?.items[0].servicePartLabel).toBe('屋面')
     expect(requests.find((request) => request.path === 'code/query')).toEqual({
       method: 'POST',
       path: 'code/query',
-      body: { valueOption: 'STATUS' },
+      body: { 'is:type|string#and': 'STATUS', page: 1, rows: 50, sidx: 'order,_id', sord: 'asc' },
     })
     expect(requests.at(-1)).toEqual({
       method: 'POST',
@@ -1004,13 +1004,13 @@ describe('G4-UX business mock runtime', () => {
 
     expect(mockStatusOptionsResponse.data).toEqual(
       expect.arrayContaining([
-        { value: mockSyntheticStatusCodes.appointmentPending, codelabel: '待预约' },
-        { value: mockSyntheticStatusCodes.onsite, codelabel: '现场服务' },
-        { value: mockSyntheticStatusCodes.visit, codelabel: '上门服务' },
-        { value: mockSyntheticStatusCodes.deferred, codelabel: '暂不上门' },
-        { value: mockSyntheticStatusCodes.order, codelabel: '待下单' },
-        { value: mockSyntheticStatusCodes.proposal, codelabel: '跟进方案' },
-        { value: mockSyntheticStatusCodes.rating, codelabel: '待评价' },
+        expect.objectContaining({ value: mockSyntheticStatusCodes.appointmentPending, name: '待预约' }),
+        expect.objectContaining({ value: mockSyntheticStatusCodes.onsite, name: '现场服务' }),
+        expect.objectContaining({ value: mockSyntheticStatusCodes.visit, name: '上门服务' }),
+        expect.objectContaining({ value: mockSyntheticStatusCodes.deferred, name: '暂不上门' }),
+        expect.objectContaining({ value: mockSyntheticStatusCodes.order, name: '待下单' }),
+        expect.objectContaining({ value: mockSyntheticStatusCodes.proposal, name: '跟进方案' }),
+        expect.objectContaining({ value: mockSyntheticStatusCodes.rating, name: '待评价' }),
       ]),
     )
     expect(mockStatusOptionsResponse.data.map((option) => option.value)).not.toEqual(
@@ -1037,7 +1037,7 @@ describe('G4-UX business mock runtime', () => {
   it('omits an unknown status instead of fabricating a task label', async () => {
     const transport: ApiReadTransport = {
       execute: vi.fn(async (request) => {
-        if (request.path === 'code/query') return { data: [], page: 1, rows: 20, total: 0 }
+        if (request.path === 'code/query') return { data: [], page: 1, rows: 50, total: 0 }
         return {
           data: [{ _id: 'work-order-unknown-status', status: 'unverified-status' }],
           page: 1,
@@ -1080,7 +1080,7 @@ describe('G4-UX business mock runtime', () => {
   it('keeps status labels separate from the Runtime current-task projection', async () => {
     const transport: ApiReadTransport = {
       execute: vi.fn(async (request) => {
-        if (request.path === 'code/query') return { data: [], page: 1, rows: 20, total: 0 }
+        if (request.path === 'code/query') return { data: [], page: 1, rows: 50, total: 0 }
         const id = request.path.split('/').at(-1) ?? ''
         return { data: { serviceAppointment: { _id: id, status: '206' } } }
       }),
