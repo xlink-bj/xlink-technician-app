@@ -1,3 +1,7 @@
+import { createNormalNodeFormsReader } from './r1-node-forms-read'
+import { r1NodeFormsReaderKey } from '@features/work-orders/r1-node-forms-read'
+import { createNormalRepeatActionProvider } from './r1-repeat-authorization'
+import { r1RepeatActionsKey } from '@features/work-orders/r1-repeat-actions-port'
 import { createLocalSigningReadAuthority } from './local-signing-read-authority'
 import { createSSRApp } from 'vue'
 import { createPinia } from 'pinia'
@@ -80,6 +84,12 @@ export function createApplication(dependencies: ApplicationDependencies = {}) {
     authSession,
     id => apiRead.isWorkOrderListedForCurrentSession?.(id) === true,
   )
+  const normalNodeFormsReader = createNormalNodeFormsReader({ auth: authSession, read: apiRead,
+    tenantId: String(import.meta.env.VITE_XLINK_AUTH_TENANT ?? ''), env: import.meta.env,
+    origin: typeof window === 'undefined' ? '' : window.location.origin })
+  app.provide(r1NodeFormsReaderKey, normalNodeFormsReader)
+  app.provide(r1RepeatActionsKey, createNormalRepeatActionProvider({ auth: authSession, reader: normalNodeFormsReader,
+    env: import.meta.env, origin: typeof window === 'undefined' ? '' : window.location.origin }))
   const apiCommand = dependencies.apiCommand ?? createDefaultTechnicianApiCommandPort(authSession, apiRead)
   const quotationOrderCommand = dependencies.quotationOrderCommand ?? createDefaultQuotationOrderCommandPort(authSession)
   const isQuotationOrderReadScopeValid = (workOrderId: string) =>

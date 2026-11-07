@@ -122,7 +122,7 @@
         :work-order-id="String(detail.id)"
         :create-controller="createAStageSpecialControllerForUi" @changed="retry" />
       <R1NodeFormsOverview v-else-if="currentR1FormNode" :node="currentR1FormNode"
-        :work-order-id="String(detail.id)" :actor-scope="workOrderReadScopeKey(session.session)" />
+        :work-order-id="String(detail.id)" :actor-scope="workOrderReadScopeKey(session.session)" @changed="retry" />
       <AppStatus v-if="aStageCompletedSpecialNode && completedSpecialReceiptGate?.status === 'clear'" tone="success" quiet
         message="现场记录已完成，可重新进入查看。"
         data-testid="a-special-complete" />

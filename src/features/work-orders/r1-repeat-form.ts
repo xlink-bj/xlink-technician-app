@@ -1,0 +1,64 @@
+import type { R1NodeFormsSnapshot } from './r1-node-forms-read'
+import type { R1LocalField } from './r1-local-form-fields'
+import { actionFormSchemaFor, ACTION_FORM_SURFACE } from './action-form-schema'
+import { evaluateFieldState, normalizeSubmission } from '@runtimes/dynamic-form'
+import { normalizeDynamicForm } from './dynamic-form-action'
+import type { FormFieldValue } from '@shared/ports'
+const deny = (): never => { throw Error('字段、选项或规则尚未核实，不能保存。') }
+const validId = (v: unknown): v is string => typeof v === 'string' && v.length > 0 && v.trim() === v && !v.includes(',')
+const reserved = new Set(['id', '_id', 'dataId', 'formDataId', 'formDefId', 'definitionId', 'extId', 'tenantId', 'userId', 'roleId', 'sid', 'smodule', 'state', 'nodeId', 'workflowId', 'dataStr', 'exts', '__proto__', 'prototype', 'constructor', 'createTime', 'createDateTime', 'createUser', 'createUserName', 'updateTime', 'updateDateTime', 'updateUser', 'updateUserName', 'orgId', 'belongTo', '_version', '_class'])
+const scalarTypes = new Set(['text', 'textarea', 'phone', 'IDNumber', 'number', 'digit', 'date', 'time', 'datetime', 'radio', 'select'])
+export function normalizeR1RepeatValues(snapshot: R1NodeFormsSnapshot, values: Readonly<Record<string, unknown>>): Record<string, string | number | boolean> {
+  const fields = snapshot.definition.fields
+  if (!fields?.length || fields.length > 50 || !values || typeof values !== 'object' || Array.isArray(values)) return deny()
+  const schema = fields.map(f => actionFormSchemaFor({ ...f, readOnly: f.readOnly || snapshot.node.formFieldIdsReadOnly?.includes(f.fieldId) === true }))
+  const appointment = snapshot.definition.purpose === 'appointment'
+  if (new Set(fields.map(f => f.valueKey)).size !== fields.length) return deny()
+  for (const field of schema) {
+    if (!validId(field.valueKey) || reserved.has(field.valueKey)) return deny()
+    const state = evaluateFieldState(field, { values, surface: ACTION_FORM_SURFACE })
+    const submitted = Object.hasOwn(values, field.valueKey)
+    // New appointment drafts retain only their verified six business fields.
+    // Other forms still have no hidden-value contract; metadata and the edit-only
+    // reason may never be introduced through a new-record draft.
+    if (state.capability === 'UNSUPPORTED' || !scalarTypes.has(field.type) || field.multiple) return deny()
+    if (appointment && submitted && field.valueKey === 'modifyReason') return deny()
+    if (!state.visible && submitted && !appointment) return deny()
+    if ((state.readOnly || state.capability === 'PRESENTATION_ONLY') && (submitted || (state.visible && field.required))) return deny()
+    if (['radio', 'select'].includes(field.type) && (!field.inlineOptions?.length
+      || new Set(field.inlineOptions.map(o => o.value)).size !== field.inlineOptions.length
+      || field.inlineOptions.some(o => o.children?.length))) return deny()
+  }
+  if (Object.keys(values).some(key => reserved.has(key) || !fields.some(f => f.valueKey === key))) return deny()
+  let normalized: Readonly<Record<string, unknown>>
+  if (appointment) {
+    const result = normalizeDynamicForm({ definitionId: snapshot.definition.id, purpose: 'appointment', fields,
+      values: values as Readonly<Record<string, FormFieldValue>>,
+      workflowReadOnlyFieldIds: snapshot.node.formFieldIdsReadOnly })
+    if (result.state !== 'succeeded' || !result.data) return deny()
+    normalized = result.data
+  } else {
+    const result = normalizeSubmission({ fields: schema, values, surface: ACTION_FORM_SURFACE })
+    if (!result.ok) return deny()
+    normalized = result.value.values
+  }
+  const out: Record<string, string | number | boolean> = {}
+  for (const [key, value] of Object.entries(normalized)) {
+    if (!['string', 'number', 'boolean'].includes(typeof value)) return deny()
+    out[key] = value as string | number | boolean
+  }
+  return out
+}
+
+/** Same schema and conditions as the submission validator, without granting a command. */
+export function projectR1RepeatFields(snapshot: R1NodeFormsSnapshot, values: Readonly<Record<string, unknown>>): readonly (R1LocalField & { readonly visible: boolean })[] {
+  return (snapshot.definition.fields ?? []).map(field => {
+    const schema = actionFormSchemaFor({ ...field, readOnly: field.readOnly || snapshot.node.formFieldIdsReadOnly?.includes(field.fieldId) === true })
+    const state = evaluateFieldState(schema, { values: values as never, surface: ACTION_FORM_SURFACE })
+    return { fieldId: field.fieldId, valueKey: field.valueKey, label: field.label, type: field.type,
+      required: state.required, readOnly: state.readOnly, options: field.options ?? [], multiple: Boolean(field.multiple),
+      visible: state.visible,
+      supported: state.capability === 'SUPPORTED_GENERIC' && state.visible && !state.readOnly && scalarTypes.has(field.type) && !field.multiple,
+      ...(state.reason ? { reason: state.reason } : {}) }
+  })
+}

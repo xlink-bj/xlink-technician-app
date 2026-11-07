@@ -6,6 +6,9 @@
       <text v-if="formList?.evidence === 'available'" data-testid="r1-form-list-count"
         class="r1-node-forms__count">{{ countText }}</text>
     </view>
+    <R1NodeFormsReadPanel v-if="normalReader?.enabled() && workOrderId" :reader="normalReader"
+      :work-order-id="workOrderId" :runtime-node-id="String(node.id)" :actor-scope="actorScope" @changed="emit('changed')" />
+    <template v-else>
     <text v-if="!formList" class="r1-node-forms__hint" data-testid="r1-form-list-unknown">
       表单记录暂不可用，当前仅支持查看。
     </text>
@@ -95,11 +98,14 @@
         {{ draftStore.message }}
       </text>
     </template>
+    </template>
   </view>
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, inject, onBeforeUnmount, ref, watch } from 'vue'
+import R1NodeFormsReadPanel from './R1NodeFormsReadPanel.vue'
+import { r1NodeFormsReaderKey } from './r1-node-forms-read'
 import type { WorkflowNodeRead, R1NodeFormReference, R1NodeFormListRead, FormDefinitionRead } from '@shared/ports'
 import type { R1LocalFieldValue } from './r1-local-form-fields'
 import AppButton from '@shared/ui/AppButton.vue'
@@ -113,6 +119,8 @@ const props = defineProps<{
   readonly actorScope?: string | null
 }>()
 const draftStore=useR1LocalFormDraftStore()
+const emit=defineEmits<{ (event:'changed'):void }>()
+const normalReader=inject(r1NodeFormsReaderKey,null)
 const newTitle=ref('')
 const editTitle=ref('')
 const editingRecordId=ref<string|null>(null)
