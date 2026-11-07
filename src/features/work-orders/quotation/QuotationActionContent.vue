@@ -368,10 +368,12 @@
                         <text class="quotation-content__line-title">{{ selection.label }}</text>
                         <text v-if="catalogUnitPriceFor(group.groupId, selection.selectionId) !== undefined"
                           class="quotation-content__line-unit-price" :data-testid="`quotation-selection-unit-price-${selection.selectionId}`">
-                          目录单价 ¥{{ formatQuotationMoney(catalogUnitPriceFor(group.groupId, selection.selectionId)!) }}{{ selection.unit ? '/' + selection.unit : '' }}
+                          目录单价 ¥{{ formatQuotationMoney(catalogUnitPriceFor(group.groupId, selection.selectionId)!) }}{{ selection.unit ? '/' + displayUnit(selection.unit) : '' }}
                         </text>
+                        <text v-if="selectionMinimumCharge(group.groupId, selection)" class="quotation-content__line-unit-price"
+                          :data-testid="`quotation-selection-minimum-${selection.selectionId}`">{{ selectionMinimumCharge(group.groupId, selection) }}</text>
                       </view>
-                      <text class="quotation-content__selection-unit">{{ selection.unit || '单位待核验' }}</text>
+                      <text class="quotation-content__selection-unit">{{ displayUnit(selection.unit) || '单位待核验' }}</text>
                       <view v-if="lineSubtotalFor(group.groupId, selection.selectionId) !== undefined" class="quotation-content__line-money"
                         :data-testid="`quotation-selection-subtotal-${selection.selectionId}`">
                         <text class="quotation-content__line-money-label">小计</text>
@@ -443,7 +445,7 @@
                           :data-testid="`quotation-selection-quantity-${selection.selectionId}`"
                           @input="onQuantityInput(group.groupId, selection.selectionId, $event)"
                         />
-                        <text v-if="selection.unit" class="quotation-content__unit">{{ selection.unit }}</text>
+                        <text v-if="selection.unit" class="quotation-content__unit">{{ displayUnit(selection.unit) }}</text>
                       </view>
                       <text v-if="composition.quantityErrorBySelection[selection.selectionId]" class="quotation-content__quantity-error" role="alert">
                         {{ composition.quantityErrorBySelection[selection.selectionId] }}
@@ -755,7 +757,7 @@
                       >已选 × {{ catalogSelectionFor(item)?.quantity }}</text>
                     </view>
                     <text class="quotation-content__catalog-item-title">{{ item.name }}</text>
-                    <text v-if="item.description || item.content" class="quotation-content__catalog-item-description">{{ item.description || item.content }}</text>
+                    <text v-if="item.description || item.content" class="quotation-content__catalog-item-description">{{ localCatalogDescription(item.description || item.content, verifiedLocalDisplay) }}</text>
                     <view v-if="catalogCardDetails(item).length" class="quotation-content__catalog-item-details">
                       <text v-for="detail in catalogCardDetails(item)" :key="detail" class="quotation-content__catalog-item-detail">{{ detail }}</text>
                     </view>
@@ -763,8 +765,10 @@
                 </view>
                 <view class="quotation-content__catalog-item-footer">
                   <view class="quotation-content__catalog-item-price" :data-testid="`quotation-catalog-price-${item.id}`">
-                    <text class="quotation-content__catalog-item-price-label">{{ catalogUnitPricePresentation(item).label }}</text>
-                    <text v-if="catalogUnitPricePresentation(item).price" class="quotation-content__catalog-item-price-value">{{ catalogUnitPricePresentation(item).price }}</text>
+                    <text class="quotation-content__catalog-item-price-label">{{ catalogUnitPricePresentation(item, displayUnit).label }}</text>
+                    <text v-if="catalogUnitPricePresentation(item, displayUnit).price" class="quotation-content__catalog-item-price-value">{{ catalogUnitPricePresentation(item, displayUnit).price }}</text>
+                    <text v-if="localCatalogMinimumCharge(item, verifiedLocalDisplay)" class="quotation-content__catalog-item-price-label"
+                      :data-testid="`quotation-catalog-minimum-${item.id}`">{{ localCatalogMinimumCharge(item, verifiedLocalDisplay) }}</text>
                   </view>
                   <AppButton
                     v-if="item.kind === 'material' && item.saleOptionCandidates && Object.keys(item.saleOptionCandidates).length"
@@ -949,7 +953,7 @@
               <text v-if="catalogBrowser.packageDetail.procedures.length === 0" class="quotation-content__empty-section">套餐详情未提供工序</text>
               <view v-for="(row, index) in catalogBrowser.packageDetail.procedures" :key="row.id || row.referenceId || index" class="quotation-content__included-row">
                 <text class="quotation-content__included-mark" aria-hidden="true">工</text>
-                <text class="quotation-content__detail-row">{{ row.item?.name || '工序引用暂不可解析' }}<template v-if="row.unit"> · {{ row.unit }}</template></text>
+                <text class="quotation-content__detail-row">{{ row.item?.name || '工序引用暂不可解析' }}<template v-if="row.unit"> · {{ displayUnit(row.unit) }}</template></text>
               </view>
             </view>
 
@@ -986,7 +990,7 @@
                   <view class="quotation-content__material-choice-content">
                     <view class="quotation-content__material-choice-copy">
                       <text class="quotation-content__material-choice-name">{{ row.item?.name || '材料引用暂不可解析' }}</text>
-                      <text class="quotation-content__material-choice-meta">{{ row.item ? catalogMetadata(row.item) : (row.unit || '单位待核验') }}</text>
+                      <text class="quotation-content__material-choice-meta">{{ row.item ? catalogMetadata(row.item) : (displayUnit(row.unit) || '单位待核验') }}</text>
                     </view>
                     <text v-if="isPackageMaterialSelected(row)" class="quotation-content__material-choice-check" aria-hidden="true">✓</text>
                   </view>
@@ -1003,7 +1007,7 @@
               <text v-if="catalogBrowser.packageDetail.measures.length === 0" class="quotation-content__empty-section">套餐详情未提供机措</text>
               <view v-for="(row, index) in catalogBrowser.packageDetail.measures" :key="row.id || row.referenceId || index" class="quotation-content__included-row">
                 <text class="quotation-content__included-mark quotation-content__included-mark--measure" aria-hidden="true">机</text>
-                <text class="quotation-content__detail-row">{{ row.item?.name || '机措引用暂不可解析' }}<template v-if="row.unit"> · {{ row.unit }}</template></text>
+                <text class="quotation-content__detail-row">{{ row.item?.name || '机措引用暂不可解析' }}<template v-if="row.unit"> · {{ displayUnit(row.unit) }}</template></text>
               </view>
             </view>
             <AppStatus
@@ -1051,6 +1055,8 @@ import { useActionWorkspaceStore } from '../action-workspace'
 import { useQuotationCompositionStore } from './composition-store'
 import { formatQuotationMoney, quotationAmountPresentation } from './amount-presentation'
 import { catalogUnitPricePresentation } from './catalog-price-presentation'
+import { useLocalUnitDisplay, useVerifiedLocalQuotationDisplay } from './local-unit-display'
+import { localCatalogDescription, localCatalogMinimumCharge, localSelectionMinimumCharge } from './local-catalog-presentation'
 import { evaluateLocalQuotationPreflight } from './local-preflight'
 import { quotationReviewReadinessCopy } from './review-readiness-copy'
 import { isFirstQuotationRepairPartStep, isInitialQuotationWorkbenchEmpty } from './empty-workbench-state'
@@ -1063,7 +1069,7 @@ import { isDirectQuotationCatalogKind } from './model'
 import { filterQuotationCatalogItemsForR1, quotationCatalogOptionsForKind } from './catalog-filtering'
 import { quotationCatalogKindLabels } from './catalog'
 import { useQuotationCatalogBrowserStore } from './catalog-browser-store'
-import type { QuotationLineKind } from './model'
+import type { QuotationLineKind, QuotationSelection } from './model'
 import { quotationSubmissionDisplayCopy } from './submission-display-copy'
 import { validateQuotationDraft, type QuotationValidationField } from './validation'
 import type { CodeOptionRead, QuotationCatalogItemRead, QuotationPackageMaterialRead } from '@shared/ports'
@@ -1106,6 +1112,8 @@ const materialSkuPreviewStatusMessage = computed(() => {
   return preview && preview.state !== 'ready' ? preview.message : '当前材料没有可用规格'
 })
 const workspace = useActionWorkspaceStore()
+const displayUnit = useLocalUnitDisplay(() => String(workspace.detail?.id ?? ''))
+const verifiedLocalDisplay = useVerifiedLocalQuotationDisplay(() => String(workspace.detail?.id ?? ''))
 const submissionStatusMessage = computed(() => quotationSubmissionDisplayCopy({
   state: workspace.quotationOrderState.state,
   message: workspace.quotationOrderState.message,
@@ -1160,6 +1168,11 @@ const lineSubtotalFor = (groupId: string, selectionId: string): number | undefin
 const catalogUnitPriceFor = (groupId: string, selectionId: string): number | undefined =>
   verifiedPricing.value?.fillOrder.groups.find((group) => group.groupId === groupId)
     ?.selectionAmounts.find((line) => line.selectionId === selectionId)?.catalogUnitPrice
+
+const selectionMinimumCharge = (groupId: string, selection: QuotationSelection): string => localSelectionMinimumCharge({
+  verifiedLocalScope: verifiedLocalDisplay.value, result: workspace.quotationEngine.result,
+  draft: composition.draft, groupId, selection,
+})
 
 // DEV product preview has NO source-verified effective tenant/work-order ExtFields.
 // Expose only a truthful local draft message; never use it to enable submission.
@@ -1698,7 +1711,7 @@ function catalogKindMark(kind: QuotationLineKind): string {
 function catalogDetails(item: QuotationCatalogItemRead): string[] {
   const details: string[] = []
   if (item.specification) details.push(`规格 ${item.specification}`)
-  if (item.unit) details.push(`单位 ${item.unit}`)
+  if (item.unit) details.push(`单位 ${displayUnit(item.unit)}`)
   if ((item.kind === 'package' || item.kind === 'material') && item.code) details.push(`编码 ${item.code}`)
   return details
 }
@@ -1744,7 +1757,7 @@ function togglePackageDetails(selectionId: string): void {
 function groupSelectionSummary(groupId: string): string {
   const selections = catalogKinds.flatMap((kind) => composition.selectionsFor(groupId, kind))
   const labels = selections.slice(0, 2).map((selection) =>
-    `${selection.label} × ${selection.quantity}${selection.unit ? ` ${selection.unit}` : ''}`)
+    `${selection.label} × ${selection.quantity}${selection.unit ? ` ${displayUnit(selection.unit)}` : ''}`)
   if (selections.length > labels.length) labels.push(`另有 ${selections.length - labels.length} 项`)
   return labels.join(' · ')
 }

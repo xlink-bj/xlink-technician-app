@@ -24,7 +24,7 @@ import type {
   StoragePort,
   TechnicianApiCommandPort,
 } from '@shared/ports'
-import { asOpaqueId, type OperationSnapshot } from '@shared/types'
+import { asOpaqueId, createOperationError, type OperationSnapshot } from '@shared/types'
 
 const workOrderId = asOpaqueId<'WorkOrderId'>(mockCommandScenarioIds.quotationFoundation)
 const workflowNodeId = asOpaqueId<'WorkflowNodeRuntimeId'>(mockQuotationWorkflowNodeId)
@@ -245,6 +245,33 @@ describe('G4-F Phase 1A quotation action foundation', () => {
     expect(commandApi.saveDynamicForm).not.toHaveBeenCalled()
     expect(commandApi.completeWorkflowNode).not.toHaveBeenCalled()
     expect(commandApi.submitAppointment).not.toHaveBeenCalled()
+  })
+
+  it('blocks before restoring a draft if an exact local repair-parts override fails', async () => {
+    const realRequest = vi.fn()
+    const api = createTechnicianApiReadAdapter(createUniApiReadTransport({
+      apiBaseUrl: 'https://mock-review.invalid', getSessionRef: () => session.sessionRef,
+      request: realRequest as never, mockLatencyMs: 0,
+    }))
+    const fallback = vi.spyOn(api, 'getCascadeCodeOptions')
+    const repository = createActionDraftRepository(memoryStorage())
+    const readDraft = vi.spyOn(repository, 'read')
+    const localRead = vi.fn(async () => ({ state: 'failed_terminal' as const,
+      error: createOperationError('authorization_denied', '本地维修部位来源未核对。') }))
+    const workspace = useActionWorkspaceStore()
+    workspace.configure({ apiRead: api, commandApi: {} as TechnicianApiCommandPort,
+      draftRepository: repository, navigation: navigation(), getSession: () => session,
+      localQuotationRepairPartsRead: localRead })
+    const result = await workspace.load({ workOrderId, workflowNodeId, actionIntent: 'place_order' })
+    expect(result.state).toBe('failed_terminal')
+    expect(localRead).toHaveBeenCalledOnce()
+    expect(workspace.loadState).toBe('blocked')
+    expect(workspace.quotationContentState).toBe('blocked')
+    expect(workspace.quotationComposition.draft).toBeNull()
+    expect(workspace.canSubmitQuotation).toBe(false)
+    expect(readDraft).not.toHaveBeenCalled()
+    expect(fallback).not.toHaveBeenCalled()
+    expect(realRequest).not.toHaveBeenCalled()
   })
 
   it('fails closed when Mock is off and the quotation fixture cannot be served', async () => {

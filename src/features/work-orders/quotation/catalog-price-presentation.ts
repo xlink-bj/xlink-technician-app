@@ -11,7 +11,10 @@ export interface CatalogUnitPricePresentation {
  * the existing R1 pricing engine after the selection is in the workbench.
  * Never infer a SKU price from an SPU, or show package base cost as a quote.
  */
-export function catalogUnitPricePresentation(item: QuotationCatalogItemRead): CatalogUnitPricePresentation {
+export function catalogUnitPricePresentation(
+  item: QuotationCatalogItemRead,
+  displayUnit: (wireUnit: string | undefined) => string = unit => unit ?? '',
+): CatalogUnitPricePresentation {
   if (item.kind === 'package') return { label: '按套餐配置核价' }
   if (item.kind === 'material' && item.saleOptionCandidates
     && Object.keys(item.saleOptionCandidates).length > 0) {
@@ -21,7 +24,7 @@ export function catalogUnitPricePresentation(item: QuotationCatalogItemRead): Ca
   if (typeof amount !== 'number' || !Number.isFinite(amount) || amount < 0) {
     return { label: '目录单价未提供' }
   }
-  const unit = item.unit?.trim()
+  const unit = displayUnit(item.unit).trim()
   return {
     label: item.kind === 'material' ? '目录单价' : '指导单价',
     price: `¥${formatQuotationMoney(amount)}${unit ? '/'+unit : ''}`,

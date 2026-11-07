@@ -271,7 +271,7 @@
                     <text class="quotation-read-line-label">{{ row.line.label }}</text>
                   </view>
                   <text class="quotation-read-meta">
-                    {{ row.line.quantity === undefined ? '' : `数量：${row.line.quantity}${row.line.unit ? ` ${row.line.unit}` : ''}` }}{{ row.line.unitPrice === undefined ? '' : ` · 单价：¥${row.line.unitPrice.toFixed(2)}` }}{{ row.line.lineTotal === undefined ? '' : ` · 小计：¥${row.line.lineTotal.toFixed(2)}` }}
+                    {{ row.line.quantity === undefined ? '' : `数量：${row.line.quantity}${row.line.unit ? ` ${displayUnit(row.line.unit)}` : ''}` }}{{ row.line.unitPrice === undefined ? '' : ` · 单价：¥${row.line.unitPrice.toFixed(2)}` }}{{ row.line.lineTotal === undefined ? '' : ` · 小计：¥${row.line.lineTotal.toFixed(2)}` }}
                   </text>
                 </view>
                 <text v-if="!group.contentSupported" class="quotation-read-warning">该分组含未识别字段，以上仅为可确认内容。</text>
@@ -320,6 +320,7 @@ import { useWorkOrderDetailStore } from '@features/work-orders/detail'
 import { actionWorkspaceRouteFor } from '@features/work-orders/action-workspace'
 import { detailTabs, type DetailTabKey } from '@features/work-orders/detail-tabs'
 import { detailWorkflowUiProjectionFor } from '@features/work-orders/detail-workflow'
+import { useLocalUnitDisplay } from '@features/work-orders/quotation/local-unit-display'
 import { quotationBrowseLineRows, useQuotationOrderBrowseStore } from '@features/work-orders/quotation/order-browse-store'
 import { signingOrderReadRouteFor } from '@features/work-orders/signing/signing-review-read-workspace'
 import { isSigningReadOrderCandidate, unavailableSigningReadReason } from '@shared/signing-order-read-policy'
@@ -353,6 +354,7 @@ const routeValue = ref<unknown>(undefined)
 const canAccess = computed(() => hasAuthenticatedSession(session.status, session.session))
 const productionReadOnly = isProductionReadOnlyRuntime()
 const detail = computed(() => workOrder.detail)
+const displayUnit = useLocalUnitDisplay(() => String(detail.value?.id ?? ''))
 const activities = computed(() => detail.value?.activities ?? [])
 const customerServiceAddress = computed(() => {
   const district = detail.value?.serviceDistrict?.trim()

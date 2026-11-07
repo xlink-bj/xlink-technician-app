@@ -1,3 +1,6 @@
+import { createNormalQuotationPartsReader } from './r1-quotation-parts-read'
+import { createNormalQuotationUnitDisplay } from './r1-quotation-unit-display'
+import { localUnitDisplayKey } from '@features/work-orders/quotation/local-unit-display'
 import { createNormalNodeFormsReader } from './r1-node-forms-read'
 import { r1NodeFormsReaderKey } from '@features/work-orders/r1-node-forms-read'
 import { createNormalRepeatActionProvider } from './r1-repeat-authorization'
@@ -84,6 +87,11 @@ export function createApplication(dependencies: ApplicationDependencies = {}) {
     authSession,
     id => apiRead.isWorkOrderListedForCurrentSession?.(id) === true,
   )
+  const normalQuotationPartsRead = createNormalQuotationPartsReader({ auth: authSession, read: apiRead,
+    env: import.meta.env, origin: typeof window === 'undefined' ? '' : window.location.origin })
+  const normalUnitDisplay = createNormalQuotationUnitDisplay({ auth: authSession, read: apiRead,
+    env: import.meta.env, origin: typeof window === 'undefined' ? '' : window.location.origin })
+  app.provide(localUnitDisplayKey, normalUnitDisplay)
   const normalNodeFormsReader = createNormalNodeFormsReader({ auth: authSession, read: apiRead,
     tenantId: String(import.meta.env.VITE_XLINK_AUTH_TENANT ?? ''), env: import.meta.env,
     origin: typeof window === 'undefined' ? '' : window.location.origin })
@@ -152,6 +160,7 @@ export function createApplication(dependencies: ApplicationDependencies = {}) {
   const actionWorkspaceStore = useActionWorkspaceStore(pinia)
   actionWorkspaceStore.configure({
     apiRead,
+    localQuotationRepairPartsRead: normalQuotationPartsRead,
     quotationCatalogRead,
     commandApi: apiCommand,
     quotationOrderCommand,

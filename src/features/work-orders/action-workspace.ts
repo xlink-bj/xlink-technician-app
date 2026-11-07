@@ -1,5 +1,6 @@
 import { appointmentReplacementProblem } from '@shared/form/appointment-replacement-context'
 import { computed, ref } from 'vue'
+import { readQuotationRepairParts, type LocalQuotationRepairPartsReader } from './quotation/repair-parts-provider'
 import { defineStore } from 'pinia'
 import { isProductionReadOnlyRuntime } from '@shared/config'
 
@@ -177,6 +178,7 @@ export interface ActionWorkspaceDependencies {
   readonly draftRepository: ActionDraftRepository
   readonly storage?: StoragePort
   readonly quotationCatalogRead?: QuotationCatalogReadPort
+  readonly localQuotationRepairPartsRead?: LocalQuotationRepairPartsReader
   readonly navigation: NavigationPort
   readonly getSession: () => SessionSnapshot | null
   readonly mediaCapture?: MediaCapturePort
@@ -728,9 +730,20 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
         catalogContext: read.data.quotationCatalogContext,
       })
       identity = actionDraftIdentityFor(nextDescriptor, session.currentRole.id)
-      const repairPartsRead = await configured.apiRead.getCascadeCodeOptions({ codeType: 'repairParts' })
+      const repairPartsProvider = await readQuotationRepairParts(
+        configured.apiRead, read.data, String(currentTask.nodeId), configured.localQuotationRepairPartsRead,
+      )
       if (requestVersion !== loadVersion || !ownedStillCurrent()) return failure('cancelled', 'Action Workspace load was superseded')
       if (!scopeUnchanged()) return blockStaleScope()
+      const repairPartsRead = repairPartsProvider.result
+      if (repairPartsProvider.source === 'local' && repairPartsRead.state !== 'succeeded') {
+        // Do not restore a previous draft with unverified local part values.
+        quotationContentState.value = 'blocked'
+        loadState.value = 'blocked'
+        lifecycle.value = 'blocked'
+        error.value = repairPartsRead.error ?? null
+        return failureFrom(repairPartsRead)
+      }
       await quotationComposition.initialize({
         identity,
         repository: configured.draftRepository,

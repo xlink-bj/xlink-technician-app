@@ -346,7 +346,9 @@ function validateQuoteFields(): boolean { return aStageOrderPanel.value?.validat
 const quotationHubRef = ref<{ finishEdit: (message?: string) => void } | null>(null)
 const quotationChoiceVisible = ref(false)
 const quotationHubVisible = computed(() =>
-  routeQuotationEntry.value === 'orders' && !quotationEditorOpened.value
+  // Wait for role-scoped preparation before the hub's onMounted Order read.
+  workspace.loadState === 'succeeded'
+  && routeQuotationEntry.value === 'orders' && !quotationEditorOpened.value
   && !routeQuotationOrderId.value && workspace.descriptor?.contentKind === 'quotation'
   && workspace.descriptor.actionIntent === 'place_order',
 )
