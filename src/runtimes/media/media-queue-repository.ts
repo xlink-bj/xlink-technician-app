@@ -3,10 +3,10 @@ import {
   createOperationError,
   type MediaUploadTask,
   type MediaUploadTaskId,
-  type MediaTaskScope,
   type OperationSnapshot,
   asOpaqueId,
 } from '@shared/types'
+import { isMediaTaskLookupScope, isMediaUploadTask } from './media-task-validation'
 
 const prefix = 'media-upload-queue:v1:'
 
@@ -16,22 +16,17 @@ function keyFor(taskId: MediaUploadTaskId): string {
 
 function taskIdFromKey(key: string): MediaUploadTaskId | undefined {
   if (!key.startsWith(prefix)) return undefined
-  const raw = decodeURIComponent(key.slice(prefix.length))
-  return raw ? asOpaqueId<'MediaUploadTaskId'>(raw) : undefined
+  try {
+    const raw = decodeURIComponent(key.slice(prefix.length))
+    const taskId = asOpaqueId<'MediaUploadTaskId'>(raw)
+    return raw.trim() && keyFor(taskId) === key ? taskId : undefined
+  } catch {
+    return undefined
+  }
 }
 
-function isTask(value: unknown): value is MediaUploadTask {
-  if (value === null || typeof value !== 'object' || Array.isArray(value)) return false
-  const candidate = value as Record<string, unknown>
-  const scope = candidate.scope
-  return candidate.schemaVersion === 1
-    && typeof candidate.taskId === 'string'
-    && typeof candidate.state === 'string'
-    && typeof candidate.attempts === 'number'
-    && typeof candidate.createdAt === 'string'
-    && typeof candidate.updatedAt === 'string'
-    && scope !== null
-    && typeof scope === 'object'
+function malformed<T>(message = 'Media queue task metadata is malformed'): OperationSnapshot<T> {
+  return { state: 'failed_terminal', error: createOperationError('server_terminal', message) }
 }
 
 export class SemanticMediaQueueRepository implements MediaQueueRepository {
@@ -41,16 +36,12 @@ export class SemanticMediaQueueRepository implements MediaQueueRepository {
     const result = await this.storage.read<unknown>({ namespace: 'cache', key: keyFor(taskId) })
     if (result.state !== 'succeeded') return result as OperationSnapshot<MediaUploadTask | null>
     if (result.data === null) return { state: 'succeeded', data: null }
-    if (!isTask(result.data)) {
-      return {
-        state: 'failed_terminal',
-        error: createOperationError('server_terminal', 'Media queue task metadata is malformed'),
-      }
-    }
+    if (!isMediaUploadTask(result.data, taskId)) return malformed()
     return { state: 'succeeded', data: result.data }
   }
 
   write(task: MediaUploadTask): Promise<OperationSnapshot<void>> {
+    if (!isMediaUploadTask(task)) return Promise.resolve(malformed())
     return this.storage.write({ namespace: 'cache', key: keyFor(task.taskId) }, task)
   }
 
@@ -61,12 +52,16 @@ export class SemanticMediaQueueRepository implements MediaQueueRepository {
   async list(
     scope: MediaTaskLookupScope,
   ): Promise<OperationSnapshot<readonly MediaUploadTask[]>> {
+    if (!isMediaTaskLookupScope(scope)) return malformed('Media queue lookup scope is malformed')
     const keys = await this.storage.listKeys({ namespace: 'cache', prefix })
-    if (keys.state !== 'succeeded' || !keys.data) return keys as unknown as OperationSnapshot<readonly MediaUploadTask[]>
+    if (keys.state !== 'succeeded') return keys as unknown as OperationSnapshot<readonly MediaUploadTask[]>
+    if (!Array.isArray(keys.data) || !keys.data.every(key => typeof key === 'string')) {
+      return malformed('Media queue key listing is malformed')
+    }
     const tasks: MediaUploadTask[] = []
     for (const key of keys.data) {
       const taskId = taskIdFromKey(key)
-      if (!taskId) continue
+      if (!taskId) return malformed('Media queue storage key is malformed')
       const task = await this.read(taskId)
       if (task.state !== 'succeeded' || !task.data) {
         if (task.state !== 'succeeded') return task as unknown as OperationSnapshot<readonly MediaUploadTask[]>

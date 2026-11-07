@@ -52,10 +52,11 @@ export async function restoreActionMediaQueue(input: {
   return changed
 }
 
-/** A possibly dispatched / ambiguous postprocess is not safe for auto retry. */
+/** A possibly dispatched upload or postprocess requires reconciliation, not replay. */
 export function resumableActionMediaTasks(tasks: readonly MediaUploadTask[]): readonly MediaUploadTask[] {
-  return tasks.filter(task => task.state === 'source_uploaded'
-    || (task.state === 'failed_retryable' && task.lastError?.code !== 'ambiguous_postprocess'))
+  return tasks.filter(task => (task.state === 'source_uploaded' && task.lastError === undefined)
+    || (task.state === 'failed_retryable' && task.lastError?.code !== 'ambiguous_postprocess'
+      && task.lastError?.code !== 'ambiguous_upload'))
 }
 
 export type RetryActionMediaQueueResult =
@@ -71,9 +72,9 @@ export async function retryActionMediaQueue(input: {
   readonly onTask: (task: MediaUploadTask) => void
 }): Promise<RetryActionMediaQueueResult> {
   // Re-check the allowlist at the queue boundary: a future caller must not
-  // bypass the Store's explicit retry filter for ambiguous postprocessing.
+  // bypass the Store's explicit retry filter for ambiguous remote mutations.
   if (resumableActionMediaTasks(input.tasks).length !== input.tasks.length) {
-    const error = createOperationError('validation', '水印处理结果待核查，不能重复提交')
+    const error = createOperationError('validation', '媒体上传或水印处理结果待核查，不能重复提交')
     return { state: 'failed', error, result: { state: 'failed_terminal', error } }
   }
   const uploaded: UploadedMediaRef[] = []

@@ -7,7 +7,6 @@ import type {
   UploadPort,
 } from '@shared/ports'
 import {
-  asOpaqueId,
   createOperationError,
   type MediaEvidenceContext,
   type MediaTaskScope,
@@ -15,6 +14,7 @@ import {
   type MediaUploadTaskId,
   type OperationSnapshot,
 } from '@shared/types'
+import { isUploadedMediaRef, taskIdFor } from './media-task-validation'
 
 export interface MediaUploadQueueOptions {
   readonly now?: () => string
@@ -23,21 +23,6 @@ export interface MediaUploadQueueOptions {
 
 function nowFor(options: MediaUploadQueueOptions): string {
   return options.now?.() ?? new Date().toISOString()
-}
-
-function taskIdFor(scope: Omit<MediaTaskScope, 'localAssetId'>, localAssetId: string): MediaUploadTaskId {
-  const parts = [
-    'media-upload-task',
-    String(scope.userId),
-    String(scope.workOrderId),
-    String(scope.workflowNodeId),
-    String(scope.formDefinitionId ?? ''),
-    String(scope.formDataId ?? ''),
-    scope.fieldId,
-    scope.valueKey,
-    localAssetId,
-  ]
-  return asOpaqueId<'MediaUploadTaskId'>(parts.map((part) => encodeURIComponent(part)).join(':'))
 }
 
 function operationFailure<T>(task: MediaUploadTask, error: ReturnType<typeof createOperationError>): OperationSnapshot<MediaUploadTask> {
@@ -49,6 +34,14 @@ function ambiguousPostprocessError() {
     'network_retryable',
     'Post-upload processing outcome is ambiguous; manual reconciliation is required',
     { code: 'ambiguous_postprocess' },
+  )
+}
+
+function ambiguousUploadError() {
+  return createOperationError(
+    'network_retryable',
+    'Media upload outcome is ambiguous; manual reconciliation is required before another upload',
+    { code: 'ambiguous_upload' },
   )
 }
 
@@ -117,7 +110,8 @@ export class MediaUploadQueue implements MediaUploadQueuePort {
     if (current.data.state !== 'failed_retryable') {
       return operationFailure(current.data, createOperationError('validation', 'Only retryable media failures can be retried'))
     }
-    if (current.data.lastError?.code === 'ambiguous_postprocess') {
+    if (current.data.lastError?.code === 'ambiguous_postprocess'
+      || current.data.lastError?.code === 'ambiguous_upload') {
       return operationFailure(current.data, current.data.lastError)
     }
     const queued = await this.update(current.data, current.data.sourceUploadedRef
@@ -177,7 +171,9 @@ export class MediaUploadQueue implements MediaUploadQueuePort {
     }
     if (task.state === 'source_uploaded') return this.processPostUpload(task)
     if (task.state === 'uploading') {
-      const interrupted = createOperationError('network_retryable', 'Previous media upload was interrupted; manual retry is required', { code: 'ambiguous_upload' })
+      // This checkpoint also survives an ACK whose following storage write
+      // failed. Neither restart nor explicit retry proves no upload occurred.
+      const interrupted = ambiguousUploadError()
       const marked = await this.update(task, { state: 'failed_retryable', lastError: interrupted })
       return marked.state === 'succeeded' && marked.data ? operationFailure(marked.data, interrupted) : marked
     }
@@ -216,6 +212,11 @@ export class MediaUploadQueue implements MediaUploadQueuePort {
     if (uploading.state !== 'succeeded' || !uploading.data) return uploading
 
     const result = await this.upload.upload(media)
+    if (result.state === 'succeeded' && !isUploadedMediaRef(result.data)) {
+      const error = ambiguousUploadError()
+      const marked = await this.update(uploading.data, { state: 'failed_retryable', lastError: error })
+      return marked.state === 'succeeded' && marked.data ? operationFailure(marked.data, error) : marked
+    }
     if (result.state !== 'succeeded' || !result.data) {
       const error = result.error ?? createOperationError('network_retryable', 'Media upload failed')
       const marked = await this.update(uploading.data, {
@@ -261,8 +262,8 @@ export class MediaUploadQueue implements MediaUploadQueuePort {
     const processing = await this.update(task, { state: 'postprocessing', lastError: undefined })
     if (processing.state !== 'succeeded' || !processing.data) return processing
     const result = await this.options.postUploadProcessor.process({ source, evidence: task.evidence })
-    if (result.state !== 'succeeded' || !result.data) {
-      const error = normalizePostprocessError(result.error)
+    if (result.state !== 'succeeded' || !isUploadedMediaRef(result.data)) {
+      const error = result.state === 'succeeded' ? ambiguousPostprocessError() : normalizePostprocessError(result.error)
       const marked = await this.update(processing.data, {
         state: error.retryable ? 'failed_retryable' : 'failed_terminal',
         lastError: error,
