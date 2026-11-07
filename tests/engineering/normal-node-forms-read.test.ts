@@ -42,6 +42,19 @@ it('cold page traverses role list, raw detail, schema/provider, discovery, exact
   expect(h.calls).toEqual(['role-list', 'basic/serviceAppointment/queryById/work', 'biz/ext/queryById.do', 'biz/extField/query', 'provider', 'biz/extForm/query/ext', 'biz/extForm/query/ext', 'basic/serviceAppointment/queryById/work'])
   expect(h.execute.mock.calls[4]?.[0].body?.['is:_id|string#and']).toBe('record')
 })
+it.each([{ showList: ['1', '2', '5'] }, { showList: [] }, { frontEndConfig: '{"mpDetailHide":true}' }])('does not request statically excluded provider %j', async metadata => {
+  const h = harness(); Object.assign(h.field, metadata)
+  h.read.getDynamicCodeOptions.mockImplementation(async () => { throw Error('Unknown excluded provider') })
+  expect((await h.reader.load('work', 'node')).records).toHaveLength(1)
+  expect(h.read.getDynamicCodeOptions).not.toHaveBeenCalled()
+})
+it('does not skip a conditional provider or treat failure as verified empty options', async () => {
+  const h = harness(); Object.assign(h.field, { showList: ['4'], frontEndConfig: '{"showField":"other","showValue":"missing"}' })
+  h.read.getDynamicCodeOptions.mockImplementation(async () => ({ state: 'failed' } as never))
+  await expect(h.reader.load('work', 'node')).rejects.toThrow()
+  expect(h.read.getDynamicCodeOptions).toHaveBeenCalledOnce()
+  expect(h.calls.some(path => path.startsWith('biz/extForm/'))).toBe(false)
+})
 it.each(['session', 'role', 'clear'])('rejects %s change during await', async kind => {
   const h = harness(); h.hook(() => kind === 'session' ? h.changeSession() : kind === 'role' ? h.changeRole() : h.reader.clear())
   await expect(h.reader.load('work', 'node')).rejects.toThrow(); expect(h.execute).toHaveBeenCalledTimes(1)

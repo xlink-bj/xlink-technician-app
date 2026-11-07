@@ -6,6 +6,8 @@ import * as Vue from 'vue'
 import { describe, expect, it, vi } from 'vitest'
 import { formDefinition } from '@adapters/api/read-models/form'
 import * as repeatForm from '@features/work-orders/r1-repeat-form'
+import * as recordReadFields from '@features/work-orders/r1-record-read-fields'
+import reference from '../fixtures/survey-59-read-reference.json'
 import * as actionPort from '@features/work-orders/r1-repeat-actions-port'
 import type { R1NodeFormsSnapshot } from '@features/work-orders/r1-node-forms-read'
 import { asOpaqueId } from '@shared/types'
@@ -30,7 +32,7 @@ function panel() {
   const { descriptor } = parse(fs.readFileSync(filename, 'utf8'), { filename })
   const source = compileScript(descriptor, { id: 'repeat-conditional-unit', inlineTemplate: true }).content
   const js = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true } }).outputText
-  const modules: Record<string, unknown> = { vue: Vue, './r1-repeat-form': repeatForm, './r1-repeat-actions-port': actionPort,
+  const modules: Record<string, unknown> = { vue: Vue, './r1-repeat-form': repeatForm, './r1-record-read-fields': recordReadFields, './r1-repeat-actions-port': actionPort,
     '@shared/ui/AppButton.vue': { __esModule: true, default: Button }, '@shared/ui/AppField.vue': { __esModule: true, default: Field }, './R1FormFieldControl.vue': { __esModule: true, default: Control } }
   const module = { exports: {} as { default: Vue.Component } }
   new Function('require', 'module', 'exports', js)((key: string) => { if (!(key in modules)) throw Error(`Unstubbed component import: ${key}`); return modules[key] }, module, module.exports)
@@ -50,8 +52,8 @@ function snapshot(): R1NodeFormsSnapshot {
 }
 function find(root: Host, predicate: (n: Host) => boolean): Host | undefined { if (predicate(root)) return root; for (const child of root.children) { const match = find(child, predicate); if (match) return match } }
 async function settle() { for (let i = 0; i < 6; i++) { await Promise.resolve(); await Vue.nextTick() } }
-async function mounted(allowActions = true) {
-  let current = snapshot()
+async function mounted(allowActions = true, initial = snapshot()) {
+  let current = initial
   const reader = { enabled: () => true, load: vi.fn(async () => current), clear: vi.fn(), isCurrent: (value: R1NodeFormsSnapshot) => value === current }
   const savedValues: Record<string, unknown>[] = []
   const saveOnly = vi.fn(async (values: Record<string, unknown>) => {
@@ -68,6 +70,20 @@ async function mounted(allowActions = true) {
 }
 
 describe('normal appointment repeat conditional page', () => {
+  it('mounts the actual readonly panel with 59 observed rows without hidden values or write controls', async () => {
+    const definition = formDefinition({ data: reference.fields.map(f => f.row) }, asOpaqueId<'FormDefinitionId'>('survey-reference'))
+    const h = await mounted(false, { ...snapshot(), definition, records: [{ id: asOpaqueId<'FormDataId'>('saved-survey'), definitionId: definition.id,
+      values: { part: ['1', '130'], squareMeter: 18.75, planeArea: 20.25, height: 123456, name: 'HIDDEN', memo: '仅测试已保存值' } }] })
+    try {
+      expect(find(h.root, n => n.props['data-testid'] === 'r1-normal-value-squareMeter')?.text).toBe('18.75')
+      expect(find(h.root, n => n.props['data-testid'] === 'r1-normal-value-planeArea')).toBeUndefined()
+      expect(find(h.root, n => n.props['data-testid'] === 'r1-normal-value-name')).toBeUndefined()
+      expect(find(h.root, n => n.props['data-testid'] === 'r1-normal-value-height')?.text).toContain('尚未完整核实')
+      expect(find(h.root, n => n.props['data-testid'] === 'r1-normal-value-surveyDrawing')?.text).toContain('附件内容暂不支持')
+      expect(h.save()).toBeUndefined(); expect(h.saveOnly).not.toHaveBeenCalled()
+      expect(find(h.root, n => n.props['data-testid'] === 'r1-normal-complete-request')).toBeUndefined()
+    } finally { h.app.unmount() }
+  })
   it('switches 1→2→1→2 without erasing hidden draft values or permanently disabling save', async () => {
     const h = await mounted()
     try {

@@ -1,0 +1,2431 @@
+{
+  "source": "Second bounded Survey structural capture; no customer data or original entity IDs. Safe subsets are not complete production config.",
+  "sourceSha256": "58cf4ed84067000cb712204778b9def6cc1ccf26cb547c835483457bc08f78b3",
+  "productionEquivalent": false,
+  "writeAuthorized": false,
+  "fields": [
+    {
+      "row": {
+        "_id": "synthetic-survey-field-001",
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "5"
+        ],
+        "enabled": 1,
+        "showType": "1",
+        "preset": 1,
+        "name": "surveyNum",
+        "type": "text",
+        "colName": "survey",
+        "operationType": "1",
+        "order": 1,
+        "showField": "",
+        "showValue": "",
+        "showFieldPreset": 0,
+        "frontEndConfig": "{}"
+      },
+      "evidence": {
+        "ordinal": 1,
+        "conditionStatus": "NOT_CONDITIONAL_BY_SHOWTYPE",
+        "providerAlias": null,
+        "omittedFrontEndConfigProperties": [],
+        "calculateConfig": "UNKNOWN",
+        "effectiveWritePermission": "UNKNOWN"
+      }
+    },
+    {
+      "row": {
+        "_id": "synthetic-survey-field-002",
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "5"
+        ],
+        "enabled": 1,
+        "showType": "1",
+        "preset": 1,
+        "name": "serviceAppointmentNum",
+        "type": "text",
+        "colName": "survey",
+        "operationType": "1",
+        "order": 2,
+        "showField": "",
+        "showValue": "",
+        "showFieldPreset": 0,
+        "frontEndConfig": "{}"
+      },
+      "evidence": {
+        "ordinal": 2,
+        "conditionStatus": "NOT_CONDITIONAL_BY_SHOWTYPE",
+        "providerAlias": null,
+        "omittedFrontEndConfigProperties": [],
+        "calculateConfig": "UNKNOWN",
+        "effectiveWritePermission": "UNKNOWN"
+      }
+    },
+    {
+      "row": {
+        "_id": "synthetic-survey-field-003",
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "5"
+        ],
+        "enabled": 1,
+        "showType": "1",
+        "preset": 1,
+        "name": "name",
+        "type": "text",
+        "colName": "survey",
+        "operationType": "1",
+        "order": 3,
+        "showField": "",
+        "showValue": "",
+        "showFieldPreset": 0,
+        "frontEndConfig": "{}",
+        "nameDisp": "客户姓名"
+      },
+      "evidence": {
+        "ordinal": 3,
+        "conditionStatus": "NOT_CONDITIONAL_BY_SHOWTYPE",
+        "providerAlias": null,
+        "omittedFrontEndConfigProperties": [],
+        "calculateConfig": "UNKNOWN",
+        "effectiveWritePermission": "UNKNOWN"
+      }
+    },
+    {
+      "row": {
+        "_id": "synthetic-survey-field-004",
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2"
+        ],
+        "enabled": 1,
+        "showType": "1",
+        "preset": 1,
+        "name": "surveyPDFUrl",
+        "type": "aLink",
+        "colName": "survey",
+        "operationType": "1",
+        "order": 4,
+        "showField": "",
+        "showValue": "",
+        "showFieldPreset": 0,
+        "frontEndConfig": "{}"
+      },
+      "evidence": {
+        "ordinal": 4,
+        "conditionStatus": "NOT_CONDITIONAL_BY_SHOWTYPE",
+        "providerAlias": null,
+        "omittedFrontEndConfigProperties": [],
+        "calculateConfig": "UNKNOWN",
+        "effectiveWritePermission": "UNKNOWN"
+      }
+    },
+    {
+      "row": {
+        "_id": "synthetic-survey-field-005",
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "5"
+        ],
+        "enabled": 1,
+        "showType": "1",
+        "preset": 1,
+        "name": "phone",
+        "type": "phone",
+        "colName": "survey",
+        "operationType": "1",
+        "order": 5,
+        "showField": "",
+        "showValue": "",
+        "showFieldPreset": 0,
+        "frontEndConfig": "{}"
+      },
+      "evidence": {
+        "ordinal": 5,
+        "conditionStatus": "NOT_CONDITIONAL_BY_SHOWTYPE",
+        "providerAlias": null,
+        "omittedFrontEndConfigProperties": [],
+        "calculateConfig": "UNKNOWN",
+        "effectiveWritePermission": "UNKNOWN"
+      }
+    },
+    {
+      "row": {
+        "_id": "synthetic-survey-field-006",
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "2"
+        ],
+        "enabled": 1,
+        "showType": "1",
+        "preset": 1,
+        "name": "area",
+        "type": "area",
+        "colName": "survey",
+        "operationType": "1",
+        "order": 6,
+        "showField": "",
+        "showValue": "",
+        "showFieldPreset": 0,
+        "frontEndConfig": "{}"
+      },
+      "evidence": {
+        "ordinal": 6,
+        "conditionStatus": "NOT_CONDITIONAL_BY_SHOWTYPE",
+        "providerAlias": null,
+        "omittedFrontEndConfigProperties": [],
+        "calculateConfig": "UNKNOWN",
+        "effectiveWritePermission": "UNKNOWN"
+      }
+    },
+    {
+      "row": {
+        "_id": "synthetic-survey-field-007",
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "5"
+        ],
+        "enabled": 1,
+        "showType": "1",
+        "preset": 1,
+        "name": "province",
+        "type": "select",
+        "colName": "survey",
+        "operationType": "1",
+        "order": 7,
+        "showField": "",
+        "showValue": "",
+        "showFieldPreset": 0,
+        "frontEndConfig": "{}",
+        "valueOption": "unresolved-code-provider-001"
+      },
+      "evidence": {
+        "ordinal": 7,
+        "conditionStatus": "NOT_CONDITIONAL_BY_SHOWTYPE",
+        "providerAlias": "code-provider-001",
+        "omittedFrontEndConfigProperties": [],
+        "calculateConfig": "UNKNOWN",
+        "effectiveWritePermission": "UNKNOWN"
+      }
+    },
+    {
+      "row": {
+        "_id": "synthetic-survey-field-008",
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1"
+        ],
+        "enabled": 1,
+        "showType": "1",
+        "preset": 1,
+        "name": "province",
+        "type": "text",
+        "colName": "survey",
+        "operationType": "1",
+        "order": 8,
+        "showField": "",
+        "showValue": "",
+        "showFieldPreset": 0,
+        "frontEndConfig": "{}"
+      },
+      "evidence": {
+        "ordinal": 8,
+        "conditionStatus": "NOT_CONDITIONAL_BY_SHOWTYPE",
+        "providerAlias": null,
+        "omittedFrontEndConfigProperties": [],
+        "calculateConfig": "UNKNOWN",
+        "effectiveWritePermission": "UNKNOWN"
+      }
+    },
+    {
+      "row": {
+        "_id": "synthetic-survey-field-009",
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1"
+        ],
+        "enabled": 1,
+        "showType": "1",
+        "preset": 1,
+        "name": "city",
+        "type": "text",
+        "colName": "survey",
+        "operationType": "1",
+        "order": 9,
+        "showField": "",
+        "showValue": "",
+        "showFieldPreset": 0,
+        "frontEndConfig": "{}"
+      },
+      "evidence": {
+        "ordinal": 9,
+        "conditionStatus": "NOT_CONDITIONAL_BY_SHOWTYPE",
+        "providerAlias": null,
+        "omittedFrontEndConfigProperties": [],
+        "calculateConfig": "UNKNOWN",
+        "effectiveWritePermission": "UNKNOWN"
+      }
+    },
+    {
+      "row": {
+        "_id": "synthetic-survey-field-010",
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1"
+        ],
+        "enabled": 1,
+        "showType": "1",
+        "preset": 1,
+        "name": "district",
+        "type": "text",
+        "colName": "survey",
+        "operationType": "1",
+        "order": 10,
+        "showField": "",
+        "showValue": "",
+        "showFieldPreset": 0,
+        "frontEndConfig": "{}"
+      },
+      "evidence": {
+        "ordinal": 10,
+        "conditionStatus": "NOT_CONDITIONAL_BY_SHOWTYPE",
+        "providerAlias": null,
+        "omittedFrontEndConfigProperties": [],
+        "calculateConfig": "UNKNOWN",
+        "effectiveWritePermission": "UNKNOWN"
+      }
+    },
+    {
+      "row": {
+        "_id": "synthetic-survey-field-011",
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "5"
+        ],
+        "enabled": 1,
+        "showType": "1",
+        "preset": 1,
+        "name": "address",
+        "type": "text",
+        "colName": "survey",
+        "operationType": "1",
+        "order": 11,
+        "showField": "",
+        "showValue": "",
+        "showFieldPreset": 0,
+        "frontEndConfig": "{}",
+        "nameDisp": "项目地址"
+      },
+      "evidence": {
+        "ordinal": 11,
+        "conditionStatus": "NOT_CONDITIONAL_BY_SHOWTYPE",
+        "providerAlias": null,
+        "omittedFrontEndConfigProperties": [],
+        "calculateConfig": "UNKNOWN",
+        "effectiveWritePermission": "UNKNOWN"
+      }
+    },
+    {
+      "row": {
+        "_id": "synthetic-survey-field-012",
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "5"
+        ],
+        "enabled": 1,
+        "showType": "1",
+        "preset": 1,
+        "name": "orgId",
+        "type": "text",
+        "colName": "survey",
+        "operationType": "1",
+        "order": 12,
+        "showField": "",
+        "showValue": "",
+        "showFieldPreset": 0,
+        "frontEndConfig": "{}"
+      },
+      "evidence": {
+        "ordinal": 12,
+        "conditionStatus": "NOT_CONDITIONAL_BY_SHOWTYPE",
+        "providerAlias": null,
+        "omittedFrontEndConfigProperties": [],
+        "calculateConfig": "UNKNOWN",
+        "effectiveWritePermission": "UNKNOWN"
+      }
+    },
+    {
+      "row": {
+        "_id": "synthetic-survey-field-013",
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1"
+        ],
+        "enabled": 1,
+        "showType": "1",
+        "preset": 1,
+        "name": "orgName",
+        "type": "text",
+        "colName": "survey",
+        "operationType": "1",
+        "order": 13,
+        "showField": "",
+        "showValue": "",
+        "showFieldPreset": 0,
+        "frontEndConfig": "{}"
+      },
+      "evidence": {
+        "ordinal": 13,
+        "conditionStatus": "NOT_CONDITIONAL_BY_SHOWTYPE",
+        "providerAlias": null,
+        "omittedFrontEndConfigProperties": [],
+        "calculateConfig": "UNKNOWN",
+        "effectiveWritePermission": "UNKNOWN"
+      }
+    },
+    {
+      "row": {
+        "_id": "synthetic-survey-field-014",
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "5"
+        ],
+        "enabled": 1,
+        "showType": "1",
+        "preset": 1,
+        "name": "supervisorName",
+        "type": "text",
+        "colName": "survey",
+        "operationType": "1",
+        "order": 14,
+        "showField": "",
+        "showValue": "",
+        "showFieldPreset": 0,
+        "frontEndConfig": "{}"
+      },
+      "evidence": {
+        "ordinal": 14,
+        "conditionStatus": "NOT_CONDITIONAL_BY_SHOWTYPE",
+        "providerAlias": null,
+        "omittedFrontEndConfigProperties": [],
+        "calculateConfig": "UNKNOWN",
+        "effectiveWritePermission": "UNKNOWN"
+      }
+    },
+    {
+      "row": {
+        "_id": "synthetic-survey-field-015",
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "5"
+        ],
+        "enabled": 1,
+        "showType": "1",
+        "preset": 1,
+        "name": "supervisorPhone",
+        "type": "phone",
+        "colName": "survey",
+        "operationType": "1",
+        "order": 15,
+        "showField": "",
+        "showValue": "",
+        "showFieldPreset": 0,
+        "frontEndConfig": "{}"
+      },
+      "evidence": {
+        "ordinal": 15,
+        "conditionStatus": "NOT_CONDITIONAL_BY_SHOWTYPE",
+        "providerAlias": null,
+        "omittedFrontEndConfigProperties": [],
+        "calculateConfig": "UNKNOWN",
+        "effectiveWritePermission": "UNKNOWN"
+      }
+    },
+    {
+      "row": {
+        "_id": "synthetic-survey-field-016",
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "5",
+          "3"
+        ],
+        "enabled": 1,
+        "showType": "1",
+        "preset": 1,
+        "name": "createTime",
+        "type": "datetime",
+        "colName": "survey",
+        "operationType": "1",
+        "order": 16,
+        "showField": "",
+        "showValue": "",
+        "showFieldPreset": 0,
+        "frontEndConfig": "{}"
+      },
+      "evidence": {
+        "ordinal": 16,
+        "conditionStatus": "NOT_CONDITIONAL_BY_SHOWTYPE",
+        "providerAlias": null,
+        "omittedFrontEndConfigProperties": [],
+        "calculateConfig": "UNKNOWN",
+        "effectiveWritePermission": "UNKNOWN"
+      }
+    },
+    {
+      "row": {
+        "_id": "synthetic-survey-field-017",
+        "required": "1",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "4",
+          "5"
+        ],
+        "enabled": 1,
+        "showType": "1",
+        "preset": 1,
+        "name": "part",
+        "type": "cascade",
+        "colName": "survey",
+        "operationType": "1",
+        "order": 17,
+        "showField": "",
+        "showValue": "",
+        "showFieldPreset": 0,
+        "frontEndConfig": "{}",
+        "valueOption": "unresolved-cascade-provider-001"
+      },
+      "evidence": {
+        "ordinal": 17,
+        "conditionStatus": "NOT_CONDITIONAL_BY_SHOWTYPE",
+        "providerAlias": "cascade-provider-001",
+        "omittedFrontEndConfigProperties": [],
+        "calculateConfig": "UNKNOWN",
+        "effectiveWritePermission": "UNKNOWN"
+      }
+    },
+    {
+      "row": {
+        "_id": "synthetic-survey-field-018",
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "2",
+          "4"
+        ],
+        "enabled": 1,
+        "showType": "3",
+        "preset": 1,
+        "name": "gap0",
+        "type": "gap",
+        "colName": "survey",
+        "operationType": "1",
+        "order": 18,
+        "showField": "part",
+        "showValue": "",
+        "showFieldPreset": 1,
+        "frontEndConfig": "{}"
+      },
+      "evidence": {
+        "ordinal": 18,
+        "conditionStatus": "PARTIAL_REDACTED_CONDITION",
+        "providerAlias": null,
+        "omittedFrontEndConfigProperties": [
+          {
+            "key": "html",
+            "status": "VALUE_NOT_ALLOWLISTED",
+            "kind": "string"
+          }
+        ],
+        "calculateConfig": "UNKNOWN",
+        "effectiveWritePermission": "UNKNOWN"
+      }
+    },
+    {
+      "row": {
+        "_id": "synthetic-survey-field-019",
+        "required": "1",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "4"
+        ],
+        "enabled": 1,
+        "showType": "3",
+        "preset": 1,
+        "name": "squareMeter",
+        "type": "digit",
+        "colName": "survey",
+        "operationType": "1",
+        "order": 19,
+        "showField": "part",
+        "showValue": "",
+        "showFieldPreset": 1,
+        "exts": {
+          "showValue": [
+            [
+              "1",
+              "110"
+            ],
+            [
+              "1",
+              "120"
+            ],
+            [
+              "1",
+              "130"
+            ],
+            [
+              "1",
+              "140"
+            ],
+            [
+              "2",
+              "210"
+            ],
+            [
+              "2",
+              "220"
+            ],
+            [
+              "9"
+            ],
+            [
+              "5"
+            ],
+            [
+              "4"
+            ]
+          ]
+        },
+        "frontEndConfig": "{}"
+      },
+      "evidence": {
+        "ordinal": 19,
+        "conditionStatus": "COMPLETE_WIRE_CONDITION_PROVIDER_NOT_READ",
+        "providerAlias": null,
+        "omittedFrontEndConfigProperties": [],
+        "calculateConfig": "UNKNOWN",
+        "effectiveWritePermission": "UNKNOWN"
+      }
+    },
+    {
+      "row": {
+        "_id": "synthetic-survey-field-020",
+        "required": "1",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "4"
+        ],
+        "enabled": 1,
+        "showType": "3",
+        "preset": 1,
+        "name": "gapLength",
+        "type": "digit",
+        "colName": "survey",
+        "operationType": "1",
+        "order": 20,
+        "showField": "part",
+        "showValue": "",
+        "showFieldPreset": 1,
+        "exts": {
+          "showValue": [
+            [
+              "8"
+            ]
+          ]
+        },
+        "frontEndConfig": "{}"
+      },
+      "evidence": {
+        "ordinal": 20,
+        "conditionStatus": "COMPLETE_WIRE_CONDITION_PROVIDER_NOT_READ",
+        "providerAlias": null,
+        "omittedFrontEndConfigProperties": [],
+        "calculateConfig": "UNKNOWN",
+        "effectiveWritePermission": "UNKNOWN"
+      }
+    },
+    {
+      "row": {
+        "_id": "synthetic-survey-field-021",
+        "required": "1",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "4"
+        ],
+        "enabled": 1,
+        "showType": "3",
+        "preset": 1,
+        "name": "length",
+        "type": "digit",
+        "colName": "survey",
+        "operationType": "1",
+        "order": 21,
+        "showField": "part",
+        "showValue": "",
+        "showFieldPreset": 1,
+        "exts": {
+          "showValue": [
+            [
+              "3",
+              "310"
+            ],
+            [
+              "3",
+              "320"
+            ]
+          ]
+        },
+        "frontEndConfig": "{}"
+      },
+      "evidence": {
+        "ordinal": 21,
+        "conditionStatus": "COMPLETE_WIRE_CONDITION_PROVIDER_NOT_READ",
+        "providerAlias": null,
+        "omittedFrontEndConfigProperties": [],
+        "calculateConfig": "UNKNOWN",
+        "effectiveWritePermission": "UNKNOWN"
+      }
+    },
+    {
+      "row": {
+        "_id": "synthetic-survey-field-022",
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "2",
+          "4"
+        ],
+        "enabled": 1,
+        "showType": "3",
+        "preset": 1,
+        "name": "length",
+        "type": "digit",
+        "colName": "survey",
+        "operationType": "1",
+        "order": 22,
+        "showField": "part",
+        "showValue": "",
+        "showFieldPreset": 1,
+        "exts": {
+          "showValue": [
+            [
+              "1",
+              "110"
+            ],
+            [
+              "1",
+              "120"
+            ],
+            [
+              "1",
+              "130"
+            ],
+            [
+              "1",
+              "140"
+            ],
+            [
+              "2",
+              "210"
+            ],
+            [
+              "2",
+              "220"
+            ],
+            [
+              "8"
+            ],
+            [
+              "9"
+            ],
+            [
+              "5"
+            ]
+          ]
+        },
+        "frontEndConfig": "{}"
+      },
+      "evidence": {
+        "ordinal": 22,
+        "conditionStatus": "COMPLETE_WIRE_CONDITION_PROVIDER_NOT_READ",
+        "providerAlias": null,
+        "omittedFrontEndConfigProperties": [],
+        "calculateConfig": "UNKNOWN",
+        "effectiveWritePermission": "UNKNOWN"
+      }
+    },
+    {
+      "row": {
+        "_id": "synthetic-survey-field-023",
+        "required": "1",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "4"
+        ],
+        "enabled": 1,
+        "showType": "3",
+        "preset": 1,
+        "name": "width",
+        "type": "digit",
+        "colName": "survey",
+        "operationType": "1",
+        "order": 23,
+        "showField": "part",
+        "showValue": "",
+        "showFieldPreset": 1,
+        "exts": {
+          "showValue": [
+            [
+              "3",
+              "310"
+            ],
+            [
+              "3",
+              "320"
+            ]
+          ]
+        },
+        "frontEndConfig": "{}"
+      },
+      "evidence": {
+        "ordinal": 23,
+        "conditionStatus": "COMPLETE_WIRE_CONDITION_PROVIDER_NOT_READ",
+        "providerAlias": null,
+        "omittedFrontEndConfigProperties": [],
+        "calculateConfig": "UNKNOWN",
+        "effectiveWritePermission": "UNKNOWN"
+      }
+    },
+    {
+      "row": {
+        "_id": "synthetic-survey-field-024",
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "2",
+          "4"
+        ],
+        "enabled": 1,
+        "showType": "3",
+        "preset": 1,
+        "name": "width",
+        "type": "digit",
+        "colName": "survey",
+        "operationType": "1",
+        "order": 24,
+        "showField": "part",
+        "showValue": "",
+        "showFieldPreset": 1,
+        "exts": {
+          "showValue": [
+            [
+              "1",
+              "110"
+            ],
+            [
+              "1",
+              "120"
+            ],
+            [
+              "1",
+              "130"
+            ],
+            [
+              "1",
+              "140"
+            ],
+            [
+              "2",
+              "210"
+            ],
+            [
+              "2",
+              "220"
+            ],
+            [
+              "8"
+            ],
+            [
+              "9"
+            ],
+            [
+              "5"
+            ]
+          ]
+        },
+        "frontEndConfig": "{}"
+      },
+      "evidence": {
+        "ordinal": 24,
+        "conditionStatus": "COMPLETE_WIRE_CONDITION_PROVIDER_NOT_READ",
+        "providerAlias": null,
+        "omittedFrontEndConfigProperties": [],
+        "calculateConfig": "UNKNOWN",
+        "effectiveWritePermission": "UNKNOWN"
+      }
+    },
+    {
+      "row": {
+        "_id": "synthetic-survey-field-025",
+        "required": "1",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "4"
+        ],
+        "enabled": 1,
+        "showType": "3",
+        "preset": 1,
+        "name": "perimeter",
+        "type": "digit",
+        "colName": "survey",
+        "operationType": "1",
+        "order": 25,
+        "showField": "part",
+        "showValue": "",
+        "showFieldPreset": 1,
+        "exts": {
+          "showValue": []
+        },
+        "frontEndConfig": "{}"
+      },
+      "evidence": {
+        "ordinal": 25,
+        "conditionStatus": "COMPLETE_WIRE_CONDITION_PROVIDER_NOT_READ",
+        "providerAlias": null,
+        "omittedFrontEndConfigProperties": [],
+        "calculateConfig": "UNKNOWN",
+        "effectiveWritePermission": "UNKNOWN"
+      }
+    },
+    {
+      "row": {
+        "_id": "synthetic-survey-field-026",
+        "required": "1",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "4"
+        ],
+        "enabled": 1,
+        "showType": "3",
+        "preset": 1,
+        "name": "planeArea",
+        "type": "digit",
+        "colName": "survey",
+        "operationType": "1",
+        "order": 26,
+        "showField": "part",
+        "showValue": "",
+        "showFieldPreset": 1,
+        "exts": {
+          "showValue": [
+            [
+              "3",
+              "310"
+            ],
+            [
+              "3",
+              "320"
+            ]
+          ]
+        },
+        "frontEndConfig": "{}"
+      },
+      "evidence": {
+        "ordinal": 26,
+        "conditionStatus": "COMPLETE_WIRE_CONDITION_PROVIDER_NOT_READ",
+        "providerAlias": null,
+        "omittedFrontEndConfigProperties": [],
+        "calculateConfig": "UNKNOWN",
+        "effectiveWritePermission": "UNKNOWN"
+      }
+    },
+    {
+      "row": {
+        "_id": "synthetic-survey-field-027",
+        "required": "1",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "4"
+        ],
+        "enabled": 1,
+        "showType": "3",
+        "preset": 1,
+        "name": "height",
+        "type": "digit",
+        "colName": "survey",
+        "operationType": "1",
+        "order": 27,
+        "showField": "part",
+        "showValue": "",
+        "showFieldPreset": 1,
+        "frontEndConfig": "{}"
+      },
+      "evidence": {
+        "ordinal": 27,
+        "conditionStatus": "PARTIAL_REDACTED_CONDITION",
+        "providerAlias": null,
+        "omittedFrontEndConfigProperties": [],
+        "calculateConfig": "UNKNOWN",
+        "effectiveWritePermission": "UNKNOWN"
+      }
+    },
+    {
+      "row": {
+        "_id": "synthetic-survey-field-028",
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "2",
+          "4"
+        ],
+        "enabled": 1,
+        "showType": "3",
+        "preset": 1,
+        "name": "gap1",
+        "type": "gap",
+        "colName": "survey",
+        "operationType": "1",
+        "order": 28,
+        "showField": "part",
+        "showValue": "",
+        "showFieldPreset": 1,
+        "frontEndConfig": "{}"
+      },
+      "evidence": {
+        "ordinal": 28,
+        "conditionStatus": "PARTIAL_REDACTED_CONDITION",
+        "providerAlias": null,
+        "omittedFrontEndConfigProperties": [
+          {
+            "key": "html",
+            "status": "VALUE_NOT_ALLOWLISTED",
+            "kind": "string"
+          }
+        ],
+        "calculateConfig": "UNKNOWN",
+        "effectiveWritePermission": "UNKNOWN"
+      }
+    },
+    {
+      "row": {
+        "_id": "synthetic-survey-field-029",
+        "required": "1",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "4"
+        ],
+        "enabled": 1,
+        "showType": "1",
+        "preset": 1,
+        "name": "surveyDrawing",
+        "type": "file",
+        "colName": "survey",
+        "operationType": "1",
+        "order": 29,
+        "showField": "",
+        "showValue": "",
+        "showFieldPreset": 0,
+        "frontEndConfig": "{\"max\":1}"
+      },
+      "evidence": {
+        "ordinal": 29,
+        "conditionStatus": "NOT_CONDITIONAL_BY_SHOWTYPE",
+        "providerAlias": null,
+        "omittedFrontEndConfigProperties": [
+          {
+            "key": "surveyTool",
+            "status": "VALUE_NOT_ALLOWLISTED",
+            "kind": "boolean"
+          }
+        ],
+        "calculateConfig": "UNKNOWN",
+        "effectiveWritePermission": "UNKNOWN"
+      }
+    },
+    {
+      "row": {
+        "_id": "synthetic-survey-field-030",
+        "required": "1",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "4"
+        ],
+        "enabled": 1,
+        "showType": "1",
+        "preset": 0,
+        "name": "images1",
+        "type": "file",
+        "colName": "survey",
+        "operationType": "1",
+        "order": 30,
+        "showField": "",
+        "showValue": "",
+        "showFieldPreset": 0,
+        "frontEndConfig": "{}"
+      },
+      "evidence": {
+        "ordinal": 30,
+        "conditionStatus": "NOT_CONDITIONAL_BY_SHOWTYPE",
+        "providerAlias": null,
+        "omittedFrontEndConfigProperties": [],
+        "calculateConfig": "UNKNOWN",
+        "effectiveWritePermission": "UNKNOWN"
+      }
+    },
+    {
+      "row": {
+        "_id": "synthetic-survey-field-031",
+        "required": "1",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "4"
+        ],
+        "enabled": 1,
+        "showType": "1",
+        "preset": 0,
+        "name": "images2",
+        "type": "file",
+        "colName": "survey",
+        "operationType": "1",
+        "order": 31,
+        "showField": "",
+        "showValue": "",
+        "showFieldPreset": 0,
+        "frontEndConfig": "{}"
+      },
+      "evidence": {
+        "ordinal": 31,
+        "conditionStatus": "NOT_CONDITIONAL_BY_SHOWTYPE",
+        "providerAlias": null,
+        "omittedFrontEndConfigProperties": [],
+        "calculateConfig": "UNKNOWN",
+        "effectiveWritePermission": "UNKNOWN"
+      }
+    },
+    {
+      "row": {
+        "_id": "synthetic-survey-field-032",
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "4"
+        ],
+        "enabled": 1,
+        "showType": "3",
+        "preset": 0,
+        "name": "images3",
+        "type": "file",
+        "colName": "survey",
+        "operationType": "1",
+        "order": 32,
+        "showField": "part",
+        "showValue": "",
+        "showFieldPreset": 1,
+        "exts": {
+          "showValue": [
+            [
+              "1",
+              "130"
+            ],
+            [
+              "1",
+              "140"
+            ]
+          ]
+        },
+        "frontEndConfig": "{}"
+      },
+      "evidence": {
+        "ordinal": 32,
+        "conditionStatus": "COMPLETE_WIRE_CONDITION_PROVIDER_NOT_READ",
+        "providerAlias": null,
+        "omittedFrontEndConfigProperties": [],
+        "calculateConfig": "UNKNOWN",
+        "effectiveWritePermission": "UNKNOWN"
+      }
+    },
+    {
+      "row": {
+        "_id": "synthetic-survey-field-033",
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "4"
+        ],
+        "enabled": 1,
+        "showType": "3",
+        "preset": 0,
+        "name": "images4",
+        "type": "file",
+        "colName": "survey",
+        "operationType": "1",
+        "order": 33,
+        "showField": "part",
+        "showValue": "",
+        "showFieldPreset": 1,
+        "exts": {
+          "showValue": [
+            [
+              "1",
+              "130"
+            ],
+            [
+              "1",
+              "140"
+            ]
+          ]
+        },
+        "frontEndConfig": "{}"
+      },
+      "evidence": {
+        "ordinal": 33,
+        "conditionStatus": "COMPLETE_WIRE_CONDITION_PROVIDER_NOT_READ",
+        "providerAlias": null,
+        "omittedFrontEndConfigProperties": [],
+        "calculateConfig": "UNKNOWN",
+        "effectiveWritePermission": "UNKNOWN"
+      }
+    },
+    {
+      "row": {
+        "_id": "synthetic-survey-field-034",
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "4"
+        ],
+        "enabled": 1,
+        "showType": "3",
+        "preset": 0,
+        "name": "images5",
+        "type": "file",
+        "colName": "survey",
+        "operationType": "1",
+        "order": 34,
+        "showField": "part",
+        "showValue": "",
+        "showFieldPreset": 1,
+        "exts": {
+          "showValue": [
+            [
+              "1",
+              "110"
+            ],
+            [
+              "1",
+              "120"
+            ],
+            [
+              "1",
+              "130"
+            ],
+            [
+              "1",
+              "140"
+            ]
+          ]
+        },
+        "frontEndConfig": "{}"
+      },
+      "evidence": {
+        "ordinal": 34,
+        "conditionStatus": "COMPLETE_WIRE_CONDITION_PROVIDER_NOT_READ",
+        "providerAlias": null,
+        "omittedFrontEndConfigProperties": [],
+        "calculateConfig": "UNKNOWN",
+        "effectiveWritePermission": "UNKNOWN"
+      }
+    },
+    {
+      "row": {
+        "_id": "synthetic-survey-field-035",
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "4"
+        ],
+        "enabled": 1,
+        "showType": "3",
+        "preset": 0,
+        "name": "images6",
+        "type": "file",
+        "colName": "survey",
+        "operationType": "1",
+        "order": 35,
+        "showField": "part",
+        "showValue": "",
+        "showFieldPreset": 1,
+        "exts": {
+          "showValue": [
+            [
+              "1",
+              "110"
+            ],
+            [
+              "1",
+              "120"
+            ],
+            [
+              "1",
+              "130"
+            ],
+            [
+              "1",
+              "140"
+            ]
+          ]
+        },
+        "frontEndConfig": "{}"
+      },
+      "evidence": {
+        "ordinal": 35,
+        "conditionStatus": "COMPLETE_WIRE_CONDITION_PROVIDER_NOT_READ",
+        "providerAlias": null,
+        "omittedFrontEndConfigProperties": [],
+        "calculateConfig": "UNKNOWN",
+        "effectiveWritePermission": "UNKNOWN"
+      }
+    },
+    {
+      "row": {
+        "_id": "synthetic-survey-field-036",
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "4"
+        ],
+        "enabled": 1,
+        "showType": "3",
+        "preset": 0,
+        "name": "images7",
+        "type": "file",
+        "colName": "survey",
+        "operationType": "1",
+        "order": 36,
+        "showField": "part",
+        "showValue": "",
+        "showFieldPreset": 1,
+        "exts": {
+          "showValue": [
+            [
+              "1",
+              "110"
+            ],
+            [
+              "1",
+              "120"
+            ],
+            [
+              "1",
+              "130"
+            ],
+            [
+              "1",
+              "140"
+            ]
+          ]
+        },
+        "frontEndConfig": "{}"
+      },
+      "evidence": {
+        "ordinal": 36,
+        "conditionStatus": "COMPLETE_WIRE_CONDITION_PROVIDER_NOT_READ",
+        "providerAlias": null,
+        "omittedFrontEndConfigProperties": [],
+        "calculateConfig": "UNKNOWN",
+        "effectiveWritePermission": "UNKNOWN"
+      }
+    },
+    {
+      "row": {
+        "_id": "synthetic-survey-field-037",
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "4"
+        ],
+        "enabled": 1,
+        "showType": "3",
+        "preset": 0,
+        "name": "images8",
+        "type": "file",
+        "colName": "survey",
+        "operationType": "1",
+        "order": 37,
+        "showField": "part",
+        "showValue": "",
+        "showFieldPreset": 1,
+        "exts": {
+          "showValue": [
+            [
+              "1",
+              "110"
+            ],
+            [
+              "1",
+              "120"
+            ],
+            [
+              "1",
+              "130"
+            ],
+            [
+              "1",
+              "140"
+            ],
+            [
+              "8"
+            ],
+            [
+              "9"
+            ]
+          ]
+        },
+        "frontEndConfig": "{}"
+      },
+      "evidence": {
+        "ordinal": 37,
+        "conditionStatus": "COMPLETE_WIRE_CONDITION_PROVIDER_NOT_READ",
+        "providerAlias": null,
+        "omittedFrontEndConfigProperties": [],
+        "calculateConfig": "UNKNOWN",
+        "effectiveWritePermission": "UNKNOWN"
+      }
+    },
+    {
+      "row": {
+        "_id": "synthetic-survey-field-038",
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "4"
+        ],
+        "enabled": 1,
+        "showType": "3",
+        "preset": 0,
+        "name": "images9",
+        "type": "file",
+        "colName": "survey",
+        "operationType": "1",
+        "order": 38,
+        "showField": "part",
+        "showValue": "",
+        "showFieldPreset": 1,
+        "exts": {
+          "showValue": [
+            [
+              "1",
+              "110"
+            ],
+            [
+              "1",
+              "120"
+            ],
+            [
+              "1",
+              "130"
+            ],
+            [
+              "1",
+              "140"
+            ]
+          ]
+        },
+        "frontEndConfig": "{}"
+      },
+      "evidence": {
+        "ordinal": 38,
+        "conditionStatus": "COMPLETE_WIRE_CONDITION_PROVIDER_NOT_READ",
+        "providerAlias": null,
+        "omittedFrontEndConfigProperties": [],
+        "calculateConfig": "UNKNOWN",
+        "effectiveWritePermission": "UNKNOWN"
+      }
+    },
+    {
+      "row": {
+        "_id": "synthetic-survey-field-039",
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "4"
+        ],
+        "enabled": 1,
+        "showType": "3",
+        "preset": 0,
+        "name": "images10",
+        "type": "file",
+        "colName": "survey",
+        "operationType": "1",
+        "order": 39,
+        "showField": "part",
+        "showValue": "",
+        "showFieldPreset": 1,
+        "exts": {
+          "showValue": [
+            [
+              "1",
+              "110"
+            ],
+            [
+              "1",
+              "120"
+            ],
+            [
+              "1",
+              "130"
+            ],
+            [
+              "1",
+              "140"
+            ]
+          ]
+        },
+        "frontEndConfig": "{}"
+      },
+      "evidence": {
+        "ordinal": 39,
+        "conditionStatus": "COMPLETE_WIRE_CONDITION_PROVIDER_NOT_READ",
+        "providerAlias": null,
+        "omittedFrontEndConfigProperties": [],
+        "calculateConfig": "UNKNOWN",
+        "effectiveWritePermission": "UNKNOWN"
+      }
+    },
+    {
+      "row": {
+        "_id": "synthetic-survey-field-040",
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "4"
+        ],
+        "enabled": 1,
+        "showType": "3",
+        "preset": 0,
+        "name": "images11",
+        "type": "file",
+        "colName": "survey",
+        "operationType": "1",
+        "order": 40,
+        "showField": "part",
+        "showValue": "",
+        "showFieldPreset": 1,
+        "exts": {
+          "showValue": [
+            [
+              "1",
+              "110"
+            ],
+            [
+              "1",
+              "120"
+            ],
+            [
+              "1",
+              "130"
+            ],
+            [
+              "1",
+              "140"
+            ]
+          ]
+        },
+        "frontEndConfig": "{}"
+      },
+      "evidence": {
+        "ordinal": 40,
+        "conditionStatus": "COMPLETE_WIRE_CONDITION_PROVIDER_NOT_READ",
+        "providerAlias": null,
+        "omittedFrontEndConfigProperties": [],
+        "calculateConfig": "UNKNOWN",
+        "effectiveWritePermission": "UNKNOWN"
+      }
+    },
+    {
+      "row": {
+        "_id": "synthetic-survey-field-041",
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "4"
+        ],
+        "enabled": 1,
+        "showType": "3",
+        "preset": 0,
+        "name": "images12",
+        "type": "file",
+        "colName": "survey",
+        "operationType": "1",
+        "order": 41,
+        "showField": "part",
+        "showValue": "",
+        "showFieldPreset": 1,
+        "exts": {
+          "showValue": [
+            [
+              "1",
+              "110"
+            ],
+            [
+              "1",
+              "120"
+            ],
+            [
+              "1",
+              "130"
+            ],
+            [
+              "1",
+              "140"
+            ]
+          ]
+        },
+        "frontEndConfig": "{}"
+      },
+      "evidence": {
+        "ordinal": 41,
+        "conditionStatus": "COMPLETE_WIRE_CONDITION_PROVIDER_NOT_READ",
+        "providerAlias": null,
+        "omittedFrontEndConfigProperties": [],
+        "calculateConfig": "UNKNOWN",
+        "effectiveWritePermission": "UNKNOWN"
+      }
+    },
+    {
+      "row": {
+        "_id": "synthetic-survey-field-042",
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "4"
+        ],
+        "enabled": 1,
+        "showType": "3",
+        "preset": 0,
+        "name": "images13",
+        "type": "file",
+        "colName": "survey",
+        "operationType": "1",
+        "order": 42,
+        "showField": "part",
+        "showValue": "",
+        "showFieldPreset": 1,
+        "exts": {
+          "showValue": [
+            [
+              "1",
+              "130"
+            ],
+            [
+              "1",
+              "140"
+            ]
+          ]
+        },
+        "frontEndConfig": "{}"
+      },
+      "evidence": {
+        "ordinal": 42,
+        "conditionStatus": "COMPLETE_WIRE_CONDITION_PROVIDER_NOT_READ",
+        "providerAlias": null,
+        "omittedFrontEndConfigProperties": [],
+        "calculateConfig": "UNKNOWN",
+        "effectiveWritePermission": "UNKNOWN"
+      }
+    },
+    {
+      "row": {
+        "_id": "synthetic-survey-field-043",
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "4"
+        ],
+        "enabled": 1,
+        "showType": "3",
+        "preset": 0,
+        "name": "images14",
+        "type": "file",
+        "colName": "survey",
+        "operationType": "1",
+        "order": 43,
+        "showField": "part",
+        "showValue": "",
+        "showFieldPreset": 1,
+        "exts": {
+          "showValue": [
+            [
+              "8"
+            ],
+            [
+              "9"
+            ]
+          ]
+        },
+        "frontEndConfig": "{}"
+      },
+      "evidence": {
+        "ordinal": 43,
+        "conditionStatus": "COMPLETE_WIRE_CONDITION_PROVIDER_NOT_READ",
+        "providerAlias": null,
+        "omittedFrontEndConfigProperties": [],
+        "calculateConfig": "UNKNOWN",
+        "effectiveWritePermission": "UNKNOWN"
+      }
+    },
+    {
+      "row": {
+        "_id": "synthetic-survey-field-044",
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "4"
+        ],
+        "enabled": 1,
+        "showType": "3",
+        "preset": 0,
+        "name": "images15",
+        "type": "file",
+        "colName": "survey",
+        "operationType": "1",
+        "order": 44,
+        "showField": "part",
+        "showValue": "",
+        "showFieldPreset": 1,
+        "exts": {
+          "showValue": [
+            [
+              "9"
+            ]
+          ]
+        },
+        "frontEndConfig": "{}"
+      },
+      "evidence": {
+        "ordinal": 44,
+        "conditionStatus": "COMPLETE_WIRE_CONDITION_PROVIDER_NOT_READ",
+        "providerAlias": null,
+        "omittedFrontEndConfigProperties": [],
+        "calculateConfig": "UNKNOWN",
+        "effectiveWritePermission": "UNKNOWN"
+      }
+    },
+    {
+      "row": {
+        "_id": "synthetic-survey-field-045",
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "4"
+        ],
+        "enabled": 1,
+        "showType": "3",
+        "preset": 0,
+        "name": "images16",
+        "type": "file",
+        "colName": "survey",
+        "operationType": "1",
+        "order": 45,
+        "showField": "part",
+        "showValue": "",
+        "showFieldPreset": 1,
+        "exts": {
+          "showValue": [
+            [
+              "8"
+            ]
+          ]
+        },
+        "frontEndConfig": "{}"
+      },
+      "evidence": {
+        "ordinal": 45,
+        "conditionStatus": "COMPLETE_WIRE_CONDITION_PROVIDER_NOT_READ",
+        "providerAlias": null,
+        "omittedFrontEndConfigProperties": [],
+        "calculateConfig": "UNKNOWN",
+        "effectiveWritePermission": "UNKNOWN"
+      }
+    },
+    {
+      "row": {
+        "_id": "synthetic-survey-field-046",
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "4"
+        ],
+        "enabled": 1,
+        "showType": "3",
+        "preset": 0,
+        "name": "images17",
+        "type": "file",
+        "colName": "survey",
+        "operationType": "1",
+        "order": 46,
+        "showField": "part",
+        "showValue": "",
+        "showFieldPreset": 1,
+        "exts": {
+          "showValue": [
+            [
+              "3",
+              "310"
+            ],
+            [
+              "3",
+              "320"
+            ]
+          ]
+        },
+        "frontEndConfig": "{}"
+      },
+      "evidence": {
+        "ordinal": 46,
+        "conditionStatus": "COMPLETE_WIRE_CONDITION_PROVIDER_NOT_READ",
+        "providerAlias": null,
+        "omittedFrontEndConfigProperties": [],
+        "calculateConfig": "UNKNOWN",
+        "effectiveWritePermission": "UNKNOWN"
+      }
+    },
+    {
+      "row": {
+        "_id": "synthetic-survey-field-047",
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "4"
+        ],
+        "enabled": 1,
+        "showType": "3",
+        "preset": 0,
+        "name": "images18",
+        "type": "file",
+        "colName": "survey",
+        "operationType": "1",
+        "order": 47,
+        "showField": "part",
+        "showValue": "",
+        "showFieldPreset": 1,
+        "exts": {
+          "showValue": [
+            [
+              "2",
+              "210"
+            ],
+            [
+              "2",
+              "220"
+            ]
+          ]
+        },
+        "frontEndConfig": "{}"
+      },
+      "evidence": {
+        "ordinal": 47,
+        "conditionStatus": "COMPLETE_WIRE_CONDITION_PROVIDER_NOT_READ",
+        "providerAlias": null,
+        "omittedFrontEndConfigProperties": [],
+        "calculateConfig": "UNKNOWN",
+        "effectiveWritePermission": "UNKNOWN"
+      }
+    },
+    {
+      "row": {
+        "_id": "synthetic-survey-field-048",
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "4"
+        ],
+        "enabled": 1,
+        "showType": "3",
+        "preset": 0,
+        "name": "images19",
+        "type": "file",
+        "colName": "survey",
+        "operationType": "1",
+        "order": 48,
+        "showField": "part",
+        "showValue": "",
+        "showFieldPreset": 1,
+        "exts": {
+          "showValue": [
+            [
+              "2",
+              "210"
+            ],
+            [
+              "2",
+              "220"
+            ]
+          ]
+        },
+        "frontEndConfig": "{}"
+      },
+      "evidence": {
+        "ordinal": 48,
+        "conditionStatus": "COMPLETE_WIRE_CONDITION_PROVIDER_NOT_READ",
+        "providerAlias": null,
+        "omittedFrontEndConfigProperties": [],
+        "calculateConfig": "UNKNOWN",
+        "effectiveWritePermission": "UNKNOWN"
+      }
+    },
+    {
+      "row": {
+        "_id": "synthetic-survey-field-049",
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "4"
+        ],
+        "enabled": 1,
+        "showType": "3",
+        "preset": 0,
+        "name": "images20",
+        "type": "file",
+        "colName": "survey",
+        "operationType": "1",
+        "order": 49,
+        "showField": "part",
+        "showValue": "",
+        "showFieldPreset": 1,
+        "exts": {
+          "showValue": [
+            [
+              "2",
+              "210"
+            ],
+            [
+              "2",
+              "220"
+            ]
+          ]
+        },
+        "frontEndConfig": "{}"
+      },
+      "evidence": {
+        "ordinal": 49,
+        "conditionStatus": "COMPLETE_WIRE_CONDITION_PROVIDER_NOT_READ",
+        "providerAlias": null,
+        "omittedFrontEndConfigProperties": [],
+        "calculateConfig": "UNKNOWN",
+        "effectiveWritePermission": "UNKNOWN"
+      }
+    },
+    {
+      "row": {
+        "_id": "synthetic-survey-field-050",
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "2",
+          "4"
+        ],
+        "enabled": 1,
+        "showType": "1",
+        "preset": 1,
+        "name": "gap2",
+        "type": "gap",
+        "colName": "survey",
+        "operationType": "1",
+        "order": 50,
+        "showField": "",
+        "showValue": "",
+        "showFieldPreset": 1,
+        "exts": {
+          "showValue": []
+        },
+        "frontEndConfig": "{}"
+      },
+      "evidence": {
+        "ordinal": 50,
+        "conditionStatus": "NOT_CONDITIONAL_BY_SHOWTYPE",
+        "providerAlias": null,
+        "omittedFrontEndConfigProperties": [],
+        "calculateConfig": "UNKNOWN",
+        "effectiveWritePermission": "UNKNOWN"
+      }
+    },
+    {
+      "row": {
+        "_id": "synthetic-survey-field-051",
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "4"
+        ],
+        "enabled": 1,
+        "showType": "1",
+        "preset": 1,
+        "name": "infraredImageList",
+        "type": "file",
+        "colName": "survey",
+        "operationType": "1",
+        "order": 51,
+        "showField": "",
+        "showValue": "",
+        "showFieldPreset": 0,
+        "frontEndConfig": "{\"max\":4}"
+      },
+      "evidence": {
+        "ordinal": 51,
+        "conditionStatus": "NOT_CONDITIONAL_BY_SHOWTYPE",
+        "providerAlias": null,
+        "omittedFrontEndConfigProperties": [],
+        "calculateConfig": "UNKNOWN",
+        "effectiveWritePermission": "UNKNOWN"
+      }
+    },
+    {
+      "row": {
+        "_id": "synthetic-survey-field-052",
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "2",
+          "4"
+        ],
+        "enabled": 1,
+        "showType": "1",
+        "preset": 1,
+        "name": "gap4",
+        "type": "gap",
+        "colName": "survey",
+        "operationType": "1",
+        "order": 52,
+        "showField": "",
+        "showValue": "",
+        "showFieldPreset": 0,
+        "frontEndConfig": "{}"
+      },
+      "evidence": {
+        "ordinal": 52,
+        "conditionStatus": "NOT_CONDITIONAL_BY_SHOWTYPE",
+        "providerAlias": null,
+        "omittedFrontEndConfigProperties": [],
+        "calculateConfig": "UNKNOWN",
+        "effectiveWritePermission": "UNKNOWN"
+      }
+    },
+    {
+      "row": {
+        "_id": "synthetic-survey-field-053",
+        "required": "0",
+        "multiple": false,
+        "showList": [],
+        "enabled": 1,
+        "showType": "1",
+        "preset": 0,
+        "name": "isMoldRemoved",
+        "type": "radio",
+        "colName": "survey",
+        "operationType": "1",
+        "order": 53,
+        "showField": "",
+        "showValue": "",
+        "showFieldPreset": 0,
+        "frontEndConfig": "{}",
+        "valueOption": "unresolved-code-provider-002"
+      },
+      "evidence": {
+        "ordinal": 53,
+        "conditionStatus": "NOT_CONDITIONAL_BY_SHOWTYPE",
+        "providerAlias": "code-provider-002",
+        "omittedFrontEndConfigProperties": [
+          {
+            "key": "direction",
+            "status": "VALUE_NOT_ALLOWLISTED",
+            "kind": "string"
+          }
+        ],
+        "calculateConfig": "UNKNOWN",
+        "effectiveWritePermission": "UNKNOWN"
+      }
+    },
+    {
+      "row": {
+        "_id": "synthetic-survey-field-054",
+        "required": "0",
+        "multiple": false,
+        "showList": [],
+        "enabled": 1,
+        "showType": "1",
+        "preset": 0,
+        "name": "beforeMoldRemoval",
+        "type": "file",
+        "colName": "survey",
+        "operationType": "1",
+        "order": 54,
+        "showField": "",
+        "showValue": "",
+        "showFieldPreset": 0,
+        "frontEndConfig": "{\"showField\":\"isMoldRemoved\",\"showValue\":\"1\"}"
+      },
+      "evidence": {
+        "ordinal": 54,
+        "conditionStatus": "NOT_CONDITIONAL_BY_SHOWTYPE",
+        "providerAlias": null,
+        "omittedFrontEndConfigProperties": [],
+        "calculateConfig": "UNKNOWN",
+        "effectiveWritePermission": "UNKNOWN"
+      }
+    },
+    {
+      "row": {
+        "_id": "synthetic-survey-field-055",
+        "required": "0",
+        "multiple": false,
+        "showList": [],
+        "enabled": 1,
+        "showType": "1",
+        "preset": 0,
+        "name": "afterMoldRemoval",
+        "type": "file",
+        "colName": "survey",
+        "operationType": "1",
+        "order": 55,
+        "showField": "",
+        "showValue": "",
+        "showFieldPreset": 0,
+        "frontEndConfig": "{\"showField\":\"isMoldRemoved\",\"showValue\":\"1\"}"
+      },
+      "evidence": {
+        "ordinal": 55,
+        "conditionStatus": "NOT_CONDITIONAL_BY_SHOWTYPE",
+        "providerAlias": null,
+        "omittedFrontEndConfigProperties": [],
+        "calculateConfig": "UNKNOWN",
+        "effectiveWritePermission": "UNKNOWN"
+      }
+    },
+    {
+      "row": {
+        "_id": "synthetic-survey-field-056",
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "2",
+          "4"
+        ],
+        "enabled": 1,
+        "showType": "1",
+        "preset": 1,
+        "name": "gap3",
+        "type": "gap",
+        "colName": "survey",
+        "operationType": "1",
+        "order": 56,
+        "showField": "",
+        "showValue": "",
+        "showFieldPreset": 0,
+        "frontEndConfig": "{}"
+      },
+      "evidence": {
+        "ordinal": 56,
+        "conditionStatus": "NOT_CONDITIONAL_BY_SHOWTYPE",
+        "providerAlias": null,
+        "omittedFrontEndConfigProperties": [],
+        "calculateConfig": "UNKNOWN",
+        "effectiveWritePermission": "UNKNOWN"
+      }
+    },
+    {
+      "row": {
+        "_id": "synthetic-survey-field-057",
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "4"
+        ],
+        "enabled": 1,
+        "showType": "3",
+        "preset": 1,
+        "name": "leakageCauseSelect",
+        "type": "select",
+        "colName": "survey",
+        "operationType": "1",
+        "order": 57,
+        "showField": "part",
+        "showValue": "",
+        "showFieldPreset": 1,
+        "exts": {
+          "showValue": [
+            [
+              "1",
+              "110"
+            ],
+            [
+              "1",
+              "120"
+            ],
+            [
+              "1",
+              "130"
+            ],
+            [
+              "1",
+              "140"
+            ],
+            [
+              "2",
+              "210"
+            ],
+            [
+              "2",
+              "220"
+            ],
+            [
+              "3",
+              "310"
+            ],
+            [
+              "3",
+              "320"
+            ],
+            [
+              "8"
+            ],
+            [
+              "9"
+            ],
+            [
+              "5"
+            ],
+            [
+              "6"
+            ],
+            [
+              "4"
+            ]
+          ]
+        },
+        "frontEndConfig": "{}"
+      },
+      "evidence": {
+        "ordinal": 57,
+        "conditionStatus": "COMPLETE_WIRE_CONDITION_PROVIDER_NOT_READ",
+        "providerAlias": null,
+        "omittedFrontEndConfigProperties": [],
+        "calculateConfig": "UNKNOWN",
+        "effectiveWritePermission": "UNKNOWN"
+      }
+    },
+    {
+      "row": {
+        "_id": "synthetic-survey-field-058",
+        "required": "1",
+        "multiple": true,
+        "showList": [
+          "1",
+          "2",
+          "4"
+        ],
+        "enabled": 1,
+        "showType": "3",
+        "preset": 1,
+        "name": "leakageCause",
+        "type": "data",
+        "colName": "survey",
+        "operationType": "1",
+        "order": 58,
+        "showField": "part",
+        "showValue": "",
+        "showFieldPreset": 1,
+        "exts": {
+          "showValue": [
+            [
+              "1",
+              "110"
+            ],
+            [
+              "1",
+              "120"
+            ],
+            [
+              "1",
+              "130"
+            ],
+            [
+              "1",
+              "140"
+            ],
+            [
+              "2",
+              "210"
+            ],
+            [
+              "2",
+              "220"
+            ],
+            [
+              "3",
+              "310"
+            ],
+            [
+              "3",
+              "320"
+            ],
+            [
+              "8"
+            ],
+            [
+              "9"
+            ],
+            [
+              "5"
+            ],
+            [
+              "6"
+            ]
+          ]
+        },
+        "frontEndConfig": "{}"
+      },
+      "evidence": {
+        "ordinal": 58,
+        "conditionStatus": "COMPLETE_WIRE_CONDITION_PROVIDER_NOT_READ",
+        "providerAlias": null,
+        "omittedFrontEndConfigProperties": [
+          {
+            "key": "errorMsg",
+            "status": "VALUE_NOT_ALLOWLISTED",
+            "kind": "string"
+          }
+        ],
+        "calculateConfig": "UNKNOWN",
+        "effectiveWritePermission": "UNKNOWN"
+      }
+    },
+    {
+      "row": {
+        "_id": "synthetic-survey-field-059",
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "4"
+        ],
+        "enabled": 1,
+        "showType": "1",
+        "preset": 1,
+        "name": "memo",
+        "type": "textarea",
+        "colName": "survey",
+        "operationType": "1",
+        "order": 59,
+        "showField": "",
+        "showValue": "",
+        "showFieldPreset": 0,
+        "frontEndConfig": "{}",
+        "nameDisp": "备注"
+      },
+      "evidence": {
+        "ordinal": 59,
+        "conditionStatus": "NOT_CONDITIONAL_BY_SHOWTYPE",
+        "providerAlias": null,
+        "omittedFrontEndConfigProperties": [],
+        "calculateConfig": "UNKNOWN",
+        "effectiveWritePermission": "UNKNOWN"
+      }
+    }
+  ]
+}

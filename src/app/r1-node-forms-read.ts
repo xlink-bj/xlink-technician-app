@@ -5,6 +5,8 @@ import { createR1ScopedFormReader } from '@adapters/api/r1-scoped-form-read'
 import { formDefinition } from '@adapters/api/read-models/form'
 import { workflowNode } from '@adapters/api/read-models/workflow'
 import { evaluateNodeVisibility } from '@runtimes/workflow/policy'
+import { isFieldApplicable } from '@runtimes/dynamic-form'
+import { ACTION_FORM_SURFACE, actionFormSchemaFor } from '@features/work-orders/action-form-schema'
 import { sessionAuthorizationFingerprint } from '@shared/session-authorization'
 import { asOpaqueId } from '@shared/types'
 import type { R1NodeFormsReader, R1NodeFormsSnapshot } from '@features/work-orders/r1-node-forms-read'
@@ -139,7 +141,11 @@ export function createNormalNodeFormsReader(input: {
       const definition = formDefinition({ data: fields }, asOpaqueId<'FormDefinitionId'>(definitionId))
       const hydrated = []
       for (const f of definition.fields ?? []) {
-        if (f.valueOption && ['radio', 'select', 'checkbox'].includes(f.type)) {
+        // A statically excluded mobile field does not need a provider request.
+        // Do not skip conditional fields: their options may be needed for a
+        // different record, and provider failure must remain explicit.
+        if (isFieldApplicable(actionFormSchemaFor(f), ACTION_FORM_SURFACE)
+          && f.valueOption && ['radio', 'select', 'checkbox'].includes(f.type)) {
           check()
           const options = await input.read.getDynamicCodeOptions?.({ valueOption: f.valueOption })
           check()

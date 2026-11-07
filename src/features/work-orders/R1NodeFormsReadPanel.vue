@@ -9,9 +9,9 @@
       <text v-if="!visibleSnapshot.records.length" class="form-read__hint" data-testid="r1-normal-form-empty">暂无已保存记录。</text>
       <view v-for="(record,index) in visibleSnapshot.records" :key="String(record.id)" class="form-read__record" data-testid="r1-normal-form-record">
         <text class="form-read__title">{{ visibleSnapshot.node.displayName || '现场记录' }} · {{ index + 1 }}</text>
-        <view v-for="field in visibleSnapshot.definition.fields" :key="field.fieldId" class="form-read__field">
+        <view v-for="field in projectR1RecordReadFields(visibleSnapshot.definition, record)" :key="field.fieldId" class="form-read__field">
           <text class="form-read__label">{{ field.label }}</text>
-          <text class="form-read__value" :data-testid="`r1-normal-value-${field.valueKey}`">{{ display(field, record.values?.[field.valueKey]) }}</text>
+          <text class="form-read__value" :data-testid="`r1-normal-value-${field.valueKey}`">{{ field.text }}</text>
         </view>
       </view>
       <template v-if="actions && !actions.locked()">
@@ -43,11 +43,11 @@
 
 <script setup lang="ts">
 import { computed, inject, onBeforeUnmount, ref, shallowRef, watch } from 'vue'
-import type { FormFieldRead, FormFieldValue } from '@shared/ports'
 import AppButton from '@shared/ui/AppButton.vue'
 import AppField from '@shared/ui/AppField.vue'
 import R1FormFieldControl from './R1FormFieldControl.vue'
 import { normalizeR1RepeatValues, projectR1RepeatFields } from './r1-repeat-form'
+import { projectR1RecordReadFields } from './r1-record-read-fields'
 import type { R1LocalFieldValue } from './r1-local-form-fields'
 import { r1RepeatActionsKey } from './r1-repeat-actions-port'
 import type { R1NodeFormsReader, R1NodeFormsSnapshot } from './r1-node-forms-read'
@@ -108,14 +108,6 @@ async function complete() {
     emit('changed')
   } catch { if (ticket === version) message.value = '流程结果尚未核实，请勿重复提交。' }
   finally { busy.value = false }
-}
-function display(field: FormFieldRead, value: FormFieldValue | undefined): string {
-  if (value === undefined) return '未保存'
-  if (value === null) return '空值'
-  const scalar = (v: unknown): string => ['string', 'number', 'boolean'].includes(typeof v)
-    ? field.options?.find(o => o.value === String(v))?.label ?? (v === '' ? '空值' : String(v))
-    : '该内容暂不支持展示'
-  return Array.isArray(value) ? value.map(scalar).join(' / ') : scalar(value)
 }
 </script>
 
