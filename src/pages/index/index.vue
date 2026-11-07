@@ -30,14 +30,16 @@
         </view>
 
         <navigator class="work-orders-entry" :url="workOrdersRoute">
-          <view class="entry-icon" aria-hidden="true">
-            <text>工</text>
+          <view class="work-orders-entry-content">
+            <view class="entry-icon" aria-hidden="true">
+              <text>工</text>
+            </view>
+            <view class="entry-copy">
+              <text class="entry-title">查看当前可见工单</text>
+              <text class="entry-subtitle">打开工单列表</text>
+            </view>
+            <text class="entry-arrow" aria-hidden="true">›</text>
           </view>
-          <view class="entry-copy">
-            <text class="entry-title">查看当前可见工单</text>
-            <text class="entry-subtitle">打开工单列表</text>
-          </view>
-          <text class="entry-arrow" aria-hidden="true">›</text>
         </navigator>
       </view>
 
@@ -385,6 +387,7 @@ function userFacingLoginMessage(error: OperationError | null | undefined): strin
 
 <style>
 .home-page {
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
   background: #f5f7fb;
   box-sizing: border-box;
   display: block;
@@ -593,16 +596,25 @@ function userFacingLoginMessage(error: OperationError | null | undefined): strin
 }
 
 .work-orders-entry {
-  align-items: center;
   background: #ffffff;
   border: 2rpx solid #e8edf4;
   border-radius: 20rpx;
   box-sizing: border-box;
-  display: flex;
-  gap: 20rpx;
+  display: block;
   min-height: 140rpx;
   padding: 20rpx;
   box-shadow: none;
+  width: 100%;
+}
+
+/* Navigator adds an anchor wrapper on H5. Own the layout inside that wrapper
+   so the same icon/copy/arrow row also works on MP and App. */
+.work-orders-entry-content {
+  align-items: center;
+  display: flex;
+  gap: 20rpx;
+  min-height: 96rpx;
+  min-width: 0;
   width: 100%;
 }
 
@@ -647,6 +659,7 @@ function userFacingLoginMessage(error: OperationError | null | undefined): strin
 }
 
 .home-footer {
+  box-sizing: border-box;
   padding: 44rpx 24rpx 0;
   text-align: center;
 }

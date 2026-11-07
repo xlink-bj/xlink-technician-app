@@ -643,6 +643,10 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
 </script>
 
 <style>
+.detail-page {
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+}
+
 /* Detail typography scale: keep hierarchy semantic and avoid component-specific sizes. */
 .detail-page,
 .guard-page {

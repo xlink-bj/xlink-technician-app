@@ -327,6 +327,10 @@ function cancelAccept(): void {
 </script>
 
 <style>
+.work-orders-page {
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+}
+
 .work-orders-page,
 .guard-page {
   background: #f3f6fa;
