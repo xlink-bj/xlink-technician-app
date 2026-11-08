@@ -221,6 +221,8 @@
 
         <template v-else-if="isFirstRepairPartStep && firstRepairPartGroup">
           <Q01EntryScreen
+            :key="inputEpoch"
+            :is-input-current="inputOwnerCurrent"
             :group="firstRepairPartGroup"
             :options="composition.repairPartOptions"
             :can-edit="canEdit"
@@ -294,7 +296,10 @@
               <view class="quotation-content__group-fields">
                 <label class="quotation-content__context-field">
                   <text class="quotation-content__context-label">部位描述</text>
-                  <textarea
+                  <QuotationTextField
+                    :is-current="inputOwnerCurrent"
+                    :key="`${inputEpoch}:${group.groupId}:description`"
+                    multiline
                     class="quotation-content__context-input quotation-content__context-input--multiline"
                     :value="group.partDescription"
                     :disabled="!canEdit"
@@ -305,7 +310,9 @@
                 </label>
                 <label class="quotation-content__context-field">
                   <text class="quotation-content__context-label">工程量</text>
-                  <input
+                  <QuotationTextField
+                    :is-current="inputOwnerCurrent"
+                    :key="`${inputEpoch}:${group.groupId}:quantity`"
                     class="quotation-content__context-input"
                     type="digit"
                     :value="group.maintainAreaNum"
@@ -436,7 +443,9 @@
                     <view class="quotation-content__line-controls">
                       <text class="quotation-content__quantity-label">数量</text>
                       <view class="quotation-content__quantity-wrap" :class="{ 'quotation-content__quantity-wrap--error': composition.quantityErrorBySelection[selection.selectionId] }">
-                        <input
+                        <QuotationTextField
+                          :is-current="inputOwnerCurrent"
+                          :key="`${inputEpoch}:${group.groupId}:${selection.selectionId}:quantity`"
                           class="quotation-content__quantity"
                           type="digit"
                           :value="composition.quantityTextBySelection[selection.selectionId] ?? String(selection.quantity)"
@@ -1046,6 +1055,8 @@ import type { SameCatalogComparison } from './sku-identity-review'
 import type { QuoteSkuReadiness } from './sku-readiness-view'
 
 import Q01EntryScreen from './Q01EntryScreen.vue'
+import QuotationTextField from './QuotationTextField.vue'
+import { useQuotationInputEpoch } from './input-delivery-epoch'
 import AppButton from '@shared/ui/AppButton.vue'
 import AppCascadeSelector from '@shared/ui/AppCascadeSelector.vue'
 import AppIcon from '@shared/ui/AppIcon.vue'
@@ -1112,6 +1123,11 @@ const materialSkuPreviewStatusMessage = computed(() => {
   return preview && preview.state !== 'ready' ? preview.message : '当前材料没有可用规格'
 })
 const workspace = useActionWorkspaceStore()
+const inputEpoch = useQuotationInputEpoch({
+  descriptor: () => workspace.descriptor,
+  localState: () => composition.localState,
+  editState: () => workspace.quotationEditState.state,
+})
 const displayUnit = useLocalUnitDisplay(() => String(workspace.detail?.id ?? ''))
 const verifiedLocalDisplay = useVerifiedLocalQuotationDisplay(() => String(workspace.detail?.id ?? ''))
 const submissionStatusMessage = computed(() => quotationSubmissionDisplayCopy({
@@ -1212,6 +1228,12 @@ onBeforeUnmount(() => {
 })
 const catalogKinds: readonly QuotationLineKind[] = ['package', 'procedure', 'material', 'measure']
 const canEdit = computed(() => ['fresh', 'restored', 'dirty', 'saving', 'saved_local', 'save_failed'].includes(composition.localState))
+// The old instance loses delivery ownership synchronously, even before Vue
+// unmounts its DOM at the next render flush. Normal edits retain this lease.
+const inputOwnerCurrent = computed(() => {
+  const epoch = inputEpoch.value
+  return () => inputEpoch.value === epoch && canEdit.value
+})
 watch([isFirstRepairPartStep, canEdit], ([active, permitted]) => {
   emit('first-step-presentation', { active, canEdit: permitted })
 }, { immediate: true })

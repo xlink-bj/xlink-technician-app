@@ -134,6 +134,11 @@ jobs:
         run: pnpm exec playwright test --config config/playwright/input-delivery.config.ts
       - name: Verify rapid search delivery on button and keyboard entry
         run: pnpm exec playwright test --config config/playwright/search-delivery.config.ts
+      - name: Verify normal quotation rapid input delivery and draft encoding at 430
+        env:
+          VITE_XLINK_ENVIRONMENT: 'test'
+          VITE_XLINK_R1_MP_UX_FIXTURES: 'false'
+        run: pnpm exec playwright test --config config/playwright/quotation-input-delivery.config.ts
       - name: Preserve Stage 1B/2A/2B/2C offline H5 evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -144,6 +149,7 @@ jobs:
             test-results/m08-catalog-scale/
             test-results/input-delivery/
             test-results/search-delivery/
+            test-results/quotation-input-delivery/
           if-no-files-found: warn
           retention-days: 7
 

@@ -64,12 +64,14 @@
 
       <view class="q01-screen__field">
         <text class="q01-screen__label xl-craft__label">维修部位描述 <text class="xl-craft__required">*</text></text>
-        <textarea
+        <QuotationTextField
+          multiline
+          :is-current="isInputCurrent"
           class="q01-screen__description xl-craft__control xl-craft__control--textarea"
           :value="group.partDescription"
           :disabled="!canEdit"
           :aria-invalid="Boolean(errors.partDescription)"
-          maxlength="-1"
+          :maxlength="-1"
           placeholder="请描述具体的渗漏或维修情况"
           data-testid="quotation-first-step-description"
           @input="emit('description-input', $event)"
@@ -81,7 +83,8 @@
 
       <view class="q01-screen__field">
         <text class="q01-screen__label xl-craft__label">工程量 <text class="xl-craft__required">*</text></text>
-        <input
+        <QuotationTextField
+          :is-current="isInputCurrent"
           class="q01-screen__quantity xl-craft__control xl-craft__control--input"
           type="digit"
           :value="group.maintainAreaNum"
@@ -155,6 +158,7 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
+import QuotationTextField from './QuotationTextField.vue'
 import AppStatus from '@shared/ui/AppStatus.vue'
 import AppButton from '@shared/ui/AppButton.vue'
 import AppIcon from '@shared/ui/AppIcon.vue'
@@ -167,6 +171,7 @@ const props = defineProps<{
   readonly group: QuotationGroup
   readonly options: readonly CodeOptionRead[]
   readonly canEdit: boolean
+  readonly isInputCurrent?: () => boolean
   readonly showDraftNotice: boolean
   readonly productReviewOnly?: boolean
   readonly repairPartsLabel: string
