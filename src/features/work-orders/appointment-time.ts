@@ -1,3 +1,5 @@
+import { validLocalDateTime } from '@shared/form/local-temporal'
+
 export interface AppointmentTimeOption {
   readonly key: string
   readonly value: string
@@ -72,7 +74,9 @@ export function dateShortcutsFor(now: Date = new Date()): readonly AppointmentDa
 
 export function parseAppointmentDateTime(value: unknown): AppointmentDisplay | undefined {
   if (typeof value !== 'string') return undefined
-  const match = /^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2})$/.exec(value.trim())
+  const literal = value.trim()
+  if (!validLocalDateTime(literal)) return undefined
+  const match = /^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}(?::\d{2})?)$/.exec(literal)
   if (!match || !dateFromInput(match[1])) return undefined
   const time = match[2]
   return {
