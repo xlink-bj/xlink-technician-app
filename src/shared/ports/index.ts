@@ -42,6 +42,7 @@ export type {
   WorkOrderContact,
   WorkOrderDetail,
   WorkOrderListQuery,
+  WorkOrderCategory,
   WorkOrderSummary,
   WorkOrderTaskTone,
   WorkflowDefinitionRead,

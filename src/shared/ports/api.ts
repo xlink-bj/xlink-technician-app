@@ -20,11 +20,15 @@ export interface ReadPage<T> {
   readonly totalCount?: number
 }
 
+/** R2 business-stage categories, always constrained by the current role's scope. */
+export type WorkOrderCategory = 'to_accept' | 'need_contact' | 'onsite' | 'following' | 'all'
+
 export interface WorkOrderListQuery {
   readonly page: number
   readonly pageSize: number
   /** Optional server-side search across the accepted Work Order evidence fields. */
   readonly searchText?: string
+  readonly category?: WorkOrderCategory
 }
 
 export interface WorkOrderSummary {

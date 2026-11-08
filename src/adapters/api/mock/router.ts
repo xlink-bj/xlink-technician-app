@@ -1,5 +1,6 @@
 import { mockOrderFieldsRead } from './order-fields'
 import { mockScaleCatalogRead } from './quotation-catalog-scale'
+import { categoryMockDetail, withCategoryMockRows } from './work-order-category-fixtures'
 import { isBusinessMockMode, type BusinessMockMode } from './config'
 import { advanceMockJourneyAfterProcess, isDevMockJourneyEnabled, mockJourneyNodes, mockJourneyStage, mockJourneyWorkOrderId, mockJourneyOrderWorkflowDefinitionId, mockJourneyOrderWorkflowRunId, mockJourneyQuotationId, mockJourneyOfficialOrderId, persistMockJourneyFormData, persistMockJourneyQuotation, persistMockJourneyOfficialOrder, readMockJourneyFormData, readMockJourneyQuotation, readMockJourneyOrderWorkflow, readMockJourneyQuoteWorkflow, readMockJourneyOfficialOrder, startMockJourneyOrderWorkflow, startMockJourneyQuoteWorkflow, type MockJourneyStage } from './journey'
 import { appointmentFormDefinitionWireId } from '../appointment-contract'
@@ -641,18 +642,22 @@ function listResponse(
 ): unknown {
   if (mode === 'empty') return emptyPageResponse()
   const term = searchTerm(requestData)
-  if (!term) return response
   if (typeof response !== 'object' || response === null || Array.isArray(response)) return response
   const envelope = response as Record<string, unknown>
   if (!Array.isArray(envelope.data)) return response
-  const needle = term.toLocaleLowerCase()
+  const needle = term?.toLocaleLowerCase()
+  const rawStatuses = requestData['in:status|array#and']
+  const statuses = typeof rawStatuses === 'string' ? new Set(rawStatuses.split(',')) : undefined
   const data = envelope.data.filter((item) =>
-    workOrderSearchFields.some((field) => {
+    (!statuses || statuses.has(String(rawSearchValue(item, 'status')))) &&
+    (!needle || workOrderSearchFields.some((field) => {
       const value = rawSearchValue(item, field)
       return typeof value === 'string' && value.toLocaleLowerCase().includes(needle)
-    }),
+    })),
   )
-  return { ...envelope, data, total: data.length }
+  const page = Number(requestData.page ?? 1), rows = Number(requestData.rows ?? 20)
+  const start = (page - 1) * rows
+  return { ...envelope, data: data.slice(start, start + rows), page, rows, total: data.length }
 }
 
 function matchedResponse(
@@ -722,11 +727,11 @@ function matchedResponse(
       serviceAppointmentId: mockWorkOrderIds[1],
       orderNumber: 'BJ202610260001',
       state: 1, processState: 4, totalPrice: 0, exts: { isAgain: 0 },
-      bjProducts: { orderList: [{
+      bjProducts: JSON.stringify({ orderList: [{
         repairParts: ['roof-waterproofing'], partDescription: '平屋顶防水维修',
         projPackages: { data: [] }, procedures: { data: [] },
         materials: { data: [] }, measures: { data: [] },
-      }] },
+      }] }),
     }], page: 1, rows: 3, total: 1 }
   }
   if (mode === 'data' && import.meta.env.DEV === true
@@ -911,16 +916,17 @@ function matchedResponse(
     return mockWorkOrderActivityResponseFor(workOrderId)
   }
   if (route === 'basic/serviceAppointment/querySAWorkflowNode') {
-    return listResponse(mode, r1MpUxListResponse(journeyListResponse(mockCommandState().listResponse)), requestData)
+    return listResponse(mode, withCategoryMockRows(r1MpUxListResponse(journeyListResponse(mockCommandState().listResponse)), true), requestData)
   }
   if (route === 'basic/serviceAppointment/query') {
-    return listResponse(mode, mockOrdinaryListResponse, requestData)
+    return listResponse(mode, withCategoryMockRows(mockOrdinaryListResponse, false), requestData)
   }
 
   const detailPrefix = 'basic/serviceAppointment/queryById/'
   if (route.startsWith(detailPrefix)) {
     const requestedId = decodeURIComponent(route.slice(detailPrefix.length))
     if (isMockOwnedRead(route)) {
+      if (requestedId.startsWith('mock-work-order-category-')) return mode === 'data' ? categoryMockDetail(requestedId) : null
       if (isDevMockJourneyEnabled() && requestedId === mockJourneyWorkOrderId) return journeyDetailResponse()
       return responseForDetail(requestedId) ?? mockWorkOrderDetailResponseFor(requestedId)
     }

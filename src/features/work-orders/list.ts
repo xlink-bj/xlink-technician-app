@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, toRaw, watch, type WatchStopHandle } from 'vue'
 import { workOrderReadScopeKey } from './read-identity-scope'
 import { isProductionReadOnlyRuntime } from '@shared/config'
+import { workOrderCategories } from './list-categories'
 
 import type {
   AcceptOrderInput,
@@ -12,6 +13,7 @@ import type {
   TechnicianApiCommandPort,
   TechnicianApiReadPort,
   WorkOrderSummary,
+  WorkOrderCategory,
 } from '@shared/ports'
 import {
   createCapabilityResult,
@@ -49,6 +51,7 @@ export const useWorkOrderListStore = defineStore('workOrderList', () => {
   const page = ref(1)
   const pageSize = ref(20)
   const searchText = ref('')
+  const category = ref<WorkOrderCategory>('all')
   const totalCount = ref<number | undefined>(undefined)
   const hasMore = ref<boolean | undefined>(undefined)
   const error = ref<OperationError | null>(null)
@@ -194,6 +197,8 @@ export const useWorkOrderListStore = defineStore('workOrderList', () => {
   }
 
   function clear(): void {
+    category.value = 'all'
+    searchText.value = ''
     clearList()
     lastLoadWasAppend = false
     contactState.value = 'not_requested'
@@ -269,6 +274,7 @@ export const useWorkOrderListStore = defineStore('workOrderList', () => {
     const result = await api.listWorkOrders({
       page: requestedPage,
       pageSize: pageSize.value,
+      ...(category.value !== 'all' ? { category: category.value } : {}),
       ...(normalizedSearchText ? { searchText: normalizedSearchText } : {}),
     })
     if (requestVersion !== loadVersion || scopeAtStart !== workOrderReadScopeKey(getSession())) {
@@ -303,6 +309,18 @@ export const useWorkOrderListStore = defineStore('workOrderList', () => {
     return load({ refresh: true })
   }
 
+  function selectCategory(value: WorkOrderCategory): Promise<OperationSnapshot<ReadPage<WorkOrderSummary>>> {
+    if (!workOrderCategories.some(item => item.key === value)) {
+      return Promise.resolve(failure('validation', 'Unsupported Work Order category'))
+    }
+    if (value === category.value) return Promise.resolve({ state: 'succeeded' })
+    clearList()
+    category.value = value
+    loadState.value = 'idle'
+    acceptError.value = null
+    return load({ refresh: true })
+  }
+
   function retry(): Promise<OperationSnapshot<ReadPage<WorkOrderSummary>>> {
     return load({ append: lastLoadWasAppend })
   }
@@ -320,6 +338,8 @@ export const useWorkOrderListStore = defineStore('workOrderList', () => {
     page,
     pageSize,
     searchText,
+    category,
+    selectCategory,
     totalCount,
     hasMore,
     error,

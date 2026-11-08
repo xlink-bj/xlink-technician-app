@@ -21,7 +21,8 @@
       "domain": "工单列表",
       "sourceEvidence": "docs/verification/G4F_SELECTABLE_CATALOG_PROD_READ_20261105.md",
       "unitTests": [
-        "tests/g4f/m1-i7-work-order-read-scope.test.ts"
+        "tests/g4f/m1-i7-work-order-read-scope.test.ts",
+        "tests/engineering/mock-current-api-parity.test.ts"
       ],
       "unresolved": "既有 121 行完整快照；本轮为分次有界观察，不能跨捕获去重",
       "liveParity": "NOT_VERIFIED"
@@ -31,7 +32,8 @@
       "domain": "工单详情与 Workflow",
       "sourceEvidence": "docs/verification/G4F_SELECTABLE_CATALOG_PROD_READ_20261105.md",
       "unitTests": [
-        "tests/engineering/r1-three-pillar-contract-matrix.test.ts"
+        "tests/engineering/r1-three-pillar-contract-matrix.test.ts",
+        "tests/engineering/mock-current-api-parity.test.ts"
       ],
       "unresolved": "68/21 成功详情观察；活跃生命周期不等于可写，其他/closed 类型未完整保留",
       "liveParity": "NOT_VERIFIED"
@@ -204,7 +206,8 @@
       "sourceEvidence": "docs/verification/R1_ORDER_CONTRACT_READ_RECONCILIATION_20261104.md",
       "unitTests": [
         "tests/g4f/mock-journey-order-protocol.test.ts",
-        "tests/g4f/quotation-order-read.test.ts"
+        "tests/g4f/quotation-order-read.test.ts",
+        "tests/engineering/mock-current-api-parity.test.ts"
       ],
       "unresolved": "只准 type=1 page1 rows3；type=0 与后续页未读",
       "liveParity": "NOT_VERIFIED"
@@ -215,7 +218,8 @@
       "sourceEvidence": "docs/verification/G4F_ORDER_PROVIDER_PRICE_SNAPSHOT_PROD_READ_20261105.md",
       "unitTests": [
         "tests/g4f/quotation-order-read.test.ts",
-        "tests/g4f/g4f-order-package-price-comparison.test.ts"
+        "tests/g4f/g4f-order-package-price-comparison.test.ts",
+        "tests/engineering/mock-current-api-parity.test.ts"
       ],
       "unresolved": "本轮样本 3/3 行 unsupported、0 captured price；仅有列表内快照投影和既有历史对照。通用 queryById 仍关闭，不宣称原始 wire 全量或金额正确",
       "liveParity": "NOT_VERIFIED"

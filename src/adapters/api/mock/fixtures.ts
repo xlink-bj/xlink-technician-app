@@ -476,7 +476,7 @@ export const mockRoleFunctionResponse = {
             order: 1,
             exts: { tabDisplay: '1' },
             action:
-              '/pages/serviceAppointment/serviceAppointments?type=SANode&orderState=mock-ready&status=mock-open',
+              '/pages/serviceAppointment/serviceAppointments?type=SANode&orderState=all',
           },
         ],
       },

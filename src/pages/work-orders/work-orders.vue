@@ -23,6 +23,17 @@
         @search="submitSearch"
       />
 
+      <scroll-view scroll-x class="work-order-categories" aria-label="工单分类">
+        <view class="work-order-categories-row" role="tablist">
+          <button v-for="item in workOrderCategories" :key="item.key"
+            class="work-order-category" :class="{ 'work-order-category--active': workOrders.category === item.key }"
+            role="tab" :aria-selected="workOrders.category === item.key"
+            :data-testid="`work-order-category-${item.key}`" @tap="selectCategory(item.key)">
+            {{ item.label }}
+          </button>
+        </view>
+      </scroll-view>
+
       <AppWorkOrderSkeleton v-if="showLoadingSkeleton" variant="list" />
 
       <AppFeedbackState
@@ -182,6 +193,8 @@ import AppRecordMark from '@shared/ui/AppRecordMark.vue'
 import AppMetaTag from '@shared/ui/AppMetaTag.vue'
 import AppSectionHeading from '@shared/ui/AppSectionHeading.vue'
 import AppSearchBar from '@shared/ui/AppSearchBar.vue'
+import { workOrderCategories } from '@features/work-orders/list-categories'
+import type { WorkOrderCategory } from '@shared/ports'
 import AppFeedbackState from '@shared/ui/AppFeedbackState.vue'
 import AppWorkOrderSkeleton from '@shared/ui/AppWorkOrderSkeleton.vue'
 import AppWorkOrderEmptyState from '@shared/ui/AppWorkOrderEmptyState.vue'
@@ -191,6 +204,17 @@ const session = useSessionStore()
 const workOrders = useWorkOrderListStore()
 const acceptCandidate = ref<WorkOrderSummary | null>(null)
 const searchDraft = ref(workOrders.searchText)
+let acceptGeneration = 0
+
+function invalidatePendingAccept(): void {
+  acceptGeneration += 1
+  acceptCandidate.value = null
+}
+
+function isCurrentAcceptResult(generation: number, scope: string | null): boolean {
+  return generation === acceptGeneration && scope !== null
+    && scope === workOrderReadScopeKey(session.session)
+}
 const canAccess = computed(() => hasAuthenticatedSession(session.status, session.session))
 const productionReadOnly = isProductionReadOnlyRuntime()
 const isLoading = computed(() => workOrders.loadState === 'loading')
@@ -226,23 +250,33 @@ watch(
   { immediate: true },
 )
 
-onBeforeUnmount(clearLoadingSkeletonTimer)
+onBeforeUnmount(() => {
+  invalidatePendingAccept()
+  clearLoadingSkeletonTimer()
+})
 
 watch(
   [() => session.status, () => workOrderReadScopeKey(session.session)],
   ([status, scope], previous) => {
+    if (previous?.length && previous[1] !== scope) searchDraft.value = ''
     if (status === 'authenticated' && scope
       && (!previous || previous[0] !== status || previous[1] !== scope)) {
-      acceptCandidate.value = null
+      invalidatePendingAccept()
       void workOrders.refresh()
     }
     if (status !== 'authenticated' && status !== 'unknown') {
-      acceptCandidate.value = null
+      invalidatePendingAccept()
+      searchDraft.value = ''
       workOrders.clear()
     }
   },
   { immediate: true, flush: 'sync' },
 )
+
+async function selectCategory(value: WorkOrderCategory): Promise<void> {
+  invalidatePendingAccept()
+  await workOrders.selectCategory(value)
+}
 
 async function submitSearch(): Promise<void> {
   if (isLoading.value) return
@@ -289,11 +323,15 @@ async function requestAccept(item: WorkOrderSummary): Promise<void> {
   if (productionReadOnly) return
   const action = listActionFor(item).acceptOrder
   if (!action) return
+  const generation = acceptGeneration
+  const scope = workOrderReadScopeKey(session.session)
   const result = await workOrders.acceptOrder({
     workOrderId: item.id,
     workflowNodeId: action.workflowNodeId,
   })
-  if (result.state === 'confirmation_required') acceptCandidate.value = item
+  if (!isCurrentAcceptResult(generation, scope)) return
+  if (result.state === 'confirmation_required'
+    && workOrders.items.some(current => current.id === item.id)) acceptCandidate.value = item
   if (result.state === 'succeeded') {
     await workOrders.navigateTo(workOrderDetailRouteFor(item.id))
   }
@@ -311,10 +349,13 @@ async function confirmAccept(): Promise<void> {
     acceptCandidate.value = null
     return
   }
+  const generation = acceptGeneration
+  const scope = workOrderReadScopeKey(session.session)
   const result = await workOrders.acceptOrder({
     workOrderId: item.id,
     workflowNodeId: action.workflowNodeId,
   }, true)
+  if (!isCurrentAcceptResult(generation, scope)) return
   if (result.state !== 'confirmation_required') acceptCandidate.value = null
   if (result.state === 'succeeded') {
     await workOrders.navigateTo(workOrderDetailRouteFor(item.id))
@@ -322,7 +363,7 @@ async function confirmAccept(): Promise<void> {
 }
 
 function cancelAccept(): void {
-  acceptCandidate.value = null
+  invalidatePendingAccept()
 }
 </script>
 
@@ -347,6 +388,12 @@ function cancelAccept(): void {
 }
 
 .production-read-only-notice { display: block; margin: 0 0 14rpx; }
+
+.work-order-categories { margin-top: 16px; border-bottom: 1px solid var(--app-color-border); width: 100%; }
+.work-order-categories-row { display: flex; min-width: max-content; justify-content: space-between; gap: 4px; }
+.work-order-category { flex-shrink: 0; margin: 0; padding: 8px; min-height: 44px; border: 0; border-bottom: 2px solid transparent; border-radius: initial; background: transparent; color: var(--app-content-muted-ink); font-size: var(--app-font-body); font-weight: 500; line-height: 26px; }
+.work-order-category::after { border: 0; }
+.work-order-category--active { color: var(--app-color-primary); border-bottom-color: currentColor; font-weight: 600; }
 
 .list-content {
   display: flex;

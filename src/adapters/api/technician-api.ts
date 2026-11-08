@@ -49,6 +49,7 @@ import {
 } from '../common/records'
 import { buildR1RepeatFormListQuery, readR1NodeFormList } from './r1-node-form-list'
 import { isProductionReadOnlyTarget } from '@shared/config'
+import { workOrderCategoryStatusFilter } from './work-order-category'
 import { sessionAuthorizationFingerprint } from '@shared/session-authorization'
 import { requiredOpaqueId } from './read-models/ids'
 import { formData, formDefinition } from './read-models/form'
@@ -373,6 +374,9 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
   }
 
   async listWorkOrders(query: WorkOrderListQuery) {
+    try { workOrderCategoryStatusFilter(query.category) } catch (error) {
+      return readFailure<ReadPage<WorkOrderSummary>>(error)
+    }
     const scopeAtStart = this.synchronizeReadScope()
     const productionReadOnly = this.isProductionReadOnly()
     if (productionReadOnly && (!scopeAtStart || !this.workOrderScopeResolver)) {
@@ -387,6 +391,8 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
           path: 'basic/serviceAppointment/query',
           body: (() => {
             const body: Record<string, ApiRequestValue> = { page: query.page, rows: query.pageSize }
+            const statusFilter = workOrderCategoryStatusFilter(query.category)
+            if (statusFilter) body['in:status|array#and'] = statusFilter
             addSearchCriteria(body, query.searchText)
             return body
           })(),
@@ -402,11 +408,16 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
     }
 
     try {
-      const scope = await this.workOrderScopeResolver.resolve()
+      const roleScope = await this.workOrderScopeResolver.resolve()
+      const statusFilter = workOrderCategoryStatusFilter(query.category, roleScope.statusFilter)
+      const scope = { ...roleScope, statusFilter: statusFilter ?? undefined }
       if (productionReadOnly && this.synchronizeReadScope() !== scopeAtStart) {
         return adapterFailure<ReadPage<WorkOrderSummary>>(
           'authorization_denied', 'Production Work Order list authorization changed before query',
         )
+      }
+      if (statusFilter === null) {
+        return succeeded<ReadPage<WorkOrderSummary>>({ items: [], page: query.page, pageSize: query.pageSize, totalCount: 0 })
       }
       const result = await this.read<ReadPage<WorkOrderSummary>>(
         buildWorkOrderListRequest(query, scope),

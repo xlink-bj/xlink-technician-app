@@ -12,6 +12,7 @@ import {
   type ApiReadTransport,
 } from './technician-api'
 import { isMockOwnedRead, tryMockRead, type MockReadActor } from './mock'
+import { assertSuccessfulReadResponse } from './read-response-failure'
 
 export type UniApiRequestExecutor = (options: UniNamespace.RequestOptions) => unknown
 
@@ -290,6 +291,7 @@ export function createUniApiReadTransport(options: UniApiReadTransportOptions): 
         verifyChildWorkflowReadScope()
         verifyRepeatReadScope()
         verifyOrderReadScope()
+        assertSuccessfulReadResponse(mockResponse)
         return mockResponse
       }
       if (isMockOwnedRead(input.path, input.body ?? input.query ?? {})) {
@@ -336,6 +338,7 @@ export function createUniApiReadTransport(options: UniApiReadTransportOptions): 
         )
       }
 
+      assertSuccessfulReadResponse(response.data)
       return response.data
     },
   }

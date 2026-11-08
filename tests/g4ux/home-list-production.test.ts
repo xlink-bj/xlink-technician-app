@@ -61,7 +61,7 @@ describe('G4-UX Phase B2 Home', () => {
 })
 
 describe('G4-UX Work Order List card', () => {
-  it('uses production Chinese copy and preserves the single semantic list', () => {
+  it('uses production Chinese copy and preserves role-scoped R2 classifications', () => {
     expect(emptyStateSource).toContain('当前暂无工单')
     expect(emptyStateSource).toContain('当前角色暂时没有可处理的工单，可稍后刷新再试。')
     expect(emptyStateSource).toContain('class="empty-state-card"')
@@ -89,7 +89,11 @@ describe('G4-UX Work Order List card', () => {
     // The loaded-item indicator represents the current returned page only;
     // it must never imply a backend total, SLA metric or fabricated counter.
     expect(listTemplate).toContain('已加载 {{ workOrders.items.length }} 条')
-    expect(listTemplate.replace(/list-loaded-count/g, '')).not.toMatch(/\b(tabs?|counts?|filters?|sort(?:ing)?)\b/i)
+    // User-confirmed R2 categories replace the earlier no-tabs decision.
+    // This does not authorize fabricated totals, new sorting or extra filters.
+    expect(listTemplate).toContain('role="tablist"')
+    expect(listTemplate).toContain('v-for="item in workOrderCategories"')
+    expect(listTemplate.replace(/list-loaded-count/g, '')).not.toMatch(/\b(counts?|filters?|sort(?:ing)?)\b/i)
     expect(listTemplate).not.toContain('工作范围')
     expect(listTemplate).not.toContain('当前可见工单</text>')
     expect(listTemplate).toContain('appearance="search-empty"')
