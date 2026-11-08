@@ -83,6 +83,46 @@ describe('C3-C media queue recovery and user-directed retry', () => {
     expect(q.retry).not.toHaveBeenCalled()
   })
 
+  it('reconciles an interrupted uploading checkpoint without retrying or binding a ref', async () => {
+    const interrupted = mediaTask('uploading', 'interrupted-upload')
+    const unknown = mediaTask('failed_retryable', 'interrupted-upload', {
+      lastError: createOperationError('network_retryable', 'outcome unknown', { code: 'ambiguous_upload' }),
+    })
+    const q = queue([interrupted])
+    q.process = vi.fn(async (): Promise<OperationSnapshot<MediaUploadTask>> => ({
+      state: 'failed_retryable', data: unknown, error: unknown.lastError,
+    }))
+    const onTask = vi.fn(), onUploaded = vi.fn()
+    expect(await restoreActionMediaQueue({
+      queue: q, descriptor, getForm: () => form, stillCurrent: () => true,
+      onTask, onUploaded, onReadFailure: vi.fn(),
+    })).toBe(false)
+    expect(q.process).toHaveBeenCalledTimes(1)
+    expect(q.process).toHaveBeenCalledWith(interrupted.taskId)
+    expect(q.retry).not.toHaveBeenCalled()
+    expect(onTask).toHaveBeenCalledTimes(1)
+    expect(onTask).toHaveBeenCalledWith(unknown)
+    expect(onUploaded).not.toHaveBeenCalled()
+  })
+
+  it('does not apply interrupted-upload reconciliation after scope revocation', async () => {
+    const q = queue([mediaTask('uploading', 'late-upload')])
+    let current = true
+    q.process = vi.fn(async () => {
+      current = false
+      return succeeded(mediaTask('failed_retryable', 'late-upload'))
+    })
+    const onTask = vi.fn(), onUploaded = vi.fn()
+    expect(await restoreActionMediaQueue({
+      queue: q, descriptor, getForm: () => form, stillCurrent: () => current,
+      onTask, onUploaded, onReadFailure: vi.fn(),
+    })).toBe(false)
+    expect(q.process).toHaveBeenCalledTimes(1)
+    expect(q.retry).not.toHaveBeenCalled()
+    expect(onTask).not.toHaveBeenCalled()
+    expect(onUploaded).not.toHaveBeenCalled()
+  })
+
   it('does not apply stale queue reads after role or task change', async () => {
     let resolve!: (v: OperationSnapshot<readonly MediaUploadTask[]>) => void
     const gate = new Promise<OperationSnapshot<readonly MediaUploadTask[]>>(yes => { resolve = yes })

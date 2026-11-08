@@ -51,17 +51,22 @@ describe('C3-A Action Workspace pure media read model', () => {
     const locked = { ...photoField, runtime: { ...photoField.runtime, readOnly: true } }
     expect(isDynamicMediaPickerAllowed({ field: locked, lifecycle: 'available', businessResult: 'not_started' })).toBe(false)
   })
-  it('prevents ambiguous postprocess retry while preserving safe retries', () => {
+  it.each(['ambiguous_postprocess', 'ambiguous_upload'])('prevents %s retry while preserving safe retries', (code) => {
     expect(isDynamicMediaRetryAvailable([])).toBe(false)
     expect(isDynamicMediaRetryAvailable([task('source_uploaded')])).toBe(true)
-    expect(isDynamicMediaRetryAvailable([task('failed_retryable', 'ambiguous_postprocess')])).toBe(false)
+    expect(isDynamicMediaRetryAvailable([task('failed_retryable', code)])).toBe(false)
     expect(isDynamicMediaRetryAvailable([task('failed_retryable', 'network')])).toBe(true)
   })
-  it('keeps survey hint precedence and ambiguity fail-closed copy', () => {
+  it.each(['ambiguous_postprocess', 'ambiguous_upload', 'postprocess_not_dispatched'])(
+    'keeps retry projection aligned with dispatch for a contradictory source checkpoint: %s', (code) => {
+      expect(isDynamicMediaRetryAvailable([task('source_uploaded', code)])).toBe(false)
+    },
+  )
+  it.each(['ambiguous_postprocess', 'ambiguous_upload'])('keeps survey hint precedence and %s fail-closed copy', (code) => {
     const hint = (state: 'failed_retryable' | 'uploaded' | 'queued', tasks: readonly MediaUploadTask[] = [], uploadedCount = 0) =>
       dynamicMediaDisplayHint({field: photoField, formPurpose: 'survey', taskState: state, tasks, uploadedCount})
     expect(hint('queued')).toBe('本地已保存，等待上传')
-    expect(hint('failed_retryable', [task('failed_retryable', 'ambiguous_postprocess')]))
+    expect(hint('failed_retryable', [task('failed_retryable', code)]))
       .toBe('处理结果待核查，请勿重复提交')
     expect(hint('failed_retryable', [task('failed_retryable', 'network')]))
       .toBe('上传失败，可点击重试')

@@ -3,6 +3,7 @@ import type { ActionBusinessResult, ActionLifecycle } from '@runtimes/action'
 import type { MediaUploadTask } from '@shared/types'
 import type { DynamicActionField } from './dynamic-form-action'
 import { surveyMediaDescriptorFor } from './survey-media'
+import { resumableActionMediaTasks } from './action-workspace-media-queue'
 
 /** Pure view projections. No queue, persistence, native API or role mutation. */
 const MEDIA_STATE_PRIORITY = [
@@ -35,8 +36,7 @@ export function isDynamicMediaPickerAllowed(input: {
 }
 
 export function isDynamicMediaRetryAvailable(tasks: readonly MediaUploadTask[]): boolean {
-  return tasks.some(task => task.state === 'source_uploaded'
-    || (task.state === 'failed_retryable' && task.lastError?.code !== 'ambiguous_postprocess'))
+  return resumableActionMediaTasks(tasks).length > 0
 }
 
 export function dynamicMediaDisplayHint(input: {
@@ -57,8 +57,9 @@ export function dynamicMediaDisplayHint(input: {
   if (taskState === 'preprocessing' || taskState === 'ready_to_upload') return '正在准备上传…'
   if (taskState === 'uploading') return '正在上传…'
   if (taskState === 'source_uploaded' || taskState === 'postprocessing') return '正在生成水印照片…'
-  const hasAmbiguousPostprocess = input.tasks.some(task => task.lastError?.code === 'ambiguous_postprocess')
-  if (taskState === 'failed_retryable' && hasAmbiguousPostprocess) return '处理结果待核查，请勿重复提交'
+  const hasAmbiguousResult = input.tasks.some(task => task.lastError?.code === 'ambiguous_postprocess'
+    || task.lastError?.code === 'ambiguous_upload')
+  if (taskState === 'failed_retryable' && hasAmbiguousResult) return '处理结果待核查，请勿重复提交'
   if (taskState === 'failed_retryable') return '上传失败，可点击重试'
   if (taskState === 'failed_terminal') return '上传失败，请重新选择'
   if (taskState === 'uploaded' || input.uploadedCount > 0) return '已上传'

@@ -38,9 +38,9 @@ export async function restoreActionMediaQueue(input: {
   for (const listedTask of listed.data.filter(task =>
     mediaTaskMatchesDynamicForm(task, input.descriptor, currentForm))) {
     if (!input.stillCurrent()) return false
-    // Existing read-only recovery behavior: resume only postprocessing,
-    // never re-upload a possibly dispatched source or unknown watermark.
-    const task = listedTask.state === 'postprocessing'
+    // The runtime reconciles dispatched checkpoints as ambiguous; process
+    // never replays their upload/postprocess. Other states stay read-only.
+    const task = listedTask.state === 'postprocessing' || listedTask.state === 'uploading'
       ? (await input.queue.process(listedTask.taskId)).data ?? listedTask
       : listedTask
     if (!input.stillCurrent()) return false

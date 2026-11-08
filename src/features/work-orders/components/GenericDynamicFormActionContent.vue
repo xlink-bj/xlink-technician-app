@@ -465,7 +465,8 @@ function mediaMaxFor(field: RenderField): number | undefined {
 }
 
 function hasAmbiguousMedia(fieldId: string): boolean {
-  return (workspace.mediaTasksByField[fieldId] ?? []).some((task) => task.lastError?.code === 'ambiguous_postprocess')
+  return (workspace.mediaTasksByField[fieldId] ?? []).some((task) =>
+    task.lastError?.code === 'ambiguous_postprocess' || task.lastError?.code === 'ambiguous_upload')
 }
 
 function hasPendingMediaTask(fieldId: string): boolean {
