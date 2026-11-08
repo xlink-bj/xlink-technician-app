@@ -61,3 +61,15 @@ Owner 随后明确批准：当前技师角色可见工单、已核对当前节�
 [两页脱敏回执](../../contracts/production/technician-role-readonly-20261105/current-formdef-two-pages.json)记录 50 + 9 条字段配置。两页采集共 67 个请求，其中 1 次登录、13 次 role tree、13 次工单列表、38 次详情和 2 次字段读取，业务变更与越界请求均为 0。采集内字段归属一致。选中工单的列表位置由上次第 36 条变为本次第 38 条，跨次身份无法从脱敏回执核实。
 
 本次当前节点类型为 repeat，表单用途未知。F04 新增一个完整的字段配置样本。2 条未知字段类型、6 条存在未保留配置键的字段、3 条带 provider 引用的字段仍需对应证据。F09 的 Survey 归属及整体 R1/Mock 等价验收仍待核验。
+
+## 当前覆盖层与合成结构回归（2026-11-08）
+
+应用起点 `9d7789c26220e960d4ec439d78fd4c75cc176f94`，R1 来源 SHA 仍为权威清单中的 `xlink-app@6c0a97b` / `xlink-cloud-backend@5fc008d`。只补现有证据、测试和映射，不修改 App/后端行为，不发新生产请求。
+
+- 历史 `coverage-f01-f21.json` 原样保留。`contracts/r1-mock-current-evidence.json` 是唯一当前覆盖层，本轮仅覆盖 F04；校验器核对已保存回执 SHA、合成结构与当前声明，防止旧“未执行”继续覆盖后续证据。其他域仍沿用各自历史观察和限制，所有 liveParity 维持 NOT_VERIFIED。
+- `scripts/lib/r1-current-formdef-synthetic.mjs` 从真实留存结构构造合成 fixture。`tests/engineering/r1-current-formdef-structure.test.ts` 经实际 field mapper 验证 59 行/56 value key、24 file 字段、原始 required/multiple/showList 类型与条件引用；检验缺页、重 ID、类型误转、伪造 provider/用途、越界值、错误升级均不能通过证据门禁。不是将未知控件替换为自造控件，也不阻止已支持的 R1 功能继续集成。
+- F04 限制除了 2 未知类型、6 配置缺项、3 provider，还包括 25 行原机器键未留存、operationType 原值未留存。合成别名不能反推原 wire 的值或身份；同次行身份完整不等于跨次身份可证。
+- M06 browserTests 补入已有 `m1-r1-contract-preview.spec.ts`（精确匹配及刷新）与 `a-stage-p1-acceptance.spec.ts`（空合同待确认），保留原伪造 Order 拒绝用例。添加路径只表示映射已闭合，不表示本轮重跑 H5。
+- 新 `r1-contract-mock-anomalies.test.ts` 串联真实 adapter/store，覆盖空/精确/外工单关联、contractId 缺匹配、缺 rows 清卡、跨订单及身份变化迟到响应；缺失/剩余/矛盾 total 仅维持 bounded_unverified。未修改当前 adapter 对矛盾 total 的行为，问题登记在权威清单第 12 节。
+
+本轮聚焦测试和全映射执行结果以交付回执为准；映射校验仍不等于测试执行，单测仍不等于浏览器/线上验收。M08 的真实 App 规模包仍另行推进。

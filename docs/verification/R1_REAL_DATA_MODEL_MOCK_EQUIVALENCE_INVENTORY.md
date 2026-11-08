@@ -26,7 +26,7 @@
 | F01 登录、用户、角色、菜单 | `index/phoneLogin.do`，`function/queryTreeByRoleId` 等已获准读取；不通过切角色扩权 | `sessionRef`（运行时保密）、`user._id`、`currentRole._id`、`tenantId`、可见功能；`roleVersion` 可不存在；会话身份更换失效缓存 | `SOURCE` + 角色只读；不可把 Mock 登录当真实认证；`function/changeRole` 非纯读，禁调 |
 | F02 工单列表 | `basic/serviceAppointment/query`；主列表另有 SANode 视角，不与另一 `WorkOrder` 页面混用 | `ServiceAppointment._id`、可见状态/任务、当前角色可见性、分页 `page/rows/total` | `SOURCE` + `PROD_READ` 121 行；完整只对当前角色快照成立 |
 | F03 工单详情 / 当前 Workflow | `basic/serviceAppointment/queryById/{列表内_id}`，需有合法角色列表来源 | `_id`、`serviceType`、`exts.sourceType`（含缺失/空值区别）、`workflowId`、`currentNode`、运行节点 `_id`、`formDefinitionId`、`handlerIds`、节点 `type/category/state`；工单/节点同源 | `SOURCE` + 有界只读；前端 handler 的 `userId/roleId/orgId+roleId` 不等于服务器授权 |
-| F04 动态表单定义 | 当前节点的 FormDef/Ext、`biz/extField/query` 或对应 FormDef 字段路径 | `formDefId/extId/colName`、ExtField `name/nameDisp/type/required/multiple/valueOption/frontEndConfig/showList/state`；条件可见、必填、级联关系 | `SOURCE`；具体活动节点字段以配置为准，禁止用历史字段列表充当生产活动 schema |
+| F04 动态表单定义 | 当前节点的 FormDef/Ext、`biz/extField/query` 或对应 FormDef 字段路径 | `formDefId/extId/colName`、ExtField `name/nameDisp/type/required/multiple/valueOption/frontEndConfig/showList/state`；条件可见、必填、级联关系 | `SOURCE` + 单个当前 repeat 的 59 字段有界结构补证；用途 UNKNOWN，2 未知类型、6 字段配置缺项、25 原键未留存、3 provider 未读；见第 12 节，不等于完整当前模型 |
 | F05 字典与字段选项 | `i/code/selectCode.do`、`i/code/selectMultistageCode` 和已证据 provider | Code ID/值/标签、父子层级、排序/禁用状态、ExtField 字段关联、选项来源/过滤参数 | `SOURCE` + 部分 `PROD_READ`；缺少选项不代表枚举为空 |
 | F06 普通 FormData | 已授权 `biz/extForm/query/{formDefId}` 或节点已带记录；按明确 Data ID 读取 | `_id`、`formDefId`、`sid`、`smodule`、`workflowId`、`nodeId`、`state`、`exts`/值、保存回执；只读取属于当前节点的记录 | `SOURCE`，写入仅 `DEV_MOCK`；`saveOnly` 不能伪造 Workflow Complete |
 | F07 `forms/repeat` 记录 | `biz/extForm/query/{formDefId}` 按 `is:workflowId|string#and`、`ne:state|integer#and=-1`、`createTime desc`、`page/rows` | 每条 `_id`、`workflowId`、`formDefId`、`state`；`forms` 的节点 `exts.formList[]` 与 `repeat` 的独立记录集合不能混作一表 | `SOURCE` + `DEV_MOCK`；缺内嵌列表为 UNKNOWN，不等于 0 条；见 [forms/repeat 台账](R1_FOUR_PHASE_FUNCTIONAL_LEDGER.md) |
@@ -148,3 +148,22 @@
 [R1 / Mock 映射台账](R1_MOCK_MAPPING_CLOSURE_20261105.md)和[机器可读映射](../../contracts/r1-mock-mapping.json)连接 F01–F21 / M01–M08 的实际测试与缺口。`pnpm verify:r1-mock-mapping` 执行关联单元测试并输出逐域实际结果；不将索引合法、跳过或源码映射算作业务等价通过。新增两组目录量级的真实读取适配器分页测试；M08 的默认 App 大规模 fixture/套餐组合仍 PARTIAL。当前完整生产 schema/额外配置/未知 Order 行等缺口不因全域索引建立而消失，整体全量等价仍 PARTIAL，#201 HOLD 不变。
 
 Owner 新增批准当前合法节点 extId 字段有界读取后，已执行一次 page=1/rows=50 无 `_all` 的字段采集；62 总请求、0 业务变更。返回页未通过完整合法页校验即停止，未重试/扩页；当前 schema 仍未取得，不升级 F04/F09。详情与停止回执见全域映射台账末节；此前未执行的证据保留原时间点。
+
+## 12. 当前证据对照更新（2026-11-08，R1 基线不变）
+
+本轮应用起点为 `9d7789c26220e960d4ec439d78fd4c75cc176f94`。交付仍以第 1 节固定 R1 前后端和既有功能为基线，不修改后端语义，不将历史后台问题治理作为前端集成的前置条件。本轮不新增 Production/Beta 请求，亦不访问尚未确认的 Code 请求。
+
+- F04：第 10 节“字段未执行”是早期采集状态。后续[50+9 字段回执](../../contracts/production/technician-role-readonly-20261105/current-formdef-two-pages.json)已证明同次选中 FormDef 的字段结构完整；[当前覆盖层](../../contracts/r1-mock-current-evidence.json)据此更新 F04，原历史 coverage 文件、原请求失败和统计不改写。不能把旧 15/21 或新字段样本当作全量等价率。
+- 新[59 字段合成结构](../../contracts/synthetic/r1-current-formdef-59-structure.json)由已保存的脱敏回执确定性生成，保持字段行身份、重复 value key、required/multiple/showList 原类型、已留存条件引用。实际字段 mapper 回归保留全部 59 行，不借字段名猜 Survey。它不是原始生产 wire 或默认 App 的完整可编辑表单，不填造缺失 provider、未知类型或配置。
+- 59 行有 56 个不同 value key；其中 25 行原机器键未留存，使用采集内合成键。2 未知类型、6 行共 7 个配置缺项、3 provider 引用和全部未留存 operationType 分别记录；“字段页完整”不升级成“全部规则已验证”。该门禁仅约束证据声明，不给已有 R1 前端渲染/保存增加新的前置审批或后端修复要求。
+- M06：映射补入现有匹配合同/刷新与空合同 H5；新增真实 adapter → store 异常矩阵覆盖外订单/外工单、contractId 缺匹配、缺 rows、订单切换、session/role/membership 变化和迟到响应。合成合同状态只用已留存的 `contractStatus=10`，不声称完整签约枚举或资格已验证。
+- M08、生产 FormData 写权限、真实上传/消息/PDF/签约及未捕获模型继续保持各自未验收状态，不能因本轮索引/单元测试通过而升级。Mock 作为已支持范围的主要开发回归环境，关键持久化仍由获准的隔离本地联调单独验证。
+
+### 历史及现有问题记录
+
+| 记录 | 事实与证据 | 本轮处理 / 后续 |
+| --- | --- | --- |
+| F04 证据台账滞后 | 历史 coverage 为“未读字段”，后续已有 59 行结构；前述两类证据时间点不同 | 新建当前覆盖层，保留旧捕获；补投影、计数、未知项及防误升级回归 |
+| 当前 FormDef 资料缺项 | 未留存类型/配置/机器键/provider/operationType，不等于确认了后台缺陷 | 单列 UNKNOWN；需要后续针对缺项的明确证据，不能伪造填齐 |
+| M06 小页 total 不完整/矛盾 | 现 adapter 不拒绝矛盾 total，返回 `bounded_unverified`；不自行翻页，不保证枚举完整 | 以当前 R1 兼容行为做回归，不改后端；严格 total 一致性另列后续，不冒称本轮已修复 |
+| 真实写入与模拟边界 | Mock ACK/状态机不能证明线上权限、事务或外部副作用 | 保留独立本地集成及 Production/Beta #201 HOLD，不扩大本轮范围 |

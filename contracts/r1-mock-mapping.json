@@ -39,13 +39,14 @@
     {
       "id": "F04",
       "domain": "动态 FormDef 字段",
-      "sourceEvidence": "docs/verification/G4E_SURVEY_DOMAIN_TRUTH.md",
+      "sourceEvidence": "docs/verification/R1_MOCK_MAPPING_CLOSURE_20261105.md",
       "unitTests": [
         "tests/engineering/r1-stage1-forms-options.test.ts",
         "tests/engineering/r1-model-contract-parity.test.ts",
-        "tests/g4f/r1-current-formdef-read.test.ts"
+        "tests/g4f/r1-current-formdef-read.test.ts",
+        "tests/engineering/r1-current-formdef-structure.test.ts"
       ],
-      "unresolved": "节点 FormDef 引用可证；Production extId 字段请求不在现有白名单，未执行",
+      "unresolved": "当前 repeat 已有同次采集完整 59 字段结构；用途 UNKNOWN，2 未知类型、6 字段配置缺项、25 字段原键未保留、3 provider 未读，不能推导完整规则、Survey 或写权限",
       "liveParity": "NOT_VERIFIED"
     },
     {
@@ -219,7 +220,8 @@
       "sourceEvidence": "docs/verification/R1_ORDER_CONTRACT_READ_RECONCILIATION_20261104.md",
       "unitTests": [
         "tests/g4f/r1-contract-read-boundary.test.ts",
-        "tests/g4f/r1-order-contract-read-guard.test.ts"
+        "tests/g4f/r1-order-contract-read-guard.test.ts",
+        "tests/engineering/r1-contract-mock-anomalies.test.ts"
       ],
       "unresolved": "一次 page1 rows3 固定 R1 OR 过滤；精确一条关联，不是全量状态与完整性",
       "liveParity": "NOT_VERIFIED"
@@ -230,7 +232,8 @@
       "sourceEvidence": "docs/verification/M1_I6_CANONICAL_TECHNICIAN_CONTRACT_QUERY.md",
       "unitTests": [
         "tests/g4f/signing-order-read-policy.test.ts",
-        "tests/g4f/r1-signing-action-parity.test.ts"
+        "tests/g4f/r1-signing-action-parity.test.ts",
+        "tests/engineering/r1-contract-mock-anomalies.test.ts"
       ],
       "unresolved": "只读状态可观察；服务器签约资格与写权限未实测，#201 HOLD",
       "liveParity": "NOT_VERIFIED"
@@ -315,7 +318,9 @@
         "F21"
       ],
       "browserTests": [
-        "tests/h5-main-mock/m1-signing-official-order-read.spec.ts"
+        "tests/h5-main-mock/m1-signing-official-order-read.spec.ts",
+        "tests/h5-main-mock/m1-r1-contract-preview.spec.ts",
+        "tests/h5-main-mock/a-stage-p1-acceptance.spec.ts"
       ],
       "status": "EXECUTABLE_SUPPORTED_SLICE_NOT_FULL_EQUIVALENCE"
     },
@@ -347,5 +352,6 @@
       "browserTests": [],
       "status": "PARTIAL_SCALE_EQUIVALENCE_NOT_PROVEN"
     }
-  ]
+  ],
+  "currentEvidence": "contracts/r1-mock-current-evidence.json"
 }

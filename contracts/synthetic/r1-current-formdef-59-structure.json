@@ -1,0 +1,1343 @@
+{
+  "version": 1,
+  "syntheticOnly": true,
+  "notForProductionRequests": true,
+  "classification": "COMPLETE_FIELD_STRUCTURE_NOT_COMPLETE_MODEL",
+  "nodeType": "repeat",
+  "formPurpose": "UNKNOWN",
+  "definitionId": "synthetic-current-definition",
+  "sourcePageLengths": [
+    50,
+    9
+  ],
+  "total": 59,
+  "rows": [
+    {
+      "evidenceFieldId": "field-001",
+      "machineKeyRetained": true,
+      "unknownType": false,
+      "unretainedConfigKeyCount": 0,
+      "operationTypeKnown": false,
+      "wire": {
+        "_id": "synthetic-current-field-001",
+        "extId": "synthetic-current-definition",
+        "name": "surveyNum",
+        "nameDisp": "合成 field-001",
+        "type": "text",
+        "state": 1,
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "5"
+        ]
+      }
+    },
+    {
+      "evidenceFieldId": "field-002",
+      "machineKeyRetained": true,
+      "unknownType": false,
+      "unretainedConfigKeyCount": 0,
+      "operationTypeKnown": false,
+      "wire": {
+        "_id": "synthetic-current-field-002",
+        "extId": "synthetic-current-definition",
+        "name": "serviceAppointmentNum",
+        "nameDisp": "合成 field-002",
+        "type": "text",
+        "state": 1,
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "5"
+        ]
+      }
+    },
+    {
+      "evidenceFieldId": "field-003",
+      "machineKeyRetained": true,
+      "unknownType": false,
+      "unretainedConfigKeyCount": 0,
+      "operationTypeKnown": false,
+      "wire": {
+        "_id": "synthetic-current-field-003",
+        "extId": "synthetic-current-definition",
+        "name": "name",
+        "nameDisp": "合成 field-003",
+        "type": "text",
+        "state": 1,
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "5"
+        ]
+      }
+    },
+    {
+      "evidenceFieldId": "field-004",
+      "machineKeyRetained": true,
+      "unknownType": true,
+      "unretainedConfigKeyCount": 0,
+      "operationTypeKnown": false,
+      "wire": {
+        "_id": "synthetic-current-field-004",
+        "extId": "synthetic-current-definition",
+        "name": "surveyPDFUrl",
+        "nameDisp": "合成 field-004",
+        "type": "UNKNOWN",
+        "state": 1,
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2"
+        ]
+      }
+    },
+    {
+      "evidenceFieldId": "field-005",
+      "machineKeyRetained": true,
+      "unknownType": false,
+      "unretainedConfigKeyCount": 0,
+      "operationTypeKnown": false,
+      "wire": {
+        "_id": "synthetic-current-field-005",
+        "extId": "synthetic-current-definition",
+        "name": "phone",
+        "nameDisp": "合成 field-005",
+        "type": "phone",
+        "state": 1,
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "5"
+        ]
+      }
+    },
+    {
+      "evidenceFieldId": "field-006",
+      "machineKeyRetained": true,
+      "unknownType": false,
+      "unretainedConfigKeyCount": 0,
+      "operationTypeKnown": false,
+      "wire": {
+        "_id": "synthetic-current-field-006",
+        "extId": "synthetic-current-definition",
+        "name": "area",
+        "nameDisp": "合成 field-006",
+        "type": "area",
+        "state": 1,
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "2"
+        ]
+      }
+    },
+    {
+      "evidenceFieldId": "field-007",
+      "machineKeyRetained": true,
+      "unknownType": false,
+      "unretainedConfigKeyCount": 0,
+      "operationTypeKnown": false,
+      "wire": {
+        "_id": "synthetic-current-field-007",
+        "extId": "synthetic-current-definition",
+        "name": "province",
+        "nameDisp": "合成 field-007",
+        "type": "select",
+        "state": 1,
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "5"
+        ],
+        "valueOption": "synthetic-code-provider-001"
+      }
+    },
+    {
+      "evidenceFieldId": "field-008",
+      "machineKeyRetained": true,
+      "unknownType": false,
+      "unretainedConfigKeyCount": 0,
+      "operationTypeKnown": false,
+      "wire": {
+        "_id": "synthetic-current-field-008",
+        "extId": "synthetic-current-definition",
+        "name": "province",
+        "nameDisp": "合成 field-008",
+        "type": "text",
+        "state": 1,
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1"
+        ]
+      }
+    },
+    {
+      "evidenceFieldId": "field-009",
+      "machineKeyRetained": true,
+      "unknownType": false,
+      "unretainedConfigKeyCount": 0,
+      "operationTypeKnown": false,
+      "wire": {
+        "_id": "synthetic-current-field-009",
+        "extId": "synthetic-current-definition",
+        "name": "city",
+        "nameDisp": "合成 field-009",
+        "type": "text",
+        "state": 1,
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1"
+        ]
+      }
+    },
+    {
+      "evidenceFieldId": "field-010",
+      "machineKeyRetained": true,
+      "unknownType": false,
+      "unretainedConfigKeyCount": 0,
+      "operationTypeKnown": false,
+      "wire": {
+        "_id": "synthetic-current-field-010",
+        "extId": "synthetic-current-definition",
+        "name": "district",
+        "nameDisp": "合成 field-010",
+        "type": "text",
+        "state": 1,
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1"
+        ]
+      }
+    },
+    {
+      "evidenceFieldId": "field-011",
+      "machineKeyRetained": true,
+      "unknownType": false,
+      "unretainedConfigKeyCount": 0,
+      "operationTypeKnown": false,
+      "wire": {
+        "_id": "synthetic-current-field-011",
+        "extId": "synthetic-current-definition",
+        "name": "address",
+        "nameDisp": "合成 field-011",
+        "type": "text",
+        "state": 1,
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "5"
+        ]
+      }
+    },
+    {
+      "evidenceFieldId": "field-012",
+      "machineKeyRetained": true,
+      "unknownType": false,
+      "unretainedConfigKeyCount": 0,
+      "operationTypeKnown": false,
+      "wire": {
+        "_id": "synthetic-current-field-012",
+        "extId": "synthetic-current-definition",
+        "name": "orgId",
+        "nameDisp": "合成 field-012",
+        "type": "text",
+        "state": 1,
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "5"
+        ]
+      }
+    },
+    {
+      "evidenceFieldId": "field-013",
+      "machineKeyRetained": true,
+      "unknownType": false,
+      "unretainedConfigKeyCount": 0,
+      "operationTypeKnown": false,
+      "wire": {
+        "_id": "synthetic-current-field-013",
+        "extId": "synthetic-current-definition",
+        "name": "orgName",
+        "nameDisp": "合成 field-013",
+        "type": "text",
+        "state": 1,
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1"
+        ]
+      }
+    },
+    {
+      "evidenceFieldId": "field-014",
+      "machineKeyRetained": true,
+      "unknownType": false,
+      "unretainedConfigKeyCount": 0,
+      "operationTypeKnown": false,
+      "wire": {
+        "_id": "synthetic-current-field-014",
+        "extId": "synthetic-current-definition",
+        "name": "supervisorName",
+        "nameDisp": "合成 field-014",
+        "type": "text",
+        "state": 1,
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "5"
+        ]
+      }
+    },
+    {
+      "evidenceFieldId": "field-015",
+      "machineKeyRetained": true,
+      "unknownType": false,
+      "unretainedConfigKeyCount": 0,
+      "operationTypeKnown": false,
+      "wire": {
+        "_id": "synthetic-current-field-015",
+        "extId": "synthetic-current-definition",
+        "name": "supervisorPhone",
+        "nameDisp": "合成 field-015",
+        "type": "phone",
+        "state": 1,
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "5"
+        ]
+      }
+    },
+    {
+      "evidenceFieldId": "field-016",
+      "machineKeyRetained": true,
+      "unknownType": false,
+      "unretainedConfigKeyCount": 0,
+      "operationTypeKnown": false,
+      "wire": {
+        "_id": "synthetic-current-field-016",
+        "extId": "synthetic-current-definition",
+        "name": "createTime",
+        "nameDisp": "合成 field-016",
+        "type": "datetime",
+        "state": 1,
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "5",
+          "3"
+        ]
+      }
+    },
+    {
+      "evidenceFieldId": "field-017",
+      "machineKeyRetained": true,
+      "unknownType": false,
+      "unretainedConfigKeyCount": 0,
+      "operationTypeKnown": false,
+      "wire": {
+        "_id": "synthetic-current-field-017",
+        "extId": "synthetic-current-definition",
+        "name": "part",
+        "nameDisp": "合成 field-017",
+        "type": "cascade",
+        "state": 1,
+        "required": "1",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "4",
+          "5"
+        ],
+        "valueOption": "synthetic-cascade-provider-001"
+      }
+    },
+    {
+      "evidenceFieldId": "field-018",
+      "machineKeyRetained": false,
+      "unknownType": false,
+      "unretainedConfigKeyCount": 1,
+      "operationTypeKnown": false,
+      "wire": {
+        "_id": "synthetic-current-field-018",
+        "extId": "synthetic-current-definition",
+        "name": "field-key-001",
+        "nameDisp": "合成 field-018",
+        "type": "gap",
+        "state": 1,
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "2",
+          "4"
+        ]
+      }
+    },
+    {
+      "evidenceFieldId": "field-019",
+      "machineKeyRetained": true,
+      "unknownType": false,
+      "unretainedConfigKeyCount": 0,
+      "operationTypeKnown": false,
+      "wire": {
+        "_id": "synthetic-current-field-019",
+        "extId": "synthetic-current-definition",
+        "name": "squareMeter",
+        "nameDisp": "合成 field-019",
+        "type": "digit",
+        "state": 1,
+        "required": "1",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "4"
+        ]
+      }
+    },
+    {
+      "evidenceFieldId": "field-020",
+      "machineKeyRetained": true,
+      "unknownType": false,
+      "unretainedConfigKeyCount": 0,
+      "operationTypeKnown": false,
+      "wire": {
+        "_id": "synthetic-current-field-020",
+        "extId": "synthetic-current-definition",
+        "name": "gapLength",
+        "nameDisp": "合成 field-020",
+        "type": "digit",
+        "state": 1,
+        "required": "1",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "4"
+        ]
+      }
+    },
+    {
+      "evidenceFieldId": "field-021",
+      "machineKeyRetained": true,
+      "unknownType": false,
+      "unretainedConfigKeyCount": 0,
+      "operationTypeKnown": false,
+      "wire": {
+        "_id": "synthetic-current-field-021",
+        "extId": "synthetic-current-definition",
+        "name": "length",
+        "nameDisp": "合成 field-021",
+        "type": "digit",
+        "state": 1,
+        "required": "1",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "4"
+        ]
+      }
+    },
+    {
+      "evidenceFieldId": "field-022",
+      "machineKeyRetained": true,
+      "unknownType": false,
+      "unretainedConfigKeyCount": 0,
+      "operationTypeKnown": false,
+      "wire": {
+        "_id": "synthetic-current-field-022",
+        "extId": "synthetic-current-definition",
+        "name": "length",
+        "nameDisp": "合成 field-022",
+        "type": "digit",
+        "state": 1,
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "2",
+          "4"
+        ]
+      }
+    },
+    {
+      "evidenceFieldId": "field-023",
+      "machineKeyRetained": true,
+      "unknownType": false,
+      "unretainedConfigKeyCount": 0,
+      "operationTypeKnown": false,
+      "wire": {
+        "_id": "synthetic-current-field-023",
+        "extId": "synthetic-current-definition",
+        "name": "width",
+        "nameDisp": "合成 field-023",
+        "type": "digit",
+        "state": 1,
+        "required": "1",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "4"
+        ]
+      }
+    },
+    {
+      "evidenceFieldId": "field-024",
+      "machineKeyRetained": true,
+      "unknownType": false,
+      "unretainedConfigKeyCount": 0,
+      "operationTypeKnown": false,
+      "wire": {
+        "_id": "synthetic-current-field-024",
+        "extId": "synthetic-current-definition",
+        "name": "width",
+        "nameDisp": "合成 field-024",
+        "type": "digit",
+        "state": 1,
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "2",
+          "4"
+        ]
+      }
+    },
+    {
+      "evidenceFieldId": "field-025",
+      "machineKeyRetained": true,
+      "unknownType": false,
+      "unretainedConfigKeyCount": 0,
+      "operationTypeKnown": false,
+      "wire": {
+        "_id": "synthetic-current-field-025",
+        "extId": "synthetic-current-definition",
+        "name": "perimeter",
+        "nameDisp": "合成 field-025",
+        "type": "digit",
+        "state": 1,
+        "required": "1",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "4"
+        ]
+      }
+    },
+    {
+      "evidenceFieldId": "field-026",
+      "machineKeyRetained": true,
+      "unknownType": false,
+      "unretainedConfigKeyCount": 0,
+      "operationTypeKnown": false,
+      "wire": {
+        "_id": "synthetic-current-field-026",
+        "extId": "synthetic-current-definition",
+        "name": "planeArea",
+        "nameDisp": "合成 field-026",
+        "type": "digit",
+        "state": 1,
+        "required": "1",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "4"
+        ]
+      }
+    },
+    {
+      "evidenceFieldId": "field-027",
+      "machineKeyRetained": true,
+      "unknownType": false,
+      "unretainedConfigKeyCount": 0,
+      "operationTypeKnown": false,
+      "wire": {
+        "_id": "synthetic-current-field-027",
+        "extId": "synthetic-current-definition",
+        "name": "height",
+        "nameDisp": "合成 field-027",
+        "type": "digit",
+        "state": 1,
+        "required": "1",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "4"
+        ]
+      }
+    },
+    {
+      "evidenceFieldId": "field-028",
+      "machineKeyRetained": false,
+      "unknownType": false,
+      "unretainedConfigKeyCount": 1,
+      "operationTypeKnown": false,
+      "wire": {
+        "_id": "synthetic-current-field-028",
+        "extId": "synthetic-current-definition",
+        "name": "field-key-002",
+        "nameDisp": "合成 field-028",
+        "type": "gap",
+        "state": 1,
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "2",
+          "4"
+        ]
+      }
+    },
+    {
+      "evidenceFieldId": "field-029",
+      "machineKeyRetained": true,
+      "unknownType": false,
+      "unretainedConfigKeyCount": 2,
+      "operationTypeKnown": false,
+      "wire": {
+        "_id": "synthetic-current-field-029",
+        "extId": "synthetic-current-definition",
+        "name": "surveyDrawing",
+        "nameDisp": "合成 field-029",
+        "type": "file",
+        "state": 1,
+        "required": "1",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "4"
+        ]
+      }
+    },
+    {
+      "evidenceFieldId": "field-030",
+      "machineKeyRetained": false,
+      "unknownType": false,
+      "unretainedConfigKeyCount": 0,
+      "operationTypeKnown": false,
+      "wire": {
+        "_id": "synthetic-current-field-030",
+        "extId": "synthetic-current-definition",
+        "name": "field-key-003",
+        "nameDisp": "合成 field-030",
+        "type": "file",
+        "state": 1,
+        "required": "1",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "4"
+        ]
+      }
+    },
+    {
+      "evidenceFieldId": "field-031",
+      "machineKeyRetained": false,
+      "unknownType": false,
+      "unretainedConfigKeyCount": 0,
+      "operationTypeKnown": false,
+      "wire": {
+        "_id": "synthetic-current-field-031",
+        "extId": "synthetic-current-definition",
+        "name": "field-key-004",
+        "nameDisp": "合成 field-031",
+        "type": "file",
+        "state": 1,
+        "required": "1",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "4"
+        ]
+      }
+    },
+    {
+      "evidenceFieldId": "field-032",
+      "machineKeyRetained": false,
+      "unknownType": false,
+      "unretainedConfigKeyCount": 0,
+      "operationTypeKnown": false,
+      "wire": {
+        "_id": "synthetic-current-field-032",
+        "extId": "synthetic-current-definition",
+        "name": "field-key-005",
+        "nameDisp": "合成 field-032",
+        "type": "file",
+        "state": 1,
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "4"
+        ]
+      }
+    },
+    {
+      "evidenceFieldId": "field-033",
+      "machineKeyRetained": false,
+      "unknownType": false,
+      "unretainedConfigKeyCount": 0,
+      "operationTypeKnown": false,
+      "wire": {
+        "_id": "synthetic-current-field-033",
+        "extId": "synthetic-current-definition",
+        "name": "field-key-006",
+        "nameDisp": "合成 field-033",
+        "type": "file",
+        "state": 1,
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "4"
+        ]
+      }
+    },
+    {
+      "evidenceFieldId": "field-034",
+      "machineKeyRetained": false,
+      "unknownType": false,
+      "unretainedConfigKeyCount": 0,
+      "operationTypeKnown": false,
+      "wire": {
+        "_id": "synthetic-current-field-034",
+        "extId": "synthetic-current-definition",
+        "name": "field-key-007",
+        "nameDisp": "合成 field-034",
+        "type": "file",
+        "state": 1,
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "4"
+        ]
+      }
+    },
+    {
+      "evidenceFieldId": "field-035",
+      "machineKeyRetained": false,
+      "unknownType": false,
+      "unretainedConfigKeyCount": 0,
+      "operationTypeKnown": false,
+      "wire": {
+        "_id": "synthetic-current-field-035",
+        "extId": "synthetic-current-definition",
+        "name": "field-key-008",
+        "nameDisp": "合成 field-035",
+        "type": "file",
+        "state": 1,
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "4"
+        ]
+      }
+    },
+    {
+      "evidenceFieldId": "field-036",
+      "machineKeyRetained": false,
+      "unknownType": false,
+      "unretainedConfigKeyCount": 0,
+      "operationTypeKnown": false,
+      "wire": {
+        "_id": "synthetic-current-field-036",
+        "extId": "synthetic-current-definition",
+        "name": "field-key-009",
+        "nameDisp": "合成 field-036",
+        "type": "file",
+        "state": 1,
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "4"
+        ]
+      }
+    },
+    {
+      "evidenceFieldId": "field-037",
+      "machineKeyRetained": false,
+      "unknownType": false,
+      "unretainedConfigKeyCount": 0,
+      "operationTypeKnown": false,
+      "wire": {
+        "_id": "synthetic-current-field-037",
+        "extId": "synthetic-current-definition",
+        "name": "field-key-010",
+        "nameDisp": "合成 field-037",
+        "type": "file",
+        "state": 1,
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "4"
+        ]
+      }
+    },
+    {
+      "evidenceFieldId": "field-038",
+      "machineKeyRetained": false,
+      "unknownType": false,
+      "unretainedConfigKeyCount": 0,
+      "operationTypeKnown": false,
+      "wire": {
+        "_id": "synthetic-current-field-038",
+        "extId": "synthetic-current-definition",
+        "name": "field-key-011",
+        "nameDisp": "合成 field-038",
+        "type": "file",
+        "state": 1,
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "4"
+        ]
+      }
+    },
+    {
+      "evidenceFieldId": "field-039",
+      "machineKeyRetained": false,
+      "unknownType": false,
+      "unretainedConfigKeyCount": 0,
+      "operationTypeKnown": false,
+      "wire": {
+        "_id": "synthetic-current-field-039",
+        "extId": "synthetic-current-definition",
+        "name": "field-key-012",
+        "nameDisp": "合成 field-039",
+        "type": "file",
+        "state": 1,
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "4"
+        ]
+      }
+    },
+    {
+      "evidenceFieldId": "field-040",
+      "machineKeyRetained": false,
+      "unknownType": false,
+      "unretainedConfigKeyCount": 0,
+      "operationTypeKnown": false,
+      "wire": {
+        "_id": "synthetic-current-field-040",
+        "extId": "synthetic-current-definition",
+        "name": "field-key-013",
+        "nameDisp": "合成 field-040",
+        "type": "file",
+        "state": 1,
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "4"
+        ]
+      }
+    },
+    {
+      "evidenceFieldId": "field-041",
+      "machineKeyRetained": false,
+      "unknownType": false,
+      "unretainedConfigKeyCount": 0,
+      "operationTypeKnown": false,
+      "wire": {
+        "_id": "synthetic-current-field-041",
+        "extId": "synthetic-current-definition",
+        "name": "field-key-014",
+        "nameDisp": "合成 field-041",
+        "type": "file",
+        "state": 1,
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "4"
+        ]
+      }
+    },
+    {
+      "evidenceFieldId": "field-042",
+      "machineKeyRetained": false,
+      "unknownType": false,
+      "unretainedConfigKeyCount": 0,
+      "operationTypeKnown": false,
+      "wire": {
+        "_id": "synthetic-current-field-042",
+        "extId": "synthetic-current-definition",
+        "name": "field-key-015",
+        "nameDisp": "合成 field-042",
+        "type": "file",
+        "state": 1,
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "4"
+        ]
+      }
+    },
+    {
+      "evidenceFieldId": "field-043",
+      "machineKeyRetained": false,
+      "unknownType": false,
+      "unretainedConfigKeyCount": 0,
+      "operationTypeKnown": false,
+      "wire": {
+        "_id": "synthetic-current-field-043",
+        "extId": "synthetic-current-definition",
+        "name": "field-key-016",
+        "nameDisp": "合成 field-043",
+        "type": "file",
+        "state": 1,
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "4"
+        ]
+      }
+    },
+    {
+      "evidenceFieldId": "field-044",
+      "machineKeyRetained": false,
+      "unknownType": false,
+      "unretainedConfigKeyCount": 0,
+      "operationTypeKnown": false,
+      "wire": {
+        "_id": "synthetic-current-field-044",
+        "extId": "synthetic-current-definition",
+        "name": "field-key-017",
+        "nameDisp": "合成 field-044",
+        "type": "file",
+        "state": 1,
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "4"
+        ]
+      }
+    },
+    {
+      "evidenceFieldId": "field-045",
+      "machineKeyRetained": false,
+      "unknownType": false,
+      "unretainedConfigKeyCount": 0,
+      "operationTypeKnown": false,
+      "wire": {
+        "_id": "synthetic-current-field-045",
+        "extId": "synthetic-current-definition",
+        "name": "field-key-018",
+        "nameDisp": "合成 field-045",
+        "type": "file",
+        "state": 1,
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "4"
+        ]
+      }
+    },
+    {
+      "evidenceFieldId": "field-046",
+      "machineKeyRetained": false,
+      "unknownType": false,
+      "unretainedConfigKeyCount": 0,
+      "operationTypeKnown": false,
+      "wire": {
+        "_id": "synthetic-current-field-046",
+        "extId": "synthetic-current-definition",
+        "name": "field-key-019",
+        "nameDisp": "合成 field-046",
+        "type": "file",
+        "state": 1,
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "4"
+        ]
+      }
+    },
+    {
+      "evidenceFieldId": "field-047",
+      "machineKeyRetained": false,
+      "unknownType": false,
+      "unretainedConfigKeyCount": 0,
+      "operationTypeKnown": false,
+      "wire": {
+        "_id": "synthetic-current-field-047",
+        "extId": "synthetic-current-definition",
+        "name": "field-key-020",
+        "nameDisp": "合成 field-047",
+        "type": "file",
+        "state": 1,
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "4"
+        ]
+      }
+    },
+    {
+      "evidenceFieldId": "field-048",
+      "machineKeyRetained": false,
+      "unknownType": false,
+      "unretainedConfigKeyCount": 0,
+      "operationTypeKnown": false,
+      "wire": {
+        "_id": "synthetic-current-field-048",
+        "extId": "synthetic-current-definition",
+        "name": "field-key-021",
+        "nameDisp": "合成 field-048",
+        "type": "file",
+        "state": 1,
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "4"
+        ]
+      }
+    },
+    {
+      "evidenceFieldId": "field-049",
+      "machineKeyRetained": false,
+      "unknownType": false,
+      "unretainedConfigKeyCount": 0,
+      "operationTypeKnown": false,
+      "wire": {
+        "_id": "synthetic-current-field-049",
+        "extId": "synthetic-current-definition",
+        "name": "field-key-022",
+        "nameDisp": "合成 field-049",
+        "type": "file",
+        "state": 1,
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "4"
+        ]
+      }
+    },
+    {
+      "evidenceFieldId": "field-050",
+      "machineKeyRetained": false,
+      "unknownType": false,
+      "unretainedConfigKeyCount": 0,
+      "operationTypeKnown": false,
+      "wire": {
+        "_id": "synthetic-current-field-050",
+        "extId": "synthetic-current-definition",
+        "name": "field-key-023",
+        "nameDisp": "合成 field-050",
+        "type": "gap",
+        "state": 1,
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "2",
+          "4"
+        ]
+      }
+    },
+    {
+      "evidenceFieldId": "field-051",
+      "machineKeyRetained": true,
+      "unknownType": false,
+      "unretainedConfigKeyCount": 1,
+      "operationTypeKnown": false,
+      "wire": {
+        "_id": "synthetic-current-field-051",
+        "extId": "synthetic-current-definition",
+        "name": "infraredImageList",
+        "nameDisp": "合成 field-051",
+        "type": "file",
+        "state": 1,
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "4"
+        ]
+      }
+    },
+    {
+      "evidenceFieldId": "field-052",
+      "machineKeyRetained": false,
+      "unknownType": false,
+      "unretainedConfigKeyCount": 0,
+      "operationTypeKnown": false,
+      "wire": {
+        "_id": "synthetic-current-field-052",
+        "extId": "synthetic-current-definition",
+        "name": "field-key-024",
+        "nameDisp": "合成 field-052",
+        "type": "gap",
+        "state": 1,
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "2",
+          "4"
+        ]
+      }
+    },
+    {
+      "evidenceFieldId": "field-053",
+      "machineKeyRetained": true,
+      "unknownType": false,
+      "unretainedConfigKeyCount": 1,
+      "operationTypeKnown": false,
+      "wire": {
+        "_id": "synthetic-current-field-053",
+        "extId": "synthetic-current-definition",
+        "name": "isMoldRemoved",
+        "nameDisp": "合成 field-053",
+        "type": "radio",
+        "state": 1,
+        "required": "0",
+        "multiple": false,
+        "showList": [],
+        "valueOption": "synthetic-code-provider-002"
+      }
+    },
+    {
+      "evidenceFieldId": "field-054",
+      "machineKeyRetained": true,
+      "unknownType": false,
+      "unretainedConfigKeyCount": 0,
+      "operationTypeKnown": false,
+      "wire": {
+        "_id": "synthetic-current-field-054",
+        "extId": "synthetic-current-definition",
+        "name": "beforeMoldRemoval",
+        "nameDisp": "合成 field-054",
+        "type": "file",
+        "state": 1,
+        "required": "0",
+        "multiple": false,
+        "showList": [],
+        "frontEndConfig": {
+          "showField": "isMoldRemoved",
+          "showValue": "value-001"
+        }
+      }
+    },
+    {
+      "evidenceFieldId": "field-055",
+      "machineKeyRetained": true,
+      "unknownType": false,
+      "unretainedConfigKeyCount": 0,
+      "operationTypeKnown": false,
+      "wire": {
+        "_id": "synthetic-current-field-055",
+        "extId": "synthetic-current-definition",
+        "name": "afterMoldRemoval",
+        "nameDisp": "合成 field-055",
+        "type": "file",
+        "state": 1,
+        "required": "0",
+        "multiple": false,
+        "showList": [],
+        "frontEndConfig": {
+          "showField": "isMoldRemoved",
+          "showValue": "value-001"
+        }
+      }
+    },
+    {
+      "evidenceFieldId": "field-056",
+      "machineKeyRetained": false,
+      "unknownType": false,
+      "unretainedConfigKeyCount": 0,
+      "operationTypeKnown": false,
+      "wire": {
+        "_id": "synthetic-current-field-056",
+        "extId": "synthetic-current-definition",
+        "name": "field-key-025",
+        "nameDisp": "合成 field-056",
+        "type": "gap",
+        "state": 1,
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "2",
+          "4"
+        ]
+      }
+    },
+    {
+      "evidenceFieldId": "field-057",
+      "machineKeyRetained": true,
+      "unknownType": false,
+      "unretainedConfigKeyCount": 0,
+      "operationTypeKnown": false,
+      "wire": {
+        "_id": "synthetic-current-field-057",
+        "extId": "synthetic-current-definition",
+        "name": "leakageCauseSelect",
+        "nameDisp": "合成 field-057",
+        "type": "select",
+        "state": 1,
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "4"
+        ]
+      }
+    },
+    {
+      "evidenceFieldId": "field-058",
+      "machineKeyRetained": true,
+      "unknownType": true,
+      "unretainedConfigKeyCount": 1,
+      "operationTypeKnown": false,
+      "wire": {
+        "_id": "synthetic-current-field-058",
+        "extId": "synthetic-current-definition",
+        "name": "leakageCause",
+        "nameDisp": "合成 field-058",
+        "type": "UNKNOWN",
+        "state": 1,
+        "required": "1",
+        "multiple": true,
+        "showList": [
+          "1",
+          "2",
+          "4"
+        ]
+      }
+    },
+    {
+      "evidenceFieldId": "field-059",
+      "machineKeyRetained": true,
+      "unknownType": false,
+      "unretainedConfigKeyCount": 0,
+      "operationTypeKnown": false,
+      "wire": {
+        "_id": "synthetic-current-field-059",
+        "extId": "synthetic-current-definition",
+        "name": "memo",
+        "nameDisp": "合成 field-059",
+        "type": "textarea",
+        "state": 1,
+        "required": "0",
+        "multiple": false,
+        "showList": [
+          "1",
+          "2",
+          "4"
+        ]
+      }
+    }
+  ],
+  "limits": {
+    "unknownTypeFields": [
+      "field-004",
+      "field-058"
+    ],
+    "unretainedConfigurationFields": [
+      "field-018",
+      "field-028",
+      "field-029",
+      "field-051",
+      "field-053",
+      "field-058"
+    ],
+    "unretainedMachineKeys": [
+      "field-018",
+      "field-028",
+      "field-030",
+      "field-031",
+      "field-032",
+      "field-033",
+      "field-034",
+      "field-035",
+      "field-036",
+      "field-037",
+      "field-038",
+      "field-039",
+      "field-040",
+      "field-041",
+      "field-042",
+      "field-043",
+      "field-044",
+      "field-045",
+      "field-046",
+      "field-047",
+      "field-048",
+      "field-049",
+      "field-050",
+      "field-052",
+      "field-056"
+    ],
+    "providerReferences": [
+      "synthetic-code-provider-001",
+      "synthetic-cascade-provider-001",
+      "synthetic-code-provider-002"
+    ],
+    "providers": "NOT_CAPTURED",
+    "operationTypes": "NOT_RETAINED",
+    "sourceRuleEquivalence": "NOT_PROVEN",
+    "liveParity": "NOT_VERIFIED",
+    "customerValuesIncluded": false,
+    "serverWritePermissionTested": false
+  }
+}

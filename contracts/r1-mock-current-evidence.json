@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "classification": "CURRENT_EVIDENCE_OVERLAY_NOT_LIVE_PARITY",
+  "historicalCoverage": "contracts/production/technician-role-readonly-20261105/coverage-f01-f21.json",
+  "r1Baseline": {
+    "frontend": "xlink-app@6c0a97b26bcbcaee81ac4e1dfd627c6e8e70e29d",
+    "backend": "xlink-cloud-backend@5fc008d32e771205260f120621c1c4fc62d0824e"
+  },
+  "domains": [
+    {
+      "id": "F04",
+      "evidence": "contracts/production/technician-role-readonly-20261105/current-formdef-two-pages.json",
+      "evidenceSha256": "fe815d9df44b27176de7ebe782bbd7e83c63bffea86c0da64a1810b3deb1f90d",
+      "syntheticFixture": "contracts/synthetic/r1-current-formdef-59-structure.json",
+      "productionObservation": "BOUNDED_FIELD_STRUCTURE_COMPLETE_MODEL_PARTIAL",
+      "fieldCount": 59,
+      "limit": "当前 repeat 已有同次采集完整 59 字段结构；用途 UNKNOWN，2 未知类型、6 字段配置缺项、25 字段原键未保留、3 provider 未读，不能推导完整规则、Survey 或写权限",
+      "liveParity": "NOT_VERIFIED",
+      "serverBusinessWritePermissionTested": false
+    }
+  ]
+}

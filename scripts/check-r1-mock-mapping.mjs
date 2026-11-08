@@ -2,6 +2,8 @@ import { readFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { resolve, dirname } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { spawnSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
+import { validateCurrentFormDefEvidence } from './lib/r1-current-formdef-synthetic.mjs'
 
 export function validateR1MockMapping(manifest, root = process.cwd()) {
   const require = (condition, reason) => { if (!condition) throw new Error(`R1_MOCK_MAPPING_BLOCKED:${reason}`) }
@@ -12,11 +14,25 @@ export function validateR1MockMapping(manifest, root = process.cwd()) {
   }
   path(manifest.inventory, 'docs/'); path(manifest.productionCoverage, 'contracts/')
   const coverage = JSON.parse(readFileSync(resolve(root, manifest.productionCoverage), 'utf8'))
+  // The original production capture stays immutable. Later bounded evidence is
+  // reconciled explicitly instead of rewriting its old 15-domain observation.
+  path(manifest.currentEvidence, 'contracts/')
+  const current = JSON.parse(readFileSync(resolve(root, manifest.currentEvidence), 'utf8'))
+  require(current.version === 1 && current.classification === 'CURRENT_EVIDENCE_OVERLAY_NOT_LIVE_PARITY'
+    && current.historicalCoverage === manifest.productionCoverage
+    && current.domains?.length === 1 && current.domains[0].id === 'F04', 'CURRENT_EVIDENCE_SCOPE')
+  for (const row of current.domains) {
+    path(row.evidence, 'contracts/production/'); path(row.syntheticFixture, 'contracts/synthetic/')
+    const receipt = readFileSync(resolve(root, row.evidence), 'utf8')
+    require(createHash('sha256').update(receipt).digest('hex') === row.evidenceSha256, 'CURRENT_EVIDENCE_DIGEST')
+    validateCurrentFormDefEvidence(row, JSON.parse(receipt), JSON.parse(readFileSync(resolve(root, row.syntheticFixture), 'utf8')))
+  }
   require(JSON.stringify(manifest.domains?.map(row => row.id)) === JSON.stringify(Array.from({ length: 21 }, (_, i) => `F${String(i + 1).padStart(2, '0')}`)), 'DOMAIN_SET')
   const tests = new Set()
   for (const row of manifest.domains) {
     require(row.liveParity === 'NOT_VERIFIED' && typeof row.unresolved === 'string' && row.unresolved.length > 10, `UNPROVEN_PROMOTION:${row.id}`)
-    require(coverage.domains.some(item => item.id === row.id && item.limit === row.unresolved && !item.serverBusinessWritePermissionTested), `COVERAGE_DRIFT:${row.id}`)
+    const observation = current.domains.find(item => item.id === row.id) ?? coverage.domains.find(item => item.id === row.id)
+    require(observation?.limit === row.unresolved && !observation.serverBusinessWritePermissionTested, `COVERAGE_DRIFT:${row.id}`)
     path(row.sourceEvidence, 'docs/')
     require(Array.isArray(row.unitTests) && row.unitTests.length > 0, `NO_TESTS:${row.id}`)
     for (const name of row.unitTests) { path(name, 'tests/'); require(name.endsWith('.test.ts'), 'NOT_UNIT_TEST'); tests.add(name) }
