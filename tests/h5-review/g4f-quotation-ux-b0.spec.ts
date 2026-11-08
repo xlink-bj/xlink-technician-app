@@ -92,7 +92,11 @@ async function openGroupCatalog(page: Page, groupId: string): Promise<void> {
   }
 
   const trigger = page.getByTestId(`quotation-browse-${groupId}`)
-  await trigger.scrollIntoViewIfNeeded()
+  // The recorded scrollIntoViewIfNeeded case left the lower edge clipped.
+  // Center the real target before checking full footer clearance.
+  await trigger.evaluate(element => element.scrollIntoView({
+    block: 'center', inline: 'nearest', behavior: 'auto',
+  }))
   await expect(trigger).toBeEnabled()
   const remainsAboveFooter = await trigger.evaluate((element) => {
     const triggerRect = element.getBoundingClientRect()

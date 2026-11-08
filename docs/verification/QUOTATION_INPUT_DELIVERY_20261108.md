@@ -44,3 +44,14 @@ IME 是正常 App 控件上的程序化 composition/input 事件序列验证，�
 原版 red-row trace 已有 empty SSR-container hydration 警告（三处记录）。测试保留完整警告，只将这一已证实基线警告单列，其他警告/页面异常不放行。
 
 本批不验证生产/Beta、真实 Java/Mongo、正式报价/订单写入、真实上传或 Workflow。暂不声称完整输入法/浏览器/原生设备矩阵通过；共享交付机制之外的历史风险、后台并发/事务与服务端金额问题不在本批治理。未保存的无效数量文本不等于可跨刷新恢复的合法草稿值。
+
+
+## 额外手动验收的 legacy 滚动定位修正
+
+`1825b4a` 的 push 两项 CI 成功，但额外手动 `42472359058` 的结果保留为失败：repeat/stage1b 两 job 成功，h5-ux 的 Login 4项通过、正常 App Mock 91通过/27跳过，最后 legacy 为25通过/1失败。失败来自 `g4f-quotation-ux-b0.spec.ts` 的 golden path：套餐数量设2、折叠/展开分组、移除工序后再次进入目录时，helper 调用 `scrollIntoViewIfNeeded` 后便要求完整按钮在底栏上方。legacy 共用本批修改的报价组件，尚未证实本批输入改动导致布局回归；封装无额外 DOM 包装/样式，不能据此声称完全无关。
+
+同 SHA 本地自然采样2通过/1失败，失败后三帧均越界1.421875px。真实 inner `rect=[top44,bottom621.875]`、`clientHeight=578`、`scrollHeight=1577`、`scrollTop=538`，按钮 `top575.296875/bottom623.296875`，底边命中底栏；仍有461px可滚空间。相同流程点的受控几何回放明确校验该状态后，仅标准居中滚动至 `scrollTop=804`，inner/footer尺寸不变，按钮变为 `top309.296875/bottom357.296875`，整钮位于安全区且中心及四条边缘命中自身，普通click成功进入目录。该诊断仍保留原居中前的false断言，退出1，不替换原CI红例，也不把回放当作CI原trace内容。
+
+最小修正仅改变 `openGroupCatalog` 的测试滚动前置为标准 `scrollIntoView({block:'center',inline:'nearest',behavior:'auto'})`，保留原严格 `button.bottom <= footer.top`、enabled检查和普通click；没有容差、sleep、force click或超时放宽。底栏实际是flex sibling，不是CSS fixed；没有修改产品布局、底栏、报价控件、计价或业务协议。原manual失败及其截图/trace日志继续保留；后续修复验证和新SHA手动验收结果分别记录。
+
+最终 `auto` 写法本地验证：同CI配置的完整legacy 26/26通过（退出0），失败golden path有界重复3/3通过（退出0），typecheck和边界检查均退出0。首次尝试的instant虽有浏览器通过证据，但旧DOM类型不支持，故改为当前auto后重新验证；没有用旧通过替代最终结果。新提交和新最终SHA的完整手动验收尚待独立复核与主干窗口，原manual失败不变。
