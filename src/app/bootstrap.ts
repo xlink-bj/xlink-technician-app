@@ -3,7 +3,7 @@ import { createNormalQuotationUnitDisplay } from './r1-quotation-unit-display'
 import { localUnitDisplayKey } from '@features/work-orders/quotation/local-unit-display'
 import { createNormalNodeFormsReader } from './r1-node-forms-read'
 import { r1NodeFormsReaderKey } from '@features/work-orders/r1-node-forms-read'
-import { createNormalRepeatActionProvider } from './r1-repeat-authorization'
+import { createNormalNodeFormActionProvider } from './r1-forms-authorization'
 import { r1RepeatActionsKey } from '@features/work-orders/r1-repeat-actions-port'
 import { createLocalSigningReadAuthority } from './local-signing-read-authority'
 import { createSSRApp } from 'vue'
@@ -96,7 +96,7 @@ export function createApplication(dependencies: ApplicationDependencies = {}) {
     tenantId: String(import.meta.env.VITE_XLINK_AUTH_TENANT ?? ''), env: import.meta.env,
     origin: typeof window === 'undefined' ? '' : window.location.origin })
   app.provide(r1NodeFormsReaderKey, normalNodeFormsReader)
-  app.provide(r1RepeatActionsKey, createNormalRepeatActionProvider({ auth: authSession, reader: normalNodeFormsReader,
+  app.provide(r1RepeatActionsKey, createNormalNodeFormActionProvider({ auth: authSession, reader: normalNodeFormsReader,
     env: import.meta.env, origin: typeof window === 'undefined' ? '' : window.location.origin }))
   const apiCommand = dependencies.apiCommand ?? createDefaultTechnicianApiCommandPort(authSession, apiRead)
   const quotationOrderCommand = dependencies.quotationOrderCommand ?? createDefaultQuotationOrderCommandPort(authSession)

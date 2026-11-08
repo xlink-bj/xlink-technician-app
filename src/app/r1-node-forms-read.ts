@@ -12,11 +12,28 @@ import { sessionAuthorizationFingerprint } from '@shared/session-authorization'
 import { asOpaqueId } from '@shared/types'
 import type { R1NodeFormsReader, R1NodeFormsSnapshot } from '@features/work-orders/r1-node-forms-read'
 import { parseR1RepeatGrant } from './r1-repeat-authorization'
+import { parseR1FormsGrant } from './r1-forms-authorization'
 
 type Row = Record<string, unknown>
 const deny = (): never => { throw Error('当前表单的身份、关联或完整性无法核实，请重新读取工单。') }
 const row = (v: unknown): Row => v !== null && typeof v === 'object' && !Array.isArray(v) ? v as Row : deny()
 const id = (v: unknown): string => typeof v === 'string' && v.trim() === v && v.length > 0 ? v : deny()
+// Keep complete EXTS transient. The display projection deliberately drops
+// unknown keys, so comparing that projection cannot establish read stability.
+function formsExtsJson(value: unknown): string {
+  const validate = (v: unknown): void => {
+    if (v === null || typeof v === 'string' || typeof v === 'boolean') return
+    if (typeof v === 'number' && Number.isFinite(v)) return
+    if (Array.isArray(v)) { for (const item of v) validate(item); return }
+    if (v && typeof v === 'object' && Object.getPrototypeOf(v) === Object.prototype) {
+      for (const item of Object.values(v)) validate(item)
+      return
+    }
+    deny()
+  }
+  row(value); validate(value)
+  return JSON.stringify(value)
+}
 
 /** Explicit local read rollout, not a synthetic record/node adapter. Production stays closed. */
 export function normalNodeFormsReadEnabled(env: Record<string, unknown>, origin: string): boolean {
@@ -24,11 +41,14 @@ export function normalNodeFormsReadEnabled(env: Record<string, unknown>, origin:
   const scopedWriteMode = env.VITE_XLINK_R1_REPEAT_ACTIONS === 'true'
     && env.VITE_XLINK_ENABLE_REAL_WRITES === 'true' && env.VITE_XLINK_ENABLE_R1_SPECIAL_WRITES === 'true'
     && parseR1RepeatGrant(env.VITE_XLINK_R1_REPEAT_GRANT)?.scope.tenantId === env.VITE_XLINK_AUTH_TENANT
+  const scopedFormsMode = env.VITE_XLINK_R1_FORMS_ACTIONS === 'true'
+    && env.VITE_XLINK_ENABLE_REAL_WRITES === 'true' && env.VITE_XLINK_ENABLE_R1_SPECIAL_WRITES === 'true'
+    && parseR1FormsGrant(env.VITE_XLINK_R1_FORMS_GRANT)?.scope.tenantId === env.VITE_XLINK_AUTH_TENANT
   return env.DEV === true && env.VITE_XLINK_R1_NODE_FORM_READ === 'true'
     && env.VITE_XLINK_ENVIRONMENT === 'dev'
     && origin === 'http://127.0.0.1:5189'
     && env.VITE_XLINK_API_BASE_URL === `${origin}/xlink/wm`
-    && (readonlyMode || scopedWriteMode)
+    && (readonlyMode || scopedWriteMode || scopedFormsMode)
     && env.VITE_XLINK_MOCK === 'false'
     && env.VITE_XLINK_AUTH_ONLY_MOCK_BUSINESS !== 'true'
     && (env.VITE_XLINK_AUTH_API_BASE_URL === undefined || env.VITE_XLINK_AUTH_API_BASE_URL === '')
@@ -49,7 +69,7 @@ export function createNormalNodeFormsReader(input: {
     getSessionRef: () => input.auth.getCurrentSession()?.sessionRef ?? null,
   })
   let generation = 0
-  let current: { snapshot: R1NodeFormsSnapshot; fingerprint: string } | null = null
+  let current: { snapshot: R1NodeFormsSnapshot; fingerprint: string; formsExts?: string } | null = null
   const enabled = () => normalNodeFormsReadEnabled(input.env, input.origin)
   const fingerprint = () => {
     const a = input.auth.getCurrentSession()
@@ -61,6 +81,11 @@ export function createNormalNodeFormsReader(input: {
     clear() { generation++; current = null },
     isCurrent(snapshot) { return current?.snapshot === snapshot && fingerprint() === current.fingerprint
       && input.read.isWorkOrderListedForCurrentSession?.(snapshot.workOrderId) === true },
+    currentFormsExts(snapshot) {
+      return current?.snapshot === snapshot && fingerprint() === current.fingerprint
+        && input.read.isWorkOrderListedForCurrentSession?.(snapshot.workOrderId) === true && current.formsExts
+        ? JSON.parse(current.formsExts) as Record<string, unknown> : null
+    },
     async load(workOrderId, runtimeNodeId) {
       const ticket = ++generation; current = null
       const actor = input.auth.getCurrentSession(), identity = fingerprint()
@@ -88,6 +113,7 @@ export function createNormalNodeFormsReader(input: {
       const check = () => { checkActor(); if (input.read.isWorkOrderListedForCurrentSession?.(workOrderId) !== true) deny() }
       const execute = async (request: ApiReadRequest) => { check(); const raw = await transport.execute(request); check(); return raw }
       let rawFill: readonly string[] | undefined
+      let rawFormsExts: string | undefined
       const readNode = async (): Promise<WorkflowNodeRead> => {
         const envelope = row(await execute({ method: 'POST', path: `basic/serviceAppointment/queryById/${encodeURIComponent(workOrderId)}`, body: {} }))
         if (envelope.success !== true || envelope.status !== 1) deny()
@@ -104,6 +130,7 @@ export function createNormalNodeFormsReader(input: {
         const def = row(rawNode.nodeDef)
         if (!['forms', 'repeat'].includes(String(def.nodeType)) || (rawNode.formDefId !== undefined && rawNode.formDefId !== def.formDefId)) deny()
         id(def.formDefId)
+        rawFormsExts = def.nodeType === 'forms' ? formsExtsJson(rawNode.exts) : undefined
         const readonlyIds = rawNode.formFieldIdsReadOnly ?? def.formFieldIdsReadOnly
         const readonlyValid = Array.isArray(readonlyIds)
           && readonlyIds.every(v => typeof v === 'string' && v.length > 0 && v.trim() === v)
@@ -121,6 +148,7 @@ export function createNormalNodeFormsReader(input: {
       }
       const node = await readNode(), definitionId = id(node.formDefinitionId)
       const fillableFieldIds = rawFill
+      const formsExts = rawFormsExts
       const ext = row(await execute({ method: 'POST', path: 'biz/ext/queryById.do', body: { id: definitionId } }))
       if (ext._id !== definitionId || ext.tenantId !== input.tenantId || ext.state !== 1
         || !['0', '1'].includes(String(ext.type)) || typeof ext.colName !== 'string' || !ext.colName) deny()
@@ -163,11 +191,12 @@ export function createNormalNodeFormsReader(input: {
       const records = []
       for (const r of discovered) records.push((await reader.select(String(r.data.id))).data)
       const after = await readNode()
-      if (JSON.stringify(after) !== JSON.stringify(node) || JSON.stringify(rawFill) !== JSON.stringify(fillableFieldIds)) deny()
+      if (JSON.stringify(after) !== JSON.stringify(node) || JSON.stringify(rawFill) !== JSON.stringify(fillableFieldIds)
+        || rawFormsExts !== formsExts) deny()
       check()
       const snapshot: R1NodeFormsSnapshot = { workOrderId, node, definition: { ...definition, fields: hydrated } as FormDefinitionRead, records,
         ...(fillableFieldIds ? { fillableFieldIds } : {}) }
-      current = { snapshot, fingerprint: identity }
+      current = { snapshot, fingerprint: identity, ...(formsExts ? { formsExts } : {}) }
       return snapshot
     },
   }

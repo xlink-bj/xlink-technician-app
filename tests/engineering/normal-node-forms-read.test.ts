@@ -161,3 +161,44 @@ it.each([
   expect(h.read.getDynamicCodeOptions).not.toHaveBeenCalled()
   expect(h.execute).not.toHaveBeenCalled()
 })
+
+describe('ordinary forms full EXTS read consistency', () => {
+  function formsHarness() {
+    const h = harness()
+    h.node.nodeDef.nodeType = 'forms'
+    const exts = { formList: [{ _id: 'record', formDefId: 'ext', state: 1 }],
+      serverOnly: { revision: 'original', nested: [1, { retain: true }] } }
+    Object.assign(h.node, { exts })
+    return { ...h, exts }
+  }
+  it('retains read-only forms discovery when complete EXTS remains unchanged', async () => {
+    const h = formsHarness(), before = structuredClone(h.exts)
+    const snapshot = await h.reader.load('work', 'node')
+    expect(snapshot.records[0]?.id).toBe('record')
+    const transient = h.reader.currentFormsExts!(snapshot)!
+    expect(transient).toEqual(before)
+    ;(transient.serverOnly as Record<string, unknown>).revision = 'caller-mutated-copy'
+    expect(h.reader.currentFormsExts!(snapshot)).toEqual(before)
+    expect(h.reader.currentFormsExts!({ ...snapshot })).toBeNull()
+    expect(h.exts).toEqual(before)
+    expect(h.calls.some(path => path.includes('upsert') || path.includes('updateExts') || path === 'workflow/process')).toBe(false)
+    h.reader.clear()
+    expect(h.reader.currentFormsExts!(snapshot)).toBeNull()
+  })
+  it.each(['unknown', 'nested', 'rowMetadata'])('rejects %s EXTS drift hidden by the display projection', async kind => {
+    const h = formsHarness()
+    h.hook(path => {
+      if (path !== 'biz/extForm/query/ext') return
+      if (kind === 'unknown') h.exts.serverOnly.revision = 'changed'
+      if (kind === 'nested') h.exts.serverOnly.nested.push(2)
+      if (kind === 'rowMetadata') Object.assign(h.exts.formList[0]!, { unknownSourceMetadata: 'changed' })
+    })
+    await expect(h.reader.load('work', 'node')).rejects.toThrow()
+  })
+  it.each([undefined, Number.NaN, new Date('2026-01-01'), () => 'omitted'])('rejects non-JSON EXTS instead of silently losing evidence %#', async value => {
+    const h = formsHarness()
+    Object.assign(h.exts.serverOnly, { unsupported: value })
+    await expect(h.reader.load('work', 'node')).rejects.toThrow()
+    expect(h.calls.some(path => path.startsWith('biz/extForm/'))).toBe(false)
+  })
+})
