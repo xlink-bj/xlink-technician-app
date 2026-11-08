@@ -1,4 +1,5 @@
 import type { SessionRef } from '@shared/types'
+import { uniApiSessionHeader } from '../common/uni-api-session-header'
 import { isProductionReadOnlyTarget } from '@shared/config'
 
 import {
@@ -200,7 +201,7 @@ export function createUniApiCommandTransport(options: UniApiCommandTransportOpti
           method: input.method,
           data: jsonExts ? JSON.stringify(input.jsonBody) : formEncode(input.body ?? {}),
           header: {
-            Cookie: `JSESSIONID=${sessionRef}`,
+            ...uniApiSessionHeader(sessionRef),
             'Content-Type': jsonExts ? 'application/json' : 'application/x-www-form-urlencoded',
           },
           dataType: 'json',

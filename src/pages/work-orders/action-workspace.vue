@@ -315,6 +315,10 @@ import type { AppChoiceOption } from '@shared/ui/types'
 import type { OperationError } from '@shared/types'
 import type { QuotationOrderBrowseItem } from '@shared/ports'
 
+// Uni H5 supplies route query attrs. onLoad owns them; this fragment page
+// must not forward route IDs onto an arbitrary DOM root.
+defineOptions({ inheritAttrs: false })
+
 const createAStageMockQuoteOrderControllerForUi: AStageMockQuoteOrderControllerFactory =
   createAStageMockQuoteOrderControllerForActor
 const session = useSessionStore()

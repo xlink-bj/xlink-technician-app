@@ -1,4 +1,5 @@
 import type { SessionRef } from '@shared/types'
+import { uniApiSessionHeader } from '../common/uni-api-session-header'
 import {
   isProductionReadOnlyReadAllowed,
   isProductionReadOnlyTarget,
@@ -302,9 +303,7 @@ export function createUniApiReadTransport(options: UniApiReadTransportOptions): 
         )
       }
 
-      const header: Record<string, string> = {
-        Cookie: `JSESSIONID=${sessionRef}`,
-      }
+      const header = uniApiSessionHeader(sessionRef)
       if (input.method === 'POST') header['Content-Type'] = 'application/x-www-form-urlencoded'
 
       let response: UniNamespace.RequestSuccessCallbackResult
