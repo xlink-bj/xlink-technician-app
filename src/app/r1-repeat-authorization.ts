@@ -51,23 +51,28 @@ export function createNormalRepeatActionProvider(input: {
       && snapshot.node.runId === g.scope.workflowRunId && snapshot.definition.id === g.scope.formDefinitionId
       && snapshot.node.formDefinitionId === g.scope.formDefinitionId && snapshot.node.sourceNodeType === 'repeat')
   }
-  const actions = createR1RepeatActions({ env: input.env, origin: input.origin,
-    getSession: () => input.auth.getCurrentSession(), hasExactGrant: permitted,
-    transport: createUniApiCommandTransport({ apiBaseUrl: String(input.env.VITE_XLINK_API_BASE_URL),
-      getSessionRef: () => input.auth.getCurrentSession()?.sessionRef ?? null }),
-    async readLatest(scope) {
-      if (!permitted(scope)) throw Error('本轮表单写入授权已失效')
-      const snapshot = await input.reader.load(scope.workOrderId, scope.runtimeNodeId)
-      if (!permitted(scope) || !input.reader.isCurrent(snapshot) || !schemaMatches(snapshot)) throw Error('当前表单配置已变化')
-      return snapshot
-    },
-  })
   return {
     forSnapshot(snapshot) {
       const g = grant(), a = input.auth.getCurrentSession()
       if (!g || !schemaMatches(snapshot) || !input.reader.isCurrent(snapshot)
         || a?.user.id !== g.scope.userId || a.currentRole?.id !== g.scope.roleId) return null
       const s = g.scope
+      // Each page action owns its read snapshot. A different page or an external
+      // reread revokes it; only this action's successful reads may renew it.
+      let leaseSnapshot = snapshot
+      const ownsSnapshot = (scope: R1RepeatScope) => permitted(scope) && input.reader.isCurrent(leaseSnapshot)
+      const actions = createR1RepeatActions({ env: input.env, origin: input.origin,
+        getSession: () => input.auth.getCurrentSession(), hasExactGrant: ownsSnapshot,
+        transport: createUniApiCommandTransport({ apiBaseUrl: String(input.env.VITE_XLINK_API_BASE_URL),
+          getSessionRef: () => input.auth.getCurrentSession()?.sessionRef ?? null }),
+        async readLatest(scope) {
+          if (!ownsSnapshot(scope)) throw Error('本轮表单写入授权已失效')
+          const latest = await input.reader.load(scope.workOrderId, scope.runtimeNodeId)
+          if (!permitted(scope) || !input.reader.isCurrent(latest) || !schemaMatches(latest)) throw Error('当前表单配置已变化')
+          leaseSnapshot = latest
+          return latest
+        },
+      })
       return { locked: () => actions.locked(s), saveOnly: values => actions.saveOnly(s, values), complete: () => actions.complete(s) }
     },
   }
