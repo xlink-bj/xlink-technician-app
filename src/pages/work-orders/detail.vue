@@ -310,7 +310,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, inject as injectHistoryReader, onBeforeUnmount, ref, watch } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 
 import { mockJourneyContext } from '@app/mock-journey'
@@ -362,7 +362,7 @@ const displayUnit = useLocalUnitDisplay(() => String(detail.value?.id ?? ''))
 const activities = computed(() => detail.value?.activities ?? [])
 const hasHistoricalForms = computed(() => detail.value?.workflowNodes?.some(node =>
   node.sourceNodeType === 'forms' && node.lifecycle === 'closed') === true)
-const historicalFormsEnabled = inject(historicalFormsReaderKey, null)?.().enabled() === true
+const historicalFormsEnabled = injectHistoryReader(historicalFormsReaderKey, null)?.().enabled() === true
 const canShowHistoricalForms = computed(() => !productionReadOnly && historicalFormsEnabled && hasHistoricalForms.value)
 const customerServiceAddress = computed(() => {
   const district = detail.value?.serviceDistrict?.trim()
