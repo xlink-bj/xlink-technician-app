@@ -56,7 +56,7 @@ export function createHistoricalFormsReader(input: {
         let total: number | undefined
         const seen = new Set<string>()
         for (let page = 1; page <= 10; page++) {
-          check(); const response = await input.read.listWorkOrders({ page, pageSize: 20 }); check()
+          check(); const response = await input.read.listWorkOrders({ page, pageSize: 20, category: 'all' }); check()
           const d = response.data
           if (response.state !== 'succeeded' || !d || !Number.isSafeInteger(d.totalCount) || d.totalCount! < 0 || d.totalCount! > 200
             || total !== undefined && d.totalCount !== total || d.page !== undefined && d.page !== page

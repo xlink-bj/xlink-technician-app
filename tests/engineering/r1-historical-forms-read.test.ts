@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { createHistoricalFormsReader } from '@app/r1-historical-forms-read'
 import { canReadHistoricalForms } from '@app/r1-historical-forms-policy'
-import type { SessionSnapshot } from '@shared/ports'
+import type { SessionSnapshot, TechnicianApiReadPort } from '@shared/ports'
 import type { ApiReadRequest } from '@adapters/api/technician-api'
 const origin = 'http://127.0.0.1:5189'
 const env = { DEV: true, VITE_XLINK_R1_NODE_FORM_READ: 'true', VITE_XLINK_ENVIRONMENT: 'dev', VITE_XLINK_MOCK: 'false', VITE_XLINK_API_BASE_URL: `${origin}/xlink/wm`, VITE_XLINK_ENABLE_REAL_WRITES: 'false', VITE_XLINK_ENABLE_R1_SPECIAL_WRITES: 'false' }
@@ -25,9 +25,9 @@ function harness(override: Record<string, unknown> = {}) {
     if (request.path === 'biz/extForm/query/ext') return { data: [structuredClone(record)], total: 1, page: 1, size: request.body?.rows, dataCount: 1 }
     throw Error('Unexpected request')
   })
-  const read = { listWorkOrders: vi.fn(async () => { listed = list.items.some(x => x.id === 'work'); return { state: 'succeeded', data: list } as never }), isWorkOrderListedForCurrentSession: () => listed }
+  const read = { listWorkOrders: vi.fn<TechnicianApiReadPort['listWorkOrders']>(async () => { listed = list.items.some(x => x.id === 'work'); return { state: 'succeeded', data: list } as never }), isWorkOrderListedForCurrentSession: () => listed }
   const reader = createHistoricalFormsReader({ auth: { getCurrentSession: () => session }, read, tenantId: 'tenant', env: { ...env, ...override }, origin, transport: { execute } })
-  return { reader, node, detail, ext, field, fieldPage, record, list, calls, read, hook: (fn: typeof hook) => { hook = fn }, unlist: () => { listed = false }, changeRole: () => { session = { ...session, currentRole: { ...session.currentRole!, id: 'other' as never } } }, changeSession: () => { session = { ...session, sessionRef: 'changed' as never } } }
+  return { reader, node, detail, ext, field, fieldPage, record, list, calls, read, hook: (fn: typeof hook) => { hook = fn }, unlist: () => { listed = false }, setListed: (value: boolean) => { listed = value }, changeRole: () => { session = { ...session, currentRole: { ...session.currentRole!, id: 'other' as never } } }, changeSession: () => { session = { ...session, sessionRef: 'changed' as never } } }
 }
 describe('separate completed forms read capability', () => {
   it('normal role list → fresh detail targets → exact records → stable complete references, without action authority', async () => {
@@ -65,3 +65,74 @@ it.each(['saId','workflowIdAlias','nodeIdAlias','nodeRunAlias','definitionAlias'
 it('preserves the full EXTS binding and rejects unrelated list metadata drift after record reads',async()=>{const h=harness(),[t]=await h.reader.discover('work');h.hook(r=>{if(r.path.includes('extForm/'))h.node.exts.unknown='changed'});await expect(h.reader.read(t!)).rejects.toThrow()})
 it('schema pagination holes are not shown as an empty historical form',async()=>{const h=harness(),[t]=await h.reader.discover('work');h.fieldPage.total=2;await expect(h.reader.read(t!)).rejects.toThrow();expect(h.calls.some(r=>r.path.includes('extForm/'))).toBe(false)})
 it('a historical reference can select its own definition without replacing the node default definition',async()=>{const h=harness();h.node.nodeDef.formDefId='default-definition';const[t]=await h.reader.discover('work');expect(t?.formDefinitionId).toBe('ext');expect((await h.reader.read(t!)).record.values?.note).toBe('saved')})
+
+describe('cold historical discovery uses explicit authorized all-category list', () => {
+  it('passes the exact category contract without overriding role HTTP scope or using the todo default', async () => {
+    const h = harness(); await h.reader.discover('work')
+    expect(h.read.listWorkOrders.mock.calls).toEqual([[{ page: 1, pageSize: 20, category: 'all' }]])
+    expect(h.calls[0]).toEqual({ method: 'POST', path: 'basic/serviceAppointment/queryById/work', body: {} })
+  })
+  it('uses existing current listed provenance without issuing another category query on a warm page', async () => {
+    const h = harness(); h.setListed(true); await h.reader.discover('work')
+    expect(h.read.listWorkOrders).not.toHaveBeenCalled()
+  })
+  it.each(['failed_terminal','failed_retryable'] as const)('does not fall back to another scope after %s', async state => {
+    const h = harness(); h.read.listWorkOrders.mockResolvedValueOnce({ state })
+    await expect(h.reader.discover('work')).rejects.toThrow()
+    expect(h.read.listWorkOrders.mock.calls).toEqual([[{ page: 1, pageSize: 20, category: 'all' }]])
+    expect(h.calls).toHaveLength(0)
+  })
+  it('rejects a row returned without authoritative adapter membership', async () => {
+    const h = harness(); h.read.listWorkOrders.mockResolvedValueOnce({ state: 'succeeded', data: h.list } as never)
+    await expect(h.reader.discover('work')).rejects.toThrow(); expect(h.calls).toHaveLength(0)
+  })
+  it('preserves explicit all on every bounded page and reads detail only after target membership', async () => {
+    const h = harness(), original = h.read.listWorkOrders.getMockImplementation()!
+    h.read.listWorkOrders.mockImplementation(async query => {
+      h.list.page = query.page; h.list.totalCount = 21
+      h.list.items = query.page === 1 ? Array.from({ length: 20 }, (_, i) => ({ id: `other-${i}` })) : [{ id: 'work' }]
+      return original(query)
+    })
+    expect(await h.reader.discover('work')).toHaveLength(1)
+    expect(h.read.listWorkOrders.mock.calls).toEqual([[{ page: 1, pageSize: 20, category: 'all' }],[{ page: 2, pageSize: 20, category: 'all' }]])
+    expect(h.calls).toHaveLength(1)
+  })
+  it.each(['total-drift','duplicate-row','wrong-page','short-page'] as const)('rejects %s before any detail access', async fault => {
+    const h = harness(), original = h.read.listWorkOrders.getMockImplementation()!
+    h.read.listWorkOrders.mockImplementation(async query => {
+      h.list.totalCount = fault === 'total-drift' && query.page === 2 ? 22 : 21
+      h.list.page = fault === 'wrong-page' ? 9 : query.page
+      h.list.items = query.page === 1 ? Array.from({ length: fault === 'short-page' ? 19 : 20 }, (_, i) => ({ id: `other-${i}` }))
+        : [{ id: fault === 'duplicate-row' ? 'other-0' : 'work' }]
+      return original(query)
+    })
+    await expect(h.reader.discover('work')).rejects.toThrow(); expect(h.calls).toHaveLength(0)
+    expect(h.read.listWorkOrders.mock.calls.every(([query]) => query.category === 'all')).toBe(true)
+  })
+  it.each(['changeRole','changeSession'] as const)('stops after %s while page is pending', async change => {
+    const h = harness(), original = h.read.listWorkOrders.getMockImplementation()!
+    h.read.listWorkOrders.mockImplementationOnce(async query => { const data = await original(query); h[change](); return data })
+    await expect(h.reader.discover('work')).rejects.toThrow(); expect(h.calls).toHaveLength(0)
+    expect(h.read.listWorkOrders).toHaveBeenCalledOnce()
+  })
+  it('stops a paginated rebuild on an unavailable next page, without default-scope retries', async () => {
+    const h = harness(), original = h.read.listWorkOrders.getMockImplementation()!
+    h.read.listWorkOrders.mockImplementation(async query => {
+      if (query.page === 2) return { state: 'failed_retryable' }
+      h.list.totalCount = 21; h.list.items = Array.from({ length: 20 }, (_, i) => ({ id: `other-${i}` }))
+      return original(query)
+    })
+    await expect(h.reader.discover('work')).rejects.toThrow(); expect(h.calls).toHaveLength(0)
+    expect(h.read.listWorkOrders.mock.calls).toEqual([[{ page: 1, pageSize: 20, category: 'all' }],[{ page: 2, pageSize: 20, category: 'all' }]])
+  })
+  it('cannot turn an old read lease into authority if the next all scope is revoked', async () => {
+    const h = harness(), [old] = await h.reader.discover('work'); h.unlist()
+    h.read.listWorkOrders.mockResolvedValueOnce({ state: 'failed_terminal' })
+    await expect(h.reader.discover('work')).rejects.toThrow(); expect(h.reader.isCurrent(old!)).toBe(false)
+    await expect(h.reader.read(old!)).rejects.toThrow(); expect(h.calls).toHaveLength(1)
+  })
+  it('does not continue past the existing 200-row bound', async () => {
+    const h = harness(); h.list.totalCount = 201; h.list.items = Array.from({ length: 20 }, (_, i) => ({ id: `other-${i}` }))
+    await expect(h.reader.discover('work')).rejects.toThrow(); expect(h.read.listWorkOrders).toHaveBeenCalledOnce(); expect(h.calls).toHaveLength(0)
+  })
+})

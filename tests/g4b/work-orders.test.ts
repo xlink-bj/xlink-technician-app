@@ -229,7 +229,7 @@ describe('G4-B Home access and Work Order List feature', () => {
     expect(listWorkOrders).toHaveBeenCalledTimes(2)
   })
 
-  it('uses only the semantic page/pageSize query and supports bounded load-more pagination', async () => {
+  it('uses only the semantic category/page/pageSize query and supports bounded load-more pagination', async () => {
     const listWorkOrders = vi
       .fn()
       .mockResolvedValueOnce(page([firstWorkOrder], 1, 2))
@@ -237,11 +237,11 @@ describe('G4-B Home access and Work Order List feature', () => {
     const store = configureStore(listApi(listWorkOrders))
 
     await store.load()
-    expect(listWorkOrders).toHaveBeenNthCalledWith(1, { page: 1, pageSize: 20 })
+    expect(listWorkOrders).toHaveBeenNthCalledWith(1, { page: 1, pageSize: 20, category: 'all' })
     expect(store.hasMore).toBe(true)
 
     await store.loadMore()
-    expect(listWorkOrders).toHaveBeenNthCalledWith(2, { page: 2, pageSize: 20 })
+    expect(listWorkOrders).toHaveBeenNthCalledWith(2, { page: 2, pageSize: 20, category: 'all' })
     expect(store.items).toHaveLength(2)
     expect(store.hasMore).toBe(false)
   })
@@ -256,7 +256,7 @@ describe('G4-B Home access and Work Order List feature', () => {
     await store.load()
     await store.refresh()
 
-    expect(listWorkOrders).toHaveBeenLastCalledWith({ page: 1, pageSize: 20 })
+    expect(listWorkOrders).toHaveBeenLastCalledWith({ page: 1, pageSize: 20, category: 'all' })
     expect(store.items).toEqual([{ id: 'work-order-003' }])
   })
 
@@ -275,11 +275,12 @@ describe('G4-B Home access and Work Order List feature', () => {
       page: 1,
       pageSize: 20,
       searchText: 'customer',
+      category: 'all',
     })
 
     await store.search('   ')
     expect(store.searchText).toBe('')
-    expect(listWorkOrders).toHaveBeenNthCalledWith(3, { page: 1, pageSize: 20 })
+    expect(listWorkOrders).toHaveBeenNthCalledWith(3, { page: 1, pageSize: 20, category: 'all' })
   })
 })
 

@@ -212,6 +212,9 @@ export const useWorkOrderListStore = defineStore('workOrderList', () => {
   async function setFailure(
     result: OperationSnapshot<ReadPage<WorkOrderSummary>>,
   ): Promise<OperationSnapshot<ReadPage<WorkOrderSummary>>> {
+    // Failed reads revoke list membership. Recovery must rebuild page one.
+    clearList()
+    lastLoadWasAppend = false
     if (!result.error) {
       const fallback = failure<ReadPage<WorkOrderSummary>>(
         'server_terminal',
@@ -274,7 +277,7 @@ export const useWorkOrderListStore = defineStore('workOrderList', () => {
     const result = await api.listWorkOrders({
       page: requestedPage,
       pageSize: pageSize.value,
-      ...(category.value !== 'all' ? { category: category.value } : {}),
+      category: category.value,
       ...(normalizedSearchText ? { searchText: normalizedSearchText } : {}),
     })
     if (requestVersion !== loadVersion || scopeAtStart !== workOrderReadScopeKey(getSession())) {

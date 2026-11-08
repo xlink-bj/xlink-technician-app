@@ -11,6 +11,7 @@ import type {
   R1FormsAddOptionRead,
   TechnicianApiReadPort,
   WorkOrderActivity,
+  WorkOrderCategory,
   WorkOrderDetail,
   WorkOrderListQuery,
   WorkOrderSummary,
@@ -87,10 +88,13 @@ interface AdapterWorkOrderListScope {
   readonly mode: 'service-appointment' | 'workflow-node'
   readonly statusFilter?: string
   readonly workflowStateFilter?: string
+  readonly roleId?: string
+  readonly menuFingerprint?: string
 }
 
 interface WorkOrderListScopeResolver {
-  resolve(): Promise<AdapterWorkOrderListScope>
+  resolve(category?: WorkOrderCategory): Promise<AdapterWorkOrderListScope>
+  isCurrent?(scope: AdapterWorkOrderListScope): boolean
 }
 
 export class ApiReadTransportError extends Error {
@@ -165,7 +169,8 @@ function roleFunctionList(raw: unknown): readonly AdapterRecord[] {
   return leaves
 }
 
-function roleVisibleWorkOrderScope(raw: unknown): AdapterWorkOrderListScope {
+function roleVisibleWorkOrderScope(raw: unknown, category?: WorkOrderCategory): AdapterWorkOrderListScope {
+  const listPath = '/pages/serviceAppointment/serviceAppointments'
   const candidates = roleFunctionList(raw)
     .map((record) => {
       const action = optionalString(record, ['action'])
@@ -173,7 +178,7 @@ function roleVisibleWorkOrderScope(raw: unknown): AdapterWorkOrderListScope {
       if (
         extensions?.tabDisplay !== '1' ||
         !action ||
-        !action.includes('/serviceAppointment/serviceAppointments')
+        action.split(/[?#]/)[0] !== listPath
       ) {
         return undefined
       }
@@ -187,7 +192,11 @@ function roleVisibleWorkOrderScope(raw: unknown): AdapterWorkOrderListScope {
     .filter((candidate): candidate is { readonly orderValue: number; readonly action: string } => Boolean(candidate))
     .sort((left, right) => left.orderValue - right.orderValue)
 
-  const selected = candidates[0]
+  // R2's explicit All may use a second, actually authorized ordinary list.
+  // Only the exact bare route qualifies. Never invent orderState=all, remove
+  // menu constraints, or infer that a query-bearing action is unrestricted.
+  const selected = (category === 'all' ? candidates.find(candidate => candidate.action === listPath) : undefined)
+    ?? candidates[0]
   if (!selected) {
     throw new ApiReadTransportError(
       'The current role has no visible Work Order list scope',
@@ -195,14 +204,27 @@ function roleVisibleWorkOrderScope(raw: unknown): AdapterWorkOrderListScope {
     )
   }
 
+  const keys = new Set<string>()
+  for (const pair of (selected.action.split('?')[1]?.split('#')[0] ?? '').split('&').filter(Boolean)) {
+    const key = decodeQueryPart(pair.split('=')[0]!)
+    if (!['type', 'status', 'orderState'].includes(key) || keys.has(key)) {
+      throw new AdapterMappingError('Unsupported or repeated Work Order menu constraint')
+    }
+    keys.add(key)
+  }
+
   const type = actionQueryValue(selected.action, 'type')
   const status = actionQueryValue(selected.action, 'status')
   const orderState = actionQueryValue(selected.action, 'orderState')
+  if ((type && type !== 'SANode') || (type !== 'SANode' && orderState)) {
+    throw new AdapterMappingError('Unsupported Work Order menu type or workflow-state constraint')
+  }
 
   return {
     mode: type === 'SANode' ? 'workflow-node' : 'service-appointment',
     ...(status ? { statusFilter: status } : {}),
     ...(orderState ? { workflowStateFilter: orderState } : {}),
+    menuFingerprint: JSON.stringify(candidates.map(candidate => [candidate.orderValue, candidate.action])),
   }
 }
 
@@ -249,7 +271,7 @@ function createRoleScopedWorkOrderListScopeResolver(
   getCurrentRoleId: () => RoleId | null,
 ): WorkOrderListScopeResolver {
   return {
-    async resolve(): Promise<AdapterWorkOrderListScope> {
+    async resolve(category): Promise<AdapterWorkOrderListScope> {
       const roleId = getCurrentRoleId()
       if (!roleId) {
         throw new ApiReadTransportError(
@@ -273,8 +295,12 @@ function createRoleScopedWorkOrderListScopeResolver(
             path: 'function/changeRole',
             body: { roleIds: roleId },
           })
-      return roleVisibleWorkOrderScope(raw)
+      if (getCurrentRoleId() !== roleId) {
+        throw new ApiReadTransportError('Work Order role changed during menu read', 'authorization_denied')
+      }
+      return { ...roleVisibleWorkOrderScope(raw, category), roleId }
     },
+    isCurrent: scope => getCurrentRoleId() === scope.roleId,
   }
 }
 
@@ -293,6 +319,10 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
   private readonly listedWorkOrderIds = new Set<string>()
   private readonly authorizedChildWorkflowParentIds = new Set<string>()
   private readonly authorizedRepeatFormContexts = new Set<string>()
+  private listReadVersion = 0
+  private listMenuFingerprint: string | null = null
+  private listQueryScope: { key: string; protocol: string } | null = null
+  private listRequiresRefresh = false
 
   constructor(
     private readonly transport: ApiReadTransport,
@@ -317,11 +347,46 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
     const nextScope = sessionAuthorizationFingerprint(identityScope)
     if (nextScope !== this.currentReadScope) {
       this.currentReadScope = nextScope
-      this.listedWorkOrderIds.clear()
-      this.authorizedChildWorkflowParentIds.clear()
-      this.authorizedRepeatFormContexts.clear()
+      this.listReadVersion++
+      this.clearListedAuthority()
+      this.listMenuFingerprint = null
+      this.listQueryScope = null
+      this.listRequiresRefresh = false
     }
     return nextScope
+  }
+
+  private clearListedAuthority(): void {
+    this.listedWorkOrderIds.clear()
+    this.authorizedChildWorkflowParentIds.clear()
+    this.authorizedRepeatFormContexts.clear()
+  }
+
+  private invalidateListRead(): void {
+    this.clearListedAuthority()
+    this.listQueryScope = null
+    this.listRequiresRefresh = true
+  }
+
+  private bindListQuery(query: WorkOrderListQuery, scope: AdapterWorkOrderListScope): void {
+    const fingerprint = JSON.stringify([scope.roleId ?? null,
+      scope.menuFingerprint ?? [scope.mode, scope.statusFilter, scope.workflowStateFilter]])
+    const drifted = this.listMenuFingerprint !== null && this.listMenuFingerprint !== fingerprint
+    if (drifted) this.invalidateListRead()
+    this.listMenuFingerprint = fingerprint
+    const key = JSON.stringify([query.category ?? null, query.searchText?.trim() ?? '', query.pageSize])
+    const protocol = JSON.stringify([scope.mode, scope.statusFilter ?? null, scope.workflowStateFilter ?? null])
+    if (query.page > 1 && (this.listRequiresRefresh || (this.listQueryScope
+      && (this.listQueryScope.key !== key || this.listQueryScope.protocol !== protocol)))) {
+      throw new ApiReadTransportError('Work Order list scope changed; refresh from page one', 'authorization_denied')
+    }
+    if (query.page === 1) {
+      // New intent must obtain its own list membership, not inherit an All,
+      // search, or prior category's cached IDs and derived form authority.
+      this.clearListedAuthority()
+      this.listRequiresRefresh = false
+    }
+    this.listQueryScope = { key, protocol }
   }
 
   private rememberListedWorkOrders(
@@ -375,11 +440,17 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
 
   async listWorkOrders(query: WorkOrderListQuery) {
     try { workOrderCategoryStatusFilter(query.category) } catch (error) {
+      this.listReadVersion++
+      this.invalidateListRead()
       return readFailure<ReadPage<WorkOrderSummary>>(error)
     }
     const scopeAtStart = this.synchronizeReadScope()
+    const ticket = ++this.listReadVersion
+    const current = () => ticket === this.listReadVersion && (!this.options.getReadAuthorizationScope
+      || (scopeAtStart !== null && this.synchronizeReadScope() === scopeAtStart))
     const productionReadOnly = this.isProductionReadOnly()
     if (productionReadOnly && (!scopeAtStart || !this.workOrderScopeResolver)) {
+      this.invalidateListRead()
       return adapterFailure<ReadPage<WorkOrderSummary>>(
         'authorization_denied', 'Production Work Order list requires an authenticated role-scoped resolver',
       )
@@ -403,19 +474,22 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
           return pageEnvelope(raw, (item) => workOrderSummary(item, statusLabels, partLabels, !this.isProductionReadOnly()))
         },
       )
+      if (!current()) return adapterFailure<ReadPage<WorkOrderSummary>>(
+        'authorization_denied', 'Work Order list read belongs to an obsolete identity or request',
+      )
+      if (result.state !== 'succeeded') this.invalidateListRead()
       this.rememberListedWorkOrders(result, scopeAtStart)
       return result
     }
 
     try {
-      const roleScope = await this.workOrderScopeResolver.resolve()
+      const roleScope = await this.workOrderScopeResolver.resolve(query.category)
       const statusFilter = workOrderCategoryStatusFilter(query.category, roleScope.statusFilter)
       const scope = { ...roleScope, statusFilter: statusFilter ?? undefined }
-      if (productionReadOnly && this.synchronizeReadScope() !== scopeAtStart) {
-        return adapterFailure<ReadPage<WorkOrderSummary>>(
-          'authorization_denied', 'Production Work Order list authorization changed before query',
-        )
+      if (!current() || this.workOrderScopeResolver.isCurrent?.(roleScope) === false) {
+        throw new ApiReadTransportError('Work Order list authorization changed before query', 'authorization_denied')
       }
+      this.bindListQuery(query, scope)
       if (statusFilter === null) {
         return succeeded<ReadPage<WorkOrderSummary>>({ items: [], page: query.page, pageSize: query.pageSize, totalCount: 0 })
       }
@@ -431,14 +505,15 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
           )
         },
       )
-      if (productionReadOnly && (this.synchronizeReadScope() !== scopeAtStart || !scopeAtStart)) {
-        return adapterFailure<ReadPage<WorkOrderSummary>>(
-          'authorization_denied', 'Production Work Order list authorization changed during read',
-        )
+      if (!current() || this.workOrderScopeResolver.isCurrent?.(roleScope) === false) {
+        throw new ApiReadTransportError('Work Order list authorization changed during read', 'authorization_denied')
       }
+      if (result.state !== 'succeeded') this.invalidateListRead()
       this.rememberListedWorkOrders(result, scopeAtStart)
       return result
     } catch (error) {
+      // An older response must neither restore IDs nor revoke a newer read.
+      if (ticket === this.listReadVersion) this.invalidateListRead()
       return readFailure<ReadPage<WorkOrderSummary>>(error)
     }
   }
