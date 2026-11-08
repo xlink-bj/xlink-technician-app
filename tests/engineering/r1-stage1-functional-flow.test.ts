@@ -277,3 +277,43 @@ describe('R1 Stage 1 separate Real transport safety fence',()=>{
     vi.unstubAllEnvs()
   })
 })
+
+describe('special form acknowledgement integrity', () => {
+  const intent = { kind:'forms_save' as const, sourceNodeType:'forms' as const, scope:forms,
+    fields:{customerNote:'test'}, title:'调查表', authoritativeExts:exts, processActive:true }
+  it.each([
+    {_id:'server-a', id:'server-b'},
+    {_id:'server-a', dataId:'server-b'},
+    {_id:'server-a', id:7},
+    {_id:'server-a', id:''},
+    {_id:'server-a', id:null},
+  ])('holds conflicting or malformed saved ID aliases %# before EXTS without replay', async data => {
+    const {storage}=store(), {command,called}=gateway()
+    vi.mocked(command.dispatch).mockImplementationOnce(async request => {called.push(request);return {success:true,data}})
+    expect((await executeR1Stage1FunctionalCandidate(storage,intent,command)).state).toBe('failed_terminal')
+    expect(called.map(request=>request.path)).toEqual(['biz/extForm/upsert/form-def-1'])
+    expect((await inspectR1MultiStepReceipt(storage,forms)).data).toMatchObject({state:'may_have_dispatched',stepIndex:0,savedFormDataIds:[]})
+    expect((await executeR1Stage1FunctionalCandidate(storage,intent,{...command})).state).toBe('failed_terminal')
+    expect(command.dispatch).toHaveBeenCalledTimes(1)
+  })
+  it.each([0,1,2])('holds explicit non-success status at step %i without advancing or replay', async step => {
+    const {storage}=store(), {command,called}=gateway()
+    vi.mocked(command.dispatch).mockImplementation(async request=>{
+      called.push(request)
+      return {success:true,...(called.length===step+1?{status:0}:{}),data:{_id:'server-a',ok:true}}
+    })
+    expect((await executeR1Stage1FunctionalCandidate(storage,intent,command)).state).toBe('failed_terminal')
+    expect(command.dispatch).toHaveBeenCalledTimes(step+1)
+    expect((await inspectR1MultiStepReceipt(storage,forms)).data).toMatchObject({state:'may_have_dispatched',stepIndex:step})
+    expect((await executeR1Stage1FunctionalCandidate(storage,intent,{...command})).state).toBe('failed_terminal')
+    expect(command.dispatch).toHaveBeenCalledTimes(step+1)
+  })
+  it.each(['data','entity','root'])('accepts consistent IDs in the supported %s envelope',async location=>{
+    const {storage}=store(), {command,called}=gateway()
+    const ids={_id:'server-a',id:'server-a',dataId:'server-a'}
+    vi.mocked(command.dispatch).mockImplementationOnce(async request=>{called.push(request);return location==='root'?{success:true,...ids}:{success:true,status:1,[location]:ids}})
+    expect((await executeR1Stage1FunctionalCandidate(storage,{...intent,processActive:false},command)).state).toBe('succeeded')
+    expect(called.map(request=>request.path)).toEqual(['biz/extForm/upsert/form-def-1','workflowNode/updateExts/runtime-1'])
+    expect(called[1]?.jsonBody).toMatchObject({unrecognizedBackendKey:{keep:'yes'},formList:[{_id:'server-a'}]})
+  })
+})

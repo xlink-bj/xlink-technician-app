@@ -55,16 +55,24 @@ function opaque<T extends string>(id:string):T {return id as T}
 function failure(message:string):OperationSnapshot<R1MultiStepReceipt>{
   return {state:'failed_terminal',error:createOperationError('unsupported_capability',message)}
 }
-function savedId(raw:unknown):string {
+function acknowledgedResponse(raw:unknown):Record<string,unknown> {
   const response=normalizeCommandResponse(raw) as Record<string,unknown>
+  if(Object.prototype.hasOwnProperty.call(response,'status') && response.status!==1)
+    throw new Error('R1 command returned a non-success status')
+  return response
+}
+function savedId(raw:unknown):string {
+  const response=acknowledgedResponse(raw)
   const data=response.data
   const record=(data && typeof data==='object' && !Array.isArray(data)
     ? data : response.entity && typeof response.entity==='object' && !Array.isArray(response.entity)
       ? response.entity : response) as Record<string,unknown>
-  const value=record._id??record.id??record.dataId
-  if(typeof value!=='string'||!value.trim()||value.startsWith('local-'))
+  const values=['_id','id','dataId']
+    .filter(key=>Object.prototype.hasOwnProperty.call(record,key)).map(key=>record[key])
+  if(!values.length || values.some(value=>typeof value!=='string'||!value.trim()
+    || value!==value.trim() || value.startsWith('local-')) || new Set(values).size!==1)
     throw new Error('R1 FormData upsert returned no authoritative saved identity')
-  return value
+  return values[0] as string
 }
 function sourceRecord(id:string,title:string,formDefinitionId:string):R1JsonObject{
   return {_id:id,formDefId:formDefinitionId,formTitle:title,state:1}
@@ -238,7 +246,7 @@ export async function executeR1Stage1FunctionalCandidate(
         const planned=planR1FormsUpdateExts({workflowNodeId:scope.runtimeNodeId,
           sourceNodeType:'forms',authoritativeExts:intent.authoritativeExts,change})
         request=r1FormsUpdateExtsCommand({sourceNodeType:'forms',planned})
-        normalizeCommandResponse(await gateway.dispatch(request))
+        acknowledgedResponse(await gateway.dispatch(request))
         return {state:'succeeded',data:{}}
       }
       case 'repeat_remove':{
@@ -246,13 +254,13 @@ export async function executeR1Stage1FunctionalCandidate(
         request=r1RepeatRemoveCommand({sourceNodeType:'repeat',
           definitionId:opaque<FormDefinitionId>(scope.formDefinitionId),
           formDataId:opaque<FormDataId>(intent.existingFormDataId)})
-        normalizeCommandResponse(await gateway.dispatch(request))
+        acknowledgedResponse(await gateway.dispatch(request))
         return {state:'succeeded',data:{}}
       }
       case 'workflow_process':{
         const ids=finalize?authoritativeIds:savedFormDataIds
         request=sourceWire(scope,ids,intent.sourceNodeType,intent.kind==='forms_finalize')
-        normalizeCommandResponse(await gateway.dispatch(request))
+        acknowledgedResponse(await gateway.dispatch(request))
         return {state:'succeeded',data:{}}
       }
     }
