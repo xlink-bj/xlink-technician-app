@@ -56,29 +56,35 @@ const props = defineProps<{ readonly reader: R1NodeFormsReader; readonly workOrd
   readonly runtimeNodeId: string; readonly actorScope?: string | null }>()
 // Preserve the reader's exact identity while keeping the empty→loaded change reactive.
 const snapshot = shallowRef<R1NodeFormsSnapshot | null>(null)
+const snapshotActorScope = ref<string | null>(null)
 const loading = ref(false), message = ref('')
 const busy = ref(false), confirmCompletion = ref(false)
 const values = ref<Record<string,R1LocalFieldValue>>({})
 const actionProvider = inject(r1RepeatActionsKey,null)
-const emit = defineEmits<{ (event: 'changed'): void }>()
+const emit = defineEmits<{ (event: 'changed'): void;
+  (event: 'snapshot-change', value: { readonly actorScope: string; readonly snapshot: R1NodeFormsSnapshot } | null): void }>()
 const actions = computed(() => visibleSnapshot.value ? actionProvider?.forSnapshot(visibleSnapshot.value) ?? null : null)
 const editableFields = computed(() => visibleSnapshot.value ? projectR1RepeatFields(visibleSnapshot.value, values.value) : [])
 const validDraft = computed(() => { try { return Boolean(visibleSnapshot.value && normalizeR1RepeatValues(visibleSnapshot.value, values.value)) } catch { return false } })
 let version = 0
-const visibleSnapshot = computed(() => props.actorScope && snapshot.value
+const visibleSnapshot = computed(() => props.actorScope && props.actorScope === snapshotActorScope.value && snapshot.value
+  && snapshot.value.workOrderId === props.workOrderId && String(snapshot.value.node.id) === props.runtimeNodeId
   && props.reader.isCurrent(snapshot.value) ? snapshot.value : null)
-function clear() { version++; props.reader.clear(); snapshot.value = null; loading.value = false; message.value = ''; values.value = {}; confirmCompletion.value = false }
+// Share only the exact visible read state, never a save ACK or the stale parent EXTS summary.
+watch(visibleSnapshot, value => emit('snapshot-change', value && snapshotActorScope.value
+  ? { actorScope: snapshotActorScope.value, snapshot: value } : null), { immediate: true, flush: 'sync' })
+function clear() { version++; props.reader.clear(); snapshot.value = null; snapshotActorScope.value = null; loading.value = false; busy.value = false; message.value = ''; values.value = {}; confirmCompletion.value = false }
 watch(() => [props.workOrderId, props.runtimeNodeId, props.actorScope], clear)
 onBeforeUnmount(clear)
 async function load() {
   if (loading.value || busy.value || !props.actorScope) return
-  const ticket = ++version
+  const ticket = ++version, actorScope = props.actorScope
   confirmCompletion.value = false
   snapshot.value = null; message.value = ''; loading.value = true
   try {
     const value = await props.reader.load(props.workOrderId, props.runtimeNodeId)
-    if (ticket !== version || !props.reader.isCurrent(value)) return
-    snapshot.value = value
+    if (ticket !== version || props.actorScope !== actorScope || !props.reader.isCurrent(value)) return
+    snapshotActorScope.value = actorScope; snapshot.value = value
     message.value = `已从后台读取 ${value.records.length} 条记录，当前仅查看。`
   } catch { if (ticket === version) message.value = '记录暂时无法完整核实，请重新读取工单后再试。' }
   finally { if (ticket === version) loading.value = false }
@@ -90,25 +96,25 @@ function setValue(key: string,value: R1LocalFieldValue) {
 async function save() {
   const action = actions.value
   if (!action || busy.value || !validDraft.value) return
-  const ticket = version; busy.value = true; message.value = ''
+  const ticket = version, actorScope = props.actorScope; busy.value = true; message.value = ''
   try {
     const saved = await action.saveOnly(values.value)
-    if (ticket !== version || !props.reader.isCurrent(saved)) return
+    if (ticket !== version || props.actorScope !== actorScope || !props.reader.isCurrent(saved)) return
     snapshot.value = saved; values.value = {}; message.value = '记录已保存并从后台重新读取，当前节点尚未完成。'
   } catch { if (ticket === version) message.value = '保存未完成或结果尚未核实，请勿重复提交。' }
-  finally { busy.value = false }
+  finally { if (ticket === version) busy.value = false }
 }
 async function complete() {
   const action = actions.value
   if (!action || busy.value || !confirmCompletion.value) return
-  const ticket = version; busy.value = true; message.value = ''
+  const ticket = version, actorScope = props.actorScope; busy.value = true; message.value = ''
   try {
     await action.complete()
-    if (ticket !== version) return
+    if (ticket !== version || props.actorScope !== actorScope) return
     message.value = '已收到提交回执，正在重新读取工单确认下一阶段。'
     emit('changed')
   } catch { if (ticket === version) message.value = '流程结果尚未核实，请勿重复提交。' }
-  finally { busy.value = false }
+  finally { if (ticket === version) busy.value = false }
 }
 </script>
 

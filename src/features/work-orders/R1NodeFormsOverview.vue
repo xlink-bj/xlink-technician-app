@@ -3,11 +3,11 @@
     class="r1-node-forms" data-testid="r1-form-list">
     <view class="r1-node-forms__heading">
       <text class="r1-node-forms__title">{{ node.sourceNodeType === 'repeat' ? '重复提交记录' : '表单记录' }}</text>
-      <text v-if="formList?.evidence === 'available'" data-testid="r1-form-list-count"
+      <text v-if="countText" data-testid="r1-form-list-count"
         class="r1-node-forms__count">{{ countText }}</text>
     </view>
     <R1NodeFormsReadPanel v-if="normalReader?.enabled() && workOrderId" :reader="normalReader"
-      :work-order-id="workOrderId" :runtime-node-id="String(node.id)" :actor-scope="actorScope" @changed="emit('changed')" />
+      :work-order-id="workOrderId" :runtime-node-id="String(node.id)" :actor-scope="actorScope" @changed="emit('changed')" @snapshot-change="normalReadState = $event" />
     <template v-else>
     <text v-if="!formList" class="r1-node-forms__hint" data-testid="r1-form-list-unknown">
       表单记录暂不可用，当前仅支持查看。
@@ -103,9 +103,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, inject, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, inject, onBeforeUnmount, ref, shallowRef, watch } from 'vue'
 import R1NodeFormsReadPanel from './R1NodeFormsReadPanel.vue'
-import { r1NodeFormsReaderKey } from './r1-node-forms-read'
+import { r1NodeFormsReaderKey, type R1NodeFormsSnapshot } from './r1-node-forms-read'
 import type { WorkflowNodeRead, R1NodeFormReference, R1NodeFormListRead, FormDefinitionRead } from '@shared/ports'
 import type { R1LocalFieldValue } from './r1-local-form-fields'
 import AppButton from '@shared/ui/AppButton.vue'
@@ -121,6 +121,7 @@ const props = defineProps<{
 const draftStore=useR1LocalFormDraftStore()
 const emit=defineEmits<{ (event:'changed'):void }>()
 const normalReader=inject(r1NodeFormsReaderKey,null)
+const normalReadState=shallowRef<{ readonly actorScope:string; readonly snapshot:R1NodeFormsSnapshot }|null>(null)
 const newTitle=ref('')
 const editTitle=ref('')
 const editingRecordId=ref<string|null>(null)
@@ -158,6 +159,13 @@ async function openFieldEditor(localId:string){
   }
 }
 const countText=computed(()=>{
+  if(normalReader?.enabled()){
+    const state=normalReadState.value, snapshot=state?.snapshot
+    if(!state || state.actorScope!==props.actorScope || !snapshot || !normalReader.isCurrent(snapshot)
+      || snapshot.workOrderId!==props.workOrderId || snapshot.node.id!==props.node?.id
+      || snapshot.node.runId!==props.node.runId || snapshot.definition.id!==props.node.formDefinitionId)return ''
+    return `已加载 ${snapshot.records.length} 条`
+  }
   const list=formList.value
   if(!list||list.evidence!=='available')return ''
   return list.truncated?`已加载 ${list.entries.length}+ 条`:`已加载 ${list.entries.length} 条`
@@ -173,6 +181,7 @@ function intentLabel(kind:R1LocalFormIntent['kind']){
 }
 function stagedFor(id:string){return draftStore.snapshot.intents.find(x=>x.targetFormDataId===id)}
 watch(()=>[props.node,props.workOrderId,props.actorScope] as const,([node,workOrderId,actorScope])=>{
+  normalReadState.value=null
   editingRecordId.value=null
   closeFieldEditor()
   if(!node||!workOrderId||!actorScope||!['forms','repeat'].includes(node.sourceNodeType??'')){
