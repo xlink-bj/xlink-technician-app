@@ -134,7 +134,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: stage1b-main-h5-${{ github.run_id }}
-          path: test-results/main-h5-mock/
+          path: |
+            test-results/main-h5-mock/
+            test-results/m08-catalog-scale/
           if-no-files-found: warn
           retention-days: 7
 
