@@ -30,7 +30,7 @@ function emptyPage<T>(): ReadPage<T> {
 
 function catalogPort(overrides: Partial<QuotationCatalogReadPort> = {}): QuotationCatalogReadPort {
   return {
-    listPackages: vi.fn(async () => succeeded({ ...emptyPage(), items: [packageRow] })),
+    listPackages: vi.fn(async () => succeeded({ ...emptyPage(), totalCount: 1, items: [packageRow] })),
     getPackageDetail: vi.fn(async () => succeeded<QuotationPackageDetailRead>({
       package: packageRow,
       procedures: [],
@@ -116,7 +116,7 @@ describe('G4-F Phase 1E quotation catalog browser', () => {
 
     const refresh = store.loadList('package', true)
     expect(store.catalogStatesByKind.package).toBe('loading')
-    resolveList?.(succeeded({ ...emptyPage(), items: [packageRow] }))
+    resolveList?.(succeeded({ ...emptyPage(), totalCount: 1, items: [packageRow] }))
     await refresh
     expect(store.catalogStatesByKind.package).toBe('succeeded')
     expect(store.visibleCatalogItems).toEqual([packageRow])
@@ -169,7 +169,7 @@ describe('G4-F Phase 1E quotation catalog browser', () => {
 
   it('exposes selection candidates only from the open successful category and exact read identity', async () => {
     const procedure: QuotationProcedureRead = { kind: 'procedure', id: 'procedure-1', name: '工序一' }
-    const port = catalogPort({ listProcedures: vi.fn(async () => succeeded({ ...emptyPage(), items: [procedure] })) })
+    const port = catalogPort({ listProcedures: vi.fn(async () => succeeded({ ...emptyPage(), totalCount: 1, items: [procedure] })) })
     const store = useQuotationCatalogBrowserStore()
     store.configure({ readPort: port, catalogContext: context })
 
@@ -239,7 +239,7 @@ describe('G4-F Phase 1E quotation catalog browser', () => {
     store.configure({ readPort: port, catalogContext: context })
     const request = store.loadList('package')
     store.clear()
-    resolveList?.(succeeded({ ...emptyPage(), items: [packageRow] }))
+    resolveList?.(succeeded({ ...emptyPage(), totalCount: 1, items: [packageRow] }))
     await request
     expect(store.catalogStatesByKind.package).toBe('idle')
     expect(store.catalogItemsByKind.package).toEqual([])
@@ -308,7 +308,7 @@ describe('G4-F Phase 1E quotation catalog browser', () => {
       serviceTypes: ['11'], sourceTypeList: ['1', '5'],
     }
     const port = catalogPort({
-      listMaterials: vi.fn(async () => succeeded({ ...emptyPage(), items: [ordinary] })),
+      listMaterials: vi.fn(async () => succeeded({ ...emptyPage(), totalCount: 1, items: [ordinary] })),
       listMaterialSalesFields: vi.fn(async () => succeeded({ items: [
         { name: 'color', label: '颜色', valueOption: 'color', options: [{ value: 'black', label: '黑色' }] },
       ] })),
@@ -342,7 +342,7 @@ describe('G4-F Phase 1E quotation catalog browser', () => {
       saleOptionCandidates: { color: ['black'] },
     }
     const port = catalogPort({
-      listMaterials: vi.fn(async () => succeeded({ ...emptyPage(), items: [withOptions] })),
+      listMaterials: vi.fn(async () => succeeded({ ...emptyPage(), totalCount: 1, items: [withOptions] })),
       listMaterialSalesFields: vi.fn(async () => succeeded({ items: [
         { name: 'color', label: '颜色', valueOption: 'color', options: [{ value: 'black', label: '黑色' }] },
       ] })),

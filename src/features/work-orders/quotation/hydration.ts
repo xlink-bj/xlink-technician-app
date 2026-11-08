@@ -84,18 +84,59 @@ type CatalogPage = ReadPage<
   | QuotationMaterialRead
   | QuotationMeasureRead
 >
+class CatalogKindMismatch extends Error {}
 
 function catalogRead(
   port: QuotationCatalogReadPort,
   kind: QuotationLineKind,
   context: QuotationCatalogContext,
+  page?: number,
 ): Promise<OperationSnapshot<CatalogPage>> {
   switch (kind) {
-    case 'package': return port.listPackages(context)
-    case 'procedure': return port.listProcedures(context)
-    case 'material': return port.listMaterials(context)
-    case 'measure': return port.listMeasures(context)
+    case 'package': return page === undefined ? port.listPackages(context) : port.listPackages(context, page)
+    case 'procedure': return page === undefined ? port.listProcedures(context) : port.listProcedures(context, page)
+    case 'material': return page === undefined ? port.listMaterials(context) : port.listMaterials(context, page)
+    case 'measure': return page === undefined ? port.listMeasures(context) : port.listMeasures(context, page)
   }
+}
+
+/** Re-read the complete bounded provider, not just the browser's first page or
+ * its cached prices. Keep the existing R1 20-row / 50-page read window. */
+async function completeCatalogRead(
+  port: QuotationCatalogReadPort,
+  kind: QuotationLineKind,
+  context: QuotationCatalogContext,
+): Promise<CatalogPage> {
+  const items: CatalogPage['items'][number][] = []
+  const ids = new Set<string>()
+  let total: number | undefined
+  for (let page = 1; page <= 50; page++) {
+    const result = await catalogRead(port, kind, context, page === 1 ? undefined : page)
+    if (failedRead(result) || !result.data) throw new Error('Catalog page unavailable')
+    const data = result.data
+    if ((data.page !== undefined && data.page !== page)
+      || (data.pageSize !== undefined && data.pageSize !== 20)
+      || !Array.isArray(data.items) || data.items.length > 20
+      || (total !== undefined && data.totalCount !== total)
+      || (data.totalCount !== undefined && (!Number.isSafeInteger(data.totalCount)
+        || data.totalCount < 0 || data.totalCount > 1000))) throw new Error('Catalog page inconsistent')
+    total = data.totalCount
+    for (const item of data.items) {
+      if (item.kind !== kind) throw new CatalogKindMismatch()
+      if (typeof item.id !== 'string' || !item.id.trim()
+        || item.id !== item.id.trim() || ids.has(item.id)) throw new Error('Catalog identity inconsistent')
+      ids.add(item.id)
+      items.push(item)
+    }
+    if (total !== undefined) {
+      if (items.length > total) throw new Error('Catalog exceeds declared total')
+      if (items.length === total) return { items, totalCount: total }
+      if (!data.items.length) throw new Error('Catalog page missing')
+    } else if (data.items.length < 20) {
+      return { items }
+    }
+  }
+  throw new Error('Catalog completeness exceeds bounded read window')
 }
 
 function uniqueProviderItem<T extends { readonly id: string; readonly kind: string }>(
@@ -229,14 +270,11 @@ export async function hydrateQuotationDraft(input: {
   const listIssues: QuotationHydrationIssue[] = []
   await Promise.all([...kinds].map(async (kind) => {
     try {
-      const result = await catalogRead(port, kind, context)
-      if (failedRead(result)) {
-        listIssues.push({ code: 'catalog.read_failed', message: `无法核对当前${kindLabel(kind)}目录，请检查网络后重试。` })
-        return
-      }
-      pages.set(kind, result.data as CatalogPage)
-    } catch {
-      listIssues.push({ code: 'catalog.read_failed', message: `无法核对当前${kindLabel(kind)}目录，请检查网络后重试。` })
+      pages.set(kind, await completeCatalogRead(port, kind, context))
+    } catch (error) {
+      listIssues.push(error instanceof CatalogKindMismatch
+        ? { code: 'catalog.kind_mismatch', message: '目录项目类型与当前类别不一致，请重新核对。' }
+        : { code: 'catalog.read_failed', message: `无法完整核对当前${kindLabel(kind)}目录，请检查网络后重试。` })
     }
   }))
   if (listIssues.length > 0) return { state: 'blocked', issues: listIssues }

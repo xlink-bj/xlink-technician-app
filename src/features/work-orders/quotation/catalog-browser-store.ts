@@ -29,8 +29,28 @@ const zeros = (): Record<QuotationLineKind, number> => ({ package: 0, procedure:
 const falses = (): Record<QuotationLineKind, boolean> => ({ package: false, procedure: false, material: false, measure: false })
 const morePages = (page: ReadPage<QuotationCatalogItemRead>, loadedCount: number): boolean =>
   page.totalCount !== undefined
-    ? loadedCount < page.totalCount && page.items.length > 0
+    ? loadedCount < page.totalCount
     : page.items.length >= (page.pageSize ?? 20)
+
+function validCatalogPage(
+  data: ReadPage<QuotationCatalogItemRead>, kind: QuotationLineKind, page: number,
+  current: readonly QuotationCatalogItemRead[] = [], total?: number,
+): boolean {
+  if ((data.page !== undefined && data.page !== page)
+    || (data.pageSize !== undefined && data.pageSize !== 20)
+    || !Array.isArray(data.items) || data.items.length > 20
+    || (total !== undefined && data.totalCount !== total)
+    || (data.totalCount !== undefined && (!Number.isSafeInteger(data.totalCount)
+      || data.totalCount < current.length + data.items.length || data.totalCount > 1000
+      || (!data.items.length && data.totalCount > current.length)))) return false
+  const ids = new Set(current.map(item => item.id))
+  for (const item of data.items) {
+    if (item.kind !== kind || typeof item.id !== 'string' || !item.id.trim()
+      || item.id !== item.id.trim() || ids.has(item.id)) return false
+    ids.add(item.id)
+  }
+  return true
+}
 
 export interface QuotationPackageMaterialLayerGroup {
   readonly key: string
@@ -113,6 +133,7 @@ export const useQuotationCatalogBrowserStore = defineStore('quotationCatalogBrow
   const listRequests: ListRequestsByKind = {}
   const pageRequests: ListRequestsByKind = {}
   const listVersions = zeros()
+  const listTotals: Partial<Record<QuotationLineKind, number>> = {}
 
   function clear(): void {
     generation += 1
@@ -123,6 +144,7 @@ export const useQuotationCatalogBrowserStore = defineStore('quotationCatalogBrow
     for (const kind of quotationCatalogKinds) {
       delete listRequests[kind]
       delete pageRequests[kind]
+      delete listTotals[kind]
       listVersions[kind] += 1
     }
     catalogItemsByKind.value = emptyItems()
@@ -289,7 +311,8 @@ export const useQuotationCatalogBrowserStore = defineStore('quotationCatalogBrow
     listErrorCopyByKind.value = { ...listErrorCopyByKind.value, [kind]: '' }
     const request = catalogListFor(port, kind, context).then((result) => {
       if (requestGeneration !== generation || requestVersion !== listVersions[kind]) return
-      if (result.state === 'succeeded' && result.data) {
+      if (result.state === 'succeeded' && result.data && validCatalogPage(result.data, kind, 1)) {
+        listTotals[kind] = result.data.totalCount
         catalogItemsByKind.value = { ...catalogItemsByKind.value, [kind]: result.data.items }
         catalogPagesByKind.value = { ...catalogPagesByKind.value, [kind]: 1 }
         catalogMoreByKind.value = { ...catalogMoreByKind.value, [kind]: morePages(result.data, result.data.items.length) }
@@ -324,25 +347,28 @@ export const useQuotationCatalogBrowserStore = defineStore('quotationCatalogBrow
     const page = catalogPagesByKind.value[kind] + 1
     if (!port || !context || !isOpen.value || selectedKind.value !== kind
       || catalogStatesByKind.value[kind] !== 'succeeded'
-      || !catalogMoreByKind.value[kind] || page > 50) return
+      || !catalogMoreByKind.value[kind]) return
+    if (page > 50) {
+      catalogPageErrorByKind.value = { ...catalogPageErrorByKind.value, [kind]: '目录尚未完整，已达到安全读取上限，请重新核对。' }
+      return
+    }
     const currentGeneration = generation
     const currentVersion = listVersions[kind]
     catalogPageLoadingByKind.value = { ...catalogPageLoadingByKind.value, [kind]: true }
     catalogPageErrorByKind.value = { ...catalogPageErrorByKind.value, [kind]: '' }
     const promise = catalogListFor(port, kind, context, page).then(result => {
       if (generation !== currentGeneration || listVersions[kind] !== currentVersion) return
-      if (result.state !== 'succeeded' || !result.data
-        || (result.data.page !== undefined && result.data.page !== page)) {
+      if (result.state !== 'succeeded' || !result.data) {
         catalogPageErrorByKind.value = { ...catalogPageErrorByKind.value, [kind]: '下一页读取失败或页码不一致，请重试。' }
         return
       }
       const current = catalogItemsByKind.value[kind]
-      const seen = new Set(current.map(item => item.id))
-      if (result.data.items.some(item => seen.has(item.id))) {
-        catalogPageErrorByKind.value = { ...catalogPageErrorByKind.value, [kind]: '目录分页返回了重复项目，已保留上一页结果。' }
+      if (!validCatalogPage(result.data, kind, page, current, listTotals[kind])) {
+        catalogPageErrorByKind.value = { ...catalogPageErrorByKind.value, [kind]: '目录分页不完整、重复或身份不一致，已保留当前列表，请重试。' }
         return
       }
       const merged = [...current, ...result.data.items]
+      listTotals[kind] = result.data.totalCount
       catalogItemsByKind.value = { ...catalogItemsByKind.value, [kind]: merged }
       catalogPagesByKind.value = { ...catalogPagesByKind.value, [kind]: page }
       catalogMoreByKind.value = { ...catalogMoreByKind.value, [kind]: morePages(result.data, merged.length) }

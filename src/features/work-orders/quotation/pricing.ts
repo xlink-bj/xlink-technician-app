@@ -81,11 +81,15 @@ function selectionAmount(selection: HydratedQuotationSelection, groupId: string)
       }
       let markup = 0
       for (const row of selection.materials) {
+        if (row.price !== undefined && (typeof row.price !== 'number'
+          || !Number.isFinite(row.price) || Math.abs(row.price) >= 1e21)) {
+          return { state: 'blocked', issue: issue('pricing.package_markup_invalid', '套餐材料加价无效，无法计算金额。', groupId, selection.selection.selectionId) }
+        }
         // R1 only adds package-material exts.price when it is > 0.
         if (row.price !== undefined && row.price > 0) markup += row.price
       }
       const unrounded = (selection.item.price + markup) * quantity
-      if (!Number.isFinite(unrounded)) {
+      if (!safeMoney(selection.item.price + markup) || !safeMoney(unrounded)) {
         return { state: 'blocked', issue: issue('pricing.package_total_invalid', '套餐金额超出可计算范围。', groupId, selection.selection.selectionId) }
       }
       const minimum = selection.item.minimumPrice ?? 0
@@ -105,7 +109,7 @@ function selectionAmount(selection: HydratedQuotationSelection, groupId: string)
         return { state: 'blocked', issue: issue('pricing.procedure_minimum_invalid', '工序最低收费无效。', groupId, selection.selection.selectionId) }
       }
       const unrounded = price * quantity
-      if (!Number.isFinite(unrounded)) {
+      if (!safeMoney(unrounded)) {
         return { state: 'blocked', issue: issue('pricing.procedure_total_invalid', '工序金额超出可计算范围。', groupId, selection.selection.selectionId) }
       }
       return {
@@ -129,7 +133,7 @@ function selectionAmount(selection: HydratedQuotationSelection, groupId: string)
               '已选 SKU 身份、单价或数量未能从当前 R1 目录唯一核验。', groupId, selection.selection.selectionId) }
           }
           const rowTotal = price * choice.quantity
-          if (!Number.isFinite(rowTotal)) {
+          if (!safeMoney(rowTotal)) {
             return { state: 'blocked', issue: issue('pricing.material_sku_total_invalid',
               'SKU 金额超出可计算范围。', groupId, selection.selection.selectionId) }
           }
@@ -138,7 +142,7 @@ function selectionAmount(selection: HydratedQuotationSelection, groupId: string)
           contribution += rowTotal
           fillOrderTotalAmount += r1AmountToFixed(rowTotal)
         }
-        return Number.isFinite(contribution) && Number.isFinite(fillOrderTotalAmount)
+        return safeMoney(contribution) && safeMoney(fillOrderTotalAmount)
           ? { state: 'succeeded', calcTotalPriceContribution: contribution, fillOrderTotalAmount }
           : { state: 'blocked', issue: issue('pricing.material_sku_total_invalid',
             'SKU 汇总金额超出可计算范围。', groupId, selection.selection.selectionId) }
@@ -151,7 +155,7 @@ function selectionAmount(selection: HydratedQuotationSelection, groupId: string)
         return { state: 'blocked', issue: issue('pricing.material_price_missing', '材料单价缺失或无效，不能按零价处理。', groupId, selection.selection.selectionId) }
       }
       const total = selection.item.price * quantity
-      return Number.isFinite(total)
+      return safeMoney(total)
         ? { state: 'succeeded', calcTotalPriceContribution: total, fillOrderTotalAmount: r1AmountToFixed(total) }
         : { state: 'blocked', issue: issue('pricing.material_total_invalid', '材料金额超出可计算范围。', groupId, selection.selection.selectionId) }
     }
@@ -160,7 +164,7 @@ function selectionAmount(selection: HydratedQuotationSelection, groupId: string)
         return { state: 'blocked', issue: issue('pricing.measure_price_missing', '机措指导单价缺失或无效。', groupId, selection.selection.selectionId) }
       }
       const total = selection.item.guideUnitPrice * quantity
-      return Number.isFinite(total)
+      return safeMoney(total)
         ? { state: 'succeeded', calcTotalPriceContribution: total, fillOrderTotalAmount: r1AmountToFixed(total) }
         : { state: 'blocked', issue: issue('pricing.measure_total_invalid', '机措金额超出可计算范围。', groupId, selection.selection.selectionId) }
     }
@@ -183,6 +187,9 @@ export function calculateQuotationPricing(draft: HydratedQuotationDraft): Quotat
         continue
       }
       calcTotalPriceContribution += priced.calcTotalPriceContribution
+      if (!safeMoney(calcTotalPriceContribution)) {
+        issues.push(issue('pricing.order_total_invalid', '报价合计超出可计算范围，请核对数量和价格。', hydratedGroup.group.groupId, selection.selection.selectionId))
+      }
       const sourceUnitPrice = selection.kind === 'material'
         ? selection.item.price
         : selection.kind === 'procedure' || selection.kind === 'measure'
@@ -200,15 +207,24 @@ export function calculateQuotationPricing(draft: HydratedQuotationDraft): Quotat
     }
     const packageSum = categoryValues.package.reduce((sum, value) => sum + value, 0)
     const procedureSum = categoryValues.procedure.reduce((sum, value) => sum + value, 0)
+    const materialSum = categoryValues.material.reduce((sum, value) => sum + value, 0)
+    const measureSum = categoryValues.measure.reduce((sum, value) => sum + value, 0)
+    if (![packageSum, procedureSum, materialSum, measureSum].every(safeMoney)) {
+      issues.push({ code: 'pricing.group_total_invalid', message: '分组金额超出可计算范围，请核对数量和价格。', groupId: hydratedGroup.group.groupId })
+      continue
+    }
     const categoryTotals: Record<QuotationLineKind, number> = {
       package: r1AmountToFixed(packageSum),
       procedure: r1AmountToFixed(procedureSum),
       // R1's fillOrder accumulates row-rounded totals here without another category rounding pass.
-      material: categoryValues.material.reduce((sum, value) => sum + value, 0),
-      measure: categoryValues.measure.reduce((sum, value) => sum + value, 0),
+      material: materialSum,
+      measure: measureSum,
     }
     // R1 sums category totals for a group without an additional group rounding pass.
     const subtotal = Object.values(categoryTotals).reduce((sum, value) => sum + value, 0)
+    if (!safeMoney(subtotal)) {
+      issues.push({ code: 'pricing.group_total_invalid', message: '分组金额超出可计算范围，请核对数量和价格。', groupId: hydratedGroup.group.groupId })
+    }
     groups.push({ groupId: hydratedGroup.group.groupId, selectionAmounts, categoryTotals, subtotal })
   }
   if (issues.length > 0) return { state: 'blocked', issues }
@@ -217,6 +233,9 @@ export function calculateQuotationPricing(draft: HydratedQuotationDraft): Quotat
   // totalPrice steps preserve the already-rounded originPrice.
   const totalPrice = originPrice
   const orderListTotalAmount = groups.reduce((sum, group) => sum + group.subtotal, 0)
+  if (!safeMoney(orderListTotalAmount)) {
+    return { state: 'blocked', issues: [{ code: 'pricing.order_total_invalid', message: '报价明细合计超出可计算范围，请核对数量和价格。' }] }
+  }
   return {
     state: 'succeeded',
     data: {
