@@ -1,3 +1,5 @@
+import { createHistoricalFormsReader } from './r1-historical-forms-read'
+import { historicalFormsReaderKey } from '@features/work-orders/r1-historical-forms-read'
 import { createNormalQuotationPartsReader } from './r1-quotation-parts-read'
 import { createNormalQuotationUnitDisplay } from './r1-quotation-unit-display'
 import { localUnitDisplayKey } from '@features/work-orders/quotation/local-unit-display'
@@ -96,6 +98,9 @@ export function createApplication(dependencies: ApplicationDependencies = {}) {
     tenantId: String(import.meta.env.VITE_XLINK_AUTH_TENANT ?? ''), env: import.meta.env,
     origin: typeof window === 'undefined' ? '' : window.location.origin })
   app.provide(r1NodeFormsReaderKey, normalNodeFormsReader)
+  app.provide(historicalFormsReaderKey, () => createHistoricalFormsReader({ auth: authSession, read: apiRead,
+    tenantId: String(import.meta.env.VITE_XLINK_AUTH_TENANT ?? ''), env: import.meta.env,
+    origin: typeof window === 'undefined' ? '' : window.location.origin }))
   app.provide(r1RepeatActionsKey, createNormalNodeFormActionProvider({ auth: authSession, reader: normalNodeFormsReader,
     env: import.meta.env, origin: typeof window === 'undefined' ? '' : window.location.origin }))
   const apiCommand = dependencies.apiCommand ?? createDefaultTechnicianApiCommandPort(authSession, apiRead)

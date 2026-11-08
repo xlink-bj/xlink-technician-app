@@ -181,10 +181,12 @@
               </view>
             </view>
           </view>
-          <view v-else class="tab-empty">
+          <view v-else-if="!canShowHistoricalForms" class="tab-empty">
             <text class="tab-empty-title">暂无跟进记录</text>
             <text class="tab-empty-copy">后续跟进信息将在业务能力开放后展示。</text>
           </view>
+          <HistoricalFormsTimeline v-if="canShowHistoricalForms" :work-order-id="String(detail.id)"
+            :actor-scope="workOrderReadScopeKey(session.session)" />
         </view>
 
         <view v-else-if="activeTab === 'customer'" class="tab-panel customer-info-panel">
@@ -337,6 +339,8 @@ import AppFeedbackState from '@shared/ui/AppFeedbackState.vue'
 import AppWorkOrderSkeleton from '@shared/ui/AppWorkOrderSkeleton.vue'
 import WorkOrderTaskFocus from '@features/work-orders/WorkOrderTaskFocus.vue'
 import R1NodeFormsOverview from '@features/work-orders/R1NodeFormsOverview.vue'
+import HistoricalFormsTimeline from '@features/work-orders/HistoricalFormsTimeline.vue'
+import { historicalFormsReaderKey } from '@features/work-orders/r1-historical-forms-read'
 import R1SpecialMockTransactionPanel from '@features/work-orders/R1SpecialMockTransactionPanel.vue'
 import { isAStageSpecialMockAvailable, createAStageSpecialMockControllerForActor, type AStageSpecialKind } from '@app/a-stage-special-mock-ui'
 import type { AStageSpecialMockControllerFactory } from '@features/work-orders/a-stage-special-mock-port'
@@ -356,6 +360,10 @@ const productionReadOnly = isProductionReadOnlyRuntime()
 const detail = computed(() => workOrder.detail)
 const displayUnit = useLocalUnitDisplay(() => String(detail.value?.id ?? ''))
 const activities = computed(() => detail.value?.activities ?? [])
+const hasHistoricalForms = computed(() => detail.value?.workflowNodes?.some(node =>
+  node.sourceNodeType === 'forms' && node.lifecycle === 'closed') === true)
+const historicalFormsEnabled = inject(historicalFormsReaderKey, null)?.().enabled() === true
+const canShowHistoricalForms = computed(() => !productionReadOnly && historicalFormsEnabled && hasHistoricalForms.value)
 const customerServiceAddress = computed(() => {
   const district = detail.value?.serviceDistrict?.trim()
   const address = detail.value?.serviceAddress?.trim()
