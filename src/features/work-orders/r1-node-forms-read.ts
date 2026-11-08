@@ -17,6 +17,10 @@ export interface R1NodeFormsReader {
   /** Transient complete EXTS for this reader's exact current forms snapshot.
    * A read credential only; never a command or edit permission. */
   currentFormsExts?(snapshot: R1NodeFormsSnapshot): Readonly<Record<string, unknown>> | null
+  /** Exact current read provenance, not an ACK/cache-derived edit grant. */
+  currentFormOriginal?(snapshot: R1NodeFormsSnapshot, recordId: string): Readonly<Record<string, unknown>> | null
+  /** Independent post-Process read; performs no mutation. */
+  confirmFormsCompletion?(snapshot: R1NodeFormsSnapshot): Promise<{ readonly transitionVerified: true }>
   clear(): void
 }
 export const r1NodeFormsReaderKey: InjectionKey<R1NodeFormsReader> = Symbol('r1-node-forms-reader')

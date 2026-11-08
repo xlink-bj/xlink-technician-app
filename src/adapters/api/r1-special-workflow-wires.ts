@@ -85,7 +85,7 @@ export function r1SpecialFormUpsert(input: {
   if (!['forms','repeat'].includes(input.sourceNodeType)) throw new Error('Unsupported R1 node type')
   if (!input.definitionId||!input.workOrderId||!input.workflowNodeId)throw new Error('R1 FormData identity missing')
   if(input.sourceNodeType==='repeat'&&!input.workflowRunId)throw new Error('R1 repeat requires actual workflow run identity')
-  const forbidden=new Set(['_id','state','nodeId','workflowId','sid','smodule','dataStr'])
+  const forbidden=new Set(['_id','id','dataId','formDataId','state','nodeId','runtimeNodeId','workflowId','workflowRunId','runId','workflow','sid','workOrderId','smodule','dataStr','tenantId','userId','roleId','formDefId','formDefinitionId','definitionId','extId','exts','__proto__','prototype','constructor'])
   if(!input.formData || typeof input.formData!=='object' || Array.isArray(input.formData)
     || Object.keys(input.formData).length>50)throw new Error('Unbounded or invalid R1 form field patch')
   for(const [key,value] of Object.entries(input.formData)){
@@ -128,15 +128,29 @@ export function r1SpecialFormUpsert(input: {
       ['formDataId',input.existingFormDataId],['sid',input.workOrderId],
       ['smodule','serviceAppointment'],['nodeId',input.workflowNodeId],
       ['formDefId',input.definitionId],['definitionId',input.definitionId],
-      ['extId',input.definitionId],
+      ['extId',input.definitionId],['formDefinitionId',input.definitionId],
     ]
     for(const [key,expected] of identities){
-      if(original[key]!==undefined && original[key]!==expected)
+      if(Object.hasOwn(source,key) && source[key]!==expected)
         throw new Error(`Authoritative saved FormData ${key} mismatch`)
     }
-    if(input.sourceNodeType==='repeat' && original.workflowId!==undefined
-      && original.workflowId!==input.workflowRunId)
-      throw new Error('Authoritative saved FormData workflowId mismatch')
+    // Both forms and repeat may carry persisted run aliases. Verify every
+    // present alias before the contextual wire can overwrite workflowId.
+    // A missing caller run is not permission to infer one from saved data.
+    const verifyRunAliases=(record:Readonly<Record<string,unknown>>)=>{
+      for(const key of ['workflowId','workflowRunId','runId']){
+        if(Object.hasOwn(record,key) && (!input.workflowRunId || record[key]!==input.workflowRunId))
+          throw new Error(`Authoritative saved FormData ${key} mismatch`)
+      }
+    }
+    verifyRunAliases(source)
+    const nestedWorkflow=source.workflow
+    if(nestedWorkflow!=null){
+      if(typeof nestedWorkflow!=='object'||Array.isArray(nestedWorkflow))
+        throw new Error('Authoritative saved FormData nested Workflow is malformed')
+      // Workflow._id belongs to a separate entity, not the FormData record.
+      verifyRunAliases(nestedWorkflow as Readonly<Record<string,unknown>>)
+    }
   } else if (input.authoritativeOriginal !== undefined) {
     throw new Error('New R1 FormData must not reuse an existing source record')
   }
@@ -154,6 +168,16 @@ export function r1SpecialFormUpsert(input: {
       delete nextExts[key]
     }
     original.exts = nextExts
+  }
+  // Existing dynamic records may store the same business value at the top
+  // level and inside exts. The read mapper prefers exts; update only duplicate
+  // keys already present there, without synthesizing an entire Mock-style merge.
+  if(input.existingFormDataId && original.exts && typeof original.exts==='object' && !Array.isArray(original.exts)){
+    const nextExts={...original.exts as Record<string,unknown>}
+    for(const [key,value] of Object.entries(input.formData)){
+      if(Object.hasOwn(nextExts,key))nextExts[key]=value
+    }
+    original.exts=nextExts
   }
   const data={...original,...input.formData,sid:input.workOrderId,smodule:'serviceAppointment',
     nodeId:input.workflowNodeId,...(input.workflowRunId?{workflowId:input.workflowRunId}:{}),

@@ -42,6 +42,8 @@ export function createR1ScopedFormReader(input: {
     ...input.formList, entries: input.formList.entries.map(entry => ({ ...entry })),
   } : undefined
   let discovered = new Set<string>()
+  const exactReads = new WeakSet<object>()
+  const originals = new WeakMap<object, Readonly<Record<string, unknown>>>()
   function current() {
     if (!input.isCurrent() || !['forms', 'repeat'].includes(scope.sourceNodeType)) { discovered.clear(); fail() }
     for (const key of ['tenantId', 'workOrderId', 'runtimeNodeId', 'workflowRunId', 'formDefinitionId'] as const) id(scope[key])
@@ -50,6 +52,16 @@ export function createR1ScopedFormReader(input: {
     const row = object(raw)
     for (const [key, expected] of Object.entries({ tenantId: scope.tenantId, sid: scope.workOrderId, nodeId: scope.runtimeNodeId, workflowId: scope.workflowRunId })) {
       if (id(row[key]) !== expected) fail()
+    }
+    for(const key of ['workflowRunId','runId']){
+      if(Object.hasOwn(row,key)&&row[key]!==scope.workflowRunId) fail()
+    }
+    if(Object.hasOwn(row,'smodule')&&row.smodule!=='serviceAppointment') fail()
+    if(row.workflow!=null){
+      const nested=object(row.workflow)
+      for(const key of ['workflowId','workflowRunId','runId']){
+        if(Object.hasOwn(nested,key)&&nested[key]!==scope.workflowRunId) fail()
+      }
     }
     const aliases = ['_id', 'id', 'dataId'].filter(key => key in row)
     if (!aliases.length) fail()
@@ -64,7 +76,9 @@ export function createR1ScopedFormReader(input: {
       ...(mapped.workflowRunId ? { workflowRunId: mapped.workflowRunId } : {}),
       ...(mapped.values ? { values: structuredClone(mapped.values) } : {}),
     }
-    return freeze({ ownership: scope, data })
+    const result = freeze({ ownership: scope, data })
+    originals.set(result, freeze(structuredClone(row)))
+    return result
   }
   async function page(pageNumber: number, exactId?: string) {
     current()
@@ -99,6 +113,13 @@ export function createR1ScopedFormReader(input: {
     return result.records[0]!
   }
   return {
+    /** Only an exact read issued by this scoped reader can carry full original
+     * provenance. A display projection, ACK, route or cached ID cannot. */
+    originalFor(record: R1ScopedFormRecord): Readonly<Record<string, unknown>> | null {
+      current()
+      const original = exactReads.has(record) ? originals.get(record) : undefined
+      return original ? structuredClone(original) : null
+    },
     async discover(): Promise<readonly R1ScopedFormRecord[]> {
       discovered = new Set()
       current()
@@ -133,7 +154,9 @@ export function createR1ScopedFormReader(input: {
     async select(recordId: string): Promise<R1ScopedFormRecord> {
       current()
       if (!discovered.has(id(recordId))) fail()
-      return exact(recordId)
+      const selected = await exact(recordId)
+      current(); exactReads.add(selected)
+      return selected
     },
   }
 }

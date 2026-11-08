@@ -69,7 +69,8 @@ export function createNormalNodeFormsReader(input: {
     getSessionRef: () => input.auth.getCurrentSession()?.sessionRef ?? null,
   })
   let generation = 0
-  let current: { snapshot: R1NodeFormsSnapshot; fingerprint: string; formsExts?: string } | null = null
+  let current: { snapshot: R1NodeFormsSnapshot; fingerprint: string; formsExts?: string;
+    originals: ReadonlyMap<string, string> } | null = null
   const enabled = () => normalNodeFormsReadEnabled(input.env, input.origin)
   const fingerprint = () => {
     const a = input.auth.getCurrentSession()
@@ -85,6 +86,90 @@ export function createNormalNodeFormsReader(input: {
       return current?.snapshot === snapshot && fingerprint() === current.fingerprint
         && input.read.isWorkOrderListedForCurrentSession?.(snapshot.workOrderId) === true && current.formsExts
         ? JSON.parse(current.formsExts) as Record<string, unknown> : null
+    },
+    currentFormOriginal(snapshot, recordId) {
+      const raw = current?.snapshot === snapshot && fingerprint() === current.fingerprint
+        && input.read.isWorkOrderListedForCurrentSession?.(snapshot.workOrderId) === true
+        ? current.originals.get(recordId) : undefined
+      return raw ? JSON.parse(raw) as Record<string, unknown> : null
+    },
+    async confirmFormsCompletion(snapshot) {
+      const identity = fingerprint(), ticket = generation
+      const check = () => {
+        if (!identity || fingerprint() !== identity || ticket !== generation || current?.snapshot !== snapshot
+          || input.read.isWorkOrderListedForCurrentSession?.(snapshot.workOrderId) !== true
+          || snapshot.node.sourceNodeType !== 'forms') deny()
+      }
+      check()
+      // Expected IDs and business values come from the private, exact-read
+      // originals, not a mutable display projection or the Process ACK.
+      const businessKeys=(snapshot.definition.fields??[]).map(field=>field.valueKey)
+      if(!current!.originals.size || !businessKeys.length || new Set(businessKeys).size!==businessKeys.length) return deny()
+      const slot=(record:Row|undefined,key:string)=>{
+        if(!record || !Object.hasOwn(record,key))return {present:false as const}
+        const value=record[key]
+        // This rollout supports scalar business fields only. In particular an
+        // explicit invalid EXTS value must never disappear into root fallback.
+        if(!(value===null || typeof value==='string' || typeof value==='boolean'
+          || (typeof value==='number'&&Number.isFinite(value))))return deny()
+        return {present:true as const,value}
+      }
+      const businessState=(raw:unknown)=>{
+        const record=row(raw),exts=record.exts==null?undefined:row(record.exts)
+        // Preserve each proven storage slot's presence/type/value, including
+        // historical distinct root/EXTS copies; ignore all unrelated metadata.
+        return JSON.stringify(businessKeys.map(key=>[key,slot(record,key),slot(exts,key)]))
+      }
+      const expected=new Map([...current!.originals].map(([recordId,raw])=>[recordId,businessState(JSON.parse(raw))]))
+      const execute=async(request:ApiReadRequest)=>{check();const value=await transport.execute(request);check();return value}
+      const terminalReferences=async()=>{
+        const envelope = row(await execute({method:'POST',
+          path:`basic/serviceAppointment/queryById/${encodeURIComponent(snapshot.workOrderId)}`,body:{}}))
+        check()
+        if(envelope.success!==true || envelope.status!==1) return deny()
+        const data=row(envelope.data),sa=row(data.serviceAppointment),wf=row(data.workflow)
+        if(sa._id!==snapshot.workOrderId || sa.state!==1 || sa.tenantId!==input.tenantId || sa.workflowId!==snapshot.node.runId
+          || wf._id!==snapshot.node.runId || wf.tenantId!==input.tenantId || wf.formDataId!==snapshot.workOrderId
+          || (wf.state!==0 && wf.state!==10) || !Array.isArray(data.workflowNode)) return deny()
+        const nodes=(data.workflowNode as unknown[]).map(row)
+        if(new Set(nodes.map(n=>id(n._id))).size!==nodes.length) return deny()
+        const n=nodes.find(n=>n._id===snapshot.node.id)
+        if(!n || n.tenantId!==input.tenantId || n.workflowId!==snapshot.node.runId
+          || n.workflowFormDataId!==snapshot.workOrderId || n.workflowFormColName!=='serviceAppointment'
+          || (n.formDefId!==undefined && n.formDefId!==snapshot.definition.id)
+          || n.state!==10 || row(n.nodeDef).nodeType!=='forms'
+          || row(n.nodeDef).formDefId!==snapshot.definition.id) return deny()
+        const references=workflowNode(n).formList
+        if(!references || references.source!=='exts.formList' || references.evidence!=='available' || references.truncated
+          || references.entries.some(entry=>!['active','deleted'].includes(entry.state)
+            || (entry.formDefinitionId!==undefined && entry.formDefinitionId!==snapshot.definition.id))
+          || [...expected.keys()].some(recordId=>!references.entries.some(entry=>entry.id===recordId&&entry.state==='active'))) return deny()
+        return references
+      }
+      const references=await terminalReferences()
+      const reader=createR1ScopedFormReader({transport:{execute},scope:{
+        tenantId:input.tenantId,workOrderId:snapshot.workOrderId,runtimeNodeId:String(snapshot.node.id),
+        workflowRunId:id(snapshot.node.runId),formDefinitionId:String(snapshot.definition.id),sourceNodeType:'forms',
+      },isCurrent:()=>{check();return true},formList:references})
+      const discovered=await reader.discover()
+      const verified=new Map<string,string>()
+      for(const discoveredRecord of discovered){
+        const selected=await reader.select(String(discoveredRecord.data.id))
+        const original=reader.originalFor(selected)
+        if(!original)return deny()
+        verified.set(String(selected.data.id),businessState(original))
+      }
+      for(const [recordId,values] of expected){
+        const actual=verified.get(recordId)
+        if(actual!==values) return deny()
+      }
+      // Only active relationship identities must stay stable during this read.
+      // Engine-owned unknown metadata/deleted history is not frozen by this client.
+      const bindings=(refs:typeof references)=>JSON.stringify(refs.entries.filter(entry=>entry.state==='active')
+        .map(entry=>[entry.id,entry.formDefinitionId??snapshot.definition.id]).sort((a,b)=>String(a[0]).localeCompare(String(b[0]))))
+      if(bindings(await terminalReferences())!==bindings(references)) return deny()
+      check(); generation++; current=null
+      return {transitionVerified:true as const}
     },
     async load(workOrderId, runtimeNodeId) {
       const ticket = ++generation; current = null
@@ -189,14 +274,21 @@ export function createNormalNodeFormsReader(input: {
       const discovered = await reader.discover()
       // List rows are discovery, not the detail read used to display a record.
       const records = []
-      for (const r of discovered) records.push((await reader.select(String(r.data.id))).data)
+      const originals = new Map<string,string>()
+      for (const r of discovered) {
+        const selected=await reader.select(String(r.data.id))
+        records.push(selected.data)
+        const original=reader.originalFor(selected)
+        if(!original) return deny()
+        originals.set(String(selected.data.id),formsExtsJson(original))
+      }
       const after = await readNode()
       if (JSON.stringify(after) !== JSON.stringify(node) || JSON.stringify(rawFill) !== JSON.stringify(fillableFieldIds)
         || rawFormsExts !== formsExts) deny()
       check()
       const snapshot: R1NodeFormsSnapshot = { workOrderId, node, definition: { ...definition, fields: hydrated } as FormDefinitionRead, records,
         ...(fillableFieldIds ? { fillableFieldIds } : {}) }
-      current = { snapshot, fingerprint: identity, ...(formsExts ? { formsExts } : {}) }
+      current = { snapshot, fingerprint: identity, originals, ...(formsExts ? { formsExts } : {}) }
       return snapshot
     },
   }

@@ -45,7 +45,12 @@ function optionalClears(previous: Record<string, unknown>, incoming: Record<stri
   const removed = Object.keys(before).filter(key => !Object.hasOwn(after, key))
   if (removed.some(key => !removableOptionalFieldKeys.has(key)
     || Object.hasOwn(incoming, key))) return null
-  const expected = Object.fromEntries(Object.entries(before).filter(([key]) => !removed.includes(key)))
+  const expected = Object.fromEntries(Object.entries(before).filter(([key]) => !removed.includes(key))
+    // A real edit wire now updates existing duplicate exts business values.
+    // Accept that change only when it matches the submitted top-level value;
+    // otherwise retain the source value, including unknown/hidden metadata.
+    .map(([key, value]) => [key, Object.hasOwn(incoming, key) && same(after[key], incoming[key])
+      ? incoming[key] : value]))
   return same(expected, after) ? removed : null
 }
 function denied(): unknown { return { success: false, code: 'TERMINAL', message: 'Synthetic special R1 command rejected' } }
