@@ -57,6 +57,7 @@ import {
 import type { ApiCommandRequest } from '../technician-api-commands'
 import { isMockOwnedRead, isMockOwnedCommand, normalizedPath, quotationCatalogListRoutes } from './ownership'
 import { mockCommandState } from './command-state'
+import { queryMockR1FormRows } from './r1-form-query'
 import { restoreMockR1SpecialState } from './r1-special-state'
 import { mockFaultWireResponse, validatedMockLatency, type MockFaultKind } from './fault-scenarios'
 export { resetMockCommandState } from './command-state'
@@ -987,13 +988,12 @@ function matchedResponse(
         })] : []
     const candidate = dataId ? mockR1ExistingFormData[dataId as keyof typeof mockR1ExistingFormData]
       ?? mockCommandState().formData.get(dataId) : undefined
-    // R1 forms soft-delete remains queryable by exact FormData ID for
-    // authoritative deletion readback; repeat/remove is absent from the list.
+    // Keep the existing exact-ID deletion read boundary. Apply every supplied
+    // known filter and the requested page to the eligible raw rows afterward.
     const row = mutableRecord(candidate)
     const formData = row?.extId === mockSyntheticDynamicFormDefinitionId
       && (row.state !== -1 || row.sid === mockR1FormsWorkOrderId) ? candidate : undefined
-    const rows = dataId ? (formData ? [formData] : []) : repeatRows
-    return { data: rows, page: 1, rows: 20, total: rows.length }
+    return queryMockR1FormRows(dataId ? (formData ? [formData] : []) : repeatRows, requestData)
   }
   if (route.startsWith('biz/extForm/query/') && route.slice('biz/extForm/query/'.length) === mockR1NoteFormDefinitionId) {
     const dataId = requestData['is:_id|string#and']

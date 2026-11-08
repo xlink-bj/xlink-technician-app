@@ -1,7 +1,8 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
 import { setBusinessMockMode, resetBusinessMockCache } from '@adapters/api/mock/config'
-import { resetMockCommandState } from '@adapters/api/mock/command-state'
+import { mockCommandState, resetMockCommandState } from '@adapters/api/mock/command-state'
 import { resetMockJourney } from '@adapters/api/mock/journey'
+import * as mockReads from '@adapters/api/mock/router'
 import * as r1SpecialTransport from '@adapters/api/mock/r1-special-protocol'
 import {
   createAStageSpecialMockController, type AStageMockActor,
@@ -686,4 +687,102 @@ describe('source-backed R1 generic file field in special forms and repeat', () =
       fields: { ...fields('重试完成'), inspectionFiles: [r1FileWireFromUpload(completed.uploadedRef!)!] } }))
       .toMatchObject({ state: 'succeeded' })
   })
+})
+
+
+describe('repeat controller complete bounded paging', () => {
+  async function savedNineteen() {
+    const ui = controller('repeat')
+    for (let n = 1; n <= 19; n++) {
+      const result = await ui.execute({ kind: 'save', fields: fields(`分页记录${n}`) })
+      expect(result.state, `save ${n} must reconcile the server ID`).toBe('succeeded')
+    }
+    return ui
+  }
+  it('reconciles the 19th save and reloads all 21 rows rather than silently taking page one', async () => {
+    const ui = await savedNineteen()
+    const view = await ui.load()
+    expect(view.entries).toHaveLength(21)
+    expect(view.receiptPending).toBe(false)
+    expect(view.entries.some(row => row.summary === '分页记录19')).toBe(true)
+    resetMockCommandState()
+    expect((await controller('repeat').load()).entries).toHaveLength(21)
+  })
+  it('finishes with every authorized active saved ID across pages', async () => {
+    const ui = await savedNineteen()
+    const dispatch = vi.spyOn(r1SpecialTransport, 'tryMockR1SpecialCommand')
+    const completed = await ui.execute({ kind: 'finish' })
+    expect(completed).toMatchObject({ state: 'succeeded', view: { nodeActive: false, receiptPending: false } })
+    if (completed.state === 'succeeded') expect(completed.view.entries).toHaveLength(21)
+    const process = dispatch.mock.calls.find(([r]) => r.path === 'workflow/process')?.[0]
+    expect(String(process?.body?.nodeFormDataId).split(',')).toHaveLength(19)
+    expect(String(process?.body?.nodeFormDataId).split(',')).toContain('mock-special-form-data-repeat-19')
+  })
+  it('rejects incomplete or drifting pages before a finish dispatch', async () => {
+    const ui = await savedNineteen()
+    const original = mockReads.tryMockRead
+    vi.spyOn(mockReads, 'tryMockRead').mockImplementation(async (path, body, options) => {
+      const response = await original(path, body, options)
+      if (path === `biz/extForm/query/${mockSyntheticDynamicFormDefinitionId}` && body?.page === 2) {
+        return { ...(response as object), total: 22 }
+      }
+      return response
+    })
+    const dispatch = vi.spyOn(r1SpecialTransport, 'tryMockR1SpecialCommand')
+    await expect(ui.load()).rejects.toThrow()
+    expect((await ui.execute({ kind: 'finish' })).state).not.toBe('succeeded')
+    expect(dispatch).not.toHaveBeenCalled()
+  })
+  it('revokes a later page when actor scope changes during the read', async () => {
+    await savedNineteen()
+    let current = actor
+    const ui = controller('repeat', () => current)
+    const original = mockReads.tryMockRead
+    vi.spyOn(mockReads, 'tryMockRead').mockImplementation(async (path, body, options) => {
+      const response = await original(path, body, options)
+      if (path === `biz/extForm/query/${mockSyntheticDynamicFormDefinitionId}` && body?.page === 2) {
+        current = { ...actor, identity: 'new-account-scope' }
+      }
+      return response
+    })
+    await expect(ui.load()).rejects.toThrow()
+    expect(await ui.execute({ kind: 'finish' })).toMatchObject({ state: 'blocked' })
+  })
+  it.each(['duplicate', 'short', 'wrong-page', 'wrong-owner', 'over-limit'] as const)(
+    'rejects %s list evidence before any command can finish a partial set', async kind => {
+      const ui = await savedNineteen()
+      const original = mockReads.tryMockRead
+      vi.spyOn(mockReads, 'tryMockRead').mockImplementation(async (path, body, options) => {
+        const response = await original(path, body, options)
+        if (path !== `biz/extForm/query/${mockSyntheticDynamicFormDefinitionId}` || body?.['is:_id|string#and']) return response
+        const page = response as { data: Array<Record<string, unknown>>; total: number }
+        if (kind === 'over-limit') return { ...page, total: 101 }
+        if (body?.page !== 2) return response
+        if (kind === 'duplicate') return { ...page, data: [{ ...page.data[0], _id: 'mock-form-data-021-existing-a' }] }
+        if (kind === 'short') return { ...page, data: [] }
+        if (kind === 'wrong-page') return { ...page, page: 1 }
+        return { ...page, data: [{ ...page.data[0], sid: 'another-work-order' }] }
+      })
+      const dispatch = vi.spyOn(r1SpecialTransport, 'tryMockR1SpecialCommand')
+      await expect(ui.load()).rejects.toThrow()
+      expect((await ui.execute({ kind: 'finish' })).state).not.toBe('succeeded')
+      expect(dispatch).not.toHaveBeenCalled()
+    })
+
+  it('blocks a 101st row before upsert at the existing complete-read limit', async () => {
+    for (let n = 1; n <= 98; n++) {
+      const id = `mock-special-form-data-repeat-${n}`
+      mockCommandState().formData.set(id, { _id: id, extId: mockSyntheticDynamicFormDefinitionId,
+        formDefId: mockSyntheticDynamicFormDefinitionId, sid: mockR1RepeatWorkOrderId,
+        nodeId: 'mock-workflow-node-021-repeat', workflowId: 'mock-workflow-run-021',
+        state: 1, exts: fields(`bounded-${n}`) })
+    }
+    const ui = controller('repeat')
+    expect((await ui.load()).entries).toHaveLength(100)
+    const dispatch = vi.spyOn(r1SpecialTransport, 'tryMockR1SpecialCommand')
+    expect(await ui.execute({ kind: 'save', fields: fields('over limit') })).toMatchObject({ state: 'blocked' })
+    expect(dispatch).not.toHaveBeenCalled()
+    expect((await ui.load()).entries).toHaveLength(100)
+  })
+
 })

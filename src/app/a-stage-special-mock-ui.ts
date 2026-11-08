@@ -112,19 +112,7 @@ async function rawDetail(kind: AStageSpecialKind) {
     || nodeDef.formDefId !== definition) throw new Error('当前表单节点身份未能核对。')
   return node!
 }
-async function scopedForms(kind: AStageSpecialKind, id?: string, formDefId = definition) {
-  if (formDefId !== definition && !(kind === 'forms' && formDefId === mockR1NoteFormDefinitionId)) {
-    throw new Error('禁止跨节点读取未知表单。')
-  }
-  const data = id ? { 'is:_id|string#and': id }
-    : { 'is:workflowId|string#and': targets[kind].run }
-  const result = await tryMockRead(`biz/extForm/query/${formDefId}`, data, { latencyMs: 0 })
-  const rows = object(result)?.data
-  if (!Array.isArray(rows) || rows.length > 100 || rows.some(row => !object(row))) {
-    throw new Error('表单记录回读失败，不能继续提交。')
-  }
-  return rows.map(row => object(row)!)
-}
+
 function scope(kind: AStageSpecialKind, actor: AStageMockActor, formDefId = definition): R1MultiStepScope {
   const target = targets[kind]
   return { userId: actor.userId, workOrderId: target.sid,
@@ -149,6 +137,50 @@ export function createAStageSpecialMockController(options: {
     && isAStageSpecialMockAvailable(kind, options.workOrderId, expected)
     && options.getActor()?.identity === expected.identity
     && options.getActor()?.roleId === expected.roleId
+
+  /** A complete bounded read, never a first-page projection labelled complete.
+   * Historical seed rows may omit ownership keys; explicit contradictions still
+   * fail closed, and no missing key is fabricated to grant edit permission. */
+  async function scopedForms(kind: AStageSpecialKind, id?: string, formDefId = definition) {
+    const fail = (): never => { throw new Error('表单记录未能完整回读，不能继续提交。') }
+    const check = () => { if (!authorized()) fail() }
+    check()
+    if (formDefId !== definition && !(kind === 'forms' && formDefId === mockR1NoteFormDefinitionId)) fail()
+    const seen = new Set<string>(), records: Record<string, unknown>[] = []
+    let total: number | undefined
+    for (let page = 1; page <= 5; page++) {
+      check()
+      const data = { sortField: 'createTime', sortOrder: 'desc', page, rows: 20,
+        ...(id ? { 'is:_id|string#and': id }
+          : { 'is:workflowId|string#and': targets[kind].run, 'ne:state|integer#and': -1 }) }
+      const envelope = object(await tryMockRead(`biz/extForm/query/${formDefId}`, data, { latencyMs: 0 }))
+      check()
+      const count = envelope?.total, rows = envelope?.data
+      if (!Number.isSafeInteger(count) || (count as number) < 0 || (count as number) > 100
+        || (total !== undefined && total !== count) || (id && (count as number) > 1)
+        || envelope?.page !== page || (envelope.size ?? envelope.rows) !== 20
+        || (envelope.rows !== undefined && envelope.rows !== 20)
+        || !Array.isArray(rows) || rows.length !== Math.min(20, Math.max(0, (count as number) - (page - 1) * 20))
+        || (envelope.dataCount !== undefined && envelope.dataCount !== rows.length)
+        || (envelope.pages !== undefined && envelope.pages !== Math.ceil((count as number) / 20))) fail()
+      total = count as number
+      for (const value of rows as unknown[]) {
+        const row = object(value), recordId = row?._id
+        if (!row || typeof recordId !== 'string' || !recordId || recordId.trim() !== recordId
+          || seen.has(recordId) || (id && recordId !== id) || ![1, -1].includes(row.state as number)
+          || (!id && row.state !== 1)) fail()
+        const expected: Record<string, string> = { id: recordId as string, dataId: recordId as string,
+          extId: formDefId, formDefId, definitionId: formDefId, formDefinitionId: formDefId,
+          sid: targets[kind].sid, nodeId: targets[kind].node, workflowId: targets[kind].run,
+          workflowRunId: targets[kind].run, runId: targets[kind].run }
+        if (Object.entries(expected).some(([key, wanted]) => Object.hasOwn(row!, key) && row![key] !== wanted)
+          || (kind === 'repeat' && row!.workflowId !== targets.repeat.run)) fail()
+        seen.add(recordId as string); records.push(row!)
+      }
+      if (records.length === total) { check(); return records }
+    }
+    return fail()
+  }
 
   const network = options.network ?? createUniNetworkStatusPort()
   const drafts = createActionDraftRepository(options.storage)
@@ -432,6 +464,9 @@ export function createAStageSpecialMockController(options: {
       if (await network.current() === 'offline') return { state: 'blocked',
         message: '网络不可用，填写内容保留在本机。连接恢复后请主动保存。' }
       const before = await load()
+      if (kind === 'repeat' && action.kind === 'save' && before.entries.length >= 100) {
+        return { state: 'blocked', message: '当前记录已达到完整读取上限，未发送新增请求。' }
+      }
       if (!before.nodeActive || before.receiptPending) return { state: 'blocked',
         message: before.receiptPending ? '上一笔操作回执仍需核对，不能重复提交。' : '当前节点已完成。' }
       const selected = action.kind === 'edit' || action.kind === 'delete'

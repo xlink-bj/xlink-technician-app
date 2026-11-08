@@ -144,6 +144,11 @@ jobs:
           VITE_XLINK_R1_MP_UX_FIXTURES: 'false'
           VITE_XLINK_R1_CATEGORY_FIXTURES: 'true'
         run: pnpm exec playwright test --config config/playwright/work-order-categories.config.ts
+      - name: Verify R1 Mock repeat query readback and record lifecycle at 430
+        env:
+          VITE_XLINK_R1_MP_UX_FIXTURES: 'true'
+          VITE_XLINK_R1_STAGE2B_FIELDS: 'true'
+        run: pnpm exec playwright test --config config/playwright/mock-repeat-query.config.ts
       - name: Preserve Stage 1B/2A/2B/2C offline H5 evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -156,6 +161,7 @@ jobs:
             test-results/search-delivery/
             test-results/quotation-input-delivery/
             test-results/work-order-categories/
+            test-results/mock-repeat-query/
           if-no-files-found: warn
           retention-days: 7
 
