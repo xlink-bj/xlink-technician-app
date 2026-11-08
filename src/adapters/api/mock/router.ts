@@ -1,4 +1,5 @@
 import { mockOrderFieldsRead } from './order-fields'
+import { mockScaleCatalogRead } from './quotation-catalog-scale'
 import { isBusinessMockMode, type BusinessMockMode } from './config'
 import { advanceMockJourneyAfterProcess, isDevMockJourneyEnabled, mockJourneyNodes, mockJourneyStage, mockJourneyWorkOrderId, mockJourneyOrderWorkflowDefinitionId, mockJourneyOrderWorkflowRunId, mockJourneyQuotationId, mockJourneyOfficialOrderId, persistMockJourneyFormData, persistMockJourneyQuotation, persistMockJourneyOfficialOrder, readMockJourneyFormData, readMockJourneyQuotation, readMockJourneyOrderWorkflow, readMockJourneyQuoteWorkflow, readMockJourneyOfficialOrder, startMockJourneyOrderWorkflow, startMockJourneyQuoteWorkflow, type MockJourneyStage } from './journey'
 import { appointmentFormDefinitionWireId } from '../appointment-contract'
@@ -764,6 +765,12 @@ function matchedResponse(
   if (mode === 'data' && isDevMockJourneyEnabled()) {
     const orderFields = mockOrderFieldsRead(route, requestData)
     if (orderFields !== undefined) return orderFields
+  }
+  if (mode === 'data' && isDevMockJourneyEnabled()
+    && import.meta.env.VITE_XLINK_ENVIRONMENT === 'dev'
+    && import.meta.env.VITE_XLINK_R1_CATALOG_SCALE === 'true') {
+    const scale = mockScaleCatalogRead(route, requestData)
+    if (scale !== undefined) return scale
   }
   if (mode === 'data' && route === 'biz/extField/query'
     && requestData.colName === 'material' && requestData.sortField === 'order'

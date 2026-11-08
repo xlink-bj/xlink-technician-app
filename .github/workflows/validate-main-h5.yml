@@ -125,6 +125,10 @@ jobs:
         run: pnpm exec playwright test --config config/playwright/main-h5-mock.config.ts tests/h5-main-mock/a-stage-last-two.spec.ts
       - name: Verify default Mock quotation fields, cross-tab drafts and Quote to Order readback at 430
         run: pnpm exec playwright test --config config/playwright/main-h5-mock.config.ts tests/h5-main-mock/order-fields-flow.spec.ts
+      - name: Verify M08 synthetic catalog pagination and package quotation at 430
+        env:
+          VITE_XLINK_R1_CATALOG_SCALE: 'true'
+        run: pnpm exec playwright test --config config/playwright/catalog-scale.config.ts
       - name: Preserve Stage 1B/2A/2B/2C offline H5 evidence
         if: always()
         uses: actions/upload-artifact@v4

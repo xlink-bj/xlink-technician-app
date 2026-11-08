@@ -14,6 +14,7 @@ const optInFixtureFlags = [
   'VITE_XLINK_R1_STAGE2C_ARRAYS',
   'VITE_XLINK_R1_STAGE2B_FIELDS',
   'VITE_XLINK_DYNAMIC_SCALAR_QA',
+  'VITE_XLINK_R1_CATALOG_SCALE',
 ] as const
 
 const enabledOptInFixtureEnv = Object.fromEntries(

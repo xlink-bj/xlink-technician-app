@@ -122,7 +122,8 @@
       "unitTests": [
         "tests/g4f/quotation-catalog-read.test.ts",
         "tests/g4f/catalog-price-presentation.test.ts",
-        "tests/g4f/r1-catalog-scale-mapping.test.ts"
+        "tests/g4f/r1-catalog-scale-mapping.test.ts",
+        "tests/g4f/mock-catalog-scale-router.test.ts"
       ],
       "unresolved": "四上下文历史有界目录证据；本轮未重复商品/价格读取",
       "liveParity": "NOT_VERIFIED"
@@ -133,7 +134,8 @@
       "sourceEvidence": "docs/verification/G4F_SELECTABLE_CATALOG_PROD_READ_20261105.md",
       "unitTests": [
         "tests/g4f/package-configuration.test.ts",
-        "tests/g4f/r1-package-layer-equivalence.test.ts"
+        "tests/g4f/r1-package-layer-equivalence.test.ts",
+        "tests/g4f/mock-catalog-scale-router.test.ts"
       ],
       "unresolved": "既有套餐详情；本轮未重复，包内材料不等于直购 SKU",
       "liveParity": "NOT_VERIFIED"
@@ -144,7 +146,8 @@
       "sourceEvidence": "docs/verification/G4F_ORDER_PROVIDER_PRICE_SNAPSHOT_PROD_READ_20261105.md",
       "unitTests": [
         "tests/g4f/g4f-order-provider-price-comparison.test.ts",
-        "tests/g4f/r1-catalog-scale-mapping.test.ts"
+        "tests/g4f/r1-catalog-scale-mapping.test.ts",
+        "tests/g4f/mock-catalog-scale-router.test.ts"
       ],
       "unresolved": "既有有效价与少数历史快照对照，不是全量价格或新鲜度验证",
       "liveParity": "NOT_VERIFIED"
@@ -156,7 +159,8 @@
       "unitTests": [
         "tests/g4f/material-sku-contract.test.ts",
         "tests/g4f/g4f-order-material-price-comparison.test.ts",
-        "tests/g4f/r1-catalog-scale-mapping.test.ts"
+        "tests/g4f/r1-catalog-scale-mapping.test.ts",
+        "tests/g4f/mock-catalog-scale-router.test.ts"
       ],
       "unresolved": "既有 SPU/价格对照；不能制造 SKU 或覆盖快照",
       "liveParity": "NOT_VERIFIED"
@@ -167,7 +171,8 @@
       "sourceEvidence": "docs/verification/G4F_ORDER_PROVIDER_PRICE_SNAPSHOT_PROD_READ_20261105.md",
       "unitTests": [
         "tests/g4f/g4f-order-provider-price-comparison.test.ts",
-        "tests/g4f/r1-catalog-scale-mapping.test.ts"
+        "tests/g4f/r1-catalog-scale-mapping.test.ts",
+        "tests/g4f/mock-catalog-scale-router.test.ts"
       ],
       "unresolved": "既有机措 provider/快照对照，本轮未重复",
       "liveParity": "NOT_VERIFIED"
@@ -187,7 +192,8 @@
       "domain": "SKU",
       "sourceEvidence": "docs/verification/G4F_SELECTABLE_CATALOG_PROD_READ_20261105.md",
       "unitTests": [
-        "tests/g4f/quotation-sku-same-catalog.test.ts"
+        "tests/g4f/quotation-sku-same-catalog.test.ts",
+        "tests/g4f/mock-catalog-scale-router.test.ts"
       ],
       "unresolved": "当前角色既有四上下文有效 SKU 空；不再普查，不等于完整 SKU 记录模型已实读",
       "liveParity": "NOT_VERIFIED"
@@ -349,7 +355,9 @@
         "F14",
         "F15"
       ],
-      "browserTests": [],
+      "browserTests": [
+        "tests/h5-main-mock/catalog-scale.spec.ts"
+      ],
       "status": "PARTIAL_SCALE_EQUIVALENCE_NOT_PROVEN"
     }
   ],
