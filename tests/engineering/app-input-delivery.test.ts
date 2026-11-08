@@ -1,0 +1,149 @@
+import fs from 'node:fs'
+import path from 'node:path'
+import { createRequire } from 'node:module'
+import ts from 'typescript'
+import { compileScript, parse } from '@vue/compiler-sfc'
+import * as Vue from 'vue'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { bindH5InputDelivery } from '@shared/ui/h5-input-delivery'
+
+class Field extends EventTarget {
+  tagName = 'INPUT'
+  value = ''
+}
+function send(field: Field, value: string, type = 'input', composing = false) {
+  field.value = value
+  const event = new Event(type)
+  Object.defineProperty(event, 'isComposing', { value: composing })
+  field.dispatchEvent(event)
+}
+afterEach(() => vi.useRealTimers())
+describe('H5 native input delivery after uni normalization', () => {
+  it('publishes every string synchronously, including a final empty value', () => {
+    const field = new Field(), emit = vi.fn()
+    bindH5InputDelivery(field, { initialValue: '', isDisabled: () => false, emit })
+    for (const value of ['19.25', '27.75', '0001234567890123456789', '']) send(field, value)
+    expect(emit.mock.calls.map(call => call[0])).toEqual(['19.25', '27.75', '0001234567890123456789', ''])
+  })
+  it('reads the normalized DOM value after the pre-existing uni target listener', () => {
+    const field = new Field(), emit = vi.fn()
+    field.addEventListener('input', event => { event.stopPropagation(); field.value = field.value.slice(0, 4) })
+    bindH5InputDelivery({ $el: { querySelector: () => field } }, { initialValue: '', isDisabled: () => false, emit })
+    send(field, '123456')
+    expect(emit.mock.calls).toEqual([['1234']])
+  })
+  it.each(['compositionend', 'blur'])('keeps IME preedit private and commits once on %s', end => {
+    const field = new Field(), emit = vi.fn()
+    bindH5InputDelivery(field, { initialValue: '', isDisabled: () => false, emit })
+    send(field, '', 'compositionstart'); send(field, 'zhong', 'input', true)
+    expect(emit).not.toHaveBeenCalled()
+    send(field, '中文', end); send(field, '中文'); send(field, '中文', 'blur')
+    expect(emit.mock.calls).toEqual([['中文']])
+  })
+  it('does not republish old DOM text on blur after an external model reset', () => {
+    const field = new Field(), emit = vi.fn()
+    const binding = bindH5InputDelivery(field, { initialValue: '', isDisabled: () => false, emit })!
+    send(field, 'old'); binding.syncModel('server-new')
+    send(field, 'old', 'blur')
+    expect(emit.mock.calls.map(call => call[0])).toEqual(['old'])
+    binding.syncModel(''); send(field, 'old')
+    expect(emit.mock.calls.map(call => call[0])).toEqual(['old', 'old'])
+  })
+  it('blocks locked or disposed instances and rejects a missing native input', () => {
+    const field = new Field(), emit = vi.fn(); let locked = true
+    const binding = bindH5InputDelivery(field, { initialValue: '', isDisabled: () => locked, emit })!
+    send(field, 'blocked'); send(field, '', 'compositionstart'); send(field, 'blocked', 'compositionend')
+    expect(emit).not.toHaveBeenCalled()
+    locked = false; send(field, 'allowed'); binding.dispose(); send(field, 'late')
+    expect(emit.mock.calls).toEqual([['allowed']])
+    expect(bindH5InputDelivery({}, { initialValue: '', isDisabled: () => false, emit })).toBeNull()
+  })
+  it('synchronizes external values through the exposed uni state setter without emitting a user input', () => {
+    const field = new Field(), emit = vi.fn(), setter = vi.fn()
+    const binding = bindH5InputDelivery({ $el: field, $triggerInput: setter }, { initialValue: '', isDisabled: () => false, emit })!
+    send(field, 'draft'); binding.syncModel('draft')
+    expect(setter).not.toHaveBeenCalled()
+    binding.syncModel('server')
+    expect(field.value).toBe('server')
+    expect(setter.mock.calls).toEqual([[{ value: 'server' }]])
+    expect(emit.mock.calls).toEqual([['draft']])
+    binding.dispose(); binding.syncModel('late')
+    expect(field.value).toBe('server')
+  })
+})
+
+type Host = Field & { type: string; props: Record<string, any>; children: Host[]; parent: Host | null; text: string }
+function host(type: string, text = ''): Host {
+  return Object.assign(new Field(), { type, props: {}, children: [], parent: null, text })
+}
+// The host models only uni's public delayed input boundary, not AppInput logic.
+const renderer = Vue.createRenderer<Host, Host>({
+  patchProp(el, key, _old, value) { el.props[key] = value; if (key === 'value') el.value = String(value ?? '') },
+  insert(el, parent, anchor = null) { if (el.parent) el.parent.children.splice(el.parent.children.indexOf(el), 1); el.parent = parent; const i = anchor ? parent.children.indexOf(anchor) : -1; if (i < 0) parent.children.push(el); else parent.children.splice(i, 0, el) },
+  remove(el) { if (el.parent) el.parent.children.splice(el.parent.children.indexOf(el), 1); el.parent = null },
+  createElement(type) {
+    const el = host(type)
+    el.addEventListener('input', () => {
+      const value = el.value
+      setTimeout(() => el.props.onInput?.({ detail: { value } }), 100)
+    })
+    return el
+  },
+  createText: text => host('#text', text), createComment: text => host('#comment', text),
+  setText(el, text) { el.text = text }, setElementText(el, text) { el.text = text },
+  parentNode: el => el.parent, nextSibling: () => null,
+})
+function component(platform: 'h5' | 'mp-weixin' | 'app' = 'h5') {
+  const filename = path.resolve('src/shared/ui/AppInput.vue')
+  let raw = fs.readFileSync(filename, 'utf8')
+  if (platform !== 'h5') {
+    const require = createRequire(import.meta.url)
+    const uniRequire = createRequire(require.resolve('@dcloudio/vite-plugin-uni/package.json'))
+    const { preprocess } = uniRequire('@dcloudio/uni-cli-shared/lib/preprocess')
+    raw = preprocess(raw,
+      { H5: false, MP_WEIXIN: platform === 'mp-weixin', APP: platform === 'app' }, { type: 'js' })
+    expect(raw).not.toContain('bindH5InputDelivery')
+  }
+  const { descriptor } = parse(raw, { filename })
+  const source = compileScript(descriptor, { id: 'app-input-delivery', inlineTemplate: true }).content
+  const js = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
+  const module = { exports: {} as { default: Vue.Component } }
+  new Function('require', 'module', 'exports', js)((name: string) => {
+    if (name === 'vue') return Vue
+    if (name === './h5-input-delivery') return { bindH5InputDelivery }
+    throw Error(`Unexpected import ${name}`)
+  }, module, module.exports)
+  return module.exports.default
+}
+describe('actual AppInput component integration', () => {
+  it.each(['mp-weixin', 'app'] as const)('retains ordinary string delivery after real %s preprocessing', platform => {
+    const root = host('root'), emit = vi.fn(), app = renderer.createApp(component(platform), { 'onUpdate:modelValue': emit })
+    app.mount(root)
+    const field = root.children[0]!
+    for (const value of ['0001234567890123456789', '27.75', '']) field.props.onInput({ detail: { value } })
+    expect(emit.mock.calls.map(call => call[0])).toEqual(['0001234567890123456789', '27.75', ''])
+    app.unmount()
+    field.props.onInput({ detail: { value: 'late' } })
+    expect(emit).toHaveBeenCalledTimes(3)
+  })
+  it('updates the parent before immediate unmount and ignores all delayed uni events', async () => {
+    vi.useFakeTimers()
+    const root = host('root'), emit = vi.fn(), app = renderer.createApp(component(), { 'onUpdate:modelValue': emit })
+    app.mount(root)
+    await Vue.nextTick()
+    const field = root.children[0]!
+    send(field, '19.25'); await vi.advanceTimersByTimeAsync(22); send(field, '27.75')
+    expect(emit.mock.calls.map(call => call[0])).toEqual(['19.25', '27.75'])
+    app.unmount(); await vi.runAllTimersAsync()
+    expect(emit.mock.calls.map(call => call[0])).toEqual(['19.25', '27.75'])
+  })
+  it.each(['disabled', 'readOnly'])('does not emit from native or synthetic input while %s', async prop => {
+    vi.useFakeTimers()
+    const root = host('root'), emit = vi.fn(), app = renderer.createApp(component(), { [prop]: true, 'onUpdate:modelValue': emit })
+    app.mount(root)
+    await Vue.nextTick()
+    const field = root.children[0]!
+    send(field, 'forged'); field.props.onInput({ detail: { value: 'forged' } })
+    expect(emit).not.toHaveBeenCalled(); app.unmount()
+  })
+})

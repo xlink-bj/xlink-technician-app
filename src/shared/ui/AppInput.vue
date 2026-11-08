@@ -1,5 +1,6 @@
 <template>
   <input
+    ref="inputRoot"
     class="app-input"
     :class="{
       'app-input--disabled': disabled,
@@ -22,7 +23,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, onUpdated, ref, watch } from 'vue'
+// #ifdef H5
+import { bindH5InputDelivery } from './h5-input-delivery'
+// #endif
 
 const props = withDefaults(
   defineProps<{
@@ -52,10 +56,41 @@ const props = withDefaults(
 
 const focused = ref(false)
 const nativeDisabled = computed(() => props.disabled || props.readOnly)
+const inputRoot = ref<unknown>(null)
+let nativeDeliveryAttached = false
+let disposed = false
 
 const emit = defineEmits<{
   (event: 'update:modelValue', value: string): void
 }>()
+
+// #ifdef H5
+let delivery: ReturnType<typeof bindH5InputDelivery> = null
+async function refreshDelivery() {
+  // uni installs its target listeners from a field-ref watcher. Let that
+  // watcher finish before subscribing, so rejected/normalized input stays so.
+  await nextTick()
+  if (disposed) return
+  if (delivery?.isCurrent(inputRoot.value)) return
+  delivery?.dispose()
+  delivery = bindH5InputDelivery(inputRoot.value, {
+    initialValue: props.modelValue,
+    isDisabled: () => nativeDisabled.value || disposed,
+    emit: value => emit('update:modelValue', value),
+  })
+  nativeDeliveryAttached = delivery !== null
+}
+onMounted(refreshDelivery)
+// Apple/WebKit uni-input replaces its inner input when disabled changes.
+onUpdated(refreshDelivery)
+watch(() => props.modelValue, value => delivery?.syncModel(value))
+// #endif
+onBeforeUnmount(() => {
+  disposed = true
+  // #ifdef H5
+  delivery?.dispose()
+  // #endif
+})
 
 function handleFocus(): void {
   focused.value = true
@@ -66,6 +101,9 @@ function handleBlur(): void {
 }
 
 function handleInput(event: unknown): void {
+  // H5's delayed uni event is a second, stale-capable channel. Native delivery
+  // owns this instance after attachment; MP/App keep their ordinary uni input.
+  if (nativeDeliveryAttached || disposed || nativeDisabled.value) return
   const input = typeof event === 'object' && event !== null ? event as Record<string, unknown> : {}
   const detail = typeof input.detail === 'object' && input.detail !== null
     ? input.detail as Record<string, unknown>

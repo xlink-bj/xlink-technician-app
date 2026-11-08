@@ -129,6 +129,8 @@ jobs:
         env:
           VITE_XLINK_R1_CATALOG_SCALE: 'true'
         run: pnpm exec playwright test --config config/playwright/catalog-scale.config.ts
+      - name: Verify synchronous AppInput delivery and H5 native boundaries
+        run: pnpm exec playwright test --config config/playwright/input-delivery.config.ts
       - name: Preserve Stage 1B/2A/2B/2C offline H5 evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -137,6 +139,7 @@ jobs:
           path: |
             test-results/main-h5-mock/
             test-results/m08-catalog-scale/
+            test-results/input-delivery/
           if-no-files-found: warn
           retention-days: 7
 
