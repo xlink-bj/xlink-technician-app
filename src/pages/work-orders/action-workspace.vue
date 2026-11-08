@@ -33,6 +33,12 @@
   >
   </QuotationOrderHub>
 
+  <QuotationOrderSuccess
+    v-else-if="successfulQuotationOrder"
+    :order="successfulQuotationOrder"
+    @open-order-records="openSuccessfulQuotationOrderRecords"
+  />
+
   <QuotationActionWorkspace
     v-else-if="workspace.descriptor?.contentKind === 'quotation' && workspace.descriptor.actionIntent === 'place_order'"
     :content-state="quotationContentViewState"
@@ -291,6 +297,9 @@ import {
   useActionWorkspaceStore,
 } from '@features/work-orders/action-workspace'
 import QuotationActionWorkspace from '@features/work-orders/quotation/QuotationActionWorkspace.vue'
+import QuotationOrderSuccess from '@features/work-orders/quotation/QuotationOrderSuccess.vue'
+import { useQuotationSuccessHandoff, quotationSuccessRouteMatches } from '@features/work-orders/quotation/success-handoff'
+import { sessionAuthorizationFingerprint } from '@shared/session-authorization'
 import QuotationOrderHub from '@features/work-orders/quotation/QuotationOrderHub.vue'
 import { useQuotationCompositionStore } from '@features/work-orders/quotation/composition-store'
 import { appointmentDisplayFor } from '@features/work-orders/appointment-time'
@@ -356,8 +365,33 @@ const quotationHubVisible = computed(() =>
   && !routeQuotationOrderId.value && workspace.descriptor?.contentKind === 'quotation'
   && workspace.descriptor.actionIntent === 'place_order',
 )
+const quotationSuccessHandoff = useQuotationSuccessHandoff(() => {
+  const action = workspace.descriptor
+  const current = session.session
+  const actor = session.status === 'authenticated' && current
+    ? sessionAuthorizationFingerprint({ sessionRef: current.sessionRef, userId: current.user.id,
+        roleId: current.currentRole?.id, roleVersion: current.roleVersion }) : null
+  const scope = actor && routeReady.value && workspace.loadState === 'succeeded'
+    && action?.contentKind === 'quotation' && quotationSuccessRouteMatches(routeAction.value, action.actionIntent)
+    && String(action.workOrderId) === String(routeId.value)
+    && String(action.workflowNodeId) === String(routeNodeId.value)
+    ? JSON.stringify([actor, routeId.value, routeNodeId.value, routeAction.value]) : null
+  return { scope, action, workOrderId: String(action?.workOrderId ?? ''), result: workspace.quotationOrderState }
+})
+const successfulQuotationOrder = quotationSuccessHandoff.order
+function openSuccessfulQuotationOrderRecords(): void {
+  quotationSuccessHandoff.open(() => {
+    // A verified success has no editable draft to flush. The hub performs its
+    // own scoped read; this transition cannot dispatch an Order or signing write.
+    routeQuotationEntry.value = 'orders'
+    routeQuotationOrderId.value = undefined
+    quotationChoiceVisible.value = false
+    quotationEditorOpened.value = false
+  })
+}
 function openQuotationEditor(): void {
   if (productionReadOnly || !quotationHubVisible.value) return
+  quotationSuccessHandoff.reset()
   quotationEditorOpened.value = true
 }
 function openQuotationOrderRecords(): void {
@@ -374,6 +408,7 @@ function openQuotationOrderRecords(): void {
 }
 async function openExistingQuotationEditor(orderId: string): Promise<void> {
   if (productionReadOnly || !quotationHubVisible.value || !orderId.trim()) return
+  quotationSuccessHandoff.reset()
   const result = await workspace.loadQuotationOrderForEdit(orderId)
   if (result.state === 'succeeded') {
     quotationEditorOpened.value = true
@@ -447,6 +482,7 @@ const quotationContentViewState = computed(() => workspace.quotationContentState
 
 const workspaceNavigationTitle = computed(() => {
   if (quotationHubVisible.value) return quotationChoiceVisible.value ? '选择下单方式' : '订单管理'
+  if (successfulQuotationOrder.value) return '订单已提交'
   if (routeAction.value === 'place_order' || workspace.descriptor?.contentKind === 'quotation') {
     return routeQuotationOrderId.value || workspace.quotationEditState.state === 'ready' ? '修改订单' : '新增订单'
   }
