@@ -1,11 +1,13 @@
 /** H5 only: subscribe on the same native target AFTER uni-input's listener.
  * uni stops propagation and normalizes numeric/maxlength values on that target,
  * then delays its public input event. Do not capture before its normalization. */
-function nativeInput(root: unknown): HTMLInputElement | null {
+type NativeTextField = HTMLInputElement | HTMLTextAreaElement
+function nativeInput(root: unknown): NativeTextField | null {
   const element = (root as { $el?: Element } | null)?.$el ?? root as Element | null
-  const input = element?.tagName === 'INPUT' ? element : element?.querySelector?.('input')
-  return input?.tagName === 'INPUT' && 'value' in input
-    && typeof input.addEventListener === 'function' ? input as HTMLInputElement : null
+  const isTextField = (node: Element | null | undefined) => node?.tagName === 'INPUT' || node?.tagName === 'TEXTAREA'
+  const input = isTextField(element) ? element : element?.querySelector?.('input, textarea')
+  return input && isTextField(input) && 'value' in input
+    && typeof input.addEventListener === 'function' ? input as NativeTextField : null
 }
 
 export function bindH5InputDelivery(root: unknown, options: {

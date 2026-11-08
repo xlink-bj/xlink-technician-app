@@ -25,6 +25,12 @@ describe('H5 native input delivery after uni normalization', () => {
     for (const value of ['19.25', '27.75', '0001234567890123456789', '']) send(field, value)
     expect(emit.mock.calls.map(call => call[0])).toEqual(['19.25', '27.75', '0001234567890123456789', ''])
   })
+  it('recognizes a textarea and preserves multiline strings and a final clear', () => {
+    const field = new Field(), emit = vi.fn(); field.tagName = 'TEXTAREA'
+    bindH5InputDelivery(field, { initialValue: '', isDisabled: () => false, emit })
+    for (const value of ['首行\n\n末行\n', '']) send(field, value)
+    expect(emit.mock.calls).toEqual([['首行\n\n末行\n'], ['']])
+  })
   it('reads the normalized DOM value after the pre-existing uni target listener', () => {
     const field = new Field(), emit = vi.fn()
     field.addEventListener('input', event => { event.stopPropagation(); field.value = field.value.slice(0, 4) })
@@ -74,7 +80,7 @@ describe('H5 native input delivery after uni normalization', () => {
 
 type Host = Field & { type: string; props: Record<string, any>; children: Host[]; parent: Host | null; text: string }
 function host(type: string, text = ''): Host {
-  return Object.assign(new Field(), { type, props: {}, children: [], parent: null, text })
+  return Object.assign(new Field(), { tagName: type === 'textarea' ? 'TEXTAREA' : 'INPUT', type, props: {}, children: [], parent: null, text })
 }
 // The host models only uni's public delayed input boundary, not AppInput logic.
 const renderer = Vue.createRenderer<Host, Host>({
@@ -93,8 +99,8 @@ const renderer = Vue.createRenderer<Host, Host>({
   setText(el, text) { el.text = text }, setElementText(el, text) { el.text = text },
   parentNode: el => el.parent, nextSibling: () => null,
 })
-function component(platform: 'h5' | 'mp-weixin' | 'app' = 'h5') {
-  const filename = path.resolve('src/shared/ui/AppInput.vue')
+function component(platform: 'h5' | 'mp-weixin' | 'app', name: 'AppInput' | 'AppTextarea') {
+  const filename = path.resolve(`src/shared/ui/${name}.vue`)
   let raw = fs.readFileSync(filename, 'utf8')
   if (platform !== 'h5') {
     const require = createRequire(import.meta.url)
@@ -115,9 +121,9 @@ function component(platform: 'h5' | 'mp-weixin' | 'app' = 'h5') {
   }, module, module.exports)
   return module.exports.default
 }
-describe('actual AppInput component integration', () => {
+describe.each(['AppInput', 'AppTextarea'] as const)('actual %s component integration', name => {
   it.each(['mp-weixin', 'app'] as const)('retains ordinary string delivery after real %s preprocessing', platform => {
-    const root = host('root'), emit = vi.fn(), app = renderer.createApp(component(platform), { 'onUpdate:modelValue': emit })
+    const root = host('root'), emit = vi.fn(), app = renderer.createApp(component(platform, name), { 'onUpdate:modelValue': emit })
     app.mount(root)
     const field = root.children[0]!
     for (const value of ['0001234567890123456789', '27.75', '']) field.props.onInput({ detail: { value } })
@@ -128,7 +134,7 @@ describe('actual AppInput component integration', () => {
   })
   it('updates the parent before immediate unmount and ignores all delayed uni events', async () => {
     vi.useFakeTimers()
-    const root = host('root'), emit = vi.fn(), app = renderer.createApp(component(), { 'onUpdate:modelValue': emit })
+    const root = host('root'), emit = vi.fn(), app = renderer.createApp(component('h5', name), { 'onUpdate:modelValue': emit })
     app.mount(root)
     await Vue.nextTick()
     const field = root.children[0]!
@@ -139,7 +145,7 @@ describe('actual AppInput component integration', () => {
   })
   it.each(['disabled', 'readOnly'])('does not emit from native or synthetic input while %s', async prop => {
     vi.useFakeTimers()
-    const root = host('root'), emit = vi.fn(), app = renderer.createApp(component(), { [prop]: true, 'onUpdate:modelValue': emit })
+    const root = host('root'), emit = vi.fn(), app = renderer.createApp(component('h5', name), { [prop]: true, 'onUpdate:modelValue': emit })
     app.mount(root)
     await Vue.nextTick()
     const field = root.children[0]!

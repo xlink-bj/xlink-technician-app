@@ -2,6 +2,38 @@ import { expect, test } from '@playwright/test'
 import type { mountInputDeliveryHarness } from './fixtures/input-delivery-harness'
 type HarnessWindow = Window & { inputHarness: ReturnType<typeof mountInputDeliveryHarness> }
 
+test('rapid multiline note is saved before the appointment action unmounts its editor', async ({ page }) => {
+  await page.setViewportSize({ width: 430, height: 932 })
+  const external: string[] = []
+  await page.route('**/*', route => {
+    if (new URL(route.request().url()).origin === 'http://localhost:5174') return route.continue()
+    external.push(route.request().url()); return route.abort()
+  })
+  await page.goto('/#/pages/index/index?devReview=1')
+  await page.getByTestId('mock-continuous-journey-entry').click()
+  await expect(page.locator('.action-content-field--note textarea')).toBeVisible()
+  const gap = await page.evaluate(async () => {
+    const field = document.querySelector('.action-content-field--note textarea') as HTMLTextAreaElement
+    field.focus(); field.value = '先检查屋面'
+    field.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: field.value }))
+    const first = performance.now()
+    await new Promise(resolve => setTimeout(resolve, 22))
+    field.value = '先检查屋面\n再确认墙根渗水处'
+    field.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: field.value }))
+    const second = performance.now()
+    ;(document.querySelector('[data-testid="mock-journey-advance"]') as HTMLElement).click()
+    return second - first
+  })
+  expect(gap).toBeLessThan(100)
+  await expect(page).toHaveURL(/work-orders\/detail/)
+  const saved = await page.evaluate(() => {
+    const runtime = (window as unknown as { uni: { getStorageSync(key: string): string } }).uni
+    return JSON.parse(runtime.getStorageSync('xlink.dev.mock.journey.019.form-data.v1.appointment'))
+  })
+  expect(saved.exts.note).toBe('先检查屋面\n再确认墙根渗水处')
+  expect(external).toEqual([])
+})
+
 test('rapid scalar input is saved before the normal action unmounts its editor', async ({ page }) => {
   page.setDefaultTimeout(15_000)
   await page.setViewportSize({ width: 430, height: 932 })
@@ -24,7 +56,7 @@ test('rapid scalar input is saved before the normal action unmounts its editor',
   // Keep the second input and normal action in the same browser task so the
   // result cannot accidentally pass merely because automation waits >100ms.
   const gap = await page.evaluate(async () => {
-    const input = document.querySelector('[data-testid="dynamic-field-squareMeter"] input') as HTMLInputElement
+    const input = document.querySelector('[data-testid="dynamic-field-squareMeter"] input') as HTMLInputElement | HTMLTextAreaElement
     input.focus(); input.value = '19.25'
     input.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: '19.25' }))
     const first = performance.now()
@@ -45,28 +77,28 @@ test('rapid scalar input is saved before the normal action unmounts its editor',
   expect(external).toEqual([])
 })
 
-for (const type of ['text', 'number', 'digit'] as const) {
-  test(`actual H5 AppInput ${type}: native normalization, composition and stale-event boundaries`, async ({ page }) => {
+for (const type of ['text', 'number', 'digit', 'textarea'] as const) {
+  test(`actual H5 text control ${type}: native normalization, composition and stale-event boundaries`, async ({ page }) => {
     await page.route('**/*', route => new URL(route.request().url()).origin === 'http://localhost:5174' ? route.continue() : route.abort())
     await page.goto('/#/pages/index/index?devReview=1')
     await page.evaluate(async kind => {
       const modulePath = '/tests/h5-main-mock/fixtures/input-delivery-harness.ts'
       const fixture = await import(modulePath)
-      ;(window as unknown as HarnessWindow).inputHarness = fixture.mountInputDeliveryHarness(kind, kind === 'text' ? 140 : 4)
+      ;(window as unknown as HarnessWindow).inputHarness = fixture.mountInputDeliveryHarness(kind, kind === 'text' || kind === 'textarea' ? 140 : 4)
     }, type)
     const snapshot = await page.evaluate(kind => {
       const h = (window as unknown as HarnessWindow).inputHarness
-      const field = document.querySelector('#input-delivery-component input') as HTMLInputElement
+      const field = document.querySelector('#input-delivery-component input, #input-delivery-component textarea') as HTMLInputElement | HTMLTextAreaElement
       const input = (value: string) => { field.value = value; field.dispatchEvent(new InputEvent('input', { bubbles: true })) }
-      field.focus(); input(kind === 'text' ? '1' : '12.3'); input(kind === 'text' ? '0001234567890123456789' : '12.3456')
+      field.focus(); input((kind === 'text' || kind === 'textarea') ? '1' : '12.3'); input((kind === 'text' || kind === 'textarea') ? '0001234567890123456789' : '12.3456')
       return { actual: h.value(), visible: field.value }
     }, type)
     expect(snapshot.actual).toBe(snapshot.visible)
-    expect(snapshot.actual).toBe(type === 'text' ? '0001234567890123456789' : '12.3')
-    if (type === 'text') {
+    expect(snapshot.actual).toBe((type === 'text' || type === 'textarea') ? '0001234567890123456789' : '12.3')
+    if (type === 'text' || type === 'textarea') {
       const ime = await page.evaluate(() => {
         const h = (window as unknown as HarnessWindow).inputHarness
-        const field = document.querySelector('#input-delivery-component input') as HTMLInputElement
+        const field = document.querySelector('#input-delivery-component input, #input-delivery-component textarea') as HTMLInputElement | HTMLTextAreaElement
         field.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true }))
         field.value = 'zhong'; field.dispatchEvent(new InputEvent('input', { bubbles: true, isComposing: true }))
         const preedit = h.value(), count = h.events().length
@@ -78,7 +110,7 @@ for (const type of ['text', 'number', 'digit'] as const) {
     }
     const externalReset = await page.evaluate(async () => {
       const h = (window as unknown as HarnessWindow).inputHarness
-      await h.setModel(''); (document.querySelector('#input-delivery-component input') as HTMLInputElement).blur()
+      await h.setModel(''); (document.querySelector('#input-delivery-component input, #input-delivery-component textarea') as HTMLInputElement).blur()
       return h.value()
     })
     expect(externalReset).toBe('')
@@ -86,7 +118,7 @@ for (const type of ['text', 'number', 'digit'] as const) {
       const value = await page.evaluate(async kind => {
         const h = (window as unknown as HarnessWindow).inputHarness
         await h.lock(kind)
-        const field = document.querySelector('#input-delivery-component input') as HTMLInputElement
+        const field = document.querySelector('#input-delivery-component input, #input-delivery-component textarea') as HTMLInputElement | HTMLTextAreaElement
         field.value = '999'; field.dispatchEvent(new InputEvent('input', { bubbles: true }))
         return h.value()
       }, locked)
@@ -98,16 +130,16 @@ for (const type of ['text', 'number', 'digit'] as const) {
   })
 }
 
-test('Apple native target replacement and external reset keep model and DOM in sync', async ({ page }) => {
+for (const kind of ['text', 'textarea'] as const) test(`Apple ${kind} target replacement and external reset keep model and DOM in sync`, async ({ page }) => {
   await page.route('**/*', route => new URL(route.request().url()).origin === 'http://localhost:5174' ? route.continue() : route.abort())
   await page.goto('/#/pages/index/index?devReview=1')
-  const result = await page.evaluate(async () => {
+  const result = await page.evaluate(async type => {
     Object.defineProperty(navigator, 'vendor', { configurable: true, value: 'Apple Computer, Inc.' })
     const modulePath = '/tests/h5-main-mock/fixtures/input-delivery-harness.ts'
     const fixture = await import(modulePath)
-    const h = fixture.mountInputDeliveryHarness('text')
+    const h = fixture.mountInputDeliveryHarness(type)
     await Promise.resolve(); await Promise.resolve()
-    const field = () => document.querySelector('#input-delivery-component input') as HTMLInputElement
+    const field = () => document.querySelector('#input-delivery-component input, #input-delivery-component textarea') as HTMLInputElement | HTMLTextAreaElement
     const input = (value: string) => { field().value = value; field().dispatchEvent(new InputEvent('input', { bubbles: true })) }
     field().focus()
     input('19.25'); await new Promise(resolve => setTimeout(resolve, 22)); input('27.75')
@@ -125,9 +157,51 @@ test('Apple native target replacement and external reset keep model and DOM in s
     const hasNativeStateSetter = h.hasNativeStateSetter()
     h.unmount()
     return { reset, replacements, hasNativeStateSetter, appleBranch: CSS.supports('image-orientation:from-image') }
-  })
+  }, kind)
   expect(result.appleBranch).toBe(true)
   expect(result.hasNativeStateSetter).toBe(true)
   expect(result.reset).toEqual({ model: '', dom: '', added: 0, focused: true })
   expect(result.replacements).toEqual(Array(2).fill({ replaced: true, model: '42.75', dom: '42.75' }))
+})
+
+test('textarea keeps native maxlength, external line endings, auto-height and final clear', async ({ page }) => {
+  await page.route('**/*', route => new URL(route.request().url()).origin === 'http://localhost:5174' ? route.continue() : route.abort())
+  await page.goto('/#/pages/index/index?devReview=1')
+  await page.evaluate(async () => {
+    const modulePath = '/tests/h5-main-mock/fixtures/input-delivery-harness.ts'
+    const fixture = await import(modulePath)
+    ;(window as unknown as HarnessWindow).inputHarness = fixture.mountInputDeliveryHarness('textarea', 4)
+  })
+  const field = page.locator('#input-delivery-component textarea')
+  await field.pressSequentially('abcdef') // Browser keyboard, not a forged over-limit value.
+  await expect(field).toHaveValue('abcd')
+  expect(await page.evaluate(() => (window as unknown as HarnessWindow).inputHarness.value())).toBe('abcd')
+  await page.evaluate(async () => {
+    ;(window as unknown as HarnessWindow).inputHarness.unmount()
+    const modulePath = '/tests/h5-main-mock/fixtures/input-delivery-harness.ts'
+    const fixture = await import(modulePath)
+    ;(window as unknown as HarnessWindow).inputHarness = fixture.mountInputDeliveryHarness('textarea')
+  })
+  await field.fill('首行')
+  const height = await field.evaluate(el => el.getBoundingClientRect().height)
+  const lines = '首行\r\n\r\n三\r\n四\r\n五\r\n六\r\n末行\r\n'
+  const count = await page.evaluate(async value => {
+    const h = (window as unknown as HarnessWindow).inputHarness
+    const native = document.querySelector('#input-delivery-component textarea') as HTMLTextAreaElement
+    native.value = '暂存首行'; native.dispatchEvent(new InputEvent('input', { bubbles: true }))
+    await new Promise(resolve => setTimeout(resolve, 22))
+    native.value = '暂存首行\n暂存末行'; native.dispatchEvent(new InputEvent('input', { bubbles: true }))
+    await h.setModel(value)
+    return h.events().length
+  }, lines)
+  await page.waitForTimeout(150) // A pending uni tail must not undo the external value.
+  await expect(field).toHaveValue(lines.replace(/\r\n/g, '\n'))
+  expect(await page.evaluate(() => (window as unknown as HarnessWindow).inputHarness.value())).toBe(lines)
+  expect(await page.evaluate(() => (window as unknown as HarnessWindow).inputHarness.events().length)).toBe(count)
+  await expect.poll(() => field.evaluate(el => el.getBoundingClientRect().height)).toBeGreaterThan(height)
+  await field.fill('首行\n\n末行\n')
+  expect(await page.evaluate(() => (window as unknown as HarnessWindow).inputHarness.value())).toBe('首行\n\n末行\n')
+  await field.fill('')
+  expect(await page.evaluate(() => (window as unknown as HarnessWindow).inputHarness.value())).toBe('')
+  await page.evaluate(() => (window as unknown as HarnessWindow).inputHarness.unmount())
 })
