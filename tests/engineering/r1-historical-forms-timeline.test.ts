@@ -7,6 +7,8 @@ import { expect, it, vi } from 'vitest'
 import * as port from '@features/work-orders/r1-historical-forms-read'
 import * as recordFields from '@features/work-orders/r1-record-read-fields'
 import { formDefinition } from '@adapters/api/read-models/form'
+import { createR1ScopedFormReader } from '@adapters/api/r1-scoped-form-read'
+import { createSurveyReadOnlyMediaCodec } from '@adapters/api/survey-readonly-media-codec'
 import { asOpaqueId } from '@shared/types'
 interface Host { type: string; props: Record<string, any>; text: string; children: Host[]; parent: Host | null }
 const node=(type:string,text=''):Host=>({type,text,props:{},children:[],parent:null})
@@ -51,4 +53,30 @@ it.each([
  const expression=source.match(/const canShowHistoricalForms = computed\(\(\) => ([^\n]+)\)/)?.[1]
  expect(expression).toBeTruthy();const actual=new Function('productionReadOnly','historicalFormsEnabled','hasHistoricalForms','return '+expression)(productionReadOnly,historicalFormsEnabled,{value:hasForms})
  expect(actual).toBe(expected);expect(source).toContain('v-else-if="!canShowHistoricalForms" class="tab-empty"');expect(source).toContain('<HistoricalFormsTimeline v-if="canShowHistoricalForms"');expect(source).toContain('暂无跟进记录')
+})
+
+it('mounts decoded Survey attachments in the actual history SFC without URL attributes or remote requests', async () => {
+  const h = await mount(), network = vi.fn(() => { throw Error('Media must not be requested') })
+  vi.stubGlobal('fetch', network); vi.stubGlobal('uni', { request: network, downloadFile: network, previewImage: network, uploadFile: network, chooseImage: network })
+  try {
+    const definition = formDefinition({ data: [{ _id: 'media-field', name: 'images1', nameDisp: '现场附件',
+      type: 'file', state: 1, colName: 'Survey', showList: ['4'], multiple: false }] }, h.value.definition.id)
+    const codec = createSurveyReadOnlyMediaCodec(definition, 'Survey', [{ _id: 'media-field', name: 'images1', type: 'file',
+      state: 1, extId: definition.id, colName: 'Survey', preset: 0 }])!
+    const raw = { _id: 'record', tenantId: 'tenant', sid: 'work', nodeId: 'node', workflowId: 'run', state: 1,
+      exts: { images1: [{ url: 'https://media.example.test/a?token=PRIVATE_TOKEN', name: 'PRIVATE_KEY', extname: 'png' }] } }
+    const scoped = createR1ScopedFormReader({ scope: { tenantId: 'tenant', workOrderId: 'work', runtimeNodeId: 'node',
+      workflowRunId: 'run', formDefinitionId: String(definition.id), sourceNodeType: 'repeat' }, isCurrent: () => true,
+      readOnlySurveyMedia: codec, transport: { execute: async request => ({ data: [raw], total: 1, page: 1, size: request.body?.rows }) } })
+    await scoped.discover()
+    const record = (await scoped.select('record')).data
+    Object.assign(h.value, { definition, record })
+    h.open().props.onTap(); await settle()
+    const value = all(h.root, el => el.props['data-testid'] === 'historical-form-value-images1')[0]!
+    expect(text(value)).toBe('已保存 1 个附件（暂不支持打开）：附件 1（PNG）')
+    expect(text(h.root)).not.toMatch(/https:|PRIVATE_TOKEN|PRIVATE_KEY|保存记录|删除/)
+    expect(all(h.root, el => ['img','image','a','video','iframe'].includes(el.type) || 'href' in el.props || 'src' in el.props)).toHaveLength(0)
+    expect(Object.keys(value.props).some(key => /^on/.test(key))).toBe(false); expect(network).not.toHaveBeenCalled()
+    h.props.workOrderId = 'other'; await settle(); expect(text(h.root)).not.toContain('附件 1（PNG）')
+  } finally { h.app.unmount(); vi.unstubAllGlobals() }
 })

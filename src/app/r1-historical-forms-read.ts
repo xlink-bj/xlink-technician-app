@@ -2,6 +2,7 @@ import type { AuthSessionPort, TechnicianApiReadPort, FormDefinitionRead } from 
 import type { ApiReadRequest, ApiReadTransport } from '@adapters/api/technician-api'
 import { createUniApiReadTransport } from '@adapters/api/uni-api-read-transport'
 import { createR1ScopedFormReader } from '@adapters/api/r1-scoped-form-read'
+import { createSurveyReadOnlyMediaCodec } from '@adapters/api/survey-readonly-media-codec'
 import { formDefinition } from '@adapters/api/read-models/form'
 import { bindR1ScopedFieldOptions, readR1ScopedFieldOptions } from '@adapters/api/r1-scoped-field-options'
 import { ACTION_FORM_SURFACE, actionFormSchemaFor } from '@features/work-orders/action-form-schema'
@@ -117,7 +118,7 @@ export function createHistoricalFormsReader(input: {
           const binding = bindings[index]
           hydrated.push(binding ? { ...field, options: await readR1ScopedFieldOptions(binding, { execute }) } : field)
         }
-        const reader = createR1ScopedFormReader({ transport: { execute }, isCurrent: () => { check(); return true },
+        const reader = createR1ScopedFormReader({ transport: { execute }, readOnlySurveyMedia: createSurveyReadOnlyMediaCodec(definition, ext.colName, fields), isCurrent: () => { check(); return true },
           scope: { tenantId: input.tenantId, workOrderId: target.workOrderId, runtimeNodeId: target.runtimeNodeId,
             workflowRunId: target.workflowRunId, formDefinitionId: target.formDefinitionId, sourceNodeType: 'forms' },
           formList: { source: 'exts.formList', evidence: 'available', truncated: false, entries: [{

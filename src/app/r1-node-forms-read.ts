@@ -2,6 +2,7 @@ import type { AuthSessionPort, TechnicianApiReadPort, FormDefinitionRead, Workfl
 import type { ApiReadRequest, ApiReadTransport } from '@adapters/api/technician-api'
 import { createUniApiReadTransport } from '@adapters/api/uni-api-read-transport'
 import { createR1ScopedFormReader } from '@adapters/api/r1-scoped-form-read'
+import { createSurveyReadOnlyMediaCodec } from '@adapters/api/survey-readonly-media-codec'
 import { bindR1ScopedFieldOptions, readR1ScopedFieldOptions } from '@adapters/api/r1-scoped-field-options'
 import { formDefinition } from '@adapters/api/read-models/form'
 import { workflowNode } from '@adapters/api/read-models/workflow'
@@ -266,7 +267,12 @@ export function createNormalNodeFormsReader(input: {
         const binding = bindings[index]
         hydrated.push(binding ? { ...field, options: await readR1ScopedFieldOptions(binding, { execute }) } : field)
       }
-      const reader = createR1ScopedFormReader({ transport: { execute }, scope: {
+      // Attachment decoding belongs only to this read-only rollout, never the
+      // scoped write snapshots consumed by edit/save/completion capabilities.
+      const readOnlySurveyMedia = input.env.VITE_XLINK_ENABLE_REAL_WRITES === 'false'
+        && input.env.VITE_XLINK_ENABLE_R1_SPECIAL_WRITES === 'false'
+        ? createSurveyReadOnlyMediaCodec(definition, ext.colName, fields) : undefined
+      const reader = createR1ScopedFormReader({ transport: { execute }, readOnlySurveyMedia, scope: {
         tenantId: input.tenantId, workOrderId, runtimeNodeId, workflowRunId: id(node.runId),
         formDefinitionId: definitionId, sourceNodeType: node.sourceNodeType as 'forms' | 'repeat',
       }, isCurrent: () => ticket === generation && fingerprint() === identity,

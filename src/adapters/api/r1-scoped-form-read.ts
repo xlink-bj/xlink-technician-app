@@ -2,6 +2,7 @@ import type { FormDataRead, FormValueCodec, R1NodeFormListRead } from '@shared/p
 import { asOpaqueId } from '@shared/types'
 import type { ApiReadTransport } from './technician-api'
 import { formData } from './read-models/form'
+import type { SurveyReadOnlyMediaCodec } from './survey-readonly-media-codec'
 
 export interface R1ScopedFormScope {
   readonly tenantId: string
@@ -36,6 +37,7 @@ export function createR1ScopedFormReader(input: {
   readonly isCurrent: () => boolean
   readonly formList?: R1NodeFormListRead
   readonly valueCodec?: FormValueCodec
+  readonly readOnlySurveyMedia?: SurveyReadOnlyMediaCodec
 }) {
   const scope = Object.freeze({ ...input.scope })
   const references = input.formList ? {
@@ -70,11 +72,13 @@ export function createR1ScopedFormReader(input: {
     for (const key of ['extId', 'definitionId', 'formDefId', 'formDefinitionId']) {
       if (key in row && id(row[key]) !== scope.formDefinitionId) fail()
     }
-    const mapped = formData(row, input.valueCodec, asOpaqueId<'FormDefinitionId'>(scope.formDefinitionId))
+    if (input.readOnlySurveyMedia && input.valueCodec) fail()
+    input.readOnlySurveyMedia?.validateSlots(row)
+    const mapped = formData(row, input.readOnlySurveyMedia ?? input.valueCodec, asOpaqueId<'FormDefinitionId'>(scope.formDefinitionId))
     // Do not clone or expose the mapper's identity-signed edit provenance.
     const data = { id: mapped.id, definitionId: mapped.definitionId,
       ...(mapped.workflowRunId ? { workflowRunId: mapped.workflowRunId } : {}),
-      ...(mapped.values ? { values: structuredClone(mapped.values) } : {}),
+      ...(mapped.values ? { values: input.readOnlySurveyMedia?.cloneValues(mapped.values) ?? structuredClone(mapped.values) } : {}),
     }
     const result = freeze({ ownership: scope, data })
     originals.set(result, freeze(structuredClone(row)))

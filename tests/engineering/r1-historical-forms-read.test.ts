@@ -136,3 +136,42 @@ describe('cold historical discovery uses explicit authorized all-category list',
     await expect(h.reader.discover('work')).rejects.toThrow(); expect(h.read.listWorkOrders).toHaveBeenCalledOnce(); expect(h.calls).toHaveLength(0)
   })
 })
+
+describe('Survey attachments in completed historical records', () => {
+  function mediaHarness() {
+    const h = harness(); h.ext.colName = 'Survey'
+    Object.assign(h.field, { colName: 'Survey', name: 'images1', type: 'file', preset: 0, multiple: false })
+    Object.assign(h.record, { exts: { images1: [{ url: 'https://media.example.test/photo?token=PRIVATE', name: 'object-key', extname: 'png' }] } })
+    return h
+  }
+  it('decodes only after scoped definition and exact saved-record checks', async () => {
+    const h = mediaHarness(), [target] = await h.reader.discover('work'), result = await h.reader.read(target!)
+    expect(result.record.values?.images1).toEqual([{ url: 'https://media.example.test/photo?token=PRIVATE', objectKey: 'object-key', extension: 'png' }])
+    expect(h.calls.some(request => /upload|upsert|process/.test(request.path))).toBe(false)
+    expect(Object.keys(h.reader).sort()).toEqual(['clear','discover','enabled','isCurrent','read'])
+  })
+  it.each(['collection', 'unsafe-url', 'tenant', 'definition'])('rejects %s without displaying partial media', async mismatch => {
+    const h = mediaHarness(), [target] = await h.reader.discover('work')
+    if (mismatch === 'collection') h.ext.colName = 'other'
+    if (mismatch === 'unsafe-url') Object.assign(h.record, { exts: { images1: [{ url: 'http://media.example.test/photo' }] } })
+    if (mismatch === 'tenant') h.record.tenantId = 'foreign'
+    if (mismatch === 'definition') Object.assign(h.record, { extId: 'foreign' })
+    await expect(h.reader.read(target!)).rejects.toThrow(); expect(h.reader.isCurrent(target!)).toBe(false)
+  })
+  it.each(['changeRole','changeSession','unlist','clear'] as const)('rejects late media response after %s', async change => {
+    const h = mediaHarness(), [target] = await h.reader.discover('work')
+    h.hook(async request => { if (!request.path.includes('extForm/')) return; await Promise.resolve()
+      if (change === 'clear') h.reader.clear(); else h[change]()
+    })
+    await expect(h.reader.read(target!)).rejects.toThrow(); expect(h.reader.isCurrent(target!)).toBe(false)
+  })
+})
+
+it.each([false, true, null])('rejects ambiguous historical root/EXTS media slots (equal=%s)', async equal => {
+  const h = harness(); h.ext.colName = 'Survey'
+  Object.assign(h.field, { colName: 'Survey', name: 'images1', type: 'file', preset: 0 })
+  const images1 = [{ url: 'https://media.example.test/photo', name: 'key', extname: 'jpg' }]
+  Object.assign(h.record, { images1, exts: { images1: equal === null ? null : equal ? images1 : [] } })
+  const [target] = await h.reader.discover('work')
+  await expect(h.reader.read(target!)).rejects.toThrow(/unverified/); expect(h.reader.isCurrent(target!)).toBe(false)
+})

@@ -202,3 +202,69 @@ describe('ordinary forms full EXTS read consistency', () => {
     expect(h.calls.some(path => path.startsWith('biz/extForm/'))).toBe(false)
   })
 })
+
+describe('Survey attachments in the normal readonly reader', () => {
+  function mediaHarness() {
+    const h = harness()
+    Object.assign(h.field, { name: 'images1', type: 'file', preset: 0, valueOption: '', showList: ['4'], multiple: false })
+    Object.assign(h.record.exts, { images1: [{ url: 'https://media.example.test/photo?token=PRIVATE', name: 'object-key', extname: 'jpg' }] })
+    return h
+  }
+  it('uses independently proven Ext and schema, discovers and exactly rereads media, with no provider/mutation request', async () => {
+    const h = mediaHarness(), snapshot = await h.reader.load('work', 'node')
+    expect(snapshot.records[0]?.values?.images1).toEqual([{ url: 'https://media.example.test/photo?token=PRIVATE', objectKey: 'object-key', extension: 'jpg' }])
+    expect(h.calls.filter(path => path.startsWith('biz/extForm/'))).toHaveLength(2)
+    expect(h.calls.some(path => /code|upload|upsert|process/.test(path))).toBe(false)
+  })
+  it.each(['ext', 'purpose', 'key', 'type', 'provider', 'shape', 'identity'])('keeps unverified %s media closed', async mismatch => {
+    const h = mediaHarness()
+    if (mismatch === 'ext') h.ext.colName = 'other'
+    if (mismatch === 'purpose') h.field.colName = 'other'
+    if (mismatch === 'key') h.field.name = 'unknownFile'
+    if (mismatch === 'type') h.field.type = 'data'
+    if (mismatch === 'provider') h.field.valueOption = 'UNKNOWN_PROVIDER'
+    if (mismatch === 'shape') Object.assign(h.record.exts, { images1: [{ url: 'javascript:alert(1)' }] })
+    if (mismatch === 'identity') h.record.nodeId = 'foreign'
+    if (['purpose', 'key', 'type'].includes(mismatch)) {
+      const snapshot = await h.reader.load('work', 'node'); expect(snapshot.records[0]?.values?.images1).toBeUndefined()
+    } else await expect(h.reader.load('work', 'node')).rejects.toThrow()
+  })
+  it.each(['session', 'role', 'clear', 'unlist'])('rejects media when %s changes across record await', async kind => {
+    const h = mediaHarness()
+    h.hook(async path => { if (!path.startsWith('biz/extForm/')) return; await Promise.resolve()
+      if (kind === 'session') h.changeSession(); else if (kind === 'role') h.changeRole(); else if (kind === 'clear') h.reader.clear(); else h.unlist()
+    })
+    await expect(h.reader.load('work', 'node')).rejects.toThrow()
+  })
+})
+
+it.each([false, true, null])('does not choose one of two root/EXTS Survey media copies (equal=%s)', async equal => {
+  const h = harness()
+  Object.assign(h.field, { name: 'images1', type: 'file', preset: 0, valueOption: '', showList: ['4'] })
+  const images1 = [{ url: 'https://media.example.test/photo', name: 'key', extname: 'jpg' }]
+  Object.assign(h.record, { images1 }); Object.assign(h.record.exts, { images1: equal === null ? null : equal ? images1 : [] })
+  await expect(h.reader.load('work', 'node')).rejects.toThrow(/unverified/)
+})
+
+it('does not attach the readonly media decoder to an authorized scoped-write snapshot', async () => {
+  const grant = { version: 1, scope: { tenantId: 'tenant', userId: 'user', roleId: 'role', workOrderId: 'work',
+    workflowRunId: 'workflow', runtimeNodeId: 'node', formDefinitionId: 'ext' }, expiresAt: '2099-01-01T00:00:00Z', fieldIds: ['field'], operations: ['create','complete'] }
+  const h = harness({ VITE_XLINK_ENABLE_REAL_WRITES: 'true', VITE_XLINK_ENABLE_R1_SPECIAL_WRITES: 'true',
+    VITE_XLINK_R1_REPEAT_ACTIONS: 'true', VITE_XLINK_AUTH_TENANT: 'tenant', VITE_XLINK_R1_REPEAT_GRANT: JSON.stringify(grant) })
+  Object.assign(h.field, { name: 'images1', type: 'file', preset: 0, valueOption: '' })
+  Object.assign(h.record.exts, { images1: [{ url: 'https://media.example.test/photo', name: 'key', extname: 'jpg' }] })
+  const snapshot = await h.reader.load('work', 'node')
+  expect(snapshot.records[0]?.values?.images1).toBeUndefined()
+  expect(h.calls.some(path => /upsert|upload|process/.test(path))).toBe(false)
+})
+
+it.each(['wrong-slot-empty', 'missing-preset-empty', 'wrong-preset-empty'])('rejects %s before a normal Survey attachment can look absent', async kind => {
+  const h = harness()
+  Object.assign(h.field, { name: 'images1', type: 'file', valueOption: '', preset: 0 })
+  if (kind === 'wrong-slot-empty') Object.assign(h.record, { images1: [] })
+  else {
+    Object.assign(h.record.exts, { images1: [] })
+    Object.assign(h.field, { preset: kind === 'missing-preset-empty' ? undefined : 1 })
+  }
+  await expect(h.reader.load('work', 'node')).rejects.toThrow(/unverified/)
+})

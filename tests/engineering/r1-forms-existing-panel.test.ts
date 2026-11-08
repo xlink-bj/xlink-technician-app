@@ -5,6 +5,8 @@ import { compileScript, parse } from '@vue/compiler-sfc'
 import * as Vue from 'vue'
 import { describe, expect, it, vi } from 'vitest'
 import { formDefinition } from '@adapters/api/read-models/form'
+import { createR1ScopedFormReader } from '@adapters/api/r1-scoped-form-read'
+import { createSurveyReadOnlyMediaCodec } from '@adapters/api/survey-readonly-media-codec'
 import * as repeatForm from '@features/work-orders/r1-repeat-form'
 import * as recordReadFields from '@features/work-orders/r1-record-read-fields'
 import * as readerPort from '@features/work-orders/r1-node-forms-read'
@@ -127,4 +129,30 @@ describe('normal forms existing-record panel capability and recovery',()=>{
    if(change==='actor')h.props.actorScope='other';if(change==='node')h.props.runtimeNodeId='other';if(change==='workOrder')h.props.workOrderId='other';await settle();pending.resolve({acknowledged:true,transitionVerified:true});await settle();expect(h.changed).not.toHaveBeenCalled();expect(h.get('r1-normal-save')).toBeUndefined()
   }finally{h.app.unmount()}
  })
+})
+
+it('mounts decoded Survey attachment metadata as inert text in the actual normal SFC', async () => {
+  const h = await mounted(), network = vi.fn(() => { throw Error('Media must not be requested') })
+  vi.stubGlobal('fetch', network); vi.stubGlobal('uni', { request: network, downloadFile: network, previewImage: network, uploadFile: network, chooseImage: network })
+  try {
+    const base = makeSnapshot('node-a', 1), definition = formDefinition({ data: [{ _id: 'media-field',
+      name: 'images1', nameDisp: '现场附件', type: 'file', state: 1, colName: 'Survey', showList: ['4'], multiple: false }] }, base.definition.id)
+    const codec = createSurveyReadOnlyMediaCodec(definition, 'Survey', [{ _id: 'media-field', name: 'images1', type: 'file',
+      state: 1, extId: definition.id, colName: 'Survey', preset: 0 }])!
+    const raw = { _id: 'server-0', tenantId: 'tenant', sid: 'work', nodeId: 'node', workflowId: 'run', state: 1,
+      exts: { images1: [{ url: 'https://media.example.test/a?token=PRIVATE_TOKEN', name: 'PRIVATE_KEY', extname: 'jpg' }] } }
+    const scoped = createR1ScopedFormReader({ scope: { tenantId: 'tenant', workOrderId: 'work', runtimeNodeId: 'node',
+      workflowRunId: 'run', formDefinitionId: String(definition.id), sourceNodeType: 'repeat' }, isCurrent: () => true,
+      readOnlySurveyMedia: codec, transport: { execute: async request => ({ data: [raw], total: 1, page: 1, size: request.body?.rows }) } })
+    await scoped.discover()
+    const record = (await scoped.select('server-0')).data
+    h.setNext({ ...base, definition, records: [record] }); h.revoke(); await h.load()
+    const value = h.get('r1-normal-value-images1')!
+    expect(text(value)).toBe('已保存 1 个附件（暂不支持打开）：附件 1（JPG）')
+    expect(text(h.root)).not.toMatch(/https:|PRIVATE_TOKEN|PRIVATE_KEY/)
+    expect(all(h.root, el => ['img','image','a','video','iframe'].includes(el.type) || 'href' in el.props || 'src' in el.props)).toHaveLength(0)
+    expect(Object.keys(value.props).some(key => /^on/.test(key))).toBe(false)
+    expect(h.saveOnly).not.toHaveBeenCalled(); expect(h.saveAndComplete).not.toHaveBeenCalled(); expect(network).not.toHaveBeenCalled()
+    h.props.actorScope = null; await settle(); expect(text(h.root)).not.toContain('附件 1（JPG）')
+  } finally { h.app.unmount(); vi.unstubAllGlobals() }
 })

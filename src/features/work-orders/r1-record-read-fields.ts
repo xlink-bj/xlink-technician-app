@@ -1,4 +1,5 @@
 import type { FormDataRead, FormDefinitionRead, FormFieldOptionRead, FormFieldRead, FormFieldValue } from '@shared/ports'
+import { isSurveyReadOnlyMediaField, surveyReadOnlyMediaText } from '@shared/form/survey-readonly-media'
 import { evaluateVisibility, isFieldApplicable } from '@runtimes/dynamic-form'
 import { actionFormConditionValues } from './action-form-condition-context'
 import { ACTION_FORM_SURFACE, actionFormSchemaFor } from './action-form-schema'
@@ -56,13 +57,15 @@ export function projectR1RecordReadFields(definition: FormDefinitionRead, record
     const visibility = evaluateVisibility(field.visibility, values)
     if (visibility.state === 'hidden') continue
     const unsupported = Boolean(field.unsupportedReason) || visibility.state === 'unsupported'
-    const noCodec = !scalarTypes.has(field.type) && !choiceTypes.has(field.type)
+    const mediaText = !unsupported && isSurveyReadOnlyMediaField(definition, field)
+      ? surveyReadOnlyMediaText(record.values?.[field.valueKey]) : undefined
+    const noCodec = mediaText === undefined && !scalarTypes.has(field.type) && !choiceTypes.has(field.type)
     const unavailable = unsupported || noCodec
     result.push({ fieldId: field.fieldId, valueKey: field.valueKey, label: field.label,
       unavailable,
       text: unsupported ? '字段规则尚未完整核实，暂不展示内容'
         : noCodec ? (field.type === 'file' ? '附件内容暂不支持在此查看' : '该字段类型暂不支持在此查看')
-          : displayValue(field, record.values?.[field.valueKey]),
+          : mediaText ?? displayValue(field, record.values?.[field.valueKey]),
     })
   }
   return result
