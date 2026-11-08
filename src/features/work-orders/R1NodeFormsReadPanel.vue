@@ -1,7 +1,7 @@
 <template>
   <view data-testid="r1-normal-form-read">
     <text class="form-read__hint">读取当前工单节点已保存的记录。查看不会保存或推进流程。</text>
-    <AppButton variant="secondary" size="compact" :disabled="loading" @tap="load">
+    <AppButton variant="secondary" size="compact" :disabled="loading || busy" @tap="load">
       {{ loading ? '正在读取…' : '读取已保存表单' }}
     </AppButton>
     <text v-if="message" class="form-read__hint" data-testid="r1-normal-form-read-message">{{ message }}</text>
@@ -73,6 +73,7 @@ onBeforeUnmount(clear)
 async function load() {
   if (loading.value || busy.value || !props.actorScope) return
   const ticket = ++version
+  confirmCompletion.value = false
   snapshot.value = null; message.value = ''; loading.value = true
   try {
     const value = await props.reader.load(props.workOrderId, props.runtimeNodeId)

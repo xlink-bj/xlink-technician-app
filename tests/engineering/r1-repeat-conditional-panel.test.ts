@@ -60,13 +60,24 @@ async function mounted(allowActions = true, initial = snapshot()) {
     const normalized = repeatForm.normalizeR1RepeatValues(current, values); savedValues.push(normalized)
     current = { ...current, records: [{ id: asOpaqueId<'FormDataId'>('saved'), definitionId: current.definition.id, values: normalized }] }; return current
   })
+  const complete = vi.fn(async () => ({ acknowledged: true, transitionVerified: false } as const))
   const root = node('root'), app = renderer.createApp(panel(), { reader, workOrderId: current.workOrderId, runtimeNodeId: String(current.node.id), actorScope: 'synthetic-actor' })
-  app.provide(actionPort.r1RepeatActionsKey, { forSnapshot: () => allowActions ? { locked: () => false, saveOnly, complete: vi.fn() } : null })
+  app.provide(actionPort.r1RepeatActionsKey, { forSnapshot: () => allowActions ? { locked: () => false, saveOnly, complete } : null })
   app.mount(root)
   find(root, n => n.type === 'button')!.props.onTap(); await settle()
   const input = async (key: string, value: string) => { const control = find(root, n => n.props['data-key'] === key); expect(control, key).toBeDefined(); control!.props.onInput(value); await settle() }
   const save = () => find(root, n => n.props['data-testid'] === 'r1-normal-save')
-  return { root, app, input, save, saveOnly, savedValues }
+  const read = () => find(root, n => n.type === 'button')!
+  return { root, app, input, save, read, reader, saveOnly, complete, savedValues, setSnapshot: (value: R1NodeFormsSnapshot) => { current = value } }
+}
+function savedSnapshot(id = 'saved'): R1NodeFormsSnapshot {
+  const value = snapshot()
+  return { ...value, records: [{ id: asOpaqueId<'FormDataId'>(id), definitionId: value.definition.id, values: { need: '1', datetime: '2026-11-08 14:00' } }] }
+}
+function deferred<T>() {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>(done => { resolve = done })
+  return { promise, resolve }
 }
 
 describe('normal appointment repeat conditional page', () => {
@@ -103,6 +114,90 @@ describe('normal appointment repeat conditional page', () => {
   it('readonly scope mounts records UI without adding a save control', async () => {
     const h = await mounted(false)
     try { expect(h.save()).toBeUndefined(); expect(h.saveOnly).not.toHaveBeenCalled() } finally { h.app.unmount() }
+  })
+  it('requires a fresh completion confirmation after rereading changed records', async () => {
+    const h = await mounted(true, savedSnapshot())
+    try {
+      find(h.root, n => n.props['data-testid'] === 'r1-normal-complete-request')!.props.onTap(); await settle()
+      const staleConfirm = find(h.root, n => n.props['data-testid'] === 'r1-normal-complete-confirm')!.props.onTap
+      h.setSnapshot(savedSnapshot('newly-read-record'))
+      h.read().props.onTap(); await settle()
+      expect(h.reader.load).toHaveBeenCalledTimes(2)
+      expect(find(h.root, n => n.props['data-testid'] === 'r1-normal-complete-confirm')).toBeUndefined()
+      expect(find(h.root, n => n.props['data-testid'] === 'r1-normal-complete-request')).toBeDefined()
+      staleConfirm(); await settle(); expect(h.complete).not.toHaveBeenCalled()
+      find(h.root, n => n.props['data-testid'] === 'r1-normal-complete-request')!.props.onTap(); await settle()
+      find(h.root, n => n.props['data-testid'] === 'r1-normal-complete-confirm')!.props.onTap(); await settle()
+      expect(h.complete).toHaveBeenCalledOnce()
+    } finally { h.app.unmount() }
+  })
+  it('does not revive completion confirmation after a failed reread and retry', async () => {
+    const h = await mounted(true, savedSnapshot())
+    try {
+      find(h.root, n => n.props['data-testid'] === 'r1-normal-complete-request')!.props.onTap(); await settle()
+      h.reader.load.mockRejectedValueOnce(new Error('synthetic read failure'))
+      h.read().props.onTap(); await settle()
+      expect(find(h.root, n => n.props['data-testid'] === 'r1-normal-form-read-message')!.text).toContain('暂时无法完整核实')
+      expect(h.read().props.disabled).toBe(false)
+      h.read().props.onTap(); await settle()
+      expect(find(h.root, n => n.props['data-testid'] === 'r1-normal-complete-confirm')).toBeUndefined()
+      expect(find(h.root, n => n.props['data-testid'] === 'r1-normal-complete-request')).toBeDefined()
+      expect(h.complete).not.toHaveBeenCalled()
+    } finally { h.app.unmount() }
+  })
+  it('preserves same-scope visible and hidden draft values across a failed reread and retry', async () => {
+    const h = await mounted()
+    try {
+      await h.input('need', '1'); await h.input('datetime', '2026-11-08 14:00'); await h.input('note', '保留草稿')
+      await h.input('need', '2'); await h.input('reasons1', 'normal')
+      h.reader.load.mockRejectedValueOnce(new Error('synthetic read failure'))
+      h.read().props.onTap(); await settle()
+      h.setSnapshot(snapshot()); h.read().props.onTap(); await settle()
+      expect(find(h.root, n => n.props['data-key'] === 'need')!.props.value).toBe('2')
+      expect(find(h.root, n => n.props['data-key'] === 'note')!.props.value).toBe('保留草稿')
+      expect(h.save()!.props.disabled).toBe(false)
+      await h.input('need', '1')
+      expect(find(h.root, n => n.props['data-key'] === 'datetime')!.props.value).toBe('2026-11-08 14:00')
+      expect(h.saveOnly).not.toHaveBeenCalled()
+    } finally { h.app.unmount() }
+  })
+  it('cancels completion intent and ignores a retained confirm callback', async () => {
+    const h = await mounted(true, savedSnapshot())
+    try {
+      find(h.root, n => n.props['data-testid'] === 'r1-normal-complete-request')!.props.onTap(); await settle()
+      const confirm = find(h.root, n => n.props['data-testid'] === 'r1-normal-complete-confirm')!.props.onTap
+      find(h.root, n => n.type === 'button' && n.children.some(child => child.text === '返回检查'))!.props.onTap(); await settle()
+      confirm(); await settle()
+      expect(h.complete).not.toHaveBeenCalled()
+      expect(find(h.root, n => n.props['data-testid'] === 'r1-normal-complete-request')).toBeDefined()
+    } finally { h.app.unmount() }
+  })
+  it('visibly disables reread and blocks direct reread callbacks while save is pending', async () => {
+    const h = await mounted(), pending = deferred<R1NodeFormsSnapshot>()
+    try {
+      await h.input('need', '1'); await h.input('datetime', '2026-11-08 14:00')
+      h.saveOnly.mockImplementationOnce(() => pending.promise)
+      h.save()!.props.onTap(); await settle()
+      expect(h.read().props.disabled).toBe(true)
+      h.read().props.onTap(); h.save()!.props.onTap(); await settle()
+      expect(h.reader.load).toHaveBeenCalledOnce(); expect(h.saveOnly).toHaveBeenCalledOnce()
+      const saved = savedSnapshot(); h.setSnapshot(saved); pending.resolve(saved); await settle()
+      expect(h.read().props.disabled).toBe(false)
+    } finally { pending.resolve(savedSnapshot()); h.app.unmount() }
+  })
+  it('visibly disables reread and blocks direct reread callbacks while completion is pending', async () => {
+    const h = await mounted(true, savedSnapshot()), pending = deferred<{ acknowledged: true; transitionVerified: false }>()
+    try {
+      h.complete.mockImplementationOnce(() => pending.promise)
+      find(h.root, n => n.props['data-testid'] === 'r1-normal-complete-request')!.props.onTap(); await settle()
+      const confirm = find(h.root, n => n.props['data-testid'] === 'r1-normal-complete-confirm')!.props.onTap
+      confirm(); await settle()
+      expect(h.read().props.disabled).toBe(true)
+      h.read().props.onTap(); confirm(); await settle()
+      expect(h.reader.load).toHaveBeenCalledOnce(); expect(h.complete).toHaveBeenCalledOnce()
+      pending.resolve({ acknowledged: true, transitionVerified: false }); await settle()
+      expect(h.read().props.disabled).toBe(false)
+    } finally { pending.resolve({ acknowledged: true, transitionVerified: false }); h.app.unmount() }
   })
   it('keeps non-appointment hidden values, injected edit reason and unsafe appointment values fail-closed', () => {
     const s = snapshot(), draft = { need: '2', reasons1: 'normal', datetime: '2026-11-08 14:00' }
