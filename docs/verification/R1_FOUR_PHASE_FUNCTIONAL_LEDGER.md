@@ -1,5 +1,9 @@
 # F1 — Forms / Repeat Existing Records: functional delivery, not write parity
 
+> **2026-11-09 现状校正：以下正文保留的是早期离线阶段记录，不再作为当前完成状态。** 普通 forms 的受限追加、同 ID 编辑及显式完成已在 `cc362b8da5206648834d9b43ff31de1a2cfa2d05` 进入主干，之后另有真实隔离本地样本及 `959d5104` 历史冷回读验收。其证据范围、原件索引与精确 `d12b30fb` CI 见 [最新前端集成收口索引](R1_FRONTEND_INTEGRATION_CLOSEOUT_20261109.md)。本文旧“unimplemented / unauthorized / only synthetic”只描述当时切片；不应据此否认后续已批准的本地结果，也不把该本地结果推广为 Production/Beta、全部 forms/repeat 或 59 字段通过。
+>
+> 下面的旧阶段结果、失败边界和数字原样保留，便于追溯；当前权限和剩余范围以上述索引及对应新报告为准。
+
 > **2026-11-05 Owner 数据模型决策：** 后续按 [R1 真实数据模型与 DEV Mock 等价清单](R1_REAL_DATA_MODEL_MOCK_EQUIVALENCE_INVENTORY.md) 建立可追溯的 F01–F21 后台对象与 M01–M08 Mock 场景。当前可报价的技术工程师 Production 上下文没有活动 SKU，普通材料 SPU 无 SKU **不得作为报价阻断**；SKU 静态分支标 `DORMANT_OR_UNVERIFIED`，暂不普查其他角色/历史。四类目录和已有 Order/合同的有界只读样本已经取得，但动态订单字段的实际适用规则、有效价逐项对照、Order 状态/合同全面投影以及所有业务写入仍未通过，不可写 `LIVE_PASS`。Issue #201 保持 HOLD。
 
 
