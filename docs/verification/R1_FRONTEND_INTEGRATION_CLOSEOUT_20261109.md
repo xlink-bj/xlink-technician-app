@@ -1,6 +1,6 @@
 # R1 前端集成：已完成切片、证据与剩余边界
 
-核验日期：2026-11-09。本文当前对齐已进入主干的代码基线 [`fa261adb18eef49a79af3fb70599e7bd56d48e50`](https://github.com/xlink-bj/xlink-technician-app/commit/fa261adb18eef49a79af3fb70599e7bd56d48e50)，包含 Survey preset 分槽、条件读取及指定定义的平面面积草稿规则；此前 `bd5c3498`、`d12b30fb` 的独立运行继续按原 SHA 保留。文档更新不等于新的功能实现或业务测试，后续代码变动须重新核验对应 SHA。
+核验日期：2026-11-09。本文当前对齐已进入主干的代码基线 [`3b9fb41b69ada2b0ad14d028cfa19b22cbc34586`](https://github.com/xlink-bj/xlink-technician-app/commit/3b9fb41b69ada2b0ad14d028cfa19b22cbc34586)，包含 Survey preset 分槽、条件读取、指定定义的平面面积草稿规则及正常读取的 EXTS 有损回落拒绝；此前 `fa261adb`、`bd5c3498`、`d12b30fb` 的独立运行继续按原 SHA 保留。文档更新不等于新的功能实现或业务测试，后续代码变动须重新核验对应 SHA。
 
 ## 1. 使用方式与当前结论
 
@@ -10,7 +10,17 @@
 
 ## 2. 精确代码基线的自动化结果
 
-### 当前 Survey 平面面积批次：fa261adb
+### 当前 Survey EXTS 读取完整性批次：3b9fb41
+
+以下已按精确 `head_sha=3b9fb41b69ada2b0ad14d028cfa19b22cbc34586` 独立核对 GitHub API、job 和日志：
+
+- [Validate 42556808008](https://github.com/xlink-bj/xlink-technician-app/actions/runs/42556808008)：success，268 个测试文件 / 3696 项通过，包含正常 reader 所在 `normal-node-forms-read.test.ts` 的 96 项；类型与工程边界、MP-WEIXIN 与 App 构建通过。quick 条件跳过。
+- [Main H5 42556808062](https://github.com/xlink-bj/xlink-technician-app/actions/runs/42556808062)：success。stage1b-mock-h5 的 17 组共 65 项通过，Survey 59 专用只读步骤由 2 项增至 3 项 / 20.8 秒，含损坏 EXTS 拒绝及修复后的显式重读；证据归档成功。r1-main-repeat-ui 与 h5-ux 条件跳过，不记为本 SHA 已执行。
+- [EXTS 读取完整性专项报告](SURVEY_READ_EXTS_INTEGRITY_20261109.md)保留两个合成红例、正常 App 回归及一般 schema 的条件依赖限制。该修复没有新增生产/Beta访问、真实后台写入或完整 59 行页面编辑保存验收。
+
+此处成功仅指已实际执行的检查；历史 SHA 的完整手动三任务结果不迁移到本 SHA，既有默认扫描的 opt-in 跳过也不计通过。
+
+### 先前 Survey 平面面积批次：fa261adb
 
 以下已按精确 `head_sha=fa261adb18eef49a79af3fb70599e7bd56d48e50` 独立核对 GitHub API、job 和日志：
 
@@ -55,6 +65,7 @@
 | Survey 已保存附件元数据 | `d12b30fb` 增加已核字段/存储槽位的只读数量与类型展示；普通与历史 reader 均有回归 | [精确提交](https://github.com/xlink-bj/xlink-technician-app/commit/d12b30fbdff81f54e66ac5dcc9259ef910676841)。不展示对象键/签名 URL，不打开、下载、上传附件；不是通用 file/data 或新编辑权限 |
 | Survey preset 分槽与条件读取 | `bd5c3498` 修复明确 preset=0 的提交值没有复制到 EXTS 的前端缺口；补 13 条路径 × 28 条完整条件矩阵及正常 App 隔离只读 H5 | [专项源码、验证及限制](SURVEY_59_STORAGE_AND_MATRIX_20261109.md)。分槽保存为协议/动作级合成验证，正常页面只测读取；不是 59 行页面全量保存或真实 typed Java 验收 |
 | 指定 Survey 定义的平面面积草稿联动 | `fa261adb` 按固定 R1 源码复刻 length/width 变更联动，接入 Workspace 和正常 forms/repeat 的本地草稿入口；输入类型、部位切换、恢复及拒绝路径有回归 | [面积专项报告](SURVEY_R1_PLANE_AREA_20261109.md)。仅定义 `7971040108398070730` 且 `part[0]=='3'` 时计算；不是 calculateConfig 引擎、写权限开放、历史面积重算或完整页面写闭环 |
+| 正常 Survey 读取的 EXTS 完整性 | `3b9fb41` 拒绝已支持手机标量/选择字段中不能无损表示的显式 EXTS 值，不再让旧根值替代；失败撤销旧 snapshot，修复后须显式重读 | [专项报告](SURVEY_READ_EXTS_INTEGRITY_20261109.md)。真实 reader 单元与正常 App 合成只读 H5 有回归；不等于所有 mapper 消费者、未知配置/控件或任意条件控制器均已验证，不改变写权限 |
 
 ### 真实本地 forms 写闭环的原件索引
 
@@ -79,6 +90,12 @@
 **fa261adb 已补的范围：** [固定 R1 前端](https://github.com/xlink-bj/xlink-app/blob/6c0a97b26bcbcaee81ac4e1dfd627c6e8e70e29d/business/subpackages/serviceAppointment/serviceAppointment.vue#L7929-L7947)已证的平面面积特例进入两个既有草稿输入入口。仅 Survey 定义 `7971040108398070730`、`part[0]=='3'` 且 length/width 发生输入变更时计算；两维真值时乘积先 `toFixed(2)` 再 `parseFloat`，否则任一维为严格数字 0 则取 0，其余为空串。保留 R1 的浮点取舍与类型区别，例如 `1.005×1 → 1`、`0×'' → 0`、`'0'×'' → ''`，不另行优化业务规则。
 
 length/width 草稿类型按该 Survey/定义身份保留，不以当前部位为窗户为前提；部位只约束是否计算，因此“先在其他部位输入字符串 '0'，切到窗户，再清空另一维”仍得到空面积。读记录、仅切部位或改其他字段不重算，不覆盖已保存历史面积。源字段与派生 planeArea 均须通过既有可见、适用、支持和可编辑检查；拒绝时不更新半份草稿。提交仍用原数值/必填校验，非法数字或非有限结果不能借此进入有效保存。这是已知源码特例，不代表已获得 calculateConfig 原文或通用公式能力。
+
+**3b9fb41 已补的范围：** [固定 R1 读取逻辑](https://github.com/xlink-bj/xlink-app/blob/6c0a97b26bcbcaee81ac4e1dfd627c6e8e70e29d/business/subpackages/serviceAppointment/serviceAppointment.vue#L7014-L7017)将每个 EXTS 键覆盖到根部。正常 Survey reader 现在在发布 snapshot 前核验已支持手机标量/选择字段的显式 EXTS 值：对象或混合非法数组不能被通用 mapper 丢弃后改用旧根值，而是拒绝整次读取。仅该键缺失才允许使用真实根值；合法 0、false、null、空串、空数组及标量数组保留，未知 audit 对象不因此冻结。存在适用支持字段时 EXTS 容器须为对象，null/缺失仍按原空容器语义；没有这类字段时不新增容器校验。
+
+旧 snapshot 在新读取开始时撤销；损坏读取失败后不继续认可旧数据，记录修复并重新通过全部原检查后，由用户显式重读恢复。新增正常 App 只读场景验证错误时 0 记录/0 平方字段、恢复后精确回显 18.75，三条 Survey H5 场景均断言无写入、未知/外部请求和页面异常。此前两个场景及其历史结果保持原时点，不改写为三项。
+
+该完整性检查只覆盖正常 Survey reader 的已支持手机字段。静态排除、未知规则或特殊类型字段作为控制器时，通用 mapper 在人工 schema 中仍可能把旧根值传播给另一个支持字段；本片没有全局修复所有消费者/条件依赖。当前 59 行中的可见条件源 part 属于已覆盖 mobile cascade，isMoldRemoved 及其两个目标均静态排除，不据此宣称任意 schema 安全。附件继续使用原只读 codec，完整写模型及未知配置不因本片升级，详见 [EXTS 专项限制](SURVEY_READ_EXTS_INTEGRITY_20261109.md)。
 
 **尚未收口的项目分开保留：**
 
