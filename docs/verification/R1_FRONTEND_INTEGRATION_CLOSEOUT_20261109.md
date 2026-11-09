@@ -1,6 +1,6 @@
 # R1 前端集成：已完成切片、证据与剩余边界
 
-核验日期：2026-11-09。本文对齐已进入主干的代码基线 [`d12b30fbdff81f54e66ac5dcc9259ef910676841`](https://github.com/xlink-bj/xlink-technician-app/commit/d12b30fbdff81f54e66ac5dcc9259ef910676841)，不把本次文档更新当成新的功能实现或业务测试。后续代码变动须重新核验对应 SHA。
+核验日期：2026-11-09。本文当前对齐已进入主干的代码基线 [`bd5c349885880850d17f26ac93156ae24c31b098`](https://github.com/xlink-bj/xlink-technician-app/commit/bd5c349885880850d17f26ac93156ae24c31b098)，包含 Survey preset 分槽与条件读取受限批次；此前 `d12b30fb` 的独立运行继续按原 SHA 保留。文档更新不等于新的功能实现或业务测试，后续代码变动须重新核验对应 SHA。
 
 ## 1. 使用方式与当前结论
 
@@ -10,7 +10,18 @@
 
 ## 2. 精确代码基线的自动化结果
 
-以下结果已通过 GitHub API 按同一 `head_sha=d12b30fbdff81f54e66ac5dcc9259ef910676841` 核对：
+### 当前 Survey 受限批次：bd5c3498
+
+以下已按精确 `head_sha=bd5c349885880850d17f26ac93156ae24c31b098` 独立核对 GitHub API、job 和日志：
+
+- [Validate 42544315329](https://github.com/xlink-bj/xlink-technician-app/actions/runs/42544315329)：success，267 个测试文件 / 3618 项通过，MP-WEIXIN 与 App 构建通过；quick 条件跳过。
+- [Main H5 42544315341](https://github.com/xlink-bj/xlink-technician-app/actions/runs/42544315341)：success。stage1b-mock-h5 的 17 组共 64 项通过，包含专用 Survey 59 只读步骤 2 项 / 20.8 秒；证据归档成功。r1-main-repeat-ui 与 h5-ux 本次条件跳过，不记为本 SHA 已执行。
+
+本批没有新的完整手动三任务验收或真实 Java 写入；不能把下面旧 SHA 的完整手动结果迁移到本 SHA。[Survey 专项报告](SURVEY_59_STORAGE_AND_MATRIX_20261109.md)里“CI 接线尚未远端运行”保留的是候选阶段时点，已由上述精确运行补齐。
+
+### 先前基线的独立运行：d12b30fb
+
+以下历史结果按 `head_sha=d12b30fbdff81f54e66ac5dcc9259ef910676841` 核对并原样保留：
 
 | 运行 | 触发方式 | 已核结果 | 解读边界 |
 | --- | --- | --- | --- |
@@ -32,6 +43,7 @@
 | 当前 App Mock 的列表/关联/失败语义与 Repeat 分页 | 已有确定差异修复与受限自动化回归 | [当前接口对齐](MOCK_CURRENT_APP_PARITY_20261108.md)、[Repeat 查询](MOCK_REPEAT_QUERY_PARITY_20261108.md)。只证明支持切片，未提升任何 liveParity 为全等价 |
 | 快速输入、预约恢复、报价输入、媒体中断回执恢复 | 相应修复已在该基线内；完整手动 H5 及各专项说明提供回归证据 | [AppInput](APP_INPUT_DELIVERY_REGRESSION_20261108.md)、[AppTextarea](APP_TEXTAREA_DELIVERY_REGRESSION_20261108.md)、[SearchBar](APP_SEARCH_DELIVERY_REGRESSION_20261108.md)、[报价输入](QUOTATION_INPUT_DELIVERY_20261108.md)、[媒体回执](MEDIA_INTERRUPTED_RECEIPT_RECOVERY_20261108.md)。不能用 Mock/程序化 IME 证明真机或真实上传 |
 | Survey 已保存附件元数据 | `d12b30fb` 增加已核字段/存储槽位的只读数量与类型展示；普通与历史 reader 均有回归 | [精确提交](https://github.com/xlink-bj/xlink-technician-app/commit/d12b30fbdff81f54e66ac5dcc9259ef910676841)。不展示对象键/签名 URL，不打开、下载、上传附件；不是通用 file/data 或新编辑权限 |
+| Survey preset 分槽与条件读取 | `bd5c3498` 修复明确 preset=0 的提交值没有复制到 EXTS 的前端缺口；补 13 条路径 × 28 条完整条件矩阵及正常 App 隔离只读 H5 | [专项源码、验证及限制](SURVEY_59_STORAGE_AND_MATRIX_20261109.md)。分槽保存为协议/动作级合成验证，正常页面只测读取；不是 59 行页面全量保存或真实 typed Java 验收 |
 
 ### 真实本地 forms 写闭环的原件索引
 
@@ -47,11 +59,15 @@
 
 两次结构材料不能混用。[当前证据 overlay](../../contracts/r1-mock-current-evidence.json) 中用途 UNKNOWN、缺字段键的旧捕获，应保留其原始范围；[Survey 59 字段说明](SURVEY_59_READ_COVERAGE_20261107.md) 则记录后续第二次结构捕获及本地 Java 回读，不能继续把旧缺项当作后者的现状。
 
-已保存事实：59 行、56 个不同业务键，重复行不能按键去重；40 行适用手机详情、其中 12 行必填；31 行有条件、28 行结构完整，gap0/height/gap1 三行部分条件未保留。23 行 preset=0，typed Survey 顶层与 exts 必须分开，已有记录更新不是普通 patch。`d12b30fb` 只补已证实 Survey 附件的只读投影。
+已保存事实：59 行、56 个不同业务键，重复行不能按键去重；40 行适用手机详情、其中 12 行必填。按根部 `showType=3` 统计为 31 行，其中 28 行条件结构完整，gap0/height/gap1 三行部分条件未保留。另有 before/afterMoldRemoval 的 frontEndConfig 条件，但其 `showList=[]` 不进入手机详情；不能把 31 当成所有来源的条件总数。perimeter 的条件值是已知空数组，不是缺失配置，不补造部位。已核 Survey 附件键共 24 个、手机适用 22 行，`d12b30fb` 已提供受限只读投影，不应再笼统写成所有 file 均不支持。
 
-尚未证明：全部 calculateConfig 内容、Survey 自身 provider 的身份/完整选项、当前有效写权限、所有特殊控件与 typed 完整替换的元数据/日期精度保全，以及完整 59 行正常保存。现有 50 字段保存上限没有因此放宽；不能借 Order 的 parts 树或填空配置凑通过。
+**bd5c3498 已补的范围：** mapper 保留明确 preset 元数据，现有 forms/repeat、Stage1 与 Survey Workspace/wire 为本次实际提交且明确 preset=0 的值生成 R1 EXTS 副本，保留根部副本、未知原文和隐藏值；23 个已知 extension 键已有合成回归，存储元数据漂移仍拒绝后续确认。13 条已捕获路径 × 28 条完整条件已有矩阵断言。正常 App H5 在全 API 拦截下读取 50+9 行，验证条件、只读附件、provider 失败与错租户拒绝、显式恢复和冷刷新，共 2 项通过。
 
-后续先核已有固定 R1/后台源码及已保存配置，再为证据充分的部分补前端/Mock 回归。这是可自主核查工作，不预设需要改后台。确实缺少的配置、真实持久化响应或获准样本则单列待证；未知规则维持显式拒绝。专项若继续产生新证据，以其独立文档/精确提交追加，不改写旧捕获。
+这不再是“所有分槽/条件测试都待做”。但 typed 保存证明仍是源码属性名 DTO 模拟→真实 wire→只读 codec/mapper，H5 的 provider 是明确合成别名，不代表真实 provider 为空或已解析。详见 [受限批次报告](SURVEY_59_STORAGE_AND_MATRIX_20261109.md)。
+
+尚未证明：三条部分条件、全部 calculateConfig 内容、Survey 自身 provider 的身份/完整选项、当前有效写权限、所有特殊控件与真实 typed 完整替换的元数据/日期精度保全，以及完整 59 行正常保存。现有 50 字段、唯一业务键和标量写模型守卫均未放宽，通用 Survey 已有 ID 替换仍拒绝；不能借 Order 的 parts 树或填空配置凑通过。真实上传、Java/Mongo 保存、并发版本和完整后继仍 NOT_RUN。
+
+后续只对上述剩余缺项继续核已有固定 R1/后台源码及已保存配置，为证据充分的部分补前端/Mock 回归，不重复把已完成分槽修复列为待办，也不预设需要改后台。确实缺少的配置、真实持久化响应或获准样本单列待证；未知规则维持显式拒绝。专项继续产生的新证据按独立文档/精确提交追加，不改写旧捕获。
 
 ## 5. type=0 报价：既有边界存档，非本轮执行主线
 
