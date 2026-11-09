@@ -36,6 +36,27 @@ function formsExtsJson(value: unknown): string {
   return JSON.stringify(value)
 }
 
+/** R1 getFormData copies every EXTS key over the root (pinned
+ * serviceAppointment.vue:7014-7017). The display mapper cannot represent an
+ * object as a scalar/choice value; it must not then expose an older root copy.
+ * Limit this check to this rollout's supported mobile Survey read fields.
+ * Unknown audit JSON and unsupported/presentation fields remain untouched. */
+function assertSurveyReadExtsValues(definition: FormDefinitionRead, original: Row): void {
+  if (definition.purpose !== 'survey' || original.exts == null) return
+  const supported = new Set(['text', 'textarea', 'phone', 'IDNumber', 'number', 'digit', 'date', 'time', 'datetime', 'switch', 'rate', 'select', 'radio', 'checkbox', 'cascade'])
+  const fields = (definition.fields ?? []).filter(field => supported.has(field.type) && !field.unsupportedReason
+    && !field.presentationOnly && isFieldApplicable(actionFormSchemaFor(field), ACTION_FORM_SURFACE))
+  if (!fields.length) return
+  const exts = row(original.exts)
+  const scalar = (value: unknown): boolean => typeof value === 'string' || typeof value === 'boolean'
+    || (typeof value === 'number' && Number.isFinite(value))
+  for (const field of fields) {
+    if (!Object.hasOwn(exts, field.valueKey)) continue
+    const value = exts[field.valueKey]
+    if (!(value === null || scalar(value) || (Array.isArray(value) && value.every(scalar)))) deny()
+  }
+}
+
 /** Explicit local read rollout, not a synthetic record/node adapter. Production stays closed. */
 export function normalNodeFormsReadEnabled(env: Record<string, unknown>, origin: string): boolean {
   const readonlyMode = env.VITE_XLINK_ENABLE_REAL_WRITES === 'false' && env.VITE_XLINK_ENABLE_R1_SPECIAL_WRITES === 'false'
@@ -283,9 +304,10 @@ export function createNormalNodeFormsReader(input: {
       const originals = new Map<string,string>()
       for (const r of discovered) {
         const selected=await reader.select(String(r.data.id))
-        records.push(selected.data)
         const original=reader.originalFor(selected)
         if(!original) return deny()
+        assertSurveyReadExtsValues(definition, original)
+        records.push(selected.data)
         originals.set(String(selected.data.id),formsExtsJson(original))
       }
       const after = await readNode()

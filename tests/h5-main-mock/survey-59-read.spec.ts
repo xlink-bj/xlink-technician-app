@@ -3,7 +3,7 @@ import { survey59Fields, survey59Paths, survey59Record, expectedSurvey59VisibleI
 
 test.skip(process.env.XLINK_H5_SURVEY_59 !== 'true', 'Dedicated readonly Survey 59 synthetic API acceptance only')
 async function fixture(page: Page, baseURL: string) {
-  const state = { part: ['1', '130'] as unknown, providerFailure: false, foreignRecord: false,
+  const state = { part: ['1', '130'] as unknown, providerFailure: false, foreignRecord: false, invalidPartExts: false,
     calls: [] as Array<{ path: string; body: Record<string, string> }>, unexpected: [] as string[], errors: [] as string[], writes: 0 }
   const fields = survey59Fields.map(field => ({ ...field,
     ...(field.valueOption ? { valueOption: `qa-survey-59-${field.name}` } : {}) }))
@@ -45,7 +45,8 @@ async function fixture(page: Page, baseURL: string) {
       return state.providerFailure ? ok({ success: false, code: 'RETRYABLE' }) : ok([{ type: body.types, children: [] }])
     }
     if (path === 'biz/extForm/query/e') {
-      const data = { ...survey59Record(state.part), ...(state.foreignRecord ? { tenantId: 'foreign' } : {}) }
+      const data: Record<string, unknown> = { ...survey59Record(state.part), ...(state.foreignRecord ? { tenantId: 'foreign' } : {}) }
+      if (state.invalidPartExts) (data.exts as Record<string, unknown>).part = { broken: true }
       const rows = !body['is:_id|string#and'] || body['is:_id|string#and'] === 'saved' ? [data] : []
       return ok({ data: rows, total: rows.length, page: Number(body.page), size: Number(body.rows), dataCount: rows.length })
     }
@@ -110,4 +111,17 @@ test('normal App refuses provider failure and foreign records, then restores onl
   expect(state.writes).toBe(0); expect(state.unexpected).toEqual([]); expect(state.errors).toEqual([])
   await info.attach('readonly-failure-recovery', { body: JSON.stringify({ calls: state.calls, writes: state.writes,
     unexpected: state.unexpected, realBackend: 'NOT_RUN' }), contentType: 'application/json' })
+})
+
+test('normal App refuses invalid authoritative EXTS instead of revealing stale root-conditioned values', async ({ page, baseURL }, info) => {
+  const state = await fixture(page, baseURL!)
+  await open(page);state.invalidPartExts = true;await read(page).click()
+  await expect(page.getByTestId('r1-normal-form-read-message')).toContainText('无法完整核实')
+  await expect(page.getByTestId('r1-normal-form-record')).toHaveCount(0)
+  await expect(page.getByTestId('r1-normal-value-squareMeter')).toHaveCount(0)
+  state.invalidPartExts = false;await read(page).click()
+  await expect(page.getByTestId('r1-normal-form-record')).toHaveCount(1)
+  await expect(page.getByTestId('r1-normal-value-squareMeter')).toContainText('18.75')
+  expect(state.writes).toBe(0);expect(state.unexpected).toEqual([]);expect(state.errors).toEqual([])
+  await info.attach('invalid-exts-explicit-read-recovery', {body:JSON.stringify({calls:state.calls,writes:state.writes,unexpected:state.unexpected}),contentType:'application/json'})
 })

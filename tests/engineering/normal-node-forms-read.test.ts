@@ -1,8 +1,62 @@
 import { describe, expect, it, vi } from 'vitest'
 import { createNormalNodeFormsReader, normalNodeFormsReadEnabled } from '@app/r1-node-forms-read'
 import type { SessionSnapshot } from '@shared/ports'
+import { projectR1RecordReadFields } from '@features/work-orders/r1-record-read-fields'
 const origin = 'http://127.0.0.1:5189'
 const env = { DEV: true, VITE_XLINK_R1_NODE_FORM_READ: 'true', VITE_XLINK_ENVIRONMENT: 'dev', VITE_XLINK_MOCK: 'false', VITE_XLINK_API_BASE_URL: `${origin}/xlink/wm`, VITE_XLINK_ENABLE_REAL_WRITES: 'false', VITE_XLINK_ENABLE_R1_SPECIAL_WRITES: 'false' }
+it('rejects an explicit unrepresentable EXTS business value instead of displaying an older root copy', async () => {
+  const h = harness()
+  Object.assign(h.record, { answer: 'yes' })
+  Object.assign(h.record.exts, { answer: { broken: true } })
+  await expect(h.reader.load('work', 'node')).rejects.toThrow()
+})
+it.each([{}, { broken: true }, [{}], [null], ['yes', {}]].map(value => ({ value })))('rejects lossy effective scalar/choice EXTS %#', async ({ value }) => {
+  const h = harness()
+  Object.assign(h.record, { answer: 'yes' });Object.assign(h.record.exts, { answer: value })
+  await expect(h.reader.load('work', 'node')).rejects.toThrow()
+  expect(h.calls.some(path => /upsert|process|upload/.test(path))).toBe(false)
+})
+it.each([0, false, null, [], ['yes'], '', 'historical-unverified-code'].map(value => ({ value })))('retains explicit representable EXTS without root fallback %#', async ({ value }) => {
+  const h = harness()
+  Object.assign(h.record, { answer: 'yes' });Object.assign(h.record.exts, { answer: value })
+  const s = await h.reader.load('work', 'node')
+  expect(s.records[0]?.values?.answer).toEqual(value)
+})
+it('allows a missing extension value to use the actual root and ignores unrelated audit JSON', async () => {
+  const h = harness()
+  delete (h.record.exts as Record<string, unknown>).answer
+  Object.assign(h.record, { answer: 'yes' });Object.assign(h.record.exts, { audit: { unknown: [1, false] } })
+  expect((await h.reader.load('work', 'node')).records[0]?.values?.answer).toBe('yes')
+})
+it.each(['static-excluded', 'unknown-rule', 'unsupported-type'])('does not expand integrity validation to unavailable fields: %s', async kind => {
+  const h = harness()
+  Object.assign(h.record, { answer: 'yes' });Object.assign(h.record.exts, { answer: { broken: true } })
+  if (kind === 'static-excluded') Object.assign(h.field, { showList: ['5'] })
+  if (kind === 'unknown-rule') Object.assign(h.field, { frontEndConfig: '{"showField":"part","showType":"3"}' })
+  if (kind === 'unsupported-type') Object.assign(h.field, { type: 'data', valueOption: '' })
+  const s = await h.reader.load('work', 'node')
+  const fields = projectR1RecordReadFields(s.definition, s.records[0]!)
+  if (kind === 'static-excluded') expect(fields).toEqual([])
+  else { expect(fields[0]?.unavailable).toBe(true);expect(fields[0]?.text).not.toContain('yes') }
+})
+it('revokes the old snapshot on lossy read failure and recovers only through a fresh explicit read', async () => {
+  const h = harness(), previous = await h.reader.load('work', 'node')
+  Object.assign(h.record, { answer: 'yes' });Object.assign(h.record.exts, { answer: { broken: true } })
+  await expect(h.reader.load('work', 'node')).rejects.toThrow()
+  expect(h.reader.isCurrent(previous)).toBe(false)
+  Object.assign(h.record.exts, { answer: 'yes' })
+  const fresh = await h.reader.load('work', 'node')
+  expect(h.reader.isCurrent(fresh)).toBe(true);expect(h.reader.isCurrent(previous)).toBe(false)
+})
+it.each(['static-excluded', 'unknown-rule', 'unsupported-type'])('does not newly validate the EXTS container with no supported mobile fields: %s', async kind => {
+  const h = harness()
+  Object.assign(h.record, { answer: 'yes', exts: [] })
+  if (kind === 'static-excluded') Object.assign(h.field, { showList: ['5'] })
+  if (kind === 'unknown-rule') Object.assign(h.field, { frontEndConfig: '{"showField":"part","showType":"3"}' })
+  if (kind === 'unsupported-type') Object.assign(h.field, { type: 'data', valueOption: '' })
+  const s = await h.reader.load('work', 'node')
+  expect(s.records).toHaveLength(1)
+})
 function harness(envOverride: Record<string, unknown> = {}) {
   let session = { sessionRef: 'session', user: { id: 'user' }, currentRole: { id: 'role' }, capabilityNames: [] } as unknown as SessionSnapshot
   let listed = false
