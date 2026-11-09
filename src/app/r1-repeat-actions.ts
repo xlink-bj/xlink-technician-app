@@ -97,7 +97,7 @@ export function createR1RepeatActions(input: {
         const before = await read(); check()
         if (before.records.length !== 0) return deny()
         const normalized = normalizeR1RepeatValues(before, draft)
-        const request = r1SpecialFormUpsert({ sourceNodeType: 'repeat', definitionId: asOpaqueId<'FormDefinitionId'>(s.formDefinitionId), formData: normalized,
+        const request = r1SpecialFormUpsert({ sourceNodeType: 'repeat', definitionId: asOpaqueId<'FormDefinitionId'>(s.formDefinitionId), formData: normalized, fieldStorage: before.definition.fields,
           workOrderId: asOpaqueId<'WorkOrderId'>(s.workOrderId), workflowNodeId: asOpaqueId<'WorkflowNodeRuntimeId'>(s.runtimeNodeId), workflowRunId: asOpaqueId<'WorkflowRunId'>(s.workflowRunId), state: 1 })
         check(); mark('uncertain')
         const raw = await input.transport.execute(request); check(); normalizeCommandResponse(raw)
@@ -106,7 +106,9 @@ export function createR1RepeatActions(input: {
         const ack = data && typeof data === 'object' && !Array.isArray(data) ? data as Record<string, unknown> : envelope
         const savedId = acknowledgedId(ack)
         const after = await read(); check()
-        if (after.records.length !== 1 || after.records[0]!.id !== savedId
+        if (JSON.stringify(after.definition.fields?.map(f => [f.fieldId, f.valueKey, f.preset]))
+          !== JSON.stringify(before.definition.fields?.map(f => [f.fieldId, f.valueKey, f.preset]))
+          || after.records.length !== 1 || after.records[0]!.id !== savedId
           || Object.entries(normalized).some(([key, value]) => after.records[0]!.values?.[key] !== value)) return deny()
         mark('ready'); return after
       })

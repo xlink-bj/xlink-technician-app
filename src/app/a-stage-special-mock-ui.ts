@@ -563,6 +563,7 @@ export function createAStageSpecialMockController(options: {
           ? { kind: 'forms_finalize', sourceNodeType: 'forms', scope: s, authoritativeSavedIds: ids }
           : { kind: 'repeat_finalize', sourceNodeType: 'repeat', scope: s, authoritativeSavedIds: ids }
       }
+      intent = { ...intent, fieldStorage: chosen.definition.fields }
       const gateway = {
         revalidate: async (requested: R1MultiStepScope) => {
           if (!authorized() || requested.workOrderId !== s.workOrderId

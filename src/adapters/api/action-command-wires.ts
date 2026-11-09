@@ -1,3 +1,4 @@
+import { projectR1PresetStorage } from './r1-field-storage'
 import { hasNonStringAppointmentNeed, appointmentNeedReselectionMessage } from '@shared/form/appointment-need'
 import { appointmentBusinessKeys, appointmentReplacementProblem, appointmentNullBusinessKey } from '@shared/form/appointment-replacement-context'
 /**
@@ -45,6 +46,7 @@ function assertSurveyCreateOnly(
   intent: SurveyCreateIntent | undefined,
   scope: Readonly<Record<string, unknown>>,
   request: ApiCommandRequest,
+  generatedExtsJson?: string,
 ): void {
   if (!intent) return
   // The existing synthetic route policy never permits real-network fall-through,
@@ -63,7 +65,9 @@ function assertSurveyCreateOnly(
   const serialized = request.body?.dataStr
   const data = typeof serialized === 'string' ? JSON.parse(serialized) : undefined
   if (!data || typeof data !== 'object' || Array.isArray(data)
-    || Object.keys(data).some(key => surveyReservedValueKeys.has(key) && !Object.hasOwn(scope, key))
+    || Object.keys(data).some(key => surveyReservedValueKeys.has(key) && !Object.hasOwn(scope, key)
+      && !(key === 'exts' && generatedExtsJson !== undefined))
+    || (generatedExtsJson !== undefined && JSON.stringify(data.exts) !== generatedExtsJson)
     || Object.entries(scope).some(([key, value]) => data[key] !== value)) {
     throw new AdapterMappingError('Serialized Survey create identity or metadata does not match its command scope')
   }
@@ -118,8 +122,11 @@ export function formDataUpsertCommand(
     ...(workflowRunId ? { workflowId: workflowRunId } : {}),
     state: 1,
   }
+  const mappedValues = mapDynamicValues(values, purpose)
+  const storedValues = purpose === 'survey' ? projectR1PresetStorage({}, mappedValues, input.fieldStorage) : mappedValues
+  const generatedExtsJson = purpose === 'survey' && Object.hasOwn(storedValues, 'exts') ? JSON.stringify(storedValues.exts) : undefined
   const data = {
-    ...mapDynamicValues(values, purpose),
+    ...storedValues,
     ...(purpose === 'appointment' ? input.appointmentReplacement?.metadata : {}),
     ...scope,
     ...(input.formDataId ? { _id: input.formDataId } : {}),
@@ -129,7 +136,7 @@ export function formDataUpsertCommand(
     path,
     body: { dataStr: JSON.stringify(data) },
   }
-  assertSurveyCreateOnly(surveyIntent, scope, request)
+  assertSurveyCreateOnly(surveyIntent, scope, request, generatedExtsJson)
   return request
 }
 

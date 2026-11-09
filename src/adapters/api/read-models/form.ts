@@ -279,6 +279,8 @@ function formField(raw: unknown, rowIndex: number): FormFieldRead | null {
     ...(state !== undefined ? { state } : {}),
     ...(fixed !== undefined ? { fixed } : {}),
     ...(operationType !== undefined ? { operationType } : {}),
+    ...(record.preset === 0 || record.preset === false ? { preset: false }
+      : record.preset === 1 || record.preset === true ? { preset: true } : {}),
     ...(showList ? { showList } : {}),
     ...(config?.mpDetailHide === true ? { mobileDetailHidden: true } : {}),
     ...(presentationOnly ? { presentationOnly: true } : {}),

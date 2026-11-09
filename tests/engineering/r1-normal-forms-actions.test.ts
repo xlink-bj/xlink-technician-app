@@ -197,3 +197,20 @@ describe('selected FormData ACK ownership before linking EXTS',()=>{
   expect((await a.saveOnly({area:3})).records[0]?.id).toBe('saved');expect(wire.execute).toHaveBeenCalledTimes(2)
  })
 })
+
+
+it('copies explicit preset=0 through the normal action wire without granting more fields',async()=>{
+ const h=setup();Object.assign(h.base.definition.fields![0]!,{preset:false})
+ await h.provider().forSnapshot(h.base)!.saveOnly({area:0})
+ const data=JSON.parse(String(wire.execute.mock.calls[0]![0].body?.dataStr))
+ expect(data).toMatchObject({area:0,exts:{area:0}})
+ expect(wire.execute).toHaveBeenCalledTimes(2)
+})
+it('keeps the persistent lock and sends no EXTS when preset storage changes after upsert',async()=>{
+ const h=setup();Object.assign(h.base.definition.fields![0]!,{preset:false})
+ const original=h.reader.load.getMockImplementation()!;let reads=0
+ h.reader.load.mockImplementation(async()=>{const s=await original();if(++reads>1)Object.assign(s.definition.fields![0]!,{preset:true});return s})
+ const a=h.provider().forSnapshot(h.base)!
+ await expect(a.saveOnly({area:3})).rejects.toThrow()
+ expect(wire.execute).toHaveBeenCalledTimes(1);expect(a.locked()).toBe(true)
+})

@@ -1,3 +1,4 @@
+import type { R1FieldStorage } from '@adapters/api/r1-field-storage'
 /**
  * Source-backed R1 special node functional candidate. This orchestrator has
  * deliberately NO production composition root: all execution is injected by
@@ -21,7 +22,7 @@ import { createOperationError } from '@shared/types'
 
 import type { R1FileWireValue } from '@shared/types'
 type Fields = Readonly<Record<string,string|number|boolean|readonly string[]|readonly R1FileWireValue[]>>
-interface Base { readonly scope:R1MultiStepScope }
+interface Base { readonly scope:R1MultiStepScope; readonly fieldStorage?: readonly R1FieldStorage[] }
 export type R1Stage1Intent =
   | (Base & {readonly kind:'forms_save';readonly sourceNodeType:'forms';
       readonly fields:Fields;readonly authoritativeExts:R1JsonObject;
@@ -150,7 +151,7 @@ export async function executeR1Stage1FunctionalCandidate(
     if(intent.kind==='forms_save'||intent.kind==='repeat_save'){
       r1SpecialFormUpsert({sourceNodeType:intent.sourceNodeType,
         definitionId:opaque<FormDefinitionId>(scope.formDefinitionId),
-        formData:intent.fields,clearedFieldKeys:intent.clearedFieldKeys,
+        formData:intent.fields,clearedFieldKeys:intent.clearedFieldKeys,fieldStorage:intent.fieldStorage,
          workOrderId:opaque<WorkOrderId>(scope.workOrderId),
         workflowNodeId:opaque<WorkflowNodeRuntimeId>(scope.runtimeNodeId),
         ...(scope.workflowRunId?{workflowRunId:opaque<WorkflowRunId>(scope.workflowRunId)}:{}),
@@ -173,7 +174,7 @@ export async function executeR1Stage1FunctionalCandidate(
     if(intent.kind==='repeat_batch'){
       for(const fields of intent.forms){
         r1SpecialFormUpsert({sourceNodeType:'repeat',
-          definitionId:opaque<FormDefinitionId>(scope.formDefinitionId),formData:fields,
+          definitionId:opaque<FormDefinitionId>(scope.formDefinitionId),formData:fields,fieldStorage:intent.fieldStorage,
           workOrderId:opaque<WorkOrderId>(scope.workOrderId),
           workflowNodeId:opaque<WorkflowNodeRuntimeId>(scope.runtimeNodeId),
           ...(scope.workflowRunId?{workflowRunId:opaque<WorkflowRunId>(scope.workflowRunId)}:{}),
@@ -210,7 +211,7 @@ export async function executeR1Stage1FunctionalCandidate(
           ? intent.existingFormDataId : undefined
         request=r1SpecialFormUpsert({sourceNodeType:intent.sourceNodeType,
           definitionId:opaque<FormDefinitionId>(scope.formDefinitionId),
-          formData:fields,
+          formData:fields,fieldStorage:intent.fieldStorage,
           ...(intent.kind==='forms_save'||intent.kind==='repeat_save'
             ? {clearedFieldKeys:intent.clearedFieldKeys}:{}),
           workOrderId:opaque<WorkOrderId>(scope.workOrderId),

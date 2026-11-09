@@ -1760,6 +1760,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
         ...(form.dataId ? { formDataId: form.dataId } : {}),
         ...(form.appointmentReplacement ? { appointmentReplacement: form.appointmentReplacement } : {}),
         values: validation.data,
+        ...(form.purpose === 'survey' ? { fieldStorage: form.fields.map(({ fieldId, valueKey, preset }) => ({ fieldId, valueKey, preset })) } : {}),
         mutation,
       })
       if (result.state === 'succeeded' && result.data) {

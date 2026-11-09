@@ -1,5 +1,5 @@
 import type { AppointmentReplacementContext } from '@shared/form/appointment-replacement-context'
-import type { FormFieldPresentation, FormFieldValue, FormFieldVisibility, FormPurpose } from '@shared/ports/api'
+import type { FormFieldRead, FormFieldPresentation, FormFieldValue, FormFieldVisibility, FormPurpose } from '@shared/ports/api'
 import type {
   FormDataId,
   FormDefinitionId,
@@ -27,6 +27,8 @@ export interface AppointmentFormOption {
 }
 
 export interface AppointmentFormFieldRead {
+  /** Explicit R1 storage layout; never a field editing permission. */
+  readonly preset?: boolean
   /** Stable ExtField row identity; never used as a FormData value key. */
   readonly fieldId: string
   /** Backend business field name used in FormData values. May repeat across rows. */
@@ -93,6 +95,8 @@ export interface SaveDynamicFormInput {
   readonly workflowRunId?: WorkflowRunId
   readonly definitionId: FormDefinitionId
   readonly purpose?: FormPurpose
+  /** Source-read layout only; never grants write or replacement authority. */
+  readonly fieldStorage?: readonly Pick<FormFieldRead, 'fieldId' | 'valueKey' | 'preset'>[]
   readonly formDataId?: FormDataId
   readonly values: Readonly<Record<string, FormFieldValue>>
   readonly mutation?: Pick<FormMutationCheckpoints, 'beforeFormDispatch' | 'afterFormSaved'>

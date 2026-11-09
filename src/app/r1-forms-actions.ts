@@ -157,7 +157,7 @@ export function createR1FormsActions(input: {
       if(recordId&&!occupied.has(recordId)) return deny()
       plan(placeholder)
       const request=r1SpecialFormUpsert({sourceNodeType:'forms',definitionId:asOpaqueId<'FormDefinitionId'>(s.formDefinitionId),
-        formData:normalized.fields,workOrderId:asOpaqueId<'WorkOrderId'>(s.workOrderId),workflowNodeId:asOpaqueId<'WorkflowNodeRuntimeId'>(s.runtimeNodeId),
+        formData:normalized.fields,fieldStorage:before.snapshot.definition.fields,workOrderId:asOpaqueId<'WorkOrderId'>(s.workOrderId),workflowNodeId:asOpaqueId<'WorkflowNodeRuntimeId'>(s.runtimeNodeId),
         workflowRunId:asOpaqueId<'WorkflowRunId'>(s.workflowRunId),state:1,
         ...(recordId?{existingFormDataId:asOpaqueId<'FormDataId'>(recordId),authoritativeOriginal:original!,clearedFieldKeys:normalized.clearedFieldKeys}:{})})
       check();mark('uncertain');receipt('upsert_may_have_dispatched',recordId)
@@ -169,7 +169,9 @@ export function createR1FormsActions(input: {
       // Re-evaluate actor, grant, definition, conditions, readonly fields, and all
       // submitted values before the second write. The original stays the exact
       // pre-upsert read; never synthesize edit authority from the ACK.
-      if(!allowed(operation,recordId) || (finish&&!allowed('save_finish',recordId))
+      if(JSON.stringify(intermediate.snapshot.definition.fields?.map(f=>[f.fieldId,f.valueKey,f.preset]))
+        !==JSON.stringify(before.snapshot.definition.fields?.map(f=>[f.fieldId,f.valueKey,f.preset]))
+        || !allowed(operation,recordId) || (finish&&!allowed('save_finish',recordId))
         || JSON.stringify(normalize(intermediate.snapshot,original??undefined))!==JSON.stringify(normalized)) return deny()
       const planned=plan(savedId)
       receipt('exts_may_have_dispatched',savedId);check()

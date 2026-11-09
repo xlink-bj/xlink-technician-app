@@ -149,6 +149,10 @@ jobs:
           VITE_XLINK_R1_MP_UX_FIXTURES: 'true'
           VITE_XLINK_R1_STAGE2B_FIELDS: 'true'
         run: pnpm exec playwright test --config config/playwright/mock-repeat-query.config.ts
+      - name: Verify normal App Survey 59 conditions and read-only media at 430
+        env:
+          XLINK_H5_SURVEY_59: 'true'
+        run: pnpm exec playwright test --config config/playwright/survey-59-read.config.ts
       - name: Preserve Stage 1B/2A/2B/2C offline H5 evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -162,6 +166,7 @@ jobs:
             test-results/quotation-input-delivery/
             test-results/work-order-categories/
             test-results/mock-repeat-query/
+            test-results/survey-59-read/
           if-no-files-found: warn
           retention-days: 7
 

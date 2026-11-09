@@ -1,3 +1,4 @@
+import { projectR1PresetStorage, type R1FieldStorage } from './r1-field-storage'
 /**
  * SOURCE-ONLY R1 workflow/process body encoders for special form nodes.
  *
@@ -73,6 +74,8 @@ export function r1SpecialFormUpsert(input: {
   /** Optional fields explicitly cleared from a full existing R1 FormData.
    * JSON omission in a full upsert; never encode a null magic value. */
   readonly clearedFieldKeys?: readonly string[]
+  /** Source-read preset metadata; this does not authorize additional fields. */
+  readonly fieldStorage?: readonly R1FieldStorage[]
   /** Full, same-record R1 source snapshot is mandatory for an existing row.
    * A projected FormDataRead.values map is NOT a full update payload. */
   readonly authoritativeOriginal?: Readonly<Record<string, unknown>>
@@ -179,7 +182,7 @@ export function r1SpecialFormUpsert(input: {
     }
     original.exts=nextExts
   }
-  const data={...original,...input.formData,sid:input.workOrderId,smodule:'serviceAppointment',
+  const data={...projectR1PresetStorage(original,input.formData,input.fieldStorage),sid:input.workOrderId,smodule:'serviceAppointment',
     nodeId:input.workflowNodeId,...(input.workflowRunId?{workflowId:input.workflowRunId}:{}),
     ...(input.existingFormDataId?{_id:input.existingFormDataId}:{}),state:input.state}
   return { method:'POST', path:`biz/extForm/upsert/${encodeURIComponent(input.definitionId)}`,

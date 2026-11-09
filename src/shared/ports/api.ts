@@ -233,6 +233,8 @@ export interface FormFieldRead {
   readonly state?: number | string
   readonly fixed?: string | number | boolean
   readonly operationType?: string | number
+  /** Explicit R1 preset flag: false stores a business copy in exts. Not permission. */
+  readonly preset?: boolean
   readonly showList?: readonly (string | number)[]
   /** R1 frontEndConfig.mpDetailHide is a mobile-detail exclusion, not a write permission. */
   readonly mobileDetailHidden?: boolean
