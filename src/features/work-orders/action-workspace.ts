@@ -118,6 +118,7 @@ import {
   type DynamicActionField,
 } from './dynamic-form-action'
 import { surveyMediaPostUploadPolicyFor } from './survey-media'
+import { r1SurveyPlaneAreaAfterChange } from './survey-plane-area'
 import { dynamicMediaPolicyFor } from './dynamic-media-policy'
 import { mediaCapacityError, mediaSelectionError } from '@runtimes/media/field-policy'
 import { loadActionMutationReceipt, mutationReceiptDenial, type ActionMutationScope } from './action-mutation-receipt'
@@ -1295,7 +1296,21 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
         error.value = normalized.error ?? null
         return { state: normalized.state, ...(normalized.error ? { error: normalized.error } : {}) }
       }
-      const nextValues = { ...dynamic.values, [field.valueKey]: normalized.data! }
+      let nextValues = { ...dynamic.values, [field.valueKey]: normalized.data! }
+      const area = r1SurveyPlaneAreaAfterChange(dynamic, field.valueKey, nextValues)
+      if (area) {
+        const targets = dynamicActionFieldsFor({ ...dynamic, values: nextValues }).filter(f => f.valueKey === 'planeArea')
+        const target = targets[0]
+        if (descriptor.value?.contentIdentity !== dynamic.definitionId
+          || targets.length !== 1 || !target || target.type !== 'digit' || !target.runtime.visible
+          || target.runtime.readOnly || target.runtime.capability !== 'SUPPORTED_GENERIC'
+          || (typeof area.value === 'number' && !Number.isFinite(area.value))) {
+          const rejected = failure<void>('unsupported_capability', '平面面积字段或计算输入尚未核实，不能自动更新草稿。')
+          error.value = rejected.error ?? null
+          return rejected
+        }
+        nextValues = { ...nextValues, planeArea: area.value }
+      }
       const leakageExperience = surveyLeakageCauseExperienceFor(dynamic)
       const nextDynamicValues = leakageExperience
         && field.valueKey === 'part'

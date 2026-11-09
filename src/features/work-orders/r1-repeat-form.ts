@@ -3,11 +3,27 @@ import type { R1LocalField } from './r1-local-form-fields'
 import { actionFormSchemaFor, ACTION_FORM_SURFACE } from './action-form-schema'
 import { evaluateFieldState, normalizeSubmission } from '@runtimes/dynamic-form'
 import { normalizeDynamicForm } from './dynamic-form-action'
+import { r1SurveyPlaneAreaAfterChange } from './survey-plane-area'
+import type { R1LocalFieldValue } from './r1-local-form-fields'
 import type { FormFieldValue } from '@shared/ports'
 const deny = (): never => { throw Error('字段、选项或规则尚未核实，不能保存。') }
 const validId = (v: unknown): v is string => typeof v === 'string' && v.length > 0 && v.trim() === v && !v.includes(',')
 const reserved = new Set(['id', '_id', 'dataId', 'formDataId', 'formDefId', 'definitionId', 'extId', 'tenantId', 'userId', 'roleId', 'sid', 'smodule', 'state', 'nodeId', 'runtimeNodeId', 'workOrderId', 'workflowId', 'workflowRunId', 'runId', 'workflow', 'formDefinitionId', 'dataStr', 'exts', '__proto__', 'prototype', 'constructor', 'createTime', 'createDateTime', 'createUser', 'createUserName', 'updateTime', 'updateDateTime', 'updateUser', 'updateUserName', 'orgId', 'belongTo', '_version', '_class'])
 const scalarTypes = new Set(['text', 'textarea', 'phone', 'IDNumber', 'number', 'digit', 'date', 'time', 'datetime', 'radio', 'select'])
+
+/** Local draft transition only. The provider, original-record provenance and
+ * submission guards still independently decide whether anything can save. */
+export function updateR1FormDraftValue(snapshot: R1NodeFormsSnapshot, values: Readonly<Record<string, R1LocalFieldValue>>,
+  key: string, value: R1LocalFieldValue): Record<string, R1LocalFieldValue> {
+  const next = { ...values, [key]: value }
+  const area = r1SurveyPlaneAreaAfterChange({ definitionId: snapshot.definition.id, purpose: snapshot.definition.purpose, values }, key, next)
+  if (!area) return next
+  const source = projectR1RepeatFields(snapshot, values).filter(f => f.valueKey === key && f.supported)
+  const target = projectR1RepeatFields(snapshot, next).filter(f => f.valueKey === 'planeArea')
+  if (source.length !== 1 || target.length !== 1 || !target[0]!.supported || target[0]!.type !== 'digit'
+    || (typeof area.value === 'number' && !Number.isFinite(area.value))) return deny()
+  return { ...next, planeArea: area.value }
+}
 export function normalizeR1RepeatValues(snapshot: R1NodeFormsSnapshot, values: Readonly<Record<string, unknown>>): Record<string, string | number | boolean> {
   const fields = snapshot.definition.fields
   if (!fields?.length || fields.length > 50 || !values || typeof values !== 'object' || Array.isArray(values)) return deny()

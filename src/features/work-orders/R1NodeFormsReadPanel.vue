@@ -58,7 +58,7 @@ import { computed, inject, onBeforeUnmount, ref, shallowRef, watch } from 'vue'
 import AppButton from '@shared/ui/AppButton.vue'
 import AppField from '@shared/ui/AppField.vue'
 import R1FormFieldControl from './R1FormFieldControl.vue'
-import { normalizeR1RepeatValues, projectR1RepeatFields } from './r1-repeat-form'
+import { normalizeR1RepeatValues, projectR1RepeatFields, updateR1FormDraftValue } from './r1-repeat-form'
 import { projectR1RecordReadFields } from './r1-record-read-fields'
 import type { R1LocalFieldValue } from './r1-local-form-fields'
 import { r1RepeatActionsKey } from './r1-repeat-actions-port'
@@ -119,7 +119,9 @@ async function load() {
 }
 function setValue(key: string,value: R1LocalFieldValue) {
   if (busy.value || !editableFields.value.some(f => f.valueKey === key && f.supported)) return
-  values.value = { ...values.value, [key]: value }
+  if (!visibleSnapshot.value) return
+  try { values.value = updateR1FormDraftValue(visibleSnapshot.value, values.value, key, value) }
+  catch { message.value = '当前字段或平面面积计算尚未核实，不能更新草稿。' }
 }
 function cancelEdit() { if (busy.value) return; pendingEditor = null; editing.value=false; editingId.value=undefined; values.value={}; confirmSaveCompletion.value=false }
 function beginCreate() { if(busy.value||!actions.value?.canCreate?.())return; cancelEdit(); editing.value=true }

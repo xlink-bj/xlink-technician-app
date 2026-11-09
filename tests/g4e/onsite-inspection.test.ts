@@ -215,6 +215,17 @@ function configureWorkspace(
   return { store, api, command, save, complete, picker, upload, storage, mediaUploadQueue }
 }
 
+function configurePlaneArea(values: Readonly<Record<string, FormFieldValue>> = {}, extraFields: DynamicFormRead['fields'] = []) {
+  const definitionId = asOpaqueId<'FormDefinitionId'>('7971040108398070730')
+  const form: DynamicFormRead = { purpose: 'survey', definitionId,
+    fields: [...['length', 'width', 'planeArea'].map(valueKey => ({ fieldId: `source-${valueKey}`, valueKey,
+      label: valueKey, type: 'digit', required: false, readOnly: false })), ...extraFields],
+    values: { part: ['3', '310'], length: 2, width: 3, planeArea: 6, ...values } }
+  const detail = surveyDetail()
+  const current = { ...detail, workflowNodes: detail.workflowNodes!.map(node => ({ ...node, formDefinitionId: definitionId })) }
+  return { ...configureWorkspace(succeeded(undefined), current, form), form }
+}
+
 async function fillAndSave(store: ReturnType<typeof useActionWorkspaceStore>): Promise<void> {
   store.setField('survey-summary', '墙面情况正常')
   store.setField('survey-result', 'safe')
@@ -410,6 +421,177 @@ describe('G4-E Survey dynamic Action Content', () => {
 
     expect(store.dynamicForm?.values).toEqual({ length: 2.5 })
     expect(store.dynamicFormSaveState).toBe('not_saved')
+  })
+
+  it('derives R1 planeArea in the actual Workspace draft after a permitted measurement row changes', async () => {
+    const { store, save } = configurePlaneArea()
+    await store.load({ workOrderId, workflowNodeId, actionIntent: 'interact_with_form' })
+    expect(store.setField('source-length', '2.345').state).toBe('succeeded')
+    expect(store.dynamicForm?.values.planeArea).toBe(7.04)
+    expect(store.dynamicFormSaveState).toBe('not_saved')
+    expect(save).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['0', '', ''], [0, '', 0], ['', '0', ''], ['', 0, 0], ['2.345', '3', 7.04],
+  ] as const)('keeps actual input types and zero/empty branches in Workspace (%s, %s)', async (length, width, area) => {
+    const { store, save } = configurePlaneArea({ width })
+    await store.load({ workOrderId, workflowNodeId, actionIntent: 'interact_with_form' })
+    expect(store.setField('source-length', length).state).toBe('succeeded')
+    expect(store.dynamicForm?.values.length).toBe(length)
+    expect(store.dynamicForm?.values.planeArea).toBe(area)
+    expect(save).not.toHaveBeenCalled()
+  })
+
+  it.each(['source-readonly', 'target-readonly', 'workflow-readonly', 'target-hidden', 'invalid-peer', 'array-peer', 'missing-target'])(
+    'does not mutate a draft when the measurement or target cannot be authorized: %s', async boundary => {
+      const h = configurePlaneArea(boundary === 'invalid-peer' ? { width: 'not-a-number' } : boundary === 'array-peer' ? { width: ['3'] } : {})
+      if (boundary === 'source-readonly') Object.assign(h.form.fields[0]!, { readOnly: true })
+      if (boundary === 'target-readonly') Object.assign(h.form.fields[2]!, { readOnly: true })
+      if (boundary === 'workflow-readonly') Object.assign(h.form, { workflowReadOnlyFieldIds: ['source-planeArea'] })
+      if (boundary === 'target-hidden') Object.assign(h.form.fields[2]!, { showList: ['5'] })
+      if (boundary === 'missing-target') Object.assign(h.form, { fields: h.form.fields.slice(0, 2) })
+      await h.store.load({ workOrderId, workflowNodeId, actionIntent: 'interact_with_form' })
+      const before = structuredClone(JSON.parse(JSON.stringify(h.store.dynamicForm?.values)))
+      expect(h.store.setField('source-length', '4').state).not.toBe('succeeded')
+      expect(h.store.dynamicForm?.values).toEqual(before)
+      expect(h.save).not.toHaveBeenCalled()
+    })
+
+  it.each([
+    ['width', '0', 'length', '', ''], ['width', 0, 'length', '', 0],
+    ['length', '0', 'width', '', ''], ['length', 0, 'width', '', 0],
+  ] as const)('retains the previous event type through the next Workspace event (%s=%s then %s empty)', async (firstKey, first, secondKey, second, area) => {
+    const h = configurePlaneArea()
+    await h.store.load({ workOrderId, workflowNodeId, actionIntent: 'interact_with_form' })
+    expect(h.store.setField(`source-${firstKey}`, first).state).toBe('succeeded')
+    expect(h.store.dynamicForm?.values[firstKey]).toBe(first)
+    expect(h.store.dynamicForm?.values.planeArea).toBe(0)
+    expect(h.store.setField(`source-${secondKey}`, second).state).toBe('succeeded')
+    expect(h.store.dynamicForm?.values[firstKey]).toBe(first)
+    expect(h.store.dynamicForm?.values[secondKey]).toBe(second)
+    expect(h.store.dynamicForm?.values.planeArea).toBe(area)
+    expect(h.save).not.toHaveBeenCalled();expect(h.complete).not.toHaveBeenCalled()
+  })
+
+  it('honors repeated row identities and conditions while sharing a measurement business key', async () => {
+    const h = configurePlaneArea({}, [{ fieldId: 'length-hidden', valueKey: 'length', label: 'hidden duplicate',
+      type: 'digit', required: false, readOnly: false, showList: ['5'] }])
+    await h.store.load({ workOrderId, workflowNodeId, actionIntent: 'interact_with_form' })
+    expect(h.store.setField('length-hidden', '99').state).not.toBe('succeeded')
+    expect(h.store.dynamicForm?.values.planeArea).toBe(6)
+    expect(h.store.setField('source-length', '4').state).toBe('succeeded')
+    expect(h.store.dynamicForm?.values).toMatchObject({ length: '4', planeArea: 12 })
+  })
+
+  it('persists the derived draft before business saving and retains it across a failed explicit draft write', async () => {
+    const h = configurePlaneArea()
+    await h.store.load({ workOrderId, workflowNodeId, actionIntent: 'interact_with_form' })
+    h.store.setField('source-width', '4.123')
+    vi.mocked(h.storage.storage.write).mockResolvedValueOnce({ state: 'failed_retryable', error: createOperationError('network_retryable', 'synthetic draft failure') })
+    expect((await h.store.saveDraft()).state).toBe('failed_retryable')
+    expect(h.store.dynamicForm?.values).toMatchObject({ width: '4.123', planeArea: 8.25 })
+    expect((await h.store.saveDraft()).state).toBe('succeeded')
+    expect(JSON.stringify([...h.storage.values.values()])).toContain('8.25')
+    expect(h.save).not.toHaveBeenCalled(); expect(h.complete).not.toHaveBeenCalled()
+  })
+
+  it('does not recalculate on read, other field changes, or after changing the loaded node scope', async () => {
+    const h = configurePlaneArea({ planeArea: 123 }, [{ fieldId: 'memo', valueKey: 'memo', label: 'memo', type: 'text', required: false, readOnly: false }])
+    await h.store.load({ workOrderId, workflowNodeId, actionIntent: 'interact_with_form' })
+    expect(h.store.dynamicForm?.values.planeArea).toBe(123)
+    h.store.setField('memo', 'unchanged geometry')
+    expect(h.store.dynamicForm?.values.planeArea).toBe(123)
+    const other = { ...h.form, definitionId: formDefinitionId, values: { part: ['3', '310'], length: 2, width: 3, planeArea: 456 } }
+    vi.mocked(h.command.readDynamicForm!).mockResolvedValue(succeeded(other))
+    vi.mocked(h.api.getWorkOrderDetail).mockResolvedValue(succeeded(surveyDetail()))
+    await h.store.load({ workOrderId, workflowNodeId, actionIntent: 'interact_with_form' })
+    h.store.setField('source-length', '4')
+    expect(h.store.dynamicForm?.values.planeArea).toBe(456)
+    expect(h.save).not.toHaveBeenCalled()
+  })
+
+  it('only recalculates after measurement input, not after selecting another part', async () => {
+    const h = configurePlaneArea({}, [{ fieldId: 'part', valueKey: 'part', label: 'synthetic part', type: 'cascade', required: true,
+      readOnly: false, options: [{ value: '3', label: 'synthetic 3', children: [{ value: '310', label: 'synthetic 310' }] },
+        { value: '1', label: 'synthetic 1', children: [{ value: '130', label: 'synthetic 130' }] }] }])
+    await h.store.load({ workOrderId, workflowNodeId, actionIntent: 'interact_with_form' })
+    h.store.setField('part', ['1', '130']);h.store.setField('source-length', '4')
+    expect(h.store.dynamicForm?.values.planeArea).toBe(6)
+    h.store.setField('part', ['3', '310'])
+    expect(h.store.dynamicForm?.values.planeArea).toBe(6)
+    h.store.setField('source-width', '2.5')
+    expect(h.store.dynamicForm?.values.planeArea).toBe(10)
+    expect(h.save).not.toHaveBeenCalled()
+  })
+
+  it('retains pre-window string zero across a part change before the next measurement event', async () => {
+    const h = configurePlaneArea({ part: ['1', '130'] }, [{ fieldId: 'part', valueKey: 'part', label: 'synthetic part', type: 'cascade', required: true,
+      readOnly: false, options: [{ value: '3', label: 'synthetic 3', children: [{ value: '310', label: 'synthetic 310' }] },
+        { value: '1', label: 'synthetic 1', children: [{ value: '130', label: 'synthetic 130' }] }] }])
+    await h.store.load({ workOrderId, workflowNodeId, actionIntent: 'interact_with_form' })
+    expect(h.store.setField('source-width', '0').state).toBe('succeeded')
+    expect(h.store.dynamicForm?.values.planeArea).toBe(6)
+    expect(h.store.setField('part', ['3', '310']).state).toBe('succeeded')
+    expect(h.store.dynamicForm?.values.planeArea).toBe(6)
+    expect(h.store.setField('source-length', '').state).toBe('succeeded')
+    expect(h.store.dynamicForm?.values.planeArea).toBe('')
+    expect(h.store.dynamicForm?.values.width).toBe('0')
+    expect(h.save).not.toHaveBeenCalled();expect(h.complete).not.toHaveBeenCalled()
+  })
+
+  it.each(['0', ''] as const)('restores pre-window event type %s through draft persistence and a failed reread', async width => {
+    const h = configurePlaneArea({ part: ['1', '130'] }, [{ fieldId: 'part', valueKey: 'part', label: 'synthetic part', type: 'cascade', required: true,
+      readOnly: false, options: [{ value: '3', label: 'synthetic 3', children: [{ value: '310', label: 'synthetic 310' }] },
+        { value: '1', label: 'synthetic 1', children: [{ value: '130', label: 'synthetic 130' }] }] }])
+    await h.store.load({ workOrderId, workflowNodeId, actionIntent: 'interact_with_form' })
+    expect(h.store.setField('source-width', width).state).toBe('succeeded')
+    await h.store.saveDraft()
+    vi.mocked(h.api.getWorkOrderDetail).mockResolvedValueOnce({ state: 'failed_retryable', error: createOperationError('network_retryable', 'synthetic read failure') })
+    await h.store.load({ workOrderId, workflowNodeId, actionIntent: 'interact_with_form' })
+    await h.store.load({ workOrderId, workflowNodeId, actionIntent: 'interact_with_form' })
+    expect(h.store.dynamicForm?.values.width).toBe(width)
+    expect(h.store.dynamicForm?.values.planeArea).toBe(6)
+    h.store.setField('part', ['3', '310'])
+    expect(h.store.dynamicForm?.values.planeArea).toBe(6)
+    h.store.setField('source-length', '')
+    expect(h.store.dynamicForm?.values.planeArea).toBe('')
+    expect(h.save).not.toHaveBeenCalled();expect(h.complete).not.toHaveBeenCalled()
+  })
+
+  it('restores the same derived draft after a failed reread and later successful same-scope read', async () => {
+    const h = configurePlaneArea({}, [{ fieldId: 'part', valueKey: 'part', label: 'synthetic part', type: 'cascade', required: true,
+      readOnly: false, options: [{ value: '3', label: 'synthetic 3', children: [{ value: '310', label: 'synthetic 310' }] }] }])
+    await h.store.load({ workOrderId, workflowNodeId, actionIntent: 'interact_with_form' })
+    h.store.setField('source-width', '4.123');await h.store.saveDraft()
+    vi.mocked(h.api.getWorkOrderDetail).mockResolvedValueOnce({ state: 'failed_retryable', error: createOperationError('network_retryable', 'synthetic read failure') })
+    expect((await h.store.load({ workOrderId, workflowNodeId, actionIntent: 'interact_with_form' })).state).not.toBe('succeeded')
+    expect(h.store.dynamicForm).toBeNull()
+    expect((await h.store.load({ workOrderId, workflowNodeId, actionIntent: 'interact_with_form' })).state).toBe('succeeded')
+    expect(h.store.dynamicForm?.values).toMatchObject({ width: '4.123', planeArea: 8.25 })
+    expect(h.save).not.toHaveBeenCalled()
+  })
+
+  it('keeps only the last synchronous measurement in the draft without business dispatch', async () => {
+    const h = configurePlaneArea()
+    await h.store.load({ workOrderId, workflowNodeId, actionIntent: 'interact_with_form' })
+    h.store.setField('source-length', '1');h.store.setField('source-length', '12')
+    await h.store.saveDraft()
+    expect(h.store.dynamicForm?.values).toMatchObject({ length: '12', planeArea: 36 })
+    expect(JSON.stringify([...h.storage.values.values()])).toContain('36')
+    expect(h.save).not.toHaveBeenCalled();expect(h.complete).not.toHaveBeenCalled()
+  })
+
+  it('restores an unfinished empty calculated area without treating it as a valid required submission', async () => {
+    const h = configurePlaneArea({ width: '0' }, [{ fieldId: 'part', valueKey: 'part', label: 'synthetic part', type: 'cascade', required: true,
+      readOnly: false, options: [{ value: '3', label: 'synthetic 3', children: [{ value: '310', label: 'synthetic 310' }] }] }])
+    await h.store.load({ workOrderId, workflowNodeId, actionIntent: 'interact_with_form' })
+    h.store.setField('source-length', '')
+    expect(h.store.dynamicForm?.values.planeArea).toBe('')
+    await h.store.saveDraft()
+    await h.store.load({ workOrderId, workflowNodeId, actionIntent: 'interact_with_form' })
+    expect(h.store.dynamicForm?.values).toMatchObject({ length: '', width: '0', planeArea: '' })
+    expect(h.save).not.toHaveBeenCalled()
   })
 
   it('keeps legacy serviceGoods deferred and non-blocking for Survey Action Content', async () => {

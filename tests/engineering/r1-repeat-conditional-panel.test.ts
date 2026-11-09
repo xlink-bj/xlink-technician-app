@@ -52,7 +52,9 @@ function snapshot(): R1NodeFormsSnapshot {
 }
 function find(root: Host, predicate: (n: Host) => boolean): Host | undefined { if (predicate(root)) return root; for (const child of root.children) { const match = find(child, predicate); if (match) return match } }
 async function settle() { for (let i = 0; i < 6; i++) { await Promise.resolve(); await Vue.nextTick() } }
-async function mounted(allowActions = true, initial = snapshot()) {
+async function mounted(allowActions = true, initial = snapshot(), extraActions: {
+  canEdit?: (id: string) => boolean; initialValues?: (id: string) => Readonly<Record<string, any>>;
+} = {}) {
   let current = initial
   const reader = { enabled: () => true, load: vi.fn(async () => current), clear: vi.fn(), isCurrent: (value: R1NodeFormsSnapshot) => value === current }
   const savedValues: Record<string, unknown>[] = []
@@ -62,7 +64,7 @@ async function mounted(allowActions = true, initial = snapshot()) {
   })
   const complete = vi.fn(async () => ({ acknowledged: true, transitionVerified: false } as const))
   const root = node('root'), app = renderer.createApp(panel(), { reader, workOrderId: current.workOrderId, runtimeNodeId: String(current.node.id), actorScope: 'synthetic-actor' })
-  app.provide(actionPort.r1RepeatActionsKey, { forSnapshot: () => allowActions ? { locked: () => false, saveOnly, complete } : null })
+  app.provide(actionPort.r1RepeatActionsKey, { forSnapshot: () => allowActions ? { locked: () => false, saveOnly, complete, ...extraActions } : null })
   app.mount(root)
   find(root, n => n.type === 'button')!.props.onTap(); await settle()
   const input = async (key: string, value: string) => { const control = find(root, n => n.props['data-key'] === key); expect(control, key).toBeDefined(); control!.props.onInput(value); await settle() }
@@ -81,6 +83,30 @@ function deferred<T>() {
 }
 
 describe('normal appointment repeat conditional page', () => {
+  it('runs the same R1 calculation in the actual panel draft without opening the unsupported save contract', async () => {
+    const definitionId = asOpaqueId<'FormDefinitionId'>('7971040108398070730'), s = snapshot()
+    const original = { part: ['3', '310'], length: 2, width: 3, planeArea: 6 }
+    const value: R1NodeFormsSnapshot = { ...s, definition: { ...s.definition, id: definitionId, purpose: 'survey',
+      fields: [...['length', 'width', 'planeArea'].map(valueKey => ({ fieldId: valueKey, valueKey, label: valueKey,
+        type: 'digit', required: false, readOnly: false })),
+        { fieldId: 'part', valueKey: 'part', label: 'synthetic original path', type: 'cascade', required: true, readOnly: true }] },
+      records: [{ id: asOpaqueId<'FormDataId'>('saved'), definitionId, values: original }] }
+    // Explicit synthetic unit provider, not production authority or browser E2E.
+    const h = await mounted(true, value, { canEdit: () => true, initialValues: () => original })
+    try {
+      find(h.root, n => n.props['data-testid'] === 'r1-normal-edit-saved')!.props.onTap(); await settle()
+      await h.input('length', '2.345')
+      expect(find(h.root, n => n.props['data-key'] === 'planeArea')!.props.value).toBe(7.04)
+      h.reader.load.mockRejectedValueOnce(new Error('synthetic read failure'))
+      h.read().props.onTap(); await settle();h.read().props.onTap();await settle()
+      expect(find(h.root, n => n.props['data-key'] === 'planeArea')!.props.value).toBe(7.04)
+      await h.input('length', '')
+      expect(find(h.root, n => n.props['data-key'] === 'planeArea')!.props.value).toBe('')
+      expect(h.save()!.props.disabled).toBe(true) // Existing scalar-only cascade guard remains.
+      expect(h.saveOnly).not.toHaveBeenCalled();expect(h.complete).not.toHaveBeenCalled()
+    } finally { h.app.unmount() }
+  })
+
   it('mounts the actual readonly panel with 59 observed rows without hidden values or write controls', async () => {
     const definition = formDefinition({ data: reference.fields.map(f => f.row) }, asOpaqueId<'FormDefinitionId'>('survey-reference'))
     const h = await mounted(false, { ...snapshot(), definition, records: [{ id: asOpaqueId<'FormDataId'>('saved-survey'), definitionId: definition.id,

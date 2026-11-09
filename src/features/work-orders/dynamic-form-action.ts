@@ -15,6 +15,7 @@ import { actionFormSchemaFor, ACTION_FORM_SURFACE, isWorkflowFieldReadOnly } fro
 import { createOperationError } from '@shared/types'
 import type { OperationSnapshot } from '@shared/types'
 import { surveyMediaDescriptorFor } from './survey-media'
+import { isR1SurveyMeasurementField, r1SurveyPlaneAreaAfterChange } from './survey-plane-area'
 import {
   surveyLeakageCauseExperienceFor,
   surveyLeakageCauseFieldStateFor,
@@ -261,6 +262,12 @@ export function normalizeDynamicFieldValue(
   if (form.purpose === 'appointment' && field.valueKey === 'need' && hasNonStringAppointmentNeed(value)) {
     return { state: 'failed_terminal', error: createOperationError('validation', appointmentNeedReselectionMessage, { reason: 'need' }) }
   }
+  // R1 permits an unfinished measurement draft; required/format submission
+  // checks remain in normalizeDynamicForm. Do not loosen the generic parser.
+  if (field.type === 'digit' && value === '' && (isR1SurveyMeasurementField(form, field.valueKey)
+    || (field.valueKey === 'planeArea' && r1SurveyPlaneAreaAfterChange(form, 'length', form.values)?.value === ''))) {
+    return { state: 'succeeded', data: '' }
+  }
   const normalized = normalizeFieldValue(field.type, value, field.options, field.multiple)
   if (!normalized.ok) {
     return {
@@ -271,5 +278,9 @@ export function normalizeDynamicFieldValue(
       ),
     }
   }
-  return { state: 'succeeded', data: toFormValue(normalized.value) }
+  // R1 digit onChange retains the event's string/number distinction. In this
+  // exact rule, string "0" and numeric 0 have different empty-peer branches.
+  // Submission still uses the existing numeric normalization and validation.
+  return { state: 'succeeded', data: field.type === 'digit' && isR1SurveyMeasurementField(form, field.valueKey)
+    ? value : toFormValue(normalized.value) }
 }
