@@ -41,7 +41,7 @@ function formsExtsJson(value: unknown): string {
  * object as a scalar/choice value; it must not then expose an older root copy.
  * Limit this check to this rollout's supported mobile Survey read fields.
  * Unknown audit JSON and unsupported/presentation fields remain untouched. */
-function assertSurveyReadExtsValues(definition: FormDefinitionRead, original: Row): void {
+export function assertSurveyReadExtsValues(definition: FormDefinitionRead, original: Row): void {
   if (definition.purpose !== 'survey' || original.exts == null) return
   const supported = new Set(['text', 'textarea', 'phone', 'IDNumber', 'number', 'digit', 'date', 'time', 'datetime', 'switch', 'rate', 'select', 'radio', 'checkbox', 'cascade'])
   const fields = (definition.fields ?? []).filter(field => supported.has(field.type) && !field.unsupportedReason

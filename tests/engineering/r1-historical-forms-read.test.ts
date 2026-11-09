@@ -175,3 +175,36 @@ it.each([false, true, null])('rejects ambiguous historical root/EXTS media slots
   const [target] = await h.reader.discover('work')
   await expect(h.reader.read(target!)).rejects.toThrow(/unverified/); expect(h.reader.isCurrent(target!)).toBe(false)
 })
+
+
+describe('Survey historical EXTS integrity follows the active read contract', () => {
+  function surveyHarness() {
+    const h = harness(); h.ext.colName = 'Survey'
+    Object.assign(h.field, { colName: 'Survey' })
+    return h
+  }
+  it.each([{}, { nested: 'not a scalar' }, [{ nested: 'not a choice' }], [null]])(
+    'rejects malformed known EXTS rather than displaying the old root copy: %j', async value => {
+      const h = surveyHarness(); Object.assign(h.record, { exts: { note: value } })
+      const [target] = await h.reader.discover('work')
+      await expect(h.reader.read(target!)).rejects.toThrow()
+      expect(h.reader.isCurrent(target!)).toBe(false)
+      expect(h.calls.some(request => /upsert|updateExts|process|upload/.test(request.path))).toBe(false)
+    })
+  it.each([null, '', false, 0, [], ['new'], [0, false]])('retains the supported EXTS value %j without root fallback', async value => {
+    const h = surveyHarness(); Object.assign(h.record, { exts: { note: value, audit: { preserve: ['unknown'] } } })
+    const [target] = await h.reader.discover('work'), result = await h.reader.read(target!)
+    expect(result.record.values?.note).toEqual(value)
+    expect(h.reader.isCurrent(result)).toBe(true)
+  })
+  it('requires explicit rediscovery after rejection, then reads the repaired server value', async () => {
+    const h = surveyHarness(); Object.assign(h.record, { exts: { note: { invalid: true } } })
+    const [old] = await h.reader.discover('work')
+    await expect(h.reader.read(old!)).rejects.toThrow()
+    Object.assign(h.record, { exts: { note: 'repaired' } })
+    const calls = h.calls.length
+    await expect(h.reader.read(old!)).rejects.toThrow(); expect(h.calls).toHaveLength(calls)
+    const [fresh] = await h.reader.discover('work')
+    expect((await h.reader.read(fresh!)).record.values?.note).toBe('repaired')
+  })
+})

@@ -10,7 +10,7 @@ import { isFieldApplicable } from '@runtimes/dynamic-form'
 import { sessionAuthorizationFingerprint } from '@shared/session-authorization'
 import { asOpaqueId } from '@shared/types'
 import type { HistoricalFormsReader, HistoricalFormRead, HistoricalFormTarget } from '@features/work-orders/r1-historical-forms-read'
-import { normalNodeFormsReadEnabled } from './r1-node-forms-read'
+import { assertSurveyReadExtsValues, normalNodeFormsReadEnabled } from './r1-node-forms-read'
 import { historicalTargets, historyDenied as deny, historyId as id, historyRow as row } from './r1-historical-forms-policy'
 
 /** Independent read-only history rollout. No mutation originals, grant, draft,
@@ -125,6 +125,9 @@ export function createHistoricalFormsReader(input: {
             id: asOpaqueId<'FormDataId'>(target.recordId), formDefinitionId: asOpaqueId<'FormDefinitionId'>(target.formDefinitionId), state: 'active' }] } })
         await reader.discover()
         const selected = await reader.select(target.recordId)
+        const original = reader.originalFor(selected)
+        if (!original) return deny()
+        assertSurveyReadExtsValues(definition, original)
         await verify(); check()
         const result: HistoricalFormRead = Object.freeze({ kind: 'historical-form-read', target,
           definition: { ...definition, fields: hydrated } as FormDefinitionRead, record: selected.data })

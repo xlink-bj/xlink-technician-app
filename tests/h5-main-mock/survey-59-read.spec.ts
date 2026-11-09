@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test'
 import { survey59Fields, survey59Paths, survey59Record, expectedSurvey59VisibleIds } from '../fixtures/survey-59-synthetic'
 
 test.skip(process.env.XLINK_H5_SURVEY_59 !== 'true', 'Dedicated readonly Survey 59 synthetic API acceptance only')
-async function fixture(page: Page, baseURL: string) {
+async function fixture(page: Page, baseURL: string, historical = false) {
   const state = { part: ['1', '130'] as unknown, providerFailure: false, foreignRecord: false, invalidPartExts: false,
     calls: [] as Array<{ path: string; body: Record<string, string> }>, unexpected: [] as string[], errors: [] as string[], writes: 0 }
   const fields = survey59Fields.map(field => ({ ...field,
@@ -10,7 +10,9 @@ async function fixture(page: Page, baseURL: string) {
   const sa = { _id: 's', tenantId: 't', orderNum: 'SYNTHETIC-59', workflowId: 'w', state: 1, status: 105,
     name: '合成59字段客户', serviceType: '40', exts: { sourceType: '' } }
   const node = { _id: 'n', tenantId: 't', workflowId: 'w', workflowFormDataId: 's', workflowFormColName: 'serviceAppointment',
-    state: 0, handlerIds: ['r'], nodeDef: { nodeType: 'repeat', name: '合成勘察只读核验', formDefId: 'e',
+    state: historical ? 10 : 0, handlerIds: ['r'],
+    ...(historical ? { exts: { formList: [{ _id: 'saved', formDefId: 'e', state: 1, formTitle: '合成已完成勘察' }] } } : {}),
+    nodeDef: { nodeType: historical ? 'forms' : 'repeat', name: '合成勘察只读核验', formDefId: 'e',
       viewableRoleIds: ['r'], formFieldIdsFill: [], formFieldIdsReadOnly: fields.map(field => field._id) } }
   page.on('pageerror', error => state.errors.push(error.message))
   await page.routeWebSocket('**/*', socket => {
@@ -33,7 +35,7 @@ async function fixture(page: Page, baseURL: string) {
       exts: { tabDisplay: '1' }, action: '/pages/serviceAppointment/serviceAppointments?type=SANode&orderState=0' }] }] } })
     if (['basic/serviceAppointment/query', 'basic/serviceAppointment/querySAWorkflowNode'].includes(path)) return ok({ data: [{ ...node, data: sa }], total: 1, page: 1, rows: 20 })
     if (path === 'basic/serviceAppointment/queryById/s') return ok({ success: true, status: 1, data: { serviceAppointment: sa,
-      workflow: { _id: 'w', tenantId: 't', formDataId: 's', state: 0 }, workflowNode: [node] } })
+      workflow: { _id: 'w', tenantId: 't', formDataId: 's', state: historical ? 10 : 0 }, workflowNode: [node] } })
     if (path === 'biz/ext/queryById.do' && body.id === 'e') return ok({ _id: 'e', tenantId: 't', state: 1, type: '1', colName: 'survey' })
     if (path === 'biz/extField/query' && body.extId === 'e') {
       const page = Number(body.page), size = Number(body.rows)
@@ -57,14 +59,14 @@ async function fixture(page: Page, baseURL: string) {
   })
   return state
 }
-async function open(page: Page) {
+async function open(page: Page, historical = false) {
   await page.goto('/#/pages/index/index')
   await page.locator('.launch-cta').click()
   await page.locator('.method-card').filter({ hasText: '快捷登录' }).click()
   await expect(page.locator('.home-page')).toBeVisible()
   await page.locator('.work-orders-entry').click()
   await page.locator('.work-order-card').click()
-  await expect(page.getByTestId('r1-normal-form-read')).toBeVisible()
+  await expect(page.getByTestId(historical ? 'historical-forms-timeline' : 'r1-normal-form-read')).toBeVisible()
 }
 const read = (page: Page) => page.getByTestId('r1-normal-form-read').locator('.app-button').filter({ hasText: '读取已保存表单' })
 test('normal App reads 59 rows in two pages and projects every captured part path without loading media', async ({ page, baseURL }, info) => {
@@ -124,4 +126,30 @@ test('normal App refuses invalid authoritative EXTS instead of revealing stale r
   await expect(page.getByTestId('r1-normal-value-squareMeter')).toContainText('18.75')
   expect(state.writes).toBe(0);expect(state.unexpected).toEqual([]);expect(state.errors).toEqual([])
   await info.attach('invalid-exts-explicit-read-recovery', {body:JSON.stringify({calls:state.calls,writes:state.writes,unexpected:state.unexpected}),contentType:'application/json'})
+})
+
+test('completed Survey history rejects malformed EXTS, clears stale values and recovers only after explicit reread', async ({ page, baseURL }, info) => {
+  const state = await fixture(page, baseURL!, true)
+  await open(page, true)
+  await page.getByTestId('historical-form-open').click()
+  await expect(page.getByTestId('historical-form-content')).toHaveCount(1)
+  await expect(page.getByTestId('historical-form-value-squareMeter')).toContainText('18.75')
+  state.invalidPartExts = true
+  await page.getByTestId('historical-form-open').click()
+  await expect(page.getByTestId('historical-forms-message')).toContainText('请重新读取')
+  await expect(page.getByTestId('historical-form-content')).toHaveCount(0)
+  await expect(page.getByTestId('historical-form-item')).toHaveCount(0)
+  await expect(page.getByTestId('historical-form-value-squareMeter')).toHaveCount(0)
+  state.invalidPartExts = false
+  await page.getByTestId('historical-forms-timeline').locator('.app-button').filter({ hasText: '重新读取' }).click()
+  await expect(page.getByTestId('historical-form-item')).toHaveCount(1)
+  await expect(page.getByTestId('historical-form-content')).toHaveCount(0)
+  await page.getByTestId('historical-form-open').click()
+  await expect(page.getByTestId('historical-form-value-squareMeter')).toContainText('18.75')
+  await expect(page.getByTestId('historical-form-content').locator('a,img')).toHaveCount(0)
+  await expect(page.getByTestId('historical-form-content')).not.toContainText('https://')
+  expect(state.writes).toBe(0); expect(state.unexpected).toEqual([]); expect(state.errors).toEqual([])
+  await info.attach('historical-invalid-exts-explicit-reread', { body: JSON.stringify({
+    calls: state.calls, writes: state.writes, unexpected: state.unexpected, realBackend: 'NOT_RUN',
+  }), contentType: 'application/json' })
 })
