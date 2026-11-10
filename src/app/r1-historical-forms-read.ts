@@ -10,7 +10,8 @@ import { isFieldApplicable } from '@runtimes/dynamic-form'
 import { sessionAuthorizationFingerprint } from '@shared/session-authorization'
 import { asOpaqueId } from '@shared/types'
 import type { HistoricalFormsReader, HistoricalFormRead, HistoricalFormTarget } from '@features/work-orders/r1-historical-forms-read'
-import { assertSurveyReadExtsValues, normalNodeFormsReadEnabled } from './r1-node-forms-read'
+import { assertSurveyReadExtsValues } from './r1-node-forms-read'
+import { historicalFormsReadEnabled, ordinaryWriteHistoricalReadEnabled } from './local-history-read-policy'
 import { historicalTargets, historyDenied as deny, historyId as id, historyRow as row } from './r1-historical-forms-policy'
 
 /** Independent read-only history rollout. No mutation originals, grant, draft,
@@ -25,18 +26,27 @@ export function createHistoricalFormsReader(input: {
 }): HistoricalFormsReader {
   const transport = input.transport ?? createUniApiReadTransport({ apiBaseUrl: String(input.env.VITE_XLINK_API_BASE_URL),
     getSessionRef: () => input.auth.getCurrentSession()?.sessionRef ?? null })
-  const enabled = () => normalNodeFormsReadEnabled(input.env, input.origin)
-    && input.env.VITE_XLINK_ENABLE_REAL_WRITES === 'false' && input.env.VITE_XLINK_ENABLE_R1_SPECIAL_WRITES === 'false'
+  let generation = 0
+  let lease: { generation: number; identity: string; workOrderId: string; targets: readonly HistoricalFormTarget[];
+    bindings: ReadonlyMap<HistoricalFormTarget, string> } | null = null
+  let results = new WeakSet<object>()
+  let ordinaryWriteGeneration: number | null = null
+  const ordinaryWriteEnabled = () => ordinaryWriteHistoricalReadEnabled(input.env, input.origin, input.tenantId)
+  const observeOrdinarySource = () => {
+    // Only an observed loss of the new source/deployment gate consumes this
+    // generation. A copied target or unrelated isCurrent(false) is not revocation.
+    if (ordinaryWriteGeneration !== null && !ordinaryWriteEnabled()) {
+      generation++; lease = null; results = new WeakSet<object>(); ordinaryWriteGeneration = null
+    }
+  }
+  const enabled = () => { observeOrdinarySource(); return historicalFormsReadEnabled(input.env, input.origin, input.tenantId) }
   const fingerprint = () => {
     const actor = input.auth.getCurrentSession()
     return enabled() && actor?.currentRole ? sessionAuthorizationFingerprint({ sessionRef: actor.sessionRef,
       userId: actor.user.id, roleId: actor.currentRole.id, roleVersion: actor.roleVersion }) : null
   }
-  let generation = 0
-  let lease: { generation: number; identity: string; workOrderId: string; targets: readonly HistoricalFormTarget[];
-    bindings: ReadonlyMap<HistoricalFormTarget, string> } | null = null
-  const results = new WeakSet<object>()
   const current = (value: HistoricalFormTarget | HistoricalFormRead) => {
+    observeOrdinarySource()
     const target = value.kind === 'historical-form-read' ? value.target : value
     return Boolean(lease && lease.generation === generation && fingerprint() === lease.identity
       && input.read.isWorkOrderListedForCurrentSession?.(lease.workOrderId) === true
@@ -46,13 +56,14 @@ export function createHistoricalFormsReader(input: {
     path: `basic/serviceAppointment/queryById/${encodeURIComponent(workOrderId)}`, body: {} })
   return {
     enabled, isCurrent: current,
-    clear() { generation++; lease = null },
+    clear() { generation++; lease = null; if (ordinaryWriteGeneration !== null) results = new WeakSet<object>(); ordinaryWriteGeneration = null },
     async discover(workOrderId) {
       const ticket = ++generation; lease = null
+      ordinaryWriteGeneration = ordinaryWriteEnabled() ? ticket : null
       id(workOrderId); id(input.tenantId)
       const actor = input.auth.getCurrentSession(), identity = fingerprint()
       if (!identity || !actor?.currentRole) return deny()
-      const check = () => { if (generation !== ticket || fingerprint() !== identity) deny() }
+      const check = () => { const currentIdentity = fingerprint(); if (generation !== ticket || currentIdentity !== identity) deny() }
       if (input.read.isWorkOrderListedForCurrentSession?.(workOrderId) !== true) {
         let total: number | undefined
         const seen = new Set<string>()
