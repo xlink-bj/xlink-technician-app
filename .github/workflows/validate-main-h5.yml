@@ -153,6 +153,41 @@ jobs:
         env:
           XLINK_H5_SURVEY_59: 'true'
         run: pnpm exec playwright test --config config/playwright/survey-59-read.config.ts
+      - name: Preserve Stage 1B/2A/2B/2C offline H5 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stage1b-main-h5-${{ github.run_id }}
+          path: |
+            test-results/main-h5-mock/
+            test-results/m08-catalog-scale/
+            test-results/input-delivery/
+            test-results/search-delivery/
+            test-results/quotation-input-delivery/
+            test-results/work-order-categories/
+            test-results/mock-repeat-query/
+            test-results/survey-59-read/
+          if-no-files-found: warn
+          retention-days: 7
+
+  scoped-form-integrations-h5:
+    # Independent runner/workspace keeps the original Stage 1B budget intact.
+    # Same automatic gate conditions, assertions and synthetic network fences.
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && startsWith(github.event.pull_request.title, '[FORM-BATCH]'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      VITE_XLINK_R1_MP_UX_FIXTURES: 'true'
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
       - name: Verify duplicate file row identity in normal App forms and repeat
         env:
           XLINK_H5_DUPLICATE_FILE: 'true'
@@ -172,20 +207,12 @@ jobs:
         env:
           XLINK_H5_FORMS_SCALAR_SUBSET: 'true'
         run: pnpm exec playwright test --config config/playwright/forms-scalar-subset.config.ts
-      - name: Preserve Stage 1B/2A/2B/2C offline H5 evidence
+      - name: Preserve scoped form integration H5 evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: stage1b-main-h5-${{ github.run_id }}
+          name: scoped-form-integrations-h5-${{ github.run_id }}
           path: |
-            test-results/main-h5-mock/
-            test-results/m08-catalog-scale/
-            test-results/input-delivery/
-            test-results/search-delivery/
-            test-results/quotation-input-delivery/
-            test-results/work-order-categories/
-            test-results/mock-repeat-query/
-            test-results/survey-59-read/
             test-results/duplicate-file-fields/
             test-results/duplicate-file-fields-forward/
             test-results/work-order-authority-revocation/
