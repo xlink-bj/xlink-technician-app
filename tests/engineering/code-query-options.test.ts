@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
-  ApiReadTransportError, createTechnicianApiReadAdapter,
+  ApiReadTransportError, createTechnicianApiReadAdapter, createRoleScopedTechnicianApiReadAdapter,
   type ApiReadRequest,
 } from '@adapters/api/technician-api'
 import { createUniApiReadTransport } from '@adapters/api/uni-api-read-transport'
@@ -208,14 +208,19 @@ describe('source-verified Code query complete read', () => {
     const execute = vi.fn(async (request: ApiReadRequest) => {
       if (request.path === 'code/query') return request.body?.page === 1
         ? envelope(rows(50), 51) : envelope(rows(1, 50), 51, 2)
-      const row = { _id: 'work-order-a', status: 'status-50' }
+      if (request.path.startsWith('function/')) return { data: { functionList: [{ action: '/pages/serviceAppointment/serviceAppointments', exts: { tabDisplay: '1' } }] } }
+      if (request.path === 'biz/action/query.do') return { data: [] }
+      if (consumer === 'detail' && request.path === 'basic/serviceAppointment/query') return { data: [{ _id: 'work-order-a', tenantId: 'synthetic-tenant' }], total: 1 }
+      const row = { _id: 'work-order-a', tenantId: 'synthetic-tenant', status: 'status-50' }
       return consumer === 'list' ? { data: [row], total: 1, page: 1, rows: 20 }
         : { data: { serviceAppointment: row } }
     })
-    const api = createTechnicianApiReadAdapter({ execute })
+    const api = consumer === 'list' ? createTechnicianApiReadAdapter({ execute })
+      : createRoleScopedTechnicianApiReadAdapter({ execute }, () => asOpaqueId<'RoleId'>(actor.roleId), { codeTenantId: 'synthetic-tenant', getReadAuthorizationScope: () => actor })
     if (consumer === 'list') {
       expect((await api.listWorkOrders({ page: 1, pageSize: 20 })).data?.items[0]?.taskLabel).toBe('状态 50')
     } else {
+      await api.listWorkOrders({ page: 1, pageSize: 20, category: 'all' })
       expect((await api.getWorkOrderDetail(asOpaqueId<'WorkOrderId'>('work-order-a'))).data?.taskLabel).toBe('状态 50')
     }
     expect(execute.mock.calls.filter(([request]) => request.path === 'code/query')).toHaveLength(2)
@@ -239,10 +244,15 @@ describe('source-verified Code query complete read', () => {
         if (request.body?.page === 2) throw new Error('offline')
         return envelope(rows(50), 51)
       }
-      return { data: { serviceAppointment: { _id: 'work-order-a', status: 'status-0' },
+      if (request.path.startsWith('function/')) return { data: { functionList: [{ action: '/pages/serviceAppointment/serviceAppointments', exts: { tabDisplay: '1' } }] } }
+      if (request.path === 'basic/serviceAppointment/query') return { data: [{ _id: 'work-order-a', tenantId: 'synthetic-tenant' }], total: 1 }
+      if (request.path === 'biz/action/query.do') return { data: [] }
+      return { data: { serviceAppointment: { _id: 'work-order-a', tenantId: 'synthetic-tenant', status: 'status-0' },
         workflowNode: [{ _id: 'node-a', nodeDef: { name: 'Do not use node name as status' } }] } }
     })
-    const result = await createTechnicianApiReadAdapter({ execute }).getWorkOrderDetail(asOpaqueId<'WorkOrderId'>('work-order-a'))
+    const api = createRoleScopedTechnicianApiReadAdapter({ execute }, () => asOpaqueId<'RoleId'>(actor.roleId), { codeTenantId: 'synthetic-tenant', getReadAuthorizationScope: () => actor })
+    await api.listWorkOrders({ page: 1, pageSize: 20, category: 'all' })
+    const result = await api.getWorkOrderDetail(asOpaqueId<'WorkOrderId'>('work-order-a'))
     expect(result.state).toBe('succeeded')
     expect(result.data?.taskLabel).toBeUndefined()
   })

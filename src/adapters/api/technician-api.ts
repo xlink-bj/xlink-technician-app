@@ -51,6 +51,7 @@ import {
 import { buildR1RepeatFormListQuery, readR1NodeFormList } from './r1-node-form-list'
 import { isProductionReadOnlyTarget } from '@shared/config'
 import { workOrderCategoryStatusFilter } from './work-order-category'
+import { isMockOwnedRead } from './mock/ownership'
 import { sessionAuthorizationFingerprint } from '@shared/session-authorization'
 import { requiredOpaqueId } from './read-models/ids'
 import { formData, formDefinition } from './read-models/form'
@@ -422,10 +423,10 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
     return new Map(flattenCodeOptions(options.data.items).map((option) => [option.value, option.label]))
   }
 
-  private async detailStatusLabelsFor(raw: unknown): Promise<ReadonlyMap<string, string>> {
+  private async detailStatusLabelsFor(raw: unknown, assertDetailCurrent: () => void): Promise<ReadonlyMap<string, string>> {
     if (!detailContainsServiceAppointmentStatus(raw)) return new Map()
 
-    const options = await this.getCodeOptions({ valueOption: 'STATUS' })
+    const options = await this.readCodeOptions({ valueOption: 'STATUS' }, assertDetailCurrent)
     if (options.state !== 'succeeded' || !options.data) return new Map()
     return new Map(options.data.items.map((option) => [option.value, option.label]))
   }
@@ -520,46 +521,69 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
 
   async getWorkOrderDetail(id: WorkOrderId) {
     const productionReadOnly = this.isProductionReadOnly()
+    const detailPath = `basic/serviceAppointment/queryById/${encodeURIComponent(id)}`
+    // Ownership, not the developer's Mock toggle, guarantees no real HTTP fallback.
+    const realDev = import.meta.env.VITE_XLINK_ENVIRONMENT === 'dev' && !isMockOwnedRead(detailPath)
+    const scopedDetail = productionReadOnly || realDev
+    // Both options are populated from the login tenant by App composition.
+    const detailTenant = this.options.codeTenantId ?? this.options.cascadeTenantId
     const scopeAtStart = this.synchronizeReadScope()
-    if (productionReadOnly) {
-      if (!this.options.getReadAuthorizationScope || !scopeAtStart || !this.listedWorkOrderIds.has(String(id))) {
+    const listVersionAtStart = this.listReadVersion
+    if (scopedDetail) {
+      if (!this.workOrderScopeResolver || !this.options.getReadAuthorizationScope || !scopeAtStart || !this.listedWorkOrderIds.has(String(id))
+        || (realDev && (typeof detailTenant !== 'string' || !detailTenant || detailTenant.trim() !== detailTenant
+          || (this.options.codeTenantId !== undefined && this.options.cascadeTenantId !== undefined
+            && this.options.codeTenantId !== this.options.cascadeTenantId)))) {
         return adapterFailure<WorkOrderDetail>(
           'authorization_denied',
-          'Production Work Order detail requires an ID returned by the current session\'s role-scoped list',
+          'Work Order detail requires a current role-listed ID and verified read context',
         )
+      }
+    }
+    const detailCurrent = () => this.synchronizeReadScope() === scopeAtStart
+      && this.listReadVersion === listVersionAtStart && this.listedWorkOrderIds.has(String(id))
+    const assertDetailCurrent = () => {
+      if (scopedDetail && !detailCurrent()) {
+        throw new ApiReadTransportError('Work Order detail authorization changed during read', 'authorization_denied')
       }
     }
     const result = await this.read<WorkOrderDetail>(
       {
         method: 'POST',
-        path: `basic/serviceAppointment/queryById/${encodeURIComponent(id)}`,
+        path: detailPath,
         // The legacy type=query flag bypasses the backend's normal workflow
-        // visibility check; Production reads deliberately omit that bypass.
-        body: productionReadOnly ? {} : { type: 'query' },
+        // visibility check; Production and real DEV omit it. Owned Mock reads stay local.
+        body: scopedDetail ? {} : { type: 'query' },
       },
       async (raw) => {
+        assertDetailCurrent()
         // Detail is authoritative only when the returned ServiceAppointment
         // identity agrees with the requested, previously role-listed ID.
-        // In Production, a missing identity cannot authorize child reads.
+        // A requested URL never substitutes for the returned record identity.
         const record = detailPayload(raw).record
-        if (productionReadOnly && !optionalString(record, ['id', '_id'])) {
-          throw new AdapterMappingError('Production Work Order detail identity is missing')
+        if (scopedDetail && !optionalString(record, ['id', '_id'])) {
+          throw new AdapterMappingError('Scoped Work Order detail identity is missing')
         }
         assertMatchingWireIdentity(record, ['id', '_id'], String(id), 'Work Order detail')
-        const statusLabels = await this.detailStatusLabelsFor(raw)
+        if (realDev && record.tenantId !== detailTenant) {
+          throw new ApiReadTransportError('Work Order detail tenant does not match authenticated configuration', 'authorization_denied')
+        }
+        const statusLabels = await this.detailStatusLabelsFor(raw, assertDetailCurrent)
+        assertDetailCurrent()
         const partLabels = await this.partLabelsFor(servicePartCodesFromDetail(raw))
+        assertDetailCurrent()
         const detail = workOrderDetail(raw, id, statusLabels, partLabels, !productionReadOnly)
         if (productionReadOnly) return detail
         const activities = await this.readWorkOrderActivities(id)
+        assertDetailCurrent()
         return activities.state === 'succeeded' && activities.data && activities.data.length > 0
           ? { ...detail, activities: activities.data }
           : detail
       },
     )
-    if (productionReadOnly && (this.synchronizeReadScope() !== scopeAtStart
-      || !this.listedWorkOrderIds.has(String(id)))) {
+    if (scopedDetail && !detailCurrent()) {
       return adapterFailure<WorkOrderDetail>(
-        'authorization_denied', 'Production Work Order detail authorization changed during read',
+        'authorization_denied', 'Scoped Work Order detail authorization changed during read',
       )
     }
     // A role-listed Work Order followed by its successful, identity-matched
@@ -910,9 +934,14 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
     )
   }
 
-  async getCodeOptions(query: CodeOptionsQuery): Promise<OperationSnapshot<ReadPage<CodeOptionRead>>> {
+  getCodeOptions(query: CodeOptionsQuery): Promise<OperationSnapshot<ReadPage<CodeOptionRead>>> {
+    return this.readCodeOptions(query)
+  }
+
+  private async readCodeOptions(query: CodeOptionsQuery, assertContext?: () => void): Promise<OperationSnapshot<ReadPage<CodeOptionRead>>> {
     const scopeAtStart = this.synchronizeReadScope()
     const assertCurrent = (): void => {
+      assertContext?.()
       if (this.options.getReadAuthorizationScope
         && (!scopeAtStart || this.synchronizeReadScope() !== scopeAtStart)) {
         throw new ApiReadTransportError('Code query session or role changed', 'authorization_denied')

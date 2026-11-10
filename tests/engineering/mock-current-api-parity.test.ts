@@ -90,14 +90,23 @@ describe('current App Mock wire parity: category / list / exact detail', () => {
   it('rejects a real transport HTTP-200 explicit business failure, without assuming unknown server codes', async () => {
     setBusinessMockMode('off')
     const request = vi.fn((options: UniNamespace.RequestOptions) => options.success?.({
-      statusCode: 200, data: { success: false, code: 'UNOBSERVED_SERVER_CODE' },
+      statusCode: 200,
+      data: options.url.endsWith('/function/changeRole')
+        ? { data: { functionList: [{ action: '/pages/serviceAppointment/serviceAppointments', exts: { tabDisplay: '1' } }] } }
+        : options.url.endsWith('/basic/serviceAppointment/query')
+          ? { data: [{ _id: 'synthetic-wire-failure', tenantId: 'synthetic-tenant' }], total: 1 }
+          : { success: false, code: 'UNOBSERVED_SERVER_CODE' },
       header: {}, cookies: [], errMsg: 'request:ok',
     }))
-    const api = createTechnicianApiReadAdapter(createUniApiReadTransport({ apiBaseUrl: 'https://example.invalid',
-      getSessionRef: () => asOpaqueId<'SessionRef'>('synthetic-session'), request }))
+    const api = createRoleScopedTechnicianApiReadAdapter(createUniApiReadTransport({ apiBaseUrl: 'https://example.invalid',
+      getSessionRef: () => asOpaqueId<'SessionRef'>('synthetic-session'), request }), () => asOpaqueId<'RoleId'>('synthetic-role'), {
+      codeTenantId: 'synthetic-tenant', getReadAuthorizationScope: () => ({ sessionRef: 'synthetic-session', userId: 'synthetic-user', roleId: 'synthetic-role', roleVersion: null }),
+    })
+    await api.listWorkOrders({ page: 1, pageSize: 20, category: 'all' })
     const result = await api.getWorkOrderDetail(asOpaqueId<'WorkOrderId'>('synthetic-wire-failure'))
     expect(result.state).toBe('failed_terminal'); expect(result.data).toBeUndefined()
-    expect(request).toHaveBeenCalledTimes(1)
+    expect(request.mock.calls.filter(([options]) => options.url.includes('/basic/serviceAppointment/queryById/'))).toHaveLength(1)
+    expect(request).toHaveBeenCalledTimes(3)
   })
 
   it('does not fabricate activity, FormDef or command success for read-only category rows', async () => {
