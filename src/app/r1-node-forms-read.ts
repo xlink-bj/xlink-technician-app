@@ -11,7 +11,7 @@ import { isFieldApplicable } from '@runtimes/dynamic-form'
 import { ACTION_FORM_SURFACE, actionFormSchemaFor } from '@features/work-orders/action-form-schema'
 import { sessionAuthorizationFingerprint } from '@shared/session-authorization'
 import { asOpaqueId } from '@shared/types'
-import type { R1NodeFormsReader, R1NodeFormsSnapshot } from '@features/work-orders/r1-node-forms-read'
+import type { R1NodeFormsReader, R1NodeFormsSnapshot, R1GenericMapRouteRead } from '@features/work-orders/r1-node-forms-read'
 import { parseR1RepeatGrant } from './r1-repeat-authorization'
 import { parseR1FormsGrant } from './r1-forms-authorization'
 import { assertSurveyLeakageCauseReadValue } from '@features/work-orders/survey-leakage-cause'
@@ -98,7 +98,21 @@ export function createNormalNodeFormsReader(input: {
   })
   let generation = 0
   let current: { snapshot: R1NodeFormsSnapshot; fingerprint: string; formsExts?: string;
-    originals: ReadonlyMap<string, string> } | null = null
+    originals: ReadonlyMap<string, string>; genericRoute?: Omit<R1GenericMapRouteRead, 'recordId' | 'original'>;
+    schemaAtRead: string } | null = null
+  const issuedRoutes = new WeakMap<object, { snapshot: R1NodeFormsSnapshot; recordId: string;
+    fingerprint: string; schemaAtRead: string; raw: string; original: Readonly<Record<string, unknown>> }>()
+  const schemaIdentity = (snapshot: R1NodeFormsSnapshot) => JSON.stringify([snapshot.node,
+    snapshot.definition,snapshot.fillableFieldIds])
+  const liveRoute = (snapshot: R1NodeFormsSnapshot, recordId: string) => {
+    if (!current?.genericRoute || current.snapshot !== snapshot || fingerprint() !== current.fingerprint
+      || input.read.isWorkOrderListedForCurrentSession?.(current.genericRoute.workOrderId) !== true
+      || schemaIdentity(snapshot) !== current.schemaAtRead
+      || snapshot.workOrderId !== current.genericRoute.workOrderId || snapshot.node.id !== current.genericRoute.runtimeNodeId
+      || snapshot.node.runId !== current.genericRoute.workflowRunId || snapshot.definition.id !== current.genericRoute.formDefinitionId
+      || !current.originals.has(recordId)) return null
+    return current
+  }
   const enabled = () => normalNodeFormsReadEnabled(input.env, input.origin)
   const fingerprint = () => {
     const a = input.auth.getCurrentSession()
@@ -120,6 +134,22 @@ export function createNormalNodeFormsReader(input: {
         && input.read.isWorkOrderListedForCurrentSession?.(snapshot.workOrderId) === true
         ? current.originals.get(recordId) : undefined
       return raw ? JSON.parse(raw) as Record<string, unknown> : null
+    },
+    currentGenericMapRoute(snapshot, recordId) {
+      const source=liveRoute(snapshot,recordId)
+      if(!source?.genericRoute)return null
+      const raw=source.originals.get(recordId)!,original=JSON.parse(raw) as Record<string,unknown>
+      const evidence=Object.freeze({...source.genericRoute,recordId,original})
+      issuedRoutes.set(evidence,{snapshot,recordId,fingerprint:source.fingerprint,schemaAtRead:source.schemaAtRead,raw,original})
+      return evidence
+    },
+    isCurrentGenericMapRoute(snapshot,recordId,evidence) {
+      if(!evidence || typeof evidence!=='object')return false
+      const stamp=issuedRoutes.get(evidence),source=liveRoute(snapshot,recordId)
+      if(!stamp || !source || stamp.snapshot!==snapshot || stamp.recordId!==recordId
+        || stamp.fingerprint!==source.fingerprint || stamp.schemaAtRead!==source.schemaAtRead
+        || source.originals.get(recordId)!==stamp.raw || (evidence as R1GenericMapRouteRead).original!==stamp.original)return false
+      try{return formsExtsJson(stamp.original)===stamp.raw}catch{return false}
     },
     async confirmFormsCompletion(snapshot) {
       const identity = fingerprint(), ticket = generation
@@ -322,7 +352,20 @@ export function createNormalNodeFormsReader(input: {
       check()
       const snapshot: R1NodeFormsSnapshot = { workOrderId, node, definition: { ...definition, fields: hydrated } as FormDefinitionRead, records,
         ...(fillableFieldIds ? { fillableFieldIds } : {}) }
-      current = { snapshot, fingerprint: identity, originals, ...(formsExts ? { formsExts } : {}) }
+      // SOURCE backend ExtFormServiceImpl existing-id branch: only exact
+      // string "0" uses frm_{tenant}_{colName} Map replacement. The query's
+      // serviceAppointment privacy branch can omit phone, so never issue for it.
+      const routeColName=ext.colName
+      const genericRoute = node.sourceNodeType==='forms' && fields.length>50 && ext.type==='0'
+        && typeof routeColName==='string' && routeColName!=='serviceAppointment' && routeColName.trim()===routeColName
+        && ['id','extId','definitionId','formDefinitionId'].every(key=>!Object.hasOwn(ext,key)||ext[key]===definitionId)
+        && (!Object.hasOwn(ext,'collectionName')||ext.collectionName===''||ext.collectionName===routeColName)
+        && fields.every(field=>field.colName===routeColName
+          && (!Object.hasOwn(field,'collectionName')||field.collectionName===''||field.collectionName===routeColName))
+        ? Object.freeze({tenantId:input.tenantId,workOrderId,runtimeNodeId,workflowRunId:id(node.runId),
+          formDefinitionId:definitionId,type:'0' as const,colName:routeColName,collectionName:`frm_${input.tenantId}_${routeColName}`}) : undefined
+      current = { snapshot, fingerprint: identity, originals, schemaAtRead:schemaIdentity(snapshot),
+        ...(genericRoute?{genericRoute}:{}), ...(formsExts ? { formsExts } : {}) }
       return snapshot
     },
   }

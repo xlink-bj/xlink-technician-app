@@ -78,7 +78,10 @@
       "sourceEvidence": "docs/verification/R1_FOUR_PHASE_FUNCTIONAL_LEDGER.md",
       "unitTests": [
         "tests/engineering/a-mock-special-forms-repeat-protocol.test.ts",
-        "tests/engineering/r1-f2-multiform-transaction.test.ts"
+        "tests/engineering/r1-f2-multiform-transaction.test.ts",
+        "tests/engineering/mock-repeat-query-parity.test.ts",
+        "tests/engineering/a-stage-main-app-special-controller.test.ts",
+        "tests/engineering/r1-scoped-form-read.test.ts"
       ],
       "unresolved": "证明当前 repeat 节点引用；未读取记录集合或验证生产事务",
       "liveParity": "NOT_VERIFIED"
@@ -100,7 +103,13 @@
       "sourceEvidence": "docs/verification/G4E_SURVEY_DOMAIN_TRUTH.md",
       "unitTests": [
         "tests/g4e/inspection-contract.test.ts",
-        "tests/g4e/survey-media-contract.test.ts"
+        "tests/g4e/survey-media-contract.test.ts",
+        "tests/engineering/survey-59-mock-fields.test.ts",
+        "tests/engineering/survey-59-read-projection.test.ts",
+        "tests/engineering/survey-59-storage-wire.test.ts",
+        "tests/engineering/survey-59-conditions-matrix.test.ts",
+        "tests/engineering/survey-effective-read-slot.test.ts",
+        "tests/engineering/survey-leakage-binding-read.test.ts"
       ],
       "unresolved": "当前 repeat 的 Survey 语义无法证明；历史 Beta 61 字段不是当前生产定义",
       "liveParity": "NOT_VERIFIED"
@@ -275,7 +284,8 @@
       ],
       "browserTests": [
         "tests/h5-main-mock/a-stage-p1-acceptance.spec.ts",
-        "tests/h5-main-mock/deep-cascade-record.spec.ts"
+        "tests/h5-main-mock/deep-cascade-record.spec.ts",
+        "tests/h5-main-mock/mock-repeat-query.spec.ts"
       ],
       "status": "EXECUTABLE_SUPPORTED_SLICE_NOT_FULL_EQUIVALENCE"
     },
@@ -286,7 +296,8 @@
         "F09"
       ],
       "browserTests": [
-        "tests/h5-main-mock/m3-survey-media-430.spec.ts"
+        "tests/h5-main-mock/m3-survey-media-430.spec.ts",
+        "tests/h5-main-mock/survey-59-read.spec.ts"
       ],
       "status": "EXECUTABLE_SUPPORTED_SLICE_NOT_FULL_EQUIVALENCE"
     },

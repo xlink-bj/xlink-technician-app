@@ -54,6 +54,7 @@ function uploadFile(
   upload: UniUploadFile,
   media: LocalMedia,
   token: string,
+  objectKey?: string,
 ): Promise<unknown> {
   const filePath = media.localPath
   if (!filePath) return Promise.reject(new Error('selected media has no online upload path'))
@@ -63,7 +64,7 @@ function uploadFile(
         url: 'https://up-z1.qiniup.com',
         filePath,
         name: 'file',
-        formData: { token },
+        formData: { token, ...(objectKey !== undefined ? { key: objectKey } : {}) },
         success: (result) => {
           if (typeof result.statusCode === 'number' && (result.statusCode < 200 || result.statusCode >= 300)) {
             reject(new Error(`upload returned HTTP ${result.statusCode}`))
@@ -107,7 +108,10 @@ export function createUniUploadPort(
           : undefined
         const key = record?.key ?? record?.fileKey ?? record?.objectKey
         const baseUrl = import.meta.env.VITE_XLINK_MEDIA_DOWNLOAD_BASE_URL
-        if (!record || typeof key !== 'string' || typeof baseUrl !== 'string' || baseUrl.trim().length === 0) {
+        if (
+          !record || typeof key !== 'string' || typeof baseUrl !== 'string' || baseUrl.trim().length === 0
+          || record.url !== undefined || record.downloadUrl !== undefined || record.publicUrl !== undefined
+        ) {
           return response
         }
         return {
@@ -117,9 +121,9 @@ export function createUniUploadPort(
       }),
     },
     {
-      upload: async ({ media, token }) => {
+      upload: async ({ media, token, objectKey }) => {
         if (isBusinessMockMode() !== 'off') return mockUploadResponse(media)
-        return uploadFile(upload, media, token)
+        return uploadFile(upload, media, token, objectKey)
       },
     },
   )

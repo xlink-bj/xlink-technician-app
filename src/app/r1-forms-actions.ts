@@ -58,6 +58,9 @@ export function createR1FormsActions(input: {
   readonly readLatest: (scope: R1RepeatScope) => Promise<R1NodeFormsSnapshot>
   readonly fullExts: (snapshot: R1NodeFormsSnapshot) => Readonly<Record<string, unknown>> | null
   readonly original?: (snapshot: R1NodeFormsSnapshot, recordId: string) => Readonly<Record<string, unknown>> | null
+  /** Trusted provider callback, not a draft flag or standalone edit grant. */
+  readonly normalizeExisting?: (snapshot:R1NodeFormsSnapshot,original:Readonly<Record<string,unknown>>,
+    draft:Readonly<Record<string,unknown>>,recordId:string)=>{fields:Record<string,string|number|boolean>;clearedFieldKeys:readonly string[]}
   readonly permits?: (operation: 'create' | 'append' | 'edit' | 'save_finish' | 'complete', recordId?: string) => boolean
   readonly confirmCompletion?: (snapshot: R1NodeFormsSnapshot) => Promise<{transitionVerified:true}>
   readonly transport: ApiCommandTransport
@@ -139,7 +142,7 @@ export function createR1FormsActions(input: {
       const original=recordId?input.original?.(before.snapshot,recordId):undefined
       if(recordId && (!original || !before.snapshot.records.some(r=>r.id===recordId))) return deny()
       const normalize=(snapshot:R1NodeFormsSnapshot,raw?:Readonly<Record<string,unknown>>)=>recordId
-        ?normalizeR1FormsEditValues(snapshot,raw??deny(),draft)
+        ?input.normalizeExisting?input.normalizeExisting(snapshot,raw??deny(),draft,recordId):normalizeR1FormsEditValues(snapshot,raw??deny(),draft)
         :{fields:normalizeR1RepeatValues(snapshot,draft),clearedFieldKeys:[] as readonly string[]}
       const normalized=normalize(before.snapshot,original??undefined)
       const subsetMetadata=usesR1FormsScalarSubset(before.snapshot)

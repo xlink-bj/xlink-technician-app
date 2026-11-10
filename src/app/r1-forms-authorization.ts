@@ -1,5 +1,5 @@
 import type { AuthSessionPort } from '@shared/ports'
-import type { R1NodeFormsReader, R1NodeFormsSnapshot } from '@features/work-orders/r1-node-forms-read'
+import type { R1NodeFormsReader, R1NodeFormsSnapshot, R1GenericMapRouteRead } from '@features/work-orders/r1-node-forms-read'
 import type { R1RepeatActionProvider } from '@features/work-orders/r1-repeat-actions-port'
 import { createUniApiCommandTransport } from '@adapters/api/uni-api-command-transport'
 import { createNormalRepeatActionProvider } from './r1-repeat-authorization'
@@ -7,6 +7,7 @@ import { r1RepeatActionsEnabled as localFormWritesEnabled, type R1RepeatScope } 
 import { normalizeR1FormsEditValues,projectR1FormsEditValues } from '@features/work-orders/r1-forms-edit-values'
 import { normalizeR1RepeatValues } from '@features/work-orders/r1-repeat-form'
 import { usesR1FormsScalarSubset } from '@features/work-orders/r1-forms-scalar-subset'
+import { projectR1GenericScalarEditValues,normalizeR1GenericScalarEditValues } from '@features/work-orders/r1-generic-scalar-edit-values'
 import { createR1FormsActions } from './r1-forms-actions'
 import { isHandlerMatch, evaluateNodeVisibility } from '@runtimes/workflow/policy'
 import { asOpaqueId } from '@shared/types'
@@ -71,13 +72,40 @@ export function createNormalFormsActionProvider(input:{readonly auth:Pick<AuthSe
       return Boolean(fresh&&permitted(g.scope)&&(fresh.operations as readonly string[]).includes(op)
         &&(op!=='edit'||(fresh.version===2&&Boolean(recordId)&&fresh.recordIds.includes(recordId!))))
     }
-    const original=(s:R1NodeFormsSnapshot,id:string)=>input.reader.currentFormOriginal?.(s,id)??null
+    const routeAt=(s:R1NodeFormsSnapshot,id:string)=>{
+      const e=input.reader.currentGenericMapRoute?.(s,id)
+      if(!e || input.reader.isCurrentGenericMapRoute?.(s,id,e)!==true || e.type!=='0'
+        ||e.tenantId!==g.scope.tenantId||e.workOrderId!==g.scope.workOrderId||e.runtimeNodeId!==g.scope.runtimeNodeId
+        ||e.workflowRunId!==g.scope.workflowRunId||e.formDefinitionId!==g.scope.formDefinitionId||e.recordId!==id
+        ||!e.colName||e.colName.trim()!==e.colName||e.colName==='serviceAppointment'
+        ||e.collectionName!==`frm_${e.tenantId}_${e.colName}`)return null
+      return e
+    }
+    const routeIdentity=(e:R1GenericMapRouteRead)=>JSON.stringify([e.tenantId,e.workOrderId,e.runtimeNodeId,
+      e.workflowRunId,e.formDefinitionId,e.recordId,e.type,e.colName,e.collectionName])
+    const initialRoutes=new Map<string,string>()
+    if(usesR1FormsScalarSubset(snapshot))for(const record of snapshot.records){
+      const e=routeAt(snapshot,String(record.id));if(e)initialRoutes.set(String(record.id),routeIdentity(e))
+    }
+    const genericRoute=(s:R1NodeFormsSnapshot,id:string)=>{
+      const e=routeAt(s,id)
+      return e&&initialRoutes.get(id)===routeIdentity(e)?e:null
+    }
+    const original=(s:R1NodeFormsSnapshot,id:string)=>usesR1FormsScalarSubset(s)
+      ?genericRoute(s,id)?.original??null:input.reader.currentFormOriginal?.(s,id)??null
+    const normalizeExisting=(s:R1NodeFormsSnapshot,raw:Readonly<Record<string,unknown>>,values:Readonly<Record<string,unknown>>,id:string)=>{
+      if(!usesR1FormsScalarSubset(s))return normalizeR1FormsEditValues(s,raw,values)
+      if(!genericRoute(s,id))throw Error('当前原记录的同租户type0路由证据不可核实')
+      // raw is the transaction's exact pre-upsert original, not the changed
+      // record returned by the intermediate read. Fresh route proof is separate.
+      return normalizeR1GenericScalarEditValues(s,raw,values)
+    }
     const owns=(s:R1RepeatScope)=>permitted(s)&&input.reader.isCurrent(lease)
     const initialValues=(id:string)=>{try{return permits('edit',id)&&owns(g.scope)&&original(lease,id)
-      ?projectR1FormsEditValues(lease,original(lease,id)!):null}catch{return null}}
+      ?usesR1FormsScalarSubset(lease)?projectR1GenericScalarEditValues(lease,original(lease,id)!):projectR1FormsEditValues(lease,original(lease,id)!):null}catch{return null}}
     const actions=createR1FormsActions({env:input.env,origin:input.origin,getSession:()=>input.auth.getCurrentSession(),hasExactGrant:owns,
       transport:createUniApiCommandTransport({apiBaseUrl:String(input.env.VITE_XLINK_API_BASE_URL),getSessionRef:()=>input.auth.getCurrentSession()?.sessionRef??null}),
-      permits,original,
+      permits,original,normalizeExisting,
       confirmCompletion:async s=>{
         if(!owns(g.scope)||!input.reader.confirmFormsCompletion)throw Error('完成结果无法核实')
         return input.reader.confirmFormsCompletion(s)
@@ -98,7 +126,7 @@ export function createNormalFormsActionProvider(input:{readonly auth:Pick<AuthSe
       initialValues,
       validateDraft:(values,id)=>{try{
         if(!owns(g.scope))return false
-        return Boolean(id?permits('edit',id)&&normalizeR1FormsEditValues(lease,original(lease,id)??{},values)
+        return Boolean(id?permits('edit',id)&&normalizeExisting(lease,original(lease,id)??{},values,id)
           :permits(lease.records.length?'append':'create')&&normalizeR1RepeatValues(lease,values))
       }catch{return false}},
       saveOnly:(values,id)=>actions.saveOnly(g.scope,values,id),

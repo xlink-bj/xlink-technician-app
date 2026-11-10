@@ -10,6 +10,20 @@ export interface R1NodeFormsSnapshot {
   readonly fillableFieldIds?: readonly string[]
   readonly records: readonly Omit<FormDataRead, 'appointmentReplacement'>[]
 }
+/** Existing-record query/Map-replacement route facts, not a write grant or
+ * proof of BSON type/precision preservation. A copied object is not evidence. */
+export interface R1GenericMapRouteRead {
+  readonly tenantId: string
+  readonly workOrderId: string
+  readonly runtimeNodeId: string
+  readonly workflowRunId: string
+  readonly formDefinitionId: string
+  readonly recordId: string
+  readonly type: '0'
+  readonly colName: string
+  readonly collectionName: string
+  readonly original: Readonly<Record<string, unknown>>
+}
 export interface R1NodeFormsReader {
   enabled(): boolean
   load(workOrderId: string, runtimeNodeId: string): Promise<R1NodeFormsSnapshot>
@@ -19,6 +33,10 @@ export interface R1NodeFormsReader {
   currentFormsExts?(snapshot: R1NodeFormsSnapshot): Readonly<Record<string, unknown>> | null
   /** Exact current read provenance, not an ACK/cache-derived edit grant. */
   currentFormOriginal?(snapshot: R1NodeFormsSnapshot, recordId: string): Readonly<Record<string, unknown>> | null
+  /** Private-reader issuance: exact string Ext.type=0, matching raw field
+   * collection identities and exact selected original; never an ACK grant. */
+  currentGenericMapRoute?(snapshot: R1NodeFormsSnapshot, recordId: string): R1GenericMapRouteRead | null
+  isCurrentGenericMapRoute?(snapshot: R1NodeFormsSnapshot, recordId: string, evidence: unknown): boolean
   /** Independent post-Process read; performs no mutation. */
   confirmFormsCompletion?(snapshot: R1NodeFormsSnapshot): Promise<{ readonly transitionVerified: true }>
   clear(): void

@@ -207,6 +207,11 @@ jobs:
         env:
           XLINK_H5_FORMS_SCALAR_SUBSET: 'true'
         run: pnpm exec playwright test --config config/playwright/forms-scalar-subset.config.ts
+      - name: Verify reader-proven generic Map scalar edit in the normal App
+        env:
+          XLINK_H5_GENERIC_MAP_EDIT: 'true'
+          VITE_XLINK_ENVIRONMENT: 'test'
+        run: pnpm exec playwright test --config config/playwright/generic-map-edit.config.ts
       - name: Preserve scoped form integration H5 evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -217,6 +222,7 @@ jobs:
             test-results/duplicate-file-fields-forward/
             test-results/work-order-authority-revocation/
             test-results/forms-scalar-subset/
+            test-results/generic-map-edit/
           if-no-files-found: warn
           retention-days: 7
 
