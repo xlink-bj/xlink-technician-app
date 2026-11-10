@@ -1,6 +1,6 @@
 import type { FormDefinitionRead } from '@shared/ports'
 import { isR1FileWireArray, type R1FileWireValue } from '@shared/types'
-import { normalizeR1LocalFieldPatch, projectR1LocalFields } from './r1-local-form-fields'
+import { normalizeR1LocalFieldPatch, projectR1LocalFields, R1_LOCAL_FORM_MAX_ROWS } from './r1-local-form-fields'
 
 /** FormDef-governed fields for synthetic 020/021 FormData writes.
  * File lists follow the R1 generic extForm type=file wire; type=image is reference-only. */
@@ -33,11 +33,11 @@ export function validateR1SpecialMockFields(
   input: R1SpecialMockFields,
 ): R1SpecialMockValidation {
   const source = definition.fields
-  if (!source?.length || source.length > 50) return { ok: false, message: '当前表单定义无法核验。' }
+  if (!source?.length || source.length > R1_LOCAL_FORM_MAX_ROWS) return { ok: false, message: '当前表单定义无法核验。' }
   if (Object.keys(input).length > 50) return { ok: false, message: '表单字段数量超出可核验范围。' }
   const seen = new Set<string>()
   for (const field of source) {
-    if (!field.valueKey || seen.has(field.valueKey)
+    if (!field.valueKey
       || ['__proto__', 'constructor', 'prototype'].includes(field.valueKey)) {
       return { ok: false, message: '表单定义存在重复或无效字段，已阻止提交。' }
     }
@@ -47,10 +47,16 @@ export function validateR1SpecialMockFields(
     return { ok: false, message: '提交内容包含不属于当前表单定义的字段。' }
   }
   const projected = projectR1LocalFields(definition, input)
+  if (projected.length !== source.length) return { ok: false, message: '表单字段身份无法核验。' }
   const fields: Record<string, R1SpecialMockFields[string]> = Object.create(null)
   for (const field of source) {
     const current = projected.find(item => item.fieldId === field.fieldId)!
     const raw = input[field.valueKey]
+    // A known hidden duplicate does not own the shared value. Its one visible,
+    // writable sibling validates it. Unknown/overlapping groups or a read-only visible row have
+    // no supported sibling and therefore cannot take this path.
+    if (current.reason === '当前字段不可见'
+      && projected.some(item => item.valueKey === field.valueKey && item.supported)) continue
     // The R1 image is a presentation-only reference, even when the raw
     // ExtField row says required=1. It never becomes a file upload.
     if (field.presentationOnly) {
@@ -109,5 +115,18 @@ export function validateR1SpecialMockFields(
     }
     fields[field.valueKey] = normalized
   }
+  // A control value may change representation (e.g. '1' -> 1) during
+  // normalization. Never save a payload that selects different rows/permissions
+  // from the candidate we just validated. The caller can supply a stable draft.
+  const normalizedProjection = projectR1LocalFields(definition, fields)
+  if (normalizedProjection.some((field, index) => {
+    const before = projected[index]!
+    return field.supported !== before.supported || field.required !== before.required
+      || field.readOnly !== before.readOnly || field.reason !== before.reason
+  })) return { ok: false, message: '字段归一化后可见性或填写权限已变化，请重新核对。' }
+  if (normalizedProjection.some(field => {
+    const value = fields[field.valueKey]
+    return field.required && (value === undefined || value === '' || (Array.isArray(value) && value.length === 0))
+  })) return { ok: false, message: '必填字段归一化后为空，请重新填写。' }
   return { ok: true, fields }
 }

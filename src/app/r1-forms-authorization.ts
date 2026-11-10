@@ -6,6 +6,7 @@ import { createNormalRepeatActionProvider } from './r1-repeat-authorization'
 import { r1RepeatActionsEnabled as localFormWritesEnabled, type R1RepeatScope } from './r1-repeat-actions'
 import { normalizeR1FormsEditValues,projectR1FormsEditValues } from '@features/work-orders/r1-forms-edit-values'
 import { normalizeR1RepeatValues } from '@features/work-orders/r1-repeat-form'
+import { usesR1FormsScalarSubset } from '@features/work-orders/r1-forms-scalar-subset'
 import { createR1FormsActions } from './r1-forms-actions'
 import { isHandlerMatch, evaluateNodeVisibility } from '@runtimes/workflow/policy'
 import { asOpaqueId } from '@shared/types'
@@ -61,6 +62,10 @@ export function createNormalFormsActionProvider(input:{readonly auth:Pick<AuthSe
     if(snapshot.node.lifecycle!=='active'||snapshot.node.nodeTypeEvidence!=='runtime_node_def'
       || !isHandlerMatch(actor,snapshot.node.handlers??[])||!evaluateNodeVisibility(snapshot.node,actor).visible)return null
     let lease=snapshot
+    // Freeze the observed metadata as bytes, not a later view of shared objects.
+    // Only the newly supported large forms subset gets this stricter lease.
+    const subsetSchema=usesR1FormsScalarSubset(snapshot)
+      ?JSON.stringify([snapshot.definition.fields,snapshot.definition.purpose,snapshot.node.formFieldIdsReadOnly,snapshot.fillableFieldIds]):undefined
     const permits=(op:R1FormsOperation,recordId?:string)=>{
       const fresh=grant()
       return Boolean(fresh&&permitted(g.scope)&&(fresh.operations as readonly string[]).includes(op)
@@ -81,7 +86,8 @@ export function createNormalFormsActionProvider(input:{readonly auth:Pick<AuthSe
       async readLatest(s){
         if(!owns(s))throw Error('本轮普通表单授权已失效')
         const latest=await input.reader.load(s.workOrderId,s.runtimeNodeId)
-        if(!permitted(s)||!input.reader.isCurrent(latest)||!schemaMatches(latest))throw Error('普通表单配置已变化')
+        if(!permitted(s)||!input.reader.isCurrent(latest)||!schemaMatches(latest)
+          ||(subsetSchema!==undefined&&JSON.stringify([latest.definition.fields,latest.definition.purpose,latest.node.formFieldIdsReadOnly,latest.fillableFieldIds])!==subsetSchema))throw Error('普通表单配置已变化')
         lease=latest;return latest
       }})
     return {locked:()=>!owns(g.scope)||actions.locked(g.scope),

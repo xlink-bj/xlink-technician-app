@@ -33,6 +33,8 @@ export function expectedSurvey59VisibleIds(part: unknown): string[] {
   return reference.fields.filter(source => {
     const field = source.row as Row
     if (!(field.showList as unknown[]).map(String).includes('4') || ['gap', 'image', 'title'].includes(String(field.type))) return false
+    // This fixture has the verified double-row binding; trigger is interaction-only.
+    if (field.name === 'leakageCauseSelect') return false
     if (source.evidence.conditionStatus === 'COMPLETE_WIRE_CONDITION_PROVIDER_NOT_READ') {
       const alternatives = (field.exts as Row).showValue as unknown[]
       return alternatives.some(value => JSON.stringify(value) === JSON.stringify(part))

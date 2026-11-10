@@ -153,6 +153,25 @@ jobs:
         env:
           XLINK_H5_SURVEY_59: 'true'
         run: pnpm exec playwright test --config config/playwright/survey-59-read.config.ts
+      - name: Verify duplicate file row identity in normal App forms and repeat
+        env:
+          XLINK_H5_DUPLICATE_FILE: 'true'
+        run: |
+          pnpm exec playwright test --config config/playwright/duplicate-file-fields.config.ts
+          cp -R test-results/duplicate-file-fields test-results/duplicate-file-fields-forward
+      - name: Verify duplicate file row identity with reversed definition rows
+        env:
+          XLINK_H5_DUPLICATE_FILE: 'true'
+          XLINK_DUPLICATE_REVERSE: 'true'
+        run: pnpm exec playwright test --config config/playwright/duplicate-file-fields.config.ts
+      - name: Verify normal App authority revocation and stale pagination isolation
+        env:
+          XLINK_H5_AUTHORITY_REVOCATION: 'true'
+        run: pnpm exec playwright test --config config/playwright/work-order-authority-revocation.config.ts
+      - name: Verify normal App scoped scalar creation and existing-edit fence
+        env:
+          XLINK_H5_FORMS_SCALAR_SUBSET: 'true'
+        run: pnpm exec playwright test --config config/playwright/forms-scalar-subset.config.ts
       - name: Preserve Stage 1B/2A/2B/2C offline H5 evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -167,6 +186,10 @@ jobs:
             test-results/work-order-categories/
             test-results/mock-repeat-query/
             test-results/survey-59-read/
+            test-results/duplicate-file-fields/
+            test-results/duplicate-file-fields-forward/
+            test-results/work-order-authority-revocation/
+            test-results/forms-scalar-subset/
           if-no-files-found: warn
           retention-days: 7
 

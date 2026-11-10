@@ -3,6 +3,7 @@ import { isSurveyReadOnlyMediaField, surveyReadOnlyMediaText } from '@shared/for
 import { evaluateVisibility, isFieldApplicable } from '@runtimes/dynamic-form'
 import { actionFormConditionValues } from './action-form-condition-context'
 import { ACTION_FORM_SURFACE, actionFormSchemaFor } from './action-form-schema'
+import { surveyLeakageCauseExperienceFor, surveyLeakageCauseReadIds, surveyLeakageCauseLabels } from './survey-leakage-cause'
 
 export interface R1RecordReadField {
   readonly fieldId: string
@@ -43,6 +44,8 @@ function displayValue(field: FormFieldRead, value: FormFieldValue | undefined): 
 /** Read display only, after the reader has verified identity and ownership.
  * Applicability/conditions are not write permission. Missing codecs and
  * incomplete conditions never become a claim that a saved value is absent.
+ * Controlled leakage data also requires the reader's lossless-original guard;
+ * a standalone lossy mapper result is not authoritative absence evidence.
  */
 export function projectR1RecordReadFields(definition: FormDefinitionRead, record: FormDataRead): readonly R1RecordReadField[] {
   const fields = definition.fields
@@ -50,6 +53,7 @@ export function projectR1RecordReadFields(definition: FormDefinitionRead, record
     || fields.some(field => !field.fieldId || !field.valueKey)
     || new Set(fields.map(field => field.fieldId)).size !== fields.length) return []
   const values = actionFormConditionValues({ definitionId: record.definitionId, dataId: record.id, values: record.values ?? {} })
+  const leakage = surveyLeakageCauseExperienceFor({ purpose: definition.purpose, fields })
   const result: R1RecordReadField[] = []
   for (const field of fields) {
     const schema = actionFormSchemaFor(field)
@@ -57,6 +61,17 @@ export function projectR1RecordReadFields(definition: FormDefinitionRead, record
     const visibility = evaluateVisibility(field.visibility, values)
     if (visibility.state === 'hidden') continue
     const unsupported = Boolean(field.unsupportedReason) || visibility.state === 'unsupported'
+    if (leakage?.triggerField.fieldId === field.fieldId) continue
+    if (!unsupported && leakage?.valueField.fieldId === field.fieldId) {
+      const value = record.values?.[field.valueKey]
+      const empty = value === undefined || value === null
+      const ids = surveyLeakageCauseReadIds(value)
+      result.push({ fieldId: field.fieldId, valueKey: field.valueKey, label: field.label,
+        unavailable: !empty && ids === null,
+        text: value === undefined ? '未保存' : value === null ? '空值' : ids === null ? '已保存的渗漏原因格式无效'
+          : ids.length ? surveyLeakageCauseLabels(ids, []).join(' / ') : '空值' })
+      continue
+    }
     const mediaText = !unsupported && isSurveyReadOnlyMediaField(definition, field)
       ? surveyReadOnlyMediaText(record.values?.[field.valueKey]) : undefined
     const noCodec = mediaText === undefined && !scalarTypes.has(field.type) && !choiceTypes.has(field.type)

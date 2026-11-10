@@ -9,9 +9,10 @@ import type {
   FormFieldValue,
   SurveyLeakageCauseRow,
 } from '@shared/ports'
-import { createOperationError } from '@shared/types'
+import { asOpaqueId, createOperationError } from '@shared/types'
 import type { OperationSnapshot } from '@shared/types'
 import { isWorkflowFieldReadOnly } from './action-form-schema'
+import { actionFormConditionValues } from './action-form-condition-context'
 
 export const surveyLeakageCauseTriggerKey = 'leakageCauseSelect' as const
 export const surveyLeakageCauseValueKey = 'leakageCause' as const
@@ -59,10 +60,18 @@ export function surveyLeakageCauseExperienceFor(
   if (
     !triggerField
     || triggerField.type !== 'select'
+    || triggerField.multiple === true
+    || triggerField.unsupportedReason
     || !valueField
     || valueField.type !== 'data'
     || valueField.multiple !== true
+    || valueField.unsupportedReason
   ) return undefined
+  for (const field of [triggerField, valueField]) {
+    if (typeof field.fieldId !== 'string' || !field.fieldId
+      || field.fieldId.trim() !== field.fieldId
+      || form.fields.filter(row => row.fieldId === field.fieldId).length !== 1) return undefined
+  }
   return { triggerField, valueField }
 }
 
@@ -121,6 +130,36 @@ export function surveyLeakageCausePersistedIds(value: unknown): readonly string[
   const ids = value.map((candidate) => typeof candidate === 'string' ? candidate.trim() : '')
   if (ids.some((id) => id.length === 0) || new Set(ids).size !== ids.length) return null
   return ids
+}
+
+/** Saved read display must not silently trim/repair identifiers. Picker and
+ * submission normalization retain their separate, existing behavior. */
+export function surveyLeakageCauseReadIds(value: unknown): readonly string[] | null {
+  const ids = surveyLeakageCausePersistedIds(value)
+  return ids && Array.isArray(value) && ids.every((id, index) => id === value[index]) ? ids : null
+}
+
+/** Validate lossless originals before publishing a saved read projection.
+ * A dropped object array must never be mistaken for a missing data row. */
+export function assertSurveyLeakageCauseReadValue(
+  form: Pick<DynamicFormRead, 'purpose' | 'fields' | 'definitionId'>,
+  original: Readonly<Record<string, unknown>>,
+): void {
+  const experience = surveyLeakageCauseExperienceFor(form)
+  if (!experience || experience.valueField.presentationOnly
+    || !isFieldApplicable(experience.valueField, 'mobile_detail')) return
+  const rawExts = original.exts
+  if (rawExts != null && (typeof rawExts !== 'object' || Array.isArray(rawExts))) throw Error('渗漏原因原始字段容器无效。')
+  const exts = rawExts as Readonly<Record<string, unknown>> | null | undefined
+  const values = actionFormConditionValues({ definitionId: form.definitionId,
+    ...(typeof original._id === 'string' ? { dataId: asOpaqueId<'FormDataId'>(original._id) } : {}),
+    values: { ...original, ...exts } as DynamicFormRead['values'] })
+  const state = surveyLeakageCauseFieldStateFor({ ...form, values }, experience.valueField)
+  if (!state?.visible || state.capability === 'UNSUPPORTED') return
+  const key = experience.valueField.valueKey
+  const effective = exts && Object.hasOwn(exts, key) ? exts : original
+  if (!Object.hasOwn(effective, key) || effective[key] === null) return
+  if (surveyLeakageCauseReadIds(effective[key]) === null) throw Error('已保存的渗漏原因格式无效。')
 }
 
 /** R1 uses the first segment of the selected part path to scope the tree. */

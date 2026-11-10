@@ -1,3 +1,4 @@
+import { duplicateFileDefinition } from './duplicate-file-fixture'
 import { mockOrderFieldsRead } from './order-fields'
 import { mockScaleCatalogRead } from './quotation-catalog-scale'
 import { categoryMockDetail, withCategoryMockRows } from './work-order-category-fixtures'
@@ -937,7 +938,8 @@ function matchedResponse(
   }
   if (route === 'biz/extField/query' && requestData.extId === mockSyntheticDynamicFormDefinitionId) {
     if (isDevMockJourneyEnabled() && import.meta.env.VITE_XLINK_R1_SPECIAL_MEDIA === 'true') {
-      return mockSyntheticSpecialMediaDefinitionResponse
+      return import.meta.env.VITE_XLINK_R1_DUPLICATE_FILE_FIELDS === 'true'
+        ? duplicateFileDefinition(import.meta.env.VITE_XLINK_R1_DUPLICATE_FILE_REVERSE === 'true') : mockSyntheticSpecialMediaDefinitionResponse
     }
     if (isDevMockJourneyEnabled() && import.meta.env.VITE_XLINK_R1_BUSINESS_FIELDS === 'true') {
       return mockSyntheticBusinessFormDefinitionResponse

@@ -322,8 +322,11 @@ async function confirmMediaRemoval(): Promise<void> {
 async function removeMediaValue(key: string, index: number): Promise<void> {
   const values = mediaValues(key), file = values[index]
   if (busy.value || !file) return
+  const field = viewFields.value.find(item => item.valueKey === key && item.supported && item.type === 'file')
+  if (!field) return
   const ticket = revision
-  const task = mediaTasks.value.find(item => item.uploadedRef?.url === file.url)
+  const task = mediaTasks.value.find(item => item.scope.fieldId === field.fieldId
+    && item.scope.valueKey === key && item.uploadedRef?.url === file.url)
   if (task && controller) {
     busy.value = true
     try {
@@ -340,7 +343,7 @@ async function removeMediaValue(key: string, index: number): Promise<void> {
 }
 function setField(key: string, value: R1SpecialMockFields[string]): void {
   if (busy.value || !viewState.value) return
-  const field = viewFields.value.find(item => item.valueKey === key)
+  const field = viewFields.value.find(item => item.valueKey === key && item.supported)
   if (!field?.supported || !editableFieldTypes.has(field.type)
     || (typeof value === 'string' && value.length > 4000)
     || (Array.isArray(value) && !(isR1FileWireArray(value)

@@ -202,7 +202,10 @@ export function createAStageSpecialMockController(options: {
       ...(recordId ? { formDataId: asOpaqueId<'FormDataId'>(recordId) } : {}),
     })
     if (!authorized() || listed.state !== 'succeeded' || !listed.data) throw new Error('媒体队列未能安全读取。')
-    return listed.data.filter(task => task.scope.formDefinitionId === formId
+    return listed.data.filter(task => task.scope.userId === expected!.userId
+      && task.scope.workOrderId === options.workOrderId
+      && task.scope.workflowNodeId === targets[kind].node
+      && task.scope.formDefinitionId === formId
       && String(task.scope.formDataId ?? '') === (recordId ?? '')
       && known.get(task.scope.fieldId) === task.scope.valueKey)
   }
@@ -485,6 +488,8 @@ export function createAStageSpecialMockController(options: {
         ? validateR1SpecialMockFields(chosen.definition, action.fields) : null
       if (checked && !checked.ok) return { state: 'blocked', message: checked.message }
       const fields = checked?.ok ? checked.fields : undefined
+      const mediaOriginal = action.kind === 'edit' && selected
+        ? (await scopedForms(kind, action.id, chosen.id))[0] : undefined
       if (fields) {
         // A saved media value is either a verified prior record value or was
         // uploaded by the exact current common queue scope. No forged URL may
@@ -493,17 +498,28 @@ export function createAStageSpecialMockController(options: {
           action.kind === 'edit' ? action.id : undefined)
         if (tasks.some(task => task.state !== 'uploaded')) return { state: 'blocked',
           message: '附件队列仍有未完成项目，请重试或删除后保存。' }
-        for (const sourceField of chosen.definition.fields ?? []) {
-          if (sourceField.type !== 'file') continue
+        const activeFields = projectR1LocalFields(chosen.definition, fields)
+        // Original conditions must select the same row before an existing
+        // attachment can authorize reuse. A shared valueKey is not ownership.
+        const originalExts = object(mediaOriginal?.exts)
+        const originalValues = mediaOriginal && (originalExts || mediaOriginal.exts === undefined)
+          ? { ...mediaOriginal, ...originalExts } as R1SpecialMockFields : undefined
+        const originalFields = originalValues
+          ? projectR1LocalFields(chosen.definition, originalValues) : []
+        for (const sourceField of activeFields) {
+          if (!sourceField.supported || sourceField.type !== 'file') continue
           const submitted = fields[sourceField.valueKey]
           if (submitted === undefined) continue
           if (!isR1FileWireArray(submitted)) return { state: 'blocked', message: '附件列表格式异常。' }
-          const fromQueue = tasks.filter(task => task.scope.fieldId === sourceField.fieldId)
+          const fromQueue = tasks.filter(task => task.scope.fieldId === sourceField.fieldId
+            && task.scope.valueKey === sourceField.valueKey)
             .flatMap(task => task.uploadedRef ? [r1FileWireFromUpload(task.uploadedRef)] : [])
             .filter((value): value is NonNullable<typeof value> => value !== null)
-          const fromSaved = action.kind === 'edit' && selected
-            && isR1FileWireArray(selected.values[sourceField.valueKey])
-            ? selected.values[sourceField.valueKey] as readonly import('@shared/types').R1FileWireValue[] : []
+          const sameOriginalRow = originalFields.some(field => field.fieldId === sourceField.fieldId
+            && field.valueKey === sourceField.valueKey && field.type === 'file' && field.supported)
+          const fromSaved = sameOriginalRow && originalValues
+            && isR1FileWireArray(originalValues[sourceField.valueKey])
+            ? originalValues[sourceField.valueKey] as readonly import('@shared/types').R1FileWireValue[] : []
           if (submitted.some(ref => ![...fromQueue, ...fromSaved]
             .some(allowed => JSON.stringify(allowed) === JSON.stringify(ref)))) {
             return { state: 'blocked', message: '附件没有来自当前表单的已完成上传。' }
@@ -511,7 +527,8 @@ export function createAStageSpecialMockController(options: {
         }
       }
       if ('expectedRevision' in action && action.expectedRevision !== undefined
-        && (!selected || selected.revision !== action.expectedRevision)) {
+        && (!selected || selected.revision !== action.expectedRevision
+          || (mediaOriginal && JSON.stringify(mediaOriginal) !== action.expectedRevision))) {
         return { state: 'blocked', message: '记录已被其他编辑器更新，请重新读取后再修改。' }
       }
       if (action.kind === 'save' || action.kind === 'save_finish') {
@@ -524,7 +541,7 @@ export function createAStageSpecialMockController(options: {
           fields: fields! }
       } else if (action.kind === 'edit' || action.kind === 'delete') {
         if (!selected) return { state: 'blocked', message: '仅当前工单中可编辑的有效记录支持修改。' }
-        const original = (await scopedForms(kind, action.id, chosen.id))[0]
+        const original = mediaOriginal ?? (await scopedForms(kind, action.id, chosen.id))[0]
         if (!original || original.state !== 1) return { state: 'blocked', message: '原始表单记录已不可用。' }
         const missing = action.kind === 'edit'
           ? chosen.definition.fields?.filter(field => !field.presentationOnly
@@ -534,11 +551,11 @@ export function createAStageSpecialMockController(options: {
           ? projectR1LocalFields(chosen.definition, fields) : []
         // Only an explicitly omitted, previously present, source optional
         // field may be removed. Hidden/read-only/unknown fields cannot vanish.
-        if (missing.some(field => {
-          const state = projected.find(item => item.fieldId === field.fieldId)
-          return !state?.supported || state.required || state.readOnly
+        const clearedFieldKeys = [...new Set(missing.map(field => field.valueKey))]
+        if (clearedFieldKeys.some(key => {
+          const active = projected.filter(item => item.valueKey === key && item.supported)
+          return active.length !== 1 || active[0]!.required || active[0]!.readOnly
         })) return { state: 'blocked', message: '现有字段不可清空，保留原始记录。' }
-        const clearedFieldKeys = missing.map(field => field.valueKey)
         if (action.kind === 'delete') {
           intent = kind === 'forms'
             ? { kind: 'forms_delete', sourceNodeType: 'forms', scope: s,

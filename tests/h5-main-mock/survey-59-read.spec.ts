@@ -4,6 +4,7 @@ import { survey59Fields, survey59Paths, survey59Record, expectedSurvey59VisibleI
 test.skip(process.env.XLINK_H5_SURVEY_59 !== 'true', 'Dedicated readonly Survey 59 synthetic API acceptance only')
 async function fixture(page: Page, baseURL: string, historical = false) {
   const state = { part: ['1', '130'] as unknown, providerFailure: false, foreignRecord: false, invalidPartExts: false,
+    cause: undefined as unknown, causeProvided: false, causeExtOverride: false,
     calls: [] as Array<{ path: string; body: Record<string, string> }>, unexpected: [] as string[], errors: [] as string[], writes: 0 }
   const fields = survey59Fields.map(field => ({ ...field,
     ...(field.valueOption ? { valueOption: `qa-survey-59-${field.name}` } : {}) }))
@@ -48,6 +49,8 @@ async function fixture(page: Page, baseURL: string, historical = false) {
     }
     if (path === 'biz/extForm/query/e') {
       const data: Record<string, unknown> = { ...survey59Record(state.part), ...(state.foreignRecord ? { tenantId: 'foreign' } : {}) }
+      if (state.causeProvided) data.leakageCause = state.cause
+      if (state.causeExtOverride) { data.leakageCause = [{ invalid: true }]; (data.exts as Record<string, unknown>).leakageCause = state.cause }
       if (state.invalidPartExts) (data.exts as Record<string, unknown>).part = { broken: true }
       const rows = !body['is:_id|string#and'] || body['is:_id|string#and'] === 'saved' ? [data] : []
       return ok({ data: rows, total: rows.length, page: Number(body.page), size: Number(body.rows), dataCount: rows.length })
@@ -153,3 +156,47 @@ test('completed Survey history rejects malformed EXTS, clears stale values and r
     calls: state.calls, writes: state.writes, unexpected: state.unexpected, realBackend: 'NOT_RUN',
   }), contentType: 'application/json' })
 })
+
+for (const historical of [false,true]) {
+  test(`${historical?'historical':'normal'} Survey reads bound cause IDs without picker and rejects lossy raw data`,async({page,baseURL},info)=>{
+    const state=await fixture(page,baseURL!,historical);await open(page,historical)
+    const load=async()=>{
+      const before=state.calls.filter(c=>c.path==='biz/extForm/query/e').length
+      const button=historical?page.getByTestId('historical-form-open'):read(page)
+      await button.click()
+      await expect.poll(()=>state.calls.filter(c=>c.path==='biz/extForm/query/e').length).toBeGreaterThan(before)
+      // A hidden value can disappear while the previous read is still busy.
+      // Wait for normal completion/failure before changing the next server fixture.
+      await expect.poll(async()=>{
+        if(await button.count())return await button.getAttribute('aria-disabled')==='false'
+        return historical&&await page.getByTestId('historical-forms-message').isVisible()
+      }).toBe(true)
+    }
+    const value=page.getByTestId(historical?'historical-form-value-leakageCause':'r1-normal-value-leakageCause')
+    const trigger=page.getByTestId(historical?'historical-form-value-leakageCauseSelect':'r1-normal-value-leakageCauseSelect')
+    for(const sample of [{value:undefined,text:'未保存'},{value:null,text:'空值'},{value:[],text:'空值'},
+      {value:['cause-a','cause-b'],text:'未解析（cause-a） / 未解析（cause-b）'}]){
+      state.cause=sample.value;state.causeProvided=sample.value!==undefined
+      await load();await expect(value).toHaveText(sample.text);await expect(trigger).toHaveCount(0)
+    }
+    state.causeExtOverride=true;state.cause=['ext-id'];await load();await expect(value).toHaveText('未解析（ext-id）')
+    state.causeExtOverride=false;state.part=['4'];state.cause=[{invalid:true}]
+    await load();await expect(value).toHaveCount(0);await expect(trigger).toHaveCount(0)
+    state.part=['1','130']
+    for(const bad of [[{invalid:true}],['id',{}],['id','id'],[' id ']]){
+      state.cause=bad;await load();await expect(value).toHaveCount(0)
+      if(historical){
+        await expect(page.getByTestId('historical-forms-message')).toContainText('请重新读取')
+        await expect(page.getByTestId('historical-form-content')).toHaveCount(0)
+      }else await expect(page.getByTestId('r1-normal-form-record')).toHaveCount(0)
+      state.cause=['repaired']
+      // Repairing the response alone must not republish stale content.
+      await expect(value).toHaveCount(0)
+      if(historical)await page.getByTestId('historical-forms-timeline').locator('.app-button').filter({hasText:'重新读取'}).click()
+      await load();await expect(value).toHaveText('未解析（repaired）')
+    }
+    expect(state.calls.some(c=>/leakageCause|upsert|process|upload|updateExts/.test(c.path))).toBe(false)
+    expect(state.writes).toBe(0);expect(state.unexpected).toEqual([]);expect(state.errors).toEqual([])
+    await info.attach('leakage-read-evidence',{body:JSON.stringify({historical,calls:state.calls,writes:state.writes,unexpected:state.unexpected,errors:state.errors}),contentType:'application/json'})
+  })
+}

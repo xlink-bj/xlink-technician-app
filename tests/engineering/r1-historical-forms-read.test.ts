@@ -208,3 +208,37 @@ describe('Survey historical EXTS integrity follows the active read contract', ()
     expect((await h.reader.read(fresh!)).record.values?.note).toBe('repaired')
   })
 })
+
+
+describe('Survey historical effective root slot integrity',()=>{
+  function rootHarness(value:unknown,empty=false) {
+    const h=harness();h.ext.colName='Survey';Object.assign(h.field,{name:'memo',colName:'Survey'})
+    Object.assign(h.record,{memo:value});if(empty)Object.assign(h.record,{exts:{}})
+    return h
+  }
+  it.each([false,true])('rejects root memo object with explicit empty EXTS=%s',async empty=>{
+    const h=rootHarness({unexpected:'json'},empty),[target]=await h.reader.discover('work')
+    await expect(h.reader.read(target!)).rejects.toThrow();expect(h.reader.isCurrent(target!)).toBe(false)
+    expect(h.calls.some(c=>/upsert|process|upload|updateExts/.test(c.path))).toBe(false)
+  })
+  it.each([null,false,0,'',[],['saved'],[0,false,'saved']].map(value=>({value})))('preserves root value %#',async({value})=>{
+    const h=rootHarness(value),[target]=await h.reader.discover('work')
+    expect((await h.reader.read(target!)).record.values?.memo).toEqual(value)
+  })
+  it('uses legal EXTS over malformed root and allows a genuinely absent field',async()=>{
+    const h=rootHarness({unexpected:'json'});Object.assign(h.record,{exts:{memo:''}})
+    let [target]=await h.reader.discover('work');expect((await h.reader.read(target!)).record.values?.memo).toBe('')
+    Reflect.deleteProperty(h.record,'memo');Object.assign(h.record,{exts:{audit:{unknown:true}}})
+    ;[target]=await h.reader.discover('work');expect((await h.reader.read(target!)).record.values?.memo).toBeUndefined()
+  })
+  it('revokes old result/target on invalid root and requires rediscovery to recover',async()=>{
+    const h=rootHarness('saved'),[target]=await h.reader.discover('work'),old=await h.reader.read(target!)
+    Object.assign(h.record,{memo:{unexpected:'json'}})
+    await expect(h.reader.read(target!)).rejects.toThrow();expect(h.reader.isCurrent(old)).toBe(false)
+    Object.assign(h.record,{memo:false});const count=h.calls.length
+    await expect(h.reader.read(target!)).rejects.toThrow();expect(h.calls).toHaveLength(count)
+    const [fresh]=await h.reader.discover('work'),result=await h.reader.read(fresh!)
+    expect(h.reader.isCurrent(result)).toBe(true);expect(result.record.values?.memo).toBe(false)
+    expect(h.calls.some(c=>/upsert|process|upload|updateExts/.test(c.path))).toBe(false)
+  })
+})

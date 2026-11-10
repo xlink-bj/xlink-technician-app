@@ -6,6 +6,7 @@ import { normalizeDynamicForm } from './dynamic-form-action'
 import { r1SurveyPlaneAreaAfterChange } from './survey-plane-area'
 import type { R1LocalFieldValue } from './r1-local-form-fields'
 import type { FormFieldValue } from '@shared/ports'
+import { usesR1FormsScalarSubset, r1FormsScalarSubsetSchema, normalizeR1FormsScalarCreate } from './r1-forms-scalar-subset'
 const deny = (): never => { throw Error('字段、选项或规则尚未核实，不能保存。') }
 const validId = (v: unknown): v is string => typeof v === 'string' && v.length > 0 && v.trim() === v && !v.includes(',')
 const reserved = new Set(['id', '_id', 'dataId', 'formDataId', 'formDefId', 'definitionId', 'extId', 'tenantId', 'userId', 'roleId', 'sid', 'smodule', 'state', 'nodeId', 'runtimeNodeId', 'workOrderId', 'workflowId', 'workflowRunId', 'runId', 'workflow', 'formDefinitionId', 'dataStr', 'exts', '__proto__', 'prototype', 'constructor', 'createTime', 'createDateTime', 'createUser', 'createUserName', 'updateTime', 'updateDateTime', 'updateUser', 'updateUserName', 'orgId', 'belongTo', '_version', '_class'])
@@ -25,6 +26,7 @@ export function updateR1FormDraftValue(snapshot: R1NodeFormsSnapshot, values: Re
   return { ...next, planeArea: area.value }
 }
 export function normalizeR1RepeatValues(snapshot: R1NodeFormsSnapshot, values: Readonly<Record<string, unknown>>): Record<string, string | number | boolean> {
+  if (usesR1FormsScalarSubset(snapshot)) return normalizeR1FormsScalarCreate(snapshot,values)
   const fields = snapshot.definition.fields
   if (!fields?.length || fields.length > 50 || !values || typeof values !== 'object' || Array.isArray(values)) return deny()
   const schema = fields.map(f => actionFormSchemaFor({ ...f, readOnly: f.readOnly || snapshot.node.formFieldIdsReadOnly?.includes(f.fieldId) === true }))
@@ -68,6 +70,16 @@ export function normalizeR1RepeatValues(snapshot: R1NodeFormsSnapshot, values: R
 
 /** Same schema and conditions as the submission validator, without granting a command. */
 export function projectR1RepeatFields(snapshot: R1NodeFormsSnapshot, values: Readonly<Record<string, unknown>>): readonly (R1LocalField & { readonly visible: boolean })[] {
+  if (usesR1FormsScalarSubset(snapshot)) {
+    try {
+      return r1FormsScalarSubsetSchema(snapshot).schema.map(field => {
+        const state=evaluateFieldState(field,{values:values as never,surface:ACTION_FORM_SURFACE})
+        return {fieldId:field.fieldId,valueKey:field.valueKey,label:snapshot.definition.fields!.find(f=>f.fieldId===field.fieldId)!.label,
+          type:field.type,required:state.required,readOnly:state.readOnly,options:field.inlineOptions??[],multiple:false,
+          visible:state.visible,supported:state.visible&&!state.readOnly&&state.capability==='SUPPORTED_GENERIC'}
+      })
+    } catch { return [] }
+  }
   return (snapshot.definition.fields ?? []).map(field => {
     const schema = actionFormSchemaFor({ ...field, readOnly: field.readOnly || snapshot.node.formFieldIdsReadOnly?.includes(field.fieldId) === true })
     const state = evaluateFieldState(schema, { values: values as never, surface: ACTION_FORM_SURFACE })

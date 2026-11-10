@@ -14,6 +14,7 @@ import { asOpaqueId } from '@shared/types'
 import type { R1NodeFormsReader, R1NodeFormsSnapshot } from '@features/work-orders/r1-node-forms-read'
 import { parseR1RepeatGrant } from './r1-repeat-authorization'
 import { parseR1FormsGrant } from './r1-forms-authorization'
+import { assertSurveyLeakageCauseReadValue } from '@features/work-orders/survey-leakage-cause'
 
 type Row = Record<string, unknown>
 const deny = (): never => { throw Error('当前表单的身份、关联或完整性无法核实，请重新读取工单。') }
@@ -38,21 +39,26 @@ function formsExtsJson(value: unknown): string {
 
 /** R1 getFormData copies every EXTS key over the root (pinned
  * serviceAppointment.vue:7014-7017). The display mapper cannot represent an
- * object as a scalar/choice value; it must not then expose an older root copy.
+ * object as a scalar/choice value; neither an explicit EXTS value nor a root
+ * fallback may silently disappear or expose an older copy. Check the effective
+ * own slot before using the lossy display projection.
  * Limit this check to this rollout's supported mobile Survey read fields.
  * Unknown audit JSON and unsupported/presentation fields remain untouched. */
 export function assertSurveyReadExtsValues(definition: FormDefinitionRead, original: Row): void {
-  if (definition.purpose !== 'survey' || original.exts == null) return
+  if (definition.purpose !== 'survey') return
+  assertSurveyLeakageCauseReadValue({ purpose: definition.purpose,
+    definitionId: definition.id, fields: definition.fields ?? [] }, original)
   const supported = new Set(['text', 'textarea', 'phone', 'IDNumber', 'number', 'digit', 'date', 'time', 'datetime', 'switch', 'rate', 'select', 'radio', 'checkbox', 'cascade'])
   const fields = (definition.fields ?? []).filter(field => supported.has(field.type) && !field.unsupportedReason
     && !field.presentationOnly && isFieldApplicable(actionFormSchemaFor(field), ACTION_FORM_SURFACE))
   if (!fields.length) return
-  const exts = row(original.exts)
+  const exts = original.exts == null ? undefined : row(original.exts)
   const scalar = (value: unknown): boolean => typeof value === 'string' || typeof value === 'boolean'
     || (typeof value === 'number' && Number.isFinite(value))
   for (const field of fields) {
-    if (!Object.hasOwn(exts, field.valueKey)) continue
-    const value = exts[field.valueKey]
+    const effective = exts && Object.hasOwn(exts, field.valueKey) ? exts : original
+    if (!Object.hasOwn(effective, field.valueKey)) continue
+    const value = effective[field.valueKey]
     if (!(value === null || scalar(value) || (Array.isArray(value) && value.every(scalar)))) deny()
   }
 }

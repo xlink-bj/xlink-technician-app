@@ -3,6 +3,7 @@
 import type { AuthSessionPort } from '@shared/ports'
 import type { R1NodeFormsSnapshot } from '@features/work-orders/r1-node-forms-read'
 import { normalizeR1RepeatValues } from '@features/work-orders/r1-repeat-form'
+import { usesR1FormsScalarSubset } from '@features/work-orders/r1-forms-scalar-subset'
 import { planR1FormsUpdateExts } from '@features/work-orders/r1-forms-exts-plan'
 import { normalizeR1FormsEditValues } from '@features/work-orders/r1-forms-edit-values'
 import { r1SpecialFormUpsert, r1FormsUpdateExtsCommand, r1FormsAfterSaveProcess, r1FormsFinalizeProcess } from '@adapters/api/r1-special-workflow-wires'
@@ -141,6 +142,8 @@ export function createR1FormsActions(input: {
         ?normalizeR1FormsEditValues(snapshot,raw??deny(),draft)
         :{fields:normalizeR1RepeatValues(snapshot,draft),clearedFieldKeys:[] as readonly string[]}
       const normalized=normalize(before.snapshot,original??undefined)
+      const subsetMetadata=usesR1FormsScalarSubset(before.snapshot)
+        ?JSON.stringify([before.snapshot.definition.fields,before.snapshot.definition.purpose,before.snapshot.node.formFieldIdsReadOnly,before.snapshot.fillableFieldIds]):undefined
       // Existing R1 formList entries retain their own title/metadata. The
       // original FormData title is separately preserved by the full raw wire;
       // do not reconcile a pre-existing difference using a node default.
@@ -171,6 +174,8 @@ export function createR1FormsActions(input: {
       // pre-upsert read; never synthesize edit authority from the ACK.
       if(JSON.stringify(intermediate.snapshot.definition.fields?.map(f=>[f.fieldId,f.valueKey,f.preset]))
         !==JSON.stringify(before.snapshot.definition.fields?.map(f=>[f.fieldId,f.valueKey,f.preset]))
+        ||(subsetMetadata!==undefined&&JSON.stringify([intermediate.snapshot.definition.fields,intermediate.snapshot.definition.purpose,
+          intermediate.snapshot.node.formFieldIdsReadOnly,intermediate.snapshot.fillableFieldIds])!==subsetMetadata)
         || !allowed(operation,recordId) || (finish&&!allowed('save_finish',recordId))
         || JSON.stringify(normalize(intermediate.snapshot,original??undefined))!==JSON.stringify(normalized)) return deny()
       const planned=plan(savedId)

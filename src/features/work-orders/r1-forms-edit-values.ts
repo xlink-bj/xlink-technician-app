@@ -1,6 +1,7 @@
 import { evaluateFieldState, normalizeSubmission } from '@runtimes/dynamic-form'
 import { actionFormSchemaFor, ACTION_FORM_SURFACE } from './action-form-schema'
 import type { R1NodeFormsSnapshot } from './r1-node-forms-read'
+import { usesR1FormsScalarSubset } from './r1-forms-scalar-subset'
 
 const reserved = new Set(['id', '_id', 'dataId', 'formDataId', 'formDefId', 'definitionId', 'extId', 'tenantId', 'userId', 'roleId', 'sid', 'smodule', 'state', 'nodeId', 'workflowId', 'workflowRunId', 'runtimeNodeId', 'workOrderId', 'dataStr', 'exts', '__proto__', 'prototype', 'constructor', 'createTime', 'createDateTime', 'createUser', 'createUserName', 'updateTime', 'updateDateTime', 'updateUser', 'updateUserName', 'orgId', 'belongTo', '_version', '_class'])
 for (const key of ['formDefinitionId', 'runId', 'workflow', 'fieldId', 'sessionRef']) reserved.add(key)
@@ -27,6 +28,8 @@ function schemaFor(snapshot: R1NodeFormsSnapshot) {
 /** Business-field projection only. The original remains the wire's authority for
  * identity, unknown data and hidden/readonly fields; this grants no edit lease. */
 export function projectR1FormsEditValues(snapshot: R1NodeFormsSnapshot, original: Readonly<Record<string, unknown>>): Record<string, unknown> {
+  // No positive non-typed provenance survives the current read projection.
+  if (usesR1FormsScalarSubset(snapshot)) return deny()
   if (!record(original) || (own(original, 'exts') && !record(original.exts))) return deny()
   const exts = record(original.exts) ? original.exts : {}
   const values: Record<string, unknown> = {}
@@ -45,6 +48,7 @@ export function normalizeR1FormsEditValues(
   original: Readonly<Record<string, unknown>>,
   draft: Readonly<Record<string, unknown>>,
 ): { fields: Record<string, string | number | boolean>; clearedFieldKeys: readonly string[] } {
+  if (usesR1FormsScalarSubset(snapshot)) return deny()
   if (!record(draft)) return deny()
   const schema = schemaFor(snapshot)
   const initial = projectR1FormsEditValues(snapshot, original)

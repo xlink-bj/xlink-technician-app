@@ -1,3 +1,4 @@
+import { assertSurveyReadExtsValues } from '@app/r1-node-forms-read'
 import { describe, expect, it } from 'vitest'
 import reference from '../fixtures/survey-59-read-reference.json'
 import { formData, formDefinition } from '@adapters/api/read-models/form'
@@ -40,10 +41,11 @@ describe('saved Survey structural reference, not production edit authorization',
     expect(JSON.stringify(rows)).not.toContain('123456')
   })
   it('does not mistake codec-dropped file/data objects for an unsaved field', () => {
-    const rows = project({ part: ['1', '130'], surveyDrawing: [{ url: 'https://untrusted.invalid/private.png' }], leakageCause: [{ code: 'unverified' }], exts: { images1: [{ url: 'https://untrusted.invalid/private.png' }] } })
+    expect(() => assertSurveyReadExtsValues(definition(), { part: ['1', '130'], leakageCause: [{ code: 'unverified' }] })).toThrow()
+    const rows = project({ part: ['1', '130'], surveyDrawing: [{ url: 'https://untrusted.invalid/private.png' }], exts: { images1: [{ url: 'https://untrusted.invalid/private.png' }] } })
     expect(rows.find(f => f.valueKey === 'surveyDrawing')).toMatchObject({ unavailable: true, text: '附件内容暂不支持在此查看' })
     expect(rows.find(f => f.valueKey === 'images1')?.text).not.toBe('未保存')
-    expect(rows.find(f => f.valueKey === 'leakageCause')?.unavailable).toBe(true)
+    expect(rows.find(f => f.valueKey === 'leakageCause')?.text).toBe('未保存')
     expect(JSON.stringify(rows)).not.toContain('https://')
   })
   it('does not infer the Survey provider from an Order dictionary', () => {

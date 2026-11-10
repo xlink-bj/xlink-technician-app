@@ -1,4 +1,4 @@
-import { evaluateFieldState, normalizeFieldValue } from '@runtimes/dynamic-form'
+import { evaluateFieldState, evaluateVisibility, normalizeFieldValue } from '@runtimes/dynamic-form'
 import type { FormFieldRead, FormDefinitionRead, FormFieldValue, FormFieldOptionRead } from '@shared/ports'
 import type { R1FileWireValue } from '@shared/types'
 
@@ -22,44 +22,60 @@ export interface R1LocalField {
 }
 const scalar = new Set(['text','textarea','phone','IDNumber','number','digit','date','time','datetime','switch','rate'])
 const choices = new Set(['select','radio','checkbox','cascade','bizSelect'])
-const MAX = 50
+// ExtField rows retain distinct fieldId identities even when business keys repeat.
+// Keep the transport's payload bound separate from the source-backed row bound.
+export const R1_LOCAL_FORM_MAX_ROWS = 200
+const MAX_VALUES = 50
+function locallySupported(field: FormFieldRead): boolean {
+  return (field.type === 'file' || scalar.has(field.type)
+    || (choices.has(field.type) && !!field.options?.length
+      && (!field.valueOption || (field.type === 'bizSelect' && field.valueOption === 'projPackage'))))
+    && !(field.type === 'select' && field.multiple)
+    && !(field.type === 'radio' && field.multiple)
+    && !(field.type === 'checkbox' && !field.multiple)
+    && !(field.type === 'cascade' && field.multiple)
+    && !(field.type === 'rate' && field.multiple)
+}
 
 export function projectR1LocalFields(
   definition: FormDefinitionRead,
   values: Readonly<Record<string, R1LocalFieldValue | readonly R1FileWireValue[]>> = {},
 ): readonly R1LocalField[] {
   const fields = definition.fields
-  if (!fields || fields.length > MAX) return []
-  const seen = new Set<string>()
-  return fields.map(field => {
-    const state = evaluateFieldState({
+  if (!fields || fields.length > R1_LOCAL_FORM_MAX_ROWS
+    || fields.some(field => !field.fieldId || !field.valueKey)
+    || new Set(fields.map(field => field.fieldId)).size !== fields.length) return []
+  const states = fields.map(field => evaluateFieldState({
       fieldId: field.fieldId, valueKey: field.valueKey, type: field.type,
       required: field.required, readOnly: field.readOnly, multiple: field.multiple,
       showList: field.showList, state: field.state, fixed: field.fixed,
       operationType: field.operationType, visibility: field.visibility,
+      mobileDetailHidden: field.mobileDetailHidden, presentationOnly: field.presentationOnly,
       valueOption: field.valueOption, unsupportedReason: field.unsupportedReason,
       ...(field.options ? { inlineOptions: field.options } : {}),
-    }, {surface:'mobile_detail',values})
-    const available = field.type === 'file' || scalar.has(field.type)
-      || (choices.has(field.type) && !!field.options?.length
-        && (!field.valueOption || (field.type==='bizSelect' && field.valueOption==='projPackage')))
-    const unique = !seen.has(field.valueKey)
-    seen.add(field.valueKey)
-    const supported = unique && available && state.capability==='SUPPORTED_GENERIC'
+    }, {surface:'mobile_detail',values}))
+  return fields.map((field, index) => {
+    const state = states[index]!
+    const siblings = fields.flatMap((row, i) => row.valueKey === field.valueKey ? [{ row, state: states[i]! }] : [])
+    // Mutually exclusive, fully understood rows may share one storage key.
+    // Ambiguous/unknown siblings must not let source order pick edit authority.
+    const unique = siblings.length === 1 || (siblings.every(({ row, state: sibling }) =>
+      !row.unsupportedReason && locallySupported(row)
+      && sibling.capability === 'SUPPORTED_GENERIC' && sibling.optionProvider.state !== 'unsupported'
+      // Static surface exclusion short-circuits state evaluation. Inspect each
+      // original rule too, so hidden unknown configuration never grants a key.
+      && evaluateVisibility(row.visibility, values).state !== 'unsupported')
+      && siblings.filter(({ state: sibling }) => sibling.visible).length === 1)
+    const supported = unique && locallySupported(field) && state.capability==='SUPPORTED_GENERIC'
       && state.visible && !state.readOnly && field.valueKey.trim().length>0
-      && !(field.type==='select' && field.multiple)
-      && !(field.type==='radio' && field.multiple)
-      && !(field.type==='checkbox' && !field.multiple)
-      // R1 cascade persists one ordered path, not an arbitrary multiselect.
-      && !(field.type==='cascade' && field.multiple)
     return {
       fieldId:field.fieldId,valueKey:field.valueKey,label:field.label,type:field.type,
       required:state.required,readOnly:state.readOnly,
       options:field.options??[],
       multiple:!!field.multiple,supported,
       ...(!supported?{reason:!unique?'重复字段名，不可修改'
+        :!state.visible && state.capability !== 'UNSUPPORTED'?'当前字段不可见'
         :state.readOnly?'原字段只读'
-        :!state.visible?'当前字段不可见'
         :'该字段或选项来源尚未支持本地编辑'}:{}),
     }
   })
@@ -72,9 +88,10 @@ export function normalizeR1LocalFieldPatch(
   raw: FormFieldValue | undefined,
 ): Readonly<Record<string,R1LocalFieldValue>> | null {
   const projected=projectR1LocalFields(definition, existing)
-  if (projected.length===0 || projected.filter(x=>x.valueKey===key).length!==1) return null
-  const field=projected.find(x=>x.valueKey===key)!
-  if(!field.supported || Object.keys(existing).length>MAX) return null
+  const selected=projected.filter(x=>x.valueKey===key && x.supported)
+  if (selected.length!==1) return null
+  const field=selected[0]!
+  if(Object.keys(existing).length>MAX_VALUES) return null
   if(raw===undefined || raw===null || raw==='' || (Array.isArray(raw)&&raw.length===0)) {
     const result={...existing}
     delete result[key]
@@ -94,7 +111,8 @@ export function normalizeR1LocalFieldPatch(
   const safe=value as R1LocalFieldValue
   if(typeof safe==='string' && safe.length>4000) return null
   if(Array.isArray(safe)&&(safe.length>30||safe.some(x=>x.length>256))) return null
-  return {...existing,[key]:safe}
+  const result = {...existing,[key]:safe}
+  return Object.keys(result).length <= MAX_VALUES ? result : null
 }
 
 /** Allows read of a synthetic form definition only through the DEV Mock adapter.
