@@ -1,3 +1,6 @@
+import {surveyMediaSourceSeal} from './r1-survey-media-source'
+import {assertSurveyMediaOriginal} from '@features/work-orders/r1-survey-media-create'
+import {createSurveyCreateMediaCodec} from '@adapters/api/survey-create-media-codec'
 import { isR1DefaultImageFieldConfig } from '@shared/form/r1-normal-image-contract'
 import { conditionalSurveySourceSeal } from './r1-survey-conditional-source'
 import { appointmentReplacementContextFromRead, appointmentReplacementProblem } from '@shared/form/appointment-replacement-context'
@@ -103,7 +106,16 @@ export function createNormalNodeFormsReader(input: {
   let generation = 0
   let current: { snapshot: R1NodeFormsSnapshot; fingerprint: string; formsExts?: string;
     originals: ReadonlyMap<string, string>; genericRoute?: Omit<R1GenericMapRouteRead, 'recordId' | 'original'>;
-    schemaAtRead: string; conditionalSurveySeal?: string; conditionalSnapshotSeal?: string; appointmentRoute?: true; appointmentSeal?: string; fileRoute?: Omit<R1GenericMapRouteRead, 'recordId' | 'original'> } | null = null
+    schemaAtRead: string; surveyMediaSeal?:string; surveyMediaSnapshotSeal?:string; conditionalSurveySeal?: string; conditionalSnapshotSeal?: string; appointmentRoute?: true; appointmentSeal?: string; fileRoute?: Omit<R1GenericMapRouteRead, 'recordId' | 'original'> } | null = null
+  const surveyMediaReads=new WeakMap<object,{snapshot:R1NodeFormsSnapshot;fingerprint:string;seal:string;snapshotSeal:string}>()
+  const mediaSnapshotSeal=(s:R1NodeFormsSnapshot)=>JSON.stringify([s.workOrderId,s.node,s.definition,s.fillableFieldIds,s.records])
+  const revokedSurveyMedia=new WeakSet<object>()
+  const liveSurveyMedia=(s:R1NodeFormsSnapshot)=>{
+    if(revokedSurveyMedia.has(s))return null
+    if(current?.surveyMediaSeal&&current.snapshot===s&&fingerprint()===current.fingerprint
+      &&input.read.isWorkOrderListedForCurrentSession?.(s.workOrderId)===true&&current.surveyMediaSnapshotSeal===mediaSnapshotSeal(s))return current
+    revokedSurveyMedia.add(s);return null
+  }
   const conditionalSurveyReads = new WeakMap<object, {snapshot:R1NodeFormsSnapshot; fingerprint:string; seal:string; snapshotSeal:string}>()
   const conditionalSnapshotSeal = (snapshot:R1NodeFormsSnapshot) => JSON.stringify([snapshot.workOrderId,snapshot.node,snapshot.definition,snapshot.fillableFieldIds,snapshot.records])
   const conditionalSurveyCurrent = (snapshot:R1NodeFormsSnapshot) => current?.conditionalSurveySeal
@@ -139,9 +151,36 @@ export function createNormalNodeFormsReader(input: {
     return enabled() && a ? sessionAuthorizationFingerprint({ sessionRef: a.sessionRef,
       userId: a.user.id, roleId: a.currentRole?.id, roleVersion: a.roleVersion }) : null
   }
-  return {
+  const api:R1NodeFormsReader = {
     enabled,
     clear() { generation++; current = null },
+    beginSurveyMediaRead(snapshot,evidence){
+      if(api.isCurrentSurveyMediaSource?.(snapshot,evidence)!==true)return deny()
+      const ticket=generation+1
+      const result=api.load(snapshot.workOrderId,String(snapshot.node.id)).catch(error=>{revokedSurveyMedia.add(snapshot);throw error})
+      return Object.freeze({result,isCurrent(){
+        const valid=generation===ticket&&api.isSurveyMediaSourceIntact?.(snapshot,evidence)===true
+        if(!valid)revokedSurveyMedia.add(snapshot)
+        return valid
+      }})
+    },
+    isSurveyMediaSourceIntact(snapshot,evidence){
+      if(!evidence||typeof evidence!=='object')return false
+      const stamp=surveyMediaReads.get(evidence)
+      const valid=Boolean(stamp&&stamp.snapshot===snapshot&&!revokedSurveyMedia.has(snapshot)&&stamp.fingerprint===fingerprint()
+        &&stamp.snapshotSeal===mediaSnapshotSeal(snapshot)&&input.read.isWorkOrderListedForCurrentSession?.(snapshot.workOrderId)===true)
+      if(stamp&&!valid)revokedSurveyMedia.add(snapshot)
+      return valid
+    },
+    currentSurveyMediaSource(snapshot){
+      const live=liveSurveyMedia(snapshot);if(!live)return null
+      const evidence=Object.freeze({});surveyMediaReads.set(evidence,{snapshot,fingerprint:live.fingerprint,seal:live.surveyMediaSeal!,snapshotSeal:live.surveyMediaSnapshotSeal!});return evidence
+    },
+    isCurrentSurveyMediaSource(snapshot,evidence){
+      if(!evidence||typeof evidence!=='object')return false
+      const live=liveSurveyMedia(snapshot),stamp=surveyMediaReads.get(evidence)
+      return Boolean(live&&stamp&&stamp.snapshot===snapshot&&stamp.fingerprint===live.fingerprint&&stamp.seal===live.surveyMediaSeal&&stamp.snapshotSeal===live.surveyMediaSnapshotSeal)
+    },
     currentSurveyConditionalSource(snapshot) {
       const source=conditionalSurveyCurrent(snapshot);if(!source)return null
       const evidence=Object.freeze({})
@@ -190,7 +229,7 @@ export function createNormalNodeFormsReader(input: {
         && stamp.schema===current.schemaAtRead && schemaIdentity(snapshot)===stamp.schema
         && input.read.isWorkOrderListedForCurrentSession?.(snapshot.workOrderId)===true)
     },
-    isCurrent(snapshot) { return current?.snapshot === snapshot && fingerprint() === current.fingerprint
+    isCurrent(snapshot) { return current?.snapshot === snapshot && (!current.surveyMediaSeal||Boolean(liveSurveyMedia(snapshot))) && fingerprint() === current.fingerprint
       && input.read.isWorkOrderListedForCurrentSession?.(snapshot.workOrderId) === true },
     currentFormsExts(snapshot) {
       return current?.snapshot === snapshot && fingerprint() === current.fingerprint
@@ -415,6 +454,9 @@ export function createNormalNodeFormsReader(input: {
         && hydrated.some(field=>field.type==='file'&&!field.readOnly
           && !node.formFieldIdsReadOnly?.includes(field.fieldId)&&fillableFieldIds?.includes(field.fieldId))
         ?routeFacts:undefined
+      const surveyMediaSeal=input.env.VITE_XLINK_ENABLE_REAL_WRITES==='true'&&input.env.VITE_XLINK_ENABLE_R1_SPECIAL_WRITES==='true'
+        ?surveyMediaSourceSeal({workOrderId,node,definition:{...definition,fields:hydrated},records:[],fillableFieldIds},ext,fields,input.tenantId):undefined
+      const surveyMediaCodec=surveyMediaSeal?createSurveyCreateMediaCodec():undefined
       const normalFileCodec=fileRoute?createNormalR1FileCodec({...definition,fields:hydrated},
         (fillableFieldIds??[]).filter(fieldId=>!node.formFieldIdsReadOnly?.includes(fieldId))):undefined
       // Attachment decoding belongs only to this read-only rollout, never the
@@ -422,8 +464,8 @@ export function createNormalNodeFormsReader(input: {
       const readOnlySurveyMedia = input.env.VITE_XLINK_ENABLE_REAL_WRITES === 'false'
         && input.env.VITE_XLINK_ENABLE_R1_SPECIAL_WRITES === 'false'
         ? createSurveyReadOnlyMediaCodec(definition, ext.colName, fields) : undefined
-      const reader = createR1ScopedFormReader({ transport: { execute }, readOnlySurveyMedia:normalFileCodec?undefined:readOnlySurveyMedia,
-        ...(normalFileCodec?{valueCodec:normalFileCodec}:{}), scope: {
+      const reader = createR1ScopedFormReader({ transport: { execute }, readOnlySurveyMedia:normalFileCodec||surveyMediaCodec?undefined:readOnlySurveyMedia,
+        ...(normalFileCodec||surveyMediaCodec?{valueCodec:normalFileCodec??surveyMediaCodec}:{}), scope: {
         tenantId: input.tenantId, workOrderId, runtimeNodeId, workflowRunId: id(node.runId),
         formDefinitionId: definitionId, sourceNodeType: node.sourceNodeType as 'forms' | 'repeat',
       }, isCurrent: () => ticket === generation && fingerprint() === identity,
@@ -436,6 +478,7 @@ export function createNormalNodeFormsReader(input: {
         const selected=await reader.select(String(r.data.id))
         const original=reader.originalFor(selected)
         if(!original) return deny()
+        if(surveyMediaSeal)assertSurveyMediaOriginal(original)
         assertSurveyReadExtsValues(definition, original)
         records.push(selected.data)
         originals.set(String(selected.data.id),formsExtsJson(original))
@@ -458,9 +501,11 @@ export function createNormalNodeFormsReader(input: {
       const genericRoute = fields.length>50?routeFacts:undefined
       const conditionalSurveySeal = conditionalSurveySourceSeal(snapshot,ext,fields,input.tenantId)
       current = { snapshot, fingerprint: identity, originals, schemaAtRead:schemaIdentity(snapshot),
+        ...(surveyMediaSeal?{surveyMediaSeal,surveyMediaSnapshotSeal:mediaSnapshotSeal(snapshot)}:{}),
         ...(conditionalSurveySeal?{conditionalSurveySeal,conditionalSnapshotSeal:conditionalSnapshotSeal(snapshot)}:{}),
         ...(appointmentRoute?{appointmentRoute,appointmentSeal:JSON.stringify([workOrderId,schemaIdentity(snapshot)])}:{}), ...(genericRoute?{genericRoute}:{}), ...(fileRoute?{fileRoute}:{}), ...(formsExts ? { formsExts } : {}) }
       return snapshot
     },
   }
+  return api
 }

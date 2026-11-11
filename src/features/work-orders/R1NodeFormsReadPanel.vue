@@ -11,7 +11,7 @@
         <text class="form-read__title">{{ visibleSnapshot.node.displayName || '现场记录' }} · {{ index + 1 }}</text>
         <view v-for="field in projectR1RecordReadFields(visibleSnapshot.definition, record)" :key="field.fieldId" class="form-read__field">
           <text class="form-read__label">{{ field.label }}</text>
-          <text class="form-read__value" :data-testid="`r1-normal-value-${field.valueKey}`">{{ field.text }}</text>
+          <text v-if="!readFiles(record,field.fieldId,field.valueKey)" class="form-read__value" :data-testid="`r1-normal-value-${field.valueKey}`">{{ field.text }}</text>
           <R1NormalFileField v-if="readFiles(record,field.fieldId,field.valueKey)" :field="field"
             :model-value="record.values?.[field.valueKey]" />
         </view>
@@ -149,13 +149,14 @@ function setValue(key: string,value: R1LocalFieldValue) {
 }
 function setFileValue(fieldId:string,key:string,value:readonly R1FileWireValue[]){
   const s=visibleSnapshot.value,media=actions.value?.fileMedia
-  if(busy.value||fileCancelling.value||!s||!media||!isR1NormalFileFieldEligible(s,fieldId,values.value)
+  if(busy.value||fileCancelling.value||!s||!media||!editableFields.value.some(f=>f.fieldId===fieldId&&f.valueKey===key&&f.type==='file'&&f.supported)
     ||!sameR1NormalFileValues(value,media.values(fieldId)))return
   values.value={...values.value,[key]:value.map(file=>({...file}))}
 }
 function readFiles(record:FormDataRead,fieldId:string,key:string){
   const field=visibleSnapshot.value?.definition.fields?.find(f=>f.fieldId===fieldId&&f.valueKey===key)
-  return field?.type==='file'&&!field.unsupportedReason&&!field.presentationOnly&&sameR1NormalFileValues(record.values?.[key],record.values?.[key])
+  return field?.type==='file'&&!field.unsupportedReason&&!field.presentationOnly&&Array.isArray(record.values?.[key])
+    &&(record.values![key] as readonly unknown[]).length>0&&sameR1NormalFileValues(record.values?.[key],record.values?.[key])
 }
 function scalarValueFor(key:string):R1LocalFieldValue|undefined{
   const value=values.value[key]

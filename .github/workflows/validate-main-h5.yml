@@ -247,6 +247,12 @@ jobs:
           VITE_XLINK_ENVIRONMENT: 'test'
           VITE_XLINK_R1_MP_UX_FIXTURES: 'false'
         run: pnpm exec playwright test --config config/playwright/survey-conditional-create.config.ts
+      - name: Verify restricted typed Survey first-image creation and exact readback
+        env:
+          XLINK_H5_SURVEY_FIRST_MEDIA_SAVE: 'true'
+          VITE_XLINK_ENVIRONMENT: 'test'
+          VITE_XLINK_R1_MP_UX_FIXTURES: 'false'
+        run: pnpm exec playwright test --config config/playwright/survey-first-media-save.config.ts
       - name: Verify normal Survey regions and IS read-only option labels
         env:
           XLINK_H5_SURVEY_REGIONS_IS_READ: 'true'
@@ -276,6 +282,7 @@ jobs:
             test-results/work-order-detail-lifecycle/
             test-results/survey-part-create/
             test-results/survey-conditional-create/
+            test-results/survey-first-media-save/
             test-results/survey-regions-is-read/
             test-results/work-order-refresh-navigation/
           if-no-files-found: warn

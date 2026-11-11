@@ -1,3 +1,4 @@
+import {isSurveyMediaFieldEligible} from '@features/work-orders/r1-survey-media-create'
 import { ref } from 'vue'
 import type { MediaFilePickerPort, MediaUploadQueuePort } from '@shared/ports'
 import { asOpaqueId, r1FileWireFromUpload, type LocalMedia, type MediaUploadTask, type MediaUploadTaskId, type OperationSnapshot, type R1FileWireValue } from '@shared/types'
@@ -30,13 +31,13 @@ const sameValues = (left: unknown, right: readonly R1FileWireValue[]): boolean =
 /** A private epoch over the shared real upload queue. Queue scope lacks role,
  * tenant and run; only the supplied bound authorization closure supplies those
  * facts. Existing durable tasks are never evidence for this new controller. */
-export function createR1NormalFormFileSession(input: {
+function createBoundFormFileSession(input: {
   readonly scope: R1RepeatScope
   readonly queue: MediaUploadQueuePort
   readonly picker: MediaFilePickerPort
   readonly getSnapshot: () => R1NodeFormsSnapshot
   readonly isAuthorized: () => boolean
-}): R1NormalFormFileSession {
+}, mode:'generic'|'survey'): R1NormalFormFileSession {
   const scope = Object.freeze({ ...input.scope }), revision = ref(0)
   const owned = new Map<MediaUploadTaskId, OwnedTask>()
   let epoch = 0, disposed = false, inFlight = false, finalized = false, uncertain = false, asserted = false, text = ''
@@ -66,7 +67,7 @@ export function createR1NormalFormFileSession(input: {
       snapshot = input.getSnapshot()
       if (disposed || finalized || !Object.values(scope).every(validId) || !input.isAuthorized()
         || snapshot.workOrderId !== scope.workOrderId || snapshot.node.id !== scope.runtimeNodeId
-        || snapshot.node.runId !== scope.workflowRunId || snapshot.node.sourceNodeType !== 'forms'
+        || snapshot.node.runId !== scope.workflowRunId || snapshot.node.sourceNodeType !== (mode==='survey'?'repeat':'forms')
         || snapshot.node.formDefinitionId !== scope.formDefinitionId || snapshot.definition.id !== scope.formDefinitionId
         || signature(snapshot) !== initialSignature) return deny()
     } catch { revoke(); return deny('附件创建授权已失效。') }
@@ -80,7 +81,7 @@ export function createR1NormalFormFileSession(input: {
   }
   function field(fieldId: string, values: Readonly<Record<string, unknown>>, expected = epoch) {
     const snapshot = guard(expected)
-    if (!object(values) || !isR1NormalFileFieldEligible(snapshot, fieldId, values)) return deny('当前附件字段不可编辑。')
+    if (!object(values) || !(mode==='survey'?isSurveyMediaFieldEligible(snapshot,fieldId):isR1NormalFileFieldEligible(snapshot, fieldId, values))) return deny('当前附件字段不可编辑。')
     const metadata = snapshot.definition.fields!.find(candidate => candidate.fieldId === fieldId)!
     const max = metadata.presentation?.max ?? 10
     if (!Number.isSafeInteger(max) || max < 0) return deny('附件数量规则尚未核实。')
@@ -297,7 +298,7 @@ export function createR1NormalFormFileSession(input: {
       if (picked.state !== 'granted' || !picked.value?.length) return deny('未能读取所选附件。')
       if (picked.value.length + [...owned.values()].filter(entry => entry.task.scope.fieldId === fieldId).length > selected.max) return deny('所选附件超过数量上限。')
       if (new Set(picked.value.map(media => media.ref)).size !== picked.value.length || picked.value.some(media => !validId(media.ref) || !mime(media.mimeType) || !isR1NormalImageMedia(media)
-        || !['camera', 'library', 'file'].includes(media.source) || !validId(media.localPath)
+        || !(mode==='survey'?media.source==='library':['camera', 'library', 'file'].includes(media.source)) || !validId(media.localPath)
         || (media.size !== undefined && (!Number.isSafeInteger(media.size) || media.size <= 0))
         || [...owned.values()].some(entry => entry.media.ref === media.ref))) return deny('所选附件身份或格式尚未核实。')
       await readQueue(expected)
@@ -400,3 +401,8 @@ export function createR1NormalFormFileSession(input: {
   }
   return session
 }
+
+/** Keep generic/type0 behavior and its caller authorization unchanged. */
+export const createR1NormalFormFileSession=(input:Parameters<typeof createBoundFormFileSession>[0])=>createBoundFormFileSession(input,'generic')
+/** Same owned queue lifecycle; distinct typed source/grant is required by its action provider. */
+export const createR1SurveyFormFileSession=(input:Parameters<typeof createBoundFormFileSession>[0])=>createBoundFormFileSession(input,'survey')

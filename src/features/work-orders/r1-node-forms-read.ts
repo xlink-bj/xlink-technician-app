@@ -41,6 +41,12 @@ export interface R1NodeFormsReader {
   currentFormsExts?(snapshot: R1NodeFormsSnapshot): Readonly<Record<string, unknown>> | null
   /** Exact current read provenance, not an ACK/cache-derived edit grant. */
   /** Reader-private typed Survey source issuance, not a caller-set snapshot flag. */
+  /** Past-proof integrity only: never establishes current read/write authority. */
+  isSurveyMediaSourceIntact?(snapshot:R1NodeFormsSnapshot,evidence:unknown):boolean
+  /** Private, exact-generation renewal of this typed read; not a write grant. */
+  beginSurveyMediaRead?(snapshot:R1NodeFormsSnapshot,evidence:unknown):{readonly result:Promise<R1NodeFormsSnapshot>;isCurrent():boolean}
+  currentSurveyMediaSource?(snapshot:R1NodeFormsSnapshot):object|null
+  isCurrentSurveyMediaSource?(snapshot:R1NodeFormsSnapshot,evidence:unknown):boolean
   currentSurveyConditionalSource?(snapshot: R1NodeFormsSnapshot): object | null
   isCurrentSurveyConditionalSource?(snapshot: R1NodeFormsSnapshot, evidence: unknown): boolean
   currentFormOriginal?(snapshot: R1NodeFormsSnapshot, recordId: string): Readonly<Record<string, unknown>> | null
