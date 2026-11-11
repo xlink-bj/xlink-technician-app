@@ -1,3 +1,4 @@
+import {decodeR1ScopedJson} from '@adapters/api/r1-scoped-json'
 import {bindR1ConfiguredFileReadDisplay} from '@shared/form/r1-configured-file-read-evidence'
 import type {R1FileCreateStorage} from '@shared/form/r1-file-create-storage'
 import {configuredFileSource} from './r1-survey-media-source'
@@ -8,7 +9,7 @@ import {createSurveyCreateMediaCodec} from '@adapters/api/survey-create-media-co
 import { isR1DefaultImageFieldConfig } from '@shared/form/r1-normal-image-contract'
 import { conditionalSurveySourceSeal } from './r1-survey-conditional-source'
 import { appointmentReplacementContextFromRead, appointmentReplacementProblem } from '@shared/form/appointment-replacement-context'
-import type { AuthSessionPort, TechnicianApiReadPort, FormDefinitionRead, WorkflowNodeRead } from '@shared/ports'
+import type { AuthSessionPort, TechnicianApiReadPort, FormFieldRead, FormDefinitionRead, WorkflowNodeRead } from '@shared/ports'
 import type { ApiReadRequest, ApiReadTransport } from '@adapters/api/technician-api'
 import { createUniApiReadTransport } from '@adapters/api/uni-api-read-transport'
 import { createR1ScopedFormReader } from '@adapters/api/r1-scoped-form-read'
@@ -109,7 +110,7 @@ export function createNormalNodeFormsReader(input: {
   })
   let generation = 0
   let current: { snapshot: R1NodeFormsSnapshot; fingerprint: string; formsExts?: string;
-    originals: ReadonlyMap<string, string>; genericRoute?: Omit<R1GenericMapRouteRead, 'recordId' | 'original'>;
+    originals: ReadonlyMap<string, string>; formsCreateRoute?: Omit<R1GenericMapRouteRead,'recordId'|'original'>; genericRoute?: Omit<R1GenericMapRouteRead, 'recordId' | 'original'>;
     schemaAtRead: string; configuredFileStorage?:R1FileCreateStorage; surveyMediaSeal?:string; surveyMediaSnapshotSeal?:string; conditionalSurveySeal?: string; conditionalSnapshotSeal?: string; appointmentRoute?: true; appointmentSeal?: string; fileRoute?: Omit<R1GenericMapRouteRead, 'recordId' | 'original'> } | null = null
   const fileDisplayChecks=new WeakMap<object,()=>boolean>()
   const surveyMediaReads=new WeakMap<object,{snapshot:R1NodeFormsSnapshot;fingerprint:string;seal:string;snapshotSeal:string;storage?:R1FileCreateStorage}>()
@@ -135,6 +136,14 @@ export function createNormalNodeFormsReader(input: {
       || JSON.stringify(snapshot.records.map(r=>r.id))!==JSON.stringify([...current.originals.keys()])
       || !current.originals.has(recordId))return null
     return current
+  }
+  const revokedFormsCreate=new WeakSet<object>()
+  const issuedFormsCreate=new WeakMap<object,{snapshot:R1NodeFormsSnapshot;seal:string}>()
+  const liveFormsCreate=(s:R1NodeFormsSnapshot)=>{
+    const valid=!revokedFormsCreate.has(s)&&current?.snapshot===s&&Boolean(current.formsCreateRoute)&&fingerprint()===current.fingerprint
+      &&schemaIdentity(s)===current.schemaAtRead&&JSON.stringify(s.records.map(r=>r.id))===JSON.stringify([...current.originals.keys()])&&input.read.isWorkOrderListedForCurrentSession?.(s.workOrderId)===true
+    if(!valid)revokedFormsCreate.add(s)
+    return valid?current:null
   }
   const issuedFileRoutes = new WeakMap<object, { snapshot:R1NodeFormsSnapshot; fingerprint:string; schema:string }>()
   const issuedRoutes = new WeakMap<object, { snapshot: R1NodeFormsSnapshot; recordId: string;
@@ -223,6 +232,14 @@ export function createNormalNodeFormsReader(input: {
       if(!stamp||!source||stamp.snapshot!==snapshot||stamp.recordId!==recordId||stamp.fingerprint!==source.fingerprint
         ||stamp.schema!==source.schemaAtRead||stamp.raw!==source.originals.get(recordId))return false
       try{return formsExtsJson((evidence as {original:Row}).original)===stamp.raw}catch{return false}
+    },
+    currentFormsCreateRoute(snapshot){
+      const live=liveFormsCreate(snapshot);if(!live?.formsCreateRoute)return null
+      const evidence=Object.freeze({...live.formsCreateRoute});issuedFormsCreate.set(evidence,{snapshot,seal:live.schemaAtRead});return evidence
+    },
+    isCurrentFormsCreateRoute(snapshot,evidence){
+      const live=liveFormsCreate(snapshot),stamp=evidence&&typeof evidence==='object'?issuedFormsCreate.get(evidence):undefined
+      return Boolean(live&&stamp&&stamp.snapshot===snapshot&&stamp.seal===live.schemaAtRead)
     },
     currentNormalFileRoute(snapshot) {
       if(!current?.fileRoute || current.snapshot!==snapshot || fingerprint()!==current.fingerprint
@@ -444,7 +461,7 @@ export function createNormalNodeFormsReader(input: {
           ? bindR1ScopedFieldOptions({ rawField: fields.find(raw => raw._id === field.fieldId),
             field, tenantId: input.tenantId, definitionId })
           : null)
-      const hydrated = []
+      const hydrated: FormFieldRead[] = []
       for (const [index, field] of (definition.fields ?? []).entries()) {
         const binding = bindings[index]
         hydrated.push(binding ? { ...field, options: await readR1ScopedFieldOptions(binding, { execute }) } : field)
@@ -468,6 +485,18 @@ export function createNormalNodeFormsReader(input: {
           .every(field=>isR1DefaultImageFieldConfig(fields.find(raw=>raw._id===field.fieldId)))
         && hydrated.some(field=>field.type==='file'&&!field.readOnly
           && !node.formFieldIdsReadOnly?.includes(field.fieldId)&&fillableFieldIds?.includes(field.fieldId))
+        ?routeFacts:undefined
+      // First-create choice capability needs exact raw metadata, not a purpose heuristic.
+      const formsCreateRoute=routeFacts&&fields.length<=50&&!['survey','inspectionAppointment','serviceAppointment'].includes(routeFacts.colName)
+        &&fields.every(f=>(!hydrated.some(mapped=>mapped.fieldId===f._id&&['switch','rate'].includes(mapped.type))
+          ||['switch','rate'].includes(String(f.type))&&!['count','allowHalf','half','step','activeValue','inactiveValue','max','min','options'].some(k=>Object.hasOwn(f,k)))
+          &&[0,1].includes(f.preset as number)&&['0','1'].includes(f.required as string)&&typeof f.multiple==='boolean'
+          &&f.operationType==='1'&&(f.calculateConfig==null||f.calculateConfig==='')&&(f.router==null||f.router==='')
+          &&(f.roleIds==null||Array.isArray(f.roleIds)&&f.roleIds.length===0)&&(!Object.hasOwn(f,'readOnly')||f.readOnly===0||f.readOnly===1)
+          &&(!Object.hasOwn(f,'readonly')||[0,1].includes(f.readonly as number)&&(!Object.hasOwn(f,'readOnly')||f.readOnly===f.readonly))
+          &&!['componentType','surveyTool','url','params'].some(k=>Object.hasOwn(f,k))
+          &&(!Object.hasOwn(f,'customizeFlag')||f.customizeFlag===0||f.customizeFlag===1)
+          &&(f.frontEndConfig==null||f.frontEndConfig===''||(()=>{try{const v=decodeR1ScopedJson(f.frontEndConfig);return Boolean(v&&typeof v==='object'&&!Array.isArray(v)&&Object.keys(v).length===0)}catch{return false}})()))
         ?routeFacts:undefined
       const writeMedia=input.env.VITE_XLINK_ENABLE_REAL_WRITES==='true'&&input.env.VITE_XLINK_ENABLE_R1_SPECIAL_WRITES==='true'
       const configuredGrant=parseR1RepeatGrant(input.env.VITE_XLINK_R1_REPEAT_GRANT)?.version===4
@@ -524,6 +553,7 @@ export function createNormalNodeFormsReader(input: {
       const genericRoute = fields.length>50?routeFacts:undefined
       const conditionalSurveySeal = conditionalSurveySourceSeal(snapshot,ext,fields,input.tenantId)
       current = { snapshot, fingerprint: identity, originals, schemaAtRead:schemaIdentity(snapshot),
+        ...(formsCreateRoute?{formsCreateRoute}:{}),
         ...(surveyMediaSeal?{surveyMediaSeal,surveyMediaSnapshotSeal:mediaSnapshotSeal(snapshot),...(configuredSource?{configuredFileStorage:configuredSource.storage}:{})}:{}),
         ...(conditionalSurveySeal?{conditionalSurveySeal,conditionalSnapshotSeal:conditionalSnapshotSeal(snapshot)}:{}),
         ...(appointmentRoute?{appointmentRoute,appointmentSeal:JSON.stringify([workOrderId,schemaIdentity(snapshot)])}:{}), ...(genericRoute?{genericRoute}:{}), ...(fileRoute?{fileRoute}:{}), ...(formsExts ? { formsExts } : {}) }

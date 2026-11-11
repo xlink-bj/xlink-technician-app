@@ -57,6 +57,9 @@ export interface R1NodeFormsReader {
    * collection identities and exact selected original; never an ACK grant. */
   currentGenericMapRoute?(snapshot: R1NodeFormsSnapshot, recordId: string): R1GenericMapRouteRead | null
   isCurrentGenericMapRoute?(snapshot: R1NodeFormsSnapshot, recordId: string, evidence: unknown): boolean
+  /** Non-special exact type0 definition route; read facts, never a write grant. */
+  currentFormsCreateRoute?(snapshot:R1NodeFormsSnapshot):R1NormalFileRouteRead|null
+  isCurrentFormsCreateRoute?(snapshot:R1NodeFormsSnapshot,evidence:unknown):boolean
   currentNormalFileRoute?(snapshot: R1NodeFormsSnapshot): R1NormalFileRouteRead | null
   isCurrentNormalFileRoute?(snapshot: R1NodeFormsSnapshot, evidence: unknown): boolean
   currentRepeatAppointment?(snapshot: R1NodeFormsSnapshot, recordId: string): R1RepeatAppointmentRead | null

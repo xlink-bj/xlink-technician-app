@@ -31,6 +31,8 @@ import { bindH5InputDelivery } from './h5-input-delivery'
 const props = withDefaults(
   defineProps<{
     readonly modelValue?: string
+    /** H5 controlled host may reject an emitted draft without changing props. */
+    readonly reconcileOnCommit?: boolean
     readonly placeholder?: string
     readonly placeholderClass?: string
     readonly placeholderStyle?: string
@@ -45,6 +47,7 @@ const props = withDefaults(
   }>(),
   {
     modelValue: '',
+    reconcileOnCommit: false,
     placeholder: '',
     placeholderClass: 'app-input__placeholder',
     disabled: false,
@@ -77,6 +80,9 @@ async function refreshDelivery() {
     initialValue: props.modelValue,
     isDisabled: () => nativeDisabled.value || disposed,
     emit: value => emit('update:modelValue', value),
+    afterCommit: () => {
+      void nextTick(() => { if (!disposed && props.reconcileOnCommit) delivery?.reconcileModel(props.modelValue) })
+    },
   })
   nativeDeliveryAttached = delivery !== null
 }

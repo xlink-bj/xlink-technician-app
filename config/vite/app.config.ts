@@ -1,4 +1,5 @@
 import { createRequire } from 'node:module'
+import { uniH5PickerLifecycle } from './uni-h5-picker-lifecycle'
 
 import { defineConfig, loadEnv } from 'vite'
 import { repositoryRoot, sourceAliases } from '../paths'
@@ -20,7 +21,7 @@ export default defineConfig(({ mode, command }) => {
       : process.env.VITE_XLINK_H5_OFFLINE_SMOKE === 'true'
         ? { server: { host: 'localhost', port: 5173, strictPort: true } }
         : {}),
-    plugins: [uni()],
+    plugins: [uniH5PickerLifecycle(), uni()],
     resolve: { alias: sourceAliases },
     ...(redactProductionQuickLogin ? {
       // Local dev may use the ignored Production profile for an authorized

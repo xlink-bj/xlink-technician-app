@@ -1,3 +1,5 @@
+import {hasR1SwitchRate,normalizeR1SwitchRateCreate,projectR1SwitchRateFields,updateR1SwitchRateDraft} from './r1-forms-switch-rate-create'
+import {usesR1FormsChoiceCreate,normalizeR1FormsChoiceCreate,projectR1FormsChoiceFields,transitionR1FormsChoiceDraft} from './r1-forms-choice-create'
 import { isSurveyConditionalDraft, supportsSurveyConditionalCreate, supportsSurveyPartSubmission, surveyConditionalPartAfterChange, surveyHeightVisible } from './r1-survey-conditional-create'
 import { hasCanonicalSurveyPart, isSurveyPartCreateDraft, isCompleteSurveyPart } from './r1-survey-part-create'
 import type { R1NodeFormsSnapshot } from './r1-node-forms-read'
@@ -19,6 +21,7 @@ const scalarTypes = new Set(['text', 'textarea', 'phone', 'IDNumber', 'number', 
  * submission guards still independently decide whether anything can save. */
 export function updateR1FormDraftValue(snapshot: R1NodeFormsSnapshot, values: Readonly<Record<string, R1LocalFieldValue>>,
   key: string, value: R1LocalFieldValue): Record<string, R1LocalFieldValue> {
+  if(hasR1SwitchRate(snapshot))return updateR1SwitchRateDraft(snapshot,values,key,value)
   if ((isSurveyPartCreateDraft(snapshot) || isSurveyConditionalDraft(snapshot)) && ['part', 'length', 'width'].includes(key)
     && !supportsSurveyPartSubmission(snapshot)) return deny()
   if (key === 'part' && hasCanonicalSurveyPart(snapshot)) {
@@ -29,6 +32,7 @@ export function updateR1FormDraftValue(snapshot: R1NodeFormsSnapshot, values: Re
   }
   if (isSurveyConditionalDraft(snapshot) && key === 'height'
     && (!supportsSurveyConditionalCreate(snapshot) || !surveyHeightVisible(snapshot, values))) return deny()
+  if(usesR1FormsChoiceCreate(snapshot))return transitionR1FormsChoiceDraft(snapshot,{...values,[key]:Array.isArray(value)?Object.freeze([...value]):value}) as Record<string,R1LocalFieldValue>
   const next = { ...values, [key]: value }
   const area = r1SurveyPlaneAreaAfterChange({ definitionId: snapshot.definition.id, purpose: snapshot.definition.purpose, values }, key, next)
   if (!area) return next
@@ -39,6 +43,8 @@ export function updateR1FormDraftValue(snapshot: R1NodeFormsSnapshot, values: Re
   return { ...next, planeArea: area.value }
 }
 export function normalizeR1RepeatValues(snapshot: R1NodeFormsSnapshot, values: Readonly<Record<string, unknown>>): Record<string, R1NormalFileCreateValues[string] | readonly string[]> {
+  if(hasR1SwitchRate(snapshot))return normalizeR1SwitchRateCreate(snapshot,values)
+  if(usesR1FormsChoiceCreate(snapshot))return normalizeR1FormsChoiceCreate(snapshot,values)
   if (usesR1NormalFileCreate(snapshot)) return normalizeR1NormalFileCreate(snapshot, values)
   if (usesR1FormsScalarSubset(snapshot)) return normalizeR1FormsScalarCreate(snapshot,values)
   const fields = snapshot.definition.fields
@@ -98,6 +104,8 @@ export function normalizeR1RepeatValues(snapshot: R1NodeFormsSnapshot, values: R
 
 /** Same schema and conditions as the submission validator, without granting a command. */
 export function projectR1RepeatFields(snapshot: R1NodeFormsSnapshot, values: Readonly<Record<string, unknown>>): readonly (R1LocalField & { readonly visible: boolean })[] {
+  if(hasR1SwitchRate(snapshot))return projectR1SwitchRateFields(snapshot)
+  if(usesR1FormsChoiceCreate(snapshot))return projectR1FormsChoiceFields(snapshot,values)
   if (usesR1NormalFileCreate(snapshot)) return projectR1NormalFileFields(snapshot, values)
   if (usesR1FormsScalarSubset(snapshot)) {
     try {

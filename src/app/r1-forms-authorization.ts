@@ -1,3 +1,8 @@
+import {hasR1SwitchRate,supportsR1SwitchRateCreate,bindR1SwitchRateCreate,updateR1SwitchRateDraft} from '@features/work-orders/r1-forms-switch-rate-create'
+import {updateR1CreateDraftValues,supportsR1CreateDraftSchema} from '@features/work-orders/r1-ordinary-create-draft'
+import type {R1LocalFieldValue} from '@features/work-orders/r1-local-form-fields'
+import {sessionAuthorizationFingerprint} from '@shared/session-authorization'
+import {usesR1FormsChoiceCreate,projectR1FormsChoiceFields,assertR1FormsChoiceStored} from '@features/work-orders/r1-forms-choice-create'
 import type { AuthSessionPort, MediaFilePickerPort, MediaUploadQueuePort } from '@shared/ports'
 import type { R1NodeFormsReader, R1NodeFormsSnapshot, R1GenericMapRouteRead } from '@features/work-orders/r1-node-forms-read'
 import type { R1RepeatActionProvider } from '@features/work-orders/r1-repeat-actions-port'
@@ -58,6 +63,8 @@ export function createNormalFormsActionProvider(input:{readonly auth:Pick<AuthSe
       && snapshot.node.sourceNodeType==='forms')
   }
   return {forSnapshot(snapshot){
+    const switchRateMode=hasR1SwitchRate(snapshot)
+    const choiceMode=Boolean(snapshot.definition.fields?.some(f=>f.type==='checkbox'||f.type==='select'&&f.multiple===true))
     const fileMode=snapshot.node.sourceNodeType==='forms'&&Boolean(snapshot.definition.fields?.some(field=>field.type==='file'
       &&!field.readOnly&&!snapshot.node.formFieldIdsReadOnly?.includes(field.fieldId)))
     // First-record generic file create only. File edits/append/Process retain
@@ -69,7 +76,30 @@ export function createNormalFormsActionProvider(input:{readonly auth:Pick<AuthSe
     const actor={userId:asOpaqueId<'UserId'>(g.scope.userId),roleIds:[asOpaqueId<'RoleId'>(g.scope.roleId)],organizationRoles:[]}
     if(snapshot.node.lifecycle!=='active'||snapshot.node.nodeTypeEvidence!=='runtime_node_def'
       || !isHandlerMatch(actor,snapshot.node.handlers??[])||!evaluateNodeVisibility(snapshot.node,actor).visible)return null
-    let lease=snapshot
+    if(choiceMode&&(g.version!==1||!usesR1FormsChoiceCreate(snapshot)||projectR1FormsChoiceFields(snapshot,{}).length!==snapshot.definition.fields?.length))return null
+    if(switchRateMode&&(g.version!==1||fileMode||choiceMode||!supportsR1SwitchRateCreate(snapshot)))return null
+    let lease=snapshot,createRevoked=false,createReadPending=false
+    const createActor=()=>{const a=input.auth.getCurrentSession();return a?sessionAuthorizationFingerprint({sessionRef:a.sessionRef,userId:a.user.id,roleId:a.currentRole?.id,roleVersion:a.roleVersion}):null}
+    const initialCreateActor=createActor()
+    const ordinaryCreateRouteIdentity=(s:R1NodeFormsSnapshot)=>{
+      const e=input.reader.currentFormsCreateRoute?.(s)
+      return e&&input.reader.isCurrentFormsCreateRoute?.(s,e)===true&&e.type==='0'
+        &&e.tenantId===g.scope.tenantId&&e.workOrderId===g.scope.workOrderId&&e.runtimeNodeId===g.scope.runtimeNodeId
+        &&e.workflowRunId===g.scope.workflowRunId&&e.formDefinitionId===g.scope.formDefinitionId
+        &&!['survey','inspectionAppointment','serviceAppointment'].includes(e.colName)&&e.collectionName===`frm_${e.tenantId}_${e.colName}`
+        ?JSON.stringify(e):null
+    }
+    const scalarDraftTypes=new Set(['text','textarea','phone','IDNumber','number','digit','date','time','datetime','radio','select'])
+    const scalarDraftCandidate=!switchRateMode&&!choiceMode&&!fileMode&&g.version===1&&snapshot.records.length===0&&snapshot.definition.purpose===undefined
+      &&Boolean(snapshot.definition.fields?.length)&&snapshot.definition.fields!.length<=50
+      &&snapshot.definition.fields!.every(f=>scalarDraftTypes.has(f.type)&&f.readOnly===false&&typeof f.required==='boolean'
+        &&!f.multiple&&!f.presentationOnly&&!f.unsupportedReason&&!f.valueOption)
+    const initialScalarRoute=scalarDraftCandidate?ordinaryCreateRouteIdentity(snapshot):null
+    const scalarDraftMode=Boolean(scalarDraftCandidate&&initialScalarRoute&&supportsR1CreateDraftSchema(snapshot))
+    const controlledCreate=choiceMode||scalarDraftMode||switchRateMode
+    const initialControlledRoute=choiceMode||switchRateMode?ordinaryCreateRouteIdentity(snapshot):initialScalarRoute
+    const initialChoiceRoute=choiceMode?ordinaryCreateRouteIdentity(snapshot):undefined
+    if(choiceMode&&!initialChoiceRoute||switchRateMode&&!initialControlledRoute)return null
     const fileRouteIdentity=(s:R1NodeFormsSnapshot)=>{
       const e=input.reader.currentNormalFileRoute?.(s)
       if(!e||input.reader.isCurrentNormalFileRoute?.(s,e)!==true||e.type!=='0'
@@ -83,10 +113,10 @@ export function createNormalFormsActionProvider(input:{readonly auth:Pick<AuthSe
     if(fileMode&&!initialFileRoute)return null
     // Freeze the observed metadata as bytes, not a later view of shared objects.
     // Only the newly supported large forms subset gets this stricter lease.
-    const subsetSchema=usesR1FormsScalarSubset(snapshot)||fileMode
+    const subsetSchema=usesR1FormsScalarSubset(snapshot)||fileMode||controlledCreate
       ?JSON.stringify([snapshot.definition.fields,snapshot.definition.purpose,snapshot.node.formFieldIdsReadOnly,snapshot.fillableFieldIds]):undefined
     const permits=(op:R1FormsOperation,recordId?:string)=>{
-      if(fileMode&&(op!=='create'||recordId!==undefined))return false
+      if((fileMode||controlledCreate)&&(op!=='create'||recordId!==undefined))return false
       const fresh=grant()
       return Boolean(fresh&&permitted(g.scope)&&(fresh.operations as readonly string[]).includes(op)
         &&(op!=='edit'||(fresh.version===2&&Boolean(recordId)&&fresh.recordIds.includes(recordId!))))
@@ -119,8 +149,26 @@ export function createNormalFormsActionProvider(input:{readonly auth:Pick<AuthSe
       // record returned by the intermediate read. Fresh route proof is separate.
       return normalizeR1GenericScalarEditValues(s,raw,values)
     }
-    const owns=(s:R1RepeatScope)=>permitted(s)&&input.reader.isCurrent(lease)
-      &&(!fileMode||fileRouteIdentity(lease)===initialFileRoute)
+    const owns=(s:R1RepeatScope)=>{
+      const sameActor=createActor()===initialCreateActor
+      // External authority is observable even while our own reader has no
+      // current snapshot. Never exempt an observed grant/switch revocation.
+      let independent=false
+      try{independent=permitted(s)&&(!controlledCreate||sameActor&&input.env.VITE_XLINK_AUTH_TENANT===g.scope.tenantId
+        &&JSON.stringify(grant())===JSON.stringify(g)&&schemaMatches(lease)
+        &&lease.node.lifecycle==='active'&&lease.node.nodeTypeEvidence==='runtime_node_def'
+        &&isHandlerMatch(actor,lease.node.handlers??[])&&evaluateNodeVisibility(lease.node,actor).visible
+        &&(subsetSchema===undefined||JSON.stringify([lease.definition.fields,lease.definition.purpose,lease.node.formFieldIdsReadOnly,lease.fillableFieldIds])===subsetSchema))}catch{independent=false}
+      if(controlledCreate&&!independent)createRevoked=true
+      const valid=independent&&input.reader.isCurrent(lease)
+        &&(!fileMode||fileRouteIdentity(lease)===initialFileRoute)
+        &&(!controlledCreate||ordinaryCreateRouteIdentity(lease)===initialControlledRoute)
+      // Only the controlled reader-current gap may await renewal. Independently
+      // observed authority loss above is permanent, including during that gap.
+      if(controlledCreate&&!valid&&!createReadPending)createRevoked=true
+      return valid&&(!controlledCreate||!createRevoked)
+    }
+    if(switchRateMode)bindR1SwitchRateCreate(snapshot,()=>owns(g.scope)&&lease===snapshot)
     const fileMedia=fileMode?createR1NormalFormFileSession({scope:g.scope,queue:input.media!.queue,picker:input.media!.picker,
       getSnapshot:()=>lease,isAuthorized:()=>owns(g.scope)&&schemaMatches(lease)&&permits('create')}):undefined
     const initialValues=(id:string)=>{try{return permits('edit',id)&&owns(g.scope)&&original(lease,id)
@@ -128,6 +176,7 @@ export function createNormalFormsActionProvider(input:{readonly auth:Pick<AuthSe
     const actions=createR1FormsActions({env:input.env,origin:input.origin,getSession:()=>input.auth.getCurrentSession(),hasExactGrant:owns,
       transport:createUniApiCommandTransport({apiBaseUrl:String(input.env.VITE_XLINK_API_BASE_URL),getSessionRef:()=>input.auth.getCurrentSession()?.sessionRef??null}),
       permits,original,normalizeExisting,
+      ...(choiceMode||switchRateMode?{assertChoiceStored:(s:R1NodeFormsSnapshot,raw:Readonly<Record<string,unknown>>,sent:Readonly<Record<string,unknown>>)=>{if(raw.tenantId!==g.scope.tenantId)throw Error('新记录租户回执不匹配');assertR1FormsChoiceStored(s,raw,sent)}}:{}),
       ...(fileMedia?{assertFileValues:(s:R1NodeFormsSnapshot,v:Readonly<Record<string,unknown>>)=>fileMedia.assertValues(s,v)}:{}),
       confirmCompletion:async s=>{
         if(!owns(g.scope)||!input.reader.confirmFormsCompletion)throw Error('完成结果无法核实')
@@ -136,14 +185,28 @@ export function createNormalFormsActionProvider(input:{readonly auth:Pick<AuthSe
       fullExts:s=>input.reader.currentFormsExts?.(s)??null,
       async readLatest(s){
         if(!owns(s))throw Error('本轮普通表单授权已失效')
-        const latest=await input.reader.load(s.workOrderId,s.runtimeNodeId)
+        let latest:R1NodeFormsSnapshot
+        createReadPending=controlledCreate
+        try{latest=await input.reader.load(s.workOrderId,s.runtimeNodeId)}catch(error){if(controlledCreate)createRevoked=true;throw error}finally{createReadPending=false}
+        if(controlledCreate&&(createRevoked||createActor()!==initialCreateActor)){createRevoked=true;throw Error('本轮创建身份已撤销')}
+
         if(!permitted(s)||!input.reader.isCurrent(latest)||!schemaMatches(latest)
+          ||(controlledCreate&&(ordinaryCreateRouteIdentity(latest)!==initialControlledRoute||JSON.stringify(grant())!==JSON.stringify(g)))
           ||(subsetSchema!==undefined&&JSON.stringify([latest.definition.fields,latest.definition.purpose,latest.node.formFieldIdsReadOnly,latest.fillableFieldIds])!==subsetSchema))throw Error('普通表单配置已变化')
-        lease=latest;return latest
+        lease=latest;
+        if(switchRateMode&&latest.records.length===0)bindR1SwitchRateCreate(latest,()=>owns(g.scope)&&lease===latest)
+        return latest
       }})
-    return {locked:()=>!owns(g.scope)||actions.locked(g.scope),
+    const updateCreateDraft=(values:Readonly<Record<string,R1LocalFieldValue>>,key:string,value:R1LocalFieldValue,recordId?:string)=>{
+      if((!scalarDraftMode&&!switchRateMode)||recordId!==undefined||fileMedia||lease.records.length!==0||!owns(g.scope)
+        ||!permits('create')||!schemaMatches(lease)||ordinaryCreateRouteIdentity(lease)!==initialControlledRoute
+        ||JSON.stringify(grant())!==JSON.stringify(g)||createActor()!==initialCreateActor)throw Error('当前普通新建草稿的来源或授权已失效')
+      return switchRateMode?updateR1SwitchRateDraft(lease,values,key,value):updateR1CreateDraftValues(lease,values,key,value)
+    }
+    return {...(scalarDraftMode||switchRateMode?{updateCreateDraft}:{}),locked:()=>!owns(g.scope)||actions.locked(g.scope),
       ...(fileMedia?{fileMedia}:{}),
-      canCreate:()=>owns(g.scope)&&(!fileMode||lease.records.length===0)&&permits(lease.records.length?'append':'create'),
+      ...(choiceMode?{projectFields:(values:Readonly<Record<string,unknown>>)=>projectR1FormsChoiceFields(lease,values)}:{}),
+      canCreate:()=>owns(g.scope)&&(!(fileMode||choiceMode)||lease.records.length===0)&&permits(lease.records.length?'append':'create'),
       canEdit:id=>owns(g.scope)&&permits('edit',id)&&lease.records.some(r=>r.id===id)&&Boolean(initialValues(id)),
       canComplete:()=>owns(g.scope)&&permits('complete')&&lease.records.length>0,
       canSaveAndComplete:()=>owns(g.scope)&&permits('save_finish'),

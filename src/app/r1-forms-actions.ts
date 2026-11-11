@@ -1,3 +1,4 @@
+import {sameR1ChoiceValue} from '@features/work-orders/r1-forms-choice-create'
 /** Normal local forms create/save adapter. R1 full EXTS replacement is retained;
  * this client lock does not provide cross-client CAS. Explicit scoped append/edit/Process; never implicit Process. */
 import type { AuthSessionPort } from '@shared/ports'
@@ -65,6 +66,8 @@ export function createR1FormsActions(input: {
     draft:Readonly<Record<string,unknown>>,recordId:string)=>{fields:Record<string,string|number|boolean>;clearedFieldKeys:readonly string[]}
   /** Required for file creates: private exact-scope queue authority, not a URL flag. */
   readonly assertFileValues?: (snapshot:R1NodeFormsSnapshot,values:Readonly<Record<string,unknown>>)=>Promise<void>
+  /** New ordinary array-choice create: full ACK/raw slot proof, never mapped-only. */
+  readonly assertChoiceStored?:(snapshot:R1NodeFormsSnapshot,raw:Readonly<Record<string,unknown>>,sent:Readonly<Record<string,unknown>>)=>void
   readonly permits?: (operation: 'create' | 'append' | 'edit' | 'save_finish' | 'complete', recordId?: string) => boolean
   readonly confirmCompletion?: (snapshot: R1NodeFormsSnapshot) => Promise<{transitionVerified:true}>
   readonly transport: ApiCommandTransport
@@ -89,7 +92,7 @@ export function createR1FormsActions(input: {
     input.permits ? input.permits(operation,recordId) : operation==='create'
   async function execute(source:R1RepeatScope, values:Readonly<Record<string,unknown>>, recordId?:string, finish=false, onlyComplete=false) {
     const s=Object.freeze({...source}),draft=Object.freeze(Object.fromEntries(Object.entries(values).map(([k,v])=>
-      [k,isR1FileWireArray(v)?Object.freeze(v.map(item=>Object.freeze({...item}))):v]))),identity=fingerprint()
+      [k,isR1FileWireArray(v)?Object.freeze(v.map(item=>Object.freeze({...item}))):Array.isArray(v)?Object.freeze([...v]):v]))),identity=fingerprint()
     const check=()=>{
       const a=input.getSession()
       if(!identity || fingerprint()!==identity || a?.user.id!==s.userId || a.currentRole?.id!==s.roleId
@@ -150,7 +153,7 @@ export function createR1FormsActions(input: {
         ?input.normalizeExisting?input.normalizeExisting(snapshot,raw??deny(),draft,recordId):normalizeR1FormsEditValues(snapshot,raw??deny(),draft)
         :{fields:normalizeR1RepeatValues(snapshot,draft),clearedFieldKeys:[] as readonly string[]}
       const normalized=normalize(before.snapshot,original??undefined)
-      const fileKeys=Object.keys(normalized.fields).filter(k=>Array.isArray(normalized.fields[k]))
+      const fileKeys=Object.keys(normalized.fields).filter(k=>Array.isArray(normalized.fields[k])&&before.snapshot.definition.fields?.some(f=>f.valueKey===k&&f.type==='file'))
       const fileCreate=Boolean(input.assertFileValues)||fileKeys.length>0
       if(fileCreate){
         if(recordId||!input.assertFileValues||!input.original)return deny()
@@ -178,7 +181,12 @@ export function createR1FormsActions(input: {
         workflowRunId:asOpaqueId<'WorkflowRunId'>(s.workflowRunId),state:1,
         ...(recordId?{existingFormDataId:asOpaqueId<'FormDataId'>(recordId),authoritativeOriginal:original!,clearedFieldKeys:normalized.clearedFieldKeys}:{})})
       check();mark('uncertain');receipt('upsert_may_have_dispatched',recordId)
-      const savedId=savedIdentity(success(await input.transport.execute(request)),s);check()
+      const savedAck=success(await input.transport.execute(request)),savedId=savedIdentity(savedAck,s);check()
+      if(input.assertChoiceStored){
+        const raw=savedAck.data??savedAck.entity??savedAck
+        if(!raw||typeof raw!=='object'||Array.isArray(raw))return deny()
+        input.assertChoiceStored(before.snapshot,raw as Record<string,unknown>,JSON.parse(String(request.body?.dataStr)))
+      }
       if(recordId?savedId!==recordId:occupied.has(savedId)) return deny()
       const intermediate=await read();check()
       if(JSON.stringify(intermediate.exts)!==JSON.stringify(before.exts)
@@ -209,8 +217,12 @@ export function createR1FormsActions(input: {
       if(JSON.stringify(after.exts)!==JSON.stringify(planned.body)
         || JSON.stringify(after.snapshot.records.map(r=>r.id))!==JSON.stringify(expectedIds)
         || !saved || Object.entries(normalized.fields).some(([k,v])=>Array.isArray(v)
-          ?!sameR1NormalFileValues(saved.values?.[k],v):saved.values?.[k]!==v)
+          ?(fileKeys.includes(k)?!sameR1NormalFileValues(saved.values?.[k],v):!sameR1ChoiceValue(saved.values?.[k],v)):saved.values?.[k]!==v)
         || normalized.clearedFieldKeys.some(k=>Object.hasOwn(saved.values??{},k))) return deny()
+      if(input.assertChoiceStored){
+        const raw=input.original?.(after.snapshot,savedId);if(!raw)return deny()
+        input.assertChoiceStored(after.snapshot,raw,JSON.parse(String(request.body?.dataStr)))
+      }
       if(fileKeys.length){
         const raw=input.original!(after.snapshot,savedId),sent=JSON.parse(String(request.body?.dataStr)) as Record<string,unknown>
         if(!raw)return deny()
@@ -231,7 +243,8 @@ export function createR1FormsActions(input: {
             || Object.hasOwn((reread.exts??{}) as object,k))) return deny()
       }
       if(finish)return process(after.snapshot,true,savedId)
-      receipt('verified',savedId);mark('ready');return after.snapshot
+      // Consume only this new create-only capability; this does not Process the node.
+      receipt('verified',savedId);mark(input.assertChoiceStored?'completed':'ready');return after.snapshot
     })
   }
   return {

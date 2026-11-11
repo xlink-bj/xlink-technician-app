@@ -143,7 +143,8 @@ function setValue(key: string,value: R1LocalFieldValue) {
   if (busy.value || fileCancelling.value || !editableFields.value.some(f => f.valueKey === key && f.supported)) return
   if (!visibleSnapshot.value) return
   try {
-    if(actions.value?.fileMedia)values.value={...values.value,[key]:value}
+    if(actions.value?.updateCreateDraft)values.value=actions.value.updateCreateDraft(values.value as Record<string,R1LocalFieldValue>,key,value,editingId.value)
+    else if(actions.value?.fileMedia)values.value={...values.value,[key]:value}
     else values.value = updateR1FormDraftValue(visibleSnapshot.value, values.value as Record<string,R1LocalFieldValue>, key, value)
   }
   catch { message.value = '当前字段或平面面积计算尚未核实，不能更新草稿。' }

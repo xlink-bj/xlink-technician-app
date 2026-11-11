@@ -153,3 +153,42 @@ describe.each(['AppInput', 'AppTextarea'] as const)('actual %s component integra
     expect(emit).not.toHaveBeenCalled(); app.unmount()
   })
 })
+
+describe.each(['AppInput','AppTextarea'] as const)('controlled rejection in actual %s',name=>{
+ it.each([' on ',''])('restores unchanged accepted model after rejected native value %j without remount/emitting rollback',async rejected=>{
+  vi.useFakeTimers()
+  const root=host('root'),emit=vi.fn(),app=renderer.createApp(component('h5',name),{reconcileOnCommit:true,modelValue:'on','onUpdate:modelValue':emit})
+  app.mount(root);await Vue.nextTick();const field=root.children[0]!
+  send(field,rejected);expect(emit.mock.calls).toEqual([[rejected]])
+  await Vue.nextTick();expect(root.children[0]).toBe(field);expect(field.value).toBe('on')
+  await vi.runAllTimersAsync();expect(field.value).toBe('on');expect(emit.mock.calls).toEqual([[rejected]])
+  app.unmount()
+ })
+})
+
+describe.each(['AppInput','AppTextarea'] as const)('IME and reconciliation in actual %s',name=>{
+ it('preserves in-progress composition across a pending accepted-value reconciliation',async()=>{
+  vi.useFakeTimers();const root=host('root'),value=Vue.ref(''),updates:string[]=[]
+  const Actual=component('h5',name)
+  const app=renderer.createApp(Vue.defineComponent({setup(){return()=>Vue.h(Actual,{reconcileOnCommit:true,modelValue:value.value,'onUpdate:modelValue':(v:string)=>{updates.push(v);value.value=v}})}}))
+  app.mount(root);await Vue.nextTick();const field=root.children[0]!
+  send(field,'x');await Vue.nextTick()
+  // Isolate reconciliation from the host renderer's ordinary pending value patch.
+  // A duplicate native input queues reconciliation without changing parent props.
+  send(field,'x');send(field,'x','compositionstart');send(field,'zhong','input',true);await Vue.nextTick()
+  expect(field.value).toBe('zhong');expect(value.value).toBe('x')
+  send(field,'中文','compositionend');await Vue.nextTick();await vi.runAllTimersAsync()
+  expect(value.value).toBe('中文');expect(field.value).toBe('中文');expect(updates).toEqual(['x','中文']);app.unmount()
+ })
+ it('reconciles a rejected identical IME commit after preedit without emitting a duplicate',async()=>{
+  vi.useFakeTimers();const root=host('root'),emit=vi.fn(),app=renderer.createApp(component('h5',name),{reconcileOnCommit:true,modelValue:'on','onUpdate:modelValue':emit})
+  app.mount(root);await Vue.nextTick();const field=root.children[0]!
+  send(field,' on ');send(field,' on ','compositionstart');send(field,'zhong','input',true);await Vue.nextTick();expect(field.value).toBe('zhong')
+  send(field,' on ','compositionend');await Vue.nextTick();await vi.runAllTimersAsync();expect(field.value).toBe('on');expect(emit.mock.calls).toEqual([[' on ']]);app.unmount()
+ })
+})
+
+it.each(['AppInput','AppTextarea'] as const)('leaves opt-out %s behavior unchanged',async name=>{
+ vi.useFakeTimers();const root=host('root'),emit=vi.fn(),app=renderer.createApp(component('h5',name),{modelValue:'on','onUpdate:modelValue':emit})
+ app.mount(root);await Vue.nextTick();const field=root.children[0]!;send(field,'draft');await Vue.nextTick();expect(field.value).toBe('draft');expect(emit.mock.calls).toEqual([['draft']]);app.unmount();await vi.runAllTimersAsync()
+})

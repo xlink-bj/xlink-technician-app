@@ -306,6 +306,30 @@ jobs:
           VITE_XLINK_ENVIRONMENT: 'test'
           VITE_XLINK_R1_MP_UX_FIXTURES: 'false'
         run: pnpm exec playwright test --config config/playwright/configured-file-readonly.config.ts
+      - name: Verify ordinary configured Code choice first creation
+        env:
+          XLINK_H5_FORMS_CHOICE_CREATE: 'true'
+          VITE_XLINK_ENVIRONMENT: 'test'
+          VITE_XLINK_R1_MP_UX_FIXTURES: 'false'
+        run: pnpm exec playwright test --config config/playwright/forms-choice-create.config.ts
+      - name: Verify ordinary scalar hidden draft transitions
+        env:
+          XLINK_H5_ORDINARY_CREATE_DRAFT: 'true'
+          VITE_XLINK_ENVIRONMENT: 'test'
+          VITE_XLINK_R1_MP_UX_FIXTURES: 'false'
+        run: pnpm exec playwright test --config config/playwright/ordinary-create-draft.config.ts
+      - name: Verify ordinary configured Switch and Rate first creation
+        env:
+          XLINK_H5_SWITCH_RATE_CREATE: 'true'
+          VITE_XLINK_ENVIRONMENT: 'test'
+          VITE_XLINK_R1_MP_UX_FIXTURES: 'false'
+        run: pnpm exec playwright test --config config/playwright/switch-rate-create.config.ts
+      - name: Verify ordinary input refusal and picker lifecycle atomicity
+        env:
+          XLINK_H5_ORDINARY_UI_ATOMICITY: 'true'
+          VITE_XLINK_ENVIRONMENT: 'test'
+          VITE_XLINK_R1_MP_UX_FIXTURES: 'false'
+        run: pnpm exec playwright test --config config/playwright/ordinary-ui-atomicity.config.ts
       - name: Preserve scoped form integration H5 evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -329,6 +353,10 @@ jobs:
             test-results/configured-file-create/
             test-results/configured-file-readonly-no-grant/
             test-results/configured-file-readonly-old-grant/
+            test-results/forms-choice-create/
+            test-results/ordinary-create-draft/
+            test-results/switch-rate-create/
+            test-results/ordinary-ui-atomicity/
           if-no-files-found: warn
           retention-days: 7
 
