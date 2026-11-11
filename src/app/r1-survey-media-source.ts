@@ -1,5 +1,5 @@
 import {configuredFileStorage} from '@adapters/api/r1-configured-file-storage'
-import {supportsR1ConfiguredFileSchema} from '@features/work-orders/r1-normal-file-values'
+import {supportsR1ConfiguredFileSchema,supportsR1ConfiguredFileReadSchema} from '@features/work-orders/r1-normal-file-values'
 import {decodeR1ScopedJson} from '@adapters/api/r1-scoped-json'
 import {supportsSurveyMediaCreate} from '@features/work-orders/r1-survey-media-create'
 import type {R1NodeFormsSnapshot} from '@features/work-orders/r1-node-forms-read'
@@ -18,6 +18,8 @@ export function surveyMediaSourceSeal(s:R1NodeFormsSnapshot,ext:Readonly<Record<
    ||JSON.stringify(f.showList)!==JSON.stringify(['1','2','4'])||f.operationType!=='1'||(Object.hasOwn(f,'readOnly')&&f.readOnly!==0)||f.showFieldPreset!==0||!f.exts||typeof f.exts!=='object'||Array.isArray(f.exts)||Object.keys(f.exts).length!==0||f.showType!=='1'
    ||f.showField!==''||f.showValue!==''||f.calculateConfig!==''||f.valueOption
    ||(Object.hasOwn(f,'collectionName')&&f.collectionName!==''&&f.collectionName!=='survey'))return
+  if(Object.hasOwn(f,'customizeFlag')? (f.customizeFlag!==0&&f.customizeFlag!==1)
+    ||mapped.presentation?.customizeFlag!==(f.customizeFlag===1):mapped.presentation?.customizeFlag!==undefined)return
   let cfg:unknown;try{cfg=decodeR1ScopedJson(f.frontEndConfig)}catch{return}
   if(!cfg||typeof cfg!=='object'||Array.isArray(cfg)||Object.keys(cfg).join()!=='max'
    ||(cfg as {max:unknown}).max!==(f.name==='infraredImageList'?4:10))return
@@ -28,8 +30,9 @@ export function surveyMediaSourceSeal(s:R1NodeFormsSnapshot,ext:Readonly<Record<
 
 /** Shared metadata/source proof for the explicit configuration-driven profile.
  * The legacy profile above remains an unchanged authority boundary. */
-export function configuredFileSource(s:R1NodeFormsSnapshot,ext:Readonly<Record<string,unknown>>,rawFields:readonly Readonly<Record<string,unknown>>[],tenant:string){
- if(!supportsR1ConfiguredFileSchema(s)||s.node.sourceNodeType!=='repeat'||s.node.lifecycle!=='active'||s.node.nodeTypeEvidence!=='runtime_node_def'
+export function configuredFileSource(s:R1NodeFormsSnapshot,ext:Readonly<Record<string,unknown>>,rawFields:readonly Readonly<Record<string,unknown>>[],tenant:string,mode:'write'|'read'='write'){
+ if(!(mode==='read'?supportsR1ConfiguredFileReadSchema(s):supportsR1ConfiguredFileSchema(s))
+  ||(mode==='read'?!['forms','repeat'].includes(s.node.sourceNodeType??''):s.node.sourceNodeType!=='repeat')||s.node.lifecycle!=='active'||s.node.nodeTypeEvidence!=='runtime_node_def'
   ||s.node.formDefinitionId!==s.definition.id||ext._id!==s.definition.id||ext.tenantId!==tenant||ext.state!==1
   ||typeof ext.colName!=='string'||!ext.colName||ext.colName.trim()!==ext.colName
   ||['id','extId','definitionId','formDefinitionId'].some(k=>Object.hasOwn(ext,k)&&ext[k]!==s.definition.id)
@@ -46,9 +49,13 @@ export function configuredFileSource(s:R1NodeFormsSnapshot,ext:Readonly<Record<s
    ||(typeof f.showType!=='string'||!['1','2','3'].includes(f.showType))||typeof f.showField!=='string'||typeof f.showValue!=='string'
    ||f.operationType!=='1'||f.showFieldPreset!==0||f.calculateConfig!==''||!f.exts||typeof f.exts!=='object'||Array.isArray(f.exts)||Object.keys(f.exts).length
    ||Object.hasOwn(f,'collectionName')&&f.collectionName!==''&&f.collectionName!==ext.colName)return
+  // ExtField.java:41,257-262: ordinary integer column marker, not a widget.
+  if(Object.hasOwn(f,'customizeFlag')? (f.customizeFlag!==0&&f.customizeFlag!==1)
+    ||mapped.presentation?.customizeFlag!==(f.customizeFlag===1):mapped.presentation?.customizeFlag!==undefined)return
   let cfg:unknown;try{cfg=decodeR1ScopedJson(f.frontEndConfig)}catch{return}
   if(!cfg||typeof cfg!=='object'||Array.isArray(cfg))return
   if(f.type!=='file'&&Object.keys(cfg).length)return
+  if(['componentType','url','params'].some(k=>Object.hasOwn(f,k)))return
   if(Object.hasOwn(f,'surveyTool')&&f.surveyTool!==false)return
   if(f.type==='file'&&Object.hasOwn(f,'max')&&(!Number.isSafeInteger(f.max)||Number(f.max)<0||Number(f.max)>10||Object.hasOwn(cfg,'max')&&f.max!==(cfg as {max:unknown}).max))return
   if(f.type==='file'&&(Object.keys(cfg).some(k=>!['max','surveyTool'].includes(k))||Object.hasOwn(cfg,'surveyTool')&&(cfg as {surveyTool:unknown}).surveyTool!==false||Object.hasOwn(cfg,'max')&&(!Number.isSafeInteger((cfg as {max:unknown}).max)||Number((cfg as {max:unknown}).max)<0)))return

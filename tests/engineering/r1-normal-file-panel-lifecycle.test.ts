@@ -1,3 +1,4 @@
+import { bindR1ConfiguredFileReadDisplay } from '@shared/form/r1-configured-file-read-evidence'
 import * as normalFileValues from '@features/work-orders/r1-normal-file-values'
 import * as sharedTypes from '@shared/types'
 import fs from 'node:fs'
@@ -46,8 +47,15 @@ const imageSnapshot = (): R1NodeFormsSnapshot => {
 }
 function find(root:Host,predicate:(n:Host)=>boolean):Host|undefined {if(predicate(root))return root;for(const child of root.children){const v=find(child,predicate);if(v)return v}}
 async function settle(){for(let i=0;i<10;i++){await Promise.resolve();await Vue.nextTick()}}
-async function mounted(distinctProviderSessions=false){
- let current=imageSnapshot()
+async function mounted(distinctProviderSessions=false, savedPreview=false){
+ let current=imageSnapshot(), displayCurrent=true
+ if(savedPreview){
+  const photo=[{url:'https://synthetic-panel.invalid/photo.png',name:'photo.png',extname:'png'}]
+  const record:any={id:'saved',definitionId:current.definition.id,values:{photo}}
+  current={...current,records:[record]}
+  bindR1ConfiguredFileReadDisplay(current.definition,record,{kind:'generic-map',definitionId:current.definition.id,colName:'syntheticImages',fields:[{fieldId:'photo',valueKey:'photo',type:'file',max:10,slots:['root','exts']}]},
+   {photo,exts:{photo}},()=>displayCurrent)
+ }
  const media={revision:Vue.ref(0),busy:()=>false,message:()=>'',values:()=>[],canPick:()=>true,ready:()=>true,
   inspect:vi.fn(async()=>true),cancel:vi.fn(async()=>true),dispose:vi.fn()}
  const actions:any={fileMedia:media,locked:()=>false,canCreate:()=>true,canComplete:()=>false,validateDraft:()=>true,
@@ -58,7 +66,7 @@ async function mounted(distinctProviderSessions=false){
  app.provide(actionPort.r1RepeatActionsKey,{forSnapshot:()=>distinctProviderSessions?{...actions,fileMedia:{...media}}:actions});app.mount(root)
  const get=(id:string)=>find(root,n=>n.props['data-testid']===id)
  const read=async()=>{find(root,n=>n.type==='button')!.props.onTap();await settle()}
- await read();return{app,root,props,reader,media,actions,get,read}
+ await read();return{app,root,props,reader,media,actions,get,read,setDisplayCurrent:(value:boolean)=>{displayCurrent=value},renderAgain:async()=>{props.reader=Vue.markRaw({...reader});await settle()}}
 }
 it('provides real cancel on the automatic first file create, then reopens a clear draft',async()=>{
  const h=await mounted();try{
@@ -93,4 +101,19 @@ it('does not apply a late cancel completion to a new actor editor',async()=>{
 
 it('inspects the rendered session rather than creating a second unused capability',async()=>{
  const h=await mounted(true);try{expect(h.get('r1-normal-form-read-message')?.text).toContain('已从后台读取 0 条');expect(h.media.inspect).toHaveBeenCalledTimes(1)}finally{h.app.unmount()}
+})
+
+
+it('the actual panel never previews observed-invalid display evidence or a restored old proof',async()=>{
+ const h=await mounted(false,true)
+ try{
+  expect(find(h.root,n=>n.type==='file-field')).toBeDefined()
+  h.setDisplayCurrent(false);await h.renderAgain()
+  expect(find(h.root,n=>n.type==='file-field')).toBeUndefined()
+  h.setDisplayCurrent(true);await h.renderAgain()
+  expect(find(h.root,n=>n.type==='file-field')).toBeUndefined()
+  expect(h.actions.saveOnly).not.toHaveBeenCalled()
+ }finally{h.app.unmount()}
+ const fresh=await mounted(false,true)
+ try{expect(find(fresh.root,n=>n.type==='file-field')).toBeDefined()}finally{fresh.app.unmount()}
 })

@@ -35,17 +35,17 @@ function fileLimit(field: FormFieldRead): number {
   return Math.min(10, max)
 }
 
-function schemaFor(s: R1NodeFormsSnapshot, configured = false): { fields: readonly FormFieldRead[]; schema: readonly FormFieldSchema[] } {
+function schemaFor(s: R1NodeFormsSnapshot, configured = false, readOnly = false): { fields: readonly FormFieldRead[]; schema: readonly FormFieldSchema[] } {
   const fields = s.definition.fields, readonly = s.node.formFieldIdsReadOnly, fillable = s.fillableFieldIds
   if ((!configured && !usesR1NormalFileCreate(s)) || (configured && !['forms','repeat'].includes(s.node.sourceNodeType ?? ''))
     || s.definition.purpose === 'appointment' || !fields?.length || fields.length > 50
-    || !Array.isArray(readonly) || !Array.isArray(fillable)) return deny()
+    || !Array.isArray(readonly) || (!readOnly && !Array.isArray(fillable))) return deny()
   if (fields.some(f => !validId(f.fieldId) || !validId(f.valueKey) || f.valueKey.length > 120 || reserved.has(f.valueKey))
     || new Set(fields.map(f => f.fieldId)).size !== fields.length || new Set(fields.map(f => f.valueKey)).size !== fields.length
     || new Set(readonly).size !== readonly.length || readonly.some(id => !validId(id) || !fields.some(f => f.fieldId === id))) return deny()
   const writable = fields.filter(f => !f.readOnly && !readonly.includes(f.fieldId))
-  if (!writable.length || writable.length > 50 || fillable.length !== writable.length || new Set(fillable).size !== fillable.length
-    || fillable.some(id => !validId(id) || !writable.some(f => f.fieldId === id))) return deny()
+  if (!readOnly && (!writable.length || writable.length > 50 || fillable!.length !== writable.length || new Set(fillable).size !== fillable!.length
+    || fillable!.some(id => !validId(id) || !writable.some(f => f.fieldId === id)))) return deny()
   const keys = new Set(fields.map(f => f.valueKey))
   const condition = (value: unknown): void => {
     if (value === undefined) return
@@ -62,7 +62,8 @@ function schemaFor(s: R1NodeFormsSnapshot, configured = false): { fields: readon
     if ((configured && typeof field.preset !== 'boolean') || typeof field.required !== 'boolean' || typeof field.readOnly !== 'boolean' || field.unsupportedReason || field.presentationOnly
       || (field.multiple !== undefined && typeof field.multiple !== 'boolean')
       || (field.type !== 'file' && (!scalarTypes.has(field.type) || field.multiple))) return deny()
-    if(configured&&(field.presentation?.surveyTool||field.presentation?.componentType||field.presentation?.customizeFlag
+    if(configured&&(field.presentation?.surveyTool||field.presentation?.componentType
+      ||field.presentation?.customizeFlag!==undefined&&typeof field.presentation.customizeFlag!=='boolean'
       ||field.presentation?.urlShape||field.presentation?.paramsShape||field.presentation?.min!==undefined
       ||field.presentation?.minlength!==undefined||field.presentation?.maxlength!==undefined
       ||field.type!=='file'&&field.presentation?.max!==undefined))return deny()
@@ -156,3 +157,10 @@ export function projectR1ConfiguredFileFields(snapshot:R1NodeFormsSnapshot,value
 }
 export const isR1ConfiguredFileFieldEligible=(snapshot:R1NodeFormsSnapshot,id:string,values:Readonly<Record<string,unknown>>)=>
   snapshot.records.length===0&&projectR1ConfiguredFileFields(snapshot,values).some(f=>f.fieldId===id&&f.type==='file'&&f.supported)
+
+/** Read decoding validates the complete schema, without requiring writable rows
+ * or fillable IDs. It never changes create normalization or grants. */
+export function supportsR1ConfiguredFileReadSchema(snapshot:R1NodeFormsSnapshot):boolean {
+  try {const {fields}=schemaFor(snapshot,true,true);return fields.some(f=>f.type==='file')}
+  catch{return false}
+}

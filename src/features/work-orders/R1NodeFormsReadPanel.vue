@@ -12,8 +12,8 @@
         <text class="form-read__title">{{ visibleSnapshot.node.displayName || '现场记录' }} · {{ index + 1 }}</text>
         <view v-for="field in projectR1RecordReadFields(visibleSnapshot.definition, record)" :key="field.fieldId" class="form-read__field">
           <text class="form-read__label">{{ field.label }}</text>
-          <text v-if="!readFiles(record,field.fieldId,field.valueKey)" class="form-read__value" :data-testid="`r1-normal-value-${field.valueKey}`">{{ field.text }}</text>
-          <R1NormalFileField v-if="readFiles(record,field.fieldId,field.valueKey)" :field="field"
+          <text v-if="!readFiles(record,field)" class="form-read__value" :data-testid="`r1-normal-value-${field.valueKey}`">{{ field.text }}</text>
+          <R1NormalFileField v-if="readFiles(record,field)" :field="field"
             :model-value="record.values?.[field.valueKey]" />
         </view>
         <AppButton v-if="actions?.canEdit?.(String(record.id)) && !actions.locked()" variant="secondary" size="compact"
@@ -69,7 +69,7 @@ import { isR1NormalFileFieldEligible, sameR1NormalFileValues } from './r1-normal
 import type { R1FileWireValue } from '@shared/types'
 import type { FormDataRead } from '@shared/ports'
 import { normalizeR1RepeatValues, projectR1RepeatFields, updateR1FormDraftValue } from './r1-repeat-form'
-import { projectR1RecordReadFields } from './r1-record-read-fields'
+import { projectR1RecordReadFields, type R1RecordReadField } from './r1-record-read-fields'
 import type { R1LocalFieldValue } from './r1-local-form-fields'
 import { r1RepeatActionsKey } from './r1-repeat-actions-port'
 import type { R1NodeFormsReader, R1NodeFormsSnapshot } from './r1-node-forms-read'
@@ -154,10 +154,14 @@ function setFileValue(fieldId:string,key:string,value:readonly R1FileWireValue[]
     ||!sameR1NormalFileValues(value,media.values(fieldId)))return
   values.value={...values.value,[key]:value.map(file=>({...file}))}
 }
-function readFiles(record:FormDataRead,fieldId:string,key:string){
-  const field=visibleSnapshot.value?.definition.fields?.find(f=>f.fieldId===fieldId&&f.valueKey===key)
-  return field?.type==='file'&&!field.unsupportedReason&&!field.presentationOnly&&Array.isArray(record.values?.[key])
-    &&(record.values![key] as readonly unknown[]).length>0&&sameR1NormalFileValues(record.values?.[key],record.values?.[key])
+function readFiles(record:FormDataRead,projected:R1RecordReadField){
+  const source=visibleSnapshot.value
+  if(!source||projected.unavailable)return false
+  const current=projectR1RecordReadFields(source.definition,record).find(f=>f.fieldId===projected.fieldId&&f.valueKey===projected.valueKey)
+  const field=source.definition.fields?.find(f=>f.fieldId===projected.fieldId&&f.valueKey===projected.valueKey)
+  return current?.unavailable===false&&field?.type==='file'&&!field.unsupportedReason&&!field.presentationOnly
+    &&Array.isArray(record.values?.[field.valueKey])&&(record.values![field.valueKey] as readonly unknown[]).length>0
+    &&sameR1NormalFileValues(record.values?.[field.valueKey],record.values?.[field.valueKey])
 }
 function scalarValueFor(key:string):R1LocalFieldValue|undefined{
   const value=values.value[key]

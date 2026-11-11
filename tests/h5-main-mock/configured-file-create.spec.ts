@@ -1,16 +1,23 @@
 import { expect, test } from '@playwright/test'
 import { createHash } from 'node:crypto'
 
-test.skip(process.env.XLINK_H5_CONFIGURED_FILE_CREATE !== 'true', 'Opt-in synthetic normal App configurations')
+const readOnly = process.env.XLINK_H5_CONFIGURED_FILE_READ === 'true'
+test.skip(process.env.XLINK_H5_CONFIGURED_FILE_CREATE !== 'true' && !readOnly, 'Opt-in synthetic normal App configurations')
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAFUlEQVR4nGOUq7j0nwEJMDGgAcICAJ0wAm/4ZvM3AAAAAElFTkSuQmCC','base64')
 const pngSha = createHash('sha256').update(png).digest('hex')
 
-for (const scenario of ['map-three-mixed','typed-renamed','wrong-root-ack','unsupported-root'] as const) {
+for (const scenario of (readOnly ? ['readonly'] as const : ['map-three-mixed','typed-renamed','wrong-root-ack','unsupported-root'] as const)) {
   test(`normal configured files ${scenario}`, async ({ page, baseURL }, info) => {
-    const typed = scenario === 'typed-renamed'||scenario==='unsupported-root', badAck = scenario === 'wrong-root-ack'
+    const typed = readOnly || scenario === 'typed-renamed'||scenario==='unsupported-root', badAck = scenario === 'wrong-root-ack'
     const tenant='synthetic-media-tenant', actor='synthetic-media-user', role='synthetic-media-role', def='synthetic-media-def'
     const col = typed ? 'survey' : 'syntheticOrdinaryForm', imageOrigin='https://synthetic-configured-media.invalid'
-    const config = typed ? [
+    const config = readOnly ? [
+      {id:'f0',key:'evidenceNorth',type:'file',preset:0,required:'1',max:2},
+      {id:'f1',key:'qualityProof',type:'file',preset:0,required:'1',max:1},
+      {id:'f2',key:'spareAttachment',type:'file',preset:0,required:'0',max:3},
+      {id:'f3',key:'memo',type:'text',preset:1,required:'0'},
+      {id:'f4',key:'width',type:'digit',preset:1,required:'0'},
+    ] : typed ? [
       { id:'f4', key:'followup', type:'text', preset:0, required:'0' },
       { id:'f0', key:scenario==='unsupported-root'?'undeclaredRoot':'arbitrarySnapshots', type:'file', preset:scenario==='unsupported-root'?1:0, required:'0', max:1 },
       { id:'f2', key:'caption', type:'text', preset:0, required:'1' },
@@ -24,12 +31,14 @@ for (const scenario of ['map-three-mixed','typed-renamed','wrong-root-ack','unsu
       { id:'f4', key:'assetView', type:'file', preset:1, required:'0', max:3 },
     ]
     const fields=config.map((f,i)=>({_id:f.id,tenantId:tenant,extId:def,colName:col,name:f.key,nameDisp:`合成配置 ${f.key}`,state:1,
-      type:f.type,preset:f.preset,required:f.required,multiple:false,showList:['1','2','4'],showType:'1',operationType:'1',showFieldPreset:0,
+      type:f.type,preset:f.preset,required:f.required,customizeFlag:1,multiple:false,showList:['1','2','4'],showType:'1',operationType:'1',showFieldPreset:0,
       exts:{},showField:'',showValue:'',calculateConfig:'',frontEndConfig:JSON.stringify(f.type==='file'?{max:f.max}:{}) ,order:i}))
     const work={_id:'synthetic-media-work',tenantId:tenant,orderNum:'SYNTHETIC-CONFIGURED-FILES',workflowId:'synthetic-media-run',state:1,status:105,serviceType:'40',name:'合成配置驱动表单',exts:{sourceType:''}}
-    const node={_id:'synthetic-media-node',tenantId:tenant,workflowId:work.workflowId,workflowFormDataId:work._id,workflowFormColName:'serviceAppointment',state:0,handlerIds:[role],nodeDef:{nodeType:'repeat',name:'配置表单',formDefId:def,viewableRoleIds:[role],formFieldIdsFill:['f0','f1','f2','f3','f4'],formFieldIdsReadOnly:[]}}
+    const node={_id:'synthetic-media-node',tenantId:tenant,workflowId:work.workflowId,workflowFormDataId:work._id,workflowFormColName:'serviceAppointment',state:0,handlerIds:[role],nodeDef:{nodeType:'repeat',name:'配置表单',formDefId:def,viewableRoleIds:[role],formFieldIdsFill:readOnly?[]:['f0','f1','f2','f3','f4'],formFieldIdsReadOnly:readOnly?['f0','f1','f2','f3','f4']:[]}}
     const ledger:{kind:string;path?:string;key?:string;imageSha?:string;values?:unknown}[]=[],unexpected:string[]=[],errors:string[]=[]
     let saved:Record<string,any>|null=null, pendingKey='', tokens=0, uploads=0, upserts=0
+    if(readOnly)saved={_id:'synthetic-configured-record',tenantId:tenant,sid:work._id,nodeId:node._id,workflowId:work.workflowId,state:1,memo:'synthetic readonly',width:0,
+      exts:{evidenceNorth:[{url:imageOrigin+'/objects/north.png',name:'north.png',extname:'png'}],qualityProof:[{url:imageOrigin+'/objects/proof.png',name:'proof.png',extname:'png'}]}}
     page.on('pageerror', e=>errors.push(e.message))
     await page.routeWebSocket('**/*',socket=>{if(new URL(socket.url()).host===new URL(baseURL!).host)socket.connectToServer();else{unexpected.push('WS');socket.close()}})
     await page.route('**/*',async route=>{
@@ -81,6 +90,22 @@ for (const scenario of ['map-three-mixed','typed-renamed','wrong-root-ack','unsu
     await page.locator('.work-orders-entry').click();const card=page.locator('.work-order-card');await expect(card).toHaveAttribute('aria-disabled','false');await card.click()
     const read=()=>page.getByTestId('r1-normal-form-read').locator('.app-button').filter({hasText:'读取已保存表单'})
     await read().click()
+    if(readOnly){
+      const assertRead=async()=>{
+        await expect(page.getByTestId('r1-normal-form-record')).toHaveCount(1)
+        for(const key of ['evidenceNorth','qualityProof'])await expect(page.getByTestId('r1-normal-file-preview-'+key)).toBeVisible()
+        await expect(page.getByTestId('r1-normal-value-spareAttachment')).toHaveText('未保存')
+        await expect(page.getByTestId('r1-normal-value-memo')).toHaveText('synthetic readonly')
+        await expect(page.getByTestId('r1-normal-value-width')).toHaveText('0')
+        await expect(page.getByTestId('r1-normal-save')).toHaveCount(0)
+        await expect(page.locator('[data-testid^="r1-normal-file-add-"]')).toHaveCount(0)
+        await expect(page.locator('[data-testid^="r1-normal-edit-"]')).toHaveCount(0)
+      }
+      await assertRead()
+      await page.goto('/#/pages/work-orders/work-orders');await expect(card).toHaveAttribute('aria-disabled','false');await card.click();await read().click();await assertRead()
+      expect(tokens).toBe(0);expect(uploads).toBe(0);expect(upserts).toBe(0)
+      expect(unexpected).toEqual([]);expect(errors).toEqual([]);return
+    }
     if(scenario==='unsupported-root'){
       await expect(page.getByTestId('r1-normal-file-unavailable')).toContainText('尚不支持新增图片')
       await expect(page.getByTestId('r1-normal-save')).toHaveCount(0)

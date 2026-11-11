@@ -120,3 +120,16 @@ describe('grant and post-dispatch drift never restore old create rights',()=>{
  it('schema change after dispatch is uncertain, even when value fits new max',async()=>{const h=setup([{key:'photo'}]);const {actions,values}=await h.filled();const normal=h.commands.getMockImplementation()!;h.commands.mockImplementationOnce(async(req:any)=>{const ack=await normal(req);h.fields[0].frontEndConfig='{"max":1}';return ack});await expect(actions.saveOnly(values)).rejects.toThrow();expect(actions.locked()).toBe(true);await expect(actions.saveOnly(values)).rejects.toThrow();expect(h.commands).toHaveBeenCalledTimes(1)})
  it('unsubmitted extension data is not certified by a correct selected image',async()=>{const h=setup([{key:'photo',preset:false}]);const {actions,values}=await h.filled();const normal=h.commands.getMockImplementation()!;h.commands.mockImplementationOnce(async(req:any)=>{const ack=await normal(req);ack.data.exts.hidden='unexpected';return ack});await expect(actions.saveOnly(values)).rejects.toThrow();expect(actions.locked()).toBe(true);expect(h.commands).toHaveBeenCalledTimes(1)})
 })
+
+
+describe('Java column marker does not disable configured owned uploads',()=>{
+ it.each(['generic','typed']as const)('keeps customizeFlag=1 through %s reader/queue/create',async kind=>{
+  const h=setup([{key:'columnMarkedPhoto',preset:false}],kind);h.fields.forEach(f=>{f.customizeFlag=1})
+  const {actions,values}=await h.filled();await actions.saveOnly(values);expect(h.commands).toHaveBeenCalledTimes(1)
+ })
+ it('fresh column-marker drift still revokes initial source',async()=>{
+  const h=setup([{key:'columnMarkedPhoto',preset:false}]);h.fields[0].customizeFlag=1
+  const {actions,values}=await h.filled();h.fields[0].customizeFlag=0
+  await expect(actions.saveOnly(values)).rejects.toThrow();expect(h.commands).not.toHaveBeenCalled()
+ })
+})

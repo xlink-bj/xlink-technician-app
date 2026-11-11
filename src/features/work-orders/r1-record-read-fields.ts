@@ -1,10 +1,10 @@
+import { r1ConfiguredFileReadDisplay } from '@shared/form/r1-configured-file-read-evidence'
 import type { FormDataRead, FormDefinitionRead, FormFieldOptionRead, FormFieldRead, FormFieldValue } from '@shared/ports'
 import { isSurveyReadOnlyMediaField, surveyReadOnlyMediaText } from '@shared/form/survey-readonly-media'
 import { evaluateVisibility, isFieldApplicable } from '@runtimes/dynamic-form'
 import { actionFormConditionValues } from './action-form-condition-context'
 import { ACTION_FORM_SURFACE, actionFormSchemaFor } from './action-form-schema'
 import { surveyLeakageCauseExperienceFor, surveyLeakageCauseReadIds, surveyLeakageCauseLabels } from './survey-leakage-cause'
-import { isR1NormalImageWireArray } from '@shared/form/r1-normal-image-contract'
 
 export interface R1RecordReadField {
   readonly fieldId: string
@@ -79,13 +79,12 @@ export function projectR1RecordReadFields(definition: FormDefinitionRead, record
           : ids.length ? surveyLeakageCauseLabels(ids, []).join(' / ') : '空值' })
       continue
     }
-    // The normal reader's definition-bound file codec is the only source of
-    // object arrays here. Unknown/image types retain their old projection.
-    if(!unsupported&&definition.purpose===undefined&&field.type==='file'&&Object.hasOwn(record.values??{},field.valueKey)){
-      const value=record.values?.[field.valueKey],files=isR1NormalImageWireArray(value)
-      result.push({fieldId:field.fieldId,valueKey:field.valueKey,label:field.label,
-        unavailable:!(files||value===null),text:value===null?'空值':files?(value.length?`${value.length} 个附件`:'空值')
-          :'已保存附件含当前未支持的历史元数据，不能编辑'})
+    const configuredFile = !unsupported && field.type === 'file' ? r1ConfiguredFileReadDisplay(definition, record, field) : null
+    if (configuredFile) {
+      const value = record.values?.[field.valueKey] as readonly unknown[] | undefined
+      result.push({ fieldId: field.fieldId, valueKey: field.valueKey, label: field.label, unavailable: configuredFile === 'unavailable',
+        text: configuredFile === 'unavailable' ? '已保存附件含当前未支持的原文，不能预览'
+          : configuredFile === 'null' ? '空值' : configuredFile === 'absent' ? '未保存' : value!.length ? `${value!.length} 个附件` : '空值' })
       continue
     }
     const mediaText = !unsupported && isSurveyReadOnlyMediaField(definition, field)
