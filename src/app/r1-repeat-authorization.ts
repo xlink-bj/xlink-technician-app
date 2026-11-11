@@ -64,18 +64,28 @@ export function createNormalRepeatActionProvider(input: {
         getGrant:()=>{const latest=grant();return latest?.version===2?latest:null},schemaMatches,
         transport:createUniApiCommandTransport({apiBaseUrl:String(input.env.VITE_XLINK_API_BASE_URL),getSessionRef:()=>input.auth.getCurrentSession()?.sessionRef??null})})
       const s = g.scope
+      const createGrantIdentity = (value: R1RepeatGrant) => JSON.stringify([
+        value.version, keys.map(key => value.scope[key]), [...value.fieldIds].sort(),
+        value.operations, value.expiresAt,
+      ])
+      const initialGrantIdentity = createGrantIdentity(g)
+      const permitsOriginalCreateGrant = (scope: R1RepeatScope) => {
+        const latest = grant()
+        return latest?.version === 1 && permitted(scope)
+          && createGrantIdentity(latest) === initialGrantIdentity
+      }
       // Each page action owns its read snapshot. A different page or an external
       // reread revokes it; only this action's successful reads may renew it.
       let leaseSnapshot = snapshot
-      const ownsSnapshot = (scope: R1RepeatScope) => permitted(scope) && input.reader.isCurrent(leaseSnapshot)
-      const actions = createR1RepeatActions({ env: input.env, origin: input.origin,
+      const ownsSnapshot = (scope: R1RepeatScope) => permitsOriginalCreateGrant(scope) && input.reader.isCurrent(leaseSnapshot)
+      const actions = createR1RepeatActions({ initialSnapshot: snapshot, readOriginal: (s, id) => input.reader.currentFormOriginal?.(s, id) ?? null, env: input.env, origin: input.origin,
         getSession: () => input.auth.getCurrentSession(), hasExactGrant: ownsSnapshot,
         transport: createUniApiCommandTransport({ apiBaseUrl: String(input.env.VITE_XLINK_API_BASE_URL),
           getSessionRef: () => input.auth.getCurrentSession()?.sessionRef ?? null }),
         async readLatest(scope) {
           if (!ownsSnapshot(scope)) throw Error('本轮表单写入授权已失效')
           const latest = await input.reader.load(scope.workOrderId, scope.runtimeNodeId)
-          if (!permitted(scope) || !input.reader.isCurrent(latest) || !schemaMatches(latest)) throw Error('当前表单配置已变化')
+          if (!permitsOriginalCreateGrant(scope) || !input.reader.isCurrent(latest) || !schemaMatches(latest)) throw Error('当前表单配置已变化')
           leaseSnapshot = latest
           return latest
         },

@@ -1,3 +1,4 @@
+import { hasCanonicalSurveyPart, isSurveyPartCreateDraft, supportsSurveyPartCreate, isCompleteSurveyPart } from './r1-survey-part-create'
 import type { R1NodeFormsSnapshot } from './r1-node-forms-read'
 import type { R1LocalField } from './r1-local-form-fields'
 import { actionFormSchemaFor, ACTION_FORM_SURFACE } from './action-form-schema'
@@ -17,6 +18,13 @@ const scalarTypes = new Set(['text', 'textarea', 'phone', 'IDNumber', 'number', 
  * submission guards still independently decide whether anything can save. */
 export function updateR1FormDraftValue(snapshot: R1NodeFormsSnapshot, values: Readonly<Record<string, R1LocalFieldValue>>,
   key: string, value: R1LocalFieldValue): Record<string, R1LocalFieldValue> {
+  if (isSurveyPartCreateDraft(snapshot) && ['part', 'length', 'width'].includes(key)
+    && !supportsSurveyPartCreate(snapshot)) return deny()
+  if (key === 'part' && hasCanonicalSurveyPart(snapshot)) {
+    const part = snapshot.definition.fields!.find(field => field.valueKey === 'part')!
+    if (!supportsSurveyPartCreate(snapshot) || !isCompleteSurveyPart(part.options ?? [], value)) return deny()
+    return { ...values, part: Object.freeze([...value]) }
+  }
   const next = { ...values, [key]: value }
   const area = r1SurveyPlaneAreaAfterChange({ definitionId: snapshot.definition.id, purpose: snapshot.definition.purpose, values }, key, next)
   if (!area) return next
@@ -26,13 +34,17 @@ export function updateR1FormDraftValue(snapshot: R1NodeFormsSnapshot, values: Re
     || (typeof area.value === 'number' && !Number.isFinite(area.value))) return deny()
   return { ...next, planeArea: area.value }
 }
-export function normalizeR1RepeatValues(snapshot: R1NodeFormsSnapshot, values: Readonly<Record<string, unknown>>): R1NormalFileCreateValues {
+export function normalizeR1RepeatValues(snapshot: R1NodeFormsSnapshot, values: Readonly<Record<string, unknown>>): Record<string, R1NormalFileCreateValues[string] | readonly string[]> {
   if (usesR1NormalFileCreate(snapshot)) return normalizeR1NormalFileCreate(snapshot, values)
   if (usesR1FormsScalarSubset(snapshot)) return normalizeR1FormsScalarCreate(snapshot,values)
   const fields = snapshot.definition.fields
   if (!fields?.length || fields.length > 50 || !values || typeof values !== 'object' || Array.isArray(values)) return deny()
   const schema = fields.map(f => actionFormSchemaFor({ ...f, readOnly: f.readOnly || snapshot.node.formFieldIdsReadOnly?.includes(f.fieldId) === true }))
   const appointment = snapshot.definition.purpose === 'appointment'
+  if (supportsSurveyPartCreate(snapshot)) {
+    const part = fields.find(field => field.valueKey === 'part')!
+    if (!isCompleteSurveyPart(part.options ?? [], values.part)) return deny()
+  }
   if (new Set(fields.map(f => f.valueKey)).size !== fields.length) return deny()
   for (const field of schema) {
     if (!validId(field.valueKey) || reserved.has(field.valueKey)) return deny()
@@ -41,7 +53,7 @@ export function normalizeR1RepeatValues(snapshot: R1NodeFormsSnapshot, values: R
     // New appointment drafts retain only their verified six business fields.
     // Other forms still have no hidden-value contract; metadata and the edit-only
     // reason may never be introduced through a new-record draft.
-    if (state.capability === 'UNSUPPORTED' || !scalarTypes.has(field.type) || field.multiple) return deny()
+    if (state.capability === 'UNSUPPORTED' || (!scalarTypes.has(field.type) && !(field.valueKey === 'part' && supportsSurveyPartCreate(snapshot))) || field.multiple) return deny()
     if (appointment && submitted && field.valueKey === 'modifyReason') return deny()
     if (!state.visible && submitted && !appointment) return deny()
     if ((state.readOnly || state.capability === 'PRESENTATION_ONLY') && (submitted || (state.visible && field.required))) return deny()
@@ -62,8 +74,14 @@ export function normalizeR1RepeatValues(snapshot: R1NodeFormsSnapshot, values: R
     if (!result.ok) return deny()
     normalized = result.value.values
   }
-  const out: Record<string, string | number | boolean> = {}
+  const out: Record<string, string | number | boolean | readonly string[]> = {}
   for (const [key, value] of Object.entries(normalized)) {
+    if (key === 'part' && supportsSurveyPartCreate(snapshot)) {
+      const part = fields.find(field => field.valueKey === 'part')!
+      if (!isCompleteSurveyPart(part.options ?? [], value)) return deny()
+      out[key] = Object.freeze([...value])
+      continue
+    }
     if (!['string', 'number', 'boolean'].includes(typeof value)) return deny()
     out[key] = value as string | number | boolean
   }
@@ -89,7 +107,7 @@ export function projectR1RepeatFields(snapshot: R1NodeFormsSnapshot, values: Rea
     return { fieldId: field.fieldId, valueKey: field.valueKey, label: field.label, type: field.type,
       required: state.required, readOnly: state.readOnly, options: field.options ?? [], multiple: Boolean(field.multiple),
       visible: state.visible,
-      supported: state.capability === 'SUPPORTED_GENERIC' && state.visible && !state.readOnly && scalarTypes.has(field.type) && !field.multiple,
+      supported: state.capability === 'SUPPORTED_GENERIC' && state.visible && !state.readOnly && (scalarTypes.has(field.type) || (field.valueKey === 'part' && supportsSurveyPartCreate(snapshot))) && !field.multiple,
       ...(state.reason ? { reason: state.reason } : {}) }
   })
 }

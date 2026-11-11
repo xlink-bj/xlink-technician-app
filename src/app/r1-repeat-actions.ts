@@ -1,3 +1,4 @@
+import { hasCanonicalSurveyPart, supportsSurveyPartCreate, surveyPartSchemaIdentity, sameSurveyPartSlots } from '@features/work-orders/r1-survey-part-create'
 import { normalizeR1RepeatValues } from '@features/work-orders/r1-repeat-form'
 export { normalizeR1RepeatValues } from '@features/work-orders/r1-repeat-form'
 /** Normal repeat create/save and explicit complete. No runtime grant is fabricated here. */
@@ -50,8 +51,13 @@ export function createR1RepeatActions(input: {
   /** Must re-list complete scoped records and exact-read each ID through the strict normal reader. */
   readonly readLatest: (scope: R1RepeatScope) => Promise<R1NodeFormsSnapshot>
   readonly transport: ApiCommandTransport
+  readonly initialSnapshot?: R1NodeFormsSnapshot
+  readonly readOriginal?: (snapshot: R1NodeFormsSnapshot, recordId: string) => Readonly<Record<string, unknown>> | null
   readonly createLock?: typeof createLocalFixtureMutationLock
 }) {
+  const initialPartSchema = input.initialSnapshot && hasCanonicalSurveyPart(input.initialSnapshot)
+    ? surveyPartSchemaIdentity(input.initialSnapshot) : undefined
+  const initialPartWasEmpty = initialPartSchema !== undefined && input.initialSnapshot!.records.length === 0
   const locks = new Map<string, ReturnType<typeof createLocalFixtureMutationLock>>()
   const lockFor = (scope: R1RepeatScope) => {
     if (!scopeParts(scope).every(validId)) return deny()
@@ -91,11 +97,14 @@ export function createR1RepeatActions(input: {
     locked: (s: R1RepeatScope) => lockFor(s).locked,
     completed: (s: R1RepeatScope) => lockFor(s).completed,
     saveOnly(scope: R1RepeatScope, values: Readonly<Record<string, unknown>>) {
-      // Freeze caller data before any await; only scalar fields are supported.
-      const draft = Object.freeze({ ...values })
+      // Capture the path before the first await; unsupported arrays still fail normalization.
+      const draft = Object.freeze({ ...values,
+        ...(Array.isArray(values.part) ? { part: Object.freeze([...values.part]) } : {}) })
       return execute(scope, async (s, read, check, mark) => {
         const before = await read(); check()
         if (before.records.length !== 0) return deny()
+        if ((initialPartSchema !== undefined || hasCanonicalSurveyPart(before)) && (!initialPartWasEmpty || !supportsSurveyPartCreate(before)
+          || initialPartSchema !== surveyPartSchemaIdentity(before))) return deny()
         const normalized = normalizeR1RepeatValues(before, draft)
         const request = r1SpecialFormUpsert({ sourceNodeType: 'repeat', definitionId: asOpaqueId<'FormDefinitionId'>(s.formDefinitionId), formData: normalized, fieldStorage: before.definition.fields,
           workOrderId: asOpaqueId<'WorkOrderId'>(s.workOrderId), workflowNodeId: asOpaqueId<'WorkflowNodeRuntimeId'>(s.runtimeNodeId), workflowRunId: asOpaqueId<'WorkflowRunId'>(s.workflowRunId), state: 1 })
@@ -109,7 +118,16 @@ export function createR1RepeatActions(input: {
         if (JSON.stringify(after.definition.fields?.map(f => [f.fieldId, f.valueKey, f.preset]))
           !== JSON.stringify(before.definition.fields?.map(f => [f.fieldId, f.valueKey, f.preset]))
           || after.records.length !== 1 || after.records[0]!.id !== savedId
-          || Object.entries(normalized).some(([key, value]) => after.records[0]!.values?.[key] !== value)) return deny()
+          || (initialPartSchema !== undefined && initialPartSchema !== surveyPartSchemaIdentity(after))
+          || Object.entries(normalized).some(([key, value]) => {
+            const actual = after.records[0]!.values?.[key]
+            if (key === 'part' && supportsSurveyPartCreate(before) && Array.isArray(value)) {
+              return !sameSurveyPartSlots(input.readOriginal?.(after, savedId), value)
+                || !Array.isArray(actual) || actual.length !== value.length
+                || value.some((segment, index) => typeof actual[index] !== 'string' || actual[index] !== segment)
+            }
+            return actual !== value
+          })) return deny()
         mark('ready'); return after
       })
     },
