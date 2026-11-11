@@ -241,6 +241,12 @@ jobs:
           VITE_XLINK_ENVIRONMENT: 'test'
           VITE_XLINK_R1_MP_UX_FIXTURES: 'false'
         run: pnpm exec playwright test --config config/playwright/survey-part-create.config.ts
+      - name: Verify restricted Survey height conditions and cleared readback
+        env:
+          XLINK_H5_SURVEY_CONDITIONAL_CREATE: 'true'
+          VITE_XLINK_ENVIRONMENT: 'test'
+          VITE_XLINK_R1_MP_UX_FIXTURES: 'false'
+        run: pnpm exec playwright test --config config/playwright/survey-conditional-create.config.ts
       - name: Preserve scoped form integration H5 evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -257,6 +263,7 @@ jobs:
             test-results/normal-r1-image-recovery/
             test-results/work-order-detail-lifecycle/
             test-results/survey-part-create/
+            test-results/survey-conditional-create/
           if-no-files-found: warn
           retention-days: 7
 

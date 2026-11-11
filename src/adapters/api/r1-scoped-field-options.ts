@@ -1,3 +1,4 @@
+import { decodeR1ScopedJson } from './r1-scoped-json'
 import type { FormFieldOptionRead, FormFieldRead } from '@shared/ports'
 import type { ApiReadTransport } from './technician-api'
 
@@ -56,42 +57,13 @@ export function bindR1ScopedFieldOptions(input: {
     fieldType: field.type, providerId: reference, kind: field.type === 'cascade' ? 'cascade' : 'code' })
 }
 
-/** CodeServiceImpl.selectCodeNew returns JSON text. Some transports decode it
- * to an array. Reject duplicate JSON keys before JSON.parse can erase them. */
-function decodeCode(raw: unknown): unknown {
-  if (typeof raw !== 'string') return raw
-  if (raw.length > 2_000_000) return fail()
-  const stack: Array<Set<string> | null> = []
-  const stringToken = /"(?:[^"\\\u0000-\u001f]|\\(?:["\\/bfnrt]|u[0-9a-fA-F]{4}))*"/y
-  for (let i = 0; i < raw.length; i++) {
-    const char = raw[i]
-    if (char === '"') {
-      stringToken.lastIndex = i
-      const match = stringToken.exec(raw)
-      if (!match) return fail()
-      i = stringToken.lastIndex - 1
-      let next = i + 1
-      while (/\s/.test(raw[next] ?? '') && next < raw.length) next++
-      if (raw[next] === ':') {
-        const keys = stack[stack.length - 1], key = JSON.parse(match[0]) as string
-        if (!keys || keys.has(key)) return fail()
-        keys.add(key)
-      }
-    } else if (char === '{' || char === '[') {
-      stack.push(char === '{' ? new Set() : null)
-      if (stack.length > 48) return fail()
-    } else if (char === '}' || char === ']') stack.pop()
-  }
-  try { return JSON.parse(raw) as unknown } catch { return fail() }
-}
-
 /** Source-backed envelopes only: the one requested Code group echoes codeId
  * and eleid and owns an options map; Cascade owns type + children. No fallback
  * envelope, first match, invalid-row filtering, or global value flattening. */
 export function parseR1ScopedFieldOptions(raw: unknown, binding: Pick<FieldBinding, 'kind' | 'providerId' | 'tenantId'>): readonly FormFieldOptionRead[] {
   const expected = providerId(binding.providerId), tenantId = text(binding.tenantId)
   if (binding.kind !== 'code' && binding.kind !== 'cascade') return fail()
-  const groups = binding.kind === 'code' ? decodeCode(raw) : raw
+  const groups = binding.kind === 'code' ? decodeR1ScopedJson(raw) : raw
   if (!Array.isArray(groups) || groups.length !== 1) return fail()
   const group = row(groups[0])
   if (group.tenantId !== undefined && group.tenantId !== tenantId) fail()

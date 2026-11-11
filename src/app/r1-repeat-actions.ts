@@ -1,4 +1,5 @@
-import { hasCanonicalSurveyPart, supportsSurveyPartCreate, surveyPartSchemaIdentity, sameSurveyPartSlots } from '@features/work-orders/r1-survey-part-create'
+import { supportsSurveyPartSubmission, supportsSurveyConditionalCreate, sameClearedSurveyHeight, sameVisibleSurveyHeight, sameSurveyConditionalScalar } from '@features/work-orders/r1-survey-conditional-create'
+import { hasCanonicalSurveyPart, surveyPartSchemaIdentity, sameSurveyPartSlots } from '@features/work-orders/r1-survey-part-create'
 import { normalizeR1RepeatValues } from '@features/work-orders/r1-repeat-form'
 export { normalizeR1RepeatValues } from '@features/work-orders/r1-repeat-form'
 /** Normal repeat create/save and explicit complete. No runtime grant is fabricated here. */
@@ -52,12 +53,17 @@ export function createR1RepeatActions(input: {
   readonly readLatest: (scope: R1RepeatScope) => Promise<R1NodeFormsSnapshot>
   readonly transport: ApiCommandTransport
   readonly initialSnapshot?: R1NodeFormsSnapshot
+  /** Trusted reader-private source proof verifier; absent never enables the new typed slice. */
+  readonly hasSurveyConditionalSource?: (snapshot: R1NodeFormsSnapshot) => boolean
   readonly readOriginal?: (snapshot: R1NodeFormsSnapshot, recordId: string) => Readonly<Record<string, unknown>> | null
   readonly createLock?: typeof createLocalFixtureMutationLock
 }) {
   const initialPartSchema = input.initialSnapshot && hasCanonicalSurveyPart(input.initialSnapshot)
     ? surveyPartSchemaIdentity(input.initialSnapshot) : undefined
   const initialPartWasEmpty = initialPartSchema !== undefined && input.initialSnapshot!.records.length === 0
+  const initialConditional = input.initialSnapshot && supportsSurveyConditionalCreate(input.initialSnapshot)
+  const initialConditionalRecords = initialConditional ? JSON.stringify(input.initialSnapshot!.records) : undefined
+  const initialConditionalSource = !initialConditional || input.hasSurveyConditionalSource?.(input.initialSnapshot!) === true
   const locks = new Map<string, ReturnType<typeof createLocalFixtureMutationLock>>()
   const lockFor = (scope: R1RepeatScope) => {
     if (!scopeParts(scope).every(validId)) return deny()
@@ -101,9 +107,14 @@ export function createR1RepeatActions(input: {
       const draft = Object.freeze({ ...values,
         ...(Array.isArray(values.part) ? { part: Object.freeze([...values.part]) } : {}) })
       return execute(scope, async (s, read, check, mark) => {
+        if (!initialConditionalSource || (initialConditional && (
+          surveyPartSchemaIdentity(input.initialSnapshot!) !== initialPartSchema
+          || JSON.stringify(input.initialSnapshot!.records) !== initialConditionalRecords
+          || input.hasSurveyConditionalSource?.(input.initialSnapshot!) !== true))) return deny()
         const before = await read(); check()
+        if (supportsSurveyConditionalCreate(before) && input.hasSurveyConditionalSource?.(before) !== true) return deny()
         if (before.records.length !== 0) return deny()
-        if ((initialPartSchema !== undefined || hasCanonicalSurveyPart(before)) && (!initialPartWasEmpty || !supportsSurveyPartCreate(before)
+        if ((initialPartSchema !== undefined || hasCanonicalSurveyPart(before)) && (!initialPartWasEmpty || !supportsSurveyPartSubmission(before)
           || initialPartSchema !== surveyPartSchemaIdentity(before))) return deny()
         const normalized = normalizeR1RepeatValues(before, draft)
         const request = r1SpecialFormUpsert({ sourceNodeType: 'repeat', definitionId: asOpaqueId<'FormDefinitionId'>(s.formDefinitionId), formData: normalized, fieldStorage: before.definition.fields,
@@ -119,12 +130,23 @@ export function createR1RepeatActions(input: {
           !== JSON.stringify(before.definition.fields?.map(f => [f.fieldId, f.valueKey, f.preset]))
           || after.records.length !== 1 || after.records[0]!.id !== savedId
           || (initialPartSchema !== undefined && initialPartSchema !== surveyPartSchemaIdentity(after))
+          || (supportsSurveyConditionalCreate(before) && input.hasSurveyConditionalSource?.(after) !== true)
           || Object.entries(normalized).some(([key, value]) => {
             const actual = after.records[0]!.values?.[key]
-            if (key === 'part' && supportsSurveyPartCreate(before) && Array.isArray(value)) {
+            if (key === 'height' && typeof value === 'number' && supportsSurveyConditionalCreate(before)) {
+              return !sameVisibleSurveyHeight(input.readOriginal?.(after, savedId), value) || actual !== value
+            }
+            if (key === 'height' && value === '' && supportsSurveyConditionalCreate(before)) {
+              return !sameClearedSurveyHeight(input.readOriginal?.(after, savedId))
+                || (actual !== undefined && actual !== null && actual !== '')
+            }
+            if (key === 'part' && supportsSurveyPartSubmission(before) && Array.isArray(value)) {
               return !sameSurveyPartSlots(input.readOriginal?.(after, savedId), value)
                 || !Array.isArray(actual) || actual.length !== value.length
                 || value.some((segment, index) => typeof actual[index] !== 'string' || actual[index] !== segment)
+            }
+            if (supportsSurveyConditionalCreate(before) && (typeof value === 'string' || typeof value === 'number')) {
+              return !sameSurveyConditionalScalar(input.readOriginal?.(after, savedId), key, value) || actual !== value
             }
             return actual !== value
           })) return deny()

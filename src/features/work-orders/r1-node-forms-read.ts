@@ -40,6 +40,9 @@ export interface R1NodeFormsReader {
    * A read credential only; never a command or edit permission. */
   currentFormsExts?(snapshot: R1NodeFormsSnapshot): Readonly<Record<string, unknown>> | null
   /** Exact current read provenance, not an ACK/cache-derived edit grant. */
+  /** Reader-private typed Survey source issuance, not a caller-set snapshot flag. */
+  currentSurveyConditionalSource?(snapshot: R1NodeFormsSnapshot): object | null
+  isCurrentSurveyConditionalSource?(snapshot: R1NodeFormsSnapshot, evidence: unknown): boolean
   currentFormOriginal?(snapshot: R1NodeFormsSnapshot, recordId: string): Readonly<Record<string, unknown>> | null
   /** Private-reader issuance: exact string Ext.type=0, matching raw field
    * collection identities and exact selected original; never an ACK grant. */

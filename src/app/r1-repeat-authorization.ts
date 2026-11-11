@@ -1,3 +1,4 @@
+import { supportsSurveyConditionalCreate } from '@features/work-orders/r1-survey-conditional-create'
 import { createRepeatAppointmentPageActions } from './r1-repeat-appointment-actions'
 import type { AuthSessionPort } from '@shared/ports'
 import type { R1NodeFormsReader, R1NodeFormsSnapshot } from '@features/work-orders/r1-node-forms-read'
@@ -44,6 +45,10 @@ export function createNormalRepeatActionProvider(input: {
     const g = grant()
     return Boolean(g && keys.every(k => scope[k] === g.scope[k]))
   }
+  const hasConditionalSource = (snapshot:R1NodeFormsSnapshot) => {
+    const proof=input.reader.currentSurveyConditionalSource?.(snapshot)
+    return Boolean(proof&&input.reader.isCurrentSurveyConditionalSource?.(snapshot,proof)===true)
+  }
   const schemaMatches = (snapshot: R1NodeFormsSnapshot): boolean => {
     const g = grant(), fields = snapshot.definition.fields
     return Boolean(g && fields && fields.length === g.fieldIds.length
@@ -63,6 +68,8 @@ export function createNormalRepeatActionProvider(input: {
       if(g.version===2)return createRepeatAppointmentPageActions({snapshot,auth:input.auth,reader:input.reader,env:input.env,origin:input.origin,
         getGrant:()=>{const latest=grant();return latest?.version===2?latest:null},schemaMatches,
         transport:createUniApiCommandTransport({apiBaseUrl:String(input.env.VITE_XLINK_API_BASE_URL),getSessionRef:()=>input.auth.getCurrentSession()?.sessionRef??null})})
+      const conditionalCreate = supportsSurveyConditionalCreate(snapshot)
+      if(conditionalCreate&&!hasConditionalSource(snapshot))return null
       const s = g.scope
       const createGrantIdentity = (value: R1RepeatGrant) => JSON.stringify([
         value.version, keys.map(key => value.scope[key]), [...value.fieldIds].sort(),
@@ -78,7 +85,8 @@ export function createNormalRepeatActionProvider(input: {
       // reread revokes it; only this action's successful reads may renew it.
       let leaseSnapshot = snapshot
       const ownsSnapshot = (scope: R1RepeatScope) => permitsOriginalCreateGrant(scope) && input.reader.isCurrent(leaseSnapshot)
-      const actions = createR1RepeatActions({ initialSnapshot: snapshot, readOriginal: (s, id) => input.reader.currentFormOriginal?.(s, id) ?? null, env: input.env, origin: input.origin,
+        && (!conditionalCreate || hasConditionalSource(leaseSnapshot))
+      const actions = createR1RepeatActions({ hasSurveyConditionalSource:hasConditionalSource, initialSnapshot: snapshot, readOriginal: (s, id) => input.reader.currentFormOriginal?.(s, id) ?? null, env: input.env, origin: input.origin,
         getSession: () => input.auth.getCurrentSession(), hasExactGrant: ownsSnapshot,
         transport: createUniApiCommandTransport({ apiBaseUrl: String(input.env.VITE_XLINK_API_BASE_URL),
           getSessionRef: () => input.auth.getCurrentSession()?.sessionRef ?? null }),

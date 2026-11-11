@@ -1,4 +1,5 @@
 import { isR1DefaultImageFieldConfig } from '@shared/form/r1-normal-image-contract'
+import { conditionalSurveySourceSeal } from './r1-survey-conditional-source'
 import { appointmentReplacementContextFromRead, appointmentReplacementProblem } from '@shared/form/appointment-replacement-context'
 import type { AuthSessionPort, TechnicianApiReadPort, FormDefinitionRead, WorkflowNodeRead } from '@shared/ports'
 import type { ApiReadRequest, ApiReadTransport } from '@adapters/api/technician-api'
@@ -102,7 +103,13 @@ export function createNormalNodeFormsReader(input: {
   let generation = 0
   let current: { snapshot: R1NodeFormsSnapshot; fingerprint: string; formsExts?: string;
     originals: ReadonlyMap<string, string>; genericRoute?: Omit<R1GenericMapRouteRead, 'recordId' | 'original'>;
-    schemaAtRead: string; appointmentRoute?: true; appointmentSeal?: string; fileRoute?: Omit<R1GenericMapRouteRead, 'recordId' | 'original'> } | null = null
+    schemaAtRead: string; conditionalSurveySeal?: string; conditionalSnapshotSeal?: string; appointmentRoute?: true; appointmentSeal?: string; fileRoute?: Omit<R1GenericMapRouteRead, 'recordId' | 'original'> } | null = null
+  const conditionalSurveyReads = new WeakMap<object, {snapshot:R1NodeFormsSnapshot; fingerprint:string; seal:string; snapshotSeal:string}>()
+  const conditionalSnapshotSeal = (snapshot:R1NodeFormsSnapshot) => JSON.stringify([snapshot.workOrderId,snapshot.node,snapshot.definition,snapshot.fillableFieldIds,snapshot.records])
+  const conditionalSurveyCurrent = (snapshot:R1NodeFormsSnapshot) => current?.conditionalSurveySeal
+    && current.snapshot===snapshot && fingerprint()===current.fingerprint
+    && input.read.isWorkOrderListedForCurrentSession?.(snapshot.workOrderId)===true
+    && conditionalSnapshotSeal(snapshot)===current.conditionalSnapshotSeal ? current : null
   const appointmentReads = new WeakMap<object, {snapshot:R1NodeFormsSnapshot; fingerprint:string; schema:string; raw:string; recordId:string}>()
   const appointmentCurrent = (snapshot:R1NodeFormsSnapshot, recordId:string) => {
     if(!current?.appointmentRoute || current.snapshot!==snapshot || fingerprint()!==current.fingerprint
@@ -135,6 +142,18 @@ export function createNormalNodeFormsReader(input: {
   return {
     enabled,
     clear() { generation++; current = null },
+    currentSurveyConditionalSource(snapshot) {
+      const source=conditionalSurveyCurrent(snapshot);if(!source)return null
+      const evidence=Object.freeze({})
+      conditionalSurveyReads.set(evidence,{snapshot,fingerprint:source.fingerprint,seal:source.conditionalSurveySeal!,snapshotSeal:source.conditionalSnapshotSeal!})
+      return evidence
+    },
+    isCurrentSurveyConditionalSource(snapshot,evidence) {
+      if(!evidence||typeof evidence!=='object')return false
+      const source=conditionalSurveyCurrent(snapshot),stamp=conditionalSurveyReads.get(evidence)
+      return Boolean(source&&stamp&&stamp.snapshot===snapshot&&stamp.fingerprint===source.fingerprint
+        &&stamp.seal===source.conditionalSurveySeal&&stamp.snapshotSeal===source.conditionalSnapshotSeal)
+    },
     currentRepeatAppointment(snapshot,recordId) {
       const source=appointmentCurrent(snapshot,recordId);if(!source)return null
       const raw=source.originals.get(recordId)!,original=JSON.parse(raw) as Row
@@ -437,7 +456,9 @@ export function createNormalNodeFormsReader(input: {
         && fields.every(f=>f.colName===ext.colName&&(!Object.hasOwn(f,'collectionName')||f.collectionName===''||f.collectionName===ext.colName))
         ?true:undefined
       const genericRoute = fields.length>50?routeFacts:undefined
+      const conditionalSurveySeal = conditionalSurveySourceSeal(snapshot,ext,fields,input.tenantId)
       current = { snapshot, fingerprint: identity, originals, schemaAtRead:schemaIdentity(snapshot),
+        ...(conditionalSurveySeal?{conditionalSurveySeal,conditionalSnapshotSeal:conditionalSnapshotSeal(snapshot)}:{}),
         ...(appointmentRoute?{appointmentRoute,appointmentSeal:JSON.stringify([workOrderId,schemaIdentity(snapshot)])}:{}), ...(genericRoute?{genericRoute}:{}), ...(fileRoute?{fileRoute}:{}), ...(formsExts ? { formsExts } : {}) }
       return snapshot
     },

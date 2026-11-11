@@ -1,3 +1,4 @@
+import { surveyHeightConditionIssue } from './survey-height-condition'
 import { appointmentReplacementContextFromRead } from '@shared/form/appointment-replacement-context'
 import type {
   FormDataRead,
@@ -124,6 +125,8 @@ function formFieldVisibility(record: AdapterRecord): {
   readonly visibility?: FormFieldVisibility
   readonly unsupportedReason?: string
 } {
+  const surveyIssue = surveyHeightConditionIssue(record)
+  if (surveyIssue) return { unsupportedReason: surveyIssue }
   const rawConfig = record.frontEndConfig
   const config = parsedRecord(rawConfig)
   const malformedConfig = typeof rawConfig === 'string'
