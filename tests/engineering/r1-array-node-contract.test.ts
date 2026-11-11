@@ -30,7 +30,7 @@ function harness(type: Kind, preset = 0, existing = true) {
     if (request.path === 'basic/serviceAppointment/queryById/' + scope.workOrderId) return { success: true, status: 1, data: { serviceAppointment: { _id: scope.workOrderId, tenantId: scope.tenantId, workflowId: scope.workflowRunId, state: 1 }, workflow: { _id: scope.workflowRunId, tenantId: scope.tenantId, formDataId: scope.workOrderId, state: 0 }, workflowNode: [node] } }
     if (request.path === 'biz/ext/queryById.do') return { _id: scope.formDefinitionId, tenantId: scope.tenantId, state: 1, type: '0', colName: field.colName }
     if (request.path === 'biz/extField/query') return { data: structuredClone(fields), total: fields.length, page: 1, size: 50 }
-    if (request.path === 'i/code/selectCode.do') return [{ codeId: fault === 'provider' ? 'WRONG' : 'SYN_CODES', eleid: 'SYN_CODES', ...(fault === 'tenant' ? { tenantId: 'other' } : {}), options: { a: '合成甲', b: '合成乙' } }]
+    if (request.path === 'i/code/selectCode.do') return [{ codeId: fault === 'provider' ? 'WRONG' : 'SYN_CODES', eleid: 'SYN_CODES', ...(fault === 'tenant' ? { tenantId: 'other' } : {}), options: { a: '合成甲', b: '合成乙', '0': '合成零', false: '合成否' } }]
     if (request.path === 'i/code/selectMultistageCode.do') return [{ type: fault === 'provider' ? 'WRONG' : 'SYN_TREE', tenantId: fault === 'tenant' ? 'other' : scope.tenantId, children: tree.map(x => ({ value: x.value, name: x.label, children: x.children.map(y => ({ value: y.value, name: y.label, children: [] })) })) }]
     if (request.path === 'biz/extForm/query/' + scope.formDefinitionId) return { data: existing ? [structuredClone(record)] : [], total: existing ? 1 : 0, page: 1, size: request.body.rows, dataCount: existing ? 1 : 0 }
     throw Error('No command/upload/unknown endpoint is permitted in this synthetic read transport')
@@ -115,17 +115,57 @@ describe('normal source-bound array read, distinct from Stage2C Mock transaction
     expect(projectR1RecordReadFields(s.definition, s.records[0]!)[0]!.text).toBe(value === undefined ? '未保存' : '空值')
     expect(Object.hasOwn(h.reader.currentFormOriginal!(s, 'synthetic-record')!.exts as object, key)).toBe(value !== undefined); h.zeroCommands()
   })
-  it('characterizes multiple Select scalar read display without accepting its shape', async () => {
+  it('keeps multiple Select scalar read visibly unverified without accepting its shape', async () => {
     const h = harness('select'); h.record.exts[key] = 'a'
     const s = await h.reader.load(scope.workOrderId, scope.runtimeNodeId), field = s.definition.fields![0]!
     expect(field).toMatchObject({ type: 'select', multiple: true })
     expect(s.records[0]!.values?.[key]).toBe('a')
     expect((h.reader.currentFormOriginal!(s, 'synthetic-record')!.exts as any)[key]).toBe('a')
     expect(normalizeFieldValue(field.type, 'a', field.options, field.multiple).ok).toBe(false)
-    // Known read-shape mismatch at the pinned baseline, not desired acceptance.
-    // Change this expectation when the separately reviewed product fix lands.
-    expect(projectR1RecordReadFields(s.definition, s.records[0]!)[0]!.text).toBe('合成甲')
+    // Original baseline label-only characterization remains in committed history.
+    expect(projectR1RecordReadFields(s.definition, s.records[0]!)[0]!.text).toBe('a（选项未核实）')
     h.zeroCommands()
+  })
+  it.each((['checkbox', 'select'] as const).flatMap(type => [0, 1].flatMap(preset =>
+    ['a', false, 0].map(value => ({ type, preset, value })),
+  )))('keeps array-choice scalar unverified: $type preset=$preset value=$value', async ({ type, preset, value }) => {
+    const h = harness(type, preset), slot = preset ? h.record : h.record.exts
+    slot[key] = value
+    const s = await h.reader.load(scope.workOrderId, scope.runtimeNodeId)
+    expect(s.definition.fields![0]).toMatchObject({ type, multiple: true })
+    expect(s.records[0]!.values?.[key]).toBe(value)
+    const raw = h.reader.currentFormOriginal!(s, 'synthetic-record')! as any
+    expect((preset ? raw : raw.exts)[key]).toBe(value)
+    expect(projectR1RecordReadFields(s.definition, s.records[0]!)[0]!.text).toBe(`${String(value)}（选项未核实）`)
+    expect(h.calls.some(x => x.path === 'i/code/selectCode.do')).toBe(true)
+    h.zeroCommands()
+  })
+  it.each((['checkbox', 'select'] as const).flatMap(type => [0, 1].map(preset => ({ type, preset }))))(
+    'preserves legitimate and empty array-choice reads: $type preset=$preset', async ({ type, preset }) => {
+      const h = harness(type, preset), slot = preset ? h.record : h.record.exts
+      for (const [value, expected] of [
+        [undefined, '未保存'], [null, '空值'], ['', '空值'], [[], '空值'],
+        [['b', 'a'], '合成乙 / 合成甲'], [[0, false], '合成零 / 合成否'],
+        [['a', 'a'], '合成甲 / 合成甲'], [['unknown'], 'unknown（选项未核实）'],
+      ] as const) {
+        if (value === undefined) delete slot[key]; else slot[key] = value
+        const s = await h.reader.load(scope.workOrderId, scope.runtimeNodeId)
+        const raw = h.reader.currentFormOriginal!(s, 'synthetic-record')! as any
+        expect(Object.hasOwn(preset ? raw : raw.exts, key)).toBe(value !== undefined)
+        expect(s.records[0]!.values?.[key]).toEqual(value)
+        expect(projectR1RecordReadFields(s.definition, s.records[0]!)[0]!.text).toBe(expected)
+        h.zeroCommands()
+      }
+    },
+  )
+  it.each(['radio', 'select'] as const)('preserves scalar %s labels and rejects array display', async type => {
+    const h = harness('select'); h.field.type = type; h.field.multiple = false
+    for (const [value, expected] of [['a', '合成甲'], [0, '合成零'], [false, '合成否'], [['a'], 'a（选项未核实）'], [[], '已保存的选项格式异常（选项未核实）']] as const) {
+      h.record.exts[key] = value
+      const s = await h.reader.load(scope.workOrderId, scope.runtimeNodeId)
+      expect(projectR1RecordReadFields(s.definition, s.records[0]!)[0]!.text).toBe(expected)
+      expect(s.records[0]!.values?.[key]).toEqual(value); h.zeroCommands()
+    }
   })
   it.each<Kind>(['checkbox', 'select', 'cascade'])('reaches schema rejection for %s save under an explicit create grant', async type => {
     const h = harness(type, 0, false), s = await h.reader.load(scope.workOrderId, scope.runtimeNodeId)

@@ -1,17 +1,30 @@
 import { expect,test } from '@playwright/test'
 test.skip(process.env.XLINK_H5_SURVEY_REGIONS_IS_READ!=='true','Opt-in synthetic regions/IS normal-App read contract')
 const def='synthetic-regions-is-survey'
-for(const mode of ['labels','excluded','wrong-provider','foreign-tenant','unknown','wrong-shape'] as const){
+for(const mode of ['labels','excluded','wrong-provider','foreign-tenant','unknown','wrong-shape','array-scalars','array-values'] as const){
  test(`regions/IS normal read ${mode}`,async({page,baseURL},info)=>{
   const calls:string[]=[],commands:string[]=[],unexpected:string[]=[],errors:string[]=[]
   let fault=mode==='wrong-provider'||mode==='foreign-tenant'
+  const arrayMode=mode==='array-scalars'||mode==='array-values'
   const fields=[
    {_id:'province-field',name:'province',nameDisp:'合成省份',type:'select',valueOption:'regions',preset:1,showList:mode==='excluded'?['5']:['4']},
    {_id:'mold-field',name:'isMoldRemoved',nameDisp:'合成处理情况',type:'radio',valueOption:'IS',preset:0,showList:mode==='excluded'?[]:['4']},
-  ].map(f=>({...f,tenantId:'t',extId:def,colName:'survey',state:1,required:'0',multiple:false,readOnly:0,showType:'1',frontEndConfig:'{}'}))
+  ].map(f=>({...f,tenantId:'t',extId:def,colName:arrayMode?'syntheticArrayRead':'survey',state:1,required:'0',multiple:false,readOnly:0,showType:'1',frontEndConfig:'{}'}))
+  if(arrayMode){
+   for(const [id,type,preset] of [['checksRoot','checkbox',1],['checksExt','checkbox',0],['multiRoot','select',1],['multiExt','select',0]] as const){
+    fields.push({...fields[1]!,_id:id+'-field',name:id,nameDisp:'合成'+id,type,preset,multiple:true})
+   }
+  }
   const sa={_id:'s',tenantId:'t',workflowId:'w',state:1,status:203,serviceType:'40',name:'合成字典读取',orderNum:'CODE-READ',exts:{sourceType:''}}
   const node={_id:'n',tenantId:'t',workflowId:'w',workflowFormDataId:'s',workflowFormColName:'serviceAppointment',state:0,handlerIds:['r'],nodeDef:{nodeType:'repeat',formDefId:def,name:'省份与处理情况',formFieldIdsFill:[],formFieldIdsReadOnly:fields.map(f=>f._id)}}
   const records=[{_id:'saved',tenantId:'t',sid:'s',nodeId:'n',workflowId:'w',state:1,province:mode==='unknown'?'UNKNOWN-P':'SYN-P1',exts:{isMoldRemoved:mode==='unknown'?'UNKNOWN-I':mode==='wrong-shape'?['1','0']:'1'}}]
+  if(arrayMode){
+   const raw=records[0]! as unknown as Record<string,any>
+   raw.checksRoot=mode==='array-values'?['1','0']:'1'
+   raw.exts.checksExt=mode==='array-values'?['1','0']:false
+   raw.multiRoot=mode==='array-values'?['1','0']:0
+   raw.exts.multiExt=mode==='array-values'?['1','0']:'1'
+  }
   await page.route('**/*',async route=>{
    const req=route.request(),u=new URL(req.url())
    if(u.origin!==baseURL){unexpected.push('external');return route.abort()}
@@ -24,12 +37,12 @@ for(const mode of ['labels','excluded','wrong-provider','foreign-tenant','unknow
    if(['basic/serviceAppointment/query','basic/serviceAppointment/querySAWorkflowNode'].includes(path))return ok({data:[{...node,data:sa}],total:1,page:1,rows:20})
    if(path==='basic/serviceAppointment/queryById/s')return ok({success:true,status:1,data:{serviceAppointment:sa,workflow:{_id:'w',tenantId:'t',formDataId:'s',state:0},workflowNode:[node]}})
    if(['code/query','biz/action/query.do'].includes(path))return ok({data:[],total:0,page:1,rows:20})
-   if(path==='biz/ext/queryById.do')return ok({_id:def,tenantId:'t',state:1,type:'1',colName:'survey'})
-   if(path==='biz/extField/query')return ok({data:fields,total:2,page:1,size:Number(b.rows)})
+   if(path==='biz/ext/queryById.do')return ok({_id:def,tenantId:'t',state:1,type:arrayMode?'0':'1',colName:arrayMode?'syntheticArrayRead':'survey'})
+   if(path==='biz/extField/query')return ok({data:fields,total:fields.length,page:1,size:Number(b.rows)})
    if(path==='i/code/selectCode.do'){
     const q=JSON.parse(b.jsonPara!);expect(b.tenantId).toBe('t');expect(q).toHaveLength(1);const id=q[0].codeId
     expect(q).toEqual([{codeId:id,eleid:id}]);expect(['regions','IS']).toContain(id)
-    const group:any={...q[0],options:id==='regions'?{'SYN-P1':'合成省一','SYN-P2':'合成省二'}:{'0':'合成未处理','1':'合成已处理'}}
+    const group:any={...q[0],options:id==='regions'?{'SYN-P1':'合成省一','SYN-P2':'合成省二'}:{'0':'合成未处理','1':'合成已处理',false:'合成否'}}
     if(fault&&mode==='wrong-provider')group.codeId='other'
     if(fault&&mode==='foreign-tenant')group.tenantId='other'
     return ok(JSON.stringify([group]))
@@ -51,6 +64,10 @@ for(const mode of ['labels','excluded','wrong-provider','foreign-tenant','unknow
     await expect(page.getByTestId('r1-normal-value-province')).toHaveText(mode==='unknown'?'UNKNOWN-P（选项未核实）':'合成省一')
     await expect(page.getByTestId('r1-normal-value-isMoldRemoved')).toHaveText(mode==='unknown'?'UNKNOWN-I（选项未核实）':mode==='wrong-shape'?'1 / 0（选项未核实）':'合成已处理')
     expect(calls.filter(p=>p==='i/code/selectCode.do').length).toBeGreaterThanOrEqual(2)
+   }
+   if(arrayMode){
+    const expected=mode==='array-values'?['合成已处理 / 合成未处理','合成已处理 / 合成未处理','合成已处理 / 合成未处理','合成已处理 / 合成未处理']:['1（选项未核实）','false（选项未核实）','0（选项未核实）','1（选项未核实）']
+    for(const [i,key] of ['checksRoot','checksExt','multiRoot','multiExt'].entries())await expect(page.getByTestId('r1-normal-value-'+key)).toHaveText(expected[i]!)
    }
    await expect(page.locator('[data-testid^="r1-normal-edit-"],[data-testid^="r1-normal-complete-"],[data-testid="r1-normal-create"],[data-testid="r1-normal-append"]')).toHaveCount(0)
    expect(commands).toEqual([]);expect(unexpected).toEqual([]);expect(errors).toEqual([]);expect(calls.some(p=>p.includes('selectMultistage'))).toBe(false)

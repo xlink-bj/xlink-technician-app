@@ -1,6 +1,6 @@
 # R1 Checkbox / multiple Select / Cascade：正常节点契约盘点
 
-验证基线：`34102c11429d233ac9230e15f765c2098ca70cc1`，2026-11-11。本片仅测试与说明，不新增控件、写权限或表单业务 profile。下列合成字段和选项不是生产配置。旧 Stage2C、Radio、canonical part/height 的通过历史不计成本片新成果。
+原契约盘点基线：`34102c11429d233ac9230e15f765c2098ca70cc1`；本次只读形状修复基线：`947de625b4a4898b5e55a4cdcd1efda6cf107fe8`，2026-11-11。本次仅修复选项显示形状判断，不新增控件、写权限或表单业务 profile。下列合成字段和选项不是生产配置。旧 Stage2C、Radio、canonical part/height 的通过历史不计成本片新成果。
 
 ## 固定来源
 
@@ -12,18 +12,18 @@
 
 | 类型 | R1 / runtime / UI | 正常 source-backed 读取 | 正常 create/edit | 真后台状态 |
 | --- | --- | --- | --- | --- |
-| Checkbox | Checkbox group事件为数组；runtime接受标量元素数组，local patch拒绝重复；既有多选控件可表达 | 本片真实 normal reader 绑定精确 Code 请求、tenant/字段/definition；顺序原样，root和EXTS可读；标量读显示仍缺形状提示 | repeat save的普通schema及直接调用的forms edit helper均拒绝数组类型；已测read/save流程0命令，不含complete或edit-provider验证 | 本片未运行Java/Mongo；Stage2C Mock不代替 |
-| Select multiple | runtime按multiple选择数组契约，单Select仍标量；普通local编辑还有显式multiple限制 | 精确Code provider；数组显示标签不授予写权；标量也会显示标签，修订新增characterization已在本轮项目执行通过 | repeat的multiple拒绝，直接forms edit helper的multiple拒绝；没有通用正常数组create/edit放行 | 未验通用源配置持久化或clear |
+| Checkbox | Checkbox group事件为数组；runtime接受标量元素数组，local patch拒绝重复；既有多选控件可表达 | 本片真实 normal reader 绑定精确 Code 请求、tenant/字段/definition；顺序原样，root和EXTS可读；本次修复后，非空标量保留原值并显示“选项未核实” | repeat save的普通schema及直接调用的forms edit helper均拒绝数组类型；已测read/save流程0命令，不含complete或edit-provider验证 | 本片未运行Java/Mongo；Stage2C Mock不代替 |
+| Select multiple | runtime按multiple选择数组契约，单Select仍标量；普通local编辑还有显式multiple限制 | 精确Code provider；数组显示标签不授予写权；原标量标签characterization保留于历史；本次改为断言非空标量显示原值及“选项未核实” | repeat的multiple拒绝，直接forms edit helper的multiple拒绝；没有通用正常数组create/edit放行 | 未验通用源配置持久化或clear |
 | Cascade single path | 独立树provider；runtime拒绝兄弟拼接但允许祖先前缀；当前selector两层/递归叶布局的输出不能建立通用存储终点规则 | 正常reader逐父级解释标签，祖先前缀也显示标签；到叶要求尚未由通用R1合同确定 | 本片合成非part字段的普通save仍拒绝；已有part窄契约不泛化成本片 | 本片未运行；历史part实证仅限其自身 |
 | Cascade multiple | legacy有单独formatter分支；其精确多路径表示尚未由本片核全 | 普通primitive数组读到不等于多路径语义已验 | 普通save在数组schema处拒绝，未据此证明独立的层级校验 | UNKNOWN / NOT_RUN |
 
-核心实现位置：`r1-scoped-field-options.ts`33–114绑定/解析provider；`r1-record-read-fields.ts`24–49显示；`r1-repeat-form.ts`40–63及99–125普通写schema；`r1-forms-edit-values.ts`12–25仅scalar编辑。测试直接导入真实normal reader/action provider、read projection、repeat/edit helper及runtime；scoped options由reader间接调用。`r1-local-form-fields.ts`26–38/84–115和Vue selector仅作源码复核，不是本测试直接执行或节点写授权证据。
+核心实现位置：`r1-scoped-field-options.ts`33–114绑定/解析provider；`r1-record-read-fields.ts`24–50显示；`r1-repeat-form.ts`40–63及99–125普通写schema；`r1-forms-edit-values.ts`12–25仅scalar编辑。测试直接导入真实normal reader/action provider、read projection、repeat/edit helper及runtime；scoped options由reader间接调用。`r1-local-form-fields.ts`26–38/84–115和Vue selector仅作源码复核，不是本测试直接执行或节点写授权证据。
 
 ## 原候选已执行证据与修订范围
 
 原32例遍历合成改名字段，覆盖两个preset、Code/Cascade分流、有序路径、root/EXTS冲突保全、missing/null/empty、未知metadata、grant下数组save拒绝、multiple Cascade save关闭、错provider/tenant、迟到角色撤销及fresh metadata/clear撤销旧lease。hidden/readonly/未知条件仅检查已不支持数组字段的projection，没有调用save，不能证明这些写guard分别起效。forms edit只直接调用helper，未运行edit-provider事务。
 
-本次修订对save用例增加精确schema错误、v1 grant、实际handler、成功fresh reader调用及provider/record重读断言；不再接受任意throw作为schema拒绝证据。重复、错误形状和31元素输入均在更早的数组schema处拒绝，不是独立duplicate/length校验证明。新增1例multiple Select标量读显示characterization直接走normal reader，记录runtime拒绝标量而display仍给标签的差异；不是认可该形状。修订后33个用例已在canonical项目定向执行通过；这是独立实跑结果，不由原32 PASS转记。
+本次修订对save用例增加精确schema错误、v1 grant、实际handler、成功fresh reader调用及provider/record重读断言；不再接受任意throw作为schema拒绝证据。重复、错误形状和31元素输入均在更早的数组schema处拒绝，不是独立duplicate/length校验证明。当时新增1例multiple Select标量读显示characterization直接走normal reader，记录runtime拒绝标量而display仍给标签的差异；不是认可该形状。本次最小显示修复把该例改为正确的未核实显示期望，历史源码和日志不覆盖。修订后33个用例已在canonical项目定向执行通过；这是独立实跑结果，不由原32 PASS转记。
 
 零upsert/updateExts/Process/upload/token仅限定已测read/save调用及对应命令观察口。测试没有调用`complete()`；grant包含complete不代表已验证它的拒绝，实际complete路径也独立于save的数组normalization。两条旧RED在预期失败断言后未执行其零命令断言，不额外将这一步记为通过。旧Stage2C断言没有拷作新成果。
 
@@ -35,10 +35,10 @@
 
 原隔离探针实跑2 FAIL、24 skipped，日志与探针原文保持不变。两条失败的证据强度不同：
 
-1. Code已核时，Checkbox存储标量`'a'`仍显示已核标签，缺数组形状未核实提示。
+1. 原基线Code已核时，Checkbox存储标量`'a'`仍显示已核标签，缺数组形状未核实提示；本次已用正常reader/Code回归复现并修复。
 2. Cascade祖先前缀`['north']`仍显示祖先标签，runtime也允许此前缀。行为已确认，但旧探针要求“选项未核实”的期望属于待定终点合同，不能直接判作通用R1或生产缺陷。当前UI输出叶路径不等于所有已存值必须到叶。
 
-独立纯函数复核另确认multiple Select同Checkbox的标量形状差异；修订中的新增normal-reader characterization已在本轮项目实跑通过。实际形状提示问题定位于`r1-record-read-fields.ts:24–49`，本片不改formatter。Cascade仅记录非叶显示/合同边界，不添加叶限制或宣称runtime修复任务。原两条RED、初轮fixture失败及扩展lease失败历史全部保留，不混入通过数。这些证据**不是正常数组写权限漏洞**，也不开放数组writer。
+独立纯函数复核另确认multiple Select同Checkbox的标量形状差异；修订中的新增normal-reader characterization已在本轮项目实跑通过。实际形状提示问题定位于`r1-record-read-fields.ts:24–50`：原盘点不改formatter，本次在共享显示函数增加一行数组形状判断。Cascade仅记录非叶显示/合同边界，不添加叶限制或宣称runtime修复任务。原两条RED、初轮fixture失败及扩展lease失败历史全部保留，不混入通过数。这些证据**不是正常数组写权限漏洞**，也不开放数组writer。
 
 重复与顺序也应分层：reader不排序/去重原值；lower runtime不单独保证唯一性，源码中的local/special validator另有各自的重复/30元素规则，不是本片save用例独立验证的guard。copy未由新增模块执行；stale lease只覆盖列出的clear/metadata情形。不能借任一层局部通过推定完整normal写协议。
 
@@ -53,3 +53,12 @@
 
 
 修订首轮项目执行为2 FAIL/168 PASS：加强断言误要求Cascade映射层显式保留multiple:false，而固定form.ts:229/290仅在true时输出multiple属性。仅测试纠正为raw必须false且mapped确实没有multiple属性，true时仍必须显式true；未放宽fresh load、错误来源、权限或命令断言。首轮原日志保留。此修订版33/170是当前结果，不与修订前32/350或旧RED叠加，亦不证明complete()、服务端clear、duplicate/size深层guard或通用Cascade到叶要求。
+
+
+## 947de625 后的最小只读形状修复
+
+正常reader/精确Code provider先红后绿：首轮13个目标回归为5 FAIL/8 PASS，未匹配false/0选项的8例已经因未知选项显示未核实；补入精确匹配的`0`/`false` Code选项后13例全FAIL，明确隔离数组形状问题。修复仅在显示函数阻止Checkbox、显式multiple=true Select的非空标量取得已核选项标签，保留其原始字符串/布尔/数值及私有root/EXTS；不会包装数组、丢弃值或标记未保存。missing仍“未保存”，null/空字符串/空数组仍“空值”。合法数组、顺序、现有重复项展示及未知选项规则不变；Radio和single Select的合法false/0仍按标量标签显示，数组仍未核实。Cascade分支原样，不推定到叶。
+
+本次模块51 PASS，相关7文件371 PASS，typecheck、boundary、dependency、config及diff均exit0。新增断言覆盖两类型、两preset、匹配选项的`'a'`/false/0、空值、合法数组与重复/未知选项，原provider错误/lease与数组writer拒绝仍通过。数值/布尔数组与重复项是原显示行为保全，不是新增写合法性声明。零业务命令断言限实际执行的reader/save观察口，不补称调用了complete。
+
+既有正常App只读H5扩展两个合成非special type0配置模式，四个改名字段覆盖Checkbox/multiple Select与root/EXTS；保存的标量1/false/0显示原值加未核实，合法数组仍显示已核标签。原regions/IS六例保留，整个受影响suite8 PASS/0 skip。所有响应纯合成、业务Mock关闭、无写grant，外网拦截，token/upload/upsert/updateExts/Process及其他未知API为0。没有Java/Mongo、生产配置或原59验收。测试沿用原独立config/output与opt-in标志，未改CI、reader、panel、权限或runtime。原RED/33/170与32/350日志保持历史，不与本次计数相加；不重跑无关全量或三端build。候选待独立审查，未发布。

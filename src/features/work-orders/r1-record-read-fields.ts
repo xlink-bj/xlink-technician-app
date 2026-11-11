@@ -34,6 +34,7 @@ function displayValue(field: FormFieldRead, value: FormFieldValue | undefined): 
   const codes = values.map(String)
   if (!choiceTypes.has(field.type)) return codes.join(' / ')
   const unverified = () => `${codes.join(' / ')}（选项未核实）`
+  if (!Array.isArray(value) && (field.type === 'checkbox' || (field.type === 'select' && field.multiple === true))) return unverified()
   if (field.type === 'cascade' && !Array.isArray(value)) return unverified()
   let options: readonly FormFieldOptionRead[] | undefined = field.options
   const labels: string[] = []
