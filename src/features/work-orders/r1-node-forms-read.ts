@@ -1,3 +1,4 @@
+import type {R1FileCreateStorage} from '@shared/form/r1-file-create-storage'
 import type { AppointmentReplacementContext } from '@shared/form/appointment-replacement-context'
 import type { InjectionKey } from 'vue'
 import type { FormDefinitionRead, FormDataRead, WorkflowNodeRead } from '@shared/ports'
@@ -45,6 +46,8 @@ export interface R1NodeFormsReader {
   isSurveyMediaSourceIntact?(snapshot:R1NodeFormsSnapshot,evidence:unknown):boolean
   /** Private, exact-generation renewal of this typed read; not a write grant. */
   beginSurveyMediaRead?(snapshot:R1NodeFormsSnapshot,evidence:unknown):{readonly result:Promise<R1NodeFormsSnapshot>;isCurrent():boolean}
+  currentConfiguredFileStorage?(snapshot:R1NodeFormsSnapshot,evidence:unknown):R1FileCreateStorage|null
+  sameConfiguredFileSource?(previous:R1NodeFormsSnapshot,prior:unknown,fresh:R1NodeFormsSnapshot,next:unknown):boolean
   currentSurveyMediaSource?(snapshot:R1NodeFormsSnapshot):object|null
   isCurrentSurveyMediaSource?(snapshot:R1NodeFormsSnapshot,evidence:unknown):boolean
   currentSurveyConditionalSource?(snapshot: R1NodeFormsSnapshot): object | null

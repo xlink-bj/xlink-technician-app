@@ -1,3 +1,6 @@
+import type {R1FileCreateStorage} from '@shared/form/r1-file-create-storage'
+import {configuredFileSource} from './r1-survey-media-source'
+import {assertConfiguredFileOriginal,createConfiguredFileCodec} from '@adapters/api/r1-configured-file-storage'
 import {surveyMediaSourceSeal} from './r1-survey-media-source'
 import {assertSurveyMediaOriginal} from '@features/work-orders/r1-survey-media-create'
 import {createSurveyCreateMediaCodec} from '@adapters/api/survey-create-media-codec'
@@ -106,8 +109,8 @@ export function createNormalNodeFormsReader(input: {
   let generation = 0
   let current: { snapshot: R1NodeFormsSnapshot; fingerprint: string; formsExts?: string;
     originals: ReadonlyMap<string, string>; genericRoute?: Omit<R1GenericMapRouteRead, 'recordId' | 'original'>;
-    schemaAtRead: string; surveyMediaSeal?:string; surveyMediaSnapshotSeal?:string; conditionalSurveySeal?: string; conditionalSnapshotSeal?: string; appointmentRoute?: true; appointmentSeal?: string; fileRoute?: Omit<R1GenericMapRouteRead, 'recordId' | 'original'> } | null = null
-  const surveyMediaReads=new WeakMap<object,{snapshot:R1NodeFormsSnapshot;fingerprint:string;seal:string;snapshotSeal:string}>()
+    schemaAtRead: string; configuredFileStorage?:R1FileCreateStorage; surveyMediaSeal?:string; surveyMediaSnapshotSeal?:string; conditionalSurveySeal?: string; conditionalSnapshotSeal?: string; appointmentRoute?: true; appointmentSeal?: string; fileRoute?: Omit<R1GenericMapRouteRead, 'recordId' | 'original'> } | null = null
+  const surveyMediaReads=new WeakMap<object,{snapshot:R1NodeFormsSnapshot;fingerprint:string;seal:string;snapshotSeal:string;storage?:R1FileCreateStorage}>()
   const mediaSnapshotSeal=(s:R1NodeFormsSnapshot)=>JSON.stringify([s.workOrderId,s.node,s.definition,s.fillableFieldIds,s.records])
   const revokedSurveyMedia=new WeakSet<object>()
   const liveSurveyMedia=(s:R1NodeFormsSnapshot)=>{
@@ -174,12 +177,22 @@ export function createNormalNodeFormsReader(input: {
     },
     currentSurveyMediaSource(snapshot){
       const live=liveSurveyMedia(snapshot);if(!live)return null
-      const evidence=Object.freeze({});surveyMediaReads.set(evidence,{snapshot,fingerprint:live.fingerprint,seal:live.surveyMediaSeal!,snapshotSeal:live.surveyMediaSnapshotSeal!});return evidence
+      const evidence=Object.freeze({});surveyMediaReads.set(evidence,{snapshot,fingerprint:live.fingerprint,seal:live.surveyMediaSeal!,snapshotSeal:live.surveyMediaSnapshotSeal!,storage:live.configuredFileStorage});return evidence
     },
     isCurrentSurveyMediaSource(snapshot,evidence){
       if(!evidence||typeof evidence!=='object')return false
       const live=liveSurveyMedia(snapshot),stamp=surveyMediaReads.get(evidence)
       return Boolean(live&&stamp&&stamp.snapshot===snapshot&&stamp.fingerprint===live.fingerprint&&stamp.seal===live.surveyMediaSeal&&stamp.snapshotSeal===live.surveyMediaSnapshotSeal)
+    },
+    currentConfiguredFileStorage(snapshot,evidence){
+      if(api.isCurrentSurveyMediaSource?.(snapshot,evidence)!==true||!evidence||typeof evidence!=='object')return null
+      return surveyMediaReads.get(evidence)?.storage??null
+    },
+    sameConfiguredFileSource(previous,prior,fresh,next){
+      if(api.isSurveyMediaSourceIntact?.(previous,prior)!==true||api.isCurrentSurveyMediaSource?.(fresh,next)!==true
+        ||!prior||typeof prior!=='object'||!next||typeof next!=='object')return false
+      const a=surveyMediaReads.get(prior),b=surveyMediaReads.get(next)
+      return Boolean(a?.storage&&b?.storage&&a.seal===b.seal)
     },
     currentSurveyConditionalSource(snapshot) {
       const source=conditionalSurveyCurrent(snapshot);if(!source)return null
@@ -454,10 +467,13 @@ export function createNormalNodeFormsReader(input: {
         && hydrated.some(field=>field.type==='file'&&!field.readOnly
           && !node.formFieldIdsReadOnly?.includes(field.fieldId)&&fillableFieldIds?.includes(field.fieldId))
         ?routeFacts:undefined
-      const surveyMediaSeal=input.env.VITE_XLINK_ENABLE_REAL_WRITES==='true'&&input.env.VITE_XLINK_ENABLE_R1_SPECIAL_WRITES==='true'
-        ?surveyMediaSourceSeal({workOrderId,node,definition:{...definition,fields:hydrated},records:[],fillableFieldIds},ext,fields,input.tenantId):undefined
-      const surveyMediaCodec=surveyMediaSeal?createSurveyCreateMediaCodec():undefined
-      const normalFileCodec=fileRoute?createNormalR1FileCodec({...definition,fields:hydrated},
+      const writeMedia=input.env.VITE_XLINK_ENABLE_REAL_WRITES==='true'&&input.env.VITE_XLINK_ENABLE_R1_SPECIAL_WRITES==='true'
+      const configuredGrant=parseR1RepeatGrant(input.env.VITE_XLINK_R1_REPEAT_GRANT)?.version===4
+      const sourceSnapshot={workOrderId,node,definition:{...definition,fields:hydrated},records:[],fillableFieldIds}
+      const configuredSource=writeMedia&&configuredGrant?configuredFileSource(sourceSnapshot,ext,fields,input.tenantId):undefined
+      const surveyMediaSeal=configuredGrant?configuredSource?.seal:writeMedia?surveyMediaSourceSeal(sourceSnapshot,ext,fields,input.tenantId):undefined
+      const surveyMediaCodec=configuredSource?createConfiguredFileCodec(configuredSource.storage):surveyMediaSeal?createSurveyCreateMediaCodec(sourceSnapshot.definition,ext):undefined
+      const normalFileCodec=!configuredSource&&fileRoute?createNormalR1FileCodec({...definition,fields:hydrated},
         (fillableFieldIds??[]).filter(fieldId=>!node.formFieldIdsReadOnly?.includes(fieldId))):undefined
       // Attachment decoding belongs only to this read-only rollout, never the
       // scoped write snapshots consumed by edit/save/completion capabilities.
@@ -478,7 +494,9 @@ export function createNormalNodeFormsReader(input: {
         const selected=await reader.select(String(r.data.id))
         const original=reader.originalFor(selected)
         if(!original) return deny()
-        if(surveyMediaSeal)assertSurveyMediaOriginal(original)
+        if(configuredGrant&&!configuredSource&&hydrated.some(field=>field.type==='file'))throw Error('当前附件配置的存储位置无法核实，不能把原文投影成未保存。')
+        if(configuredSource)assertConfiguredFileOriginal(configuredSource.storage,original)
+        else if(surveyMediaSeal)assertSurveyMediaOriginal(original)
         assertSurveyReadExtsValues(definition, original)
         records.push(selected.data)
         originals.set(String(selected.data.id),formsExtsJson(original))
@@ -501,7 +519,7 @@ export function createNormalNodeFormsReader(input: {
       const genericRoute = fields.length>50?routeFacts:undefined
       const conditionalSurveySeal = conditionalSurveySourceSeal(snapshot,ext,fields,input.tenantId)
       current = { snapshot, fingerprint: identity, originals, schemaAtRead:schemaIdentity(snapshot),
-        ...(surveyMediaSeal?{surveyMediaSeal,surveyMediaSnapshotSeal:mediaSnapshotSeal(snapshot)}:{}),
+        ...(surveyMediaSeal?{surveyMediaSeal,surveyMediaSnapshotSeal:mediaSnapshotSeal(snapshot),...(configuredSource?{configuredFileStorage:configuredSource.storage}:{})}:{}),
         ...(conditionalSurveySeal?{conditionalSurveySeal,conditionalSnapshotSeal:conditionalSnapshotSeal(snapshot)}:{}),
         ...(appointmentRoute?{appointmentRoute,appointmentSeal:JSON.stringify([workOrderId,schemaIdentity(snapshot)])}:{}), ...(genericRoute?{genericRoute}:{}), ...(fileRoute?{fileRoute}:{}), ...(formsExts ? { formsExts } : {}) }
       return snapshot

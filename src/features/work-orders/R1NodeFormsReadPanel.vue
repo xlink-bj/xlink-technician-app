@@ -6,6 +6,7 @@
     </AppButton>
     <text v-if="message" class="form-read__hint" data-testid="r1-normal-form-read-message">{{ message }}</text>
     <template v-if="visibleSnapshot">
+      <text v-if="!actions && visibleSnapshot.definition.fields?.some(field => field.type==='file')" class="form-read__hint" data-testid="r1-normal-file-unavailable">此表单的附件配置或授权尚不支持新增图片。</text>
       <text v-if="!visibleSnapshot.records.length" class="form-read__hint" data-testid="r1-normal-form-empty">暂无已保存记录。</text>
       <view v-for="(record,index) in visibleSnapshot.records" :key="String(record.id)" class="form-read__record" data-testid="r1-normal-form-record">
         <text class="form-read__title">{{ visibleSnapshot.node.displayName || '现场记录' }} · {{ index + 1 }}</text>

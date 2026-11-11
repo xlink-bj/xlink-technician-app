@@ -98,6 +98,10 @@ export function normalizeFieldValue(
   options?: readonly FormOption[],
   multiple = false,
 ): NormalizationResult {
+  // R1 radio-group is single-value; metadata cannot promote it to a multiselect.
+  if (type === 'radio' && (multiple || Array.isArray(value))) {
+    return invalid('radio requires a scalar choice and does not support multiple')
+  }
   if (type === 'cascade' && Array.isArray(value) && !multiple
     && options?.some(option => Boolean(option.children?.length))
     && !supportedCascadePath(options, value)) {
@@ -236,6 +240,17 @@ export function normalizeSubmission(input: {
 
     const raw = input.values[field.valueKey]
     if (!state.visible && !input.preserveHiddenValues) continue
+    // Check participating radio shape before the optional missing-value skip:
+    // [] is an invalid radio value, and missing data cannot legitimize multiple.
+    if (field.type === 'radio' && (field.multiple || Array.isArray(raw))) {
+      return {
+        ok: false,
+        reason: 'validation',
+        fieldId: field.fieldId,
+        valueKey: field.valueKey,
+        message: 'radio requires a scalar choice and does not support multiple',
+      }
+    }
     if (isMissing(raw)) {
       if (state.required) {
         return {

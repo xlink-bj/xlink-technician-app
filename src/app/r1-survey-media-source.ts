@@ -1,3 +1,5 @@
+import {configuredFileStorage} from '@adapters/api/r1-configured-file-storage'
+import {supportsR1ConfiguredFileSchema} from '@features/work-orders/r1-normal-file-values'
 import {decodeR1ScopedJson} from '@adapters/api/r1-scoped-json'
 import {supportsSurveyMediaCreate} from '@features/work-orders/r1-survey-media-create'
 import type {R1NodeFormsSnapshot} from '@features/work-orders/r1-node-forms-read'
@@ -22,4 +24,36 @@ export function surveyMediaSourceSeal(s:R1NodeFormsSnapshot,ext:Readonly<Record<
  }
  if(new Set(fields.map(f=>f._id)).size!==2)return
  return JSON.stringify([tenant,ext,fields])
+}
+
+/** Shared metadata/source proof for the explicit configuration-driven profile.
+ * The legacy profile above remains an unchanged authority boundary. */
+export function configuredFileSource(s:R1NodeFormsSnapshot,ext:Readonly<Record<string,unknown>>,rawFields:readonly Readonly<Record<string,unknown>>[],tenant:string){
+ if(!supportsR1ConfiguredFileSchema(s)||s.node.sourceNodeType!=='repeat'||s.node.lifecycle!=='active'||s.node.nodeTypeEvidence!=='runtime_node_def'
+  ||s.node.formDefinitionId!==s.definition.id||ext._id!==s.definition.id||ext.tenantId!==tenant||ext.state!==1
+  ||typeof ext.colName!=='string'||!ext.colName||ext.colName.trim()!==ext.colName
+  ||['id','extId','definitionId','formDefinitionId'].some(k=>Object.hasOwn(ext,k)&&ext[k]!==s.definition.id)
+  ||Object.hasOwn(ext,'collectionName')&&ext.collectionName!==''&&ext.collectionName!==ext.colName
+  ||rawFields.length!==s.definition.fields!.length)return
+ for(const key of ['preScriptContent','scriptContent'])if(Object.hasOwn(ext,key)&&ext[key]!==null&&ext[key]!=='')return
+ for(const f of rawFields){
+  const mapped=s.definition.fields!.find(x=>x.fieldId===f._id&&x.valueKey===f.name)
+  if(!mapped||f.extId!==s.definition.id||f.tenantId!==tenant||f.state!==1||f.colName!==ext.colName||f.type!==mapped.type
+   ||(Object.hasOwn(f,'enabled')&&f.enabled!==1)||(Object.hasOwn(f,'readOnly')&&f.readOnly!==0&&f.readOnly!==1)
+   ||mapped.readOnly!==(f.readOnly===1)||!['0','1'].includes(String(f.required))||f.required!==(mapped.required?'1':'0')
+   ||!([0,1]as unknown[]).includes(f.preset)||mapped.preset!==(f.preset===1)||typeof f.multiple!=='boolean'
+   ||!Array.isArray(f.showList)||f.showList.some(v=>typeof v!=='string'||!['1','2','3','4'].includes(v))||new Set(f.showList).size!==f.showList.length
+   ||(typeof f.showType!=='string'||!['1','2','3'].includes(f.showType))||typeof f.showField!=='string'||typeof f.showValue!=='string'
+   ||f.operationType!=='1'||f.showFieldPreset!==0||f.calculateConfig!==''||!f.exts||typeof f.exts!=='object'||Array.isArray(f.exts)||Object.keys(f.exts).length
+   ||Object.hasOwn(f,'collectionName')&&f.collectionName!==''&&f.collectionName!==ext.colName)return
+  let cfg:unknown;try{cfg=decodeR1ScopedJson(f.frontEndConfig)}catch{return}
+  if(!cfg||typeof cfg!=='object'||Array.isArray(cfg))return
+  if(f.type!=='file'&&Object.keys(cfg).length)return
+  if(Object.hasOwn(f,'surveyTool')&&f.surveyTool!==false)return
+  if(f.type==='file'&&Object.hasOwn(f,'max')&&(!Number.isSafeInteger(f.max)||Number(f.max)<0||Number(f.max)>10||Object.hasOwn(cfg,'max')&&f.max!==(cfg as {max:unknown}).max))return
+  if(f.type==='file'&&(Object.keys(cfg).some(k=>!['max','surveyTool'].includes(k))||Object.hasOwn(cfg,'surveyTool')&&(cfg as {surveyTool:unknown}).surveyTool!==false||Object.hasOwn(cfg,'max')&&(!Number.isSafeInteger((cfg as {max:unknown}).max)||Number((cfg as {max:unknown}).max)<0)))return
+ }
+ if(new Set(rawFields.map(f=>f._id)).size!==rawFields.length)return
+ const storage=configuredFileStorage(s.definition,ext);if(!storage)return
+ return {seal:JSON.stringify([tenant,ext,rawFields,storage]),storage}
 }

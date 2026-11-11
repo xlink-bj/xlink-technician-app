@@ -37,7 +37,7 @@ function createBoundFormFileSession(input: {
   readonly picker: MediaFilePickerPort
   readonly getSnapshot: () => R1NodeFormsSnapshot
   readonly isAuthorized: () => boolean
-}, mode:'generic'|'survey'): R1NormalFormFileSession {
+}, mode:'generic'|'survey'|{sourceNodeType:string;allowedSources?:readonly string[];eligible:(snapshot:R1NodeFormsSnapshot,fieldId:string,values:Readonly<Record<string,unknown>>)=>boolean}): R1NormalFormFileSession {
   const scope = Object.freeze({ ...input.scope }), revision = ref(0)
   const owned = new Map<MediaUploadTaskId, OwnedTask>()
   let epoch = 0, disposed = false, inFlight = false, finalized = false, uncertain = false, asserted = false, text = ''
@@ -67,7 +67,7 @@ function createBoundFormFileSession(input: {
       snapshot = input.getSnapshot()
       if (disposed || finalized || !Object.values(scope).every(validId) || !input.isAuthorized()
         || snapshot.workOrderId !== scope.workOrderId || snapshot.node.id !== scope.runtimeNodeId
-        || snapshot.node.runId !== scope.workflowRunId || snapshot.node.sourceNodeType !== (mode==='survey'?'repeat':'forms')
+        || snapshot.node.runId !== scope.workflowRunId || snapshot.node.sourceNodeType !== (typeof mode==='object'?mode.sourceNodeType:mode==='survey'?'repeat':'forms')
         || snapshot.node.formDefinitionId !== scope.formDefinitionId || snapshot.definition.id !== scope.formDefinitionId
         || signature(snapshot) !== initialSignature) return deny()
     } catch { revoke(); return deny('附件创建授权已失效。') }
@@ -81,7 +81,7 @@ function createBoundFormFileSession(input: {
   }
   function field(fieldId: string, values: Readonly<Record<string, unknown>>, expected = epoch) {
     const snapshot = guard(expected)
-    if (!object(values) || !(mode==='survey'?isSurveyMediaFieldEligible(snapshot,fieldId):isR1NormalFileFieldEligible(snapshot, fieldId, values))) return deny('当前附件字段不可编辑。')
+    if (!object(values) || !(typeof mode==='object'?mode.eligible(snapshot,fieldId,values):mode==='survey'?isSurveyMediaFieldEligible(snapshot,fieldId):isR1NormalFileFieldEligible(snapshot, fieldId, values))) return deny('当前附件字段不可编辑。')
     const metadata = snapshot.definition.fields!.find(candidate => candidate.fieldId === fieldId)!
     const max = metadata.presentation?.max ?? 10
     if (!Number.isSafeInteger(max) || max < 0) return deny('附件数量规则尚未核实。')
@@ -298,7 +298,7 @@ function createBoundFormFileSession(input: {
       if (picked.state !== 'granted' || !picked.value?.length) return deny('未能读取所选附件。')
       if (picked.value.length + [...owned.values()].filter(entry => entry.task.scope.fieldId === fieldId).length > selected.max) return deny('所选附件超过数量上限。')
       if (new Set(picked.value.map(media => media.ref)).size !== picked.value.length || picked.value.some(media => !validId(media.ref) || !mime(media.mimeType) || !isR1NormalImageMedia(media)
-        || !(mode==='survey'?media.source==='library':['camera', 'library', 'file'].includes(media.source)) || !validId(media.localPath)
+        || !(typeof mode==='object'?(mode.allowedSources??['library']).includes(media.source):mode==='survey'?media.source==='library':['camera', 'library', 'file'].includes(media.source)) || !validId(media.localPath)
         || (media.size !== undefined && (!Number.isSafeInteger(media.size) || media.size <= 0))
         || [...owned.values()].some(entry => entry.media.ref === media.ref))) return deny('所选附件身份或格式尚未核实。')
       await readQueue(expected)
@@ -406,3 +406,7 @@ function createBoundFormFileSession(input: {
 export const createR1NormalFormFileSession=(input:Parameters<typeof createBoundFormFileSession>[0])=>createBoundFormFileSession(input,'generic')
 /** Same owned queue lifecycle; distinct typed source/grant is required by its action provider. */
 export const createR1SurveyFormFileSession=(input:Parameters<typeof createBoundFormFileSession>[0])=>createBoundFormFileSession(input,'survey')
+
+/** Bound caller chooses only schema/surface strategy; queue ownership, strict
+ * MIME/URL, cancellation, epochs and receipt checks remain this single engine. */
+export const createR1ConfiguredFormFileSession=(input:Parameters<typeof createBoundFormFileSession>[0],strategy:Extract<Parameters<typeof createBoundFormFileSession>[1],object>)=>createBoundFormFileSession(input,strategy)

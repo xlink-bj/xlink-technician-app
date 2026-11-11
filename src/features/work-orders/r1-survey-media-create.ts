@@ -1,3 +1,6 @@
+import {normalizeR1ConfiguredFileCreate,projectR1ConfiguredFileFields} from './r1-normal-file-values'
+/** Compatibility for the published v3 grant only. New configurations use the
+ * shared schema and explicit v4 grant; this profile never gains new fields. */
 import type { R1NodeFormsSnapshot } from './r1-node-forms-read'
 import type { R1LocalField } from './r1-local-form-fields'
 import { isR1NormalImageWireArray } from '@shared/form/r1-normal-image-contract'
@@ -26,25 +29,15 @@ export function isSurveyMediaFieldEligible(s:R1NodeFormsSnapshot,fieldId:string)
 }
 export function projectSurveyMediaFields(s:R1NodeFormsSnapshot):readonly(R1LocalField&{readonly visible:boolean})[]{
  if(!supportsSurveyMediaCreate(s))return []
- return s.definition.fields!.map(f=>({fieldId:f.fieldId,valueKey:f.valueKey,label:f.label,type:f.type,required:f.required,
-  readOnly:false,visible:true,supported:s.records.length===0,multiple:false,options:[]}))
+ return projectR1ConfiguredFileFields(s,{}).map(f=>({...f,supported:s.records.length===0&&f.supported}))
 }
 export function normalizeSurveyMediaCreate(s:R1NodeFormsSnapshot,values:Readonly<Record<string,unknown>>):Record<string,readonly R1FileWireValue[]>{
- if(!supportsSurveyMediaCreate(s)||s.records.length!==0||!values||typeof values!=='object'||Array.isArray(values)
-  ||Object.keys(values).some(k=>!keys.includes(k as never)))return deny()
- const out:Record<string,readonly R1FileWireValue[]>={},seen=new Set<string>()
- for(const f of s.definition.fields!){
-  const value=values[f.valueKey]
-  // This first capability proves a nonempty root + EXTS pair only. Optional
-  // absent/null/empty preservation has not been measured against typed Mongo.
-  if(f.valueKey==='infraredImageList'&&(!Array.isArray(value)||value.length===0))return deny()
-  if(!isR1NormalImageWireArray(value)||value.length>(f.valueKey==='infraredImageList'?4:10)||(f.required&&value.length===0))return deny()
-  // Empty optional file values are omitted, never passed as ambiguous string[].
-  if(!value.length)continue
-  for(const image of value){if(seen.has(image.name)||seen.has(image.url))return deny();seen.add(image.name);seen.add(image.url)}
-  out[f.valueKey]=Object.freeze(value.map(v=>Object.freeze({...v})))
- }
- return Object.freeze(out)
+ if(!supportsSurveyMediaCreate(s))return deny()
+ const out=normalizeR1ConfiguredFileCreate(s,values)
+ // Preserve v3's previously granted nonempty-pair limitation. Optional omission
+ // for arbitrary configurations belongs to the explicit v4 contract.
+ if(keys.some(key=>{const value=out[key];return !Array.isArray(value)||!value.length}))return deny()
+ return out as Record<string,readonly R1FileWireValue[]>
 }
 /** Strict original-slot check; never compare only the reader's display values. */
 export function assertSurveyMediaOriginal(raw:Readonly<Record<string,unknown>>,expected?:Readonly<Record<string,readonly R1FileWireValue[]>>):void{
