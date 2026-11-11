@@ -77,7 +77,8 @@ const actionProvider = inject(r1RepeatActionsKey,null)
 const emit = defineEmits<{ (event: 'changed'): void;
   (event: 'snapshot-change', value: { readonly actorScope: string; readonly snapshot: R1NodeFormsSnapshot } | null): void }>()
 const actions = computed(() => visibleSnapshot.value ? actionProvider?.forSnapshot(visibleSnapshot.value) ?? null : null)
-const editableFields = computed(() => visibleSnapshot.value ? projectR1RepeatFields(visibleSnapshot.value, values.value) : [])
+const editableFields = computed(() => visibleSnapshot.value ? actions.value?.projectFields?.(values.value,editingId.value)
+  ?? projectR1RepeatFields(visibleSnapshot.value, values.value) : [])
 const validDraft = computed(() => { try { return Boolean(visibleSnapshot.value && (actions.value?.validateDraft
   ? actions.value.validateDraft(values.value, editingId.value) : normalizeR1RepeatValues(visibleSnapshot.value, values.value))) } catch { return false } })
 let version = 0

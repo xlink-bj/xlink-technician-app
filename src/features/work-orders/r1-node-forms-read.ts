@@ -1,3 +1,4 @@
+import type { AppointmentReplacementContext } from '@shared/form/appointment-replacement-context'
 import type { InjectionKey } from 'vue'
 import type { FormDefinitionRead, FormDataRead, WorkflowNodeRead } from '@shared/ports'
 
@@ -24,6 +25,10 @@ export interface R1GenericMapRouteRead {
   readonly collectionName: string
   readonly original: Readonly<Record<string, unknown>>
 }
+export interface R1RepeatAppointmentRead {
+  readonly original: Readonly<Record<string, unknown>>
+  readonly appointmentReplacement: AppointmentReplacementContext
+}
 export interface R1NodeFormsReader {
   enabled(): boolean
   load(workOrderId: string, runtimeNodeId: string): Promise<R1NodeFormsSnapshot>
@@ -37,6 +42,8 @@ export interface R1NodeFormsReader {
    * collection identities and exact selected original; never an ACK grant. */
   currentGenericMapRoute?(snapshot: R1NodeFormsSnapshot, recordId: string): R1GenericMapRouteRead | null
   isCurrentGenericMapRoute?(snapshot: R1NodeFormsSnapshot, recordId: string, evidence: unknown): boolean
+  currentRepeatAppointment?(snapshot: R1NodeFormsSnapshot, recordId: string): R1RepeatAppointmentRead | null
+  isCurrentRepeatAppointment?(snapshot: R1NodeFormsSnapshot, recordId: string, evidence: unknown): boolean
   /** Independent post-Process read; performs no mutation. */
   confirmFormsCompletion?(snapshot: R1NodeFormsSnapshot): Promise<{ readonly transitionVerified: true }>
   clear(): void

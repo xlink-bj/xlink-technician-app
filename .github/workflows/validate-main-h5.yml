@@ -212,6 +212,11 @@ jobs:
           XLINK_H5_GENERIC_MAP_EDIT: 'true'
           VITE_XLINK_ENVIRONMENT: 'test'
         run: pnpm exec playwright test --config config/playwright/generic-map-edit.config.ts
+      - name: Verify normal Repeat appointment same-ID edits and uncertain recovery
+        env:
+          XLINK_H5_REPEAT_APPOINTMENT_EDIT: 'true'
+          VITE_XLINK_ENVIRONMENT: 'test'
+        run: pnpm exec playwright test --config config/playwright/repeat-appointment-edit.config.ts
       - name: Preserve scoped form integration H5 evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -223,6 +228,7 @@ jobs:
             test-results/work-order-authority-revocation/
             test-results/forms-scalar-subset/
             test-results/generic-map-edit/
+            test-results/repeat-appointment-edit/
           if-no-files-found: warn
           retention-days: 7
 

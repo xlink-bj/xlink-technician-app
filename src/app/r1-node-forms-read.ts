@@ -1,3 +1,4 @@
+import { appointmentReplacementContextFromRead, appointmentReplacementProblem } from '@shared/form/appointment-replacement-context'
 import type { AuthSessionPort, TechnicianApiReadPort, FormDefinitionRead, WorkflowNodeRead } from '@shared/ports'
 import type { ApiReadRequest, ApiReadTransport } from '@adapters/api/technician-api'
 import { createUniApiReadTransport } from '@adapters/api/uni-api-read-transport'
@@ -99,7 +100,16 @@ export function createNormalNodeFormsReader(input: {
   let generation = 0
   let current: { snapshot: R1NodeFormsSnapshot; fingerprint: string; formsExts?: string;
     originals: ReadonlyMap<string, string>; genericRoute?: Omit<R1GenericMapRouteRead, 'recordId' | 'original'>;
-    schemaAtRead: string } | null = null
+    schemaAtRead: string; appointmentRoute?: true; appointmentSeal?: string } | null = null
+  const appointmentReads = new WeakMap<object, {snapshot:R1NodeFormsSnapshot; fingerprint:string; schema:string; raw:string; recordId:string}>()
+  const appointmentCurrent = (snapshot:R1NodeFormsSnapshot, recordId:string) => {
+    if(!current?.appointmentRoute || current.snapshot!==snapshot || fingerprint()!==current.fingerprint
+      || JSON.stringify([snapshot.workOrderId,schemaIdentity(snapshot)])!==current.appointmentSeal
+      || schemaIdentity(snapshot)!==current.schemaAtRead || input.read.isWorkOrderListedForCurrentSession?.(snapshot.workOrderId)!==true
+      || JSON.stringify(snapshot.records.map(r=>r.id))!==JSON.stringify([...current.originals.keys()])
+      || !current.originals.has(recordId))return null
+    return current
+  }
   const issuedRoutes = new WeakMap<object, { snapshot: R1NodeFormsSnapshot; recordId: string;
     fingerprint: string; schemaAtRead: string; raw: string; original: Readonly<Record<string, unknown>> }>()
   const schemaIdentity = (snapshot: R1NodeFormsSnapshot) => JSON.stringify([snapshot.node,
@@ -122,6 +132,22 @@ export function createNormalNodeFormsReader(input: {
   return {
     enabled,
     clear() { generation++; current = null },
+    currentRepeatAppointment(snapshot,recordId) {
+      const source=appointmentCurrent(snapshot,recordId);if(!source)return null
+      const raw=source.originals.get(recordId)!,original=JSON.parse(raw) as Row
+      const context=appointmentReplacementContextFromRead(original,{definitionId:snapshot.definition.id,dataId:recordId,workflowRunId:snapshot.node.runId})
+      if(appointmentReplacementProblem({definitionId:snapshot.definition.id,dataId:recordId,workflowRunId:snapshot.node.runId,
+        workOrderId:snapshot.workOrderId,workflowNodeId:snapshot.node.id,appointmentReplacement:context},true))return null
+      const evidence=Object.freeze({original,appointmentReplacement:context})
+      appointmentReads.set(evidence,{snapshot,recordId,raw,fingerprint:source.fingerprint,schema:source.schemaAtRead});return evidence
+    },
+    isCurrentRepeatAppointment(snapshot,recordId,evidence) {
+      if(!evidence || typeof evidence!=='object')return false
+      const stamp=appointmentReads.get(evidence),source=appointmentCurrent(snapshot,recordId)
+      if(!stamp||!source||stamp.snapshot!==snapshot||stamp.recordId!==recordId||stamp.fingerprint!==source.fingerprint
+        ||stamp.schema!==source.schemaAtRead||stamp.raw!==source.originals.get(recordId))return false
+      try{return formsExtsJson((evidence as {original:Row}).original)===stamp.raw}catch{return false}
+    },
     isCurrent(snapshot) { return current?.snapshot === snapshot && fingerprint() === current.fingerprint
       && input.read.isWorkOrderListedForCurrentSession?.(snapshot.workOrderId) === true },
     currentFormsExts(snapshot) {
@@ -257,6 +283,7 @@ export function createNormalNodeFormsReader(input: {
       const execute = async (request: ApiReadRequest) => { check(); const raw = await transport.execute(request); check(); return raw }
       let rawFill: readonly string[] | undefined
       let rawFormsExts: string | undefined
+      let appointmentSubmitAllowed = false
       const readNode = async (): Promise<WorkflowNodeRead> => {
         const envelope = row(await execute({ method: 'POST', path: `basic/serviceAppointment/queryById/${encodeURIComponent(workOrderId)}`, body: {} }))
         if (envelope.success !== true || envelope.status !== 1) deny()
@@ -284,12 +311,14 @@ export function createNormalNodeFormsReader(input: {
           && def.formFieldIdsFill.every(v => typeof v === 'string' && v.length > 0 && v.trim() === v)
           && new Set(def.formFieldIdsFill).size === def.formFieldIdsFill.length
           ? [...def.formFieldIdsFill] : undefined
+        appointmentSubmitAllowed = !Object.hasOwn(def,'submitHideNodeId') || def.submitHideNodeId === ''
         const node = workflowNode(rawNode)
         if (node.formDefinitionId !== def.formDefId || node.runId !== wf._id || node.nodeTypeEvidence !== 'runtime_node_def'
           || !evaluateNodeVisibility(node, { userId: actor.user.id, roleIds: [actor.currentRole!.id], organizationRoles: [] }).visible) deny()
         return node
       }
       const node = await readNode(), definitionId = id(node.formDefinitionId)
+      const appointmentSubmitAtRead = appointmentSubmitAllowed
       const fillableFieldIds = rawFill
       const formsExts = rawFormsExts
       const ext = row(await execute({ method: 'POST', path: 'biz/ext/queryById.do', body: { id: definitionId } }))
@@ -355,6 +384,12 @@ export function createNormalNodeFormsReader(input: {
       // SOURCE backend ExtFormServiceImpl existing-id branch: only exact
       // string "0" uses frm_{tenant}_{colName} Map replacement. The query's
       // serviceAppointment privacy branch can omit phone, so never issue for it.
+      const appointmentRoute = appointmentSubmitAtRead && appointmentSubmitAllowed && node.sourceNodeType==='repeat' && definition.purpose==='appointment'
+        && ext.type==='0' && ext.colName==='appointment'
+        && ['id','extId','definitionId','formDefinitionId'].every(k=>!Object.hasOwn(ext,k)||ext[k]===definitionId)
+        && (!Object.hasOwn(ext,'collectionName')||ext.collectionName===''||ext.collectionName===ext.colName)
+        && fields.every(f=>f.colName===ext.colName&&(!Object.hasOwn(f,'collectionName')||f.collectionName===''||f.collectionName===ext.colName))
+        ?true:undefined
       const routeColName=ext.colName
       const genericRoute = node.sourceNodeType==='forms' && fields.length>50 && ext.type==='0'
         && typeof routeColName==='string' && routeColName!=='serviceAppointment' && routeColName.trim()===routeColName
@@ -365,6 +400,7 @@ export function createNormalNodeFormsReader(input: {
         ? Object.freeze({tenantId:input.tenantId,workOrderId,runtimeNodeId,workflowRunId:id(node.runId),
           formDefinitionId:definitionId,type:'0' as const,colName:routeColName,collectionName:`frm_${input.tenantId}_${routeColName}`}) : undefined
       current = { snapshot, fingerprint: identity, originals, schemaAtRead:schemaIdentity(snapshot),
+        ...(appointmentRoute?{appointmentRoute,appointmentSeal:JSON.stringify([workOrderId,schemaIdentity(snapshot)])}:{}),
         ...(genericRoute?{genericRoute}:{}), ...(formsExts ? { formsExts } : {}) }
       return snapshot
     },
